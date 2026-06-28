@@ -7587,7 +7587,12 @@ Composition rules:
   useEffect(()=>{
     if(showIntro) return;
     if(!basicMode){ basicAutoPlayedRef.current=false; return; }
-    if(chords.length>0 || playing || busy || composeMode || micActive || loadedSource){ basicAutoPlayedRef.current=true; return; }
+    // Already have content / playing / another source active → nothing to do,
+    // and mark as done so we don't auto-load over a user's piece.
+    if(chords.length>0 || playing || composeMode || micActive || loadedSource){ basicAutoPlayedRef.current=true; return; }
+    // Still warming up (piano sampler loading → busy) — wait; the effect re-runs
+    // when busy clears because busy is in the deps. Do NOT lock here.
+    if(busy) return;
     if(basicAutoPlayedRef.current) return;
     basicAutoPlayedRef.current = true;
     try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
@@ -7601,7 +7606,7 @@ Composition rules:
     }, 300);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[showIntro, basicMode]);
+  },[showIntro, basicMode, busy, chords.length, loadedSource, playing]);
 
   // BASIC mode: auto-start playback whenever a song is loaded but not yet
   // playing (chords present, nothing drawn yet). Covers "My song" uploads
@@ -9651,7 +9656,7 @@ Composition rules:
           const accent = adv ? '220,180,90' : '247,243,236';   // gold | white
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
           return (
-            <button onClick={()=>setBasicMode(b=>!b)} aria-label={label} aria-pressed={adv} title={label}
+            <button onClick={()=>{ try{ fullClear(); }catch(_){} basicAutoPlayedRef.current=false; setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
               style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'rgba('+accent+',.13)',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'background .2s, color .2s, border-color .2s'}}>
               <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
               {label}
@@ -9879,7 +9884,7 @@ Composition rules:
           would be empty. This quiet placeholder fills it — a golden-ratio frame
           hint with a soft prompt — so the screen never reads as broken. Mobile
           (<769px) hides it via CSS; the mobile flow stacks panel-only as before. */}
-      {isSetupView && !showOnboarding && (
+      {isSetupView && !showOnboarding && !basicMode && (
       <div className="pf-setup-stage" aria-hidden="true">
         <div className="pf-setup-stage-inner">
           <div className="pf-setup-stage-mark">Paintiano</div>
@@ -12470,7 +12475,8 @@ Composition rules:
       )}
       </div>
       )}
-      <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.2{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.2{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
@@ -12480,6 +12486,7 @@ Composition rules:
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
         <button onClick={()=>setLegalDoc('refunds')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalRefunds')}</button>
       </div>
+      )}
 
       {/* ── HELP FAB (Variant A — floating "?" bottom-right) ───────────────
           Affordance for the SETUP SCREEN only. Hidden as soon as the user
