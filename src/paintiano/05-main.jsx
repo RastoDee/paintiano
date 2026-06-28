@@ -2106,6 +2106,11 @@ export default function Paintiano() {
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
+  // Inline "edit your set" mode for the Pick-a-look cockpit. When on, disabled
+  // palettes/artists show as ghost chips you can tap to add to your set (and
+  // enabled ones to remove) — live, without leaving the canvas. The heavy
+  // Styles & palettes modal stays in the menu for full management.
+  const [cockpitEdit, setCockpitEdit] = useState(false);
   const [guideQuery, setGuideQuery] = useState('');
   // Stable composite-close callback for GuideModal (same memo rationale as
   // closeAbout). Closes the modal and clears the search query in one action.
@@ -2114,6 +2119,12 @@ export default function Paintiano() {
   // Remember the origin so Setup's Done/✕ returns the user where they came from.
   const openSetupFromGuide = useCallback((cardId)=>{ setShowGuide(false); setGuideQuery(''); setSetupReturnTo('guide'); setGuideReturnCardId(cardId||null); setShowSetupModal(true); },[]);
   const closeSetup = useCallback(()=>{ setShowSetupModal(false); if(setupReturnTo==='guide'){ setShowGuide(true); } setSetupReturnTo(null); },[setupReturnTo]);
+  // Shared set-toggles with last-item protection — the canvas must always have
+  // at least one palette and one artist to paint with, so the final enabled
+  // chip can't be turned off. Used by the inline cockpit edit mode and the
+  // full Setup modal alike.
+  const togglePalSafe = useCallback((k)=> setSetupPalettes(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
+  const toggleArtSafe = useCallback((k)=> setSetupArtists(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [morphSel, setMorphSel] = useState([]); // ordered target moods for chain-morph (max 3)
   const [morphPool, setMorphPool] = useState([]);
@@ -10029,10 +10040,21 @@ Composition rules:
           )}
         </div>
         {!isDesktop && (<>
-        <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
-          <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (t('colorLabel') + ' · ' + t('styleLabel'))}</span>
-          <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
-        </button>
+        <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
+          <span style={{width:30,flexShrink:0}} aria-hidden="true" />
+          <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
+            <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : ts('pickLook','Pick a look')}</span>
+            <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
+          </button>
+          {/* Setup dial — toggles inline edit mode. Shown only when the strip is
+              open and we're in a music mode (image-scan has no per-set chips to
+              edit). Lit gold while editing. */}
+          {(stripOpen && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive) ? (
+            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:30,height:30,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',padding:0,fontFamily:'inherit',background:cockpitEdit?'rgba(201,168,76,.15)':'transparent',border:'1px solid '+(cockpitEdit?'rgba(201,168,76,.85)':'rgba(242,238,232,.18)'),color:cockpitEdit?'rgba(220,180,90,.98)':'rgba(230,222,196,.45)',transition:'all .15s ease'}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="8" cy="18" r="2" fill="currentColor"/></svg>
+            </button>
+          ) : (<span style={{width:30,flexShrink:0}} aria-hidden="true" />)}
+        </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
@@ -10173,10 +10195,14 @@ Composition rules:
                   for the readout; in AI Compose they still set the palette the AI
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
-              {(()=>{ const _allTabs = appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']; const _tabs = _allTabs.filter(m => m==='bw' || setupPalettes.includes(m)); const _shown = _tabs.length?_tabs:_allTabs;
+              {(()=>{ const _allTabs = appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']; const _enabled = _allTabs.filter(m => m==='bw' || setupPalettes.includes(m)); const _baseShown = _enabled.length?_enabled:_allTabs;
+              // In edit mode the user manages their set: show every palette, the
+              // off ones as ghost chips they can tap to add. 'bw' is never user-
+              // toggleable, so it's excluded from the editable list.
+              const _shown = cockpitEdit ? _allTabs.filter(m=>m!=='bw'||_baseShown.includes('bw')) : _baseShown;
               // Single palette shown → render the name as plain text (same font,
-              // cream), not a chip — nothing to switch between.
-              if(_shown.length===1){
+              // cream), not a chip — nothing to switch between. (Not in edit mode.)
+              if(_shown.length===1 && !cockpitEdit){
                 return (
                   <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',color:'rgba(220,180,90,.95)',userSelect:'none'}}>{t(_shown[0])}</div>
                 );
@@ -10193,8 +10219,11 @@ Composition rules:
                   // applied is always the default (defaultCustomPalette) —
                   // the user's saved palette stays locked until they upgrade.
                   const isFree = proStatus==='free';
+                  const _inSet = setupPalettes.includes(m);
+                  const _ghost = cockpitEdit && !_inSet && m!=='bw';
                   return (
-                  <button key={m} disabled={dis} className={mode===m?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                  <button key={m} disabled={dis&&!cockpitEdit} className={mode===m&&!cockpitEdit?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+                    if(cockpitEdit && m!=='bw'){ togglePalSafe(m); return; }
                     if(dis) return;
                     if(isCustomTab && mode==='custom'){
                       if(!customArmed){
@@ -10219,7 +10248,7 @@ Composition rules:
                     if(canvasRef.current){canvasRef.current.style.opacity='0';}
                     kontraAutoRef.current=false;   // manual palette tap → kontra (if chosen) is now deliberate
                     setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:dis?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:dis?0.32:1,whiteSpace:'nowrap',overflow:'visible',...chipStyle(mode===m)}}>
+                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:(dis&&!cockpitEdit)?0.32:1,whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _inSet : (mode===m)))}}>
                     <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                       <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                       {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
@@ -10401,7 +10430,7 @@ Composition rules:
             // per spec:
             //   1→1h0d  2→2h0d  3→3h0d  4→2h2d  5→3h2d  6→3h3d
             //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
-            const _visiblePairs = effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
+            const _visiblePairs = cockpitEdit ? effectivePairs : effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b));
             const _familyOn = setupArtists.includes('mosaicFamily');
             const _chipCount = (_familyOn?1:0) + _visiblePairs.length;
             // baseCols per Rasto's key (chips only): 1→1, 2→2, 3→3, 4→2,
@@ -10459,7 +10488,7 @@ Composition rules:
               }
             }} className={(mosaicManual?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(mosaicManual),...(!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
             ); })()}
-            {effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b)).map(([a,b], _pairIdx)=>{
+            {(cockpitEdit ? effectivePairs : effectivePairs.filter(([a,b])=>setupArtists.includes(a)||setupArtists.includes(b))).map(([a,b], _pairIdx)=>{
               // Setup-picker integration: when only ONE side of the pair is in
               // setupArtists, the pair tile collapses to a single-toggle for
               // that side — no A↔B flip, no info row, no third-tap deselect.
@@ -10525,10 +10554,16 @@ Composition rules:
               //     tap 3 (active on b)  → deselect → full shuffle
               const onClick = ()=>{
                 if(demoReelOn) return;
-                // ── SINGLE-SIDE PAIR (only one side in setupArtists) ──
-                // Behaves as a plain toggle for that side: tap on → paint it,
-                // tap on (active) → deselect. No flip to the other side, no
-                // info row, no third-tap. Applies to both Free and Paid tiers.
+                // ── EDIT MODE ── tap toggles this pair's membership in the set.
+                // We toggle the 'a' side (the primary/Free-reachable member);
+                // fine-grained a-vs-b control lives in the full Styles & palettes
+                // modal. Last-item protection keeps at least one artist enabled.
+                if(cockpitEdit){
+                  const _bothOff = !setupArtists.includes(a) && !setupArtists.includes(b);
+                  if(_bothOff){ toggleArtSafe(a); }
+                  else { setSetupArtists(prev => prev.length>1 ? prev.filter(x=>x!==a && x!==b) : prev); }
+                  return;
+                }
                 if(forcedSide){
                   if(style===forcedSide){
                     if(randomMode){ setPairLastPick(p=>({...p,[pairKey]:forcedSide})); setStyleTo(null); }
@@ -10610,17 +10645,25 @@ Composition rules:
                     : (style===faceKey
                         ? `tap for ${STYLE_LABELS[_otherKey]}`
                         : (randomMode ? 'tap for shuffle' : `tap for ${STYLE_LABELS[faceKey]}`)));
+              const _pairInSet = setupArtists.includes(a) || setupArtists.includes(b);
+              const _pairGhost = cockpitEdit && !_pairInSet;
               return (
               <Fragment key={a+'_'+b}>
-                <button className={isOn?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
-                  title={pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`))}
-                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...chipStyle(isOn),...(!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
+                <button className={(!cockpitEdit&&isOn)?'pf-artist pf-artist-on':'pf-artist'} onClick={onClick}
+                  title={cockpitEdit ? (_pairInSet?'in your set — tap to remove':'tap to add to your set') : (pairLocked ? nextHint : (isOn ? `${STYLE_INSPIRED[activeKey]} — ${nextHint}` : (shufHit ? `🎲 ${STYLE_INSPIRED[shufKey]} — shuffle is painting this` : `${STYLE_LABELS[a]} / ${STYLE_LABELS[b]} — tap to paint, tap again to flip, again for Mosaic`)))}
+                  style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(_pairGhost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _pairInSet : isOn)),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{label}</button>
               </Fragment>
               );
             })}
           </div>
           ); })()}
-          {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
+          {cockpitEdit && (
+            <div style={{textAlign:'center',marginTop:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(230,222,196,.55)',lineHeight:1.5}}>
+              <span>{ts('editHint','Tap to add or remove from your set.')}</span>
+              <span> </span>
+              <span role="button" tabIndex={0} onClick={()=>{setCockpitEdit(false);setSetupReturnTo(null);setShowSetupModal(true);}} onKeyDown={(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setCockpitEdit(false);setSetupReturnTo(null);setShowSetupModal(true);}}} style={{color:'rgba(220,180,90,.9)',cursor:'pointer',whiteSpace:'nowrap'}}>{ts('editFull','Manage all →')}</span>
+            </div>
+          )}
               member of the most recently tapped pair with a PRO badge.
               Clickable: opens the paywall with reason 'settings'. Sitting
               outside the palette buttons it reads visually as its own
