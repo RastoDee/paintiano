@@ -26885,13 +26885,36 @@ Composition rules:
   // current position while the music keeps playing. Avoids repeating the
   // current style so each tap is visibly different.
   const basicSurprise = useCallback(()=>{
-    const pool = EXPRESSIVE_POOL.filter(k=>k!==style);
-    const src = pool.length ? pool : EXPRESSIVE_POOL;
-    const k = src[Math.floor(Math.random()*src.length)] || 'picasso';
-    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    // Surprise rotates through every (artist × variant) address available on the
+    // current tier — for Free that's the 9 unlocked artists, each with 2 style
+    // variants (phaseIndex 0/1) = 18 looks, plus mosaic. For Pro, all artists ×
+    // their full variant count. Each tap lands on a DIFFERENT address than the
+    // current one so the painting always visibly changes.
+    const artists = (proStatus === 'free')
+      ? Array.from(FREE_UNLOCKED_KEYS)
+      : ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
+    const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky'||k==='wave') ? 7 : 6));
+    // Build the full address space: each artist × its variants, plus mosaic.
+    const addrs = [];
+    artists.forEach(k=>{ const n=variantsFor(k); for(let v=0; v<n; v++) addrs.push([k,v]); });
+    addrs.push(['mosaicFamily', 0]);  // mosaic = the bare golden-ratio grid
+    // Exclude the current address so the result is always a visible change.
+    const curK = style || 'mosaicFamily';
+    const curV = (phaseIndex|0);
+    const pool = addrs.filter(([k,v])=> !(k===curK && v===curV));
+    const src = pool.length ? pool : addrs;
+    const [nk,nv] = src[Math.floor(Math.random()*src.length)] || ['picasso',0];
     setRandomMode(false); randomModeRef.current=false;
-    setStyle(k);
-  },[EXPRESSIVE_POOL, style]);
+    if(nk==='mosaicFamily'){
+      setSetupArtists(prev => prev.includes('mosaicFamily') ? prev : [...prev,'mosaicFamily']);
+      setStyle(null);                 // null style → mosaic / bare grid
+      setShufVariant(nv|0);
+    } else {
+      setSetupArtists(prev => prev.includes(nk) ? prev : [...prev, nk]);
+      setStyle(nk);
+      setPhaseIndex(nv|0);            // pick that artist's variant
+    }
+  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
   // and the canvas is empty (e.g. after the intro splash, or on entering Basic
