@@ -3125,14 +3125,14 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //  Glass → StillLife (overlapping geometric shapes, vase/fruit implied only).
   //  Surreal = soft biomorphic blobs — the ONLY non-angular phase, dreamlike.
   //  (Rose Atmosphere retired — it was a near-duplicate of Blue Atmosphere.)
-  // Free (cap=2) sees Analytic + Synthetic collage — subtle structural contrast.
+  // Free (cap=2) sees positions 0,1. Analytic Cubism (phaseA) is the most
+  // expensive phase (dense pencil-grain hatching) and caused jank on lower-end
+  // devices, so it's moved OUT of the Free slots: Free now gets Synthetic
+  // collage + Blue Atmosphere (both light to draw). Pro still reaches Analytic
+  // and the rest at the higher indices.
+  const _picassoOrder = [picassoPhaseB, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseFacetedField, picassoPhaseStillLife, picassoPhaseSurreal];
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===1){ picassoPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===2){ picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===3){ picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===4){ picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ picassoPhaseSurreal(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  picassoPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
+  (_picassoOrder[pick]||picassoPhaseB)(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // ── Picasso phase A: Analytic Cubism — the original angular shard composition. ──

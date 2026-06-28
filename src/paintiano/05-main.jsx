@@ -1383,7 +1383,7 @@ export default function Paintiano() {
     ['picasso','matisse'],
     ['pollock','bloom'],
     ['kusama','miro'],
-    ['mondrian','kandinsky'],
+    ['kandinsky','mondrian'],
     ['gold','rothko'],
     ['bulge','wave'],
     ['spiral','arcs'],
@@ -7607,6 +7607,9 @@ Composition rules:
   // with nothing loaded). Waits for the loading intro to clear so Liebestraum
   // doesn't start underneath the splash. Fires once per empty-canvas entry.
   const basicAutoPlayedRef = useRef(false);
+  // Lite "Use my song" opens a tiny File / Mic chooser instead of going straight
+  // to the file dialog. Mic arms the listen mode and auto-starts recording.
+  const [liteSrcPicker, setLiteSrcPicker] = useState(false);
   useEffect(()=>{
     if(showIntro) return;
     if(!basicMode){ basicAutoPlayedRef.current=false; return; }
@@ -13003,12 +13006,39 @@ Composition rules:
                                               : (playing ? ('❚❚ '+(t('pause')!=='pause'?t('pause'):'Pause'))
                                                          : ('▶ '+(t('play')!=='play'?t('play'):'Play'))));
         const _midClick = ()=>{ if(_done){ try{ exportImage('web'); }catch(_){} return; } try{ handlePauseClick(); }catch(_){} };
+        const _capturing = micActive || recording;   // mic is actively listening/painting
+        const _startMicLite = ()=>{
+          setLiteSrcPicker(false);
+          // A new capture wipes whatever was there before — stop any live mic first.
+          try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
+          try{ if(draftOwnerRef.current){ draftOwnerRef.current=null; } }catch(_){}
+          try{ setMuted(false); }catch(_){}
+          setMicPreset('music');               // listen to the room (no singing required)
+          setMicArmed(true); setStayActive(true);
+          // Auto-start the capture in the same gesture — no separate REC tap.
+          setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startMicListening(); }catch(_){} }).catch(()=>{ try{ startMicListening(); }catch(_){} }); }catch(_){ try{ startMicListening(); }catch(__){} } }, 60);
+        };
+        const _stopMicLite = ()=>{ try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} setMicArmed(false); };
+        const _openFileLite = ()=>{ setLiteSrcPicker(false); if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} };
+        // Middle button: Stop while capturing, else Save (done) / Pause·Play.
+        const _midMicAware = _capturing ? ('■ '+ts('stopLabel','Stop')) : _midLabel;
+        const _midClickAware = ()=>{ if(_capturing){ _stopMicLite(); return; } _midClick(); };
         return (
+        <>
+        {liteSrcPicker && (
+          <div onClick={()=>setLiteSrcPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:'rgba(4,3,8,0.6)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
+            <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:560,display:'flex',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))'}}>
+              <button onClick={_openFileLite} style={{...btn,flexDirection:'column',gap:8,padding:'20px 8px',fontSize:(.74*effScale)+'rem'}}>🎵 {ts('useMySongFile','File')}</button>
+              <button onClick={_startMicLite} style={{...btn,flexDirection:'column',gap:8,padding:'20px 8px',fontSize:(.74*effScale)+'rem'}}>🎙 {ts('useMySongMic','Mic')}</button>
+            </div>
+          </div>
+        )}
         <div role="region" aria-label="basic actions" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
-          <button onClick={_midClick} disabled={!_haveArt} title={_done?ts('saveLabel','Save'):(playing?t('pause'):t('play'))} style={{...btn,opacity:_haveArt?1:.5}}>{_midLabel}</button>
-          <button onClick={()=>{ if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} }} title={ts('useMySong','Use my song')} style={btn}>🎵 {ts('useMySong','Use my song')}</button>
+          <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
+          <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={btn}>🎵 {ts('useMySong','Use my song')}</button>
         </div>
+        </>
         );
       })()}
     </div>
