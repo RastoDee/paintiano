@@ -47,8 +47,8 @@ const PF_STYLE = `
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
         @keyframes pf-flip-nudge {
-          0%,100% { opacity:.5; transform:translateX(0); }
-          50% { opacity:1; transform:translateX(2px); }
+          0%,100% { opacity:.55; transform:translateX(0) scale(1); }
+          50% { opacity:1; transform:translateX(3px) scale(1.18); }
         }
         @keyframes pf-artist-glow {
           0%   { opacity:.4; text-shadow:0 0 0 rgba(240,192,64,0); }
