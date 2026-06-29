@@ -11512,6 +11512,18 @@ Composition rules:
         </>);
       })()}
 
+        {basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current && (
+          <div style={{minHeight:'46dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18}}>
+            <div onClick={(e)=>{ e.stopPropagation(); litePlayStart(); }} role="button" aria-label={t('play')||'Play'}
+              style={{position:'relative',width:130,height:130,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
+              <span className="pf-breathe" style={{position:'absolute',width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.42),transparent 65%)'}}/>
+              <span style={{position:'relative',zIndex:2,width:90,height:90,borderRadius:'50%',background:'linear-gradient(145deg,rgba(255,225,140,.96),rgba(220,170,70,.93))',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 30px rgba(240,192,64,.42),inset 0 2px 11px rgba(255,250,220,.7),inset 0 -4px 13px rgba(150,105,20,.55)'}}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="#1a1206" style={{marginLeft:6}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(1.05*effScale)+'rem',color:'rgba(220,180,90,.82)',letterSpacing:'.05em'}}>{ts('litePlayHint','Zahraj')}</div>
+          </div>
+        )}
       {isActiveView && (<>
       {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !is5Col && !(disp===0 && !playing && !anim) && (()=>{
         // Body 11: once playback begins / the mood pic has been drawn (disp>0),
@@ -11684,18 +11696,6 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none',transition:'opacity .25s ease'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        {basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current && (
-          <div style={{position:'absolute',inset:0,zIndex:5,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18}}>
-            <div onClick={(e)=>{ e.stopPropagation(); litePlayStart(); }} role="button" aria-label={t('play')||'Play'}
-              style={{position:'relative',width:130,height:130,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
-              <span className="pf-breathe" style={{position:'absolute',width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.42),transparent 65%)'}}/>
-              <span style={{position:'relative',zIndex:2,width:90,height:90,borderRadius:'50%',background:'linear-gradient(145deg,rgba(255,225,140,.96),rgba(220,170,70,.93))',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 30px rgba(240,192,64,.42),inset 0 2px 11px rgba(255,250,220,.7),inset 0 -4px 13px rgba(150,105,20,.55)'}}>
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="#1a1206" style={{marginLeft:6}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-              </span>
-            </div>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(1.05*effScale)+'rem',color:'rgba(220,180,90,.82)',letterSpacing:'.05em'}}>{ts('litePlayHint','Zahraj')}</div>
-          </div>
-        )}
         <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((basicMode&&!immersive)?{borderRadius:14,boxShadow:'0 10px 40px rgba(0,0,0,.5)',outline:'1px solid rgba(255,255,255,.10)',outlineOffset:'-1px'}:{}),...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
@@ -12787,7 +12787,7 @@ Composition rules:
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && !showIntro && !isActiveView && !showGuide && !showAbout && !showBook && !showSetupModal && !showHelp && !legalDoc && !paywallReason && (
+      {!showOnboarding && !showIntro && !isActiveView && !basicMode && !showGuide && !showAbout && !showBook && !showSetupModal && !showHelp && !legalDoc && !paywallReason && (
         <button
           className="pf-help-fab"
           onClick={()=>setShowHelp(true)}
