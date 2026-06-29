@@ -2126,8 +2126,8 @@ export default function Paintiano() {
   const chipStyle = useCallback((on)=>({
     color: on ? 'rgba(220,180,90,.98)' : PF.cream,
     background: PF.card2,
-    border: '1px solid '+(on ? 'rgba(201,168,76,.55)' : 'rgba(242,238,232,.08)'),
-    boxShadow: on ? '0 0 0 1px rgba(201,168,76,.28)' : 'none',
+    border: '1px solid '+(on ? 'rgba(201,168,76,.4)' : 'rgba(242,238,232,.08)'),
+    boxShadow: 'none',
   }),[]);
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
@@ -10767,7 +10767,7 @@ Composition rules:
                     if(canvasRef.current){canvasRef.current.style.opacity='0';}
                     kontraAutoRef.current=false;   // manual palette tap → kontra (if chosen) is now deliberate
                     setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:(dis&&!cockpitEdit)?0.32:1,whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
+                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:(dis&&!cockpitEdit)?0.32:1,whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
                     <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                       <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                       {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
@@ -10865,7 +10865,7 @@ Composition rules:
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 kontraAutoRef.current=false;   // manual palette choice → deliberate
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                   <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                   {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
@@ -11078,7 +11078,7 @@ Composition rules:
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
-                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {label}
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
@@ -11143,7 +11143,7 @@ Composition rules:
                   const _inSet = setupTones.includes(o.k);
                   const _ghost = cockpitEdit && !_inSet;
                   return (
-                  <button key={o.k} onClick={()=>{ if(cockpitEdit){ toggleToneSafe(o.k); return; } setTone(o.k); }} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && sel) ? {background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>{o.label}</button>
+                  <button key={o.k} onClick={()=>{ if(cockpitEdit){ toggleToneSafe(o.k); return; } setTone(o.k); }} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && sel) ? {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>{o.label}</button>
                   );
                 })}
               </div>
