@@ -1880,7 +1880,7 @@ export default function Paintiano() {
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
   // (free users only see 2 of 6). The dice picks a variant in this range.
-  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky'||style==='wave') ? 7 : 6));
+  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : 6)));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -7698,7 +7698,7 @@ Composition rules:
     const artists = (proStatus === 'free')
       ? Array.from(FREE_UNLOCKED_KEYS)
       : ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
-    const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky'||k==='wave') ? 7 : 6));
+    const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky') ? 8 : (k==='wave' ? 7 : 6)));
     // The shuffle pool of "artists" includes mosaic as one more entry, so the
     // bare grid shows about as often as any single painter.
     const bagKeys = [...artists, 'mosaicFamily'];
@@ -10818,6 +10818,15 @@ Composition rules:
             </div>
             );
           })() : (<>
+            {cockpitEdit && (
+              <div className="pf-inspired-row" style={{position:'relative',marginTop:2,marginBottom:2,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{ts('palettesTitle','palettes')}</div>
+                <div style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',display:'flex',gap:6}}>
+                  <button onClick={()=>setSetupPalettes([...ALL_PALETTE_KEYS])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.4)',color:'rgba(201,168,76,.8)'}}>{ts('selAll','all')}</button>
+                  <button onClick={()=>setSetupPalettes(['harmony'])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(230,222,196,.5)'}}>{ts('selNone','none')}</button>
+                </div>
+              </div>
+            )}
             {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _enabled = _allTabs.filter(m => setupPalettes.includes(m)); const _baseShown = _enabled.length?_enabled:_allTabs;
             // Edit mode: show all palettes, off ones as ghosts to tap-add.
             const _shown = cockpitEdit ? _allTabs : _baseShown;
@@ -10949,6 +10958,12 @@ Composition rules:
           {(loadedSource!=='image' || moodFromImg) && (
           <div className="pf-inspired-row" style={{position:'relative',marginTop:6,marginBottom:2}}>
             <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</div>
+            {cockpitEdit && (
+              <div style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',display:'flex',gap:6}}>
+                <button onClick={()=>setSetupArtists([...ALL_ARTIST_KEYS])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.4)',color:'rgba(201,168,76,.8)'}}>{ts('selAll','all')}</button>
+                <button onClick={()=>setSetupArtists(['mosaicFamily'])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(230,222,196,.5)'}}>{ts('selNone','none')}</button>
+              </div>
+            )}
             <button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:randomMode?'rgba(255,200,120,.95)':'rgba(207,197,168,.55)',background:randomMode?'rgba(255,200,120,.1)':'rgba(255,255,255,.02)',border:'1px solid '+(randomMode?'rgba(255,200,120,.4)':'rgba(255,255,255,.08)'),boxShadow:'none'}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
             </button>
@@ -11125,8 +11140,12 @@ Composition rules:
                       return next;
                     });
                   } else {
-                    // Remove both — last-item protection on the whole set.
-                    setSetupArtists(prev => prev.length>1 ? prev.filter(x=>x!==a && x!==b) : prev);
+                    // Remove both — but never let the whole set empty out
+                    // (at least one artist/mosaic must remain selectable).
+                    setSetupArtists(prev => {
+                      const next = prev.filter(x=>x!==a && x!==b);
+                      return next.length>=1 ? next : prev;
+                    });
                   }
                   return;
                 }

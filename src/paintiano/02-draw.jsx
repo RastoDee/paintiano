@@ -10286,7 +10286,7 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   // REF per phase = that phase's highest threshold (A's RING 280 is the max).
   // 7 phases: A Cosmic · B Bauhaus · Circles · Comp8 · Paris · Geom · Dense.
   // (Improvisation was retired; Geom + Dense added.)
-  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(_variantCap === 2){
     // Free: 0 = Cosmic scatter (fall through), 1 = Dense circles+radials —
     // the phase closest in spirit to Cosmic scatter (energetic cosmic density),
@@ -10300,6 +10300,7 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
     if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette, chords, gc); return; }
     if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette, chords, gc); return; }
     if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette, chords, gc); return; }
+    if(pick===7){ kandinskyPhaseFloat(ctx, CW, CH, eff(200), ss, mode, palette, chords, gc); return; }
   }
   kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette, chords);
 }
@@ -10844,6 +10845,50 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
       const sx=CW*f[0], sy=CH*f[1];
       for(let i=3;i>=0;i--){ ctx.fillStyle=_kandPickCol(i+si*10+rings+1+dots, rings+1+dots+20, chords, gc, palette); ctx.beginPath(); ctx.arc(sx,sy,minD*0.02*(i+1)/4*2,0,Math.PI*2); ctx.fill(); }
     });
+  }
+}
+
+
+// ── Kandinsky phase H: Floating composition — shapes drift freely on a single
+// colour field, threaded by a few thin construction lines. Sparse, airy, the
+// Bauhaus-era "free abstract" Kandinsky. Progressive reveal via chordCount. ──
+function kandinskyPhaseFloat(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
+  const ss = sessionSeed|0, isBW = mode==='bw';
+  const ink = isBW ? '#1a1a1a' : '#14141c';
+  // single tinted ground (a calm field, from the first chord's colour, muted)
+  const g = _kandPickCol(0, 1, chords, gc, palette);
+  if(isBW){ ctx.fillStyle = '#ece8e0'; }
+  else { ctx.fillStyle = `rgb(${Math.min(255,(g[0]*0.4+150))|0},${Math.min(255,(g[1]*0.4+150))|0},${Math.min(255,(g[2]*0.4+150))|0})`; }
+  ctx.fillRect(0,0,CW,CH);
+  const minD = Math.min(CW,CH);
+  const p = Math.max(0, Math.min(1, chordCount / 200));
+  const N = Math.max(4, Math.round(p * 26));
+  // floating shapes: circles, squares, triangles, rings, half-discs
+  for(let i=0;i<N;i++){
+    const r = _seedRnd(3300+i, ss, 0, 0);
+    const x = r()*CW, y = r()*CH, s = minD*(0.05 + r()*0.16);
+    const col = _kandPickCol(i, N, chords, gc, palette);
+    const k = Math.floor(r()*5);
+    ctx.save();
+    ctx.fillStyle = `rgb(${col[0]|0},${col[1]|0},${col[2]|0})`;
+    ctx.strokeStyle = `rgb(${col[0]|0},${col[1]|0},${col[2]|0})`;
+    if(k===0){ ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.fill(); }
+    else if(k===1){ ctx.fillRect(x-s/2,y-s/2,s,s); }
+    else if(k===2){ const rot=r()*Math.PI*2; ctx.beginPath(); for(let t=0;t<3;t++){ const a=rot+t*2.094; ctx[t?'lineTo':'moveTo'](x+Math.cos(a)*s*0.6, y+Math.sin(a)*s*0.6); } ctx.closePath(); ctx.fill(); }
+    else if(k===3){ ctx.lineWidth=Math.max(2,s*0.16); ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.stroke(); }
+    else { const rot=r()*Math.PI*2; ctx.beginPath(); ctx.arc(x,y,s/2,rot,rot+Math.PI); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  }
+  // a few thin construction lines crossing the field
+  ctx.strokeStyle = ink;
+  const NL = Math.max(2, Math.round(p*5));
+  for(let i=0;i<NL;i++){
+    const r = _seedRnd(3400+i, ss, 0, 0);
+    ctx.lineWidth = 1 + r()*2.4;
+    ctx.beginPath();
+    ctx.moveTo(r()*CW, r()*CH);
+    ctx.lineTo(r()*CW, r()*CH);
+    ctx.stroke();
   }
 }
 
