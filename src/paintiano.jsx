@@ -26430,7 +26430,7 @@ Composition rules:
       // Lazy-fetch the built-in sample image from /public, build a File, feed it
       // through the normal image pipeline. (Was ~678KB of inlined base64.)
       const blob=await (await fetch(SAMPLE_IMAGE_B64_URL)).blob();
-      const file=new File([blob],'sample-image.jpg',{type:'image/jpeg'});
+      const file=new File([blob],'The Starry Night — Van Gogh.jpg',{type:'image/jpeg'});
       const fakeEvent={target:{files:[file],value:''}};
       loadImage(fakeEvent);
     }catch(e){setErr('Sample image: '+(e&&e.message||'load failed'));setErrInfo(false);}
@@ -30896,7 +30896,7 @@ Composition rules:
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?3:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
-            {basicMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
+            {basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
               </span>
