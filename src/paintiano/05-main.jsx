@@ -2164,6 +2164,7 @@ export default function Paintiano() {
   //                          on the music flavour.
   const [liteImageMode, setLiteImageMode] = useState(false);
   const liteImageModeRef = useRef(false);
+  const liteAwaitTapRef = useRef(false);
   const [liteFlip, setLiteFlip] = useState(false); // header 3D flip animation
   // First-run nudge so users discover the two Lite flavours. Three soft cues:
   // a one-time peek-flip teaser, a pulsing ⇋ glyph, and a "tap to flip" hint —
@@ -7759,6 +7760,9 @@ Composition rules:
     if(liteImageMode){
       if(_liteImgAppliedRef.current) return;
       _liteImgAppliedRef.current = true;
+      // Stop the music flavour's audio completely before the image starts, so
+      // the two never overlap during the flip.
+      try{ stopAll(); }catch(_){}
       try{ basicAutoPlayedRef.current=true; }catch(_){}   // suppress Liszt auto-play
       try{ loadSampleImage(); }catch(_){}
     } else {
@@ -7786,8 +7790,28 @@ Composition rules:
   // playback (iOS needs a gesture for sound anyway) so audio + paint start
   // together on the tap instead of the canvas playing silently underneath.
   const [liteAwaitTap, setLiteAwaitTap] = useState(false);
+  useEffect(()=>{ liteAwaitTapRef.current = liteAwaitTap; },[liteAwaitTap]);
   const basicTapUnlock = useCallback(()=>{
     if(!basicMode) return;
+    // If the "Tap to begin" splash is showing for ANY reason (first entry, or a
+    // re-armed context after a Lite flavour flip), this tap must dismiss it and
+    // start playback. Without this, the 2nd-visit splash (liteEverUnlocked
+    // already true) fell through to the recovery branch and did nothing.
+    if(liteAwaitTapRef.current){
+      liteEverUnlockedRef.current = true;
+      basicTapUnlockedRef.current = true;
+      setLiteAwaitTap(false);
+      try{ unlockAudio(); }catch(_){}
+      try{ setMuted(false); }catch(_){}
+      setTimeout(()=>{
+        try{
+          if(chordsRef.current && chordsRef.current.length>0 && !playingRef.current){
+            wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); });
+          }
+        }catch(_){}
+      }, 30);
+      return;
+    }
     // Two separate concerns:
     //  • liteEverUnlockedRef — set ONCE on the very first tap; never reset. Its
     //    job is only to run unlockAudio()+start the splashed song a single time.
