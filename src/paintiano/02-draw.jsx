@@ -10685,10 +10685,12 @@ function _kandPickCol(i, n, chords, gc, fallbackPalette){
   const chordIdx = Math.min(cn-1, Math.max(0, Math.floor((i/Math.max(1,n)) * cn)));
   const chord = chords[chordIdx];
   _setCurE(chord && chord._E);
-  // 8 fixed pitches spread across mid/low register (matches the original
-  // palette generation in drawKandinskyOverlay so the palette character is
-  // unchanged — only its energy band shifts per element).
-  const pitches = [60,64,67,71,74,77,55,48];
+  // Song-aware anchors: 8 most prominent pitch classes of the piece.
+  // Matches the song-aware palette build in drawKandinskyOverlay so per-
+  // element colours track the song's actual harmonic DNA. Falls back to a
+  // mid/low fixed spread when chord data isn't usable here.
+  const tops = (typeof _songTopPitches === 'function') ? _songTopPitches(chords, 8) : null;
+  const pitches = (tops && tops.length) ? tops : [60,64,67,71,74,77,55,48];
   const m = pitches[Math.abs(i) % pitches.length];
   const c = gc(m, 100);
   if(!Array.isArray(c)) return c;
