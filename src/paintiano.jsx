@@ -21912,6 +21912,8 @@ export default function Paintiano() {
   // longer (flip animation + audio-context settle) so the first note after a
   // flip doesn't crackle. Cleared once the post-flip playback has started.
   const liteFlipJustRef = useRef(false);
+  // Guards against re-entrant saveAudio() calls (heavy Tone.Offline render).
+  const savingRef = useRef(false);
   const [liteFlip, setLiteFlip] = useState(false); // header 3D flip animation
   // First-run nudge so users discover the two Lite flavours. Three soft cues:
   // a one-time peek-flip teaser, a pulsing ⇋ glyph, and a "tap to flip" hint —
@@ -28739,6 +28741,13 @@ Composition rules:
   },[scoreBlob,scoreFileName,t]);
   // Export audio via offline render — fast, silent, independent of playback.
   const saveAudio=useCallback(async(prepareOnly,withImage)=>{
+    // Re-entry guard: rendering audio uses Tone.Offline, which is heavy. Without
+    // this, repeated Save taps each kick off a parallel offline render — they
+    // pile up, exhaust memory and crash/reload the app. Ignore taps while a
+    // render is already in flight.
+    if(savingRef.current) return;
+    savingRef.current = true;
+    try{
     const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
     if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
     const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
@@ -28787,6 +28796,7 @@ Composition rules:
       setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}},10000);
       setScoreMsg({tone:'ok',text:'download started ✓'});
     }catch(e){ setScoreMsg({tone:'err',text:'Save blocked: '+(e?.message||e?.name||'unknown')}); }
+    } finally { savingRef.current = false; }
   },[chords,loadedSource,compositionName,recordingName,t,unlockAudio]);
   const shareRecording=async()=>{
     if(!recBlob)return;
@@ -33056,7 +33066,7 @@ Composition rules:
                                 : (holdPaused ? (<>{_icoPlay}<span>{t('resume')!=='resume'?t('resume'):'Resume'}</span></>)
                                               : (playing ? (<>{_icoPause}<span>{t('pause')!=='pause'?t('pause'):'Pause'}</span></>)
                                                          : (<>{_icoPlay}<span>{t('play')!=='play'?t('play'):'Play'}</span></>)));
-        const _midClick = ()=>{ if(_done){ if(liteImageMode){ try{ saveAudio(); }catch(_){} } else { try{ exportImage('web'); }catch(_){} } return; } try{ handlePauseClick(); }catch(_){} };
+        const _midClick = ()=>{ if(_done){ if(liteImageMode){ try{ if(!savingRef.current){ setRecordIntent('audio'); startRecord(); } }catch(_){} } else { try{ exportImage('web'); }catch(_){} } return; } try{ handlePauseClick(); }catch(_){} };
         const _capturing = micActive || recording;   // mic is actively listening/painting
         const _startMicLite = ()=>{
           setLiteSrcPicker(false);
