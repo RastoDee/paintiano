@@ -10809,7 +10809,7 @@ Composition rules:
             );
           })() : (<>
             {cockpitEdit && (
-              <div className="pf-inspired-row" style={{position:'relative',marginTop:2,marginBottom:2,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <div className="pf-inspired-row" style={{position:'relative',marginTop:2,marginBottom:2,display:'flex',alignItems:'center',justifyContent:'flex-start'}}>
                 <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{ts('palettesTitle','palettes')}</div>
                 <div style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',display:'flex',gap:6}}>
                   <button onClick={()=>setSetupPalettes([...ALL_PALETTE_KEYS])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(201,168,76,.4)',color:'rgba(201,168,76,.8)'}}>{ts('selAll','all')}</button>
