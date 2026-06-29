@@ -30641,7 +30641,9 @@ Composition rules:
         // inline in the seek row (default) or as a separate block above the
         // seek bar on the 5-col layout (desktop/tablet landscape) — there the
         // narrow tools column would otherwise truncate long morph chains.
-        const _titleSpan = (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
+        const _titleSpan = basicMode
+          ? (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:(.52*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:'rgba(201,168,76,.7)'}}>{seekTitle}</span>)
+          : (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
         const _showAiBadge = (moodContext && composeSource==='ai') || _imgAtmo;
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : null;
         return (<>
@@ -30663,17 +30665,6 @@ Composition rules:
               <span key="insp-mosaic" className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>Mosaic</span>
             )}
           </div>
-          {basicMode && chords.length>0 && (()=>{
-            const _last = chords[chords.length-1];
-            const _totMs = (_last?.startMs||0) + ((_last?.n&&_last.n[0]&&_last.n[0].durMs)||500);
-            const _curMs = chords[Math.min(disp,chords.length-1)]?.startMs || 0;
-            const _fmt = (ms)=>{ const s=Math.max(0,Math.round(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
-            return (
-              <div style={{display:'flex',justifyContent:'flex-end',fontSize:(.52*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.55)',fontVariantNumeric:'tabular-nums',marginBottom:4}}>
-                {_fmt(_curMs)} / {_fmt(_totMs)}
-              </div>
-            );
-          })()}
           {(viewMode!=='image' || !(recording||!!recBlob)) && (
           <div
             role="slider"
@@ -30754,7 +30745,7 @@ Composition rules:
             style={{position:'relative',height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.55)':'none',outlineOffset:3}}
             onFocus={()=>setFocusedInput('seek')}
             onBlur={()=>setFocusedInput(null)}>
-            <div style={{height:'100%',width:pct+'%',background:playing?'rgba(90,190,110,.65)':'rgba(201,168,76,.45)',borderRadius:3,transition:'none',pointerEvents:'none'}}/>
+            <div style={{height:'100%',width:pct+'%',background:basicMode?'rgba(220,180,90,.85)':(playing?'rgba(90,190,110,.65)':'rgba(201,168,76,.45)'),borderRadius:3,transition:'none',pointerEvents:'none'}}/>
           </div>
           )}
           {/* "Pick a look" + edit dial — desktop/tablet only, in the gap between the
