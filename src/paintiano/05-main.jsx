@@ -7764,15 +7764,20 @@ Composition rules:
       // the two never overlap during the flip.
       try{ stopAll(); }catch(_){}
       try{ basicAutoPlayedRef.current=true; }catch(_){}   // suppress Liszt auto-play
+      try{ setLiteAwaitTap(false); }catch(_){}            // image plays now — no splash
+      try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
       try{ loadSampleImage(); }catch(_){}
     } else {
       if(!_liteImgAppliedRef.current) return;
       _liteImgAppliedRef.current = false;
       try{ stopAll(); }catch(_){}
       try{ fullClear && fullClear(); }catch(_){}
-      // Audio is already unlocked from the first entry, so coming back to music
-      // must NOT show the "Tap to begin" splash again (its tap handler no-ops on
-      // the 2nd visit). Clear it and let basicAutoPlay reload + play Liszt.
+      // Coming back to music from image: audio has already played, so the
+      // "Tap to begin" splash must never reappear. Mark the audio as permanently
+      // unlocked (these refs gate the splash in basicAutoPlay) and clear any
+      // pending splash, then let basicAutoPlay reload + auto-play Liszt.
+      try{ liteEverUnlockedRef.current = true; }catch(_){}
+      try{ basicTapUnlockedRef.current = true; }catch(_){}
       try{ setLiteAwaitTap(false); }catch(_){}
       try{ basicAutoPlayedRef.current=false; }catch(_){}
     }
