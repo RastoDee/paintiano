@@ -20638,7 +20638,16 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
-  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
+  // ── Lite "Surprise me" shuffle-bags (better perceived randomness) ──────────
+  // surpriseArtistBag: a shuffled queue of artist keys; we pop one per tap and
+  // only reshuffle once every artist has appeared — so none repeats until all
+  // others have shown, and none goes missing for long. surpriseVariantBags:
+  // per-artist shuffled queues of variant indices, same idea at the variant
+  // level. Refs so they survive across taps without triggering re-renders.
+  const surpriseArtistBagRef = useRef([]);
+  const surpriseVariantBagsRef = useRef({});
+  useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // SHOW MODE (auto-shuffle slideshow): while a piece is playing AND dice is on
   // (full shuffle, or dice + a selected artist), the Save chip is replaced by a
   // "↻ Show" chip. Tapping it auto-advances the painting every SHOW_INTERVAL ms
@@ -27008,16 +27017,44 @@ Composition rules:
       ? Array.from(FREE_UNLOCKED_KEYS)
       : ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
     const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky'||k==='wave') ? 7 : 6));
-    // Build the full address space: each artist × its variants, plus mosaic.
-    const addrs = [];
-    artists.forEach(k=>{ const n=variantsFor(k); for(let v=0; v<n; v++) addrs.push([k,v]); });
-    addrs.push(['mosaicFamily', 0]);  // mosaic = the bare golden-ratio grid
-    // Exclude the current address so the result is always a visible change.
+    // The shuffle pool of "artists" includes mosaic as one more entry, so the
+    // bare grid shows about as often as any single painter.
+    const bagKeys = [...artists, 'mosaicFamily'];
+    // Fisher–Yates shuffle.
+    const shuffle = (arr)=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
     const curK = style || 'mosaicFamily';
     const curV = (phaseIndex|0);
-    const pool = addrs.filter(([k,v])=> !(k===curK && v===curV));
-    const src = pool.length ? pool : addrs;
-    const [nk,nv] = src[Math.floor(Math.random()*src.length)] || ['picasso',0];
+    // ── pick next ARTIST from the shuffle-bag ──────────────────────────────
+    // Refill when empty. On refill, if the freshly shuffled bag would hand back
+    // the artist we're already on (bag boundary), rotate it so we still change.
+    let bag = surpriseArtistBagRef.current;
+    // Drop stale keys if the tier/pool changed (e.g. Pro↔free) so the bag never
+    // serves a now-unavailable artist.
+    bag = bag.filter(k => bagKeys.includes(k));
+    if(bag.length===0){
+      bag = shuffle(bagKeys);
+      if(bag.length>1 && bag[0]===curK){ bag.push(bag.shift()); }
+    }
+    let nk = bag.shift();
+    // Guard: never hand back the current artist twice in a row (covers the rare
+    // case where the leftover bag's head equals curK after filtering).
+    if(nk===curK && bag.length){ bag.push(nk); nk = bag.shift(); }
+    surpriseArtistBagRef.current = bag;
+    // ── pick next VARIANT for that artist from its own bag ─────────────────
+    const vCount = (nk==='mosaicFamily') ? 1 : variantsFor(nk);
+    let nv = 0;
+    if(vCount>1){
+      const vbags = surpriseVariantBagsRef.current;
+      let vbag = (vbags[nk]||[]).filter(v => v<vCount);
+      if(vbag.length===0){
+        vbag = shuffle(Array.from({length:vCount},(_,i)=>i));
+        // Avoid repeating the same variant across a bag boundary when we stay
+        // on the same artist (only relevant if the artist guard above failed).
+        if(nk===curK && vbag.length>1 && vbag[0]===curV){ vbag.push(vbag.shift()); }
+      }
+      nv = vbag.shift();
+      vbags[nk] = vbag;
+    }
     setRandomMode(false); randomModeRef.current=false;
     if(nk==='mosaicFamily'){
       setSetupArtists(prev => prev.includes('mosaicFamily') ? prev : [...prev,'mosaicFamily']);
