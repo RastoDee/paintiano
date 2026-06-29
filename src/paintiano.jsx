@@ -30552,6 +30552,9 @@ Composition rules:
                 </div>
               </div>
             )}
+            {!cockpitEdit && !isMobilePortrait && (
+              <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',marginTop:2,marginBottom:2}}>{ts('palettesTitle','palety')}</div>
+            )}
             {(()=>{ const _allTabs = ['harmony','spectral','phi','kontra','custom']; const _enabled = _allTabs.filter(m => setupPalettes.includes(m)); const _baseShown = _enabled.length?_enabled:_allTabs;
             // Edit mode: show all palettes, off ones as ghosts to tap-add.
             const _shown = cockpitEdit ? _allTabs : _baseShown;
@@ -30630,6 +30633,35 @@ Composition rules:
               </div>
             )}
           </>)}
+          {!isMobilePortrait && (setupTones.length>=2 || cockpitEdit) && (
+          <div style={{marginTop:10,marginBottom:2}}>
+            <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
+            {(()=>{
+              const allTones = [
+                {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure'},
+                {k:'real',   label:({EN:'Real',SK:'Skutočný',DE:'Real',FR:'Réel',ES:'Real',PT:'Real',zh:'真实',zhTW:'真實',ja:'リアル'})[lang]||'Real'},
+                {k:'pastel', label:({EN:'Pastel',SK:'Pastelový',DE:'Pastell',FR:'Pastel',ES:'Pastel',PT:'Pastel',zh:'柔和',zhTW:'柔和',ja:'パステル'})[lang]||'Pastel'}
+              ];
+              // Edit mode shows all three (off ones as ghosts to tap-add); normal
+              // mode shows only the enabled tones and a tap selects the tone.
+              const visTones = cockpitEdit ? allTones : allTones.filter(o => setupTones.includes(o.k));
+              if(!visTones.length) return null;
+              const cols = visTones.length;
+              return (
+              <div style={{display:'grid',gridTemplateColumns:`repeat(${cols}, 1fr)`,gap:6}}>
+                {visTones.map(o=>{
+                  const sel = tone===o.k;
+                  const _inSet = setupTones.includes(o.k);
+                  const _ghost = cockpitEdit && !_inSet;
+                  return (
+                  <button key={o.k} onClick={()=>{ if(cockpitEdit){ toggleToneSafe(o.k); return; } setTone(o.k); }} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && sel) ? {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>{o.label}</button>
+                  );
+                })}
+              </div>
+              );
+            })()}
+          </div>
+          )}
           </div>
           <div className="pf-styles-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* IMAGE mode: the right column (where artists sit in other modes) holds
@@ -30857,7 +30889,7 @@ Composition rules:
               tone there's nothing to switch between, so the picker (and its
               "tone" label) is hidden on the active canvas; the lone tone is
               applied silently. */}
-          {(setupTones.length>=2 || cockpitEdit) && (
+          {isMobilePortrait && (setupTones.length>=2 || cockpitEdit) && (
           <div style={{marginTop:10,marginBottom:2}}>
             <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
