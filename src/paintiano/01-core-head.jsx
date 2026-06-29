@@ -46,6 +46,10 @@ const PF_STYLE = `
            100% = no change to desktop; just disables automatic text scaling. */
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
+        @keyframes pf-flip-nudge {
+          0%,100% { opacity:.5; transform:translateX(0); }
+          50% { opacity:1; transform:translateX(2px); }
+        }
         @keyframes pf-artist-glow {
           0%   { opacity:.4; text-shadow:0 0 0 rgba(240,192,64,0); }
           35%  { opacity:1;  text-shadow:0 0 12px rgba(240,192,64,.6); }

@@ -2156,6 +2156,29 @@ export default function Paintiano() {
     }catch(_){ return true; }
   });
   const basicModeRef = useRef(false);
+  // Lite has two flavours, flipped by tapping the header subtitle:
+  //   liteImageMode=false → "music → painting" (the original: auto-plays Liszt)
+  //   liteImageMode=true  → "painting → music" (auto-loads the Van Gogh sample
+  //                          image and paints/plays it; CTAs become Pause/Save/
+  //                          Use my picture). Not persisted — Lite always opens
+  //                          on the music flavour.
+  const [liteImageMode, setLiteImageMode] = useState(false);
+  const liteImageModeRef = useRef(false);
+  const [liteFlip, setLiteFlip] = useState(false); // header 3D flip animation
+  // First-run nudge so users discover the two Lite flavours. Three soft cues:
+  // a one-time peek-flip teaser, a pulsing ⇋ glyph, and a "tap to flip" hint —
+  // all retire forever once the user flips (persisted in localStorage).
+  const [liteFlipSeen, setLiteFlipSeen] = useState(()=>{ try{ return localStorage.getItem('paintiano_lite_flip_seen')==='1'; }catch(_){ return false; } });
+  const [liteFlipTeaser, setLiteFlipTeaser] = useState(false);
+  useEffect(()=>{ liteImageModeRef.current = liteImageMode; },[liteImageMode]);
+  // One-time teaser: a couple of seconds after Lite opens, the subtitle gives a
+  // small peek-flip to draw the eye to it. Only if the user hasn't flipped yet.
+  useEffect(()=>{
+    if(!basicMode || liteFlipSeen || liteImageMode) return;
+    const t1=setTimeout(()=>{ setLiteFlipTeaser(true); }, 2200);
+    const t2=setTimeout(()=>{ setLiteFlipTeaser(false); }, 2200+620);
+    return ()=>{ clearTimeout(t1); clearTimeout(t2); };
+  },[basicMode,liteFlipSeen,liteImageMode]);
   useEffect(()=>{
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
@@ -2698,7 +2721,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cells || cells.length < chords.length){
         try{
           const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), portraitGrow: basicModeRef.current});
+          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), portraitGrow: basicModeRef.current && !liteImageModeRef.current});
           gridRef.current = fixed;
           setGrid(fixed);
         }catch(_){}
@@ -3077,7 +3100,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // In Lite, both voice and music capture use the grow-canvas (portrait) shape
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
-    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, portraitGrow: basicModeRef.current});
+    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -4028,7 +4051,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(insertedCursor!=null){ selectedChordIdxRef.current=insertedCursor; setSelectedChordIdx(insertedCursor); }
     try{
       const evs=nextChords.map(c=>({durQ:c.durQ!=null?c.durQ:1}));
-      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true, portraitGrow: basicModeRef.current});
+      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
       gridRef.current=newGrid;
       if(!playingRef.current) setGrid(newGrid);
       // Pre-set the grid signature so the reactive [chords] effect recognizes
@@ -7720,9 +7743,31 @@ Composition rules:
   // with nothing loaded). Waits for the loading intro to clear so Liebestraum
   // doesn't start underneath the splash. Fires once per empty-canvas entry.
   const basicAutoPlayedRef = useRef(false);
+  // Lite flavour switch (music ⇄ painting). Flipping into image mode auto-loads
+  // the Van Gogh sample so it reads + plays immediately (mirrors music mode's
+  // Liszt auto-play). Flipping back clears it and re-arms the music sample. Lite
+  // only — never touches Advanced. Guarded to fire once per flip.
+  const _liteImgAppliedRef = useRef(false);
+  useEffect(()=>{
+    if(!basicMode){ _liteImgAppliedRef.current=false; return; }
+    if(liteImageMode){
+      if(_liteImgAppliedRef.current) return;
+      _liteImgAppliedRef.current = true;
+      try{ basicAutoPlayedRef.current=true; }catch(_){}   // suppress Liszt auto-play
+      try{ loadSampleImage(); }catch(_){}
+    } else {
+      if(!_liteImgAppliedRef.current) return;
+      _liteImgAppliedRef.current = false;
+      try{ stopAll(); }catch(_){}
+      try{ fullClear && fullClear(); }catch(_){}
+      try{ basicAutoPlayedRef.current=false; }catch(_){}
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[liteImageMode,basicMode]);
   // Lite "Use my song" opens a tiny File / Mic chooser instead of going straight
   // to the file dialog. Mic arms the listen mode and auto-starts recording.
   const [liteSrcPicker, setLiteSrcPicker] = useState(false);
+  const [liteImgPicker, setLiteImgPicker] = useState(false); // Lite mode 2: Sample(Van Gogh)/File
   // iOS blocks audio started off a timer (no user gesture), so the auto-played
   // Liszt can paint but stay silent. The first tap anywhere in Lite unlocks the
   // audio context and, if a song is loaded but not audibly playing, (re)starts
@@ -9944,6 +9989,38 @@ Composition rules:
       </div>
       <header style={{textAlign:'center',marginBottom:isActiveView?8:(isDesktop?8:18)}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+        {basicMode && (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+          <div
+            onClick={()=>{
+              // Flip the header around its vertical axis, switch Lite flavour at
+              // the half-way point so the back face shows the new subtitle.
+              if(liteFlip) return;
+              if(!liteFlipSeen){ setLiteFlipSeen(true); try{ localStorage.setItem('paintiano_lite_flip_seen','1'); }catch(_){} }
+              setLiteFlipTeaser(false);
+              setLiteFlip(true);
+              setTimeout(()=>{ setLiteImageMode(v=>!v); }, 260);
+              setTimeout(()=>{ setLiteFlip(false); }, 540);
+            }}
+            role="button"
+            title={liteImageMode ? 'painting → music' : 'music → painting'}
+            style={{display:'inline-flex',alignItems:'center',gap:8,margin:'2px auto 0',cursor:'pointer',padding:'4px 12px',borderRadius:999,
+              transform:(liteFlip||liteFlipTeaser)?'rotateY(90deg)':'rotateY(0deg)',
+              transformOrigin:'center center',WebkitTapHighlightColor:'transparent',userSelect:'none',
+              background:(!liteFlipSeen)?'rgba(220,180,90,.07)':'transparent',
+              boxShadow:(!liteFlipSeen)?'0 0 0 1px rgba(220,180,90,.18)':'none',transition:'transform .26s ease, background .4s ease, box-shadow .4s ease'}}>
+            <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:isDesktop?'1rem':'1.05rem',color:'rgba(220,180,90,.9)',letterSpacing:'.02em'}}>
+              {liteImageMode ? 'painting → music' : 'music → painting'}
+            </span>
+            <span aria-hidden="true" style={{fontSize:'.7rem',color:'rgba(220,180,90,.7)',display:'inline-block',animation:(!liteFlipSeen)?'pf-flip-nudge 1.7s ease-in-out infinite':'none'}}>⇋</span>
+          </div>
+          {!liteFlipSeen && (
+            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:isDesktop?'.6rem':'.64rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(220,180,90,.45)',marginTop:1}}>
+              {ts('tapToFlip','tap to flip')}
+            </div>
+          )}
+          </div>
+        )}
         {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
         {!isActiveView && !isDesktop && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
@@ -13241,6 +13318,9 @@ Composition rules:
           try{ const _n=(chordsRef.current?chordsRef.current.length:chords.length)||0; setDisp(_n); dispRef.current=_n; }catch(_){}
           basicTapUnlockedRef.current=false; try{ audioWasHiddenRef.current=true; }catch(_){} setTimeout(()=>{ try{ wakeAudio(); }catch(_){} }, 80); };
         const _openFileLite = ()=>{ setLiteSrcPicker(false); if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} };
+        // Lite Image: pick a photo → Paintiano reads it as a score and paints.
+        // loadImage handles the whole pipeline (decode, scan, paint), so we just
+        // open the image file picker — same as Advanced, no Setup screen.
         const _loadSampleLite = ()=>{
           setLiteSrcPicker(false);
           // Load the built-in Liszt sample and play it — same source the Lite
@@ -13267,10 +13347,21 @@ Composition rules:
             </div>
           </div>
         )}
+        {/* Lite mode 2 (painting → music) image picker: Sample (Van Gogh) / File */}
+        {liteImgPicker && (
+          <div onClick={()=>setLiteImgPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:(basicMode&&isDesktop)?'transparent':'rgba(4,3,8,0.6)',display:'flex',alignItems:(basicMode&&isDesktop)?'flex-start':'flex-end',justifyContent:'center',backdropFilter:(basicMode&&isDesktop)?'none':'blur(2px)'}}>
+            <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'row',alignItems:'stretch',gap:12,padding:'96px 16px 0'}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,width:'100%',maxWidth:480,padding:'16px 16px 28px',background:'linear-gradient(180deg,rgba(20,17,28,.0),rgba(20,17,28,.96) 18%)',borderTopLeftRadius:22,borderTopRightRadius:22}}>
+              <button onClick={()=>{ setLiteImgPicker(false); try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🖼 {ts('useMySongSample','Sample')}</button>
+              <button onClick={()=>{ setLiteImgPicker(false); try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎵 {ts('useMySongFile','File')}</button>
+            </div>
+          </div>
+        )}
         <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
-          <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
+          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>}
           <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
-          {!immersive && <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>}
+          {!immersive && (liteImageMode
+            ? <button onClick={()=>setLiteImgPicker(true)} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🖼 {ts('useMyPicture','Use my picture')}</button>
+            : <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>)}
         </div>
         </>
         );
