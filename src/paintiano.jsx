@@ -30730,7 +30730,7 @@ Composition rules:
                 ? t('mosaicStyle')
                 : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; const _f=STYLE_INSPIRED[_soloKey]||_soloKey; return _as[_f]||_f; })();
               return (
-                <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:PF.cream}}>{_soloName}</div>
+                <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:'rgba(220,180,90,.98)'}}>{_soloName}</div>
               );
             }
             return (
