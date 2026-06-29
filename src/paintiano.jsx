@@ -27581,7 +27581,9 @@ Composition rules:
     try{ setMuted(false); }catch(_){}
     try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
     try{ setStyle(null); }catch(_){}         // Mosaic = bare reading
-    try{ setMode('harmony'); }catch(_){}
+    // Inherit the user's active palette and tone (set in Advanced or stored
+    // from a previous session). Lite no longer force-resets to Harmony so
+    // a Spectral / Phi / Custom user keeps their colour DNA in Lite too.
     try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
     loadSampleMidi();
     setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startPlayRef.current && startPlayRef.current(); }catch(_){} }).catch(()=>{}); }catch(_){} }, 120);
@@ -27811,10 +27813,10 @@ Composition rules:
       try{
         try{ setMuted(false); }catch(_){}
         // Lite always opens on Mosaic (no artist overlay) — the bare reading of
-        // the music. Surprise me then cycles into artist styles.
+        // the music. Surprise me then cycles into artist styles. Palette and
+        // tone are inherited from the user's Advanced settings — no force.
         try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
         setStyle(null);
-        setMode('harmony');
         loadSampleMidi();
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
@@ -33283,7 +33285,7 @@ Composition rules:
           try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){}
           try{ setMuted(false); }catch(_){}
           try{ pickExpressiveStyle(); }catch(_){}
-          setMode('harmony');
+          // Palette + tone inherited from current state (Advanced or session).
           loadSampleMidi();
           setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); }); }catch(_){} }, 120);
         };
