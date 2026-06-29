@@ -388,8 +388,8 @@ const PF_STYLE = `
           .pf-app-root > header > div { margin: 0 !important; display: inline-flex !important; align-items: center; transform: scale(.82); transform-origin: left center; }
           /* Lite (basicMode): stack flip subtitle UNDER the title, re-enable
              pointer events so the flip toggle is clickable on desktop. */
-          .pf-app-root.pf-mode-lite > header { grid-area: header !important; flex-direction: column !important; align-items: center !important; justify-self: center !important; width: max-content !important; max-width: 100% !important; margin: 0 auto !important; text-align: center !important; pointer-events: auto !important; gap: 2px !important; position: static !important; transform: none !important; }
-          .pf-app-root.pf-mode-lite > header > div { pointer-events: auto !important; }
+          .pf-app-root.pf-mode-lite > header { grid-area: header !important; flex-direction: column !important; align-items: center !important; justify-self: center !important; align-self: center !important; width: max-content !important; max-width: 100% !important; margin: 0 auto !important; text-align: center !important; pointer-events: auto !important; gap: 2px !important; position: static !important; transform: none !important; }
+          .pf-app-root.pf-mode-lite > header > div { pointer-events: auto !important; transform: none !important; transform-origin: center center !important; display: flex !important; }
           /* Help (?) button moves from the bottom-right FAB up next to the
              hamburger menu in the top-left, where help conventionally lives. */
           /* Help (?) sits next to the hamburger. position:absolute (NOT fixed) so
