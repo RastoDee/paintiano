@@ -1671,7 +1671,7 @@ function computeGrid(arg, opts){
     CW=N*BW;
     CH=Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
-  } else if(typeof window!=='undefined' && window.innerWidth>=769){
+  } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){
     // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as
     // mobile (square-ish blocks: BH = BW*PHI, CW = N*BW, CH = rows*BH). This is
     // what makes circles render as circles and the paint keep pace with the
@@ -1679,6 +1679,9 @@ function computeGrid(arg, opts){
     // of the full viewport, we cap it to the centre column of the three-column
     // grid (tools left ~180px, artists right ~180px, gaps + page padding). The
     // result is the identical painting, just sized to the middle lane.
+    // (portraitGrow bypasses this branch — see the mobile grow branch below —
+    //  so Lite live mic paints a tall portrait canvas on desktop too, instead of
+    //  a wide 900px frame that goes landscape when rows are few.)
     const vpW=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:960;
     const SIDE_W=180, GAPS=2*24, PAGE_PAD=56, SLACK=12;
     const paneW=Math.max(320, vpW - 2*SIDE_W - GAPS - PAGE_PAD - SLACK);
@@ -1697,7 +1700,10 @@ function computeGrid(arg, opts){
     // no matter how many columns N a piece has (e.g. a long AI-composed mood).
     // Height still grows with row count (the "grow canvas" behaviour).
     const vpL=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:540;
-    const targetCWL=Math.min(820,Math.max(320,vpL-32));
+    // portraitGrow (Lite live mic on desktop) caps the width to a portrait lane
+    // so the canvas stays tall — a wide viewport would otherwise make it landscape.
+    const _capW=(opts&&opts.portraitGrow)?560:820;
+    const targetCWL=Math.min(_capW,Math.max(320,vpL-32));
     // Fill the FULL target width: deriving CW = N*floor(targetCWL/N) lost up to
     // N px to rounding, which on long pieces (large N) visibly narrowed the
     // canvas on mobile. Keep BW fractional (segment math below rounds per-cell)

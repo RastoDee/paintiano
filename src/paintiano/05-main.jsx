@@ -2698,7 +2698,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cells || cells.length < chords.length){
         try{
           const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen')});
+          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), portraitGrow: basicModeRef.current});
           gridRef.current = fixed;
           setGrid(fixed);
         }catch(_){}
@@ -3077,7 +3077,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // In Lite, both voice and music capture use the grow-canvas (portrait) shape
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
-    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen});
+    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, portraitGrow: basicModeRef.current});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -4028,7 +4028,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(insertedCursor!=null){ selectedChordIdxRef.current=insertedCursor; setSelectedChordIdx(insertedCursor); }
     try{
       const evs=nextChords.map(c=>({durQ:c.durQ!=null?c.durQ:1}));
-      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true});
+      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true, portraitGrow: basicModeRef.current});
       gridRef.current=newGrid;
       if(!playingRef.current) setGrid(newGrid);
       // Pre-set the grid signature so the reactive [chords] effect recognizes
@@ -9636,10 +9636,14 @@ Composition rules:
     // ◆ Lite on desktop/tablet — the CTAs float over the canvas, so they fade
     //   after 2s of no pointer activity (snappy clean plate), revealed again on
     //   any move/tap. ◆ During playback / fullscreen everywhere else: 4s.
-    const liteFloat = basicMode && isDesktop;
+    // Auto-hide the floating CTAs only in Lite fullscreen on a tablet held in
+    // PORTRAIT (isNotPhone = tablet/desktop sized, !is5Col = not landscape).
+    // There the CTAs overlay the tall canvas, so they fade after 2s of no
+    // pointer activity (snappy clean plate) and reveal on any move/tap.
+    const liteFloat = basicMode && immersive && isNotPhone && !is5Col;
     if(liteFloat){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2000); }
     else if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 4000); }
-  },[playing,immersive,basicMode,isDesktop]);
+  },[playing,immersive,basicMode,isNotPhone,is5Col]);
   // When playback stops, reveal controls. Outside fullscreen they then stay put;
   // in fullscreen we re-arm the idle countdown so a finished, still piece also
   // fades its controls. Entering/leaving fullscreen re-evaluates this. Lite
@@ -9647,19 +9651,18 @@ Composition rules:
   useEffect(()=>{
     if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current);
     setControlsAwake(true);
-    if(playing || immersive || (basicMode && isDesktop)){ wakeControls(); }
+    if(playing || immersive || (basicMode && immersive && isNotPhone && !is5Col)){ wakeControls(); }
     return ()=>{ if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current); };
-  },[playing,immersive,basicMode,isDesktop,wakeControls]);
-  // Lite on desktop/tablet: any pointer movement / tap anywhere reveals the
-  // floating CTAs and re-arms their 2s idle fade (the CTAs sit off-canvas, so
-  // canvas-only listeners aren't enough). Mobile keeps its docked bar always on.
+  },[playing,immersive,basicMode,isNotPhone,is5Col,wakeControls]);
+  // Lite fullscreen on a tablet in portrait: any pointer move / tap reveals the
+  // floating CTAs and re-arms their 2s idle fade. Other layouts keep CTAs put.
   useEffect(()=>{
-    if(!(basicMode && isDesktop)) return;
+    if(!(basicMode && immersive && isNotPhone && !is5Col)) return;
     const wake=()=>wakeControls();
     window.addEventListener('pointermove',wake,{passive:true});
     window.addEventListener('pointerdown',wake,{passive:true});
     return ()=>{ window.removeEventListener('pointermove',wake); window.removeEventListener('pointerdown',wake); };
-  },[basicMode,isDesktop,wakeControls]);
+  },[basicMode,immersive,isNotPhone,is5Col,wakeControls]);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
@@ -13264,7 +13267,7 @@ Composition rules:
             </div>
           </div>
         )}
-        <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',top:96,right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+        <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',top:96,right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
           <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
           {!immersive && <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>}
