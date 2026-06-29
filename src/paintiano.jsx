@@ -27646,6 +27646,11 @@ Composition rules:
     // when busy clears because busy is in the deps. Do NOT lock here.
     if(busy) return;
     if(basicAutoPlayedRef.current) return;
+    // Mark the visitor as onboarded as soon as Lite is shown (independent of the
+    // audio gesture). This is what the Lite/Advanced persistence + Pro-default
+    // logic keys off — gating it behind the Play-chip unlock below meant the
+    // chosen mode wasn't remembered until the user tapped Play.
+    try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
     // First entry (audio not yet unlocked by a user gesture): do NOT autoplay —
     // the big Play chip on the empty canvas handles the first start (iOS needs
     // the gesture). Once audio has been unlocked once (the user tapped Play, or
@@ -27653,7 +27658,6 @@ Composition rules:
     // (music↔painting) and back auto-plays without re-tapping.
     if(!liteEverUnlockedRef.current) return;
     basicAutoPlayedRef.current = true;
-    try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
     const id=setTimeout(()=>{
       try{
         try{ setMuted(false); }catch(_){}
