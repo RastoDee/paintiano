@@ -2155,6 +2155,10 @@ export default function Paintiano() {
   const [liteImageMode, setLiteImageMode] = useState(false);
   const liteImageModeRef = useRef(false);
   const liteAwaitTapRef = useRef(false);
+  // Set true right when a Lite flavour flip starts; lets the auto-start wait
+  // longer (flip animation + audio-context settle) so the first note after a
+  // flip doesn't crackle. Cleared once the post-flip playback has started.
+  const liteFlipJustRef = useRef(false);
   const [liteFlip, setLiteFlip] = useState(false); // header 3D flip animation
   // First-run nudge so users discover the two Lite flavours. Three soft cues:
   // a one-time peek-flip teaser, a pulsing ⇋ glyph, and a "tap to flip" hint —
@@ -7776,6 +7780,10 @@ Composition rules:
       try{ setLiteAwaitTap(false); }catch(_){}            // image plays now — no splash
       try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
       try{ loadSampleImage(); }catch(_){}
+      // The flip hard-muted the master to kill the piano tail. Image flavour
+      // paints from a photo (no music auto-plays), so restore the master mute
+      // to the user's setting once the tail has died, otherwise it stays muted.
+      try{ const _wasFlip = liteFlipJustRef.current; liteFlipJustRef.current=false; if(_wasFlip){ setTimeout(()=>{ try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){} }, 650); } }catch(_){}
     } else {
       if(!_liteImgAppliedRef.current) return;
       _liteImgAppliedRef.current = false;
@@ -7926,7 +7934,8 @@ Composition rules:
     if(playing || holdPaused || busy || disp>0){ basicAutoStartedRef.current=true; return; }
     if(basicAutoStartedRef.current) return;
     basicAutoStartedRef.current = true;
-    const id=setTimeout(()=>{ try{ setMuted(false); }catch(_){} try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlay && startPlay(); }catch(__){} } }, 120);
+    const _flipDelay = liteFlipJustRef.current ? 650 : 120;
+    const id=setTimeout(()=>{ if(liteFlipJustRef.current){ try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){} } liteFlipJustRef.current=false; try{ setMuted(false); }catch(_){} try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlay && startPlay(); }catch(__){} } }, _flipDelay);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
@@ -10073,6 +10082,13 @@ Composition rules:
               // crackling through the 260 ms flip. The liteImageMode effect on the
               // other side then loads + plays from the start.
               try{ stopAll(); }catch(_){}
+              // Hard-mute the master output the instant the flip starts, so the
+              // piano's RELEASE TAIL (notes still ringing out after releaseAll)
+              // is silenced immediately instead of bleeding through the flip and
+              // crackling against the new flavour's first note. Unmuted again by
+              // the post-flip auto-start once the context has settled.
+              try{ Tone.getDestination().mute = true; }catch(_){}
+              liteFlipJustRef.current = true;
               if(!liteFlipSeen){ setLiteFlipSeen(true); try{ localStorage.setItem('paintiano_lite_flip_seen','1'); }catch(_){} }
               setLiteFlipTeaser(false);
               setLiteFlip(true);
@@ -10091,7 +10107,7 @@ Composition rules:
           </div>
           </div>
         )}
-        {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
+        {isPro && !basicMode && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
         {!isActiveView && !isDesktop && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
 
@@ -13176,7 +13192,7 @@ Composition rules:
                   })}
                 </div>
                 <div className="pf-setup-done-pal" style={{display:'none'}}>
-                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
+                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span>→</span></button>
                 </div>
               </div>
               <div className="pf-setup-tones">
@@ -13250,7 +13266,7 @@ Composition rules:
               )}
             </div>
             <div className="pf-setup-footer" style={{padding:'18px 20px 22px',borderTop:'1px solid rgba(255,255,255,.05)',display:'flex',justifyContent:'center',gap:8}}>
-              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span style={{marginLeft:8}}>→</span></button>
+              <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span>→</span></button>
             </div>
             <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{position:'absolute',right:14,bottom:12,display:'inline-flex',alignItems:'center',gap:4,padding:'5px 12px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.7)',background:'rgba(28,24,40,.55)',border:'1px solid rgba(201,168,76,.3)',fontSize:'.55rem',fontWeight:600}}>A<span style={{fontSize:(.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.5rem',opacity:.6}}>{readScale===1?'1×':readScale===1.25?'1¼':'1½'}</span></button>
           </div>
@@ -13270,12 +13286,23 @@ Composition rules:
         // is done, so it reads louder than the quiet Save/Pause btn but quieter
         // than the gold primary: a gold-tinted outline, not a filled gold.
         const secondary = {...btn,background:'rgba(220,180,90,.10)',color:'rgba(232,216,170,.95)',border:'1px solid rgba(220,180,90,.45)'};
+        // Hyper-modern CTA glyphs (thin stroke / solid, inherit button colour).
+        const _icoSize = Math.round(17*Math.max(.85,Math.min(1.15,effScale)));
+        const _icoShuffle = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}} aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>);
+        const _icoPlay = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="currentColor" style={{flexShrink:0}} aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>);
+        const _icoPause = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="currentColor" style={{flexShrink:0}} aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.4"/><rect x="14" y="5" width="4" height="14" rx="1.4"/></svg>);
+        const _icoSave = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}} aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>);
+        const _icoWave = (<svg width={Math.round(_icoSize*1.1)} height={_icoSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{flexShrink:0}} aria-hidden="true"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="6" x2="8" y2="18"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="16" y1="4" x2="16" y2="20"/><line x1="20" y1="10" x2="20" y2="14"/></svg>);
+        const _icoPic = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}} aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9" r="1.4"/><path d="M3 16.5l5-4 4 3 3-2.5 6 5"/></svg>);
+        const _icoFile = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}} aria-hidden="true"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>);
+        const _icoMic = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}} aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>);
+        const _icoSample = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}} aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="7" y1="5" x2="7" y2="14"/><line x1="11" y1="5" x2="11" y2="14"/><line x1="15" y1="5" x2="15" y2="14"/></svg>);
         const _haveArt = chords.length>0;
         const _done = _haveArt && !playing && disp>=chords.length;
-        const _midLabel = _done ? ('💾 '+ts('saveLabel','Save'))
-                                : (holdPaused ? ('▶ '+(t('resume')!=='resume'?t('resume'):'Resume'))
-                                              : (playing ? ('❚❚ '+(t('pause')!=='pause'?t('pause'):'Pause'))
-                                                         : ('▶ '+(t('play')!=='play'?t('play'):'Play'))));
+        const _midLabel = _done ? (<>{_icoSave}<span>{ts('saveLabel','Save')}</span></>)
+                                : (holdPaused ? (<>{_icoPlay}<span>{t('resume')!=='resume'?t('resume'):'Resume'}</span></>)
+                                              : (playing ? (<>{_icoPause}<span>{t('pause')!=='pause'?t('pause'):'Pause'}</span></>)
+                                                         : (<>{_icoPlay}<span>{t('play')!=='play'?t('play'):'Play'}</span></>)));
         const _midClick = ()=>{ if(_done){ if(liteImageMode){ try{ saveAudio(); }catch(_){} } else { try{ exportImage('web'); }catch(_){} } return; } try{ handlePauseClick(); }catch(_){} };
         const _capturing = micActive || recording;   // mic is actively listening/painting
         const _startMicLite = ()=>{
@@ -13323,16 +13350,16 @@ Composition rules:
           setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); }); }catch(_){} }, 120);
         };
         // Middle button: Stop while capturing, else Save (done) / Pause·Play.
-        const _midMicAware = _capturing ? ('■ '+ts('stopLabel','Stop')) : _midLabel;
+        const _midMicAware = _capturing ? (<>{_icoPause}<span>{ts('stopLabel','Stop')}</span></>) : _midLabel;
         const _midClickAware = ()=>{ if(_capturing){ _stopMicLite(); return; } _midClick(); };
         return (
         <>
         {liteSrcPicker && (
           <div onClick={()=>setLiteSrcPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:(basicMode&&isDesktop)?'transparent':'rgba(4,3,8,0.6)',backdropFilter:(basicMode&&isDesktop)?'none':'blur(4px)',WebkitBackdropFilter:(basicMode&&isDesktop)?'none':'blur(4px)',display:'flex',alignItems:(basicMode&&isDesktop)?'flex-start':'flex-end',justifyContent:(basicMode&&isDesktop)?'flex-start':'flex-end'}}>
             <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'column',alignItems:'stretch',gap:12,padding:'96px 0 0 24px',width:150}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))',minWidth:200}}>
-              <button onClick={_loadSampleLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎹 {ts('useMySongSample','Sample')}</button>
-              <button onClick={_openFileLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎵 {ts('useMySongFile','File')}</button>
-              <button onClick={_startMicLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎙 {ts('useMySongMic','Mic')}</button>
+              <button onClick={_loadSampleLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
+              <button onClick={_openFileLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
+              <button onClick={_startMicLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoMic}<span style={{marginLeft:7}}>{ts('useMySongMic','Mic')}</span></button>
             </div>
           </div>
         )}
@@ -13340,17 +13367,17 @@ Composition rules:
         {liteImgPicker && (
           <div onClick={()=>setLiteImgPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:(basicMode&&isDesktop)?'transparent':'rgba(4,3,8,0.6)',display:'flex',alignItems:(basicMode&&isDesktop)?'flex-start':'flex-end',justifyContent:'center',backdropFilter:(basicMode&&isDesktop)?'none':'blur(2px)'}}>
             <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'row',alignItems:'stretch',gap:12,padding:'96px 16px 0'}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,width:'100%',maxWidth:480,padding:'16px 16px 28px',background:'linear-gradient(180deg,rgba(20,17,28,.0),rgba(20,17,28,.96) 18%)',borderTopLeftRadius:22,borderTopRightRadius:22}}>
-              <button onClick={()=>{ setLiteImgPicker(false); try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🖼 {ts('useMySongSample','Sample')}</button>
-              <button onClick={()=>{ setLiteImgPicker(false); try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>🎵 {ts('useMySongFile','File')}</button>
+              <button onClick={()=>{ setLiteImgPicker(false); try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
+              <button onClick={()=>{ setLiteImgPicker(false); try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
             </div>
           </div>
         )}
         <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
-          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>}
+          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
           <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
           {!immersive && (liteImageMode
-            ? <button onClick={()=>setLiteImgPicker(true)} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🖼 {ts('useMyPicture','Use my picture')}</button>
-            : <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>)}
+            ? <button onClick={()=>setLiteImgPicker(true)} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
+            : <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
         </div>
         </>
         );
