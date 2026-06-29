@@ -3410,18 +3410,26 @@ function rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const base=_picChord(chords,0,gc,isBW).rgb;
+  // Song-aware baseline tint (35% lerp) — Rothko's late incandescent series
+  // glowed warm orange/red/yellow; we keep that fire but let each piece
+  // burn in its own colour. A magenta-rich song shifts the bands into hot
+  // pink-coral; a wandering Romantic piece into burnt sienna and rust.
+  const _tint = (!isBW && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
+  const _T = (b)=> (typeof _tintBaseline === 'function') ? _tintBaseline(b, _tint, 0.35) : b.slice();
+  const _bGnd   = _T([200, 70, 16]);
+  const _bField = _T([180, 60, 20]);
   // hot ground
-  ctx.fillStyle=isBW?'#8a8580':`rgb(${Math.min(255,200+base[0]*0.2)},${Math.round(70+base[1]*0.2)},${Math.round(16+base[2]*0.1)})`;ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle=isBW?'#8a8580':`rgb(${Math.min(255,_bGnd[0]+base[0]*0.2)},${Math.round(_bGnd[1]+base[1]*0.2)},${Math.round(_bGnd[2]+base[2]*0.1)})`;ctx.fillRect(0,0,CW,CH);
   const fields=Math.max(2,Math.min(4,Math.round(cn/30)));
   const vis=Math.max(1,Math.ceil(N/cn*fields));
   const marginX=CW*0.08,innerW=CW*0.84,innerY=CH*0.06,innerH=CH*0.88,gap=innerH*0.03;
   const availH=innerH-gap*(fields-1),fh=availH/fields;
   for(let i=0;i<vis;i++){
     const {rgb}=_picChord(chords,Math.floor(i*(cn/fields)),gc,isBW);
-    // push toward incandescent warm
-    const r=isBW?Math.round((rgb[0]+rgb[1]+rgb[2])/3):Math.min(255,Math.round(180+rgb[0]*0.3));
-    const g=isBW?r:Math.min(255,Math.round(60+rgb[1]*0.5));
-    const b=isBW?r:Math.round(20+rgb[2]*0.3);
+    // push toward incandescent warm, now song-tinted
+    const r=isBW?Math.round((rgb[0]+rgb[1]+rgb[2])/3):Math.min(255,Math.round(_bField[0]+rgb[0]*0.3));
+    const g=isBW?r:Math.min(255,Math.round(_bField[1]+rgb[1]*0.5));
+    const b=isBW?r:Math.round(_bField[2]+rgb[2]*0.3);
     _rothkoField(ctx,marginX,innerY+i*(fh+gap),innerW,fh,r,g,b,0.9);
   }
 }
@@ -6910,13 +6918,21 @@ function francisPhaseCluster(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
+  // Song-aware baseline tint (25% lerp — blue must stay dominant). The
+  // phase is named "Blue Balls" after a specific Francis painting, so the
+  // identity is the blue mass. Tint only nudges the baseline: an F-major
+  // piece picks up a teal-warm undertone, a magenta-rich synth-pop piece
+  // shifts toward indigo-violet — never away from "blue".
+  const _tint = (!isBW && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
+  const _T = (b)=> (typeof _tintBaseline === 'function') ? _tintBaseline(b, _tint, 0.25) : b.slice();
+  const _bBall = _T([0, 30, 120]);
   const balls=Math.max(5,Math.min(80,Math.round(cn*0.6)));
   const vis=Math.max(1,Math.ceil(N/cn*balls));
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+3900,ss,0,0);
     const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/balls)),gc,isBW);
-    // push blue
-    const r=isBW?rgb[0]:Math.round(rgb[0]*0.4),g=isBW?rgb[1]:Math.round(rgb[1]*0.5+30),b=isBW?rgb[2]:Math.min(255,Math.round(rgb[2]*0.6+120));
+    // push blue, now song-tinted at the baseline
+    const r=isBW?rgb[0]:Math.round(_bBall[0]+rgb[0]*0.4),g=isBW?rgb[1]:Math.round(_bBall[1]+rgb[1]*0.5),b=isBW?rgb[2]:Math.min(255,Math.round(_bBall[2]+rgb[2]*0.6));
     const x=rnd()*CW,y=rnd()*CH,R=Math.min(CW,CH)*(0.03+energy*0.07+rnd()*0.02);
     ctx.fillStyle=`rgba(${r},${g},${b},${(0.55+rnd()*0.3).toFixed(2)})`;
     ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
@@ -9144,21 +9160,39 @@ function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode)
   const N=Math.max(1, Math.min(cn, lim));
   const reveal=Math.max(0, Math.min(1, N/cn));
   const D=Math.min(CW, CH);
+  // Song-aware baseline tint (35% lerp toward the piece's top-pitch colour).
+  // Keeps Mitchell's sunflowers as sunflowers (yellow/orange petals, green
+  // stems, cream ground) but each song blooms in its own light: a synth-pop
+  // piece shifts the field to rose-mauve, a late Romantic one to bronze.
+  // Same seed → same composition; only the colour temperature changes.
+  const _tint = (!isBW && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
+  const _T = (b)=> (typeof _tintBaseline === 'function') ? _tintBaseline(b, _tint, 0.35) : b.slice();
+  const _bPetalY = _T([200, 160, 30]);
+  const _bPetalO = _T([200, 100, 30]);
+  const _bStem   = _T([40, 110, 50]);
+  const _bGndTop = _T([224, 212, 184]);   // #e0d4b8
+  const _bGndBot = _T([200, 168, 144]);   // #c8a890
   const _adjHex=(hex)=>{
     let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
     if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
     if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
     return `rgb(${r},${g},${b})`;
   };
+  const _adjRGB=(arr)=>{
+    let r=arr[0]|0, g=arr[1]|0, b=arr[2]|0;
+    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+    return `rgb(${r|0},${g|0},${b|0})`;
+  };
   if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  // Warm cream-pink ground gradient.
+  // Warm cream-pink ground gradient — song-tinted in colour mode.
   const grad=ctx.createLinearGradient(0,0,0,CH);
   if(isBW){
     grad.addColorStop(0, _adjHex('#d8d0bc'));
     grad.addColorStop(1, _adjHex('#bcb098'));
   } else {
-    grad.addColorStop(0, _adjHex('#e0d4b8'));
-    grad.addColorStop(1, _adjHex('#c8a890'));
+    grad.addColorStop(0, _adjRGB(_bGndTop));
+    grad.addColorStop(1, _adjRGB(_bGndBot));
   }
   ctx.fillStyle=grad;
   ctx.fillRect(0,0,CW,CH);
@@ -9177,7 +9211,7 @@ function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode)
     const {rgb}=_picChord(chords, i%cn, gc, isBW);
     const stemCol=isBW
       ? [60+rgb[0]*0.2, 90+rgb[1]*0.2, 50+rgb[2]*0.2]
-      : [40+rgb[0]*0.2, 110+rgb[1]*0.3, 50+rgb[2]*0.2];
+      : [_bStem[0]+rgb[0]*0.2, _bStem[1]+rgb[1]*0.3, _bStem[2]+rgb[2]*0.2];
     // Multi-layer stem.
     for(let layer=0; layer<3; layer++){
       const lr=_seedRnd(i*30+layer+9510, ss, 0, 0); lr();
@@ -9206,8 +9240,8 @@ function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode)
     const flowerCol=isBW
       ? [180+rgb[0]*0.2, 160+rgb[1]*0.2, 120+rgb[2]*0.1]
       : (fr()<0.5
-          ? [200+rgb[0]*0.15, 160+rgb[1]*0.20, 30+rgb[2]*0.1]
-          : [200+rgb[0]*0.10, 100+rgb[1]*0.15, 30+rgb[2]*0.1]);
+          ? [_bPetalY[0]+rgb[0]*0.15, _bPetalY[1]+rgb[1]*0.20, _bPetalY[2]+rgb[2]*0.1]
+          : [_bPetalO[0]+rgb[0]*0.10, _bPetalO[1]+rgb[1]*0.15, _bPetalO[2]+rgb[2]*0.1]);
     const fsize=D*(0.06 + fr()*0.05);
     const petals=8 + Math.floor(fr()*6);
     for(let p=0; p<petals; p++){
@@ -11536,6 +11570,38 @@ function _songTopPitches(chords, N){
   // Return mid-octave MIDI anchors (C4-based) so gc() routes through the
   // active mode the same way the original fixed-pitch sampling did.
   return order.slice(0, Math.max(1, N|0)).map(pc => 60 + pc);
+}
+
+// ── Song tint for hardcoded baseline palettes ────────────────────────────────
+// Returns [r,g,b] = gc() sampled at the song's TOP pitch class, or null.
+// Used by signature artist phases (Mitchell Sunflower, Sam Francis Blue Balls,
+// Rothko Incandescent, etc.) where the hardcoded baseline colour IS the
+// painting's identity — but the identity should bend to the piece, not stay
+// frozen across every song. The tint moves the baseline part-way (15..40%)
+// toward the song's loudest pitch colour so a synth-pop sunflower blooms in
+// rose-mauve while a late Romantic one bronzes — same flowers, different light.
+function _songTint(chords, gc){
+  if(!chords || !chords.length || typeof gc !== 'function') return null;
+  const tops = _songTopPitches(chords, 1);
+  if(!tops || !tops.length) return null;
+  const c = gc(tops[0], 100);
+  if(!Array.isArray(c)) return null;
+  return [c[0]|0, c[1]|0, c[2]|0];
+}
+
+// Lerp a hardcoded [r,g,b] baseline toward the song tint by `strength` (0..1).
+// Strength tunes per-phase: identity-strong phases (Blue Balls must stay blue)
+// use 0.20..0.25; open phases (Sunflower can bend more) use 0.30..0.40.
+// Returns [r,g,b] (clamped 0..255). Falls back to the baseline when no tint.
+function _tintBaseline(baseline, tint, strength){
+  if(!tint || !baseline) return baseline ? baseline.slice() : baseline;
+  const k = Math.max(0, Math.min(1, strength));
+  const mk = 1 - k;
+  return [
+    Math.max(0, Math.min(255, baseline[0]*mk + tint[0]*k))|0,
+    Math.max(0, Math.min(255, baseline[1]*mk + tint[1]*k))|0,
+    Math.max(0, Math.min(255, baseline[2]*mk + tint[2]*k))|0,
+  ];
 }
 
 function _miroPal(isBW, gc, chords){
