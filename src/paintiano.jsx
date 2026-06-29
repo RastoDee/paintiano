@@ -29450,7 +29450,7 @@ Composition rules:
         })()}
       </div>
       <header style={{textAlign:'center',marginBottom:(basicMode&&isActiveView)?2:(isActiveView?8:(isDesktop?8:18))}}>
-        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(basicMode&&isActiveView)?(isDesktop?'clamp(1.5rem,3vw,2rem)':'clamp(1.8rem,7vw,2.3rem)'):(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)'),fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(basicMode&&isActiveView)?(isDesktop?'clamp(1.8rem,4vw,2.5rem)':'clamp(2.2rem,9vw,3rem)'):(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)'),fontWeight:600,letterSpacing:'.03em',margin:(basicMode&&isActiveView)?'0 0 0':'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
         {basicMode && (
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
           <div
@@ -29466,7 +29466,7 @@ Composition rules:
             }}
             role="button"
             title={liteImageMode ? 'painting → music' : 'music → painting'}
-            style={{display:'inline-flex',alignItems:'center',gap:8,margin:'2px auto 0',cursor:'pointer',padding:'4px 12px',borderRadius:999,
+            style={{display:'inline-flex',alignItems:'center',gap:8,margin:'0 auto 0',cursor:'pointer',padding:'4px 12px',borderRadius:999,
               transform:(liteFlip||liteFlipTeaser)?'rotateY(90deg)':'rotateY(0deg)',
               transformOrigin:'center center',WebkitTapHighlightColor:'transparent',userSelect:'none',
               transition:'transform .26s ease'}}>
