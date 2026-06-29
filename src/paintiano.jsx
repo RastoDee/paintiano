@@ -27172,7 +27172,9 @@ Composition rules:
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
         // audio + paint together (basicTapUnlock), instead of painting silently.
-        if(!basicTapUnlockedRef.current) setLiteAwaitTap(true);
+        // Desktop browsers don't gate audio the same way (and the splash there
+        // just covers a canvas that's already painting), so skip it on desktop.
+        if(!basicTapUnlockedRef.current && !isDesktop) setLiteAwaitTap(true);
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
@@ -29070,7 +29072,7 @@ Composition rules:
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
-      {basicMode && liteAwaitTap && !showIntro && (
+      {basicMode && liteAwaitTap && !isDesktop && !showIntro && (
         <div onPointerDown={basicTapUnlock} role="button" aria-label={ts('tapToBegin','Tap to begin')} style={{position:'fixed',inset:0,zIndex:90000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18,cursor:'pointer',background:'rgba(6,5,12,0.82)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',WebkitTapHighlightColor:'transparent'}}>
           <div className="pf-breathe" style={{width:74,height:74,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(220,180,90,.55)',background:'rgba(220,180,90,.08)',boxShadow:'0 0 40px rgba(220,180,90,.25)'}}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="rgba(220,180,90,.95)" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
