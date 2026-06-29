@@ -896,19 +896,19 @@ const PF_STYLE = `
             padding: 14px 24px 28px !important;
             gap: 0 !important;
           }
-          .pf-app-root.pf-mode-lite > .pf-stage-part {
+          .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-stage-part {
             margin-top: 4px !important;
             align-self: center !important;
             max-width: calc(100vw - 420px) !important;
             width: 100% !important;
           }
-          .pf-app-root.pf-mode-lite > .pf-stage-part > canvas {
+          .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-stage-part > canvas {
             max-width: 100% !important;
             width: 100% !important;
             height: auto !important;
           }
           /* Seek/title row spans the same width as the canvas. */
-          .pf-app-root.pf-mode-lite > .pf-seek-block {
+          .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-seek-block {
             max-width: calc(100vw - 420px) !important;
             margin: 0 auto 8px !important;
           }
