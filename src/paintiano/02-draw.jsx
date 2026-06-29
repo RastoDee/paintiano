@@ -10854,37 +10854,60 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
 // Bauhaus-era "free abstract" Kandinsky. Progressive reveal via chordCount. ──
 function kandinskyPhaseFloat(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
   const ss = sessionSeed|0, isBW = mode==='bw';
-  const ink = isBW ? '#1a1a1a' : '#14141c';
-  // single tinted ground (a calm field, from the first chord's colour, muted)
-  const g = _kandPickCol(0, 1, chords, gc, palette);
-  if(isBW){ ctx.fillStyle = '#ece8e0'; }
-  else { ctx.fillStyle = `rgb(${Math.min(255,(g[0]*0.4+150))|0},${Math.min(255,(g[1]*0.4+150))|0},${Math.min(255,(g[2]*0.4+150))|0})`; }
+  const cn = chords ? chords.length : 0;
+  // Local colour helper that ALWAYS returns an [r,g,b] array for chord i.
+  const colAt = (i)=>{
+    if(typeof gc!=='function' || !cn){ return [180,180,190]; }
+    const idx = Math.min(cn-1, Math.max(0, ((i%cn)+cn)%cn));
+    const ch = chords[idx];
+    _setCurE(ch && ch._E);
+    const notes = ch && (ch.n || ch.notes);
+    if(!notes || !notes.length) return [180,180,190];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){ const m=note.m!==undefined?note.m:note; const v=note.v!==undefined?note.v:90; const cc=gc(m,v); R+=cc[0]; G+=cc[1]; B+=cc[2]; c++; }
+    return [R/c, G/c, B/c];
+  };
+  // ── Dark (not black) ground, tinted by the piece. Take the average chord
+  //    colour and pull it down into a deep — but coloured — backdrop so the
+  //    field reads as "in tune" with the music, distinct from the cream and
+  //    pure-black grounds other phases use. ──
+  let gr=[40,38,52];
+  if(!isBW && cn){
+    let R=0,G=0,B=0; const steps=Math.min(cn,8);
+    for(let i=0;i<steps;i++){ const c=colAt(Math.floor(i*cn/steps)); R+=c[0]; G+=c[1]; B+=c[2]; }
+    R/=steps; G/=steps; B/=steps;
+    // deepen: scale toward dark, keep hue, floor so it's never pure black
+    gr = [Math.max(18, R*0.32), Math.max(16, G*0.32), Math.max(24, B*0.34)];
+  } else if(isBW){ gr=[34,34,34]; }
+  ctx.fillStyle = `rgb(${gr[0]|0},${gr[1]|0},${gr[2]|0})`;
   ctx.fillRect(0,0,CW,CH);
+
   const minD = Math.min(CW,CH);
-  const p = Math.max(0, Math.min(1, chordCount / 200));
-  const N = Math.max(4, Math.round(p * 26));
-  // floating shapes: circles, squares, triangles, rings, half-discs
+  const p = Math.max(0.25, Math.min(1, chordCount / 200));
+  const N = Math.max(8, Math.round(p * 30));
+  // brighten a chord colour so shapes pop on the dark ground
+  const lift = (c, amt)=> `rgb(${Math.min(255,c[0]+amt)|0},${Math.min(255,c[1]+amt)|0},${Math.min(255,c[2]+amt)|0})`;
   for(let i=0;i<N;i++){
     const r = _seedRnd(3300+i, ss, 0, 0);
-    const x = r()*CW, y = r()*CH, s = minD*(0.05 + r()*0.16);
-    const col = _kandPickCol(i, N, chords, gc, palette);
+    const x = r()*CW, y = r()*CH, s = minD*(0.05 + r()*0.17);
+    const base = colAt(i);
+    const col = isBW ? 'rgb(230,230,230)' : lift(base, 70);
     const k = Math.floor(r()*5);
     ctx.save();
-    ctx.fillStyle = `rgb(${col[0]|0},${col[1]|0},${col[2]|0})`;
-    ctx.strokeStyle = `rgb(${col[0]|0},${col[1]|0},${col[2]|0})`;
+    ctx.fillStyle = col; ctx.strokeStyle = col;
     if(k===0){ ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.fill(); }
     else if(k===1){ ctx.fillRect(x-s/2,y-s/2,s,s); }
     else if(k===2){ const rot=r()*Math.PI*2; ctx.beginPath(); for(let t=0;t<3;t++){ const a=rot+t*2.094; ctx[t?'lineTo':'moveTo'](x+Math.cos(a)*s*0.6, y+Math.sin(a)*s*0.6); } ctx.closePath(); ctx.fill(); }
-    else if(k===3){ ctx.lineWidth=Math.max(2,s*0.16); ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.stroke(); }
+    else if(k===3){ ctx.lineWidth=Math.max(2.5,s*0.18); ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.stroke(); }
     else { const rot=r()*Math.PI*2; ctx.beginPath(); ctx.arc(x,y,s/2,rot,rot+Math.PI); ctx.closePath(); ctx.fill(); }
     ctx.restore();
   }
-  // a few thin construction lines crossing the field
-  ctx.strokeStyle = ink;
+  // a few thin construction lines crossing the field (light, low opacity)
+  ctx.strokeStyle = isBW ? 'rgba(220,220,220,0.5)' : 'rgba(235,230,210,0.45)';
   const NL = Math.max(2, Math.round(p*5));
   for(let i=0;i<NL;i++){
     const r = _seedRnd(3400+i, ss, 0, 0);
-    ctx.lineWidth = 1 + r()*2.4;
+    ctx.lineWidth = 1 + r()*2.2;
     ctx.beginPath();
     ctx.moveTo(r()*CW, r()*CH);
     ctx.lineTo(r()*CW, r()*CH);
