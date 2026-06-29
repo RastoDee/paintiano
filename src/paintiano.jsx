@@ -46,6 +46,17 @@ const PF_STYLE = `
            100% = no change to desktop; just disables automatic text scaling. */
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
+        @keyframes pf-artist-glow {
+          0%   { opacity:.4; text-shadow:0 0 0 rgba(240,192,64,0); }
+          35%  { opacity:1;  text-shadow:0 0 12px rgba(240,192,64,.6); }
+          100% { opacity:1;  text-shadow:0 0 0 rgba(240,192,64,0); }
+        }
+        .pf-artist-glow { animation: pf-artist-glow .55s ease both; }
+        @keyframes pf-breathe {
+          0%,100% { transform:scale(1);    box-shadow:0 0 0 0 rgba(220,180,90,.30); }
+          50%     { transform:scale(1.06); box-shadow:0 0 0 12px rgba(220,180,90,0); }
+        }
+        .pf-breathe { animation: pf-breathe 2.4s ease-in-out infinite; }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
         .pf-setup-stage { display: none; }
         .pf-tool { transition: all .18s; }
@@ -28994,7 +29005,7 @@ Composition rules:
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {basicMode && liteAwaitTap && !showIntro && (
         <div onPointerDown={basicTapUnlock} role="button" aria-label={ts('tapToBegin','Tap to begin')} style={{position:'fixed',inset:0,zIndex:90000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18,cursor:'pointer',background:'rgba(6,5,12,0.82)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',WebkitTapHighlightColor:'transparent'}}>
-          <div style={{width:74,height:74,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(220,180,90,.55)',background:'rgba(220,180,90,.08)',boxShadow:'0 0 40px rgba(220,180,90,.25)'}}>
+          <div className="pf-breathe" style={{width:74,height:74,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(220,180,90,.55)',background:'rgba(220,180,90,.08)',boxShadow:'0 0 40px rgba(220,180,90,.25)'}}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="rgba(220,180,90,.95)" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
           </div>
           <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(1.5*effScale)+'rem',fontStyle:'italic',letterSpacing:'.04em',color:'rgba(230,205,140,.95)'}}>{ts('tapToBegin','Tap to begin')}</div>
@@ -30644,14 +30655,25 @@ Composition rules:
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
             {basicMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
-              <span style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
+              <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
             {basicMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='oneM' || !STYLE_INSPIRED[effectiveStyle]) && (
-              <span style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>Mosaic</span>
+              <span key="insp-mosaic" className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>Mosaic</span>
             )}
           </div>
+          {basicMode && chords.length>0 && (()=>{
+            const _last = chords[chords.length-1];
+            const _totMs = (_last?.startMs||0) + ((_last?.n&&_last.n[0]&&_last.n[0].durMs)||500);
+            const _curMs = chords[Math.min(disp,chords.length-1)]?.startMs || 0;
+            const _fmt = (ms)=>{ const s=Math.max(0,Math.round(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+            return (
+              <div style={{display:'flex',justifyContent:'flex-end',fontSize:(.52*effScale)+'rem',letterSpacing:'.06em',color:'rgba(201,168,76,.55)',fontVariantNumeric:'tabular-nums',marginBottom:4}}>
+                {_fmt(_curMs)} / {_fmt(_totMs)}
+              </div>
+            );
+          })()}
           {(viewMode!=='image' || !(recording||!!recBlob)) && (
           <div
             role="slider"
@@ -30923,7 +30945,7 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none',transition:'opacity .25s ease'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined}:{})}}/>
+        <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((basicMode&&!immersive)?{borderRadius:14,boxShadow:'0 10px 40px rgba(0,0,0,.45)',outline:'1px solid rgba(201,168,76,.18)',outlineOffset:'-1px'}:{}),...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
@@ -32479,6 +32501,10 @@ Composition rules:
       {basicMode && !showIntro && (()=>{
         const btn = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'13px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'};
         const primary = {...btn,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
+        // Secondary accent — "Use my song" is the main next-step once a painting
+        // is done, so it reads louder than the quiet Save/Pause btn but quieter
+        // than the gold primary: a gold-tinted outline, not a filled gold.
+        const secondary = {...btn,background:'rgba(220,180,90,.10)',color:'rgba(232,216,170,.95)',border:'1px solid rgba(220,180,90,.45)'};
         const _haveArt = chords.length>0;
         const _done = _haveArt && !playing && disp>=chords.length;
         const _midLabel = _done ? ('💾 '+ts('saveLabel','Save'))
@@ -32537,7 +32563,7 @@ Composition rules:
         <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',top:96,right:24,zIndex:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
           <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
-          <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>
+          <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...secondary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>
         </div>
         </>
         );

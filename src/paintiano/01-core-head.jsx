@@ -46,6 +46,17 @@ const PF_STYLE = `
            100% = no change to desktop; just disables automatic text scaling. */
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
+        @keyframes pf-artist-glow {
+          0%   { opacity:.4; text-shadow:0 0 0 rgba(240,192,64,0); }
+          35%  { opacity:1;  text-shadow:0 0 12px rgba(240,192,64,.6); }
+          100% { opacity:1;  text-shadow:0 0 0 rgba(240,192,64,0); }
+        }
+        .pf-artist-glow { animation: pf-artist-glow .55s ease both; }
+        @keyframes pf-breathe {
+          0%,100% { transform:scale(1);    box-shadow:0 0 0 0 rgba(220,180,90,.30); }
+          50%     { transform:scale(1.06); box-shadow:0 0 0 12px rgba(220,180,90,0); }
+        }
+        .pf-breathe { animation: pf-breathe 2.4s ease-in-out infinite; }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
         .pf-setup-stage { display: none; }
         .pf-tool { transition: all .18s; }
