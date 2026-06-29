@@ -388,7 +388,7 @@ const PF_STYLE = `
           .pf-app-root > header > div { margin: 0 !important; display: inline-flex !important; align-items: center; transform: scale(.82); transform-origin: left center; }
           /* Lite (basicMode): stack flip subtitle UNDER the title, re-enable
              pointer events so the flip toggle is clickable on desktop. */
-          .pf-app-root.pf-mode-lite > header { flex-direction: column !important; pointer-events: auto !important; gap: 2px !important; }
+          .pf-app-root.pf-mode-lite > header { flex-direction: column !important; align-items: center !important; justify-self: stretch !important; width: 100% !important; text-align: center !important; pointer-events: auto !important; gap: 2px !important; }
           .pf-app-root.pf-mode-lite > header > div { pointer-events: auto !important; }
           /* Help (?) button moves from the bottom-right FAB up next to the
              hamburger menu in the top-left, where help conventionally lives. */

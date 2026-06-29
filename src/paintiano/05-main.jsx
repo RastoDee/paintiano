@@ -13342,7 +13342,7 @@ Composition rules:
                                                          : (<>{_icoPlay}<span>{t('play')!=='play'?t('play'):'Play'}</span></>)));
         const _midClick = ()=>{
           if(_liteImgRecording){ try{ stopRecord(); }catch(_){} return; }
-          if(_liteImgHasRec){ try{ if(recBlob){ const f=new File([recBlob],recName||'paintiano.m4a',{type:recBlob.type||'audio/mp4'}); if(navigator.share && (!navigator.canShare||navigator.canShare({files:[f]}))){ navigator.share({files:[f],title:'Paintiano audio'}).catch(()=>{}); } else { const u=URL.createObjectURL(recBlob); const a=document.createElement('a'); a.href=u; a.download=recName||'paintiano.m4a'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>{try{URL.revokeObjectURL(u);}catch(_){}} ,10000); } } }catch(_){} return; }
+          if(_liteImgHasRec){ try{ if(recBlob){ const f=new File([recBlob],recName||'paintiano.m4a',{type:recBlob.type||'audio/mp4'}); const _dl=()=>{ try{ const u=URL.createObjectURL(recBlob); const a=document.createElement('a'); a.href=u; a.download=recName||'paintiano.m4a'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>{try{URL.revokeObjectURL(u);}catch(_){}} ,10000); }catch(_){} }; if(navigator.share && navigator.canShare && navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'Paintiano audio'}).catch(()=>{ _dl(); }); } else { _dl(); } } }catch(_){} return; }
           if(_done){ if(liteImageMode){ /* handled above */ } else { try{ exportImage('web'); }catch(_){} } return; }
           try{ handlePauseClick(); }catch(_){}
         };
