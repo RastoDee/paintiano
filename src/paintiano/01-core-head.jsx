@@ -866,6 +866,24 @@ const PF_STYLE = `
             max-width: 100% !important;
             justify-self: center !important;
           }
+          /* Lite live mic/compose keeps the portrait canvas (Advanced uses the
+             wide landscape layout above; Lite must not). Higher specificity +
+             these caps hold the canvas tall and centred on desktop/tablet. */
+          .pf-app-root.pf-mode-lite.pf-mode-live > .pf-stage-part {
+            align-self: center !important;
+            justify-self: center !important;
+            width: auto !important;
+            max-width: 100% !important;
+            max-height: calc(100vh - 200px) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+          }
+          .pf-app-root.pf-mode-lite.pf-mode-live > .pf-stage-part > canvas {
+            width: auto !important;
+            height: auto !important;
+            max-width: 100% !important;
+            max-height: calc(100vh - 200px) !important;
+          }
           .pf-mode-live > .pf-stage-part > canvas {
             max-height: calc(100vh - 230px) !important;
             max-width: 100% !important;
