@@ -33066,7 +33066,7 @@ Composition rules:
                                 : (holdPaused ? (<>{_icoPlay}<span>{t('resume')!=='resume'?t('resume'):'Resume'}</span></>)
                                               : (playing ? (<>{_icoPause}<span>{t('pause')!=='pause'?t('pause'):'Pause'}</span></>)
                                                          : (<>{_icoPlay}<span>{t('play')!=='play'?t('play'):'Play'}</span></>)));
-        const _midClick = ()=>{ if(_done){ if(liteImageMode){ try{ if(!savingRef.current){ setRecordIntent('audio'); startRecord(); } }catch(_){} } else { try{ exportImage('web'); }catch(_){} } return; } try{ handlePauseClick(); }catch(_){} };
+        const _midClick = ()=>{ if(_done){ if(liteImageMode){ try{ saveAudio(false); }catch(_){} } else { try{ exportImage('web'); }catch(_){} } return; } try{ handlePauseClick(); }catch(_){} };
         const _capturing = micActive || recording;   // mic is actively listening/painting
         const _startMicLite = ()=>{
           setLiteSrcPicker(false);
