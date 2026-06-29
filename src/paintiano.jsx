@@ -26315,6 +26315,12 @@ Composition rules:
           setMelodyOn(false);setMelodyData(null);
           setLoadedSource('image');
           setPickMode(null);
+          // Lite image mode (painting → music): start playing immediately so it
+          // behaves like the music flavour's Liszt auto-play — no manual Play tap.
+          if(basicModeRef.current && liteImageModeRef.current){
+            try{ setMuted(false); }catch(_){}
+            setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlayRef.current?.(); }catch(__){} } }, 160);
+          }
         }catch(e){if(loadTokenRef.current===myToken){setErr('Image: '+e.message);setErrInfo(false);}}
       };
       img.src=evt.target.result;
@@ -27174,6 +27180,10 @@ Composition rules:
       _liteImgAppliedRef.current = false;
       try{ stopAll(); }catch(_){}
       try{ fullClear && fullClear(); }catch(_){}
+      // Audio is already unlocked from the first entry, so coming back to music
+      // must NOT show the "Tap to begin" splash again (its tap handler no-ops on
+      // the 2nd visit). Clear it and let basicAutoPlay reload + play Liszt.
+      try{ setLiteAwaitTap(false); }catch(_){}
       try{ basicAutoPlayedRef.current=false; }catch(_){}
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -29167,7 +29177,7 @@ Composition rules:
   const isSetupView = !isActiveView;
 
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':'12px 16px 220px')),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode&&liteImageMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {basicMode && liteAwaitTap && !isDesktop && !showIntro && (
@@ -29401,7 +29411,7 @@ Composition rules:
           );
         })()}
       </div>
-      <header style={{textAlign:'center',marginBottom:isActiveView?8:(isDesktop?8:18)}}>
+      <header style={{textAlign:'center',marginBottom:(basicMode&&liteImageMode)?2:(isActiveView?8:(isDesktop?8:18))}}>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)',fontWeight:600,letterSpacing:'.03em',margin:'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
         {basicMode && (
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
@@ -29428,11 +29438,6 @@ Composition rules:
             </span>
             <span aria-hidden="true" style={{fontSize:'.7rem',color:'rgba(220,180,90,.7)',display:'inline-block',animation:(!liteFlipSeen)?'pf-flip-nudge 1.7s ease-in-out infinite':'none'}}>⇋</span>
           </div>
-          {!liteFlipSeen && (
-            <div style={{fontFamily:"'Outfit',sans-serif",fontSize:isDesktop?'.6rem':'.64rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(220,180,90,.45)',marginTop:1}}>
-              {ts('tapToFlip','tap to flip')}
-            </div>
-          )}
           </div>
         )}
         {isPro && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
