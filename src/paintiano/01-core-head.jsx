@@ -426,6 +426,7 @@ const PF_STYLE = `
              the strip stays a normal stacked column there. */
           .pf-app-root > .pf-panel-part { display: contents !important; }
           .pf-app-root .pf-strip-grid { display: contents !important; }
+          .pf-app-root .pf-inspired-label { text-align: left !important; padding-right: 32px !important; }
           .pf-app-root .pf-colors-inner {
             grid-area: colors;
             align-self: start;

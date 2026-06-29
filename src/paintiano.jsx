@@ -426,6 +426,7 @@ const PF_STYLE = `
              the strip stays a normal stacked column there. */
           .pf-app-root > .pf-panel-part { display: contents !important; }
           .pf-app-root .pf-strip-grid { display: contents !important; }
+          .pf-app-root .pf-inspired-label { text-align: left !important; padding-right: 32px !important; }
           .pf-app-root .pf-colors-inner {
             grid-area: colors;
             align-self: start;
@@ -30635,7 +30636,7 @@ Composition rules:
           </>)}
           {!isMobilePortrait && (setupTones.length>=2 || cockpitEdit) && (
           <div style={{marginTop:10,marginBottom:2}}>
-            <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
+            <div className="pf-inspired-label" style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none',marginBottom:6}}>{({EN:'tone',SK:'tón',DE:'ton',FR:'tonalité',ES:'tono',PT:'tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'tone'}</div>
             {(()=>{
               const allTones = [
                 {k:'pure',   label:({EN:'Pure',SK:'Čistý',DE:'Pur',FR:'Pur',ES:'Puro',PT:'Puro',zh:'纯净',zhTW:'純淨',ja:'ピュア'})[lang]||'Pure'},
