@@ -10767,7 +10767,7 @@ Composition rules:
                     if(canvasRef.current){canvasRef.current.style.opacity='0';}
                     kontraAutoRef.current=false;   // manual palette tap → kontra (if chosen) is now deliberate
                     setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:(dis&&!cockpitEdit)?0.32:1,whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _inSet : (mode===m)))}}>
+                  }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:(dis&&!cockpitEdit)?0.32:1,whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
                     <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                       <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                       {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
@@ -10865,7 +10865,7 @@ Composition rules:
                 if(canvasRef.current){canvasRef.current.style.opacity='0';}
                 kontraAutoRef.current=false;   // manual palette choice → deliberate
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
-              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _inSet : (mode===m)))}}>
+              }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                   <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                   {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
@@ -10971,7 +10971,7 @@ Composition rules:
             //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _familyOn = setupArtists.includes('mosaicFamily');
             // Un-paired: count individual artist chips actually shown.
-            const _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : setupArtists.includes(k));
+            const _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k)));
             const _chipCount = ((_familyOn || cockpitEdit)?1:0) + _visibleArtists.length;
             // Column count: keep tiles readable. Up to 5 across (so the full
             // 20-chip edit grid lays out as a tidy 5×4). Fewer chips → fewer cols.
@@ -10987,6 +10987,17 @@ Composition rules:
               }
             })();
             const _cols = _baseCols;
+            // Single chip in non-edit → show the name as plain text (no chip),
+            // exactly like a single palette. Nothing to switch between.
+            if(_chipCount===1 && !cockpitEdit){
+              const _soloKey = _visibleArtists.length===1 ? _visibleArtists[0] : 'mosaicFamily';
+              const _soloName = _soloKey==='mosaicFamily'
+                ? t('mosaicStyle')
+                : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; const _f=STYLE_INSPIRED[_soloKey]||_soloKey; return _as[_f]||_f; })();
+              return (
+                <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:PF.cream}}>{_soloName}</div>
+              );
+            }
             return (
           <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
@@ -11046,7 +11057,7 @@ Composition rules:
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
                 them opens the paywall instead of selecting. Edit mode: tap toggles
                 membership in setupArtists. ── */}
-            {ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : setupArtists.includes(k)).map((k)=>{
+            {ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k))).map((k)=>{
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'};
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
@@ -11060,7 +11071,6 @@ Composition rules:
                   toggleArtSafe(k);
                   return;
                 }
-                if(locked){ setPaywallReason('settings'); return; }
                 selectStyle(k);
               };
               return (
@@ -11068,9 +11078,9 @@ Composition rules:
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
-                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&!cockpitEdit)?0.5:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? inSet : isOn)),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {label}
-                  {locked && !cockpitEdit && (
+                  {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
                 </button>
@@ -11133,7 +11143,7 @@ Composition rules:
                   const _inSet = setupTones.includes(o.k);
                   const _ghost = cockpitEdit && !_inSet;
                   return (
-                  <button key={o.k} onClick={()=>{ if(cockpitEdit){ toggleToneSafe(o.k); return; } setTone(o.k); }} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? _inSet : sel))}}>{o.label}</button>
+                  <button key={o.k} onClick={()=>{ if(cockpitEdit){ toggleToneSafe(o.k); return; } setTone(o.k); }} style={{padding:'8px 0',textAlign:'center',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && sel) ? {background:'transparent',border:'1px solid rgba(242,238,232,.55)',color:PF.cream,boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>{o.label}</button>
                   );
                 })}
               </div>
