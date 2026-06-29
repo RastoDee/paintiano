@@ -1661,6 +1661,7 @@ function computeGrid(arg, opts){
   const totalQ=evs.reduce((s,e,i)=>s+_effDurQ(i),0);
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
+  const _portrait = !!(opts && opts.portraitGrow);
   const N0=Math.max(2,Math.ceil(Math.sqrt(totalQ)));
   let bestN=N0, bestScore=-1;
   for(let dn=-1; dn<=2; dn++){
@@ -1675,8 +1676,8 @@ function computeGrid(arg, opts){
   // Uniform global scale so the totals fill exactly N*rows width-units.
   // Every block keeps the SAME unit width across the canvas (no per-row stretching).
   const scale=(N*rows)/totalQ;
-  let BW, BH, CW, CH;
-  if(liveMode){
+  let BW, BH, CW, CH, _branch='?';
+  if(liveMode){ _branch='live';
     // LIVE-MODE FIXED CANVAS FRAME — compose / sing / listen.
     // Width AND height stay constant regardless of chord count. Width chosen
     // by viewport (a bit larger than non-live modes since compose paintings
@@ -1689,7 +1690,7 @@ function computeGrid(arg, opts){
     CW=N*BW;
     CH=Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
-  } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){
+  } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){ _branch='desktop';
     // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as
     // mobile (square-ish blocks: BH = BW*PHI, CW = N*BW, CH = rows*BH). This is
     // what makes circles render as circles and the paint keep pace with the
@@ -1708,7 +1709,7 @@ function computeGrid(arg, opts){
     BH=Math.round(BW*PHI);
     CW=N*BW;
     CH=rows*BH;
-  } else {
+  } else { _branch='mobile';
     // LOADED-MODE GROW CANVAS — MIDI / audio / score / image / mood (MOBILE).
     // Block height = BW * PHI (golden ratio per block), canvas height grows
     // with row count. This is the original behavior pre-treemap experiment;
@@ -1781,7 +1782,7 @@ function computeGrid(arg, opts){
     const lastSeg=cells[cells.length-1].segments[cells[cells.length-1].segments.length-1];
     CH=lastSeg.y+BH;
   }
-  return{N,BW,BH,CW,CH,cells,rows,totalQ};
+  return{N,BW,BH,CW,CH,cells,rows,totalQ,_branch};
 }
 // ─────────────────────────────────────────────────────────────────────────────
 // §3  CANVAS DRAW FUNCTIONS
@@ -22480,7 +22481,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
     const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, portraitGrow: basicModeRef.current});
-    try{ if(basicModeRef.current) console.log('[PF-DIAG mic-grid]','basicMode=',basicModeRef.current,'isDesktop=',(typeof window!=='undefined'&&window.innerWidth),'CW=',newGrid.CW,'CH=',newGrid.CH,'ratio=',(newGrid.CW/newGrid.CH).toFixed(2),(newGrid.CW>newGrid.CH?'LANDSCAPE':'portrait'),'micListening=',micListening,'micPainting=',micPainting,'draftOwner=',draftOwnerRef.current); }catch(_){}
+    try{ if(basicModeRef.current) console.log('[PF-DIAG mic-grid]','branch=',newGrid._branch,'CW=',newGrid.CW,'CH=',newGrid.CH,'N=',newGrid.N,'rows=',newGrid.rows,'totalQ=',newGrid.totalQ,'ratio=',(newGrid.CW/newGrid.CH).toFixed(2),(newGrid.CW>newGrid.CH?'LANDSCAPE':'portrait'),'micListening=',micListening,'draftOwner=',draftOwnerRef.current); }catch(_){}
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
