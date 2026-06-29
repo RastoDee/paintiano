@@ -1735,13 +1735,17 @@ function computeGrid(arg, opts){
     // portraitGrow (Lite live mic on desktop) caps the width to a portrait lane
     // so the canvas stays tall — a wide viewport would otherwise make it landscape.
     const _capW=(opts&&opts.portraitGrow)?560:820;
-    const targetCWL=Math.min(_capW,Math.max(320,vpL-32));
-    // Fill the FULL target width: deriving CW = N*floor(targetCWL/N) lost up to
-    // N px to rounding, which on long pieces (large N) visibly narrowed the
-    // canvas on mobile. Keep BW fractional (segment math below rounds per-cell)
-    // and pin CW to the full target so the painting spans the whole column.
+    const _liteWide = !!(opts&&opts.liteWide);
+    // Lite-only: stretch the canvas closer to the screen edges (smaller side
+    // margin) for a bolder, fuller painting. To keep the SAME height while
+    // widening, BH is derived from the ORIGINAL (-32 margin) block width, so
+    // only the width grows — cells get a touch wider (slight, intentional φ
+    // break). Advanced / pure pipelines never pass liteWide, so they are
+    // completely untouched.
+    const targetCWL=Math.min(_liteWide?900:_capW,Math.max(320,vpL-(_liteWide?12:32)));
     BW=Math.max(2,targetCWL/N);
-    BH=Math.round(BW*PHI);
+    const _bwForHeight = _liteWide ? Math.max(2,(Math.min(_capW,Math.max(320,vpL-32)))/N) : BW;
+    BH=Math.round(_bwForHeight*PHI);
     CW=Math.round(targetCWL);
     CH=rows*BH;
   }

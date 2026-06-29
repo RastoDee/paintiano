@@ -1735,13 +1735,17 @@ function computeGrid(arg, opts){
     // portraitGrow (Lite live mic on desktop) caps the width to a portrait lane
     // so the canvas stays tall — a wide viewport would otherwise make it landscape.
     const _capW=(opts&&opts.portraitGrow)?560:820;
-    const targetCWL=Math.min(_capW,Math.max(320,vpL-32));
-    // Fill the FULL target width: deriving CW = N*floor(targetCWL/N) lost up to
-    // N px to rounding, which on long pieces (large N) visibly narrowed the
-    // canvas on mobile. Keep BW fractional (segment math below rounds per-cell)
-    // and pin CW to the full target so the painting spans the whole column.
+    const _liteWide = !!(opts&&opts.liteWide);
+    // Lite-only: stretch the canvas closer to the screen edges (smaller side
+    // margin) for a bolder, fuller painting. To keep the SAME height while
+    // widening, BH is derived from the ORIGINAL (-32 margin) block width, so
+    // only the width grows — cells get a touch wider (slight, intentional φ
+    // break). Advanced / pure pipelines never pass liteWide, so they are
+    // completely untouched.
+    const targetCWL=Math.min(_liteWide?900:_capW,Math.max(320,vpL-(_liteWide?12:32)));
     BW=Math.max(2,targetCWL/N);
-    BH=Math.round(BW*PHI);
+    const _bwForHeight = _liteWide ? Math.max(2,(Math.min(_capW,Math.max(320,vpL-32)))/N) : BW;
+    BH=Math.round(_bwForHeight*PHI);
     CW=Math.round(targetCWL);
     CH=rows*BH;
   }
@@ -15291,6 +15295,7 @@ const I18N = {
     mic:'MIC', micActive:'LIVE',
     voicePreset:'🎤 voice', musicPreset:'🔊 music',
     play:'play', pause:'pause', resume:'resume', mute:'mute audio', unmute:'unmute audio', randomOn:'random ON', randomOff:'random OFF',
+    litePlayHint:'Play',
     print:'🖨 print', clear:'clear', clearConfirm:'tap again to clear', demoConfirm:'replace current?', switchConfirm:'clean canvas?', loop:'⟳ loop', appChoseColour:'the app chose the colour reading', undo:'↩',
     recArm:'rec', recStop:'rec…',
     share:'share', save:'save', next:'Next', showLabel:'Show', saving:'saving…', saved:'saved ✓', scoreExport:'score', scoreXmlHint:'opens in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exports the whole piece', exportScore:'score (xml)', exportScoreHint:'opens in MuseScore etc.', exportAudio:'audio', exportAudioHint:'plays & records the full piece', exportBoth:'both', exportBothHint:'score now, then records audio', exportNeedsPlay:'play first to export', rendering:'rendering audio…', renderFail:'audio render failed',
@@ -15428,6 +15433,7 @@ const I18N = {
     mic:'MIKRO', micActive:'LIVE',
     voicePreset:'🎤 stimme', musicPreset:'🔊 musik',
     play:'spielen', pause:'pause', resume:'weiter', mute:'ton aus', unmute:'ton an', randomOn:'zufall AN', randomOff:'zufall AUS',
+    litePlayHint:'Abspielen',
     print:'🖨 drucken', clear:'löschen', clearConfirm:'nochmal antippen', demoConfirm:'aktuelles ersetzen?', switchConfirm:'leinwand leeren?', loop:'⟳ schleife', appChoseColour:'die App wählte die Farblesung', undo:'↩',
     recArm:'aufn.', recStop:'aufn.…',
     share:'teilen', save:'speichern', next:'Weiter', showLabel:'Show', saving:'speichert…', saved:'gespeichert ✓', scoreExport:'noten', scoreXmlHint:'öffnet in MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportiert das ganze Stück', exportScore:'noten (xml)', exportScoreHint:'öffnet in MuseScore usw.', exportAudio:'audio', exportAudioHint:'spielt & nimmt das Stück auf', exportBoth:'beides', exportBothHint:'noten jetzt, dann audio', exportNeedsPlay:'zuerst abspielen', rendering:'audio wird erzeugt…', renderFail:'audio-erzeugung fehlgeschlagen',
@@ -15563,6 +15569,7 @@ const I18N = {
     mic:'MICRO', micActive:'LIVE',
     voicePreset:'🎤 voix', musicPreset:'🔊 musique',
     play:'jouer', pause:'pause', resume:'reprendre', mute:'couper le son', unmute:'activer le son', randomOn:'aléatoire ON', randomOff:'aléatoire OFF',
+    litePlayHint:'Jouer',
     print:'🖨 imprimer', clear:'effacer', clearConfirm:'toucher à nouveau', demoConfirm:'remplacer ?', switchConfirm:'vider la toile ?', loop:'⟳ boucle', appChoseColour:"l'app a choisi la lecture couleur", undo:'↩',
     recArm:'enreg.', recStop:'enreg.…',
     share:'partager', save:'enregistrer', next:'Suivant', showLabel:'Show', saving:'enregistrement…', saved:'enregistré ✓', scoreExport:'partition', scoreXmlHint:'ouvre dans MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exporter', exportHint:'exporte tout le morceau', exportScore:'partition (xml)', exportScoreHint:'ouvre dans MuseScore etc.', exportAudio:'audio', exportAudioHint:'joue & enregistre le morceau', exportBoth:'les deux', exportBothHint:'partition puis audio', exportNeedsPlay:'jouez d\'abord', rendering:'rendu audio…', renderFail:'échec du rendu audio',
@@ -15698,6 +15705,7 @@ const I18N = {
     mic:'MICRO', micActive:'EN VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
     play:'tocar', pause:'pausa', resume:'continuar', mute:'silenciar', unmute:'activar sonido', randomOn:'aleatorio ON', randomOff:'aleatorio OFF',
+    litePlayHint:'Tocar',
     print:'🖨 imprimir', clear:'borrar', clearConfirm:'tocar otra vez', demoConfirm:'¿reemplazar?', switchConfirm:'¿limpiar lienzo?', loop:'⟳ bucle', appChoseColour:'la app eligió la lectura de color', undo:'↩',
     recArm:'grabar', recStop:'graba…',
     share:'compartir', save:'guardar', next:'Siguiente', showLabel:'Show', saving:'guardando…', saved:'guardado ✓', scoreExport:'partitura', scoreXmlHint:'abre en MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'exportar', exportHint:'exporta toda la pieza', exportScore:'partitura (xml)', exportScoreHint:'abre en MuseScore etc.', exportAudio:'audio', exportAudioHint:'reproduce y graba la pieza', exportBoth:'ambos', exportBothHint:'partitura y luego audio', exportNeedsPlay:'reproduce primero', rendering:'renderizando audio…', renderFail:'fallo al renderizar audio',
@@ -15833,6 +15841,7 @@ const I18N = {
     mic:'MIKRO', micActive:'LIVE',
     voicePreset:'🎤 hlas', musicPreset:'🔊 hudba',
     play:'prehrať', pause:'pauza', resume:'pokračovať', mute:'stlmiť zvuk', unmute:'zapnúť zvuk', randomOn:'náhoda ZAP', randomOff:'náhoda VYP',
+    litePlayHint:'Zahraj',
     print:'🖨 tlačiť', clear:'vyčistiť', clearConfirm:'znova pre vyčistenie', demoConfirm:'nahradiť súčasné?', switchConfirm:'vyčistiť plátno?', loop:'⟳ slučka', appChoseColour:'farbu určila aplikácia', undo:'↩',
     recArm:'nahrať', recStop:'nahr…',
     share:'zdieľať', save:'uložiť', next:'Ďalší', showLabel:'Show', saving:'ukladám…', saved:'uložené ✓', scoreExport:'noty', scoreXmlHint:'otvorí v MuseScore, Sibelius, Finale…', exportLabel:'export', exportTitle:'export', exportHint:'exportuje celú skladbu', exportScore:'noty (xml)', exportScoreHint:'otvorí v MuseScore a pod.', exportAudio:'audio', exportAudioHint:'prehrá a nahrá celú skladbu', exportBoth:'oboje', exportBothHint:'noty hneď, potom audio', exportNeedsPlay:'najprv prehraj', rendering:'renderujem audio…', renderFail:'render audia zlyhal',
@@ -15968,6 +15977,7 @@ const I18N = {
     mic:'麦克风', micActive:'直播',
     voicePreset:'🎤 人声', musicPreset:'🔊 音乐',
     play:'播放', pause:'暂停', resume:'继续', mute:'静音', unmute:'取消静音', randomOn:'随机 开', randomOff:'随机 关',
+    litePlayHint:'播放',
     print:'🖨 打印', clear:'清空', clearConfirm:'再次点击清空', demoConfirm:'替换当前?', switchConfirm:'清空画布?', loop:'⟳ 循环', appChoseColour:'颜色由应用选择', undo:'↩',
     recArm:'录制', recStop:'录制…',
     share:'分享', save:'保存', next:'下一个', showLabel:'放映', saving:'保存中…', saved:'已保存 ✓', scoreExport:'乐谱', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中打开…', exportLabel:'导出', exportTitle:'导出', exportHint:'导出整首作品', exportScore:'乐谱 (xml)', exportScoreHint:'可在 MuseScore 等软件中打开', exportAudio:'音频', exportAudioHint:'播放并录制整首作品', exportBoth:'两者', exportBothHint:'先导出乐谱,再录制音频', exportNeedsPlay:'请先播放再导出', rendering:'渲染音频中…', renderFail:'音频渲染失败',
@@ -16109,6 +16119,7 @@ const I18N = {
     mic:'麥克風', micActive:'直播',
     voicePreset:'🎤 人聲', musicPreset:'🔊 音樂',
     play:'播放', pause:'暫停', resume:'繼續', mute:'靜音', unmute:'取消靜音', randomOn:'隨機 開', randomOff:'隨機 關',
+    litePlayHint:'播放',
     print:'🖨 列印', clear:'清空', clearConfirm:'再次點擊清空', demoConfirm:'取代目前？', switchConfirm:'清空畫布？', loop:'⟳ 循環', appChoseColour:'顏色由應用程式選擇', undo:'↩',
     recArm:'錄製', recStop:'錄製…',
     share:'分享', save:'儲存', saving:'儲存中…', saved:'已儲存 ✓', scoreExport:'樂譜', scoreXmlHint:'可在 MuseScore、Sibelius、Finale 中開啟…', exportLabel:'匯出', exportTitle:'匯出', exportHint:'匯出整首作品', exportScore:'樂譜 (xml)', exportScoreHint:'可在 MuseScore 等軟體中開啟', exportAudio:'音訊', exportAudioHint:'播放並錄製整首作品', exportBoth:'兩者', exportBothHint:'先匯出樂譜，再錄製音訊', exportNeedsPlay:'請先播放再匯出', rendering:'渲染音訊中…', renderFail:'音訊渲染失敗',
@@ -16243,6 +16254,7 @@ const I18N = {
     mic:'MIC', micActive:'AO VIVO',
     voicePreset:'🎤 voz', musicPreset:'🔊 música',
     play:'tocar', pause:'pausar', resume:'continuar', mute:'silenciar áudio', unmute:'ativar áudio', randomOn:'aleatório LIG', randomOff:'aleatório DES',
+    litePlayHint:'Tocar',
     print:'🖨 imprimir', clear:'limpar', clearConfirm:'toque novamente para limpar', demoConfirm:'substituir atual?', switchConfirm:'limpar tela?', loop:'⟳ loop', appChoseColour:'o app escolheu a cor', undo:'↩',
     recArm:'grav', recStop:'grav…',
     share:'compartilhar', save:'salvar', next:'Próximo', showLabel:'Show', saving:'salvando…', saved:'salvo ✓', scoreExport:'partitura', scoreXmlHint:'abre no MuseScore, Sibelius, Finale…', exportLabel:'exportar', exportTitle:'exportar', exportHint:'exporta a peça inteira', exportScore:'partitura (xml)', exportScoreHint:'abre no MuseScore etc.', exportAudio:'áudio', exportAudioHint:'toca e grava a peça inteira', exportBoth:'ambos', exportBothHint:'partitura primeiro, depois grava áudio', exportNeedsPlay:'toque primeiro para exportar', rendering:'renderizando áudio…', renderFail:'falha ao renderizar áudio',
@@ -16378,6 +16390,7 @@ const I18N = {
     mic:'マイク', micActive:'ライブ',
     voicePreset:'🎤 声', musicPreset:'🔊 音楽',
     play:'再生', pause:'一時停止', resume:'続き', mute:'音声ミュート', unmute:'音声オン', randomOn:'ランダム ON', randomOff:'ランダム OFF',
+    litePlayHint:'再生',
     print:'🖨 印刷', clear:'クリア', clearConfirm:'もう一度タップでクリア', demoConfirm:'現在のものを置き換える?', switchConfirm:'キャンバスをクリーンに?', loop:'⟳ ループ', appChoseColour:'アプリが色の読み方を選んだ', undo:'↩',
     recArm:'録音', recStop:'録音…',
     share:'シェア', save:'保存', next:'次へ', showLabel:'スライドショー', saving:'保存中…', saved:'保存しました ✓', scoreExport:'楽譜', scoreXmlHint:'MuseScore、Sibelius、Finale で開ける…', exportLabel:'エクスポート', exportTitle:'エクスポート', exportHint:'曲全体をエクスポート', exportScore:'楽譜 (xml)', exportScoreHint:'MuseScore などで開ける', exportAudio:'音声', exportAudioHint:'曲全体を再生して録音', exportBoth:'両方', exportBothHint:'今すぐ楽譜、続けて音声録音', exportNeedsPlay:'エクスポートするには先に再生', rendering:'音声をレンダリング中…', renderFail:'音声レンダリングに失敗',
@@ -22448,7 +22461,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cells || cells.length < chords.length){
         try{
           const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
           gridRef.current = fixed;
           setGrid(fixed);
         }catch(_){}
@@ -22831,7 +22844,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // In Lite, both voice and music capture use the grow-canvas (portrait) shape
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
-    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -23782,7 +23795,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(insertedCursor!=null){ selectedChordIdxRef.current=insertedCursor; setSelectedChordIdx(insertedCursor); }
     try{
       const evs=nextChords.map(c=>({durQ:c.durQ!=null?c.durQ:1}));
-      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true, liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
       gridRef.current=newGrid;
       if(!playingRef.current) setGrid(newGrid);
       // Pre-set the grid signature so the reactive [chords] effect recognizes
@@ -27410,6 +27423,21 @@ Composition rules:
     setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
   },[pickExpressiveStyle, loadSampleMidi, startPlay]);
 
+  // Lite Play chip — the canvas starts empty (no autoplay). The first tap on the
+  // big gold Play chip loads the Liszt sample and starts playback within the
+  // user gesture (so iOS lets the audio through), opening on Mosaic (the bare
+  // reading, no artist) just like the old auto-open did.
+  const litePlayStart = useCallback(()=>{
+    try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
+    try{ setMuted(false); }catch(_){}
+    try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
+    try{ setStyle(null); }catch(_){}         // Mosaic = bare reading
+    try{ setMode('harmony'); }catch(_){}
+    try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
+    loadSampleMidi();
+    setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startPlayRef.current && startPlayRef.current(); }catch(_){} }).catch(()=>{}); }catch(_){} }, 120);
+  },[loadSampleMidi]);
+
   // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
   // WITHOUT restarting the song. The paint effect re-renders live on a style
   // change, so the whole painting repaints in the new artist's language at the
@@ -27595,6 +27623,12 @@ Composition rules:
     // when busy clears because busy is in the deps. Do NOT lock here.
     if(busy) return;
     if(basicAutoPlayedRef.current) return;
+    // First entry (audio not yet unlocked by a user gesture): do NOT autoplay —
+    // the big Play chip on the empty canvas handles the first start (iOS needs
+    // the gesture). Once audio has been unlocked once (the user tapped Play, or
+    // played anything), autoplay is allowed again — so flipping the Lite flavour
+    // (music↔painting) and back auto-plays without re-tapping.
+    if(!liteEverUnlockedRef.current) return;
     basicAutoPlayedRef.current = true;
     try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
     const id=setTimeout(()=>{
@@ -27611,7 +27645,7 @@ Composition rules:
         // audio + paint together (basicTapUnlock), instead of painting silently.
         // Desktop browsers don't gate audio the same way (and the splash there
         // just covers a canvas that's already painting), so skip it on desktop.
-        if(!liteEverUnlockedRef.current && !basicTapUnlockedRef.current && !isDesktop) setLiteAwaitTap(true);
+        // (tap-to-begin splash removed — no auto-gated splash anymore)
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
@@ -29542,14 +29576,6 @@ Composition rules:
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
-      {basicMode && liteAwaitTap && !isDesktop && !showIntro && (
-        <div onPointerDown={basicTapUnlock} role="button" aria-label={ts('tapToBegin','Tap to begin')} style={{position:'fixed',inset:0,zIndex:90000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18,cursor:'pointer',background:'rgba(6,5,12,0.82)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',WebkitTapHighlightColor:'transparent'}}>
-          <div className="pf-breathe" style={{width:74,height:74,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(220,180,90,.55)',background:'rgba(220,180,90,.08)',boxShadow:'0 0 40px rgba(220,180,90,.25)'}}>
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="rgba(220,180,90,.95)" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(1.5*effScale)+'rem',fontStyle:'italic',letterSpacing:'.04em',color:'rgba(230,205,140,.95)'}}>{ts('tapToBegin','Tap to begin')}</div>
-        </div>
-      )}
       {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
         // a big play CTA that loads the trimmed Liszt sample (30 s) and starts
@@ -31407,6 +31433,18 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none',transition:'opacity .25s ease'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
+        {basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current && (
+          <div style={{position:'absolute',inset:0,zIndex:5,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18}}>
+            <div onClick={(e)=>{ e.stopPropagation(); litePlayStart(); }} role="button" aria-label={t('play')||'Play'}
+              style={{position:'relative',width:130,height:130,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
+              <span className="pf-breathe" style={{position:'absolute',width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.42),transparent 65%)'}}/>
+              <span style={{position:'relative',zIndex:2,width:90,height:90,borderRadius:'50%',background:'linear-gradient(145deg,rgba(255,225,140,.96),rgba(220,170,70,.93))',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 30px rgba(240,192,64,.42),inset 0 2px 11px rgba(255,250,220,.7),inset 0 -4px 13px rgba(150,105,20,.55)'}}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="#1a1206" style={{marginLeft:6}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(1.05*effScale)+'rem',color:'rgba(220,180,90,.82)',letterSpacing:'.05em'}}>{ts('litePlayHint','Zahraj')}</div>
+          </div>
+        )}
         <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((basicMode&&!immersive)?{borderRadius:14,boxShadow:'0 10px 40px rgba(0,0,0,.5)',outline:'1px solid rgba(255,255,255,.10)',outlineOffset:'-1px'}:{}),...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>

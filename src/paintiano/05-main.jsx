@@ -2712,7 +2712,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cells || cells.length < chords.length){
         try{
           const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
           gridRef.current = fixed;
           setGrid(fixed);
         }catch(_){}
@@ -3095,7 +3095,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // In Lite, both voice and music capture use the grow-canvas (portrait) shape
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
-    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -4046,7 +4046,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(insertedCursor!=null){ selectedChordIdxRef.current=insertedCursor; setSelectedChordIdx(insertedCursor); }
     try{
       const evs=nextChords.map(c=>({durQ:c.durQ!=null?c.durQ:1}));
-      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+      const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : true, liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
       gridRef.current=newGrid;
       if(!playingRef.current) setGrid(newGrid);
       // Pre-set the grid signature so the reactive [chords] effect recognizes
@@ -7674,6 +7674,21 @@ Composition rules:
     setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
   },[pickExpressiveStyle, loadSampleMidi, startPlay]);
 
+  // Lite Play chip — the canvas starts empty (no autoplay). The first tap on the
+  // big gold Play chip loads the Liszt sample and starts playback within the
+  // user gesture (so iOS lets the audio through), opening on Mosaic (the bare
+  // reading, no artist) just like the old auto-open did.
+  const litePlayStart = useCallback(()=>{
+    try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
+    try{ setMuted(false); }catch(_){}
+    try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
+    try{ setStyle(null); }catch(_){}         // Mosaic = bare reading
+    try{ setMode('harmony'); }catch(_){}
+    try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
+    loadSampleMidi();
+    setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startPlayRef.current && startPlayRef.current(); }catch(_){} }).catch(()=>{}); }catch(_){} }, 120);
+  },[loadSampleMidi]);
+
   // BASIC-mode "Surprise me" — swap to a DIFFERENT random expressive style
   // WITHOUT restarting the song. The paint effect re-renders live on a style
   // change, so the whole painting repaints in the new artist's language at the
@@ -7859,6 +7874,12 @@ Composition rules:
     // when busy clears because busy is in the deps. Do NOT lock here.
     if(busy) return;
     if(basicAutoPlayedRef.current) return;
+    // First entry (audio not yet unlocked by a user gesture): do NOT autoplay —
+    // the big Play chip on the empty canvas handles the first start (iOS needs
+    // the gesture). Once audio has been unlocked once (the user tapped Play, or
+    // played anything), autoplay is allowed again — so flipping the Lite flavour
+    // (music↔painting) and back auto-plays without re-tapping.
+    if(!liteEverUnlockedRef.current) return;
     basicAutoPlayedRef.current = true;
     try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){}
     const id=setTimeout(()=>{
@@ -7875,7 +7896,7 @@ Composition rules:
         // audio + paint together (basicTapUnlock), instead of painting silently.
         // Desktop browsers don't gate audio the same way (and the splash there
         // just covers a canvas that's already painting), so skip it on desktop.
-        if(!liteEverUnlockedRef.current && !basicTapUnlockedRef.current && !isDesktop) setLiteAwaitTap(true);
+        // (tap-to-begin splash removed — no auto-gated splash anymore)
       }catch(_){}
     }, 300);
     return ()=>clearTimeout(id);
@@ -9806,14 +9827,6 @@ Composition rules:
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
-      {basicMode && liteAwaitTap && !isDesktop && !showIntro && (
-        <div onPointerDown={basicTapUnlock} role="button" aria-label={ts('tapToBegin','Tap to begin')} style={{position:'fixed',inset:0,zIndex:90000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18,cursor:'pointer',background:'rgba(6,5,12,0.82)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',WebkitTapHighlightColor:'transparent'}}>
-          <div className="pf-breathe" style={{width:74,height:74,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(220,180,90,.55)',background:'rgba(220,180,90,.08)',boxShadow:'0 0 40px rgba(220,180,90,.25)'}}>
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="rgba(220,180,90,.95)" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(1.5*effScale)+'rem',fontStyle:'italic',letterSpacing:'.04em',color:'rgba(230,205,140,.95)'}}>{ts('tapToBegin','Tap to begin')}</div>
-        </div>
-      )}
       {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
         // a big play CTA that loads the trimmed Liszt sample (30 s) and starts
@@ -11671,6 +11684,18 @@ Composition rules:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none',transition:'opacity .25s ease'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
+        {basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current && (
+          <div style={{position:'absolute',inset:0,zIndex:5,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18}}>
+            <div onClick={(e)=>{ e.stopPropagation(); litePlayStart(); }} role="button" aria-label={t('play')||'Play'}
+              style={{position:'relative',width:130,height:130,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
+              <span className="pf-breathe" style={{position:'absolute',width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.42),transparent 65%)'}}/>
+              <span style={{position:'relative',zIndex:2,width:90,height:90,borderRadius:'50%',background:'linear-gradient(145deg,rgba(255,225,140,.96),rgba(220,170,70,.93))',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 30px rgba(240,192,64,.42),inset 0 2px 11px rgba(255,250,220,.7),inset 0 -4px 13px rgba(150,105,20,.55)'}}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="#1a1206" style={{marginLeft:6}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(1.05*effScale)+'rem',color:'rgba(220,180,90,.82)',letterSpacing:'.05em'}}>{ts('litePlayHint','Zahraj')}</div>
+          </div>
+        )}
         <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((basicMode&&!immersive)?{borderRadius:14,boxShadow:'0 10px 40px rgba(0,0,0,.5)',outline:'1px solid rgba(255,255,255,.10)',outlineOffset:'-1px'}:{}),...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
