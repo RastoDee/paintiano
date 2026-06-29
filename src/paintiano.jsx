@@ -386,6 +386,10 @@ const PF_STYLE = `
           }
           .pf-app-root > header h1 { font-size: 1.6rem !important; margin: 0 !important; line-height: 1 !important; }
           .pf-app-root > header > div { margin: 0 !important; display: inline-flex !important; align-items: center; transform: scale(.82); transform-origin: left center; }
+          /* Lite (basicMode): stack flip subtitle UNDER the title, re-enable
+             pointer events so the flip toggle is clickable on desktop. */
+          .pf-app-root.pf-mode-lite > header { flex-direction: column !important; pointer-events: auto !important; gap: 2px !important; }
+          .pf-app-root.pf-mode-lite > header > div { pointer-events: auto !important; }
           /* Help (?) button moves from the bottom-right FAB up next to the
              hamburger menu in the top-left, where help conventionally lives. */
           /* Help (?) sits next to the hamburger. position:absolute (NOT fixed) so
@@ -27556,6 +27560,15 @@ Composition rules:
   useEffect(()=>{ liteAwaitTapRef.current = liteAwaitTap; },[liteAwaitTap]);
   const basicTapUnlock = useCallback(()=>{
     if(!basicMode) return;
+    // Play chip is showing (first entry, empty canvas, music→painting mode):
+    // a stray tap anywhere (opening the menu, switching language, etc.) must NOT
+    // consume the first-gesture unlock — only the explicit tap on the Play chip
+    // (litePlayStart) starts audio. Otherwise the chip would vanish after any
+    // incidental tap without anything playing.
+    if(!liteImageModeRef.current && !liteEverUnlockedRef.current && !playingRef.current
+       && (!chordsRef.current || chordsRef.current.length===0)){
+      return;
+    }
     // If the "Tap to begin" splash is showing for ANY reason (first entry, or a
     // re-armed context after a Lite flavour flip), this tap must dismiss it and
     // start playback. Without this, the 2nd-visit splash (liteEverUnlocked
@@ -29808,6 +29821,11 @@ Composition rules:
               // Flip the header around its vertical axis, switch Lite flavour at
               // the half-way point so the back face shows the new subtitle.
               if(liteFlip) return;
+              // Stop audio IMMEDIATELY (internal pause) before the flip animation,
+              // so the outgoing flavour's sound is silenced cleanly instead of
+              // crackling through the 260 ms flip. The liteImageMode effect on the
+              // other side then loads + plays from the start.
+              try{ stopAll(); }catch(_){}
               if(!liteFlipSeen){ setLiteFlipSeen(true); try{ localStorage.setItem('paintiano_lite_flip_seen','1'); }catch(_){} }
               setLiteFlipTeaser(false);
               setLiteFlip(true);
