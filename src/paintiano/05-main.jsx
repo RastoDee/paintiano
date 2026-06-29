@@ -3243,6 +3243,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const dispRef     = useRef(0);
   const handlePauseClickRef = useRef(null);
   const startPlayRef = useRef(null);
+  const startRecordRef = useRef(null);
   const aiComposeRef = useRef(null); // lets aiMoodFromText (declared earlier) call aiCompose for unknown moods
   // Cache of the last successful AI composition, keyed by normalised mood text +
   // language. Lets re-entering the SAME mood (e.g. Setup → Canvas, or retyping the
@@ -6906,7 +6907,8 @@ Composition rules:
           // behaves like the music flavour's Liszt auto-play — no manual Play tap.
           if(basicModeRef.current && liteImageModeRef.current){
             try{ setMuted(false); }catch(_){}
-            setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlayRef.current?.(); }catch(__){} } }, 160);
+            try{ setRecBlob(null); setRecName(''); setRecordIntent('picker'); }catch(_){}
+            setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startRecordRef.current?.(); }catch(_){} }).catch(()=>{ try{ startRecordRef.current?.(); }catch(_){} }); }catch(_){ try{ startRecordRef.current?.(); }catch(__){} } }, 160);
           }
         }catch(e){if(loadTokenRef.current===myToken){setErr('Image: '+e.message);setErrInfo(false);}}
       };
@@ -7941,7 +7943,7 @@ Composition rules:
     if(basicAutoStartedRef.current) return;
     basicAutoStartedRef.current = true;
     const _flipDelay = liteFlipJustRef.current ? 650 : 120;
-    const id=setTimeout(()=>{ if(liteFlipJustRef.current){ try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){} } liteFlipJustRef.current=false; try{ setMuted(false); }catch(_){} if(liteImageModeRef.current){ try{ setRecBlob(null); setRecName(''); }catch(_){} try{ setRecordIntent('picker'); }catch(_){} try{ wakeAudio().then(()=>{ try{ startRecord(); }catch(_){} }).catch(()=>{ try{ startRecord(); }catch(_){} }); }catch(_){ try{ startRecord(); }catch(__){} } } else { try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlay && startPlay(); }catch(__){} } } }, _flipDelay);
+    const id=setTimeout(()=>{ if(liteFlipJustRef.current){ try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){} } liteFlipJustRef.current=false; try{ setMuted(false); }catch(_){} try{ wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); }); }catch(_){ try{ startPlay && startPlay(); }catch(__){} } }, _flipDelay);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[basicMode, chords.length, loadedSource, playing, holdPaused, busy]);
@@ -8388,6 +8390,7 @@ Composition rules:
     startPlay();
   };
 
+  useEffect(()=>{ startRecordRef.current=startRecord; });
   // Stop both the MediaRecorder and the playback. They start together via
   // startRecord → startPlay, so the rec button stops them together too.
   // requestData() flushes pending bytes before stop — helps iOS mp4 finalize.
@@ -10124,7 +10127,7 @@ Composition rules:
           </div>
         )}
         {isPro && !basicMode && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
-        {!isActiveView && !isDesktop && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
+        {!isActiveView && !isDesktop && !basicMode && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
 
       {/* ─────────────────────────────────────────────────────────────
@@ -13320,6 +13323,10 @@ Composition rules:
         // recording) → Save (once a recording exists). Save shares the captured
         // WAV directly. Music flavour keeps its normal Save/Pause/Resume/Play.
         const _liteImg = basicMode && liteImageMode;
+        // Big Play chip is on screen (first entry, audio not yet unlocked): the
+        // bottom CTAs are disabled until the user taps Play, so nothing fires
+        // before the audio gesture.
+        const _litePlayChipShown = basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current;
         const _liteImgRecording = _liteImg && recording;
         const _liteImgHasRec = _liteImg && !recording && !!recBlob;
         const _icoStop = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="currentColor" style={{flexShrink:0}} aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>);
@@ -13404,11 +13411,11 @@ Composition rules:
           </div>
         )}
         <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
-          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
-          <button onClick={_midClickAware} disabled={!_liteImg && !_capturing && !_haveArt} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
+          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
+          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
           {!immersive && (liteImageMode
-            ? <button onClick={()=>setLiteImgPicker(true)} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
-            : <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
+            ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
+            : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
         </div>
         </>
         );
