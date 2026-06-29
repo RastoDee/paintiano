@@ -9335,7 +9335,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // for non-BW, or muted greys for BW. Black + white anchor in every variant.
   // ORA + SKIN remain fixed accents typical of Miró's broader palette (orange
   // and warm tan/skin tones) — they're stylistic constants, not pitch slots.
-  const _P = _miroPal(isBW, gc);
+  const _P = _miroPal(isBW, gc, chords);
   const BLK  = _P.BLK;
   const RED  = _P.RED;
   const GRN  = _P.GRN;
@@ -9365,7 +9365,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // chord param: setting _curE right before sampling lets Real mode route to
   // the right palette band (pastel for piano, dark for forte).
   const accent=(r,g,b,rnd,chord)=>{
-    const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
+    const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW, chords) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
     // First-note pitch class drives the accent slot deterministically.
     const notes = chord && (chord.n || chord.notes);
     const firstM = (notes && notes.length) ? (notes[0].m!=null?notes[0].m:notes[0]) : 60;
@@ -9565,7 +9565,7 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // Miró palette (same as phase A).
   // Miró palette — see _miroPal (BW = greys; non-BW = active colour scheme).
-  const _P = _miroPal(isBW, gc);
+  const _P = _miroPal(isBW, gc, chords);
   const BLK = _P.BLK;
   const RED = _P.RED;
   const GRN = _P.GRN;
@@ -9624,7 +9624,7 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,paintCount))*cn))];
     _setCurE(chord && chord._E);
     const notes=chord&&(chord.n||chord.notes||[]);
-    const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
+    const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW, chords) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
     // Snap by pitch class (tone-stable) instead of by RGB (tone-shifts).
     // See phaseA accent() for the same fix. SLOT keeps the per-chord identity
     // stable across Pure/Real/Pastel so structural decisions downstream don't
@@ -9697,7 +9697,40 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 }
 
 // Miró palette helper used by the new phases.
-function _miroPal(isBW, gc){
+// ── Song-aware palette helper (shared by Miró / Kandinsky / Bauhaus) ─────────
+// Returns the top N pitch classes of the piece as mid-octave MIDI anchors
+// (so gc() can sample them like a real note). Frequency is velocity-weighted
+// so the LOUD notes drive the palette identity, not silent passing tones.
+// Deterministic: same chords → same ranking → same anchors → same painting.
+// Returns null if no usable pitch data — callers must keep a static fallback.
+function _songTopPitches(chords, N){
+  if(!chords || !chords.length) return null;
+  const hist = new Array(12).fill(0);
+  let total = 0;
+  for(const ch of chords){
+    const notes = ch && (ch.n || ch.notes);
+    if(!notes || !notes.length) continue;
+    for(const note of notes){
+      const m = note.m !== undefined ? note.m : note;
+      const v = note.v !== undefined ? note.v : 80;
+      if(typeof m !== 'number') continue;
+      const pc = ((m|0) % 12 + 12) % 12;
+      const w = (typeof v === 'number' ? v : 80);
+      hist[pc] += w;
+      total += w;
+    }
+  }
+  if(total === 0) return null;
+  // Sort PCs by weight desc, tie-break by PC index asc (stable, deterministic).
+  const order = hist.map((c,i)=>({c,i}))
+                    .sort((a,b)=> (b.c - a.c) || (a.i - b.i))
+                    .map(x => x.i);
+  // Return mid-octave MIDI anchors (C4-based) so gc() routes through the
+  // active mode the same way the original fixed-pitch sampling did.
+  return order.slice(0, Math.max(1, N|0)).map(pc => 60 + pc);
+}
+
+function _miroPal(isBW, gc, chords){
   // BW mode keeps the original muted greys — Miró without colour is texture,
   // not a palette to shift. Black + white always remain ink and canvas
   // (universal anchors), they don't change with the colour scheme.
@@ -9711,18 +9744,22 @@ function _miroPal(isBW, gc){
       WHT:[245,242,235]
     };
   }
-  // Derive the four accent slots from gc() at four representative pitch
-  // classes (C, E, G, A — the I-iii-V-vi anchor set). Active palette ripples
+  // Song-aware accent slots: derive RED/GRN/BLU/YEL from gc() at the song's
+  // TOP FOUR pitch classes (loud notes dominate). Active palette ripples
   // through Miró: Harmony → COF colours; Spectral → chromatic; φ Phi →
-  // golden-angle spread; Custom → user picks. Whatever the user chose for
-  // these four pitches is what they see in every Miró canvas.
+  // golden-angle spread; Custom → user picks. Two pieces in the same mode
+  // now read DIFFERENTLY — a Liszt sonata in Spectral picks one set of four
+  // anchors, a synth-pop song in Spectral picks another. Fallback to the
+  // canonical I-iii-V-vi (C,E,G,A) when chord data is unavailable.
+  const tops = _songTopPitches(chords, 4);
+  const A = (tops && tops.length) ? tops : [60, 64, 67, 69];
   const samp = m => { const c = gc(m, 100); return [c[0]|0, c[1]|0, c[2]|0]; };
   return {
     BLK:[14,12,16],
-    RED: samp(60),  // C
-    GRN: samp(64),  // E
-    BLU: samp(67),  // G
-    YEL: samp(69),  // A
+    RED: samp(A[0]),
+    GRN: samp(A[1] != null ? A[1] : A[0]),
+    BLU: samp(A[2] != null ? A[2] : A[0]),
+    YEL: samp(A[3] != null ? A[3] : A[0]),
     WHT:[245,242,235]
   };
 }
@@ -9737,14 +9774,22 @@ function _miroPal(isBW, gc){
 // piano-chord elements get pastel reds, forte-chord elements get dark reds,
 // instead of every accent being one fixed flat colour.
 // Falls back to the static _miroPal slot when gc/chord unavailable.
-function _miroAccentRGB(slot, chord, gc, isBW){
-  const fallback = _miroPal(isBW, gc);
+function _miroAccentRGB(slot, chord, gc, isBW, chords){
+  const fallback = _miroPal(isBW, gc, chords);
   if(!chord || typeof gc !== 'function' || isBW) return fallback[slot] || fallback.RED;
   _setCurE(chord._E);
-  // Slot → pitch class anchor (matches the I-iii-V-vi family in _miroPal,
-  // plus extra anchors for the two non-pitch Miró fixed accents).
-  const slotPitch = { RED:60, GRN:64, BLU:67, YEL:69, ORA:70, SKIN:65 };
-  const m = slotPitch[slot] != null ? slotPitch[slot] : 60;
+  // Song-aware: the 6 Miró slots (RED/GRN/BLU/YEL/ORA/SKIN) map to the top 6
+  // pitch classes of the piece. A song with only 3 distinct PCs still works
+  // (fewer slots populate via fallback). Two-piece A/B test in Spectral mode
+  // now reads as two clearly different paintings instead of identical sets.
+  // Fallback to the canonical I-iii-V-vi+ when chord data is unavailable.
+  const tops = _songTopPitches(chords, 6);
+  const slotIdx = { RED:0, GRN:1, BLU:2, YEL:3, ORA:4, SKIN:5 };
+  const fixedFallback = { RED:60, GRN:64, BLU:67, YEL:69, ORA:70, SKIN:65 };
+  const idx = slotIdx[slot] != null ? slotIdx[slot] : 0;
+  const m = (tops && tops[idx] != null) ? tops[idx]
+          : (tops && tops[0] != null)   ? tops[0]
+          : (fixedFallback[slot] != null ? fixedFallback[slot] : 60);
   const c = gc(m, 100);
   if(!Array.isArray(c)) return fallback[slot] || fallback.RED;
   return [c[0]|0, c[1]|0, c[2]|0];
@@ -9753,7 +9798,7 @@ function _miroAccentRGB(slot, chord, gc, isBW){
 // ── Miró C: Blue triptych — a deep blue field with a few floating marks. ──
 function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW, gc, chords);
   ctx.fillStyle=isBW?'rgb(70,72,90)':'rgb(20,55,150)';ctx.fillRect(0,0,CW,CH);
   const marks=Math.max(3,Math.min(24,Math.round(cn/8)));
   const vis=Math.max(1,Math.ceil(N/cn*marks));
@@ -9768,7 +9813,7 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`;ctx.lineWidth=Math.max(2,CW*0.006);ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+(rnd()-0.5)*CW*0.3,y+(rnd()-0.5)*CH*0.3,x+(rnd()-0.5)*CW*0.25,y+(rnd()-0.5)*CH*0.25);ctx.stroke();
     } else if(kind===1){ // red/yellow disc (band-aware via _miroAccentRGB)
-      const col = _miroAccentRGB(rnd()<0.5?'RED':'YEL', chord, gc, isBW);
+      const col = _miroAccentRGB(rnd()<0.5?'RED':'YEL', chord, gc, isBW, chords);
       ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
       ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*(0.02+energy*0.04),0,Math.PI*2);ctx.fill();
     } else { // star
@@ -9787,7 +9832,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const N=Math.max(1,Math.min(cn,lim));
   const reveal=Math.max(0,Math.min(1,N/cn));
   const D=Math.min(CW,CH);
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW, gc, chords);
   // Cream paper ground.
   const _adjHex=(hex)=>{
     let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
@@ -9917,7 +9962,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró E: Harlequin Carnival — busy confetti of many small bright shapes. ──
 function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW, gc, chords);
   ctx.fillStyle=isBW?'rgb(120,118,124)':'rgb(150,120,90)';ctx.fillRect(0,0,CW,CH);
   const units=Math.max(10,Math.min(220,cn*2));
   const vis=Math.max(1,Math.ceil(N/cn*units));
@@ -9930,7 +9975,7 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const chord = chords[ci];
     const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.012+rnd()*0.03);
     const slot = slots[(rnd()*slots.length)|0];
-    const col = (slot==='BLK') ? P.BLK : (slot==='WHT') ? P.WHT : _miroAccentRGB(slot, chord, gc, isBW);
+    const col = (slot==='BLK') ? P.BLK : (slot==='WHT') ? P.WHT : _miroAccentRGB(slot, chord, gc, isBW, chords);
     ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
     const kind=(rnd()*4)|0;
     if(kind===0){ctx.beginPath();ctx.arc(x,y,s,0,Math.PI*2);ctx.fill();}
@@ -9943,7 +9988,7 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Miró F: Primary signs on white — clean white ground, bold red/blue/black. ──
 function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const P=_miroPal(isBW,gc);
+  const P=_miroPal(isBW, gc, chords);
   ctx.fillStyle=isBW?'rgb(240,238,232)':'rgb(248,246,240)';ctx.fillRect(0,0,CW,CH);
   const signs=Math.max(3,Math.min(28,Math.round(cn/7)));
   const vis=Math.max(1,Math.ceil(N/cn*signs));
@@ -9955,7 +10000,7 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const {energy}=_picChord(chords,ci,gc,isBW);
     const x=0.1*CW+rnd()*0.8*CW,y=0.1*CH+rnd()*0.8*CH;
     const slot=slots[(rnd()*slots.length)|0];
-    const col = (slot==='BLK') ? P.BLK : _miroAccentRGB(slot, chord, gc, isBW);
+    const col = (slot==='BLK') ? P.BLK : _miroAccentRGB(slot, chord, gc, isBW, chords);
     const R=Math.min(CW,CH)*(0.02+energy*0.05);
     const kind=(rnd()*3)|0;
     if(kind===0){ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();}
@@ -10270,13 +10315,17 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   const _charDrive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
   const _elMul = 0.72 + 0.56*_charDrive;
   const eff = (ref) => Math.max(1, Math.round(prog * ref * _elMul));
-  // Bauhaus palette tuned to the active colour scheme. Instead of one hard-coded
-  // set, we sample gc() across 8 pitches spread over the range, so Harmony yields
-  // a circle-of-fifths family, Spectral a chromatic rainbow, B/W a grey scale,
-  // and Custom the user's palette — "in the spirit of" the scheme, not per-note.
+  // Song-aware palette: sample gc() at the song's TOP 8 pitch classes so the
+  // Kandinsky canvas inherits the piece's actual colour DNA. Harmony yields
+  // a circle-of-fifths family rooted in the song's harmonic centre, Spectral
+  // a chromatic spread of the song's loud pitches, B/W a grey scale, Custom
+  // the user's palette mapped to those anchors. Two different pieces in the
+  // same mode now render to different Kandinsky palettes. Static mid-register
+  // fallback when chord data is unavailable.
   const palette = (()=>{
     if(typeof gc !== 'function') return null;
-    const pitches=[60,64,67,71,74,77,55,48];   // spread across mid/low register
+    const tops = (typeof _songTopPitches === 'function') ? _songTopPitches(chords, 8) : null;
+    const pitches = (tops && tops.length) ? tops : [60,64,67,71,74,77,55,48];   // fallback: mid/low spread
     return pitches.map(m=>{ const c=gc(m,100); return Array.isArray(c)?`rgb(${c[0]},${c[1]},${c[2]})`:c; });
   })();
   // ── PHASE CHOOSER: commit to ONE of Kandinsky's compositional modes ──
@@ -13295,14 +13344,30 @@ function _bhChordCol(chords, cn, gc, i, mul){
 }
 function _bhCss(c){ return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; }
 function _bhCssA(c,a){ return `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`; }
-// Bauhaus accent palette (classic poster colours), tinted toward chord colours.
+// Bauhaus accent palette — fully song-aware. 6 chord-derived colours sampled
+// across the timeline + 6 anchor colours from the song's top pitch classes
+// (replaces the old canonical Bauhaus hardcoded hues so the painting reflects
+// the actual piece — synth-pop = neon, late Romantic = muted — instead of
+// every song being forced through the same blue/red/ochre signature).
 function _bhPalette(chords, cn, gc, rnd){
-  // Build a palette: half from chord colours, half from canonical Bauhaus hues.
-  const canon = [[43,95,165],[192,57,43],[232,163,61],[79,158,128],[212,104,63],[26,26,24]];
   const pal = [];
+  // 6 chord-derived colours spread across the song timeline.
   const k = Math.min(cn, 6);
   for(let i=0;i<k;i++) pal.push(_bhChordCol(chords, cn, gc, Math.floor(i*cn/Math.max(1,k))));
-  for(const c of canon) pal.push(c);
+  // 6 song-aware anchors from the top pitch classes (gc() routes them through
+  // the active mode the same way the canonical loop fed canonical RGBs).
+  const tops = (typeof _songTopPitches === 'function') ? _songTopPitches(chords, 6) : null;
+  if(tops && tops.length && typeof gc === 'function'){
+    for(const m of tops){
+      const c = gc(m, 100);
+      if(Array.isArray(c)) pal.push([c[0]|0, c[1]|0, c[2]|0]);
+    }
+  } else {
+    // Hard fallback (no chord data): keep the canonical poster hues so the
+    // painting still has 12 entries to draw from. Should not happen at runtime.
+    const canon = [[43,95,165],[192,57,43],[232,163,61],[79,158,128],[212,104,63],[26,26,24]];
+    for(const c of canon) pal.push(c);
+  }
   return pal;
 }
 function _bhPick(pal, rnd, exclude){
