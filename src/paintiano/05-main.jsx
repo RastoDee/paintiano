@@ -2591,6 +2591,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }catch(_){}
     const{N,BW,BH,CW,CH}=grid;
+    try{ if(basicModeRef.current && micActive) console.log('[PF-DIAG paint]','CW=',CW,'CH=',CH,'ratio=',(CW/CH).toFixed(2),(CW>CH?'LANDSCAPE':'portrait'),'wrapW=',canvasWrapRef.current&&canvasWrapRef.current.offsetWidth,'wrapH=',canvasWrapRef.current&&canvasWrapRef.current.offsetHeight); }catch(_){}
     // SUPERSAMPLING (immersive fullscreen, painted modes only). Renders the painting
     // at SS× internal resolution + pre-scales the context, exactly like the export
     // path, so fullscreen on a big/tablet screen is crisp instead of a stretched
@@ -3078,6 +3079,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
     const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, portraitGrow: basicModeRef.current});
+    try{ if(basicModeRef.current) console.log('[PF-DIAG mic-grid]','basicMode=',basicModeRef.current,'isDesktop=',(typeof window!=='undefined'&&window.innerWidth),'CW=',newGrid.CW,'CH=',newGrid.CH,'ratio=',(newGrid.CW/newGrid.CH).toFixed(2),(newGrid.CW>newGrid.CH?'LANDSCAPE':'portrait'),'micListening=',micListening,'micPainting=',micPainting,'draftOwner=',draftOwnerRef.current); }catch(_){}
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
