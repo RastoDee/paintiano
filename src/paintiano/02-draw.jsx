@@ -5293,15 +5293,19 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   //  0/1 = Spiral / Radiant mandala (original body below, via `mandala`).
   //  2 = Ten Largest (stacked ovoid forms).  3 = The Swan (split field + swans, recoloured).
   //  4 = Altarpiece pyramid (triangle + disc).  5 = Botanical (symmetric plant chart).
+  let _klintMandala = false;
   {
     const _pn=_capN(6); const _kpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_kpick===2){ klintPhaseTen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===3){ klintPhaseSwan(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===4){ klintPhaseAltar(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick===5){ klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original spiral/mandala body (variant 0/1)
+    // variant 0 = spiral, variant 1 = radiant mandala — DETERMINISTIC per index
+    // so the two looks are independent (previously both fell through to a coin
+    // flip, which made them interchangeable instead of distinct styles).
+    _klintMandala = (_kpick===1);
   }
-  const mandala = rnd() < 0.5;
+  const mandala = _klintMandala;
 
   // Draw a snail-spiral.
   function snail(cx, cy, rMax, turns, col, lw){
@@ -13150,4 +13154,253 @@ function bakeImageChords(src){
     out.push({ n: baseNotes, startMs: c.startMs || 0, durQ: c.durQ, _domPc: c._domPc, _lum: c._lum });
   }
   return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── Bauhaus (geometric school, 1919) ──────────────────────────────────────
+// Geometric vocabulary: circle, square, triangle, half/quarter-circle, lens,
+// targets, arches. Flat primary colours (blue/red/yellow + black/cream/maroon)
+// drawn from the chords. Hard edges, modular grid. 7 deterministic phases via
+// phaseIndex (the Next/Vary button cycles them). Same overlay architecture as
+// Stella/af Klint: signature (ctx,CW,CH,chords,lim,gc,sessionSeed,mode,phaseIndex),
+// progressive reveal through `lim`, colour from chords through `gc`.
+//   0 = Modular grid      (airy poster: shapes across cells, target/petal/star)
+//   1 = Dense circles     (tight half-circle grid, rich palette)
+//   2 = Abstract face     (cubist face: black bars, target eyes, drips)
+//   3 = Ausstellung       (translucent overlapping circles + black line grid)
+//   4 = Stacked arches    (nested rainbow half-rings)
+//   5 = Offset circles    (grid + big circles straddling cell lines)
+//   6 = Line construction (thick black bars dividing fields + basic shapes)
+// ───────────────────────────────────────────────────────────────────────────
+function drawBauhausOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+
+  // Colour for chord i (averaged note colours), optional brightness multiplier.
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, ((i % cn)+cn)%cn));
+    const chord = chords[idx];
+    _setCurE(chord && chord._E);
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [120,100,140];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  const cssa = (c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+
+  // Reveal fraction so the painting builds up with playback.
+  const revealFrac = Math.max(0, Math.min(1, lim / cn));
+
+  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick===1){ bauhausPhaseDense(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===2){ bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===3){ bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ bauhausPhaseArches(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ bauhausPhaseOffset(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===6){ bauhausPhaseLines(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  bauhausPhaseGrid(ctx,CW,CH,chords,lim,gc,ss,mode);  // pick 0
+}
+
+// ── Shared Bauhaus helpers (each phase re-derives chordCol locally for purity)─
+function _bhChordCol(chords, cn, gc, i, mul){
+  const idx = Math.min(cn-1, Math.max(0, ((i % cn)+cn)%cn));
+  const chord = chords[idx];
+  _setCurE(chord && chord._E);
+  const notes = chord && (chord.n || chord.notes);
+  if(!notes || !notes.length) return [120,100,140];
+  let R=0,G=0,B=0,c=0;
+  for(const note of notes){
+    const m = note.m!==undefined?note.m:note;
+    const v = note.v!==undefined?note.v:80;
+    const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+  }
+  const k = mul===undefined?1:mul;
+  return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+}
+function _bhCss(c){ return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; }
+function _bhCssA(c,a){ return `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`; }
+// Bauhaus accent palette (classic poster colours), tinted toward chord colours.
+function _bhPalette(chords, cn, gc, rnd){
+  // Build a palette: half from chord colours, half from canonical Bauhaus hues.
+  const canon = [[43,95,165],[192,57,43],[232,163,61],[79,158,128],[212,104,63],[26,26,24]];
+  const pal = [];
+  const k = Math.min(cn, 6);
+  for(let i=0;i<k;i++) pal.push(_bhChordCol(chords, cn, gc, Math.floor(i*cn/Math.max(1,k))));
+  for(const c of canon) pal.push(c);
+  return pal;
+}
+function _bhPick(pal, rnd, exclude){
+  let c, tries=0;
+  do{ c = pal[Math.floor(rnd()*pal.length)]; tries++; }
+  while(exclude && c===exclude && tries<8);
+  return c;
+}
+// flat shape primitives (hard-edge), clipped to a cell where relevant
+function _bhClipCell(ctx,x,y,w,h,fn){ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); fn(); ctx.restore(); }
+function _bhCircle(ctx,cx,cy,r,col,a){ ctx.save(); if(a!=null)ctx.globalAlpha=a; ctx.fillStyle=_bhCss(col); ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+function _bhRing(ctx,cx,cy,r,lw,col){ ctx.strokeStyle=_bhCss(col); ctx.lineWidth=lw; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke(); }
+function _bhSq(ctx,x,y,w,h,col){ ctx.fillStyle=_bhCss(col); ctx.fillRect(x,y,w,h); }
+function _bhHalf(ctx,x,y,w,h,col,rot){ _bhClipCell(ctx,x,y,w,h,()=>{ ctx.fillStyle=_bhCss(col); ctx.beginPath(); const s=Math.max(w,h);
+  if(rot===0)ctx.arc(x+w/2,y+h,s,Math.PI,0); else if(rot===1)ctx.arc(x,y+h/2,s,-Math.PI/2,Math.PI/2);
+  else if(rot===2)ctx.arc(x+w/2,y,s,0,Math.PI); else ctx.arc(x+w,y+h/2,s,Math.PI/2,Math.PI*1.5); ctx.closePath(); ctx.fill(); }); }
+function _bhQuarter(ctx,x,y,w,h,col,cn4){ _bhClipCell(ctx,x,y,w,h,()=>{ ctx.fillStyle=_bhCss(col); const s=Math.max(w,h);
+  const cx=(cn4===0||cn4===3)?x:x+w, cy=(cn4===0||cn4===1)?y:y+h; ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,s,cn4*Math.PI/2,(cn4+1)*Math.PI/2); ctx.closePath(); ctx.fill(); }); }
+function _bhTri(ctx,x,y,w,h,col,d){ ctx.fillStyle=_bhCss(col); ctx.beginPath();
+  if(d===0){ctx.moveTo(x,y);ctx.lineTo(x+w,y);ctx.lineTo(x,y+h);} else if(d===1){ctx.moveTo(x+w,y);ctx.lineTo(x+w,y+h);ctx.lineTo(x,y);}
+  else if(d===2){ctx.moveTo(x+w,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x+w,y);} else {ctx.moveTo(x,y+h);ctx.lineTo(x,y);ctx.lineTo(x+w,y+h);} ctx.closePath(); ctx.fill(); }
+function _bhTarget(ctx,cx,cy,r,pal,rnd){ const a=_bhPick(pal,rnd); _bhRing(ctx,cx,cy,r,r*0.28,a); _bhCircle(ctx,cx,cy,r*0.5,_bhPick(pal,rnd,a)); }
+function _bhPetals(ctx,cx,cy,R,pal,rnd){ for(let p=0;p<4;p++){ ctx.save(); ctx.translate(cx,cy); ctx.rotate(p*Math.PI/2); ctx.fillStyle=_bhCss(_bhPick(pal,rnd));
+  ctx.beginPath(); ctx.arc(-R*0.5,0,R*0.5,-Math.PI/2,Math.PI/2); ctx.arc(R*0.5,0,R*0.5,Math.PI/2,Math.PI*1.5); ctx.closePath(); ctx.fill(); ctx.restore(); } }
+function _bhStar4(ctx,cx,cy,r,col){ ctx.fillStyle=_bhCss(col); ctx.beginPath(); for(let i=0;i<4;i++){ const a=i*Math.PI/2,a2=a+Math.PI/4;
+  ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r); ctx.lineTo(cx+Math.cos(a2)*r*0.34,cy+Math.sin(a2)*r*0.34); } ctx.closePath(); ctx.fill(); }
+function _bhDrips(ctx,x,yt,yb,colCss,n,rnd){ ctx.strokeStyle=colCss; for(let i=0;i<n;i++){ const dx=x+(rnd()-0.5)*20; ctx.lineWidth=1+rnd()*2.5; ctx.beginPath(); ctx.moveTo(dx,yt); ctx.lineTo(dx,yt+(yb-yt)*(0.3+rnd()*0.7)); ctx.stroke(); } }
+function _bhCreamFill(ctx,CW,CH){ ctx.fillStyle='rgb(239,233,221)'; ctx.fillRect(0,0,CW,CH); }
+
+// ── Phase 0: Modular grid (airy poster) ───────────────────────────────────
+function bauhausPhaseGrid(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(401,ss,0,0);
+  const pal=_bhPalette(chords,cn,gc,rnd);
+  _bhCreamFill(ctx,CW,CH);
+  const cols=4, rows=6, cw=CW/cols, ch=CH/rows;
+  const reveal=Math.max(0,Math.min(1,lim/cn));
+  const shown=Math.ceil(cols*rows*reveal);
+  let idx=0;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(idx++>shown) { continue; }
+    if(rnd()<0.30) continue;
+    const x=c*cw,y=r*ch;
+    if(rnd()<0.45) _bhSq(ctx,x,y,cw,ch,_bhPick(pal,rnd));
+    const s=rnd();
+    if(s<0.22) _bhHalf(ctx,x,y,cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
+    else if(s<0.42) _bhQuarter(ctx,x,y,cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
+    else if(s<0.55) _bhTri(ctx,x,y,cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
+    else if(s<0.65) _bhCircle(ctx,x+cw/2,y+ch/2,Math.min(cw,ch)*0.42,_bhPick(pal,rnd));
+  }
+  if(reveal>0.4) _bhTarget(ctx,cw*1.4,ch*2.3,Math.min(cw,ch)*0.7,pal,rnd);
+  if(reveal>0.6) _bhPetals(ctx,cw*2.5,ch*4.3,Math.min(cw,ch)*0.95,pal,rnd);
+  if(reveal>0.5){ const sx=cw*2.7,sy=ch*0.7,sr=Math.min(cw,ch)*0.7; _bhCircle(ctx,sx,sy,sr,[43,95,165]); _bhStar4(ctx,sx,sy,sr*0.7,[232,163,61]); }
+}
+
+// ── Phase 1: Dense half-circle grid (rich palette) ────────────────────────
+function bauhausPhaseDense(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(402,ss,0,0);
+  // richer palette: chord colours + dark accents
+  const pal=_bhPalette(chords,cn,gc,rnd);
+  pal.push([58,20,32],[255,255,255],[217,140,140],[122,35,53]);
+  // maroon ground
+  _bhSq(ctx,0,0,CW,CH,[122,35,53]);
+  const cols=6, rows=9, cw=CW/cols, ch=CH/rows;
+  const reveal=Math.max(0,Math.min(1,lim/cn));
+  const shown=Math.ceil(cols*rows*reveal);
+  let idx=0;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(idx++>shown) continue;
+    const x=c*cw,y=r*ch, bg=_bhPick(pal,rnd); _bhSq(ctx,x,y,cw,ch,bg);
+    const k=rnd(), fg=_bhPick(pal,rnd,bg);
+    if(k<0.42) _bhHalf(ctx,x,y,cw,ch,fg,Math.floor(rnd()*4));
+    else if(k<0.66) _bhQuarter(ctx,x,y,cw,ch,fg,Math.floor(rnd()*4));
+    else if(k<0.86) _bhCircle(ctx,x+cw/2,y+ch/2,Math.min(cw,ch)*0.46,fg);
+  }
+}
+
+// ── Phase 2: Abstract cubist face ─────────────────────────────────────────
+function bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(403,ss,0,0);
+  const pal=_bhPalette(chords,cn,gc,rnd);
+  pal.push([109,138,120],[125,138,153],[232,221,200]);
+  // muted block field
+  ctx.fillStyle='rgb(205,184,154)'; ctx.fillRect(0,0,CW,CH);
+  const cols=4, rows=5, cw=CW/cols, ch=CH/rows;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const x=c*cw,y=r*ch; _bhSq(ctx,x,y,cw,ch,_bhPick(pal,rnd));
+    if(rnd()<0.25) _bhDrips(ctx,x+cw*rnd(),y+ch,CH,'rgba(20,20,18,.5)',2,rnd);
+  }
+  const reveal=Math.max(0,Math.min(1,lim/cn));
+  const W=CW,H=CH, ink=[26,26,24];
+  // brow bar
+  _bhSq(ctx,W*0.13,H*0.17,W*0.74,H*0.035,ink); _bhDrips(ctx,W*0.2,H*0.205,H*0.45,'rgb(26,26,24)',8,rnd);
+  _bhSq(ctx,W*0.38,H*0.10,W*0.22,H*0.07,ink);                     // hat
+  _bhSq(ctx,W*0.47,H*0.17,W*0.06,H*0.46,ink); _bhSq(ctx,W*0.44,H*0.60,W*0.12,H*0.02,ink); // nose
+  if(reveal>0.25){ _bhRing(ctx,W*0.36,H*0.34,W*0.07,W*0.05,ink); _bhCircle(ctx,W*0.36,H*0.34,W*0.03,[232,163,61]); } // left eye
+  if(reveal>0.4){ _bhCircle(ctx,W*0.70,H*0.30,W*0.12,[232,221,200]); _bhCircle(ctx,W*0.70,H*0.30,W*0.085,ink); _bhCircle(ctx,W*0.70,H*0.30,W*0.04,[43,95,165]); } // right eye
+  if(reveal>0.6){ _bhSq(ctx,W*0.40,H*0.70,W*0.22,H*0.02,ink); _bhSq(ctx,W*0.42,H*0.83,W*0.30,H*0.16,ink); _bhDrips(ctx,W*0.45,H*0.99,H*1.05,'rgb(26,26,24)',10,rnd); } // mouth+chin
+  _bhCircle(ctx,W*0.80,H*0.12,W*0.045,ink); _bhCircle(ctx,W*0.90,H*0.10,W*0.03,[192,57,43]); _bhCircle(ctx,W*0.13,H*0.72,W*0.07,[43,51,64]);
+}
+
+// ── Phase 3: Ausstellung — translucent circles + black line grid ──────────
+function bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(404,ss,0,0);
+  const pal=_bhPalette(chords,cn,gc,rnd);
+  pal.push([26,26,24],[212,84,31],[154,53,32],[138,125,74]);
+  ctx.fillStyle='rgb(243,234,208)'; ctx.fillRect(0,0,CW,CH);
+  // pale column blocks
+  for(let i=0;i<5;i++){ if(rnd()<0.5){ const x=rnd()*CW,w=CW*(0.08+rnd()*0.12); ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle=_bhCss(_bhPick(pal,rnd)); ctx.fillRect(x,0,w,CH); ctx.restore(); } }
+  const reveal=Math.max(0,Math.min(1,lim/cn));
+  const N=Math.ceil((10+rnd()*6)*Math.max(0.3,reveal));
+  for(let i=0;i<N;i++) _bhCircle(ctx,rnd()*CW,rnd()*CH,CW*(0.08+rnd()*0.22),_bhPick(pal,rnd),0.55+rnd()*0.25);
+  for(let i=0;i<5;i++) _bhCircle(ctx,rnd()*CW,rnd()*CH,CW*(0.02+rnd()*0.03),_bhPick(pal,rnd));
+  // thin black orthogonal construction lines
+  ctx.strokeStyle='rgb(26,26,24)';
+  const NL=Math.ceil(14*Math.max(0.3,reveal));
+  for(let i=0;i<NL;i++){ ctx.lineWidth=1+rnd()*2; ctx.beginPath();
+    if(rnd()<0.5){ const x=rnd()*CW; ctx.moveTo(x,rnd()*CH*0.3); ctx.lineTo(x,CH*(0.5+rnd()*0.5)); }
+    else { const y=rnd()*CH; ctx.moveTo(rnd()*CW*0.3,y); ctx.lineTo(CW*(0.5+rnd()*0.5),y); } ctx.stroke(); }
+}
+
+// ── Phase 4: Stacked arches (rainbow nested half-rings) ───────────────────
+function bauhausPhaseArches(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(405,ss,0,0);
+  const pal=_bhPalette(chords,cn,gc,rnd);
+  _bhCreamFill(ctx,CW,CH);
+  const cols=2, rows=3, cw=CW/cols, ch=CH/rows;
+  const reveal=Math.max(0,Math.min(1,lim/cn));
+  const shown=Math.ceil(cols*rows*reveal);
+  let idx=0;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(idx++>shown) continue;
+    const x=c*cw,y=r*ch; _bhSq(ctx,x,y,cw,ch,_bhPick(pal,rnd));
+    const n=3+Math.floor(rnd()*3), maxR=Math.min(cw,ch)*0.85;
+    for(let i=n;i>=1;i--){ const col=_bhPick(pal,rnd); _bhClipCell(ctx,x,y,cw,ch,()=>{ ctx.fillStyle=_bhCss(col); ctx.beginPath(); ctx.arc(x+cw/2,y+ch*0.95,maxR*(i/n),Math.PI,0); ctx.closePath(); ctx.fill(); }); }
+  }
+}
+
+// ── Phase 5: Offset circles (grid + big circles straddling cell lines) ────
+function bauhausPhaseOffset(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(406,ss,0,0);
+  const pal=_bhPalette(chords,cn,gc,rnd);
+  pal.push([122,35,53],[255,255,255]);
+  _bhSq(ctx,0,0,CW,CH,[122,35,53]);
+  const cols=4, rows=6, cw=CW/cols, ch=CH/rows;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++) _bhSq(ctx,c*cw,r*ch,cw,ch,_bhPick(pal,rnd));
+  const reveal=Math.max(0,Math.min(1,lim/cn));
+  const N=Math.ceil((7+rnd()*4)*Math.max(0.3,reveal));
+  for(let i=0;i<N;i++){ const ccx=cw*(0.5+Math.floor(rnd()*cols)), ccy=ch*(0.5+Math.floor(rnd()*rows)); _bhCircle(ctx,ccx,ccy,Math.min(cw,ch)*(0.7+rnd()*0.5),_bhPick(pal,rnd)); }
+  for(let i=0;i<5;i++) _bhHalf(ctx,cw*Math.floor(rnd()*cols),ch*Math.floor(rnd()*rows),cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
+}
+
+// ── Phase 6: Line construction (thick black bars + basic shapes) ──────────
+function bauhausPhaseLines(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(407,ss,0,0);
+  const pal=_bhPalette(chords,cn,gc,rnd);
+  _bhCreamFill(ctx,CW,CH);
+  const reveal=Math.max(0,Math.min(1,lim/cn));
+  const NF=Math.ceil(6*Math.max(0.3,reveal));
+  for(let i=0;i<NF;i++){ ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle=_bhCss(_bhPick(pal,rnd)); ctx.fillRect(rnd()*CW*0.6,rnd()*CH*0.6,CW*(0.2+rnd()*0.3),CH*(0.15+rnd()*0.3)); ctx.restore(); }
+  const NS=Math.ceil(6*Math.max(0.3,reveal));
+  for(let i=0;i<NS;i++){ const x=rnd()*CW,y=rnd()*CH,s=CW*(0.08+rnd()*0.12),k=Math.floor(rnd()*3);
+    if(k===0) _bhCircle(ctx,x,y,s/2,_bhPick(pal,rnd));
+    else if(k===1) _bhHalf(ctx,x-s/2,y-s/2,s,s,_bhPick(pal,rnd),Math.floor(rnd()*4));
+    else _bhSq(ctx,x-s/2,y-s/2,s,s,_bhPick(pal,rnd)); }
+  // thick black construction bars
+  ctx.fillStyle='rgb(26,26,24)';
+  for(let i=0;i<5;i++){ if(rnd()<0.5) ctx.fillRect(0,rnd()*CH,CW,CW*0.02); else ctx.fillRect(rnd()*CW,0,CW*0.02,CH); }
 }

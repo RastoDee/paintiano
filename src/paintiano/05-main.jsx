@@ -1121,7 +1121,7 @@ export default function Paintiano() {
   // covers all three states (Mosaic / Notes / oneM); the chip still cycles
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
-  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai'];
   // Tones available in the active canvas Tone selector. Users can pre-filter
   // which tones appear in the main panel via Setup (same chip-list UI as
   // palettes/artists). Default: all three on.
@@ -1169,7 +1169,7 @@ export default function Paintiano() {
       // pull in the partner so every enabled pair is two-sided. Otherwise
       // tap-2 on the chip falls through forcedSide → Mosaic instead of
       // flipping to the partner.
-      const _PAIRS = [['picasso','matisse'],['pollock','bloom'],['kusama','miro'],['mondrian','kandinsky'],['gold','rothko'],['bulge','wave'],['spiral','arcs'],['pop','mitchell'],['monet','hokusai']];
+      const _PAIRS = [['picasso','matisse'],['pollock','bloom'],['kusama','miro'],['bauhaus','kandinsky'],['gold','rothko'],['bulge','wave'],['spiral','arcs'],['pop','mitchell'],['monet','hokusai']];
       for(const [pa,pb] of _PAIRS){
         const ha = valid.includes(pa), hb = valid.includes(pb);
         if(ha && !hb) valid.push(pb);
@@ -1378,18 +1378,18 @@ export default function Paintiano() {
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
   const STYLE_LABELS_I18N = {
-    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grid',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
-    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Bauhaus',miro:'Konštelácia',mondrian:'Mriežka',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
-    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Bauhaus',miro:'Konstellation',mondrian:'Raster',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
-    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Bauhaus',miro:'Constellation',mondrian:'Grille',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
-    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Bauhaus',miro:'Constelación',mondrian:'Cuadrícula',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
-    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Bauhaus',miro:'Constelação',mondrian:'Grade',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
-    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'包豪斯',miro:'星座',mondrian:'网格',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
-    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'包浩斯',miro:'星座',mondrian:'網格',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
-    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'バウハウス',miro:'星座',mondrian:'グリッド',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
+    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Abstract',miro:'Constellation',mondrian:'Grid',bauhaus:'Bauhaus',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
+    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Abstraktné',miro:'Konštelácia',mondrian:'Mriežka',bauhaus:'Bauhaus',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
+    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Abstrakt',miro:'Konstellation',mondrian:'Raster',bauhaus:'Bauhaus',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
+    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Abstrait',miro:'Constellation',mondrian:'Grille',bauhaus:'Bauhaus',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
+    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Abstracto',miro:'Constelación',mondrian:'Cuadrícula',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
+    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Abstrato',miro:'Constelação',mondrian:'Grade',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
+    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'抽象',miro:'星座',mondrian:'网格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
+    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'抽象',miro:'星座',mondrian:'網格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
+    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'抽象',miro:'星座',mondrian:'グリッド',bauhaus:'バウハウス',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
+  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -1399,7 +1399,7 @@ export default function Paintiano() {
     ['picasso','matisse'],
     ['pollock','bloom'],
     ['kusama','miro'],
-    ['kandinsky','mondrian'],
+    ['kandinsky','bauhaus'],
     ['gold','rothko'],
     ['bulge','wave'],
     ['spiral','arcs'],
@@ -1815,7 +1815,7 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
+  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','bauhaus','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
   // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
   // shuffle across all 16. Keeps the random feature usable for Free without ever
   // accidentally landing on a locked artist (which would just paint a Pro-only
@@ -2840,7 +2840,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='oneM'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='oneM'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -2864,7 +2864,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       _ensureEnergies(chords);
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
@@ -2873,7 +2873,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -2932,7 +2932,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const fullCanvasOverlay = style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
         _ensureEnergies(chords);
@@ -2972,6 +2972,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='rothko')   drawRothkoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='matisse')  drawMatisseOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='mondrian') drawMondrianOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='bauhaus') drawBauhausOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='bulge') drawBulgeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='arcs') drawArcsOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='bloom') drawBloomOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
@@ -3020,6 +3021,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='mondrian' && lim>0){
         drawMondrianOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
+      if(style==='bauhaus' && lim>0){
+        drawBauhausOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+      }
       if(style==='bulge' && lim>0){
         drawBulgeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
@@ -3053,7 +3057,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='oneM' && lim>0){
         drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -3521,7 +3525,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -9230,6 +9234,9 @@ Composition rules:
         }
         if(style==='mondrian' && chords.length>0){
           drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='bauhaus' && chords.length>0){
+          drawBauhausOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='bulge' && chords.length>0){
           drawBulgeOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
