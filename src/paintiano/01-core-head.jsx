@@ -17,7 +17,7 @@ const GOLD = '#c9a84c';
 // see it again. Setting this to `false` disables the entire onboarding flow
 // instantly: the app falls back to the current setup screen for everyone. No
 // other code paths change.
-const ONBOARDING_V3 = true;
+const ONBOARDING_V3 = false;
 // ── Playful design tokens (added v2.6.0) ────────────────────────────────────
 // Layered dark surfaces + bright cream text + saturated accents. Used across
 // the redesigned control panel. Buttons lift + glow on interaction.
@@ -47,8 +47,8 @@ const PF_STYLE = `
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
         @keyframes pf-flip-nudge {
-          0%,100% { opacity:.55; transform:translateX(0) scale(1); }
-          50% { opacity:1; transform:translateX(3px) scale(1.18); }
+          0%,100% { opacity:.6; transform:scale(1); }
+          50% { opacity:1; transform:scale(1.035); }
         }
         @keyframes pf-artist-glow {
           0%   { opacity:.4; text-shadow:0 0 0 rgba(240,192,64,0); }

@@ -9656,6 +9656,20 @@ Composition rules:
   // the Setup⇄Canvas navigation is consistent across ALL modes.
   const hasContent = chords.length>0 || composeMode || micActive || micArmed || hasComposeDraft || hasMicDraft;
   const isActiveView = !forceSetup && (playing || chords.length>0 || composeMode || micActive || micArmed || working || stayActive);
+  // Lite: when the canvas first appears (active view), snap the page to the top
+  // so the header sits up top and the canvas fills the screen — the intended
+  // opening pose. Without this the page can stay scrolled mid-way after the
+  // auto-loaded sample kicks in.
+  const _liteScrolledRef = useRef(false);
+  useEffect(()=>{
+    if(!basicMode){ _liteScrolledRef.current=false; return; }
+    if(isActiveView && !_liteScrolledRef.current){
+      _liteScrolledRef.current = true;
+      requestAnimationFrame(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){} });
+    } else if(!isActiveView){
+      _liteScrolledRef.current = false;
+    }
+  },[basicMode,isActiveView]);
   // Immersive painting view is CSS-based (native Fullscreen API doesn't cover
   // non-video elements on iOS). Lock page scroll + ESC to exit; auto-exit when
   // we leave the canvas (Clear / back to Setup).
@@ -10041,12 +10055,10 @@ Composition rules:
             style={{display:'inline-flex',alignItems:'center',gap:8,margin:'2px auto 0',cursor:'pointer',padding:'4px 12px',borderRadius:999,
               transform:(liteFlip||liteFlipTeaser)?'rotateY(90deg)':'rotateY(0deg)',
               transformOrigin:'center center',WebkitTapHighlightColor:'transparent',userSelect:'none',
-              background:(!liteFlipSeen)?'rgba(220,180,90,.12)':'transparent',
-              boxShadow:(!liteFlipSeen)?'0 0 0 1px rgba(220,180,90,.4), 0 0 16px rgba(220,180,90,.18)':'none',transition:'transform .26s ease, background .4s ease, box-shadow .4s ease'}}>
-            <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:isDesktop?'1rem':'1.05rem',color:'rgba(220,180,90,.9)',letterSpacing:'.02em'}}>
+              transition:'transform .26s ease'}}>
+            <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:isDesktop?'1rem':'1.05rem',color:'rgba(220,180,90,.9)',letterSpacing:'.02em',display:'inline-block',transformOrigin:'center center',animation:(!liteFlipSeen)?'pf-flip-nudge 2.6s ease-in-out infinite':'none'}}>
               {liteImageMode ? 'painting → music' : 'music → painting'}
             </span>
-            <span aria-hidden="true" style={{fontSize:(!liteFlipSeen)?'.92rem':'.7rem',color:(!liteFlipSeen)?'rgba(255,217,110,1)':'rgba(220,180,90,.7)',display:'inline-block',animation:(!liteFlipSeen)?'pf-flip-nudge 1.3s ease-in-out infinite':'none'}}>⇋</span>
           </div>
           </div>
         )}
