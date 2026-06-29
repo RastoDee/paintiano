@@ -27469,12 +27469,17 @@ Composition rules:
       ? Array.from(FREE_UNLOCKED_KEYS)
       : ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
     const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky') ? 8 : (k==='wave' ? 7 : 6)));
-    // The shuffle pool of "artists" includes mosaic as one more entry, so the
-    // bare grid shows about as often as any single painter.
-    const bagKeys = [...artists, 'mosaicFamily'];
+    // The shuffle pool of "artists" includes the three Mosaic-family stops
+    // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
+    // shows about as often as any single painter.
+    const _isFamilyKey = (k)=> (k==='mosaicFamily'||k==='mosaicNotes'||k==='mosaicOneM');
+    const bagKeys = [...artists, 'mosaicFamily', 'mosaicNotes', 'mosaicOneM'];
     // Fisher–Yates shuffle.
     const shuffle = (arr)=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
-    const curK = style || 'mosaicFamily';
+    const curK = style ? style
+               : oneMMode ? 'mosaicOneM'
+               : notesMode ? 'mosaicNotes'
+               : 'mosaicFamily';
     const curV = (phaseIndex|0);
     // ── pick next ARTIST from the shuffle-bag ──────────────────────────────
     // Refill when empty. On refill, if the freshly shuffled bag would hand back
@@ -27493,7 +27498,7 @@ Composition rules:
     if(nk===curK && bag.length){ bag.push(nk); nk = bag.shift(); }
     surpriseArtistBagRef.current = bag;
     // ── pick next VARIANT for that artist from its own bag ─────────────────
-    const vCount = (nk==='mosaicFamily') ? 1 : variantsFor(nk);
+    const vCount = _isFamilyKey(nk) ? 1 : variantsFor(nk);
     let nv = 0;
     if(vCount>1){
       const vbags = surpriseVariantBagsRef.current;
@@ -27508,16 +27513,21 @@ Composition rules:
       vbags[nk] = vbag;
     }
     setRandomMode(false); randomModeRef.current=false;
-    if(nk==='mosaicFamily'){
+    if(_isFamilyKey(nk)){
+      // Mosaic family stop. style stays null; the sub-mode flags pick which
+      // bare-grid look renders via effectiveStyle (Mosaic / Notes / $1M$).
       setSetupArtists(prev => prev.includes('mosaicFamily') ? prev : [...prev,'mosaicFamily']);
-      setStyle(null);                 // null style → mosaic / bare grid
-      setShufVariant(nv|0);
+      setStyle(null);                 // null style → mosaic family
+      setShufVariant(0);
+      setNotesMode(nk==='mosaicNotes');
+      setOneMMode(nk==='mosaicOneM');
     } else {
       setSetupArtists(prev => prev.includes(nk) ? prev : [...prev, nk]);
       setStyle(nk);
       setPhaseIndex(nv|0);            // pick that artist's variant
+      setNotesMode(false); setOneMMode(false);  // artist exits any family sub-mode
     }
-  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex]);
+  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
   // and the canvas is empty (e.g. after the intro splash, or on entering Basic
