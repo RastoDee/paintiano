@@ -29009,21 +29009,34 @@ Composition rules:
   const wakeControls = useCallback(()=>{
     setControlsAwake(true);
     if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current);
-    // Hide the floating exit button after a short idle. During playback this
-    // applies everywhere; in fullscreen (immersive) it also applies once the
-    // piece has FINISHED and is sitting still — so the canvas can be admired as
-    // a clean artwork. A tap / pointer move calls wakeControls again to reveal.
-    if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 4000); }
-  },[playing,immersive]);
+    // Hide the floating controls after a short idle so the painting reads clean.
+    // ◆ Lite on desktop/tablet — the CTAs float over the canvas, so they fade
+    //   after 2s of no pointer activity (snappy clean plate), revealed again on
+    //   any move/tap. ◆ During playback / fullscreen everywhere else: 4s.
+    const liteFloat = basicMode && isDesktop;
+    if(liteFloat){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2000); }
+    else if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 4000); }
+  },[playing,immersive,basicMode,isDesktop]);
   // When playback stops, reveal controls. Outside fullscreen they then stay put;
   // in fullscreen we re-arm the idle countdown so a finished, still piece also
-  // fades its controls. Entering/leaving fullscreen re-evaluates this.
+  // fades its controls. Entering/leaving fullscreen re-evaluates this. Lite
+  // desktop/tablet also re-arms so its floating CTAs fade when idle.
   useEffect(()=>{
     if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current);
     setControlsAwake(true);
-    if(playing || immersive){ wakeControls(); }
+    if(playing || immersive || (basicMode && isDesktop)){ wakeControls(); }
     return ()=>{ if(controlsIdleRef.current) clearTimeout(controlsIdleRef.current); };
-  },[playing,immersive,wakeControls]);
+  },[playing,immersive,basicMode,isDesktop,wakeControls]);
+  // Lite on desktop/tablet: any pointer movement / tap anywhere reveals the
+  // floating CTAs and re-arms their 2s idle fade (the CTAs sit off-canvas, so
+  // canvas-only listeners aren't enough). Mobile keeps its docked bar always on.
+  useEffect(()=>{
+    if(!(basicMode && isDesktop)) return;
+    const wake=()=>wakeControls();
+    window.addEventListener('pointermove',wake,{passive:true});
+    window.addEventListener('pointerdown',wake,{passive:true});
+    return ()=>{ window.removeEventListener('pointermove',wake); window.removeEventListener('pointerdown',wake); };
+  },[basicMode,isDesktop,wakeControls]);
   // Latch stayActive whenever we're genuinely active (content on canvas, a live
   // mode, or processing). Once latched, Clear can empty the canvas without
   // bouncing back to setup; only "← Setup" un-latches it.
@@ -32620,7 +32633,7 @@ Composition rules:
             </div>
           </div>
         )}
-        <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',top:96,right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+        <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',top:96,right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt)?.5:1}}>↻ {ts('surpriseMe','Surprise me')}</button>
           <button onClick={_midClickAware} disabled={!_capturing && !_haveArt} title={_capturing?ts('stopLabel','Stop'):(_done?ts('saveLabel','Save'):(playing?t('pause'):t('play')))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:(_capturing||_haveArt)?1:.5}}>{_midMicAware}</button>
           <button onClick={()=>setLiteSrcPicker(true)} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{})}}>🎵 {ts('useMySong','Use my song')}</button>
