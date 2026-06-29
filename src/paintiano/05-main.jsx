@@ -2160,6 +2160,23 @@ export default function Paintiano() {
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
   },[basicMode]);
+  // Pro / Pro AI users land in Advanced by default — they bought the controls.
+  // Free (and first-time) visitors still start in Lite. We only auto-switch on
+  // the first load of a visitor who hasn't been onboarded yet (paintiano_basic_mode
+  // is written on mount, so we key off paintiano_onboarded which is only set once
+  // the user has actually engaged). A Pro user who later picks Lite keeps it.
+  // proStatus starts as 'loading' (the licence resolves async); this fires once.
+  const proDefaultAppliedRef = useRef(false);
+  useEffect(()=>{
+    if(proDefaultAppliedRef.current) return;
+    if(proStatus==='loading') return;            // licence not resolved yet
+    proDefaultAppliedRef.current = true;
+    let onboarded=false;
+    try{ onboarded = localStorage.getItem('paintiano_onboarded')==='1'; }catch(_){}
+    if(!onboarded && (proStatus==='pro' || proStatus==='pro_ai')){
+      setBasicMode(false);                       // Pro → Advanced on first visit
+    }
+  },[proStatus]);
   // Inline "edit your set" mode for the Pick-a-look cockpit. When on, disabled
   // palettes/artists show as ghost chips you can tap to add to your set (and
   // enabled ones to remove) — live, without leaving the canvas. The heavy
