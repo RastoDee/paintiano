@@ -1659,25 +1659,33 @@ function computeGrid(arg, opts){
     return _wts ? base * _wts[i] : base;
   };
   const totalQ=evs.reduce((s,e,i)=>s+_effDurQ(i),0);
+  // Live mic commits chords with very small durQ, so totalQ stays ~1–2 even
+  // after many chords → N=2, rows=1 → a wide 1-row landscape strip. For
+  // portraitGrow we size the column/row grid by the CHORD COUNT instead, which
+  // grows 1,2,3… so rows climb and the canvas becomes a tall portrait. (totalQ
+  // still drives per-cell widths below; only N/rows use the count.)
+  const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
   const _portrait = !!(opts && opts.portraitGrow);
-  const N0=Math.max(2,Math.ceil(Math.sqrt(totalQ)));
+  const N0 = _portrait
+    ? Math.max(2, Math.ceil(Math.sqrt(_layoutQ)/1.15))
+    : Math.max(2,Math.ceil(Math.sqrt(_layoutQ)));
   let bestN=N0, bestScore=-1;
   for(let dn=-1; dn<=2; dn++){
     const n=Math.max(2, N0+dn);
-    const r=Math.max(1,Math.ceil(totalQ/n));
-    const fillRatio=totalQ/(n*r);
+    const r=Math.max(1,Math.ceil(_layoutQ/n));
+    const fillRatio=_layoutQ/(n*r);
     const score=fillRatio*100 - r*0.5;
     if(score>bestScore){bestScore=score; bestN=n;}
   }
   const N=bestN;
-  const rows=Math.max(1,Math.ceil(totalQ/N));
+  const rows=Math.max(1,Math.ceil(_layoutQ/N));
   // Uniform global scale so the totals fill exactly N*rows width-units.
   // Every block keeps the SAME unit width across the canvas (no per-row stretching).
-  const scale=(N*rows)/totalQ;
-  let BW, BH, CW, CH, _branch='?';
-  if(liveMode){ _branch='live';
+  const scale=(N*rows)/_layoutQ;
+  let BW, BH, CW, CH;
+  if(liveMode){
     // LIVE-MODE FIXED CANVAS FRAME — compose / sing / listen.
     // Width AND height stay constant regardless of chord count. Width chosen
     // by viewport (a bit larger than non-live modes since compose paintings
@@ -1690,7 +1698,7 @@ function computeGrid(arg, opts){
     CW=N*BW;
     CH=Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
-  } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){ _branch='desktop';
+  } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){
     // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as
     // mobile (square-ish blocks: BH = BW*PHI, CW = N*BW, CH = rows*BH). This is
     // what makes circles render as circles and the paint keep pace with the
@@ -1709,7 +1717,7 @@ function computeGrid(arg, opts){
     BH=Math.round(BW*PHI);
     CW=N*BW;
     CH=rows*BH;
-  } else { _branch='mobile';
+  } else {
     // LOADED-MODE GROW CANVAS — MIDI / audio / score / image / mood (MOBILE).
     // Block height = BW * PHI (golden ratio per block), canvas height grows
     // with row count. This is the original behavior pre-treemap experiment;
@@ -1782,6 +1790,6 @@ function computeGrid(arg, opts){
     const lastSeg=cells[cells.length-1].segments[cells[cells.length-1].segments.length-1];
     CH=lastSeg.y+BH;
   }
-  return{N,BW,BH,CW,CH,cells,rows,totalQ,_branch};
+  return{N,BW,BH,CW,CH,cells,rows,totalQ};
 }
 // ─────────────────────────────────────────────────────────────────────────────
