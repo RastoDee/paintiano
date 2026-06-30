@@ -7720,7 +7720,7 @@ Hard requirements:
     try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
     try{ setMuted(false); }catch(_){}
     try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
-    try{ setStyle(null); }catch(_){}         // Mosaic = bare reading
+    try{ setStyle('pollock'); setPhaseIndex(0); setNotesMode(false); setOneMMode(false); }catch(_){}   // Pollock 'a' — painterly first impression on first Play tap
     // Inherit the user's active palette and tone (set in Advanced or stored
     // from a previous session). Lite no longer force-resets to Harmony so
     // a Spectral / Phi / Custom user keeps their colour DNA in Lite too.
@@ -7952,14 +7952,12 @@ Hard requirements:
     const id=setTimeout(()=>{
       try{
         try{ setMuted(false); }catch(_){}
-        // Lite always opens on Pollock 'a' — a strong painterly first
-        // impression instead of the bare Mosaic. Surprise me then cycles
-        // through other styles. Palette and tone are inherited from the user's
-        // Advanced settings — no force.
+        // Lite auto-load on flip/re-entry: keep Mosaic (bare reading). The
+        // first-ever Play chip (litePlayStart) is where Pollock 'a' kicks in as
+        // the painterly first impression. Palette and tone are inherited from
+        // the user's Advanced settings — no force.
         try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
-        setStyle('pollock');
-        setPhaseIndex(0);
-        setNotesMode(false); setOneMMode(false);
+        setStyle(null);
         loadSampleMidi();
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
