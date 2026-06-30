@@ -7841,7 +7841,7 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   //  2 = Clustered masses (centre).
   //  3 = Blue Balls (blue dominant).
   //  4 = Towards Disappearance (1957-58, minimal sparse marks).
-  //  5 = Big Red mural (red field + edge incursions).
+  //  5 = Hanging Drips (1960s "Hanging" series — vertical color streams).
   //  Free (cap=2) sees Bloom + Mandala — dense organic vs ordered concentric
   //  is the strongest visual contrast in Sam Francis's catalogue.
   {
@@ -7850,7 +7850,7 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
     if(_fpick===2){ francisPhaseCluster(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===3){ francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_fpick===4){ francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_fpick===5){ francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_fpick===5){ francisPhaseHangingDrips(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     // Slots 0 and 6 share the bloom body; the slot picks the layout (0 = top-
     // weighted field with drips, 6 = Edge composition: blots ring the borders,
     // open white centre) instead of a hidden seed bit — both reachable via Vary.
@@ -8018,8 +8018,83 @@ function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
 // ── Sam Francis E: Grid/lattice — colour blots seated in an open white grid. ──
 
-// ── Sam Francis F: Big Red mural — a dominant red field with edge incursions. ──
-function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+// ── Sam Francis F: Hanging Drips — vertical color streams from top (1960s
+// "Hanging" series). Replaces the previous "Big Red mural" — that one read as
+// one dominant red polygon vs Cluster's centralised dots, and visually crowded
+// the canvas. Hanging Drips is the only Francis phase (and the only style on
+// the whole bench) that reads top-down: a curtain of chord-coloured heads
+// raining vertical drips into the white. Density drives stream count: 5
+// streams for calm pieces, up to 11 for dense ones. Each stream picks one
+// chord, with ~40% chance of a drop pooling at the bottom.
+function francisPhaseHangingDrips(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+  const N=Math.max(1, Math.min(cn, lim));
+  const reveal=Math.max(0, Math.min(1, N/cn));
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  // White ground — Sam Francis raw canvas
+  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';
+  ctx.fillRect(0,0,CW,CH);
+  // Song character drives the curtain density: a calm sparse piece gets 5
+  // streams of breathing white, an energetic dense one fills to 11 streams.
+  const _chFr = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+  const _drive = _chFr ? (0.5*_chFr.energy + 0.5*_chFr.density) : 0.5;
+  const streamCountFull = Math.max(5, Math.min(11, Math.round(5 + _drive*6)));
+  const visStreams = Math.max(1, Math.ceil(streamCountFull * reveal));
+  const spacing = CW / (streamCountFull+1);
+  for(let i=0; i<visStreams; i++){
+    const rnd = _seedRnd(i+5500, ss, 0, 0); rnd(); rnd();
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    // X: spaced evenly across width with small jitter so it doesn't read as a comb
+    const x = spacing*(i+1) + (rnd()-0.5)*spacing*0.4;
+    // Head ellipse at top of stream
+    const headW = Math.min(CW,CH) * (0.025 + rnd()*0.025);
+    const headH = headW * 0.45;
+    const headY = CH * (0.02 + rnd()*0.04);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.92)`;
+    ctx.beginPath();
+    ctx.ellipse(x, headY, headW, headH, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Vertical drip: linear gradient fading head-colour into the white as it falls
+    const dripLength = CH * (0.30 + rnd()*0.60);
+    const dripW = headW * 0.6;
+    const grad = ctx.createLinearGradient(x, headY, x, headY+dripLength);
+    grad.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`);
+    grad.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.12)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(x-dripW/2, headY+headH*0.4, dripW, dripLength);
+    // 40% chance: a drop pools at the bottom of the drip
+    if(rnd() < 0.4){
+      const dropY = headY + dripLength;
+      const dropW = headW * 0.7;
+      const dropH = dropW * 0.55;
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.42)`;
+      ctx.beginPath();
+      ctx.ellipse(x, dropY, dropW, dropH, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  // Bottom-edge incursions (a couple of other-chord dots resting on the floor —
+  // visual ground note so the curtain doesn't float).
+  const incCount = Math.max(2, Math.min(6, Math.round(cn/15)));
+  const visInc = Math.max(0, Math.ceil(reveal * incCount));
+  for(let i=0; i<visInc; i++){
+    const rnd = _seedRnd(i+5700, ss, 0, 0); rnd(); rnd();
+    const {rgb} = _picChord(chords, (i+streamCountFull) % cn, gc, isBW);
+    const x = rnd()*CW;
+    const y = CH - rnd()*CH*0.15;
+    const R = Math.min(CW,CH)*(0.025+rnd()*0.04);
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.62)`;
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ── ARCHIVED: previous Sam Francis F — Big Red mural (dominant red field +
+// edge incursions). Replaced by Hanging Drips because the central polygon
+// read as too dominant and visually clashed with adjacent Francis phases
+// (Cluster, Bloom). Preserved here for reference and potential revival.
+function francisPhaseBigRed_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
   const reveal=Math.max(0,Math.min(1,N/cn));
@@ -34447,13 +34522,13 @@ Hard requirements:
             </div>
           </div>
         )}
-        <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+        {!_litePlayChipShown && <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
           {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
           <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
           {!immersive && (liteImageMode
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
-        </div>
+        </div>}
         </>
         );
       })()}
