@@ -3550,15 +3550,22 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      stars, a snail spiral, algae — placed boldly across one flat luminous
   //      ground; his late "Jazz" / "The Snail" manner, not grid-bound).
   //  A = Cell-based panels — original.  B = Big cut-out collage — original.
-  //  C = Fauvism (wild non-natural colour patches, loose strokes).
+  //  C = Brushy Fauve composition — Open Window Collioure 1905 manner:
+  //      five vertical zones (warm wall · frame · window · frame · cool wall),
+  //      window split at song-register horizon, brushy strokes per zone,
+  //      violent complementary accents (orange in cobalt sky, red in green
+  //      water, yellow in warm/cool walls). No scatter, no outlines.
   //  D = Nice interior (window/room bands with patterned panels).
-  //  E = The Dance (curved figures on blue/green ground).
+  //  E = Stained glass grid — Vence chapel 1948-51 manner: jewel-tone leaded
+  //      panes on warm cream priming, geometric ornaments in ~35% of cells,
+  //      ~10% dark structural panes for compositional weight. (Replaces the
+  //      old Dance phase; archived as _matissePhaseDance_archived below.)
   //  F = Jazz organic (bold black-outlined organic cut shapes on white).
   const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===4){ matissePhaseDance(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ matissePhaseStainedGlass(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ matissePhaseJazz(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   // Slots 0 and 6 both run phase A's cell-based panels; the slot picks the cell
   // treatment (0 = scattered cut-outs, 6 = nested concentric frames) instead of
@@ -3951,6 +3958,197 @@ function matissePhaseFauve(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+// ── Matisse E: Stained glass grid — Vence chapel (1948-51) manner. Jewel-tone
+// leaded panes on warm cream priming, with geometric ornaments in ~35% of
+// cells and ~10% dark structural panes for compositional weight. Grid size,
+// cell colours, ornament density, and dark-cell count are all chord-driven.
+// Replaces the old Dance phase in slot 4.
+function matissePhaseStainedGlass(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0;
+  const isBW=mode==='bw';
+  const cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
+
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
+  const register=_ch?_ch.register:0.5;
+
+  // Warm cream priming — visible through ornament cut-outs and behind every pane.
+  const PRIMING=isBW?[226,222,212]:[232,222,200];
+  ctx.fillStyle=`rgb(${PRIMING[0]},${PRIMING[1]},${PRIMING[2]})`;
+  ctx.fillRect(0,0,CW,CH);
+
+  // Lead colour — near-black, the structural "cames" between panes.
+  const LEAD=isBW?[18,18,22]:[12,10,14];
+
+  // ── Grid dimensions ──
+  // Base 5×7 for portrait, but density drives variation: calm = looser
+  // (4×6, fewer larger panes), energetic = tighter (6×8, many small panes).
+  const aspect=CH/CW;
+  const baseCols=aspect>1.2?5:7;          // portrait → fewer cols
+  const baseRows=aspect>1.2?7:5;
+  const denseAdj=Math.round((density-0.30)*3); // -1..+3 from typical density
+  const cols=Math.max(3,Math.min(8,baseCols+denseAdj));
+  const rows=Math.max(3,Math.min(10,baseRows+denseAdj));
+  const cellW=CW/cols;
+  const cellH=CH/rows;
+  const totalCells=cols*rows;
+
+  // ── Cell colour assignment via chord permutation ──
+  // Each cell gets a chord-derived colour from a SHUFFLED chord index map,
+  // stable per session. This creates the rhythmic colour scatter of stained
+  // glass without per-cell randomness in fill colour.
+  const permRnd=_seedRnd(44001,ss,0,0); permRnd(); permRnd();
+  const perm=[];
+  for(let i=0;i<totalCells;i++) perm.push(i);
+  for(let i=perm.length-1;i>0;i--){
+    const j=Math.floor(permRnd()*(i+1));
+    const t=perm[i]; perm[i]=perm[j]; perm[j]=t;
+  }
+
+  // Dark structural cells — count scales with chord complexity (more harmonic
+  // density = more structural weight). Bounded so the grid never goes too dark.
+  const darkCount=Math.max(rows,Math.min(Math.floor(totalCells*0.18),rows+Math.floor(density*8)));
+  const darkCells=new Set();
+  for(let i=0;i<darkCount;i++) darkCells.add(perm[i]);
+
+  // Jewel pane colour from chord — pushed toward saturation; Vence palette is
+  // jewel-rich, not pastel.
+  const _jewel=(idx)=>{
+    const {rgb,energy:eC}=_picChord(chords,idx%cn,gc,isBW);
+    let r=rgb[0], g=rgb[1], b=rgb[2];
+    if(isBW){
+      const lum=Math.round(r*0.299+g*0.587+b*0.114);
+      r=g=b=lum;
+    } else {
+      // Saturation boost — jewel tones must be vivid. Skipped in pastel tone.
+      if(!_pastelOn){
+        const mx=Math.max(r,g,b,1);
+        const boost=180/mx; // ensure max channel hits ~180+ for vivid read
+        if(boost>1){
+          r=Math.min(255,Math.round(r*boost));
+          g=Math.min(255,Math.round(g*boost));
+          b=Math.min(255,Math.round(b*boost));
+        }
+      }
+    }
+    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    return [r|0,g|0,b|0,eC];
+  };
+
+  // ── Cell pass — fill panes, draw ornaments ──
+  // Lead inset breathing room around each pane (lead lines drawn on top).
+  const inset=2.5;
+  const visCells=Math.max(1,Math.ceil(totalCells*reveal));
+  let cellIdx=0;
+
+  // Reveal order: row-major (top-to-bottom, left-to-right), so the song builds
+  // the window from the top down as more chords play. Predictable, not random.
+  for(let ry=0;ry<rows;ry++){
+    for(let cxi=0;cxi<cols;cxi++){
+      if(cellIdx>=visCells){ cellIdx++; continue; }
+      const xx=cxi*cellW, yy=ry*cellH;
+      const idx=ry*cols+cxi;
+
+      if(darkCells.has(idx)){
+        // Dark structural pane — composes mass into the grid.
+        ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
+        ctx.fillRect(xx+inset,yy+inset,cellW-2*inset,cellH-2*inset);
+        cellIdx++;
+        continue;
+      }
+
+      // Jewel pane
+      const jewelChordIdx=perm[idx];
+      const jc=_jewel(jewelChordIdx);
+      ctx.fillStyle=`rgb(${jc[0]},${jc[1]},${jc[2]})`;
+      ctx.fillRect(xx+inset,yy+inset,cellW-2*inset,cellH-2*inset);
+
+      // Ornament — energy gates frequency (calm songs = simpler grid, energetic
+      // = more ornament). Ornament kind cycles through 4 chapel motifs.
+      const ornRnd=_seedRnd(idx+45000,ss,0,0); ornRnd(); ornRnd();
+      const ornChance=0.25+energy*0.25; // 0.25–0.50
+      if(ornRnd()<ornChance){
+        const ccx=xx+cellW/2, ccy=yy+cellH/2;
+        const ornKind=Math.floor(ornRnd()*4);
+        const innerC=_jewel(jewelChordIdx+3);
+
+        if(ornKind===0){
+          // Concentric circle — lead ring + inner jewel
+          const orR=Math.min(cellW,cellH)*0.28;
+          ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
+          ctx.beginPath(); ctx.arc(ccx,ccy,orR,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle=`rgb(${innerC[0]},${innerC[1]},${innerC[2]})`;
+          ctx.beginPath(); ctx.arc(ccx,ccy,orR*0.55,0,Math.PI*2); ctx.fill();
+        } else if(ornKind===1){
+          // Cross / plus — chapel motif
+          const armW=cellW*0.16, armL=Math.min(cellW,cellH)*0.32;
+          ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
+          ctx.fillRect(ccx-armW/2,ccy-armL,armW,armL*2);
+          ctx.fillRect(ccx-armL,ccy-armW/2,armL*2,armW);
+        } else if(ornKind===2){
+          // Leaf / flame — vegetal vertical form (chapel organic motif)
+          const orR=Math.min(cellW,cellH)*0.36;
+          ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
+          ctx.beginPath();
+          const nPts=14;
+          for(let ti=0;ti<=nPts;ti++){
+            const t=ti/nPts;
+            const yLocal=(t-0.5)*orR*1.7;
+            const xMax=orR*0.55*Math.pow(Math.sin(t*Math.PI),1.3);
+            if(ti===0) ctx.moveTo(ccx+xMax,ccy+yLocal);
+            else ctx.lineTo(ccx+xMax,ccy+yLocal);
+          }
+          for(let ti=nPts;ti>=0;ti--){
+            const t=ti/nPts;
+            const yLocal=(t-0.5)*orR*1.7;
+            const xMax=orR*0.55*Math.pow(Math.sin(t*Math.PI),1.3);
+            ctx.lineTo(ccx-xMax,ccy+yLocal);
+          }
+          ctx.closePath(); ctx.fill();
+        } else {
+          // Diagonal split — dynamic note in the static grid
+          ctx.fillStyle=`rgb(${innerC[0]},${innerC[1]},${innerC[2]})`;
+          ctx.beginPath();
+          if(ornRnd()<0.5){
+            ctx.moveTo(xx+inset,yy+inset);
+            ctx.lineTo(xx+cellW-inset,yy+inset);
+            ctx.lineTo(xx+inset,yy+cellH-inset);
+          } else {
+            ctx.moveTo(xx+cellW-inset,yy+inset);
+            ctx.lineTo(xx+cellW-inset,yy+cellH-inset);
+            ctx.lineTo(xx+inset,yy+cellH-inset);
+          }
+          ctx.closePath(); ctx.fill();
+        }
+      }
+      cellIdx++;
+    }
+  }
+
+  // ── Lead lines (drawn AFTER panes, on top) ──
+  // Vertical
+  const leadW=Math.max(2.5,D*0.005);
+  ctx.strokeStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
+  ctx.lineWidth=leadW;
+  for(let cxi=0;cxi<=cols;cxi++){
+    const xx=cxi*cellW;
+    ctx.beginPath(); ctx.moveTo(xx,0); ctx.lineTo(xx,CH); ctx.stroke();
+  }
+  for(let ry=0;ry<=rows;ry++){
+    const yy=ry*cellH;
+    ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(CW,yy); ctx.stroke();
+  }
+  // Outer frame thicker
+  ctx.lineWidth=leadW*2.2;
+  ctx.strokeRect(0,0,CW,CH);
+}
+
+
 // ── Matisse D: Nice interior v2 — 2-4 vertical panels with 4 pattern types. ──
 function matissePhaseNice(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
@@ -4021,9 +4219,11 @@ function matissePhaseNice(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── Matisse E: The Dance v2 — random figure count (3-8), 3 arrangements
-// (ring/line/cluster), varied sky/ground split. ──
-function matissePhaseDance(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+// ── ARCHIVED: Matisse E The Dance — schematic stickmen on sky/ground split.
+// Dispatcher no longer calls this; kept for possible future return. Replaced
+// in slot 4 by matissePhaseStainedGlass (Vence chapel jewel grid). To restore,
+// rename back to matissePhaseDance and call from drawMatisseOverlay slot 4.
+function _matissePhaseDance_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const sR=_seedRnd(42001,ss,0,0); sR(); sR();
   const {rgb:sky}=_picChord(chords,0,gc,isBW);
