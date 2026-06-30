@@ -7959,20 +7959,20 @@ Hard requirements:
       try{
         try{ setMuted(false); }catch(_){}
         // Lite auto-load on flip/re-entry: branch on the flip-flag.
-        //  • Painting→music flip → Kusama 'a' (a painterly re-introduction so
-        //    the user doesn't crash from image-driven art into a bare grid).
-        //  • Plain re-entry (reload, fresh tab) → Kandinsky 'a' — a calm,
-        //    composed "welcome back" painting that still reads as art (not the
-        //    bare Mosaic grid we used to show).
+        //  • Painting→music flip → Kandinsky 'a' (a composed, lyrical
+        //    re-introduction so the user doesn't crash from image-driven art
+        //    into a bare grid).
+        //  • Plain re-entry (reload, fresh tab) → Kusama 'a' — bold, vibrant
+        //    "welcome back" painting (no longer the bare Mosaic grid).
         // The first-ever Play chip (litePlayStart) is where Pollock 'a' kicks
         // in as the very first painterly impression. Palette and tone inherit
         // from the user's Advanced settings — no force.
         try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
         if(_fromImageFlipRef.current){
           _fromImageFlipRef.current = false;            // consume the flag
-          setStyle('kusama');
+          setStyle('kandinsky');
         } else {
-          setStyle('kandinsky');                        // re-entry / reload
+          setStyle('kusama');                           // re-entry / reload
         }
         setPhaseIndex(0);
         setNotesMode(false); setOneMMode(false);
@@ -13428,6 +13428,12 @@ Hard requirements:
           // A new capture wipes whatever was there before — stop any live mic first.
           try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
           try{ if(draftOwnerRef.current){ draftOwnerRef.current=null; } }catch(_){}
+          // New mic = fresh start: drop the previous painting/chords entirely so
+          // the user gets a clean canvas, not continuation of the last recording.
+          // The previous session's Save dialog has already committed (or
+          // discarded) the user's intent before this point.
+          try{ stopAll && stopAll(); }catch(_){}
+          try{ fullClear && fullClear(); }catch(_){}
           try{ setMuted(false); }catch(_){}
           setMicPreset('music');               // listen to the room (no singing required)
           setMicArmed(true); setStayActive(true);
