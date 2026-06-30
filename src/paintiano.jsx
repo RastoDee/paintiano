@@ -3713,41 +3713,240 @@ function matissePhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
-// ── Matisse C: Fauvism — wild non-natural colour patches, loose strokes. ──
-// ── Matisse C: Fauvism v2 — wild patches, random count + saturation boost. ──
+// ── Matisse C: Brushy Fauve composition — Open Window Collioure 1905 manner.
+// Five vertical zones (warm wall · frame · window · frame · cool wall) with
+// chord-derived palette per zone. Each zone is filled with brushy paint-quality
+// strokes (irregular 4-vertex polys with vertex jitter), no outlines anywhere.
+// Window splits horizontally at song-register driven horizon. Violent
+// complementary accents (orange in cobalt sky, red in green water, yellow in
+// violet walls) bring the Fauve dissonance. Stroke count + accent count driven
+// by song density / energy. No scatter, no clean ellipses, no outlines.
 function matissePhaseFauve(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(40001,ss,0,0); sR(); sR();
-  ctx.fillStyle=isBW?'#dcd6cc':'#f4eeda'; ctx.fillRect(0,0,CW,CH);
-  const nPatches=12+((sR()*20)|0);
-  const vis=Math.max(1,Math.ceil(N/cn*nPatches*2.5));
-  for(let i=0;i<Math.min(nPatches,vis);i++){
-    const rR=_seedRnd(i+40500,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/nPatches))%cn,gc,isBW);
-    // Saturation boost — skipped in Pastel so the cut-outs stay soft.
-    const sat=_pastelOn ? 1 : (1.2+rR()*0.3);
-    const r=Math.min(255,Math.round(rgb[0]*sat));
-    const g=Math.min(255,Math.round(rgb[1]*sat));
-    const b=Math.min(255,Math.round(rgb[2]*sat));
-    const cx=rR()*CW, cy=rR()*CH;
-    const rx=Math.min(CW,CH)*(0.04+rR()*0.10);
-    const ry=Math.min(CW,CH)*(0.04+rR()*0.10);
-    const ang=rR()*Math.PI*2;
-    const pts=[];
-    for(let ti=0;ti<12;ti++){
-      const t=ti/12*Math.PI*2;
-      const rxx=rx*(0.7+rR()*0.6), ryy=ry*(0.7+rR()*0.6);
-      const ex=Math.cos(t)*rxx, ey=Math.sin(t)*ryy;
-      const px=ex*Math.cos(ang)-ey*Math.sin(ang);
-      const py=ex*Math.sin(ang)+ey*Math.cos(ang);
-      pts.push([cx+px,cy+py]);
+  const ss=sessionSeed|0;
+  const isBW=mode==='bw';
+  const cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
+
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
+  const register=_ch?_ch.register:0.5;
+
+  // Warm cream priming ground — Matisse always paints over warm underlayer.
+  ctx.fillStyle=isBW?'#e0d8c8':'#e8d8b4';
+  ctx.fillRect(0,0,CW,CH);
+
+  // ── Five-zone composition ──
+  // Zones: warm-wall · frame · window · frame · cool-wall
+  // Frame widths fixed (decorative); wall/window widths balanced.
+  // Composition is asymmetric — slight shift driven by session seed.
+  const sR=_seedRnd(40001,ss,0,3); sR(); sR();
+  const asym=(sR()-0.5)*0.06;       // ±3% asymmetry
+  const wallL_w=0.20+asym;
+  const frameL_w=0.07;
+  const window_w=0.46-asym*2;
+  const frameR_w=0.07;
+  const wallR_w=0.20+asym;
+
+  // Horizon Y driven by register: low register → high horizon (sky tall),
+  // high register → low horizon (sky narrow, water/garden tall).
+  const horizonY=CH*(0.40+(1-register)*0.30);
+
+  // ── Per-zone chord-derived base colour (the FLAT ground brush) ──
+  const _zoneBase=(idx)=>{
+    const {rgb}=_picChord(chords,Math.floor(idx*cn/8)%cn,gc,isBW);
+    return rgb;
+  };
+
+  // Helper: bias chord colour toward a Fauve "role" (warm/cool/cobalt/etc).
+  // The chord-colour KEEPS its hue character but is pushed into the role's zone.
+  const _biasToward=(rgb,target,strength)=>{
+    return [
+      Math.round(rgb[0]*(1-strength)+target[0]*strength),
+      Math.round(rgb[1]*(1-strength)+target[1]*strength),
+      Math.round(rgb[2]*(1-strength)+target[2]*strength)
+    ];
+  };
+
+  // Role anchors (Fauve archetypal palette — used to STEER chord colours,
+  // not replace them).
+  const T_WARM_WALL =[210,55,75];     // pink/red wall
+  const T_FRAME     =[230,165,40];    // ochre / gold frame
+  const T_SKY       =[35,90,180];     // cobalt sky
+  const T_WATER     =[40,150,110];    // emerald / kelly green
+  const T_COOL_WALL =[170,55,135];    // magenta / violet wall
+
+  // Complementary accents — the Fauve dissonance.
+  const A_ORANGE   =[255,140,30];
+  const A_RED      =[220,40,50];
+  const A_YELLOW   =[250,215,70];
+
+  // Get zone base colour by blending chord colour with role target.
+  const zoneCol=(roleTarget,chordIdx,strength)=>{
+    const base=_zoneBase(chordIdx);
+    let c=_biasToward(base,roleTarget,strength);
+    if(isBW){
+      const lum=Math.round(c[0]*0.299+c[1]*0.587+c[2]*0.114);
+      c=[lum,lum,lum];
     }
-    ctx.fillStyle=`rgba(${r},${g},${b},0.86)`;
-    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
-    for(let p=1;p<pts.length;p++) ctx.lineTo(pts[p][0],pts[p][1]);
-    ctx.closePath(); ctx.fill();
-    if(rR()<0.3){
-      ctx.strokeStyle='rgba(15,12,20,0.71)'; ctx.lineWidth=2; ctx.stroke();
+    if(typeof _energyTint==='function'){const t=_energyTint(c[0],c[1],c[2]);c=[t[0],t[1],t[2]];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(c[0],c[1],c[2]);c=[t[0],t[1],t[2]];}
+    return c;
+  };
+
+  // ── Paint zone bases (broad flat ground per zone) ──
+  let xPos=0;
+  // Wall left
+  const wallL_x=xPos*CW; const wallL_W=wallL_w*CW;
+  const wallL_col=zoneCol(T_WARM_WALL,0,0.55);
+  ctx.fillStyle=`rgb(${wallL_col[0]},${wallL_col[1]},${wallL_col[2]})`;
+  ctx.fillRect(wallL_x,0,wallL_W,CH);
+  xPos+=wallL_w;
+
+  const frameL_x=xPos*CW; const frameL_W=frameL_w*CW;
+  const frameL_col=zoneCol(T_FRAME,1,0.65);
+  ctx.fillStyle=`rgb(${frameL_col[0]},${frameL_col[1]},${frameL_col[2]})`;
+  ctx.fillRect(frameL_x,0,frameL_W,CH);
+  xPos+=frameL_w;
+
+  const win_x=xPos*CW; const win_W=window_w*CW;
+  const sky_col=zoneCol(T_SKY,2,0.55);
+  const water_col=zoneCol(T_WATER,3,0.55);
+  ctx.fillStyle=`rgb(${sky_col[0]},${sky_col[1]},${sky_col[2]})`;
+  ctx.fillRect(win_x,0,win_W,horizonY);
+  ctx.fillStyle=`rgb(${water_col[0]},${water_col[1]},${water_col[2]})`;
+  ctx.fillRect(win_x,horizonY,win_W,CH-horizonY);
+  xPos+=window_w;
+
+  const frameR_x=xPos*CW; const frameR_W=frameR_w*CW;
+  const frameR_col=zoneCol(T_FRAME,4,0.65);
+  ctx.fillStyle=`rgb(${frameR_col[0]},${frameR_col[1]},${frameR_col[2]})`;
+  ctx.fillRect(frameR_x,0,frameR_W,CH);
+  xPos+=frameR_w;
+
+  const wallR_x=xPos*CW; const wallR_W=wallR_w*CW;
+  const wallR_col=zoneCol(T_COOL_WALL,5,0.55);
+  ctx.fillStyle=`rgb(${wallR_col[0]},${wallR_col[1]},${wallR_col[2]})`;
+  ctx.fillRect(wallR_x,0,wallR_W,CH);
+
+  // ── Brushy strokes per zone (the painted texture) ──
+  // Stroke count grows with song density (busy songs = more brushy texture).
+  const strokesPerZone=Math.max(8,Math.min(30,14+Math.round(density*16)));
+  const drawZoneStrokes=(zoneX,zoneW,yTop,yBottom,roleTarget,zoneIdx)=>{
+    const visStrokes=Math.max(2,Math.ceil(strokesPerZone*reveal));
+    for(let i=0;i<visStrokes;i++){
+      const rR=_seedRnd(i+40100+zoneIdx*500,ss,0,0); rR(); rR();
+      // Per-stroke chord colour (gives Paintiano signature inside the zone).
+      const {rgb,energy:sE}=_picChord(chords,(i+zoneIdx*7)%cn,gc,isBW);
+      // Bias toward zone role at 0.40 strength — strokes vary but stay in family.
+      let c=_biasToward(rgb,roleTarget,0.40);
+      if(isBW){const l=Math.round(c[0]*0.299+c[1]*0.587+c[2]*0.114);c=[l,l,l];}
+      if(typeof _energyTint==='function'){const t=_energyTint(c[0],c[1],c[2]);c=[t[0],t[1],t[2]];}
+      if(typeof _pastelTint==='function'){const t=_pastelTint(c[0],c[1],c[2]);c=[t[0],t[1],t[2]];}
+      const cx=zoneX+rR()*zoneW;
+      const cy=yTop+rR()*(yBottom-yTop);
+      // Brushy stroke: vertical-ish rect with irregular 4 corners.
+      const sw=zoneW*(0.30+rR()*0.35);
+      const sh=(yBottom-yTop)*(0.04+rR()*0.10);
+      const ang=(rR()-0.5)*0.40;
+      const cosR=Math.cos(ang), sinR=Math.sin(ang);
+      const jit=4;
+      const corners=[
+        [-sw/2,-sh/2],
+        [ sw/2+(rR()-0.5)*jit, -sh/2+(rR()-0.5)*jit],
+        [ sw/2+(rR()-0.5)*jit,  sh/2+(rR()-0.5)*jit],
+        [-sw/2+(rR()-0.5)*jit,  sh/2+(rR()-0.5)*jit]
+      ];
+      ctx.beginPath();
+      for(let p=0;p<4;p++){
+        const lx=corners[p][0], ly=corners[p][1];
+        const gx=cx+lx*cosR-ly*sinR;
+        const gy=cy+lx*sinR+ly*cosR;
+        if(p===0) ctx.moveTo(gx,gy); else ctx.lineTo(gx,gy);
+      }
+      ctx.closePath();
+      const a=(0.72+sE*0.22).toFixed(2);
+      ctx.fillStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+      ctx.fill();
+    }
+  };
+
+  drawZoneStrokes(wallL_x,wallL_W,0,CH,T_WARM_WALL,0);
+  drawZoneStrokes(frameL_x,frameL_W,0,CH,T_FRAME,1);
+  drawZoneStrokes(win_x,win_W,0,horizonY,T_SKY,2);
+  drawZoneStrokes(win_x,win_W,horizonY,CH,T_WATER,3);
+  drawZoneStrokes(frameR_x,frameR_W,0,CH,T_FRAME,4);
+  drawZoneStrokes(wallR_x,wallR_W,0,CH,T_COOL_WALL,5);
+
+  // ── Violent complementary accents (the Fauve "wrongness" notes) ──
+  // Count scales with energy — louder songs get more accent dissonance.
+  const accentCt=Math.max(3,Math.min(14,4+Math.round(energy*8)));
+  const visAccents=Math.max(1,Math.ceil(accentCt*reveal));
+  const drawAccent=(zoneX,zoneW,yTop,yBottom,col,idx)=>{
+    const aR=_seedRnd(idx+42000,ss,0,0); aR(); aR();
+    const cx=zoneX+aR()*zoneW;
+    const cy=yTop+aR()*(yBottom-yTop);
+    const sz=D*(0.022+aR()*0.030);
+    let c=col;
+    if(isBW){const l=Math.round(c[0]*0.299+c[1]*0.587+c[2]*0.114);c=[l,l,l];}
+    if(typeof _energyTint==='function'){const t=_energyTint(c[0],c[1],c[2]);c=[t[0],t[1],t[2]];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(c[0],c[1],c[2]);c=[t[0],t[1],t[2]];}
+    // Irregular accent dot — small brushy mark, NOT a perfect circle.
+    ctx.beginPath();
+    for(let ti=0;ti<8;ti++){
+      const t=ti/8*Math.PI*2;
+      const rr=sz*(0.70+aR()*0.55);
+      const x=cx+Math.cos(t)*rr, y=cy+Math.sin(t)*rr;
+      if(ti===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.fillStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},0.92)`;
+    ctx.fill();
+  };
+
+  // Orange in cobalt sky (complementary), red in green water (complementary),
+  // yellow in violet/red walls (complementary).
+  for(let i=0;i<visAccents;i++){
+    const tag=i%4;
+    if(tag===0) drawAccent(win_x,win_W,0,horizonY,A_ORANGE,i*4+0);
+    else if(tag===1) drawAccent(win_x,win_W,horizonY,CH,A_RED,i*4+1);
+    else if(tag===2) drawAccent(wallL_x,wallL_W,0,CH,A_YELLOW,i*4+2);
+    else drawAccent(wallR_x,wallR_W,0,CH,A_YELLOW,i*4+3);
+  }
+
+  // ── Loose horizon brush — a few horizontal strokes along the window's
+  // horizon line so the split doesn't read as a hard rectangle edge. ──
+  if(reveal>0.20){
+    const hStrokes=3+Math.floor(density*3);
+    for(let i=0;i<hStrokes;i++){
+      const hR=_seedRnd(i+43000,ss,0,0); hR();
+      const cx=win_x+(i+0.5)*(win_W/hStrokes)+(hR()-0.5)*win_W*0.10;
+      const cy=horizonY+(hR()-0.5)*8;
+      const sw=win_W*(0.12+hR()*0.10);
+      const sh=CH*0.014;
+      const ang=(hR()-0.5)*0.15;
+      const cosR=Math.cos(ang), sinR=Math.sin(ang);
+      const jit=3;
+      const corners=[
+        [-sw/2,-sh/2],
+        [ sw/2+(hR()-0.5)*jit, -sh/2+(hR()-0.5)*jit],
+        [ sw/2+(hR()-0.5)*jit,  sh/2+(hR()-0.5)*jit],
+        [-sw/2+(hR()-0.5)*jit,  sh/2+(hR()-0.5)*jit]
+      ];
+      ctx.beginPath();
+      for(let p=0;p<4;p++){
+        const lx=corners[p][0], ly=corners[p][1];
+        const gx=cx+lx*cosR-ly*sinR;
+        const gy=cy+lx*sinR+ly*cosR;
+        if(p===0) ctx.moveTo(gx,gy); else ctx.lineTo(gx,gy);
+      }
+      ctx.closePath();
+      // Horizon brush takes a muted ochre / warm grey
+      const hCol=isBW?[100,90,80]:[180,140,60];
+      ctx.fillStyle=`rgba(${hCol[0]},${hCol[1]},${hCol[2]},0.78)`;
+      ctx.fill();
     }
   }
 }
