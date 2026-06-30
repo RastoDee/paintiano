@@ -5241,7 +5241,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stashDraft]);
 
   const loadMidi=e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     const r=new FileReader();
@@ -5263,7 +5263,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   };
 
   const loadAudio=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     // The flow:
     //   1. reading file → arrayBuffer
     //   2. decoding audio → decodeAudioData via OfflineAudioContext (iOS-safe)
@@ -5553,7 +5553,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _mfiRecall=useCallback((entry)=>{
     if(!entry) return;
     stashOutgoing('mfi');
-    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -5626,7 +5626,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _aiComposeRecall=useCallback((entry)=>{
     if(!entry) return;
     stashOutgoing('mood');
-    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -6116,7 +6116,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Accepts both uncompressed .musicxml/.xml AND compressed .mxl (zip-deflated).
   // accept="*/*" used because iOS file picker doesn't recognize .mxl UTI and would dim it.
   const loadMusicXml=useCallback(async e=>{
-    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     setWorking(true);setWLabel('reading score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
@@ -6300,7 +6300,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // the old title stayed on the canvas, and only a second attempt worked.
     if(!title||working)return;
     stashOutgoing('mood');
-    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
     setSongQ(title);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
     const song=findSong(title);
     if(!song){setErr(t('errs').songNotFound);return;}
@@ -6335,7 +6335,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     // Hard fallback: offline procedural generator (no network).
     stashOutgoing('mood');
-    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
     const song=moodToSong(text);
     if(!song){ setErr(t('errs').songNotFound); return; }
     setSongQ(text);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
@@ -6395,7 +6395,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(busy) return;
     const mat=extractImageMaterial();
     if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
-    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
     // AI composition flows through gateAI below (Pro AI = unlimited, Free/Pro
     // = trial then paywall). No tier check here — the gate decides.
     // Shared apply for both a cache hit and a fresh AI result. Keeps the ORIGINAL
@@ -6660,7 +6660,7 @@ Output ONLY valid JSON, no prose, no markdown:
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
     if(!title||busy||composedModeRef.current)return;
     stashOutgoing('mood');
-    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     // Cache hit: same mood phrase + language already composed by AI → replay the
     // stored piece, no new AI call, no "composing…" spinner. This is what makes
@@ -6800,7 +6800,7 @@ Hard requirements:
   const loadImage=useCallback(e=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';setPickMode(null);
     stashOutgoing('image');
-    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
     if(draftOwnerRef.current) stashDraft(draftOwnerRef.current);
     draftOwnerRef.current=null;
     setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
@@ -11399,7 +11399,7 @@ Hard requirements:
                   image-frame for image, sparkles for MFI), label sentence-case,
                   hint shows the actual sample name underneath. */}
               <button onClick={()=>{
-                if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
+                if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
                 if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
                 if(pickMode==='sound') loadSampleScore();
                 else if(pickMode==='midi') loadSampleMidi();
