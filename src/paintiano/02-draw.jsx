@@ -1755,20 +1755,25 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      violent complementary accents (orange in cobalt sky, red in green
   //      water, yellow in warm/cool walls). No scatter, no outlines.
   //  D = Nice interior (window/room bands with patterned panels).
-  //  E = Stained glass grid — Vence chapel 1948-51 manner: jewel-tone leaded
-  //      panes on warm cream priming, geometric ornaments in ~35% of cells,
-  //      ~10% dark structural panes for compositional weight. (Replaces the
-  //      old Dance phase; archived as _matissePhaseDance_archived below.)
+  //  E = French Window at Collioure (1914) — Matisse's most radical painting:
+  //      three vertical bands (pale lavender · dark sepia centre · pale olive)
+  //      with painterly vertical brushstroke texture, segmented dividers, and
+  //      2-5 pendulum hanging lines. (Replaces the previous Stained Glass slot;
+  //      archived as _matissePhaseStainedGlass_archived below.)
   //  F = La Gerbe / The Snail (1953) — radial cut-out gesture: chord-derived
   //      vivid leaves fanning from central anchor across calm cream; jagged
   //      scissor edges, no outlines, asymmetric accents. (Replaces the old
   //      Jazz cuts shape-menu; archived as _matissePhaseJazz_archived below.)
-  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  //  G = Memory of Oceania (1953) — late cut-out tapestry: 7-11 large flat
+  //      colour blocks on warm cream priming + biomorphic curve connectors +
+  //      small white blob accents.
+  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===4){ matissePhaseStainedGlass(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===4){ matissePhaseFrenchWindow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ matissePhaseLaGerbe(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===7){ matissePhaseMemoryOceania(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   // Slots 0 and 6 both run phase A's cell-based panels; the slot picks the cell
   // treatment (0 = scattered cut-outs, 6 = nested concentric frames) instead of
   // a hidden seed bit — both reachable via Vary.
@@ -2160,12 +2165,198 @@ function matissePhaseFauve(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── Matisse E: Stained glass grid — Vence chapel (1948-51) manner. Jewel-tone
-// leaded panes on warm cream priming, with geometric ornaments in ~35% of
-// cells and ~10% dark structural panes for compositional weight. Grid size,
-// cell colours, ornament density, and dark-cell count are all chord-driven.
-// Replaces the old Dance phase in slot 4.
-function matissePhaseStainedGlass(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+// ── Matisse E: French Window at Collioure (1914) — Matisse's most radical
+// painting, predates Rothko / Newman color-field by 35+ years. Three vertical
+// bands: pale lavender (cool side), dark sepia (dominant centre void), pale
+// olive (warm side). The centre is the radical core — chord 0 darkened into
+// sepia/plum/brown family. Painterly vertical brushstroke texture per band
+// (NOT flat fills), segmented painterly dividers (NOT hard lines), and 2–5
+// thin pendulum/hanging lines from the chord velocity peaks.
+function matissePhaseFrenchWindow(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0;
+  const isBW=mode==='bw';
+  const cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
+
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
+
+  // Outer canvas underlayer — visible at edges and through painterly gaps.
+  ctx.fillStyle=isBW?'#3a3232':'#3a2a26';
+  ctx.fillRect(0,0,CW,CH);
+
+  // ── 3-band asymmetric widths driven by density ──
+  // Calm song → balanced 33/33/33; energetic → strong centre dominance.
+  const sR=_seedRnd(48001,ss,0,0); sR(); sR();
+  const centerBias=0.05+density*0.20; // 0.05–0.25 extra to centre
+  let leftW=(0.33-centerBias/2)*CW + (sR()-0.5)*CW*0.03;
+  let centerW=(0.34+centerBias)*CW + (sR()-0.5)*CW*0.03;
+  if(leftW<CW*0.18) leftW=CW*0.18;
+  if(centerW<CW*0.25) centerW=CW*0.25;
+  let rightW=CW-leftW-centerW;
+  if(rightW<CW*0.18){ rightW=CW*0.18; centerW=CW-leftW-rightW; }
+
+  // Anchor palette — Collioure 1914 trinity
+  const T_LAVENDER=[165,175,200];
+  const T_SEPIA   =[ 75, 45, 50];
+  const T_OLIVE   =[180,185,145];
+
+  // Helper: chord colour biased toward role, with energy/pastel tints.
+  const _bandCol=(idx,target,strength)=>{
+    const {rgb}=_picChord(chords,idx%cn,gc,isBW);
+    let r=rgb[0], g=rgb[1], b=rgb[2];
+    if(isBW){
+      const l=Math.round(r*0.299+g*0.587+b*0.114);
+      r=g=b=l;
+    }
+    r=Math.round(r*(1-strength)+target[0]*strength);
+    g=Math.round(g*(1-strength)+target[1]*strength);
+    b=Math.round(b*(1-strength)+target[2]*strength);
+    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    return [r|0,g|0,b|0];
+  };
+
+  // ── PAINTERLY BAND ──
+  // Base fill + ~40 vertical brushstrokes + horizontal patches. NOT a flat
+  // rectangle — the band must read as oil on canvas.
+  const paintBand=(x,y,w,h,baseCol,slot,isCenter)=>{
+    if(w<=0) return;
+    ctx.fillStyle=`rgb(${baseCol[0]},${baseCol[1]},${baseCol[2]})`;
+    ctx.fillRect(x,y,w,h);
+    const stripeRng=_seedRnd(slot*1000+48100,ss,0,0); stripeRng(); stripeRng();
+    const stripes=40+Math.floor(density*20);
+    for(let s=0;s<stripes;s++){
+      const sx=x+stripeRng()*w;
+      const sw=2+stripeRng()*(w*0.05);
+      const sy=y+stripeRng()*h*0.4;
+      const sh=h*(0.4+stripeRng()*0.7);
+      const lift=stripeRng()<0.5?14:-14;
+      const a=0.10+stripeRng()*0.18;
+      const cR=Math.max(0,Math.min(255,baseCol[0]+lift));
+      const cG=Math.max(0,Math.min(255,baseCol[1]+lift));
+      const cB=Math.max(0,Math.min(255,baseCol[2]+lift));
+      ctx.fillStyle=`rgba(${cR},${cG},${cB},${a.toFixed(2)})`;
+      ctx.fillRect(sx,sy,sw,sh);
+    }
+    const patches=isCenter?50:25;
+    for(let p=0;p<patches;p++){
+      const py=y+stripeRng()*h;
+      const pw=w*(0.30+stripeRng()*0.45);
+      const ph=6+stripeRng()*14;
+      const px=x+stripeRng()*(w-pw);
+      const lift=stripeRng()<0.5?12:-10;
+      const a=0.08+stripeRng()*0.14;
+      const cR=Math.max(0,Math.min(255,baseCol[0]+lift));
+      const cG=Math.max(0,Math.min(255,baseCol[1]+lift));
+      const cB=Math.max(0,Math.min(255,baseCol[2]+lift));
+      ctx.fillStyle=`rgba(${cR},${cG},${cB},${a.toFixed(2)})`;
+      ctx.fillRect(px,py,pw,ph);
+    }
+  };
+
+  // ── Reveal: left → right → centre ──
+  if(reveal>0){
+    paintBand(0,0,leftW,CH,_bandCol(1,T_LAVENDER,0.55),1,false);
+  }
+  if(reveal>0.20){
+    paintBand(leftW+centerW,0,rightW,CH,_bandCol(2,T_OLIVE,0.55),2,false);
+  }
+  if(reveal>0.40){
+    // Centre: chord 0 (root) darkened toward sepia — the radical void core.
+    const v0=_picChord(chords,0,gc,isBW);
+    let cR=Math.round(v0.rgb[0]*0.30+30);
+    let cG=Math.round(v0.rgb[1]*0.25+20);
+    let cB=Math.round(v0.rgb[2]*0.25+22);
+    if(isBW){
+      const l=Math.round(cR*0.299+cG*0.587+cB*0.114);
+      cR=cG=cB=l;
+    }
+    cR=Math.round(cR*0.45+T_SEPIA[0]*0.55);
+    cG=Math.round(cG*0.45+T_SEPIA[1]*0.55);
+    cB=Math.round(cB*0.45+T_SEPIA[2]*0.55);
+    if(typeof _energyTint==='function'){const t=_energyTint(cR,cG,cB);cR=t[0];cG=t[1];cB=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(cR,cG,cB);cR=t[0];cG=t[1];cB=t[2];}
+    paintBand(leftW,0,centerW,CH,[cR|0,cG|0,cB|0],3,true);
+  }
+
+  // ── PAINTERLY DIVIDERS — segmented vertical lines at band boundaries ──
+  if(reveal>0.10){
+    const dividerRng=_seedRnd(48200,ss,0,0); dividerRng(); dividerRng();
+    const dCol=isBW?[42,38,38]:[40,28,30];
+    const drawDivider=(xPos)=>{
+      const segs=20;
+      for(let s=0;s<segs;s++){
+        const sy=s*CH/segs+dividerRng()*5;
+        const sh=CH/segs*(0.7+dividerRng()*0.4);
+        const a=0.20+dividerRng()*0.30;
+        ctx.fillStyle=`rgba(${dCol[0]},${dCol[1]},${dCol[2]},${a.toFixed(2)})`;
+        ctx.fillRect(xPos-1.5,sy,3,sh);
+      }
+    };
+    drawDivider(leftW);
+    drawDivider(leftW+centerW);
+  }
+
+  // ── PENDULUM / HANGING LINES ──
+  // 2–5 thin dangling vertical lines, count from energy. Bias placement to
+  // the lavender (left) and sepia (centre) bands — matches the 1914 original.
+  if(reveal>0.50){
+    const pendCount=Math.max(2,Math.min(5,2+Math.round(energy*3)));
+    const visPend=Math.max(0,Math.ceil(pendCount*reveal));
+    const pCol=isBW?'rgba(40,40,40,0.78)':'rgba(28,22,22,0.78)';
+    for(let pi=0;pi<visPend;pi++){
+      const pR=_seedRnd(pi+48400,ss,0,0); pR(); pR();
+      const inLeft=pR()<0.55;
+      const x=inLeft
+        ? leftW*(0.30+pR()*0.50)
+        : leftW+centerW*(0.20+pR()*0.60);
+      const yStart=CH*(0.15+pR()*0.30);
+      const len=CH*(0.10+pR()*0.45);
+      const yEnd=Math.min(CH*0.92,yStart+len);
+      const thick=1.4+pR()*0.8;
+      const xEnd=x+(pR()-0.5)*4;
+      const midX=(x+xEnd)/2+(pR()-0.5)*5;
+      ctx.strokeStyle=pCol;
+      ctx.lineWidth=thick;
+      ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(x,yStart);
+      ctx.bezierCurveTo(midX,yStart+len*0.3,midX,yStart+len*0.7,xEnd,yEnd);
+      ctx.stroke();
+      ctx.fillStyle=pCol;
+      ctx.beginPath();
+      ctx.arc(x,yStart,thick+0.5,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // ── OVERALL CANVAS GRAIN — 250 small dark dots ──
+  // Paper/canvas texture across all bands. Makes the surface read as oil on
+  // primed canvas, not as flat digital fill.
+  if(reveal>0.05){
+    const grainRng=_seedRnd(48700,ss,0,0); grainRng();
+    for(let g=0;g<250;g++){
+      const gx=grainRng()*CW;
+      const gy=grainRng()*CH;
+      const gs=1+grainRng()*1.5;
+      const a=0.08+grainRng()*0.10;
+      ctx.fillStyle=`rgba(28,20,18,${a.toFixed(2)})`;
+      ctx.fillRect(gx,gy,gs,gs);
+    }
+  }
+}
+
+
+// ── ARCHIVED: Matisse E Stained glass grid — Vence chapel jewel grid attempt.
+// Dispatcher no longer calls this; kept for possible future return. Replaced
+// in slot 4 by matissePhaseFrenchWindow (Collioure 1914 manner). To restore,
+// rename back to matissePhaseStainedGlass and call from drawMatisseOverlay
+// slot 4.
+function _matissePhaseStainedGlass_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0;
   const isBW=mode==='bw';
   const cn=chords.length;
@@ -2656,6 +2847,140 @@ function matissePhaseLaGerbe(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
+
+
+// ── Matisse G: Memory of Oceania (1953) — Matisse's late cut-out tapestry.
+// Loose grid of 7–11 large flat-colour blocks on warm cream priming, joined
+// by 2–5 thin biomorphic black curves and accented by a few small white blob
+// silhouettes. Quintessential late-period abstraction.
+function matissePhaseMemoryOceania(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0;
+  const isBW=mode==='bw';
+  const cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
+
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
+
+  // Warm cream priming ground — Matisse's late-period signature.
+  ctx.fillStyle=isBW?'#e8e2d6':'#f0e6d4';
+  ctx.fillRect(0,0,CW,CH);
+
+  // Block count from density (calm = 7, busy = 11).
+  const blockCount=Math.max(7,Math.min(11,7+Math.round(density*4)));
+  const visBlocks=Math.max(1,Math.ceil(blockCount*reveal));
+
+  // Saturation-boosted chord colour for each block.
+  const _blockCol=(idx)=>{
+    const {rgb}=_picChord(chords,idx%cn,gc,isBW);
+    let r=rgb[0], g=rgb[1], b=rgb[2];
+    if(isBW){
+      const l=Math.round(r*0.299+g*0.587+b*0.114);
+      r=g=b=l;
+    } else if(!_pastelOn){
+      const mx=Math.max(r,g,b,1);
+      const k=180/mx;
+      if(k>1){
+        r=Math.min(255,Math.round(r*k));
+        g=Math.min(255,Math.round(g*k));
+        b=Math.min(255,Math.round(b*k));
+      }
+    }
+    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    return [r|0,g|0,b|0];
+  };
+
+  // ── Place blocks via farthest-point (composed, not scatter) ──
+  const placed=[];
+  for(let b=0;b<visBlocks;b++){
+    const bR=_seedRnd(b+49100,ss,0,0); bR(); bR();
+    const wF=0.08+bR()*0.22;
+    const hF=0.08+bR()*0.22;
+    let bestX=0.5-wF/2, bestY=0.5-hF/2, bestD=-1;
+    for(let t=0;t<8;t++){
+      const tx=0.04+bR()*(0.95-wF-0.04);
+      const ty=0.04+bR()*(0.95-hF-0.04);
+      const ccx=tx+wF/2, ccy=ty+hF/2;
+      let mind=1e9;
+      for(const p of placed){
+        const dx=ccx-p.cx, dy=ccy-p.cy;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<mind) mind=d;
+      }
+      if(!placed.length) mind=1e9;
+      if(mind>bestD){
+        bestD=mind;
+        bestX=tx;
+        bestY=ty;
+      }
+    }
+    const px=bestX*CW, py=bestY*CH;
+    const pw=wF*CW, ph=hF*CH;
+    const col=_blockCol(b);
+    const j=Math.min(pw,ph)*0.04;
+    ctx.beginPath();
+    ctx.moveTo(px+(bR()-0.5)*j, py+(bR()-0.5)*j);
+    ctx.lineTo(px+pw+(bR()-0.5)*j, py+(bR()-0.5)*j);
+    ctx.lineTo(px+pw+(bR()-0.5)*j, py+ph+(bR()-0.5)*j);
+    ctx.lineTo(px+(bR()-0.5)*j, py+ph+(bR()-0.5)*j);
+    ctx.closePath();
+    ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
+    ctx.fill();
+    placed.push({cx:bestX+wF/2, cy:bestY+hF/2});
+  }
+
+  // ── Biomorphic black curve connectors ──
+  if(reveal>0.30){
+    const curveCt=Math.max(2,Math.min(5,2+Math.round(density*3)));
+    const visCurves=Math.max(0,Math.ceil(curveCt*reveal));
+    const BLACK=isBW?'rgba(20,20,22,0.9)':'rgba(25,25,28,0.9)';
+    for(let c=0;c<visCurves;c++){
+      const cR=_seedRnd(c+49500,ss,0,0); cR(); cR();
+      const sx=0.10*CW+cR()*0.80*CW;
+      const sy=0.10*CH+cR()*0.80*CH;
+      const ex=0.10*CW+cR()*0.80*CW;
+      const ey=0.10*CH+cR()*0.80*CH;
+      const ccx=(sx+ex)/2+(cR()-0.5)*CW*0.30;
+      const ccy=(sy+ey)/2+(cR()-0.5)*CH*0.30;
+      ctx.strokeStyle=BLACK;
+      ctx.lineWidth=Math.max(3,D*0.008);
+      ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(sx,sy);
+      ctx.quadraticCurveTo(ccx,ccy,ex,ey);
+      ctx.stroke();
+    }
+  }
+
+  // ── Small white biomorphic blob accents ──
+  if(reveal>0.50){
+    const blobCt=Math.max(2,Math.min(6,3+Math.round(energy*3)));
+    const visBlobs=Math.max(0,Math.ceil(blobCt*reveal));
+    const BLOB_COL=isBW?'#f4eee0':'#f8f0dc';
+    for(let bi=0;bi<visBlobs;bi++){
+      const bR2=_seedRnd(bi+49800,ss,0,0); bR2(); bR2();
+      const bx=0.10*CW+bR2()*0.80*CW;
+      const by=0.10*CH+bR2()*0.80*CH;
+      const rad=D*(0.020+bR2()*0.020);
+      ctx.beginPath();
+      const n=12;
+      for(let ti=0;ti<n;ti++){
+        const t=ti/n*Math.PI*2;
+        const rr=rad*(1.0+0.3*Math.sin(t*3+bi));
+        const x=bx+Math.cos(t)*rr*0.7;
+        const y=by+Math.sin(t)*rr*1.2;
+        if(ti===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.fillStyle=BLOB_COL;
+      ctx.fill();
+    }
+  }
+}
 
 
 // ── ARCHIVED: Matisse F Jazz cuts — 5-12 cut shapes in 5 types (icarus,
