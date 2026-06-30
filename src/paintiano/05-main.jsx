@@ -7814,6 +7814,11 @@ Hard requirements:
   // Liszt auto-play). Flipping back clears it and re-arms the music sample. Lite
   // only — never touches Advanced. Guarded to fire once per flip.
   const _liteImgAppliedRef = useRef(false);
+  // Signal: did basicAutoPlay get triggered by a painting→music flip?
+  // Set true in the liteImageMode useEffect's else-branch (flip from image to
+  // music), consumed in basicAutoPlay to pick a richer default (Kusama) vs
+  // a plain re-entry (Mosaic).
+  const _fromImageFlipRef = useRef(false);
   useEffect(()=>{
     if(!basicMode){ _liteImgAppliedRef.current=false; return; }
     if(liteImageMode){
@@ -7842,6 +7847,7 @@ Hard requirements:
       try{ liteEverUnlockedRef.current = true; }catch(_){}
       try{ basicTapUnlockedRef.current = true; }catch(_){}
       try{ setLiteAwaitTap(false); }catch(_){}
+      try{ _fromImageFlipRef.current = true; }catch(_){}  // signal to basicAutoPlay: this is a flip, not a re-entry
       try{ basicAutoPlayedRef.current=false; }catch(_){}
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -7952,12 +7958,24 @@ Hard requirements:
     const id=setTimeout(()=>{
       try{
         try{ setMuted(false); }catch(_){}
-        // Lite auto-load on flip/re-entry: keep Mosaic (bare reading). The
-        // first-ever Play chip (litePlayStart) is where Pollock 'a' kicks in as
-        // the painterly first impression. Palette and tone are inherited from
-        // the user's Advanced settings — no force.
+        // Lite auto-load on flip/re-entry: branch on the flip-flag.
+        //  • Painting→music flip → Kusama 'a' (a painterly re-introduction so
+        //    the user doesn't crash from image-driven art into a bare grid).
+        //  • Plain re-entry (reload, fresh tab) → Kandinsky 'a' — a calm,
+        //    composed "welcome back" painting that still reads as art (not the
+        //    bare Mosaic grid we used to show).
+        // The first-ever Play chip (litePlayStart) is where Pollock 'a' kicks
+        // in as the very first painterly impression. Palette and tone inherit
+        // from the user's Advanced settings — no force.
         try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
-        setStyle(null);
+        if(_fromImageFlipRef.current){
+          _fromImageFlipRef.current = false;            // consume the flag
+          setStyle('kusama');
+        } else {
+          setStyle('kandinsky');                        // re-entry / reload
+        }
+        setPhaseIndex(0);
+        setNotesMode(false); setOneMMode(false);
         loadSampleMidi();
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
