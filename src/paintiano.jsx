@@ -32721,7 +32721,6 @@ Hard requirements:
                 <svg width="34" height="34" viewBox="0 0 24 24" fill="#1a1206" style={{marginLeft:6}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
               </span>
             </div>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:(1.05*effScale)+'rem',color:'rgba(220,180,90,.82)',letterSpacing:'.05em'}}>{ts('litePlayHint','Zahraj')}</div>
           </div>
         )}
       {isActiveView && (<>
