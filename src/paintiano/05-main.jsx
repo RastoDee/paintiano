@@ -12800,7 +12800,7 @@ Hard requirements:
           <button className="pf-lift pf-tx-undo" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
       </div>
-      {composeMode && (
+      {composeMode && !working && (
       <div ref={kbScrollRef} className="pf-piano-dock" style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
         <div style={{position:'relative',width:PW,height:WKH,userSelect:'none',opacity:loadedMode?0.25:(busy&&!playing?0.4:1),filter:loadedMode?'grayscale(0.6)':'none',pointerEvents:loadedMode?'none':'auto'}}>
           {WKEYS.map(({midi,wi})=>{
