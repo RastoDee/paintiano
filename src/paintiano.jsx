@@ -3158,27 +3158,31 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const _energy = _ch ? _ch.energy : 0.5;
   const _density = _ch ? _ch.density : 0.3;
-  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic Rothko (Stacked / Row / Grid, seed-driven internal layout
-  //      pick — the three layouts read as one "stacked colour-field" identity
-  //      so they share a single Vary slot).
+  // ── 8-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
+  //  0 = Classic Rothko Stacked (vertical, the canonical layout).
   //  1 = Pastel / Light period (cream ground + pale fields, high luminosity).
-  //  2 = Multiform (early 1948, free blurred patches).
-  //  3 = Seagram (dark portal frames 1958-59).
-  //  4 = Chapel (Houston, 1964-67, triptych ultra-dark monochrome).
-  //  5 = Incandescent (warm glowing 1955-58).
+  //  2 = Classic Rothko Row (horizontal Classic).
+  //  3 = Classic Rothko Grid (grid-arranged Classic).
+  //  4 = Multiform (early 1948, free blurred patches).
+  //  5 = Seagram (dark portal frames 1958-59).
+  //  6 = Chapel (Houston, 1964-67, triptych ultra-dark monochrome).
+  //  7 = Incandescent (warm glowing 1955-58).
   //  Free (cap=2) sees Stacked + Pastel — dark saturated vs light luminous
   //  is the strongest art-historical contrast in Rothko's late career.
+  //  Slot 1 stays Pastel (not Row Classic) so Free keeps maximal contrast.
+  let _rothkoForcedLayout = null; // null = seed-roll; else 0=stack, 1=row, 2=grid
   {
-    const _pn=_capN(6); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(8); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_ropick===1){ rothkoPhasePastel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===2){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===3){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===4){ rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===5){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // else fall through to original stacked/row/grid body (variant 0; the
-    // layout sub-pick within is seed-driven, kept as natural micro-variation
-    // rather than its own Vary slot).
+    if(_ropick===4){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===5){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===6){ rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===7){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    // Slots 0, 2, 3 fall through to the Classic body with forced layout —
+    // each layout is now its own Vary slot rather than a hidden seed sub-pick.
+    if(_ropick===0) _rothkoForcedLayout = 0;
+    else if(_ropick===2) _rothkoForcedLayout = 1;
+    else if(_ropick===3) _rothkoForcedLayout = 2;
   }
   // Rothko is intentionally minimal — even 12 fields is at the high end of his
   // late stacked compositions, so we cap there rather than chasing density.
@@ -3214,15 +3218,18 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const innerX=marginX, innerW=CW-2*marginX;
   const innerY=marginTop, innerH=CH-marginTop-marginBot;
 
-  // ── Layout chooser (stable per painting, re-rolls on Vary) ──
-  // 0 = vertical stack (classic Rothko), 1 = horizontal row, 2 = grid.
+  // ── Layout chooser ──
+  // If a Vary slot forced a specific layout (slots 0/2/3 = stack/row/grid),
+  // honour it. Otherwise fall back to the legacy seed-driven micro-variation
+  // (kept defensive — should not trigger now that all 3 are explicit slots).
   const lr=_seedRnd(99,ss,0,0);
   const layoutRoll=lr();
-  // Grid only when there are enough fields to make rows×cols sensible.
-  const layout = FIELDS<=2 ? 0
-               : layoutRoll<0.62 ? 0
-               : layoutRoll<0.82 ? 1
-               : 2;
+  const layout = (_rothkoForcedLayout != null)
+               ? _rothkoForcedLayout
+               : (FIELDS<=2 ? 0
+                  : layoutRoll<0.62 ? 0
+                  : layoutRoll<0.82 ? 1
+                  : 2);
   const wr=_seedRnd(7,ss,0,0);
 
   // Build the list of field rects {x,y,w,h} based on the chosen layout.
@@ -11124,10 +11131,18 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
     const m = note.m!==undefined?note.m:note;
     const v = note.v!==undefined?note.v:100;
     const [r, g, b] = gc(m, v);
-    // Pink-warm blossom: blend toward soft pink.
-    const br = Math.round(r * 0.4 + 230);
-    const bg = Math.round(g * 0.3 + 170);
-    const bbv = Math.round(b * 0.3 + 180);
+    // Paintiano DNA: chord-driven petal palette (sakura family preserved but
+    // chord identity dominates — white/pink/coral/peach varies by chord).
+    const br = Math.round(r * 0.65 + 100);
+    const bg = Math.round(g * 0.55 + 85);
+    const bbv = Math.round(b * 0.55 + 105);
+    // Chord-derived warm centre (gold/coral/peach varies per chord) — replaces
+    // the hardcoded yellow #E8C24A so each flower's heart carries the chord too.
+    const cR = Math.min(255, Math.round(r * 0.55 + 130));
+    const cG = Math.min(255, Math.round(g * 0.50 + 100));
+    const cB = Math.min(255, Math.round(b * 0.30 + 40));
+    // Per-blossom RNG for petal-level micro-jitter (±12 from base).
+    const petalRnd = _seedRnd(i + 95300, ss, 0, 0); petalRnd(); petalRnd();
 
     // Position roughly along branch.
     const t = 0.1 + rnd() * 0.9;
@@ -11139,12 +11154,18 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
     const cy = by + (rnd() - 0.5) * 70 - 10;
     const rad = 5 + rnd() * 8;
 
-    // 5-petal flower: 5 overlapping circles around a centre.
+    // 5-petal flower: 5 overlapping circles around a centre. Each petal gets
+    // a small ±12 jitter from the blossom's base colour for realistic floral
+    // variation (no two petals exactly the same shade).
+    const jit = 12;
     for(let p = 0; p < 5; p++){
       const pang = (p / 5) * Math.PI * 2;
       const px = cx + Math.cos(pang) * rad * 0.55;
       const py = cy + Math.sin(pang) * rad * 0.55;
-      ctx.fillStyle = `rgb(${Math.min(255,br)},${Math.min(255,bg)},${Math.min(255,bbv)})`;
+      const pR  = Math.max(0, Math.min(255, br  + (petalRnd() - 0.5) * jit));
+      const pG  = Math.max(0, Math.min(255, bg  + (petalRnd() - 0.5) * jit));
+      const pBb = Math.max(0, Math.min(255, bbv + (petalRnd() - 0.5) * jit));
+      ctx.fillStyle = `rgb(${pR|0},${pG|0},${pBb|0})`;
       ctx.beginPath();
       ctx.arc(px, py, rad * 0.6, 0, 6.2832);
       ctx.fill();
@@ -11152,8 +11173,8 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
       ctx.lineWidth = 0.5;
       ctx.stroke();
     }
-    // Yellow centre.
-    ctx.fillStyle = '#E8C24A';
+    // Chord-derived centre — no longer hardcoded yellow.
+    ctx.fillStyle = `rgb(${cR},${cG},${cB})`;
     ctx.beginPath();
     ctx.arc(cx, cy, rad * 0.25, 0, 6.2832);
     ctx.fill();
@@ -22499,7 +22520,7 @@ export default function Paintiano() {
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
   // (free users only see 2 of 6). The dice picks a variant in this range.
-  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 7 : 6))));
+  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 7 : (style==='rothko' ? 8 : 6)))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
