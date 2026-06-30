@@ -3482,11 +3482,23 @@ function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.closePath();
     ctx.fillStyle = pg;
     ctx.fill();
-    // Very soft edge — no heavy contour, so planes read as overlapping veils
-    // rather than stacked shards. This is the key visual difference from
-    // FacetedField (which keeps hard contours on its dense small fragments).
-    ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.32)' : 'rgba(10,16,30,0.28)';
-    ctx.lineWidth = Math.max(1, D*0.0024);
+    // Thin chord-coloured contour — Paintiano signature bleeds through the
+    // cool veils. Picasso's Blue Period was never pure blue: skin, rose,
+    // ochre touches cut through the melancholy. Here the contour carries the
+    // song's harmony. Boost dark chord colours up so the line reads against
+    // the deep blue ground, without washing out the hue.
+    const _mx = Math.max(rgb[0], rgb[1], rgb[2], 1);
+    const _boost = _mx < 170 ? 170/_mx : 1;
+    const _cR = Math.min(255, Math.round(rgb[0]*_boost));
+    const _cG = Math.min(255, Math.round(rgb[1]*_boost));
+    const _cB = Math.min(255, Math.round(rgb[2]*_boost));
+    if(isBW){
+      const _lum = Math.round(_cR*0.299 + _cG*0.587 + _cB*0.114);
+      ctx.strokeStyle = `rgba(${Math.min(255,_lum+50)},${Math.min(255,_lum+50)},${Math.min(255,_lum+50)},0.78)`;
+    } else {
+      ctx.strokeStyle = `rgba(${_cR},${_cG},${_cB},${(0.78 + energy*0.14).toFixed(2)})`;
+    }
+    ctx.lineWidth = Math.max(0.9, D*0.0017);
     ctx.stroke();
     ctx.restore();
   }
