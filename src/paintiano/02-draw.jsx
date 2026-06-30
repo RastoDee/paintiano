@@ -1752,13 +1752,16 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      panes on warm cream priming, geometric ornaments in ~35% of cells,
   //      ~10% dark structural panes for compositional weight. (Replaces the
   //      old Dance phase; archived as _matissePhaseDance_archived below.)
-  //  F = Jazz organic (bold black-outlined organic cut shapes on white).
+  //  F = La Gerbe / The Snail (1953) — radial cut-out gesture: chord-derived
+  //      vivid leaves fanning from central anchor across calm cream; jagged
+  //      scissor edges, no outlines, asymmetric accents. (Replaces the old
+  //      Jazz cuts shape-menu; archived as _matissePhaseJazz_archived below.)
   const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===4){ matissePhaseStainedGlass(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ matissePhaseJazz(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ matissePhaseLaGerbe(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   // Slots 0 and 6 both run phase A's cell-based panels; the slot picks the cell
   // treatment (0 = scattered cut-outs, 6 = nested concentric frames) instead of
   // a hidden seed bit — both reachable via Vary.
@@ -2460,9 +2463,199 @@ function _matissePhaseDance_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── Matisse F: Jazz organic v2 — 5-12 cut shapes in 5 types (icarus/circle-cut/
-// half-moon/algae/star). ──
-function matissePhaseJazz(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+// ── Matisse F: La Gerbe / The Snail (1953) manner — a radial fan of cut-out
+// leaves blooming from a central anchor across a calm cream priming. Each
+// leaf is an elongated jagged-edged biomorphic cut-paper shape in a vivid
+// Jazz-period palette colour, derived from the song's chord. The fan span,
+// leaf count, leaf length variation, anchor color and asymmetric accents are
+// all chord-driven. No outlines anywhere — pure flat scissor-cut paper.
+function matissePhaseLaGerbe(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0;
+  const isBW=mode==='bw';
+  const cn=chords.length;
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
+
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
+  const register=_ch?_ch.register:0.5;
+
+  // Calm cream priming — the gesture must stand alone, no competing pattern.
+  ctx.fillStyle=isBW?'#e2dccc':'#ebdcb8';
+  ctx.fillRect(0,0,CW,CH);
+
+  // ── Centre/anchor positioning ──
+  // Anchor is centred horizontally but slightly biased downward, so the fan
+  // opens UPWARD across the canvas (like a sheaf gathered at the base — that
+  // is the "Gerbe" reading). Session seed nudges position ±5%.
+  const sR=_seedRnd(46001,ss,0,0); sR(); sR();
+  const anchorCx=CW*(0.50+(sR()-0.5)*0.10);
+  const anchorCy=CH*(0.62+(sR()-0.5)*0.10);
+
+  // ── Fan span — driven by ENERGY ──
+  // Calm song = narrow upright bouquet (~120°). Energetic song = wide spread
+  // (~260°). Fan is symmetric around straight-up axis (-π/2).
+  const fanSpan=Math.PI*(0.65+energy*0.75); // ≈117° to 252°
+  const fanCentre=-Math.PI/2;
+  const fanStart=fanCentre-fanSpan/2;
+
+  // ── Leaf count — driven by DENSITY ──
+  // Sparse songs: 8 broad leaves. Busy songs: up to 18 narrower leaves.
+  const leafCount=Math.max(7,Math.min(18,8+Math.round(density*12)));
+  const visLeaves=Math.max(2,Math.ceil(leafCount*reveal));
+
+  // ── Jazz palette via chord colours ──
+  // Each leaf takes its chord colour and saturation-boosts it to true Jazz
+  // intensity (vermilion, cobalt, gold, forest, crimson, turquoise, magenta).
+  // Pastel tone skips boost to keep the cuts soft.
+  const _jazzCol=(idx)=>{
+    const {rgb,energy:eC}=_picChord(chords,idx%cn,gc,isBW);
+    let r=rgb[0], g=rgb[1], b=rgb[2];
+    if(isBW){
+      const lum=Math.round(r*0.299+g*0.587+b*0.114);
+      r=g=b=lum;
+    } else if(!_pastelOn){
+      // Pure-Jazz boost: stretch the dominant channel to 255, others halved.
+      const mx=Math.max(r,g,b,1);
+      const k=255/mx;
+      r=r*k; g=g*k; b=b*k;
+      const m2=Math.max(r,g,b);
+      const pull=(ch)=>ch===m2?ch:ch*0.55;
+      r=Math.round(pull(r)); g=Math.round(pull(g)); b=Math.round(pull(b));
+    } else {
+      r=Math.round(r); g=Math.round(g); b=Math.round(b);
+    }
+    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(r,g,b);r=t[0];g=t[1];b=t[2];}
+    return [r|0,g|0,b|0,eC];
+  };
+
+  // ── Draw the fan leaves ──
+  // Each leaf radiates from anchor along its assigned angle. Length varies
+  // with the chord's energy (loud chords → longer leaves), bounded so the
+  // whole fan still fits in canvas. Width tapers toward the tip (almond).
+  const maxLeafR=Math.min(CW*0.46,CH*0.55);
+  const baseLeafW=D*(0.035+energy*0.025); // width broader in energetic songs
+
+  // Iterate so that the fan REVEALS from the centre outward (build the bouquet
+  // symmetrically as more chords play) — visually stronger than left-to-right.
+  // Build an order array: middle-out indexing.
+  const order=[];
+  const mid=(leafCount-1)/2;
+  for(let r=0;r<=Math.ceil(mid);r++){
+    const left=Math.floor(mid-r);
+    const right=Math.ceil(mid+r);
+    if(left===right){ if(left>=0&&left<leafCount) order.push(left); }
+    else {
+      if(left>=0&&left<leafCount) order.push(left);
+      if(right>=0&&right<leafCount&&right!==left) order.push(right);
+    }
+  }
+
+  for(let oi=0;oi<visLeaves&&oi<order.length;oi++){
+    const i=order[oi];
+    const t=leafCount===1?0.5:(i/(leafCount-1));
+    const leafAng=fanStart+t*fanSpan;
+
+    // Leaf-specific RNG (stable per session+leaf)
+    const lR=_seedRnd(i+46100,ss,0,0); lR(); lR();
+
+    // Length & width per leaf
+    const {rgb:_unused,energy:lE}=_picChord(chords,i%cn,gc,isBW);
+    const lenJit=0.78+lR()*0.36; // length variation
+    const leafLen=maxLeafR*(0.62+0.32*Math.sin(t*Math.PI))*lenJit;
+    const leafW=baseLeafW*(0.85+lR()*0.40);
+
+    // Get colour for THIS leaf
+    const jc=_jazzCol(i);
+    const alpha=(0.88+lE*0.10).toFixed(2);
+
+    // Build the leaf polygon — elongated almond with JAGGED scissor edges.
+    // Edge jitter ≈6% of leaf width — small, irregular, hand-cut quality.
+    const nPts=18;
+    const jit=leafW*0.10;
+    ctx.save();
+    ctx.translate(anchorCx,anchorCy);
+    ctx.rotate(leafAng+Math.PI/2); // rotate so the almond stands along ang
+    ctx.beginPath();
+    // Right side, tip outward
+    for(let pi=0;pi<=nPts;pi++){
+      const tt=pi/nPts;
+      const yLocal=-tt*leafLen;
+      const xMaxBase=leafW*Math.pow(Math.sin(tt*Math.PI),1.25);
+      const xMax=xMaxBase*(1+(lR()-0.5)*0.16);
+      const xJit=(lR()-0.5)*jit*0.6;
+      if(pi===0) ctx.moveTo(xMax+xJit,yLocal);
+      else ctx.lineTo(xMax+xJit,yLocal);
+    }
+    // Left side, tip inward
+    for(let pi=nPts;pi>=0;pi--){
+      const tt=pi/nPts;
+      const yLocal=-tt*leafLen;
+      const xMaxBase=leafW*Math.pow(Math.sin(tt*Math.PI),1.25);
+      const xMax=xMaxBase*(1+(lR()-0.5)*0.16);
+      const xJit=(lR()-0.5)*jit*0.6;
+      ctx.lineTo(-xMax+xJit,yLocal);
+    }
+    ctx.closePath();
+    ctx.fillStyle=`rgba(${jc[0]},${jc[1]},${jc[2]},${alpha})`;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Central anchor ──
+  // Two-layer disc at the base: dark outer (often black in Jazz period) + warm
+  // inner from the song's root chord. Acts as the visual gravity centre.
+  if(reveal>0.10){
+    const rootCol=_jazzCol(0);
+    const anchorOuter=isBW?[20,20,24]:[15,15,18];
+    const anchorR=D*(0.05+energy*0.015);
+    ctx.fillStyle=`rgb(${anchorOuter[0]},${anchorOuter[1]},${anchorOuter[2]})`;
+    ctx.beginPath(); ctx.arc(anchorCx,anchorCy,anchorR,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=`rgb(${rootCol[0]},${rootCol[1]},${rootCol[2]})`;
+    ctx.beginPath(); ctx.arc(anchorCx,anchorCy,anchorR*0.55,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── Asymmetric accent cut-shapes ──
+  // A small number of organic Jazz-cut accents scattered around the fan
+  // perimeter (not random — placed in the empty space outside the fan).
+  // Count scales with chord velocity peaks (rough proxy: energy).
+  const accentCt=Math.max(2,Math.min(6,2+Math.round(energy*4)));
+  const visAccents=Math.max(0,Math.ceil(accentCt*reveal));
+  for(let i=0;i<visAccents;i++){
+    const aR=_seedRnd(i+47000,ss,0,0); aR(); aR();
+    // Place accents BELOW or AROUND the anchor (outside the upward fan)
+    // Angle from -π (left horizontal) sweeping through bottom to 0 (right hor)
+    const aAng=-Math.PI*(0.95-aR()*0.90); // wraps through bottom semicircle
+    const aRad=Math.min(CW,CH)*(0.20+aR()*0.18);
+    const ax=anchorCx+Math.cos(aAng)*aRad;
+    const ay=anchorCy+Math.sin(aAng)*aRad;
+    const acCol=_jazzCol(i+5);
+    const acSize=D*(0.030+aR()*0.030);
+    // Organic blob with jagged edges
+    ctx.beginPath();
+    const nA=10;
+    for(let ti=0;ti<=nA;ti++){
+      const tt=ti/nA*Math.PI*2;
+      const rr=acSize*(0.70+aR()*0.55);
+      const x=ax+Math.cos(tt)*rr, y=ay+Math.sin(tt)*rr*0.90;
+      if(ti===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.fillStyle=`rgba(${acCol[0]},${acCol[1]},${acCol[2]},0.92)`;
+    ctx.fill();
+  }
+}
+
+
+
+// ── ARCHIVED: Matisse F Jazz cuts — 5-12 cut shapes in 5 types (icarus,
+// circle-cut, half-moon, algae, star) with INK outlines on cream. Dispatcher
+// no longer calls this; kept for possible future return. Replaced in slot 5
+// by matissePhaseLaGerbe (radial cut-out gesture).
+function _matissePhaseJazz_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const sR=_seedRnd(43001,ss,0,0); sR(); sR();
   ctx.fillStyle=isBW?'#ece8e0':'#f2ece0'; ctx.fillRect(0,0,CW,CH);
