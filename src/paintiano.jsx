@@ -26528,6 +26528,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _mfiRecall=useCallback((entry)=>{
     if(!entry) return;
     stashOutgoing('mfi');
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -26552,7 +26553,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setDisp(evts.length); idxRef.current=evts.length;
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
-  },[stopAll,applyEvents]);
+  },[stopAll,applyEvents,composeMode,micPainting,micListening]);
 
   // ── AI Compose "recent 3" list ──────────────────────────────────────────────
   // Tracks only AI-generated moods from the free-text path (composeSource='ai',
@@ -26600,6 +26601,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _aiComposeRecall=useCallback((entry)=>{
     if(!entry) return;
     stashOutgoing('mood');
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     try{
       const evts=noteArr2events(entry.notes||[],entry.tempo||90);
       if(!evts.length) return;
@@ -26622,7 +26624,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setDisp(evts.length); idxRef.current=evts.length;
       try{ const bytes=encodeMidi(evts,entry.tempo||100); setMidiBlob(new Blob([bytes],{type:'audio/midi'})); setMidiName(title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid'); }catch(_){}
     }catch(_){}
-  },[stopAll,applyEvents]);
+  },[stopAll,applyEvents,composeMode,micPainting,micListening]);
 
   // Style sync during recording window: when the user switches style WHILE the
   // re-record window is open (after first Play, before song fully plays once),
@@ -27273,6 +27275,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // the old title stayed on the canvas, and only a second attempt worked.
     if(!title||working)return;
     stashOutgoing('mood');
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     setSongQ(title);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
     const song=findSong(title);
     if(!song){setErr(t('errs').songNotFound);return;}
@@ -27287,7 +27290,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const bytes=encodeMidi(evts,song.tempo||120);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
-  },[working,stopAll,applyEvents,t]);
+  },[working,stopAll,applyEvents,t,composeMode,micPainting,micListening]);
 
   // Free-text mood: type anything ("zúrivá", "nostalgic storm") and get a track.
   // Hybrid: an exact match against our crafted mood library plays the hand-crafted piece;
@@ -27307,6 +27310,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     // Hard fallback: offline procedural generator (no network).
     stashOutgoing('mood');
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     const song=moodToSong(text);
     if(!song){ setErr(t('errs').songNotFound); return; }
     setSongQ(text);setErr('');setErrInfo(false);setMidiBlob(null);setAudioBlob(null);setAudioName('');audioBlobRef.current=null;stopAll();
@@ -27317,7 +27321,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const bytes=encodeMidi(evts,song.tempo||100);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
-  },[working,stopAll,applyEvents,aiMidi,t]);
+  },[working,stopAll,applyEvents,aiMidi,t,composeMode,micPainting,micListening]);
 
   // ── Image → Composition ────────────────────────────────────────────────
   // Extract a compact "musical material" summary from the notes the current
@@ -27366,6 +27370,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(busy) return;
     const mat=extractImageMaterial();
     if(!mat){ setErr(t('noNotesGeneric')||'Load an image first'); setErrInfo(false); return; }
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     // AI composition flows through gateAI below (Pro AI = unlimited, Free/Pro
     // = trial then paywall). No tier check here — the gate decides.
     // Shared apply for both a cache hit and a fresh AI result. Keeps the ORIGINAL
@@ -27484,7 +27489,7 @@ Composition rules:
       setErr(e.message||'Compose failed'); setErrInfo(false);
     }
     finally{ setWorking(false); setWLabel(''); setWPct(0); }
-  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro,originalImgUrl,_imgMoodHash,_imgComposeCacheGet,_imgComposeCacheSet]);
+  },[busy,extractImageMaterial,stopAll,lang,gateAI,t,isPro,originalImgUrl,_imgMoodHash,_imgComposeCacheGet,_imgComposeCacheSet,composeMode,micPainting,micListening]);
 
   // ── MELODY cache ────────────────────────────────────────────────────────────
   // Keyed by image hash + atmosphere signature so the same picture in the same
@@ -27630,6 +27635,7 @@ Output ONLY valid JSON, no prose, no markdown:
     const title=((typeof overrideMood==='string'&&overrideMood)?overrideMood:songQ).trim();
     if(!title||busy||composedModeRef.current)return;
     stashOutgoing('mood');
+    if(micPainting)stopMicPainting();if(micListening)stopMicListening();if(composeMode)setComposeMode(false);
     if(typeof overrideMood==='string'&&overrideMood)setSongQ(overrideMood);
     // Cache hit: same mood phrase + language already composed by AI → replay the
     // stored piece, no new AI call, no "composing…" spinner. This is what makes
@@ -27759,7 +27765,7 @@ Hard requirements:
       } else { setErr(e.message||'Compose failed');setErrInfo(false); }
     }
     finally{setWorking(false);setWLabel('');setWPct(0);}
-  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow,lang,gateAI]);
+  },[songQ,busy,stopAll,applyEvents,wipeCanvasNow,lang,gateAI,composeMode,micPainting,micListening]);
 
   // Bridge ref so aiMoodFromText (declared earlier) can invoke aiCompose.
   useEffect(()=>{ aiComposeRef.current=aiCompose; },[aiCompose]);
