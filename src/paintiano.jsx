@@ -32689,7 +32689,7 @@ Hard requirements:
 
         {basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current && (
           <div style={{minHeight:'46dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18}}>
-            <div onClick={(e)=>{ e.stopPropagation(); litePlayStart(); }} role="button" aria-label={t('play')||'Play'}
+            <div onClick={(e)=>{ e.stopPropagation(); if(!liteEverUnlockedRef.current) litePlayStart(); }} onPointerDown={(e)=>{ e.stopPropagation(); if(!liteEverUnlockedRef.current) litePlayStart(); }} role="button" aria-label={t('play')||'Play'}
               style={{position:'relative',width:130,height:130,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
               <span className="pf-breathe" style={{position:'absolute',width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(240,192,64,.42),transparent 65%)'}}/>
               <span style={{position:'relative',zIndex:2,width:90,height:90,borderRadius:'50%',background:'linear-gradient(145deg,rgba(255,225,140,.96),rgba(220,170,70,.93))',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 30px rgba(240,192,64,.42),inset 0 2px 11px rgba(255,250,220,.7),inset 0 -4px 13px rgba(150,105,20,.55)'}}>
@@ -32952,7 +32952,7 @@ Hard requirements:
             paint effect runs every time these values change. Width/height
             0 + overflow:hidden makes it invisible and zero-cost. */}
         <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}</div>
-        {chords.length===0 && micArmed && !micActive && (
+        {!basicMode && chords.length===0 && micArmed && !micActive && (
           <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
               setMicArmed(false);
@@ -34484,6 +34484,14 @@ Hard requirements:
           // discarded) the user's intent before this point.
           try{ stopAll && stopAll(); }catch(_){}
           try{ fullClear && fullClear(); }catch(_){}
+          // Belt-and-braces: clear mic preset stashes + audio refs so neither
+          // the HUDBA⇄voice switcher nor any restoreStash effect can revive
+          // the previous song's audio header / seek bar / chords on top of
+          // the new mic painting (the "mixed mode" bug — Metamorphosis playing
+          // in seek while mic painted green Rothko on canvas).
+          try{ listenStashRef.current=null; singStashRef.current=null; }catch(_){}
+          try{ listenPCMRef.current=null; listenBlobRef.current=null; }catch(_){}
+          try{ setAudioName(''); setMidiName(''); setLoadedSource(null); }catch(_){}
           try{ setMuted(false); }catch(_){}
           setMicPreset('music');               // listen to the room (no singing required)
           setMicArmed(true); setStayActive(true);
@@ -34507,7 +34515,17 @@ Hard requirements:
           try{ resumeFromRef.current=null; }catch(_){}
           try{ const _n=(chordsRef.current?chordsRef.current.length:chords.length)||0; setDisp(_n); dispRef.current=_n; }catch(_){}
           basicTapUnlockedRef.current=false; try{ audioWasHiddenRef.current=true; }catch(_){} setTimeout(()=>{ try{ wakeAudio(); }catch(_){} }, 80); };
-        const _openFileLite = ()=>{ setLiteSrcPicker(false); if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; } try{ refSound.current && refSound.current.click(); }catch(_){} };
+        const _openFileLite = ()=>{
+          setLiteSrcPicker(false);
+          // Picking a file REPLACES the source. Stop any live mic + clear armed
+          // state first — otherwise we end up with file playing in the seek bar
+          // AND mic painting on the canvas at the same time (the "mixed mode"
+          // bug — Metamorphosis One in seek, Rothko green from mic painting).
+          try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
+          try{ setMicArmed(false); }catch(_){}
+          if(draftOwnerRef.current){ try{ stashDraft(draftOwnerRef.current); }catch(_){} draftOwnerRef.current=null; }
+          try{ refSound.current && refSound.current.click(); }catch(_){}
+        };
         // Lite Image: pick a photo → Paintiano reads it as a score and paints.
         // loadImage handles the whole pipeline (decode, scan, paint), so we just
         // open the image file picker — same as Advanced, no Setup screen.
