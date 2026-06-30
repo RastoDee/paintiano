@@ -677,7 +677,9 @@
 <script>
 (function(){
   // PWA install hint — mobile only, when installable, hidden if already installed
-  if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone) return;
+  var debugForce = /[?&]showinstall=1/.test(window.location.search);
+  var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isStandalone && !debugForce) return;
   var chip = document.getElementById("installChip");
   var modal = document.getElementById("installModal");
   var closeBtn = document.getElementById("installModalClose");
@@ -691,6 +693,15 @@
     chip.classList.add("show");
     trackOnce("install_hint_shown", {platform: platform});
   }
+  // DEBUG: force-show via ?showinstall=1 (for testing)
+  if (debugForce) {
+    chip.classList.add("show");
+    // Append debug info inside chip
+    var dbg = document.createElement("span");
+    dbg.style.cssText = "color:#ff6;font-size:.7rem;margin-left:8px;border-left:1px solid #ff6;padding-left:8px;";
+    dbg.textContent = "iOS:"+isIos+" Mob:"+isMobile+" Std:"+!!isStandalone;
+    chip.appendChild(dbg);
+  }
   // Android Chrome: capture installable event
   window.addEventListener("beforeinstallprompt", function(e){
     e.preventDefault();
@@ -698,7 +709,7 @@
     if (isMobile) showChip("android");
   });
   // iOS Safari: no native prompt — show chip immediately on mobile only
-  if (isIos && isMobile) showChip("ios");
+  if (isIos && isMobile && !debugForce) showChip("ios");
   chip.addEventListener("click", function(e){
     e.preventDefault();
     trackOnce("install_clicked", {platform: isIos ? "ios" : "android"});
