@@ -362,7 +362,7 @@ function applyWatermark(canvas, isPro) {
 // ─── ProBadge — small gold PRO pill ────────────────────────────────────────────
 // `size`: 'md' (default — header beside Paintiano title), 'sm' (inline beside
 // labels like the locked-partner name or inside small chip/tab buttons).
-// `tier`: 'pro' (default — gold, used for non-AI Pro features like 16 artists,
+// `tier`: 'pro' (default — gold, used for non-AI Pro features like 19 artists,
 // 300 DPI, Custom palette) or 'ai' (purple, "PRO AI" label — used for AI
 // features locked to the Pro AI tier: How do you feel? mood input, MFI,
 // AI Compose, Atmosphere).
@@ -517,7 +517,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
       ['proAiValueImage', 'AI composition from your images'],
       ['proAiValueAtmo',  'AI atmospheric tinting'],
     ] : [
-      ['proValueArtists', '18 artists (free has 9)'],
+      ['proValueArtists', '19 artists (free has 9)'],
       ['proValueTypes',   '6 paint types per artist (free has 2)'],
       ['proValuePalette', 'Custom palette — set your own 12 colours'],
       ['proValueDpi',     '300 DPI exports, no watermark'],
