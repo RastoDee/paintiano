@@ -1659,6 +1659,15 @@ export default function Paintiano() {
   // songs / image transcription. Auto-enabled by Für Elise demo. Auto-cleared
   // by clear() and by loading any external content (applyEvents / loadImage).
   const [composeMode, setComposeMode] = useState(false);
+  // BRUTE FIX (Jun 2026): force compose mode off whenever an AI operation is in
+  // progress. Earlier, surgical setComposeMode(false) calls in each AI handler
+  // did not reliably suppress the Compose source UI during the "composing…"
+  // phase — the keyboard, the compose-only "Recently played" pill, and the
+  // strip layout all kept rendering as if the user were still in Compose.
+  // Adding this effect makes "working" the single source of truth: while any
+  // AI task is running, composeMode is guaranteed false so the canvas reads
+  // as a Mood-in-progress, not a Compose surface.
+  useEffect(()=>{ if(working && composeMode) setComposeMode(false); },[working, composeMode]);
   // Block style: which artist's mark-making language renders each chord.
   // null (default) = implicit mosaic — sharp φ-rectangles. 'picasso' = cubist
   // shards with contour lines, 'kusama' = fields of contrasting polka dots on
@@ -12231,6 +12240,7 @@ Hard requirements:
               const submit=(txt)=>{
                 if(aiLocked){ submitFree(txt); return; }
                 const v=(txt||'').trim(); if(!v)return;
+                if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
                 setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null);
                 setForceSetup(false); setCurrentMood(v); setImgMoodThumb(null);
                 setMoodFromImg(false); setVarySource(null); setLoadedSource(null);
