@@ -14710,12 +14710,15 @@ function bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // pale column blocks
   for(let i=0;i<5;i++){ if(rnd()<0.5){ const x=rnd()*CW,w=CW*(0.08+rnd()*0.12); ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle=_bhCss(_bhPick(pal,rnd)); ctx.fillRect(x,0,w,CH); ctx.restore(); } }
   const reveal=Math.max(0,Math.min(1,lim/cn));
-  const N=Math.ceil((10+rnd()*6)*Math.max(0.3,reveal));
+  // Strict reveal — was Math.max(0.3, reveal) on every layer, so the phase
+  // jumped to ~30 % full on the very first chord. Now each layer grows from 0.
+  const N=Math.ceil((10+rnd()*6)*reveal);
   for(let i=0;i<N;i++) _bhCircle(ctx,rnd()*CW,rnd()*CH,CW*(0.08+rnd()*0.22),_bhPick(pal,rnd),0.55+rnd()*0.25);
-  for(let i=0;i<5;i++) _bhCircle(ctx,rnd()*CW,rnd()*CH,CW*(0.02+rnd()*0.03),_bhPick(pal,rnd));
+  const NA=Math.ceil(5*reveal);
+  for(let i=0;i<NA;i++) _bhCircle(ctx,rnd()*CW,rnd()*CH,CW*(0.02+rnd()*0.03),_bhPick(pal,rnd));
   // thin black orthogonal construction lines
   ctx.strokeStyle='rgb(26,26,24)';
-  const NL=Math.ceil(14*Math.max(0.3,reveal));
+  const NL=Math.ceil(14*reveal);
   for(let i=0;i<NL;i++){ ctx.lineWidth=1+rnd()*2; ctx.beginPath();
     if(rnd()<0.5){ const x=rnd()*CW; ctx.moveTo(x,rnd()*CH*0.3); ctx.lineTo(x,CH*(0.5+rnd()*0.5)); }
     else { const y=rnd()*CH; ctx.moveTo(rnd()*CW*0.3,y); ctx.lineTo(CW*(0.5+rnd()*0.5),y); } ctx.stroke(); }
@@ -14745,11 +14748,20 @@ function bauhausPhaseOffset(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   pal.push([122,35,53],[255,255,255]);
   _bhSq(ctx,0,0,CW,CH,[122,35,53]);
   const cols=4, rows=6, cw=CW/cols, ch=CH/rows;
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++) _bhSq(ctx,c*cw,r*ch,cw,ch,_bhPick(pal,rnd));
   const reveal=Math.max(0,Math.min(1,lim/cn));
-  const N=Math.ceil((7+rnd()*4)*Math.max(0.3,reveal));
+  // Reveal the grid cells progressively (was: all 24 cells drawn at once,
+  // making the phase look like it appeared instantly on the first chord).
+  const cellsShown=Math.ceil(cols*rows*reveal);
+  let idx=0;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(idx++>cellsShown) continue;
+    _bhSq(ctx,c*cw,r*ch,cw,ch,_bhPick(pal,rnd));
+  }
+  // Big circles + accent halves driven strictly by reveal (no 30 % floor).
+  const N=Math.ceil((7+rnd()*4)*reveal);
   for(let i=0;i<N;i++){ const ccx=cw*(0.5+Math.floor(rnd()*cols)), ccy=ch*(0.5+Math.floor(rnd()*rows)); _bhCircle(ctx,ccx,ccy,Math.min(cw,ch)*(0.7+rnd()*0.5),_bhPick(pal,rnd)); }
-  for(let i=0;i<5;i++) _bhHalf(ctx,cw*Math.floor(rnd()*cols),ch*Math.floor(rnd()*rows),cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
+  const halfN=Math.ceil(5*reveal);
+  for(let i=0;i<halfN;i++) _bhHalf(ctx,cw*Math.floor(rnd()*cols),ch*Math.floor(rnd()*rows),cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
 }
 
 // ── Phase 6: Line construction (thick black bars + basic shapes) ──────────
@@ -14758,14 +14770,19 @@ function bauhausPhaseLines(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const pal=_bhPalette(chords,cn,gc,rnd);
   _bhCreamFill(ctx,CW,CH);
   const reveal=Math.max(0,Math.min(1,lim/cn));
-  const NF=Math.ceil(6*Math.max(0.3,reveal));
+  // Strict reveal everywhere — was Math.max(0.3, reveal) on each layer, which
+  // made every layer pop in at 30 % on the very first chord (the phase looked
+  // mostly done after one chord). Now each layer scales with reveal from 0.
+  const NF=Math.ceil(6*reveal);
   for(let i=0;i<NF;i++){ ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle=_bhCss(_bhPick(pal,rnd)); ctx.fillRect(rnd()*CW*0.6,rnd()*CH*0.6,CW*(0.2+rnd()*0.3),CH*(0.15+rnd()*0.3)); ctx.restore(); }
-  const NS=Math.ceil(6*Math.max(0.3,reveal));
+  const NS=Math.ceil(6*reveal);
   for(let i=0;i<NS;i++){ const x=rnd()*CW,y=rnd()*CH,s=CW*(0.08+rnd()*0.12),k=Math.floor(rnd()*3);
     if(k===0) _bhCircle(ctx,x,y,s/2,_bhPick(pal,rnd));
     else if(k===1) _bhHalf(ctx,x-s/2,y-s/2,s,s,_bhPick(pal,rnd),Math.floor(rnd()*4));
     else _bhSq(ctx,x-s/2,y-s/2,s,s,_bhPick(pal,rnd)); }
-  // thick black construction bars
+  // Thick black construction bars also reveal progressively (was: all 5 drawn
+  // immediately, giving the phase a finished "framed" look from chord 1).
   ctx.fillStyle='rgb(26,26,24)';
-  for(let i=0;i<5;i++){ if(rnd()<0.5) ctx.fillRect(0,rnd()*CH,CW,CW*0.02); else ctx.fillRect(rnd()*CW,0,CW*0.02,CH); }
+  const NB=Math.ceil(5*reveal);
+  for(let i=0;i<NB;i++){ if(rnd()<0.5) ctx.fillRect(0,rnd()*CH,CW,CW*0.02); else ctx.fillRect(rnd()*CW,0,CW*0.02,CH); }
 }
