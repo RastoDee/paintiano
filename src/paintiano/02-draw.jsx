@@ -3126,21 +3126,21 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Picasso's modes per painting ──
   // Stable from session seed, re-rolls on Vary/Random. Six abstract phases:
-  //  A = Analytic Cubism (angular faceted shards, pencil-grain hatching).
-  //  B = Synthetic Cubism collage (large abstract "cut-paper" shapes).
-  //  Blue = Blue Atmosphere (cool palette cubist shards, no figures).
-  //  Mask → FacetedField (full-canvas dense angular shards, no subject).
-  //  Glass → StillLife (overlapping geometric shapes, vase/fruit implied only).
-  //  Surreal = soft biomorphic blobs — the ONLY non-angular phase, dreamlike.
-  //  (Rose Atmosphere retired — it was a near-duplicate of Blue Atmosphere.)
-  // Free (cap=2) sees positions 0,1. Analytic Cubism (phaseA) is the most
-  // expensive phase (dense pencil-grain hatching) and caused jank on lower-end
-  // devices, so it's moved OUT of the Free slots: Free now gets Synthetic
-  // collage + Blue Atmosphere (both light to draw). Pro still reaches Analytic
-  // and the rest at the higher indices.
-  const _picassoOrder = [picassoPhaseB, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseFacetedField, picassoPhaseStillLife, picassoPhaseSurreal];
+  //  SyntheticPlanes = 5–9 large irregular planes, asymmetric tonal mass.
+  //  BlueAtmo        = Blue Atmosphere veils (cool palette, soft edges).
+  //  Analytic (A)    = recursive plane subdivision + pencil-grain hatching.
+  //  FacetedDrift    = directional flow field of small angular facets.
+  //  StillLife       = geometric still-life via composition only (no outlines).
+  //  TonalCubism     = meditative warm-grey planes with charcoal wash masses.
+  // No phase carries a literal subject — every Picasso phase is pure spatial
+  // fragmentation. Identity comes from mass, edge, overlap, tonality.
+  // Free (cap=2) sees positions 0,1. Analytic Cubism is the most expensive
+  // phase (dense pencil-grain hatching) and caused jank on lower-end devices,
+  // so it's moved OUT of the Free slots: Free gets SyntheticPlanes + BlueAtmo
+  // (both light to draw). Pro reaches Analytic and the rest at higher indices.
+  const _picassoOrder = [picassoPhaseSyntheticPlanes, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseFacetedDrift, picassoPhaseStillLife, picassoPhaseTonalCubism];
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  (_picassoOrder[pick]||picassoPhaseB)(ctx,CW,CH,chords,lim,gc,ss,mode);
+  (_picassoOrder[pick]||picassoPhaseSyntheticPlanes)(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // ── Picasso phase A: Analytic Cubism — the original angular shard composition. ──
@@ -3228,126 +3228,148 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   });
 }
 
-// ── Picasso phase B: Synthetic Cubism / collage. Instead of fracturing the
-// canvas into many angular shards, this lays down a SMALL number of LARGE,
-// rounded "cut-paper" shapes (rounded rectangles, discs, half-discs, arcs/guitar
-// curves) that overlap on flat color fields, each with a bold clean outline and
-// an occasional woodgrain or dot fill — the look of his papier-collé period.
-// Same palette + chord-color sampling as phase A, so it reads as the same hand.
-function picassoPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+// ── Picasso Synthetic Planes: pure abstract spatial fragmentation. 5–9 large
+// irregular planes, asymmetric tonal mass loaded to one side per song direction.
+// One dark plane (heaviest), one bright chord-coloured accent, mid planes pulled
+// toward restrained earth tones. Thick irregular charcoal contours. NO objects,
+// NO silhouettes — Picasso 1921–25 mass/edge/overlap signature without subject.
+function picassoPhaseSyntheticPlanes(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const ss=sessionSeed|0;
-  const D=Math.min(CW,CH);
   const isBW=mode==='bw';
-  const grey=(r,g,b)=>{const v=Math.round(r*0.299+g*0.587+b*0.114);return[v,v,v];};
-  const _pal=[[60,110,70],[200,55,40],[100,55,130],[50,90,150],[210,170,30],[220,200,170],[15,8,18],[180,80,50]];
-  const pal=isBW?_pal.map(([r,g,b])=>grey(r,g,b)):_pal;
-  const ink=isBW?'rgba(20,20,20,0.92)':'rgba(15,8,18,0.92)';
-
-  // How many collage shapes — far fewer than phase A's planes; grows slowly.
   const cn=chords.length;
-  const shapeCount=Math.max(3,Math.min(16, 3+Math.floor(cn/14)));
-  const paintCount=Math.max(1,Math.min(shapeCount,Math.round(lim*(shapeCount/cn))));
+  const N=Math.max(1,Math.min(cn,lim));
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
 
-  // Sample a chord's averaged color (same approach as phase A's fill).
-  const chordColor=(pIdx)=>{
-    const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(cn/shapeCount)))];
-    _setCurE(chord && chord._E);
-    const notes=chord&&(chord.n||chord.notes||[]);
-    let aR=0,aG=0,aB=0,aV=0,c=0;
-    if(notes&&notes.length)for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);aR+=r;aG+=g;aB+=b;aV+=v;c++;}
-    if(!c){return{rgb:pal[pIdx%pal.length],energy:0.5};}
-    let rgb=[aR/c,aG/c,aB/c];
-    if(isBW)rgb=grey(rgb[0],rgb[1],rgb[2]);
-    return{rgb:rgb.map(Math.round),energy:Math.max(0,Math.min(1,(aV/c-30)/90))};
-  };
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
+  const register=_ch?_ch.register:0.5;
 
-  // Lay shapes out on a loose diagonal drift so they overlap like pasted paper.
-  for(let p=0;p<paintCount;p++){
-    const rnd=_seedRnd(p+900,ss, 0, 0);
-    const {rgb,energy}=chordColor(p);
-    const [r,g,b]=rgb;
-    // Size: large, a meaningful fraction of the canvas, shrinking slightly as count rises.
-    const sz=D*(0.30+rnd()*0.30)*(1-Math.min(0.4,paintCount*0.03));
-    const cx=CW*(0.12+rnd()*0.76);
-    const cy=CH*(0.12+rnd()*0.76);
-    const rot=(rnd()-0.5)*0.9; // gentle tilt, not the wild angles of phase A
-    const kind=rnd();
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(rot);
-    const fill=`rgba(${r},${g},${b},${(0.82+energy*0.15).toFixed(2)})`;
+  // Cream paper ground.
+  ctx.fillStyle=isBW?'#e4e1d8':'#e8dabc';
+  ctx.fillRect(0,0,CW,CH);
 
-    const tracePath=()=>{
+  // Subtle paper grain (stable per-session, not per-frame).
+  ctx.save();
+  ctx.globalAlpha=0.07;
+  ctx.fillStyle=isBW?'rgb(50,42,32)':'rgb(70,52,28)';
+  for(let i=0;i<600;i++){
+    const gr=_seedRnd(i+7700,ss,0,0);
+    ctx.fillRect(gr()*CW,gr()*CH,1,1);
+  }
+  ctx.restore();
+
+  // Plane count: 5–9 driven by song character.
+  const planeCountFull=Math.max(5,Math.min(9,5+Math.round((energy+density)*2)));
+  const visPlanes=Math.max(1,Math.ceil(planeCountFull*reveal));
+
+  // Asymmetric composition: dark mass loaded to one side.
+  // Side chosen per session, vertical bias chosen by register
+  // (low register → bottom heavy; high register → top heavy).
+  const dirR=_seedRnd(7701,ss,0,0); dirR(); dirR();
+  const heavyLeft=dirR()<0.5;
+  const heavyTop=register<0.5;
+
+  // Generate plane data (deterministic from session seed + index).
+  const planes=[];
+  for(let i=0;i<planeCountFull;i++){
+    const r=_seedRnd(i+7900,ss,0,0); r(); r();
+    let cx, cy, sz;
+    if(i===0){
+      // DARK MASS — largest, one side
+      cx=heavyLeft?CW*(0.10+r()*0.18):CW*(0.72+r()*0.18);
+      cy=heavyTop?CH*(0.15+r()*0.30):CH*(0.55+r()*0.30);
+      sz=D*(0.55+r()*0.18);
+    } else if(i===planeCountFull-1){
+      // ACCENT — small, off-centre
+      cx=CW*(0.30+r()*0.40);
+      cy=CH*(0.32+r()*0.36);
+      sz=D*(0.10+r()*0.07);
+    } else {
+      // MID — spread across canvas
+      cx=CW*(0.18+r()*0.64);
+      cy=CH*(0.18+r()*0.64);
+      sz=D*(0.28+r()*0.22);
+    }
+    // Irregular polygon, 5–7 sides, deliberately uneven.
+    const sides=5+Math.floor(r()*3);
+    const verts=[];
+    for(let s=0;s<sides;s++){
+      const a=(s/sides)*Math.PI*2+(r()-0.5)*0.7;
+      const rr=sz*(0.60+r()*0.65);
+      verts.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]);
+    }
+    planes.push({cx,cy,sz,verts,idx:i,isDark:i===0,isAccent:i===planeCountFull-1});
+  }
+
+  // Draw in order: dark first (background), mid, accent last (top).
+  for(let i=0;i<visPlanes;i++){
+    const p=planes[i];
+    const {rgb,energy:cE}=_picChord(chords,Math.floor(i*cn/planeCountFull),gc,isBW);
+
+    let fR, fG, fB;
+    if(p.isDark){
+      fR=isBW?35:28; fG=isBW?35:22; fB=isBW?38:28;
+    } else if(p.isAccent){
+      // Boost saturation — bright chord colour.
+      const mx=Math.max(rgb[0],rgb[1],rgb[2]);
+      const k=mx>10?240/mx:1;
+      fR=Math.min(255,rgb[0]*k);
+      fG=Math.min(255,rgb[1]*k);
+      fB=Math.min(255,rgb[2]*k);
+    } else {
+      // Pull mid planes toward muted earth.
+      fR=Math.round(rgb[0]*0.72+34);
+      fG=Math.round(rgb[1]*0.72+28);
+      fB=Math.round(rgb[2]*0.72+26);
+    }
+    // Tone adjustments (Real energy, Pastel softness).
+    if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
+
+    const buildPath=()=>{
       ctx.beginPath();
-      if(kind<0.32){
-        // Rounded rectangle ("pasted card").
-        const w=sz*(0.9+rnd()*0.7), h=sz*(0.6+rnd()*0.6), rr=Math.min(w,h)*(0.12+rnd()*0.18);
-        const x=-w/2,y=-h/2;
-        ctx.moveTo(x+rr,y);
-        ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr);
-        ctx.arcTo(x,y+h,x,y,rr);     ctx.arcTo(x,y,x+w,y,rr);
-        ctx.closePath();
-      } else if(kind<0.58){
-        // Disc.
-        ctx.arc(0,0,sz*0.5,0,Math.PI*2);
-      } else if(kind<0.78){
-        // Half-disc / D-shape.
-        const rad=sz*0.5, a0=rnd()*Math.PI*2;
-        ctx.arc(0,0,rad,a0,a0+Math.PI);
-        ctx.closePath();
-      } else {
-        // Abstract polygon (5-7 sides) — pure cubist cut-paper shape.
-        const sides = 5 + Math.floor(rnd()*3);
-        for(let s=0;s<sides;s++){
-          const a = (s/sides)*Math.PI*2 + rnd()*0.2;
-          const rr = sz*0.45*(0.75+rnd()*0.5);
-          const px = Math.cos(a)*rr, py = Math.sin(a)*rr;
-          if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-        }
-        ctx.closePath();
-      }
+      ctx.moveTo(p.verts[0][0],p.verts[0][1]);
+      for(let v=1;v<p.verts.length;v++)ctx.lineTo(p.verts[v][0],p.verts[v][1]);
+      ctx.closePath();
     };
 
-    // Flat fill.
-    tracePath();
-    ctx.fillStyle=fill;
+    buildPath();
+    ctx.fillStyle=`rgba(${fR|0},${fG|0},${fB|0},${(0.90+cE*0.08).toFixed(2)})`;
     ctx.fill();
 
-    // Occasional inner texture: woodgrain stripes or a dot field, clipped to the shape.
-    if(rnd()<0.5){
-      ctx.save(); tracePath(); ctx.clip();
-      const texC=isBW?[40,40,40]:pal[6];
-      ctx.globalAlpha=0.5+rnd()*0.25;
-      if(rnd()<0.55){
-        // Woodgrain — gently wavy horizontal lines.
-        ctx.strokeStyle=`rgb(${texC[0]},${texC[1]},${texC[2]})`;
-        ctx.lineWidth=Math.max(0.8,sz*0.012);
-        const gap=Math.max(3,sz*0.07);
-        for(let yy=-sz*0.6;yy<sz*0.6;yy+=gap){
-          ctx.beginPath();
-          for(let xx=-sz*0.7;xx<=sz*0.7;xx+=sz*0.1){
-            const wy=yy+Math.sin((xx/sz)*6+yy)*sz*0.015;
-            xx===-sz*0.7?ctx.moveTo(xx,wy):ctx.lineTo(xx,wy);
-          }
-          ctx.stroke();
-        }
-      } else {
-        // Dot field.
-        ctx.fillStyle=`rgb(${texC[0]},${texC[1]},${texC[2]})`;
-        const dg=Math.max(4,sz*0.13),dr=dg*0.22;
-        for(let yy=-sz*0.6;yy<sz*0.6;yy+=dg){const ro=(Math.round((yy)/dg)%2)*dg*0.5;
-          for(let xx=-sz*0.6;xx<sz*0.6;xx+=dg){ctx.beginPath();ctx.arc(xx+ro,yy,dr,0,Math.PI*2);ctx.fill();}}
-      }
-      ctx.globalAlpha=1; ctx.restore();
+    // Subtle inner grain texture — barely visible, gives surface depth.
+    ctx.save();
+    buildPath();
+    ctx.clip();
+    ctx.fillStyle=p.isDark?'rgba(255,250,240,0.045)':'rgba(15,10,18,0.07)';
+    for(let g=0;g<80;g++){
+      const r=_seedRnd(g+i*200+8500,ss,0,0);
+      ctx.fillRect(p.cx+(r()-0.5)*p.sz*2,p.cy+(r()-0.5)*p.sz*2,1.2,1.2);
     }
+    ctx.restore();
 
-    // Bold clean outline (the defining trait vs phase A's jittered sketch line).
-    tracePath();
-    ctx.strokeStyle=ink;
-    ctx.lineWidth=Math.max(1.5,D*(0.006+energy*0.004));
+    // Thick irregular charcoal contour — per-segment jitter, no clean line.
+    const jR=_seedRnd(i+9100,ss,0,0);
+    const jit=D*0.005;
+    ctx.beginPath();
+    ctx.moveTo(p.verts[0][0]+(jR()-0.5)*jit,p.verts[0][1]+(jR()-0.5)*jit);
+    for(let v=1;v<p.verts.length;v++){
+      const prev=p.verts[v-1], cur=p.verts[v];
+      for(let s=1;s<=3;s++){
+        const t=s/3;
+        ctx.lineTo(
+          prev[0]+(cur[0]-prev[0])*t+(jR()-0.5)*jit,
+          prev[1]+(cur[1]-prev[1])*t+(jR()-0.5)*jit
+        );
+      }
+    }
+    ctx.closePath();
+    ctx.strokeStyle=isBW?'rgba(15,15,18,0.94)':'rgba(15,8,18,0.94)';
+    ctx.lineWidth=Math.max(2,D*(0.0055+cE*0.003));
     ctx.lineJoin='round'; ctx.lineCap='round';
     ctx.stroke();
-    ctx.restore();
   }
 }
 
@@ -3570,67 +3592,109 @@ function picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.globalAlpha = 1;
 }
 
-// ── Picasso Faceted Field: full-canvas dense angular shards, no subject.
-// Maximum-density analytic cubism with strong pencil-grain texture.
-function picassoPhaseFacetedField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
+// ── Picasso Faceted Drift: directional flow of small angular facets across
+// the canvas. Flow direction comes from song register (low → vertical, high →
+// horizontal, mid → diagonal). Density gradient: tighter band for calm songs,
+// dispersed for energetic. Per-facet earth-toned fill + thin charcoal outline.
+// Two chord-colour washes accent ~12% of facets. NO subject — pure energy field
+// through cubist fragmentation.
+function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0;
+  const isBW=mode==='bw';
+  const cn=chords.length;
   const N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-  const sR = _seedRnd(8801,ss,0,14); sR(); sR();
+  const reveal=Math.max(0,Math.min(1,N/cn));
+  const D=Math.min(CW,CH);
 
-  const facetCountFull = 140 + Math.floor(sR()*80);          // 140-220 facets
-  const hatchCountFull = 400 + Math.floor(sR()*200);         // 400-600 hatches
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
+  const register=_ch?_ch.register:0.5;
 
-  // Muted analytic ground.
-  ctx.fillStyle = isBW ? '#3a3834' : '#4a4438';
+  // Tobacco / warm ochre ground.
+  ctx.fillStyle=isBW?'#9a9388':'#b09464';
   ctx.fillRect(0,0,CW,CH);
 
-  const visFacets = Math.max(12, Math.ceil(facetCountFull * reveal));
+  // Paper grain.
+  ctx.save();
+  ctx.globalAlpha=0.10;
+  ctx.fillStyle=isBW?'rgb(40,32,22)':'rgb(60,42,18)';
+  for(let i=0;i<700;i++){
+    const gr=_seedRnd(i+9800,ss,0,0);
+    ctx.fillRect(gr()*CW,gr()*CH,1.2,1.2);
+  }
+  ctx.restore();
+
+  // Facet count driven by song character.
+  const facetFull=Math.max(60,Math.min(180,100+Math.round((energy+density)*40)));
+  const visFacets=Math.max(8,Math.ceil(facetFull*reveal));
+
+  // Flow direction from register: low → vertical, high → horizontal, mid → diagonal.
+  const dirR=_seedRnd(9701,ss,0,0); dirR(); dirR();
+  let flowAng;
+  if(register<0.35) flowAng=Math.PI/2+(dirR()-0.5)*0.45;
+  else if(register>0.65) flowAng=(dirR()-0.5)*0.45;
+  else flowAng=Math.PI/4+(dirR()-0.5)*0.6;
+  const dx=Math.cos(flowAng), dy=Math.sin(flowAng);
+  const px=-dy, py=dx;
+
+  // Two chord-colour washes for selective accents.
+  const wash1=_picChord(chords,Math.floor(cn*0.25),gc,isBW).rgb;
+  const wash2=_picChord(chords,Math.floor(cn*0.72),gc,isBW).rgb;
+
   for(let i=0;i<visFacets;i++){
-    const r1 = _seedRnd(i+8900,ss,0,0); r1(); r1();
-    const cx = r1()*CW, cy = r1()*CH;
-    const sz = 30 + r1()*100;
-    const rot = r1()*Math.PI*2;
-    const sides = 3 + Math.floor(r1()*2);                    // triangles + quads
-    const {rgb} = _picChord(chords, i%cn, gc, isBW);
-    const cr = isBW ? Math.round(rgb[0]*0.6+30) : Math.round(rgb[0]*0.65 + 25);
-    const cg = isBW ? Math.round(rgb[1]*0.6+25) : Math.round(rgb[1]*0.60 + 20);
-    const cb = isBW ? Math.round(rgb[2]*0.6+20) : Math.round(rgb[2]*0.55 + 20);
+    const r=_seedRnd(i+9900,ss,0,0); r(); r();
+
+    // Position along flow axis + perpendicular density gradient.
+    // Calm songs → tighter band; energetic → dispersed.
+    const tAlong=r();
+    let tPerp=(r()-0.5)*2;
+    tPerp*=(0.35+(1-density)*0.55);
+    const flowLen=Math.sqrt(CW*CW+CH*CH);
+    const cx=CW*0.5+dx*(tAlong-0.5)*flowLen+px*tPerp*flowLen*0.42;
+    const cy=CH*0.5+dy*(tAlong-0.5)*flowLen+py*tPerp*flowLen*0.42;
+    if(cx<-60||cx>CW+60||cy<-60||cy>CH+60) continue;
+
+    // Small angular facet aligned with flow.
+    const sz=D*(0.025+r()*0.045);
+    const rot=flowAng+(r()-0.5)*0.7;
+    const sides=3+Math.floor(r()*2);
+    const {rgb,energy:fE}=_picChord(chords,i%cn,gc,isBW);
+
+    // Pull facet colour heavily toward earth tones — Ma Jolie palette.
+    let fR=Math.round(rgb[0]*0.50+60);
+    let fG=Math.round(rgb[1]*0.50+48);
+    let fB=Math.round(rgb[2]*0.50+36);
+    if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
+
     ctx.save();
-    ctx.translate(cx, cy);
+    ctx.translate(cx,cy);
     ctx.rotate(rot);
     ctx.beginPath();
     for(let s=0;s<sides;s++){
-      const a = (s/sides)*Math.PI*2;
-      const r = sz * (0.60 + r1()*0.80);
-      const px = Math.cos(a)*r, py = Math.sin(a)*r;
-      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      const a=(s/sides)*Math.PI*2;
+      const rr=sz*(0.60+r()*0.70);
+      const x=Math.cos(a)*rr, y=Math.sin(a)*rr;
+      if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
     ctx.closePath();
-    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.65 + r1()*0.30).toFixed(2)})`;
+    ctx.fillStyle=`rgba(${fR|0},${fG|0},${fB|0},${(0.78+fE*0.18).toFixed(2)})`;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(15,10,8,0.65)';
-    ctx.lineWidth = 1 + r1()*1.5;
+
+    // Selective chord-colour wash on ~12% of facets (alternating).
+    if(i%8===0 || i%11===0){
+      const wc=(i%8===0)?wash1:wash2;
+      ctx.fillStyle=`rgba(${wc[0]},${wc[1]},${wc[2]},0.32)`;
+      ctx.fill();
+    }
+
+    // Thin charcoal outline.
+    ctx.strokeStyle=isBW?'rgba(20,18,14,0.62)':'rgba(40,28,12,0.72)';
+    ctx.lineWidth=Math.max(0.5,D*0.0012);
     ctx.stroke();
     ctx.restore();
   }
-
-  // Strong pencil-grain hatching crossing the canvas, scale with reveal.
-  const visHatches = Math.ceil(hatchCountFull * reveal);
-  ctx.globalAlpha = 0.22;
-  ctx.strokeStyle = 'rgba(20,15,10,0.95)';
-  ctx.lineWidth = 0.5;
-  for(let k=0;k<visHatches;k++){
-    const hR = _seedRnd(k+9000,ss,0,0); hR();
-    const sx = hR()*CW, sy = hR()*CH;
-    const len = 6 + hR()*15;
-    const a = (hR()<0.5 ? -Math.PI/4 : Math.PI/4) + (hR()-0.5)*0.3;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
 }
 
 // ── Picasso Geometric Still-Life: synthetic cubism still-life via geometry
@@ -3739,70 +3803,131 @@ function picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.stroke();
 }
 
-// ── Picasso Surrealism: soft biomorphic forms — the ONLY non-angular Picasso
-// phase. Dreamlike amoeba/blob shapes (smooth quadratic contours, not shards),
-// overlapping on a muted dreamy ground, each filled from the palette with a bold
-// dark outline and an occasional surreal "eye" accent. Honours Paintiano's colour
-// concept (fully chromatic). Count/size driven by song character; reveals with lim.
-function picassoPhaseSurreal(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+// ── Picasso Tonal Cubism: meditative warm-grey atmospheric cubism. 10–18 larger
+// softer planes on a desaturated palette, charcoal wash regions as compositional
+// masses, optional muted chord-colour wash. Soft outlines (less ink violence
+// than the analytic phases). The "Cézanne-influenced 1908–09 transition" feel —
+// contemplative, restrained, tonal. NO biomorphs, NO eyes, NO subject.
+function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0;
+  const isBW=mode==='bw';
+  const cn=chords.length;
   const N=Math.max(1,Math.min(cn,lim));
   const reveal=Math.max(0,Math.min(1,N/cn));
   const D=Math.min(CW,CH);
-  const INK = isBW ? [20,20,22] : [18,12,20];
 
-  // Song character → how many blobs and how busy. Energetic/dense music = more,
-  // smaller, more lobed forms; calm/sparse = fewer, larger, smoother.
-  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const drive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const energy=_ch?_ch.energy:0.5;
+  const density=_ch?_ch.density:0.3;
 
-  const sR=_seedRnd(9301,ss,0,9); sR(); sR();
+  // Soft warm-grey ground.
+  ctx.fillStyle=isBW?'#a8a59c':'#a89e8a';
+  ctx.fillRect(0,0,CW,CH);
 
-  // ── Dreamy muted ground: two palette colours, darkened, as a soft gradient ──
-  const {rgb:gA}=_picChord(chords,0,gc,isBW);
-  const {rgb:gB}=_picChord(chords,Math.floor(cn/2),gc,isBW);
-  const _adj=(r,g,b,f)=>{ if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];} if(typeof _pastelTint==='function'){const p=_pastelTint(r,g,b);r=p[0];g=p[1];b=p[2];} return `rgb(${Math.round(r*f)},${Math.round(g*f)},${Math.round(b*f)})`; };
-  const grad=ctx.createLinearGradient(0,0,CW,CH);
-  grad.addColorStop(0,_adj(gA[0],gA[1],gA[2],0.34));
-  grad.addColorStop(1,_adj(gB[0],gB[1],gB[2],0.30));
-  ctx.fillStyle=grad; ctx.fillRect(0,0,CW,CH);
+  // Paper grain.
+  ctx.save();
+  ctx.globalAlpha=0.07;
+  ctx.fillStyle=isBW?'rgb(35,32,28)':'rgb(50,40,32)';
+  for(let i=0;i<500;i++){
+    const gr=_seedRnd(i+10800,ss,0,0);
+    ctx.fillRect(gr()*CW,gr()*CH,1,1);
+  }
+  ctx.restore();
 
-  // ── Biomorphic blobs ──
-  const blobFull=Math.max(5,Math.round(7+drive*8));   // ~7-15
-  const visBlobs=Math.max(2,Math.ceil(blobFull*reveal));
-  for(let i=0;i<visBlobs;i++){
-    const r1=_seedRnd(i+9400,ss,0,0); r1(); r1();
-    const cx=r1()*CW, cy=r1()*CH;
-    const baseR=D*(0.10+r1()*(0.20-drive*0.06));        // calmer songs → larger
-    const lobes=4+Math.floor(r1()*(3+drive*4));         // busier songs → more lobes
-    const {rgb,energy}=_picChord(chords, i%cn, gc, isBW);
-    const fillA=(0.72+energy*0.20).toFixed(2);
-    // Build a smooth closed blob: radial points with wobble, joined by quadratics
-    // through midpoints (so the control points round the corners → no facets).
-    const pts=[];
-    for(let k=0;k<lobes;k++){ const ang=(k/lobes)*Math.PI*2 + (r1()-0.5)*0.4; const rr=baseR*(0.55+r1()*0.85); pts.push([cx+Math.cos(ang)*rr, cy+Math.sin(ang)*rr]); }
-    ctx.save();
-    ctx.beginPath();
-    const m0x=(pts[0][0]+pts[lobes-1][0])/2, m0y=(pts[0][1]+pts[lobes-1][1])/2;
-    ctx.moveTo(m0x,m0y);
-    for(let k=0;k<lobes;k++){ const cur=pts[k], nxt=pts[(k+1)%lobes]; const mx=(cur[0]+nxt[0])/2, my=(cur[1]+nxt[1])/2; ctx.quadraticCurveTo(cur[0],cur[1],mx,my); }
-    ctx.closePath();
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${fillA})`;
-    ctx.fill();
-    ctx.strokeStyle=`rgba(${INK[0]},${INK[1]},${INK[2]},0.82)`;
-    ctx.lineWidth=Math.max(1.8,D*(0.005+energy*0.003));
-    ctx.lineJoin='round';
-    ctx.stroke();
-    // Surreal inner accent: a small contrasting "eye" disc, sometimes.
-    if(r1()<0.55){
-      const {rgb:ic}=_picChord(chords,(i*5+3)%cn,gc,isBW);
-      const ex=cx+(r1()-0.5)*baseR*0.5, ey=cy+(r1()-0.5)*baseR*0.5, er=baseR*(0.12+r1()*0.10);
-      ctx.beginPath(); ctx.arc(ex,ey,er,0,Math.PI*2);
-      ctx.fillStyle=`rgb(${ic[0]},${ic[1]},${ic[2]})`; ctx.fill();
-      ctx.strokeStyle=`rgba(${INK[0]},${INK[1]},${INK[2]},0.7)`; ctx.lineWidth=Math.max(1.2,D*0.003); ctx.stroke();
-      if(r1()<0.6){ ctx.beginPath(); ctx.arc(ex,ey,er*0.4,0,Math.PI*2); ctx.fillStyle=`rgba(${INK[0]},${INK[1]},${INK[2]},0.9)`; ctx.fill(); }
+  // 10–18 larger softer planes.
+  const planeFull=Math.max(10,Math.min(18,10+Math.round((energy+density)*4)));
+  const visPlanes=Math.max(2,Math.ceil(planeFull*reveal));
+
+  // Loose jittered grid of plane centres — Voronoi-like, no obvious rows.
+  const cols=Math.ceil(Math.sqrt(planeFull));
+  const rows=Math.ceil(planeFull/cols);
+  const planes=[];
+  let idx=0;
+  for(let ry=0;ry<rows && idx<planeFull;ry++){
+    for(let cx=0;cx<cols && idx<planeFull;cx++){
+      const r=_seedRnd(idx+10900,ss,0,0); r(); r();
+      const gridX=CW*(cx+0.5)/cols;
+      const gridY=CH*(ry+0.5)/rows;
+      const jit=D*0.11;
+      const px=gridX+(r()-0.5)*jit*2;
+      const py=gridY+(r()-0.5)*jit*2;
+      const sz=D*(0.19+r()*0.16);
+      const sides=4+Math.floor(r()*3);
+      const verts=[];
+      for(let s=0;s<sides;s++){
+        const a=(s/sides)*Math.PI*2+(r()-0.5)*0.45;
+        const rr=sz*(0.72+r()*0.48);
+        verts.push([px+Math.cos(a)*rr,py+Math.sin(a)*rr]);
+      }
+      planes.push({cx:px,cy:py,sz,verts,idx});
+      idx++;
     }
-    ctx.restore();
+  }
+
+  // Draw planes — heavily desaturated, pulled toward warm grey.
+  for(let i=0;i<visPlanes;i++){
+    const p=planes[i];
+    const {rgb,energy:pE}=_picChord(chords,i%cn,gc,isBW);
+    let fR=Math.round(rgb[0]*0.38+92);
+    let fG=Math.round(rgb[1]*0.38+86);
+    let fB=Math.round(rgb[2]*0.38+76);
+    if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
+    if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
+
+    ctx.beginPath();
+    ctx.moveTo(p.verts[0][0],p.verts[0][1]);
+    for(let v=1;v<p.verts.length;v++)ctx.lineTo(p.verts[v][0],p.verts[v][1]);
+    ctx.closePath();
+    ctx.fillStyle=`rgba(${fR|0},${fG|0},${fB|0},${(0.72+pE*0.18).toFixed(2)})`;
+    ctx.fill();
+    ctx.strokeStyle=isBW?'rgba(40,32,28,0.42)':'rgba(50,38,28,0.46)';
+    ctx.lineWidth=Math.max(0.8,D*0.0018);
+    ctx.stroke();
+  }
+
+  // Charcoal wash regions — 2 large translucent dark masses as compositional weight.
+  // Drawn after ~30% reveal so the painting builds up before the masses land.
+  if(reveal>0.30){
+    for(let w=0;w<2;w++){
+      const wR=_seedRnd(w+11500,ss,0,0); wR(); wR();
+      const wx=CW*(0.20+wR()*0.60);
+      const wy=CH*(0.20+wR()*0.60);
+      const wsz=D*(0.42+wR()*0.20);
+      const wsides=5+Math.floor(wR()*3);
+      ctx.beginPath();
+      for(let s=0;s<wsides;s++){
+        const a=(s/wsides)*Math.PI*2;
+        const rr=wsz*(0.70+wR()*0.50);
+        const x=wx+Math.cos(a)*rr, y=wy+Math.sin(a)*rr;
+        if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.fillStyle=isBW?`rgba(28,26,22,${(0.16+w*0.06).toFixed(2)})`:`rgba(35,28,22,${(0.18+w*0.06).toFixed(2)})`;
+      ctx.fill();
+    }
+  }
+
+  // Single muted chord-colour wash after ~50% — adds one tonal warm/cool note.
+  if(reveal>0.50){
+    const wcR=_seedRnd(12100,ss,0,0); wcR(); wcR();
+    const wcx=CW*(0.25+wcR()*0.50);
+    const wcy=CH*(0.25+wcR()*0.50);
+    const wcsz=D*(0.38+wcR()*0.15);
+    const wcsides=5+Math.floor(wcR()*3);
+    const {rgb:wcRgb}=_picChord(chords,Math.floor(cn*0.5),gc,isBW);
+    const wR=Math.round(wcRgb[0]*0.52+72);
+    const wG=Math.round(wcRgb[1]*0.52+62);
+    const wB=Math.round(wcRgb[2]*0.52+56);
+    ctx.beginPath();
+    for(let s=0;s<wcsides;s++){
+      const a=(s/wcsides)*Math.PI*2;
+      const rr=wcsz*(0.70+wcR()*0.50);
+      const x=wcx+Math.cos(a)*rr, y=wcy+Math.sin(a)*rr;
+      if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.fillStyle=`rgba(${wR},${wG},${wB},0.30)`;
+    ctx.fill();
   }
 }
 
