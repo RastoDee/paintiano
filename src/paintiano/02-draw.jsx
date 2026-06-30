@@ -3592,12 +3592,12 @@ function picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.globalAlpha = 1;
 }
 
-// ── Picasso Faceted Drift: directional flow of small angular facets across
-// the canvas. Flow direction comes from song register (low → vertical, high →
-// horizontal, mid → diagonal). Density gradient: tighter band for calm songs,
-// dispersed for energetic. Per-facet earth-toned fill + thin charcoal outline.
-// Two chord-colour washes accent ~12% of facets. NO subject — pure energy field
-// through cubist fragmentation.
+// ── Picasso Faceted Drift: directional analytic cubism — dense overlapping
+// facets across the canvas, mostly monochrome, faint chord-colour bias only.
+// Flow direction comes from song register (low → vertical, high → horizontal,
+// mid → diagonal). Density gradient: tighter band for calm songs, dispersed
+// for energetic. Strong charcoal hatching ties the field together (Ma Jolie /
+// Kahnweiler 1910–11 feel). NO subject — pure fragmentation field.
 function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0;
   const isBW=mode==='bw';
@@ -3611,23 +3611,13 @@ function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const density=_ch?_ch.density:0.3;
   const register=_ch?_ch.register:0.5;
 
-  // Tobacco / warm ochre ground.
-  ctx.fillStyle=isBW?'#9a9388':'#b09464';
+  // Cool grey-brown ground — analytic cubism muted base, NOT golden tobacco.
+  ctx.fillStyle=isBW?'#5a5650':'#4a4438';
   ctx.fillRect(0,0,CW,CH);
 
-  // Paper grain.
-  ctx.save();
-  ctx.globalAlpha=0.10;
-  ctx.fillStyle=isBW?'rgb(40,32,22)':'rgb(60,42,18)';
-  for(let i=0;i<700;i++){
-    const gr=_seedRnd(i+9800,ss,0,0);
-    ctx.fillRect(gr()*CW,gr()*CH,1.2,1.2);
-  }
-  ctx.restore();
-
-  // Facet count driven by song character.
-  const facetFull=Math.max(60,Math.min(180,100+Math.round((energy+density)*40)));
-  const visFacets=Math.max(8,Math.ceil(facetFull*reveal));
+  // Dense facet count — analytic cubism is busy and overlapping.
+  const facetFull=Math.max(180,Math.min(380,220+Math.round((energy+density)*70)));
+  const visFacets=Math.max(20,Math.ceil(facetFull*reveal));
 
   // Flow direction from register: low → vertical, high → horizontal, mid → diagonal.
   const dirR=_seedRnd(9701,ss,0,0); dirR(); dirR();
@@ -3638,10 +3628,6 @@ function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const dx=Math.cos(flowAng), dy=Math.sin(flowAng);
   const px=-dy, py=dx;
 
-  // Two chord-colour washes for selective accents.
-  const wash1=_picChord(chords,Math.floor(cn*0.25),gc,isBW).rgb;
-  const wash2=_picChord(chords,Math.floor(cn*0.72),gc,isBW).rgb;
-
   for(let i=0;i<visFacets;i++){
     const r=_seedRnd(i+9900,ss,0,0); r(); r();
 
@@ -3649,22 +3635,23 @@ function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     // Calm songs → tighter band; energetic → dispersed.
     const tAlong=r();
     let tPerp=(r()-0.5)*2;
-    tPerp*=(0.35+(1-density)*0.55);
+    tPerp*=(0.55+(1-density)*0.45);
     const flowLen=Math.sqrt(CW*CW+CH*CH);
-    const cx=CW*0.5+dx*(tAlong-0.5)*flowLen+px*tPerp*flowLen*0.42;
-    const cy=CH*0.5+dy*(tAlong-0.5)*flowLen+py*tPerp*flowLen*0.42;
-    if(cx<-60||cx>CW+60||cy<-60||cy>CH+60) continue;
+    const cx=CW*0.5+dx*(tAlong-0.5)*flowLen+px*tPerp*flowLen*0.50;
+    const cy=CH*0.5+dy*(tAlong-0.5)*flowLen+py*tPerp*flowLen*0.50;
+    if(cx<-40||cx>CW+40||cy<-40||cy>CH+40) continue;
 
-    // Small angular facet aligned with flow.
-    const sz=D*(0.025+r()*0.045);
-    const rot=flowAng+(r()-0.5)*0.7;
-    const sides=3+Math.floor(r()*2);
+    // Facet size — bigger than before so they overlap and build a continuous field.
+    const sz=D*(0.045+r()*0.075);
+    const rot=flowAng+(r()-0.5)*0.9;
+    const sides=3+Math.floor(r()*2);            // triangles + quads
     const {rgb,energy:fE}=_picChord(chords,i%cn,gc,isBW);
 
-    // Pull facet colour heavily toward earth tones — Ma Jolie palette.
-    let fR=Math.round(rgb[0]*0.50+60);
-    let fG=Math.round(rgb[1]*0.50+48);
-    let fB=Math.round(rgb[2]*0.50+36);
+    // VERY heavy pull toward earth tones — almost monochrome.
+    // Only ~22% of chord-colour bleeds through. Picasso analytic is not colourful.
+    let fR=isBW?Math.round(rgb[0]*0.18+72):Math.round(rgb[0]*0.22+58);
+    let fG=isBW?Math.round(rgb[1]*0.18+68):Math.round(rgb[1]*0.22+46);
+    let fB=isBW?Math.round(rgb[2]*0.18+62):Math.round(rgb[2]*0.22+32);
     if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
     if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
 
@@ -3674,7 +3661,7 @@ function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.beginPath();
     for(let s=0;s<sides;s++){
       const a=(s/sides)*Math.PI*2;
-      const rr=sz*(0.60+r()*0.70);
+      const rr=sz*(0.60+r()*0.80);
       const x=Math.cos(a)*rr, y=Math.sin(a)*rr;
       if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
@@ -3682,19 +3669,46 @@ function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.fillStyle=`rgba(${fR|0},${fG|0},${fB|0},${(0.78+fE*0.18).toFixed(2)})`;
     ctx.fill();
 
-    // Selective chord-colour wash on ~12% of facets (alternating).
-    if(i%8===0 || i%11===0){
-      const wc=(i%8===0)?wash1:wash2;
-      ctx.fillStyle=`rgba(${wc[0]},${wc[1]},${wc[2]},0.32)`;
+    // Tonal modelling: darken one edge slightly so each facet has dimension.
+    // This is the analytic cubism "sculpted facet" read.
+    if(r()<0.6){
+      ctx.fillStyle='rgba(15,10,8,0.18)';
+      ctx.beginPath();
+      const a0=r()*Math.PI*2;
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,sz,a0,a0+Math.PI);
+      ctx.closePath();
       ctx.fill();
     }
 
     // Thin charcoal outline.
-    ctx.strokeStyle=isBW?'rgba(20,18,14,0.62)':'rgba(40,28,12,0.72)';
-    ctx.lineWidth=Math.max(0.5,D*0.0012);
+    ctx.strokeStyle=isBW?'rgba(15,12,10,0.70)':'rgba(20,12,8,0.78)';
+    ctx.lineWidth=Math.max(0.6,D*0.0014);
     ctx.stroke();
     ctx.restore();
   }
+
+  // Dense charcoal hatching — analytic cubism signature. Scales with reveal.
+  // Crosshatch in two diagonals, biased toward the flow direction.
+  const hatchFull=400+Math.floor(_seedRnd(11000,ss,0,0)()*250);
+  const visHatches=Math.ceil(hatchFull*reveal);
+  ctx.save();
+  ctx.globalAlpha=0.24;
+  ctx.strokeStyle=isBW?'rgba(15,12,10,0.95)':'rgba(20,14,8,0.95)';
+  ctx.lineWidth=0.55;
+  for(let k=0;k<visHatches;k++){
+    const hR=_seedRnd(k+11200,ss,0,0); hR();
+    const sx=hR()*CW, sy=hR()*CH;
+    const len=6+hR()*18;
+    // 70% follow flow direction (parallel to flowAng), 30% cross-hatch.
+    const useFlow=hR()<0.70;
+    const a=useFlow ? flowAng+(hR()-0.5)*0.30 : flowAng+Math.PI/2+(hR()-0.5)*0.30;
+    ctx.beginPath();
+    ctx.moveTo(sx,sy);
+    ctx.lineTo(sx+Math.cos(a)*len,sy+Math.sin(a)*len);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 // ── Picasso Geometric Still-Life: synthetic cubism still-life via geometry
