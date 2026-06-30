@@ -937,7 +937,7 @@ const PF_STYLE = `
           /* Seek/title row spans the same width as the canvas. */
           .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-seek-block {
             max-width: calc(100vw - 420px) !important;
-            margin: 0 auto 8px !important;
+            margin: 0 auto 7px !important;
           }
           /* Hide the #root scrollbar in Lite — the canvas can be tall and
              scrollable, but the visible scrollbar track is distracting. */

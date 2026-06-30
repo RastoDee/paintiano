@@ -937,7 +937,7 @@ const PF_STYLE = `
           /* Seek/title row spans the same width as the canvas. */
           .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-seek-block {
             max-width: calc(100vw - 420px) !important;
-            margin: 0 auto 8px !important;
+            margin: 0 auto 7px !important;
           }
           /* Hide the #root scrollbar in Lite — the canvas can be tall and
              scrollable, but the visible scrollbar track is distracting. */
@@ -22055,13 +22055,16 @@ export default function Paintiano() {
   const [liteFlipTeaser, setLiteFlipTeaser] = useState(false);
   useEffect(()=>{ liteImageModeRef.current = liteImageMode; },[liteImageMode]);
   // One-time teaser: a couple of seconds after Lite opens, the subtitle gives a
-  // small peek-flip to draw the eye to it. Only if the user hasn't flipped yet.
+  // small peek-flip to draw the eye to it. Only if the user hasn't flipped yet,
+  // AND only after the user has played at least once — in the Play-chip state
+  // the flip is disabled, so a teaser would point at a dead element.
   useEffect(()=>{
     if(!basicMode || liteFlipSeen || liteImageMode) return;
+    if(!liteEverUnlockedRef.current && chords.length===0) return;
     const t1=setTimeout(()=>{ setLiteFlipTeaser(true); }, 2200);
     const t2=setTimeout(()=>{ setLiteFlipTeaser(false); }, 2200+620);
     return ()=>{ clearTimeout(t1); clearTimeout(t2); };
-  },[basicMode,liteFlipSeen,liteImageMode]);
+  },[basicMode,liteFlipSeen,liteImageMode,chords.length]);
   useEffect(()=>{
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
@@ -29991,8 +29994,17 @@ Composition rules:
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(basicMode&&isActiveView)?(isDesktop?'clamp(1.8rem,4vw,2.5rem)':'clamp(2.2rem,9vw,3rem)'):(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)'),fontWeight:600,letterSpacing:'.03em',margin:(basicMode&&isActiveView)?'0 0 0':'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
         {basicMode && (
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+          {(()=>{
+            // The header flip ("music → painting" ↔ "painting → music") is
+            // inert until the user has played at least once. In the Play-chip
+            // state the only meaningful action is to tap the big gold Play
+            // disc — flipping into image-mode out of an empty start screen
+            // would dump the user into a half-loaded blank canvas.
+            const _liteFlipDisabled = chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current;
+            return (
           <div
             onClick={()=>{
+              if(_liteFlipDisabled) return;
               // Flip the header around its vertical axis, switch Lite flavour at
               // the half-way point so the back face shows the new subtitle.
               if(liteFlip) return;
@@ -30017,15 +30029,20 @@ Composition rules:
               setTimeout(()=>{ setLiteFlip(false); }, 540);
             }}
             role="button"
-            title={liteImageMode ? 'painting → music' : 'music → painting'}
-            style={{display:'inline-flex',alignItems:'center',gap:8,margin:'0 auto 0',cursor:'pointer',padding:'4px 12px',borderRadius:999,
+            aria-disabled={_liteFlipDisabled || undefined}
+            title={_liteFlipDisabled ? '' : (liteImageMode ? 'painting → music' : 'music → painting')}
+            style={{display:'inline-flex',alignItems:'center',gap:8,margin:'0 auto 0',cursor:_liteFlipDisabled?'default':'pointer',padding:'4px 12px',borderRadius:999,
               transform:(liteFlip||liteFlipTeaser)?'rotateY(90deg)':'rotateY(0deg)',
               transformOrigin:'center center',WebkitTapHighlightColor:'transparent',userSelect:'none',
-              transition:'transform .26s ease'}}>
-            <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:isDesktop?'1rem':'1.05rem',color:'rgba(220,180,90,.9)',letterSpacing:'.02em',display:'inline-block',transformOrigin:'center center',animation:(!liteFlipSeen)?'pf-flip-nudge 2.6s ease-in-out infinite':'none'}}>
+              opacity:_liteFlipDisabled?.35:1,
+              pointerEvents:_liteFlipDisabled?'none':'auto',
+              transition:'transform .26s ease, opacity .25s ease'}}>
+            <span style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:isDesktop?'1rem':'1.05rem',color:'rgba(220,180,90,.9)',letterSpacing:'.02em',display:'inline-block',transformOrigin:'center center',animation:(!liteFlipSeen && !_liteFlipDisabled)?'pf-flip-nudge 2.6s ease-in-out infinite':'none'}}>
               {liteImageMode ? 'painting → music' : 'music → painting'}
             </span>
           </div>
+            );
+          })()}
           </div>
         )}
         {isPro && !basicMode && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
@@ -30538,15 +30555,16 @@ Composition rules:
             </button>
           ) : (<span style={{width:26,flexShrink:0}} aria-hidden="true" />)}
         </div>
-        {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
+        {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
-        {/* Styles without an artist — mosaic (no style selected) and notes — get
-            no "inspired by". Show the active colour mode • the style name so the
-            collapsed caption isn't blank. mosaic = effectiveStyle null/none;
-            notes = effectiveStyle 'notes'. */}
-        {!stripOpen && (loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='oneM') && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='oneM'?t('oneMStyle'):effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
+        {/* Styles without an artist attribution — mosaic (no style selected) and
+            notes (bare grid with note labels) — get no "inspired by". One Million
+            Dollar Page goes through the artist branch above (it references a real
+            iconic web-art piece). Show the active colour mode • the style name so
+            the collapsed caption isn't blank. */}
+        {!stripOpen && (loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
@@ -31352,16 +31370,16 @@ Composition rules:
             <img src={imgMoodThumb || originalImgUrl} alt="source" style={{width:44,height:44,objectFit:'cover',borderRadius:8,border:'1px solid rgba(220,150,255,.45)',boxShadow:'0 2px 8px rgba(0,0,0,.4)',opacity:.88,flexShrink:0}}/>
           </div>
         )}
-        <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?3:8}}>
+        <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?7:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
-            {basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM' && STYLE_INSPIRED[effectiveStyle] && (
+            {basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
-            {basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='oneM' || !STYLE_INSPIRED[effectiveStyle]) && (
-              <span key="insp-mosaic" className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>Mosaic</span>
+            {basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
+              <span key={`insp-${effectiveStyle==='notes'?'notes':'mosaic'}`} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>{effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</span>
             )}
           </div>
           {(viewMode!=='image' || !(recording||!!recBlob)) && (
@@ -31514,14 +31532,17 @@ Composition rules:
       {immersive && STYLE_INSPIRED[effectiveStyle || 'mosaic'] && (()=>{
         const _key = effectiveStyle || 'mosaic';
         const _bare = (_key === 'mosaic' || _key === 'notes');
+        const _label = _key === 'notes' ? t('notesStyle')
+                     : _key === 'mosaic' ? t('mosaicStyle')
+                     : STYLE_INSPIRED[_key];
         return (
         <div style={{position:'fixed',top:'max(8px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.95)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
           {!style&&(<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.85}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}
-          {!_bare && (<span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span>)} {STYLE_INSPIRED[_key]}
+          {!_bare && (<span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span>)} {_label}
         </div>
         );
       })()}
-      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)',boxShadow:varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)',marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onClick={e=>{
