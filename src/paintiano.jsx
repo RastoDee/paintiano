@@ -928,6 +928,8 @@ const PF_STYLE = `
             align-self: center !important;
             max-width: calc(100vw - 420px) !important;
             width: 100% !important;
+            border: none !important;
+            box-shadow: none !important;
           }
           .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-stage-part > canvas {
             max-width: 100% !important;
@@ -28987,8 +28989,11 @@ Hard requirements:
     if(showIntro) return;
     if(!basicMode){ basicAutoPlayedRef.current=false; return; }
     // Already have content / playing / another source active → nothing to do,
-    // and mark as done so we don't auto-load over a user's piece.
-    if(chords.length>0 || playing || composeMode || micActive || loadedSource){ basicAutoPlayedRef.current=true; return; }
+    // and mark as done so we don't auto-load over a user's piece. micArmed is
+    // included because _startMicLite calls fullClear (chords=0, loadedSource=null)
+    // and THEN setMicArmed(true) — without this guard, basicAutoPlay races in
+    // between and auto-loads Liszt over the user's pending mic capture.
+    if(chords.length>0 || playing || composeMode || micActive || micArmed || loadedSource){ basicAutoPlayedRef.current=true; return; }
     // Still warming up (piano sampler loading → busy) — wait; the effect re-runs
     // when busy clears because busy is in the deps. Do NOT lock here.
     if(busy) return;
@@ -29037,7 +29042,7 @@ Hard requirements:
     }, 300);
     return ()=>clearTimeout(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[showIntro, basicMode, busy, chords.length, loadedSource, playing]);
+  },[showIntro, basicMode, busy, chords.length, loadedSource, playing, micArmed, micActive]);
 
   // BASIC mode: auto-start playback whenever a song is loaded but not yet
   // playing (chords present, nothing drawn yet). Covers "My song" uploads

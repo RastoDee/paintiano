@@ -928,6 +928,8 @@ const PF_STYLE = `
             align-self: center !important;
             max-width: calc(100vw - 420px) !important;
             width: 100% !important;
+            border: none !important;
+            box-shadow: none !important;
           }
           .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-stage-part > canvas {
             max-width: 100% !important;
