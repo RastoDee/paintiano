@@ -930,6 +930,17 @@ const PF_STYLE = `
             width: 100% !important;
             border: none !important;
             box-shadow: none !important;
+            border-radius: 0 !important;
+            outline: none !important;
+          }
+          /* Catch-all for any descendant .pf-stage-part inside Lite (covers
+             extra wrappers that the direct-child selector above misses). */
+          .pf-app-root.pf-mode-lite:not(.pf-immersive) .pf-stage-part,
+          .pf-app-root.pf-mode-lite:not(.pf-immersive) .pf-stage-part > canvas {
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            outline: none !important;
           }
           .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-stage-part > canvas {
             max-width: 100% !important;

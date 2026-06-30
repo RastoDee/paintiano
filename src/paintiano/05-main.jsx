@@ -1526,6 +1526,15 @@ export default function Paintiano() {
   const [recording, setRecording] = useState(false);
   const [micPainting, setMicPainting] = useState(false);
   const [micListening, setMicListening] = useState(false);
+  // Refs mirroring the mic state, so deferred callbacks (e.g. setTimeout inside
+  // _startMicLite) read the LATEST value, not a stale closure snapshot.
+  // Without these, a fast Mikro→Mikro tap captured micListening=true at the
+  // time setTimeout was scheduled, and 60ms later startMicListening's
+  // toggle-guard read that stale true and immediately stopped the mic.
+  const micListeningRef = useRef(false);
+  const micPaintingRef = useRef(false);
+  useEffect(()=>{ micListeningRef.current = micListening; },[micListening]);
+  useEffect(()=>{ micPaintingRef.current = micPainting; },[micPainting]);
   // Combined mic-mode preset — selects which behavior the single 🎙 MIC button
   // activates. 'voice' = sing-style (monophonic, snap-to-C-major, piano echo),
   // 'music' = listen-style (polyphonic chord detection, silent painting).
@@ -8581,7 +8590,7 @@ Hard requirements:
   useEffect(()=>{stopMicListeningRef.current=stopMicListening;},[stopMicListening]);
 
   const startMicListening=useCallback(async()=>{
-    if(micListening){stopMicListening();return;}
+    if(micListeningRef.current){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     const prevOwner = draftOwnerRef.current;
@@ -8591,7 +8600,7 @@ Hard requirements:
     if(prevOwner && !continuation) stashDraft(prevOwner);
     // Only one mode at a time
     setComposeMode(false);
-    if(micPainting){stopMicPainting();}
+    if(micPaintingRef.current){stopMicPainting();}
     try{
       // Some iOS builds reject specific audio constraints (autoGainControl:false
       // etc.) with OverconstrainedError/NotReadableError even though the mic is
@@ -8809,10 +8818,10 @@ Hard requirements:
       setErr(micErrMsg(e));setErrInfo(false);
       setMicListening(false);
     }
-  },[micListening,stopMicListening,stopAll]);
+  },[stopMicListening,stopAll]);
 
   const startMicPainting=useCallback(async()=>{
-    if(micPainting)return stopMicPainting();
+    if(micPaintingRef.current)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
     const prevOwner = draftOwnerRef.current;
@@ -11827,7 +11836,7 @@ Hard requirements:
           <img src={originalImgUrl} alt="original" onLoad={e=>{const w=e.target.naturalWidth,h=e.target.naturalHeight; if(w&&h) setMfiImgAspect(w+' / '+h);}} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',objectPosition:'0 0',display:'block',zIndex:0,pointerEvents:'none',transition:'opacity .25s ease'}}/>
         )}
         <audio ref={audioElRef} style={{display:'none'}} preload="auto"/>
-        <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((basicMode&&!immersive)?{borderRadius:14,boxShadow:'0 10px 40px rgba(0,0,0,.5)',outline:'1px solid rgba(255,255,255,.10)',outlineOffset:'-1px'}:{}),...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{})}}/>
+        <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
         {demoReelOn && demoPrintBeat && (
