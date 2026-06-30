@@ -33232,7 +33232,7 @@ Hard requirements:
               return (
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
                 <div style={{flex:1,minWidth:0,position:'relative'}}>
-                  <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,.018)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,padding:'12px 14px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
+                  <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); try{e.nativeEvent.stopImmediatePropagation();}catch(_){} if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,.018)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,padding:'12px 14px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
                   {/* Empty-state placeholder: for trial-active users a marquee
                       of examples; for aiLocked an instruction + PRO AI badge
                       since free-typing won't reach the AI. */}
