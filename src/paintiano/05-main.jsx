@@ -13277,91 +13277,64 @@ Hard requirements:
               <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} aria-label="close" title="close" style={{background:'rgba(28,24,40,.6)',border:'1px solid rgba(242,238,232,.15)',color:okMin?'rgba(247,243,236,.85)':'rgba(247,243,236,.25)',width:34,height:34,borderRadius:'50%',cursor:okMin?'pointer':'default',fontSize:'1.1rem',display:'inline-flex',alignItems:'center',justifyContent:'center',padding:0,fontFamily:'inherit'}}>×</button>
             </div>
             <div className="pf-setup-body" style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:22}}>
+              {/* Palettes — chip grid matching cockpit look; solid = in Set,
+                  dashed = ghost (not in Set). ALL/NONE inline shortcuts. */}
               <div className="pf-setup-palettes">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupPalettesTitle','Palettes')}</span>
-                  <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
-                    <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
-                    <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{ts('setupPalettesTitle','Palettes')}</span>
+                  <span style={{display:'inline-flex',gap:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.06em'}}>
+                    <span onClick={()=>setSetupPalettes(ALL_PALETTE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes(ALL_PALETTE_KEYS.slice());}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.85)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupAll','All'))}</span>
+                    <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(230,222,196,.2)',color:'rgba(230,222,196,.55)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
                 </div>
-                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
+                <div style={{display:'grid',gridTemplateColumns:isDesktop?'repeat(5,1fr)':'repeat(auto-fill,minmax(90px,1fr))',gap:8}}>
                   {ALL_PALETTE_KEYS.map(k=>{
                     const on = setupPalettes.includes(k);
                     return (
-                    <button key={k} onClick={()=>togglePal(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
-                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:6,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'1rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
-                      <span style={{flex:1,textAlign:'left'}}>{_sent(_palLabels[k])}</span>
-                    </button>
+                    <button key={k} onClick={()=>togglePal(k)} style={{padding:'10px 4px',textAlign:'center',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:22,transition:'color .18s, background .18s, border-color .18s',...(on?{background:'transparent',border:'1px solid rgba(201,168,76,.75)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.25)',color:'rgba(230,222,196,.5)'})}}>{_sent(_palLabels[k])}</button>
                     );
                   })}
                 </div>
-                <div className="pf-setup-done-pal" style={{display:'none'}}>
-                  <button onClick={()=>{ if(okMin) closeSetup(); }} disabled={!okMin} style={{padding:'12px 32px',background:'transparent',color:okMin?'rgba(220,180,90,.95)':'rgba(201,168,76,.3)',border:'1px solid '+(okMin?'rgba(201,168,76,.45)':'rgba(201,168,76,.15)'),borderRadius:22,cursor:okMin?'pointer':'default',fontFamily:'inherit',fontSize:(.68*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',textTransform:'uppercase',transition:'background .18s, border-color .18s'}}>{_sent(ts('setupSave','Done'))} <span>→</span></button>
-                </div>
               </div>
-              <div className="pf-setup-tones">
+              {/* Inspired by — 5-column chip grid of individual artists (not
+                  paired). "Mosaic family" is one tile that covers all three
+                  mosaic variants; the other 19 keys are individual artists. */}
+              <div className="pf-setup-artists">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupTonesTitle',({EN:'Tones',SK:'Tóny',DE:'Töne',FR:'Tonalités',ES:'Tonos',PT:'Tons',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tones')}</span>
-                  <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
-                    <span onClick={()=>setSetupTones(ALL_TONE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones(ALL_TONE_KEYS.slice());}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
-                    <span onClick={()=>setSetupTones(['pure'])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones(['pure']);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{ts('setupArtistsTitle',({EN:'Inspired by',SK:'Inšpirované',DE:'Inspiriert von',FR:'Inspiré par',ES:'Inspirado por',PT:'Inspirado por',zh:'灵感来源',zhTW:'靈感來源',ja:'インスパイア'})[lang]||'Inspired by')}</span>
+                  <span style={{display:'inline-flex',gap:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.06em'}}>
+                    <span onClick={()=>setSetupArtists(ALL_ARTIST_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(ALL_ARTIST_KEYS.slice());}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.85)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupAll','All'))}</span>
+                    <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(230,222,196,.2)',color:'rgba(230,222,196,.55)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
                 </div>
-                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
+                  {ALL_ARTIST_KEYS.map(k=>{
+                    const on = setupArtists.includes(k);
+                    // Compact single-word label for chip (fits in narrow column)
+                    const _label = k==='mosaicFamily' ? (ts('setupMosaicFamily','Mosaic')) : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; const _f=STYLE_INSPIRED[k]||k; return _as[_f]||_f; })();
+                    return (
+                    <button key={k} onClick={()=>toggleArt(k)} style={{padding:'8px 4px',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,transition:'color .18s, background .18s, border-color .18s',...(on?{background:'transparent',border:'1px solid rgba(201,168,76,.75)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.25)',color:'rgba(230,222,196,.5)'})}}>{_label}</button>
+                    );
+                  })}
+                </div>
+                <div style={{textAlign:'center',marginTop:12,fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.55)',fontStyle:'italic'}}>{ts('setupTapHint',({EN:'Tap to add or remove from your set.',SK:'Klepni pre pridanie alebo odstránenie zo setu.',DE:'Tippen, um zum Set hinzuzufügen oder zu entfernen.',FR:'Touchez pour ajouter ou retirer de votre set.',ES:'Toca para añadir o quitar de tu set.',PT:'Toque para adicionar ou remover do seu conjunto.',zh:'点击以从您的集合中添加或移除。',zhTW:'點擊以從您的集合中添加或移除。',ja:'タップしてセットに追加または削除します。'})[lang]||'Tap to add or remove from your set.')}</div>
+              </div>
+              {/* Tones — 3-chip row (chosen tones become available in the
+                  cockpit; if only 1 is enabled, the cockpit hides the tone
+                  section entirely). */}
+              <div className="pf-setup-tones">
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{ts('setupTonesTitle',({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone')}</span>
+                  <span style={{display:'inline-flex',gap:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.06em'}}>
+                    <span onClick={()=>setSetupTones(ALL_TONE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones(ALL_TONE_KEYS.slice());}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.85)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupAll','All'))}</span>
+                    <span onClick={()=>setSetupTones([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones([]);}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(230,222,196,.2)',color:'rgba(230,222,196,.55)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupNone','None'))}</span>
+                  </span>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
                   {ALL_TONE_KEYS.map(k=>{
                     const on = setupTones.includes(k);
                     return (
-                    <button key={k} onClick={()=>toggleTone(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
-                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:6,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'1rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
-                      <span style={{flex:1,textAlign:'left'}}>{_sent(_toneLabels[k])}</span>
-                    </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="pf-setup-artists">
-                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
-                  <span style={{fontSize:(.65*effScale)+'rem',fontWeight:500,letterSpacing:'.14em',color:'rgba(201,168,76,.7)',textTransform:'uppercase'}}>{ts('setupArtistsTitle','Artists')}</span>
-                  <span style={{display:'inline-flex',gap:14,fontSize:(.6*effScale)+'rem',letterSpacing:0}}>
-                    <span onClick={()=>setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists(['mosaicFamily', ...BASE_STYLE_PAIRS.flat()]);}}} style={{cursor:'pointer',color:'rgba(201,168,76,.7)'}}>{_sent(ts('setupAll','All'))}</span>
-                    <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',color:'rgba(230,222,196,.45)'}}>{_sent(ts('setupNone','None'))}</span>
-                  </span>
-                </div>
-                <div className="pf-setup-grid" style={{display:'flex',flexDirection:'column',gap:0}}>
-                  {/* Mosaic family — single tile (the trio Mosaic / Notes / $1M$). */}
-                  {(()=>{
-                    const k='mosaicFamily';
-                    const on = setupArtists.includes(k);
-                    return (
-                    <button key={k} onClick={()=>toggleArt(k)} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':'rgba(247,243,236,.45)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
-                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:6,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'1rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
-                      <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_artistLabels[k]}</span>
-                    </button>
-                    );
-                  })()}
-                  {/* Artist pairs — one tile per pair, toggles BOTH sides at once.
-                      Free tier shows 🔒 next to the Pro ('b') side in the label. */}
-                  {BASE_STYLE_PAIRS.map(([a,b])=>{
-                    const on = setupArtists.includes(a) && setupArtists.includes(b);
-                    const halfOn = !on && (setupArtists.includes(a) || setupArtists.includes(b));
-                    const togglePair = ()=> setSetupArtists(prev=>{
-                      const has = prev.includes(a) && prev.includes(b);
-                      if(has){
-                        return prev.filter(x=>x!==a && x!==b);
-                      }
-                      const next = prev.slice();
-                      if(!next.includes(a)) next.push(a);
-                      if(!next.includes(b)) next.push(b);
-                      return next;
-                    });
-                    return (
-                    <button key={a+'_'+b} onClick={togglePair} className="pf-setup-row" style={{display:'inline-flex',alignItems:'center',gap:12,padding:'12px 4px',background:'transparent',color:on?'rgba(247,243,236,.85)':(halfOn?'rgba(247,243,236,.65)':'rgba(247,243,236,.45)'),border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',fontSize:(.92*effScale)+'rem',fontWeight:500,letterSpacing:0,textAlign:'left',transition:'color .18s, padding-left .18s'}}>
-                      <span style={{display:'inline-flex',width:22,height:22,alignItems:'center',justifyContent:'center',borderRadius:6,border:'1px solid '+(on?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'1rem',fontWeight:600,lineHeight:1,flexShrink:0}}>{on?'✓':''}</span>
-                      <span style={{flex:1,textAlign:'left',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                        {STYLE_INSPIRED[a]} · {STYLE_INSPIRED[b]}{isFree && (<span style={{marginLeft:4,fontSize:'.85em',opacity:.5}} title={ts('proLockTitle','Pro')}>🔒</span>)}
-                      </span>
-                    </button>
+                    <button key={k} onClick={()=>toggleTone(k)} style={{padding:'10px 4px',textAlign:'center',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:22,transition:'color .18s, background .18s, border-color .18s',...(on?{background:'transparent',border:'1px solid rgba(201,168,76,.75)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.25)',color:'rgba(230,222,196,.5)'})}}>{_sent(_toneLabels[k])}</button>
                     );
                   })}
                 </div>
