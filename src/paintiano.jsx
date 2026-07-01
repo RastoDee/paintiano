@@ -27892,6 +27892,48 @@ Hard requirements:
           const ofc=document.createElement('canvas');ofc.width=nc;ofc.height=nr;
           const ctx=ofc.getContext('2d');ctx.drawImage(img,0,0,nc,nr);
           const raw=ctx.getImageData(0,0,nc,nr).data;
+          // AUTO-DETECT scan direction from image characteristics.
+          // Layer 1 (aspect ratio) — landscape → 'lr', portrait → 'vert'.
+          // Layer 2 (radial luminance, square-ish images only) — center brighter
+          // than edges → 'spiralIn' (climax at center: Kandinsky, Klimt, mandala);
+          // edges brighter → 'spiralOut' (radiation: Kusama, Pollock); ~equal → 'lr'.
+          // Uses Rec.709 luminance and 15% relative threshold. Fresh detect on
+          // every new image; a manual chip tap after load overrides just for that
+          // image (the next load auto-detects again).
+          (()=>{
+            try{
+              const _iw = img.naturalWidth || 1;
+              const _ih = img.naturalHeight || 1;
+              const _r = _iw / _ih;
+              let _dir = 'lr';
+              if(_r >= 1.3)       _dir = 'lr';
+              else if(_r <= 0.77) _dir = 'vert';
+              else {
+                const _cx = nc/2, _cy = nr/2;
+                const _maxR = Math.min(nc, nr) / 2;
+                const _inR2  = (_maxR * 0.30) * (_maxR * 0.30);
+                const _outR2 = (_maxR * 0.60) * (_maxR * 0.60);
+                let _cSum=0, _cN=0, _eSum=0, _eN=0;
+                for(let y=0; y<nr; y++){
+                  const _dy = y - _cy;
+                  for(let x=0; x<nc; x++){
+                    const _dx = x - _cx;
+                    const _d2 = _dx*_dx + _dy*_dy;
+                    const _i = (y*nc + x) * 4;
+                    const _l = 0.2126*raw[_i] + 0.7152*raw[_i+1] + 0.0722*raw[_i+2];
+                    if(_d2 <= _inR2){ _cSum += _l; _cN++; }
+                    else if(_d2 >= _outR2){ _eSum += _l; _eN++; }
+                  }
+                }
+                const _cAvg = _cN ? _cSum/_cN : 0;
+                const _eAvg = _eN ? _eSum/_eN : 0;
+                if(_cAvg > _eAvg * 1.15)      _dir = 'spiralIn';
+                else if(_eAvg > _cAvg * 1.15) _dir = 'spiralOut';
+                else                          _dir = 'lr';
+              }
+              setImgDir(_dir);
+            }catch(_){/* fall back to whatever imgDir already is */}
+          })();
           const px=[];
           for(let row=0;row<nr;row++)for(let col=0;col<nc;col++){const i=(row*nc+col)*4;px.push({r:raw[i],g:raw[i+1],b:raw[i+2]});}
           // APP-CHOSEN COLOUR MODE: decide the reading from how much of the image
