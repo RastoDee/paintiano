@@ -11835,17 +11835,26 @@ Hard requirements:
         }}
       >
         {/* My Music ♡ Save button — top-LEFT mirror of the fullscreen ⛶ button
-            on top-right. Only appears when File audio is loaded (mic recordings
-            and samples are excluded per scope). Tap opens the save modal which
-            prefills the name from the file (if any) or an auto-timestamped
-            fallback, and shows the target slot. */}
-        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && loadedSource==='audio' && !!audioBlob && (
+            on top-right. Appears whenever any imported piece is loaded (audio
+            mp3/wav/m4a, midi, or MusicXML — all get saved to the same shared
+            archive). Tap opens the save modal which prefills the name from
+            the file (if any) or an auto-timestamped fallback, and shows the
+            target slot. */}
+        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && (
+          (loadedSource==='audio' && !!audioBlob)
+          || (loadedSource==='midi'  && !!midiBlob)
+          || (loadedSource==='score' && !!scoreBlob)
+        ) && (
         <button onClick={(e)=>{
           e.stopPropagation();
           const _pad=n=>String(n).padStart(2,'0');
           const _now=new Date();
           const _autoWord=({EN:'Song',SK:'Skladba',DE:'Lied',FR:'Chanson',ES:'Canción',PT:'Música',zh:'歌曲',zhTW:'歌曲',ja:'曲'})[lang]||'Song';
-          const _stem=(audioName||'').replace(/\.[^.]+$/,'').trim();
+          const _rawName = loadedSource==='audio' ? audioName
+                         : loadedSource==='midi'  ? midiName
+                         : loadedSource==='score' ? scoreName
+                         : '';
+          const _stem=(_rawName||'').replace(/\.[^.]+$/,'').trim();
           const _autoName=_autoWord+' '+_now.getFullYear()+'-'+_pad(_now.getMonth()+1)+'-'+_pad(_now.getDate())+' '+_pad(_now.getHours())+':'+_pad(_now.getMinutes());
           setMyMusicSaveName(_stem || _autoName);
           setMyMusicSaveTargetSlot(null);
@@ -13613,9 +13622,19 @@ Hard requirements:
               <div style={{display:'flex',gap:8,marginTop:4}}>
                 <button onClick={()=>{ if(!myMusicSaving) setShowMyMusicSaveModal(false); }} disabled={myMusicSaving} style={{flex:1,padding:'10px 14px',background:'transparent',border:'1px solid rgba(230,222,196,.2)',borderRadius:10,color:'rgba(230,222,196,.75)',cursor:myMusicSaving?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',fontWeight:500}}>{_sent(ts('cancelLabel','Cancel'))}</button>
                 <button disabled={myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim()} onClick={async()=>{
-                  if(!audioBlobRef.current) return;
+                  // Pick the right blob for the current loaded source. All 3
+                  // formats (audio, midi, MusicXML) go into the same archive.
+                  const _blob = loadedSource==='audio' ? audioBlobRef.current
+                              : loadedSource==='midi'  ? midiBlob
+                              : loadedSource==='score' ? scoreBlob
+                              : null;
+                  if(!_blob) return;
+                  const _kind = loadedSource==='audio' ? 'audio'
+                              : loadedSource==='midi'  ? 'midi'
+                              : loadedSource==='score' ? 'score'
+                              : 'audio';
                   setMyMusicSaving(true);
-                  const _r = await myMusicSaveToSlot(myMusicSaveTargetSlot, { name: myMusicSaveName.trim(), blob: audioBlobRef.current, mime: audioBlobRef.current.type });
+                  const _r = await myMusicSaveToSlot(myMusicSaveTargetSlot, { name: myMusicSaveName.trim(), blob: _blob, mime: _blob.type || (_kind==='midi'?'audio/midi':(_kind==='score'?'application/vnd.recordare.musicxml+xml':'audio/mpeg')), kind: _kind });
                   setMyMusicSaving(false);
                   if(_r){
                     setShowMyMusicSaveModal(false);

@@ -1327,10 +1327,11 @@ async function myMusicList(){
     });
   }catch(_){ return []; }
 }
-// saveToSlot(id, {name, blob, mime}) → writes to a specific slot. If a record
-// already exists at that id, it's overwritten (put semantics). Returns
-// {id, name, addedAt, sizeBytes, mime} on success or null on failure.
-async function myMusicSaveToSlot(id, {name, blob, mime}){
+// saveToSlot(id, {name, blob, mime, kind}) → writes to a specific slot. If a
+// record already exists at that id, it's overwritten (put semantics). `kind`
+// records the source type ('audio' | 'midi' | 'score') so the load path knows
+// how to re-open it. Returns the saved record on success or null on failure.
+async function myMusicSaveToSlot(id, {name, blob, mime, kind}){
   if(!Number.isInteger(id) || id<1 || id>MY_MUSIC_MAX) return null;
   if(!(blob instanceof Blob)) return null;
   try{
@@ -1340,6 +1341,7 @@ async function myMusicSaveToSlot(id, {name, blob, mime}){
       name: (name || 'Untitled').toString().slice(0, 120),
       blob,
       mime: mime || blob.type || 'audio/mpeg',
+      kind: kind || 'audio',
       sizeBytes: blob.size,
       addedAt: Date.now(),
     };
