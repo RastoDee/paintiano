@@ -827,6 +827,14 @@ export default function Paintiano() {
   // Music canvas can show each cell's source carrying colour while the audio
   // plays the full, unchanged harmony. Pure Image / pure Music never set this.
   const _imageDomPcsRef = useRef(null);
+  // Per-NOTE side-channel for _paintPc — the pixel-derived pitch class captured
+  // during image scan (02-draw.jsx:12498, before snap/bar progression overwrites
+  // n.m). MIDI protocol only carries pitch/velocity/timing, so this custom
+  // field is lost during the See Music encode → File → loadMidi round-trip.
+  // This ref preserves it around the bridge; a useEffect below rehydrates it
+  // into chord notes after loadMidi. Structure: array of arrays of numbers
+  // (or undefined for notes without _paintPc), song order matching baked chords.
+  const _imagePaintPcsRef = useRef(null);
   // Bridge draft signatures (point 4). When See music / Hear image creates a
   // target-mode draft and the user works on it then taps Back, the in-progress
   // target draft is stashed (musicStashRef / imageStashRef) tagged with the
@@ -3385,6 +3393,38 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setChords(prev => (prev && prev.length ? prev.slice() : prev));
     setStamp(s=>s+1);
     _imageDomPcsRef.current = null; // single-use
+  },[chords, loadedSource]);
+  // ── _paintPc hydration (per-NOTE, See Music round-trip) ──────────────────
+  // Companion to the _domPc effect above. MIDI encode/decode drops custom
+  // fields; _imagePaintPcsRef preserved per-note _paintPc across the bridge.
+  // Reinject each note's _paintPc so drawBlock's dual-layer branch activates
+  // and paints source-faithful colours in Music mode after See Music.
+  // Count mismatch handling matches _domPc: proportional mapping when
+  // bakeImageChords produced a different chord count than the MIDI round-trip
+  // returned, and per-note mapping within a chord uses min(srcNotes, curNotes)
+  // so extra/missing notes fall through the fallback (n.m) silently.
+  useEffect(()=>{
+    if(!_imagePaintPcsRef.current) return;
+    if(loadedSource!=='midi') return;
+    if(!chords || chords.length===0) return;
+    const src = _imagePaintPcsRef.current; // Array<Array<number|null>>, song order
+    const cur = chordsRef.current;
+    if(!cur || cur.length===0) return;
+    const srcLen = src.length;
+    if(srcLen===0){ _imagePaintPcsRef.current=null; return; }
+    for(let i=0; i<cur.length; i++){
+      const srcIdx = Math.min(srcLen-1, Math.floor(i * srcLen / cur.length));
+      const srcNotes = src[srcIdx] || [];
+      const curNotes = cur[i].n || [];
+      const n = Math.min(srcNotes.length, curNotes.length);
+      for(let j=0; j<n; j++){
+        const pc = srcNotes[j];
+        if(typeof pc === 'number') curNotes[j]._paintPc = pc;
+      }
+    }
+    setChords(prev => (prev && prev.length ? prev.slice() : prev));
+    setStamp(s=>s+1);
+    _imagePaintPcsRef.current = null; // single-use
   },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
@@ -10895,6 +10935,9 @@ Hard requirements:
                   pc:  (typeof c._domPc==='number' ? c._domPc : null),
                   lum: (typeof c._lum==='number'   ? c._lum   : null)
                 }));
+                // Capture per-note _paintPc so we can rehydrate after MIDI
+                // round-trip (protocol strips custom fields). See useEffect below.
+                _imagePaintPcsRef.current = baked.map(c => (c.n || []).map(n => (typeof n._paintPc === 'number' ? n._paintPc : null)));
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -10919,6 +10962,7 @@ Hard requirements:
                     pc:  (typeof c._domPc==='number' ? c._domPc : null),
                     lum: (typeof c._lum==='number'   ? c._lum   : null)
                   }));
+                  _imagePaintPcsRef.current = baked.map(c => (c.n || []).map(n => (typeof n._paintPc === 'number' ? n._paintPc : null)));
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
