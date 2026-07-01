@@ -31795,16 +31795,12 @@ Hard requirements:
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
           <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
-            <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : (cockpitEdit ? ts('editSet','Edit your set') : ts('pickLook','Pick a look'))}</span>
+            <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : ts('pickLook','Pick a look')}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
           </button>
-          {/* Edit dial — subtle icon, no box. Shown when the strip is open in a
-              music mode. Gold when editing. */}
-          {(stripOpen && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive) ? (
-            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
-            </button>
-          ) : (<span style={{width:26,flexShrink:0}} aria-hidden="true" />)}
+          {/* Edit toggle removed — Preset editing is now done via ⚙ in the
+              top-bar (opens Setup modal). The cockpit is selection-only. */}
+          <span style={{width:26,flexShrink:0}} aria-hidden="true" />
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
@@ -31948,13 +31944,12 @@ Hard requirements:
                   draws the piece's harmony from. Only the SCAN DIRECTION below is
                   scan-specific (compose ignores reading order), so that's gated. */}
               {(()=>{ const _allTabs = appColour?['harmony','spectral','phi','kontra','custom']:['bw','custom']; const _enabled = _allTabs.filter(m => m==='bw' || setupPalettes.includes(m)); const _baseShown = _enabled.length?_enabled:_allTabs;
-              // In edit mode the user manages their set: show every palette, the
-              // off ones as ghost chips they can tap to add. 'bw' is never user-
-              // toggleable, so it's excluded from the editable list.
-              const _shown = cockpitEdit ? _allTabs.filter(m=>m!=='bw'||_baseShown.includes('bw')) : _baseShown;
+              // Cockpit is selection-only: show only palettes in the user's set.
+              // Editing the set is done via ⚙ (Setup modal), not inline here.
+              const _shown = _baseShown;
               // Single palette shown → render the name as plain text (same font,
-              // cream), not a chip — nothing to switch between. (Not in edit mode.)
-              if(_shown.length===1 && !cockpitEdit){
+              // cream), not a chip — nothing to switch between.
+              if(_shown.length===1){
                 return (
                   <div style={{textAlign:'center',padding:'8px 0',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',fontFamily:'inherit',textTransform:'uppercase',color:'rgba(220,180,90,.95)',userSelect:'none'}}>{t(_shown[0])}</div>
                 );
@@ -31972,7 +31967,7 @@ Hard requirements:
                   // the user's saved palette stays locked until they upgrade.
                   const isFree = proStatus==='free';
                   const _inSet = setupPalettes.includes(m);
-                  const _ghost = cockpitEdit && !_inSet && m!=='bw';
+                  const _ghost = false;
                   return (
                   <button key={m} disabled={dis&&!cockpitEdit} className={mode===m&&!cockpitEdit?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
                     if(cockpitEdit && m!=='bw'){ togglePalSafe(m); return; }
@@ -32721,10 +32716,7 @@ Hard requirements:
               in styles below it). Mobile has its own header up top. Music modes only. */}
           {isDesktop && !basicMode && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive && (
           <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,marginBottom:0,padding:'0 2px'}}>
-            <span style={{flex:1,fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:cockpitEdit?'rgba(220,180,90,.85)':'rgba(201,168,76,.7)'}}>{cockpitEdit?ts('editSet','Edit your set'):ts('pickLook','Pick a look')}</span>
-            <button onClick={()=>setCockpitEdit(e=>!e)} aria-pressed={cockpitEdit} aria-label={ts('editSet','Edit your set')} title={ts('editSet','Edit your set')} style={{width:26,height:26,flexShrink:0,display:'inline-flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,fontFamily:'inherit',background:'transparent',border:'none',color:cockpitEdit?'rgba(220,180,90,.95)':'rgba(230,222,196,.38)',transition:'color .15s ease'}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="1.8" fill="currentColor"/><circle cx="15" cy="12" r="1.8" fill="currentColor"/><circle cx="8" cy="18" r="1.8" fill="currentColor"/></svg>
-            </button>
+            <span style={{flex:1,fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.7)'}}>{ts('pickLook','Pick a look')}</span>
           </div>
           )}
         </div>
