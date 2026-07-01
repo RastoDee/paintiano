@@ -10124,9 +10124,15 @@ Hard requirements:
     // strip collapsed so the full plate is visible while composing/singing.
     // (Play/Resume close the strip explicitly in their handlers; we don't gate on
     // `playing` here so the strip doesn't pop back open when playback ends.)
-    if(isActiveView && !composeMode && !micActive){ setStripOpen(true); }
+    // Image mode is an exception — the canvas holds the whole picture, and an
+    // auto-opened strip between the header and canvas pushes the painting so
+    // far down that most of the viewport is empty above it. Keep the strip
+    // collapsed by default in Image mode; the strip header stays tap-able to
+    // expand on demand.
+    const _inImageMode = loadedSource==='image' && !moodFromImg;
+    if(isActiveView && !composeMode && !micActive && !_inImageMode){ setStripOpen(true); }
     else { setStripOpen(false); }
-  },[isActiveView,composeMode,micActive]);
+  },[isActiveView,composeMode,micActive,loadedSource,moodFromImg]);
   const isSetupView = !isActiveView;
 
   return (
