@@ -26172,6 +26172,41 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
   },[stopAll,micPainting,micListening,composeMode]);
 
+  // ── resetAll — full app reset without page reload ──────────────────────────
+  // For users with several active modes stacked up (Music + Image + Compose
+  // draft + mic draft, etc.) who don't want to Clear each one individually.
+  // Behaves like a page reload from the user's perspective — every draft, every
+  // stash, every loaded source is dropped — but no actual reload happens, so
+  // the Advanced/Lite choice, language, and other prefs are preserved.
+  const resetAll = useCallback(()=>{
+    // Stop anything running first (playback, mic streams, recorders).
+    try{ if(micPainting) stopMicPaintingRef.current?.(); }catch(_){}
+    try{ if(micListening) stopMicListeningRef.current?.(); }catch(_){}
+    try{ stopAll(); }catch(_){}
+    // Drop every stash + draft indicator, unconditionally — regardless of what
+    // the "current" mode is. This is the difference vs clear(): clear only
+    // touches the draft owned by the active mode; resetAll wipes them all.
+    composeStashRef.current = null; setHasComposeDraft(false);
+    composeActiveRecallIdRef.current = null;
+    singStashRef.current    = null;
+    listenStashRef.current  = null;
+    setHasMicDraft(false);
+    micActiveRecallIdRef.current = null;
+    micActiveRecallPresetRef.current = null;
+    moodStashRef.current    = null; setHasMoodDraft(false);
+    musicStashRef.current   = null; setHasMusicDraft(false);
+    imageStashRef.current   = null; setHasImageDraft(false);
+    mfiStashRef.current     = null; setHasMfiDraft(false);
+    draftOwnerRef.current   = null;
+    // Now run the standard content wipe (chords, loaded blob/url, canvas).
+    try{ clear(); }catch(_){}
+    // Force back to Setup screen even if the caller was mid-flow.
+    setForceSetup(false);
+    setPickMode(null);
+    setComposeMode(false);
+    composedModeRef.current = false;
+  },[clear,stopAll,micPainting,micListening]);
+
   // Clear from the painting view. For a loaded source (mood / MIDI / audio /
   // score / image) Clear is a FULL reset — it drops the loaded piece and returns
   // to an empty setup. For compose / mic the "painting" IS the chord draft, so it
@@ -31460,6 +31495,13 @@ Hard requirements:
                   (!isPro)            ? {key:'pro',  label:t('proBadge'),                   pro:'gold',   onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : (!isProAI)        ? {key:'proai',label:t('proAiBadge')||'PRO AI',       pro:'purple', onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : null,
+                  // Reset — full-app reset without page reload. Drops every
+                  // draft, every stash, every loaded source across all modes;
+                  // returns the user to a clean Setup screen. For users who
+                  // have several modes stacked and don't want to Clear each
+                  // one individually. Preferences (Lite/Advanced, language)
+                  // are preserved since there's no actual reload.
+                  {key:'reset', label:ts('resetLabel',({EN:'Reset',SK:'Reset',DE:'Zurücksetzen',FR:'Réinitialiser',ES:'Restablecer',PT:'Redefinir',zh:'重置',zhTW:'重置',ja:'リセット'})[lang]||'Reset'), onClick:()=>{setNavMenuOpen(false);resetAll();}},
                 ].filter(Boolean).map((it,i,arr)=>(
                   <div key={it.key} role="menuitem" tabIndex={0}
                     onClick={it.onClick}
