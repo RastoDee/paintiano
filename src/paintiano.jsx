@@ -26153,6 +26153,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // their "draft saved" glow is correct because they're recoverable.)
     setCurrentMood(null);setVarySource(null);setSongQ('');
     setImgMoodThumb(null);setMoodFromImg(false);
+    // ⚠ REGRESSION-PRONE — DO NOT REMOVE
+    // Symptom when missing: after Clear, the Setup screen's Image tile still
+    // shows the gold "active/draft" dot even though there is no content to
+    // return to. Image content may stay on the canvas for that session —
+    // that's separate — but the source-tile indicator must reset.
+    // Test path: load Image → Clear → Back to Setup → the Image tile must NOT glow.
+    imageStashRef.current = null; setHasImageDraft(false);
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
     // After clear in a creative mode, mark the canvas as draft-owned by that
