@@ -32817,8 +32817,16 @@ Hard requirements:
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="upload" s={14}/>{_sent(_stripIcon(t('chooseFile')))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'MIDI · audio · MusicXML':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'Audio · .mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'JPG · PNG · GIF · WEBP · HEIC'}</span>
               </button>
-              {/* Recently AI generated — Pro feature. Free users see locked items;
-                  tapping any opens the paywall via _mfiRecall. Only in MFI picker. */}
+              {/* MY MUSIC TILE — replay a saved slot. Same drawer as the Lite
+                  tile so the whole archive is in one place. Shown in every
+                  music picker mode (sound/midi/audio/score); drawer itself
+                  filters nothing — the user picks by name. */}
+              {(pickMode==='sound' || pickMode==='midi' || pickMode==='audio' || pickMode==='score') && (
+              <button onClick={()=>{ setPickMode(null); setShowMyMusicDrawer(true); }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</span>
+                <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ts('mymusicHint',({EN:'Saved slots · up to 5',SK:'Uložené sloty · max 5',DE:'Gespeicherte Slots · max 5',FR:'Emplacements enregistrés · max 5',ES:'Espacios guardados · máx 5',PT:'Espaços guardados · máx 5',zh:'已保存插槽 · 最多5个',zhTW:'已儲存插槽 · 最多5個',ja:'保存済みスロット · 最大5個'})[lang]||'Saved slots · up to 5')}</span>
+              </button>
+              )}
               {pickMode==='imgmood' && mfiRecent.length>0 && (
                 <div style={{marginTop:8,display:'flex',flexDirection:'column',gap:6}}>
                   <div style={{fontSize:(.58*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(242,238,232,.4)',textAlign:'center',marginTop:4,marginBottom:2,fontWeight:500}}>
