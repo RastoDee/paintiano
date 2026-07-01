@@ -1374,6 +1374,38 @@ async function myMusicFirstEmpty(){
   const slot = list.find(r => r.empty);
   return slot ? slot.id : null;
 }
+// compact() → re-numbers occupied records so their ids are contiguous 1..N.
+// Called after every delete: the drawer should always show occupied slots at
+// the top (ids 1, 2, 3...) and empty placeholders at the bottom, matching a
+// natural "list" mental model instead of leaving gaps where records used to
+// live. No-op when the store is already compact.
+async function myMusicCompact(){
+  try{
+    const db  = await myMusicOpen();
+    const raw = await new Promise((resolve)=>{
+      const tx = db.transaction(MY_MUSIC_STORE, 'readonly');
+      const req= tx.objectStore(MY_MUSIC_STORE).getAll();
+      req.onsuccess = ()=> resolve(req.result || []);
+      req.onerror   = ()=> resolve([]);
+    });
+    const occupied = raw.slice().sort((a,b)=> a.id - b.id);
+    // Already compact? bail without touching the store.
+    const isCompact = occupied.every((r, i)=> r.id === i+1);
+    if(isCompact) return true;
+    await new Promise((resolve)=>{
+      const tx = db.transaction(MY_MUSIC_STORE, 'readwrite');
+      const st = tx.objectStore(MY_MUSIC_STORE);
+      st.clear();
+      occupied.forEach((r, i)=>{
+        const rec = { ...r, id: i + 1 };
+        st.put(rec);
+      });
+      tx.oncomplete = ()=> resolve();
+      tx.onerror    = ()=> resolve();
+    });
+    return true;
+  }catch(_){ return false; }
+}
 
 
 function parseMidi(buf){
@@ -31382,7 +31414,7 @@ Hard requirements:
                       <div style={{fontSize:(.68*effScale)+'rem',fontWeight:600,color:'rgba(220,180,90,.95)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:'.02em'}}>{rec.name}{_kindLabel && <span style={{marginLeft:6,fontSize:(.5*effScale)+'rem',color:'rgba(220,180,90,.5)',fontWeight:500,letterSpacing:'.08em'}}>{_kindLabel}</span>}</div>
                       <div style={{fontSize:(.5*effScale)+'rem',color:'rgba(230,222,196,.45)',marginTop:2,letterSpacing:'.02em'}}>{_dtStr} · {_kb}</div>
                     </div>
-                    <button onClick={async()=>{ await myMusicDelete(rec.id); const l=await myMusicList(); setMyMusicSlots(l); }} aria-label="delete" title={ts('deleteLabel',({EN:'Delete',SK:'Odstrániť',DE:'Löschen',FR:'Supprimer',ES:'Eliminar',PT:'Excluir',zh:'删除',zhTW:'刪除',ja:'削除'})[lang]||'Delete')} style={{background:'transparent',border:'none',color:'rgba(230,80,80,.55)',cursor:'pointer',padding:'4px 8px',fontSize:'1rem',flexShrink:0,lineHeight:1}}>×</button>
+                    <button onClick={async()=>{ await myMusicDelete(rec.id); await myMusicCompact(); const l=await myMusicList(); setMyMusicSlots(l); }} aria-label="delete" title={ts('deleteLabel',({EN:'Delete',SK:'Odstrániť',DE:'Löschen',FR:'Supprimer',ES:'Eliminar',PT:'Excluir',zh:'删除',zhTW:'刪除',ja:'削除'})[lang]||'Delete')} style={{background:'transparent',border:'none',color:'rgba(230,80,80,.55)',cursor:'pointer',padding:'4px 8px',fontSize:'1rem',flexShrink:0,lineHeight:1}}>×</button>
                   </div>
                 );
               })}

@@ -10234,7 +10234,7 @@ Hard requirements:
                       <div style={{fontSize:(.68*effScale)+'rem',fontWeight:600,color:'rgba(220,180,90,.95)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:'.02em'}}>{rec.name}{_kindLabel && <span style={{marginLeft:6,fontSize:(.5*effScale)+'rem',color:'rgba(220,180,90,.5)',fontWeight:500,letterSpacing:'.08em'}}>{_kindLabel}</span>}</div>
                       <div style={{fontSize:(.5*effScale)+'rem',color:'rgba(230,222,196,.45)',marginTop:2,letterSpacing:'.02em'}}>{_dtStr} · {_kb}</div>
                     </div>
-                    <button onClick={async()=>{ await myMusicDelete(rec.id); const l=await myMusicList(); setMyMusicSlots(l); }} aria-label="delete" title={ts('deleteLabel',({EN:'Delete',SK:'Odstrániť',DE:'Löschen',FR:'Supprimer',ES:'Eliminar',PT:'Excluir',zh:'删除',zhTW:'刪除',ja:'削除'})[lang]||'Delete')} style={{background:'transparent',border:'none',color:'rgba(230,80,80,.55)',cursor:'pointer',padding:'4px 8px',fontSize:'1rem',flexShrink:0,lineHeight:1}}>×</button>
+                    <button onClick={async()=>{ await myMusicDelete(rec.id); await myMusicCompact(); const l=await myMusicList(); setMyMusicSlots(l); }} aria-label="delete" title={ts('deleteLabel',({EN:'Delete',SK:'Odstrániť',DE:'Löschen',FR:'Supprimer',ES:'Eliminar',PT:'Excluir',zh:'删除',zhTW:'刪除',ja:'削除'})[lang]||'Delete')} style={{background:'transparent',border:'none',color:'rgba(230,80,80,.55)',cursor:'pointer',padding:'4px 8px',fontSize:'1rem',flexShrink:0,lineHeight:1}}>×</button>
                   </div>
                 );
               })}
