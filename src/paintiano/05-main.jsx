@@ -1621,6 +1621,14 @@ export default function Paintiano() {
   const [myMusicSavedFlash, setMyMusicSavedFlash] = useState(false);
   const [showMyMusicDrawer, setShowMyMusicDrawer] = useState(false);
   const [myMusicSlots, setMyMusicSlots] = useState([]); // refreshed on drawer open + after save/delete
+  // Refresh slot list whenever the drawer opens so it always shows current
+  // state (a save while drawer was closed, another tab's write, etc.).
+  useEffect(()=>{
+    if(!showMyMusicDrawer) return;
+    let cancelled = false;
+    myMusicList().then(l => { if(!cancelled) setMyMusicSlots(l); });
+    return ()=>{ cancelled = true; };
+  }, [showMyMusicDrawer]);
   const [recBlob, setRecBlob] = useState(null);   // recording output blob (share row)
   const [recName, setRecName] = useState('');      // recording output name
   const [audioSideImage, setAudioSideImage] = useState(null); // optional original image to share alongside audio
@@ -5445,6 +5453,34 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
+
+  // ── loadFromMyMusic — replay a saved slot ──────────────────────────────────
+  // Reconstitutes a File from the IDB blob (name + mime intact) then routes it
+  // through the same handler that a fresh upload would use: loadAudio for audio
+  // formats, loadMidi for MIDI. This means saved pieces get the same transcribe
+  // pipeline, so the resulting painting matches what the user originally saw.
+  // The drawer closes before dispatch so the working overlay is unobstructed.
+  const loadFromMyMusic = useCallback(async(rec)=>{
+    if(!rec || !rec.blob) return;
+    setShowMyMusicDrawer(false);
+    const _extByMime = {
+      'audio/mpeg':'.mp3','audio/mp3':'.mp3',
+      'audio/wav':'.wav','audio/wave':'.wav','audio/x-wav':'.wav',
+      'audio/mp4':'.m4a','audio/x-m4a':'.m4a','audio/aac':'.m4a',
+      'audio/ogg':'.ogg','audio/webm':'.webm',
+      'audio/midi':'.mid','audio/x-midi':'.mid',
+      'application/vnd.recordare.musicxml+xml':'.mxl',
+      'application/vnd.recordare.musicxml':'.xml',
+    };
+    const _ext = _extByMime[rec.mime] || (rec.kind==='midi' ? '.mid' : (rec.kind==='score' ? '.xml' : '.mp3'));
+    const _fileName = /\.[a-z0-9]+$/i.test(rec.name) ? rec.name : (rec.name + _ext);
+    const _file = new File([rec.blob], _fileName, { type: rec.mime || 'application/octet-stream' });
+    const _fakeEvent = { target: { files: [_file], value: '' } };
+    try{
+      if(rec.kind === 'midi')      loadMidi(_fakeEvent);
+      else                          await loadAudio(_fakeEvent);
+    }catch(err){ /* silent — user can retry from the drawer */ }
+  }, [loadAudio, loadMidi]);
 
   // ── Body 4: Mood-from-image cache ──────────────────────────────────────────
   // The expensive step is the AI vision call. We cache its parsed result keyed by
@@ -10165,6 +10201,47 @@ Hard requirements:
       {myMusicSavedFlash && (
         <div style={{position:'fixed',top:'max(20px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:20001,padding:'10px 20px',background:'rgba(90,170,90,0.95)',color:'#fff',borderRadius:20,fontSize:(.68*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',boxShadow:'0 4px 16px rgba(0,0,0,.3)',pointerEvents:'none',animation:'pf-flash-in .18s ease-out'}}>✓ {ts('mymusicSaved',({EN:'Saved',SK:'Uložené',DE:'Gespeichert',FR:'Enregistré',ES:'Guardado',PT:'Guardado',zh:'已保存',zhTW:'已儲存',ja:'保存済み'})[lang]||'Saved')}</div>
       )}
+      {/* My Music — Drawer (5 slots with meta + delete + tap-to-load). Opens
+          via the "Moja hudba" tile in the Lite source picker or a similar
+          entry in Advanced. Shared UI: identical in both modes. */}
+      {showMyMusicDrawer && (
+        <div onClick={()=>setShowMyMusicDrawer(false)} style={{position:'fixed',inset:0,zIndex:20000,background:'rgba(4,3,8,0.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:460,background:'#0e0b16',border:'1px solid rgba(201,168,76,.35)',borderRadius:16,padding:'20px 22px 22px',display:'flex',flexDirection:'column',gap:14,maxHeight:'85dvh',overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+              <div style={{fontSize:(.7*effScale)+'rem',fontWeight:500,letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(220,180,90,.9)'}}>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</div>
+              <button onClick={()=>setShowMyMusicDrawer(false)} aria-label="close" style={{background:'transparent',border:'none',color:'rgba(230,222,196,.55)',fontSize:'1.2rem',cursor:'pointer',padding:'4px 8px',lineHeight:1}}>×</button>
+            </div>
+            <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.55)',fontStyle:'italic'}}>{myMusicSlots.filter(s=>!s.empty).length} / 5 · {ts('mymusicSlotsUsed',({EN:'slots used',SK:'obsadených slotov',DE:'Slots belegt',FR:'emplacements utilisés',ES:'espacios usados',PT:'espaços usados',zh:'已用插槽',zhTW:'已用插槽',ja:'使用中スロット'})[lang]||'slots used')}</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8,overflowY:'auto',maxHeight:'60dvh',paddingRight:2}}>
+              {myMusicSlots.map(rec => {
+                if(rec.empty){
+                  return (
+                    <div key={rec.id} style={{padding:'14px 16px',borderRadius:12,border:'1px dashed rgba(230,222,196,.15)',background:'transparent',color:'rgba(230,222,196,.35)',fontSize:(.62*effScale)+'rem',fontStyle:'italic',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+                      <span style={{fontSize:(.5*effScale)+'rem',color:'rgba(230,222,196,.3)',letterSpacing:'.14em'}}>{rec.id}</span>
+                      <span>—</span>
+                      <span style={{width:14}}/>
+                    </div>
+                  );
+                }
+                const _dt = new Date(rec.addedAt);
+                const _pad=n=>String(n).padStart(2,'0');
+                const _dtStr = _dt.getFullYear()+'-'+_pad(_dt.getMonth()+1)+'-'+_pad(_dt.getDate())+' '+_pad(_dt.getHours())+':'+_pad(_dt.getMinutes());
+                const _kb = rec.sizeBytes>=1024*1024 ? (rec.sizeBytes/1024/1024).toFixed(1)+' MB' : Math.round(rec.sizeBytes/1024)+' kB';
+                const _kindLabel = rec.kind==='midi' ? 'MIDI' : rec.kind==='score' ? 'MusicXML' : '';
+                return (
+                  <div key={rec.id} style={{padding:'12px 14px',borderRadius:12,border:'1px solid rgba(201,168,76,.25)',background:'rgba(201,168,76,.05)',display:'flex',alignItems:'center',gap:10}}>
+                    <div onClick={()=>loadFromMyMusic(rec)} style={{flex:1,cursor:'pointer',minWidth:0}}>
+                      <div style={{fontSize:(.68*effScale)+'rem',fontWeight:600,color:'rgba(220,180,90,.95)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:'.02em'}}>{rec.name}{_kindLabel && <span style={{marginLeft:6,fontSize:(.5*effScale)+'rem',color:'rgba(220,180,90,.5)',fontWeight:500,letterSpacing:'.08em'}}>{_kindLabel}</span>}</div>
+                      <div style={{fontSize:(.5*effScale)+'rem',color:'rgba(230,222,196,.45)',marginTop:2,letterSpacing:'.02em'}}>{_dtStr} · {_kb}</div>
+                    </div>
+                    <button onClick={async()=>{ await myMusicDelete(rec.id); const l=await myMusicList(); setMyMusicSlots(l); }} aria-label="delete" title={ts('deleteLabel',({EN:'Delete',SK:'Odstrániť',DE:'Löschen',FR:'Supprimer',ES:'Eliminar',PT:'Excluir',zh:'删除',zhTW:'刪除',ja:'削除'})[lang]||'Delete')} style={{background:'transparent',border:'none',color:'rgba(230,80,80,.55)',cursor:'pointer',padding:'4px 8px',fontSize:'1rem',flexShrink:0,lineHeight:1}}>×</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="pf-topbar" style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
         {/* ── V2 nav: hamburger (left) opens a glass menu panel; zoom + language
             sit together in a segmented control (right). The five destinations
@@ -13632,6 +13709,7 @@ Hard requirements:
             <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'column',alignItems:'stretch',gap:12,padding:'96px 0 0 24px',width:150}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))',minWidth:200}}>
               <button onClick={_loadSampleLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
               <button onClick={_openFileLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
+              <button onClick={()=>{ setLiteSrcPicker(false); setShowMyMusicDrawer(true); }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span style={{marginLeft:7}}>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</span></button>
               <button onClick={_startMicLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoMic}<span style={{marginLeft:7}}>{ts('useMySongMic','Mic')}</span></button>
             </div>
           </div>
