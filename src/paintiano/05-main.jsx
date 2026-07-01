@@ -11847,6 +11847,8 @@ Hard requirements:
         ) && (
         <button onClick={(e)=>{
           e.stopPropagation();
+          // DEBUG (temp): confirm the onClick actually fires on mobile.
+          try{ alert('♡ tapped'); }catch(_){}
           const _pad=n=>String(n).padStart(2,'0');
           const _now=new Date();
           const _autoWord=({EN:'Song',SK:'Skladba',DE:'Lied',FR:'Chanson',ES:'Canción',PT:'Música',zh:'歌曲',zhTW:'歌曲',ja:'曲'})[lang]||'Song';
