@@ -827,6 +827,13 @@ export default function Paintiano() {
   // Music canvas can show each cell's source carrying colour while the audio
   // plays the full, unchanged harmony. Pure Image / pure Music never set this.
   const _imageDomPcsRef = useRef(null);
+  // Tracks whether the currently-loaded piece came from a My Music slot.
+  // When set (to the slot id 1-5), the ♡ Save button on the canvas is hidden
+  // to prevent duplicate entries — user loaded from slot N, playing it back,
+  // no reason to save it again. Cleared by clear() and by fresh uploads via
+  // loadAudio/loadMidi (their _fromMyMusic=false default resets it), so any
+  // new source restores the Save affordance immediately.
+  const _loadedFromMyMusicRef = useRef(null);
   // Bridge draft signatures (point 4). When See music / Hear image creates a
   // target-mode draft and the user works on it then taps Back, the in-progress
   // target draft is stashed (musicStashRef / imageStashRef) tagged with the
@@ -4958,6 +4965,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!composeMode&&!micPainting&&!micListening) draftOwnerRef.current=null;
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
+    // Clearing content also drops the "loaded from My Music" tag — after
+    // Clear + fresh upload, the ♡ Save button must reappear so the fresh
+    // piece can be archived.
+    _loadedFromMyMusicRef.current=null;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');
     // Invalidate the cached substrate canvas + last-paint signature. Without this,
     // Clear emptied the chords but left the built-up substrate cache intact, so
@@ -5279,6 +5290,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     pressInfo.current={};sessionStart.current=0;gridSigRef.current='';composedModeRef.current=false;
     setDisp(0);setInfo(null);setErr('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
+    _loadedFromMyMusicRef.current=null;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setStamp(s=>s+1);
     setImgPlayMode('scan'); imgPlayModeRef.current='scan';
     moodStashRef.current=null;setHasMoodDraft(false);
@@ -5329,8 +5341,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setDisp(0);
   },[stashDraft]);
 
-  const loadMidi=e=>{
+  const loadMidi=(e,_fromMyMusic=false)=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    if(!_fromMyMusic) _loadedFromMyMusicRef.current=null;
     stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     const r=new FileReader();
@@ -5351,8 +5364,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     r.readAsArrayBuffer(file);
   };
 
-  const loadAudio=useCallback(async e=>{
+  const loadAudio=useCallback(async (e,_fromMyMusic=false)=>{
     const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
+    if(!_fromMyMusic) _loadedFromMyMusicRef.current=null;
     // The flow:
     //   1. reading file → arrayBuffer
     //   2. decoding audio → decodeAudioData via OfflineAudioContext (iOS-safe)
@@ -5525,9 +5539,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _fileName = /\.[a-z0-9]+$/i.test(rec.name) ? rec.name : (rec.name + _ext);
     const _file = new File([rec.blob], _fileName, { type: rec.mime || 'application/octet-stream' });
     const _fakeEvent = { target: { files: [_file], value: '' } };
+    // Tag this load so the ♡ Save button hides — replaying a slot never
+    // needs a fresh save entry. Set BEFORE dispatch so the render triggered
+    // by loadedSource/blob updates already sees the ref populated.
+    _loadedFromMyMusicRef.current = rec.id;
     try{
-      if(rec.kind === 'midi')      loadMidi(_fakeEvent);
-      else                          await loadAudio(_fakeEvent);
+      if(rec.kind === 'midi')      loadMidi(_fakeEvent, true);
+      else                          await loadAudio(_fakeEvent, true);
     }catch(err){ /* silent — user can retry from the drawer */ }
   }, [loadAudio, loadMidi]);
 
@@ -12029,7 +12047,7 @@ Hard requirements:
             archive). Tap opens the save modal which prefills the name from
             the file (if any) or an auto-timestamped fallback, and shows the
             target slot. */}
-        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && (
+        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && !_loadedFromMyMusicRef.current && (
           (loadedSource==='audio' && !!audioBlob)
           || (loadedSource==='midi'  && !!midiBlob)
           || (loadedSource==='score' && !!scoreBlob)
