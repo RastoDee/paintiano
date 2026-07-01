@@ -10069,7 +10069,9 @@ Hard requirements:
                   // Setup temporarily removed from the menu — testing the inline
                   // "Pick a look" edit mode as the single mechanism. Restore by
                   // un-commenting (the modal code itself is untouched).
-                  basicMode ? null : {key:'setup',   label:ts('setupPickerLabel','Setup'),        onClick:()=>{setNavMenuOpen(false);setSetupReturnTo(null);setShowSetupModal(true);}},
+                  // Setup entry removed from the menu — the ⚙ icon in the
+                  // top-bar pill (right of A A / lang) is the single entry.
+                  // {key:'setup',   label:ts('setupPickerLabel','Setup'),        onClick:()=>{setNavMenuOpen(false);setSetupReturnTo(null);setShowSetupModal(true);}},
                   (!isPro)            ? {key:'pro',  label:t('proBadge'),                   pro:'gold',   onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : (!isProAI)        ? {key:'proai',label:t('proAiBadge')||'PRO AI',       pro:'purple', onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : null,
