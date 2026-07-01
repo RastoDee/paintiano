@@ -1271,8 +1271,109 @@ const bwCol=(m,v=100)=>{
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// §2  MIDI / MUSIC-XML / AUDIO PARSERS
+// §1.5  MY MUSIC ARCHIVE — IndexedDB helper (5 slots, audio blob + meta)
 // ─────────────────────────────────────────────────────────────────────────────
+// A tiny audio-only save/load archive backed by IndexedDB. Shared between Lite
+// and Advanced. Stores 5 slots max (manual delete, not FIFO). Each slot holds
+// the original blob (mp3/wav/m4a — no conversion, playback goes through <audio>
+// which handles all common formats cross-browser) plus a display name + date.
+// No chords, no thumbnail, no style/palette — the piece is re-painted live on
+// each load. All functions are Promise-based and safe to call before init.
+const MY_MUSIC_DB   = 'paintiano-mymusic';
+const MY_MUSIC_STORE= 'songs';
+const MY_MUSIC_MAX  = 5;
+let _mymusicDbPromise = null;
+function myMusicOpen(){
+  if(_mymusicDbPromise) return _mymusicDbPromise;
+  _mymusicDbPromise = new Promise((resolve, reject)=>{
+    try{
+      const req = indexedDB.open(MY_MUSIC_DB, 1);
+      req.onupgradeneeded = (e)=>{
+        const db = req.result;
+        if(!db.objectStoreNames.contains(MY_MUSIC_STORE)){
+          // keyPath='id' where id is slot index 1..5 so we can address slots
+          // directly and enforce the max cleanly (a put with id=6 is a bug).
+          db.createObjectStore(MY_MUSIC_STORE, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror   = ()=> reject(req.error);
+    }catch(err){ reject(err); }
+  });
+  return _mymusicDbPromise;
+}
+// list() → sorted Array<{id, name, blob, addedAt, sizeBytes, mime}>. Always
+// returns 5 entries with `empty:true` placeholders so the drawer can render a
+// fixed grid without extra logic.
+async function myMusicList(){
+  try{
+    const db = await myMusicOpen();
+    return await new Promise((resolve)=>{
+      const tx = db.transaction(MY_MUSIC_STORE, 'readonly');
+      const st = tx.objectStore(MY_MUSIC_STORE);
+      const req= st.getAll();
+      req.onsuccess = ()=>{
+        const raw = req.result || [];
+        const byId = new Map(raw.map(r=>[r.id, r]));
+        const out  = [];
+        for(let i=1; i<=MY_MUSIC_MAX; i++){
+          const r = byId.get(i);
+          if(r) out.push(r);
+          else  out.push({ id:i, empty:true });
+        }
+        resolve(out);
+      };
+      req.onerror = ()=> resolve([]);
+    });
+  }catch(_){ return []; }
+}
+// saveToSlot(id, {name, blob, mime}) → writes to a specific slot. If a record
+// already exists at that id, it's overwritten (put semantics). Returns
+// {id, name, addedAt, sizeBytes, mime} on success or null on failure.
+async function myMusicSaveToSlot(id, {name, blob, mime}){
+  if(!Number.isInteger(id) || id<1 || id>MY_MUSIC_MAX) return null;
+  if(!(blob instanceof Blob)) return null;
+  try{
+    const db  = await myMusicOpen();
+    const rec = {
+      id,
+      name: (name || 'Untitled').toString().slice(0, 120),
+      blob,
+      mime: mime || blob.type || 'audio/mpeg',
+      sizeBytes: blob.size,
+      addedAt: Date.now(),
+    };
+    await new Promise((resolve, reject)=>{
+      const tx = db.transaction(MY_MUSIC_STORE, 'readwrite');
+      tx.objectStore(MY_MUSIC_STORE).put(rec);
+      tx.oncomplete = ()=> resolve();
+      tx.onerror    = ()=> reject(tx.error);
+    });
+    return rec;
+  }catch(_){ return null; }
+}
+// deleteSlot(id) → removes a record. Silent success even if the slot was empty.
+async function myMusicDelete(id){
+  try{
+    const db = await myMusicOpen();
+    await new Promise((resolve)=>{
+      const tx = db.transaction(MY_MUSIC_STORE, 'readwrite');
+      tx.objectStore(MY_MUSIC_STORE).delete(id);
+      tx.oncomplete = ()=> resolve();
+      tx.onerror    = ()=> resolve();
+    });
+    return true;
+  }catch(_){ return false; }
+}
+// firstEmptySlot() → returns 1..5 for the first empty slot, or null if full.
+// Used by the save flow to auto-assign a slot when the user hasn't picked one.
+async function myMusicFirstEmpty(){
+  const list = await myMusicList();
+  const slot = list.find(r => r.empty);
+  return slot ? slot.id : null;
+}
+
+
 function parseMidi(buf){
   const d=new Uint8Array(buf);let p=0;
   const u8=()=>d[p++];
