@@ -7729,7 +7729,15 @@ Hard requirements:
     try{ if(micListening) stopMicListening(); else if(micPainting) stopMicPainting(); }catch(_){}
     try{ setMuted(false); }catch(_){}
     try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
-    try{ setStyle('pollock'); setPhaseIndex(0); setNotesMode(false); setOneMMode(false); }catch(_){}   // Pollock 'a' — painterly first impression on first Play tap
+    try{
+      // Prefer Pollock 'a' — painterly first impression. If the user removed
+      // Pollock from their Set via Preset (⚙), fall back to the first playable
+      // artist in their set (skip mosaicFamily and Pro-locked artists on Free).
+      const _target = setupArtists.includes('pollock')
+        ? 'pollock'
+        : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock');
+      setStyle(_target); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+    }catch(_){}
     // Inherit the user's active palette and tone (set in Advanced or stored
     // from a previous session). Lite no longer force-resets to Harmony so
     // a Spectral / Phi / Custom user keeps their colour DNA in Lite too.
@@ -7982,9 +7990,18 @@ Hard requirements:
         try{ setRandomMode(false); randomModeRef.current=false; }catch(_){}
         if(_fromImageFlipRef.current){
           _fromImageFlipRef.current = false;            // consume the flag
-          setStyle('kandinsky');
+          // Prefer Kandinsky (flip default). Fall back to first playable artist
+          // in the user's Set if Kandinsky was removed via Preset.
+          const _t = setupArtists.includes('kandinsky')
+            ? 'kandinsky'
+            : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kandinsky');
+          setStyle(_t);
         } else {
-          setStyle('kusama');                           // re-entry / reload
+          // Re-entry / reload — prefer Kusama, same fallback logic.
+          const _t = setupArtists.includes('kusama')
+            ? 'kusama'
+            : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kusama');
+          setStyle(_t);
         }
         setPhaseIndex(0);
         setNotesMode(false); setOneMMode(false);
@@ -13289,7 +13306,7 @@ Hard requirements:
                     <span onClick={()=>setSetupPalettes([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupPalettes([]);}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(230,222,196,.2)',color:'rgba(230,222,196,.55)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:isDesktop?'repeat(5,1fr)':'repeat(3,1fr)',gap:6,rowGap:8}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8}}>
                   {ALL_PALETTE_KEYS.map(k=>{
                     const on = setupPalettes.includes(k);
                     return (

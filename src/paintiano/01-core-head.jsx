@@ -232,37 +232,11 @@ const PF_STYLE = `
            edge, right thumb hits artist checks at right edge). Locks (🔒) ride
            with artist names inside the label span, so they stay next to names
            regardless of row direction. */
-        .pf-setup-body {
-          display: grid !important;
-          grid-template-columns: 1fr 1fr !important;
-          grid-template-areas: "pal art" "tone art" "done art" !important;
-          gap: 0 16px !important;
-          align-items: start !important;
-        }
-        .pf-setup-palettes { grid-area: pal; display: flex; flex-direction: column; }
-        .pf-setup-tones    { grid-area: tone; display: flex; flex-direction: column; }
-        .pf-setup-artists  { grid-area: art; }
-        .pf-setup-palettes .pf-setup-grid,
-        .pf-setup-tones .pf-setup-grid,
-        .pf-setup-artists .pf-setup-grid { grid-template-columns: 1fr !important; }
-        /* PALETTES + TONES col: text right-aligned (toward center), checkbox at left edge */
-        .pf-setup-palettes .pf-setup-grid > button > :last-child,
-        .pf-setup-tones    .pf-setup-grid > button > :last-child { text-align: right !important; flex: 1; }
-        /* ARTISTS col: row reversed → checkbox at right edge, text+lock left-aligned (toward center) */
-        .pf-setup-artists  .pf-setup-grid > button { flex-direction: row-reverse !important; }
-        .pf-setup-artists  .pf-setup-grid > button > span:last-child { text-align: left !important; }
-        /* Section head (Artists / All / None): nudge slightly inward from the
-           right edge so "None" stays visible on narrow mobile widths. */
-        .pf-setup-artists > div:first-child { padding-right: 8px !important; }
-        /* Section heads: keep the title + All/None group together on the left
-           instead of justify-content: space-between (which pushed "None" off
-           the right edge on narrow mobile portrait modals). */
-        .pf-setup-palettes > div:first-child,
-        .pf-setup-tones    > div:first-child,
-        .pf-setup-artists  > div:first-child {
-          justify-content: flex-start !important;
-          gap: 16px !important;
-        }
+        /* Setup modal body: vertical stack (Palettes → Artists → Tones)
+           for all viewports (mobile, tablet, desktop). Layout is driven by
+           the inline flex column in the JSX; no grid overrides here. Chip
+           grid columns per section are also driven by inline styles so the
+           section-specific grids don't get clobbered by an old 1fr rule. */
         @media (min-width: 769px) and (min-height: 501px),
                (max-height: 500px) and (orientation: landscape) {
           html, body {
@@ -716,19 +690,10 @@ const PF_STYLE = `
              wider screens. The base 2-col layout + 2-thumb rules apply
              globally; here we just swap to 3-col grid and pin DONE. */
           .pf-setup-dialog { max-width: 860px !important; }
-          /* Desktop + tablet portrait/landscape: 2-col layout. Palettes on
-             the left, Artists on the right. HOTOVO chip stays in the modal
-             footer (the in-Tone variant was used when Tone lived in Setup
-             — that's now on the main canvas screen). */
-          .pf-setup-body {
-            grid-template-columns: 1fr 1fr !important;
-            grid-template-areas: "pal art" "tone art" !important;
-            gap: 0 28px !important;
-          }
-          .pf-setup-palettes { grid-area: pal; height: auto; }
-          .pf-setup-tones    { grid-area: tone; height: auto; }
-          .pf-setup-artists  { grid-area: art; }
-          /* Palette-column DONE stays hidden in 2-col (footer DONE is used). */
+          /* Setup modal body: same vertical stack on desktop as on mobile.
+             The old 2-col pal|art grid was replaced by a single-column stack
+             (Palettes → Artists → Tones) driven by inline flex in the JSX.
+             HOTOVO chip stays pinned in the modal footer. */
           .pf-setup-done-pal { display: none !important; }
           /* Version footer + legal links span all three columns at the very
              bottom of the grid (it's a version/legal footer, so it belongs at the
