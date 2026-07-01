@@ -39,54 +39,6 @@ const GUARDS = [
       '"active/draft" dot even though there is no content to return to. ' +
       'Test: load Image → Clear → Back to Setup → Image tile must NOT glow.',
   },
-  {
-    name: 'See Music: _paintPc side-channel ref declared',
-    file: 'src/fragments/05-main.jsx',
-    pattern: /const _imagePaintPcsRef\s*=\s*useRef\(null\)/,
-    symptom:
-      'See Music bridge encodes chords via MIDI which strips the custom ' +
-      '_paintPc field. Without this side-channel, the pixel-derived colour ' +
-      'is lost during Image → Music transfer, and the Music-mode painting ' +
-      'no longer resembles the source image (e.g. green image gives a ' +
-      'harmonic-coloured painting instead of a green one).',
-  },
-  {
-    name: 'See Music: _paintPc captured in bridge before MIDI encode',
-    file: 'src/fragments/05-main.jsx',
-    pattern: /_imagePaintPcsRef\.current\s*=\s*baked\.map\(c\s*=>\s*\(c\.n\s*\|\|\s*\[\]\)\.map/,
-    symptom:
-      'Side-channel ref exists but nothing writes to it before the MIDI ' +
-      'encode step. See Music transfer produces empty side-channel and ' +
-      'source colours are still lost.',
-  },
-  {
-    name: 'See Music: _paintPc hydration effect after loadMidi',
-    file: 'src/fragments/05-main.jsx',
-    pattern: /_paintPc hydration.+See Music round-trip/,
-    symptom:
-      'Side-channel captures _paintPc but nothing re-injects it into chord ' +
-      'notes after loadMidi. drawBlock dual-layer branch (02-draw.jsx:1244) ' +
-      'never activates because _hasPaintPc stays false; painting reads only ' +
-      'the harmonically-shaped m instead of the source pixel PC.',
-  },
-  {
-    name: 'See Music: dual-layer render in drawBlock',
-    file: 'src/fragments/02-draw.jsx',
-    pattern: /const _hasPaintPc\s*=\s*notes\.some\(n\s*=>\s*typeof n\._paintPc\s*===\s*['"]number['"]\)/,
-    symptom:
-      'drawBlock no longer transforms m to _paintPc for painting. Even with ' +
-      'side-channel + hydration working, the painter ignores _paintPc and ' +
-      'paints from raw m — same regression as if the whole feature was gone.',
-  },
-  {
-    name: 'See Music: chord constructor writes _paintPc',
-    file: 'src/fragments/02-draw.jsx',
-    pattern: /_paintPc\s*:\s*midi\s*%\s*12/,
-    symptom:
-      'Image scan constructor no longer records _paintPc per note. The ' +
-      'entire dual-layer chain has no source data to work with; hydration ' +
-      'has nothing to preserve.',
-  },
   // Add new guards here as bugs recur. Format:
   // {
   //   name: '...',
