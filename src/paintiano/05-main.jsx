@@ -5025,6 +5025,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setPickMode(null);
     setComposeMode(false);
     composedModeRef.current = false;
+    // stayActive is a sticky flag that latches true whenever the user enters
+    // the canvas view. clear() doesn't touch it, so without this line resetAll
+    // called from the Setup screen could still land the user in canvas view
+    // (isActiveView reads stayActive OR chords.length, etc.). Reset drops the
+    // latch so the view falls back to whatever the state deserves — which,
+    // after everything above, is the empty Setup screen.
+    setStayActive(false);
   },[clear,stopAll,micPainting,micListening]);
 
   // Clear from the painting view. For a loaded source (mood / MIDI / audio /
