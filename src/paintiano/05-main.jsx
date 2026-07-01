@@ -11170,7 +11170,7 @@ Hard requirements:
             //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _familyOn = setupArtists.includes('mosaicFamily');
             // Un-paired: count individual artist chips actually shown.
-            const _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k)));
+            const _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : setupArtists.includes(k));
             const _chipCount = ((_familyOn || cockpitEdit)?1:0) + _visibleArtists.length;
             // Column count: keep tiles readable. Up to 5 across (so the full
             // 20-chip edit grid lays out as a tidy 5×4). Fewer chips → fewer cols.
@@ -11256,7 +11256,7 @@ Hard requirements:
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
                 them opens the paywall instead of selecting. Edit mode: tap toggles
                 membership in setupArtists. ── */}
-            {ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k))).map((k)=>{
+            {ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : setupArtists.includes(k)).map((k)=>{
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'};
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
