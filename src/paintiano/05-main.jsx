@@ -10278,6 +10278,11 @@ Hard requirements:
                 const _r = await myMusicSaveToSlot(myMusicSaveTargetSlot, { name: myMusicSaveName.trim(), blob: _blob, mime: _blob.type || (_kind==='midi'?'audio/midi':(_kind==='score'?'application/vnd.recordare.musicxml+xml':'audio/mpeg')), kind: _kind });
                 setMyMusicSaving(false);
                 if(_r){
+                  // Mark this track as archived so the ♡ Save button hides —
+                  // prevents saving the SAME piece twice in one play (applies to
+                  // fresh Files uploads too, not just My-Music-loaded tracks).
+                  // Reset on Clear / fresh upload re-shows it for the next piece.
+                  _loadedFromMyMusicRef.current = _r.id;
                   setShowMyMusicSaveModal(false);
                   setMyMusicSavedFlash(true);
                   setTimeout(()=>setMyMusicSavedFlash(false), 1800);
