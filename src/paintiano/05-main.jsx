@@ -869,6 +869,11 @@ export default function Paintiano() {
   // Permanent "first tap has unlocked audio" flag — set once, never reset by
   // statechange, so unlockAudio (and its silent kick) runs exactly once.
   const liteEverUnlockedRef = useRef(false);
+  // After the Lite Play chip lands on Pollock, the very next "Surprise" tap is
+  // forced to Mosaic — the bare grid reading — for maximum contrast against
+  // Pollock's overlay density. From the third tap onwards, the normal random
+  // shuffle-bag takes over. Set by litePlayStart, consumed once by basicSurprise.
+  const _liteNextIsMosaicRef = useRef(false);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -7896,6 +7901,9 @@ Hard requirements:
         ? 'pollock'
         : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock');
       setStyle(_target); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      // Arm the "next Surprise = Mosaic" flag so the second impression is the
+      // bare grid, high contrast with the painterly Pollock opener.
+      _liteNextIsMosaicRef.current = true;
     }catch(_){}
     // Inherit the user's active palette and tone (set in Advanced or stored
     // from a previous session). Lite no longer force-resets to Harmony so
@@ -7911,6 +7919,17 @@ Hard requirements:
   // current position while the music keeps playing. Avoids repeating the
   // current style so each tap is visibly different.
   const basicSurprise = useCallback(()=>{
+    // ── Forced Mosaic on the first Surprise after Lite Play ─────────────
+    // litePlayStart lands on Pollock. The very next Surprise tap goes to
+    // Mosaic (contrast: dense overlay → bare grid). From the tap after that,
+    // the shuffle-bag rotation below runs normally.
+    if(_liteNextIsMosaicRef.current){
+      _liteNextIsMosaicRef.current = false;
+      setRandomMode(false); randomModeRef.current=false;
+      setSetupArtists(prev => prev.includes('mosaicFamily') ? prev : [...prev,'mosaicFamily']);
+      setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      return;
+    }
     // Surprise rotates through every (artist × variant) address available on the
     // current tier — for Free that's the 9 unlocked artists, each with 2 style
     // variants (phaseIndex 0/1) = 18 looks, plus mosaic. For Pro, all artists ×
@@ -8155,6 +8174,10 @@ Hard requirements:
             ? 'kandinsky'
             : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kandinsky');
           setStyle(_t);
+          // Mirror the music-flavour opener: Kandinsky first, next Surprise tap
+          // lands on Mosaic (bare grid), then random. Arms the shared flag
+          // consumed by basicSurprise.
+          _liteNextIsMosaicRef.current = true;
         } else {
           // Re-entry / reload — prefer Kusama, same fallback logic.
           const _t = setupArtists.includes('kusama')
