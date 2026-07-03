@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/keep-alive", "schedule": "0 */6 * * *" }
+    { "path": "/api/keep-alive", "schedule": "0 3 * * *" }
   ],
   "rewrites": [
     { "source": "/", "has": [{ "type": "query", "key": "paid" }], "destination": "/play.html" },
