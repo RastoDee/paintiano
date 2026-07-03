@@ -11850,7 +11850,7 @@ Hard requirements:
               </span>
             )}
             {basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
-              <span key={`insp-${effectiveStyle==='notes'?'notes':'mosaic'}`} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>{effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</span>
+              <span key={`insp-${effectiveStyle==='notes'?'notes':'mosaic'}`} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>{effectiveStyle==='notes'?t('notesStyle'):t('liteMosaicStyle')}</span>
             )}
           </div>
           {(viewMode!=='image' || !(recording||!!recBlob)) && (
@@ -13643,17 +13643,9 @@ Hard requirements:
                   {ALL_ARTIST_KEYS.map(k=>{
                     const on = setupArtists.includes(k);
                     // Compact single-word label to fit narrow 5-col chip
-                    const _fullName = k==='mosaicFamily' ? '' : (STYLE_INSPIRED[k]||k);
-                    const _label = k==='mosaicFamily' ? t('mosaicStyle') : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; return _as[_fullName]||_fullName; })();
-                    // Free tier: Pro-only artists render as locked chips —
-                    // dimmed with a 🔒 badge; tap opens the paywall instead of
-                    // toggling the set. Paid tiers see no locks (styleIsLocked
-                    // returns false when proStatus !== "free").
-                    const locked = styleIsLocked(k);
-                    const chipStyleOn = {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
-                    const chipStyleOff = {background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
+                    const _label = k==='mosaicFamily' ? t('mosaicStyle') : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; const _f=STYLE_INSPIRED[k]||k; return _as[_f]||_f; })();
                     return (
-                    <button key={k} onClick={()=>{ if(locked){ setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
+                    <button key={k} onClick={()=>toggleArt(k)} style={{width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{_label}</button>
                     );
                   })}
                 </div>
