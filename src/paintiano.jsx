@@ -20915,38 +20915,48 @@ function useEntitlements() {
 function _drawPhiSignature(canvas) {
   try {
     const ctx = canvas.getContext('2d');
-    if (!ctx) { try { console.warn('[phi] no ctx'); } catch(_) {} return; }
+    if (!ctx) return;
     const w = canvas.width, h = canvas.height;
     const minEdge = Math.min(w, h);
-    // DEBUG: 8% shortEdge = huge, undeniable. Roll back once we confirm.
-    const fontPx = Math.max(48, Math.round(minEdge * 0.08));
+    // 3.2% of the shorter edge — comfortably visible on 5544×7420 A1 exports
+    // while staying discreet on square feed exports.
+    const fontPx = Math.max(18, Math.round(minEdge * 0.032));
     const margin = Math.round(minEdge * 0.030);
+    ctx.save();
+    // Reset any active transform (scale/rotate) left by the chord-grid
+    // renderer — without this our draw lands in scaled coords and misses the
+    // export canvas entirely. This was the root cause of ‘no φ in PNG’.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     const cx = w - margin;
     const cy = h - margin;
-    try { console.log('[phi] draw', {w, h, fontPx, cx, cy}); } catch(_) {}
-    ctx.save();
-    // DEBUG frame around signature area — proves the function ran even if
-    // the font renders empty for whatever reason.
-    ctx.strokeStyle = 'rgba(255,0,0,0.9)';
-    ctx.lineWidth = Math.max(3, Math.round(fontPx * 0.08));
-    ctx.strokeRect(cx - fontPx * 1.0, cy - fontPx * 1.1, fontPx * 1.1, fontPx * 1.3);
-    ctx.font = 'italic 700 ' + fontPx + 'px Georgia, "Times New Roman", Times, serif';
+    // Canvas 2D does NOT honour the CSS font fallback chain like HTML does:
+    // if the first family isn't loaded yet, the whole rule may be ignored.
+    // Use system serifs (Georgia + Times) that are guaranteed to be present
+    // and render φ beautifully in italic. No webfont dependency.
+    ctx.font = 'italic 600 ' + fontPx + 'px Georgia, "Times New Roman", Times, serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'alphabetic';
-    // DEBUG: fully opaque white + black stroke — unmissable on any ground.
-    ctx.lineWidth = Math.max(4, Math.round(fontPx * 0.08));
+    const OP = 0.72;
+    // Dark outline stroke — keeps the glyph legible on gold/paper grounds
+    // without needing to sample the pixels underneath.
+    ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.06));
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(0,0,0,1)';
+    ctx.strokeStyle = 'rgba(0,0,0,' + (OP * 0.55).toFixed(2) + ')';
     ctx.strokeText('φ', cx, cy);
-    ctx.fillStyle = 'rgba(255,255,255,1)';
+    // Main gold glyph — paintiano brand colour.
+    ctx.globalAlpha = OP;
+    ctx.fillStyle = '#c9a84c';
     ctx.fillText('φ', cx, cy);
+    // Warm highlight above-left — engraved feel on dark grounds.
+    ctx.globalAlpha = OP * 0.35;
+    ctx.fillStyle = '#ffdc8c';
+    ctx.fillText('φ', cx - Math.max(1, fontPx * 0.02), cy - Math.max(1, fontPx * 0.03));
     ctx.restore();
-  } catch (e) { try { console.error('[phi] err', e); } catch(_) {} }
+  } catch (_) {}
 }
 
 // ─── watermark: diagonal tile on Free, discreet φ signature on Pro/Pro AI ────
 function applyWatermark(canvas, isPro) {
-  try { console.log('[phi] applyWatermark called', { isPro, hasCanvas: !!canvas, w: canvas && canvas.width, h: canvas && canvas.height }); } catch(_) {}
   if (!canvas) return canvas;
   if (isPro) { _drawPhiSignature(canvas); return canvas; }
   try {
@@ -31357,7 +31367,6 @@ Hard requirements:
         // mark. Pro skips this (applyWatermark is a no-op when isPro=true).
         applyWatermark(st, isPro);
       }
-      try { console.log('[phi] pre-toBlob outCanvas', { w: outCanvas.width, h: outCanvas.height, isProAtExport: isPro }); const _dbg = outCanvas.getContext('2d'); if (_dbg) { _dbg.save(); _dbg.strokeStyle='rgba(0,255,0,0.9)'; _dbg.lineWidth = Math.max(30, Math.round(Math.min(outCanvas.width,outCanvas.height)*0.02)); _dbg.beginPath(); _dbg.moveTo(0,0); _dbg.lineTo(outCanvas.width, outCanvas.height); _dbg.moveTo(outCanvas.width,0); _dbg.lineTo(0, outCanvas.height); _dbg.stroke(); _dbg.restore(); } } catch(e) {}
       let blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
       let _mime='image/png', _ext='png';
       if(!blob){
