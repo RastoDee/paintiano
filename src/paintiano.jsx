@@ -17780,9 +17780,6 @@ const I18N = {
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
     today:'今天',
-    trialBanner1:'僅剩 1 次 AI 試用 · 升級 Pro AI 享無限',
-    trialBanner2:'僅剩 2 次 AI 試用 · 升級 Pro AI 享無限',
-    morphAiUnavailable:'AI 生成的情緒不支援 Morph',
     proPaywallTitle:'\u7559\u4f4f\u4f60\u7684\u6b4c\u8c31\u6210\u7684\u753b\u3002',
     proPaywallTitleAi:'\u4f60\u5df2\u611f\u53d7\u5230\u60c5\u7eea\u7684\u529b\u91cf\u3002',
     proPaywallFooter:'一次性付款 · 无订阅 · 含增值税',
@@ -31784,6 +31781,11 @@ Hard requirements:
                 const _r = await myMusicSaveToSlot(myMusicSaveTargetSlot, { name: myMusicSaveName.trim(), blob: _blob, mime: _blob.type || (_kind==='midi'?'audio/midi':(_kind==='score'?'application/vnd.recordare.musicxml+xml':'audio/mpeg')), kind: _kind });
                 setMyMusicSaving(false);
                 if(_r){
+                  // Duplicate-save guard: also for Files-loaded audio/midi/score.
+                  // Tag this session as "loaded from My Music" so the ♡ Save
+                  // button hides — pressing Save again on the same file would
+                  // otherwise create another slot entry.
+                  _loadedFromMyMusicRef.current = _r.id;
                   setShowMyMusicSaveModal(false);
                   setMyMusicSavedFlash(true);
                   setTimeout(()=>setMyMusicSavedFlash(false), 1800);
@@ -35149,9 +35151,19 @@ Hard requirements:
                   {ALL_ARTIST_KEYS.map(k=>{
                     const on = setupArtists.includes(k);
                     // Compact single-word label to fit narrow 5-col chip
-                    const _label = k==='mosaicFamily' ? t('mosaicStyle') : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; const _f=STYLE_INSPIRED[k]||k; return _as[_f]||_f; })();
+                    const _fullName = k==='mosaicFamily' ? '' : (STYLE_INSPIRED[k]||k);
+                    const _label = k==='mosaicFamily' ? t('mosaicStyle') : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; return _as[_fullName]||_fullName; })();
+                    // Free tier: Pro-only artists render as locked chips —
+                    // dimmed with a 🔒 badge; tap closes the modal and opens the
+                    // paywall instead of toggling the set. Paid tiers see no locks
+                    // (styleIsLocked returns false when proStatus !== "free").
+                    // Modal must close before paywall opens because both use
+                    // zIndex 100000 and the later-rendered setup modal covers it.
+                    const locked = styleIsLocked(k);
+                    const chipStyleOn = {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
+                    const chipStyleOff = {background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
-                    <button key={k} onClick={()=>toggleArt(k)} style={{width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{_label}</button>
+                    <button key={k} onClick={()=>{ if(locked){ setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
                     );
                   })}
                 </div>
