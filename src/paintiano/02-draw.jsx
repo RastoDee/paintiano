@@ -6370,10 +6370,13 @@ function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fill();
 }
 
-// ── Sam Francis H: Towards Disappearance (1957-58). Ultra-minimal: only
-// 8-12 sparse, faint chord-coloured marks scattered across canvas + canvas
-// grain. Each mark is a soft low-opacity bloom + occasional tiny dot.
-// The "quiet" Sam Francis — opposite of Bloom field's density.
+// ── Sam Francis H: Towards Disappearance (1957-58). Minimal — but COMPOSED.
+// (F1) A seed-picked corner region anchors the weight; the diagonally
+// opposite corner stays an INTENTIONAL void (Francis' edge-painting
+// instinct), so sparseness reads as a decision, not confetti.
+// (F2) Marks carry gravity drips + spatter — they read as PAINT, not blur.
+// (F3) One dominant anchor bloom + smaller satellites — a composition even
+// on short tracks. All seed-deterministic; reveal grows with lim.
 function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal = Math.max(0, Math.min(1, N/cn));
@@ -6389,34 +6392,73 @@ function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
   }
 
-  // Sparse marks — count scales gently with chord count but stays minimal.
-  const marks = Math.max(4, Math.min(14, Math.round(cn/12) + 6));
+  // (F1) Anchor corner (seed-stable) — the far corner stays empty.
+  const _crn = _seedRnd(6090, ss, 0, 0);
+  const corner = Math.floor(_crn()*4);              // 0 TL, 1 TR, 2 BR, 3 BL
+  const acx = (corner===0||corner===3) ? CW*0.24 : CW*0.76;
+  const acy = (corner===0||corner===1) ? CH*0.20 : CH*0.80;
+  const edgeX = (corner===0||corner===3) ? 0.10 : 0.90; // vertical edge near anchor
+  const dn = Math.min(CW,CH);
+
+  const mkBloom = (x,y,r,rgb,aMax)=>{
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${aMax})`);
+    g.addColorStop(0.6, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(aMax*0.42).toFixed(2)})`);
+    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  };
+  // (F2) Gravity drip: thin quadratic fall + end droplet.
+  const mkDrip = (x,y,rgb,len,w,rnd)=>{
+    ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.42)`;
+    ctx.lineWidth = w; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x+(rnd()-0.5)*6, y+len*0.55, x+(rnd()-0.5)*4, y+len);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
+    ctx.beginPath(); ctx.arc(x+(rnd()-0.5)*4, y+len, w*0.9, 0, Math.PI*2); ctx.fill();
+  };
+  const mkSpatter = (x,y,rgb,n,spread,rnd)=>{
+    for(let k=0;k<n;k++){
+      const a=rnd()*Math.PI*2, d=rnd()*spread;
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.28+rnd()*0.3).toFixed(2)})`;
+      ctx.beginPath(); ctx.arc(x+Math.cos(a)*d, y+Math.sin(a)*d, 0.8+rnd()*1.8, 0, Math.PI*2); ctx.fill();
+    }
+  };
+
+  // Sparse marks — anchor first, satellites hug the anchor's edges as lim grows.
+  const marks = Math.max(5, Math.min(12, Math.round(cn/14) + 5));
   const vis = Math.max(2, Math.ceil(marks*reveal));
 
   for(let i=0;i<vis;i++){
     const rnd = _seedRnd(i+6100, ss, 0, 0);
     const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
-    const x = CW*0.1 + rnd()*CW*0.8;
-    const y = CH*0.1 + rnd()*CH*0.8;
-    const r = Math.min(CW,CH) * (0.04+rnd()*0.06);
-
-    // Very faint bloom — low opacity gradient.
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35)`);
-    g.addColorStop(0.6, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.15)`);
-    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI*2);
-    ctx.fill();
-
-    // Occasional tiny dot/spatter near the bloom.
-    if(rnd() > 0.5){
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
-      ctx.beginPath();
-      ctx.arc(x + (rnd()-0.5)*r*1.5, y + (rnd()-0.5)*r*1.5, 1.5+rnd()*2, 0, Math.PI*2);
-      ctx.fill();
+    if(i===0){
+      // (F3) THE anchor — one dominant bloom in the corner region.
+      const x = acx + (rnd()-0.5)*dn*0.10;
+      const y = acy + (rnd()-0.5)*dn*0.10;
+      const r = dn * (0.16 + rnd()*0.06);
+      mkBloom(x, y, r, rgb, 0.5);
+      mkBloom(x + r*0.25, y - r*0.2, r*0.5, rgb, 0.4);   // inner density
+      mkDrip(x - r*0.3, y + r*0.45, rgb, dn*(0.10+rnd()*0.08), 2.4, rnd);
+      mkDrip(x + r*0.35, y + r*0.5, rgb, dn*(0.14+rnd()*0.10), 1.8, rnd);
+      mkSpatter(x, y, rgb, 8, r*0.9, rnd);
+      continue;
     }
+    // (F1) Satellites: bias to the vertical edge near the anchor and the
+    // bottom edge — the far corner stays empty (the void carries the frame).
+    let x, y;
+    if(rnd() < 0.55){
+      x = CW * (edgeX + (rnd()-0.5)*0.16);
+      y = CH * (0.30 + rnd()*0.62);
+    } else {
+      x = CW * (0.15 + rnd()*0.62);
+      y = CH * (0.86 + (rnd()-0.5)*0.10);
+    }
+    const r = dn * (0.035 + rnd()*0.05);
+    mkBloom(x, y, r, rgb, 0.32 + rnd()*0.14);
+    if(i%2===0) mkDrip(x + (rnd()-0.5)*r, y + r*0.4, rgb, dn*(0.05+rnd()*0.06), 1.6, rnd);
+    else mkSpatter(x, y, rgb, 4, r*1.1, rnd);
   }
 }
 
@@ -6803,11 +6845,23 @@ function klintPhaseAltar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── af Klint F: Botanical — symmetric plant/diagram chart on pale ground. ──
+// ── af Klint F: Botanical — painterly-mystical botany (v2). Keeps her
+// diagram DNA but reads as a painting: curved asymmetric stems at varied
+// heights with organic spacing, watercolor-translucent leaves, af Klint
+// vocabulary at the tips (spiral / concentric-ring "fruit"), soft wash
+// ground + a large horizon arc (her mystical geometry).
 function klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const sRoot = _seedRnd(91, ss, 0, 33); sRoot(); sRoot();
-  ctx.fillStyle=isBW?'#e4e0d6':'#f0ead8';ctx.fillRect(0,0,CW,CH);
+  // Soft wash ground.
+  const gw = ctx.createRadialGradient(CW*0.5, CH*0.42, CW*0.1, CW*0.5, CH*0.5, Math.max(CW,CH)*0.75);
+  gw.addColorStop(0, isBW ? '#e9e5da' : '#f5efdd');
+  gw.addColorStop(1, isBW ? '#d8d4c8' : '#e6dcc2');
+  ctx.fillStyle = gw; ctx.fillRect(0,0,CW,CH);
+  // Horizon arc (mystical ground geometry).
+  ctx.strokeStyle = isBW ? 'rgba(120,116,104,0.35)' : 'rgba(160,140,100,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(CW*0.5, CH*1.55, CH*0.75, 0, Math.PI*2); ctx.stroke();
   // Per-song stem count variance ±25%.
   const stemsBase=Math.max(2,Math.min(12,Math.round(cn/12)));
   const stems = Math.max(2, Math.round(stemsBase * (0.85 + sRoot()*0.30)));
@@ -6816,42 +6870,49 @@ function klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+4600,ss,0,0);
     const {rgb}=_picChord(chords,Math.floor(i*(cn/stems)),gc,isBW);
-    // Per-stem horizontal offset.
-    const cx=i*sw+sw/2+(rnd()-0.5)*sw*0.25;
-    // central stem
-    ctx.strokeStyle=isBW?'rgba(80,90,70,0.8)':'rgba(60,110,70,0.8)';ctx.lineWidth=Math.max(1.5,sw*0.03);
-    ctx.beginPath();ctx.moveTo(cx,CH*0.9);ctx.lineTo(cx,CH*0.2);ctx.stroke();
-    // Per-stem node count + leaf angle.
-    const nodes=3+((rnd()*5)|0);
-    const leafAngle = 0.30 + rnd()*0.40;
+    // Organic spacing (jitter breaks the column grid) + varied heights.
+    const bx=i*sw+sw/2+(rnd()-0.5)*sw*0.55;
+    const baseY=CH*(0.90+rnd()*0.04);
+    const topY=CH*(0.18+rnd()*0.34);
+    // Curved asymmetric stem (quadratic bow).
+    const bowX=bx+(rnd()-0.5)*sw*1.1;
+    const tipX=bx+(rnd()-0.5)*sw*0.4;
+    ctx.strokeStyle=isBW?'rgba(80,90,70,0.75)':'rgba(70,105,80,0.75)';
+    ctx.lineWidth=Math.max(1.6,sw*0.028); ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(bx,baseY);
+    ctx.quadraticCurveTo(bowX,(baseY+topY)/2,tipX,topY);ctx.stroke();
+    // Watercolor-translucent leaves, asymmetric along the bow.
+    const nodes=3+((rnd()*4)|0);
     for(let nd=0;nd<nodes;nd++){
-      const y=CH*0.85-nd/(nodes)*CH*0.6;
-      const r=sw*0.28*(1-nd/nodes*0.4);
-      ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.8)`;
-      ctx.beginPath();ctx.ellipse(cx-sw*0.25,y,r,r*0.5,-leafAngle,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.ellipse(cx+sw*0.25,y,r,r*0.5,leafAngle,0,Math.PI*2);ctx.fill();
+      const t=0.22+nd*0.62/nodes;
+      const lx=bx+(bowX-bx)*2*t*(1-t)+(tipX-bx)*t*t;   // point on the quadratic
+      const ly=baseY+(topY-baseY)*t;
+      const side=((nd+i)%2)?1:-1;
+      const r=sw*0.30*(1-t*0.45)*(0.8+rnd()*0.5);
+      const ang=side*(0.45+rnd()*0.35);
+      ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35)`;
+      ctx.beginPath();ctx.ellipse(lx+side*sw*0.16,ly,r,r*0.42,ang,0,Math.PI*2);ctx.fill();
+      // faint vein
+      ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.35)`;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+side*sw*0.28*Math.cos(ang),ly+side*sw*0.10*Math.sin(ang));ctx.stroke();
     }
-    // Top bloom — kind variance (disc / 6-petal / hexagon).
-    const bloomKind = Math.floor(rnd()*3);
-    const bx = cx, by = CH*0.2, bR = sw*0.16;
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    if(bloomKind === 0){
-      ctx.beginPath();ctx.arc(bx, by, bR, 0, Math.PI*2);ctx.fill();
-    } else if(bloomKind === 1){
-      for(let p=0;p<6;p++){
-        const pa = (p/6)*Math.PI*2;
-        ctx.beginPath();
-        ctx.arc(bx+Math.cos(pa)*bR*0.6, by+Math.sin(pa)*bR*0.6, bR*0.5, 0, Math.PI*2);
-        ctx.fill();
-      }
-    } else {
+    // Tip: af Klint vocabulary — spiral or concentric-ring "fruit".
+    if(i%2===0){
+      ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.8)`;ctx.lineWidth=2;
       ctx.beginPath();
-      for(let h=0;h<6;h++){
-        const a = (h/6)*Math.PI*2;
-        const hx = bx + Math.cos(a)*bR, hy = by + Math.sin(a)*bR;
-        if(h===0) ctx.moveTo(hx,hy); else ctx.lineTo(hx,hy);
+      for(let s=0;s<26;s++){
+        const aa=s*0.6, r2=sw*0.13*(1-s/26);
+        const px=tipX+Math.cos(aa)*r2, py=topY-sw*0.10+Math.sin(aa)*r2;
+        if(s===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
       }
-      ctx.closePath();ctx.fill();
+      ctx.stroke();
+    } else {
+      const {rgb:rg2}=_picChord(chords,(Math.floor(i*(cn/stems))+3)%cn,gc,isBW);
+      const rings=[[sw*0.14,0.8,rgb],[sw*0.09,0.6,rg2],[sw*0.045,0.9,rgb]];
+      for(const [rr,op,cc] of rings){
+        ctx.strokeStyle=`rgba(${cc[0]},${cc[1]},${cc[2]},${op})`;ctx.lineWidth=2.2;
+        ctx.beginPath();ctx.arc(tipX,topY-sw*0.09,rr,0,Math.PI*2);ctx.stroke();
+      }
     }
   }
 }
@@ -7150,29 +7211,64 @@ function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,CW,CH);
 
-  // Curled female silhouette (right side).
-  const cx = CW*0.65, cy = CH*0.55;
-  const figureSize = CW*0.30;
-  ctx.fillStyle = isBW ? '#b8b6b0' : '#dab098';
-  ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,40,20,0.7)';
-  ctx.lineWidth = 3;
-  // Body curled — fetal-like position.
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, figureSize, figureSize*0.85, 0.2, 0, Math.PI*2);
-  ctx.fill(); ctx.stroke();
-  // Knee.
-  ctx.beginPath();
-  ctx.ellipse(cx + figureSize*0.3, cy + figureSize*0.3, figureSize*0.45, figureSize*0.30, 0.4, 0, Math.PI*2);
-  ctx.fill(); ctx.stroke();
-  // Head.
-  ctx.beginPath();
-  ctx.ellipse(cx + figureSize*0.5, cy - figureSize*0.5, figureSize*0.18, figureSize*0.20, 0.5, 0, Math.PI*2);
-  ctx.fill(); ctx.stroke();
-  // Red hair (or grey).
-  ctx.fillStyle = isBW ? '#4a4848' : '#a83020';
-  ctx.beginPath();
-  ctx.ellipse(cx + figureSize*0.55, cy - figureSize*0.55, figureSize*0.22, figureSize*0.16, 0.3, 0, Math.PI*2);
-  ctx.fill();
+  // Golden ornamental spiral nest — abstract stand-in for the curled figure.
+  // Nested golden arc shells (nautilus-like curled mass) + chord-jewel tiles
+  // along the spiral + tight Klimt curls at the outer tips. Pure Klimt
+  // ornament vocabulary (Stoclet / Tree-of-Life curls); no literal figure.
+  const cx = CW*0.63, cy = CH*0.56;
+  const nestR = CW*0.055;
+  const _nr = _seedRnd(31200, ss, 0, 0);
+  // Nested arc shells.
+  for(let sh=0; sh<7; sh++){
+    const r0 = nestR*(sh+1);
+    const a0 = 0.6 + sh*0.35, a1 = a0 + Math.PI*(1.15 + 0.1*sh);
+    ctx.strokeStyle = isBW
+      ? (sh%2===0 ? 'rgba(210,206,196,0.9)' : 'rgba(140,136,126,0.9)')
+      : (sh%2===0 ? 'rgba(232,200,98,0.9)' : 'rgba(184,134,46,0.9)');
+    ctx.lineWidth = 7 - sh*0.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for(let s=0; s<=40; s++){
+      const a = a0 + (a1-a0)*s/40;
+      const rr = r0*(1 + 0.06*Math.sin(s*0.7 + sh));
+      const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*0.88;
+      if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  // Chord-jewel tiles along the spiral path.
+  for(let i=0; i<26; i++){
+    const a = 0.6 + i*0.42, rr = nestR*0.9*(1 + i*0.22);
+    if(rr > CW*0.38) break;
+    const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*0.88;
+    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    const gold = isBW ? '#d0ccc0' : '#e8c862';
+    if(i%3===0){
+      ctx.save(); ctx.translate(x, y); ctx.rotate(i*0.3);
+      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.strokeStyle = gold; ctx.lineWidth = 1.2; ctx.strokeRect(-5, -5, 10, 10);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      ctx.beginPath(); ctx.arc(x, y, 4.6, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = gold; ctx.lineWidth = 1.2; ctx.stroke();
+    }
+  }
+  // Tight Klimt curls at the outer tips.
+  for(let i=0; i<5; i++){
+    const a = 0.6 + i*1.5, rr = CW*0.36;
+    const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*0.88;
+    ctx.strokeStyle = isBW ? 'rgba(210,206,196,0.85)' : 'rgba(232,200,98,0.85)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for(let s=0; s<30; s++){
+      const aa = s*0.55 + _nr()*0.2, r2 = 8*(1 - s/30);
+      const px = x + Math.cos(aa)*r2, py = y + Math.sin(aa)*r2;
+      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
 
   // Golden coin/disc shower — diagonal cascade from upper-left. Reveal-based count.
   const showerCount = Math.max(20, Math.ceil(140*reveal));
@@ -7802,54 +7898,64 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return;
   }
 
-  // ── Variant A — horizontal bands of vertical wavy stripes (default) ───────
-  // Horizontal bands of vertical wavy stripes; each band reveals as lim grows.
-  // Song energy raises the overall ripple amplitude so a vivid piece vibrates
-  // harder across the whole field (op-art's expressive variable is deformation,
-  // like Bulge — band count would just blur the moiré).
+  // ── Variant A — Riley "Fall" ribbons: full-width horizontal wavy stripes ──
+  // (W1) Chromatic discipline: the WHOLE painting uses one deep stripe tone
+  // derived from the root chord (ground stays cream) plus ONE saturated accent
+  // ribbon at the piece's climax (loudest chord). The music lives in the
+  // geometry (amplitude / frequency / phase), not in a per-band rainbow.
+  // (W2) Systematic progression: amplitude & frequency grow top→bottom —
+  // calm opening, dense crescendo — the logic of Riley's "Fall" (1963).
+  // (W3) 48 segments per edge + constant-thickness ribbons (both edges share
+  // one phase) so curves print smooth and precise at HQ.
   const _chWa = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const _waEnergy = _chWa ? _chWa.energy : 0.5;
   const _waAmpMul = 0.8 + 0.5*_waEnergy;   // 0.8..1.3
-  const BANDS = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:cn<=240?32:cn<=400?44:60;
+  const BANDS = cn<=8?10:cn<=24?16:cn<=60?24:cn<=120?32:cn<=240?42:cn<=400?52:64;
   const visBands = Math.max(1, Math.ceil((lim/cn)*BANDS));
   const bandH = CH / BANDS;
-  const stripeW = CW / (cn<=20?14:cn<=60?22:cn<=200?32:44);
+  // (W1) Whole-painting palette: deep tone from the root chord.
+  const waveDark = [darkC[0]*0.55, darkC[1]*0.55, darkC[2]*0.55];
+  // Climax = chord with the highest average velocity → its band gets the accent.
+  let _cxIdx = 0, _cxVel = -1;
+  for(let i=0;i<cn;i++){
+    const nn = chords[i] && (chords[i].n || chords[i].notes);
+    if(!nn || !nn.length) continue;
+    let v=0; for(const note of nn) v += (note.v!==undefined?note.v:80);
+    v/=nn.length;
+    if(v>_cxVel){ _cxVel=v; _cxIdx=i; }
+  }
+  const accentBand = Math.min(BANDS-1, Math.floor((_cxIdx/cn)*BANDS));
+  const accentCol = chordCol(_cxIdx, 1.1);
 
   for(let b=0; b<visBands; b++){
-    const y0 = b*bandH, y1 = y0+bandH;
-    // Wave params modulated by the chord at this band.
+    const t = BANDS<=1 ? 0 : b/(BANDS-1);
+    const yC = (b+0.5)*bandH;
     const chord = chords[Math.min(cn-1, Math.floor((b/BANDS)*cn))];
     _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
     const topNote = notes && notes.length ? (notes[0].m!==undefined?notes[0].m:notes[0]) : 60;
     const vel = notes && notes.length && notes[0].v!==undefined ? notes[0].v : 80;
-    const amp = bandH * (0.25 + (vel/127)*0.7) * _waAmpMul;
-    const freq = 0.6 + ((topNote%12)/12)*2.2;
-    const phase = b*0.7 + rnd()*0.5;
-    const bandDark = chordCol(b, 0.55);
-    const bandLite = chordCol(b+3, 1.2);
-    // Draw vertical wavy stripes across the band.
-    let toggle = (b&1);
-    for(let sx=-stripeW; sx<CW+stripeW; sx+=stripeW){
-      toggle = !toggle;
-      ctx.fillStyle = toggle ? css(bandDark) : css(bandLite);
-      ctx.beginPath();
-      const segs = 18;
-      // top edge L→R
-      for(let s=0;s<=segs;s++){
-        const t=s/segs, x = sx + t*stripeW;
-        const yy = y0 + Math.sin((x/CW)*Math.PI*2*freq + phase)*amp*0.5 + amp*0.5;
-        if(s===0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
-      }
-      // bottom edge R→L (next stripe offset)
-      for(let s=segs;s>=0;s--){
-        const t=s/segs, x = sx + t*stripeW + stripeW;
-        const yy = y1 + Math.sin((x/CW)*Math.PI*2*freq + phase)*amp*0.5 + amp*0.5;
-        ctx.lineTo(x, yy);
-      }
-      ctx.closePath();
-      ctx.fill();
+    // (W2) Progression: calm top → crescendo bottom; chord velocity is a
+    // gentle voice on top, capped so ribbons stay legible.
+    const amp = Math.min(bandH*0.95, bandH * (0.10 + 0.95*Math.pow(t,1.6)) * _waAmpMul * (0.85 + 0.3*(vel/127)));
+    const freq = (0.9 + ((topNote%12)/12)*1.1) * (0.75 + 0.85*t);
+    const phase = b*0.32 + ((topNote%7)/7)*0.5;   // deterministic — no random jitter
+    const h = bandH*0.52;                          // ribbon thickness; cream ground shows between
+    ctx.fillStyle = (b===accentBand) ? css(accentCol) : css(waveDark);
+    ctx.beginPath();
+    const segs = 48;
+    for(let s=0;s<=segs;s++){
+      const x = (s/segs)*CW;
+      const yy = yC - h*0.5 + Math.sin((x/CW)*Math.PI*2*freq + phase)*amp;
+      if(s===0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
     }
+    for(let s=segs;s>=0;s--){
+      const x = (s/segs)*CW;
+      const yy = yC + h*0.5 + Math.sin((x/CW)*Math.PI*2*freq + phase)*amp;
+      ctx.lineTo(x, yy);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
 }
 
@@ -8572,34 +8678,59 @@ function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode)
       ctx.stroke();
     }
   }
-  // Flower heads — yellow/orange centers (song palette via chord).
+  // Flower heads — Mitchell's ACTUAL Sunflower language: each head is an
+  // explosive gestural tangle of short impasto strokes (yellow/orange/umbra/
+  // olive) at chaotic angles around a dark tangled core, plus gravity
+  // drips. Sunflower as ENERGY, not illustration.
   for(let i=0; i<visStems; i++){
     const fr=_seedRnd(i+9550, ss, 0, 0); fr(); fr();
     const fx=CW*(0.30 + i*0.40/stemsFull + (fr()-0.5)*0.05);
     const fy=CH*(0.35 + fr()*0.20);
-    // Centre colour from chord, biased warm.
     const {rgb}=_picChord(chords, (i*2+1)%cn, gc, isBW);
-    const flowerCol=isBW
-      ? [180+rgb[0]*0.2, 160+rgb[1]*0.2, 120+rgb[2]*0.1]
-      : (fr()<0.5
-          ? [_bPetalY[0]+rgb[0]*0.15, _bPetalY[1]+rgb[1]*0.20, _bPetalY[2]+rgb[2]*0.1]
-          : [_bPetalO[0]+rgb[0]*0.10, _bPetalO[1]+rgb[1]*0.15, _bPetalO[2]+rgb[2]*0.1]);
-    const fsize=D*(0.06 + fr()*0.05);
-    const petals=8 + Math.floor(fr()*6);
-    for(let p=0; p<petals; p++){
-      const pa=(p/petals)*Math.PI*2 + (fr()-0.5)*0.3;
-      const x1=fx + Math.cos(pa)*fsize*0.4;
-      const y1=fy + Math.sin(pa)*fsize*0.4;
-      const x2=fx + Math.cos(pa)*fsize*1.2;
-      const y2=fy + Math.sin(pa)*fsize*1.2;
-      const w=D*(0.010 + fr()*0.012);
-      _mitchImpasto(ctx, x1, y1, x2, y2, flowerCol, w, ss, i*30+p+9560);
+    const palY=isBW?[190,182,150]:[_bPetalY[0]+rgb[0]*0.15,_bPetalY[1]+rgb[1]*0.20,_bPetalY[2]+rgb[2]*0.1];
+    const palO=isBW?[160,148,120]:[_bPetalO[0]+rgb[0]*0.10,_bPetalO[1]+rgb[1]*0.15,_bPetalO[2]+rgb[2]*0.1];
+    const palU=isBW?[110,100, 84]:[138+rgb[0]*0.10, 90+rgb[1]*0.10, 36+rgb[2]*0.05];   // umbra
+    const palG=isBW?[120,124,100]:[_bStem[0]+30, _bStem[1]+20, _bStem[2]];             // olive
+    const heads=[palY,palY,palO,palO,palU,palG];
+    const fsize=D*(0.07 + fr()*0.055);
+    // Outer burst — chaotic short strokes, varied radius/length/width.
+    const burst=44 + Math.floor(fr()*26);
+    for(let p=0; p<burst; p++){
+      const br=_seedRnd(i*200+p+9560, ss, 0, 0);
+      const a0=br()*Math.PI*2;
+      const r0=br()*fsize*0.35;
+      const r1=r0+fsize*(0.30+br()*0.75);
+      const a1=a0+(br()-0.5)*1.2;
+      const x1=fx+Math.cos(a0)*r0, y1=fy+Math.sin(a0)*r0;
+      const x2=fx+Math.cos(a1)*r1, y2=fy+Math.sin(a1)*r1;
+      const col=heads[Math.floor(br()*heads.length)];
+      const w=D*(0.006+br()*0.012);
+      _mitchImpasto(ctx, x1, y1, x2, y2, col, w, ss, i*300+p+9560);
     }
-    // Dark center.
-    ctx.fillStyle=isBW ? 'rgba(50,45,40,0.85)' : 'rgba(80,40,20,0.85)';
-    ctx.beginPath();
-    ctx.arc(fx, fy, fsize*0.35, 0, Math.PI*2);
-    ctx.fill();
+    // Dark tangled core — short crossing strokes, no clean disc.
+    const coreCol=isBW?[52,47,42]:[74,50,24];
+    const coreN=14+Math.floor(fr()*8);
+    for(let p=0; p<coreN; p++){
+      const cr=_seedRnd(i*200+p+9880, ss, 0, 0);
+      const a=cr()*Math.PI*2, r0=cr()*fsize*0.30;
+      const x1=fx+Math.cos(a)*r0*0.2, y1=fy+Math.sin(a)*r0*0.2;
+      const x2=fx+Math.cos(a+(cr()-0.5)*2)*fsize*0.32, y2=fy+Math.sin(a+(cr()-0.5)*2)*fsize*0.32;
+      _mitchImpasto(ctx, x1, y1, x2, y2, coreCol, D*0.007, ss, i*300+p+9880);
+    }
+    // Gravity drips off the head — Mitchell lets the paint run.
+    const drips=2+Math.floor(fr()*2);
+    for(let p=0; p<drips; p++){
+      const dr=_seedRnd(i*40+p+9950, ss, 0, 0);
+      const dx=fx+(dr()-0.5)*fsize*1.3;
+      const dy=fy+fsize*(0.2+dr()*0.4);
+      const len=D*(0.05+dr()*0.09);
+      const col=heads[Math.floor(dr()*heads.length)];
+      ctx.strokeStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.5)`;
+      ctx.lineWidth=1.6+dr()*1.4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(dx, dy);
+      ctx.quadraticCurveTo(dx+(dr()-0.5)*8, dy+len*0.55, dx+(dr()-0.5)*5, dy+len);
+      ctx.stroke();
+    }
   }
 }
 
