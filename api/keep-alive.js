@@ -1,3 +1,4 @@
+// Supabase keep-alive: pinged by Vercel cron every 6h to prevent free-tier pause.
 export default async function handler(req, res) {
   try {
     const url = process.env.SUPABASE_URL;
