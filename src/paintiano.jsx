@@ -26864,6 +26864,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const mName=file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' ');
         applyEvents(evts,mName);
         setCompositionName(mName);
+        // Persist the original MIDI bytes so the ♡ Save button can put
+        // them into a My Music slot for byte-perfect replay later.
+        try { setMidiBlob(new Blob([evt.target.result], { type: file.type || 'audio/midi' })); setMidiName(file.name); } catch (_) {}
         setLoadedSource('midi');
         setPickMode(null);
         if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
@@ -27791,6 +27794,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setScoreName(sName);
       setCompositionName(sName);
       applyEvents(evts,sName);
+      // Persist the original MusicXML bytes (compressed .mxl OR plain
+      // .xml/.musicxml) so the ♡ Save button can put them into a My Music
+      // slot for byte-perfect replay later.
+      try { const _mime = isZip ? 'application/vnd.recordare.musicxml+xml' : 'application/vnd.recordare.musicxml'; setScoreBlob(new Blob([buf], { type: _mime })); } catch (_) {}
       setLoadedSource('score');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Score: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
