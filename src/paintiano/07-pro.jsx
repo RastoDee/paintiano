@@ -303,9 +303,51 @@ function useEntitlements() {
   };
 }
 
-// ─── watermark for free exports (no-op for Pro) ───────────────────────────────
+// ─── φ signature for Pro exports (bottom-right of the canvas) ──────────────
+// Small italic φ in the paintiano gold, drawn in 3 layers so it reads on both
+// dark and light grounds without probing the pixels underneath: a hairline dark
+// ductus for legibility on gold/paper areas, the main gold glyph (#c9a84c) and
+// a warm highlight so the mark feels engraved rather than painted on top. Size
+// is 2.6% of the shorter edge and the margin 2.8%, so vertical Story exports
+// (1596×2604) and square feed exports get an identically proportioned mark.
+function _drawPhiSignature(canvas) {
+  try {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const w = canvas.width, h = canvas.height;
+    const minEdge = Math.min(w, h);
+    const fontPx = Math.max(14, Math.round(minEdge * 0.026));
+    const margin = Math.round(minEdge * 0.028);
+    // Position: bottom-right corner, glyph centred horizontally on its own box
+    // so italic overhang doesn't touch the edge; small optical lift so the
+    // descender sits above the paper edge.
+    const cx = w - margin - fontPx * 0.55;
+    const cy = h - margin - fontPx * 0.10;
+    ctx.save();
+    ctx.font = 'italic 500 ' + fontPx + 'px "Cormorant Garamond", Georgia, "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const OP = 0.62;
+    // 1) hairline dark ductus — keeps the glyph legible on gold/paper grounds
+    ctx.globalAlpha = OP * 0.28;
+    ctx.fillStyle = '#000000';
+    ctx.fillText('φ', cx, cy);
+    // 2) main gold glyph (paintiano brand)
+    ctx.globalAlpha = OP;
+    ctx.fillStyle = '#c9a84c';
+    ctx.fillText('φ', cx, cy - 0.6);
+    // 3) warm highlight above-left — engraved look on dark grounds
+    ctx.globalAlpha = OP * 0.35;
+    ctx.fillStyle = '#ffdc8c';
+    ctx.fillText('φ', cx - 0.4, cy - 1.2);
+    ctx.restore();
+  } catch (_) {}
+}
+
+// ─── watermark: diagonal tile on Free, discreet φ signature on Pro/Pro AI ────
 function applyWatermark(canvas, isPro) {
-  if (isPro || !canvas) return canvas;
+  if (!canvas) return canvas;
+  if (isPro) { _drawPhiSignature(canvas); return canvas; }
   try {
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
