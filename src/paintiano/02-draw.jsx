@@ -6242,27 +6242,72 @@ function francisPhaseHangingDrips(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const headW = Math.min(CW,CH) * (0.025 + rnd()*0.025);
     const headH = headW * 0.45;
     const headY = CH * (0.02 + rnd()*0.04);
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.92)`;
-    ctx.beginPath();
-    ctx.ellipse(x, headY, headW, headH, 0, 0, Math.PI*2);
-    ctx.fill();
-    // Vertical drip: linear gradient fading head-colour into the white as it falls
-    const dripLength = CH * (0.30 + rnd()*0.60);
-    const dripW = headW * 0.6;
-    const grad = ctx.createLinearGradient(x, headY, x, headY+dripLength);
-    grad.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`);
-    grad.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.12)`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(x-dripW/2, headY+headH*0.4, dripW, dripLength);
-    // 40% chance: a drop pools at the bottom of the drip
-    if(rnd() < 0.4){
-      const dropY = headY + dripLength;
-      const dropW = headW * 0.7;
-      const dropH = dropW * 0.55;
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.42)`;
+    // (H2) Head = irregular bloom mass: 2-3 overlapping soft ellipses with
+    // offset/rotation + a few spatter dots — paint, not a pushpin head.
+    for(let k=0;k<3;k++){
+      const ox=(rnd()-0.5)*headW*0.8, oy=(rnd()-0.5)*headH*0.8;
+      const rx=headW*(0.6+rnd()*0.55), ry=rx*(0.38+rnd()*0.22);
+      const rot=(rnd()-0.5)*0.7;
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.55+rnd()*0.3).toFixed(2)})`;
       ctx.beginPath();
-      ctx.ellipse(x, dropY, dropW, dropH, 0, 0, Math.PI*2);
+      ctx.ellipse(x+ox, headY+oy, rx, ry, rot, 0, Math.PI*2);
       ctx.fill();
+    }
+    for(let k=0;k<5;k++){
+      const a=rnd()*Math.PI*2, d=headW*(0.8+rnd()*1.4);
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.3+rnd()*0.35).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.arc(x+Math.cos(a)*d, headY+Math.sin(a)*d*0.5, 0.8+rnd()*2.0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // (H1) Drip = tapering, gently wobbling filled path: wide at the head,
+    // thin at the tail, opacity fading as it falls — gravity, not geometry.
+    const dripLength = CH * (0.30 + rnd()*0.60);
+    const segs=26;
+    const wob=[0]; for(let s=1;s<=segs;s++) wob.push(wob[s-1]+(rnd()-0.5)*3.2);
+    const grad = ctx.createLinearGradient(x, headY, x, headY+dripLength);
+    grad.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.82)`);
+    grad.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.10)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    for(let s=0;s<=segs;s++){
+      const t=s/segs, y=headY+headH*0.4+dripLength*t;
+      const w=(headW*0.55)*(1-t*0.82)+0.8;
+      const xx=x+wob[s]*(0.4+t);
+      if(s===0) ctx.moveTo(xx-w/2, y); else ctx.lineTo(xx-w/2, y);
+    }
+    for(let s=segs;s>=0;s--){
+      const t=s/segs, y=headY+headH*0.4+dripLength*t;
+      const w=(headW*0.55)*(1-t*0.82)+0.8;
+      const xx=x+wob[s]*(0.4+t);
+      ctx.lineTo(xx+w/2, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    const endX=x+wob[segs]*1.4, endY=headY+headH*0.4+dripLength;
+    // (H3) Pool ONLY when the drip reaches the floor; otherwise a droplet.
+    if(rnd() < 0.4 && dripLength > CH*0.80){
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
+      ctx.beginPath();
+      ctx.ellipse(endX, CH*0.965, headW*0.9, headW*0.30, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.6)`;
+      ctx.beginPath();
+      ctx.arc(endX, endY, 1.6+rnd()*1.8, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // Occasional thin secondary trail beside the main drip.
+    if(rnd() < 0.5){
+      const sx=x+headW*(rnd()-0.5)*1.2;
+      const sl=dripLength*(0.3+rnd()*0.4);
+      const g2=ctx.createLinearGradient(sx, headY, sx, headY+sl);
+      g2.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.4)`);
+      g2.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.05)`);
+      ctx.strokeStyle=g2; ctx.lineWidth=1.4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(sx, headY+headH*0.3);
+      ctx.quadraticCurveTo(sx+(rnd()-0.5)*6, headY+sl*0.5, sx+(rnd()-0.5)*4, headY+sl);
+      ctx.stroke();
     }
   }
   // Bottom-edge incursions (a couple of other-chord dots resting on the floor —
@@ -6275,10 +6320,21 @@ function francisPhaseHangingDrips(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const x = rnd()*CW;
     const y = CH - rnd()*CH*0.15;
     const R = Math.min(CW,CH)*(0.025+rnd()*0.04);
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.62)`;
+    // Soft bloom instead of a flat vector dot.
+    const g = ctx.createRadialGradient(x, y, 0, x, y, R);
+    g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.6)`);
+    g.addColorStop(0.7, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`);
+    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+    ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(x, y, R, 0, Math.PI*2);
     ctx.fill();
+    if(rnd() < 0.6){
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
+      ctx.beginPath();
+      ctx.arc(x+(rnd()-0.5)*R, y+(rnd()-0.5)*R*0.6, 1.5+rnd()*2, 0, Math.PI*2);
+      ctx.fill();
+    }
   }
 }
 
@@ -7467,25 +7523,60 @@ function klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
   else _klimtGround(ctx,CW,CH);
 
-  // Clusters appear progressively.
-  const visClusters = Math.max(1, Math.ceil(clusterCountFull * reveal));
-  for(let c=0;c<visClusters;c++){
-    const cx = rnd()*CW;
-    const cy = rnd()*CH;
-    const tileSize = 8 + rnd()*16;
-    const tilesInCluster = 4 + Math.floor(rnd()*8);
-    for(let t=0;t<tilesInCluster;t++){
-      const tx = cx + (rnd()-0.5)*tileSize*3;
-      const ty = cy + (rnd()-0.5)*tileSize*3;
-      const sz = tileSize*(0.7+rnd()*0.6);
-      const {rgb} = _picChord(chords, (c*10+t)%cn, gc, isBW);
-      // Tile chord colour
-      ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
-      ctx.fillRect(tx, ty, sz, sz*(0.7+rnd()*0.5));
-      // Dark border
-      ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(60,40,15,0.7)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(tx, ty, sz, sz*(0.7+rnd()*0.5));
+  // (G1) Mosaic flows in two meandering vertical RIVERS (Stoclet Tree-of-Life
+  // branches carry the tesserae) instead of uniform confetti. Rivers grow
+  // top→down with the reveal. (G2) Tesserae pack tightly inside the river
+  // band. (G4) Mixed shapes: squares, triangles, circles. (G3) The gold
+  // ground keeps breathing — a few small satellites, no crumbs everywhere.
+  const dn = Math.min(CW,CH);
+  const borderCol = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(60,40,15,0.7)';
+  const drawTessera = (tx,ty,s,rgb,kind)=>{
+    ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+    ctx.strokeStyle = borderCol; ctx.lineWidth = 1;
+    if(kind < 0.62){
+      ctx.fillRect(tx, ty, s, s*0.9); ctx.strokeRect(tx, ty, s, s*0.9);
+    } else if(kind < 0.85){
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx+s, ty); ctx.lineTo(tx+s*0.5, ty-s*0.9);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(tx, ty, s*0.45, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    }
+  };
+  const riverDefs = [
+    { x0: CW*0.30, amp: CW*0.10, ph: 0.0, wBase: dn*0.115, seedOff: 41000 },
+    { x0: CW*0.72, amp: CW*0.08, ph: 1.7, wBase: dn*0.085, seedOff: 42000 },
+  ];
+  const stepsFull = 46;
+  const visSteps = Math.max(2, Math.ceil(stepsFull * reveal));
+  for(let rv=0; rv<riverDefs.length; rv++){
+    const R = riverDefs[rv];
+    for(let st=0; st<visSteps; st++){
+      const rr = _seedRnd(R.seedOff + st, ss, 0, 0);
+      const t = st/(stepsFull-1);
+      const y = CH*(0.02 + t*0.96);
+      const cx = R.x0 + Math.sin(t*Math.PI*2.2 + R.ph)*R.amp;
+      const wband = R.wBase*(0.7 + 0.6*Math.abs(Math.sin(t*Math.PI*1.4 + R.ph)));
+      const nT = Math.max(3, Math.round(3 + wband/(dn*0.02)));
+      for(let k=0;k<nT;k++){
+        const tx = cx + (rr()-0.5)*wband;
+        const ty = y + (rr()-0.5)*CH*0.018;
+        const s = dn*(0.013 + rr()*0.019);
+        const {rgb} = _picChord(chords, (st*7+k+rv*13)%cn, gc, isBW);
+        drawTessera(tx, ty, s, rgb, rr());
+      }
+    }
+  }
+  // Sparse satellite clusters — appear in the second half of the piece.
+  if(reveal > 0.5){
+    const satCount = 5 + Math.floor(rnd()*4);
+    const visSats = Math.ceil(satCount * (reveal-0.5)*2);
+    for(let c=0;c<visSats;c++){
+      const cx = rnd()*CW, cy = rnd()*CH;
+      for(let t=0;t<5;t++){
+        const s = dn*(0.011 + rnd()*0.014);
+        const {rgb} = _picChord(chords, (c*10+t+300)%cn, gc, isBW);
+        drawTessera(cx+(rnd()-0.5)*dn*0.05, cy+(rnd()-0.5)*dn*0.05, s, rgb, rnd());
+      }
     }
   }
 
@@ -9170,33 +9261,63 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
 
   // Horizontal tulip bands — count grows with reveal.
+  // (M1) Bands are CONTIGUOUS: boundaries are precomputed with gentle jitter
+  // and each band fills exactly to the next — no black seams.
+  // (M4) Perspective: bands near the horizon are thinner (field recedes).
+  // (M2) Each band fills with a vertical gradient of its own colour, mixed
+  // toward the sky tone near the horizon (atmospheric perspective) — no
+  // flat max-saturation bars.
+  // (M3) Dabs inside a band stay in the band's hue family (light/dark
+  // variations), horizontally elongated like tulip rows; ~10% accents
+  // from other chords keep the music audible.
   const fieldStart = skyHeight;
   const fieldH = CH - fieldStart;
   const visBands = Math.max(1, Math.ceil(bandCountFull * reveal));
+  // Perspective weights (thin at horizon → broad at foreground), contiguous bounds.
+  const _bw=[]; let _bwSum=0;
+  for(let b=0;b<bandCountFull;b++){ const w=0.55+1.0*Math.pow(b/Math.max(1,bandCountFull-1),1.2); _bw.push(w); _bwSum+=w; }
+  const _bounds=[fieldStart];
+  for(let b=0;b<bandCountFull;b++){ _bounds.push(_bounds[b]+fieldH*_bw[b]/_bwSum); }
+  for(let b=1;b<bandCountFull;b++){ _bounds[b]+= (rnd()-0.5)*fieldH*0.012; }   // gentle boundary jitter
+  // Sky tone for atmospheric mixing — lightened first-chord colour.
+  const [_skR,_skG,_skB] = chordCol(0.05);
+  const skyMix=[Math.min(255,_skR*0.4+165),Math.min(255,_skG*0.4+150),Math.min(255,_skB*0.4+150)];
   for(let b=0;b<visBands;b++){
-    const t = b/bandCountFull;
-    const yStart = fieldStart + t*fieldH;
-    const yH = fieldH/bandCountFull * (0.8 + rnd()*0.4);
-    const [r,g,gb] = chordCol(0.3 + t*0.65);
-    ctx.fillStyle = `rgb(${r|0},${g|0},${gb|0})`;
-    ctx.fillRect(0, yStart, CW, yH);
-    // Painterly strokes inside band — density tracks song character. An energetic
-    // piece vibrates with a denser, busier impressionist surface; a calm one stays
-    // open and atmospheric. (computeSongCharacter is hoisted once below the loop's
-    // first use via _monetDrive.)
-    const strokesFull = Math.round((200 + Math.floor(rnd()*150)) * _monetStrokeMul);
+    const t = bandCountFull<=1 ? 1 : b/(bandCountFull-1);
+    const yStart = _bounds[b];
+    const yEnd = _bounds[b+1];
+    const yH = yEnd - yStart;
+    const [r0,g0,b0] = chordCol(0.3 + t*0.65);
+    // Atmospheric desaturation toward the horizon.
+    const mixT = 0.45*(1-t);
+    const base=[r0*(1-mixT)+skyMix[0]*mixT, g0*(1-mixT)+skyMix[1]*mixT, b0*(1-mixT)+skyMix[2]*mixT];
+    const dark=[base[0]*0.75+8, base[1]*0.75+8, base[2]*0.75+14];
+    const lite=[Math.min(255,base[0]+42), Math.min(255,base[1]+42), Math.min(255,base[2]+42)];
+    const grad = ctx.createLinearGradient(0, yStart, 0, yEnd);
+    grad.addColorStop(0, `rgb(${dark[0]|0},${dark[1]|0},${dark[2]|0})`);
+    grad.addColorStop(0.55, `rgb(${base[0]|0},${base[1]|0},${base[2]|0})`);
+    grad.addColorStop(1, `rgb(${lite[0]|0},${lite[1]|0},${lite[2]|0})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, yStart, CW, yH+1);
+    // Dabs — density tracks song character; foreground bands get more/larger.
+    const strokesFull = Math.round((140 + Math.floor(rnd()*110)) * _monetStrokeMul * (0.5+t*0.8));
     const visStrokes = Math.ceil(strokesFull * reveal);
     for(let k=0;k<visStrokes;k++){
       const sx = rnd()*CW;
       const sy = yStart + rnd()*yH;
-      const len = 4 + rnd()*12;
-      const [sr,sg,sb] = chordColIdx(b*30 + k);
-      const lift = (rnd()-0.5)*60;
-      const jr = Math.max(0,Math.min(255, sr + lift));
-      const jg = Math.max(0,Math.min(255, sg + lift));
-      const jb = Math.max(0,Math.min(255, sb + lift));
-      ctx.strokeStyle = `rgba(${jr|0},${jg|0},${jb|0},0.75)`;
-      ctx.lineWidth = 1+rnd()*1.5;
+      let dr,dg,db;
+      if(rnd() < 0.10){
+        const [ar,ag,ab] = chordColIdx(b*30 + k);   // accent from another chord
+        dr=ar; dg=ag; db=ab;
+      } else {
+        const f = (rnd()-0.42)*1.0;                 // -0.42..0.58 → dark..light in-family
+        if(f>=0){ dr=Math.min(255,base[0]+f*120); dg=Math.min(255,base[1]+f*120); db=Math.min(255,base[2]+f*120); }
+        else    { dr=base[0]*(1+f*0.9); dg=base[1]*(1+f*0.9); db=base[2]*(1+f*0.9); }
+      }
+      const len = (5 + rnd()*13) * (0.5 + t*0.9);   // tulip-row dabs grow toward foreground
+      ctx.strokeStyle = `rgba(${dr|0},${dg|0},${db|0},0.85)`;
+      ctx.lineWidth = (1.4+rnd()*2.2) * (0.5 + t*0.7);
+      ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.lineTo(sx+len, sy+(rnd()-0.5)*1.5);
@@ -10606,19 +10727,49 @@ function kusamaPhaseTendril(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const base=_kusChord(chords,0,gc).rgb;
   ctx.fillStyle=`rgb(${Math.max(120,base[0])},${Math.round(base[1]*0.4)},${Math.round(base[2]*0.5)})`;ctx.fillRect(0,0,CW,CH);
-  const tendrils=Math.max(6,Math.min(60,Math.round(cn/2)));
+  // (K1) Smooth vines growing from the bottom — small angular drift per step,
+  // no teleporting segments. (K2) Polka-dot chains along every tendril plus a
+  // terminal dot — the Kusama signature. (K3) Palette discipline: cream is
+  // dominant, joined by just two chord colours per painting.
+  const tendrils=Math.max(6,Math.min(26,Math.round(cn/4)+5));
   const vis=Math.max(1,Math.ceil(N/cn*tendrils));
+  const groundCol=[Math.max(120,base[0]),Math.round(base[1]*0.4),Math.round(base[2]*0.5)];
+  const colA=_kusChord(chords,0,gc).rgb;
+  const colB=_kusChord(chords,Math.floor(cn/2),gc).rgb;
+  const cream=[246,240,228];
   ctx.lineCap='round';
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+303,ss,0,0);
-    const {rgb}=_kusChord(chords,Math.floor(i*(cn/tendrils)),gc);
-    ctx.strokeStyle=`rgba(${Math.min(255,rgb[0]+120)},${Math.min(255,rgb[1]+120)},${Math.min(255,rgb[2]+120)},0.85)`;
-    ctx.lineWidth=Math.max(1.5,Math.min(CW,CH)*0.012);
-    let x=rnd()*CW, y=rnd()*CH;
-    ctx.beginPath();ctx.moveTo(x,y);
-    const segs=5+Math.floor(rnd()*5);
-    for(let s=0;s<segs;s++){const nx=x+(rnd()-0.5)*CW*0.3,ny=y+(rnd()-0.5)*CH*0.3;ctx.quadraticCurveTo((x+nx)/2+(rnd()-0.5)*40,(y+ny)/2+(rnd()-0.5)*40,nx,ny);x=nx;y=ny;}
+    const pick=rnd();
+    const col = pick<0.55 ? cream : (pick<0.78 ? colA : colB);
+    // Grow upward from below the canvas with a gentle personal curl.
+    let x=CW*(0.06+rnd()*0.88), y=CH*1.02;
+    let ang=-Math.PI/2+(rnd()-0.5)*0.5;
+    const Ln=CH*(0.5+rnd()*0.55);
+    const steps=34;
+    const curl=(rnd()-0.5)*0.16;
+    const pts=[[x,y]];
+    for(let s=0;s<steps;s++){
+      ang+=curl+(rnd()-0.5)*0.10;
+      x+=Math.cos(ang)*Ln/steps; y+=Math.sin(ang)*Ln/steps;
+      pts.push([x,y]);
+    }
+    ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},0.9)`;
+    ctx.lineWidth=Math.max(2,Math.min(CW,CH)*0.008);
+    ctx.beginPath();
+    for(let s=0;s<pts.length;s++){ if(s===0)ctx.moveTo(pts[s][0],pts[s][1]); else ctx.lineTo(pts[s][0],pts[s][1]); }
     ctx.stroke();
+    // Dot chain along the vine.
+    ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
+    for(let j=2;j<pts.length;j+=3){
+      const r=1.8+2.6*Math.abs(Math.sin(j*0.7))+rnd();
+      ctx.beginPath();ctx.arc(pts[j][0],pts[j][1],r,0,Math.PI*2);ctx.fill();
+    }
+    // Terminal dot with a ground-colour core (Kusama donut).
+    const tp=pts[pts.length-1];
+    ctx.beginPath();ctx.arc(tp[0],tp[1],5+rnd()*4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgb(${groundCol[0]},${groundCol[1]},${groundCol[2]})`;
+    ctx.beginPath();ctx.arc(tp[0],tp[1],2+rnd()*1.5,0,Math.PI*2);ctx.fill();
   }
 }
 
