@@ -316,30 +316,37 @@ function _drawPhiSignature(canvas) {
     if (!ctx) return;
     const w = canvas.width, h = canvas.height;
     const minEdge = Math.min(w, h);
-    const fontPx = Math.max(14, Math.round(minEdge * 0.026));
-    const margin = Math.round(minEdge * 0.028);
-    // Position: bottom-right corner, glyph centred horizontally on its own box
-    // so italic overhang doesn't touch the edge; small optical lift so the
-    // descender sits above the paper edge.
-    const cx = w - margin - fontPx * 0.55;
-    const cy = h - margin - fontPx * 0.10;
+    // 3.2% of the shorter edge — comfortably visible on 5544×7420 A1 exports
+    // while staying discreet on square feed exports.
+    const fontPx = Math.max(18, Math.round(minEdge * 0.032));
+    const margin = Math.round(minEdge * 0.030);
+    // Position: bottom-right corner. Italic overhang can lean past the box
+    // so we anchor to the right edge and let textAlign='right' handle spacing.
+    const cx = w - margin;
+    const cy = h - margin;
     ctx.save();
-    ctx.font = 'italic 500 ' + fontPx + 'px "Cormorant Garamond", Georgia, "Times New Roman", serif';
-    ctx.textAlign = 'center';
+    // Canvas 2D does NOT honour the CSS font fallback chain like HTML does:
+    // if the first family isn't loaded yet, the whole rule may be ignored.
+    // Use system serifs (Georgia + Times) that are guaranteed to be present
+    // and render φ beautifully in italic. No webfont dependency.
+    ctx.font = 'italic 600 ' + fontPx + 'px Georgia, "Times New Roman", Times, serif';
+    ctx.textAlign = 'right';
     ctx.textBaseline = 'alphabetic';
-    const OP = 0.62;
-    // 1) hairline dark ductus — keeps the glyph legible on gold/paper grounds
-    ctx.globalAlpha = OP * 0.28;
-    ctx.fillStyle = '#000000';
-    ctx.fillText('φ', cx, cy);
-    // 2) main gold glyph (paintiano brand)
+    const OP = 0.72;
+    // Dark outline stroke — keeps the glyph legible on gold/paper grounds
+    // without needing to sample the pixels underneath.
+    ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.06));
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(0,0,0,' + (OP * 0.55).toFixed(2) + ')';
+    ctx.strokeText('φ', cx, cy);
+    // Main gold glyph — paintiano brand colour.
     ctx.globalAlpha = OP;
     ctx.fillStyle = '#c9a84c';
-    ctx.fillText('φ', cx, cy - 0.6);
-    // 3) warm highlight above-left — engraved look on dark grounds
+    ctx.fillText('φ', cx, cy);
+    // Warm highlight above-left — engraved feel on dark grounds.
     ctx.globalAlpha = OP * 0.35;
     ctx.fillStyle = '#ffdc8c';
-    ctx.fillText('φ', cx - 0.4, cy - 1.2);
+    ctx.fillText('φ', cx - Math.max(1, fontPx * 0.02), cy - Math.max(1, fontPx * 0.03));
     ctx.restore();
   } catch (_) {}
 }
