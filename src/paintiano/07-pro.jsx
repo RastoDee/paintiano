@@ -313,46 +313,38 @@ function useEntitlements() {
 function _drawPhiSignature(canvas) {
   try {
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) { try { console.warn('[phi] no ctx'); } catch(_) {} return; }
     const w = canvas.width, h = canvas.height;
     const minEdge = Math.min(w, h);
-    // 3.2% of the shorter edge — comfortably visible on 5544×7420 A1 exports
-    // while staying discreet on square feed exports.
-    const fontPx = Math.max(18, Math.round(minEdge * 0.032));
+    // DEBUG: 8% shortEdge = huge, undeniable. Roll back once we confirm.
+    const fontPx = Math.max(48, Math.round(minEdge * 0.08));
     const margin = Math.round(minEdge * 0.030);
-    // Position: bottom-right corner. Italic overhang can lean past the box
-    // so we anchor to the right edge and let textAlign='right' handle spacing.
     const cx = w - margin;
     const cy = h - margin;
+    try { console.log('[phi] draw', {w, h, fontPx, cx, cy}); } catch(_) {}
     ctx.save();
-    // Canvas 2D does NOT honour the CSS font fallback chain like HTML does:
-    // if the first family isn't loaded yet, the whole rule may be ignored.
-    // Use system serifs (Georgia + Times) that are guaranteed to be present
-    // and render φ beautifully in italic. No webfont dependency.
-    ctx.font = 'italic 600 ' + fontPx + 'px Georgia, "Times New Roman", Times, serif';
+    // DEBUG frame around signature area — proves the function ran even if
+    // the font renders empty for whatever reason.
+    ctx.strokeStyle = 'rgba(255,0,0,0.9)';
+    ctx.lineWidth = Math.max(3, Math.round(fontPx * 0.08));
+    ctx.strokeRect(cx - fontPx * 1.0, cy - fontPx * 1.1, fontPx * 1.1, fontPx * 1.3);
+    ctx.font = 'italic 700 ' + fontPx + 'px Georgia, "Times New Roman", Times, serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'alphabetic';
-    const OP = 0.72;
-    // Dark outline stroke — keeps the glyph legible on gold/paper grounds
-    // without needing to sample the pixels underneath.
-    ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.06));
+    // DEBUG: fully opaque white + black stroke — unmissable on any ground.
+    ctx.lineWidth = Math.max(4, Math.round(fontPx * 0.08));
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(0,0,0,' + (OP * 0.55).toFixed(2) + ')';
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
     ctx.strokeText('φ', cx, cy);
-    // Main gold glyph — paintiano brand colour.
-    ctx.globalAlpha = OP;
-    ctx.fillStyle = '#c9a84c';
+    ctx.fillStyle = 'rgba(255,255,255,1)';
     ctx.fillText('φ', cx, cy);
-    // Warm highlight above-left — engraved feel on dark grounds.
-    ctx.globalAlpha = OP * 0.35;
-    ctx.fillStyle = '#ffdc8c';
-    ctx.fillText('φ', cx - Math.max(1, fontPx * 0.02), cy - Math.max(1, fontPx * 0.03));
     ctx.restore();
-  } catch (_) {}
+  } catch (e) { try { console.error('[phi] err', e); } catch(_) {} }
 }
 
 // ─── watermark: diagonal tile on Free, discreet φ signature on Pro/Pro AI ────
 function applyWatermark(canvas, isPro) {
+  try { console.log('[phi] applyWatermark called', { isPro, hasCanvas: !!canvas, w: canvas && canvas.width, h: canvas && canvas.height }); } catch(_) {}
   if (!canvas) return canvas;
   if (isPro) { _drawPhiSignature(canvas); return canvas; }
   try {
