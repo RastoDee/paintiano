@@ -10038,51 +10038,123 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
 
 // Variant 3 — Storm: lightning zigzag through dark sky.
 function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
-  // HK v2 — storm in ONE ink family: bokashi cloud gradations instead of
-  // multi-hue bands; rain in exactly two tones (paper-foam + one pale chord
-  // voice); lightning stays. Depth of the ink follows the song's energy.
+  // HK v2.1 — Sanka Haku'u (Rainstorm Beneath the Summit): the pair print
+  // to Red Fuji. A GIANT off-centre black Fuji (peak ~0.38, near the top
+  // edge, base beyond the canvas) rises above a cloud bank at ~60% that
+  // swallows its lower slope; lightning with a climax-tinted glow strikes
+  // BELOW the cloud line. Rain in two ink tones, denser under the clouds.
+  // Differs from the Fuji phase by SILHOUETTE and composition, not just tone.
   const rnd = _seedRnd(92, ss, 0, 3);
   const K = _hokusaiInk(chords, lim, gc);
   const dk=[Math.round(K.D[0]*0.65+K.sumi[0]*0.35),Math.round(K.D[1]*0.65+K.sumi[1]*0.35),Math.round(K.D[2]*0.65+K.sumi[2]*0.35)];
   ctx.fillStyle = `rgb(${dk[0]},${dk[1]},${dk[2]})`;
   ctx.fillRect(0,0,CW,CH);
-  // Bokashi cloud bands — one family, layered gradations with wavy bottoms.
-  for(let i=0;i<4;i++){
-    const y0=i*CH*0.16;
-    const g=ctx.createLinearGradient(0,y0,0,y0+CH*0.16);
-    const t0=[Math.round(K.D[0]*(0.85-i*0.06)),Math.round(K.D[1]*(0.85-i*0.06)),Math.round(K.D[2]*(0.85-i*0.06))];
-    g.addColorStop(0, `rgba(${t0[0]},${t0[1]},${t0[2]},0.85)`);
+  // Bokashi storm sky — one family, layered gradations with wavy bottoms.
+  for(let i=0;i<3;i++){
+    const y0=i*CH*0.12;
+    const g=ctx.createLinearGradient(0,y0,0,y0+CH*0.14);
+    const t0=[Math.round(K.D[0]*(0.9-i*0.08)),Math.round(K.D[1]*(0.9-i*0.08)),Math.round(K.D[2]*(0.9-i*0.08))];
+    g.addColorStop(0, `rgba(${t0[0]},${t0[1]},${t0[2]},0.80)`);
     g.addColorStop(1, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0)`);
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.moveTo(0,y0); ctx.lineTo(CW,y0);
-    for(let x=CW;x>=0;x-=CW/24) ctx.lineTo(x, y0+CH*0.16 + Math.sin(x*0.02+i)*CH*0.012);
+    for(let x=CW;x>=0;x-=CW/24) ctx.lineTo(x, y0+CH*0.14 + Math.sin(x*0.02+i)*CH*0.010);
     ctx.closePath(); ctx.fill();
   }
-  // Ground swell — deep gradient toward the bottom.
-  const gg=ctx.createLinearGradient(0,CH*0.62,0,CH);
-  gg.addColorStop(0, `rgba(${K.D[0]},${K.D[1]},${K.D[2]},0.9)`);
-  gg.addColorStop(1, `rgba(${dk[0]},${dk[1]},${dk[2]},1)`);
-  ctx.fillStyle=gg; ctx.fillRect(0,CH*0.62,CW,CH*0.38);
-  // Rain — TWO tones only. Count scales with the reveal.
+  // Giant off-centre black Fuji — sumi+ink silhouette, base beyond edges.
+  const fpx=CW*(0.38+(rnd()-0.5)*0.04), fpy=CH*0.06;
+  const fuji=[Math.round(K.sumi[0]*0.78+K.D[0]*0.22),Math.round(K.sumi[1]*0.78+K.D[1]*0.22),Math.round(K.sumi[2]*0.78+K.D[2]*0.22)];
+  const fujiTop=[Math.round(fuji[0]*0.7+K.D[0]*0.3),Math.round(fuji[1]*0.7+K.D[1]*0.3),Math.round(fuji[2]*0.7+K.D[2]*0.3)];
+  const gm=ctx.createLinearGradient(0,fpy,0,CH);
+  gm.addColorStop(0, `rgb(${fujiTop[0]},${fujiTop[1]},${fujiTop[2]})`);
+  gm.addColorStop(1, `rgb(${fuji[0]},${fuji[1]},${fuji[2]})`);
+  ctx.fillStyle=gm;
+  ctx.strokeStyle=`rgba(${K.paper[0]},${K.paper[1]},${K.paper[2]},0.35)`; ctx.lineWidth=1.6;
+  const baseY=CH*1.05;
+  ctx.beginPath();
+  ctx.moveTo(-CW*0.35, baseY);
+  ctx.bezierCurveTo(CW*0.02, CH*0.62, CW*0.22, CH*0.20, fpx, fpy);
+  ctx.bezierCurveTo(CW*0.55, CH*0.22, CW*0.80, CH*0.68, CW*1.30, baseY);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Tiny snow remnant (Hokusai keeps it even on the black Fuji).
+  ctx.fillStyle=`rgba(${K.paper[0]},${K.paper[1]},${K.paper[2]},0.85)`;
+  ctx.beginPath();
+  ctx.moveTo(fpx-CW*0.045, fpy+CH*0.035);
+  const nz=7;
+  for(let i=1;i<=nz;i++){
+    const t=i/nz;
+    const px=fpx-CW*0.045+t*CW*0.09;
+    const py=fpy+CH*(0.035-0.009*Math.sin(t*Math.PI))+(i%2?CH*0.013:0);
+    ctx.lineTo(px,py);
+  }
+  ctx.lineTo(fpx+CW*0.045, fpy+CH*0.035); ctx.lineTo(fpx, fpy); ctx.closePath(); ctx.fill();
+  // Cloud bank at ~60% — swallows the lower slope; billows along the top.
+  const cloudY=CH*0.60;
+  const gcb=ctx.createLinearGradient(0,cloudY,0,CH);
+  const cbTop=[Math.round(K.M[0]*0.75+K.paper[0]*0.25),Math.round(K.M[1]*0.75+K.paper[1]*0.25),Math.round(K.M[2]*0.75+K.paper[2]*0.25)];
+  gcb.addColorStop(0, `rgba(${cbTop[0]},${cbTop[1]},${cbTop[2]},0.92)`);
+  gcb.addColorStop(1, `rgba(${Math.round(K.D[0]*0.8+K.sumi[0]*0.2)},${Math.round(K.D[1]*0.8+K.sumi[1]*0.2)},${Math.round(K.D[2]*0.8+K.sumi[2]*0.2)},0.85)`);
+  ctx.fillStyle=gcb;
+  ctx.beginPath();
+  ctx.moveTo(0, cloudY);
+  for(let k=0;k<=22;k++){
+    const x=k*CW/22;
+    ctx.lineTo(x, cloudY + Math.sin(k*0.9)*CH*0.020 - (k%2?CH*0.015:0));
+  }
+  ctx.lineTo(CW, CH); ctx.lineTo(0, CH); ctx.closePath(); ctx.fill();
+  const cbBill=[Math.round(K.M[0]*0.70+K.paper[0]*0.30),Math.round(K.M[1]*0.70+K.paper[1]*0.30),Math.round(K.M[2]*0.70+K.paper[2]*0.30)];
+  for(let i=0;i<9;i++){
+    const cx=CW*(0.04+i*0.115), cy=cloudY+Math.sin(i*0.9)*CH*0.015;
+    ctx.fillStyle=`rgba(${cbBill[0]},${cbBill[1]},${cbBill[2]},0.85)`;
+    ctx.beginPath(); ctx.arc(cx, cy, CW*(0.045+rnd()*0.03), 0, Math.PI*2); ctx.fill();
+  }
+  // Lightning BELOW the cloud line — climax glow + main bolt + branches.
+  const strikeX=CW*(0.55+rnd()*0.14);
+  const glow=[Math.round(K.A[0]*0.55+K.paper[0]*0.45),Math.round(K.A[1]*0.55+K.paper[1]*0.45),Math.round(K.A[2]*0.55+K.paper[2]*0.45)];
+  const rg=ctx.createRadialGradient(strikeX, CH*0.82, 0, strikeX, CH*0.82, CW*0.26);
+  rg.addColorStop(0, `rgba(${glow[0]},${glow[1]},${glow[2]},0.55)`);
+  rg.addColorStop(0.55, `rgba(${glow[0]},${glow[1]},${glow[2]},0.16)`);
+  rg.addColorStop(1, `rgba(${glow[0]},${glow[1]},${glow[2]},0)`);
+  ctx.fillStyle=rg;
+  ctx.beginPath(); ctx.arc(strikeX, CH*0.82, CW*0.26, 0, Math.PI*2); ctx.fill();
+  let px=CW*0.55, py=cloudY+CH*0.02;
+  const boltPts=[[px,py]];
+  for(let s=0;s<6;s++){
+    px+=(rnd()-0.5)*CW*0.09 + (strikeX-px)*0.15;
+    py+=CH*0.058;
+    boltPts.push([px,py]);
+  }
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.strokeStyle=`rgba(${glow[0]},${glow[1]},${glow[2]},0.5)`; ctx.lineWidth=9;
+  ctx.beginPath();
+  for(let s=0;s<boltPts.length;s++){ if(s===0)ctx.moveTo(boltPts[s][0],boltPts[s][1]); else ctx.lineTo(boltPts[s][0],boltPts[s][1]); }
+  ctx.stroke();
+  ctx.strokeStyle=`rgb(${K.paper[0]},${K.paper[1]},${K.paper[2]})`; ctx.lineWidth=3.4;
+  ctx.stroke();
+  // Branches — more for energetic pieces.
+  const brN = K.energy>0.55 ? 3 : 2;
+  const brAt=[2,4,3];
+  for(let bq=0;bq<brN;bq++){
+    const bi=brAt[bq];
+    let qx=boltPts[bi][0], qy=boltPts[bi][1];
+    const side=(bq%2===0)?-1:1;
+    ctx.beginPath(); ctx.moveTo(qx,qy);
+    for(let s=0;s<3;s++){ qx+=side*(12+rnd()*24); qy+=CH*0.040; ctx.lineTo(qx,qy); }
+    ctx.strokeStyle=`rgba(${glow[0]},${glow[1]},${glow[2]},0.45)`; ctx.lineWidth=5; ctx.stroke();
+    ctx.strokeStyle=`rgba(${K.paper[0]},${K.paper[1]},${K.paper[2]},0.9)`; ctx.lineWidth=1.7; ctx.stroke();
+  }
+  // Rain — TWO tones, denser below the cloud line; count scales with lim.
   const vc=K.voice(1);
   const pale=[Math.round(vc[0]*0.55+K.paper[0]*0.45),Math.round(vc[1]*0.55+K.paper[1]*0.45),Math.round(vc[2]*0.55+K.paper[2]*0.45)];
-  const rainCount=Math.min(300, Math.max(120, lim*4));
+  const rainCount=Math.min(320, Math.max(140, lim*4));
   for(let i=0;i<rainCount;i++){
-    const rx=rnd()*CW, ry=rnd()*CH, ln=8+rnd()*16;
+    const ry=rnd()*CH;
+    if(ry<cloudY && rnd()<0.5) continue;   // sparser above the clouds
+    const rx=rnd()*CW*1.1-CW*0.05, ln=10+rnd()*20;
     const col=(i%3===0)?pale:K.paper;
-    ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},${(0.28+rnd()*0.25).toFixed(2)})`;
+    ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},${(0.22+rnd()*0.26).toFixed(2)})`;
     ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-ln*0.35, ry+ln); ctx.stroke();
-  }
-  // Lightning — paper-white zigzags; a second bolt for energetic pieces.
-  const bolts = K.energy>0.55 ? 2 : 1;
-  for(let b=0;b<bolts;b++){
-    let px=CW*(0.35+rnd()*0.30), py=CH*(0.08+rnd()*0.10);
-    ctx.strokeStyle=`rgb(${K.paper[0]},${K.paper[1]},${K.paper[2]})`;
-    ctx.lineWidth=2.6; ctx.lineJoin='round';
-    ctx.beginPath(); ctx.moveTo(px,py);
-    for(let s=0;s<7;s++){ px+=(rnd()-0.5)*CW*0.06; py+=CH*0.10; ctx.lineTo(px,py); }
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-ln*0.45, ry+ln); ctx.stroke();
   }
 }
 
