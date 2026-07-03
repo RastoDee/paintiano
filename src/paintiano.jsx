@@ -31357,6 +31357,7 @@ Hard requirements:
         // mark. Pro skips this (applyWatermark is a no-op when isPro=true).
         applyWatermark(st, isPro);
       }
+      try { console.log('[phi] pre-toBlob outCanvas', { w: outCanvas.width, h: outCanvas.height, isProAtExport: isPro }); const _dbg = outCanvas.getContext('2d'); if (_dbg) { _dbg.save(); _dbg.strokeStyle='rgba(0,255,0,0.9)'; _dbg.lineWidth = Math.max(30, Math.round(Math.min(outCanvas.width,outCanvas.height)*0.02)); _dbg.beginPath(); _dbg.moveTo(0,0); _dbg.lineTo(outCanvas.width, outCanvas.height); _dbg.moveTo(outCanvas.width,0); _dbg.lineTo(0, outCanvas.height); _dbg.stroke(); _dbg.restore(); } } catch(e) {}
       let blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
       let _mime='image/png', _ext='png';
       if(!blob){
