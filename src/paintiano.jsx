@@ -33423,12 +33423,12 @@ Hard requirements:
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?7:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
-            {basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
+            {!immersive && basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
-            {basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
+            {!immersive && basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
               <span key={`insp-${effectiveStyle==='notes'?'notes':'mosaic'}`} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>{effectiveStyle==='notes'?t('notesStyle'):t('liteMosaicStyle')}</span>
             )}
           </div>
@@ -33583,7 +33583,7 @@ Hard requirements:
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:_swipeFlashDark?'rgba(240,222,180,.98)':'rgba(36,28,32,.98)',textShadow:_swipeFlashDark?'0 4px 24px rgba(0,0,0,.9), 0 0 40px rgba(201,168,76,.35)':'0 2px 12px rgba(255,250,235,.85), 0 0 30px rgba(255,240,200,.55)'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:_swipeFlashDark?'rgba(240,222,180,.98)':'rgba(28,22,26,.98)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
           </div>
@@ -33630,33 +33630,33 @@ Hard requirements:
           // Show the inspired-by flash overlay in the centre of the canvas.
           if(dy < 0){
             _swipeWasGestureRef.current = true;
-            // Sample the centre of the painting to decide flash contrast.
-            // Fast: 100×100 patch, stride 20 → 25 samples, plenty for a mean.
-            // Wrapped in try/catch — getImageData can throw on tainted canvas
-            // (e.g. cross-origin image background). On error we default to the
-            // dark pill (aka the current behaviour) so nothing regresses.
+            // Sample luminance across the WHOLE canvas (not just centre) via
+            // a coarse 6×6 grid = 36 points. Robust to sparse compositions
+            // (Kusama dots, Klint stems) where a centre-only sample would hit
+            // the black backdrop and misclassify the painting as dark.
+            // The canvas is pre-filled with #04040a before the painting draws,
+            // so any un-painted region reads as near-black. Averaging across the
+            // whole surface bakes that backdrop into the mean, which is exactly
+            // what the eye also perceives — sparse painting on black = dark.
             let _paintingIsDark = true;
             try {
               const _cv = canvasRef.current;
               if(_cv){
                 const _cctx = _cv.getContext('2d');
-                const _cx = Math.max(0, Math.floor(_cv.width/2) - 50);
-                const _cy = Math.max(0, Math.floor(_cv.height/2) - 50);
-                const _sw = Math.min(100, _cv.width - _cx);
-                const _sh = Math.min(100, _cv.height - _cy);
-                const _pix = _cctx.getImageData(_cx, _cy, _sw, _sh).data;
                 let _lSum = 0, _n = 0;
-                for(let py = 0; py < _sh; py += 20){
-                  for(let px = 0; px < _sw; px += 20){
-                    const _i = (py * _sw + px) * 4;
+                for(let gy = 1; gy <= 6; gy++){
+                  for(let gx = 1; gx <= 6; gx++){
+                    const _px = Math.max(0, Math.min(_cv.width  - 1, Math.floor(_cv.width  * gx / 7)));
+                    const _py = Math.max(0, Math.min(_cv.height - 1, Math.floor(_cv.height * gy / 7)));
+                    const _d = _cctx.getImageData(_px, _py, 1, 1).data;
                     // Rec.601 luminance — human-perception weighted.
-                    _lSum += 0.299*_pix[_i] + 0.587*_pix[_i+1] + 0.114*_pix[_i+2];
+                    _lSum += 0.299*_d[0] + 0.587*_d[1] + 0.114*_d[2];
                     _n++;
                   }
                 }
                 if(_n > 0) _paintingIsDark = (_lSum / _n) < 128;
               }
-            } catch(_) { /* tainted canvas or no ctx — keep default dark pill */ }
+            } catch(_) { /* tainted canvas or no ctx — keep default dark */ }
             _setSwipeFlashDark(_paintingIsDark);
             try { basicSurprise(); } catch(_){}
             // Flash: the effectiveStyle updates on the next render — we snap the
