@@ -1457,9 +1457,6 @@ export default function Paintiano() {
   // the existing canvas onClick handler run normally).
   const _swipeStartRef = useRef(null);
   const _swipeWasGestureRef = useRef(false);
-  // Timestamp of the previous canvas tap \u2014 used to detect double-tap in
-  // fullscreen (single tap does nothing, double-tap reveals CTAs).
-  const _lastTapTsRef = useRef(0);
   const [_swipeFlashKey, _setSwipeFlashKey] = useState(null);
   const _swipeFlashTimerRef = useRef(null);
   const [stamp,     setStamp]     = useState(0);
@@ -12083,7 +12080,8 @@ Hard requirements:
               } else {
                 nextRollInProgressRef.current = true;
                 if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); }
-                wakeControls();
+                // Swipe intentionally does NOT wakeControls — that would
+                // reveal the CTA bar unexpectedly on gesture. Only tap does.
               }
             } catch(_){}
             // Fire the flash on the next tick so it renders WITH the new
@@ -12107,21 +12105,10 @@ Hard requirements:
             e.preventDefault(); e.stopPropagation();
             return;
           }
-          // Fullscreen: double-tap reveals CTAs (single tap does nothing so
-          // swipe up doesn't accidentally trigger the control bar). Normal
-          // mode keeps the classic single-tap wake for parity with the
-          // video-player pattern.
-          if(immersive){
-            const _now = Date.now();
-            if(_now - _lastTapTsRef.current < 300){
-              wakeControls();
-              _lastTapTsRef.current = 0;
-            } else {
-              _lastTapTsRef.current = _now;
-            }
-          } else if(playing){
-            wakeControls();
-          }
+          // Any tap on the canvas reveals the fullscreen control and re-arms its
+          // idle countdown (video-player pattern). Skipped if the touch was a
+          // recognised swipe (guarded above via _swipeWasGestureRef).
+          if(playing||immersive) wakeControls();
           // During the demo reel a canvas tap is the "escape" gesture — kill
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
