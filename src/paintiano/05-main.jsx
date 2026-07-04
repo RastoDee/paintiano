@@ -1458,6 +1458,10 @@ export default function Paintiano() {
   const _swipeStartRef = useRef(null);
   const _swipeWasGestureRef = useRef(false);
   const [_swipeFlashKey, _setSwipeFlashKey] = useState(null);
+  // Adaptive flash colour: sampled from the painting under the flash so a
+  // dark painting gets the light pill (default) and a light painting gets
+  // the dark pill — both stay legible without ever hiding the artwork.
+  const [_swipeFlashDark, _setSwipeFlashDark] = useState(true);
   const _swipeFlashTimerRef = useRef(null);
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
@@ -12042,7 +12046,7 @@ Hard requirements:
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(240,222,180,.98)',fontStyle:'italic',textShadow:'0 4px 24px rgba(0,0,0,.9), 0 0 40px rgba(201,168,76,.35)',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',padding:'18px 32px',borderRadius:16,backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',animation:'pfSwipeFlash 1.2s ease-out both',color:_swipeFlashDark?'rgba(240,222,180,.98)':'rgba(36,32,40,.96)',background:_swipeFlashDark?'rgba(6,6,12,.72)':'rgba(242,238,232,.82)',border:_swipeFlashDark?'1px solid rgba(201,168,76,.28)':'1px solid rgba(60,50,20,.22)',boxShadow:_swipeFlashDark?'0 12px 40px rgba(0,0,0,.55), 0 0 60px rgba(201,168,76,.18)':'0 12px 40px rgba(0,0,0,.25), 0 0 60px rgba(201,168,76,.12)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
           </div>
@@ -12089,6 +12093,34 @@ Hard requirements:
           // Show the inspired-by flash overlay in the centre of the canvas.
           if(dy < 0){
             _swipeWasGestureRef.current = true;
+            // Sample the centre of the painting to decide flash contrast.
+            // Fast: 100×100 patch, stride 20 → 25 samples, plenty for a mean.
+            // Wrapped in try/catch — getImageData can throw on tainted canvas
+            // (e.g. cross-origin image background). On error we default to the
+            // dark pill (aka the current behaviour) so nothing regresses.
+            let _paintingIsDark = true;
+            try {
+              const _cv = canvasRef.current;
+              if(_cv){
+                const _cctx = _cv.getContext('2d');
+                const _cx = Math.max(0, Math.floor(_cv.width/2) - 50);
+                const _cy = Math.max(0, Math.floor(_cv.height/2) - 50);
+                const _sw = Math.min(100, _cv.width - _cx);
+                const _sh = Math.min(100, _cv.height - _cy);
+                const _pix = _cctx.getImageData(_cx, _cy, _sw, _sh).data;
+                let _lSum = 0, _n = 0;
+                for(let py = 0; py < _sh; py += 20){
+                  for(let px = 0; px < _sw; px += 20){
+                    const _i = (py * _sw + px) * 4;
+                    // Rec.601 luminance — human-perception weighted.
+                    _lSum += 0.299*_pix[_i] + 0.587*_pix[_i+1] + 0.114*_pix[_i+2];
+                    _n++;
+                  }
+                }
+                if(_n > 0) _paintingIsDark = (_lSum / _n) < 128;
+              }
+            } catch(_) { /* tainted canvas or no ctx — keep default dark pill */ }
+            _setSwipeFlashDark(_paintingIsDark);
             try { basicSurprise(); } catch(_){}
             // Flash: the effectiveStyle updates on the next render — we snap the
             // NEW pick from the flash timer scheduled below (queue microtask so
