@@ -14550,44 +14550,50 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // ~7 dominant hue peaks, snap every pixel to its closest cluster before
   // building the chord. This tames photo mush into musical chords while
   // leaving painterly images untouched.
-  // Loosened thresholds after real-world testing: real photos have fewer
+  // Loosened thresholds after real-world testing. Real photos have fewer
   // dominant hue clusters than expected (portrait = skin + background;
   // landscape = sky + foliage). Bin activation lowered to 5% of max so
   // secondary hues count; required count lowered to 8.
-  let _photoActiveBins=0;
-  { const _bMax=hueHist.reduce((a,b)=>Math.max(a,b),0)||1;
-    for(let i=0;i<36;i++) if(hueHist[i] >= _bMax*0.05) _photoActiveBins++; }
-  const _photoHueSpread = _photoActiveBins >= 8;
-  const _photoMediumChroma = avgChroma >= 8 && avgChroma <= 40;
-  const _photoDetailNoise = busyness >= 7 && avgChroma <= 40;
-  // Anti-painting veto: extreme chroma is a strong painting signal.
-  //   >40 = intentional saturated palette (Van Gogh, Kandinsky, Kusama)
-  //   <8  = deliberate monochrome (ink, Guernica, sepia)
-  // In either case, force PAINTING regardless of the 3 photo signals.
-  const _paintingChroma = avgChroma > 40 || avgChroma < 8;
-  // 2-of-3 photo signals triggers, unless the anti-painting veto fires.
-  const _photoScore = (_photoHueSpread?1:0) + (_photoMediumChroma?1:0) + (_photoDetailNoise?1:0);
-  const isPhoto = !_paintingChroma && _photoScore >= 2;
-  _setLastImageIsPhoto(isPhoto);
-  // Build quantised palette peaks from the hue histogram — the ~7 dominant
-  // hue centres photos will snap to. Pick top-N bins by weight, ensuring a
-  // minimum angular separation (≥20°) so we don't collect twins from a
-  // single gradient. Only used inside the photo branch below.
-  const _photoPeaks = [];
-  if(isPhoto){
-    const _idxSorted = Array.from({length:36},(_,i)=>i).sort((a,b)=>hueHist[b]-hueHist[a]);
-    for(const bi of _idxSorted){
-      if(_photoPeaks.length >= 7) break;
-      if(hueHist[bi] <= 0) continue;
-      const h = bi*10 + 5;
-      let tooClose=false;
-      for(const p of _photoPeaks){
-        const d = Math.min(Math.abs(h-p), 360-Math.abs(h-p));
-        if(d < 20){ tooClose=true; break; }
+  // Whole block wrapped in try/catch: if ANY unexpected error fires here
+  // we quietly fall back to PAINTING behaviour so the scan never breaks.
+  let isPhoto = false;
+  let _photoPeaks = [];
+  try {
+    let _photoActiveBins = 0;
+    let _bMax = 0;
+    for(let i=0; i<36; i++){ if(hueHist[i] > _bMax) _bMax = hueHist[i]; }
+    if(_bMax <= 0) _bMax = 1;
+    for(let i=0; i<36; i++){ if(hueHist[i] >= _bMax*0.05) _photoActiveBins++; }
+    const _photoHueSpread = _photoActiveBins >= 8;
+    const _photoMediumChroma = avgChroma >= 8 && avgChroma <= 40;
+    const _photoDetailNoise = busyness >= 7 && avgChroma <= 40;
+    const _paintingChroma = avgChroma > 40 || avgChroma < 8;
+    const _photoScore = (_photoHueSpread?1:0) + (_photoMediumChroma?1:0) + (_photoDetailNoise?1:0);
+    isPhoto = !_paintingChroma && _photoScore >= 2;
+    if(isPhoto){
+      // Build ~7 dominant hue peaks with min 20° separation.
+      const _indices = [];
+      for(let i=0; i<36; i++) _indices.push(i);
+      _indices.sort(function(a,b){ return hueHist[b] - hueHist[a]; });
+      for(let k=0; k<_indices.length; k++){
+        if(_photoPeaks.length >= 7) break;
+        const bi = _indices[k];
+        if(hueHist[bi] <= 0) continue;
+        const h = bi*10 + 5;
+        let tooClose = false;
+        for(let pi=0; pi<_photoPeaks.length; pi++){
+          const p = _photoPeaks[pi];
+          const d = Math.min(Math.abs(h-p), 360-Math.abs(h-p));
+          if(d < 20){ tooClose = true; break; }
+        }
+        if(!tooClose) _photoPeaks.push(h);
       }
-      if(!tooClose) _photoPeaks.push(h);
     }
+  } catch(_photoErr){
+    isPhoto = false;
+    _photoPeaks = [];
   }
+  _setLastImageIsPhoto(isPhoto);
   // ─── Tempo from image character ────────────────────────────────────────────
   // The piece used to be a fixed 2:00 for EVERY image, so two utterly different
   // paintings shared the same pulse and length and ended up sounding alike. Now
@@ -14900,8 +14906,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // foliage that generate 4–5 close pitches) read as chord triads, not
       // clusters. Keep the 3 with highest velocity (loudest = most vivid).
       if(isPhoto && notes.length > 3){
-        notes.sort((a,b)=>b.v-a.v);
-        notes.length = 3;
+        // Build a new sorted, truncated array \u2014 don't mutate .length on the
+        // original, iOS/Safari treats Array.length as writable-only under
+        // strict conditions and can throw "readonly property" here.
+        const _sorted = notes.slice().sort((a,b)=>b.v-a.v).slice(0,3);
+        notes.length = 0;
+        for(const _n of _sorted) notes.push(_n);
       }
       // Fallback: grab the most vivid pixel anywhere in the column group
       if(notes.length===0){
