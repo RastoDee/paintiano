@@ -2054,11 +2054,8 @@ function _getSongEnergy(){ return _songEnergy; }
 // Set by pixelsToImageEvents; read by the UI so it can badge the current
 // image as PHOTO or PAINTING. Null before the first image has been scanned.
 let _lastImageIsPhoto = null;
-let _lastImageMetrics = null;
 function _setLastImageIsPhoto(v){ _lastImageIsPhoto = (v==null) ? null : !!v; }
 function _getLastImageIsPhoto(){ return _lastImageIsPhoto; }
-function _setLastImageMetrics(m){ _lastImageMetrics = m || null; }
-function _getLastImageMetrics(){ return _lastImageMetrics; }
 // Set the average octave of the current chord — used by Real mode to nudge
 // high-register chords toward Pastel and low-register chords toward Dark
 // (regardless of the chord's energy band). Call alongside _setCurE on each
@@ -14599,7 +14596,6 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     const _paintingSignal = avgChroma > 42 || avgChroma < 6 || _top3Frac > 0.75;
     // All three photo signals must be true AND no painting veto fires.
     isPhoto = !_paintingSignal && _photoChroma && _photoBusy && _photoNotConcentrated;
-    try { _setLastImageMetrics({ top3: _top3Frac, chroma: avgChroma, busyness: busyness, diffuse: _photoDiffuse, medChroma: _photoMediumChroma, detailNoise: _photoDetailNoise, veto: _paintingSignal }); } catch(_){}
     if(isPhoto){
       // Build ~7 dominant hue peaks with min 20° separation.
       const _indices = [];
@@ -14622,7 +14618,6 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   } catch(_photoErr){
     isPhoto = false;
     _photoPeaks = [];
-    try { _setLastImageMetrics({ error: true }); } catch(_){}
   }
   _setLastImageIsPhoto(isPhoto);
   // ─── Tempo from image character ────────────────────────────────────────────
@@ -23135,6 +23130,10 @@ export default function Paintiano() {
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
+  // Ref mirror of immersive so callbacks that fire outside React's re-render
+  // cycle (grid computation, effects with stale closures) can read the live
+  // value without being re-created every time the flag toggles.
+  const immersiveRef = useRef(false);
   // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
   // Touch tracking for the vertical swipe gesture on the immersive canvas.
   // Stores {y, x, t} at touchStart; touchEnd computes the delta and decides
@@ -23929,6 +23928,7 @@ export default function Paintiano() {
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
   },[basicMode]);
+  useEffect(()=>{ immersiveRef.current = immersive; },[immersive]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
   // Free (and first-time) visitors still start in Lite. We only auto-switch on
   // the first load of a visitor who hasn't been onboarded yet (paintiano_basic_mode
@@ -24467,7 +24467,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cells || cells.length < chords.length){
         try{
           const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+          // liteWide extends to Advanced fullscreen (immersive) too so the
+          // fullscreen mosaic canvas matches Lite's edge-to-edge look. Normal
+          // (non-fullscreen) Advanced keeps its usual grid.
+          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current || immersiveRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
           gridRef.current = fixed;
           setGrid(fixed);
         }catch(_){}
@@ -24850,7 +24853,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // In Lite, both voice and music capture use the grow-canvas (portrait) shape
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
-    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, liteWide: basicModeRef.current || immersiveRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -33729,35 +33732,6 @@ Hard requirements:
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
-          </div>
-        );
-      })()}
-      {/* PHOTO/PAINTING debug badge — shows which classifier branch fired
-          for the current image scan. Visible only in Image mode with an
-          active pixel scan. Reads a module-level flag from 02-draw.jsx
-          set by pixelsToImageEvents when the piece was transcribed. */}
-      {viewMode==='image' && originalImgUrl && pixelRef.current && typeof _getLastImageIsPhoto==='function' && stamp>=0 && (()=>{
-        const _ip = _getLastImageIsPhoto();
-        if(_ip===null) return null;
-        const _label = _ip ? 'PHOTO' : 'PAINTING';
-        // Diagnostic metrics from the detector so we can see WHY it decided.
-        let _diag = '';
-        try {
-          if(typeof _getLastImageMetrics === 'function'){
-            const _m = _getLastImageMetrics();
-            if(_m && !_m.error){
-              const _t3 = Math.round((_m.top3 || 0) * 100);
-              const _ch = Math.round(_m.chroma || 0);
-              const _bz = Math.round(_m.busyness || 0);
-              _diag = ' \u00b7 t3:' + _t3 + '% c:' + _ch + ' b:' + _bz + (_m.veto ? ' [veto]' : '');
-            }
-          }
-        } catch(_){}
-        return (
-          <div style={{display:'flex',justifyContent:'center',marginBottom:8,pointerEvents:'none'}}>
-            <div style={{padding:'4px 12px',borderRadius:12,border:'1px solid rgba(201,168,76,.55)',background:'rgba(201,168,76,.10)',color:'rgba(220,180,90,.98)',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',fontStyle:'italic',fontFamily:'inherit'}}>
-              {_label}{_diag}
-            </div>
           </div>
         );
       })()}
