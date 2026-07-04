@@ -12707,7 +12707,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // The old global dynScale multiplier that lived here was retired in the
   // Phase 2 audit — the centre+compress model in Final dynamics replaces
   // it without the slow-motion-film side effect of flat scaling.
-  const dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
+  let dynE = Math.max(0, Math.min(1, 0.55*eContrast + 0.45*eBusy));
   // ── RHYTHM DRIVE ──
   // A single 0..1 knob that turns "calm/legato/sparse" into "lively/articulated/
   // dense" as it rises. Driven by energy, nudged up by positive valence (bright
