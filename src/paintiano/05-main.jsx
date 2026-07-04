@@ -12030,7 +12030,7 @@ Hard requirements:
           tells the user what a swipe does in the current mode: Lite → Surprise,
           Advanced → Next. Only rendered when immersive; occupies the letterbox
           area where INSPIRED BY used to be. Swipe flash still fires below. */}
-      {immersive && viewMode!=='image' && !liteImageMode && (
+      {immersive && viewMode!=='image' && !liteImageMode && (basicMode || style || randomMode) && (
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
           {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
         </div>
