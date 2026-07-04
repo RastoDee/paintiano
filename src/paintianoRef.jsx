@@ -20905,9 +20905,60 @@ function useEntitlements() {
   };
 }
 
-// ─── watermark for free exports (no-op for Pro) ───────────────────────────────
+// ─── φ signature for Pro exports (bottom-right of the canvas) ──────────────
+// Small italic φ in the paintiano gold, drawn in 3 layers so it reads on both
+// dark and light grounds without probing the pixels underneath: a hairline dark
+// ductus for legibility on gold/paper areas, the main gold glyph (#c9a84c) and
+// a warm highlight so the mark feels engraved rather than painted on top. Size
+// is 2.6% of the shorter edge and the margin 2.8%, so vertical Story exports
+// (1596×2604) and square feed exports get an identically proportioned mark.
+function _drawPhiSignature(canvas) {
+  try {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const w = canvas.width, h = canvas.height;
+    const minEdge = Math.min(w, h);
+    // 3.2% of the shorter edge — comfortably visible on 5544×7420 A1 exports
+    // while staying discreet on square feed exports.
+    const fontPx = Math.max(18, Math.round(minEdge * 0.032));
+    const margin = Math.round(minEdge * 0.030);
+    ctx.save();
+    // Reset any active transform (scale/rotate) left by the chord-grid
+    // renderer — without this our draw lands in scaled coords and misses the
+    // export canvas entirely. This was the root cause of ‘no φ in PNG’.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const cx = w - margin;
+    const cy = h - margin;
+    // Canvas 2D does NOT honour the CSS font fallback chain like HTML does:
+    // if the first family isn't loaded yet, the whole rule may be ignored.
+    // Use system serifs (Georgia + Times) that are guaranteed to be present
+    // and render φ beautifully in italic. No webfont dependency.
+    ctx.font = 'italic 600 ' + fontPx + 'px Georgia, "Times New Roman", Times, serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    const OP = 0.72;
+    // Dark outline stroke — keeps the glyph legible on gold/paper grounds
+    // without needing to sample the pixels underneath.
+    ctx.lineWidth = Math.max(2, Math.round(fontPx * 0.06));
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(0,0,0,' + (OP * 0.55).toFixed(2) + ')';
+    ctx.strokeText('φ', cx, cy);
+    // Main gold glyph — paintiano brand colour.
+    ctx.globalAlpha = OP;
+    ctx.fillStyle = '#c9a84c';
+    ctx.fillText('φ', cx, cy);
+    // Warm highlight above-left — engraved feel on dark grounds.
+    ctx.globalAlpha = OP * 0.35;
+    ctx.fillStyle = '#ffdc8c';
+    ctx.fillText('φ', cx - Math.max(1, fontPx * 0.02), cy - Math.max(1, fontPx * 0.03));
+    ctx.restore();
+  } catch (_) {}
+}
+
+// ─── watermark: diagonal tile on Free, discreet φ signature on Pro/Pro AI ────
 function applyWatermark(canvas, isPro) {
-  if (isPro || !canvas) return canvas;
+  if (!canvas) return canvas;
+  if (isPro) { _drawPhiSignature(canvas); return canvas; }
   try {
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
@@ -22953,6 +23004,15 @@ export default function Paintiano() {
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
+  // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
+  // Touch tracking for the vertical swipe gesture on the immersive canvas.
+  // Stores {y, x, t} at touchStart; touchEnd computes the delta and decides
+  // whether it was a swipe (fires basicSurprise + flash) or a plain tap (lets
+  // the existing canvas onClick handler run normally).
+  const _swipeStartRef = useRef(null);
+  const _swipeWasGestureRef = useRef(false);
+  const [_swipeFlashKey, _setSwipeFlashKey] = useState(null);
+  const _swipeFlashTimerRef = useRef(null);
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
@@ -31642,7 +31702,7 @@ Hard requirements:
 
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
@@ -33359,12 +33419,12 @@ Hard requirements:
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?7:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
-            {basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
+            {!immersive && basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
-            {basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
+            {!immersive && basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
               <span key={`insp-${effectiveStyle==='notes'?'notes':'mosaic'}`} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>{effectiveStyle==='notes'?t('notesStyle'):t('liteMosaicStyle')}</span>
             )}
           </div>
@@ -33504,30 +33564,90 @@ Hard requirements:
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
         </button>
       )}
-      {/* Fullscreen artist attribution — fixed near the viewport top so it sits
-          in the black letterbox ABOVE the canvas. The user prefers it high (even
-          close to the URL bar) over ever landing on the painting. Shows the
-          inspiring artist (fixed pick OR shuffle draw); also shown for the
-          Mosaic family. "inspired by" prefix is added for artists and for
-          oneM ("One Million Dollar Page"); plain Mosaic and Notes show the
-          bare label without the prefix. */}
-      {immersive && STYLE_INSPIRED[effectiveStyle || 'mosaic'] && (()=>{
-        const _key = effectiveStyle || 'mosaic';
-        const _bare = (_key === 'mosaic' || _key === 'notes');
-        const _label = _key === 'notes' ? t('notesStyle')
-                     : _key === 'mosaic' ? t('mosaicStyle')
-                     : STYLE_INSPIRED[_key];
+      {/* Top-of-screen artist attribution intentionally removed in Lite fullscreen:
+          the swipe-up flash (below) is the sole feedback mechanism — nothing
+          permanent sits on the painting or in the letterbox. */}
+      {/* Swipe-up flash — large centred “inspired by <artist>” that fades in,
+          holds, and fades out over ~1.2s. Fires only in Lite fullscreen after a
+          recognised swipe-up gesture; effectiveStyle is read at render time so
+          the label always reflects the newly-picked artist. */}
+      {immersive && basicMode && _swipeFlashKey && (()=>{
+        const _fKey = effectiveStyle || 'mosaic';
+        const _fBare = (_fKey === 'mosaic' || _fKey === 'notes');
+        const _fLabel = _fKey === 'notes' ? t('notesStyle')
+                      : _fKey === 'mosaic' ? t('liteMosaicStyle')
+                      : STYLE_INSPIRED[_fKey];
+        if(!_fLabel) return null;
         return (
-        <div style={{position:'fixed',top:'max(8px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.95)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
-          {!style&&(<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.85}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}
-          {!_bare && (<span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span>)} {_label}
-        </div>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
+            {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
+            <div>{_fLabel}</div>
+          </div>
         );
       })()}
       <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
+        onTouchStart={e=>{
+          // Lite fullscreen only: track swipe start. Ignore multi-touch (pinch).
+          if(!immersive || !basicMode) return;
+          if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
+          const tt = e.touches[0];
+          _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
+          _swipeWasGestureRef.current = false;
+        }}
+        onTouchMove={e=>{
+          // Mark the interaction as a gesture-in-progress as soon as vertical
+          // travel is meaningful — the tap guard in onClick reads this so the
+          // trailing onClick after touchend doesn't also trigger.
+          if(!immersive || !basicMode) return;
+          const s = _swipeStartRef.current; if(!s) return;
+          const tt = e.touches[0]; if(!tt) return;
+          const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
+          if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx) * 1.2){
+            _swipeWasGestureRef.current = true;
+          }
+        }}
+        onTouchEnd={e=>{
+          if(!immersive || !basicMode) return;
+          const s = _swipeStartRef.current; _swipeStartRef.current = null;
+          if(!s) return;
+          const tt = (e.changedTouches && e.changedTouches[0]) || null;
+          if(!tt) return;
+          const dy = tt.clientY - s.y, dx = tt.clientX - s.x, dt = Date.now() - s.t;
+          // Swipe criteria: 50px minimum vertical travel, under 700ms,
+          // clearly dominant vertical direction. Otherwise it was a tap or
+          // an ambiguous drag — let onClick handle it normally.
+          if(dt > 700 || Math.abs(dy) < 50 || Math.abs(dy) < Math.abs(dx) * 1.5){
+            _swipeWasGestureRef.current = false;
+            return;
+          }
+          // Swipe UP → next Surprise (same handler the "Prekvap ma" chip uses).
+          // Show the inspired-by flash overlay in the centre of the canvas.
+          if(dy < 0){
+            _swipeWasGestureRef.current = true;
+            try { basicSurprise(); } catch(_){}
+            // Fire the flash on the next tick so it renders WITH the new
+            // painting, not before. The overlay uses a text-stroke trick so
+            // it stays legible on any background — no luminance sampling.
+            if(_swipeFlashTimerRef.current) { clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
+            setTimeout(()=>{
+              _setSwipeFlashKey('flash-' + Date.now());
+              _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, 1200);
+            }, 0);
+          }
+          // Swipe down: intentionally does nothing — exit stays on the X
+          // button only (per product decision).
+        }}
         onClick={e=>{
+          // Swipe-tap guard: if the touch ended as a recognised swipe we must
+          // suppress the trailing synthetic click, otherwise the canvas would
+          // also try to select a chord under the fingertip.
+          if(_swipeWasGestureRef.current){
+            _swipeWasGestureRef.current = false;
+            e.preventDefault(); e.stopPropagation();
+            return;
+          }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
@@ -33620,7 +33740,9 @@ Hard requirements:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive && !showMode;
+          // Note: !showMode removed — NEXT stays active during Show so users
+          // can manually jump within an auto-shuffle sequence. Same in normal.
+          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image' && canRollNextFs;
           const showSlideFs = playing && randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image';
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
@@ -33647,7 +33769,7 @@ Hard requirements:
                   {t(mode)||mode} ›
                 </button>
               )}
-              {showNextFs && (
+              {!immersive && showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   next ›
@@ -34490,10 +34612,10 @@ Hard requirements:
           // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
           // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
           // with no randomMode).
-          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive && !showMode;
+          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={showMode?'Show is auto-shuffling — tap Show to stop':(canRoll?'next painting — jump to a new variation':'wait for the current action to finish')} aria-label="next painting" style={txStyle('pink',{effScale,disabled:!canRoll})}><TxIcon n="next" s={14*effScale}/>{t('next')!=='next'?t('next'):'Next'}</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={txStyle('pink',{effScale,disabled:!canRoll})}><TxIcon n="next" s={14*effScale}/>{t('next')!=='next'?t('next'):'Next'}</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
@@ -35352,11 +35474,11 @@ Hard requirements:
           </div>
         )}
         {!_litePlayChipShown && <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
-          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
-          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
           {!immersive && (liteImageMode
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
+          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
+          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
         </>
         );

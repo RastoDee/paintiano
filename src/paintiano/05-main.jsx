@@ -12013,6 +12013,15 @@ Hard requirements:
       {/* Top-of-screen artist attribution intentionally removed in Lite fullscreen:
           the swipe-up flash (below) is the sole feedback mechanism — nothing
           permanent sits on the painting or in the letterbox. */}
+      {/* Fullscreen swipe hint — static gold italic label above the canvas that
+          tells the user what a swipe does in the current mode: Lite → Surprise,
+          Advanced → Next. Only rendered when immersive; occupies the letterbox
+          area where INSPIRED BY used to be. Swipe flash still fires below. */}
+      {immersive && (
+        <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
+          {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
+        </div>
+      )}
       {/* Swipe-up flash — large centred “inspired by <artist>” that fades in,
           holds, and fades out over ~1.2s. Fires only in Lite fullscreen after a
           recognised swipe-up gesture; effectiveStyle is read at render time so
