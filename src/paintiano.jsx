@@ -23928,7 +23928,22 @@ export default function Paintiano() {
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
   },[basicMode]);
-  useEffect(()=>{ immersiveRef.current = immersive; },[immersive]);
+  useEffect(()=>{
+    immersiveRef.current = immersive;
+    // Entering/leaving fullscreen changes which frame the canvas should use:
+    // Advanced fullscreen borrows Lite's wide portrait frame (liteWide), and
+    // must return to the usual Advanced frame on exit. Lite is always wide,
+    // so no recompute is needed there. Image scan pins its own CSS size.
+    if(basicModeRef.current) return;
+    if(viewModeRef.current==='image') return;
+    const evs=chordsRef.current;
+    if(!evs || !evs.length) return;
+    try{
+      const ng=computeGrid(evs,{liveMode:(draftOwnerRef.current!=='listen'), liteWide: immersive, portraitGrow: false});
+      gridRef.current=ng;
+      setGrid(ng);
+    }catch(_){}
+  },[immersive]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
   // Free (and first-time) visitors still start in Lite. We only auto-switch on
   // the first load of a visitor who hasn't been onboarded yet (paintiano_basic_mode
@@ -24906,7 +24921,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(t) clearTimeout(t);
       t=setTimeout(()=>{
         if(_skip()) return;
-        const ng=computeGrid(chordsRef.current);
+        const ng=computeGrid(chordsRef.current,{liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current || immersiveRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
         gridRef.current=ng;
         // Apply immediately — even during playback. The paint loop reads gridRef
         // (already updated above), so this only syncs the visual canvas size.
