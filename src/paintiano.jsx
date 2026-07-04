@@ -33704,7 +33704,7 @@ Hard requirements:
           tells the user what a swipe does in the current mode: Lite → Surprise,
           Advanced → Next. Only rendered when immersive; occupies the letterbox
           area where INSPIRED BY used to be. Swipe flash still fires below. */}
-      {immersive && viewMode!=='image' && !liteImageMode && (
+      {immersive && viewMode!=='image' && !liteImageMode && (basicMode || style || randomMode) && (
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
           {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
         </div>
@@ -33775,8 +33775,14 @@ Hard requirements:
               if(basicMode){
                 basicSurprise();
               } else {
-                nextRollInProgressRef.current = true;
-                if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); }
+                // Advanced FS swipe mirrors the NEXT button: only rolls when
+                // a look is active (specific style) or shuffle is ON. With
+                // dice OFF the gesture is intentionally a no-op — the hint
+                // label is hidden in that state too, so nothing is promised.
+                if(style || randomMode){
+                  nextRollInProgressRef.current = true;
+                  _diceRoll();
+                }
               }
             } catch(_){}
             // Fire the flash on the next tick so it renders WITH the new
