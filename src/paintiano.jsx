@@ -33604,7 +33604,7 @@ Hard requirements:
           const s = _swipeStartRef.current; if(!s) return;
           const tt = e.touches[0]; if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
-          if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx) * 1.2){
+          if(Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx) * 1.1){
             _swipeWasGestureRef.current = true;
           }
         }}
@@ -33618,7 +33618,7 @@ Hard requirements:
           // Swipe criteria: 50px minimum vertical travel, under 700ms,
           // clearly dominant vertical direction. Otherwise it was a tap or
           // an ambiguous drag — let onClick handle it normally.
-          if(dt > 700 || Math.abs(dy) < 50 || Math.abs(dy) < Math.abs(dx) * 1.5){
+          if(dt > 900 || Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2){
             _swipeWasGestureRef.current = false;
             return;
           }
