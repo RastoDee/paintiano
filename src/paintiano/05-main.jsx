@@ -12113,6 +12113,10 @@ Hard requirements:
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
           if(demoReelOn){ demoReelStop(); return; }
+          // In fullscreen: tap only wakes CTAs (already fired above). Chord
+          // select is disabled here so it doesn't race with the swipe gesture
+          // (which fires only on touchend). Same behaviour for Lite & Advanced.
+          if(immersive) return;
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
           const rect=cv.getBoundingClientRect();
