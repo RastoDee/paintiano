@@ -12035,7 +12035,6 @@ Hard requirements:
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onTouchStart={e=>{
-          try { if(typeof window!=='undefined'){ window.__swipeAdvLog=window.__swipeAdvLog||[]; window.__swipeAdvLog.push('start immersive=' + immersive + ' basicMode=' + basicMode + ' touches=' + e.touches.length); if(window.__swipeAdvLog.length>30) window.__swipeAdvLog.shift(); } } catch(_){}
           if(!immersive) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
@@ -12055,7 +12054,6 @@ Hard requirements:
           }
         }}
         onTouchEnd={e=>{
-          try { if(typeof window!=='undefined'){ window.__swipeAdvLog=window.__swipeAdvLog||[]; window.__swipeAdvLog.push('end immersive=' + immersive + ' hasStart=' + !!_swipeStartRef.current); } } catch(_){}
           if(!immersive) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
@@ -12065,16 +12063,13 @@ Hard requirements:
           // Swipe criteria: 50px minimum vertical travel, under 700ms,
           // clearly dominant vertical direction. Otherwise it was a tap or
           // an ambiguous drag — let onClick handle it normally.
-          try { if(typeof window!=='undefined'){ window.__swipeAdvLog.push('end-eval dy=' + dy.toFixed(0) + ' dx=' + dx.toFixed(0) + ' dt=' + dt); } } catch(_){}
           if(dt > 900 || Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2){
-            try { if(typeof window!=='undefined'){ window.__swipeAdvLog.push('REJECT: dt=' + dt + ' |dy|=' + Math.abs(dy).toFixed(0) + ' |dx|=' + Math.abs(dx).toFixed(0)); } } catch(_){}
             _swipeWasGestureRef.current = false;
             return;
           }
           // Swipe UP → next Surprise (same handler the "Prekvap ma" chip uses).
           // Show the inspired-by flash overlay in the centre of the canvas.
           if(dy < 0){
-            try { if(typeof window!=='undefined'){ window.__swipeAdvLog.push('FIRE basicMode=' + basicMode + ' style=' + (style||'null') + ' randomMode=' + randomMode); } } catch(_){}
             _swipeWasGestureRef.current = true;
             // Lite: cycle through Surprise shuffle. Advanced: perform the
             // same action the NEXT button used to do (dice roll, either in
