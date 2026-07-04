@@ -12061,10 +12061,23 @@ Hard requirements:
         const _ip = _getLastImageIsPhoto();
         if(_ip===null) return null;
         const _label = _ip ? 'PHOTO' : 'PAINTING';
+        // Diagnostic metrics from the detector so we can see WHY it decided.
+        let _diag = '';
+        try {
+          if(typeof _getLastImageMetrics === 'function'){
+            const _m = _getLastImageMetrics();
+            if(_m && !_m.error){
+              const _t3 = Math.round((_m.top3 || 0) * 100);
+              const _ch = Math.round(_m.chroma || 0);
+              const _bz = Math.round(_m.busyness || 0);
+              _diag = ' \u00b7 t3:' + _t3 + '% c:' + _ch + ' b:' + _bz + (_m.veto ? ' [veto]' : '');
+            }
+          }
+        } catch(_){}
         return (
           <div style={{display:'flex',justifyContent:'center',marginBottom:8,pointerEvents:'none'}}>
-            <div style={{padding:'4px 12px',borderRadius:12,border:'1px solid rgba(201,168,76,.55)',background:'rgba(201,168,76,.10)',color:'rgba(220,180,90,.98)',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',fontFamily:'inherit'}}>
-              {_label}
+            <div style={{padding:'4px 12px',borderRadius:12,border:'1px solid rgba(201,168,76,.55)',background:'rgba(201,168,76,.10)',color:'rgba(220,180,90,.98)',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',fontStyle:'italic',fontFamily:'inherit'}}>
+              {_label}{_diag}
             </div>
           </div>
         );

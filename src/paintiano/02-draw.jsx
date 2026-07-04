@@ -133,8 +133,11 @@ function _getSongEnergy(){ return _songEnergy; }
 // Set by pixelsToImageEvents; read by the UI so it can badge the current
 // image as PHOTO or PAINTING. Null before the first image has been scanned.
 let _lastImageIsPhoto = null;
+let _lastImageMetrics = null;
 function _setLastImageIsPhoto(v){ _lastImageIsPhoto = (v==null) ? null : !!v; }
 function _getLastImageIsPhoto(){ return _lastImageIsPhoto; }
+function _setLastImageMetrics(m){ _lastImageMetrics = m || null; }
+function _getLastImageMetrics(){ return _lastImageMetrics; }
 // Set the average octave of the current chord — used by Real mode to nudge
 // high-register chords toward Pastel and low-register chords toward Dark
 // (regardless of the chord's energy band). Call alongside _setCurE on each
@@ -12668,6 +12671,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // low-chroma paintings pass it too); combining it with chroma and
     // detail signals catches real photos while leaving art alone.
     isPhoto = !_paintingSignal && _photoDiffuse && (_photoMediumChroma || _photoDetailNoise);
+    try { _setLastImageMetrics({ top3: _top3Frac, chroma: avgChroma, busyness: busyness, diffuse: _photoDiffuse, medChroma: _photoMediumChroma, detailNoise: _photoDetailNoise, veto: _paintingSignal }); } catch(_){}
     if(isPhoto){
       // Build ~7 dominant hue peaks with min 20° separation.
       const _indices = [];
@@ -12690,6 +12694,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   } catch(_photoErr){
     isPhoto = false;
     _photoPeaks = [];
+    try { _setLastImageMetrics({ error: true }); } catch(_){}
   }
   _setLastImageIsPhoto(isPhoto);
   // ─── Tempo from image character ────────────────────────────────────────────

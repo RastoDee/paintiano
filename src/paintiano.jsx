@@ -2054,8 +2054,11 @@ function _getSongEnergy(){ return _songEnergy; }
 // Set by pixelsToImageEvents; read by the UI so it can badge the current
 // image as PHOTO or PAINTING. Null before the first image has been scanned.
 let _lastImageIsPhoto = null;
+let _lastImageMetrics = null;
 function _setLastImageIsPhoto(v){ _lastImageIsPhoto = (v==null) ? null : !!v; }
 function _getLastImageIsPhoto(){ return _lastImageIsPhoto; }
+function _setLastImageMetrics(m){ _lastImageMetrics = m || null; }
+function _getLastImageMetrics(){ return _lastImageMetrics; }
 // Set the average octave of the current chord — used by Real mode to nudge
 // high-register chords toward Pastel and low-register chords toward Dark
 // (regardless of the chord's energy band). Call alongside _setCurE on each
@@ -14589,6 +14592,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // low-chroma paintings pass it too); combining it with chroma and
     // detail signals catches real photos while leaving art alone.
     isPhoto = !_paintingSignal && _photoDiffuse && (_photoMediumChroma || _photoDetailNoise);
+    try { _setLastImageMetrics({ top3: _top3Frac, chroma: avgChroma, busyness: busyness, diffuse: _photoDiffuse, medChroma: _photoMediumChroma, detailNoise: _photoDetailNoise, veto: _paintingSignal }); } catch(_){}
     if(isPhoto){
       // Build ~7 dominant hue peaks with min 20° separation.
       const _indices = [];
@@ -14611,6 +14615,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   } catch(_photoErr){
     isPhoto = false;
     _photoPeaks = [];
+    try { _setLastImageMetrics({ error: true }); } catch(_){}
   }
   _setLastImageIsPhoto(isPhoto);
   // ─── Tempo from image character ────────────────────────────────────────────
@@ -33728,10 +33733,23 @@ Hard requirements:
         const _ip = _getLastImageIsPhoto();
         if(_ip===null) return null;
         const _label = _ip ? 'PHOTO' : 'PAINTING';
+        // Diagnostic metrics from the detector so we can see WHY it decided.
+        let _diag = '';
+        try {
+          if(typeof _getLastImageMetrics === 'function'){
+            const _m = _getLastImageMetrics();
+            if(_m && !_m.error){
+              const _t3 = Math.round((_m.top3 || 0) * 100);
+              const _ch = Math.round(_m.chroma || 0);
+              const _bz = Math.round(_m.busyness || 0);
+              _diag = ' \u00b7 t3:' + _t3 + '% c:' + _ch + ' b:' + _bz + (_m.veto ? ' [veto]' : '');
+            }
+          }
+        } catch(_){}
         return (
           <div style={{display:'flex',justifyContent:'center',marginBottom:8,pointerEvents:'none'}}>
-            <div style={{padding:'4px 12px',borderRadius:12,border:'1px solid rgba(201,168,76,.55)',background:'rgba(201,168,76,.10)',color:'rgba(220,180,90,.98)',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',fontFamily:'inherit'}}>
-              {_label}
+            <div style={{padding:'4px 12px',borderRadius:12,border:'1px solid rgba(201,168,76,.55)',background:'rgba(201,168,76,.10)',color:'rgba(220,180,90,.98)',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',fontStyle:'italic',fontFamily:'inherit'}}>
+              {_label}{_diag}
             </div>
           </div>
         );
