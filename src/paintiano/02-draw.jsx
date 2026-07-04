@@ -12629,26 +12629,45 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // ~7 dominant hue peaks, snap every pixel to its closest cluster before
   // building the chord. This tames photo mush into musical chords while
   // leaving painterly images untouched.
-  // Loosened thresholds after real-world testing. Real photos have fewer
-  // dominant hue clusters than expected (portrait = skin + background;
-  // landscape = sky + foliage). Bin activation lowered to 5% of max so
-  // secondary hues count; required count lowered to 8.
+  // Photo detector v3: HUE CONCENTRATION as the primary signal.
+  // Paintings have a discrete palette — a few dominant colours occupy
+  // most of the hue histogram (top-3 bins hold >50% of the weight).
+  // Photographs have a diffuse palette — skin, sky, foliage, shadows
+  // spread across many bins with no single dominant peak (top-3 bins
+  // hold only ~25-40% of the weight).
   // Whole block wrapped in try/catch: if ANY unexpected error fires here
   // we quietly fall back to PAINTING behaviour so the scan never breaks.
   let isPhoto = false;
   let _photoPeaks = [];
   try {
-    let _photoActiveBins = 0;
-    let _bMax = 0;
-    for(let i=0; i<36; i++){ if(hueHist[i] > _bMax) _bMax = hueHist[i]; }
-    if(_bMax <= 0) _bMax = 1;
-    for(let i=0; i<36; i++){ if(hueHist[i] >= _bMax*0.05) _photoActiveBins++; }
-    const _photoHueSpread = _photoActiveBins >= 8;
-    const _photoMediumChroma = avgChroma >= 8 && avgChroma <= 40;
-    const _photoDetailNoise = busyness >= 7 && avgChroma <= 40;
-    const _paintingChroma = avgChroma > 40 || avgChroma < 8;
-    const _photoScore = (_photoHueSpread?1:0) + (_photoMediumChroma?1:0) + (_photoDetailNoise?1:0);
-    isPhoto = !_paintingChroma && _photoScore >= 2;
+    // Total hue weight + top-3 bin concentration
+    let _hueTotal = 0;
+    for(let i=0; i<36; i++) _hueTotal += hueHist[i];
+    let _top3Sum = 0;
+    if(_hueTotal > 0){
+      // Copy hueHist into a plain array, sort desc, take top-3.
+      const _sorted = [];
+      for(let i=0; i<36; i++) _sorted.push(hueHist[i]);
+      _sorted.sort(function(a,b){ return b - a; });
+      _top3Sum = _sorted[0] + _sorted[1] + _sorted[2];
+    }
+    const _top3Frac = _hueTotal > 0 ? (_top3Sum / _hueTotal) : 1;
+    // Photo signal 1: DIFFUSE hue distribution (top-3 hold <45% of weight)
+    const _photoDiffuse = _top3Frac < 0.45;
+    // Photo signal 2: MEDIUM chroma (not extreme saturated palette)
+    const _photoMediumChroma = avgChroma >= 8 && avgChroma <= 35;
+    // Photo signal 3: HIGH busyness with restrained chroma (natural texture)
+    const _photoDetailNoise = busyness >= 8 && avgChroma <= 35;
+    // Anti-photo veto: HIGHLY concentrated palette is always painting.
+    //   top-3 >60% = deliberate palette (Mondrian, Rothko, Kusama)
+    //   chroma >42 = intentional saturated art (Van Gogh, Kandinsky)
+    //   chroma <6  = deliberate monochrome (ink, sepia, Guernica)
+    const _paintingSignal = _top3Frac > 0.60 || avgChroma > 42 || avgChroma < 6;
+    // Require the DIFFUSE signal (mandatory) + at least ONE of the other
+    // two, and no painting veto. Diffuse alone isn't enough (some flat
+    // low-chroma paintings pass it too); combining it with chroma and
+    // detail signals catches real photos while leaving art alone.
+    isPhoto = !_paintingSignal && _photoDiffuse && (_photoMediumChroma || _photoDetailNoise);
     if(isPhoto){
       // Build ~7 dominant hue peaks with min 20° separation.
       const _indices = [];
