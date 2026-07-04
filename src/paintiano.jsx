@@ -33774,9 +33774,13 @@ Hard requirements:
             try {
               if(basicMode){
                 basicSurprise();
-              } else {
+              } else if(style || randomMode){
+                // Advanced FS swipe = same as NEXT button: only rolls when
+                // dice is ON (specific artist look OR shuffle). With dice OFF
+                // the gesture is a full no-op (no side effects), matching
+                // the hidden hint label — nothing is promised, nothing fires.
                 nextRollInProgressRef.current = true;
-                if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); }
+                _diceRoll();
               }
             } catch(_){}
             // Fire the flash on the next tick so it renders WITH the new
