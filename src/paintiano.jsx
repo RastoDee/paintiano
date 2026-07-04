@@ -33575,7 +33575,7 @@ Hard requirements:
         const _fKey = effectiveStyle || 'mosaic';
         const _fBare = (_fKey === 'mosaic' || _fKey === 'notes');
         const _fLabel = _fKey === 'notes' ? t('notesStyle')
-                      : _fKey === 'mosaic' ? t('liteMosaicStyle')
+                      : _fKey === 'mosaic' ? t(basicMode ? 'liteMosaicStyle' : 'mosaicStyle')
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
@@ -33587,9 +33587,9 @@ Hard requirements:
       })()}
       <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
-        onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
+        onPointerMove={()=>{ if(_swipeStartRef.current) return; if(playing||immersive) wakeControls(); }}
         onTouchStart={e=>{
-          if(!immersive) return;
+          if(!immersive || viewMode==='image' || liteImageMode) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
@@ -33599,7 +33599,7 @@ Hard requirements:
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
-          if(!immersive) return;
+          if(!immersive || viewMode==='image' || liteImageMode) return;
           const s = _swipeStartRef.current; if(!s) return;
           const tt = e.touches[0]; if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
@@ -33608,7 +33608,7 @@ Hard requirements:
           }
         }}
         onTouchEnd={e=>{
-          if(!immersive) return;
+          if(!immersive || viewMode==='image' || liteImageMode) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
