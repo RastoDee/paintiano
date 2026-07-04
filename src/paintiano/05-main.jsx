@@ -12026,11 +12026,11 @@ Hard requirements:
           holds, and fades out over ~1.2s. Fires only in Lite fullscreen after a
           recognised swipe-up gesture; effectiveStyle is read at render time so
           the label always reflects the newly-picked artist. */}
-      {immersive && basicMode && _swipeFlashKey && (()=>{
+      {immersive && _swipeFlashKey && (()=>{
         const _fKey = effectiveStyle || 'mosaic';
         const _fBare = (_fKey === 'mosaic' || _fKey === 'notes');
         const _fLabel = _fKey === 'notes' ? t('notesStyle')
-                      : _fKey === 'mosaic' ? t('liteMosaicStyle')
+                      : _fKey === 'mosaic' ? t(basicMode ? 'liteMosaicStyle' : 'mosaicStyle')
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
@@ -12044,8 +12044,9 @@ Hard requirements:
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onTouchStart={e=>{
-          // Lite fullscreen only: track swipe start. Ignore multi-touch (pinch).
-          if(!immersive || !basicMode) return;
+          // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
+          // is bound to the image — no next style to swipe to). Ignore multi-touch.
+          if(!immersive || viewMode==='image' || liteImageMode) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
@@ -12055,7 +12056,7 @@ Hard requirements:
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
-          if(!immersive || !basicMode) return;
+          if(!immersive || viewMode==='image' || liteImageMode) return;
           const s = _swipeStartRef.current; if(!s) return;
           const tt = e.touches[0]; if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
@@ -12064,7 +12065,7 @@ Hard requirements:
           }
         }}
         onTouchEnd={e=>{
-          if(!immersive || !basicMode) return;
+          if(!immersive || viewMode==='image' || liteImageMode) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
@@ -12081,7 +12082,16 @@ Hard requirements:
           // Show the inspired-by flash overlay in the centre of the canvas.
           if(dy < 0){
             _swipeWasGestureRef.current = true;
-            try { basicSurprise(); } catch(_){}
+            // Lite: cycle through Surprise shuffle. Advanced: perform the
+            // same action the NEXT button used to do (dice roll).
+            try {
+              if(basicMode){
+                basicSurprise();
+              } else {
+                nextRollInProgressRef.current = true;
+                if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); }
+              }
+            } catch(_){}
             // Fire the flash on the next tick so it renders WITH the new
             // painting, not before. The overlay uses a text-stroke trick so
             // it stays legible on any background — no luminance sampling.
