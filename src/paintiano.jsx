@@ -14530,6 +14530,47 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const lightVar=lN?Math.max(0,lSqSum/lN - avgLight*avgLight):0;
   const contrast=Math.sqrt(lightVar);    // 0 (flat) … ~50 (extreme black↔white)
   const busyness=edgeN?edgeSum/edgeN:0;  // 0 (smooth) … ~30+ (very detailed)
+  // ─── PHOTO vs PAINTING DETECTOR ─────────────────────────────────
+  // Real-world photographs have very different colour DNA from paintings:
+  //   • hue entropy: photos spread across many bins (skin gradients, sky
+  //     gradients, foliage), paintings cluster in a handful of dominant
+  //     hues (intentional palette).
+  //   • chroma: photos sit in a medium band (12–30%), paintings are
+  //     either high (>35%) or explicitly low (monochrome).
+  //   • busyness with low chroma: photos carry detail without meaningful
+  //     colour (skin, cloth, foliage noise) — paintings carry meaningful
+  //     colour at every detail level.
+  // If all three photo signals trigger, we treat the input as a photograph
+  // and switch to a quantised-palette chord model: cluster the image into
+  // ~7 dominant hue peaks, snap every pixel to its closest cluster before
+  // building the chord. This tames photo mush into musical chords while
+  // leaving painterly images untouched.
+  let _photoActiveBins=0;
+  { const _bMax=hueHist.reduce((a,b)=>Math.max(a,b),0)||1;
+    for(let i=0;i<36;i++) if(hueHist[i] >= _bMax*0.08) _photoActiveBins++; }
+  const _photoHueSpread = _photoActiveBins >= 14;
+  const _photoMediumChroma = avgChroma >= 12 && avgChroma <= 32;
+  const _photoDetailNoise = busyness >= 10 && avgChroma <= 34;
+  const isPhoto = _photoHueSpread && _photoMediumChroma && _photoDetailNoise;
+  // Build quantised palette peaks from the hue histogram — the ~7 dominant
+  // hue centres photos will snap to. Pick top-N bins by weight, ensuring a
+  // minimum angular separation (≥20°) so we don't collect twins from a
+  // single gradient. Only used inside the photo branch below.
+  const _photoPeaks = [];
+  if(isPhoto){
+    const _idxSorted = Array.from({length:36},(_,i)=>i).sort((a,b)=>hueHist[b]-hueHist[a]);
+    for(const bi of _idxSorted){
+      if(_photoPeaks.length >= 7) break;
+      if(hueHist[bi] <= 0) continue;
+      const h = bi*10 + 5;
+      let tooClose=false;
+      for(const p of _photoPeaks){
+        const d = Math.min(Math.abs(h-p), 360-Math.abs(h-p));
+        if(d < 20){ tooClose=true; break; }
+      }
+      if(!tooClose) _photoPeaks.push(h);
+    }
+  }
   // ─── Tempo from image character ────────────────────────────────────────────
   // The piece used to be a fixed 2:00 for EVERY image, so two utterly different
   // paintings shared the same pulse and length and ended up sounding alike. Now
@@ -14570,6 +14611,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // dense" as it rises. Driven by energy, nudged up by positive valence (bright
   // moods feel more rhythmically alive) and down by very negative valence (heavy,
   // grief-like moods stay broad and slow even if the canvas is busy).
+  // PHOTO OVERRIDE: dampen energy and rhythm drive. Photos have naturally
+  // high busyness (JPEG noise, gradient sky, foliage) which the painterly
+  // energy model reads as "vivid & fast" — but the CONTENT is usually
+  // contemplative. Compress energy toward 0.35–0.55 so tempo lands calm.
+  if(isPhoto){
+    energy = 0.35 + energy * 0.20;         // 0.35 … 0.55 regardless of raw score
+    dynE   = Math.max(0, Math.min(1, dynE * 0.65)); // softer dynamic centre too
+  }
   const rhythmDrive = Math.max(0, Math.min(1, energy + 0.15*valenceBias));
   // Duration: calm → longer & slower planes, energetic → tighter & quicker.
   // Centre ceiling at 4:00 (240s) at neutral mood (was 3:00 — default was a guluomet);
@@ -14711,7 +14760,18 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       return { m:midi, v:dv, durMs:noteDur, bass:true };
     }
     if (l < 6 || l > 94) return null;
-    const dh=Math.min(Math.abs(h-bgHue),360-Math.abs(h-bgHue));
+    // PHOTO PATH: quantise hue to nearest palette peak so a plausible
+    // chord emerges (not a 5-semitone mush from gradient noise).
+    let _hueUse = h;
+    if(isPhoto && _photoPeaks.length){
+      let _best=_photoPeaks[0], _bd=361;
+      for(const _pk of _photoPeaks){
+        const _d = Math.min(Math.abs(h-_pk), 360-Math.abs(h-_pk));
+        if(_d < _bd){ _bd=_d; _best=_pk; }
+      }
+      _hueUse = _best;
+    }
+    const dh=Math.min(Math.abs(_hueUse-bgHue),360-Math.abs(_hueUse-bgHue));
     const chroma=s*Math.min(l,100-l)/50; // 0..100
     const isBackgroundHue = dh < 30;
     const isNearBackground = dh < 50;
@@ -14725,9 +14785,9 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           : salFloor * 0.40;
       if (chroma < requiredChroma) return null;
     }
-    // Pitch: hue → COF/SPEC_HUE table
+    // Pitch: hue → COF/SPEC_HUE table (photo path uses quantised hue)
     let pc=0,minD=Infinity;
-    table.forEach((th,ti)=>{const d=Math.min(Math.abs(h-th),360-Math.abs(h-th));if(d<minD){minD=d;pc=ti;}});
+    table.forEach((th,ti)=>{const d=Math.min(Math.abs(_hueUse-th),360-Math.abs(_hueUse-th));if(d<minD){minD=d;pc=ti;}});
     // Octave: lightness → register, compressed to 3..6
     const oct=Math.max(3,Math.min(6,3+Math.round((l-20)/72*3)));
     const midi=Math.max(24,Math.min(96,(oct+1)*12+pc+octaveShift)); // gentle whole-image normalization
@@ -14818,6 +14878,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         const varScore = Math.min(1, lVar/100) * 0.65 + Math.min(1, hueSpread/60) * 0.35;
         _flat = 1 - varScore;
         _lum = Math.max(0, Math.min(1, lMean/100));   // render-only: cell brightness
+      }
+      // PHOTO: cap voicing at 3 notes so gradient-heavy cells (skin/sky/
+      // foliage that generate 4–5 close pitches) read as chord triads, not
+      // clusters. Keep the 3 with highest velocity (loudest = most vivid).
+      if(isPhoto && notes.length > 3){
+        notes.sort((a,b)=>b.v-a.v);
+        notes.length = 3;
       }
       // Fallback: grab the most vivid pixel anywhere in the column group
       if(notes.length===0){
