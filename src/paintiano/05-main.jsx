@@ -12025,7 +12025,7 @@ Hard requirements:
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-1px -1px 0 rgba(20,14,18,.75), 1px -1px 0 rgba(20,14,18,.75), -1px 1px 0 rgba(20,14,18,.75), 1px 1px 0 rgba(20,14,18,.75), 0 -1px 0 rgba(20,14,18,.75), 0 1px 0 rgba(20,14,18,.75), -1px 0 0 rgba(20,14,18,.75), 1px 0 0 rgba(20,14,18,.75)'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
           </div>
