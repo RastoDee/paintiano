@@ -23130,10 +23130,6 @@ export default function Paintiano() {
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
-  // Ref mirror of immersive so callbacks that fire outside React's re-render
-  // cycle (grid computation, effects with stale closures) can read the live
-  // value without being re-created every time the flag toggles.
-  const immersiveRef = useRef(false);
   // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
   // Touch tracking for the vertical swipe gesture on the immersive canvas.
   // Stores {y, x, t} at touchStart; touchEnd computes the delta and decides
@@ -23928,22 +23924,6 @@ export default function Paintiano() {
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
   },[basicMode]);
-  useEffect(()=>{
-    immersiveRef.current = immersive;
-    // Entering/leaving fullscreen changes which frame the canvas should use:
-    // Advanced fullscreen borrows Lite's wide portrait frame (liteWide), and
-    // must return to the usual Advanced frame on exit. Lite is always wide,
-    // so no recompute is needed there. Image scan pins its own CSS size.
-    if(basicModeRef.current) return;
-    if(viewModeRef.current==='image') return;
-    const evs=chordsRef.current;
-    if(!evs || !evs.length) return;
-    try{
-      const ng=computeGrid(evs,{liveMode:(draftOwnerRef.current!=='listen'), liteWide: immersive, portraitGrow: false});
-      gridRef.current=ng;
-      setGrid(ng);
-    }catch(_){}
-  },[immersive]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
   // Free (and first-time) visitors still start in Lite. We only auto-switch on
   // the first load of a visitor who hasn't been onboarded yet (paintiano_basic_mode
@@ -24482,10 +24462,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cells || cells.length < chords.length){
         try{
           const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-          // liteWide extends to Advanced fullscreen (immersive) too so the
-          // fullscreen mosaic canvas matches Lite's edge-to-edge look. Normal
-          // (non-fullscreen) Advanced keeps its usual grid.
-          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current || immersiveRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
           gridRef.current = fixed;
           setGrid(fixed);
         }catch(_){}
@@ -24868,7 +24845,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // In Lite, both voice and music capture use the grow-canvas (portrait) shape
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
-    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, liteWide: basicModeRef.current || immersiveRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -24921,7 +24898,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(t) clearTimeout(t);
       t=setTimeout(()=>{
         if(_skip()) return;
-        const ng=computeGrid(chordsRef.current,{liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current || immersiveRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+        const ng=computeGrid(chordsRef.current);
         gridRef.current=ng;
         // Apply immediately — even during playback. The paint loop reads gridRef
         // (already updated above), so this only syncs the visual canvas size.
