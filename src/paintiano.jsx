@@ -23130,6 +23130,7 @@ export default function Paintiano() {
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
+  const immersiveRef = useRef(false); // live mirror for handlers with stale closures (resize)
   // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
   // Touch tracking for the vertical swipe gesture on the immersive canvas.
   // Stores {y, x, t} at touchStart; touchEnd computes the delta and decides
@@ -23932,6 +23933,7 @@ export default function Paintiano() {
   // options — restoring the usual Advanced frame. Lite, image scan, and live
   // authoring (compose/sing/mic) are skipped: they manage their own frames.
   useEffect(()=>{
+    immersiveRef.current = immersive;
     if(basicModeRef.current) return;
     if(viewModeRef.current==='image') return;
     if(draftOwnerRef.current) return;
@@ -24920,7 +24922,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(t) clearTimeout(t);
       t=setTimeout(()=>{
         if(_skip()) return;
-        const ng=computeGrid(chordsRef.current);
+        // Advanced fullscreen uses the Lite-style dense frame; a resize
+        // (iOS browser chrome show/hide fires one on immersive toggle) must
+        // NOT silently recompute back to the plain frame and undo it.
+        const _fsDense = immersiveRef.current && !basicModeRef.current;
+        const ng=_fsDense ? computeGrid(chordsRef.current,{liteWide:true, portraitGrow:true}) : computeGrid(chordsRef.current);
         gridRef.current=ng;
         // Apply immediately — even during playback. The paint loop reads gridRef
         // (already updated above), so this only syncs the visual canvas size.
