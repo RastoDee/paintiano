@@ -23924,6 +23924,28 @@ export default function Paintiano() {
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
   },[basicMode]);
+  // Advanced fullscreen borrows Lite's dense portrait frame. On entering
+  // immersive we recompute the grid with portraitGrow (layout by chord count
+  // → more columns/rows → fine cells) + liteWide (edge-to-edge width) and NO
+  // liveMode (grow canvas, same engine the loaded-piece path uses). On exit we
+  // recompute exactly like the original load path — computeGrid(evs) with no
+  // options — restoring the usual Advanced frame. Lite, image scan, and live
+  // authoring (compose/sing/mic) are skipped: they manage their own frames.
+  useEffect(()=>{
+    if(basicModeRef.current) return;
+    if(viewModeRef.current==='image') return;
+    if(draftOwnerRef.current) return;
+    const evs=chordsRef.current;
+    if(!evs || !evs.length) return;
+    try{
+      const _withIdx=evs.map((c,i)=>(c && c.idx!=null)?c:{...c,idx:i});
+      const ng = immersive
+        ? computeGrid(_withIdx,{liteWide:true, portraitGrow:true})
+        : computeGrid(_withIdx);
+      gridRef.current=ng;
+      setGrid(ng);
+    }catch(_){}
+  },[immersive]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
   // Free (and first-time) visitors still start in Lite. We only auto-switch on
   // the first load of a visitor who hasn't been onboarded yet (paintiano_basic_mode
