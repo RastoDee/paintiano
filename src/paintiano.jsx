@@ -33655,7 +33655,11 @@ Hard requirements:
                   }
                 }
                 if(_n > 0) _paintingIsDark = (_lSum / _n) < 128;
-                try { console.log('[swipe] meanL=' + (_lSum/Math.max(1,_n)).toFixed(1) + ' isDark=' + _paintingIsDark + ' n=' + _n + ' canvas=' + _cv.width + 'x' + _cv.height); } catch(_) {}
+                try {
+                  const _entry = 'meanL=' + (_lSum/Math.max(1,_n)).toFixed(1) + ' isDark=' + _paintingIsDark + ' n=' + _n + ' canvas=' + _cv.width + 'x' + _cv.height + ' style=' + (effectiveStyle||'?');
+                  console.log('[swipe] ' + _entry);
+                  if(typeof window !== 'undefined'){ window.__swipeLog = window.__swipeLog || []; window.__swipeLog.push(_entry); if(window.__swipeLog.length > 20) window.__swipeLog.shift(); }
+                } catch(_) {}
               }
             } catch(e) { try { console.warn('[swipe] sample failed', e && e.message); } catch(_) {} }
             // Encode the decision into the flash-key string so the overlay
