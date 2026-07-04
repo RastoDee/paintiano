@@ -30641,13 +30641,6 @@ Hard requirements:
       let pendingSig='';
       let pendingNotes=null;
       let prevChordStart=performance.now();
-      // Stability gate: a new candidate must repeat across TWO consecutive
-      // commits before it replaces the pending chord. Steady tones whose
-      // top-3 harmonic peaks reshuffle frame-to-frame never get two identical
-      // sigs in a row, so their jitter is suppressed; a real chord change
-      // holds its sig and passes on the next commit (~120ms later).
-      let candSig='';       // last commit's raw candidate
-      let candNotes=null;   // its notes (armed only after a repeat)
       const emitChord=(notes,heldMs)=>{
         // Silent painting — highlight + record, but NO playback during the
         // capture session (the user is already hearing the source audio).
@@ -30709,26 +30702,15 @@ Hard requirements:
           const mag=fftMag(buf);
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
           const ev=buildEvent(mag,liveSr);
-          if(ev){
-            if(ev.sig===pendingSig){
-              // Same as what's already showing — nothing to do, and reset
-              // the candidate so a later flicker must re-confirm twice.
-              candSig=''; candNotes=null;
-            } else if(ev.sig===candSig){
-              // CONFIRMED: this candidate appeared two commits running.
-              // Flush the old pending chord and arm the new one.
-              if(pendingNotes){
-                const heldMs=now-prevChordStart;
-                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
-              }
-              pendingSig=ev.sig;
-              pendingNotes=ev.notes;
-              prevChordStart=now;
-              candSig=''; candNotes=null;
-            } else {
-              // First sighting of a new candidate — hold it, don't emit yet.
-              candSig=ev.sig; candNotes=ev.notes;
+          if(ev && ev.sig!==pendingSig){
+            // Event changed. Flush previous, arm new — no stability gate.
+            if(pendingNotes){
+              const heldMs=now-prevChordStart;
+              if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             }
+            pendingSig=ev.sig;
+            pendingNotes=ev.notes;
+            prevChordStart=now;
           }
         }
         listenRafRef.current=requestAnimationFrame(tick);
