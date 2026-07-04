@@ -895,6 +895,12 @@ export default function Paintiano() {
   const kbScrollRef  = useRef(null);
   const recorderRef      = useRef(null);
   const recChunksRef     = useRef([]);
+  // Suppresses the MediaRecorder onstop handler from writing recBlob/recName
+  // when we're tearing everything down (e.g. Lite\u2194Advanced toggle). The stop
+  // is asynchronous, so without this a pending playback would flush its blob
+  // AFTER fullClear() has reset state \u2014 leaking a phantom recording into the
+  // opposite mode. Set true right before the reset; onstop reads and clears it.
+  const _suppressRecOnStopRef = useRef(false);
   const recStreamDestRef = useRef(null);
   const micStreamRef     = useRef(null);
   const micRafRef        = useRef(null);
@@ -8647,6 +8653,13 @@ Hard requirements:
       const blob=new Blob(recChunksRef.current,{type:mt});
       const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')?'m4a':'webm';
       const name=(info?.title||'paintiano').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').slice(0,50)+'.'+ext;
+      // Suppressed teardown (Lite\u2194Advanced toggle): drop the blob entirely.
+      if(_suppressRecOnStopRef.current){
+        _suppressRecOnStopRef.current=false;
+        recChunksRef.current=[];
+        setRecording(false);recorderRef.current=null;
+        return;
+      }
       if(blob.size<2000){setErr(t('recTooShort'));setErrInfo(false);}
       else{setRecBlob(blob);setRecName(name);}
       setRecording(false);recorderRef.current=null;
@@ -10413,7 +10426,7 @@ Hard requirements:
           const accent = adv ? '220,180,90' : '230,205,140';   // full gold | lite gold
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
           return (
-            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ if(recording) stopRecord(); }catch(_){} try{ setMicArmed(false); }catch(_){} try{ setHasMicDraft(false); listenStashRef.current=null; singStashRef.current=null; }catch(_){} try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; basicTapUnlockedRef.current=false; liteEverUnlockedRef.current=false; setLiteAwaitTap(false); try{ setLiteImageMode(false); liteImageModeRef.current=false; _liteImgAppliedRef.current=false; }catch(_){} setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
+            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ _suppressRecOnStopRef.current=true; const _r=recorderRef.current; if(_r && _r.state!=='inactive'){ try{ _r.stop(); }catch(_){} } setRecording(false); recorderRef.current=null; recChunksRef.current=[]; setRecordIntent(null); recordIntentRef.current=null; }catch(_){} try{ if(recording) stopRecord(); }catch(_){} try{ setMicArmed(false); }catch(_){} try{ setHasMicDraft(false); listenStashRef.current=null; singStashRef.current=null; }catch(_){} try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; basicTapUnlockedRef.current=false; liteEverUnlockedRef.current=false; setLiteAwaitTap(false); try{ setLiteImageMode(false); liteImageModeRef.current=false; _liteImgAppliedRef.current=false; }catch(_){} setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
               style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'transparent',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'color .2s, border-color .2s'}}>
               <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
               {label}
