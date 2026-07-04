@@ -33568,26 +33568,9 @@ Hard requirements:
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
         </button>
       )}
-      {/* Fullscreen artist attribution — fixed near the viewport top so it sits
-          in the black letterbox ABOVE the canvas. The user prefers it high (even
-          close to the URL bar) over ever landing on the painting. Shows the
-          inspiring artist (fixed pick OR shuffle draw); also shown for the
-          Mosaic family. "inspired by" prefix is added for artists and for
-          oneM ("One Million Dollar Page"); plain Mosaic and Notes show the
-          bare label without the prefix. */}
-      {immersive && STYLE_INSPIRED[effectiveStyle || 'mosaic'] && (()=>{
-        const _key = effectiveStyle || 'mosaic';
-        const _bare = (_key === 'mosaic' || _key === 'notes');
-        const _label = _key === 'notes' ? t('notesStyle')
-                     : _key === 'mosaic' ? t('mosaicStyle')
-                     : STYLE_INSPIRED[_key];
-        return (
-        <div style={{position:'fixed',top:'max(8px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:10000,textAlign:'center',fontSize:(.6*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.95)',fontStyle:'italic',textShadow:'0 2px 10px rgba(0,0,0,.95)',pointerEvents:'none',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6}}>
-          {!style&&(<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.85}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}
-          {!_bare && (<span style={{fontStyle:'normal',opacity:.7}}>{t('inspiredByTitle')||'inspired by'}</span>)} {_label}
-        </div>
-        );
-      })()}
+      {/* Top-of-screen artist attribution intentionally removed in Lite fullscreen:
+          the swipe-up flash (below) is the sole feedback mechanism — nothing
+          permanent sits on the painting or in the letterbox. */}
       {/* Swipe-up flash — large centred “inspired by <artist>” that fades in,
           holds, and fades out over ~1.2s. Fires only in Lite fullscreen after a
           recognised swipe-up gesture; effectiveStyle is read at render time so
@@ -33600,7 +33583,7 @@ Hard requirements:
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',padding:'18px 32px',borderRadius:16,backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',animation:'pfSwipeFlash 1.2s ease-out both',color:_swipeFlashDark?'rgba(240,222,180,.98)':'rgba(36,32,40,.96)',background:_swipeFlashDark?'rgba(6,6,12,.72)':'rgba(242,238,232,.82)',border:_swipeFlashDark?'1px solid rgba(201,168,76,.28)':'1px solid rgba(60,50,20,.22)',boxShadow:_swipeFlashDark?'0 12px 40px rgba(0,0,0,.55), 0 0 60px rgba(201,168,76,.18)':'0 12px 40px rgba(0,0,0,.25), 0 0 60px rgba(201,168,76,.12)'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:_swipeFlashDark?'rgba(240,222,180,.98)':'rgba(36,28,32,.98)',textShadow:_swipeFlashDark?'0 4px 24px rgba(0,0,0,.9), 0 0 40px rgba(201,168,76,.35)':'0 2px 12px rgba(255,250,235,.85), 0 0 30px rgba(255,240,200,.55)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
           </div>
