@@ -12029,7 +12029,7 @@ Hard requirements:
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:_swipeFlashDark?'rgba(240,222,180,.98)':'rgba(28,22,26,.98)'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:(_swipeFlashKey && _swipeFlashKey.indexOf('dark-')===0)?'rgba(240,222,180,.98)':'rgba(28,22,26,.98)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
           </div>
@@ -12101,8 +12101,14 @@ Hard requirements:
                   }
                 }
                 if(_n > 0) _paintingIsDark = (_lSum / _n) < 128;
+                try { console.log('[swipe] meanL=' + (_lSum/Math.max(1,_n)).toFixed(1) + ' isDark=' + _paintingIsDark + ' n=' + _n + ' canvas=' + _cv.width + 'x' + _cv.height); } catch(_) {}
               }
-            } catch(_) { /* tainted canvas or no ctx — keep default dark */ }
+            } catch(e) { try { console.warn('[swipe] sample failed', e && e.message); } catch(_) {} }
+            // Encode the decision into the flash-key string so the overlay
+            // reads it atomically — no React state race between two setState
+            // calls (setSwipeFlashDark + setSwipeFlashKey) which was causing
+            // the previous swipe's colour to show on the current one.
+            const _flashPrefix = _paintingIsDark ? 'dark-' : 'light-';
             _setSwipeFlashDark(_paintingIsDark);
             try { basicSurprise(); } catch(_){}
             // Flash: the effectiveStyle updates on the next render — we snap the
@@ -12112,7 +12118,7 @@ Hard requirements:
             setTimeout(()=>{
               // Use a marker string — the flash overlay reads current effectiveStyle
               // directly at render time, so the value here just gates visibility.
-              _setSwipeFlashKey('flash-' + Date.now());
+              _setSwipeFlashKey(_flashPrefix + 'flash-' + Date.now());
               _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, 1200);
             }, 0);
           }
