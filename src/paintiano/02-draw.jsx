@@ -12655,22 +12655,29 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       _top3Sum = _sorted[0] + _sorted[1] + _sorted[2];
     }
     const _top3Frac = _hueTotal > 0 ? (_top3Sum / _hueTotal) : 1;
-    // Photo signal 1: DIFFUSE hue distribution (top-3 hold <45% of weight)
-    const _photoDiffuse = _top3Frac < 0.45;
-    // Photo signal 2: MEDIUM chroma (not extreme saturated palette)
-    const _photoMediumChroma = avgChroma >= 8 && avgChroma <= 35;
-    // Photo signal 3: HIGH busyness with restrained chroma (natural texture)
-    const _photoDetailNoise = busyness >= 8 && avgChroma <= 35;
-    // Anti-photo veto: HIGHLY concentrated palette is always painting.
-    //   top-3 >60% = deliberate palette (Mondrian, Rothko, Kusama)
+    // Photo detector v4: calibrated against 5 real-world samples.
+    //   Rasto's data (photo → PHOTO expected):
+    //     couple in nature:     t3:63% c:21 b:8
+    //     football match:       t3:60% c:21 b:8
+    //     concert scene:        t3:64% c:13 b:9
+    //   Rasto's data (painting → PAINTING expected):
+    //     Picasso portrait:     t3:45% c:16 b:6
+    //     Van Gogh Starry Night t3:71% c:27 b:8
+    //   Discriminators that separate them:
+    //     • chroma 12–40 (photos land in mid-chroma band)
+    //     • busyness ≥8  (photos have real-world texture; Picasso's flat
+    //                    paint areas score 6, distinguishing him)
+    //     • top-3 fraction ≤68% (Van Gogh's 71% concentration = paint veto)
+    const _photoChroma = avgChroma >= 12 && avgChroma <= 40;
+    const _photoBusy = busyness >= 8;
+    const _photoNotConcentrated = _top3Frac <= 0.68;
+    // Anti-photo veto: extreme values are painting signatures.
     //   chroma >42 = intentional saturated art (Van Gogh, Kandinsky)
     //   chroma <6  = deliberate monochrome (ink, sepia, Guernica)
-    const _paintingSignal = _top3Frac > 0.60 || avgChroma > 42 || avgChroma < 6;
-    // Require the DIFFUSE signal (mandatory) + at least ONE of the other
-    // two, and no painting veto. Diffuse alone isn't enough (some flat
-    // low-chroma paintings pass it too); combining it with chroma and
-    // detail signals catches real photos while leaving art alone.
-    isPhoto = !_paintingSignal && _photoDiffuse && (_photoMediumChroma || _photoDetailNoise);
+    //   top-3 >75% = extremely concentrated palette (Mondrian, Rothko)
+    const _paintingSignal = avgChroma > 42 || avgChroma < 6 || _top3Frac > 0.75;
+    // All three photo signals must be true AND no painting veto fires.
+    isPhoto = !_paintingSignal && _photoChroma && _photoBusy && _photoNotConcentrated;
     try { _setLastImageMetrics({ top3: _top3Frac, chroma: avgChroma, busyness: busyness, diffuse: _photoDiffuse, medChroma: _photoMediumChroma, detailNoise: _photoDetailNoise, veto: _paintingSignal }); } catch(_){}
     if(isPhoto){
       // Build ~7 dominant hue peaks with min 20° separation.
