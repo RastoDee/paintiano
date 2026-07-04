@@ -1450,6 +1450,15 @@ export default function Paintiano() {
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
+  // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
+  // Touch tracking for the vertical swipe gesture on the immersive canvas.
+  // Stores {y, x, t} at touchStart; touchEnd computes the delta and decides
+  // whether it was a swipe (fires basicSurprise + flash) or a plain tap (lets
+  // the existing canvas onClick handler run normally).
+  const _swipeStartRef = useRef(null);
+  const _swipeWasGestureRef = useRef(false);
+  const [_swipeFlashKey, _setSwipeFlashKey] = useState(null);
+  const _swipeFlashTimerRef = useRef(null);
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
@@ -10139,7 +10148,7 @@ Hard requirements:
 
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
@@ -12021,10 +12030,89 @@ Hard requirements:
         </div>
         );
       })()}
+      {/* Swipe-up flash — large centred “inspired by <artist>” that fades in,
+          holds, and fades out over ~1.2s. Fires only in Lite fullscreen after a
+          recognised swipe-up gesture; effectiveStyle is read at render time so
+          the label always reflects the newly-picked artist. */}
+      {immersive && basicMode && _swipeFlashKey && (()=>{
+        const _fKey = effectiveStyle || 'mosaic';
+        const _fBare = (_fKey === 'mosaic' || _fKey === 'notes');
+        const _fLabel = _fKey === 'notes' ? t('notesStyle')
+                      : _fKey === 'mosaic' ? t('mosaicStyle')
+                      : STYLE_INSPIRED[_fKey];
+        if(!_fLabel) return null;
+        return (
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(240,222,180,.98)',fontStyle:'italic',textShadow:'0 4px 24px rgba(0,0,0,.9), 0 0 40px rgba(201,168,76,.35)',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both'}}>
+            {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
+            <div>{_fLabel}</div>
+          </div>
+        );
+      })()}
       <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
+        onTouchStart={e=>{
+          // Lite fullscreen only: track swipe start. Ignore multi-touch (pinch).
+          if(!immersive || !basicMode) return;
+          if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
+          const tt = e.touches[0];
+          _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
+          _swipeWasGestureRef.current = false;
+        }}
+        onTouchMove={e=>{
+          // Mark the interaction as a gesture-in-progress as soon as vertical
+          // travel is meaningful — the tap guard in onClick reads this so the
+          // trailing onClick after touchend doesn't also trigger.
+          if(!immersive || !basicMode) return;
+          const s = _swipeStartRef.current; if(!s) return;
+          const tt = e.touches[0]; if(!tt) return;
+          const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
+          if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx) * 1.2){
+            _swipeWasGestureRef.current = true;
+          }
+        }}
+        onTouchEnd={e=>{
+          if(!immersive || !basicMode) return;
+          const s = _swipeStartRef.current; _swipeStartRef.current = null;
+          if(!s) return;
+          const tt = (e.changedTouches && e.changedTouches[0]) || null;
+          if(!tt) return;
+          const dy = tt.clientY - s.y, dx = tt.clientX - s.x, dt = Date.now() - s.t;
+          // Swipe criteria: 50px minimum vertical travel, under 700ms,
+          // clearly dominant vertical direction. Otherwise it was a tap or
+          // an ambiguous drag — let onClick handle it normally.
+          if(dt > 700 || Math.abs(dy) < 50 || Math.abs(dy) < Math.abs(dx) * 1.5){
+            _swipeWasGestureRef.current = false;
+            return;
+          }
+          // Swipe UP → next Surprise (same handler the "Prekvap ma" chip uses).
+          // Show the inspired-by flash overlay in the centre of the canvas.
+          if(dy < 0){
+            _swipeWasGestureRef.current = true;
+            try { basicSurprise(); } catch(_){}
+            // Flash: the effectiveStyle updates on the next render — we snap the
+            // NEW pick from the flash timer scheduled below (queue microtask so
+            // the state has committed).
+            if(_swipeFlashTimerRef.current) { clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
+            setTimeout(()=>{
+              // Use a marker string — the flash overlay reads current effectiveStyle
+              // directly at render time, so the value here just gates visibility.
+              _setSwipeFlashKey('flash-' + Date.now());
+              _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, 1200);
+            }, 0);
+          }
+          // Swipe down: intentionally does nothing — exit stays on the X
+          // button only (per product decision).
+        }}
         onClick={e=>{
+          // Swipe-tap guard: if the touch ended as a recognised swipe we must
+          // suppress the trailing synthetic click, otherwise the canvas would
+          // also try to select a chord under the fingertip.
+          if(_swipeWasGestureRef.current){
+            _swipeWasGestureRef.current = false;
+            e.preventDefault(); e.stopPropagation();
+            return;
+          }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
