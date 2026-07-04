@@ -1458,10 +1458,6 @@ export default function Paintiano() {
   const _swipeStartRef = useRef(null);
   const _swipeWasGestureRef = useRef(false);
   const [_swipeFlashKey, _setSwipeFlashKey] = useState(null);
-  // Adaptive flash colour: sampled from the painting under the flash so a
-  // dark painting gets the light pill (default) and a light painting gets
-  // the dark pill — both stay legible without ever hiding the artwork.
-  const [_swipeFlashDark, _setSwipeFlashDark] = useState(true);
   const _swipeFlashTimerRef = useRef(null);
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
@@ -12029,7 +12025,7 @@ Hard requirements:
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:(_swipeFlashKey && _swipeFlashKey.indexOf('dark-')===0)?'rgba(240,222,180,.98)':'rgba(28,22,26,.98)'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-1.5px -1.5px 0 rgba(20,14,18,.95), 1.5px -1.5px 0 rgba(20,14,18,.95), -1.5px 1.5px 0 rgba(20,14,18,.95), 1.5px 1.5px 0 rgba(20,14,18,.95), 0 -1.5px 0 rgba(20,14,18,.95), 0 1.5px 0 rgba(20,14,18,.95), -1.5px 0 0 rgba(20,14,18,.95), 1.5px 0 0 rgba(20,14,18,.95)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
           </div>
@@ -12076,53 +12072,13 @@ Hard requirements:
           // Show the inspired-by flash overlay in the centre of the canvas.
           if(dy < 0){
             _swipeWasGestureRef.current = true;
-            // Sample luminance across the WHOLE canvas (not just centre) via
-            // a coarse 6×6 grid = 36 points. Robust to sparse compositions
-            // (Kusama dots, Klint stems) where a centre-only sample would hit
-            // the black backdrop and misclassify the painting as dark.
-            // The canvas is pre-filled with #04040a before the painting draws,
-            // so any un-painted region reads as near-black. Averaging across the
-            // whole surface bakes that backdrop into the mean, which is exactly
-            // what the eye also perceives — sparse painting on black = dark.
-            let _paintingIsDark = true;
-            try {
-              const _cv = canvasRef.current;
-              if(_cv){
-                const _cctx = _cv.getContext('2d');
-                let _lSum = 0, _n = 0;
-                for(let gy = 1; gy <= 6; gy++){
-                  for(let gx = 1; gx <= 6; gx++){
-                    const _px = Math.max(0, Math.min(_cv.width  - 1, Math.floor(_cv.width  * gx / 7)));
-                    const _py = Math.max(0, Math.min(_cv.height - 1, Math.floor(_cv.height * gy / 7)));
-                    const _d = _cctx.getImageData(_px, _py, 1, 1).data;
-                    // Rec.601 luminance — human-perception weighted.
-                    _lSum += 0.299*_d[0] + 0.587*_d[1] + 0.114*_d[2];
-                    _n++;
-                  }
-                }
-                if(_n > 0) _paintingIsDark = (_lSum / _n) < 128;
-                try {
-                  const _entry = 'meanL=' + (_lSum/Math.max(1,_n)).toFixed(1) + ' isDark=' + _paintingIsDark + ' n=' + _n + ' canvas=' + _cv.width + 'x' + _cv.height + ' style=' + (effectiveStyle||'?');
-                  console.log('[swipe] ' + _entry);
-                  if(typeof window !== 'undefined'){ window.__swipeLog = window.__swipeLog || []; window.__swipeLog.push(_entry); if(window.__swipeLog.length > 20) window.__swipeLog.shift(); }
-                } catch(_) {}
-              }
-            } catch(e) { try { console.warn('[swipe] sample failed', e && e.message); } catch(_) {} }
-            // Encode the decision into the flash-key string so the overlay
-            // reads it atomically — no React state race between two setState
-            // calls (setSwipeFlashDark + setSwipeFlashKey) which was causing
-            // the previous swipe's colour to show on the current one.
-            const _flashPrefix = _paintingIsDark ? 'dark-' : 'light-';
-            _setSwipeFlashDark(_paintingIsDark);
             try { basicSurprise(); } catch(_){}
-            // Flash: the effectiveStyle updates on the next render — we snap the
-            // NEW pick from the flash timer scheduled below (queue microtask so
-            // the state has committed).
+            // Fire the flash on the next tick so it renders WITH the new
+            // painting, not before. The overlay uses a text-stroke trick so
+            // it stays legible on any background — no luminance sampling.
             if(_swipeFlashTimerRef.current) { clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
             setTimeout(()=>{
-              // Use a marker string — the flash overlay reads current effectiveStyle
-              // directly at render time, so the value here just gates visibility.
-              _setSwipeFlashKey(_flashPrefix + 'flash-' + Date.now());
+              _setSwipeFlashKey('flash-' + Date.now());
               _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, 1200);
             }, 0);
           }
