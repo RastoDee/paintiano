@@ -12021,7 +12021,7 @@ Hard requirements:
         const _fKey = effectiveStyle || 'mosaic';
         const _fBare = (_fKey === 'mosaic' || _fKey === 'notes');
         const _fLabel = _fKey === 'notes' ? t('notesStyle')
-                      : _fKey === 'mosaic' ? t('mosaicStyle')
+                      : _fKey === 'mosaic' ? t('liteMosaicStyle')
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
