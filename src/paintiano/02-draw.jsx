@@ -12629,13 +12629,24 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // ~7 dominant hue peaks, snap every pixel to its closest cluster before
   // building the chord. This tames photo mush into musical chords while
   // leaving painterly images untouched.
+  // Loosened thresholds after real-world testing: real photos have fewer
+  // dominant hue clusters than expected (portrait = skin + background;
+  // landscape = sky + foliage). Bin activation lowered to 5% of max so
+  // secondary hues count; required count lowered to 8.
   let _photoActiveBins=0;
   { const _bMax=hueHist.reduce((a,b)=>Math.max(a,b),0)||1;
-    for(let i=0;i<36;i++) if(hueHist[i] >= _bMax*0.08) _photoActiveBins++; }
-  const _photoHueSpread = _photoActiveBins >= 14;
-  const _photoMediumChroma = avgChroma >= 12 && avgChroma <= 32;
-  const _photoDetailNoise = busyness >= 10 && avgChroma <= 34;
-  const isPhoto = _photoHueSpread && _photoMediumChroma && _photoDetailNoise;
+    for(let i=0;i<36;i++) if(hueHist[i] >= _bMax*0.05) _photoActiveBins++; }
+  const _photoHueSpread = _photoActiveBins >= 8;
+  const _photoMediumChroma = avgChroma >= 8 && avgChroma <= 40;
+  const _photoDetailNoise = busyness >= 7 && avgChroma <= 40;
+  // Anti-painting veto: extreme chroma is a strong painting signal.
+  //   >40 = intentional saturated palette (Van Gogh, Kandinsky, Kusama)
+  //   <8  = deliberate monochrome (ink, Guernica, sepia)
+  // In either case, force PAINTING regardless of the 3 photo signals.
+  const _paintingChroma = avgChroma > 40 || avgChroma < 8;
+  // 2-of-3 photo signals triggers, unless the anti-painting veto fires.
+  const _photoScore = (_photoHueSpread?1:0) + (_photoMediumChroma?1:0) + (_photoDetailNoise?1:0);
+  const isPhoto = !_paintingChroma && _photoScore >= 2;
   _setLastImageIsPhoto(isPhoto);
   // Build quantised palette peaks from the hue histogram — the ~7 dominant
   // hue centres photos will snap to. Pick top-N bins by weight, ensuring a
