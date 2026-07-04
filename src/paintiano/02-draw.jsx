@@ -130,6 +130,11 @@ function _getCurE(){ return _curE; }
 let _songEnergy = 0.5;
 function _setSongEnergy(e){ _songEnergy = (e==null||isNaN(e)) ? 0.5 : Math.max(0,Math.min(1,e)); }
 function _getSongEnergy(){ return _songEnergy; }
+// Set by pixelsToImageEvents; read by the UI so it can badge the current
+// image as PHOTO or PAINTING. Null before the first image has been scanned.
+let _lastImageIsPhoto = null;
+function _setLastImageIsPhoto(v){ _lastImageIsPhoto = (v==null) ? null : !!v; }
+function _getLastImageIsPhoto(){ return _lastImageIsPhoto; }
 // Set the average octave of the current chord — used by Real mode to nudge
 // high-register chords toward Pastel and low-register chords toward Dark
 // (regardless of the chord's energy band). Call alongside _setCurE on each
@@ -12631,6 +12636,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const _photoMediumChroma = avgChroma >= 12 && avgChroma <= 32;
   const _photoDetailNoise = busyness >= 10 && avgChroma <= 34;
   const isPhoto = _photoHueSpread && _photoMediumChroma && _photoDetailNoise;
+  _setLastImageIsPhoto(isPhoto);
   // Build quantised palette peaks from the hue histogram — the ~7 dominant
   // hue centres photos will snap to. Pick top-N bins by weight, ensuring a
   // minimum angular separation (≥20°) so we don't collect twins from a

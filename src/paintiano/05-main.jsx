@@ -12053,6 +12053,22 @@ Hard requirements:
           </div>
         );
       })()}
+      {/* PHOTO/PAINTING debug badge — shows which classifier branch fired
+          for the current image scan. Visible only in Image mode with an
+          active pixel scan. Reads a module-level flag from 02-draw.jsx
+          set by pixelsToImageEvents when the piece was transcribed. */}
+      {viewMode==='image' && originalImgUrl && pixelRef.current && typeof _getLastImageIsPhoto==='function' && stamp>=0 && (()=>{
+        const _ip = _getLastImageIsPhoto();
+        if(_ip===null) return null;
+        const _label = _ip ? 'PHOTO' : 'PAINTING';
+        return (
+          <div style={{display:'flex',justifyContent:'center',marginBottom:8,pointerEvents:'none'}}>
+            <div style={{padding:'4px 12px',borderRadius:12,border:'1px solid rgba(201,168,76,.55)',background:'rgba(201,168,76,.10)',color:'rgba(220,180,90,.98)',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',fontFamily:'inherit'}}>
+              {_label}
+            </div>
+          </div>
+        );
+      })()}
       <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(_swipeStartRef.current) return; if(playing||immersive) wakeControls(); }}

@@ -2051,6 +2051,11 @@ function _getCurE(){ return _curE; }
 let _songEnergy = 0.5;
 function _setSongEnergy(e){ _songEnergy = (e==null||isNaN(e)) ? 0.5 : Math.max(0,Math.min(1,e)); }
 function _getSongEnergy(){ return _songEnergy; }
+// Set by pixelsToImageEvents; read by the UI so it can badge the current
+// image as PHOTO or PAINTING. Null before the first image has been scanned.
+let _lastImageIsPhoto = null;
+function _setLastImageIsPhoto(v){ _lastImageIsPhoto = (v==null) ? null : !!v; }
+function _getLastImageIsPhoto(){ return _lastImageIsPhoto; }
 // Set the average octave of the current chord — used by Real mode to nudge
 // high-register chords toward Pastel and low-register chords toward Dark
 // (regardless of the chord's energy band). Call alongside _setCurE on each
@@ -14552,6 +14557,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const _photoMediumChroma = avgChroma >= 12 && avgChroma <= 32;
   const _photoDetailNoise = busyness >= 10 && avgChroma <= 34;
   const isPhoto = _photoHueSpread && _photoMediumChroma && _photoDetailNoise;
+  _setLastImageIsPhoto(isPhoto);
   // Build quantised palette peaks from the hue histogram — the ~7 dominant
   // hue centres photos will snap to. Pick top-N bins by weight, ensuring a
   // minimum angular separation (≥20°) so we don't collect twins from a
@@ -33671,6 +33677,22 @@ Hard requirements:
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             <div>{_fLabel}</div>
+          </div>
+        );
+      })()}
+      {/* PHOTO/PAINTING debug badge — shows which classifier branch fired
+          for the current image scan. Visible only in Image mode with an
+          active pixel scan. Reads a module-level flag from 02-draw.jsx
+          set by pixelsToImageEvents when the piece was transcribed. */}
+      {viewMode==='image' && originalImgUrl && pixelRef.current && typeof _getLastImageIsPhoto==='function' && stamp>=0 && (()=>{
+        const _ip = _getLastImageIsPhoto();
+        if(_ip===null) return null;
+        const _label = _ip ? 'PHOTO' : 'PAINTING';
+        return (
+          <div style={{display:'flex',justifyContent:'center',marginBottom:8,pointerEvents:'none'}}>
+            <div style={{padding:'4px 12px',borderRadius:12,border:'1px solid rgba(201,168,76,.55)',background:'rgba(201,168,76,.10)',color:'rgba(220,180,90,.98)',fontSize:(.58*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',fontFamily:'inherit'}}>
+              {_label}
+            </div>
           </div>
         );
       })()}
