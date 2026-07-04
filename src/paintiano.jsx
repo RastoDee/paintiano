@@ -33571,11 +33571,11 @@ Hard requirements:
           holds, and fades out over ~1.2s. Fires only in Lite fullscreen after a
           recognised swipe-up gesture; effectiveStyle is read at render time so
           the label always reflects the newly-picked artist. */}
-      {immersive && _swipeFlashKey && (()=>{
+      {immersive && basicMode && _swipeFlashKey && (()=>{
         const _fKey = effectiveStyle || 'mosaic';
         const _fBare = (_fKey === 'mosaic' || _fKey === 'notes');
         const _fLabel = _fKey === 'notes' ? t('notesStyle')
-                      : _fKey === 'mosaic' ? t(basicMode ? 'liteMosaicStyle' : 'mosaicStyle')
+                      : _fKey === 'mosaic' ? t('liteMosaicStyle')
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
@@ -33587,9 +33587,10 @@ Hard requirements:
       })()}
       <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
-        onPointerMove={()=>{ if(_swipeStartRef.current) return; if(playing||immersive) wakeControls(); }}
+        onPointerMove={()=>{ if(playing||immersive) wakeControls(); }}
         onTouchStart={e=>{
-          if(!immersive || viewMode==='image' || liteImageMode) return;
+          // Lite fullscreen only: track swipe start. Ignore multi-touch (pinch).
+          if(!immersive || !basicMode) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
@@ -33599,16 +33600,16 @@ Hard requirements:
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
-          if(!immersive || viewMode==='image' || liteImageMode) return;
+          if(!immersive || !basicMode) return;
           const s = _swipeStartRef.current; if(!s) return;
           const tt = e.touches[0]; if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
-          if(Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx) * 1.1){
+          if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx) * 1.2){
             _swipeWasGestureRef.current = true;
           }
         }}
         onTouchEnd={e=>{
-          if(!immersive || viewMode==='image' || liteImageMode) return;
+          if(!immersive || !basicMode) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
@@ -33617,7 +33618,7 @@ Hard requirements:
           // Swipe criteria: 50px minimum vertical travel, under 700ms,
           // clearly dominant vertical direction. Otherwise it was a tap or
           // an ambiguous drag — let onClick handle it normally.
-          if(dt > 900 || Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2){
+          if(dt > 700 || Math.abs(dy) < 50 || Math.abs(dy) < Math.abs(dx) * 1.5){
             _swipeWasGestureRef.current = false;
             return;
           }
@@ -33625,19 +33626,7 @@ Hard requirements:
           // Show the inspired-by flash overlay in the centre of the canvas.
           if(dy < 0){
             _swipeWasGestureRef.current = true;
-            // Lite: cycle through Surprise shuffle. Advanced: perform the
-            // same action the NEXT button used to do (dice roll, either in
-            // fixed-style or random-mode paths).
-            try {
-              if(basicMode){
-                basicSurprise();
-              } else {
-                nextRollInProgressRef.current = true;
-                if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); }
-                // Swipe intentionally does NOT wakeControls — that would
-                // reveal the CTA bar unexpectedly on gesture. Only tap does.
-              }
-            } catch(_){}
+            try { basicSurprise(); } catch(_){}
             // Fire the flash on the next tick so it renders WITH the new
             // painting, not before. The overlay uses a text-stroke trick so
             // it stays legible on any background — no luminance sampling.
@@ -33660,17 +33649,13 @@ Hard requirements:
             return;
           }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
-          // idle countdown (video-player pattern). Skipped if the touch was a
-          // recognised swipe (guarded above via _swipeWasGestureRef).
+          // idle countdown (video-player pattern). Done before the demo-reel /
+          // chord-select branches so it fires regardless of what the tap does.
           if(playing||immersive) wakeControls();
           // During the demo reel a canvas tap is the "escape" gesture — kill
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
           if(demoReelOn){ demoReelStop(); return; }
-          // In fullscreen: tap only wakes CTAs (already fired above). Chord
-          // select is disabled here so it doesn't race with the swipe gesture
-          // (which fires only on touchend). Same behaviour for Lite & Advanced.
-          if(immersive) return;
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
           const rect=cv.getBoundingClientRect();
@@ -33755,7 +33740,9 @@ Hard requirements:
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
             || ((composeMode||micActive||micArmed) && chords.length>0 && !demoReelOn && !busy && !recording && viewMode!=='image');
-          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive && !showMode;
+          // Note: !showMode removed — NEXT stays active during Show so users
+          // can manually jump within an auto-shuffle sequence. Same in normal.
+          const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image' && canRollNextFs;
           const showSlideFs = playing && randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image';
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
@@ -33782,7 +33769,7 @@ Hard requirements:
                   {t(mode)||mode} ›
                 </button>
               )}
-              {!immersive && showNextFs && (
+              {showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   next ›
@@ -34625,10 +34612,10 @@ Hard requirements:
           // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
           // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
           // with no randomMode).
-          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive && !showMode;
+          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           if(!randomMode) return null;
           return (
-            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={showMode?'Show is auto-shuffling — tap Show to stop':(canRoll?'next painting — jump to a new variation':'wait for the current action to finish')} aria-label="next painting" style={txStyle('pink',{effScale,disabled:!canRoll})}><TxIcon n="next" s={14*effScale}/>{t('next')!=='next'?t('next'):'Next'}</button>
+            <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={txStyle('pink',{effScale,disabled:!canRoll})}><TxIcon n="next" s={14*effScale}/>{t('next')!=='next'?t('next'):'Next'}</button>
           );
         })()}
         {/* SAVE — opens the export flow (size picker → preview: save / share /
@@ -35487,11 +35474,11 @@ Hard requirements:
           </div>
         )}
         {!_litePlayChipShown && <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
-          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
-          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
           {!immersive && (liteImageMode
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
+          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
+          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
         </>
         );
