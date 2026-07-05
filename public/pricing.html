@@ -39,14 +39,16 @@
   .plan .cta { display:block; padding:12px 18px; border-radius:28px; text-align:center; font-weight:600; font-size:.82rem; letter-spacing:.12em; text-transform:uppercase; text-decoration:none; transition:transform .15s ease; }
   .plan.free .cta { color:var(--ink); background:transparent; border:1px solid rgba(232,226,212,.3); }
   .plan.free .cta:hover { background:rgba(232,226,212,.05); }
-  .plan.pro .cta { color:#0a0a12; background:linear-gradient(135deg,var(--gold),var(--gold-soft)); border:1px solid var(--gold-soft); box-shadow:0 6px 22px rgba(201,168,76,.25); opacity:.55; cursor:default; pointer-events:none; }
+  .plan.pro .cta { color:#0a0a12; background:linear-gradient(135deg,var(--gold),var(--gold-soft)); border:1px solid var(--gold-soft); box-shadow:0 6px 22px rgba(201,168,76,.25); cursor:pointer; }
+  .plan.pro .cta:hover { transform:translateY(-1px); }
   .plan.pro .cta-note { text-align:center; color:var(--muted); font-size:.78rem; margin-top:10px; font-family:'Cormorant Garamond',serif; font-style:italic; letter-spacing:.02em; }
   .plan.proai { background:linear-gradient(150deg,rgba(176,108,255,.13),rgba(220,150,255,.03)); border-color:rgba(220,150,255,.5); box-shadow:0 8px 32px rgba(176,108,255,.14); position:relative; }
   .plan.proai::before { content:attr(data-badge); position:absolute; top:-10px; right:22px; background:linear-gradient(135deg,var(--ai),var(--ai-soft)); color:#0a0a12; font-size:.68rem; font-weight:700; letter-spacing:.15em; padding:5px 12px; border-radius:12px; box-shadow:0 4px 14px rgba(176,108,255,.4); }
   .plan.proai .plan-name { color:var(--ai-soft); }
   .plan.proai .plan-price .amount { color:var(--ai-soft); }
   .plan.proai ul li::before { color:var(--ai); }
-  .plan.proai .cta { color:#0a0a12; background:linear-gradient(135deg,var(--ai),var(--ai-soft)); border:1px solid var(--ai-soft); box-shadow:0 6px 22px rgba(176,108,255,.28); opacity:.55; cursor:default; pointer-events:none; }
+  .plan.proai .cta { color:#0a0a12; background:linear-gradient(135deg,var(--ai),var(--ai-soft)); border:1px solid var(--ai-soft); box-shadow:0 6px 22px rgba(176,108,255,.28); cursor:pointer; }
+  .plan.proai .cta:hover { transform:translateY(-1px); }
   .plan.proai .cta-note { text-align:center; color:var(--muted); font-size:.78rem; margin-top:10px; font-family:'Cormorant Garamond',serif; font-style:italic; letter-spacing:.02em; }
   h2 { font-family:'Cormorant Garamond',serif; font-weight:600; font-size:1.4rem; color:var(--gold); margin:32px 0 12px; letter-spacing:-.01em; }
   p { font-size:.95rem; color:var(--ink); margin-bottom:12px; }
