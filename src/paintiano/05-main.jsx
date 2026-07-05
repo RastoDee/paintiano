@@ -12159,9 +12159,10 @@ Hard requirements:
         // canonical style shows both).
         const _canonHit = !basicMode && !randomMode && proStatus!=='free' && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
         // Dielo = the FULL canon: canonical artist + Harmony palette + the
-        // natural chord-hash seed (no Vary lock). Anything else that still
-        // wears an artist's hand is a study.
-        const _canonExact = _canonHit && effectiveStyle===canonArtist && mode==='harmony' && structureSeedLock==null;
+        // natural chord-hash seed. Any variant deviation — Vary lock, dice
+        // salt, phase or shuffle-variant pick (all of which SURVIVE dice off) —
+        // demotes to a study.
+        const _canonExact = _canonHit && effectiveStyle===canonArtist && mode==='harmony' && structureSeedLock==null && (rndSalt|0)===0 && (phaseIndex|0)===0 && (shufVariant|0)===0;
         const _canonSpan = _canonHit ? (_canonExact
           ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 6px',borderRadius:6,whiteSpace:'nowrap',fontWeight:700,color:'#0a0a12',background:'linear-gradient(135deg,#d8b856,#b8963c)',boxShadow:'0 0 10px rgba(201,168,76,.35)'}}>{'◆ '+(t('canonWork')!=='canonWork'?t('canonWork'):'Original')}</span>)
           : (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>{t('canonStudy')!=='canonStudy'?t('canonStudy'):'study'}</span>)) : null;
