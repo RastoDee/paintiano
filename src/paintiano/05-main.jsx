@@ -10867,7 +10867,7 @@ Hard requirements:
               // (resume the partly-scanned Image canvas) instead of re-scanning.
               // If the Music changed since, fall through to a fresh scan.
               try{
-                const _curSig = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'') + '|' + ((style||shuffleStyle||'')) + '|' + (mode||'') + '|' + (pollockSessionSeed>>>0);
+                const _curSig = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
                 if(imageStashRef.current && _hearImageSrcSigRef.current === _curSig){
                   try{ stashMode('music'); }catch(_){}   // keep the Music draft for Back
                   _imageFromMusicRef.current = true;
@@ -10884,7 +10884,7 @@ Hard requirements:
                 // Fresh scan → supersede any stale Image draft from a previous
                 // Hear image; record the source signature so a later Back tags
                 // the new draft for reuse.
-                _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'') + '|' + ((style||shuffleStyle||'')) + '|' + (mode||'') + '|' + (pollockSessionSeed>>>0);
+                _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
                 imageStashRef.current = null; setHasImageDraft(false);
                 const cv = canvasRef.current;
                 if(!cv) return;
@@ -12229,7 +12229,7 @@ Hard requirements:
           const showNextFs = randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image' && canRollNextFs;
           const showSlideFs = playing && randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image';
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
-          if(!exportReadyFs && !showNextFs && !showPaletteFs && !showSlideFs) return null;
+          if(!exportReadyFs && !showNextFs && !showPaletteFs && !(showSlideFs && !immersive)) return null;
           return (
             <div className="pf-fs-controls" style={{position:'fixed',zIndex:10000,display:'flex',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease',...(immersive?{
                 top:'50%',
@@ -12265,7 +12265,7 @@ Hard requirements:
                   {t('shareStory')||'Story'}
                 </button>
               )}
-              {showSlideFs && (
+              {showSlideFs && !immersive && (
                 <button onClick={(e)=>{ e.stopPropagation(); toggleShow(); wakeControls(); }} className="pf-lift" aria-label="auto-shuffle paintings" aria-pressed={showMode}
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px 18px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:showMode?'#0a0a12':'#ffd07a',background:showMode?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'rgba(255,200,120,.20)',border:'1px solid '+(showMode?PF.gold2:'rgba(255,200,120,.6)'),boxShadow:showMode?'0 6px 22px rgba(240,192,64,.4)':'0 4px 14px rgba(255,200,120,.2)',WebkitTapHighlightColor:'transparent'}}>
                   ↻ {t('showLabel')!=='showLabel'?t('showLabel'):'Show'}
