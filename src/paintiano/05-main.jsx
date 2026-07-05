@@ -9021,6 +9021,7 @@ Hard requirements:
       let candNotes=null;
       let candCount=0;
       let candAt=0;
+      let pendStreak=0; // consecutive commits where the PENDING sig re-appeared
       const emitChord=(notes,heldMs)=>{
         // Silent painting — highlight + record, but NO playback during the
         // capture session (the user is already hearing the source audio).
@@ -9082,7 +9083,7 @@ Hard requirements:
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             pendingNotes=null;pendingSig='';
           }
-          candSig='';candNotes=null;candCount=0;
+          candSig='';candNotes=null;candCount=0;pendStreak=0;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
         if(now-lastCommit>COMMIT_INTERVAL){
@@ -9092,17 +9093,22 @@ Hard requirements:
           const ev=buildEvent(mag,liveSr);
           if(ev){
             if(ev.sig===pendingSig){
-              // Same event still sounding — hold. Any half-armed candidate
-              // was a one-frame flicker; drop it.
-              candSig='';candNotes=null;candCount=0;
+              // Same event still sounding. Wipe the candidate only after a
+              // SUSTAINED return (2 consecutive commits) — a single re-appearance
+              // between candidate frames must NOT eat quieter alternating content
+              // (loud chord + soft melody alternate frame-by-frame in real music).
+              pendStreak++;
+              if(pendStreak>=2){ candSig='';candNotes=null;candCount=0; }
             } else if(!pendingNotes){
               // Onset from silence — paint immediately, no gate.
               pendingSig=ev.sig;
               pendingNotes=ev.notes;
               prevChordStart=now;
-              candSig='';candNotes=null;candCount=0;
+              candSig='';candNotes=null;candCount=0;pendStreak=0;
             } else {
-              // Differs from the pending event — stability gate 2-of-2.
+              // Differs from the pending event — needs 2 sightings (not
+              // necessarily consecutive) before it replaces the block.
+              pendStreak=0;
               if(ev.sig===candSig){ candCount++; candNotes=ev.notes; }
               else { candSig=ev.sig; candNotes=ev.notes; candCount=1; candAt=now; }
               if(candCount>=2){
