@@ -30687,6 +30687,14 @@ Hard requirements:
       let pendingSig='';
       let pendingNotes=null;
       let prevChordStart=performance.now();
+      // Stability gate 2-of-2: a CHANGE of event must be seen on 2 consecutive
+      // commits (~240ms) before it replaces the pending block. Single-frame
+      // harmonic flickers die here. Onset from silence is NOT gated — the
+      // first sound paints immediately (responsiveness preserved).
+      let candSig='';
+      let candNotes=null;
+      let candCount=0;
+      let candAt=0;
       const emitChord=(notes,heldMs)=>{
         // Silent painting — highlight + record, but NO playback during the
         // capture session (the user is already hearing the source audio).
@@ -30709,24 +30717,31 @@ Hard requirements:
       //  • Otherwise, if a dominant pitch is clearly above the rest → single note
       //  • Otherwise, if multiple comparable peaks → 2–3 raw pitches as-is
       // Returns {sig, notes} or null.
+      // TRANSCRIPTION FIX (music mode): sig is a sorted pitch-class set, NOT
+      // the raw midi list. Octave harmonics flicker between frames (C4↔C5)
+      // and the chord detector flaps around its 0.60 threshold (C-maj ↔ raw
+      // C,E,G) — both are the SAME musical content, so they must produce the
+      // SAME sig. Detection sensitivity (noise gate, pickPitches minMag,
+      // detectChord threshold) is untouched — only the block-identity changed.
+      const pcSig=(notes)=>{const s=[...new Set(notes.map(n=>((n.m%12)+12)%12))].sort((a,b)=>a-b);return s.join(',');};
       const buildEvent=(mag,liveSr)=>{
         const chroma=computeChroma(mag,liveSr);
         const det=detectChord(chroma); // null below 0.60 conf
         const peaks=pickPitches(mag,liveSr,0.02); // original sensitivity
         if(det){
           const notes=generateVoicing(det.root,det.quality);
-          return { sig:'C:'+det.root+':'+det.quality, notes };
+          return { sig:pcSig(notes), notes };
         }
         if(peaks.length===0) return null;
         // Single dominant pitch: top peak ≥ 2.0× the next one → treat as melody.
         if(peaks.length===1 || peaks[0].mag >= peaks[1].mag*2.0){
           const m=peaks[0].midi;
-          return { sig:'N:'+m, notes:[{m,v:Math.max(70,Math.min(110,Math.round(peaks[0].mag*110)))}] };
+          const notes=[{m,v:Math.max(70,Math.min(110,Math.round(peaks[0].mag*110)))}];
+          return { sig:pcSig(notes), notes };
         }
         // Raw multi-pitch: take top 2–3, sorted ascending (low → high).
         const taken=peaks.slice(0,3).map(p=>({m:p.midi,v:Math.max(60,Math.min(108,Math.round(p.mag*100)))})).sort((a,b)=>a.m-b.m);
-        const sig='P:'+taken.map(n=>n.m).join(',');
-        return { sig, notes:taken };
+        return { sig:pcSig(taken), notes:taken };
       };
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
@@ -30741,6 +30756,7 @@ Hard requirements:
             if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
             pendingNotes=null;pendingSig='';
           }
+          candSig='';candNotes=null;candCount=0;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
         if(now-lastCommit>COMMIT_INTERVAL){
@@ -30748,15 +30764,30 @@ Hard requirements:
           const mag=fftMag(buf);
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
           const ev=buildEvent(mag,liveSr);
-          if(ev && ev.sig!==pendingSig){
-            // Event changed. Flush previous, arm new — no stability gate.
-            if(pendingNotes){
-              const heldMs=now-prevChordStart;
-              if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+          if(ev){
+            if(ev.sig===pendingSig){
+              // Same event still sounding — hold. Any half-armed candidate
+              // was a one-frame flicker; drop it.
+              candSig='';candNotes=null;candCount=0;
+            } else if(!pendingNotes){
+              // Onset from silence — paint immediately, no gate.
+              pendingSig=ev.sig;
+              pendingNotes=ev.notes;
+              prevChordStart=now;
+              candSig='';candNotes=null;candCount=0;
+            } else {
+              // Differs from the pending event — stability gate 2-of-2.
+              if(ev.sig===candSig){ candCount++; candNotes=ev.notes; }
+              else { candSig=ev.sig; candNotes=ev.notes; candCount=1; candAt=now; }
+              if(candCount>=2){
+                const heldMs=candAt-prevChordStart;
+                if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+                pendingSig=candSig;
+                pendingNotes=candNotes;
+                prevChordStart=candAt; // block starts when the new sound was first seen
+                candSig='';candNotes=null;candCount=0;
+              }
             }
-            pendingSig=ev.sig;
-            pendingNotes=ev.notes;
-            prevChordStart=now;
           }
         }
         listenRafRef.current=requestAnimationFrame(tick);
