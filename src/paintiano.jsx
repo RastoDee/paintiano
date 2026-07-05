@@ -23113,6 +23113,10 @@ export default function Paintiano() {
   // the gate to open the paywall instead of swapping styles.
   const styleIsLocked = useCallback((key) => {
     if (proStatus !== 'free') return false;
+    // Mosaic family (Mosaic / Notes / $1M$) is a core FREE feature — never
+    // locked. It isn't part of the artist style-pairs so it's absent from
+    // FREE_UNLOCKED_KEYS; special-case it here so it renders unlocked.
+    if (key==='mosaicFamily' || key==='mosaicNotes' || key==='mosaicOneM') return false;
     return !FREE_UNLOCKED_KEYS.has(key);
   }, [proStatus, FREE_UNLOCKED_KEYS]);
   // Remembers, per pair, which member the user last selected. So when a pair's
