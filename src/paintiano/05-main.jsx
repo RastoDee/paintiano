@@ -11719,7 +11719,7 @@ Hard requirements:
             //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _familyOn = setupArtists.includes('mosaicFamily');
             // Un-paired: count individual artist chips actually shown.
-            const _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : setupArtists.includes(k));
+            const _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k)));
             const _chipCount = ((_familyOn || cockpitEdit)?1:0) + _visibleArtists.length;
             // Column count: keep tiles readable. Up to 5 across (so the full
             // 20-chip edit grid lays out as a tidy 5×4). Fewer chips → fewer cols.
@@ -11805,7 +11805,7 @@ Hard requirements:
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
                 them opens the paywall instead of selecting. Edit mode: tap toggles
                 membership in setupArtists. ── */}
-            {ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : setupArtists.includes(k)).map((k)=>{
+            {ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k))).map((k)=>{
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'};
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
@@ -11844,6 +11844,25 @@ Hard requirements:
           {cockpitEdit && (
             <div style={{textAlign:'center',marginTop:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(230,222,196,.55)',lineHeight:1.5}}>
               <span>{ts('editHint','Tap to add or remove from your set.')}</span>
+            </div>
+          )}
+          {/* ── Kánonický maliar rows (under the picker) ──
+              Free tier + canonical painter Pro-locked → gold clickable upsell
+              ("this piece's painter is X — unlock the original" → paywall).
+              Painter removed from the user's set (and not locked) → muted
+              info-only hint. Both hidden in cockpit edit mode. */}
+          {!cockpitEdit && canonArtist && proStatus==='free' && styleIsLocked(canonArtist) && (
+            <div
+              onClick={()=>{ setPaywallReason('settings'); }}
+              role="button" tabIndex={0}
+              onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPaywallReason('settings'); } }}
+              style={{textAlign:'center',marginTop:8,padding:'4px 8px',fontSize:(.58*effScale)+'rem',letterSpacing:'.04em',color:'rgba(216,184,86,.85)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6}}>
+              ◆ {(ts('canonYourPainter','This piece\u2019s painter is {artist}')).replace('{artist}', STYLE_INSPIRED[canonArtist]||canonArtist)} — <span style={{textDecoration:'underline'}}>{ts('canonUnlock','unlock the original')}</span>
+            </div>
+          )}
+          {!cockpitEdit && canonArtist && !setupArtists.includes(canonArtist) && !styleIsLocked(canonArtist) && (
+            <div style={{textAlign:'center',marginTop:8,fontSize:(.55*effScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.5)',fontStyle:'italic',userSelect:'none'}}>
+              ◆ {(ts('canonOutsideSet','This piece chose {artist} — outside your set')).replace('{artist}', STYLE_INSPIRED[canonArtist]||canonArtist)}
             </div>
           )}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
@@ -12120,7 +12139,7 @@ Hard requirements:
         // another ARTIST style → muted 'štúdia'. Mosaic/notes/$oneM$ = neutral
         // ground, no badge. Combines with ✦ AI / offline (e.g. AI piece in its
         // canonical style shows both).
-        const _canonHit = !basicMode && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
+        const _canonHit = !basicMode && !randomMode && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
         // Dielo = the FULL canon: canonical artist + Harmony palette + the
         // natural chord-hash seed (no Vary lock). Anything else that still
         // wears an artist's hand is a study.
