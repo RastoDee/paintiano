@@ -31782,6 +31782,7 @@ Hard requirements:
       const cssParts=[];
       t.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (mm,c)=>{ cssParts.push(c); return mm; });
       const docCss = cssParts.join('\n')
+        .replace(/:root\b/g, '.legal-root')
         .replace(/\bbody\b(?=\s*[{,.:])/g, '.legal-root')
         .replace(/\bhtml\b(?=\s*[{,.:])/g, '.legal-root');
       setLegalCss(docCss);
