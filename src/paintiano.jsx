@@ -23187,6 +23187,25 @@ export default function Paintiano() {
     try{ return ((viewMode==='paint'||viewMode==='audio') && info && chords.length) ? canonicalArtistKey(chords) : null; }
     catch(_){ return null; }
   },[chords, info, viewMode]);
+  // ── Kánonický maliar AUTO-APPLY. Called from applyEvents (fresh loads only —
+  // draft restore keeps its stashed style). On every load the piece "chooses"
+  // its painter: artist set explicitly, palette set to Harmony, variant left
+  // implicit (pollockSessionSeed already derives it from the same chords).
+  // Precedence: (5) Random dice on → don't fight it, skip; (4) artist removed
+  // from the user's set → respect curation, skip; (3) artist Pro-locked on
+  // free → skip (the ◆ on the locked chip IS the upsell); (2) Harmony disabled
+  // → artist + first available palette (badge will read 'štúdia'); (1) full
+  // canon. Ref-bridge (no-deps effect) so applyEvents keeps its deps unchanged.
+  const canonAutoRef = useRef(null);
+  useEffect(()=>{ canonAutoRef.current = (wi)=>{
+    if(randomModeRef.current) return;
+    const ck = canonicalArtistKey(wi);
+    if(!ck) return;
+    if(!setupArtists.includes(ck)) return;
+    if(styleIsLocked(ck)) return;
+    setStyleTo(ck);
+    setMode(setupPalettes.includes('harmony') ? 'harmony' : (setupPalettes[0] || 'harmony'));
+  }; });
   const [err,       setErr]       = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
@@ -27088,6 +27107,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
+    // Kánonický maliar: the freshly loaded piece picks its painter + palette
+    // (rules & gating live in canonAutoRef — see its definition).
+    try{ if(canonAutoRef.current) canonAutoRef.current(wi); }catch(_){}
     idxRef.current=wi.length;
     setComposeMode(false);
     setDemoMode(false);
@@ -33798,7 +33820,11 @@ Hard requirements:
         // ground, no badge. Combines with ✦ AI / offline (e.g. AI piece in its
         // canonical style shows both).
         const _canonHit = !basicMode && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
-        const _canonSpan = _canonHit ? (effectiveStyle===canonArtist
+        // Dielo = the FULL canon: canonical artist + Harmony palette + the
+        // natural chord-hash seed (no Vary lock). Anything else that still
+        // wears an artist's hand is a study.
+        const _canonExact = _canonHit && effectiveStyle===canonArtist && mode==='harmony' && structureSeedLock==null;
+        const _canonSpan = _canonHit ? (_canonExact
           ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 6px',borderRadius:6,whiteSpace:'nowrap',fontWeight:700,color:'#0a0a12',background:'linear-gradient(135deg,#d8b856,#b8963c)',boxShadow:'0 0 10px rgba(201,168,76,.35)'}}>{'◆ '+(t('canonWork')!=='canonWork'?t('canonWork'):'Original')}</span>)
           : (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>{t('canonStudy')!=='canonStudy'?t('canonStudy'):'study'}</span>)) : null;
         return (<>
