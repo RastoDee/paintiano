@@ -32541,7 +32541,7 @@ Hard requirements:
               // (resume the partly-scanned Image canvas) instead of re-scanning.
               // If the Music changed since, fall through to a fresh scan.
               try{
-                const _curSig = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
+                const _curSig = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'') + '|' + ((style||shuffleStyle||'')) + '|' + (mode||'') + '|' + (pollockSessionSeed>>>0);
                 if(imageStashRef.current && _hearImageSrcSigRef.current === _curSig){
                   try{ stashMode('music'); }catch(_){}   // keep the Music draft for Back
                   _imageFromMusicRef.current = true;
@@ -32558,7 +32558,7 @@ Hard requirements:
                 // Fresh scan → supersede any stale Image draft from a previous
                 // Hear image; record the source signature so a later Back tags
                 // the new draft for reuse.
-                _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'');
+                _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'') + '|' + ((style||shuffleStyle||'')) + '|' + (mode||'') + '|' + (pollockSessionSeed>>>0);
                 imageStashRef.current = null; setHasImageDraft(false);
                 const cv = canvasRef.current;
                 if(!cv) return;
