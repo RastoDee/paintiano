@@ -1286,6 +1286,7 @@ export default function Paintiano() {
   // level. Refs so they survive across taps without triggering re-renders.
   const surpriseArtistBagRef = useRef([]);
   const surpriseVariantBagsRef = useRef({});
+  const surprisePaletteBagRef = useRef([]);
   useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
   // SHOW MODE (auto-shuffle slideshow): while a piece is playing AND dice is on
   // (full shuffle, or dice + a selected artist), the Save chip is replaced by a
@@ -8031,6 +8032,25 @@ Hard requirements:
       vbags[nk] = vbag;
     }
     setRandomMode(false); randomModeRef.current=false;
+    // ── pick next PALETTE from setupPalettes (read-only over the setup) ─────
+    // Every Surprise is a fresh palette × style × variant combo. Palettes are
+    // shuffled in their own no-repeat bag so they rotate evenly. 'bw' is never
+    // a Lite palette; 'custom' is included only if the user enabled it.
+    try {
+      const _palPool = ALL_PALETTE_KEYS.filter(p => p!=='bw' && setupPalettes.includes(p));
+      if(_palPool.length){
+        const _curPal = mode;
+        let pbag = surprisePaletteBagRef.current.filter(p => _palPool.includes(p));
+        if(pbag.length===0){
+          pbag = shuffle(_palPool.slice());
+          if(pbag.length>1 && pbag[0]===_curPal){ pbag.push(pbag.shift()); }
+        }
+        let npal = pbag.shift();
+        if(npal===_curPal && pbag.length){ pbag.push(npal); npal = pbag.shift(); }
+        surprisePaletteBagRef.current = pbag;
+        if(npal && npal!==mode){ setMode(npal); }
+      }
+    } catch(_){}
     if(_isFamilyKey(nk)){
       // Mosaic family stop. style stays null; the sub-mode flags pick which
       // bare-grid look renders via effectiveStyle (Mosaic / Notes / $1M$).
@@ -8045,7 +8065,7 @@ Hard requirements:
       setPhaseIndex(nv|0);            // pick that artist's variant
       setNotesMode(false); setOneMMode(false);  // artist exits any family sub-mode
     }
-  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode]);
+  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode, setupPalettes, mode, setupArtists]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
   // and the canvas is empty (e.g. after the intro splash, or on entering Basic
