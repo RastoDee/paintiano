@@ -33704,7 +33704,7 @@ Hard requirements:
           tells the user what a swipe does in the current mode: Lite → Surprise,
           Advanced → Next. Only rendered when immersive; occupies the letterbox
           area where INSPIRED BY used to be. Swipe flash still fires below. */}
-      {immersive && viewMode!=='image' && !liteImageMode && (basicMode || randomMode) && (
+      {immersive && viewMode!=='image' && !liteImageMode && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive))) && (
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
           {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
         </div>
@@ -33774,11 +33774,12 @@ Hard requirements:
             try {
               if(basicMode){
                 basicSurprise();
-              } else if(randomMode){
-                // Advanced FS swipe = dice-button state only. If the dice
-                // (shuffle) is OFF the gesture is a full no-op regardless of
-                // whether an artist look is selected, matching the hidden
-                // hint label — nothing is promised, nothing fires.
+              } else if(randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)){
+                // Advanced FS swipe mirrors the normal-screen NEXT button
+                // exactly: it only fires when dice (shuffle) is ON *and* the
+                // roll is currently allowed (canRoll). If NEXT would be
+                // disabled — e.g. an unplayed mood with disp===0 — the swipe
+                // is a full no-op, and the hint label is hidden to match.
                 nextRollInProgressRef.current = true;
                 _diceRoll();
               }
