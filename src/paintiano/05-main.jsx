@@ -9022,6 +9022,16 @@ Hard requirements:
       let candCount=0;
       let candAt=0;
       let pendStreak=0; // consecutive commits where the PENDING sig re-appeared
+      // ONSET DETECTION (spectral flux): a sharp rise of NEW spectral energy
+      // between commits = a note attack. Attacks cut blocks directly, so the
+      // painting follows the RHYTHM of the song, not just spectral identity
+      // drift. Detection sensitivity (noise gate etc.) is untouched.
+      let prevMag=null;
+      let fluxAvg=0;
+      let lastOnsetAt=0;
+      // CHROMA SMOOTHING: average the last 3 chroma frames before chord
+      // detection — kills single-frame template flapping.
+      const chromaHist=[];
       const emitChord=(notes,heldMs)=>{
         // Silent painting — highlight + record, but NO playback during the
         // capture session (the user is already hearing the source audio).
@@ -9053,7 +9063,17 @@ Hard requirements:
       const pcSig=(notes)=>{const s=[...new Set(notes.map(n=>((n.m%12)+12)%12))].sort((a,b)=>a-b);return s.join(',');};
       const buildEvent=(mag,liveSr)=>{
         const chroma=computeChroma(mag,liveSr);
-        const det=detectChord(chroma); // null below 0.60 conf
+        // Smooth chroma over the last 3 commits — chord templates see a
+        // steadier vector, so detection stops flapping around its threshold.
+        chromaHist.push(chroma);
+        if(chromaHist.length>3)chromaHist.shift();
+        let chromaAvg=chroma;
+        if(chromaHist.length>1){
+          chromaAvg=new Float32Array(12);
+          for(let k=0;k<chromaHist.length;k++)for(let i=0;i<12;i++)chromaAvg[i]+=chromaHist[k][i];
+          for(let i=0;i<12;i++)chromaAvg[i]/=chromaHist.length;
+        }
+        const det=detectChord(chromaAvg); // null below 0.60 conf
         const peaks=pickPitches(mag,liveSr,0.02); // original sensitivity
         if(det){
           const notes=generateVoicing(det.root,det.quality);
@@ -9062,7 +9082,24 @@ Hard requirements:
         if(peaks.length===0) return null;
         // Single dominant pitch: top peak ≥ 2.0× the next one → treat as melody.
         if(peaks.length===1 || peaks[0].mag >= peaks[1].mag*2.0){
-          const m=peaks[0].midi;
+          let m=peaks[0].midi;
+          // Harmonic-summation guard: if the sub-octave bin (f/2) carries
+          // real energy (≥30% of the peak), the dominant peak is actually a
+          // 2nd harmonic — take the true fundamental instead. Fixes the
+          // classic "melody jumps an octave up" FFT error.
+          const f2=(peaks[0].freq||0)/2;
+          if(f2>=27.5){
+            const binHz=liveSr/(mag.length*2);
+            const b=Math.round(f2/binHz);
+            if(b>=1&&b<mag.length-1){
+              let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];
+              const local=Math.max(mag[b-1],mag[b],mag[b+1])/(mx||1);
+              if(local>=peaks[0].mag*0.30){
+                const mm=Math.round(69+12*Math.log2(f2/440));
+                if(mm>=21&&mm<=108)m=mm;
+              }
+            }
+          }
           const notes=[{m,v:Math.max(70,Math.min(110,Math.round(peaks[0].mag*110)))}];
           return { sig:pcSig(notes), notes };
         }
@@ -9084,15 +9121,38 @@ Hard requirements:
             pendingNotes=null;pendingSig='';
           }
           candSig='';candNotes=null;candCount=0;pendStreak=0;
+          prevMag=null;chromaHist.length=0;
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
         if(now-lastCommit>COMMIT_INTERVAL){
           lastCommit=now;
           const mag=fftMag(buf);
           const liveSr = (ac.sampleRate && ac.sampleRate>1000) ? ac.sampleRate : (sr && sr>1000 ? sr : 44100);
+          // Spectral flux: sum of positive magnitude increases vs the previous
+          // commit. An onset is flux ≥ 2.2× its running average, at most one
+          // per 220ms. Cuts the pending block immediately — the painting
+          // follows note attacks (rhythm), not just spectral identity.
+          let isOnset=false;
+          if(prevMag&&prevMag.length===mag.length){
+            let flux=0;
+            for(let i=0;i<mag.length;i++){const d=mag[i]-prevMag[i];if(d>0)flux+=d;}
+            if(fluxAvg>0&&flux>fluxAvg*2.2&&(now-lastOnsetAt)>=220)isOnset=true;
+            fluxAvg=fluxAvg*0.9+flux*0.1;
+          }
+          prevMag=mag;
           const ev=buildEvent(mag,liveSr);
           if(ev){
-            if(ev.sig===pendingSig){
+            if(isOnset&&pendingNotes){
+              // Note attack — cut now, even if the pitch content is the same
+              // (the same chord struck twice IS two musical events).
+              lastOnsetAt=now;
+              const heldMs=now-prevChordStart;
+              if(heldMs>=MIN_HOLD_MS) emitChord(pendingNotes,heldMs);
+              pendingSig=ev.sig;
+              pendingNotes=ev.notes;
+              prevChordStart=now;
+              candSig='';candNotes=null;candCount=0;pendStreak=0;
+            } else if(ev.sig===pendingSig){
               // Same event still sounding. Wipe the candidate only after a
               // SUSTAINED return (2 consecutive commits) — a single re-appearance
               // between candidate frames must NOT eat quieter alternating content
@@ -9101,6 +9161,7 @@ Hard requirements:
               if(pendStreak>=2){ candSig='';candNotes=null;candCount=0; }
             } else if(!pendingNotes){
               // Onset from silence — paint immediately, no gate.
+              lastOnsetAt=now;
               pendingSig=ev.sig;
               pendingNotes=ev.notes;
               prevChordStart=now;
