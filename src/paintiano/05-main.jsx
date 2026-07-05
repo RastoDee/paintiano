@@ -1480,10 +1480,12 @@ export default function Paintiano() {
   useEffect(()=>{ composeSourceRef.current = composeSource; }, [composeSource]);
   // ── Kánonický maliar: derived, not stored. The current piece's one true
   // painter, hashed from its notes (canonicalArtistKey in 01-core). Gated on
-  // info (only real loaded pieces — mic/live leave info null) and paint view
-  // (image scans build chords without applyEvents). Advanced-only in the UI.
+  // info (only real loaded pieces — mic/live leave info null); 'paint' covers
+  // MIDI/XML/mood/AI, 'audio' covers mp3/wav (loadAudio flips viewMode to
+  // 'audio' right after applyEvents). 'image' stays excluded — image scans
+  // build chords without applyEvents. Advanced-only in the UI.
   const canonArtist = useMemo(()=>{
-    try{ return (viewMode==='paint' && info && chords.length) ? canonicalArtistKey(chords) : null; }
+    try{ return ((viewMode==='paint'||viewMode==='audio') && info && chords.length) ? canonicalArtistKey(chords) : null; }
     catch(_){ return null; }
   },[chords, info, viewMode]);
   const [err,       setErr]       = useState('');
