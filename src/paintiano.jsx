@@ -33509,7 +33509,7 @@ Hard requirements:
                   {/* Kánonický maliar: gold ◆ marks the artist this piece chose —
                       visible even when the style is locked (that IS the upsell). */}
                   {!cockpitEdit && canonArtist===k && (
-                    <span title={(ts('canonChose','This piece chose {artist}')).replace('{artist}',_full)} style={{position:'absolute',top:-6,right:-2,fontSize:(.5*effScale)+'rem',lineHeight:1,color:'rgba(216,184,86,.95)',textShadow:'0 0 6px rgba(201,168,76,.65)'}}>◆</span>
+                    <span title={(ts('canonChose','This piece chose {artist}')).replace('{artist}',_full)} style={{position:'absolute',top:2,right:5,fontSize:(.4*effScale)+'rem',lineHeight:1,color:'rgba(216,184,86,.95)',textShadow:'0 0 5px rgba(201,168,76,.65)'}}>◆</span>
                   )}
                 </button>
               );
