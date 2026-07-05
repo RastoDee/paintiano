@@ -10868,6 +10868,7 @@ Hard requirements:
               // If the Music changed since, fall through to a fresh scan.
               try{
                 const _curSig = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'') + '|' + ((style||shuffleStyle||'')) + '|' + (mode||'') + '|' + (pollockSessionSeed>>>0);
+                try{ console.log('[HEAR]', JSON.stringify({curSig:_curSig, savedSig:_hearImageSrcSigRef.current, hasStash:!!imageStashRef.current, match:(_hearImageSrcSigRef.current===_curSig), style:style, shuffleStyle:shuffleStyle, mode:mode, seed:(pollockSessionSeed>>>0)})); }catch(_){}
                 if(imageStashRef.current && _hearImageSrcSigRef.current === _curSig){
                   try{ stashMode('music'); }catch(_){}   // keep the Music draft for Back
                   _imageFromMusicRef.current = true;
