@@ -7907,7 +7907,8 @@ Hard requirements:
   const pickExpressiveStyle = useCallback(()=>{
     const pool = EXPRESSIVE_POOL;
     const k = pool[Math.floor(Math.random()*pool.length)] || 'picasso';
-    setSetupArtists(prev => prev.includes(k) ? prev : [...prev, k]);
+    // NOTE: no setSetupArtists here — Lite landing/surprise never writes the
+    // central setup. It just selects a style to render.
     setRandomMode(false); randomModeRef.current=false;
     setStyle(k);
     return k;
@@ -7963,7 +7964,7 @@ Hard requirements:
     if(_liteNextIsMosaicRef.current){
       _liteNextIsMosaicRef.current = false;
       setRandomMode(false); randomModeRef.current=false;
-      setSetupArtists(prev => prev.includes('mosaicFamily') ? prev : [...prev,'mosaicFamily']);
+      // NOTE: no setSetupArtists here — Surprise is read-only over the setup.
       setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
       return;
     }
@@ -7972,15 +7973,21 @@ Hard requirements:
     // variants (phaseIndex 0/1) = 18 looks, plus mosaic. For Pro, all artists ×
     // their full variant count. Each tap lands on a DIFFERENT address than the
     // current one so the painting always visibly changes.
-    const artists = (proStatus === 'free')
-      ? Array.from(FREE_UNLOCKED_KEYS)
-      : ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily');
+    // READ-ONLY over the central setup: the Lite shuffle pool is exactly the
+    // artists the user enabled in Advanced (setupArtists), never all-unlocked.
+    // Free tier additionally filters to unlocked artists. Surprise NEVER writes
+    // back to setupArtists — it only reads which artists are allowed.
+    const _allowedArtists = setupArtists.filter(k => k!=='mosaicFamily' && (proStatus!=='free' || FREE_UNLOCKED_KEYS.has(k)));
+    const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
+    const _familyAllowed = setupArtists.includes('mosaicFamily');
     const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky') ? 8 : (k==='wave' ? 7 : 6)));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
     const _isFamilyKey = (k)=> (k==='mosaicFamily'||k==='mosaicNotes'||k==='mosaicOneM');
-    const bagKeys = [...artists, 'mosaicFamily', 'mosaicNotes', 'mosaicOneM'];
+    // Mosaic family stops (Mosaic / Notes / $1M$) join the bag ONLY when the
+    // user kept mosaicFamily enabled in the central setup (option B).
+    const bagKeys = _familyAllowed ? [...artists, 'mosaicFamily', 'mosaicNotes', 'mosaicOneM'] : [...artists];
     // Fisher–Yates shuffle.
     const shuffle = (arr)=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
     const curK = style ? style
@@ -8023,13 +8030,13 @@ Hard requirements:
     if(_isFamilyKey(nk)){
       // Mosaic family stop. style stays null; the sub-mode flags pick which
       // bare-grid look renders via effectiveStyle (Mosaic / Notes / $1M$).
-      setSetupArtists(prev => prev.includes('mosaicFamily') ? prev : [...prev,'mosaicFamily']);
+      // NOTE: no setSetupArtists here — Surprise is read-only over the setup.
       setStyle(null);                 // null style → mosaic family
       setShufVariant(0);
       setNotesMode(nk==='mosaicNotes');
       setOneMMode(nk==='mosaicOneM');
     } else {
-      setSetupArtists(prev => prev.includes(nk) ? prev : [...prev, nk]);
+      // NOTE: no setSetupArtists here — Surprise only *reads* the allowed set.
       setStyle(nk);
       setPhaseIndex(nv|0);            // pick that artist's variant
       setNotesMode(false); setOneMMode(false);  // artist exits any family sub-mode
