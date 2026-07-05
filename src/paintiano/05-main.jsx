@@ -10090,6 +10090,8 @@ Hard requirements:
   // user never leaves the Paintiano context (no new tab, no full-page nav).
   const [legalDoc, setLegalDoc] = useState(null);
   const [legalHtml, setLegalHtml] = useState('');
+  const [legalCss, setLegalCss] = useState('');
+  const legalHostRef = useRef(null);
   const [legalLoading, setLegalLoading] = useState(false);
   useEffect(()=>{
     if(!legalDoc){ setLegalHtml(''); return; }
@@ -10097,11 +10099,28 @@ Hard requirements:
     setLegalLoading(true);
     fetch('/'+legalDoc+'.html').then(r=>r.text()).then(t=>{
       if(cancelled) return;
+      // FIX 17: keep the doc's own <head> CSS. It used to be dropped with the
+      // whole <head> (to avoid clashing with app styles), which rendered the
+      // modal as raw unstyled HTML. The content now lives in a Shadow DOM
+      // (see the render below), so the doc CSS is fully isolated — we can
+      // inject it verbatim. body/html selectors are remapped onto the
+      // .legal-root wrapper because a shadow tree has no <body>.
+      const cssParts=[];
+      t.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (mm,c)=>{ cssParts.push(c); return mm; });
+      const docCss = cssParts.join('\n')
+        .replace(/\bbody\b(?=\s*[{,.:])/g, '.legal-root')
+        .replace(/\bhtml\b(?=\s*[{,.:])/g, '.legal-root');
+      setLegalCss(docCss);
       // Strip everything before <body> and after </body> so we render
       // only the page's content — outer <html>/<head> would clash with
       // the app's own document and break styles.
       const m = t.match(/<body[^>]*>([\s\S]*)<\/body>/i);
       let body = m ? m[1] : t;
+      // Buy CTAs carry inline onclick="paintianoBuy('pro')" for the
+      // standalone page. Inside the modal that global doesn't exist —
+      // rename the attribute so it can't throw, and route the click to the
+      // app's own openCheckout in onLegalClick instead.
+      body = body.replace(/onclick="paintianoBuy\(/g, 'data-buy="paintianoBuy(');
       // The HTML file contains all 8 language sections side-by-side plus a
       // small standalone-mode <script> with localStorage-based language
       // detection. Inside the modal we don't want either of those: the
@@ -10142,18 +10161,38 @@ Hard requirements:
       // Fall back to EN if the requested language is missing in this doc.
       h = h.replace('class="wrap" data-lang="en"', 'class="wrap active" data-lang="en"');
     }
-    return '<style>[data-lang]:not(.active){display:none}</style>'+h;
-  },[legalHtml, lang]);
+    return '<style>'+legalCss+'\n[data-lang]:not(.active){display:none}\n.legal-root{min-height:100%}</style><div class="legal-root">'+h+'</div>';
+  },[legalHtml, legalCss, lang]);
+  // FIX 17: render the doc inside a Shadow DOM so its CSS is isolated from
+  // the app (both directions). React never manages shadow children, so we
+  // fill it imperatively whenever the content or loading state changes.
+  useEffect(()=>{
+    const el = legalHostRef.current;
+    if(!el) return;
+    if(!el.shadowRoot){ try{ el.attachShadow({mode:'open'}); }catch(_){ return; } }
+    const html = legalLoading
+      ? '<p style="opacity:.6;text-align:center;padding:40px;font-family:Arial">Loading…</p>'
+      : legalHtmlForLang;
+    try{ el.shadowRoot.innerHTML = html; }catch(_){}
+  },[legalDoc, legalLoading, legalHtmlForLang]);
   // Intercept clicks on cross-doc anchors inside the modal — instead of
   // following the href (which would navigate the whole page), open the
   // matching doc inside the modal.
   const onLegalClick = useCallback((e)=>{
-    const a = e.target.closest('a');
+    // Events crossing a shadow boundary are retargeted to the host —
+    // composedPath()[0] recovers the real element inside the shadow tree.
+    const path = (e.nativeEvent && e.nativeEvent.composedPath) ? e.nativeEvent.composedPath() : null;
+    const t0 = (path && path.length && path[0].closest) ? path[0] : e.target;
+    const a = t0.closest ? t0.closest('a') : null;
     if(!a) return;
+    // Buy CTA → the app's own Paddle checkout (same flow as the paywall).
+    const buy = a.getAttribute('data-buy') || '';
+    const bm = buy.match(/paintianoBuy\('([^']+)'/);
+    if(bm){ e.preventDefault(); try{ openCheckout(bm[1]==='pro_ai'?'pro_ai':'pro'); }catch(_){} return; }
     const href = a.getAttribute('href') || '';
     const m = href.match(/^\/?(pricing|terms|privacy|refunds)\.html$/i);
     if(m){ e.preventDefault(); setLegalDoc(m[1].toLowerCase()); }
-  },[]);
+  },[openCheckout]);
   // Onboarding phase: 'preview' (idle hero with ▶), 'playing' (real-time mirror
   // of the main canvas drawing the sample), 'done' (sample finished, CTA bar
   // appears with "Try your own" + replay).
@@ -13848,7 +13887,7 @@ Hard requirements:
               onClick={onLegalClick}
               style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'24px 22px 28px',color:'rgba(247,243,236,.92)',fontFamily:'Arial, sans-serif',fontSize:(.85*effScale)+'rem',lineHeight:1.55}}
               className="paintiano-legal-content"
-              dangerouslySetInnerHTML={{__html: legalLoading ? '<p style="opacity:.6;text-align:center;padding:40px;">Loading…</p>' : legalHtmlForLang}}
+              ref={legalHostRef}
             />
           </div>
         </div>
