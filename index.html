@@ -828,5 +828,44 @@ function build(){
 if(document.readyState!=='loading')build(); else document.addEventListener('DOMContentLoaded',build);
 })();
 </script>
+<!-- ═══ PAINTIANO · PH LAUNCH TEASER POPUP ═══
+     Vlož tesne pred </body> v index.html (landing).
+     Auto-vypne sa po 29.7.2026 09:00 CET. Max 1× za 3 dni na návštevníka. -->
+<script>
+(function(){
+  var PH_URL='https://www.producthunt.com/products/paintiano?launch=paintiano';
+  var LAUNCH_TS=Date.parse('2026-07-29T07:00:00Z'); /* 09:00 CET */
+  var KEY='paintiano_ph_teaser_seen';
+  var COOLDOWN=3*24*3600*1000;
+  if(Date.now()>=LAUNCH_TS)return;
+  try{var last=+localStorage.getItem(KEY)||0;if(Date.now()-last<COOLDOWN)return;}catch(_){}
+  var shown=false;
+  function show(){
+    if(shown)return;shown=true;
+    try{localStorage.setItem(KEY,''+Date.now());}catch(_){}
+    var bd=document.createElement('div');
+    bd.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(6,6,12,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .35s ease;';
+    var p=document.createElement('div');
+    p.style.cssText='position:relative;max-width:420px;width:100%;background:#0d0b16;border:1px solid rgba(201,168,76,.35);border-radius:18px;padding:36px 30px 30px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.6);font-family:\'Cormorant Garamond\',Georgia,serif;color:#e8e2d4;';
+    p.innerHTML=
+      '<div style="font-size:.68rem;letter-spacing:.3em;color:#c9a84c;text-transform:uppercase;margin-bottom:14px;">Product Hunt &middot; July 29</div>'+
+      '<div style="font-size:1.7rem;font-weight:600;line-height:1.25;margin-bottom:10px;">Paintiano is launching</div>'+
+      '<div style="font-size:1.02rem;color:rgba(232,226,212,.75);line-height:1.5;margin-bottom:24px;font-style:italic;">Be first to know when music becomes painting &mdash; tap Notify me on Product Hunt.</div>'+
+      '<a href="'+PH_URL+'" target="_blank" rel="noopener" style="display:block;padding:14px 18px;border-radius:28px;background:linear-gradient(135deg,#c9a84c,#e8cf8a);color:#0a0a12;font-weight:700;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;font-family:Arial,sans-serif;">Notify me on launch</a>'+
+      '<button aria-label="close" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:16px;background:rgba(247,243,236,.07);color:rgba(247,243,236,.75);border:1px solid rgba(247,243,236,.18);cursor:pointer;font-size:1rem;line-height:1;">&#10005;</button>';
+    bd.appendChild(p);document.body.appendChild(bd);
+    requestAnimationFrame(function(){bd.style.opacity='1';});
+    function close(){bd.style.opacity='0';setTimeout(function(){try{bd.remove();}catch(_){}} ,350);}
+    bd.addEventListener('click',function(e){if(e.target===bd)close();});
+    p.querySelector('button').addEventListener('click',close);
+  }
+  /* Desktop exit-intent: mys opusta okno smerom hore */
+  document.addEventListener('mouseout',function(e){
+    if(!e.relatedTarget&&e.clientY<=0)show();
+  });
+  /* Mobil: raz po 25 s */
+  if(('ontouchstart' in window))setTimeout(show,25000);
+})();
+</script>
 </body>
 </html>
