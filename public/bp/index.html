@@ -57,6 +57,8 @@
 <script src="./bp-bundle.js"></script>
 <script>
 (function(){
+  window.addEventListener('error',function(e){var s=document.getElementById('status');if(s)s.textContent='JS chyba: '+(e.message||e.type);});
+  window.addEventListener('unhandledrejection',function(e){var s=document.getElementById('status');if(s)s.textContent='chyba (async): '+(e.reason&&e.reason.message?e.reason.message:e.reason);});
   var recBtn=document.getElementById('recBtn'),fileInp=document.getElementById('fileInp'),
       statusEl=document.getElementById('status'),bar=document.getElementById('bar'),barfill=document.getElementById('barfill'),
       playBtn=document.getElementById('playBtn');
@@ -138,11 +140,27 @@
   var bpModel=null;
   function run(audio22k,durS){
     bar.style.display='block';barfill.style.width='0%';
-    setStatus(bpModel?'prepisujem…':'sťahujem model (~0.9 MB)…');
-    if(!bpModel)bpModel=new BP.BasicPitch('./model/model.json');
+    var pre;
+    if(bpModel){pre=Promise.resolve();}
+    else{
+      setStatus('kontrolujem model súbory…');
+      pre=fetch('./model/model.json').then(function(r){
+        if(!r.ok)throw new Error('model.json HTTP '+r.status);
+        return fetch('./model/group1-shard1of1.bin',{method:'HEAD'});
+      }).then(function(r){
+        if(r&&!r.ok)throw new Error('weights .bin HTTP '+r.status);
+        setStatus('inicializujem TF ('+(BP.tf.getBackend()||'…')+')…');
+        return BP.tf.ready();
+      }).then(function(){
+        setStatus('sťahujem model (~0.9 MB) · backend '+BP.tf.getBackend()+'…');
+        bpModel=new BP.BasicPitch('./model/model.json');
+        return bpModel.model;
+      }).then(function(){setStatus('model načítaný · spúšťam prepis…');});
+    }
     var frames=[],onsets=[],contours=[];
     var t0=performance.now();
-    bpModel.evaluateModel(audio22k,function(f,o,c){
+    pre.then(function(){
+    return bpModel.evaluateModel(audio22k,function(f,o,c){
       Array.prototype.push.apply(frames,f);
       Array.prototype.push.apply(onsets,o);
       Array.prototype.push.apply(contours,c);
@@ -164,6 +182,7 @@
       drawRoll(notes,durS);
       listNotes(notes);
       playBtn.style.display=notes.length?'block':'none';
+    });
     }).catch(function(e){
       bar.style.display='none';
       setStatus('chyba: '+(e&&e.message?e.message:e));
