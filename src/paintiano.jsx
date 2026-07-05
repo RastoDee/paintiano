@@ -31849,7 +31849,19 @@ Hard requirements:
       ? '<p style="opacity:.6;text-align:center;padding:40px;font-family:Arial">Loading…</p>'
       : legalHtmlForLang;
     try{ el.shadowRoot.innerHTML = html; }catch(_){}
-  },[legalDoc, legalLoading, legalHtmlForLang]);
+    // Buy CTAs: bind directly inside the shadow tree — more reliable than
+    // relying on retargeted events reaching the host's React onClick.
+    try{
+      el.shadowRoot.querySelectorAll('a[data-buy]').forEach(a=>{
+        a.style.cursor='pointer';
+        a.addEventListener('click', (ev)=>{
+          ev.preventDefault(); ev.stopPropagation();
+          const mm=(a.getAttribute('data-buy')||'').match(/paintianoBuy\('([^']+)'/);
+          try{ openCheckout(mm&&mm[1]==='pro_ai' ? 'pro_ai' : 'pro'); }catch(_){}
+        });
+      });
+    }catch(_){}
+  },[legalDoc, legalLoading, legalHtmlForLang, openCheckout]);
   // Intercept clicks on cross-doc anchors inside the modal — instead of
   // following the href (which would navigate the whole page), open the
   // matching doc inside the modal.
