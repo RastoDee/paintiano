@@ -33856,7 +33856,7 @@ Hard requirements:
         // another ARTIST style → muted 'štúdia'. Mosaic/notes/$oneM$ = neutral
         // ground, no badge. Combines with ✦ AI / offline (e.g. AI piece in its
         // canonical style shows both).
-        const _canonHit = !basicMode && !randomMode && proStatus!=='free' && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
+        const _canonHit = !basicMode && proStatus!=='free' && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
         // Dielo = the FULL canon: canonical artist + Harmony palette + the
         // natural chord-hash seed. Any variant deviation — Vary lock, dice
         // salt, phase or shuffle-variant pick (all of which SURVIVE dice off) —
