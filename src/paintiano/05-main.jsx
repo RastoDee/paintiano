@@ -1478,36 +1478,6 @@ export default function Paintiano() {
   // becoming dependent on composeSource and re-creating per change).
   const composeSourceRef = useRef(null);
   useEffect(()=>{ composeSourceRef.current = composeSource; }, [composeSource]);
-  // ── Kánonický maliar: derived, not stored. The current piece's one true
-  // painter, hashed from its notes (canonicalArtistKey in 01-core). Gated on
-  // info (only real loaded pieces — mic/live leave info null); 'paint' covers
-  // MIDI/XML/mood/AI, 'audio' covers mp3/wav (loadAudio flips viewMode to
-  // 'audio' right after applyEvents). 'image' stays excluded — image scans
-  // build chords without applyEvents. Advanced-only in the UI.
-  const canonArtist = useMemo(()=>{
-    try{ return ((viewMode==='paint'||viewMode==='audio') && info && chords.length) ? canonicalArtistKey(chords) : null; }
-    catch(_){ return null; }
-  },[chords, info, viewMode]);
-  // ── Kánonický maliar AUTO-APPLY. Called from applyEvents (fresh loads only —
-  // draft restore keeps its stashed style). On every load the piece "chooses"
-  // its painter: artist set explicitly, palette set to Harmony, variant left
-  // implicit (pollockSessionSeed already derives it from the same chords).
-  // Precedence: (5) Random dice on → don't fight it, skip; (4) artist removed
-  // from the user's set → respect curation, skip; (3) artist Pro-locked on
-  // free → skip (the ◆ on the locked chip IS the upsell); (2) Harmony disabled
-  // → artist + first available palette (badge will read 'štúdia'); (1) full
-  // canon. Ref-bridge (no-deps effect) so applyEvents keeps its deps unchanged.
-  const canonAutoRef = useRef(null);
-  useEffect(()=>{ canonAutoRef.current = (wi)=>{
-    if(proStatus==='free') return; // canon is a Pro feature — free sees only the teaser row
-    if(randomModeRef.current) return;
-    const ck = canonicalArtistKey(wi);
-    if(!ck) return;
-    if(!setupArtists.includes(ck)) return;
-    if(styleIsLocked(ck)) return;
-    setStyleTo(ck);
-    setMode(setupPalettes.includes('harmony') ? 'harmony' : (setupPalettes[0] || 'harmony'));
-  }; });
   const [err,       setErr]       = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
@@ -5409,9 +5379,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
     setInfo({title,count:wi.length,dur:Math.round(lastMs/1000)});
-    // Kánonický maliar: the freshly loaded piece picks its painter + palette
-    // (rules & gating live in canonAutoRef — see its definition).
-    try{ if(canonAutoRef.current) canonAutoRef.current(wi); }catch(_){}
     idxRef.current=wi.length;
     setComposeMode(false);
     setDemoMode(false);
@@ -11832,11 +11799,6 @@ Hard requirements:
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
-                  {/* Kánonický maliar: gold ◆ marks the artist this piece chose —
-                      visible even when the style is locked (that IS the upsell). */}
-                  {!cockpitEdit && proStatus!=='free' && canonArtist===k && (
-                    <span title={(ts('canonChose','This piece chose {artist}')).replace('{artist}',_full)} style={{position:'absolute',top:2,right:5,fontSize:(.4*effScale)+'rem',lineHeight:1,color:'rgba(216,184,86,.95)',textShadow:'0 0 5px rgba(201,168,76,.65)'}}>◆</span>
-                  )}
                 </button>
               );
             })}
@@ -11847,42 +11809,6 @@ Hard requirements:
               <span>{ts('editHint','Tap to add or remove from your set.')}</span>
             </div>
           )}
-          {/* ── Kánonický maliar rows (under the picker) ──
-              Free tier + canonical painter Pro-locked → gold clickable upsell
-              ("this piece's painter is X — unlock the original" → paywall).
-              Painter removed from the user's set (and not locked) → muted
-              info-only hint. Hidden in cockpit edit mode AND for built-in
-              content (onboarding samples, demo) — a brand-new visitor must
-              never see a payment nudge on a piece they didn't choose; the
-              canon moment belongs to THEIR first own song. */}
-          {!cockpitEdit && canonArtist && (()=>{
-            const _builtinTitles=[
-              (typeof SAMPLE_AUDIO_NAME!=='undefined')?SAMPLE_AUDIO_NAME:null,
-              (typeof SAMPLE_MIDI_NAME!=='undefined')?SAMPLE_MIDI_NAME:null,
-              (typeof SAMPLE_SCORE_NAME!=='undefined')?SAMPLE_SCORE_NAME:null,
-              t('mfiSampleTitle')||null
-            ].filter(Boolean);
-            if(demoMode || (info && _builtinTitles.includes(info.title))) return null;
-            const _cName = STYLE_INSPIRED[canonArtist]||canonArtist;
-            if(proStatus==='free' && styleIsLocked(canonArtist)) return (
-              // Variant B — a whisper, not a toll-booth: muted info line with no
-              // unlock CTA. Tap opens the GUIDE style card (education, not the
-              // paywall) — curiosity → understanding → self-directed upgrade.
-              <div
-                onClick={()=>{ setGuideReturnCardId('style'); setShowGuide(true); }}
-                role="button" tabIndex={0}
-                onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setGuideReturnCardId('style'); setShowGuide(true); } }}
-                style={{textAlign:'center',marginTop:8,padding:'4px 8px',fontSize:(.55*effScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.5)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6}}>
-                ◆ {(ts('canonYourPainter','This piece\u2019s painter is {artist}')).replace('{artist}', _cName)}
-              </div>
-            );
-            if(proStatus!=='free' && !setupArtists.includes(canonArtist) && !styleIsLocked(canonArtist)) return (
-              <div style={{textAlign:'center',marginTop:8,fontSize:(.55*effScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.5)',fontStyle:'italic',userSelect:'none'}}>
-                ◆ {(ts('canonOutsideSet','This piece chose {artist} — outside your set')).replace('{artist}', _cName)}
-              </div>
-            );
-            return null;
-          })()}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
               member of the most recently tapped pair with a PRO badge.
               Clickable: opens the paywall with reason 'settings'. */}
@@ -12152,20 +12078,6 @@ Hard requirements:
         // glance the piece was NOT AI-composed. 'crafted' (library) stays bare.
         const _showOffBadge = !_showAiBadge && moodContext && composeSource==='offline';
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : _showOffBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>offline</span>) : null;
-        // ── Kánonický maliar badge (Advanced only). The piece's hashed one true
-        // painter: current style IS the canonical artist → filled gold ◆ Dielo;
-        // another ARTIST style → muted 'štúdia'. Mosaic/notes/$oneM$ = neutral
-        // ground, no badge. Combines with ✦ AI / offline (e.g. AI piece in its
-        // canonical style shows both).
-        const _canonHit = !basicMode && proStatus!=='free' && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
-        // Dielo = the FULL canon: canonical artist + Harmony palette + the
-        // natural chord-hash seed. Any variant deviation — Vary lock, dice
-        // salt, phase or shuffle-variant pick (all of which SURVIVE dice off) —
-        // demotes to a study.
-        const _canonExact = _canonHit && effectiveStyle===canonArtist && mode==='harmony' && structureSeedLock==null && (rndSalt|0)===0 && (phaseIndex|0)===0 && (shufVariant|0)===0;
-        const _canonSpan = _canonHit ? (_canonExact
-          ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 6px',borderRadius:6,whiteSpace:'nowrap',fontWeight:700,color:'#0a0a12',background:'linear-gradient(135deg,#d8b856,#b8963c)',boxShadow:'0 0 10px rgba(201,168,76,.35)'}}>{'◆ '+(t('canonWork')!=='canonWork'?t('canonWork'):'Original')}</span>)
-          : (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>{t('canonStudy')!=='canonStudy'?t('canonStudy'):'study'}</span>)) : null;
         return (<>
         {showTransport && (<>
         {is5Col && (imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
@@ -12175,7 +12087,7 @@ Hard requirements:
         )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?7:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_canonSpan}{_badgeSpan}</span>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
             {!immersive && basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
