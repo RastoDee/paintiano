@@ -1519,6 +1519,31 @@ function paintSnapMidi(midi, scaleKey){
 
 function snapDurQ(q){const t=[0.25,0.5,0.75,1,1.5,2,3,4];let b=1,bd=Infinity;for(const x of t){const d=Math.abs(q-x);if(d<bd){bd=d;b=x;}}return b;}
 
+// ── Kánonický maliar ─────────────────────────────────────────────────────────
+// Every piece deterministically "chooses" ONE of the 19 artists — its canonical
+// painter. The hash runs over the first 64 notes' (pitch class, beat-snapped
+// duration) pairs: pitch CLASS (m % 12) so an octave transposition keeps the
+// painter, durQ so tempo/timing wobble keeps the painter. Same piece → same
+// painter, forever, on every device. FNV-1a, no deps. mosaicFamily is excluded
+// on purpose: Mosaic is the neutral ground, not an author's hand.
+const CANON_ARTISTS = ['picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai'];
+function canonicalArtistKey(events){
+  if(!events || !events.length) return null;
+  let h = 0x811c9dc5, n = 0, done = false;
+  for(const ev of events){
+    if(done) break;
+    const dq = Math.round((ev.durQ || 1) * 4) & 255; // quarter-beat resolution
+    for(const note of (ev.n || [])){
+      const pc = (((note.m || 0) % 12) + 12) % 12;
+      h ^= pc; h = Math.imul(h, 0x01000193);
+      h ^= dq; h = Math.imul(h, 0x01000193);
+      if(++n >= 64){ done = true; break; }
+    }
+  }
+  if(!n) return null;
+  return CANON_ARTISTS[(h >>> 0) % CANON_ARTISTS.length];
+}
+
 // Decompress a .mxl (zipped MusicXML) ArrayBuffer to the inner XML text.
 // Uses inline ZIP parsing + browser's built-in DecompressionStream — no library, ~50 LOC.
 // Works on iOS Safari 16.4+, Chrome 80+, Firefox 113+.

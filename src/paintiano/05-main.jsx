@@ -1478,6 +1478,14 @@ export default function Paintiano() {
   // becoming dependent on composeSource and re-creating per change).
   const composeSourceRef = useRef(null);
   useEffect(()=>{ composeSourceRef.current = composeSource; }, [composeSource]);
+  // ── Kánonický maliar: derived, not stored. The current piece's one true
+  // painter, hashed from its notes (canonicalArtistKey in 01-core). Gated on
+  // info (only real loaded pieces — mic/live leave info null) and paint view
+  // (image scans build chords without applyEvents). Advanced-only in the UI.
+  const canonArtist = useMemo(()=>{
+    try{ return (viewMode==='paint' && info && chords.length) ? canonicalArtistKey(chords) : null; }
+    catch(_){ return null; }
+  },[chords, info, viewMode]);
   const [err,       setErr]       = useState('');
   const [errInfo,   setErrInfo]   = useState(false);
 
@@ -11799,6 +11807,11 @@ Hard requirements:
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
+                  {/* Kánonický maliar: gold ◆ marks the artist this piece chose —
+                      visible even when the style is locked (that IS the upsell). */}
+                  {!cockpitEdit && canonArtist===k && (
+                    <span title={(ts('canonChose','This piece chose {artist}')).replace('{artist}',_full)} style={{position:'absolute',top:-6,right:-2,fontSize:(.5*effScale)+'rem',lineHeight:1,color:'rgba(216,184,86,.95)',textShadow:'0 0 6px rgba(201,168,76,.65)'}}>◆</span>
+                  )}
                 </button>
               );
             })}
@@ -12078,6 +12091,15 @@ Hard requirements:
         // glance the piece was NOT AI-composed. 'crafted' (library) stays bare.
         const _showOffBadge = !_showAiBadge && moodContext && composeSource==='offline';
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : _showOffBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>offline</span>) : null;
+        // ── Kánonický maliar badge (Advanced only). The piece's hashed one true
+        // painter: current style IS the canonical artist → filled gold ◆ Dielo;
+        // another ARTIST style → muted 'štúdia'. Mosaic/notes/$oneM$ = neutral
+        // ground, no badge. Combines with ✦ AI / offline (e.g. AI piece in its
+        // canonical style shows both).
+        const _canonHit = !basicMode && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
+        const _canonSpan = _canonHit ? (effectiveStyle===canonArtist
+          ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 6px',borderRadius:6,whiteSpace:'nowrap',fontWeight:700,color:'#0a0a12',background:'linear-gradient(135deg,#d8b856,#b8963c)',boxShadow:'0 0 10px rgba(201,168,76,.35)'}}>{'◆ '+(t('canonWork')!=='canonWork'?t('canonWork'):'Original')}</span>)
+          : (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>{t('canonStudy')!=='canonStudy'?t('canonStudy'):'study'}</span>)) : null;
         return (<>
         {showTransport && (<>
         {is5Col && (imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !(disp===0 && !playing && !anim) && (
@@ -12087,7 +12109,7 @@ Hard requirements:
         )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?7:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_canonSpan}{_badgeSpan}</span>
             {!immersive && basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {STYLE_INSPIRED[effectiveStyle]}
