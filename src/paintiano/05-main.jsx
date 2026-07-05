@@ -1499,6 +1499,7 @@ export default function Paintiano() {
   // canon. Ref-bridge (no-deps effect) so applyEvents keeps its deps unchanged.
   const canonAutoRef = useRef(null);
   useEffect(()=>{ canonAutoRef.current = (wi)=>{
+    if(proStatus==='free') return; // canon is a Pro feature — free sees only the teaser row
     if(randomModeRef.current) return;
     const ck = canonicalArtistKey(wi);
     if(!ck) return;
@@ -11833,7 +11834,7 @@ Hard requirements:
                   )}
                   {/* Kánonický maliar: gold ◆ marks the artist this piece chose —
                       visible even when the style is locked (that IS the upsell). */}
-                  {!cockpitEdit && canonArtist===k && (
+                  {!cockpitEdit && proStatus!=='free' && canonArtist===k && (
                     <span title={(ts('canonChose','This piece chose {artist}')).replace('{artist}',_full)} style={{position:'absolute',top:2,right:5,fontSize:(.4*effScale)+'rem',lineHeight:1,color:'rgba(216,184,86,.95)',textShadow:'0 0 5px rgba(201,168,76,.65)'}}>◆</span>
                   )}
                 </button>
@@ -11850,21 +11851,38 @@ Hard requirements:
               Free tier + canonical painter Pro-locked → gold clickable upsell
               ("this piece's painter is X — unlock the original" → paywall).
               Painter removed from the user's set (and not locked) → muted
-              info-only hint. Both hidden in cockpit edit mode. */}
-          {!cockpitEdit && canonArtist && proStatus==='free' && styleIsLocked(canonArtist) && (
-            <div
-              onClick={()=>{ setPaywallReason('settings'); }}
-              role="button" tabIndex={0}
-              onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setPaywallReason('settings'); } }}
-              style={{textAlign:'center',marginTop:8,padding:'4px 8px',fontSize:(.58*effScale)+'rem',letterSpacing:'.04em',color:'rgba(216,184,86,.85)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6}}>
-              ◆ {(ts('canonYourPainter','This piece\u2019s painter is {artist}')).replace('{artist}', STYLE_INSPIRED[canonArtist]||canonArtist)} — <span style={{textDecoration:'underline'}}>{ts('canonUnlock','unlock the original')}</span>
-            </div>
-          )}
-          {!cockpitEdit && canonArtist && !setupArtists.includes(canonArtist) && !styleIsLocked(canonArtist) && (
-            <div style={{textAlign:'center',marginTop:8,fontSize:(.55*effScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.5)',fontStyle:'italic',userSelect:'none'}}>
-              ◆ {(ts('canonOutsideSet','This piece chose {artist} — outside your set')).replace('{artist}', STYLE_INSPIRED[canonArtist]||canonArtist)}
-            </div>
-          )}
+              info-only hint. Hidden in cockpit edit mode AND for built-in
+              content (onboarding samples, demo) — a brand-new visitor must
+              never see a payment nudge on a piece they didn't choose; the
+              canon moment belongs to THEIR first own song. */}
+          {!cockpitEdit && canonArtist && (()=>{
+            const _builtinTitles=[
+              (typeof SAMPLE_AUDIO_NAME!=='undefined')?SAMPLE_AUDIO_NAME:null,
+              (typeof SAMPLE_MIDI_NAME!=='undefined')?SAMPLE_MIDI_NAME:null,
+              (typeof SAMPLE_SCORE_NAME!=='undefined')?SAMPLE_SCORE_NAME:null,
+              t('mfiSampleTitle')||null
+            ].filter(Boolean);
+            if(demoMode || (info && _builtinTitles.includes(info.title))) return null;
+            const _cName = STYLE_INSPIRED[canonArtist]||canonArtist;
+            if(proStatus==='free' && styleIsLocked(canonArtist)) return (
+              // Variant B — a whisper, not a toll-booth: muted info line with no
+              // unlock CTA. Tap opens the GUIDE style card (education, not the
+              // paywall) — curiosity → understanding → self-directed upgrade.
+              <div
+                onClick={()=>{ setGuideReturnCardId('style'); setShowGuide(true); }}
+                role="button" tabIndex={0}
+                onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setGuideReturnCardId('style'); setShowGuide(true); } }}
+                style={{textAlign:'center',marginTop:8,padding:'4px 8px',fontSize:(.55*effScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.5)',fontStyle:'italic',cursor:'pointer',userSelect:'none',borderRadius:6}}>
+                ◆ {(ts('canonYourPainter','This piece\u2019s painter is {artist}')).replace('{artist}', _cName)}
+              </div>
+            );
+            if(proStatus!=='free' && !setupArtists.includes(canonArtist) && !styleIsLocked(canonArtist)) return (
+              <div style={{textAlign:'center',marginTop:8,fontSize:(.55*effScale)+'rem',letterSpacing:'.04em',color:'rgba(207,197,168,.5)',fontStyle:'italic',userSelect:'none'}}>
+                ◆ {(ts('canonOutsideSet','This piece chose {artist} — outside your set')).replace('{artist}', _cName)}
+              </div>
+            );
+            return null;
+          })()}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
               member of the most recently tapped pair with a PRO badge.
               Clickable: opens the paywall with reason 'settings'. */}
@@ -12139,7 +12157,7 @@ Hard requirements:
         // another ARTIST style → muted 'štúdia'. Mosaic/notes/$oneM$ = neutral
         // ground, no badge. Combines with ✦ AI / offline (e.g. AI piece in its
         // canonical style shows both).
-        const _canonHit = !basicMode && !randomMode && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
+        const _canonHit = !basicMode && !randomMode && proStatus!=='free' && !!info && !!canonArtist && CANON_ARTISTS.includes(effectiveStyle);
         // Dielo = the FULL canon: canonical artist + Harmony palette + the
         // natural chord-hash seed (no Vary lock). Anything else that still
         // wears an artist's hand is a study.
