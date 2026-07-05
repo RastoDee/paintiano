@@ -144,16 +144,17 @@
     if(bpModel){pre=Promise.resolve();}
     else{
       setStatus('kontrolujem model súbory…');
-      pre=fetch('./model/model.json').then(function(r){
+      var bust='?v='+Date.now();
+      pre=fetch('./model/model.json'+bust,{cache:'reload'}).then(function(r){
         if(!r.ok)throw new Error('model.json HTTP '+r.status);
-        return fetch('./model/group1-shard1of1.bin',{method:'HEAD'});
+        return fetch('./model/group1-shard1of1.bin'+bust,{method:'HEAD',cache:'reload'});
       }).then(function(r){
         if(r&&!r.ok)throw new Error('weights .bin HTTP '+r.status);
         setStatus('inicializujem TF ('+(BP.tf.getBackend()||'…')+')…');
         return BP.tf.ready();
       }).then(function(){
         setStatus('sťahujem model (~0.9 MB) · backend '+BP.tf.getBackend()+'…');
-        bpModel=new BP.BasicPitch('./model/model.json');
+        bpModel=new BP.BasicPitch(BP.tf.loadGraphModel('./model/model.json'+bust,{requestInit:{cache:'reload'}}));
         return bpModel.model;
       }).then(function(){setStatus('model načítaný · spúšťam prepis…');});
     }
