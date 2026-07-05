@@ -26757,6 +26757,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // latch so the view falls back to whatever the state deserves — which,
     // after everything above, is the empty Setup screen.
     setStayActive(false);
+    // LITE RESET: return to the virgin Lite landing (big Play chip). These
+    // flags were otherwise reset ONLY by the Lite↔Advanced toggle, so Reset
+    // inside Lite stranded the user on an empty mode screen (with the bottom
+    // CTAs) instead of the primary Play screen. Mirrors the toggle's resets.
+    basicAutoPlayedRef.current=false;
+    basicTapUnlockedRef.current=false;
+    liteEverUnlockedRef.current=false;
+    try{ setLiteAwaitTap(false); }catch(_){}
+    try{ setLiteImageMode(false); liteImageModeRef.current=false; _liteImgAppliedRef.current=false; }catch(_){}
   },[clear,stopAll,micPainting,micListening]);
 
   // Clear from the painting view. For a loaded source (mood / MIDI / audio /
