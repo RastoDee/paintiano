@@ -35551,7 +35551,7 @@ Hard requirements:
           onClick={(e)=>{ if(e.target===e.currentTarget) setLegalDoc(null); }}
           style={{position:'fixed',inset:0,zIndex:100001,background:'rgba(6,6,12,.94)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',paddingTop:`calc(env(safe-area-inset-top,0px) + 12px)`,paddingBottom:`calc(env(safe-area-inset-bottom,0px) + 12px)`,paddingLeft:12,paddingRight:12,overflow:'hidden',display:'flex',justifyContent:'center'}}
         >
-          <div style={{position:'relative',width:'100%',maxWidth:720,height:'100%',background:'rgba(14,11,22,.92)',border:'1px solid rgba(201,168,76,.18)',borderRadius:14,boxShadow:'0 18px 60px rgba(0,0,0,.55)',display:'flex',flexDirection:'column'}}>
+          <div style={{position:'relative',width:'100%',maxWidth:980,height:'100%',background:'rgba(14,11,22,.92)',border:'1px solid rgba(201,168,76,.18)',borderRadius:14,boxShadow:'0 18px 60px rgba(0,0,0,.55)',display:'flex',flexDirection:'column'}}>
             <button
               onClick={()=>setLegalDoc(null)}
               aria-label="close"
