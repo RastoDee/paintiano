@@ -26132,6 +26132,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         varySource: meta.varySource||null, morphTargets: meta.morphTargets||[],
         songQ: meta.songQ||'', structureSeedLock: (meta.structureSeedLock==null?null:meta.structureSeedLock),
         midiBlob: meta.midiBlob||null, midiName: meta.midiName||'',
+        // Variant knobs — freeze the exact painting so Back restores it, not a
+        // re-rolled one. Style/variant only advances via Next/Swipe, not Back.
+        _shuffleArtistIndex: shuffleArtistIndex, _shufVariant: shufVariant, _phaseIndex: phaseIndex, _rndSalt: rndSalt,
       };
       setHasMoodDraft(true);
     }
@@ -26157,6 +26160,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         audioName: ls==='audio' ? (meta.audioName||'') : '',
         audioSideImage: ls==='audio' ? (meta.audioSideImage||null) : null,
         audioRowOpen: ls==='audio' ? !!meta.audioRowOpen : false,
+        // Variant knobs — freeze the exact painting so Back restores it.
+        _shuffleArtistIndex: shuffleArtistIndex, _shufVariant: shufVariant, _phaseIndex: phaseIndex, _rndSalt: rndSalt,
       };
       setHasMusicDraft(true);
     }
@@ -26288,6 +26293,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setVarySource(s.varySource || null);
       setSongQ(s.songQ || '');
       setStructureSeedLock(s.structureSeedLock==null?null:s.structureSeedLock);
+      // Restore frozen variant knobs so the painting is byte-identical on Back.
+      if(s._shuffleArtistIndex!=null){ setShuffleArtistIndex(s._shuffleArtistIndex|0); }
+      if(s._shufVariant!=null){ setShufVariant(s._shufVariant|0); }
+      if(s._phaseIndex!=null){ setPhaseIndex(s._phaseIndex|0); }
+      if(s._rndSalt!=null){ setRndSalt(s._rndSalt|0); }
       setMidiBlob(s.midiBlob || null); setMidiName(s.midiName || '');
       setMoodFromImg(false);
       setMoodContext(true);
@@ -26348,6 +26358,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         setViewMode(s.viewMode || 'paint'); viewModeRef.current = s.viewMode || 'paint';
         if(_sub==='score') setScoreName(s.scoreName || '');
       }
+      // Restore frozen variant knobs so the painting is byte-identical on Back.
+      if(s._shuffleArtistIndex!=null){ setShuffleArtistIndex(s._shuffleArtistIndex|0); }
+      if(s._shufVariant!=null){ setShufVariant(s._shufVariant|0); }
+      if(s._phaseIndex!=null){ setPhaseIndex(s._phaseIndex|0); }
+      if(s._rndSalt!=null){ setRndSalt(s._rndSalt|0); }
       setLoadedSource(_sub);
       setStamp(prev=>prev+1);
       setTimeout(()=>{ restoringRef.current = false; }, 0);
