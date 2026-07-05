@@ -28,7 +28,8 @@
 </head>
 <body>
 <h1>P A I N T I A N O</h1>
-<p class="sub">Basic Pitch PoC · verný prepis · test v4</p>
+<p class="sub">Basic Pitch PoC · verný prepis · test v5</p>
+<p class="sub" id="diagUrl" style="word-break:break-all"></p>
 
 <button class="btn primary" id="recBtn">● nahraj 20 s z reproduktora</button>
 <label class="filelbl" for="fileInp">alebo vyber audio súbor (mp3 / wav / m4a)</label>
@@ -57,6 +58,7 @@
 <script src="./bp-bundle.js"></script>
 <script>
 (function(){
+  document.getElementById('diagUrl').textContent=location.href;
   window.addEventListener('error',function(e){var s=document.getElementById('status');if(s)s.textContent='JS chyba: '+(e.message||e.type);});
   window.addEventListener('unhandledrejection',function(e){var s=document.getElementById('status');if(s)s.textContent='chyba (async): '+(e.reason&&e.reason.message?e.reason.message:e.reason);});
   var recBtn=document.getElementById('recBtn'),fileInp=document.getElementById('fileInp'),
@@ -145,16 +147,18 @@
     else{
       setStatus('kontrolujem model súbory…');
       var bust='?v='+Date.now();
-      pre=fetch('./model/model.json'+bust,{cache:'reload'}).then(function(r){
-        if(!r.ok)throw new Error('model.json HTTP '+r.status);
-        return fetch('./model/group1-shard1of1.bin'+bust,{method:'HEAD',cache:'reload'});
+      var mUrl=new URL('./model/model.json',location.href).href;
+      var wUrl=new URL('./model/group1-shard1of1.bin',location.href).href;
+      pre=fetch(mUrl+bust,{cache:'reload'}).then(function(r){
+        if(!r.ok)throw new Error('model.json HTTP '+r.status+' · req: '+mUrl+' · resp: '+r.url);
+        return fetch(wUrl+bust,{method:'HEAD',cache:'reload'});
       }).then(function(r){
-        if(r&&!r.ok)throw new Error('weights .bin HTTP '+r.status);
+        if(r&&!r.ok)throw new Error('weights .bin HTTP '+r.status+' · resp: '+r.url);
         setStatus('inicializujem TF ('+(BP.tf.getBackend()||'…')+')…');
         return BP.tf.ready();
       }).then(function(){
         setStatus('sťahujem model (~0.9 MB) · backend '+BP.tf.getBackend()+'…');
-        bpModel=new BP.BasicPitch(BP.tf.loadGraphModel('./model/model.json'+bust,{requestInit:{cache:'reload'}}));
+        bpModel=new BP.BasicPitch(BP.tf.loadGraphModel(mUrl+bust,{requestInit:{cache:'reload'}}));
         return bpModel.model;
       }).then(function(){setStatus('model načítaný · spúšťam prepis…');});
     }
