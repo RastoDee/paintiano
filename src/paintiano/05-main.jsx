@@ -3796,6 +3796,44 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Called synchronously from the Resume/Play tap. No-op-cheap on desktop and when
   // audio is healthy (the round-trip is a couple of ms and inaudible since we're
   // not sounding anything at tap time).
+  // ── TIER-3 AUDIO RECOVERY — rebuild the AudioContext itself ────────────────
+  // iOS "running-but-dead" zombie: after a background / lock-screen return the
+  // context can report state==='running' with a frozen clock while the
+  // underlying audio device is permanently torn down. suspend()->resume()
+  // cycles (tiers 1/2 above) no longer re-acquire it — the only thing that
+  // brings sound back without killing Safari is a brand-new AudioContext.
+  // This replicates "swipe the app away and reopen", in-place:
+  //   1. dispose the sampler (bound to the dead context)
+  //   2. swap in a fresh Tone context, dispose the old one
+  //   3. re-apply the session pins (Tone.start, lookAhead, audioSession, mute)
+  //   4. rebuild the sampler (loads from the SW cache — quick)
+  //   5. re-arm the statechange flag so unlockAudio attaches its listener to
+  //      the NEW context on its next run
+  // MUST run inside a user gesture (Play/Resume tap, speaker long-press).
+  const rebuildAudioContext = useCallback(async ()=>{
+    try{ if(samplerRef.current){ try{ samplerRef.current.dispose(); }catch(_){} samplerRef.current=null; } }catch(_){}
+    samplerOk.current=false;
+    try{ setPiano('loading'); }catch(_){}
+    try{
+      const _old = Tone.getContext();
+      Tone.setContext(new Tone.Context({ latencyHint:'interactive' }));
+      try{ _old.dispose(); }catch(_){}
+    }catch(_){}
+    try{ await Tone.start(); }catch(_){}
+    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type='playback'; } }catch(_){}
+    try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
+    try{
+      const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+        onload:()=>{ samplerOk.current=true; setPiano('ready'); },
+        onerror:()=>{ samplerOk.current=false; setPiano('error'); },
+      }).toDestination();
+      samplerRef.current = s2;
+    }catch(_){}
+    // The statechange listener was bound to the dead context — re-arm so the
+    // next unlockAudio attaches a fresh one to the new context.
+    try{ audioStateListenerRef.current = false; }catch(_){}
+  },[]);
   const wakeAudioRef = useRef(0);
   const wakeAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
@@ -3835,6 +3873,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           samplerRef.current = s2;
         }
       }catch(_){}
+      // TIER-3 liveness check: the double re-acquire above can still leave a
+      // zombie ('running' yet the clock frozen / device dead). Verify the clock
+      // actually advances; if not, rebuild the whole context — we're inside the
+      // Play/Resume gesture, which is when iOS honours it.
+      try{
+        const _t0 = ac.currentTime;
+        await new Promise(r=>setTimeout(r, 160));
+        if(ac.state!=='running' || !(ac.currentTime > _t0)){
+          await rebuildAudioContext();
+        }
+      }catch(_){}
     } else {
       try{
         if(ac.state === 'suspended' || ac.state === 'interrupted'){
@@ -3860,7 +3909,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         src.buffer=buf; src.connect(ac.destination); src.start(0); src.stop(ac.currentTime+0.005);
       }
     }catch(_){}
-  },[]);
+  },[rebuildAudioContext]);
 
   // Hard audio recovery + diagnosis — bound to a LONG-PRESS on the speaker
   // button. For the rare case where sound dies and a page reload doesn't bring
@@ -3876,9 +3925,27 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Force-resume the context (covers suspended / interrupted).
     try{ await Tone.start(); }catch(_){}
     try{ if(ac && ac.state!=='running'){ await ac.resume(); } }catch(_){}
-    // If sampler died or never loaded, rebuild it.
+    // TIER-3: 'running' alone can be a zombie (dead device, frozen clock).
+    // Verify the clock advances; if not, rebuild the whole context in-place —
+    // the long-press is a user gesture, so iOS honours the rebuild.
+    let _rebuilt = false;
     try{
-      if(!samplerOk.current){
+      const ac1 = Tone.getContext().rawContext;
+      if(ac1){
+        const _t0 = ac1.currentTime;
+        await new Promise(r=>setTimeout(r, 160));
+        if(ac1.state!=='running' || !(ac1.currentTime > _t0)){
+          await rebuildAudioContext();
+          _rebuilt = true;
+          report.push('→ rebuilt audio context');
+        }
+      }
+    }catch(_){}
+    // If sampler died or never loaded, rebuild it. Skip when the tier-3 path
+    // above already rebuilt context + sampler (its onload may not have fired
+    // yet — rebuilding again here would dispose the fresh one mid-load).
+    try{
+      if(!_rebuilt && !samplerOk.current){
         try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
         const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
           onload:()=>{ samplerOk.current=true; setPiano('ready'); },
@@ -4025,6 +4092,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // tab switcher restoration) where visibilitychange may NOT fire. Same
     // recovery path: kill anything stuck and re-unlock.
     const onPageShow = (e)=>{
+      // bfcache restore returns the exact "running-but-dead" device a normal
+      // background return does — arm the hidden flag so the next Play/Resume
+      // tap runs the full tier-2/3 re-acquire inside a real gesture.
+      try{ if(e && e.persisted){ audioWasHiddenRef.current = true; } }catch(_){}
       // persisted=true => restored from bfcache; persisted=false => normal
       // load. We want recovery on both, since persisted bfcache returns are
       // the exact case where Tone.context might still think it's running but
