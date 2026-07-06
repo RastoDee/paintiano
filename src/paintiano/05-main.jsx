@@ -12462,7 +12462,9 @@ Hard requirements:
                   {t('vary')}
                 </button>
               )}
-              {!immersive && showNextFs && (
+              {/* NEXT in fullscreen — DESKTOP ONLY (mobile fullscreen uses the
+                  swipe gesture instead). Same conditions as the normal-screen Next. */}
+              {isDesktop && showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   next ›
