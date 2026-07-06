@@ -34900,7 +34900,14 @@ Hard requirements:
           // small source picture to stay over the canvas, so capture + restore it.
           const _wasMfi = moodFromImg;
           const _keepThumb = moodFromImg ? imgMoodThumb : null;
-          applyEvents(evts,varied.title+' ·');
+          // Localize the display title: a morphed piece's internal title is the
+          // EN mood-key chain ("relaxed → noble → ...") straight from the song
+          // library, so map each segment through moodNames for the canvas label.
+          // Non-mood titles (AI compose names etc.) pass through unchanged. The
+          // .mid filename below keeps the raw EN title (ASCII-safe).
+          const _mnV=t('moodNames')||{};
+          const _dispVaryTitle=String(varied.title||'').split(' → ').map(x=>_mnV[x]||x).join(' → ');
+          applyEvents(evts,_dispVaryTitle+' ·');
           // applyEvents now clears moodContext AND moodFromImg; restore both
           // because a Vary of a mood piece is still a mood piece — and an MFI
           // Vary is still MFI. Without restoring moodFromImg the header reverts
