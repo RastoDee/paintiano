@@ -24077,14 +24077,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // becomes active, so its colour tab shows as normally selected again.
     if((loadedSource && loadedSource!=='image') || currentMood || composeMode || micActive){ setSetupNoSel(false); }
   },[loadedSource, currentMood, composeMode, micActive]);  // eslint-disable-line react-hooks/exhaustive-deps
-  // When a mood is picked the view flips to active and the setup panel (with
-  // MORPH/VARY) is replaced by the collapsed strip. Auto-open the strip on
-  // mood-select so those mood-refinement controls stay immediately reachable.
+  // When a mood is picked the view flips to active; the look strip stays
+  // COLLAPSED by default (user opens it via the ▾ header). MORPH/VARY now
+  // live in the header/dock, so nothing in the strip needs auto-opening.
   // True only while restoreMode (multi-draft) is committing a stashed Mood back
   // onto the canvas. Lets the currentMood effect below skip its morphTargets
   // wipe so a restored morph chain survives the restore.
   const restoringRef = useRef(false);
-  useEffect(()=>{ if(currentMood) setStripOpen(true); if(!restoringRef.current) setMorphTargets([]); },[currentMood]);
+  useEffect(()=>{ if(!restoringRef.current) setMorphTargets([]); },[currentMood]);
   // Re-translate the built-in MFI sample title when the UI language changes.
   // The sample is a fixed baked piece, so its title would otherwise stay frozen
   // in whatever language it was loaded in. Detect it by matching the current
@@ -24098,10 +24098,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
-  // When VARY restarts playback it wants the Color·Style strip to STAY open. But
-  // startPlay (async) closes the strip on a fresh (non-resume) start, and that
-  // close lands AFTER VARY's setStripOpen(true) because startPlay awaits unlock.
-  // This ref lets VARY tell startPlay "don't close the strip this once".
+  // Legacy: VARY/MORPH used to live in the look strip and kept it open across
+  // their restarts via this ref (read + reset in startPlay). Both moved to the
+  // dock/header (Jul 2026) and no writer remains — kept so startPlay's read
+  // stays untouched; always false now.
   const keepStripOpenRef = useRef(false);
   // Mood-hint flash: when the user taps a disabled morph/vary, the mood
   // selector briefly pulses with a label above it pointing them there.
@@ -32026,15 +32026,10 @@ Hard requirements:
   // effect re-runs and repaints the existing painting onto the fresh canvas.
   useEffect(()=>{
     if(isActiveView){ requestAnimationFrame(()=>setStamp(s=>s+1)); }
-    // Attributes (color/style/scan) now live in the canvas strip, not the setup
-    // screen. Auto-open the strip on entering the canvas so the user sees them
-    // straight away; it auto-closes on Play (see startPlay) to free the canvas.
-    // EXCEPTION: in Compose / Mic modes the canvas IS the workspace — keep the
-    // strip collapsed so the full plate is visible while composing/singing.
-    // (Play/Resume close the strip explicitly in their handlers; we don't gate on
-    // `playing` here so the strip doesn't pop back open when playback ends.)
-    if(isActiveView && !composeMode && !micActive){ setStripOpen(true); }
-    else { setStripOpen(false); }
+    // Attributes (color/style/scan) live in the canvas strip. The strip now
+    // defaults to COLLAPSED on every canvas entry (all modes) — the user
+    // opens it via the ▾ header. Desktop is unaffected (renders via isDesktop).
+    setStripOpen(false);
   },[isActiveView,composeMode,micActive]);
   const isSetupView = !isActiveView;
 
@@ -32895,6 +32890,45 @@ Hard requirements:
               jump back to setup); picking one loads it immediately. Shown for the
               mood context (not a file source, not a live mode) — including AFTER
               Clear, when currentMood is null but we're still on the mood canvas. */}
+          {/* MORPH — moved from the look strip to the header (mood pieces only;
+              MFI has no morph chain). Purple gradient kept; header pill geometry. */}
+          {!loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && (
+            <button className="pf-lift pf-hdr-morph" onClick={()=>{
+              if(sourcePickerLocked)return;
+              // Morph cannot remix AI-generated moods (it only works against the
+              // library/offline mood pool with known recipes). Show a clear gold
+              // hint instead of opening a picker that would fail at commit time.
+              if(composeSource==='ai'){
+                setErr(t('morphAiUnavailable')||'Morph for AI generated mood unavailable');
+                setErrInfo(true);
+                return;
+              }
+              if(!currentMood){flashMoodHint();return;}
+              if(!chords.length)return;
+              const pre=morphTargets.filter(m=>MOODS.includes(m));
+              setMorphSel(pre);
+              setShowMorphMenu(true);
+              const cached=morphPoolCacheRef.current[currentMood];
+              if(cached){
+                setMorphPool([...pre, ...cached.filter(m=>!pre.includes(m)).slice(0,18-pre.length)]);
+                setMorphPoolSource('ai'); setMorphPoolLoading(false);
+              } else {
+                // okamžitý offline pool, kým AI dobehne
+                setMorphPool([...pre, ...makeMorphPool(currentMood, pre)]);
+                setMorphPoolSource('offline'); setMorphPoolLoading(true);
+                const base=currentMood;
+                fetchMorphPoolAI(base, pre).then(ai=>{
+                  setMorphPoolLoading(false);
+                  if(ai&&ai.length){
+                    morphPoolCacheRef.current[base]=ai;
+                    const cur=morphSelRef.current||pre;
+                    setMorphPool([...cur, ...ai.filter(m=>!cur.includes(m)).slice(0,18-cur.length)]);
+                    setMorphPoolSource('ai');
+                  }
+                });
+              }
+            }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):composeSource==='ai'?(t('morphAiUnavailable')||'Morph for AI generated mood unavailable'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:22,border:'none',cursor:sourcePickerLocked?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked&&composeSource!=='ai'?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked&&composeSource!=='ai'?1:.55,transition:'all .18s'}}>{t('morph')}</button>
+          )}
           {!loadedSource && !composeMode && !micActive && moodContext && (
             moodFromImg ? (
             <button onClick={()=>{if(recording||sourcePickerLocked||!aiUsable)return;if(pickMode==='imgmood'){setPickMode(null);return;}if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode('imgmood');}} disabled={recording||sourcePickerLocked||!aiUsable} className="pf-lift" title={!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(((t('newBy')||{}).image||t('newSource'))+' '+(t('backToImage')||'image'))} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(28,24,40,.5)',color:(recording||sourcePickerLocked||!aiUsable)?'rgba(230,222,196,.25)':'rgba(225,175,255,.85)',border:'1px solid rgba(220,150,255,.3)',borderRadius:22,cursor:(recording||sourcePickerLocked||!aiUsable)?'default':'pointer',fontFamily:'inherit',fontSize:(.55*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',opacity:!aiUsable?.5:1}}>+ {((t('newBy')||{}).image||t('newSource'))} {t('backToImage')||'image'}{!aiUsable&&<span style={{fontSize:(.5*effScale)+'rem',opacity:.8}}>· {t('aiOffline')||'offline'}</span>}</button>
@@ -32950,111 +32984,6 @@ Hard requirements:
         {(stripOpen || isDesktop) && (
         <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
-          {/* Morph / Vary — only for mood-based pieces (mood + mood-from-image),
-              never for loaded MIDI/audio/score. Morph: text moods only. Vary: both. */}
-          {moodContext && (
-          <div style={{display:'grid',gridTemplateColumns:(!moodFromImg)?'1fr 1fr':'1fr',gap:8}}>
-            {(!moodFromImg) && (
-            <button className="pf-morph" onClick={()=>{
-              if(sourcePickerLocked)return;
-              // Morph cannot remix AI-generated moods (it only works against the
-              // library/offline mood pool with known recipes). Show a clear gold
-              // hint instead of opening a picker that would fail at commit time.
-              if(composeSource==='ai'){
-                setErr(t('morphAiUnavailable')||'Morph for AI generated mood unavailable');
-                setErrInfo(true);
-                return;
-              }
-              if(!currentMood){flashMoodHint();return;}
-              if(!chords.length)return;
-              const pre=morphTargets.filter(m=>MOODS.includes(m));
-              setMorphSel(pre);
-              setShowMorphMenu(true);
-              const cached=morphPoolCacheRef.current[currentMood];
-              if(cached){
-                setMorphPool([...pre, ...cached.filter(m=>!pre.includes(m)).slice(0,18-pre.length)]);
-                setMorphPoolSource('ai'); setMorphPoolLoading(false);
-              } else {
-                // okamžitý offline pool, kým AI dobehne
-                setMorphPool([...pre, ...makeMorphPool(currentMood, pre)]);
-                setMorphPoolSource('offline'); setMorphPoolLoading(true);
-                const base=currentMood;
-                fetchMorphPoolAI(base, pre).then(ai=>{
-                  setMorphPoolLoading(false);
-                  if(ai&&ai.length){
-                    morphPoolCacheRef.current[base]=ai;
-                    const cur=morphSelRef.current||pre;
-                    setMorphPool([...cur, ...ai.filter(m=>!cur.includes(m)).slice(0,18-cur.length)]);
-                    setMorphPoolSource('ai');
-                  }
-                });
-              }
-            }} disabled={sourcePickerLocked} title={recording?t('stopRecFirst'):composeSource==='ai'?(t('morphAiUnavailable')||'Morph for AI generated mood unavailable'):!currentMood?t('pickMoodFirst'):t('morphInto')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:chords.length&&currentMood&&!sourcePickerLocked&&composeSource!=='ai'?'linear-gradient(135deg,#7c4df5,#a97ff5)':'rgba(124,77,245,.3)',opacity:chords.length&&currentMood&&!sourcePickerLocked&&composeSource!=='ai'?1:.55,transition:'all .18s'}}>{t('morph')}</button>
-            )}
-            <button className="pf-vary" onClick={()=>{
-              // VARY is allowed while PLAYING (no need to pause first), but not
-              // during compose/mic/recording/processing, and not on an empty
-              // canvas. If it was playing, restart from the beginning with the
-              // new variation; if NOT playing, just load it (don't auto-play).
-              const varyBlocked = composeMode||micPainting||micListening||recording||working;
-              if(varyBlocked) return;
-              if(!varySource||!chords.length){flashMoodHint();return;}
-              const varied=rerollSong(varySource, !randomMode);
-              if(!varied)return;
-              // Mark Vary in progress — the phaseIndex useEffect will see this
-              // flag and skip re-rolling the style. Vary changes tones only;
-              // the (umelec, štýl) pair must persist for 4-tuple identity.
-              varyInProgressRef.current = true;
-              const wasPlaying=playing||holdPausedRef.current; // active = playing OR paused → auto-restart, don't wait for Play
-              // Random OFF → keep the picture STRUCTURE, change only colors+sound:
-              // freeze the seed too (belt-and-braces with the pitch-only reroll).
-              // Random ON → fresh structure: clear the lock.
-              if(randomMode){ setStructureSeedLock(null); }
-              else { setStructureSeedLock(pollockSessionSeed>>>0); }
-              setVarySource(varied);
-              stopAll();
-              const evts=noteArr2events(varied.notes,varied.tempo);
-              if(!evts.length){setErr(t('errs').varyFail);return;}
-              // applyEvents clears imgMoodThumb; in mood-from-image mode we want the
-              // small source picture to stay over the canvas, so capture + restore it.
-              const _wasMfi = moodFromImg;
-              const _keepThumb = moodFromImg ? imgMoodThumb : null;
-              applyEvents(evts,varied.title+' ·');
-              // applyEvents now clears moodContext AND moodFromImg; restore both
-              // because a Vary of a mood piece is still a mood piece — and an MFI
-              // Vary is still MFI. Without restoring moodFromImg the header reverts
-              // to mood mode (NEW MOOD + MORPH) instead of staying MFI (NEW IMAGE,
-              // no MORPH). Vary/Morph row is wrapped in moodContext && so that's
-              // restored too.
-              setMoodContext(true);
-              if(_wasMfi){ setMoodFromImg(true); }
-              if(_keepThumb){ setImgMoodThumb(_keepThumb); }
-              const bytes=encodeMidi(evts,varied.tempo||100);
-              setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
-              setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
-              // If we're varying an MFI piece, keep the recent entry in sync with
-              // the latest variation (replaces notes, keeps thumbnail + title).
-              // So when user revisits via Recently AI generated, they get THIS
-              // version — not the original AI generation.
-              if(moodFromImg && currentMood){
-                try{ _mfiRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
-              } else if(composeSource==='ai' && currentMood){
-                // Same idea for AI Compose (text-mood path) — update its recent.
-                try{ _aiComposeRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
-              }
-              setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-              // Keep the Color·Style strip OPEN after Vary so the user can keep
-              // varying without re-expanding it each time. It stays open until the
-              // user closes it themselves.
-              setStripOpen(true);
-              // Only restart playback if it was already playing. When stopped,
-              // VARY just loads the new variation (canvas blank, ready to Play).
-              // startPlay collapses the strip — re-open it just after so Vary's
-              // "stay open" wins even when Vary restarts playback.
-              if(wasPlaying){ resumeFromRef.current=0; keepStripOpenRef.current=true; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
-            }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:7,padding:'9px 16px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:(.64*effScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55,transition:'all .18s'}}>{t('vary')}</button>
-          </div>
-          )}
           {/* Color */}
           {loadedSource==='image' && !moodFromImg ? (() => {
             // IMAGE mode: same four chips as every other mode (Harmony · Spectral ·
@@ -34785,7 +34714,7 @@ Hard requirements:
                   const bytes=encodeMidi(evts,song.tempo||120);
                   setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                   setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
-                  if(_morphWasActive){ resumeFromRef.current=0; keepStripOpenRef.current=true; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
+                  if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
                   return;
                 }
                 const chain=[findSong(currentMood), ...morphSel.map(findSong)];
@@ -34808,7 +34737,7 @@ Hard requirements:
                 const bytes=encodeMidi(evts,morphed.tempo||100);
                 setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
                 setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
-                if(_morphWasActive){ resumeFromRef.current=0; keepStripOpenRef.current=true; setTimeout(()=>{ startPlayRef.current?.(); setStripOpen(true); }, 60); }
+                if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
               }} style={{flex:1,padding:'10px 16px',background:'linear-gradient(135deg,#7c4df5,#a97ff5)',color:'#fff',border:'none',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('morphGo'))}</button>
             </div>
           </div>
@@ -34939,6 +34868,65 @@ Hard requirements:
             confusion and let the user accidentally extend a finished take. */}<button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
         {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && (
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={txStyle(loopMode?'active':'neutral',{effScale,disabled:recording})}><TxIcon n="loop" s={14*effScale}/>{t('loop')}</button>
+        )}
+        {/* VARY — moved from the look strip to the dock (row 1, right of Loop).
+            Same visibility gate as Loop: mood + mood-from-image pieces only. */}
+        {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && (
+          <button className="pf-lift pf-dock-vary" onClick={()=>{
+          // VARY is allowed while PLAYING (no need to pause first), but not
+          // during compose/mic/recording/processing, and not on an empty
+          // canvas. If it was playing, restart from the beginning with the
+          // new variation; if NOT playing, just load it (don't auto-play).
+          const varyBlocked = composeMode||micPainting||micListening||recording||working;
+          if(varyBlocked) return;
+          if(!varySource||!chords.length){flashMoodHint();return;}
+          const varied=rerollSong(varySource, !randomMode);
+          if(!varied)return;
+          // Mark Vary in progress — the phaseIndex useEffect will see this
+          // flag and skip re-rolling the style. Vary changes tones only;
+          // the (umelec, štýl) pair must persist for 4-tuple identity.
+          varyInProgressRef.current = true;
+          const wasPlaying=playing||holdPausedRef.current; // active = playing OR paused → auto-restart, don't wait for Play
+          // Random OFF → keep the picture STRUCTURE, change only colors+sound:
+          // freeze the seed too (belt-and-braces with the pitch-only reroll).
+          // Random ON → fresh structure: clear the lock.
+          if(randomMode){ setStructureSeedLock(null); }
+          else { setStructureSeedLock(pollockSessionSeed>>>0); }
+          setVarySource(varied);
+          stopAll();
+          const evts=noteArr2events(varied.notes,varied.tempo);
+          if(!evts.length){setErr(t('errs').varyFail);return;}
+          // applyEvents clears imgMoodThumb; in mood-from-image mode we want the
+          // small source picture to stay over the canvas, so capture + restore it.
+          const _wasMfi = moodFromImg;
+          const _keepThumb = moodFromImg ? imgMoodThumb : null;
+          applyEvents(evts,varied.title+' ·');
+          // applyEvents now clears moodContext AND moodFromImg; restore both
+          // because a Vary of a mood piece is still a mood piece — and an MFI
+          // Vary is still MFI. Without restoring moodFromImg the header reverts
+          // to mood mode (NEW MOOD + MORPH) instead of staying MFI (NEW IMAGE,
+          // no MORPH). The dock VARY and header MORPH read these latches too.
+          setMoodContext(true);
+          if(_wasMfi){ setMoodFromImg(true); }
+          if(_keepThumb){ setImgMoodThumb(_keepThumb); }
+          const bytes=encodeMidi(evts,varied.tempo||100);
+          setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
+          setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
+          // If we're varying an MFI piece, keep the recent entry in sync with
+          // the latest variation (replaces notes, keeps thumbnail + title).
+          // So when user revisits via Recently AI generated, they get THIS
+          // version — not the original AI generation.
+          if(moodFromImg && currentMood){
+            try{ _mfiRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
+          } else if(composeSource==='ai' && currentMood){
+            // Same idea for AI Compose (text-mood path) — update its recent.
+            try{ _aiComposeRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
+          }
+          setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
+          // Only restart playback if it was already playing. When stopped,
+          // VARY just loads the new variation (canvas blank, ready to Play).
+          if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
+        }} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{...txStyle('neutral',{effScale}),border:'none',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55}}>{t('vary')}</button>
         )}
         {/* Original ⇄ Piano source toggle — appears once the mic session
             (Voice or Music) has a finalised audio blob and the mic is no
