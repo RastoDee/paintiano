@@ -924,6 +924,12 @@ export default function Paintiano() {
   // the next revive must force that cycle even though the context reads
   // 'running'. Cleared once a successful re-acquire has run.
   const audioWasHiddenRef = useRef(false);
+  // Timestamps of the last background stay — tier-3 uses the DURATION to
+  // decide between the cheap clock-test recover and a full context rebuild
+  // (iOS zombies often keep 'running' state AND an advancing clock while
+  // the output device is dead, so the clock test alone misses them).
+  const audioHiddenAtRef = useRef(0);
+  const audioHiddenLongRef = useRef(false);
   // Re-armed by the audio statechange listener when the context dies mid-session
   // so the next Lite tap re-runs hard-recovery. Declared here (before unlockAudio
   // attaches the statechange listener) to avoid a temporal-dead-zone reference.
@@ -3935,15 +3941,21 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           samplerRef.current = s2;
         }
       }catch(_){}
-      // TIER-3 liveness check: the double re-acquire above can still leave a
-      // zombie ('running' yet the clock frozen / device dead). Verify the clock
-      // actually advances; if not, rebuild the whole context — we're inside the
-      // Play/Resume gesture, which is when iOS honours it.
+      // TIER-3: iOS zombies often keep state==='running' AND an advancing
+      // clock while the output device is dead — the clock test alone misses
+      // them. After a long background stay (>15 s, or a bfcache restore) we
+      // therefore rebuild UNCONDITIONALLY inside this gesture; after a quick
+      // app-switch the cheap clock test avoids a needless sampler reload.
       try{
-        const _t0 = ac.currentTime;
-        await new Promise(r=>setTimeout(r, 160));
-        if(ac.state!=='running' || !(ac.currentTime > _t0)){
+        if(audioHiddenLongRef.current){
+          audioHiddenLongRef.current = false;
           await rebuildAudioContext();
+        } else {
+          const _t0 = ac.currentTime;
+          await new Promise(r=>setTimeout(r, 160));
+          if(ac.state!=='running' || !(ac.currentTime > _t0)){
+            await rebuildAudioContext();
+          }
         }
       }catch(_){}
     } else {
@@ -3987,21 +3999,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Force-resume the context (covers suspended / interrupted).
     try{ await Tone.start(); }catch(_){}
     try{ if(ac && ac.state!=='running'){ await ac.resume(); } }catch(_){}
-    // TIER-3: 'running' alone can be a zombie (dead device, frozen clock).
-    // Verify the clock advances; if not, rebuild the whole context in-place —
-    // the long-press is a user gesture, so iOS honours the rebuild.
+    // TIER-3 — UNCONDITIONAL: the long-press is the user explicitly asking
+    // for the hammer, and iOS zombies can pass every observable check
+    // ('running' state, advancing clock) with a dead output device. Rebuild
+    // the whole context every time — the manual equivalent of restarting
+    // Safari, inside one gesture. Costs a sampler reload (~1 s from cache).
     let _rebuilt = false;
     try{
-      const ac1 = Tone.getContext().rawContext;
-      if(ac1){
-        const _t0 = ac1.currentTime;
-        await new Promise(r=>setTimeout(r, 160));
-        if(ac1.state!=='running' || !(ac1.currentTime > _t0)){
-          await rebuildAudioContext();
-          _rebuilt = true;
-          report.push('→ rebuilt audio context');
-        }
-      }
+      await rebuildAudioContext();
+      _rebuilt = true;
+      report.push('→ rebuilt audio context');
     }catch(_){}
     // If sampler died or never loaded, rebuild it. Skip when the tier-3 path
     // above already rebuilt context + sampler (its onload may not have fired
@@ -4080,6 +4087,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // Mark that we backgrounded — the next revive must force a full
         // suspend->resume re-acquire (iOS returns a running-but-dead device).
         audioWasHiddenRef.current = true;
+        audioHiddenAtRef.current = Date.now();
         if(playingRef.current){
           resumeFromRef.current=dispRef.current;
           setHoldPaused(true);
@@ -4091,6 +4099,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           setPlaying(false);setAnim(false);
         }
       }else{
+        // A stay longer than ~15 s is the profile that produces the undetectable
+        // zombie — flag it so the next in-gesture wake rebuilds unconditionally.
+        if(audioHiddenAtRef.current && (Date.now()-audioHiddenAtRef.current)>15000){ audioHiddenLongRef.current = true; }
+        audioHiddenAtRef.current = 0;
         // Visibility returned. While we were hidden — OR while another tab
         // was foregrounded — the audio session may have been:
         //   (a) suspended by iOS (normal background behaviour), OR
@@ -4157,7 +4169,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // bfcache restore returns the exact "running-but-dead" device a normal
       // background return does — arm the hidden flag so the next Play/Resume
       // tap runs the full tier-2/3 re-acquire inside a real gesture.
-      try{ if(e && e.persisted){ audioWasHiddenRef.current = true; } }catch(_){}
+      try{ if(e && e.persisted){ audioWasHiddenRef.current = true; audioHiddenLongRef.current = true; } }catch(_){}
       // persisted=true => restored from bfcache; persisted=false => normal
       // load. We want recovery on both, since persisted bfcache returns are
       // the exact case where Tone.context might still think it's running but
