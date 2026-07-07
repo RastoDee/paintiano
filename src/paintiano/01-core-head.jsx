@@ -1709,13 +1709,32 @@ function parseMusicXml(xmlText){
 //   weights  []    per-chord size multiplier (loud/bass → bigger, soft/high →
 //                  smaller), MEAN-NORMALISED to ~1 so total canvas fill is
 //                  preserved (the grid still fills exactly).
+//
+// MusicDNA extension (Jul 2026) — four additive dimensions for the overlay
+// tuning pass; existing consumers are untouched (fields above are computed
+// exactly as before). All 0..1, 0.5 = neutral midpoint unless noted:
+//   tempo      0..1  chord onsets per second via the median onset interval
+//                    (1200 ms = slow ballad → 0, 150 ms = rapid-fire → 1)
+//   regularity 0..1  1 − coefficient of variation of the onset intervals
+//                    (metronomic pulse → 1, rubato / chaos → 0)
+//   tension    0..1  share of dissonant in-chord intervals (m2/M2/tritone/M7),
+//                    doubled so real repertoire spans the range; 0 = consonant
+//   contour    0..1  linear trend of the mean chord pitch over the piece
+//                    (0 = falling line, 0.5 = flat, 1 = rising line)
 function computeSongCharacter(chords){
-  const empty = { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:null };
+  const empty = { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:null, tempo:0.5, regularity:0.5, tension:0, contour:0.5 };
   if(!Array.isArray(chords) || chords.length===0) return empty;
   let vSum=0, vN=0, vMin=127, vMax=0, mSum=0, mN=0, nSum=0, nN=0;
-  const perChordV=[], perChordM=[];
+  let disPairs=0, totPairs=0;
+  const perChordV=[], perChordM=[], onsets=[];
   for(const c of chords){
+    if(c && typeof c.startMs==='number') onsets.push(c.startMs);
     if(!c || !c.n || !c.n.length){ perChordV.push(null); perChordM.push(null); continue; }
+    // in-chord dissonance pairs — minor/major second, tritone, major seventh
+    for(let i=0;i<c.n.length;i++)for(let j=i+1;j<c.n.length;j++){
+      const a=(typeof c.n[i].m==='number')?c.n[i].m:60, b=(typeof c.n[j].m==='number')?c.n[j].m:60;
+      const d=Math.abs(a-b)%12; totPairs++; if(d===1||d===2||d===6||d===11) disPairs++;
+    }
     let cv=0, cvN=0, cm=0, cmN=0;
     for(const n of c.n){
       const v=(typeof n.v==='number')?n.v:80;
@@ -1752,7 +1771,32 @@ function computeSongCharacter(chords){
   }
   const wMean = wN?wSum/wN:1;
   if(wMean>0){ for(let i=0;i<weights.length;i++) weights[i]/=wMean; } // normalise → mean 1
-  return { energy, dynRange, register, density, weights };
+  // ── MusicDNA extension — tempo / regularity / tension / contour ──
+  let tempo=0.5, regularity=0.5;
+  if(onsets.length>2){
+    const so=[...onsets].sort((a,b)=>a-b); const iv=[];
+    for(let i=1;i<so.length;i++){ const d=so[i]-so[i-1]; if(d>1) iv.push(d); }
+    if(iv.length){
+      const s2=[...iv].sort((a,b)=>a-b); const med=s2[s2.length>>1];
+      tempo=Math.max(0, Math.min(1, (1200-med)/1050));
+      if(iv.length>2){
+        const mi=iv.reduce((s,x)=>s+x,0)/iv.length;
+        const sd=Math.sqrt(iv.reduce((s,x)=>s+(x-mi)*(x-mi),0)/iv.length);
+        regularity=Math.max(0, Math.min(1, 1-sd/Math.max(1,mi)));
+      }
+    }
+  }
+  const tension = totPairs ? Math.max(0, Math.min(1, disPairs/totPairs*2)) : 0;
+  let contour=0.5;
+  { // linear trend of the (already collected) per-chord mean pitches
+    const ys=[]; for(const y of perChordM){ if(y!=null) ys.push(y); }
+    if(ys.length>3){
+      const mx=(ys.length-1)/2; let my=0; for(const y of ys) my+=y; my/=ys.length;
+      let num=0,den=0; for(let i=0;i<ys.length;i++){ num+=(i-mx)*(ys[i]-my); den+=(i-mx)*(i-mx); }
+      contour=Math.max(0, Math.min(1, 0.5+(den?num/den:0)*0.5));
+    }
+  }
+  return { energy, dynRange, register, density, weights, tempo, regularity, tension, contour };
 }
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));

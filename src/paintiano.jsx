@@ -1709,13 +1709,32 @@ function parseMusicXml(xmlText){
 //   weights  []    per-chord size multiplier (loud/bass → bigger, soft/high →
 //                  smaller), MEAN-NORMALISED to ~1 so total canvas fill is
 //                  preserved (the grid still fills exactly).
+//
+// MusicDNA extension (Jul 2026) — four additive dimensions for the overlay
+// tuning pass; existing consumers are untouched (fields above are computed
+// exactly as before). All 0..1, 0.5 = neutral midpoint unless noted:
+//   tempo      0..1  chord onsets per second via the median onset interval
+//                    (1200 ms = slow ballad → 0, 150 ms = rapid-fire → 1)
+//   regularity 0..1  1 − coefficient of variation of the onset intervals
+//                    (metronomic pulse → 1, rubato / chaos → 0)
+//   tension    0..1  share of dissonant in-chord intervals (m2/M2/tritone/M7),
+//                    doubled so real repertoire spans the range; 0 = consonant
+//   contour    0..1  linear trend of the mean chord pitch over the piece
+//                    (0 = falling line, 0.5 = flat, 1 = rising line)
 function computeSongCharacter(chords){
-  const empty = { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:null };
+  const empty = { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:null, tempo:0.5, regularity:0.5, tension:0, contour:0.5 };
   if(!Array.isArray(chords) || chords.length===0) return empty;
   let vSum=0, vN=0, vMin=127, vMax=0, mSum=0, mN=0, nSum=0, nN=0;
-  const perChordV=[], perChordM=[];
+  let disPairs=0, totPairs=0;
+  const perChordV=[], perChordM=[], onsets=[];
   for(const c of chords){
+    if(c && typeof c.startMs==='number') onsets.push(c.startMs);
     if(!c || !c.n || !c.n.length){ perChordV.push(null); perChordM.push(null); continue; }
+    // in-chord dissonance pairs — minor/major second, tritone, major seventh
+    for(let i=0;i<c.n.length;i++)for(let j=i+1;j<c.n.length;j++){
+      const a=(typeof c.n[i].m==='number')?c.n[i].m:60, b=(typeof c.n[j].m==='number')?c.n[j].m:60;
+      const d=Math.abs(a-b)%12; totPairs++; if(d===1||d===2||d===6||d===11) disPairs++;
+    }
     let cv=0, cvN=0, cm=0, cmN=0;
     for(const n of c.n){
       const v=(typeof n.v==='number')?n.v:80;
@@ -1752,7 +1771,32 @@ function computeSongCharacter(chords){
   }
   const wMean = wN?wSum/wN:1;
   if(wMean>0){ for(let i=0;i<weights.length;i++) weights[i]/=wMean; } // normalise → mean 1
-  return { energy, dynRange, register, density, weights };
+  // ── MusicDNA extension — tempo / regularity / tension / contour ──
+  let tempo=0.5, regularity=0.5;
+  if(onsets.length>2){
+    const so=[...onsets].sort((a,b)=>a-b); const iv=[];
+    for(let i=1;i<so.length;i++){ const d=so[i]-so[i-1]; if(d>1) iv.push(d); }
+    if(iv.length){
+      const s2=[...iv].sort((a,b)=>a-b); const med=s2[s2.length>>1];
+      tempo=Math.max(0, Math.min(1, (1200-med)/1050));
+      if(iv.length>2){
+        const mi=iv.reduce((s,x)=>s+x,0)/iv.length;
+        const sd=Math.sqrt(iv.reduce((s,x)=>s+(x-mi)*(x-mi),0)/iv.length);
+        regularity=Math.max(0, Math.min(1, 1-sd/Math.max(1,mi)));
+      }
+    }
+  }
+  const tension = totPairs ? Math.max(0, Math.min(1, disPairs/totPairs*2)) : 0;
+  let contour=0.5;
+  { // linear trend of the (already collected) per-chord mean pitches
+    const ys=[]; for(const y of perChordM){ if(y!=null) ys.push(y); }
+    if(ys.length>3){
+      const mx=(ys.length-1)/2; let my=0; for(const y of ys) my+=y; my/=ys.length;
+      let num=0,den=0; for(let i=0;i<ys.length;i++){ num+=(i-mx)*(ys[i]-my); den+=(i-mx)*(i-mx); }
+      contour=Math.max(0, Math.min(1, 0.5+(den?num/den:0)*0.5));
+    }
+  }
+  return { energy, dynRange, register, density, weights, tempo, regularity, tension, contour };
 }
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
@@ -6886,6 +6930,12 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   // ════════ A & B: block-grid phases (partition-based) ════════
   if(phase==='A' || phase==='B'){
     const sparse = phase==='B';
+    // Song character: an energetic piece pushes more colour blocks and slightly
+    // heavier grid lines; a quiet one stays whiter with thinner lines. 0.5 is
+    // neutral (= the untuned output). Grid fineness itself already breathes
+    // with the music inside _partitionCanvas.
+    const _chM=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+    const _chE=_chM?_chM.energy:0.5;
     const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400, sparse?0.30:0.45);
     const order = rects.map((r,i)=>i).sort((a,b)=>{
       const ra=rects[a], rb=rects[b];
@@ -6894,9 +6944,9 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
       return ra.x-rb.x;
     });
     const revealed=order.slice(0,paintCount);
-    const lw=sparse?Math.max(2,Math.round(Math.min(CW,CH)*0.009)):Math.max(3,Math.round(Math.min(CW,CH)*0.012));
+    const lw=sparse?Math.max(2,Math.round(Math.min(CW,CH)*0.009*(0.85+0.3*_chE))):Math.max(3,Math.round(Math.min(CW,CH)*0.012*(0.85+0.3*_chE)));
     // Fill thresholds: A is color-rich, B is white-dominant with sparse color.
-    const colorThresh = sparse?0.30:0.62, blackThresh = sparse?0.38:0.72;
+    const colorThresh = (sparse?0.30:0.62)*(0.7+0.6*_chE), blackThresh = colorThresh + (sparse?0.08:0.10);
     // Seed ONE rng before the loop and advance it per block. Calling _seedRnd
     // fresh per block used each seed's poorly-mixed FIRST output, which clustered
     // badly — some session seeds produced ZERO color blocks (all-cream canvas).
@@ -13510,7 +13560,12 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   const isBW = mode === 'bw';
   const ss = (sessionSeed|0) ^ ((phaseIndex|0) * 0x9E3779B1) ^ 0x4D6F0001;
   const R = (()=>{ let s = ss>>>0; return ()=>{ s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; })();
-  const bgCount = Math.max(4, Math.floor(lim * 0.60));
+  // Song character: a dense piece tips the split toward the chaos layer
+  // (more foreground shapes), a sparse one stays architectural; an energetic
+  // piece grows the chaos shapes. 0.5/0.5 = the untuned 0.60 split, size ×1.
+  const _chO=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const _bgShare = 0.60 - (((_chO?_chO.density:0.5))-0.5)*0.30;
+  const bgCount = Math.max(4, Math.floor(lim * _bgShare));
   const fgCount = Math.max(0, lim - bgCount);
   // ── LAYER 1: tile fill via guillotine partition ─────────────────────────
   const rects = [{x:0, y:0, w:CW, h:CH}];
@@ -13590,7 +13645,7 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   // ── LAYER 2: chaos shapes via Vogel-spiral placement ────────────────────
   if(fgCount === 0) return;
-  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60;
+  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60 * (0.85+0.3*(_chO?_chO.energy:0.5));
   const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));
   const ccx = CW/2, ccy = CH/2;
   const maxR = Math.min(CW, CH) * 0.46;
@@ -21672,6 +21727,68 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     </div>
   );
 }
+// §5.9  MUSIC DNA — deterministic per-piece feature vector
+// ────────────────────────────────────────────────────────────────────────────
+// Extracted ONCE per piece (applyEvents) from the raw chords — pitch, time,
+// duration, velocity. All dimensions are normalized 0..1. The style choosers
+// in 02-draw read this via globalThis.__PAINT_MUSIC_DNA as a shared "grammar":
+// the style stays the vocabulary, the music decides how it speaks. Same piece
+// therefore always yields the same DNA — determinism preserved. Incremental
+// modes (mic, compose) null the DNA at entry and paint with neutral values.
+// Debug: window.__PAINT_MUSIC_DNA in the console after loading a piece.
+function computeMusicDNA(events){
+  try{
+    if(!events || !events.length) return null;
+    const on=[], pitches=[], vels=[];
+    let minT=Infinity, maxT=-Infinity;
+    for(const ch of events){
+      const tt=+ch.startMs||0; on.push(tt);
+      if(tt<minT)minT=tt; if(tt>maxT)maxT=tt;
+      for(const n of (ch.n||[])){
+        pitches.push((n&&n.m!==undefined)?n.m:(typeof n==='number'?n:60));
+        vels.push((n&&n.v!==undefined)?n.v:100);
+      }
+    }
+    if(!pitches.length) return null;
+    const clamp01=x=>Math.max(0,Math.min(1,x));
+    const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+    const spanS=Math.max(0.001,(maxT-minT)/1000);
+    // density — chord events per second, 0.5..6 eps saturates the range
+    const density=clamp01((events.length/spanS-0.5)/5.5);
+    // energy — mean velocity 40..115 plus a spread kicker
+    const mv=avg(vels);
+    const vSd=Math.sqrt(avg(vels.map(v=>(v-mv)*(v-mv))));
+    const energy=clamp01(((mv-40)/75)*0.8+clamp01(vSd/30)*0.2);
+    // tempoClass — median onset interval, 1200ms=slow..150ms=fast
+    const iv=[]; const so=[...on].sort((a,b)=>a-b);
+    for(let i=1;i<so.length;i++){const d=so[i]-so[i-1]; if(d>1) iv.push(d);}
+    let med=500; if(iv.length){const s2=[...iv].sort((a,b)=>a-b); med=s2[s2.length>>1];}
+    const tempoClass=clamp01((1200-med)/1050);
+    // registerCenter — mean pitch 36..96; 0=deep bass, 1=high treble
+    const registerCenter=clamp01((avg(pitches)-36)/60);
+    // registerSpread — pitch range 12..60 semitones
+    const registerSpread=clamp01((Math.max(...pitches)-Math.min(...pitches)-12)/48);
+    // regularity — 1 − coefficient of variation of onset intervals
+    let regularity=0.5;
+    if(iv.length>2){const mi=avg(iv);const sd=Math.sqrt(avg(iv.map(x=>(x-mi)*(x-mi))));regularity=clamp01(1-sd/Math.max(1,mi));}
+    // tension — share of dissonant in-chord intervals: m2/M2/tritone/M7, doubled
+    let dis=0,tot=0;
+    for(const ch of events){const ns=(ch.n||[]).map(n=>(n&&n.m!==undefined)?n.m:n);
+      for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){const d=Math.abs(ns[i]-ns[j])%12;tot++;if(d===1||d===2||d===6||d===11)dis++;}}
+    const tension=tot?clamp01(dis/tot*2):0;
+    // contour — linear trend of mean chord pitch, ±1 semitone/event saturates;
+    // 0=falling line, 0.5=flat, 1=rising line
+    let contour=0.5;
+    if(events.length>3){
+      const ys=events.map(ch=>{const ns=(ch.n||[]).map(n=>(n&&n.m!==undefined)?n.m:n);return ns.length?avg(ns):60;});
+      const mx=(events.length-1)/2, my=avg(ys);
+      let num=0,den=0;for(let i=0;i<events.length;i++){num+=(i-mx)*(ys[i]-my);den+=(i-mx)*(i-mx);}
+      contour=clamp01(0.5+(den?num/den:0)*0.5);
+    }
+    return {density,energy,tempoClass,registerCenter,registerSpread,regularity,tension,contour};
+  }catch(_){ return null; }
+}
+
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
 // ─────────────────────────────────────────────────────────────────────────────
 const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
@@ -26074,7 +26191,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(e.key==='Backspace'&&composeMode&&!busy&&!recording){e.preventDefault();undoLast();return;}
       if((e.key===' '||e.key==='Enter')&&isInteractive())return;
       if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}
-      if(e.key==='Enter'){e.preventDefault();if(!composeMode){unlockAudio();setComposeMode(true);setMicArmed(false);}else{setComposeMode(false);}return;}
+      if(e.key==='Enter'){e.preventDefault();if(!composeMode){unlockAudio();(globalThis.__PAINT_MUSIC_DNA=null),setComposeMode(true);setMicArmed(false);}else{setComposeMode(false);}return;}
       const m=map[e.key];if(m&&!held.has(e.key)){held.add(e.key);pressNote(m);}
     };
     const up=e=>held.delete(e.key);
@@ -27119,6 +27236,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Pre-sort notes high→low so draw functions (mosaic, dim, etc.) skip the sort
       if(ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m);
     });
+    // MUSIC DNA — one deterministic vector per piece; 02-draw choosers read it.
+    try{ globalThis.__PAINT_MUSIC_DNA = computeMusicDNA(events); }catch(_){}
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
@@ -30618,6 +30737,8 @@ Hard requirements:
   useEffect(()=>{stopMicListeningRef.current=stopMicListening;},[stopMicListening]);
 
   const startMicListening=useCallback(async()=>{
+    // Incremental mode — no precomputed piece, paint with neutral DNA.
+    try{ globalThis.__PAINT_MUSIC_DNA = null; }catch(_){}
     if(micListeningRef.current){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
@@ -30947,6 +31068,8 @@ Hard requirements:
   },[stopMicListening,stopAll]);
 
   const startMicPainting=useCallback(async()=>{
+    // Incremental mode — no precomputed piece, paint with neutral DNA.
+    try{ globalThis.__PAINT_MUSIC_DNA = null; }catch(_){}
     if(micPaintingRef.current)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
@@ -32613,7 +32736,7 @@ Hard requirements:
                     // un-played composition reappears. If the canvas still holds
                     // the draft (resume path), leave it as-is.
                     if((!chordsRef.current||!chordsRef.current.length)) restoreStash('compose');
-                    setComposeMode(true); return;
+                    (globalThis.__PAINT_MUSIC_DNA=null),setComposeMode(true); return;
                   }
                   if(owner) stashDraft(owner);
                   if(!restoreStash('compose')){
@@ -32621,7 +32744,7 @@ Hard requirements:
                     setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');
                     audioBlobRef.current=null;setCurrentMood(null);setVarySource(null);setSongQ('');setLoadedSource(null);
                   }
-                  setComposeMode(true);
+                  (globalThis.__PAINT_MUSIC_DNA=null),setComposeMode(true);
                   setMicArmed(false);
                 } else setComposeMode(false);
               }} disabled={!composeMode && (busy || micPainting || micListening)} title={composeMode?t('composing'):busy?t('stopRecFirst'):micPainting?t('stopSingFirst'):micListening?t('stopListenFirst'):hasComposeDraft?t('compose')+' · draft saved':t('compose')} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:isNotPhone?'40px 24px':14,height:isNotPhone?110:64,borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,color:composeMode||hasComposeDraft?'#eafff4':'rgba(120,200,160,.85)',background:(composeMode||hasComposeDraft)?'linear-gradient(135deg,#236b4f,#3a9b73)':'transparent',border:'1px solid '+((composeMode||hasComposeDraft)?'rgba(78,203,141,.65)':'rgba(78,203,141,.22)'),boxShadow:(composeMode||hasComposeDraft)?'0 0 0 1px rgba(78,203,141,.25), 0 4px 14px rgba(58,155,115,.25)':'none',opacity:(!composeMode&&(busy||micPainting||micListening))?.4:1,transition:'all .18s'}}>{(composeMode||hasComposeDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#4ecb8d',boxShadow:'0 0 6px #4ecb8d',flexShrink:0}}/>}<span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1.5"/><line x1="9" y1="6" x2="9" y2="14"/><line x1="15" y1="6" x2="15" y2="14"/><line x1="6.5" y1="6" x2="6.5" y2="12"/><line x1="11.5" y1="6" x2="11.5" y2="12"/><line x1="17.5" y1="6" x2="17.5" y2="12"/></svg></span> {_sent(composeMode?t('composing'):t('compose'))}</button>
