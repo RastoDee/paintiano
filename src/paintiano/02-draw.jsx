@@ -1294,7 +1294,7 @@ function _partitionCanvas(chords, lim, ss, seedBase, capScale){
   // scale. Deterministic; audio untouched. Baked into the cache key below.
   const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const _charDrive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const _csMul = 0.72 + 0.58*_charDrive;
+  const _csMul = 0.50 + 1.04*_charDrive;   // amplified ×1.8 (was 0.72+0.58)
   cs = cs * _csMul;
   const cn = chords.length;
   const MAX_RECTS=Math.max(2,Math.min(cn,Math.round((
@@ -3231,11 +3231,11 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // wider beads); a soft/sparse one stays airy. Deterministic; audio untouched.
   const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const _charDrive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;   // 0..1
-  const _passCharMul = 0.7 + 0.6*_charDrive;                              // 0.7..1.3
+  const _passCharMul = 0.46 + 1.08*_charDrive;                            // 0.46..1.54 (amplified ×1.8)
   const passCount = Math.max(4, Math.round(
     (pollVariant === 1 ? passCount0 * 0.55 : passCount0) * _passCharMul
   ));
-  const _pollWidthMul = (pollVariant === 1 ? 1.8 : 1.0) * (0.85 + 0.3*_charDrive);
+  const _pollWidthMul = (pollVariant === 1 ? 1.8 : 1.0) * (0.73 + 0.54*_charDrive);
 
   // Map pass index → chord index. The first pass corresponds to the first
   // chord, last pass corresponds to the latest chord, evenly distributed.
@@ -4104,7 +4104,7 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // legible (30 chords → 30 planes) and long pieces keep adding planes well
   // past the 300-mark (was previous cap).
   const _chP = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _planeMul = _chP ? (0.72 + 0.56*(0.55*_chP.energy + 0.45*_chP.density)) : 1;
+  const _planeMul = _chP ? (0.50 + 1.01*(0.55*_chP.energy + 0.45*_chP.density)) : 1;
   const MAX_PLANES=Math.max(2,Math.round(Math.min(chords.length,Math.min(500,
     chords.length<=30  ? chords.length
     :chords.length<=80 ? 30+Math.floor((chords.length-30)*0.60)
@@ -4979,9 +4979,9 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
       return ra.x-rb.x;
     });
     const revealed=order.slice(0,paintCount);
-    const lw=sparse?Math.max(2,Math.round(Math.min(CW,CH)*0.009*(0.85+0.3*_chE))):Math.max(3,Math.round(Math.min(CW,CH)*0.012*(0.85+0.3*_chE)));
+    const lw=sparse?Math.max(2,Math.round(Math.min(CW,CH)*0.009*(0.73+0.54*_chE))):Math.max(3,Math.round(Math.min(CW,CH)*0.012*(0.73+0.54*_chE)));
     // Fill thresholds: A is color-rich, B is white-dominant with sparse color.
-    const colorThresh = (sparse?0.30:0.62)*(0.7+0.6*_chE), blackThresh = colorThresh + (sparse?0.08:0.10);
+    const colorThresh = (sparse?0.30:0.62)*(0.46+1.08*_chE), blackThresh = colorThresh + (sparse?0.08:0.10);
     // Seed ONE rng before the loop and advance it per block. Calling _seedRnd
     // fresh per block used each seed's poorly-mixed FIRST output, which clustered
     // badly — some session seeds produced ZERO color blocks (all-cream canvas).
@@ -5860,7 +5860,7 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // Song character drives it: a dense, energetic piece nests more (tighter) rings
   // for an intense optical pulse; a calm, sparse one keeps fewer, broader bands.
   const _chSt = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _stMul = _chSt ? (0.78 + 0.5*(0.5*_chSt.energy + 0.5*_chSt.density)) : 1;
+  const _stMul = _chSt ? (0.60 + 0.90*(0.5*_chSt.energy + 0.5*_chSt.density)) : 1;
   if(concentric){
     // ── Concentric Squares ──────────────────────────────────────────────────
     const RINGS = Math.max(2, Math.round((cn<=6 ? Math.max(2,cn) : cn<=16 ? 6 : cn<=40 ? 9 : cn<=90 ? 12 : 16) * _stMul));
@@ -7082,7 +7082,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       // stack of motifs down the column — density tracks song character so the
       // frieze variant differentiates pieces just like the grid variant.
       const _chGf = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-      const _gfMul = _chGf ? (0.82 + 0.42*(0.5*_chGf.energy + 0.5*_chGf.density)) : 1;
+      const _gfMul = _chGf ? (0.68 + 0.76*(0.5*_chGf.energy + 0.5*_chGf.density)) : 1;
       const motifs = Math.max(4, Math.round((cn<=12 ? 5 : cn<=40 ? 8 : 12) * _gfMul));
       const mH = CH / motifs;
       for(let m=0; m<motifs; m++){
@@ -7121,7 +7121,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // colour-jewels (richer Klimt decoration), a calm one fewer. A finer grid suits
   // Klimt — ornament density IS the statement (unlike op-art, where it'd be noise).
   const _chKlimt = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _klimtMul = _chKlimt ? (0.82 + 0.42*(0.5*_chKlimt.energy + 0.5*_chKlimt.density)) : 1;
+  const _klimtMul = _chKlimt ? (0.68 + 0.76*(0.5*_chKlimt.energy + 0.5*_chKlimt.density)) : 1;
   const COLS = Math.max(4, Math.round((cn<=8 ? 4 : cn<=24 ? 6 : cn<=60 ? 8 : 10) * _klimtMul));
   const ROWS = Math.max(4, Math.round(COLS * (CH/CW)));
   const cw = CW/COLS, ch = CH/ROWS;
@@ -7663,7 +7663,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
   // wall fills with figures: a loud, dense piece swarms with glyphs, a calm one
   // stays sparse and bold.
   const _chPo = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _poMul = _chPo ? (0.82 + 0.42*(0.55*_chPo.energy + 0.45*_chPo.density)) : 1;
+  const _poMul = _chPo ? (0.68 + 0.76*(0.55*_chPo.energy + 0.45*_chPo.density)) : 1;
   const COLS = Math.max(3, Math.round((cn<=6?3:cn<=18?4:cn<=45?5:cn<=100?6:cn<=200?7:cn<=350?9:12) * _poMul));
   const ROWS = Math.max(3, Math.round(COLS*(CH/CW)));
   const cw = CW/COLS, ch = CH/ROWS;
@@ -9208,7 +9208,7 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
   const veilCount = 15 + Math.floor(rnd()*20);
   // Impressionist stroke density from song character (energy-led): 0.78..1.34×.
   const _chMo = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _monetStrokeMul = _chMo ? (0.78 + 0.56*(0.6*_chMo.energy + 0.4*_chMo.density)) : 1;
+  const _monetStrokeMul = _chMo ? (0.60 + 1.01*(0.6*_chMo.energy + 0.4*_chMo.density)) : 1;
 
   function chordCol(t){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
@@ -10456,7 +10456,7 @@ function kusamaPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed){
     return[aR/c,aG/c,aB/c,Math.min(1,aA/c),aV/c];
   };
   const _chKu = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _kuMul = _chKu ? (0.74 + 0.52*(0.55*_chKu.energy + 0.45*_chKu.density)) : 1;
+  const _kuMul = _chKu ? (0.53 + 0.94*(0.55*_chKu.energy + 0.45*_chKu.density)) : 1;
   const MAX_RECTS=Math.max(2,Math.round(Math.min(chords.length,
     chords.length<=40  ? chords.length
     :chords.length<=120 ? 40+Math.floor((chords.length-40)*0.45)
@@ -10959,7 +10959,7 @@ function miroPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   // per-note growth made long pieces like Liszt an overcrowded flickering field.
   const _cnA = Math.max(1, chords.length);
   const _chMi = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _miMul = _chMi ? (0.74 + 0.52*(0.55*_chMi.energy + 0.45*_chMi.density)) : 1;
+  const _miMul = _chMi ? (0.53 + 0.94*(0.55*_chMi.energy + 0.45*_chMi.density)) : 1;
   const TOTAL = Math.max(8, Math.min(240, Math.round((20 + Math.sqrt(_cnA) * 5) * _miMul)));
   const vis = Math.max(1, Math.ceil((N/_cnA) * TOTAL));
 
@@ -11599,7 +11599,7 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // (more foreground shapes), a sparse one stays architectural; an energetic
   // piece grows the chaos shapes. 0.5/0.5 = the untuned 0.60 split, size ×1.
   const _chO=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const _bgShare = 0.60 - (((_chO?_chO.density:0.5))-0.5)*0.30;
+  const _bgShare = 0.60 - (((_chO?_chO.density:0.5))-0.5)*0.54;
   const bgCount = Math.max(4, Math.floor(lim * _bgShare));
   const fgCount = Math.max(0, lim - bgCount);
   // ── LAYER 1: tile fill via guillotine partition ─────────────────────────
@@ -11680,7 +11680,7 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   // ── LAYER 2: chaos shapes via Vogel-spiral placement ────────────────────
   if(fgCount === 0) return;
-  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60 * (0.85+0.3*(_chO?_chO.energy:0.5));
+  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60 * (0.73+0.54*(_chO?_chO.energy:0.5));
   const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));
   const ccx = CW/2, ccy = CH/2;
   const maxR = Math.min(CW, CH) * 0.46;
@@ -11885,7 +11885,7 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   // Multiplier 0.72..1.28, applied to every phase's element budget via eff().
   const _ch = (chords && typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const _charDrive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const _elMul = 0.72 + 0.56*_charDrive;
+  const _elMul = 0.50 + 1.01*_charDrive;   // amplified ×1.8 (was 0.72+0.56)
   const eff = (ref) => Math.max(1, Math.round(prog * ref * _elMul));
   // Song-aware palette: sample gc() at the song's TOP 8 pitch classes so the
   // Kandinsky canvas inherits the piece's actual colour DNA. Harmony yields
