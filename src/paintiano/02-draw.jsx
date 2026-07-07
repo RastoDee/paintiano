@@ -224,6 +224,57 @@ function _pastelTint(r,g,b){
 }
 
 // Sharp φ-rectangle look — implicit default when no artist style selected.
+// ── SONG CHARACTER (A2) — ACTIVATION ─────────────────────────────────────────
+// Dozens of call sites across the style choosers shipped dormant behind a
+// `typeof computeSongCharacter==='function'` guard — the mappings (pass
+// counts, stroke widths, coverage, jitter) are already tuned per artist and
+// simply fell back to their 0.5 neutrals because this function was never
+// defined. Defining it switches the whole MusicDNA network on: the music
+// decides how each style speaks, the style stays the vocabulary.
+// Three fields, each 0..1 with 0.5 as the neutral midpoint:
+//   density  — chord events per second, 0.5..6 eps saturates the range
+//   energy   — mean velocity 40..115 plus a velocity-spread kicker
+//   register — mean pitch 36..96; 0 = deep bass, 1 = high treble
+// Deterministic: the same finished piece always yields the same character.
+// Cached per chords array — overlays call this many times per frame during
+// playback, so it must be O(1) after the first computation. Mic/compose pass
+// their live, growing array: the length check invalidates the cache and the
+// character legitimately evolves with the performance.
+// The richer 8-dim vector from 05-main lives at globalThis.__PAINT_MUSIC_DNA
+// (debug + future dimensions); this 3-field core is self-contained on chords
+// so replay, recall and mic all work without cross-fragment state.
+const _songCharCache = new WeakMap();
+function computeSongCharacter(chords){
+  try{
+    if(!chords || !chords.length) return null;
+    const hit = _songCharCache.get(chords);
+    if(hit && hit.n === chords.length) return hit.v;
+    const clamp01 = x => Math.max(0, Math.min(1, x));
+    let minT=Infinity, maxT=-Infinity, pSum=0, pN=0, vSum=0, vSq=0;
+    for(const ch of chords){
+      const tt = +ch.startMs || 0;
+      if(tt<minT) minT=tt; if(tt>maxT) maxT=tt;
+      const ns = ch.n || ch.notes || (Array.isArray(ch) ? ch : null);
+      if(!ns) continue;
+      for(const note of ns){
+        const m = note.m !== undefined ? note.m : note;
+        const v = note.v !== undefined ? note.v : 100;
+        pSum += m; vSum += v; vSq += v*v; pN++;
+      }
+    }
+    if(!pN) return null;
+    const spanS = Math.max(0.001, (maxT-minT)/1000);
+    const density = clamp01((chords.length/spanS - 0.5)/5.5);
+    const mv = vSum/pN;
+    const vSd = Math.sqrt(Math.max(0, vSq/pN - mv*mv));
+    const energy = clamp01(((mv-40)/75)*0.8 + clamp01(vSd/30)*0.2);
+    const register = clamp01((pSum/pN - 36)/60);
+    const v = { density, energy, register };
+    _songCharCache.set(chords, { n: chords.length, v });
+    return v;
+  }catch(_){ return null; }
+}
+
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
   const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
@@ -4965,6 +5016,12 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   // ════════ A & B: block-grid phases (partition-based) ════════
   if(phase==='A' || phase==='B'){
     const sparse = phase==='B';
+    // Song character: an energetic piece pushes more colour blocks and slightly
+    // heavier grid lines; a quiet one stays whiter with thinner lines. 0.5 is
+    // neutral (= the untuned output). Grid fineness itself already breathes
+    // with the music inside _partitionCanvas.
+    const _chM=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+    const _chE=_chM?_chM.energy:0.5;
     const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400, sparse?0.30:0.45);
     const order = rects.map((r,i)=>i).sort((a,b)=>{
       const ra=rects[a], rb=rects[b];
@@ -4973,9 +5030,9 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
       return ra.x-rb.x;
     });
     const revealed=order.slice(0,paintCount);
-    const lw=sparse?Math.max(2,Math.round(Math.min(CW,CH)*0.009)):Math.max(3,Math.round(Math.min(CW,CH)*0.012));
+    const lw=sparse?Math.max(2,Math.round(Math.min(CW,CH)*0.009*(0.85+0.3*_chE))):Math.max(3,Math.round(Math.min(CW,CH)*0.012*(0.85+0.3*_chE)));
     // Fill thresholds: A is color-rich, B is white-dominant with sparse color.
-    const colorThresh = sparse?0.30:0.62, blackThresh = sparse?0.38:0.72;
+    const colorThresh = (sparse?0.30:0.62)*(0.7+0.6*_chE), blackThresh = colorThresh + (sparse?0.08:0.10);
     // Seed ONE rng before the loop and advance it per block. Calling _seedRnd
     // fresh per block used each seed's poorly-mixed FIRST output, which clustered
     // badly — some session seeds produced ZERO color blocks (all-cream canvas).
@@ -11589,7 +11646,12 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   const isBW = mode === 'bw';
   const ss = (sessionSeed|0) ^ ((phaseIndex|0) * 0x9E3779B1) ^ 0x4D6F0001;
   const R = (()=>{ let s = ss>>>0; return ()=>{ s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; })();
-  const bgCount = Math.max(4, Math.floor(lim * 0.60));
+  // Song character: a dense piece tips the split toward the chaos layer
+  // (more foreground shapes), a sparse one stays architectural; an energetic
+  // piece grows the chaos shapes. 0.5/0.5 = the untuned 0.60 split, size ×1.
+  const _chO=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const _bgShare = 0.60 - (((_chO?_chO.density:0.5))-0.5)*0.30;
+  const bgCount = Math.max(4, Math.floor(lim * _bgShare));
   const fgCount = Math.max(0, lim - bgCount);
   // ── LAYER 1: tile fill via guillotine partition ─────────────────────────
   const rects = [{x:0, y:0, w:CW, h:CH}];
@@ -11669,7 +11731,7 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   // ── LAYER 2: chaos shapes via Vogel-spiral placement ────────────────────
   if(fgCount === 0) return;
-  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60;
+  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60 * (0.85+0.3*(_chO?_chO.energy:0.5));
   const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));
   const ccx = CW/2, ccy = CH/2;
   const maxR = Math.min(CW, CH) * 0.46;
