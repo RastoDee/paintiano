@@ -6550,6 +6550,494 @@ function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 //   3 Vlnenie  interference field — every note a wave source, canvas = sum
 //   4 Dych     breath — one soft colour stratum per phrase, zero shapes
 //   5 Rieka    time river — the only non-radial one; pitch = altitude
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared helper for the Jul-2026 trio (Lichtenstein / Klee / Delaunay):
+// per-chord colour through gc() so the palette mode applies, plus duration /
+// velocity meta. Mirrors the chordCol pattern used by every other overlay.
+function _trioChordTools(chords, gc){
+  const cn = chords.length;
+  function col(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    _setCurE(chord && chord._E);
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [200,150,120];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  function meta(i){
+    const chord=chords[Math.min(cn-1,Math.max(0,i))]; const notes=chord&&(chord.n||chord.notes)||[];
+    let d=0,v=0,c=0;
+    for(const n of notes){ d+=(n.durMs||400); v+=(n.v!==undefined?n.v:80); c++; }
+    return { dur: Math.min(1.6, c? (d/c)/900 : 0.5), vel: Math.min(1, c? (v/c)/110 : 0.7) };
+  }
+  const css=(c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  // Lichtenstein flat: push a gc colour to a poster-flat comic version —
+  // dominant channel saturates, the palette hue survives, the comic look wins.
+  const flat=(c)=>{ const mx=Math.max(c[0],c[1],c[2],1); const k=232/mx;
+    return [Math.min(240,c[0]*k), Math.min(240,c[1]*k), Math.min(240,c[2]*k)]; };
+  const shade=(c,f)=>[Math.min(255,c[0]*f),Math.min(255,c[1]*f),Math.min(255,c[2]*f)];
+  return {col, meta, css, flat, shade, cn};
+}
+function _bendayField(ctx,x,y,w,h,fill,r,step,alpha){
+  ctx.fillStyle=fill; ctx.globalAlpha=alpha;
+  for(let yy=y+step/2; yy<y+h; yy+=step)
+    for(let xx=x+step/2+(((yy/step)|0)%2)*step/2; xx<x+w; xx+=step){
+      ctx.beginPath(); ctx.arc(xx,yy,r,0,7); ctx.fill();
+    }
+  ctx.globalAlpha=1;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LICHTENSTEIN — Ben-Day dots, fat black contours, poster-flat colour.
+// Phases: 0 panels · 1 burst · 2 close-up curves · 3 brushstrokes · 4 mirrors
+// · 5 pop grid. Song character: density → raster tightness, energy → contour
+// weight and shape sizes.
+function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss=sessionSeed|0, rnd=_seedRnd(23, ss, 0, 0);
+  const {col, meta, css, flat, cn}=_trioChordTools(chords, gc);
+  const N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH);
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const dnaD=_ch?_ch.density:0.5, dnaE=_ch?_ch.energy:0.5;
+  const INK='#141414', PAPER='#f7f3ea';
+  const LW=(Math.max(3,S*0.008))*(0.75+0.5*dnaE);
+  const dotStep=(S*0.017)*(1.25-0.5*dnaD), dotR=dotStep*0.27;
+  const GA=Math.PI*2*(1-2/(1+Math.sqrt(5)));
+  ctx.fillStyle=PAPER; ctx.fillRect(0,0,CW,CH);
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+
+  const blob=(x,y,s,fill,burst)=>{
+    ctx.lineWidth=Math.max(3,s*0.13); ctx.strokeStyle=INK; ctx.fillStyle=css(fill);
+    if(burst){
+      ctx.beginPath();
+      for(let k=0;k<12;k++){const a=k/12*Math.PI*2, r=(k%2?s*0.5:s*1.15);
+        const bx=x+Math.cos(a)*r, by=y+Math.sin(a)*r; k?ctx.lineTo(bx,by):ctx.moveTo(bx,by);}
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(x,y,s,s*0.72,(rnd()-0.5)*0.8,0,7); ctx.fill(); ctx.stroke();
+    }
+  };
+
+  if(pick===0){ // panels
+    const panels=[[0,0,CW*0.56,CH*0.5],[CW*0.56,0,CW*0.44,CH*0.5],[0,CH*0.5,CW*0.44,CH*0.5],[CW*0.44,CH*0.5,CW*0.56,CH*0.5]];
+    const per=Math.ceil(cn/4);
+    panels.forEach((P,pi)=>{
+      const [px,py,pw,ph]=P;
+      ctx.save(); ctx.beginPath(); ctx.rect(px,py,pw,ph); ctx.clip();
+      _bendayField(ctx,px,py,pw,ph,css(flat(col(pi*per))),dotR,dotStep,0.5);
+      for(let i=pi*per;i<Math.min(N,(pi+1)*per);i++){
+        const m=meta(i);
+        const x=px+pw*(0.15+0.7*(((i-pi*per)*GA/(Math.PI*2))%1)), y=py+ph*(0.2+0.6*rnd());
+        blob(x,y,(pw*0.06+m.dur*pw*0.10)*(0.75+0.5*dnaE),flat(col(i)),m.dur>1.0);
+      }
+      ctx.restore();
+      ctx.strokeStyle=INK; ctx.lineWidth=LW*1.6; ctx.strokeRect(px+LW,py+LW,pw-LW*2,ph-LW*2);
+    });
+    return;
+  }
+  if(pick===1){ // burst
+    _bendayField(ctx,0,0,CW,CH,css(flat(col(1))),dotR,dotStep,0.45);
+    const cx=CW/2, cy=CH*0.52;
+    for(let i=0;i<N;i+=3){
+      const m=meta(i); const a=i*GA, len=S*0.18+m.dur*S*0.24;
+      ctx.fillStyle=css(flat(col(i)));
+      ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+Math.cos(a-0.04)*len,cy+Math.sin(a-0.04)*len);
+      ctx.lineTo(cx+Math.cos(a+0.04)*len,cy+Math.sin(a+0.04)*len);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle=PAPER; ctx.strokeStyle=INK; ctx.lineWidth=LW*1.4;
+    ctx.beginPath();
+    for(let k=0;k<20;k++){const a=k/20*Math.PI*2, r=(k%2?S*0.10:S*0.24)*(0.8+0.4*rnd());
+      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r; k?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=css(flat(col(0))); ctx.beginPath(); ctx.arc(cx,cy,S*0.07*(0.75+0.5*dnaE),0,7); ctx.fill(); ctx.stroke();
+    return;
+  }
+  if(pick===2){ // close-up curves
+    _bendayField(ctx,0,0,CW,CH,css(flat(col(2))),dotR*0.95,dotStep*0.9,0.4);
+    const bands=7, per=Math.ceil(cn/bands);
+    for(let b=0;b<bands;b++){
+      const i=Math.min(cn-1,b*per); if(i>=N && b>0) break;
+      const m=meta(i);
+      ctx.fillStyle=css(flat(col(i))); ctx.strokeStyle=INK; ctx.lineWidth=LW*1.2;
+      ctx.beginPath();
+      const y0=CH*0.12+b*CH*0.12;
+      ctx.moveTo(-20,y0);
+      for(let x=0;x<=CW;x+=CW/8){ ctx.quadraticCurveTo(x+CW/16, y0+(((x/(CW/8))|0)%2?-1:1)*(S*0.04+m.dur*S*0.06), x+CW/8, y0); }
+      ctx.lineTo(CW+20,y0+CH*0.13); ctx.lineTo(-20,y0+CH*0.13); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+    return;
+  }
+  if(pick===3){ // brushstrokes
+    _bendayField(ctx,0,0,CW,CH,css(flat(col(3))),dotR,dotStep,0.42);
+    const rows=6, per=Math.ceil(cn/rows);
+    for(let k=0;k<rows;k++){
+      const i=Math.min(cn-1,k*per); if(i>=N && k>0) break;
+      const m=meta(i);
+      const x0=CW*0.08, x1=CW*0.92, y=CH*0.14+k*CH*0.15, th=(CH*0.05+m.dur*CH*0.05)*(0.75+0.5*dnaE);
+      ctx.fillStyle=css(flat(col(i))); ctx.strokeStyle=INK; ctx.lineWidth=LW;
+      ctx.beginPath(); ctx.moveTo(x0,y);
+      ctx.bezierCurveTo(CW*0.3,y-th*0.8, CW*0.6,y+th*0.8, x1,y+(rnd()-0.5)*th);
+      ctx.lineTo(x1-S*0.04,y+th);
+      ctx.bezierCurveTo(CW*0.6,y+th*1.8, CW*0.3,y+th*0.2, x0+S*0.024,y+th);
+      for(let f=0;f<4;f++){ ctx.lineTo(x0+S*0.013-f*S*0.011, y+th-f*(th/4)); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    return;
+  }
+  if(pick===4){ // mirrors
+    ctx.fillStyle=INK; ctx.fillRect(0,0,CW,CH);
+    const discs=6, per=Math.ceil(cn/discs);
+    for(let k=0;k<discs;k++){
+      const i=Math.min(cn-1,k*per); if(i>=N && k>0) break;
+      const m=meta(i);
+      const cx=CW*(0.2+0.6*((k*GA/(Math.PI*2))%1)), cy=CH*(0.2+0.6*rnd());
+      const R=(S*0.12+m.dur*S*0.10)*(0.75+0.5*dnaE);
+      ctx.fillStyle=css(flat(col(i))); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.clip();
+      ctx.fillStyle=INK;
+      const st=dotStep*0.75;
+      for(let y=cy-R;y<cy+R;y+=st)
+        for(let x=cx-R+(((y/st)|0)%2)*st/2;x<cx+R;x+=st){
+          const d=Math.hypot(x-cx,y-cy)/R;
+          ctx.beginPath(); ctx.arc(x,y,dotR*0.35+dotR*1.2*d,0,7); ctx.fill();
+        }
+      ctx.restore();
+      ctx.strokeStyle=PAPER; ctx.lineWidth=LW; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+    }
+    return;
+  }
+  { // 5 pop grid
+    ctx.fillStyle=INK; ctx.fillRect(0,0,CW,CH);
+    const cols=7, rows=8, cw=CW/cols, chh=CH/rows;
+    for(let i=0;i<Math.min(N,cols*rows);i++){
+      const m=meta(i); const f=flat(col(i));
+      const x=(i%cols)*cw, y=((i/cols)|0)*chh;
+      ctx.fillStyle=(i%2)?PAPER:css(f); ctx.fillRect(x+2,y+2,cw-4,chh-4);
+      _bendayField(ctx,x+2,y+2,cw-4,chh-4,(i%2)?css(f):INK,dotR*0.5,dotStep*0.55,0.5);
+      ctx.strokeStyle=INK; ctx.lineWidth=Math.max(2,LW*0.6); ctx.strokeRect(x+2,y+2,cw-4,chh-4);
+      ctx.fillStyle=(i%2)?css(f):PAPER; ctx.strokeStyle=INK;
+      const cx2=x+cw/2, cy2=y+chh/2, s2=Math.min(cw,chh)*0.22*(0.7+m.dur*0.5)*(0.75+0.5*dnaE);
+      if(m.dur>0.9){
+        ctx.beginPath();
+        for(let k=0;k<8;k++){const a=k/8*Math.PI*2, r=(k%2?s2*0.5:s2);
+          k?ctx.lineTo(cx2+Math.cos(a)*r,cy2+Math.sin(a)*r):ctx.moveTo(cx2+Math.cos(a)*r,cy2+Math.sin(a)*r);}
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else { ctx.beginPath(); ctx.arc(cx2,cy2,s2,0,7); ctx.fill(); ctx.stroke(); }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KLEE — the painter-musician. Phases: 0 magic squares + a line for a walk ·
+// 1 polyphony (translucent layers) · 2 fugue (voices entering shifted) ·
+// 3 fish garden · 4 arrows over terraces · 5 dot mosaic.
+// Song character: register → which rows light up, energy → luminosity.
+function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss=sessionSeed|0, rnd=_seedRnd(40, ss, 0, 0);
+  const {col, meta, css, shade, cn}=_trioChordTools(chords, gc);
+  const N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH);
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const dnaE=_ch?_ch.energy:0.5, dnaR=_ch?_ch.register:0.5;
+  const PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI);
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const ground=(a,b)=>{const g=ctx.createLinearGradient(0,0,0,CH);g.addColorStop(0,a);g.addColorStop(1,b);ctx.fillStyle=g;ctx.fillRect(0,0,CW,CH);};
+  const chordTopness=(i)=>{ // 0..1 vertical home of a chord from its mean pitch
+    const chord=chords[Math.min(cn-1,i)]; const notes=chord&&(chord.n||chord.notes)||[];
+    if(!notes.length) return 0.5;
+    let s2=0; for(const n of notes){ s2+=(n.m!==undefined?n.m:n); }
+    return Math.max(0,Math.min(1,(s2/notes.length-36)/60));
+  };
+
+  if(pick===0){ // magic squares + line
+    ground('#241a14','#160f0d');
+    const cols=11, rows=8, colW=[], rowH=[]; let acc=0, accR=0;
+    for(let c=0;c<cols;c++){const w=0.6+rnd()*0.9;colW.push(w);acc+=w;}
+    for(let r=0;r<rows;r++){const h2=0.6+rnd()*0.9;rowH.push(h2);accR+=h2;}
+    const per=cn/cols; let cy=0;
+    for(let r2=0;r2<rows;r2++){
+      let cx=0;
+      for(let c=0;c<cols;c++){
+        const w=colW[c]/acc*CW, h2=rowH[r2]/accR*CH;
+        const ni=Math.min(cn-1,(c*per+r2*1.7)|0);
+        const revealed = ni<N;
+        const m=meta(ni);
+        const lit = revealed && Math.abs((rows-1-r2)/(rows-1)-(0.3+0.5*m.vel))<0.30;
+        const base=col(ni, lit?(0.9+0.7*m.vel*(0.75+0.5*dnaE)):0.32);
+        ctx.fillStyle=css(base,0.96);
+        ctx.fillRect(cx+1.5,cy+1.5,w-3,h2-3);
+        const gg=ctx.createRadialGradient(cx+w/2,cy+h2/2,2,cx+w/2,cy+h2/2,Math.max(w,h2)*0.7);
+        gg.addColorStop(0,'rgba(255,240,210,.10)'); gg.addColorStop(1,'rgba(0,0,0,.14)');
+        ctx.fillStyle=gg; ctx.fillRect(cx+1.5,cy+1.5,w-3,h2-3);
+        cx+=w;
+      }
+      cy+=rowH[r2]/accR*CH;
+    }
+    ctx.strokeStyle='rgba(20,14,10,.85)'; ctx.lineWidth=Math.max(2,S*0.003); ctx.lineJoin='round';
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const x=CW*0.04+(i/Math.max(1,cn-1))*CW*0.92;
+      const y=CH*0.82-chordTopness(i)*CH*0.6+Math.sin(i*GA)*S*0.012;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+    ctx.fillStyle='#f3dc9a'; ctx.beginPath(); ctx.arc(CW*0.16,CH*0.14,S*0.026,0,7); ctx.fill();
+    ctx.fillStyle='#241a14'; ctx.beginPath(); ctx.arc(CW*0.16+S*0.012,CH*0.14-S*0.004,S*0.022,0,7); ctx.fill();
+    return;
+  }
+  if(pick===1){ // polyphony
+    ground('#efe6d2','#e0d2b6');
+    ctx.globalCompositeOperation='multiply';
+    for(let i=0;i<N;i++){
+      const m=meta(i);
+      const x=CW*0.05+((i*GA/(Math.PI*2))%1)*CW*0.7, y=CH*0.06+((i*PHI)%1)*CH*0.7;
+      ctx.fillStyle=css(col(i,1.25),0.35);
+      ctx.fillRect(x,y,CW*0.10+m.dur*CW*0.16,CH*0.08+m.vel*CH*0.14);
+    }
+    ctx.globalCompositeOperation='source-over';
+    return;
+  }
+  if(pick===2){ // fugue
+    const base=col(0,0.35);
+    ground(css(shade(base,0.9)), css(shade(base,0.45)));
+    const motifN=8, voices=5;
+    for(let v=0;v<voices;v++){
+      for(let i=0;i<motifN;i++){
+        const gi=v*3+i; if(gi>=N) break;
+        const m=meta(i);
+        const x=CW*0.08+i*CW*0.105+v*CW*0.045, y=CH*0.16+v*CH*0.15+Math.sin(i*0.9)*CH*0.02;
+        const s2=(S*0.05+m.dur*S*0.05)*(0.75+0.5*dnaE);
+        ctx.fillStyle=css(col(i,0.55+v*0.18+m.vel*0.25),0.92);
+        if(i%3===0){ ctx.beginPath(); ctx.arc(x,y,s2*0.62,0,7); ctx.fill(); }
+        else if(i%3===1){ ctx.fillRect(x-s2*0.55,y-s2*0.55,s2*1.1,s2*1.1); }
+        else { ctx.beginPath(); ctx.moveTo(x,y-s2*0.65); ctx.lineTo(x+s2*0.6,y+s2*0.5); ctx.lineTo(x-s2*0.6,y+s2*0.5); ctx.closePath(); ctx.fill(); }
+      }
+    }
+    return;
+  }
+  if(pick===3){ // fish garden
+    ground('#0c1418','#060a0e');
+    ctx.fillStyle='rgba(240,230,200,.5)';
+    for(let p=0;p<4;p++) for(let s2=0;s2<40;s2++){
+      const t=s2/40, x=CW*0.1+t*CW*0.8, y=CH*(0.2+p*0.2)+Math.sin(t*6+p)*CH*0.05;
+      ctx.beginPath(); ctx.arc(x,y,Math.max(1.2,S*0.0022),0,7); ctx.fill();
+    }
+    for(let i=0;i<N;i++){
+      if(i%3) continue;
+      const m=meta(i);
+      const x=CW*0.1+((i*GA/(Math.PI*2))%1)*CW*0.8, y=CH*0.12+((i*PHI)%1)*CH*0.75;
+      const s2=(S*0.03+m.dur*S*0.04)*(0.75+0.5*dnaE);
+      ctx.save(); ctx.translate(x,y); ctx.rotate((rnd()-0.5)*0.8);
+      ctx.fillStyle=css(col(i,1.05+m.vel*0.35),0.95);
+      ctx.beginPath(); ctx.ellipse(0,0,s2,s2*0.45,0,0,7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(s2*0.9,0); ctx.lineTo(s2*1.5,-s2*0.4); ctx.lineTo(s2*1.5,s2*0.4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#0c1418'; ctx.beginPath(); ctx.arc(-s2*0.45,0,Math.max(1,s2*0.09),0,7); ctx.fill();
+      ctx.restore();
+    }
+    ctx.strokeStyle='rgba(120,200,150,.6)'; ctx.lineWidth=Math.max(1.6,S*0.0026);
+    for(let p=0;p<6;p++){const x=CW*(0.08+p*0.16); ctx.beginPath(); ctx.moveTo(x,CH);
+      for(let s2=0;s2<8;s2++){ ctx.quadraticCurveTo(x+(s2%2?S*0.018:-S*0.018),CH-(s2+0.5)*CH*0.04,x,CH-(s2+1)*CH*0.04); } ctx.stroke();}
+    return;
+  }
+  if(pick===4){ // arrows over terraces
+    const rows=9;
+    for(let r=0;r<rows;r++){
+      const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni);
+      ctx.fillStyle=css(col(ni,0.55+m.vel*0.55),0.95);
+      ctx.fillRect(0,r*CH/rows,CW,CH/rows+1);
+    }
+    const per=Math.ceil(cn/6);
+    for(let p=0;p<6;p++){
+      const ai=Math.min(cn-1,p*per); if(ai>=N && p>0) break;
+      const bi=Math.min(cn-1,p*per+per-1);
+      const up=chordTopness(bi)>chordTopness(ai);
+      const m=meta(ai);
+      const x=CW*(0.14+p*0.145), y=CH*(0.5+(p%2?0.16:-0.16));
+      const L=(CH*0.12+m.dur*CH*0.08)*(0.75+0.5*dnaE), dir=up?-1:1;
+      ctx.fillStyle='rgba(20,14,10,.82)';
+      ctx.fillRect(x-S*0.009, Math.min(y,y+dir*L*0.62), S*0.018, L*0.62);
+      ctx.beginPath(); ctx.moveTo(x,y+dir*L); ctx.lineTo(x-S*0.03,y+dir*L*0.6); ctx.lineTo(x+S*0.03,y+dir*L*0.6); ctx.closePath(); ctx.fill();
+    }
+    return;
+  }
+  { // 5 dot mosaic
+    ground('#2a2118','#191209');
+    const step=CW/38;
+    for(let y=step/2;y<CH;y+=step) for(let x=step/2;x<CW;x+=step){
+      const ci=Math.min(cn-1,(x/CW*cn)|0);
+      const revealed=ci<N; const m=meta(ci);
+      const band=1-Math.abs(y/CH-(1-chordTopness(ci)))*2.2;
+      const litK=revealed?Math.max(0,band):0;
+      ctx.fillStyle=css(col(ci, 0.22+litK*(0.7+0.7*m.vel*(0.75+0.5*dnaE))),0.95);
+      ctx.fillRect(x-step*0.42,y-step*0.42,step*0.84,step*0.84);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELAUNAY — Orphism: simultaneous colour circles, the circle of fifths made
+// literal. Phases: 0 simultaneous discs · 1 Rythme column · 2 endless rhythm
+// · 3 windows · 4 electric prisms · 5 sun & moon.
+// Song character: energy → ring counts / radiance, density → disc population.
+function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss=sessionSeed|0, rnd=_seedRnd(85, ss, 0, 0);
+  const {col, meta, css, shade, cn}=_trioChordTools(chords, gc);
+  const N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH);
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const dnaE=_ch?_ch.energy:0.5, dnaD=_ch?_ch.density:0.5;
+  const PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI);
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // segment colour: rotate the chord colour's channels + lightness stepping —
+  // simultaneous contrast from within the active palette, no foreign hues.
+  const seg=(base,s2,k)=>{
+    const rot=[[0,1,2],[1,2,0],[2,0,1]][s2%3];
+    const c=[base[rot[0]],base[rot[1]],base[rot[2]]];
+    return shade(c, 0.7+((s2+k)%3)*0.22);
+  };
+  function disc(x,y,R,i,vel,ringAdd){
+    const base=col(i,1.05);
+    const ringN=3+((vel*3*(0.75+0.5*dnaE))|0)+(ringAdd||0);
+    for(let k=ringN;k>=1;k--){
+      const rr=R*k/ringN, segs=4+((i+k)%4);
+      for(let s2=0;s2<segs;s2++){
+        const a0=(s2/segs)*Math.PI*2+k*0.35, a1=((s2+1)/segs)*Math.PI*2+k*0.35;
+        ctx.fillStyle=css(seg(base,s2,k),0.92);
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,rr,a0,a1); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.strokeStyle='rgba(30,26,20,.25)'; ctx.lineWidth=Math.max(1.5,S*0.0026);
+    ctx.beginPath(); ctx.arc(x,y,R,0,7); ctx.stroke();
+  }
+
+  if(pick===0){ // simultaneous discs
+    ctx.fillStyle='#f0e9da'; ctx.fillRect(0,0,CW,CH);
+    const stride=Math.max(3, Math.round(5*(1.3-0.6*dnaD)));
+    const ds=[];
+    for(let i=0;i<N;i+=stride){
+      const m=meta(i);
+      ds.push({x:CW*(0.14+0.72*((i*GA/(Math.PI*2))%1)), y:CH*(0.16+0.68*rnd()),
+               r:S*0.07+m.dur*S*0.10, i, vel:m.vel});
+    }
+    ds.sort((a,b)=>b.r-a.r);
+    for(const d of ds) disc(d.x,d.y,d.r,d.i,d.vel,0);
+    return;
+  }
+  if(pick===1){ // Rythme column
+    ctx.fillStyle='#efe7d6'; ctx.fillRect(0,0,CW,CH);
+    for(let k=0;k<6;k++){
+      const ni=Math.min(cn-1,k*9); const m=meta(ni);
+      ctx.fillStyle=css(col(ni,0.9+k*0.06),0.9);
+      ctx.beginPath(); ctx.arc(k%2?0:CW, CH*(0.12+k*0.16), CW*0.16+m.dur*CW*0.05, 0, 7); ctx.fill();
+    }
+    const per=Math.ceil(cn/4);
+    for(let k=0;k<4;k++){
+      const ni=Math.min(cn-1,k*per); if(ni>=N && k>0) break;
+      const m=meta(ni);
+      disc(CW*0.5+(k%2?CW*0.05:-CW*0.05), CH*(0.16+k*0.225), CW*0.15+m.dur*CW*0.06, ni, m.vel, 1);
+    }
+    return;
+  }
+  if(pick===2){ // endless rhythm
+    ctx.fillStyle='#151220'; ctx.fillRect(0,0,CW,CH);
+    ctx.strokeStyle='rgba(240,233,218,.22)'; ctx.lineWidth=CW*0.02;
+    ctx.beginPath();
+    for(let s2=0;s2<=40;s2++){const t=s2/40;
+      const x=CW*(0.2+0.6*t), y=CH*(0.14+0.72*t);
+      s2?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.stroke();
+    const per=Math.ceil(cn/5);
+    for(let k=0;k<5;k++){
+      const ni=Math.min(cn-1,k*per); if(ni>=N && k>0) break;
+      const m=meta(ni); const base=col(ni,1.05);
+      const t=k/4, x=CW*(0.2+0.6*t), y=CH*(0.14+0.72*t)+Math.sin(t*Math.PI)*(k%2?-1:1)*CH*0.10;
+      const R=CW*0.13+m.dur*CW*0.05;
+      ctx.beginPath(); ctx.arc(x,y,R,Math.PI*0.5,Math.PI*1.5); ctx.closePath();
+      ctx.fillStyle=css(base,0.95); ctx.fill();
+      ctx.beginPath(); ctx.arc(x+R*0.22,y,R,Math.PI*1.5,Math.PI*0.5); ctx.closePath();
+      ctx.fillStyle=css(seg(base,1,1),0.95); ctx.fill();
+      ctx.fillStyle=css(seg(base,2,2),0.95);
+      ctx.beginPath(); ctx.arc(x+R*0.11,y,R*0.4,0,7); ctx.fill();
+    }
+    return;
+  }
+  if(pick===3){ // windows
+    ctx.fillStyle='#e9e2cf'; ctx.fillRect(0,0,CW,CH);
+    ctx.globalCompositeOperation='multiply';
+    for(let i=0;i<N;i++){
+      const m=meta(i);
+      const x=((i*GA/(Math.PI*2))%1)*CW, y=((i*PHI)%1)*CH;
+      const s2=CW*0.10+m.dur*CW*0.12, a=(i%4)*Math.PI/8;
+      ctx.fillStyle=css(col(i,1.15),0.42);
+      ctx.beginPath();
+      ctx.moveTo(x,y-s2*0.7);
+      ctx.lineTo(x+Math.cos(a)*s2, y+Math.sin(a)*s2*0.4);
+      ctx.lineTo(x+Math.cos(a+2)*s2*0.8, y+Math.sin(a+2)*s2*0.8);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle='rgba(60,80,60,.35)'; ctx.lineWidth=Math.max(3,S*0.006);
+    ctx.beginPath(); ctx.moveTo(CW*0.46,CH*0.9); ctx.lineTo(CW*0.5,CH*0.22); ctx.lineTo(CW*0.54,CH*0.9); ctx.stroke();
+    return;
+  }
+  if(pick===4){ // electric prisms
+    ctx.fillStyle='#efe8d8'; ctx.fillRect(0,0,CW,CH);
+    for(let i=0;i<N;i+=7){
+      const m=meta(i);
+      disc(CW*(0.1+0.8*rnd()), CH*(0.1+0.8*rnd()), S*0.05+m.dur*S*0.03, i, m.vel, 0);
+    }
+    const p1=Math.min(cn-1,8), p2=Math.min(cn-1,Math.max(9,(cn*0.62)|0));
+    [p1,p2].forEach((ni,k)=>{
+      if(ni>=N && k>0) return;
+      const base=col(ni,1.1);
+      const x=CW*(k?0.66:0.34), y=CH*(k?0.6:0.4), R=S*0.30*(0.8+0.4*dnaE);
+      for(let ring=14;ring>=1;ring--){
+        const rr=R*ring/14, segs=10+ring*2;
+        for(let s2=0;s2<segs;s2++){
+          const a0=s2/segs*Math.PI*2+ring*0.22+k, a1=(s2+1)/segs*Math.PI*2+ring*0.22+k;
+          ctx.fillStyle=css(seg(base,s2,ring),0.5);
+          ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,rr,a0,a1); ctx.closePath(); ctx.fill();
+        }
+      }
+    });
+    return;
+  }
+  { // 5 sun & moon
+    ctx.fillStyle='#101425'; ctx.fillRect(0,0,CW,CH);
+    let sunI=0, moonI=0, mx2=-1, mn2=2;
+    for(let i=0;i<N;i++){ const m=meta(i); if(m.vel>mx2){mx2=m.vel;sunI=i;} if(m.vel<mn2){mn2=m.vel;moonI=i;} }
+    const sb=col(sunI,1.25);
+    const sx=CW*0.34, sy=CH*0.42, SR=S*0.26*(0.85+0.3*dnaE);
+    for(let k=0;k<24;k++){
+      const a=k/24*Math.PI*2;
+      ctx.fillStyle=css(seg(sb,k,0),0.9);
+      ctx.beginPath(); ctx.moveTo(sx,sy);
+      ctx.lineTo(sx+Math.cos(a)*SR*1.35, sy+Math.sin(a)*SR*1.35);
+      ctx.lineTo(sx+Math.cos(a+0.13)*SR, sy+Math.sin(a+0.13)*SR);
+      ctx.closePath(); ctx.fill();
+    }
+    disc(sx,sy,SR*0.8,sunI,mx2,2);
+    const mb=col(moonI,0.7);
+    const mx=CW*0.74, my=CH*0.68, MR=S*0.17;
+    for(let k=5;k>=1;k--){
+      ctx.fillStyle=css(shade(mb,0.55+k*0.16),0.9);
+      ctx.beginPath(); ctx.arc(mx,my,MR*k/5,0,7); ctx.fill();
+      ctx.fillStyle='#101425';
+      ctx.beginPath(); ctx.arc(mx+MR*k/5*0.35, my-MR*k/5*0.12, MR*k/5*0.82, 0, 7); ctx.fill();
+    }
+  }
+}
+
 function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
