@@ -568,7 +568,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
       ['proAiValueImage', 'AI composition from your images'],
       ['proAiValueAtmo',  'AI atmospheric tinting'],
     ] : [
-      ['proValueArtists', '19 artists (free has 9)'],
+      ['proValueArtists', '20 artists (free has 9)'],
       ['proValueTypes',   '6 paint types per artist (free has 2)'],
       ['proValuePalette', 'Custom palette — set your own 12 colours'],
       ['proValueDpi',     '300 DPI exports, no watermark'],

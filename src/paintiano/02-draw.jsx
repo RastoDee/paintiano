@@ -6535,6 +6535,251 @@ function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // rays (Hilma af Klint's "The Ten Largest" and "Altarpieces"). Seed picks the
 // composition per painting. Each form is coloured from a chord via gc(); forms
 // reveal progressively as lim advances. Soft pastel, organic, mystical.
+// ─────────────────────────────────────────────────────────────────────────────
+// RAFFEL — the author's signature style. No painter from art history: this one
+// makes Paintiano's OWN mathematics visible. Every phase is built exclusively
+// from the golden angle (137.5°, phyllotaxis — φ made visible by nature) and
+// the piece's harmony; colours come through gc() so the chosen palette mode
+// applies exactly like for every other artist. The only style wired to the
+// full song character from day one — the music decides how it speaks:
+//   density → element counts · energy → sizes/luminosity · register → gravity
+// Six phases (Vary/dice address them like any other artist):
+//   0 Kvet     phyllotaxis bloom — the piece grows like a sunflower
+//   1 Závoje   chromatic veils — additive light, harmony births colour
+//   2 Prstence orbits — radius = fifths ladder, angle = time, arc = duration
+//   3 Vlnenie  interference field — every note a wave source, canvas = sum
+//   4 Dych     breath — one soft colour stratum per phrase, zero shapes
+//   5 Rieka    time river — the only non-radial one; pitch = altitude
+function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const N  = Math.max(1, Math.min(lim, cn));          // progressive reveal
+  const rnd = _seedRnd(137, ss, 0, 0);                 // 137 — the golden angle salt
+  const PHI = (1+Math.sqrt(5))/2, GA = Math.PI*2*(1-1/PHI);
+  const S = Math.min(CW, CH);
+  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+  const dnaD = _ch ? _ch.density : 0.5;                // element counts
+  const dnaE = _ch ? _ch.energy  : 0.5;                // sizes / luminosity
+  const dnaR = _ch ? _ch.register: 0.5;                // vertical gravity
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    _setCurE(chord && chord._E);
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [200,150,120];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css=(c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const chordMeta=(i)=>{                               // duration+velocity 0..1-ish
+    const chord=chords[Math.min(cn-1,i)]; const notes=chord&&(chord.n||chord.notes)||[];
+    let d=0,v=0,c=0;
+    for(const n of notes){ d+=(n.durMs||400); v+=(n.v!==undefined?n.v:80); c++; }
+    return { dur: Math.min(1.6, c? (d/c)/900 : 0.5), vel: Math.min(1, c? (v/c)/110 : 0.7) };
+  };
+  // deep night ground tinted by the piece's opening chord — the signature dark
+  const g0 = chordCol(0, 0.16);
+  ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
+  ctx.fillRect(0,0,CW,CH);
+
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
+
+  if(pick===0){
+    // ── 0 · KVET — phyllotaxis bloom ────────────────────────────────────────
+    const C = S*0.0135*(0.9+0.35*dnaD);                // radial pitch of the spiral
+    // golden thread first (under the petals)
+    ctx.strokeStyle='rgba(201,168,76,.20)'; ctx.lineWidth=Math.max(1,S*0.0011);
+    ctx.beginPath();
+    for(let i=0;i<N;i++){ const r=C*Math.sqrt(i+1)*3.1,a=i*GA;
+      const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    ctx.stroke();
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const r=C*Math.sqrt(i+1)*3.1, a=i*GA;
+      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+      const size=(S*0.010+m.dur*S*0.030)*(0.55+0.45*Math.sqrt((i+1)/cn))*(0.75+0.5*dnaE);
+      ctx.save(); ctx.translate(x,y); ctx.rotate(a+Math.PI/2);
+      const g=ctx.createRadialGradient(0,-size*0.15,1, 0,0,size*1.15);
+      g.addColorStop(0, css(col.map(q=>Math.min(255,q*1.45+40)), 0.55+0.4*m.vel));
+      g.addColorStop(0.55, css(col, 0.8));
+      g.addColorStop(1, css(col, 0));
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.moveTo(0,-size);
+      ctx.quadraticCurveTo(size*0.62,-size*0.15, 0,size*0.72);
+      ctx.quadraticCurveTo(-size*0.62,-size*0.15, 0,-size);
+      ctx.fill();
+      ctx.fillStyle=css([245,240,228], 0.75*m.vel+0.1);
+      ctx.beginPath(); ctx.arc(0,-size*0.1, Math.max(1.1,size*0.09),0,7); ctx.fill();
+      ctx.restore();
+    }
+    return;
+  }
+
+  if(pick===1){
+    // ── 1 · ZÁVOJE — chromatic veils, additive ─────────────────────────────
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const a0=i*GA*0.5, r0=S*0.035+i*(S*0.004);
+      const steps=22, width=(S*0.02+m.dur*S*0.06)*(0.4+0.6*m.vel)*(0.75+0.5*dnaE)+S*0.012;
+      ctx.beginPath();
+      for(let s2=0;s2<=steps;s2++){
+        const t=s2/steps, a=a0+t*1.9, r=r0+t*S*0.13*m.dur;
+        const x=cx+Math.cos(a)*r+(rnd()-0.5)*S*0.005;
+        const y=cy+Math.sin(a)*r*0.92+(rnd()-0.5)*S*0.005;
+        s2?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.strokeStyle=css(col, 0.05+0.075*m.vel);
+      ctx.lineWidth=width; ctx.lineCap='round';
+      ctx.stroke();
+      // soft echo pass instead of blur (blur filter is too slow on mobile)
+      ctx.strokeStyle=css(col, 0.035);
+      ctx.lineWidth=width*1.9; ctx.stroke();
+    }
+    ctx.globalCompositeOperation='source-over';
+    return;
+  }
+
+  if(pick===2){
+    // ── 2 · PRSTENCE — orbits: radius = fifths ladder, angle = time ─────────
+    const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
+    const rings=12, r0=S*0.065, rStep=S*0.033;
+    ctx.strokeStyle='rgba(201,168,76,.07)'; ctx.lineWidth=1;
+    for(let k=0;k<rings;k++){ ctx.beginPath(); ctx.arc(cx,cy,r0+k*rStep,0,7); ctx.stroke(); }
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const chord=chords[i], notes=chord&&(chord.n||chord.notes)||[];
+      const pc=notes.length?(((notes[0].m!==undefined?notes[0].m:notes[0])%12)+12)%12:0;
+      const ring=FIF.indexOf(pc);
+      const r=r0+ring*rStep;
+      const a0=(i/cn)*Math.PI*2-Math.PI/2;
+      const sweep=0.08+m.dur*0.45;
+      const width=(S*0.005+m.dur*S*0.012)*(0.55+0.45*m.vel)*(0.75+0.5*dnaE);
+      ctx.strokeStyle=css(col, 0.10+0.13*m.vel); ctx.lineWidth=width*2.4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.arc(cx,cy,r,a0,a0+sweep); ctx.stroke();
+      ctx.strokeStyle=css(col.map(q=>Math.min(255,q*1.25+25)), 0.85); ctx.lineWidth=width;
+      ctx.beginPath(); ctx.arc(cx,cy,r,a0,a0+sweep); ctx.stroke();
+      const hx=cx+Math.cos(a0+sweep)*r, hy=cy+Math.sin(a0+sweep)*r;
+      ctx.fillStyle=css([245,240,228], 0.8*m.vel+0.1);
+      ctx.beginPath(); ctx.arc(hx,hy,Math.max(1.3,width*0.42),0,7); ctx.fill();
+    }
+    ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle='rgba(201,168,76,.5)'; ctx.lineWidth=Math.max(1,S*0.0013);
+    ctx.beginPath(); ctx.arc(cx,cy,S*0.013,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy-S*0.02); ctx.lineTo(cx,cy+S*0.02); ctx.stroke();
+    return;
+  }
+
+  if(pick===3){
+    // ── 3 · VLNENIE — interference field (coarse cells for mobile) ──────────
+    const srcs=[];
+    const stride=Math.max(1, Math.ceil(N/28));         // cap sources ≈28
+    for(let i=0;i<N;i+=stride){
+      const m=chordMeta(i), col=chordCol(i);
+      const r=S*0.012*Math.sqrt(i+1)*3.0, a=i*GA;
+      srcs.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, col,
+                 f:(0.010+0.018*m.dur)*(720/S), amp:(0.4+0.6*m.vel)*(0.75+0.5*dnaE)});
+    }
+    const cell=Math.max(5, Math.round(S/170));
+    const cut2=(S*0.42)*(S*0.42);
+    for(let y=0;y<CH;y+=cell){
+      for(let x=0;x<CW;x+=cell){
+        let R=0,G=0,B=0,w=0;
+        for(const s2 of srcs){
+          const dx=x-s2.x, dy=y-s2.y, d2=dx*dx+dy*dy;
+          if(d2>cut2) continue;
+          const d=Math.sqrt(d2);
+          const ww=Math.max(0, Math.cos(d*s2.f)) * s2.amp * Math.exp(-d/(S*0.42));
+          if(ww<=0.002) continue;
+          R+=ww*s2.col[0]; G+=ww*s2.col[1]; B+=ww*s2.col[2]; w+=ww;
+        }
+        if(w<=0.02) continue;
+        const k=Math.min(1,w*0.9);
+        ctx.fillStyle=`rgb(${Math.min(255,R/w*k)|0},${Math.min(255,G/w*k)|0},${Math.min(255,B/w*k)|0})`;
+        ctx.fillRect(x,y,cell,cell);
+      }
+    }
+    return;
+  }
+
+  if(pick===4){
+    // ── 4 · DYCH — one soft colour stratum per phrase ───────────────────────
+    const PH_N=13, phrases=[];
+    for(let s2=0;s2<N;s2+=PH_N) phrases.push([s2, Math.min(N,s2+PH_N)]);
+    ctx.globalCompositeOperation='lighter';
+    const total=Math.max(1, Math.ceil(cn/PH_N));
+    phrases.forEach((ph,pi)=>{
+      // phrase colour = mean of its chord colours; energy = mean velocity
+      let R=0,G=0,B=0,E=0,c=0;
+      for(let i=ph[0];i<ph[1];i++){ const col=chordCol(i); const m=chordMeta(i);
+        R+=col[0];G+=col[1];B+=col[2];E+=m.vel;c++; }
+      if(!c) return;
+      const col=[R/c,G/c,B/c], energy=E/c;
+      const y0=(pi/total)*CH, bandH=(CH/total)*PHI;
+      for(let k=0;k<3;k++){
+        const yy=y0+bandH*(0.2+0.3*k)+(rnd()-0.5)*CH*0.035;
+        const g=ctx.createRadialGradient(CW*(0.3+rnd()*0.4), yy, 8, CW/2, yy, CW*0.75);
+        g.addColorStop(0, css(col, (0.13+0.10*energy)*(0.75+0.5*dnaE)));
+        g.addColorStop(1, css(col, 0));
+        ctx.fillStyle=g;
+        ctx.fillRect(0, yy-bandH*0.9, CW, bandH*1.8);
+      }
+    });
+    ctx.globalCompositeOperation='source-over';
+    // breathing grain
+    ctx.globalAlpha=0.05;
+    for(let i=0;i<120;i++){
+      const x=rnd()*CW;
+      ctx.strokeStyle='#f2eee8'; ctx.lineWidth=0.7;
+      ctx.beginPath(); ctx.moveTo(x, rnd()*CH); ctx.lineTo(x+(rnd()-0.5)*8, rnd()*CH); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    return;
+  }
+
+  // ── 5 · RIEKA — time flows left→right, pitch = altitude ───────────────────
+  {
+    const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
+    ctx.globalCompositeOperation='lighter';
+    let ladder=0; const laneY=[];
+    for(let i=0;i<cn;i++){
+      const chord=chords[i], notes=chord&&(chord.n||chord.notes)||[];
+      const pc=notes.length?(((notes[0].m!==undefined?notes[0].m:notes[0])%12)+12)%12:0;
+      ladder = ladder*0.72 + (FIF.indexOf(pc)/11 - 0.5)*0.28;
+      laneY.push(CH*(0.42+0.16*dnaR) + ladder*CH*0.62);
+    }
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const x0=CW*0.035 + (i/Math.max(1,cn-1))*(CW*0.88);
+      const len=S*0.05+m.dur*S*0.20, width=(S*0.007+m.dur*S*0.026)*(0.5+0.5*m.vel)*(0.75+0.5*dnaE);
+      const y0=laneY[i];
+      ctx.beginPath();
+      const steps=14;
+      for(let s2=0;s2<=steps;s2++){
+        const t=s2/steps, x=x0+t*len;
+        const y=y0 + Math.sin((x*0.011*(720/S))+i*GA)*S*0.016*(1-t*0.4) + Math.sin(x*0.011*PHI*(720/S))*S*0.008;
+        s2?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.strokeStyle=css(col, 0.10+0.10*m.vel);
+      ctx.lineWidth=width; ctx.lineCap='round'; ctx.stroke();
+      ctx.strokeStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.35*m.vel+0.1);
+      ctx.lineWidth=Math.max(1.4,width*0.22); ctx.stroke();
+    }
+    ctx.globalCompositeOperation='source-over';
+  }
+}
+
 function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
