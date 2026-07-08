@@ -8607,7 +8607,8 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
       const [px,py,pw,ph]=P;
       ctx.save(); ctx.beginPath(); ctx.rect(px,py,pw,ph); ctx.clip();
       _bendayField(ctx,px,py,pw,ph,css(flat(col(pi*per))),dotR,dotStep,0.5);
-      for(let i=pi*per;i<Math.min(N,(pi+1)*per);i++){
+      const _pstep=Math.max(1,Math.ceil(per/9));
+      for(let i=pi*per;i<Math.min(N,(pi+1)*per);i+=_pstep){
         const m=meta(i);
         const x=px+pw*(0.15+0.7*(((i-pi*per)*GA/(Math.PI*2))%1)), y=py+ph*(0.2+0.6*rnd());
         blob(x,y,(pw*0.06+m.dur*pw*0.10)*(0.75+0.5*dnaE),flat(col(i)),m.dur>1.0);
@@ -8620,7 +8621,8 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   if(pick===1){ // burst
     _bendayField(ctx,0,0,CW,CH,css(flat(col(1))),dotR,dotStep,0.45);
     const cx=CW/2, cy=CH*0.52;
-    for(let i=0;i<N;i+=3){
+    const _rstep=Math.max(3,Math.ceil(cn/30));
+    for(let i=0;i<N;i+=_rstep){
       const m=meta(i); const a=i*GA, len=S*0.18+m.dur*S*0.24;
       ctx.fillStyle=css(flat(col(i)));
       ctx.beginPath(); ctx.moveTo(cx,cy);
@@ -8758,14 +8760,24 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       }
       cy+=rowH[r2]/accR*CH;
     }
-    ctx.strokeStyle='rgba(20,14,10,.85)'; ctx.lineWidth=Math.max(2,S*0.003); ctx.lineJoin='round';
-    ctx.beginPath();
-    for(let i=0;i<N;i++){
-      const x=CW*0.04+(i/Math.max(1,cn-1))*CW*0.92;
-      const y=CH*0.82-chordTopness(i)*CH*0.6+Math.sin(i*GA)*S*0.012;
-      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    // "a line for a walk" — downsampled to ~56 walk points regardless of the
+    // piece length (hundreds of chords produced a dense scribble) and smoothed
+    // through quadratic midpoints; thinner and softer.
+    ctx.strokeStyle='rgba(20,14,10,.7)'; ctx.lineWidth=Math.max(1.6,S*0.0024); ctx.lineJoin='round'; ctx.lineCap='round';
+    const _lstep=Math.max(1,Math.ceil(cn/56));
+    const _pts=[];
+    for(let i=0;i<N;i+=_lstep){
+      _pts.push([CW*0.04+(i/Math.max(1,cn-1))*CW*0.92,
+                 CH*0.82-chordTopness(i)*CH*0.6+Math.sin((i/_lstep)*GA)*S*0.010]);
     }
-    ctx.stroke();
+    if(_pts.length>1){
+      ctx.beginPath(); ctx.moveTo(_pts[0][0],_pts[0][1]);
+      for(let p=1;p<_pts.length-1;p++){
+        ctx.quadraticCurveTo(_pts[p][0],_pts[p][1],(_pts[p][0]+_pts[p+1][0])/2,(_pts[p][1]+_pts[p+1][1])/2);
+      }
+      ctx.lineTo(_pts[_pts.length-1][0],_pts[_pts.length-1][1]);
+      ctx.stroke();
+    }
     ctx.fillStyle='#f3dc9a'; ctx.beginPath(); ctx.arc(CW*0.16,CH*0.14,S*0.026,0,7); ctx.fill();
     ctx.fillStyle='#241a14'; ctx.beginPath(); ctx.arc(CW*0.16+S*0.012,CH*0.14-S*0.004,S*0.022,0,7); ctx.fill();
     return;
@@ -8773,7 +8785,10 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   if(pick===1){ // polyphony — translucent watercolour glazes weaving voices
     ground('#efe6d2','#e0d2b6');
     ctx.globalCompositeOperation='multiply';
-    for(let i=0;i<N;i++){
+    // cap the weave at ~48 glazes regardless of piece length — hundreds of
+    // multiply layers collapse to black no matter how pale each glaze is
+    const _kstep=Math.max(1,Math.ceil(cn/48));
+    for(let i=0;i<N;i+=_kstep){
       const m=meta(i);
       // R2 low-discrepancy placement — x/y decorrelated (the old i·GA / i·φ
       // pairing is linear in i, which lined every rectangle up on one diagonal)
@@ -8813,8 +8828,9 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       const t=s2/40, x=CW*0.1+t*CW*0.8, y=CH*(0.2+p*0.2)+Math.sin(t*6+p)*CH*0.05;
       ctx.beginPath(); ctx.arc(x,y,Math.max(1.2,S*0.0022),0,7); ctx.fill();
     }
+    const _fstep=Math.max(3,Math.ceil(cn/18));
     for(let i=0;i<N;i++){
-      if(i%3) continue;
+      if(i%_fstep) continue;
       const m=meta(i);
       const x=CW*0.1+((i*GA/(Math.PI*2))%1)*CW*0.8, y=CH*0.12+((i*PHI)%1)*CH*0.75;
       const s2=(S*0.03+m.dur*S*0.04)*(0.75+0.5*dnaE);
@@ -8903,7 +8919,7 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 
   if(pick===0){ // simultaneous discs
     ctx.fillStyle='#f0e9da'; ctx.fillRect(0,0,CW,CH);
-    const stride=Math.max(3, Math.round(5*(1.3-0.6*dnaD)));
+    const stride=Math.max(Math.ceil(cn/14), Math.round(5*(1.3-0.6*dnaD)));
     const ds=[];
     for(let i=0;i<N;i+=stride){
       const m=meta(i);
@@ -8958,7 +8974,10 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
     ctx.fillStyle='#e9e2cf'; ctx.fillRect(0,0,CW,CH);
     ctx.globalCompositeOperation='multiply';
     const wx=CW/2, wy=CH*0.46;
-    for(let i=0;i<N;i++){
+    // cap the fan at ~44 shards — hundreds of chords otherwise stack every
+    // golden angle into a solid black ring
+    const _dstep=Math.max(1,Math.ceil(cn/44));
+    for(let i=0;i<N;i+=_dstep){
       const m=meta(i);
       const a=i*GA;
       const r0=S*0.05+((0.7548776662*(i+1))%1)*S*0.26;
@@ -8979,7 +8998,8 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   }
   if(pick===4){ // electric prisms
     ctx.fillStyle='#efe8d8'; ctx.fillRect(0,0,CW,CH);
-    for(let i=0;i<N;i+=7){
+    const _sstep=Math.max(7,Math.ceil(cn/9));
+    for(let i=0;i<N;i+=_sstep){
       const m=meta(i);
       disc(CW*(0.1+0.8*rnd()), CH*(0.1+0.8*rnd()), S*0.05+m.dur*S*0.03, i, m.vel, 0);
     }
