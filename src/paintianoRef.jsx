@@ -8500,6 +8500,251 @@ function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // rays (Hilma af Klint's "The Ten Largest" and "Altarpieces"). Seed picks the
 // composition per painting. Each form is coloured from a chord via gc(); forms
 // reveal progressively as lim advances. Soft pastel, organic, mystical.
+// ─────────────────────────────────────────────────────────────────────────────
+// RAFFEL — the author's signature style. No painter from art history: this one
+// makes Paintiano's OWN mathematics visible. Every phase is built exclusively
+// from the golden angle (137.5°, phyllotaxis — φ made visible by nature) and
+// the piece's harmony; colours come through gc() so the chosen palette mode
+// applies exactly like for every other artist. The only style wired to the
+// full song character from day one — the music decides how it speaks:
+//   density → element counts · energy → sizes/luminosity · register → gravity
+// Six phases (Vary/dice address them like any other artist):
+//   0 Kvet     phyllotaxis bloom — the piece grows like a sunflower
+//   1 Závoje   chromatic veils — additive light, harmony births colour
+//   2 Prstence orbits — radius = fifths ladder, angle = time, arc = duration
+//   3 Vlnenie  interference field — every note a wave source, canvas = sum
+//   4 Dych     breath — one soft colour stratum per phrase, zero shapes
+//   5 Rieka    time river — the only non-radial one; pitch = altitude
+function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const ss = sessionSeed | 0;
+  const cn = chords.length;
+  const N  = Math.max(1, Math.min(lim, cn));          // progressive reveal
+  const rnd = _seedRnd(137, ss, 0, 0);                 // 137 — the golden angle salt
+  const PHI = (1+Math.sqrt(5))/2, GA = Math.PI*2*(1-1/PHI);
+  const S = Math.min(CW, CH);
+  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+  const dnaD = _ch ? _ch.density : 0.5;                // element counts
+  const dnaE = _ch ? _ch.energy  : 0.5;                // sizes / luminosity
+  const dnaR = _ch ? _ch.register: 0.5;                // vertical gravity
+
+  function chordCol(i, mul){
+    const idx = Math.min(cn-1, Math.max(0, i % cn));
+    const chord = chords[idx];
+    _setCurE(chord && chord._E);
+    const notes = chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return [200,150,120];
+    let R=0,G=0,B=0,c=0;
+    for(const note of notes){
+      const m = note.m!==undefined?note.m:note;
+      const v = note.v!==undefined?note.v:80;
+      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
+    }
+    const k = mul===undefined?1:mul;
+    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
+  }
+  const css=(c,a)=> a===undefined ? `rgb(${c[0]|0},${c[1]|0},${c[2]|0})` : `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const chordMeta=(i)=>{                               // duration+velocity 0..1-ish
+    const chord=chords[Math.min(cn-1,i)]; const notes=chord&&(chord.n||chord.notes)||[];
+    let d=0,v=0,c=0;
+    for(const n of notes){ d+=(n.durMs||400); v+=(n.v!==undefined?n.v:80); c++; }
+    return { dur: Math.min(1.6, c? (d/c)/900 : 0.5), vel: Math.min(1, c? (v/c)/110 : 0.7) };
+  };
+  // deep night ground tinted by the piece's opening chord — the signature dark
+  const g0 = chordCol(0, 0.16);
+  ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
+  ctx.fillRect(0,0,CW,CH);
+
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
+
+  if(pick===0){
+    // ── 0 · KVET — phyllotaxis bloom ────────────────────────────────────────
+    const C = S*0.0135*(0.9+0.35*dnaD);                // radial pitch of the spiral
+    // golden thread first (under the petals)
+    ctx.strokeStyle='rgba(201,168,76,.20)'; ctx.lineWidth=Math.max(1,S*0.0011);
+    ctx.beginPath();
+    for(let i=0;i<N;i++){ const r=C*Math.sqrt(i+1)*3.1,a=i*GA;
+      const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    ctx.stroke();
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const r=C*Math.sqrt(i+1)*3.1, a=i*GA;
+      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+      const size=(S*0.010+m.dur*S*0.030)*(0.55+0.45*Math.sqrt((i+1)/cn))*(0.75+0.5*dnaE);
+      ctx.save(); ctx.translate(x,y); ctx.rotate(a+Math.PI/2);
+      const g=ctx.createRadialGradient(0,-size*0.15,1, 0,0,size*1.15);
+      g.addColorStop(0, css(col.map(q=>Math.min(255,q*1.45+40)), 0.55+0.4*m.vel));
+      g.addColorStop(0.55, css(col, 0.8));
+      g.addColorStop(1, css(col, 0));
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.moveTo(0,-size);
+      ctx.quadraticCurveTo(size*0.62,-size*0.15, 0,size*0.72);
+      ctx.quadraticCurveTo(-size*0.62,-size*0.15, 0,-size);
+      ctx.fill();
+      ctx.fillStyle=css([245,240,228], 0.75*m.vel+0.1);
+      ctx.beginPath(); ctx.arc(0,-size*0.1, Math.max(1.1,size*0.09),0,7); ctx.fill();
+      ctx.restore();
+    }
+    return;
+  }
+
+  if(pick===1){
+    // ── 1 · ZÁVOJE — chromatic veils, additive ─────────────────────────────
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const a0=i*GA*0.5, r0=S*0.035+i*(S*0.004);
+      const steps=22, width=(S*0.02+m.dur*S*0.06)*(0.4+0.6*m.vel)*(0.75+0.5*dnaE)+S*0.012;
+      ctx.beginPath();
+      for(let s2=0;s2<=steps;s2++){
+        const t=s2/steps, a=a0+t*1.9, r=r0+t*S*0.13*m.dur;
+        const x=cx+Math.cos(a)*r+(rnd()-0.5)*S*0.005;
+        const y=cy+Math.sin(a)*r*0.92+(rnd()-0.5)*S*0.005;
+        s2?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.strokeStyle=css(col, 0.05+0.075*m.vel);
+      ctx.lineWidth=width; ctx.lineCap='round';
+      ctx.stroke();
+      // soft echo pass instead of blur (blur filter is too slow on mobile)
+      ctx.strokeStyle=css(col, 0.035);
+      ctx.lineWidth=width*1.9; ctx.stroke();
+    }
+    ctx.globalCompositeOperation='source-over';
+    return;
+  }
+
+  if(pick===2){
+    // ── 2 · PRSTENCE — orbits: radius = fifths ladder, angle = time ─────────
+    const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
+    const rings=12, r0=S*0.065, rStep=S*0.033;
+    ctx.strokeStyle='rgba(201,168,76,.07)'; ctx.lineWidth=1;
+    for(let k=0;k<rings;k++){ ctx.beginPath(); ctx.arc(cx,cy,r0+k*rStep,0,7); ctx.stroke(); }
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const chord=chords[i], notes=chord&&(chord.n||chord.notes)||[];
+      const pc=notes.length?(((notes[0].m!==undefined?notes[0].m:notes[0])%12)+12)%12:0;
+      const ring=FIF.indexOf(pc);
+      const r=r0+ring*rStep;
+      const a0=(i/cn)*Math.PI*2-Math.PI/2;
+      const sweep=0.08+m.dur*0.45;
+      const width=(S*0.005+m.dur*S*0.012)*(0.55+0.45*m.vel)*(0.75+0.5*dnaE);
+      ctx.strokeStyle=css(col, 0.10+0.13*m.vel); ctx.lineWidth=width*2.4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.arc(cx,cy,r,a0,a0+sweep); ctx.stroke();
+      ctx.strokeStyle=css(col.map(q=>Math.min(255,q*1.25+25)), 0.85); ctx.lineWidth=width;
+      ctx.beginPath(); ctx.arc(cx,cy,r,a0,a0+sweep); ctx.stroke();
+      const hx=cx+Math.cos(a0+sweep)*r, hy=cy+Math.sin(a0+sweep)*r;
+      ctx.fillStyle=css([245,240,228], 0.8*m.vel+0.1);
+      ctx.beginPath(); ctx.arc(hx,hy,Math.max(1.3,width*0.42),0,7); ctx.fill();
+    }
+    ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle='rgba(201,168,76,.5)'; ctx.lineWidth=Math.max(1,S*0.0013);
+    ctx.beginPath(); ctx.arc(cx,cy,S*0.013,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy-S*0.02); ctx.lineTo(cx,cy+S*0.02); ctx.stroke();
+    return;
+  }
+
+  if(pick===3){
+    // ── 3 · VLNENIE — interference field (coarse cells for mobile) ──────────
+    const srcs=[];
+    const stride=Math.max(1, Math.ceil(N/28));         // cap sources ≈28
+    for(let i=0;i<N;i+=stride){
+      const m=chordMeta(i), col=chordCol(i);
+      const r=S*0.012*Math.sqrt(i+1)*3.0, a=i*GA;
+      srcs.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, col,
+                 f:(0.010+0.018*m.dur)*(720/S), amp:(0.4+0.6*m.vel)*(0.75+0.5*dnaE)});
+    }
+    const cell=Math.max(5, Math.round(S/170));
+    const cut2=(S*0.42)*(S*0.42);
+    for(let y=0;y<CH;y+=cell){
+      for(let x=0;x<CW;x+=cell){
+        let R=0,G=0,B=0,w=0;
+        for(const s2 of srcs){
+          const dx=x-s2.x, dy=y-s2.y, d2=dx*dx+dy*dy;
+          if(d2>cut2) continue;
+          const d=Math.sqrt(d2);
+          const ww=Math.max(0, Math.cos(d*s2.f)) * s2.amp * Math.exp(-d/(S*0.42));
+          if(ww<=0.002) continue;
+          R+=ww*s2.col[0]; G+=ww*s2.col[1]; B+=ww*s2.col[2]; w+=ww;
+        }
+        if(w<=0.02) continue;
+        const k=Math.min(1,w*0.9);
+        ctx.fillStyle=`rgb(${Math.min(255,R/w*k)|0},${Math.min(255,G/w*k)|0},${Math.min(255,B/w*k)|0})`;
+        ctx.fillRect(x,y,cell,cell);
+      }
+    }
+    return;
+  }
+
+  if(pick===4){
+    // ── 4 · DYCH — one soft colour stratum per phrase ───────────────────────
+    const PH_N=13, phrases=[];
+    for(let s2=0;s2<N;s2+=PH_N) phrases.push([s2, Math.min(N,s2+PH_N)]);
+    ctx.globalCompositeOperation='lighter';
+    const total=Math.max(1, Math.ceil(cn/PH_N));
+    phrases.forEach((ph,pi)=>{
+      // phrase colour = mean of its chord colours; energy = mean velocity
+      let R=0,G=0,B=0,E=0,c=0;
+      for(let i=ph[0];i<ph[1];i++){ const col=chordCol(i); const m=chordMeta(i);
+        R+=col[0];G+=col[1];B+=col[2];E+=m.vel;c++; }
+      if(!c) return;
+      const col=[R/c,G/c,B/c], energy=E/c;
+      const y0=(pi/total)*CH, bandH=(CH/total)*PHI;
+      for(let k=0;k<3;k++){
+        const yy=y0+bandH*(0.2+0.3*k)+(rnd()-0.5)*CH*0.035;
+        const g=ctx.createRadialGradient(CW*(0.3+rnd()*0.4), yy, 8, CW/2, yy, CW*0.75);
+        g.addColorStop(0, css(col, (0.13+0.10*energy)*(0.75+0.5*dnaE)));
+        g.addColorStop(1, css(col, 0));
+        ctx.fillStyle=g;
+        ctx.fillRect(0, yy-bandH*0.9, CW, bandH*1.8);
+      }
+    });
+    ctx.globalCompositeOperation='source-over';
+    // breathing grain
+    ctx.globalAlpha=0.05;
+    for(let i=0;i<120;i++){
+      const x=rnd()*CW;
+      ctx.strokeStyle='#f2eee8'; ctx.lineWidth=0.7;
+      ctx.beginPath(); ctx.moveTo(x, rnd()*CH); ctx.lineTo(x+(rnd()-0.5)*8, rnd()*CH); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    return;
+  }
+
+  // ── 5 · RIEKA — time flows left→right, pitch = altitude ───────────────────
+  {
+    const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
+    ctx.globalCompositeOperation='lighter';
+    let ladder=0; const laneY=[];
+    for(let i=0;i<cn;i++){
+      const chord=chords[i], notes=chord&&(chord.n||chord.notes)||[];
+      const pc=notes.length?(((notes[0].m!==undefined?notes[0].m:notes[0])%12)+12)%12:0;
+      ladder = ladder*0.72 + (FIF.indexOf(pc)/11 - 0.5)*0.28;
+      laneY.push(CH*(0.42+0.16*dnaR) + ladder*CH*0.62);
+    }
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const x0=CW*0.035 + (i/Math.max(1,cn-1))*(CW*0.88);
+      const len=S*0.05+m.dur*S*0.20, width=(S*0.007+m.dur*S*0.026)*(0.5+0.5*m.vel)*(0.75+0.5*dnaE);
+      const y0=laneY[i];
+      ctx.beginPath();
+      const steps=14;
+      for(let s2=0;s2<=steps;s2++){
+        const t=s2/steps, x=x0+t*len;
+        const y=y0 + Math.sin((x*0.011*(720/S))+i*GA)*S*0.016*(1-t*0.4) + Math.sin(x*0.011*PHI*(720/S))*S*0.008;
+        s2?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      }
+      ctx.strokeStyle=css(col, 0.10+0.10*m.vel);
+      ctx.lineWidth=width; ctx.lineCap='round'; ctx.stroke();
+      ctx.strokeStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.35*m.vel+0.1);
+      ctx.lineWidth=Math.max(1.4,width*0.22); ctx.stroke();
+    }
+    ctx.globalCompositeOperation='source-over';
+  }
+}
+
 function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
@@ -17279,7 +17524,7 @@ const I18N = {
     // Tier card keys (two-tier paywall, Jun 2026)
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (then €14.99)',
-    proValueArtists:'Every style & artist \u2014 19 in all (free has 9)',
+    proValueArtists:'Every style & artist \u2014 20 in all (free has 9)',
     proValueTypes:'6 paint types per artist (free has 2)',
     proValuePalette:'Your own palette \u2014 set all 12 colours',
     proValueDpi:'Print-ready for the wall \u2014 300 DPI, no watermark',
@@ -17416,7 +17661,7 @@ const I18N = {
     proSupportLine:'Du hältst damit auch ein unabhängiges Solo-Kunstprojekt am Leben.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (danach 14,99 €)',
-    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 19 insgesamt (Free hat 9)',
+    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 20 insgesamt (Free hat 9)',
     proValueTypes:'6 Mal-Typen pro Künstler (Free hat 2)',
     proValuePalette:'Deine eigene Palette \u2014 alle 12 Farben',
     proValueDpi:'Druckfertig f\u00fcr die Wand \u2014 300 DPI, kein Wasserzeichen',
@@ -17552,7 +17797,7 @@ const I18N = {
     proSupportLine:'Vous soutenez aussi un projet d’art solo indépendant.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (puis 14,99 €)',
-    proValueArtists:'Tous les styles & artistes \u2014 19 en tout (Free en a 9)',
+    proValueArtists:'Tous les styles & artistes \u2014 20 en tout (Free en a 9)',
     proValueTypes:'6 types de peinture par artiste (Free en a 2)',
     proValuePalette:'Votre propre palette \u2014 vos 12 couleurs',
     proValueDpi:'Pr\u00eat \u00e0 imprimer pour le mur \u2014 300 DPI, sans filigrane',
@@ -17688,7 +17933,7 @@ const I18N = {
     proSupportLine:'También mantienes vivo un proyecto artístico independiente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (luego 14,99 €)',
-    proValueArtists:'Todos los estilos y artistas \u2014 19 en total (Free tiene 9)',
+    proValueArtists:'Todos los estilos y artistas \u2014 20 en total (Free tiene 9)',
     proValueTypes:'6 tipos de pintura por artista (Free tiene 2)',
     proValuePalette:'Tu propia paleta \u2014 tus 12 colores',
     proValueDpi:'Listo para imprimir y enmarcar \u2014 300 DPI, sin marca de agua',
@@ -17824,7 +18069,7 @@ const I18N = {
     proSupportLine:'Zároveň pomáhaš udržať nezávislý umelecký projekt.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (potom 14,99 €)',
-    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 19 spolu (Free m\u00e1 9)',
+    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 20 spolu (Free m\u00e1 9)',
     proValueTypes:'6 typov maľby na umelca (Free má 2)',
     proValuePalette:'Vlastn\u00e1 paleta \u2014 v\u0161etk\u00fdch 12 farieb',
     proValueDpi:'Pripraven\u00e9 na stenu \u2014 300 DPI, bez vodoznaku',
@@ -17963,7 +18208,7 @@ const I18N = {
     proSupportLine:'您也在帮助一个独立的艺术项目持续运作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鸟价(之后 €14.99)',
-    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 19 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',
+    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 20 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',
     proValueTypes:'每位艺术家 6 种画法(免费版 2 种)',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8c03\u8272\u677f \u2014 \u5168\u90e8 12 \u79cd\u989c\u8272',
     proValueDpi:'\u53ef\u6253\u5370\u4e0a\u5899 \u2014 300 DPI\uff0c\u65e0\u6c34\u5370',
@@ -18093,7 +18338,7 @@ const I18N = {
     proSupportLine:'您也在幫助一個獨立的藝術專案持續運作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鳥價（之後 €14.99）',
-    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 19 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',
+    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 20 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',
     proValueTypes:'每位藝術家 6 種畫法（免費版 2 種）',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8abf\u8272\u76e4 \u2014 \u5168\u90e8 12 \u7a2e\u984f\u8272',
     proValueDpi:'\u53ef\u5217\u5370\u4e0a\u7246 \u2014 300 DPI\uff0c\u7121\u6d6e\u6c34\u5370',
@@ -18234,7 +18479,7 @@ const I18N = {
     proSupportLine:'Você também ajuda a manter um projeto de arte solo independente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (depois €14.99)',
-    proValueArtists:'Todos os estilos e artistas \u2014 19 no total (Free tem 9)',
+    proValueArtists:'Todos os estilos e artistas \u2014 20 no total (Free tem 9)',
     proValueTypes:'6 tipos de pintura por artista (Free tem 2)',
     proValuePalette:'A sua pr\u00f3pria paleta \u2014 as 12 cores',
     proValueDpi:'Pronto para imprimir e emoldurar \u2014 300 DPI, sem marca de \u00e1gua',
@@ -18370,7 +18615,7 @@ const I18N = {
     proSupportLine:'独立アートプロジェクトを支えることにもなります。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · アーリーバード(その後 €14.99)',
-    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 19 \u4eba\uff08Free \u306f 9 \u4eba\uff09',
+    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 20 \u4eba\uff08Free \u306f 9 \u4eba\uff09',
     proValueTypes:'各アーティスト 6 種類の描き方(Free は 2 種類)',
     proValuePalette:'\u81ea\u5206\u3060\u3051\u306e\u30d1\u30ec\u30c3\u30c8 \u2014 12 \u8272\u3059\u3079\u3066',
     proValueDpi:'\u58c1\u306b\u3082\u5370\u5237\u3067\u304d\u308b \u2014 300 DPI\u3001\u30a6\u30a9\u30fc\u30bf\u30fc\u30de\u30fc\u30af\u306a\u3057',
@@ -21345,7 +21590,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
       ['proAiValueImage', 'AI composition from your images'],
       ['proAiValueAtmo',  'AI atmospheric tinting'],
     ] : [
-      ['proValueArtists', '19 artists (free has 9)'],
+      ['proValueArtists', '20 artists (free has 9)'],
       ['proValueTypes',   '6 paint types per artist (free has 2)'],
       ['proValuePalette', 'Custom palette — set your own 12 colours'],
       ['proValueDpi',     '300 DPI exports, no watermark'],
@@ -22936,7 +23181,7 @@ export default function Paintiano() {
   // covers all three states (Mosaic / Notes / oneM); the chip still cycles
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
-  const ALL_ARTIST_KEYS  = ['mosaicFamily','picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','raffel','picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai'];
   // Tones available in the active canvas Tone selector. Users can pre-filter
   // which tones appear in the main panel via Setup (same chip-list UI as
   // palettes/artists). Default: all three on.
@@ -22966,7 +23211,7 @@ export default function Paintiano() {
       // in Setup gets it forced back on at the next restart (the bug we're
       // fixing). We remember which artists have already been seeded in a
       // separate localStorage flag and never re-seed those again.
-      const NEW_ARTISTS = ['monet','hokusai','mondrian','bauhaus'];
+      const NEW_ARTISTS = ['monet','hokusai','mondrian','bauhaus','raffel'];
       let seeded = [];
       try { const s = JSON.parse(localStorage.getItem('paintiano_setup_artists_seeded')||'[]'); if(Array.isArray(s)) seeded = s; } catch(_){}
       let seededChanged = false;
@@ -23184,18 +23429,18 @@ export default function Paintiano() {
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
   const STYLE_LABELS_I18N = {
-    EN:{picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Abstract',miro:'Constellation',mondrian:'Grid',bauhaus:'Bauhaus',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
-    SK:{picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Abstraktné',miro:'Konštelácia',mondrian:'Mriežka',bauhaus:'Bauhaus',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
-    DE:{picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Abstrakt',miro:'Konstellation',mondrian:'Raster',bauhaus:'Bauhaus',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
-    FR:{picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Abstrait',miro:'Constellation',mondrian:'Grille',bauhaus:'Bauhaus',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
-    ES:{picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Abstracto',miro:'Constelación',mondrian:'Cuadrícula',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
-    PT:{picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Abstrato',miro:'Constelação',mondrian:'Grade',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
-    zh:{picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'抽象',miro:'星座',mondrian:'网格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
-    zhTW:{picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'抽象',miro:'星座',mondrian:'網格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
-    ja:{picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'抽象',miro:'星座',mondrian:'グリッド',bauhaus:'バウハウス',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
+    EN:{raffel:'Signature',picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Abstract',miro:'Constellation',mondrian:'Grid',bauhaus:'Bauhaus',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
+    SK:{raffel:'Signatúra',picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Abstraktné',miro:'Konštelácia',mondrian:'Mriežka',bauhaus:'Bauhaus',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
+    DE:{raffel:'Signatur',picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Abstrakt',miro:'Konstellation',mondrian:'Raster',bauhaus:'Bauhaus',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
+    FR:{raffel:'Signature',picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Abstrait',miro:'Constellation',mondrian:'Grille',bauhaus:'Bauhaus',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
+    ES:{raffel:'Firma',picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Abstracto',miro:'Constelación',mondrian:'Cuadrícula',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
+    PT:{raffel:'Assinatura',picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Abstrato',miro:'Constelação',mondrian:'Grade',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
+    zh:{raffel:'签名',picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'抽象',miro:'星座',mondrian:'网格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
+    zhTW:{raffel:'簽名',picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'抽象',miro:'星座',mondrian:'網格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
+    ja:{raffel:'サイン',picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'抽象',miro:'星座',mondrian:'グリッド',bauhaus:'バウハウス',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
+  const STYLE_INSPIRED = {raffel:'RafFel',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -23674,7 +23919,7 @@ export default function Paintiano() {
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL_ALL = ['picasso','kusama','pollock','kandinsky','miro','bauhaus','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
+  const SHUFFLE_POOL_ALL = ['raffel','picasso','kusama','pollock','kandinsky','miro','bauhaus','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
   // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
   // shuffle across all 16. Keeps the random feature usable for Free without ever
   // accidentally landing on a locked artist (which would just paint a Pro-only
@@ -24708,7 +24953,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='oneM'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='oneM'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -24732,7 +24977,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='raffel' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       _ensureEnergies(chords);
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
@@ -24741,7 +24986,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+      const isOverlayStyle = style==='raffel'||style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -24800,7 +25045,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const fullCanvasOverlay = style==='raffel'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap(proStatus==='free' ? 2 : null);
         _ensureEnergies(chords);
@@ -24851,6 +25096,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='mitchell') drawMitchellOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='monet') drawMonetOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='hokusai') drawHokusaiOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+        else if(style==='raffel') drawRaffelOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
         return;
@@ -24922,10 +25168,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='hokusai' && lim>0){
         drawHokusaiOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
+      if(style==='raffel' && lim>0){
+        drawRaffelOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
+      }
       if(style==='oneM' && lim>0){
         drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -25394,7 +25643,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const isOverlay = style==='raffel'||style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
@@ -31648,6 +31897,9 @@ Hard requirements:
         if(style==='hokusai' && chords.length>0){
           drawHokusaiOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
+        if(style==='raffel' && chords.length>0){
+          drawRaffelOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
         if(style==='oneM' && chords.length>0){
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
@@ -35861,7 +36113,7 @@ Hard requirements:
                     const on = setupArtists.includes(k);
                     // Compact single-word label to fit narrow 5-col chip
                     const _fullName = k==='mosaicFamily' ? '' : (STYLE_INSPIRED[k]||k);
-                    const _label = k==='mosaicFamily' ? t('mosaicStyle') : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; return _as[_fullName]||_fullName; })();
+                    const _label = k==='mosaicFamily' ? t('mosaicStyle') : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet'}; const _nm=_as[_fullName]||_fullName; return k==='raffel' ? ('✦ '+_nm) : _nm; })();
                     // Free tier: Pro-only artists render as locked chips —
                     // dimmed with a 🔒 badge; tap closes the modal and opens the
                     // paywall instead of toggling the set. Paid tiers see no locks
@@ -35869,8 +36121,11 @@ Hard requirements:
                     // Modal must close before paywall opens because both use
                     // zIndex 100000 and the later-rendered setup modal covers it.
                     const locked = styleIsLocked(k);
-                    const chipStyleOn = {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
-                    const chipStyleOff = {background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
+                    // RafFel — the author's signature style gets the only gold chip
+                    // in the grid: quiet hierarchy, no extra layout.
+                    const _gold = (k==='raffel');
+                    const chipStyleOn = _gold?{background:PF.card2,border:'1px solid rgba(201,168,76,.85)',color:'#e8c96a'}:{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
+                    const chipStyleOff = _gold?{background:'transparent',border:'1px dashed rgba(201,168,76,.5)',color:'rgba(220,180,90,.6)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
                     <button key={k} onClick={()=>{ if(locked){ setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
                     );

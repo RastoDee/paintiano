@@ -6688,8 +6688,14 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     for(let i=0;i<N;i+=stride){
       const m=chordMeta(i), col=chordCol(i);
       const r=S*0.012*Math.sqrt(i+1)*3.0, a=i*GA;
-      srcs.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, col,
-                 f:(0.010+0.018*m.dur)*(720/S), amp:(0.4+0.6*m.vel)*(0.75+0.5*dnaE)});
+      // saturate: chord-averaged gc colours are too muted for an additive
+      // wave field — without the boost the interference reads as muddy blobs
+      const _mid=(col[0]+col[1]+col[2])/3;
+      const colS=[0,1,2].map(q=>Math.max(0,Math.min(255,_mid+(col[q]-_mid)*1.7)));
+      // wavelength scales WITH the canvas (f·S constant, mockup ratios):
+      // at any resolution the ring pattern matches the approved mockup.
+      srcs.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, col:colS,
+                 f:(15.7+22.4*Math.min(1.6,m.dur))/S, amp:(0.4+0.6*m.vel)*(0.75+0.5*dnaE)});
     }
     const cell=Math.max(5, Math.round(S/170));
     const cut2=(S*0.42)*(S*0.42);
