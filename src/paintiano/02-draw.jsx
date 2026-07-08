@@ -6585,6 +6585,16 @@ function _trioChordTools(chords, gc){
   const shade=(c,f)=>[Math.min(255,c[0]*f),Math.min(255,c[1]*f),Math.min(255,c[2]*f)];
   return {col, meta, css, flat, shade, cn};
 }
+// Adaptive watercolour glaze: mix toward white only as much as the source
+// colour needs to reach a luminous-glaze ceiling (max channel ≈ 212). Dark
+// saturated palettes (Harmony/Contrast) get the full watercolour lift; an
+// already-pastel palette mode passes through untouched — no double-pasteling.
+function _glaze(c){
+  const mx=Math.max(c[0],c[1],c[2]);
+  if(mx>=212) return c;
+  const k=Math.min(0.55,(212-mx)/Math.max(1,255-mx));
+  return [255-(255-c[0])*(1-k), 255-(255-c[1])*(1-k), 255-(255-c[2])*(1-k)];
+}
 function _bendayField(ctx,x,y,w,h,fill,r,step,alpha){
   ctx.fillStyle=fill; ctx.globalAlpha=alpha;
   for(let yy=y+step/2; yy<y+h; yy+=step)
@@ -6795,14 +6805,20 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     ctx.fillStyle='#241a14'; ctx.beginPath(); ctx.arc(CW*0.16+S*0.012,CH*0.14-S*0.004,S*0.022,0,7); ctx.fill();
     return;
   }
-  if(pick===1){ // polyphony
+  if(pick===1){ // polyphony — translucent watercolour glazes weaving voices
     ground('#efe6d2','#e0d2b6');
     ctx.globalCompositeOperation='multiply';
     for(let i=0;i<N;i++){
       const m=meta(i);
-      const x=CW*0.05+((i*GA/(Math.PI*2))%1)*CW*0.7, y=CH*0.06+((i*PHI)%1)*CH*0.7;
-      ctx.fillStyle=css(col(i,1.25),0.35);
-      ctx.fillRect(x,y,CW*0.10+m.dur*CW*0.16,CH*0.08+m.vel*CH*0.14);
+      // R2 low-discrepancy placement — x/y decorrelated (the old i·GA / i·φ
+      // pairing is linear in i, which lined every rectangle up on one diagonal)
+      const x=CW*0.04+((0.7548776662*(i+1))%1)*CW*0.72;
+      const y=CH*0.05+((0.5698402910*(i+1))%1)*CH*0.72;
+      // pastel glaze: mix toward white so stacked multiplies stay luminous —
+      // saturated fills under multiply collapse to black after a few layers
+      const pale=_glaze(col(i,1.0));
+      ctx.fillStyle=css(pale,0.92);
+      ctx.fillRect(x,y,CW*0.09+m.dur*CW*0.15,CH*0.07+m.vel*CH*0.12);
     }
     ctx.globalCompositeOperation='source-over';
     return;
@@ -6971,18 +6987,24 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
     }
     return;
   }
-  if(pick===3){ // windows
+  if(pick===3){ // windows — prismatic shards fanning around the centre
+    // (Fenêtres): light radiates outward through pastel panes; completely
+    // different composition from Klee's woven rectangles.
     ctx.fillStyle='#e9e2cf'; ctx.fillRect(0,0,CW,CH);
     ctx.globalCompositeOperation='multiply';
+    const wx=CW/2, wy=CH*0.46;
     for(let i=0;i<N;i++){
       const m=meta(i);
-      const x=((i*GA/(Math.PI*2))%1)*CW, y=((i*PHI)%1)*CH;
-      const s2=CW*0.10+m.dur*CW*0.12, a=(i%4)*Math.PI/8;
-      ctx.fillStyle=css(col(i,1.15),0.42);
+      const a=i*GA;
+      const r0=S*0.05+((0.7548776662*(i+1))%1)*S*0.26;
+      const len=S*0.13+m.dur*S*0.22;
+      const wid=0.10+m.vel*0.15;
+      const pale=_glaze(col(i,1.05));
+      ctx.fillStyle=css(pale,0.92);
       ctx.beginPath();
-      ctx.moveTo(x,y-s2*0.7);
-      ctx.lineTo(x+Math.cos(a)*s2, y+Math.sin(a)*s2*0.4);
-      ctx.lineTo(x+Math.cos(a+2)*s2*0.8, y+Math.sin(a+2)*s2*0.8);
+      ctx.moveTo(wx+Math.cos(a)*(r0+len), wy+Math.sin(a)*(r0+len));
+      ctx.lineTo(wx+Math.cos(a-wid)*r0,  wy+Math.sin(a-wid)*r0);
+      ctx.lineTo(wx+Math.cos(a+wid)*r0,  wy+Math.sin(a+wid)*r0);
       ctx.closePath(); ctx.fill();
     }
     ctx.globalCompositeOperation='source-over';
