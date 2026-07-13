@@ -37131,7 +37131,7 @@ Hard requirements:
             Solves discovery (the missing lite_to_advanced step) at the exact
             instant of delight. Free users only; keeps Lite calm otherwise. */}
         {basicMode && !isPro && !bridgeUsed && _done && !_litePlayChipShown && (
-          <div style={(basicMode&&isDesktop)?{position:'fixed',right:24,...((isNotPhone&&!is5Col)?{top:'calc(52% + 200px)',transform:'translateY(-50%)'}:{top:284}),width:150,zIndex:immersive?10001:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 96px)',transform:'translateX(-50%)',zIndex:65,pointerEvents:'auto'}}>
+          <div style={(basicMode&&isDesktop)?{position:'fixed',right:24,...((isNotPhone&&!is5Col)?{top:'calc(52% + 210px)'}:{top:470}),width:150,zIndex:immersive?10001:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 96px)',transform:'translateX(-50%)',zIndex:65,pointerEvents:'auto'}}>
             <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
               ✦ {t('liteBridge')||'discover the full Paintiano →'}
