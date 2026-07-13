@@ -2300,6 +2300,10 @@ export default function Paintiano() {
     }catch(_){ return true; }
   });
   const basicModeRef = useRef(false);
+  // ZASAH BEST - set when the user enters Advanced via the 'discover full
+  // Paintiano' bridge. If they then toggle back to Lite, we preserve the
+  // painting (skip fullClear) instead of dropping to the default yellow Play.
+  const cameFromBridgeRef = useRef(false);
   // ── ZASAH BEST — auto-immerse in Lite shortly after playback starts ──────
   // A Lite painting takes ~3 min to render; the peak is watching it BEGIN, not
   // finish. So a few seconds into playback — IF the user is passive (no touch
@@ -10920,7 +10924,7 @@ Hard requirements:
           const accent = adv ? '220,180,90' : '230,205,140';   // full gold | lite gold
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
           return (
-            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ _suppressRecOnStopRef.current=true; const _r=recorderRef.current; if(_r && _r.state!=='inactive'){ try{ _r.stop(); }catch(_){} } setRecording(false); recorderRef.current=null; recChunksRef.current=[]; setRecordIntent(null); recordIntentRef.current=null; }catch(_){} try{ if(recording) stopRecord(); }catch(_){} try{ setMicArmed(false); }catch(_){} try{ setHasMicDraft(false); listenStashRef.current=null; singStashRef.current=null; }catch(_){} try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} try{ setForceSetup(goingAdvanced); }catch(_){} basicAutoPlayedRef.current=false; basicTapUnlockedRef.current=false; liteEverUnlockedRef.current=false; setLiteAwaitTap(false); try{ setLiteImageMode(false); liteImageModeRef.current=false; _liteImgAppliedRef.current=false; }catch(_){} setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
+            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ _suppressRecOnStopRef.current=true; const _r=recorderRef.current; if(_r && _r.state!=='inactive'){ try{ _r.stop(); }catch(_){} } setRecording(false); recorderRef.current=null; recChunksRef.current=[]; setRecordIntent(null); recordIntentRef.current=null; }catch(_){} try{ if(recording) stopRecord(); }catch(_){} try{ setMicArmed(false); }catch(_){} try{ setHasMicDraft(false); listenStashRef.current=null; singStashRef.current=null; }catch(_){} // ZASAH BEST: returning to Lite via the bridge preserves the painting. const _preserveLite = (!goingAdvanced && cameFromBridgeRef.current); cameFromBridgeRef.current=false; if(!_preserveLite){ try{ fullClear(); }catch(_){} try{ setStayActive(false); }catch(_){} try{ setStyle(null); }catch(_){} } try{ setForceSetup(goingAdvanced); }catch(_){} if(!_preserveLite){ basicAutoPlayedRef.current=false; basicTapUnlockedRef.current=false; liteEverUnlockedRef.current=false; setLiteAwaitTap(false); }else{ liteEverUnlockedRef.current=true; } try{ setLiteImageMode(false); liteImageModeRef.current=false; _liteImgAppliedRef.current=false; }catch(_){} setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
               style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'transparent',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'color .2s, border-color .2s'}}>
               <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
               {label}
@@ -14429,7 +14433,7 @@ Hard requirements:
             instant of delight. Free users only; keeps Lite calm otherwise. */}
         {basicMode && !isPro && _done && !_litePlayChipShown && (
           <div style={{position:'fixed',left:'50%',bottom:immersive?'calc(env(safe-area-inset-bottom,0px) + 28px)':'calc(env(safe-area-inset-bottom,0px) + 74px)',transform:'translateX(-50%)',zIndex:immersive?10001:62,pointerEvents:'auto'}}>
-            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBasicMode(false); }}
+            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} cameFromBridgeRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
               ✦ {t('liteBridge')||'discover the full Paintiano →'}
             </button>
