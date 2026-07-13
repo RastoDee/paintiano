@@ -35945,6 +35945,14 @@ Hard requirements:
           style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
       </div>
       )}
+      {/* ZASAH — Pro AI success teaser (free user finished an AI piece). */}
+      {!isPro && composeSource==='ai' && chords.length>0 && !playing && disp>=chords.length && !recording && !busy && !composeMode && !micActive && isActiveView && (
+        <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'calc(env(safe-area-inset-bottom,0px) + 92px)',zIndex:55,pointerEvents:'auto'}}>
+          <button onClick={()=>{ try{ window.posthog && window.posthog.capture('pro_teaser_click',{ at:'ai_success', ai:true }); }catch(_){} setPaywallReason('ai_trial'); }} className="pf-lift" style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 18px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:600,color:'rgba(228,178,255,.98)',background:'rgba(220,150,255,.14)',border:'1px solid rgba(220,150,255,.6)',boxShadow:'0 8px 26px rgba(0,0,0,.4)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
+            ✦ {ts('proTeaserAi','p\u00e1\u010di sa? odomkni Pro AI')}
+          </button>
+        </div>
+      )}
       {isActiveView && !basicMode && (
       <div role="region" aria-label="playback controls" className="pf-transport-dock" style={isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
