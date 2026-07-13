@@ -14396,6 +14396,20 @@ Hard requirements:
           <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
           {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
+        {/* ZASAH BEST — Lite→full bridge. A finished Lite painting is the peak
+            moment to reveal that the full Paintiano (24 artists, AI, palettes)
+            exists. NOT a paywall — it switches to Advanced (setBasicMode(false)),
+            which is where the taste-preview + success teaser then do the selling.
+            Solves discovery (the missing lite_to_advanced step) at the exact
+            instant of delight. Free users only; keeps Lite calm otherwise. */}
+        {basicMode && !isPro && _done && !_litePlayChipShown && !immersive && (
+          <div style={{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 74px)',transform:'translateX(-50%)',zIndex:62,pointerEvents:'auto'}}>
+            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBasicMode(false); }}
+              style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
+              ✦ {t('liteBridge')||'discover the full Paintiano →'}
+            </button>
+          </div>
+        )}
         </>
         );
       })()}

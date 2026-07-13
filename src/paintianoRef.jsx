@@ -18060,7 +18060,7 @@ const I18N = {
     // Tier card keys (two-tier paywall, Jun 2026)
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (then €14.99)',
-    proValueArtists:'Every style & artist \u2014 24 in all (free has 9)',proTeaser:'this song in 24 styles',
+    proValueArtists:'Every style & artist \u2014 24 in all (free has 9)',proTeaser:'this song in 24 styles',proTeaserTaste:'loved it? unlock all 24',
     proValueTypes:'6 paint types per artist (free has 2)',
     proValuePalette:'Your own palette \u2014 set all 12 colours',
     proValueDpi:'Print-ready for the wall \u2014 300 DPI, no watermark',
@@ -18197,7 +18197,7 @@ const I18N = {
     proSupportLine:'Du hältst damit auch ein unabhängiges Solo-Kunstprojekt am Leben.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (danach 14,99 €)',
-    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 24 insgesamt (Free hat 9)',proTeaser:'dieser Song in 24 Stilen',
+    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 24 insgesamt (Free hat 9)',proTeaser:'dieser Song in 24 Stilen',proTeaserTaste:'gef\u00e4llt? alle 24 freischalten',
     proValueTypes:'6 Mal-Typen pro Künstler (Free hat 2)',
     proValuePalette:'Deine eigene Palette \u2014 alle 12 Farben',
     proValueDpi:'Druckfertig f\u00fcr die Wand \u2014 300 DPI, kein Wasserzeichen',
@@ -18333,7 +18333,7 @@ const I18N = {
     proSupportLine:'Vous soutenez aussi un projet d’art solo indépendant.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (puis 14,99 €)',
-    proValueArtists:'Tous les styles & artistes \u2014 24 en tout (Free en a 9)',proTeaser:'ce morceau en 24 styles',
+    proValueArtists:'Tous les styles & artistes \u2014 24 en tout (Free en a 9)',proTeaser:'ce morceau en 24 styles',proTeaserTaste:'\u00e7a te pla\u00eet ? d\u00e9bloque les 24',
     proValueTypes:'6 types de peinture par artiste (Free en a 2)',
     proValuePalette:'Votre propre palette \u2014 vos 12 couleurs',
     proValueDpi:'Pr\u00eat \u00e0 imprimer pour le mur \u2014 300 DPI, sans filigrane',
@@ -18469,7 +18469,7 @@ const I18N = {
     proSupportLine:'También mantienes vivo un proyecto artístico independiente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (luego 14,99 €)',
-    proValueArtists:'Todos los estilos y artistas \u2014 24 en total (Free tiene 9)',proTeaser:'esta canci\u00f3n en 24 estilos',
+    proValueArtists:'Todos los estilos y artistas \u2014 24 en total (Free tiene 9)',proTeaser:'esta canci\u00f3n en 24 estilos',proTeaserTaste:'\u00bfte gusta? desbloquea los 24',
     proValueTypes:'6 tipos de pintura por artista (Free tiene 2)',
     proValuePalette:'Tu propia paleta \u2014 tus 12 colores',
     proValueDpi:'Listo para imprimir y enmarcar \u2014 300 DPI, sin marca de agua',
@@ -18605,7 +18605,7 @@ const I18N = {
     proSupportLine:'Zároveň pomáhaš udržať nezávislý umelecký projekt.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (potom 14,99 €)',
-    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 24 spolu (Free m\u00e1 9)',proTeaser:'t\u00e1to skladba v 24 \u0161t\u00fdloch',
+    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 24 spolu (Free m\u00e1 9)',proTeaser:'t\u00e1to skladba v 24 \u0161t\u00fdloch',proTeaserTaste:'p\u00e1\u010di sa? odomkni v\u0161etk\u00fdch 24',
     proValueTypes:'6 typov maľby na umelca (Free má 2)',
     proValuePalette:'Vlastn\u00e1 paleta \u2014 v\u0161etk\u00fdch 12 farieb',
     proValueDpi:'Pripraven\u00e9 na stenu \u2014 300 DPI, bez vodoznaku',
@@ -18744,7 +18744,7 @@ const I18N = {
     proSupportLine:'您也在帮助一个独立的艺术项目持续运作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鸟价(之后 €14.99)',
-    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',proTeaser:'\u8fd9\u9996\u66f2\u5b50\u7684 24 \u79cd\u98ce\u683c',
+    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',proTeaser:'\u8fd9\u9996\u66f2\u5b50\u7684 24 \u79cd\u98ce\u683c',proTeaserTaste:'\u559c\u6b22\u5417\uff1f\u89e3\u9501\u5168\u90e8 24 \u79cd',
     proValueTypes:'每位艺术家 6 种画法(免费版 2 种)',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8c03\u8272\u677f \u2014 \u5168\u90e8 12 \u79cd\u989c\u8272',
     proValueDpi:'\u53ef\u6253\u5370\u4e0a\u5899 \u2014 300 DPI\uff0c\u65e0\u6c34\u5370',
@@ -18874,7 +18874,7 @@ const I18N = {
     proSupportLine:'您也在幫助一個獨立的藝術專案持續運作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鳥價（之後 €14.99）',
-    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',proTeaser:'\u9019\u9996\u66f2\u5b50\u7684 24 \u7a2e\u98a8\u683c',
+    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',proTeaser:'\u9019\u9996\u66f2\u5b50\u7684 24 \u7a2e\u98a8\u683c',proTeaserTaste:'\u559c\u6b61\u55ce\uff1f\u89e3\u9396\u5168\u90e8 24 \u7a2e',
     proValueTypes:'每位藝術家 6 種畫法（免費版 2 種）',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8abf\u8272\u76e4 \u2014 \u5168\u90e8 12 \u7a2e\u984f\u8272',
     proValueDpi:'\u53ef\u5217\u5370\u4e0a\u7246 \u2014 300 DPI\uff0c\u7121\u6d6e\u6c34\u5370',
@@ -19015,7 +19015,7 @@ const I18N = {
     proSupportLine:'Você também ajuda a manter um projeto de arte solo independente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (depois €14.99)',
-    proValueArtists:'Todos os estilos e artistas \u2014 24 no total (Free tem 9)',proTeaser:'esta m\u00fasica em 24 estilos',
+    proValueArtists:'Todos os estilos e artistas \u2014 24 no total (Free tem 9)',proTeaser:'esta m\u00fasica em 24 estilos',proTeaserTaste:'gostou? desbloqueie os 24',
     proValueTypes:'6 tipos de pintura por artista (Free tem 2)',
     proValuePalette:'A sua pr\u00f3pria paleta \u2014 as 12 cores',
     proValueDpi:'Pronto para imprimir e emoldurar \u2014 300 DPI, sem marca de \u00e1gua',
@@ -19151,7 +19151,7 @@ const I18N = {
     proSupportLine:'独立アートプロジェクトを支えることにもなります。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · アーリーバード(その後 €14.99)',
-    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 24 \u4eba\uff08Free \u306f 9 \u4eba\uff09',proTeaser:'\u3053\u306e\u66f2\u3092 24 \u30b9\u30bf\u30a4\u30eb\u3067',
+    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 24 \u4eba\uff08Free \u306f 9 \u4eba\uff09',proTeaser:'\u3053\u306e\u66f2\u3092 24 \u30b9\u30bf\u30a4\u30eb\u3067',proTeaserTaste:'\u6c17\u306b\u5165\u3063\u305f\uff1f24 \u4eba\u3059\u3079\u3066\u89e3\u9664',
     proValueTypes:'各アーティスト 6 種類の描き方(Free は 2 種類)',
     proValuePalette:'\u81ea\u5206\u3060\u3051\u306e\u30d1\u30ec\u30c3\u30c8 \u2014 12 \u8272\u3059\u3079\u3066',
     proValueDpi:'\u58c1\u306b\u3082\u5370\u5237\u3067\u304d\u308b \u2014 300 DPI\u3001\u30a6\u30a9\u30fc\u30bf\u30fc\u30de\u30fc\u30af\u306a\u3057',
@@ -24009,6 +24009,14 @@ export default function Paintiano() {
   // We also derive the locked set so the gate logic below knows which keys are
   // behind the paywall.
   const FREE_PAIRS = BASE_STYLE_PAIRS; // [a,b] kept in BASE order; only 'a' is reachable for free
+  // ZASAH 2 - taste preview: a Free user may try each locked artist LIVE once
+  // per session before the wall. Showing the value first converts far better
+  // than a bare lock. Session-scoped (a ref, resets on reload) so it never
+  // becomes a way to use Pro for free across visits.
+  const tastedKeysRef = useRef(new Set());
+  const [tastePreviewKey, setTastePreviewKey] = useState(null);
+  const tastePreviewKeyRef = useRef(null);
+  useEffect(()=>{ tastePreviewKeyRef.current = tastePreviewKey; },[tastePreviewKey]);
   const FREE_UNLOCKED_KEYS = useMemo(
     () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
     []
@@ -24022,8 +24030,10 @@ export default function Paintiano() {
     // locked. It isn't part of the artist style-pairs so it's absent from
     // FREE_UNLOCKED_KEYS; special-case it here so it renders unlocked.
     if (key==='mosaicFamily' || key==='mosaicNotes' || key==='mosaicOneM') return false;
+    // The artist being tasted right now reads as unlocked for this one preview.
+    if(key && key===tastePreviewKey) return false;
     return !FREE_UNLOCKED_KEYS.has(key);
-  }, [proStatus, FREE_UNLOCKED_KEYS]);
+  }, [proStatus, FREE_UNLOCKED_KEYS, tastePreviewKey]);
   // Remembers, per pair, which member the user last selected. So when a pair's
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
@@ -24638,6 +24648,9 @@ export default function Paintiano() {
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
   // no artist + Random on, the painting shuffles across artist styles).
   const selectStyle = useCallback((k)=>{
+    // ZASAH 2: if the user moves to a style other than the one being tasted,
+    // spend the preview (the free live try is over).
+    if(tastePreviewKeyRef.current && k!==tastePreviewKeyRef.current){ setTastePreviewKey(null); }
     // Just change the style. Do NOT force a view change here: setting
     // forceSetup=false used to yank the user to an EMPTY canvas when they
     // changed style in setup with no source loaded. View transitions are
@@ -35190,7 +35203,7 @@ Hard requirements:
               {exportReadyFs && !isPro && (
                 <button onClick={(e)=>{ e.stopPropagation(); try{ window.posthog && window.posthog.capture('pro_teaser_click', { at:'success' }); }catch(_){} setPaywallReason('settings'); }} className="pf-lift" aria-label={t('proTeaser')||'this song in 24 styles'}
                   style={{display:'inline-flex',alignItems:'center',gap:6,padding:'11px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'none',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap'}}>
-                  ✦ {t('proTeaser')||'this song in 24 styles'}
+                  ✦ {tastePreviewKey ? (t('proTeaserTaste')||'loved it? unlock all 24') : (t('proTeaser')||'this song in 24 styles')}
                 </button>
               )}
               {exportReadyFs && (
@@ -36705,7 +36718,7 @@ Hard requirements:
                     const chipStyleOn = _gold?{background:PF.card2,border:'1px solid rgba(201,168,76,.85)',color:'#e8c96a'}:{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
                     const chipStyleOff = _gold?{background:'transparent',border:'1px dashed rgba(201,168,76,.5)',color:'rgba(220,180,90,.6)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
-                    <button key={k} onClick={()=>{ if(locked){ setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
+                    <button key={k} onClick={()=>{ if(locked){ if(!tastedKeysRef.current.has(k)){ tastedKeysRef.current.add(k); setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
                     );
                   })}
                 </div>
