@@ -24813,6 +24813,15 @@ export default function Paintiano() {
   // Once the user has taken the bridge into Advanced, don't offer it again
   // this session — they now know the top-bar Lite/Advanced switch.
   const [bridgeUsed, setBridgeUsed] = useState(false);
+  // ── GUIDED TOUR (offered on arrival in Advanced via the bridge) ──────────
+  // welcome = the initial yes/no card; tourStep = -1 (off) or 0..3 (spotlight).
+  // Shown once ever (localStorage). forceSetup is saved on start so we can put
+  // the user back exactly where they were when the tour ends.
+  const [tourWelcome, setTourWelcome] = useState(false);
+  const [tourStep, setTourStep] = useState(-1);
+  const tourReturnSetupRef = useRef(false);
+  const tourSeenRef = useRef(false);
+  try{ if(!tourSeenRef.current && typeof localStorage!=='undefined' && localStorage.getItem('paintiano_tour_seen')==='1') tourSeenRef.current=true; }catch(_){}
   // ── ZASAH BEST — auto-immerse in Lite shortly after playback starts ──────
   // A Lite painting takes ~3 min to render; the peak is watching it BEGIN, not
   // finish. So a few seconds into playback — IF the user is passive (no touch
@@ -36944,12 +36953,92 @@ Hard requirements:
             instant of delight. Free users only; keeps Lite calm otherwise. */}
         {basicMode && !isPro && !bridgeUsed && _done && !_litePlayChipShown && (
           <div style={{position:'fixed',left:'50%',bottom:immersive?'calc(env(safe-area-inset-bottom,0px) + 28px)':'calc(env(safe-area-inset-bottom,0px) + 74px)',transform:'translateX(-50%)',zIndex:immersive?10001:62,pointerEvents:'auto'}}>
-            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); setBasicMode(false); }}
+            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); setBasicMode(false); try{ if(!tourSeenRef.current){ setTimeout(()=>setTourWelcome(true), 650); } }catch(_){} }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
               ✦ {t('liteBridge')||'discover the full Paintiano →'}
             </button>
           </div>
         )}
+        {/* ── GUIDED TOUR overlay: welcome card + 4-step spotlight ────────── */}
+        {(tourWelcome || tourStep>=0) && (()=>{
+          const TOUR = [
+            { sel:'.pf-setup-artists', title:ts('tourArtTitle','Tvoja skladba, 24 poh\u013eadov'), body:ts('tourArtBody','\u0164ukni ktor\u00e9hoko\u013evek umelca \u2014 t\u00e1 ist\u00e1 skladba sa prekresl\u00ed jeho \u0161t\u00fdlom. Prv\u00fd raz zadarmo.'), pad:8 },
+            { sel:'.pf-dice', title:ts('tourDiceTitle','Prekvapenie'), body:ts('tourDiceBody','Kocka prehod\u00ed \u0161t\u00fdl n\u00e1hodne, a \u2934 zv\u00e4\u010d\u0161\u00ed obraz na cel\u00fa obrazovku.'), pad:14 },
+            { sel:'.pf-moodtile', title:ts('tourSrcTitle','Za\u010dni \u010doko\u013evek nov\u00e9'), body:ts('tourSrcBody','Pie\u2011se\u0148, obr\u00e1zok alebo hraj na\u017eivo \u2014 ka\u017ed\u00fd zdroj sa stane obrazom.'), pad:8 },
+            { sel:'.pf-mfitile', title:ts('tourAiTitle','AI kompoz\u00edcia'), body:ts('tourAiBody','Opí\u0161 pocit alebo ho\u010f obr\u00e1zok \u2014 AI zlo\u017e\u00ed cel\u00fa skladbu. Toto je Pro AI.'), pad:8, ai:true },
+          ];
+          const endTour = (done)=>{
+            try{ window.posthog && window.posthog.capture(done?'tour_complete':'tour_skip'); }catch(_){}
+            try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){}
+            tourSeenRef.current=true;
+            setTourStep(-1); setTourWelcome(false);
+            try{ setForceSetup(tourReturnSetupRef.current); }catch(_){}
+          };
+          const startTour = ()=>{
+            try{ window.posthog && window.posthog.capture('tour_start'); }catch(_){}
+            tourReturnSetupRef.current = !!forceSetup;
+            setTourWelcome(false); setTourStep(0);
+          };
+          const goStep = (n)=>{
+            if(n>=TOUR.length){ endTour(true); return; }
+            // steps 2 & 3 live on the SETUP screen; step 0/1 on the canvas cockpit.
+            try{ setForceSetup(n>=2); }catch(_){}
+            setTourStep(n);
+          };
+          const playDemo = (kind)=>{
+            try{ window.posthog && window.posthog.capture('tour_ai_demo',{ type:kind }); }catch(_){}
+            try{ if(kind==='image'){ loadSampleImgMood(); } else { aiMidi('dreamy'); } }catch(_){}
+            endTour(true);
+          };
+          // WELCOME card
+          if(tourWelcome){
+            return (
+              <div style={{position:'fixed',inset:0,zIndex:100050,pointerEvents:'none'}}>
+                <div style={{position:'absolute',left:14,right:14,bottom:'calc(18px + env(safe-area-inset-bottom,0px))',pointerEvents:'auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:18,padding:20,boxShadow:'0 20px 60px rgba(0,0,0,.6)',maxWidth:402,margin:'0 auto'}}>
+                  <div style={{fontFamily:'inherit',fontWeight:600,color:'#e8c96a',fontSize:(1.05*effScale)+'rem',marginBottom:6}}>{ts('tourWelcomeTitle','Vitaj v plnom Paintiane')}</div>
+                  <div style={{fontSize:(.84*effScale)+'rem',lineHeight:1.45,color:'rgba(242,238,232,.75)',marginBottom:16}}>{ts('tourWelcomeBody','Tvoja skladba je tu \u2014 teraz ju vie\u0161 vidie\u0165 24 sp\u00f4sobmi. Chcem ti r\u00fdchlo uk\u00e1za\u0165, ako?')}</div>
+                  <div style={{display:'flex',gap:10}}>
+                    <button onClick={()=>endTour(false)} style={{flex:1,padding:12,borderRadius:11,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(242,238,232,.55)'}}>{ts('tourSkip','Presko\u010d\u00edm')}</button>
+                    <button onClick={startTour} style={{flex:1,padding:12,borderRadius:11,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(201,168,76,.16)',border:'1px solid rgba(201,168,76,.7)',color:'#e8c96a'}}>{ts('tourYes','\u00c1no, uk\u00e1\u017e mi \u2193')}</button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+          // SPOTLIGHT step — read the live element rect
+          const st = TOUR[tourStep]; if(!st) return null;
+          let r=null; try{ const el=document.querySelector(st.sel); if(el) r=el.getBoundingClientRect(); }catch(_){}
+          const pad=st.pad||8;
+          const below = r ? (r.top < window.innerHeight*0.5) : true;
+          return (
+            <div style={{position:'fixed',inset:0,zIndex:100050}}>
+              {/* dim with a cut-out ring around the target */}
+              {r && (<div style={{position:'fixed',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:16,boxShadow:'0 0 0 3px #c9a84c, 0 0 0 9999px rgba(4,3,9,.82)',pointerEvents:'none',transition:'all .35s cubic-bezier(.4,0,.2,1)'}} />)}
+              {!r && (<div style={{position:'fixed',inset:0,background:'rgba(4,3,9,.82)'}} />)}
+              {/* tooltip card */}
+              <div style={{position:'fixed',left:14,right:14,...(below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
+                <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}{st.ai?'  \u00b7  PRO AI':''}</div>
+                <div style={{fontSize:(.96*effScale)+'rem',color:'#e8c96a',fontWeight:600,marginBottom:5}}>{st.title}</div>
+                <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{st.body}</div>
+                {st.ai && (
+                  <div style={{display:'flex',gap:8,marginBottom:12}}>
+                    <button onClick={()=>playDemo('mood')} style={{flex:1,padding:'9px 0',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(220,150,255,.16)',border:'1px solid rgba(220,150,255,.6)',color:'rgba(228,178,255,.98)'}}>{'\u25b6 '+ts('tourDemoMood','N\u00e1lada')}</button>
+                    <button onClick={()=>playDemo('image')} style={{flex:1,padding:'9px 0',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(220,150,255,.16)',border:'1px solid rgba(220,150,255,.6)',color:'rgba(228,178,255,.98)'}}>{'\u25b6 '+ts('tourDemoImage','Obr\u00e1zok')}</button>
+                  </div>
+                )}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{display:'flex',gap:5}}>
+                    {TOUR.map((_,k)=>(<div key={k} style={{width:6,height:6,borderRadius:'50%',background:k===tourStep?'#c9a84c':'rgba(242,238,232,.25)'}} />))}
+                  </div>
+                  <div style={{display:'flex',gap:8}}>
+                    <button onClick={()=>endTour(false)} style={{padding:'7px 15px',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'transparent',border:'none',color:'rgba(242,238,232,.4)'}}>{ts('tourSkipShort','Presko\u010di\u0165')}</button>
+                    <button onClick={()=>goStep(tourStep+1)} style={{padding:'7px 15px',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(201,168,76,.16)',border:'1px solid rgba(201,168,76,.7)',color:'#e8c96a'}}>{tourStep===TOUR.length-1?ts('tourDone','Hotovo \u2713'):ts('tourNext','\u010ealej \u2192')}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         </>
         );
       })()}
