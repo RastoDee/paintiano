@@ -585,6 +585,19 @@ function IntroSplash({ onDone, tagline, skipLabel }){
           opacity:titleIn?0.8:0,transform:titleIn?'scale(1)':'scale(2.4)',transition:'opacity .7s ease .8s, transform 1.0s cubic-bezier(.18,.7,.16,1) .8s'}}>{tagline}</div>
       </div>
       <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:'.5rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
+        {/* VERZIA A/B — arrival hint bubble over the cockpit artists. */}
+        {!basicMode && !isPro && arrivalHint && (()=>{
+          let r=null; try{ const el=document.querySelector('.pf-setup-artists'); if(el) r=el.getBoundingClientRect(); }catch(_){}
+          const top = r ? (r.top - 12) : 150;
+          return (
+            <div onClick={()=>setArrivalHint(false)} style={{position:'fixed',left:0,right:0,top:0,bottom:0,zIndex:100040,pointerEvents:'auto'}}>
+              <div style={{position:'fixed',left:14,right:14,top:(r?(r.top+r.height+12):160)+'px',maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.6)',borderRadius:15,padding:'13px 16px',boxShadow:'0 14px 40px rgba(0,0,0,.55)',display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:(1.0*effScale)+'rem',flexShrink:0}}>✦</span>
+                <span style={{fontSize:(.82*effScale)+'rem',lineHeight:1.35,color:'rgba(242,238,232,.85)'}}>{ts('arrivalHint','Tvoja skladba, 24 spôsobov. Ťukni ktoréhokoľvek — prvý je zadarmo.')}</span>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }
@@ -2303,33 +2316,12 @@ export default function Paintiano() {
   // Once the user has taken the bridge into Advanced, don't offer it again
   // this session — they now know the top-bar Lite/Advanced switch.
   const [bridgeUsed, setBridgeUsed] = useState(false);
-  // ── GUIDED TOUR (offered on arrival in Advanced via the bridge) ──────────
-  // welcome = the initial yes/no card; tourStep = -1 (off) or 0..3 (spotlight).
-  // Shown once ever (localStorage). forceSetup is saved on start so we can put
-  // the user back exactly where they were when the tour ends.
-  const [tourWelcome, setTourWelcome] = useState(false);
-  const [tourStep, setTourStep] = useState(-1);
-  const tourReturnSetupRef = useRef(false);
-  const tourSeenRef = useRef(false);
-  const tourPendingRef = useRef(false);
-  const [tourTick, setTourTick] = useState(0);
-  useEffect(()=>{
-    if(tourStep<0) return;
-    // Re-measure a couple of times as the modal opens/scrolls so the
-    // highlight ring lands on the section's final position.
-    const a=setTimeout(()=>setTourTick(t=>t+1), 120);
-    const b=setTimeout(()=>setTourTick(t=>t+1), 360);
-    return ()=>{ clearTimeout(a); clearTimeout(b); };
-  },[tourStep]);
-  useEffect(()=>{
-    // Bridge set tourPendingRef, and we've now actually landed in Advanced.
-    // TEST MODE: fire every time (the once-ever tourSeenRef gate is disabled).
-    if(tourPendingRef.current && !basicMode){
-      tourPendingRef.current=false;
-      setTimeout(()=>{ setTourWelcome(true); }, 400);
-    }
-  },[basicMode]);
-  try{ if(!tourSeenRef.current && typeof localStorage!=='undefined' && localStorage.getItem('paintiano_tour_seen')==='1') tourSeenRef.current=true; }catch(_){}
+  // VERZIA A/B — arrival hint. When the user crosses from Lite to Advanced
+  // via the bridge, open the cockpit once and float a single gold bubble over
+  // the artists: "your song, 24 ways — tap any, first is free". No modal, no
+  // steps, nothing overwritten. It fades on first tap or after a few seconds.
+  const [arrivalHint, setArrivalHint] = useState(false);
+  const arrivalPendingRef = useRef(false);
   // ── ZASAH BEST — auto-immerse in Lite shortly after playback starts ──────
   // A Lite painting takes ~3 min to render; the peak is watching it BEGIN, not
   // finish. So a few seconds into playback — IF the user is passive (no touch
@@ -2398,6 +2390,16 @@ export default function Paintiano() {
     // AI) that Pro sells — the missing number behind the 1% paywall view.
     if(_wasBasic===true && basicMode===false){
       try{ window.posthog && window.posthog.capture('lite_to_advanced', { proStatus }); }catch(_){}
+    }
+  },[basicMode]);
+  // Arrival hint trigger — fires once we're truly in Advanced after the bridge.
+  useEffect(()=>{
+    if(arrivalPendingRef.current && !basicMode){
+      arrivalPendingRef.current=false;
+      try{ setStripOpen(true); }catch(_){}
+      setTimeout(()=>{ setArrivalHint(true); }, 380);
+      setTimeout(()=>{ setArrivalHint(false); }, 6500);
+      try{ window.posthog && window.posthog.capture('arrival_hint_shown'); }catch(_){}
     }
   },[basicMode]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
@@ -10988,7 +10990,7 @@ Hard requirements:
                 <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{height:38,padding:'0 12px',background:readScale>1?'rgba(201,168,76,.12)':'transparent',color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'none',borderRight:'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:4,fontWeight:600,WebkitTapHighlightColor:'transparent'}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
                 <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{height:38,padding:'0 12px',background:'transparent',color:PF.muted,border:'none',borderRight:basicMode?'none':'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:(.62*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:5,WebkitTapHighlightColor:'transparent'}}><span style={{color:'rgba(220,180,90,.95)',fontWeight:600,letterSpacing:'.08em'}}>{meta.code}</span><span style={{fontSize:(.55*effScale)+'rem',opacity:.6}}>▾</span></button>
                 {!basicMode && (
-                <button className="pf-setup-chip" onClick={()=>{ setSetupReturnTo(null); setShowSetupModal(true); }} aria-label={ts('setupPickerLabel','Setup')} title={ts('setupPickerLabel','Setup')} style={{height:38,padding:'0 12px',background:'transparent',color:'rgba(220,180,90,.85)',border:'none',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                <button onClick={()=>{ setSetupReturnTo(null); setShowSetupModal(true); }} aria-label={ts('setupPickerLabel','Setup')} title={ts('setupPickerLabel','Setup')} style={{height:38,padding:'0 12px',background:'transparent',color:'rgba(220,180,90,.85)',border:'none',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
                 )}
               </div>
               {langOpen && (
@@ -14461,7 +14463,7 @@ Hard requirements:
             instant of delight. Free users only; keeps Lite calm otherwise. */}
         {basicMode && !isPro && _haveArt && !_litePlayChipShown && !immersive && (
           <div style={isDesktop?{position:'fixed',right:24,top:'calc(52% + 140px)',width:150,zIndex:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 96px)',transform:'translateX(-50%)',zIndex:65,pointerEvents:'auto'}}>
-            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
+            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); arrivalPendingRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
               ✦ {t('liteBridge')||'discover the full Paintiano →'}
             </button>
@@ -14470,94 +14472,6 @@ Hard requirements:
         </>
         );
       })()}
-        {/* ── GUIDED TOUR overlay: welcome card + 4-step spotlight ────────── */}
-        {!basicMode && !isPro && (tourWelcome || tourStep>=0) && (()=>{
-          const TOUR = [
-            { sel:'.pf-setup-chip', title:ts('tourChipTitle','Tvoje \u0161t\u00fadio'), body:ts('tourChipBody','Tu sa otv\u00e1ra setup \u2014 v\u0161etci umelci, palety a t\u00f3ny na jednom mieste. Pozrime sa dnu.'), pad:10, opensModal:true },
-            { sel:'.pf-setup-artists', title:ts('tourArtTitle','24 umelcov'), body:ts('tourArtBody','9 je zadarmo, zvy\u0161ok odomkne Pro \u2014 no prv\u00fd \u0165uk na ktor\u00e9hoko\u013evek m\u00e1\u0161 zadarmo. Preto tie z\u00e1mky nie s\u00fa stena, ale pozv\u00e1nka.'), pad:8, inModal:true },
-            { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
-            { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
-            { sel:'.pf-mfitile', title:ts('tourAiTitle','AI kompoz\u00edcia'), body:ts('tourAiBody','AI zlo\u017e\u00ed skladbu z obr\u00e1zka alebo n\u00e1lady. Pozri \u2014 vyskú\u0161aj \u017eiv\u00fa uk\u00e1\u017eku. Toto je Pro AI.'), pad:8, ai:true, closeModal:true },
-          ];
-          const endTour = (done)=>{
-            try{ window.posthog && window.posthog.capture(done?'tour_complete':'tour_skip'); }catch(_){}
-            try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){}
-            tourSeenRef.current=true;
-            setTourStep(-1); setTourWelcome(false);
-            try{ setShowSetupModal(false); }catch(_){}
-            try{ setForceSetup(tourReturnSetupRef.current); }catch(_){}
-          };
-          const startTour = ()=>{
-            try{ window.posthog && window.posthog.capture('tour_start'); }catch(_){}
-            tourReturnSetupRef.current = !!forceSetup;
-            setTourWelcome(false); setTourStep(0);
-          };
-          const goStep = (n)=>{
-            if(n>=TOUR.length){ endTour(true); return; }
-            // Opening the modal happens as we step INTO the first in-modal step,
-            // so the setup chip (step 0) is shown first, then the modal appears.
-            if(TOUR[n] && TOUR[n].inModal){ try{ setSetupReturnTo(null); setShowSetupModal(true); }catch(_){} setTimeout(()=>setTourStep(n), 200); return; }
-            if(TOUR[n] && TOUR[n].closeModal){ try{ setShowSetupModal(false); }catch(_){} setTimeout(()=>setTourStep(n), 220); return; }
-            setTourStep(n);
-          };
-          const playAiDemo = ()=>{
-            try{ window.posthog && window.posthog.capture('tour_ai_demo',{ type:'image' }); }catch(_){}
-            try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){}
-            tourSeenRef.current=true;
-            setTourStep(-1); setTourWelcome(false);
-            try{ setShowSetupModal(false); }catch(_){}
-            try{ setForceSetup(false); }catch(_){}
-            setTimeout(()=>{ try{ loadSampleImgMood(); }catch(_){} }, 260);
-          };
-          // WELCOME card
-          if(tourWelcome){
-            return (
-              <div style={{position:'fixed',inset:0,zIndex:100050,pointerEvents:'none'}}>
-                <div style={{position:'absolute',left:14,right:14,bottom:'calc(18px + env(safe-area-inset-bottom,0px))',pointerEvents:'auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:18,padding:20,boxShadow:'0 20px 60px rgba(0,0,0,.6)',maxWidth:402,margin:'0 auto'}}>
-                  <div style={{fontFamily:'inherit',fontWeight:600,color:'#e8c96a',fontSize:(1.05*effScale)+'rem',marginBottom:6}}>{ts('tourWelcomeTitle','Vitaj v plnom Paintiane')}</div>
-                  <div style={{fontSize:(.84*effScale)+'rem',lineHeight:1.45,color:'rgba(242,238,232,.75)',marginBottom:16}}>{ts('tourWelcomeBody','Tvoja skladba je tu \u2014 teraz ju vie\u0161 vidie\u0165 24 sp\u00f4sobmi. Chcem ti r\u00fdchlo uk\u00e1za\u0165, ako?')}</div>
-                  <div style={{display:'flex',gap:10}}>
-                    <button onClick={()=>endTour(false)} style={{flex:1,padding:12,borderRadius:11,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(242,238,232,.55)'}}>{ts('tourSkip','Presko\u010d\u00edm')}</button>
-                    <button onClick={startTour} style={{flex:1,padding:12,borderRadius:11,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(201,168,76,.16)',border:'1px solid rgba(201,168,76,.7)',color:'#e8c96a'}}>{ts('tourYes','\u00c1no, uk\u00e1\u017e mi \u2193')}</button>
-                  </div>
-                </div>
-              </div>
-            );
-          }
-          // SPOTLIGHT step — read the live element rect
-          const st = TOUR[tourStep]; if(!st) return null; void tourTick;
-          let r=null; try{ if(st.sel){ const el=document.querySelector(st.sel); if(el) r=el.getBoundingClientRect(); } }catch(_){}
-          const pad=st.pad||8;
-          const below = r ? (r.top < window.innerHeight*0.5) : true;
-          return (
-            <div style={{position:'fixed',inset:0,zIndex:100050}}>
-              {/* Light veil over everything so the whole modal stays readable,
-                  plus a gold glow ring on the highlighted part (no blackout). */}
-              <div style={{position:'fixed',inset:0,background:'rgba(4,3,9,.38)',pointerEvents:'none',transition:'background .35s ease'}} />
-              {r && (<div style={{position:'fixed',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:16,boxShadow:'0 0 0 2px rgba(201,168,76,.9), 0 0 22px 4px rgba(201,168,76,.55)',background:'rgba(201,168,76,.06)',pointerEvents:'none',transition:'all .35s cubic-bezier(.4,0,.2,1)'}} />)}
-              {/* tooltip card */}
-              <div style={{position:'fixed',left:14,right:14,...(below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
-                <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}</div>
-                <div style={{fontSize:(.96*effScale)+'rem',color:'#e8c96a',fontWeight:600,marginBottom:5}}>{st.title}</div>
-                <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{st.body}</div>
-                {st.ai && (
-                  <div style={{display:'flex',marginBottom:12}}>
-                    <button onClick={playAiDemo} style={{flex:1,padding:'12px 0',borderRadius:10,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(220,150,255,.16)',border:'1px solid rgba(220,150,255,.65)',color:'rgba(228,178,255,.98)'}}>{'\u25b6 '+ts('tourAiTry','Vyskú\u0161a\u0165 uk\u00e1\u017eku')}</button>
-                  </div>
-                )}
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                  <div style={{display:'flex',gap:5}}>
-                    {TOUR.map((_,k)=>(<div key={k} style={{width:6,height:6,borderRadius:'50%',background:k===tourStep?'#c9a84c':'rgba(242,238,232,.25)'}} />))}
-                  </div>
-                  <div style={{display:'flex',gap:8}}>
-                    <button onClick={()=>endTour(false)} style={{padding:'7px 15px',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'transparent',border:'none',color:'rgba(242,238,232,.4)'}}>{ts('tourSkipShort','Presko\u010di\u0165')}</button>
-                    <button onClick={()=>goStep(tourStep+1)} style={{padding:'7px 15px',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(201,168,76,.16)',border:'1px solid rgba(201,168,76,.7)',color:'#e8c96a'}}>{tourStep===TOUR.length-1?ts('tourDone','Hotovo \u2713'):ts('tourNext','\u010ealej \u2192')}</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
     </div>
   );
 }
