@@ -24066,7 +24066,7 @@ export default function Paintiano() {
     window.addEventListener('pointerdown', onTouch, { passive:true, capture:true });
     liteAutoFsTimerRef.current = setTimeout(()=>{
       // Still playing, still Lite, still passive, still not FS? Immerse.
-      if(basicModeRef.current && playingRef.current && !immersive && !liteUserTouchedRef.current && !liteAutoFsSpentRef.current){
+      if(basicMode && playing && !immersive && !liteUserTouchedRef.current && !liteAutoFsSpentRef.current){
         liteAutoFsSpentRef.current = true;
         try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'auto' }); }catch(_){}
         setImmersive(true);
