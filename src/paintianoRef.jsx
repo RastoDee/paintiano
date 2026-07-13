@@ -36960,7 +36960,7 @@ Hard requirements:
           </div>
         )}
         {/* ── GUIDED TOUR overlay: welcome card + 4-step spotlight ────────── */}
-        {(tourWelcome || tourStep>=0) && (()=>{
+        {!basicMode && !isPro && (tourWelcome || tourStep>=0) && (()=>{
           const TOUR = [
             { sel:'.pf-setup-artists', title:ts('tourArtTitle','Tvoja skladba, 24 poh\u013eadov'), body:ts('tourArtBody','\u0164ukni ktor\u00e9hoko\u013evek umelca \u2014 t\u00e1 ist\u00e1 skladba sa prekresl\u00ed jeho \u0161t\u00fdlom. Prv\u00fd raz zadarmo.'), pad:8 },
             { sel:'.pf-dice', title:ts('tourDiceTitle','Prekvapenie'), body:ts('tourDiceBody','Kocka prehod\u00ed \u0161t\u00fdl n\u00e1hodne, a \u2934 zv\u00e4\u010d\u0161\u00ed obraz na cel\u00fa obrazovku.'), pad:14 },
