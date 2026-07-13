@@ -1499,6 +1499,14 @@ export default function Paintiano() {
   // We also derive the locked set so the gate logic below knows which keys are
   // behind the paywall.
   const FREE_PAIRS = BASE_STYLE_PAIRS; // [a,b] kept in BASE order; only 'a' is reachable for free
+  // ZASAH 2 - taste preview: a Free user may try each locked artist LIVE once
+  // per session before the wall. Showing the value first converts far better
+  // than a bare lock. Session-scoped (a ref, resets on reload) so it never
+  // becomes a way to use Pro for free across visits.
+  const tastedKeysRef = useRef(new Set());
+  const [tastePreviewKey, setTastePreviewKey] = useState(null);
+  const tastePreviewKeyRef = useRef(null);
+  useEffect(()=>{ tastePreviewKeyRef.current = tastePreviewKey; },[tastePreviewKey]);
   const FREE_UNLOCKED_KEYS = useMemo(
     () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
     []
@@ -1512,8 +1520,10 @@ export default function Paintiano() {
     // locked. It isn't part of the artist style-pairs so it's absent from
     // FREE_UNLOCKED_KEYS; special-case it here so it renders unlocked.
     if (key==='mosaicFamily' || key==='mosaicNotes' || key==='mosaicOneM') return false;
+    // The artist being tasted right now reads as unlocked for this one preview.
+    if(key && key===tastePreviewKey) return false;
     return !FREE_UNLOCKED_KEYS.has(key);
-  }, [proStatus, FREE_UNLOCKED_KEYS]);
+  }, [proStatus, FREE_UNLOCKED_KEYS, tastePreviewKey]);
   // Remembers, per pair, which member the user last selected. So when a pair's
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
@@ -2128,6 +2138,9 @@ export default function Paintiano() {
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
   // no artist + Random on, the painting shuffles across artist styles).
   const selectStyle = useCallback((k)=>{
+    // ZASAH 2: if the user moves to a style other than the one being tasted,
+    // spend the preview (the free live try is over).
+    if(tastePreviewKeyRef.current && k!==tastePreviewKeyRef.current){ setTastePreviewKey(null); }
     // Just change the style. Do NOT force a view change here: setting
     // forceSetup=false used to yank the user to an EMPTY canvas when they
     // changed style in setup with no source loaded. View transitions are
@@ -12680,7 +12693,7 @@ Hard requirements:
               {exportReadyFs && !isPro && (
                 <button onClick={(e)=>{ e.stopPropagation(); try{ window.posthog && window.posthog.capture('pro_teaser_click', { at:'success' }); }catch(_){} setPaywallReason('settings'); }} className="pf-lift" aria-label={t('proTeaser')||'this song in 24 styles'}
                   style={{display:'inline-flex',alignItems:'center',gap:6,padding:'11px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'none',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap'}}>
-                  ✦ {t('proTeaser')||'this song in 24 styles'}
+                  ✦ {tastePreviewKey ? (t('proTeaserTaste')||'loved it? unlock all 24') : (t('proTeaser')||'this song in 24 styles')}
                 </button>
               )}
               {exportReadyFs && (
@@ -14195,7 +14208,7 @@ Hard requirements:
                     const chipStyleOn = _gold?{background:PF.card2,border:'1px solid rgba(201,168,76,.85)',color:'#e8c96a'}:{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
                     const chipStyleOff = _gold?{background:'transparent',border:'1px dashed rgba(201,168,76,.5)',color:'rgba(220,180,90,.6)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
-                    <button key={k} onClick={()=>{ if(locked){ setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
+                    <button key={k} onClick={()=>{ if(locked){ if(!tastedKeysRef.current.has(k)){ tastedKeysRef.current.add(k); setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
                     );
                   })}
                 </div>

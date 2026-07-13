@@ -18060,7 +18060,7 @@ const I18N = {
     // Tier card keys (two-tier paywall, Jun 2026)
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (then €14.99)',
-    proValueArtists:'Every style & artist \u2014 24 in all (free has 9)',
+    proValueArtists:'Every style & artist \u2014 24 in all (free has 9)',proTeaser:'this song in 24 styles',
     proValueTypes:'6 paint types per artist (free has 2)',
     proValuePalette:'Your own palette \u2014 set all 12 colours',
     proValueDpi:'Print-ready for the wall \u2014 300 DPI, no watermark',
@@ -18197,7 +18197,7 @@ const I18N = {
     proSupportLine:'Du hältst damit auch ein unabhängiges Solo-Kunstprojekt am Leben.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (danach 14,99 €)',
-    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 24 insgesamt (Free hat 9)',
+    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 24 insgesamt (Free hat 9)',proTeaser:'dieser Song in 24 Stilen',
     proValueTypes:'6 Mal-Typen pro Künstler (Free hat 2)',
     proValuePalette:'Deine eigene Palette \u2014 alle 12 Farben',
     proValueDpi:'Druckfertig f\u00fcr die Wand \u2014 300 DPI, kein Wasserzeichen',
@@ -18333,7 +18333,7 @@ const I18N = {
     proSupportLine:'Vous soutenez aussi un projet d’art solo indépendant.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (puis 14,99 €)',
-    proValueArtists:'Tous les styles & artistes \u2014 24 en tout (Free en a 9)',
+    proValueArtists:'Tous les styles & artistes \u2014 24 en tout (Free en a 9)',proTeaser:'ce morceau en 24 styles',
     proValueTypes:'6 types de peinture par artiste (Free en a 2)',
     proValuePalette:'Votre propre palette \u2014 vos 12 couleurs',
     proValueDpi:'Pr\u00eat \u00e0 imprimer pour le mur \u2014 300 DPI, sans filigrane',
@@ -18469,7 +18469,7 @@ const I18N = {
     proSupportLine:'También mantienes vivo un proyecto artístico independiente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (luego 14,99 €)',
-    proValueArtists:'Todos los estilos y artistas \u2014 24 en total (Free tiene 9)',
+    proValueArtists:'Todos los estilos y artistas \u2014 24 en total (Free tiene 9)',proTeaser:'esta canci\u00f3n en 24 estilos',
     proValueTypes:'6 tipos de pintura por artista (Free tiene 2)',
     proValuePalette:'Tu propia paleta \u2014 tus 12 colores',
     proValueDpi:'Listo para imprimir y enmarcar \u2014 300 DPI, sin marca de agua',
@@ -18605,7 +18605,7 @@ const I18N = {
     proSupportLine:'Zároveň pomáhaš udržať nezávislý umelecký projekt.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (potom 14,99 €)',
-    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 24 spolu (Free m\u00e1 9)',
+    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 24 spolu (Free m\u00e1 9)',proTeaser:'t\u00e1to skladba v 24 \u0161t\u00fdloch',
     proValueTypes:'6 typov maľby na umelca (Free má 2)',
     proValuePalette:'Vlastn\u00e1 paleta \u2014 v\u0161etk\u00fdch 12 farieb',
     proValueDpi:'Pripraven\u00e9 na stenu \u2014 300 DPI, bez vodoznaku',
@@ -18744,7 +18744,7 @@ const I18N = {
     proSupportLine:'您也在帮助一个独立的艺术项目持续运作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鸟价(之后 €14.99)',
-    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',
+    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',proTeaser:'\u8fd9\u9996\u66f2\u5b50\u7684 24 \u79cd\u98ce\u683c',
     proValueTypes:'每位艺术家 6 种画法(免费版 2 种)',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8c03\u8272\u677f \u2014 \u5168\u90e8 12 \u79cd\u989c\u8272',
     proValueDpi:'\u53ef\u6253\u5370\u4e0a\u5899 \u2014 300 DPI\uff0c\u65e0\u6c34\u5370',
@@ -18874,7 +18874,7 @@ const I18N = {
     proSupportLine:'您也在幫助一個獨立的藝術專案持續運作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鳥價（之後 €14.99）',
-    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',
+    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',proTeaser:'\u9019\u9996\u66f2\u5b50\u7684 24 \u7a2e\u98a8\u683c',
     proValueTypes:'每位藝術家 6 種畫法（免費版 2 種）',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8abf\u8272\u76e4 \u2014 \u5168\u90e8 12 \u7a2e\u984f\u8272',
     proValueDpi:'\u53ef\u5217\u5370\u4e0a\u7246 \u2014 300 DPI\uff0c\u7121\u6d6e\u6c34\u5370',
@@ -19015,7 +19015,7 @@ const I18N = {
     proSupportLine:'Você também ajuda a manter um projeto de arte solo independente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (depois €14.99)',
-    proValueArtists:'Todos os estilos e artistas \u2014 24 no total (Free tem 9)',
+    proValueArtists:'Todos os estilos e artistas \u2014 24 no total (Free tem 9)',proTeaser:'esta m\u00fasica em 24 estilos',
     proValueTypes:'6 tipos de pintura por artista (Free tem 2)',
     proValuePalette:'A sua pr\u00f3pria paleta \u2014 as 12 cores',
     proValueDpi:'Pronto para imprimir e emoldurar \u2014 300 DPI, sem marca de \u00e1gua',
@@ -19151,7 +19151,7 @@ const I18N = {
     proSupportLine:'独立アートプロジェクトを支えることにもなります。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · アーリーバード(その後 €14.99)',
-    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 24 \u4eba\uff08Free \u306f 9 \u4eba\uff09',
+    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 24 \u4eba\uff08Free \u306f 9 \u4eba\uff09',proTeaser:'\u3053\u306e\u66f2\u3092 24 \u30b9\u30bf\u30a4\u30eb\u3067',
     proValueTypes:'各アーティスト 6 種類の描き方(Free は 2 種類)',
     proValuePalette:'\u81ea\u5206\u3060\u3051\u306e\u30d1\u30ec\u30c3\u30c8 \u2014 12 \u8272\u3059\u3079\u3066',
     proValueDpi:'\u58c1\u306b\u3082\u5370\u5237\u3067\u304d\u308b \u2014 300 DPI\u3001\u30a6\u30a9\u30fc\u30bf\u30fc\u30de\u30fc\u30af\u306a\u3057',
@@ -24831,8 +24831,16 @@ export default function Paintiano() {
     return ()=>{ clearTimeout(t1); clearTimeout(t2); };
   },[basicMode,liteFlipSeen,liteImageMode,chords.length]);
   useEffect(()=>{
+    const _wasBasic = basicModeRef.current;
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
+    // ZÁSAH 3 — measure Lite→Advanced discovery. Fires only on a real
+    // transition out of Lite (not on initial mount), once per flip. Tells us
+    // whether the 890 one-and-done users even see the full mode (24 artists,
+    // AI) that Pro sells — the missing number behind the 1% paywall view.
+    if(_wasBasic===true && basicMode===false){
+      try{ window.posthog && window.posthog.capture('lite_to_advanced', { proStatus }); }catch(_){}
+    }
   },[basicMode]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
   // Free (and first-time) visitors still start in Lite. We only auto-switch on
@@ -35173,6 +35181,16 @@ Hard requirements:
                 <button onClick={(e)=>{ e.stopPropagation(); toggleShow(); wakeControls(); }} className="pf-lift" aria-label="auto-shuffle paintings" aria-pressed={showMode}
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px 18px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:showMode?'#0a0a12':'#ffd07a',background:showMode?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'rgba(255,200,120,.20)',border:'1px solid '+(showMode?PF.gold2:'rgba(255,200,120,.6)'),boxShadow:showMode?'0 6px 22px rgba(240,192,64,.4)':'0 4px 14px rgba(255,200,120,.2)',WebkitTapHighlightColor:'transparent'}}>
                   ↻ {t('showLabel')!=='showLabel'?t('showLabel'):'Show'}
+                </button>
+              )}
+              {/* ZÁSAH 1 — success-moment Pro invitation. Non-modal, gold,
+                  shown only to non-Pro when a painting is finished: the peak
+                  enthusiasm moment, not a frustrating wall. Moves Pro exposure
+                  from ~1% (buried) to everyone who finishes a painting. */}
+              {exportReadyFs && !isPro && (
+                <button onClick={(e)=>{ e.stopPropagation(); try{ window.posthog && window.posthog.capture('pro_teaser_click', { at:'success' }); }catch(_){} setPaywallReason('settings'); }} className="pf-lift" aria-label={t('proTeaser')||'this song in 24 styles'}
+                  style={{display:'inline-flex',alignItems:'center',gap:6,padding:'11px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'none',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap'}}>
+                  ✦ {t('proTeaser')||'this song in 24 styles'}
                 </button>
               )}
               {exportReadyFs && (
