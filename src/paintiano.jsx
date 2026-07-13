@@ -36987,7 +36987,7 @@ Hard requirements:
             { sel:'.pf-setup-artists', title:ts('tourArtTitle','24 umelcov'), body:ts('tourArtBody','9 je zadarmo, zvy\u0161ok odomkne Pro \u2014 no prv\u00fd \u0165uk na ktor\u00e9hoko\u013evek m\u00e1\u0161 zadarmo. Preto tie z\u00e1mky nie s\u00fa stena, ale pozv\u00e1nka.'), pad:8, inModal:true },
             { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
             { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
-            { sel:null, title:ts('tourReelTitle','A teraz \u2014 uk\u00e1\u017eka'), body:ts('tourReelBody','60 sek\u00fand: hudba sa men\u00ed na ma\u013ebu, 24 \u0161t\u00fdlov, AI z n\u00e1lady aj z obr\u00e1zka. \u0164ukni pre spustenie.'), reel:true },
+            { sel:'.pf-mfitile', title:ts('tourAiTitle','AI kompoz\u00edcia'), body:ts('tourAiBody','AI zlo\u017e\u00ed skladbu z obr\u00e1zka alebo n\u00e1lady. Pozri \u2014 vyskú\u0161aj \u017eiv\u00fa uk\u00e1\u017eku. Toto je Pro AI.'), pad:8, ai:true, closeModal:true },
           ];
           const endTour = (done)=>{
             try{ window.posthog && window.posthog.capture(done?'tour_complete':'tour_skip'); }catch(_){}
@@ -37007,16 +37007,17 @@ Hard requirements:
             // Opening the modal happens as we step INTO the first in-modal step,
             // so the setup chip (step 0) is shown first, then the modal appears.
             if(TOUR[n] && TOUR[n].inModal){ try{ setSetupReturnTo(null); setShowSetupModal(true); }catch(_){} setTimeout(()=>setTourStep(n), 200); return; }
+            if(TOUR[n] && TOUR[n].closeModal){ try{ setShowSetupModal(false); }catch(_){} setTimeout(()=>setTourStep(n), 220); return; }
             setTourStep(n);
           };
-          const playReel = ()=>{
-            try{ window.posthog && window.posthog.capture('tour_reel_play'); }catch(_){}
+          const playAiDemo = ()=>{
+            try{ window.posthog && window.posthog.capture('tour_ai_demo',{ type:'image' }); }catch(_){}
             try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){}
             tourSeenRef.current=true;
             setTourStep(-1); setTourWelcome(false);
             try{ setShowSetupModal(false); }catch(_){}
-            try{ setForceSetup(tourReturnSetupRef.current); }catch(_){}
-            setTimeout(()=>{ try{ demoPlay(); }catch(_){} }, 260);
+            try{ setForceSetup(false); }catch(_){}
+            setTimeout(()=>{ try{ loadSampleImgMood(); }catch(_){} }, 260);
           };
           // WELCOME card
           if(tourWelcome){
@@ -37049,9 +37050,9 @@ Hard requirements:
                 <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}</div>
                 <div style={{fontSize:(.96*effScale)+'rem',color:'#e8c96a',fontWeight:600,marginBottom:5}}>{st.title}</div>
                 <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{st.body}</div>
-                {st.reel && (
+                {st.ai && (
                   <div style={{display:'flex',marginBottom:12}}>
-                    <button onClick={playReel} style={{flex:1,padding:'12px 0',borderRadius:10,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(201,168,76,.18)',border:'1px solid rgba(201,168,76,.7)',color:'#e8c96a'}}>{'\u25b6 '+ts('tourReelPlay','Pozri uk\u00e1\u017eku')}</button>
+                    <button onClick={playAiDemo} style={{flex:1,padding:'12px 0',borderRadius:10,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(220,150,255,.16)',border:'1px solid rgba(220,150,255,.65)',color:'rgba(228,178,255,.98)'}}>{'\u25b6 '+ts('tourAiTry','Vyskú\u0161a\u0165 uk\u00e1\u017eku')}</button>
                   </div>
                 )}
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
