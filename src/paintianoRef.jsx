@@ -36974,33 +36974,37 @@ Hard requirements:
         {/* ── GUIDED TOUR overlay: welcome card + 4-step spotlight ────────── */}
         {!basicMode && !isPro && (tourWelcome || tourStep>=0) && (()=>{
           const TOUR = [
-            { sel:'.pf-setup-artists', title:ts('tourArtTitle','Tvoja skladba, 24 poh\u013eadov'), body:ts('tourArtBody','\u0164ukni ktor\u00e9hoko\u013evek umelca \u2014 t\u00e1 ist\u00e1 skladba sa prekresl\u00ed jeho \u0161t\u00fdlom. Prv\u00fd raz zadarmo.'), pad:8 },
-            { sel:'.pf-dice', title:ts('tourDiceTitle','Prekvapenie'), body:ts('tourDiceBody','Kocka prehod\u00ed \u0161t\u00fdl n\u00e1hodne, a \u2934 zv\u00e4\u010d\u0161\u00ed obraz na cel\u00fa obrazovku.'), pad:14 },
-            { sel:'.pf-moodtile', title:ts('tourSrcTitle','Za\u010dni \u010doko\u013evek nov\u00e9'), body:ts('tourSrcBody','Pie\u2011se\u0148, obr\u00e1zok alebo hraj na\u017eivo \u2014 ka\u017ed\u00fd zdroj sa stane obrazom.'), pad:8 },
-            { sel:'.pf-mfitile', title:ts('tourAiTitle','AI kompoz\u00edcia'), body:ts('tourAiBody','Opí\u0161 pocit alebo ho\u010f obr\u00e1zok \u2014 AI zlo\u017e\u00ed cel\u00fa skladbu. Toto je Pro AI.'), pad:8, ai:true },
+            { sel:'.pf-setup-artists', title:ts('tourArtTitle','24 umelcov'), body:ts('tourArtBody','T\u00e1 ist\u00e1 skladba, 24 poh\u013eadov. \u0164ukni ktor\u00e9hoko\u013evek \u2014 prv\u00fd raz zadarmo, aj tie so z\u00e1mkom.'), pad:8 },
+            { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8 },
+            { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8 },
+            { sel:null, title:ts('tourReelTitle','A teraz \u2014 uk\u00e1\u017eka'), body:ts('tourReelBody','60 sek\u00fand: hudba sa men\u00ed na ma\u013ebu, 24 \u0161t\u00fdlov, AI z n\u00e1lady aj z obr\u00e1zka. \u0164ukni pre spustenie.'), reel:true },
           ];
           const endTour = (done)=>{
             try{ window.posthog && window.posthog.capture(done?'tour_complete':'tour_skip'); }catch(_){}
             try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){}
             tourSeenRef.current=true;
             setTourStep(-1); setTourWelcome(false);
+            try{ setShowSetupModal(false); }catch(_){}
             try{ setForceSetup(tourReturnSetupRef.current); }catch(_){}
           };
           const startTour = ()=>{
             try{ window.posthog && window.posthog.capture('tour_start'); }catch(_){}
             tourReturnSetupRef.current = !!forceSetup;
-            setTourWelcome(false); setTourStep(0);
+            try{ setSetupReturnTo(null); setShowSetupModal(true); }catch(_){}
+            setTourWelcome(false); setTimeout(()=>setTourStep(0), 220);
           };
           const goStep = (n)=>{
             if(n>=TOUR.length){ endTour(true); return; }
-            // steps 2 & 3 live on the SETUP screen; step 0/1 on the canvas cockpit.
-            try{ setForceSetup(n>=2); }catch(_){}
             setTourStep(n);
           };
-          const playDemo = (kind)=>{
-            try{ window.posthog && window.posthog.capture('tour_ai_demo',{ type:kind }); }catch(_){}
-            try{ if(kind==='image'){ loadSampleImgMood(); } else { aiMidi('dreamy'); } }catch(_){}
-            endTour(true);
+          const playReel = ()=>{
+            try{ window.posthog && window.posthog.capture('tour_reel_play'); }catch(_){}
+            try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){}
+            tourSeenRef.current=true;
+            setTourStep(-1); setTourWelcome(false);
+            try{ setShowSetupModal(false); }catch(_){}
+            try{ setForceSetup(tourReturnSetupRef.current); }catch(_){}
+            setTimeout(()=>{ try{ demoPlay(); }catch(_){} }, 260);
           };
           // WELCOME card
           if(tourWelcome){
@@ -37019,7 +37023,7 @@ Hard requirements:
           }
           // SPOTLIGHT step — read the live element rect
           const st = TOUR[tourStep]; if(!st) return null;
-          let r=null; try{ const el=document.querySelector(st.sel); if(el) r=el.getBoundingClientRect(); }catch(_){}
+          let r=null; try{ if(st.sel){ const el=document.querySelector(st.sel); if(el) r=el.getBoundingClientRect(); } }catch(_){}
           const pad=st.pad||8;
           const below = r ? (r.top < window.innerHeight*0.5) : true;
           return (
@@ -37029,13 +37033,12 @@ Hard requirements:
               {!r && (<div style={{position:'fixed',inset:0,background:'rgba(4,3,9,.82)'}} />)}
               {/* tooltip card */}
               <div style={{position:'fixed',left:14,right:14,...(below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
-                <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}{st.ai?'  \u00b7  PRO AI':''}</div>
+                <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}</div>
                 <div style={{fontSize:(.96*effScale)+'rem',color:'#e8c96a',fontWeight:600,marginBottom:5}}>{st.title}</div>
                 <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{st.body}</div>
-                {st.ai && (
-                  <div style={{display:'flex',gap:8,marginBottom:12}}>
-                    <button onClick={()=>playDemo('mood')} style={{flex:1,padding:'9px 0',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(220,150,255,.16)',border:'1px solid rgba(220,150,255,.6)',color:'rgba(228,178,255,.98)'}}>{'\u25b6 '+ts('tourDemoMood','N\u00e1lada')}</button>
-                    <button onClick={()=>playDemo('image')} style={{flex:1,padding:'9px 0',borderRadius:9,fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(220,150,255,.16)',border:'1px solid rgba(220,150,255,.6)',color:'rgba(228,178,255,.98)'}}>{'\u25b6 '+ts('tourDemoImage','Obr\u00e1zok')}</button>
+                {st.reel && (
+                  <div style={{display:'flex',marginBottom:12}}>
+                    <button onClick={playReel} style={{flex:1,padding:'12px 0',borderRadius:10,fontFamily:'inherit',fontSize:(.8*effScale)+'rem',fontWeight:600,cursor:'pointer',background:'rgba(201,168,76,.18)',border:'1px solid rgba(201,168,76,.7)',color:'#e8c96a'}}>{'\u25b6 '+ts('tourReelPlay','Pozri uk\u00e1\u017eku')}</button>
                   </div>
                 )}
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>

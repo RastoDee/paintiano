@@ -24822,6 +24822,15 @@ export default function Paintiano() {
   const tourReturnSetupRef = useRef(false);
   const tourSeenRef = useRef(false);
   const tourPendingRef = useRef(false);
+  const [tourTick, setTourTick] = useState(0);
+  useEffect(()=>{
+    if(tourStep<0) return;
+    // Re-measure a couple of times as the modal opens/scrolls so the
+    // highlight ring lands on the section's final position.
+    const a=setTimeout(()=>setTourTick(t=>t+1), 120);
+    const b=setTimeout(()=>setTourTick(t=>t+1), 360);
+    return ()=>{ clearTimeout(a); clearTimeout(b); };
+  },[tourStep]);
   useEffect(()=>{
     // Bridge set tourPendingRef, and we've now actually landed in Advanced.
     // TEST MODE: fire every time (the once-ever tourSeenRef gate is disabled).
@@ -33489,7 +33498,7 @@ Hard requirements:
                 <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{height:38,padding:'0 12px',background:readScale>1?'rgba(201,168,76,.12)':'transparent',color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'none',borderRight:'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:4,fontWeight:600,WebkitTapHighlightColor:'transparent'}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
                 <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{height:38,padding:'0 12px',background:'transparent',color:PF.muted,border:'none',borderRight:basicMode?'none':'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:(.62*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:5,WebkitTapHighlightColor:'transparent'}}><span style={{color:'rgba(220,180,90,.95)',fontWeight:600,letterSpacing:'.08em'}}>{meta.code}</span><span style={{fontSize:(.55*effScale)+'rem',opacity:.6}}>▾</span></button>
                 {!basicMode && (
-                <button onClick={()=>{ setSetupReturnTo(null); setShowSetupModal(true); }} aria-label={ts('setupPickerLabel','Setup')} title={ts('setupPickerLabel','Setup')} style={{height:38,padding:'0 12px',background:'transparent',color:'rgba(220,180,90,.85)',border:'none',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                <button className="pf-setup-chip" onClick={()=>{ setSetupReturnTo(null); setShowSetupModal(true); }} aria-label={ts('setupPickerLabel','Setup')} title={ts('setupPickerLabel','Setup')} style={{height:38,padding:'0 12px',background:'transparent',color:'rgba(220,180,90,.85)',border:'none',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
                 )}
               </div>
               {langOpen && (
@@ -36974,9 +36983,10 @@ Hard requirements:
         {/* ── GUIDED TOUR overlay: welcome card + 4-step spotlight ────────── */}
         {!basicMode && !isPro && (tourWelcome || tourStep>=0) && (()=>{
           const TOUR = [
-            { sel:'.pf-setup-artists', title:ts('tourArtTitle','24 umelcov'), body:ts('tourArtBody','T\u00e1 ist\u00e1 skladba, 24 poh\u013eadov. \u0164ukni ktor\u00e9hoko\u013evek \u2014 prv\u00fd raz zadarmo, aj tie so z\u00e1mkom.'), pad:8 },
-            { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8 },
-            { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8 },
+            { sel:'.pf-setup-chip', title:ts('tourChipTitle','Tvoje \u0161t\u00fadio'), body:ts('tourChipBody','Tu sa otv\u00e1ra setup \u2014 v\u0161etci umelci, palety a t\u00f3ny na jednom mieste. Pozrime sa dnu.'), pad:10, opensModal:true },
+            { sel:'.pf-setup-artists', title:ts('tourArtTitle','24 umelcov'), body:ts('tourArtBody','9 je zadarmo, zvy\u0161ok odomkne Pro \u2014 no prv\u00fd \u0165uk na ktor\u00e9hoko\u013evek m\u00e1\u0161 zadarmo. Preto tie z\u00e1mky nie s\u00fa stena, ale pozv\u00e1nka.'), pad:8, inModal:true },
+            { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
+            { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
             { sel:null, title:ts('tourReelTitle','A teraz \u2014 uk\u00e1\u017eka'), body:ts('tourReelBody','60 sek\u00fand: hudba sa men\u00ed na ma\u013ebu, 24 \u0161t\u00fdlov, AI z n\u00e1lady aj z obr\u00e1zka. \u0164ukni pre spustenie.'), reel:true },
           ];
           const endTour = (done)=>{
@@ -36990,11 +37000,13 @@ Hard requirements:
           const startTour = ()=>{
             try{ window.posthog && window.posthog.capture('tour_start'); }catch(_){}
             tourReturnSetupRef.current = !!forceSetup;
-            try{ setSetupReturnTo(null); setShowSetupModal(true); }catch(_){}
-            setTourWelcome(false); setTimeout(()=>setTourStep(0), 220);
+            setTourWelcome(false); setTourStep(0);
           };
           const goStep = (n)=>{
             if(n>=TOUR.length){ endTour(true); return; }
+            // Opening the modal happens as we step INTO the first in-modal step,
+            // so the setup chip (step 0) is shown first, then the modal appears.
+            if(TOUR[n] && TOUR[n].inModal){ try{ setSetupReturnTo(null); setShowSetupModal(true); }catch(_){} setTimeout(()=>setTourStep(n), 200); return; }
             setTourStep(n);
           };
           const playReel = ()=>{
@@ -37022,15 +37034,16 @@ Hard requirements:
             );
           }
           // SPOTLIGHT step — read the live element rect
-          const st = TOUR[tourStep]; if(!st) return null;
+          const st = TOUR[tourStep]; if(!st) return null; void tourTick;
           let r=null; try{ if(st.sel){ const el=document.querySelector(st.sel); if(el) r=el.getBoundingClientRect(); } }catch(_){}
           const pad=st.pad||8;
           const below = r ? (r.top < window.innerHeight*0.5) : true;
           return (
             <div style={{position:'fixed',inset:0,zIndex:100050}}>
-              {/* dim with a cut-out ring around the target */}
-              {r && (<div style={{position:'fixed',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:16,boxShadow:'0 0 0 3px #c9a84c, 0 0 0 9999px rgba(4,3,9,.82)',pointerEvents:'none',transition:'all .35s cubic-bezier(.4,0,.2,1)'}} />)}
-              {!r && (<div style={{position:'fixed',inset:0,background:'rgba(4,3,9,.82)'}} />)}
+              {/* Light veil over everything so the whole modal stays readable,
+                  plus a gold glow ring on the highlighted part (no blackout). */}
+              <div style={{position:'fixed',inset:0,background:'rgba(4,3,9,.38)',pointerEvents:'none',transition:'background .35s ease'}} />
+              {r && (<div style={{position:'fixed',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:16,boxShadow:'0 0 0 2px rgba(201,168,76,.9), 0 0 22px 4px rgba(201,168,76,.55)',background:'rgba(201,168,76,.06)',pointerEvents:'none',transition:'all .35s cubic-bezier(.4,0,.2,1)'}} />)}
               {/* tooltip card */}
               <div style={{position:'fixed',left:14,right:14,...(below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
                 <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}</div>
