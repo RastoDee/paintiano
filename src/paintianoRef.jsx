@@ -24821,6 +24821,15 @@ export default function Paintiano() {
   const [tourStep, setTourStep] = useState(-1);
   const tourReturnSetupRef = useRef(false);
   const tourSeenRef = useRef(false);
+  const tourPendingRef = useRef(false);
+  useEffect(()=>{
+    // Bridge set tourPendingRef, and we've now actually landed in Advanced.
+    // TEST MODE: fire every time (the once-ever tourSeenRef gate is disabled).
+    if(tourPendingRef.current && !basicMode){
+      tourPendingRef.current=false;
+      setTimeout(()=>{ setTourWelcome(true); }, 400);
+    }
+  },[basicMode]);
   try{ if(!tourSeenRef.current && typeof localStorage!=='undefined' && localStorage.getItem('paintiano_tour_seen')==='1') tourSeenRef.current=true; }catch(_){}
   // ── ZASAH BEST — auto-immerse in Lite shortly after playback starts ──────
   // A Lite painting takes ~3 min to render; the peak is watching it BEGIN, not
@@ -36953,7 +36962,7 @@ Hard requirements:
             instant of delight. Free users only; keeps Lite calm otherwise. */}
         {basicMode && !isPro && !bridgeUsed && _done && !_litePlayChipShown && (
           <div style={{position:'fixed',left:'50%',bottom:immersive?'calc(env(safe-area-inset-bottom,0px) + 28px)':'calc(env(safe-area-inset-bottom,0px) + 74px)',transform:'translateX(-50%)',zIndex:immersive?10001:62,pointerEvents:'auto'}}>
-            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); setBasicMode(false); try{ if(!tourSeenRef.current){ setTimeout(()=>setTourWelcome(true), 650); } }catch(_){} }}
+            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
               ✦ {t('liteBridge')||'discover the full Paintiano →'}
             </button>
