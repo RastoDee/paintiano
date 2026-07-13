@@ -24825,10 +24825,8 @@ export default function Paintiano() {
   useEffect(()=>{
     // Bridge set tourPendingRef, and we've now actually landed in Advanced.
     // TEST MODE: fire every time (the once-ever tourSeenRef gate is disabled).
-    try{ console.log('[TOUR effect] basicMode=',basicMode,'pending=',tourPendingRef.current); }catch(_){}
     if(tourPendingRef.current && !basicMode){
       tourPendingRef.current=false;
-      try{ console.log('[TOUR] firing welcome'); }catch(_){}
       setTimeout(()=>{ setTourWelcome(true); }, 400);
     }
   },[basicMode]);
@@ -36962,9 +36960,9 @@ Hard requirements:
             which is where the taste-preview + success teaser then do the selling.
             Solves discovery (the missing lite_to_advanced step) at the exact
             instant of delight. Free users only; keeps Lite calm otherwise. */}
-        {basicMode && !isPro && _done && !_litePlayChipShown && (
-          <div ref={()=>{ try{ if(!window.__bridgeSeen){ window.__bridgeSeen=1; console.log('[TOUR] bridge RENDERED'); } }catch(_){} }} style={(isDesktop&&!immersive)?{position:'fixed',right:24,top:'calc(52% + 130px)',width:150,zIndex:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:immersive?'calc(env(safe-area-inset-bottom,0px) + 28px)':'calc(env(safe-area-inset-bottom,0px) + 74px)',transform:'translateX(-50%)',zIndex:immersive?10001:62,pointerEvents:'auto'}}>
-            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; try{ console.log('[TOUR] bridge clicked, pending set'); }catch(_){} setBasicMode(false); }}
+        {basicMode && !isPro && _haveArt && !_litePlayChipShown && !immersive && (
+          <div style={isDesktop?{position:'fixed',right:24,top:'calc(52% + 140px)',width:150,zIndex:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 96px)',transform:'translateX(-50%)',zIndex:65,pointerEvents:'auto'}}>
+            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
               ✦ {t('liteBridge')||'discover the full Paintiano →'}
             </button>
