@@ -1539,6 +1539,31 @@ export default function Paintiano() {
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
+  // ── ZASAH BEST — auto-immerse in Lite shortly after playback starts ──────
+  // A Lite painting takes ~3 min to render; the peak is watching it BEGIN, not
+  // finish. So a few seconds into playback — IF the user is passive (no touch
+  // since Play) — the canvas glides into fullscreen so they watch it grow big.
+  // Any interaction cancels it (they may want the palette / Vary). Fires once
+  // per session so it never nags. Manual FS entry also spends the one shot.
+  const liteAutoFsSpentRef = useRef(false);
+  const liteAutoFsTimerRef = useRef(null);
+  const liteUserTouchedRef = useRef(false);
+  useEffect(()=>{
+    // Only in Lite, only for a real fresh playback, only once, never if already FS.
+    if(!basicMode || !playing || immersive || liteAutoFsSpentRef.current) return;
+    liteUserTouchedRef.current = false;
+    const onTouch = ()=>{ liteUserTouchedRef.current = true; };
+    window.addEventListener('pointerdown', onTouch, { passive:true, capture:true });
+    liteAutoFsTimerRef.current = setTimeout(()=>{
+      // Still playing, still Lite, still passive, still not FS? Immerse.
+      if(basicModeRef.current && playingRef.current && !immersive && !liteUserTouchedRef.current && !liteAutoFsSpentRef.current){
+        liteAutoFsSpentRef.current = true;
+        try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'auto' }); }catch(_){}
+        setImmersive(true);
+      }
+    }, 2500);
+    return ()=>{ window.removeEventListener('pointerdown', onTouch, { capture:true }); if(liteAutoFsTimerRef.current){ clearTimeout(liteAutoFsTimerRef.current); liteAutoFsTimerRef.current=null; } };
+  },[basicMode, playing, immersive]);
   // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
   // Touch tracking for the vertical swipe gesture on the immersive canvas.
   // Stores {y, x, t} at touchStart; touchEnd computes the delta and decides
@@ -12614,7 +12639,7 @@ Hard requirements:
         }} aria-label={ts('mymusicSaveAria','Save to My Music')} title={ts('mymusicSaveAria','Save to My Music')} className="pf-mymusic-btn" style={{position:'absolute',top:8,left:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>)}
-        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && <button onClick={(e)=>{e.stopPropagation(); setImmersive(v=>!v);}} aria-label="fullscreen" title="Fullscreen" className="pf-fs-btn" style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
+        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && <button onClick={(e)=>{e.stopPropagation(); if(basicMode){ liteAutoFsSpentRef.current=true; try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'manual' }); }catch(_){} } setImmersive(v=>!v);}} aria-label="fullscreen" title="Fullscreen" className="pf-fs-btn" style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>}
         {/* Fullscreen CTA row — Next (shuffle: jump to a new variation, works
