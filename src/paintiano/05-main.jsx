@@ -1512,9 +1512,6 @@ export default function Paintiano() {
     // locked. It isn't part of the artist style-pairs so it's absent from
     // FREE_UNLOCKED_KEYS; special-case it here so it renders unlocked.
     if (key==='mosaicFamily' || key==='mosaicNotes' || key==='mosaicOneM') return false;
-    // $1M$ as an explicit cockpit artist stays FREE — it was free as the third
-    // state of the Mosaic family and pulling it out must not paywall it.
-    if (key==='oneM') return false;
     return !FREE_UNLOCKED_KEYS.has(key);
   }, [proStatus, FREE_UNLOCKED_KEYS]);
   // Remembers, per pair, which member the user last selected. So when a pair's
@@ -1958,18 +1955,19 @@ export default function Paintiano() {
     : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
-    const MOSAIC_FAMILY = ['mosaic','notes','oneM'];
+    // $1M$ moved out of the family — it is a standalone (Pro) cockpit artist.
+    const MOSAIC_FAMILY = ['mosaic','notes'];
     const familyOn = setupArtists.includes('mosaicFamily');
     // ── LOCK MODE ──
-    // User tapped Mosaic chip with dice on. Pool is the 3 family stops in a
-    // FIXED order (Mosaic → Notes → oneM → Mosaic), starting at Mosaic.
+    // User tapped Mosaic chip with dice on. Pool is the 2 family stops in a
+    // FIXED order (Mosaic → Notes → Mosaic), starting at Mosaic.
     // shuffleArtistIndex is reset to 0 when the lock is entered, so the first
     // render is Mosaic and Next advances sequentially. If user disabled the
     // mosaic family in Setup, lock mode is a no-op (returns null → falls back
     // to nothing, and the chip itself is hidden anyway).
     if(mosaicShuffleLock){
       if(!familyOn) return null;
-      return MOSAIC_FAMILY[((shuffleArtistIndex|0) % 3 + 3) % 3];
+      return MOSAIC_FAMILY[((shuffleArtistIndex|0) % 2 + 2) % 2];
     }
     // ── FULL SHUFFLE MODE ──
     // Pool = (selected artists) + (mosaic family, only if selected in Setup).
@@ -8167,7 +8165,7 @@ Hard requirements:
     const _isFamilyKey = (k)=> (k==='mosaicFamily'||k==='mosaicNotes'||k==='mosaicOneM');
     // Mosaic family stops (Mosaic / Notes / $1M$) join the bag ONLY when the
     // user kept mosaicFamily enabled in the central setup (option B).
-    const bagKeys = _familyAllowed ? [...artists, 'mosaicFamily', 'mosaicNotes', 'mosaicOneM'] : [...artists];
+    const bagKeys = _familyAllowed ? [...artists, 'mosaicFamily', 'mosaicNotes'] : [...artists];
     // Fisher–Yates shuffle.
     const shuffle = (arr)=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
     const curK = style ? style
@@ -8233,7 +8231,7 @@ Hard requirements:
       setStyle(null);                 // null style → mosaic family
       setShufVariant(0);
       setNotesMode(nk==='mosaicNotes');
-      setOneMMode(nk==='mosaicOneM');
+      setOneMMode(false);   // $1M$ left the family — reachable only as an artist
     } else {
       // NOTE: no setSetupArtists here — Surprise only *reads* the allowed set.
       setStyle(nk);
@@ -11907,8 +11905,8 @@ Hard requirements:
                             : 'mosaic';
               const subLabel = subKind==='notes' ? t('notesStyle') : subKind==='oneM' ? t('oneMStyle') : t('mosaicStyle');
               const lockTip = randomMode
-                ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes / $1M$')
-                : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap for $1M$' : 'mosaic — tap for note names'));
+                ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes')
+                : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap to clear back to mosaic' : 'mosaic — tap for note names'));
               return (
             <button onClick={()=>{
               // In edit mode the Mosaic chip behaves like every other chip:
@@ -11935,10 +11933,11 @@ Hard requirements:
                   return nx;
                 });
               } else {
-                // Dice off → original 3-tap cycle Mosaic → Notes → $1M$ → Mosaic.
-                if(!notesMode && !oneMMode){ setNotesMode(true); }
-                else if(notesMode && !oneMMode){ setNotesMode(false); setOneMMode(true); }
-                else { setOneMMode(false); setNotesMode(false); }
+                // Dice off → 2-tap cycle Mosaic → Notes → Mosaic ($1M$ is now a
+                // standalone Pro artist chip, no longer a family stop).
+                setOneMMode(false);
+                if(!notesMode){ setNotesMode(true); }
+                else { setNotesMode(false); }
               }
             }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
             ); })()}
@@ -13747,7 +13746,7 @@ Hard requirements:
       )}
       </div>
       )}
-      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.3{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.4{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
