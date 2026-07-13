@@ -24891,7 +24891,9 @@ export default function Paintiano() {
   },[basicMode]);
   // Offer the tour once we've truly landed in Advanced after the bridge.
   useEffect(()=>{
-    if(tourPendingRef.current && !basicMode){ tourPendingRef.current=false; setTimeout(()=>setTourWelcome(true), 420); }
+    if(tourPendingRef.current && !basicMode){ tourPendingRef.current=false;
+      let seen=false; try{ seen = (typeof localStorage!=='undefined' && localStorage.getItem('paintiano_tour_seen')==='1'); }catch(_){}
+      if(!seen){ setTimeout(()=>setTourWelcome(true), 420); } }
   },[basicMode]);
   // Re-measure the highlight ring as the modal opens/scrolls.
   useEffect(()=>{
@@ -36966,7 +36968,7 @@ Hard requirements:
             which is where the taste-preview + success teaser then do the selling.
             Solves discovery (the missing lite_to_advanced step) at the exact
             instant of delight. Free users only; keeps Lite calm otherwise. */}
-        {basicMode && !isPro && _haveArt && !_litePlayChipShown && !immersive && (
+        {basicMode && !isPro && !bridgeUsed && _haveArt && !_litePlayChipShown && !immersive && (
           <div style={isDesktop?{position:'fixed',right:24,top:'calc(52% + 140px)',width:150,zIndex:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 96px)',transform:'translateX(-50%)',zIndex:65,pointerEvents:'auto'}}>
             <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
