@@ -2321,8 +2321,16 @@ export default function Paintiano() {
     return ()=>{ clearTimeout(t1); clearTimeout(t2); };
   },[basicMode,liteFlipSeen,liteImageMode,chords.length]);
   useEffect(()=>{
+    const _wasBasic = basicModeRef.current;
     basicModeRef.current = basicMode;
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
+    // ZÁSAH 3 — measure Lite→Advanced discovery. Fires only on a real
+    // transition out of Lite (not on initial mount), once per flip. Tells us
+    // whether the 890 one-and-done users even see the full mode (24 artists,
+    // AI) that Pro sells — the missing number behind the 1% paywall view.
+    if(_wasBasic===true && basicMode===false){
+      try{ window.posthog && window.posthog.capture('lite_to_advanced', { proStatus }); }catch(_){}
+    }
   },[basicMode]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
   // Free (and first-time) visitors still start in Lite. We only auto-switch on
@@ -12663,6 +12671,16 @@ Hard requirements:
                 <button onClick={(e)=>{ e.stopPropagation(); toggleShow(); wakeControls(); }} className="pf-lift" aria-label="auto-shuffle paintings" aria-pressed={showMode}
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px 18px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:showMode?'#0a0a12':'#ffd07a',background:showMode?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'rgba(255,200,120,.20)',border:'1px solid '+(showMode?PF.gold2:'rgba(255,200,120,.6)'),boxShadow:showMode?'0 6px 22px rgba(240,192,64,.4)':'0 4px 14px rgba(255,200,120,.2)',WebkitTapHighlightColor:'transparent'}}>
                   ↻ {t('showLabel')!=='showLabel'?t('showLabel'):'Show'}
+                </button>
+              )}
+              {/* ZÁSAH 1 — success-moment Pro invitation. Non-modal, gold,
+                  shown only to non-Pro when a painting is finished: the peak
+                  enthusiasm moment, not a frustrating wall. Moves Pro exposure
+                  from ~1% (buried) to everyone who finishes a painting. */}
+              {exportReadyFs && !isPro && (
+                <button onClick={(e)=>{ e.stopPropagation(); try{ window.posthog && window.posthog.capture('pro_teaser_click', { at:'success' }); }catch(_){} setPaywallReason('settings'); }} className="pf-lift" aria-label={t('proTeaser')||'this song in 24 styles'}
+                  style={{display:'inline-flex',alignItems:'center',gap:6,padding:'11px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'none',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap'}}>
+                  ✦ {t('proTeaser')||'this song in 24 styles'}
                 </button>
               )}
               {exportReadyFs && (
