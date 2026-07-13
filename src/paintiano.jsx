@@ -23095,19 +23095,6 @@ function IntroSplash({ onDone, tagline, skipLabel }){
           opacity:titleIn?0.8:0,transform:titleIn?'scale(1)':'scale(2.4)',transition:'opacity .7s ease .8s, transform 1.0s cubic-bezier(.18,.7,.16,1) .8s'}}>{tagline}</div>
       </div>
       <div style={{position:'absolute',bottom:30,left:0,right:0,textAlign:'center',fontFamily:"'Outfit',sans-serif",fontSize:'.5rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.28)',pointerEvents:'none'}}>{skipLabel}</div>
-        {/* VERZIA A/B — arrival hint bubble over the cockpit artists. */}
-        {!basicMode && !isPro && arrivalHint && (()=>{
-          let r=null; try{ const el=document.querySelector('.pf-setup-artists'); if(el) r=el.getBoundingClientRect(); }catch(_){}
-          const top = r ? (r.top - 12) : 150;
-          return (
-            <div onClick={()=>setArrivalHint(false)} style={{position:'fixed',left:0,right:0,top:0,bottom:0,zIndex:100040,pointerEvents:'auto'}}>
-              <div style={{position:'fixed',left:14,right:14,top:(r?(r.top+r.height+12):160)+'px',maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.6)',borderRadius:15,padding:'13px 16px',boxShadow:'0 14px 40px rgba(0,0,0,.55)',display:'flex',alignItems:'center',gap:10}}>
-                <span style={{fontSize:(1.0*effScale)+'rem',flexShrink:0}}>✦</span>
-                <span style={{fontSize:(.82*effScale)+'rem',lineHeight:1.35,color:'rgba(242,238,232,.85)'}}>{ts('arrivalHint','Tvoja skladba, 24 spôsobov. Ťukni ktoréhokoľvek — prvý je zadarmo.')}</span>
-              </div>
-            </div>
-          );
-        })()}
     </div>
   );
 }
@@ -36982,6 +36969,18 @@ Hard requirements:
         </>
         );
       })()}
+        {/* VERZIA A/B — arrival hint bubble over the cockpit artists. */}
+        {!basicMode && !isPro && arrivalHint && (()=>{
+          let r=null; try{ const el=document.querySelector('.pf-setup-artists'); if(el) r=el.getBoundingClientRect(); }catch(_){}
+          return (
+            <div onClick={()=>setArrivalHint(false)} style={{position:'fixed',left:0,right:0,top:0,bottom:0,zIndex:100040,pointerEvents:'auto'}}>
+              <div style={{position:'fixed',left:14,right:14,top:(r?(r.top+r.height+12):160)+'px',maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.6)',borderRadius:15,padding:'13px 16px',boxShadow:'0 14px 40px rgba(0,0,0,.55)',display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:(1.0*effScale)+'rem',flexShrink:0}}>✦</span>
+                <span style={{fontSize:(.82*effScale)+'rem',lineHeight:1.35,color:'rgba(242,238,232,.85)'}}>{ts('arrivalHint','Tvoja skladba, 24 spôsobov. Ťukni ktoréhokoľvek — prvý je zadarmo.')}</span>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }
