@@ -1509,7 +1509,9 @@ export default function Paintiano() {
   // per session before the wall. Showing the value first converts far better
   // than a bare lock. Session-scoped (a ref, resets on reload) so it never
   // becomes a way to use Pro for free across visits.
-  const tastedKeysRef = useRef(new Set());
+  // A free user gets ONE taste of a locked artist total (not one per artist).
+  // Once used, tapping ANY locked artist opens the paywall.
+  const tasteUsedRef = useRef(false);
   const [tastePreviewKey, setTastePreviewKey] = useState(null);
   const tastePreviewKeyRef = useRef(null);
   useEffect(()=>{ tastePreviewKeyRef.current = tastePreviewKey; },[tastePreviewKey]);
@@ -14226,6 +14228,7 @@ Hard requirements:
                     <span onClick={()=>setSetupArtists([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupArtists([]);}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(230,222,196,.2)',color:'rgba(230,222,196,.55)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
                 </div>
+                {proStatus==='free' && !tasteUsedRef.current && (<div style={{fontSize:(.52*effScale)+'rem',lineHeight:1.4,color:'rgba(201,168,76,.7)',marginBottom:10,fontStyle:'italic'}}>{ts('tasteHint',({EN:'Tap your favourite locked \uD83D\uDD12 artist — it unlocks for you to try.',SK:'\u0164ukni na svojho ob\u013E\u00FAben\u00E9ho zamknut\u00E9ho \uD83D\uDD12 umelca \u2014 odomkne sa ti na vysk\u00FA\u0161anie.',DE:'Tippe deinen liebsten gesperrten \uD83D\uDD12 K\u00FCnstler an \u2014 er wird f\u00FCr dich freigeschaltet.',FR:'Touche ton artiste verrouill\u00E9 \uD83D\uDD12 pr\u00E9f\u00E9r\u00E9 \u2014 il se d\u00E9verrouille pour toi.',ES:'Toca tu artista bloqueado \uD83D\uDD12 favorito \u2014 se desbloquea para que lo pruebes.',PT:'Toca no teu artista bloqueado \uD83D\uDD12 favorito \u2014 desbloqueia para experimentares.',zh:'\u70B9\u4E00\u4E0B\u4F60\u6700\u559C\u6B22\u7684\u9501\u5B9A\uD83D\uDD12\u827A\u672F\u5BB6\u2014\u2014\u4F1A\u4E3A\u4F60\u89E3\u9501\u8BD5\u7528\u3002',zhTW:'\u9EDE\u4E00\u4E0B\u4F60\u6700\u559C\u6B61\u7684\u9396\u5B9A\uD83D\uDD12\u85DD\u8853\u5BB6\u2014\u2014\u6703\u70BA\u4F60\u89E3\u9396\u8A66\u7528\u3002',ja:'\u597D\u304D\u306A\u30ED\u30C3\u30AF\u3055\u308C\u305F\uD83D\uDD12\u30A2\u30FC\u30C6\u30A3\u30B9\u30C8\u3092\u30BF\u30C3\u30D7\u2014\u3042\u306A\u305F\u306E\u305F\u3081\u306B\u89E3\u9664\u3055\u308C\u307E\u3059\u3002'})[lang]||'Tap your favourite locked artist — it unlocks for you to try.')}</div>)}
                 <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,rowGap:8}}>
                   {ALL_ARTIST_KEYS.map(k=>{
                     const on = setupArtists.includes(k);
@@ -14245,7 +14248,7 @@ Hard requirements:
                     const chipStyleOn = _gold?{background:PF.card2,border:'1px solid rgba(201,168,76,.85)',color:'#e8c96a'}:{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
                     const chipStyleOff = _gold?{background:'transparent',border:'1px dashed rgba(201,168,76,.5)',color:'rgba(220,180,90,.6)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
-                    <button key={k} onClick={()=>{ if(locked){ if(!tastedKeysRef.current.has(k)){ tastedKeysRef.current.add(k); setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
+                    <button key={k} onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
                     );
                   })}
                 </div>
