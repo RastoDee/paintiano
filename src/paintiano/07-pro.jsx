@@ -238,30 +238,38 @@ function useProStatus() {
 // trialUsed is a FLOAT — full AI calls (composeFromImage, aiCompose) consume
 // 1.0, while lighter calls (atmosphere detect) consume 0.5. trialLeft is
 // rounded UP for user-facing display via Math.ceil at the callsite.
+// ─── AI trial hook — PER-MODE credits (no shared pool) ───────────────────────
+// Each heavy AI mode gets its own single free try: 'mood', 'mfi', 'compose'.
+// 'atmomelody' is ONE shared credit for the atmo + melody pair together
+// (2×atmo, 2×melody, or 1+1 all exhaust the same single credit). We persist a
+// small map of how many times each key was used.
+const AI_TRIAL_LIMITS = { mood:1, mfi:1, compose:1, atmomelody:1 };
 function useAiTrial() {
-  const [trialUsed, setTrialUsed] = useState(() => {
-    try { return Math.max(0, parseFloat(localStorage.getItem(PRO_CFG.trialStoreKey) || '0')) || 0; }
-    catch (_) { return 0; }
+  const [used, setUsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(PRO_CFG.trialStoreKey) || '{}') || {}; }
+    catch (_) { return {}; }
   });
-
-  // Optional amount (default 1 = full AI call). Pass 0.5 for atmo/lighter calls.
-  const consumeTrial = useCallback((amount = 1) => {
-    setTrialUsed((n) => {
-      const next = n + amount;
-      try { localStorage.setItem(PRO_CFG.trialStoreKey, String(next)); } catch (_) {}
+  // Consume one unit of a specific mode's credit. amount kept for atmo/melody
+  // (0.5 each → two uses exhaust the shared 1.0).
+  const consumeTrial = useCallback((key, amount = 1) => {
+    setUsed((m) => {
+      const next = { ...m, [key]: (m[key] || 0) + amount };
+      try { localStorage.setItem(PRO_CFG.trialStoreKey, JSON.stringify(next)); } catch (_) {}
       return next;
     });
   }, []);
-
   const resetTrial = useCallback(() => {
     try { localStorage.removeItem(PRO_CFG.trialStoreKey); } catch (_) {}
-    setTrialUsed(0);
+    setUsed({});
   }, []);
-
+  // Has this specific mode's credit run out?
+  const modeExhausted = useCallback((key) => {
+    const lim = AI_TRIAL_LIMITS[key] || 1;
+    return (used[key] || 0) >= lim;
+  }, [used]);
   return {
-    trialUsed,
-    trialLeft: Math.max(0, PRO_CFG.trialMax - trialUsed),
-    trialExhausted: trialUsed >= PRO_CFG.trialMax,
+    trialUsedMap: used,
+    modeExhausted,
     consumeTrial,
     resetTrial,
   };
@@ -284,20 +292,19 @@ function useAiTrial() {
 function useEntitlements() {
   const pro = useProStatus();
   const trial = useAiTrial();
-  const gateAI = useCallback((amount = 1, consume = true) => {
+  // gateAI(key, amount, consume) — key is the AI mode: 'mood'|'mfi'|'compose'|
+  // 'atmomelody'. Each mode has its own credit (atmomelody shared for the pair).
+  const gateAI = useCallback((key, amount = 1, consume = true) => {
     if (pro.proStatus === 'loading') return { allow: false, reason: 'loading' };
-    // Unlimited AI is a Pro AI privilege only. Plain Pro is the full
-    // deterministic tool but NOT unlimited AI — so Pro falls through to the
-    // same trial path as Free, which funnels it toward a Pro AI upgrade.
     if (pro.proStatus === 'pro_ai')  return { allow: true };
-    // free OR pro tier → trial credits
-    if (trial.trialExhausted)        return { allow: false, reason: 'ai_trial' };
-    if (consume) trial.consumeTrial(amount);
+    // free OR pro tier → per-mode trial credit
+    if (trial.modeExhausted(key))    return { allow: false, reason: 'ai_trial' };
+    if (consume) trial.consumeTrial(key, amount);
     return { allow: true };
-  }, [pro.proStatus, trial.trialExhausted, trial.consumeTrial]);
+  }, [pro.proStatus, trial.modeExhausted, trial.consumeTrial]);
   return {
     ...pro,            // proStatus, isPro, licenseKey, maskedEmail, activate/deactivate/openCheckout
-    ...trial,          // trialUsed, trialLeft, trialExhausted, consumeTrial, resetTrial
+    ...trial,          // trialUsedMap, modeExhausted, consumeTrial, resetTrial
     ready: pro.proStatus !== 'loading',
     gateAI,
   };
