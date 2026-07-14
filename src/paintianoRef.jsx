@@ -24981,31 +24981,12 @@ export default function Paintiano() {
   const [tourTick, setTourTick] = useState(0);
   const tourPendingRef = useRef(false);
   const tourReturnSetupRef = useRef(false);
-  // ── ZASAH BEST — auto-immerse in Lite shortly after playback starts ──────
-  // A Lite painting takes ~3 min to render; the peak is watching it BEGIN, not
-  // finish. So a few seconds into playback — IF the user is passive (no touch
-  // since Play) — the canvas glides into fullscreen so they watch it grow big.
-  // Any interaction cancels it (they may want the palette / Vary). Fires once
-  // per session so it never nags. Manual FS entry also spends the one shot.
+  // ── Auto-immerse REMOVED — users found it intrusive. Instead the fullscreen
+  //     toggle simply stays visible longer (see controlsAwake timeout) so they
+  //     choose when to go big. Refs kept: the manual FS button still reads them.
   const liteAutoFsSpentRef = useRef(false);
   const liteAutoFsTimerRef = useRef(null);
   const liteUserTouchedRef = useRef(false);
-  useEffect(()=>{
-    // Only in Lite, only for a real fresh playback, only once, never if already FS.
-    if(!basicMode || !playing || immersive || liteAutoFsSpentRef.current) return;
-    liteUserTouchedRef.current = false;
-    const onTouch = ()=>{ liteUserTouchedRef.current = true; };
-    window.addEventListener('pointerdown', onTouch, { passive:true, capture:true });
-    liteAutoFsTimerRef.current = setTimeout(()=>{
-      // Still playing, still Lite, still passive, still not FS? Immerse.
-      if(basicMode && playing && !immersive && !liteUserTouchedRef.current && !liteAutoFsSpentRef.current){
-        liteAutoFsSpentRef.current = true;
-        try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'auto' }); }catch(_){}
-        setImmersive(true);
-      }
-    }, 2500);
-    return ()=>{ window.removeEventListener('pointerdown', onTouch, { capture:true }); if(liteAutoFsTimerRef.current){ clearTimeout(liteAutoFsTimerRef.current); liteAutoFsTimerRef.current=null; } };
-  },[basicMode, playing, immersive]);
   // Lite has two flavours, flipped by tapping the header subtitle:
   //   liteImageMode=false → "music → painting" (the original: auto-plays Liszt)
   //   liteImageMode=true  → "painting → music" (auto-loads the Van Gogh sample
@@ -33219,7 +33200,7 @@ Hard requirements:
     // pointer activity (snappy clean plate) and reveal on any move/tap.
     const liteFloat = basicMode && immersive && isNotPhone && !is5Col;
     if(liteFloat){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2000); }
-    else if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 4000); }
+    else if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 10000); }
   },[playing,immersive,basicMode,isNotPhone,is5Col]);
   // When playback stops, reveal controls. Outside fullscreen they then stay put;
   // in fullscreen we re-arm the idle countdown so a finished, still piece also
