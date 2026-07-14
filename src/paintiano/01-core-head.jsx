@@ -61,6 +61,11 @@ const PF_STYLE = `
           50%     { transform:scale(1.06); box-shadow:0 0 0 12px rgba(220,180,90,0); }
         }
         .pf-breathe { animation: pf-breathe 2.4s ease-in-out infinite; }
+        @keyframes pf-cockpit-nudge {
+          0%,100% { color:rgba(201,168,76,.55); text-shadow:0 0 0 rgba(201,168,76,0); }
+          50%     { color:rgba(220,190,110,1); text-shadow:0 0 10px rgba(201,168,76,.7); }
+        }
+        .pf-cockpit-nudge { animation: pf-cockpit-nudge 2.2s ease-in-out infinite; }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
         .pf-setup-stage { display: none; }
         .pf-tool { transition: all .18s; }

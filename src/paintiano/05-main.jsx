@@ -2265,6 +2265,9 @@ export default function Paintiano() {
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
+  // Cockpit-roll nudge: a soft gold pulse on the collapsed "choose look" bar,
+  // shown until the user opens the roll for the first time ever.
+  const [cockpitOpened, setCockpitOpened] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_cockpit_opened')==='1'; }catch(_){ return false; } });
   // ── BASIC vs ADVANCED app mode ────────────────────────────────────────────
   // basicMode = the simplified experience: a big live canvas painting the Liszt
   // sample, with just three CTAs (Surprise me · contextual Save/Pause · My
@@ -11554,7 +11557,7 @@ Hard requirements:
         {!isDesktop && !basicMode && (<>
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
-          <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>!o);}} disabled={demoReelOn} aria-expanded={stripOpen} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
+          <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>{ const nv=!o; if(nv && !cockpitOpened){ try{ localStorage.setItem('paintiano_cockpit_opened','1'); }catch(_){} setCockpitOpened(true); } return nv; });}} disabled={demoReelOn} aria-expanded={stripOpen} className={(!cockpitOpened && !stripOpen && !demoReelOn) ? 'pf-cockpit-nudge' : undefined} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:(!cockpitOpened && !stripOpen && !demoReelOn) ? undefined : (stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)'),fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
             <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : ts('pickLook','Pick a look')}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
           </button>
