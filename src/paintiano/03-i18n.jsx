@@ -155,7 +155,7 @@ const I18N = {
     tourSkipShort:'Skip',
     tourDone:'Done \u2713',
     tourNext:'Next \u2192',
-    aiTrialBadge:'1 free try',
+    aiTrialBadge:'1 free AI try',
     proTeaserAi:'loved it? unlock Pro AI',
   },
   DE:{
@@ -309,7 +309,7 @@ const I18N = {
     tourSkipShort:'\u00dcberspringen',
     tourDone:'Fertig \u2713',
     tourNext:'Weiter \u2192',
-    aiTrialBadge:'1 Gratisversuch',
+    aiTrialBadge:'1 KI-Gratisversuch',
     proTeaserAi:'gef\u00e4llt\u2019s? Pro AI freischalten',
   },
   FR:{
@@ -463,7 +463,7 @@ const I18N = {
     tourSkipShort:'Passer',
     tourDone:'Termin\u00e9 \u2713',
     tourNext:'Suivant \u2192',
-    aiTrialBadge:'1 essai gratuit',
+    aiTrialBadge:'1 essai IA gratuit',
     proTeaserAi:'\u00e7a te pla\u00eet ? d\u00e9bloque Pro AI',
   },
   ES:{
@@ -617,7 +617,7 @@ const I18N = {
     tourSkipShort:'Omitir',
     tourDone:'Listo \u2713',
     tourNext:'Siguiente \u2192',
-    aiTrialBadge:'1 prueba gratis',
+    aiTrialBadge:'1 prueba IA gratis',
     proTeaserAi:'\u00bfte gust\u00f3? desbloquea Pro AI',
   },
   SK:{
@@ -760,7 +760,7 @@ const I18N = {
     tourChipTitle:'Tvoje \u0161t\u00fadio',
     tourChipBody:'Tu sa otv\u00e1ra setup \u2014 v\u0161etci umelci, palety a t\u00f3ny na jednom mieste. Pozrime sa dnu.',
     tourArtTitle:'24 umelcov',
-    tourArtBody:'9 je zadarmo, zvy\u0161ok odomkne Pro \u2014 no prv\u00fd \u0165uk na ktor\u00e9hoko\u013evek m\u00e1\u0161 zadarmo. Z\u00e1mky nie s\u00fa stena, ale pozv\u00e1nka.',
+    tourArtBody:'9 je zadarmo, zvy\u0161ok odomkne Pro \u2014 no prv\u00fd klik na ktor\u00e9hoko\u013evek m\u00e1\u0161 zadarmo. Z\u00e1mky nie s\u00fa stena, ale pozv\u00e1nka.',
     tourPalTitle:'Palety',
     tourPalBody:'Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.',
     tourToneTitle:'T\u00f3ny',
@@ -771,7 +771,7 @@ const I18N = {
     tourSkipShort:'Presko\u010di\u0165',
     tourDone:'Hotovo \u2713',
     tourNext:'\u010ealej \u2192',
-    aiTrialBadge:'1 sk\u00fa\u0161ka zdarma',
+    aiTrialBadge:'1 AI sk\u00fa\u0161ka zdarma',
     proTeaserAi:'p\u00e1\u010di sa? odomkni Pro AI',
   },
   zh:{
@@ -928,7 +928,7 @@ const I18N = {
     tourSkipShort:'\u8df3\u8fc7',
     tourDone:'\u5b8c\u6210 \u2713',
     tourNext:'\u4e0b\u4e00\u6b65 \u2192',
-    aiTrialBadge:'\u514d\u8d39\u8bd5\u7528 1 \u6b21',
+    aiTrialBadge:'AI \u514d\u8d39\u8bd5\u7528 1 \u6b21',
     proTeaserAi:'\u559c\u6b22\u5417\uff1f\u89e3\u9501 Pro AI',
   },
   zhTW:{
@@ -1081,7 +1081,7 @@ const I18N = {
     tourSkipShort:'\u7565\u904e',
     tourDone:'\u5b8c\u6210 \u2713',
     tourNext:'\u4e0b\u4e00\u6b65 \u2192',
-    aiTrialBadge:'\u514d\u8cbb\u8a66\u7528 1 \u6b21',
+    aiTrialBadge:'AI \u514d\u8cbb\u8a66\u7528 1 \u6b21',
     proTeaserAi:'\u559c\u6b61\u55ce\uff1f\u89e3\u9396 Pro AI',
   },
   PT:{
@@ -1235,7 +1235,7 @@ const I18N = {
     tourSkipShort:'Ignorar',
     tourDone:'Conclu\u00eddo \u2713',
     tourNext:'Seguinte \u2192',
-    aiTrialBadge:'1 tentativa gr\u00e1tis',
+    aiTrialBadge:'1 tentativa IA gr\u00e1tis',
     proTeaserAi:'gostaste? desbloqueia Pro AI',
   },
   ja:{
@@ -1389,7 +1389,7 @@ const I18N = {
     tourSkipShort:'\u30b9\u30ad\u30c3\u30d7',
     tourDone:'\u5b8c\u4e86 \u2713',
     tourNext:'\u6b21\u3078 \u2192',
-    aiTrialBadge:'\u7121\u6599\u304a\u8a66\u3057 1 \u56de',
+    aiTrialBadge:'AI \u7121\u6599\u304a\u8a66\u3057 1 \u56de',
     proTeaserAi:'\u6c17\u306b\u5165\u3063\u305f\uff1f Pro AI \u3092\u89e3\u9664',
   },
 };
