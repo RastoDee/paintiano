@@ -7132,23 +7132,14 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     for(let i=0;i<N;i++){ const r=C*Math.sqrt(i+1)*3.1,a=i*GA;
       const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
     ctx.stroke();
-    // Variant A: soft glowing dots on each node instead of petals.
-    ctx.globalCompositeOperation='lighter';
     for(let i=0;i<N;i++){
       const m=chordMeta(i), col=chordCol(i);
       const r=C*Math.sqrt(i+1)*3.1, a=i*GA;
       const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
-      const size=(S*0.008+m.dur*S*0.022)*(0.55+0.45*Math.sqrt((i+1)/cn))*(0.75+0.5*dnaE);
-      const g=ctx.createRadialGradient(x,y,0.5, x,y,size*1.6);
-      g.addColorStop(0, css(col.map(q=>Math.min(255,q*1.45+40)), 0.9));
-      g.addColorStop(0.35, css(col, 0.6));
-      g.addColorStop(1, css(col, 0));
-      ctx.fillStyle=g;
-      ctx.beginPath(); ctx.arc(x,y,size*1.6,0,7); ctx.fill();
-      ctx.fillStyle=css([255,252,245], 0.5*m.vel+0.15);
-      ctx.beginPath(); ctx.arc(x,y,Math.max(1,size*0.28),0,7); ctx.fill();
+      const size=(S*0.0022+m.dur*S*0.004)*(0.6+0.4*Math.sqrt((i+1)/cn));
+      ctx.fillStyle=css(col, 0.5+0.18*m.vel);
+      ctx.beginPath(); ctx.arc(x,y, Math.max(0.9,size), 0,7); ctx.fill();
     }
-    ctx.globalCompositeOperation='source-over';
     return;
   }
 
