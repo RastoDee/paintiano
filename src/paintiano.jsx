@@ -9102,51 +9102,43 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     for(let i=0;i<N;i++){ const r=C*Math.sqrt(i+1)*3.1,a=i*GA;
       const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
     ctx.stroke();
+    // Variant A: soft glowing dots on each node instead of petals.
+    ctx.globalCompositeOperation='lighter';
     for(let i=0;i<N;i++){
       const m=chordMeta(i), col=chordCol(i);
       const r=C*Math.sqrt(i+1)*3.1, a=i*GA;
       const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
-      const size=(S*0.010+m.dur*S*0.030)*(0.55+0.45*Math.sqrt((i+1)/cn))*(0.75+0.5*dnaE);
-      ctx.save(); ctx.translate(x,y); ctx.rotate(a+Math.PI/2);
-      const g=ctx.createRadialGradient(0,-size*0.15,1, 0,0,size*1.15);
-      g.addColorStop(0, css(col.map(q=>Math.min(255,q*1.45+40)), 0.55+0.4*m.vel));
-      g.addColorStop(0.55, css(col, 0.8));
+      const size=(S*0.008+m.dur*S*0.022)*(0.55+0.45*Math.sqrt((i+1)/cn))*(0.75+0.5*dnaE);
+      const g=ctx.createRadialGradient(x,y,0.5, x,y,size*1.6);
+      g.addColorStop(0, css(col.map(q=>Math.min(255,q*1.45+40)), 0.9));
+      g.addColorStop(0.35, css(col, 0.6));
       g.addColorStop(1, css(col, 0));
       ctx.fillStyle=g;
-      ctx.beginPath();
-      ctx.moveTo(0,-size);
-      ctx.quadraticCurveTo(size*0.62,-size*0.15, 0,size*0.72);
-      ctx.quadraticCurveTo(-size*0.62,-size*0.15, 0,-size);
-      ctx.fill();
-      ctx.fillStyle=css([245,240,228], 0.75*m.vel+0.1);
-      ctx.beginPath(); ctx.arc(0,-size*0.1, Math.max(1.1,size*0.09),0,7); ctx.fill();
-      ctx.restore();
+      ctx.beginPath(); ctx.arc(x,y,size*1.6,0,7); ctx.fill();
+      ctx.fillStyle=css([255,252,245], 0.5*m.vel+0.15);
+      ctx.beginPath(); ctx.arc(x,y,Math.max(1,size*0.28),0,7); ctx.fill();
     }
+    ctx.globalCompositeOperation='source-over';
     return;
   }
 
   if(pick===1){
-    // ── 1 · ZÁVOJE — chromatic veils, additive ─────────────────────────────
-    ctx.globalCompositeOperation='lighter';
+    // — 1 · NIŤ — clean coloured lines along the golden-angle spiral, no petals
+    const C1 = S*0.0135*(0.9+0.35*dnaD);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    let px, py;
     for(let i=0;i<N;i++){
       const m=chordMeta(i), col=chordCol(i);
-      const a0=i*GA*0.5, r0=S*0.035+i*(S*0.004);
-      const steps=22, width=(S*0.02+m.dur*S*0.06)*(0.4+0.6*m.vel)*(0.75+0.5*dnaE)+S*0.012;
-      ctx.beginPath();
-      for(let s2=0;s2<=steps;s2++){
-        const t=s2/steps, a=a0+t*1.9, r=r0+t*S*0.13*m.dur;
-        const x=cx+Math.cos(a)*r+(rnd()-0.5)*S*0.005;
-        const y=cy+Math.sin(a)*r*0.92+(rnd()-0.5)*S*0.005;
-        s2?ctx.lineTo(x,y):ctx.moveTo(x,y);
+      const r=C1*Math.sqrt(i+1)*3.1, a=i*GA;
+      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+      if(i){
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(x,y);
+        ctx.strokeStyle=css(col, 0.55+0.35*m.vel);
+        ctx.lineWidth=Math.max(1, S*0.0016*(0.6+0.8*m.dur));
+        ctx.stroke();
       }
-      ctx.strokeStyle=css(col, 0.05+0.075*m.vel);
-      ctx.lineWidth=width; ctx.lineCap='round';
-      ctx.stroke();
-      // soft echo pass instead of blur (blur filter is too slow on mobile)
-      ctx.strokeStyle=css(col, 0.035);
-      ctx.lineWidth=width*1.9; ctx.stroke();
+      px=x; py=y;
     }
-    ctx.globalCompositeOperation='source-over';
     return;
   }
 
