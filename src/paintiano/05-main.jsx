@@ -2525,8 +2525,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const localized=t('mfiSampleTitle'); if(!localized) return;
     let sampleTitles=[]; try{ sampleTitles=Object.values(I18N).map(x=>x&&x.mfiSampleTitle).filter(Boolean); }catch(_){}
     const isSampleTitle=v=>!!v && sampleTitles.includes(v);
-    if(isSampleTitle(currentMood) && currentMood!==localized) setCurrentMood(localized);
-    setInfo(prev=> (prev && isSampleTitle(prev.title) && prev.title!==localized) ? {...prev,title:localized} : prev);
+    if(moodFromImgRef.current){
+      if(isSampleTitle(currentMood) && currentMood!==localized) setCurrentMood(localized);
+      setInfo(prev=> (prev && isSampleTitle(prev.title) && prev.title!==localized) ? {...prev,title:localized} : prev);
+    }
   },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
