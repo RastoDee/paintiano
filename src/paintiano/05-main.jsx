@@ -5330,7 +5330,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // image canvas is transparent with the <img> beneath, clearing the canvas
     // reveals the photo again — and the stronger block outline (0.42) makes the
     // before/after difference obvious so Clear visibly did something.
-    if(loadedSource==='image' && !imgComposeRef.current && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
+    if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
       setImgPlayMode('scan'); imgPlayModeRef.current='scan';
       // KEEP: pixelRef, scanPixelBackupRef, originalImgUrl (the picture stays) AND
@@ -5371,6 +5371,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // still live in the current app state (canvas keeps the photo), but
       // there's no STASHED draft for ← Back → chip to resurrect.
       dispRef.current=0; playedOnceRef.current=false;
+      imgComposeRef.current=false; setImgPlayMode('scan'); imgPlayModeRef.current='scan';
       if(moodMetaRef.current) moodMetaRef.current.playedOnce=false;
       imageStashRef.current=null; setHasImageDraft(false);
       // loadedSource stays 'image' → image view persists with the photo on canvas,
