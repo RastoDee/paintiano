@@ -5377,7 +5377,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // still live in the current app state (canvas keeps the photo), but
       // there's no STASHED draft for ← Back → chip to resurrect.
       dispRef.current=0; playedOnceRef.current=false;
-      imgComposeRef.current=false; setImgPlayMode('scan'); imgPlayModeRef.current='scan';
       if(moodMetaRef.current) moodMetaRef.current.playedOnce=false;
       imageStashRef.current=null; setHasImageDraft(false);
       // loadedSource stays 'image' → image view persists with the photo on canvas,
