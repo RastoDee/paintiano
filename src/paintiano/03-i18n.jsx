@@ -155,7 +155,7 @@ const I18N = {
     tourSkipShort:'Skip',
     tourDone:'Done \u2713',
     tourNext:'Next \u2192',
-    aiTrialBadge:'{n} free tries',
+    aiTrialBadge:'1 free try',
     proTeaserAi:'loved it? unlock Pro AI',
   },
   DE:{
@@ -309,7 +309,7 @@ const I18N = {
     tourSkipShort:'\u00dcberspringen',
     tourDone:'Fertig \u2713',
     tourNext:'Weiter \u2192',
-    aiTrialBadge:'{n} Gratisversuche',
+    aiTrialBadge:'1 Gratisversuch',
     proTeaserAi:'gef\u00e4llt\u2019s? Pro AI freischalten',
   },
   FR:{
@@ -463,7 +463,7 @@ const I18N = {
     tourSkipShort:'Passer',
     tourDone:'Termin\u00e9 \u2713',
     tourNext:'Suivant \u2192',
-    aiTrialBadge:'{n} essais gratuits',
+    aiTrialBadge:'1 essai gratuit',
     proTeaserAi:'\u00e7a te pla\u00eet ? d\u00e9bloque Pro AI',
   },
   ES:{
@@ -617,7 +617,7 @@ const I18N = {
     tourSkipShort:'Omitir',
     tourDone:'Listo \u2713',
     tourNext:'Siguiente \u2192',
-    aiTrialBadge:'{n} pruebas gratis',
+    aiTrialBadge:'1 prueba gratis',
     proTeaserAi:'\u00bfte gust\u00f3? desbloquea Pro AI',
   },
   SK:{
@@ -771,7 +771,7 @@ const I18N = {
     tourSkipShort:'Presko\u010di\u0165',
     tourDone:'Hotovo \u2713',
     tourNext:'\u010ealej \u2192',
-    aiTrialBadge:'{n} sk\u00fa\u0161ky zdarma',
+    aiTrialBadge:'1 sk\u00fa\u0161ka zdarma',
     proTeaserAi:'p\u00e1\u010di sa? odomkni Pro AI',
   },
   zh:{
@@ -928,7 +928,7 @@ const I18N = {
     tourSkipShort:'\u8df3\u8fc7',
     tourDone:'\u5b8c\u6210 \u2713',
     tourNext:'\u4e0b\u4e00\u6b65 \u2192',
-    aiTrialBadge:'{n} \u6b21\u514d\u8d39\u8bd5\u7528',
+    aiTrialBadge:'\u514d\u8d39\u8bd5\u7528 1 \u6b21',
     proTeaserAi:'\u559c\u6b22\u5417\uff1f\u89e3\u9501 Pro AI',
   },
   zhTW:{
@@ -1081,7 +1081,7 @@ const I18N = {
     tourSkipShort:'\u7565\u904e',
     tourDone:'\u5b8c\u6210 \u2713',
     tourNext:'\u4e0b\u4e00\u6b65 \u2192',
-    aiTrialBadge:'{n} \u6b21\u514d\u8cbb\u8a66\u7528',
+    aiTrialBadge:'\u514d\u8cbb\u8a66\u7528 1 \u6b21',
     proTeaserAi:'\u559c\u6b61\u55ce\uff1f\u89e3\u9396 Pro AI',
   },
   PT:{
@@ -1235,7 +1235,7 @@ const I18N = {
     tourSkipShort:'Ignorar',
     tourDone:'Conclu\u00eddo \u2713',
     tourNext:'Seguinte \u2192',
-    aiTrialBadge:'{n} tentativas gr\u00e1tis',
+    aiTrialBadge:'1 tentativa gr\u00e1tis',
     proTeaserAi:'gostaste? desbloqueia Pro AI',
   },
   ja:{
@@ -1389,7 +1389,7 @@ const I18N = {
     tourSkipShort:'\u30b9\u30ad\u30c3\u30d7',
     tourDone:'\u5b8c\u4e86 \u2713',
     tourNext:'\u6b21\u3078 \u2192',
-    aiTrialBadge:'\u7121\u6599\u304a\u8a66\u3057 {n} \u56de',
+    aiTrialBadge:'\u7121\u6599\u304a\u8a66\u3057 1 \u56de',
     proTeaserAi:'\u6c17\u306b\u5165\u3063\u305f\uff1f Pro AI \u3092\u89e3\u9664',
   },
 };
