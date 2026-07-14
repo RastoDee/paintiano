@@ -21958,30 +21958,38 @@ function useProStatus() {
 // trialUsed is a FLOAT — full AI calls (composeFromImage, aiCompose) consume
 // 1.0, while lighter calls (atmosphere detect) consume 0.5. trialLeft is
 // rounded UP for user-facing display via Math.ceil at the callsite.
+// ─── AI trial hook — PER-MODE credits (no shared pool) ───────────────────────
+// Each heavy AI mode gets its own single free try: 'mood', 'mfi', 'compose'.
+// 'atmomelody' is ONE shared credit for the atmo + melody pair together
+// (2×atmo, 2×melody, or 1+1 all exhaust the same single credit). We persist a
+// small map of how many times each key was used.
+const AI_TRIAL_LIMITS = { mood:1, mfi:1, compose:1, atmomelody:1 };
 function useAiTrial() {
-  const [trialUsed, setTrialUsed] = useState(() => {
-    try { return Math.max(0, parseFloat(localStorage.getItem(PRO_CFG.trialStoreKey) || '0')) || 0; }
-    catch (_) { return 0; }
+  const [used, setUsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(PRO_CFG.trialStoreKey) || '{}') || {}; }
+    catch (_) { return {}; }
   });
-
-  // Optional amount (default 1 = full AI call). Pass 0.5 for atmo/lighter calls.
-  const consumeTrial = useCallback((amount = 1) => {
-    setTrialUsed((n) => {
-      const next = n + amount;
-      try { localStorage.setItem(PRO_CFG.trialStoreKey, String(next)); } catch (_) {}
+  // Consume one unit of a specific mode's credit. amount kept for atmo/melody
+  // (0.5 each → two uses exhaust the shared 1.0).
+  const consumeTrial = useCallback((key, amount = 1) => {
+    setUsed((m) => {
+      const next = { ...m, [key]: (m[key] || 0) + amount };
+      try { localStorage.setItem(PRO_CFG.trialStoreKey, JSON.stringify(next)); } catch (_) {}
       return next;
     });
   }, []);
-
   const resetTrial = useCallback(() => {
     try { localStorage.removeItem(PRO_CFG.trialStoreKey); } catch (_) {}
-    setTrialUsed(0);
+    setUsed({});
   }, []);
-
+  // Has this specific mode's credit run out?
+  const modeExhausted = useCallback((key) => {
+    const lim = AI_TRIAL_LIMITS[key] || 1;
+    return (used[key] || 0) >= lim;
+  }, [used]);
   return {
-    trialUsed,
-    trialLeft: Math.max(0, PRO_CFG.trialMax - trialUsed),
-    trialExhausted: trialUsed >= PRO_CFG.trialMax,
+    trialUsedMap: used,
+    modeExhausted,
     consumeTrial,
     resetTrial,
   };
@@ -22004,20 +22012,19 @@ function useAiTrial() {
 function useEntitlements() {
   const pro = useProStatus();
   const trial = useAiTrial();
-  const gateAI = useCallback((amount = 1, consume = true) => {
+  // gateAI(key, amount, consume) — key is the AI mode: 'mood'|'mfi'|'compose'|
+  // 'atmomelody'. Each mode has its own credit (atmomelody shared for the pair).
+  const gateAI = useCallback((key, amount = 1, consume = true) => {
     if (pro.proStatus === 'loading') return { allow: false, reason: 'loading' };
-    // Unlimited AI is a Pro AI privilege only. Plain Pro is the full
-    // deterministic tool but NOT unlimited AI — so Pro falls through to the
-    // same trial path as Free, which funnels it toward a Pro AI upgrade.
     if (pro.proStatus === 'pro_ai')  return { allow: true };
-    // free OR pro tier → trial credits
-    if (trial.trialExhausted)        return { allow: false, reason: 'ai_trial' };
-    if (consume) trial.consumeTrial(amount);
+    // free OR pro tier → per-mode trial credit
+    if (trial.modeExhausted(key))    return { allow: false, reason: 'ai_trial' };
+    if (consume) trial.consumeTrial(key, amount);
     return { allow: true };
-  }, [pro.proStatus, trial.trialExhausted, trial.consumeTrial]);
+  }, [pro.proStatus, trial.modeExhausted, trial.consumeTrial]);
   return {
     ...pro,            // proStatus, isPro, licenseKey, maskedEmail, activate/deactivate/openCheckout
-    ...trial,          // trialUsed, trialLeft, trialExhausted, consumeTrial, resetTrial
+    ...trial,          // trialUsedMap, modeExhausted, consumeTrial, resetTrial
     ready: pro.proStatus !== 'loading',
     gateAI,
   };
@@ -23797,7 +23804,7 @@ export default function Paintiano() {
   // effectivePairs / etc. below. The hook has no parameter dependencies — order
   // among hooks doesn't matter for correctness as long as it stays consistent.
   const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
-          trialUsed, trialLeft, trialExhausted, consumeTrial, gateAI } = useEntitlements();
+          trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
   const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
   // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
@@ -24116,7 +24123,10 @@ export default function Paintiano() {
   // feel? · Mood from image · AI Compose · Atmosphere) and the locked mood
   // input. Clicks on any of these still surface the paywall once, not on every
   // tap — the visual state already communicates the gating.
-  const aiLocked = (proStatus === 'free') && trialExhausted;
+  // Per-mode lock helpers. A tile is 'locked' only when ITS OWN credit is spent
+  // (Pro AI is unlimited so never locked). 'free' and plain 'pro' share the trial path.
+  const aiLockedMode = useCallback((key)=> (proStatus!=='pro_ai') && modeExhausted(key), [proStatus, modeExhausted]);
+  const aiLocked = aiLockedMode('mfi');  // legacy alias: the image-AI (MFI) tile
   // Descriptive style labels shown on the chips (the internal keys —
   // picasso/kusama/… — stay unchanged everywhere in the logic). This keeps the
   // feature branded by what it DOES, while STYLE_INSPIRED supplies a small
@@ -24240,32 +24250,8 @@ export default function Paintiano() {
     return()=>clearTimeout(t);
   },[err,errInfo]);
 
-  // ── AI trial countdown banner ───────────────────────────────────────────────
-  // Show a gold info banner whenever a free user has only 1 or 2 AI trials left
-  // (Math.ceil to avoid showing "0.5" or "1.5"). Re-fires on EVERY trialLeft
-  // change while in the danger zone — so the user can't miss it after a quick
-  // consume. Suppressed for Pro users and when trial is fully exhausted (the
-  // paywall handles that case explicitly). Tracks whether WE set the current
-  // banner via a ref so that flipping to Pro can clear it immediately, not
-  // wait for the 6 s auto-dismiss (which leaves a "1 trial left" message
-  // visible on the freshly-Pro setup screen — confusing).
-  const trialBannerActiveRef = useRef(false);
-  useEffect(()=>{
-    if(isPro||trialExhausted) {
-      if(trialBannerActiveRef.current){
-        setErr(''); setErrInfo(false);
-        trialBannerActiveRef.current = false;
-      }
-      return;
-    }
-    const left=Math.ceil(trialLeft);
-    if(left>2||left<=0) return;
-    const msg = left===1
-      ? (t('trialBanner1')||'Only 1 AI trial left · Get Pro AI for unlimited')
-      : (t('trialBanner2')||'Only '+left+' AI trials left · Get Pro AI for unlimited');
-    setErr(msg); setErrInfo(true);
-    trialBannerActiveRef.current = true;
-  },[trialLeft,isPro,trialExhausted,t]);
+  // (AI trial banner removed — per-mode credits make a global counter banner
+  //  misleading; the per-tile badges + paywall communicate state instead.)
 
   const [working,   setWorking]   = useState(false);
   const [wLabel,    setWLabel]    = useState('');
@@ -29040,7 +29026,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Only a real, paid AI call costs a trial credit. Check WITHOUT consuming
       // (consume:false) — the credit is charged after a successful reply below.
       if(!parsed){
-        const g=gateAI(1,false);
+        const g=gateAI('mfi',1,false);
         if(!g.allow){
           // Revert the eagerly-set canvas state — no AI call will happen.
           setImgMoodThumb(null); setMoodContext(false); setMoodFromImg(false);
@@ -29073,7 +29059,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Other languages are translated lazily on first switch (title-only, cheap).
       _mfiTitlesRef.current = isSample ? null : {[lang]: title};
       // Store fresh AI results so the next run of this image is free.
-      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} gateAI(1, true); }
+      if(!_fromCache){ try{ _imgMoodCacheSet(_hash,parsed); }catch(_){} gateAI('mfi',1, true); }
       // Body 3: make Vary work in mood-from-image. rerollSong expects notes as
       // {note,dur,beat} objects; the AI returns [pitch,dur,beat,vel] arrays — so
       // normalise here. Vary then re-tunes THIS image's piece locally (transpose
@@ -29507,7 +29493,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         try{ _applyComposition(_cached); return; }catch(_){ /* fall through to AI */ }
       }
     }
-    { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
+    { const g=gateAI('compose',1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true); setWLabel('composing…'); setWPct(20); setErr(''); setErrInfo(false); setMidiBlob(null); stopAll();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
@@ -29579,7 +29565,7 @@ Composition rules:
       if(!raw)throw new Error('Empty content');
       const parsed=extractAiJson(raw);
       if(!parsed?.notes?.length)throw new Error('No notes');
-      gateAI(1,true);
+      gateAI('compose',1,true);
       // Cache the composition keyed by image hash so re-composing the same
       // picture later is instant + free (see _imgComposeCacheGet).
       if(_imgHash!=null){ try{ _imgComposeCacheSet(_imgHash,{notes:parsed.notes,tempo:parsed.tempo||90,title:parsed.title||''}); }catch(_){} }
@@ -29631,7 +29617,7 @@ Composition rules:
       const _cached=_melodyCacheGet(_key);
       if(_cached&&_cached.notes&&_cached.notes.length){ return _cached; }
     }
-    { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return null; } }
+    { const g=gateAI('atmomelody',0.5,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return null; } }
     setMelodyBusy(true); setErr(''); setErrInfo(false);
     try{
       // ATMO directive: when an atmosphere has been detected, project (v,e) into
@@ -29699,7 +29685,7 @@ Output ONLY valid JSON, no prose, no markdown:
       if(!raw)throw new Error('Empty content');
       const parsed=extractAiJson(raw);
       if(!parsed?.notes?.length)throw new Error('No notes');
-      gateAI(1,true);
+      gateAI('atmomelody',0.5,true);
       const result={notes:parsed.notes,chords:Array.isArray(parsed.chords)?parsed.chords:[],tempo:parsed.tempo||90,title:parsed.title||''};
       if(_key!=null){ try{ _melodyCacheSet(_key,result); }catch(_){} }
       return result;
@@ -29765,7 +29751,7 @@ Output ONLY valid JSON, no prose, no markdown:
     // Check WITHOUT consuming (consume:false) — we charge the credit only after
     // a successful AI reply below, so a failed call that falls back to the
     // offline generator doesn't burn a trial. Mirrors mood-from-image / atmosphere.
-    { const g=gateAI(1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
+    { const g=gateAI('mood',1,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
@@ -29834,7 +29820,7 @@ Hard requirements:
       aiComposeCacheRef.current = { key:_ckey, parsed };
       // Successful fresh AI composition — charge the trial now (free tier only;
       // no-op for Pro). Reaching here means a real AI reply parsed OK.
-      gateAI(1, true);
+      gateAI('mood',1, true);
       const evts=noteArr2events(parsed.notes,parsed.tempo);
       if(!evts.length)throw new Error('Could not parse composition');
       // Set varySource (normalised note objects) so Vary can re-tune THIS piece
@@ -30183,7 +30169,7 @@ Hard requirements:
     // counts toward the free trial pool. Check the gate WITHOUT consuming yet
     // (consume:false) — we only charge the 0.5 credit after a successful reply,
     // so a failed/zero-result call doesn't burn a trial.
-    { const g=gateAI(0.5,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
+    { const g=gateAI('atmomelody',0.5,false); if(!g.allow){ if(g.reason==='ai_trial') setPaywallReason('ai_trial'); return; } }
     setAtmoBusy(true); setErr('');
     try{
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
@@ -30221,7 +30207,7 @@ Hard requirements:
       // Successful fresh AI call — now charge the trial (free tier only).
       // gateAI with consume:true applies the 0.5 credit through the same path;
       // for Pro it's a no-op. Toggling atmo on/off later uses cached atmoMood.
-      gateAI(0.5, true);
+      gateAI('atmomelody',0.5, true);
     }catch(e){ const _net=e&&(e.message==='AI unavailable'||e._aiNet); if(_net) setAiDown(true); const _errs=(t('errs')||{}); setErr(_net?(_errs.aiNet||'AI is unreachable right now.'):(_errs.aiBadResp||'The AI reply was incomplete — try again.')); setErrInfo(false); }
     finally{ setAtmoBusy(false); }
   },[atmoBusy,originalImgUrl,lang,t,isPro,gateAI]);
@@ -33743,7 +33729,7 @@ Hard requirements:
               mood (how do you feel?) · compose · mic. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('createLabel'))}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMoodDraft){ restoreMode('mood'); setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>{(proStatus==='free' && !trialExhausted) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(220,180,90,.95)',background:'rgba(201,168,76,.12)',border:'1px solid rgba(201,168,76,.5)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free try')}</span>)}
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMoodDraft){ restoreMode('mood'); setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>{(proStatus!=='pro_ai' && !modeExhausted('mood')) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(220,180,90,.95)',background:'rgba(201,168,76,.12)',border:'1px solid rgba(201,168,76,.5)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free try')}</span>)}
               {(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dcb45a',boxShadow:'0 0 6px #dcb45a',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></span>
               {_sent(t('moodHowFeel'))}
@@ -33846,7 +33832,7 @@ Hard requirements:
               mood-from-image · music · image. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('importLabel'))}</div>
-            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ restoreMode('mfi'); setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':((moodFromImg&&chords.length>0||hasMfiDraft)?'#eafff4':'rgba(228,178,255,.95)')),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>{(proStatus==='free' && !trialExhausted) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(228,178,255,.95)',background:'rgba(220,150,255,.14)',border:'1px solid rgba(220,150,255,.5)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free try')}</span>)}
+            <button onClick={()=>{ if(aiLocked){ setPaywallReason('ai_trial'); return; } if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ restoreMode('mfi'); setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':((moodFromImg&&chords.length>0||hasMfiDraft)?'#eafff4':'rgba(228,178,255,.95)')),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>{(proStatus!=='pro_ai' && !modeExhausted('mfi')) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(228,178,255,.95)',background:'rgba(220,150,255,.14)',border:'1px solid rgba(220,150,255,.5)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free try')}</span>)}
               {(moodFromImg&&chords.length>0||hasMfiDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dc96ff',boxShadow:'0 0 6px #dc96ff',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>}</span>
               {imgAiBusy?'…':_sent(t('imgMood')||'mood from image').replace(/^(\S+)\s+/, '$1\u00A0')}
@@ -34521,7 +34507,7 @@ Hard requirements:
             {isDesktop && <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('imgReadLabel')!=='imgReadLabel'?t('imgReadLabel'):(lang==='SK'?'čítanie':'reading')}</div>}
             <div style={{display:'flex',flexDirection:isDesktop?'column':'row',gap:6}}>
               <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
-              <button onClick={()=>{ if(busy||working) return; if(aiLocked){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.7)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'0 0 0 1px rgba(220,150,255,.24)',opacity:aiLocked?.85:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,position:'relative'}}>{(proStatus==='free' && !trialExhausted) && (<span style={{position:'absolute',top:-7,right:8,fontSize:(.4*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',whiteSpace:'nowrap',color:'rgba(228,178,255,.98)',background:'rgba(40,20,55,.95)',border:'1px solid rgba(220,150,255,.6)',borderRadius:8,padding:'1px 6px',pointerEvents:'none',zIndex:3}}>{ts('aiTrialBadge','1 free try')}</span>)}
+              <button onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.7)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'0 0 0 1px rgba(220,150,255,.24)',opacity:aiLocked?.85:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,position:'relative'}}>{(proStatus!=='pro_ai' && !modeExhausted('compose')) && (<span style={{position:'absolute',top:-7,right:8,fontSize:(.4*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',whiteSpace:'nowrap',color:'rgba(228,178,255,.98)',background:'rgba(40,20,55,.95)',border:'1px solid rgba(220,150,255,.6)',borderRadius:8,padding:'1px 6px',pointerEvents:'none',zIndex:3}}>{ts('aiTrialBadge','1 free try')}</span>)}
                 <span>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')}</span>
                 {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
               </button>
@@ -36093,7 +36079,7 @@ Hard requirements:
       )}
       {/* ZASAH — Pro AI success teaser (free user finished an AI piece). */}
       {!isPro && composeSource==='ai' && chords.length>0 && !playing && disp>=chords.length && !recording && !busy && !composeMode && !micActive && isActiveView && (
-        <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'calc(env(safe-area-inset-bottom,0px) + 92px)',zIndex:55,pointerEvents:'auto'}}>
+        <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'calc(env(safe-area-inset-bottom,0px) + 200px)',zIndex:51,pointerEvents:'auto'}}>
           <button onClick={()=>{ try{ window.posthog && window.posthog.capture('pro_teaser_click',{ at:'ai_success', ai:true }); }catch(_){} setPaywallReason('ai_trial'); }} className="pf-lift" style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 18px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:600,color:'rgba(228,178,255,.98)',background:'rgba(220,150,255,.14)',border:'1px solid rgba(220,150,255,.6)',boxShadow:'0 8px 26px rgba(0,0,0,.4)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
             ✦ {ts('proTeaserAi','p\u00e1\u010di sa? odomkni Pro AI')}
           </button>
@@ -36743,7 +36729,7 @@ Hard requirements:
         <ProPaywall
           t={t}
           reason={paywallReason}
-          trialLeft={trialLeft}
+          trialLeft={0}
           onClose={()=>setPaywallReason(null)}
           onActivated={()=>setPaywallReason(null)}
           openCheckout={openCheckout}
