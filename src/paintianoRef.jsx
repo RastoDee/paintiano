@@ -25209,10 +25209,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const localized=t('mfiSampleTitle'); if(!localized) return;
     let sampleTitles=[]; try{ sampleTitles=Object.values(I18N).map(x=>x&&x.mfiSampleTitle).filter(Boolean); }catch(_){}
     const isSampleTitle=v=>!!v && sampleTitles.includes(v);
-    if(moodFromImgRef.current){
-      if(isSampleTitle(currentMood) && currentMood!==localized) setCurrentMood(localized);
-      setInfo(prev=> (prev && isSampleTitle(prev.title) && prev.title!==localized) ? {...prev,title:localized} : prev);
-    }
+    if(isSampleTitle(currentMood) && currentMood!==localized) setCurrentMood(localized);
+    setInfo(prev=> (prev && isSampleTitle(prev.title) && prev.title!==localized) ? {...prev,title:localized} : prev);
   },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const [loopMode,    setLoopMode]    = useState(false);
   const [varyFlash,   setVaryFlash]   = useState(false);
@@ -34970,7 +34968,7 @@ Hard requirements:
         };
         const _imgAtmo = (viewMode==='image' && originalImgUrl && atmoOn && atmoMood);
         const _atmoTitle = _imgAtmo ? (()=>{ const w=_atmoWordSeek(atmoMood.v,atmoMood.e); const ti=(atmoMood.title&&String(atmoMood.title).trim())||''; return ti?(ti+' · '+w):w; })() : null;
-        const seekTitle = _atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : (micPainting||micListening||micActive) ? t('mic').replace(/[^\p{L} ]/gu,'') : '')); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening);
+        const _isImgScan = (loadedSource==='image' && !moodFromImg && imgPlayModeRef.current!=='compose' && !imgComposeRef.current); const seekTitle = _isImgScan ? ((compositionName||'').trim() || (info?info.title:'') || '') : (_atmoTitle || (info ? info.title : (composeMode ? t('compose').replace(/[^\p{L} ]/gu,'') : (micPainting||micListening||micActive) ? t('mic').replace(/[^\p{L} ]/gu,'') : ''))); const seekDur = info ? info.dur : Math.round((chords[chords.length-1]?.startMs||0)/1000)||0; const showTransport = !!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening);
         // Title group (mood/morph title + library/AI badge). Rendered either
         // inline in the seek row (default) or as a separate block above the
         // seek bar on the 5-col layout (desktop/tablet landscape) — there the
