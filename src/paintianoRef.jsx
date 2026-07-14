@@ -24974,7 +24974,7 @@ export default function Paintiano() {
   const basicModeRef = useRef(false);
   // Once the user has taken the bridge into Advanced, don't offer it again
   // this session — they now know the top-bar Lite/Advanced switch.
-  const [bridgeUsed, setBridgeUsed] = useState(false);
+  const [bridgeUsed, setBridgeUsed] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_discovered')==='1'; }catch(_){ return false; } });
   // GUIDED TOUR (v2) — offered on arrival in Advanced via the bridge.
   const [tourWelcome, setTourWelcome] = useState(false);
   const [tourStep, setTourStep] = useState(-1);
@@ -25035,8 +25035,9 @@ export default function Paintiano() {
   // Offer the tour once we've truly landed in Advanced after the bridge.
   useEffect(()=>{
     if(tourPendingRef.current && !basicMode){ tourPendingRef.current=false;
-      let seen=false; try{ seen = (typeof localStorage!=='undefined' && localStorage.getItem('paintiano_tour_seen')==='1'); }catch(_){}
-      if(!seen){ setTimeout(()=>setTourWelcome(true), 420); } }
+      // tourPendingRef is set ONLY by the discover-CTA click, so this fires
+      // exactly once — on the very arrival the click produced.
+      setTimeout(()=>setTourWelcome(true), 420); }
   },[basicMode]);
   // Re-measure the highlight ring as the modal opens/scrolls.
   useEffect(()=>{
@@ -37113,7 +37114,7 @@ Hard requirements:
             instant of delight. Free users only; keeps Lite calm otherwise. */}
         {basicMode && !isPro && !bridgeUsed && _done && !_litePlayChipShown && (
           <div style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'calc(52% + 220px)'}:{top:480}),right:24,width:150,zIndex:immersive?10001:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 74px)',transform:'translateX(-50%)',zIndex:immersive?10001:62,pointerEvents:'auto'}}>
-            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
+            <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} try{ localStorage.setItem('paintiano_discovered','1'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
               ✦ {t('liteBridge')||'discover the full Paintiano →'}
             </button>
@@ -37132,7 +37133,6 @@ Hard requirements:
           ];
           const endTour = (done)=>{
             try{ window.posthog && window.posthog.capture(done?'tour_complete':'tour_skip'); }catch(_){}
-            try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){}
             setTourStep(-1); setTourWelcome(false);
             try{ setShowSetupModal(false); }catch(_){}
             try{ setForceSetup(tourReturnSetupRef.current); }catch(_){}
