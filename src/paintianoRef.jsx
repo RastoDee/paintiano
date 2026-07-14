@@ -33837,7 +33837,6 @@ Hard requirements:
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>}</span>
               {imgAiBusy?'…':_sent(t('imgMood')||'mood from image').replace(/^(\S+)\s+/, '$1\u00A0')}
               {!aiLocked && !aiUsable && <span style={{fontSize:(.5*effScale)+'rem',opacity:.8,fontWeight:500,letterSpacing:0}}>· {t('aiOffline')||'offline'}</span>}
-              {aiLocked && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
             </button>
             <div className="pf-setup-import" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
               {/* Unified MUSIC tile — opens one picker for MIDI / audio / score;
@@ -34873,7 +34872,7 @@ Hard requirements:
                 else if(pickMode==='midi') refMidi.current?.click();
                 else if(pickMode==='audio') refAudio.current?.click();
                 else if(pickMode==='score') refScore.current?.click();
-                else if(pickMode==='imgmood') refImgMood.current?.click();
+                else if(pickMode==='imgmood'){ if(aiLocked){ setPickMode(null); setPaywallReason('ai_trial'); return; } refImgMood.current?.click(); }
                 else refImage.current?.click();
                 // NOTE: do NOT setPickMode(null) here — doing so in the same tick
                 // unmounts the hidden <input> before the browser's file dialog
@@ -34883,6 +34882,7 @@ Hard requirements:
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="upload" s={14}/>{_sent(_stripIcon(t('chooseFile')))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'MIDI · audio · MusicXML':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'Audio · .mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'JPG · PNG · GIF · WEBP · HEIC'}</span>
+                {pickMode==='imgmood' && (proStatus!=='pro_ai') && (modeExhausted('mfi') ? <div style={{marginTop:8,display:'flex',justifyContent:'center'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></div> : <span style={{display:'block',marginTop:6,fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',color:'rgba(228,178,255,.9)'}}>{ts('aiTrialBadge','1 free try')}</span>)}
               </button>
               {/* MY MUSIC TILE — replay a saved slot. Same drawer as the Lite
                   tile so the whole archive is in one place. Shown in every
@@ -35800,7 +35800,8 @@ Hard requirements:
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(_stripIcon(t('selectMood')))}</div>
             {(()=>{
-              // For Free + aiLocked the input stays fully editable (so the
+              const moodLocked = aiLockedMode('mood');
+              // For Free + moodLocked the input stays fully editable (so the
               // autocomplete is useful) but the submit path is restricted to
               // EXACT preset matches — the AI fallback (aiMoodFromText) is
               // gated. If what the user typed doesn't resolve to a preset
@@ -35828,7 +35829,7 @@ Hard requirements:
                 setMoodHint(false); setMoodEdit('');
               };
               const submit=(txt)=>{
-                if(aiLocked){ submitFree(txt); return; }
+                if(moodLocked){ submitFree(txt); return; }
                 const v=(txt||'').trim(); if(!v)return;
                 if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
                 setShowMoodMenu(false); setMoodEdit(''); setStructureSeedLock(null);
@@ -35840,8 +35841,8 @@ Hard requirements:
                 setMoodHint(false);
               };
               // Submit-eligible? For Pro/Pro AI: any non-empty text. For Free
-              // aiLocked: only if the text resolves to a preset mood.
-              const canSubmit = aiLocked
+              // moodLocked: only if the text resolves to a preset mood.
+              const canSubmit = moodLocked
                 ? (_resolveMood(moodEdit) !== null)
                 : !!moodEdit.trim();
               return (
@@ -35849,9 +35850,9 @@ Hard requirements:
                 <div style={{flex:1,minWidth:0,position:'relative'}}>
                   <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); try{e.nativeEvent.stopImmediatePropagation();}catch(_){} if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,.018)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,padding:'12px 14px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
                   {/* Empty-state placeholder: for trial-active users a marquee
-                      of examples; for aiLocked an instruction + PRO AI badge
+                      of examples; for moodLocked an instruction + PRO AI badge
                       since free-typing won't reach the AI. */}
-                  {!moodEdit && !aiLocked && (()=>{
+                  {!moodEdit && !moodLocked && (()=>{
                     const ex=t('moodExamples');
                     const items=Array.isArray(ex)&&ex.length?ex:[t('moodPlaceholder')];
                     const ribbon=items.join('     ·     ');
@@ -35864,18 +35865,18 @@ Hard requirements:
                       </div>
                     );
                   })()}
-                  {aiLocked && !moodEdit && (
+                  {moodLocked && !moodEdit && (
                     <div aria-hidden="true" style={{position:'absolute',inset:0,borderRadius:8,overflow:'hidden',pointerEvents:'none',display:'inline-flex',alignItems:'center',paddingLeft:12,gap:6}}>
                       <span style={{color:'rgba(242,238,232,.45)',fontSize:(.62*effScale)+'rem',fontStyle:'italic'}}>{t('moodChooseBelow')||'Choose a mood from the list below'}</span>
                       <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />
                     </div>
                   )}
                 </div>
-                <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={aiLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
+                <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={moodLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
               </div>
             ); })()}
             {/* Suggestions grid — autocomplete-filtered moods while typing.
-                For Free+aiLocked, when the input is empty we show the full
+                For Free+moodLocked, when the input is empty we show the full
                 MOODS list alphabetically (so the user has something to pick
                 without typing); once they start typing, normal autocomplete
                 behaviour applies. Clicking any preset is free (no AI). */}
@@ -35884,12 +35885,12 @@ Hard requirements:
                 const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
                 const q=_n(moodEdit.trim());
                 if(!q){
-                  // Empty input: Free+aiLocked sees a short SAMPLE of moods
+                  // Empty input: Free+moodLocked sees a short SAMPLE of moods
                   // (6 popular ones) so the cancel button stays in the viewport
                   // on small screens. Typing reveals normal autocomplete over
                   // the full MOODS list. Others see nothing (their marquee
                   // placeholder cues "type").
-                  if(aiLocked){
+                  if(moodLocked){
                     const SAMPLE=['joyful','calm','melancholic','mysterious','romantic','epic'];
                     return SAMPLE.filter(m=>MOODS.includes(m));
                   }
@@ -35931,7 +35932,7 @@ Hard requirements:
                 </button>
               ))}
             </div>
-            {aiLocked && !moodEdit.trim() && (
+            {moodLocked && !moodEdit.trim() && (
               <div style={{textAlign:'center',marginTop:6,marginBottom:8,fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',color:'rgba(207,197,168,.45)',fontStyle:'italic',flexShrink:0}}>
                 {t('moodTypeToSearch')||'Type to search any of 95 moods…'}
               </div>

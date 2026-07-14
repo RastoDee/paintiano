@@ -13211,7 +13211,7 @@ Hard requirements:
                   // on small screens. Typing reveals normal autocomplete over
                   // the full MOODS list. Others see nothing (their marquee
                   // placeholder cues "type").
-                  if(moodLocked){
+                  if(aiLockedMode('mood')){
                     const SAMPLE=['joyful','calm','melancholic','mysterious','romantic','epic'];
                     return SAMPLE.filter(m=>MOODS.includes(m));
                   }
@@ -13253,7 +13253,7 @@ Hard requirements:
                 </button>
               ))}
             </div>
-            {moodLocked && !moodEdit.trim() && (
+            {aiLockedMode('mood') && !moodEdit.trim() && (
               <div style={{textAlign:'center',marginTop:6,marginBottom:8,fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',color:'rgba(207,197,168,.45)',fontStyle:'italic',flexShrink:0}}>
                 {t('moodTypeToSearch')||'Type to search any of 95 moods…'}
               </div>
