@@ -23636,6 +23636,9 @@ export default function Paintiano() {
   // would otherwise leave Clear unable to rebuild the scan. Kept here so Clear
   // can restore scan from the same picture.
   const scanPixelBackupRef = useRef(null);
+  // Bumped to force the image re-scan effect to re-transcribe scan chords
+  // (used after Clear on an AI-compose piece, where mode/palette didn't change).
+  const [scanBump, setScanBump] = useState(0);
   const genRef       = useRef(0);
   const inputFocus   = useRef(false);
   const refMidi      = useRef(null);
@@ -28024,12 +28027,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       stopAll();
       setImgPlayMode('scan'); imgPlayModeRef.current='scan';
       if(imgComposeRef.current){
-        // was an AI compose — its chords are not a scan; drop them so Play re-scans.
+        // Was an AI compose: its chords are the AI piece, not a scan. Restore the
+        // scan pixels and force a re-scan so Play performs a fresh SCAN (not replay).
         imgComposeRef.current=false;
-        setChords([]); chordsRef.current=[];
-        setComposeSource(null); composeSourceRef.current=null;
-        setCurrentMood(null); setSongQ('');
+        setComposeSource(null); composeSourceRef.current=null; setCurrentMood(null); setSongQ('');
         if(scanPixelBackupRef.current){ pixelRef.current=scanPixelBackupRef.current; pixelRef.current.lastSig=null; }
+        setScanBump(b=>b+1);
       }
       // KEEP: pixelRef, scanPixelBackupRef, originalImgUrl (the picture stays) AND
       // the chord array (the current scan). We only reset the PLAYBACK POSITION
@@ -30155,7 +30158,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
 
   const loadSampleImage=useCallback(async()=>{
     try{

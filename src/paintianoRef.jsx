@@ -28023,6 +28023,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
       setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      if(imgComposeRef.current){
+        // was an AI compose — its chords are not a scan; drop them so Play re-scans.
+        imgComposeRef.current=false;
+        setChords([]); chordsRef.current=[];
+        setComposeSource(null); composeSourceRef.current=null;
+        setCurrentMood(null); setSongQ('');
+        if(scanPixelBackupRef.current){ pixelRef.current=scanPixelBackupRef.current; pixelRef.current.lastSig=null; }
+      }
       // KEEP: pixelRef, scanPixelBackupRef, originalImgUrl (the picture stays) AND
       // the chord array (the current scan). We only reset the PLAYBACK POSITION
       // and wipe the painted blocks from the canvas, so Play re-scans from the
