@@ -757,6 +757,9 @@ function pick(){
 // {key, validatedAt, email, tier} with tier 'pro' | 'pro_ai'. We only need to
 // know that a key exists and which tier — never the key value itself.
 var LICENSE_KEY='paintiano_license_v1';
+// Post-payment return: Stripe sends the buyer back to the landing with ?paid=1.
+// Fire the funnel's final event here (the in-app handler never sees it).
+try{ if(new URLSearchParams(window.location.search).get('paid')==='1'){ window.posthog && window.posthog.capture && window.posthog.capture('purchase_return'); } }catch(_){}
 function readTier(){
   try{
     var raw=localStorage.getItem(LICENSE_KEY); if(!raw) return null;
