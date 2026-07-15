@@ -2010,7 +2010,10 @@ export default function Paintiano() {
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
   // (free users only see 2). The dice picks a variant in this range.
-  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : 6))))));
+  // Exception: during a taste preview the tasted artist shows its FULL
+  // variant range (the whole point of the teaser), read via ref so stale
+  // closures can't pin it to 2.
+  const _effVariants = () => ((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : 6))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -11913,7 +11916,18 @@ Hard requirements:
             //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _familyOn = setupArtists.includes('mosaicFamily');
             // Un-paired: count individual artist chips actually shown.
-            const _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k)));
+            let _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k)));
+            // Taste preview (Free): the previewed Pro artist swaps IN for one
+            // pseudo-random free artist (deterministic per preview key), so the
+            // cockpit stays at mosaic + 9 — never grows to 10. Ends with the preview.
+            if(!cockpitEdit && proStatus==='free' && tastePreviewKey && _visibleArtists.includes(tastePreviewKey)){
+              const _frees=_visibleArtists.filter(k=>k!==tastePreviewKey);
+              if(_frees.length){
+                let _h=0; for(let _c=0;_c<tastePreviewKey.length;_c++){ _h=(_h*31+tastePreviewKey.charCodeAt(_c))>>>0; }
+                const _out=_frees[_h%_frees.length];
+                _visibleArtists=_visibleArtists.filter(k=>k!==_out);
+              }
+            }
             const _chipCount = ((_familyOn || cockpitEdit)?1:0) + _visibleArtists.length;
             // Column count: keep tiles readable. Up to 5 across (so the full
             // 20-chip edit grid lays out as a tidy 5×4). Fewer chips → fewer cols.
@@ -12000,7 +12014,7 @@ Hard requirements:
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
                 them opens the paywall instead of selecting. Edit mode: tap toggles
                 membership in setupArtists. ── */}
-            {ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k))).map((k)=>{
+            {_visibleArtists.map((k)=>{
               const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
