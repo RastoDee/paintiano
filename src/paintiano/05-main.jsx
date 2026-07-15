@@ -6575,13 +6575,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(isScore)      return loadMusicXml(e);
     return loadAudio(e);
   },[loadMidi,loadMusicXml,loadAudio]);
-  const loadSampleMidi=useCallback(()=>{
+  const loadSampleMidi=useCallback((idx)=>{
     try{
-      const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
+      const _si=(idx===1||idx===2)?idx:0;
+      const arrayBuffer=b64ToArrayBuffer([SAMPLE_MIDI_B64,SAMPLE_MIDI_B64_2,SAMPLE_MIDI_B64_3][_si]);
       const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
       const evts=toChords(raw,div,temps);
       if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
-      stopAll();wipeCanvasNow();applyEvents(evts,SAMPLE_MIDI_NAME);
+      stopAll();wipeCanvasNow();applyEvents(evts,[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][_si]);
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
@@ -8342,6 +8343,8 @@ Hard requirements:
   // to the file dialog. Mic arms the listen mode and auto-starts recording.
   const [liteSrcPicker, setLiteSrcPicker] = useState(false);
   const [liteImgPicker, setLiteImgPicker] = useState(false); // Lite mode 2: Sample(Van Gogh)/File
+  const [liteSamplePick, setLiteSamplePick] = useState(false); // Lite 'Sample' sub-picker (3 built-in pieces)
+  useEffect(()=>{ if(!liteSrcPicker) setLiteSamplePick(false); },[liteSrcPicker]);
   // iOS blocks audio started off a timer (no user gesture), so the auto-played
   // Liszt can paint but stay silent. The first tap anywhere in Lite unlocks the
   // audio context and, if a song is loaded but not audibly playing, (re)starts
@@ -14424,7 +14427,7 @@ Hard requirements:
         // Lite Image: pick a photo → Paintiano reads it as a score and paints.
         // loadImage handles the whole pipeline (decode, scan, paint), so we just
         // open the image file picker — same as Advanced, no Setup screen.
-        const _loadSampleLite = ()=>{
+        const _loadSampleLite = (si)=>{
           setLiteSrcPicker(false);
           // Load the built-in Liszt sample and play it — same source the Lite
           // entry auto-loads. This is a real tap, so audio is allowed.
@@ -14433,7 +14436,7 @@ Hard requirements:
           try{ setMuted(false); }catch(_){}
           try{ pickExpressiveStyle(); }catch(_){}
           // Palette + tone inherited from current state (Advanced or session).
-          loadSampleMidi();
+          loadSampleMidi(si);
           setTimeout(()=>{ try{ wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); }); }catch(_){} }, 120);
         };
         // Middle button: Stop while capturing, else Save (done) / Pause·Play.
@@ -14444,10 +14447,18 @@ Hard requirements:
         {liteSrcPicker && (
           <div onClick={()=>setLiteSrcPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:(basicMode&&isDesktop)?'transparent':'rgba(4,3,8,0.6)',backdropFilter:(basicMode&&isDesktop)?'none':'blur(4px)',WebkitBackdropFilter:(basicMode&&isDesktop)?'none':'blur(4px)',display:'flex',alignItems:(basicMode&&isDesktop)?'flex-start':'flex-end',justifyContent:(basicMode&&isDesktop)?'flex-start':'flex-end'}}>
             <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'column',alignItems:'stretch',gap:12,padding:'96px 0 0 24px',width:150}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,padding:'14px 12px calc(80px + env(safe-area-inset-bottom,0px))',minWidth:200}}>
-              <button onClick={_loadSampleLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
+              {/* Lite sub-picker: tap Sample -> choose one of 3 built-in pieces (one tap -> plays). */}
+              {liteSamplePick ? (<>
+              <button onClick={()=>_loadSampleLite(0)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Liebestraum · Liszt</span></button>
+              <button onClick={()=>_loadSampleLite(1)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Bumble-Bee · Rimsky-Korsakov</span></button>
+              <button onClick={()=>_loadSampleLite(2)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Metamorphosis · Glass</span></button>
+              <button onClick={()=>setLiteSamplePick(false)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}><span>‹ {t('backToSetup')||'back'}</span></button>
+              </>) : (<>
+              <button onClick={()=>setLiteSamplePick(true)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
               <button onClick={_openFileLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
               <button onClick={()=>{ setLiteSrcPicker(false); setShowMyMusicDrawer(true); }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span style={{marginLeft:7}}>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</span></button>
               <button onClick={_startMicLite} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoMic}<span style={{marginLeft:7}}>{ts('useMySongMic','Mic')}</span></button>
+              </>)}
             </div>
           </div>
         )}
