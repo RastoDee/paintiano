@@ -7174,17 +7174,15 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
   if(pick===2){
-    // — 2 · MRIEŽKA — golden-ratio rectangles + gold spiral, coloured fields —
-    // portrait golden rectangle: taller than wide, centred vertically
-    let w=CW*0.74, h=w*PHI, x=(CW-w)/2, y=(CH-h)/2, dir=0; const cells=[]; const sqs=[];
+    // — 2 · MRIEŽKA — portrait golden rectangle, spiral through nested squares —
+    let w=CW*0.72, h=w*PHI, x=(CW-w)/2, y=(CH-h)/2, dir=0; const cells=[]; const sqs=[];
     for(let k=0;k<12;k++){ const s=Math.min(w,h);
-      // remember the square carved this step + its quarter-arc corner for the spiral
-      if(dir===0){ sqs.push({cx:x+s, cy:y+s, r:s, a0:Math.PI, a1:Math.PI*1.5}); cells.push({x, y, w:s, h:s, k}); x+=s; w-=s; }
-      else if(dir===1){ sqs.push({cx:x, cy:y+s, r:s, a0:Math.PI*1.5, a1:Math.PI*2}); cells.push({x, y, w:w, h:s, k}); y+=s; h-=s; }
-      else if(dir===2){ w-=s; sqs.push({cx:x+w, cy:y, r:s, a0:0, a1:Math.PI*0.5}); cells.push({x:x+w, y, w:s, h:h, k}); }
-      else { h-=s; sqs.push({cx:x, cy:y+h, r:s, a0:Math.PI*0.5, a1:Math.PI}); cells.push({x, y:y+h, w:w, h:s, k}); }
-      dir=(dir+1)%4; if(w<4||h<4) break; }
-    // colour every field with its chord colour, as a soft gradient wash
+      if(dir===0){ sqs.push({cx:x, cy:y+s, r:s, a0:-Math.PI/2, a1:0}); cells.push({x, y, w, h:s, k}); y+=s; h-=s; }
+      else if(dir===1){ sqs.push({cx:x, cy:y, r:s, a0:0, a1:Math.PI/2}); cells.push({x:x+w-s, y, w:s, h, k}); w-=s; }
+      else if(dir===2){ sqs.push({cx:x+w, cy:y, r:s, a0:Math.PI/2, a1:Math.PI}); cells.push({x, y:y+h-s, w, h:s, k}); h-=s; }
+      else { sqs.push({cx:x+w, cy:y+h, r:s, a0:Math.PI, a1:Math.PI*1.5}); cells.push({x, y, w:s, h, k}); x+=s; w-=s; }
+      dir=(dir+1)%4; if(w<3||h<3) break; }
+    // coloured field washes
     cells.forEach((c2,k)=>{ const cc=chordCol(Math.floor(k/Math.max(1,cells.length)*N)); const m=chordMeta(k);
       const g=ctx.createLinearGradient(c2.x,c2.y,c2.x+c2.w,c2.y+c2.h);
       g.addColorStop(0, css(cc, 0.10+0.14*m.vel)); g.addColorStop(1, css(cc, 0.02));
@@ -7192,10 +7190,10 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     // gold rectangle outlines
     ctx.strokeStyle='rgba(201,168,76,.30)'; ctx.lineWidth=1;
     cells.forEach(c2=>{ ctx.strokeRect(c2.x,c2.y,c2.w,c2.h); });
-    // the true golden spiral through the squares
+    // the golden spiral through the squares
     ctx.strokeStyle='rgba(201,168,76,.55)'; ctx.lineWidth=1.4; ctx.lineCap='round';
     for(const q of sqs){ ctx.beginPath(); ctx.arc(q.cx,q.cy,q.r,q.a0,q.a1); ctx.stroke(); }
-    // coloured chord points distributed ALONG the spiral
+    // coloured chord points distributed along the spiral
     let tot=0; for(const q of sqs) tot+=q.r*(Math.PI/2);
     for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
       const t=i/Math.max(1,N-1); let d=t*tot, q=sqs[0];

@@ -9090,7 +9090,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
   // ═══════════════ RafFel — active phase set (6) ═══════════════
@@ -9258,6 +9258,34 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         ctx.fillRect(x,y,cell,cell);
       }
     }
+    return;
+  }
+
+
+  if(pick===7){
+    // — 7 · KOMPOZÍCIA — scattered points joined into a coloured graph —
+    // Deterministic scatter seeded from the piece, so it's stable per song.
+    const rnd2=_seedRnd(137, ss, 1, 0);
+    const pts=[];
+    for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
+      const a=i*GA + (rnd2()-0.5)*0.6;
+      const rad=Math.sqrt(rnd2())*S*0.46;
+      let x=cx+Math.cos(a)*rad*(0.7+0.6*rnd2()), y=cy+Math.sin(a)*rad;
+      x=Math.max(CW*0.05,Math.min(CW*0.95,x)); y=Math.max(CH*0.05,Math.min(CH*0.95,y));
+      pts.push({x,y,i,m,col});
+    }
+    // main thread: connect chords in play order
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    for(let i=1;i<pts.length;i++){ const p=pts[i];
+      ctx.strokeStyle=css(p.col, 0.4+0.3*p.m.vel); ctx.lineWidth=Math.max(1, S*0.0016*(0.6+0.7*p.m.dur));
+      ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(p.x,p.y); ctx.stroke(); }
+    // short branches to the single nearest neighbour (faint)
+    for(let i=0;i<pts.length;i++){ const p=pts[i]; let best=-1, bd=1e18;
+      for(let j=0;j<pts.length;j++){ if(j===i) continue; const d=(pts[j].x-p.x)**2+(pts[j].y-p.y)**2; if(d<bd){ bd=d; best=j; } }
+      if(best>=0){ ctx.strokeStyle=css(p.col, 0.12); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(pts[best].x,pts[best].y); ctx.stroke(); } }
+    // coloured nodes
+    for(const p of pts){ ctx.fillStyle=css(p.col, 0.92);
+      ctx.beginPath(); ctx.arc(p.x,p.y, Math.max(1.4, S*0.0035+p.m.dur*S*0.005),0,7); ctx.fill(); }
     return;
   }
 
@@ -24933,7 +24961,7 @@ export default function Paintiano() {
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
   // (free users only see 2). The dice picks a variant in this range.
-  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : 6))))));
+  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 8 : 6))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
