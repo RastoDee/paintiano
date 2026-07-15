@@ -9090,10 +9090,123 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  const _pn=_capN(9); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
+  // ═══════════════ RafFel — active phase set (6) ═══════════════
+  // pick 0=Niť(Lissajous) 1=Súhvezdie 2=Mriežka 3=Sieť 4=Vlna 5=Vejár.
+  // The old phases are kept below, parked at pick===90x, in case we revisit.
+
   if(pick===0){
+    // — 0 · NIŤ — one continuous Lissajous curve, gold underglow, colour flows —
+    const A=S*0.42;
+    const fa=2+Math.round(dnaE*3), fb=1+Math.round(dnaD*3), delta=Math.PI/2*(0.5+dnaR);
+    const steps=Math.max(360, N*10);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    // gold underglow
+    let prev=null;
+    for(let s2=0;s2<=steps;s2++){ const t=s2/steps, tt=t*Math.PI*2;
+      const x=cx+Math.sin(fa*tt+delta)*A, y=cy+Math.sin(fb*tt)*A;
+      if(prev){ ctx.strokeStyle='rgba(201,168,76,.06)'; ctx.lineWidth=Math.max(3,S*0.012); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
+      prev={x,y};
+    }
+    // colour core
+    prev=null;
+    for(let s2=0;s2<=steps;s2++){ const t=s2/steps, idx=Math.min(N-1,(t*N)|0), col=chordCol(idx), m=chordMeta(idx), tt=t*Math.PI*2;
+      const x=cx+Math.sin(fa*tt+delta)*A, y=cy+Math.sin(fb*tt)*A;
+      if(prev){ ctx.strokeStyle=css(col, 0.55+0.3*m.vel); ctx.lineWidth=Math.max(1.4,S*0.004); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
+      prev={x,y};
+    }
+    return;
+  }
+
+  if(pick===1){
+    // — 1 · SÚHVEZDIE — chords on the circle of fifths; tetivy only between close ones —
+    const R=S*0.40;
+    const pts=[];
+    for(let i=0;i<N;i++){
+      const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
+      let pm=60; if(notes.length){ let s=0,c=0; for(const nt of notes){ const mm=nt.m!==undefined?nt.m:nt; s+=mm; c++; } pm=s/Math.max(1,c); }
+      const pcv=((Math.round(pm)%12)+12)%12; const slot=[0,7,2,9,4,11,6,1,8,3,10,5].indexOf(pcv);
+      const a=-Math.PI/2 + slot/12*Math.PI*2;
+      const rr=R*(0.30+0.68*(i/Math.max(1,N-1)));
+      pts.push({x:cx+Math.cos(a)*rr, y:cy+Math.sin(a)*rr, i, slot});
+    }
+    for(let i=1;i<pts.length;i++){ const d=Math.abs(pts[i].slot-pts[i-1].slot); if(!(d<=1||d>=11)) continue;
+      const m=chordMeta(i); ctx.strokeStyle=css([201,168,76], 0.12+0.14*m.vel); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(pts[i].x,pts[i].y); ctx.stroke(); }
+    for(const p of pts){ const m=chordMeta(p.i), col=chordCol(p.i); const rad=Math.max(1.2, S*0.003+m.dur*S*0.006);
+      const g=ctx.createRadialGradient(p.x,p.y,0.4,p.x,p.y,rad*2.4);
+      g.addColorStop(0, css(col.map(q=>Math.min(255,q*1.3+30)),0.95)); g.addColorStop(0.4, css(col,0.7)); g.addColorStop(1, css(col,0));
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,rad*2.4,0,7); ctx.fill();
+      ctx.fillStyle=css([255,252,246], 0.55*m.vel+0.2); ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(0.8,rad*0.42),0,7); ctx.fill(); }
+    return;
+  }
+
+  if(pick===2){
+    // — 2 · MRIEŽKA — golden-ratio rectangles, quiet coloured field fills —
+    let x=CW*0.12, y=CH*0.20, w=CW*0.76, h=w/PHI, dir=0; const cells=[];
+    for(let k=0;k<11;k++){ const s=Math.min(w,h); cells.push({x, y, w:(dir%2?w:s), h:(dir%2?s:h), k});
+      if(dir===0){ x+=s; w-=s; } else if(dir===1){ y+=s; h-=s; } else if(dir===2){ w-=s; } else { h-=s; }
+      dir=(dir+1)%4; if(w<4||h<4) break; }
+    cells.forEach((c2,k)=>{ if(k%2===0){ const cc=chordCol(k*3); ctx.fillStyle=css(cc, 0.16); ctx.fillRect(c2.x,c2.y,c2.w,c2.h); } });
+    ctx.strokeStyle='rgba(201,168,76,.35)'; ctx.lineWidth=1;
+    cells.forEach(c2=>{ ctx.strokeRect(c2.x,c2.y,c2.w,c2.h); });
+    cells.forEach((c2,k)=>{ const cc=chordCol(k*5), m=chordMeta(k); ctx.fillStyle=css(cc.map(q=>Math.min(255,q*1.3+30)),0.85);
+      ctx.beginPath(); ctx.arc(c2.x,c2.y, Math.max(1.4, S*0.004+m.dur*S*0.004),0,7); ctx.fill(); });
+    return;
+  }
+
+  if(pick===3){
+    // — 3 · SIEŤ — spiral nodes linked only when chords are harmonically related —
+    const C3=S*0.0135*(0.9+0.35*dnaD); const pts=[];
+    for(let i=0;i<N;i++){ const r=C3*Math.sqrt(i+1)*3.1, a=i*GA;
+      const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
+      let pm=60; if(notes.length){ const mm=notes[0].m!==undefined?notes[0].m:notes[0]; pm=mm; }
+      pts.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, i, pc:((Math.round(pm)%12)+12)%12}); }
+    for(let i=0;i<pts.length;i++){ for(let j=i+1;j<Math.min(pts.length,i+9);j++){
+      const d=((pts[i].pc-pts[j].pc)%12+12)%12; if(!(d===7||d===5||d===3||d===4||d===8||d===9)) continue;
+      const m=chordMeta(j); ctx.strokeStyle=css([201,168,76], 0.05+0.06*m.vel); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y); ctx.stroke(); } }
+    for(const p of pts){ const m=chordMeta(p.i), col=chordCol(p.i);
+      ctx.fillStyle=css(col, 0.85); ctx.beginPath(); ctx.arc(p.x,p.y, Math.max(1.2, S*0.0026+m.dur*S*0.004),0,7); ctx.fill(); }
+    return;
+  }
+
+  if(pick===4){
+    // — 4 · VLNA — quiet soundwave: vertical bars on a baseline —
+    const baseY=CH*(0.46+0.10*dnaR);
+    ctx.strokeStyle='rgba(201,168,76,.18)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(CW*0.06,baseY); ctx.lineTo(CW*0.94,baseY); ctx.stroke();
+    const span=CW*0.88, x0=CW*0.06;
+    for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
+      const x=x0+(i/Math.max(1,N-1))*span;
+      const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
+      let pm=60; if(notes.length){ const mm=notes[0].m!==undefined?notes[0].m:notes[0]; pm=mm; }
+      const pcv=((Math.round(pm)%12)+12)%12; const dir=(pcv%2===0)?-1:1;
+      const hgt=(S*0.04 + (pcv/11)*S*0.30)*(0.5+0.5*m.dur);
+      ctx.strokeStyle=css(col, 0.6+0.3*m.vel); ctx.lineWidth=Math.max(1.4, span/N*0.5); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x,baseY); ctx.lineTo(x,baseY+dir*hgt); ctx.stroke();
+      ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.9); ctx.beginPath(); ctx.arc(x,baseY+dir*hgt, Math.max(1, span/N*0.3),0,7); ctx.fill(); }
+    return;
+  }
+
+  if(pick===5){
+    // — 5 · VEJÁR — rays radiating at the golden angle, length = duration —
+    const fcy=CH*(0.52+0.10*dnaR);
+    for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i); const a=i*GA - Math.PI/2;
+      const r0=S*0.03, r1=r0+(S*0.10+m.dur*S*0.32);
+      const x0=cx+Math.cos(a)*r0, y0=fcy+Math.sin(a)*r0, x1=cx+Math.cos(a)*r1, y1=fcy+Math.sin(a)*r1;
+      ctx.strokeStyle=css(col, 0.4+0.35*m.vel); ctx.lineWidth=Math.max(1, S*0.0016); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+      ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.85); ctx.beginPath(); ctx.arc(x1,y1, Math.max(1, S*0.004*m.vel+1),0,7); ctx.fill(); }
+    return;
+  }
+
+  // ── parked: original phases below (reachable only via pick===90x) ──
+
+
+  if(pick===900){
     // ── 0 · KVET — phyllotaxis bloom ────────────────────────────────────────
     const C = S*0.0135*(0.9+0.35*dnaD);                // radial pitch of the spiral
     // golden thread first (under the petals)
@@ -9113,7 +9226,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===1){
+  if(pick===901){
     // — 1 · NIŤ — clean coloured lines along the golden-angle spiral, no petals
     const C1 = S*0.0135*(0.9+0.35*dnaD);
     ctx.lineCap='round'; ctx.lineJoin='round';
@@ -9133,7 +9246,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===2){
+  if(pick===902){
     // ── 2 · PRSTENCE — orbits: radius = fifths ladder, angle = time ─────────
     const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
     const rings=12, r0=S*0.065, rStep=S*0.033;
@@ -9164,7 +9277,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===3){
+  if(pick===903){
     // ── 3 · VLNENIE — interference field (coarse cells for mobile) ──────────
     const srcs=[];
     const stride=Math.max(1, Math.ceil(N/28));         // cap sources ≈28
@@ -9202,7 +9315,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===4){
+  if(pick===904){
     // ── 4 · DYCH — one soft colour stratum per phrase ───────────────────────
     const PH_N=13, phrases=[];
     for(let s2=0;s2<N;s2+=PH_N) phrases.push([s2, Math.min(N,s2+PH_N)]);
@@ -9238,7 +9351,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
   // ── 5 · RIEKA — time flows left→right, pitch = altitude ───────────────────
-  if(pick===5){
+  if(pick===905){
     const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
     ctx.globalCompositeOperation='lighter';
     let ladder=0; const laneY=[];
@@ -9270,7 +9383,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
   // ── 6 · KVÍNTY — chords mapped on the circle of fifths, gold chords between them ──
-  if(pick===6){
+  if(pick===906){
     const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
     const R=S*0.40;
     // faint gold reference ring + 12 tone ticks
@@ -9300,27 +9413,41 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
   // ── 7 · φ — nested golden rectangles + Fibonacci spiral of coloured points ──
-  if(pick===7){
-    let x=CW*0.10, y=CH*0.16, w=CW*0.80, h=w/PHI, dir=0;
-    ctx.strokeStyle='rgba(201,168,76,.20)'; ctx.lineWidth=1;
-    for(let k=0;k<10;k++){
+  if(pick===907){
+    // Build the nested golden squares; remember each square so the spiral fits them.
+    let x=CW*0.12, y=CH*0.20, w=CW*0.76, h=w/PHI, dir=0;
+    const sqs=[];
+    ctx.strokeStyle='rgba(201,168,76,.18)'; ctx.lineWidth=1;
+    for(let k=0;k<11;k++){
       ctx.strokeRect(x,y,w,h);
-      const sq=Math.min(w,h);
-      if(dir===0){ x+=sq; w-=sq; } else if(dir===1){ y+=sq; h-=sq; } else if(dir===2){ w-=sq; } else { h-=sq; }
+      const s=Math.min(w,h);
+      // the square carved off this step, plus which corner the quarter-arc turns around
+      if(dir===0){ sqs.push({cx:x+s, cy:y+s, r:s, a0:Math.PI, a1:Math.PI*1.5}); x+=s; w-=s; }
+      else if(dir===1){ sqs.push({cx:x+ (w-h>=0? (w- s):0) + 0, cy:y+s, r:s, a0:Math.PI*1.5, a1:Math.PI*2}); y+=s; h-=s; }
+      else if(dir===2){ w-=s; sqs.push({cx:x+w, cy:y, r:s, a0:0, a1:Math.PI*0.5}); }
+      else { h-=s; sqs.push({cx:x, cy:y+h, r:s, a0:Math.PI*0.5, a1:Math.PI}); }
       dir=(dir+1)%4; if(w<4||h<4) break;
     }
-    // Fibonacci/phi spiral of precise coloured chord points
+    // Draw the true golden spiral (quarter-arc per square) as a faint gold guide.
+    ctx.strokeStyle='rgba(201,168,76,.5)'; ctx.lineWidth=1.3; ctx.lineCap='round';
+    for(const q of sqs){ ctx.beginPath(); ctx.arc(q.cx,q.cy,q.r,q.a0,q.a1); ctx.stroke(); }
+    // Place chord points evenly ALONG that spiral so they sit on the curve.
+    // Concatenate arcs; distribute i across total arc-length by square radius.
+    let totLen=0; for(const q of sqs) totLen+=q.r*(Math.PI/2);
     for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
-      const t=i/Math.max(1,N-1); const ang=t*Math.PI*2*3.0; const rr=(S*0.02)*Math.pow(PHI, t*4.0);
-      const px=cx+Math.cos(ang)*rr*0.5, py=cy+Math.sin(ang)*rr*0.5;
-      if(px<0||px>CW||py<0||py>CH) continue;
-      ctx.fillStyle=css(col, 0.9); ctx.beginPath(); ctx.arc(px,py, Math.max(1.2, S*0.003+m.dur*S*0.005), 0,7); ctx.fill();
+      const t=i/Math.max(1,N-1); let d=t*totLen; let q=sqs[0];
+      for(const s of sqs){ const segLen=s.r*(Math.PI/2); if(d<=segLen){ q=s; break; } d-=segLen; }
+      const segLen=q.r*(Math.PI/2); const frac=Math.max(0,Math.min(1,d/segLen));
+      const a=q.a0+(q.a1-q.a0)*frac;
+      const px=q.cx+Math.cos(a)*q.r, py=q.cy+Math.sin(a)*q.r;
+      ctx.fillStyle=css(col, 0.92); ctx.beginPath();
+      ctx.arc(px,py, Math.max(1.4, S*0.0035+m.dur*S*0.006), 0,7); ctx.fill();
     }
     return;
   }
 
   // ── 8 · LISSAJOUS — one continuous curve, colour flows with the tones ──
-  if(pick===8){
+  if(pick===908){
     const A=S*0.42;
     const fa=2+Math.round(dnaE*3), fb=1+Math.round(dnaD*3), delta=Math.PI/2*(0.5+dnaR);
     const steps=Math.max(240, N*8);
@@ -24747,7 +24874,7 @@ export default function Paintiano() {
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
   // (free users only see 2). The dice picks a variant in this range.
-  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 9 : 6))))));
+  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 6 : 6))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
