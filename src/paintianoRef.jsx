@@ -9090,7 +9090,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
   // ═══════════════ RafFel — active phase set (6) ═══════════════
@@ -9145,7 +9145,8 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 
   if(pick===2){
     // — 2 · MRIEŽKA — golden-ratio rectangles + gold spiral, coloured fields —
-    let x=CW*0.10, y=CH*0.14, w=CW*0.80, h=w/PHI, dir=0; const cells=[]; const sqs=[];
+    // portrait golden rectangle: taller than wide, centred vertically
+    let w=CW*0.74, h=w*PHI, x=(CW-w)/2, y=(CH-h)/2, dir=0; const cells=[]; const sqs=[];
     for(let k=0;k<12;k++){ const s=Math.min(w,h);
       // remember the square carved this step + its quarter-arc corner for the spiral
       if(dir===0){ sqs.push({cx:x+s, cy:y+s, r:s, a0:Math.PI, a1:Math.PI*1.5}); cells.push({x, y, w:s, h:s, k}); x+=s; w-=s; }
@@ -9177,18 +9178,22 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
   if(pick===3){
-    // — 3 · SIEŤ — spiral nodes linked only when chords are harmonically related —
-    const C3=S*0.0135*(0.9+0.35*dnaD); const pts=[];
-    for(let i=0;i<N;i++){ const r=C3*Math.sqrt(i+1)*3.1, a=i*GA;
-      const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
-      let pm=60; if(notes.length){ const mm=notes[0].m!==undefined?notes[0].m:notes[0]; pm=mm; }
-      pts.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, i, pc:((Math.round(pm)%12)+12)%12}); }
-    for(let i=0;i<pts.length;i++){ for(let j=i+1;j<Math.min(pts.length,i+4);j++){
-      const d=((pts[i].pc-pts[j].pc)%12+12)%12; if(!(d===7||d===5)) continue;
-      const m=chordMeta(j); ctx.strokeStyle=css([201,168,76], 0.06+0.07*m.vel); ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y); ctx.stroke(); } }
-    for(const p of pts){ const m=chordMeta(p.i), col=chordCol(p.i);
-      ctx.fillStyle=css(col, 0.85); ctx.beginPath(); ctx.arc(p.x,p.y, Math.max(1.2, S*0.0026+m.dur*S*0.004),0,7); ctx.fill(); }
+    // — 3 · NIŤ — clean coloured lines along the golden-angle spiral —
+    const C1 = S*0.0135*(0.9+0.35*dnaD);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    let px, py;
+    for(let i=0;i<N;i++){
+      const m=chordMeta(i), col=chordCol(i);
+      const r=C1*Math.sqrt(i+1)*3.1, a=i*GA;
+      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+      if(i){
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(x,y);
+        ctx.strokeStyle=css(col, 0.55+0.35*m.vel);
+        ctx.lineWidth=Math.max(1, S*0.0016*(0.6+0.8*m.dur));
+        ctx.stroke();
+      }
+      px=x; py=y;
+    }
     return;
   }
 
@@ -9221,6 +9226,41 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.85); ctx.beginPath(); ctx.arc(x1,y1, Math.max(1, S*0.004*m.vel+1),0,7); ctx.fill(); }
     return;
   }
+
+  if(pick===6){
+    // — 6 · VLNENIE — interference field (coarse cells for mobile) —
+    const srcs=[];
+    const stride=Math.max(1, Math.ceil(N/28));
+    for(let i=0;i<N;i+=stride){
+      const m=chordMeta(i), col=chordCol(i);
+      const r=S*0.012*Math.sqrt(i+1)*3.0, a=i*GA;
+      const _mid=(col[0]+col[1]+col[2])/3;
+      const colS=[0,1,2].map(q=>Math.max(0,Math.min(255,_mid+(col[q]-_mid)*1.7)));
+      srcs.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, col:colS,
+                 f:(15.7+22.4*Math.min(1.6,m.dur))/S, amp:(0.4+0.6*m.vel)*(0.75+0.5*dnaE)});
+    }
+    const cell=Math.max(5, Math.round(S/170));
+    const cut2=(S*0.42)*(S*0.42);
+    for(let y=0;y<CH;y+=cell){
+      for(let x=0;x<CW;x+=cell){
+        let R=0,G=0,B=0,w=0;
+        for(const s2 of srcs){
+          const dx=x-s2.x, dy=y-s2.y, d2=dx*dx+dy*dy;
+          if(d2>cut2) continue;
+          const d=Math.sqrt(d2);
+          const ww=Math.max(0, Math.cos(d*s2.f)) * s2.amp * Math.exp(-d/(S*0.42));
+          if(ww<=0.002) continue;
+          R+=ww*s2.col[0]; G+=ww*s2.col[1]; B+=ww*s2.col[2]; w+=ww;
+        }
+        if(w<=0.02) continue;
+        const k=Math.min(1,w*0.9);
+        ctx.fillStyle=`rgb(${Math.min(255,R/w*k)|0},${Math.min(255,G/w*k)|0},${Math.min(255,B/w*k)|0})`;
+        ctx.fillRect(x,y,cell,cell);
+      }
+    }
+    return;
+  }
+
 
   // ── parked: original phases below (reachable only via pick===90x) ──
 
@@ -24893,7 +24933,7 @@ export default function Paintiano() {
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
   // (free users only see 2). The dice picks a variant in this range.
-  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 6 : 6))))));
+  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : 6))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
