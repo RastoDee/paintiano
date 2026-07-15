@@ -9090,7 +9090,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(9); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
   if(pick===0){
@@ -9238,7 +9238,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
   // ── 5 · RIEKA — time flows left→right, pitch = altitude ───────────────────
-  {
+  if(pick===5){
     const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
     ctx.globalCompositeOperation='lighter';
     let ladder=0; const laneY=[];
@@ -9266,7 +9266,79 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       ctx.lineWidth=Math.max(1.4,width*0.22); ctx.stroke();
     }
     ctx.globalCompositeOperation='source-over';
+    return;
   }
+
+  // ── 6 · KVÍNTY — chords mapped on the circle of fifths, gold chords between them ──
+  if(pick===6){
+    const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
+    const R=S*0.40;
+    // faint gold reference ring + 12 tone ticks
+    ctx.strokeStyle='rgba(201,168,76,.14)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+    for(let t=0;t<12;t++){ const a=-Math.PI/2 + t/12*Math.PI*2;
+      ctx.strokeStyle='rgba(201,168,76,.24)';
+      ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*R*0.96,cy+Math.sin(a)*R*0.96); ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R); ctx.stroke(); }
+    // chord pitch → circle-of-fifths slot; time pulls radius outward
+    const pts=[];
+    for(let i=0;i<N;i++){
+      const chord=chords[Math.min(cn-1,i)]; const notes=(chord&&(chord.n||chord.notes))||[];
+      let pm=60; if(notes.length){ let s=0,c=0; for(const nt of notes){ const m=nt.m!==undefined?nt.m:nt; s+=m; c++; } pm=s/Math.max(1,c); }
+      const pcv=((Math.round(pm)%12)+12)%12; const slot=FIF.indexOf(pcv);
+      const a=-Math.PI/2 + slot/12*Math.PI*2;
+      const rr=R*(0.60+0.36*(i/Math.max(1,N-1)));
+      pts.push({x:cx+Math.cos(a)*rr, y:cy+Math.sin(a)*rr, i});
+    }
+    // gold tetivy between consecutive chords
+    for(let i=1;i<pts.length;i++){ const m=chordMeta(i);
+      ctx.strokeStyle=css([201,168,76], 0.09+0.11*m.vel); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(pts[i].x,pts[i].y); ctx.stroke(); }
+    // coloured nodes
+    for(const p of pts){ const m=chordMeta(p.i), col=chordCol(p.i);
+      ctx.fillStyle=css(col, 0.9); ctx.beginPath(); ctx.arc(p.x,p.y, Math.max(1.4, S*0.004+m.dur*S*0.006), 0,7); ctx.fill(); }
+    return;
+  }
+
+  // ── 7 · φ — nested golden rectangles + Fibonacci spiral of coloured points ──
+  if(pick===7){
+    let x=CW*0.10, y=CH*0.16, w=CW*0.80, h=w/PHI, dir=0;
+    ctx.strokeStyle='rgba(201,168,76,.20)'; ctx.lineWidth=1;
+    for(let k=0;k<10;k++){
+      ctx.strokeRect(x,y,w,h);
+      const sq=Math.min(w,h);
+      if(dir===0){ x+=sq; w-=sq; } else if(dir===1){ y+=sq; h-=sq; } else if(dir===2){ w-=sq; } else { h-=sq; }
+      dir=(dir+1)%4; if(w<4||h<4) break;
+    }
+    // Fibonacci/phi spiral of precise coloured chord points
+    for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
+      const t=i/Math.max(1,N-1); const ang=t*Math.PI*2*3.0; const rr=(S*0.02)*Math.pow(PHI, t*4.0);
+      const px=cx+Math.cos(ang)*rr*0.5, py=cy+Math.sin(ang)*rr*0.5;
+      if(px<0||px>CW||py<0||py>CH) continue;
+      ctx.fillStyle=css(col, 0.9); ctx.beginPath(); ctx.arc(px,py, Math.max(1.2, S*0.003+m.dur*S*0.005), 0,7); ctx.fill();
+    }
+    return;
+  }
+
+  // ── 8 · LISSAJOUS — one continuous curve, colour flows with the tones ──
+  if(pick===8){
+    const A=S*0.42;
+    const fa=2+Math.round(dnaE*3), fb=1+Math.round(dnaD*3), delta=Math.PI/2*(0.5+dnaR);
+    const steps=Math.max(240, N*8);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    let prev=null;
+    for(let s2=0;s2<=steps;s2++){
+      const t=s2/steps; const idx=Math.min(N-1, (t*N)|0);
+      const col=chordCol(idx), m=chordMeta(idx);
+      const tt=t*Math.PI*2;
+      const px=cx+Math.sin(fa*tt+delta)*A;
+      const py=cy+Math.sin(fb*tt)*A;
+      if(prev){ ctx.strokeStyle=css(col, 0.5+0.32*m.vel); ctx.lineWidth=Math.max(1, S*0.0016);
+        ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(px,py); ctx.stroke(); }
+      prev={x:px,y:py};
+    }
+    return;
+  }
+
 }
 
 function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
