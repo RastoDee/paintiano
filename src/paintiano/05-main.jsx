@@ -6678,19 +6678,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
 
-  const loadSampleScore=useCallback(async(idx)=>{
+  const loadSampleScore=useCallback(async()=>{
     setWorking(true);setWLabel('reading sample score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
-      const _si=(idx===1||idx===2)?idx:0;
-      const arrayBuffer=b64ToArrayBuffer([SAMPLE_SCORE_B64,SAMPLE_SCORE_B64_2,SAMPLE_SCORE_B64_3][_si]);
+      const arrayBuffer=b64ToArrayBuffer(SAMPLE_SCORE_B64);
       setWPct(50);
       const xmlText=await mxlToXml(arrayBuffer);
       if(loadTokenRef.current!==myToken)return;
       setWPct(80);
       const evts=parseMusicXml(xmlText);
       if(!evts.length){setErr(t('errs').noNotesXml);setErrInfo(false);return;}
-      applyEvents(evts,[SAMPLE_SCORE_NAME,SAMPLE_SCORE_NAME_2,SAMPLE_SCORE_NAME_3][_si]);
+      applyEvents(evts,SAMPLE_SCORE_NAME);
       setLoadedSource('score');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Sample score: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
@@ -12208,7 +12207,7 @@ Hard requirements:
                 <button key={i} onClick={()=>{
                   if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
                   if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
-                  loadSampleScore(i);
+                  loadSampleMidi(i);
                   setForceSetup(false);
                   setPickMode(null);
                 }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
