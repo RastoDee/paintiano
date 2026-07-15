@@ -9144,16 +9144,35 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
   if(pick===2){
-    // — 2 · MRIEŽKA — golden-ratio rectangles, quiet coloured field fills —
-    let x=CW*0.12, y=CH*0.20, w=CW*0.76, h=w/PHI, dir=0; const cells=[];
-    for(let k=0;k<11;k++){ const s=Math.min(w,h); cells.push({x, y, w:(dir%2?w:s), h:(dir%2?s:h), k});
-      if(dir===0){ x+=s; w-=s; } else if(dir===1){ y+=s; h-=s; } else if(dir===2){ w-=s; } else { h-=s; }
+    // — 2 · MRIEŽKA — golden-ratio rectangles + gold spiral, coloured fields —
+    let x=CW*0.10, y=CH*0.14, w=CW*0.80, h=w/PHI, dir=0; const cells=[]; const sqs=[];
+    for(let k=0;k<12;k++){ const s=Math.min(w,h);
+      // remember the square carved this step + its quarter-arc corner for the spiral
+      if(dir===0){ sqs.push({cx:x+s, cy:y+s, r:s, a0:Math.PI, a1:Math.PI*1.5}); cells.push({x, y, w:s, h:s, k}); x+=s; w-=s; }
+      else if(dir===1){ sqs.push({cx:x, cy:y+s, r:s, a0:Math.PI*1.5, a1:Math.PI*2}); cells.push({x, y, w:w, h:s, k}); y+=s; h-=s; }
+      else if(dir===2){ w-=s; sqs.push({cx:x+w, cy:y, r:s, a0:0, a1:Math.PI*0.5}); cells.push({x:x+w, y, w:s, h:h, k}); }
+      else { h-=s; sqs.push({cx:x, cy:y+h, r:s, a0:Math.PI*0.5, a1:Math.PI}); cells.push({x, y:y+h, w:w, h:s, k}); }
       dir=(dir+1)%4; if(w<4||h<4) break; }
-    cells.forEach((c2,k)=>{ if(k%2===0){ const cc=chordCol(k*3); ctx.fillStyle=css(cc, 0.16); ctx.fillRect(c2.x,c2.y,c2.w,c2.h); } });
-    ctx.strokeStyle='rgba(201,168,76,.35)'; ctx.lineWidth=1;
+    // colour every field with its chord colour, as a soft gradient wash
+    cells.forEach((c2,k)=>{ const cc=chordCol(Math.floor(k/Math.max(1,cells.length)*N)); const m=chordMeta(k);
+      const g=ctx.createLinearGradient(c2.x,c2.y,c2.x+c2.w,c2.y+c2.h);
+      g.addColorStop(0, css(cc, 0.10+0.14*m.vel)); g.addColorStop(1, css(cc, 0.02));
+      ctx.fillStyle=g; ctx.fillRect(c2.x,c2.y,c2.w,c2.h); });
+    // gold rectangle outlines
+    ctx.strokeStyle='rgba(201,168,76,.30)'; ctx.lineWidth=1;
     cells.forEach(c2=>{ ctx.strokeRect(c2.x,c2.y,c2.w,c2.h); });
-    cells.forEach((c2,k)=>{ const cc=chordCol(k*5), m=chordMeta(k); ctx.fillStyle=css(cc.map(q=>Math.min(255,q*1.3+30)),0.85);
-      ctx.beginPath(); ctx.arc(c2.x,c2.y, Math.max(1.4, S*0.004+m.dur*S*0.004),0,7); ctx.fill(); });
+    // the true golden spiral through the squares
+    ctx.strokeStyle='rgba(201,168,76,.55)'; ctx.lineWidth=1.4; ctx.lineCap='round';
+    for(const q of sqs){ ctx.beginPath(); ctx.arc(q.cx,q.cy,q.r,q.a0,q.a1); ctx.stroke(); }
+    // coloured chord points distributed ALONG the spiral
+    let tot=0; for(const q of sqs) tot+=q.r*(Math.PI/2);
+    for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
+      const t=i/Math.max(1,N-1); let d=t*tot, q=sqs[0];
+      for(const s of sqs){ const sl=s.r*(Math.PI/2); if(d<=sl){ q=s; break; } d-=sl; }
+      const sl=q.r*(Math.PI/2), fr=Math.max(0,Math.min(1,d/sl)), a=q.a0+(q.a1-q.a0)*fr;
+      const px=q.cx+Math.cos(a)*q.r, py=q.cy+Math.sin(a)*q.r;
+      ctx.fillStyle=css(col.map(qq=>Math.min(255,qq*1.25+25)), 0.9);
+      ctx.beginPath(); ctx.arc(px,py, Math.max(1.4, S*0.0035+m.dur*S*0.005),0,7); ctx.fill(); }
     return;
   }
 
@@ -9164,9 +9183,9 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
       let pm=60; if(notes.length){ const mm=notes[0].m!==undefined?notes[0].m:notes[0]; pm=mm; }
       pts.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, i, pc:((Math.round(pm)%12)+12)%12}); }
-    for(let i=0;i<pts.length;i++){ for(let j=i+1;j<Math.min(pts.length,i+9);j++){
-      const d=((pts[i].pc-pts[j].pc)%12+12)%12; if(!(d===7||d===5||d===3||d===4||d===8||d===9)) continue;
-      const m=chordMeta(j); ctx.strokeStyle=css([201,168,76], 0.05+0.06*m.vel); ctx.lineWidth=1;
+    for(let i=0;i<pts.length;i++){ for(let j=i+1;j<Math.min(pts.length,i+4);j++){
+      const d=((pts[i].pc-pts[j].pc)%12+12)%12; if(!(d===7||d===5)) continue;
+      const m=chordMeta(j); ctx.strokeStyle=css([201,168,76], 0.06+0.07*m.vel); ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(pts[i].x,pts[i].y); ctx.lineTo(pts[j].x,pts[j].y); ctx.stroke(); } }
     for(const p of pts){ const m=chordMeta(p.i), col=chordCol(p.i);
       ctx.fillStyle=css(col, 0.85); ctx.beginPath(); ctx.arc(p.x,p.y, Math.max(1.2, S*0.0026+m.dur*S*0.004),0,7); ctx.fill(); }
