@@ -7128,23 +7128,34 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // The old phases are kept below, parked at pick===90x, in case we revisit.
 
   if(pick===0){
-    // — 0 · NIŤ — one continuous Lissajous curve, gold underglow, colour flows —
+    // — 0 · NIŤ — Lissajous whose shape comes from the song's key + register —
     const A=S*0.42;
-    const fa=2+Math.round(dnaE*3), fb=1+Math.round(dnaD*3), delta=Math.PI/2*(0.5+dnaR);
-    const steps=Math.max(360, N*10);
+    // estimate the key: most common pitch class across the chords
+    const _pcHist=new Array(12).fill(0);
+    for(let i=0;i<cn;i++){ const chd=chords[i]; const nn=(chd&&(chd.n||chd.notes))||[];
+      for(const nt of nn){ const mm=nt.m!==undefined?nt.m:nt; _pcHist[((Math.round(mm)%12)+12)%12]++; } }
+    let _key=0,_best=-1; for(let p=0;p<12;p++){ if(_pcHist[p]>_best){ _best=_pcHist[p]; _key=p; } }
+    const _FIF=[0,7,2,9,4,11,6,1,8,3,10,5]; const _slot=_FIF.indexOf(_key);
+    // frequencies: fa from key position, fb from register — wide spread of shapes
+    const fa = 2 + (_slot % 7);
+    const fb = 2 + Math.round(dnaR*5);
+    // phase from density/energy → opens loops into knots/stars; key adds offset
+    const delta = (Math.PI/2)*(0.3 + dnaD*1.4) + _slot*0.13;
+    const Ax = A*(0.85+0.15*dnaE), Ay = A*(0.85+0.15*(1-dnaE));
+    const steps=Math.max(480, N*12);
     ctx.lineCap='round'; ctx.lineJoin='round';
     // gold underglow
     let prev=null;
     for(let s2=0;s2<=steps;s2++){ const t=s2/steps, tt=t*Math.PI*2;
-      const x=cx+Math.sin(fa*tt+delta)*A, y=cy+Math.sin(fb*tt)*A;
-      if(prev){ ctx.strokeStyle='rgba(201,168,76,.06)'; ctx.lineWidth=Math.max(3,S*0.012); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
+      const x=cx+Math.sin(fa*tt+delta)*Ax, y=cy+Math.sin(fb*tt)*Ay;
+      if(prev){ ctx.strokeStyle='rgba(201,168,76,.05)'; ctx.lineWidth=Math.max(3,S*0.011); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
       prev={x,y};
     }
-    // colour core
+    // colour core (colour flows with the chords)
     prev=null;
     for(let s2=0;s2<=steps;s2++){ const t=s2/steps, idx=Math.min(N-1,(t*N)|0), col=chordCol(idx), m=chordMeta(idx), tt=t*Math.PI*2;
-      const x=cx+Math.sin(fa*tt+delta)*A, y=cy+Math.sin(fb*tt)*A;
-      if(prev){ ctx.strokeStyle=css(col, 0.55+0.3*m.vel); ctx.lineWidth=Math.max(1.4,S*0.004); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
+      const x=cx+Math.sin(fa*tt+delta)*Ax, y=cy+Math.sin(fb*tt)*Ay;
+      if(prev){ ctx.strokeStyle=css(col, 0.55+0.3*m.vel); ctx.lineWidth=Math.max(1.3,S*0.0038); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
       prev={x,y};
     }
     return;
