@@ -9052,6 +9052,19 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 
 function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
+  // -- density cap: long pieces get a uniform subsample (sqrt scale) so the
+  //    painting stays elegant. Short pieces (<=110 chords) are untouched;
+  //    long ones stay visibly denser (600 -> ~198, 1400 -> ~253) but never a
+  //    carpet. lim is remapped so the progressive reveal still grows smoothly
+  //    with playback across the whole piece.
+  const _cn0 = chords.length;
+  if(_cn0 > 110){
+    const _K = Math.round(110 + 4*Math.sqrt(_cn0-110));
+    const _sel = new Array(_K);
+    for(let _j=0;_j<_K;_j++){ _sel[_j] = chords[Math.floor(_j*_cn0/_K)]; }
+    lim = Math.max(1, Math.round(Math.min(lim,_cn0)*_K/_cn0));
+    chords = _sel;
+  }
   const ss = sessionSeed | 0;
   const cn = chords.length;
   const N  = Math.max(1, Math.min(lim, cn));          // progressive reveal

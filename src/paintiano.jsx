@@ -24345,7 +24345,7 @@ export default function Paintiano() {
   // "↻ Show" chip. Tapping it auto-advances the painting every SHOW_INTERVAL ms
   // (as if Next were pressed on a timer); Next is disabled while Show runs. A
   // second tap toggles it off; the timer is also torn down when playback stops.
-  const SHOW_INTERVAL_MS = 8000;
+  const SHOW_INTERVAL_MS = 5000;
   const [showMode,setShowMode]=useState(false);
   const showTimerRef=useRef(null);
   const showDiceRef=useRef(null); // holds the latest _diceRoll so the interval calls a fresh closure
@@ -33504,14 +33504,14 @@ Hard requirements:
     // Hide the floating controls after a short idle so the painting reads clean.
     // ◆ Lite on desktop/tablet — the CTAs float over the canvas, so they fade
     //   after 2s of no pointer activity (snappy clean plate), revealed again on
-    //   any move/tap. ◆ During playback / fullscreen everywhere else: 4s.
+    //   any move/tap. ◆ During playback / fullscreen everywhere else: 5s.
     // Auto-hide the floating CTAs only in Lite fullscreen on a tablet held in
     // PORTRAIT (isNotPhone = tablet/desktop sized, !is5Col = not landscape).
     // There the CTAs overlay the tall canvas, so they fade after 2s of no
     // pointer activity (snappy clean plate) and reveal on any move/tap.
     const liteFloat = basicMode && immersive && isNotPhone && !is5Col;
     if(liteFloat){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2000); }
-    else if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 10000); }
+    else if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 5000); }
   },[playing,immersive,basicMode,isNotPhone,is5Col]);
   // When playback stops, reveal controls. Outside fullscreen they then stay put;
   // in fullscreen we re-arm the idle countdown so a finished, still piece also
@@ -37252,11 +37252,10 @@ Hard requirements:
                     // Modal must close before paywall opens because both use
                     // zIndex 100000 and the later-rendered setup modal covers it.
                     const locked = styleIsLocked(k);
-                    // RafFel — the author's signature style gets the only gold chip
-                    // in the grid: quiet hierarchy, no extra layout.
-                    const _gold = (k==='raffel');
-                    const chipStyleOn = _gold?{background:PF.card2,border:'1px solid rgba(201,168,76,.85)',color:'#e8c96a'}:{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
-                    const chipStyleOff = _gold?{background:'transparent',border:'1px dashed rgba(201,168,76,.5)',color:'rgba(220,180,90,.6)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
+                    // RafFel keeps only the ✦ star in its label — chip styling matches
+                    // every other artist (the gold chip read as pre-selected).
+                    const chipStyleOn = {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
+                    const chipStyleOff = {background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
                     <button key={k} onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
                     );
