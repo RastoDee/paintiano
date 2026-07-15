@@ -7120,7 +7120,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
   // ═══════════════ RafFel — active phase set (6) ═══════════════
@@ -7173,7 +7173,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===2){
+  if(pick===920){
     // — 2 · MRIEŽKA — portrait golden rectangle, spiral through nested squares —
     let w=CW*0.72, h=w*PHI, x=(CW-w)/2, y=(CH-h)/2, dir=0; const cells=[]; const sqs=[];
     for(let k=0;k<12;k++){ const s=Math.min(w,h);
@@ -7205,7 +7205,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===3){
+  if(pick===2){
     // — 3 · NIŤ — clean coloured lines along the golden-angle spiral —
     const C1 = S*0.0135*(0.9+0.35*dnaD);
     ctx.lineCap='round'; ctx.lineJoin='round';
@@ -7225,7 +7225,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===4){
+  if(pick===3){
     // — 4 · VLNA — quiet soundwave: vertical bars on a baseline —
     const baseY=CH*(0.46+0.10*dnaR);
     ctx.strokeStyle='rgba(201,168,76,.18)'; ctx.lineWidth=1;
@@ -7243,7 +7243,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===5){
+  if(pick===4){
     // — 5 · VEJÁR — rays radiating at the golden angle, length = duration —
     const fcy=CH*(0.52+0.10*dnaR);
     for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i); const a=i*GA - Math.PI/2;
@@ -7255,7 +7255,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===6){
+  if(pick===5){
     // — 6 · VLNENIE — interference field (coarse cells for mobile) —
     const srcs=[];
     const stride=Math.max(1, Math.ceil(N/28));
@@ -7290,7 +7290,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
 
-  if(pick===7){
+  if(pick===6){
     // — 7 · KOMPOZÍCIA — scattered points joined into a coloured graph —
     // Deterministic scatter seeded from the piece, so it's stable per song.
     const rnd2=_seedRnd(137, ss, 1, 0);

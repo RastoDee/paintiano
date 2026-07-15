@@ -2008,7 +2008,7 @@ export default function Paintiano() {
   const paintPhase = (style ? phaseIndex : shufVariant) | 0;
   // Effective number of style-variants per artist for the current tier
   // (free users only see 2). The dice picks a variant in this range.
-  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 8 : 6))))));
+  const _effVariants = () => (proStatus==='free' ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : 6))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
