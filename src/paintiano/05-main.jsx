@@ -1338,6 +1338,8 @@ export default function Paintiano() {
   const [disp,      setDisp]      = useState(0);
   const [active,    setActive]    = useState(new Set());
   const [pickMode,  setPickMode]  = useState(null); // 'midi' | 'audio' | null
+  const [sampleSubPick,setSampleSubPick]=useState(false); // score/sound sample sub-picker (3 built-in pieces)
+  useEffect(()=>{ setSampleSubPick(false); },[pickMode]);
   const [preview,   setPreview]   = useState(null); // {url, filename, w, h, size, file}
   const [previewMsg,setPreviewMsg]= useState(null); // in-modal status text
   // paintDur is read by the playback-timing path (below) but never changed at
@@ -6675,18 +6677,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
 
-  const loadSampleScore=useCallback(async()=>{
+  const loadSampleScore=useCallback(async(idx)=>{
     setWorking(true);setWLabel('reading sample score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
-      const arrayBuffer=b64ToArrayBuffer(SAMPLE_SCORE_B64);
+      const _si=(idx===1||idx===2)?idx:0;
+      const arrayBuffer=b64ToArrayBuffer([SAMPLE_SCORE_B64,SAMPLE_SCORE_B64_2,SAMPLE_SCORE_B64_3][_si]);
       setWPct(50);
       const xmlText=await mxlToXml(arrayBuffer);
       if(loadTokenRef.current!==myToken)return;
       setWPct(80);
       const evts=parseMusicXml(xmlText);
       if(!evts.length){setErr(t('errs').noNotesXml);setErrInfo(false);return;}
-      applyEvents(evts,SAMPLE_SCORE_NAME);
+      applyEvents(evts,[SAMPLE_SCORE_NAME,SAMPLE_SCORE_NAME_2,SAMPLE_SCORE_NAME_3][_si]);
       setLoadedSource('score');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Sample score: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
@@ -12189,12 +12192,38 @@ Hard requirements:
                 {t('cancel')}
               </button>
             </div>
+            ) : (sampleSubPick && (pickMode==='sound'||pickMode==='score')) ? (
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {/* SAMPLE SUB-PICKER — three built-in MusicXML pieces. Opened by
+                  tapping the sample tile in sound/score mode; back returns to
+                  the normal picker. Reset on pickMode change via effect. */}
+              {[
+                {n:'Liebestraum No.3 — Liszt',d:({EN:'romantic · lyrical',SK:'romantická · lyrická',DE:'romantisch · lyrisch',FR:'romantique · lyrique',ES:'romántica · lírica',PT:'romântica · lírica',zh:'浪漫 · 抒情',zhTW:'浪漫 · 抒情',ja:'ロマンティック · 拒情的'})[lang]||'romantic · lyrical'},
+                {n:'Flight of the Bumble-Bee — Rimsky-Korsakov',d:({EN:'fast · dense',SK:'rýchla · hustá',DE:'schnell · dicht',FR:'rapide · dense',ES:'rápida · densa',PT:'rápida · densa',zh:'快速 · 密集',zhTW:'快速 · 密集',ja:'高速 · 濃密'})[lang]||'fast · dense'},
+                {n:'Metamorphosis One — Philip Glass',d:({EN:'minimal · calm',SK:'minimalistická · pokojná',DE:'minimalistisch · ruhig',FR:'minimaliste · calme',ES:'minimalista · serena',PT:'minimalista · serena',zh:'极简 · 平静',zhTW:'極簡 · 平靜',ja:'ミニマル · 静寂'})[lang]||'minimal · calm'}
+              ].map((s,i)=>(
+                <button key={i} onClick={()=>{
+                  if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
+                  if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
+                  loadSampleScore(i);
+                  setForceSetup(false);
+                  setPickMode(null);
+                }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+                  <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="play" s={14}/>{s.n}</span>
+                  <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.d}</span>
+                </button>
+              ))}
+              <button onClick={()=>setSampleSubPick(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
+                ‹ {t('backToSetup')||'back'}
+              </button>
+            </div>
             ) : (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {/* SAMPLE TILE — icon matches the mode (gramophone for music,
                   image-frame for image, sparkles for MFI), label sentence-case,
                   hint shows the actual sample name underneath. */}
               <button onClick={()=>{
+                if(pickMode==='sound'||pickMode==='score'){ setSampleSubPick(true); return; } // open 3-piece sub-picker instead of loading directly
                 if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
                 if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
                 if(pickMode==='sound') loadSampleScore();
@@ -12207,7 +12236,7 @@ Hard requirements:
                 setPickMode(null);
               }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="play" s={14}/>{_sent(_stripIcon(t('builtInSample')))}</span>
-                <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?SAMPLE_SCORE_NAME:pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?SAMPLE_SCORE_NAME:pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:'The Starry Night — Vincent van Gogh'}</span>
+                <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'Liszt · Rimsky-Korsakov · Glass':pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?'Liszt · Rimsky-Korsakov · Glass':pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:'The Starry Night — Vincent van Gogh'}</span>
               </button>
 
               {/* FILE TILE — universal upload icon, gold accent, hint shows accepted formats. */}
