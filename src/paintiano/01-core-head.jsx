@@ -294,13 +294,14 @@ const PF_STYLE = `
             position: relative;
             display: grid !important;
             grid-template-columns: 180px minmax(0, 1fr) 180px;
-            grid-template-rows: auto auto auto auto auto 1fr auto auto;
+            grid-template-rows: auto auto auto auto auto 1fr auto auto auto;
             grid-template-areas:
               "topbar   topbar topbar"
               "header   header header"
               "controls stage  rtop"
               "colors   stage  styles"
               "ltrans   stage  styles"
+              ".        stage  styles"
               ".        stage  rfab"
               "vfooter  vfooter vfooter"
               "legal    legal  legal";
@@ -319,15 +320,15 @@ const PF_STYLE = `
           @media (orientation: landscape) and (min-height: 501px) {
             .pf-app-root:not(.pf-mode-setup) {
               grid-template-columns: 180px minmax(0, 1fr) 180px !important;
-              grid-template-rows: auto auto auto auto auto auto 1fr auto auto !important;
+              grid-template-rows: auto auto auto auto auto 1fr auto auto auto !important;
               grid-template-areas:
                 "topbar   topbar  topbar"
                 "header   header  header"
                 "controls trkhd   rtop"
                 "colors   stage   styles"
                 "ltrans   stage   styles"
+                ".        stage   styles"
                 ".        stage   rfab"
-                ".        stage   ."
                 "vfooter  vfooter vfooter"
                 "legal    legal   legal" !important;
               column-gap: 24px !important;
