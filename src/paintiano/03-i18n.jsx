@@ -1252,7 +1252,7 @@ const I18N = {
     listen:'🔊 聴く', listening:'🔊 聴いています…',
     mic:'マイク', micActive:'ライブ',
     voicePreset:'🎤 声', musicPreset:'🔊 音楽',
-    play:'再生', pause:'一時停止', resume:'続き', mute:'音声ミュート', unmute:'音声オン', randomOn:'ランダム ON', randomOff:'ランダム OFF',
+    play:'再生', pause:'一時停止', resume:'続き', mute:'音声ミュート', unmute:'音声オン', randomOn:'シャッフル ON', randomOff:'シャッフル OFF',
     litePlayHint:'再生',
     print:'🖨 印刷', clear:'クリア', clearConfirm:'もう一度タップでクリア', demoConfirm:'現在のものを置き換える?', switchConfirm:'キャンバスをクリーンに?', loop:'⟳ ループ', appChoseColour:'アプリが色の読み方を選んだ', undo:'↩',
     recArm:'録音', recStop:'録音…',
