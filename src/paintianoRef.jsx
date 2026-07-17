@@ -25897,7 +25897,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     _setArtistSeed(pollockSessionSeed);
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
-    _setVariantCap(proStatus==='free' ? 2 : null);
+    _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
     // See music carrying-tone paint: when a Music chord carries _domPc (set by
     // the post-load effect from the source image's per-cell dominant hue), build
     // a paint-side copy where every note's m is rewritten to (oct*12 + _domPc) —
@@ -26098,7 +26098,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // alone owns the canvas.
         const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
-        _setVariantCap(proStatus==='free' ? 2 : null);
+        _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
@@ -32900,7 +32900,7 @@ Hard requirements:
         }
       }else{
         _setArtistSeed(pollockSessionSeed);
-        _setVariantCap(proStatus==='free' ? 2 : null);
+        _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         chords.forEach((chord)=>{
           const {n:notes,idx}=chord; _setCurE(chord._E);
