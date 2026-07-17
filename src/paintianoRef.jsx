@@ -25120,6 +25120,67 @@ export default function Paintiano() {
       if((phaseIndex|0)!==(qrVariantRef.current|0)) setPhaseIndex(qrVariantRef.current|0);
     }
   },[style,phaseIndex]);
+  // ── POSTER MAKER (internal, ?postermaker=raffel2026) ───────────────────────
+  // Renders the CURRENT canvas as a print master: dark gallery layout, gold
+  // typography, and a gold QR whose URL is the exact address of what is on
+  // screen — (piece, artist, v) read from live state, so the QR can never
+  // disagree with the exported painting. Built-in pieces only.
+  const exportPoster = useCallback(async ()=>{
+    try{
+      if(builtinPieceRef.current==null){ alert('Poster maker: only built-in sample pieces.'); return; }
+      const pieceKey=['liebestraum','bumblebee','metamorphosis'][builtinPieceRef.current];
+      const artKey=style||null;
+      const vNow=(phaseIndex|0);
+      let url='https://paintiano.app/play?piece='+pieceKey;
+      if(artKey){ url+='&artist='+artKey+'&v='+vNow; }
+      // fonts first (Cormorant is already imported by the app shell)
+      try{ await document.fonts.load('italic 600 84px "Cormorant Garamond"'); await document.fonts.load('600 120px "Cormorant Garamond"'); }catch(_){}
+      // QR (H error correction) fetched, then recoloured gold-on-transparent
+      const qrImg=await new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=rej; im.src='https://api.qrserver.com/v1/create-qr-code/?size=900x900&ecc=H&qzone=2&data='+encodeURIComponent(url); });
+      const W=2160,H=3840, GOLD='#c9a84c';
+      const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+      const cx=cv.getContext('2d');
+      cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H);
+      // artwork — current main canvas, fit into frame area, thin gold keyline
+      const srcCv=canvasRef.current;
+      const AX=180, AY=560, AW=W-360, AH=Math.round(AW*(srcCv?srcCv.height/srcCv.width:4/3));
+      const AH2=Math.min(AH, 2700);
+      cx.strokeStyle='rgba(201,168,76,.85)'; cx.lineWidth=2;
+      cx.strokeRect(AX-2,AY-2,AW+4,AH2+4);
+      if(srcCv){ cx.drawImage(srcCv,AX,AY,AW,AH2); }
+      // inspired by — top, italic serif
+      cx.textAlign='center'; cx.fillStyle=GOLD;
+      if(artKey && STYLE_INSPIRED[artKey]){
+        cx.font='italic 600 84px "Cormorant Garamond", serif';
+        cx.fillText('inspired by '+STYLE_INSPIRED[artKey], W/2, AY-120);
+      }
+      // Paintiano + tagline — bottom centre
+      cx.font='600 132px "Cormorant Garamond", serif';
+      cx.fillText('Paintiano', W/2, AY+AH2+330);
+      cx.font='58px Outfit, sans-serif'; cx.fillStyle='rgba(201,168,76,.75)';
+      cx.fillText('music → φ painting', W/2, AY+AH2+420);
+      // gold QR — bottom-left, aligned with artwork left edge
+      const QS=240;
+      const t=document.createElement('canvas'); t.width=QS; t.height=QS;
+      const tc=t.getContext('2d'); tc.drawImage(qrImg,0,0,QS,QS);
+      const id=tc.getImageData(0,0,QS,QS); const d0=id.data;
+      for(let i=0;i<d0.length;i+=4){ const dark=d0[i]<128; d0[i]=201; d0[i+1]=168; d0[i+2]=76; d0[i+3]=dark?255:0; }
+      tc.putImageData(id,0,0);
+      const QY=AY+AH2+560;
+      cx.drawImage(t,AX,QY);
+      cx.font='30px Outfit, sans-serif'; cx.fillStyle='rgba(160,134,60,.9)';
+      cx.fillText('S C A N  ·  H E A R  I T  P A I N T', AX+QS/2, QY+QS+52);
+      // φ mark bottom right
+      cx.font='italic 600 64px "Cormorant Garamond", serif'; cx.fillStyle=GOLD; cx.textAlign='right';
+      cx.fillText('φ', W-140, H-140);
+      cv.toBlob((b)=>{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(b);
+        a.download='paintiano-poster-'+pieceKey+'-'+(artKey||'mosaic')+'-v'+vNow+'.png';
+        a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+      },'image/png');
+    }catch(e){ try{ alert('Poster export failed: '+e.message); }catch(_){} }
+  },[style,phaseIndex,STYLE_INSPIRED]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -25286,6 +25347,12 @@ export default function Paintiano() {
   const qrPieceRef = useRef(undefined);
   const qrArtistRef = useRef(null);
   const qrVariantRef = useRef(0);
+  const posterMakerRef = useRef(false);
+  // Which BUILT-IN sample currently owns the canvas (0/1/2) — set by
+  // loadSampleMidi, cleared by every other loader via applyEvents. This is
+  // what makes the poster tool work from the normal in-app sample picker,
+  // no URLs needed.
+  const builtinPieceRef = useRef(null);
   if(qrPieceRef.current===undefined){
     let _qidx=null;
     try{
@@ -25302,9 +25369,31 @@ export default function Paintiano() {
       // the buyer's poster exactly.
       const _qv=parseInt(_u.get('v'),10);
       if(qrArtistRef.current && Number.isInteger(_qv) && _qv>=0 && _qv<=7){ qrVariantRef.current=_qv; }
+      // ?postermaker=<secret> — internal production tool (alternate enabler;
+      // the primary switch is 7 quick taps on the Paintiano wordmark).
+      if(_u.get('postermaker')==='raffel2026'){ try{ localStorage.setItem('paintiano_postermaker','1'); }catch(_){} }
     }catch(_){}
     qrPieceRef.current=_qidx;
   }
+  // Poster-maker mode: hidden production switch. 7 quick taps on the Paintiano
+  // wordmark toggle it; persisted so Rasto's devices keep it on. Zero UI
+  // otherwise — the chip renders only with a built-in piece on canvas.
+  const [posterMaker,setPosterMaker]=useState(()=>{ try{ return localStorage.getItem('paintiano_postermaker')==='1'; }catch(_){ return false; } });
+  const _pmTapsRef=useRef({n:0,t:0});
+  const _pmLogoTap=useCallback(()=>{
+    const now=Date.now(); const st=_pmTapsRef.current;
+    if(now-st.t>2600){ st.n=0; }
+    st.t=now; st.n++;
+    if(st.n>=4){
+      st.n=0;
+      setPosterMaker(v=>{
+        const nv=!v;
+        try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){}
+        try{ setErr(nv?'poster maker ON':'poster maker OFF'); setErrInfo(true); setTimeout(()=>setErr(''),1800); }catch(_){}
+        return nv;
+      });
+    }
+  },[]);
   // ── BASIC vs ADVANCED app mode ────────────────────────────────────────────
   // basicMode = the simplified experience: a big live canvas painting the Liszt
   // sample, with just three CTAs (Surprise me · contextual Save/Pause · My
@@ -28594,6 +28683,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const applyEvents = useCallback((events,title)=>{
     if(!events.length)return;
+    builtinPieceRef.current=null; // any loader other than loadSampleMidi re-nulls it below
     setImgReturnUrl(null); setImgMoodThumb(null);
     // Clear MFI flags — applyEvents is the chord-loader for ALL non-MFI
     // sources (MIDI/audio/score files, song search, AI compose, recall,
@@ -29611,6 +29701,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const evts=toChords(raw,div,temps);
       if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
       stopAll();wipeCanvasNow();applyEvents(evts,[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][_si]);
+      builtinPieceRef.current=_si; // built-in piece owns the canvas → poster tool may fire
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
@@ -33703,6 +33794,9 @@ Hard requirements:
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
+      {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
+        <button onClick={exportPoster} style={{position:'fixed',right:14,bottom:132,zIndex:9999,padding:'10px 16px',borderRadius:22,border:'1px solid rgba(201,168,76,.8)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.18em',cursor:'pointer'}}>⬇ POSTER</button>
+      )}
       {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
         // a big play CTA that loads the trimmed Liszt sample (30 s) and starts
@@ -34038,7 +34132,7 @@ Hard requirements:
         })()}
       </div>
       <header style={{textAlign:'center',marginBottom:(basicMode&&isActiveView)?2:(isActiveView?8:(isDesktop?8:18))}}>
-        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(basicMode&&isActiveView)?(isDesktop?'clamp(1.8rem,4vw,2.5rem)':'clamp(2.2rem,9vw,3rem)'):(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)'),fontWeight:600,letterSpacing:'.03em',margin:(basicMode&&isActiveView)?'0 0 0':'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
+        <h1 onClick={_pmLogoTap} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:(basicMode&&isActiveView)?(isDesktop?'clamp(1.8rem,4vw,2.5rem)':'clamp(2.2rem,9vw,3rem)'):(isDesktop?'clamp(1.8rem,4vw,2.6rem)':'clamp(2.4rem,10vw,3.2rem)'),fontWeight:600,letterSpacing:'.03em',margin:(basicMode&&isActiveView)?'0 0 0':'0 0 6px',lineHeight:1,background:`linear-gradient(135deg,${PF.gold2} 0%,${PF.gold} 50%,#c88a18 100%)`,WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent'}}>Paintiano</h1>
         {basicMode && (
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
           {(()=>{
