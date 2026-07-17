@@ -25129,10 +25129,16 @@ export default function Paintiano() {
     try{
       if(builtinPieceRef.current==null){ alert('Poster maker: only built-in sample pieces.'); return; }
       const pieceKey=['liebestraum','bumblebee','metamorphosis'][builtinPieceRef.current];
-      const artKey=style||null;
-      const vNow=(phaseIndex|0);
-      let url='https://paintiano.app/play?piece='+pieceKey;
-      if(artKey){ url+='&artist='+artKey+'&v='+vNow; }
+      // The painted address, mirroring the paint pipeline exactly:
+      //  • manual artist → (style, phaseIndex)
+      //  • dice on, no artist → shuffle owns it → (shuffleStyle, shufVariant)
+      //  • Mosaic / Notes family stops have no QR address — block with a hint.
+      const artKey = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode ? 'oneM' : null);
+      const vNow = style ? (phaseIndex|0) : (shufVariant|0);
+      if(!artKey || (typeof ALL_ARTIST_KEYS!=='undefined' && !ALL_ARTIST_KEYS.includes(artKey))){
+        alert('Poster maker: Mosaic/Notes stop nema QR adresu - vyber konkretneho umelca.'); return;
+      }
+      const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+artKey+'&v='+vNow;
       // fonts first (Cormorant is already imported by the app shell)
       try{ await document.fonts.load('italic 600 84px "Cormorant Garamond"'); await document.fonts.load('600 120px "Cormorant Garamond"'); }catch(_){}
       // QR (H error correction) fetched, then recoloured gold-on-transparent
@@ -25180,7 +25186,7 @@ export default function Paintiano() {
         a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
       },'image/png');
     }catch(e){ try{ alert('Poster export failed: '+e.message); }catch(_){} }
-  },[style,phaseIndex,STYLE_INSPIRED]);
+  },[style,phaseIndex,shuffleStyle,shufVariant,oneMMode,STYLE_INSPIRED]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with

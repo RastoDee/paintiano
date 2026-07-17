@@ -2185,26 +2185,37 @@ export default function Paintiano() {
       cx.fillText('Paintiano', W/2, AY+AH2+330);
       cx.font='58px Outfit, sans-serif'; cx.fillStyle='rgba(201,168,76,.75)';
       cx.fillText('music → φ painting', W/2, AY+AH2+420);
-      // gold QR — bottom-left, aligned with artwork left edge
+      // gold QR — centred beneath the tagline
       const QS=240;
       const t=document.createElement('canvas'); t.width=QS; t.height=QS;
       const tc=t.getContext('2d'); tc.drawImage(qrImg,0,0,QS,QS);
       const id=tc.getImageData(0,0,QS,QS); const d0=id.data;
       for(let i=0;i<d0.length;i+=4){ const dark=d0[i]<128; d0[i]=201; d0[i+1]=168; d0[i+2]=76; d0[i+3]=dark?255:0; }
       tc.putImageData(id,0,0);
-      const QY=AY+AH2+560;
-      cx.drawImage(t,AX,QY);
+      const QY=AY+AH2+520;
+      cx.drawImage(t,W/2-QS/2,QY);
+      cx.textAlign='center';
       cx.font='30px Outfit, sans-serif'; cx.fillStyle='rgba(160,134,60,.9)';
-      cx.fillText('S C A N  ·  H E A R  I T  P A I N T', AX+QS/2, QY+QS+52);
+      cx.fillText('S C A N  ·  H E A R  I T  P A I N T', W/2, QY+QS+52);
       // φ mark bottom right
       cx.font='italic 600 64px "Cormorant Garamond", serif'; cx.fillStyle=GOLD; cx.textAlign='right';
       cx.fillText('φ', W-140, H-140);
-      cv.toBlob((b)=>{
+      // PRODUCTION PACKAGE — three files, staggered so the browser allows them:
+      //  1. composed poster (dark layout + gold QR)
+      //  2. raw artwork alone (native canvas resolution, no chrome)
+      //  3. print QR alone (black on white, EC-H) for Postera's own layouts
+      const base='paintiano-'+pieceKey+'-'+artKey+'-v'+vNow;
+      const dl=(blob,name,delay)=>setTimeout(()=>{
         const a=document.createElement('a');
-        a.href=URL.createObjectURL(b);
-        a.download='paintiano-poster-'+pieceKey+'-'+(artKey||'mosaic')+'-v'+vNow+'.png';
-        a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-      },'image/png');
+        a.href=URL.createObjectURL(blob); a.download=name; a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+      },delay);
+      cv.toBlob((b)=>{ if(b) dl(b, base+'-poster.png', 0); },'image/png');
+      if(srcCv){ srcCv.toBlob((b)=>{ if(b) dl(b, base+'-art.png', 450); },'image/png'); }
+      try{
+        const qb=await fetch(qrImg.src).then(r=>r.blob());
+        dl(qb, base+'-qr.png', 900);
+      }catch(_){}
     }catch(e){ try{ alert('Poster export failed: '+e.message); }catch(_){} }
   },[style,phaseIndex,shuffleStyle,shufVariant,oneMMode,STYLE_INSPIRED]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
