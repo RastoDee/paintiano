@@ -2163,59 +2163,75 @@ export default function Paintiano() {
       try{ await document.fonts.load('italic 600 84px "Cormorant Garamond"'); await document.fonts.load('600 120px "Cormorant Garamond"'); }catch(_){}
       // QR (H error correction) fetched, then recoloured gold-on-transparent
       const qrImg=await new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=rej; im.src='https://api.qrserver.com/v1/create-qr-code/?size=900x900&ecc=H&qzone=2&data='+encodeURIComponent(url); });
-      const W=2160,H=3840, GOLD='#c9a84c';
+      const GOLD='#c9a84c';
+      const srcCv=canvasRef.current;
+      // DYNAMIC HEIGHT: footer flows under the artwork, whatever its aspect —
+      // fixed 3840 clipped the QR on taller canvases.
+      const W=2160, AX=180, AY=560, AW=W-360;
+      const AH2=Math.min(Math.round(AW*(srcCv?srcCv.height/srcCv.width:4/3)), 2900);
+      const TY=AY+AH2+300;         // Paintiano baseline
+      const TAGY=TY+96;            // tagline baseline
+      const QS=240, QY=TAGY+70;    // QR top
+      const CAPY=QY+QS+56;         // caption baseline
+      const H=CAPY+170;
       const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
       const cx=cv.getContext('2d');
       cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H);
-      // artwork — current main canvas, fit into frame area, thin gold keyline
-      const srcCv=canvasRef.current;
-      const AX=180, AY=560, AW=W-360, AH=Math.round(AW*(srcCv?srcCv.height/srcCv.width:4/3));
-      const AH2=Math.min(AH, 2700);
       cx.strokeStyle='rgba(201,168,76,.85)'; cx.lineWidth=2;
       cx.strokeRect(AX-2,AY-2,AW+4,AH2+4);
       if(srcCv){ cx.drawImage(srcCv,AX,AY,AW,AH2); }
-      // inspired by — top, italic serif
       cx.textAlign='center'; cx.fillStyle=GOLD;
       if(artKey && STYLE_INSPIRED[artKey]){
         cx.font='italic 600 84px "Cormorant Garamond", serif';
         cx.fillText('inspired by '+STYLE_INSPIRED[artKey], W/2, AY-120);
       }
-      // Paintiano + tagline — bottom centre
       cx.font='600 132px "Cormorant Garamond", serif';
-      cx.fillText('Paintiano', W/2, AY+AH2+330);
+      cx.fillText('Paintiano', W/2, TY);
       cx.font='58px Outfit, sans-serif'; cx.fillStyle='rgba(201,168,76,.75)';
-      cx.fillText('music → φ painting', W/2, AY+AH2+420);
-      // gold QR — centred beneath the tagline
-      const QS=240;
+      cx.fillText('music \u2192 \u03c6 painting', W/2, TAGY);
+      // gold QR centred beneath the tagline
       const t=document.createElement('canvas'); t.width=QS; t.height=QS;
       const tc=t.getContext('2d'); tc.drawImage(qrImg,0,0,QS,QS);
       const id=tc.getImageData(0,0,QS,QS); const d0=id.data;
       for(let i=0;i<d0.length;i+=4){ const dark=d0[i]<128; d0[i]=201; d0[i+1]=168; d0[i+2]=76; d0[i+3]=dark?255:0; }
       tc.putImageData(id,0,0);
-      const QY=AY+AH2+520;
       cx.drawImage(t,W/2-QS/2,QY);
       cx.textAlign='center';
       cx.font='30px Outfit, sans-serif'; cx.fillStyle='rgba(160,134,60,.9)';
-      cx.fillText('S C A N  ·  H E A R  I T  P A I N T', W/2, QY+QS+52);
-      // φ mark bottom right
+      cx.fillText('S C A N  \u00b7  H E A R  I T  P A I N T', W/2, CAPY);
       cx.font='italic 600 64px "Cormorant Garamond", serif'; cx.fillStyle=GOLD; cx.textAlign='right';
-      cx.fillText('φ', W-140, H-140);
-      // PRODUCTION PACKAGE — three files, staggered so the browser allows them:
-      //  1. composed poster (dark layout + gold QR)
-      //  2. raw artwork alone (native canvas resolution, no chrome)
-      //  3. print QR alone (black on white, EC-H) for Postera's own layouts
+      cx.fillText('\u03c6', W-140, H-110);
+      // PRODUCTION PACKAGE — one ZIP (iOS Safari drops extra downloads), no libs:
+      // a minimal STORED zip is ~40 lines. Contains poster / raw art / print QR.
       const base='paintiano-'+pieceKey+'-'+artKey+'-v'+vNow;
-      const dl=(blob,name,delay)=>setTimeout(()=>{
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(blob); a.download=name; a.click();
-        setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-      },delay);
-      cv.toBlob((b)=>{ if(b) dl(b, base+'-poster.png', 0); },'image/png');
-      if(srcCv){ srcCv.toBlob((b)=>{ if(b) dl(b, base+'-art.png', 450); },'image/png'); }
-      try{
-        const qb=await fetch(qrImg.src).then(r=>r.blob());
-        dl(qb, base+'-qr.png', 900);
-      }catch(_){}
+      const posterBlob=await new Promise(r=>cv.toBlob(r,'image/png'));
+      const artBlob=srcCv?await new Promise(r=>srcCv.toBlob(r,'image/png')):null;
+      let qrBlob=null; try{ qrBlob=await fetch(qrImg.src).then(r=>r.ok?r.blob():null); }catch(_){}
+      const files=[[base+'-poster.png',posterBlob]];
+      if(artBlob) files.push([base+'-art.png',artBlob]);
+      if(qrBlob)  files.push([base+'-qr.png',qrBlob]);
+      const crcT=(()=>{const T=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);T[n]=c>>>0;}return T;})();
+      const crc32=(u)=>{let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};
+      const u16=(v)=>[v&255,(v>>>8)&255]; const u32=(v)=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+      const enc=new TextEncoder(); const parts=[]; const cd=[]; let off=0;
+      for(const [nm,bl] of files){
+        const data=new Uint8Array(await bl.arrayBuffer());
+        const n=enc.encode(nm); const crc=crc32(data);
+        const lh=new Uint8Array([80,75,3,4,...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(n.length),...u16(0)]);
+        parts.push(lh,n,data);
+        cd.push({n,crc,sz:data.length,off});
+        off+=lh.length+n.length+data.length;
+      }
+      const cdStart=off; let cdLen=0;
+      for(const e of cd){
+        const ch=new Uint8Array([80,75,1,2,...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(e.crc),...u32(e.sz),...u32(e.sz),...u16(e.n.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(e.off)]);
+        parts.push(ch,e.n); cdLen+=ch.length+e.n.length;
+      }
+      parts.push(new Uint8Array([80,75,5,6,...u16(0),...u16(0),...u16(cd.length),...u16(cd.length),...u32(cdLen),...u32(cdStart),...u16(0)]));
+      const zip=new Blob(parts,{type:'application/zip'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(zip); a.download=base+'.zip'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),6000);
     }catch(e){ try{ alert('Poster export failed: '+e.message); }catch(_){} }
   },[style,phaseIndex,shuffleStyle,shufVariant,oneMMode,STYLE_INSPIRED]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
