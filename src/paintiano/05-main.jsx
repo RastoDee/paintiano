@@ -2125,6 +2125,21 @@ export default function Paintiano() {
       }
     }
   }, [pollockSessionSeed, effectiveStyle, randomMode]);
+  // ── QR poster pin — bulletproof variant enforcement ────────────────────────
+  // A poster QR promises ONE exact painting: (piece, artist, v). Whatever
+  // rolls or resets the phase (dice, load effects, future code), this effect
+  // re-asserts the pinned variant while the QR artist is still the active
+  // style. It also re-asserts the ref-only taste latch (the state-sync effect
+  // can overwrite the ref). The moment the user actively moves to a DIFFERENT
+  // artist, the pin disarms for good and normal behaviour takes over.
+  useEffect(()=>{
+    if(!qrArtistRef.current) return;
+    if(style && style!==qrArtistRef.current){ qrArtistRef.current=null; return; }
+    if(style===qrArtistRef.current){
+      tastePreviewKeyRef.current = qrArtistRef.current;
+      if((phaseIndex|0)!==(qrVariantRef.current|0)) setPhaseIndex(qrVariantRef.current|0);
+    }
+  },[style,phaseIndex]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
