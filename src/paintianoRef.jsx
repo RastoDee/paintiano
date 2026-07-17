@@ -25261,6 +25261,22 @@ export default function Paintiano() {
   // Cockpit-roll nudge: a soft gold pulse on the collapsed "choose look" bar,
   // shown until the user opens the roll for the first time ever.
   const [cockpitOpened, setCockpitOpened] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_cockpit_opened')==='1'; }catch(_){ return false; } });
+  // ── QR poster deep link: /play?piece=liebestraum|bumblebee|metamorphosis ──
+  // Poster QR codes land here. Parsed ONCE per page load; the param stays in
+  // the URL (posters hang for years — a refresh must keep working). Effect:
+  //   • the app opens in Lite on the big Play disc (audio needs a gesture anyway)
+  //   • every Lite default-sample load (Play disc, Surprise, welcome-back) uses
+  //     THIS piece instead of the default Liebestraum
+  // No artist forcing, no UI changes — otherwise the normal Lite flow.
+  const qrPieceRef = useRef(undefined);
+  if(qrPieceRef.current===undefined){
+    let _qidx=null;
+    try{
+      const _qp=new URLSearchParams(window.location.search).get('piece');
+      _qidx = _qp==='liebestraum' ? 0 : _qp==='bumblebee' ? 1 : _qp==='metamorphosis' ? 2 : null;
+    }catch(_){}
+    qrPieceRef.current=_qidx;
+  }
   // ── BASIC vs ADVANCED app mode ────────────────────────────────────────────
   // basicMode = the simplified experience: a big live canvas painting the Liszt
   // sample, with just three CTAs (Surprise me · contextual Save/Pause · My
@@ -25270,6 +25286,7 @@ export default function Paintiano() {
   // reloads — applies to every user, new or returning.
   const [basicMode, setBasicMode] = useState(()=>{
     try{
+      if(qrPieceRef.current!=null) return true; // QR poster scan → always land on the Lite Play disc
       if(!localStorage.getItem('paintiano_onboarded')) return true; // first visit → Basic
       return localStorage.getItem('paintiano_basic_mode')!=='0';
     }catch(_){ return true; }
@@ -31130,7 +31147,7 @@ Hard requirements:
   const surpriseMe = useCallback(()=>{
     pickExpressiveStyle();
     setMode('harmony');
-    loadSampleMidi();
+    loadSampleMidi(qrPieceRef.current==null?undefined:qrPieceRef.current);
     setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
   },[pickExpressiveStyle, loadSampleMidi, startPlay]);
 
@@ -31158,7 +31175,7 @@ Hard requirements:
     // from a previous session). Lite no longer force-resets to Harmony so
     // a Spectral / Phi / Custom user keeps their colour DNA in Lite too.
     try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
-    loadSampleMidi();
+    loadSampleMidi(qrPieceRef.current==null?undefined:qrPieceRef.current);
     setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startPlayRef.current && startPlayRef.current(); }catch(_){} }).catch(()=>{}); }catch(_){} }, 120);
   },[loadSampleMidi]);
 
@@ -31463,7 +31480,7 @@ Hard requirements:
         }
         setPhaseIndex(0);
         setNotesMode(false); setOneMMode(false);
-        loadSampleMidi();
+        loadSampleMidi(qrPieceRef.current==null?undefined:qrPieceRef.current);
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
         // audio + paint together (basicTapUnlock), instead of painting silently.

@@ -25269,11 +25269,18 @@ export default function Paintiano() {
   //     THIS piece instead of the default Liebestraum
   // No artist forcing, no UI changes — otherwise the normal Lite flow.
   const qrPieceRef = useRef(undefined);
+  const qrArtistRef = useRef(null);
   if(qrPieceRef.current===undefined){
     let _qidx=null;
     try{
-      const _qp=new URLSearchParams(window.location.search).get('piece');
+      const _u=new URLSearchParams(window.location.search);
+      const _qp=_u.get('piece');
       _qidx = _qp==='liebestraum' ? 0 : _qp==='bumblebee' ? 1 : _qp==='metamorphosis' ? 2 : null;
+      // ?artist= — the opening artist (the one printed on the poster). Validated
+      // against the real key list; painted via the taste-preview REF so a Pro
+      // artist renders fully for the poster's buyer regardless of tier.
+      const _qa=_u.get('artist');
+      if(_qa && typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(_qa) && _qa!=='mosaicFamily'){ qrArtistRef.current=_qa; }
     }catch(_){}
     qrPieceRef.current=_qidx;
   }
@@ -31163,13 +31170,22 @@ Hard requirements:
       // Prefer Pollock 'a' — painterly first impression. If the user removed
       // Pollock from their Set via Preset (⚙), fall back to the first playable
       // artist in their set (skip mosaicFamily and Pro-locked artists on Free).
-      const _target = setupArtists.includes('pollock')
+      const _target = qrArtistRef.current
+        ? qrArtistRef.current
+        : (setupArtists.includes('pollock')
         ? 'pollock'
-        : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock');
+        : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'));
       setStyle(_target); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      if(qrArtistRef.current){
+        // Poster QR: paint in the poster's artist, full variant range, even on
+        // Free (ref-only taste latch; state stays null so no countdown starts).
+        tastePreviewKeyRef.current = qrArtistRef.current;
+        _liteNextIsMosaicRef.current = false;
+      } else {
       // Arm the "next Surprise = Mosaic" flag so the second impression is the
       // bare grid, high contrast with the painterly Pollock opener.
       _liteNextIsMosaicRef.current = true;
+      }
     }catch(_){}
     // Inherit the user's active palette and tone (set in Advanced or stored
     // from a previous session). Lite no longer force-resets to Harmony so
@@ -31473,9 +31489,12 @@ Hard requirements:
           _liteNextIsMosaicRef.current = true;
         } else {
           // Re-entry / reload — prefer Kusama, same fallback logic.
-          const _t = setupArtists.includes('kusama')
+          const _t = qrArtistRef.current
+            ? qrArtistRef.current
+            : (setupArtists.includes('kusama')
             ? 'kusama'
-            : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kusama');
+            : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kusama'));
+          if(qrArtistRef.current){ tastePreviewKeyRef.current = qrArtistRef.current; }
           setStyle(_t);
         }
         setPhaseIndex(0);
