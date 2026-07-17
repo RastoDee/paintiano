@@ -25270,6 +25270,7 @@ export default function Paintiano() {
   // No artist forcing, no UI changes — otherwise the normal Lite flow.
   const qrPieceRef = useRef(undefined);
   const qrArtistRef = useRef(null);
+  const qrVariantRef = useRef(0);
   if(qrPieceRef.current===undefined){
     let _qidx=null;
     try{
@@ -25281,6 +25282,11 @@ export default function Paintiano() {
       // artist renders fully for the poster's buyer regardless of tier.
       const _qa=_u.get('artist');
       if(_qa && typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(_qa) && _qa!=='mosaicFamily'){ qrArtistRef.current=_qa; }
+      // ?v= — the exact painting variant (phase index) printed on the poster.
+      // Seed is a deterministic hash of the piece, so (piece, artist, v) pins
+      // the buyer's poster exactly.
+      const _qv=parseInt(_u.get('v'),10);
+      if(qrArtistRef.current && Number.isInteger(_qv) && _qv>=0 && _qv<=7){ qrVariantRef.current=_qv; }
     }catch(_){}
     qrPieceRef.current=_qidx;
   }
@@ -31175,7 +31181,7 @@ Hard requirements:
         : (setupArtists.includes('pollock')
         ? 'pollock'
         : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'));
-      setStyle(_target); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      setStyle(_target); setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0); setNotesMode(false); setOneMMode(false);
       if(qrArtistRef.current){
         // Poster QR: paint in the poster's artist, full variant range, even on
         // Free (ref-only taste latch; state stays null so no countdown starts).
@@ -31497,7 +31503,7 @@ Hard requirements:
           if(qrArtistRef.current){ tastePreviewKeyRef.current = qrArtistRef.current; }
           setStyle(_t);
         }
-        setPhaseIndex(0);
+        setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0);
         setNotesMode(false); setOneMMode(false);
         loadSampleMidi(qrPieceRef.current==null?undefined:qrPieceRef.current);
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
