@@ -1053,6 +1053,16 @@ export default function Paintiano() {
       if(!reloadArmed) return;
       // Only reload when the tab is hidden — avoids interrupting active painting.
       if(document.visibilityState !== 'visible'){
+        // CIRCUIT BREAKER: at most ONE auto-reload per 10 minutes per browser.
+        // Whatever inconsistent state the SW/cache ever gets into, a reload
+        // LOOP is now physically impossible — worst case the user runs one
+        // stale build until the next natural visit.
+        try{
+          const K='paintiano_sw_reload_ts';
+          const last=parseInt(localStorage.getItem(K)||'0',10);
+          if(Date.now()-last < 10*60*1000) return;
+          localStorage.setItem(K, String(Date.now()));
+        }catch(_){}
         try{ window.location.reload(); }catch(_){}
       }
     };

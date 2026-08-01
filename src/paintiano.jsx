@@ -24033,6 +24033,16 @@ export default function Paintiano() {
       if(!reloadArmed) return;
       // Only reload when the tab is hidden — avoids interrupting active painting.
       if(document.visibilityState !== 'visible'){
+        // CIRCUIT BREAKER: at most ONE auto-reload per 10 minutes per browser.
+        // Whatever inconsistent state the SW/cache ever gets into, a reload
+        // LOOP is now physically impossible — worst case the user runs one
+        // stale build until the next natural visit.
+        try{
+          const K='paintiano_sw_reload_ts';
+          const last=parseInt(localStorage.getItem(K)||'0',10);
+          if(Date.now()-last < 10*60*1000) return;
+          localStorage.setItem(K, String(Date.now()));
+        }catch(_){}
         try{ window.location.reload(); }catch(_){}
       }
     };
@@ -25412,6 +25422,10 @@ export default function Paintiano() {
   // wordmark toggle it; persisted so Rasto's devices keep it on. Zero UI
   // otherwise — the chip renders only with a built-in piece on canvas.
   const [posterMaker,setPosterMaker]=useState(()=>{ try{ return localStorage.getItem('paintiano_postermaker')==='1'; }catch(_){ return false; } });
+  // Product Hunt launch banner — discreet pill, dismiss is remembered, and the
+  // whole thing self-expires at launch time (26 Aug 2026, 09:00 CEST) so no
+  // cleanup release is ever needed.
+  const [phBanner,setPhBanner]=useState(()=>{ try{ if(Date.now()>=Date.parse('2026-08-26T07:00:00Z')) return false; return localStorage.getItem('paintiano_ph_banner_v1')!=='1'; }catch(_){ return false; } });
   const _pmTapsRef=useRef({n:0,t:0});
   const _pmLogoTap=useCallback(()=>{
     const now=Date.now(); const st=_pmTapsRef.current;
@@ -33829,6 +33843,16 @@ Hard requirements:
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
         <button onClick={exportPoster} style={{position:'fixed',right:14,bottom:132,zIndex:9999,padding:'10px 16px',borderRadius:22,border:'1px solid rgba(201,168,76,.8)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.18em',cursor:'pointer'}}>⬇ POSTER</button>
+      )}
+      {phBanner && (
+        <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(201,168,76,.55)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45)',maxWidth:'92vw'}}>
+          <span
+            onClick={()=>{ try{ window.open('https://www.producthunt.com/products/paintiano?launch=paintiano','_blank'); }catch(_){} }}
+            style={{color:'#c9a84c',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+            {({EN:'Launching on Product Hunt · Aug 26',SK:'Štartujeme na Product Hunte · 26. 8.',DE:'Wir starten auf Product Hunt · 26. 8.',FR:'Lancement sur Product Hunt · 26/8',ES:'Lanzamiento en Product Hunt · 26/8',PT:'Lançamento no Product Hunt · 26/8',zh:'8月26日 Product Hunt 上线',zhTW:'8月26日 Product Hunt 上線',ja:'8月26日 Product Hunt でローンチ'})[lang]||'Launching on Product Hunt · Aug 26'} · <b style={{fontWeight:700}}>Notify me</b>
+          </span>
+          <span onClick={()=>{ setPhBanner(false); try{ localStorage.setItem('paintiano_ph_banner_v1','1'); }catch(_){} }} style={{color:'rgba(201,168,76,.7)',cursor:'pointer',fontSize:15,lineHeight:1,padding:'2px 4px'}}>×</span>
+        </div>
       )}
       {showOnboarding && !showIntro && !basicMode && (()=>{
         // First-visit hero. Shows a Miró-style preview of what Paintiano produces,
