@@ -8349,10 +8349,14 @@ Hard requirements:
       // Prefer Pollock 'a' — painterly first impression. If the user removed
       // Pollock from their Set via Preset (⚙), fall back to the first playable
       // artist in their set (skip mosaicFamily and Pro-locked artists on Free).
+      // First Lite impression: a random pick from four strong free openers
+      // (Pollock / Kandinsky / Kusama / af Klint spiral), all at v0 — instead
+      // of always Pollock. QR artist still wins when present.
+      const _openers=['pollock','kandinsky','kusama','spiral'].filter(k=> setupArtists.includes(k));
       const _target = qrArtistRef.current
         ? qrArtistRef.current
-        : (setupArtists.includes('pollock')
-        ? 'pollock'
+        : (_openers.length
+        ? _openers[(Math.random()*_openers.length)|0]
         : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'));
       setStyle(_target); setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0); setNotesMode(false); setOneMMode(false);
       if(qrArtistRef.current){

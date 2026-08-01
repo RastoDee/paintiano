@@ -33844,6 +33844,11 @@ Hard requirements:
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
         <button onClick={exportPoster} style={{position:'fixed',right:14,bottom:132,zIndex:9999,padding:'10px 16px',borderRadius:22,border:'1px solid rgba(201,168,76,.8)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.18em',cursor:'pointer'}}>⬇ POSTER</button>
       )}
+      {posterMaker && builtinPieceRef.current!=null && (
+        <div style={{position:'fixed',left:14,bottom:132,zIndex:9999,padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',fontVariantNumeric:'tabular-nums'}}>
+          {(style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':'—'))} · v{style?(phaseIndex|0):(shufVariant|0)}
+        </div>
+      )}
       {phBanner && (
         <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(201,168,76,.55)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45)',maxWidth:'92vw'}}>
           <span
