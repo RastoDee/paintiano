@@ -33871,7 +33871,7 @@ Hard requirements:
           for external songs where the POSTER button itself stays hidden. */}
       {posterMaker && chords.length>0 && (
         <div style={{position:'fixed',left:14,bottom:132,zIndex:9999,padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',fontVariantNumeric:'tabular-nums'}}>
-          {(style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':'—'))} · v{style?(phaseIndex|0):(shufVariant|0)} · {mode}
+          {(()=>{ const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null); return _k ? (STYLE_INSPIRED[_k]||_k) : '—'; })()} · v{style?(phaseIndex|0):(shufVariant|0)} · {mode}
         </div>
       )}
       {phBanner && (
