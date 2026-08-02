@@ -905,7 +905,12 @@ export default function Paintiano() {
   // length), the stale target draft is discarded and the bridge regenerates a
   // fresh piece. Null = no reusable bridge draft.
   const _seeMusicSrcSigRef = useRef(null);  // Image signature when the Music draft was made
-  const _hearImageSrcSigRef = useRef(null); // Music signature when the Image draft was made
+  const _hearImageSrcSigRef = useRef(null);
+  // Hear image on a Music-mode MOSAIC: the scanner aligns to the grid — one
+  // scan band per mosaic row (nr = rows*4, CHORD_SIZE=4), reading direction
+  // forced to 'lr' so every row is read whole, top to bottom. One-shot hint
+  // set here, consumed inside loadImage's pixelify.
+  const _hearMosaicRowsRef = useRef(null); // Music signature when the Image draft was made
   const audioElRef   = useRef(null); // real audio playback in audio mode
   const audioSourceRef = useRef(null); // Web Audio source node for audio mode
   const samplerRef   = useRef(null);
@@ -7416,7 +7421,12 @@ Hard requirements:
           const BW=Math.max(1,Math.floor(availW/nc));
           const BH=Math.max(2,Math.round(BW*PHI));
           const imgRatio=img.naturalHeight/Math.max(1,img.naturalWidth);
-          const nr=Math.max(60,Math.min(400,Math.round(nc*imgRatio*BW/BH)));
+          let nr=Math.max(60,Math.min(400,Math.round(nc*imgRatio*BW/BH)));
+          // Mosaic hear-image alignment: one scan band (CHORD_SIZE=4 rows) per
+          // mosaic row → the scanner reads the grid exactly as the music laid
+          // it down. Consumed after the direction decision below.
+          const _mosRows=_hearMosaicRowsRef.current;
+          if(_mosRows){ nr=Math.max(4,Math.min(400,(_mosRows|0)*4)); }
           const ofc=document.createElement('canvas');ofc.width=nc;ofc.height=nr;
           const ctx=ofc.getContext('2d');ctx.drawImage(img,0,0,nc,nr);
           const raw=ctx.getImageData(0,0,nc,nr).data;
@@ -7459,9 +7469,11 @@ Hard requirements:
                 else if(_eAvg > _cAvg * 1.15) _dir = 'spiralOut';
                 else                          _dir = 'lr';
               }
+              if(_mosRows){ _dir='lr'; }   // mosaic hear-image: rows, always
               setImgDir(_dir);
             }catch(_){/* fall back to whatever imgDir already is */}
           })();
+          _hearMosaicRowsRef.current=null;
           const px=[];
           for(let row=0;row<nr;row++)for(let col=0;col<nc;col++){const i=(row*nc+col)*4;px.push({r:raw[i],g:raw[i+1],b:raw[i+2]});}
           // APP-CHOSEN COLOUR MODE: decide the reading from how much of the image
@@ -11602,6 +11614,14 @@ Hard requirements:
                 // Fresh scan → supersede any stale Image draft from a previous
                 // Hear image; record the source signature so a later Back tags
                 // the new draft for reuse.
+                try{
+                  _hearMosaicRowsRef.current=null;
+                  if(!effectiveStyle && gridRef.current && gridRef.current.cells && gridRef.current.cells.length){
+                    const _ys=new Set();
+                    for(const _c of gridRef.current.cells){ _ys.add(Math.round(_c.y)); }
+                    if(_ys.size>=1){ _hearMosaicRowsRef.current=_ys.size; }
+                  }
+                }catch(_){ _hearMosaicRowsRef.current=null; }
                 _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'') + '|' + (effectiveStyle||'') + '|' + (mode||'') + '|' + (pollockSessionSeed>>>0) + '|' + (shuffleArtistIndex|0) + '|' + (shufVariant|0) + '|' + (rndSalt|0) + '|' + (phaseIndex|0) + '|' + (structureSeedLock==null?'x':(structureSeedLock>>>0));
                 imageStashRef.current = null; setHasImageDraft(false);
                 const cv = canvasRef.current;

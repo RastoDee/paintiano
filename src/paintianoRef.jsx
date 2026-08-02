@@ -5054,15 +5054,15 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   let _forcedPollVariant = 0; // set by the phase dispatcher: 0 = Dense, 1 = Sparse
   // ── 7-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
   //  0 = Classic drip — Dense all-over web.
-  //  1 = Vertical drip totem — drip painting organised in vertical columns.
+  //  1 = Autumn Rhythm — horizontal looping skeins in three passes.
   //  2 = Black pourings / theme colour pour.
   //  3 = Lavender Mist / Totem atmospheric.
   //  4 = White Light (post-drip 1954, INVERTED palette on dark ground).
   //  5 = Blue Poles.
   //  6 = Sparse — bolder strokes, more open canvas, thicker beads (was a hidden
   //      seed bit inside slot 0; now its own cyclable phase).
-  //  Free (cap=2) sees Dense + Vertical totem — two distinct drip
-  //  compositions (all-over web vs vertical organisation).
+  //  Free (cap=2) sees Dense + Autumn Rhythm — two distinct drip
+  //  compositions (all-over web vs horizontal rhythm).
   {
     const _pn=_capN(7); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_variantCap === 2){
@@ -5765,115 +5765,109 @@ function pollockPhasePoles(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // progress scales figure count + symbol count, so short songs show one figure,
 // long songs build the full composition.
 function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  // ── AUTUMN RHYTHM — long horizontal looping skeins in three passes ──
+  // Replaces the former vertical "stenographic" columns. Classic all-over
+  // drip organised horizontally: (1) black/umber armature laid first, (2)
+  // chord-coloured accents, (3) cream/white highlights arriving late. Loop
+  // amplitude and skein count follow the song's energy; every value comes
+  // from _seedRnd so (piece, artist, v) stays a pure address.
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const progress = N/Math.max(1,cn);
   const D=Math.min(CW,CH);
-  const sR=_seedRnd(7100,ss,0,0); sR(); sR();
 
-  // ── Lavender/cream ground with warm wash gradient overlay ──
-  ctx.fillStyle = isBW ? '#c0b69e' : '#d4c5a8';
+  // ── Burlap-cream ground with a faint warm wash ──
+  ctx.fillStyle = isBW ? '#c6bda6' : '#ddd0b0';
   ctx.fillRect(0,0,CW,CH);
   const wash = ctx.createLinearGradient(0,0,0,CH);
   if(isBW){
-    wash.addColorStop(0,'rgba(140,130,120,0.18)');
-    wash.addColorStop(1,'rgba(100,95,90,0.10)');
+    wash.addColorStop(0,'rgba(150,142,128,0.14)');
+    wash.addColorStop(1,'rgba(110,104,96,0.10)');
   } else {
-    wash.addColorStop(0,'rgba(200,150,120,0.18)');
-    wash.addColorStop(1,'rgba(150,100,80,0.10)');
+    wash.addColorStop(0,'rgba(205,170,120,0.14)');
+    wash.addColorStop(1,'rgba(160,120,80,0.10)');
   }
   ctx.fillStyle = wash;
   ctx.fillRect(0,0,CW,CH);
 
-  // Song character → column count + per-column density. Calm music = fewer
-  // narrower columns, sparser drips; energetic = more, busier.
   const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const drive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const cols = Math.max(3, Math.min(5, Math.round(3 + drive*2)));
-  const elementsPerCol = Math.round(70 + drive*30);   // 70-100 elements per column at full reveal
-  const colW = CW/cols;
 
-  // Build the column centres deterministically.
-  const colCenters = [];
-  const colWidths = [];
-  for(let c=0;c<cols;c++){
-    const cr = _seedRnd(c+7150,ss,0,0); cr(); cr();
-    colCenters.push(colW*(c+0.5) + (cr()-0.5)*colW*0.25);
-    colWidths.push(colW*(0.55 + cr()*0.25));
-  }
+  // Layer sizing: armature completes early, colour mid-song, lights late.
+  const nArm = Math.round(10 + drive*6);   // 10-16 dark skeins
+  const nCol = Math.round(9  + drive*6);   // 9-15 colour skeins
+  const nLit = Math.round(6  + drive*4);   // 6-10 highlight skeins
+  const armVis = Math.min(nArm, Math.ceil(nArm * Math.min(1, progress*1.6)));
+  const colVis = Math.min(nCol, Math.ceil(nCol * Math.max(0, Math.min(1,(progress-0.10)*1.45))));
+  const litVis = Math.min(nLit, Math.ceil(nLit * Math.max(0, Math.min(1,(progress-0.45)*1.9))));
 
-  // Drip palette: Pollock's earthy darks plus chord-driven accents. We mix
-  // fixed darks (ink, cream, brown) with per-element _picChord pulls so the
-  // painting reads as Pollock first, song-coloured second.
-  const fixedPal = isBW
-    ? [[15,12,18],[245,240,228],[100,90,80],[60,55,50],[200,180,160]]
-    : [[20,15,18],[255,250,240],[80,40,30],[180,80,60],[200,170,90]];
+  const armPal = isBW ? [[22,20,17],[64,58,50]] : [[24,20,16],[62,44,28]];
+  const litPal = isBW ? [[240,236,226],[214,206,190]] : [[246,242,232],[236,224,198]];
 
-  const visPerCol = Math.max(4, Math.ceil(elementsPerCol * progress));
-
-  for(let c=0;c<cols;c++){
-    const colCenter = colCenters[c];
-    const colWidth  = colWidths[c];
-    for(let i=0;i<visPerCol;i++){
-      const pr = _seedRnd(c*1000+i+7300,ss,0,0); pr();
-      // Pick element type: 50% drip line, 35% droplet, 15% splatter cluster
-      const which = pr();
-      // Pick colour: mostly fixed Pollock palette; ~25% chord-driven for song colour.
-      let rgb;
-      if(pr() < 0.25){
-        const _ci = Math.floor((c*elementsPerCol + i) % cn);
-        const _ch2 = chords[_ci];
-        _setCurE(_ch2 && _ch2._E);
-        const _pc = _picChord(chords, _ci, gc, isBW);
-        rgb = _pc.rgb;
-      } else {
-        rgb = fixedPal[Math.floor(pr()*fixedPal.length)];
+  function skein(salt, rgbPick, baseW){
+    const r=_seedRnd(salt,ss,0,0); r(); r();
+    const y0   = CH*(0.06 + r()*0.88);
+    const span = CW*(0.75 + r()*0.75);
+    const x0   = -CW*0.15 + r()*(CW*1.3 - span);
+    const slope= (r()-0.5)*CH*0.12;
+    const amp  = D*(0.03 + r()*0.075)*(0.7+0.6*drive);
+    const loops= 2.2 + r()*2.6;
+    const ph   = r()*6.28318;
+    let rgb;
+    if(rgbPick==='chord'){
+      const _ci=Math.floor(r()*cn);
+      _setCurE(chords[_ci] && chords[_ci]._E);
+      rgb=_picChord(chords,_ci,gc,isBW).rgb;
+    } else {
+      rgb=rgbPick[Math.floor(r()*rgbPick.length)];
+    }
+    const a=0.72+r()*0.16;
+    ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(2)})`;
+    ctx.fillStyle=ctx.strokeStyle;
+    ctx.lineCap='round';
+    const steps=84;
+    let px=0,py=0;
+    for(let i2=0;i2<=steps;i2++){
+      const t=i2/steps;
+      const env=0.55+0.45*Math.sin(t*3.05+ph*0.7);
+      const x=x0+span*t;
+      const y=y0+slope*t+Math.sin(t*6.28318*loops+ph)*amp*env;
+      if(i2>0){
+        ctx.lineWidth=Math.max(0.9, baseW*(0.45+0.55*Math.abs(Math.sin(i2*0.21+ph))));
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(x,y); ctx.stroke();
       }
-      const alpha = 0.70 + pr()*0.15;
-      const colStr = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha.toFixed(2)})`;
-
-      if(which < 0.50){
-        // ── Vertical drip line: quadratic with slight sway ──
-        const x0 = colCenter + (pr()-0.5)*colWidth;
-        const y0 = pr()*CH;
-        const len = CH*(0.08 + pr()*0.30);
-        const sway = (pr()-0.5)*colWidth*0.4;
-        ctx.strokeStyle = colStr;
-        ctx.lineWidth = Math.max(0.8, D*(0.001 + pr()*0.0045));
-        ctx.lineCap = 'round';
+      px=x; py=y;
+      // droplets flung off the skein
+      if(((i2*7+((ph*100)|0))%17)===0){
+        const dr=_seedRnd(salt*13+i2+9500,ss,0,0); dr();
+        const rr=D*(0.0012+dr()*0.004);
         ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.quadraticCurveTo(x0+sway, y0+len*0.5, x0+sway*0.4, y0+len);
-        ctx.stroke();
-      } else if(which < 0.85){
-        // ── Droplet ──
-        const x = colCenter + (pr()-0.5)*colWidth*1.1;
-        const y = pr()*CH;
-        ctx.fillStyle = colStr;
-        ctx.beginPath();
-        ctx.arc(x, y, D*(0.002 + pr()*0.008), 0, Math.PI*2);
+        ctx.arc(x+(dr()-0.5)*amp*0.9, y+(dr()-0.5)*amp*0.9, rr, 0, 6.28318);
         ctx.fill();
-      } else {
-        // ── Splatter cluster (5 small nearby dots) ──
-        const x = colCenter + (pr()-0.5)*colWidth*0.8;
-        const y = pr()*CH;
-        ctx.fillStyle = colStr;
-        for(let s=0;s<5;s++){
-          const sr = _seedRnd(c*1000+i*10+s+7400,ss,0,0); sr();
-          const dx = (sr()-0.5)*colWidth*0.4;
-          const dy = (sr()-0.5)*CH*0.04;
-          ctx.beginPath();
-          ctx.arc(x+dx, y+dy, D*(0.001 + sr()*0.004), 0, Math.PI*2);
-          ctx.fill();
-        }
       }
     }
   }
-}
 
-// ── Pollock H: White Light — late-period (1954). Dark maroon-brown ground;
-// drip field with reversed proportions — 60% white/cream drips, 40% chord-
-// driven colour accents, 2% ink. Mirrors classic drip mechanics but inverts
-// the figure/ground relationship. Only Pollock variant with a dark canvas.
+  for(let i=0;i<armVis;i++) skein(8100+i, armPal, D*0.006);
+  for(let i=0;i<colVis;i++) skein(8300+i, 'chord', D*0.0048);
+  for(let i=0;i<litVis;i++) skein(8500+i, litPal, D*0.0038);
+
+  // fine spatter mist, grows with the song
+  const mist=Math.round(90+260*progress);
+  for(let i=0;i<mist;i++){
+    const r=_seedRnd(8700+i,ss,0,0); r();
+    const w=r();
+    let rgb;
+    if(w<0.55) rgb=armPal[0];
+    else if(w<0.80){
+      const _ci=Math.floor(r()*cn);
+      rgb=_picChord(chords,_ci,gc,isBW).rgb;
+    } else rgb=litPal[0];
+    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.5+r()*0.35).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(r()*CW, r()*CH, D*(0.0007+r()*0.0026), 0, 6.28318);
+    ctx.fill();
+  }
+}
 function pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const progress = N/Math.max(1,cn);
