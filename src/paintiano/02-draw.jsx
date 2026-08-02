@@ -6836,9 +6836,15 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     const base=col(0,0.35);
     ground(css(shade(base,0.9)), css(shade(base,0.45)));
     const motifN=8, voices=5;
+    // Reveal scaled to the WHOLE song: the old gate (v*3+i >= N) exposed all
+    // 40 marks after ~20 chords, so a full piece looked painted instantly.
+    // Now voices enter one after another across the entire duration — a fugue.
+    const _tot=voices*motifN;
+    const _rev=Math.max(1, Math.ceil(_tot * (N/Math.max(1,cn))));
+    let _k=0;
     for(let v=0;v<voices;v++){
       for(let i=0;i<motifN;i++){
-        const gi=v*3+i; if(gi>=N) break;
+        if(++_k>_rev) break;
         const m=meta(i);
         const x=CW*0.08+i*CW*0.105+v*CW*0.045, y=CH*0.16+v*CH*0.15+Math.sin(i*0.9)*CH*0.02;
         const s2=(S*0.05+m.dur*S*0.05)*(0.75+0.5*dnaE);
