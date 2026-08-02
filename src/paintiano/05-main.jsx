@@ -2028,7 +2028,7 @@ export default function Paintiano() {
   // Exception: during a taste preview the tasted artist shows its FULL
   // variant range (the whole point of the teaser), read via ref so stale
   // closures can't pin it to 2.
-  const _effVariants = () => ((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : 6))))));
+  const _effVariants = () => ((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : (style==='pollock' ? 7 : 6)))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -7421,12 +7421,12 @@ Hard requirements:
           const BW=Math.max(1,Math.floor(availW/nc));
           const BH=Math.max(2,Math.round(BW*PHI));
           const imgRatio=img.naturalHeight/Math.max(1,img.naturalWidth);
-          let nr=Math.max(60,Math.min(400,Math.round(nc*imgRatio*BW/BH)));
-          // Mosaic hear-image alignment: one scan band (CHORD_SIZE=4 rows) per
-          // mosaic row → the scanner reads the grid exactly as the music laid
-          // it down. Consumed after the direction decision below.
+          const nr=Math.max(60,Math.min(400,Math.round(nc*imgRatio*BW/BH)));
+          // Mosaic hear-image alignment hint: the IMAGE keeps its full natural
+          // resolution (display unchanged); only the TRANSCRIPTION bands align —
+          // one band per mosaic row (see _setImgForcedBands in the transcribe
+          // effect). Here we just carry the row count + force 'lr' below.
           const _mosRows=_hearMosaicRowsRef.current;
-          if(_mosRows){ nr=Math.max(4,Math.min(400,(_mosRows|0)*4)); }
           const ofc=document.createElement('canvas');ofc.width=nc;ofc.height=nr;
           const ctx=ofc.getContext('2d');ctx.drawImage(img,0,0,nc,nr);
           const raw=ctx.getImageData(0,0,nc,nr).data;
@@ -7505,7 +7505,7 @@ Hard requirements:
           const startMode = _fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode);
           kontraAutoRef.current = (!_fromMusic && startMode==='kontra'); // auto-kontra only on a fresh image, never when palette carried from Music
           if(startMode!==mode) setMode(startMode);
-          pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4};
+          pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4,mosaicBands:(_mosRows|0)||null};
           scanPixelBackupRef.current=pixelRef.current; // keep scan data for Clear after a compose nulls pixelRef
           imgComposeRef.current=false;
           setImgPlayMode('scan'); imgPlayModeRef.current='scan'; // a fresh image always starts in scan
@@ -7524,7 +7524,9 @@ Hard requirements:
             : startMode==='phi' ? PHI_HUE
             : startMode==='kontra' ? KONTRA_HUE
             : COF;                                     // harmony & bw both read via COF
+          try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
           const evts=pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
+          try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
           // Explicit canvas clear — when loading consecutive images, both
@@ -7610,7 +7612,9 @@ Hard requirements:
       : mode==='kontra' ? KONTRA_HUE
       : COF;
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
+    try{ _setImgForcedBands((pixelRef.current&&pixelRef.current.mosaicBands)||0); }catch(_){}
     const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
+    try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
     // MELODY stays a separate voice: the texture in chordsRef is never altered by it
     // (the sung line is computed and scheduled in parallel by startPlay), so the
@@ -8419,7 +8423,7 @@ Hard requirements:
     const _allowedArtists = setupArtists.filter(k => k!=='mosaicFamily' && (proStatus!=='free' || FREE_UNLOCKED_KEYS.has(k)));
     const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
     const _familyAllowed = setupArtists.includes('mosaicFamily');
-    const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky') ? 8 : (k==='wave' ? 7 : 6)));
+    const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky'||k==='matisse'||k==='rothko') ? 8 : ((k==='wave'||k==='raffel'||k==='pollock') ? 7 : 6)));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.

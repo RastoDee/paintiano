@@ -13644,6 +13644,12 @@ function buildTraversal(nrBands, effCols, dir){
   return order;
 }
 
+// Mosaic hear-image: when set (>0), the transcription slices the image into
+// exactly this many horizontal bands (one per mosaic row) instead of the
+// fixed 4-pixel-row bands — the DISPLAY raster stays untouched. One-shot,
+// reset by the caller right after each transcription.
+let _imgForcedBands = 0;
+function _setImgForcedBands(n){ _imgForcedBands = (n|0) > 0 ? (n|0) : 0; }
 function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // atmoBias (optional): {v,e} from AI ATM. When present, the painting's own
   // energy is BLENDED with the atmo mood's energy, and the mood's valence biases
@@ -13653,7 +13659,12 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const atmoE = atmoBias && typeof atmoBias.e==='number' ? Math.max(0,Math.min(1,atmoBias.e)) : null;
   const CHORD_SIZE=4;
   const COL_STEP=4;                              // merge 4 adjacent columns per time-event
-  const _nrBands=Math.floor(nr/CHORD_SIZE);
+  const _fb = (_imgForcedBands>0) ? Math.min(_imgForcedBands, nr) : 0;
+  const _nrBands = _fb ? _fb : Math.floor(nr/CHORD_SIZE);
+  // Band → pixel-row range. Default: fixed CHORD_SIZE stride. Forced: rows
+  // sliced proportionally so band i covers exactly mosaic row i.
+  const _bandRow0 = (b)=> _fb ? Math.floor(b*nr/_fb)     : b*CHORD_SIZE;
+  const _bandRow1 = (b)=> _fb ? Math.floor((b+1)*nr/_fb) : Math.min(nr, b*CHORD_SIZE+CHORD_SIZE);
   const effCols=Math.ceil(nc/COL_STEP);          // 192/4 = 48 events per band → 960 total
   // ─── Color statistics pass ──
   // Find the dominant background hue and the average chroma so we can suppress
@@ -14013,8 +14024,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // strict filter would have left this chord empty. Guarantees audible music.
   function pickMostVivid(band, col){
     let best=null, bestCh=-1;
-    for(let j=0;j<CHORD_SIZE;j++){
-      const row=band*CHORD_SIZE+j; if(row>=nr) break;
+    for(let row=_bandRow0(band); row<_bandRow1(band) && row<nr; row++){
       const idx=row*nc+col;
       const{r,g,b}=px[idx],[ , s, l]=toHsl(r,g,b);
       const ch = s * Math.min(l, 100-l) / 50;
@@ -14055,8 +14065,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       const _domHueHist=new Float32Array(36);
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
-        for(let j=0;j<CHORD_SIZE;j++){
-          const row=band*CHORD_SIZE+j; if(row>=nr) break;
+        for(let row=_bandRow0(band); row<_bandRow1(band) && row<nr; row++){
           const idx=row*nc+col;
           const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
