@@ -8562,7 +8562,10 @@ Hard requirements:
       // (Advanced image → Lite switch, possibly mid-scan), the flavour just
       // adopts it — no stop, no sample load — so the scan continues seamlessly,
       // exactly like the music flavour continues playback across the toggle.
-      const _hasImg = (viewModeRef.current==='image') && chordsRef.current && chordsRef.current.length>0;
+      // Guard on the IMAGE DATA itself, not the view: viewModeRef can change
+      // during the Lite re-render, but pixelRef (the scanned picture) survives
+      // the toggle exactly when an image piece is travelling along.
+      const _hasImg = !!(pixelRef.current && chordsRef.current && chordsRef.current.length>0);
       try{ basicAutoPlayedRef.current=true; }catch(_){}   // suppress Liszt auto-play
       try{ setLiteAwaitTap(false); }catch(_){}            // image plays now — no splash
       try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
