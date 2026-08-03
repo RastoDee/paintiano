@@ -31643,6 +31643,8 @@ Hard requirements:
   const [liteImgPicker, setLiteImgPicker] = useState(false); // Lite mode 2: Sample(Van Gogh)/File
   const [liteSamplePick, setLiteSamplePick] = useState(false); // Lite 'Sample' sub-picker (3 built-in pieces)
   useEffect(()=>{ if(!liteSrcPicker) setLiteSamplePick(false); },[liteSrcPicker]);
+  const [liteImgSamplePick, setLiteImgSamplePick] = useState(false); // Lite image 'Sample' sub-picker (3 paintings)
+  useEffect(()=>{ if(!liteImgPicker) setLiteImgSamplePick(false); },[liteImgPicker]);
   // iOS blocks audio started off a timer (no user gesture), so the auto-played
   // Liszt can paint but stay silent. The first tap anywhere in Lite unlocks the
   // audio context and, if a song is loaded but not audibly playing, (re)starts
@@ -37832,10 +37834,16 @@ Hard requirements:
         {liteImgPicker && (
           <div onClick={()=>setLiteImgPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:(basicMode&&isDesktop)?'transparent':'rgba(4,3,8,0.6)',display:'flex',alignItems:(basicMode&&isDesktop)?'flex-start':'flex-end',justifyContent:'center',backdropFilter:(basicMode&&isDesktop)?'none':'blur(2px)'}}>
             <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'row',alignItems:'stretch',gap:12,padding:'96px 16px 0'}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,width:'100%',maxWidth:480,padding:'16px 16px 28px',background:'linear-gradient(180deg,rgba(20,17,28,.0),rgba(20,17,28,.96) 18%)',borderTopLeftRadius:22,borderTopRightRadius:22}}>
-              {['Van Gogh','Monet','Munch'].map((nm,i)=>(
+              {/* Lite image sub-picker — same pattern as songs: Sample -> 3 paintings. */}
+              {liteImgSamplePick ? (<>
+              {['Starry Night · Van Gogh','Water Lilies · Monet','The Scream · Munch'].map((nm,i)=>(
               <button key={i} onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(i); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{nm}</span></button>
               ))}
+              <button onClick={()=>setLiteImgSamplePick(false)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}><span>‹ {t('backToSetup')||'back'}</span></button>
+              </>) : (<>
+              <button onClick={()=>setLiteImgSamplePick(true)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
               <button onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
+              </>)}
             </div>
           </div>
         )}
