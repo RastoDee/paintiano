@@ -2452,24 +2452,38 @@ export default function Paintiano() {
   // wordmark toggle it; persisted so Rasto's devices keep it on. Zero UI
   // otherwise — the chip renders only with a built-in piece on canvas.
   const [posterMaker,setPosterMaker]=useState(()=>{ try{ return localStorage.getItem('paintiano_postermaker')==='1'; }catch(_){ return false; } });
+  // Address chip alone (artist · variant · palette) — its own switch: 2 quick
+  // taps on the wordmark. Poster maker (POSTER button) stays on 4 taps.
+  const [addrChip,setAddrChip]=useState(()=>{ try{ return localStorage.getItem('paintiano_addr_chip')==='1'; }catch(_){ return false; } });
   // Product Hunt launch banner — discreet pill, dismiss is remembered, and the
   // whole thing self-expires at launch time (26 Aug 2026, 09:00 CEST) so no
   // cleanup release is ever needed.
   const [phBanner,setPhBanner]=useState(()=>{ try{ if(Date.now()>=Date.parse('2026-08-26T07:00:00Z')) return false; return localStorage.getItem('paintiano_ph_banner_v1')!=='1'; }catch(_){ return false; } });
-  const _pmTapsRef=useRef({n:0,t:0});
+  const _pmTapsRef=useRef({n:0,t:0,tm:null});
   const _pmLogoTap=useCallback(()=>{
     const now=Date.now(); const st=_pmTapsRef.current;
     if(now-st.t>2600){ st.n=0; }
     st.t=now; st.n++;
-    if(st.n>=4){
-      st.n=0;
-      setPosterMaker(v=>{
-        const nv=!v;
-        try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){}
-        try{ setErr(nv?'poster maker ON':'poster maker OFF'); setErrInfo(true); setTimeout(()=>setErr(''),1800); }catch(_){}
-        return nv;
-      });
-    }
+    if(st.tm){ clearTimeout(st.tm); }
+    // decide AFTER the burst ends: 2-3 taps = address chip, 4+ = poster maker
+    st.tm=setTimeout(()=>{
+      const n=st.n; st.n=0; st.tm=null;
+      if(n>=4){
+        setPosterMaker(v=>{
+          const nv=!v;
+          try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){}
+          try{ setErr(nv?'poster maker ON':'poster maker OFF'); setErrInfo(true); setTimeout(()=>setErr(''),1800); }catch(_){}
+          return nv;
+        });
+      } else if(n>=2){
+        setAddrChip(v=>{
+          const nv=!v;
+          try{ localStorage.setItem('paintiano_addr_chip', nv?'1':'0'); }catch(_){}
+          try{ setErr(nv?'chip ON':'chip OFF'); setErrInfo(true); setTimeout(()=>setErr(''),1800); }catch(_){}
+          return nv;
+        });
+      }
+    },520);
   },[]);
   // ── BASIC vs ADVANCED app mode ────────────────────────────────────────────
   // basicMode = the simplified experience: a big live canvas painting the Liszt
@@ -10891,7 +10905,7 @@ Hard requirements:
       )}
       {/* Address chip: visible with ANY content while poster-maker is on — also
           for external songs where the POSTER button itself stays hidden. */}
-      {posterMaker && chords.length>0 && (
+      {(addrChip || posterMaker) && chords.length>0 && (
         <div style={{position:'fixed',left:14,bottom:132,zIndex:9999,padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',fontVariantNumeric:'tabular-nums'}}>
           {(()=>{ const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null); return _k ? (STYLE_INSPIRED[_k]||_k) : '—'; })()} · v{style?(phaseIndex|0):(shufVariant|0)} · {mode}
         </div>
