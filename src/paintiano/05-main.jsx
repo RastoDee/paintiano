@@ -8558,13 +8558,20 @@ Hard requirements:
     if(liteImageMode){
       if(_liteImgAppliedRef.current) return;
       _liteImgAppliedRef.current = true;
-      // Stop the music flavour's audio completely before the image starts, so
-      // the two never overlap during the flip.
-      try{ stopAll(); }catch(_){}
+      // CONTENT TRAVELS ALONG: if an image piece is already on the canvas
+      // (Advanced image → Lite switch, possibly mid-scan), the flavour just
+      // adopts it — no stop, no sample load — so the scan continues seamlessly,
+      // exactly like the music flavour continues playback across the toggle.
+      const _hasImg = (viewModeRef.current==='image') && chordsRef.current && chordsRef.current.length>0;
       try{ basicAutoPlayedRef.current=true; }catch(_){}   // suppress Liszt auto-play
       try{ setLiteAwaitTap(false); }catch(_){}            // image plays now — no splash
       try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
-      try{ loadSampleImage((Math.random()*3)|0); }catch(_){}
+      if(!_hasImg){
+        // Empty flip: stop the music flavour's audio, then auto-load a random
+        // built-in painting so the flavour reads + plays immediately.
+        try{ stopAll(); }catch(_){}
+        try{ loadSampleImage((Math.random()*3)|0); }catch(_){}
+      }
       // The flip hard-muted the master to kill the piano tail. Image flavour
       // paints from a photo (no music auto-plays), so restore the master mute
       // to the user's setting once the tail has died, otherwise it stays muted.
