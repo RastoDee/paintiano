@@ -2173,7 +2173,8 @@ export default function Paintiano() {
       if(!artKey || (typeof ALL_ARTIST_KEYS!=='undefined' && !ALL_ARTIST_KEYS.includes(artKey))){
         alert('Poster maker: Mosaic/Notes stop nema QR adresu - vyber konkretneho umelca.'); return;
       }
-      const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+artKey+'&v='+vNow;
+      if(mode==='custom'){ alert('Poster maker: vlastna paleta nie je QR-adresovatelna - zvol standardnu.'); return; }
+      const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+artKey+'&v='+vNow+'&p='+mode+'&t='+tone;
       // fonts first (Cormorant is already imported by the app shell)
       try{ await document.fonts.load('italic 600 84px "Cormorant Garamond"'); await document.fonts.load('600 120px "Cormorant Garamond"'); }catch(_){}
       // QR (H error correction) fetched, then recoloured gold-on-transparent
@@ -2218,7 +2219,7 @@ export default function Paintiano() {
       cx.fillText('\u03c6', W-140, H-110);
       // PRODUCTION PACKAGE — one ZIP (iOS Safari drops extra downloads), no libs:
       // a minimal STORED zip is ~40 lines. Contains poster / raw art / print QR.
-      const base='paintiano-'+pieceKey+'-'+artKey+'-v'+vNow;
+      const base='paintiano-'+pieceKey+'-'+artKey+'-v'+vNow+'-'+mode+'-'+tone;
       const posterBlob=await new Promise(r=>cv.toBlob(r,'image/png'));
       const artBlob=srcCv?await new Promise(r=>srcCv.toBlob(r,'image/png')):null;
       let qrBlob=null; try{ qrBlob=await fetch(qrImg.src).then(r=>r.ok?r.blob():null); }catch(_){}
@@ -2248,7 +2249,7 @@ export default function Paintiano() {
       a.href=URL.createObjectURL(zip); a.download=base+'.zip'; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),6000);
     }catch(e){ try{ alert('Poster export failed: '+e.message); }catch(_){} }
-  },[style,phaseIndex,shuffleStyle,shufVariant,oneMMode,STYLE_INSPIRED]);
+  },[style,phaseIndex,shuffleStyle,shufVariant,oneMMode,mode,tone,STYLE_INSPIRED]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -2416,6 +2417,8 @@ export default function Paintiano() {
   const qrArtistRef = useRef(null);
   const qrVariantRef = useRef(0);
   const litePieceRef = useRef(0);
+  const qrModeRef = useRef(null);
+  const qrToneRef = useRef(null);
   const posterMakerRef = useRef(false);
   // Which BUILT-IN sample currently owns the canvas (0/1/2) — set by
   // loadSampleMidi, cleared by every other loader via applyEvents. This is
@@ -2438,6 +2441,13 @@ export default function Paintiano() {
       // the buyer's poster exactly.
       const _qv=parseInt(_u.get('v'),10);
       if(qrArtistRef.current && Number.isInteger(_qv) && _qv>=0 && _qv<=7){ qrVariantRef.current=_qv; }
+      // ?p= palette and ?t= tone — the rest of the painting's address. Without
+      // them a poster made in e.g. spectral/pastel would repaint in the scanner's
+      // defaults and NOT match the print. Custom palette is not addressable.
+      const _qm=_u.get('p');
+      if(['harmony','spectral','phi','kontra','bw'].indexOf(_qm)>=0){ qrModeRef.current=_qm; }
+      const _qt=_u.get('t');
+      if(['pure','real','pastel'].indexOf(_qt)>=0){ qrToneRef.current=_qt; }
       // ?postermaker=<secret> — internal production tool (alternate enabler;
       // the primary switch is 7 quick taps on the Paintiano wordmark).
       if(_u.get('postermaker')==='raffel2026'){ try{ localStorage.setItem('paintiano_postermaker','1'); }catch(_){} }
@@ -8399,6 +8409,8 @@ Hard requirements:
         // Free (ref-only taste latch; state stays null so no countdown starts).
         tastePreviewKeyRef.current = qrArtistRef.current;
         _liteNextIsMosaicRef.current = false;
+        if(qrModeRef.current){ try{ setMode(qrModeRef.current); }catch(_){} }
+        if(qrToneRef.current){ try{ setTone(qrToneRef.current); }catch(_){} }
       } else {
       // Arm the "next Surprise = Mosaic" flag so the second impression is the
       // bare grid, high contrast with the painterly Pollock opener.
@@ -8712,7 +8724,11 @@ Hard requirements:
             : (setupArtists.includes('kusama')
             ? 'kusama'
             : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kusama'));
-          if(qrArtistRef.current){ tastePreviewKeyRef.current = qrArtistRef.current; }
+          if(qrArtistRef.current){
+            tastePreviewKeyRef.current = qrArtistRef.current;
+            if(qrModeRef.current){ try{ setMode(qrModeRef.current); }catch(_){} }
+            if(qrToneRef.current){ try{ setTone(qrToneRef.current); }catch(_){} }
+          }
           setStyle(_t);
         }
         setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0);
