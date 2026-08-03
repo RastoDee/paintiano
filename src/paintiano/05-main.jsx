@@ -2415,6 +2415,7 @@ export default function Paintiano() {
   const qrPieceRef = useRef(undefined);
   const qrArtistRef = useRef(null);
   const qrVariantRef = useRef(0);
+  const litePieceRef = useRef(0);
   const posterMakerRef = useRef(false);
   // Which BUILT-IN sample currently owns the canvas (0/1/2) — set by
   // loadSampleMidi, cleared by every other loader via applyEvents. This is
@@ -2442,6 +2443,10 @@ export default function Paintiano() {
       if(_u.get('postermaker')==='raffel2026'){ try{ localStorage.setItem('paintiano_postermaker','1'); }catch(_){} }
     }catch(_){}
     qrPieceRef.current=_qidx;
+    // Lite session piece: the QR piece when present, otherwise a RANDOM pick
+    // from the three built-in samples — chosen once per page load so Play,
+    // Surprise and welcome-back all stay on the same song within a session.
+    litePieceRef.current = (_qidx!=null) ? _qidx : ((Math.random()*3)|0);
   }
   // Poster-maker mode: hidden production switch. 7 quick taps on the Paintiano
   // wordmark toggle it; persisted so Rasto's devices keep it on. Zero UI
@@ -8349,7 +8354,7 @@ Hard requirements:
   const surpriseMe = useCallback(()=>{
     pickExpressiveStyle();
     setMode('harmony');
-    loadSampleMidi(qrPieceRef.current==null?undefined:qrPieceRef.current);
+    loadSampleMidi(litePieceRef.current);
     setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
   },[pickExpressiveStyle, loadSampleMidi, startPlay]);
 
@@ -8390,7 +8395,7 @@ Hard requirements:
     // from a previous session). Lite no longer force-resets to Harmony so
     // a Spectral / Phi / Custom user keeps their colour DNA in Lite too.
     try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
-    loadSampleMidi(qrPieceRef.current==null?undefined:qrPieceRef.current);
+    loadSampleMidi(litePieceRef.current);
     setTimeout(()=>{ try{ wakeAudio().then(()=>{ try{ startPlayRef.current && startPlayRef.current(); }catch(_){} }).catch(()=>{}); }catch(_){} }, 120);
   },[loadSampleMidi]);
 
@@ -8698,7 +8703,7 @@ Hard requirements:
         }
         setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0);
         setNotesMode(false); setOneMMode(false);
-        loadSampleMidi(qrPieceRef.current==null?undefined:qrPieceRef.current);
+        loadSampleMidi(litePieceRef.current);
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
         // audio + paint together (basicTapUnlock), instead of painting silently.
