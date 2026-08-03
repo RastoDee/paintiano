@@ -5793,9 +5793,11 @@ function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const drive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
 
   // Layer sizing: armature completes early, colour mid-song, lights late.
-  const nArm = Math.round(10 + drive*6);   // 10-16 dark skeins
-  const nCol = Math.round(9  + drive*6);   // 9-15 colour skeins
-  const nLit = Math.round(6  + drive*4);   // 6-10 highlight skeins
+  // SONG-COLOUR FIRST: chord-coloured skeins dominate; the dark armature is
+  // just a thin scaffold and cream lights only a final sparkle.
+  const nArm = Math.round(4 + drive*2);    // 4-6 thin dark skeins
+  const nCol = Math.round(18 + drive*8);   // 18-26 colour skeins — the painting
+  const nLit = Math.round(3  + drive*2);   // 3-5 highlight skeins
   const armVis = Math.min(nArm, Math.ceil(nArm * Math.min(1, progress*1.6)));
   const colVis = Math.min(nCol, Math.ceil(nCol * Math.max(0, Math.min(1,(progress-0.10)*1.45))));
   const litVis = Math.min(nLit, Math.ceil(nLit * Math.max(0, Math.min(1,(progress-0.45)*1.9))));
@@ -5847,9 +5849,9 @@ function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     }
   }
 
-  for(let i=0;i<armVis;i++) skein(8100+i, armPal, D*0.006);
-  for(let i=0;i<colVis;i++) skein(8300+i, 'chord', D*0.0048);
-  for(let i=0;i<litVis;i++) skein(8500+i, litPal, D*0.0038);
+  for(let i=0;i<armVis;i++) skein(8100+i, armPal, D*0.0032);
+  for(let i=0;i<colVis;i++) skein(8300+i, 'chord', D*0.0062);
+  for(let i=0;i<litVis;i++) skein(8500+i, litPal, D*0.0034);
 
   // fine spatter mist, grows with the song
   const mist=Math.round(90+260*progress);
@@ -5857,8 +5859,8 @@ function pollockPhaseStenographic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const r=_seedRnd(8700+i,ss,0,0); r();
     const w=r();
     let rgb;
-    if(w<0.55) rgb=armPal[0];
-    else if(w<0.80){
+    if(w<0.20) rgb=armPal[0];
+    else if(w<0.88){
       const _ci=Math.floor(r()*cn);
       rgb=_picChord(chords,_ci,gc,isBW).rgb;
     } else rgb=litPal[0];
@@ -6020,7 +6022,7 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const ss=sessionSeed|0;
   // ── PHASE CHOOSER: commit to ONE of Picasso's modes per painting ──
   // Stable from session seed, re-rolls on Vary/Random. Six abstract phases:
-  //  SyntheticPlanes = 5–9 large irregular planes, asymmetric tonal mass.
+  //  LightLine       = 1949 "light drawings": one unbroken luminous stroke.
   //  BlueAtmo        = Blue Atmosphere veils (cool palette, soft edges).
   //  Analytic (A)    = recursive plane subdivision + pencil-grain hatching.
   //  FacetedDrift    = directional flow field of small angular facets.
@@ -6030,11 +6032,64 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // fragmentation. Identity comes from mass, edge, overlap, tonality.
   // Free (cap=2) sees positions 0,1. Analytic Cubism is the most expensive
   // phase (dense pencil-grain hatching) and caused jank on lower-end devices,
-  // so it's moved OUT of the Free slots: Free gets SyntheticPlanes + BlueAtmo
+  // so it's moved OUT of the Free slots: Free gets LightLine + BlueAtmo
   // (both light to draw). Pro reaches Analytic and the rest at higher indices.
-  const _picassoOrder = [picassoPhaseSyntheticPlanes, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseFacetedDrift, picassoPhaseStillLife, picassoPhaseTonalCubism];
+  // SyntheticPlanes was retired from the wheel (curation, Aug 2026) — the
+  // function stays below for reference but is no longer reachable.
+  const _picassoOrder = [picassoPhaseLightLine, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseFacetedDrift, picassoPhaseStillLife, picassoPhaseTonalCubism];
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   (_picassoOrder[pick]||picassoPhaseSyntheticPlanes)(ctx,CW,CH,chords,lim,gc,ss,mode);
+}
+
+// ── Picasso phase LIGHT LINE — the 1949 "light drawings". ──
+// One unbroken luminous stroke draws itself across a near-black ground for
+// the WHOLE song: chord energy drives speed, thickness and loop-arabesques;
+// quiet passages run white, energetic passages tint into the chord's colour
+// (whole phrases, not single segments). BW mode = pure white light, accents
+// carried by width/glow alone — which is exactly what Picasso's original
+// black-and-white photographs were. Deterministic: the path is generated
+// sequentially from chord 0, so any progress prefix is identical.
+function picassoPhaseLightLine(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw';
+  const cn=chords.length, N=Math.max(1,Math.min(cn,lim));
+  const D=Math.min(CW,CH);
+  // near-black ground + soft vignette
+  ctx.fillStyle='#0c0b0e'; ctx.fillRect(0,0,CW,CH);
+  const vg=ctx.createRadialGradient(CW/2,CH/2,D*0.2,CW/2,CH/2,D*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.42)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,CW,CH);
+  const r=_seedRnd(9100,ss,0,0); r(); r();
+  let x=CW*(0.10+r()*0.12), y=CH*(0.35+r()*0.3), ang=r()*6.28318;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  let tint=0; // smoothed colour amount — whole phrases, not single segments
+  for(let i=0;i<N;i++){
+    const ch=chords[i];
+    const E=(ch&&typeof ch._E==='number')?ch._E:0.5;
+    _setCurE(E);
+    const cc=_picChord(chords,i,gc,isBW).rgb;
+    // phrase-level tint: eases toward the chord colour in energetic passages
+    tint += ((E>0.55 ? Math.min(1,(E-0.35)*1.5) : 0) - tint)*0.25;
+    const t=isBW?0:tint;
+    const R=Math.round(255+(cc[0]-255)*t), G=Math.round(250+(cc[1]-250)*t), B=Math.round(240+(cc[2]-240)*t);
+    const col='rgba('+R+','+G+','+B+',0.92)';
+    const w=D*0.0016*(1+2.1*E);
+    const per=7, sp=D*(0.006+0.007*E);
+    ctx.beginPath(); ctx.moveTo(x,y);
+    for(let k=0;k<per;k++){
+      ang += (r()-0.5)*0.42 + 0.16*Math.sin((i*per+k)*0.13);
+      if(E>0.72 && r()<0.10){        // accent → arabesque loop
+        for(let q=0;q<22;q++){ ang+=0.29; x+=Math.cos(ang)*sp*0.8; y+=Math.sin(ang)*sp*0.68; ctx.lineTo(x,y); }
+      }
+      x+=Math.cos(ang)*sp; y+=Math.sin(ang)*sp*0.85;
+      if(x<CW*0.06||x>CW*0.94){ ang=Math.PI-ang; x=Math.max(CW*0.06,Math.min(CW*0.94,x)); }
+      if(y<CH*0.07||y>CH*0.93){ ang=-ang; y=Math.max(CH*0.07,Math.min(CH*0.93,y)); }
+      ctx.lineTo(x,y);
+    }
+    // glow pass + bright core in one shadowed stroke
+    ctx.shadowColor=col; ctx.shadowBlur=D*0.016*(0.8+E);
+    ctx.strokeStyle=col; ctx.lineWidth=w; ctx.stroke();
+  }
+  ctx.shadowBlur=0;
 }
 
 // ── Picasso phase A: Analytic Cubism — the original angular shard composition. ──
