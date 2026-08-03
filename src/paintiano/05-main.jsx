@@ -7712,12 +7712,14 @@ Hard requirements:
     }
   },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
 
-  const loadSampleImage=useCallback(async()=>{
+  const loadSampleImage=useCallback(async(idx)=>{
     try{
-      // Lazy-fetch the built-in sample image from /public, build a File, feed it
-      // through the normal image pipeline. (Was ~678KB of inlined base64.)
-      const blob=await (await fetch(SAMPLE_IMAGE_B64_URL)).blob();
-      const file=new File([blob],'The Starry Night — Van Gogh.jpg',{type:'image/jpeg'});
+      // Lazy-fetch one of the built-in sample images (Van Gogh / Monet / Munch)
+      // from /public and feed it through the normal image pipeline. No arg = 0
+      // (Van Gogh) — the demo reel and the baked mood cache depend on that.
+      const _it=(typeof SAMPLE_IMAGES!=='undefined' && SAMPLE_IMAGES[(idx|0)]) || { u: SAMPLE_IMAGE_B64_URL, t: 'The Starry Night — Van Gogh' };
+      const blob=await (await fetch(_it.u)).blob();
+      const file=new File([blob],_it.t+'.jpg',{type:blob.type||'image/jpeg'});
       const fakeEvent={target:{files:[file],value:''}};
       loadImage(fakeEvent);
     }catch(e){setErr('Sample image: '+(e&&e.message||'load failed'));setErrInfo(false);}
@@ -8562,7 +8564,7 @@ Hard requirements:
       try{ basicAutoPlayedRef.current=true; }catch(_){}   // suppress Liszt auto-play
       try{ setLiteAwaitTap(false); }catch(_){}            // image plays now — no splash
       try{ liteEverUnlockedRef.current = true; basicTapUnlockedRef.current = true; }catch(_){}
-      try{ loadSampleImage(); }catch(_){}
+      try{ loadSampleImage((Math.random()*3)|0); }catch(_){}
       // The flip hard-muted the master to kill the piano tail. Image flavour
       // paints from a photo (no music auto-plays), so restore the master mute
       // to the user's setting once the tail has died, otherwise it stays muted.
@@ -12486,6 +12488,29 @@ Hard requirements:
                 {t('cancel')}
               </button>
             </div>
+            ) : (sampleSubPick && pickMode==='image') ? (
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {/* IMAGE SAMPLE SUB-PICKER — three public-domain paintings. */}
+              {[
+                {n:'The Starry Night — Van Gogh',d:({EN:'swirling night · deep blues',SK:'vírivá noc · hlboké modré',DE:'wirbelnde Nacht · tiefes Blau',FR:'nuit tourbillonnante · bleus profonds',ES:'noche en espiral · azules profundos',PT:'noite em espiral · azuis profundos',zh:'旋转的夜空 · 深蓝',zhTW:'旋轉的夜空 · 深藍',ja:'渦巻く夜 · 深い青'})[lang]||'swirling night · deep blues'},
+                {n:'Water Lily Pond — Monet',d:({EN:'water garden · soft greens',SK:'vodná záhrada · jemné zelené',DE:'Wassergarten · sanftes Grün',FR:'jardin d\u2019eau · verts doux',ES:'jardín de agua · verdes suaves',PT:'jardim aquático · verdes suaves',zh:'水上花园 · 柔和的绿',zhTW:'水上花園 · 柔和的綠',ja:'水の庭 · やわらかな緑'})[lang]||'water garden · soft greens'},
+                {n:'The Scream — Munch',d:({EN:'burning sky · dark fjord',SK:'horiace nebo · tmavý fjord',DE:'brennender Himmel · dunkler Fjord',FR:'ciel en feu · fjord sombre',ES:'cielo ardiente · fiordo oscuro',PT:'céu em chamas · fiorde escuro',zh:'燃烧的天空 · 幽暗峡湾',zhTW:'燃燒的天空 · 幽暗峽灣',ja:'燃える空 · 暗いフィヨルド'})[lang]||'burning sky · dark fjord'}
+              ].map((s,i)=>(
+                <button key={i} onClick={()=>{
+                  if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
+                  if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
+                  loadSampleImage(i);
+                  setForceSetup(false);
+                  setPickMode(null);
+                }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',textAlign:'center'}}>
+                  <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.3,color:'rgba(230,222,196,.9)'}}>{s.n}</span>
+                  <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis'}}>{s.d}</span>
+                </button>
+              ))}
+              <button onClick={()=>setSampleSubPick(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit'}}>
+                ‹ {t('backToSetup')||'back'}
+              </button>
+            </div>
             ) : (sampleSubPick && (pickMode==='sound'||pickMode==='score')) ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {/* SAMPLE SUB-PICKER — three built-in MusicXML pieces. Opened by
@@ -12517,7 +12542,7 @@ Hard requirements:
                   image-frame for image, sparkles for MFI), label sentence-case,
                   hint shows the actual sample name underneath. */}
               <button onClick={()=>{
-                if(pickMode==='sound'||pickMode==='score'){ setSampleSubPick(true); return; } // open 3-piece sub-picker instead of loading directly
+                if(pickMode==='sound'||pickMode==='score'||pickMode==='image'){ setSampleSubPick(true); return; } // open 3-item sub-picker instead of loading directly
                 if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
                 if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}
                 if(pickMode==='sound') loadSampleScore();
@@ -14756,7 +14781,9 @@ Hard requirements:
         {liteImgPicker && (
           <div onClick={()=>setLiteImgPicker(false)} style={{position:'fixed',inset:0,zIndex:70,background:(basicMode&&isDesktop)?'transparent':'rgba(4,3,8,0.6)',display:'flex',alignItems:(basicMode&&isDesktop)?'flex-start':'flex-end',justifyContent:'center',backdropFilter:(basicMode&&isDesktop)?'none':'blur(2px)'}}>
             <div onClick={e=>e.stopPropagation()} style={(basicMode&&isDesktop)?{display:'flex',flexDirection:'row',alignItems:'stretch',gap:12,padding:'96px 16px 0'}:{display:'flex',flexDirection:'column',alignItems:'stretch',gap:10,width:'100%',maxWidth:480,padding:'16px 16px 28px',background:'linear-gradient(180deg,rgba(20,17,28,.0),rgba(20,17,28,.96) 18%)',borderTopLeftRadius:22,borderTopRightRadius:22}}>
-              <button onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
+              {['Van Gogh','Monet','Munch'].map((nm,i)=>(
+              <button key={i} onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(i); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{nm}</span></button>
+              ))}
               <button onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
             </div>
           </div>
