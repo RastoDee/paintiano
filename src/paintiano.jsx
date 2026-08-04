@@ -18074,9 +18074,14 @@ function composeImageGlass(px,nc,nr,table,colorMode,dir){
     const bassPc=(si%2===0)?((tonic+shift)%12):((tonic+shift+7)%12);
     const bsrc=sec.cells[0];
     const vPh=(ph==='intro'?0.72:ph==='chorale'?0.9:ph==='climax'?1.12:ph==='outro'?0.7:1);
+    // LEFT HAND lives the whole section: the pedal is re-struck EVERY BAR,
+    // root and fifth alternating — the two hands breathe together, always.
     if(ph!=='intro' && ph!=='chorale'){
-      const secMs=bars[si]*perBar*pulse;
-      evts.push({n:[{m:36+bassPc,v:Math.round(54*vPh*arc(si/NS)),durMs:Math.min(secMs,6000),bass:true}],startMs:t,idx:evIdx++,cg:bsrc.cg,band:bsrc.band,colStep:bsrc.colStep||4,_chroma:sec.chr,_flat:0,_domPc:bassPc,_lum:sec.lum});
+      const barLen=perBar*pulse;
+      for(let bb=0;bb<bars[si];bb++){
+        const bp=(bb%2===0)?bassPc:((bassPc+7)%12);
+        evts.push({n:[{m:36+bp,v:Math.round((bb===0?54:46)*vPh*arc(si/NS)),durMs:Math.round(barLen*1.15),bass:true}],startMs:t+bb*barLen,idx:evIdx++,cg:bsrc.cg,band:bsrc.band,colStep:bsrc.colStep||4,_chroma:sec.chr,_flat:0,_domPc:bp,_lum:sec.lum});
+      }
     }
     if(ph==='chorale'){
       // BLOCK CHORDS — the whole cell rings together in slow quarters; the
@@ -18359,7 +18364,17 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
       //   1 nocturne lilt (the old ta-da — now just one voice among four)
       //   2 three sinking quarters
       //   3 an eighth-note run rising into a held tone (the ornamental scale)
-      const restP=0.10+sec.homog*0.28;
+      const restP=0.06+sec.homog*0.20;
+      if(cadence){
+        // the phrase-end bar RESOLVES aloud: fifth falling home to the root —
+        // the right hand sings the cadence instead of going silent.
+        const c5=Math.max(60,Math.min(88,64+fifth));
+        const c1=Math.max(58,Math.min(86,(64+root)>c5?(64+root-12):(64+root)));
+        const scC=srcOf(root);
+        evts.push({n:[{m:c5,v:Math.round(56*env),durMs:Math.round(eighth*2.6)}],startMs:t+Math.round((rb()-0.5)*80),idx:evIdx++,cg:scC.cg,band:scC.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:fifth,_lum:sec.lum});
+        evts.push({n:[{m:c1,v:Math.round(60*env),durMs:Math.round(eighth*4.6)}],startMs:t+3*eighth,idx:evIdx++,cg:scC.cg,band:scC.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+        prevMel=c1;
+      }
       if(!cadence && jr()>restP){
         let cands=uniqR.slice(0,6).filter(p2=>p2===root||p2===third||p2===fifth||jr()<0.5);
         if(!cands.length) cands=[third];
@@ -18504,6 +18519,14 @@ function composeImageVine(px,nc,nr,table,colorMode,dir){
       const isCoda=last;
       const lift=isCoda?Math.min(12,(b2)*2):0;
       const scS=srcOf(sec,root);
+      // continuous LH foundation under the motor: a soft root+fifth dyad on
+      // beats 1 and 3 — the accents punch ON TOP of a hand that never leaves.
+      if(phV!=='build'){
+        for(const hb of [0,4]){
+          const bR=snap(36+root);
+          evts.push({n:[{m:bR,v:Math.round(46*swell),durMs:Math.round(six*4.4),bass:true},{m:stepSc(bR,4),v:Math.round(38*swell),durMs:Math.round(six*4.4),bass:true}],startMs:t+hb*six,idx:evIdx++,cg:scS.cg,band:scS.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+        }
+      }
       for(let k=0;k<8;k++){
         const isAcc=acc.indexOf(k)>=0;
         if(phV!=='motor' && !isAcc && !(phV==='build'&&k%2===0&&barNo>=2)) continue;
@@ -18607,8 +18630,20 @@ function composeImageGershwin(px,nc,nr,table,colorMode,dir){
       evts.push({n:st.ns.map(o=>({m:o.m,v:Math.round(o.v*env),durMs:Math.round(o.d),bass:!!o.bass})),startMs:t0+st.ms,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
     }
     if(vamp) continue;                                     // intro: left hand alone
-    // TUNE — syncopated swung phrases; contour follows the row's light; the
-    // blue-note grace slides into the third on accented long notes.
+    // TUNE — call & response: even bars sing the phrase, odd bars ANSWER it
+    // with a lighter one-two — the right hand never walks off stage.
+    if(bar%2===1){
+      const qi2=Math.min(3,(bar>>1)%4);
+      const trend2=(sec.prof?sec.prof[qi2]:sec.lum)-sec.lum;
+      let am=prevMel!=null?prevMel:snap(76+third);
+      am=snap(Math.max(63,Math.min(93,am+Math.max(-4,Math.min(5,Math.round(trend2/9))))));
+      const vA=Math.round((52+Math.min(14,sec.chr*0.4))*env);
+      const pcA2=((am%12)+12)%12; const scA2=srcOf(sec,pcA2);
+      evts.push({n:[{m:am,v:vA,durMs:Math.round(swA*1.5)}],startMs:t0+q+swA,idx:evIdx++,cg:scA2.cg,band:scA2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcA2,_lum:sec.lum});
+      const am2=snap(Math.max(60,am-((jz()<0.5)?3:1)));
+      evts.push({n:[{m:am2,v:Math.max(30,vA-8),durMs:Math.round(q*1.6)}],startMs:t0+q*3,idx:evIdx++,cg:scA2.cg,band:scA2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((am2%12)+12)%12,_lum:sec.lum});
+      prevMel=am2;
+    }
     if(bar%2===0){
       const nN=2+((jz()<0.5)?1:0);
       for(let ni=0;ni<nN;ni++){
