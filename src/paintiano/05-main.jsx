@@ -1508,6 +1508,12 @@ export default function Paintiano() {
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
 const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma'};;
+// Free-tier composer split: Chopin + Satie ship free (public-domain anchors,
+// maximum stylistic contrast — dense Romantic harmony vs. sparse minimalism);
+// Glass / Vine / Gershwin / Yiruma unlock with Pro. Chips stay visible with a
+// 🔒 badge; every CONSUMPTION point checks composerIsLocked (panel tap,
+// Composer-mode fallback pick, Lite surprise roll, setup toggle).
+const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -1567,6 +1573,10 @@ const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryde
     if(key && key===tastePreviewKey) return false;
     return !FREE_UNLOCKED_KEYS.has(key);
   }, [proStatus, FREE_UNLOCKED_KEYS, tastePreviewKey]);
+  // Composer mirror of styleIsLocked — Free plays Chopin + Satie; the other
+  // four render locked and open the paywall. Never filters setupComposers
+  // itself (the saved set survives an upgrade untouched), only gates use.
+  const composerIsLocked = useCallback((key) => proStatus === 'free' && !FREE_COMPOSER_KEYS.includes(key), [proStatus]);
   // Remembers, per pair, which member the user last selected. So when a pair's
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
@@ -2803,13 +2813,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _lastComposerRef = useRef('glass');   // remembered pick for the Composer mode button
   // disabled-in-Setup composer → release the picture back to plain Scan
   useEffect(()=>{
-    if(imgComposer && !setupComposers.includes(imgComposer)){
+    if(imgComposer && (!setupComposers.includes(imgComposer) || composerIsLocked(imgComposer))){
       imgComposerRef.current=null; setImgComposer(null);
     }
-    if(!setupComposers.includes(_lastComposerRef.current)){
-      _lastComposerRef.current = setupComposers[0] || 'glass';
+    if(!setupComposers.includes(_lastComposerRef.current) || composerIsLocked(_lastComposerRef.current)){
+      _lastComposerRef.current = setupComposers.find(k=>!composerIsLocked(k)) || 'chopin';
     }
-  },[setupComposers, imgComposer]);
+  },[setupComposers, imgComposer, composerIsLocked]);
   useEffect(()=>{ imgComposerRef.current = imgComposer; },[imgComposer]);
   // LITE image flavour: loads default to plain SCAN; the "Surprise me"
   // button rolls a different composer (Glass/Satie/Chopin/Scan, never the
@@ -2818,11 +2828,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     imgComposerRef.current=null; setImgComposer(null);
   },[]);
   const _liteRollComposer = useCallback(()=>{
-    const _en=['glass','satie','chopin','vine','gershwin','yiruma'].filter(k=>setupComposers.includes(k));
+    const _en=['glass','satie','chopin','vine','gershwin','yiruma'].filter(k=>setupComposers.includes(k) && !composerIsLocked(k));
     const a=[null,..._en].filter(x=>x!==imgComposerRef.current);
     const c=a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
-  },[setupComposers]);
+  },[setupComposers, composerIsLocked]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -12229,7 +12239,7 @@ Hard requirements:
             {isDesktop && <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('imgReadLabel')!=='imgReadLabel'?t('imgReadLabel'):(lang==='SK'?'čítanie':'reading')}</div>}
             <div style={{display:'flex',flexDirection:isDesktop?'column':'row',gap:6}}>
               <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } imgComposerRef.current=null; setImgComposer(null); }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&!imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&!imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&!imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
-              <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } if(!imgComposer){ const c=_lastComposerRef.current||'glass'; imgComposerRef.current=c; setImgComposer(c); } }} disabled={busy||working} title={'the picture recomposed in a composer\u2019s style'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'\u266b '+(({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer')}</button>
+              <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } if(!imgComposer){ let c=_lastComposerRef.current; if(!c||composerIsLocked(c)) c=setupComposers.find(k=>!composerIsLocked(k))||'chopin'; imgComposerRef.current=c; setImgComposer(c); } }} disabled={busy||working} title={'the picture recomposed in a composer\u2019s style'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'\u266b '+(({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer')}</button>
               <button onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.7)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'0 0 0 1px rgba(220,150,255,.24)',opacity:aiLocked?.85:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,position:'relative'}}>{(proStatus!=='pro_ai') && (modeExhausted('compose') ? (<span style={{position:'absolute',top:-7,right:8,zIndex:3,pointerEvents:'none'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></span>) : (<span style={{position:'absolute',top:-7,right:8,fontSize:(.4*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',whiteSpace:'nowrap',color:'rgba(228,178,255,.98)',background:'rgba(40,20,55,.95)',border:'1px solid rgba(220,150,255,.6)',borderRadius:8,padding:'1px 6px',pointerEvents:'none',zIndex:3}}>{ts('aiTrialBadge','1 free AI try')}</span>))}
                 <span>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')}</span>
               </button>
@@ -12259,17 +12269,19 @@ Hard requirements:
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
               if(_cs.length===1){ return (
-                <div style={{textAlign:'center',padding:'8px 4px',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',color:'rgba(220,180,90,.95)'}}>{_cs[0].n}</div>
+                <div style={{textAlign:'center',padding:'8px 4px',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',color:'rgba(220,180,90,.95)'}}>{_cs[0].n}{composerIsLocked(_cs[0].k)?' 🔒':''}</div>
               ); }
               return (
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6}}>
                 {_cs.map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
+                  const proLock=composerIsLocked(c.k);
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'panel'}); }catch(_){} setPaywallReason('settings'); return; } _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}</button>
+                      title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined}
+                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked||proLock)?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}{proLock && (<span style={{position:'absolute',top:2,right:5,fontSize:(.34*effScale)+'rem',opacity:.7}}>🔒</span>)}</button>
                   );
                 })}
               </div>
@@ -14746,8 +14758,9 @@ Hard requirements:
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,rowGap:8}}>
                   {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].map(c=>{
                     const on = setupComposers.includes(c.k);
+                    const proLock = composerIsLocked(c.k);
                     return (
-                    <button key={c.k} onClick={()=>{ setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} style={{padding:'9px 4px',textAlign:'center',borderRadius:999,cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{c.n}</button>
+                    <button key={c.k} onClick={()=>{ if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'setup'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined} style={{position:'relative',opacity:proLock?0.5:1,padding:'9px 4px',textAlign:'center',borderRadius:999,cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{c.n}{proLock && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7}}>🔒</span>)}</button>
                     );
                   })}
                 </div>
@@ -14980,15 +14993,15 @@ Hard requirements:
             { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
             { sel:'.pf-setup-composers', inModal:true, pad:8,
               title:(({EN:'Composers',SK:'Skladatelia',DE:'Komponisten',FR:'Compositeurs',ES:'Compositores',PT:'Compositores',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composers'),
-              body:(({EN:'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma.',
-                      SK:'Obraz m\u00f4\u017ee hra\u0165 ako \u010dist\u00fd prepis \u2014 alebo prekomponovan\u00fd v \u0161t\u00fdle skladate\u013ea, od Glassa po Yirumu.',
-                      DE:'Ein Bild kann als reiner Scan spielen \u2014 oder neu komponiert im Stil eines Komponisten, von Glass bis Yiruma.',
-                      FR:'Un tableau peut jouer en scan pur \u2014 ou recompos\u00e9 dans le style d\u2019un compositeur, de Glass \u00e0 Yiruma.',
-                      ES:'Un cuadro puede sonar como escaneo puro \u2014 o recompuesto al estilo de un compositor, de Glass a Yiruma.',
-                      PT:'Um quadro pode tocar como leitura pura \u2014 ou recomposto ao estilo de um compositor, de Glass a Yiruma.',
-                      zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Glass \u5230 Yiruma\u3002',
-                      zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Glass \u5230 Yiruma\u3002',
-                      ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Glass \u304b\u3089 Yiruma \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma.') },
+              body:(({EN:'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma. Chopin + Satie are free \u2014 Pro unlocks all six.',
+                      SK:'Obraz m\u00f4\u017ee hra\u0165 ako \u010dist\u00fd prepis \u2014 alebo prekomponovan\u00fd v \u0161t\u00fdle skladate\u013ea, od Glassa po Yirumu. Chopin + Satie s\u00fa zadarmo \u2014 Pro odomkne v\u0161etk\u00fdch \u0161es\u0165.',
+                      DE:'Ein Bild kann als reiner Scan spielen \u2014 oder neu komponiert im Stil eines Komponisten, von Glass bis Yiruma. Chopin + Satie sind gratis \u2014 Pro schaltet alle sechs frei.',
+                      FR:'Un tableau peut jouer en scan pur \u2014 ou recompos\u00e9 dans le style d\u2019un compositeur, de Glass \u00e0 Yiruma. Chopin + Satie sont gratuits \u2014 Pro d\u00e9bloque les six.',
+                      ES:'Un cuadro puede sonar como escaneo puro \u2014 o recompuesto al estilo de un compositor, de Glass a Yiruma. Chopin + Satie son gratis \u2014 Pro desbloquea los seis.',
+                      PT:'Um quadro pode tocar como leitura pura \u2014 ou recomposto ao estilo de um compositor, de Glass a Yiruma. Chopin + Satie s\u00e3o gr\u00e1tis \u2014 o Pro desbloqueia os seis.',
+                      zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Glass \u5230 Yiruma\u3002\u8096\u90a6\u4e0e\u8428\u8482\u514d\u8d39\u2014\u2014Pro \u89e3\u9501\u5168\u90e8\u516d\u4f4d\u3002',
+                      zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Glass \u5230 Yiruma\u3002\u856d\u90a6\u8207\u85a9\u63d0\u514d\u8cbb\u2014\u2014Pro \u89e3\u9396\u5168\u90e8\u516d\u4f4d\u3002',
+                      ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Glass \u304b\u3089 Yiruma \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u30676\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma. Chopin + Satie are free \u2014 Pro unlocks all six.') },
             { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
           ];
           const endTour = (done)=>{
