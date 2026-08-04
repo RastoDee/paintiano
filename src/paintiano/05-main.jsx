@@ -2777,6 +2777,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Image reading direction: 'lr' (default), 'vert', 'spiralIn', 'spiralOut'.
   // Mirrored to a ref so transcription loops read the current value live.
   const [imgDir, setImgDir] = useState('lr');
+  // COMPOSER for painting→music: null = plain scan (the "mosaic" of image
+  // mode), 'glass' = the piece re-composed in a composer's style from the
+  // analysed whole picture. Mirrors mosaic-vs-artists on the music side.
+  const [imgComposer, setImgComposer] = useState(null);
+  const imgComposerRef = useRef(null);
+  useEffect(()=>{ imgComposerRef.current = imgComposer; },[imgComposer]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -7554,7 +7560,9 @@ Hard requirements:
             : startMode==='kontra' ? KONTRA_HUE
             : COF;                                     // harmony & bw both read via COF
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
-          const evts=pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
+          const evts=(imgComposerRef.current==='glass')
+            ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
@@ -7621,7 +7629,7 @@ Hard requirements:
     if(restoringRef.current)return; // multi-draft restore in progress — keep the stashed chords/disp
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    const sig = mode + '|' + imgDir + '|c:' + (imgComposer||'scan') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
@@ -7642,7 +7650,9 @@ Hard requirements:
       : COF;
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     try{ _setImgForcedBands((pixelRef.current&&pixelRef.current.mosaicBands)||0); }catch(_){}
-    const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
+    const _evtsLit = (imgComposerRef.current==='glass')
+      ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
     // MELODY stays a separate voice: the texture in chordsRef is never altered by it
@@ -7710,7 +7720,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
@@ -12170,6 +12180,16 @@ Hard requirements:
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
                     <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
+                  );
+                })}
+              </div>
+              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
+                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'}].map(c=>{
+                  const sel=imgComposer===c.k;
+                  const locked=working;
+                  return (
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; setImgComposer(c.k); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',borderRadius:10,cursor:locked?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',background:sel?'rgba(201,168,76,.16)':'rgba(255,255,255,.02)',border:sel?'1px solid rgba(201,168,76,.55)':'1px solid rgba(255,255,255,.08)',color:sel?'#c9a84c':'rgba(230,222,196,.75)',opacity:locked?.5:1}}>{c.n}</button>
                   );
                 })}
               </div>
