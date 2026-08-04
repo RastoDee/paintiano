@@ -16170,7 +16170,10 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
     }
     lum/=cells.length; chr/=cells.length;
     let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
+    // luminance PROFILE left→right (4 samples) — the picture's own melody line
+    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
   }
   if(!secs.length) return base;
   const g=new Float32Array(12); let gl=0;
@@ -16238,8 +16241,21 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
       if(melSkip>0){ melSkip--; }
       else if(!cadence && jr()>restP && !last){
         let cands=uniqR.slice(0,5); if(!cands.length) cands=[tonic];
+        // the row's LIGHT chooses the direction: rising luminance pulls the
+        // melody up, falling pulls it down — the picture draws its own line
+        const _qi=Math.min(3,Math.floor((b2/Math.max(1,bars[si]))*4));
+        const _trend=(sec.prof?sec.prof[_qi]:sec.lum)-sec.lum;
         let melPc=cands[0];
-        if(prevMel!=null){ let bd=99; for(const p2 of cands){ const dd=Math.min((p2-prevMel%12+12)%12,(prevMel%12-p2+12)%12); if(dd<bd){bd=dd;melPc=p2;} } }
+        if(prevMel!=null){
+          let bd=99, near=[];
+          for(const p2 of cands){ const dd=Math.min((p2-prevMel%12+12)%12,(prevMel%12-p2+12)%12); near.push([dd,p2]); }
+          near.sort((a,b)=>a[0]-b[0]);
+          melPc=near[0][1];
+          if(near.length>1 && Math.abs(_trend)>4){
+            const dirOf=(pc)=>{ const up=(pc-prevMel%12+12)%12, dn=(prevMel%12-pc+12)%12; return up<=dn?1:-1; };
+            if(dirOf(near[0][1])!==Math.sign(_trend) && dirOf(near[1][1])===Math.sign(_trend)) melPc=near[1][1];
+          }
+        }
         let mm=60+melPc; if(prevMel!=null){ while(mm-prevMel>7) mm-=12; while(prevMel-mm>7) mm+=12; }
         if(phS==='rolled'){ mm=Math.min(89,mm+12); }
         mm=Math.max(55,Math.min(84,mm));
@@ -16293,7 +16309,10 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
     }
     lum/=cells.length; chr/=cells.length;
     let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
+    // luminance PROFILE left→right (4 samples) — the picture's own melody line
+    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
   }
   if(!secs.length) return base;
   const g=new Float32Array(12); let gl=0,gc2=0;
@@ -16374,6 +16393,17 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
         let cands=uniqR.slice(0,6).filter(p2=>p2===root||p2===third||p2===fifth||jr()<0.5);
         if(!cands.length) cands=[third];
         let melPc=cands[Math.floor(jr()*cands.length)]||third;
+        // light-trend bias: prefer the candidate that moves with the row's
+        // luminance direction (the melody traces the picture)
+        if(prevMel!=null && cands.length>1 && sec.prof){
+          const _qi=Math.min(3,Math.floor((b2/Math.max(1,bars[si]))*4));
+          const _trend=sec.prof[_qi]-sec.lum;
+          if(Math.abs(_trend)>4){
+            const dirOf=(pc)=>{ const up=(pc-prevMel%12+12)%12, dn=(prevMel%12-pc+12)%12; return up<=dn?1:-1; };
+            const match=cands.filter(pc=>dirOf(pc)===Math.sign(_trend));
+            if(match.length){ melPc=match[Math.floor(jr()*match.length)]; }
+          }
+        }
         let mm=64+melPc; if(prevMel!=null){ while(mm-prevMel>9) mm-=12; while(prevMel-mm>9) mm+=12; }
         mm=Math.max(58,Math.min(88,mm));
         if(nearClim) mm=Math.min(93,mm+12);        // climax sings an octave up
@@ -16556,7 +16586,10 @@ function composeImageDebussy(px,nc,nr,table,colorMode,dir){
     }
     lum/=cells.length; chr/=cells.length;
     let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
+    // luminance PROFILE left→right (4 samples) — the picture's own melody line
+    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
   }
   if(!secs.length) return base;
   const g=new Float32Array(12); let gl=0,gc2=0;
@@ -16577,16 +16610,26 @@ function composeImageDebussy(px,nc,nr,table,colorMode,dir){
   const maxBars=Math.max(24,Math.floor(150000/barMs));
   const totBars=maxBars - (maxBars%4);
   const totalMs=totBars*barMs+4000;
-  const prog=[0,5,3,4];                                    // I vi IV V
+  // PALETTE-AWARE floor: I and V anchor the phrase, but the two middle
+  // chords are the picture's 2nd and 3rd strongest colours quantised to
+  // scale degrees — switch the palette and the harmony itself moves.
+  const degIdxOf=(pc)=>{ const q=(()=>{ let best=pc,bd=99; for(const a of scAbs){ const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; })(); const ii=scAbs.indexOf(q); return ii<0?5:ii; };
+  const gRank=[...Array(12).keys()].sort((a,b)=>g[b]-g[a]);
+  let dA=degIdxOf(gRank[1]!=null?gRank[1]:5), dB=degIdxOf(gRank[2]!=null?gRank[2]:3);
+  if(dA===0||dA===4) dA=5;
+  if(dB===0||dB===4||dB===dA) dB=(dA===3)?1:3;
+  const prog=[0,dA,dB,4];
   const rp=R(1);
   const evts=[]; let evIdx=0;
   const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
   const srcOf=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
   const wave=(pos)=>0.84+0.08*Math.sin(pos*11)+0.18*Math.exp(-((pos-0.55)*(pos-0.55))/(2*0.18*0.18));
   // one melodic PHRASE per role, built from the picture's two strongest colours
-  const mkPhrase=(startM,shape)=>shape.map(o=>({offE:o[0],durE:o[1],step:o[2]}));
-  const shapeA=[[0,3,0],[3,3,1],[6,2,2],[8,4,1]];          // rise and settle
-  const shapeB=[[0,3,4],[3,2,3],[6,2,2],[8,4,3]];          // higher answer
+  // the PHRASE CONTOUR is drawn by the row's own light: four luminance
+  // samples become four scale-step targets — the melody literally traces
+  // the picture left to right (B answers a fourth higher).
+  const shapeFromProf=(sec,lift)=>{ const offs=[[0,3],[3,3],[6,2],[8,4]];
+    return offs.map((o,i2)=>({offE:o[0],durE:o[1],step:lift+Math.max(-3,Math.min(4,Math.round(((sec.prof?sec.prof[i2]:sec.lum)-sec.lum)/9)))})); };
   for(let bar=0;bar<totBars;bar++){
     const sec=secAt(bar), pos=(bar*barMs)/totalMs, env=wave(pos);
     const deg=prog[bar%4];
@@ -16602,17 +16645,26 @@ function composeImageDebussy(px,nc,nr,table,colorMode,dir){
     const color=(deg===0||deg===3);
     const fPos=bar/Math.max(1,totBars-1);
     const slotB=((bar>>1)%4===2);
-    const arp=[b0, t5, color?n9:(t3+12), t5, b0+12, t5];
+    // the running figure CHANGES SHAPE bar to bar — four contours in rotation
+    // (rise, rock, wave, descent), tones used evenly; the ninth glows only on
+    // the colour bars. No more one-pattern telegraph.
+    const _pats=[
+      [b0, t3, t5, color?n9:(t3+12), b0+12, t5],
+      [b0, t5, t3, b0+12, t5, t3],
+      [b0, t3, t5, t3+12, t5, color?n9:t3],
+      [b0+12, t5, t3+12, t5, t3, b0]
+    ];
+    const arp=_pats[(bar+((rp()<0.5)?0:2))%4];
     if(slotB && fPos>0.2){
       // B phrase wears different clothing: two soft ROLLED chords per bar
       // instead of the running arpeggio — the fabric itself changes.
-      for(const off of [0,3]){
-        const chd=[b0,t3,t5,(color?n9:b0+12)];
-        for(let q=0;q<chd.length;q++){
-          const pcA=((chd[q]%12)+12)%12; const scA=srcOf(sec,pcA);
-          evts.push({n:[{m:chd[q],v:Math.round((38-q*2)*env),durMs:Math.round(eighth*3*1.9),bass:q===0&&off===0}],startMs:t0+off*eighth+q*70,idx:evIdx++,cg:scA.cg,band:scA.band,colStep:4,_chroma:scA._chroma||sec.chr,_flat:0,_domPc:pcA,_lum:scA._lum||sec.lum});
-        }
+      const chd=[b0,t3,t5,(color?n9:b0+12)];
+      for(let q=0;q<chd.length;q++){
+        const pcA=((chd[q]%12)+12)%12; const scA=srcOf(sec,pcA);
+        evts.push({n:[{m:chd[q],v:Math.round((38-q*2)*env),durMs:Math.round(eighth*4.6),bass:q===0}],startMs:t0+q*140,idx:evIdx++,cg:scA.cg,band:scA.band,colStep:4,_chroma:scA._chroma||sec.chr,_flat:0,_domPc:pcA,_lum:scA._lum||sec.lum});
       }
+      { const pc5=((t5%12)+12)%12; const sc5=srcOf(sec,pc5);
+        evts.push({n:[{m:t5+12,v:Math.round(30*env),durMs:Math.round(eighth*2.6)}],startMs:t0+4*eighth,idx:evIdx++,cg:sc5.cg,band:sc5.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pc5,_lum:sec.lum}); }
     } else
     for(let k=0;k<6;k++){
       const pcA=((arp[k]%12)+12)%12; const scA=srcOf(sec,pcA);
@@ -16624,7 +16676,7 @@ function composeImageDebussy(px,nc,nr,table,colorMode,dir){
       const slot=(bar>>1)%4;                               // A A' B A
       const isB=(slot===2), isA2=(slot===1);
       const base=snap((isB?79:74)+thirdPc);
-      const shape=isB?shapeB:shapeA;
+      const shape=shapeFromProf(sec,isB?3:0);
       let prevM=null;
       for(let ni=0;ni<shape.length;ni++){
         const o=shape[ni];

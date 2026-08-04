@@ -9204,22 +9204,13 @@ Hard requirements:
   // unreliable on iOS so we skip the inline player and offer only a save
   // button — the file itself is fine for download / share / play in Files /
   // Voice Memos / Music.
-  // Full image-flavour SURPRISE: drop the running take (recorder torn down
-  // WITHOUT stopAll), stop playback, roll a different composer, then start a
-  // fresh recorded take from the top — one tap, new style, clean take.
+  // Image-flavour SURPRISE: roll a different composer and let the piece
+  // CONTINUE — the transcribe effect live-swaps the events mid-play (same
+  // mechanics as a palette change), mirroring the music-side artist swipe.
+  // A running take simply spans the style change; Stop → Save still applies.
   const _liteImgSurprise = useCallback(()=>{
-    try{
-      if(recorderRef.current && recorderRef.current.state!=='inactive'){
-        _suppressRecOnStopRef.current=true;
-        recorderRef.current.stop();
-      }
-      setRecording(false); recorderRef.current=null;
-    }catch(_){}
-    try{ setRecBlob(null); setRecName(''); }catch(_){}
-    try{ stopAll(); }catch(_){}
     try{ _liteRollComposer(); }catch(_){}
-    setTimeout(()=>{ try{ (startRecordRef.current||startRecord)(); }catch(_){} },160);
-  },[stopAll,_liteRollComposer]);
+  },[_liteRollComposer]);
   const startRecord=()=>{
     if(!chords.length||recording||playing)return;
     if(!window.MediaRecorder){setErr(t('recUnsupported'));setErrInfo(false);return;}
@@ -12902,7 +12893,7 @@ Hard requirements:
           tells the user what a swipe does in the current mode: Lite → Surprise,
           Advanced → Next. Only rendered when immersive; occupies the letterbox
           area where INSPIRED BY used to be. Swipe flash still fires below. */}
-      {immersive && viewMode!=='image' && !liteImageMode && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive))) && (
+      {immersive && ((viewMode!=='image' && !liteImageMode && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)))) || (basicMode && liteImageMode && chords.length>0)) && (
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
           {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
         </div>
