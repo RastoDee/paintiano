@@ -18130,7 +18130,7 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
   const tot=bars.reduce((a,b)=>a+b,0);
   if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
   const totalMs=bars.reduce((a,b)=>a+b,0)*barMs;
-  const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0;
+  const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0, lastGest=-1, melSkip=0;
   const jr=R(1);
   const seventh = bright?11:10;
   const totBars=bars.reduce((a,b)=>a+b,0);
@@ -18172,20 +18172,26 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
       } else {
         evts.push({n:mkCh(42,Math.round(beat*1.9)),startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
       }
-      // melody — a long note on beat 1 or 2, stepwise from the previous one;
-      // homogeneous (calm) regions often rest instead: Satie breathes.
+      // melody speaks in GESTURES with memory — never the same shape twice in
+      // a row: 0 whole-bar tone · 1 "da-taaa" · 2 "da-da·" · 3 tie over the
+      // barline (the Satie suspension; the next bar's melody then rests).
       const restP=0.18+sec.homog*0.4;
-      if(!cadence && jr()>restP && !last){
+      if(melSkip>0){ melSkip--; }
+      else if(!cadence && jr()>restP && !last){
         let cands=uniqR.slice(0,5); if(!cands.length) cands=[tonic];
         let melPc=cands[0];
         if(prevMel!=null){ let bd=99; for(const p2 of cands){ const dd=Math.min((p2-prevMel%12+12)%12,(prevMel%12-p2+12)%12); if(dd<bd){bd=dd;melPc=p2;} } }
         let mm=60+melPc; if(prevMel!=null){ while(mm-prevMel>7) mm-=12; while(prevMel-mm>7) mm+=12; }
         mm=Math.max(55,Math.min(84,mm));
-        prevMel=mm;
         const msc=srcOf(melPc);
-        const onBeat2=jr()<0.35;
-        const durB=2+(jr()<0.4?1:0);
-        evts.push({n:[{m:mm,v:Math.round((58+Math.min(18,sec.chr*0.5))*env),durMs:Math.round(beat*durB*0.96)}],startMs:t+(onBeat2?beat:0),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
+        const vB=(58+Math.min(18,sec.chr*0.5))*env;
+        const P=(m2,vv,startB,durB2)=>{ evts.push({n:[{m:m2,v:Math.round(vv),durMs:Math.round(beat*durB2*0.96)}],startMs:t+Math.round(startB*beat),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum}); };
+        let gi; do{ gi=Math.floor(jr()*4); }while(gi===lastGest);
+        lastGest=gi;
+        if(gi===0){ P(mm,vB,0,2.9); prevMel=mm; }
+        else if(gi===1){ const nb=Math.max(55,Math.min(84,mm+(jr()<0.5?-2:2))); P(nb,vB*0.86,0,0.95); P(mm,vB,1,1.9); prevMel=mm; }
+        else if(gi===2){ const nb=Math.max(55,Math.min(84,mm+(jr()<0.5?-1:2))); P(mm,vB*0.95,0,0.95); P(nb,vB*0.85,1,0.95); prevMel=nb; }
+        else { P(mm,vB*0.96,(jr()<0.5?1:2),4.6); prevMel=mm; melSkip=1; }
       }
       t+=barMs;
     }
@@ -18245,7 +18251,7 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
   const totalMs=totBars*barMs;
   // functional floor: i - VI - iv - V (minor) / I - vi - IV - V (major)
   const prog=minor?[0,8,5,7]:[0,9,5,7];
-  const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0;
+  const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0, lastGestC=-1;
   const jr=R(1), rb=R(2);
   const climBar=Math.floor(totBars*0.618);
   for(let si=0;si<secs.length;si++){
@@ -18276,7 +18282,11 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
       for(const L of lh){
         evts.push({n:[{m:L.m,v:Math.round(L.v*env),durMs:Math.round(eighth*L.dur),bass:!!L.bass}],startMs:t+L.off*eighth,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
       }
-      // RIGHT HAND — cantabile: a phrase note (or two) with rubato + ornament
+      // RIGHT HAND — cantabile in GESTURES with memory (no "ta-da" grind):
+      //   0 dotted-half across the bar (with the grace-note sigh)
+      //   1 nocturne lilt (the old ta-da — now just one voice among four)
+      //   2 three sinking quarters
+      //   3 an eighth-note run rising into a held tone (the ornamental scale)
       const restP=0.10+sec.homog*0.28;
       if(!cadence && jr()>restP){
         let cands=uniqR.slice(0,6).filter(p2=>p2===root||p2===third||p2===fifth||jr()<0.5);
@@ -18285,22 +18295,28 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
         let mm=64+melPc; if(prevMel!=null){ while(mm-prevMel>9) mm-=12; while(prevMel-mm>9) mm+=12; }
         mm=Math.max(58,Math.min(88,mm));
         if(nearClim) mm=Math.min(93,mm+12);        // climax sings an octave up
-        prevMel=mm;
         const msc=srcOf(melPc);
         const rubato=Math.round((rb()-0.5)*120);   // breathes around the beat
-        const longN=jr()<0.55;
-        const startO=(jr()<0.4?0:(jr()<0.7?2:3))*eighth;
         const vMel=Math.round((66+Math.min(20,sec.chr*0.6))*env*(nearClim?1.12:1));
-        // grace-note ornament before long notes — the Chopin sigh
-        if(longN && jr()<0.6){
-          evts.push({n:[{m:Math.min(94,mm+(minor?1:2)),v:Math.max(30,vMel-22),durMs:110}],startMs:Math.max(0,t+startO+rubato-120),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
-        }
-        evts.push({n:[{m:mm,v:vMel,durMs:Math.round(eighth*(longN?4.6:2.3))}],startMs:t+startO+rubato,idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
-        // answering step on the bar's back half for short notes
-        if(!longN && jr()<0.55){
-          const mm2=Math.max(56,Math.min(90,mm+(jr()<0.5?-2:2)));
-          evts.push({n:[{m:mm2,v:Math.max(34,vMel-10),durMs:Math.round(eighth*1.8)}],startMs:t+4*eighth+Math.round((rb()-0.5)*90),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
-          prevMel=mm2;
+        const PE=(m2,vv,offE,durE)=>{ evts.push({n:[{m:m2,v:Math.round(vv),durMs:Math.round(eighth*durE)}],startMs:Math.max(0,t+Math.round(offE*eighth)+rubato),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum}); };
+        let gi; do{ gi=Math.floor(jr()*4); }while(gi===lastGestC);
+        lastGestC=gi;
+        if(gi===0){
+          if(jr()<0.6){ PE(Math.min(94,mm+(minor?1:2)),Math.max(30,vMel-22),-0.3,0.28); }
+          PE(mm,vMel,0,5.2); prevMel=mm;
+        } else if(gi===1){
+          PE(mm,vMel,0,1.9);
+          const st=Math.max(56,Math.min(90,mm+(jr()<0.5?-2:2)));
+          PE(st,vMel-8,2,0.95);
+          const ct=Math.max(56,Math.min(90,64+((jr()<0.5?third:fifth))+((mm-64)>=6?12:0)));
+          PE(ct,vMel-4,3,1.9); prevMel=ct;
+        } else if(gi===2){
+          PE(mm,vMel,0,1.8); PE(Math.max(55,mm-2),vMel-6,2,1.8); PE(Math.max(54,mm-(minor?4:3)),vMel-10,4,1.8);
+          prevMel=Math.max(54,mm-(minor?4:3));
+        } else {
+          const startFrom=Math.max(55,mm-5);
+          for(let q=0;q<4;q++){ PE(startFrom+q+(q>1?1:0),Math.max(28,vMel-16),q*1,0.9); }
+          PE(mm,vMel,4,3.4); prevMel=mm;
         }
       }
       t+=barMs;
