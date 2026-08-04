@@ -16181,18 +16181,30 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
       const pos=t/Math.max(1,totalMs);
       const env=arc(Math.min(1,pos));
       const sc=srcOf(root);
-      // beat 1 — low bass
-      evts.push({n:[{m:36+root,v:Math.round(50*env),durMs:Math.round(beat*2.7),bass:true}],startMs:t,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-      // beat 2 — mid 7th-chord (root, third, seventh), soft
+      // The accompaniment SWAY changes by 4-bar PHRASE (A A' B A...) so the
+      // "bass-chord-rest" figure never rides one shape for the whole piece:
+      //   A: bass | chord | ·      A': bass | · | chord      B: bass+pad
+      // and every 4th bar is a CADENCE breath (long chord, melody tacet).
+      const phraseT=[0,1,0,2][Math.floor(barNo/4)%4];
+      const cadence=(barNo%4===3);
       const third=(root+(bright?4:3))%12;
-      const ch=[{m:48+root,v:Math.round(42*env),durMs:Math.round(beat*1.9)},
-                {m:48+third+(third<root?12:0),v:Math.round(38*env),durMs:Math.round(beat*1.9)},
-                {m:48+((root+seventh)%12)+(((root+seventh)%12)<root?12:0),v:Math.round(36*env),durMs:Math.round(beat*1.9)}];
-      evts.push({n:ch,startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      const mkCh=(vv,dd)=>[{m:48+root,v:Math.round(vv*env),durMs:dd},
+                {m:48+third+(third<root?12:0),v:Math.round((vv-4)*env),durMs:dd},
+                {m:48+((root+seventh)%12)+(((root+seventh)%12)<root?12:0),v:Math.round((vv-6)*env),durMs:dd}];
+      evts.push({n:[{m:36+root,v:Math.round(50*env),durMs:Math.round(beat*2.7),bass:true}],startMs:t,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      if(cadence){
+        evts.push({n:mkCh(40,Math.round(beat*2.8)),startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      } else if(phraseT===1){
+        evts.push({n:mkCh(42,Math.round(beat*0.95)),startMs:t+beat*2,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      } else if(phraseT===2){
+        evts.push({n:mkCh(38,Math.round(beat*2.8)),startMs:t,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      } else {
+        evts.push({n:mkCh(42,Math.round(beat*1.9)),startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      }
       // melody — a long note on beat 1 or 2, stepwise from the previous one;
       // homogeneous (calm) regions often rest instead: Satie breathes.
       const restP=0.18+sec.homog*0.4;
-      if(jr()>restP && !last){
+      if(!cadence && jr()>restP && !last){
         let cands=uniqR.slice(0,5); if(!cands.length) cands=[tonic];
         let melPc=cands[0];
         if(prevMel!=null){ let bd=99; for(const p2 of cands){ const dd=Math.min((p2-prevMel%12+12)%12,(prevMel%12-p2+12)%12); if(dd<bd){bd=dd;melPc=p2;} } }
@@ -16280,19 +16292,22 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
       const env=arc(Math.min(1,pos));
       const nearClim=Math.abs(barNo-climBar)<=1;
       const sc=srcOf(root);
-      // LEFT HAND — broken-chord stencil across the bar: R . 5 . 10 . 5 . 8 . 5
-      const lh=[ {m:36+root,off:0,v:50,dur:2.2,bass:true},
-                 {m:48+fifth+(fifth<root?12:0)-12,off:1,v:40,dur:1.6},
-                 {m:52+third+(third<root?12:0)-4,off:2,v:42,dur:1.6},
-                 {m:48+fifth+(fifth<root?12:0)-12,off:3,v:38,dur:1.6},
-                 {m:48+root,off:4,v:41,dur:1.6},
-                 {m:48+fifth+(fifth<root?12:0)-12,off:5,v:37,dur:1.6} ];
+      // LEFT HAND — the broken-chord shape rotates by 2-bar BLOCKS (A A B A C…)
+      // and every 8th bar is a CADENCE breath (three attacks, melody tacet),
+      // so the figure never grinds one "ta-da" across the whole nocturne.
+      const mF=48+fifth+(fifth<root?12:0)-12, mT=52+third+(third<root?12:0)-4, mR=48+root;
+      const lhA=[ {m:36+root,off:0,v:50,dur:2.2,bass:true},{m:mF,off:1,v:40,dur:1.6},{m:mT,off:2,v:42,dur:1.6},{m:mF,off:3,v:38,dur:1.6},{m:mR,off:4,v:41,dur:1.6},{m:mF,off:5,v:37,dur:1.6} ];
+      const lhB=[ {m:36+root,off:0,v:50,dur:2.2,bass:true},{m:mR,off:1,v:40,dur:1.6},{m:mF,off:2,v:39,dur:1.6},{m:mT,off:3,v:42,dur:1.6},{m:mF,off:4,v:38,dur:1.6},{m:mT,off:5,v:40,dur:1.6} ];
+      const lhC=[ {m:36+root,off:0,v:50,dur:3.4,bass:true},{m:mF,off:2,v:41,dur:2.4},{m:mT,off:2,v:39,dur:2.4},{m:mR,off:4,v:40,dur:2.4},{m:mF,off:4,v:37,dur:2.4} ];
+      const cadence=(barNo%8===7);
+      const blk=[0,0,1,0,2,0,1,2][Math.floor(barNo/2)%8];
+      const lh=cadence?lhC:(blk===1?lhB:(blk===2?lhC:lhA));
       for(const L of lh){
         evts.push({n:[{m:L.m,v:Math.round(L.v*env),durMs:Math.round(eighth*L.dur),bass:!!L.bass}],startMs:t+L.off*eighth,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
       }
       // RIGHT HAND — cantabile: a phrase note (or two) with rubato + ornament
       const restP=0.10+sec.homog*0.28;
-      if(jr()>restP){
+      if(!cadence && jr()>restP){
         let cands=uniqR.slice(0,6).filter(p2=>p2===root||p2===third||p2===fifth||jr()<0.5);
         if(!cands.length) cands=[third];
         let melPc=cands[Math.floor(jr()*cands.length)]||third;

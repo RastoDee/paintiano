@@ -18036,69 +18036,43 @@ function composeImageGlass(px,nc,nr,table,colorMode,dir){
   if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
   // ── PHASE 2 · compose (additive cells, pendulum arpeggio, pedal bass) ──
   const evts=[]; let t=0, evIdx=0, prevPcs=[];
-  const jit=R(1), vary=R(2);
-  // climax = the section whose position is nearest phi
+  const jit=R(1);
+  // form only: a phi-placed climax section (register + dynamics lift) and a
+  // subdominant terrace every ~4th section. Texture stays the clean original.
   let clim=0,cd=9;
   for(let si=0;si<secs.length;si++){ const d=Math.abs(si/(secs.length-1||1)-0.618); if(d<cd){cd=d;clim=si;} }
   for(let si=0;si<secs.length;si++){
     const sec=secs[si], last=si===secs.length-1, isClim=si===clim;
-    // every ~4th section wanders to the SUBDOMINANT colour and back — the
-    // harmonic terrace that keeps a long additive piece from flatlining
     const shift=(!last && !isClim && si%4===3)?5:0;
     const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(p2=>inScale((p2+shift)%12));
     const uniqR=[...new Set(ranked)];
     let K=3+(sec.chr>28?1:0)+(sec.homog<0.4?1:0); if(last) K=2;
-    // breathing: a very homogeneous mid-piece section thins to 2 notes, no bass
-    const thin=!last && !isClim && sec.homog>0.72 && si>1 && vary()<0.6;
-    if(thin) K=2;
     const cellPcs=[];
     for(const p2 of prevPcs){ if(cellPcs.length<2 && uniqR.includes(p2)) cellPcs.push(p2); }
     for(const p2 of uniqR){ if(cellPcs.length>=K) break; if(!cellPcs.includes(p2)) cellPcs.push(p2); }
     while(cellPcs.length<Math.min(K,3)) cellPcs.push((tonic+scale[(cellPcs.length*2)%scale.length])%12);
     prevPcs=cellPcs.slice();
-    // registral terracing: base register from brightness, then a slow seeded
-    // wander (+/- one octave) so consecutive sections sit on different floors
     let octBase=sec.lum<40?3:(sec.lum<62?4:5);
-    octBase+=Math.round((vary()-0.5)*2)* (isClim?0:1);
-    octBase=Math.max(3,Math.min(5,octBase));
+    if(isClim) octBase=Math.min(5,octBase+1);          // the one lift of the piece
     const mids=[]; let lastM=-1;
     for(const p2 of cellPcs.slice().sort((a,b)=>a-b)){ let m=12*(octBase+1)+p2; while(m<=lastM) m+=12; lastM=m; mids.push({m,pc:p2}); }
-    // figuration changes per section: pendulum / rising / broken thirds
-    const fig=isClim?0:Math.floor(vary()*3);
-    let seq;
-    if(fig===1){ seq=mids.slice(); }
-    else if(fig===2 && mids.length>=3){ seq=[]; for(let q=0;q<mids.length;q++){ seq.push(mids[q]); seq.push(mids[(q+2)%mids.length]); } }
-    else { seq=mids.concat(mids.slice(1,Math.max(1,mids.length-1)).reverse()); }
-    // climax: octave doubling — the cell rings in two registers at once
-    if(isClim){ seq=seq.map(o=>({m:o.m,pc:o.pc,dbl:o.m+12})); }
-    const trip=(sec.chr>32 && !last);
-    const perBar=8;
+    const seq=mids.concat(mids.slice(1,Math.max(1,mids.length-1)).reverse()); // pendulum
+    const trip=sec.chr>32 && !last;
+    const perBar=trip?12:8;
+    const pulse=trip?Math.round(eighth*2/3):eighth;
     const bassPc=(si%2===0)?((tonic+shift)%12):((tonic+shift+7)%12);
+    const secMs=bars[si]*perBar*pulse;
     const bsrc=sec.cells[0];
-    if(!thin){
-      const secMs=bars[si]*perBar*eighth;
-      evts.push({n:[{m:36+bassPc,v:Math.round((thin?0:56)*arc(si/secs.length)),durMs:Math.min(secMs,6000),bass:true}],startMs:t,idx:evIdx++,cg:bsrc.cg,band:bsrc.band,colStep:bsrc.colStep||4,_chroma:sec.chr,_flat:0,_domPc:bassPc,_lum:sec.lum});
-    }
-    let pulseMs=eighth;
+    evts.push({n:[{m:36+bassPc,v:Math.round(56*arc(si/secs.length)),durMs:Math.min(secMs,6000),bass:true}],startMs:t,idx:evIdx++,cg:bsrc.cg,band:bsrc.band,colStep:bsrc.colStep||4,_chroma:sec.chr,_flat:0,_domPc:bassPc,_lum:sec.lum});
+    let pulseMs=pulse;
     for(let b2=0;b2<bars[si];b2++){
-      // 3-against-2 shimmer alternates BY BAR in energetic sections
-      const barTrip=trip && (b2%2===1);
-      const nPer=barTrip?12:8;
-      const pMs=barTrip?Math.round(pulseMs*2/3):pulseMs;
-      // mid-section bass answer: fifth under bar 3 of long sections
-      if(!thin && b2===2 && bars[si]>=3){
-        evts.push({n:[{m:36+((bassPc+7)%12),v:Math.round(48*arc(t/Math.max(1,maxBars*8*eighth))),durMs:Math.min(nPer*pMs,4500),bass:true}],startMs:t,idx:evIdx++,cg:bsrc.cg,band:bsrc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:(bassPc+7)%12,_lum:sec.lum});
-      }
-      for(let k=0;k<nPer;k++){
+      for(let k=0;k<perBar;k++){
         const note=seq[k%seq.length];
         const srcC=sec.src[note.pc]||sec.src[cellPcs[0]]||{cg:bsrc.cg,band:bsrc.band,_lum:sec.lum,_chroma:sec.chr};
         const pos=t/Math.max(1,(maxBars*8*eighth));
-        const accent=(k%4===0)?6:0;
-        const v=Math.max(30,Math.min(110,Math.round((50+Math.min(40,sec.chr))*arc(Math.min(1,pos)) + accent + (isClim?8:0) + (jit()-0.5)*10)));
-        const ns=[{m:note.m,v,durMs:Math.round(pMs*1.9)}];
-        if(note.dbl) ns.push({m:note.dbl,v:Math.max(28,v-14),durMs:Math.round(pMs*1.9)});
-        evts.push({n:ns,startMs:t,idx:evIdx++,cg:srcC.cg,band:srcC.band,colStep:4,_chroma:srcC._chroma||sec.chr,_flat:0,_domPc:note.pc,_lum:srcC._lum||sec.lum});
-        t+=pMs;
+        const v=Math.max(30,Math.min(110,Math.round((52+Math.min(40,sec.chr))*arc(Math.min(1,pos)) + (isClim?8:0) + (jit()-0.5)*10)));
+        evts.push({n:[{m:note.m,v,durMs:Math.round(pulseMs*1.9)}],startMs:t,idx:evIdx++,cg:srcC.cg,band:srcC.band,colStep:4,_chroma:srcC._chroma||sec.chr,_flat:0,_domPc:note.pc,_lum:srcC._lum||sec.lum});
+        t+=pulseMs;
         if(last) pulseMs=Math.round(pulseMs*1.02);   // ritardando out
       }
     }
@@ -18157,11 +18131,11 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
   if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
   const totalMs=bars.reduce((a,b)=>a+b,0)*barMs;
   const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0;
-  const jr=R(1), av=R(2);
+  const jr=R(1);
   const seventh = bright?11:10;
   const totBars=bars.reduce((a,b)=>a+b,0);
-  // "trio" window around phi: a few bars drift to the RELATIVE key and back —
-  // Satie's quiet modal wandering, the antidote to a flat middle
+  // the single form gesture: a short "trio" near phi drifting to the RELATIVE
+  // key and back — everything else keeps the clean original sway
   const trioStart=Math.floor(totBars*0.58), trioEnd=Math.min(totBars-2,trioStart+4);
   const rel=bright?(tonic+9)%12:(tonic+3)%12;
   for(let si=0;si<secs.length;si++){
@@ -18170,69 +18144,160 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
     const uniqR=[...new Set(ranked)];
     const rootA=uniqR[0]!=null?uniqR[0]:tonic;
     const rootB=uniqR[1]!=null?uniqR[1]:(tonic+7)%12;      // sway between two colours
-    const rootC=uniqR[2]!=null?uniqR[2]:(tonic+5)%12;      // borrowed colour, every 4th bar
     const srcOf=(pc)=>sec.src[pc]||sec.src[rootA]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
     for(let b2=0;b2<bars[si];b2++,barNo++){
       const inTrio=barNo>=trioStart&&barNo<trioEnd;
       let root=(b2%2===0)?rootA:rootB;
-      if(!inTrio && barNo%4===3) root=rootC;               // borrowed harmony breath
-      if(inTrio) root=(barNo%2===0)?rel:(rel+7)%12;        // relative-key drift
+      if(inTrio) root=(barNo%2===0)?rel:(rel+7)%12;
       const pos=t/Math.max(1,totalMs);
       const env=arc(Math.min(1,pos));
       const sc=srcOf(root);
       // beat 1 — low bass
       evts.push({n:[{m:36+root,v:Math.round(50*env),durMs:Math.round(beat*2.7),bass:true}],startMs:t,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-      // accompaniment pattern varies BY BAR: plain / echoed on 3 / rolled / bare
-      const patR=av();
-      const pat=patR<0.5?0:(patR<0.72?1:(patR<0.9?2:3));
+      // beat 2 — mid 7th-chord (root, third, seventh), soft
       const third=(root+(bright?4:3))%12;
-      const mk=(vv,dd)=>[{m:48+root,v:Math.round(vv*env),durMs:dd},
-                {m:48+third+(third<root?12:0),v:Math.round((vv-4)*env),durMs:dd},
-                {m:48+((root+seventh)%12)+(((root+seventh)%12)<root?12:0),v:Math.round((vv-6)*env),durMs:dd}];
-      if(pat===2){
-        // gentle roll — the three chord tones staggered like a slow hand
-        const chd=mk(42,Math.round(beat*1.9));
-        for(let q=0;q<chd.length;q++){
-          evts.push({n:[chd[q]],startMs:t+beat+q*90,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        }
-      } else if(pat!==3){
-        evts.push({n:mk(42,Math.round(beat*1.9)),startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        if(pat===1){
-          evts.push({n:mk(34,Math.round(beat*0.95)),startMs:t+beat*2,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        }
-      }
-      // melody — short PHRASES rather than isolated notes: a 2-note gesture
-      // (passing tone → chord tone) or one long note; occasionally answered
-      // an octave lower next bar (echo). Calm regions still rest.
-      const restP=0.15+sec.homog*0.38;
+      const ch=[{m:48+root,v:Math.round(42*env),durMs:Math.round(beat*1.9)},
+                {m:48+third+(third<root?12:0),v:Math.round(38*env),durMs:Math.round(beat*1.9)},
+                {m:48+((root+seventh)%12)+(((root+seventh)%12)<root?12:0),v:Math.round(36*env),durMs:Math.round(beat*1.9)}];
+      evts.push({n:ch,startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      // melody — a long note on beat 1 or 2, stepwise from the previous one;
+      // homogeneous (calm) regions often rest instead: Satie breathes.
+      const restP=0.18+sec.homog*0.4;
       if(jr()>restP && !last){
         let cands=uniqR.slice(0,5); if(!cands.length) cands=[tonic];
         let melPc=cands[0];
         if(prevMel!=null){ let bd=99; for(const p2 of cands){ const dd=Math.min((p2-prevMel%12+12)%12,(prevMel%12-p2+12)%12); if(dd<bd){bd=dd;melPc=p2;} } }
         let mm=60+melPc; if(prevMel!=null){ while(mm-prevMel>7) mm-=12; while(prevMel-mm>7) mm+=12; }
         mm=Math.max(55,Math.min(84,mm));
-        if(inTrio) mm=Math.max(55,mm-12*(av()<0.5?1:0));
-        const echo=av()<0.22 && prevMel!=null;
-        if(echo) mm=Math.max(48,prevMel-12);
         prevMel=mm;
         const msc=srcOf(melPc);
-        const phrase=jr()<0.45 && !echo;
-        if(phrase){
-          // passing tone (a step above) resolving down onto the chord tone
-          const pass=Math.min(86,mm+2);
-          evts.push({n:[{m:pass,v:Math.round(52*env),durMs:Math.round(beat*0.9)}],startMs:t,idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
-          evts.push({n:[{m:mm,v:Math.round((60+Math.min(16,sec.chr*0.5))*env),durMs:Math.round(beat*1.9)}],startMs:t+beat,idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
-        } else {
-          const onBeat2=jr()<0.35;
-          const durB=2+(jr()<0.4?1:0);
-          evts.push({n:[{m:mm,v:Math.round((58+Math.min(18,sec.chr*0.5))*env*(echo?0.8:1)),durMs:Math.round(beat*durB*0.96)}],startMs:t+(onBeat2?beat:0),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
-        }
+        const onBeat2=jr()<0.35;
+        const durB=2+(jr()<0.4?1:0);
+        evts.push({n:[{m:mm,v:Math.round((58+Math.min(18,sec.chr*0.5))*env),durMs:Math.round(beat*durB*0.96)}],startMs:t+(onBeat2?beat:0),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
       }
       t+=barMs;
     }
   }
   // final bar — bass + 7th chord, long and very soft
   evts.push({n:[{m:36+tonic,v:44,durMs:3200,bass:true},{m:48+tonic,v:40,durMs:3200},{m:48+((tonic+(bright?4:3))%12),v:36,durMs:3200},{m:48+((tonic+seventh)%12),v:34,durMs:3200}],startMs:t+beat,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:0,_flat:0,_domPc:tonic,_lum:gl});
+  return evts;
+}
+
+// ── CHOPIN — nocturne: arpeggiated left hand, cantabile melody, rubato. ──
+// Two-phase like the others. The harmonic floor is FUNCTIONAL (i-VI-iv-V
+// cycling), coloured by each section's pitch material; the right hand sings
+// two-bar phrases with grace-note ornaments and a phi-placed climax.
+function composeImageChopin(px,nc,nr,table,colorMode,dir){
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return base||[];
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(9900+salt,ss,0,0); f(); return f; };
+  const bandsMap=new Map();
+  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
+  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
+  const S=Math.max(10,Math.min(20,bandKeys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
+    for(const c of cells){
+      lum+=(c._lum||50); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
+        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
+    }
+    lum/=cells.length; chr/=cells.length;
+    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
+  }
+  if(!secs.length) return base;
+  const g=new Float32Array(12); let gl=0,gc2=0;
+  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
+  gl/=secs.length; gc2/=secs.length;
+  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
+  const minor = gl<=55;                              // nocturnes lean minor
+  const scale = minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const inScale=(pc)=>{ let best=pc,bd=99; for(const d of scale){ const a=(tonic+d)%12; const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
+  // 6/8 nocturne pulse — dotted-quarter ~ 50, so an eighth ≈ 400ms; brighter
+  // pictures flow a touch quicker
+  const eighth=Math.round(400-Math.min(1,gc2/45)*70);
+  const barMs=eighth*6;
+  const arc=(pos)=>0.78+0.36*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.2*0.2));
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
+  const maxBars=Math.floor(155000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const totalMs=totBars*barMs;
+  // functional floor: i - VI - iv - V (minor) / I - vi - IV - V (major)
+  const prog=minor?[0,8,5,7]:[0,9,5,7];
+  const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0;
+  const jr=R(1), rb=R(2);
+  const climBar=Math.floor(totBars*0.618);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+    const uniqR=[...new Set(ranked)];
+    const srcOf=(pc)=>sec.src[pc]||sec.src[uniqR[0]]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const deg=prog[barNo%4];
+      const root=(tonic+deg)%12;
+      const isV=deg===7;
+      const third=(root+((minor&&!isV)?3:4))%12;   // V stays major even in minor — the nocturne dominant
+      const fifth=(root+7)%12;
+      const pos=t/Math.max(1,totalMs);
+      const env=arc(Math.min(1,pos));
+      const nearClim=Math.abs(barNo-climBar)<=1;
+      const sc=srcOf(root);
+      // LEFT HAND — broken-chord stencil across the bar: R . 5 . 10 . 5 . 8 . 5
+      const lh=[ {m:36+root,off:0,v:50,dur:2.2,bass:true},
+                 {m:48+fifth+(fifth<root?12:0)-12,off:1,v:40,dur:1.6},
+                 {m:52+third+(third<root?12:0)-4,off:2,v:42,dur:1.6},
+                 {m:48+fifth+(fifth<root?12:0)-12,off:3,v:38,dur:1.6},
+                 {m:48+root,off:4,v:41,dur:1.6},
+                 {m:48+fifth+(fifth<root?12:0)-12,off:5,v:37,dur:1.6} ];
+      for(const L of lh){
+        evts.push({n:[{m:L.m,v:Math.round(L.v*env),durMs:Math.round(eighth*L.dur),bass:!!L.bass}],startMs:t+L.off*eighth,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      }
+      // RIGHT HAND — cantabile: a phrase note (or two) with rubato + ornament
+      const restP=0.10+sec.homog*0.28;
+      if(jr()>restP){
+        let cands=uniqR.slice(0,6).filter(p2=>p2===root||p2===third||p2===fifth||jr()<0.5);
+        if(!cands.length) cands=[third];
+        let melPc=cands[Math.floor(jr()*cands.length)]||third;
+        let mm=64+melPc; if(prevMel!=null){ while(mm-prevMel>9) mm-=12; while(prevMel-mm>9) mm+=12; }
+        mm=Math.max(58,Math.min(88,mm));
+        if(nearClim) mm=Math.min(93,mm+12);        // climax sings an octave up
+        prevMel=mm;
+        const msc=srcOf(melPc);
+        const rubato=Math.round((rb()-0.5)*120);   // breathes around the beat
+        const longN=jr()<0.55;
+        const startO=(jr()<0.4?0:(jr()<0.7?2:3))*eighth;
+        const vMel=Math.round((66+Math.min(20,sec.chr*0.6))*env*(nearClim?1.12:1));
+        // grace-note ornament before long notes — the Chopin sigh
+        if(longN && jr()<0.6){
+          evts.push({n:[{m:Math.min(94,mm+(minor?1:2)),v:Math.max(30,vMel-22),durMs:110}],startMs:Math.max(0,t+startO+rubato-120),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
+        }
+        evts.push({n:[{m:mm,v:vMel,durMs:Math.round(eighth*(longN?4.6:2.3))}],startMs:t+startO+rubato,idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
+        // answering step on the bar's back half for short notes
+        if(!longN && jr()<0.55){
+          const mm2=Math.max(56,Math.min(90,mm+(jr()<0.5?-2:2)));
+          evts.push({n:[{m:mm2,v:Math.max(34,vMel-10),durMs:Math.round(eighth*1.8)}],startMs:t+4*eighth+Math.round((rb()-0.5)*90),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
+          prevMel=mm2;
+        }
+      }
+      t+=barMs;
+      if(last && b2>=bars[si]-2){ t+=Math.round(barMs*0.12); }   // ritardando
+    }
+  }
+  // final: dominant sigh, then rolled tonic chord — long, fading
+  const fifthT=(tonic+7)%12, thirdT=(tonic+(minor?3:4))%12;
+  const roll=[{m:36+tonic,v:52,d:0},{m:48+tonic,v:46,d:80},{m:48+thirdT+(thirdT<tonic?12:0),v:42,d:160},{m:48+fifthT+(fifthT<tonic?12:0),v:40,d:240},{m:60+tonic,v:44,d:320}];
+  for(const r2 of roll){
+    evts.push({n:[{m:r2.m,v:r2.v,durMs:3600,bass:r2.m<45}],startMs:t+eighth+r2.d,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
+  }
   return evts;
 }
 
@@ -30871,6 +30936,8 @@ Hard requirements:
             ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='satie')
             ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='chopin')
+            ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -30963,6 +31030,8 @@ Hard requirements:
       ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='satie')
       ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='chopin')
+      ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -35495,8 +35564,8 @@ Hard requirements:
                 })}
               </div>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
-              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'}].map(c=>{
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
+                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'}].map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
