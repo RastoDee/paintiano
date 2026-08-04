@@ -36145,7 +36145,7 @@ Hard requirements:
                   return (
                     <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1}}>{c.n}</button>
+                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}</button>
                   );
                 })}
               </div>

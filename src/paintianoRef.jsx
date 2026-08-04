@@ -36131,15 +36131,25 @@ Hard requirements:
               </div>
             </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
-              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-                {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>setupComposers.includes(c.k)).map(c=>{
+              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>setupComposers.includes(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
+              // a SINGLE enabled composer = nothing to choose — show the name as
+              // plain gold text, exactly like a lone artist under INSPIRED BY
+              if(_cs.length===1){ return (
+                <div style={{textAlign:'center',padding:'8px 4px',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',color:'rgba(220,180,90,.95)'}}>{_cs[0].n}</div>
+              ); }
+              return (
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6}}>
+                {_cs.map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',borderRadius:10,cursor:locked?'default':'pointer',fontFamily:'inherit',fontSize:(.54*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase',background:sel?'rgba(201,168,76,.16)':'rgba(255,255,255,.02)',border:sel?'1px solid rgba(201,168,76,.55)':'1px solid rgba(255,255,255,.08)',color:sel?'#c9a84c':'rgba(230,222,196,.75)',opacity:locked?.5:1}}>{c.n}</button>
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
+                      className={sel?'pf-artist pf-artist-on':'pf-artist'}
+                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1}}>{c.n}</button>
                   );
                 })}
               </div>
+              ); })()}
             </>)}
             </>) : (
               <div style={{padding:'10px 12px',marginTop:2,borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
@@ -38600,8 +38610,8 @@ Hard requirements:
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{({EN:'Composers',SK:'Skladatelia',DE:'Komponisten',FR:'Compositeurs',ES:'Compositores',PT:'Compositores',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composers'}</span>
                   <span style={{display:'inline-flex',gap:6,fontSize:(.5*effScale)+'rem',letterSpacing:'.04em'}}>
-                    <span onClick={()=>setSetupComposers(ALL_COMPOSER_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupComposers(ALL_COMPOSER_KEYS.slice());}}} style={{cursor:'pointer',padding:'4px 12px',borderRadius:999,border:'1px solid rgba(201,168,76,.45)',color:'rgba(220,180,90,.9)',fontStyle:'italic'}}>{ts('setupAll','All')}</span>
-                    <span onClick={()=>setSetupComposers([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupComposers([]);}}} style={{cursor:'pointer',padding:'4px 12px',borderRadius:999,border:'1px solid rgba(242,238,232,.25)',color:'rgba(230,222,196,.6)',fontStyle:'italic'}}>{ts('setupNone','None')}</span>
+                    <span onClick={()=>setSetupComposers(ALL_COMPOSER_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupComposers(ALL_COMPOSER_KEYS.slice());}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.85)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupAll','All'))}</span>
+                    <span onClick={()=>setSetupComposers([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupComposers([]);}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(230,222,196,.2)',color:'rgba(230,222,196,.55)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupNone','None'))}</span>
                   </span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,rowGap:8}}>
