@@ -26394,6 +26394,22 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const c=a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
   },[]);
+  // Full image-flavour SURPRISE: drop the running take (recorder torn down
+  // WITHOUT stopAll), stop playback, roll a different composer, then start a
+  // fresh recorded take from the top — one tap, new style, clean take.
+  const _liteImgSurprise = useCallback(()=>{
+    try{
+      if(recorderRef.current && recorderRef.current.state!=='inactive'){
+        _suppressRecOnStopRef.current=true;
+        recorderRef.current.stop();
+      }
+      setRecording(false); recorderRef.current=null;
+    }catch(_){}
+    try{ setRecBlob(null); setRecName(''); }catch(_){}
+    try{ stopAll(); }catch(_){}
+    try{ _liteRollComposer(); }catch(_){}
+    setTimeout(()=>{ try{ (startRecordRef.current||startRecord)(); }catch(_){} },160);
+  },[stopAll,_liteRollComposer]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -36551,7 +36567,7 @@ Hard requirements:
             // same action the NEXT button used to do (dice roll).
             try {
               if(basicMode){
-                if(liteImageMode){ _liteRollComposer(); }
+                if(liteImageMode){ _liteImgSurprise(); }
                 else { basicSurprise(); }
               } else if(randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)){
                 // Advanced FS swipe mirrors the normal-screen NEXT button
@@ -38473,7 +38489,7 @@ Hard requirements:
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
           <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
-          {liteImageMode && <button onClick={()=>{ try{ _liteRollComposer(); }catch(_){} }} disabled={!_liteImg||_liteImgRecording||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||_liteImgRecording||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
+          {liteImageMode && <button onClick={()=>{ try{ _liteImgSurprise(); }catch(_){} }} disabled={!_liteImg||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
           {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
         {/* ZASAH BEST — Lite→full bridge. A finished Lite painting is the peak
