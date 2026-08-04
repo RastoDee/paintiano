@@ -16779,32 +16779,48 @@ function composeImageYiruma(px,nc,nr,table,colorMode,dir){
     const sc=srcOf(sec,root);
     const last8=bar>=totBars-2;
     const rit=last8?1.12:1;
-    // LEFT HAND — flowing broken chord: R · 5 · 10 · 12 · 10 · 5 · 8 · 5
+    // ── the RIVER TEXTURE: right hand runs CONTINUOUS eighths where the
+    // hook's melody notes sit ON TOP of soft chord-fill tones — shimmer under
+    // song, both hands present every beat. Left hand: deep octave + fifth,
+    // long sustains (the classic Yiruma floor).
     let r0=snap(40+root); let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
     let t3=t5+1; while(((t3%12)+12)%12!==third) t3++;
-    const lhSeq=[r0,t5,t3,t3+5>t3?stepSc(t3,2):t3+3,t3,t5,r0+12,t5];
-    for(let k=0;k<8;k++){
-      evts.push({n:[{m:lhSeq[k],v:Math.round((38+(k===0?8:0))*env),durMs:Math.round(eighth*1.9*rit),bass:k===0}],startMs:t0+Math.round(k*eighth*rit),idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((lhSeq[k]%12)+12)%12,_lum:sec.lum});
-    }
-    if(blk===0 && bar<2) continue;                         // intro: hands alone
-    // HOOK returns on every even bar-pair; B block sings it a third higher
-    if(bar%2===0){
+    // LH: octave dyad on beat 1, fifth on the half-bar — sustained
+    evts.push({n:[{m:r0-12,v:Math.round(50*env),durMs:Math.round(barMs*0.62*rit),bass:true},{m:r0,v:Math.round(44*env),durMs:Math.round(barMs*0.62*rit),bass:true}],startMs:t0,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+    evts.push({n:[{m:t5-12,v:Math.round(42*env),durMs:Math.round(barMs*0.55*rit),bass:true}],startMs:t0+Math.round(4*eighth*rit),idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:fifth,_lum:sec.lum});
+    // RH: melody map for this bar from the hook (even bar = offs 0-7, odd = 8-15)
+    const half=(bar%2)*8;
+    const melMap={};
+    if(!(blk===0 && bar<2)){
       const lift=(blk===2)?2:0;
       const dbl=(blk===1||blk===3);
       for(const h of hook){
-        const inBar2=h.offE>=8;
-        if(inBar2 && bar+1>=totBars) break;
-        const mm0=stepSc(h.m,lift);
-        const mm=snap(Math.max(67,Math.min(94,mm0)));
-        const pcM=((mm%12)+12)%12; const scM=srcOf(sec,pcM);
+        if(h.offE<half || h.offE>=half+8) continue;
+        const mm=snap(Math.max(67,Math.min(94,stepSc(h.m,lift))));
+        melMap[h.offE-half]={mm,durE:h.durE,dbl,isLast:h===hook[hook.length-1]};
+      }
+    }
+    const fills=[t3+12,t5+12,stepSc(t3,2)+12,t5+12];
+    let melHold=0;
+    for(let k=0;k<8;k++){
+      const t1=t0+Math.round(k*eighth*rit);
+      const me=melMap[k];
+      if(me){
         const vM=Math.round((58+Math.min(16,sec.chr*0.5))*env*(blk===2?1.08:1));
-        // appoggiatura sigh before the long final note of the hook
-        if(h===hook[hook.length-1] && ry()<0.6){
-          evts.push({n:[{m:stepSc(mm,1),v:Math.max(26,vM-22),durMs:Math.round(eighth*0.8)}],startMs:t0+Math.round((h.offE-0.9)*eighth*rit),idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcM,_lum:sec.lum});
+        const pcM=((me.mm%12)+12)%12; const scM=srcOf(sec,pcM);
+        if(me.isLast && ry()<0.6){
+          evts.push({n:[{m:stepSc(me.mm,1),v:Math.max(26,vM-22),durMs:Math.round(eighth*0.8)}],startMs:Math.max(0,t1-Math.round(eighth*0.9)),idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcM,_lum:sec.lum});
         }
-        const ns=[{m:mm,v:vM,durMs:Math.round(h.durE*eighth*1.3*rit)}];
-        if(dbl){ ns.push({m:mm+12>94?mm-12:mm+12,v:Math.max(24,vM-18),durMs:Math.round(h.durE*eighth*1.25*rit)}); }
-        evts.push({n:ns,startMs:t0+Math.round(h.offE*eighth*rit),idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:scM._chroma||sec.chr,_flat:0,_domPc:pcM,_lum:scM._lum||sec.lum});
+        const ns=[{m:me.mm,v:vM,durMs:Math.round(me.durE*eighth*1.3*rit)}];
+        if(me.dbl){ ns.push({m:me.mm+12>94?me.mm-12:me.mm+12,v:Math.max(24,vM-18),durMs:Math.round(me.durE*eighth*1.25*rit)}); }
+        evts.push({n:ns,startMs:t1,idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:scM._chroma||sec.chr,_flat:0,_domPc:pcM,_lum:scM._lum||sec.lum});
+        melHold=me.durE-1;
+      } else {
+        // soft chord-fill eighth — quieter while a melody note still rings
+        const fm=snap(fills[k%4]);
+        const under=melHold>0; if(melHold>0) melHold--;
+        const pcF=((fm%12)+12)%12; const scF=srcOf(sec,pcF);
+        evts.push({n:[{m:fm,v:Math.round((under?26:33)*env),durMs:Math.round(eighth*1.7*rit)}],startMs:t1,idx:evIdx++,cg:scF.cg,band:scF.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcF,_lum:sec.lum});
       }
     }
   }
