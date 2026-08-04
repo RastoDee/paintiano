@@ -7564,6 +7564,8 @@ Hard requirements:
             ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='satie')
             ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='chopin')
+            ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -7656,6 +7658,8 @@ Hard requirements:
       ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='satie')
       ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='chopin')
+      ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -12188,8 +12192,8 @@ Hard requirements:
                 })}
               </div>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
-              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'}].map(c=>{
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
+                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'}].map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
