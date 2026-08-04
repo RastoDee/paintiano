@@ -35739,13 +35739,16 @@ Hard requirements:
             aria-valuemax={Math.max(0,chords.length-1)}
             aria-valuenow={Math.min(disp,Math.max(0,chords.length-1))}
             aria-valuetext={`chord ${Math.min(disp,chords.length)} of ${chords.length}`}
-            tabIndex={chords.length?0:-1}
+            tabIndex={(chords.length&&!basicMode)?0:-1}
             onPointerDown={e=>{
               if(!chords.length)return;
               // Lock seeking while recording — a tap/scrub would stopAll() (and
               // thus the recorder), prematurely ending the take and surfacing
               // Save mid-record. The bar is read-only during REC.
               if(recording)return;
+              // LITE is display-only: the bar shows progress but never scrubs
+              // (matches the pure-Lite feel; adopted content included).
+              if(basicMode)return;
               e.preventDefault();
               // Capture so subsequent moves/up fire even if the pointer leaves
               // the track — matches native <input type=range> drag behaviour.
@@ -35785,6 +35788,7 @@ Hard requirements:
               const cur=Math.min(disp,chords.length-1);
               const step=Math.max(1,Math.floor(chords.length/20)); // ~5% jumps for PgUp/PgDn
               let next=cur;
+              if(basicMode) return;   // Lite: seek is display-only
               switch(e.key){
                 case 'ArrowLeft':  case 'ArrowDown':  next=cur-1;          break;
                 case 'ArrowRight': case 'ArrowUp':    next=cur+1;          break;
@@ -35808,7 +35812,7 @@ Hard requirements:
                 setDisp(next);
               }
             }}
-            style={{position:'relative',height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.55)':'none',outlineOffset:3}}
+            style={{position:'relative',height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,cursor:(chords.length&&!basicMode)?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.55)':'none',outlineOffset:3}}
             onFocus={()=>setFocusedInput('seek')}
             onBlur={()=>setFocusedInput(null)}>
             <div style={{height:'100%',width:pct+'%',background:basicMode?'rgba(242,238,232,.7)':(playing?'rgba(90,190,110,.65)':'rgba(201,168,76,.45)'),borderRadius:3,transition:'none',pointerEvents:'none'}}/>
@@ -37737,7 +37741,7 @@ Hard requirements:
         const _midLabel = _liteImgRecording ? (<>{_icoStop}<span>{ts('stopLabel','Stop')}</span></>)
                           : _liteImgHasRec ? (<>{_icoSave}<span>{ts('saveLabel','Save')}</span></>)
                           : (_liteImg && (playing || holdPaused)) ? (<>{_icoStop}<span>{ts('stopLabel','Stop')}</span></>)
-                          : _liteImg ? (<>{_icoSave}<span>{ts('saveLabel','Save')}</span></>)
+                          : _liteImg ? (<>{_icoPlay}<span>{t('play')!=='play'?t('play'):'Play'}</span></>)
                           : _done ? (<>{_icoSave}<span>{ts('saveLabel','Save')}</span></>)
                                 : (holdPaused ? (<>{_icoPlay}<span>{t('resume')!=='resume'?t('resume'):'Resume'}</span></>)
                                               : (playing ? (<>{_icoPause}<span>{t('pause')!=='pause'?t('pause'):'Pause'}</span></>)
@@ -37746,7 +37750,7 @@ Hard requirements:
           if(_liteImgRecording){ try{ stopRecord(); }catch(_){} return; }
           if(_liteImgHasRec){ try{ if(recBlob){ const f=new File([recBlob],recName||'paintiano.m4a',{type:recBlob.type||'audio/mp4'}); const _dl=()=>{ try{ const u=URL.createObjectURL(recBlob); const a=document.createElement('a'); a.href=u; a.download=recName||'paintiano.m4a'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>{try{URL.revokeObjectURL(u);}catch(_){}} ,10000); }catch(_){} }; if(navigator.share && navigator.canShare && navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'Paintiano audio'}).catch(()=>{ _dl(); }); } else { _dl(); } } }catch(_){} return; }
           if(_liteImg && (playing || holdPaused)){ try{ stopAll(); }catch(_){} return; }
-          if(_liteImg){ /* stopped image without a recording: Save exports the painting */ try{ exportImage('web'); }catch(_){} return; }
+          if(_liteImg){ /* stopped, no take yet (adopted content): Play = fresh take from the top, recording as standard Lite does */ try{ (startRecordRef.current||startRecord)(); }catch(_){} return; }
           if(_done){ try{ exportImage('web'); }catch(_){} return; }
           try{ handlePauseClick(); }catch(_){}
         };
