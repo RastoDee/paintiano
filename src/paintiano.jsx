@@ -21747,63 +21747,54 @@ const CONCEPT_CARDS_I18N = {
     {id:'meet', glyph:'φ', title:`Where they meet`, body:`Music is mathematics the ear feels. Painting is mathematics the eye feels. Paintiano is about the place where they meet — one phenomenon, two surfaces, divisible only the way water divides from ice.`},
     {id:'determinism', glyph:'◆', title:`Determinism is honesty`, body:`Chance lowers responsibility. When the result is random, the maker never has to ask why. Paintiano is deterministic — same song, same painting, always. Your painting doesn't say "chance decided." It says "you decided." The beauty is that it happened precisely, because you meant it to.`},
     {id:'conceptual', glyph:'✦', title:`A conceptual work`, body:`Paintiano is a conceptual work by RafFel. The object is an app that paints; the idea is that music and image are one phenomenon. The proof isn't written in a treatise — it's shown in something you open and play. No curator needed. Press a key, and you'll understand it yourself.`},
-    {id:'composers', glyph:'♪', title:`Six composers, one proof`, body:`Chopin, Satie, Gershwin, Glass, Vine, Yiruma — three centuries of piano, six ways of thinking in sound. Each paints differently, because each composes differently. The painting is the harmony's fingerprint: a composer's mind, made visible.`},
     {id:'remember', glyph:'◯', book:true, title:`We only forgot`, cta:`Read the book`, body:`Music has a colour. It always had. We only forgot. Paintiano is a way to remember. The whole story lives in the book — free, in your language.`}
   ],
   DE: [
     {id:'meet', glyph:'φ', title:`Wo sie sich treffen`, body:`Musik ist Mathematik, die das Ohr fühlt. Malerei ist Mathematik, die das Auge fühlt. Paintiano handelt vom Ort, an dem sie sich treffen — ein Phänomen, zwei Oberflächen, trennbar nur so, wie sich Wasser von Eis trennt.`},
     {id:'determinism', glyph:'◆', title:`Determinismus ist Ehrlichkeit`, body:`Zufall senkt die Verantwortung. Ist das Ergebnis zufällig, muss der Schöpfer nie fragen, warum. Paintiano ist deterministisch — gleiches Stück, gleiches Bild, immer. Dein Bild sagt nicht „der Zufall hat entschieden". Es sagt „du hast entschieden". Das Schöne ist: es geschah genau so, weil du es so wolltest.`},
     {id:'conceptual', glyph:'✦', title:`Ein konzeptuelles Werk`, body:`Paintiano ist ein konzeptuelles Werk von RafFel. Das Objekt ist eine App, die malt; die Idee ist, dass Musik und Bild ein einziges Phänomen sind. Der Beweis steht nicht in einem Traktat — er zeigt sich in etwas, das du öffnest und spielst. Kein Kurator nötig. Drück eine Taste, und du verstehst es selbst.`},
-    {id:'composers', glyph:'♪', title:`Sechs Komponisten, ein Beweis`, body:`Chopin, Satie, Gershwin, Glass, Vine, Yiruma — drei Jahrhunderte Klavier, sechs Arten, in Klang zu denken. Jeder malt anders, weil jeder anders komponiert. Das Bild ist der Fingerabdruck der Harmonik: der Geist eines Komponisten, sichtbar gemacht.`},
     {id:'remember', glyph:'◯', book:true, title:`Wir hatten es nur vergessen`, cta:`Das Buch lesen`, body:`Musik hat eine Farbe. Sie hatte sie immer. Wir hatten es nur vergessen. Paintiano ist ein Weg, sich zu erinnern. Die ganze Geschichte steht im Buch — kostenlos, in deiner Sprache.`}
   ],
   FR: [
     {id:'meet', glyph:'φ', title:`Le lieu où elles se rencontrent`, body:`La musique est une mathématique que l'oreille ressent. La peinture est une mathématique que l'œil ressent. Paintiano parle du lieu où elles se rencontrent — un seul phénomène, deux surfaces, qu'on ne sépare que comme l'eau se sépare de la glace.`},
     {id:'determinism', glyph:'◆', title:`Le déterminisme est une honnêteté`, body:`Le hasard abaisse la responsabilité. Quand le résultat est aléatoire, le créateur n'a pas à se demander pourquoi. Paintiano est déterministe — même morceau, même tableau, toujours. Ton tableau ne dit pas « le hasard a décidé ». Il dit « tu as décidé ». La beauté, c'est qu'il est advenu précisément, parce que tu le voulais ainsi.`},
     {id:'conceptual', glyph:'✦', title:`Une œuvre conceptuelle`, body:`Paintiano est une œuvre conceptuelle de RafFel. L'objet est une application qui peint ; l'idée est que la musique et l'image sont un seul phénomène. La preuve ne s'écrit pas dans un traité — elle se montre dans une chose que tu ouvres et que tu joues. Aucun commissaire nécessaire. Presse une touche, et tu comprendras toi-même.`},
-    {id:'composers', glyph:'♪', title:`Six compositeurs, une preuve`, body:`Chopin, Satie, Gershwin, Glass, Vine, Yiruma — trois siècles de piano, six façons de penser en son. Chacun peint autrement parce que chacun compose autrement. La peinture est l'empreinte de l'harmonie : l'esprit d'un compositeur, rendu visible.`},
     {id:'remember', glyph:'◯', book:true, title:`Nous l'avions seulement oublié`, cta:`Lire le livre`, body:`La musique a une couleur. Elle l'a toujours eue. Nous l'avions seulement oublié. Paintiano est une manière de s'en souvenir. Toute l'histoire est dans le livre — gratuit, dans ta langue.`}
   ],
   ES: [
     {id:'meet', glyph:'φ', title:`El lugar donde se encuentran`, body:`La música es matemática que el oído siente. La pintura es matemática que el ojo siente. Paintiano trata del lugar donde se encuentran — un solo fenómeno, dos superficies, separables solo como el agua se separa del hielo.`},
     {id:'determinism', glyph:'◆', title:`El determinismo es honestidad`, body:`El azar reduce la responsabilidad. Cuando el resultado es aleatorio, el creador nunca tiene que preguntarse por qué. Paintiano es determinista — misma pieza, mismo cuadro, siempre. Tu cuadro no dice «el azar decidió». Dice «tú decidiste». La belleza está en que ocurrió exactamente así, porque tú lo quisiste.`},
     {id:'conceptual', glyph:'✦', title:`Una obra conceptual`, body:`Paintiano es una obra conceptual de RafFel. El objeto es una app que pinta; la idea es que la música y la imagen son un solo fenómeno. La prueba no se escribe en un tratado — se muestra en algo que abres y tocas. No hace falta un curador. Pulsa una tecla, y lo entenderás tú mismo.`},
-    {id:'composers', glyph:'♪', title:`Seis compositores, una prueba`, body:`Chopin, Satie, Gershwin, Glass, Vine, Yiruma — tres siglos de piano, seis maneras de pensar en sonido. Cada uno pinta distinto porque cada uno compone distinto. La pintura es la huella de la armonía: la mente de un compositor, hecha visible.`},
     {id:'remember', glyph:'◯', book:true, title:`Solo lo habíamos olvidado`, cta:`Leer el libro`, body:`La música tiene color. Siempre lo tuvo. Solo lo habíamos olvidado. Paintiano es una manera de recordarlo. Toda la historia está en el libro — gratis, en tu idioma.`}
   ],
   PT: [
     {id:'meet', glyph:'φ', title:`O lugar onde se encontram`, body:`A música é matemática que o ouvido sente. A pintura é matemática que o olho sente. O Paintiano trata do lugar onde se encontram — um só fenómeno, duas superfícies, separáveis apenas como a água se separa do gelo.`},
     {id:'determinism', glyph:'◆', title:`O determinismo é honestidade`, body:`O acaso reduz a responsabilidade. Quando o resultado é aleatório, o criador nunca precisa de perguntar porquê. O Paintiano é determinista — mesma peça, mesmo quadro, sempre. O teu quadro não diz «o acaso decidiu». Diz «tu decidiste». A beleza está em ter acontecido exatamente assim, porque tu o quiseste.`},
     {id:'conceptual', glyph:'✦', title:`Uma obra conceptual`, body:`O Paintiano é uma obra conceptual de RafFel. O objeto é uma app que pinta; a ideia é que a música e a imagem são um só fenómeno. A prova não se escreve num tratado — mostra-se em algo que abres e tocas. Não é preciso curador. Pressiona uma tecla, e entenderás sozinho.`},
-    {id:'composers', glyph:'♪', title:`Seis compositores, uma prova`, body:`Chopin, Satie, Gershwin, Glass, Vine, Yiruma — três séculos de piano, seis maneiras de pensar em som. Cada um pinta de forma diferente porque cada um compõe de forma diferente. A pintura é a impressão digital da harmonia: a mente de um compositor, tornada visível.`},
     {id:'remember', glyph:'◯', book:true, title:`Nós é que o esquecemos`, cta:`Ler o livro`, body:`A música tem cor. Sempre teve. Nós é que o esquecemos. O Paintiano é uma maneira de o recordar. Toda a história está no livro — grátis, na tua língua.`}
   ],
   SK: [
     {id:'meet', glyph:'φ', title:`Miesto, kde sa stretávajú`, body:`Hudba je matematika, ktorú cíti ucho. Maľba je matematika, ktorú cíti oko. Paintiano je o mieste, kde sa stretávajú — jeden jav, dve podoby, oddeliteľné len tak, ako sa voda oddeľuje od ľadu.`},
     {id:'determinism', glyph:'◆', title:`Determinizmus je čestnosť`, body:`Náhoda znižuje zodpovednosť. Keď je výsledok náhodný, tvorca sa nikdy nemusí pýtať prečo. Paintiano je deterministické — tá istá skladba, ten istý obraz, vždy. Tvoj obraz nehovorí „rozhodla náhoda". Hovorí „rozhodol si ty". Krása je v tom, že sa to stalo presne tak, lebo si to tak chcel.`},
     {id:'conceptual', glyph:'✦', title:`Konceptuálne dielo`, body:`Paintiano je konceptuálne dielo RafFela. Objektom je aplikácia, ktorá maľuje; myšlienkou je, že hudba a obraz sú jeden jav. Dôkaz sa nepíše v traktáte — ukazuje sa v niečom, čo otvoríš a zahráš. Netreba kurátora. Stlač kláves a pochopíš sám.`},
-    {id:'composers', glyph:'♪', title:`Šesť skladateľov, jeden dôkaz`, body:`Chopin, Satie, Gershwin, Glass, Vine, Yiruma — tri storočia klavíra, šesť spôsobov myslenia v zvuku. Každý maľuje inak, lebo každý inak komponuje. Obraz je odtlačok harmónie: myseľ skladateľa, ktorú vidno.`},
     {id:'remember', glyph:'◯', book:true, title:`Len sme zabudli`, cta:`Prečítať knihu`, body:`Hudba má farbu. Vždy ju mala. Len sme zabudli. Paintiano je spôsob, ako si spomenúť. Celý príbeh je v knihe — zadarmo, v tvojom jazyku.`}
   ],
   zh: [
     {id:'meet', glyph:'φ', title:`它们相遇的地方`, body:`音乐是耳朵能感受到的数学。绘画是眼睛能感受到的数学。Paintiano 讲述它们相遇的地方——同一个现象，两种表面，只能像水与冰那样被区分。`},
     {id:'determinism', glyph:'◆', title:`确定性是一种诚实`, body:`偶然降低了责任。当结果是随机的，创作者永远不必问为什么。Paintiano 是确定的——同一首曲子，同一幅画，永远如此。你的画不说「偶然决定的」，它说「你决定的」。美就在于：它精确地发生了，因为你希望它如此。`},
     {id:'conceptual', glyph:'✦', title:`一件观念作品`, body:`Paintiano 是 RafFel 的一件观念作品。物件是一个会作画的应用；理念是：音乐与图像是同一个现象。证明不写在论文里——它展现在你打开并弹奏的东西里。无需策展人。按下一个键，你自己就会懂。`},
-    {id:'composers', glyph:'♪', title:`六位作曲家，一个证明`, body:`肖邦、萨蒂、格什温、格拉斯、瓦因、李闰珉——三个世纪的钢琴，六种用声音思考的方式。每个人画出的画都不同，因为每个人的作曲方式不同。绘画是和声的指纹：一位作曲家的心灵，变得可见。`},
     {id:'remember', glyph:'◯', book:true, title:`只是我们忘了`, cta:`阅读这本书`, body:`音乐有颜色。一直都有。只是我们忘了。Paintiano 是想起来的一种方式。完整的故事都在书里——免费，使用你的语言。`}
   ],
   zhTW: [
     {id:'meet', glyph:'φ', title:`它們相遇的地方`, body:`音樂是耳朵能感受到的數學。繪畫是眼睛能感受到的數學。Paintiano 講述它們相遇的地方——同一個現象，兩種表面，只能像水與冰那樣被區分。`},
     {id:'determinism', glyph:'◆', title:`確定性是一種誠實`, body:`偶然降低了責任。當結果是隨機的，創作者永遠不必問為什麼。Paintiano 是確定的——同一首曲子，同一幅畫，永遠如此。你的畫不說「偶然決定的」，它說「你決定的」。美就在於：它精確地發生了，因為你希望它如此。`},
     {id:'conceptual', glyph:'✦', title:`一件觀念作品`, body:`Paintiano 是 RafFel 的一件觀念作品。物件是一個會作畫的應用；理念是：音樂與圖像是同一個現象。證明不寫在論文裡——它展現在你打開並彈奏的東西裡。無需策展人。按下一個鍵，你自己就會懂。`},
-    {id:'composers', glyph:'♪', title:`六位作曲家，一個證明`, body:`蕭邦、薩提、蓋希文、葛拉斯、瓦因、李閏珉——三個世紀的鋼琴，六種用聲音思考的方式。每個人畫出的畫都不同，因為每個人的作曲方式不同。繪畫是和聲的指紋：一位作曲家的心靈，變得可見。`},
     {id:'remember', glyph:'◯', book:true, title:`只是我們忘了`, cta:`閱讀這本書`, body:`音樂有顏色。一直都有。只是我們忘了。Paintiano 是想起來的一種方式。完整的故事都在書裡——免費，使用你的語言。`}
   ],
   ja: [
     {id:'meet', glyph:'φ', title:`二つが出会う場所`, body:`音楽は、耳が感じる数学である。絵画は、目が感じる数学である。Paintiano は、その二つが出会う場所についての話だ——ひとつの現象、二つの表面、水と氷を分けるようにしか分けられない。`},
     {id:'determinism', glyph:'◆', title:`決定論は誠実さ`, body:`偶然は責任を軽くする。結果が無作為なら、作り手はなぜかを問わずに済む。Paintiano は決定論的だ——同じ曲、同じ絵、いつでも。あなたの絵は「偶然が決めた」とは言わない。「あなたが決めた」と言う。美しさは、あなたがそう望んだから、まさにそう起きたことにある。`},
     {id:'conceptual', glyph:'✦', title:`コンセプチュアルな作品`, body:`Paintiano は RafFel のコンセプチュアルな作品だ。物体は絵を描くアプリ。理念は、音楽と画像はひとつの現象だということ。証明は論文には書かれない——あなたが開いて弾くものの中に示される。キュレーターは要らない。鍵をひとつ押せば、自分で分かる。`},
-    {id:'composers', glyph:'♪', title:`6人の作曲家、ひとつの証明`, body:`ショパン、サティ、ガーシュウィン、グラス、ヴァイン、イルマ——3世紀のピアノ、音で考える6つの方法。作曲の仕方が違うから、描かれる絵も違う。絵画は和声の指紋——作曲家の心が、目に見えるものになる。`},
     {id:'remember', glyph:'◯', book:true, title:`わたしたちが忘れていただけ`, cta:`本を読む`, body:`音楽には色がある。ずっとあった。わたしたちが忘れていただけ。Paintiano は、思い出すためのひとつの方法だ。物語のすべては本の中に——無料、あなたの言語で。`}
   ]
 };
