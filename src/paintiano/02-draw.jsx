@@ -16370,17 +16370,17 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
   return evts;
 }
 
-// ── BACH — two-voice invention: motif, answer, sequence, cadence. ──
-// The strongest row of the picture becomes the MOTIF; the piece is its
-// imitations: right hand states it, left answers a fifth below, then both
-// run descending diatonic sequences around a circle-of-fifths degree walk.
-// Terraced baroque dynamics, no pedal, no rubato — clockwork from colour.
-function composeImageBach(px,nc,nr,table,colorMode,dir){
+// ── CARL VINE — driving toccata: shifting accents, added-note brightness. ──
+// The modern engine none of the others have: a relentless sixteenth pulse
+// whose accents keep migrating (3+3+2 / 2+3+3), punchy bass octaves ONLY on
+// the accents, luminous add2 harmonies from the picture's colours, a floating
+// lyrical breather mid-piece, and a rising coda. Energy is the picture's.
+function composeImageVine(px,nc,nr,table,colorMode,dir){
   const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
   if(!base || !base.length) return base||[];
   let ss=0x811c9dc5;
   for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(10000+salt,ss,0,0); f(); return f; };
+  const R=(salt)=>{ const f=_seedRnd(10200+salt,ss,0,0); f(); return f; };
   const bandsMap=new Map();
   for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
   const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
@@ -16390,95 +16390,91 @@ function composeImageBach(px,nc,nr,table,colorMode,dir){
     const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
     const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
     if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0,tw=0;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
       lum+=(c._lum||50); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60); tw+=w;
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
     lum/=cells.length; chr/=cells.length;
-    secs.push({hist,src,lum,chr,tw,cells});
+    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
   }
   if(!secs.length) return base;
   const g=new Float32Array(12); let gl=0,gc2=0;
   for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
   gl/=secs.length; gc2/=secs.length;
   let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  const minor = gl<=52;
+  const minor = gl<=42;                                    // Vine leans bright
   const scale = minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
   const scAbs=scale.map(d=>(tonic+d)%12);
   const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
   const stepSc=(m,nSteps)=>{ let cur=snap(m); const dir2=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir2; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir2; cur=nxt; } return cur; };
-  // pulse: stately eighths — an invention that BREATHES, not a typewriter
-  const eighth=Math.round(340-Math.min(1,gc2/45)*60);     // ~280-340ms
-  const barMs=eighth*8;
-  // MOTIF with a rhythmic face: durations 1·½·½·1·1·2 eighths (6 total),
-  // stepwise contour with one leap; every other section INVERTS it.
-  let msec=secs[0]; for(const sec of secs){ if(sec.tw>msec.tw) msec=sec; }
-  const mR=R(3);
-  const contour=[[0,1,2,1,3,2],[0,2,1,3,2,4],[0,1,3,2,1,0],[0,2,4,3,2,1]][Math.floor(mR()*4)];
-  const rhythm=[1,0.5,0.5,1,1,2];
-  const offs=[0,1,1.5,2,3,4];
-  const m0=snap(64+tonic);
-  const degWalk=[0,3,6,2,5,1,4,0];
-  let bars=secs.map(()=>3);
-  const maxBars=Math.floor(150000/barMs);
+  const inScale=(pc)=>{ let best=pc,bd=99; for(const a of scAbs){ const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
+  // sixteenth motor — vivid pictures push harder
+  const six=Math.round(165-Math.min(1,gc2/45)*35);         // ~130-165ms
+  const barMs=six*8;                                       // 8 sixteenths per bar
+  let bars=secs.map(sec=>3+Math.round((1-sec.homog)*2));   // 3-5 bars each
+  const maxBars=Math.floor(140000/barMs);
   const tot=bars.reduce((a,b)=>a+b,0);
   if(tot>maxBars){ bars=bars.map(b=>Math.max(2,Math.round(b*maxBars/tot))); }
-  const evts=[]; let t=0, evIdx=0;
-  const srcOfG=(sec,pc)=>sec.src[pc]||sec.src[scAbs[0]]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
-  const push=(sec,m,v,startMs,durMs,bass)=>{ const pc=((m%12)+12)%12; const sc2=srcOfG(sec,pc);
-    evts.push({n:[{m,v:Math.round(v),durMs:Math.round(durMs),bass:!!bass}],startMs:Math.round(startMs),idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sc2._chroma||sec.chr,_flat:0,_domPc:pc,_lum:sc2._lum||sec.lum}); };
-  // play the motif (or its inversion) from a given diatonic shift
-  const motifAt=(sec,shift,base,inv,vB,t0,mord)=>{
-    for(let k=0;k<contour.length;k++){
-      const cst=inv?-contour[k]:contour[k];
-      const mm=stepSc(base,shift+cst);
-      if(mord && k===0){ push(sec,stepSc(mm,1),vB*0.6,t0-Math.round(eighth*0.28),eighth*0.3,false); }
-      push(sec,mm,vB+(k===0?5:0),t0+offs[k]*eighth,eighth*rhythm[k]*0.94,false);
-    }
-  };
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const totalMs=totBars*barMs;
+  const evts=[]; let t=0, evIdx=0, barNo=0;
+  const rv=R(1);
+  // breather: 3 bars around phi — the pulse stops and add9 clouds float
+  const brStart=Math.floor(totBars*0.60), brEnd=Math.min(totBars-4,brStart+3);
+  const srcOf=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
   for(let si=0;si<secs.length;si++){
     const sec=secs[si], last=si===secs.length-1;
-    const deg=degWalk[si%8];
-    const shift=deg;
-    const inv=(si%2===1);                          // inversion every other section
-    const terr=(si%2===0)?1:0.84;                  // terraced f / mf
-    const vB=(58+Math.min(24,sec.chr*0.7))*terr;
-    for(let b2=0;b2<bars[si];b2++){
-      const cadBar=(b2===bars[si]-1);
-      if(cadBar){
-        // CADENCE with momentum: LH walks V→I in quarters, RH runs a light
-        // four-note 16th figure into the resolution — landing, not freezing.
-        const vRoot=stepSc(m0-24,shift+4), iRoot=stepSc(m0-24,shift);
-        push(sec,Math.max(33,vRoot),vB*0.85,t,eighth*3.6,true);
-        push(sec,Math.max(33,iRoot),vB*0.9,t+eighth*4,eighth*3.6,true);
-        for(let q=3;q>=1;q--){ push(sec,stepSc(m0,shift+q+4),vB*0.7,t+(3-q)*eighth*0.5,eighth*0.5*0.9,false); }
-        push(sec,stepSc(m0,shift+4),vB*0.92,t+eighth*1.5,eighth*2.4,false);
-        push(sec,stepSc(m0,shift+7),vB,t+eighth*4,eighth*3.8,false);
+    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+    const uniqR=[...new Set(ranked)];
+    const rootX=uniqR[0]!=null?uniqR[0]:tonic;
+    const rootY=uniqR[1]!=null?uniqR[1]:((tonic+5)%12);
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const pos=t/Math.max(1,totalMs);
+      const swell=0.8+0.3*Math.exp(-((pos-0.85)*(pos-0.85))/(2*0.12*0.12)); // coda grows
+      if(barNo>=brStart && barNo<brEnd){
+        // BREATHER — floating added-note cloud, very soft, no pulse
+        const r0=snap(52+rootX);
+        const cl=[r0, stepSc(r0,2), stepSc(r0,4), stepSc(r0,1)+12];
+        const scB=srcOf(sec,rootX);
+        for(let q=0;q<cl.length;q++){
+          evts.push({n:[{m:cl[q],v:Math.round(34-q*2),durMs:Math.round(barMs*1.15),bass:q===0}],startMs:t+q*Math.round(six*0.9),idx:evIdx++,cg:scB.cg,band:scB.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((cl[q]%12)+12)%12,_lum:sec.lum});
+        }
         t+=barMs;
         continue;
       }
-      // DIALOG: the voices trade the motif bar by bar — one sings, the other
-      // walks sparse chord-tone quarters (beats 1 & 3), then they swap.
-      const rhTurn=((si+b2)%2===0);
-      const mord=(b2===0 && mR()<0.5);
-      if(rhTurn){
-        motifAt(sec,shift-b2,m0,inv,vB,t,mord);
-        push(sec,Math.max(33,stepSc(m0-24,shift)),vB*0.72,t,eighth*1.8,true);
-        push(sec,Math.max(33,stepSc(m0-24,shift+4)),vB*0.62,t+eighth*4,eighth*1.8,true);
-      } else {
-        motifAt(sec,shift-b2,m0-12,inv,vB*0.86,t,false);
-        // RH answers with a light two-note sigh on the back half
-        push(sec,stepSc(m0,shift+2),vB*0.7,t+eighth*4,eighth*0.94,false);
-        push(sec,stepSc(m0,shift+1),vB*0.78,t+eighth*5,eighth*2.4,false);
+      const root=(b2%2===0)?rootX:rootY;
+      // added-note chord: root · 2nd · 3rd · 5th (the Vine glow)
+      const b0=snap(60+root);
+      const tones=[b0, stepSc(b0,1), stepSc(b0,2), stepSc(b0,4)];
+      // accents migrate: 3+3+2 normally, 2+3+3 every fourth bar
+      const acc=(barNo%4===3)?[0,2,5]:[0,3,6];
+      const isCoda=last;
+      const lift=isCoda?Math.min(12,(b2)*2):0;             // coda climbs
+      const scS=srcOf(sec,root);
+      for(let k=0;k<8;k++){
+        const isAcc=acc.indexOf(k)>=0;
+        const tone=tones[(k*2+((barNo>>1)&1))%4]+ (isCoda?lift:0);
+        const v=Math.round((44+Math.min(22,sec.chr*0.6))*(isAcc?1.35:1)*swell);
+        const ns=[{m:tone,v:Math.min(112,v),durMs:Math.round(six*1.5)}];
+        if(isAcc){ ns.push({m:tone+12,v:Math.max(26,v-18),durMs:Math.round(six*1.5)}); }
+        const pcT=((tone%12)+12)%12; const scT=srcOf(sec,pcT);
+        evts.push({n:ns,startMs:t+k*six,idx:evIdx++,cg:scT.cg,band:scT.band,colStep:4,_chroma:scT._chroma||sec.chr,_flat:0,_domPc:pcT,_lum:scT._lum||sec.lum});
+        // punchy low octave ONLY on accents
+        if(isAcc){
+          const bm=snap(36+root)+(isCoda?Math.min(7,lift):0);
+          evts.push({n:[{m:bm,v:Math.min(110,Math.round(80*swell)),durMs:Math.round(six*1.1),bass:true}],startMs:t+k*six,idx:evIdx++,cg:scS.cg,band:scS.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+        }
       }
       t+=barMs;
     }
   }
-  // final: V-I, unison octave tonic, held
-  const uni=snap(48+tonic);
-  evts.push({n:[{m:uni-12,v:62,durMs:2600,bass:true},{m:uni,v:60,durMs:2600},{m:uni+12,v:56,durMs:2600}],startMs:t+eighth,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
+  // final stab: tonic add2, accented, then a ringing hold
+  const f0=snap(48+tonic);
+  evts.push({n:[{m:f0-12,v:104,durMs:260,bass:true},{m:f0,v:100,durMs:260},{m:stepSc(f0,1),v:92,durMs:260},{m:stepSc(f0,4),v:94,durMs:260}],startMs:t+six,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
+  evts.push({n:[{m:f0-12,v:56,durMs:3400,bass:true},{m:f0,v:52,durMs:3400},{m:stepSc(f0,2),v:48,durMs:3400},{m:stepSc(f0,4),v:46,durMs:3400}],startMs:t+six+320,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
   return evts;
 }
 

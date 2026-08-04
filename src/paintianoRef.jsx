@@ -18380,16 +18380,17 @@ function composeImageBach(px,nc,nr,table,colorMode,dir){
   const scAbs=scale.map(d=>(tonic+d)%12);
   const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
   const stepSc=(m,nSteps)=>{ let cur=snap(m); const dir2=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir2; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir2; cur=nxt; } return cur; };
-  // pulse: eighths, quicker when the picture is vivid — a running invention
-  const eighth=Math.round(300-Math.min(1,gc2/45)*80);      // ~220-300ms
+  // pulse: stately eighths — an invention that BREATHES, not a typewriter
+  const eighth=Math.round(340-Math.min(1,gc2/45)*60);     // ~280-340ms
   const barMs=eighth*8;
-  // MOTIF from the strongest section: 6 eighth-notes, stepwise with one leap
+  // MOTIF with a rhythmic face: durations 1·½·½·1·1·2 eighths (6 total),
+  // stepwise contour with one leap; every other section INVERTS it.
   let msec=secs[0]; for(const sec of secs){ if(sec.tw>msec.tw) msec=sec; }
   const mR=R(3);
   const contour=[[0,1,2,1,3,2],[0,2,1,3,2,4],[0,1,3,2,1,0],[0,2,4,3,2,1]][Math.floor(mR()*4)];
+  const rhythm=[1,0.5,0.5,1,1,2];
+  const offs=[0,1,1.5,2,3,4];
   const m0=snap(64+tonic);
-  const motif=contour.map(cst=>stepSc(m0,cst));
-  // degree walk: I IV vii iii vi ii V I (circle of fifths inside the key)
   const degWalk=[0,3,6,2,5,1,4,0];
   let bars=secs.map(()=>3);
   const maxBars=Math.floor(150000/barMs);
@@ -18397,39 +18398,51 @@ function composeImageBach(px,nc,nr,table,colorMode,dir){
   if(tot>maxBars){ bars=bars.map(b=>Math.max(2,Math.round(b*maxBars/tot))); }
   const evts=[]; let t=0, evIdx=0;
   const srcOfG=(sec,pc)=>sec.src[pc]||sec.src[scAbs[0]]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+  const push=(sec,m,v,startMs,durMs,bass)=>{ const pc=((m%12)+12)%12; const sc2=srcOfG(sec,pc);
+    evts.push({n:[{m,v:Math.round(v),durMs:Math.round(durMs),bass:!!bass}],startMs:Math.round(startMs),idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sc2._chroma||sec.chr,_flat:0,_domPc:pc,_lum:sc2._lum||sec.lum}); };
+  // play the motif (or its inversion) from a given diatonic shift
+  const motifAt=(sec,shift,base,inv,vB,t0,mord)=>{
+    for(let k=0;k<contour.length;k++){
+      const cst=inv?-contour[k]:contour[k];
+      const mm=stepSc(base,shift+cst);
+      if(mord && k===0){ push(sec,stepSc(mm,1),vB*0.6,t0-Math.round(eighth*0.28),eighth*0.3,false); }
+      push(sec,mm,vB+(k===0?5:0),t0+offs[k]*eighth,eighth*rhythm[k]*0.94,false);
+    }
+  };
   for(let si=0;si<secs.length;si++){
     const sec=secs[si], last=si===secs.length-1;
     const deg=degWalk[si%8];
-    const rootPc=scAbs[deg%scAbs.length];
-    const shiftSteps=deg;                         // diatonic transposition of the motif
-    const terr=(si%2===0)?1:0.82;                 // terraced dynamics: f / mf
-    const vBase=(58+Math.min(26,sec.chr*0.7))*terr;
+    const shift=deg;
+    const inv=(si%2===1);                          // inversion every other section
+    const terr=(si%2===0)?1:0.84;                  // terraced f / mf
+    const vB=(58+Math.min(24,sec.chr*0.7))*terr;
     for(let b2=0;b2<bars[si];b2++){
       const cadBar=(b2===bars[si]-1);
       if(cadBar){
-        // CADENCE: V→I. LH walks 5→1 in long notes; RH resolves 7→8.
-        const vRoot=stepSc(m0-24+shiftSteps,4), iRoot=stepSc(m0-24,shiftSteps);
-        const sc2=srcOfG(sec,rootPc);
-        evts.push({n:[{m:Math.max(34,vRoot),v:Math.round(vBase*0.9),durMs:eighth*4,bass:true}],startMs:t,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:rootPc,_lum:sec.lum});
-        evts.push({n:[{m:Math.max(34,iRoot),v:Math.round(vBase*0.95),durMs:eighth*4,bass:true}],startMs:t+eighth*4,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:rootPc,_lum:sec.lum});
-        const lead=stepSc(m0+shiftSteps,6), res=stepSc(m0+shiftSteps,7);
-        evts.push({n:[{m:lead,v:Math.round(vBase),durMs:eighth*3}],startMs:t,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((lead%12)+12)%12,_lum:sec.lum});
-        evts.push({n:[{m:res,v:Math.round(vBase*1.02),durMs:eighth*5}],startMs:t+eighth*4,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((res%12)+12)%12,_lum:sec.lum});
+        // CADENCE with momentum: LH walks V→I in quarters, RH runs a light
+        // four-note 16th figure into the resolution — landing, not freezing.
+        const vRoot=stepSc(m0-24,shift+4), iRoot=stepSc(m0-24,shift);
+        push(sec,Math.max(33,vRoot),vB*0.85,t,eighth*3.6,true);
+        push(sec,Math.max(33,iRoot),vB*0.9,t+eighth*4,eighth*3.6,true);
+        for(let q=3;q>=1;q--){ push(sec,stepSc(m0,shift+q+4),vB*0.7,t+(3-q)*eighth*0.5,eighth*0.5*0.9,false); }
+        push(sec,stepSc(m0,shift+4),vB*0.92,t+eighth*1.5,eighth*2.4,false);
+        push(sec,stepSc(m0,shift+7),vB,t+eighth*4,eighth*3.8,false);
         t+=barMs;
         continue;
       }
-      // sequence: each bar shifts the motif down one diatonic step
-      const seqShift=shiftSteps-b2;
-      for(let k=0;k<motif.length;k++){
-        const mmR=stepSc(motif[k],seqShift);
-        const pcR=((mmR%12)+12)%12;
-        const sc2=srcOfG(sec,pcR);
-        evts.push({n:[{m:mmR,v:Math.round(vBase+(k===0?5:0)),durMs:Math.round(eighth*0.92)}],startMs:t+k*eighth,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sc2._chroma||sec.chr,_flat:0,_domPc:pcR,_lum:sc2._lum||sec.lum});
-        // LEFT: the answer, one bar delayed, a diatonic fifth below — or a
-        // steady chord-tone continuo under the very first statement
-        const mmL=(si===0&&b2===0)? stepSc(m0-24+ (k%2===0?0:4), shiftSteps) : stepSc(motif[k],seqShift-4)-12;
-        const pcL=((mmL%12)+12)%12;
-        evts.push({n:[{m:Math.max(33,mmL),v:Math.round(vBase*0.8),durMs:Math.round(eighth*0.92),bass:mmL<48}],startMs:t+k*eighth+(si===0&&b2===0?0:barMs>>1)- (si===0&&b2===0?0:0),idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcL,_lum:sec.lum});
+      // DIALOG: the voices trade the motif bar by bar — one sings, the other
+      // walks sparse chord-tone quarters (beats 1 & 3), then they swap.
+      const rhTurn=((si+b2)%2===0);
+      const mord=(b2===0 && mR()<0.5);
+      if(rhTurn){
+        motifAt(sec,shift-b2,m0,inv,vB,t,mord);
+        push(sec,Math.max(33,stepSc(m0-24,shift)),vB*0.72,t,eighth*1.8,true);
+        push(sec,Math.max(33,stepSc(m0-24,shift+4)),vB*0.62,t+eighth*4,eighth*1.8,true);
+      } else {
+        motifAt(sec,shift-b2,m0-12,inv,vB*0.86,t,false);
+        // RH answers with a light two-note sigh on the back half
+        push(sec,stepSc(m0,shift+2),vB*0.7,t+eighth*4,eighth*0.94,false);
+        push(sec,stepSc(m0,shift+1),vB*0.78,t+eighth*5,eighth*2.4,false);
       }
       t+=barMs;
     }
@@ -18475,56 +18488,82 @@ function composeImageDebussy(px,nc,nr,table,colorMode,dir){
   for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
   gl/=secs.length; gc2/=secs.length;
   let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  // bright & pastel → pentatonic garden; dark or saturated-mysterious → whole-tone mist
-  const whole = gl<=46 || (gl<=58 && gc2>34);
-  const steps = whole?[0,2,4,6,8,10]:[0,2,4,7,9];
-  const scAbs=steps.map(d=>(tonic+d)%12);
+  // ── Rêverie model: flowing arpeggios on a warm functional floor, and a
+  // SINGING PHRASE that literally returns (A A' B A). The old sliding
+  // planing-wash had no anchor — this one you can hum along to.
+  const dark = gl<=44;
+  const scale = dark?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
   const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
   const stepSc=(m,nSteps)=>{ let cur=snap(m); const dir2=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir2; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir2; cur=nxt; } return cur; };
-  const eighth=Math.round(330-Math.min(1,gc2/45)*50);
-  // irregular breathing: phrase steps last 2/3/2/3/4 eighths — never a grid
-  const stepPat=[2,3,2,3,4];
-  let phr=secs.map(sec=>3+Math.round((1-sec.homog)*2));    // 3-5 planing steps
-  const estMs=phr.reduce((a,b)=>a+b,0)*3*eighth;
-  const budget=150000;
-  if(estMs>budget){ const k=budget/estMs; phr=phr.map(p=>Math.max(2,Math.round(p*k))); }
-  const evts=[]; let t=0, evIdx=0;
-  const totalMs=Math.max(1,phr.reduce((a,b)=>a+b,0)*3*eighth);
-  const wave=(pos)=>0.82+0.1*Math.sin(pos*19)+0.16*Math.exp(-((pos-0.5)*(pos-0.5))/(2*0.16*0.16));
+  const degPc=(d)=>scAbs[((d%scAbs.length)+scAbs.length)%scAbs.length];
+  const eighth=Math.round(300-Math.min(1,gc2/45)*40);      // gentle compound lilt
+  const barMs=eighth*6;
+  const maxBars=Math.max(24,Math.floor(150000/barMs));
+  const totBars=maxBars - (maxBars%4);
+  const totalMs=totBars*barMs+4000;
+  const prog=[0,5,3,4];                                    // I vi IV V
   const rp=R(1);
-  let dirUp=true, prevLum=secs[0].lum;
-  for(let si=0;si<secs.length;si++){
-    const sec=secs[si], last=si===secs.length-1;
-    dirUp = sec.lum>=prevLum; prevLum=sec.lum;
-    const topPc=(()=>{ let p3=scAbs[0],b3=-1; for(const pc of scAbs){ if(sec.hist[pc]>b3){b3=sec.hist[pc];p3=pc;} } return p3; })();
-    const sc2=sec.src[topPc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
-    // soft low pedal under the phrase
-    const phraseMs=phr[si]*3*eighth;
-    evts.push({n:[{m:Math.max(31,snap(36+topPc)),v:Math.round(38*wave(t/totalMs)),durMs:Math.min(phraseMs+eighth*4,8000),bass:true}],startMs:t,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:topPc,_lum:sec.lum});
-    // shimmer ripple opens busy phrases — a quick pentatonic spray
-    if(sec.homog<0.45 && !last){
-      const n0=snap(72+topPc);
-      for(let q=0;q<6;q++){
-        evts.push({n:[{m:Math.min(96,stepSc(n0,q)),v:Math.round((30+q*3)*wave(t/totalMs)),durMs:Math.round(eighth*2.2)}],startMs:t+q*Math.round(70+rp()*30),idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:topPc,_lum:sec.lum});
+  const evts=[]; let evIdx=0;
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const srcOf=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+  const wave=(pos)=>0.84+0.08*Math.sin(pos*11)+0.18*Math.exp(-((pos-0.55)*(pos-0.55))/(2*0.18*0.18));
+  // one melodic PHRASE per role, built from the picture's two strongest colours
+  const mkPhrase=(startM,shape)=>shape.map(o=>({offE:o[0],durE:o[1],step:o[2]}));
+  const shapeA=[[0,3,0],[3,3,1],[6,2,2],[8,4,1]];          // rise and settle
+  const shapeB=[[0,3,4],[3,2,3],[6,2,2],[8,4,3]];          // higher answer
+  for(let bar=0;bar<totBars;bar++){
+    const sec=secAt(bar), pos=(bar*barMs)/totalMs, env=wave(pos);
+    const deg=prog[bar%4];
+    const rootPc=degPc(deg);
+    const thirdPc=degPc(deg+2), fifthPc=degPc(deg+4), ninthPc=degPc(deg+1);
+    const t0=bar*barMs;
+    // ARPEGGIO — six soft eighths, two octaves of the bar's chord; the I and
+    // IV bars glow with an added ninth (the Debussy colour)
+    let b0=48+rootPc; b0=snap(b0);
+    let t3=b0+1; while(((t3%12)+12)%12!==thirdPc) t3++;
+    let t5=t3+1; while(((t5%12)+12)%12!==fifthPc) t5++;
+    let n9=b0+13; while(((n9%12)+12)%12!==ninthPc) n9++;
+    const color=(deg===0||deg===3);
+    const arp=[b0, t5, color?n9:(t3+12), t5, b0+12, t5];
+    for(let k=0;k<6;k++){
+      const pcA=((arp[k]%12)+12)%12; const scA=srcOf(sec,pcA);
+      evts.push({n:[{m:arp[k],v:Math.round((36+Math.min(10,sec.chr*0.3))*env),durMs:Math.round(eighth*2.1),bass:k===0}],startMs:t0+k*eighth,idx:evIdx++,cg:scA.cg,band:scA.band,colStep:4,_chroma:scA._chroma||sec.chr,_flat:0,_domPc:pcA,_lum:scA._lum||sec.lum});
+    }
+    // MELODY — 2-bar phrases cycling A A' B A; each note anchors on a chord
+    // tone of ITS bar (steps land on 3rd/5th/root), so it always belongs.
+    if(bar%2===0){
+      const slot=(bar>>1)%4;                               // A A' B A
+      const isB=(slot===2), isA2=(slot===1);
+      const base=snap((isB?79:74)+thirdPc);
+      const shape=isB?shapeB:shapeA;
+      let prevM=null;
+      for(let ni=0;ni<shape.length;ni++){
+        const o=shape[ni];
+        const inBar2=o.offE>=6;
+        const dg=inBar2?prog[(bar+1)%4]:deg;
+        const anchors=[degPc(dg),degPc(dg+2),degPc(dg+4)];
+        let mm=stepSc(base,o.step + (isA2&&ni===shape.length-1?1:0));
+        // pull the tone onto the nearest chord anchor of its bar
+        let best=mm,bd=99;
+        for(const pcT of anchors){ for(let o2=5;o2<=7;o2++){ const c2=12*o2+pcT; const dd=Math.abs(c2-mm); if(dd<bd){bd=dd;best=c2;} } }
+        mm=Math.max(67,Math.min(91,best));
+        if(prevM!=null && Math.abs(mm-prevM)>9){ mm=prevM+(mm>prevM?7:-7); mm=snap(mm); }
+        prevM=mm;
+        const pcM=((mm%12)+12)%12; const scM=srcOf(sec,pcM);
+        evts.push({n:[{m:mm,v:Math.round(60*env*(isB?1.08:1)),durMs:Math.round(o.durE*eighth*1.35)}],startMs:t0+o.offE*eighth+Math.round((rp()-0.5)*50),idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:scM._chroma||sec.chr,_flat:0,_domPc:pcM,_lum:scM._lum||sec.lum});
       }
     }
-    // PLANING: the whole chord slides step by step along the scale
-    let baseM=snap(60+topPc);
-    for(let p4=0;p4<phr[si];p4++){
-      const stepE=stepPat[(si+p4)%stepPat.length];
-      const chordM=stepSc(baseM,(dirUp?1:-1)*p4);
-      const c1=chordM, c2=stepSc(chordM,2), c3=stepSc(chordM,4);
-      const vv=wave(t/totalMs)*(46+Math.min(22,sec.chr*0.6));
-      const dur=Math.round(stepE*eighth*2.6);              // heavy overlap = pedal
-      const pcC=((c1%12)+12)%12;
-      const sc3=sec.src[pcC]||sc2;
-      evts.push({n:[{m:c1,v:Math.round(vv),durMs:dur},{m:c2,v:Math.round(vv*0.86),durMs:dur},{m:c3,v:Math.round(vv*0.76),durMs:dur}],startMs:t,idx:evIdx++,cg:sc3.cg,band:sc3.band,colStep:4,_chroma:sc3._chroma||sec.chr,_flat:0,_domPc:pcC,_lum:sc3._lum||sec.lum});
-      t+=stepE*eighth;
-    }
   }
-  // final: add9-ish tonic cluster, very long, ppp — the water settles
-  const f1=snap(48+tonic), f2=stepSc(f1,1), f3=stepSc(f1,2), f4=stepSc(f1,4);
-  evts.push({n:[{m:Math.max(30,f1-12),v:34,durMs:4200,bass:true},{m:f1,v:32,durMs:4200},{m:f2,v:28,durMs:4200},{m:f3,v:27,durMs:4200},{m:f4,v:26,durMs:4200}],startMs:t+eighth,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
+  // plagal close: IV(add9) → I add9, rolled and very soft — the water settles
+  let tEnd=totBars*barMs;
+  const ivPc=degPc(3), iv3=degPc(5), r9=degPc(1), r3=degPc(2), r5=degPc(4);
+  evts.push({n:[{m:snap(41+ivPc),v:40,durMs:Math.round(barMs*1.1),bass:true},{m:snap(53+ivPc),v:34,durMs:Math.round(barMs*1.1)},{m:snap(57+iv3),v:32,durMs:Math.round(barMs*1.1)}],startMs:tEnd,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:ivPc,_lum:gl});
+  tEnd+=Math.round(barMs*1.1);
+  const roll=[[36+tonic,42,0,1],[48+tonic,38,90,0],[48+r3,34,180,0],[48+r5,32,270,0],[60+r9,30,360,0],[60+tonic,33,450,0]];
+  for(const r2 of roll){
+    evts.push({n:[{m:snap(r2[0]),v:r2[1],durMs:4400,bass:!!r2[3]}],startMs:tEnd+r2[2],idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
+  }
   return evts;
 }
 
@@ -26382,6 +26421,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // analysed whole picture. Mirrors mosaic-vs-artists on the music side.
   const [imgComposer, setImgComposer] = useState(null);
   const imgComposerRef = useRef(null);
+  const _lastComposerRef = useRef('glass');   // remembered pick for the Composer mode button
   useEffect(()=>{ imgComposerRef.current = imgComposer; },[imgComposer]);
   // LITE image flavour: loads default to plain SCAN; the "Surprise me"
   // button rolls a different composer (Glass/Satie/Chopin/Scan, never the
@@ -35804,12 +35844,14 @@ Hard requirements:
             )}
             {isDesktop && <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('imgReadLabel')!=='imgReadLabel'?t('imgReadLabel'):(lang==='SK'?'čítanie':'reading')}</div>}
             <div style={{display:'flex',flexDirection:isDesktop?'column':'row',gap:6}}>
-              <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='scan'?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:imgPlayMode==='scan'?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:imgPlayMode==='scan'?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
+              <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } imgComposerRef.current=null; setImgComposer(null); }} disabled={busy||working} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&!imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&!imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&!imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
+              <button onClick={()=>{ if(busy||working) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } if(!imgComposer){ const c=_lastComposerRef.current||'glass'; imgComposerRef.current=c; setImgComposer(c); } }} disabled={busy||working} title={'the picture recomposed in a composer\u2019s style'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'\u266b '+(({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer')}</button>
               <button onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.7)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'0 0 0 1px rgba(220,150,255,.24)',opacity:aiLocked?.85:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,position:'relative'}}>{(proStatus!=='pro_ai') && (modeExhausted('compose') ? (<span style={{position:'absolute',top:-7,right:8,zIndex:3,pointerEvents:'none'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></span>) : (<span style={{position:'absolute',top:-7,right:8,fontSize:(.4*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',whiteSpace:'nowrap',color:'rgba(228,178,255,.98)',background:'rgba(40,20,55,.95)',border:'1px solid rgba(220,150,255,.6)',borderRadius:8,padding:'1px 6px',pointerEvents:'none',zIndex:3}}>{ts('aiTrialBadge','1 free AI try')}</span>))}
                 <span>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')}</span>
               </button>
             </div>
             {imgPlayMode==='scan' ? (<>
+            {!imgComposer ? (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
@@ -35827,16 +35869,18 @@ Hard requirements:
                   );
                 })}
               </div>
+            </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'bach',n:'Bach'},{k:'debussy',n:'Debussy'}].map(c=>{
+                {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'bach',n:'Bach'},{k:'debussy',n:'Debussy'}].map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; setImgComposer(c.k); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',borderRadius:10,cursor:locked?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',background:sel?'rgba(201,168,76,.16)':'rgba(255,255,255,.02)',border:sel?'1px solid rgba(201,168,76,.55)':'1px solid rgba(255,255,255,.08)',color:sel?'#c9a84c':'rgba(230,222,196,.75)',opacity:locked?.5:1}}>{c.n}</button>
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',borderRadius:10,cursor:locked?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',background:sel?'rgba(201,168,76,.16)':'rgba(255,255,255,.02)',border:sel?'1px solid rgba(201,168,76,.55)':'1px solid rgba(255,255,255,.08)',color:sel?'#c9a84c':'rgba(230,222,196,.75)',opacity:locked?.5:1}}>{c.n}</button>
                   );
                 })}
               </div>
+            </>)}
             </>) : (
               <div style={{padding:'10px 12px',marginTop:2,borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
             )}
