@@ -36654,9 +36654,11 @@ Hard requirements:
                 {effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
-            {!immersive && basicMode && liteImageMode && imgComposer && COMPOSER_INSPIRED[imgComposer] && (
-              <span key={'inspc-'+imgComposer} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}
+            {!immersive && basicMode && liteImageMode && (
+              <span key={'inspc-'+(imgComposer||'scan')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
+                {imgComposer && COMPOSER_INSPIRED[imgComposer]
+                  ? (<><span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
+                  : 'Scan'}
               </span>
             )}
             {!immersive && basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
