@@ -18211,6 +18211,11 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
   let ss=0x811c9dc5;
   for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
   const R=(salt)=>{ const f=_seedRnd(9900+salt,ss,0,0); f(); return f; };
+  // Diatonic walking — EVERY melodic step moves along the key's scale, never
+  // by raw semitone arithmetic (that's what made runs sound false).
+  let _scAbs=null;
+  const _snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of _scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
+  const _stepSc=(m,nSteps)=>{ let cur=_snap(m); const dir=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir; while(_scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir; cur=nxt; } return cur; };
   const bandsMap=new Map();
   for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
   const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
@@ -18251,6 +18256,7 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
   const totalMs=totBars*barMs;
   // functional floor: i - VI - iv - V (minor) / I - vi - IV - V (major)
   const prog=minor?[0,8,5,7]:[0,9,5,7];
+  _scAbs=scale.map(d=>(tonic+d)%12);
   const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0, lastGestC=-1;
   const jr=R(1), rb=R(2);
   const climBar=Math.floor(totBars*0.618);
@@ -18302,20 +18308,23 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
         let gi; do{ gi=Math.floor(jr()*4); }while(gi===lastGestC);
         lastGestC=gi;
         if(gi===0){
-          if(jr()<0.6){ PE(Math.min(94,mm+(minor?1:2)),Math.max(30,vMel-22),-0.3,0.28); }
+          if(jr()<0.6){ PE(Math.min(94,_stepSc(mm,1)),Math.max(30,vMel-22),-0.3,0.28); }
           PE(mm,vMel,0,5.2); prevMel=mm;
         } else if(gi===1){
           PE(mm,vMel,0,1.9);
-          const st=Math.max(56,Math.min(90,mm+(jr()<0.5?-2:2)));
+          const st=Math.max(56,Math.min(90,_stepSc(mm,jr()<0.5?-1:1)));
           PE(st,vMel-8,2,0.95);
-          const ct=Math.max(56,Math.min(90,64+((jr()<0.5?third:fifth))+((mm-64)>=6?12:0)));
+          // finish on the NEAREST chord tone to where the line is
+          let ct=st,cbd=99;
+          for(const pc of [root,third,fifth]){ for(let o=4;o<=6;o++){ const c2=12*o+pc; const dd=Math.abs(c2-st); if(dd>0&&dd<cbd){cbd=dd;ct=c2;} } }
+          ct=Math.max(56,Math.min(90,ct));
           PE(ct,vMel-4,3,1.9); prevMel=ct;
         } else if(gi===2){
-          PE(mm,vMel,0,1.8); PE(Math.max(55,mm-2),vMel-6,2,1.8); PE(Math.max(54,mm-(minor?4:3)),vMel-10,4,1.8);
-          prevMel=Math.max(54,mm-(minor?4:3));
+          const d1=Math.max(55,_stepSc(mm,-1)), d2=Math.max(54,_stepSc(mm,-2));
+          PE(mm,vMel,0,1.8); PE(d1,vMel-6,2,1.8); PE(d2,vMel-10,4,1.8);
+          prevMel=d2;
         } else {
-          const startFrom=Math.max(55,mm-5);
-          for(let q=0;q<4;q++){ PE(startFrom+q+(q>1?1:0),Math.max(28,vMel-16),q*1,0.9); }
+          for(let q=4;q>=1;q--){ PE(Math.max(55,_stepSc(mm,-q)),Math.max(28,vMel-16),(4-q)*1,0.9); }
           PE(mm,vMel,4,3.4); prevMel=mm;
         }
       }
@@ -18329,6 +18338,193 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
   for(const r2 of roll){
     evts.push({n:[{m:r2.m,v:r2.v,durMs:3600,bass:r2.m<45}],startMs:t+eighth+r2.d,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
   }
+  return evts;
+}
+
+// ── BACH — two-voice invention: motif, answer, sequence, cadence. ──
+// The strongest row of the picture becomes the MOTIF; the piece is its
+// imitations: right hand states it, left answers a fifth below, then both
+// run descending diatonic sequences around a circle-of-fifths degree walk.
+// Terraced baroque dynamics, no pedal, no rubato — clockwork from colour.
+function composeImageBach(px,nc,nr,table,colorMode,dir){
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return base||[];
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(10000+salt,ss,0,0); f(); return f; };
+  const bandsMap=new Map();
+  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
+  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
+  const S=Math.max(8,Math.min(16,bandKeys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0,tw=0;
+    for(const c of cells){
+      lum+=(c._lum||50); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60); tw+=w;
+        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
+    }
+    lum/=cells.length; chr/=cells.length;
+    secs.push({hist,src,lum,chr,tw,cells});
+  }
+  if(!secs.length) return base;
+  const g=new Float32Array(12); let gl=0,gc2=0;
+  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
+  gl/=secs.length; gc2/=secs.length;
+  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
+  const minor = gl<=52;
+  const scale = minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
+  const stepSc=(m,nSteps)=>{ let cur=snap(m); const dir2=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir2; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir2; cur=nxt; } return cur; };
+  // pulse: eighths, quicker when the picture is vivid — a running invention
+  const eighth=Math.round(300-Math.min(1,gc2/45)*80);      // ~220-300ms
+  const barMs=eighth*8;
+  // MOTIF from the strongest section: 6 eighth-notes, stepwise with one leap
+  let msec=secs[0]; for(const sec of secs){ if(sec.tw>msec.tw) msec=sec; }
+  const mR=R(3);
+  const contour=[[0,1,2,1,3,2],[0,2,1,3,2,4],[0,1,3,2,1,0],[0,2,4,3,2,1]][Math.floor(mR()*4)];
+  const m0=snap(64+tonic);
+  const motif=contour.map(cst=>stepSc(m0,cst));
+  // degree walk: I IV vii iii vi ii V I (circle of fifths inside the key)
+  const degWalk=[0,3,6,2,5,1,4,0];
+  let bars=secs.map(()=>3);
+  const maxBars=Math.floor(150000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(2,Math.round(b*maxBars/tot))); }
+  const evts=[]; let t=0, evIdx=0;
+  const srcOfG=(sec,pc)=>sec.src[pc]||sec.src[scAbs[0]]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    const deg=degWalk[si%8];
+    const rootPc=scAbs[deg%scAbs.length];
+    const shiftSteps=deg;                         // diatonic transposition of the motif
+    const terr=(si%2===0)?1:0.82;                 // terraced dynamics: f / mf
+    const vBase=(58+Math.min(26,sec.chr*0.7))*terr;
+    for(let b2=0;b2<bars[si];b2++){
+      const cadBar=(b2===bars[si]-1);
+      if(cadBar){
+        // CADENCE: V→I. LH walks 5→1 in long notes; RH resolves 7→8.
+        const vRoot=stepSc(m0-24+shiftSteps,4), iRoot=stepSc(m0-24,shiftSteps);
+        const sc2=srcOfG(sec,rootPc);
+        evts.push({n:[{m:Math.max(34,vRoot),v:Math.round(vBase*0.9),durMs:eighth*4,bass:true}],startMs:t,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:rootPc,_lum:sec.lum});
+        evts.push({n:[{m:Math.max(34,iRoot),v:Math.round(vBase*0.95),durMs:eighth*4,bass:true}],startMs:t+eighth*4,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:rootPc,_lum:sec.lum});
+        const lead=stepSc(m0+shiftSteps,6), res=stepSc(m0+shiftSteps,7);
+        evts.push({n:[{m:lead,v:Math.round(vBase),durMs:eighth*3}],startMs:t,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((lead%12)+12)%12,_lum:sec.lum});
+        evts.push({n:[{m:res,v:Math.round(vBase*1.02),durMs:eighth*5}],startMs:t+eighth*4,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((res%12)+12)%12,_lum:sec.lum});
+        t+=barMs;
+        continue;
+      }
+      // sequence: each bar shifts the motif down one diatonic step
+      const seqShift=shiftSteps-b2;
+      for(let k=0;k<motif.length;k++){
+        const mmR=stepSc(motif[k],seqShift);
+        const pcR=((mmR%12)+12)%12;
+        const sc2=srcOfG(sec,pcR);
+        evts.push({n:[{m:mmR,v:Math.round(vBase+(k===0?5:0)),durMs:Math.round(eighth*0.92)}],startMs:t+k*eighth,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sc2._chroma||sec.chr,_flat:0,_domPc:pcR,_lum:sc2._lum||sec.lum});
+        // LEFT: the answer, one bar delayed, a diatonic fifth below — or a
+        // steady chord-tone continuo under the very first statement
+        const mmL=(si===0&&b2===0)? stepSc(m0-24+ (k%2===0?0:4), shiftSteps) : stepSc(motif[k],seqShift-4)-12;
+        const pcL=((mmL%12)+12)%12;
+        evts.push({n:[{m:Math.max(33,mmL),v:Math.round(vBase*0.8),durMs:Math.round(eighth*0.92),bass:mmL<48}],startMs:t+k*eighth+(si===0&&b2===0?0:barMs>>1)- (si===0&&b2===0?0:0),idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcL,_lum:sec.lum});
+      }
+      t+=barMs;
+    }
+  }
+  // final: V-I, unison octave tonic, held
+  const uni=snap(48+tonic);
+  evts.push({n:[{m:uni-12,v:62,durMs:2600,bass:true},{m:uni,v:60,durMs:2600},{m:uni+12,v:56,durMs:2600}],startMs:t+eighth,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
+  return evts;
+}
+
+// ── DEBUSSY — impressionist planing: chords glide, pedal blurs, light ripples. ──
+// Pastel-bright pictures breathe in PENTATONIC, dark-mysterious ones in
+// WHOLE-TONE. Whole chords slide stepwise along the scale (planing), heavy
+// overlap acts as the pedal, busy rows shimmer with quick ripples. Dynamics
+// move in soft waves with one larger swell mid-piece — water, not drama.
+function composeImageDebussy(px,nc,nr,table,colorMode,dir){
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return base||[];
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(10100+salt,ss,0,0); f(); return f; };
+  const bandsMap=new Map();
+  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
+  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
+  const S=Math.max(10,Math.min(20,bandKeys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
+    for(const c of cells){
+      lum+=(c._lum||50); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
+        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
+    }
+    lum/=cells.length; chr/=cells.length;
+    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
+  }
+  if(!secs.length) return base;
+  const g=new Float32Array(12); let gl=0,gc2=0;
+  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
+  gl/=secs.length; gc2/=secs.length;
+  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
+  // bright & pastel → pentatonic garden; dark or saturated-mysterious → whole-tone mist
+  const whole = gl<=46 || (gl<=58 && gc2>34);
+  const steps = whole?[0,2,4,6,8,10]:[0,2,4,7,9];
+  const scAbs=steps.map(d=>(tonic+d)%12);
+  const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
+  const stepSc=(m,nSteps)=>{ let cur=snap(m); const dir2=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir2; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir2; cur=nxt; } return cur; };
+  const eighth=Math.round(330-Math.min(1,gc2/45)*50);
+  // irregular breathing: phrase steps last 2/3/2/3/4 eighths — never a grid
+  const stepPat=[2,3,2,3,4];
+  let phr=secs.map(sec=>3+Math.round((1-sec.homog)*2));    // 3-5 planing steps
+  const estMs=phr.reduce((a,b)=>a+b,0)*3*eighth;
+  const budget=150000;
+  if(estMs>budget){ const k=budget/estMs; phr=phr.map(p=>Math.max(2,Math.round(p*k))); }
+  const evts=[]; let t=0, evIdx=0;
+  const totalMs=Math.max(1,phr.reduce((a,b)=>a+b,0)*3*eighth);
+  const wave=(pos)=>0.82+0.1*Math.sin(pos*19)+0.16*Math.exp(-((pos-0.5)*(pos-0.5))/(2*0.16*0.16));
+  const rp=R(1);
+  let dirUp=true, prevLum=secs[0].lum;
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    dirUp = sec.lum>=prevLum; prevLum=sec.lum;
+    const topPc=(()=>{ let p3=scAbs[0],b3=-1; for(const pc of scAbs){ if(sec.hist[pc]>b3){b3=sec.hist[pc];p3=pc;} } return p3; })();
+    const sc2=sec.src[topPc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+    // soft low pedal under the phrase
+    const phraseMs=phr[si]*3*eighth;
+    evts.push({n:[{m:Math.max(31,snap(36+topPc)),v:Math.round(38*wave(t/totalMs)),durMs:Math.min(phraseMs+eighth*4,8000),bass:true}],startMs:t,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:topPc,_lum:sec.lum});
+    // shimmer ripple opens busy phrases — a quick pentatonic spray
+    if(sec.homog<0.45 && !last){
+      const n0=snap(72+topPc);
+      for(let q=0;q<6;q++){
+        evts.push({n:[{m:Math.min(96,stepSc(n0,q)),v:Math.round((30+q*3)*wave(t/totalMs)),durMs:Math.round(eighth*2.2)}],startMs:t+q*Math.round(70+rp()*30),idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:topPc,_lum:sec.lum});
+      }
+    }
+    // PLANING: the whole chord slides step by step along the scale
+    let baseM=snap(60+topPc);
+    for(let p4=0;p4<phr[si];p4++){
+      const stepE=stepPat[(si+p4)%stepPat.length];
+      const chordM=stepSc(baseM,(dirUp?1:-1)*p4);
+      const c1=chordM, c2=stepSc(chordM,2), c3=stepSc(chordM,4);
+      const vv=wave(t/totalMs)*(46+Math.min(22,sec.chr*0.6));
+      const dur=Math.round(stepE*eighth*2.6);              // heavy overlap = pedal
+      const pcC=((c1%12)+12)%12;
+      const sc3=sec.src[pcC]||sc2;
+      evts.push({n:[{m:c1,v:Math.round(vv),durMs:dur},{m:c2,v:Math.round(vv*0.86),durMs:dur},{m:c3,v:Math.round(vv*0.76),durMs:dur}],startMs:t,idx:evIdx++,cg:sc3.cg,band:sc3.band,colStep:4,_chroma:sc3._chroma||sec.chr,_flat:0,_domPc:pcC,_lum:sc3._lum||sec.lum});
+      t+=stepE*eighth;
+    }
+  }
+  // final: add9-ish tonic cluster, very long, ppp — the water settles
+  const f1=snap(48+tonic), f2=stepSc(f1,1), f3=stepSc(f1,2), f4=stepSc(f1,4);
+  evts.push({n:[{m:Math.max(30,f1-12),v:34,durMs:4200,bass:true},{m:f1,v:32,durMs:4200},{m:f2,v:28,durMs:4200},{m:f3,v:27,durMs:4200},{m:f4,v:26,durMs:4200}],startMs:t+eighth,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
   return evts;
 }
 
@@ -26186,6 +26382,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgComposer, setImgComposer] = useState(null);
   const imgComposerRef = useRef(null);
   useEffect(()=>{ imgComposerRef.current = imgComposer; },[imgComposer]);
+  // LITE image flavour: loads default to plain SCAN; the "Surprise me"
+  // button rolls a different composer (Glass/Satie/Chopin/Scan, never the
+  // current one) on the SAME picture — mirror of the music-side surprise.
+  const _liteResetComposer = useCallback(()=>{
+    imgComposerRef.current=null; setImgComposer(null);
+  },[]);
+  const _liteRollComposer = useCallback(()=>{
+    const a=[null,'glass','satie','chopin','bach','debussy'].filter(x=>x!==imgComposerRef.current);
+    const c=a[(Math.random()*a.length)|0];
+    imgComposerRef.current=c; setImgComposer(c);
+  },[]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -30969,6 +31176,10 @@ Hard requirements:
             ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='chopin')
             ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='bach')
+            ? composeImageBach(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='debussy')
+            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -31063,6 +31274,10 @@ Hard requirements:
       ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='chopin')
       ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='bach')
+      ? composeImageBach(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='debussy')
+      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -31994,6 +32209,7 @@ Hard requirements:
         // Empty flip: stop the music flavour's audio, then auto-load a random
         // built-in painting so the flavour reads + plays immediately.
         try{ stopAll(); }catch(_){}
+        try{ _liteResetComposer(); }catch(_){}
         try{ loadSampleImage((Math.random()*3)|0); }catch(_){}
       }
       // The flip hard-muted the master to kill the piano tail. Image flavour
@@ -35595,8 +35811,8 @@ Hard requirements:
                 })}
               </div>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
-              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
-                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'}].map(c=>{
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
+                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'bach',n:'Bach'},{k:'debussy',n:'Debussy'}].map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
@@ -38233,12 +38449,12 @@ Hard requirements:
               {/* Lite image sub-picker — same pattern as songs: Sample -> 3 paintings. */}
               {liteImgSamplePick ? (<>
               {[(({EN:'Starry Night',SK:'Hviezdna noc',DE:'Sternennacht',FR:'La Nuit étoilée',ES:'La noche estrellada',PT:'A Noite Estrelada',zh:'星夜',zhTW:'星夜',ja:'星月夜'})[lang]||'Starry Night')+' · Van Gogh',(({EN:'Water Lilies',SK:'Lekná',DE:'Seerosen',FR:'Les Nymphéas',ES:'Nenúfares',PT:'Nenúfares',zh:'睡莲',zhTW:'睡蓮',ja:'睡蓮'})[lang]||'Water Lilies')+' · Monet',(({EN:'The Scream',SK:'Výkrik',DE:'Der Schrei',FR:'Le Cri',ES:'El grito',PT:'O Grito',zh:'呐喊',zhTW:'吶喊',ja:'叫び'})[lang]||'The Scream')+' · Munch'].map((nm,i)=>(
-              <button key={i} onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(i); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{nm}</span></button>
+              <button key={i} onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ _liteResetComposer(); }catch(_){} try{ loadSampleImage(i); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{nm}</span></button>
               ))}
               <button onClick={()=>setLiteImgSamplePick(false)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}><span>‹ {t('backToSetup')||'back'}</span></button>
               </>) : (<>
               <button onClick={()=>setLiteImgSamplePick(true)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
-              <button onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
+              <button onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ _liteResetComposer(); }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
               </>)}
             </div>
           </div>
@@ -38248,6 +38464,7 @@ Hard requirements:
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
           <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
+          {liteImageMode && <button onClick={()=>{ try{ _liteRollComposer(); }catch(_){} }} disabled={!_liteImg||_liteImgRecording||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||_liteImgRecording||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
           {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
         {/* ZASAH BEST — Lite→full bridge. A finished Lite painting is the peak

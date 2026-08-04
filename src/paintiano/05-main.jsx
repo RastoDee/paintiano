@@ -1489,7 +1489,8 @@ export default function Paintiano() {
     ja:{lichtenstein:'コミック',klee:'ポリフォニー',delaunay:'ディスク',oneM:'ミリオン',raffel:'サイン',picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'抽象',miro:'星座',mondrian:'グリッド',bauhaus:'バウハウス',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
-  const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'};
+  const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
+const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',bach:'J. S. Bach',debussy:'Claude Debussy'};;
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -12724,6 +12725,11 @@ Hard requirements:
                 {effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
+            {!immersive && basicMode && liteImageMode && imgComposer && COMPOSER_INSPIRED[imgComposer] && (
+              <span key={'inspc-'+imgComposer} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
+                <span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}
+              </span>
+            )}
             {!immersive && basicMode && !liteImageMode && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic' || !STYLE_INSPIRED[effectiveStyle]) && (
               <span key={`insp-${effectiveStyle==='notes'?'notes':'mosaic'}`} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>{effectiveStyle==='notes'?t('notesStyle'):t('liteMosaicStyle')}</span>
             )}
@@ -12885,9 +12891,11 @@ Hard requirements:
           recognised swipe-up gesture; effectiveStyle is read at render time so
           the label always reflects the newly-picked artist. */}
       {immersive && _swipeFlashKey && (()=>{
-        const _fKey = effectiveStyle || 'mosaic';
-        const _fBare = (_fKey === 'mosaic' || _fKey === 'notes' || _fKey === 'raffel');
-        const _fLabel = _fKey === 'notes' ? t('notesStyle')
+        const _isImgFlash = basicMode && liteImageMode;
+        const _fKey = _isImgFlash ? ('c-'+(imgComposer||'scan')) : (effectiveStyle || 'mosaic');
+        const _fBare = _isImgFlash ? !imgComposer : (_fKey === 'mosaic' || _fKey === 'notes' || _fKey === 'raffel');
+        const _fLabel = _isImgFlash ? (imgComposer ? COMPOSER_INSPIRED[imgComposer] : 'Scan')
+                      : _fKey === 'notes' ? t('notesStyle')
                       : _fKey === 'mosaic' ? t(basicMode ? 'liteMosaicStyle' : 'mosaicStyle')
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
@@ -12904,7 +12912,7 @@ Hard requirements:
         onTouchStart={e=>{
           // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
           // is bound to the image — no next style to swipe to). Ignore multi-touch.
-          if(!immersive || viewMode==='image' || liteImageMode) return;
+          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode)) || (liteImageMode&&!basicMode)) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
@@ -12923,7 +12931,7 @@ Hard requirements:
           }
         }}
         onTouchEnd={e=>{
-          if(!immersive || viewMode==='image' || liteImageMode) return;
+          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode)) || (liteImageMode&&!basicMode)) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
@@ -12944,7 +12952,8 @@ Hard requirements:
             // same action the NEXT button used to do (dice roll).
             try {
               if(basicMode){
-                basicSurprise();
+                if(liteImageMode){ _liteRollComposer(); }
+                else { basicSurprise(); }
               } else if(randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)){
                 // Advanced FS swipe mirrors the normal-screen NEXT button
                 // exactly: it only fires when dice (shuffle) is ON *and* the
