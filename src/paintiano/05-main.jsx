@@ -2795,22 +2795,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const c=a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
   },[]);
-  // Full image-flavour SURPRISE: drop the running take (recorder torn down
-  // WITHOUT stopAll), stop playback, roll a different composer, then start a
-  // fresh recorded take from the top — one tap, new style, clean take.
-  const _liteImgSurprise = useCallback(()=>{
-    try{
-      if(recorderRef.current && recorderRef.current.state!=='inactive'){
-        _suppressRecOnStopRef.current=true;
-        recorderRef.current.stop();
-      }
-      setRecording(false); recorderRef.current=null;
-    }catch(_){}
-    try{ setRecBlob(null); setRecName(''); }catch(_){}
-    try{ stopAll(); }catch(_){}
-    try{ _liteRollComposer(); }catch(_){}
-    setTimeout(()=>{ try{ (startRecordRef.current||startRecord)(); }catch(_){} },160);
-  },[stopAll,_liteRollComposer]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -9219,6 +9203,22 @@ Hard requirements:
   // unreliable on iOS so we skip the inline player and offer only a save
   // button — the file itself is fine for download / share / play in Files /
   // Voice Memos / Music.
+  // Full image-flavour SURPRISE: drop the running take (recorder torn down
+  // WITHOUT stopAll), stop playback, roll a different composer, then start a
+  // fresh recorded take from the top — one tap, new style, clean take.
+  const _liteImgSurprise = useCallback(()=>{
+    try{
+      if(recorderRef.current && recorderRef.current.state!=='inactive'){
+        _suppressRecOnStopRef.current=true;
+        recorderRef.current.stop();
+      }
+      setRecording(false); recorderRef.current=null;
+    }catch(_){}
+    try{ setRecBlob(null); setRecName(''); }catch(_){}
+    try{ stopAll(); }catch(_){}
+    try{ _liteRollComposer(); }catch(_){}
+    setTimeout(()=>{ try{ (startRecordRef.current||startRecord)(); }catch(_){} },160);
+  },[stopAll,_liteRollComposer]);
   const startRecord=()=>{
     if(!chords.length||recording||playing)return;
     if(!window.MediaRecorder){setErr(t('recUnsupported'));setErrInfo(false);return;}
