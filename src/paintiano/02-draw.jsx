@@ -16108,6 +16108,99 @@ function composeImageGlass(px,nc,nr,table,colorMode,dir){
   return evts;
 }
 
+// ── SATIE — Gymnopédie: slow 3/4, bass-chord sway, a sparse floating melody. ──
+// Same two-phase design as Glass: the whole picture is analysed first, then
+// the piece is composed over the complete map. Sections become harmonic
+// regions (one chord colour each); homogeneous regions breathe with rests.
+function composeImageSatie(px,nc,nr,table,colorMode,dir){
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return base||[];
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(9800+salt,ss,0,0); f(); return f; };
+  const bandsMap=new Map();
+  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
+  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
+  const S=Math.max(10,Math.min(22,bandKeys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
+    for(const c of cells){
+      lum+=(c._lum||50); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
+        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
+    }
+    lum/=cells.length; chr/=cells.length;
+    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
+  }
+  if(!secs.length) return base;
+  const g=new Float32Array(12); let gl=0;
+  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; }
+  gl/=secs.length;
+  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
+  const bright = gl>50;
+  // bright → major with a lydian shimmer; dark → dorian. Chords are 7ths —
+  // the gymnopédie sonority — never plain triads.
+  const scale = bright?[0,2,4,6,7,9,11]:[0,2,3,5,7,9,10];
+  const inScale=(pc)=>{ let best=pc,bd=99; for(const d of scale){ const a=(tonic+d)%12; const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
+  const beat=Math.round(60000/66);              // lent — quarter ≈ 909ms
+  const barMs=beat*3;
+  const arc=(pos)=>0.88+0.14*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.24*0.24));
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));   // busy regions get more bars
+  const maxBars=Math.floor(160000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totalMs=bars.reduce((a,b)=>a+b,0)*barMs;
+  const evts=[]; let t=0, evIdx=0, prevMel=null;
+  const jr=R(1);
+  const seventh = bright?11:10;
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+    const uniqR=[...new Set(ranked)];
+    const rootA=uniqR[0]!=null?uniqR[0]:tonic;
+    const rootB=uniqR[1]!=null?uniqR[1]:(tonic+7)%12;      // sway between two colours
+    const srcOf=(pc)=>sec.src[pc]||sec.src[rootA]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+    for(let b2=0;b2<bars[si];b2++){
+      const root=(b2%2===0)?rootA:rootB;
+      const pos=t/Math.max(1,totalMs);
+      const env=arc(Math.min(1,pos));
+      const sc=srcOf(root);
+      // beat 1 — low bass
+      evts.push({n:[{m:36+root,v:Math.round(50*env),durMs:Math.round(beat*2.7),bass:true}],startMs:t,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      // beat 2 — mid 7th-chord (root, third, seventh), soft
+      const third=(root+(bright?4:3))%12;
+      const ch=[{m:48+root,v:Math.round(42*env),durMs:Math.round(beat*1.9)},
+                {m:48+third+(third<root?12:0),v:Math.round(38*env),durMs:Math.round(beat*1.9)},
+                {m:48+((root+seventh)%12)+(((root+seventh)%12)<root?12:0),v:Math.round(36*env),durMs:Math.round(beat*1.9)}];
+      evts.push({n:ch,startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
+      // melody — a long note on beat 1 or 2, stepwise from the previous one;
+      // homogeneous (calm) regions often rest instead: Satie breathes.
+      const restP=0.18+sec.homog*0.4;
+      if(jr()>restP && !last){
+        let cands=uniqR.slice(0,5); if(!cands.length) cands=[tonic];
+        let melPc=cands[0];
+        if(prevMel!=null){ let bd=99; for(const p2 of cands){ const dd=Math.min((p2-prevMel%12+12)%12,(prevMel%12-p2+12)%12); if(dd<bd){bd=dd;melPc=p2;} } }
+        let mm=60+melPc; if(prevMel!=null){ while(mm-prevMel>7) mm-=12; while(prevMel-mm>7) mm+=12; }
+        mm=Math.max(55,Math.min(84,mm));
+        prevMel=mm;
+        const msc=srcOf(melPc);
+        const onBeat2=jr()<0.35;
+        const durB=2+(jr()<0.4?1:0);
+        evts.push({n:[{m:mm,v:Math.round((58+Math.min(18,sec.chr*0.5))*env),durMs:Math.round(beat*durB*0.96)}],startMs:t+(onBeat2?beat:0),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum});
+      }
+      t+=barMs;
+    }
+  }
+  // final bar — bass + 7th chord, long and very soft
+  evts.push({n:[{m:36+tonic,v:44,durMs:3200,bass:true},{m:48+tonic,v:40,durMs:3200},{m:48+((tonic+(bright?4:3))%12),v:36,durMs:3200},{m:48+((tonic+seventh)%12),v:34,durMs:3200}],startMs:t+beat,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:0,_flat:0,_domPc:tonic,_lum:gl});
+  return evts;
+}
+
 function bakeImageChords(src){
   if(!src || !src.length) return [];
   const out = [];

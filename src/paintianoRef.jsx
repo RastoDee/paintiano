@@ -17980,6 +17980,105 @@ const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 // so the resulting MIDI carries actual MIDI events for every audible note.
 // Deterministic — same image scan always produces the same bake (seeds come
 // from per-chord _tremSeed already in the array, or fall back to position).
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPOSER LAYER — painting → music in a composer's STYLE.
+// Two-phase design: Phase 1 ANALYSES the whole picture first (the plain scan,
+// row-major, is the material map: per-cell notes + colour statistics), then
+// Phase 2 COMPOSES over the complete map — so form, climax and ending are
+// planned from the whole image, never guessed locally. Deterministic:
+// (pixels, composer) → identical piece, always. Mirrors mosaic vs artists.
+// ═══════════════════════════════════════════════════════════════════════════
+function composeImageGlass(px,nc,nr,table,colorMode,dir){
+  // ── PHASE 1 · analyse ────────────────────────────────────────────────────
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return base||[];
+  // seed from the pixels themselves (FNV over a sparse sample)
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(9700+salt,ss,0,0); f(); return f; };
+  // group scan cells into row-bands, then merge bands into 12-28 SECTIONS
+  const bandsMap=new Map();
+  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
+  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
+  const S=Math.max(12,Math.min(28,bandKeys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
+    for(const c of cells){
+      lum+=(c._lum||50); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
+        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
+    }
+    lum/=cells.length; chr/=cells.length;
+    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
+  }
+  if(!secs.length) return base;
+  // ── globals: tonic, mode, tempo, dynamic arc ──
+  const g=new Float32Array(12); let gl=0,gc2=0;
+  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
+  gl/=secs.length; gc2/=secs.length;
+  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
+  const major = gl>50;
+  const scale = major?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10];
+  const inScale=(pc)=>{ let best=pc,bd=99; for(const d of scale){ const a=(tonic+d)%12; const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
+  const c01=Math.min(1,gc2/45);
+  const bpm=94+Math.round(c01*40);
+  const eighth=Math.round(60000/bpm/2);
+  const arc=(pos)=>0.72+0.44*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.22*0.22));
+  // bar budget so the piece lands ~1.5-3 min regardless of image size
+  let bars=secs.map(sec=>2+Math.round(sec.homog*2));
+  const maxBars=Math.floor(170000/(8*eighth));
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  // ── PHASE 2 · compose (additive cells, pendulum arpeggio, pedal bass) ──
+  const evts=[]; let t=0, evIdx=0, prevPcs=[];
+  const jit=R(1);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+    const uniqR=[...new Set(ranked)];
+    let K=3+(sec.chr>28?1:0)+(sec.homog<0.4?1:0); if(last) K=2;
+    const cellPcs=[];
+    for(const p2 of prevPcs){ if(cellPcs.length<2 && uniqR.includes(p2)) cellPcs.push(p2); }
+    for(const p2 of uniqR){ if(cellPcs.length>=K) break; if(!cellPcs.includes(p2)) cellPcs.push(p2); }
+    while(cellPcs.length<Math.min(K,3)) cellPcs.push((tonic+scale[(cellPcs.length*2)%scale.length])%12);
+    prevPcs=cellPcs.slice();
+    // voicing: ascending midis around the section's brightness register
+    const octBase=sec.lum<40?3:(sec.lum<62?4:5);
+    const mids=[]; let lastM=-1;
+    for(const p2 of cellPcs.slice().sort((a,b)=>a-b)){ let m=12*(octBase+1)+p2; while(m<=lastM) m+=12; lastM=m; mids.push({m,pc:p2}); }
+    const seq=mids.concat(mids.slice(1,Math.max(1,mids.length-1)).reverse()); // pendulum
+    const trip=sec.chr>32 && !last;
+    const perBar=trip?12:8;
+    const pulse=trip?Math.round(eighth*2/3):eighth;
+    // pedal bass under the section (tonic / fifth alternating)
+    const bassPc=(si%2===0)?tonic:(tonic+7)%12;
+    const secMs=bars[si]*perBar*pulse;
+    const bsrc=sec.cells[0];
+    evts.push({n:[{m:36+bassPc,v:Math.round(56*arc(si/secs.length)),durMs:Math.min(secMs,6000),bass:true}],startMs:t,idx:evIdx++,cg:bsrc.cg,band:bsrc.band,colStep:bsrc.colStep||4,_chroma:sec.chr,_flat:0,_domPc:bassPc,_lum:sec.lum});
+    let pulseMs=pulse;
+    for(let b2=0;b2<bars[si];b2++){
+      for(let k=0;k<perBar;k++){
+        const note=seq[k%seq.length];
+        const srcC=sec.src[note.pc]||sec.src[cellPcs[0]]||{cg:bsrc.cg,band:bsrc.band,_lum:sec.lum,_chroma:sec.chr};
+        const pos=t/Math.max(1,(maxBars*8*eighth));
+        const v=Math.max(30,Math.min(108,Math.round((52+Math.min(40,sec.chr))*arc(Math.min(1,pos)) + (jit()-0.5)*10)));
+        evts.push({n:[{m:note.m,v,durMs:Math.round(pulseMs*1.9)}],startMs:t,idx:evIdx++,cg:srcC.cg,band:srcC.band,colStep:4,_chroma:srcC._chroma||sec.chr,_flat:0,_domPc:note.pc,_lum:srcC._lum||sec.lum});
+        t+=pulseMs;
+        if(last) pulseMs=Math.round(pulseMs*1.02);   // ritardando out
+      }
+    }
+  }
+  // final tonic chord, long and soft — the picture closes on its key
+  const third=(tonic+(major?4:3))%12, fifth=(tonic+7)%12;
+  evts.push({n:[{m:48+tonic,v:46,durMs:2600},{m:60+third,v:42,durMs:2600},{m:60+fifth,v:40,durMs:2600}],startMs:t+eighth,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
+  return evts;
+}
+
 function bakeImageChords(src){
   if(!src || !src.length) return [];
   const out = [];
@@ -25828,6 +25927,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Image reading direction: 'lr' (default), 'vert', 'spiralIn', 'spiralOut'.
   // Mirrored to a ref so transcription loops read the current value live.
   const [imgDir, setImgDir] = useState('lr');
+  // COMPOSER for painting→music: null = plain scan (the "mosaic" of image
+  // mode), 'glass' = the piece re-composed in a composer's style from the
+  // analysed whole picture. Mirrors mosaic-vs-artists on the music side.
+  const [imgComposer, setImgComposer] = useState(null);
+  const imgComposerRef = useRef(null);
+  useEffect(()=>{ imgComposerRef.current = imgComposer; },[imgComposer]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -30605,7 +30710,9 @@ Hard requirements:
             : startMode==='kontra' ? KONTRA_HUE
             : COF;                                     // harmony & bw both read via COF
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
-          const evts=pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
+          const evts=(imgComposerRef.current==='glass')
+            ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
@@ -30672,7 +30779,7 @@ Hard requirements:
     if(restoringRef.current)return; // multi-draft restore in progress — keep the stashed chords/disp
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const sig = mode + '|' + imgDir + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    const sig = mode + '|' + imgDir + '|c:' + (imgComposer||'scan') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
@@ -30693,7 +30800,9 @@ Hard requirements:
       : COF;
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     try{ _setImgForcedBands((pixelRef.current&&pixelRef.current.mosaicBands)||0); }catch(_){}
-    const _evtsLit=pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
+    const _evtsLit = (imgComposerRef.current==='glass')
+      ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
     // MELODY stays a separate voice: the texture in chordsRef is never altered by it
@@ -30761,7 +30870,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
@@ -35221,6 +35330,16 @@ Hard requirements:
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
                     <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
+                  );
+                })}
+              </div>
+              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
+                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'}].map(c=>{
+                  const sel=imgComposer===c.k;
+                  const locked=working;
+                  return (
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; setImgComposer(c.k); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',borderRadius:10,cursor:locked?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',background:sel?'rgba(201,168,76,.16)':'rgba(255,255,255,.02)',border:sel?'1px solid rgba(201,168,76,.55)':'1px solid rgba(255,255,255,.08)',color:sel?'#c9a84c':'rgba(230,222,196,.75)',opacity:locked?.5:1}}>{c.n}</button>
                   );
                 })}
               </div>
