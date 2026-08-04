@@ -1296,6 +1296,23 @@ export default function Paintiano() {
   useEffect(() => {
     try { localStorage.setItem('paintiano_setup_tones', JSON.stringify(setupTones)); } catch(_) {}
   }, [setupTones]);
+  // COMPOSERS set — mirrors setupArtists for the painting→music side: the
+  // sheet picks which composers are in play (panel chips + Lite surprise
+  // roulette). Scan is a MODE, not a member — always available.
+  const ALL_COMPOSER_KEYS = ['glass','satie','chopin','vine','gershwin','yiruma'];
+  const [setupComposers, setSetupComposers] = useState(() => {
+    try {
+      const raw = localStorage.getItem('paintiano_setup_composers');
+      if(!raw) return ALL_COMPOSER_KEYS.slice();
+      const arr = JSON.parse(raw);
+      if(!Array.isArray(arr)) return ALL_COMPOSER_KEYS.slice();
+      const valid = arr.filter(k => ALL_COMPOSER_KEYS.includes(k));
+      return valid.length ? valid : ALL_COMPOSER_KEYS.slice();
+    } catch(_) { return ALL_COMPOSER_KEYS.slice(); }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('paintiano_setup_composers', JSON.stringify(setupComposers)); } catch(_) {}
+  }, [setupComposers]);
   // If the current tone is no longer in setupTones (user disabled it), fall
   // back to the first enabled tone — keeps the active selection valid without
   // forcing the user to manually re-pick after editing Setup.
@@ -2784,6 +2801,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgComposer, setImgComposer] = useState(null);
   const imgComposerRef = useRef(null);
   const _lastComposerRef = useRef('glass');   // remembered pick for the Composer mode button
+  // disabled-in-Setup composer → release the picture back to plain Scan
+  useEffect(()=>{
+    if(imgComposer && !setupComposers.includes(imgComposer)){
+      imgComposerRef.current=null; setImgComposer(null);
+    }
+    if(!setupComposers.includes(_lastComposerRef.current)){
+      _lastComposerRef.current = setupComposers[0] || 'glass';
+    }
+  },[setupComposers, imgComposer]);
   useEffect(()=>{ imgComposerRef.current = imgComposer; },[imgComposer]);
   // LITE image flavour: loads default to plain SCAN; the "Surprise me"
   // button rolls a different composer (Glass/Satie/Chopin/Scan, never the
@@ -2792,10 +2818,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     imgComposerRef.current=null; setImgComposer(null);
   },[]);
   const _liteRollComposer = useCallback(()=>{
-    const a=[null,'glass','satie','chopin','vine','gershwin','yiruma'].filter(x=>x!==imgComposerRef.current);
+    const _en=['glass','satie','chopin','vine','gershwin','yiruma'].filter(k=>setupComposers.includes(k));
+    const a=[null,..._en].filter(x=>x!==imgComposerRef.current);
     const c=a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
-  },[]);
+  },[setupComposers]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -11929,7 +11956,7 @@ Hard requirements:
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
           <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>{ const nv=!o; if(nv && !cockpitOpened){ try{ localStorage.setItem('paintiano_cockpit_opened','1'); }catch(_){} setCockpitOpened(true); } return nv; });}} disabled={demoReelOn} aria-expanded={stripOpen} className={(!cockpitOpened && !stripOpen && !demoReelOn) ? 'pf-cockpit-nudge' : undefined} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:(!cockpitOpened && !stripOpen && !demoReelOn) ? undefined : (stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)'),fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
-            <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : ts('pickLook','Pick a look')}</span>
+            <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + t('dirLabel') + ' · ' + (({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer') + ' · ' + (t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')) : ts('pickLook','Pick a look')}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
           </button>
           {/* Edit toggle removed — Preset editing is now done via ⚙ in the
@@ -11948,7 +11975,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):t('dir_'+imgDir)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):(imgComposer?(COMPOSER_INSPIRED[imgComposer]||imgComposer):t('dir_'+imgDir))}</div>
         )}
         </>)}
         {(stripOpen || isDesktop) && (
@@ -12229,11 +12256,11 @@ Hard requirements:
             </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-                {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].map(c=>{
+                {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>setupComposers.includes(c.k)).map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',borderRadius:10,cursor:locked?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',background:sel?'rgba(201,168,76,.16)':'rgba(255,255,255,.02)',border:sel?'1px solid rgba(201,168,76,.55)':'1px solid rgba(255,255,255,.08)',color:sel?'#c9a84c':'rgba(230,222,196,.75)',opacity:locked?.5:1}}>{c.n}</button>
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',borderRadius:10,cursor:locked?'default':'pointer',fontFamily:'inherit',fontSize:(.54*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase',background:sel?'rgba(201,168,76,.16)':'rgba(255,255,255,.02)',border:sel?'1px solid rgba(201,168,76,.55)':'1px solid rgba(255,255,255,.08)',color:sel?'#c9a84c':'rgba(230,222,196,.75)',opacity:locked?.5:1}}>{c.n}</button>
                   );
                 })}
               </div>
@@ -14689,6 +14716,26 @@ Hard requirements:
                   })}
                 </div>
                 <div style={{textAlign:'center',marginTop:12,fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.55)',fontStyle:'italic'}}>{ts('setupTapHint',({EN:'Tap to add or remove from your set.',SK:'Klepni pre pridanie alebo odstránenie zo setu.',DE:'Tippen, um zum Set hinzuzufügen oder zu entfernen.',FR:'Touchez pour ajouter ou retirer de votre set.',ES:'Toca para añadir o quitar de tu set.',PT:'Toque para adicionar ou remover do seu conjunto.',zh:'点击以从您的集合中添加或移除。',zhTW:'點擊以從您的集合中添加或移除。',ja:'タップしてセットに追加または削除します。'})[lang]||'Tap to add or remove from your set.')}</div>
+              </div>
+              {/* Composers — painting→music mirror of the Artists set: chips
+                  chosen here appear in the image panel and feed the Lite
+                  surprise roulette. Scan is a mode, always on, not listed. */}
+              <div className="pf-setup-composers">
+                <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
+                  <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{({EN:'Composers',SK:'Skladatelia',DE:'Komponisten',FR:'Compositeurs',ES:'Compositores',PT:'Compositores',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composers'}</span>
+                  <span style={{display:'inline-flex',gap:6,fontSize:(.5*effScale)+'rem',letterSpacing:'.04em'}}>
+                    <span onClick={()=>setSetupComposers(ALL_COMPOSER_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupComposers(ALL_COMPOSER_KEYS.slice());}}} style={{cursor:'pointer',padding:'4px 12px',borderRadius:999,border:'1px solid rgba(201,168,76,.45)',color:'rgba(220,180,90,.9)',fontStyle:'italic'}}>{ts('setupAll','All')}</span>
+                    <span onClick={()=>setSetupComposers([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupComposers([]);}}} style={{cursor:'pointer',padding:'4px 12px',borderRadius:999,border:'1px solid rgba(242,238,232,.25)',color:'rgba(230,222,196,.6)',fontStyle:'italic'}}>{ts('setupNone','None')}</span>
+                  </span>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,rowGap:8}}>
+                  {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].map(c=>{
+                    const on = setupComposers.includes(c.k);
+                    return (
+                    <button key={c.k} onClick={()=>{ setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} style={{padding:'9px 4px',textAlign:'center',borderRadius:999,cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{c.n}</button>
+                    );
+                  })}
+                </div>
               </div>
               {/* Tones — 3-chip row (chosen tones become available in the
                   cockpit; if only 1 is enabled, the cockpit hides the tone
