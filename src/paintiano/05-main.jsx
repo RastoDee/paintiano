@@ -2783,6 +2783,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgComposer, setImgComposer] = useState(null);
   const imgComposerRef = useRef(null);
   useEffect(()=>{ imgComposerRef.current = imgComposer; },[imgComposer]);
+  // LITE image flavour: loads default to plain SCAN; the "Surprise me"
+  // button rolls a different composer (Glass/Satie/Chopin/Scan, never the
+  // current one) on the SAME picture — mirror of the music-side surprise.
+  const _liteResetComposer = useCallback(()=>{
+    imgComposerRef.current=null; setImgComposer(null);
+  },[]);
+  const _liteRollComposer = useCallback(()=>{
+    const a=[null,'glass','satie','chopin','bach','debussy'].filter(x=>x!==imgComposerRef.current);
+    const c=a[(Math.random()*a.length)|0];
+    imgComposerRef.current=c; setImgComposer(c);
+  },[]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -7566,6 +7577,10 @@ Hard requirements:
             ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='chopin')
             ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='bach')
+            ? composeImageBach(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='debussy')
+            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -7660,6 +7675,10 @@ Hard requirements:
       ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='chopin')
       ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='bach')
+      ? composeImageBach(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='debussy')
+      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -8591,6 +8610,7 @@ Hard requirements:
         // Empty flip: stop the music flavour's audio, then auto-load a random
         // built-in painting so the flavour reads + plays immediately.
         try{ stopAll(); }catch(_){}
+        try{ _liteResetComposer(); }catch(_){}
         try{ loadSampleImage((Math.random()*3)|0); }catch(_){}
       }
       // The flip hard-muted the master to kill the piano tail. Image flavour
@@ -12192,8 +12212,8 @@ Hard requirements:
                 })}
               </div>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
-              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
-                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'}].map(c=>{
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
+                {[{k:null,n:'Scan'},{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'bach',n:'Bach'},{k:'debussy',n:'Debussy'}].map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
@@ -14830,12 +14850,12 @@ Hard requirements:
               {/* Lite image sub-picker — same pattern as songs: Sample -> 3 paintings. */}
               {liteImgSamplePick ? (<>
               {[(({EN:'Starry Night',SK:'Hviezdna noc',DE:'Sternennacht',FR:'La Nuit étoilée',ES:'La noche estrellada',PT:'A Noite Estrelada',zh:'星夜',zhTW:'星夜',ja:'星月夜'})[lang]||'Starry Night')+' · Van Gogh',(({EN:'Water Lilies',SK:'Lekná',DE:'Seerosen',FR:'Les Nymphéas',ES:'Nenúfares',PT:'Nenúfares',zh:'睡莲',zhTW:'睡蓮',ja:'睡蓮'})[lang]||'Water Lilies')+' · Monet',(({EN:'The Scream',SK:'Výkrik',DE:'Der Schrei',FR:'Le Cri',ES:'El grito',PT:'O Grito',zh:'呐喊',zhTW:'吶喊',ja:'叫び'})[lang]||'The Scream')+' · Munch'].map((nm,i)=>(
-              <button key={i} onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ loadSampleImage(i); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{nm}</span></button>
+              <button key={i} onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ _liteResetComposer(); }catch(_){} try{ loadSampleImage(i); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{nm}</span></button>
               ))}
               <button onClick={()=>setLiteImgSamplePick(false)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}><span>‹ {t('backToSetup')||'back'}</span></button>
               </>) : (<>
               <button onClick={()=>setLiteImgSamplePick(true)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoPic}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>
-              <button onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
+              <button onClick={()=>{ setLiteImgPicker(false); try{ setRecBlob(null); setRecName(''); }catch(_){} try{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } }catch(_){} try{ _liteResetComposer(); }catch(_){} try{ refImage.current && refImage.current.click(); }catch(_){} }} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoFile}<span style={{marginLeft:7}}>{ts('useMySongFile','File')}</span></button>
               </>)}
             </div>
           </div>
@@ -14845,6 +14865,7 @@ Hard requirements:
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
           <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
+          {liteImageMode && <button onClick={()=>{ try{ _liteRollComposer(); }catch(_){} }} disabled={!_liteImg||_liteImgRecording||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||_liteImgRecording||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
           {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
         {/* ZASAH BEST — Lite→full bridge. A finished Lite painting is the peak
