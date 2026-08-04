@@ -1490,7 +1490,7 @@ export default function Paintiano() {
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
-const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',debussy:'Claude Debussy'};;
+const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma'};;
   // Style pairs — each picker button cycles through two related styles, the way
   // Mosaic cycles to Notes. Tap an inactive button → first style; tap the active
   // button → flip to its partner; tap again → back to Mosaic. Pairing is by
@@ -2792,7 +2792,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     imgComposerRef.current=null; setImgComposer(null);
   },[]);
   const _liteRollComposer = useCallback(()=>{
-    const a=[null,'glass','satie','chopin','vine','debussy'].filter(x=>x!==imgComposerRef.current);
+    const a=[null,'glass','satie','chopin','vine','gershwin','yiruma'].filter(x=>x!==imgComposerRef.current);
     const c=a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
   },[]);
@@ -7581,8 +7581,10 @@ Hard requirements:
             ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='vine')
             ? composeImageVine(px,nc,nr,hueTable,startMode,imgDirRef.current)
-            : (imgComposerRef.current==='debussy')
-            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='gershwin')
+            ? composeImageGershwin(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='yiruma')
+            ? composeImageYiruma(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -7679,8 +7681,10 @@ Hard requirements:
       ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='vine')
       ? composeImageVine(px,nc,nr,hueTable,mode,imgDirRef.current)
-      : (imgComposerRef.current==='debussy')
-      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='gershwin')
+      ? composeImageGershwin(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='yiruma')
+      ? composeImageYiruma(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -12225,7 +12229,7 @@ Hard requirements:
             </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
-                {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'debussy',n:'Debussy'}].map(c=>{
+                {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
