@@ -42,6 +42,14 @@ function _setArtistSeed(s){ _artistSeed = s>>>0; }
 // within those 2 variants, and Pro sees the full library on the same key.
 let _variantCap = null;
 function _setVariantCap(n){ _variantCap = (n != null && n > 0) ? (n|0) : null; }
+// Transparent-export flag — when ON, per-cell substrate styles (Pollock cream,
+// Picasso / Miró dark grounds) skip their opaque base coat so „Gallery ·
+// transparent“ keeps only the painted elements. Full-canvas grounds are
+// stripped generically by the fillRect interceptor in exportImage (05-main);
+// this flag covers grounds painted cell-by-cell, which the interceptor can't
+// tell apart from content. Always reset to false after the export render.
+let _noBg = false;
+function _setNoBg(v){ _noBg = !!v; }
 // Apply the cap to a raw N (per-artist variant count). Returns the effective
 // variant count to feed into (rnd()*N)|0 chooser logic.
 function _capN(N){ return (_variantCap != null && _variantCap < N) ? _variantCap : N; }
@@ -324,6 +332,7 @@ function drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH){
   // Solid cream base — covers the dark paintiano canvas with raw-canvas off-white.
   // Kept uniform (no per-chord colour tint) so nothing coloured shows through
   // under the drip overlay — the substrate reads as clean raw canvas.
+  if(_noBg) return; // transparent export: drips only, no raw-canvas substrate
   ctx.fillStyle = '#f2ede0';
   ctx.fillRect(bx-2, by-2, BW+4, BH+4);
 }
@@ -1262,13 +1271,13 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
     // color. The per-block drawer just keeps the dark canvas underneath —
     // previously this used the cream substrate from Pollock, which produced
     // an unwanted white background showing through gaps between planes.
-    ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
+    if(!_noBg){ ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2); }
     return;
   }
   if(style==='kusama')return drawKusama(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='kandinsky')return drawKandinsky(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
-  if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
+  if(style==='miro'){if(!_noBg){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);}return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
   return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }

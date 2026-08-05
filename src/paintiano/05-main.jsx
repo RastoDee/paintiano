@@ -10265,6 +10265,15 @@ Hard requirements:
       // noBg: transparent-background variant (Gallery · transparent) — skip the
       // paper fill entirely; the SVG stays alpha and composites onto any surface.
       if(!noBg){ hctx.fillStyle='#04040a';hctx.fillRect(0,0,CW,CH); }
+      if(noBg){
+        // Strip full-canvas ground fills generically: every artist ground /
+        // priming wash covers (0,0,CW,CH) (incl. gradient grounds — they go
+        // through fillRect too), while content fills never span the whole
+        // canvas. Coordinates are canvas-space on both the SVG ctx and the
+        // scaled raster ctx, so one comparison covers both export paths.
+        const _origFillRect = hctx.fillRect.bind(hctx);
+        hctx.fillRect = (x,y,w,h)=>{ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2) return; _origFillRect(x,y,w,h); };
+      }
       if(viewMode==='image'&&pixelRef.current){
         const{nc,nr,px}=pixelRef.current;
         for(let i=0;i<nc*nr;i++){
@@ -10274,6 +10283,7 @@ Hard requirements:
         }
       }else{
         _setArtistSeed(pollockSessionSeed);
+        _setNoBg(noBg);
         _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         chords.forEach((chord)=>{
@@ -10361,6 +10371,7 @@ Hard requirements:
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
       }
+      _setNoBg(false);
       // ── GALLERY (vector SVG) export: branch out here, before all the
       // canvas-only postprocessing (watermark, source thumb overlay, story
       // compositing). The SVG carries everything the renderer drew; print
@@ -10626,7 +10637,7 @@ Hard requirements:
         }
       }
       setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label});
-    }catch(e){setErr('Print: '+e.message);setErrInfo(false);}
+    }catch(e){ try{ _setNoBg(false); }catch(_){} setErr('Print: '+e.message);setErrInfo(false);}
   };
 
 
