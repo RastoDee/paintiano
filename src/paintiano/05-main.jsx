@@ -10286,7 +10286,16 @@ Hard requirements:
         _setNoBg(noBg);
         _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
-        chords.forEach((chord)=>{
+        // Transparent export = exactly what the live canvas shows, minus the
+        // ground. Overlay-architecture styles paint layer-cake: hidden per-cell
+        // under-layer → full-canvas ground (covers it) → signature overlay.
+        // The interceptor strips the ground, which would EXPOSE the hidden
+        // under-layer — so for these styles we skip the cell pass and render
+        // only the signature. Episodic styles + mosaic keep cells: there the
+        // cells are the visible artwork itself.
+        const _overlayArchStyles=['pollock','picasso','kusama','miro','kandinsky','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','raffel','lichtenstein','klee','delaunay'];
+        const _skipCells = noBg && _overlayArchStyles.includes(style);
+        if(!_skipCells) chords.forEach((chord)=>{
           const {n:notes,idx}=chord; _setCurE(chord._E);
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));

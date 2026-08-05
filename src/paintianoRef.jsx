@@ -3250,6 +3250,12 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='miro'){if(!_noBg){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);}return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
+  // Transparent export: for overlay-architecture styles (bloom, gold, spiral,
+  // arcs, bulge, wave …) the per-cell mosaic below is background TEXTURE —
+  // the signature lives in the canvas-wide overlay. Skip the filler so only
+  // the elements remain; the actual mosaic style keeps its tiles (they ARE
+  // the artwork there).
+  if(_noBg && style!=='mosaic') return;
   return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }
 
@@ -36460,7 +36466,13 @@ Hard requirements:
                 {previewMsg.text}
               </div>
             )}
-            <img src={preview.url} alt={preview.filename} style={{maxWidth:'100%',maxHeight:'50vh',border:'1px solid rgba(201,168,76,.25)',borderRadius:4,display:'block',WebkitTouchCallout:'default'}}/>
+            <img src={preview.url} alt={preview.filename} style={{maxWidth:'100%',maxHeight:'50vh',border:'1px solid rgba(201,168,76,.25)',borderRadius:4,display:'block',WebkitTouchCallout:'default',...((preview.label||'').includes('transparent')?{
+              // Checkerboard under transparent exports — on the dark modal a
+              // transparent SVG reads as „black background“ and the user can't
+              // tell alpha from paint. Classic alpha checker fixes that.
+              backgroundImage:'linear-gradient(45deg,rgba(255,255,255,.14) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.14) 75%),linear-gradient(45deg,rgba(255,255,255,.14) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.14) 75%)',
+              backgroundSize:'20px 20px', backgroundPosition:'0 0,10px 10px', backgroundColor:'rgba(120,120,120,.25)'
+            }:{})}}/>
             <div style={{fontSize:(.5*effScale)+'rem',color:'rgba(180,170,150,.4)',textAlign:'center',wordBreak:'break-all',padding:'0 8px',maxWidth:340}}>{preview.filename}</div>
             <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(180,170,150,.5)',textAlign:'center',padding:'0 14px',maxWidth:340,lineHeight:1.5}}>
               {(typeof window!=='undefined' && window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches)
