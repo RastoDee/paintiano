@@ -1279,6 +1279,12 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='miro'){if(!_noBg){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);}return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
+  // Transparent export: for overlay-architecture styles (bloom, gold, spiral,
+  // arcs, bulge, wave …) the per-cell mosaic below is background TEXTURE —
+  // the signature lives in the canvas-wide overlay. Skip the filler so only
+  // the elements remain; the actual mosaic style keeps its tiles (they ARE
+  // the artwork there).
+  if(_noBg && style!=='mosaic') return;
   return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }
 

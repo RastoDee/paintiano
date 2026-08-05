@@ -2013,6 +2013,14 @@ function _setArtistSeed(s){ _artistSeed = s>>>0; }
 // within those 2 variants, and Pro sees the full library on the same key.
 let _variantCap = null;
 function _setVariantCap(n){ _variantCap = (n != null && n > 0) ? (n|0) : null; }
+// Transparent-export flag — when ON, per-cell substrate styles (Pollock cream,
+// Picasso / Miró dark grounds) skip their opaque base coat so „Gallery ·
+// transparent“ keeps only the painted elements. Full-canvas grounds are
+// stripped generically by the fillRect interceptor in exportImage (05-main);
+// this flag covers grounds painted cell-by-cell, which the interceptor can't
+// tell apart from content. Always reset to false after the export render.
+let _noBg = false;
+function _setNoBg(v){ _noBg = !!v; }
 // Apply the cap to a raw N (per-artist variant count). Returns the effective
 // variant count to feed into (rnd()*N)|0 chooser logic.
 function _capN(N){ return (_variantCap != null && _variantCap < N) ? _variantCap : N; }
@@ -2295,6 +2303,7 @@ function drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH){
   // Solid cream base — covers the dark paintiano canvas with raw-canvas off-white.
   // Kept uniform (no per-chord colour tint) so nothing coloured shows through
   // under the drip overlay — the substrate reads as clean raw canvas.
+  if(_noBg) return; // transparent export: drips only, no raw-canvas substrate
   ctx.fillStyle = '#f2ede0';
   ctx.fillRect(bx-2, by-2, BW+4, BH+4);
 }
@@ -3233,13 +3242,13 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
     // color. The per-block drawer just keeps the dark canvas underneath —
     // previously this used the cream substrate from Pollock, which produced
     // an unwanted white background showing through gaps between planes.
-    ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2);
+    if(!_noBg){ ctx.fillStyle='#04040a';ctx.fillRect(bx-1,by-1,BW+2,BH+2); }
     return;
   }
   if(style==='kusama')return drawKusama(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='kandinsky')return drawKandinsky(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
-  if(style==='miro'){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);return;}
+  if(style==='miro'){if(!_noBg){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);}return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
   return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }
@@ -34151,6 +34160,15 @@ Hard requirements:
       // noBg: transparent-background variant (Gallery · transparent) — skip the
       // paper fill entirely; the SVG stays alpha and composites onto any surface.
       if(!noBg){ hctx.fillStyle='#04040a';hctx.fillRect(0,0,CW,CH); }
+      if(noBg){
+        // Strip full-canvas ground fills generically: every artist ground /
+        // priming wash covers (0,0,CW,CH) (incl. gradient grounds — they go
+        // through fillRect too), while content fills never span the whole
+        // canvas. Coordinates are canvas-space on both the SVG ctx and the
+        // scaled raster ctx, so one comparison covers both export paths.
+        const _origFillRect = hctx.fillRect.bind(hctx);
+        hctx.fillRect = (x,y,w,h)=>{ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2) return; _origFillRect(x,y,w,h); };
+      }
       if(viewMode==='image'&&pixelRef.current){
         const{nc,nr,px}=pixelRef.current;
         for(let i=0;i<nc*nr;i++){
@@ -34160,6 +34178,7 @@ Hard requirements:
         }
       }else{
         _setArtistSeed(pollockSessionSeed);
+        _setNoBg(noBg);
         _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         chords.forEach((chord)=>{
@@ -34247,6 +34266,7 @@ Hard requirements:
           drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
       }
+      _setNoBg(false);
       // ── GALLERY (vector SVG) export: branch out here, before all the
       // canvas-only postprocessing (watermark, source thumb overlay, story
       // compositing). The SVG carries everything the renderer drew; print
@@ -34512,7 +34532,7 @@ Hard requirements:
         }
       }
       setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label});
-    }catch(e){setErr('Print: '+e.message);setErrInfo(false);}
+    }catch(e){ try{ _setNoBg(false); }catch(_){} setErr('Print: '+e.message);setErrInfo(false);}
   };
 
 
