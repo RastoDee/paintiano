@@ -12850,16 +12850,13 @@ Hard requirements:
             aria-valuemax={Math.max(0,chords.length-1)}
             aria-valuenow={Math.min(disp,Math.max(0,chords.length-1))}
             aria-valuetext={`chord ${Math.min(disp,chords.length)} of ${chords.length}`}
-            tabIndex={(chords.length&&!basicMode)?0:-1}
+            tabIndex={chords.length?0:-1}
             onPointerDown={e=>{
               if(!chords.length)return;
               // Lock seeking while recording — a tap/scrub would stopAll() (and
               // thus the recorder), prematurely ending the take and surfacing
               // Save mid-record. The bar is read-only during REC.
               if(recording)return;
-              // LITE is display-only: the bar shows progress but never scrubs
-              // (matches the pure-Lite feel; adopted content included).
-              if(basicMode)return;
               e.preventDefault();
               // Capture so subsequent moves/up fire even if the pointer leaves
               // the track — matches native <input type=range> drag behaviour.
@@ -12899,7 +12896,6 @@ Hard requirements:
               const cur=Math.min(disp,chords.length-1);
               const step=Math.max(1,Math.floor(chords.length/20)); // ~5% jumps for PgUp/PgDn
               let next=cur;
-              if(basicMode) return;   // Lite: seek is display-only
               switch(e.key){
                 case 'ArrowLeft':  case 'ArrowDown':  next=cur-1;          break;
                 case 'ArrowRight': case 'ArrowUp':    next=cur+1;          break;
@@ -12923,7 +12919,7 @@ Hard requirements:
                 setDisp(next);
               }
             }}
-            style={{position:'relative',height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,cursor:(chords.length&&!basicMode)?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.55)':'none',outlineOffset:3}}
+            style={{position:'relative',height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.55)':'none',outlineOffset:3}}
             onFocus={()=>setFocusedInput('seek')}
             onBlur={()=>setFocusedInput(null)}>
             <div style={{height:'100%',width:pct+'%',background:basicMode?'rgba(242,238,232,.7)':(playing?'rgba(90,190,110,.65)':'rgba(201,168,76,.45)'),borderRadius:3,transition:'none',pointerEvents:'none'}}/>

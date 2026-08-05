@@ -37289,7 +37289,9 @@ Hard requirements:
           : loadedSource==='midi'
           ? { line:'rgba(91,156,246,.95)', dim:'rgba(140,180,255,.5)', border:'rgba(91,156,246,.5)', edge:'rgba(91,156,246,.4)' }
           : loadedSource==='audio'
-          ? { line:'rgba(244,124,60,.95)', dim:'rgba(255,160,100,.5)', border:'rgba(244,124,60,.5)', edge:'rgba(244,124,60,.4)' }
+          // Audio import shares the Music tile's BLUE with MIDI — orange is the
+          // Image tile's colour; audio in orange read as a mismatch.
+          ? { line:'rgba(91,156,246,.95)', dim:'rgba(140,180,255,.5)', border:'rgba(91,156,246,.5)', edge:'rgba(91,156,246,.4)' }
           : loadedSource==='score'
           ? { line:'rgba(169,127,245,.95)', dim:'rgba(200,170,255,.5)', border:'rgba(169,127,245,.5)', edge:'rgba(169,127,245,.4)' }
           : (loadedSource==='image' && !moodFromImg)
