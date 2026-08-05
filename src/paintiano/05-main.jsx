@@ -10194,7 +10194,7 @@ Hard requirements:
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
   // sandbox-internal scheme — the only thing that reliably works is rendering the PNG
   // inside the iframe as <img> and letting iOS native long-press → Save to Photos do the job.
-  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false)=>{
+  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
     try{
       if(!chords.length){setErr(t('errs').nothingToPrint);setErrInfo(false);return;}
       // Export the style actually on screen — in shuffle mode that's the
@@ -10262,7 +10262,9 @@ Hard requirements:
         hctx.imageSmoothingEnabled=false;
         hctx.scale(SCALE,SCALE);
       }
-      hctx.fillStyle='#04040a';hctx.fillRect(0,0,CW,CH);
+      // noBg: transparent-background variant (Gallery · transparent) — skip the
+      // paper fill entirely; the SVG stays alpha and composites onto any surface.
+      if(!noBg){ hctx.fillStyle='#04040a';hctx.fillRect(0,0,CW,CH); }
       if(viewMode==='image'&&pixelRef.current){
         const{nc,nr,px}=pixelRef.current;
         for(let i=0;i<nc*nr;i++){
@@ -10369,9 +10371,9 @@ Hard requirements:
         const blob = new Blob([svgStr], {type:'image/svg+xml'});
         const url = URL.createObjectURL(blob);
         const baseName = (info && info.title ? String(info.title).replace(/[^\w\u00C0-\u024F\u1E00-\u1EFF -]+/g,'').trim() : 'paintiano') || 'paintiano';
-        const filename = `${baseName}-gallery.svg`;
+        const filename = `${baseName}-gallery${noBg?'-transparent':''}.svg`;
         const file = new File([blob], filename, {type:'image/svg+xml'});
-        setPreview({url, filename, w:CW, h:CH, size:blob.size, file, dpi:null, label});
+        setPreview({url, filename, w:CW, h:CH, size:blob.size, file, dpi:null, label: noBg ? label+'-transparent' : label});
         return;
       }
       // Watermark policy: stamp "paintiano.app" unless we KNOW the user is
@@ -13509,6 +13511,14 @@ Hard requirements:
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'SVG · fine-art print · any DPI',SK:'SVG · fine-art tlač · ľubovoľné DPI',DE:'SVG · Fine-Art-Druck · beliebige DPI',FR:'SVG · impression fine-art · DPI au choix',ES:'SVG · impresión fine-art · cualquier DPI',PT:'SVG · impressão fine-art · qualquer DPI',zh:'SVG · 美术级打印 · 任意 DPI',zhTW:'SVG · 美術級列印 · 任意 DPI',ja:'SVG · ファインアート印刷 · 任意の DPI'})[lang]||'SVG · fine-art print · any DPI'}</div>
+                  </button>
+                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false, true); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                      <TxIcon n="gallery" s={14}/>
+                      {({EN:'Gallery · transparent',SK:'Galéria · transparent',DE:'Galerie · transparent',FR:'Galerie · transparent',ES:'Galería · transparente',PT:'Galeria · transparente',zh:'画廊 · 透明',zhTW:'畫廊 · 透明',ja:'ギャラリー · 透明'})[lang]||'Gallery · transparent'}
+                      {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
+                    </span>
+                    <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'SVG · no background · for design & merch',SK:'SVG · bez pozadia · pre dizajn a merč',DE:'SVG · ohne Hintergrund · für Design & Merch',FR:'SVG · sans fond · pour design & merch',ES:'SVG · sin fondo · para diseño y merch',PT:'SVG · sem fundo · para design e merch',zh:'SVG · 无背景 · 用于设计与周边',zhTW:'SVG · 無背景 · 用於設計與周邊',ja:'SVG · 背景なし · デザイン・グッズ用'})[lang]||'SVG · no background · for design & merch'}</div>
                   </button>
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file

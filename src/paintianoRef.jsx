@@ -36151,23 +36151,21 @@ Hard requirements:
               </div>
             </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
-              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>setupComposers.includes(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
+              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>setupComposers.includes(c.k) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
               if(_cs.length===1){ return (
-                <div style={{textAlign:'center',padding:'8px 4px',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',color:'rgba(220,180,90,.95)'}}>{_cs[0].n}{composerIsLocked(_cs[0].k)?' 🔒':''}</div>
+                <div style={{textAlign:'center',padding:'8px 4px',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',color:'rgba(220,180,90,.95)'}}>{_cs[0].n}</div>
               ); }
               return (
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6}}>
                 {_cs.map(c=>{
                   const sel=imgComposer===c.k;
                   const locked=working;
-                  const proLock=composerIsLocked(c.k);
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'panel'}); }catch(_){} setPaywallReason('settings'); return; } _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined}
-                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked||proLock)?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}{proLock && (<span style={{position:'absolute',top:2,right:5,fontSize:(.34*effScale)+'rem',opacity:.7}}>🔒</span>)}</button>
+                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}</button>
                   );
                 })}
               </div>
