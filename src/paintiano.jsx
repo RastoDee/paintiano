@@ -34181,16 +34181,103 @@ Hard requirements:
         _setNoBg(noBg);
         _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
+        // ── overlay pass as a function — called twice in transparent mode:
+        // once into a throwaway probe ctx to DETECT whether this style/variant
+        // paints its own full-canvas ground, then into the real ctx. ──
+        const _runOverlays = (_octx) => {
+        // Pollock global drip overlay — drawn over all rendered cells.
+        // _octx is already scaled; pass canvas-space CW/CH so the splatters
+        // span the painting at export resolution.
+        if(style==='pollock' && chords.length>0){
+          drawPollockOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='picasso' && chords.length>0){
+          drawPicassoOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='kusama' && chords.length>0){
+          drawKusamaOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, paintPhase);
+        }
+        if(style==='miro' && chords.length>0){
+          drawMiroOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        // Kandinsky canvas-wide contour overlay.
+        if(style==='kandinsky' && chords.length>0){
+          drawKandinskyOverlay(_octx, CW, CH, chords.length, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
+        }
+        if(style==='rothko' && chords.length>0){
+          drawRothkoOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='matisse' && chords.length>0){
+          drawMatisseOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='mondrian' && chords.length>0){
+          drawMondrianOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='bauhaus' && chords.length>0){
+          drawBauhausOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='bulge' && chords.length>0){
+          drawBulgeOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='arcs' && chords.length>0){
+          drawArcsOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='bloom' && chords.length>0){
+          drawBloomOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='spiral' && chords.length>0){
+          drawSpiralOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='gold' && chords.length>0){
+          drawGoldOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='pop' && chords.length>0){
+          drawPopOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='wave' && chords.length>0){
+          drawWaveOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='mitchell' && chords.length>0){
+          drawMitchellOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='monet' && chords.length>0){
+          drawMonetOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='hokusai' && chords.length>0){
+          drawHokusaiOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='raffel' && chords.length>0){
+          drawRaffelOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='lichtenstein' && chords.length>0){
+          drawLichtensteinOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='klee' && chords.length>0){
+          drawKleeOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='delaunay' && chords.length>0){
+          drawDelaunayOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+        }
+        if(style==='oneM' && chords.length>0){
+          drawOneMOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
+        }
+        };
         // Transparent export = exactly what the live canvas shows, minus the
-        // ground. Overlay-architecture styles paint layer-cake: hidden per-cell
-        // under-layer → full-canvas ground (covers it) → signature overlay.
-        // The interceptor strips the ground, which would EXPOSE the hidden
-        // under-layer — so for these styles we skip the cell pass and render
-        // only the signature. Episodic styles + mosaic keep cells: there the
-        // cells are the visible artwork itself.
-        const _overlayArchStyles=['pollock','picasso','kusama','miro','kandinsky','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','raffel','lichtenstein','klee','delaunay'];
-        const _skipCells = noBg && _overlayArchStyles.includes(style);
-        if(!_skipCells) chords.forEach((chord)=>{
+        // ground. If the overlay paints an opaque full-canvas ground, the
+        // per-cell under-layer is invisible on the live canvas — stripping the
+        // ground would expose that hidden junk, so the cell pass is skipped.
+        // If the overlay paints no ground (e.g. dark Kandinsky variants), the
+        // cells are visible content and stay. Probe-based, so it is correct
+        // per style AND per variant, with no hand-maintained list.
+        let _cellsHidden = false;
+        if(noBg){
+          const _probe = createSvgCtx(CW, CH);
+          const _pf = _probe.fillRect.bind(_probe);
+          _probe.fillRect = (x,y,w,h)=>{ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2){ _cellsHidden = true; return; } _pf(x,y,w,h); };
+          _setCurE(0.5);
+          _runOverlays(_probe);
+        }
+        if(!(noBg && _cellsHidden))         chords.forEach((chord)=>{
           const {n:notes,idx}=chord; _setCurE(chord._E);
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
@@ -34198,82 +34285,7 @@ Hard requirements:
           else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(hctx,col*BW,row*BH,notes,gc,BW,BH,style);}
         });
         _setCurE(0.5);
-        // Pollock global drip overlay — drawn over all rendered cells.
-        // hctx is already scaled; pass canvas-space CW/CH so the splatters
-        // span the painting at export resolution.
-        if(style==='pollock' && chords.length>0){
-          drawPollockOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='picasso' && chords.length>0){
-          drawPicassoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='kusama' && chords.length>0){
-          drawKusamaOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, paintPhase);
-        }
-        if(style==='miro' && chords.length>0){
-          drawMiroOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        // Kandinsky canvas-wide contour overlay.
-        if(style==='kandinsky' && chords.length>0){
-          drawKandinskyOverlay(hctx, CW, CH, chords.length, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
-        }
-        if(style==='rothko' && chords.length>0){
-          drawRothkoOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='matisse' && chords.length>0){
-          drawMatisseOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='mondrian' && chords.length>0){
-          drawMondrianOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='bauhaus' && chords.length>0){
-          drawBauhausOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='bulge' && chords.length>0){
-          drawBulgeOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='arcs' && chords.length>0){
-          drawArcsOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='bloom' && chords.length>0){
-          drawBloomOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='spiral' && chords.length>0){
-          drawSpiralOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='gold' && chords.length>0){
-          drawGoldOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='pop' && chords.length>0){
-          drawPopOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='wave' && chords.length>0){
-          drawWaveOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='mitchell' && chords.length>0){
-          drawMitchellOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='monet' && chords.length>0){
-          drawMonetOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='hokusai' && chords.length>0){
-          drawHokusaiOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='raffel' && chords.length>0){
-          drawRaffelOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='lichtenstein' && chords.length>0){
-          drawLichtensteinOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='klee' && chords.length>0){
-          drawKleeOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='delaunay' && chords.length>0){
-          drawDelaunayOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
-        }
-        if(style==='oneM' && chords.length>0){
-          drawOneMOverlay(hctx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
-        }
+        _runOverlays(hctx);
       }
       _setNoBg(false);
       // ── GALLERY (vector SVG) export: branch out here, before all the

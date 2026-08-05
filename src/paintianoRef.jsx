@@ -3250,12 +3250,6 @@ function drawBlock(ctx,bx,by,notes,gc,BW,BH,style){
   if(style==='pollock')return drawBlockPollockCream(ctx,bx,by,_notes,gc,BW,BH);
   if(style==='miro'){if(!_noBg){ctx.fillStyle='rgba(28,18,12,1)';ctx.fillRect(bx-1,by-1,BW+2,BH+2);}return;}
   if(style==='notes')return drawBlockNotes(ctx,bx,by,_notes,gc,BW,BH);
-  // Transparent export: for overlay-architecture styles (bloom, gold, spiral,
-  // arcs, bulge, wave …) the per-cell mosaic below is background TEXTURE —
-  // the signature lives in the canvas-wide overlay. Skip the filler so only
-  // the elements remain; the actual mosaic style keeps its tiles (they ARE
-  // the artwork there).
-  if(_noBg && style!=='mosaic') return;
   return drawBlockMosaic(ctx,bx,by,_notes,gc,BW,BH); // implicit default
 }
 
@@ -34187,7 +34181,16 @@ Hard requirements:
         _setNoBg(noBg);
         _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
-        chords.forEach((chord)=>{
+        // Transparent export = exactly what the live canvas shows, minus the
+        // ground. Overlay-architecture styles paint layer-cake: hidden per-cell
+        // under-layer → full-canvas ground (covers it) → signature overlay.
+        // The interceptor strips the ground, which would EXPOSE the hidden
+        // under-layer — so for these styles we skip the cell pass and render
+        // only the signature. Episodic styles + mosaic keep cells: there the
+        // cells are the visible artwork itself.
+        const _overlayArchStyles=['pollock','picasso','kusama','miro','kandinsky','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','raffel','lichtenstein','klee','delaunay'];
+        const _skipCells = noBg && _overlayArchStyles.includes(style);
+        if(!_skipCells) chords.forEach((chord)=>{
           const {n:notes,idx}=chord; _setCurE(chord._E);
           const cell=grid.cells&&grid.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
