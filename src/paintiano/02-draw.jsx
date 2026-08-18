@@ -14149,7 +14149,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
           lSumC += ll; lSqSumC += ll*ll; lNC++;
-          if(_imgAccent && ss>25 && ll>6 && ll<85){ const _ad=Math.abs(hh-_imgAccent.hue); if(Math.min(_ad,360-_ad)<=25) _accCnt++; }
+          if(_imgAccent && ss>25 && ll>6 && ll<85 && (ss*Math.min(ll,100-ll)/50)>18){ const _ad=Math.abs(hh-_imgAccent.hue); if(Math.min(_ad,360-_ad)<=25) _accCnt++; }
           if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
             if(hh < hueMinC) hueMinC = hh;
             if(hh > hueMaxC) hueMaxC = hh;

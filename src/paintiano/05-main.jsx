@@ -7578,11 +7578,20 @@ Hard requirements:
           // Mondrian's cream+black, ink, sepia) has almost none ⇒ B/W; a colourful
           // painting (Chagall, Monet) has plenty ⇒ Color.
           let vivid=0, considered=0;
-          const _accHist=new Float32Array(36);       // hue census of the vivid pixels (B/W·accent)
+          // Hue census for B/W·accent, weighted by REAL chroma (sat × lightness
+          // factor), not pixel count — a dark navy sky has HSL saturation >25%
+          // at lightness ~14%, so counting pixels lets the sky outvote a small
+          // bright moon. Chroma weighting flips it: navy ≈ 12, the moon ≈ 80.
+          const _accHist=new Float32Array(36);
+          let _accEligible=0;
           for(const p of px){
             const[hh0,ss,ll]=toHsl(p.r,p.g,p.b);
             considered++;
-            if(ss>25 && ll<85 && ll>6){ vivid++; _accHist[Math.floor(hh0/10)%36]++; }   // truly saturated, not pale/near-black
+            if(ss>25 && ll<85 && ll>6){
+              vivid++;   // truly saturated, not pale/near-black (bw/colour reading)
+              const _chr = ss*Math.min(ll,100-ll)/50;
+              if(_chr>18){ _accHist[Math.floor(hh0/10)%36] += _chr; _accEligible++; }
+            }
           }
           const vividPct = considered ? (vivid/considered)*100 : 0;
           const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
@@ -7593,10 +7602,11 @@ Hard requirements:
           // neighbourhood), extract its hue: the header shows a dot in that
           // colour and 02-draw lifts the accent cells musically.
           let _accent=null;
-          if(autoMode==='bw' && vivid >= Math.max(6, considered*0.0005)){
-            let _bi=0,_bm=0; for(let i2=0;i2<36;i2++){ if(_accHist[i2]>_bm){ _bm=_accHist[i2]; _bi=i2; } }
+          if(autoMode==='bw' && _accEligible >= Math.max(6, considered*0.0005)){
+            let _bi=0,_bm=0,_tw=0;
+            for(let i2=0;i2<36;i2++){ _tw+=_accHist[i2]; if(_accHist[i2]>_bm){ _bm=_accHist[i2]; _bi=i2; } }
             const _nb=_accHist[(_bi+35)%36]+_accHist[_bi]+_accHist[(_bi+1)%36];
-            if(_bm>0 && _nb >= vivid*0.6) _accent={hue:_bi*10+5};
+            if(_bm>0 && _tw>0 && _nb >= _tw*0.6) _accent={hue:_bi*10+5};
           }
           setBwAccent(_accent);
           try{ _setImgAccent(_accent); }catch(_){}

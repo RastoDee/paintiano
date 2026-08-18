@@ -15691,6 +15691,14 @@ function buildTraversal(nrBands, effCols, dir){
 // reset by the caller right after each transcription.
 let _imgForcedBands = 0;
 function _setImgForcedBands(n){ _imgForcedBands = (n|0) > 0 ? (n|0) : 0; }
+// B/W · accent channel — set by the image classifier (05-main) when a near-
+// monochrome image carries one coherent colour cluster (an orange moon in a
+// night sky). Cells touching the accent hue get a velocity lift in
+// pixelsToImageEvents, so the fragment is EMPHASISED musically — and since
+// all six image composers weight their pitch histograms by velocity, the
+// accent shapes their compositions too. null = no accent.
+let _imgAccent = null;
+function _setImgAccent(a){ _imgAccent = (a && typeof a.hue==='number') ? {hue:((a.hue%360)+360)%360} : null; }
 function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // atmoBias (optional): {v,e} from AI ATM. When present, the painting's own
   // energy is BLENDED with the atmo mood's energy, and the mood's valence biases
@@ -16104,6 +16112,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // the audio notes built below are never touched by it, so pure Image and
       // pure Music playback are byte-for-byte unchanged.
       const _domHueHist=new Float32Array(36);
+      let _accCnt=0;   // pixels in this cell matching the B/W·accent hue
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let row=_bandRow0(band); row<_bandRow1(band) && row<nr; row++){
@@ -16111,6 +16120,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
           lSumC += ll; lSqSumC += ll*ll; lNC++;
+          if(_imgAccent && ss>25 && ll>6 && ll<85){ const _ad=Math.abs(hh-_imgAccent.hue); if(Math.min(_ad,360-_ad)<=25) _accCnt++; }
           if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
             if(hh < hueMinC) hueMinC = hh;
             if(hh > hueMaxC) hueMaxC = hh;
@@ -16169,9 +16179,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           _domPc=pc;
         }
       }
+      // B/W · accent: a cell holding the accent cluster gets a velocity lift
+      // (×1.35, cap 124) — the coloured fragment is louder in the scan AND
+      // ranks higher in every composer's velocity-weighted histogram.
+      const _acc = !!(_imgAccent && _accCnt>=2);
+      if(_acc){ for(const _n of notes){ if(_n && _n.v!=null) _n.v=Math.min(124,Math.round(_n.v*1.35)); } }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc,_lum});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc,_lum,_acc});
       evIdx++;
     }
   }
@@ -25030,6 +25045,10 @@ export default function Paintiano() {
   // The colour reading the app chose for the current image (harmony or bw), so
   // leaving Custom returns to it rather than always to harmony.
   const appModeRef = useRef('harmony');
+  // B/W · accent: near-monochrome image with one coherent colour cluster —
+  // {hue} drives the header dot; the music-side lift lives in 02-draw via
+  // _setImgAccent. null = plain B/W or colourful image.
+  const [bwAccent, setBwAccent] = useState(null);
   // True when KONTRA is the colourful-image AUTO default (not a manual pick), so the
   // leave-image cleanup can reset it to harmony without clobbering a hand-chosen kontra.
   const kontraAutoRef = useRef(false);
@@ -28758,6 +28777,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setChords([]);chordsRef.current=[];idxRef.current=0;setPending([]);pendingRef.current=[];
     setDisp(0);setHoldPaused(false);resumeFromRef.current=null;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);setInfo(null);
+    setBwAccent(null); try{ _setImgAccent(null); }catch(_){}
     substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
     lastPaintRef.current={disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false};
     try{ const cv=canvasRef.current; if(cv){ const cx=cv.getContext('2d'); cx&&cx.clearRect(0,0,cv.width,cv.height); } }catch(_){}
@@ -28988,6 +29008,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       composedModeRef.current = false;
       draftOwnerRef.current = null;
       pixelRef.current = null; imgComposeRef.current = false;
+      setBwAccent(null); try{ _setImgAccent(null); }catch(_){}
       // mood is not a file/image source
       setLoadedSource(null); setOriginalImgUrl(null); setImgMoodThumb(null);
       setViewMode(s.viewMode || 'paint');
@@ -29040,6 +29061,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       composedModeRef.current = false;
       draftOwnerRef.current = null;
       pixelRef.current = null; imgComposeRef.current = false;
+      setBwAccent(null); try{ _setImgAccent(null); }catch(_){}
       // music is not a mood / image source
       setMoodContext(false); setMoodFromImg(false); setCurrentMood(null); setVarySource(null);
       setOriginalImgUrl(null); setImgMoodThumb(null);
@@ -29149,6 +29171,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       composedModeRef.current = false;
       draftOwnerRef.current = null;
       pixelRef.current = null; imgComposeRef.current = false;
+      setBwAccent(null); try{ _setImgAccent(null); }catch(_){}
       setLoadedSource(null);
       setInfo(s.info || null);
       setComposeSource(s.composeSource || null);
@@ -31465,13 +31488,28 @@ Hard requirements:
           // Mondrian's cream+black, ink, sepia) has almost none ⇒ B/W; a colourful
           // painting (Chagall, Monet) has plenty ⇒ Color.
           let vivid=0, considered=0;
+          const _accHist=new Float32Array(36);       // hue census of the vivid pixels (B/W·accent)
           for(const p of px){
-            const[,ss,ll]=toHsl(p.r,p.g,p.b);
+            const[hh0,ss,ll]=toHsl(p.r,p.g,p.b);
             considered++;
-            if(ss>25 && ll<85 && ll>6) vivid++;        // truly saturated, not pale/near-black
+            if(ss>25 && ll<85 && ll>6){ vivid++; _accHist[Math.floor(hh0/10)%36]++; }   // truly saturated, not pale/near-black
           }
           const vividPct = considered ? (vivid/considered)*100 : 0;
           const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
+          // B/W · ACCENT: a crescent moon is 0.1% of the pixels, so the image
+          // rightly reads as monochrome — yet the fragment deserves to be seen
+          // and heard. If the B/W image still contains a COHERENT colour
+          // cluster (≥ ~0.05% of pixels, ≥60% of them within one ±10° hue
+          // neighbourhood), extract its hue: the header shows a dot in that
+          // colour and 02-draw lifts the accent cells musically.
+          let _accent=null;
+          if(autoMode==='bw' && vivid >= Math.max(6, considered*0.0005)){
+            let _bi=0,_bm=0; for(let i2=0;i2<36;i2++){ if(_accHist[i2]>_bm){ _bm=_accHist[i2]; _bi=i2; } }
+            const _nb=_accHist[(_bi+35)%36]+_accHist[_bi]+_accHist[(_bi+1)%36];
+            if(_bm>0 && _nb >= vivid*0.6) _accent={hue:_bi*10+5};
+          }
+          setBwAccent(_accent);
+          try{ _setImgAccent(_accent); }catch(_){}
           // Hear image (Music → Image bridge): the user already has a palette
           // chosen in Music; carry it across instead of overriding with the
           // image auto-pick (which would snap Harmony → Kontra on every cross).
@@ -35914,7 +35952,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):(imgComposer?(COMPOSER_INSPIRED[imgComposer]||imgComposer):t('dir_'+imgDir))}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)}{mode==='bw' && bwAccent && (<> · <span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,margin:'0 2px',verticalAlign:'middle'}}/> {({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</>)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):(imgComposer?(COMPOSER_INSPIRED[imgComposer]||imgComposer):t('dir_'+imgDir))}</div>
         )}
         </>)}
         {(stripOpen || isDesktop) && (
