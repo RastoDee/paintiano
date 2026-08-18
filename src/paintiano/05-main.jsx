@@ -12057,7 +12057,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)}{mode==='bw' && bwAccent && (<> · <span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,margin:'0 2px',verticalAlign:'middle'}}/> {({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</>)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):(imgComposer?(COMPOSER_INSPIRED[imgComposer]||imgComposer):t('dir_'+imgDir))}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)}{mode==='bw' && bwAccent && (<> · <span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,margin:'0 2px',verticalAlign:'middle'}}/> {({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</>)} · {imgPlayMode==='compose'?(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'):(imgComposer?(<span style={{fontStyle:'italic',textTransform:'none'}}>{t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</span>):t('dir_'+imgDir))}</div>
         )}
         </>)}
         {(stripOpen || isDesktop) && (
@@ -12336,7 +12336,7 @@ Hard requirements:
                 })}
               </div>
             </>) : (<>
-              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer'}</div>
+              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('inspiredByTitle')}</div>
               {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>setupComposers.includes(c.k) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
@@ -14594,7 +14594,11 @@ Hard requirements:
                 const inf=t('tierUnlimited')||'∞';
                 const ronly=t('tierReadOnly')||'preview only';
                 const rows=[
-                  [t('tierRowArtists')||'Artists',         '9',     '19',       '19',  null],
+                  [t('tierRowArtists')||'Artists',         '9',     '24',       '24',  null],
+                  [t('tierRowComposers')||'Composers',     '2',     '6',        '6',   null],
+                  [t('tierRowMusic')  ||'Music (MIDI · mp3 · score)', yes, yes, yes, null],
+                  [t('tierRowImage')  ||'Image scan',      yes,     yes,        yes,   null],
+                  [t('tierRowLive')   ||'Compose & Mic (live)', yes, yes,       yes,   null],
                   [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
