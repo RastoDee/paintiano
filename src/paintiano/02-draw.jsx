@@ -13720,6 +13720,14 @@ function buildTraversal(nrBands, effCols, dir){
 // reset by the caller right after each transcription.
 let _imgForcedBands = 0;
 function _setImgForcedBands(n){ _imgForcedBands = (n|0) > 0 ? (n|0) : 0; }
+// B/W · accent channel — set by the image classifier (05-main) when a near-
+// monochrome image carries one coherent colour cluster (an orange moon in a
+// night sky). Cells touching the accent hue get a velocity lift in
+// pixelsToImageEvents, so the fragment is EMPHASISED musically — and since
+// all six image composers weight their pitch histograms by velocity, the
+// accent shapes their compositions too. null = no accent.
+let _imgAccent = null;
+function _setImgAccent(a){ _imgAccent = (a && typeof a.hue==='number') ? {hue:((a.hue%360)+360)%360} : null; }
 function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // atmoBias (optional): {v,e} from AI ATM. When present, the painting's own
   // energy is BLENDED with the atmo mood's energy, and the mood's valence biases
@@ -14133,6 +14141,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // the audio notes built below are never touched by it, so pure Image and
       // pure Music playback are byte-for-byte unchanged.
       const _domHueHist=new Float32Array(36);
+      let _accCnt=0;   // pixels in this cell matching the B/W·accent hue
       for(let sk=0;sk<COL_STEP;sk++){
         const col=cg*COL_STEP+sk; if(col>=nc) break;
         for(let row=_bandRow0(band); row<_bandRow1(band) && row<nr; row++){
@@ -14140,6 +14149,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           const{r,g,b}=px[idx],[hh,ss,ll]=toHsl(r,g,b);
           cellChroma += ss*Math.min(ll,100-ll)/50; cellChN++;
           lSumC += ll; lSqSumC += ll*ll; lNC++;
+          if(_imgAccent && ss>25 && ll>6 && ll<85){ const _ad=Math.abs(hh-_imgAccent.hue); if(Math.min(_ad,360-_ad)<=25) _accCnt++; }
           if(ss > 8){ // ignore near-grey pixels for hue spread (their hue is noise)
             if(hh < hueMinC) hueMinC = hh;
             if(hh > hueMaxC) hueMaxC = hh;
@@ -14198,9 +14208,14 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           _domPc=pc;
         }
       }
+      // B/W · accent: a cell holding the accent cluster gets a velocity lift
+      // (×1.35, cap 124) — the coloured fragment is louder in the scan AND
+      // ranks higher in every composer's velocity-weighted histogram.
+      const _acc = !!(_imgAccent && _accCnt>=2);
+      if(_acc){ for(const _n of notes){ if(_n && _n.v!=null) _n.v=Math.min(124,Math.round(_n.v*1.35)); } }
       // Store band+cg so the canvas mosaic can paint each event's exact cell in
       // traversal order (needed for non-row-major directions like vert/spiral).
-      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc,_lum});
+      evts.push({n:notes,startMs:evIdx*msPerBlock,idx:evIdx,cg,band,colStep:COL_STEP,_chroma:cellChN?cellChroma/cellChN:0,_flat,_domPc,_lum,_acc});
       evIdx++;
     }
   }
