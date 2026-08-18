@@ -31511,12 +31511,17 @@ Hard requirements:
           // cluster (≥ ~0.05% of pixels, ≥60% of them within one ±10° hue
           // neighbourhood), extract its hue: the header shows a dot in that
           // colour and 02-draw lifts the accent cells musically.
+          // Salience is about STRENGTH, not head-count: after the 192×120
+          // downsample a crescent moon is 5–10 pixels, so any relative floor
+          // kills it. Three coherent high-chroma pixels (chroma>18 each, ≥60%
+          // of the total weight in one ±10° neighbourhood, total weight ≥60)
+          // are a deliberate accent; JPEG noise doesn't cluster like that.
           let _accent=null;
-          if(autoMode==='bw' && _accEligible >= Math.max(6, considered*0.0005)){
+          if(autoMode==='bw' && _accEligible >= 3){
             let _bi=0,_bm=0,_tw=0;
             for(let i2=0;i2<36;i2++){ _tw+=_accHist[i2]; if(_accHist[i2]>_bm){ _bm=_accHist[i2]; _bi=i2; } }
             const _nb=_accHist[(_bi+35)%36]+_accHist[_bi]+_accHist[(_bi+1)%36];
-            if(_bm>0 && _tw>0 && _nb >= _tw*0.6) _accent={hue:_bi*10+5};
+            if(_bm>0 && _tw>=60 && _nb >= _tw*0.6) _accent={hue:_bi*10+5};
           }
           setBwAccent(_accent);
           try{ _setImgAccent(_accent); }catch(_){}
