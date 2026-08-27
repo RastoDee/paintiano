@@ -181,6 +181,12 @@ function bookUrl(lang){
   const code = BOOK_LANGS.indexOf(lang) >= 0 ? lang : 'EN';
   return '/book/paintiano-' + code + '.pdf';
 }
+// Excerpt (ukážka) — the app links to a sample, not the full book. Static PDF
+// per language at /public/book/paintiano-<LANG>-excerpt.pdf; EN fallback.
+function bookExcerptUrl(lang){
+  const code = BOOK_LANGS.indexOf(lang) >= 0 ? lang : 'EN';
+  return '/book/paintiano-' + code + '-excerpt.pdf';
+}
 
 // Self-contained concept-text modal. Lifted out of the main JSX so the modal
 // only reconciles when (lang, t, onClose) actually change — previously it
@@ -204,7 +210,7 @@ const AboutModal = memo(function AboutModal({onClose, t, ts, lang, readScale, se
               <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{card.title}</div>
               <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{card.body}</div>
               {card.book && (
-                <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookCta','Read the book')} →</a>
+                <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookExcerptCta','Read an excerpt')} →</a>
               )}
             </div>
           ))}
@@ -230,7 +236,7 @@ const BookModal = memo(function BookModal({onClose, t, lang, ts, readScale}){
           <div style={{fontSize:(4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>📖</div>
           <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{t('bookTitle')}</div>
           <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{ts('bookDesc','')}</div>
-          <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookCta','Open the book')} →</a>
+          <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookExcerptCta','Read an excerpt')} →</a>
         </div>
       </div>
     </div>

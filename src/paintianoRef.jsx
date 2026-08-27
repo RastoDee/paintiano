@@ -26444,9 +26444,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // taps on the wordmark. Poster maker (POSTER button) stays on 4 taps.
   const [addrChip,setAddrChip]=useState(()=>{ try{ return localStorage.getItem('paintiano_addr_chip')==='1'; }catch(_){ return false; } });
   // Product Hunt launch banner — discreet pill, dismiss is remembered, and the
-  // whole thing self-expires at launch time (26 Aug 2026, 09:00 CEST) so no
+  // whole thing self-expires at launch time (9 Sep 2026, 09:00 CEST) so no
   // cleanup release is ever needed.
-  const [phBanner,setPhBanner]=useState(()=>{ try{ if(Date.now()>=Date.parse('2026-08-26T07:00:00Z')) return false; return localStorage.getItem('paintiano_ph_banner_v1')!=='1'; }catch(_){ return false; } });
+  const [phBanner,setPhBanner]=useState(()=>{ try{ if(Date.now()>=Date.parse('2026-09-09T07:00:00Z')) return false; return localStorage.getItem('paintiano_ph_banner_v1')!=='1'; }catch(_){ return false; } });
   const _pmTapsRef=useRef({n:0,t:0,tm:null});
   const _pmLogoTap=useCallback(()=>{
     const now=Date.now(); const st=_pmTapsRef.current;
@@ -35051,7 +35051,7 @@ Hard requirements:
           <span
             onClick={()=>{ try{ window.open('https://www.producthunt.com/products/paintiano?launch=paintiano','_blank'); }catch(_){} }}
             style={{color:'#c9a84c',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            {({EN:'Launching on Product Hunt · Aug 26',SK:'Štartujeme na Product Hunte · 26. 8.',DE:'Wir starten auf Product Hunt · 26. 8.',FR:'Lancement sur Product Hunt · 26/8',ES:'Lanzamiento en Product Hunt · 26/8',PT:'Lançamento no Product Hunt · 26/8',zh:'8月26日 Product Hunt 上线',zhTW:'8月26日 Product Hunt 上線',ja:'8月26日 Product Hunt でローンチ'})[lang]||'Launching on Product Hunt · Aug 26'} · <b style={{fontWeight:700}}>Notify me</b>
+            {({EN:'Launching on Product Hunt · Sep 9',SK:'Štartujeme na Product Hunte · 9. 9.',DE:'Wir starten auf Product Hunt · 9. 9.',FR:'Lancement sur Product Hunt · 9/9',ES:'Lanzamiento en Product Hunt · 9/9',PT:'Lançamento no Product Hunt · 9/9',zh:'9月9日 Product Hunt 上线',zhTW:'9月9日 Product Hunt 上線',ja:'9月9日 Product Hunt でローンチ'})[lang]||'Launching on Product Hunt · Sep 9'} · <b style={{fontWeight:700}}>Notify me</b>
           </span>
           <span onClick={()=>{ setPhBanner(false); try{ localStorage.setItem('paintiano_ph_banner_v1','1'); }catch(_){} }} style={{color:'rgba(201,168,76,.7)',cursor:'pointer',fontSize:15,lineHeight:1,padding:'2px 4px'}}>×</span>
         </div>
