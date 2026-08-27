@@ -19238,7 +19238,7 @@ const I18N = {
     recUnsupported:'Recording not supported in this browser.',
     recTooShort:'Recording was too short — hold rec for at least a second.',
     searchGuide:'search the guide…', noMatches:'No matches for',
-    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'text size', legalPricing:'Pricing', legalTerms:'Terms', legalPrivacy:'Privacy', legalRefunds:'Refunds', bookTitle:'Paintiano — The Book of Golden Music', bookDesc:'The full story behind Paintiano — finding beauty between the note and the colour, the golden ratio, Scriabin. Free, in your language.', bookCta:'Open the book',
+    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'text size', legalPricing:'Pricing', legalTerms:'Terms', legalPrivacy:'Privacy', legalRefunds:'Refunds', bookTitle:'Paintiano — The Book of Golden Music', bookDesc:'The full story behind Paintiano — finding beauty between the note and the colour, the golden ratio, Scriabin. Free, in your language.', bookCta:'Open the book', bookExcerptCta:'Book summary',
     pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another', morphTitle:'morph {mood} into…', morphHint:'pick up to 3 — in order', morphGo:'morph',
     reroll:'reroll: a fresh take',
     demoMode:'demo mode — clear to play again', demoSkip:'tap canvas to skip',
@@ -19398,7 +19398,7 @@ const I18N = {
     recUnsupported:'Aufnahme wird nicht unterstützt.',
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
     searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
-    guideTitle:'anleitung', conceptTitle:'konzept', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße', legalPricing:'Preise', legalTerms:'Bedingungen', legalPrivacy:'Datenschutz', legalRefunds:'Erstattungen', bookTitle:'Paintiano — Das Buch der goldenen Musik', bookDesc:'Die ganze Geschichte hinter Paintiano — Schönheit zwischen Note und Farbe, der Goldene Schnitt, Skrjabin. Kostenlos, in deiner Sprache.', bookCta:'Buch öffnen',
+    guideTitle:'anleitung', conceptTitle:'konzept', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße', legalPricing:'Preise', legalTerms:'Bedingungen', legalPrivacy:'Datenschutz', legalRefunds:'Erstattungen', bookTitle:'Paintiano — Das Buch der goldenen Musik', bookDesc:'Die ganze Geschichte hinter Paintiano — Schönheit zwischen Note und Farbe, der Goldene Schnitt, Skrjabin. Kostenlos, in deiner Sprache.', bookCta:'Buch öffnen', bookExcerptCta:'Zusammenfassung des Buches',
     pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren', morphTitle:'{mood} verwandeln in…', morphHint:'bis zu 3 wählen — der Reihe nach', morphGo:'verwandeln',
     reroll:'neu würfeln',
     demoMode:'demo-modus — löschen zum erneuten spielen', demoSkip:'auf canvas tippen zum überspringen',
@@ -19556,7 +19556,7 @@ const I18N = {
     recUnsupported:'Enregistrement non supporté.',
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
     searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
-    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte', legalPricing:'Tarifs', legalTerms:'Conditions', legalPrivacy:'Confidentialité', legalRefunds:'Remboursements', bookTitle:'Paintiano — Le Livre de la musique dorée', bookDesc:'Toute l’histoire derrière Paintiano — la beauté entre la note et la couleur, le nombre d’or, Scriabine. Gratuit, dans ta langue.', bookCta:'Ouvrir le livre',
+    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte', legalPricing:'Tarifs', legalTerms:'Conditions', legalPrivacy:'Confidentialité', legalRefunds:'Remboursements', bookTitle:'Paintiano — Le Livre de la musique dorée', bookDesc:'Toute l’histoire derrière Paintiano — la beauté entre la note et la couleur, le nombre d’or, Scriabine. Gratuit, dans ta langue.', bookCta:'Ouvrir le livre', bookExcerptCta:'Résumé du livre',
     pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle', morphTitle:'transformer {mood} en…', morphHint:'choisir jusqu’à 3 — dans l’ordre', morphGo:'transformer',
     reroll:'relancer',
     demoMode:'mode démo — effacer pour rejouer', demoSkip:'toucher la toile pour passer',
@@ -19714,7 +19714,7 @@ const I18N = {
     recUnsupported:'Grabación no compatible.',
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
     searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
-    guideTitle:'guía', conceptTitle:'concepto', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto', legalPricing:'Precios', legalTerms:'Términos', legalPrivacy:'Privacidad', legalRefunds:'Reembolsos', bookTitle:'Paintiano — El libro de la música dorada', bookDesc:'Toda la historia tras Paintiano — la belleza entre la nota y el color, la proporción áurea, Scriabin. Gratis, en tu idioma.', bookCta:'Abrir el libro',
+    guideTitle:'guía', conceptTitle:'concepto', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto', legalPricing:'Precios', legalTerms:'Términos', legalPrivacy:'Privacidad', legalRefunds:'Reembolsos', bookTitle:'Paintiano — El libro de la música dorada', bookDesc:'Toda la historia tras Paintiano — la belleza entre la nota y el color, la proporción áurea, Scriabin. Gratis, en tu idioma.', bookCta:'Abrir el libro', bookExcerptCta:'Resumen del libro',
     pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual', morphTitle:'transformar {mood} en…', morphHint:'elige hasta 3 — en orden', morphGo:'transformar',
     reroll:'relanzar',
     demoMode:'modo demo — borrar para volver a tocar', demoSkip:'toca el lienzo para saltar',
@@ -19872,7 +19872,7 @@ const I18N = {
     recUnsupported:'Nahrávanie nie je v tomto prehliadači podporované.',
     recTooShort:'Nahrávka bola príliš krátka — podrž rec aspoň sekundu.',
     searchGuide:'hľadať v príručke…', noMatches:'Žiadne výsledky pre',
-    guideTitle:'príručka', conceptTitle:'koncept', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu', legalPricing:'Cenník', legalTerms:'Podmienky', legalPrivacy:'Súkromie', legalRefunds:'Vrátenie', bookTitle:'Paintiano — Kniha o zlatej hudbe', bookDesc:'Celý príbeh za Paintianom — hľadanie krásy medzi notou a farbou, zlatý rez, Scriabin. Zadarmo, v tvojom jazyku.', bookCta:'Otvoriť knihu',
+    guideTitle:'príručka', conceptTitle:'koncept', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu', legalPricing:'Cenník', legalTerms:'Podmienky', legalPrivacy:'Súkromie', legalRefunds:'Vrátenie', bookTitle:'Paintiano — Kniha o zlatej hudbe', bookDesc:'Celý príbeh za Paintianom — hľadanie krásy medzi notou a farbou, zlatý rez, Scriabin. Zadarmo, v tvojom jazyku.', bookCta:'Otvoriť knihu', bookExcerptCta:'Zhrnutie knihy',
     pickMoodFirst:'najprv vyber náladu', morphInto:'morfovať súčasnú náladu do inej', morphTitle:'plynule prejdi z {mood} do…', morphHint:'vyber max 3 — v poradí', morphGo:'morfovať',
     reroll:'prehodiť: čerstvé prevedenie',
     demoMode:'režim demo — vyčisti pre nové prehratie', demoSkip:'klikni na plátno pre preskočenie',
@@ -20030,7 +20030,7 @@ const I18N = {
     recUnsupported:'此浏览器不支持录音。',
     recTooShort:'录音过短 — 请按住录制至少一秒。',
     searchGuide:'搜索指南…', noMatches:'未找到匹配项',
-    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字号', legalPricing:'价格', legalTerms:'条款', legalPrivacy:'隐私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音乐之书', bookDesc:'Paintiano 背后的完整故事——在音符与色彩之间寻找美、黄金比例、斯克里亚宾。免费，使用你的语言。', bookCta:'打开书',
+    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字号', legalPricing:'价格', legalTerms:'条款', legalPrivacy:'隐私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音乐之书', bookDesc:'Paintiano 背后的完整故事——在音符与色彩之间寻找美、黄金比例、斯克里亚宾。免费，使用你的语言。', bookCta:'打开书', bookExcerptCta:'本书摘要',
     pickMoodFirst:'请先选择情绪', morphInto:'将当前情绪变形为另一种', morphTitle:'将 {mood} 变形为…', morphHint:'最多选 3 种 — 按顺序', morphGo:'变形',
     reroll:'重掷:换一种诠释',
     demoMode:'演示模式 — 清空以重新播放', demoSkip:'点击画布跳过',
@@ -20191,7 +20191,7 @@ const I18N = {
     recUnsupported:'此瀏覽器不支援錄音。',
     recTooShort:'錄音過短 — 請按住錄製至少一秒。',
     searchGuide:'搜尋指南…', noMatches:'未找到符合項目',
-    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字級', legalPricing:'價格', legalTerms:'條款', legalPrivacy:'隱私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音樂之書', bookDesc:'Paintiano 背後的完整故事——在音符與色彩之間尋找美、黃金比例、斯克里亞賓。免費，使用你的語言。', bookCta:'打開書',
+    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字級', legalPricing:'價格', legalTerms:'條款', legalPrivacy:'隱私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音樂之書', bookDesc:'Paintiano 背後的完整故事——在音符與色彩之間尋找美、黃金比例、斯克里亞賓。免費，使用你的語言。', bookCta:'打開書', bookExcerptCta:'本書摘要',
     pickMoodFirst:'請先選擇情緒', morphInto:'將目前情緒變形為另一種', morphTitle:'將 {mood} 變形為…', morphHint:'最多選 3 種 — 按順序', morphGo:'變形',
     reroll:'重擲：換一種詮釋',
     demoMode:'示範模式 — 清空以重新播放', demoSkip:'點擊畫布跳過',
@@ -20348,7 +20348,7 @@ const I18N = {
     recUnsupported:'Gravação não suportada neste navegador.',
     recTooShort:'Gravação muito curta — segure rec por pelo menos um segundo.',
     searchGuide:'buscar no guia…', noMatches:'Nenhum resultado para',
-    guideTitle:'guia', conceptTitle:'conceito', fsNormal:'A', fsLarge:'A+', fsLabel:'tamanho do texto', legalPricing:'Preços', legalTerms:'Termos', legalPrivacy:'Privacidade', legalRefunds:'Reembolsos', bookTitle:'Paintiano — O Livro da Música Dourada', bookDesc:'Toda a história por trás do Paintiano — a beleza entre a nota e a cor, a proporção áurea, Skriabin. Grátis, na tua língua.', bookCta:'Abrir o livro',
+    guideTitle:'guia', conceptTitle:'conceito', fsNormal:'A', fsLarge:'A+', fsLabel:'tamanho do texto', legalPricing:'Preços', legalTerms:'Termos', legalPrivacy:'Privacidade', legalRefunds:'Reembolsos', bookTitle:'Paintiano — O Livro da Música Dourada', bookDesc:'Toda a história por trás do Paintiano — a beleza entre a nota e a cor, a proporção áurea, Skriabin. Grátis, na tua língua.', bookCta:'Abrir o livro', bookExcerptCta:'Resumo do livro',
     pickMoodFirst:'escolha um humor primeiro', morphInto:'transformar o humor atual em outro', morphTitle:'transformar {mood} em…', morphHint:'escolha até 3 — em ordem', morphGo:'transformar',
     reroll:'rerrolar: uma nova versão',
     demoMode:'modo demo — limpe para tocar novamente', demoSkip:'toque a tela para pular',
@@ -20506,7 +20506,7 @@ const I18N = {
     recUnsupported:'このブラウザでは録音がサポートされていません。',
     recTooShort:'録音が短すぎました — rec を 1 秒以上押し続けてください。',
     searchGuide:'ガイドを検索…', noMatches:'一致なし:',
-    guideTitle:'ガイド', conceptTitle:'コンセプト', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金', bookTitle:'Paintiano — 黄金の音楽の書', bookDesc:'Paintiano の物語のすべて——音と色のあいだの美、黄金比、スクリャービン。無料、あなたの言語で。', bookCta:'本を開く',
+    guideTitle:'ガイド', conceptTitle:'コンセプト', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金', bookTitle:'Paintiano — 黄金の音楽の書', bookDesc:'Paintiano の物語のすべて——音と色のあいだの美、黄金比、スクリャービン。無料、あなたの言語で。', bookCta:'本を開く', bookExcerptCta:'本の要約',
     pickMoodFirst:'まずムードを選んでください', morphInto:'現在のムードを別のムードに morph', morphTitle:'{mood} を…に morph', morphHint:'最大 3 つを選ぶ — 順番に', morphGo:'モーフ',
     reroll:'振り直し:新しい解釈',
     demoMode:'デモモード — もう一度再生するにはクリア', demoSkip:'キャンバスをタップでスキップ',
@@ -24127,6 +24127,12 @@ function bookUrl(lang){
   const code = BOOK_LANGS.indexOf(lang) >= 0 ? lang : 'EN';
   return '/book/paintiano-' + code + '.pdf';
 }
+// Excerpt (ukážka) — the app links to a sample, not the full book. Static PDF
+// per language at /public/book/paintiano-<LANG>-excerpt.pdf; EN fallback.
+function bookExcerptUrl(lang){
+  const code = BOOK_LANGS.indexOf(lang) >= 0 ? lang : 'EN';
+  return '/book/paintiano-' + code + '-excerpt.pdf';
+}
 
 // Self-contained concept-text modal. Lifted out of the main JSX so the modal
 // only reconciles when (lang, t, onClose) actually change — previously it
@@ -24150,7 +24156,7 @@ const AboutModal = memo(function AboutModal({onClose, t, ts, lang, readScale, se
               <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{card.title}</div>
               <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{card.body}</div>
               {card.book && (
-                <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookCta','Read the book')} →</a>
+                <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookExcerptCta','Read an excerpt')} →</a>
               )}
             </div>
           ))}
@@ -24176,7 +24182,7 @@ const BookModal = memo(function BookModal({onClose, t, lang, ts, readScale}){
           <div style={{fontSize:(4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>📖</div>
           <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{t('bookTitle')}</div>
           <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{ts('bookDesc','')}</div>
-          <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookCta','Open the book')} →</a>
+          <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookExcerptCta','Read an excerpt')} →</a>
         </div>
       </div>
     </div>

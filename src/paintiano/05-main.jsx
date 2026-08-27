@@ -259,7 +259,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const [currentIdx, setCurrentIdx] = useState(0);
   const [expandedId, setExpandedId] = useState(null);
   const cards = useMemo(()=>{
-    if(isBook) return [{id:'book', glyph:'📖', book:true, title:t('bookTitle')||'The Book', cta:ts('bookCta','Open the book'), body:ts('bookDesc','')}];
+    if(isBook) return [{id:'book', glyph:'📖', book:true, title:t('bookTitle')||'The Book', cta:ts('bookExcerptCta','Book summary'), body:ts('bookDesc','')}];
     if(isConcept) return getConceptCards(lang);
     const all = getGuideCards(lang);
     return all.filter(c => (category==='all' || c.cat===category) && guideCardMatch(c, guideQuery));
@@ -398,7 +398,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
                     </>
                   )}
                   {card.book ? (
-                    <a href={bookUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{card.cta} →</a>
+                    <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{card.cta} →</a>
                   ) : card.cta && (
                     <button onClick={()=>{ if(onOpenSetup) onOpenSetup(card.id); else onClose(); }} style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>{card.cta} →</button>
                   )}
