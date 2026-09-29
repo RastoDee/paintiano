@@ -8603,9 +8603,14 @@ Hard requirements:
     // Free tier additionally filters to unlocked artists. Surprise NEVER writes
     // back to setupArtists — it only reads which artists are allowed.
     const _allowedArtists = setupArtists.filter(k => k!=='mosaicFamily' && (proStatus!=='free' || FREE_UNLOCKED_KEYS.has(k)));
+    // Artist of the day joins the Free bag even when it is not in the user's
+    // set (Surprise is the main Lite discovery path — no Setup needed), and
+    // it is doubled in the bag so it turns up within the first few taps.
+    if(proStatus==='free' && artistOfDay && !_allowedArtists.includes(artistOfDay)){ _allowedArtists.push(artistOfDay, artistOfDay); }
     const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
     const _familyAllowed = setupArtists.includes('mosaicFamily');
-    const variantsFor = (k)=> (proStatus==='free' ? 2 : ((k==='kandinsky'||k==='matisse'||k==='rothko') ? 8 : ((k==='wave'||k==='raffel'||k==='pollock') ? 7 : 6)));
+    // Free = 2 variants, except the artist of the day (full range, like Pro).
+    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : ((k==='kandinsky'||k==='matisse'||k==='rothko') ? 8 : ((k==='wave'||k==='raffel'||k==='pollock') ? 7 : 6)));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
@@ -8685,7 +8690,7 @@ Hard requirements:
       setPhaseIndex(nv|0);            // pick that artist's variant
       setNotesMode(false); setOneMMode(false);  // artist exits any family sub-mode
     }
-  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode, setupPalettes, mode, setupArtists]);
+  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode, setupPalettes, mode, setupArtists, artistOfDay]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
   // and the canvas is empty (e.g. after the intro splash, or on entering Basic
