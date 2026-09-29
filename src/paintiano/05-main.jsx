@@ -1570,6 +1570,22 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
     []
   );
+  // ─── ARTIST OF THE DAY (Free retention) ──────────────────────────────────
+  // Every local calendar day, ONE Pro artist and ONE Pro composer unlock for
+  // everyone — full variants, no taste latch. Deterministic from the day
+  // index (FNV mix) so every user worldwide gets the same pair → shareable,
+  // marketable ("today: Klimt"). No server, no storage. Resets at LOCAL
+  // midnight; an app left open flips on the next minute tick (dailyTick).
+  const DAILY_ARTIST_POOL = useMemo(()=> ['matisse','bloom','miro','bauhaus','rothko','wave','arcs','mitchell','hokusai','lichtenstein','klee','delaunay','oneM','raffel','mondrian'], []);
+  const DAILY_COMPOSER_POOL = useMemo(()=> ['glass','vine','gershwin','yiruma'], []);
+  const _dayIndex = () => { const d=new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset()*60000)/86400000); };
+  const [dailyTick, setDailyTick] = useState(()=>_dayIndex());
+  useEffect(()=>{ const id=setInterval(()=>{ const n=_dayIndex(); setDailyTick(p=> p===n ? p : n); }, 60000); return ()=>clearInterval(id); },[]);
+  const _dailyHash = (n, salt) => { let h=(0x811c9dc5 ^ salt)>>>0; h=Math.imul(h ^ (n>>>0), 0x01000193)>>>0; h^=h>>>13; h=Math.imul(h,0x5bd1e995)>>>0; h^=h>>>15; return h>>>0; };
+  const artistOfDay   = DAILY_ARTIST_POOL[_dailyHash(dailyTick, 7) % DAILY_ARTIST_POOL.length];
+  const composerOfDay = DAILY_COMPOSER_POOL[_dailyHash(dailyTick, 11) % DAILY_COMPOSER_POOL.length];
+  const isDailyArtist   = useCallback((k)=> proStatus==='free' && k===artistOfDay, [proStatus, artistOfDay]);
+  const isDailyComposer = useCallback((k)=> proStatus==='free' && k===composerOfDay, [proStatus, composerOfDay]);
   const effectivePairs = (proStatus === 'free') ? FREE_PAIRS : STYLE_PAIRS;
   // For Free: tapping a pair must NEVER select the b side. styleIsLocked tells
   // the gate to open the paywall instead of swapping styles.
@@ -1581,12 +1597,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if (key==='mosaicFamily' || key==='mosaicNotes' || key==='mosaicOneM') return false;
     // The artist being tasted right now reads as unlocked for this one preview.
     if(key && key===tastePreviewKey) return false;
+    // Artist of the day: fully unlocked for Free today (see artistOfDay).
+    if(key && key===artistOfDay) return false;
     return !FREE_UNLOCKED_KEYS.has(key);
-  }, [proStatus, FREE_UNLOCKED_KEYS, tastePreviewKey]);
+  }, [proStatus, FREE_UNLOCKED_KEYS, tastePreviewKey, artistOfDay]);
   // Composer mirror of styleIsLocked — Free plays Chopin + Satie; the other
   // four render locked and open the paywall. Never filters setupComposers
   // itself (the saved set survives an upgrade untouched), only gates use.
-  const composerIsLocked = useCallback((key) => proStatus === 'free' && !FREE_COMPOSER_KEYS.includes(key), [proStatus]);
+  const composerIsLocked = useCallback((key) => proStatus === 'free' && key!==composerOfDay && !FREE_COMPOSER_KEYS.includes(key), [proStatus, composerOfDay]);
   // Remembers, per pair, which member the user last selected. So when a pair's
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
@@ -2003,7 +2021,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // accidentally landing on a locked artist (which would just paint a Pro-only
   // style without a clear way to dismiss it).
   const SHUFFLE_POOL = (proStatus === 'free')
-    ? SHUFFLE_POOL_ALL.filter(k => FREE_UNLOCKED_KEYS.has(k))
+    ? SHUFFLE_POOL_ALL.filter(k => FREE_UNLOCKED_KEYS.has(k) || k===artistOfDay)
     : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
@@ -2027,7 +2045,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // pollockSessionSeed → same song gives the same order every time
     // (deterministic), but Mosaic / Notes / oneM can land anywhere in the
     // sequence (not bunched at the end).
-    const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k));
+    const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
     const base = familyOn ? [...filteredArtists, ...MOSAIC_FAMILY] : filteredArtists;
     if(base.length === 0) return null;          // user disabled everything — guard
     let s = ((pollockSessionSeed >>> 0) ^ 0x9E3779B1) >>> 0;
@@ -2091,7 +2109,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // ── FULL SHUFFLE ── bag = every (artistIndex × variant) combination.
       // Pool size mirrors shuffleStyle: selected artists (+ mosaic family if on).
       const familyOn = setupArtists.includes('mosaicFamily');
-      const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k));
+      const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
       const poolLen = (filteredArtists.length + (familyOn?3:0)) || 1;
       const key = 'full|'+poolLen+'|'+N+'|'+(familyOn?1:0)+'|'+(pollockSessionSeed>>>0);
       if(diceBagKeyRef.current!==key || diceBagRef.current.length===0){
@@ -2293,6 +2311,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
   // no artist + Random on, the painting shuffles across artist styles).
   const selectStyle = useCallback((k)=>{
+    try{ if(proStatus==='free' && k===artistOfDay) window.posthog && window.posthog.capture('daily_artist_used',{artist:k}); }catch(_){}
     // ZASAH 2: if the user moves to a style other than the one being tasted,
     // spend the preview (the free live try is over).
     if(tastePreviewKeyRef.current && k!==tastePreviewKeyRef.current){ setTastePreviewKey(null); }
@@ -2506,6 +2525,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Product Hunt launch banner — discreet pill, dismiss is remembered, and the
   // whole thing self-expires at launch time (7 Oct 2026, 09:00 CEST) so no
   // cleanup release is ever needed.
+  // Daily-artist toast: once per local day for Free users (localStorage remembers the day index).
+  const [dailyToast,setDailyToast]=useState(()=>{ try{ const d=new Date(); const n=Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/86400000); return localStorage.getItem('paintiano_daily_toast_v1')!==String(n); }catch(_){ return false; } });
   const [phBanner,setPhBanner]=useState(()=>{ try{ if(Date.now()>=Date.parse('2026-10-07T07:00:00Z')) return false; return localStorage.getItem('paintiano_ph_banner_v1')!=='1'; }catch(_){ return false; } });
   const _pmTapsRef=useRef({n:0,t:0,tm:null});
   const _pmLogoTap=useCallback(()=>{
@@ -2838,11 +2859,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     imgComposerRef.current=null; setImgComposer(null);
   },[]);
   const _liteRollComposer = useCallback(()=>{
-    const _en=['glass','satie','chopin','vine','gershwin','yiruma'].filter(k=>setupComposers.includes(k) && !composerIsLocked(k));
+    const _en=['glass','satie','chopin','vine','gershwin','yiruma'].filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
     const a=[null,..._en].filter(x=>x!==imgComposerRef.current);
-    const c=a[(Math.random()*a.length)|0];
+    // Composer of the day is weighted (~40%) so most Free Lite sessions meet it.
+    const _dc = (proStatus==='free' && a.includes(composerOfDay)) ? composerOfDay : null;
+    const c = (_dc && Math.random()<0.4) ? _dc : a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
-  },[setupComposers, composerIsLocked]);
+  },[setupComposers, composerIsLocked, isDailyComposer, composerOfDay, proStatus]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -3198,7 +3221,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     _setArtistSeed(pollockSessionSeed);
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
-    _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+    _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
     // See music carrying-tone paint: when a Music chord carries _domPc (set by
     // the post-load effect from the source image's per-cell dominant hue), build
     // a paint-side copy where every note's m is rewritten to (oct*12 + _domPc) —
@@ -3399,7 +3422,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // alone owns the canvas.
         const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
-        _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
@@ -8524,6 +8547,8 @@ Hard requirements:
       // (Pollock / Kandinsky / Kusama / af Klint spiral), all at v0 — instead
       // of always Pollock. QR artist still wins when present.
       const _openers=['pollock','kandinsky','kusama','spiral'].filter(k=> setupArtists.includes(k));
+      // Artist of the day opens ~40% of Free Lite sessions — discovery without Setup.
+      if(proStatus==='free' && artistOfDay && Math.random()<0.4){ _openers.length=0; _openers.push(artistOfDay); }
       const _target = qrArtistRef.current
         ? qrArtistRef.current
         : (_openers.length
@@ -10328,7 +10353,7 @@ Hard requirements:
       }else{
         _setArtistSeed(pollockSessionSeed);
         _setNoBg(noBg);
-        _setVariantCap((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         // ── overlay pass as a function — called twice in transparent mode:
         // once into a throwaway probe ctx to DETECT whether this style/variant
@@ -11104,6 +11129,15 @@ Hard requirements:
       {(addrChip || posterMaker) && chords.length>0 && (
         <div style={{position:'fixed',left:14,bottom:132,zIndex:9999,padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',fontVariantNumeric:'tabular-nums'}}>
           {(()=>{ const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null); return _k ? (STYLE_INSPIRED[_k]||_k) : '—'; })()} · v{style?(phaseIndex|0):(shufVariant|0)} · {mode}
+        </div>
+      )}
+      {dailyToast && proStatus==='free' && !phBanner && !showOnboarding && !showIntro && (
+        <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw'}}>
+          <span onClick={()=>{ try{ window.posthog && window.posthog.capture('daily_toast_tap',{artist:artistOfDay,composer:composerOfDay}); }catch(_){} setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ if(!liteImageMode) selectStyle(artistOfDay); }catch(_){} }}
+            style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+            ✦ {ts('dailyUnlocked','Free today')}: <b style={{fontWeight:700}}>{STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</b> · {ts('dailyTry','try it')}
+          </span>
+          <span onClick={()=>{ setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ window.posthog && window.posthog.capture('daily_toast_dismiss'); }catch(_){} }} style={{color:'rgba(226,196,119,.7)',cursor:'pointer',fontSize:15,lineHeight:1,padding:'2px 4px'}}>×</span>
         </div>
       )}
       {phBanner && (
@@ -12052,7 +12086,7 @@ Hard requirements:
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2}}>✦ {ts('dailyUnlocked','Free today')} ·</span>)}{effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
             notes (bare grid with note labels) — get no "inspired by". One Million
@@ -12343,7 +12377,7 @@ Hard requirements:
               </div>
             </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('inspiredByTitle')}</div>
-              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>setupComposers.includes(c.k) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
+              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
               if(_cs.length===1){ return (
@@ -12398,7 +12432,7 @@ Hard requirements:
             //   7→4h3d  8→4h4d  9→5h4d  10→5h5d
             const _familyOn = setupArtists.includes('mosaicFamily');
             // Un-paired: count individual artist chips actually shown.
-            let _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : (setupArtists.includes(k) && !styleIsLocked(k)));
+            let _visibleArtists = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily').filter(k=> cockpitEdit ? true : ((setupArtists.includes(k) || isDailyArtist(k)) && !styleIsLocked(k)));
             // Taste preview (Free): the previewed Pro artist swaps IN for one
             // pseudo-random free artist (deterministic per preview key), so the
             // cockpit stays at mosaic + 9 — never grows to 10. Ends with the preview.
@@ -12522,6 +12556,7 @@ Hard requirements:
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
+                  {isDailyArtist(k) && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3}}>✦ {ts('dailyBadge','today')}</span>)}
                 </button>
               );
             })}
@@ -12869,13 +12904,13 @@ Hard requirements:
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
             {!immersive && basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                {effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
+                {isDailyArtist(effectiveStyle) && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {ts('dailyBadge','today')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
             {!immersive && basicMode && liteImageMode && (
               <span key={'inspc-'+(imgComposer||'scan')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 {imgComposer && COMPOSER_INSPIRED[imgComposer]
-                  ? (<><span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
+                  ? (<>{isDailyComposer(imgComposer) && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {ts('dailyBadge','today')} · </span>)}<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
                   : 'Scan'}
               </span>
             )}
@@ -14602,6 +14637,7 @@ Hard requirements:
                 const rows=[
                   [t('tierRowArtists')||'Artists',         '9',     '24',       '24',  null],
                   [t('tierRowComposers')||'Composers',     '2',     '6',        '6',   null],
+                  [t('tierRowDaily')||'Artist of the day', yes,     no,         no,    '✦'],
                   [t('tierRowMusic')  ||'Music (MIDI · mp3 · score)', yes, yes, yes, null],
                   [t('tierRowImage')  ||'Image scan',      yes,     yes,        yes,   null],
                   [t('tierRowLive')   ||'Compose & Mic (live)', yes, yes,       yes,   null],
@@ -14803,6 +14839,12 @@ Hard requirements:
               {/* Inspired by — 5-column chip grid of individual artists (not
                   paired). "Mosaic family" is one tile that covers all three
                   mosaic variants; the other 19 keys are individual artists. */}
+              {proStatus==='free' && (
+                <div style={{margin:'6px 0 12px',padding:'9px 12px',border:'1px solid rgba(201,168,76,.3)',borderRadius:14,background:'linear-gradient(90deg,rgba(201,168,76,.10),rgba(201,168,76,.03))',fontSize:(.56*effScale)+'rem',lineHeight:1.45,color:'rgba(230,222,196,.9)'}}>
+                  ✦ <b style={{color:'rgba(226,196,119,1)',fontWeight:600}}>{ts('dailyUnlocked','Free today')}:</b> {STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}
+                  <div style={{fontSize:(.5*effScale)+'rem',color:PF.muted,marginTop:2}}>{ts('dailyTomorrow','a new pair tomorrow · Pro has them all')}</div>
+                </div>
+              )}
               <div className="pf-setup-artists">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{ts('setupArtistsTitle',({EN:'Inspired by',SK:'Inšpirované',DE:'Inspiriert von',FR:'Inspiré par',ES:'Inspirado por',PT:'Inspirado por',zh:'灵感来源',zhTW:'靈感來源',ja:'インスパイア'})[lang]||'Inspired by')}</span>
@@ -14830,7 +14872,7 @@ Hard requirements:
                     const chipStyleOn = {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
                     const chipStyleOff = {background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
-                    <button key={k} onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff)}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}</button>
+                    <button key={k} onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff),...(isDailyArtist(k)?{border:'1px solid rgba(226,196,119,.9)',boxShadow:'0 0 14px rgba(226,196,119,.28)',color:'rgba(244,230,192,1)'}:{})}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}{isDailyArtist(k) && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3}}>✦ {ts('dailyBadge','today')}</span>)}</button>
                     );
                   })}
                 </div>
@@ -14852,7 +14894,7 @@ Hard requirements:
                     const on = setupComposers.includes(c.k);
                     const proLock = composerIsLocked(c.k);
                     return (
-                    <button key={c.k} onClick={()=>{ if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'setup'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined} style={{position:'relative',opacity:proLock?0.5:1,padding:'9px 4px',textAlign:'center',borderRadius:999,cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{c.n}{proLock && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7}}>🔒</span>)}</button>
+                    <button key={c.k} onClick={()=>{ if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'setup'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined} style={{position:'relative',opacity:proLock?0.5:1,padding:'9px 4px',textAlign:'center',borderRadius:999,cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{c.n}{proLock && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7}}>🔒</span>)}{isDailyComposer(c.k) && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3}}>✦ {ts('dailyBadge','today')}</span>)}</button>
                     );
                   })}
                 </div>

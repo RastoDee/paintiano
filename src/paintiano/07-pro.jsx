@@ -578,6 +578,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
       ['proValueArtists', '24 artists (free has 9)'],
       ['proValueTypes',   '6 paint types per artist (free has 2)'],
       ['proValueComposers','All 6 composers — picture recomposition (free has 2)'],
+      ['proValueDaily',    'Free gets one extra artist a day — Pro has them all, always'],
       ['proValuePalette', 'Custom palette — set your own 12 colours'],
       ['proValueDpi',     '300 DPI exports, no watermark'],
       ['proValueLife',    'Lifetime access'],
@@ -804,7 +805,9 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               const ronly = tr('tierReadOnly', 'preview only');
               const credits3 = tr('tier3Credits', '3 credits');
               const rows = [
-                [tr('tierRowArtists', 'Artists'),       '8',     '16',     '16',  null],
+                [tr('tierRowArtists', 'Artists'),       '9',     '24',     '24',  null],
+                [tr('tierRowComposers', 'Composers'),   '2',     '6',      '6',   null],
+                [tr('tierRowDaily', 'Artist of the day'), yes,   no,       no,    '✦'],
                 [tr('tierRowTypes', 'Paint types'),     '2',     allWord,  allWord, null],
                 [tr('tierRowPalette', 'Custom palette'),ronly,   yes,      yes,   null],
                 [tr('tierRowDpi', '300 DPI export'),    no,      yes,      yes,   null],
