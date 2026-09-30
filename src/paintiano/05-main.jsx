@@ -224,6 +224,30 @@ const AboutModal = memo(function AboutModal({onClose, t, ts, lang, readScale, se
 // Self-contained book modal — opened from the top nav "Book" item. Mirrors the
 // look of the Guide book card (glyph + localized title + description + CTA) but
 // stands alone, like AboutModal. The CTA opens /book/paintiano-<lang>.pdf.
+// ─── Artist-of-the-day explainer ───────────────────────────────────────────
+// Opened by tapping ANY ✦ daily element (Lite/canvas headers, picker & setup
+// chips, setup line). Explains the mechanic to a newcomer WITHOUT assuming
+// they know about Pro: what exists (24 painters, 6 composers), what they have
+// (nine, always), what is extra today, and that tomorrow brings another pair.
+// Pro is the natural last line, never the word "free".
+const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, artistName, composerName, readScale}){
+  const panelRef = useRef(null);
+  useModalFocusTrap(panelRef);
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(4,4,10,.72)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',padding:18}}>
+      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" style={{maxWidth:400,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(226,196,119,.5)',borderRadius:14,padding:'24px 22px 20px',color:'rgba(230,222,196,.9)',fontFamily:'inherit',boxShadow:'0 0 32px rgba(226,196,119,.16), 0 20px 60px rgba(0,0,0,.6)',position:'relative'}}>
+        <button onClick={onClose} aria-label="Close" style={{position:'absolute',top:10,right:12,background:'transparent',border:'none',color:'rgba(230,222,196,.55)',fontSize:20,cursor:'pointer',lineHeight:1,padding:4}}>×</button>
+        <div style={{fontSize:(.62*readScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(226,196,119,1)',fontWeight:700,marginBottom:10}}>✦ {ts('dailyTitle','Artist of the day')}</div>
+        <div style={{fontSize:(.84*readScale)+'rem',lineHeight:1.55}}>{ts('dailyExplain','Paintiano paints in the styles of 24 painters and 6 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.')}</div>
+        <div style={{marginTop:12,padding:'10px 12px',borderRadius:10,background:'rgba(226,196,119,.08)',border:'1px solid rgba(226,196,119,.28)',fontSize:(.8*readScale)+'rem',lineHeight:1.5}}>
+          <span style={{color:'rgba(201,168,76,.8)'}}>{ts('dailyTodayIs','Today')}:</span> <b style={{color:'rgba(244,230,192,1)',fontWeight:600}}>{artistName} · {composerName}</b>
+          <div style={{fontSize:(.66*readScale)+'rem',color:'rgba(201,168,76,.7)',marginTop:2,fontStyle:'italic'}}>{ts('dailyTomorrowPair','Tomorrow — another pair.')}</div>
+        </div>
+        <button onClick={()=>{ onClose(); if(onPro) onPro(); }} style={{display:'block',width:'100%',marginTop:14,padding:'9px 12px',background:'transparent',border:'1px solid rgba(201,168,76,.4)',borderRadius:22,color:'rgba(201,168,76,.9)',fontFamily:'inherit',fontSize:(.6*readScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',cursor:'pointer'}}>{ts('dailyAllPro','All 24, always → Paintiano Pro')}</button>
+      </div>
+    </div>
+  );
+});
 const BookModal = memo(function BookModal({onClose, t, lang, ts, readScale}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
@@ -2401,6 +2425,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // function. Identity is stable since setShowAbout is a useState setter.
   const closeAbout = useCallback(()=>setShowAbout(false),[]);
   const [showBook, setShowBook] = useState(false);
+  const [showDailyInfo, setShowDailyInfo] = useState(false);
+  const openDailyInfo = useCallback((e)=>{ if(e){ e.preventDefault(); e.stopPropagation(); } setShowDailyInfo(true); try{ window.posthog && window.posthog.capture('daily_info_open'); }catch(_){} },[]);
   const closeBook = useCallback(()=>setShowBook(false),[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
   // Paint-mode Web/Print export toggle: when ON and a source image is on
@@ -11140,7 +11166,7 @@ Hard requirements:
         <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw'}}>
           <span onClick={()=>{ try{ window.posthog && window.posthog.capture('daily_toast_tap',{artist:artistOfDay,composer:composerOfDay}); }catch(_){} setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ if(!liteImageMode) selectStyle(artistOfDay); }catch(_){} }}
             style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            ✦ {ts('dailyUnlocked','Free today')}: <b style={{fontWeight:700}}>{STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</b> · {ts('dailyTry','try it')}
+            ✦ {ts('dailyTitle','Artist of the day')}: <b style={{fontWeight:700}}>{STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</b> · {ts('dailyTry','try it')}
           </span>
           <span onClick={()=>{ setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ window.posthog && window.posthog.capture('daily_toast_dismiss'); }catch(_){} }} style={{color:'rgba(226,196,119,.7)',cursor:'pointer',fontSize:15,lineHeight:1,padding:'2px 4px'}}>×</span>
         </div>
@@ -12091,7 +12117,7 @@ Hard requirements:
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2}}>✦ {ts('dailyUnlocked','Free today')} ·</span>)}{effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
             notes (bare grid with note labels) — get no "inspired by". One Million
@@ -12396,7 +12422,7 @@ Hard requirements:
                   return (
                     <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}{isDailyComposer(c.k) && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3}}>✦ {ts('dailyBadge','today')}</span>)}</button>
+                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}</button>
                   );
                 })}
               </div>
@@ -12561,7 +12587,7 @@ Hard requirements:
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
-                  {isDailyArtist(k) && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3}}>✦ {ts('dailyBadge','today')}</span>)}
+                  {isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
                 </button>
               );
             })}
@@ -12909,13 +12935,13 @@ Hard requirements:
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
             {!immersive && basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                {isDailyArtist(effectiveStyle) && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {ts('dailyBadge','today')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
+                {isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
             {!immersive && basicMode && liteImageMode && (
               <span key={'inspc-'+(imgComposer||'scan')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 {imgComposer && COMPOSER_INSPIRED[imgComposer]
-                  ? (<>{isDailyComposer(imgComposer) && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {ts('dailyBadge','today')} · </span>)}<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
+                  ? (<>{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
                   : 'Scan'}
               </span>
             )}
@@ -13690,6 +13716,9 @@ Hard requirements:
           readScale={effScale}
           setReadScale={setReadScale}
         />
+      )}
+      {showDailyInfo && (
+        <DailyInfoPopover onClose={()=>setShowDailyInfo(false)} onPro={()=>{ setShowSetupModal(false); setPaywallReason('settings'); }} ts={ts} artistName={STYLE_INSPIRED[artistOfDay]||artistOfDay} composerName={COMPOSER_INSPIRED[composerOfDay]||composerOfDay} readScale={effScale} />
       )}
       {showBook && (
         <GuideModal
@@ -14846,7 +14875,7 @@ Hard requirements:
                   mosaic variants; the other 19 keys are individual artists. */}
               {proStatus==='free' && (
                 <div style={{margin:'6px 0 12px',padding:'9px 12px',border:'1px solid rgba(201,168,76,.3)',borderRadius:14,background:'linear-gradient(90deg,rgba(201,168,76,.10),rgba(201,168,76,.03))',fontSize:(.56*effScale)+'rem',lineHeight:1.45,color:'rgba(230,222,196,.9)'}}>
-                  ✦ <b style={{color:'rgba(226,196,119,1)',fontWeight:600}}>{ts('dailyUnlocked','Free today')}:</b> {STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}
+                  <span onClick={openDailyInfo} role="button" tabIndex={0} style={{cursor:'pointer'}}>✦ <b style={{color:'rgba(226,196,119,1)',fontWeight:600,textDecoration:'underline dotted',textUnderlineOffset:3}}>{ts('dailyTitle','Artist of the day')}:</b> {STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</span>
                   <div style={{fontSize:(.5*effScale)+'rem',color:PF.muted,marginTop:2}}>{ts('dailyTomorrow','a new pair tomorrow · Pro has them all')}</div>
                 </div>
               )}
@@ -14877,7 +14906,7 @@ Hard requirements:
                     const chipStyleOn = {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'};
                     const chipStyleOff = {background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'};
                     return (
-                    <button key={k} onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff),...(isDailyArtist(k)?{border:'1px solid rgba(226,196,119,.9)',boxShadow:'0 0 14px rgba(226,196,119,.28)',color:'rgba(244,230,192,1)'}:{})}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}{isDailyArtist(k) && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3}}>✦ {ts('dailyBadge','today')}</span>)}</button>
+                    <button key={k} onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',opacity:locked?0.5:1,...(on?chipStyleOn:chipStyleOff),...(isDailyArtist(k)?{border:'1px solid rgba(226,196,119,.9)',boxShadow:'0 0 14px rgba(226,196,119,.28)',color:'rgba(244,230,192,1)'}:{})}}>{_label}{locked && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>)}{isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}</button>
                     );
                   })}
                 </div>
@@ -14899,7 +14928,7 @@ Hard requirements:
                     const on = setupComposers.includes(c.k);
                     const proLock = composerIsLocked(c.k);
                     return (
-                    <button key={c.k} onClick={()=>{ if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'setup'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined} style={{position:'relative',opacity:proLock?0.5:1,padding:'9px 4px',textAlign:'center',borderRadius:999,cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}),...(isDailyComposer(c.k)?{border:'1px solid rgba(226,196,119,.9)',boxShadow:'0 0 14px rgba(226,196,119,.28)',color:'rgba(244,230,192,1)'}:{})}}>{c.n}{proLock && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7}}>🔒</span>)}{isDailyComposer(c.k) && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3}}>✦ {ts('dailyBadge','today')}</span>)}</button>
+                    <button key={c.k} onClick={()=>{ if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'setup'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined} style={{position:'relative',opacity:proLock?0.5:1,padding:'9px 4px',textAlign:'center',borderRadius:999,cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}),...(isDailyComposer(c.k)?{border:'1px solid rgba(226,196,119,.9)',boxShadow:'0 0 14px rgba(226,196,119,.28)',color:'rgba(244,230,192,1)'}:{})}}>{c.n}{proLock && (<span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7}}>🔒</span>)}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}</button>
                     );
                   })}
                 </div>
