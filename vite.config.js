@@ -38,7 +38,13 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt', NOT 'autoUpdate'. autoUpdate + skipWaiting + clientsClaim made the
+      // plugin reload the page the moment a new sw.js was seen — and with Safari
+      // holding several deploy generations in cache, the new SW saw yet another
+      // "update" after every reload → endless intro loop (Oct 2026). In prompt
+      // mode nothing reloads by itself: main.jsx shows the update toast and the
+      // user taps Refresh (hardUpdate) when they are ready.
+      registerType: 'prompt',
       // PWA only attaches to the /play entry — the landing must NEVER register
       // a service worker (otherwise the SW would intercept future / navigations
       // and serve the PWA cached HTML instead of the static landing).
@@ -65,8 +71,11 @@ export default defineConfig({
         // Force the new service worker to take over the page immediately on the next
         // navigation, without waiting for all tabs to close. This is what makes
         // background refresh actually happen on a returning visit with autoUpdate.
-        skipWaiting: true,
-        clientsClaim: true,
+        // Both OFF: a freshly installed SW must WAIT until the user applies the
+        // update (toast → hardUpdate) or closes every tab. With skipWaiting +
+        // clientsClaim the new worker hijacked live pages and triggered reloads.
+        skipWaiting: false,
+        clientsClaim: false,
         // Embedded base64 samples push the JSX bundle above the default 2 MB precache limit
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         // Precache only the static front-end build — never anything under /api
