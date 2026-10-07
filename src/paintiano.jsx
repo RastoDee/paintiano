@@ -26167,6 +26167,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _swipeWasGestureRef = useRef(false);
   const [_swipeFlashKey, _setSwipeFlashKey] = useState(null);
   const _swipeFlashTimerRef = useRef(null);
+  // Same ~1.2s “inspired by …” flash the fullscreen swipe fires — reused by the
+  // Surprise me button so a tap and a swipe give identical feedback (only in
+  // fullscreen, where the inspired-by caption is hidden and the flash is the
+  // sole feedback).
+  const _fireInspiredFlash = useCallback(()=>{
+    if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; }
+    setTimeout(()=>{ _setSwipeFlashKey('flash-'+Date.now()); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },1200); },0);
+  },[]);
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
@@ -39730,8 +39738,8 @@ Hard requirements:
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
           <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
-          {liteImageMode && <button onClick={()=>{ try{ _liteImgSurprise(); }catch(_){} }} disabled={!_liteImg||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
-          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
+          {liteImageMode && <button onClick={()=>{ try{ _liteImgSurprise(); }catch(_){} if(immersive) _fireInspiredFlash(); }} disabled={!_liteImg||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
+          {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); if(immersive) _fireInspiredFlash(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
         {/* ZASAH BEST — Lite→full bridge. A finished Lite painting is the peak
             moment to reveal that the full Paintiano (24 artists, AI, palettes)
