@@ -13253,7 +13253,8 @@ Hard requirements:
                 if(liteImageMode){ _liteImgSurprise(); }
                 else { basicSurprise(); }
               } else if(viewMode==='image'){
-                if(composerDice && imgComposer && !working && !busy && !recording) _composerRoll();
+                // busy includes `playing` — a swipe mid-piece must still roll (same as the transport Next).
+                if(composerDice && imgComposer && !working && !anim && !recording) _composerRoll();
               } else if(randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)){
                 // Advanced FS swipe mirrors the normal-screen NEXT button
                 // exactly: it only fires when dice (shuffle) is ON *and* the
@@ -13382,7 +13383,7 @@ Hard requirements:
           const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image' && canRollNextFs;
           // Composer dice in Image mode — same NEXT, rolls a composer instead of an artist.
-          const showNextComposerFs = viewMode==='image' && composerDice && !!imgComposer && imgPlayMode==='scan' && chords.length>0 && !anim && !working && !busy && !recording;
+          const showNextComposerFs = viewMode==='image' && composerDice && !!imgComposer && imgPlayMode==='scan' && chords.length>0 && !anim && !working && !recording;
           const showSlideFs = playing && randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image';
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
           // VARY in fullscreen — mood + mood-from-image pieces only (same gate as
