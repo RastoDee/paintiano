@@ -18829,6 +18829,548 @@ function composeImageYiruma(px,nc,nr,table,colorMode,dir){
 }
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SIX MORE COMPOSERS (Oct 2026) — Bach · Beethoven · Debussy · Rachmaninov ·
+// Einaudi · Hisaishi. Same two-phase contract as the first six: analyse the
+// whole picture into sections (shared helper below), then compose over the
+// complete map. Deterministic: (pixels, composer) → identical piece.
+// ═══════════════════════════════════════════════════════════════════════════
+// Shared PHASE 1 — identical to what Glass…Yiruma inline, factored once.
+// Returns null when the scan is empty (caller returns base||[]).
+function _composerAnalyse(px,nc,nr,table,colorMode,saltBase,Smin,Smax){
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return {base:base||[],secs:null};
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(saltBase+salt,ss,0,0); f(); return f; };
+  const bandsMap=new Map();
+  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
+  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
+  const S=Math.max(Smin,Math.min(Smax,bandKeys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
+    for(const c of cells){
+      lum+=(c._lum||50); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
+        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
+    }
+    lum/=cells.length; chr/=cells.length;
+    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
+    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
+  }
+  if(!secs.length) return {base,secs:null};
+  const g=new Float32Array(12); let gl=0,gc2=0;
+  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
+  gl/=secs.length; gc2/=secs.length;
+  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
+  return {base,secs,tonic,gl,gc2,R};
+}
+// scale helpers bound to an absolute pitch-class set
+function _scaleKit(scAbs){
+  const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
+  const stepSc=(m,nSteps)=>{ let cur=snap(m); const d=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+d; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=d; cur=nxt; } return cur; };
+  const inScale=(pc)=>{ let best=pc,bd=99; for(const a of scAbs){ const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
+  const dPc=(d)=>scAbs[((d%scAbs.length)+scAbs.length)%scAbs.length];
+  return {snap,stepSc,inScale,dPc};
+}
+const _srcOfSec=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+const _ev=(evts,idxRef,ns,startMs,sc,sec,domPc)=>{ evts.push({n:ns,startMs:Math.max(0,Math.round(startMs)),idx:idxRef.i++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sc._chroma||sec.chr,_flat:0,_domPc:domPc,_lum:sc._lum||sec.lum}); };
+
+// ── BACH — two-part invention: subject · answer a fifth below · sequences
+// round the circle of fifths · running sixteenths over a walking bass ·
+// dominant pedal at phi · cadence (Picardy third in minor). No pedal: every
+// note detached, dynamics TERRACED (forte / piano blocks), never swelling.
+function composeImageBach(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10500,10,18);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const minor=gl<=50;
+  const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];      // harmonic minor: the leading tone
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const six=Math.round(175-Math.min(1,gc2/45)*30);           // 145-175ms sixteenth
+  const barMs=six*16;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*1));
+  const maxBars=Math.floor(140000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0;
+  const rb=R(1);
+  // SUBJECT — 8 sixteenths drawn from the strongest section's pcs, snapped to
+  // the key, shaped as Bach shapes them: leap up, then step back down.
+  let hsec=secs[0], hw=-1; for(const s of secs){ let w=0; for(let p=0;p<12;p++) w+=s.hist[p]; if(w>hw){hw=w;hsec=s;} }
+  const sub0=snap(60+tonic);
+  const subj=[0,2,4,3,2,1,0,-1].map(st=>stepSc(sub0,st));
+  const seqDeg=[0,3,6,2,5,1,4,0];                            // I IV vii iii vi ii V I
+  const pedalStart=Math.floor(totBars*0.60), pedalEnd=Math.min(totBars-3,pedalStart+3);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      const inPedal=barNo>=pedalStart&&barNo<pedalEnd;
+      // EPISODES: exposition (subject RH, answer LH) → sequence (running
+      // sixteenths, bass walks the circle) → pedal → sequence' → cadence
+      const ph = barNo<2 ? 'expo' : inPedal ? 'pedal' : (barNo>=2&&barNo<4) ? 'answer' : 'seq';
+      const terr = ((barNo>>2)&1)===0 ? 1 : 0.78;             // terraced f / p blocks
+      const deg=seqDeg[barNo%8];
+      const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4);
+      const sc=_srcOfSec(sec,root);
+      const vBase=(60+Math.min(18,sec.chr*0.5))*terr;
+      if(ph==='expo'||ph==='answer'){
+        const up=ph==='expo';
+        const tr=up?0:-7;                                     // answer a fifth below in LH
+        for(let k=0;k<16;k++){
+          // second half of the bar restates the subject one scale step higher
+          let mm=stepSc(subj[k%8]+tr,(k>=8?1:0));
+          mm=up?Math.min(96,mm):Math.max(36,mm-12);
+          const pcm=((mm%12)+12)%12;
+          _ev(evts,ix,[{m:snap(mm),v:Math.round(vBase*(k%4===0?1.08:0.92)),durMs:Math.round(six*0.9),bass:!up}],t+k*six,_srcOfSec(sec,pcm),sec,pcm);
+          if(!up && k%4===0){ // RH counter-subject: held chord tones above
+            _ev(evts,ix,[{m:snap(72+[root,third,fifth][(k>>2)%3]),v:Math.round(vBase*0.8),durMs:Math.round(six*3.6)}],t+k*six,sc,sec,root);
+          }
+        }
+      } else if(ph==='pedal'){
+        // DOMINANT PEDAL — bass hammers the fifth in eighths; RH figures
+        // circle above it, tension before home.
+        const dom=dPc(4);
+        for(let k=0;k<8;k++){
+          _ev(evts,ix,[{m:snap(36+dom),v:Math.round((58+(k%2?0:8))*terr),durMs:Math.round(six*1.8),bass:true}],t+k*2*six,_srcOfSec(sec,dom),sec,dom);
+        }
+        const fig=[0,2,1,3,2,4,3,5,4,6,5,7,6,7,7,8].map(st=>stepSc(snap(67+dom),st));
+        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)),durMs:Math.round(six*0.9)}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
+      } else {
+        // SEQUENCE — RH running sixteenths: broken-chord figure R-3-5-8-5-3
+        // (the prelude shape) coloured by the section's own pcs; LH walking
+        // eighths root → fifth → third → fifth.
+        const r0=snap(60+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=t3+1; while(((t5%12)+12)%12!==fifth) t5++;
+        const lift=(f>0.75&&!last)?12:0;
+        const fig=[r0,t3,t5,r0+12,t5,t3,r0,t3, r0,t3,t5,r0+12,t5,t3,r0,t3].map(m=>m+lift);
+        // choose the picture's own strongest pc as a passing colour on beat 3
+        const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+        if(ranked[0]!=null){ fig[9]=snap(60+ranked[0]+lift); fig[13]=snap(60+ranked[0]+lift); }
+        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)+(rb()-0.5)*4),durMs:Math.round(six*0.9)}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
+        const walk=[root,fifth,third,fifth,root,dPc(deg+1),third,fifth];
+        for(let k=0;k<8;k++){ const bm=snap(36+walk[k]); _ev(evts,ix,[{m:bm,v:Math.round((52+(k%2?0:6))*terr),durMs:Math.round(six*1.7),bass:true}],t+k*2*six,_srcOfSec(sec,walk[k]),sec,walk[k]); }
+      }
+      t+=barMs;
+      if(last && b2===bars[si]-1) t+=Math.round(barMs*0.1);
+    }
+  }
+  // CADENCE — ii · V · I, then the final chord: Picardy third in minor.
+  const cad=[[1,0],[4,1]];
+  for(const [dg,k] of cad){ const r=dPc(dg); _ev(evts,ix,[{m:snap(36+r),v:60,durMs:Math.round(six*7),bass:true},{m:snap(55+dPc(dg+2)),v:52,durMs:Math.round(six*7)},{m:snap(60+dPc(dg+4)),v:50,durMs:Math.round(six*7)}],t+k*8*six,_srcOfSec(secs[secs.length-1],r),secs[secs.length-1],r); }
+  const thirdF=(tonic+4)%12;                                  // major third always — Picardy
+  _ev(evts,ix,[{m:24+tonic,v:66,durMs:3200,bass:true},{m:36+tonic,v:60,durMs:3200,bass:true},{m:52+thirdF+(thirdF<tonic?12:0),v:52,durMs:3200},{m:55+((tonic+7)%12)+(((tonic+7)%12)<tonic?12:0),v:50,durMs:3200},{m:72+tonic,v:56,durMs:3200}],t+16*six,{cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2},secs[0],tonic);
+  return evts;
+}
+
+// ── BEETHOVEN — sonata drama: a four-note MOTIF (short-short-short-long)
+// cut from the picture's strongest colours, hammered, transposed through the
+// sections; tremolo octaves in the bass under dark passages, Alberti bass
+// under calm ones; sforzando accents, sudden piano after forte; a hammered
+// coda of tonic chords. Minor unless the picture is bright.
+function composeImageBeethoven(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10600,10,18);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const minor=gl<=58;
+  const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const eighth=Math.round(260-Math.min(1,gc2/45)*40);        // allegro con brio
+  const barMs=eighth*8;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
+  const maxBars=Math.floor(150000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0;
+  const rv=R(1);
+  // the motif: three repeated notes then a leap — the leap's size comes from
+  // how far the picture's two strongest colours sit apart on the wheel
+  let hsec=secs[0], hw=-1; for(const s of secs){ let w=0; for(let p=0;p<12;p++) w+=s.hist[p]; if(w>hw){hw=w;hsec=s;} }
+  const rk=[...Array(12).keys()].filter(p=>hsec.hist[p]>0).sort((a,b)=>hsec.hist[b]-hsec.hist[a]).map(inScale);
+  const m0=snap(67+(rk[0]!=null?rk[0]:tonic));
+  let leap=-3; if(rk[1]!=null){ const d=(rk[1]-rk[0]+12)%12; leap = d>6 ? -2 : (d>=3 ? -3 : 2); }
+  const motif=[m0,m0,m0,stepSc(m0,leap)];
+  const prog=minor?[0,5,4,0, 3,4,0,4]:[0,3,4,0, 5,1,4,0];     // i iv V i · VI V i V
+  const climBar=Math.floor(totBars*0.618);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      // EPISODES: motif statement (bare, ff) → tremolo drama → lyrical second
+      // theme (Alberti, p, relative major) → development (motif transposed
+      // through the sections) → recapitulation ff → coda hammer
+      const ph = barNo<2 ? 'state' : f<0.28 ? 'drama' : f<0.46 ? 'lyric' : f<0.72 ? 'devel' : f<0.90 ? 'recap' : 'coda';
+      const rel=minor?(tonic+3)%12:(tonic+9)%12;
+      let root=dPc(prog[barNo%8]);
+      if(ph==='lyric') root=(barNo%2===0)?rel:(rel+7)%12;
+      if(ph==='devel'){ const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale); root=ranked[b2%Math.max(1,ranked.length)]!=null?ranked[b2%ranked.length]:root; }
+      const third=inScale((root+(minor&&ph!=='lyric'?3:4))%12), fifth=inScale((root+7)%12);
+      const sc=_srcOfSec(sec,root);
+      const sub=(ph==='lyric')?0.62:(ph==='state'||ph==='recap'||ph==='coda')?1.15:0.95;
+      const nearClim=Math.abs(barNo-climBar)<=1;
+      const vB=Math.min(118,(64+Math.min(24,sec.chr*0.6))*sub*(nearClim?1.12:1));
+      // sudden piano: every 4th bar of drama drops to p — the Beethoven jolt
+      const jolt=(ph==='drama'&&barNo%4===3)?0.55:1;
+      // ── LEFT HAND ──
+      if(ph==='state'){
+        // nothing under the first statement: the motif alone, ff, then silence
+      } else if(ph==='drama'||ph==='recap'||ph==='devel'){
+        // TREMOLO OCTAVES — the Pathétique floor: low root octave re-struck
+        // every eighth, alternating octave members
+        for(let k=0;k<8;k++){
+          const bm=snap(36+root)-(k%2?12:0);
+          _ev(evts,ix,[{m:bm,v:Math.round((50+(k%4===0?12:0))*jolt*(ph==='devel'?0.85:1)),durMs:Math.round(eighth*1.1),bass:true}],t+k*eighth,sc,sec,root);
+        }
+      } else if(ph==='lyric'){
+        // ALBERTI — root · fifth · third · fifth in eighths, p
+        const r0=snap(48+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
+        const alb=[r0,t5,t3,t5,r0,t5,t3,t5];
+        for(let k=0;k<8;k++){ _ev(evts,ix,[{m:alb[k],v:Math.round(34+(k%4===0?6:0)),durMs:Math.round(eighth*1.2),bass:k%4===0}],t+k*eighth,sc,sec,root); }
+      } else { // coda: hammered root-fifth octaves on the beats
+        for(let k=0;k<8;k+=2){ _ev(evts,ix,[{m:snap(36+root),v:Math.round(88*(k===0?1:0.9)),durMs:Math.round(eighth*1.6),bass:true},{m:snap(24+root),v:80,durMs:Math.round(eighth*1.6),bass:true}],t+k*eighth,sc,sec,root); }
+      }
+      // ── RIGHT HAND ──
+      if(ph==='lyric'){
+        // second theme: a singing line, stepwise, drawn by the row's light
+        const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+        let mm=snap(72+third); mm=snap(Math.max(64,Math.min(88,mm+Math.max(-4,Math.min(4,Math.round(trend/9))))));
+        const line=[mm,stepSc(mm,1),stepSc(mm,-1),mm];
+        const offs=[0,3,4,6], durs=[3,1,2,2.4];
+        for(let k=0;k<4;k++){ const pcm=((line[k]%12)+12)%12; _ev(evts,ix,[{m:line[k],v:Math.round(vB*0.9+(k===0?6:0)),durMs:Math.round(eighth*durs[k]*1.1)}],t+offs[k]*eighth,_srcOfSec(sec,pcm),sec,pcm); }
+      } else if(ph==='coda'){
+        // hammered tonic chords — three on the beat, then silence before the next
+        for(let k=0;k<6;k+=2){ _ev(evts,ix,[{m:snap(60+root),v:Math.round(vB),durMs:Math.round(eighth*1.3)},{m:snap(64+third+(third<root?12:0)),v:Math.round(vB-6),durMs:Math.round(eighth*1.3)},{m:snap(67+fifth+(fifth<root?12:0)),v:Math.round(vB-4),durMs:Math.round(eighth*1.3)},{m:snap(72+root),v:Math.round(vB),durMs:Math.round(eighth*1.3)}],t+k*eighth,sc,sec,root); }
+      } else {
+        // the MOTIF — transposed onto this bar's chord; in 'state' it stands
+        // alone (ff) with its long note held across the rest of the bar
+        const tr=(ph==='state')?0:(snap(60+root)-snap(60+tonic));
+        const mv=motif.map(m=>Math.max(55,Math.min(96,snap(m+tr+(ph==='recap'?12:0)))));
+        const sfz=(ph==='drama'&&b2%2===1)?1.18:1;
+        for(let k=0;k<4;k++){
+          const isLong=k===3;
+          const ns=[{m:mv[k],v:Math.round(Math.min(120,vB*jolt*(isLong?sfz*1.05:0.92))),durMs:Math.round(eighth*(isLong?(ph==='state'?5.5:3.2):0.85))}];
+          if(ph==='recap'||ph==='state'){ ns.push({m:mv[k]-12,v:Math.round(ns[0].v*0.85),durMs:ns[0].durMs}); }   // octaves
+          const pcm=((mv[k]%12)+12)%12;
+          _ev(evts,ix,ns,t+k*eighth,_srcOfSec(sec,pcm),sec,pcm);
+        }
+        if(ph==='devel' && rv()<0.5){ // development: the motif answered an octave down, LH-ish, offset half a bar
+          for(let k=0;k<4;k++){ const m2=Math.max(40,mv[k]-12); _ev(evts,ix,[{m:m2,v:Math.round(vB*0.78),durMs:Math.round(eighth*(k===3?2.2:0.85))}],t+(4+k)*eighth,sc,sec,((m2%12)+12)%12); }
+        }
+      }
+      t+=barMs;
+      if(ph==='state') t+=Math.round(barMs*0.5);               // the famous pause after the statement
+    }
+  }
+  // FINAL — tonic hammered thrice, then one long ff chord
+  const T=secs[secs.length-1], scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2};
+  for(let k=0;k<3;k++){ _ev(evts,ix,[{m:24+tonic,v:96,durMs:Math.round(eighth*1.4),bass:true},{m:36+tonic,v:92,durMs:Math.round(eighth*1.4),bass:true},{m:snap(55+dPc(2)),v:84,durMs:Math.round(eighth*1.4)},{m:snap(60+tonic),v:88,durMs:Math.round(eighth*1.4)}],t+k*2*eighth,scT,T,tonic); }
+  _ev(evts,ix,[{m:24+tonic,v:100,durMs:3600,bass:true},{m:36+tonic,v:96,durMs:3600,bass:true},{m:snap(52+dPc(2)),v:86,durMs:3600},{m:snap(55+dPc(4)),v:84,durMs:3600},{m:snap(72+tonic),v:92,durMs:3600}],t+7*eighth,scT,T,tonic);
+  return evts;
+}
+
+// ── DEBUSSY — impressionism: pentatonic calm · whole-tone shimmer · parallel
+// ninth chords sliding (planing) · arpeggio washes up the keyboard · long
+// pedal, pp-mp, one swell. The picture's chroma picks the scale per section:
+// muted rows go pentatonic, vivid rows whole-tone. Form A · B(whole-tone) · A'.
+function composeImageDebussy(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10700,10,20);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const pent=[0,2,4,7,9].map(d=>(tonic+d)%12);
+  const whole=[0,2,4,6,8,10].map(d=>(tonic+d)%12);
+  const kitP=_scaleKit(pent), kitW=_scaleKit(whole);
+  const q=Math.round(720-Math.min(1,gc2/45)*120);            // quarter ≈ 600-720ms, lent
+  const barMs=q*4;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*1));
+  const maxBars=Math.floor(160000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null;
+  const rd=R(1), rub=R(2);
+  const arc=(pos)=>0.86+0.22*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.16*0.16));
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      const env=arc(f);
+      const wt=(f>=0.40&&f<0.66) || sec.chr>34;              // B section, or any vivid row → whole-tone
+      const kit=wt?kitW:kitP; const scAbs=wt?whole:pent;
+      const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(kit.inScale);
+      const root=ranked[0]!=null?ranked[0]:tonic;
+      const sc=_srcOfSec(sec,root);
+      const ph = f<0.12 ? 'open' : (barNo%6===5) ? 'wash' : wt ? 'plane' : 'cloud';
+      const rb=()=>Math.round((rub()-0.5)*160);             // rubato
+      if(ph==='open'){
+        // bare low fifth, pp, and one high pentatonic tone hanging in the air
+        _ev(evts,ix,[{m:kit.snap(36+root),v:Math.round(36*env),durMs:Math.round(barMs*1.6),bass:true},{m:kit.snap(43+root),v:Math.round(30*env),durMs:Math.round(barMs*1.6),bass:true}],t,sc,sec,root);
+        const hi=kit.snap(84+root); _ev(evts,ix,[{m:hi,v:Math.round(34*env),durMs:Math.round(barMs*1.2)}],t+q*2+rb(),_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12);
+      } else if(ph==='wash'){
+        // ARPEGGIO WASH — eight quick tones sweeping two octaves up the scale,
+        // pedal down, then the top held: the Debussy spray
+        const s0=kit.snap(48+root);
+        for(let k=0;k<8;k++){ const m=Math.min(100,kit.stepSc(s0,k*2)); const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((38+k*2)*env),durMs:Math.round(q*2.6),bass:k===0}],t+k*Math.round(q*0.22)+rb()*0.3,_srcOfSec(sec,pcm),sec,pcm); }
+        const top=Math.min(100,kit.stepSc(s0,16)); _ev(evts,ix,[{m:top,v:Math.round(44*env),durMs:Math.round(q*3.4)}],t+8*Math.round(q*0.22),_srcOfSec(sec,((top%12)+12)%12),sec,((top%12)+12)%12);
+      } else if(ph==='plane'){
+        // PLANING — parallel 9th chords sliding by whole steps, each a half-bar
+        for(let h=0;h<2;h++){
+          const r=kit.snap(48+root)+(h?2:0);
+          const ch=[r,r+4,r+10,r+14,r+16].map(m=>kit.snap(m));
+          _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((40-i2*2)*env),durMs:Math.round(q*2.3),bass:i2===0})),t+h*2*q+rb(),sc,sec,((r%12)+12)%12);
+          _ev(evts,ix,[{m:kit.snap(r-12),v:Math.round(36*env),durMs:Math.round(q*2.3),bass:true}],t+h*2*q+rb(),sc,sec,((r%12)+12)%12);
+        }
+      } else {
+        // CLOUD — pentatonic: bass fifth held, a soft 9th chord mid, melody
+        // fragment of 2-3 tones drawn by the row's light, pp
+        _ev(evts,ix,[{m:kit.snap(36+root),v:Math.round(40*env),durMs:Math.round(barMs*1.3),bass:true},{m:kit.snap(43+root),v:Math.round(34*env),durMs:Math.round(barMs*1.3),bass:true}],t,sc,sec,root);
+        const r=kit.snap(55+root); const ch=[r,kit.stepSc(r,1),kit.stepSc(r,3)];
+        _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((34-i2*2)*env),durMs:Math.round(q*3.2)})),t+q+rb(),sc,sec,root);
+        if(rd()>0.25){
+          const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+          let mm=prevMel!=null?prevMel:kit.snap(79+root);
+          mm=kit.snap(Math.max(70,Math.min(94,mm+Math.max(-4,Math.min(4,Math.round(trend/8))))));
+          const n2=kit.stepSc(mm,trend>=0?1:-1), n3=kit.stepSc(mm,trend>=0?-1:1);
+          const seq=[[mm,0,2.6],[n2,2,1.2],[n3,3,2.2]]; const nN=2+(rd()<0.5?1:0);
+          for(let k=0;k<nN;k++){ const [m,off,d]=seq[k]; const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((46+Math.min(10,sec.chr*0.3))*env-k*3),durMs:Math.round(q*d)}],t+off*q+rb(),_srcOfSec(sec,pcm),sec,pcm); }
+          prevMel=seq[nN-1][0];
+        }
+      }
+      t+=barMs;
+      if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.15);
+    }
+  }
+  // ENDING — a last wash up to the tonic, then a pentatonic 6/9 chord fading
+  const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  const s0=kitP.snap(48+tonic);
+  for(let k=0;k<6;k++){ _ev(evts,ix,[{m:Math.min(100,kitP.stepSc(s0,k*2)),v:36+k,durMs:Math.round(q*3),bass:k===0}],t+k*Math.round(q*0.24),scT,T,tonic); }
+  _ev(evts,ix,[{m:24+tonic,v:38,durMs:5200,bass:true},{m:36+tonic,v:36,durMs:5200,bass:true},{m:kitP.snap(55+pent[2]),v:32,durMs:5200},{m:kitP.snap(59+pent[3]),v:30,durMs:5200},{m:kitP.snap(62+pent[1]),v:30,durMs:5200},{m:kitP.snap(76+tonic),v:34,durMs:5200}],t+q*2,scT,T,tonic);
+  return evts;
+}
+
+// ── RACHMANINOV — the big Russian canvas: left hand sweeps arpeggios across
+// three octaves (root · fifth · tenth · octave), bells in the deep bass, a
+// melody in OCTAVES that falls stepwise in long sighs, a chromatic inner voice,
+// a phi-placed climax of full chords ff, and a quiet bell coda. Minor by nature.
+function composeImageRachmaninov(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10800,10,18);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const minor=gl<=64;
+  const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const eighth=Math.round(330-Math.min(1,gc2/45)*50);        // broad, moderato
+  const barMs=eighth*8;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
+  const maxBars=Math.floor(160000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null;
+  const rr=R(1);
+  const prog=minor?[0,5,3,4, 0,5,1,4]:[0,5,3,4, 0,2,3,4];    // i VI iv V · i VI ii V
+  const climBar=Math.floor(totBars*0.618);
+  const arc=(pos)=>0.74+0.5*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.17*0.17));
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      const env=arc(f);
+      const ph = f<0.10 ? 'bells' : Math.abs(barNo-climBar)<=1 ? 'climax' : f>0.90 ? 'coda' : 'sweep';
+      const deg=prog[barNo%8];
+      let root=dPc(deg);
+      const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+      if(ph==='sweep' && b2%2===1 && ranked[0]!=null) root=ranked[0]; // the picture colours every other bar
+      const third=inScale((root+(minor?3:4))%12), fifth=inScale((root+7)%12);
+      const sc=_srcOfSec(sec,root);
+      const vB=Math.min(120,(60+Math.min(26,sec.chr*0.7))*env);
+      if(ph==='bells'||ph==='coda'){
+        // BELLS — deep octave on the beat, a soft chord answering, the Kremlin
+        // tolling that opens and closes
+        _ev(evts,ix,[{m:24+root,v:Math.round((ph==='coda'?48:70)*env),durMs:Math.round(barMs*1.1),bass:true},{m:36+root,v:Math.round((ph==='coda'?42:62)*env),durMs:Math.round(barMs*1.1),bass:true}],t,sc,sec,root);
+        _ev(evts,ix,[{m:snap(52+root),v:Math.round(40*env),durMs:Math.round(eighth*5)},{m:snap(55+third+(third<root?12:0)),v:Math.round(36*env),durMs:Math.round(eighth*5)},{m:snap(59+fifth+(fifth<root?12:0)),v:Math.round(36*env),durMs:Math.round(eighth*5)}],t+3*eighth,sc,sec,root);
+        if(ph==='coda'){ const hi=snap(84+root); _ev(evts,ix,[{m:hi,v:Math.round(40*env),durMs:Math.round(eighth*6)}],t+4*eighth,_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12); }
+        t+=barMs; continue;
+      }
+      // ── LEFT HAND SWEEP — R · 5 · 10 · R' · 10 · 5 · R · 5 over three octaves
+      const r0=snap(28+root); let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++; let t10=t5+1; while(((t10%12)+12)%12!==third) t10++;
+      const sweep=[r0,t5,t10,r0+24,t10+12,t5+12,t10,t5];
+      for(let k=0;k<8;k++){ const pcm=((sweep[k]%12)+12)%12; _ev(evts,ix,[{m:sweep[k],v:Math.round((ph==='climax'?62:48)*env*(k===0?1.15:1)+(k%2?-3:0)),durMs:Math.round(eighth*1.9),bass:k===0||k===1}],t+k*eighth,_srcOfSec(sec,pcm),sec,pcm); }
+      if(ph==='climax'){
+        // CLIMAX — full chords in both hands on every beat, ff, melody on top
+        for(let k=0;k<8;k+=2){
+          const top=snap(79+[root,fifth,third,root][k>>1]+((k>>1)===3?12:0));
+          _ev(evts,ix,[{m:top-24,v:Math.round(vB*0.9),durMs:Math.round(eighth*2.1)},{m:snap(top-17),v:Math.round(vB*0.85),durMs:Math.round(eighth*2.1)},{m:snap(top-12),v:Math.round(vB*0.95),durMs:Math.round(eighth*2.1)},{m:top,v:Math.round(Math.min(124,vB*1.08)),durMs:Math.round(eighth*2.1)}],t+k*eighth,_srcOfSec(sec,((top%12)+12)%12),sec,((top%12)+12)%12);
+        }
+        t+=barMs; continue;
+      }
+      // ── MELODY IN OCTAVES — long sighs that fall stepwise, the row's light
+      // pulling the line; a chromatic inner voice creeping under it
+      const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+      let mm=prevMel!=null?prevMel:snap(76+third);
+      if(trend>6 || prevMel==null || mm<66) mm=snap(Math.min(91,mm+5)); // a leap UP to start the sigh
+      else mm=stepSc(mm,-1);
+      mm=snap(Math.max(64,Math.min(91,mm)));
+      const sigh=[[mm,0,3.2],[stepSc(mm,-1),3,1.6],[stepSc(mm,-2),5,2.8]];
+      const nN=(rr()<0.7)?3:2;
+      for(let k=0;k<nN;k++){
+        const [m,off,d]=sigh[k]; const pcm=((m%12)+12)%12;
+        const v=Math.round(vB*(k===0?1:0.9-k*0.04));
+        _ev(evts,ix,[{m,v,durMs:Math.round(eighth*d)},{m:m-12,v:Math.round(v*0.82),durMs:Math.round(eighth*d)}],t+off*eighth,_srcOfSec(sec,pcm),sec,pcm);
+      }
+      prevMel=sigh[nN-1][0];
+      // inner voice: a chromatic step between the hands on beats 2 and 4
+      const inn=snap(60+third+(third<root?12:0)); _ev(evts,ix,[{m:inn,v:Math.round(38*env),durMs:Math.round(eighth*1.8)}],t+2*eighth,sc,sec,third); _ev(evts,ix,[{m:inn-1,v:Math.round(36*env),durMs:Math.round(eighth*1.8)}],t+6*eighth,sc,sec,third);
+      t+=barMs;
+      if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.12);
+    }
+  }
+  // FINAL — one great tonic bell, then the chord dying away
+  const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  _ev(evts,ix,[{m:21+((tonic+3)%12),v:60,durMs:1400,bass:true}],t,scT,T,tonic);
+  _ev(evts,ix,[{m:24+tonic,v:74,durMs:5200,bass:true},{m:36+tonic,v:68,durMs:5200,bass:true},{m:snap(52+dPc(2)),v:56,durMs:5200},{m:snap(55+dPc(4)),v:54,durMs:5200},{m:snap(64+tonic),v:58,durMs:5200},{m:snap(76+tonic),v:52,durMs:5200}],t+eighth*3,scT,T,tonic);
+  return evts;
+}
+
+// ── EINAUDI — the ostinato: one broken-chord figure in the left hand that
+// NEVER changes, a four-chord loop, a sparse melody, and one long crescendo
+// built by adding layers (LH alone → melody → melody in octaves → RH eighths
+// doubling the ostinato) until everything is stripped back for the end.
+// The picture's light writes the melody; its colours pick the four chords.
+function composeImageEinaudi(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10900,8,14);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const scale=[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const dark=gl<=52;
+  const loop=dark?[5,3,0,4]:[0,5,3,4];                       // vi IV I V / I vi IV V
+  const eighth=Math.round(300-Math.min(1,gc2/45)*40);        // steady, walking
+  const barMs=eighth*8;
+  const maxBars=Math.max(32,Math.floor(165000/barMs));
+  const totBars=maxBars-(maxBars%8);
+  const totalMs=totBars*barMs;
+  const evts=[]; const ix={i:0}; let prevMel=null;
+  const re=R(1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  // the ostinato shape: R · 5 · 8 · 10 · 8 · 5 · R · 5 — fixed for the piece
+  const shape=[0,4,7,9,7,4,0,4];                             // scale steps from the root
+  for(let bar=0;bar<totBars;bar++){
+    const sec=secAt(bar);
+    const f=bar/Math.max(1,totBars-1);
+    // one long crescendo to ~0.82, then the strip-down
+    const env=f<0.82 ? 0.62+0.5*(f/0.82) : 1.12-0.6*((f-0.82)/0.18);
+    const blk=Math.floor(f*6);                               // 0 LH · 1 +mel · 2 +mel · 3 octaves · 4 full · 5 strip
+    const deg=loop[(bar>>1)%4];
+    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4);
+    const t0=bar*barMs;
+    const sc=_srcOfSec(sec,root);
+    const r0=snap(40+root);
+    // ── OSTINATO LH — every bar, every eighth, unchanged
+    for(let k=0;k<8;k++){ const m=stepSc(r0,shape[k]); const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((40+(k===0?10:0))*env),durMs:Math.round(eighth*1.6),bass:k===0}],t0+k*eighth,_srcOfSec(sec,pcm),sec,pcm); }
+    if(blk===4){ // full: RH doubles the ostinato an octave up in eighths, soft
+      for(let k=0;k<8;k++){ const m=stepSc(r0,shape[k])+12; _ev(evts,ix,[{m,v:Math.round(30*env),durMs:Math.round(eighth*1.4)}],t0+k*eighth,sc,sec,((m%12)+12)%12); }
+    }
+    if(blk===0 || (blk===5 && bar>=totBars-3)) continue;    // LH alone at both ends
+    // ── MELODY — sparse: 1-2 long notes per bar, stepwise, drawn by the light
+    const qi=Math.min(3,(bar>>1)%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+    let mm=prevMel!=null?prevMel:snap(72+third);
+    const step=Math.max(-2,Math.min(2,Math.round(trend/10)));
+    mm=stepSc(mm,step===0?((bar%4===3)?-1:1):step);
+    if(bar%8===7) mm=snap(Math.max(64,Math.min(88,snap(72+root))));   // phrase-end lands on the chord root
+    mm=snap(Math.max(64,Math.min(89,mm)));
+    const vM=Math.round((52+Math.min(16,sec.chr*0.5))*env);
+    const oct=(blk>=3);
+    const two=re()<0.45;
+    const push=(m,off,d)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:vM,durMs:Math.round(eighth*d)}]; if(oct) ns.push({m:m-12,v:Math.round(vM*0.8),durMs:Math.round(eighth*d)}); _ev(evts,ix,ns,t0+off*eighth,_srcOfSec(sec,pcm),sec,pcm); };
+    if(two){ push(mm,0,4.2); const m2=stepSc(mm,trend>=0?1:-1); push(m2,4,4.2); prevMel=m2; }
+    else { push(mm,0,8.4); prevMel=mm; }
+  }
+  // ENDING — the ostinato's root alone, then the tonic chord held
+  const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  _ev(evts,ix,[{m:snap(40+tonic),v:40,durMs:Math.round(barMs*0.8),bass:true}],tE,scT,T,tonic);
+  _ev(evts,ix,[{m:snap(28+tonic),v:44,durMs:5000,bass:true},{m:snap(40+tonic),v:40,durMs:5000,bass:true},{m:snap(55+dPc(4)),v:32,durMs:5000},{m:snap(59+dPc(2)),v:30,durMs:5000},{m:snap(72+tonic),v:36,durMs:5000}],tE+Math.round(barMs*0.8),scT,T,tonic);
+  return evts;
+}
+
+// ── HISAISHI — the Ghibli waltz: 3/4 lilt (bass · chord · chord), a wide
+// diatonic melody that leaps a sixth and walks back down, add9 colour on
+// every chord, the IV · V · iii · vi "royal road" turn in the chorus, melody
+// in octaves when it lifts. Warm major; a dark picture goes to the relative
+// minor for the verse and brightens in the chorus.
+function composeImageHisaishi(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,11000,8,16);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const scale=[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const dark=gl<=48;
+  const q=Math.round(470-Math.min(1,gc2/45)*90);             // waltz quarter 380-470ms
+  const barMs=q*3;
+  const maxBars=Math.max(32,Math.floor(150000/barMs));
+  const totBars=maxBars-(maxBars%8);
+  const evts=[]; const ix={i:0}; let prevMel=null;
+  const rh=R(1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const verse=dark?[5,3,0,4, 5,3,1,4]:[0,4,5,3, 0,4,1,4];    // vi IV I V / I V vi IV
+  const chorus=[3,4,2,5, 3,4,0,0];                           // IV V iii vi · IV V I I — the royal road
+  for(let bar=0;bar<totBars;bar++){
+    const sec=secAt(bar);
+    const f=bar/Math.max(1,totBars-1);
+    const blk=(bar>>3)%4;                                    // 8-bar blocks: intro/verse · chorus · verse · chorus
+    const ph = bar<4 ? 'intro' : (blk%2===1) ? 'chorus' : (f>0.92) ? 'outro' : 'verse';
+    const env=0.82+0.26*Math.exp(-((f-0.66)*(f-0.66))/(2*0.2*0.2));
+    const deg=(ph==='chorus'?chorus:verse)[bar%8];
+    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4), ninth=dPc(deg+1);
+    const t0=bar*barMs;
+    const sc=_srcOfSec(sec,root);
+    // ── WALTZ LH — bass on 1, add9 chord on 2 and 3
+    _ev(evts,ix,[{m:snap(36+root),v:Math.round((52+(ph==='chorus'?6:0))*env),durMs:Math.round(q*1.3),bass:true}],t0,sc,sec,root);
+    const r=snap(52+root); const ch=[r,snap(r+(third-root+12)%12),snap(r+(fifth-root+12)%12),snap(r+(ninth-root+12)%12+12)];
+    for(const hb of [1,2]){ _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((34-i2*2+(hb===1?2:0))*env),durMs:Math.round(q*0.9)})),t0+hb*q,sc,sec,root); }
+    if(ph==='intro'){ // intro: a rising arpeggio each bar instead of melody — the music box
+      const a0=snap(64+root); for(let k=0;k<3;k++){ const m=stepSc(a0,k*2); _ev(evts,ix,[{m,v:Math.round(40*env),durMs:Math.round(q*1.8)}],t0+k*q,_srcOfSec(sec,((m%12)+12)%12),sec,((m%12)+12)%12); }
+      continue;
+    }
+    if(ph==='outro' && bar>=totBars-2) continue;
+    // ── MELODY — leap a SIXTH up at the phrase start, then walk down; the
+    // row's light bends the walk; chorus sings in octaves and a step higher
+    const qi=Math.min(3,(bar>>1)%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+    const phraseStart=bar%4===0;
+    let mm;
+    if(phraseStart || prevMel==null){ mm=snap(Math.min(91,stepSc(snap(67+third),5))); }        // the sixth leap
+    else { mm=stepSc(prevMel,(trend>8)?1:-1); }
+    if(ph==='chorus') mm=Math.min(93,stepSc(mm,1));
+    mm=snap(Math.max(64,Math.min(93,mm)));
+    const vM=Math.round((56+Math.min(16,sec.chr*0.5))*env*(ph==='chorus'?1.08:1));
+    const oct=ph==='chorus';
+    const push=(m,off,d,vv)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:Math.round(vv),durMs:Math.round(q*d)}]; if(oct) ns.push({m:m-12,v:Math.round(vv*0.78),durMs:Math.round(q*d)}); _ev(evts,ix,ns,t0+off*q,_srcOfSec(sec,pcm),sec,pcm); };
+    const g=rh();
+    if(phraseStart){ push(mm,0,3.1,vM); prevMel=mm; }                                  // the long held leap note
+    else if(g<0.4){ push(mm,0,2.1,vM); const m2=stepSc(mm,-1); push(m2,2,1.1,vM-6); prevMel=m2; }   // half + quarter
+    else if(g<0.7){ push(mm,0,1.1,vM); const m2=stepSc(mm,1); push(m2,1,1.1,vM-4); const m3=stepSc(mm,-1); push(m3,2,1.1,vM-6); prevMel=m3; } // three quarters
+    else { push(mm,0,3.1,vM-2); prevMel=mm; }
+  }
+  // ENDING — IV add9 → I, high tonic, long
+  const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  const iv=dPc(3);
+  _ev(evts,ix,[{m:snap(36+iv),v:48,durMs:Math.round(barMs*0.95),bass:true},{m:snap(52+iv),v:38,durMs:Math.round(barMs*0.95)},{m:snap(55+dPc(5)),v:36,durMs:Math.round(barMs*0.95)},{m:snap(59+dPc(4)),v:34,durMs:Math.round(barMs*0.95)}],tE,scT,T,iv);
+  _ev(evts,ix,[{m:snap(24+tonic),v:52,durMs:5000,bass:true},{m:snap(36+tonic),v:48,durMs:5000,bass:true},{m:snap(55+dPc(2)),v:38,durMs:5000},{m:snap(59+dPc(4)),v:36,durMs:5000},{m:snap(62+dPc(1)),v:34,durMs:5000},{m:snap(76+tonic),v:42,durMs:5000}],tE+barMs,scT,T,tonic);
+  return evts;
+}
+
 function bakeImageChords(src){
   if(!src || !src.length) return [];
   const out = [];
@@ -19270,7 +19812,7 @@ const I18N = {
     // Tier card keys (two-tier paywall, Jun 2026)
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (then €14.99)',
-    proValueArtists:'Every style & artist \u2014 24 in all (free has 9)',proValueComposers:'All 6 composers \u2014 picture recomposition (free has 2)',proTeaser:'this song in 24 styles',proTeaserTaste:'loved it? unlock all 24',liteBridge:'discover the full Paintiano \u2192',
+    proValueArtists:'Every style & artist \u2014 24 in all (free has 9)',proValueComposers:'All 12 composers \u2014 picture recomposition (free has 2)',proTeaser:'this song in 24 styles',proTeaserTaste:'loved it? unlock all 24',liteBridge:'discover the full Paintiano \u2192',
     proValueTypes:'6 paint types per artist (free has 2)',
     proValuePalette:'Your own palette \u2014 set all 12 colours',
     proValueDpi:'Print-ready for the wall \u2014 300 DPI, no watermark',
@@ -19302,7 +19844,7 @@ const I18N = {
     tierReadOnly:'preview only',
     tierRowArtists:'Artists',
     tierRowComposers:'Composers',
-    dailyBadge:'today', dailyBadgeTitle:'Free today', dailyUnlocked:'Free today', dailyTomorrow:'a new artist & composer tomorrow · Pro has them all', dailyTry:'try it', proValueDaily:'Free gets one extra artist a day — Pro has them all, always', tierRowDaily:'Artist of the day', dailyTitle:'Artist of the day', dailyExplain:'Paintiano paints in the styles of 24 painters and 6 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.', dailyTodayIs:'Today', dailyTomorrowPair:'Tomorrow — another pair.', dailyAllPro:'All 24, always → Paintiano Pro',
+    dailyBadge:'today', dailyBadgeTitle:'Free today', dailyUnlocked:'Free today', dailyTomorrow:'a new artist & composer tomorrow · Pro has them all', dailyTry:'try it', proValueDaily:'Free gets one extra artist a day — Pro has them all, always', tierRowDaily:'Artist of the day', dailyTitle:'Artist of the day', dailyExplain:'Paintiano paints in the styles of 24 painters and 12 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.', dailyTodayIs:'Today', dailyTomorrowPair:'Tomorrow — another pair.', dailyAllPro:'All 24, always → Paintiano Pro',
     tierRowMusic:'Music (MIDI · mp3 · score)',
     tierRowImage:'Image scan',
     tierRowLive:'Compose & Mic (live)',
@@ -19430,7 +19972,7 @@ const I18N = {
     proSupportLine:'Du hältst damit auch ein unabhängiges Solo-Kunstprojekt am Leben.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (danach 14,99 €)',
-    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 24 insgesamt (Free hat 9)',proValueComposers:'Alle 6 Komponisten \u2014 Bild-Rekomposition (Free hat 2)',proTeaser:'dieser Song in 24 Stilen',proTeaserTaste:'gef\u00e4llt? alle 24 freischalten',liteBridge:'entdecke das ganze Paintiano \u2192',
+    proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 24 insgesamt (Free hat 9)',proValueComposers:'Alle 12 Komponisten \u2014 Bild-Rekomposition (Free hat 2)',proTeaser:'dieser Song in 24 Stilen',proTeaserTaste:'gef\u00e4llt? alle 24 freischalten',liteBridge:'entdecke das ganze Paintiano \u2192',
     proValueTypes:'6 Mal-Typen pro Künstler (Free hat 2)',
     proValuePalette:'Deine eigene Palette \u2014 alle 12 Farben',
     proValueDpi:'Druckfertig f\u00fcr die Wand \u2014 300 DPI, kein Wasserzeichen',
@@ -19461,7 +20003,7 @@ const I18N = {
     tierReadOnly:'nur Vorschau',
     tierRowArtists:'Künstler',
     tierRowComposers:'Komponisten',
-    dailyBadge:'heute', dailyBadgeTitle:'Heute gratis', dailyUnlocked:'Heute gratis', dailyTomorrow:'morgen ein neuer Künstler & Komponist · Pro hat alle', dailyTry:'ausprobieren', proValueDaily:'Free bekommt täglich einen Künstler extra — Pro hat alle, immer', tierRowDaily:'Künstler des Tages', dailyTitle:'Künstler des Tages', dailyExplain:'Paintiano malt in den Stilen von 24 Malern und 6 Komponisten. Neun davon hast du immer — und jeden Tag kommen ein weiterer Maler und ein weiterer Komponist für einen Tag dazu.', dailyTodayIs:'Heute', dailyTomorrowPair:'Morgen — ein anderes Paar.', dailyAllPro:'Alle 24, für immer → Paintiano Pro',
+    dailyBadge:'heute', dailyBadgeTitle:'Heute gratis', dailyUnlocked:'Heute gratis', dailyTomorrow:'morgen ein neuer Künstler & Komponist · Pro hat alle', dailyTry:'ausprobieren', proValueDaily:'Free bekommt täglich einen Künstler extra — Pro hat alle, immer', tierRowDaily:'Künstler des Tages', dailyTitle:'Künstler des Tages', dailyExplain:'Paintiano malt in den Stilen von 24 Malern und 12 Komponisten. Neun davon hast du immer — und jeden Tag kommen ein weiterer Maler und ein weiterer Komponist für einen Tag dazu.', dailyTodayIs:'Heute', dailyTomorrowPair:'Morgen — ein anderes Paar.', dailyAllPro:'Alle 24, für immer → Paintiano Pro',
     tierRowMusic:'Musik (MIDI · mp3 · Noten)',
     tierRowImage:'Bild-Scan',
     tierRowLive:'Komponieren & Mikro (live)',
@@ -19589,7 +20131,7 @@ const I18N = {
     proSupportLine:'Vous soutenez aussi un projet d’art solo indépendant.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (puis 14,99 €)',
-    proValueArtists:'Tous les styles & artistes \u2014 24 en tout (Free en a 9)',proValueComposers:'Les 6 compositeurs \u2014 recomposition d\u2019image (Free en a 2)',proTeaser:'ce morceau en 24 styles',proTeaserTaste:'\u00e7a te pla\u00eet ? d\u00e9bloque les 24',liteBridge:'d\u00e9couvre tout Paintiano \u2192',
+    proValueArtists:'Tous les styles & artistes \u2014 24 en tout (Free en a 9)',proValueComposers:'Les 12 compositeurs \u2014 recomposition d\u2019image (Free en a 2)',proTeaser:'ce morceau en 24 styles',proTeaserTaste:'\u00e7a te pla\u00eet ? d\u00e9bloque les 24',liteBridge:'d\u00e9couvre tout Paintiano \u2192',
     proValueTypes:'6 types de peinture par artiste (Free en a 2)',
     proValuePalette:'Votre propre palette \u2014 vos 12 couleurs',
     proValueDpi:'Pr\u00eat \u00e0 imprimer pour le mur \u2014 300 DPI, sans filigrane',
@@ -19620,7 +20162,7 @@ const I18N = {
     tierReadOnly:'aperçu',
     tierRowArtists:'Artistes',
     tierRowComposers:'Compositeurs',
-    dailyBadge:'aujourd’hui', dailyBadgeTitle:'Gratuit aujourd’hui', dailyUnlocked:'Gratuit aujourd’hui', dailyTomorrow:'un nouvel artiste & compositeur demain · Pro les a tous', dailyTry:'essayer', proValueDaily:'Free reçoit un artiste en plus chaque jour — Pro les a tous, toujours', tierRowDaily:'Artiste du jour', dailyTitle:'Artiste du jour', dailyExplain:'Paintiano peint dans les styles de 24 peintres et 6 compositeurs. Neuf d’entre eux sont toujours à toi — et chaque jour, un peintre et un compositeur de plus s’y joignent pour une journée.', dailyTodayIs:'Aujourd’hui', dailyTomorrowPair:'Demain — un autre duo.', dailyAllPro:'Les 24, pour toujours → Paintiano Pro',
+    dailyBadge:'aujourd’hui', dailyBadgeTitle:'Gratuit aujourd’hui', dailyUnlocked:'Gratuit aujourd’hui', dailyTomorrow:'un nouvel artiste & compositeur demain · Pro les a tous', dailyTry:'essayer', proValueDaily:'Free reçoit un artiste en plus chaque jour — Pro les a tous, toujours', tierRowDaily:'Artiste du jour', dailyTitle:'Artiste du jour', dailyExplain:'Paintiano peint dans les styles de 24 peintres et 12 compositeurs. Neuf d’entre eux sont toujours à toi — et chaque jour, un peintre et un compositeur de plus s’y joignent pour une journée.', dailyTodayIs:'Aujourd’hui', dailyTomorrowPair:'Demain — un autre duo.', dailyAllPro:'Les 24, pour toujours → Paintiano Pro',
     tierRowMusic:'Musique (MIDI · mp3 · partition)',
     tierRowImage:'Scan d’image',
     tierRowLive:'Composer & Micro (direct)',
@@ -19748,7 +20290,7 @@ const I18N = {
     proSupportLine:'También mantienes vivo un proyecto artístico independiente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (luego 14,99 €)',
-    proValueArtists:'Todos los estilos y artistas \u2014 24 en total (Free tiene 9)',proValueComposers:'Los 6 compositores \u2014 recomposici\u00f3n de imagen (Free tiene 2)',proTeaser:'esta canci\u00f3n en 24 estilos',proTeaserTaste:'\u00bfte gusta? desbloquea los 24',liteBridge:'descubre todo Paintiano \u2192',
+    proValueArtists:'Todos los estilos y artistas \u2014 24 en total (Free tiene 9)',proValueComposers:'Los 12 compositores \u2014 recomposici\u00f3n de imagen (Free tiene 2)',proTeaser:'esta canci\u00f3n en 24 estilos',proTeaserTaste:'\u00bfte gusta? desbloquea los 24',liteBridge:'descubre todo Paintiano \u2192',
     proValueTypes:'6 tipos de pintura por artista (Free tiene 2)',
     proValuePalette:'Tu propia paleta \u2014 tus 12 colores',
     proValueDpi:'Listo para imprimir y enmarcar \u2014 300 DPI, sin marca de agua',
@@ -19779,7 +20321,7 @@ const I18N = {
     tierReadOnly:'solo vista',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
-    dailyBadge:'hoy', dailyBadgeTitle:'Gratis hoy', dailyUnlocked:'Gratis hoy', dailyTomorrow:'mañana otro artista y compositor · Pro los tiene todos', dailyTry:'probar', proValueDaily:'Free recibe un artista extra cada día — Pro los tiene todos, siempre', tierRowDaily:'Artista del día', dailyTitle:'Artista del día', dailyExplain:'Paintiano pinta en los estilos de 24 pintores y 6 compositores. Nueve de ellos son siempre tuyos — y cada día se les une un pintor y un compositor más durante un día.', dailyTodayIs:'Hoy', dailyTomorrowPair:'Mañana — otra pareja.', dailyAllPro:'Los 24, para siempre → Paintiano Pro',
+    dailyBadge:'hoy', dailyBadgeTitle:'Gratis hoy', dailyUnlocked:'Gratis hoy', dailyTomorrow:'mañana otro artista y compositor · Pro los tiene todos', dailyTry:'probar', proValueDaily:'Free recibe un artista extra cada día — Pro los tiene todos, siempre', tierRowDaily:'Artista del día', dailyTitle:'Artista del día', dailyExplain:'Paintiano pinta en los estilos de 24 pintores y 12 compositores. Nueve de ellos son siempre tuyos — y cada día se les une un pintor y un compositor más durante un día.', dailyTodayIs:'Hoy', dailyTomorrowPair:'Mañana — otra pareja.', dailyAllPro:'Los 24, para siempre → Paintiano Pro',
     tierRowMusic:'Música (MIDI · mp3 · partitura)',
     tierRowImage:'Escaneo de imagen',
     tierRowLive:'Componer & Micro (en vivo)',
@@ -19907,7 +20449,7 @@ const I18N = {
     proSupportLine:'Zároveň pomáhaš udržať nezávislý umelecký projekt.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'9,99 € · early-bird (potom 14,99 €)',
-    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 24 spolu (Free m\u00e1 9)',proValueComposers:'V\u0161etk\u00fdch 6 skladate\u013eov \u2014 prekomponovanie obrazu (Free m\u00e1 2)',proTeaser:'t\u00e1to skladba v 24 \u0161t\u00fdloch',proTeaserTaste:'p\u00e1\u010di sa? odomkni v\u0161etk\u00fdch 24',liteBridge:'objav cel\u00e9 Paintiano \u2192',
+    proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 24 spolu (Free m\u00e1 9)',proValueComposers:'V\u01121etk\u00fdch 6 skladate\u013eov \u2014 prekomponovanie obrazu (Free m\u00e1 2)',proTeaser:'t\u00e1to skladba v 24 \u0161t\u00fdloch',proTeaserTaste:'p\u00e1\u010di sa? odomkni v\u0161etk\u00fdch 24',liteBridge:'objav cel\u00e9 Paintiano \u2192',
     proValueTypes:'6 typov maľby na umelca (Free má 2)',
     proValuePalette:'Vlastn\u00e1 paleta \u2014 v\u0161etk\u00fdch 12 farieb',
     proValueDpi:'Pripraven\u00e9 na stenu \u2014 300 DPI, bez vodoznaku',
@@ -19938,7 +20480,7 @@ const I18N = {
     tierReadOnly:'len náhľad',
     tierRowArtists:'Umelci',
     tierRowComposers:'Skladatelia',
-    dailyBadge:'dnes', dailyBadgeTitle:'Dnes zadarmo', dailyUnlocked:'Dnes zadarmo', dailyTomorrow:'zajtra ďalší umelec a skladateľ · Pro ich má všetkých', dailyTry:'vyskúšať', proValueDaily:'Free dostane každý deň jedného umelca navyše — Pro ich má všetkých, vždy', tierRowDaily:'Umelec dňa', dailyTitle:'Umelec dňa', dailyExplain:'Paintiano maľuje v štýle 24 maliarov a 6 skladateľov. Deväť z nich máš vždy — a každý deň sa k nim na jeden deň pridá ďalší maliar a skladateľ.', dailyTodayIs:'Dnes', dailyTomorrowPair:'Zajtra — iný pár.', dailyAllPro:'Všetkých 24, navždy → Paintiano Pro',
+    dailyBadge:'dnes', dailyBadgeTitle:'Dnes zadarmo', dailyUnlocked:'Dnes zadarmo', dailyTomorrow:'zajtra ďalší umelec a skladateľ · Pro ich má všetkých', dailyTry:'vyskúšať', proValueDaily:'Free dostane každý deň jedného umelca navyše — Pro ich má všetkých, vždy', tierRowDaily:'Umelec dňa', dailyTitle:'Umelec dňa', dailyExplain:'Paintiano maľuje v štýle 24 maliarov a 12 skladateľov. Deväť z nich máš vždy — a každý deň sa k nim na jeden deň pridá ďalší maliar a skladateľ.', dailyTodayIs:'Dnes', dailyTomorrowPair:'Zajtra — iný pár.', dailyAllPro:'Všetkých 24, navždy → Paintiano Pro',
     tierRowMusic:'Hudba (MIDI · mp3 · noty)',
     tierRowImage:'Sken obrazu',
     tierRowLive:'Komponovať & Mikro (naživo)',
@@ -20069,7 +20611,7 @@ const I18N = {
     proSupportLine:'您也在帮助一个独立的艺术项目持续运作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鸟价(之后 €14.99)',
-    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',proValueComposers:'\u5168\u90e8 6 \u4f4d\u4f5c\u66f2\u5bb6\uff0c\u56fe\u50cf\u91cd\u8c31\uff08\u514d\u8d39\u7248 2 \u4f4d\uff09',proTeaser:'\u8fd9\u9996\u66f2\u5b50\u7684 24 \u79cd\u98ce\u683c',proTeaserTaste:'\u559c\u6b22\u5417\uff1f\u89e3\u9501\u5168\u90e8 24 \u79cd',liteBridge:'\u63a2\u7d22\u5b8c\u6574\u7248 Paintiano \u2192',
+    proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',proValueComposers:'\u51128\u90e8 6 \u4f4d\u4f5c\u66f2\u5bb6\uff0c\u56fe\u50cf\u91cd\u8c31\uff08\u514d\u8d39\u7248 2 \u4f4d\uff09',proTeaser:'\u8fd9\u9996\u66f2\u5b50\u7684 24 \u79cd\u98ce\u683c',proTeaserTaste:'\u559c\u6b22\u5417\uff1f\u89e3\u9501\u5168\u90e8 24 \u79cd',liteBridge:'\u63a2\u7d22\u5b8c\u6574\u7248 Paintiano \u2192',
     proValueTypes:'每位艺术家 6 种画法(免费版 2 种)',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8c03\u8272\u677f \u2014 \u5168\u90e8 12 \u79cd\u989c\u8272',
     proValueDpi:'\u53ef\u6253\u5370\u4e0a\u5899 \u2014 300 DPI\uff0c\u65e0\u6c34\u5370',
@@ -20100,7 +20642,7 @@ const I18N = {
     tierReadOnly:'仅预览',
     tierRowArtists:'艺术家',
     tierRowComposers:'作曲家',
-    dailyBadge:'今日', dailyBadgeTitle:'今日免费', dailyUnlocked:'今日免费', dailyTomorrow:'明天换一位艺术家和作曲家 · Pro 全部拥有', dailyTry:'试一试', proValueDaily:'免费版每天多解锁一位艺术家——Pro 永久拥有全部', tierRowDaily:'今日艺术家', dailyTitle:'今日艺术家', dailyExplain:'Paintiano 以 24 位画家和 6 位作曲家的风格作画。其中九位始终属于你——每天还会有一位画家和一位作曲家加入一天。', dailyTodayIs:'今天', dailyTomorrowPair:'明天——另一对。', dailyAllPro:'全部 24 位，永久 → Paintiano Pro',
+    dailyBadge:'今日', dailyBadgeTitle:'今日免费', dailyUnlocked:'今日免费', dailyTomorrow:'明天换一位艺术家和作曲家 · Pro 全部拥有', dailyTry:'试一试', proValueDaily:'免费版每天多解锁一位艺术家——Pro 永久拥有全部', tierRowDaily:'今日艺术家', dailyTitle:'今日艺术家', dailyExplain:'Paintiano 以 24 位画家和 12 位作曲家的风格作画。其中九位始终属于你——每天还会有一位画家和一位作曲家加入一天。', dailyTodayIs:'今天', dailyTomorrowPair:'明天——另一对。', dailyAllPro:'全部 24 位，永久 → Paintiano Pro',
     tierRowMusic:'音乐（MIDI · mp3 · 乐谱）',
     tierRowImage:'图像扫描',
     tierRowLive:'弹奏 & 麦克风（实时）',
@@ -20222,7 +20764,7 @@ const I18N = {
     proSupportLine:'您也在幫助一個獨立的藝術專案持續運作。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · 早鳥價（之後 €14.99）',
-    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',proValueComposers:'\u5168\u90e8 6 \u4f4d\u4f5c\u66f2\u5bb6\uff0c\u5716\u50cf\u91cd\u8b5c\uff08\u514d\u8cbb\u7248 2 \u4f4d\uff09',proTeaser:'\u9019\u9996\u66f2\u5b50\u7684 24 \u7a2e\u98a8\u683c',proTeaserTaste:'\u559c\u6b61\u55ce\uff1f\u89e3\u9396\u5168\u90e8 24 \u7a2e',liteBridge:'\u63a2\u7d22\u5b8c\u6574\u7248 Paintiano \u2192',
+    proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',proValueComposers:'\u51128\u90e8 6 \u4f4d\u4f5c\u66f2\u5bb6\uff0c\u5716\u50cf\u91cd\u8b5c\uff08\u514d\u8cbb\u7248 2 \u4f4d\uff09',proTeaser:'\u9019\u9996\u66f2\u5b50\u7684 24 \u7a2e\u98a8\u683c',proTeaserTaste:'\u559c\u6b61\u55ce\uff1f\u89e3\u9396\u5168\u90e8 24 \u7a2e',liteBridge:'\u63a2\u7d22\u5b8c\u6574\u7248 Paintiano \u2192',
     proValueTypes:'每位藝術家 6 種畫法（免費版 2 種）',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8abf\u8272\u76e4 \u2014 \u5168\u90e8 12 \u7a2e\u984f\u8272',
     proValueDpi:'\u53ef\u5217\u5370\u4e0a\u7246 \u2014 300 DPI\uff0c\u7121\u6d6e\u6c34\u5370',
@@ -20253,7 +20795,7 @@ const I18N = {
     tierReadOnly:'僅預覽',
     tierRowArtists:'藝術家',
     tierRowComposers:'作曲家',
-    dailyBadge:'今日', dailyBadgeTitle:'今日免費', dailyUnlocked:'今日免費', dailyTomorrow:'明天換一位藝術家和作曲家 · Pro 全部擁有', dailyTry:'試一試', proValueDaily:'免費版每天多解鎖一位藝術家——Pro 永久擁有全部', tierRowDaily:'今日藝術家', dailyTitle:'今日藝術家', dailyExplain:'Paintiano 以 24 位畫家和 6 位作曲家的風格作畫。其中九位始終屬於你——每天還會有一位畫家和一位作曲家加入一天。', dailyTodayIs:'今天', dailyTomorrowPair:'明天——另一對。', dailyAllPro:'全部 24 位，永久 → Paintiano Pro',
+    dailyBadge:'今日', dailyBadgeTitle:'今日免費', dailyUnlocked:'今日免費', dailyTomorrow:'明天換一位藝術家和作曲家 · Pro 全部擁有', dailyTry:'試一試', proValueDaily:'免費版每天多解鎖一位藝術家——Pro 永久擁有全部', tierRowDaily:'今日藝術家', dailyTitle:'今日藝術家', dailyExplain:'Paintiano 以 24 位畫家和 12 位作曲家的風格作畫。其中九位始終屬於你——每天還會有一位畫家和一位作曲家加入一天。', dailyTodayIs:'今天', dailyTomorrowPair:'明天——另一對。', dailyAllPro:'全部 24 位，永久 → Paintiano Pro',
     tierRowMusic:'音樂（MIDI · mp3 · 樂譜）',
     tierRowImage:'圖像掃描',
     tierRowLive:'彈奏 & 麥克風（即時）',
@@ -20386,7 +20928,7 @@ const I18N = {
     proSupportLine:'Você também ajuda a manter um projeto de arte solo independente.',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · early-bird (depois €14.99)',
-    proValueArtists:'Todos os estilos e artistas \u2014 24 no total (Free tem 9)',proValueComposers:'Os 6 compositores \u2014 recomposi\u00e7\u00e3o de imagem (Free tem 2)',proTeaser:'esta m\u00fasica em 24 estilos',proTeaserTaste:'gostou? desbloqueie os 24',liteBridge:'descubra o Paintiano completo \u2192',
+    proValueArtists:'Todos os estilos e artistas \u2014 24 no total (Free tem 9)',proValueComposers:'Os 12 compositores \u2014 recomposi\u00e7\u00e3o de imagem (Free tem 2)',proTeaser:'esta m\u00fasica em 24 estilos',proTeaserTaste:'gostou? desbloqueie os 24',liteBridge:'descubra o Paintiano completo \u2192',
     proValueTypes:'6 tipos de pintura por artista (Free tem 2)',
     proValuePalette:'A sua pr\u00f3pria paleta \u2014 as 12 cores',
     proValueDpi:'Pronto para imprimir e emoldurar \u2014 300 DPI, sem marca de \u00e1gua',
@@ -20417,7 +20959,7 @@ const I18N = {
     tierReadOnly:'só prévia',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
-    dailyBadge:'hoje', dailyBadgeTitle:'Grátis hoje', dailyUnlocked:'Grátis hoje', dailyTomorrow:'amanhã outro artista e compositor · o Pro tem todos', dailyTry:'experimentar', proValueDaily:'O Free recebe um artista extra por dia — o Pro tem todos, sempre', tierRowDaily:'Artista do dia', dailyTitle:'Artista do dia', dailyExplain:'O Paintiano pinta nos estilos de 24 pintores e 6 compositores. Nove deles são sempre teus — e todos os dias junta-se mais um pintor e mais um compositor por um dia.', dailyTodayIs:'Hoje', dailyTomorrowPair:'Amanhã — outro par.', dailyAllPro:'Os 24, para sempre → Paintiano Pro',
+    dailyBadge:'hoje', dailyBadgeTitle:'Grátis hoje', dailyUnlocked:'Grátis hoje', dailyTomorrow:'amanhã outro artista e compositor · o Pro tem todos', dailyTry:'experimentar', proValueDaily:'O Free recebe um artista extra por dia — o Pro tem todos, sempre', tierRowDaily:'Artista do dia', dailyTitle:'Artista do dia', dailyExplain:'O Paintiano pinta nos estilos de 24 pintores e 12 compositores. Nove deles são sempre teus — e todos os dias junta-se mais um pintor e mais um compositor por um dia.', dailyTodayIs:'Hoje', dailyTomorrowPair:'Amanhã — outro par.', dailyAllPro:'Os 24, para sempre → Paintiano Pro',
     tierRowMusic:'Música (MIDI · mp3 · partitura)',
     tierRowImage:'Scan de imagem',
     tierRowLive:'Compor & Micro (ao vivo)',
@@ -20545,7 +21087,7 @@ const I18N = {
     proSupportLine:'独立アートプロジェクトを支えることにもなります。',
     proTierTitle:'Paintiano Pro',
     proTierPrice:'€9.99 · アーリーバード(その後 €14.99)',
-    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 24 \u4eba\uff08Free \u306f 9 \u4eba\uff09',proValueComposers:'6\u4eba\u306e\u4f5c\u66f2\u5bb6\u3059\u3079\u3066 \u2014 \u753b\u50cf\u306e\u518d\u4f5c\u66f2\uff08Free \u306f 2\u4eba\uff09',proTeaser:'\u3053\u306e\u66f2\u3092 24 \u30b9\u30bf\u30a4\u30eb\u3067',proTeaserTaste:'\u6c17\u306b\u5165\u3063\u305f\uff1f24 \u4eba\u3059\u3079\u3066\u89e3\u9664',liteBridge:'Paintiano \u306e\u5168\u6a5f\u80fd\u3092\u898b\u308b \u2192',
+    proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 24 \u4eba\uff08Free \u306f 9 \u4eba\uff09',proValueComposers:'12\u4eba\u306e\u4f5c\u66f2\u5bb6\u3059\u3079\u3066 \u2014 \u753b\u50cf\u306e\u518d\u4f5c\u66f2\uff08Free \u306f 2\u4eba\uff09',proTeaser:'\u3053\u306e\u66f2\u3092 24 \u30b9\u30bf\u30a4\u30eb\u3067',proTeaserTaste:'\u6c17\u306b\u5165\u3063\u305f\uff1f24 \u4eba\u3059\u3079\u3066\u89e3\u9664',liteBridge:'Paintiano \u306e\u5168\u6a5f\u80fd\u3092\u898b\u308b \u2192',
     proValueTypes:'各アーティスト 6 種類の描き方(Free は 2 種類)',
     proValuePalette:'\u81ea\u5206\u3060\u3051\u306e\u30d1\u30ec\u30c3\u30c8 \u2014 12 \u8272\u3059\u3079\u3066',
     proValueDpi:'\u58c1\u306b\u3082\u5370\u5237\u3067\u304d\u308b \u2014 300 DPI\u3001\u30a6\u30a9\u30fc\u30bf\u30fc\u30de\u30fc\u30af\u306a\u3057',
@@ -20576,7 +21118,7 @@ const I18N = {
     tierReadOnly:'プレビューのみ',
     tierRowArtists:'アーティスト',
     tierRowComposers:'作曲家',
-    dailyBadge:'今日', dailyBadgeTitle:'今日は無料', dailyUnlocked:'今日は無料', dailyTomorrow:'明日は別のアーティストと作曲家 · Pro はすべて使えます', dailyTry:'試す', proValueDaily:'Free は毎日アーティストが1人追加——Pro はいつでも全員', tierRowDaily:'今日のアーティスト', dailyTitle:'今日のアーティスト', dailyExplain:'Paintiano は24人の画家と6人の作曲家のスタイルで描きます。そのうち9人はいつでもあなたのもの——そして毎日、画家1人と作曲家1人が一日だけ加わります。', dailyTodayIs:'今日', dailyTomorrowPair:'明日は——別のペア。', dailyAllPro:'24人すべて、ずっと → Paintiano Pro',
+    dailyBadge:'今日', dailyBadgeTitle:'今日は無料', dailyUnlocked:'今日は無料', dailyTomorrow:'明日は別のアーティストと作曲家 · Pro はすべて使えます', dailyTry:'試す', proValueDaily:'Free は毎日アーティストが1人追加——Pro はいつでも全員', tierRowDaily:'今日のアーティスト', dailyTitle:'今日のアーティスト', dailyExplain:'Paintiano は24人の画家と12人の作曲家のスタイルで描きます。そのうち9人はいつでもあなたのもの——そして毎日、画家1人と作曲家1人が一日だけ加わります。', dailyTodayIs:'今日', dailyTomorrowPair:'明日は——別のペア。', dailyAllPro:'24人すべて、ずっと → Paintiano Pro',
     tierRowMusic:'音楽（MIDI · mp3 · 楽譜）',
     tierRowImage:'画像スキャン',
     tierRowLive:'演奏 & マイク（ライブ）',
@@ -21904,8 +22446,8 @@ const GUIDE_CARDS_I18N = {
   EN: [
     {id:'overview', glyph:'✦', cat:'start', title:`Music ⇄ painting`, body:`Same wheel, both ways. Sing, type, or drop a photo — the canvas fills as the music plays. Save the art, record the song. Take both home.`, more:`Paintiano is a two-way translator. The same colour wheel and pitch wheel run in both directions. Pick a source — Compose, MIC, Music, Image, or a mood — and the canvas fills as the music plays. Two paths in: ◆ Music → painting: type a mood (any feeling, any language), play the piano, sing into the mic, or drop in a MIDI, MP3 or score. ◆ Painting → music: drop in an image. Pick a colour mode, maybe an artist. Same music = same painting, always. Turn on 🔀 Shuffle for a fresh take each Play. Then Save the painting and Record the music — those are the parts you keep.`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite & Advanced`, body:`Two ways in. Lite paints a piano piece the moment you open it — just listen and tap Surprise. Advanced gives you every control. Flip with the chip up top. Lite fullscreen: swipe up = new surprise.`, more:`Paintiano opens in two modes, switched by the pill in the top bar (next to the menu). ◆ LITE — the app starts painting a classic piano piece on its own. No setup, no menus: watch the canvas fill, tap ↻ Surprise me to jump to another artist and variant, Pause/Save when you like a frame, or Use my song to drop in your own. Every artist shows its name as "inspired by …" above the canvas. Made to just work. ◆ ADVANCED — the full studio: the Create / Import tiles (mood, Compose, MIC, Music, Image), all five palettes, every artist, Setup, 🔀 Shuffle, the cockpit. Everything described in this guide lives here. ◆ The chip remembers your choice; switching to Advanced opens a fresh setup screen, switching back to Lite auto-plays again. Start in Lite, move to Advanced when you want the controls.`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`Six composers`, body:`Painting → music: a picture can play as a pure Scan — or recomposed in a composer's voice. Chopin & Satie free, all six in Pro — plus one Pro composer and one Pro artist unlock for everyone each day (✦ today). Setup → Composers picks the set.`, more:`Composers live on the image side — the painting→music mirror of the 24 artists. Load a picture and it can play two ways. ◆ SCAN reads it literally, left to right, like a score. ◆ COMPOSER recomposes the same picture in a composer's voice — its colours and energy, phrased by a different musical mind. ◆ Frédéric Chopin — the Romantic poet of the piano; singing lines, rich harmony. ◆ Erik Satie — French minimalism before the word existed; sparse chords that float. ◆ George Gershwin — jazz harmony in the concert hall; blue notes bloom. ◆ Philip Glass — repeating cells shifting one degree at a time; the music breathes in patterns. ◆ Carl Vine — contemporary Australian energy; angular, bright, rhythmic. ◆ Yiruma — modern lyrical piano; wide, calm waves. ◆ Same picture, different composer → a genuinely different piece; the header credits “inspired by …”. In Lite, ↻ Surprise rolls Scan or another composer on the same picture. Setup → Composers picks who's in play. Free includes Chopin + Satie; Pro unlocks all six.`},
-    {id:'daily', glyph:'✦', cat:'start', title:`Artist of the day`, body:`Paintiano paints in the styles of 24 painters and 6 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day. Tomorrow, another pair.`, more:`The pair changes at midnight, your local time, and is the same for everyone in the world that day — so “today it’s Hokusai” is something you can share. ◆ Where you meet them: in Lite, ↻ Surprise rolls the artist of the day early and often; on the canvas the header reads “✦ Artist of the day · inspired by …”; in the picker and in Setup their chip wears a small ✦ today badge. ◆ They come with their full range of variants, not a preview. ◆ Tap any ✦ to open this explanation again. ◆ Want all 24 painters and all 6 composers every day, forever? That is Paintiano Pro.`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`Twelve composers`, body:`Painting → music: a picture can play as a pure Scan — or recomposed in a composer's voice. Chopin & Satie free, all twelve in Pro — plus one Pro composer and one Pro artist unlock for everyone each day (✦ today). Setup → Composers picks the set.`, more:`Composers live on the image side — the painting→music mirror of the 24 artists. Load a picture and it can play two ways. ◆ SCAN reads it literally, left to right, like a score. ◆ COMPOSER recomposes the same picture in a composer's voice — its colours and energy, phrased by a different musical mind. ◆ Frédéric Chopin — the Romantic poet of the piano; singing lines, rich harmony. ◆ Erik Satie — French minimalism before the word existed; sparse chords that float. ◆ George Gershwin — jazz harmony in the concert hall; blue notes bloom. ◆ Philip Glass — repeating cells shifting one degree at a time; the music breathes in patterns. ◆ Carl Vine — contemporary Australian energy; angular, bright, rhythmic. ◆ Yiruma — modern lyrical piano; wide, calm waves. ◆ J. S. Bach — two-voice invention; running sixteenths over a walking bass, terraced loud/soft, no pedal. ◆ Beethoven — a four-note motif hammered through the piece; tremolo bass, sforzando, sudden silence. ◆ Debussy — impressionism; pentatonic calm, whole-tone shimmer, parallel chords under a long pedal. ◆ Rachmaninov — the big Russian canvas; three-octave arpeggios, melody in octaves, bells. ◆ Einaudi — one ostinato that never changes; layers pile up into a single long crescendo. ◆ Hisaishi — the Ghibli waltz; a melody that leaps a sixth and walks back down, add9 warmth. ◆ Same picture, different composer → a genuinely different piece; the header credits “inspired by …”. In Lite, ↻ Surprise rolls Scan or another composer on the same picture. Setup → Composers picks who's in play. Free includes Chopin + Satie; Pro unlocks all twelve.`},
+    {id:'daily', glyph:'✦', cat:'start', title:`Artist of the day`, body:`Paintiano paints in the styles of 24 painters and 12 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day. Tomorrow, another pair.`, more:`The pair changes at midnight, your local time, and is the same for everyone in the world that day — so “today it’s Hokusai” is something you can share. ◆ Where you meet them: in Lite, ↻ Surprise rolls the artist of the day early and often; on the canvas the header reads “✦ Artist of the day · inspired by …”; in the picker and in Setup their chip wears a small ✦ today badge. ◆ They come with their full range of variants, not a preview. ◆ Tap any ✦ to open this explanation again. ◆ Want all 24 painters and all 12 composers every day, forever? That is Paintiano Pro.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Pick what you see`, body:`Hide what you don't use. 5 palettes, 24 artists, Mosaic family, 3 tones. Edit via Pick a look. Re-open anytime to widen or narrow.`, more:`Pick a look on the canvas — tap the pencil (Edit your set) — narrows the canvas pickers to only the palettes and artists you actually use. Two sections: tick which of the five colour palettes appear in the tabs, and which artists or the "Mosaic family" entry appear among the style tiles. ◆ Mosaic family is one item covering all three states (Mosaic / Notes / $1M$); the chip still cycles on tap. ◆ Default is everything — narrow once you have favourites. ◆ Free tier sees Pro artists with a 🔒; ticking saves the preference, but paint still hits the paywall until you upgrade. ◆ Minimum 1 palette + 1 artist. ◆ Tones (Pure / Real / Pastel) live in their own section: Pure is the default (clean, saturated swatches that paint the music as straight colour); Real adds painterly grain and slight pigment shift; Pastel softens everything to a chalkier feel. Default is Pure only — tick more if you want them. When only one tone is on, the canvas tone picker hides; when two or three are on, it appears so you can switch on the fly. ◆ Choice persists on this device. Shuffle (🔀) only draws from your selected pool.`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 palettes, one song`, body:`Harmony, Spectral, φ Phi, Kontra, Custom. Tap a tab to switch — same notes, instant repaint. Each paints the music in a different colour grammar.`, more:`Five colour grammars for the same music. ◆ Harmony — circle-of-fifths order, related keys cluster. ◆ Spectral — visual equal temperament: twelve equal hue steps for twelve equal semitones; the wheel closes, B leads back to C in colour. ◆ φ Phi — golden-angle hues (137.5°), maximally scattered, no two pitch classes near each other. ◆ Kontra — inverse-Harmony: clashing chords clash on canvas, clean ones bloom apart. ◆ Custom — defaults to Scriabin's 1910 Prometheus mapping; only colours in your palette make sound (Pro edits every swatch). ◆ B/W — image mode only, when a picture is grayscale. Switch anytime — same notes, instant repaint. Free sees Custom read-only; Pro makes it editable. Kontra is free on every tier.`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`Harmony = circle of fifths`, body:`The same wheel every musician learns. C and G sit close in colour because they sit close in music. Modulate up a fifth, watch the hues shift one notch.`, more:`Harmony maps pitch to hue along the circle of fifths — the relationship every musician already knows. Keys a fifth apart sit a step apart in colour, so a ii–V–I slides smoothly across the wheel and a distant modulation jumps across it. Hue comes from pitch class, lightness from octave, saturation from how hard the note was played. It's the most "musical" of the readings: what looks close on canvas is close in the score.`},
@@ -21923,13 +22465,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`Name a feeling`, body:`Tap ✦ how do you feel? Type any feeling, any language. AI writes a piano piece. Then Morph into another mood, or Vary for a fresh key.`, more:`Tap ✦ "how do you feel?" and type any feeling, in any language — furious, saudade, 3am drive, summer crush. AI writes a piano piece for it and the canvas fills chord by chord as it plays. After: ◆ ✦ MORPH crossfades one mood into another — first half A, second half B, a velocity blend in the 40–60% zone. ◆ ✦ VARY shifts the tonality to a new key (often major ↔ minor): the rhythm and structure stay locked, only the chords — and so the colours — change. Keep tapping for new keys. ◆ Free gets 1 free try per AI mode (Mood, Mood-from-image, AI Compose — Atmosphere & Melody share two); Pro AI = unlimited.`},
     {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to print-ready.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A1 · print-ready (high-res, gallery-grade). Same song always gives the same painting — your songs have signatures now. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A1 · print-ready size.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause and seek the bar. ⟳ Loop repeats. 🔊 Mute paints in silence. Clear resets — smartly, per mode.`, more:`The playback controls. ◆ Play starts and pauses (Space too); tap the progress bar to jump, drag to scrub. ◆ ⟳ LOOP keeps a mood piece repeating; gold when on. ◆ 🔊 / 🔇 Mute silences all audio while the painting still renders — remembered across sessions. ◆ Clear is mode-aware: Compose wipes the canvas and stays; MIC drops only the active mode's draft; Image drops the draft so Setup goes back to fresh — the picture itself stays on canvas; MIDI/audio/score/text mood do a full reset. ◆ If status says "loading piano…", wait a few seconds (~5 MB sample); it falls back to a synth if that fails.`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 (early-bird, then €14.99) → all 24 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 (early-bird, then €24.99) adds unlimited AI. Tip: on Free, tap your favourite locked artist once — it unlocks for you to try.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked, 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark. Each AI mode gets 1 free try: text mood, Mood-from-image, AI Compose — and Atmosphere + Melody share two tries between them. ◆ Pro €9.99 (early-bird, then €14.99) — all 24 artists, all paint types, editable Custom palette, print-ready exports without watermark, lifetime access (no AI). ◆ Pro AI €19.99 (early-bird, then €24.99) — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere & Melody. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time. ◆ Composer voices for pictures: Free has Chopin + Satie; Pro unlocks all six.`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 (early-bird, then €14.99) → all 24 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 (early-bird, then €24.99) adds unlimited AI. Tip: on Free, tap your favourite locked artist once — it unlocks for you to try.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked, 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark. Each AI mode gets 1 free try: text mood, Mood-from-image, AI Compose — and Atmosphere + Melody share two tries between them. ◆ Pro €9.99 (early-bird, then €14.99) — all 24 artists, all paint types, editable Custom palette, print-ready exports without watermark, lifetime access (no AI). ◆ Pro AI €19.99 (early-bird, then €24.99) — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere & Melody. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time. ◆ Composer voices for pictures: Free has Chopin + Satie; Pro unlocks all twelve.`}
   ],
   DE: [
     {id:'overview', glyph:'✦', cat:'start', title:`Musik ⇄ Malerei`, body:`Gleiches Rad, beide Richtungen. Singen, tippen oder Foto droppen — die Leinwand füllt sich mit der Musik. Bild sichern, Song aufnehmen. Nimm beides mit.`, more:`Paintiano ist ein Übersetzer in beide Richtungen. Dasselbe Farbrad und Tonhöhenrad laufen in beide Richtungen. Wähle eine Quelle — Komponieren, Mikro, Musik, Bild oder eine Stimmung — und die Leinwand füllt sich, während die Musik spielt. Zwei Wege hinein: ◆ Musik → Bild: tippe eine Stimmung (jedes Gefühl, jede Sprache), spiele Klavier, sing ins Mikrofon, oder droppe MIDI, MP3 oder Noten. ◆ Bild → Musik: droppe ein Bild. Wähle einen Farbmodus, vielleicht einen Künstler. Gleiche Musik = gleiches Bild, immer. Schalte 🔀 Zufall ein für eine frische Lesart bei jedem Play. Dann sichere das Bild und nimm die Musik auf — das sind die Teile, die du behältst.`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite & Advanced`, body:`Zwei Einstiege. Lite malt sofort ein Klavierstück — zuhören und Überrasch mich tippen. Advanced gibt dir jede Kontrolle. Wechsle mit dem Chip oben. Lite-Vollbild: Swipe nach oben = neue Überraschung.`, more:`Paintiano öffnet in zwei Modi, umgeschaltet mit der Pille in der Topbar (neben dem Menü). ◆ LITE — die App malt von selbst ein klassisches Klavierstück. Kein Setup, keine Menüs: sieh der Leinwand beim Füllen zu, tippe ↻ Überrasch mich für einen anderen Künstler und eine andere Variante, Pause/Sichern bei einem schönen Bild, oder Mein Song für dein eigenes. Jeder Künstler zeigt seinen Namen als „inspiriert von …" über der Leinwand. Gemacht, um einfach zu funktionieren. ◆ ADVANCED — das volle Studio: die Erstellen / Import-Kacheln (Stimmung, Komponieren, Mikro, Musik, Bild), alle fünf Paletten, jeder Künstler, Setup, 🔀 Zufall, das Cockpit. Alles in dieser Anleitung lebt hier. ◆ Der Chip merkt sich deine Wahl; der Wechsel zu Advanced öffnet einen frischen Setup-Bildschirm, zurück zu Lite spielt wieder automatisch. Starte in Lite, geh zu Advanced, wenn du die Kontrollen willst.`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`Sechs Komponisten`, body:`Bild → Musik: ein Bild kann als reiner Scan spielen — oder neu komponiert in der Stimme eines Komponisten. Chopin & Satie gratis, alle sechs in Pro — dazu wird täglich ein Pro-Komponist und ein Pro-Künstler für alle freigeschaltet (✦ heute). Setup → Komponisten wählt das Set.`, more:`Die Komponisten leben auf der Bildseite — der Bild→Musik-Spiegel der 24 Künstler. Lade ein Bild, und es kann auf zwei Arten spielen. ◆ SCAN liest es wörtlich, von links nach rechts, wie eine Partitur. ◆ KOMPONIST komponiert dasselbe Bild neu in der Stimme eines Komponisten — seine Farben und Energie, phrasiert von einem anderen musikalischen Geist. ◆ Frédéric Chopin — der romantische Dichter des Klaviers; singende Linien, reiche Harmonik. ◆ Erik Satie — französischer Minimalismus, bevor es das Wort gab; karge Akkorde, die schweben. ◆ George Gershwin — Jazzharmonik im Konzertsaal; Blue Notes blühen. ◆ Philip Glass — sich wiederholende Zellen, die sich um einen Grad verschieben; die Musik atmet in Mustern. ◆ Carl Vine — zeitgenössische australische Energie; kantig, hell, rhythmisch. ◆ Yiruma — modernes lyrisches Klavier; weite, ruhige Wellen. ◆ Gleiches Bild, anderer Komponist → ein wirklich anderes Stück; die Kopfzeile nennt „inspired by …“. In Lite würfelt ↻ Überrasch mich Scan oder einen anderen Komponisten auf demselben Bild. Setup → Komponisten bestimmt, wer im Spiel ist. Free enthält Chopin + Satie; Pro schaltet alle sechs frei.`},
-    {id:'daily', glyph:'✦', cat:'start', title:`Künstler des Tages`, body:`Paintiano malt in den Stilen von 24 Malern und 6 Komponisten. Neun davon hast du immer — und jeden Tag kommen ein weiterer Maler und ein weiterer Komponist für einen Tag dazu. Morgen ein anderes Paar.`, more:`Das Paar wechselt um Mitternacht deiner Ortszeit und ist an diesem Tag für alle auf der Welt gleich — „heute ist Hokusai dran“ lässt sich also teilen. ◆ Wo du sie triffst: In Lite würfelt ↻ Überrasch mich den Künstler des Tages früh und oft; auf der Leinwand steht „✦ Künstler des Tages · inspired by …“; im Picker und im Setup trägt sein Chip ein kleines ✦ heute. ◆ Sie kommen mit allen Varianten, nicht als Vorschau. ◆ Tippe auf ein ✦, um diese Erklärung wieder zu öffnen. ◆ Alle 24 Maler und alle 6 Komponisten jeden Tag, für immer? Das ist Paintiano Pro.`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`Zwölf Komponisten`, body:`Bild → Musik: ein Bild kann als reiner Scan spielen — oder neu komponiert in der Stimme eines Komponisten. Chopin & Satie gratis, alle zwölf in Pro — dazu wird täglich ein Pro-Komponist und ein Pro-Künstler für alle freigeschaltet (✦ heute). Setup → Komponisten wählt das Set.`, more:`Die Komponisten leben auf der Bildseite — der Bild→Musik-Spiegel der 24 Künstler. Lade ein Bild, und es kann auf zwei Arten spielen. ◆ SCAN liest es wörtlich, von links nach rechts, wie eine Partitur. ◆ KOMPONIST komponiert dasselbe Bild neu in der Stimme eines Komponisten — seine Farben und Energie, phrasiert von einem anderen musikalischen Geist. ◆ Frédéric Chopin — der romantische Dichter des Klaviers; singende Linien, reiche Harmonik. ◆ Erik Satie — französischer Minimalismus, bevor es das Wort gab; karge Akkorde, die schweben. ◆ George Gershwin — Jazzharmonik im Konzertsaal; Blue Notes blühen. ◆ Philip Glass — sich wiederholende Zellen, die sich um einen Grad verschieben; die Musik atmet in Mustern. ◆ Carl Vine — zeitgenössische australische Energie; kantig, hell, rhythmisch. ◆ Yiruma — modernes lyrisches Klavier; weite, ruhige Wellen. ◆ J. S. Bach — zweistimmige Invention; laufende Sechzehntel über einem schreitenden Bass, Terrassendynamik, kein Pedal. ◆ Beethoven — ein Viertonmotiv, durch das ganze Stück gehämmert; Tremolo-Bass, Sforzato, plötzliche Stille. ◆ Debussy — Impressionismus; pentatonische Ruhe, Ganzton-Schimmer, Parallelakkorde unter langem Pedal. ◆ Rachmaninow — die große russische Leinwand; Arpeggien über drei Oktaven, Melodie in Oktaven, Glocken. ◆ Einaudi — ein Ostinato, das sich nie ändert; Schicht auf Schicht bis zu einem einzigen langen Crescendo. ◆ Hisaishi — der Ghibli-Walzer; eine Melodie, die eine Sexte springt und wieder herabsteigt, add9-Wärme. ◆ Gleiches Bild, anderer Komponist → ein wirklich anderes Stück; die Kopfzeile nennt „inspired by …“. In Lite würfelt ↻ Überrasch mich Scan oder einen anderen Komponisten auf demselben Bild. Setup → Komponisten bestimmt, wer im Spiel ist. Free enthält Chopin + Satie; Pro schaltet alle zwölf frei.`},
+    {id:'daily', glyph:'✦', cat:'start', title:`Künstler des Tages`, body:`Paintiano malt in den Stilen von 24 Malern und 12 Komponisten. Neun davon hast du immer — und jeden Tag kommen ein weiterer Maler und ein weiterer Komponist für einen Tag dazu. Morgen ein anderes Paar.`, more:`Das Paar wechselt um Mitternacht deiner Ortszeit und ist an diesem Tag für alle auf der Welt gleich — „heute ist Hokusai dran“ lässt sich also teilen. ◆ Wo du sie triffst: In Lite würfelt ↻ Überrasch mich den Künstler des Tages früh und oft; auf der Leinwand steht „✦ Künstler des Tages · inspired by …“; im Picker und im Setup trägt sein Chip ein kleines ✦ heute. ◆ Sie kommen mit allen Varianten, nicht als Vorschau. ◆ Tippe auf ein ✦, um diese Erklärung wieder zu öffnen. ◆ Alle 24 Maler und alle 12 Komponisten jeden Tag, für immer? Das ist Paintiano Pro.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Wähle, was du siehst`, body:`Verstecke, was du nicht nutzt. 5 Paletten, 24 Künstler, Mosaik-Familie, 3 Töne. Bearbeite über „Wähle einen Look“. Jederzeit wieder öffnen.`, more:`„Wähle einen Look“ auf der Leinwand — tippe den Stift (Set bearbeiten) — grenzt die Canvas-Wähler auf die Paletten und Künstler ein, die du wirklich nutzt. Zwei Bereiche: hake an, welche der fünf Paletten in den Tabs erscheinen, und welche Künstler oder der „Mosaik-Familie"-Eintrag bei den Stil-Kacheln auftauchen. ◆ Die Mosaik-Familie ist ein Eintrag für alle drei Zustände (Mosaik / Noten / $1M$); die Kachel zykelt weiter beim Tippen. ◆ Standard ist alles — grenze erst ein, wenn du Favoriten hast. ◆ Free sieht Pro-Künstler mit 🔒; Anhaken speichert die Wahl, aber das Malen trifft die Paywall bis zum Upgrade. ◆ Mindestens 1 Palette + 1 Künstler. ◆ Töne (Pur / Real / Pastell) leben in einem eigenen Bereich: Pur ist der Standard (saubere, gesättigte Farben, die die Musik als reine Farbe malen); Real fügt malerische Körnung und leichte Pigmentverschiebung hinzu; Pastell macht alles weicher, kreidiger. Standard ist nur Pur — hake mehr an, wenn du sie willst. Ist nur ein Ton an, blendet sich der Canvas-Ton-Wähler aus; bei zwei oder drei erscheint er, damit du im Fluss wechseln kannst. ◆ Wahl bleibt auf diesem Gerät. Zufall (🔀) zieht nur aus deiner Auswahl.`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 Paletten, ein Song`, body:`Harmonie, Spektral, φ Phi, Kontra, Eigen. Tab antippen zum Wechseln — gleiche Noten, sofortige Neumalung. Jede eine andere Farbgrammatik.`, more:`Fünf Farbgrammatiken für dieselbe Musik. ◆ Harmonie — Quintenzirkel-Ordnung, verwandte Tonarten gruppieren sich. ◆ Spektral — visuelle gleichstufige Stimmung: zwölf gleiche Farbschritte für zwölf Halbtöne; das Rad schließt sich, H führt farblich zurück zu C. ◆ φ Phi — Farben im goldenen Winkel (137,5°), maximal gestreut. ◆ Kontra — inverse Harmonie: schräge Akkorde knallen auf der Leinwand, klare blühen auseinander. ◆ Eigen — Standard ist Skrjabins Prometheus-Karte von 1910; nur Farben deiner Palette klingen (Pro bearbeitet jede). ◆ S/W — nur im Bildmodus, wenn ein Bild graustufig ist. Wechsle jederzeit — gleiche Noten, sofortige Neumalung. Free sieht Eigen schreibgeschützt; Pro macht es bearbeitbar. Kontra ist auf jeder Stufe gratis.`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`Harmonie = Quintenzirkel`, body:`Das Rad, das jeder Musiker lernt. C und G stehen farblich nah, weil sie musikalisch nah stehen. Eine Quinte hoch — die Töne rücken eine Stufe.`, more:`Harmonie ordnet Tonhöhe der Farbe entlang des Quintenzirkels zu — die Beziehung, die jeder Musiker schon kennt. Tonarten eine Quinte auseinander stehen farblich einen Schritt auseinander, also gleitet eine ii–V–I sanft übers Rad und eine ferne Modulation springt darüber. Farbton kommt von der Tonklasse, Helligkeit von der Oktave, Sättigung davon, wie hart der Ton gespielt wurde. Die musikalischste Lesart: was auf der Leinwand nah aussieht, ist nah in der Partitur.`},
@@ -21947,13 +22489,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`Nenn ein Gefühl`, body:`Tippe ✦ wie fühlst du dich? Tippe jedes Gefühl, jede Sprache. KI schreibt ein Klavierstück. Dann Morph in eine andere Stimmung, oder Vary für eine frische Tonart.`, more:`Tippe ✦ „wie fühlst du dich?" und tippe jedes Gefühl, in jeder Sprache — wütend, saudade, 3-Uhr-Fahrt, Sommerschwarm. KI schreibt ein Klavierstück dafür und die Leinwand füllt sich Akkord für Akkord, während es spielt. Danach: ◆ ✦ MORPH blendet eine Stimmung in eine andere — erste Hälfte A, zweite B, ein Velocity-Blend in der 40–60%-Zone. ◆ ✦ VARY verschiebt die Tonart auf eine neue (oft Dur ↔ Moll): Rhythmus und Struktur bleiben gesperrt, nur die Akkorde — und somit die Farben — ändern sich. Tippe weiter für neue Tonarten. ◆ Free bekommt 1 Gratisversuch je KI-Modus (Stimmung, Stimmung aus Bild, KI komponieren — Atmosphäre & Melodie teilen sich zwei); Pro KI = unbegrenzt.`},
     {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Sichern → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf druckfertig.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SICHERN exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A1 · druckfertig (hochauflösend, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. ◆ ⏺ AUFNEHMEN (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ NOTEN wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A1 · druckfertig frei.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, Loop, Mute, Clear`, body:`Play/Pause und Leiste suchen. ⟳ Loop wiederholt. 🔊 Mute malt in Stille. Clear setzt zurück — klug, je Modus.`, more:`Die Wiedergabe-Steuerung. ◆ Play startet und pausiert (auch Leertaste); tippe die Fortschrittsleiste zum Springen, ziehe zum Scrubben. ◆ ⟳ LOOP lässt ein Stimmungsstück wiederholen; gold wenn an. ◆ 🔊 / 🔇 Mute stummschaltet alles Audio, während das Bild weiter entsteht — über Sitzungen gemerkt. ◆ Clear ist modusbewusst: Compose löscht die Leinwand und bleibt; MIC verwirft nur den Entwurf des aktiven Modus; Image verwirft den Entwurf, sodass Setup wieder leer ist — das Bild bleibt auf der Leinwand; MIDI/Audio/Noten/Text-Stimmung machen einen vollen Reset. ◆ Steht da „loading piano…", warte ein paar Sekunden (~5 MB Sample); klappt das nicht, schaltet es auf ein Synth-Klavier.`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € (Early-bird, dann 14,99 €) → alle 24 Künstler, editierbare Eigen-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € (Early-bird, dann 24,99 €) fügt unbegrenzte KI hinzu. Tipp: Tippe bei Free deinen liebsten gesperrten Künstler einmal an — er wird zum Ausprobieren freigeschaltet.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet, 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Eigen-Palette schreibgeschützt, Exporte mit Wasserzeichen. Jeder KI-Modus hat 1 Gratisversuch: Text-Stimmung, Stimmung aus Bild, KI komponieren — und Atmosphäre + Melodie teilen sich zwei Versuche. ◆ Pro €9.99 (Early-bird, dann €14.99) — alle 24 Künstler, alle Maltypen, editierbare Eigen-Palette, druckfertige Exporte ohne Wasserzeichen, lebenslanger Zugang (ohne KI). ◆ Pro KI €19.99 (Early-bird, dann €24.99) — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Stimmung aus Bild, KI komponieren, KI-Atmosphäre & Melodie. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit. ◆ Komponistenstimmen für Bilder: Free hat Chopin + Satie; Pro schaltet alle sechs frei.`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € (Early-bird, dann 14,99 €) → alle 24 Künstler, editierbare Eigen-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € (Early-bird, dann 24,99 €) fügt unbegrenzte KI hinzu. Tipp: Tippe bei Free deinen liebsten gesperrten Künstler einmal an — er wird zum Ausprobieren freigeschaltet.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet, 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Eigen-Palette schreibgeschützt, Exporte mit Wasserzeichen. Jeder KI-Modus hat 1 Gratisversuch: Text-Stimmung, Stimmung aus Bild, KI komponieren — und Atmosphäre + Melodie teilen sich zwei Versuche. ◆ Pro €9.99 (Early-bird, dann €14.99) — alle 24 Künstler, alle Maltypen, editierbare Eigen-Palette, druckfertige Exporte ohne Wasserzeichen, lebenslanger Zugang (ohne KI). ◆ Pro KI €19.99 (Early-bird, dann €24.99) — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Stimmung aus Bild, KI komponieren, KI-Atmosphäre & Melodie. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit. ◆ Komponistenstimmen für Bilder: Free hat Chopin + Satie; Pro schaltet alle zwölf frei.`}
   ],
   FR: [
     {id:'overview', glyph:'✦', cat:'start', title:`Musique ⇄ peinture`, body:`Même roue, les deux sens. Chante, tape ou dépose une photo — la toile se remplit avec la musique. Sauve l'art, enregistre le morceau. Repars avec les deux.`, more:`Paintiano est un traducteur à double sens. La même roue des couleurs et roue des hauteurs tournent dans les deux sens. Choisis une source — Composer, Micro, Musique, Image ou une humeur — et la toile se remplit pendant que la musique joue. Deux voies d'entrée : ◆ Musique → peinture : tape une humeur (n'importe quel ressenti, n'importe quelle langue), joue du piano, chante dans le micro, ou dépose un MIDI, MP3 ou une partition. ◆ Peinture → musique : dépose une image. Choisis un mode couleur, peut-être un artiste. Même musique = même peinture, toujours. Active 🔀 l'aléatoire pour une lecture neuve à chaque Play. Puis Sauve la peinture et Enregistre la musique — ce sont les parties que tu gardes.`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite & Avancé`, body:`Deux entrées. Lite peint un morceau de piano dès l'ouverture — écoute et touche Surprends-moi. Avancé te donne chaque commande. Bascule avec la pastille en haut. Plein écran Lite : swipe en haut = nouvelle surprise.`, more:`Paintiano s'ouvre en deux modes, basculés par la pastille de la barre du haut (à côté du menu). ◆ LITE — l'app se met à peindre toute seule un morceau de piano classique. Aucun réglage, aucun menu : regarde la toile se remplir, touche ↻ Surprends-moi pour passer à un autre artiste et une autre variante, Pause/Sauver quand une image te plaît, ou Ma chanson pour la tienne. Chaque artiste affiche son nom en « inspiré de … » au-dessus de la toile. Fait pour juste fonctionner. ◆ AVANCÉ — le studio complet : les tuiles Créer / Import (humeur, Composer, Micro, Musique, Image), les cinq palettes, chaque artiste, Setup, 🔀 aléatoire, le cockpit. Tout ce que décrit ce guide vit ici. ◆ La pastille retient ton choix ; passer en Avancé ouvre un écran de réglage neuf, revenir en Lite relance la lecture auto. Commence en Lite, passe en Avancé quand tu veux les commandes.`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`Six compositeurs`, body:`Peinture → musique : une image peut jouer en Scan pur — ou recomposée dans la voix d'un compositeur. Chopin & Satie gratuits, les six en Pro — et chaque jour un compositeur et un artiste Pro se débloquent pour tous (✦ aujourd’hui). Setup → Compositeurs choisit le set.`, more:`Les compositeurs vivent côté image — le miroir peinture→musique des 24 artistes. Charge une image : elle peut jouer de deux façons. ◆ SCAN la lit littéralement, de gauche à droite, comme une partition. ◆ COMPOSITEUR recompose la même image dans la voix d'un compositeur — ses couleurs et son énergie, phrasées par un autre esprit musical. ◆ Frédéric Chopin — le poète romantique du piano ; lignes chantantes, harmonie riche. ◆ Erik Satie — le minimalisme français avant que le mot existe ; accords épars qui flottent. ◆ George Gershwin — l'harmonie jazz dans la salle de concert ; les blue notes fleurissent. ◆ Philip Glass — des cellules répétées qui glissent d'un degré à la fois ; la musique respire en motifs. ◆ Carl Vine — énergie australienne contemporaine ; anguleuse, claire, rythmique. ◆ Yiruma — piano lyrique moderne ; larges vagues calmes. ◆ Même image, autre compositeur → un morceau vraiment différent ; l'en-tête crédite « inspired by … ». En Lite, ↻ Surprends-moi tire Scan ou un autre compositeur sur la même image. Setup → Compositeurs décide qui est en jeu. Free inclut Chopin + Satie ; Pro débloque les six.`},
-    {id:'daily', glyph:'✦', cat:'start', title:`Artiste du jour`, body:`Paintiano peint dans les styles de 24 peintres et 6 compositeurs. Neuf d'entre eux sont toujours à toi — et chaque jour, un peintre et un compositeur de plus s'y joignent pour une journée. Demain, un autre duo.`, more:`Le duo change à minuit, heure locale, et il est le même pour tout le monde ce jour-là — « aujourd'hui c'est Hokusai » se partage. ◆ Où les rencontrer : en Lite, ↻ Surprends-moi tire l'artiste du jour tôt et souvent ; sur la toile l'en-tête indique « ✦ Artiste du jour · inspired by … » ; dans le sélecteur et le Setup, sa puce porte un petit ✦ aujourd'hui. ◆ Ils arrivent avec toutes leurs variantes, pas un aperçu. ◆ Touche un ✦ pour rouvrir cette explication. ◆ Les 24 peintres et les 6 compositeurs chaque jour, pour toujours ? C'est Paintiano Pro.`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`Douze compositeurs`, body:`Peinture → musique : une image peut jouer en Scan pur — ou recomposée dans la voix d'un compositeur. Chopin & Satie gratuits, les douze en Pro — et chaque jour un compositeur et un artiste Pro se débloquent pour tous (✦ aujourd’hui). Setup → Compositeurs choisit le set.`, more:`Les compositeurs vivent côté image — le miroir peinture→musique des 24 artistes. Charge une image : elle peut jouer de deux façons. ◆ SCAN la lit littéralement, de gauche à droite, comme une partition. ◆ COMPOSITEUR recompose la même image dans la voix d'un compositeur — ses couleurs et son énergie, phrasées par un autre esprit musical. ◆ Frédéric Chopin — le poète romantique du piano ; lignes chantantes, harmonie riche. ◆ Erik Satie — le minimalisme français avant que le mot existe ; accords épars qui flottent. ◆ George Gershwin — l'harmonie jazz dans la salle de concert ; les blue notes fleurissent. ◆ Philip Glass — des cellules répétées qui glissent d'un degré à la fois ; la musique respire en motifs. ◆ Carl Vine — énergie australienne contemporaine ; anguleuse, claire, rythmique. ◆ Yiruma — piano lyrique moderne ; larges vagues calmes. ◆ J. S. Bach — invention à deux voix ; doubles croches courantes sur une basse qui marche, nuances en terrasses, sans pédale. ◆ Beethoven — un motif de quatre notes martelé à travers la pièce ; basse en trémolo, sforzando, silences soudains. ◆ Debussy — l'impressionnisme ; calme pentatonique, miroitement par tons entiers, accords parallèles sous une longue pédale. ◆ Rachmaninov — la grande toile russe ; arpèges sur trois octaves, mélodie en octaves, cloches. ◆ Einaudi — un ostinato qui ne change jamais ; les couches s'empilent en un seul long crescendo. ◆ Hisaishi — la valse Ghibli ; une mélodie qui saute une sixte et redescend, chaleur add9. ◆ Même image, autre compositeur → un morceau vraiment différent ; l'en-tête crédite « inspired by … ». En Lite, ↻ Surprends-moi tire Scan ou un autre compositeur sur la même image. Setup → Compositeurs décide qui est en jeu. Free inclut Chopin + Satie ; Pro débloque les douze.`},
+    {id:'daily', glyph:'✦', cat:'start', title:`Artiste du jour`, body:`Paintiano peint dans les styles de 24 peintres et 12 compositeurs. Neuf d'entre eux sont toujours à toi — et chaque jour, un peintre et un compositeur de plus s'y joignent pour une journée. Demain, un autre duo.`, more:`Le duo change à minuit, heure locale, et il est le même pour tout le monde ce jour-là — « aujourd'hui c'est Hokusai » se partage. ◆ Où les rencontrer : en Lite, ↻ Surprends-moi tire l'artiste du jour tôt et souvent ; sur la toile l'en-tête indique « ✦ Artiste du jour · inspired by … » ; dans le sélecteur et le Setup, sa puce porte un petit ✦ aujourd'hui. ◆ Ils arrivent avec toutes leurs variantes, pas un aperçu. ◆ Touche un ✦ pour rouvrir cette explication. ◆ Les 24 peintres et les 12 compositeurs chaque jour, pour toujours ? C'est Paintiano Pro.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Choisis ce que tu vois`, body:`Cache ce que tu n'utilises pas. 5 palettes, 24 artistes, famille Mosaïque, 3 tons. Modifie via « Choisis un style ». Rouvre quand tu veux.`, more:`« Choisis un style » sur la toile — touche le crayon (Modifier ta sélection) — réduit les sélecteurs de la toile aux seules palettes et artistes que tu utilises vraiment. Deux sections : coche lesquelles des cinq palettes apparaissent dans les onglets, et quels artistes ou l'entrée « famille Mosaïque » apparaissent parmi les tuiles de style. ◆ La famille Mosaïque est un seul élément couvrant les trois états (Mosaïque / Notes / $1M$) ; la tuile cycle toujours au tap. ◆ Le défaut est tout — réduis une fois que tu as des favoris. ◆ Free voit les artistes Pro avec 🔒 ; cocher enregistre la préférence, mais la peinture bute sur le paywall jusqu'à l'upgrade. ◆ Minimum 1 palette + 1 artiste. ◆ Les Tons (Pur / Réel / Pastel) vivent dans leur propre section : Pur est le défaut (couleurs propres et saturées qui peignent la musique en couleur franche) ; Réel ajoute un grain pictural et un léger décalage de pigment ; Pastel adoucit tout vers un rendu craie. Le défaut est seulement Pur — coche-en plus si tu en veux. Quand un seul ton est actif, le sélecteur de ton sur la toile se cache ; avec deux ou trois, il apparaît pour switcher à la volée. ◆ Le choix reste sur cet appareil. L'aléatoire (🔀) ne pioche que dans ta sélection.`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 palettes, un morceau`, body:`Harmonie, Spectral, φ Phi, Contre, Perso. Tape un onglet pour changer — mêmes notes, repeinte instantanée. Chacune une autre grammaire de couleur.`, more:`Cinq grammaires de couleur pour la même musique. ◆ Harmonie — ordre du cycle des quintes, les tonalités proches se groupent. ◆ Spectral — tempérament égal visuel : douze pas de teinte égaux pour douze demi-tons ; la roue se ferme, Si ramène à Do en couleur. ◆ φ Phi — teintes en angle d'or (137,5°), dispersées au maximum. ◆ Contre — Harmonie inverse : les accords heurtés s'entrechoquent sur la toile, les nets éclosent à l'écart. ◆ Perso — par défaut la carte Prométhée de Scriabine de 1910 ; seules les couleurs de ta palette sonnent (Pro édite chacune). ◆ N/B — mode image seul, quand une image est en niveaux de gris. Change quand tu veux — mêmes notes, repeinte instantanée. Free voit Perso en lecture seule ; Pro le rend éditable. Contre est gratuit à tous les niveaux.`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`Harmonie = cycle des quintes`, body:`La roue que tout musicien apprend. Do et Sol sont proches en couleur car proches en musique. Monte d'une quinte — les teintes glissent d'un cran.`, more:`Harmonie associe la hauteur à la teinte le long du cycle des quintes — la relation que tout musicien connaît déjà. Des tonalités à une quinte d'écart sont à un pas en couleur, donc un ii–V–I glisse doucement sur la roue et une modulation lointaine la traverse d'un bond. La teinte vient de la classe de hauteur, la luminosité de l'octave, la saturation de la force du jeu. La lecture la plus « musicale » : ce qui paraît proche sur la toile est proche dans la partition.`},
@@ -21971,13 +22513,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`Nomme un ressenti`, body:`Tape ✦ comment tu te sens ? Tape n'importe quel ressenti, n'importe quelle langue. L'IA écrit un morceau. Puis Morph vers une autre humeur, ou Vary pour une tonalité neuve.`, more:`Tape ✦ « comment tu te sens ? » et tape n'importe quel ressenti, en n'importe quelle langue — furieux, saudade, virée à 3h, béguin d'été. L'IA écrit un morceau de piano pour lui et la toile se remplit accord par accord pendant qu'il joue. Après : ◆ ✦ MORPH fond une humeur dans une autre — première moitié A, seconde B, un mélange de vélocité dans la zone 40–60%. ◆ ✦ VARY décale la tonalité vers une nouvelle (souvent majeur ↔ mineur) : le rythme et la structure restent verrouillés, seuls les accords — et donc les couleurs — changent. Tape encore pour de nouvelles tonalités. ◆ Free reçoit 1 essai gratuit par mode IA (ambiance, ambiance image, composer IA — Atmosphère & Mélodie en partagent deux) ; Pro IA = illimité.`},
     {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Sauver → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte en qualité prête à imprimer.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAUVER exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A1 · prêt à imprimer (haute résolution, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. ◆ ⏺ ENREGISTRER (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ PARTITION transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A1 · prête à imprimer.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause et navigation. ⟳ Loop répète. 🔊 Mute peint en silence. Clear réinitialise — intelligemment, par mode.`, more:`Les commandes de lecture. ◆ Play démarre et met en pause (Espace aussi) ; tape la barre de progression pour sauter, glisse pour scruber. ◆ ⟳ LOOP fait répéter une pièce d'humeur ; or quand actif. ◆ 🔊 / 🔇 Mute coupe tout l'audio pendant que la peinture continue — mémorisé entre sessions. ◆ Clear est sensible au mode : Compose efface la toile et reste ; MIC abandonne seulement le brouillon du mode actif ; Image abandonne le brouillon, Setup repart à zéro — l'image reste sur la toile ; MIDI/audio/partition/humeur texte font un reset complet. ◆ Si le statut dit « loading piano… », attends quelques secondes (~5 Mo d'échantillon) ; si ça échoue, il bascule sur un piano synthé.`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € (early-bird, puis 14,99 €) → les 24 artistes, palette Perso éditable, sans filigrane, à vie. Pro IA 19,99 € (early-bird, puis 24,99 €) ajoute l'IA illimitée. Astuce : en Free, touche ton artiste verrouillé préféré — il se déverrouille pour l'essayer.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués, 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Perso en lecture seule, exports avec filigrane. Chaque mode IA a 1 essai gratuit : ambiance texte, ambiance image, composer IA — et Atmosphère + Mélodie partagent deux essais. ◆ Pro €9.99 (early-bird, puis €14.99) — les 24 artistes, tous les types de peinture, palette Perso éditable, exports prêts à imprimer sans filigrane, accès à vie (sans IA). ◆ Pro IA €19.99 (early-bird, puis €24.99) — tout Pro plus IA illimitée : ambiances texte, ambiance image, composer IA, Atmosphère & Mélodie IA. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois. ◆ Voix de compositeurs pour les images : Free a Chopin + Satie ; Pro débloque les six.`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € (early-bird, puis 14,99 €) → les 24 artistes, palette Perso éditable, sans filigrane, à vie. Pro IA 19,99 € (early-bird, puis 24,99 €) ajoute l'IA illimitée. Astuce : en Free, touche ton artiste verrouillé préféré — il se déverrouille pour l'essayer.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués, 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Perso en lecture seule, exports avec filigrane. Chaque mode IA a 1 essai gratuit : ambiance texte, ambiance image, composer IA — et Atmosphère + Mélodie partagent deux essais. ◆ Pro €9.99 (early-bird, puis €14.99) — les 24 artistes, tous les types de peinture, palette Perso éditable, exports prêts à imprimer sans filigrane, accès à vie (sans IA). ◆ Pro IA €19.99 (early-bird, puis €24.99) — tout Pro plus IA illimitée : ambiances texte, ambiance image, composer IA, Atmosphère & Mélodie IA. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois. ◆ Voix de compositeurs pour les images : Free a Chopin + Satie ; Pro débloque les douze.`}
   ],
   ES: [
     {id:'overview', glyph:'✦', cat:'start', title:`Música ⇄ pintura`, body:`La misma rueda, ambos sentidos. Canta, escribe o suelta una foto — el lienzo se llena con la música. Guarda el arte, graba la canción. Llévate ambos.`, more:`Paintiano es un traductor de doble sentido. La misma rueda de colores y rueda de tonos giran en ambos sentidos. Elige una fuente — Componer, Micro, Música, Imagen o un estado de ánimo — y el lienzo se llena mientras suena la música. Dos vías de entrada: ◆ Música → pintura: escribe un ánimo (cualquier sentimiento, cualquier idioma), toca el piano, canta al micro, o suelta un MIDI, MP3 o partitura. ◆ Pintura → música: suelta una imagen. Elige un modo de color, quizá un artista. La misma música = la misma pintura, siempre. Activa 🔀 aleatorio para una lectura nueva en cada Play. Luego Guarda la pintura y Graba la música — esas son las partes que te quedas.`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite y Avanzado`, body:`Dos entradas. Lite pinta una pieza de piano al abrir — escucha y toca Sorpréndeme. Avanzado te da cada control. Cambia con la píldora de arriba. Pantalla completa Lite: swipe arriba = nueva sorpresa.`, more:`Paintiano abre en dos modos, alternados con la píldora de la barra superior (junto al menú). ◆ LITE — la app empieza a pintar sola una pieza de piano clásica. Sin ajustes, sin menús: mira llenarse el lienzo, toca ↻ Sorpréndeme para saltar a otro artista y variante, Pausa/Guardar cuando te guste un cuadro, o Mi canción para la tuya. Cada artista muestra su nombre como «inspirado en …» sobre el lienzo. Hecho para simplemente funcionar. ◆ AVANZADO — el estudio completo: las casillas Crear / Importar (estado, Componer, Micro, Música, Imagen), las cinco paletas, cada artista, Setup, 🔀 aleatorio, la cabina. Todo lo descrito en esta guía vive aquí. ◆ La píldora recuerda tu elección; pasar a Avanzado abre una pantalla de ajuste nueva, volver a Lite reanuda la reproducción automática. Empieza en Lite, ve a Avanzado cuando quieras los controles.`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`Seis compositores`, body:`Pintura → música: una imagen puede sonar como Scan puro — o recompuesta en la voz de un compositor. Chopin y Satie gratis, los seis en Pro — y cada día un compositor y un artista Pro se desbloquean para todos (✦ hoy). Setup → Compositores elige el set.`, more:`Los compositores viven en el lado de la imagen — el espejo pintura→música de los 24 artistas. Carga una imagen y puede sonar de dos maneras. ◆ SCAN la lee literalmente, de izquierda a derecha, como una partitura. ◆ COMPOSITOR recompone la misma imagen en la voz de un compositor — sus colores y energía, fraseados por otra mente musical. ◆ Frédéric Chopin — el poeta romántico del piano; líneas que cantan, armonía rica. ◆ Erik Satie — minimalismo francés antes de que existiera la palabra; acordes escasos que flotan. ◆ George Gershwin — armonía de jazz en la sala de conciertos; las blue notes florecen. ◆ Philip Glass — células que se repiten y se desplazan un grado cada vez; la música respira en patrones. ◆ Carl Vine — energía australiana contemporánea; angulosa, brillante, rítmica. ◆ Yiruma — piano lírico moderno; olas anchas y calmas. ◆ Misma imagen, otro compositor → una pieza genuinamente distinta; la cabecera acredita «inspired by …». En Lite, ↻ Sorpréndeme sortea Scan u otro compositor sobre la misma imagen. Setup → Compositores decide quién está en juego. Free incluye Chopin + Satie; Pro desbloquea los seis.`},
-    {id:'daily', glyph:'✦', cat:'start', title:`Artista del día`, body:`Paintiano pinta en los estilos de 24 pintores y 6 compositores. Nueve de ellos son siempre tuyos — y cada día se les une un pintor y un compositor más durante un día. Mañana, otra pareja.`, more:`La pareja cambia a medianoche, hora local, y es la misma para todo el mundo ese día — «hoy toca Hokusai» se puede compartir. ◆ Dónde los encuentras: en Lite, ↻ Sorpréndeme sortea al artista del día pronto y a menudo; en el lienzo la cabecera dice «✦ Artista del día · inspired by …»; en el selector y en Setup su chip lleva un pequeño ✦ hoy. ◆ Llegan con todas sus variantes, no como vista previa. ◆ Toca cualquier ✦ para reabrir esta explicación. ◆ ¿Los 24 pintores y los 6 compositores cada día, para siempre? Eso es Paintiano Pro.`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`Doce compositores`, body:`Pintura → música: una imagen puede sonar como Scan puro — o recompuesta en la voz de un compositor. Chopin y Satie gratis, los doce en Pro — y cada día un compositor y un artista Pro se desbloquean para todos (✦ hoy). Setup → Compositores elige el set.`, more:`Los compositores viven en el lado de la imagen — el espejo pintura→música de los 24 artistas. Carga una imagen y puede sonar de dos maneras. ◆ SCAN la lee literalmente, de izquierda a derecha, como una partitura. ◆ COMPOSITOR recompone la misma imagen en la voz de un compositor — sus colores y energía, fraseados por otra mente musical. ◆ Frédéric Chopin — el poeta romántico del piano; líneas que cantan, armonía rica. ◆ Erik Satie — minimalismo francés antes de que existiera la palabra; acordes escasos que flotan. ◆ George Gershwin — armonía de jazz en la sala de conciertos; las blue notes florecen. ◆ Philip Glass — células que se repiten y se desplazan un grado cada vez; la música respira en patrones. ◆ Carl Vine — energía australiana contemporánea; angulosa, brillante, rítmica. ◆ Yiruma — piano lírico moderno; olas anchas y calmas. ◆ J. S. Bach — invención a dos voces; semicorcheas corriendo sobre un bajo que camina, dinámica en terrazas, sin pedal. ◆ Beethoven — un motivo de cuatro notas martillado por toda la pieza; bajo en trémolo, sforzando, silencios súbitos. ◆ Debussy — impresionismo; calma pentatónica, brillo de tonos enteros, acordes paralelos bajo un pedal largo. ◆ Rachmaninov — el gran lienzo ruso; arpegios de tres octavas, melodía en octavas, campanas. ◆ Einaudi — un ostinato que nunca cambia; las capas se apilan en un único crescendo largo. ◆ Hisaishi — el vals Ghibli; una melodía que salta una sexta y baja caminando, calidez add9. ◆ Misma imagen, otro compositor → una pieza genuinamente distinta; la cabecera acredita «inspired by …». En Lite, ↻ Sorpréndeme sortea Scan u otro compositor sobre la misma imagen. Setup → Compositores decide quién está en juego. Free incluye Chopin + Satie; Pro desbloquea los doce.`},
+    {id:'daily', glyph:'✦', cat:'start', title:`Artista del día`, body:`Paintiano pinta en los estilos de 24 pintores y 12 compositores. Nueve de ellos son siempre tuyos — y cada día se les une un pintor y un compositor más durante un día. Mañana, otra pareja.`, more:`La pareja cambia a medianoche, hora local, y es la misma para todo el mundo ese día — «hoy toca Hokusai» se puede compartir. ◆ Dónde los encuentras: en Lite, ↻ Sorpréndeme sortea al artista del día pronto y a menudo; en el lienzo la cabecera dice «✦ Artista del día · inspired by …»; en el selector y en Setup su chip lleva un pequeño ✦ hoy. ◆ Llegan con todas sus variantes, no como vista previa. ◆ Toca cualquier ✦ para reabrir esta explicación. ◆ ¿Los 24 pintores y los 12 compositores cada día, para siempre? Eso es Paintiano Pro.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Elige qué ves`, body:`Oculta lo que no usas. 5 paletas, 24 artistas, familia Mosaico, 3 tonos. Edita con «Elige un estilo». Reábrelo cuando quieras.`, more:`«Elige un estilo» en el lienzo — toca el lápiz (Editar tu conjunto) reduce los selectores del lienzo solo a las paletas y artistas que de verdad usas. Dos secciones: marca cuáles de las cinco paletas aparecen en las pestañas, y qué artistas o la entrada «familia Mosaico» aparecen entre las baldosas de estilo. ◆ La familia Mosaico es un ítem que cubre los tres estados (Mosaico / Notas / $1M$); la baldosa sigue ciclando al tocar. ◆ El defecto es todo — reduce cuando tengas favoritos. ◆ Free ve artistas Pro con 🔒; marcar guarda la preferencia, pero pintar choca con el paywall hasta mejorar. ◆ Mínimo 1 paleta + 1 artista. ◆ Los Tonos (Puro / Real / Pastel) viven en su propia sección: Puro es el defecto (muestras limpias y saturadas que pintan la música como color directo); Real añade grano pictórico y leve cambio de pigmento; Pastel suaviza todo hacia un acabado de tiza. El defecto es solo Puro — marca más si los quieres. Cuando solo un tono está activo, el selector de tono del lienzo se oculta; con dos o tres aparece para cambiar al vuelo. ◆ La elección queda en este dispositivo. Aleatorio (🔀) solo saca de tu selección.`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 paletas, una canción`, body:`Armonía, Espectral, φ Phi, Contra, Personal. Toca una pestaña para cambiar — mismas notas, repintado al instante. Cada una otra gramática de color.`, more:`Cinco gramáticas de color para la misma música. ◆ Armonía — orden del círculo de quintas, las tonalidades cercanas se agrupan. ◆ Espectral — temperamento igual visual: doce pasos de tono iguales para doce semitonos; la rueda se cierra, Si vuelve a Do en color. ◆ φ Phi — tonos en ángulo áureo (137,5°), dispersos al máximo. ◆ Contra — Armonía inversa: los acordes ásperos chocan en el lienzo, los limpios florecen aparte. ◆ Personal — por defecto el mapa Prometeo de Scriabin de 1910; solo suenan los colores de tu paleta (Pro edita cada uno). ◆ B/N — solo modo imagen, cuando una imagen es en grises. Cambia cuando quieras — mismas notas, repintado al instante. Free ve Personal de solo lectura; Pro lo hace editable. Contra es gratis en todos los niveles.`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`Armonía = círculo de quintas`, body:`La rueda que aprende todo músico. Do y Sol están cerca en color porque están cerca en música. Sube una quinta — los tonos se mueven un paso.`, more:`Armonía asigna altura a tono de color por el círculo de quintas — la relación que todo músico ya conoce. Tonalidades a una quinta de distancia están a un paso en color, así un ii–V–I se desliza suave por la rueda y una modulación lejana la cruza de un salto. El tono viene de la clase de altura, la luminosidad de la octava, la saturación de cuán fuerte se tocó la nota. La lectura más «musical»: lo que parece cerca en el lienzo está cerca en la partitura.`},
@@ -21995,13 +22537,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`Nombra un sentir`, body:`Toca ✦ ¿cómo te sientes? Escribe cualquier sentir, cualquier idioma. La IA escribe una pieza. Luego Morph a otro ánimo, o Vary para una tonalidad nueva.`, more:`Toca ✦ «¿cómo te sientes?» y escribe cualquier sentir, en cualquier idioma — furioso, saudade, manejar a las 3am, amor de verano. La IA escribe una pieza de piano para ello y el lienzo se llena acorde por acorde mientras suena. Después: ◆ ✦ MORPH funde un ánimo en otro — primera mitad A, segunda B, una mezcla de velocidad en la zona 40–60%. ◆ ✦ VARY desplaza la tonalidad a una nueva (a menudo mayor ↔ menor): el ritmo y la estructura quedan fijos, solo cambian los acordes — y por tanto los colores. Sigue tocando para nuevas tonalidades. ◆ Free recibe 1 prueba gratis por modo IA (estado, estado imagen, componer IA — Atmósfera y Melodía comparten dos); Pro IA = ilimitado.`},
     {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Guardar → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a calidad lista para imprimir.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ GUARDAR exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A1 · listo para imprimir (alta resolución, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. ◆ ⏺ GRABAR (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ PARTITURA convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A1 · listo para imprimir.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa y navegar la barra. ⟳ Loop repite. 🔊 Mute pinta en silencio. Clear reinicia — listo, por modo.`, more:`Los controles de reproducción. ◆ Play inicia y pausa (Espacio también); toca la barra de progreso para saltar, arrastra para hacer scrub. ◆ ⟳ LOOP mantiene una pieza de ánimo repitiendo; oro cuando está activo. ◆ 🔊 / 🔇 Mute silencia todo el audio mientras la pintura sigue generándose — recordado entre sesiones. ◆ Clear es consciente del modo: Compose borra el lienzo y se queda; MIC descarta solo el borrador del modo activo; Image descarta el borrador, Setup vuelve a empezar — la imagen sigue en el lienzo; MIDI/audio/partitura/ánimo de texto hacen un reinicio completo. ◆ Si el estado dice «loading piano…», espera unos segundos (~5 MB de muestra); si falla, pasa a un piano sintético.`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € (early-bird, luego 14,99 €) → los 24 artistas, paleta Personal editable, sin marca de agua, de por vida. Pro IA 19,99 € (early-bird, luego 24,99 €) añade IA ilimitada. Truco: en Free, toca tu artista bloqueado favorito — se desbloquea para probarlo.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Personal de solo lectura, exports con marca de agua. Cada modo IA tiene 1 prueba gratis: estado de texto, estado imagen, componer IA — y Atmósfera + Melodía comparten dos pruebas. ◆ Pro €9.99 (early-bird, luego €14.99) — los 24 artistas, todos los tipos de pintura, paleta Personal editable, exports listos para imprimir sin marca de agua, acceso de por vida (sin IA). ◆ Pro IA €19.99 (early-bird, luego €24.99) — todo Pro más IA ilimitada: estados de texto, estado imagen, componer IA, Atmósfera y Melodía IA. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez. ◆ Voces de compositores para imágenes: Free tiene Chopin + Satie; Pro desbloquea los seis.`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € (early-bird, luego 14,99 €) → los 24 artistas, paleta Personal editable, sin marca de agua, de por vida. Pro IA 19,99 € (early-bird, luego 24,99 €) añade IA ilimitada. Truco: en Free, toca tu artista bloqueado favorito — se desbloquea para probarlo.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Personal de solo lectura, exports con marca de agua. Cada modo IA tiene 1 prueba gratis: estado de texto, estado imagen, componer IA — y Atmósfera + Melodía comparten dos pruebas. ◆ Pro €9.99 (early-bird, luego €14.99) — los 24 artistas, todos los tipos de pintura, paleta Personal editable, exports listos para imprimir sin marca de agua, acceso de por vida (sin IA). ◆ Pro IA €19.99 (early-bird, luego €24.99) — todo Pro más IA ilimitada: estados de texto, estado imagen, componer IA, Atmósfera y Melodía IA. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez. ◆ Voces de compositores para imágenes: Free tiene Chopin + Satie; Pro desbloquea los doce.`}
   ],
   SK: [
     {id:'overview', glyph:'✦', cat:'start', title:`Hudba ⇄ maľba`, body:`To isté koleso, oboma smermi. Spievaj, píš alebo hoď fotku — plátno sa plní s hudbou. Ulož maľbu, nahraj pieseň. Odnesieš si oboje.`, more:`Paintiano je obojsmerný prekladač. To isté farebné koleso a koleso tónov beží oboma smermi. Vyber zdroj — Komponovať, Mikro, Hudba, Obraz alebo nálada — a plátno sa plní, ako hrá hudba. Dve cesty dnu: ◆ Hudba → maľba: napíš náladu (akýkoľvek pocit, akýkoľvek jazyk), hraj na klavíri, spievaj do mikrofónu, alebo hoď MIDI, MP3 či noty. ◆ Maľba → hudba: hoď obrázok. Vyber farebný mód, prípadne umelca. Tá istá hudba = tá istá maľba, vždy. Zapni 🔀 zamiešanie pre nový pohľad pri každom Play. Potom Ulož maľbu a Nahraj hudbu — to sú časti, ktoré si necháš.`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite & Rozšírený`, body:`Dva vstupy. Lite začne maľovať klavírnu skladbu hneď po otvorení — počúvaj a ťukni Prekvap ma. Rozšírený ti dá každý ovládač. Prepínaj čipom hore. Lite fullscreen: swipe hore = nové prekvapenie.`, more:`Paintiano sa otvára v dvoch režimoch, prepínaš ich pilulkou v hornej lište (vedľa menu). ◆ LITE — appka sama začne maľovať klasickú klavírnu skladbu. Žiadne nastavenia, žiadne menu: sleduj, ako sa plátno plní, ťukni ↻ Prekvap ma na skok k inému umelcovi a variante, Pauza/Ulož keď sa ti obraz páči, alebo Moja skladba pre vlastnú. Každý umelec ukazuje meno ako „inšpirované …" nad plátnom. Spravené tak, aby to proste fungovalo. ◆ ROZŠÍRENÝ — plné štúdio: dlaždice Tvorba / Import (nálada, Komponovať, Mikro, Hudba, Obraz), všetkých päť paliet, každý umelec, Setup, 🔀 zamiešanie, kokpit. Všetko, čo opisuje táto príručka, žije tu. ◆ Čip si pamätá tvoju voľbu; prepnutie na Rozšírený otvorí čistú nastavovaciu obrazovku, návrat na Lite znova spustí automatické prehrávanie. Začni v Lite, prejdi na Rozšírený, keď chceš ovládače.`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`Šesť skladateľov`, body:`Obraz → hudba: obrázok môže hrať ako čistý Scan — alebo prekomponovaný v hlase skladateľa. Chopin a Satie zadarmo, všetkých šesť v Pro — a každý deň sa pre všetkých odomkne jeden Pro skladateľ a jeden Pro umelec (✦ dnes). Setup → Skladatelia určí výber.`, more:`Skladatelia žijú na obrazovej strane — zrkadlo 24 umelcov v smere obraz→hudba. Nahraj obrázok a môže hrať dvoma spôsobmi. ◆ SCAN ho číta doslovne, zľava doprava, ako partitúru. ◆ SKLADATEĽ ten istý obrázok prekomponuje v hlase skladateľa — jeho farby a energiu frázuje iná hudobná myseľ. ◆ Frédéric Chopin — romantický básnik klavíra; spievajúce línie, bohatá harmónia. ◆ Erik Satie — francúzsky minimalizmus skôr, než to slovo existovalo; riedke akordy, ktoré sa vznášajú. ◆ George Gershwin — jazzová harmónia v koncertnej sále; blue notes rozkvitajú. ◆ Philip Glass — opakujúce sa bunky posúvané o jeden stupeň; hudba dýcha vo vzoroch. ◆ Carl Vine — súčasná austrálska energia; hranatá, jasná, rytmická. ◆ Yiruma — moderný lyrický klavír; široké, pokojné vlny. ◆ Ten istý obrázok, iný skladateľ → skutočne iná skladba; hlavička uvádza „inspired by …“. V Lite ↻ Prekvap ma žrebuje Scan alebo iného skladateľa na tom istom obrázku. Setup → Skladatelia určuje, kto je v hre. Free má Chopina + Satieho; Pro odomkne všetkých šesť.`},
-    {id:'daily', glyph:'✦', cat:'start', title:`Umelec dňa`, body:`Paintiano maľuje v štýle 24 maliarov a 6 skladateľov. Deväť z nich máš vždy — a každý deň sa k nim na jeden deň pridá ďalší maliar a skladateľ. Zajtra iný pár.`, more:`Pár sa mení o polnoci tvojho lokálneho času a v ten deň je rovnaký pre všetkých na svete — „dnes je Hokusai“ sa dá zdieľať. ◆ Kde ich stretneš: v Lite ↻ Prekvap ma žrebuje umelca dňa skoro a často; na plátne hlavička hovorí „✦ Umelec dňa · inspired by …“; v pickeri a v Setupe má jeho chip malé ✦ dnes. ◆ Prichádzajú so všetkými variantmi, nie ako ukážka. ◆ Ťukni na ktorékoľvek ✦ a toto vysvetlenie sa otvorí znova. ◆ Chceš všetkých 24 maliarov a 6 skladateľov každý deň, navždy? To je Paintiano Pro.`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`Dvanásť skladateľov`, body:`Obraz → hudba: obrázok môže hrať ako čistý Scan — alebo prekomponovaný v hlase skladateľa. Chopin a Satie zadarmo, všetkých dvanásť v Pro — a každý deň sa pre všetkých odomkne jeden Pro skladateľ a jeden Pro umelec (✦ dnes). Setup → Skladatelia určí výber.`, more:`Skladatelia žijú na obrazovej strane — zrkadlo 24 umelcov v smere obraz→hudba. Nahraj obrázok a môže hrať dvoma spôsobmi. ◆ SCAN ho číta doslovne, zľava doprava, ako partitúru. ◆ SKLADATEĽ ten istý obrázok prekomponuje v hlase skladateľa — jeho farby a energiu frázuje iná hudobná myseľ. ◆ Frédéric Chopin — romantický básnik klavíra; spievajúce línie, bohatá harmónia. ◆ Erik Satie — francúzsky minimalizmus skôr, než to slovo existovalo; riedke akordy, ktoré sa vznášajú. ◆ George Gershwin — jazzová harmónia v koncertnej sále; blue notes rozkvitajú. ◆ Philip Glass — opakujúce sa bunky posúvané o jeden stupeň; hudba dýcha vo vzoroch. ◆ Carl Vine — súčasná austrálska energia; hranatá, jasná, rytmická. ◆ Yiruma — moderný lyrický klavír; široké, pokojné vlny. ◆ J. S. Bach — dvojhlasná invencia; bežiace šestnástiny nad kráčajúcim basom, terasová dynamika, bez pedálu. ◆ Beethoven — štvortónový motív vtĺkaný celou skladbou; tremolo v base, sforzando, náhle ticho. ◆ Debussy — impresionizmus; pentatonický pokoj, celotónové chvenie, paralelné akordy pod dlhým pedálom. ◆ Rachmaninov — veľké ruské plátno; arpeggiá cez tri oktávy, melódia v oktávach, zvony. ◆ Einaudi — jedno ostinato, ktoré sa nikdy nemení; vrstvy sa skladajú do jediného dlhého crescenda. ◆ Hisaishi — valčík z Ghibli; melódia, ktorá skočí o sextu a kráča späť dole, teplo add9. ◆ Ten istý obrázok, iný skladateľ → skutočne iná skladba; hlavička uvádza „inspired by …“. V Lite ↻ Prekvap ma žrebuje Scan alebo iného skladateľa na tom istom obrázku. Setup → Skladatelia určuje, kto je v hre. Free má Chopina + Satieho; Pro odomkne všetkých dvanásť.`},
+    {id:'daily', glyph:'✦', cat:'start', title:`Umelec dňa`, body:`Paintiano maľuje v štýle 24 maliarov a 12 skladateľov. Deväť z nich máš vždy — a každý deň sa k nim na jeden deň pridá ďalší maliar a skladateľ. Zajtra iný pár.`, more:`Pár sa mení o polnoci tvojho lokálneho času a v ten deň je rovnaký pre všetkých na svete — „dnes je Hokusai“ sa dá zdieľať. ◆ Kde ich stretneš: v Lite ↻ Prekvap ma žrebuje umelca dňa skoro a často; na plátne hlavička hovorí „✦ Umelec dňa · inspired by …“; v pickeri a v Setupe má jeho chip malé ✦ dnes. ◆ Prichádzajú so všetkými variantmi, nie ako ukážka. ◆ Ťukni na ktorékoľvek ✦ a toto vysvetlenie sa otvorí znova. ◆ Chceš všetkých 24 maliarov a 12 skladateľov každý deň, navždy? To je Paintiano Pro.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Vyber, čo vidíš`, body:`Schovaj, čo nepoužívaš. 5 paliet, 24 umelcov, Mosaic rodina, 3 tóny. Uprav cez „Vyber vzhľad“. Otvor kedykoľvek znova.`, more:`„Vyber vzhľad“ na plátne — ťukni ceruzku (Uprav si zostavu) zúži canvas selektory len na palety a umelcov, ktorých naozaj používaš. Dve sekcie: zaškrtni, ktoré z piatich paliet sa zobrazia v záložkách, a ktorí umelci alebo „Mosaic rodina" sa zobrazia medzi dlaždicami štýlov. ◆ Mosaic rodina je jedna položka pre všetky tri stavy (Mosaic / Noty / $1M$); dlaždica krúži pri klikoch. ◆ Default je všetko — zúž až keď máš obľúbencov. ◆ Free vidí Pro umelcov s 🔒; zaškrtnutie uloží voľbu, ale maľba narazí na paywall. ◆ Minimum 1 paleta + 1 umelec. ◆ Tóny (Čistý / Skutočný / Pastelový) majú vlastnú sekciu: Čistý je default (čisté, sýte farby, ktoré maľujú hudbu ako rovnú farbu); Skutočný pridá maliarsku zrnitosť a jemný posun pigmentu; Pastelový zjemní všetko do kriedového cítenia. Default je len Čistý — zaškrtni viac, ak ich chceš. Keď je len jeden tón zapnutý, picker tónov na plátne sa skryje; pri dvoch či troch sa zobrazí, aby si mohol prepínať za chodu. ◆ Voľba ostáva na tomto zariadení. Zamiešanie (🔀) ťahá len z tvojho výberu.`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 paliet, jedna pieseň`, body:`Harmónia, Spektrum, φ Phi, Kontra, Vlastná. Klikni záložku a prepneš — tie isté noty, okamžitá premaľba. Každá maľuje hudbu v inej farebnej gramatike.`, more:`Päť farebných gramatík pre tú istú hudbu. ◆ Harmónia — poradie kvintového kruhu, príbuzné tóniny sa zhlukujú. ◆ Spektrum — vizuálne rovnaké temperovanie: dvanásť rovnakých krokov tónu pre dvanásť polotónov; koleso sa uzatvára, H vedie späť k C. ◆ φ Phi — farby zlatého uhla (137,5°), maximálne rozptýlené. ◆ Kontra — obrátená Harmónia: drsné akordy sa hádajú na plátne, čisté kvitnú od seba. ◆ Vlastná — default je Skriabinova Prometheus mapa z 1910; znejú len farby z tvojej palety (Pro edituje každú). ◆ Č/B — len v obrazovom móde, keď je obrázok šedotónový. Prepni kedykoľvek — tie isté noty, okamžitá premaľba. Free vidí Vlastnú len na čítanie; Pro ju sprístupní. Kontra je zadarmo na každej úrovni.`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`Harmónia = kvintový kruh`, body:`Koleso, ktoré sa učí každý hudobník. C a G stoja farebne blízko, lebo stoja hudobne blízko. Posuň o kvintu — odtiene sa pohnú o pozíciu.`, more:`Harmónia mapuje tón na odtieň po kvintovom kruhu — vzťah, ktorý každý hudobník už pozná. Tóniny vzdialené o kvintu sú farebne o krok od seba, takže ii–V–I plynule kĺže po kolese a vzdialená modulácia cezeň skočí. Odtieň pochádza z tónovej triedy, svetlosť z oktávy, sýtosť z toho, ako silno bol tón zahraný. Je to najhudobnejšie čítanie: čo je blízko na plátne, je blízko v partitúre.`},
@@ -22019,13 +22561,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`Pomenuj pocit`, body:`Klikni ✦ ako sa cítiš? Napíš akýkoľvek pocit, akýkoľvek jazyk. AI napíše klavírnu skladbu. Potom Morph do inej nálady, alebo Vary pre novú tóninu.`, more:`Klikni ✦ „ako sa cítiš?" a napíš akýkoľvek pocit, v akomkoľvek jazyku — zúrivý, saudade, 3am drive, letná láska. AI preň napíše klavírnu skladbu a plátno sa plní akord po akorde, ako hrá. Potom: ◆ ✦ MORPH prelína jednu náladu do druhej — prvá polovica A, druhá B, dynamický blend v zóne 40–60%. ◆ ✦ VARY posunie tóninu na novú (často dur ↔ mol): rytmus a štruktúra ostávajú zamknuté, menia sa len akordy — a teda farby. Klikaj ďalej pre nové tóniny. ◆ Free dostane 1 skúšku zadarmo na každý AI mód (Nálada, Nálada z obrazu, AI skladba — Atmosféra a Melódia zdieľajú dve); Pro AI = neobmedzene.`},
     {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Ulož → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a odomkne kvalitu pripravenú na tlač.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ ULOŽIŤ exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A1 · pripravené na tlač (vysoké rozlíšenie, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. ◆ ⏺ NAHRAJ (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ NOTY premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A1 · pripravenú na tlač.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pauza a posun lišty. ⟳ Loop opakuje. 🔊 Mute maľuje v tichu. Clear resetuje — chytro, podľa módu.`, more:`Ovládanie prehrávania. ◆ Play spustí a pozastaví (aj Space); klik na lištu skočí, ťahaj na scrub. ◆ ⟳ LOOP necháva náladovú skladbu opakovať; zlatá keď je zapnutá. ◆ 🔊 / 🔇 Mute stíši všetko audio, kým maľba stále vzniká — pamätá sa medzi sedeniami. ◆ Clear rozlišuje módy: Compose zmaže plátno a ostane; MIC zahodí len draft aktívneho módu; Image zahodí draft, Setup sa vráti do čistého stavu — samotný obrázok ostáva na plátne; MIDI/audio/noty/text mood spravia plný reset. ◆ Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample); ak to zlyhá, prepne na syntetický klavír.`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 (early-bird, potom €14.99) → všetkých 24 umelcov, editovateľná Vlastná paleta, bez watermarku, doživotne. Pro AI €19.99 (early-bird, potom €24.99) pridáva neobmedzené AI. Tip: vo Free ťukni na svojho obľúbeného zamknutého umelca — odomkne sa ti na vyskúšanie.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých, 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Vlastná paleta len na čítanie, exporty s watermarkom. Každý AI mód má 1 skúšku zadarmo: textová nálada, Nálada z obrazu, AI skladba — a Atmosféra + Melódia zdieľajú 2 skúšky medzi sebou. ◆ Pro €9.99 (early-bird, potom €14.99) — všetkých 24 umelcov, všetky typy maľby, editovateľná Vlastná paleta, exporty pripravené na tlač bez watermarku, doživotný prístup (bez AI). ◆ Pro AI €19.99 (early-bird, potom €24.99) — všetko z Pro plus neobmedzené AI: textové moody, Nálada z obrazu, AI skladba, AI Atmosféra a Melódia. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz. ◆ Skladateľské hlasy pre obrázky: Free má Chopina + Satieho; Pro odomkne všetkých šesť.`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 (early-bird, potom €14.99) → všetkých 24 umelcov, editovateľná Vlastná paleta, bez watermarku, doživotne. Pro AI €19.99 (early-bird, potom €24.99) pridáva neobmedzené AI. Tip: vo Free ťukni na svojho obľúbeného zamknutého umelca — odomkne sa ti na vyskúšanie.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých, 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Vlastná paleta len na čítanie, exporty s watermarkom. Každý AI mód má 1 skúšku zadarmo: textová nálada, Nálada z obrazu, AI skladba — a Atmosféra + Melódia zdieľajú 2 skúšky medzi sebou. ◆ Pro €9.99 (early-bird, potom €14.99) — všetkých 24 umelcov, všetky typy maľby, editovateľná Vlastná paleta, exporty pripravené na tlač bez watermarku, doživotný prístup (bez AI). ◆ Pro AI €19.99 (early-bird, potom €24.99) — všetko z Pro plus neobmedzené AI: textové moody, Nálada z obrazu, AI skladba, AI Atmosféra a Melódia. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz. ◆ Skladateľské hlasy pre obrázky: Free má Chopina + Satieho; Pro odomkne všetkých dvanásť.`}
   ],
   PT: [
     {id:'overview', glyph:'✦', cat:'start', title:`Música ⇄ pintura`, body:`A mesma roda, ambos os sentidos. Canta, escreve ou larga uma foto — a tela enche-se com a música. Guarda a arte, grava a canção. Leva os dois.`, more:`O Paintiano é um tradutor de duplo sentido. A mesma roda de cores e roda de alturas correm nos dois sentidos. Escolhe uma fonte — Compor, Micro, Música, Imagem ou um estado de espírito — e a tela enche-se enquanto a música toca. Duas vias de entrada: ◆ Música → pintura: escreve um estado (qualquer sentimento, qualquer língua), toca piano, canta ao micro, ou larga um MIDI, MP3 ou partitura. ◆ Pintura → música: larga uma imagem. Escolhe um modo de cor, talvez um artista. A mesma música = a mesma pintura, sempre. Liga 🔀 aleatório para uma leitura nova a cada Play. Depois Guarda a pintura e Grava a música — são as partes que ficas.`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite e Avançado`, body:`Duas entradas. O Lite pinta uma peça de piano ao abrir — ouve e toca Surpreende-me. O Avançado dá-te cada controlo. Alterna com a pílula no topo. Ecrã inteiro Lite: swipe para cima = nova surpresa.`, more:`O Paintiano abre em dois modos, alternados pela pílula na barra de topo (ao lado do menu). ◆ LITE — a app começa a pintar sozinha uma peça de piano clássica. Sem configuração, sem menus: vê a tela encher-se, toca ↻ Surpreende-me para saltar para outro artista e variante, Pausa/Guardar quando gostares de um quadro, ou A minha música para a tua. Cada artista mostra o nome como «inspirado em …» acima da tela. Feito para simplesmente funcionar. ◆ AVANÇADO — o estúdio completo: os blocos Criar / Importar (humor, Compor, Micro, Música, Imagem), as cinco paletas, cada artista, Setup, 🔀 aleatório, o cockpit. Tudo o que este guia descreve vive aqui. ◆ A pílula lembra a tua escolha; passar para Avançado abre um ecrã de configuração novo, voltar ao Lite retoma a reprodução automática. Começa no Lite, vai ao Avançado quando quiseres os controlos.`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`Seis compositores`, body:`Pintura → música: uma imagem pode tocar como Scan puro — ou recomposta na voz de um compositor. Chopin e Satie grátis, os seis no Pro — e todos os dias um compositor e um artista Pro desbloqueiam para todos (✦ hoje). Setup → Compositores escolhe o conjunto.`, more:`Os compositores vivem do lado da imagem — o espelho pintura→música dos 24 artistas. Carrega uma imagem e ela pode tocar de duas formas. ◆ SCAN lê-a literalmente, da esquerda para a direita, como uma partitura. ◆ COMPOSITOR recompõe a mesma imagem na voz de um compositor — as suas cores e energia, fraseadas por outra mente musical. ◆ Frédéric Chopin — o poeta romântico do piano; linhas que cantam, harmonia rica. ◆ Erik Satie — minimalismo francês antes de a palavra existir; acordes esparsos que flutuam. ◆ George Gershwin — harmonia de jazz na sala de concertos; as blue notes florescem. ◆ Philip Glass — células que se repetem e deslocam um grau de cada vez; a música respira em padrões. ◆ Carl Vine — energia australiana contemporânea; angulosa, clara, rítmica. ◆ Yiruma — piano lírico moderno; ondas largas e calmas. ◆ Mesma imagem, outro compositor → uma peça genuinamente diferente; o cabeçalho credita «inspired by …». No Lite, ↻ Surpreende-me sorteia Scan ou outro compositor sobre a mesma imagem. Setup → Compositores decide quem está em jogo. O Free inclui Chopin + Satie; o Pro desbloqueia os seis.`},
-    {id:'daily', glyph:'✦', cat:'start', title:`Artista do dia`, body:`O Paintiano pinta nos estilos de 24 pintores e 6 compositores. Nove deles são sempre teus — e todos os dias junta-se mais um pintor e mais um compositor por um dia. Amanhã, outro par.`, more:`O par muda à meia-noite, hora local, e nesse dia é o mesmo para toda a gente no mundo — «hoje é o Hokusai» pode partilhar-se. ◆ Onde os encontras: no Lite, ↻ Surpreende-me sorteia o artista do dia cedo e muitas vezes; na tela o cabeçalho diz «✦ Artista do dia · inspired by …»; no seletor e no Setup o seu chip tem um pequeno ✦ hoje. ◆ Chegam com todas as variantes, não como pré-visualização. ◆ Toca em qualquer ✦ para reabrir esta explicação. ◆ Os 24 pintores e os 6 compositores todos os dias, para sempre? Isso é o Paintiano Pro.`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`Doce compositores`, body:`Pintura → música: uma imagem pode tocar como Scan puro — ou recomposta na voz de um compositor. Chopin e Satie grátis, os doze no Pro — e todos os dias um compositor e um artista Pro desbloqueiam para todos (✦ hoje). Setup → Compositores escolhe o conjunto.`, more:`Os compositores vivem do lado da imagem — o espelho pintura→música dos 24 artistas. Carrega uma imagem e ela pode tocar de duas formas. ◆ SCAN lê-a literalmente, da esquerda para a direita, como uma partitura. ◆ COMPOSITOR recompõe a mesma imagem na voz de um compositor — as suas cores e energia, fraseadas por outra mente musical. ◆ Frédéric Chopin — o poeta romântico do piano; linhas que cantam, harmonia rica. ◆ Erik Satie — minimalismo francês antes de a palavra existir; acordes esparsos que flutuam. ◆ George Gershwin — harmonia de jazz na sala de concertos; as blue notes florescem. ◆ Philip Glass — células que se repetem e deslocam um grau de cada vez; a música respira em padrões. ◆ Carl Vine — energia australiana contemporânea; angulosa, clara, rítmica. ◆ Yiruma — piano lírico moderno; ondas largas e calmas. ◆ J. S. Bach — invenção a duas vozes; semicolcheias a correr sobre um baixo que caminha, dinâmica em terraços, sem pedal. ◆ Beethoven — um motivo de quatro notas martelado por toda a peça; baixo em trémulo, sforzando, silêncios súbitos. ◆ Debussy — impressionismo; calma pentatónica, brilho de tons inteiros, acordes paralelos sob um pedal longo. ◆ Rachmaninov — a grande tela russa; arpejos de três oitavas, melodia em oitavas, sinos. ◆ Einaudi — um ostinato que nunca muda; as camadas acumulam-se num único crescendo longo. ◆ Hisaishi — a valsa Ghibli; uma melodia que salta uma sexta e desce a caminhar, calor add9. ◆ Mesma imagem, outro compositor → uma peça genuinamente diferente; o cabeçalho credita «inspired by …». No Lite, ↻ Surpreende-me sorteia Scan ou outro compositor sobre a mesma imagem. Setup → Compositores decide quem está em jogo. O Free inclui Chopin + Satie; o Pro desbloqueia os doze.`},
+    {id:'daily', glyph:'✦', cat:'start', title:`Artista do dia`, body:`O Paintiano pinta nos estilos de 24 pintores e 12 compositores. Nove deles são sempre teus — e todos os dias junta-se mais um pintor e mais um compositor por um dia. Amanhã, outro par.`, more:`O par muda à meia-noite, hora local, e nesse dia é o mesmo para toda a gente no mundo — «hoje é o Hokusai» pode partilhar-se. ◆ Onde os encontras: no Lite, ↻ Surpreende-me sorteia o artista do dia cedo e muitas vezes; na tela o cabeçalho diz «✦ Artista do dia · inspired by …»; no seletor e no Setup o seu chip tem um pequeno ✦ hoje. ◆ Chegam com todas as variantes, não como pré-visualização. ◆ Toca em qualquer ✦ para reabrir esta explicação. ◆ Os 24 pintores e os 12 compositores todos os dias, para sempre? Isso é o Paintiano Pro.`},
     {id:'setup', glyph:'⚙', cat:'start', title:`Escolhe o que vês`, body:`Esconde o que não usas. 5 paletas, 24 artistas, família Mosaico, 3 tons. Edita via «Escolhe um estilo». Reabre quando quiseres.`, more:`«Escolhe um estilo» na tela — toca no lápis (Editar o teu conjunto) reduz os seletores da tela só às paletas e artistas que usas mesmo. Duas secções: marca quais das cinco paletas aparecem nos separadores, e que artistas ou a entrada «família Mosaico» aparecem entre os ladrilhos de estilo. ◆ A família Mosaico é um item que cobre os três estados (Mosaico / Notas / $1M$); o ladrilho continua a ciclar ao toque. ◆ O padrão é tudo — reduz quando tiveres favoritos. ◆ Free vê artistas Pro com 🔒; marcar guarda a preferência, mas pintar bate no paywall até melhorares. ◆ Mínimo 1 paleta + 1 artista. ◆ Os Tons (Puro / Real / Pastel) vivem na sua própria secção: Puro é o padrão (amostras limpas e saturadas que pintam a música como cor direta); Real adiciona grão pictórico e leve mudança de pigmento; Pastel suaviza tudo para um toque de giz. O padrão é só Puro — marca mais se os quiseres. Quando só um tom está ativo, o seletor de tom na tela esconde-se; com dois ou três aparece para trocar ao vivo. ◆ A escolha fica neste dispositivo. Aleatório (🔀) só tira da tua seleção.`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 paletas, uma canção`, body:`Harmonia, Espectral, φ Phi, Contra, Personalizada. Toca um separador para trocar — mesmas notas, repintura instantânea. Cada uma outra gramática de cor.`, more:`Cinco gramáticas de cor para a mesma música. ◆ Harmonia — ordem do círculo de quintas, tonalidades próximas agrupam-se. ◆ Espectral — temperamento igual visual: doze passos de tom iguais para doze semitons; a roda fecha, Si volta a Dó em cor. ◆ φ Phi — tons em ângulo dourado (137,5°), dispersos ao máximo. ◆ Contra — Harmonia inversa: acordes ásperos chocam na tela, os limpos florescem à parte. ◆ Personalizada — por defeito o mapa Prometeu de Scriabin de 1910; só as cores da tua paleta soam (Pro edita cada). ◆ P&B — só modo imagem, quando uma imagem é em cinzentos. Troca quando quiseres — mesmas notas, repintura instantânea. Free vê Personalizada só de leitura; Pro torna-a editável. Contra é grátis em todos os níveis.`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`Harmonia = círculo de quintas`, body:`A roda que todo músico aprende. Dó e Sol ficam perto em cor porque ficam perto em música. Sobe uma quinta — os tons movem-se um passo.`, more:`Harmonia mapeia altura para tom de cor ao longo do círculo de quintas — a relação que todo músico já conhece. Tonalidades a uma quinta de distância ficam a um passo em cor, por isso um ii–V–I desliza suave pela roda e uma modulação distante atravessa-a num salto. O tom vem da classe de altura, a luminosidade da oitava, a saturação de quão forte a nota foi tocada. A leitura mais «musical»: o que parece perto na tela está perto na partitura.`},
@@ -22043,13 +22585,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`Nomeia um sentir`, body:`Toca ✦ como te sentes? Escreve qualquer sentir, qualquer língua. A IA escreve uma peça. Depois Morph para outro estado, ou Vary para uma tonalidade nova.`, more:`Toca ✦ «como te sentes?» e escreve qualquer sentir, em qualquer língua — furioso, saudade, conduzir às 3 da manhã, paixão de verão. A IA escreve uma peça de piano para ele e a tela enche-se acorde a acorde enquanto toca. Depois: ◆ ✦ MORPH funde um estado noutro — primeira metade A, segunda B, uma mistura de velocidade na zona 40–60%. ◆ ✦ VARY desloca a tonalidade para uma nova (muitas vezes maior ↔ menor): o ritmo e a estrutura ficam travados, só os acordes — e portanto as cores — mudam. Continua a tocar para novas tonalidades. ◆ Free recebe 1 tentativa grátis por modo IA (humor, humor da imagem, compor IA — Atmosfera e Melodia partilham duas); Pro IA = ilimitado.`},
     {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Guardar → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para qualidade pronta para imprimir.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ GUARDAR exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A1 · pronto para imprimir (alta resolução, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. ◆ ⏺ GRAVAR (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ PARTITURA transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A1 · pronto para imprimir.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa e navegar a barra. ⟳ Loop repete. 🔊 Mute pinta em silêncio. Clear reinicia — esperto, por modo.`, more:`Os controlos de reprodução. ◆ Play inicia e pausa (Espaço também); toca a barra de progresso para saltar, arrasta para fazer scrub. ◆ ⟳ LOOP mantém uma peça de estado a repetir; dourado quando ligado. ◆ 🔊 / 🔇 Mute silencia todo o áudio enquanto a pintura continua a gerar-se — lembrado entre sessões. ◆ Clear é consciente do modo: Compose apaga a tela e fica; MIC descarta só o rascunho do modo ativo; Image descarta o rascunho, Setup volta ao início — a imagem fica na tela; MIDI/áudio/partitura/estado de texto fazem um reset completo. ◆ Se o estado diz «loading piano…», espera uns segundos (~5 MB de amostra); se falhar, passa para um piano sintético.`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € (early-bird, depois 14,99 €) → todos os 24 artistas, paleta Personalizada editável, sem marca de água, vitalício. Pro IA 19,99 € (early-bird, depois 24,99 €) adiciona IA ilimitada. Dica: no Free, toca no teu artista bloqueado favorito — desbloqueia para experimentares.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Personalizada só de leitura, exports com marca de água. Cada modo IA tem 1 tentativa grátis: estado de texto, humor da imagem, compor IA — e Atmosfera + Melodia partilham duas tentativas. ◆ Pro €9.99 (early-bird, depois €14.99) — todos os 24 artistas, todos os tipos de pintura, paleta Personalizada editável, exports prontos para imprimir sem marca de água, acesso vitalício (sem IA). ◆ Pro IA €19.99 (early-bird, depois €24.99) — tudo do Pro mais IA ilimitada: estados de texto, humor da imagem, compor IA, Atmosfera e Melodia IA. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez. ◆ Vozes de compositores para imagens: o Free tem Chopin + Satie; o Pro desbloqueia os seis.`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € (early-bird, depois 14,99 €) → todos os 24 artistas, paleta Personalizada editável, sem marca de água, vitalício. Pro IA 19,99 € (early-bird, depois 24,99 €) adiciona IA ilimitada. Dica: no Free, toca no teu artista bloqueado favorito — desbloqueia para experimentares.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Personalizada só de leitura, exports com marca de água. Cada modo IA tem 1 tentativa grátis: estado de texto, humor da imagem, compor IA — e Atmosfera + Melodia partilham duas tentativas. ◆ Pro €9.99 (early-bird, depois €14.99) — todos os 24 artistas, todos os tipos de pintura, paleta Personalizada editável, exports prontos para imprimir sem marca de água, acesso vitalício (sem IA). ◆ Pro IA €19.99 (early-bird, depois €24.99) — tudo do Pro mais IA ilimitada: estados de texto, humor da imagem, compor IA, Atmosfera e Melodia IA. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez. ◆ Vozes de compositores para imagens: o Free tem Chopin + Satie; o Pro desbloqueia os doze.`}
   ],
   zh: [
     {id:'overview', glyph:'✦', cat:'start', title:`音乐 ⇄ 绘画`, body:`同一个轮盘,两个方向。唱、打字或丢一张照片——画布随音乐填满。保存画作,录下乐曲。两者都带走。`, more:`Paintiano 是双向翻译器。同一个色轮和音高轮双向运转。选一个来源——作曲、麦克风、音乐、图像或一种情绪——音乐播放时画布随之填满。两条入口:◆ 音乐 → 绘画:输入一种情绪(任何感受、任何语言)、弹钢琴、对麦克风唱,或丢入 MIDI、MP3 或乐谱。◆ 绘画 → 音乐:丢入一张图。选个颜色模式,也许选个艺术家。同样的音乐 = 同样的画,始终如此。打开 🔀 随机,每次 Play 都有新解读。然后保存画作、录下音乐——这两样是你留下的。`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite 与高级`, body:`两种入口。Lite 一打开就开始绘制一段钢琴曲——聆听并点「给我惊喜」。高级则给你每一项控制。用顶部的药丸切换。Lite 全屏时上滑 = 新惊喜。`, more:`Paintiano 以两种模式打开，由顶栏的药丸（菜单旁）切换。◆ LITE——应用会自动开始绘制一段经典钢琴曲。无需设置、无需菜单：看着画布填满，点 ↻ 给我惊喜 跳到另一位艺术家与变体，喜欢某一帧时按 暂停/保存，或用我的歌 放入你自己的曲子。每位艺术家会在画布上方显示其名「灵感来自 …」。就是要它直接好用。◆ 高级——完整工作室：创作 / 导入 磁贴（情绪、作曲、麦克风、音乐、图像）、全部五种调色板、每位艺术家、Setup、🔀 随机、驾驶舱。本指南描述的一切都在这里。◆ 药丸会记住你的选择；切到高级会打开全新的设置界面，切回 Lite 会再次自动播放。从 Lite 开始，想要控制时再转到高级。`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`六位作曲家`, body:`绘画 → 音乐：图像可以以纯 Scan 播放——或用作曲家的声音重新谱写。肖邦与萨蒂免费，Pro 解锁全部六位——此外每天为所有人解锁一位 Pro 作曲家和一位 Pro 艺术家（✦ 今日）。设置 → 作曲家选择阵容。`, more:`作曲家位于图像一侧——是 24 位画家在绘画→音乐方向的镜像。载入一张图，它可以两种方式播放。◆ SCAN 从左到右逐字读取，如同读谱。◆ 作曲家模式用作曲家的声音重新谱写同一张图——它的色彩与能量，由另一个音乐心灵来叙述。◆ 肖邦——钢琴的浪漫主义诗人；歌唱般的线条，丰富的和声。◆ 萨蒂——“极简主义”一词诞生前的法国极简；稀疏而漂浮的和弦。◆ 格什温——音乐厅里的爵士和声；蓝调音绽放。◆ 格拉斯——每次移动一个音级的重复音型；音乐在图案中呼吸。◆ 瓦因——当代澳大利亚的能量；棱角分明、明亮、富于节奏。◆ 李闰珉——现代抒情钢琴；宽阔平静的波浪。◆ 同一张图，不同作曲家 → 截然不同的乐曲；标题标注 “inspired by …”。在 Lite 中，↻ 「给我惊喜」会在同一张图上抽取 Scan 或另一位作曲家。设置 → 作曲家决定谁参与。免费版含肖邦与萨蒂；Pro 解锁全部六位。`},
-    {id:'daily', glyph:'✦', cat:'start', title:`今日艺术家`, body:`Paintiano 以 24 位画家和 6 位作曲家的风格作画。其中九位始终属于你——每天还会有一位画家和一位作曲家加入一天。明天，另一对。`, more:`这对组合在你当地时间的午夜更换，当天全世界的人看到的都一样——「今天是北斋」可以分享。◆ 在哪里遇见他们：Lite 中，↻「给我惊喜」会尽早且频繁地抽到今日艺术家；画布标题显示「✦ 今日艺术家 · inspired by …」；在选择器和设置中，他们的标签带有小小的 ✦ 今日。◆ 他们带着全部变体登场，而非预览。◆ 点击任意 ✦ 可再次打开此说明。◆ 想每天永久拥有全部 24 位画家和 6 位作曲家？那就是 Paintiano Pro。`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`十二位作曲家`, body:`绘画 → 音乐：图像可以以纯 Scan 播放——或用作曲家的声音重新谱写。肖邦与萨蒂免费，Pro 解锁全部十二位——此外每天为所有人解锁一位 Pro 作曲家和一位 Pro 艺术家（✦ 今日）。设置 → 作曲家选择阵容。`, more:`作曲家位于图像一侧——是 24 位画家在绘画→音乐方向的镜像。载入一张图，它可以两种方式播放。◆ SCAN 从左到右逐字读取，如同读谱。◆ 作曲家模式用作曲家的声音重新谱写同一张图——它的色彩与能量，由另一个音乐心灵来叙述。◆ 肖邦——钢琴的浪漫主义诗人；歌唱般的线条，丰富的和声。◆ 萨蒂——“极简主义”一词诞生前的法国极简；稀疏而漂浮的和弦。◆ 格什温——音乐厅里的爵士和声；蓝调音绽放。◆ 格拉斯——每次移动一个音级的重复音型；音乐在图案中呼吸。◆ 瓦因——当代澳大利亚的能量；棱角分明、明亮、富于节奏。◆ 李闰珉——现代抒情钢琴；宽阔平静的波浪。◆ 巴赫——二声部创意曲；十六分音符在行走低音上奔跑，阶梯式强弱，不用踏板。◆ 贝多芬——四音动机贯穿全曲地敲击；震音低音、突强、骤然的寂静。◆ 德彪西——印象主义；五声音阶的宁静、全音阶的闪烁、长踏板下的平行和弦。◆ 拉赫玛尼诺夫——俄罗斯的宏大画布；跨三个八度的琶音、八度旋律、钟声。◆ 埃奥迪——永不改变的固定音型；层层叠加成一个漫长的渐强。◆ 久石让——吉卜力圆舞曲；旋律跳上六度再缓步而下，add9 的温暖。◆ 同一张图，不同作曲家 → 截然不同的乐曲；标题标注 “inspired by …”。在 Lite 中，↻ 「给我惊喜」会在同一张图上抽取 Scan 或另一位作曲家。设置 → 作曲家决定谁参与。免费版含肖邦与萨蒂；Pro 解锁全部十二位。`},
+    {id:'daily', glyph:'✦', cat:'start', title:`今日艺术家`, body:`Paintiano 以 24 位画家和 12 位作曲家的风格作画。其中九位始终属于你——每天还会有一位画家和一位作曲家加入一天。明天，另一对。`, more:`这对组合在你当地时间的午夜更换，当天全世界的人看到的都一样——「今天是北斋」可以分享。◆ 在哪里遇见他们：Lite 中，↻「给我惊喜」会尽早且频繁地抽到今日艺术家；画布标题显示「✦ 今日艺术家 · inspired by …」；在选择器和设置中，他们的标签带有小小的 ✦ 今日。◆ 他们带着全部变体登场，而非预览。◆ 点击任意 ✦ 可再次打开此说明。◆ 想每天永久拥有全部 24 位画家和 12 位作曲家？那就是 Paintiano Pro。`},
     {id:'setup', glyph:'⚙', cat:'start', title:`选择你看到的`, body:`隐藏你不用的。5 个调色板、24 位艺术家、Mosaic 家族、3 种色调。通过「选个风格」编辑。随时重开放宽或收窄。`, more:`画布上的「选个风格」——点铅笔（编辑你的组合）把画布选择器收窄到你真正用的调色板和艺术家。两个部分:勾选五个调色板中哪些出现在标签里,以及哪些艺术家或「Mosaic 家族」条目出现在风格方块里。◆ Mosaic 家族是一个涵盖三态(马赛克 / 音符 / $1M$)的条目;方块点击仍会循环。◆ 默认是全部——有偏好后再收窄。◆ Free 看到 Pro 艺术家带 🔒;勾选会保存偏好,但绘制仍会撞上付费墙直到升级。◆ 至少 1 个调色板 + 1 位艺术家。◆ 色调(纯净 / 真实 / 柔和)有自己的部分:纯净是默认(干净饱和的色块,把音乐画成正色);真实添加绘画感颗粒和轻微的颜料偏移;柔和把一切软化为粉笔感。默认只有纯净——想要更多就勾选。只开一个色调时,画布上的色调选择器会隐藏;开两或三个时它会出现,让你随时切换。◆ 选择留在此设备上。随机(🔀)只从你的选择中抽取。`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 个调色板,一首歌`, body:`和声、光谱、φ Phi、反向、自定义。点标签切换——同样的音符,即时重绘。每个用不同的色彩语法画同一段音乐。`, more:`同一段音乐的五种色彩语法。◆ 和声——五度圈顺序,相关调聚拢。◆ 光谱——视觉平均律:十二个相等色相步对应十二个相等半音;轮盘闭合,B 在颜色上引回 C。◆ φ Phi——黄金角色相(137.5°),最大程度散开。◆ 反向——和声的反面:刺耳和弦在画布上冲突,干净的彼此绽开。◆ 自定义——默认是斯克里亚宾 1910 普罗米修斯映射;只有你调色板里的颜色发声(Pro 可编辑每个)。◆ 黑白——仅图像模式,当图为灰阶时。随时切换——同样的音符,即时重绘。Free 看到自定义为只读;Pro 使其可编辑。反向在每个级别都免费。`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`和声 = 五度圈`, body:`每位音乐家都学的轮盘。C 和 G 在颜色上靠近,因为在音乐上靠近。升一个五度——色相挪一格。`, more:`和声沿五度圈把音高映射到色相——每位音乐家都已熟悉的关系。相隔一个五度的调在颜色上相隔一步,所以 ii–V–I 平滑地滑过轮盘,远关系转调则一跃而过。色相来自音级,明度来自八度,饱和度来自音弹得多用力。这是最「音乐」的读法:画布上看起来近的,在乐谱上也近。`},
@@ -22067,13 +22609,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`说出一种感受`, body:`点 ✦ 你感觉如何?输入任何感受、任何语言。AI 写一段钢琴曲。然后 Morph 进另一种情绪,或 Vary 换一个新调。`, more:`点 ✦「你感觉如何?」,输入任何感受、用任何语言——愤怒、saudade、凌晨三点开车、夏日心动。AI 为它写一段钢琴曲,播放时画布逐和弦填满。之后:◆ ✦ MORPH 把一种情绪交叉淡入另一种——前半是 A,后半是 B,在 40–60% 区做力度混合。◆ ✦ VARY 把调性移到一个新调(常是大 ↔ 小):节奏与结构锁定,只有和弦——从而颜色——改变。继续点换新调。◆ Free 每个 AI 模式有 1 次免费试用(情绪、从图像取情绪、AI 作曲——氛围与旋律共享 2 次);Pro AI = 无限。`},
     {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`保存 → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到可印刷品质。`, more:`两颗钻石——图与乐。◆ ↓ 保存 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A1 · 可印刷 (高分辨率, 画廊级)。同一首歌总给同样的画——你的歌现在有了签名。◆ ⏺ 录制(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ 乐谱 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A1 · 可印刷尺寸。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循环、静音、清除`, body:`播放/暂停并拖进度条。⟳ 循环重复。🔊 静音在无声中作画。Clear 智能重置,按模式。`, more:`播放控制。◆ 播放开始并暂停(空格也行);点进度条跳转,拖动来 scrub。◆ ⟳ LOOP 让情绪曲重复;开启时为金色。◆ 🔊 / 🔇 静音在画作仍照常生成时静掉所有音频——跨会话记住。◆ Clear 感知模式:Compose 擦画布并留下;MIC 只丢当前模式的草稿;Image 丢弃草稿,Setup 回到初始——图片本身留在画布上;MIDI/音频/乐谱/文字情绪做完整重置。◆ 若状态显示「loading piano…」,等几秒(约 5 MB 采样);若失败,切换到合成钢琴。`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99(早鸟价,之后 €14.99)→ 全部 24 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99(早鸟价,之后 €24.99)增加无限 AI。提示:在 Free,点一下你最喜欢的锁定艺术家——会为你解锁试用。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家,每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印。每个 AI 模式有 1 次免费试用:文字情绪、从图像取情绪、AI 作曲——而 氛围 + 旋律 之间共享 2 次试用。◆ Pro €9.99(早鸟价,之后 €14.99)——全部 24 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的可印刷导出、终身访问(无 AI)。◆ Pro AI €19.99(早鸟价,之后 €24.99)——Pro 的一切外加无限 AI:文字情绪、从图像取情绪、AI 作曲、AI 氛围与旋律。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。◆ 图像的作曲家之声：免费版有肖邦与萨蒂；Pro 解锁全部六位。`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99(早鸟价,之后 €14.99)→ 全部 24 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99(早鸟价,之后 €24.99)增加无限 AI。提示:在 Free,点一下你最喜欢的锁定艺术家——会为你解锁试用。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家,每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印。每个 AI 模式有 1 次免费试用:文字情绪、从图像取情绪、AI 作曲——而 氛围 + 旋律 之间共享 2 次试用。◆ Pro €9.99(早鸟价,之后 €14.99)——全部 24 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的可印刷导出、终身访问(无 AI)。◆ Pro AI €19.99(早鸟价,之后 €24.99)——Pro 的一切外加无限 AI:文字情绪、从图像取情绪、AI 作曲、AI 氛围与旋律。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。◆ 图像的作曲家之声：免费版有肖邦与萨蒂；Pro 解锁全部十二位。`}
   ],
   zhTW: [
     {id:'overview', glyph:'✦', cat:'start', title:`音樂 ⇄ 繪畫`, body:`同一個輪盤,兩個方向。唱、打字或丟一張照片——畫布隨音樂填滿。保存畫作,錄下樂曲。兩者都帶走。`, more:`Paintiano 是雙向翻譯器。同一個色輪和音高輪雙向運轉。選一個來源——作曲、麥克風、音樂、圖像或一種情緒——音樂播放時畫布隨之填滿。兩條入口:◆ 音樂 → 繪畫:輸入一種情緒(任何感受、任何語言)、彈鋼琴、對麥克風唱,或丟入 MIDI、MP3 或樂譜。◆ 繪畫 → 音樂:丟入一張圖。選個顏色模式,也許選個藝術家。同樣的音樂 = 同樣的畫,始終如此。打開 🔀 隨機,每次 Play 都有新解讀。然後保存畫作、錄下音樂——這兩樣是你留下的。`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite 與進階`, body:`兩種入口。Lite 一打開就開始繪製一段鋼琴曲——聆聽並點「給我驚喜」。進階則給你每一項控制。用頂部的藥丸切換。Lite 全螢幕時上滑 = 新驚喜。`, more:`Paintiano 以兩種模式打開，由頂欄的藥丸（選單旁）切換。◆ LITE——應用會自動開始繪製一段經典鋼琴曲。無需設定、無需選單：看著畫布填滿，點 ↻ 給我驚喜 跳到另一位藝術家與變體，喜歡某一幀時按 暫停/儲存，或用我的歌 放入你自己的曲子。每位藝術家會在畫布上方顯示其名「靈感來自 …」。就是要它直接好用。◆ 進階——完整工作室：創作 / 匯入 磁貼（情緒、作曲、麥克風、音樂、圖像）、全部五種調色盤、每位藝術家、Setup、🔀 隨機、駕駛艙。本指南描述的一切都在這裡。◆ 藥丸會記住你的選擇；切到進階會打開全新的設定介面，切回 Lite 會再次自動播放。從 Lite 開始，想要控制時再轉到進階。`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`六位作曲家`, body:`繪畫 → 音樂：圖像可以以純 Scan 播放——或用作曲家的聲音重新譜寫。蕭邦與薩提免費，Pro 解鎖全部六位——此外每天為所有人解鎖一位 Pro 作曲家和一位 Pro 藝術家（✦ 今日）。設定 → 作曲家選擇陣容。`, more:`作曲家位於圖像一側——是 24 位畫家在繪畫→音樂方向的鏡像。載入一張圖，它可以兩種方式播放。◆ SCAN 從左到右逐字讀取，如同讀譜。◆ 作曲家模式用作曲家的聲音重新譜寫同一張圖——它的色彩與能量，由另一個音樂心靈來敘述。◆ 蕭邦——鋼琴的浪漫主義詩人；歌唱般的線條，豐富的和聲。◆ 薩提——「極簡主義」一詞誕生前的法國極簡；稀疏而飄浮的和弦。◆ 蓋希文——音樂廳裡的爺士和聲；藍調音綠放。◆ 葛拉斯——每次移動一個音級的重複音型；音樂在圖案中呼吸。◆ 瓦因——當代澳洲的能量；棱角分明、明亮、富於節奏。◆ 李閏珉——現代抒情鋼琴；寬闊平靜的波浪。◆ 同一張圖，不同作曲家 → 截然不同的樂曲；標題標註 “inspired by …”。在 Lite 中，↻ 「給我驚喜」會在同一張圖上抽取 Scan 或另一位作曲家。設定 → 作曲家決定誰參與。免費版含蕭邦與薩提；Pro 解鎖全部六位。`},
-    {id:'daily', glyph:'✦', cat:'start', title:`今日藝術家`, body:`Paintiano 以 24 位畫家和 6 位作曲家的風格作畫。其中九位始終屬於你——每天還會有一位畫家和一位作曲家加入一天。明天，另一對。`, more:`這對組合在你當地時間的午夜更換，當天全世界的人看到的都一樣——「今天是北齋」可以分享。◆ 在哪裡遇見他們：Lite 中，↻「給我驚喜」會盡早且頻繁地抽到今日藝術家；畫布標題顯示「✦ 今日藝術家 · inspired by …」；在選擇器和設定中，他們的標籤帶有小小的 ✦ 今日。◆ 他們帶著全部變體登場，而非預覽。◆ 點擊任意 ✦ 可再次打開此說明。◆ 想每天永久擁有全部 24 位畫家和 6 位作曲家？那就是 Paintiano Pro。`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`十二位作曲家`, body:`繪畫 → 音樂：圖像可以以純 Scan 播放——或用作曲家的聲音重新譜寫。蕭邦與薩提免費，Pro 解鎖全部十二位——此外每天為所有人解鎖一位 Pro 作曲家和一位 Pro 藝術家（✦ 今日）。設定 → 作曲家選擇陣容。`, more:`作曲家位於圖像一側——是 24 位畫家在繪畫→音樂方向的鏡像。載入一張圖，它可以兩種方式播放。◆ SCAN 從左到右逐字讀取，如同讀譜。◆ 作曲家模式用作曲家的聲音重新譜寫同一張圖——它的色彩與能量，由另一個音樂心靈來敘述。◆ 蕭邦——鋼琴的浪漫主義詩人；歌唱般的線條，豐富的和聲。◆ 薩提——「極簡主義」一詞誕生前的法國極簡；稀疏而飄浮的和弦。◆ 蓋希文——音樂廳裡的爺士和聲；藍調音綠放。◆ 葛拉斯——每次移動一個音級的重複音型；音樂在圖案中呼吸。◆ 瓦因——當代澳洲的能量；棱角分明、明亮、富於節奏。◆ 李閏珉——現代抒情鋼琴；寬闊平靜的波浪。◆ 巴哈——二聲部創意曲；十六分音符在行走低音上奔跑，階梯式強弱，不用踏板。◆ 貝多芬——四音動機貫穿全曲地敲擊；震音低音、突強、驟然的寂靜。◆ 德布西——印象主義；五聲音階的寧靜、全音階的閃爍、長踏板下的平行和弦。◆ 拉赫曼尼諾夫——俄羅斯的宏大畫布；跨三個八度的琶音、八度旋律、鐘聲。◆ 艾奧迪——永不改變的固定音型；層層疊加成一個漫長的漸強。◆ 久石讓——吉卜力圓舞曲；旋律跳上六度再緩步而下，add9 的溫暖。◆ 同一張圖，不同作曲家 → 截然不同的樂曲；標題標註 “inspired by …”。在 Lite 中，↻ 「給我驚喜」會在同一張圖上抽取 Scan 或另一位作曲家。設定 → 作曲家決定誰參與。免費版含蕭邦與薩提；Pro 解鎖全部十二位。`},
+    {id:'daily', glyph:'✦', cat:'start', title:`今日藝術家`, body:`Paintiano 以 24 位畫家和 12 位作曲家的風格作畫。其中九位始終屬於你——每天還會有一位畫家和一位作曲家加入一天。明天，另一對。`, more:`這對組合在你當地時間的午夜更換，當天全世界的人看到的都一樣——「今天是北齋」可以分享。◆ 在哪裡遇見他們：Lite 中，↻「給我驚喜」會盡早且頻繁地抽到今日藝術家；畫布標題顯示「✦ 今日藝術家 · inspired by …」；在選擇器和設定中，他們的標籤帶有小小的 ✦ 今日。◆ 他們帶著全部變體登場，而非預覽。◆ 點擊任意 ✦ 可再次打開此說明。◆ 想每天永久擁有全部 24 位畫家和 12 位作曲家？那就是 Paintiano Pro。`},
     {id:'setup', glyph:'⚙', cat:'start', title:`選擇你看到的`, body:`隱藏你不用的。5 個調色盤、24 位藝術家、Mosaic 家族、3 種色調。透過「選個風格」編輯。隨時重開放寬或收窄。`, more:`畫布上的「選個風格」——點鉛筆（編輯你的組合）把畫布選擇器收窄到你真正用的調色盤和藝術家。兩個部分:勾選五個調色盤中哪些出現在標籤裡,以及哪些藝術家或「Mosaic 家族」條目出現在風格方塊裡。◆ Mosaic 家族是一個涵蓋三態(馬賽克 / 音符 / $1M$)的條目;方塊點擊仍會循環。◆ 預設是全部——有偏好後再收窄。◆ Free 看到 Pro 藝術家帶 🔒;勾選會保存偏好,但繪製仍會撞上付費牆直到升級。◆ 至少 1 個調色盤 + 1 位藝術家。◆ 色調(純淨 / 真實 / 柔和)有自己的部分:純淨是預設(乾淨飽和的色塊,把音樂畫成正色);真實添加繪畫感顆粒和輕微的顏料偏移;柔和把一切軟化為粉筆感。預設只有純淨——想要更多就勾選。只開一個色調時,畫布上的色調選擇器會隱藏;開兩或三個時它會出現,讓你隨時切換。◆ 選擇留在此裝置上。隨機(🔀)只從你的選擇中抽取。`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 個調色盤,一首歌`, body:`和聲、光譜、φ Phi、反向、自訂。點標籤切換——同樣的音符,即時重繪。每個用不同的色彩語法畫同一段音樂。`, more:`同一段音樂的五種色彩語法。◆ 和聲——五度圈順序,相關調聚攏。◆ 光譜——視覺平均律:十二個相等色相步對應十二個相等半音;輪盤閉合,B 在顏色上引回 C。◆ φ Phi——黃金角色相(137.5°),最大程度散開。◆ 反向——和聲的反面:刺耳和弦在畫布上衝突,乾淨的彼此綻開。◆ 自訂——預設是斯克里亞賓 1910 普羅米修斯映射;只有你調色盤裡的顏色發聲(Pro 可編輯每個)。◆ 黑白——僅圖像模式,當圖為灰階時。隨時切換——同樣的音符,即時重繪。Free 看到自訂為唯讀;Pro 使其可編輯。反向在每個級別都免費。`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`和聲 = 五度圈`, body:`每位音樂家都學的輪盤。C 和 G 在顏色上靠近,因為在音樂上靠近。升一個五度——色相挪一格。`, more:`和聲沿五度圈把音高映射到色相——每位音樂家都已熟悉的關係。相隔一個五度的調在顏色上相隔一步,所以 ii–V–I 平滑地滑過輪盤,遠關係轉調則一躍而過。色相來自音級,明度來自八度,飽和度來自音彈得多用力。這是最「音樂」的讀法:畫布上看起來近的,在樂譜上也近。`},
@@ -22091,13 +22633,13 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`說出一種感受`, body:`點 ✦ 你感覺如何?輸入任何感受、任何語言。AI 寫一段鋼琴曲。然後 Morph 進另一種情緒,或 Vary 換一個新調。`, more:`點 ✦「你感覺如何?」,輸入任何感受、用任何語言——憤怒、saudade、凌晨三點開車、夏日心動。AI 為它寫一段鋼琴曲,播放時畫布逐和弦填滿。之後:◆ ✦ MORPH 把一種情緒交叉淡入另一種——前半是 A,後半是 B,在 40–60% 區做力度混合。◆ ✦ VARY 把調性移到一個新調(常是大 ↔ 小):節奏與結構鎖定,只有和弦——從而顏色——改變。繼續點換新調。◆ Free 每個 AI 模式有 1 次免費試用(情緒、從圖像取情緒、AI 作曲——氛圍與旋律共享 2 次);Pro AI = 無限。`},
     {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`儲存 → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到可列印品質。`, more:`兩顆鑽石——圖與樂。◆ ↓ 儲存 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A1 · 可列印 (高解析度, 畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。◆ ⏺ 錄製(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ 樂譜 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A1 · 可列印尺寸。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循環、靜音、清除`, body:`播放/暫停並拖進度條。⟳ 循環重複。🔊 靜音在無聲中作畫。Clear 智慧重置,按模式。`, more:`播放控制。◆ 播放開始並暫停(空格也行);點進度條跳轉,拖動來 scrub。◆ ⟳ LOOP 讓情緒曲重複;開啟時為金色。◆ 🔊 / 🔇 靜音在畫作仍照常生成時靜掉所有音訊——跨工作階段記住。◆ Clear 感知模式:Compose 擦畫布並留下;MIC 只丟當前模式的草稿;Image 丟棄草稿,Setup 回到初始——圖片本身留在畫布上;MIDI/音訊/樂譜/文字情緒做完整重置。◆ 若狀態顯示「loading piano…」,等幾秒(約 5 MB 取樣);若失敗,切換到合成鋼琴。`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99(早鳥價,之後 €14.99)→ 全部 24 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99(早鳥價,之後 €24.99)增加無限 AI。提示:在 Free,點一下你最喜歡的鎖定藝術家——會為你解鎖試用。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家,每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印。每個 AI 模式有 1 次免費試用:文字情緒、從圖像取情緒、AI 作曲——而 氛圍 + 旋律 之間共享 2 次試用。◆ Pro €9.99(早鳥價,之後 €14.99)——全部 24 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的可列印匯出、終身存取(無 AI)。◆ Pro AI €19.99(早鳥價,之後 €24.99)——Pro 的一切外加無限 AI:文字情緒、從圖像取情緒、AI 作曲、AI 氛圍與旋律。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。◆ 圖像的作曲家之聲：免費版有蕭邦與薩提；Pro 解鎖全部六位。`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99(早鳥價,之後 €14.99)→ 全部 24 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99(早鳥價,之後 €24.99)增加無限 AI。提示:在 Free,點一下你最喜歡的鎖定藝術家——會為你解鎖試用。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家,每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印。每個 AI 模式有 1 次免費試用:文字情緒、從圖像取情緒、AI 作曲——而 氛圍 + 旋律 之間共享 2 次試用。◆ Pro €9.99(早鳥價,之後 €14.99)——全部 24 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的可列印匯出、終身存取(無 AI)。◆ Pro AI €19.99(早鳥價,之後 €24.99)——Pro 的一切外加無限 AI:文字情緒、從圖像取情緒、AI 作曲、AI 氛圍與旋律。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。◆ 圖像的作曲家之聲：免費版有蕭邦與薩提；Pro 解鎖全部十二位。`}
   ],
   ja: [
     {id:'overview', glyph:'✦', cat:'start', title:`音楽 ⇄ 絵画`, body:`同じ輪、両方向。歌う、打つ、写真をドロップ——音楽が流れるとキャンバスが満ちる。絵を保存、曲を録音。両方を持ち帰る。`, more:`Paintiano は双方向の翻訳機。同じ色相環と音高環が両方向に回る。ソースを選ぶ——作曲、マイク、音楽、画像、または気持ち——と、音楽が流れる間キャンバスが満ちる。二つの入口:◆ 音楽 → 絵画:気分を打つ(どんな感情でも、どんな言語でも)、ピアノを弾く、マイクに歌う、または MIDI・MP3・楽譜をドロップ。◆ 絵画 → 音楽:画像をドロップ。色モードを選び、必要ならアーティストも。同じ音楽 = 同じ絵、いつも。🔀 シャッフルをオンにすれば Play ごとに新しい解釈。そして絵を保存し音楽を録音——それが手元に残る部分。`},
     {id:'appmodes', glyph:'◑', cat:'start', title:`Lite とアドバンス`, body:`入口は二つ。Lite は開いた瞬間にピアノ曲を描き始めます——聴いて「おまかせ」をタップ。アドバンスはすべての操作を渡します。上部のチップで切替。Lite のフルスクリーンで上スワイプ = 新しいサプライズ。`, more:`Paintiano は二つのモードで開き、トップバーのピル（メニューの隣）で切り替えます。◆ LITE——アプリが自動でクラシックなピアノ曲を描き始めます。設定もメニューも不要：キャンバスが満ちていくのを眺め、↻ おまかせ で別のアーティストとバリアントへ、気に入った一枚で 一時停止/保存、自分の曲 で自前の曲を読み込み。各アーティストはキャンバス上部に「… に着想を得て」として名を表示。とにかく動くように作りました。◆ アドバンス——フル・スタジオ：作成 / 取り込み タイル（気持ち、作曲、マイク、音楽、画像）、五つのパレット全部、全アーティスト、Setup、🔀 シャッフル、コックピット。このガイドが説明するすべてはここにあります。◆ チップは選択を記憶します。アドバンスへ切り替えると新しい設定画面が開き、Lite へ戻すと再び自動再生します。Lite から始め、操作が欲しくなったらアドバンスへ。`},
-    {id:'composers', glyph:'🎹', cat:'start', title:`6人の作曲家`, body:`絵 → 音楽：画像は純粋な Scan としても、作曲家の声で再作曲しても演奏できます。ショパンとサティは無料、Pro で6人すべて——さらに毎日、Pro の作曲家1人とアーティスト1人が全員に解放されます（✦ 今日）。設定 → 作曲家で顔ぶれを選べます。`, more:`作曲家は画像側にいます——24人の画家の、絵→音楽方向の鏡像です。画像を読み込むと、二つの方法で演奏できます。◆ SCAN は左から右へ、楽譜のようにそのまま読みます。◆ 作曲家モードは同じ画像を作曲家の声で再作曲します——その色とエネルギーを、別の音楽的知性がフレーズします。◆ ショパン——ピアノのロマン派詩人。歌う旋律線と豊かな和声。◆ サティ——その言葉が生まれる前のフランス的ミニマリズム。まばらに漂う和音。◆ ガーシュウィン——コンサートホールのジャズ和声。ブルーノートが咲きます。◆ グラス——一度に一段ずつずれる反復セル。音楽がパターンの中で呼吸します。◆ ヴァイン——現代オーストラリアのエネルギー。角ばって明るく、リズミカル。◆ イルマ——現代の叙情的ピアノ。広く静かな波。◆ 同じ画像でも作曲家が違えば → まったく別の曲に。ヘッダーには “inspired by …” と示されます。Lite では ↻ 「おまかせ」が同じ画像の上で Scan か別の作曲家を抽選します。設定 → 作曲家で誰が参加するか決めます。Free はショパン + サティ、Pro で6人すべて解放。`},
-    {id:'daily', glyph:'✦', cat:'start', title:`今日のアーティスト`, body:`Paintiano は24人の画家と6人の作曲家のスタイルで描きます。そのうち9人はいつでもあなたのもの——そして毎日、画家1人と作曲家1人が一日だけ加わります。明日は別のペア。`, more:`ペアはあなたの現地時間の深夜0時に入れ替わり、その日は世界中の誰にとっても同じです——「今日は北斎」と共有できます。◆ 出会える場所：Lite では ↻「おまかせ」が今日のアーティストを早く、何度も引き当てます。キャンバスのヘッダーには「✦ 今日のアーティスト · inspired by …」と表示され、ピッカーと設定ではそのチップに小さな ✦ 今日 が付きます。◆ プレビューではなく、すべてのバリエーション付きで登場します。◆ どの ✦ をタップしても、この説明が再び開きます。◆ 24人の画家と6人の作曲家を毎日ずっと？ それが Paintiano Pro です。`},
+    {id:'composers', glyph:'🎹', cat:'start', title:`12人の作曲家`, body:`絵 → 音楽：画像は純粋な Scan としても、作曲家の声で再作曲しても演奏できます。ショパンとサティは無料、Pro で12人すべて——さらに毎日、Pro の作曲家1人とアーティスト1人が全員に解放されます（✦ 今日）。設定 → 作曲家で顔ぶれを選べます。`, more:`作曲家は画像側にいます——24人の画家の、絵→音楽方向の鏡像です。画像を読み込むと、二つの方法で演奏できます。◆ SCAN は左から右へ、楽譜のようにそのまま読みます。◆ 作曲家モードは同じ画像を作曲家の声で再作曲します——その色とエネルギーを、別の音楽的知性がフレーズします。◆ ショパン——ピアノのロマン派詩人。歌う旋律線と豊かな和声。◆ サティ——その言葉が生まれる前のフランス的ミニマリズム。まばらに漂う和音。◆ ガーシュウィン——コンサートホールのジャズ和声。ブルーノートが咲きます。◆ グラス——一度に一段ずつずれる反復セル。音楽がパターンの中で呼吸します。◆ ヴァイン——現代オーストラリアのエネルギー。角ばって明るく、リズミカル。◆ イルマ——現代の叙情的ピアノ。広く静かな波。◆ バッハ——二声のインヴェンション。歩くベースの上を走る十六分音符、段階的な強弱、ペダルなし。◆ ベートーヴェン——四つの音の動機が曲全体を打ち鳴らす。トレモロのベース、スフォルツァンド、突然の静寂。◆ ドビュッシー——印象主義。五音音階の静けさ、全音音階のきらめき、長いペダルの下の平行和音。◆ ラフマニノフ——ロシアの大きなカンヴァス。三オクターブのアルペジオ、オクターブの旋律、鐘。◆ エイナウディ——決して変わらないオスティナート。層が積み重なり、ひとつの長いクレッシェンドへ。◆ 久石譲——ジブリのワルツ。六度跳んで歩いて降りる旋律、add9 の温もり。◆ 同じ画像でも作曲家が違えば → まったく別の曲に。ヘッダーには “inspired by …” と示されます。Lite では ↻ 「おまかせ」が同じ画像の上で Scan か別の作曲家を抽選します。設定 → 作曲家で誰が参加するか決めます。Free はショパン + サティ、Pro で12人すべて解放。`},
+    {id:'daily', glyph:'✦', cat:'start', title:`今日のアーティスト`, body:`Paintiano は24人の画家と12人の作曲家のスタイルで描きます。そのうち9人はいつでもあなたのもの——そして毎日、画家1人と作曲家1人が一日だけ加わります。明日は別のペア。`, more:`ペアはあなたの現地時間の深夜0時に入れ替わり、その日は世界中の誰にとっても同じです——「今日は北斎」と共有できます。◆ 出会える場所：Lite では ↻「おまかせ」が今日のアーティストを早く、何度も引き当てます。キャンバスのヘッダーには「✦ 今日のアーティスト · inspired by …」と表示され、ピッカーと設定ではそのチップに小さな ✦ 今日 が付きます。◆ プレビューではなく、すべてのバリエーション付きで登場します。◆ どの ✦ をタップしても、この説明が再び開きます。◆ 24人の画家と12人の作曲家を毎日ずっと？ それが Paintiano Pro です。`},
     {id:'setup', glyph:'⚙', cat:'start', title:`見えるものを選ぶ`, body:`使わないものを隠す。5 パレット、24 人のアーティスト、Mosaic ファミリー、3 つのトーン。「ルックを選ぶ」で編集。いつでも再び広げたり絞ったり。`, more:`キャンバスの「ルックを選ぶ」——鉛筆（セットを編集）は、キャンバスのピッカーを本当に使うパレットとアーティストだけに絞る。二つのセクション:五つのパレットのどれをタブに出すか、どのアーティストや「Mosaic ファミリー」項目をスタイルタイルに出すかをチェック。◆ Mosaic ファミリーは三状態(モザイク / 音符 / $1M$)を覆う一項目;タイルはタップで循環し続ける。◆ デフォルトは全部——お気に入りができたら絞る。◆ Free は Pro アーティストを 🔒 付きで見る;チェックは設定を保存するが、描画はアップグレードまでペイウォールに当たる。◆ 最低 1 パレット + 1 アーティスト。◆ トーン(ピュア / リアル / パステル)は独自のセクション:ピュアはデフォルト(クリーンで彩度のある色で、音楽をストレートな色として描く);リアルは絵画的なグレインと軽微な顔料のずれを加える;パステルは全体をチョーキーな質感に和らげる。デフォルトはピュアのみ — もっと欲しければチェック。一つのトーンだけがオンのとき、キャンバスのトーンピッカーは非表示;二つか三つオンのときは表示され、その場で切り替えできる。◆ 選択はこの端末に残る。シャッフル(🔀)は選択からのみ引く。`},
     {id:'modes', glyph:'φ', cat:'colors', title:`5 パレット、一曲`, body:`ハーモニー、スペクトル、φ Phi、反転、カスタム。タブをタップで切替——同じ音符、即座に再描画。それぞれ違う色の文法で同じ音楽を描く。`, more:`同じ音楽の五つの色の文法。◆ ハーモニー——五度圏の順、近い調が集まる。◆ スペクトル——視覚の平均律:十二の等しい色相ステップで十二の半音;輪が閉じ、B が色で C へ戻る。◆ φ Phi——黄金角の色相(137.5°)、最大に散る。◆ 反転——ハーモニーの逆:ぶつかる和音はキャンバスでぶつかり、澄んだものは離れて咲く。◆ カスタム——既定はスクリャービンの 1910 プロメテウス対応;あなたのパレットの色だけが鳴る(Pro は各色を編集)。◆ 白黒——画像モードのみ、画像がグレースケールのとき。いつでも切替——同じ音符、即座に再描画。Free はカスタムを読取専用で見る;Pro は編集可能に。反転はどの段階でも無料。`},
     {id:'harmony', glyph:'◯', cat:'colors', title:`ハーモニー = 五度圏`, body:`どの音楽家も学ぶ輪。C と G は音楽で近いから色でも近い。五度上がると——色相が一段ずれる。`, more:`ハーモニーは音高を五度圏に沿って色相へ対応させる——どの音楽家も既に知る関係。五度離れた調は色で一歩離れ、だから ii–V–I は輪を滑らかに滑り、遠い転調は飛び越える。色相は音名から、明度は八度から、彩度は音をどれだけ強く弾いたかから。最も「音楽的」な読み:キャンバスで近く見えるものは譜でも近い。`},
@@ -22115,7 +22657,7 @@ const GUIDE_CARDS_I18N = {
     {id:'moods', glyph:'✦', cat:'music', title:`感情に名前を`, body:`✦ どんな気分? をタップ。どんな感情でも、どんな言語でも打つ。AI が一曲書く。その後 Morph で別の気分へ、Vary で新しい調へ。`, more:`✦「どんな気分?」をタップし、どんな感情でも、どんな言語でも打つ——激怒、サウダージ、午前3時のドライブ、夏の片思い。AI がそれにピアノ曲を書き、再生中キャンバスが和音ごとに満ちる。その後:◆ ✦ MORPH は一つの気分を別の気分へクロスフェード——前半が A、後半が B、40–60% ゾーンでベロシティをブレンド。◆ ✦ VARY は調性を新しい調へずらす(しばしば長 ↔ 短):リズムと構造はロックされ、和音——ゆえに色——だけが変わる。タップし続けて新しい調へ。◆ Free は AI モードごとに 1 回の無料お試し(気持ち、画像からムード、AI 作曲——雰囲気とメロディは 2 回を共有);Pro AI = 無制限。`},
     {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`保存 → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 印刷可能品質に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ 保存 は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A1 · 印刷可能 (高解像度, ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。◆ ⏺ 録音(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ 楽譜 は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A1 · 印刷可能サイズを解放する。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`再生・ループ・ミュート・消去`, body:`再生/停止とバー移動。⟳ ループで繰返し。🔊 ミュートで無音で描く。Clear はモードごとに賢くリセット。`, more:`再生コントロール。◆ 再生は開始と停止(スペースも);進捗バーをタップでジャンプ、ドラッグでスクラブ。◆ ⟳ LOOP は気分の曲を繰り返させる;オンで金色。◆ 🔊 / 🔇 ミュートは絵が通常通り生成される間、全音声を消す——セッションをまたいで記憶。◆ Clear はモードを意識する:Compose はキャンバスを消して留まる;MIC はアクティブなモードの下書きだけ捨てる;Image はドラフトを破棄し、Setup は再び初期状態へ — 画像自体はキャンバスに残る;MIDI/音声/楽譜/テキスト気分は完全リセット。◆ 状態が「loading piano…」と出たら数秒待つ(約 5 MB サンプル);失敗すればシンセピアノに切り替わる。`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99(早割、以降 €14.99)→ 全 24 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99(早割、以降 €24.99)は無制限 AI を追加。ヒント:Free では、好きなロックされたアーティストをタップ—試すために解除されます。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放、各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き。各 AI モードに 1 回の無料お試し:テキスト気分、画像からムード、AI 作曲——そして 雰囲気 + メロディ は 2 回のお試しを共有。◆ Pro €9.99(早割、以降 €14.99)——全 24 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの印刷可能な書き出し、永久アクセス(AI なし)。◆ Pro AI €19.99(早割、以降 €24.99)——Pro の全てに無制限 AI:テキスト気分、画像からムード、AI 作曲、AI 雰囲気とメロディ。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。◆ 画像のための作曲家ボイス：Free はショパン + サティ、Pro で6人すべて解放。`}
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99(早割、以降 €14.99)→ 全 24 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99(早割、以降 €24.99)は無制限 AI を追加。ヒント:Free では、好きなロックされたアーティストをタップ—試すために解除されます。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放、各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き。各 AI モードに 1 回の無料お試し:テキスト気分、画像からムード、AI 作曲——そして 雰囲気 + メロディ は 2 回のお試しを共有。◆ Pro €9.99(早割、以降 €14.99)——全 24 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの印刷可能な書き出し、永久アクセス(AI なし)。◆ Pro AI €19.99(早割、以降 €24.99)——Pro の全てに無制限 AI:テキスト気分、画像からムード、AI 作曲、AI 雰囲気とメロディ。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。◆ 画像のための作曲家ボイス：Free はショパン + サティ、Pro で12人すべて解放。`}
   ]
 };
 function getGuideCards(lang){ return GUIDE_CARDS_I18N[lang] || GUIDE_CARDS_I18N.EN; }
@@ -23581,7 +24123,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     ] : [
       ['proValueArtists', '24 artists (free has 9)'],
       ['proValueTypes',   '6 paint types per artist (free has 2)'],
-      ['proValueComposers','All 6 composers — picture recomposition (free has 2)'],
+      ['proValueComposers','All 12 composers — picture recomposition (free has 2)'],
       ['proValueDaily',    'Free gets one extra artist a day — Pro has them all, always'],
       ['proValuePalette', 'Custom palette — set your own 12 colours'],
       ['proValueDpi',     '300 DPI exports, no watermark'],
@@ -23810,7 +24352,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               const credits3 = tr('tier3Credits', '3 credits');
               const rows = [
                 [tr('tierRowArtists', 'Artists'),       '9',     '24',     '24',  null],
-                [tr('tierRowComposers', 'Composers'),   '2',     '6',      '6',   null],
+                [tr('tierRowComposers', 'Composers'),   '2',     '12',     '12',  null],
                 [tr('tierRowDaily', 'Artist of the day'), yes,   no,       no,    '✦'],
                 [tr('tierRowTypes', 'Paint types'),     '2',     allWord,  allWord, null],
                 [tr('tierRowPalette', 'Custom palette'),ronly,   yes,      yes,   null],
@@ -24205,7 +24747,7 @@ const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, art
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" style={{maxWidth:400,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(226,196,119,.5)',borderRadius:14,padding:'24px 22px 20px',color:'rgba(230,222,196,.9)',fontFamily:'inherit',boxShadow:'0 0 32px rgba(226,196,119,.16), 0 20px 60px rgba(0,0,0,.6)',position:'relative'}}>
         <button onClick={onClose} aria-label="Close" style={{position:'absolute',top:10,right:12,background:'transparent',border:'none',color:'rgba(230,222,196,.55)',fontSize:20,cursor:'pointer',lineHeight:1,padding:4}}>×</button>
         <div style={{fontSize:(.62*readScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(226,196,119,1)',fontWeight:700,marginBottom:10}}>✦ {ts('dailyTitle','Artist of the day')}</div>
-        <div style={{fontSize:(.84*readScale)+'rem',lineHeight:1.55}}>{ts('dailyExplain','Paintiano paints in the styles of 24 painters and 6 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.')}</div>
+        <div style={{fontSize:(.84*readScale)+'rem',lineHeight:1.55}}>{ts('dailyExplain','Paintiano paints in the styles of 24 painters and 12 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.')}</div>
         <div style={{marginTop:12,padding:'10px 12px',borderRadius:10,background:'rgba(226,196,119,.08)',border:'1px solid rgba(226,196,119,.28)',fontSize:(.8*readScale)+'rem',lineHeight:1.5}}>
           <span style={{color:'rgba(201,168,76,.8)'}}>{ts('dailyTodayIs','Today')}:</span> <b style={{color:'rgba(244,230,192,1)',fontWeight:600}}>{artistName} · {composerName}</b>
           <div style={{fontSize:(.66*readScale)+'rem',color:'rgba(201,168,76,.7)',marginTop:2,fontStyle:'italic'}}>{ts('dailyTomorrowPair','Tomorrow — another pair.')}</div>
@@ -25300,7 +25842,10 @@ export default function Paintiano() {
   // COMPOSERS set — mirrors setupArtists for the painting→music side: the
   // sheet picks which composers are in play (panel chips + Lite surprise
   // roulette). Scan is a MODE, not a member — always available.
-  const ALL_COMPOSER_KEYS = ['glass','satie','chopin','vine','gershwin','yiruma'];
+  const ALL_COMPOSER_KEYS = ['glass','satie','chopin','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'];
+  // Composers added Oct 2026 — existing users have a stored set without them;
+  // merge them in ONCE (flag) so the new voices show up without a reset.
+  const NEW_COMPOSER_KEYS_2026 = ['bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'];
   const [setupComposers, setSetupComposers] = useState(() => {
     try {
       const raw = localStorage.getItem('paintiano_setup_composers');
@@ -25308,6 +25853,10 @@ export default function Paintiano() {
       const arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return ALL_COMPOSER_KEYS.slice();
       const valid = arr.filter(k => ALL_COMPOSER_KEYS.includes(k));
+      if(!localStorage.getItem('paintiano_setup_composers_v2')){
+        for(const k of NEW_COMPOSER_KEYS_2026){ if(!valid.includes(k)) valid.push(k); }
+        try{ localStorage.setItem('paintiano_setup_composers_v2','1'); }catch(_){}
+      }
       return valid.length ? valid : ALL_COMPOSER_KEYS.slice();
     } catch(_) { return ALL_COMPOSER_KEYS.slice(); }
   });
@@ -25508,10 +26057,10 @@ export default function Paintiano() {
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
-const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma'};;
+const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma',bach:'J. S. Bach',beethoven:'Ludwig van Beethoven',debussy:'Claude Debussy',rachmaninov:'Sergei Rachmaninov',einaudi:'Ludovico Einaudi',hisaishi:'Joe Hisaishi'};
 // Free-tier composer split: Chopin + Satie ship free (public-domain anchors,
 // maximum stylistic contrast — dense Romantic harmony vs. sparse minimalism);
-// Glass / Vine / Gershwin / Yiruma unlock with Pro. Chips stay visible with a
+// The other ten (Glass … Hisaishi) unlock with Pro. Chips stay visible with a
 // 🔒 badge; every CONSUMPTION point checks composerIsLocked (panel tap,
 // Composer-mode fallback pick, Lite surprise roll, setup toggle).
 const FREE_COMPOSER_KEYS = ['chopin','satie'];
@@ -25568,7 +26117,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // marketable ("today: Klimt"). No server, no storage. Resets at LOCAL
   // midnight; an app left open flips on the next minute tick (dailyTick).
   const DAILY_ARTIST_POOL = useMemo(()=> ['matisse','bloom','miro','bauhaus','rothko','wave','arcs','mitchell','hokusai','lichtenstein','klee','delaunay','oneM','raffel','mondrian'], []);
-  const DAILY_COMPOSER_POOL = useMemo(()=> ['glass','vine','gershwin','yiruma'], []);
+  const DAILY_COMPOSER_POOL = useMemo(()=> ['glass','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'], []);
   const _dayIndex = () => { const d=new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset()*60000)/86400000); };
   const [dailyTick, setDailyTick] = useState(()=>_dayIndex());
   useEffect(()=>{ const id=setInterval(()=>{ const n=_dayIndex(); setDailyTick(p=> p===n ? p : n); }, 60000); return ()=>clearInterval(id); },[]);
@@ -26852,7 +27401,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     imgComposerRef.current=null; setImgComposer(null);
   },[]);
   const _liteRollComposer = useCallback(()=>{
-    const _en=['glass','satie','chopin','vine','gershwin','yiruma'].filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
+    const _en=['glass','satie','chopin','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'].filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
     const a=[null,..._en].filter(x=>x!==imgComposerRef.current);
     // Composer of the day is weighted (~40%) so most Free Lite sessions meet it.
     const _dc = (proStatus==='free' && a.includes(composerOfDay)) ? composerOfDay : null;
@@ -31682,6 +32231,18 @@ Hard requirements:
             ? composeImageGershwin(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='yiruma')
             ? composeImageYiruma(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='bach')
+            ? composeImageBach(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='beethoven')
+            ? composeImageBeethoven(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='debussy')
+            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='rachmaninov')
+            ? composeImageRachmaninov(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='einaudi')
+            ? composeImageEinaudi(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='hisaishi')
+            ? composeImageHisaishi(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -31782,6 +32343,18 @@ Hard requirements:
       ? composeImageGershwin(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='yiruma')
       ? composeImageYiruma(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='bach')
+      ? composeImageBach(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='beethoven')
+      ? composeImageBeethoven(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='debussy')
+      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='rachmaninov')
+      ? composeImageRachmaninov(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='einaudi')
+      ? composeImageEinaudi(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='hisaishi')
+      ? composeImageHisaishi(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -36375,7 +36948,7 @@ Hard requirements:
               </div>
             </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('inspiredByTitle')}</div>
-              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
+              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
               if(_cs.length===1){ return (
@@ -38891,7 +39464,7 @@ Hard requirements:
                   </span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,rowGap:8}}>
-                  {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].map(c=>{
+                  {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].map(c=>{
                     const on = setupComposers.includes(c.k);
                     const proLock = composerIsLocked(c.k);
                     return (
@@ -39128,15 +39701,15 @@ Hard requirements:
             { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
             { sel:'.pf-setup-composers', inModal:true, pad:8,
               title:(({EN:'Composers',SK:'Skladatelia',DE:'Komponisten',FR:'Compositeurs',ES:'Compositores',PT:'Compositores',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composers'),
-              body:(({EN:'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma. Chopin + Satie are free \u2014 Pro unlocks all six.',
-                      SK:'Obraz m\u00f4\u017ee hra\u0165 ako \u010dist\u00fd prepis \u2014 alebo prekomponovan\u00fd v \u0161t\u00fdle skladate\u013ea, od Glassa po Yirumu. Chopin + Satie s\u00fa zadarmo \u2014 Pro odomkne v\u0161etk\u00fdch \u0161es\u0165.',
-                      DE:'Ein Bild kann als reiner Scan spielen \u2014 oder neu komponiert im Stil eines Komponisten, von Glass bis Yiruma. Chopin + Satie sind gratis \u2014 Pro schaltet alle sechs frei.',
-                      FR:'Un tableau peut jouer en scan pur \u2014 ou recompos\u00e9 dans le style d\u2019un compositeur, de Glass \u00e0 Yiruma. Chopin + Satie sont gratuits \u2014 Pro d\u00e9bloque les six.',
-                      ES:'Un cuadro puede sonar como escaneo puro \u2014 o recompuesto al estilo de un compositor, de Glass a Yiruma. Chopin + Satie son gratis \u2014 Pro desbloquea los seis.',
-                      PT:'Um quadro pode tocar como leitura pura \u2014 ou recomposto ao estilo de um compositor, de Glass a Yiruma. Chopin + Satie s\u00e3o gr\u00e1tis \u2014 o Pro desbloqueia os seis.',
-                      zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Glass \u5230 Yiruma\u3002\u8096\u90a6\u4e0e\u8428\u8482\u514d\u8d39\u2014\u2014Pro \u89e3\u9501\u5168\u90e8\u516d\u4f4d\u3002',
-                      zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Glass \u5230 Yiruma\u3002\u856d\u90a6\u8207\u85a9\u63d0\u514d\u8cbb\u2014\u2014Pro \u89e3\u9396\u5168\u90e8\u516d\u4f4d\u3002',
-                      ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Glass \u304b\u3089 Yiruma \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u30676\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma. Chopin + Satie are free \u2014 Pro unlocks all six.') },
+              body:(({EN:'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.',
+                      SK:'Obraz m\u00f4\u017ee hra\u0165 ako \u010dist\u00fd prepis \u2014 alebo prekomponovan\u00fd v \u0161t\u00fdle skladate\u013ea, od Bacha po Hisaishiho. Chopin + Satie s\u00fa zadarmo \u2014 Pro odomkne v\u0161etk\u00fdch dvan\u00e1s\u0165.',
+                      DE:'Ein Bild kann als reiner Scan spielen \u2014 oder neu komponiert im Stil eines Komponisten, von Bach bis Hisaishi. Chopin + Satie sind gratis \u2014 Pro schaltet alle zw\u00f6lf frei.',
+                      FR:'Un tableau peut jouer en scan pur \u2014 ou recompos\u00e9 dans le style d\u2019un compositeur, de Bach \u00e0 Hisaishi. Chopin + Satie sont gratuits \u2014 Pro d\u00e9bloque les douze.',
+                      ES:'Un cuadro puede sonar como escaneo puro \u2014 o recompuesto al estilo de un compositor, de Bach a Hisaishi. Chopin + Satie son gratis \u2014 Pro desbloquea los doce.',
+                      PT:'Um quadro pode tocar como leitura pura \u2014 ou recomposto ao estilo de um compositor, de Bach a Hisaishi. Chopin + Satie s\u00e3o gr\u00e1tis \u2014 o Pro desbloqueia os doze.',
+                      zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Bach \u5230 Hisaishi\u3002\u8096\u90a6\u4e0e\u8428\u8482\u514d\u8d39\u2014\u2014Pro \u89e3\u9501\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
+                      zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Bach \u5230 Hisaishi\u3002\u856d\u90a6\u8207\u85a9\u63d0\u514d\u8cbb\u2014\u2014Pro \u89e3\u9396\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
+                      ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Bach \u304b\u3089 Hisaishi \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u306712\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.') },
             { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
           ];
           const endTour = (done)=>{

@@ -238,7 +238,7 @@ const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, art
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" style={{maxWidth:400,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(226,196,119,.5)',borderRadius:14,padding:'24px 22px 20px',color:'rgba(230,222,196,.9)',fontFamily:'inherit',boxShadow:'0 0 32px rgba(226,196,119,.16), 0 20px 60px rgba(0,0,0,.6)',position:'relative'}}>
         <button onClick={onClose} aria-label="Close" style={{position:'absolute',top:10,right:12,background:'transparent',border:'none',color:'rgba(230,222,196,.55)',fontSize:20,cursor:'pointer',lineHeight:1,padding:4}}>×</button>
         <div style={{fontSize:(.62*readScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(226,196,119,1)',fontWeight:700,marginBottom:10}}>✦ {ts('dailyTitle','Artist of the day')}</div>
-        <div style={{fontSize:(.84*readScale)+'rem',lineHeight:1.55}}>{ts('dailyExplain','Paintiano paints in the styles of 24 painters and 6 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.')}</div>
+        <div style={{fontSize:(.84*readScale)+'rem',lineHeight:1.55}}>{ts('dailyExplain','Paintiano paints in the styles of 24 painters and 12 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.')}</div>
         <div style={{marginTop:12,padding:'10px 12px',borderRadius:10,background:'rgba(226,196,119,.08)',border:'1px solid rgba(226,196,119,.28)',fontSize:(.8*readScale)+'rem',lineHeight:1.5}}>
           <span style={{color:'rgba(201,168,76,.8)'}}>{ts('dailyTodayIs','Today')}:</span> <b style={{color:'rgba(244,230,192,1)',fontWeight:600}}>{artistName} · {composerName}</b>
           <div style={{fontSize:(.66*readScale)+'rem',color:'rgba(201,168,76,.7)',marginTop:2,fontStyle:'italic'}}>{ts('dailyTomorrowPair','Tomorrow — another pair.')}</div>
@@ -1333,7 +1333,10 @@ export default function Paintiano() {
   // COMPOSERS set — mirrors setupArtists for the painting→music side: the
   // sheet picks which composers are in play (panel chips + Lite surprise
   // roulette). Scan is a MODE, not a member — always available.
-  const ALL_COMPOSER_KEYS = ['glass','satie','chopin','vine','gershwin','yiruma'];
+  const ALL_COMPOSER_KEYS = ['glass','satie','chopin','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'];
+  // Composers added Oct 2026 — existing users have a stored set without them;
+  // merge them in ONCE (flag) so the new voices show up without a reset.
+  const NEW_COMPOSER_KEYS_2026 = ['bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'];
   const [setupComposers, setSetupComposers] = useState(() => {
     try {
       const raw = localStorage.getItem('paintiano_setup_composers');
@@ -1341,6 +1344,10 @@ export default function Paintiano() {
       const arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return ALL_COMPOSER_KEYS.slice();
       const valid = arr.filter(k => ALL_COMPOSER_KEYS.includes(k));
+      if(!localStorage.getItem('paintiano_setup_composers_v2')){
+        for(const k of NEW_COMPOSER_KEYS_2026){ if(!valid.includes(k)) valid.push(k); }
+        try{ localStorage.setItem('paintiano_setup_composers_v2','1'); }catch(_){}
+      }
       return valid.length ? valid : ALL_COMPOSER_KEYS.slice();
     } catch(_) { return ALL_COMPOSER_KEYS.slice(); }
   });
@@ -1541,10 +1548,10 @@ export default function Paintiano() {
   };
   const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
-const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma'};;
+const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma',bach:'J. S. Bach',beethoven:'Ludwig van Beethoven',debussy:'Claude Debussy',rachmaninov:'Sergei Rachmaninov',einaudi:'Ludovico Einaudi',hisaishi:'Joe Hisaishi'};
 // Free-tier composer split: Chopin + Satie ship free (public-domain anchors,
 // maximum stylistic contrast — dense Romantic harmony vs. sparse minimalism);
-// Glass / Vine / Gershwin / Yiruma unlock with Pro. Chips stay visible with a
+// The other ten (Glass … Hisaishi) unlock with Pro. Chips stay visible with a
 // 🔒 badge; every CONSUMPTION point checks composerIsLocked (panel tap,
 // Composer-mode fallback pick, Lite surprise roll, setup toggle).
 const FREE_COMPOSER_KEYS = ['chopin','satie'];
@@ -1601,7 +1608,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // marketable ("today: Klimt"). No server, no storage. Resets at LOCAL
   // midnight; an app left open flips on the next minute tick (dailyTick).
   const DAILY_ARTIST_POOL = useMemo(()=> ['matisse','bloom','miro','bauhaus','rothko','wave','arcs','mitchell','hokusai','lichtenstein','klee','delaunay','oneM','raffel','mondrian'], []);
-  const DAILY_COMPOSER_POOL = useMemo(()=> ['glass','vine','gershwin','yiruma'], []);
+  const DAILY_COMPOSER_POOL = useMemo(()=> ['glass','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'], []);
   const _dayIndex = () => { const d=new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset()*60000)/86400000); };
   const [dailyTick, setDailyTick] = useState(()=>_dayIndex());
   useEffect(()=>{ const id=setInterval(()=>{ const n=_dayIndex(); setDailyTick(p=> p===n ? p : n); }, 60000); return ()=>clearInterval(id); },[]);
@@ -2885,7 +2892,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     imgComposerRef.current=null; setImgComposer(null);
   },[]);
   const _liteRollComposer = useCallback(()=>{
-    const _en=['glass','satie','chopin','vine','gershwin','yiruma'].filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
+    const _en=['glass','satie','chopin','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'].filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
     const a=[null,..._en].filter(x=>x!==imgComposerRef.current);
     // Composer of the day is weighted (~40%) so most Free Lite sessions meet it.
     const _dc = (proStatus==='free' && a.includes(composerOfDay)) ? composerOfDay : null;
@@ -7715,6 +7722,18 @@ Hard requirements:
             ? composeImageGershwin(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='yiruma')
             ? composeImageYiruma(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='bach')
+            ? composeImageBach(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='beethoven')
+            ? composeImageBeethoven(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='debussy')
+            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='rachmaninov')
+            ? composeImageRachmaninov(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='einaudi')
+            ? composeImageEinaudi(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            : (imgComposerRef.current==='hisaishi')
+            ? composeImageHisaishi(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -7815,6 +7834,18 @@ Hard requirements:
       ? composeImageGershwin(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='yiruma')
       ? composeImageYiruma(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='bach')
+      ? composeImageBach(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='beethoven')
+      ? composeImageBeethoven(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='debussy')
+      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='rachmaninov')
+      ? composeImageRachmaninov(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='einaudi')
+      ? composeImageEinaudi(px,nc,nr,hueTable,mode,imgDirRef.current)
+      : (imgComposerRef.current==='hisaishi')
+      ? composeImageHisaishi(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
@@ -12408,7 +12439,7 @@ Hard requirements:
               </div>
             </>) : (<>
               <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('inspiredByTitle')}</div>
-              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
+              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
               if(_cs.length===1){ return (
@@ -14924,7 +14955,7 @@ Hard requirements:
                   </span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,rowGap:8}}>
-                  {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'}].map(c=>{
+                  {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].map(c=>{
                     const on = setupComposers.includes(c.k);
                     const proLock = composerIsLocked(c.k);
                     return (
@@ -15161,15 +15192,15 @@ Hard requirements:
             { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
             { sel:'.pf-setup-composers', inModal:true, pad:8,
               title:(({EN:'Composers',SK:'Skladatelia',DE:'Komponisten',FR:'Compositeurs',ES:'Compositores',PT:'Compositores',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composers'),
-              body:(({EN:'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma. Chopin + Satie are free \u2014 Pro unlocks all six.',
-                      SK:'Obraz m\u00f4\u017ee hra\u0165 ako \u010dist\u00fd prepis \u2014 alebo prekomponovan\u00fd v \u0161t\u00fdle skladate\u013ea, od Glassa po Yirumu. Chopin + Satie s\u00fa zadarmo \u2014 Pro odomkne v\u0161etk\u00fdch \u0161es\u0165.',
-                      DE:'Ein Bild kann als reiner Scan spielen \u2014 oder neu komponiert im Stil eines Komponisten, von Glass bis Yiruma. Chopin + Satie sind gratis \u2014 Pro schaltet alle sechs frei.',
-                      FR:'Un tableau peut jouer en scan pur \u2014 ou recompos\u00e9 dans le style d\u2019un compositeur, de Glass \u00e0 Yiruma. Chopin + Satie sont gratuits \u2014 Pro d\u00e9bloque les six.',
-                      ES:'Un cuadro puede sonar como escaneo puro \u2014 o recompuesto al estilo de un compositor, de Glass a Yiruma. Chopin + Satie son gratis \u2014 Pro desbloquea los seis.',
-                      PT:'Um quadro pode tocar como leitura pura \u2014 ou recomposto ao estilo de um compositor, de Glass a Yiruma. Chopin + Satie s\u00e3o gr\u00e1tis \u2014 o Pro desbloqueia os seis.',
-                      zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Glass \u5230 Yiruma\u3002\u8096\u90a6\u4e0e\u8428\u8482\u514d\u8d39\u2014\u2014Pro \u89e3\u9501\u5168\u90e8\u516d\u4f4d\u3002',
-                      zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Glass \u5230 Yiruma\u3002\u856d\u90a6\u8207\u85a9\u63d0\u514d\u8cbb\u2014\u2014Pro \u89e3\u9396\u5168\u90e8\u516d\u4f4d\u3002',
-                      ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Glass \u304b\u3089 Yiruma \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u30676\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Glass to Yiruma. Chopin + Satie are free \u2014 Pro unlocks all six.') },
+              body:(({EN:'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.',
+                      SK:'Obraz m\u00f4\u017ee hra\u0165 ako \u010dist\u00fd prepis \u2014 alebo prekomponovan\u00fd v \u0161t\u00fdle skladate\u013ea, od Bacha po Hisaishiho. Chopin + Satie s\u00fa zadarmo \u2014 Pro odomkne v\u0161etk\u00fdch dvan\u00e1s\u0165.',
+                      DE:'Ein Bild kann als reiner Scan spielen \u2014 oder neu komponiert im Stil eines Komponisten, von Bach bis Hisaishi. Chopin + Satie sind gratis \u2014 Pro schaltet alle zw\u00f6lf frei.',
+                      FR:'Un tableau peut jouer en scan pur \u2014 ou recompos\u00e9 dans le style d\u2019un compositeur, de Bach \u00e0 Hisaishi. Chopin + Satie sont gratuits \u2014 Pro d\u00e9bloque les douze.',
+                      ES:'Un cuadro puede sonar como escaneo puro \u2014 o recompuesto al estilo de un compositor, de Bach a Hisaishi. Chopin + Satie son gratis \u2014 Pro desbloquea los doce.',
+                      PT:'Um quadro pode tocar como leitura pura \u2014 ou recomposto ao estilo de um compositor, de Bach a Hisaishi. Chopin + Satie s\u00e3o gr\u00e1tis \u2014 o Pro desbloqueia os doze.',
+                      zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Bach \u5230 Hisaishi\u3002\u8096\u90a6\u4e0e\u8428\u8482\u514d\u8d39\u2014\u2014Pro \u89e3\u9501\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
+                      zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Bach \u5230 Hisaishi\u3002\u856d\u90a6\u8207\u85a9\u63d0\u514d\u8cbb\u2014\u2014Pro \u89e3\u9396\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
+                      ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Bach \u304b\u3089 Hisaishi \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u306712\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.') },
             { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
           ];
           const endTour = (done)=>{

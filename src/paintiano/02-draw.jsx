@@ -16858,6 +16858,548 @@ function composeImageYiruma(px,nc,nr,table,colorMode,dir){
 }
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SIX MORE COMPOSERS (Oct 2026) — Bach · Beethoven · Debussy · Rachmaninov ·
+// Einaudi · Hisaishi. Same two-phase contract as the first six: analyse the
+// whole picture into sections (shared helper below), then compose over the
+// complete map. Deterministic: (pixels, composer) → identical piece.
+// ═══════════════════════════════════════════════════════════════════════════
+// Shared PHASE 1 — identical to what Glass…Yiruma inline, factored once.
+// Returns null when the scan is empty (caller returns base||[]).
+function _composerAnalyse(px,nc,nr,table,colorMode,saltBase,Smin,Smax){
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return {base:base||[],secs:null};
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(saltBase+salt,ss,0,0); f(); return f; };
+  const bandsMap=new Map();
+  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
+  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
+  const S=Math.max(Smin,Math.min(Smax,bandKeys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
+    for(const c of cells){
+      lum+=(c._lum||50); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
+        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
+    }
+    lum/=cells.length; chr/=cells.length;
+    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
+    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
+  }
+  if(!secs.length) return {base,secs:null};
+  const g=new Float32Array(12); let gl=0,gc2=0;
+  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
+  gl/=secs.length; gc2/=secs.length;
+  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
+  return {base,secs,tonic,gl,gc2,R};
+}
+// scale helpers bound to an absolute pitch-class set
+function _scaleKit(scAbs){
+  const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
+  const stepSc=(m,nSteps)=>{ let cur=snap(m); const d=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+d; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=d; cur=nxt; } return cur; };
+  const inScale=(pc)=>{ let best=pc,bd=99; for(const a of scAbs){ const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
+  const dPc=(d)=>scAbs[((d%scAbs.length)+scAbs.length)%scAbs.length];
+  return {snap,stepSc,inScale,dPc};
+}
+const _srcOfSec=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
+const _ev=(evts,idxRef,ns,startMs,sc,sec,domPc)=>{ evts.push({n:ns,startMs:Math.max(0,Math.round(startMs)),idx:idxRef.i++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sc._chroma||sec.chr,_flat:0,_domPc:domPc,_lum:sc._lum||sec.lum}); };
+
+// ── BACH — two-part invention: subject · answer a fifth below · sequences
+// round the circle of fifths · running sixteenths over a walking bass ·
+// dominant pedal at phi · cadence (Picardy third in minor). No pedal: every
+// note detached, dynamics TERRACED (forte / piano blocks), never swelling.
+function composeImageBach(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10500,10,18);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const minor=gl<=50;
+  const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];      // harmonic minor: the leading tone
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const six=Math.round(175-Math.min(1,gc2/45)*30);           // 145-175ms sixteenth
+  const barMs=six*16;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*1));
+  const maxBars=Math.floor(140000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0;
+  const rb=R(1);
+  // SUBJECT — 8 sixteenths drawn from the strongest section's pcs, snapped to
+  // the key, shaped as Bach shapes them: leap up, then step back down.
+  let hsec=secs[0], hw=-1; for(const s of secs){ let w=0; for(let p=0;p<12;p++) w+=s.hist[p]; if(w>hw){hw=w;hsec=s;} }
+  const sub0=snap(60+tonic);
+  const subj=[0,2,4,3,2,1,0,-1].map(st=>stepSc(sub0,st));
+  const seqDeg=[0,3,6,2,5,1,4,0];                            // I IV vii iii vi ii V I
+  const pedalStart=Math.floor(totBars*0.60), pedalEnd=Math.min(totBars-3,pedalStart+3);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      const inPedal=barNo>=pedalStart&&barNo<pedalEnd;
+      // EPISODES: exposition (subject RH, answer LH) → sequence (running
+      // sixteenths, bass walks the circle) → pedal → sequence' → cadence
+      const ph = barNo<2 ? 'expo' : inPedal ? 'pedal' : (barNo>=2&&barNo<4) ? 'answer' : 'seq';
+      const terr = ((barNo>>2)&1)===0 ? 1 : 0.78;             // terraced f / p blocks
+      const deg=seqDeg[barNo%8];
+      const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4);
+      const sc=_srcOfSec(sec,root);
+      const vBase=(60+Math.min(18,sec.chr*0.5))*terr;
+      if(ph==='expo'||ph==='answer'){
+        const up=ph==='expo';
+        const tr=up?0:-7;                                     // answer a fifth below in LH
+        for(let k=0;k<16;k++){
+          // second half of the bar restates the subject one scale step higher
+          let mm=stepSc(subj[k%8]+tr,(k>=8?1:0));
+          mm=up?Math.min(96,mm):Math.max(36,mm-12);
+          const pcm=((mm%12)+12)%12;
+          _ev(evts,ix,[{m:snap(mm),v:Math.round(vBase*(k%4===0?1.08:0.92)),durMs:Math.round(six*0.9),bass:!up}],t+k*six,_srcOfSec(sec,pcm),sec,pcm);
+          if(!up && k%4===0){ // RH counter-subject: held chord tones above
+            _ev(evts,ix,[{m:snap(72+[root,third,fifth][(k>>2)%3]),v:Math.round(vBase*0.8),durMs:Math.round(six*3.6)}],t+k*six,sc,sec,root);
+          }
+        }
+      } else if(ph==='pedal'){
+        // DOMINANT PEDAL — bass hammers the fifth in eighths; RH figures
+        // circle above it, tension before home.
+        const dom=dPc(4);
+        for(let k=0;k<8;k++){
+          _ev(evts,ix,[{m:snap(36+dom),v:Math.round((58+(k%2?0:8))*terr),durMs:Math.round(six*1.8),bass:true}],t+k*2*six,_srcOfSec(sec,dom),sec,dom);
+        }
+        const fig=[0,2,1,3,2,4,3,5,4,6,5,7,6,7,7,8].map(st=>stepSc(snap(67+dom),st));
+        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)),durMs:Math.round(six*0.9)}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
+      } else {
+        // SEQUENCE — RH running sixteenths: broken-chord figure R-3-5-8-5-3
+        // (the prelude shape) coloured by the section's own pcs; LH walking
+        // eighths root → fifth → third → fifth.
+        const r0=snap(60+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=t3+1; while(((t5%12)+12)%12!==fifth) t5++;
+        const lift=(f>0.75&&!last)?12:0;
+        const fig=[r0,t3,t5,r0+12,t5,t3,r0,t3, r0,t3,t5,r0+12,t5,t3,r0,t3].map(m=>m+lift);
+        // choose the picture's own strongest pc as a passing colour on beat 3
+        const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+        if(ranked[0]!=null){ fig[9]=snap(60+ranked[0]+lift); fig[13]=snap(60+ranked[0]+lift); }
+        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)+(rb()-0.5)*4),durMs:Math.round(six*0.9)}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
+        const walk=[root,fifth,third,fifth,root,dPc(deg+1),third,fifth];
+        for(let k=0;k<8;k++){ const bm=snap(36+walk[k]); _ev(evts,ix,[{m:bm,v:Math.round((52+(k%2?0:6))*terr),durMs:Math.round(six*1.7),bass:true}],t+k*2*six,_srcOfSec(sec,walk[k]),sec,walk[k]); }
+      }
+      t+=barMs;
+      if(last && b2===bars[si]-1) t+=Math.round(barMs*0.1);
+    }
+  }
+  // CADENCE — ii · V · I, then the final chord: Picardy third in minor.
+  const cad=[[1,0],[4,1]];
+  for(const [dg,k] of cad){ const r=dPc(dg); _ev(evts,ix,[{m:snap(36+r),v:60,durMs:Math.round(six*7),bass:true},{m:snap(55+dPc(dg+2)),v:52,durMs:Math.round(six*7)},{m:snap(60+dPc(dg+4)),v:50,durMs:Math.round(six*7)}],t+k*8*six,_srcOfSec(secs[secs.length-1],r),secs[secs.length-1],r); }
+  const thirdF=(tonic+4)%12;                                  // major third always — Picardy
+  _ev(evts,ix,[{m:24+tonic,v:66,durMs:3200,bass:true},{m:36+tonic,v:60,durMs:3200,bass:true},{m:52+thirdF+(thirdF<tonic?12:0),v:52,durMs:3200},{m:55+((tonic+7)%12)+(((tonic+7)%12)<tonic?12:0),v:50,durMs:3200},{m:72+tonic,v:56,durMs:3200}],t+16*six,{cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2},secs[0],tonic);
+  return evts;
+}
+
+// ── BEETHOVEN — sonata drama: a four-note MOTIF (short-short-short-long)
+// cut from the picture's strongest colours, hammered, transposed through the
+// sections; tremolo octaves in the bass under dark passages, Alberti bass
+// under calm ones; sforzando accents, sudden piano after forte; a hammered
+// coda of tonic chords. Minor unless the picture is bright.
+function composeImageBeethoven(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10600,10,18);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const minor=gl<=58;
+  const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const eighth=Math.round(260-Math.min(1,gc2/45)*40);        // allegro con brio
+  const barMs=eighth*8;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
+  const maxBars=Math.floor(150000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0;
+  const rv=R(1);
+  // the motif: three repeated notes then a leap — the leap's size comes from
+  // how far the picture's two strongest colours sit apart on the wheel
+  let hsec=secs[0], hw=-1; for(const s of secs){ let w=0; for(let p=0;p<12;p++) w+=s.hist[p]; if(w>hw){hw=w;hsec=s;} }
+  const rk=[...Array(12).keys()].filter(p=>hsec.hist[p]>0).sort((a,b)=>hsec.hist[b]-hsec.hist[a]).map(inScale);
+  const m0=snap(67+(rk[0]!=null?rk[0]:tonic));
+  let leap=-3; if(rk[1]!=null){ const d=(rk[1]-rk[0]+12)%12; leap = d>6 ? -2 : (d>=3 ? -3 : 2); }
+  const motif=[m0,m0,m0,stepSc(m0,leap)];
+  const prog=minor?[0,5,4,0, 3,4,0,4]:[0,3,4,0, 5,1,4,0];     // i iv V i · VI V i V
+  const climBar=Math.floor(totBars*0.618);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      // EPISODES: motif statement (bare, ff) → tremolo drama → lyrical second
+      // theme (Alberti, p, relative major) → development (motif transposed
+      // through the sections) → recapitulation ff → coda hammer
+      const ph = barNo<2 ? 'state' : f<0.28 ? 'drama' : f<0.46 ? 'lyric' : f<0.72 ? 'devel' : f<0.90 ? 'recap' : 'coda';
+      const rel=minor?(tonic+3)%12:(tonic+9)%12;
+      let root=dPc(prog[barNo%8]);
+      if(ph==='lyric') root=(barNo%2===0)?rel:(rel+7)%12;
+      if(ph==='devel'){ const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale); root=ranked[b2%Math.max(1,ranked.length)]!=null?ranked[b2%ranked.length]:root; }
+      const third=inScale((root+(minor&&ph!=='lyric'?3:4))%12), fifth=inScale((root+7)%12);
+      const sc=_srcOfSec(sec,root);
+      const sub=(ph==='lyric')?0.62:(ph==='state'||ph==='recap'||ph==='coda')?1.15:0.95;
+      const nearClim=Math.abs(barNo-climBar)<=1;
+      const vB=Math.min(118,(64+Math.min(24,sec.chr*0.6))*sub*(nearClim?1.12:1));
+      // sudden piano: every 4th bar of drama drops to p — the Beethoven jolt
+      const jolt=(ph==='drama'&&barNo%4===3)?0.55:1;
+      // ── LEFT HAND ──
+      if(ph==='state'){
+        // nothing under the first statement: the motif alone, ff, then silence
+      } else if(ph==='drama'||ph==='recap'||ph==='devel'){
+        // TREMOLO OCTAVES — the Pathétique floor: low root octave re-struck
+        // every eighth, alternating octave members
+        for(let k=0;k<8;k++){
+          const bm=snap(36+root)-(k%2?12:0);
+          _ev(evts,ix,[{m:bm,v:Math.round((50+(k%4===0?12:0))*jolt*(ph==='devel'?0.85:1)),durMs:Math.round(eighth*1.1),bass:true}],t+k*eighth,sc,sec,root);
+        }
+      } else if(ph==='lyric'){
+        // ALBERTI — root · fifth · third · fifth in eighths, p
+        const r0=snap(48+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
+        const alb=[r0,t5,t3,t5,r0,t5,t3,t5];
+        for(let k=0;k<8;k++){ _ev(evts,ix,[{m:alb[k],v:Math.round(34+(k%4===0?6:0)),durMs:Math.round(eighth*1.2),bass:k%4===0}],t+k*eighth,sc,sec,root); }
+      } else { // coda: hammered root-fifth octaves on the beats
+        for(let k=0;k<8;k+=2){ _ev(evts,ix,[{m:snap(36+root),v:Math.round(88*(k===0?1:0.9)),durMs:Math.round(eighth*1.6),bass:true},{m:snap(24+root),v:80,durMs:Math.round(eighth*1.6),bass:true}],t+k*eighth,sc,sec,root); }
+      }
+      // ── RIGHT HAND ──
+      if(ph==='lyric'){
+        // second theme: a singing line, stepwise, drawn by the row's light
+        const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+        let mm=snap(72+third); mm=snap(Math.max(64,Math.min(88,mm+Math.max(-4,Math.min(4,Math.round(trend/9))))));
+        const line=[mm,stepSc(mm,1),stepSc(mm,-1),mm];
+        const offs=[0,3,4,6], durs=[3,1,2,2.4];
+        for(let k=0;k<4;k++){ const pcm=((line[k]%12)+12)%12; _ev(evts,ix,[{m:line[k],v:Math.round(vB*0.9+(k===0?6:0)),durMs:Math.round(eighth*durs[k]*1.1)}],t+offs[k]*eighth,_srcOfSec(sec,pcm),sec,pcm); }
+      } else if(ph==='coda'){
+        // hammered tonic chords — three on the beat, then silence before the next
+        for(let k=0;k<6;k+=2){ _ev(evts,ix,[{m:snap(60+root),v:Math.round(vB),durMs:Math.round(eighth*1.3)},{m:snap(64+third+(third<root?12:0)),v:Math.round(vB-6),durMs:Math.round(eighth*1.3)},{m:snap(67+fifth+(fifth<root?12:0)),v:Math.round(vB-4),durMs:Math.round(eighth*1.3)},{m:snap(72+root),v:Math.round(vB),durMs:Math.round(eighth*1.3)}],t+k*eighth,sc,sec,root); }
+      } else {
+        // the MOTIF — transposed onto this bar's chord; in 'state' it stands
+        // alone (ff) with its long note held across the rest of the bar
+        const tr=(ph==='state')?0:(snap(60+root)-snap(60+tonic));
+        const mv=motif.map(m=>Math.max(55,Math.min(96,snap(m+tr+(ph==='recap'?12:0)))));
+        const sfz=(ph==='drama'&&b2%2===1)?1.18:1;
+        for(let k=0;k<4;k++){
+          const isLong=k===3;
+          const ns=[{m:mv[k],v:Math.round(Math.min(120,vB*jolt*(isLong?sfz*1.05:0.92))),durMs:Math.round(eighth*(isLong?(ph==='state'?5.5:3.2):0.85))}];
+          if(ph==='recap'||ph==='state'){ ns.push({m:mv[k]-12,v:Math.round(ns[0].v*0.85),durMs:ns[0].durMs}); }   // octaves
+          const pcm=((mv[k]%12)+12)%12;
+          _ev(evts,ix,ns,t+k*eighth,_srcOfSec(sec,pcm),sec,pcm);
+        }
+        if(ph==='devel' && rv()<0.5){ // development: the motif answered an octave down, LH-ish, offset half a bar
+          for(let k=0;k<4;k++){ const m2=Math.max(40,mv[k]-12); _ev(evts,ix,[{m:m2,v:Math.round(vB*0.78),durMs:Math.round(eighth*(k===3?2.2:0.85))}],t+(4+k)*eighth,sc,sec,((m2%12)+12)%12); }
+        }
+      }
+      t+=barMs;
+      if(ph==='state') t+=Math.round(barMs*0.5);               // the famous pause after the statement
+    }
+  }
+  // FINAL — tonic hammered thrice, then one long ff chord
+  const T=secs[secs.length-1], scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2};
+  for(let k=0;k<3;k++){ _ev(evts,ix,[{m:24+tonic,v:96,durMs:Math.round(eighth*1.4),bass:true},{m:36+tonic,v:92,durMs:Math.round(eighth*1.4),bass:true},{m:snap(55+dPc(2)),v:84,durMs:Math.round(eighth*1.4)},{m:snap(60+tonic),v:88,durMs:Math.round(eighth*1.4)}],t+k*2*eighth,scT,T,tonic); }
+  _ev(evts,ix,[{m:24+tonic,v:100,durMs:3600,bass:true},{m:36+tonic,v:96,durMs:3600,bass:true},{m:snap(52+dPc(2)),v:86,durMs:3600},{m:snap(55+dPc(4)),v:84,durMs:3600},{m:snap(72+tonic),v:92,durMs:3600}],t+7*eighth,scT,T,tonic);
+  return evts;
+}
+
+// ── DEBUSSY — impressionism: pentatonic calm · whole-tone shimmer · parallel
+// ninth chords sliding (planing) · arpeggio washes up the keyboard · long
+// pedal, pp-mp, one swell. The picture's chroma picks the scale per section:
+// muted rows go pentatonic, vivid rows whole-tone. Form A · B(whole-tone) · A'.
+function composeImageDebussy(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10700,10,20);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const pent=[0,2,4,7,9].map(d=>(tonic+d)%12);
+  const whole=[0,2,4,6,8,10].map(d=>(tonic+d)%12);
+  const kitP=_scaleKit(pent), kitW=_scaleKit(whole);
+  const q=Math.round(720-Math.min(1,gc2/45)*120);            // quarter ≈ 600-720ms, lent
+  const barMs=q*4;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*1));
+  const maxBars=Math.floor(160000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null;
+  const rd=R(1), rub=R(2);
+  const arc=(pos)=>0.86+0.22*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.16*0.16));
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      const env=arc(f);
+      const wt=(f>=0.40&&f<0.66) || sec.chr>34;              // B section, or any vivid row → whole-tone
+      const kit=wt?kitW:kitP; const scAbs=wt?whole:pent;
+      const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(kit.inScale);
+      const root=ranked[0]!=null?ranked[0]:tonic;
+      const sc=_srcOfSec(sec,root);
+      const ph = f<0.12 ? 'open' : (barNo%6===5) ? 'wash' : wt ? 'plane' : 'cloud';
+      const rb=()=>Math.round((rub()-0.5)*160);             // rubato
+      if(ph==='open'){
+        // bare low fifth, pp, and one high pentatonic tone hanging in the air
+        _ev(evts,ix,[{m:kit.snap(36+root),v:Math.round(36*env),durMs:Math.round(barMs*1.6),bass:true},{m:kit.snap(43+root),v:Math.round(30*env),durMs:Math.round(barMs*1.6),bass:true}],t,sc,sec,root);
+        const hi=kit.snap(84+root); _ev(evts,ix,[{m:hi,v:Math.round(34*env),durMs:Math.round(barMs*1.2)}],t+q*2+rb(),_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12);
+      } else if(ph==='wash'){
+        // ARPEGGIO WASH — eight quick tones sweeping two octaves up the scale,
+        // pedal down, then the top held: the Debussy spray
+        const s0=kit.snap(48+root);
+        for(let k=0;k<8;k++){ const m=Math.min(100,kit.stepSc(s0,k*2)); const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((38+k*2)*env),durMs:Math.round(q*2.6),bass:k===0}],t+k*Math.round(q*0.22)+rb()*0.3,_srcOfSec(sec,pcm),sec,pcm); }
+        const top=Math.min(100,kit.stepSc(s0,16)); _ev(evts,ix,[{m:top,v:Math.round(44*env),durMs:Math.round(q*3.4)}],t+8*Math.round(q*0.22),_srcOfSec(sec,((top%12)+12)%12),sec,((top%12)+12)%12);
+      } else if(ph==='plane'){
+        // PLANING — parallel 9th chords sliding by whole steps, each a half-bar
+        for(let h=0;h<2;h++){
+          const r=kit.snap(48+root)+(h?2:0);
+          const ch=[r,r+4,r+10,r+14,r+16].map(m=>kit.snap(m));
+          _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((40-i2*2)*env),durMs:Math.round(q*2.3),bass:i2===0})),t+h*2*q+rb(),sc,sec,((r%12)+12)%12);
+          _ev(evts,ix,[{m:kit.snap(r-12),v:Math.round(36*env),durMs:Math.round(q*2.3),bass:true}],t+h*2*q+rb(),sc,sec,((r%12)+12)%12);
+        }
+      } else {
+        // CLOUD — pentatonic: bass fifth held, a soft 9th chord mid, melody
+        // fragment of 2-3 tones drawn by the row's light, pp
+        _ev(evts,ix,[{m:kit.snap(36+root),v:Math.round(40*env),durMs:Math.round(barMs*1.3),bass:true},{m:kit.snap(43+root),v:Math.round(34*env),durMs:Math.round(barMs*1.3),bass:true}],t,sc,sec,root);
+        const r=kit.snap(55+root); const ch=[r,kit.stepSc(r,1),kit.stepSc(r,3)];
+        _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((34-i2*2)*env),durMs:Math.round(q*3.2)})),t+q+rb(),sc,sec,root);
+        if(rd()>0.25){
+          const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+          let mm=prevMel!=null?prevMel:kit.snap(79+root);
+          mm=kit.snap(Math.max(70,Math.min(94,mm+Math.max(-4,Math.min(4,Math.round(trend/8))))));
+          const n2=kit.stepSc(mm,trend>=0?1:-1), n3=kit.stepSc(mm,trend>=0?-1:1);
+          const seq=[[mm,0,2.6],[n2,2,1.2],[n3,3,2.2]]; const nN=2+(rd()<0.5?1:0);
+          for(let k=0;k<nN;k++){ const [m,off,d]=seq[k]; const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((46+Math.min(10,sec.chr*0.3))*env-k*3),durMs:Math.round(q*d)}],t+off*q+rb(),_srcOfSec(sec,pcm),sec,pcm); }
+          prevMel=seq[nN-1][0];
+        }
+      }
+      t+=barMs;
+      if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.15);
+    }
+  }
+  // ENDING — a last wash up to the tonic, then a pentatonic 6/9 chord fading
+  const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  const s0=kitP.snap(48+tonic);
+  for(let k=0;k<6;k++){ _ev(evts,ix,[{m:Math.min(100,kitP.stepSc(s0,k*2)),v:36+k,durMs:Math.round(q*3),bass:k===0}],t+k*Math.round(q*0.24),scT,T,tonic); }
+  _ev(evts,ix,[{m:24+tonic,v:38,durMs:5200,bass:true},{m:36+tonic,v:36,durMs:5200,bass:true},{m:kitP.snap(55+pent[2]),v:32,durMs:5200},{m:kitP.snap(59+pent[3]),v:30,durMs:5200},{m:kitP.snap(62+pent[1]),v:30,durMs:5200},{m:kitP.snap(76+tonic),v:34,durMs:5200}],t+q*2,scT,T,tonic);
+  return evts;
+}
+
+// ── RACHMANINOV — the big Russian canvas: left hand sweeps arpeggios across
+// three octaves (root · fifth · tenth · octave), bells in the deep bass, a
+// melody in OCTAVES that falls stepwise in long sighs, a chromatic inner voice,
+// a phi-placed climax of full chords ff, and a quiet bell coda. Minor by nature.
+function composeImageRachmaninov(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10800,10,18);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const minor=gl<=64;
+  const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const eighth=Math.round(330-Math.min(1,gc2/45)*50);        // broad, moderato
+  const barMs=eighth*8;
+  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
+  const maxBars=Math.floor(160000/barMs);
+  const tot=bars.reduce((a,b)=>a+b,0);
+  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null;
+  const rr=R(1);
+  const prog=minor?[0,5,3,4, 0,5,1,4]:[0,5,3,4, 0,2,3,4];    // i VI iv V · i VI ii V
+  const climBar=Math.floor(totBars*0.618);
+  const arc=(pos)=>0.74+0.5*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.17*0.17));
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1);
+      const env=arc(f);
+      const ph = f<0.10 ? 'bells' : Math.abs(barNo-climBar)<=1 ? 'climax' : f>0.90 ? 'coda' : 'sweep';
+      const deg=prog[barNo%8];
+      let root=dPc(deg);
+      const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+      if(ph==='sweep' && b2%2===1 && ranked[0]!=null) root=ranked[0]; // the picture colours every other bar
+      const third=inScale((root+(minor?3:4))%12), fifth=inScale((root+7)%12);
+      const sc=_srcOfSec(sec,root);
+      const vB=Math.min(120,(60+Math.min(26,sec.chr*0.7))*env);
+      if(ph==='bells'||ph==='coda'){
+        // BELLS — deep octave on the beat, a soft chord answering, the Kremlin
+        // tolling that opens and closes
+        _ev(evts,ix,[{m:24+root,v:Math.round((ph==='coda'?48:70)*env),durMs:Math.round(barMs*1.1),bass:true},{m:36+root,v:Math.round((ph==='coda'?42:62)*env),durMs:Math.round(barMs*1.1),bass:true}],t,sc,sec,root);
+        _ev(evts,ix,[{m:snap(52+root),v:Math.round(40*env),durMs:Math.round(eighth*5)},{m:snap(55+third+(third<root?12:0)),v:Math.round(36*env),durMs:Math.round(eighth*5)},{m:snap(59+fifth+(fifth<root?12:0)),v:Math.round(36*env),durMs:Math.round(eighth*5)}],t+3*eighth,sc,sec,root);
+        if(ph==='coda'){ const hi=snap(84+root); _ev(evts,ix,[{m:hi,v:Math.round(40*env),durMs:Math.round(eighth*6)}],t+4*eighth,_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12); }
+        t+=barMs; continue;
+      }
+      // ── LEFT HAND SWEEP — R · 5 · 10 · R' · 10 · 5 · R · 5 over three octaves
+      const r0=snap(28+root); let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++; let t10=t5+1; while(((t10%12)+12)%12!==third) t10++;
+      const sweep=[r0,t5,t10,r0+24,t10+12,t5+12,t10,t5];
+      for(let k=0;k<8;k++){ const pcm=((sweep[k]%12)+12)%12; _ev(evts,ix,[{m:sweep[k],v:Math.round((ph==='climax'?62:48)*env*(k===0?1.15:1)+(k%2?-3:0)),durMs:Math.round(eighth*1.9),bass:k===0||k===1}],t+k*eighth,_srcOfSec(sec,pcm),sec,pcm); }
+      if(ph==='climax'){
+        // CLIMAX — full chords in both hands on every beat, ff, melody on top
+        for(let k=0;k<8;k+=2){
+          const top=snap(79+[root,fifth,third,root][k>>1]+((k>>1)===3?12:0));
+          _ev(evts,ix,[{m:top-24,v:Math.round(vB*0.9),durMs:Math.round(eighth*2.1)},{m:snap(top-17),v:Math.round(vB*0.85),durMs:Math.round(eighth*2.1)},{m:snap(top-12),v:Math.round(vB*0.95),durMs:Math.round(eighth*2.1)},{m:top,v:Math.round(Math.min(124,vB*1.08)),durMs:Math.round(eighth*2.1)}],t+k*eighth,_srcOfSec(sec,((top%12)+12)%12),sec,((top%12)+12)%12);
+        }
+        t+=barMs; continue;
+      }
+      // ── MELODY IN OCTAVES — long sighs that fall stepwise, the row's light
+      // pulling the line; a chromatic inner voice creeping under it
+      const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+      let mm=prevMel!=null?prevMel:snap(76+third);
+      if(trend>6 || prevMel==null || mm<66) mm=snap(Math.min(91,mm+5)); // a leap UP to start the sigh
+      else mm=stepSc(mm,-1);
+      mm=snap(Math.max(64,Math.min(91,mm)));
+      const sigh=[[mm,0,3.2],[stepSc(mm,-1),3,1.6],[stepSc(mm,-2),5,2.8]];
+      const nN=(rr()<0.7)?3:2;
+      for(let k=0;k<nN;k++){
+        const [m,off,d]=sigh[k]; const pcm=((m%12)+12)%12;
+        const v=Math.round(vB*(k===0?1:0.9-k*0.04));
+        _ev(evts,ix,[{m,v,durMs:Math.round(eighth*d)},{m:m-12,v:Math.round(v*0.82),durMs:Math.round(eighth*d)}],t+off*eighth,_srcOfSec(sec,pcm),sec,pcm);
+      }
+      prevMel=sigh[nN-1][0];
+      // inner voice: a chromatic step between the hands on beats 2 and 4
+      const inn=snap(60+third+(third<root?12:0)); _ev(evts,ix,[{m:inn,v:Math.round(38*env),durMs:Math.round(eighth*1.8)}],t+2*eighth,sc,sec,third); _ev(evts,ix,[{m:inn-1,v:Math.round(36*env),durMs:Math.round(eighth*1.8)}],t+6*eighth,sc,sec,third);
+      t+=barMs;
+      if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.12);
+    }
+  }
+  // FINAL — one great tonic bell, then the chord dying away
+  const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  _ev(evts,ix,[{m:21+((tonic+3)%12),v:60,durMs:1400,bass:true}],t,scT,T,tonic);
+  _ev(evts,ix,[{m:24+tonic,v:74,durMs:5200,bass:true},{m:36+tonic,v:68,durMs:5200,bass:true},{m:snap(52+dPc(2)),v:56,durMs:5200},{m:snap(55+dPc(4)),v:54,durMs:5200},{m:snap(64+tonic),v:58,durMs:5200},{m:snap(76+tonic),v:52,durMs:5200}],t+eighth*3,scT,T,tonic);
+  return evts;
+}
+
+// ── EINAUDI — the ostinato: one broken-chord figure in the left hand that
+// NEVER changes, a four-chord loop, a sparse melody, and one long crescendo
+// built by adding layers (LH alone → melody → melody in octaves → RH eighths
+// doubling the ostinato) until everything is stripped back for the end.
+// The picture's light writes the melody; its colours pick the four chords.
+function composeImageEinaudi(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,10900,8,14);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const scale=[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const dark=gl<=52;
+  const loop=dark?[5,3,0,4]:[0,5,3,4];                       // vi IV I V / I vi IV V
+  const eighth=Math.round(300-Math.min(1,gc2/45)*40);        // steady, walking
+  const barMs=eighth*8;
+  const maxBars=Math.max(32,Math.floor(165000/barMs));
+  const totBars=maxBars-(maxBars%8);
+  const totalMs=totBars*barMs;
+  const evts=[]; const ix={i:0}; let prevMel=null;
+  const re=R(1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  // the ostinato shape: R · 5 · 8 · 10 · 8 · 5 · R · 5 — fixed for the piece
+  const shape=[0,4,7,9,7,4,0,4];                             // scale steps from the root
+  for(let bar=0;bar<totBars;bar++){
+    const sec=secAt(bar);
+    const f=bar/Math.max(1,totBars-1);
+    // one long crescendo to ~0.82, then the strip-down
+    const env=f<0.82 ? 0.62+0.5*(f/0.82) : 1.12-0.6*((f-0.82)/0.18);
+    const blk=Math.floor(f*6);                               // 0 LH · 1 +mel · 2 +mel · 3 octaves · 4 full · 5 strip
+    const deg=loop[(bar>>1)%4];
+    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4);
+    const t0=bar*barMs;
+    const sc=_srcOfSec(sec,root);
+    const r0=snap(40+root);
+    // ── OSTINATO LH — every bar, every eighth, unchanged
+    for(let k=0;k<8;k++){ const m=stepSc(r0,shape[k]); const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((40+(k===0?10:0))*env),durMs:Math.round(eighth*1.6),bass:k===0}],t0+k*eighth,_srcOfSec(sec,pcm),sec,pcm); }
+    if(blk===4){ // full: RH doubles the ostinato an octave up in eighths, soft
+      for(let k=0;k<8;k++){ const m=stepSc(r0,shape[k])+12; _ev(evts,ix,[{m,v:Math.round(30*env),durMs:Math.round(eighth*1.4)}],t0+k*eighth,sc,sec,((m%12)+12)%12); }
+    }
+    if(blk===0 || (blk===5 && bar>=totBars-3)) continue;    // LH alone at both ends
+    // ── MELODY — sparse: 1-2 long notes per bar, stepwise, drawn by the light
+    const qi=Math.min(3,(bar>>1)%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+    let mm=prevMel!=null?prevMel:snap(72+third);
+    const step=Math.max(-2,Math.min(2,Math.round(trend/10)));
+    mm=stepSc(mm,step===0?((bar%4===3)?-1:1):step);
+    if(bar%8===7) mm=snap(Math.max(64,Math.min(88,snap(72+root))));   // phrase-end lands on the chord root
+    mm=snap(Math.max(64,Math.min(89,mm)));
+    const vM=Math.round((52+Math.min(16,sec.chr*0.5))*env);
+    const oct=(blk>=3);
+    const two=re()<0.45;
+    const push=(m,off,d)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:vM,durMs:Math.round(eighth*d)}]; if(oct) ns.push({m:m-12,v:Math.round(vM*0.8),durMs:Math.round(eighth*d)}); _ev(evts,ix,ns,t0+off*eighth,_srcOfSec(sec,pcm),sec,pcm); };
+    if(two){ push(mm,0,4.2); const m2=stepSc(mm,trend>=0?1:-1); push(m2,4,4.2); prevMel=m2; }
+    else { push(mm,0,8.4); prevMel=mm; }
+  }
+  // ENDING — the ostinato's root alone, then the tonic chord held
+  const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  _ev(evts,ix,[{m:snap(40+tonic),v:40,durMs:Math.round(barMs*0.8),bass:true}],tE,scT,T,tonic);
+  _ev(evts,ix,[{m:snap(28+tonic),v:44,durMs:5000,bass:true},{m:snap(40+tonic),v:40,durMs:5000,bass:true},{m:snap(55+dPc(4)),v:32,durMs:5000},{m:snap(59+dPc(2)),v:30,durMs:5000},{m:snap(72+tonic),v:36,durMs:5000}],tE+Math.round(barMs*0.8),scT,T,tonic);
+  return evts;
+}
+
+// ── HISAISHI — the Ghibli waltz: 3/4 lilt (bass · chord · chord), a wide
+// diatonic melody that leaps a sixth and walks back down, add9 colour on
+// every chord, the IV · V · iii · vi "royal road" turn in the chorus, melody
+// in octaves when it lifts. Warm major; a dark picture goes to the relative
+// minor for the verse and brightens in the chorus.
+function composeImageHisaishi(px,nc,nr,table,colorMode,dir){
+  const A=_composerAnalyse(px,nc,nr,table,colorMode,11000,8,16);
+  if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R}=A;
+  const scale=[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12);
+  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const dark=gl<=48;
+  const q=Math.round(470-Math.min(1,gc2/45)*90);             // waltz quarter 380-470ms
+  const barMs=q*3;
+  const maxBars=Math.max(32,Math.floor(150000/barMs));
+  const totBars=maxBars-(maxBars%8);
+  const evts=[]; const ix={i:0}; let prevMel=null;
+  const rh=R(1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const verse=dark?[5,3,0,4, 5,3,1,4]:[0,4,5,3, 0,4,1,4];    // vi IV I V / I V vi IV
+  const chorus=[3,4,2,5, 3,4,0,0];                           // IV V iii vi · IV V I I — the royal road
+  for(let bar=0;bar<totBars;bar++){
+    const sec=secAt(bar);
+    const f=bar/Math.max(1,totBars-1);
+    const blk=(bar>>3)%4;                                    // 8-bar blocks: intro/verse · chorus · verse · chorus
+    const ph = bar<4 ? 'intro' : (blk%2===1) ? 'chorus' : (f>0.92) ? 'outro' : 'verse';
+    const env=0.82+0.26*Math.exp(-((f-0.66)*(f-0.66))/(2*0.2*0.2));
+    const deg=(ph==='chorus'?chorus:verse)[bar%8];
+    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4), ninth=dPc(deg+1);
+    const t0=bar*barMs;
+    const sc=_srcOfSec(sec,root);
+    // ── WALTZ LH — bass on 1, add9 chord on 2 and 3
+    _ev(evts,ix,[{m:snap(36+root),v:Math.round((52+(ph==='chorus'?6:0))*env),durMs:Math.round(q*1.3),bass:true}],t0,sc,sec,root);
+    const r=snap(52+root); const ch=[r,snap(r+(third-root+12)%12),snap(r+(fifth-root+12)%12),snap(r+(ninth-root+12)%12+12)];
+    for(const hb of [1,2]){ _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((34-i2*2+(hb===1?2:0))*env),durMs:Math.round(q*0.9)})),t0+hb*q,sc,sec,root); }
+    if(ph==='intro'){ // intro: a rising arpeggio each bar instead of melody — the music box
+      const a0=snap(64+root); for(let k=0;k<3;k++){ const m=stepSc(a0,k*2); _ev(evts,ix,[{m,v:Math.round(40*env),durMs:Math.round(q*1.8)}],t0+k*q,_srcOfSec(sec,((m%12)+12)%12),sec,((m%12)+12)%12); }
+      continue;
+    }
+    if(ph==='outro' && bar>=totBars-2) continue;
+    // ── MELODY — leap a SIXTH up at the phrase start, then walk down; the
+    // row's light bends the walk; chorus sings in octaves and a step higher
+    const qi=Math.min(3,(bar>>1)%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+    const phraseStart=bar%4===0;
+    let mm;
+    if(phraseStart || prevMel==null){ mm=snap(Math.min(91,stepSc(snap(67+third),5))); }        // the sixth leap
+    else { mm=stepSc(prevMel,(trend>8)?1:-1); }
+    if(ph==='chorus') mm=Math.min(93,stepSc(mm,1));
+    mm=snap(Math.max(64,Math.min(93,mm)));
+    const vM=Math.round((56+Math.min(16,sec.chr*0.5))*env*(ph==='chorus'?1.08:1));
+    const oct=ph==='chorus';
+    const push=(m,off,d,vv)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:Math.round(vv),durMs:Math.round(q*d)}]; if(oct) ns.push({m:m-12,v:Math.round(vv*0.78),durMs:Math.round(q*d)}); _ev(evts,ix,ns,t0+off*q,_srcOfSec(sec,pcm),sec,pcm); };
+    const g=rh();
+    if(phraseStart){ push(mm,0,3.1,vM); prevMel=mm; }                                  // the long held leap note
+    else if(g<0.4){ push(mm,0,2.1,vM); const m2=stepSc(mm,-1); push(m2,2,1.1,vM-6); prevMel=m2; }   // half + quarter
+    else if(g<0.7){ push(mm,0,1.1,vM); const m2=stepSc(mm,1); push(m2,1,1.1,vM-4); const m3=stepSc(mm,-1); push(m3,2,1.1,vM-6); prevMel=m3; } // three quarters
+    else { push(mm,0,3.1,vM-2); prevMel=mm; }
+  }
+  // ENDING — IV add9 → I, high tonic, long
+  const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  const iv=dPc(3);
+  _ev(evts,ix,[{m:snap(36+iv),v:48,durMs:Math.round(barMs*0.95),bass:true},{m:snap(52+iv),v:38,durMs:Math.round(barMs*0.95)},{m:snap(55+dPc(5)),v:36,durMs:Math.round(barMs*0.95)},{m:snap(59+dPc(4)),v:34,durMs:Math.round(barMs*0.95)}],tE,scT,T,iv);
+  _ev(evts,ix,[{m:snap(24+tonic),v:52,durMs:5000,bass:true},{m:snap(36+tonic),v:48,durMs:5000,bass:true},{m:snap(55+dPc(2)),v:38,durMs:5000},{m:snap(59+dPc(4)),v:36,durMs:5000},{m:snap(62+dPc(1)),v:34,durMs:5000},{m:snap(76+tonic),v:42,durMs:5000}],tE+barMs,scT,T,tonic);
+  return evts;
+}
+
 function bakeImageChords(src){
   if(!src || !src.length) return [];
   const out = [];
