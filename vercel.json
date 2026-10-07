@@ -6,7 +6,8 @@
   "rewrites": [
     { "source": "/", "has": [{ "type": "query", "key": "paid" }], "destination": "/play.html" },
     { "source": "/play", "destination": "/play.html" },
-    { "source": "/play/:path*", "destination": "/play.html" }
+    { "source": "/play/:path*", "destination": "/play.html" },
+    { "source": "/concept", "destination": "/concept.html" }
   ],
   "headers": [
     {
@@ -26,6 +27,12 @@
       "source": "/play.html",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/concept.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
       ]
     },
     {

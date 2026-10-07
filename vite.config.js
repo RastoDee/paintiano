@@ -22,6 +22,7 @@ export default defineConfig({
   // ── Multi-entry build ────────────────────────────────────────────────────────
   // index.html  → landing page (static HTML, no React, no PWA)
   // play.html   → the PWA (React + service worker)
+  // concept.html → static concept/author page (served at /concept via vercel.json)
   // Two physical files in dist/ means Vercel serves each path directly — no
   // rewrite-vs-SPA-fallback fight. The PWA mounts at /play (via vercel.json
   // rewrite from /play → /play.html).
@@ -32,6 +33,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         play: resolve(__dirname, 'play.html'),
+        concept: resolve(__dirname, 'concept.html'),   // static /concept page (no React, no PWA)
       },
     },
   },
@@ -82,13 +84,13 @@ export default defineConfig({
         // and never the landing page (we don't want offline navigations to
         // accidentally hit a cached version while the PWA is being served).
         globPatterns: ['**/*.{js,css,svg,png,ico,woff2}', 'play.html'],
-        globIgnores: ['**/api/**', 'index.html'],
+        globIgnores: ['**/api/**', 'index.html', 'concept.html'],
         // The SPA navigation fallback now targets play.html (the PWA shell),
         // restricted to /play* URLs only. Root / and /landing.html stay
         // un-intercepted by the SW.
         navigateFallback: '/play.html',
         navigateFallbackAllowlist: [/^\/play(\/|$|\?)/],
-        navigateFallbackDenylist: [/^\/api\//, /^\/$/, /^\/landing\.html/, /^\/index\.html/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/$/, /^\/landing\.html/, /^\/index\.html/, /^\/concept/],
         runtimeCaching: [
           {
             // CRITICAL: force every /api/* request straight to the network.

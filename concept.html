@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music has colour — the Paintiano concept</title>
+<meta name="description" content="Twelve notes, twelve colours, one wheel. How Paintiano turns music into golden-ratio paintings — and paintings back into music.">
+<meta name="theme-color" content="#06060c">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/paintiano-icon.png">
+<link rel="canonical" href="https://paintiano.app/concept">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Paintiano">
+<meta property="og:title" content="Music has colour — the Paintiano concept">
+<meta property="og:description" content="Twelve notes, twelve colours, one wheel. How Paintiano turns music into golden-ratio paintings — and paintings back into music.">
+<meta property="og:url" content="https://paintiano.app/concept">
+<meta property="og:image" content="https://paintiano.app/ph_card1_hero.png">
+<meta name="twitter:card" content="summary_large_image">
+<!-- PostHog (cookieless, EU) — same project as the landing -->
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init('phc_opy7KxSYp4vXsGGJBaGo4zzeCUn6hcmdWGUTxxEr2jXD',{api_host:'https://eu.i.posthog.com',persistence:'memory',autocapture:true,capture_pageview:true,person_profiles:'identified_only'})
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  /* ── Tokens: identical to the landing ── */
+  :root{
+    --bg:#06060c; --bg2:#0e0b16; --card:#161320; --card2:#1d1929;
+    --line:rgba(242,238,232,.08); --line2:rgba(242,238,232,.14);
+    --cream:#f2eee8; --muted:rgba(242,238,232,.5); --faint:rgba(242,238,232,.34);
+    --gold:#f0c040; --goldq:#c9a84c; --goldg:#ffd96e; --goldRGB:201,168,76;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,Helvetica,Arial,sans-serif;
+    --maxw:1080px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
+  body{margin:0; background:var(--bg); color:var(--cream); font-family:var(--sans); font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    background-image:radial-gradient(ellipse at 50% -8%, #0e0b16 0%, #06060c 58%); background-attachment:fixed;}
+  a{color:inherit; text-decoration:none;}
+  img,svg{display:block; max-width:100%;}
+  ::selection{background:rgba(var(--goldRGB),.3); color:var(--cream);}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px;}
+  .eyebrow{font-family:var(--sans); font-size:.66rem; font-weight:600; letter-spacing:.26em; text-transform:uppercase; color:var(--goldq); margin:0 0 18px;}
+  .btn{display:inline-flex; align-items:center; gap:9px; cursor:pointer; font-family:var(--sans); font-size:.94rem; font-weight:600; letter-spacing:.01em; padding:14px 26px; border-radius:40px; border:1px solid transparent; transition:transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;}
+  .btn-gold{background:linear-gradient(135deg,var(--goldg),var(--goldq)); color:#1a1505; box-shadow:0 6px 26px rgba(var(--goldRGB),.28);}
+  .btn-gold:hover{transform:translateY(-2px); box-shadow:0 10px 34px rgba(var(--goldRGB),.4);}
+  .btn-ghost{background:transparent; color:var(--cream); border-color:var(--line2);}
+  .btn-ghost:hover{transform:translateY(-2px); border-color:rgba(var(--goldRGB),.6); color:var(--goldg);}
+  .btn:focus-visible{outline:2px solid var(--goldg); outline-offset:3px;}
+  .note{font-size:.8rem; color:var(--faint); letter-spacing:.01em;}
+  header.site{position:sticky; top:0; z-index:50; backdrop-filter:saturate(140%) blur(10px); background:rgba(6,6,12,.62); border-bottom:1px solid var(--line);}
+  .site .wrap{display:flex; align-items:center; justify-content:space-between; height:64px;}
+  .brand{font-family:var(--serif); font-weight:600; font-size:1.5rem; letter-spacing:.02em; background:linear-gradient(135deg,var(--goldg),var(--gold) 55%,var(--goldq)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+  .site .btn{padding:10px 20px; font-size:.86rem;}
+  .site-nav{display:flex; align-items:center; gap:14px;}
+  .langsel{background:rgba(22,19,32,.6); color:var(--cream); border:1px solid var(--line2); border-radius:20px; padding:6px 12px; font:inherit; font-size:.82rem; letter-spacing:.02em; cursor:pointer; -webkit-appearance:none; appearance:none;}
+  .langsel:hover{border-color:rgba(var(--goldRGB),.6); color:var(--goldg);}
+  .langsel:focus-visible{outline:2px solid var(--goldg); outline-offset:2px;}
+  footer.site{border-top:1px solid var(--line); padding:34px 0 44px;}
+  footer .wrap{display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;}
+  .foot-mark{font-size:.7rem; letter-spacing:.24em; text-transform:uppercase; color:rgba(var(--goldRGB),.8);}
+  .foot-links{display:flex; gap:18px; flex-wrap:wrap; justify-content:center; font-size:.86rem; color:var(--muted);}
+  .foot-links a:hover{color:var(--goldg);}
+  .reveal{opacity:0; transform:translateY(16px); transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in{opacity:1; transform:none;}
+
+  /* ── Concept page ── */
+  .narrow{max-width:720px; margin:0 auto; padding:0 22px;}
+  .hero{text-align:center; padding:56px 0 24px;}
+  .hero h1{font-family:var(--serif); font-weight:500; font-size:clamp(2.3rem,6.2vw,3.8rem); line-height:1.08; margin:0 0 12px; letter-spacing:-.01em;}
+  .hero .lede{font-family:var(--serif); font-style:italic; font-size:1.3rem; color:var(--muted); max-width:36ch; margin:0 auto 26px;}
+  .wheelwrap{width:min(78vw,380px); margin:0 auto;}
+  .wheelwrap svg{width:100%; height:auto;}
+  .seg{transition:opacity .25s; opacity:.26;}
+  .seg.on{opacity:1;}
+  .lbl{font-family:var(--serif); font-size:15px; fill:var(--cream); text-anchor:middle; dominant-baseline:middle; opacity:.9;}
+  .lbl.dim{opacity:.35;}
+  .center{font-family:var(--serif); font-size:30px; fill:var(--gold); text-anchor:middle; dominant-baseline:middle; font-style:italic;}
+  .capt{margin:14px auto 0; font-size:.78rem; color:var(--muted); letter-spacing:.02em;}
+  .tabs{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:22px 0 8px;}
+  .tab{font-family:var(--sans); font-size:.8rem; letter-spacing:.04em; padding:8px 14px; border-radius:999px; border:1px solid var(--line2); background:transparent; color:var(--cream); cursor:pointer;}
+  .tab[aria-selected="true"]{border-color:var(--gold); color:var(--gold); background:rgba(240,192,64,.08);}
+  .tab:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+  .tabnote{text-align:center; font-size:1rem; color:var(--muted); max-width:54ch; margin:0 auto; min-height:3.2em;}
+  .tabnote b{color:var(--cream); font-weight:600;}
+  section.c{padding:54px 0 0;}
+  h2.sec{font-family:var(--serif); font-weight:500; letter-spacing:.005em; font-size:clamp(1.8rem,4.2vw,2.5rem); line-height:1.1; margin:0 0 14px; color:var(--cream);}
+  section.c p{margin:0 0 16px; max-width:64ch; color:rgba(242,238,232,.82);}
+  .q{font-family:var(--serif); font-style:italic; font-size:1.5rem; line-height:1.35; color:var(--gold); max-width:34ch; margin:10px 0 26px;}
+  .ladder{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:14px; margin:22px 0 10px; font-size:.85rem;}
+  .ladder .end{text-align:center;}
+  .ladder .end big{display:block; font-family:var(--serif); font-size:clamp(1.3rem,5vw,1.9rem); line-height:1.1; white-space:nowrap;}
+  .ladder .end small{color:var(--muted);}
+  .ladder .mid{position:relative; height:3px; background:linear-gradient(90deg,#3a2a7a,#1e6a9e,#2a9a60,#c9c440,#e8782a,#e23b3b); border-radius:2px; width:min(38vw,220px);}
+  .ladder .mid span{position:absolute; top:10px; left:50%; transform:translateX(-50%); white-space:nowrap; color:var(--muted);}
+  .dirs{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:8px;}
+  .dirs div{border-top:1px solid rgba(240,192,64,.35); padding-top:12px;}
+  .dirs h3{font-family:var(--serif); font-weight:500; font-size:1.35rem; margin:0 0 6px;}
+  .dirs p{font-size:.98rem; color:var(--muted); margin:0;}
+  .phi{display:flex; gap:22px; align-items:center; margin-top:8px;}
+  .phi svg{flex:0 0 auto; width:min(44vw,260px); height:auto;}
+  .phi p{font-size:.98rem; color:var(--muted); margin:0;}
+  .author{display:flex; gap:22px; align-items:center; margin-top:8px;}
+  .author img{width:120px; height:120px; border-radius:50%; object-fit:cover; border:1px solid rgba(var(--goldRGB),.5); flex:0 0 auto;}
+  .author p{font-size:.98rem; color:var(--muted); margin:0 0 8px;}
+  .author .name{font-family:var(--serif); font-size:1.35rem; color:var(--cream); margin:0 0 4px;}
+  .author a{color:var(--goldq);}
+  .author a:hover{color:var(--goldg);}
+  .close{padding:60px 0 70px; text-align:center;}
+  .close p{margin:0 auto 22px; max-width:46ch; color:rgba(242,238,232,.82);}
+  .close .btn+.btn{margin-left:8px;}
+  @media (max-width:520px){ .dirs{grid-template-columns:1fr;} .phi,.author{flex-direction:column; align-items:flex-start;} .close .btn{margin:6px 4px;} .close .btn+.btn{margin-left:4px;} }
+  @media (prefers-reduced-motion:reduce){ *{animation:none !important; scroll-behavior:auto !important;} .reveal{opacity:1; transform:none; transition:none;} .seg{transition:none;} }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="/">Paintiano</a>
+    <div class="site-nav">
+      <select id="langsel" class="langsel" aria-label="Language"></select>
+      <a class="btn btn-gold" href="/play" data-i18n="nav_try">Try free</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="narrow">
+    <p class="eyebrow" data-i18n="eyebrow">The concept</p>
+    <h1 data-i18n-html="h1">Music has colour.<br>It always had.</h1>
+    <p class="lede" data-i18n="lede">Twelve notes, twelve colours, one wheel. That is all of Paintiano.</p>
+    <div class="wheelwrap" aria-label="Colour wheel: twelve notes mapped to twelve colours">
+      <svg viewBox="0 0 400 400" id="wheel"></svg>
+    </div>
+    <p class="capt" data-i18n="capt">Liebestraum — Liszt · the opening bars</p>
+    <div class="tabs" role="tablist" aria-label="Palettes">
+      <button class="tab" role="tab" aria-selected="true" data-p="harmony" data-i18n="tab_harmony">Harmony</button>
+      <button class="tab" role="tab" aria-selected="false" data-p="spectral" data-i18n="tab_spectral">Spectrum</button>
+      <button class="tab" role="tab" aria-selected="false" data-p="kontra" data-i18n="tab_kontra">Kontra</button>
+      <button class="tab" role="tab" aria-selected="false" data-p="phi">φ</button>
+      <button class="tab" role="tab" aria-selected="false" data-p="custom" data-i18n="tab_custom">Custom</button>
+    </div>
+    <p class="tabnote" id="tabnote"></p>
+  </div>
+</section>
+
+<main class="narrow">
+
+<section class="c reveal">
+  <h2 class="sec" data-i18n="wave_h">Tone and colour are the same wave</h2>
+  <p data-i18n-html="wave_p1">Sound is a wave in the air. Light is a wave in a field. Only forty doublings separate them: concert <i>A</i> raised forty octaves stops being heard and starts being seen — as a warm red.</p>
+  <div class="ladder">
+    <div class="end"><big>440 Hz</big><small data-i18n="wave_a">concert A</small></div>
+    <div class="mid"><span>× 2⁴⁰</span></div>
+    <div class="end"><big>484 THz</big><small data-i18n="wave_red">red</small></div>
+  </div>
+  <p data-i18n-html="wave_p2">The whole system stands on this bridge: <i>hue</i> carries the pitch, <i>lightness</i> the octave, <i>saturation</i> the force of the touch. A bass C is deep blue, a soprano C almost white; forte is saturated, pianissimo barely a shadow.</p>
+</section>
+
+<section class="c reveal">
+  <h2 class="sec" data-i18n="five_h">Five views of one wheel</h2>
+  <p data-i18n="five_p1">Twelve notes can be laid on a colour wheel by more than one rule — and each is true in its own way. A musician hears the circle of fifths. A physicist sees the spectrum. A painter looks for complements. Nature builds by the golden angle. The fifth view is yours.</p>
+  <p class="q" data-i18n="five_q">There is no one right answer. There are four true ones — and one of your own.</p>
+  <p data-i18n="five_p2">Try them on the wheel above. Same piece, different mapping, different painting.</p>
+</section>
+
+<section class="c reveal">
+  <h2 class="sec" data-i18n="dirs_h">Two directions</h2>
+  <div class="dirs">
+    <div>
+      <h3 data-i18n="dir1_h">Music → painting</h3>
+      <p data-i18n="dir1_p">Play, upload or hum. Every chord is a brushstroke; the same song gives the same painting, every time. Twenty-four painters each see it their own way.</p>
+    </div>
+    <div>
+      <h3 data-i18n="dir2_h">Painting → music</h3>
+      <p data-i18n="dir2_p">The rule runs backwards too. Load a photo, a Guernica or a child's drawing — and Paintiano plays it. Twelve composers recompose it in their own voice.</p>
+    </div>
+  </div>
+</section>
+
+<section class="c reveal">
+  <h2 class="sec" data-i18n="phi_h">Golden-ratio geometry</h2>
+  <div class="phi">
+    <svg viewBox="0 0 260 162" aria-hidden="true">
+      <rect x="1" y="1" width="258" height="160" fill="none" stroke="#c9a84c" stroke-width="1.2"/>
+      <rect x="1" y="1" width="160" height="160" fill="none" stroke="#c9a84c" stroke-width=".8" opacity=".55"/>
+      <rect x="161" y="1" width="98" height="98" fill="none" stroke="#c9a84c" stroke-width=".8" opacity=".55"/>
+      <rect x="161" y="99" width="61" height="62" fill="none" stroke="#c9a84c" stroke-width=".8" opacity=".55"/>
+      <path d="M1 161 A160 160 0 0 1 161 1 A98 98 0 0 1 259 99 A61 61 0 0 1 198 161" fill="none" stroke="#f0c040" stroke-width="1.6"/>
+      <text x="130" y="88" font-family="Cormorant Garamond,serif" font-size="34" font-style="italic" fill="#f0c040" text-anchor="middle">φ</text>
+    </svg>
+    <p data-i18n="phi_p">The canvas format and the basic cell of every painting come from φ = 1.618 — the ratio nature uses from the sunflower to the galaxy. Not because it is pretty. Because it is the same ratio the ear feels as consonance.</p>
+  </div>
+</section>
+
+<section class="c reveal">
+  <h2 class="sec" data-i18n="author_h">The author</h2>
+  <div class="author">
+    <img src="/author.jpg" alt="Rasto Ďurica" width="120" height="120" loading="lazy">
+    <div>
+      <p class="name">Rasto Ďurica · Raf Fel</p>
+      <p data-i18n="author_p">Quantum physics by training, software by trade, art by compulsion. Born in Slovakia, ten years in Germany, now in Bratislava. Co-author of Labyrint, an exhibition where physics met sculpture; author of the Paintiano book; and of the app you are about to open.</p>
+      <p><a href="https://www.linkedin.com/in/rastodurica" rel="noopener" target="_blank">LinkedIn</a> · <a href="mailto:hello@paintiano.app">hello@paintiano.app</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="close reveal">
+  <p data-i18n="close_p">The whole story — from Pythagoras through Newton and Scriabin to the piano in your pocket — is in the book. The one-page summary is free; the full book is free on request.</p>
+  <a class="btn btn-gold" href="/play" data-i18n="close_cta">Try Paintiano</a><a class="btn btn-ghost" id="bookLink" href="/book/paintiano-EN-excerpt.pdf" data-i18n="close_book">Book summary</a>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="foot-mark">Paintiano · v2.2</div>
+    <div class="foot-links">
+      <a href="/" data-i18n="foot_home">Home</a><a href="/pricing.html" data-i18n="foot_pricing">Pricing</a><a href="/terms.html" data-i18n="foot_terms">Terms</a><a href="/privacy.html" data-i18n="foot_privacy">Privacy</a>
+    </div>
+    <div class="note" data-i18n="foot_note">Music becomes painting. Made by Raf Fel.</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+var I18N={
+en:{title:"Music has colour — the Paintiano concept",nav_try:"Try free",eyebrow:"The concept",h1:"Music has colour.<br>It always had.",lede:"Twelve notes, twelve colours, one wheel. That is all of Paintiano.",capt:"Liebestraum — Liszt · the opening bars",tab_harmony:"Harmony",tab_spectral:"Spectrum",tab_kontra:"Kontra",tab_custom:"Custom",
+ n_harmony:"<b>The musician's view.</b> Notes follow the circle of fifths: what sounds together sits next to each other. Neighbouring colours = consonance, opposite colours = tension.",n_spectral:"<b>The physicist's view.</b> The chromatic scale as a rainbow: every semitone 30° further. Pure physics, no human taste.",n_kontra:"<b>The painter's view.</b> The circle of fifths, but harmonic intervals get complementary colours — the painting holds by contrast, not by agreement.",n_phi:"<b>Nature's view.</b> Every next note a golden angle of 137.5° further — the way a sunflower places its seeds. No two colours ever meet.",n_custom:"<b>Your view.</b> In the app you give every note a colour of your own. Scriabin had his map; you can have yours.",
+ wave_h:"Tone and colour are the same wave",wave_p1:"Sound is a wave in the air. Light is a wave in a field. Only forty doublings separate them: concert <i>A</i> raised forty octaves stops being heard and starts being seen — as a warm red.",wave_a:"concert A",wave_red:"red",wave_p2:"The whole system stands on this bridge: <i>hue</i> carries the pitch, <i>lightness</i> the octave, <i>saturation</i> the force of the touch. A bass C is deep blue, a soprano C almost white; forte is saturated, pianissimo barely a shadow.",
+ five_h:"Five views of one wheel",five_p1:"Twelve notes can be laid on a colour wheel by more than one rule — and each is true in its own way. A musician hears the circle of fifths. A physicist sees the spectrum. A painter looks for complements. Nature builds by the golden angle. The fifth view is yours.",five_q:"There is no one right answer. There are four true ones — and one of your own.",five_p2:"Try them on the wheel above. Same piece, different mapping, different painting.",
+ dirs_h:"Two directions",dir1_h:"Music → painting",dir1_p:"Play, upload or hum. Every chord is a brushstroke; the same song gives the same painting, every time. Twenty-four painters each see it their own way.",dir2_h:"Painting → music",dir2_p:"The rule runs backwards too. Load a photo, a Guernica or a child's drawing — and Paintiano plays it. Twelve composers recompose it in their own voice.",
+ phi_h:"Golden-ratio geometry",phi_p:"The canvas format and the basic cell of every painting come from φ = 1.618 — the ratio nature uses from the sunflower to the galaxy. Not because it is pretty. Because it is the same ratio the ear feels as consonance.",
+ author_h:"The author",author_p:"Quantum physics by training, software by trade, art by compulsion. Born in Slovakia, ten years in Germany, now in Bratislava. Co-author of Labyrint, an exhibition where physics met sculpture; author of the Paintiano book; and of the app you are about to open.",
+ close_p:"The whole story — from Pythagoras through Newton and Scriabin to the piano in your pocket — is in the book. The one-page summary is free; the full book is free on request.",close_cta:"Try Paintiano",close_book:"Book summary",foot_home:"Home",foot_pricing:"Pricing",foot_terms:"Terms",foot_privacy:"Privacy",foot_note:"Music becomes painting. Made by Raf Fel.",book:"EN"},
+sk:{title:"Hudba má farbu — koncept Paintiano",nav_try:"Skúsiť zadarmo",eyebrow:"Koncept",h1:"Hudba má farbu.<br>Vždy mala.",lede:"Dvanásť tónov, dvanásť farieb, jedno koleso. Toto je celé Paintiano.",capt:"Liebestraum — Liszt · prvé takty",tab_harmony:"Harmónia",tab_spectral:"Spektrum",tab_kontra:"Kontra",tab_custom:"Vlastná",
+ n_harmony:"<b>Pohľad hudobníka.</b> Tóny idú po kruhu kvínt: čo znie spolu, leží vedľa seba. Susedné farby = súzvuk, protiľahlé = napätie.",n_spectral:"<b>Pohľad fyzika.</b> Chromatická stupnica ako dúha: každý poltón o 30° ďalej. Čistá fyzika, žiadny ľudský vkus.",n_kontra:"<b>Pohľad maliara.</b> Kruh kvínt, ale harmonické intervaly dostanú komplementárne farby — obraz drží kontrastom, nie súladom.",n_phi:"<b>Pohľad prírody.</b> Každý ďalší tón o zlatý uhol 137,5° — tak slnečnica kladie semená. Žiadne dve farby sa nikdy nestretnú.",n_custom:"<b>Tvoj pohľad.</b> V appke si každému tónu priradíš vlastnú farbu. Skriabin mal svoju mapu; môžeš mať svoju.",
+ wave_h:"Tón a farba sú tá istá vlna",wave_p1:"Zvuk je vlnenie vzduchu. Svetlo je vlnenie poľa. Delí ich len štyridsať zdvojení: komorné <i>a</i> zdvihnuté o štyridsať oktáv prestane byť počuť a začne byť vidieť — ako teplá červená.",wave_a:"komorné a",wave_red:"červená",wave_p2:"Na tomto moste stojí celý systém: <i>odtieň</i> nesie výšku tónu, <i>svetlosť</i> oktávu, <i>sýtosť</i> silu úderu. Basové C je tmavomodré, sopránové takmer biele; forte je sýte, pianissimo sotva tieň.",
+ five_h:"Päť pohľadov na jedno koleso",five_p1:"Dvanásť tónov sa dá na farebné koleso položiť viacerými pravidlami — a každé je pravdivé po svojom. Hudobník počuje kruh kvínt. Fyzik vidí spektrum. Maliar hľadá komplementy. Príroda stavia zlatým uhlom. Piaty pohľad je tvoj.",five_q:"Nie je jedna správna odpoveď. Sú štyri pravdivé — a jedna vlastná.",five_p2:"Vyskúšaj si ich hore na kolese. Tá istá skladba, iné priradenie, iný obraz.",
+ dirs_h:"Dva smery",dir1_h:"Hudba → obraz",dir1_p:"Zahráš, nahráš alebo zanôtiš. Každý akord je ťah štetca; tá istá pieseň dá ten istý obraz, zakaždým. Dvadsaťštyri maliarov sa na ňu pozrie po svojom.",dir2_h:"Obraz → hudba",dir2_p:"Pravidlo sa dá otočiť. Nahráš fotku, Guernicu či detskú kresbu — a Paintiano ju zahrá. Dvanásť skladateľov ju prekomponuje vo svojom hlase.",
+ phi_h:"Geometria zlatého rezu",phi_p:"Formát plátna aj základná bunka obrazu sú odvodené z φ = 1,618 — pomeru, ktorý príroda používa od slnečnice po galaxiu. Nie preto, že je pekný. Preto, že je to ten istý pomer, ktorý ucho cíti ako súzvuk.",
+ author_h:"Autor",author_p:"Vzdelaním kvantový fyzik, povolaním softvér, umenie z nutkania. Narodený na Slovensku, desať rokov v Nemecku, dnes v Bratislave. Spoluautor výstavy Labyrint, kde sa stretla fyzika so sochou; autor knihy Paintiano — a appky, ktorú práve otvoríš.",
+ close_p:"Celý príbeh — od Pytagora cez Newtona a Skriabina až po klavír v tvojom vrecku — je v knihe. Zhrnutie na jednu stranu je zadarmo; celú knihu pošleme zadarmo na požiadanie.",close_cta:"Skúsiť Paintiano",close_book:"Zhrnutie knihy",foot_home:"Domov",foot_pricing:"Cenník",foot_terms:"Podmienky",foot_privacy:"Súkromie",foot_note:"Hudba sa stáva obrazom. Vytvoril Raf Fel.",book:"SK"},
+de:{title:"Musik hat Farbe — das Paintiano-Konzept",nav_try:"Gratis testen",eyebrow:"Das Konzept",h1:"Musik hat Farbe.<br>Schon immer.",lede:"Zwölf Töne, zwölf Farben, ein Kreis. Das ist das ganze Paintiano.",capt:"Liebestraum — Liszt · die ersten Takte",tab_harmony:"Harmonie",tab_spectral:"Spektrum",tab_kontra:"Kontra",tab_custom:"Eigene",
+ n_harmony:"<b>Der Blick des Musikers.</b> Die Töne folgen dem Quintenzirkel: Was zusammen klingt, liegt nebeneinander. Nachbarfarben = Konsonanz, Gegenfarben = Spannung.",n_spectral:"<b>Der Blick des Physikers.</b> Die chromatische Skala als Regenbogen: jeder Halbton 30° weiter. Reine Physik, kein menschlicher Geschmack.",n_kontra:"<b>Der Blick des Malers.</b> Quintenzirkel, aber harmonische Intervalle bekommen Komplementärfarben — das Bild hält durch Kontrast, nicht durch Einklang.",n_phi:"<b>Der Blick der Natur.</b> Jeder nächste Ton einen goldenen Winkel von 137,5° weiter — so legt die Sonnenblume ihre Kerne. Zwei Farben treffen sich nie.",n_custom:"<b>Dein Blick.</b> In der App gibst du jedem Ton deine eigene Farbe. Skrjabin hatte seine Karte; du kannst deine haben.",
+ wave_h:"Ton und Farbe sind dieselbe Welle",wave_p1:"Klang ist eine Welle in der Luft. Licht ist eine Welle im Feld. Nur vierzig Verdopplungen trennen sie: der Kammerton <i>a</i>, um vierzig Oktaven gehoben, hört auf, hörbar zu sein, und beginnt, sichtbar zu sein — als warmes Rot.",wave_a:"Kammerton a",wave_red:"Rot",wave_p2:"Auf dieser Brücke steht das ganze System: der <i>Farbton</i> trägt die Tonhöhe, die <i>Helligkeit</i> die Oktave, die <i>Sättigung</i> die Kraft des Anschlags. Ein Bass-C ist tiefblau, ein Sopran-C fast weiß; forte ist satt, pianissimo kaum ein Schatten.",
+ five_h:"Fünf Blicke auf einen Kreis",five_p1:"Zwölf Töne lassen sich nach mehr als einer Regel auf den Farbkreis legen — und jede ist auf ihre Art wahr. Der Musiker hört den Quintenzirkel. Der Physiker sieht das Spektrum. Der Maler sucht Komplemente. Die Natur baut mit dem goldenen Winkel. Der fünfte Blick ist deiner.",five_q:"Es gibt nicht die eine richtige Antwort. Es gibt vier wahre — und eine eigene.",five_p2:"Probier sie oben am Kreis. Dasselbe Stück, andere Zuordnung, anderes Bild.",
+ dirs_h:"Zwei Richtungen",dir1_h:"Musik → Bild",dir1_p:"Spielen, hochladen oder summen. Jeder Akkord ist ein Pinselstrich; dasselbe Lied ergibt dasselbe Bild, jedes Mal. Vierundzwanzig Maler sehen es auf ihre Weise.",dir2_h:"Bild → Musik",dir2_p:"Die Regel läuft auch rückwärts. Lade ein Foto, eine Guernica oder eine Kinderzeichnung — und Paintiano spielt sie. Zwölf Komponisten komponieren sie in ihrer eigenen Stimme neu.",
+ phi_h:"Geometrie des Goldenen Schnitts",phi_p:"Das Leinwandformat und die Grundzelle jedes Bildes kommen aus φ = 1,618 — dem Verhältnis, das die Natur von der Sonnenblume bis zur Galaxie verwendet. Nicht, weil es schön ist. Weil es dasselbe Verhältnis ist, das das Ohr als Konsonanz empfindet.",
+ author_h:"Der Autor",author_p:"Quantenphysiker von der Ausbildung, Software von Beruf, Kunst aus Zwang. Geboren in der Slowakei, zehn Jahre in Deutschland, heute in Bratislava. Mitautor von Labyrint, einer Ausstellung, in der Physik auf Skulptur traf; Autor des Paintiano-Buchs — und der App, die du gleich öffnest.",
+ close_p:"Die ganze Geschichte — von Pythagoras über Newton und Skrjabin bis zum Klavier in deiner Tasche — steht im Buch. Die einseitige Zusammenfassung ist gratis; das ganze Buch gibt es kostenlos auf Anfrage.",close_cta:"Paintiano testen",close_book:"Buch-Zusammenfassung",foot_home:"Start",foot_pricing:"Preise",foot_terms:"AGB",foot_privacy:"Datenschutz",foot_note:"Musik wird Bild. Von Raf Fel.",book:"DE"},
+fr:{title:"La musique a une couleur — le concept Paintiano",nav_try:"Essayer gratuitement",eyebrow:"Le concept",h1:"La musique a une couleur.<br>Depuis toujours.",lede:"Douze notes, douze couleurs, une roue. C'est tout Paintiano.",capt:"Liebestraum — Liszt · les premières mesures",tab_harmony:"Harmonie",tab_spectral:"Spectre",tab_kontra:"Kontra",tab_custom:"Perso",
+ n_harmony:"<b>Le regard du musicien.</b> Les notes suivent le cycle des quintes : ce qui sonne ensemble est côte à côte. Couleurs voisines = consonance, couleurs opposées = tension.",n_spectral:"<b>Le regard du physicien.</b> La gamme chromatique en arc-en-ciel : chaque demi-ton 30° plus loin. Pure physique, aucun goût humain.",n_kontra:"<b>Le regard du peintre.</b> Le cycle des quintes, mais les intervalles harmoniques reçoivent des couleurs complémentaires — le tableau tient par le contraste, non par l'accord.",n_phi:"<b>Le regard de la nature.</b> Chaque note suivante à un angle d'or de 137,5° — ainsi le tournesol place ses graines. Deux couleurs ne se rencontrent jamais.",n_custom:"<b>Ton regard.</b> Dans l'app, tu donnes à chaque note ta propre couleur. Scriabine avait sa carte ; tu peux avoir la tienne.",
+ wave_h:"Le son et la couleur sont la même onde",wave_p1:"Le son est une onde dans l'air. La lumière, une onde dans un champ. Seuls quarante doublements les séparent : le <i>la</i> du diapason, monté de quarante octaves, cesse d'être entendu et commence à être vu — en rouge chaud.",wave_a:"la du diapason",wave_red:"rouge",wave_p2:"Tout le système repose sur ce pont : la <i>teinte</i> porte la hauteur, la <i>clarté</i> l'octave, la <i>saturation</i> la force du toucher. Un do grave est bleu profond, un do aigu presque blanc ; le forte est saturé, le pianissimo à peine une ombre.",
+ five_h:"Cinq regards sur une même roue",five_p1:"Douze notes peuvent se poser sur une roue chromatique selon plus d'une règle — et chacune est vraie à sa façon. Le musicien entend le cycle des quintes. Le physicien voit le spectre. Le peintre cherche les complémentaires. La nature construit par l'angle d'or. Le cinquième regard est le tien.",five_q:"Il n'y a pas une seule bonne réponse. Il y en a quatre vraies — et une à toi.",five_p2:"Essaie-les sur la roue ci-dessus. Même pièce, autre correspondance, autre tableau.",
+ dirs_h:"Deux directions",dir1_h:"Musique → tableau",dir1_p:"Joue, charge ou fredonne. Chaque accord est un coup de pinceau ; la même chanson donne le même tableau, à chaque fois. Vingt-quatre peintres la voient chacun à leur manière.",dir2_h:"Tableau → musique",dir2_p:"La règle marche aussi à l'envers. Charge une photo, une Guernica ou un dessin d'enfant — et Paintiano le joue. Douze compositeurs le recomposent de leur propre voix.",
+ phi_h:"Géométrie du nombre d'or",phi_p:"Le format de la toile et la cellule de base de chaque tableau viennent de φ = 1,618 — le rapport que la nature utilise du tournesol à la galaxie. Pas parce qu'il est beau. Parce que c'est le même rapport que l'oreille ressent comme consonance.",
+ author_h:"L'auteur",author_p:"Physicien quantique de formation, logiciel de métier, art par nécessité. Né en Slovaquie, dix ans en Allemagne, aujourd'hui à Bratislava. Co-auteur de Labyrint, une exposition où la physique a rencontré la sculpture ; auteur du livre Paintiano — et de l'app que tu vas ouvrir.",
+ close_p:"Toute l'histoire — de Pythagore à Newton et Scriabine jusqu'au piano dans ta poche — est dans le livre. Le résumé d'une page est gratuit ; le livre entier est gratuit sur demande.",close_cta:"Essayer Paintiano",close_book:"Résumé du livre",foot_home:"Accueil",foot_pricing:"Tarifs",foot_terms:"Conditions",foot_privacy:"Confidentialité",foot_note:"La musique devient peinture. Par Raf Fel.",book:"FR"},
+es:{title:"La música tiene color — el concepto Paintiano",nav_try:"Probar gratis",eyebrow:"El concepto",h1:"La música tiene color.<br>Siempre lo tuvo.",lede:"Doce notas, doce colores, una rueda. Eso es todo Paintiano.",capt:"Liebestraum — Liszt · los primeros compases",tab_harmony:"Armonía",tab_spectral:"Espectro",tab_kontra:"Kontra",tab_custom:"Propia",
+ n_harmony:"<b>La mirada del músico.</b> Las notas siguen el círculo de quintas: lo que suena junto está junto. Colores vecinos = consonancia, colores opuestos = tensión.",n_spectral:"<b>La mirada del físico.</b> La escala cromática como arcoíris: cada semitono 30° más allá. Pura física, sin gusto humano.",n_kontra:"<b>La mirada del pintor.</b> El círculo de quintas, pero los intervalos armónicos reciben colores complementarios — el cuadro se sostiene por contraste, no por acuerdo.",n_phi:"<b>La mirada de la naturaleza.</b> Cada nota siguiente a un ángulo áureo de 137,5° — así coloca el girasol sus semillas. Dos colores nunca se encuentran.",n_custom:"<b>Tu mirada.</b> En la app le das a cada nota tu propio color. Scriabin tenía su mapa; tú puedes tener el tuyo.",
+ wave_h:"Tono y color son la misma onda",wave_p1:"El sonido es una onda en el aire. La luz, una onda en un campo. Solo cuarenta duplicaciones los separan: el <i>la</i> de afinación, subido cuarenta octavas, deja de oírse y empieza a verse — como un rojo cálido.",wave_a:"la de afinación",wave_red:"rojo",wave_p2:"Todo el sistema se apoya en ese puente: el <i>tono</i> lleva la altura, la <i>luminosidad</i> la octava, la <i>saturación</i> la fuerza del toque. Un do grave es azul profundo, un do agudo casi blanco; el forte es saturado, el pianissimo apenas una sombra.",
+ five_h:"Cinco miradas a una misma rueda",five_p1:"Doce notas pueden colocarse en una rueda de color según más de una regla — y cada una es verdadera a su manera. El músico oye el círculo de quintas. El físico ve el espectro. El pintor busca complementarios. La naturaleza construye con el ángulo áureo. La quinta mirada es la tuya.",five_q:"No hay una sola respuesta correcta. Hay cuatro verdaderas — y una propia.",five_p2:"Pruébalas en la rueda de arriba. Misma pieza, otra correspondencia, otro cuadro.",
+ dirs_h:"Dos direcciones",dir1_h:"Música → cuadro",dir1_p:"Toca, sube o tararea. Cada acorde es una pincelada; la misma canción da el mismo cuadro, cada vez. Veinticuatro pintores la ven cada uno a su manera.",dir2_h:"Cuadro → música",dir2_p:"La regla también funciona al revés. Carga una foto, un Guernica o un dibujo infantil — y Paintiano lo toca. Doce compositores lo recomponen con su propia voz.",
+ phi_h:"Geometría de la proporción áurea",phi_p:"El formato del lienzo y la célula básica de cada cuadro vienen de φ = 1,618 — la proporción que la naturaleza usa del girasol a la galaxia. No porque sea bonita. Porque es la misma proporción que el oído siente como consonancia.",
+ author_h:"El autor",author_p:"Físico cuántico de formación, software de oficio, arte por necesidad. Nacido en Eslovaquia, diez años en Alemania, hoy en Bratislava. Coautor de Labyrint, una exposición donde la física se encontró con la escultura; autor del libro Paintiano — y de la app que estás a punto de abrir.",
+ close_p:"Toda la historia — de Pitágoras a Newton y Scriabin hasta el piano en tu bolsillo — está en el libro. El resumen de una página es gratis; el libro completo es gratis a petición.",close_cta:"Probar Paintiano",close_book:"Resumen del libro",foot_home:"Inicio",foot_pricing:"Precios",foot_terms:"Términos",foot_privacy:"Privacidad",foot_note:"La música se vuelve pintura. Por Raf Fel.",book:"ES"},
+pt:{title:"A música tem cor — o conceito Paintiano",nav_try:"Experimentar grátis",eyebrow:"O conceito",h1:"A música tem cor.<br>Sempre teve.",lede:"Doze notas, doze cores, uma roda. É todo o Paintiano.",capt:"Liebestraum — Liszt · os primeiros compassos",tab_harmony:"Harmonia",tab_spectral:"Espectro",tab_kontra:"Kontra",tab_custom:"Própria",
+ n_harmony:"<b>O olhar do músico.</b> As notas seguem o círculo de quintas: o que soa junto fica lado a lado. Cores vizinhas = consonância, cores opostas = tensão.",n_spectral:"<b>O olhar do físico.</b> A escala cromática como arco-íris: cada meio-tom 30° mais além. Física pura, sem gosto humano.",n_kontra:"<b>O olhar do pintor.</b> O círculo de quintas, mas os intervalos harmónicos recebem cores complementares — o quadro sustenta-se pelo contraste, não pelo acordo.",n_phi:"<b>O olhar da natureza.</b> Cada nota seguinte a um ângulo de ouro de 137,5° — assim o girassol coloca as sementes. Duas cores nunca se encontram.",n_custom:"<b>O teu olhar.</b> Na app dás a cada nota a tua própria cor. Skriabin tinha o seu mapa; podes ter o teu.",
+ wave_h:"Som e cor são a mesma onda",wave_p1:"O som é uma onda no ar. A luz, uma onda num campo. Só quarenta duplicações os separam: o <i>lá</i> de afinação, subido quarenta oitavas, deixa de se ouvir e começa a ver-se — como um vermelho quente.",wave_a:"lá de afinação",wave_red:"vermelho",wave_p2:"Todo o sistema assenta nessa ponte: o <i>matiz</i> carrega a altura, a <i>luminosidade</i> a oitava, a <i>saturação</i> a força do toque. Um dó grave é azul profundo, um dó agudo quase branco; o forte é saturado, o pianissimo mal uma sombra.",
+ five_h:"Cinco olhares sobre uma roda",five_p1:"Doze notas podem ser postas numa roda de cores por mais de uma regra — e cada uma é verdadeira à sua maneira. O músico ouve o círculo de quintas. O físico vê o espectro. O pintor procura complementares. A natureza constrói pelo ângulo de ouro. O quinto olhar é o teu.",five_q:"Não há uma única resposta certa. Há quatro verdadeiras — e uma tua.",five_p2:"Experimenta-as na roda acima. A mesma peça, outro mapeamento, outro quadro.",
+ dirs_h:"Duas direções",dir1_h:"Música → quadro",dir1_p:"Toca, carrega ou trauteia. Cada acorde é uma pincelada; a mesma canção dá o mesmo quadro, sempre. Vinte e quatro pintores vêem-na cada um à sua maneira.",dir2_h:"Quadro → música",dir2_p:"A regra também funciona ao contrário. Carrega uma foto, uma Guernica ou um desenho de criança — e o Paintiano toca-o. Doze compositores recompõem-no na sua própria voz.",
+ phi_h:"Geometria da proporção áurea",phi_p:"O formato da tela e a célula base de cada quadro vêm de φ = 1,618 — a proporção que a natureza usa do girassol à galáxia. Não por ser bonita. Por ser a mesma proporção que o ouvido sente como consonância.",
+ author_h:"O autor",author_p:"Físico quântico de formação, software de profissão, arte por necessidade. Nascido na Eslováquia, dez anos na Alemanha, hoje em Bratislava. Coautor de Labyrint, uma exposição onde a física encontrou a escultura; autor do livro Paintiano — e da app que estás prestes a abrir.",
+ close_p:"Toda a história — de Pitágoras a Newton e Skriabin até ao piano no teu bolso — está no livro. O resumo de uma página é grátis; o livro completo é grátis a pedido.",close_cta:"Experimentar o Paintiano",close_book:"Resumo do livro",foot_home:"Início",foot_pricing:"Preços",foot_terms:"Termos",foot_privacy:"Privacidade",foot_note:"A música torna-se pintura. Por Raf Fel.",book:"PT"},
+zh:{title:"音乐有颜色——Paintiano 的概念",nav_try:"免费试用",eyebrow:"概念",h1:"音乐有颜色。<br>一直都有。",lede:"十二个音，十二种颜色，一个色轮。这就是整个 Paintiano。",capt:"爱之梦——李斯特 · 开头几小节",tab_harmony:"和声",tab_spectral:"光谱",tab_kontra:"对比",tab_custom:"自定义",
+ n_harmony:"<b>音乐家的视角。</b>音按五度圈排列：和谐的音彼此相邻。相邻的颜色 = 协和，相对的颜色 = 张力。",n_spectral:"<b>物理学家的视角。</b>半音阶像彩虹：每个半音前进 30°。纯粹的物理，没有人的偏好。",n_kontra:"<b>画家的视角。</b>仍是五度圈，但和谐音程得到互补色——画面靠对比站立，而非靠一致。",n_phi:"<b>自然的视角。</b>每个下一个音前进黄金角 137.5°——向日葵就是这样排列种子的。没有两种颜色会相遇。",n_custom:"<b>你的视角。</b>在应用里，你为每个音指定自己的颜色。斯克里亚宾有他的色谱；你也可以有你的。",
+ wave_h:"音与色是同一种波",wave_p1:"声音是空气中的波。光是场中的波。两者之间只隔着四十次倍频：标准音 <i>A</i> 升高四十个八度，便从听得见变成看得见——一抹温暖的红。",wave_a:"标准音 A",wave_red:"红",wave_p2:"整个系统就建在这座桥上：<i>色相</i>承载音高，<i>明度</i>承载八度，<i>饱和度</i>承载触键力度。低音 C 是深蓝，高音 C 近乎白；强奏饱满，极弱几乎只剩影子。",
+ five_h:"一个色轮，五种视角",five_p1:"十二个音可以按不止一种规则铺在色轮上——每一种都以自己的方式成立。音乐家听见五度圈。物理学家看见光谱。画家寻找互补色。自然以黄金角建造。第五种视角是你的。",five_q:"没有唯一的正确答案。有四个真实的——还有一个属于你。",five_p2:"在上面的色轮上试试。同一首曲子，不同的映射，不同的画。",
+ dirs_h:"两个方向",dir1_h:"音乐 → 画",dir1_p:"弹奏、上传或哼唱。每个和弦都是一笔；同一首歌给出同一幅画，每次如此。二十四位画家各有各的看法。",dir2_h:"画 → 音乐",dir2_p:"规则也可以反过来。载入一张照片、一幅《格尔尼卡》或一幅儿童画——Paintiano 把它奏出来。十二位作曲家用自己的声音重新谱写。",
+ phi_h:"黄金比例的几何",phi_p:"画布的比例和每幅画的基本单元都来自 φ = 1.618——自然从向日葵到星系都在使用的比例。不是因为它好看，而是因为它正是耳朵感受为协和的那个比例。",
+ author_h:"作者",author_p:"量子物理出身，软件为业，艺术是情不自禁。生于斯洛伐克，在德国十年，如今住在布拉迪斯拉发。展览《Labyrint》的联合作者——物理与雕塑在此相遇；Paintiano 一书的作者——也是你即将打开的这个应用的作者。",
+ close_p:"完整的故事——从毕达哥拉斯、牛顿、斯克里亚宾到你口袋里的钢琴——都在书里。一页摘要免费；完整的书可免费索取。",close_cta:"试试 Paintiano",close_book:"书的摘要",foot_home:"首页",foot_pricing:"价格",foot_terms:"条款",foot_privacy:"隐私",foot_note:"音乐成为绘画。Raf Fel 作。",book:"zh"},
+zhTW:{title:"音樂有顏色——Paintiano 的概念",nav_try:"免費試用",eyebrow:"概念",h1:"音樂有顏色。<br>一直都有。",lede:"十二個音，十二種顏色，一個色輪。這就是整個 Paintiano。",capt:"愛之夢——李斯特 · 開頭幾小節",tab_harmony:"和聲",tab_spectral:"光譜",tab_kontra:"對比",tab_custom:"自訂",
+ n_harmony:"<b>音樂家的視角。</b>音按五度圈排列：和諧的音彼此相鄰。相鄰的顏色 = 協和，相對的顏色 = 張力。",n_spectral:"<b>物理學家的視角。</b>半音階像彩虹：每個半音前進 30°。純粹的物理，沒有人的偏好。",n_kontra:"<b>畫家的視角。</b>仍是五度圈，但和諧音程得到互補色——畫面靠對比站立，而非靠一致。",n_phi:"<b>自然的視角。</b>每個下一個音前進黃金角 137.5°——向日葵就是這樣排列種子的。沒有兩種顏色會相遇。",n_custom:"<b>你的視角。</b>在應用程式裡，你為每個音指定自己的顏色。斯克里亞賓有他的色譜；你也可以有你的。",
+ wave_h:"音與色是同一種波",wave_p1:"聲音是空氣中的波。光是場中的波。兩者之間只隔著四十次倍頻：標準音 <i>A</i> 升高四十個八度，便從聽得見變成看得見——一抹溫暖的紅。",wave_a:"標準音 A",wave_red:"紅",wave_p2:"整個系統就建在這座橋上：<i>色相</i>承載音高，<i>明度</i>承載八度，<i>飽和度</i>承載觸鍵力度。低音 C 是深藍，高音 C 近乎白；強奏飽滿，極弱幾乎只剩影子。",
+ five_h:"一個色輪，五種視角",five_p1:"十二個音可以按不只一種規則鋪在色輪上——每一種都以自己的方式成立。音樂家聽見五度圈。物理學家看見光譜。畫家尋找互補色。自然以黃金角建造。第五種視角是你的。",five_q:"沒有唯一的正確答案。有四個真實的——還有一個屬於你。",five_p2:"在上面的色輪上試試。同一首曲子，不同的映射，不同的畫。",
+ dirs_h:"兩個方向",dir1_h:"音樂 → 畫",dir1_p:"彈奏、上傳或哼唱。每個和弦都是一筆；同一首歌給出同一幅畫，每次如此。二十四位畫家各有各的看法。",dir2_h:"畫 → 音樂",dir2_p:"規則也可以反過來。載入一張照片、一幅《格爾尼卡》或一幅兒童畫——Paintiano 把它奏出來。十二位作曲家用自己的聲音重新譜寫。",
+ phi_h:"黃金比例的幾何",phi_p:"畫布的比例和每幅畫的基本單元都來自 φ = 1.618——自然從向日葵到星系都在使用的比例。不是因為它好看，而是因為它正是耳朵感受為協和的那個比例。",
+ author_h:"作者",author_p:"量子物理出身，軟體為業，藝術是情不自禁。生於斯洛伐克，在德國十年，如今住在布拉提斯拉瓦。展覽《Labyrint》的共同作者——物理與雕塑在此相遇；Paintiano 一書的作者——也是你即將打開的這個應用程式的作者。",
+ close_p:"完整的故事——從畢達哥拉斯、牛頓、斯克里亞賓到你口袋裡的鋼琴——都在書裡。一頁摘要免費；完整的書可免費索取。",close_cta:"試試 Paintiano",close_book:"書的摘要",foot_home:"首頁",foot_pricing:"價格",foot_terms:"條款",foot_privacy:"隱私",foot_note:"音樂成為繪畫。Raf Fel 作。",book:"zhTW"},
+ja:{title:"音楽には色がある——Paintiano のコンセプト",nav_try:"無料で試す",eyebrow:"コンセプト",h1:"音楽には色がある。<br>ずっと前から。",lede:"12の音、12の色、ひとつの輪。それが Paintiano のすべて。",capt:"愛の夢——リスト · 冒頭の数小節",tab_harmony:"ハーモニー",tab_spectral:"スペクトル",tab_kontra:"コントラ",tab_custom:"カスタム",
+ n_harmony:"<b>音楽家の見方。</b>音は五度圏に並ぶ：共に響く音は隣り合う。隣の色 = 協和、向かいの色 = 緊張。",n_spectral:"<b>物理学者の見方。</b>半音階を虹として：半音ごとに 30° 進む。純粋な物理、人の好みはなし。",n_kontra:"<b>画家の見方。</b>五度圏のまま、ただし協和する音程には補色を——絵は一致ではなく対比で立つ。",n_phi:"<b>自然の見方。</b>次の音ごとに黄金角 137.5° 進む——ひまわりが種を並べる方法。二つの色が重なることはない。",n_custom:"<b>あなたの見方。</b>アプリでは各音に自分の色を与えられる。スクリャービンには彼の地図があった。あなたにも。",
+ wave_h:"音と色は同じ波",wave_p1:"音は空気の波。光は場の波。両者を隔てるのは四十回の倍化だけ：基準音の <i>A</i> を四十オクターブ上げると、聞こえなくなり、見えはじめる——温かな赤として。",wave_a:"基準音 A",wave_red:"赤",wave_p2:"システム全体はこの橋の上に立つ：<i>色相</i>が音の高さを、<i>明度</i>がオクターブを、<i>彩度</i>がタッチの強さを運ぶ。低い C は深い青、高い C はほとんど白。フォルテは鮮やか、ピアニッシモはかすかな影。",
+ five_h:"ひとつの輪、五つの見方",five_p1:"12の音を色相環に置く規則はひとつではない——そしてどれも、それぞれの仕方で正しい。音楽家は五度圏を聴く。物理学者はスペクトルを見る。画家は補色を探す。自然は黄金角で築く。五つ目の見方はあなたのもの。",five_q:"唯一の正解はない。四つの真実と——あなた自身のひとつがある。",five_p2:"上の輪で試してみて。同じ曲、違う対応、違う絵。",
+ dirs_h:"二つの方向",dir1_h:"音楽 → 絵",dir1_p:"弾く、アップロードする、口ずさむ。和音のひとつひとつが筆のひと運び。同じ曲は同じ絵になる、いつでも。24人の画家がそれぞれの目で見る。",dir2_h:"絵 → 音楽",dir2_p:"規則は逆向きにも働く。写真、ゲルニカ、子どもの絵を読み込めば——Paintiano が演奏する。12人の作曲家が自分の声で書き直す。",
+ phi_h:"黄金比の幾何学",phi_p:"カンヴァスの比率も、すべての絵の基本セルも φ = 1.618 から——ひまわりから銀河まで自然が使う比率。美しいからではない。耳が協和と感じるのと同じ比率だから。",
+ author_h:"作者",author_p:"量子物理を学び、ソフトウェアを仕事に、芸術は衝動から。スロバキア生まれ、ドイツに十年、いまはブラチスラヴァ。物理と彫刻が出会った展覧会「Labyrint」の共同作者、Paintiano の本の著者——そして、あなたがこれから開くアプリの作者。",
+ close_p:"ピタゴラスからニュートン、スクリャービン、そしてポケットの中のピアノまで——物語のすべては本の中に。一枚の要約は無料。完全版も無料で、ご希望に応じて。",close_cta:"Paintiano を試す",close_book:"本の要約",foot_home:"ホーム",foot_pricing:"料金",foot_terms:"規約",foot_privacy:"プライバシー",foot_note:"音楽が絵になる。Raf Fel 作。",book:"ja"}
+};
+var LANGS=[['en','English'],['sk','Slovenčina'],['de','Deutsch'],['fr','Français'],['es','Español'],['pt','Português'],['zh','简体中文'],['zhTW','繁體中文'],['ja','日本語']];
+var KEY='pf_lang';
+function pick(){
+  try{var s=localStorage.getItem(KEY); if(s&&I18N[s])return s;}catch(e){}
+  var n=(navigator.language||'en').toLowerCase();
+  if(n.indexOf('zh')===0){return (n.indexOf('tw')>-1||n.indexOf('hk')>-1||n.indexOf('hant')>-1)?'zhTW':'zh';}
+  var two=n.slice(0,2), map={en:'en',sk:'sk',de:'de',fr:'fr',es:'es',pt:'pt',ja:'ja'};
+  return map[two]||'en';
+}
+var cur='en';
+function apply(lang){
+  cur=lang; var d=I18N[lang]||I18N.en;
+  document.documentElement.lang=lang;
+  if(d.title)document.title=d.title;
+  document.querySelectorAll('[data-i18n]').forEach(function(el){var k=el.getAttribute('data-i18n'); if(d[k]!=null)el.textContent=d[k];});
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el){var k=el.getAttribute('data-i18n-html'); if(d[k]!=null)el.innerHTML=d[k];});
+  var bl=document.getElementById('bookLink'); if(bl) bl.setAttribute('href','/book/paintiano-'+(d.book||'EN')+'-excerpt.pdf');
+  setNote();
+}
+function build(){
+  var sel=document.getElementById('langsel'); if(!sel)return;
+  LANGS.forEach(function(l){var o=document.createElement('option'); o.value=l[0]; o.textContent=l[1]; sel.appendChild(o);});
+  var c=pick(); sel.value=c; apply(c);
+  sel.addEventListener('change',function(){try{localStorage.setItem(KEY,sel.value);}catch(e){} apply(sel.value);});
+}
+
+/* ── The wheel ── */
+var PC=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+var COF=['C','G','D','A','E','B','F♯','C♯','G♯','D♯','A♯','F'];
+var P={
+  harmony:{order:COF,hue:function(i){return i*30;}},
+  spectral:{order:PC,hue:function(i){return i*30;}},
+  kontra:{order:COF,hue:function(i){return (i*30+180)%360;}},
+  phi:{order:PC,hue:function(i){return (i*137.5)%360;}},
+  custom:{order:PC,hue:function(i){return (i*30+15)%360;}}
+};
+var curP='harmony';
+function setNote(){ var d=I18N[cur]||I18N.en; var el=document.getElementById('tabnote'); if(el) el.innerHTML=d['n_'+curP]||''; }
+var svg=document.getElementById('wheel'), NS='http://www.w3.org/2000/svg';
+var cx=200,cy=200,r1=120,r2=178;
+function arc(a0,a1,ri,ro){
+  function t(a){return a*Math.PI/180;} function x(r,a){return cx+r*Math.cos(t(a-90));} function y(r,a){return cy+r*Math.sin(t(a-90));}
+  return 'M'+x(ro,a0)+' '+y(ro,a0)+' A'+ro+' '+ro+' 0 0 1 '+x(ro,a1)+' '+y(ro,a1)+' L'+x(ri,a1)+' '+y(ri,a1)+' A'+ri+' '+ri+' 0 0 0 '+x(ri,a0)+' '+y(ri,a0)+' Z';
+}
+var segs=[],lbls=[];
+function buildWheel(p){
+  curP=p; while(svg.firstChild) svg.removeChild(svg.firstChild); segs=[]; lbls=[];
+  var cfg=P[p];
+  cfg.order.forEach(function(n,i){
+    var a0=i*30-15,a1=a0+30;
+    var el=document.createElementNS(NS,'path'); el.setAttribute('d',arc(a0+1,a1-1,r1,r2));
+    el.setAttribute('fill','hsl('+cfg.hue(i)+' 78% 56%)'); el.setAttribute('class','seg'); el.setAttribute('data-n',n); svg.appendChild(el); segs.push(el);
+    var tx=document.createElementNS(NS,'text'); var ang=(i*30-90)*Math.PI/180; var rr=(r1+r2)/2;
+    tx.setAttribute('x',cx+rr*Math.cos(ang)); tx.setAttribute('y',cy+rr*Math.sin(ang)); tx.setAttribute('class','lbl dim'); tx.textContent=n; svg.appendChild(tx); lbls.push(tx);
+  });
+  var c=document.createElementNS(NS,'text'); c.setAttribute('x',cx); c.setAttribute('y',cy); c.setAttribute('class','center'); c.textContent='φ'; svg.appendChild(c);
+  setNote();
+}
+var LISZT=['G♯','C','D♯','G♯','G','F','D♯','C♯','C','B','G♯','F','D♯'];
+var timer=null;
+function play(){
+  clearTimeout(timer); segs.forEach(function(s){s.classList.remove('on');}); lbls.forEach(function(l){l.classList.add('dim');});
+  var rm=false; try{ rm=window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  function all(){ segs.forEach(function(s){s.classList.add('on');}); lbls.forEach(function(l){l.classList.remove('dim');}); }
+  if(rm){ all(); return; }
+  var i=0;
+  function step(){
+    if(i>=LISZT.length){ all(); return; }
+    var n=LISZT[i++]; var k=-1; for(var q=0;q<segs.length;q++){ if(segs[q].getAttribute('data-n')===n){k=q;break;} }
+    if(k>=0){ segs[k].classList.add('on'); lbls[k].classList.remove('dim'); }
+    timer=setTimeout(step,420);
+  }
+  step();
+}
+function wire(){
+  document.querySelectorAll('.tab').forEach(function(b){ b.addEventListener('click',function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected','false');}); b.setAttribute('aria-selected','true');
+    buildWheel(b.getAttribute('data-p')); play();
+    try{ window.posthog && window.posthog.capture('concept_palette_tab',{palette:b.getAttribute('data-p')}); }catch(e){}
+  }); });
+}
+function init(){ build(); buildWheel('harmony'); play(); wire();
+  try{ var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); },{threshold:.12}); document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); }); setTimeout(function(){ document.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('in'); }); },2500); }catch(e){ document.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('in'); }); }
+}
+if(document.readyState!=='loading')init(); else document.addEventListener('DOMContentLoaded',init);
+})();
+</script>
+</body>
+</html>
