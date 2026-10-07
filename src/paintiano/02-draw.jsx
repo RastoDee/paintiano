@@ -17000,11 +17000,13 @@ function composeImageBach(px,nc,nr,table,colorMode,dir){
   return evts;
 }
 
-// ── BEETHOVEN — sonata drama: a four-note MOTIF (short-short-short-long)
-// cut from the picture's strongest colours, hammered, transposed through the
-// sections; tremolo octaves in the bass under dark passages, Alberti bass
-// under calm ones; sforzando accents, sudden piano after forte; a hammered
-// coda of tonic chords. Minor unless the picture is bright.
+// ── BEETHOVEN — sonata in four rooms, no slogans: ADAGIO (Moonlight — low
+// octaves, continuous triplet broken chords, a slow dotted melody above, pp)
+// → ALLEGRO (Alberti bass, a singing theme in two-bar gestures that never
+// repeat back-to-back, sforzando on the downbeat, a sudden piano every fourth
+// bar) → STORM (tremolo octaves, melody in octaves falling down the scale,
+// climax at phi) → ADAGIO again, higher and softer → two bars of hammered
+// chords. The picture sets key, tempo and the melody's contour.
 function composeImageBeethoven(px,nc,nr,table,colorMode,dir){
   const A=_composerAnalyse(px,nc,nr,table,colorMode,10600,10,18);
   if(!A.secs) return A.base;
@@ -17013,91 +17015,87 @@ function composeImageBeethoven(px,nc,nr,table,colorMode,dir){
   const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];
   const scAbs=scale.map(d=>(tonic+d)%12);
   const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
-  const eighth=Math.round(260-Math.min(1,gc2/45)*40);        // allegro con brio
+  const eighth=Math.round(300-Math.min(1,gc2/45)*50);
   const barMs=eighth*8;
+  const trip=Math.round(eighth*2/3);                        // triplet eighth
   let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
   const maxBars=Math.floor(150000/barMs);
   const tot=bars.reduce((a,b)=>a+b,0);
   if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
   const totBars=bars.reduce((a,b)=>a+b,0);
-  const evts=[]; const ix={i:0}; let t=0, barNo=0;
-  const rv=R(1);
-  // the motif: three repeated notes then a leap — the leap's size comes from
-  // how far the picture's two strongest colours sit apart on the wheel
-  let hsec=secs[0], hw=-1; for(const s of secs){ let w=0; for(let p=0;p<12;p++) w+=s.hist[p]; if(w>hw){hw=w;hsec=s;} }
-  const rk=[...Array(12).keys()].filter(p=>hsec.hist[p]>0).sort((a,b)=>hsec.hist[b]-hsec.hist[a]).map(inScale);
-  const m0=snap(67+(rk[0]!=null?rk[0]:tonic));
-  let leap=-3; if(rk[1]!=null){ const d=(rk[1]-rk[0]+12)%12; leap = d>6 ? -2 : (d>=3 ? -3 : 2); }
-  const motif=[m0,m0,m0,stepSc(m0,leap)];
-  const prog=minor?[0,5,4,0, 3,4,0,4]:[0,3,4,0, 5,1,4,0];     // i iv V i · VI V i V
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null, lastG=-1;
+  const rv=R(1), rb=R(2);
+  const prog=minor?[0,5,3,4, 0,3,4,0]:[0,5,3,4, 0,3,4,0];    // i VI iv V · i iv V i
   const climBar=Math.floor(totBars*0.618);
   for(let si=0;si<secs.length;si++){
     const sec=secs[si], last=si===secs.length-1;
+    const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
     for(let b2=0;b2<bars[si];b2++,barNo++){
       const f=barNo/Math.max(1,totBars-1);
-      // EPISODES: motif statement (bare, ff) → tremolo drama → lyrical second
-      // theme (Alberti, p, relative major) → development (motif transposed
-      // through the sections) → recapitulation ff → coda hammer
-      const ph = barNo<2 ? 'state' : f<0.28 ? 'drama' : f<0.46 ? 'lyric' : f<0.72 ? 'devel' : f<0.90 ? 'recap' : 'coda';
-      const rel=minor?(tonic+3)%12:(tonic+9)%12;
+      const ph = f<0.30 ? 'adagio' : f<0.62 ? 'allegro' : f<0.80 ? 'storm' : f<0.94 ? 'adagio2' : 'coda';
       let root=dPc(prog[barNo%8]);
-      if(ph==='lyric') root=(barNo%2===0)?rel:(rel+7)%12;
-      if(ph==='devel'){ const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale); root=ranked[b2%Math.max(1,ranked.length)]!=null?ranked[b2%ranked.length]:root; }
-      const third=inScale((root+(minor&&ph!=='lyric'?3:4))%12), fifth=inScale((root+7)%12);
+      if(ph==='allegro' && b2%2===1 && ranked[0]!=null) root=ranked[0];   // the picture colours every other bar
+      const third=inScale((root+(minor?3:4))%12), fifth=inScale((root+7)%12);
       const sc=_srcOfSec(sec,root);
-      const sub=(ph==='lyric')?0.62:(ph==='state'||ph==='recap'||ph==='coda')?1.15:0.95;
       const nearClim=Math.abs(barNo-climBar)<=1;
-      const vB=Math.min(118,(64+Math.min(24,sec.chr*0.6))*sub*(nearClim?1.12:1));
-      // sudden piano: every 4th bar of drama drops to p — the Beethoven jolt
-      const jolt=(ph==='drama'&&barNo%4===3)?0.55:1;
-      // ── LEFT HAND ──
-      if(ph==='state'){
-        // nothing under the first statement: the motif alone, ff, then silence
-      } else if(ph==='drama'||ph==='recap'||ph==='devel'){
-        // TREMOLO OCTAVES — the Pathétique floor: low root octave re-struck
-        // every eighth, alternating octave members
-        for(let k=0;k<8;k++){
-          const bm=snap(36+root)-(k%2?12:0);
-          _ev(evts,ix,[{m:bm,v:Math.round((50+(k%4===0?12:0))*jolt*(ph==='devel'?0.85:1)),durMs:Math.round(eighth*1.1),bass:true}],t+k*eighth,sc,sec,root);
+      const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
+      const r0=snap(48+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
+      if(ph==='adagio'||ph==='adagio2'){
+        const hi=ph==='adagio2';
+        const env=hi?0.8:0.9;
+        // low octave held under the whole bar
+        _ev(evts,ix,[{m:snap(36+root),v:Math.round(44*env),durMs:Math.round(barMs*1.05),bass:true},{m:snap(24+root),v:Math.round(40*env),durMs:Math.round(barMs*1.05),bass:true}],t,sc,sec,root);
+        // continuous triplets: R · 3 · 5 up and up, the Moonlight wheel
+        const wheel=[r0,t3,t5,r0,t3,t5,r0,t3,t5,r0,t3,t5].map((m,i2)=>m+(hi?12:0));
+        for(let k=0;k<12;k++){ _ev(evts,ix,[{m:wheel[k],v:Math.round((30+(k%3===0?6:0))*env),durMs:Math.round(trip*1.9)}],t+k*trip,sc,sec,((wheel[k]%12)+12)%12); }
+        // the slow melody above: one dotted figure per two bars, drawn by the light
+        if(barNo%2===0){
+          let mm=prevMel!=null?prevMel:snap(72+fifth);
+          mm=snap(Math.max(67,Math.min(hi?93:88,mm+Math.max(-3,Math.min(3,Math.round(trend/9))))));
+          if(barNo%4===2) mm=snap(Math.max(67,Math.min(93,67+root+(hi?12:0))));           // every second phrase rests on the chord
+          const pcm=((mm%12)+12)%12; const scM=_srcOfSec(sec,pcm);
+          const vM=Math.round((50+Math.min(12,sec.chr*0.4))*env);
+          _ev(evts,ix,[{m:mm,v:vM,durMs:Math.round(eighth*5.6)}],t+Math.round((rb()-0.5)*60),scM,sec,pcm);
+          _ev(evts,ix,[{m:mm,v:Math.round(vM*0.8),durMs:Math.round(eighth*0.9)}],t+6*eighth,scM,sec,pcm);                      // the dotted tail
+          const up=stepSc(mm,trend>=0?1:-1); _ev(evts,ix,[{m:up,v:Math.round(vM*0.85),durMs:Math.round(eighth*0.9)}],t+7*eighth,scM,sec,((up%12)+12)%12);
+          prevMel=up;
         }
-      } else if(ph==='lyric'){
-        // ALBERTI — root · fifth · third · fifth in eighths, p
-        const r0=snap(48+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
-        const alb=[r0,t5,t3,t5,r0,t5,t3,t5];
-        for(let k=0;k<8;k++){ _ev(evts,ix,[{m:alb[k],v:Math.round(34+(k%4===0?6:0)),durMs:Math.round(eighth*1.2),bass:k%4===0}],t+k*eighth,sc,sec,root); }
-      } else { // coda: hammered root-fifth octaves on the beats
-        for(let k=0;k<8;k+=2){ _ev(evts,ix,[{m:snap(36+root),v:Math.round(88*(k===0?1:0.9)),durMs:Math.round(eighth*1.6),bass:true},{m:snap(24+root),v:80,durMs:Math.round(eighth*1.6),bass:true}],t+k*eighth,sc,sec,root); }
+        t+=barMs; continue;
       }
-      // ── RIGHT HAND ──
-      if(ph==='lyric'){
-        // second theme: a singing line, stepwise, drawn by the row's light
-        const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
-        let mm=snap(72+third); mm=snap(Math.max(64,Math.min(88,mm+Math.max(-4,Math.min(4,Math.round(trend/9))))));
-        const line=[mm,stepSc(mm,1),stepSc(mm,-1),mm];
-        const offs=[0,3,4,6], durs=[3,1,2,2.4];
-        for(let k=0;k<4;k++){ const pcm=((line[k]%12)+12)%12; _ev(evts,ix,[{m:line[k],v:Math.round(vB*0.9+(k===0?6:0)),durMs:Math.round(eighth*durs[k]*1.1)}],t+offs[k]*eighth,_srcOfSec(sec,pcm),sec,pcm); }
-      } else if(ph==='coda'){
-        // hammered tonic chords — three on the beat, then silence before the next
-        for(let k=0;k<6;k+=2){ _ev(evts,ix,[{m:snap(60+root),v:Math.round(vB),durMs:Math.round(eighth*1.3)},{m:snap(64+third+(third<root?12:0)),v:Math.round(vB-6),durMs:Math.round(eighth*1.3)},{m:snap(67+fifth+(fifth<root?12:0)),v:Math.round(vB-4),durMs:Math.round(eighth*1.3)},{m:snap(72+root),v:Math.round(vB),durMs:Math.round(eighth*1.3)}],t+k*eighth,sc,sec,root); }
+      if(ph==='coda'){
+        for(let k=0;k<8;k+=2){
+          _ev(evts,ix,[{m:snap(36+root),v:Math.round(92*(k===0?1:0.9)),durMs:Math.round(eighth*1.5),bass:true},{m:snap(24+root),v:84,durMs:Math.round(eighth*1.5),bass:true}],t+k*eighth,sc,sec,root);
+          _ev(evts,ix,[{m:snap(60+root),v:92,durMs:Math.round(eighth*1.5)},{m:snap(64+third+(third<root?12:0)),v:86,durMs:Math.round(eighth*1.5)},{m:snap(67+fifth+(fifth<root?12:0)),v:88,durMs:Math.round(eighth*1.5)},{m:snap(72+root),v:94,durMs:Math.round(eighth*1.5)}],t+k*eighth,sc,sec,root);
+        }
+        t+=barMs; continue;
+      }
+      // ── ALLEGRO / STORM ──
+      const storm=ph==='storm';
+      const subito=(!storm && barNo%4===3)?0.55:1;            // sudden piano
+      const sfz=(barNo%2===0)?1.15:1;                          // downbeat accent
+      const vB=Math.min(118,(66+Math.min(22,sec.chr*0.6))*(storm?1.1:1)*(nearClim?1.12:1)*subito);
+      if(storm){
+        for(let k=0;k<8;k++){ const bm=snap(36+root)-(k%2?12:0); _ev(evts,ix,[{m:bm,v:Math.round(52+(k%4===0?12:0)),durMs:Math.round(eighth*1.1),bass:true}],t+k*eighth,sc,sec,root); }
       } else {
-        // the MOTIF — transposed onto this bar's chord; in 'state' it stands
-        // alone (ff) with its long note held across the rest of the bar
-        const tr=(ph==='state')?0:(snap(60+root)-snap(60+tonic));
-        const mv=motif.map(m=>Math.max(55,Math.min(96,snap(m+tr+(ph==='recap'?12:0)))));
-        const sfz=(ph==='drama'&&b2%2===1)?1.18:1;
-        for(let k=0;k<4;k++){
-          const isLong=k===3;
-          const ns=[{m:mv[k],v:Math.round(Math.min(120,vB*jolt*(isLong?sfz*1.05:0.92))),durMs:Math.round(eighth*(isLong?(ph==='state'?5.5:3.2):0.85))}];
-          if(ph==='recap'||ph==='state'){ ns.push({m:mv[k]-12,v:Math.round(ns[0].v*0.85),durMs:ns[0].durMs}); }   // octaves
-          const pcm=((mv[k]%12)+12)%12;
-          _ev(evts,ix,ns,t+k*eighth,_srcOfSec(sec,pcm),sec,pcm);
-        }
-        if(ph==='devel' && rv()<0.5){ // development: the motif answered an octave down, LH-ish, offset half a bar
-          for(let k=0;k<4;k++){ const m2=Math.max(40,mv[k]-12); _ev(evts,ix,[{m:m2,v:Math.round(vB*0.78),durMs:Math.round(eighth*(k===3?2.2:0.85))}],t+(4+k)*eighth,sc,sec,((m2%12)+12)%12); }
-        }
+        const alb=[r0,t5,t3,t5,r0,t5,t3,t5];
+        for(let k=0;k<8;k++){ _ev(evts,ix,[{m:alb[k],v:Math.round((36+(k%4===0?8:0))*subito),durMs:Math.round(eighth*1.2),bass:k%4===0}],t+k*eighth,sc,sec,root); }
       }
+      // THEME in two-bar gestures with memory — never the same shape twice:
+      // 0 scale run up to a held tone · 1 dotted figure (long-short-long) ·
+      // 2 leap up a fourth then step down · 3 three repeated quarters then a
+      // fall — repeated notes exist, but only once per phrase and never twice in a row.
+      let mm=prevMel!=null?prevMel:snap(74+third);
+      mm=snap(Math.max(64,Math.min(storm?93:89,mm+Math.max(-4,Math.min(4,Math.round(trend/8))))));
+      const PE=(m,off,d,vv)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:Math.round(Math.min(122,vv)),durMs:Math.round(eighth*d)}]; if(storm) ns.push({m:m-12,v:Math.round(vv*0.82),durMs:Math.round(eighth*d)}); _ev(evts,ix,ns,t+off*eighth+Math.round((rb()-0.5)*40),_srcOfSec(sec,pcm),sec,pcm); };
+      let gi; do{ gi=Math.floor(rv()*4); }while(gi===lastG);
+      lastG=gi;
+      if(storm) gi=(barNo%2===0)?0:3;                        // the storm only runs and falls
+      if(gi===0){ for(let q=4;q>=1;q--) PE(stepSc(mm,-q),(4-q),0.95,vB*0.8); PE(mm,4,3.8,vB*sfz); prevMel=mm; }
+      else if(gi===1){ PE(mm,0,2.8,vB*sfz); PE(stepSc(mm,-1),3,0.95,vB*0.85); PE(stepSc(mm,1),4,3.8,vB); prevMel=stepSc(mm,1); }
+      else if(gi===2){ const up=stepSc(mm,3); PE(mm,0,1.9,vB*sfz); PE(up,2,2.8,vB); PE(stepSc(up,-1),5,1.4,vB*0.9); PE(stepSc(up,-2),6,1.9,vB*0.85); prevMel=stepSc(up,-2); }
+      else { PE(mm,0,1.9,vB*sfz); PE(mm,2,1.9,vB*0.9); PE(mm,4,1.9,vB*0.9); PE(stepSc(mm,-2),6,1.9,vB); prevMel=stepSc(mm,-2); }
       t+=barMs;
-      if(ph==='state') t+=Math.round(barMs*0.5);               // the famous pause after the statement
+      if(ph==='allegro' && barNo%8===7) t+=Math.round(eighth*1.5);   // the Beethoven breath between phrases
     }
   }
   // FINAL — tonic hammered thrice, then one long ff chord

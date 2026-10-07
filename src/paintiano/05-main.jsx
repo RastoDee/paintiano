@@ -2672,8 +2672,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Re-measure the highlight ring as the modal opens/scrolls.
   useEffect(()=>{
     if(tourStep<0) return;
-    const a=setTimeout(()=>setTourTick(t=>t+1),120); const b=setTimeout(()=>setTourTick(t=>t+1),360);
-    return ()=>{ clearTimeout(a); clearTimeout(b); };
+    // The target may sit below the fold of the Setup sheet (Composers grew to
+    // 12 chips, pushing Tones off-screen) — bring it into view FIRST, then
+    // measure, or the ring lands on whatever is at the stale rect (the footer).
+    const TOUR_SELS=['.pf-setup-chip','.pf-setup-artists','.pf-setup-palettes','.pf-setup-composers','.pf-setup-tones'];
+    const s0=setTimeout(()=>{ try{ const el=document.querySelector(TOUR_SELS[tourStep]||''); if(el && el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'auto'}); }catch(_){} },40);
+    const a=setTimeout(()=>setTourTick(t=>t+1),160); const b=setTimeout(()=>setTourTick(t=>t+1),420);
+    return ()=>{ clearTimeout(s0); clearTimeout(a); clearTimeout(b); };
   },[tourStep]);
   // Pro / Pro AI users land in Advanced by default — they bought the controls.
   // Free (and first-time) visitors still start in Lite. We only auto-switch on
@@ -2899,6 +2904,32 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const c = (_dc && Math.random()<0.4) ? _dc : a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
   },[setupComposers, composerIsLocked, isDailyComposer, composerOfDay, proStatus]);
+  // ADVANCED composer dice — mirror of the artists' 🎲: ON rolls a different
+  // composer at once; NEXT (panel, fullscreen button, fullscreen swipe-up)
+  // rolls again. Bag draw: every enabled, unlocked composer once before any
+  // repeat; never the one currently playing. A roll restarts the piece from
+  // the top (a new composer is a new piece, not a texture swap).
+  const [composerDice, setComposerDice] = useState(false);
+  const composerBagRef = useRef([]);
+  const composerBagKeyRef = useRef('');
+  const _composerNextRef = useRef(false);
+  const _composerRoll = useCallback(()=>{
+    const pool=ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
+    if(pool.length<2) return false;
+    const key=pool.join(',');
+    if(composerBagKeyRef.current!==key || composerBagRef.current.length===0){
+      composerBagKeyRef.current=key;
+      const arr=pool.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t2=arr[i];arr[i]=arr[j];arr[j]=t2; }
+      composerBagRef.current=arr;
+    }
+    if(composerBagRef.current[0]===imgComposerRef.current && composerBagRef.current.length>1){ const t2=composerBagRef.current[0]; composerBagRef.current[0]=composerBagRef.current[1]; composerBagRef.current[1]=t2; }
+    const c=composerBagRef.current.shift();
+    if(!c || c===imgComposerRef.current) return false;
+    _composerNextRef.current=true;
+    _lastComposerRef.current=c; imgComposerRef.current=c; setImgComposer(c);
+    try{ window.posthog && window.posthog.capture('composer_dice_roll',{composer:c}); }catch(_){}
+    return true;
+  },[setupComposers, isDailyComposer, composerIsLocked]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
@@ -7807,7 +7838,8 @@ Hard requirements:
     // change re-orders the scan, so playback must restart from the top rather
     // than resume mid-stream (resuming would jump to an unrelated cell). A
     // palette/mode change keeps the same order and resumes seamlessly.
-    const _dirChanged = pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir;
+    const _dirChanged = (pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir) || _composerNextRef.current;
+    _composerNextRef.current=false;
     pixelRef.current.lastDir=imgDir;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
@@ -12438,7 +12470,16 @@ Hard requirements:
                 })}
               </div>
             </>) : (<>
-              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('inspiredByTitle')}</div>
+              <div style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',minHeight:28,display:'flex',alignItems:'center'}}>
+                <span>{t('inspiredByTitle')}</span>
+                {/* composer dice (🎲 mirror) + NEXT — only when there is more than one composer to roll between */}
+                {(ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k)).length>1) && (<>
+                  {composerDice && (<button onClick={()=>{ if(busy||working) return; _composerRoll(); }} disabled={busy||working} aria-label="next composer" title="next composer" style={{position:'absolute',right:36,top:'50%',transform:'translateY(-50%)',padding:'4px 10px',borderRadius:12,cursor:'pointer',fontFamily:'inherit',fontSize:(.46*effScale)+'rem',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',opacity:(busy||working)?.5:1}}>next ›</button>)}
+                  <button onClick={()=>{ if(busy||working) return; setComposerDice(v=>{ const nx=!v; if(nx){ composerBagRef.current=[]; composerBagKeyRef.current=''; setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); } return nx; }); }} className="pf-dice" title={composerDice?'shuffle ON · Next rolls a different composer':'shuffle OFF · tap to shuffle across composers'} aria-label={composerDice?t('randomOn'):t('randomOff')} aria-pressed={composerDice} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:composerDice?'#0a0a12':'rgba(201,168,76,.75)',background:composerDice?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(composerDice?PF.gold2:'rgba(201,168,76,.4)')}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                  </button>
+                </>)}
+              </div>
               {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
@@ -13126,7 +13167,7 @@ Hard requirements:
           tells the user what a swipe does in the current mode: Lite → Surprise,
           Advanced → Next. Only rendered when immersive; occupies the letterbox
           area where INSPIRED BY used to be. Swipe flash still fires below. */}
-      {immersive && ((viewMode!=='image' && !liteImageMode && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)))) || (basicMode && liteImageMode && chords.length>0)) && (
+      {immersive && ((viewMode!=='image' && !liteImageMode && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)))) || (basicMode && liteImageMode && chords.length>0) || (!basicMode && viewMode==='image' && composerDice && !!imgComposer && chords.length>0)) && (
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
           {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
         </div>
@@ -13136,7 +13177,7 @@ Hard requirements:
           recognised swipe-up gesture; effectiveStyle is read at render time so
           the label always reflects the newly-picked artist. */}
       {immersive && _swipeFlashKey && (()=>{
-        const _isImgFlash = basicMode && liteImageMode;
+        const _isImgFlash = (basicMode && liteImageMode) || (!basicMode && viewMode==='image');
         const _fKey = _isImgFlash ? ('c-'+(imgComposer||'scan')) : (effectiveStyle || 'mosaic');
         const _fBare = _isImgFlash ? !imgComposer : (_fKey === 'mosaic' || _fKey === 'notes' || _fKey === 'raffel');
         const _fLabel = _isImgFlash ? (imgComposer ? COMPOSER_INSPIRED[imgComposer] : 'Scan')
@@ -13157,7 +13198,7 @@ Hard requirements:
         onTouchStart={e=>{
           // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
           // is bound to the image — no next style to swipe to). Ignore multi-touch.
-          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode)) || (liteImageMode&&!basicMode)) return;
+          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer)) || (liteImageMode&&!basicMode)) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
@@ -13167,7 +13208,7 @@ Hard requirements:
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
-          if(!immersive || viewMode==='image' || liteImageMode) return;
+          if(!immersive || (viewMode==='image' && !(!basicMode&&composerDice&&imgComposer)) || liteImageMode) return;
           const s = _swipeStartRef.current; if(!s) return;
           const tt = e.touches[0]; if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
@@ -13176,7 +13217,7 @@ Hard requirements:
           }
         }}
         onTouchEnd={e=>{
-          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode)) || (liteImageMode&&!basicMode)) return;
+          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer)) || (liteImageMode&&!basicMode)) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
@@ -13199,6 +13240,8 @@ Hard requirements:
               if(basicMode){
                 if(liteImageMode){ _liteImgSurprise(); }
                 else { basicSurprise(); }
+              } else if(viewMode==='image'){
+                if(composerDice && imgComposer && !working && !busy && !recording) _composerRoll();
               } else if(randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)){
                 // Advanced FS swipe mirrors the normal-screen NEXT button
                 // exactly: it only fires when dice (shuffle) is ON *and* the
@@ -13326,13 +13369,15 @@ Hard requirements:
           // can manually jump within an auto-shuffle sequence. Same in normal.
           const canRollNextFs = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
           const showNextFs = randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image' && canRollNextFs;
+          // Composer dice in Image mode — same NEXT, rolls a composer instead of an artist.
+          const showNextComposerFs = viewMode==='image' && composerDice && !!imgComposer && imgPlayMode==='scan' && chords.length>0 && !anim && !working && !busy && !recording;
           const showSlideFs = playing && randomMode && (effectiveStyle||shuffleStyle) && chords.length>0 && viewMode!=='image';
           const showPaletteFs = chords.length>0 && (disp>0 || playing || holdPaused);
           // VARY in fullscreen — mood + mood-from-image pieces only (same gate as
           // the dock chip); fullscreen CTAs hide instead of disabling, so it only
           // renders when actually actionable.
           const showVaryFs = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && varySource && chords.length>0 && !(composeMode||micPainting||micListening||recording||working));
-          if(!exportReadyFs && !showNextFs && !showPaletteFs && !showVaryFs && !(showSlideFs && !immersive)) return null;
+          if(!exportReadyFs && !showNextFs && !showNextComposerFs && !showPaletteFs && !showVaryFs && !(showSlideFs && !immersive)) return null;
           return (
             <div className="pf-fs-controls" style={{position:'fixed',zIndex:10000,display:'flex',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease',...(immersive?{
                 top:'50%',
@@ -13366,6 +13411,12 @@ Hard requirements:
               {isDesktop && showNextFs && (
                 <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); } wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
+                  next ›
+                </button>
+              )}
+              {isDesktop && showNextComposerFs && (
+                <button onClick={(e)=>{ e.stopPropagation(); _composerRoll(); wakeControls(); }} className="pf-lift" aria-label="next composer"
+                  style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)'}}>
                   next ›
                 </button>
               )}
