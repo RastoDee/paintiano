@@ -7854,6 +7854,22 @@ Hard requirements:
     // palette/mode change keeps the same order and resumes seamlessly.
     const _dirChanged = (pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir) || _composerNextRef.current;
     _composerNextRef.current=false;
+    // COMPOSER change: the pieces differ in length and density, so keeping the
+    // same event INDEX jumps the progress bar (Rachmaninov at 27% → Bach at 18%
+    // → Debussy at 88%). Map the position by TIME FRACTION instead: where we are
+    // in the old piece (0..1) → the event nearest that fraction in the new one.
+    const _prevC = pixelRef.current.lastComposer;
+    pixelRef.current.lastComposer = imgComposer||'scan';
+    const _compChanged = _prevC !== undefined && _prevC !== (imgComposer||'scan');
+    const _mapIdx = (oldArr, oldIdx, newArr)=>{
+      if(!oldArr||!oldArr.length||!newArr||!newArr.length) return 0;
+      const _tot=(arr)=>{ let m=0; for(const e of arr){ const d=(e.n&&e.n[0]&&e.n[0].durMs)||0; m=Math.max(m,(e.startMs||0)+d); } return m||1; };
+      const oi=Math.max(0,Math.min(oldIdx|0, oldArr.length-1));
+      const f=Math.max(0,Math.min(1,(oldArr[oi].startMs||0)/_tot(oldArr)));
+      const target=f*_tot(newArr);
+      let best=0, bd=Infinity; for(let k=0;k<newArr.length;k++){ const dd=Math.abs((newArr[k].startMs||0)-target); if(dd<bd){bd=dd;best=k;} }
+      return best;
+    };
     pixelRef.current.lastDir=imgDir;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
@@ -7922,6 +7938,15 @@ Hard requirements:
       // re-arm it: restart from the current position. _melodyTogglePlayingRef is
       // set true by the chip handler only when it flips melody during playback, so
       // a plain colour change still swaps seamlessly without a restart.
+      else if(_compChanged){
+        // new composer mid-piece: continue at the same POINT IN TIME, not the same index
+        const keep=_mapIdx(chordsRef.current, dispRef.current||0, evts);
+        setChords(evts);chordsRef.current=evts;
+        setDisp(keep);
+        resumeFromRef.current=keep;
+        setStamp(s=>s+1);
+        try{ startPlayRef.current?.({melodyRearm:true}); }catch(_){}
+      }
       else if(_melodyTogglePlayingRef.current){
         _melodyTogglePlayingRef.current=false;
         const keep=Math.min(dispRef.current||0, evts.length);
@@ -7942,7 +7967,7 @@ Hard requirements:
       // restart playback (still paused) and don't reset disp to the end.
       // EXCEPT a direction change re-orders the scan — keeping the old position
       // would resume on an unrelated cell, so reset to the top.
-      const keep=_dirChanged ? 0 : Math.min(dispRef.current||0, evts.length);
+      const keep=_dirChanged ? 0 : (_compChanged ? _mapIdx(chordsRef.current, dispRef.current||0, evts) : Math.min(dispRef.current||0, evts.length));
       setChords(evts);chordsRef.current=evts;
       setDisp(keep);setStamp(s=>s+1);
       resumeFromRef.current=keep;
