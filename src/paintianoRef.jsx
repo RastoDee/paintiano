@@ -27427,8 +27427,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // ADVANCED composer dice — mirror of the artists' 🎲: ON rolls a different
   // composer at once; NEXT (panel, fullscreen button, fullscreen swipe-up)
   // rolls again. Bag draw: every enabled, unlocked composer once before any
-  // repeat; never the one currently playing. A roll restarts the piece from
-  // the top (a new composer is a new piece, not a texture swap).
+  // repeat; never the one currently playing. The piece continues from where it
+  // is in the new voice — same seamless swap as Lite's Surprise.
   const [composerDice, setComposerDice] = useState(false);
   const composerBagRef = useRef([]);
   const composerBagKeyRef = useRef('');
@@ -27445,7 +27445,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(composerBagRef.current[0]===imgComposerRef.current && composerBagRef.current.length>1){ const t2=composerBagRef.current[0]; composerBagRef.current[0]=composerBagRef.current[1]; composerBagRef.current[1]=t2; }
     const c=composerBagRef.current.shift();
     if(!c || c===imgComposerRef.current) return false;
-    _composerNextRef.current=true;
+    // No restart flag: like Lite's Surprise, the piece keeps its position and the
+    // new composer takes over seamlessly (the recompose effect swaps chords live).
     _lastComposerRef.current=c; imgComposerRef.current=c; setImgComposer(c);
     try{ window.posthog && window.posthog.capture('composer_dice_roll',{composer:c}); }catch(_){}
     return true;
