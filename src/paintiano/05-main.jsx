@@ -2183,19 +2183,35 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
   const _painterLabel = (k)=>{ if(!k||k==='mosaic') return t('mosaicStyle'); if(k==='notes') return t('notesStyle'); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
   const _stageNames = (kind)=> kind==='art'
-    ? [effectiveStyle, ...painterStage].map(_painterLabel).join(' × ')
+    ? _jamStage().map(_painterLabel).join(' × ')
     : [imgComposer, ...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k).join(' ↔ ');
   // the artists' shuffle, switched off the same way its own button does it
   const _shuffleOff = ()=>{ if(!randomModeRef.current) return; setRandomMode(false); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setMosaicShuffleLock(false); if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); };
   const _toggleJam = ()=>{ if(working||anim) return; setJamOn(v=>{ const nx=!v; if(nx) _shuffleOff(); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:nx}); }catch(_){} return nx; }); };
   const _toggleCr = ()=>{ if(working||anim) return; setCrOn(v=>{ const nx=!v; if(nx) setComposerDice(false); try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:nx}); }catch(_){} return nx; }); };
   // chip taps while JAM / C&R is on: add · remove · (first slot) promote the next
+  // The stage holds only EXPLICIT members: slot 1 = the selected artist (if
+  // any), then painterStage. Mosaic is a chip like any other ('mosaic' key) —
+  // an empty selection is NOT an implicit mosaic on stage.
+  const _jamStage = ()=> (style!==null ? [style] : []).concat(painterStage);
   const _jamTap = (k)=>{
-    const cur=[style,...painterStage]; const i=cur.indexOf(k);
-    if(i===0){ if(painterStage.length){ const nx=painterStage[0]; setPainterStage(p=>p.slice(1)); setStyleTo(nx); } return; }
-    if(i>0){ setPainterStage(p=>p.filter((_,j)=>j!==i-1)); return; }
+    const cur=_jamStage(); const i=cur.indexOf(k);
+    if(i>=0){
+      if(style!==null && i===0){
+        // the selected artist leaves: the next one steps into the selection
+        const nx=painterStage[0];
+        if(nx===undefined) setStyleTo(null);
+        else if(nx==='mosaic') setStyleTo(null);          // mosaic stays an explicit stage member
+        else { setPainterStage(p=>p.slice(1)); setStyleTo(nx); }
+      } else {
+        const j = style!==null ? i-1 : i;
+        setPainterStage(p=>p.filter((_,q)=>q!==j));
+      }
+      return;
+    }
     if(cur.length>=STAGE_MAX) return;
     try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'jam',n:cur.length+1}); }catch(_){}
+    if(style===null && k!=='mosaic' && !painterStage.length){ setStyleTo(k); return; }   // first member = the normal selection
     setPainterStage(p=>[...p,k]);
   };
   const _crTap = (k)=>{
@@ -3523,7 +3539,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // JAM: extra painters on the stage → the whole canvas is a layered render,
     // repainted per frame (no append / substrate caching), throttled like overlays.
     const _jamExtra = painterStageRef.current;
-    const _jamKeys = (_jamExtra && _jamExtra.length && viewMode!=='image' && !basicModeRef.current) ? [style, ..._jamExtra] : null;
+    const _jamAll = (styleRef.current!==null ? [styleRef.current] : []).concat(_jamExtra||[]);
+    const _jamKeys = (_jamAll.length>=2 && viewMode!=='image' && !basicModeRef.current) ? _jamAll : null;
     const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+') : '';
     const canAppend =
       !_jamKeys &&
@@ -10702,7 +10719,8 @@ Hard requirements:
         // If the overlay paints no ground (e.g. dark Kandinsky variants), the
         // cells are visible content and stay. Probe-based, so it is correct
         // per style AND per variant, with no hand-maintained list.
-        const _jamX = (painterStageRef.current && painterStageRef.current.length && viewMode!=='image' && !basicModeRef.current) ? [style, ...painterStageRef.current] : null;
+        const _jamAllX = (style!==null ? [style] : []).concat(painterStageRef.current||[]);
+        const _jamX = (_jamAllX.length>=2 && viewMode!=='image' && !basicModeRef.current) ? _jamAllX : null;
         if(_jamX){
           // JAM export: the same layered render as the live canvas, at export resolution.
           _jamPaint(hctx, CW, CH, N, BW, BH, grid, chords, chords.length, gc, _jamX, pollockSessionSeed, mode, paintPhase, !!noBg, _isGallery?1:SCALE);
@@ -12758,7 +12776,8 @@ Hard requirements:
               // the artist pairs, a shuffle-hit shows the white frame (no gold
               // glow); a manual pick shows the gold glow. Splitting these keeps
               // the Mosaic family visually consistent with the other chips.
-              const mosaicManual = style===null && !shuffleStyle;
+              const _mosIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf('mosaic') : -1;
+              const mosaicManual = (style===null && !shuffleStyle && !(jamOn && painterStage.length)) || _mosIx>=0;
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes') ? 'notes'
                             : (shuffleStyle==='oneM') ? 'oneM'
@@ -12785,7 +12804,7 @@ Hard requirements:
                 });
                 return;
               }
-              if(jamOn){ _jamTap(null); return; }
+              if(jamOn){ _jamTap('mosaic'); return; }
               if(style!==null){ selectStyle(style); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
@@ -12803,7 +12822,7 @@ Hard requirements:
                 if(!notesMode){ setNotesMode(true); }
                 else { setNotesMode(false); }
               }
-            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{subLabel}</button>
+            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),position:'relative'}}>{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
             ); })()}
             {/* ── Per-artist chips (un-paired). Every artist is its own toggle.
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
@@ -12814,7 +12833,7 @@ Hard requirements:
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
               const locked = styleIsLocked(k);            // Pro-only & user is Free
-              const _stIx = (jamOn && !cockpitEdit && painterStage.length) ? [style,...painterStage].indexOf(k) : -1;
+              const _stIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf(k) : -1;
               const isOn = (!cockpitEdit) && (style===k || _stIx>0);
               const inSet = setupArtists.includes(k);
               const shufHit = (!cockpitEdit) && (shuffleStyle===k);
