@@ -897,6 +897,98 @@ const TxIcon = ({n, s=15}) => {
   }
 };
 
+// ═══ ENSEMBLE · JAM (painters) ═════════════════════════════════════════════
+// 2–5 painters on ONE canvas. The piece is split by register: every chord's
+// mean pitch is ranked and the ranking cut into N equal bands — slot 1 paints
+// the bass band, the last slot the treble. Each painter then renders ONLY its
+// own chords in its own style, on top of the previous one. Painter 1 owns the
+// ground; every later painter has its full-canvas ground fills stripped (the
+// same fillRect trick the transparent export uses), so only its marks land.
+const _JAM_FULL = new Set(['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM','pollock']);
+const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
+const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
+const ENSEMBLE_I18N = {
+  EN:{title:'Ensemble',desc:'Several painters on one canvas (Jam) and composers trading phrases (Call & response). Adds a Stage with + above the artist and composer pickers.',pickPainter:'pick another painter',pickComposer:'pick another composer',calls:'calls',answers:'answers',addTip:'add to the stage',removeTip:'remove',regs:['bass','low','mid','high','treble']},
+  SK:{title:'Ensemble',desc:'Viac maliarov na jednom plátne (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Pridá Pódium s + nad výber umelcov a skladateľov.',pickPainter:'vyber ďalšieho maliara',pickComposer:'vyber ďalšieho skladateľa',calls:'volá',answers:'odpovedá',addTip:'pridať na pódium',removeTip:'odobrať',regs:['bas','nízke','stred','vysoké','výšky']},
+  DE:{title:'Ensemble',desc:'Mehrere Maler auf einer Leinwand (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Fügt eine Bühne mit + über den Künstler- und Komponistenwählern hinzu.',pickPainter:'wähle einen weiteren Maler',pickComposer:'wähle einen weiteren Komponisten',calls:'ruft',answers:'antwortet',addTip:'auf die Bühne',removeTip:'entfernen',regs:['Bass','tief','Mitte','hoch','Höhen']},
+  FR:{title:'Ensemble',desc:'Plusieurs peintres sur une toile (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Ajoute une Scène avec + au-dessus des sélecteurs d’artistes et de compositeurs.',pickPainter:'choisis un autre peintre',pickComposer:'choisis un autre compositeur',calls:'appelle',answers:'répond',addTip:'ajouter à la scène',removeTip:'retirer',regs:['basse','grave','médium','aigu','aigus']},
+  ES:{title:'Ensemble',desc:'Varios pintores en un lienzo (Jam) y compositores que se intercambian frases (Call & response). Añade un Escenario con + sobre los selectores de artistas y compositores.',pickPainter:'elige otro pintor',pickComposer:'elige otro compositor',calls:'llama',answers:'responde',addTip:'añadir al escenario',removeTip:'quitar',regs:['bajo','grave','medio','agudo','agudos']},
+  PT:{title:'Ensemble',desc:'Vários pintores numa tela (Jam) e compositores a trocar frases (Call & response). Adiciona um Palco com + acima dos seletores de artistas e compositores.',pickPainter:'escolhe outro pintor',pickComposer:'escolhe outro compositor',calls:'chama',answers:'responde',addTip:'adicionar ao palco',removeTip:'remover',regs:['baixo','grave','médio','agudo','agudos']},
+  zh:{title:'合奏',desc:'多位画家同画一张画布（Jam），作曲家轮流接句（Call & response）。在艺术家和作曲家选择器上方加入带 + 的舞台。',pickPainter:'再选一位画家',pickComposer:'再选一位作曲家',calls:'呼',answers:'应',addTip:'加入舞台',removeTip:'移除',regs:['低音','中低','中音','中高','高音']},
+  zhTW:{title:'合奏',desc:'多位畫家同畫一張畫布（Jam），作曲家輪流接句（Call & response）。在藝術家和作曲家選擇器上方加入帶 + 的舞台。',pickPainter:'再選一位畫家',pickComposer:'再選一位作曲家',calls:'呼',answers:'應',addTip:'加入舞台',removeTip:'移除',regs:['低音','中低','中音','中高','高音']},
+  ja:{title:'アンサンブル',desc:'複数の画家がひとつのキャンバスに（Jam）、作曲家がフレーズを掛け合う（Call & response）。アーティストと作曲家の選択の上に + 付きのステージを追加。',pickPainter:'もう一人の画家を選ぶ',pickComposer:'もう一人の作曲家を選ぶ',calls:'呼ぶ',answers:'応える',addTip:'ステージに追加',removeTip:'外す',regs:['低音','中低','中音','中高','高音']},
+};
+const _REG_PICK = {2:[0,4],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4]};
+let _jamCache = { src:null, n:0, parts:null };
+function _jamPartition(chords, n){
+  if(_jamCache.src===chords && _jamCache.n===n && _jamCache.parts) return _jamCache.parts;
+  const pitch = chords.map(c=>{ const ns=(c&&c.n)||[]; if(!ns.length) return 60; let t=0; for(const x of ns) t+=(x&&x.m!=null)?x.m:(typeof x==='number'?x:60); return t/ns.length; });
+  const order = pitch.map((_,i)=>i).sort((a,b)=>(pitch[a]-pitch[b])||(a-b));
+  const band = new Array(chords.length);
+  for(let r=0;r<order.length;r++) band[order[r]] = Math.min(n-1, Math.floor(r*n/Math.max(1,order.length)));
+  const parts = Array.from({length:n},()=>({chords:[],pos:[]}));
+  for(let i=0;i<chords.length;i++){ const b=band[i]; parts[b].chords.push(chords[i]); parts[b].pos.push(i); }
+  _jamCache = { src:chords, n, parts };
+  return parts;
+}
+// how many of this painter's chords fall inside the global paint horizon `lim`
+function _jamLim(part, lim){ const pos=part.pos; let lo=0,hi=pos.length; while(lo<hi){ const m=(lo+hi)>>1; if(pos[m]<lim) lo=m+1; else hi=m; } return lo; }
+function _jamOverlay(k, ctx, CW, CH, ch, lim, gc, seed, mode, ph){
+  switch(k){
+    case 'pollock':      return drawPollockOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'picasso':      return drawPicassoOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'kusama':       return drawKusamaOverlay(ctx,CW,CH,ch,lim,gc,seed,ph);
+    case 'miro':         return drawMiroOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'kandinsky':    return drawKandinskyOverlay(ctx,CW,CH,lim,seed,mode,gc,ph,ch.length,ch);
+    case 'rothko':       return drawRothkoOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'matisse':      return drawMatisseOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'mondrian':     return drawMondrianOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'bauhaus':      return drawBauhausOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'bulge':        return drawBulgeOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'arcs':         return drawArcsOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'bloom':        return drawBloomOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'spiral':       return drawSpiralOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'gold':         return drawGoldOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'pop':          return drawPopOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'wave':         return drawWaveOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'mitchell':     return drawMitchellOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'monet':        return drawMonetOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'hokusai':      return drawHokusaiOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'raffel':       return drawRaffelOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'lichtenstein': return drawLichtensteinOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'klee':         return drawKleeOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'delaunay':     return drawDelaunayOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
+    case 'oneM':         return drawOneMOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,0);
+    default: return;
+  }
+}
+// Paints the whole jam into `ctx` (live canvas, raster export or the SVG shim —
+// all three expose fillRect, which is all the ground stripping needs).
+function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround){
+  const parts=_jamPartition(chords, keys.length);
+  if(!noGround){ ctx.fillStyle = keys[0]==='pollock' ? '#f2ede0' : '#04040a'; ctx.fillRect(0,0,CW,CH); }
+  keys.forEach((k,i)=>{
+    const part=parts[i]; const li=_jamLim(part, lim); if(li<=0) return;
+    _setArtistSeed((((seed>>>0) + i*1013)>>>0) || 1);
+    const strip = (i>0 || noGround);
+    const _of = ctx.fillRect;
+    if(strip){ ctx.fillRect = function(x,y,w,h){ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2) return; return _of.call(ctx,x,y,w,h); }; }
+    try{
+      if(!_JAM_FULL.has(k)){
+        for(let j=0;j<li;j++){
+          const chord=part.chords[j]; if(!chord) continue; _setCurE(chord._E);
+          const {n:notes,idx}=chord; const cell=grid.cells&&grid.cells[idx];
+          if(cell){ if(cell.segments) cell.segments.forEach(sg=>drawBlock(ctx,sg.x,sg.y,notes,gc,sg.w,sg.h,k)); else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,k); }
+          else { const si=idx%(N*N),col=si%N,row=Math.floor(si/N); drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,k); }
+        }
+      }
+      _setCurE(0.5);
+      if(k) _jamOverlay(k, ctx, CW, CH, part.chords, li, gc, seed, mode, ph);
+    } finally { if(strip){ ctx.fillRect=_of; } }
+  });
+  _setArtistSeed(seed);
+}
+
 export default function Paintiano() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
@@ -2134,6 +2226,65 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // variant), so re-landing on the same address looks identical.
   //  • shuffle (no manual artist): jump to a random artist AND a random style.
   //  • manual artist + dice: jump to a random style of that one artist.
+  // ═══ ENSEMBLE (opt-in, Pro) — Jam painters + Call & response composers ═══
+  // Stage = slot 1 (the normal single pick: `style` / `imgComposer`) plus up to
+  // four extra slots. Everything existing keeps working on slot 1; the extras
+  // only exist while the Setup toggle is on. Free: toggle shows a lock → paywall.
+  const [ensembleOn, setEnsembleOn] = useState(()=>{ try{ return localStorage.getItem('paintiano_setup_ensemble')==='1'; }catch(_){ return false; } });
+  useEffect(()=>{ try{ localStorage.setItem('paintiano_setup_ensemble', ensembleOn?'1':'0'); }catch(_){} },[ensembleOn]);
+  const ensembleActive = ensembleOn && proStatus!=='free';
+  const ensembleOnRef = useRef(false); useEffect(()=>{ ensembleOnRef.current = ensembleActive; },[ensembleActive]);
+  const [painterStage, setPainterStage] = useState([]);   // extra painters, slots 2..5 (slot 1 = style)
+  const painterStageRef = useRef([]); useEffect(()=>{ painterStageRef.current = painterStage; },[painterStage]);
+  const [composerStage, setComposerStage] = useState([]); // extra composers, slots 2..5 (slot 1 = imgComposer)
+  const composerStageRef = useRef([]); useEffect(()=>{ composerStageRef.current = composerStage; },[composerStage]);
+  const [stageArm, setStageArm] = useState(null);          // 'art' | 'comp' | null — "+" is waiting for a pick
+  useEffect(()=>{ if(!ensembleActive){ setPainterStage([]); setComposerStage([]); setStageArm(null); } },[ensembleActive]);
+  const STAGE_MAX = 5;
+  const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
+  const _painterLabel = (k)=>{ if(!k||k==='mosaic') return t('mosaicStyle'); if(k==='notes') return t('notesStyle'); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
+  const _stageNames = (kind)=> kind==='art'
+    ? [effectiveStyle, ...painterStage].map(_painterLabel).join(' × ')
+    : [imgComposer, ...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k).join(' ↔ ');
+  const _stageAddPainter = (k)=>{ setStageArm(null); setPainterStage(prev=>{ const cur=[style,...prev]; if(cur.length>=STAGE_MAX || cur.includes(k)) return prev; try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'jam',n:cur.length+1}); }catch(_){} return [...prev,k]; }); };
+  const _stageAddComposer = (k)=>{ setStageArm(null); setComposerStage(prev=>{ const cur=[imgComposerRef.current,...prev]; if(cur.length>=STAGE_MAX || cur.includes(k)) return prev; try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'cr',n:cur.length+1}); }catch(_){} return [...prev,k]; }); };
+  const _stageRemovePainter = (i)=>{ if(i===0){ const nx=painterStage[0]; setPainterStage(prev=>prev.slice(1)); if(nx!==undefined) setStyleTo(nx); } else setPainterStage(prev=>prev.filter((_,j)=>j!==i-1)); };
+  const _stageRemoveComposer = (i)=>{ if(i===0){ const nx=composerStage[0]; setComposerStage(prev=>prev.slice(1)); if(nx){ _lastComposerRef.current=nx; imgComposerRef.current=nx; setImgComposer(nx); } } else setComposerStage(prev=>prev.filter((_,j)=>j!==i-1)); };
+  // dice: the whole stage re-rolls (slot 1 by the existing bags, extras fresh)
+  const _stageRerollPainters = ()=>{ const n=painterStageRef.current.length; if(!n) return; const pool=ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k) && k!==styleRef.current); for(let i=pool.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t2=pool[i];pool[i]=pool[j];pool[j]=t2; } setPainterStage(pool.slice(0,n)); };
+  const _renderStage = (kind)=>{
+    if(!ensembleActive || cockpitEdit || basicMode) return null;
+    const isArt = kind==='art';
+    if(!isArt && !imgComposer) return null;
+    const slots = isArt ? [effectiveStyle, ...painterStage] : [imgComposer, ...composerStage];
+    const n = slots.length, armed = stageArm===kind;
+    const regIx = _REG_PICK[n] || [];
+    const regs = _ensT('regs');
+    const liveWho = (!isArt && n>1 && (playing||holdPaused) && chords.length) ? ((chords[Math.max(0,Math.min(disp-1,chords.length-1))]||{})._who||null) : null;
+    const remove = (i)=> isArt ? _stageRemovePainter(i) : _stageRemoveComposer(i);
+    return (
+      <div className="pf-stage-bar" style={{margin:'4px 0 8px'}}>
+        <div style={{display:'flex',gap:6,alignItems:'stretch',padding:7,borderRadius:14,background:'linear-gradient(180deg,rgba(201,168,76,.10),rgba(201,168,76,.03))',border:'1px solid rgba(201,168,76,.28)',minHeight:44}}>
+          {slots.map((k,i)=>{
+            const live = !!liveWho && k===liveWho;
+            const name = isArt ? _painterLabel(k) : (_COMP_SHORT[k]||k);
+            const sub = n>1 ? (isArt ? (regs[regIx[i]]||'') : (i===0 ? '1 · '+_ensT('calls') : i===1 ? '2 · '+_ensT('answers') : String(i+1))) : '';
+            return (
+              <div key={String(k)+i} style={{flex:1,minWidth:0,position:'relative',borderRadius:11,border:'1px solid '+(live?'rgba(226,196,119,1)':'rgba(226,196,119,.5)'),background:'rgba(26,25,39,.9)',padding:'6px 5px 4px',textAlign:'center',boxShadow:live?'0 0 14px rgba(226,196,119,.45)':'none',transition:'box-shadow .2s, border-color .2s'}}>
+                <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.05em',textTransform:'uppercase',color:live?'#fff':'rgba(244,230,192,.95)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{name}</div>
+                {sub && (<div style={{fontSize:(.38*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase',color:PF.muted,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{sub}</div>)}
+                {n>1 && (<button onClick={(e)=>{ e.stopPropagation(); remove(i); }} aria-label={_ensT('removeTip')} title={_ensT('removeTip')} style={{position:'absolute',top:-7,right:-7,width:17,height:17,borderRadius:'50%',background:'#2a2838',border:'1px solid rgba(255,255,255,.18)',color:'#ccc',fontSize:11,lineHeight:'15px',padding:0,cursor:'pointer',fontFamily:'inherit'}}>×</button>)}
+              </div>
+            );
+          })}
+          {n<STAGE_MAX && (
+            <button onClick={()=>{ if(working) return; setStageArm(armed?null:kind); }} aria-pressed={armed} title={_ensT('addTip')} aria-label={_ensT('addTip')} style={{flex:'0 0 42px',borderRadius:11,border:'1px '+(armed?'solid rgba(226,196,119,1)':'dashed rgba(201,168,76,.45)'),background:armed?'rgba(201,168,76,.14)':'transparent',color:'rgba(226,196,119,.95)',fontSize:20,fontWeight:300,lineHeight:1,cursor:'pointer',fontFamily:'inherit',padding:0,animation:armed?'pfStagePulse 1.2s infinite':'none'}}>+</button>
+          )}
+        </div>
+        {armed && (<div style={{fontSize:(.46*effScale)+'rem',color:PF.muted,textAlign:'center',marginTop:4,fontStyle:'italic'}}>{isArt ? _ensT('pickPainter') : _ensT('pickComposer')}</div>)}
+      </div>
+    );
+  };
   const _diceRoll = () => {
     const N = _effVariants();
     if(style){
@@ -2169,6 +2320,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       setShuffleArtistIndex(next.a|0);
       setShufVariant(()=> next.v|0);
     }
+    _stageRerollPainters();
   };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
@@ -2907,7 +3059,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // button rolls a different composer (Glass/Satie/Chopin/Scan, never the
   // current one) on the SAME picture — mirror of the music-side surprise.
   const _liteResetComposer = useCallback(()=>{
-    imgComposerRef.current=null; setImgComposer(null);
+    imgComposerRef.current=null; setImgComposer(null); setComposerStage([]);
   },[]);
   const _liteRollComposer = useCallback(()=>{
     const _en=['glass','satie','chopin','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'].filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
@@ -2916,6 +3068,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _dc = (proStatus==='free' && a.includes(composerOfDay)) ? composerOfDay : null;
     const c = (_dc && Math.random()<0.4) ? _dc : a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
+    // Ensemble on (Pro): now and then Surprise seats a second composer — a duo
+    // trading phrases on the same picture. Off → always a soloist.
+    if(ensembleOnRef.current && c && Math.random()<0.25){ const o=_en.filter(k=>k!==c); setComposerStage(o.length?[o[(Math.random()*o.length)|0]]:[]); }
+    else setComposerStage([]);
   },[setupComposers, composerIsLocked, isDailyComposer, composerOfDay, proStatus]);
   // ADVANCED composer dice — mirror of the artists' 🎲: ON rolls a different
   // composer at once; NEXT (panel, fullscreen button, fullscreen swipe-up)
@@ -2941,11 +3097,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // No restart flag: like Lite's Surprise, the piece keeps its position and the
     // new composer takes over seamlessly (the recompose effect swaps chords live).
     _lastComposerRef.current=c; imgComposerRef.current=c; setImgComposer(c);
+    // the rest of the stage re-rolls with it (fresh, distinct, never the soloist)
+    { const n=composerStageRef.current.length; if(n){ const px=pool.filter(k=>k!==c); for(let i=px.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t2=px[i];px[i]=px[j];px[j]=t2; } setComposerStage(px.slice(0,n)); } }
     try{ window.posthog && window.posthog.capture('composer_dice_roll',{composer:c}); }catch(_){}
     return true;
   },[setupComposers, isDailyComposer, composerIsLocked]);
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
+  // FULLSCREEN SCROLL LOCK — on iOS the swipe-up gesture also scrolled the whole
+  // page (canvas, hint and the ⤢ button slid away). In immersive mode lock the
+  // document: no overflow, no touch-driven scrolling, no rubber-banding. The
+  // stage itself gets touch-action:none so the gesture reaches our handlers.
+  useEffect(()=>{
+    if(typeof document==='undefined') return;
+    const de=document.documentElement, b=document.body;
+    if(!immersive) return;
+    const prev={deO:de.style.overflow, bO:b.style.overflow, bT:b.style.touchAction, bOb:b.style.overscrollBehavior, deOb:de.style.overscrollBehavior};
+    de.style.overflow='hidden'; b.style.overflow='hidden'; b.style.touchAction='none'; b.style.overscrollBehavior='none'; de.style.overscrollBehavior='none';
+    try{ window.scrollTo(0,0); }catch(_){}
+    return ()=>{ de.style.overflow=prev.deO; b.style.overflow=prev.bO; b.style.touchAction=prev.bT; b.style.overscrollBehavior=prev.bOb; de.style.overscrollBehavior=prev.deOb; };
+  },[immersive]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
   // a mosaic/style); 'compose' = AI writes a free-standing piece from the image
   // material (Pro; canvas stays the original image). The transport Play/Pause/REC
@@ -3417,7 +3588,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.disp = lim;
       return;
     }
+    // JAM: extra painters on the stage → the whole canvas is a layered render,
+    // repainted per frame (no append / substrate caching), throttled like overlays.
+    const _jamExtra = painterStageRef.current;
+    const _jamKeys = (_jamExtra && _jamExtra.length && viewMode!=='image' && !basicModeRef.current) ? [style, ..._jamExtra] : null;
+    const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+') : '';
     const canAppend =
+      !_jamKeys &&
       (playing||anim) &&
       prev.chords===chords &&
       prev.grid===grid &&
@@ -3448,15 +3625,25 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // appears to do nothing during playback.
       const seedChanged = prev.pollockSessionSeed !== pollockSessionSeed
         || prev.phaseIndex !== paintPhase
-        || prev.shuffleArtistIndex !== shuffleArtistIndex;
-      if(isOverlayStyle && playing && !seedChanged && lim<chords.length && (nowMs-lastOverlayPaintRef.current)<110){
+        || prev.shuffleArtistIndex !== shuffleArtistIndex
+        || (prev.jamSig||'') !== _jamSig;
+      if((isOverlayStyle||_jamKeys) && playing && !seedChanged && lim<chords.length && (nowMs-lastOverlayPaintRef.current)<110){
         // Skip this overlay repaint — keep last frame on canvas. Record disp so
         // the next allowed repaint covers the gap.
         prev.disp = lim; prev.pending = pending;
-        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex};
+        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
       lastOverlayPaintRef.current = nowMs;
+      if(_jamKeys && lim>0){
+        _setArtistSeed(pollockSessionSeed);
+        _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _ensureEnergies(chords);
+        ctx.clearRect(0,0,CW,CH);
+        _jamPaint(ctx, CW, CH, N, BW, BH, grid, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false);
+        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
+        return;
+      }
       if(isOverlayStyle && lim>0){
         // ── CACHED-SUBSTRATE PATH ──
         // Build (or incrementally extend) the offscreen substrate, then blit it
@@ -3648,7 +3835,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -7755,7 +7942,10 @@ Hard requirements:
             : startMode==='kontra' ? KONTRA_HUE
             : COF;                                     // harmony & bw both read via COF
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
-          const evts=(imgComposerRef.current==='glass')
+          const _crKeys0 = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+          const evts=(_crKeys0.length>=2)
+            ? composeImageCallResponse(px,nc,nr,hueTable,startMode,imgDirRef.current,_crKeys0)
+            : (imgComposerRef.current==='glass')
             ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='satie')
             ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current)
@@ -7846,7 +8036,7 @@ Hard requirements:
     if(restoringRef.current)return; // multi-draft restore in progress — keep the stashed chords/disp
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const sig = mode + '|' + imgDir + '|c:' + (imgComposer||'scan') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    const sig = mode + '|' + imgDir + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
@@ -7859,8 +8049,9 @@ Hard requirements:
     // → Debussy at 88%). Map the position by TIME FRACTION instead: where we are
     // in the old piece (0..1) → the event nearest that fraction in the new one.
     const _prevC = pixelRef.current.lastComposer;
-    pixelRef.current.lastComposer = imgComposer||'scan';
-    const _compChanged = _prevC !== undefined && _prevC !== (imgComposer||'scan');
+    const _compKey = (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '');
+    pixelRef.current.lastComposer = _compKey;
+    const _compChanged = _prevC !== undefined && _prevC !== _compKey;
     const _mapIdx = (oldArr, oldIdx, newArr)=>{
       if(!oldArr||!oldArr.length||!newArr||!newArr.length) return 0;
       const _tot=(arr)=>{ let m=0; for(const e of arr){ const d=(e.n&&e.n[0]&&e.n[0].durMs)||0; m=Math.max(m,(e.startMs||0)+d); } return m||1; };
@@ -7884,7 +8075,10 @@ Hard requirements:
       : COF;
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     try{ _setImgForcedBands((pixelRef.current&&pixelRef.current.mosaicBands)||0); }catch(_){}
-    const _evtsLit = (imgComposerRef.current==='glass')
+    const _crKeys = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+    const _evtsLit = (_crKeys.length>=2)
+      ? composeImageCallResponse(px,nc,nr,hueTable,mode,imgDirRef.current,_crKeys)
+      : (imgComposerRef.current==='glass')
       ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current)
       : (imgComposerRef.current==='satie')
       ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current)
@@ -7985,7 +8179,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
@@ -10576,6 +10770,11 @@ Hard requirements:
         // If the overlay paints no ground (e.g. dark Kandinsky variants), the
         // cells are visible content and stay. Probe-based, so it is correct
         // per style AND per variant, with no hand-maintained list.
+        const _jamX = (painterStageRef.current && painterStageRef.current.length && viewMode!=='image' && !basicModeRef.current) ? [style, ...painterStageRef.current] : null;
+        if(_jamX){
+          // JAM export: the same layered render as the live canvas, at export resolution.
+          _jamPaint(hctx, CW, CH, N, BW, BH, grid, chords, chords.length, gc, _jamX, pollockSessionSeed, mode, paintPhase, !!noBg);
+        } else {
         let _cellsHidden = false;
         if(noBg){
           const _probe = createSvgCtx(CW, CH);
@@ -10593,6 +10792,7 @@ Hard requirements:
         });
         _setCurE(0.5);
         _runOverlays(hctx);
+        }
       }
       _setNoBg(false);
       // ── GALLERY (vector SVG) export: branch out here, before all the
@@ -10749,7 +10949,9 @@ Hard requirements:
           : null;
         // raffel is the author's ORIGINAL — never "inspired by", bare name only.
         const _inspBare = (_inspKey==='mosaic' || _inspKey==='notes' || _inspKey==='raffel');
-        const _inspLabel = _inspKey
+        const _inspLabel = (_inspKey && painterStage.length)
+          ? _stageNames('art')
+          : _inspKey
           ? (_inspBare ? STYLE_INSPIRED[_inspKey] : `inspired by ${STYLE_INSPIRED[_inspKey]}`)
           : null;
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
@@ -12219,7 +12421,7 @@ Hard requirements:
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _stageNames('art') : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
             notes (bare grid with note labels) — get no "inspired by". One Million
@@ -12230,7 +12432,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _stageNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
         )}
         </>)}
         {(stripOpen || isDesktop) && (
@@ -12518,6 +12720,7 @@ Hard requirements:
                   </button>
                 </>)}
               </div>
+              {_renderStage('comp')}
               {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
@@ -12530,7 +12733,7 @@ Hard requirements:
                   const sel=imgComposer===c.k;
                   const locked=working;
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; if(stageArm==='comp'){ _stageAddComposer(c.k); return; } _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
                       style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}</button>
                   );
@@ -12563,6 +12766,7 @@ Hard requirements:
           )}
           {(loadedSource!=='image' || moodFromImg) && (
           <>
+          {_renderStage('art')}
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────
             // Chip count = Mosaic (if family selected) + visible pairs in
@@ -12648,6 +12852,7 @@ Hard requirements:
                 });
                 return;
               }
+              if(stageArm==='art'){ _stageAddPainter(null); return; }
               if(style!==null){ selectStyle(style); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
@@ -12685,6 +12890,7 @@ Hard requirements:
                   toggleArtSafe(k);
                   return;
                 }
+                if(stageArm==='art' && !locked){ _stageAddPainter(k); return; }
                 selectStyle(k);
               };
               return (
@@ -13226,11 +13432,11 @@ Hard requirements:
         return (
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
-            <div>{_fLabel}</div>
+            <div>{_isImgFlash ? (composerStage.length ? _stageNames('comp') : _fLabel) : (painterStage.length ? _stageNames('art') : _fLabel)}</div>
           </div>
         );
       })()}
-      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(_swipeStartRef.current) return; if(playing||immersive) wakeControls(); }}
         onTouchStart={e=>{
@@ -15066,6 +15272,19 @@ Hard requirements:
               {/* Tones — 3-chip row (chosen tones become available in the
                   cockpit; if only 1 is enabled, the cockpit hides the tone
                   section entirely). */}
+              {/* Ensemble — opt-in (Pro): Jam painters + Call & response composers.
+                  Default OFF; the Stage with + only appears while this is on. */}
+              <div className="pf-setup-ensemble" style={{marginBottom:18}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{_ensT('title')}{proStatus==='free' && (<span style={{marginLeft:6,fontSize:'.8em',opacity:.7}}>🔒</span>)}</div>
+                    <div style={{fontSize:(.52*effScale)+'rem',lineHeight:1.45,color:'rgba(230,222,196,.6)',marginTop:4}}>{_ensT('desc')}</div>
+                  </div>
+                  <button onClick={()=>{ if(proStatus==='free'){ try{ window.posthog && window.posthog.capture('ensemble_locked_tap'); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setEnsembleOn(v=>{ const nx=!v; try{ window.posthog && window.posthog.capture('ensemble_toggle',{on:nx}); }catch(_){} return nx; }); }} role="switch" aria-checked={ensembleActive} aria-label={_ensT('title')} style={{flex:'0 0 auto',width:46,height:26,borderRadius:13,border:'1px solid '+(ensembleActive?'rgba(226,196,119,.9)':'rgba(201,168,76,.35)'),background:ensembleActive?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.04)',position:'relative',cursor:'pointer',padding:0}}>
+                    <span style={{position:'absolute',top:3,left:ensembleActive?23:3,width:18,height:18,borderRadius:'50%',background:ensembleActive?'#1a1408':'rgba(201,168,76,.6)',transition:'left .18s'}}/>
+                  </button>
+                </div>
+              </div>
               <div className="pf-setup-tones">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{ts('setupTonesTitle',({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone')}</span>

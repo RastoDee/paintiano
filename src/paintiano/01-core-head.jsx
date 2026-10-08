@@ -45,6 +45,7 @@ const PF_STYLE = `
            orientation (which blew up the version footer on mobile-landscape).
            100% = no change to desktop; just disables automatic text scaling. */
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        @keyframes pfStagePulse { 0%,100% { box-shadow:0 0 0 0 rgba(226,196,119,.35);} 50% { box-shadow:0 0 0 6px rgba(226,196,119,0);} }
         @keyframes pf-fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:translateY(0);} }
         @keyframes pf-flip-nudge {
           0%,100% { opacity:.6; transform:scale(1); }

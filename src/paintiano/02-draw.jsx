@@ -17398,6 +17398,37 @@ function composeImageHisaishi(px,nc,nr,table,colorMode,dir){
   return evts;
 }
 
+// ── CALL & RESPONSE — an ensemble of 2–5 composers trading phrases on the
+// SAME picture. Every composer first writes the whole piece in their own voice
+// (their own engine, untouched). The relay then passes the floor along every
+// ~5 s phrase: composer k plays the slice of THEIR piece that sits at that
+// point of the form (by time fraction, so pieces of different lengths line
+// up), then the next composer answers from the same spot in theirs. Their own
+// tempo and note lengths are kept inside the window — nothing is stretched.
+// Total length = the first composer's piece. Every event is tagged `_who`
+// (composer key) so the stage/caption can light up who is playing right now.
+const COMPOSER_ENGINES={glass:composeImageGlass,satie:composeImageSatie,chopin:composeImageChopin,vine:composeImageVine,gershwin:composeImageGershwin,yiruma:composeImageYiruma,bach:composeImageBach,beethoven:composeImageBeethoven,debussy:composeImageDebussy,rachmaninov:composeImageRachmaninov,einaudi:composeImageEinaudi,hisaishi:composeImageHisaishi};
+const CALL_RESPONSE_PHRASE_MS=5000;
+function composeImageCallResponse(px,nc,nr,table,colorMode,dir,keys){
+  const ks=(keys||[]).filter(k=>COMPOSER_ENGINES[k]);
+  if(ks.length<2) return ks.length===1 ? COMPOSER_ENGINES[ks[0]](px,nc,nr,table,colorMode,dir) : [];
+  const pieces=ks.map(k=>{ try{ return COMPOSER_ENGINES[k](px,nc,nr,table,colorMode,dir)||[]; }catch(_){ return []; } });
+  const tot=(arr)=>{ let m=0; for(const e of arr){ const d=(e.n&&e.n[0]&&e.n[0].durMs)||0; m=Math.max(m,(e.startMs||0)+d); } return m||1; };
+  const T=tot(pieces[0]), PH=CALL_RESPONSE_PHRASE_MS;
+  const out=[];
+  for(let j=0, a=0; a<T; j++, a+=PH){
+    const k=j%ks.length, P=pieces[k]; if(!P.length) continue;
+    const Tk=tot(P), b=Math.min(T,a+PH), len=b-a;
+    // same point of the form in composer k's own timeline, window kept at its own pace
+    const ka=Math.min(Math.max(0,Tk-len),(a/T)*Tk), kb=ka+len;
+    for(const e of P){ const s=e.startMs||0; if(s<ka||s>=kb) continue;
+      out.push(Object.assign({},e,{startMs:Math.round(a+(s-ka)),_who:ks[k]})); }
+  }
+  out.sort((x,y)=>x.startMs-y.startMs);
+  for(let i=0;i<out.length;i++) out[i].idx=i;
+  return out;
+}
+
 function bakeImageChords(src){
   if(!src || !src.length) return [];
   const out = [];
