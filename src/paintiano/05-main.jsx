@@ -3059,11 +3059,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{
     if(typeof document==='undefined') return;
     const de=document.documentElement, b=document.body;
-    if(!immersive) return;
-    const prev={deO:de.style.overflow, bO:b.style.overflow, bT:b.style.touchAction, bOb:b.style.overscrollBehavior, deOb:de.style.overscrollBehavior};
+    // Unlock = clear the properties outright (never "restore a remembered
+    // value" — on iOS that left the page stuck after leaving fullscreen).
+    const unlock=()=>{ try{ for(const el of [de,b]){ el.style.removeProperty('overflow'); el.style.removeProperty('touch-action'); el.style.removeProperty('overscroll-behavior'); } }catch(_){} };
+    if(!immersive){ unlock(); return; }
     de.style.overflow='hidden'; b.style.overflow='hidden'; b.style.touchAction='none'; b.style.overscrollBehavior='none'; de.style.overscrollBehavior='none';
     try{ window.scrollTo(0,0); }catch(_){}
-    return ()=>{ de.style.overflow=prev.deO; b.style.overflow=prev.bO; b.style.touchAction=prev.bT; b.style.overscrollBehavior=prev.bOb; de.style.overscrollBehavior=prev.deOb; };
+    // belt and braces: a fullscreen left through the browser's own gesture
+    // may skip our state path for a frame — unlock whenever the document's
+    // fullscreen element is gone.
+    const onFs=()=>{ if(!document.fullscreenElement && !document.webkitFullscreenElement) unlock(); };
+    document.addEventListener('fullscreenchange', onFs); document.addEventListener('webkitfullscreenchange', onFs);
+    return ()=>{ document.removeEventListener('fullscreenchange', onFs); document.removeEventListener('webkitfullscreenchange', onFs); unlock(); };
   },[immersive]);
   // Image playback mode: 'scan' = read the picture left→right as a score (paints
   // a mosaic/style); 'compose' = AI writes a free-standing piece from the image
