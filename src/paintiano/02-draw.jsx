@@ -17443,43 +17443,279 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,dir,keys){
 // progressive build, Vary all deterministic).
 // ─────────────────────────────────────────────────────────────────────────────
 const ARTIST_DNA = {
-  mosaic:       {ground:'#04040a',mark:{rect:1},                        size:[.03,.08],edge:0,  alpha:1,  layout:{grid:1},               outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
-  raffel:       {ground:'#0a0a12',mark:{phi:.6,disc:.2,ring:.2},       size:[.03,.2], edge:.05,alpha:.9, layout:{grid:.5,spiral:.5},    outline:.2,tone:'gold',    wobble:.1, lines:.3,layers:2,density:.8, halftone:0},
-  picasso:      {ground:'#0c0b0e',mark:{facet:.7,arc:.3},         size:[.05,.25],edge:0,  alpha:.95,layout:{scatter:.6,grid:.4},   outline:.9,tone:'dark',    wobble:.5, lines:.5,layers:1,density:.7, halftone:0},
-  matisse:      {ground:'#16120a',mark:{cutout:.8,blob:.2},              size:[.05,.25],edge:0,  alpha:1,  layout:{scatter:.8,radial:.2}, outline:0, tone:'pure',    wobble:.6, lines:0, layers:1,density:.7, halftone:0},
-  pollock:      {ground:'#f2ede0',mark:{drip:.7,splat:.3},              size:[.004,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},   outline:0, tone:'pure',    wobble:.9, lines:.6,layers:3,density:1,  halftone:0},
-  bloom:        {ground:'#f6f3ec',mark:{splat:.6,cloud:.4},       size:[.01,.08],edge:.3, alpha:.8, layout:{scatter:.6,field:.4},  outline:0, tone:'pure',    wobble:.8, lines:.2,layers:3,density:.6, halftone:0},
-  kusama:       {ground:'#111111',mark:{dotcluster:.6,dot:.4},                         size:[.01,.05],edge:0,  alpha:1,  layout:{grid:.4,field:.6},     outline:0, tone:'pure',    wobble:.2, lines:0, layers:1,density:1,  halftone:0},
-  miro:         {ground:'#efe8d8',mark:{miroblob:.6,star:.25,dot:.15},        size:[.02,.14],edge:.05,alpha:1,  layout:{scatter:1},            outline:.9,tone:'primary', wobble:.6, lines:.7,layers:1,density:.6, halftone:0},
-  mondrian:     {ground:'#f3efe6',mark:{gridrect:1},                        size:[.08,.35],edge:0,  alpha:1,  layout:{grid:1},               outline:1, tone:'primary', wobble:0,  lines:1, layers:1,density:.5, halftone:0},
-  bauhaus:      {ground:'#e8e1d2',mark:{disc:.34,tri:.33,rect:.33},        size:[.05,.3], edge:0,  alpha:1,  layout:{grid:.6,diagonal:.4},  outline:.3,tone:'primary', wobble:0,  lines:.4,layers:1,density:.6, halftone:0},
-  kandinsky:    {ground:'#e9e2cf',mark:{kring:.5,arc:.3,disc:.2},        size:[.02,.18],edge:.1, alpha:.85,layout:{scatter:.7,radial:.3}, outline:.6,tone:'pure',    wobble:.3, lines:.5,layers:2,density:.7, halftone:0},
-  gold:         {ground:'#1a140a',mark:{goldspiral:.5,gridrect:.2,dot:.3},size:[.01,.12],edge:.1,alpha:.95,layout:{field:.5,spiral:.3,stack:.2},outline:.2,tone:'gold',wobble:.3,lines:.2,layers:3,density:.8,halftone:0},
-  rothko:       {ground:'#2a1216',mark:{field:1},                       size:[.3,.6],  edge:.9, alpha:.75,layout:{stack:1},              outline:0, tone:'dark',    wobble:.3, lines:0, layers:2,density:.5, halftone:0},
-  bulge:        {ground:'#101018',mark:{bulge:1},               size:[.02,.06],edge:0,  alpha:1,  layout:{grid:1},               outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
-  wave:         {ground:'#f4f1ea',mark:{stripes:.8,wave:.2},             size:[.01,.04],edge:0,  alpha:1,  layout:{stack:.7,flow:.3},     outline:0, tone:'mono',    wobble:.1, lines:0, layers:1,density:1,  halftone:0},
-  spiral:       {ground:'#e8dfd0',mark:{target:.6,spiral:.4},     size:[.05,.3], edge:.1, alpha:.8, layout:{radial:.6,stack:.4},   outline:.3,tone:'pastel',  wobble:.1, lines:.4,layers:2,density:.5, halftone:0},
-  arcs:         {ground:'#f2efe8',mark:{protractor:1},              size:[.08,.4], edge:0,  alpha:1,  layout:{radial:.7,grid:.3},    outline:0, tone:'primary', wobble:0,  lines:0, layers:1,density:.6, halftone:0},
-  pop:          {ground:'#ffd23f',mark:{figure:.6,radiant:.4},                size:[.05,.2], edge:0,  alpha:1,  layout:{scatter:.6,radial:.4}, outline:1, tone:'primary', wobble:.4, lines:.4,layers:1,density:.6, halftone:0},
-  mitchell:     {ground:'#f3f0e8',mark:{brush:.7,drip:.3},       size:[.01,.06],edge:.4, alpha:.75,layout:{field:.5,scatter:.5},  outline:0, tone:'pure',    wobble:.9, lines:.3,layers:4,density:.8, halftone:0},
-  monet:        {ground:'#cfd6c8',mark:{dab:1},                         size:[.008,.03],edge:.6,alpha:.55,layout:{field:1},              outline:0, tone:'pastel',  wobble:.5, lines:0, layers:4,density:1,  halftone:0},
-  hokusai:      {ground:'#e6e0d0',mark:{crest:.7,wave:.3},         size:[.03,.2], edge:0,  alpha:.95,layout:{flow:.8,stack:.2},     outline:.7,tone:'pure',    wobble:.4, lines:.5,layers:2,density:.6, halftone:0},
-  lichtenstein: {ground:'#fffdf5',mark:{benday:.6,blob:.2,rect:.2},       size:[.05,.25],edge:0,  alpha:1,  layout:{grid:.5,scatter:.5},   outline:1, tone:'primary', wobble:.1, lines:.3,layers:1,density:.5, halftone:1},
-  klee:         {ground:'#d9cfb6',mark:{tile:.7,tri:.15,arc:.15},         size:[.03,.12],edge:.3, alpha:.85,layout:{grid:.8,stack:.2},     outline:.2,tone:'pastel',  wobble:.3, lines:.3,layers:2,density:.9, halftone:0},
-  delaunay:     {ground:'#f0e9da',mark:{orphic:.8,arc:.2},                size:[.05,.3], edge:0,  alpha:.9, layout:{radial:.7,scatter:.3}, outline:0, tone:'pure',    wobble:.1, lines:0, layers:2,density:.6, halftone:0},
-  oneM:         {ground:'#ffffff',mark:{pixels:1},                        size:[.01,.03],edge:0,  alpha:1,  layout:{grid:1},               outline:.3,tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
+  mosaic:       {ground:'#04040a',mark:{rect:1},                          size:[.03,.08],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
+  raffel:       {ground:'#06060c',mark:{phiarc:.8,ring:.2},               size:[.15,.4], edge:.2, alpha:.9, layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:.1, lines:.2,layers:1,density:.15,halftone:0},
+  picasso:      {ground:'#0a0a0e',mark:{neon:.7,ring:.3},                 size:[.06,.22],edge:.5, alpha:.95,layout:{flow:.6,scatter:.4},     outline:0, tone:'pure',    wobble:.6, lines:.3,layers:1,density:.2, halftone:0},
+  matisse:      {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},              size:[.05,.18],edge:0,  alpha:1,  layout:{grid:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.5, lines:0, layers:1,density:.6, halftone:0},
+  pollock:      {ground:'#f2ede0',mark:{drip:.7,splat:.3},                size:[.004,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:3,density:1,  halftone:0},
+  bloom:        {ground:'#f6f3ec',mark:{cloud:.6,dot:.4},                 size:[.05,.18],edge:.9, alpha:.6, layout:{scatter:.7,field:.3},    outline:0, tone:'pastel',  wobble:.6, lines:.2,layers:3,density:.5, halftone:0},
+  kusama:       {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},          size:[.03,.09],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:.2, lines:.2,layers:1,density:1,  halftone:0},
+  miro:         {ground:'#f5f2e8',mark:{star:.35,dot:.25,cross:.2,target:.2},size:[.02,.08],edge:0,alpha:1, layout:{scatter:1},              outline:0, tone:'primary', wobble:.4, lines:.15,layers:1,density:.25,halftone:0},
+  mondrian:     {ground:'#f3efe6',mark:{gridrect:1},                      size:[.08,.35],edge:0,  alpha:1,  layout:{grid:1},                 outline:1, tone:'primary', wobble:0,  lines:1, layers:1,density:.5, halftone:0},
+  bauhaus:      {ground:'#e8e1d2',mark:{field:.4,disc:.3,target:.3},      size:[.12,.4], edge:0,  alpha:1,  layout:{grid:.7,radial:.3},      outline:0, tone:'primary', wobble:0,  lines:.2,layers:1,density:.3, halftone:0},
+  kandinsky:    {ground:'#0b0b10',mark:{kring:.4,beam:.3,disc:.3},        size:[.02,.16],edge:.1, alpha:.9, layout:{scatter:.7,radial:.3},   outline:0, tone:'pure',    wobble:.3, lines:.7,layers:2,density:.6, halftone:0},
+  gold:         {ground:'#b8963c',mark:{tile:.4,goldspiral:.3,target:.3}, size:[.03,.08],edge:0,  alpha:.95,layout:{grid:1},                 outline:.2,tone:'gold',    wobble:0,  lines:0, layers:1,density:.8, halftone:0},
+  rothko:       {ground:'#2a1216',mark:{field:1},                         size:[.3,.6],  edge:.9, alpha:.75,layout:{stack:1},                outline:0, tone:'dark',    wobble:.3, lines:0, layers:2,density:.5, halftone:0},
+  bulge:        {ground:'#101018',mark:{cube:1},                          size:[.02,.05],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
+  wave:         {ground:'#1a1a2a',mark:{stripes:1},                       size:[.01,.03],edge:0,  alpha:1,  layout:{stack:1},                outline:0, tone:'pastel',  wobble:.2, lines:0, layers:1,density:.8, halftone:0},
+  spiral:       {ground:'#b8963a',mark:{target:.6,petal:.4},              size:[.06,.25],edge:.1, alpha:.8, layout:{radial:.6,scatter:.4},   outline:0, tone:'pastel',  wobble:.1, lines:0, layers:2,density:.4, halftone:0},
+  arcs:         {ground:'#eeeec0',mark:{nest:1},                          size:[.1,.4],  edge:0,  alpha:1,  layout:{radial:.5,grid:.5},      outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:.3, halftone:0},
+  pop:          {ground:'#ffd23f',mark:{heart:.5,radiant:.3,figure:.2},   size:[.05,.15],edge:0,  alpha:1,  layout:{grid:.7,scatter:.3},     outline:1, tone:'primary', wobble:.2, lines:0, layers:1,density:.6, halftone:0},
+  mitchell:     {ground:'#f3f0e8',mark:{brush:1},                         size:[.04,.14],edge:.2, alpha:.85,layout:{scatter:1},              outline:0, tone:'pure',    wobble:.9, lines:.4,layers:2,density:.35,halftone:0},
+  monet:        {ground:'#cfd6c8',mark:{field:.5,dab:.5},                 size:[.01,.1], edge:.7, alpha:.55,layout:{stack:.6,field:.4},      outline:0, tone:'pastel',  wobble:.5, lines:0, layers:3,density:.9, halftone:0},
+  hokusai:      {ground:'#e6e0d0',mark:{crest:.5,ring:.5},                size:[.03,.16],edge:0,  alpha:.95,layout:{stack:.6,flow:.4},      outline:.6,tone:'pure',    wobble:.3, lines:.3,layers:1,density:.25,halftone:0},
+  lichtenstein: {ground:'#fffdf5',mark:{benday:.7,blob:.3},               size:[.05,.2], edge:0,  alpha:1,  layout:{scatter:.6,grid:.4},     outline:1, tone:'primary', wobble:.1, lines:0, layers:1,density:.4, halftone:1},
+  klee:         {ground:'#d9cfb6',mark:{tile:1},                          size:[.04,.1], edge:.35,alpha:.9, layout:{grid:1},                 outline:0, tone:'pastel',  wobble:.1, lines:.2,layers:1,density:1,  halftone:0},
+  delaunay:     {ground:'#f0e9da',mark:{orphic:1},                        size:[.06,.3], edge:0,  alpha:.9, layout:{scatter:.6,radial:.4},   outline:0, tone:'pure',    wobble:.1, lines:0, layers:2,density:.35,halftone:0},
+  oneM:         {ground:'#ffffff',mark:{panel:.6,pixels:.4},              size:[.02,.07],edge:0,  alpha:1,  layout:{grid:1},                 outline:.3,tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
 };
 ARTIST_DNA.notes = ARTIST_DNA.mosaic;
+// Per-variant genes — one entry per variant of the real engine (same order as
+// the engine's own phase picker, so Vary/Next in Jam walks the parents' true
+// variants). Each entry overrides the artist's base genes.
+const ARTIST_VARIANTS = {
+  raffel: [
+    {mark:{phiarc:1},size:[.2,.45],layout:{radial:1},density:.12},
+    {mark:{chain:.7,beam:.3},size:[.05,.15],layout:{scatter:1},density:.2,lines:.6},
+    {mark:{rays:1},size:[.2,.5],layout:{radial:1},density:.15},
+    {mark:{stem:1},size:[.08,.25],layout:{grid:1},density:.5,lines:0},
+    {mark:{rays:.6,phiarc:.4},size:[.2,.5],layout:{radial:1},density:.15},
+    {ground:'#101018',mark:{cloud:1},size:[.15,.4],edge:.9,alpha:.8,density:.3,tone:'pure'},
+    {mark:{rays:.5,chain:.5},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
+  ],
+  picasso: [
+    {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},
+    {ground:'#1b2a6b',mark:{beam:1},size:[.1,.3],edge:.3,alpha:.8,layout:{scatter:1},density:.3,lines:.6},
+    {ground:'#2a2a3a',mark:{hatch:.7,facet:.3},size:[.06,.2],edge:0,alpha:1,layout:{grid:.7,scatter:.3},outline:.9,density:.8},
+    {ground:'#6b5a3a',mark:{poly:.6,tri:.4},size:[.05,.18],edge:0,alpha:.6,layout:{scatter:1},outline:.3,density:.7},
+    {ground:'#8a8a3a',mark:{poly:.5,arch:.3,disc:.2},size:[.08,.3],edge:0,alpha:.85,layout:{grid:.6,scatter:.4},outline:.6,density:.4},
+    {ground:'#9a9a8a',mark:{poly:1},size:[.08,.3],edge:0,alpha:.5,layout:{scatter:1},outline:.2,density:.5},
+  ],
+  matisse: [
+    {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},size:[.05,.18],layout:{grid:.8,scatter:.2},density:.6},
+    {ground:'#3fbf9a',mark:{starburst:.5,cutout:.5},size:[.15,.4],layout:{scatter:1},density:.12},
+    {ground:'#d08a4a',mark:{poly:.6,panel:.4},size:[.04,.15],alpha:.8,layout:{grid:.6,field:.4},density:.9},
+    {ground:'#3a3ad0',mark:{cutout:1},size:[.1,.3],layout:{scatter:1},density:.15,tone:'dark'},
+    {ground:'#8a7a9a',mark:{stem:.6,panel:.4},size:[.08,.3],layout:{grid:1},density:.4},
+    {ground:'#e8e2cc',mark:{leaf:1},size:[.08,.3],layout:{radial:1},density:.25},
+    {ground:'#6a8a3a',mark:{panel:.5,cutout:.5},size:[.04,.12],layout:{grid:1},density:1},
+    {ground:'#e8e2cc',mark:{panel:.6,cutout:.4},size:[.1,.35],layout:{scatter:1},density:.15},
+  ],
+  pollock: [
+    {mark:{drip:.7,splat:.3},size:[.004,.03],layout:{flow:.8,scatter:.2},density:1,layers:3},
+    {ground:'#d9c9a8',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.6,layers:1,lines:0},
+    {ground:'#9a9aa0',mark:{drip:.6,splat:.4},size:[.006,.04],alpha:.7,layout:{flow:1},density:1,layers:4},
+    {ground:'#e8dcc0',mark:{cloud:.4,splat:.3,dot:.3},size:[.01,.08],edge:.8,alpha:.5,layout:{scatter:1},density:.4,layers:2},
+    {ground:'#2a2420',mark:{drip:1},size:[.004,.03],layout:{flow:1},density:1,layers:4,tone:'pastel'},
+    {ground:'#e8e0cc',mark:{bar:.7,splat:.3},size:[.01,.05],layout:{grid:1},density:.5,layers:1},
+    {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:1,layers:3},
+  ],
+  bloom: [
+    {mark:{cloud:.6,dot:.4},size:[.05,.18],edge:.9,alpha:.6,layout:{scatter:.7,field:.3},density:.5},
+    {ground:'#f8f8f4',mark:{fan:1},size:[.3,.5],edge:0,alpha:.9,layout:{radial:1},density:.08},
+    {ground:'#f8f8f4',mark:{poly:.6,cloud:.4},size:[.05,.2],edge:.2,alpha:.55,layout:{scatter:1},density:.4},
+    {ground:'#f8f8f4',mark:{ring:.6,disc:.4},size:[.04,.14],edge:.3,alpha:.6,layout:{scatter:1},density:.5},
+    {ground:'#f8f8f4',mark:{dot:1},size:[.004,.01],edge:0,alpha:.8,layout:{scatter:1},density:.3},
+    {ground:'#f8f8f4',mark:{vdrip:1},size:[.03,.08],edge:.3,alpha:.85,layout:{grid:1},density:.3},
+    {mark:{cloud:.7,vdrip:.3},size:[.05,.2],edge:.8,alpha:.6,layout:{scatter:1},density:.5},
+    {mark:{cloud:.6,dot:.4},size:[.05,.18],edge:.9,alpha:.6,layout:{field:1},density:.6},
+  ],
+  kusama: [
+    {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},size:[.03,.09],layout:{grid:1},density:1},
+    {ground:'#f4f4ee',mark:{dot:1},size:[.004,.02],layout:{scatter:1},density:1,tone:'pure'},
+    {ground:'#5a4a2a',mark:{scallop:1},size:[.03,.06],layout:{grid:1},density:1},
+    {ground:'#1a1410',mark:{sphere:1},size:[.08,.25],layout:{scatter:1},density:.3},
+    {ground:'#111111',mark:{target:.6,dotcluster:.4},size:[.1,.3],layout:{scatter:1},density:.25},
+    {ground:'#d85a1a',mark:{chain:1},size:[.03,.08],layout:{scatter:1},density:.4,lines:.8},
+  ],
+  miro: [
+    {ground:'#1b1812',mark:{tri:.3,blob:.3,target:.2,dot:.2},size:[.02,.07],layout:{scatter:1},density:.2,outline:.2},
+    {ground:'#d8f4ee',mark:{cross:.5,rays:.3,dot:.2},size:[.02,.06],layout:{scatter:1},density:.08},
+    {ground:'#1f3a8a',mark:{dot:.6,star:.2,wavyline:.2},size:[.03,.08],layout:{scatter:1},density:.15,tone:'primary'},
+    {ground:'#f5f2e8',mark:{poly:.4,cross:.2,dot:.2,arch:.2},size:[.03,.1],layout:{scatter:1},density:.2,lines:.4,outline:.5},
+    {ground:'#9a8a6a',mark:{tri:.3,disc:.3,dot:.2,arc:.2},size:[.01,.04],layout:{scatter:1},density:.9,tone:'primary'},
+    {ground:'#f8f6ee',mark:{cross:.4,star:.3,dot:.3},size:[.02,.06],layout:{scatter:1},density:.12},
+  ],
+  mondrian: [
+    {mark:{gridrect:1},size:[.08,.35],layout:{grid:1},density:.5},
+    {ground:'#f3efe6',mark:{gridrect:1},size:[.1,.4],layout:{grid:1},density:.3},
+    {ground:'#f8f8f4',mark:{rect:1},size:[.015,.03],layout:{scatter:1},density:.9,outline:0,lines:0},
+    {ground:'#f8f8f4',mark:{gridline:1},size:[.1,.3],layout:{grid:1},density:.2,outline:0,lines:0},
+    {ground:'#f8f8f4',mark:{gridline:.7,rect:.3},size:[.02,.05],layout:{grid:1},density:1,outline:0,lines:0,tone:'gold'},
+    {ground:'#0a0a0a',mark:{gridrect:1},size:[.05,.15],layout:{diagonal:1},density:.4,tone:'mono'},
+    {ground:'#7a7a62',mark:{beam:1},size:[.05,.2],layout:{radial:1},density:.3,outline:0,lines:0,tone:'dark'},
+    {ground:'#f8f8f4',mark:{cross:1},size:[.01,.02],layout:{scatter:1},density:.9,outline:0,lines:0},
+  ],
+  bauhaus: [
+    {mark:{field:.4,disc:.3,target:.3},size:[.12,.4],layout:{grid:.7,radial:.3},density:.3},
+    {mark:{panel:1},size:[.15,.4],layout:{stack:1},density:.4},
+    {mark:{panel:.5,target:.3,bar:.2},size:[.1,.35],layout:{grid:1},density:.4},
+    {mark:{disc:.5,beam:.3,panel:.2},size:[.1,.35],alpha:.7,layout:{scatter:1},density:.4},
+    {mark:{arch:.6,panel:.4},size:[.15,.45],layout:{stack:1},density:.3},
+    {mark:{disc:.5,panel:.5},size:[.1,.3],layout:{grid:1},density:.5},
+    {mark:{gridline:.5,disc:.3,panel:.2},size:[.1,.3],layout:{grid:1},density:.4},
+    {mark:{field:.4,disc:.3,target:.3},size:[.12,.4],layout:{grid:1},density:.3},
+  ],
+  kandinsky: [
+    {mark:{kring:.4,beam:.3,disc:.3},size:[.02,.16],layout:{scatter:.7,radial:.3},density:.6},
+    {mark:{target:.5,dot:.3,beam:.2},size:[.02,.14],layout:{scatter:1},density:.6},
+    {mark:{disc:1},size:[.08,.25],edge:.4,alpha:.7,layout:{scatter:1},density:.3},
+    {ground:'#f4f2ec',mark:{tri:.6,beam:.4},size:[.04,.12],layout:{scatter:1},density:.25},
+    {ground:'#5a6a8a',mark:{bar:.5,panel:.5},size:[.05,.2],layout:{scatter:1},density:.15},
+    {ground:'#d8c8e8',mark:{tri:.4,disc:.4,kring:.2},size:[.08,.3],alpha:.8,layout:{scatter:1},density:.3,outline:.5},
+    {ground:'#f4f2ec',mark:{disc:.5,beam:.3,target:.2},size:[.03,.2],layout:{radial:1},density:.4,lines:.6},
+    {ground:'#2a2428',mark:{ring:.4,tri:.3,beam:.3},size:[.04,.14],layout:{scatter:1},density:.3,tone:'pastel'},
+  ],
+  gold: [
+    {mark:{tile:.4,goldspiral:.3,target:.3},size:[.03,.08],layout:{grid:1},density:.8},
+    {mark:{goldspiral:.5,ring:.5},size:[.06,.2],layout:{scatter:1},density:.4,lines:.5},
+    {mark:{tri:.5,rect:.5},size:[.005,.02],layout:{flow:1},density:1},
+    {ground:'#5a1a1a',mark:{disc:.5,arc:.5},size:[.03,.1],alpha:.9,layout:{radial:1},density:.4,tone:'gold'},
+    {ground:'#5a5a3a',mark:{dot:1},size:[.005,.02],layout:{scatter:1},density:1,tone:'pure'},
+    {ground:'#1a1a1a',mark:{zigzag:1},size:[.1,.3],layout:{stack:1},density:.4,tone:'pastel'},
+    {mark:{eye:.6,diamond:.4},size:[.04,.1],layout:{grid:1},density:.9},
+    {mark:{diamond:.5,tri:.3,dot:.2},size:[.02,.06],layout:{grid:1},density:1},
+  ],
+  rothko: [
+    {mark:{field:1},size:[.3,.6],edge:.9,alpha:.75,layout:{stack:1},density:.5},
+    {ground:'#e8e4d8',mark:{field:1},size:[.3,.6],edge:.5,alpha:.7,layout:{stack:1},density:.4,tone:'pastel'},
+    {mark:{field:1},size:[.3,.6],edge:.9,alpha:.8,layout:{stack:1},density:.5},
+    {ground:'#d8d4c0',mark:{field:1},size:[.25,.5],edge:.6,alpha:.75,layout:{stack:1},density:.4},
+    {ground:'#b8963c',mark:{field:1},size:[.3,.6],edge:.3,alpha:.8,layout:{stack:1},density:.3,tone:'gold'},
+    {ground:'#4a1a1a',mark:{nest:1},size:[.2,.45],edge:.4,alpha:.7,layout:{grid:1},density:.3,tone:'dark'},
+    {ground:'#1a1418',mark:{field:1},size:[.3,.6],edge:.7,alpha:.5,layout:{stack:1},density:.4,tone:'dark'},
+    {ground:'#c84a1a',mark:{field:1},size:[.3,.6],edge:.2,alpha:.9,layout:{stack:1},density:.4},
+  ],
+  bulge: [
+    {mark:{cube:1},size:[.02,.05],layout:{grid:1},density:1},
+    {ground:'#3a3a2a',mark:{vstripes:1},size:[.02,.05],layout:{stack:1},density:.8},
+    {mark:{checker:1},size:[.02,.05],layout:{grid:1},density:1},
+    {mark:{tri:1},size:[.02,.05],layout:{grid:1},density:1},
+    {mark:{cube:1},size:[.015,.04],layout:{grid:1},density:1},
+    {ground:'#1a1030',mark:{dot:1},size:[.01,.03],layout:{grid:1},density:1},
+  ],
+  wave: [
+    {mark:{stripes:1},size:[.01,.03],layout:{stack:1},density:.8},
+    {ground:'#2a2a3a',mark:{vstripes:1},size:[.01,.03],layout:{grid:1},density:1},
+    {ground:'#1a1a2a',mark:{arc:1},size:[.2,.5],layout:{radial:1},density:.5,tone:'pure'},
+    {ground:'#2a4a3a',mark:{wavyline:1},size:[.02,.05],layout:{stack:1},density:.7},
+    {ground:'#f4f4ec',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.8,tone:'mono'},
+    {ground:'#f4f4ec',mark:{tri:1},size:[.05,.12],layout:{grid:1},density:1},
+    {ground:'#1a1a2a',mark:{stripes:1},size:[.004,.01],layout:{stack:1},density:1},
+    {ground:'#1a1a2a',mark:{arc:.6,wavyline:.4},size:[.1,.4],layout:{radial:1},density:.5},
+  ],
+  spiral: [
+    {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:.6,scatter:.4},density:.4},
+    {mark:{rays:1},size:[.3,.6],layout:{radial:1},density:.08,tone:'pure'},
+    {ground:'#e8e2cc',mark:{asterisk:.5,goldspiral:.3,cloud:.2},size:[.05,.15],edge:.3,alpha:.7,layout:{scatter:1},density:.3},
+    {ground:'#f0e84a',mark:{ring:.6,dot:.4},size:[.05,.2],layout:{scatter:1},density:.15},
+    {ground:'#1a1418',mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},
+    {ground:'#e8e2cc',mark:{stem:1},size:[.1,.3],layout:{grid:1},density:.3},
+    {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:1},density:.4},
+    {mark:{rays:.7,target:.3},size:[.2,.5],layout:{radial:1},density:.1},
+  ],
+  arcs: [
+    {mark:{nest:1},size:[.1,.4],layout:{radial:.5,grid:.5},density:.3},
+    {mark:{protractor:1},size:[.15,.45],layout:{radial:1},density:.2},
+    {mark:{nest:1},size:[.2,.5],layout:{grid:1},density:.2},
+    {mark:{step:1},size:[.05,.2],layout:{scatter:1},density:.4,lines:0},
+    {mark:{nestpoly:1},size:[.1,.3],alpha:.8,layout:{scatter:1},density:.3},
+    {ground:'#141420',mark:{ring:.6,arc:.4},size:[.08,.25],layout:{scatter:1},density:.5},
+    {mark:{nest:1},size:[.1,.4],layout:{grid:1},density:.3},
+    {mark:{protractor:.6,nest:.4},size:[.15,.45],layout:{radial:1},density:.2},
+  ],
+  pop: [
+    {mark:{heart:.6,radiant:.4},size:[.05,.15],layout:{grid:1},density:.6},
+    {ground:'#f4f44a',mark:{figure:.7,disc:.3},size:[.15,.35],layout:{scatter:1},density:.12},
+    {ground:'#1a1a2a',mark:{figure:.4,radiant:.3,rect:.3},size:[.04,.1],layout:{scatter:1},density:.3},
+    {ground:'#e8d82a',mark:{radiant:1},size:[.05,.12],layout:{scatter:1},density:.08},
+    {ground:'#6ad83a',mark:{speech:1},size:[.05,.1],layout:{grid:1},density:.8},
+    {ground:'#e8e4b8',mark:{figure:1},size:[.03,.08],layout:{scatter:1},density:.4},
+    {ground:'#f4f4ec',mark:{star:.4,heart:.3,radiant:.3},size:[.04,.12],layout:{scatter:1},density:.4},
+    {mark:{heart:.6,radiant:.4},size:[.05,.15],layout:{grid:1},density:.6},
+  ],
+  mitchell: [
+    {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
+    {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
+    {mark:{brush:1},size:[.02,.06],layout:{scatter:1},density:.5},
+    {mark:{brush:1},size:[.03,.1],layout:{radial:1},density:.5,tone:'dark'},
+    {ground:'#e88a7a',mark:{brush:1},size:[.03,.1],layout:{radial:1},density:.4,tone:'gold'},
+    {mark:{brush:1},size:[.02,.06],layout:{scatter:1},density:.2},
+    {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
+    {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
+  ],
+  monet: [
+    {mark:{field:.5,dab:.5},size:[.01,.1],edge:.7,alpha:.55,layout:{stack:.6,field:.4},density:.9},
+    {ground:'#1a1a2a',mark:{bar:.7,dab:.3},size:[.01,.05],edge:.2,alpha:.8,layout:{grid:1},density:.9},
+    {ground:'#2a1a3a',mark:{bar:1},size:[.005,.02],edge:.1,alpha:.9,layout:{grid:1},density:1},
+    {ground:'#f0d8a8',mark:{field:1},size:[.3,.6],edge:.5,alpha:.5,layout:{stack:1},density:.6,tone:'pastel'},
+    {ground:'#f0d84a',mark:{dot:.7,disc:.3},size:[.01,.03],edge:.1,alpha:.8,layout:{field:1},density:1},
+    {ground:'#c8e8d8',mark:{field:1},size:[.3,.6],edge:.6,alpha:.4,layout:{stack:1},density:.6,tone:'pastel'},
+    {mark:{field:.5,dab:.5},size:[.01,.1],edge:.7,alpha:.55,layout:{stack:1},density:.9},
+    {ground:'#1a1a2a',mark:{bar:.7,dab:.3},size:[.01,.05],edge:.2,alpha:.8,layout:{grid:1},density:.9},
+  ],
+  hokusai: [
+    {mark:{ring:.7,crest:.3},size:[.02,.06],layout:{stack:1},density:.3},
+    {mark:{crest:.6,arc:.4},size:[.03,.12],layout:{flow:1},density:.15},
+    {mark:{cloud:1},size:[.03,.1],edge:.1,alpha:.8,layout:{radial:1},density:.4,tone:'pastel'},
+    {ground:'#5a4a6a',mark:{rain:1},size:[.05,.2],layout:{scatter:1},density:.5},
+    {ground:'#c8c0a8',mark:{rain:.7,tri:.3},size:[.05,.2],layout:{scatter:1},density:.6},
+    {ground:'#e8e0d0',mark:{beam:1},size:[.1,.3],layout:{grid:1},density:.5,tone:'dark'},
+    {mark:{ring:.7,crest:.3},size:[.02,.06],layout:{stack:1},density:.3},
+    {mark:{crest:.6,arc:.4},size:[.03,.12],layout:{flow:1},density:.15},
+  ],
+  lichtenstein: [
+    {mark:{benday:.7,blob:.3},size:[.05,.2],layout:{scatter:.6,grid:.4},density:.4},
+    {ground:'#e8e8f4',mark:{radiant:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.1},
+    {ground:'#e8e8f4',mark:{wavyline:1},size:[.05,.12],layout:{stack:1},density:.5,outline:1},
+    {ground:'#f4e8e8',mark:{stripes:1},size:[.03,.08],layout:{stack:1},density:.4,outline:1},
+    {ground:'#111111',mark:{benday:1},size:[.1,.3],layout:{scatter:1},density:.15},
+    {ground:'#f8f8f4',mark:{panel:.5,target:.5},size:[.05,.1],layout:{grid:1},density:1},
+    {mark:{benday:.7,blob:.3},size:[.05,.2],layout:{scatter:1},density:.4},
+    {ground:'#e8e8f4',mark:{radiant:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.1},
+  ],
+  klee: [
+    {mark:{tile:1},size:[.04,.1],layout:{grid:1},density:1},
+    {ground:'#e8e0d0',mark:{rect:1},size:[.04,.12],alpha:.6,layout:{scatter:1},density:.6,edge:0},
+    {ground:'#5a5a2a',mark:{disc:.4,rect:.3,tri:.3},size:[.02,.05],layout:{grid:1},density:1,edge:0},
+    {ground:'#141420',mark:{dotline:.7,dot:.3},size:[.05,.2],layout:{flow:1},density:.3,edge:0,tone:'pastel'},
+    {ground:'#c8b84a',mark:{field:.7,arrow:.3},size:[.2,.5],layout:{stack:1},density:.4,edge:0},
+    {ground:'#2a2a2a',mark:{tile:1},size:[.01,.03],layout:{grid:1},density:1,edge:0},
+    {mark:{tile:1},size:[.04,.1],layout:{grid:1},density:1},
+    {ground:'#e8e0d0',mark:{rect:1},size:[.04,.12],alpha:.6,layout:{scatter:1},density:.6,edge:0},
+  ],
+  delaunay: [
+    {mark:{orphic:1},size:[.06,.3],layout:{scatter:.6,radial:.4},density:.35},
+    {mark:{arch:.6,orphic:.4},size:[.15,.45],layout:{radial:1},density:.2},
+    {ground:'#141420',mark:{arch:.5,disc:.5},size:[.15,.4],alpha:.85,layout:{radial:1},density:.25},
+    {mark:{tri:.6,fan:.4},size:[.1,.3],alpha:.8,layout:{radial:1},density:.3},
+    {mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},
+    {ground:'#141420',mark:{rays:.5,fan:.5},size:[.3,.6],layout:{radial:1},density:.08},
+    {mark:{orphic:1},size:[.06,.3],layout:{scatter:1},density:.35},
+    {mark:{arch:.6,orphic:.4},size:[.15,.45],layout:{radial:1},density:.2},
+  ],
+  oneM: [
+    {mark:{panel:.6,pixels:.4},size:[.02,.07],layout:{grid:1},density:1},
+    {mark:{panel:.5,star:.2,disc:.3},size:[.02,.08],layout:{grid:.8,scatter:.2},density:1},
+    {mark:{panel:.7,pixels:.3},size:[.03,.1],layout:{grid:1},density:1},
+    {mark:{panel:.6,tri:.2,ring:.2},size:[.02,.07],layout:{grid:.8,scatter:.2},density:1},
+    {mark:{panel:.6,pixels:.4},size:[.02,.07],layout:{grid:1},density:1},
+    {mark:{panel:.5,star:.2,disc:.3},size:[.02,.08],layout:{grid:.8,scatter:.2},density:1},
+  ],
+};
+
+// the artist's genes for a given variant (phase) — base + that variant's overrides
+function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const v=V[((ph|0)%V.length+V.length)%V.length]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
 function _fuHex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
 // Cross the parents' DNA into one genome. Numeric genes blend by weight,
 // vocabularies (mark / layout) merge by weight, palette treatments keep
 // their weights and are blended per colour at paint time.
-function fuseDNA(keys){
+function fuseDNA(keys, ph){
   const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
   if(!ks.length) return null;
-  const ws=ks.map((k)=>[ARTIST_DNA[k], 1/ks.length]);
+  const ws=ks.map((k)=>[_dnaOf(k,ph), 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
@@ -17487,7 +17723,7 @@ function fuseDNA(keys){
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
   const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
   return {
-    keys:ks, ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
+    keys:ks, ph:(ph|0), ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
     mark:dict('mark'), layout:dict('layout'),
     size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
     edge:num('edge'), alpha:num('alpha'), outline:num('outline'), wobble:num('wobble'), lines:num('lines'),
@@ -17569,9 +17805,11 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'cloud': { for(let j=0;j<6;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.35+R()*.4),0,6.2832); ctx.fill(); } break; }
       case 'dotcluster': { // Kusama: a swarm of equal dots
         const dr=rr*.22; for(let yy=-rr;yy<=rr;yy+=dr*2.3) for(let xx=-rr;xx<=rr;xx+=dr*2.3){ if(xx*xx+yy*yy>rr*rr) continue; ctx.beginPath(); ctx.arc(xx,yy,dr,0,6.2832); ctx.fill(); } break; }
-      case 'miroblob': { // Miró: outlined organism with an eye
-        const k=7; for(let j=0;j<=k;j++){ const a=j/k*6.2832, q=rr*(0.6+R()*0.7); const px=Math.cos(a)*q, py=Math.sin(a)*q; j?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.1); ctx.stroke();
-        ctx.beginPath(); ctx.fillStyle='#111'; ctx.arc(rr*.25,-rr*.1,rr*.14,0,6.2832); ctx.fill(); break; }
+      case 'miroblob': { // Miró: a smooth amoeba with a black contour (no eyes, no birds)
+        const k=6, pts=[]; for(let j=0;j<k;j++){ const a=j/k*6.2832, q=rr*(0.6+R()*0.6); pts.push([Math.cos(a)*q,Math.sin(a)*q]); }
+        ctx.moveTo((pts[k-1][0]+pts[0][0])/2,(pts[k-1][1]+pts[0][1])/2);
+        for(let j=0;j<k;j++){ const p0=pts[j], p1=pts[(j+1)%k]; ctx.quadraticCurveTo(p0[0],p0[1],(p0[0]+p1[0])/2,(p0[1]+p1[1])/2); }
+        ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.09); ctx.stroke(); break; }
       case 'gridrect': { // Mondrian / Klimt: flat rectangle in a black frame
         const h=rr*(0.6+R()*0.8); ctx.rect(-rr,-h,2*rr,2*h); ctx.fill(); ctx.strokeStyle='#141414'; ctx.lineWidth=Math.max(1.5,rr*.12); ctx.stroke(); break; }
       case 'kring': { // Kandinsky: ring, inner disc, a line through
@@ -17580,7 +17818,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'bulge': { // Vasarely: a small grid of discs swelling toward the centre
         for(let yy=-2;yy<=2;yy++) for(let xx=-2;xx<=2;xx++){ const d=Math.sqrt(xx*xx+yy*yy)/2.9; const q=rr*.22*(1.3-d); ctx.beginPath(); ctx.fillStyle=((xx+yy)%2)?col:col2; ctx.arc(xx*rr*.45,yy*rr*.45,Math.max(.5,q),0,6.2832); ctx.fill(); } break; }
       case 'stripes': { // Riley: a bundle of parallel bands
-        ctx.lineWidth=Math.max(1,rr*.28); for(let j=-2;j<=2;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(-rr*5,j*rr*.6); ctx.lineTo(rr*5,j*rr*.6); ctx.stroke(); } break; }
+        ctx.lineWidth=Math.max(1,rr*.28); for(let j=-2;j<=2;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(-rr*80,j*rr*.6); ctx.lineTo(rr*80,j*rr*.6); ctx.stroke(); } break; }
       case 'target': { // af Klint: concentric rings in two colours
         for(let q=4;q>=1;q--){ ctx.beginPath(); ctx.fillStyle=(q%2)?col:col2; ctx.arc(0,0,rr*q/4,0,6.2832); ctx.fill(); } break; }
       case 'protractor': { // Stella: nested quarter-arcs
@@ -17602,6 +17840,51 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         ctx.rect(-rr,-rr,2*rr,2*rr); ctx.fill(); ctx.beginPath(); ctx.fillStyle=col2; ctx.rect(-rr*.55,-rr*.55,rr*1.1,rr*1.1); ctx.fill(); break; }
       case 'phi': { // RafFel: golden rectangle with its square and quarter-arc
         const w=rr*1.618, h=rr; ctx.rect(-w/2,-h/2,w,h); ctx.fill(); ctx.strokeStyle='rgba(212,175,55,.9)'; ctx.lineWidth=Math.max(1,rr*.05); ctx.strokeRect(-w/2,-h/2,w,h); ctx.beginPath(); ctx.moveTo(-w/2+h,-h/2); ctx.lineTo(-w/2+h,h/2); ctx.stroke(); ctx.beginPath(); ctx.arc(-w/2+h,h/2,h,Math.PI,1.5*Math.PI); ctx.stroke(); break; }
+      case 'phiarc': { // RafFel: a thin golden-ratio arc, two colours along it
+        ctx.lineWidth=Math.max(1.2,rr*.045); const a0=R()*6.28; ctx.strokeStyle=col; ctx.arc(0,0,rr,a0,a0+1.9); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.arc(0,0,rr*0.618,a0+0.3,a0+1.6); ctx.stroke(); break; }
+      case 'neon': { // Picasso (neon line): one continuous glowing contour
+        ctx.lineWidth=Math.max(1.5,rr*.06); ctx.strokeStyle=col; let px=-rr*1.4,py=0; ctx.moveTo(px,py); for(let j=0;j<4;j++){ const nx=px+rr*0.7, ny=(R()-.5)*rr*1.6; ctx.quadraticCurveTo(px+rr*.35,(R()-.5)*rr*1.8,nx,ny); px=nx; py=ny; } ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.arc(px,py,rr*.18,0,6.2832); ctx.stroke(); break; }
+      case 'panel': { // Matisse / Kusama / $1M$: a flat colour panel, edge to edge of its cell
+        ctx.rect(-rr*1.1,-rr*.8,rr*2.2,rr*1.6); ctx.fill(); break; }
+      case 'cross': { // Miró: a black plus
+        ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(2,rr*.22); ctx.lineCap='butt'; ctx.moveTo(-rr,0); ctx.lineTo(rr,0); ctx.moveTo(0,-rr*1.2); ctx.lineTo(0,rr*1.2); ctx.stroke(); break; }
+      case 'beam': { // Kandinsky: a long straight beam of colour
+        ctx.lineWidth=Math.max(1.5,rr*.08); ctx.moveTo(-rr*3,rr*.6); ctx.lineTo(rr*3,-rr*.6); ctx.stroke(); break; }
+      case 'cube': { // Vasarely: an isometric cube, three faces
+        const h=rr*.5; ctx.moveTo(0,-rr); ctx.lineTo(rr*.87,-h); ctx.lineTo(0,0); ctx.lineTo(-rr*.87,-h); ctx.closePath(); ctx.fillStyle=col; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-rr*.87,-h); ctx.lineTo(0,0); ctx.lineTo(0,rr); ctx.lineTo(-rr*.87,h); ctx.closePath(); ctx.fillStyle=col2; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(rr*.87,-h); ctx.lineTo(0,0); ctx.lineTo(0,rr); ctx.lineTo(rr*.87,h); ctx.closePath(); ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fill(); ctx.fillStyle=col2; ctx.globalAlpha*=.55; ctx.fill(); break; }
+      case 'nest': { // Stella: nested concentric squares, colours alternating
+        for(let q=5;q>=1;q--){ ctx.beginPath(); const e=rr*q/5; ctx.rect(-e,-e,2*e,2*e); ctx.fillStyle=(q%2)?col:col2; ctx.fill(); } break; }
+      case 'heart': { // Haring: a heart with a black contour
+        ctx.moveTo(0,rr*.9); ctx.bezierCurveTo(-rr*1.3,rr*.1,-rr*.9,-rr*.9,0,-rr*.35); ctx.bezierCurveTo(rr*.9,-rr*.9,rr*1.3,rr*.1,0,rr*.9); ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.1); ctx.stroke(); break; }
+      case 'rays': { ctx.lineWidth=Math.max(1,rr*.02); for(let j=0;j<18;j++){ const a=R()*6.2832; ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr); ctx.stroke(); } break; }
+      case 'stem': { ctx.lineWidth=Math.max(1,rr*.05); ctx.moveTo(0,rr); ctx.lineTo(0,-rr); ctx.stroke(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,-rr,rr*.12,0,6.2832); ctx.fill(); break; }
+      case 'chain': { ctx.lineWidth=Math.max(1,rr*.06); let px=-rr,py=0; ctx.moveTo(px,py); for(let j=0;j<4;j++){ px+=rr*.5; py+=(R()-.5)*rr*.8; ctx.lineTo(px,py); } ctx.stroke(); px=-rr; py=0; for(let j=0;j<5;j++){ ctx.beginPath(); ctx.fillStyle=(j%2)?col:col2; ctx.arc(px,py,rr*.1,0,6.2832); ctx.fill(); px+=rr*.5; py+=(R()-.5)*rr*.8; } break; }
+      case 'hatch': { const k=5; const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.7+R()*0.4); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1; const st=Math.max(3,rr*.14); for(let d=-rr*2;d<rr*2;d+=st){ ctx.beginPath(); ctx.moveTo(d,-rr*2); ctx.lineTo(d+rr*2,rr*2); ctx.stroke(); } ctx.restore(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.07); ctx.stroke(); break; }
+      case 'poly': { const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.6+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
+      case 'arch': { ctx.arc(0,rr*.3,rr,Math.PI,0); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,rr*.3,rr*.55,Math.PI,0); ctx.closePath(); ctx.fill(); break; }
+      case 'starburst': { for(let j=0;j<8;j++){ const a=j/8*6.2832, q=j%2?rr*.35:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
+      case 'leaf': { ctx.moveTo(0,rr); ctx.quadraticCurveTo(rr*.9,0,0,-rr); ctx.quadraticCurveTo(-rr*.9,0,0,rr); ctx.fill(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.lineWidth=Math.max(1,rr*.05); ctx.moveTo(0,rr*.9); ctx.lineTo(0,-rr*.9); ctx.stroke(); break; }
+      case 'wavyline': { ctx.lineWidth=Math.max(1,rr*.25); ctx.moveTo(-rr*40,0); for(let j=1;j<=32;j++){ ctx.quadraticCurveTo(-rr*40+rr*2.5*j-rr*1.25,(j%2?-1:1)*rr*1.2,-rr*40+rr*2.5*j,0);} ctx.stroke(); break; }
+      case 'bar': { ctx.rect(-rr*.3,-rr*2.5,rr*.6,rr*5); ctx.fill(); break; }
+      case 'fan': { const a0=(R()*4|0)*1.5708; for(let q=6;q>=1;q--){ for(let sgm=0;sgm<6;sgm++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rr*q/6,a0+sgm*0.2618,a0+(sgm+1)*0.2618); ctx.closePath(); ctx.fillStyle=((q+sgm)%2)?col:col2; ctx.fill(); } } break; }
+      case 'vdrip': { ctx.lineWidth=Math.max(1,rr*.18); ctx.lineCap='round'; ctx.moveTo(0,-rr); for(let j=1;j<=4;j++){ ctx.quadraticCurveTo((R()-.5)*rr*.5,-rr+j*rr*.6-rr*.3,0,-rr+j*rr*.6);} ctx.stroke(); ctx.beginPath(); ctx.arc(0,-rr,rr*.3,0,6.2832); ctx.fill(); break; }
+      case 'scallop': { ctx.lineWidth=Math.max(1,rr*.12); for(let j=-1;j<=1;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.arc(j*rr*1.1,0,rr*.55,Math.PI,0); ctx.stroke(); } break; }
+      case 'sphere': { ctx.arc(0,0,rr,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,.35)'; ctx.arc(-rr*.3,-rr*.3,rr*.45,0,6.2832); ctx.fill(); ctx.fillStyle='rgba(0,0,0,.6)'; for(let j=0;j<10;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr*.9; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*.07,0,6.2832); ctx.fill(); } break; }
+      case 'gridline': { ctx.lineWidth=Math.max(1.5,rr*.06); ctx.moveTo(-rr*80,0); ctx.lineTo(rr*80,0); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.moveTo(0,-rr*80); ctx.lineTo(0,rr*80); ctx.stroke(); break; }
+      case 'vstripes': { ctx.lineWidth=Math.max(1,rr*.28); for(let j=-2;j<=2;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(j*rr*.6,-rr*80); ctx.lineTo(j*rr*.6,rr*80); ctx.stroke(); } break; }
+      case 'checker': { const st=rr*.5; for(let yy=-1;yy<=1;yy++) for(let xx=-1;xx<=1;xx++){ ctx.fillStyle=((xx+yy)%2)?col:col2; ctx.fillRect(xx*st-st/2,yy*st-st/2,st,st); } break; }
+      case 'zigzag': { ctx.lineWidth=Math.max(1.5,rr*.08); ctx.moveTo(-rr*2,0); for(let j=1;j<=6;j++){ ctx.lineTo(-rr*2+j*rr*.66,(j%2?-1:1)*rr*.5);} ctx.stroke(); break; }
+      case 'eye': { ctx.ellipse(0,0,rr,rr*.6,0,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,0,rr*.4,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.fillStyle='#111'; ctx.arc(0,0,rr*.18,0,6.2832); ctx.fill(); break; }
+      case 'diamond': { ctx.moveTo(0,-rr); ctx.lineTo(rr*.6,0); ctx.lineTo(0,rr); ctx.lineTo(-rr*.6,0); ctx.closePath(); ctx.fill(); break; }
+      case 'asterisk': { ctx.lineWidth=Math.max(1,rr*.06); for(let j=0;j<3;j++){ const a=j*1.0472; ctx.beginPath(); ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr); ctx.lineTo(-Math.cos(a)*rr,-Math.sin(a)*rr); ctx.stroke(); } break; }
+      case 'step': { ctx.lineWidth=Math.max(1.5,rr*.1); let px=-rr,py=rr; ctx.moveTo(px,py); for(let j=0;j<4;j++){ px+=rr*.5; ctx.lineTo(px,py); py-=rr*.5; ctx.lineTo(px,py);} ctx.stroke(); break; }
+      case 'nestpoly': { const k=5; for(let q=4;q>=1;q--){ ctx.beginPath(); for(let j=0;j<k;j++){ const a=j/k*6.2832-1.5708, e=rr*q/4; j?ctx.lineTo(Math.cos(a)*e,Math.sin(a)*e):ctx.moveTo(Math.cos(a)*e,Math.sin(a)*e);} ctx.closePath(); ctx.fillStyle=(q%2)?col:col2; ctx.fill(); } break; }
+      case 'speech': { ctx.rect(-rr,-rr*.55,rr*2,rr*1.1); ctx.fill(); ctx.beginPath(); ctx.moveTo(-rr*.5,rr*.55); ctx.lineTo(-rr*.3,rr*.95); ctx.lineTo(-rr*.1,rr*.55); ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.1); ctx.strokeRect(-rr,-rr*.55,rr*2,rr*1.1); break; }
+      case 'rain': { ctx.lineWidth=Math.max(1,rr*.03); for(let j=0;j<6;j++){ ctx.beginPath(); const x0=(R()-.5)*rr*2; ctx.moveTo(x0,-rr); ctx.lineTo(x0-rr*.4,rr); ctx.stroke(); } break; }
+      case 'dotline': { for(let j=0;j<=10;j++){ ctx.beginPath(); ctx.arc(-rr+j*rr*.2, Math.sin(j*.6)*rr*.3, rr*.04, 0, 6.2832); ctx.fill(); } break; }
+      case 'arrow': { ctx.lineWidth=Math.max(2,rr*.14); ctx.moveTo(0,rr); ctx.lineTo(0,-rr*.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-rr*.4,-rr*.3); ctx.lineTo(0,-rr); ctx.lineTo(rr*.4,-rr*.3); ctx.closePath(); ctx.fill(); break; }
       case 'pixels': { // $1M$: a patch of tiny squares
         const st=Math.max(2,rr*.3); for(let yy=-rr;yy<rr;yy+=st) for(let xx=-rr;xx<rr;xx+=st){ ctx.fillStyle=(((xx+yy)/st)|0)%2?col:col2; ctx.fillRect(xx,yy,st*.85,st*.85); } break; }
       default: ctx.arc(0,0,rr,0,6.2832); ctx.fill();
@@ -17618,7 +17901,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
 // The fused painter. chords/lim as every other overlay; gc = the song's palette.
 // noGround: skip the ground fill (transparent export).
 function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
-  const F = fuseDNA(keys); if(!F || !chords || !chords.length) return;
+  const F = fuseDNA(keys, phaseIndex); if(!F || !chords || !chords.length) return;
   const ss = (sessionSeed|0) ^ ((phaseIndex|0)*7919);
   const S = Math.min(CW,CH), n = chords.length;
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
@@ -17652,7 +17935,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const note=ns[j]; const m=note.m!==undefined?note.m:(typeof note==='number'?note:60), v=note.v!==undefined?note.v:80;
         // this chord's painter — a fair round-robin, so a duo really is 50/50;
         // the painter keeps its own vocabulary and size, the hand stays fused
-        const PD=ARTIST_DNA[F.keys[(i+layer)%F.keys.length]];
+        const PD=_dnaOf(F.keys[(i+layer)%F.keys.length], F.ph);
         const kind=_fuPick(PD.mark,R());
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
@@ -17662,7 +17945,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=_fuTone([c2r,c2g,c2b],F,R());
         ctx.save(); ctx.translate(x+(j?(R()-.5)*r*2.2:0), y+(j?(R()-.5)*r*2.2:0));
-        _fuMark(ctx, kind, r, col, F, R, (kind==='field'||kind==='stripe'||kind==='stripes'||kind==='figure')?0:(R()-.5)*F.wobble*1.2, col2);
+        _fuMark(ctx, kind, r, col, F, R, (/^(field|stripe|stripes|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2, col2);
         ctx.restore();
       }
     }
