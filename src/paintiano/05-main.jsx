@@ -2230,7 +2230,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _artMode = jamOn ? 3 : randomMode ? (style!==null ? 1 : 2) : 0;
   const _cycleArt = ()=>{
     if(working||anim) return;
-    if(_artMode===0){ _shuffleOn(); return; }                       // → 1 (or 2 when nothing is selected)
+    if(_artMode===0){                                               // → 1: nothing selected → pick a random artist first
+      if(style===null){ const pool=ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k)); if(pool.length) setStyleTo(pool[(Math.random()*pool.length)|0]); }
+      _shuffleOn(); return; }
     if(_artMode===1){ setStyleTo(null); return; }                   // → 2: release the selection, keep shuffling
     if(_artMode===2){ _shuffleOff(); if(ensembleActive){ setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){} } return; } // → 3 or 0
     setJamOn(false);                                                // 3 → 0
@@ -12872,6 +12874,7 @@ Hard requirements:
                   toggleArtSafe(k);
                   return;
                 }
+                if(_artMode===2) return;                      // shuffle ALL: the chips are locked — the draw decides
                 if(jamOn && !locked){ _jamTap(k); return; }
                 selectStyle(k);
               };
@@ -12880,7 +12883,7 @@ Hard requirements:
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
-                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {label}
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
