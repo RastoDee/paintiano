@@ -17735,13 +17735,37 @@ function fuseDNA(keys, ph){
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
   const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
-  return {
+  return _fuMusic({
     keys:ks, ph:(ph|0), phs, ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
     mark:dict('mark'), layout:dict('layout'),
     size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
     edge:num('edge'), alpha:num('alpha'), outline:num('outline'), wobble:num('wobble'), lines:num('lines'),
-    layers:Math.max(1,Math.round(num('layers'))), density:num('density'), halftone:num('halftone'), tones,
-  };
+    layers:Math.max(1,Math.round(num('layers'))), density:num('density'), halftone:num('halftone'), tones, tilt:0,
+  });
+}
+// ── The SONG shapes the fused hand (Music DNA, the same grammar the solo
+// engines read from globalThis.__PAINT_MUSIC_DNA; all 0..1):
+//   density·tempo  → how many marks       register      → how big they are
+//   registerSpread → how varied in size   tension       → contour, hand-shake
+//   regularity     → grid/stack vs flow/scatter          energy → opacity, layers
+//   contour        → the field tilts up or down along the time axis
+function _fuMusic(F){
+  const D=(typeof globalThis!=='undefined') ? globalThis.__PAINT_MUSIC_DNA : null;
+  if(!D || typeof D.density!=='number') return F;
+  const c01=(x)=>Math.max(0,Math.min(1,x));
+  F.density = c01(F.density * (0.7+0.6*D.density) * (0.85+0.3*D.tempoClass));
+  const sc = 1.25-0.5*D.registerCenter;
+  F.size = [F.size[0]*sc, F.size[1]*sc*(1+0.4*D.registerSpread)];
+  F.outline = c01(F.outline + 0.3*(D.tension-0.5));
+  F.wobble  = c01(F.wobble  + 0.4*(0.5-D.regularity));
+  F.alpha   = c01(F.alpha   * (0.8+0.3*D.energy));
+  if(D.energy>0.7 && F.layers<4) F.layers+=1;
+  const L=F.layout, reg=D.regularity;
+  L.grid=(L.grid||0)+0.3*reg; L.stack=(L.stack||0)+0.15*reg;
+  L.flow=(L.flow||0)+0.3*(1-reg); L.scatter=(L.scatter||0)+0.15*(1-reg);
+  const t=Object.values(L).reduce((a,b)=>a+b,0)||1; for(const k in L) L[k]/=t;
+  F.tilt = (D.contour-0.5)*0.5;                                   // rising song → the field climbs to the right
+  return F;
 }
 function _fuPick(d,x){ for(const k in d){ x-=d[k]; if(x<=0) return k; } for(const k in d) return k; return 'dot'; }
 // One palette treatment, blended from the parents' — not one per mark.
@@ -17779,6 +17803,7 @@ function _fuPlace(u, pitch, F, CW, CH, r1, r2, i, n){
   let pk=((r1*7919+r2*104729)%1+1)%1*T, k=0; for(;k<7;k++){ pk-=w[k]; if(pk<=0) break; }
   let x=px[k], y=py[k];
   const wob=F.wobble*0.07; x+=(r1-.5)*wob; y+=(r2-.5)*wob;
+  if(F.tilt) y-=(u-0.5)*F.tilt;
   x=Math.max(.04,Math.min(.96,x)); y=Math.max(.05,Math.min(.95,y));
   return [x*CW, y*CH];
 }
