@@ -17435,8 +17435,8 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,dir,keys){
 // Not a collage of the artists' own engines: every artist is reduced to a
 // DNA of ~12 genes (ground, stroke vocabulary, size, edge softness, opacity,
 // layout grammar, contour, palette treatment, hand-shake, connecting lines,
-// layers, density). The selected artists are crossed — the first leads
-// (weight .5), then .3, .2, .15, .1 — into a single fused genome, and ONE
+// layers, density). The selected artists are crossed with EQUAL weights
+// (the first only sets the ground) into a single fused genome, and ONE
 // renderer paints the whole song with it: stroke types are inherited from
 // all parents, but size, edge, contour, layout and layering are one blended
 // hand. Same song + same parents + same seed → the same painting (export,
@@ -17470,7 +17470,7 @@ const ARTIST_DNA = {
   oneM:         {ground:'#ffffff',mark:{rect:1},                        size:[.01,.03],edge:0,  alpha:1,  layout:{grid:1},               outline:.3,tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
 };
 ARTIST_DNA.notes = ARTIST_DNA.mosaic;
-const FUSION_WEIGHTS = [.5,.3,.2,.15,.1];
+// equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
 function _fuHex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
 // Cross the parents' DNA into one genome. Numeric genes blend by weight,
@@ -17479,7 +17479,7 @@ function _fuHex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),
 function fuseDNA(keys){
   const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
   if(!ks.length) return null;
-  const ws=ks.map((k,i)=>[ARTIST_DNA[k], FUSION_WEIGHTS[Math.min(i,FUSION_WEIGHTS.length-1)]]);
+  const ws=ks.map((k)=>[ARTIST_DNA[k], 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
@@ -17512,13 +17512,23 @@ function _fuTone(rgb, F, r1){
 // Layout grammar: ONE blended rule for every mark (x by time, y by pitch,
 // pulled toward the parents' habits: grid · field · scatter · flow · radial ·
 // stack · spiral · diagonal), then the fused hand-shake.
-function _fuPlace(u, pitch, F, CW, CH, r1, r2){
+// Layout grammar: ONE blended rule for every mark. grid = the mosaic's own
+// reading order, cell by cell over the WHOLE canvas (time runs row by row);
+// field = that grid, jittered; scatter = random; flow = a river across;
+// radial = around the phi point; stack = bands by pitch; spiral; diagonal.
+// Then the fused hand-shake.
+function _fuPlace(u, pitch, F, CW, CH, r1, r2, i, n){
   const L=F.layout, w=[L.grid||0,L.field||0,L.scatter||0,L.flow||0,L.radial||0,L.stack||0,L.spiral||0,L.diagonal||0];
   const T=w.reduce((a,b)=>a+b,0)||1;
   const ang=u*Math.PI*2*2.2, rad=0.08+0.42*u;
-  const px=[u, u, r1, u, 0.618+Math.cos(ang)*0.33*(1-pitch*.5), 0.5+(r1-.5)*.8, 0.5+Math.cos(ang)*rad, u];
-  const py=[1-pitch, 1-pitch+(r2-.5)*.18, r2, 0.5+Math.sin(u*9.4+pitch*3)*0.34, 0.382+Math.sin(ang)*0.33*(1-pitch*.5), 1-pitch, 0.5+Math.sin(ang)*rad, (1-pitch)*.6+u*.4];
-  let x=0,y=0; for(let k=0;k<8;k++){ x+=px[k]*w[k]/T; y+=py[k]*w[k]/T; }
+  const cols=Math.max(2,Math.round(Math.sqrt(Math.max(1,n)*CW/CH))), rows=Math.max(1,Math.ceil(Math.max(1,n)/cols));
+  const gx=((i%cols)+0.5)/cols, gy=(Math.floor(i/cols)+0.5)/rows;
+  const px=[gx, gx, r1, u, 0.618+Math.cos(ang)*0.33*(1-pitch*.5), 0.5+(r1-.5)*.9, 0.5+Math.cos(ang)*rad, u];
+  const py=[gy, gy+(r2-.5)*.12, r2, 0.5+Math.sin(u*9.4+pitch*3)*0.34, 0.382+Math.sin(ang)*0.33*(1-pitch*.5), 1-pitch, 0.5+Math.sin(ang)*rad, 0.5+(u-0.5)*0.8+(pitch-0.5)*0.5];
+  // each mark follows ONE inherited grammar (weighted pick) — averaging the
+  // grammars would pull everything into a blur at the centre
+  let pk=((r1*7919+r2*104729)%1+1)%1*T, k=0; for(;k<7;k++){ pk-=w[k]; if(pk<=0) break; }
+  let x=px[k], y=py[k];
   const wob=F.wobble*0.07; x+=(r1-.5)*wob; y+=(r2-.5)*wob;
   x=Math.max(.04,Math.min(.96,x)); y=Math.max(.05,Math.min(.95,y));
   return [x*CW, y*CH];
@@ -17583,13 +17593,15 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       const R=_seedRnd(i*31+layer*977, ss, 7, 11);
       // big-mark idioms (Rothko fields…) say less: fewer, larger marks, one per chord
       const bigCap = F.size[1]>0.2 ? Math.max(0.3, 0.2/F.size[1]) : 1;
-      if(R() > F.density*(0.45+lf*0.55)*bigCap) continue;
+      // breathing room: fewer marks the more painters share the canvas
+      const crowd = 0.6/Math.sqrt(F.keys.length);
+      if(R() > F.density*(0.45+lf*0.55)*bigCap*crowd) continue;
       const E=(chords[i]&&typeof chords[i]._E==='number')?chords[i]._E:0.5;
       _setCurE(E);
       const pitch=pitchOf(ns);
-      const [x,y]=_fuPlace(i/Math.max(1,n-1), pitch, F, CW, CH, R(), R());
+      const [x,y]=_fuPlace(i/Math.max(1,n-1), pitch, F, CW, CH, R(), R(), i, n);
       if(layer===0) pos[i]=[x,y];
-      const k=F.size[1]>0.2 ? 1 : Math.min(ns.length,4);
+      const k=F.size[1]>0.2 ? 1 : Math.min(ns.length, F.keys.length>=3 ? 2 : 3);
       for(let j=0;j<k;j++){
         const note=ns[j]; const m=note.m!==undefined?note.m:(typeof note==='number'?note:60), v=note.v!==undefined?note.v:80;
         const kind=_fuPick(F.mark,R());
