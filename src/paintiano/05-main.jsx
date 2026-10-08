@@ -13570,6 +13570,9 @@ Hard requirements:
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
           if(demoReelOn){ demoReelStop(); return; }
+          // Lite fullscreen: a plain tap brings the “inspired by …” flash back —
+          // the only place the attribution lives while the painting fills the screen.
+          if(immersive && basicMode) _fireInspiredFlash();
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
           const rect=cv.getBoundingClientRect();
