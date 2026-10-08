@@ -2227,14 +2227,37 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // The state is derived, never stored: 1 = shuffle + an artist selected,
   // 2 = shuffle + no selection (the selection is released on the way).
   const _shuffleOn = ()=>{ setJamOn(false); setRandomMode(true); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setStructureSeedLock(null); };
+  const _shuffleIndexFor = (key)=>{
+    if(!key) return -1;
+    const MOSAIC_FAMILY=['mosaic','notes']; const familyOn=setupArtists.includes('mosaicFamily');
+    const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
+    const base = familyOn ? [...filteredArtists, ...MOSAIC_FAMILY] : filteredArtists;
+    if(!base.length) return -1;
+    let s2 = ((pollockSessionSeed >>> 0) ^ 0x9E3779B1) >>> 0; if(s2===0) s2=1;
+    const _rnd = () => { s2 = (Math.imul(s2, 1664525) + 1013904223) >>> 0; return s2 / 4294967296; };
+    const pool = base.slice();
+    for(let i = pool.length - 1; i > 0; i--){ const j = Math.floor(_rnd() * (i + 1)); const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
+    let h = (pollockSessionSeed>>>0); h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
+    const basePick = (h>>>0) % pool.length;
+    const at = pool.indexOf(key); if(at<0) return -1;
+    return ((at - basePick) % pool.length + pool.length) % pool.length;
+  };
   const _artMode = jamOn ? 3 : randomMode ? (style!==null ? 1 : 2) : 0;
   const _cycleArt = ()=>{
     if(working||anim) return;
     if(_artMode===0){                                               // → 1: nothing selected → pick a random artist first
       if(style===null){ const pool=ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k)); if(pool.length) setStyleTo(pool[(Math.random()*pool.length)|0]); }
       _shuffleOn(); return; }
-    if(_artMode===1){ setStyleTo(null); return; }                   // → 2: release the selection, keep shuffling
-    if(_artMode===2){ _shuffleOff(); if(ensembleActive){ setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){} } return; } // → 3 or 0
+    if(_artMode===1){                                               // → 2: release the selection, keep shuffling —
+      const keep=style; setStyleTo(null);                           //      but the draw starts on the SAME artist
+      const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix);
+      return; }
+    if(_artMode===2){                                               // → 3 or 0: the artist on screen stays
+      const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null;
+      _shuffleOff();
+      if(ensembleActive){ if(cur) setStyleTo(cur); setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){} }
+      else if(cur) setStyleTo(cur);
+      return; }
     setJamOn(false);                                                // 3 → 0
   };
   const _getCompMode = ()=> crOn ? 2 : composerDice ? 1 : 0;   // lazy: composerDice is declared further down
