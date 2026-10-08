@@ -904,15 +904,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, the 🔀 button gets one more step — Ensemble; then tap up to five artists or composers.'},
-  SK:{title:'Ensemble',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, tlačidlo 🔀 dostane ďalší krok — Ensemble; potom ťukni až na päť umelcov či skladateľov.'},
-  DE:{title:'Ensemble',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet bekommt der 🔀-Knopf einen weiteren Schritt — Ensemble; dann bis zu fünf Künstler oder Komponisten antippen.'},
-  FR:{title:'Ensemble',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, le bouton 🔀 gagne une étape de plus — Ensemble ; touche ensuite jusqu’à cinq artistes ou compositeurs.'},
-  ES:{title:'Ensemble',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, el botón 🔀 gana un paso más — Ensemble; luego toca hasta cinco artistas o compositores.'},
-  PT:{title:'Ensemble',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, o botão 🔀 ganha mais um passo — Ensemble; depois toca até cinco artistas ou compositores.'},
-  zh:{title:'合奏',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，🔀 按钮多一个档位——合奏；然后点按最多五位艺术家或作曲家。'},
-  zhTW:{title:'合奏',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，🔀 按鈕多一個檔位——合奏；然後點按最多五位藝術家或作曲家。'},
-  ja:{title:'アンサンブル',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると 🔀 ボタンにもう一段——アンサンブルが加わり、アーティストか作曲家を最大5人までタップできます。'},
+  EN:{title:'Ensemble',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, the 🔀 button gets one more step — Ensemble; then tap up to five artists or composers. In Lite, Surprise now and then plays an ensemble.'},
+  SK:{title:'Ensemble',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, tlačidlo 🔀 dostane ďalší krok — Ensemble; potom ťukni až na päť umelcov či skladateľov. V Lite Prekvap ma občas zahrá ensemble.'},
+  DE:{title:'Ensemble',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet bekommt der 🔀-Knopf einen weiteren Schritt — Ensemble; dann bis zu fünf Künstler oder Komponisten antippen. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
+  FR:{title:'Ensemble',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, le bouton 🔀 gagne une étape de plus — Ensemble ; touche ensuite jusqu’à cinq artistes ou compositeurs. En Lite, Surprends-moi joue parfois un ensemble.'},
+  ES:{title:'Ensemble',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, el botón 🔀 gana un paso más — Ensemble; luego toca hasta cinco artistas o compositores. En Lite, Sorpréndeme toca a veces un ensemble.'},
+  PT:{title:'Ensemble',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, o botão 🔀 ganha mais um passo — Ensemble; depois toca até cinco artistas ou compositores. No Lite, Surpreende-me toca às vezes um ensemble.'},
+  zh:{title:'合奏',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，🔀 按钮多一个档位——合奏；然后点按最多五位艺术家或作曲家。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
+  zhTW:{title:'合奏',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，🔀 按鈕多一個檔位——合奏；然後點按最多五位藝術家或作曲家。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
+  ja:{title:'アンサンブル',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると 🔀 ボタンにもう一段——アンサンブルが加わり、アーティストか作曲家を最大5人までタップできます。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed);
@@ -2445,7 +2445,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       cx.strokeRect(AX-2,AY-2,AW+4,AH2+4);
       if(srcCv){ cx.drawImage(srcCv,AX,AY,AW,AH2); }
       cx.textAlign='center'; cx.fillStyle=GOLD;
-      if(artKey && STYLE_INSPIRED[artKey]){
+      if(artKey && painterStageRef.current.length && style!==null){
+        cx.font='italic 600 72px "Cormorant Garamond", serif';
+        cx.fillText(_stageNames('art'), W/2, AY-120, W-200);
+      } else if(artKey && STYLE_INSPIRED[artKey]){
         cx.font='italic 600 84px "Cormorant Garamond", serif';
         cx.fillText('inspired by '+STYLE_INSPIRED[artKey], W/2, AY-120);
       }
@@ -2763,6 +2766,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     }catch(_){ return true; }
   });
   const basicModeRef = useRef(false);
+  // Lite ⇄ Advanced: an ensemble never travels across the switch — Lite fills
+  // its stage only from Surprise, Advanced only from chip taps.
+  const _ensModeFirstRef = useRef(true);
+  useEffect(()=>{ if(_ensModeFirstRef.current){ _ensModeFirstRef.current=false; return; } setJamOn(false); setCrOn(false); setPainterStage([]); setComposerStage([]); },[basicMode]);
   // Once the user has taken the bridge into Advanced, don't offer it again
   // this session — they now know the top-bar Lite/Advanced switch.
   const [bridgeUsed, setBridgeUsed] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_discovered')==='1'; }catch(_){ return false; } });
@@ -3064,9 +3071,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _dc = (proStatus==='free' && a.includes(composerOfDay)) ? composerOfDay : null;
     const c = (_dc && Math.random()<0.4) ? _dc : a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
-    // Ensemble on (Pro): now and then Surprise seats a second composer — a duo
-    // trading phrases on the same picture. Off → always a soloist.
-    if(ensembleOnRef.current && c && Math.random()<0.25){ const o=_en.filter(k=>k!==c); setComposerStage(o.length?[o[(Math.random()*o.length)|0]]:[]); }
+    // Ensemble on (Pro): now and then Surprise seats an ensemble — 2 to 5
+    // composers (count and members random) trading phrases on the same picture.
+    if(ensembleOnRef.current && c && Math.random()<0.25){ const o=_en.filter(k=>k!==c); for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; } const n=Math.min(o.length, 1+((Math.random()*4)|0)); setComposerStage(o.slice(0,n)); }
     else setComposerStage([]);
   },[setupComposers, composerIsLocked, isDailyComposer, composerOfDay, proStatus]);
   // ADVANCED composer dice — mirror of the artists' 🎲: ON rolls a different
@@ -3600,7 +3607,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // repainted per frame (no append / substrate caching), throttled like overlays.
     const _jamExtra = painterStageRef.current;
     const _jamAll = (styleRef.current!==null ? [styleRef.current] : []).concat(_jamExtra||[]);
-    const _jamKeys = (_jamAll.length>=2 && viewMode!=='image' && !basicModeRef.current) ? _jamAll : null;
+    const _jamKeys = (_jamAll.length>=2 && viewMode!=='image') ? _jamAll : null;
     const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+') : '';
     const canAppend =
       !_jamKeys &&
@@ -8912,6 +8919,10 @@ Hard requirements:
   // change, so the whole painting repaints in the new artist's language at the
   // current position while the music keeps playing. Avoids repeating the
   // current style so each tap is visibly different.
+  // Lite Jam belongs to the Surprise that seated it: any other style change in
+  // Lite (Play disc, flavour flip, auto-play) takes the stage down.
+  const _liteJamStyleRef = useRef(null);
+  useEffect(()=>{ if(basicModeRef.current && painterStageRef.current.length && style!==_liteJamStyleRef.current){ _liteJamStyleRef.current=null; setPainterStage([]); } },[style]);
   const basicSurprise = useCallback(()=>{
     // ── Forced Mosaic on the first Surprise after Lite Play ─────────────
     // litePlayStart lands on Pollock. The very next Surprise tap goes to
@@ -9021,6 +9032,17 @@ Hard requirements:
       setPhaseIndex(nv|0);            // pick that artist's variant
       setNotesMode(false); setOneMMode(false);  // artist exits any family sub-mode
     }
+    // ENSEMBLE in Lite (Pro, on in Setup): now and then Surprise paints a Jam —
+    // the drawn artist (with its drawn variant) plus 1–4 more painters, count
+    // and members random, from the same allowed pool. Otherwise a soloist.
+    let _jamExtra = [];
+    if(ensembleOnRef.current && !_isFamilyKey(nk) && Math.random()<0.25){
+      const o = Array.from(new Set(artists)).filter(k=>k!==nk && k!=='oneM');
+      for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; }
+      _jamExtra = o.slice(0, Math.min(o.length, 1+((Math.random()*4)|0)));
+    }
+    _liteJamStyleRef.current = _jamExtra.length ? nk : null;
+    setPainterStage(_jamExtra);
   },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode, setupPalettes, mode, setupArtists, artistOfDay]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
@@ -10780,7 +10802,7 @@ Hard requirements:
         // cells are visible content and stay. Probe-based, so it is correct
         // per style AND per variant, with no hand-maintained list.
         const _jamAllX = (style!==null ? [style] : []).concat(painterStageRef.current||[]);
-        const _jamX = (_jamAllX.length>=2 && viewMode!=='image' && !basicModeRef.current) ? _jamAllX : null;
+        const _jamX = (_jamAllX.length>=2 && viewMode!=='image') ? _jamAllX : null;
         if(_jamX){
           // JAM export: the same layered render as the live canvas, at export resolution.
           _jamPaint(hctx, CW, CH, N, BW, BH, grid, chords, chords.length, gc, _jamX, pollockSessionSeed, mode, paintPhase, !!noBg, _isGallery?1:SCALE);
@@ -13258,14 +13280,18 @@ Hard requirements:
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?7:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
-            {!immersive && basicMode && !liteImageMode && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
+            {!immersive && basicMode && !liteImageMode && painterStage.length>0 && style!==null && (
+              <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{_stageNames('art')}</span>
+            )}
+            {!immersive && basicMode && !liteImageMode && !(painterStage.length>0 && style!==null) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
                 {isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
             {!immersive && basicMode && liteImageMode && (
-              <span key={'inspc-'+(imgComposer||'scan')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                {imgComposer && COMPOSER_INSPIRED[imgComposer]
+              <span key={'inspc-'+(imgComposer||'scan')+(composerStage.length?'+'+composerStage.join('+'):'')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
+                {(imgComposer && composerStage.length) ? _stageNames('comp')
+                  : imgComposer && COMPOSER_INSPIRED[imgComposer]
                   ? (<>{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
                   : 'Scan'}
               </span>
