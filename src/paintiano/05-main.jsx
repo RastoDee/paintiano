@@ -206,9 +206,9 @@ const AboutModal = memo(function AboutModal({onClose, t, ts, lang, readScale, se
         <div style={{display:'flex',flexDirection:'column',gap:18}}>
           {cards.map((card, i) => (
             <div key={card.id} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:14,textAlign:'center',padding:'24px 20px',borderRadius:18,background:'rgba(255,255,255,.018)',border:'1px solid rgba(201,168,76,.14)'}}>
-              <div style={{fontSize:(3.4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{card.glyph}</div>
-              <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{card.title}</div>
-              <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{card.body}</div>
+              <div style={{fontSize:(3.4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{pfIcons(card.glyph)}</div>
+              <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{pfIcons(card.title)}</div>
+              <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{pfIcons(card.body)}</div>
               {card.book && (
                 <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookExcerptCta','Read an excerpt')} →</a>
               )}
@@ -409,15 +409,15 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             cards.map((card, idx)=>(
               <div key={card.id} data-card-idx={idx} className="pf-guide-card" style={{minHeight:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px 28px 60px',boxSizing:'border-box'}}>
                 <div key={card.id+'-'+idx} className="pf-guide-card-inner" style={{maxWidth:520,width:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:18,textAlign:'center'}}>
-                  <div style={{fontSize:'5rem',lineHeight:1,color:PF.gold2,marginBottom:6,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{card.glyph}</div>
-                  <div style={{fontSize:(1.6*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{card.title}</div>
-                  <div style={{fontSize:(.92*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{card.body}</div>
+                  <div style={{fontSize:'5rem',lineHeight:1,color:PF.gold2,marginBottom:6,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{pfIcons(card.glyph)}</div>
+                  <div style={{fontSize:(1.6*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{pfIcons(card.title)}</div>
+                  <div style={{fontSize:(.92*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{pfIcons(card.body)}</div>
                   {card.more && expandedId!==card.id && (
                     <button onClick={()=>setExpandedId(card.id)} style={{marginTop:2,padding:'7px 18px',background:'transparent',color:'rgba(201,168,76,.8)',border:'1px solid rgba(201,168,76,.4)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.58*readScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>{(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'} ↓</button>
                   )}
                   {card.more && expandedId===card.id && (
                     <>
-                      <div className="pf-guide-card-inner" style={{fontSize:(.82*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.78)',fontFamily:'inherit',letterSpacing:'.01em',textAlign:'left',maxWidth:480}}>{card.more}</div>
+                      <div className="pf-guide-card-inner" style={{fontSize:(.82*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.78)',fontFamily:'inherit',letterSpacing:'.01em',textAlign:'left',maxWidth:480}}>{pfIcons(card.more)}</div>
                       <button onClick={()=>setExpandedId(null)} style={{marginTop:2,padding:'7px 18px',background:'transparent',color:'rgba(201,168,76,.6)',border:'1px solid rgba(201,168,76,.3)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.58*readScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>{(t('guideLess')&&t('guideLess')!=='guideLess')?t('guideLess'):'Less'} ↑</button>
                     </>
                   )}
@@ -904,15 +904,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, an Ensemble button appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. In Lite, Surprise now and then plays an ensemble.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Call & response',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. V Lite Prekvap ma občas zahrá ensemble.'},
-  DE:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
-  FR:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un bouton Ensemble apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. En Lite, Surprends-moi joue parfois un ensemble.'},
-  ES:{title:'Ensemble',fusion:'Fusión',cr:'Call & response',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, aparece un botón Ensemble junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. En Lite, Sorpréndeme toca a veces un ensemble.'},
-  PT:{title:'Ensemble',fusion:'Fusão',cr:'Call & response',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um botão Ensemble ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. No Lite, Surpreende-me toca às vezes um ensemble.'},
-  zh:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，每个 🔀 旁出现合奏按钮；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
-  zhTW:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，每個 🔀 旁出現合奏按鈕；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Call & response',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると各 🔀 の隣にアンサンブル・ボタンが現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. In Lite, Surprise now and then plays an ensemble.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Call & response',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. V Lite Prekvap ma občas zahrá ensemble.'},
+  DE:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
+  FR:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. En Lite, Surprends-moi joue parfois un ensemble.'},
+  ES:{title:'Ensemble',fusion:'Fusión',cr:'Call & response',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. En Lite, Sorpréndeme toca a veces un ensemble.'},
+  PT:{title:'Ensemble',fusion:'Fusão',cr:'Call & response',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. No Lite, Surpreende-me toca às vezes um ensemble.'},
+  zh:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
+  zhTW:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Call & response',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed);
@@ -2160,7 +2160,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Exception: during a taste preview the tasted artist shows its FULL
   // variant range (the whole point of the teaser), read via ref so stale
   // closures can't pin it to 2.
-  const _effVariants = () => ((proStatus==='free' && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : (style==='pollock' ? 7 : 6)))))));
+  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : (style==='pollock' ? 7 : 6)))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -2886,7 +2886,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // The target may sit below the fold of the Setup sheet (Composers grew to
     // 12 chips, pushing Tones off-screen) — bring it into view FIRST, then
     // measure, or the ring lands on whatever is at the stale rect (the footer).
-    const TOUR_SELS=['.pf-setup-chip','.pf-setup-artists','.pf-setup-palettes','.pf-setup-composers','.pf-setup-tones'];
+    const TOUR_SELS=['.pf-setup-chip','.pf-setup-artists','.pf-setup-palettes','.pf-setup-composers','.pf-setup-ensemble','.pf-setup-tones'];
     const s0=setTimeout(()=>{ try{ const el=document.querySelector(TOUR_SELS[tourStep]||''); if(el && el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'auto'}); }catch(_){} },40);
     const a=setTimeout(()=>setTourTick(t=>t+1),160); const b=setTimeout(()=>setTourTick(t=>t+1),420);
     return ()=>{ clearTimeout(s0); clearTimeout(a); clearTimeout(b); };
@@ -3530,7 +3530,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     _setArtistSeed(pollockSessionSeed);
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
-    _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+    _setVariantCap((proStatus==='free' && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
     // See music carrying-tone paint: when a Music chord carries _domPc (set by
     // the post-load effect from the source image's per-cell dominant hue), build
     // a paint-side copy where every note's m is rewritten to (oct*12 + _domPc) —
@@ -3698,7 +3698,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       lastOverlayPaintRef.current = nowMs;
       if(_jamKeys && lim>0){
         _setArtistSeed(pollockSessionSeed);
-        _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap((proStatus==='free' && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         ctx.clearRect(0,0,CW,CH);
         _jamPaint(ctx, CW, CH, N, BW, BH, grid, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false, SS);
@@ -3748,7 +3748,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // alone owns the canvas.
         const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
-        _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap((proStatus==='free' && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
@@ -10756,7 +10756,7 @@ Hard requirements:
       }else{
         _setArtistSeed(pollockSessionSeed);
         _setNoBg(noBg);
-        _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap((proStatus==='free' && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         // ── overlay pass as a function — called twice in transparent mode:
         // once into a throwaway probe ctx to DETECT whether this style/variant
@@ -15384,7 +15384,7 @@ Hard requirements:
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
                   <div style={{minWidth:0}}>
                     <div style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{_ensT('title')}{proStatus==='free' && (<span style={{marginLeft:6,fontSize:'.8em',opacity:.7}}>🔒</span>)}</div>
-                    <div style={{fontSize:(.52*effScale)+'rem',lineHeight:1.45,color:'rgba(230,222,196,.6)',marginTop:4}}>{_ensT('desc')}</div>
+                    <div style={{fontSize:(.52*effScale)+'rem',lineHeight:1.45,color:'rgba(230,222,196,.6)',marginTop:4}}>{pfIcons(_ensT('desc'))}</div>
                   </div>
                   <button onClick={()=>{ if(proStatus==='free'){ try{ window.posthog && window.posthog.capture('ensemble_locked_tap'); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setEnsembleOn(v=>{ const nx=!v; try{ window.posthog && window.posthog.capture('ensemble_toggle',{on:nx}); }catch(_){} return nx; }); }} role="switch" aria-checked={ensembleActive} aria-label={_ensT('title')} style={{flex:'0 0 auto',width:46,height:26,borderRadius:13,border:'1px solid '+(ensembleActive?'rgba(226,196,119,.9)':'rgba(201,168,76,.35)'),background:ensembleActive?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.04)',position:'relative',cursor:'pointer',padding:0}}>
                     <span style={{position:'absolute',top:3,left:ensembleActive?23:3,width:18,height:18,borderRadius:'50%',background:ensembleActive?'#1a1408':'rgba(201,168,76,.6)',transition:'left .18s'}}/>
@@ -15625,6 +15625,17 @@ Hard requirements:
                       zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Bach \u5230 Hisaishi\u3002\u8096\u90a6\u4e0e\u8428\u8482\u514d\u8d39\u2014\u2014Pro \u89e3\u9501\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
                       zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Bach \u5230 Hisaishi\u3002\u856d\u90a6\u8207\u85a9\u63d0\u514d\u8cbb\u2014\u2014Pro \u89e3\u9396\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
                       ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Bach \u304b\u3089 Hisaishi \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u306712\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.') },
+            { sel:'.pf-setup-ensemble', inModal:true, pad:8,
+              title:_ensT('title'),
+              body:(({EN:'Pro: cross 2–5 painters into one new style (Jam) or let composers trade phrases (Call & response). Switch it on here — a ◎ button then appears beside each 🔀.',
+                      SK:'Pro: skríž 2–5 maliarov do jedného nového rukopisu (Jam) alebo nechaj skladateľov striedať si frázy (Call & response). Zapni to tu — vedľa každého 🔀 potom pribudne tlačidlo ◎.',
+                      DE:'Pro: 2–5 Maler zu einer neuen Handschrift kreuzen (Jam) oder Komponisten Phrasen tauschen lassen (Call & Response). Hier einschalten — dann erscheint neben jedem 🔀 ein ◎-Knopf.',
+                      FR:'Pro : croise 2–5 peintres en un nouveau style (Jam) ou laisse des compositeurs s’échanger des phrases (Call & response). Active-le ici — un bouton ◎ apparaît alors à côté de chaque 🔀.',
+                      ES:'Pro: cruza 2–5 pintores en un estilo nuevo (Jam) o deja que los compositores se intercambien frases (Call & response). Actívalo aquí — luego aparece un botón ◎ junto a cada 🔀.',
+                      PT:'Pro: cruza 2–5 pintores num estilo novo (Jam) ou deixa compositores trocar frases (Call & response). Liga-o aqui — depois aparece um botão ◎ ao lado de cada 🔀.',
+                      zh:'Pro：把 2–5 位画家杂交成一种新风格（Jam），或让作曲家轮流接句（Call & response）。在这里开启——之后每个 🔀 旁会出现 ◎ 按钮。',
+                      zhTW:'Pro：把 2–5 位畫家雜交成一種新風格（Jam），或讓作曲家輪流接句（Call & response）。在這裡開啟——之後每個 🔀 旁會出現 ◎ 按鈕。',
+                      ja:'Pro：2〜5 人の画家をひとつの新しい筆致に掛け合わせる（Jam）、または作曲家にフレーズを掛け合わせる（Call & response）。ここでオンに——各 🔀 の隣に ◎ ボタンが現れる。'})[lang]||'') },
             { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
           ];
           const endTour = (done)=>{
@@ -15669,7 +15680,7 @@ Hard requirements:
               <div style={{position:'fixed',left:14,right:14,...(below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
                 <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}</div>
                 <div style={{fontSize:(.96*effScale)+'rem',color:'#e8c96a',fontWeight:600,marginBottom:5}}>{st.title}</div>
-                <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{st.body}</div>
+                <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{pfIcons(st.body)}</div>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                   <div style={{display:'flex',gap:5}}>
                     {TOUR.map((_,k)=>(<div key={k} style={{width:6,height:6,borderRadius:'50%',background:k===tourStep?'#c9a84c':'rgba(242,238,232,.25)'}} />))}
