@@ -898,41 +898,83 @@ const TxIcon = ({n, s=15}) => {
 };
 
 // ═══ ENSEMBLE · JAM (painters) ═════════════════════════════════════════════
-// 2–5 painters on ONE canvas. The piece is split by register: every chord's
-// mean pitch is ranked and the ranking cut into N equal bands — slot 1 paints
-// the bass band, the last slot the treble. Each painter then renders ONLY its
-// own chords in its own style, on top of the previous one. Painter 1 owns the
-// ground; every later painter has its full-canvas ground fills stripped (the
-// same fillRect trick the transparent export uses), so only its marks land.
+// 2–5 painters on ONE canvas, composed as a poster: ground / figure / accent
+// (see _JAM_ROLES below). Ground fills of later painters are stripped with the
+// same fillRect trick the transparent export uses, so only their marks land.
 const _JAM_FULL = new Set(['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM','pollock']);
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',desc:'Several painters on one canvas (Jam) and composers trading phrases (Call & response). Adds a Stage with + above the artist and composer pickers.',pickPainter:'pick another painter',pickComposer:'pick another composer',calls:'calls',answers:'answers',addTip:'add to the stage',removeTip:'remove',regs:['bass','low','mid','high','treble']},
-  SK:{title:'Ensemble',desc:'Viac maliarov na jednom plátne (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Pridá Pódium s + nad výber umelcov a skladateľov.',pickPainter:'vyber ďalšieho maliara',pickComposer:'vyber ďalšieho skladateľa',calls:'volá',answers:'odpovedá',addTip:'pridať na pódium',removeTip:'odobrať',regs:['bas','nízke','stred','vysoké','výšky']},
-  DE:{title:'Ensemble',desc:'Mehrere Maler auf einer Leinwand (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Fügt eine Bühne mit + über den Künstler- und Komponistenwählern hinzu.',pickPainter:'wähle einen weiteren Maler',pickComposer:'wähle einen weiteren Komponisten',calls:'ruft',answers:'antwortet',addTip:'auf die Bühne',removeTip:'entfernen',regs:['Bass','tief','Mitte','hoch','Höhen']},
-  FR:{title:'Ensemble',desc:'Plusieurs peintres sur une toile (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Ajoute une Scène avec + au-dessus des sélecteurs d’artistes et de compositeurs.',pickPainter:'choisis un autre peintre',pickComposer:'choisis un autre compositeur',calls:'appelle',answers:'répond',addTip:'ajouter à la scène',removeTip:'retirer',regs:['basse','grave','médium','aigu','aigus']},
-  ES:{title:'Ensemble',desc:'Varios pintores en un lienzo (Jam) y compositores que se intercambian frases (Call & response). Añade un Escenario con + sobre los selectores de artistas y compositores.',pickPainter:'elige otro pintor',pickComposer:'elige otro compositor',calls:'llama',answers:'responde',addTip:'añadir al escenario',removeTip:'quitar',regs:['bajo','grave','medio','agudo','agudos']},
-  PT:{title:'Ensemble',desc:'Vários pintores numa tela (Jam) e compositores a trocar frases (Call & response). Adiciona um Palco com + acima dos seletores de artistas e compositores.',pickPainter:'escolhe outro pintor',pickComposer:'escolhe outro compositor',calls:'chama',answers:'responde',addTip:'adicionar ao palco',removeTip:'remover',regs:['baixo','grave','médio','agudo','agudos']},
-  zh:{title:'合奏',desc:'多位画家同画一张画布（Jam），作曲家轮流接句（Call & response）。在艺术家和作曲家选择器上方加入带 + 的舞台。',pickPainter:'再选一位画家',pickComposer:'再选一位作曲家',calls:'呼',answers:'应',addTip:'加入舞台',removeTip:'移除',regs:['低音','中低','中音','中高','高音']},
-  zhTW:{title:'合奏',desc:'多位畫家同畫一張畫布（Jam），作曲家輪流接句（Call & response）。在藝術家和作曲家選擇器上方加入帶 + 的舞台。',pickPainter:'再選一位畫家',pickComposer:'再選一位作曲家',calls:'呼',answers:'應',addTip:'加入舞台',removeTip:'移除',regs:['低音','中低','中音','中高','高音']},
-  ja:{title:'アンサンブル',desc:'複数の画家がひとつのキャンバスに（Jam）、作曲家がフレーズを掛け合う（Call & response）。アーティストと作曲家の選択の上に + 付きのステージを追加。',pickPainter:'もう一人の画家を選ぶ',pickComposer:'もう一人の作曲家を選ぶ',calls:'呼ぶ',answers:'応える',addTip:'ステージに追加',removeTip:'外す',regs:['低音','中低','中音','中高','高音']},
+  EN:{title:'Ensemble',desc:'Several painters composed into one poster (Jam) and composers trading phrases (Call & response). When on, a second button appears next to the shuffle dice; tap up to five artists or composers.',roles:['ground','figure','accent','figure 2','accent 2']},
+  SK:{title:'Ensemble',desc:'Viac maliarov zložených do jedného plagátu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa kocky pribudne druhé tlačidlo; potom ťukni až na päť umelcov či skladateľov.',roles:['podklad','figúra','akcent','figúra 2','akcent 2']},
+  DE:{title:'Ensemble',desc:'Mehrere Maler zu einem Poster komponiert (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben dem Würfel ein zweiter Knopf; dann bis zu fünf Künstler oder Komponisten antippen.',roles:['Grund','Figur','Akzent','Figur 2','Akzent 2']},
+  FR:{title:'Ensemble',desc:'Plusieurs peintres composés en une affiche (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un second bouton apparaît à côté du dé ; touche ensuite jusqu’à cinq artistes ou compositeurs.',roles:['fond','figure','accent','figure 2','accent 2']},
+  ES:{title:'Ensemble',desc:'Varios pintores compuestos en un póster (Jam) y compositores que se intercambian frases (Call & response). Al activarlo aparece un segundo botón junto al dado; luego toca hasta cinco artistas o compositores.',roles:['fondo','figura','acento','figura 2','acento 2']},
+  PT:{title:'Ensemble',desc:'Vários pintores compostos num cartaz (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um segundo botão ao lado do dado; depois toca até cinco artistas ou compositores.',roles:['fundo','figura','acento','figura 2','acento 2']},
+  zh:{title:'合奏',desc:'多位画家合成一张海报（Jam），作曲家轮流接句（Call & response）。开启后，骰子旁会出现第二个按钮；然后点按最多五位艺术家或作曲家。',roles:['底','主体','点睛','主体 2','点睛 2']},
+  zhTW:{title:'合奏',desc:'多位畫家合成一張海報（Jam），作曲家輪流接句（Call & response）。開啟後，骰子旁會出現第二個按鈕；然後點按最多五位藝術家或作曲家。',roles:['底','主體','點睛','主體 2','點睛 2']},
+  ja:{title:'アンサンブル',desc:'複数の画家をひとつのポスターに構成（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにするとサイコロの横に2つ目のボタンが現れ、アーティストか作曲家を最大5人までタップできます。',roles:['地','図','アクセント','図 2','アクセント 2']},
 };
-const _REG_PICK = {2:[0,4],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4]};
-let _jamCache = { src:null, n:0, parts:null };
-function _jamPartition(chords, n){
-  if(_jamCache.src===chords && _jamCache.n===n && _jamCache.parts) return _jamCache.parts;
-  const pitch = chords.map(c=>{ const ns=(c&&c.n)||[]; if(!ns.length) return 60; let t=0; for(const x of ns) t+=(x&&x.m!=null)?x.m:(typeof x==='number'?x:60); return t/ns.length; });
-  const order = pitch.map((_,i)=>i).sort((a,b)=>(pitch[a]-pitch[b])||(a-b));
-  const band = new Array(chords.length);
-  for(let r=0;r<order.length;r++) band[order[r]] = Math.min(n-1, Math.floor(r*n/Math.max(1,order.length)));
-  const parts = Array.from({length:n},()=>({chords:[],pos:[]}));
-  for(let i=0;i<chords.length;i++){ const b=band[i]; parts[b].chords.push(chords[i]); parts[b].pos.push(i); }
-  _jamCache = { src:chords, n, parts };
-  return parts;
+// ROLES, not registers. Slot 1 is the GROUND: the whole song, the whole canvas,
+// its own ground. Slot 2 is the FIGURE: the same whole song by the second
+// painter, seen through a window placed on the golden section (never centred).
+// Slot 3 is the ACCENT: the third painter marks only the piece's peaks
+// (top ~10 % by energy), full canvas, ground stripped — a sparse gesture that
+// ties ground and figure across the window's edge. Slot 4 = a second, smaller
+// figure in the mirrored phi point; slot 5 = a second accent, by melody
+// (highest notes). Every painter reads the song's palette, so the tone holds.
+const _JAM_ROLES = {1:['ground'],2:['ground','figure'],3:['ground','figure','accentE'],4:['ground','figure','accentE','figure2'],5:['ground','figure','accentE','figure2','accentM']};
+const _PHI = 0.6180339887;
+let _jamAccCache = { src:null, kind:'', out:null };
+// the peaks of the piece — a sparse pick that keeps the original order
+function _jamAccent(chords, kind){
+  if(_jamAccCache.src===chords && _jamAccCache.kind===kind && _jamAccCache.out) return _jamAccCache.out;
+  const score = chords.map(c=>{
+    const ns=(c&&c.n)||[]; if(!ns.length) return 0;
+    if(kind==='accentM'){ let mx=0; for(const x of ns){ const m=(x&&x.m!=null)?x.m:60; if(m>mx) mx=m; } return mx; }
+    let sv=0; for(const x of ns) sv+=(x&&x.v!=null)?x.v:80;
+    return (typeof c._E==='number'?c._E:0.5)*100 + sv/ns.length*0.35 + Math.min(4,ns.length)*2;
+  });
+  const n = Math.max(1, Math.round(chords.length*(kind==='accentM'?0.08:0.1)));
+  const top = score.map((v,i)=>i).sort((x,y)=>(score[y]-score[x])||(x-y)).slice(0,n).sort((x,y)=>x-y);
+  const out = { chords: top.map(i=>chords[i]), pos: top };
+  _jamAccCache = { src:chords, kind, out };
+  return out;
 }
-// how many of this painter's chords fall inside the global paint horizon `lim`
 function _jamLim(part, lim){ const pos=part.pos; let lo=0,hi=pos.length; while(lo<hi){ const m=(lo+hi)>>1; if(pos[m]<lim) lo=m+1; else hi=m; } return lo; }
+// The figure's window — shape, phi point, size, tilt — rolled from the
+// painting seed + variant, so the dice/Next gives a new poster, not a new noise.
+function _jamWindow(seed, ph, CW, CH, second){
+  let h=((seed>>>0) ^ ((ph|0)*2654435761))>>>0; const R=()=>{ h=(h*1103515245+12345)>>>0; return h/4294967296; };
+  const shape = ['ellipse','rect','band'][(R()*3)|0];
+  const k = (R()*4)|0;
+  let px = (k&1) ? 1-_PHI : _PHI, py = (k&2) ? _PHI : 1-_PHI;
+  if(second){ px = 1-px; py = 1-py; }
+  const sc = second ? _PHI : 1;
+  const tilt = shape==='band' ? 0 : (R()*12-6)*Math.PI/180;
+  let w,hh;
+  if(shape==='ellipse'){ w=0.80*CW*sc; hh=0.60*CH*sc; }
+  else if(shape==='rect'){ w=0.55*CW*sc; hh=Math.min(0.72*CH, w/1.618); if(hh>=0.72*CH){ hh=0.72*CH*sc; w=hh*1.618; } }
+  else { w=0.382*CW*sc; hh=CH; py=0.5; }
+  const m=Math.min(CW,CH)*0.03;
+  const cx = Math.max(w/2+m, Math.min(CW-w/2-m, px*CW));
+  const cy = shape==='band' ? CH/2 : Math.max(hh/2+m, Math.min(CH-hh/2-m, py*CH));
+  return { shape, cx, cy, w, h:hh, tilt, soft: shape==='ellipse' };
+}
+function _jamShapePath(ctx, win){
+  ctx.beginPath();
+  if(win.shape==='ellipse') ctx.ellipse(0,0,win.w/2,win.h/2,0,0,Math.PI*2);
+  else ctx.rect(-win.w/2,-win.h/2,win.w,win.h);
+}
+let _jamOffs = [null,null,null,null];
+function _jamOffscreen(ix, pw, phh){
+  let o=_jamOffs[ix];
+  if(!o || o.width!==pw || o.height!==phh){
+    o = (typeof OffscreenCanvas!=='undefined') ? new OffscreenCanvas(pw,phh) : Object.assign(document.createElement('canvas'),{width:pw,height:phh});
+    _jamOffs[ix]=o;
+  }
+  return o;
+}
 function _jamOverlay(k, ctx, CW, CH, ch, lim, gc, seed, mode, ph){
   switch(k){
     case 'pollock':      return drawPollockOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
@@ -962,29 +1004,82 @@ function _jamOverlay(k, ctx, CW, CH, ch, lim, gc, seed, mode, ph){
     default: return;
   }
 }
-// Paints the whole jam into `ctx` (live canvas, raster export or the SVG shim —
-// all three expose fillRect, which is all the ground stripping needs).
-function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround){
-  const parts=_jamPartition(chords, keys.length);
+function _jamRender(ctx, CW, CH, N, BW, BH, grid, part, lim, gc, k, seed, mode, ph, strip){
+  const li=_jamLim(part, lim); if(li<=0) return;
+  const _of = ctx.fillRect;
+  if(strip){ ctx.fillRect = function(x,y,w,h){ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2) return; return _of.call(ctx,x,y,w,h); }; }
+  try{
+    if(!_JAM_FULL.has(k)){
+      for(let j=0;j<li;j++){
+        const chord=part.chords[j]; if(!chord) continue; _setCurE(chord._E);
+        const {n:notes,idx}=chord; const cell=grid.cells&&grid.cells[idx];
+        if(cell){ if(cell.segments) cell.segments.forEach(sg=>drawBlock(ctx,sg.x,sg.y,notes,gc,sg.w,sg.h,k)); else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,k); }
+        else { const si=idx%(N*N),col=si%N,row=Math.floor(si/N); drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,k); }
+      }
+    }
+    _setCurE(0.5);
+    if(k) _jamOverlay(k, ctx, CW, CH, part.chords, li, gc, seed, mode, ph);
+  } finally { if(strip){ ctx.fillRect=_of; } }
+}
+// An accent BAND for field painters (Rothko, Matisse, Mondrian… lay their
+// whole picture out across whatever chords they get, so a sparse pick would
+// not read as marks but as a full re-layout). A thin strip on the phi line
+// opposite the figure, crossing the poster — the third voice as a stripe.
+function _jamBand(win, CW, CH, second){
+  const vertical = win.shape==='band' ? false : !second;
+  if(vertical){ const x = (win.cx > CW/2 ? 1-_PHI : _PHI)*CW; return { shape:'rect', cx:x, cy:CH/2, w:CW*(second?0.055:0.085), h:CH, tilt:0, soft:false }; }
+  const y = (win.cy > CH/2 ? 1-_PHI : _PHI)*CH; return { shape:'rect', cx:CW/2, cy:y, w:CW, h:CH*(second?0.055:0.085), tilt:0, soft:false };
+}
+// The painter's complete picture, shown through a window (figure / band).
+function _jamThrough(ctx, CW, CH, N, BW, BH, grid, all, lim, gc, k, seed, mode, ph, win, ps, ix){
+  const isShim = typeof ctx.drawImage!=='function';
+  if(isShim){
+    ctx.save(); ctx.translate(win.cx,win.cy); ctx.rotate(win.tilt); _jamShapePath(ctx,win); ctx.clip(); ctx.rotate(-win.tilt); ctx.translate(-win.cx,-win.cy);
+    ctx.fillStyle = k==='pollock' ? '#f2ede0' : '#04040a'; ctx.fillRect(0,0,CW,CH);
+    _jamRender(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed,mode,ph,false);
+    ctx.restore();
+    return;
+  }
+  const pw=Math.max(1,Math.round(CW*ps)), phh=Math.max(1,Math.round(CH*ps));
+  const off=_jamOffscreen(ix,pw,phh), o=off.getContext('2d');
+  o.setTransform(1,0,0,1,0,0); o.globalCompositeOperation='source-over'; o.clearRect(0,0,pw,phh);
+  o.setTransform(ps,0,0,ps,0,0);
+  o.fillStyle = k==='pollock' ? '#f2ede0' : '#04040a'; o.fillRect(0,0,CW,CH);
+  _jamRender(o,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed,mode,ph,false);
+  // mask: soft radial for the ellipse (painterly), hard for rect/band (poster)
+  o.globalCompositeOperation='destination-in';
+  o.save(); o.translate(win.cx,win.cy); o.rotate(win.tilt);
+  if(win.soft){
+    const r=Math.max(win.w,win.h)/2;
+    o.save(); o.scale(win.w/2/r, win.h/2/r);
+    const g=o.createRadialGradient(0,0,r*0.78,0,0,r); g.addColorStop(0,'rgba(0,0,0,1)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    o.fillStyle=g; o.fillRect(-r,-r,2*r,2*r); o.restore();
+  } else { o.fillStyle='#000'; _jamShapePath(o,win); o.fill(); }
+  o.restore(); o.globalCompositeOperation='source-over';
+  ctx.drawImage(off,0,0,CW,CH);
+  if(!win.soft){ // hairline rim — the poster's cut edge
+    ctx.save(); ctx.translate(win.cx,win.cy); ctx.rotate(win.tilt); _jamShapePath(ctx,win);
+    ctx.strokeStyle='rgba(242,238,232,.28)'; ctx.lineWidth=Math.max(1,Math.min(CW,CH)*0.0025); ctx.stroke(); ctx.restore();
+  }
+}
+// Paints the whole ensemble into `ctx`: live canvas, raster export (pxScale =
+// the ctx's device scale, used for the offscreen buffers) or the SVG shim
+// (no drawImage → windows are clipped, hard-edged).
+function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
+  const roles=_JAM_ROLES[keys.length]||_JAM_ROLES[1];
+  const all={chords, pos:chords.map((_,i)=>i)};
+  const ps = Math.max(1, pxScale||1);
+  const win = _jamWindow(seed, ph, CW, CH, false);
   if(!noGround){ ctx.fillStyle = keys[0]==='pollock' ? '#f2ede0' : '#04040a'; ctx.fillRect(0,0,CW,CH); }
   keys.forEach((k,i)=>{
-    const part=parts[i]; const li=_jamLim(part, lim); if(li<=0) return;
+    const role=roles[i];
     _setArtistSeed((((seed>>>0) + i*1013)>>>0) || 1);
-    const strip = (i>0 || noGround);
-    const _of = ctx.fillRect;
-    if(strip){ ctx.fillRect = function(x,y,w,h){ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2) return; return _of.call(ctx,x,y,w,h); }; }
-    try{
-      if(!_JAM_FULL.has(k)){
-        for(let j=0;j<li;j++){
-          const chord=part.chords[j]; if(!chord) continue; _setCurE(chord._E);
-          const {n:notes,idx}=chord; const cell=grid.cells&&grid.cells[idx];
-          if(cell){ if(cell.segments) cell.segments.forEach(sg=>drawBlock(ctx,sg.x,sg.y,notes,gc,sg.w,sg.h,k)); else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,k); }
-          else { const si=idx%(N*N),col=si%N,row=Math.floor(si/N); drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,k); }
-        }
-      }
-      _setCurE(0.5);
-      if(k) _jamOverlay(k, ctx, CW, CH, part.chords, li, gc, seed, mode, ph);
-    } finally { if(strip){ ctx.fillRect=_of; } }
+    if(role==='ground'){ _jamRender(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed,mode,ph,!!noGround); return; }
+    if(role==='figure' || role==='figure2'){ _jamThrough(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed+7,mode,ph, role==='figure2'?_jamWindow(seed,ph,CW,CH,true):win, ps, role==='figure2'?1:0); return; }
+    // accent: gestural painters (drips, lines, cells) mark the peaks across the
+    // whole poster; field painters cross it as a thin phi band.
+    if(_JAM_FULL.has(k)) _jamThrough(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed+13,mode,ph,_jamBand(win,CW,CH,role==='accentM'),ps,role==='accentM'?3:2);
+    else _jamRender(ctx,CW,CH,N,BW,BH,grid,_jamAccent(chords,role),lim,gc,k,seed,mode,ph,true);
   });
   _setArtistSeed(seed);
 }
@@ -2238,53 +2333,51 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const painterStageRef = useRef([]); useEffect(()=>{ painterStageRef.current = painterStage; },[painterStage]);
   const [composerStage, setComposerStage] = useState([]); // extra composers, slots 2..5 (slot 1 = imgComposer)
   const composerStageRef = useRef([]); useEffect(()=>{ composerStageRef.current = composerStage; },[composerStage]);
-  const [stageArm, setStageArm] = useState(null);          // 'art' | 'comp' | null — "+" is waiting for a pick
-  useEffect(()=>{ if(!ensembleActive){ setPainterStage([]); setComposerStage([]); setStageArm(null); } },[ensembleActive]);
+  // Two header buttons (next to the shuffle dice): JAM on the artists' side,
+  // CALL & RESPONSE on the composers' side. Each is exclusive with its dice —
+  // switching one on switches the other off. While on, tapping chips builds
+  // the stage (max 5, order = role); tapping a member again takes it off.
+  const [jamOn, setJamOn] = useState(false);
+  const jamOnRef = useRef(false); useEffect(()=>{ jamOnRef.current = jamOn; },[jamOn]);
+  const [crOn, setCrOn] = useState(false);
+  const crOnRef = useRef(false); useEffect(()=>{ crOnRef.current = crOn; },[crOn]);
+  useEffect(()=>{ if(!ensembleActive){ setJamOn(false); setCrOn(false); setPainterStage([]); setComposerStage([]); } },[ensembleActive]);
+  useEffect(()=>{ if(!jamOn) setPainterStage([]); },[jamOn]);
+  useEffect(()=>{ if(!crOn) setComposerStage([]); },[crOn]);
   const STAGE_MAX = 5;
   const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
   const _painterLabel = (k)=>{ if(!k||k==='mosaic') return t('mosaicStyle'); if(k==='notes') return t('notesStyle'); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
   const _stageNames = (kind)=> kind==='art'
     ? [effectiveStyle, ...painterStage].map(_painterLabel).join(' × ')
     : [imgComposer, ...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k).join(' ↔ ');
-  const _stageAddPainter = (k)=>{ setStageArm(null); setPainterStage(prev=>{ const cur=[style,...prev]; if(cur.length>=STAGE_MAX || cur.includes(k)) return prev; try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'jam',n:cur.length+1}); }catch(_){} return [...prev,k]; }); };
-  const _stageAddComposer = (k)=>{ setStageArm(null); setComposerStage(prev=>{ const cur=[imgComposerRef.current,...prev]; if(cur.length>=STAGE_MAX || cur.includes(k)) return prev; try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'cr',n:cur.length+1}); }catch(_){} return [...prev,k]; }); };
-  const _stageRemovePainter = (i)=>{ if(i===0){ const nx=painterStage[0]; setPainterStage(prev=>prev.slice(1)); if(nx!==undefined) setStyleTo(nx); } else setPainterStage(prev=>prev.filter((_,j)=>j!==i-1)); };
-  const _stageRemoveComposer = (i)=>{ if(i===0){ const nx=composerStage[0]; setComposerStage(prev=>prev.slice(1)); if(nx){ _lastComposerRef.current=nx; imgComposerRef.current=nx; setImgComposer(nx); } } else setComposerStage(prev=>prev.filter((_,j)=>j!==i-1)); };
-  // dice: the whole stage re-rolls (slot 1 by the existing bags, extras fresh)
-  const _stageRerollPainters = ()=>{ const n=painterStageRef.current.length; if(!n) return; const pool=ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k) && k!==styleRef.current); for(let i=pool.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t2=pool[i];pool[i]=pool[j];pool[j]=t2; } setPainterStage(pool.slice(0,n)); };
-  const _renderStage = (kind)=>{
-    if(!ensembleActive || cockpitEdit || basicMode) return null;
-    const isArt = kind==='art';
-    if(!isArt && !imgComposer) return null;
-    const slots = isArt ? [effectiveStyle, ...painterStage] : [imgComposer, ...composerStage];
-    const n = slots.length, armed = stageArm===kind;
-    const regIx = _REG_PICK[n] || [];
-    const regs = _ensT('regs');
-    const liveWho = (!isArt && n>1 && (playing||holdPaused) && chords.length) ? ((chords[Math.max(0,Math.min(disp-1,chords.length-1))]||{})._who||null) : null;
-    const remove = (i)=> isArt ? _stageRemovePainter(i) : _stageRemoveComposer(i);
-    return (
-      <div className="pf-stage-bar" style={{margin:'4px 0 8px'}}>
-        <div style={{display:'flex',gap:6,alignItems:'stretch',padding:7,borderRadius:14,background:'linear-gradient(180deg,rgba(201,168,76,.10),rgba(201,168,76,.03))',border:'1px solid rgba(201,168,76,.28)',minHeight:44}}>
-          {slots.map((k,i)=>{
-            const live = !!liveWho && k===liveWho;
-            const name = isArt ? _painterLabel(k) : (_COMP_SHORT[k]||k);
-            const sub = n>1 ? (isArt ? (regs[regIx[i]]||'') : (i===0 ? '1 · '+_ensT('calls') : i===1 ? '2 · '+_ensT('answers') : String(i+1))) : '';
-            return (
-              <div key={String(k)+i} style={{flex:1,minWidth:0,position:'relative',borderRadius:11,border:'1px solid '+(live?'rgba(226,196,119,1)':'rgba(226,196,119,.5)'),background:'rgba(26,25,39,.9)',padding:'6px 5px 4px',textAlign:'center',boxShadow:live?'0 0 14px rgba(226,196,119,.45)':'none',transition:'box-shadow .2s, border-color .2s'}}>
-                <div style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.05em',textTransform:'uppercase',color:live?'#fff':'rgba(244,230,192,.95)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{name}</div>
-                {sub && (<div style={{fontSize:(.38*effScale)+'rem',letterSpacing:'.12em',textTransform:'uppercase',color:PF.muted,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{sub}</div>)}
-                {n>1 && (<button onClick={(e)=>{ e.stopPropagation(); remove(i); }} aria-label={_ensT('removeTip')} title={_ensT('removeTip')} style={{position:'absolute',top:-7,right:-7,width:17,height:17,borderRadius:'50%',background:'#2a2838',border:'1px solid rgba(255,255,255,.18)',color:'#ccc',fontSize:11,lineHeight:'15px',padding:0,cursor:'pointer',fontFamily:'inherit'}}>×</button>)}
-              </div>
-            );
-          })}
-          {n<STAGE_MAX && (
-            <button onClick={()=>{ if(working) return; setStageArm(armed?null:kind); }} aria-pressed={armed} title={_ensT('addTip')} aria-label={_ensT('addTip')} style={{flex:'0 0 42px',borderRadius:11,border:'1px '+(armed?'solid rgba(226,196,119,1)':'dashed rgba(201,168,76,.45)'),background:armed?'rgba(201,168,76,.14)':'transparent',color:'rgba(226,196,119,.95)',fontSize:20,fontWeight:300,lineHeight:1,cursor:'pointer',fontFamily:'inherit',padding:0,animation:armed?'pfStagePulse 1.2s infinite':'none'}}>+</button>
-          )}
-        </div>
-        {armed && (<div style={{fontSize:(.46*effScale)+'rem',color:PF.muted,textAlign:'center',marginTop:4,fontStyle:'italic'}}>{isArt ? _ensT('pickPainter') : _ensT('pickComposer')}</div>)}
-      </div>
-    );
+  // the artists' shuffle, switched off the same way its own button does it
+  const _shuffleOff = ()=>{ if(!randomModeRef.current) return; setRandomMode(false); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setMosaicShuffleLock(false); if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); };
+  const _toggleJam = ()=>{ if(working||anim) return; setJamOn(v=>{ const nx=!v; if(nx) _shuffleOff(); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:nx}); }catch(_){} return nx; }); };
+  const _toggleCr = ()=>{ if(working||anim) return; setCrOn(v=>{ const nx=!v; if(nx) setComposerDice(false); try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:nx}); }catch(_){} return nx; }); };
+  // chip taps while JAM / C&R is on: add · remove · (first slot) promote the next
+  const _jamTap = (k)=>{
+    const cur=[style,...painterStage]; const i=cur.indexOf(k);
+    if(i===0){ if(painterStage.length){ const nx=painterStage[0]; setPainterStage(p=>p.slice(1)); setStyleTo(nx); } return; }
+    if(i>0){ setPainterStage(p=>p.filter((_,j)=>j!==i-1)); return; }
+    if(cur.length>=STAGE_MAX) return;
+    try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'jam',n:cur.length+1}); }catch(_){}
+    setPainterStage(p=>[...p,k]);
   };
+  const _crTap = (k)=>{
+    const cur=[imgComposerRef.current,...composerStage].filter(Boolean); const i=cur.indexOf(k);
+    if(i===0){ if(composerStage.length){ const nx=composerStage[0]; setComposerStage(p=>p.slice(1)); _lastComposerRef.current=nx; imgComposerRef.current=nx; setImgComposer(nx); } return; }
+    if(i>0){ setComposerStage(p=>p.filter((_,j)=>j!==i-1)); return; }
+    if(cur.length>=STAGE_MAX) return;
+    try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'cr',n:cur.length+1}); }catch(_){}
+    setComposerStage(p=>[...p,k]);
+  };
+  // the header button shared by both sides — same chrome as the dice, 34px to its left
+  const _ensembleBtn = (on, onClick)=>(
+    <button onClick={onClick} className="pf-dice" title={_ensT('title')+(on?' ON':' OFF')} aria-label={_ensT('title')} aria-pressed={on} style={{position:'absolute',right:34,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none'}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="9" r="4.6"/><circle cx="15.5" cy="9" r="4.6"/><circle cx="12" cy="15.5" r="4.6"/></svg>
+    </button>
+  );
+  const _stageBadge = (ix, roles)=> (ix>=0) ? (<span title={roles[ix]||''} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>) : null;
   const _diceRoll = () => {
     const N = _effVariants();
     if(style){
@@ -2320,7 +2413,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       setShuffleArtistIndex(next.a|0);
       setShufVariant(()=> next.v|0);
     }
-    _stageRerollPainters();
   };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
@@ -3083,6 +3175,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const composerBagKeyRef = useRef('');
   const _composerNextRef = useRef(false);
   const _composerRoll = useCallback(()=>{
+    // Call & response: Next passes the first word on — the stage rotates
+    // (B · C · A), the piece continues; nobody new walks in.
+    if(crOnRef.current && composerStageRef.current.length){
+      const st=composerStageRef.current, cur=imgComposerRef.current, nf=st[0];
+      setComposerStage([...st.slice(1), cur]); _lastComposerRef.current=nf; imgComposerRef.current=nf; setImgComposer(nf);
+      return true;
+    }
     const pool=ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
     if(pool.length<2) return false;
     const key=pool.join(',');
@@ -3097,8 +3196,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // No restart flag: like Lite's Surprise, the piece keeps its position and the
     // new composer takes over seamlessly (the recompose effect swaps chords live).
     _lastComposerRef.current=c; imgComposerRef.current=c; setImgComposer(c);
-    // the rest of the stage re-rolls with it (fresh, distinct, never the soloist)
-    { const n=composerStageRef.current.length; if(n){ const px=pool.filter(k=>k!==c); for(let i=px.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t2=px[i];px[i]=px[j];px[j]=t2; } setComposerStage(px.slice(0,n)); } }
     try{ window.posthog && window.posthog.capture('composer_dice_roll',{composer:c}); }catch(_){}
     return true;
   },[setupComposers, isDailyComposer, composerIsLocked]);
@@ -3640,7 +3737,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _setVariantCap((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         ctx.clearRect(0,0,CW,CH);
-        _jamPaint(ctx, CW, CH, N, BW, BH, grid, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false);
+        _jamPaint(ctx, CW, CH, N, BW, BH, grid, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false, SS);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
@@ -10773,7 +10870,7 @@ Hard requirements:
         const _jamX = (painterStageRef.current && painterStageRef.current.length && viewMode!=='image' && !basicModeRef.current) ? [style, ...painterStageRef.current] : null;
         if(_jamX){
           // JAM export: the same layered render as the live canvas, at export resolution.
-          _jamPaint(hctx, CW, CH, N, BW, BH, grid, chords, chords.length, gc, _jamX, pollockSessionSeed, mode, paintPhase, !!noBg);
+          _jamPaint(hctx, CW, CH, N, BW, BH, grid, chords, chords.length, gc, _jamX, pollockSessionSeed, mode, paintPhase, !!noBg, _isGallery?1:SCALE);
         } else {
         let _cellsHidden = false;
         if(noBg){
@@ -12715,12 +12812,12 @@ Hard requirements:
                 <span>{t('inspiredByTitle')}</span>
                 {/* composer dice (🎲 mirror) + NEXT — only when there is more than one composer to roll between */}
                 {(ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k)).length>1) && (<>
-                  <button onClick={()=>{ if(working||anim) return; setComposerDice(v=>{ const nx=!v; if(nx){ composerBagRef.current=[]; composerBagKeyRef.current=''; setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); } return nx; }); }} className="pf-dice" title={composerDice?'shuffle ON · Next rolls a different composer':'shuffle OFF · tap to shuffle across composers'} aria-label={composerDice?t('randomOn'):t('randomOff')} aria-pressed={composerDice} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:composerDice?'#0a0a12':'rgba(201,168,76,.75)',background:composerDice?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(composerDice?PF.gold2:'rgba(201,168,76,.4)')}}>
+                  {ensembleActive && _ensembleBtn(crOn, _toggleCr)}
+                  <button onClick={()=>{ if(working||anim) return; setComposerDice(v=>{ const nx=!v; if(nx){ setCrOn(false); composerBagRef.current=[]; composerBagKeyRef.current=''; setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); } return nx; }); }} className="pf-dice" title={composerDice?'shuffle ON · Next rolls a different composer':'shuffle OFF · tap to shuffle across composers'} aria-label={composerDice?t('randomOn'):t('randomOff')} aria-pressed={composerDice} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:composerDice?'#0a0a12':'rgba(201,168,76,.75)',background:composerDice?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(composerDice?PF.gold2:'rgba(201,168,76,.4)')}}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
                   </button>
                 </>)}
               </div>
-              {_renderStage('comp')}
               {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
@@ -12730,12 +12827,13 @@ Hard requirements:
               return (
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6}}>
                 {_cs.map(c=>{
-                  const sel=imgComposer===c.k;
+                  const _cIx = (crOn && composerStage.length) ? [imgComposer,...composerStage].indexOf(c.k) : -1;
+                  const sel=imgComposer===c.k || _cIx>0;
                   const locked=working;
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; if(stageArm==='comp'){ _stageAddComposer(c.k); return; } _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; if(crOn){ _crTap(c.k); return; } _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}</button>
+                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'}:chipStyle(false))}}>{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'])}</button>
                   );
                 })}
               </div>
@@ -12759,14 +12857,14 @@ Hard requirements:
                 <button onClick={()=>setSetupArtists(['mosaicFamily'])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(230,222,196,.5)'}}>{ts('selNone','none')}</button>
               </div>
             )}
-            {!cockpitEdit && (<button onClick={()=>{ setRandomMode(v=>{ const next=!v; setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:randomMode?'#0a0a12':'rgba(201,168,76,.75)',background:randomMode?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(randomMode?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none'}}>
+            {!cockpitEdit && ensembleActive && _ensembleBtn(jamOn, _toggleJam)}
+            {!cockpitEdit && (<button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setJamOn(false); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:randomMode?'#0a0a12':'rgba(201,168,76,.75)',background:randomMode?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(randomMode?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none'}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
             </button>)}
           </div>
           )}
           {(loadedSource!=='image' || moodFromImg) && (
           <>
-          {_renderStage('art')}
           {(()=>{
             // ── Adaptive chip grid (max 2 rows) ────────────────────────────
             // Chip count = Mosaic (if family selected) + visible pairs in
@@ -12852,7 +12950,7 @@ Hard requirements:
                 });
                 return;
               }
-              if(stageArm==='art'){ _stageAddPainter(null); return; }
+              if(jamOn){ _jamTap(null); return; }
               if(style!==null){ selectStyle(style); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
@@ -12881,7 +12979,8 @@ Hard requirements:
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
               const locked = styleIsLocked(k);            // Pro-only & user is Free
-              const isOn = (!cockpitEdit) && (style===k);
+              const _stIx = (jamOn && !cockpitEdit && painterStage.length) ? [style,...painterStage].indexOf(k) : -1;
+              const isOn = (!cockpitEdit) && (style===k || _stIx>0);
               const inSet = setupArtists.includes(k);
               const shufHit = (!cockpitEdit) && (shuffleStyle===k);
               const _ghost = cockpitEdit && !inSet;
@@ -12890,7 +12989,7 @@ Hard requirements:
                   toggleArtSafe(k);
                   return;
                 }
-                if(stageArm==='art' && !locked){ _stageAddPainter(k); return; }
+                if(jamOn && !locked){ _jamTap(k); return; }
                 selectStyle(k);
               };
               return (
@@ -12904,6 +13003,7 @@ Hard requirements:
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
                   {isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
+                  {_stageBadge(_stIx, _ensT('roles'))}
                 </button>
               );
             })}
