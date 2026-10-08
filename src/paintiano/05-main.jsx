@@ -904,15 +904,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, the 🔀 button gets one more step — Ensemble; then tap up to five artists or composers. In Lite, Surprise now and then plays an ensemble.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Call & response',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, tlačidlo 🔀 dostane ďalší krok — Ensemble; potom ťukni až na päť umelcov či skladateľov. V Lite Prekvap ma občas zahrá ensemble.'},
-  DE:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet bekommt der 🔀-Knopf einen weiteren Schritt — Ensemble; dann bis zu fünf Künstler oder Komponisten antippen. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
-  FR:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, le bouton 🔀 gagne une étape de plus — Ensemble ; touche ensuite jusqu’à cinq artistes ou compositeurs. En Lite, Surprends-moi joue parfois un ensemble.'},
-  ES:{title:'Ensemble',fusion:'Fusión',cr:'Call & response',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, el botón 🔀 gana un paso más — Ensemble; luego toca hasta cinco artistas o compositores. En Lite, Sorpréndeme toca a veces un ensemble.'},
-  PT:{title:'Ensemble',fusion:'Fusão',cr:'Call & response',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, o botão 🔀 ganha mais um passo — Ensemble; depois toca até cinco artistas ou compositores. No Lite, Surpreende-me toca às vezes um ensemble.'},
-  zh:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，🔀 按钮多一个档位——合奏；然后点按最多五位艺术家或作曲家。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
-  zhTW:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，🔀 按鈕多一個檔位——合奏；然後點按最多五位藝術家或作曲家。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Call & response',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると 🔀 ボタンにもう一段——アンサンブルが加わり、アーティストか作曲家を最大5人までタップできます。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, an Ensemble button appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. In Lite, Surprise now and then plays an ensemble.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Call & response',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. V Lite Prekvap ma občas zahrá ensemble.'},
+  DE:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
+  FR:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un bouton Ensemble apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. En Lite, Surprends-moi joue parfois un ensemble.'},
+  ES:{title:'Ensemble',fusion:'Fusión',cr:'Call & response',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, aparece un botón Ensemble junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. En Lite, Sorpréndeme toca a veces un ensemble.'},
+  PT:{title:'Ensemble',fusion:'Fusão',cr:'Call & response',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um botão Ensemble ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. No Lite, Surpreende-me toca às vezes um ensemble.'},
+  zh:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，每个 🔀 旁出现合奏按钮；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
+  zhTW:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，每個 🔀 旁出現合奏按鈕；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Call & response',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると各 🔀 の隣にアンサンブル・ボタンが現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed);
@@ -2188,6 +2188,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const crOnRef = useRef(false); useEffect(()=>{ crOnRef.current = crOn; },[crOn]);
   useEffect(()=>{ if(!ensembleActive){ setJamOn(false); setCrOn(false); setPainterStage([]); setComposerStage([]); } },[ensembleActive]);
   useEffect(()=>{ if(!jamOn) setPainterStage([]); },[jamOn]);
+  // Ensemble × shuffle ALL: every Next draws a fresh crossing (how many and who
+  // are random). Shuffle 1 needs no flag: Next rolls the variant of the crossing.
+  const [jamAll, setJamAll] = useState(false);
+  useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
   useEffect(()=>{ if(!crOn) setComposerStage([]); },[crOn]);
   const STAGE_MAX = 5;
   const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
@@ -2236,7 +2240,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // composers 0 off → 1 shuffle → 2 call & response (Setup on) → 0.
   // The state is derived, never stored: 1 = shuffle + an artist selected,
   // 2 = shuffle + no selection (the selection is released on the way).
-  const _shuffleOn = ()=>{ setJamOn(false); setRandomMode(true); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setStructureSeedLock(null); };
+  const _shuffleOn = ()=>{ setRandomMode(true); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setStructureSeedLock(null); };
   const _shuffleIndexFor = (key)=>{
     if(!key) return -1;
     const MOSAIC_FAMILY=['mosaic','notes']; const familyOn=setupArtists.includes('mosaicFamily');
@@ -2252,38 +2256,66 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     const at = pool.indexOf(key); if(at<0) return -1;
     return ((at - basePick) % pool.length + pool.length) % pool.length;
   };
-  const _artMode = jamOn ? 3 : randomMode ? (style!==null ? 1 : 2) : 0;
+  // TWO buttons per side: 🔀 shuffle (off → 1 → ALL → off) and Ensemble (on/off);
+  // they combine — Ensemble + 1 = Next rolls the crossing's variant, Ensemble +
+  // ALL = Next draws a new random crossing.
+  const _artMode = randomMode ? ((style===null || jamAll) ? 2 : 1) : 0;
   const _cycleArt = ()=>{
     if(working||anim) return;
     if(_artMode===0){                                               // → 1: nothing selected → pick a random artist first
       if(style===null){ const pool=ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k)); if(pool.length) setStyleTo(pool[(Math.random()*pool.length)|0]); }
       _shuffleOn(); return; }
-    if(_artMode===1){                                               // → 2: release the selection, keep shuffling —
-      const keep=style; setStyleTo(null);                           //      but the draw starts on the SAME artist
-      const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix);
+    if(_artMode===1){                                               // → 2 (ALL)
+      if(jamOn){ setJamAll(true); return; }                         // ensemble: the stage stays until the next draw
+      const keep=style; setStyleTo(null);                           // release the selection, keep shuffling —
+      const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix);   // but the draw starts on the SAME artist
       return; }
-    if(_artMode===2){                                               // → 3 or 0: the artist on screen stays
-      const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null;
-      _shuffleOff();
-      if(ensembleActive){ if(cur) setStyleTo(cur); setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){} }
-      else if(cur) setStyleTo(cur);
-      return; }
-    setJamOn(false);                                                // 3 → 0
+    // 2 → 0: the artist (or the crossing) on screen stays
+    if(jamAll){ setJamAll(false); _shuffleOff(); return; }
+    const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null;
+    _shuffleOff();
+    if(cur) setStyleTo(cur);
   };
-  const _getCompMode = ()=> crOn ? 2 : composerDice ? 1 : 0;   // lazy: composerDice is declared further down
+  // Ensemble button (artists): on/off, independent of 🔀. Entering from ALL keeps
+  // the drawn artist as member 1 and stays in ALL; leaving ALL hands the draw back
+  // to the plain shuffle, starting on the same artist.
+  const _toggleJam = ()=>{
+    if(working||anim) return;
+    if(!jamOn){
+      if(_artMode===2 && !jamAll){ const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null; if(cur){ setNotesMode(false); setOneMMode(false); setStyle(cur); } setJamAll(true); }
+      setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){}
+      return;
+    }
+    if(jamAll){ const keep=style; setJamAll(false); setStyle(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
+    setJamOn(false);
+  };
+  // Ensemble ALL draw: 2–5 painters from the shuffle pool, count and members
+  // random; member 1 gets a random variant, the others derive theirs.
+  const _jamAllRoll = ()=>{
+    const pool=SHUFFLE_POOL.filter(k=>k!=='oneM' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+    if(pool.length<2) return;
+    const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
+    if(a[0]===style && a.length>2){ const x=a[0]; a[0]=a[1]; a[1]=x; }
+    const n=Math.min(a.length, 2+((Math.random()*4)|0));
+    const lead=a[0], vN=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[lead]) || 6;
+    setNotesMode(false); setOneMMode(false);
+    setStyle(lead); setPainterStage(a.slice(1,n)); setPhaseIndex((Math.random()*vN)|0);
+    try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n}); }catch(_){}
+  };
+  const _getCompMode = ()=> composerDice ? 1 : 0;   // lazy: composerDice is declared further down
   const _cycleComp = ()=>{
     if(working||anim) return;
     const _compMode=_getCompMode();
-    if(_compMode===0){ setCrOn(false); composerBagRef.current=[]; composerBagKeyRef.current=''; setComposerDice(true); setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); return; }
-    if(_compMode===1){ setComposerDice(false); if(ensembleActive){ setCrOn(true); try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:true}); }catch(_){} } return; }
-    setCrOn(false);
+    if(_compMode===0){ composerBagRef.current=[]; composerBagKeyRef.current=''; setComposerDice(true); setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); return; }
+    setComposerDice(false);
   };
-  const _modeBtn = (mode, onClick, isArt)=>{
-    const on = mode>0, isEns = isArt ? mode===3 : mode===2;
-    const badge = isArt ? (mode===1 ? '1' : mode===2 ? 'ALL' : '') : '';
+  const _toggleCr = ()=>{ if(working||anim) return; setCrOn(v=>{ const nx=!v; try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:nx}); }catch(_){} return nx; }); };
+  const _modeBtn = (mode, onClick, isArt, ens, rightPx)=>{
+    const on = mode>0, isEns = !!ens;
+    const badge = (isArt && !isEns) ? (mode===1 ? '1' : mode===2 ? 'ALL' : '') : '';
     const title = isEns ? _ensT('title') : on ? t('randomOn') : t('randomOff');
     return (
-    <button onClick={onClick} className="pf-dice" title={title} aria-label={title} aria-pressed={on} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none',overflow:'visible'}}>
+    <button onClick={onClick} className="pf-dice" title={title} aria-label={title} aria-pressed={on} style={{position:'absolute',right:(rightPx||0),top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none',overflow:'visible'}}>
       {isEns
         ? (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="9" r="4.6"/><circle cx="15.5" cy="9" r="4.6"/><circle cx="12" cy="15.5" r="4.6"/></svg>)
         : (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>)}
@@ -2293,6 +2325,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   };
   const _stageBadge = (ix, roles)=> (ix>=0) ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>) : null;
   const _diceRoll = () => {
+    if(jamOn && jamAll){ _jamAllRoll(); return; }
     const N = _effVariants();
     if(style){
       // ── SELECTED ARTIST ── bag = this artist's variants [0..N-1], no repeat.
@@ -3096,15 +3129,17 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const composerBagKeyRef = useRef('');
   const _composerNextRef = useRef(false);
   const _composerRoll = useCallback(()=>{
-    // Call & response: Next passes the first word on — the stage rotates
-    // (B · C · A), the piece continues; nobody new walks in.
-    if(crOnRef.current && composerStageRef.current.length){
-      const st=composerStageRef.current, cur=imgComposerRef.current, nf=st[0];
-      setComposerStage([...st.slice(1), cur]); _lastComposerRef.current=nf; imgComposerRef.current=nf; setImgComposer(nf);
-      return true;
-    }
     const pool=ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
     if(pool.length<2) return false;
+    // Call & response + 🔀: Next seats a new random ensemble — 2–5 composers,
+    // count and members random; the piece continues.
+    if(crOnRef.current){
+      const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
+      if(a[0]===imgComposerRef.current && a.length>2){ const x=a[0]; a[0]=a[1]; a[1]=x; }
+      const n=Math.min(a.length, 2+((Math.random()*4)|0)), lead=a[0];
+      setComposerStage(a.slice(1,n)); _lastComposerRef.current=lead; imgComposerRef.current=lead; setImgComposer(lead);
+      return true;
+    }
     const key=pool.join(',');
     if(composerBagKeyRef.current!==key || composerBagRef.current.length===0){
       composerBagKeyRef.current=key;
@@ -12758,6 +12793,7 @@ Hard requirements:
                 {/* composer dice (🎲 mirror) + NEXT — only when there is more than one composer to roll between */}
                 {(ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k)).length>1) && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
+                  {ensembleActive && _modeBtn(crOn?1:0, _toggleCr, false, true, 36)}
                 </>)}
               </div>
               {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
@@ -12800,6 +12836,7 @@ Hard requirements:
               </div>
             )}
             {!cockpitEdit && _modeBtn(_artMode, _cycleArt, true)}
+            {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
           </div>
           )}
           {(loadedSource!=='image' || moodFromImg) && (
@@ -12890,6 +12927,7 @@ Hard requirements:
                 });
                 return;
               }
+              if(jamAll) return;
               if(jamOn){ _jamTap('mosaic'); return; }
               if(style!==null){ selectStyle(style); return; }
               if(randomMode){
@@ -12922,7 +12960,7 @@ Hard requirements:
               const _stIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf(k) : -1;
               const isOn = (!cockpitEdit) && (style===k || _stIx>0);
               const inSet = setupArtists.includes(k);
-              const shufHit = (!cockpitEdit) && (shuffleStyle===k);
+              const shufHit = (!cockpitEdit) && (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0));
               const _ghost = cockpitEdit && !inSet;
               const onClick = ()=>{
                 if(cockpitEdit){
