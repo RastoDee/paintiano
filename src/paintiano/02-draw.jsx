@@ -17627,7 +17627,7 @@ const ARTIST_VARIANTS = {
   pop: [
     {mark:{heart:.6,radiant:.4},size:[.05,.15],layout:{grid:1},density:.6},
     {ground:'#f4f44a',mark:{figure:.7,disc:.3},size:[.15,.35],layout:{scatter:1},density:.12},
-    {ground:'#1a1a2a',mark:{figure:.4,radiant:.3,rect:.3},size:[.04,.1],layout:{scatter:1},density:.3},
+    {ground:'#1a1a2a',mark:{figure:.45,radiant:.35,tvbox:.2},size:[.04,.1],layout:{scatter:1},density:.3},
     {ground:'#e8d82a',mark:{radiant:1},size:[.05,.12],layout:{scatter:1},density:.08},
     {ground:'#6ad83a',mark:{speech:1},size:[.05,.1],layout:{grid:1},density:.8},
     {ground:'#e8e4b8',mark:{figure:1},size:[.03,.08],layout:{scatter:1},density:.4},
@@ -17822,6 +17822,8 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'ring': ctx.lineWidth=Math.max(1,rr*.18); ctx.arc(0,0,rr,0,6.2832); ctx.stroke(); break;
       case 'arc': { ctx.lineWidth=Math.max(1,rr*.14); const a0=R()*6.28; ctx.arc(0,0,rr,a0,a0+1.6+R()*1.6); ctx.stroke(); break; }
       case 'rect': { const h=rr*(0.55+R()*0.9); ctx.rect(-rr,-h,2*rr,2*h); ctx.fill(); break; }
+      case 'tvbox': { // Haring: a small hollow box drawn in one thick line
+        ctx.strokeStyle=col; ctx.lineWidth=Math.max(1.5,rr*.16); ctx.lineJoin='round'; ctx.rect(-rr*.8,-rr*.5,rr*1.6,rr*1.0); ctx.stroke(); break; }
       case 'field': { const h=rr*(0.35+R()*.3); ctx.rect(-rr*2.2,-h,rr*4.4,2*h); ctx.fill(); break; }
       case 'tri': { const a=R()*6.28; for(let j=0;j<3;j++){ const t=a+j*2.094; j?ctx.lineTo(Math.cos(t)*rr,Math.sin(t)*rr):ctx.moveTo(Math.cos(t)*rr,Math.sin(t)*rr);} ctx.closePath(); ctx.fill(); break; }
       case 'blob': { const k=6+(R()*4|0); for(let j=0;j<=k;j++){ const a=j/k*6.2832, q=rr*(0.7+R()*0.6*(0.3+F.wobble)); const px=Math.cos(a)*q, py=Math.sin(a)*q; j?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); break; }
@@ -18018,10 +18020,15 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         // this chord's painter — a fair round-robin, so a duo really is 50/50;
         // the painter keeps its own vocabulary and size, the hand stays fused
         const PD=_dnaOf(F.keys[(i+layer)%F.keys.length], F.phs[(i+layer)%F.keys.length]);
-        const kind=_fuPick(PD.mark,R());
+        let kind=_fuPick(PD.mark,R());
+        // Kusama in a crossing speaks in dots: specks, dotted chains and flat
+        // patchwork panels (which read as plain squares next to another hand)
+        // become a visible dot swarm; her nets, spheres and targets stay.
+        const _kus = F.keys[(i+layer)%F.keys.length]==='kusama';
+        if(_kus && (kind==='dot'||kind==='chain'||kind==='panel')) kind='dotcluster';
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
-        const r=Math.max(1.2, base*(0.8+R()*0.4));
+        const r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : 1.2, base*(0.8+R()*0.4));
         const [cr,cg,cb]=gc(m,v);
         const _pi=(i+layer)%F.keys.length, _pal=SM[_pi]&&SM[_pi].pal;
         const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
