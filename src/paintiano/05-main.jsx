@@ -13494,7 +13494,7 @@ Hard requirements:
           tells the user what a swipe does in the current mode: Lite → Surprise,
           Advanced → Next. Only rendered when immersive; occupies the letterbox
           area where INSPIRED BY used to be. Swipe flash still fires below. */}
-      {immersive && isCoarse && ((viewMode!=='image' && !liteImageMode && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)))) || (basicMode && liteImageMode && chords.length>0) || (!basicMode && viewMode==='image' && composerDice && !!imgComposer && chords.length>0)) && (
+      {immersive && isCoarse && ((viewMode!=='image' && !(basicMode&&liteImageMode) && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)))) || (basicMode && liteImageMode && chords.length>0) || (!basicMode && viewMode==='image' && composerDice && !!imgComposer && chords.length>0)) && (
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
           {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
         </div>
@@ -13542,7 +13542,7 @@ Hard requirements:
           if(immersive){ if(e.touches.length===1) _holdStart(e.touches[0].clientX, e.touches[0].clientY); else _holdCancel(); }
           // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
           // is bound to the image — no next style to swipe to). Ignore multi-touch.
-          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer)) || (liteImageMode&&!basicMode)) return;
+          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
@@ -13553,7 +13553,7 @@ Hard requirements:
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
-          if(!immersive || (viewMode==='image' && !(!basicMode&&composerDice&&imgComposer)) || liteImageMode) return;
+          if(!immersive || (viewMode==='image' && !(!basicMode&&composerDice&&imgComposer)) || (basicMode&&liteImageMode)) return;
           const s = _swipeStartRef.current; if(!s) return;
           const tt = e.touches[0]; if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
@@ -13564,7 +13564,7 @@ Hard requirements:
         onTouchCancel={()=>{ _holdEnd(); }}
         onTouchEnd={e=>{
           _holdEnd();
-          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer)) || (liteImageMode&&!basicMode)) return;
+          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
