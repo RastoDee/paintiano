@@ -2235,9 +2235,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(_artMode===2){ _shuffleOff(); if(ensembleActive){ setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){} } return; } // → 3 or 0
     setJamOn(false);                                                // 3 → 0
   };
-  const _compMode = crOn ? 2 : composerDice ? 1 : 0;
+  const _getCompMode = ()=> crOn ? 2 : composerDice ? 1 : 0;   // lazy: composerDice is declared further down
   const _cycleComp = ()=>{
     if(working||anim) return;
+    const _compMode=_getCompMode();
     if(_compMode===0){ setCrOn(false); composerBagRef.current=[]; composerBagKeyRef.current=''; setComposerDice(true); setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); return; }
     if(_compMode===1){ setComposerDice(false); if(ensembleActive){ setCrOn(true); try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:true}); }catch(_){} } return; }
     setCrOn(false);
@@ -12699,7 +12700,7 @@ Hard requirements:
                 <span>{t('inspiredByTitle')}</span>
                 {/* composer dice (🎲 mirror) + NEXT — only when there is more than one composer to roll between */}
                 {(ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k)).length>1) && (<>
-                  {_modeBtn(_compMode, _cycleComp, false)}
+                  {_modeBtn(_getCompMode(), _cycleComp, false)}
                 </>)}
               </div>
               {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
