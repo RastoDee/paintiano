@@ -1695,6 +1695,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; }
     setTimeout(()=>{ _setSwipeFlashKey('flash-'+Date.now()); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },1200); },0);
   },[]);
+  // Lite fullscreen press-and-hold: the label stays up while the finger rests
+  // on the painting and fades out on release (a short tap still gives the
+  // regular 1.2 s flash). A swipe cancels the hold before it shows.
+  const _holdTimerRef = useRef(null);
+  const _holdingRef = useRef(false);
+  const _holdReleasedRef = useRef(false);
+  const _holdCancel = ()=>{ if(_holdTimerRef.current){ clearTimeout(_holdTimerRef.current); _holdTimerRef.current=null; } };
+  const _holdStart = ()=>{ _holdCancel(); _holdReleasedRef.current=false; _holdTimerRef.current=setTimeout(()=>{ _holdTimerRef.current=null; if(_swipeWasGestureRef.current) return; _holdingRef.current=true; if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey('hold-'+Date.now()); },300); };
+  const _holdEnd = ()=>{ _holdCancel(); if(!_holdingRef.current) return; _holdingRef.current=false; _holdReleasedRef.current=true; _setSwipeFlashKey('out-'+Date.now()); if(_swipeFlashTimerRef.current) clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },420); };
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
@@ -11486,7 +11495,7 @@ Hard requirements:
 
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
         <button onClick={exportPoster} style={{position:'fixed',right:14,bottom:132,zIndex:9999,padding:'10px 16px',borderRadius:22,border:'1px solid rgba(201,168,76,.8)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.18em',cursor:'pointer'}}>⬇ POSTER</button>
@@ -13465,7 +13474,7 @@ Hard requirements:
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':'pfSwipeFlash 1.2s ease-out both'),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             {(()=>{
               // Ensemble: one name per line, a small × / ↔ between — never one long
@@ -13491,8 +13500,10 @@ Hard requirements:
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
           _swipeWasGestureRef.current = false;
+          if(basicMode) _holdStart();
         }}
         onTouchMove={e=>{
+          if(_holdTimerRef.current && _swipeStartRef.current && e.touches[0]){ const _m=e.touches[0]; if(Math.abs(_m.clientX-_swipeStartRef.current.x)+Math.abs(_m.clientY-_swipeStartRef.current.y)>14) _holdCancel(); }
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
@@ -13504,7 +13515,9 @@ Hard requirements:
             _swipeWasGestureRef.current = true;
           }
         }}
+        onTouchCancel={()=>{ _holdEnd(); }}
         onTouchEnd={e=>{
+          _holdEnd();
           if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer)) || (liteImageMode&&!basicMode)) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
@@ -13572,7 +13585,7 @@ Hard requirements:
           if(demoReelOn){ demoReelStop(); return; }
           // Lite fullscreen: a plain tap brings the “inspired by …” flash back —
           // the only place the attribution lives while the painting fills the screen.
-          if(immersive && basicMode) _fireInspiredFlash();
+          if(immersive && basicMode){ if(_holdReleasedRef.current) _holdReleasedRef.current=false; else _fireInspiredFlash(); }
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
           const rect=cv.getBoundingClientRect();
