@@ -13467,7 +13467,16 @@ Hard requirements:
         return (
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:'pfSwipeFlash 1.2s ease-out both',color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
-            <div>{_isImgFlash ? (composerStage.length ? _stageNames('comp') : _fLabel) : (painterStage.length ? _stageNames('art') : _fLabel)}</div>
+            {(()=>{
+              // Ensemble: one name per line, a small × / ↔ between — never one long
+              // line running off the screen. Size steps down with the stage size.
+              const _ens = _isImgFlash ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k) : null)
+                                       : (painterStage.length && style!==null ? _jamStage().map(_painterLabel) : null);
+              if(!_ens) return (<div>{_fLabel}</div>);
+              const _sep = _isImgFlash ? '↔' : '×';
+              const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
+              return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div></Fragment>))}</div>);
+            })()}
           </div>
         );
       })()}
