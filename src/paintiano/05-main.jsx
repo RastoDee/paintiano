@@ -904,15 +904,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, the 🔀 button gets one more step — Ensemble; then tap up to five artists or composers. In Lite, Surprise now and then plays an ensemble.'},
-  SK:{title:'Ensemble',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, tlačidlo 🔀 dostane ďalší krok — Ensemble; potom ťukni až na päť umelcov či skladateľov. V Lite Prekvap ma občas zahrá ensemble.'},
-  DE:{title:'Ensemble',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet bekommt der 🔀-Knopf einen weiteren Schritt — Ensemble; dann bis zu fünf Künstler oder Komponisten antippen. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
-  FR:{title:'Ensemble',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, le bouton 🔀 gagne une étape de plus — Ensemble ; touche ensuite jusqu’à cinq artistes ou compositeurs. En Lite, Surprends-moi joue parfois un ensemble.'},
-  ES:{title:'Ensemble',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, el botón 🔀 gana un paso más — Ensemble; luego toca hasta cinco artistas o compositores. En Lite, Sorpréndeme toca a veces un ensemble.'},
-  PT:{title:'Ensemble',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, o botão 🔀 ganha mais um passo — Ensemble; depois toca até cinco artistas ou compositores. No Lite, Surpreende-me toca às vezes um ensemble.'},
-  zh:{title:'合奏',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，🔀 按钮多一个档位——合奏；然后点按最多五位艺术家或作曲家。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
-  zhTW:{title:'合奏',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，🔀 按鈕多一個檔位——合奏；然後點按最多五位藝術家或作曲家。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
-  ja:{title:'アンサンブル',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると 🔀 ボタンにもう一段——アンサンブルが加わり、アーティストか作曲家を最大5人までタップできます。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, the 🔀 button gets one more step — Ensemble; then tap up to five artists or composers. In Lite, Surprise now and then plays an ensemble.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Call & response',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, tlačidlo 🔀 dostane ďalší krok — Ensemble; potom ťukni až na päť umelcov či skladateľov. V Lite Prekvap ma občas zahrá ensemble.'},
+  DE:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet bekommt der 🔀-Knopf einen weiteren Schritt — Ensemble; dann bis zu fünf Künstler oder Komponisten antippen. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
+  FR:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, le bouton 🔀 gagne une étape de plus — Ensemble ; touche ensuite jusqu’à cinq artistes ou compositeurs. En Lite, Surprends-moi joue parfois un ensemble.'},
+  ES:{title:'Ensemble',fusion:'Fusión',cr:'Call & response',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, el botón 🔀 gana un paso más — Ensemble; luego toca hasta cinco artistas o compositores. En Lite, Sorpréndeme toca a veces un ensemble.'},
+  PT:{title:'Ensemble',fusion:'Fusão',cr:'Call & response',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, o botão 🔀 ganha mais um passo — Ensemble; depois toca até cinco artistas ou compositores. No Lite, Surpreende-me toca às vezes um ensemble.'},
+  zh:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，🔀 按钮多一个档位——合奏；然后点按最多五位艺术家或作曲家。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
+  zhTW:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，🔀 按鈕多一個檔位——合奏；然後點按最多五位藝術家或作曲家。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Call & response',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると 🔀 ボタンにもう一段——アンサンブルが加わり、アーティストか作曲家を最大5人までタップできます。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed);
@@ -13474,14 +13474,20 @@ Hard requirements:
                       : _fKey === 'mosaic' ? t(basicMode ? 'liteMosaicStyle' : 'mosaicStyle')
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
+        const _ensF = _isImgFlash ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k) : null)
+                                  : (painterStage.length && style!==null ? _jamStage().map(_painterLabel) : null);
         return (
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':'pfSwipeFlash 1.2s ease-out both'),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
-            {!_fBare && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
+            {_ensF && (<>
+              {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” */}
+              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
+              <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
+            </>)}
+            {(!_fBare || _ensF) && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:_ensF?14:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             {(()=>{
               // Ensemble: one name per line, a small × / ↔ between — never one long
               // line running off the screen. Size steps down with the stage size.
-              const _ens = _isImgFlash ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k) : null)
-                                       : (painterStage.length && style!==null ? _jamStage().map(_painterLabel) : null);
+              const _ens = _ensF;
               if(!_ens) return (<div>{_fLabel}</div>);
               const _sep = _isImgFlash ? '↔' : '×';
               const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
