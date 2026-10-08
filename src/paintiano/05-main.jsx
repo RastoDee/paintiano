@@ -1702,7 +1702,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _holdingRef = useRef(false);
   const _holdReleasedRef = useRef(false);
   const _holdCancel = ()=>{ if(_holdTimerRef.current){ clearTimeout(_holdTimerRef.current); _holdTimerRef.current=null; } };
-  const _holdStart = ()=>{ _holdCancel(); _holdReleasedRef.current=false; _holdTimerRef.current=setTimeout(()=>{ _holdTimerRef.current=null; if(_swipeWasGestureRef.current) return; _holdingRef.current=true; if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey('hold-'+Date.now()); },300); };
+  const _holdPosRef = useRef(null);
+  const _holdStart = (x,y)=>{ _holdCancel(); _holdReleasedRef.current=false; _holdPosRef.current={x,y}; _holdTimerRef.current=setTimeout(()=>{ _holdTimerRef.current=null; if(_swipeWasGestureRef.current) return; _holdingRef.current=true; if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey('hold-'+Date.now()); },300); };
   const _holdEnd = ()=>{ _holdCancel(); if(!_holdingRef.current) return; _holdingRef.current=false; _holdReleasedRef.current=true; _setSwipeFlashKey('out-'+Date.now()); if(_swipeFlashTimerRef.current) clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },420); };
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
@@ -13493,6 +13494,8 @@ Hard requirements:
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(_swipeStartRef.current) return; if(playing||immersive) wakeControls(); }}
         onTouchStart={e=>{
+          // Fullscreen (Lite + Advanced): press-and-hold shows who painted it.
+          if(immersive){ if(e.touches.length===1) _holdStart(e.touches[0].clientX, e.touches[0].clientY); else _holdCancel(); }
           // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
           // is bound to the image — no next style to swipe to). Ignore multi-touch.
           if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer)) || (liteImageMode&&!basicMode)) return;
@@ -13500,10 +13503,9 @@ Hard requirements:
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
           _swipeWasGestureRef.current = false;
-          if(basicMode) _holdStart();
         }}
         onTouchMove={e=>{
-          if(_holdTimerRef.current && _swipeStartRef.current && e.touches[0]){ const _m=e.touches[0]; if(Math.abs(_m.clientX-_swipeStartRef.current.x)+Math.abs(_m.clientY-_swipeStartRef.current.y)>14) _holdCancel(); }
+          if(_holdTimerRef.current && _holdPosRef.current && e.touches[0]){ const _m=e.touches[0]; if(e.touches.length>1 || Math.abs(_m.clientX-_holdPosRef.current.x)+Math.abs(_m.clientY-_holdPosRef.current.y)>14) _holdCancel(); }
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
@@ -13583,9 +13585,9 @@ Hard requirements:
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
           if(demoReelOn){ demoReelStop(); return; }
-          // Lite fullscreen: a plain tap brings the “inspired by …” flash back —
+          // Fullscreen (Lite + Advanced): a plain tap brings the “inspired by …” flash back —
           // the only place the attribution lives while the painting fills the screen.
-          if(immersive && basicMode){ if(_holdReleasedRef.current) _holdReleasedRef.current=false; else _fireInspiredFlash(); }
+          if(immersive){ if(_holdReleasedRef.current) _holdReleasedRef.current=false; else _fireInspiredFlash(); }
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
           const rect=cv.getBoundingClientRect();
