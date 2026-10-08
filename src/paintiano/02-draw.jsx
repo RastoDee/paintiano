@@ -17705,17 +17705,30 @@ const ARTIST_VARIANTS = {
 };
 
 // the artist's genes for a given variant (phase) — base + that variant's overrides
-function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const v=V[((ph|0)%V.length+V.length)%V.length]; return Object.assign({}, b, v); }
+// how many variants each engine really has (its own _capN) — the fusion must
+// land on the SAME variant the solo painting is showing for this phaseIndex
+const ARTIST_VARIANT_N = {raffel:7,picasso:6,matisse:8,pollock:7,bloom:7,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
+function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
 function _fuHex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
 // Cross the parents' DNA into one genome. Numeric genes blend by weight,
 // vocabularies (mark / layout) merge by weight, palette treatments keep
 // their weights and are blended per colour at paint time.
+// Variant per stage member: the selected artist (slot 1) is exactly the
+// variant on screen; every added painter gets its OWN variant, drawn from
+// the phase, its name and its slot — so Miró-3 + Bauhaus gives e.g. Bauhaus-5,
+// and Next/Vary re-rolls all of them. Deterministic → exports reproduce.
+function _fuVariantOf(k, slot, ph){
+  if(slot===0) return ph|0;
+  let h=((ph|0)*2654435761)>>>0; for(let i=0;i<k.length;i++){ h=(h*31 + k.charCodeAt(i) + slot*7919)>>>0; }
+  const n=ARTIST_VARIANT_N[k]||1; return (h>>>8)%n;
+}
 function fuseDNA(keys, ph){
   const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
   if(!ks.length) return null;
-  const ws=ks.map((k)=>[_dnaOf(k,ph), 1/ks.length]);
+  const phs=ks.map((k,i)=>_fuVariantOf(k,i,ph));
+  const ws=ks.map((k,i)=>[_dnaOf(k,phs[i]), 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
@@ -17723,7 +17736,7 @@ function fuseDNA(keys, ph){
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
   const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
   return {
-    keys:ks, ph:(ph|0), ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
+    keys:ks, ph:(ph|0), phs, ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
     mark:dict('mark'), layout:dict('layout'),
     size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
     edge:num('edge'), alpha:num('alpha'), outline:num('outline'), wobble:num('wobble'), lines:num('lines'),
@@ -17900,10 +17913,54 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
 }
 // The fused painter. chords/lim as every other overlay; gc = the song's palette.
 // noGround: skip the ground fill (transparent export).
+// ── The parent's REAL engine, rendered on a thumbnail, tells the truth about
+// this variant's ground and palette for THIS song — grounds and palettes in
+// the engines depend on the song (and the seed), so no table can know them.
+// Cached per (artist, variant, seed, song).
+let _fuSampleCache = new Map();
+function _fuRealOverlay(k, ctx, CW, CH, chords, lim, gc, seed, mode, ph){
+  switch(k){
+    case 'kusama':    return drawKusamaOverlay(ctx,CW,CH,chords,lim,gc,seed,ph);
+    case 'kandinsky': return drawKandinskyOverlay(ctx,CW,CH,lim,seed,mode,gc,ph,chords.length,chords);
+    case 'oneM':      return drawOneMOverlay(ctx,CW,CH,chords,lim,gc,seed,mode,0);
+    case 'mosaic': case 'notes': return;
+    default: { const fn=(typeof globalThis!=='undefined') ? globalThis['draw'+k.charAt(0).toUpperCase()+k.slice(1)+'Overlay'] : null; if(typeof fn==='function') fn(ctx,CW,CH,chords,lim,gc,seed,mode,ph); }
+  }
+}
+function _fuSample(k, chords, gc, seed, mode, ph){
+  const key=k+'|'+(ph|0)+'|'+(seed|0)+'|'+(chords.length)+'|'+(chords.__fuId||0);
+  const hit=_fuSampleCache.get(key); if(hit) return hit;
+  let out={ground:null, pal:[]};
+  try{
+    if(typeof document==='undefined') return out;
+    const W=96,H=60;
+    const cv=(typeof OffscreenCanvas!=='undefined') ? new OffscreenCanvas(W,H) : Object.assign(document.createElement('canvas'),{width:W,height:H});
+    const c=cv.getContext('2d'); if(!c) return out;
+    c.fillStyle = k==='pollock' ? '#f2ede0' : '#04040a'; c.fillRect(0,0,W,H);
+    const savedSeed=_artistSeed, savedE=_curE;
+    _setArtistSeed(seed); _setCurE(0.5);
+    _fuRealOverlay(k, c, W, H, chords, chords.length, gc, seed, mode, ph);
+    _setArtistSeed(savedSeed); _setCurE(savedE);
+    const d=c.getImageData(0,0,W,H).data; const cnt=new Map();
+    for(let i=0;i<d.length;i+=4){ if(d[i+3]<128) continue; const q=((d[i]>>4)<<8)|((d[i+1]>>4)<<4)|(d[i+2]>>4); cnt.set(q,(cnt.get(q)||0)+1); }
+    const arr=[...cnt.entries()].sort((a,b)=>b[1]-a[1]);
+    const toRgb=(q)=>[((q>>8)&15)*17,((q>>4)&15)*17,(q&15)*17];
+    if(arr.length){ out.ground=toRgb(arr[0][0]); }
+    const tot=W*H;
+    for(let i=1;i<arr.length && out.pal.length<6;i++){ if(arr[i][1]<tot*0.012) break; const c2=toRgb(arr[i][0]); const g=out.ground; if(g && Math.abs(c2[0]-g[0])+Math.abs(c2[1]-g[1])+Math.abs(c2[2]-g[2])<60) continue; out.pal.push(c2); }
+  }catch(_){ }
+  if(_fuSampleCache.size>64) _fuSampleCache.clear();
+  _fuSampleCache.set(key,out); return out;
+}
+function _fuSnap(rgb, pal){ if(!pal||pal.length<2) return rgb; let best=pal[0], bd=1e9; for(const p of pal){ const d=(p[0]-rgb[0])**2+(p[1]-rgb[1])**2+(p[2]-rgb[2])**2; if(d<bd){bd=d;best=p;} } return best; }
 function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
   const F = fuseDNA(keys, phaseIndex); if(!F || !chords || !chords.length) return;
   const ss = (sessionSeed|0) ^ ((phaseIndex|0)*7919);
   const S = Math.min(CW,CH), n = chords.length;
+  // samples of every parent's real engine for this song / seed / variant
+  const SM = F.keys.map((k,i)=>_fuSample(k, chords, gc, sessionSeed, mode, F.phs[i]));
+  const g0 = SM[0] && SM[0].ground;
+  if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
   // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~600 marks/layer
   const stride = Math.max(1, Math.ceil(n/600));
@@ -17935,15 +17992,16 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const note=ns[j]; const m=note.m!==undefined?note.m:(typeof note==='number'?note:60), v=note.v!==undefined?note.v:80;
         // this chord's painter — a fair round-robin, so a duo really is 50/50;
         // the painter keeps its own vocabulary and size, the hand stays fused
-        const PD=_dnaOf(F.keys[(i+layer)%F.keys.length], F.ph);
+        const PD=_dnaOf(F.keys[(i+layer)%F.keys.length], F.phs[(i+layer)%F.keys.length]);
         const kind=_fuPick(PD.mark,R());
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
         const r=Math.max(1.2, base*(0.8+R()*0.4));
         const [cr,cg,cb]=gc(m,v);
-        const col=_fuTone([cr,cg,cb],F,R());
+        const _pi=(i+layer)%F.keys.length, _pal=SM[_pi]&&SM[_pi].pal;
+        const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
-        const col2=_fuTone([c2r,c2g,c2b],F,R());
+        const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         ctx.save(); ctx.translate(x+(j?(R()-.5)*r*2.2:0), y+(j?(R()-.5)*r*2.2:0));
         _fuMark(ctx, kind, r, col, F, R, (/^(field|stripe|stripes|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2, col2);
         ctx.restore();
