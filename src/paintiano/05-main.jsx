@@ -897,191 +897,26 @@ const TxIcon = ({n, s=15}) => {
   }
 };
 
-// ═══ ENSEMBLE · JAM (painters) ═════════════════════════════════════════════
-// 2–5 painters on ONE canvas, composed as a poster: ground / figure / accent
-// (see _JAM_ROLES below). Ground fills of later painters are stripped with the
-// same fillRect trick the transparent export uses, so only their marks land.
-const _JAM_FULL = new Set(['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM','pollock']);
+// ═══ ENSEMBLE · JAM — 2–5 painters crossed into one new hand ═══════════
+// The fused renderer lives in 02-draw (ARTIST_DNA / fuseDNA /
+// drawFusionOverlay). This wrapper keeps one call for the live canvas, the
+// raster export and the SVG shim.
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',desc:'Several painters composed into one poster (Jam) and composers trading phrases (Call & response). When on, a second button appears next to the shuffle dice; tap up to five artists or composers.',roles:['ground','figure','accent','figure 2','accent 2']},
-  SK:{title:'Ensemble',desc:'Viac maliarov zložených do jedného plagátu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa kocky pribudne druhé tlačidlo; potom ťukni až na päť umelcov či skladateľov.',roles:['podklad','figúra','akcent','figúra 2','akcent 2']},
-  DE:{title:'Ensemble',desc:'Mehrere Maler zu einem Poster komponiert (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben dem Würfel ein zweiter Knopf; dann bis zu fünf Künstler oder Komponisten antippen.',roles:['Grund','Figur','Akzent','Figur 2','Akzent 2']},
-  FR:{title:'Ensemble',desc:'Plusieurs peintres composés en une affiche (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un second bouton apparaît à côté du dé ; touche ensuite jusqu’à cinq artistes ou compositeurs.',roles:['fond','figure','accent','figure 2','accent 2']},
-  ES:{title:'Ensemble',desc:'Varios pintores compuestos en un póster (Jam) y compositores que se intercambian frases (Call & response). Al activarlo aparece un segundo botón junto al dado; luego toca hasta cinco artistas o compositores.',roles:['fondo','figura','acento','figura 2','acento 2']},
-  PT:{title:'Ensemble',desc:'Vários pintores compostos num cartaz (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um segundo botão ao lado do dado; depois toca até cinco artistas ou compositores.',roles:['fundo','figura','acento','figura 2','acento 2']},
-  zh:{title:'合奏',desc:'多位画家合成一张海报（Jam），作曲家轮流接句（Call & response）。开启后，骰子旁会出现第二个按钮；然后点按最多五位艺术家或作曲家。',roles:['底','主体','点睛','主体 2','点睛 2']},
-  zhTW:{title:'合奏',desc:'多位畫家合成一張海報（Jam），作曲家輪流接句（Call & response）。開啟後，骰子旁會出現第二個按鈕；然後點按最多五位藝術家或作曲家。',roles:['底','主體','點睛','主體 2','點睛 2']},
-  ja:{title:'アンサンブル',desc:'複数の画家をひとつのポスターに構成（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにするとサイコロの横に2つ目のボタンが現れ、アーティストか作曲家を最大5人までタップできます。',roles:['地','図','アクセント','図 2','アクセント 2']},
+  EN:{title:'Ensemble',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, a second button appears next to the shuffle dice; tap up to five artists or composers.'},
+  SK:{title:'Ensemble',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa kocky pribudne druhé tlačidlo; potom ťukni až na päť umelcov či skladateľov.'},
+  DE:{title:'Ensemble',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben dem Würfel ein zweiter Knopf; dann bis zu fünf Künstler oder Komponisten antippen.'},
+  FR:{title:'Ensemble',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un second bouton apparaît à côté du dé ; touche ensuite jusqu’à cinq artistes ou compositeurs.'},
+  ES:{title:'Ensemble',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo aparece un segundo botón junto al dado; luego toca hasta cinco artistas o compositores.'},
+  PT:{title:'Ensemble',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um segundo botão ao lado do dado; depois toca até cinco artistas ou compositores.'},
+  zh:{title:'合奏',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，骰子旁会出现第二个按钮；然后点按最多五位艺术家或作曲家。'},
+  zhTW:{title:'合奏',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，骰子旁會出現第二個按鈕；然後點按最多五位藝術家或作曲家。'},
+  ja:{title:'アンサンブル',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにするとサイコロの横に2つ目のボタンが現れ、アーティストか作曲家を最大5人までタップできます。'},
 };
-// ROLES, not registers. Slot 1 is the GROUND: the whole song, the whole canvas,
-// its own ground. Slot 2 is the FIGURE: the same whole song by the second
-// painter, seen through a window placed on the golden section (never centred).
-// Slot 3 is the ACCENT: the third painter marks only the piece's peaks
-// (top ~10 % by energy), full canvas, ground stripped — a sparse gesture that
-// ties ground and figure across the window's edge. Slot 4 = a second, smaller
-// figure in the mirrored phi point; slot 5 = a second accent, by melody
-// (highest notes). Every painter reads the song's palette, so the tone holds.
-const _JAM_ROLES = {1:['ground'],2:['ground','figure'],3:['ground','figure','accentE'],4:['ground','figure','accentE','figure2'],5:['ground','figure','accentE','figure2','accentM']};
-const _PHI = 0.6180339887;
-let _jamAccCache = { src:null, kind:'', out:null };
-// the peaks of the piece — a sparse pick that keeps the original order
-function _jamAccent(chords, kind){
-  if(_jamAccCache.src===chords && _jamAccCache.kind===kind && _jamAccCache.out) return _jamAccCache.out;
-  const score = chords.map(c=>{
-    const ns=(c&&c.n)||[]; if(!ns.length) return 0;
-    if(kind==='accentM'){ let mx=0; for(const x of ns){ const m=(x&&x.m!=null)?x.m:60; if(m>mx) mx=m; } return mx; }
-    let sv=0; for(const x of ns) sv+=(x&&x.v!=null)?x.v:80;
-    return (typeof c._E==='number'?c._E:0.5)*100 + sv/ns.length*0.35 + Math.min(4,ns.length)*2;
-  });
-  const n = Math.max(1, Math.round(chords.length*(kind==='accentM'?0.08:0.1)));
-  const top = score.map((v,i)=>i).sort((x,y)=>(score[y]-score[x])||(x-y)).slice(0,n).sort((x,y)=>x-y);
-  const out = { chords: top.map(i=>chords[i]), pos: top };
-  _jamAccCache = { src:chords, kind, out };
-  return out;
-}
-function _jamLim(part, lim){ const pos=part.pos; let lo=0,hi=pos.length; while(lo<hi){ const m=(lo+hi)>>1; if(pos[m]<lim) lo=m+1; else hi=m; } return lo; }
-// The figure's window — shape, phi point, size, tilt — rolled from the
-// painting seed + variant, so the dice/Next gives a new poster, not a new noise.
-function _jamWindow(seed, ph, CW, CH, second){
-  let h=((seed>>>0) ^ ((ph|0)*2654435761))>>>0; const R=()=>{ h=(h*1103515245+12345)>>>0; return h/4294967296; };
-  const shape = ['ellipse','rect','band'][(R()*3)|0];
-  const k = (R()*4)|0;
-  let px = (k&1) ? 1-_PHI : _PHI, py = (k&2) ? _PHI : 1-_PHI;
-  if(second){ px = 1-px; py = 1-py; }
-  const sc = second ? _PHI : 1;
-  const tilt = shape==='band' ? 0 : (R()*12-6)*Math.PI/180;
-  let w,hh;
-  if(shape==='ellipse'){ w=0.80*CW*sc; hh=0.60*CH*sc; }
-  else if(shape==='rect'){ w=0.55*CW*sc; hh=Math.min(0.72*CH, w/1.618); if(hh>=0.72*CH){ hh=0.72*CH*sc; w=hh*1.618; } }
-  else { w=0.382*CW*sc; hh=CH; py=0.5; }
-  const m=Math.min(CW,CH)*0.03;
-  const cx = Math.max(w/2+m, Math.min(CW-w/2-m, px*CW));
-  const cy = shape==='band' ? CH/2 : Math.max(hh/2+m, Math.min(CH-hh/2-m, py*CH));
-  return { shape, cx, cy, w, h:hh, tilt, soft: shape==='ellipse' };
-}
-function _jamShapePath(ctx, win){
-  ctx.beginPath();
-  if(win.shape==='ellipse') ctx.ellipse(0,0,win.w/2,win.h/2,0,0,Math.PI*2);
-  else ctx.rect(-win.w/2,-win.h/2,win.w,win.h);
-}
-let _jamOffs = [null,null,null,null];
-function _jamOffscreen(ix, pw, phh){
-  let o=_jamOffs[ix];
-  if(!o || o.width!==pw || o.height!==phh){
-    o = (typeof OffscreenCanvas!=='undefined') ? new OffscreenCanvas(pw,phh) : Object.assign(document.createElement('canvas'),{width:pw,height:phh});
-    _jamOffs[ix]=o;
-  }
-  return o;
-}
-function _jamOverlay(k, ctx, CW, CH, ch, lim, gc, seed, mode, ph){
-  switch(k){
-    case 'pollock':      return drawPollockOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'picasso':      return drawPicassoOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'kusama':       return drawKusamaOverlay(ctx,CW,CH,ch,lim,gc,seed,ph);
-    case 'miro':         return drawMiroOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'kandinsky':    return drawKandinskyOverlay(ctx,CW,CH,lim,seed,mode,gc,ph,ch.length,ch);
-    case 'rothko':       return drawRothkoOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'matisse':      return drawMatisseOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'mondrian':     return drawMondrianOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'bauhaus':      return drawBauhausOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'bulge':        return drawBulgeOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'arcs':         return drawArcsOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'bloom':        return drawBloomOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'spiral':       return drawSpiralOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'gold':         return drawGoldOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'pop':          return drawPopOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'wave':         return drawWaveOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'mitchell':     return drawMitchellOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'monet':        return drawMonetOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'hokusai':      return drawHokusaiOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'raffel':       return drawRaffelOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'lichtenstein': return drawLichtensteinOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'klee':         return drawKleeOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'delaunay':     return drawDelaunayOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,ph);
-    case 'oneM':         return drawOneMOverlay(ctx,CW,CH,ch,lim,gc,seed,mode,0);
-    default: return;
-  }
-}
-function _jamRender(ctx, CW, CH, N, BW, BH, grid, part, lim, gc, k, seed, mode, ph, strip){
-  const li=_jamLim(part, lim); if(li<=0) return;
-  const _of = ctx.fillRect;
-  if(strip){ ctx.fillRect = function(x,y,w,h){ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2) return; return _of.call(ctx,x,y,w,h); }; }
-  try{
-    if(!_JAM_FULL.has(k)){
-      for(let j=0;j<li;j++){
-        const chord=part.chords[j]; if(!chord) continue; _setCurE(chord._E);
-        const {n:notes,idx}=chord; const cell=grid.cells&&grid.cells[idx];
-        if(cell){ if(cell.segments) cell.segments.forEach(sg=>drawBlock(ctx,sg.x,sg.y,notes,gc,sg.w,sg.h,k)); else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,k); }
-        else { const si=idx%(N*N),col=si%N,row=Math.floor(si/N); drawBlock(ctx,col*BW,row*BH,notes,gc,BW,BH,k); }
-      }
-    }
-    _setCurE(0.5);
-    if(k) _jamOverlay(k, ctx, CW, CH, part.chords, li, gc, seed, mode, ph);
-  } finally { if(strip){ ctx.fillRect=_of; } }
-}
-// An accent BAND for field painters (Rothko, Matisse, Mondrian… lay their
-// whole picture out across whatever chords they get, so a sparse pick would
-// not read as marks but as a full re-layout). A thin strip on the phi line
-// opposite the figure, crossing the poster — the third voice as a stripe.
-function _jamBand(win, CW, CH, second){
-  const vertical = win.shape==='band' ? false : !second;
-  if(vertical){ const x = (win.cx > CW/2 ? 1-_PHI : _PHI)*CW; return { shape:'rect', cx:x, cy:CH/2, w:CW*(second?0.055:0.085), h:CH, tilt:0, soft:false }; }
-  const y = (win.cy > CH/2 ? 1-_PHI : _PHI)*CH; return { shape:'rect', cx:CW/2, cy:y, w:CW, h:CH*(second?0.055:0.085), tilt:0, soft:false };
-}
-// The painter's complete picture, shown through a window (figure / band).
-function _jamThrough(ctx, CW, CH, N, BW, BH, grid, all, lim, gc, k, seed, mode, ph, win, ps, ix){
-  const isShim = typeof ctx.drawImage!=='function';
-  if(isShim){
-    ctx.save(); ctx.translate(win.cx,win.cy); ctx.rotate(win.tilt); _jamShapePath(ctx,win); ctx.clip(); ctx.rotate(-win.tilt); ctx.translate(-win.cx,-win.cy);
-    ctx.fillStyle = k==='pollock' ? '#f2ede0' : '#04040a'; ctx.fillRect(0,0,CW,CH);
-    _jamRender(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed,mode,ph,false);
-    ctx.restore();
-    return;
-  }
-  const pw=Math.max(1,Math.round(CW*ps)), phh=Math.max(1,Math.round(CH*ps));
-  const off=_jamOffscreen(ix,pw,phh), o=off.getContext('2d');
-  o.setTransform(1,0,0,1,0,0); o.globalCompositeOperation='source-over'; o.clearRect(0,0,pw,phh);
-  o.setTransform(ps,0,0,ps,0,0);
-  o.fillStyle = k==='pollock' ? '#f2ede0' : '#04040a'; o.fillRect(0,0,CW,CH);
-  _jamRender(o,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed,mode,ph,false);
-  // mask: soft radial for the ellipse (painterly), hard for rect/band (poster)
-  o.globalCompositeOperation='destination-in';
-  o.save(); o.translate(win.cx,win.cy); o.rotate(win.tilt);
-  if(win.soft){
-    const r=Math.max(win.w,win.h)/2;
-    o.save(); o.scale(win.w/2/r, win.h/2/r);
-    const g=o.createRadialGradient(0,0,r*0.78,0,0,r); g.addColorStop(0,'rgba(0,0,0,1)'); g.addColorStop(1,'rgba(0,0,0,0)');
-    o.fillStyle=g; o.fillRect(-r,-r,2*r,2*r); o.restore();
-  } else { o.fillStyle='#000'; _jamShapePath(o,win); o.fill(); }
-  o.restore(); o.globalCompositeOperation='source-over';
-  ctx.drawImage(off,0,0,CW,CH);
-  if(!win.soft){ // hairline rim — the poster's cut edge
-    ctx.save(); ctx.translate(win.cx,win.cy); ctx.rotate(win.tilt); _jamShapePath(ctx,win);
-    ctx.strokeStyle='rgba(242,238,232,.28)'; ctx.lineWidth=Math.max(1,Math.min(CW,CH)*0.0025); ctx.stroke(); ctx.restore();
-  }
-}
-// Paints the whole ensemble into `ctx`: live canvas, raster export (pxScale =
-// the ctx's device scale, used for the offscreen buffers) or the SVG shim
-// (no drawImage → windows are clipped, hard-edged).
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
-  const roles=_JAM_ROLES[keys.length]||_JAM_ROLES[1];
-  const all={chords, pos:chords.map((_,i)=>i)};
-  const ps = Math.max(1, pxScale||1);
-  const win = _jamWindow(seed, ph, CW, CH, false);
-  if(!noGround){ ctx.fillStyle = keys[0]==='pollock' ? '#f2ede0' : '#04040a'; ctx.fillRect(0,0,CW,CH); }
-  keys.forEach((k,i)=>{
-    const role=roles[i];
-    _setArtistSeed((((seed>>>0) + i*1013)>>>0) || 1);
-    if(role==='ground'){ _jamRender(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed,mode,ph,!!noGround); return; }
-    if(role==='figure' || role==='figure2'){ _jamThrough(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed+7,mode,ph, role==='figure2'?_jamWindow(seed,ph,CW,CH,true):win, ps, role==='figure2'?1:0); return; }
-    // accent: gestural painters (drips, lines, cells) mark the peaks across the
-    // whole poster; field painters cross it as a thin phi band.
-    if(_JAM_FULL.has(k)) _jamThrough(ctx,CW,CH,N,BW,BH,grid,all,lim,gc,k,seed+13,mode,ph,_jamBand(win,CW,CH,role==='accentM'),ps,role==='accentM'?3:2);
-    else _jamRender(ctx,CW,CH,N,BW,BH,grid,_jamAccent(chords,role),lim,gc,k,seed,mode,ph,true);
-  });
   _setArtistSeed(seed);
+  drawFusionOverlay(ctx, CW, CH, chords, lim, gc, seed, mode, ph, keys, !!noGround);
 }
 
 export default function Paintiano() {
@@ -2377,7 +2212,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="9" r="4.6"/><circle cx="15.5" cy="9" r="4.6"/><circle cx="12" cy="15.5" r="4.6"/></svg>
     </button>
   );
-  const _stageBadge = (ix, roles)=> (ix>=0) ? (<span title={roles[ix]||''} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>) : null;
+  const _stageBadge = (ix, roles)=> (ix>=0) ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>) : null;
   const _diceRoll = () => {
     const N = _effVariants();
     if(style){
@@ -13003,7 +12838,7 @@ Hard requirements:
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
                   {isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
-                  {_stageBadge(_stIx, _ensT('roles'))}
+                  {_stageBadge(_stIx, [])}
                 </button>
               );
             })}
@@ -14900,7 +14735,7 @@ Hard requirements:
       )}
       </div>
       )}
-      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.4{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.5{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>

@@ -17429,6 +17429,194 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,dir,keys){
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// §JAM · FUSION — 2–5 painters crossed into ONE new hand.
+//
+// Not a collage of the artists' own engines: every artist is reduced to a
+// DNA of ~12 genes (ground, stroke vocabulary, size, edge softness, opacity,
+// layout grammar, contour, palette treatment, hand-shake, connecting lines,
+// layers, density). The selected artists are crossed — the first leads
+// (weight .5), then .3, .2, .15, .1 — into a single fused genome, and ONE
+// renderer paints the whole song with it: stroke types are inherited from
+// all parents, but size, edge, contour, layout and layering are one blended
+// hand. Same song + same parents + same seed → the same painting (export,
+// progressive build, Vary all deterministic).
+// ─────────────────────────────────────────────────────────────────────────────
+const ARTIST_DNA = {
+  mosaic:       {ground:'#04040a',mark:{rect:1},                        size:[.03,.08],edge:0,  alpha:1,  layout:{grid:1},               outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
+  raffel:       {ground:'#0a0a12',mark:{rect:.5,disc:.3,ring:.2},       size:[.03,.2], edge:.05,alpha:.9, layout:{grid:.5,spiral:.5},    outline:.2,tone:'gold',    wobble:.1, lines:.3,layers:2,density:.8, halftone:0},
+  picasso:      {ground:'#0c0b0e',mark:{tri:.4,blob:.3,arc:.3},         size:[.05,.25],edge:0,  alpha:.95,layout:{scatter:.6,grid:.4},   outline:.9,tone:'dark',    wobble:.5, lines:.5,layers:1,density:.7, halftone:0},
+  matisse:      {ground:'#16120a',mark:{petal:.6,blob:.4},              size:[.05,.25],edge:0,  alpha:1,  layout:{scatter:.8,radial:.2}, outline:0, tone:'pure',    wobble:.6, lines:0, layers:1,density:.7, halftone:0},
+  pollock:      {ground:'#f2ede0',mark:{drip:.7,splat:.3},              size:[.004,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},   outline:0, tone:'pure',    wobble:.9, lines:.6,layers:3,density:1,  halftone:0},
+  bloom:        {ground:'#f6f3ec',mark:{splat:.5,blob:.3,dot:.2},       size:[.01,.08],edge:.3, alpha:.8, layout:{scatter:.6,field:.4},  outline:0, tone:'pure',    wobble:.8, lines:.2,layers:3,density:.6, halftone:0},
+  kusama:       {ground:'#111111',mark:{dot:1},                         size:[.01,.05],edge:0,  alpha:1,  layout:{grid:.4,field:.6},     outline:0, tone:'pure',    wobble:.2, lines:0, layers:1,density:1,  halftone:0},
+  miro:         {ground:'#efe8d8',mark:{blob:.6,dot:.2,star:.2},        size:[.02,.14],edge:.05,alpha:1,  layout:{scatter:1},            outline:.9,tone:'primary', wobble:.6, lines:.7,layers:1,density:.6, halftone:0},
+  mondrian:     {ground:'#f3efe6',mark:{rect:1},                        size:[.08,.35],edge:0,  alpha:1,  layout:{grid:1},               outline:1, tone:'primary', wobble:0,  lines:1, layers:1,density:.5, halftone:0},
+  bauhaus:      {ground:'#e8e1d2',mark:{disc:.3,tri:.3,rect:.4},        size:[.05,.3], edge:0,  alpha:1,  layout:{grid:.6,diagonal:.4},  outline:.3,tone:'primary', wobble:0,  lines:.4,layers:1,density:.6, halftone:0},
+  kandinsky:    {ground:'#e9e2cf',mark:{ring:.4,disc:.3,arc:.3},        size:[.02,.18],edge:.1, alpha:.85,layout:{scatter:.7,radial:.3}, outline:.6,tone:'pure',    wobble:.3, lines:.5,layers:2,density:.7, halftone:0},
+  gold:         {ground:'#1a140a',mark:{spiral:.3,disc:.3,rect:.2,dot:.2},size:[.01,.12],edge:.1,alpha:.95,layout:{field:.5,spiral:.3,stack:.2},outline:.2,tone:'gold',wobble:.3,lines:.2,layers:3,density:.8,halftone:0},
+  rothko:       {ground:'#2a1216',mark:{field:1},                       size:[.3,.6],  edge:.9, alpha:.75,layout:{stack:1},              outline:0, tone:'dark',    wobble:.3, lines:0, layers:2,density:.5, halftone:0},
+  bulge:        {ground:'#101018',mark:{disc:.5,rect:.5},               size:[.02,.06],edge:0,  alpha:1,  layout:{grid:1},               outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
+  wave:         {ground:'#f4f1ea',mark:{stripe:.8,wave:.2},             size:[.01,.04],edge:0,  alpha:1,  layout:{stack:.7,flow:.3},     outline:0, tone:'mono',    wobble:.1, lines:0, layers:1,density:1,  halftone:0},
+  spiral:       {ground:'#e8dfd0',mark:{ring:.4,spiral:.3,disc:.3},     size:[.05,.3], edge:.1, alpha:.8, layout:{radial:.6,stack:.4},   outline:.3,tone:'pastel',  wobble:.1, lines:.4,layers:2,density:.5, halftone:0},
+  arcs:         {ground:'#f2efe8',mark:{arc:.8,stripe:.2},              size:[.08,.4], edge:0,  alpha:1,  layout:{radial:.7,grid:.3},    outline:0, tone:'primary', wobble:0,  lines:0, layers:1,density:.6, halftone:0},
+  pop:          {ground:'#ffd23f',mark:{blob:.7,arc:.3},                size:[.05,.2], edge:0,  alpha:1,  layout:{scatter:.6,radial:.4}, outline:1, tone:'primary', wobble:.4, lines:.4,layers:1,density:.6, halftone:0},
+  mitchell:     {ground:'#f3f0e8',mark:{dab:.6,drip:.2,splat:.2},       size:[.01,.06],edge:.4, alpha:.75,layout:{field:.5,scatter:.5},  outline:0, tone:'pure',    wobble:.9, lines:.3,layers:4,density:.8, halftone:0},
+  monet:        {ground:'#cfd6c8',mark:{dab:1},                         size:[.008,.03],edge:.6,alpha:.55,layout:{field:1},              outline:0, tone:'pastel',  wobble:.5, lines:0, layers:4,density:1,  halftone:0},
+  hokusai:      {ground:'#e6e0d0',mark:{wave:.6,arc:.3,dot:.1},         size:[.03,.2], edge:0,  alpha:.95,layout:{flow:.8,stack:.2},     outline:.7,tone:'pure',    wobble:.4, lines:.5,layers:2,density:.6, halftone:0},
+  lichtenstein: {ground:'#fffdf5',mark:{disc:.3,blob:.3,rect:.4},       size:[.05,.25],edge:0,  alpha:1,  layout:{grid:.5,scatter:.5},   outline:1, tone:'primary', wobble:.1, lines:.3,layers:1,density:.5, halftone:1},
+  klee:         {ground:'#d9cfb6',mark:{rect:.6,tri:.2,arc:.2},         size:[.03,.12],edge:.3, alpha:.85,layout:{grid:.8,stack:.2},     outline:.2,tone:'pastel',  wobble:.3, lines:.3,layers:2,density:.9, halftone:0},
+  delaunay:     {ground:'#f0e9da',mark:{disc:.5,arc:.5},                size:[.05,.3], edge:0,  alpha:.9, layout:{radial:.7,scatter:.3}, outline:0, tone:'pure',    wobble:.1, lines:0, layers:2,density:.6, halftone:0},
+  oneM:         {ground:'#ffffff',mark:{rect:1},                        size:[.01,.03],edge:0,  alpha:1,  layout:{grid:1},               outline:.3,tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
+};
+ARTIST_DNA.notes = ARTIST_DNA.mosaic;
+const FUSION_WEIGHTS = [.5,.3,.2,.15,.1];
+const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
+function _fuHex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+// Cross the parents' DNA into one genome. Numeric genes blend by weight,
+// vocabularies (mark / layout) merge by weight, palette treatments keep
+// their weights and are blended per colour at paint time.
+function fuseDNA(keys){
+  const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
+  if(!ks.length) return null;
+  const ws=ks.map((k,i)=>[ARTIST_DNA[k], FUSION_WEIGHTS[Math.min(i,FUSION_WEIGHTS.length-1)]]);
+  const T=ws.reduce((s,[,w])=>s+w,0);
+  const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
+  const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
+  let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
+  { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
+  const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
+  return {
+    keys:ks, ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
+    mark:dict('mark'), layout:dict('layout'),
+    size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
+    edge:num('edge'), alpha:num('alpha'), outline:num('outline'), wobble:num('wobble'), lines:num('lines'),
+    layers:Math.max(1,Math.round(num('layers'))), density:num('density'), halftone:num('halftone'), tones,
+  };
+}
+function _fuPick(d,x){ for(const k in d){ x-=d[k]; if(x<=0) return k; } for(const k in d) return k; return 'dot'; }
+// One palette treatment, blended from the parents' — not one per mark.
+function _fuTone(rgb, F, r1){
+  let [r,g,b]=rgb; let R=0,G=0,B=0;
+  for(const t in F.tones){ const w=F.tones[t]; let x=r,y=g,z=b;
+    if(t==='pastel'){ x=r+(255-r)*.45; y=g+(255-g)*.45; z=b+(255-b)*.45; }
+    else if(t==='dark'){ x=r*.62; y=g*.62; z=b*.62; }
+    else if(t==='gold'){ x=r*.6+212*.4; y=g*.6+175*.4; z=b*.6+55*.4; }
+    else if(t==='mono'){ const l=r*.299+g*.587+b*.114; const k=l>128?250:17; x=y=z=k; }
+    else if(t==='primary'){ // snap to the nearest flat primary
+      let best=_FU_PRIM[0], bd=1e9; for(const p of _FU_PRIM){ const d=(p[0]-r)**2+(p[1]-g)**2+(p[2]-b)**2; if(d<bd){bd=d;best=p;} }
+      x=best[0]; y=best[1]; z=best[2]; }
+    R+=x*w; G+=y*w; B+=z*w; }
+  return `rgb(${R|0},${G|0},${B|0})`;
+}
+// Layout grammar: ONE blended rule for every mark (x by time, y by pitch,
+// pulled toward the parents' habits: grid · field · scatter · flow · radial ·
+// stack · spiral · diagonal), then the fused hand-shake.
+function _fuPlace(u, pitch, F, CW, CH, r1, r2){
+  const L=F.layout, w=[L.grid||0,L.field||0,L.scatter||0,L.flow||0,L.radial||0,L.stack||0,L.spiral||0,L.diagonal||0];
+  const T=w.reduce((a,b)=>a+b,0)||1;
+  const ang=u*Math.PI*2*2.2, rad=0.08+0.42*u;
+  const px=[u, u, r1, u, 0.618+Math.cos(ang)*0.33*(1-pitch*.5), 0.5+(r1-.5)*.8, 0.5+Math.cos(ang)*rad, u];
+  const py=[1-pitch, 1-pitch+(r2-.5)*.18, r2, 0.5+Math.sin(u*9.4+pitch*3)*0.34, 0.382+Math.sin(ang)*0.33*(1-pitch*.5), 1-pitch, 0.5+Math.sin(ang)*rad, (1-pitch)*.6+u*.4];
+  let x=0,y=0; for(let k=0;k<8;k++){ x+=px[k]*w[k]/T; y+=py[k]*w[k]/T; }
+  const wob=F.wobble*0.07; x+=(r1-.5)*wob; y+=(r2-.5)*wob;
+  x=Math.max(.04,Math.min(.96,x)); y=Math.max(.05,Math.min(.95,y));
+  return [x*CW, y*CH];
+}
+function _fuMark(ctx, kind, r, col, F, R, ang){
+  const soft = F.edge>0.15;
+  const passes = soft ? 3 : 1;
+  for(let p=passes-1;p>=0;p--){
+    const rr = soft ? r*(1+p*F.edge*0.45) : r;
+    const la = F.alpha/Math.sqrt(F.layers);            // many passes → each one lighter
+    ctx.globalAlpha = soft ? la*(p===0?0.7:0.22/(p)) : la;
+    ctx.save(); ctx.rotate(ang); ctx.fillStyle=col; ctx.strokeStyle=col; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    switch(kind){
+      case 'dot': case 'disc': ctx.arc(0,0,rr,0,6.2832); ctx.fill(); break;
+      case 'ring': ctx.lineWidth=Math.max(1,rr*.18); ctx.arc(0,0,rr,0,6.2832); ctx.stroke(); break;
+      case 'arc': { ctx.lineWidth=Math.max(1,rr*.14); const a0=R()*6.28; ctx.arc(0,0,rr,a0,a0+1.6+R()*1.6); ctx.stroke(); break; }
+      case 'rect': { const h=rr*(0.55+R()*0.9); ctx.rect(-rr,-h,2*rr,2*h); ctx.fill(); break; }
+      case 'field': { const h=rr*(0.35+R()*.3); ctx.rect(-rr*2.2,-h,rr*4.4,2*h); ctx.fill(); break; }
+      case 'tri': { const a=R()*6.28; for(let j=0;j<3;j++){ const t=a+j*2.094; j?ctx.lineTo(Math.cos(t)*rr,Math.sin(t)*rr):ctx.moveTo(Math.cos(t)*rr,Math.sin(t)*rr);} ctx.closePath(); ctx.fill(); break; }
+      case 'blob': { const k=6+(R()*4|0); for(let j=0;j<=k;j++){ const a=j/k*6.2832, q=rr*(0.7+R()*0.6*(0.3+F.wobble)); const px=Math.cos(a)*q, py=Math.sin(a)*q; j?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); break; }
+      case 'petal': { ctx.moveTo(0,0); ctx.bezierCurveTo(rr*1.2,-rr*1.1,rr*1.2,rr*1.1,0,rr*.1); ctx.bezierCurveTo(-rr*.3,rr*.6,-rr*.3,-rr*.6,0,0); ctx.fill(); break; }
+      case 'star': { for(let j=0;j<10;j++){ const a=j/10*6.2832, q=j%2?rr*.45:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
+      case 'dab': ctx.lineWidth=Math.max(1,rr*.9); ctx.moveTo(-rr,0); ctx.lineTo(rr,(R()-.5)*rr); ctx.stroke(); break;
+      case 'stripe': ctx.lineWidth=Math.max(1,rr*.5); ctx.moveTo(-rr*6,0); ctx.lineTo(rr*6,0); ctx.stroke(); break;
+      case 'wave': { ctx.lineWidth=Math.max(1,rr*.22); ctx.moveTo(-rr*2.5,0); for(let j=1;j<=4;j++){ ctx.quadraticCurveTo(-rr*2.5+rr*1.25*j-rr*.6, (j%2?-1:1)*rr*.9, -rr*2.5+rr*1.25*j, 0);} ctx.stroke(); break; }
+      case 'spiral': { ctx.lineWidth=Math.max(1,rr*.1); for(let j=0;j<=40;j++){ const t=j/40*6.2832*2.5, q=rr*j/40; j?ctx.lineTo(Math.cos(t)*q,Math.sin(t)*q):ctx.moveTo(0,0);} ctx.stroke(); break; }
+      case 'drip': { ctx.lineWidth=Math.max(1,rr*.35); let px=-rr*6,py=0; ctx.moveTo(px,py); for(let j=0;j<5;j++){ px+=rr*2.4; py+=(R()-.5)*rr*4*(0.3+F.wobble); ctx.quadraticCurveTo(px-rr,py+(R()-.5)*rr*3,px,py);} ctx.stroke(); for(let j=0;j<3;j++){ ctx.beginPath(); ctx.arc((R()-.5)*rr*8,(R()-.5)*rr*3,rr*(.2+R()*.5),0,6.2832); ctx.fill(); } break; }
+      case 'splat': { for(let j=0;j<7;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr*2.2; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.1+R()*.5),0,6.2832); ctx.fill(); } break; }
+      default: ctx.arc(0,0,rr,0,6.2832); ctx.fill();
+    }
+    if(p===0 && F.halftone>0.3 && rr>8 && R()<F.halftone){ // Ben-Day screen inherited from Lichtenstein
+      ctx.save(); ctx.clip(); ctx.fillStyle=F.groundLum>128?'rgba(255,255,255,.55)':'rgba(0,0,0,.35)';
+      const st=Math.max(3,rr*.22); for(let yy=-rr*2;yy<rr*2;yy+=st) for(let xx=-rr*2;xx<rr*2;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*.28,0,6.2832); ctx.fill(); } ctx.restore();
+    }
+    if(p===0 && F.outline>0 && R()<F.outline && kind!=='drip' && kind!=='splat' && kind!=='dab' && kind!=='stripe'){ ctx.globalAlpha=1; ctx.strokeStyle=F.groundLum>128?'#141414':'#f4efe4'; ctx.lineWidth=Math.max(1.2,rr*.09); ctx.stroke(); }
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+}
+// The fused painter. chords/lim as every other overlay; gc = the song's palette.
+// noGround: skip the ground fill (transparent export).
+function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
+  const F = fuseDNA(keys); if(!F || !chords || !chords.length) return;
+  const ss = (sessionSeed|0) ^ ((phaseIndex|0)*7919);
+  const S = Math.min(CW,CH), n = chords.length;
+  if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
+  // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~600 marks/layer
+  const stride = Math.max(1, Math.ceil(n/600));
+  const L = Math.min(lim|0, n);
+  // every chord has its own deterministic stream → marks never move as lim grows
+  const pos = new Array(n);
+  const chordAt = (i)=>{ const c=chords[i]; const ns=(c&&(c.n||c.notes))||[]; return ns; };
+  const meanOf = (ns)=>{ if(!ns.length) return 60; let t=0; for(const x of ns) t+=(x.m!==undefined?x.m:(typeof x==='number'?x:60)); return t/ns.length; };
+  const allP=[]; for(let i=0;i<n;i++){ const ns=chordAt(i); if(ns.length) allP.push(meanOf(ns)); } allP.sort((a,b)=>a-b);
+  const pLo=allP.length?allP[Math.floor(allP.length*.05)]:40, pHi=allP.length?allP[Math.floor(allP.length*.95)]:80, pSpan=Math.max(8,pHi-pLo);
+  const pitchOf = (ns)=> Math.max(0,Math.min(1,(meanOf(ns)-pLo)/pSpan));
+  for(let layer=0; layer<F.layers; layer++){
+    const lf=(layer+1)/F.layers;                  // first layers big & quiet, last layer crisp
+    for(let i=0;i<L;i+=stride){
+      const ns=chordAt(i); if(!ns.length) continue;
+      const R=_seedRnd(i*31+layer*977, ss, 7, 11);
+      // big-mark idioms (Rothko fields…) say less: fewer, larger marks, one per chord
+      const bigCap = F.size[1]>0.2 ? Math.max(0.3, 0.2/F.size[1]) : 1;
+      if(R() > F.density*(0.45+lf*0.55)*bigCap) continue;
+      const E=(chords[i]&&typeof chords[i]._E==='number')?chords[i]._E:0.5;
+      _setCurE(E);
+      const pitch=pitchOf(ns);
+      const [x,y]=_fuPlace(i/Math.max(1,n-1), pitch, F, CW, CH, R(), R());
+      if(layer===0) pos[i]=[x,y];
+      const k=F.size[1]>0.2 ? 1 : Math.min(ns.length,4);
+      for(let j=0;j<k;j++){
+        const note=ns[j]; const m=note.m!==undefined?note.m:(typeof note==='number'?note:60), v=note.v!==undefined?note.v:80;
+        const kind=_fuPick(F.mark,R());
+        const base=S*(F.size[0]+(F.size[1]-F.size[0])*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
+        const r=Math.max(1.2, base*(0.8+R()*0.4));
+        const [cr,cg,cb]=gc(m,v);
+        const col=_fuTone([cr,cg,cb],F,R());
+        ctx.save(); ctx.translate(x+(j?(R()-.5)*r*2.2:0), y+(j?(R()-.5)*r*2.2:0));
+        _fuMark(ctx, kind, r, col, F, R, (kind==='field'||kind==='stripe')?0:(R()-.5)*F.wobble*1.2);
+        ctx.restore();
+      }
+    }
+  }
+  // connecting line — inherited from the line-drawers (orthogonal if the hand
+  // is steady, curved if it shakes)
+  if(F.lines>0.25){
+    const R=_seedRnd(5,ss,3,3);
+    ctx.save(); ctx.globalAlpha=Math.min(1,F.lines*.9); ctx.strokeStyle=F.groundLum>128?'rgba(20,18,24,.85)':'rgba(244,239,228,.7)'; ctx.lineWidth=Math.max(1,S*0.0045*F.lines); ctx.lineCap='round'; ctx.beginPath();
+    let prev=null;
+    for(let i=0;i<L;i+=stride){ if(!pos[i]) continue; if(R()>F.lines*0.6){ continue; } const [x,y]=pos[i];
+      if(prev){ ctx.moveTo(prev[0],prev[1]); if(F.wobble>0.4) ctx.quadraticCurveTo((prev[0]+x)/2+(R()-.5)*S*.22,(prev[1]+y)/2+(R()-.5)*S*.22,x,y); else { ctx.lineTo(x,prev[1]); ctx.lineTo(x,y); } }
+      prev=[x,y]; }
+    ctx.stroke(); ctx.restore();
+  }
+  _setCurE(0.5);
+}
+
 function bakeImageChords(src){
   if(!src || !src.length) return [];
   const out = [];
