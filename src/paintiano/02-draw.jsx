@@ -17843,8 +17843,11 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'cutout': { // Matisse: a scissors leaf
         ctx.moveTo(0,-rr); for(let j=0;j<5;j++){ const t=(j+1)/5; ctx.quadraticCurveTo(rr*(0.9-0.3*j)*(j%2?1:-1)*1.3, -rr+t*2*rr-rr*.3, 0, -rr+t*2*rr); } ctx.closePath(); ctx.fill(); break; }
       case 'cloud': { for(let j=0;j<6;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.35+R()*.4),0,6.2832); ctx.fill(); } break; }
-      case 'dotcluster': { // Kusama: a swarm of equal dots
-        const dr=rr*.22; for(let yy=-rr;yy<=rr;yy+=dr*2.3) for(let xx=-rr;xx<=rr;xx+=dr*2.3){ if(xx*xx+yy*yy>rr*rr) continue; ctx.beginPath(); ctx.arc(xx,yy,dr,0,6.2832); ctx.fill(); } break; }
+      case 'dotcluster': { // Kusama: a loose drift of polka dots — uneven sizes, no grid
+        const k=4+Math.floor(R()*5), pts=[];
+        for(let j=0;j<k*3 && pts.length<k;j++){ const a=R()*6.2832, d=Math.sqrt(R())*rr, q=rr*(0.1+R()*0.22); const x=Math.cos(a)*d, y=Math.sin(a)*d;
+          if(pts.some(p=>Math.hypot(p[0]-x,p[1]-y)<(p[2]+q)*1.15)) continue; pts.push([x,y,q]); }
+        for(const p of pts){ ctx.beginPath(); ctx.arc(p[0],p[1],p[2],0,6.2832); ctx.fill(); } break; }
       case 'miroblob': { // Miró: a smooth amoeba with a black contour (no eyes, no birds)
         const k=6, pts=[]; for(let j=0;j<k;j++){ const a=j/k*6.2832, q=rr*(0.6+R()*0.6); pts.push([Math.cos(a)*q,Math.sin(a)*q]); }
         ctx.moveTo((pts[k-1][0]+pts[0][0])/2,(pts[k-1][1]+pts[0][1])/2);
@@ -18021,11 +18024,10 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         // the painter keeps its own vocabulary and size, the hand stays fused
         const PD=_dnaOf(F.keys[(i+layer)%F.keys.length], F.phs[(i+layer)%F.keys.length]);
         let kind=_fuPick(PD.mark,R());
-        // Kusama in a crossing speaks in dots: specks, dotted chains and flat
-        // patchwork panels (which read as plain squares next to another hand)
-        // become a visible dot swarm; her nets, spheres and targets stay.
+        // Kusama's flat patchwork panels read as plain squares next to another
+        // hand — in a crossing they become a loose drift of polka dots.
         const _kus = F.keys[(i+layer)%F.keys.length]==='kusama';
-        if(_kus && (kind==='dot'||kind==='chain'||kind==='panel')) kind='dotcluster';
+        if(_kus && kind==='panel') kind='dotcluster';
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
         const r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : 1.2, base*(0.8+R()*0.4));
