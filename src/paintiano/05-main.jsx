@@ -904,15 +904,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, a second button appears next to the shuffle dice; tap up to five artists or composers.'},
-  SK:{title:'Ensemble',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa kocky pribudne druhé tlačidlo; potom ťukni až na päť umelcov či skladateľov.'},
-  DE:{title:'Ensemble',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben dem Würfel ein zweiter Knopf; dann bis zu fünf Künstler oder Komponisten antippen.'},
-  FR:{title:'Ensemble',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un second bouton apparaît à côté du dé ; touche ensuite jusqu’à cinq artistes ou compositeurs.'},
-  ES:{title:'Ensemble',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo aparece un segundo botón junto al dado; luego toca hasta cinco artistas o compositores.'},
-  PT:{title:'Ensemble',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um segundo botão ao lado do dado; depois toca até cinco artistas ou compositores.'},
-  zh:{title:'合奏',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，骰子旁会出现第二个按钮；然后点按最多五位艺术家或作曲家。'},
-  zhTW:{title:'合奏',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，骰子旁會出現第二個按鈕；然後點按最多五位藝術家或作曲家。'},
-  ja:{title:'アンサンブル',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにするとサイコロの横に2つ目のボタンが現れ、アーティストか作曲家を最大5人までタップできます。'},
+  EN:{title:'Ensemble',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, the 🔀 button gets one more step — Ensemble; then tap up to five artists or composers.'},
+  SK:{title:'Ensemble',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, tlačidlo 🔀 dostane ďalší krok — Ensemble; potom ťukni až na päť umelcov či skladateľov.'},
+  DE:{title:'Ensemble',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet bekommt der 🔀-Knopf einen weiteren Schritt — Ensemble; dann bis zu fünf Künstler oder Komponisten antippen.'},
+  FR:{title:'Ensemble',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, le bouton 🔀 gagne une étape de plus — Ensemble ; touche ensuite jusqu’à cinq artistes ou compositeurs.'},
+  ES:{title:'Ensemble',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, el botón 🔀 gana un paso más — Ensemble; luego toca hasta cinco artistas o compositores.'},
+  PT:{title:'Ensemble',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, o botão 🔀 ganha mais um passo — Ensemble; depois toca até cinco artistas ou compositores.'},
+  zh:{title:'合奏',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，🔀 按钮多一个档位——合奏；然后点按最多五位艺术家或作曲家。'},
+  zhTW:{title:'合奏',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，🔀 按鈕多一個檔位——合奏；然後點按最多五位藝術家或作曲家。'},
+  ja:{title:'アンサンブル',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると 🔀 ボタンにもう一段——アンサンブルが加わり、アーティストか作曲家を最大5人までタップできます。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed);
@@ -2187,8 +2187,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     : [imgComposer, ...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k).join(' ↔ ');
   // the artists' shuffle, switched off the same way its own button does it
   const _shuffleOff = ()=>{ if(!randomModeRef.current) return; setRandomMode(false); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setMosaicShuffleLock(false); if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); };
-  const _toggleJam = ()=>{ if(working||anim) return; setJamOn(v=>{ const nx=!v; if(nx) _shuffleOff(); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:nx}); }catch(_){} return nx; }); };
-  const _toggleCr = ()=>{ if(working||anim) return; setCrOn(v=>{ const nx=!v; if(nx) setComposerDice(false); try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:nx}); }catch(_){} return nx; }); };
   // chip taps while JAM / C&R is on: add · remove · (first slot) promote the next
   // The stage holds only EXPLICIT members: slot 1 = the selected artist (if
   // any), then painterStage. Mosaic is a chip like any other ('mosaic' key) —
@@ -2223,11 +2221,40 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     setComposerStage(p=>[...p,k]);
   };
   // the header button shared by both sides — same chrome as the dice, 34px to its left
-  const _ensembleBtn = (on, onClick)=>(
-    <button onClick={onClick} className="pf-dice" title={_ensT('title')+(on?' ON':' OFF')} aria-label={_ensT('title')} aria-pressed={on} style={{position:'absolute',right:34,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none'}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="9" r="4.6"/><circle cx="15.5" cy="9" r="4.6"/><circle cx="12" cy="15.5" r="4.6"/></svg>
+  // ONE mode button per side, cycling: artists 0 off → 1 shuffle within the
+  // selected artist → 2 shuffle across all → 3 ensemble (Setup on) → 0;
+  // composers 0 off → 1 shuffle → 2 call & response (Setup on) → 0.
+  // The state is derived, never stored: 1 = shuffle + an artist selected,
+  // 2 = shuffle + no selection (the selection is released on the way).
+  const _shuffleOn = ()=>{ setJamOn(false); setRandomMode(true); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setStructureSeedLock(null); };
+  const _artMode = jamOn ? 3 : randomMode ? (style!==null ? 1 : 2) : 0;
+  const _cycleArt = ()=>{
+    if(working||anim) return;
+    if(_artMode===0){ _shuffleOn(); return; }                       // → 1 (or 2 when nothing is selected)
+    if(_artMode===1){ setStyleTo(null); return; }                   // → 2: release the selection, keep shuffling
+    if(_artMode===2){ _shuffleOff(); if(ensembleActive){ setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){} } return; } // → 3 or 0
+    setJamOn(false);                                                // 3 → 0
+  };
+  const _compMode = crOn ? 2 : composerDice ? 1 : 0;
+  const _cycleComp = ()=>{
+    if(working||anim) return;
+    if(_compMode===0){ setCrOn(false); composerBagRef.current=[]; composerBagKeyRef.current=''; setComposerDice(true); setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); return; }
+    if(_compMode===1){ setComposerDice(false); if(ensembleActive){ setCrOn(true); try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:true}); }catch(_){} } return; }
+    setCrOn(false);
+  };
+  const _modeBtn = (mode, onClick, isArt)=>{
+    const on = mode>0, isEns = isArt ? mode===3 : mode===2;
+    const badge = isArt ? (mode===1 ? '1' : mode===2 ? 'ALL' : '') : '';
+    const title = isEns ? _ensT('title') : on ? t('randomOn') : t('randomOff');
+    return (
+    <button onClick={onClick} className="pf-dice" title={title} aria-label={title} aria-pressed={on} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none',overflow:'visible'}}>
+      {isEns
+        ? (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="9" r="4.6"/><circle cx="15.5" cy="9" r="4.6"/><circle cx="12" cy="15.5" r="4.6"/></svg>)
+        : (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>)}
+      {badge && (<span style={{position:'absolute',top:-7,right:-7,fontSize:(.34*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 4px',borderRadius:7,background:'#1a1408',color:'#f0d78a',border:'1px solid rgba(240,215,138,.6)',lineHeight:1.2,pointerEvents:'none'}}>{badge}</span>)}
     </button>
-  );
+    );
+  };
   const _stageBadge = (ix, roles)=> (ix>=0) ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>) : null;
   const _diceRoll = () => {
     const N = _effVariants();
@@ -12672,10 +12699,7 @@ Hard requirements:
                 <span>{t('inspiredByTitle')}</span>
                 {/* composer dice (🎲 mirror) + NEXT — only when there is more than one composer to roll between */}
                 {(ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k)).length>1) && (<>
-                  {ensembleActive && _ensembleBtn(crOn, _toggleCr)}
-                  <button onClick={()=>{ if(working||anim) return; setComposerDice(v=>{ const nx=!v; if(nx){ setCrOn(false); composerBagRef.current=[]; composerBagKeyRef.current=''; setTimeout(()=>{ try{ _composerRoll(); }catch(_){} },0); } return nx; }); }} className="pf-dice" title={composerDice?'shuffle ON · Next rolls a different composer':'shuffle OFF · tap to shuffle across composers'} aria-label={composerDice?t('randomOn'):t('randomOff')} aria-pressed={composerDice} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:composerDice?'#0a0a12':'rgba(201,168,76,.75)',background:composerDice?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(composerDice?PF.gold2:'rgba(201,168,76,.4)')}}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-                  </button>
+                  {_modeBtn(_compMode, _cycleComp, false)}
                 </>)}
               </div>
               {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
@@ -12717,10 +12741,7 @@ Hard requirements:
                 <button onClick={()=>setSetupArtists(['mosaicFamily'])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(230,222,196,.5)'}}>{ts('selNone','none')}</button>
               </div>
             )}
-            {!cockpitEdit && ensembleActive && _ensembleBtn(jamOn, _toggleJam)}
-            {!cockpitEdit && (<button onClick={()=>{ setRandomMode(v=>{ const next=!v; if(next) setJamOn(false); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; if(!next) setMosaicShuffleLock(false); if(next) setStructureSeedLock(null); else if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); return next; }); }} className="pf-dice" title={randomMode?(style?'random ON · tap to turn off':'shuffle ON · each Play/Next paints a different artist style'):(style?'random OFF · tap to enable':'shuffle OFF · tap to shuffle across all artist styles')} aria-label={randomMode?t('randomOn'):t('randomOff')} style={{position:'absolute',right:0,top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:randomMode?'#0a0a12':'rgba(201,168,76,.75)',background:randomMode?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(randomMode?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none'}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-            </button>)}
+            {!cockpitEdit && _modeBtn(_artMode, _cycleArt, true)}
           </div>
           )}
           {(loadedSource!=='image' || moodFromImg) && (
