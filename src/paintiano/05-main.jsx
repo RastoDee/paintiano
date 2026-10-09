@@ -2430,7 +2430,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // Use the same dice helper as Next/Play so shuffle picks via shufVariant
       // (the painted variant index) rather than a raw phaseIndex that the
       // shuffle path no longer reads.
-      if((seed !== 0 || art) && randomMode){
+      // Ensemble × ALL: the draw itself changes the artist on screen — rolling
+      // again here would chain draw → style change → draw … forever. Ensemble
+      // crossings are drawn only by Next / Play / Show.
+      if((seed !== 0 || art) && randomMode && !(jamOn && jamAll)){
         _diceRoll();
       }
     }
@@ -12932,8 +12935,8 @@ Hard requirements:
                 return;
               }
               if(jamAll) return;
-              if(jamOn){ _jamTap('mosaic'); return; }
-              if(style!==null){ selectStyle(style); return; }
+              if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
+              if(style!==null){ if(_artMode===1) _shuffleOff(); selectStyle(style); return; }   // back to Mosaic leaves 🔀 1 (never slides into ALL)
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
                 // restarts the cycle at 'mosaic' and clears the dice-off
@@ -12972,6 +12975,9 @@ Hard requirements:
                   return;
                 }
                 if(_artMode===2) return;                      // shuffle ALL: the chips are locked — the draw decides
+                // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
+                // must not slide into ALL just because nothing is selected any more).
+                if(_artMode===1 && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)) _shuffleOff();
                 if(jamOn && !locked){ _jamTap(k); return; }
                 selectStyle(k);
               };
