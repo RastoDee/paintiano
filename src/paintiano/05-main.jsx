@@ -904,15 +904,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Several painters crossed into one new style (Jam) and composers trading phrases (Call & response). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. In Lite, Surprise now and then plays an ensemble.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Call & response',desc:'Viac maliarov skrížených do jedného nového rukopisu (Jam) a skladatelia, ktorí si striedajú frázy (Call & response). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. V Lite Prekvap ma občas zahrá ensemble.'},
-  DE:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Jam) und Komponisten, die sich Phrasen zuspielen (Call & Response). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
-  FR:{title:'Ensemble',fusion:'Fusion',cr:'Call & response',desc:'Plusieurs peintres croisés en une nouvelle écriture (Jam) et des compositeurs qui s’échangent des phrases (Call & response). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. En Lite, Surprends-moi joue parfois un ensemble.'},
-  ES:{title:'Ensemble',fusion:'Fusión',cr:'Call & response',desc:'Varios pintores cruzados en un estilo nuevo (Jam) y compositores que se intercambian frases (Call & response). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. En Lite, Sorpréndeme toca a veces un ensemble.'},
-  PT:{title:'Ensemble',fusion:'Fusão',cr:'Call & response',desc:'Vários pintores cruzados num estilo novo (Jam) e compositores a trocar frases (Call & response). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. No Lite, Surpreende-me toca às vezes um ensemble.'},
-  zh:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位画家杂交成一种新风格（Jam），作曲家轮流接句（Call & response）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
-  zhTW:{title:'合奏',fusion:'融合',cr:'Call & response',desc:'多位畫家雜交成一種新風格（Jam），作曲家輪流接句（Call & response）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Call & response',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（Jam）、作曲家がフレーズを掛け合う（Call & response）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. In Lite, Surprise now and then plays an ensemble.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. V Lite Prekvap ma občas zahrá ensemble.'},
+  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
+  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. En Lite, Surprends-moi joue parfois un ensemble.'},
+  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. En Lite, Sorpréndeme toca a veces un ensemble.'},
+  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. No Lite, Surpreende-me toca às vezes um ensemble.'},
+  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
+  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed);
@@ -2170,8 +2170,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Stage = slot 1 (the normal single pick: `style` / `imgComposer`) plus up to
   // four extra slots. Everything existing keeps working on slot 1; the extras
   // only exist while the Setup toggle is on. Free: toggle shows a lock → paywall.
-  const [ensembleOn, setEnsembleOn] = useState(()=>{ try{ return localStorage.getItem('paintiano_setup_ensemble')==='1'; }catch(_){ return false; } });
-  useEffect(()=>{ try{ localStorage.setItem('paintiano_setup_ensemble', ensembleOn?'1':'0'); }catch(_){} },[ensembleOn]);
+  // Default ON for Pro: no stored choice = on (it only acts once Pro is active);
+  // the choice is stored only when the user flips the Setup switch. Buying Pro
+  // in this session switches it on as well.
+  const [ensembleOn, setEnsembleOn] = useState(()=>{ try{ return localStorage.getItem('paintiano_setup_ensemble')!=='0'; }catch(_){ return true; } });
+  const _ensPrevProRef = useRef(proStatus);
+  useEffect(()=>{ const prev=_ensPrevProRef.current; _ensPrevProRef.current=proStatus; if(prev==='free' && (proStatus==='pro'||proStatus==='pro_ai')){ setEnsembleOn(true); try{ localStorage.setItem('paintiano_setup_ensemble','1'); }catch(_){} } },[proStatus]);
   const ensembleActive = ensembleOn && proStatus!=='free';
   const ensembleOnRef = useRef(false); useEffect(()=>{ ensembleOnRef.current = ensembleActive; },[ensembleActive]);
   const [painterStage, setPainterStage] = useState([]);   // extra painters, slots 2..5 (slot 1 = style)
@@ -15379,14 +15383,14 @@ Hard requirements:
                   cockpit; if only 1 is enabled, the cockpit hides the tone
                   section entirely). */}
               {/* Ensemble — opt-in (Pro): Jam painters + Call & response composers.
-                  Default OFF; the Stage with + only appears while this is on. */}
+                  Default ON for Pro; the choice is stored only when the switch is flipped. */}
               <div className="pf-setup-ensemble" style={{marginBottom:18}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
                   <div style={{minWidth:0}}>
                     <div style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{_ensT('title')}{proStatus==='free' && (<span style={{marginLeft:6,fontSize:'.8em',opacity:.7}}>🔒</span>)}</div>
                     <div style={{fontSize:(.52*effScale)+'rem',lineHeight:1.45,color:'rgba(230,222,196,.6)',marginTop:4}}>{pfIcons(_ensT('desc'))}</div>
                   </div>
-                  <button onClick={()=>{ if(proStatus==='free'){ try{ window.posthog && window.posthog.capture('ensemble_locked_tap'); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setEnsembleOn(v=>{ const nx=!v; try{ window.posthog && window.posthog.capture('ensemble_toggle',{on:nx}); }catch(_){} return nx; }); }} role="switch" aria-checked={ensembleActive} aria-label={_ensT('title')} style={{flex:'0 0 auto',width:46,height:26,borderRadius:13,border:'1px solid '+(ensembleActive?'rgba(226,196,119,.9)':'rgba(201,168,76,.35)'),background:ensembleActive?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.04)',position:'relative',cursor:'pointer',padding:0}}>
+                  <button onClick={()=>{ if(proStatus==='free'){ try{ window.posthog && window.posthog.capture('ensemble_locked_tap'); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setEnsembleOn(v=>{ const nx=!v; try{ localStorage.setItem('paintiano_setup_ensemble', nx?'1':'0'); }catch(_){} try{ window.posthog && window.posthog.capture('ensemble_toggle',{on:nx}); }catch(_){} return nx; }); }} role="switch" aria-checked={ensembleActive} aria-label={_ensT('title')} style={{flex:'0 0 auto',width:46,height:26,borderRadius:13,border:'1px solid '+(ensembleActive?'rgba(226,196,119,.9)':'rgba(201,168,76,.35)'),background:ensembleActive?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.04)',position:'relative',cursor:'pointer',padding:0}}>
                     <span style={{position:'absolute',top:3,left:ensembleActive?23:3,width:18,height:18,borderRadius:'50%',background:ensembleActive?'#1a1408':'rgba(201,168,76,.6)',transition:'left .18s'}}/>
                   </button>
                 </div>
@@ -15627,15 +15631,15 @@ Hard requirements:
                       ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Bach \u304b\u3089 Hisaishi \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u306712\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.') },
             { sel:'.pf-setup-ensemble', inModal:true, pad:8,
               title:_ensT('title'),
-              body:(({EN:'Pro: cross 2–5 painters into one new style (Jam) or let composers trade phrases (Call & response). Switch it on here — a ◎ button then appears beside each 🔀.',
-                      SK:'Pro: skríž 2–5 maliarov do jedného nového rukopisu (Jam) alebo nechaj skladateľov striedať si frázy (Call & response). Zapni to tu — vedľa každého 🔀 potom pribudne tlačidlo ◎.',
-                      DE:'Pro: 2–5 Maler zu einer neuen Handschrift kreuzen (Jam) oder Komponisten Phrasen tauschen lassen (Call & Response). Hier einschalten — dann erscheint neben jedem 🔀 ein ◎-Knopf.',
-                      FR:'Pro : croise 2–5 peintres en un nouveau style (Jam) ou laisse des compositeurs s’échanger des phrases (Call & response). Active-le ici — un bouton ◎ apparaît alors à côté de chaque 🔀.',
-                      ES:'Pro: cruza 2–5 pintores en un estilo nuevo (Jam) o deja que los compositores se intercambien frases (Call & response). Actívalo aquí — luego aparece un botón ◎ junto a cada 🔀.',
-                      PT:'Pro: cruza 2–5 pintores num estilo novo (Jam) ou deixa compositores trocar frases (Call & response). Liga-o aqui — depois aparece um botão ◎ ao lado de cada 🔀.',
-                      zh:'Pro：把 2–5 位画家杂交成一种新风格（Jam），或让作曲家轮流接句（Call & response）。在这里开启——之后每个 🔀 旁会出现 ◎ 按钮。',
-                      zhTW:'Pro：把 2–5 位畫家雜交成一種新風格（Jam），或讓作曲家輪流接句（Call & response）。在這裡開啟——之後每個 🔀 旁會出現 ◎ 按鈕。',
-                      ja:'Pro：2〜5 人の画家をひとつの新しい筆致に掛け合わせる（Jam）、または作曲家にフレーズを掛け合わせる（Call & response）。ここでオンに——各 🔀 の隣に ◎ ボタンが現れる。'})[lang]||'') },
+              body:(({EN:'Pro: cross 2–5 painters into one new style (Fusion) or let composers trade phrases (Jam session). Switch it on here — a ◎ button then appears beside each 🔀.',
+                      SK:'Pro: skríž 2–5 maliarov do jedného nového rukopisu (Fúzia) alebo nechaj skladateľov striedať si frázy (Jam session). Zapni to tu — vedľa každého 🔀 potom pribudne tlačidlo ◎.',
+                      DE:'Pro: 2–5 Maler zu einer neuen Handschrift kreuzen (Fusion) oder Komponisten Phrasen tauschen lassen (Jam session). Hier einschalten — dann erscheint neben jedem 🔀 ein ◎-Knopf.',
+                      FR:'Pro : croise 2–5 peintres en un nouveau style (Fusion) ou laisse des compositeurs s’échanger des phrases (Jam session). Active-le ici — un bouton ◎ apparaît alors à côté de chaque 🔀.',
+                      ES:'Pro: cruza 2–5 pintores en un estilo nuevo (Fusión) o deja que los compositores se intercambien frases (Jam session). Actívalo aquí — luego aparece un botón ◎ junto a cada 🔀.',
+                      PT:'Pro: cruza 2–5 pintores num estilo novo (Fusão) ou deixa compositores trocar frases (Jam session). Liga-o aqui — depois aparece um botão ◎ ao lado de cada 🔀.',
+                      zh:'Pro：把 2–5 位画家杂交成一种新风格（融合），或让作曲家轮流接句（Jam session）。在这里开启——之后每个 🔀 旁会出现 ◎ 按钮。',
+                      zhTW:'Pro：把 2–5 位畫家雜交成一種新風格（融合），或讓作曲家輪流接句（Jam session）。在這裡開啟——之後每個 🔀 旁會出現 ◎ 按鈕。',
+                      ja:'Pro：2〜5 人の画家をひとつの新しい筆致に掛け合わせる（フュージョン）、または作曲家にフレーズを掛け合わせる（Jam session）。ここでオンに——各 🔀 の隣に ◎ ボタンが現れる。'})[lang]||'') },
             { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
           ];
           const endTour = (done)=>{
