@@ -15116,7 +15116,7 @@ Hard requirements:
                 const ronly=t('tierReadOnly')||'preview only';
                 const rows=[
                   [t('tierRowArtists')||'Artists',         '9',     '24',       '24',  null],
-                  [t('tierRowComposers')||'Composers',     '2',     '6',        '6',   null],
+                  [t('tierRowComposers')||'Composers',     '2',     '12',       '12',  null],
                   [t('tierRowDaily')||'Artist of the day', yes,     no,         no,    '✦'],
                   [t('tierRowMusic')  ||'Music (MIDI · mp3 · score)', yes, yes, yes, null],
                   [t('tierRowImage')  ||'Image scan',      yes,     yes,        yes,   null],

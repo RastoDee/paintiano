@@ -650,7 +650,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
               {tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
-            {isDesktop && (
+            {(
               <button
                 onClick={() => setView('key')}
                 style={{
@@ -699,11 +699,6 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   {tr('proSupportLine', 'You\u2019re also keeping a solo art project independent.')}
                 </p>
               </>
-            )}
-            {!isDesktop && (
-              <button style={btnGhost} onClick={() => setView('key')}>
-                {tr('proHaveKey', 'I already have a key')}
-              </button>
             )}
             <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
               <span onClick={() => setView('about')} role="button" tabIndex={0}
