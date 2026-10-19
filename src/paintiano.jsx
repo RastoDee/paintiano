@@ -19291,7 +19291,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
     switch(kind){
       case 'dot': case 'disc': ctx.arc(0,0,rr,0,6.2832); ctx.fill(); break;
       case 'ring': ctx.lineWidth=Math.max(1,rr*.18); ctx.arc(0,0,rr,0,6.2832); ctx.stroke(); break;
-      case 'arc': { ctx.lineWidth=Math.max(1,rr*.14); const a0=R()*6.28; ctx.arc(0,0,rr,a0,a0+1.6+R()*1.6); ctx.stroke(); break; }
+      case 'arc': { ctx.lineCap='round'; ctx.lineWidth=Math.max(1.5,rr*.2); const a0=R()*6.28; ctx.arc(0,0,rr,a0,a0+1.6+R()*1.6); ctx.stroke(); break; }
       case 'rect': { const h=rr*(0.55+R()*0.9); ctx.rect(-rr,-h,2*rr,2*h); ctx.fill(); break; }
       case 'tvbox': { // Haring: a small hollow box drawn in one thick line
         ctx.strokeStyle=col; ctx.lineWidth=Math.max(1.5,rr*.16); ctx.lineJoin='round'; ctx.rect(-rr*.8,-rr*.5,rr*1.6,rr*1.0); ctx.stroke(); break; }
@@ -19318,8 +19318,12 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         const rings=3+(R()*2|0); for(let q=rings;q>=1;q--){ const rq=rr*q/rings; for(let sgm=0;sgm<4;sgm++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rq,sgm*1.5708,(sgm+1)*1.5708); ctx.closePath(); ctx.fillStyle=((q+sgm)%2)?col:col2; ctx.fill(); } } break; }
       case 'facet': { // Picasso: angular shard with a hard contour
         const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.55+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.08); ctx.stroke(); break; }
-      case 'cutout': { // Matisse: a scissors leaf
-        ctx.moveTo(0,-rr); for(let j=0;j<5;j++){ const t=(j+1)/5; ctx.quadraticCurveTo(rr*(0.9-0.3*j)*(j%2?1:-1)*1.3, -rr+t*2*rr-rr*.3, 0, -rr+t*2*rr); } ctx.closePath(); ctx.fill(); break; }
+      case 'cutout': { // Matisse: a scissors leaf — lobed down one side and back up the other, cut in one go
+        const lobes=3+(R()*2|0), w=rr*(0.55+R()*0.35), st=2*rr/lobes;
+        ctx.moveTo(0,-rr);
+        for(let j=0;j<lobes;j++){ const t1=-rr+(j+1)*st; ctx.quadraticCurveTo(w*(1.1+R()*.3), t1-st/2, j===lobes-1?0:w*.35, t1); }
+        for(let j=lobes-1;j>=0;j--){ const t0=-rr+j*st; ctx.quadraticCurveTo(-w*(1.1+R()*.3), t0+st/2, j===0?0:-w*.35, t0); }
+        ctx.closePath(); ctx.fill(); break; }
       case 'cloud': { for(let j=0;j<6;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.35+R()*.4),0,6.2832); ctx.fill(); } break; }
       case 'dotcluster': { // Kusama: a loose drift of polka dots — uneven sizes, no grid
         const k=4+Math.floor(R()*5), pts=[];
@@ -19365,23 +19369,28 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
           if(R()<0.5){ ctx.beginPath(); ctx.lineWidth=Math.max(1,ctx.lineWidth*0.35); ctx.moveTo(x1,y1); ctx.lineTo(x1+Math.cos(a+(R()-.5)*1.4)*L*0.28, y1+Math.sin(a+(R()-.5)*1.4)*L*0.28); ctx.stroke(); }
         }
         ctx.beginPath(); break; }
-      case 'crest': { // Hokusai: the wave with claws
-        ctx.lineWidth=Math.max(1.5,rr*.14); ctx.beginPath(); ctx.moveTo(-rr*1.6,rr*.4); ctx.quadraticCurveTo(-rr*.4,-rr*1.2,rr*.9,-rr*.6); ctx.quadraticCurveTo(rr*.3,-rr*.5,rr*.1,-rr*.1); ctx.stroke();
-        for(let j=0;j<4;j++){ ctx.beginPath(); const x0=-rr*.6+j*rr*.45; ctx.moveTo(x0,-rr*.3-j*rr*.12); ctx.quadraticCurveTo(x0+rr*.2,-rr*.6-j*rr*.1,x0+rr*.1,-rr*.9-j*rr*.08); ctx.lineWidth=Math.max(1,rr*.06); ctx.stroke(); } break; }
+      case 'crest': { // Hokusai: the curling wave — a thick rise that curls over, foam fingers hanging from the lip
+        ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(1.5,rr*.22);
+        ctx.beginPath(); ctx.moveTo(-rr*1.6,rr*.5); ctx.bezierCurveTo(-rr*.9,-rr*.9, rr*.6,-rr*1.25, rr*.9,-rr*.4); ctx.bezierCurveTo(rr*1.0,rr*.1, rr*.45,rr*.2, rr*.35,-rr*.15); ctx.stroke();
+        ctx.lineWidth=Math.max(1,rr*.08); ctx.strokeStyle=col2;
+        for(let j=0;j<5;j++){ const q=j/4, x=rr*(-0.55+q*1.35), y=-rr*(0.72+0.38*Math.sin(q*3.1)); ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo(x+rr*.16,y+rr*.22, x-rr*.04,y+rr*(.32+R()*.2)); ctx.stroke(); }
+        ctx.beginPath(); break; }
       case 'benday': { // Lichtenstein: flat disc with a dot screen and a black contour
         ctx.arc(0,0,rr,0,6.2832); ctx.fill(); ctx.save(); ctx.clip(); ctx.fillStyle=F.groundLum>128?'rgba(255,255,255,.6)':'rgba(0,0,0,.35)'; const st=Math.max(3,rr*.24); for(let yy=-rr;yy<rr;yy+=st) for(let xx=-rr;xx<rr;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*.3,0,6.2832); ctx.fill(); } ctx.restore(); ctx.beginPath(); ctx.arc(0,0,rr,0,6.2832); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.1); ctx.stroke(); break; }
       case 'tile': { // Klee: a square with a smaller square inside, two colours
         ctx.rect(-rr,-rr,2*rr,2*rr); ctx.fill(); ctx.beginPath(); ctx.fillStyle=col2; ctx.rect(-rr*.55,-rr*.55,rr*1.1,rr*1.1); ctx.fill(); break; }
       case 'phi': { // RafFel: golden rectangle with its square and quarter-arc
-        const w=rr*1.618, h=rr; ctx.rect(-w/2,-h/2,w,h); ctx.fill(); ctx.strokeStyle='rgba(212,175,55,.9)'; ctx.lineWidth=Math.max(1,rr*.05); ctx.strokeRect(-w/2,-h/2,w,h); ctx.beginPath(); ctx.moveTo(-w/2+h,-h/2); ctx.lineTo(-w/2+h,h/2); ctx.stroke(); ctx.beginPath(); ctx.arc(-w/2+h,h/2,h,Math.PI,1.5*Math.PI); ctx.stroke(); break; }
+        const w=rr*1.618, h=rr; ctx.rect(-w/2,-h/2,w,h); ctx.fill(); ctx.strokeStyle=col2; ctx.lineWidth=Math.max(1.2,rr*.09); ctx.strokeRect(-w/2,-h/2,w,h); ctx.beginPath(); ctx.moveTo(-w/2+h,-h/2); ctx.lineTo(-w/2+h,h/2); ctx.stroke(); ctx.beginPath(); ctx.arc(-w/2+h,h/2,h,Math.PI,1.5*Math.PI); ctx.stroke(); break; }
       case 'phiarc': { // RafFel: a thin golden-ratio arc, two colours along it
-        ctx.lineWidth=Math.max(1.2,rr*.045); const a0=R()*6.28; ctx.strokeStyle=col; ctx.arc(0,0,rr,a0,a0+1.9); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.arc(0,0,rr*0.618,a0+0.3,a0+1.6); ctx.stroke(); break; }
+        ctx.lineCap='round'; ctx.lineWidth=Math.max(1.5,rr*.12); const a0=R()*6.28; ctx.strokeStyle=col; ctx.arc(0,0,rr,a0,a0+1.9); ctx.stroke(); ctx.beginPath(); ctx.lineWidth=Math.max(1,rr*.075); ctx.strokeStyle=col2; ctx.arc(0,0,rr*0.618,a0+0.3,a0+1.6); ctx.stroke(); break; }
       case 'neon': { // Picasso (neon line): one continuous glowing contour
-        ctx.lineWidth=Math.max(1.5,rr*.06); ctx.strokeStyle=col; let px=-rr*1.4,py=0; ctx.moveTo(px,py); for(let j=0;j<4;j++){ const nx=px+rr*0.7, ny=(R()-.5)*rr*1.6; ctx.quadraticCurveTo(px+rr*.35,(R()-.5)*rr*1.8,nx,ny); px=nx; py=ny; } ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.arc(px,py,rr*.18,0,6.2832); ctx.stroke(); break; }
+        ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=col; let px=-rr*1.4,py=0; ctx.moveTo(px,py); for(let j=0;j<4;j++){ const nx=px+rr*0.7, ny=(R()-.5)*rr*1.6; ctx.quadraticCurveTo(px+rr*.35,(R()-.5)*rr*1.8,nx,ny); px=nx; py=ny; }
+        const _ga=ctx.globalAlpha; ctx.globalAlpha=_ga*0.28; ctx.lineWidth=Math.max(4,rr*.32); ctx.stroke();   // the glow
+        ctx.globalAlpha=_ga; ctx.lineWidth=Math.max(1.5,rr*.09); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.lineWidth=Math.max(1.5,rr*.09); ctx.arc(px,py,rr*.2,0,6.2832); ctx.stroke(); break; }
       case 'panel': { // Matisse / Kusama / $1M$: a flat colour panel, edge to edge of its cell
         ctx.rect(-rr*1.1,-rr*.8,rr*2.2,rr*1.6); ctx.fill(); break; }
-      case 'cross': { // Miró: a black plus
-        ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(2,rr*.22); ctx.lineCap='butt'; ctx.moveTo(-rr,0); ctx.lineTo(rr,0); ctx.moveTo(0,-rr*1.2); ctx.lineTo(0,rr*1.2); ctx.stroke(); break; }
+      case 'cross': { // Miró: a black plus (white on a dark ground)
+        ctx.strokeStyle=F.groundLum>128?'#111':'#f4efe4'; ctx.lineWidth=Math.max(2,rr*.22); ctx.lineCap='butt'; ctx.moveTo(-rr,0); ctx.lineTo(rr,0); ctx.moveTo(0,-rr*1.2); ctx.lineTo(0,rr*1.2); ctx.stroke(); break; }
       case 'beam': { // Kandinsky: a long straight beam of colour
         ctx.lineWidth=Math.max(1.5,rr*.08); ctx.moveTo(-rr*3,rr*.6); ctx.lineTo(rr*3,-rr*.6); ctx.stroke(); break; }
       case 'cube': { // Vasarely: an isometric cube, three faces
@@ -19400,9 +19409,11 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         ctx.globalAlpha=la; ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,0,r0*0.55,0,6.2832); ctx.fill();
         ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(1,rr*0.018); ctx.arc(0,0,r0*0.85,0,6.2832); ctx.stroke();
         ctx.beginPath(); break; }
-      case 'stem': { ctx.lineWidth=Math.max(1,rr*.05); ctx.moveTo(0,rr); ctx.lineTo(0,-rr); ctx.stroke(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,-rr,rr*.12,0,6.2832); ctx.fill(); break; }
-      case 'chain': { ctx.lineWidth=Math.max(1,rr*.06); let px=-rr,py=0; ctx.moveTo(px,py); for(let j=0;j<4;j++){ px+=rr*.5; py+=(R()-.5)*rr*.8; ctx.lineTo(px,py); } ctx.stroke(); px=-rr; py=0; for(let j=0;j<5;j++){ ctx.beginPath(); ctx.fillStyle=(j%2)?col:col2; ctx.arc(px,py,rr*.1,0,6.2832); ctx.fill(); px+=rr*.5; py+=(R()-.5)*rr*.8; } break; }
-      case 'hatch': { const k=5; const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.7+R()*0.4); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1; const st=Math.max(3,rr*.14); for(let d=-rr*2;d<rr*2;d+=st){ ctx.beginPath(); ctx.moveTo(d,-rr*2); ctx.lineTo(d+rr*2,rr*2); ctx.stroke(); } ctx.restore(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.07); ctx.stroke(); break; }
+      case 'stem': { ctx.lineCap='round'; ctx.lineWidth=Math.max(1.5,rr*.09); ctx.moveTo(0,rr); ctx.lineTo(0,-rr); ctx.stroke(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,-rr,rr*.18,0,6.2832); ctx.fill(); break; }
+      case 'chain': { // Kusama: a run of linked loops (her nets), each a little off the line
+        ctx.lineWidth=Math.max(1.2,rr*.09); let px=-rr,py=0; for(let j=0;j<5;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col2:col; const q=rr*(.22+R()*.1); ctx.arc(px,py,q,0,6.2832); ctx.stroke(); px+=rr*.42; py+=(R()-.5)*rr*.5; } break; }
+      case 'hatch': { const k=5; const a0=R()*6.28; const pts=[]; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.7+R()*0.4); pts.push([Math.cos(a)*q,Math.sin(a)*q]); } const poly=()=>{ ctx.beginPath(); pts.forEach((p,j)=> j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); };
+        poly(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1; const st=Math.max(3,rr*.14); for(let d=-rr*2;d<rr*2;d+=st){ ctx.beginPath(); ctx.moveTo(d,-rr*2); ctx.lineTo(d+rr*2,rr*2); ctx.stroke(); } ctx.restore(); poly(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.07); ctx.stroke(); break; }
       case 'poly': { const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.6+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
       case 'arch': { ctx.arc(0,rr*.3,rr,Math.PI,0); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,rr*.3,rr*.55,Math.PI,0); ctx.closePath(); ctx.fill(); break; }
       case 'starburst': { for(let j=0;j<8;j++){ const a=j/8*6.2832, q=j%2?rr*.35:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
@@ -19429,7 +19440,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'nestpoly': { const k=5; for(let q=4;q>=1;q--){ ctx.beginPath(); for(let j=0;j<k;j++){ const a=j/k*6.2832-1.5708, e=rr*q/4; j?ctx.lineTo(Math.cos(a)*e,Math.sin(a)*e):ctx.moveTo(Math.cos(a)*e,Math.sin(a)*e);} ctx.closePath(); ctx.fillStyle=(q%2)?col:col2; ctx.fill(); } break; }
       case 'speech': { ctx.rect(-rr,-rr*.55,rr*2,rr*1.1); ctx.fill(); ctx.beginPath(); ctx.moveTo(-rr*.5,rr*.55); ctx.lineTo(-rr*.3,rr*.95); ctx.lineTo(-rr*.1,rr*.55); ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.1); ctx.strokeRect(-rr,-rr*.55,rr*2,rr*1.1); break; }
       case 'rain': { ctx.lineWidth=Math.max(1,rr*.03); for(let j=0;j<3;j++){ ctx.beginPath(); const x0=(R()-.5)*rr*2; ctx.moveTo(x0,-rr); ctx.lineTo(x0-rr*.4,rr); ctx.stroke(); } break; }
-      case 'dotline': { for(let j=0;j<=10;j++){ ctx.beginPath(); ctx.arc(-rr+j*rr*.2, Math.sin(j*.6)*rr*.3, rr*.04, 0, 6.2832); ctx.fill(); } break; }
+      case 'dotline': { for(let j=0;j<=10;j++){ ctx.beginPath(); ctx.fillStyle=(j%2)?col2:col; ctx.arc(-rr+j*rr*.2, Math.sin(j*.6)*rr*.3, rr*(.07+(j%3)*.02), 0, 6.2832); ctx.fill(); } break; }
       case 'arrow': { ctx.lineWidth=Math.max(2,rr*.14); ctx.moveTo(0,rr); ctx.lineTo(0,-rr*.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-rr*.4,-rr*.3); ctx.lineTo(0,-rr); ctx.lineTo(rr*.4,-rr*.3); ctx.closePath(); ctx.fill(); break; }
       case 'pixels': { // $1M$: a patch of tiny squares
         const st=Math.max(2,rr*.3); for(let yy=-rr;yy<rr;yy+=st) for(let xx=-rr;xx<rr;xx+=st){ ctx.fillStyle=(((xx+yy)/st)|0)%2?col:col2; ctx.fillRect(xx,yy,st*.85,st*.85); } break; }
