@@ -7971,12 +7971,13 @@ function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // full song character from day one — the music decides how it speaks:
 //   density → element counts · energy → sizes/luminosity · register → gravity
 // Six phases (Vary/dice address them like any other artist):
-//   0 Kvet     phyllotaxis bloom — the piece grows like a sunflower
-//   1 Závoje   chromatic veils — additive light, harmony births colour
-//   2 Prstence orbits — radius = fifths ladder, angle = time, arc = duration
-//   3 Vlnenie  interference field — every note a wave source, canvas = sum
-//   4 Dych     breath — one soft colour stratum per phrase, zero shapes
-//   5 Rieka    time river — the only non-radial one; pitch = altitude
+//   0 Niť        Lissajous thread — its shape from the song's key + register
+//   1 Súhvezdie  chords on the circle of fifths, chords joined when close
+//   2 Niť        clean coloured lines along the golden-angle spiral
+//   3 Vlna       quiet soundwave — vertical bars on a baseline
+//   4 Vejár      rays at the golden angle, length = duration
+//   5 Kompozícia scattered points joined into a coloured graph
+// (the earlier Kvet / Závoje / Prstence / Vlnenie / Dych / Rieka are parked at pick===90x)
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helper for the Jul-2026 trio (Lichtenstein / Klee / Delaunay):
 // per-chord colour through gc() so the palette mode applies, plus duration /
@@ -8566,11 +8567,13 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
   // ═══════════════ RafFel — active phase set (6) ═══════════════
-  // pick 0=Niť(Lissajous) 1=Súhvezdie 2=Mriežka 3=Sieť 4=Vlna 5=Vejár.
+  // pick 0=Niť(Lissajous) 1=Súhvezdie 2=Niť 3=Vlna 4=Vejár 5=Kompozícia.
+  // Vlnenie (the interference field) was retired in Oct 2026 — it read as a
+  // blurred cloud, nothing like the rest of the hand — and is parked at 909.
   // The old phases are kept below, parked at pick===90x, in case we revisit.
 
   if(pick===0){
@@ -8715,8 +8718,8 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===5){
-    // — 6 · VLNENIE — interference field (coarse cells for mobile) —
+  if(pick===909){
+    // — (retired) VLNENIE — interference field (coarse cells for mobile) —
     const srcs=[];
     const stride=Math.max(1, Math.ceil(cn/28));   // full-song stride: sources stay put as N grows
     for(let i=0;i<N;i+=stride){
@@ -8750,8 +8753,8 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
 
-  if(pick===6){
-    // — 7 · KOMPOZÍCIA — scattered points joined into a coloured graph —
+  if(pick===5){
+    // — 6 · KOMPOZÍCIA — scattered points joined into a coloured graph —
     // Deterministic scatter seeded from the piece, so it's stable per song.
     const rnd2=_seedRnd(137, ss, 1, 0);
     const pts=[];
@@ -18949,7 +18952,6 @@ const ARTIST_VARIANTS = {
     {mark:{rays:1},size:[.2,.5],layout:{radial:1},density:.15},
     {mark:{stem:1},size:[.08,.25],layout:{grid:1},density:.5,lines:0},
     {mark:{rays:.6,phiarc:.4},size:[.2,.5],layout:{radial:1},density:.15},
-    {ground:'#101018',mark:{cloud:1},size:[.15,.4],edge:.9,alpha:.8,density:.3,tone:'pure'},
     {mark:{rays:.5,chain:.5},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
   ],
   picasso: [
@@ -19155,13 +19157,13 @@ const ARTIST_VARIANTS = {
   ],
   delaunay: [
     {mark:{orphic:1},size:[.06,.3],layout:{scatter:.6,radial:.4},density:.35},
-    {mark:{arch:.6,orphic:.4},size:[.15,.45],layout:{radial:1},density:.2},
-    {ground:'#141420',mark:{arch:.5,disc:.5},size:[.15,.4],alpha:.85,layout:{radial:1},density:.25},
+    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{radial:1},density:.2},
+    {ground:'#141420',mark:{arch:.5,disc:.5},size:[.12,.28],alpha:.95,layout:{radial:1},density:.25},
     {mark:{tri:.6,fan:.4},size:[.1,.3],alpha:.8,layout:{radial:1},density:.3},
     {mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},
     {ground:'#141420',mark:{rays:.5,fan:.5},size:[.3,.6],layout:{radial:1},density:.08},
     {mark:{orphic:1},size:[.06,.3],layout:{scatter:1},density:.35},
-    {mark:{arch:.6,orphic:.4},size:[.15,.45],layout:{radial:1},density:.2},
+    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{radial:1},density:.2},
   ],
   oneM: [
     {mark:{panel:.6,pixels:.4},size:[.02,.07],layout:{grid:1},density:1},
@@ -19176,7 +19178,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:6,matisse:8,pollock:7,bloom:7,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:8,pollock:7,bloom:7,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
@@ -19561,6 +19563,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // Size, layout, hand-shake and contour stay the one fused hand.
   const PDs=F.keys.map((k,i)=>_dnaOf(k,F.phs[i]));
   const FPs=PDs.map(pd=>(pd.edge===F.edge && pd.alpha===F.alpha) ? F : Object.assign({},F,{edge:pd.edge,alpha:pd.alpha}));
+  // idioms whose size is a length, not an area — the area cap below leaves them alone
+  const _FU_LINEAR=/^(field|stripe|stripes|vstripes|band|vband|gridline|gridstub|wavyline|wave|beam|shortbeam|drip|rays|brush|rain|zigzag|dab|bar|vdrip|stem|dotline|chain|neon|splat|dotcluster|radiant|step|scallop|crest|phiarc|arc)$/;
   const _SPAN={stripes:['band',5],vstripes:['vband',5],gridline:['gridstub',6],wavyline:['wave',8],beam:['shortbeam',8]};
   const _spanUsed=new Set();
   for(let layer=0; layer<F.layers; layer++){
@@ -19601,6 +19605,14 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='brush') r=Math.min(r, S*0.13);
         else if(kind==='rain') r=Math.min(r, S*0.09);     // Hokusai's rain: streaks, not a lattice
         else if(kind==='beam') r=Math.min(r, S*0.09);     // a beam crosses part of the canvas, not all of it
+        else if(kind==='cloud') r=Math.min(r, S*0.13);    // a cloud, not a fog over everything
+        else if(!_FU_LINEAR.test(kind)){
+          r=Math.min(r, S*0.21);   // no single shape swallows a third of the canvas (Delaunay discs, Bauhaus targets…)
+          // and big shapes are budgeted by the area they cover (~1.6 canvases in all), spread
+          // evenly over the piece; past the budget a chord paints a small echo of the shape,
+          // so a long piece is not a soup of a hundred overlapping translucent discs
+          if(r > S*0.09){ const B=Math.max(8, Math.min(80, Math.round(1.6/(Math.PI*(r/S)*(r/S))))); const sl='A'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)) r*=0.35; else _spanUsed.add(sl); }
+        }
         const [cr,cg,cb]=gc(m,v);
         const _pal=SM[_pi]&&SM[_pi].pal;
         const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
@@ -26799,7 +26811,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Exception: during a taste preview the tasted artist shows its FULL
   // variant range (the whole point of the teaser), read via ref so stale
   // closures can't pin it to 2.
-  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='raffel' ? 7 : (style==='pollock' ? 7 : 6)))))));
+  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='pollock' ? 7 : 6))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -33696,7 +33708,7 @@ Hard requirements:
     const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
     const _familyAllowed = setupArtists.includes('mosaicFamily');
     // Free = 2 variants, except the artist of the day (full range, like Pro).
-    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : ((k==='kandinsky'||k==='matisse'||k==='rothko') ? 8 : ((k==='wave'||k==='raffel'||k==='pollock') ? 7 : 6)));
+    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : ((k==='kandinsky'||k==='matisse'||k==='rothko') ? 8 : ((k==='wave'||k==='pollock') ? 7 : 6)));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
