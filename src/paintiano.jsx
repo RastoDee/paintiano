@@ -10899,457 +10899,200 @@ function drawMitchellOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   mitchellPhaseGarden(ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
-// ── Impasto multi-layer brush stroke. Three offset layers with slight colour
-// drift give the chunky oil-paint feel without requiring per-pixel work. All
-// random offsets are seeded from (idx, ss) so two paintings of the same song
-// + variant always produce identical strokes. ──
+// ── A loaded brush stroke. Mitchell's mark is a broad ribbon of oil: thick
+// where the brush lands, thinning and breaking up as it runs dry, with the
+// hairs of the brush streaking through it and a darker relief under one edge
+// (the impasto catching the light). Now and then a drip runs down from it.
+// All randomness is seeded from (idx, ss) so the same song + variant always
+// produces identical strokes.
 function _mitchImpasto(ctx, x0, y0, x1, y1, rgb, baseW, ss, idx){
-  for(let layer=0; layer<3; layer++){
-    const lr=_seedRnd(idx*7+layer+9050, ss, 0, 0); lr();
-    const offsetX=(lr()-0.5)*baseW*0.4;
-    const offsetY=(lr()-0.5)*baseW*0.4;
-    const dr=lr()-0.5, dg=lr()-0.5, db=lr()-0.5;
-    const r=Math.max(0,Math.min(255, rgb[0]+dr*40))|0;
-    const g=Math.max(0,Math.min(255, rgb[1]+dg*40))|0;
-    const b=Math.max(0,Math.min(255, rgb[2]+db*40))|0;
-    ctx.strokeStyle=`rgba(${r},${g},${b},${0.45+layer*0.20})`;
-    ctx.lineWidth=baseW*(1-layer*0.15);
-    ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.moveTo(x0+offsetX, y0+offsetY);
-    const cpx=(x0+x1)/2+offsetX+(lr()-0.5)*baseW;
-    const cpy=(y0+y1)/2+offsetY+(lr()-0.5)*baseW;
-    ctx.quadraticCurveTo(cpx, cpy, x1+offsetX, y1+offsetY);
-    ctx.stroke();
+  const lr=_seedRnd(idx*7+9050, ss, 0, 0); lr();
+  const dx=x1-x0, dy=y1-y0, L=Math.hypot(dx,dy)||1, px=-dy/L, py=dx/L;
+  const w0=baseW*1.8, bend=(lr()-0.5)*L*0.5, K=10, pts=[];
+  const dry=0.55+lr()*0.3;                                   // how far along the brush runs dry
+  for(let k=0;k<=K;k++){ const u=k/K, q=u-0.5, arc=bend*(1-4*q*q)*0.5; pts.push([x0+dx*u+px*arc, y0+dy*u+py*arc, w0*(1-dry*u)*(0.82+lr()*0.36)]); }
+  const ribbon=(ox,oy,sc)=>{ ctx.beginPath();
+    for(let k=0;k<=K;k++){ const [x,y,w]=pts[k]; const h=w*sc/2; k?ctx.lineTo(x+ox-px*h,y+oy-py*h):ctx.moveTo(x+ox-px*h,y+oy-py*h); }
+    for(let k=K;k>=0;k--){ const [x,y,w]=pts[k]; const h=w*sc/2; ctx.lineTo(x+ox+px*h,y+oy+py*h); }
+    ctx.closePath(); ctx.fill(); };
+  const r=rgb[0]|0, g=rgb[1]|0, b=rgb[2]|0;
+  ctx.fillStyle=`rgba(${Math.max(0,r*0.55)|0},${Math.max(0,g*0.55)|0},${Math.max(0,b*0.6)|0},0.34)`;   // relief
+  ribbon(px*w0*0.14+w0*0.06, py*w0*0.14+w0*0.08, 1.0);
+  ctx.fillStyle=`rgba(${r},${g},${b},0.96)`;
+  ribbon(0,0,1.0);
+  ctx.fillStyle=`rgba(${Math.min(255,r+70)|0},${Math.min(255,g+70)|0},${Math.min(255,b+70)|0},0.35)`;   // a lit ridge of paint
+  ribbon(-px*w0*0.16, -py*w0*0.16, 0.42);
+  ctx.lineCap='round'; ctx.lineWidth=Math.max(1, w0*0.07);                                           // the hairs of the brush
+  for(let h=-1;h<=1;h+=2){ ctx.beginPath(); ctx.strokeStyle=h<0?'rgba(0,0,0,.16)':'rgba(255,255,255,.22)';
+    for(let k=0;k<=K;k++){ const [x,y,w]=pts[k]; const o=w*0.24*h; k?ctx.lineTo(x+px*o,y+py*o):ctx.moveTo(x+px*o,y+py*o); } ctx.stroke(); }
+  if(lr()<0.14){                                                                                       // a drip
+    let low=pts[0]; for(const p of pts) if(p[1]>low[1]) low=p;
+    ctx.beginPath(); ctx.strokeStyle=`rgba(${r},${g},${b},0.85)`; ctx.lineWidth=Math.max(1, w0*0.14);
+    ctx.moveTo(low[0],low[1]); ctx.lineTo(low[0]+(lr()-0.5)*4, low[1]+L*(0.3+lr()*0.6)); ctx.stroke();
+    ctx.beginPath(); ctx.fillStyle=`rgba(${r},${g},${b},0.9)`; ctx.arc(low[0]+(lr()-0.5)*4, low[1]+L*(0.3+lr()*0.6), Math.max(1.2,w0*0.1), 0, 6.2832); ctx.fill();
   }
 }
 
-// ── Mitchell A: Gestural Garden — all-over impasto in song palette. ──
+// ── Mitchell's composition engine. Her paintings are not scattered marks:
+// they are KNOTS — dense accumulations of loaded strokes, each knot a few
+// colours plus white and one dark, hooked and jabbed over one another, with
+// bare canvas breathing between the knots and drips running out of them.
+// Every phase below is built from knots; only their number, size, palette and
+// placement change. Strokes are listed first and drawn in time order, so the
+// painting grows with the music and the same song always repaints identically.
+function _mitchGround(ctx, CW, CH, chords, hex, hexBW, isBW){
+  const h=isBW?hexBW:hex;
+  let r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16);
+  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
+  if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
+  if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
+  ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CW,CH);
+}
+function _mitchMix(a,b,t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+// a knot's palette: the chords of one passage, plus white and one dark
+function _mitchPal(chords, gc, isBW, i0, span){
+  const cn=chords.length, pal=[];
+  for(let k=0;k<4;k++){ const {rgb}=_picChord(chords, (i0+Math.floor(k*span/4))%cn, gc, isBW); pal.push(rgb); }
+  pal.push([246,243,234]);                                          // her white
+  pal.push(_mitchMix(pal[0],[20,16,24],0.6));                       // one dark
+  return pal;
+}
+// list the strokes of one knot (nothing drawn yet)
+function _mitchKnot(list, D, cx, cy, R, count, pal, ss, idx, o){
+  o=o||{};
+  const kr=_seedRnd(idx*17+9700, ss, 0, 0); kr();
+  const dir=(o.dir!=null)?o.dir:kr()*Math.PI*2, spread=o.spread!=null?o.spread:1.3, radial=o.radial||0;
+  for(let s=0;s<count;s++){
+    const r=_seedRnd(idx*400+s+9710, ss, 0, 0); r();
+    const a0=r()*Math.PI*2, d0=R*Math.sqrt(r())*(o.tight||0.95);
+    const x=cx+Math.cos(a0)*d0, y=cy+Math.sin(a0)*d0*(o.squash||1);
+    let ang; if(r()<radial) ang=a0+(r()-.5)*0.5; else ang=dir+(r()-.5)*spread+(r()<0.25?Math.PI/2:0);
+    const hook=r()<0.22;                                                  // one stroke in five is a long hooked one
+    const L=D*(hook?0.14+r()*0.12:0.05+r()*0.1)*(o.len||1), w=D*(0.011+r()*0.016)*(o.w||1);
+    const pick=r(); const col = pick<0.16 ? pal[4] : pick<0.26 ? pal[5] : pal[(r()*4)|0];
+    list.push({x0:x-Math.cos(ang)*L/2, y0:y-Math.sin(ang)*L/2, x1:x+Math.cos(ang)*L/2, y1:y+Math.sin(ang)*L/2, col, w, id:idx*400+s, t:s/count});
+  }
+}
+function _mitchDraw(ctx, list, reveal, ss){
+  // time order across knots: every knot grows at once
+  list.sort((a,b)=>a.t-b.t || a.id-b.id);
+  const n=Math.max(1, Math.ceil(list.length*Math.max(0,Math.min(1,reveal))));
+  for(let i=0;i<n;i++){ const s=list[i]; _mitchImpasto(ctx, s.x0, s.y0, s.x1, s.y1, s.col, s.w, ss, s.id); }
+}
+function _mitchDrips(ctx, D, list, k, ss, idx){
+  // long drips out of the lowest strokes
+  const low=list.slice().sort((a,b)=>Math.max(b.y0,b.y1)-Math.max(a.y0,a.y1)).slice(0,k);
+  low.forEach((s,i)=>{ const r=_seedRnd(idx*31+i+9790, ss, 0, 0); r();
+    const x=(s.x0+s.x1)/2, y=Math.max(s.y0,s.y1); const c=s.col;
+    ctx.strokeStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},0.8)`; ctx.lineWidth=Math.max(1.2,D*(0.003+r()*0.004)); ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo(x+(r()-.5)*D*0.02, y+D*0.08, x+(r()-.5)*D*0.03, y+D*(0.1+r()*0.2)); ctx.stroke(); });
+}
+function _mitchChar(chords){ const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; return _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5; }
+
+// ── Mitchell A: Gestural Garden — all-over: 6–9 knots overlapping across the whole canvas, bare canvas in the gaps ──
 function mitchellPhaseGarden(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
-  const N=Math.max(1, Math.min(cn, lim));
-  const reveal=Math.max(0, Math.min(1, N/cn));
-  const D=Math.min(CW, CH);
-  // Cream ground (palette-independent for stable identity; tone-adjusted).
-  const _adjHex=(hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  ctx.fillStyle=isBW ? _adjHex('#e8e2d4') : _adjHex('#f4eee0');
-  ctx.fillRect(0,0,CW,CH);
-  // Stroke count scales with chord count + song character.
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const strokeCountFull=Math.max(60, Math.round(70 + drive*40));
-  const visStrokes=Math.max(8, Math.ceil(strokeCountFull*reveal));
-  for(let i=0; i<visStrokes; i++){
-    const r=_seedRnd(i+9100, ss, 0, 0); r(); r();
-    const cx=CW*r();
-    const cy=CH*r();
-    const len=D*(0.06 + r()*0.14);
-    const ang=r()*Math.PI*2;
-    const w=D*(0.012 + r()*0.020);
-    // Colour from song palette via chord index (cycled).
-    const {rgb}=_picChord(chords, i%cn, gc, isBW);
-    const x0=cx - Math.cos(ang)*len*0.5;
-    const y0=cy - Math.sin(ang)*len*0.5;
-    const x1=cx + Math.cos(ang)*len*0.5;
-    const y1=cy + Math.sin(ang)*len*0.5;
-    _mitchImpasto(ctx, x0, y0, x1, y1, rgb, w, ss, i);
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
+  _mitchGround(ctx,CW,CH,chords,'#f4eee0','#e8e2d4',isBW);
+  const drive=_mitchChar(chords), K=6+Math.round(drive*3), list=[];
+  const gr=_seedRnd(9801, ss, 0, 0); gr();
+  const cols=K>7?3:2, rows=Math.ceil(K/cols);
+  for(let k=0;k<K;k++){
+    const gx=((k%cols)+0.5)/cols, gy=(Math.floor(k/cols)+0.5)/rows;
+    const cx=CW*(gx+(gr()-.5)*0.22), cy=CH*(gy+(gr()-.5)*0.18), R=D*(0.15+gr()*0.09);
+    _mitchKnot(list, D, cx, cy, R, 26+Math.round(drive*16), _mitchPal(chords,gc,isBW,Math.floor(k*cn/K),Math.ceil(cn/K)), ss, 9810+k, {spread:1.5, radial:0.12});
   }
-  // Drip accents — scale with reveal.
-  const drips=Math.ceil(20*reveal);
-  for(let i=0; i<drips; i++){
-    const pr=_seedRnd(i+9150, ss, 0, 0); pr();
-    const {rgb}=_picChord(chords, (i*3)%cn, gc, isBW);
-    ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.40+pr()*0.30})`;
-    ctx.lineWidth=Math.max(1, D*0.0025);
-    ctx.beginPath();
-    ctx.moveTo(pr()*CW, pr()*CH);
-    ctx.lineTo(pr()*CW+(pr()-0.5)*20, pr()*CH+D*(0.04+pr()*0.08));
-    ctx.stroke();
-  }
+  _mitchDraw(ctx, list, reveal, ss);
+  if(reveal>0.5) _mitchDrips(ctx, D, list, 3+Math.round(drive*3), ss, 9830);
 }
 
-// ── Mitchell B: Color Bursts — radial explosions, each tied to a chord. ──
+// ── Mitchell B: Explosions — 3–6 big knots bursting outward, drips pouring out of them ──
 function mitchellPhaseBursts(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
-  const N=Math.max(1, Math.min(cn, lim));
-  const reveal=Math.max(0, Math.min(1, N/cn));
-  const D=Math.min(CW, CH);
-  const _adjHex=(hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  ctx.fillStyle=isBW ? _adjHex('#dcd6c8') : _adjHex('#e8e2d0');
-  ctx.fillRect(0,0,CW,CH);
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const burstCountFull=Math.max(3, Math.min(7, Math.round(4 + drive*3)));
-  const visBursts=Math.max(1, Math.ceil(burstCountFull*reveal));
-  for(let i=0; i<visBursts; i++){
-    const br=_seedRnd(i+9200, ss, 0, 0); br(); br();
-    const cx=CW*(0.15 + br()*0.70);
-    const cy=CH*(0.15 + br()*0.70);
-    const R=D*(0.16 + br()*0.10);
-    // Each burst takes its palette from one chord (cycled).
-    const {rgb}=_picChord(chords, i%cn, gc, isBW);
-    const strokes=18 + Math.floor(br()*12);
-    for(let s=0; s<strokes; s++){
-      const sr=_seedRnd(i*40+s+9250, ss, 0, 0); sr();
-      const ang=sr()*Math.PI*2;
-      const dist=R*(0.2 + sr()*0.9);
-      const x1=cx + Math.cos(ang)*dist*0.3;
-      const y1=cy + Math.sin(ang)*dist*0.3;
-      const x2=cx + Math.cos(ang)*dist;
-      const y2=cy + Math.sin(ang)*dist;
-      const w=Math.max(1.5, D*(0.008 + sr()*0.014));
-      _mitchImpasto(ctx, x1, y1, x2, y2, rgb, w, ss, i*200+s);
-    }
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
+  _mitchGround(ctx,CW,CH,chords,'#e8e2d0','#dcd6c8',isBW);
+  const drive=_mitchChar(chords), K=3+Math.round(drive*3), list=[];
+  const br=_seedRnd(9841, ss, 0, 0); br();
+  for(let k=0;k<K;k++){
+    const cx=CW*(0.2+br()*0.6), cy=CH*(0.18+br()*0.56), R=D*(0.17+br()*0.1);
+    _mitchKnot(list, D, cx, cy, R, 44+Math.round(drive*20), _mitchPal(chords,gc,isBW,Math.floor(k*cn/K),Math.ceil(cn/K)), ss, 9850+k, {radial:0.55, spread:2.2, len:1.15});
   }
+  _mitchDraw(ctx, list, reveal, ss);
+  if(reveal>0.4) _mitchDrips(ctx, D, list, 4+K, ss, 9870);
 }
 
-// ── Mitchell C: Diptych Field — two panels, each its own chord sub-range. ──
+// ── Mitchell C: Diptych — two panels, each its own passage of the song, strokes bridging the seam ──
 function mitchellPhaseDiptych(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
-  const N=Math.max(1, Math.min(cn, lim));
-  const reveal=Math.max(0, Math.min(1, N/cn));
-  const D=Math.min(CW, CH);
-  const _adjHex=(hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  ctx.fillStyle=isBW ? _adjHex('#e4ddc6') : _adjHex('#efeadc');
-  ctx.fillRect(0,0,CW,CH);
-  // Vertical seam.
-  ctx.strokeStyle=isBW ? 'rgba(180,175,160,0.55)' : 'rgba(200,195,180,0.55)';
-  ctx.lineWidth=1.5;
-  ctx.beginPath();
-  ctx.moveTo(CW/2, 0); ctx.lineTo(CW/2, CH);
-  ctx.stroke();
-  // Left panel uses first half of chords; right panel uses second half.
-  const halfCn=Math.max(1, Math.floor(cn/2));
-  const panels=[
-    {x0:0, x1:CW/2, chordStart:0, chordEnd:halfCn},
-    {x0:CW/2, x1:CW, chordStart:halfCn, chordEnd:cn}
-  ];
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const strokesPerPanel=Math.max(20, Math.round(40 + drive*20));
-  const visStrokesPerPanel=Math.max(4, Math.ceil(strokesPerPanel*reveal));
-  for(let p=0; p<panels.length; p++){
-    const pan=panels[p];
-    const panW=pan.x1-pan.x0;
-    const panChords=Math.max(1, pan.chordEnd - pan.chordStart);
-    for(let i=0; i<visStrokesPerPanel; i++){
-      const br=_seedRnd(i+p*500+9300, ss, 0, 0); br(); br();
-      const cx=pan.x0 + panW*br();
-      const cy=CH*br();
-      const len=D*(0.05 + br()*0.12);
-      const ang=br()*Math.PI*2;
-      const w=D*(0.010 + br()*0.018);
-      const chordIdx=pan.chordStart + (i % panChords);
-      const {rgb}=_picChord(chords, chordIdx, gc, isBW);
-      const x0=cx - Math.cos(ang)*len*0.5;
-      const y0=cy - Math.sin(ang)*len*0.5;
-      const x1=cx + Math.cos(ang)*len*0.5;
-      const y1=cy + Math.sin(ang)*len*0.5;
-      _mitchImpasto(ctx, x0, y0, x1, y1, rgb, w, ss, i+p*500);
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
+  _mitchGround(ctx,CW,CH,chords,'#f2ecdc','#e6e0d2',isBW);
+  ctx.strokeStyle=isBW?'rgba(170,165,150,.5)':'rgba(190,184,168,.5)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(CW/2,0); ctx.lineTo(CW/2,CH); ctx.stroke();
+  const drive=_mitchChar(chords), list=[], half=Math.ceil(cn/2);
+  const dr=_seedRnd(9881, ss, 0, 0); dr();
+  for(let p=0;p<2;p++){
+    const KP=2+Math.round(drive*1.4);
+    for(let k=0;k<KP;k++){
+      const cx=CW*(p*0.5+0.1+dr()*0.3), cy=CH*(0.15+(k+dr()*0.6)/KP*0.7), R=D*(0.13+dr()*0.08);
+      _mitchKnot(list, D, cx, cy, R, 24+Math.round(drive*14), _mitchPal(chords,gc,isBW,p*half+Math.floor(k*half/KP),Math.ceil(half/KP)), ss, 9890+p*10+k, {spread:1.2, radial:0.1});
     }
   }
-  // Bridging strokes across the seam (use transitional chords near midpoint).
-  const bridgesFull=Math.max(3, Math.min(6, Math.round(3+drive*3)));
-  const visBridges=Math.max(1, Math.ceil(bridgesFull*reveal));
-  for(let i=0; i<visBridges; i++){
-    const br=_seedRnd(i+9380, ss, 0, 0); br(); br();
-    const y=CH*(0.20 + br()*0.60);
-    const transitionIdx=Math.max(0, Math.min(cn-1, halfCn-1 + (i%3)-1));
-    const {rgb}=_picChord(chords, transitionIdx, gc, isBW);
-    const x0=CW*0.35 + br()*CW*0.10;
-    const x1=CW*0.55 + br()*CW*0.10;
-    const w=D*(0.014 + br()*0.014);
-    _mitchImpasto(ctx, x0, y, x1, y+(br()-0.5)*D*0.08, rgb, w, ss, i+9390);
-  }
+  // bridging strokes across the seam
+  for(let i=0;i<4+Math.round(drive*3);i++){ const r=_seedRnd(i+9920, ss, 0, 0); r(); const y=CH*(0.2+r()*0.6), L=D*(0.12+r()*0.1);
+    const {rgb}=_picChord(chords,(i*7)%cn,gc,isBW); list.push({x0:CW/2-L/2, y0:y+(r()-.5)*D*0.05, x1:CW/2+L/2, y1:y+(r()-.5)*D*0.05, col:rgb, w:D*(0.014+r()*0.012), id:9930+i, t:0.5+i*0.05}); }
+  _mitchDraw(ctx, list, reveal, ss);
+  if(reveal>0.5) _mitchDrips(ctx, D, list, 4, ss, 9940);
 }
 
-// ── Mitchell D: Dark Central Mass — 60s "violent" period. Song palette tone-
-// downed (multiplied) so the painting still reflects the song's colours but
-// in a darker, denser register. ──
+// ── Mitchell D: Dark Central Mass — the 60s: one dense dark knot, light jabs at its edge, drips below ──
 function mitchellPhaseDarkMass(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
-  const N=Math.max(1, Math.min(cn, lim));
-  const reveal=Math.max(0, Math.min(1, N/cn));
-  const D=Math.min(CW, CH);
-  const _adjHex=(hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  ctx.fillStyle=isBW ? _adjHex('#d4ccb4') : _adjHex('#e0d8c0');
-  ctx.fillRect(0,0,CW,CH);
-  const r0=_seedRnd(9400, ss, 0, 0); r0(); r0();
-  const massX=CW*0.5 + (r0()-0.5)*CW*0.10;
-  const massY=CH*0.5 + (r0()-0.5)*CH*0.10;
-  const massR=D*0.28;
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const strokesFull=Math.max(60, Math.round(80 + drive*40));
-  const visStrokes=Math.max(8, Math.ceil(strokesFull*reveal));
-  // Darkening factor — multiplies song palette to give the "violent" mood.
-  const DARK_MUL=0.40;
-  for(let i=0; i<visStrokes; i++){
-    const br=_seedRnd(i+9420, ss, 0, 0); br(); br();
-    // Gaussian-ish cluster around mass center (sqrt skews toward middle).
-    const angR=br()*Math.PI*2;
-    const distR=Math.sqrt(br())*massR;
-    const cx=massX + Math.cos(angR)*distR;
-    const cy=massY + Math.sin(angR)*distR;
-    const len=D*(0.04 + br()*0.10);
-    const ang=br()*Math.PI*2;
-    const w=D*(0.010 + br()*0.020);
-    // Song palette tone-downed.
-    const {rgb}=_picChord(chords, i%cn, gc, isBW);
-    const darkR=[Math.round(rgb[0]*DARK_MUL), Math.round(rgb[1]*DARK_MUL), Math.round(rgb[2]*DARK_MUL)];
-    const x0=cx - Math.cos(ang)*len*0.5;
-    const y0=cy - Math.sin(ang)*len*0.5;
-    const x1=cx + Math.cos(ang)*len*0.5;
-    const y1=cy + Math.sin(ang)*len*0.5;
-    _mitchImpasto(ctx, x0, y0, x1, y1, darkR, w, ss, i+9420);
-  }
-  // Outward angry drips.
-  const dripsFull=15;
-  const visDrips=Math.max(2, Math.ceil(dripsFull*reveal));
-  for(let i=0; i<visDrips; i++){
-    const pr=_seedRnd(i+9490, ss, 0, 0); pr();
-    const ang=pr()*Math.PI*2;
-    const start=massR*(0.7 + pr()*0.3);
-    const end=massR*(1.1 + pr()*0.8);
-    const x0=massX + Math.cos(ang)*start;
-    const y0=massY + Math.sin(ang)*start;
-    const x1=massX + Math.cos(ang)*end;
-    const y1=massY + Math.sin(ang)*end;
-    const {rgb}=_picChord(chords, (i*3)%cn, gc, isBW);
-    const darkR=[Math.round(rgb[0]*DARK_MUL), Math.round(rgb[1]*DARK_MUL), Math.round(rgb[2]*DARK_MUL)];
-    ctx.strokeStyle=`rgba(${darkR[0]},${darkR[1]},${darkR[2]},${0.55+pr()*0.30})`;
-    ctx.lineWidth=Math.max(1.5, D*0.005);
-    ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
-    ctx.stroke();
-  }
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
+  _mitchGround(ctx,CW,CH,chords,'#e4ddcc','#d8d2c4',isBW);
+  const drive=_mitchChar(chords), list=[];
+  const pal=_mitchPal(chords,gc,isBW,0,cn).map((c,i)=> i<4 ? _mitchMix(c,[18,14,22],0.55) : c);
+  _mitchKnot(list, D, CW*0.5, CH*0.47, D*0.3, 80+Math.round(drive*30), pal, ss, 9950, {spread:1.6, radial:0.2, tight:0.85});
+  const lp=_mitchPal(chords,gc,isBW,Math.floor(cn/2),Math.ceil(cn/2)).map((c)=>_mitchMix(c,[250,246,236],0.35));
+  _mitchKnot(list, D, CW*0.5, CH*0.47, D*0.36, 18+Math.round(drive*8), lp, ss, 9951, {spread:2.0, radial:0.6, tight:1.0});
+  _mitchDraw(ctx, list, reveal, ss);
+  if(reveal>0.5) _mitchDrips(ctx, D, list, 6, ss, 9960);
 }
 
-// ── Mitchell E: Sunflower — vertical stems + flower heads (Van Gogh hommage). ──
+// ── Mitchell E: Sunflowers (the Van Gogh homage, 1990–91): warm knots held up on columns of green strokes, long drips ──
 function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
-  const N=Math.max(1, Math.min(cn, lim));
-  const reveal=Math.max(0, Math.min(1, N/cn));
-  const D=Math.min(CW, CH);
-  // Song-aware baseline tint (35% lerp toward the piece's top-pitch colour).
-  // Keeps Mitchell's sunflowers as sunflowers (yellow/orange petals, green
-  // stems, cream ground) but each song blooms in its own light: a synth-pop
-  // piece shifts the field to rose-mauve, a late Romantic one to bronze.
-  // Same seed → same composition; only the colour temperature changes.
-  const _tint = (!isBW && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
-  const _T = (b)=> (typeof _tintBaseline === 'function') ? _tintBaseline(b, _tint, 0.35) : b.slice();
-  const _bPetalY = _T([200, 160, 30]);
-  const _bPetalO = _T([200, 100, 30]);
-  const _bStem   = _T([40, 110, 50]);
-  const _bGndTop = _T([224, 212, 184]);   // #e0d4b8
-  const _bGndBot = _T([200, 168, 144]);   // #c8a890
-  const _adjHex=(hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  const _adjRGB=(arr)=>{
-    let r=arr[0]|0, g=arr[1]|0, b=arr[2]|0;
-    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r|0},${g|0},${b|0})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  // Warm cream-pink ground gradient — song-tinted in colour mode.
-  const grad=ctx.createLinearGradient(0,0,0,CH);
-  if(isBW){
-    grad.addColorStop(0, _adjHex('#d8d0bc'));
-    grad.addColorStop(1, _adjHex('#bcb098'));
-  } else {
-    grad.addColorStop(0, _adjRGB(_bGndTop));
-    grad.addColorStop(1, _adjRGB(_bGndBot));
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
+  _mitchGround(ctx,CW,CH,chords,'#f6f1e2','#ece6d8',isBW);
+  const drive=_mitchChar(chords), K=2+Math.round(drive*2), list=[];
+  const sr=_seedRnd(9971, ss, 0, 0); sr();
+  for(let k=0;k<K;k++){
+    const cx=CW*((k+0.5)/K+(sr()-.5)*0.14), cy=CH*(0.2+sr()*0.2), R=D*(0.12+sr()*0.07);
+    const warm=_mitchPal(chords,gc,isBW,Math.floor(k*cn/K),Math.ceil(cn/K)).map((c,i)=> i<4 ? _mitchMix(c,[238,186,38],isBW?0:0.55) : c);
+    _mitchKnot(list, D, cx, cy, R, 36+Math.round(drive*16), warm, ss, 9980+k, {radial:0.5, spread:2.4, len:0.9});
+    // the column of stems
+    const stems=4+Math.round(sr()*3);
+    for(let s2=0;s2<stems;s2++){ const r=_seedRnd(k*20+s2+9995, ss, 0, 0); r();
+      const x=cx+(r()-.5)*R*1.2, y0=cy+R*(0.3+r()*0.5), y1=Math.min(CH*0.97, y0+CH*(0.2+r()*0.3));
+      const {rgb}=_picChord(chords,(k*11+s2*3)%cn,gc,isBW); const green=isBW?rgb:_mitchMix(rgb,[72,128,58],0.6);
+      list.push({x0:x, y0:y0, x1:x+(r()-.5)*D*0.03, y1:y1, col:green, w:D*(0.012+r()*0.012), id:10000+k*20+s2, t:0.3+r()*0.6}); }
   }
-  ctx.fillStyle=grad;
-  ctx.fillRect(0,0,CW,CH);
-  // Stem count scales with chord count.
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const stemsFull=Math.max(6, Math.min(13, Math.round(8 + drive*5)));
-  const visStems=Math.max(2, Math.ceil(stemsFull*reveal));
-  // Stems — green/blue range derived from song palette (chord-based but biased green).
-  for(let i=0; i<visStems; i++){
-    const sr=_seedRnd(i+9500, ss, 0, 0); sr();
-    const baseX=CW*(0.30 + i*0.40/stemsFull + (sr()-0.5)*0.05);
-    const startY=CH*(0.95 + sr()*0.05);
-    const endY=CH*(0.35 + sr()*0.20);
-    // Stem colour: take chord but bias green/blue.
-    const {rgb}=_picChord(chords, i%cn, gc, isBW);
-    const stemCol=isBW
-      ? [60+rgb[0]*0.2, 90+rgb[1]*0.2, 50+rgb[2]*0.2]
-      : [_bStem[0]+rgb[0]*0.2, _bStem[1]+rgb[1]*0.3, _bStem[2]+rgb[2]*0.2];
-    // Multi-layer stem.
-    for(let layer=0; layer<3; layer++){
-      const lr=_seedRnd(i*30+layer+9510, ss, 0, 0); lr();
-      const offset=(lr()-0.5)*D*0.01;
-      const drR=Math.max(0,Math.min(255, stemCol[0]+(lr()-0.5)*30))|0;
-      const drG=Math.max(0,Math.min(255, stemCol[1]+(lr()-0.5)*30))|0;
-      const drB=Math.max(0,Math.min(255, stemCol[2]+(lr()-0.5)*30))|0;
-      ctx.strokeStyle=`rgba(${drR},${drG},${drB},${0.5+layer*0.20})`;
-      ctx.lineWidth=D*(0.008 - layer*0.002);
-      ctx.lineCap='round';
-      ctx.beginPath();
-      ctx.moveTo(baseX+offset, startY);
-      const cpx=baseX + (lr()-0.5)*D*0.04;
-      const cpy=(startY+endY)/2;
-      ctx.quadraticCurveTo(cpx, cpy, baseX+(lr()-0.5)*D*0.03, endY);
-      ctx.stroke();
-    }
-  }
-  // Flower heads — Mitchell's ACTUAL Sunflower language: each head is an
-  // explosive gestural tangle of short impasto strokes (yellow/orange/umbra/
-  // olive) at chaotic angles around a dark tangled core, plus gravity
-  // drips. Sunflower as ENERGY, not illustration.
-  for(let i=0; i<visStems; i++){
-    const fr=_seedRnd(i+9550, ss, 0, 0); fr(); fr();
-    const fx=CW*(0.30 + i*0.40/stemsFull + (fr()-0.5)*0.05);
-    const fy=CH*(0.35 + fr()*0.20);
-    const {rgb}=_picChord(chords, (i*2+1)%cn, gc, isBW);
-    const palY=isBW?[190,182,150]:[_bPetalY[0]+rgb[0]*0.15,_bPetalY[1]+rgb[1]*0.20,_bPetalY[2]+rgb[2]*0.1];
-    const palO=isBW?[160,148,120]:[_bPetalO[0]+rgb[0]*0.10,_bPetalO[1]+rgb[1]*0.15,_bPetalO[2]+rgb[2]*0.1];
-    const palU=isBW?[110,100, 84]:[138+rgb[0]*0.10, 90+rgb[1]*0.10, 36+rgb[2]*0.05];   // umbra
-    const palG=isBW?[120,124,100]:[_bStem[0]+30, _bStem[1]+20, _bStem[2]];             // olive
-    const heads=[palY,palY,palO,palO,palU,palG];
-    const fsize=D*(0.07 + fr()*0.055);
-    // Outer burst — chaotic short strokes, varied radius/length/width.
-    const burst=44 + Math.floor(fr()*26);
-    for(let p=0; p<burst; p++){
-      const br=_seedRnd(i*200+p+9560, ss, 0, 0);
-      const a0=br()*Math.PI*2;
-      const r0=br()*fsize*0.35;
-      const r1=r0+fsize*(0.30+br()*0.75);
-      const a1=a0+(br()-0.5)*1.2;
-      const x1=fx+Math.cos(a0)*r0, y1=fy+Math.sin(a0)*r0;
-      const x2=fx+Math.cos(a1)*r1, y2=fy+Math.sin(a1)*r1;
-      const col=heads[Math.floor(br()*heads.length)];
-      const w=D*(0.006+br()*0.012);
-      _mitchImpasto(ctx, x1, y1, x2, y2, col, w, ss, i*300+p+9560);
-    }
-    // Dark tangled core — short crossing strokes, no clean disc.
-    const coreCol=isBW?[52,47,42]:[74,50,24];
-    const coreN=14+Math.floor(fr()*8);
-    for(let p=0; p<coreN; p++){
-      const cr=_seedRnd(i*200+p+9880, ss, 0, 0);
-      const a=cr()*Math.PI*2, r0=cr()*fsize*0.30;
-      const x1=fx+Math.cos(a)*r0*0.2, y1=fy+Math.sin(a)*r0*0.2;
-      const x2=fx+Math.cos(a+(cr()-0.5)*2)*fsize*0.32, y2=fy+Math.sin(a+(cr()-0.5)*2)*fsize*0.32;
-      _mitchImpasto(ctx, x1, y1, x2, y2, coreCol, D*0.007, ss, i*300+p+9880);
-    }
-    // Gravity drips off the head — Mitchell lets the paint run.
-    const drips=2+Math.floor(fr()*2);
-    for(let p=0; p<drips; p++){
-      const dr=_seedRnd(i*40+p+9950, ss, 0, 0);
-      const dx=fx+(dr()-0.5)*fsize*1.3;
-      const dy=fy+fsize*(0.2+dr()*0.4);
-      const len=D*(0.05+dr()*0.09);
-      const col=heads[Math.floor(dr()*heads.length)];
-      ctx.strokeStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.5)`;
-      ctx.lineWidth=1.6+dr()*1.4; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(dx, dy);
-      ctx.quadraticCurveTo(dx+(dr()-0.5)*8, dy+len*0.55, dx+(dr()-0.5)*5, dy+len);
-      ctx.stroke();
-    }
-  }
+  _mitchDraw(ctx, list, reveal, ss);
+  if(reveal>0.4) _mitchDrips(ctx, D, list, 3+K, ss, 10040);
 }
 
-// ── Mitchell F: Late Sparse White — 1992 final paintings. White ground with
-// 2-3 concentrated zones tied to chord positions in the song (start/middle/end). ──
+// ── Mitchell F: Late White (1992): white canvas, two or three small knots, a trailing drip under each ──
 function mitchellPhaseLateWhite(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
-  const N=Math.max(1, Math.min(cn, lim));
-  const reveal=Math.max(0, Math.min(1, N/cn));
-  const D=Math.min(CW, CH);
-  const _adjHex=(hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint==='function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint==='function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  // White unprimed canvas.
-  ctx.fillStyle=isBW ? _adjHex('#f0eee4') : _adjHex('#fafaf2');
-  ctx.fillRect(0,0,CW,CH);
-  // Subtle canvas weave texture (seeded).
-  for(let i=0; i<150; i++){
-    const pr=_seedRnd(i+9610, ss, 0, 0); pr();
-    ctx.fillStyle=`rgba(220,215,200,${0.04+pr()*0.06})`;
-    ctx.beginPath();
-    ctx.arc(pr()*CW, pr()*CH, 0.4+pr()*1.0, 0, Math.PI*2);
-    ctx.fill();
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
+  _mitchGround(ctx,CW,CH,chords,'#fafaf2','#f0eee4',isBW);
+  for(let i=0; i<150; i++){ const pr=_seedRnd(i+9610, ss, 0, 0); pr(); ctx.fillStyle=`rgba(220,215,200,${0.04+pr()*0.06})`; ctx.beginPath(); ctx.arc(pr()*CW, pr()*CH, 0.4+pr()*1.0, 0, Math.PI*2); ctx.fill(); }
+  const drive=_mitchChar(chords), K=2+Math.round(drive*1), list=[];
+  const zr=_seedRnd(9651, ss, 0, 0); zr();
+  for(let z=0;z<K;z++){
+    const cx=CW*(0.22+z*(0.56/Math.max(1,K-1))+(zr()-.5)*0.1), cy=CH*(0.3+zr()*0.3), R=D*(0.11+zr()*0.07);
+    _mitchKnot(list, D, cx, cy, R, 18+Math.round(drive*10), _mitchPal(chords,gc,isBW,Math.floor(z*(cn-1)/Math.max(1,K-1)),Math.ceil(cn/K)), ss, 10050+z, {spread:1.1, radial:0.15, len:0.8});
   }
-  // 2-3 zones. Each maps to a key chord position in the song.
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const drive=_ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const zonesFull=Math.max(2, Math.min(3, Math.round(2 + drive*1)));
-  const visZones=Math.max(1, Math.ceil(zonesFull*reveal));
-  // Zone chord positions: start, middle, end (interpolated to zone count).
-  for(let z=0; z<visZones; z++){
-    const zr=_seedRnd(z+9650, ss, 0, 0); zr(); zr();
-    const zx=CW*(0.20 + z*0.30 + (zr()-0.5)*0.08);
-    const zy=CH*(0.30 + zr()*0.30);
-    const zR=D*(0.15 + zr()*0.10);
-    // Chord index for this zone: 0 / cn/2 / cn-1 (interpolated).
-    const chordIdx=Math.floor((z/(zonesFull-1 || 1))*(cn-1));
-    const {rgb}=_picChord(chords, chordIdx, gc, isBW);
-    // Concentrated impasto strokes within zone.
-    const strokeCount=20 + Math.floor(zr()*15);
-    for(let i=0; i<strokeCount; i++){
-      const sr=_seedRnd(z*200+i+9660, ss, 0, 0); sr();
-      const ang=sr()*Math.PI*2;
-      const dist=Math.sqrt(sr())*zR;
-      const cx=zx + Math.cos(ang)*dist;
-      const cy=zy + Math.sin(ang)*dist;
-      const slen=D*(0.04 + sr()*0.08);
-      const sang=sr()*Math.PI*2;
-      const w=D*(0.012 + sr()*0.014);
-      const x0=cx - Math.cos(sang)*slen*0.5;
-      const y0=cy - Math.sin(sang)*slen*0.5;
-      const x1=cx + Math.cos(sang)*slen*0.5;
-      const y1=cy + Math.sin(sang)*slen*0.5;
-      _mitchImpasto(ctx, x0, y0, x1, y1, rgb, w, ss, z*200+i+9670);
-    }
-    // Down-thrusting trail (Mitchell's late signature drip).
-    const trailX=zx + (zr()-0.5)*D*0.04;
-    const trailY=zy + zR*0.7;
-    const trailEnd=trailY + D*(0.12 + zr()*0.10);
-    ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.50+zr()*0.30})`;
-    ctx.lineWidth=Math.max(2, D*0.006);
-    ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.moveTo(trailX, trailY);
-    ctx.quadraticCurveTo(trailX+(zr()-0.5)*D*0.02, (trailY+trailEnd)/2, trailX+(zr()-0.5)*D*0.04, trailEnd);
-    ctx.stroke();
-  }
+  _mitchDraw(ctx, list, reveal, ss);
+  if(reveal>0.5) _mitchDrips(ctx, D, list, K, ss, 10070);
 }
 
 
@@ -19286,7 +19029,9 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
   const passes = soft ? 3 : 1;
   for(let p=passes-1;p>=0;p--){
     const rr = soft ? r*(1+p*F.edge*0.45) : r;
-    const la = F.alpha/Math.sqrt(F.layers);            // many passes → each one lighter
+    // a flat, opaque hand (Delaunay's discs, Matisse's paper, Mitchell's oil) stays opaque;
+    // only the veiled hands (Rothko, Monet, Bloom) get lighter with every layer
+    const la = (F.alpha>=0.85 && F.edge<=0.2) ? F.alpha : F.alpha/Math.sqrt(F.layers);
     ctx.globalAlpha = soft ? la*(p===0?0.7:0.22/(p)) : la;
     ctx.save(); ctx.rotate(ang); ctx.fillStyle=col; ctx.strokeStyle=col; ctx.lineCap='round'; ctx.lineJoin='round';
     ctx.beginPath();
@@ -19430,7 +19175,8 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'hatch': { const k=5; const a0=R()*6.28; const pts=[]; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.7+R()*0.4); pts.push([Math.cos(a)*q,Math.sin(a)*q]); } const poly=()=>{ ctx.beginPath(); pts.forEach((p,j)=> j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); };
         poly(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1; const st=Math.max(3,rr*.14); for(let d=-rr*2;d<rr*2;d+=st){ ctx.beginPath(); ctx.moveTo(d,-rr*2); ctx.lineTo(d+rr*2,rr*2); ctx.stroke(); } ctx.restore(); poly(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.07); ctx.stroke(); break; }
       case 'poly': { const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.6+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
-      case 'arch': { ctx.arc(0,rr*.3,rr,Math.PI,0); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,rr*.3,rr*.55,Math.PI,0); ctx.closePath(); ctx.fill(); break; }
+      case 'arch': { // Delaunay: a half-disc of concentric bands in two colours (the Rythme arcs)
+        const nb=3+(R()*2|0); for(let b=nb;b>=1;b--){ ctx.beginPath(); ctx.fillStyle=(b%2)?col:col2; ctx.arc(0,rr*.3,rr*b/nb,Math.PI,0); ctx.closePath(); ctx.fill(); } ctx.beginPath(); break; }
       case 'starburst': { for(let j=0;j<8;j++){ const a=j/8*6.2832, q=j%2?rr*.35:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
       case 'leaf': { ctx.moveTo(0,rr); ctx.quadraticCurveTo(rr*.9,0,0,-rr); ctx.quadraticCurveTo(-rr*.9,0,0,rr); ctx.fill(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.lineWidth=Math.max(1,rr*.05); ctx.moveTo(0,rr*.9); ctx.lineTo(0,-rr*.9); ctx.stroke(); break; }
       case 'wavyline': { ctx.lineWidth=Math.max(1,rr*.25); ctx.moveTo(-rr*40,0); for(let j=1;j<=32;j++){ ctx.quadraticCurveTo(-rr*40+rr*2.5*j-rr*1.25,(j%2?-1:1)*rr*1.2,-rr*40+rr*2.5*j,0);} ctx.stroke(); break; }
