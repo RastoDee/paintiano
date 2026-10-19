@@ -18997,7 +18997,7 @@ const ARTIST_VARIANTS = {
     {ground:'#5a4a2a',mark:{scallop:1},size:[.03,.06],layout:{grid:1},density:1},
     {ground:'#1a1410',mark:{sphere:1},size:[.08,.25],layout:{scatter:1},density:.3},
     {ground:'#111111',mark:{target:.6,dotcluster:.4},size:[.1,.3],layout:{scatter:1},density:.25},
-    {ground:'#d85a1a',mark:{chain:1},size:[.03,.08],layout:{scatter:1},density:.4,lines:.8},
+    {ground:'#d85a1a',mark:{chain:1},size:[.02,.05],layout:{scatter:1},density:.3,lines:.6},
   ],
   miro: [
     {ground:'#1b1812',mark:{tri:.3,blob:.3,target:.2,dot:.2},size:[.02,.07],layout:{scatter:1},density:.2,outline:.2},
@@ -19606,6 +19606,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='rain') r=Math.min(r, S*0.09);     // Hokusai's rain: streaks, not a lattice
         else if(kind==='beam') r=Math.min(r, S*0.09);     // a beam crosses part of the canvas, not all of it
         else if(kind==='cloud') r=Math.min(r, S*0.13);    // a cloud, not a fog over everything
+        else if(kind==='chain') r=Math.min(r, S*0.045);   // Kusama's nets are fine — small loops, never big hoops
         else if(!_FU_LINEAR.test(kind)){
           r=Math.min(r, S*0.21);   // no single shape swallows a third of the canvas (Delaunay discs, Bauhaus targets…)
           // and big shapes are budgeted by the area they cover (~1.6 canvases in all), spread
