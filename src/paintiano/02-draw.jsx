@@ -1673,164 +1673,170 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //  G = Memory of Oceania (1953) — late cut-out tapestry: 7-11 large flat
   //      colour blocks on warm cream priming + biomorphic curve connectors +
   //      small white blob accents.
-  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  //  H = Jazz (1947) — deep ground, crooked colour panels, big bright shapes,
+  //      small yellow stars (Icarus, the Sword-Swallower).
+  // Slots: 0 Parakeet field · 1 big collage · 2 Fauve · 3 Nice · 4 French
+  // Window · 5 La Gerbe · 6 nested-frame grid · 7 Memory of Oceania · 8 Jazz.
+  const _pn=_capN(9); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===4){ matissePhaseFrenchWindow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ matissePhaseLaGerbe(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===6){ matissePhaseFrames(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===7){ matissePhaseMemoryOceania(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  // Slots 0 and 6 both run phase A's cell-based panels; the slot picks the cell
-  // treatment (0 = scattered cut-outs, 6 = nested concentric frames) instead of
-  // a hidden seed bit — both reachable via Vary.
-  matissePhaseA(ctx,CW,CH,chords,lim,gc,ss,mode, (pick===6)?1:0);
+  matissePhaseA(ctx,CW,CH,chords,lim,gc,ss,mode, (pick===8)?1:0);
 }
 
-// ── Matisse phase A: the original cell-based panels (nested frames / scattered
-// cut-outs, chosen per painting by a seed bit). ──
+// ── Matisse's cut-out engine (gouaches découpées). One vocabulary of paper
+// shapes — the algue frond, the leaf, the heart-leaf, the star, the pomegranate
+// disc, the coral — every edge cut with scissors (a slight tremor along the
+// outline, never a smooth bezier), every colour flat. Each phase lists its
+// shapes first and draws them in time order, so the collage grows with the
+// music and the same song + variant always recalls the identical picture.
+function _matCut(ctx, pts, jit, rnd){
+  // a polygon with scissor-cut edges: every vertex trembles a little
+  ctx.beginPath();
+  for(let i=0;i<pts.length;i++){ const [x,y]=pts[i]; const jx=(rnd()-.5)*jit, jy=(rnd()-.5)*jit; i?ctx.lineTo(x+jx,y+jy):ctx.moveTo(x+jx,y+jy); }
+  ctx.closePath(); ctx.fill();
+}
+function _matBez(p0,p1,p2,p3,n,out){ for(let i=1;i<=n;i++){ const u=i/n, v=1-u; out.push([v*v*v*p0[0]+3*v*v*u*p1[0]+3*v*u*u*p2[0]+u*u*u*p3[0], v*v*v*p0[1]+3*v*v*u*p1[1]+3*v*u*u*p2[1]+u*u*u*p3[1]]); } }
+// shapes are built in a local frame (centre 0,0; size ~1) and placed by _matPlace
+function _matShapeLeaf(rnd){ const w=0.28+rnd()*0.16, pts=[[0,-1]]; _matBez([0,-1],[w*1.2,-0.55],[w*1.3,0.4],[0,1],10,pts); _matBez([0,1],[-w*1.3,0.4],[-w*1.2,-0.55],[0,-1],10,pts); return [pts]; }
+function _matShapeHeart(rnd){ const w=0.55+rnd()*0.15, pts=[[0,0.95]]; _matBez([0,0.95],[w*1.4,0.1],[w*1.2,-0.95],[0,-0.45],10,pts); _matBez([0,-0.45],[-w*1.2,-0.95],[-w*1.4,0.1],[0,0.95],10,pts); return [pts]; }
+function _matShapeAlgue(rnd){ // fronds fanning from one stem
+  const n=3+(rnd()*3|0), tilt=(rnd()-.5)*0.5, spread=1.0+rnd()*0.8, by=0.85, polys=[];
+  for(let j=0;j<n;j++){ const a=-1.5708+tilt+((n===1?0:(j/(n-1)-0.5))*spread), L=1.1+rnd()*0.6, w=0.17+rnd()*0.11;
+    const dx=Math.cos(a), dy=Math.sin(a), px=-dy, py=dx; const P=(u,v)=>[dx*L*u+px*w*v, by+dy*L*u+py*w*v];
+    const pts=[[0,by]]; _matBez([0,by],P(0.35,1.4),P(1.08,1.0),P(1,0),8,pts); _matBez(P(1,0),P(1.08,-1.0),P(0.35,-1.4),[0,by],8,pts); polys.push(pts); }
+  return polys; }
+function _matShapeStar(rnd){ const k=4+(rnd()*4|0), pts=[]; const inner=0.32+rnd()*0.2; for(let i=0;i<k*2;i++){ const a=i/(k*2)*6.2832-1.5708, q=(i%2)?inner:1; pts.push([Math.cos(a)*q,Math.sin(a)*q]); } return [pts]; }
+function _matShapeDisc(rnd){ const pts=[]; const k=22; for(let i=0;i<k;i++){ const a=i/k*6.2832; const q=0.92+rnd()*0.1; pts.push([Math.cos(a)*q,Math.sin(a)*q]); } return [pts]; }
+function _matShapeCoral(rnd){ // a branching coral / seaweed: a trunk with 2–3 forked lobes
+  const polys=[], forks=2+(rnd()*2|0); for(let j=0;j<forks;j++){ const a=-1.5708+(j/(forks-1||1)-0.5)*1.4+(rnd()-.5)*0.3, L=0.9+rnd()*0.5, w=0.14+rnd()*0.08; const dx=Math.cos(a), dy=Math.sin(a), px=-dy, py=dx;
+    const P=(u,v)=>[dx*L*u+px*w*v, 0.9+dy*L*u+py*w*v]; const pts=[[0,0.9]]; _matBez([0,0.9],P(0.3,1.2),P(0.7,1.5),P(1,0),7,pts); _matBez(P(1,0),P(0.7,-1.5),P(0.3,-1.2),[0,0.9],7,pts); polys.push(pts); }
+  return polys; }
+function _matShapeGerbe(rnd){ // La Gerbe frond: three or four long narrow lobes from one foot, barely fanning
+  const n=3+(rnd()*2|0), spread=0.5+rnd()*0.3, by=0.95, polys=[];
+  for(let j=0;j<n;j++){ const a=-1.5708+((j/(n-1))-0.5)*spread, L=1.5+rnd()*0.5, w=0.1+rnd()*0.06;
+    const dx=Math.cos(a), dy=Math.sin(a), px=-dy, py=dx; const P=(u,v)=>[dx*L*u+px*w*v, by+dy*L*u+py*w*v];
+    const pts=[[0,by]]; _matBez([0,by],P(0.3,1.3),P(1.06,1.0),P(1,0),8,pts); _matBez(P(1,0),P(1.06,-1.0),P(0.3,-1.3),[0,by],8,pts); polys.push(pts); }
+  return polys; }
+const _MAT_SHAPES={leaf:_matShapeLeaf, heart:_matShapeHeart, algue:_matShapeAlgue, gerbe:_matShapeGerbe, star:_matShapeStar, disc:_matShapeDisc, coral:_matShapeCoral};
+function _matPlace(ctx, kind, cx, cy, size, rot, rgb, ss, idx){
+  const rnd=_seedRnd(idx*13+2600, ss, 0, 0); rnd();
+  const polys=_MAT_SHAPES[kind](rnd); const ca=Math.cos(rot), sa=Math.sin(rot);
+  ctx.fillStyle=`rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
+  for(const pts of polys){ _matCut(ctx, pts.map(([x,y])=>[cx+(x*ca-y*sa)*size, cy+(x*sa+y*ca)*size]), size*0.03, rnd); }
+}
+// flat paper colour from a chord: full saturation, one hue, the "Jazz" palette
+function _matFlat(chords, idx, gc, isBW){
+  const {rgb}=_picChord(chords, idx, gc, isBW); let [r,g,b]=rgb;
+  if(isBW) return rgb;
+  if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];
+  const mx=Math.max(r,g,b,1), k=255/mx; let R=r*k,G=g*k,B=b*k; const m2=Math.max(R,G,B);
+  const pull=(ch)=>ch===m2?ch:ch*0.45; return [Math.round(pull(R)),Math.round(pull(G)),Math.round(pull(B))];
+}
+function _matDraw(ctx, list, reveal, ss){
+  list.sort((a,b)=>a.t-b.t || a.id-b.id);
+  const n=Math.max(1, Math.ceil(list.length*Math.max(0,Math.min(1,reveal))));
+  for(let i=0;i<n;i++){ const s=list[i]; _matPlace(ctx, s.kind, s.x, s.y, s.size, s.rot, s.col, ss, s.id); }
+}
+function _matReveal(chords, lim){ const cn=chords.length; return Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn)); }
+
+// ── Matisse A (slot 0): The Parakeet and the Mermaid — an all-over field of
+// leaves and fronds in three or four flat colours on white, with pomegranates.
+// Slot 6: Jazz — the same vocabulary, big and bright, on a deep ground with a
+// few colour panels (Icarus, the Sword-Swallower).
 function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, forcedNested){
-  const ss=sessionSeed|0;
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const jazz=(forcedNested===1);
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; const density=_ch?_ch.density:0.4;
+  const r0=_seedRnd(2501, ss, 0, 0); r0();
+  const list=[];
+  if(!jazz){
+    ctx.fillStyle=isBW?'#efece4':'#f7f4ea'; ctx.fillRect(0,0,CW,CH);
+    // four passage colours, one leaf colour per passage of the song
+    const cols=[0,1,2,3].map(k=>_matFlat(chords, Math.floor((k+0.5)*cn/4), gc, isBW));
+    const cnt=30+Math.round(density*30), colsN=Math.max(4,Math.round(Math.sqrt(cnt*CW/CH))), rowsN=Math.ceil(cnt/colsN);
+    for(let i=0;i<cnt;i++){ const r=_seedRnd(i+2510, ss, 0, 0); r();
+      const gx=((i%colsN)+0.3+r()*0.4)/colsN, gy=(Math.floor(i/colsN)+0.3+r()*0.4)/rowsN;
+      const kind=['leaf','algue','heart','leaf','coral'][(r()*5)|0];
+      list.push({kind, x:CW*gx, y:CH*gy, size:D*(0.065+r()*0.06)*(kind==='algue'?0.9:1), rot:(r()-.5)*2.4, col:cols[(Math.floor(i*4/cnt))%4], id:i, t:i/cnt}); }
+    // pomegranates — a handful of warm discs
+    const pom=4+Math.round(density*6); const pc=isBW?[90,90,90]:[232,96,42];
+    for(let i=0;i<pom;i++){ const r=_seedRnd(i+2590, ss, 0, 0); r(); list.push({kind:'disc', x:CW*(0.08+r()*0.84), y:CH*(0.08+r()*0.84), size:D*(0.022+r()*0.02), rot:0, col:pc, id:500+i, t:r()}); }
+  } else {
+    const dark=_matFlat(chords, 0, gc, isBW); const g=isBW?[22,22,22]:[Math.round(dark[0]*0.12)|0, Math.round(dark[1]*0.1)|0, Math.round(dark[2]*0.16+12)|0];
+    ctx.fillStyle=`rgb(${g[0]},${g[1]},${g[2]})`; ctx.fillRect(0,0,CW,CH);
+    // two or three colour panels, cut a little crooked
+    const panels=2+(r0()*2|0);
+    for(let p=0;p<panels;p++){ const r=_seedRnd(p+2620, ss, 0, 0); r(); const c=_matFlat(chords, Math.floor((p+0.5)*cn/panels), gc, isBW);
+      const x=CW*(p/panels+0.04+r()*0.1), y=CH*(0.1+r()*0.3), w=CW*(0.9/panels-0.08+r()*0.08), h=CH*(0.35+r()*0.35);
+      ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`; _matCut(ctx, [[x,y],[x+w,y],[x+w,y+h],[x,y+h]], D*0.012, r); }
+    // big bold shapes — one per panel and a few loose — plus small white stars
+    const big=panels+2+Math.round(density*2);
+    for(let i=0;i<big;i++){ const r=_seedRnd(i+2650, ss, 0, 0); r(); const kind=['algue','star','leaf','coral','heart'][(r()*5)|0];
+      const c = r()<0.3 ? (isBW?[240,240,236]:[246,243,234]) : _matFlat(chords, Math.floor((i+0.5)*cn/big), gc, isBW);
+      list.push({kind, x:CW*(0.12+r()*0.76), y:CH*(0.12+r()*0.76), size:D*(0.12+r()*0.1), rot:(r()-.5)*1.6, col:c, id:i, t:i/big}); }
+    const stars=5+Math.round(density*6);
+    for(let i=0;i<stars;i++){ const r=_seedRnd(i+2690, ss, 0, 0); r(); list.push({kind:'star', x:CW*(0.05+r()*0.9), y:CH*(0.05+r()*0.9), size:D*(0.02+r()*0.025), rot:r()*6.28, col:isBW?[240,240,236]:[250,236,120], id:600+i, t:r()}); }
+  }
+  _matDraw(ctx, list, reveal, ss);
+  _setCurE(0.5);
+}
+
+// ── Matisse (slot 6): the nested-frame grid — kept from the first Matisse. The
+// canvas is partitioned by the song; every cell is a set of concentric paper
+// frames in successive voice colours with one cut-out figure in its centre.
+function matissePhaseFrames(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
   const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400,0.34);
-  // Cell treatment: scattered cut-outs vs nested concentric frames. Now chosen
-  // by the phase slot (passed in as forcedNested) so both are reachable via Vary;
-  // the old seed bit remains only as a defensive fallback if no slot is passed.
-  const nestedMode = (forcedNested!=null) ? (forcedNested===1) : (((ss>>>5)&1)===1);
   ctx.fillStyle='#16120a'; ctx.fillRect(0,0,CW,CH);
-  const blob=(rnd,cx,cy,rad,wob,pts)=>{ctx.beginPath();for(let i=0;i<=pts;i++){const ang=(i/pts)*Math.PI*2;const rr=rad*(1+wob*Math.sin(ang*(2+Math.floor(rnd()*3))+rnd()*3));const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr*0.92;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
-  const star=(cx,cy,rad)=>{ctx.beginPath();for(let i=0;i<8;i++){const ang=(i/8)*Math.PI*2-Math.PI/2;const rr=(i%2===0)?rad:rad*0.36;const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
-  const leaf=(cx,cy,len,wid,rot)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();ctx.moveTo(0,-len*0.5);ctx.bezierCurveTo(wid,-len*0.2,wid,len*0.3,0,len*0.5);ctx.bezierCurveTo(-wid,len*0.3,-wid,-len*0.2,0,-len*0.5);ctx.closePath();ctx.fill();ctx.restore();};
-  const algae=(rnd,cx,cy,scale,rot)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();const lobes=3+Math.floor(rnd()*3);ctx.moveTo(0,scale*0.9);for(let i=0;i<=lobes;i++){const t=i/lobes;const y=scale*(0.9-1.8*t);const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);ctx.quadraticCurveTo(w*1.6,y+scale*0.1,w*0.2,y-scale*0.18);}for(let i=lobes;i>=0;i--){const t=i/lobes;const y=scale*(0.9-1.8*t);const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);ctx.quadraticCurveTo(-w*1.6,y+scale*0.1,-w*0.2,y-scale*0.18);}ctx.closePath();ctx.fill();ctx.restore();};
   rects.forEach((rect,pIdx)=>{
+    if(pIdx>=paintCount) return;
     const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
-    if(pIdx>=paintCount){ return; }
-    const _mci=Math.min(chords.length-1,Math.floor(pIdx*(chords.length/Math.max(1,MAX_RECTS))));
-    _setCurE(chords[_mci] && chords[_mci]._E);
+    const _mci=Math.min(cn-1,Math.floor(pIdx*(cn/Math.max(1,MAX_RECTS)))); _setCurE(chords[_mci] && chords[_mci]._E);
     const rnd=_seedRnd(pIdx+2500,ss,0,0);
-    const base=_rectChordColor(chords,pIdx,MAX_RECTS,gc);
-
-    if(nestedMode){
-      // ── NESTED FRAME ── concentric voice-color rectangles + centre figure
-      const layers=Math.min(4,2+Math.floor(Math.min(BW,BH)/60));
-      let ix=bx,iy=by,iw=BW,ih=BH;
-      for(let l=0;l<layers;l++){
-        const c=_rectChordColor(chords,(pIdx+l)%MAX_RECTS,MAX_RECTS,gc);
-        // alternate brightness per ring so borders read distinctly
-        const f=(l%2===0)?1.0:0.7;
-        ctx.fillStyle=`rgb(${Math.min(255,Math.round(c[0]*f))},${Math.min(255,Math.round(c[1]*f))},${Math.min(255,Math.round(c[2]*f))})`;
-        ctx.fillRect(ix,iy,iw,ih);
-        const insx=iw*(0.12+rnd()*0.05), insy=ih*(0.12+rnd()*0.05);
-        ix+=insx; iy+=insy; iw-=2*insx; ih-=2*insy;
-        if(iw<6||ih<6) break;
-      }
-      if(Math.min(BW,BH)<10) return;
-      // organic figure in the innermost panel — white or a contrasting voice
-      const fig = rnd()<0.6 ? [244,241,232] : _rectChordColor(chords,(pIdx+5)%MAX_RECTS,MAX_RECTS,gc);
-      ctx.fillStyle=`rgb(${fig[0]|0},${fig[1]|0},${fig[2]|0})`;
-      const cx=ix+iw/2, cy=iy+ih/2, rad=Math.min(iw,ih)*0.42;
-      const fk=Math.floor(rnd()*3);
-      if(fk===0) blob(rnd,cx,cy,rad*(0.9+rnd()*0.2),0.28,9+Math.floor(rnd()*3));
-      else if(fk===1){ blob(rnd,cx,cy-rad*0.4,rad*0.6,0.25,8); blob(rnd,cx,cy+rad*0.5,rad*0.8,0.30,9); }
-      else algae(rnd,cx,cy,rad*1.05,(rnd()-0.5)*0.8);
-      return;
-    }
-
-    // ── SCATTERED CUT-OUTS ── flat ground + one strewn shape
-    const gr=Math.round(base[0]*0.7),gg=Math.round(base[1]*0.7),gb=Math.round(base[2]*0.7);
-    ctx.fillStyle=`rgb(${gr},${gg},${gb})`; ctx.fillRect(bx,by,BW,BH);
-    if(Math.min(BW,BH)<8) return;
-    const sib=_rectChordColor(chords,(pIdx+3)%MAX_RECTS,MAX_RECTS,gc);
-    const sr=Math.min(255,Math.round(sib[0]*1.05+10)),sg=Math.min(255,Math.round(sib[1]*1.05+10)),sb=Math.min(255,Math.round(sib[2]*1.05+10));
-    ctx.fillStyle=`rgb(${sr},${sg},${sb})`;
-    const cx=bx+BW*(0.4+rnd()*0.2), cy=by+BH*(0.4+rnd()*0.2), rad=Math.min(BW,BH)*0.42;
-    const kind=Math.floor(rnd()*4);
-    if(kind===0) blob(rnd,cx,cy,rad*(0.85+rnd()*0.3),0.26+rnd()*0.12,9+Math.floor(rnd()*3));
-    else if(kind===1) star(cx,cy,rad*(0.9+rnd()*0.25));
-    else if(kind===2) leaf(cx,cy,Math.min(BW,BH)*(1.3+rnd()*0.4),rad*0.6,(rnd()-0.5)*2.2);
-    else algae(rnd,cx,cy,rad*(1.1+rnd()*0.3),(rnd()-0.5)*2.4);
+    const layers=Math.min(4,2+Math.floor(Math.min(BW,BH)/60));
+    let ix=bx,iy=by,iw=BW,ih=BH;
+    for(let l=0;l<layers;l++){
+      const c=_rectChordColor(chords,(pIdx+l)%MAX_RECTS,MAX_RECTS,gc); const f=(l%2===0)?1.0:0.7;
+      ctx.fillStyle=`rgb(${Math.min(255,Math.round(c[0]*f))},${Math.min(255,Math.round(c[1]*f))},${Math.min(255,Math.round(c[2]*f))})`;
+      if(l===0) ctx.fillRect(ix,iy,iw,ih); else _matCut(ctx, [[ix,iy],[ix+iw,iy],[ix+iw,iy+ih],[ix,iy+ih]], Math.min(iw,ih)*0.03, rnd);
+      const insx=iw*(0.12+rnd()*0.05), insy=ih*(0.12+rnd()*0.05); ix+=insx; iy+=insy; iw-=2*insx; ih-=2*insy;
+      if(iw<6||ih<6) break; }
+    if(Math.min(BW,BH)<10) return;
+    const fig = rnd()<0.6 ? [244,241,232] : _rectChordColor(chords,(pIdx+5)%MAX_RECTS,MAX_RECTS,gc);
+    const kind=['algue','leaf','heart','star','coral'][(rnd()*5)|0];
+    _matPlace(ctx, kind, ix+iw/2, iy+ih/2, Math.min(iw,ih)*0.42, (rnd()-.5)*0.9, isBW?[240,240,236]:fig, ss, 3000+pIdx);
   });
   _setCurE(0.5);
 }
 
-// ── Matisse phase B: big free-form cut-out collage — his late "Jazz" / "The
-// Snail" / "La Gerbe" manner. A FEW large, bold paper-cut shapes (leaves,
-// stars, a snail spiral, algae, blobs) in flat saturated color, placed freely
-// and well-spaced across ONE flat luminous ground — not grid-bound like phase
-// A. Colors are sampled from the chords and snapped to flat saturated tones for
-// that cut-paper character.
+// ── Matisse B (slot 1): the big collage — a few LARGE paper shapes placed
+// boldly across one luminous ground (the manner of the late cut-outs: a snail
+// spiral, fronds, stars, leaves), well spaced, nothing grid-bound.
 function matissePhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0;
-  const D=Math.min(CW,CH);
-  const isBW=mode==='bw';
-  const cn=chords.length;
-
-  // Dominant chord color → flat luminous ground (Matisse grounds: blue, pink,
-  // ochre, white). Lighten a touch so cut-outs pop.
-  let domR=120,domG=110,domB=170,domSat=-1,aLum=0,c=0;
-  const upto=Math.min(cn,Math.max(1,lim));
-  for(let i=0;i<upto;i++){
-    const chord=chords[i];const notes=chord&&(chord.n||chord.notes||[]);
-    if(!notes||!notes.length) continue;
-    for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);const sat=Math.max(r,g,b)-Math.min(r,g,b);if(sat>domSat){domSat=sat;domR=r;domG=g;domB=b;}aLum+=0.299*r+0.587*g+0.114*b;c++;}
-  }
-  if(!c)c=1;
-  const ground = isBW ? [232,228,220]
-    : [Math.round(domR*0.5+90), Math.round(domG*0.5+90), Math.round(domB*0.5+95)];
-  ctx.fillStyle=`rgb(${ground[0]},${ground[1]},${ground[2]})`;
-  ctx.fillRect(0,0,CW,CH);
-
-  // Flat saturated cut-out colors (the Jazz palette): force chord colors toward
-  // pure, bold tones. Pastel tone skips the stretch so the cut-outs stay soft.
-  const flat=(idx)=>{
-    const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,12))*cn))];
-    _setCurE(chord && chord._E);
-    const notes=chord&&(chord.n||chord.notes||[]);
-    let r=200,g=70,b=40;
-    if(notes&&notes.length){let aR=0,aG=0,aB=0,k=0;for(const n of notes){const m=n.m!==undefined?n.m:n,v=n.v!==undefined?n.v:80;const[cr,cg,cb]=gc(m,v);aR+=cr;aG+=cg;aB+=cb;k++;}r=aR/k;g=aG/k;b=aB/k;}
-    if(isBW){const lum=Math.round(0.299*r+0.587*g+0.114*b);return [lum,lum,lum];}
-    if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];
-    // stretch to full saturation, preserve hue
-    const mx=Math.max(r,g,b,1),k=255/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);
-    const pull=ch=>ch===m2?ch:ch*0.5;
-    return [Math.round(pull(R)),Math.round(pull(G)),Math.round(pull(B))];
-  };
-
-  // Shape primitives (same vocabulary as phase A), drawn at the given center.
-  const blob=(rnd,cx,cy,rad,wob,pts)=>{ctx.beginPath();for(let i=0;i<=pts;i++){const ang=(i/pts)*Math.PI*2;const rr=rad*(1+wob*Math.sin(ang*(2+Math.floor(rnd()*3))+rnd()*3));const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr*0.92;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
-  const star=(cx,cy,rad)=>{ctx.beginPath();for(let i=0;i<8;i++){const ang=(i/8)*Math.PI*2-Math.PI/2;const rr=(i%2===0)?rad:rad*0.36;const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fill();};
-  const leaf=(cx,cy,len,wid,rot)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();ctx.moveTo(0,-len*0.5);ctx.bezierCurveTo(wid,-len*0.2,wid,len*0.3,0,len*0.5);ctx.bezierCurveTo(-wid,len*0.3,-wid,-len*0.2,0,-len*0.5);ctx.closePath();ctx.fill();ctx.restore();};
-  const algae=(rnd,cx,cy,scale,rot)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();const lobes=3+Math.floor(rnd()*3);ctx.moveTo(0,scale*0.9);for(let i=0;i<=lobes;i++){const t=i/lobes;const y=scale*(0.9-1.8*t);const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);ctx.quadraticCurveTo(w*1.6,y+scale*0.1,w*0.2,y-scale*0.18);}for(let i=lobes;i>=0;i--){const t=i/lobes;const y=scale*(0.9-1.8*t);const w=scale*(0.5*Math.sin(t*Math.PI)+0.12);ctx.quadraticCurveTo(-w*1.6,y+scale*0.1,-w*0.2,y-scale*0.18);}ctx.closePath();ctx.fill();ctx.restore();};
-  const snail=(cx,cy,rad,col0,col1)=>{
-    // Concentric rotated squares spiralling inward (homage to "The Snail").
-    let s=rad, x=cx-rad, y=cy-rad, ang=0;
-    for(let k=0;k<6 && s>rad*0.12;k++){
-      ctx.save();ctx.translate(cx,cy);ctx.rotate(ang);
-      ctx.fillStyle=`rgb(${(k%2?col1:col0).join(',')})`;
-      ctx.fillRect(-s/2,-s/2,s,s);
-      ctx.restore();
-      s*=0.72; ang+=0.5;
-    }
-  };
-
-  // A few large shapes, well spaced (farthest-point placement like Miró B).
-  const shapeCount=Math.max(3,Math.min(14,3+Math.floor(cn/18)));
-  const paintCount=Math.max(1,Math.min(shapeCount,Math.round(lim*(shapeCount/Math.max(1,cn)))));
-  const placed=[];
-  const pickPos=(rnd)=>{let best=null,bestD=-1;for(let t=0;t<6;t++){const x=CW*(0.13+rnd()*0.74),y=CH*(0.13+rnd()*0.74);let md=1e9;for(const p of placed){const d=Math.hypot(x-p.x,y-p.y);if(d<md)md=d;}if(!placed.length)md=1e9;if(md>bestD){bestD=md;best={x,y};}}return best;};
-
-  for(let p=0;p<paintCount;p++){
-    const rnd=_seedRnd(p+2700,ss, 0, 0);
-    const pos=pickPos(rnd);placed.push(pos);
-    const cx=pos.x,cy=pos.y;
-    const col=flat(p);
-    ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
-    const rad=D*(0.10+rnd()*0.12);
-    const kind=Math.floor(rnd()*5);
-    if(kind===0) leaf(cx,cy,rad*2.4,rad*0.95,(rnd()-0.5)*Math.PI);
-    else if(kind===1) star(cx,cy,rad*1.25);
-    else if(kind===2) algae(rnd,cx,cy,rad*1.6,(rnd()-0.5)*1.6);
-    else if(kind===3) blob(rnd,cx,cy,rad*1.15,0.24+rnd()*0.14,9+Math.floor(rnd()*3));
-    else { const col1=flat(p+2); snail(cx,cy,rad*1.8,col,col1); }
-  }
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  // ground: the dominant chord colour, lifted to a luminous paper tone
+  let dom=[120,110,170], ds=-1; const upto=cn;   // the whole piece — the ground must not shift as the music plays
+  for(let i=0;i<upto;i+=Math.max(1,Math.floor(upto/40))){ const {rgb}=_picChord(chords,i,gc,isBW); const sat=Math.max(...rgb)-Math.min(...rgb); if(sat>ds){ ds=sat; dom=rgb; } }
+  const ground = isBW ? [232,228,220] : [Math.round(dom[0]*0.45+120), Math.round(dom[1]*0.45+120), Math.round(dom[2]*0.45+125)];
+  ctx.fillStyle=`rgb(${ground[0]},${ground[1]},${ground[2]})`; ctx.fillRect(0,0,CW,CH);
+  const count=Math.max(4,Math.min(9,4+Math.floor(cn/60))), placed=[], list=[];
+  const pickPos=(r)=>{ let best=null,bestD=-1; for(let k=0;k<7;k++){ const x=CW*(0.14+r()*0.72), y=CH*(0.14+r()*0.72); let md=1e9; for(const p of placed){ const d=Math.hypot(x-p.x,y-p.y); if(d<md) md=d; } if(md>bestD){ bestD=md; best={x,y}; } } return best; };
+  for(let p=0;p<count;p++){ const r=_seedRnd(p+2700, ss, 0, 0); r(); const pos=pickPos(r); placed.push(pos);
+    const col=_matFlat(chords, Math.floor((p+0.5)*cn/count), gc, isBW);
+    const kind=['algue','leaf','star','coral','heart','algue'][(r()*6)|0];
+    list.push({kind, x:pos.x, y:pos.y, size:D*(0.15+r()*0.1), rot:(r()-.5)*2.0, col, id:p, t:p/count}); }
+  // the snail: one spiral of torn squares, now and then
+  const sr=_seedRnd(2790, ss, 0, 0); sr();
+  if(sr()<0.5){ const cx=CW*(0.3+sr()*0.4), cy=CH*(0.3+sr()*0.4); let s=D*0.26, ang=sr()*1.2; const n=Math.max(1,Math.ceil(6*reveal));
+    for(let k=0;k<n && s>D*0.03;k++){ const c=_matFlat(chords, Math.floor((k+0.5)*cn/6), gc, isBW); ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`; const ca=Math.cos(ang), sa=Math.sin(ang);
+      const q=[[-s/2,-s/2],[s/2,-s/2],[s/2,s/2],[-s/2,s/2]].map(([x,y])=>[cx+x*ca-y*sa, cy+x*sa+y*ca]); _matCut(ctx, q, s*0.06, sr); s*=0.72; ang+=0.55; } }
+  _matDraw(ctx, list, reveal, ss);
+  _setCurE(0.5);
 }
 
 // ── Matisse C: Brushy Fauve composition — Open Window Collioure 1905 manner.
@@ -2334,330 +2340,42 @@ function matissePhaseNice(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── ARCHIVED: Matisse E The Dance — schematic stickmen on sky/ground split.
-// Dispatcher no longer calls this; kept for possible future return. Replaced
-// in slot 4 by matissePhaseStainedGlass (Vence chapel jewel grid). To restore,
-// rename back to matissePhaseDance and call from drawMatisseOverlay slot 4.
-
-// ── Matisse F: La Gerbe / The Snail (1953) manner — a radial fan of cut-out
-// leaves blooming from a central anchor across a calm cream priming. Each
-// leaf is an elongated jagged-edged biomorphic cut-paper shape in a vivid
-// Jazz-period palette colour, derived from the song's chord. The fan span,
-// leaf count, leaf length variation, anchor color and asymmetric accents are
-// all chord-driven. No outlines anywhere — pure flat scissor-cut paper.
+// ── Matisse F (slot 5): La Gerbe (1953) — a sheaf of fronds fanning upward from
+// a low anchor across calm cream; every frond a flat colour, scissor-cut.
 function matissePhaseLaGerbe(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0;
-  const isBW=mode==='bw';
-  const cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const D=Math.min(CW,CH);
-
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const energy=_ch?_ch.energy:0.5;
-  const density=_ch?_ch.density:0.3;
-  const register=_ch?_ch.register:0.5;
-
-  // Calm cream priming — the gesture must stand alone, no competing pattern.
-  ctx.fillStyle=isBW?'#e2dccc':'#ebdcb8';
-  ctx.fillRect(0,0,CW,CH);
-
-  // ── Centre/anchor positioning ──
-  // Anchor is centred horizontally but slightly biased downward, so the fan
-  // opens UPWARD across the canvas (like a sheaf gathered at the base — that
-  // is the "Gerbe" reading). Session seed nudges position ±5%.
-  const sR=_seedRnd(46001,ss,0,0); sR(); sR();
-  const anchorCx=CW*(0.50+(sR()-0.5)*0.10);
-  const anchorCy=CH*(0.62+(sR()-0.5)*0.10);
-
-  // ── Fan span — driven by ENERGY ──
-  // Calm song = narrow upright bouquet (~120°). Energetic song = wide spread
-  // (~260°). Fan is symmetric around straight-up axis (-π/2).
-  const fanSpan=Math.PI*(0.65+energy*0.75); // ≈117° to 252°
-  const fanCentre=-Math.PI/2;
-  const fanStart=fanCentre-fanSpan/2;
-
-  // ── Leaf count — driven by DENSITY ──
-  // Sparse songs: 8 broad leaves. Busy songs: up to 18 narrower leaves.
-  const leafCount=Math.max(7,Math.min(18,8+Math.round(density*12)));
-  const visLeaves=Math.max(2,Math.ceil(leafCount*reveal));
-
-  // ── Jazz palette via chord colours ──
-  // Each leaf takes its chord colour and saturation-boosts it to true Jazz
-  // intensity (vermilion, cobalt, gold, forest, crimson, turquoise, magenta).
-  // Pastel tone skips boost to keep the cuts soft.
-  const _jazzCol=(idx)=>{
-    const {rgb,energy:eC}=_picChord(chords,idx%cn,gc,isBW);
-    let r=rgb[0], g=rgb[1], b=rgb[2];
-    if(isBW){
-      const lum=Math.round(r*0.299+g*0.587+b*0.114);
-      r=g=b=lum;
-    } else if(!_pastelOn){
-      // Pure-Jazz boost: stretch the dominant channel to 255, others halved.
-      const mx=Math.max(r,g,b,1);
-      const k=255/mx;
-      r=r*k; g=g*k; b=b*k;
-      const m2=Math.max(r,g,b);
-      const pull=(ch)=>ch===m2?ch:ch*0.55;
-      r=Math.round(pull(r)); g=Math.round(pull(g)); b=Math.round(pull(b));
-    } else {
-      r=Math.round(r); g=Math.round(g); b=Math.round(b);
-    }
-    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
-    if(typeof _pastelTint==='function'){const t=_pastelTint(r,g,b);r=t[0];g=t[1];b=t[2];}
-    return [r|0,g|0,b|0,eC];
-  };
-
-  // ── Draw the fan leaves ──
-  // Each leaf radiates from anchor along its assigned angle. Length varies
-  // with the chord's energy (loud chords → longer leaves), bounded so the
-  // whole fan still fits in canvas. Width tapers toward the tip (almond).
-  const maxLeafR=Math.min(CW*0.46,CH*0.55);
-  const baseLeafW=D*(0.035+energy*0.025); // width broader in energetic songs
-
-  // Iterate so that the fan REVEALS from the centre outward (build the bouquet
-  // symmetrically as more chords play) — visually stronger than left-to-right.
-  // Build an order array: middle-out indexing.
-  const order=[];
-  const mid=(leafCount-1)/2;
-  for(let r=0;r<=Math.ceil(mid);r++){
-    const left=Math.floor(mid-r);
-    const right=Math.ceil(mid+r);
-    if(left===right){ if(left>=0&&left<leafCount) order.push(left); }
-    else {
-      if(left>=0&&left<leafCount) order.push(left);
-      if(right>=0&&right<leafCount&&right!==left) order.push(right);
-    }
-  }
-
-  for(let oi=0;oi<visLeaves&&oi<order.length;oi++){
-    const i=order[oi];
-    const t=leafCount===1?0.5:(i/(leafCount-1));
-    const leafAng=fanStart+t*fanSpan;
-
-    // Leaf-specific RNG (stable per session+leaf)
-    const lR=_seedRnd(i+46100,ss,0,0); lR(); lR();
-
-    // Length & width per leaf
-    const {rgb:_unused,energy:lE}=_picChord(chords,i%cn,gc,isBW);
-    const lenJit=0.78+lR()*0.36; // length variation
-    const leafLen=maxLeafR*(0.62+0.32*Math.sin(t*Math.PI))*lenJit;
-    const leafW=baseLeafW*(0.85+lR()*0.40);
-
-    // Get colour for THIS leaf
-    const jc=_jazzCol(i);
-    const alpha=(0.88+lE*0.10).toFixed(2);
-
-    // Build the leaf polygon — elongated almond with JAGGED scissor edges.
-    // Edge jitter ≈6% of leaf width — small, irregular, hand-cut quality.
-    const nPts=18;
-    const jit=leafW*0.10;
-    ctx.save();
-    ctx.translate(anchorCx,anchorCy);
-    ctx.rotate(leafAng+Math.PI/2); // rotate so the almond stands along ang
-    ctx.beginPath();
-    // Right side, tip outward
-    for(let pi=0;pi<=nPts;pi++){
-      const tt=pi/nPts;
-      const yLocal=-tt*leafLen;
-      const xMaxBase=leafW*Math.pow(Math.sin(tt*Math.PI),1.25);
-      const xMax=xMaxBase*(1+(lR()-0.5)*0.16);
-      const xJit=(lR()-0.5)*jit*0.6;
-      if(pi===0) ctx.moveTo(xMax+xJit,yLocal);
-      else ctx.lineTo(xMax+xJit,yLocal);
-    }
-    // Left side, tip inward
-    for(let pi=nPts;pi>=0;pi--){
-      const tt=pi/nPts;
-      const yLocal=-tt*leafLen;
-      const xMaxBase=leafW*Math.pow(Math.sin(tt*Math.PI),1.25);
-      const xMax=xMaxBase*(1+(lR()-0.5)*0.16);
-      const xJit=(lR()-0.5)*jit*0.6;
-      ctx.lineTo(-xMax+xJit,yLocal);
-    }
-    ctx.closePath();
-    ctx.fillStyle=`rgba(${jc[0]},${jc[1]},${jc[2]},${alpha})`;
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // ── Central anchor ──
-  // Two-layer disc at the base: dark outer (often black in Jazz period) + warm
-  // inner from the song's root chord. Acts as the visual gravity centre.
-  if(reveal>0.10){
-    const rootCol=_jazzCol(0);
-    const anchorOuter=isBW?[20,20,24]:[15,15,18];
-    const anchorR=D*(0.05+energy*0.015);
-    ctx.fillStyle=`rgb(${anchorOuter[0]},${anchorOuter[1]},${anchorOuter[2]})`;
-    ctx.beginPath(); ctx.arc(anchorCx,anchorCy,anchorR,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=`rgb(${rootCol[0]},${rootCol[1]},${rootCol[2]})`;
-    ctx.beginPath(); ctx.arc(anchorCx,anchorCy,anchorR*0.55,0,Math.PI*2); ctx.fill();
-  }
-
-  // ── Asymmetric accent cut-shapes ──
-  // A small number of organic Jazz-cut accents scattered around the fan
-  // perimeter (not random — placed in the empty space outside the fan).
-  // Count scales with chord velocity peaks (rough proxy: energy).
-  const accentCt=Math.max(2,Math.min(6,2+Math.round(energy*4)));
-  const visAccents=Math.max(0,Math.ceil(accentCt*reveal));
-  for(let i=0;i<visAccents;i++){
-    const aR=_seedRnd(i+47000,ss,0,0); aR(); aR();
-    // Place accents BELOW or AROUND the anchor (outside the upward fan)
-    // Angle from -π (left horizontal) sweeping through bottom to 0 (right hor)
-    const aAng=-Math.PI*(0.95-aR()*0.90); // wraps through bottom semicircle
-    const aRad=Math.min(CW,CH)*(0.20+aR()*0.18);
-    const ax=anchorCx+Math.cos(aAng)*aRad;
-    const ay=anchorCy+Math.sin(aAng)*aRad;
-    const acCol=_jazzCol(i+5);
-    const acSize=D*(0.030+aR()*0.030);
-    // Organic blob with jagged edges
-    ctx.beginPath();
-    const nA=10;
-    for(let ti=0;ti<=nA;ti++){
-      const tt=ti/nA*Math.PI*2;
-      const rr=acSize*(0.70+aR()*0.55);
-      const x=ax+Math.cos(tt)*rr, y=ay+Math.sin(tt)*rr*0.90;
-      if(ti===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.closePath();
-    ctx.fillStyle=`rgba(${acCol[0]},${acCol[1]},${acCol[2]},0.92)`;
-    ctx.fill();
-  }
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; const density=_ch?_ch.density:0.4;
+  ctx.fillStyle=isBW?'#e2dccc':'#ebdcb8'; ctx.fillRect(0,0,CW,CH);
+  const r0=_seedRnd(46001, ss, 0, 0); r0();
+  const ax=CW*(0.5+(r0()-.5)*0.12), ay=CH*(0.9+(r0()-.5)*0.06);
+  const n=9+Math.round(density*5), list=[];
+  for(let i=0;i<n;i++){ const r=_seedRnd(i+46010, ss, 0, 0); r();
+    const a=-1.5708+((i/(n-1))-0.5)*2.7+(r()-.5)*0.12, L=Math.max(CW,CH)*((i%2)?0.42:0.64)*(0.85+r()*0.3);
+    const x=ax+Math.cos(a)*L*0.5, y=ay+Math.sin(a)*L*0.5;
+    list.push({kind:'gerbe', x, y, size:L*0.42, rot:a+1.5708, col:_matFlat(chords, Math.floor((i+0.5)*cn/n), gc, isBW), id:i, t:i/n}); }
+  // a few seeds at the foot of the sheaf
+  for(let i=0;i<4;i++){ const r=_seedRnd(i+46090, ss, 0, 0); r(); list.push({kind:'disc', x:ax+(r()-.5)*D*0.3, y:ay+(r()-.3)*D*0.08, size:D*(0.012+r()*0.012), rot:0, col:_matFlat(chords, Math.floor(r()*cn), gc, isBW), id:200+i, t:0.6+r()*0.4}); }
+  _matDraw(ctx, list, reveal, ss);
+  _setCurE(0.5);
 }
 
-
-
-// ── Matisse G: Memory of Oceania (1953) — Matisse's late cut-out tapestry.
-// Loose grid of 7–11 large flat-colour blocks on warm cream priming, joined
-// by 2–5 thin biomorphic black curves and accented by a few small white blob
-// silhouettes. Quintessential late-period abstraction.
+// ── Matisse G (slot 7): Memory of Oceania (1953) — large flat colour blocks on
+// warm cream, a few white paper shapes drifting over them, one long black
+// brush line crossing the picture.
 function matissePhaseMemoryOceania(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0;
-  const isBW=mode==='bw';
-  const cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const D=Math.min(CW,CH);
-
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const energy=_ch?_ch.energy:0.5;
-  const density=_ch?_ch.density:0.3;
-
-  // Warm cream priming ground — Matisse's late-period signature.
-  ctx.fillStyle=isBW?'#e8e2d6':'#f0e6d4';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Block count from density (calm = 7, busy = 11).
-  const blockCount=Math.max(7,Math.min(11,7+Math.round(density*4)));
-  const visBlocks=Math.max(1,Math.ceil(blockCount*reveal));
-
-  // Saturation-boosted chord colour for each block.
-  const _blockCol=(idx)=>{
-    const {rgb}=_picChord(chords,idx%cn,gc,isBW);
-    let r=rgb[0], g=rgb[1], b=rgb[2];
-    if(isBW){
-      const l=Math.round(r*0.299+g*0.587+b*0.114);
-      r=g=b=l;
-    } else if(!_pastelOn){
-      const mx=Math.max(r,g,b,1);
-      const k=180/mx;
-      if(k>1){
-        r=Math.min(255,Math.round(r*k));
-        g=Math.min(255,Math.round(g*k));
-        b=Math.min(255,Math.round(b*k));
-      }
-    }
-    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
-    if(typeof _pastelTint==='function'){const t=_pastelTint(r,g,b);r=t[0];g=t[1];b=t[2];}
-    return [r|0,g|0,b|0];
-  };
-
-  // ── Place blocks via farthest-point (composed, not scatter) ──
-  const placed=[];
-  for(let b=0;b<visBlocks;b++){
-    const bR=_seedRnd(b+49100,ss,0,0); bR(); bR();
-    const wF=0.08+bR()*0.22;
-    const hF=0.08+bR()*0.22;
-    let bestX=0.5-wF/2, bestY=0.5-hF/2, bestD=-1;
-    for(let t=0;t<8;t++){
-      const tx=0.04+bR()*(0.95-wF-0.04);
-      const ty=0.04+bR()*(0.95-hF-0.04);
-      const ccx=tx+wF/2, ccy=ty+hF/2;
-      let mind=1e9;
-      for(const p of placed){
-        const dx=ccx-p.cx, dy=ccy-p.cy;
-        const d=Math.sqrt(dx*dx+dy*dy);
-        if(d<mind) mind=d;
-      }
-      if(!placed.length) mind=1e9;
-      if(mind>bestD){
-        bestD=mind;
-        bestX=tx;
-        bestY=ty;
-      }
-    }
-    const px=bestX*CW, py=bestY*CH;
-    const pw=wF*CW, ph=hF*CH;
-    const col=_blockCol(b);
-    const j=Math.min(pw,ph)*0.04;
-    ctx.beginPath();
-    ctx.moveTo(px+(bR()-0.5)*j, py+(bR()-0.5)*j);
-    ctx.lineTo(px+pw+(bR()-0.5)*j, py+(bR()-0.5)*j);
-    ctx.lineTo(px+pw+(bR()-0.5)*j, py+ph+(bR()-0.5)*j);
-    ctx.lineTo(px+(bR()-0.5)*j, py+ph+(bR()-0.5)*j);
-    ctx.closePath();
-    ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
-    ctx.fill();
-    placed.push({cx:bestX+wF/2, cy:bestY+hF/2});
-  }
-
-  // ── Biomorphic black curve connectors ──
-  if(reveal>0.30){
-    const curveCt=Math.max(2,Math.min(5,2+Math.round(density*3)));
-    const visCurves=Math.max(0,Math.ceil(curveCt*reveal));
-    const BLACK=isBW?'rgba(20,20,22,0.9)':'rgba(25,25,28,0.9)';
-    for(let c=0;c<visCurves;c++){
-      const cR=_seedRnd(c+49500,ss,0,0); cR(); cR();
-      const sx=0.10*CW+cR()*0.80*CW;
-      const sy=0.10*CH+cR()*0.80*CH;
-      const ex=0.10*CW+cR()*0.80*CW;
-      const ey=0.10*CH+cR()*0.80*CH;
-      const ccx=(sx+ex)/2+(cR()-0.5)*CW*0.30;
-      const ccy=(sy+ey)/2+(cR()-0.5)*CH*0.30;
-      ctx.strokeStyle=BLACK;
-      ctx.lineWidth=Math.max(3,D*0.008);
-      ctx.lineCap='round';
-      ctx.beginPath();
-      ctx.moveTo(sx,sy);
-      ctx.quadraticCurveTo(ccx,ccy,ex,ey);
-      ctx.stroke();
-    }
-  }
-
-  // ── Small white biomorphic blob accents ──
-  if(reveal>0.50){
-    const blobCt=Math.max(2,Math.min(6,3+Math.round(energy*3)));
-    const visBlobs=Math.max(0,Math.ceil(blobCt*reveal));
-    const BLOB_COL=isBW?'#f4eee0':'#f8f0dc';
-    for(let bi=0;bi<visBlobs;bi++){
-      const bR2=_seedRnd(bi+49800,ss,0,0); bR2(); bR2();
-      const bx=0.10*CW+bR2()*0.80*CW;
-      const by=0.10*CH+bR2()*0.80*CH;
-      const rad=D*(0.020+bR2()*0.020);
-      ctx.beginPath();
-      const n=12;
-      for(let ti=0;ti<n;ti++){
-        const t=ti/n*Math.PI*2;
-        const rr=rad*(1.0+0.3*Math.sin(t*3+bi));
-        const x=bx+Math.cos(t)*rr*0.7;
-        const y=by+Math.sin(t)*rr*1.2;
-        if(ti===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      }
-      ctx.closePath();
-      ctx.fillStyle=BLOB_COL;
-      ctx.fill();
-    }
-  }
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; const density=_ch?_ch.density:0.4;
+  ctx.fillStyle=isBW?'#e8e2d6':'#f0e6d4'; ctx.fillRect(0,0,CW,CH);
+  const blocks=6+Math.round(density*4), vis=Math.max(1,Math.ceil(blocks*reveal));
+  for(let i=0;i<vis;i++){ const r=_seedRnd(i+47010, ss, 0, 0); r(); const c=_matFlat(chords, Math.floor((i+0.5)*cn/blocks), gc, isBW);
+    const w=CW*(0.18+r()*0.26), h=CH*(0.14+r()*0.26), x=CW*(0.02+r()*0.8), y=CH*(0.02+r()*0.8);
+    ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`; _matCut(ctx, [[x,y],[x+w,y+(r()-.5)*h*0.1],[x+w,y+h],[x+(r()-.5)*w*0.1,y+h]], D*0.012, r); }
+  const list=[]; const white=isBW?[240,240,236]:[247,244,236]; const n=3+Math.round(density*2);
+  for(let i=0;i<n;i++){ const r=_seedRnd(i+47060, ss, 0, 0); r(); list.push({kind:['algue','coral','leaf','star'][(r()*4)|0], x:CW*(0.12+r()*0.76), y:CH*(0.12+r()*0.76), size:D*(0.09+r()*0.08), rot:(r()-.5)*2.0, col:white, id:i, t:i/n}); }
+  _matDraw(ctx, list, reveal, ss);
+  if(reveal>0.5){ const r=_seedRnd(47090, ss, 0, 0); r(); ctx.strokeStyle=isBW?'rgba(30,30,30,.9)':'rgba(24,20,22,.9)'; ctx.lineWidth=Math.max(2,D*0.012); ctx.lineCap='round'; ctx.beginPath();
+    const x0=CW*(0.05+r()*0.2), y0=CH*(0.2+r()*0.6); ctx.moveTo(x0,y0); ctx.bezierCurveTo(CW*(0.3+r()*0.2), CH*(0.05+r()*0.3), CW*(0.55+r()*0.2), CH*(0.6+r()*0.35), CW*(0.85+r()*0.12), CH*(0.2+r()*0.6)); ctx.stroke(); }
+  _setCurE(0.5);
 }
 
 
@@ -16752,6 +16470,7 @@ const ARTIST_VARIANTS = {
     {ground:'#e8e2cc',mark:{leaf:1},size:[.08,.3],layout:{radial:1},density:.25},
     {ground:'#6a8a3a',mark:{panel:.5,cutout:.5},size:[.04,.12],layout:{grid:1},density:1},
     {ground:'#e8e2cc',mark:{panel:.6,cutout:.4},size:[.1,.35],layout:{scatter:1},density:.15},
+    {ground:'#141418',mark:{cutout:.5,star:.3,panel:.2},size:[.08,.25],layout:{scatter:1},density:.2},   // Jazz
   ],
   pollock: [
     {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
@@ -16959,7 +16678,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:8,pollock:7,bloom:7,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:9,pollock:7,bloom:7,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];

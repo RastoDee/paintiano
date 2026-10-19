@@ -129,6 +129,13 @@ const SIG_BLACKLIST=new Set([
   'rothko|matisse','bauhaus|raffel','bauhaus|rothko','mitchell|rothko','pollock|bloom','pollock|matisse','bloom|spiral',
 ].map(s=>s.split('|').sort().join('|')));
 const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
+// The built-in pieces are the shop window — the first painting a new user ever
+// sees. Their Signatures are hung by hand (still the same for everyone); every
+// other piece keeps the computed one. Roles must match SIG_ROLES membership.
+const SIG_CURATED = {
+  [SAMPLE_MIDI_NAME]:   {keys:['gold','bloom'],    roles:['ornament','field'], ph:1, mode:'harmony'},   // Liebestraum: Klimt's gold over soft blooms
+  [SAMPLE_MIDI_NAME_3]: {keys:['raffel','picasso'], roles:['field','gesture'],   ph:0, mode:'kontra'},    // Metamorphosis One: RafFel's dark arcs, Picasso's neon line
+};
 
 // Audio recordings: what survives transcription is TONALITY — mode, key centre
 // and how busy the texture is. Mode × energy picks the leading role, the key
@@ -2276,7 +2283,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Exception: during a taste preview the tasted artist shows its FULL
   // variant range (the whole point of the teaser), read via ref so stale
   // closures can't pin it to 2.
-  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 8 : (style==='rothko' ? 8 : (style==='pollock' ? 7 : 6))))));
+  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 9 : (style==='rothko' ? 8 : (style==='pollock' ? 7 : 6))))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -6398,6 +6405,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // the latch (and a latch-only Free stage); Lite opens every piece on it.
     try{
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
+      if(_sg && title && SIG_CURATED[title]) Object.assign(_sg, SIG_CURATED[title]);
       const _sgMusic = sigMusicNextRef.current; sigMusicNextRef.current=false;
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
@@ -9173,7 +9181,7 @@ Hard requirements:
     const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
     const _familyAllowed = setupArtists.includes('mosaicFamily');
     // Free = 2 variants, except the artist of the day (full range, like Pro).
-    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : ((k==='kandinsky'||k==='matisse'||k==='rothko') ? 8 : ((k==='wave'||k==='pollock') ? 7 : 6)));
+    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : (k==='matisse' ? 9 : ((k==='kandinsky'||k==='rothko') ? 8 : ((k==='wave'||k==='pollock') ? 7 : 6))));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
