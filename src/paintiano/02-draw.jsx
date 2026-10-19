@@ -17113,13 +17113,13 @@ const ARTIST_VARIANTS = {
   ],
   spiral: [
     {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:.6,scatter:.4},density:.4},
-    {mark:{rays:1},size:[.3,.6],layout:{radial:1},density:.08,tone:'pure'},
+    {mark:{rays:1},size:[.12,.26],layout:{radial:1},density:.08,tone:'pure'},
     {ground:'#e8e2cc',mark:{asterisk:.5,goldspiral:.3,cloud:.2},size:[.05,.15],edge:.3,alpha:.7,layout:{scatter:1},density:.3},
     {ground:'#f0e84a',mark:{ring:.6,dot:.4},size:[.05,.2],layout:{scatter:1},density:.15},
     {ground:'#1a1418',mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},
     {ground:'#e8e2cc',mark:{stem:1},size:[.1,.3],layout:{grid:1},density:.3},
     {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:1},density:.4},
-    {mark:{rays:.7,target:.3},size:[.2,.5],layout:{radial:1},density:.1},
+    {mark:{rays:.7,target:.3},size:[.1,.24],layout:{radial:1},density:.1},
   ],
   arcs: [
     {mark:{nest:1},size:[.1,.4],layout:{radial:.5,grid:.5},density:.3},
@@ -17316,7 +17316,9 @@ function _fuPlace(u, pitch, F, CW, CH, r1, r2, i, n){
 }
 function _fuMark(ctx, kind, r, col, F, R, ang, col2){
   col2 = col2 || col;
-  const soft = F.edge>0.15;
+  // line idioms (af Klint's rays, Mitchell's strokes) stay crisp: a soft halo
+  // pass would re-draw them with fresh random angles → a tangle, or blur them fat
+  const soft = F.edge>0.15 && kind!=='rays' && kind!=='brush';
   const passes = soft ? 3 : 1;
   for(let p=passes-1;p>=0;p--){
     const rr = soft ? r*(1+p*F.edge*0.45) : r;
@@ -17379,8 +17381,21 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         ctx.beginPath(); ctx.moveTo(0,-rr*.45); ctx.lineTo(0,rr*.2); ctx.moveTo(-rr*.6,-rr*.5); ctx.lineTo(0,-rr*.25); ctx.lineTo(rr*.6,-rr*.6); ctx.moveTo(-rr*.5,rr*.8); ctx.lineTo(0,rr*.2); ctx.lineTo(rr*.5,rr*.8); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(4,rr*.42); ctx.stroke(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,rr*.26); ctx.stroke(); break; }
       case 'radiant': { // Haring: radiating strokes
         ctx.lineWidth=Math.max(1.5,rr*.1); for(let j=0;j<8;j++){ const a=j/8*6.2832; ctx.beginPath(); ctx.moveTo(Math.cos(a)*rr*.5,Math.sin(a)*rr*.5); ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr); ctx.stroke(); } break; }
-      case 'brush': { // Mitchell: a bundle of loaded strokes
-        ctx.lineCap='round'; for(let j=0;j<4;j++){ ctx.beginPath(); ctx.lineWidth=Math.max(1,rr*(0.25+R()*0.35)); ctx.strokeStyle=(j%2)?col:col2; const y0=(R()-.5)*rr; ctx.moveTo(-rr*1.4,y0); ctx.quadraticCurveTo((R()-.5)*rr,y0+(R()-.5)*rr*1.5,rr*1.4,y0+(R()-.5)*rr); ctx.stroke(); } break; }
+      case 'brush': { // Mitchell: a cluster of fast loaded strokes — mostly lean, a few fuller, with dry flicks
+        const Smax=(F._S||600)*0.024;                                  // never a fat bar, whatever the size gene
+        const dir=(R()-.5)*1.2, nS=5+(R()*4|0);
+        ctx.lineCap='round'; ctx.lineJoin='round';
+        for(let j=0;j<nS;j++){
+          const full=j<2;                                               // two fuller strokes carry the colour
+          ctx.beginPath(); ctx.lineWidth=Math.max(1, Math.min(Smax, rr*(full?0.2+R()*0.08:0.07+R()*0.07)));
+          ctx.strokeStyle=(j%2)?col2:col; ctx.globalAlpha=la*(full?0.9:0.55+R()*0.35);
+          const a=dir+(R()-.5)*0.8, L=rr*(1.1+R()*0.9), ox=(R()-.5)*rr*0.7, oy=(R()-.5)*rr*0.7;
+          const ca=Math.cos(a), sa=Math.sin(a), bend=(R()-.5)*L*0.7;
+          const x0=ox-ca*L/2, y0=oy-sa*L/2, x1=ox+ca*L/2, y1=oy+sa*L/2;
+          ctx.moveTo(x0,y0); ctx.quadraticCurveTo(ox-sa*bend, oy+ca*bend, x1, y1); ctx.stroke();
+          if(R()<0.5){ ctx.beginPath(); ctx.lineWidth=Math.max(1,ctx.lineWidth*0.35); ctx.moveTo(x1,y1); ctx.lineTo(x1+Math.cos(a+(R()-.5)*1.4)*L*0.28, y1+Math.sin(a+(R()-.5)*1.4)*L*0.28); ctx.stroke(); }
+        }
+        ctx.beginPath(); break; }
       case 'crest': { // Hokusai: the wave with claws
         ctx.lineWidth=Math.max(1.5,rr*.14); ctx.beginPath(); ctx.moveTo(-rr*1.6,rr*.4); ctx.quadraticCurveTo(-rr*.4,-rr*1.2,rr*.9,-rr*.6); ctx.quadraticCurveTo(rr*.3,-rr*.5,rr*.1,-rr*.1); ctx.stroke();
         for(let j=0;j<4;j++){ ctx.beginPath(); const x0=-rr*.6+j*rr*.45; ctx.moveTo(x0,-rr*.3-j*rr*.12); ctx.quadraticCurveTo(x0+rr*.2,-rr*.6-j*rr*.1,x0+rr*.1,-rr*.9-j*rr*.08); ctx.lineWidth=Math.max(1,rr*.06); ctx.stroke(); } break; }
@@ -17408,7 +17423,14 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         for(let q=5;q>=1;q--){ ctx.beginPath(); const e=rr*q/5; ctx.rect(-e,-e,2*e,2*e); ctx.fillStyle=(q%2)?col:col2; ctx.fill(); } break; }
       case 'heart': { // Haring: a heart with a black contour
         ctx.moveTo(0,rr*.9); ctx.bezierCurveTo(-rr*1.3,rr*.1,-rr*.9,-rr*.9,0,-rr*.35); ctx.bezierCurveTo(rr*.9,-rr*.9,rr*1.3,rr*.1,0,rr*.9); ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.1); ctx.stroke(); break; }
-      case 'rays': { ctx.lineWidth=Math.max(1,rr*.02); for(let j=0;j<18;j++){ const a=R()*6.2832; ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr); ctx.stroke(); } break; }
+      case 'rays': { // af Klint: an ordered radiance (Altarpiece sun) — even rays, long/short, around a small ringed core
+        const nR=[12,16,24][R()*3|0], a0=R()*6.2832, r0=rr*0.2;
+        ctx.lineCap='round'; ctx.lineWidth=Math.max(1, Math.min((F._S||600)*0.004, rr*0.016));
+        for(let j=0;j<nR;j++){ const a=a0+j/nR*6.2832, L=(j%2)?rr*0.62:rr; ctx.beginPath(); ctx.strokeStyle=(j%2)?col2:col; ctx.globalAlpha=la*((j%2)?0.55:0.8);
+          ctx.moveTo(Math.cos(a)*r0,Math.sin(a)*r0); ctx.lineTo(Math.cos(a)*L,Math.sin(a)*L); ctx.stroke(); }
+        ctx.globalAlpha=la; ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,0,r0*0.55,0,6.2832); ctx.fill();
+        ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(1,rr*0.018); ctx.arc(0,0,r0*0.85,0,6.2832); ctx.stroke();
+        ctx.beginPath(); break; }
       case 'stem': { ctx.lineWidth=Math.max(1,rr*.05); ctx.moveTo(0,rr); ctx.lineTo(0,-rr); ctx.stroke(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,-rr,rr*.12,0,6.2832); ctx.fill(); break; }
       case 'chain': { ctx.lineWidth=Math.max(1,rr*.06); let px=-rr,py=0; ctx.moveTo(px,py); for(let j=0;j<4;j++){ px+=rr*.5; py+=(R()-.5)*rr*.8; ctx.lineTo(px,py); } ctx.stroke(); px=-rr; py=0; for(let j=0;j<5;j++){ ctx.beginPath(); ctx.fillStyle=(j%2)?col:col2; ctx.arc(px,py,rr*.1,0,6.2832); ctx.fill(); px+=rr*.5; py+=(R()-.5)*rr*.8; } break; }
       case 'hatch': { const k=5; const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.7+R()*0.4); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1; const st=Math.max(3,rr*.14); for(let d=-rr*2;d<rr*2;d+=st){ ctx.beginPath(); ctx.moveTo(d,-rr*2); ctx.lineTo(d+rr*2,rr*2); ctx.stroke(); } ctx.restore(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.07); ctx.stroke(); break; }
@@ -17496,15 +17518,35 @@ function _fuSample(k, chords, gc, seed, mode, ph){
   _fuSampleCache.set(key,out); return out;
 }
 function _fuSnap(rgb, pal){ if(!pal||pal.length<2) return rgb; let best=pal[0], bd=1e9; for(const p of pal){ const d=(p[0]-rgb[0])**2+(p[1]-rgb[1])**2+(p[2]-rgb[2])**2; if(d<bd){bd=d;best=p;} } return best; }
+// Flat area idioms (Rothko fields, Wave stripes, Kusama panels, Bloom clouds…)
+// are the UNDERPAINTING of a crossing: they go down first and every gesture
+// (Mitchell's strokes, af Klint's radiance, Picasso's lines) sits on top —
+// otherwise a later field simply buries its partner. The gestures are drawn
+// on a reusable sheet and laid over at the end, so the random stream (and the
+// painting's identity) stays exactly as it was.
+const _FU_UNDER=/^(field|stripe|stripes|vstripes|panel|cloud|checker)$/;
+let _fuTopCv=null;
+function _fuTopSheet(w,h){
+  try{
+    if(typeof document==='undefined' || !w || !h) return null;
+    if(!_fuTopCv) _fuTopCv=document.createElement('canvas');
+    if(_fuTopCv.width!==w || _fuTopCv.height!==h){ _fuTopCv.width=w; _fuTopCv.height=h; }
+    return _fuTopCv;
+  }catch(_){ return null; }
+}
 function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
   const F = fuseDNA(keys, phaseIndex); if(!F || !chords || !chords.length) return;
   const ss = (sessionSeed|0) ^ ((phaseIndex|0)*7919);
-  const S = Math.min(CW,CH), n = chords.length;
+  const S = Math.min(CW,CH), n = chords.length; F._S = S;
   // samples of every parent's real engine for this song / seed / variant
   const SM = F.keys.map((k,i)=>_fuSample(k, chords, gc, sessionSeed, mode, F.phs[i]));
   const g0 = SM[0] && SM[0].ground;
   if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
+  // gesture sheet (see _FU_UNDER); falls back to painting straight onto ctx
+  const _cv=ctx.canvas, top=_cv ? _fuTopSheet(_cv.width,_cv.height) : null;
+  let tctx=ctx;
+  if(top){ try{ tctx=top.getContext('2d'); tctx.setTransform(1,0,0,1,0,0); _resetCtxState(tctx); tctx.clearRect(0,0,top.width,top.height); tctx.setTransform(ctx.getTransform()); }catch(_){ tctx=ctx; } }
   // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~600 marks/layer
   const stride = Math.max(1, Math.ceil(n/600));
   const L = Math.min(lim|0, n);
@@ -17543,15 +17585,18 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         if(_kus && kind==='panel') kind='dotcluster';
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
-        const r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : 1.2, base*(0.8+R()*0.4));
+        let r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : 1.2, base*(0.8+R()*0.4));
+        if(kind==='rays') r=Math.min(r, S*0.17);          // a radiance, not a net over the whole canvas
+        else if(kind==='brush') r=Math.min(r, S*0.13);
         const [cr,cg,cb]=gc(m,v);
         const _pi=(i+layer)%F.keys.length, _pal=SM[_pi]&&SM[_pi].pal;
         const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
-        ctx.save(); ctx.translate(x+(j?(R()-.5)*r*2.2:0), y+(j?(R()-.5)*r*2.2:0));
-        _fuMark(ctx, kind, r, col, F, R, (/^(field|stripe|stripes|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2, col2);
-        ctx.restore();
+        const dc=(tctx!==ctx && !_FU_UNDER.test(kind)) ? tctx : ctx;
+        dc.save(); dc.translate(x+(j?(R()-.5)*r*2.2:0), y+(j?(R()-.5)*r*2.2:0));
+        _fuMark(dc, kind, r, col, F, R, (/^(field|stripe|stripes|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2, col2);
+        dc.restore();
       }
     }
   }
@@ -17559,13 +17604,14 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // is steady, curved if it shakes)
   if(F.lines>0.25){
     const R=_seedRnd(5,ss,3,3);
-    ctx.save(); ctx.globalAlpha=Math.min(1,F.lines*.9); ctx.strokeStyle=F.groundLum>128?'rgba(20,18,24,.85)':'rgba(244,239,228,.7)'; ctx.lineWidth=Math.max(1,S*0.0045*F.lines); ctx.lineCap='round'; ctx.beginPath();
+    tctx.save(); tctx.globalAlpha=Math.min(1,F.lines*.9); tctx.strokeStyle=F.groundLum>128?'rgba(20,18,24,.85)':'rgba(244,239,228,.7)'; tctx.lineWidth=Math.max(1,S*0.0045*F.lines); tctx.lineCap='round'; tctx.beginPath();
     let prev=null;
     for(let i=0;i<L;i+=stride){ if(!pos[i]) continue; if(R()>F.lines*0.6){ continue; } const [x,y]=pos[i];
-      if(prev){ ctx.moveTo(prev[0],prev[1]); if(F.wobble>0.4) ctx.quadraticCurveTo((prev[0]+x)/2+(R()-.5)*S*.22,(prev[1]+y)/2+(R()-.5)*S*.22,x,y); else { ctx.lineTo(x,prev[1]); ctx.lineTo(x,y); } }
+      if(prev){ tctx.moveTo(prev[0],prev[1]); if(F.wobble>0.4) tctx.quadraticCurveTo((prev[0]+x)/2+(R()-.5)*S*.22,(prev[1]+y)/2+(R()-.5)*S*.22,x,y); else { tctx.lineTo(x,prev[1]); tctx.lineTo(x,y); } }
       prev=[x,y]; }
-    ctx.stroke(); ctx.restore();
+    tctx.stroke(); tctx.restore();
   }
+  if(tctx!==ctx){ ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; ctx.drawImage(top,0,0); ctx.restore(); }
   _setCurE(0.5);
 }
 

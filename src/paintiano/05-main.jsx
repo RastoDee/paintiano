@@ -209,15 +209,15 @@ function computeSongSignature(events, opts){
   }catch(_){ return null; }
 }
 const SIG_I18N = {
-  EN:{label:'Signature',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of'},
-  SK:{label:'Signatúra',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra'},
-  DE:{label:'Signatur',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von'},
-  FR:{label:'Signature',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de'},
-  ES:{label:'Firma',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de'},
-  PT:{label:'Assinatura',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de'},
-  zh:{label:'签名',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·'},
-  zhTW:{label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·'},
-  ja:{label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·'},
+  EN:{label:'Signature',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'}},
+  SK:{label:'Signatúra',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'}},
+  DE:{label:'Signatur',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'}},
+  FR:{label:'Signature',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'}},
+  ES:{label:'Firma',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'}},
+  PT:{label:'Assinatura',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'}},
+  zh:{label:'签名',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'}},
+  zhTW:{label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'}},
+  ja:{label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
 };
 
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
@@ -1490,7 +1490,8 @@ export default function Paintiano() {
   // while the signature is on screen the Setup-picker guards below leave its
   // artist / palette / tone alone, Free gets the full variant range.
   const sigActiveRef = useRef(false);
-  const sigAudioNextRef = useRef(false);   // the next applyEvents comes from audio transcription
+  const sigAudioNextRef = useRef(false);
+  const sigMusicNextRef = useRef(false);   // the next applyEvents is a music file / sample → Advanced opens it on ✦ too   // the next applyEvents comes from audio transcription
   // If the current tone is no longer in setupTones (user disabled it), fall
   // back to the first enabled tone — keeps the active selection valid without
   // forcing the user to manually re-pick after editing Setup.
@@ -2352,6 +2353,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     }
     try{ window.posthog && window.posthog.capture('signature_off'); }catch(_){}
   };
+  // “why”: each member with the musical role that brought it in — Rhythm → Mondrian · …
+  const _sigRole = (r)=>{ const d=(SIG_I18N[lang]||SIG_I18N.EN).roles||SIG_I18N.EN.roles; return d[r]||SIG_I18N.EN.roles[r]||r; };
+  const _sigWhy = (s)=>{ s = s || songSigRef.current; if(!s || !s.keys || !s.roles) return []; return s.keys.map((k,i)=>[_sigRole(s.roles[i]), _painterLabel(k), k]); };
   const _toggleSig = ()=>{ if(working||anim) return; if(sigActiveRef.current) _sigOff(); else _applySig(); };
   const applySigRef = useRef(null); applySigRef.current = _applySig;
   useEffect(()=>{
@@ -6382,10 +6386,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // the latch (and a latch-only Free stage); Lite opens every piece on it.
     try{
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
+      const _sgMusic = sigMusicNextRef.current; sigMusicNextRef.current=false;
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
-      if(_sg && basicModeRef.current && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
+      // Lite: every piece. Advanced: music files and samples (MIDI · audio · score) open on ✦.
+      if(_sg && (basicModeRef.current || _sgMusic) && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
     }catch(_){}
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
@@ -6416,7 +6422,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const evts=toChords(raw,div,temps);
         if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
         const mName=file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' ');
-        applyEvents(evts,mName);
+        sigMusicNextRef.current=true; applyEvents(evts,mName);
         setCompositionName(mName);
         // Persist the original MIDI bytes so the ♡ Save button can put
         // them into a My Music slot for byte-perfect replay later.
@@ -6549,7 +6555,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const aName=file.name.replace(/\.[^.]+$/,'');
       setCompositionName(aName);
       setAudioBlobAndRef(blob);setAudioName(file.name);
-      sigAudioNextRef.current=true; applyEvents(evts,aName);
+      sigAudioNextRef.current=true; sigMusicNextRef.current=true; applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
     }catch(e){
@@ -7349,7 +7355,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const sName=file.name.replace(/\.[^.]+$/,'');
       setScoreName(sName);
       setCompositionName(sName);
-      applyEvents(evts,sName);
+      sigMusicNextRef.current=true; applyEvents(evts,sName);
       // Persist the original MusicXML bytes (compressed .mxl OR plain
       // .xml/.musicxml) so the ♡ Save button can put them into a My Music
       // slot for byte-perfect replay later.
@@ -7385,7 +7391,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
       const evts=toChords(raw,div,temps);
       if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
-      stopAll();wipeCanvasNow();applyEvents(evts,[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][_si]);
+      stopAll();wipeCanvasNow();sigMusicNextRef.current=true; applyEvents(evts,[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][_si]);
       builtinPieceRef.current=_si; // built-in piece owns the canvas → poster tool may fire
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
@@ -7404,7 +7410,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!allEvts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
       const evts = allEvts.filter(e => (e.startMs||0) < maxMs);
       const finalEvts = evts.length > 0 ? evts : allEvts.slice(0, 32);
-      stopAll();wipeCanvasNow();applyEvents(finalEvts,SAMPLE_MIDI_NAME);
+      stopAll();wipeCanvasNow();sigMusicNextRef.current=true; applyEvents(finalEvts,SAMPLE_MIDI_NAME);
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
@@ -7474,7 +7480,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       setAudioBlobAndRef(blob);setAudioName('Liebestraum No.3 — Liszt.mp3');
-      sigAudioNextRef.current=true; applyEvents(evts,SAMPLE_AUDIO_NAME);
+      sigAudioNextRef.current=true; sigMusicNextRef.current=true; applyEvents(evts,SAMPLE_AUDIO_NAME);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Sample audio: '+e.message);setErrInfo(false);}}
@@ -7493,7 +7499,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setWPct(80);
       const evts=parseMusicXml(xmlText);
       if(!evts.length){setErr(t('errs').noNotesXml);setErrInfo(false);return;}
-      applyEvents(evts,SAMPLE_SCORE_NAME);
+      sigMusicNextRef.current=true; applyEvents(evts,SAMPLE_SCORE_NAME);
       setLoadedSource('score');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Sample score: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
@@ -13017,6 +13023,11 @@ Hard requirements:
                 _visibleArtists=_visibleArtists.filter(k=>k!==_out);
               }
             }
+            // ✦ Signature members always have a chip while ✦ is on — also a Pro
+            // member on Free, or one left out of the user's set — so the grid
+            // never contradicts the fusion info under it. Gone when ✦ goes off.
+            const _sigK = (!cockpitEdit && sigActive && songSig && songSig.keys) ? songSig.keys : [];
+            for(const _k of _sigK) if(_k && !_visibleArtists.includes(_k) && ALL_ARTIST_KEYS.includes(_k)) _visibleArtists.push(_k);
             const _chipCount = ((_familyOn || cockpitEdit)?1:0) + _visibleArtists.length;
             // Column count: keep tiles readable. Up to 5 across (so the full
             // 20-chip edit grid lays out as a tidy 5×4). Fewer chips → fewer cols.
@@ -13112,7 +13123,8 @@ Hard requirements:
               const label = _artistShort[_full] || _full;
               const locked = styleIsLocked(k);            // Pro-only & user is Free
               const _stIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf(k) : -1;
-              const isOn = (!cockpitEdit) && (style===k || _stIx>0);
+              const _inSig = _sigK.includes(k);
+              const isOn = (!cockpitEdit) && (style===k || _stIx>0 || _inSig);
               const inSet = setupArtists.includes(k);
               const shufHit = (!cockpitEdit) && (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0));
               const _ghost = cockpitEdit && !inSet;
@@ -13122,6 +13134,7 @@ Hard requirements:
                   return;
                 }
                 if(_artMode===2) return;                      // shuffle ALL: the chips are locked — the draw decides
+                if(locked && _inSig){ setPaywallReason('settings'); return; }   // a Pro ✦ member on Free: on its own it is Pro
                 // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
                 // must not slide into ALL just because nothing is selected any more).
                 if(_artMode===1 && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)) _shuffleOff();
@@ -13139,6 +13152,7 @@ Hard requirements:
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
                   {isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
+                  {_inSig && !isDailyArtist(k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}
                   {_stageBadge(_stIx, [])}
                 </button>
               );
@@ -13148,6 +13162,15 @@ Hard requirements:
           {cockpitEdit && (
             <div style={{textAlign:'center',marginTop:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(230,222,196,.55)',lineHeight:1.5}}>
               <span>{ts('editHint','Tap to add or remove from your set.')}</span>
+            </div>
+          )}
+          {/* Signature info row — who paints the ✦ fusion and why.
+              the ✦ members get a chip in the grid above while ✦ is on (see _sigK);
+              this row says which role brought each one in. */}
+          {sigActive && songSig && !cockpitEdit && (
+            <div className="pf-sig-info" style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'0 6px',fontSize:(.56*effScale)+'rem',letterSpacing:'.04em',color:'rgba(201,168,76,.8)',lineHeight:1.6}}>
+              <div style={{fontWeight:600,color:'rgba(226,196,119,1)',letterSpacing:'.16em',textTransform:'uppercase',fontSize:'.82em'}}>✦ {_sigT('label')}{songSig.keys.length>1 ? ' · '+_ensT('fusion') : ''}</div>
+              <div style={{fontStyle:'italic'}}>{_sigWhy(songSig).map(([r,n,k],i)=>(<Fragment key={k}>{i>0 && (<span style={{opacity:.55}}> · </span>)}<span style={{whiteSpace:'nowrap'}}><span style={{opacity:.65}}>{r}</span> → <span style={{fontStyle:'normal',fontWeight:600}}>{n}</span></span></Fragment>))}</div>
             </div>
           )}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
@@ -13687,7 +13710,7 @@ Hard requirements:
               if(!_ens) return (<div>{_fLabel}</div>);
               const _sep = _isImgFlash ? '↔' : '×';
               const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
-              return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div></Fragment>))}</div>);
+              return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div>{_sigF && songSig && songSig.roles && songSig.roles[i] && (<div style={{fontStyle:'normal',fontSize:'.4em',letterSpacing:'.3em',opacity:.75,marginTop:1}}>{_sigRole(songSig.roles[i])}</div>)}</Fragment>))}</div>);
             })()}
           </div>
         );
@@ -14066,6 +14089,10 @@ Hard requirements:
           </div>
         )}
       </div>
+      {/* ✦ why — under the picture: which musical role brought in which painter */}
+      {sigActive && songSig && viewMode!=='image' && !composeMode && !immersive && (
+        <div className="pf-sig-why" style={{textAlign:'center',marginTop:6,padding:'0 12px',fontSize:(.5*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.72)',fontStyle:'italic',lineHeight:1.5}}>{_sigWhy(songSig).map(([r,n],i)=>(i?' · ':'')+r+' → '+n).join('')}</div>
+      )}
 
       </>)}
 
