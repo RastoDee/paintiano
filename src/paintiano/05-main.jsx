@@ -162,15 +162,15 @@ function computeSongSignature(events){
   }catch(_){ return null; }
 }
 const SIG_I18N = {
-  EN:{label:'Signature',tip:'This song’s signature painting — artist, variant and palette chosen by the music’s character. The same for everyone.',of:'Signature of'},
-  SK:{label:'Signatúra',tip:'Signatúrna maľba tejto skladby — umelec, variant a paleta vybrané podľa charakteru hudby. Rovnaká pre každého.',of:'Signatúra'},
-  DE:{label:'Signatur',tip:'Das Signaturbild dieses Stücks — Künstler, Variante und Palette nach dem Charakter der Musik gewählt. Für alle gleich.',of:'Signatur von'},
-  FR:{label:'Signature',tip:'La peinture-signature de ce morceau — artiste, variante et palette choisis d’après le caractère de la musique. La même pour tous.',of:'Signature de'},
-  ES:{label:'Firma',tip:'La pintura-firma de esta canción — artista, variante y paleta elegidos por el carácter de la música. La misma para todos.',of:'Firma de'},
-  PT:{label:'Assinatura',tip:'A pintura-assinatura desta música — artista, variante e paleta escolhidos pelo carácter da música. Igual para todos.',of:'Assinatura de'},
-  zh:{label:'签名',tip:'这首曲子的签名画——由音乐的性格选出艺术家、变体与调色板。人人相同。',of:'签名 ·'},
-  zhTW:{label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格選出藝術家、變體與調色盤。人人相同。',of:'簽名 ·'},
-  ja:{label:'署名',tip:'この曲の署名画——音楽の性格から画家・バリアント・パレットが選ばれます。誰にとっても同じ一枚。',of:'署名 ·'},
+  EN:{label:'Signature',tip:'This song’s signature painting — artist, variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of'},
+  SK:{label:'Signatúra',tip:'Signatúrna maľba tejto skladby — umelec, variant a paleta vybrané podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra'},
+  DE:{label:'Signatur',tip:'Das Signaturbild dieses Stücks — Künstler, Variante und Palette nach dem Charakter der Musik gewählt. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von'},
+  FR:{label:'Signature',tip:'La peinture-signature de ce morceau — artiste, variante et palette choisis d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de'},
+  ES:{label:'Firma',tip:'La pintura-firma de esta canción — artista, variante y paleta elegidos por el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de'},
+  PT:{label:'Assinatura',tip:'A pintura-assinatura desta música — artista, variante e paleta escolhidos pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de'},
+  zh:{label:'签名',tip:'这首曲子的签名画——由音乐的性格选出艺术家、变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·'},
+  zhTW:{label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格選出藝術家、變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·'},
+  ja:{label:'署名',tip:'この曲の署名画——音楽の性格から画家・バリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·'},
 };
 
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
@@ -2270,9 +2270,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const [sigActive, setSigActive] = useState(false);
   useEffect(()=>{ sigActiveRef.current = sigActive; },[sigActive]);
   const _sigT = (k)=>{ const d=SIG_I18N[lang]||SIG_I18N.EN; return d[k]!==undefined ? d[k] : SIG_I18N.EN[k]; };
+  // What was on screen before ✦ — tapping ✦ again (while lit) returns to it.
+  const sigPrevRef = useRef(null);
   const _applySig = (s)=>{
     s = s || songSigRef.current;
     if(!s || !s.keys || !s.keys.length) return;
+    if(!sigActiveRef.current) sigPrevRef.current = { style, stage: painterStage.slice(), ph: phaseIndex|0, mode, jamOn, notesMode, oneMMode };
     sigActiveRef.current = true;                  // sync — the Setup guards run before the state effect
     _shuffleOff();
     setNotesMode(false); setOneMMode(false); setStructureSeedLock(null);
@@ -2284,6 +2287,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     setSigActive(true);
     try{ window.posthog && window.posthog.capture('signature_apply',{n:s.keys.length,lead:s.keys[0]}); }catch(_){}
   };
+  const _sigOff = ()=>{
+    if(!sigActiveRef.current) return;
+    sigActiveRef.current = false; setSigActive(false);
+    const p = sigPrevRef.current; sigPrevRef.current = null;
+    const liveSig = songSigRef.current;
+    if(p && (!liveSig || p.style!==liveSig.keys[0] || p.stage.join('+')!==liveSig.keys.slice(1).join('+') || p.ph!==(liveSig.ph|0) || p.mode!==liveSig.mode)){
+      // back to the previous selection (artist, stage, variant, palette)
+      if(p.style===null){ setNotesMode(!!p.notesMode); setOneMMode(!!p.oneMMode); }
+      setStyle(p.style); setPainterStage(p.stage); setPhaseIndex(p.ph); setMode(p.mode);
+      if(!p.jamOn) setJamOn(false);
+      _liteJamStyleRef.current = p.stage.length ? p.style : null;
+    } else {
+      // nothing to return to: keep the artist, drop a stage that only ✦ put up
+      if(!jamOnRef.current) setPainterStage(q=>q.length?[]:q);
+    }
+    try{ window.posthog && window.posthog.capture('signature_off'); }catch(_){}
+  };
+  const _toggleSig = ()=>{ if(working||anim) return; if(sigActiveRef.current) _sigOff(); else _applySig(); };
   const applySigRef = useRef(null); applySigRef.current = _applySig;
   useEffect(()=>{
     if(!sigActive) return;
@@ -6314,7 +6335,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{
       const _sg = computeSongSignature(events);
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
-      sigActiveRef.current=false; setSigActive(false);
+      sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
       if(_sg && basicModeRef.current && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
     }catch(_){}
@@ -12579,7 +12600,7 @@ Hard requirements:
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
         </div>
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _stageNames('art') : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && viewMode!=='image' && (<span onClick={()=>{ if(working||anim) return; if(!sigActive) _applySig(); }} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:sigActive?'default':'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _stageNames('art') : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
             notes (bare grid with note labels) — get no "inspired by". One Million
@@ -12587,7 +12608,7 @@ Hard requirements:
             iconic web-art piece). Show the active colour mode • the style name so
             the collapsed caption isn't blank. */}
         {!stripOpen && (loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && viewMode!=='image' && (<span onClick={()=>{ if(working||anim) return; if(!sigActive) _applySig(); }} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:sigActive?'default':'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _stageNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
@@ -12920,7 +12941,7 @@ Hard requirements:
             {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && viewMode!=='image' && (
-              <button onClick={()=>{ if(working||anim||sigActive) return; _applySig(); }} className="pf-sig" title={_sigT('tip')} aria-label={_sigT('label')} aria-pressed={sigActive} style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:sigActive?'default':'pointer',whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s',background:sigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(sigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:sigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:sigActive?700:500}}>✦ {_sigT('label')}</button>
+              <button onClick={_toggleSig} className="pf-sig" title={_sigT('tip')} aria-label={_sigT('label')} aria-pressed={sigActive} style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s',background:sigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(sigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:sigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:sigActive?700:500}}>✦ {_sigT('label')}</button>
             )}
           </div>
           )}
