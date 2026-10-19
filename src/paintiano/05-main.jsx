@@ -103,7 +103,23 @@ const SIG_PROFILES={
 const SIG_PALETTES={kontra:[0.069,{tens:0.811,major:-0.487,chrom:0.324}],spectral:[-0.384,{spread:0.848,leaps:0.424,dens:0.318}],harmony:[0.354,{regul:0.808,legato:0.505,poly:0.303}],phi:[-0.038,{dens:-0.615,tempo:-0.492,leaps:-0.492,major:0.369}]};
 const SIG_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
 const SIG_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-function computeSongSignature(events){
+// Audio files reach the signature through pitch transcription: onset timing,
+// note lengths, range and leaps of a band recording are dominated by
+// transcription artefacts (drums, vocals, reverb, distortion) and would push
+// every recording into the same corner of the profile space. What survives
+// transcription reliably is TONALITY: the key centre, major vs minor, and how
+// busy the texture is. Audio pieces are matched on exactly that — mode ×
+// energy picks a family of six painters, the key centre picks the painter,
+// an ambiguous mode crosses it with its counterpart (a Fusion).
+const SIG_AUDIO_FAMILY={
+  majHi:['pop','lichtenstein','delaunay','matisse','miro','kusama'],
+  majLo:['monet','bloom','arcs','klee','spiral','mondrian'],
+  minHi:['pollock','kandinsky','mitchell','picasso','hokusai','bulge'],
+  minLo:['rothko','gold','wave','bauhaus','raffel','klee'],
+};
+const SIG_AUDIO_DENS_MID=1.33;   // median transcribed event density (log events/s)
+function computeSongSignature(events, opts){
+  const _audio = !!(opts && opts.audio);
   try{
     const ev=(events||[]).filter(ch=>ch&&ch.n&&ch.n.length);
     if(ev.length<4) return null;
@@ -150,12 +166,24 @@ function computeSongSignature(events){
       leaps,
     };
     const z={}; for(const k in SIG_REF){ const [m,s]=SIG_REF[k]; z[k]=Math.max(-3,Math.min(3,(f[k]-m)/s)); }
-    const sc=Object.keys(SIG_PROFILES).map(a=>{ const [b,p]=SIG_PROFILES[a]; let s=b; for(const k in p) s+=p[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0]);
-    const keys=[sc[0][1]];
-    if(sc[0][0]-sc[1][0]<0.12) keys.push(sc[1][1]);
-    if(keys.length===2 && sc[0][0]-sc[2][0]<0.06) keys.push(sc[2][1]);
+    let keys;
+    if(_audio){
+      const hi = f.dens > SIG_AUDIO_DENS_MID;
+      const fam = SIG_AUDIO_FAMILY[(bestMaj?'maj':'min')+(hi?'Hi':'Lo')];
+      const other = SIG_AUDIO_FAMILY[(bestMaj?'min':'maj')+(hi?'Hi':'Lo')];
+      const ix = ((bestR*7)%12)%6;               // circle-of-fifths position of the key centre
+      keys=[fam[ix]];
+      if(Math.abs(f.major)<0.12 && other[ix]!==fam[ix]) keys.push(other[ix]);   // mode ambiguous → cross with the counterpart
+    } else {
+      const sc=Object.keys(SIG_PROFILES).map(a=>{ const [b,p]=SIG_PROFILES[a]; let s=b; for(const k in p) s+=p[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0]);
+      keys=[sc[0][1]];
+      if(sc[0][0]-sc[1][0]<0.12) keys.push(sc[1][1]);
+      if(keys.length===2 && sc[0][0]-sc[2][0]<0.06) keys.push(sc[2][1]);
+    }
     // palette by character — the same scoring, four palette profiles; never custom
-    const mode = Object.keys(SIG_PALETTES).map(a=>{ const [b,p]=SIG_PALETTES[a]; let v=b; for(const k in p) v+=p[k]*z[k]; return [v,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
+    const mode = _audio
+      ? (f.chrom>0.14 ? 'kontra' : bestMaj ? (f.dens>SIG_AUDIO_DENS_MID ? 'spectral' : 'harmony') : (f.dens>SIG_AUDIO_DENS_MID ? 'kontra' : 'phi'))
+      : Object.keys(SIG_PALETTES).map(a=>{ const [b,p]=SIG_PALETTES[a]; let v=b; for(const k in p) v+=p[k]*z[k]; return [v,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
     const nV=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[keys[0]])||1;
     const ph=((seed>>>8)%nV);
     return {v:SIG_V, keys, ph, mode, z, f, seed};
@@ -1443,6 +1471,7 @@ export default function Paintiano() {
   // while the signature is on screen the Setup-picker guards below leave its
   // artist / palette / tone alone, Free gets the full variant range.
   const sigActiveRef = useRef(false);
+  const sigAudioNextRef = useRef(false);   // the next applyEvents comes from audio transcription
   // If the current tone is no longer in setupTones (user disabled it), fall
   // back to the first enabled tone — keeps the active selection valid without
   // forcing the user to manually re-pick after editing Setup.
@@ -6333,7 +6362,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // SONG SIGNATURE — one per piece, the same for everyone. A new piece drops
     // the latch (and a latch-only Free stage); Lite opens every piece on it.
     try{
-      const _sg = computeSongSignature(events);
+      const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
@@ -6501,7 +6530,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const aName=file.name.replace(/\.[^.]+$/,'');
       setCompositionName(aName);
       setAudioBlobAndRef(blob);setAudioName(file.name);
-      applyEvents(evts,aName);
+      sigAudioNextRef.current=true; applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
     }catch(e){
@@ -7426,7 +7455,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       setAudioBlobAndRef(blob);setAudioName('Liebestraum No.3 — Liszt.mp3');
-      applyEvents(evts,SAMPLE_AUDIO_NAME);
+      sigAudioNextRef.current=true; applyEvents(evts,SAMPLE_AUDIO_NAME);
       setViewMode('audio');viewModeRef.current='audio';
       setLoadedSource('audio');setPickMode(null);
     }catch(e){if(loadTokenRef.current===myToken){setErr('Sample audio: '+e.message);setErrInfo(false);}}
