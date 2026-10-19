@@ -73,7 +73,7 @@ function computeMusicDNA(events){
 // the 3 built-in samples, weighted so every painter wins a fair share.
 // SIG_V is the signature version — bump it when profiles or rules change so
 // older posters stay honest about which edition they show.
-const SIG_V = 2;
+const SIG_V = 3;
 const SIG_REF={dens:[1.160,0.517],tempo:[-5.658,0.578],reg:[63.701,4.632],spread:[29.514,10.962],regul:[-0.491,0.281],tens:[0.095,0.160],major:[0.245,0.366],chrom:[0.085,0.087],poly:[2.227,0.820],legato:[0.231,0.408],leaps:[6.203,3.430]};
 const SIG_PROFILES={
   rothko:[-1.413,{dens:-0.516,tempo:-0.516,legato:0.516,major:-0.258,reg:-0.258,poly:0.258}],
@@ -103,20 +103,30 @@ const SIG_PROFILES={
 const SIG_PALETTES={kontra:[0.069,{tens:0.811,major:-0.487,chrom:0.324}],spectral:[-0.384,{spread:0.848,leaps:0.424,dens:0.318}],harmony:[0.354,{regul:0.808,legato:0.505,poly:0.303}],phi:[-0.038,{dens:-0.615,tempo:-0.492,leaps:-0.492,major:0.369}]};
 const SIG_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
 const SIG_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-// Audio files reach the signature through pitch transcription: onset timing,
-// note lengths, range and leaps of a band recording are dominated by
-// transcription artefacts (drums, vocals, reverb, distortion) and would push
-// every recording into the same corner of the profile space. What survives
-// transcription reliably is TONALITY: the key centre, major vs minor, and how
-// busy the texture is. Audio pieces are matched on exactly that — mode ×
-// energy picks a family of six painters, the key centre picks the painter,
-// an ambiguous mode crosses it with its counterpart (a Fusion).
-const SIG_AUDIO_FAMILY={
-  majHi:['pop','lichtenstein','delaunay','matisse','miro','kusama'],
-  majLo:['monet','bloom','arcs','klee','spiral','mondrian'],
-  minHi:['pollock','kandinsky','mitchell','picasso','hokusai','bulge'],
-  minLo:['rothko','gold','wave','bauhaus','raffel','klee'],
+// SIGNATURE = A FUSION BY ROLES. Every painter plays one role in the print,
+// and each role is driven by its own layer of the music:
+//   structure  (composition, grid)      ← rhythm, regularity, polyphony
+//   gesture    (marks, strokes)         ← melody, energy, tempo
+//   field      (ground, colour field)   ← harmony, legato, minor
+//   ornament   (pattern, glyph)         ← density, brightness, major
+//   light      (cosmos, radiance)       ← register, range, leaps
+// The two strongest roles always paint; a role joins as 3rd–5th member when
+// its layer is nearly as strong (within SIG_ROLE_TAU). Never two painters of
+// the same role. Inside a role the painter closest to the music wins.
+const SIG_ROLES={
+  structure:{bias:0.037,w:{regul:0.864,poly:0.432,chrom:-0.259},painters:{mondrian:0.069,bauhaus:-0.491,klee:0.037,bulge:0.378,wave:0.087,arcs:-0.079}},
+  gesture:{bias:-0.076,w:{dens:0.520,tempo:0.520,regul:-0.520,leaps:0.347,tens:0.260},painters:{pollock:-0.530,mitchell:0.101,picasso:-0.123,hokusai:0.268,kandinsky:0.283}},
+  field:{bias:-0.553,w:{legato:0.691,tempo:-0.518,dens:-0.432,major:-0.259},painters:{rothko:-0.890,monet:0.335,bloom:0.042,raffel:0.513}},
+  ornament:{bias:0.142,w:{dens:0.503,major:0.704,tens:-0.402,regul:0.302},painters:{gold:-0.167,kusama:0.119,lichtenstein:0.249,pop:-0.218,miro:0.017}},
+  light:{bias:0.450,w:{reg:0.704,spread:0.503,leaps:0.402,major:0.302},painters:{spiral:-0.131,delaunay:-0.131,matisse:0.262}},
 };
+const SIG_ROLE_TAU=1.1;
+
+// Audio recordings: what survives transcription is TONALITY — mode, key centre
+// and how busy the texture is. Mode × energy picks the leading role, the key
+// centre (circle-of-fifths position) picks the second role and every painter;
+// an ambiguous mode or a chromatic texture adds members.
+const SIG_AUDIO_LEAD={majHi:'ornament',majLo:'light',minHi:'gesture',minLo:'field'};
 const SIG_AUDIO_DENS_MID=1.33;   // median transcribed event density (log events/s)
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
@@ -166,39 +176,48 @@ function computeSongSignature(events, opts){
       leaps,
     };
     const z={}; for(const k in SIG_REF){ const [m,s]=SIG_REF[k]; z[k]=Math.max(-3,Math.min(3,(f[k]-m)/s)); }
-    let keys;
+    const _rk=Object.keys(SIG_ROLES);
+    let roles;
     if(_audio){
       const hi = f.dens > SIG_AUDIO_DENS_MID;
-      const fam = SIG_AUDIO_FAMILY[(bestMaj?'maj':'min')+(hi?'Hi':'Lo')];
-      const other = SIG_AUDIO_FAMILY[(bestMaj?'min':'maj')+(hi?'Hi':'Lo')];
-      const ix = ((bestR*7)%12)%6;               // circle-of-fifths position of the key centre
-      keys=[fam[ix]];
-      if(Math.abs(f.major)<0.12 && other[ix]!==fam[ix]) keys.push(other[ix]);   // mode ambiguous → cross with the counterpart
+      const lead = SIG_AUDIO_LEAD[(bestMaj?'maj':'min')+(hi?'Hi':'Lo')];
+      const fifth = (bestR*7)%12;
+      const rest = _rk.filter(r=>r!==lead);
+      const second = rest[fifth % rest.length];
+      roles=[lead, second];
+      const more = (Math.abs(f.major)<0.12 ? 1 : 0) + (f.chrom>0.10 ? 1 : 0) + (f.tens>0.22 ? 1 : 0);
+      const pool = rest.filter(r=>r!==second);
+      for(let i=0;i<more && i<pool.length;i++) roles.push(pool[(fifth+i*5)%pool.length]);
+      roles = roles.filter((r,i,a)=>a.indexOf(r)===i);
     } else {
-      const sc=Object.keys(SIG_PROFILES).map(a=>{ const [b,p]=SIG_PROFILES[a]; let s=b; for(const k in p) s+=p[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0]);
-      keys=[sc[0][1]];
-      if(sc[0][0]-sc[1][0]<0.12) keys.push(sc[1][1]);
-      if(keys.length===2 && sc[0][0]-sc[2][0]<0.06) keys.push(sc[2][1]);
+      const rsc=_rk.map(r=>{ const R=SIG_ROLES[r]; let s=R.bias; for(const k in R.w) s+=R.w[k]*z[k]; return [s,r]; }).sort((x,y)=>y[0]-x[0]);
+      roles=[rsc[0][1], rsc[1][1]];
+      for(let i=2;i<5;i++) if(rsc[0][0]-rsc[i][0] < SIG_ROLE_TAU) roles.push(rsc[i][1]);
     }
+    const keys = roles.map((r,ri)=>{
+      const P=SIG_ROLES[r].painters, names=Object.keys(P);
+      if(_audio) return names[((bestR*7)%12 + ri*3) % names.length];
+      return names.map(a=>{ const pr=SIG_PROFILES[a][1]; let s=P[a]; for(const k in pr) s+=pr[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
+    });
     // palette by character — the same scoring, four palette profiles; never custom
     const mode = _audio
       ? (f.chrom>0.14 ? 'kontra' : bestMaj ? (f.dens>SIG_AUDIO_DENS_MID ? 'spectral' : 'harmony') : (f.dens>SIG_AUDIO_DENS_MID ? 'kontra' : 'phi'))
       : Object.keys(SIG_PALETTES).map(a=>{ const [b,p]=SIG_PALETTES[a]; let v=b; for(const k in p) v+=p[k]*z[k]; return [v,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
     const nV=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[keys[0]])||1;
     const ph=((seed>>>8)%nV);
-    return {v:SIG_V, keys, ph, mode, z, f, seed};
+    return {v:SIG_V, keys, roles, ph, mode, z, f, seed};
   }catch(_){ return null; }
 }
 const SIG_I18N = {
-  EN:{label:'Signature',tip:'This song’s signature painting — artist, variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of'},
-  SK:{label:'Signatúra',tip:'Signatúrna maľba tejto skladby — umelec, variant a paleta vybrané podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra'},
-  DE:{label:'Signatur',tip:'Das Signaturbild dieses Stücks — Künstler, Variante und Palette nach dem Charakter der Musik gewählt. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von'},
-  FR:{label:'Signature',tip:'La peinture-signature de ce morceau — artiste, variante et palette choisis d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de'},
-  ES:{label:'Firma',tip:'La pintura-firma de esta canción — artista, variante y paleta elegidos por el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de'},
-  PT:{label:'Assinatura',tip:'A pintura-assinatura desta música — artista, variante e paleta escolhidos pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de'},
-  zh:{label:'签名',tip:'这首曲子的签名画——由音乐的性格选出艺术家、变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·'},
-  zhTW:{label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格選出藝術家、變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·'},
-  ja:{label:'署名',tip:'この曲の署名画——音楽の性格から画家・バリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·'},
+  EN:{label:'Signature',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of'},
+  SK:{label:'Signatúra',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra'},
+  DE:{label:'Signatur',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von'},
+  FR:{label:'Signature',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de'},
+  ES:{label:'Firma',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de'},
+  PT:{label:'Assinatura',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de'},
+  zh:{label:'签名',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·'},
+  zhTW:{label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·'},
+  ja:{label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·'},
 };
 
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
