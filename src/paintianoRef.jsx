@@ -19108,10 +19108,10 @@ const ARTIST_VARIANTS = {
   mitchell: [
     {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
     {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
-    {mark:{brush:1},size:[.02,.06],layout:{scatter:1},density:.5},
-    {mark:{brush:1},size:[.03,.1],layout:{radial:1},density:.5,tone:'dark'},
-    {ground:'#e88a7a',mark:{brush:1},size:[.03,.1],layout:{radial:1},density:.4,tone:'gold'},
-    {mark:{brush:1},size:[.02,.06],layout:{scatter:1},density:.2},
+    {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.5},
+    {mark:{brush:1},size:[.05,.12],layout:{radial:1},density:.5,tone:'dark'},
+    {ground:'#e88a7a',mark:{brush:1},size:[.05,.12],layout:{radial:1},density:.4,tone:'gold'},
+    {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.2},
     {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
     {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
   ],
@@ -19157,13 +19157,13 @@ const ARTIST_VARIANTS = {
   ],
   delaunay: [
     {mark:{orphic:1},size:[.06,.3],layout:{scatter:.6,radial:.4},density:.35},
-    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{radial:1},density:.2},
-    {ground:'#141420',mark:{arch:.5,disc:.5},size:[.12,.28],alpha:.95,layout:{radial:1},density:.25},
-    {mark:{tri:.6,fan:.4},size:[.1,.3],alpha:.8,layout:{radial:1},density:.3},
-    {mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},
-    {ground:'#141420',mark:{rays:.5,fan:.5},size:[.3,.6],layout:{radial:1},density:.08},
+    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{scatter:.55,radial:.45},density:.2},
+    {ground:'#141420',mark:{arch:.5,disc:.5},size:[.12,.28],alpha:.95,layout:{scatter:.55,radial:.45},density:.25},
+    {mark:{tri:.6,fan:.4},size:[.1,.3],alpha:.8,layout:{scatter:.55,radial:.45},density:.3},
+    {mark:{fan:1},size:[.3,.6],layout:{scatter:.55,radial:.45},density:.08},
+    {ground:'#141420',mark:{rays:.5,fan:.5},size:[.3,.6],layout:{scatter:.55,radial:.45},density:.08},
     {mark:{orphic:1},size:[.06,.3],layout:{scatter:1},density:.35},
-    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{radial:1},density:.2},
+    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{scatter:.55,radial:.45},density:.2},
   ],
   oneM: [
     {mark:{panel:.6,pixels:.4},size:[.02,.07],layout:{grid:1},density:1},
@@ -19360,21 +19360,24 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         ctx.beginPath(); ctx.moveTo(0,-rr*.45); ctx.lineTo(0,rr*.2); ctx.moveTo(-rr*.6,-rr*.5); ctx.lineTo(0,-rr*.25); ctx.lineTo(rr*.6,-rr*.6); ctx.moveTo(-rr*.5,rr*.8); ctx.lineTo(0,rr*.2); ctx.lineTo(rr*.5,rr*.8); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(4,rr*.42); ctx.stroke(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,rr*.26); ctx.stroke(); break; }
       case 'radiant': { // Haring: radiating strokes
         ctx.lineWidth=Math.max(1.5,rr*.1); for(let j=0;j<8;j++){ const a=j/8*6.2832; ctx.beginPath(); ctx.moveTo(Math.cos(a)*rr*.5,Math.sin(a)*rr*.5); ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr); ctx.stroke(); } break; }
-      case 'brush': { // Mitchell: a cluster of fast loaded strokes — mostly lean, a few fuller, with dry flicks
-        const Smax=(F._S||600)*0.024;                                  // never a fat bar, whatever the size gene
-        const dir=(R()-.5)*1.2, nS=5+(R()*4|0);
-        ctx.lineCap='round'; ctx.lineJoin='round';
+      case 'brush': { // Mitchell: loaded strokes — broad and juicy, tapering as the brush runs dry, ragged at the edge; a cluster of 3–5, one of them pale, now and then a drip
+        const nS=4+(R()*4|0), dir=(R()-.5)*1.4, Wmax=(F._S||600)*0.03;
         for(let j=0;j<nS;j++){
-          const full=j<2;                                               // two fuller strokes carry the colour
-          ctx.beginPath(); ctx.lineWidth=Math.max(1, Math.min(Smax, rr*(full?0.2+R()*0.08:0.07+R()*0.07)));
-          ctx.strokeStyle=(j%2)?col2:col; ctx.globalAlpha=la*(full?0.9:0.55+R()*0.35);
-          const a=dir+(R()-.5)*0.8, L=rr*(1.1+R()*0.9), ox=(R()-.5)*rr*0.7, oy=(R()-.5)*rr*0.7;
-          const ca=Math.cos(a), sa=Math.sin(a), bend=(R()-.5)*L*0.7;
-          const x0=ox-ca*L/2, y0=oy-sa*L/2, x1=ox+ca*L/2, y1=oy+sa*L/2;
-          ctx.moveTo(x0,y0); ctx.quadraticCurveTo(ox-sa*bend, oy+ca*bend, x1, y1); ctx.stroke();
-          if(R()<0.5){ ctx.beginPath(); ctx.lineWidth=Math.max(1,ctx.lineWidth*0.35); ctx.moveTo(x1,y1); ctx.lineTo(x1+Math.cos(a+(R()-.5)*1.4)*L*0.28, y1+Math.sin(a+(R()-.5)*1.4)*L*0.28); ctx.stroke(); }
+          const a=dir+(R()-.5)*1.0, L=rr*(1.0+R()*1.2), w0=Math.min(Wmax, rr*(0.22+R()*0.22)), ox=(R()-.5)*rr*0.6, oy=(R()-.5)*rr*0.6;
+          const ca=Math.cos(a), sa=Math.sin(a), bend=(R()-.5)*L*0.5, pale=(j===nS-1 && R()<0.6);
+          const c=pale ? (F.groundLum>128 ? 'rgba(250,247,240,.92)' : 'rgba(236,230,214,.9)') : ((j%2)?col2:col);
+          const K=9, pts=[];
+          for(let k=0;k<=K;k++){ const u=k/K, q=u-0.5, arc=bend*(1-4*q*q)*0.5; pts.push([ox+ca*q*L-sa*arc, oy+sa*q*L+ca*arc, w0*(1-0.75*u)*(0.85+R()*0.3)]); }
+          ctx.beginPath(); ctx.fillStyle=c; ctx.globalAlpha=la*(pale?0.85:0.95);
+          for(let k=0;k<=K;k++){ const [x,y,wk]=pts[k]; k?ctx.lineTo(x-sa*wk/2,y+ca*wk/2):ctx.moveTo(x-sa*wk/2,y+ca*wk/2); }
+          for(let k=K;k>=0;k--){ const [x,y,wk]=pts[k]; ctx.lineTo(x+sa*wk/2,y-ca*wk/2); }
+          ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.strokeStyle='rgba(0,0,0,.16)'; ctx.lineWidth=Math.max(1,w0*.08);   // the hairs of the brush
+          for(let sgn=-1;sgn<=1;sgn+=2){ for(let k=0;k<=K;k++){ const [x,y,wk]=pts[k]; const px=-sa*wk*0.22*sgn, py=ca*wk*0.22*sgn; k?ctx.lineTo(x+px,y+py):ctx.moveTo(x+px,y+py); } }
+          ctx.stroke();
+          if(R()<0.16){ const [x,y,wk]=pts[3]; ctx.beginPath(); ctx.strokeStyle=c; ctx.lineCap='round'; ctx.lineWidth=Math.max(1,w0*.16); ctx.moveTo(x,y+wk*.3); ctx.lineTo(x+(R()-.5)*3, y+wk*.3+rr*(0.35+R()*0.5)); ctx.stroke(); }
         }
-        ctx.beginPath(); break; }
+        ctx.globalAlpha=la; ctx.beginPath(); break; }
       case 'crest': { // Hokusai: the curling wave — a thick rise that curls over, foam fingers hanging from the lip
         ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(1.5,rr*.22);
         ctx.beginPath(); ctx.moveTo(-rr*1.6,rr*.5); ctx.bezierCurveTo(-rr*.9,-rr*.9, rr*.6,-rr*1.25, rr*.9,-rr*.4); ctx.bezierCurveTo(rr*1.0,rr*.1, rr*.45,rr*.2, rr*.35,-rr*.15); ctx.stroke();
@@ -19541,8 +19544,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
   const _defer=[];   // gestures, replayed over the underpainting (see _FU_UNDER)
-  // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~600 marks/layer
-  const stride = Math.max(1, Math.ceil(n/600));
+  // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~320 marks/layer — room to breathe
+  const stride = Math.max(1, Math.ceil(n/320));
   const L = Math.min(lim|0, n);
   // every chord has its own deterministic stream → marks never move as lim grows
   const pos = new Array(n);
@@ -19559,20 +19562,21 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // Below a mark budget every chord paints REPS times, the extra passes placed
   // between it and the next chord on the time axis — long pieces keep REPS=1
   // and paint exactly as before.
-  let _exp=0; for(let ly=0; ly<F.layers; ly++){ const lf=(ly+1)/F.layers; _exp += Math.ceil(n/stride)*Math.min(1, F.density*(0.45+lf*0.55)*bigCap*crowd); }
+  // Each parent keeps its own EDGE and OPACITY: a soft hand (Rothko's veils)
+  // averaged into a crisp one (Pollock, Mondrian) used to blur BOTH into mud.
+  // Size, layout, hand-shake and contour stay the one fused hand.
+  const PDs=F.keys.map((k,i)=>_dnaOf(k,F.phs[i]));
+  const FPs=PDs.map(pd=>(pd.edge===F.edge && pd.alpha===F.alpha) ? F : Object.assign({},F,{edge:pd.edge,alpha:pd.alpha}));
+  const _dAvg = PDs.reduce((s,pd)=>s+(0.3+0.5*pd.density),0)/PDs.length;   // the compressed density the loop really uses
+  let _exp=0; for(let ly=0; ly<F.layers; ly++){ const lf=(ly+1)/F.layers; _exp += Math.ceil(n/stride)*Math.min(1, _dAvg*(0.45+lf*0.55)*bigCap*crowd); }
   _exp *= (F.size[1]>0.2 ? 1 : (F.keys.length>=3 ? 1.6 : 2));
-  const REPS = Math.max(1, Math.min(6, Math.ceil((70*bigCap)/Math.max(1,_exp))));
+  const REPS = Math.max(1, Math.min(6, Math.ceil((90*bigCap)/Math.max(1,_exp))));
   const nV = n*REPS;
   // Full-width idioms (Riley's bands, Mondrian's grid lines, Lichtenstein's
   // wavy lines) are a STRUCTURE, not a per-chord mark: a long piece used to
   // bury its partner under hundreds of them. A budget of evenly spaced slots
   // keeps ~2×budget of them per painting; every other chord paints the short
   // echo of the same idiom, so the music's density still shows.
-  // Each parent keeps its own EDGE and OPACITY: a soft hand (Rothko's veils)
-  // averaged into a crisp one (Pollock, Mondrian) used to blur BOTH into mud.
-  // Size, layout, hand-shake and contour stay the one fused hand.
-  const PDs=F.keys.map((k,i)=>_dnaOf(k,F.phs[i]));
-  const FPs=PDs.map(pd=>(pd.edge===F.edge && pd.alpha===F.alpha) ? F : Object.assign({},F,{edge:pd.edge,alpha:pd.alpha}));
   // idioms whose size is a length, not an area — the area cap below leaves them alone
   const _FU_LINEAR=/^(field|stripe|stripes|vstripes|band|vband|gridline|gridstub|wavyline|wave|beam|shortbeam|drip|rays|brush|rain|zigzag|dab|bar|vdrip|stem|dotline|chain|net|neon|splat|dotcluster|radiant|step|scallop|crest|phiarc|arc)$/;
   const _SPAN={stripes:['band',5],vstripes:['vband',5],gridline:['gridstub',6],wavyline:['wave',8],beam:['shortbeam',8]};
@@ -19603,14 +19607,14 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const note=ns[j]; const m=note.m!==undefined?note.m:(typeof note==='number'?note:60), v=note.v!==undefined?note.v:80;
         // the painter keeps its own vocabulary and size, the hand stays fused
         let kind=_fuPick(PD.mark,R());
-        if(_SPAN[kind]){ const sl=kind+Math.floor(i*_SPAN[kind][1]*2/Math.max(1,n)); if(_spanUsed.has(sl)){ if(R()<0.7) continue; kind=_SPAN[kind][0]; } else _spanUsed.add(sl); }
+        if(_SPAN[kind]){ const sl=kind+Math.floor(i*_SPAN[kind][1]*2/Math.max(1,n)); if(_spanUsed.has(sl)){ if(R()<0.85) continue; kind=_SPAN[kind][0]; } else _spanUsed.add(sl); }
         // Kusama's flat patchwork panels read as plain squares next to another
         // hand — in a crossing they become a loose drift of polka dots.
         const _kus = F.keys[_pi]==='kusama';
         if(_kus && kind==='panel') kind='dotcluster';
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
-        let r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : 1.2, base*(0.8+R()*0.4));
+        let r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : S*0.006, base*(0.8+R()*0.4));
         if(kind==='rays') r=Math.min(r, S*0.17);          // a radiance, not a net over the whole canvas
         else if(kind==='brush') r=Math.min(r, S*0.13);
         else if(kind==='rain') r=Math.min(r, S*0.09);     // Hokusai's rain: streaks, not a lattice
@@ -19623,7 +19627,9 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
           // and big shapes are budgeted by the area they cover (~1.6 canvases in all), spread
           // evenly over the piece; past the budget a chord paints a small echo of the shape,
           // so a long piece is not a soup of a hundred overlapping translucent discs
-          if(r > S*0.09){ const B=Math.max(8, Math.min(80, Math.round(1.6/(Math.PI*(r/S)*(r/S))))); const sl='A'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)) r*=0.35; else _spanUsed.add(sl); }
+          // Delaunay's rhythms / Bauhaus targets are a few big forms, not a wall of them: a smaller area budget and sparser echoes
+          const _disc=/^(orphic|arch|fan|target|protractor)$/.test(kind);
+          if(r > (_disc?S*0.06:S*0.09)){ const B=Math.max(6, Math.min(80, Math.round((_disc?0.8:1.6)/(Math.PI*(r/S)*(r/S))))); const sl='A'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)){ if(_disc && R()<0.6) continue; r*=0.35; } else _spanUsed.add(sl); }
         }
         const [cr,cg,cb]=gc(m,v);
         const _pal=SM[_pi]&&SM[_pi].pal;
@@ -19631,7 +19637,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
-        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         if(_FU_UNDER.test(kind)){
           ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, FP, R, ang, col2); ctx.restore();
         } else {
@@ -19648,14 +19654,15 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     _fuMark(ctx, kind, r, col, FP, ()=> q<vals.length ? vals[q++] : 0.5, ang, col2);
     ctx.restore();
   }
-  // connecting line — inherited from the line-drawers (orthogonal if the hand
-  // is steady, curved if it shakes)
-  if(F.lines>0.25){
+  // connecting thread — only from the hands that really draw one (Pollock's
+  // web, Miró's wires: lines ≥ .45): a loose curved thread, faint and short-
+  // lived. The old right-angled version read as a stray wireframe.
+  if(F.lines>=0.45){
     const R=_seedRnd(5,ss,3,3);
-    ctx.save(); ctx.globalAlpha=Math.min(1,F.lines*.9); ctx.strokeStyle=F.groundLum>128?'rgba(20,18,24,.85)':'rgba(244,239,228,.7)'; ctx.lineWidth=Math.max(1,S*0.0045*F.lines); ctx.lineCap='round'; ctx.beginPath();
-    let prev=null;
-    for(let i=0;i<L;i+=stride){ if(!pos[i]) continue; if(R()>F.lines*0.6){ continue; } const [x,y]=pos[i];
-      if(prev){ ctx.moveTo(prev[0],prev[1]); if(F.wobble>0.4) ctx.quadraticCurveTo((prev[0]+x)/2+(R()-.5)*S*.22,(prev[1]+y)/2+(R()-.5)*S*.22,x,y); else { ctx.lineTo(x,prev[1]); ctx.lineTo(x,y); } }
+    ctx.save(); ctx.globalAlpha=Math.min(.55,F.lines*.55); ctx.strokeStyle=F.groundLum>128?'rgba(20,18,24,.8)':'rgba(244,239,228,.7)'; ctx.lineWidth=Math.max(1,S*0.003*F.lines); ctx.lineCap='round'; ctx.beginPath();
+    let prev=null, run=0;
+    for(let i=0;i<L;i+=stride){ if(!pos[i]) continue; if(R()>F.lines*0.5 || run>5){ prev=null; run=0; continue; } const [x,y]=pos[i];
+      if(prev){ ctx.moveTo(prev[0],prev[1]); ctx.quadraticCurveTo((prev[0]+x)/2+(R()-.5)*S*.2,(prev[1]+y)/2+(R()-.5)*S*.2,x,y); run++; }
       prev=[x,y]; }
     ctx.stroke(); ctx.restore();
   }
