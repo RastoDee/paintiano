@@ -17521,19 +17521,13 @@ function _fuSnap(rgb, pal){ if(!pal||pal.length<2) return rgb; let best=pal[0], 
 // Flat area idioms (Rothko fields, Wave stripes, Kusama panels, Bloom clouds…)
 // are the UNDERPAINTING of a crossing: they go down first and every gesture
 // (Mitchell's strokes, af Klint's radiance, Picasso's lines) sits on top —
-// otherwise a later field simply buries its partner. The gestures are drawn
-// on a reusable sheet and laid over at the end, so the random stream (and the
-// painting's identity) stays exactly as it was.
+// otherwise a later field simply buries its partner. A gesture is first run
+// against a null context that only records the random numbers it draws, then
+// replayed with exactly those numbers after the underpainting — so the random
+// stream (the painting's identity) is untouched, and it works the same on the
+// live canvas, the raster export and the vector (SVG) export.
 const _FU_UNDER=/^(field|stripe|stripes|vstripes|panel|cloud|checker)$/;
-let _fuTopCv=null;
-function _fuTopSheet(w,h){
-  try{
-    if(typeof document==='undefined' || !w || !h) return null;
-    if(!_fuTopCv) _fuTopCv=document.createElement('canvas');
-    if(_fuTopCv.width!==w || _fuTopCv.height!==h){ _fuTopCv.width=w; _fuTopCv.height=h; }
-    return _fuTopCv;
-  }catch(_){ return null; }
-}
+const _FU_NULL=(()=>{ let P; const f=function(){ return P; }; P=new Proxy(f,{ get:(o,p)=> p===Symbol.toPrimitive ? (()=>0) : P, set:()=>true, apply:()=>P }); return P; })();
 function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
   const F = fuseDNA(keys, phaseIndex); if(!F || !chords || !chords.length) return;
   const ss = (sessionSeed|0) ^ ((phaseIndex|0)*7919);
@@ -17543,10 +17537,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const g0 = SM[0] && SM[0].ground;
   if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
-  // gesture sheet (see _FU_UNDER); falls back to painting straight onto ctx
-  const _cv=ctx.canvas, top=_cv ? _fuTopSheet(_cv.width,_cv.height) : null;
-  let tctx=ctx;
-  if(top){ try{ tctx=top.getContext('2d'); tctx.setTransform(1,0,0,1,0,0); _resetCtxState(tctx); tctx.clearRect(0,0,top.width,top.height); tctx.setTransform(ctx.getTransform()); }catch(_){ tctx=ctx; } }
+  const _defer=[];   // gestures, replayed over the underpainting (see _FU_UNDER)
   // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~600 marks/layer
   const stride = Math.max(1, Math.ceil(n/600));
   const L = Math.min(lim|0, n);
@@ -17593,25 +17584,34 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
-        const dc=(tctx!==ctx && !_FU_UNDER.test(kind)) ? tctx : ctx;
-        dc.save(); dc.translate(x+(j?(R()-.5)*r*2.2:0), y+(j?(R()-.5)*r*2.2:0));
-        _fuMark(dc, kind, r, col, F, R, (/^(field|stripe|stripes|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2, col2);
-        dc.restore();
+        const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
+        const ang=(/^(field|stripe|stripes|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        if(_FU_UNDER.test(kind)){
+          ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, F, R, ang, col2); ctx.restore();
+        } else {
+          const vals=[]; _fuMark(_FU_NULL, kind, r, col, F, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
+          _defer.push([tx, ty, kind, r, col, ang, col2, vals]);
+        }
       }
     }
+  }
+  // the gestures, over the underpainting
+  for(const [tx,ty,kind,r,col,ang,col2,vals] of _defer){
+    let q=0; ctx.save(); ctx.translate(tx, ty);
+    _fuMark(ctx, kind, r, col, F, ()=> q<vals.length ? vals[q++] : 0.5, ang, col2);
+    ctx.restore();
   }
   // connecting line — inherited from the line-drawers (orthogonal if the hand
   // is steady, curved if it shakes)
   if(F.lines>0.25){
     const R=_seedRnd(5,ss,3,3);
-    tctx.save(); tctx.globalAlpha=Math.min(1,F.lines*.9); tctx.strokeStyle=F.groundLum>128?'rgba(20,18,24,.85)':'rgba(244,239,228,.7)'; tctx.lineWidth=Math.max(1,S*0.0045*F.lines); tctx.lineCap='round'; tctx.beginPath();
+    ctx.save(); ctx.globalAlpha=Math.min(1,F.lines*.9); ctx.strokeStyle=F.groundLum>128?'rgba(20,18,24,.85)':'rgba(244,239,228,.7)'; ctx.lineWidth=Math.max(1,S*0.0045*F.lines); ctx.lineCap='round'; ctx.beginPath();
     let prev=null;
     for(let i=0;i<L;i+=stride){ if(!pos[i]) continue; if(R()>F.lines*0.6){ continue; } const [x,y]=pos[i];
-      if(prev){ tctx.moveTo(prev[0],prev[1]); if(F.wobble>0.4) tctx.quadraticCurveTo((prev[0]+x)/2+(R()-.5)*S*.22,(prev[1]+y)/2+(R()-.5)*S*.22,x,y); else { tctx.lineTo(x,prev[1]); tctx.lineTo(x,y); } }
+      if(prev){ ctx.moveTo(prev[0],prev[1]); if(F.wobble>0.4) ctx.quadraticCurveTo((prev[0]+x)/2+(R()-.5)*S*.22,(prev[1]+y)/2+(R()-.5)*S*.22,x,y); else { ctx.lineTo(x,prev[1]); ctx.lineTo(x,y); } }
       prev=[x,y]; }
-    tctx.stroke(); tctx.restore();
+    ctx.stroke(); ctx.restore();
   }
-  if(tctx!==ctx){ ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; ctx.drawImage(top,0,0); ctx.restore(); }
   _setCurE(0.5);
 }
 
