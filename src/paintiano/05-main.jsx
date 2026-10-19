@@ -67,36 +67,40 @@ function computeMusicDNA(events){
 // major/minor, chromaticism, polyphony, legato, leaps) is z-scored against
 // fixed reference stats and matched to hand-tuned painter profiles. The best
 // match leads; a close runner-up (or two) joins as a Fusion. Variant and
-// palette come from the same vector plus a hash of the notes (tone stays yours).
+// palette come from the same vector plus a hash of the notes, tone is 'pure'.
+// Calibrated on 97 library moods + ~540 real pieces (Bach, Beethoven, Mozart,
+// Haydn, Schumann, Chopin, Joplin, Palestrina, Monteverdi, folk tunes) +
+// the 3 built-in samples, weighted so every painter wins a fair share.
 // SIG_V is the signature version — bump it when profiles or rules change so
 // older posters stay honest about which edition they show.
 const SIG_V = 1;
-const SIG_REF={dens:[1.058,0.487],tempo:[-5.879,0.524],reg:[60.503,2.510],spread:[41.682,3.765],regul:[-0.361,0.296],tens:[0.091,0.069],major:[0.147,0.379],chrom:[0.083,0.082],poly:[2.291,0.597],legato:[0.007,0.527],leaps:[8.845,4.122]};
+const SIG_REF={dens:[1.160,0.517],tempo:[-5.658,0.578],reg:[63.701,4.632],spread:[29.514,10.962],regul:[-0.491,0.281],tens:[0.095,0.160],major:[0.245,0.366],chrom:[0.085,0.087],poly:[2.227,0.820],legato:[0.231,0.408],leaps:[6.203,3.430]};
 const SIG_PROFILES={
-  rothko:[-1.691,{dens:-0.516,tempo:-0.516,legato:0.516,major:-0.258,reg:-0.258,poly:0.258}],
-  monet:[-0.368,{dens:-0.186,legato:0.621,reg:0.621,major:0.311,tens:-0.311}],
-  pollock:[0.922,{dens:0.535,tempo:0.535,regul:-0.535,chrom:0.267,leaps:0.267}],
-  mondrian:[-0.401,{regul:0.555,tens:-0.555,chrom:-0.555,major:0.277}],
-  kusama:[0.476,{regul:0.667,dens:0.667,poly:-0.333}],
-  bulge:[0.325,{regul:0.667,dens:0.333,spread:-0.667}],
-  wave:[-0.178,{regul:0.667,legato:0.333,spread:-0.667}],
-  kandinsky:[0.396,{tens:0.555,chrom:0.555,leaps:0.555,spread:0.277}],
-  mitchell:[0.666,{tempo:0.316,regul:-0.632,spread:0.632,legato:-0.316}],
-  miro:[-0.894,{major:0.654,leaps:0.654,dens:-0.196,poly:-0.327}],
-  picasso:[0.491,{chrom:0.756,regul:-0.378,tens:0.378,major:-0.378}],
-  matisse:[-0.406,{major:0.836,poly:0.418,tempo:0.251,regul:0.251}],
-  bloom:[-0.662,{legato:0.707,major:0.354,reg:0.354,dens:-0.354,tens:-0.354}],
-  bauhaus:[-0.539,{regul:0.692,poly:0.692,tens:-0.208}],
-  gold:[-0.548,{reg:-0.369,poly:0.737,major:-0.221,legato:0.369,spread:0.369}],
-  spiral:[-0.866,{leaps:-0.816,legato:0.408,reg:0.408}],
-  arcs:[-0.282,{regul:0.546,legato:0.546,spread:0.546,major:0.327}],
-  pop:[0.287,{major:0.654,dens:0.654,tempo:0.327,tens:-0.196}],
-  hokusai:[-0.131,{spread:0.793,leaps:0.397,major:-0.397,legato:0.238}],
-  lichtenstein:[0.016,{major:0.447,dens:0.447,regul:0.447,poly:-0.447,leaps:0.447}],
-  klee:[-0.116,{poly:-0.793,dens:-0.238,reg:0.397,regul:0.397}],
-  delaunay:[-0.448,{tempo:0.518,spread:0.518,major:0.518,dens:0.311,legato:-0.311}],
-  raffel:[0.488,{}]
+  rothko:[-1.413,{dens:-0.516,tempo:-0.516,legato:0.516,major:-0.258,reg:-0.258,poly:0.258}],
+  monet:[-0.232,{dens:-0.186,legato:0.621,reg:0.621,major:0.311,tens:-0.311}],
+  pollock:[-0.941,{dens:0.535,tempo:0.535,regul:-0.535,chrom:0.267,leaps:0.267}],
+  mondrian:[-0.213,{regul:0.555,tens:-0.555,chrom:-0.555,major:0.277}],
+  kusama:[-0.095,{regul:0.667,dens:0.667,poly:-0.333}],
+  bulge:[-0.335,{regul:0.667,dens:0.333,spread:-0.667}],
+  wave:[-0.196,{regul:0.667,legato:0.333,spread:-0.667}],
+  kandinsky:[-0.120,{tens:0.555,chrom:0.555,leaps:0.555,spread:0.277}],
+  mitchell:[-0.371,{tempo:0.316,regul:-0.632,spread:0.632,legato:-0.316}],
+  miro:[-0.379,{major:0.654,leaps:0.654,dens:-0.196,poly:-0.327}],
+  picasso:[-0.600,{chrom:0.756,regul:-0.378,tens:0.378,major:-0.378}],
+  matisse:[-0.453,{major:0.836,poly:0.418,tempo:0.251,regul:0.251}],
+  bloom:[-0.515,{legato:0.707,major:0.354,reg:0.354,dens:-0.354,tens:-0.354}],
+  bauhaus:[-0.487,{regul:0.692,poly:0.692,tens:-0.208}],
+  gold:[-0.764,{reg:-0.369,poly:0.737,major:-0.221,legato:0.369,spread:0.369}],
+  spiral:[-0.383,{leaps:-0.816,legato:0.408,reg:0.408}],
+  arcs:[-0.218,{regul:0.546,legato:0.546,spread:0.546,major:0.327}],
+  pop:[-0.467,{major:0.654,dens:0.654,tempo:0.327,tens:-0.196}],
+  hokusai:[-0.435,{spread:0.793,leaps:0.397,major:-0.397,legato:0.238}],
+  lichtenstein:[0.072,{major:0.447,dens:0.447,regul:0.447,poly:-0.447,leaps:0.447}],
+  klee:[-0.898,{poly:-0.793,dens:-0.238,reg:0.397,regul:0.397}],
+  delaunay:[-0.474,{tempo:0.518,spread:0.518,major:0.518,dens:0.311,legato:-0.311}],
+  raffel:[0.318,{}]
 };
+const SIG_PALETTES={kontra:[0.069,{tens:0.811,major:-0.487,chrom:0.324}],spectral:[-0.384,{spread:0.848,leaps:0.424,dens:0.318}],harmony:[0.354,{regul:0.808,legato:0.505,poly:0.303}],phi:[-0.038,{dens:-0.615,tempo:-0.492,leaps:-0.492,major:0.369}]};
 const SIG_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
 const SIG_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
 function computeSongSignature(events){
@@ -150,11 +154,11 @@ function computeSongSignature(events){
     const keys=[sc[0][1]];
     if(sc[0][0]-sc[1][0]<0.12) keys.push(sc[1][1]);
     if(keys.length===2 && sc[0][0]-sc[2][0]<0.06) keys.push(sc[2][1]);
-    // palette by character — never custom
-    const mode = z.tens>0.6 ? 'kontra' : z.regul>0.3 ? 'harmony' : z.spread>0.5 ? 'spectral' : 'phi';
+    // palette by character — the same scoring, four palette profiles; never custom
+    const mode = Object.keys(SIG_PALETTES).map(a=>{ const [b,p]=SIG_PALETTES[a]; let v=b; for(const k in p) v+=p[k]*z[k]; return [v,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
     const nV=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[keys[0]])||1;
     const ph=((seed>>>8)%nV);
-    return {v:SIG_V, keys, ph, mode, z, seed};
+    return {v:SIG_V, keys, ph, mode, z, f, seed};
   }catch(_){ return null; }
 }
 const SIG_I18N = {
