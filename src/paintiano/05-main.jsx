@@ -73,7 +73,7 @@ function computeMusicDNA(events){
 // the 3 built-in samples, weighted so every painter wins a fair share.
 // SIG_V is the signature version — bump it when profiles or rules change so
 // older posters stay honest about which edition they show.
-const SIG_V = 1;
+const SIG_V = 2;
 const SIG_REF={dens:[1.160,0.517],tempo:[-5.658,0.578],reg:[63.701,4.632],spread:[29.514,10.962],regul:[-0.491,0.281],tens:[0.095,0.160],major:[0.245,0.366],chrom:[0.085,0.087],poly:[2.227,0.820],legato:[0.231,0.408],leaps:[6.203,3.430]};
 const SIG_PROFILES={
   rothko:[-1.413,{dens:-0.516,tempo:-0.516,legato:0.516,major:-0.258,reg:-0.258,poly:0.258}],
@@ -288,12 +288,7 @@ function useModalFocusTrap(panelRef){
 // "Paintiano — The Book of Golden Music" — a static PDF per language at
 // /public/book/paintiano-<LANG>.pdf (LANG = app code: EN DE FR ES PT SK zh
 // zhTW ja). The localized display title lives in i18n as t('bookTitle').
-// bookUrl() falls back to EN for any unknown language.
 const BOOK_LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW','ja'];
-function bookUrl(lang){
-  const code = BOOK_LANGS.indexOf(lang) >= 0 ? lang : 'EN';
-  return '/book/paintiano-' + code + '.pdf';
-}
 // Excerpt (ukážka) — the app links to a sample, not the full book. Static PDF
 // per language at /public/book/paintiano-<LANG>-excerpt.pdf; EN fallback.
 function bookExcerptUrl(lang){
@@ -306,33 +301,6 @@ function bookExcerptUrl(lang){
 // re-rendered on every Paintiano render including the 5-15Hz `disp` tick
 // during playback even when not visible. `React.memo` plus stable t/onClose
 // references from the parent skip reconciliation entirely.
-const AboutModal = memo(function AboutModal({onClose, t, ts, lang, readScale, setReadScale}){
-  const panelRef = useRef(null);
-  useModalFocusTrap(panelRef);
-  const cards = getConceptCards(lang);
-  return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-about-title" style={{maxWidth:560,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'26px 22px 30px',color:'rgba(207,197,168,.88)',fontFamily:'inherit',position:'relative'}}>
-        <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-about-title" style={{textAlign:'center',marginBottom:14,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{t('conceptTitle')}</div>
-        <div style={{display:'flex',justifyContent:'center',marginBottom:20}}><button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 16px',borderRadius:16,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',background:readScale>1?'rgba(255,255,255,.04)':'transparent',border:'1px solid rgba(201,168,76,.85)'}}><span style={{fontSize:'.6rem',fontWeight:600}}>{t('fsLabel')}</span><span style={{fontSize:(0.6*readScale)+'rem',fontWeight:700}}>A</span><span style={{fontSize:'.55rem',opacity:.7}}>{readScale===1?'1×':readScale===1.25?'1.25×':'1.5×'}</span></button></div>
-        <div style={{display:'flex',flexDirection:'column',gap:18}}>
-          {cards.map((card, i) => (
-            <div key={card.id} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:14,textAlign:'center',padding:'24px 20px',borderRadius:18,background:'rgba(255,255,255,.018)',border:'1px solid rgba(201,168,76,.14)'}}>
-              <div style={{fontSize:(3.4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>{pfIcons(card.glyph)}</div>
-              <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{pfIcons(card.title)}</div>
-              <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{pfIcons(card.body)}</div>
-              {card.book && (
-                <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookExcerptCta','Read an excerpt')} →</a>
-              )}
-            </div>
-          ))}
-        </div>
-        <button onClick={onClose} style={{display:'block',margin:'24px auto 0',padding:'8px 24px',background:'transparent',color:'rgba(207,197,168,.7)',border:'1px solid rgba(207,197,168,.25)',borderRadius:3,cursor:'pointer',fontSize:(.6*readScale)+'rem',fontFamily:'inherit',letterSpacing:'.16em',textTransform:'uppercase'}}>{t('close')||'close'}</button>
-      </div>
-    </div>
-  );
-});
 
 // Self-contained book modal — opened from the top nav "Book" item. Mirrors the
 // look of the Guide book card (glyph + localized title + description + CTA) but
@@ -357,24 +325,6 @@ const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, art
           <div style={{fontSize:(.66*readScale)+'rem',color:'rgba(201,168,76,.7)',marginTop:2,fontStyle:'italic'}}>{ts('dailyTomorrowPair','Tomorrow — another pair.')}</div>
         </div>
         <button onClick={()=>{ onClose(); if(onPro) onPro(); }} style={{display:'block',width:'100%',marginTop:14,padding:'9px 12px',background:'transparent',border:'1px solid rgba(201,168,76,.4)',borderRadius:22,color:'rgba(201,168,76,.9)',fontFamily:'inherit',fontSize:(.6*readScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',cursor:'pointer'}}>{ts('dailyAllPro','All 24, always → Paintiano Pro')}</button>
-      </div>
-    </div>
-  );
-});
-const BookModal = memo(function BookModal({onClose, t, lang, ts, readScale}){
-  const panelRef = useRef(null);
-  useModalFocusTrap(panelRef);
-  return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
-      <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-book-title" style={{maxWidth:480,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(201,168,76,.3)',borderRadius:8,padding:'30px 26px 34px',color:'rgba(207,197,168,.88)',fontFamily:'inherit',position:'relative'}}>
-        <button onClick={onClose} aria-label="close" style={{position:'absolute',top:12,right:14,background:'transparent',border:'none',color:'rgba(207,197,168,.5)',fontSize:'1.1rem',cursor:'pointer',lineHeight:1,padding:4}} title="close">×</button>
-        <div id="paintiano-book-title" style={{textAlign:'center',marginBottom:18,letterSpacing:'.24em',color:'rgba(201,168,76,.85)',fontSize:(.7*readScale)+'rem',textTransform:'uppercase'}}>{ts('gcat_book','Book')}</div>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:18,textAlign:'center'}}>
-          <div style={{fontSize:(4*readScale)+'rem',lineHeight:1,color:PF.gold2,filter:'drop-shadow(0 2px 16px rgba(201,168,76,.25))'}}>📖</div>
-          <div style={{fontSize:(1.5*readScale)+'rem',fontWeight:500,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',letterSpacing:'.01em',color:PF.gold2,lineHeight:1.2}}>{t('bookTitle')}</div>
-          <div style={{fontSize:(.9*readScale)+'rem',lineHeight:1.55,color:'rgba(230,222,196,.85)',fontFamily:'inherit',letterSpacing:'.01em'}}>{ts('bookDesc','')}</div>
-          <a href={bookExcerptUrl(lang)} target="_blank" rel="noopener noreferrer" style={{marginTop:6,padding:'10px 22px',background:'rgba(201,168,76,.16)',color:PF.gold2,border:'1px solid rgba(201,168,76,.55)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*readScale)+'rem',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',textDecoration:'none',display:'inline-block'}}>{ts('bookExcerptCta','Read an excerpt')} →</a>
-        </div>
       </div>
     </div>
   );
@@ -422,7 +372,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
     }, {root, threshold:[0.5, 0.75]});
     cardEls.forEach(el=>io.observe(el));
     return ()=>io.disconnect();
-  }, [cards.length]);
+  }, [cards]);
   // Keyboard arrows for desktop accessibility
   useEffect(()=>{
     const onKey = (e)=>{
@@ -635,7 +585,7 @@ function IntroSplash({ onDone, tagline, skipLabel }){
   const cvRef = useRef(null);
   const rafRef = useRef(0);
   const doneRef = useRef(false);
-  const [titleIn, setTitleIn] = useState(false);
+  const [titleIn, setTitleIn] = useState(false); const titleInRef=useRef(false);
   const finish = useCallback(()=>{ if(doneRef.current) return; doneRef.current=true; cancelAnimationFrame(rafRef.current); onDone(); },[onDone]);
 
   useEffect(()=>{
@@ -704,7 +654,7 @@ function IntroSplash({ onDone, tagline, skipLabel }){
         }
       }
       ctx.globalAlpha=1;
-      if(el>1200 && !titleIn) setTitleIn(true);
+      if(el>1200 && !titleInRef.current){ titleInRef.current=true; setTitleIn(true); }
       if(el<DUR && !doneRef.current){ rafRef.current=requestAnimationFrame(tick); }
       else finish();
     };
@@ -1028,7 +978,7 @@ const ENSEMBLE_I18N = {
   ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
-  _setArtistSeed(seed);
+  _setArtistSeed(seed); _resetCtxState(ctx);
   drawFusionOverlay(ctx, CW, CH, chords, lim, gc, seed, mode, ph, keys, !!noGround);
 }
 
@@ -1573,7 +1523,7 @@ export default function Paintiano() {
   const surpriseArtistBagRef = useRef([]);
   const surpriseVariantBagsRef = useRef({});
   const surprisePaletteBagRef = useRef([]);
-  useEffect(()=>{randomModeRef.current=randomMode;try{localStorage.setItem('paintiano_random',randomMode?'1':'0');}catch(_){}},[randomMode]);
+  useEffect(()=>{randomModeRef.current=randomMode;},[randomMode]);
   // SHOW MODE (auto-shuffle slideshow): while a piece is playing AND dice is on
   // (full shuffle, or dice + a selected artist), the Save chip is replaced by a
   // "↻ Show" chip. Tapping it auto-advances the painting every SHOW_INTERVAL ms
@@ -1598,7 +1548,6 @@ export default function Paintiano() {
   // Prev/Next step the index so you can browse back to a variation you liked.
   const saltHistoryRef = useRef([0]);
   const saltIdxRef = useRef(0);
-  const [variationPos, setVariationPos] = useState(0); // for UI: re-render on nav
   const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
@@ -1680,18 +1629,6 @@ export default function Paintiano() {
   // style row read EN regardless of UI language. Now keyed by lang and selected
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
-  const STYLE_LABELS_I18N = {
-    EN:{lichtenstein:'Comic',klee:'Polyphony',delaunay:'Discs',oneM:'Million',raffel:'Signature',picasso:'Cubist',kusama:'Dots',pollock:'Drip',kandinsky:'Abstract',miro:'Constellation',mondrian:'Grid',bauhaus:'Bauhaus',rothko:'Fields',matisse:'Cut-out',bulge:'Bulge',arcs:'Arcs',bloom:'Bloom',spiral:'Spiral',gold:'Gold',pop:'Pop',wave:'Wave',comic:'Comic',monet:'Light',hokusai:'Woodblock'},
-    SK:{lichtenstein:'Komiks',klee:'Polyfónia',delaunay:'Disky',oneM:'Milión',raffel:'Signatúra',picasso:'Kubizmus',kusama:'Bodky',pollock:'Kvapky',kandinsky:'Abstraktné',miro:'Konštelácia',mondrian:'Mriežka',bauhaus:'Bauhaus',rothko:'Polia',matisse:'Výstrižky',bulge:'Vyklenutie',arcs:'Oblúky',bloom:'Kvet',spiral:'Špirála',gold:'Zlato',pop:'Pop',wave:'Vlna',comic:'Komiks',monet:'Svetlo',hokusai:'Drevoryt'},
-    DE:{lichtenstein:'Comic',klee:'Polyphonie',delaunay:'Scheiben',oneM:'Million',raffel:'Signatur',picasso:'Kubismus',kusama:'Punkte',pollock:'Tropfen',kandinsky:'Abstrakt',miro:'Konstellation',mondrian:'Raster',bauhaus:'Bauhaus',rothko:'Felder',matisse:'Scherenschnitt',bulge:'Wölbung',arcs:'Bögen',bloom:'Blüte',spiral:'Spirale',gold:'Gold',pop:'Pop',wave:'Welle',comic:'Comic',monet:'Licht',hokusai:'Holzschnitt'},
-    FR:{lichtenstein:'BD',klee:'Polyphonie',delaunay:'Disques',oneM:'Million',raffel:'Signature',picasso:'Cubiste',kusama:'Pois',pollock:'Gouttes',kandinsky:'Abstrait',miro:'Constellation',mondrian:'Grille',bauhaus:'Bauhaus',rothko:'Champs',matisse:'Découpage',bulge:'Bombé',arcs:'Arcs',bloom:'Floraison',spiral:'Spirale',gold:'Or',pop:'Pop',wave:'Vague',comic:'BD',monet:'Lumière',hokusai:'Estampe'},
-    ES:{lichtenstein:'Cómic',klee:'Polifonía',delaunay:'Discos',oneM:'Millón',raffel:'Firma',picasso:'Cubista',kusama:'Puntos',pollock:'Goteo',kandinsky:'Abstracto',miro:'Constelación',mondrian:'Cuadrícula',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Abultado',arcs:'Arcos',bloom:'Floración',spiral:'Espiral',gold:'Oro',pop:'Pop',wave:'Onda',comic:'Cómic',monet:'Luz',hokusai:'Xilografía'},
-    PT:{lichtenstein:'HQ',klee:'Polifonia',delaunay:'Discos',oneM:'Milhão',raffel:'Assinatura',picasso:'Cubista',kusama:'Pontos',pollock:'Gotas',kandinsky:'Abstrato',miro:'Constelação',mondrian:'Grade',bauhaus:'Bauhaus',rothko:'Campos',matisse:'Recortes',bulge:'Saliência',arcs:'Arcos',bloom:'Florescer',spiral:'Espiral',gold:'Ouro',pop:'Pop',wave:'Onda',comic:'HQ',monet:'Luz',hokusai:'Xilogravura'},
-    zh:{lichtenstein:'漫画',klee:'复调',delaunay:'圆盘',oneM:'百万',raffel:'签名',picasso:'立体派',kusama:'圆点',pollock:'滴洒',kandinsky:'抽象',miro:'星座',mondrian:'网格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪纸',bulge:'凸起',arcs:'弧线',bloom:'绽放',spiral:'螺旋',gold:'金色',pop:'波普',wave:'波浪',comic:'漫画',monet:'光',hokusai:'浮世绘'},
-    zhTW:{lichtenstein:'漫畫',klee:'複調',delaunay:'圓盤',oneM:'百萬',raffel:'簽名',picasso:'立體派',kusama:'圓點',pollock:'滴灑',kandinsky:'抽象',miro:'星座',mondrian:'網格',bauhaus:'包豪斯',rothko:'色域',matisse:'剪紙',bulge:'凸起',arcs:'弧線',bloom:'綻放',spiral:'螺旋',gold:'金色',pop:'普普',wave:'波浪',comic:'漫畫',monet:'光',hokusai:'浮世繪'},
-    ja:{lichtenstein:'コミック',klee:'ポリフォニー',delaunay:'ディスク',oneM:'ミリオン',raffel:'サイン',picasso:'キュビズム',kusama:'ドット',pollock:'ドリップ',kandinsky:'抽象',miro:'星座',mondrian:'グリッド',bauhaus:'バウハウス',rothko:'色面',matisse:'切り絵',bulge:'凸面',arcs:'弧',bloom:'開花',spiral:'螺旋',gold:'金',pop:'ポップ',wave:'波',comic:'コミック',monet:'光',hokusai:'浮世絵'},
-  };
-  const STYLE_LABELS = STYLE_LABELS_I18N[lang] || STYLE_LABELS_I18N.EN;
   const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
 const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma',bach:'J. S. Bach',beethoven:'Ludwig van Beethoven',debussy:'Claude Debussy',rachmaninov:'Sergei Rachmaninov',einaudi:'Ludovico Einaudi',hisaishi:'Joe Hisaishi'};
 // Free-tier composer split: Chopin + Satie ship free (public-domain anchors,
@@ -1785,7 +1722,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
   // Key = "a|b"; value = the style key last chosen from that pair.
-  const [pairLastPick, setPairLastPick] = useState({});
   // D2 refactor (Free tier only): which pair is currently showing its "locked
   // partner" info row beneath the artist palette. Holds the pair key "a|b" of
   // the most recently tapped pair, or null. Tapping the same pair again toggles
@@ -1966,6 +1902,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(el._blobUrl){try{URL.revokeObjectURL(el._blobUrl);}catch(_){}}
     if(audioBlob){el._blobUrl=URL.createObjectURL(audioBlob);el.src=el._blobUrl;}
     else{el._blobUrl=null;el.src='';}
+    return ()=>{ if(el._blobUrl){ try{URL.revokeObjectURL(el._blobUrl);}catch(_){} el._blobUrl=null; } };
   },[audioBlob]);
   const [audioName, setAudioName] = useState('');
   // ── My Music archive state (shared Lite + Advanced) ──────────────────────
@@ -2032,13 +1969,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const [speedSweeping, setSpeedSweeping] = useState(false);   // true while holding — shows a floating rate label above the finger
   // Same pattern for the demo link: if the canvas has content, ask once before
   // replacing it with Für Elise. Empty canvas → demo fires immediately.
-  const demoArmRef = useRef(null);
   // Source-switch arm — only guards a CREATION canvas (Compose/MIC), which the
   // user hand-made and can't reload. Loaded sources (MIDI/Audio/Score/Image/mood)
   // switch immediately. First tap on a different tile arms it (shows "clean
   // canvas?"); second tap of the same tile within 3s switches + cleans.
-  const [switchArmed, setSwitchArmed] = useState(null); // tile key or null
-  const switchArmRef = useRef(null);
+  const switchArmed = null;   // source-switch arming was retired — tiles never arm; kept as a constant for the tile styles
   // A12: track which text input has focus so we can show a visible focus ring.
   // Single string ('comp'|'guide'|null) keeps it cheap. The existing
   // inputFocus.current ref is a boolean for piano-shortcut suppression — that
@@ -2310,13 +2245,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const jamOnRef = useRef(false); useEffect(()=>{ jamOnRef.current = jamOn; },[jamOn]);
   const [crOn, setCrOn] = useState(false);
   const crOnRef = useRef(false); useEffect(()=>{ crOnRef.current = crOn; },[crOn]);
-  useEffect(()=>{ if(!ensembleActive){ setJamOn(false); setCrOn(false); setPainterStage([]); setComposerStage([]); } },[ensembleActive]);
-  useEffect(()=>{ if(!jamOn) setPainterStage([]); },[jamOn]);
+  useEffect(()=>{ if(!ensembleActive){ setJamOn(false); setCrOn(false); setPainterStage(p=>p.length?[]:p); setComposerStage(p=>p.length?[]:p); } },[ensembleActive]);
+  useEffect(()=>{ if(!jamOn) setPainterStage(p=>p.length?[]:p); },[jamOn]);
   // Ensemble × shuffle ALL: every Next draws a fresh crossing (how many and who
   // are random). Shuffle 1 needs no flag: Next rolls the variant of the crossing.
   const [jamAll, setJamAll] = useState(false);
   useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
-  useEffect(()=>{ if(!crOn) setComposerStage([]); },[crOn]);
+  useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
   const STAGE_MAX = 5;
   const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
   const _painterLabel = (k)=>{ if(!k||k==='mosaic') return t('mosaicStyle'); if(k==='notes') return t('notesStyle'); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
@@ -2359,7 +2294,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(ok) return;
     sigActiveRef.current = false; setSigActive(false);
     // a Free fusion stage has no Ensemble behind it — take it down with the latch
-    if(!jamOnRef.current && painterStage.length && painterStage.join('+')===rest) setPainterStage([]);
+    if(!jamOnRef.current && painterStage.length && painterStage.join('+')===rest) setPainterStage(p=>p.length?[]:p);
   },[sigActive, style, painterStage, phaseIndex, mode, randomMode, composeMode, micPainting, micListening, viewMode]);
   // chip taps while JAM / C&R is on: add · remove · (first slot) promote the next
   // The stage holds only EXPLICIT members: slot 1 = the selected artist (if
@@ -2505,7 +2440,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // Pool size mirrors shuffleStyle: selected artists (+ mosaic family if on).
       const familyOn = setupArtists.includes('mosaicFamily');
       const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
-      const poolLen = (filteredArtists.length + (familyOn?3:0)) || 1;
+      const poolLen = (filteredArtists.length + (familyOn?2:0)) || 1;
       const key = 'full|'+poolLen+'|'+N+'|'+(familyOn?1:0)+'|'+(pollockSessionSeed>>>0);
       if(diceBagKeyRef.current!==key || diceBagRef.current.length===0){
         diceBagKeyRef.current = key;
@@ -2519,6 +2454,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // index so the artist lands exactly on combo.a (cancel basePick offset).
       setShuffleArtistIndex(next.a|0);
       setShufVariant(()=> next.v|0);
+      return (next.a|0)!==(shuffleArtistIndex|0);   // true = the artist on screen changes
     }
   };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
@@ -2590,7 +2526,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // again here would chain draw → style change → draw … forever. Ensemble
       // crossings are drawn only by Next / Play / Show.
       if((seed !== 0 || art) && randomMode && !(jamOn && jamAll)){
-        _diceRoll();
+        // Full shuffle: the roll itself moves effectiveStyle → this effect would
+        // run again and roll again (until a draw landed on the same artist).
+        // Consume that one re-run.
+        if(_diceRoll()===true) nextRollInProgressRef.current = true;
       }
     }
   }, [pollockSessionSeed, effectiveStyle, randomMode]);
@@ -2778,7 +2717,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     saltHistoryRef.current=hist;
     saltIdxRef.current=hist.length-1;
     setRndSalt(salt);
-    setVariationPos(saltIdxRef.current);
   },[]);
   // Demo mode: true while a Für Elise demo session is active. Locks the
   // play action (Stop still works because it's the same button in playing state)
@@ -2880,7 +2818,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const litePieceRef = useRef(0);
   const qrModeRef = useRef(null);
   const qrToneRef = useRef(null);
-  const posterMakerRef = useRef(false);
   // Which BUILT-IN sample currently owns the canvas (0/1/2) — set by
   // loadSampleMidi, cleared by every other loader via applyEvents. This is
   // what makes the poster tool work from the normal in-app sample picker,
@@ -2931,7 +2868,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // cleanup release is ever needed.
   // Daily-artist toast: once per local day for Free users (localStorage remembers the day index).
   const [dailyToast,setDailyToast]=useState(()=>{ try{ const d=new Date(); const n=Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/86400000); return localStorage.getItem('paintiano_daily_toast_v1')!==String(n); }catch(_){ return false; } });
-  const [phBanner,setPhBanner]=useState(()=>{ try{ if(Date.now()>=Date.parse('2026-10-07T07:00:00Z')) return false; return localStorage.getItem('paintiano_ph_banner_v1')!=='1'; }catch(_){ return false; } });
   const _pmTapsRef=useRef({n:0,t:0,tm:null});
   const _pmLogoTap=useCallback(()=>{
     const now=Date.now(); const st=_pmTapsRef.current;
@@ -2976,7 +2912,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Lite ⇄ Advanced: an ensemble never travels across the switch — Lite fills
   // its stage only from Surprise, Advanced only from chip taps.
   const _ensModeFirstRef = useRef(true);
-  useEffect(()=>{ if(_ensModeFirstRef.current){ _ensModeFirstRef.current=false; return; } setJamOn(false); setCrOn(false); setPainterStage([]); setComposerStage([]); },[basicMode]);
+  useEffect(()=>{ if(_ensModeFirstRef.current){ _ensModeFirstRef.current=false; return; } setJamOn(false); setCrOn(false); setPainterStage(p=>p.length?[]:p); setComposerStage(p=>p.length?[]:p); },[basicMode]);
   // Once the user has taken the bridge into Advanced, don't offer it again
   // this session — they now know the top-bar Lite/Advanced switch.
   const [bridgeUsed, setBridgeUsed] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_discovered')==='1'; }catch(_){ return false; } });
@@ -2989,9 +2925,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // ── Auto-immerse REMOVED — users found it intrusive. Instead the fullscreen
   //     toggle simply stays visible longer (see controlsAwake timeout) so they
   //     choose when to go big. Refs kept: the manual FS button still reads them.
-  const liteAutoFsSpentRef = useRef(false);
-  const liteAutoFsTimerRef = useRef(null);
-  const liteUserTouchedRef = useRef(false);
   // Lite has two flavours, flipped by tapping the header subtitle:
   //   liteImageMode=false → "music → painting" (the original: auto-plays Liszt)
   //   liteImageMode=true  → "painting → music" (auto-loads the Van Gogh sample
@@ -3228,16 +3161,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // their restarts via this ref (read + reset in startPlay). Both moved to the
   // dock/header (Jul 2026) and no writer remains — kept so startPlay's read
   // stays untouched; always false now.
-  const keepStripOpenRef = useRef(false);
-  // Mood-hint flash: when the user taps a disabled morph/vary, the mood
-  // selector briefly pulses with a label above it pointing them there.
-  const [moodHint, setMoodHint] = useState(false);
-  const moodHintRef = useRef(null);
-  const flashMoodHint = useCallback(()=>{
-    setMoodHint(true);
-    if(moodHintRef.current) clearTimeout(moodHintRef.current);
-    moodHintRef.current = setTimeout(()=>{setMoodHint(false); moodHintRef.current=null;}, 2500);
-  },[]);
   const [compositionName, setCompositionName] = useState('');
   const loopModeRef = useRef(false);
   const [varySource, setVarySource] = useState(null);
@@ -3269,7 +3192,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // button rolls a different composer (Glass/Satie/Chopin/Scan, never the
   // current one) on the SAME picture — mirror of the music-side surprise.
   const _liteResetComposer = useCallback(()=>{
-    imgComposerRef.current=null; setImgComposer(null); setComposerStage([]);
+    imgComposerRef.current=null; setImgComposer(null); setComposerStage(p=>p.length?[]:p);
   },[]);
   const _liteRollComposer = useCallback(()=>{
     const _en=['glass','satie','chopin','vine','gershwin','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi'].filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k));
@@ -3281,7 +3204,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Ensemble on (Pro): now and then Surprise seats an ensemble — 2 to 5
     // composers (count and members random) trading phrases on the same picture.
     if(ensembleOnRef.current && c && Math.random()<0.25){ const o=_en.filter(k=>k!==c); for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; } const n=Math.min(o.length, 1+((Math.random()*4)|0)); setComposerStage(o.slice(0,n)); }
-    else setComposerStage([]);
+    else setComposerStage(p=>p.length?[]:p);
   },[setupComposers, composerIsLocked, isDailyComposer, composerOfDay, proStatus]);
   // ADVANCED composer dice — mirror of the artists' 🎲: ON rolls a different
   // composer at once; NEXT (panel, fullscreen button, fullscreen swipe-up)
@@ -3348,8 +3271,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgPlayMode, setImgPlayMode] = useState('scan');
   const imgPlayModeRef = useRef('scan');
   useEffect(()=>{ imgPlayModeRef.current=imgPlayMode; },[imgPlayMode]);
-  const blobUrl      = useMemo(()=>midiBlob?URL.createObjectURL(midiBlob):null,[midiBlob]);
-  const audioBlobUrl = useMemo(()=>audioBlob?URL.createObjectURL(audioBlob):null,[audioBlob]);
   const busy = playing || anim || working;
   // Mode exclusion: once a file/song is loaded OR an image is dropped, the
   // keyboard is locked until clear (no mixing loaded content with new live
@@ -3428,7 +3349,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   // Cleanup the compose-commit debounce on unmount so it can't fire commit()
   // against a torn-down state tree.
-  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);if(moodHintRef.current)clearTimeout(moodHintRef.current);if(demoArmRef.current)clearTimeout(demoArmRef.current);if(switchArmRef.current)clearTimeout(switchArmRef.current);try{const b=demoReelRef.current;if(b){b.active=false;b.timers.forEach(id=>clearTimeout(id));if(b.parade)clearInterval(b.parade);if(b.vary)clearInterval(b.vary);if(b.type)clearInterval(b.type);}}catch(_){}substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
+  useEffect(()=>()=>{clearTimeout(kbTimer.current);if(clearArmRef.current)clearTimeout(clearArmRef.current);if(speedHoldRef.current)clearTimeout(speedHoldRef.current);try{const b=demoReelRef.current;if(b){b.active=false;b.timers.forEach(id=>clearTimeout(id));if(b.parade)clearInterval(b.parade);if(b.vary)clearInterval(b.vary);if(b.type)clearInterval(b.type);}}catch(_){}substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};},[]);
 
   // iOS 17+: pin the audio session category to 'playback' on app mount.
   // This makes audio output IGNORE the hardware silent switch (side mute
@@ -3942,6 +3863,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         } else if(!fullCanvasOverlay) ctx.drawImage(sub.canvas,0,0,CW,CH);
         // Run the canvas-wide overlay on top (this is the only per-frame cost
         // that legitimately scales with lim).
+        _resetCtxState(ctx);
         if(style==='pollock')   drawPollockOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='picasso')  drawPicassoOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='kusama')   drawKusamaOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, paintPhase);
@@ -3966,7 +3888,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='klee') drawKleeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='delaunay') drawDelaunayOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
-        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed};
+        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
       ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
@@ -4059,7 +3981,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
       }
     }
-    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex};
+    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
   },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
@@ -4218,7 +4140,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
       if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
-      if(ac.state==='suspended')ac.resume();
+      if(ac.state==='suspended')ac.resume().catch(()=>{});
       const freq=440*Math.pow(2,(midi-69)/12),now=ac.currentTime,fade=Math.min(dur+tailS+.35,3.0),amp=gain*.18*(mutedRef.current?0:1),master=ac.createGain();
       master.gain.setValueAtTime(amp,now);master.gain.exponentialRampToValueAtTime(.0001,now+fade);master.connect(ac.destination);
       if(recStreamDestRef.current){try{master.connect(recStreamDestRef.current);}catch(_){}}
@@ -4663,7 +4585,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // resume the context. Resume on 'interrupted' isn't always honoured by
       // iOS without a fresh user gesture, but it's a no-op safe to attempt.
       try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
-      try { ac.resume(); } catch(_){}
+      try { ac.resume().catch(()=>{}); } catch(_){}
       // Poll briefly for the context to actually transition to 'running' before
       // returning. Without this, startPlay would schedule notes against a still-
       // suspended Tone.now() and the first chord could land silent. Hard cap at
@@ -5445,6 +5367,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[info, viewMode, currentMood, composeSource, varySource, morphTargets, songQ, structureSeedLock, midiBlob, midiName, compositionName, audioName, scoreName, audioSideImage, audioRowOpen, originalImgUrl, mode, imgDir, setupNoSel, playedOnce, imgMoodThumb, mfiImgAspect, imgReturnUrl]);
 
   // stashMode: capture the current SOURCE-mode draft (Mood only for now).
+  // Live mirrors of the variant knobs — stashMode runs through a [] closure and
+  // used to freeze them at their mount values (every ← Back restored variant 0).
+  const phaseIndexRef=useRef(0), shufVariantRef=useRef(0), shuffleArtistIndexRef=useRef(0), rndSaltRef=useRef(0);
+  useEffect(()=>{ phaseIndexRef.current=phaseIndex; shufVariantRef.current=shufVariant; shuffleArtistIndexRef.current=shuffleArtistIndex; rndSaltRef.current=rndSalt; },[phaseIndex,shufVariant,shuffleArtistIndex,rndSalt]);
   const stashMode = useCallback((mode)=>{
     if(mode==='mood'){
       // Only a real text-mood with content. MFI (moodFromImg) is its own mode,
@@ -5466,7 +5392,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         midiBlob: meta.midiBlob||null, midiName: meta.midiName||'',
         // Variant knobs — freeze the exact painting so Back restores it, not a
         // re-rolled one. Style/variant only advances via Next/Swipe, not Back.
-        _shuffleArtistIndex: shuffleArtistIndex, _shufVariant: shufVariant, _phaseIndex: phaseIndex, _rndSalt: rndSalt,
+        _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current,
       };
       setHasMoodDraft(true);
     }
@@ -5493,7 +5419,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         audioSideImage: ls==='audio' ? (meta.audioSideImage||null) : null,
         audioRowOpen: ls==='audio' ? !!meta.audioRowOpen : false,
         // Variant knobs — freeze the exact painting so Back restores it.
-        _shuffleArtistIndex: shuffleArtistIndex, _shufVariant: shufVariant, _phaseIndex: phaseIndex, _rndSalt: rndSalt,
+        _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current,
       };
       setHasMusicDraft(true);
     }
@@ -5804,12 +5730,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,stashOutgoing]);
 
   // clearModeStash: drop a source-mode draft (used by full clear).
-  const clearModeStash = useCallback((mode)=>{
-    if(mode==='mood'){ moodStashRef.current = null; setHasMoodDraft(false); }
-    if(mode==='music'){ musicStashRef.current = null; setHasMusicDraft(false); }
-    if(mode==='image'){ imageStashRef.current = null; setHasImageDraft(false); }
-    if(mode==='mfi'){ mfiStashRef.current = null; setHasMfiDraft(false); }
-  },[]);
   // Notes mode is a per-painting choice — reset it to plain colour Mosaic
   // whenever the source changes (new loaded file, new mood, image↔mood switch),
   // so each fresh source starts in the normal reading rather than inheriting
@@ -6228,7 +6148,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // a non-zero rndSalt and a structureSeedLock; both must reset so the
       // next painting starts from a clean seed state.
       setRndSalt(0); setStructureSeedLock(null); setShuffleArtistIndex(0); setPhaseIndex(0);
-      saltHistoryRef.current=[0]; saltIdxRef.current=0; setVariationPos(0);
+      saltHistoryRef.current=[0]; saltIdxRef.current=0;
       // Substrate cache + last-paint signature: invalidate fully so the
       // renderer can't take any fast-path shortcut against stale data.
       substrateRef.current={canvas:null,ctx:null,builtTo:0,key:'',CW:0,CH:0};
@@ -6393,7 +6313,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // the latch (and a latch-only Free stage); Lite opens every piece on it.
     try{
       const _sg = computeSongSignature(events);
-      if(sigActiveRef.current && !jamOnRef.current) setPainterStage([]);
+      if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false);
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
       if(_sg && basicModeRef.current && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
@@ -6599,6 +6519,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // formats, loadMidi for MIDI. This means saved pieces get the same transcribe
   // pipeline, so the resulting painting matches what the user originally saw.
   // The drawer closes before dispatch so the working overlay is unobstructed.
+  const loadMusicXmlRef = useRef(null);   // loadMusicXml is declared further down
   const loadFromMyMusic = useCallback(async(rec)=>{
     if(!rec || !rec.blob) return;
     setShowMyMusicDrawer(false);
@@ -6620,8 +6541,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // by loadedSource/blob updates already sees the ref populated.
     _loadedFromMyMusicRef.current = rec.id;
     try{
-      if(rec.kind === 'midi')      loadMidi(_fakeEvent, true);
-      else                          await loadAudio(_fakeEvent, true);
+      if(rec.kind === 'midi')       loadMidi(_fakeEvent, true);
+      else if(rec.kind === 'score') await (loadMusicXmlRef.current ? loadMusicXmlRef.current(_fakeEvent) : loadAudio(_fakeEvent, true));
+      else                           await loadAudio(_fakeEvent, true);
     }catch(err){ /* silent — user can retry from the drawer */ }
   }, [loadAudio, loadMidi]);
 
@@ -7367,6 +7289,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(e){if(loadTokenRef.current===myToken){setErr('Score: '+e.message);setErrInfo(false);}}
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
+  useEffect(()=>{ loadMusicXmlRef.current=loadMusicXml; },[loadMusicXml]);
 
   // Unified "Sound" input router. One file picker accepts MIDI, audio and score
   // files; we detect which kind it is by extension and hand the SAME change-event
@@ -8509,7 +8432,7 @@ Hard requirements:
     // Gentle in-gesture audio wake: just make sure the context is running. The
     // heavier disconnect/rebuild/restart recovery was destabilising audio across
     // all modes, so it's been removed from here.
-    try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume(); }catch(_){}
+    try{ const ac=Tone.getContext().rawContext; if(ac && ac.state!=='running') ac.resume().catch(()=>{}); }catch(_){}
     // Image AI-Compose mode: a FRESH Play (not a resume) that hasn't composed yet
     // hands off to aiComposeFromImage — it composes (or replays the cached piece)
     // and starts playback itself, with the original image kept on the canvas.
@@ -8573,19 +8496,18 @@ Hard requirements:
         nextRollInProgressRef.current = true;
         // Manual artist → rotate style. Shuffle (no manual artist) → rotate
         // artist + roll a fresh random style for that new artist.
-        if(style){ _diceRoll(); }
-        else { _diceRoll(); }
-        // (both branches roll the dice; _diceRoll handles manual-artist vs shuffle)
+        // startPlay is memoised on other deps — call the per-render roll via its
+        // ref so the roll sees the CURRENT artist / variant / Setup selection.
+        try{ (showDiceRef.current || _diceRoll)(); }catch(_){}
       }
-      else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); setVariationPos(0); }
+      else { saltHistoryRef.current=[0]; saltIdxRef.current=0; setRndSalt(0); }
     }
     stopAll();if(!isResume)setDisp(0);setPlaying(true);
     // Collapse the Color·Style strip when a FRESH Play starts, so the canvas gets
     // full focus. Only on fresh Play (not resume): the user can re-open the strip
     // during playback to change colour/style, and we must NOT yank it shut again —
     // nothing here closes it mid-play, so it stays open until the next fresh Play.
-    if(!isResume && !keepStripOpenRef.current) setStripOpen(false);
-    keepStripOpenRef.current=false;
+    if(!isResume) setStripOpen(false);
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -8600,11 +8522,11 @@ Hard requirements:
         const src=ac.createBufferSource();
         src.buffer=audioPCMRef.current;
         src.playbackRate.value=playbackSpeedRef.current;
-        const audioGain=ac.createGain();audioGain.gain.value=mutedRef.current?0:1;src.connect(audioGain);audioGain.connect(ac.destination);src._muteGain=audioGain;
+        const audioGain=ac.createGain();audioGain.gain.value=mutedRef.current?0:1;src.connect(audioGain);try{Tone.connect(audioGain,Tone.getDestination());}catch(_){audioGain.connect(ac.destination);}src._muteGain=audioGain;
         const offsetSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
         src.start(0,offsetSec);
         audioSourceRef.current=src;
-        src.onended=()=>{audioSourceRef.current=null;};
+        src.onended=()=>{ if(audioSourceRef.current===src) audioSourceRef.current=null; };
       }catch(_){}
     }
 
@@ -8628,7 +8550,7 @@ Hard requirements:
         const src=ac.createBufferSource();
         src.buffer=listenPCMRef.current;
         src.playbackRate.value=playbackSpeedRef.current;
-        const g=ac.createGain();g.gain.value=mutedRef.current?0:1;src.connect(g);g.connect(ac.destination);src._muteGain=g;
+        const g=ac.createGain();g.gain.value=mutedRef.current?0:1;src.connect(g);try{Tone.connect(g,Tone.getDestination());}catch(_){g.connect(ac.destination);}src._muteGain=g;
         const offsetSec=fromIdx>0&&chords[fromIdx]?(chords[fromIdx].startMs||0)/1000:0;
         src.start(0,offsetSec);
         originalSourceRef.current=src;
@@ -9080,12 +9002,6 @@ Hard requirements:
 
   // "Surprise me" (full) — random expressive style + harmony palette, then load
   // the full Liszt sample and play, so the canvas shows a fresh painting.
-  const surpriseMe = useCallback(()=>{
-    pickExpressiveStyle();
-    setMode('harmony');
-    loadSampleMidi(litePieceRef.current);
-    setTimeout(()=>{ try{ startPlay && startPlay(); }catch(_){} }, 280);
-  },[pickExpressiveStyle, loadSampleMidi, startPlay]);
 
   // Lite Play chip — the canvas starts empty (no autoplay). The first tap on the
   // big gold Play chip loads the Liszt sample and starts playback within the
@@ -9140,7 +9056,7 @@ Hard requirements:
   // Lite Jam belongs to the Surprise that seated it: any other style change in
   // Lite (Play disc, flavour flip, auto-play) takes the stage down.
   const _liteJamStyleRef = useRef(null);
-  useEffect(()=>{ if(basicModeRef.current && painterStageRef.current.length && style!==_liteJamStyleRef.current){ _liteJamStyleRef.current=null; setPainterStage([]); } },[style]);
+  useEffect(()=>{ if(basicModeRef.current && painterStageRef.current.length && style!==_liteJamStyleRef.current){ _liteJamStyleRef.current=null; setPainterStage(p=>p.length?[]:p); } },[style]);
   const basicSurprise = useCallback(()=>{
     // ── Forced Mosaic on the first Surprise after Lite Play ─────────────
     // litePlayStart lands on Pollock. The very next Surprise tap goes to
@@ -9799,7 +9715,7 @@ Hard requirements:
         src.buffer = listenPCMRef.current;
         src.playbackRate.value = playbackSpeedRef.current;
         const g = ac.createGain(); g.gain.value = mutedRef.current?0:1;
-        src.connect(g); g.connect(ac.destination); src._muteGain = g;
+        src.connect(g); try{Tone.connect(g,Tone.getDestination());}catch(_){g.connect(ac.destination);} src._muteGain = g;
         src.start(0, offsetSec);
         originalSourceRef.current = src;
         originalPlaybackRef.current = true;
@@ -10935,6 +10851,7 @@ Hard requirements:
         // once into a throwaway probe ctx to DETECT whether this style/variant
         // paints its own full-canvas ground, then into the real ctx. ──
         const _runOverlays = (_octx) => {
+        _resetCtxState(_octx);
         // Pollock global drip overlay — drawn over all rendered cells.
         // _octx is already scaled; pass canvas-space CW/CH so the splatters
         // span the painting at export resolution.
@@ -11644,7 +11561,7 @@ Hard requirements:
     // new variation; if NOT playing, just load it (don't auto-play).
     const varyBlocked = composeMode||micPainting||micListening||recording||working;
     if(varyBlocked) return;
-    if(!varySource||!chords.length){flashMoodHint();return;}
+    if(!varySource||!chords.length){return;}
     const varied=rerollSong(varySource, !randomMode);
     if(!varied)return;
     // Mark Vary in progress — the phaseIndex useEffect will see this
@@ -11717,23 +11634,13 @@ Hard requirements:
           {(()=>{ const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null); return _k ? (STYLE_INSPIRED[_k]||_k) : '—'; })()} · v{style?(phaseIndex|0):(shufVariant|0)} · {mode}
         </div>
       )}
-      {dailyToast && proStatus==='free' && !phBanner && !showOnboarding && !showIntro && (
+      {dailyToast && proStatus==='free' && !showOnboarding && !showIntro && (
         <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw'}}>
           <span onClick={()=>{ try{ window.posthog && window.posthog.capture('daily_toast_tap',{artist:artistOfDay,composer:composerOfDay}); }catch(_){} setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ if(!liteImageMode) selectStyle(artistOfDay); }catch(_){} }}
             style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
             ✦ {ts('dailyTitle','Artist of the day')}: <b style={{fontWeight:700}}>{STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</b> · {ts('dailyTry','try it')}
           </span>
           <span onClick={()=>{ setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ window.posthog && window.posthog.capture('daily_toast_dismiss'); }catch(_){} }} style={{color:'rgba(226,196,119,.7)',cursor:'pointer',fontSize:15,lineHeight:1,padding:'2px 4px'}}>×</span>
-        </div>
-      )}
-      {phBanner && (
-        <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(201,168,76,.55)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45)',maxWidth:'92vw'}}>
-          <span
-            onClick={()=>{ try{ window.open('https://www.producthunt.com/products/paintiano?launch=paintiano','_blank'); }catch(_){} }}
-            style={{color:'#c9a84c',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            {({EN:'Launching on Product Hunt · Oct 7',SK:'Štartujeme na Product Hunte · 7. 10.',DE:'Wir starten auf Product Hunt · 7. 10.',FR:'Lancement sur Product Hunt · 7/10',ES:'Lanzamiento en Product Hunt · 7/10',PT:'Lançamento no Product Hunt · 7/10',zh:'10月7日 Product Hunt 上线',zhTW:'10月7日 Product Hunt 上線',ja:'10月7日 Product Hunt でローンチ'})[lang]||'Launching on Product Hunt · Oct 7'} · <b style={{fontWeight:700}}>Notify me</b>
-          </span>
-          <span onClick={()=>{ setPhBanner(false); try{ localStorage.setItem('paintiano_ph_banner_v1','1'); }catch(_){} }} style={{color:'rgba(201,168,76,.7)',cursor:'pointer',fontSize:15,lineHeight:1,padding:'2px 4px'}}>×</span>
         </div>
       )}
       {showOnboarding && !showIntro && !basicMode && (()=>{
@@ -11901,7 +11808,7 @@ Hard requirements:
       )}
       {/* Saved flash — brief confirmation after successful save. */}
       {myMusicSavedFlash && (
-        <div style={{position:'fixed',top:'max(20px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:20001,padding:'10px 20px',background:'rgba(90,170,90,0.95)',color:'#fff',borderRadius:20,fontSize:(.68*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',boxShadow:'0 4px 16px rgba(0,0,0,.3)',pointerEvents:'none',animation:'pf-flash-in .18s ease-out'}}>✓ {ts('mymusicSaved',({EN:'Saved',SK:'Uložené',DE:'Gespeichert',FR:'Enregistré',ES:'Guardado',PT:'Guardado',zh:'已保存',zhTW:'已儲存',ja:'保存済み'})[lang]||'Saved')}</div>
+        <div style={{position:'fixed',top:'max(20px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:20001,padding:'10px 20px',background:'rgba(90,170,90,0.95)',color:'#fff',borderRadius:20,fontSize:(.68*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',boxShadow:'0 4px 16px rgba(0,0,0,.3)',pointerEvents:'none',animation:'pf-fadeUp .18s ease-out'}}>✓ {ts('mymusicSaved',({EN:'Saved',SK:'Uložené',DE:'Gespeichert',FR:'Enregistré',ES:'Guardado',PT:'Guardado',zh:'已保存',zhTW:'已儲存',ja:'保存済み'})[lang]||'Saved')}</div>
       )}
       {/* My Music — Drawer (5 slots with meta + delete + tap-to-load). Opens
           via the "Moja hudba" tile in the Lite source picker or a similar
@@ -12255,7 +12162,7 @@ Hard requirements:
               mood-from-image · music · image. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('importLabel'))}</div>
-            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ restoreMode('mfi'); setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':((moodFromImg&&chords.length>0||hasMfiDraft)?'#eafff4':'rgba(228,178,255,.95)')),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>{(proStatus!=='pro_ai' && !modeExhausted('mfi')) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(228,178,255,.95)',background:'rgba(220,150,255,.14)',border:'1px solid rgba(220,150,255,.5)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free AI try')}</span>)}
+            <button onClick={()=>{ if(!imgAiBusy&&!sourcePickerLocked&&aiUsable){ if(moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMfiDraft){ restoreMode('mfi'); setForceSetup(false); return; } setPickMode(pickMode==='imgmood'?null:'imgmood'); } }} disabled={imgAiBusy||sourcePickerLocked||(!aiLocked&&!aiUsable)} className="pf-lift pf-mfitile" title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(!aiUsable?(t('aiOfflineHint')||'AI features need a connection'):(t('mfiDesc')!=='mfiDesc' ? t('mfiDesc') : 'pick a picture — AI captures its mood, then paints'))} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:(imgAiBusy||(!aiLocked&&!aiUsable))?'default':'pointer',background:(moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.20)':'transparent',border:'1px solid '+((moodFromImg&&chords.length>0||hasMfiDraft)?'rgba(220,150,255,.75)':'rgba(220,150,255,.35)'),color:aiLocked?'rgba(225,175,255,.75)':((imgAiBusy||!aiUsable)?'rgba(225,175,255,.5)':((moodFromImg&&chords.length>0||hasMfiDraft)?'#eafff4':'rgba(228,178,255,.95)')),fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:aiLocked?.85:(!aiUsable?.5:1),position:'relative'}}>{(proStatus!=='pro_ai' && !modeExhausted('mfi')) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(228,178,255,.95)',background:'rgba(220,150,255,.14)',border:'1px solid rgba(220,150,255,.5)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free AI try')}</span>)}
               {(moodFromImg&&chords.length>0||hasMfiDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dc96ff',boxShadow:'0 0 6px #dc96ff',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}>{imgAiBusy?<span>⏳</span>:<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.5L21 19l-1.3.5L19 21l-.7-1.5L17 19l1.3-.5z"/><path d="M5 4l.6 1.2L7 6l-1.4.4L5 8l-.6-1.6L3 6l1.4-.4z"/></svg>}</span>
               {imgAiBusy?'…':_sent(t('imgMood')||'mood from image').replace(/^(\S+)\s+/, '$1\u00A0')}
@@ -12469,8 +12376,8 @@ Hard requirements:
                 if(!cv) return;
                 cv.toBlob((blob)=>{
                   if(!blob) return;
+                  const file = new File([blob], 'painting.png', { type:'image/png', lastModified: Date.now() });
                   try{
-                    const file = new File([blob], 'painting.png', { type:'image/png', lastModified: Date.now() });
                     const dt = new DataTransfer();
                     dt.items.add(file);
                     // Mark this transition so the next ← Back from image mode
@@ -12608,7 +12515,7 @@ Hard requirements:
                 setErrInfo(true);
                 return;
               }
-              if(!currentMood){flashMoodHint();return;}
+              if(!currentMood){return;}
               if(!chords.length)return;
               const pre=morphTargets.filter(m=>MOODS.includes(m));
               setMorphSel(pre);
@@ -13491,7 +13398,7 @@ Hard requirements:
         // narrow tools column would otherwise truncate long morph chains.
         const _titleSpan = basicMode
           ? (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:(.52*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:'rgba(201,168,76,.7)'}}>{seekTitle}</span>)
-          : (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:seekTitle.includes('→')?0.85:0.5,color:seekTitle.includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:seekTitle.includes('→')?'.62rem':'.57rem',fontStyle:seekTitle.includes('→')?'italic':'normal'}}>{seekTitle}</span>);
+          : (<span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',opacity:String(seekTitle||'').includes('→')?0.85:0.5,color:String(seekTitle||'').includes('→')?'rgba(220,170,255,.9)':'inherit',fontSize:String(seekTitle||'').includes('→')?'.62rem':'.57rem',fontStyle:String(seekTitle||'').includes('→')?'italic':'normal'}}>{seekTitle}</span>);
         const _showAiBadge = (moodContext && composeSource==='ai') || _imgAtmo;
         // Offline badge: the AI call failed and the piece came from the local
         // procedural generator (moodToSong fallback in aiCompose). Muted colour
@@ -13886,7 +13793,7 @@ Hard requirements:
         }} aria-label={ts('mymusicSaveAria','Save to My Music')} title={ts('mymusicSaveAria','Save to My Music')} className="pf-mymusic-btn" style={{position:'absolute',top:8,left:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>)}
-        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && <button onClick={(e)=>{e.stopPropagation(); if(basicMode){ liteAutoFsSpentRef.current=true; try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'manual' }); }catch(_){} } setImmersive(v=>!v);}} aria-label="fullscreen" title="Fullscreen" className="pf-fs-btn" style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
+        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && <button onClick={(e)=>{e.stopPropagation(); if(basicMode){ try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'manual' }); }catch(_){} } setImmersive(v=>!v);}} aria-label="fullscreen" title="Fullscreen" className="pf-fs-btn" style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>}
         {/* Fullscreen CTA row — Next (shuffle: jump to a new variation, works
@@ -13942,7 +13849,7 @@ Hard requirements:
               {/* NEXT in fullscreen — DESKTOP ONLY (mobile fullscreen uses the
                   swipe gesture instead). Same conditions as the normal-screen Next. */}
               {isDesktop && showNextFs && (
-                <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; if(style){ _diceRoll(); } else if(randomMode){ _diceRoll(); } _fireInspiredFlash(); wakeControls(); }} className="pf-lift" aria-label="next painting"
+                <button onClick={(e)=>{ e.stopPropagation(); nextRollInProgressRef.current=true; _diceRoll(); _fireInspiredFlash(); wakeControls(); }} className="pf-lift" aria-label="next painting"
                   style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,padding:'12px 24px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#fff',background:'linear-gradient(135deg,#e8557a,#d13b66)',border:'1px solid #e8557a',boxShadow:'0 6px 22px rgba(209,59,102,.45)',WebkitTapHighlightColor:'transparent'}}>
                   next ›
                 </button>
@@ -14381,7 +14288,7 @@ Hard requirements:
                 </button>
               ))}
             </div>
-            <button onClick={()=>setShowComposeRecent(false)} style={{display:'block',margin:'0 auto',padding:'8px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'none',cursor:'pointer',fontSize:(.65*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
+            <button onClick={()=>setShowComposeRecent(false)} style={{display:'block',margin:'0 auto',padding:'8px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'none',cursor:'pointer',fontSize:(.65*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('cancel'))}</button>
           </div>
         </div>
       )}
@@ -14397,7 +14304,7 @@ Hard requirements:
                 </button>
               )); })()}
             </div>
-            <button onClick={()=>setShowMicRecent(false)} style={{display:'block',margin:'0 auto',padding:'8px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'none',cursor:'pointer',fontSize:(.65*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
+            <button onClick={()=>setShowMicRecent(false)} style={{display:'block',margin:'0 auto',padding:'8px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'none',cursor:'pointer',fontSize:(.65*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('cancel'))}</button>
           </div>
         </div>
       )}
@@ -14432,8 +14339,8 @@ Hard requirements:
                 setVarySource(s); setImgMoodThumb(null); setMoodFromImg(false);
                 setLoadedSource(null); setMoodContext(true); setSongQ(m);
                 stopAll(); aiMidi(m);
-                if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
-                setMoodHint(false); setMoodEdit('');
+                
+                setMoodEdit('');
               };
               const submit=(txt)=>{
                 if(moodLocked){ submitFree(txt); return; }
@@ -14444,8 +14351,7 @@ Hard requirements:
                 setMoodFromImg(false); setVarySource(null); setLoadedSource(null);
                 setMoodContext(true); setSongQ(v); setCompositionName('');
                 setRecordingName(''); stopAll(); aiMoodFromText(v);
-                if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
-                setMoodHint(false);
+                
               };
               // Submit-eligible? For Pro/Pro AI: any non-empty text. For Free
               // moodLocked: only if the text resolves to a preset mood.
@@ -14531,8 +14437,7 @@ Hard requirements:
                   setSongQ(m);
                   stopAll();
                   aiMidi(m);
-                  if(moodHintRef.current){clearTimeout(moodHintRef.current);moodHintRef.current=null;}
-                  setMoodHint(false);
+                  
                 }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 4px',borderRadius:14,background: (m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.18)':'rgba(255,255,255,.015)',color: (m===currentMood&&!imgMoodThumb)?PF.gold2:PF.cream,border:'1px solid '+((m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.5)':'rgba(255,255,255,.06)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
                   <span style={{fontSize:'1.15rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
                   <span style={{fontSize:(.56*effScale)+'rem',fontWeight:500,letterSpacing:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{_sent((t('moodNames')||{})[m]||m)}</span>
@@ -14594,7 +14499,7 @@ Hard requirements:
               })}
             </div>
             <div style={{display:'flex',gap:8,marginTop:16}}>
-              <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'10px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent('cancel')}</button>
+              <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'10px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('cancel'))}</button>
               <button onClick={()=>{
                 // Capture whether playback was active (playing OR paused) BEFORE
                 // stopAll below — if so, the morph result auto-plays from the top.
@@ -14650,41 +14555,6 @@ Hard requirements:
         </div>
       )}
 
-      {/* Bottom dock: only docks to the viewport during playback (so you can
-          watch the canvas animate while the piano stays visible). When not
-          playing, it flows in normal document order. */}
-      {isActiveView && !basicMode && (
-      <div className="pf-tx-edge-l" aria-hidden="true">
-        <button
-          className="pf-lift pf-tx-play"
-          onClick={handlePauseClick}
-          disabled={demoReelOn||recording||((micPainting||micListening)?!chords.length:((!chords.length&&!playing&&!holdPaused)||(demoMode&&!playing&&!holdPaused)))}
-          title={demoReelOn?(t('demoMode')||'demo mode'):recording?t('stopRecFirst'):(micPainting||micListening)?(chords.length?t('play'):micListening?t('stopListenFirst'):t('stopSingFirst')):demoMode&&!playing?t('demoMode'):holdPaused?t('resume'):playing?t('pause'):t('play')}
-          style={{...txStyle('primary',{effScale,primary:true,disabled:(recording||((micPainting||micListening)?!chords.length:(!chords.length||(demoMode&&!playing&&!holdPaused))))}),display:(viewMode==='image'&&(recording||!!recBlob))?'none':'inline-flex',cursor:(recording||((micPainting||micListening)&&!chords.length))?'not-allowed':'pointer'}}>
-          <TxIcon n={playing&&!holdPaused?'pause':'play'} s={15*effScale}/>{holdPaused?t('resume'):playing?t('pause'):t('play')}
-        </button>
-        <button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
-        <button
-          onClick={()=>{
-            if(demoReelOn){ demoReelStop(); return; }
-            if(recording)return;
-            if(clearArmed){
-              if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}
-              setClearArmed(false);
-              clearCanvas();
-            }else{
-              const hasPainting = disp>0 || (composedModeRef.current && chords.length>0);
-              if(!hasPainting&&!pending.length){clearCanvas();return;}
-              setClearArmed(true);
-              clearArmRef.current=setTimeout(()=>{setClearArmed(false);clearArmRef.current=null;},3000);
-            }
-          }}
-          className="pf-lift pf-tx-clear"
-          disabled={recording}
-          title={recording?t('stopRecFirst'):undefined}
-          style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
-      </div>
-      )}
       {/* ZASAH — Pro AI success teaser (free user finished an AI piece). */}
       {!isPro && composeSource==='ai' && chords.length>0 && !playing && disp>=chords.length && !recording && !busy && !composeMode && !micActive && isActiveView && (
         <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'calc(env(safe-area-inset-bottom,0px) + 158px)',zIndex:51,pointerEvents:'auto'}}>
@@ -14779,7 +14649,7 @@ Hard requirements:
           </button>
         )}{/* After stop, the transport pill disappears entirely — Clear is the
             way to start a fresh song. The old "tap REC again" pill caused
-            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift pf-tx-mute" onClick={()=>setMuted(m=>!m)} onPointerDown={()=>{ if(speakerHoldRef.current)clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);} speakerHoldRef.current=null; }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
+            confusion and let the user accidentally extend a finished take. */}<button className="pf-lift pf-tx-mute" onClick={()=>{ if(speakerHoldRef.current==='fired'){ speakerHoldRef.current=null; return; } setMuted(m=>!m); }} onPointerDown={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired')clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; audioHardRecover(); },600); }} onPointerUp={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current); speakerHoldRef.current=null;} }} onPointerLeave={()=>{ if(speakerHoldRef.current&&speakerHoldRef.current!=='fired'){clearTimeout(speakerHoldRef.current);speakerHoldRef.current=null;} }} title={muted?t('unmute'):t('mute')} aria-label={muted?t('unmute'):t('mute')} style={txStyle(muted?'danger':'neutral',{effScale,on:muted,icon:true})}><TxIcon n={muted?'mute':'sound'} s={15*effScale}/></button>
         {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && (
           <button className="pf-lift" onClick={()=>{const v=!loopMode;setLoopMode(v);loopModeRef.current=v;}} disabled={recording} title={recording?t('stopRecFirst'):undefined} style={txStyle(loopMode?'active':'neutral',{effScale,disabled:recording})}><TxIcon n="loop" s={14*effScale}/>{t('loop')}</button>
         )}
@@ -15317,8 +15187,8 @@ Hard requirements:
                       <tr>
                         <th style={Object.assign({},cellSty,{textAlign:'left',color:'rgba(242,238,232,.4)',fontSize:(.6*effScale)+'rem',paddingLeft:2,fontWeight:400,letterSpacing:'.04em'})}></th>
                         <th style={Object.assign({},cellSty,{color:FREE_FG,fontSize:(.62*effScale)+'rem',fontWeight:500})}>€0</th>
-                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>€9.99 <s style={{opacity:.5,fontWeight:400}}>€14.99</s></th>
-                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>€19.99 <s style={{opacity:.5,fontWeight:400}}>€24.99</s></th>
+                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>{PRO_CFG.displayPricePro} <s style={{opacity:.5,fontWeight:400}}>{PRO_CFG.displayPriceProRegular}</s></th>
+                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>{PRO_CFG.displayPriceProAI} <s style={{opacity:.5,fontWeight:400}}>{PRO_CFG.displayPriceProAIRegular}</s></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -15769,7 +15639,7 @@ Hard requirements:
           {!immersive && (liteImageMode
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
-          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...((_capturing && !basicMode)?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
+          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
           {liteImageMode && <button onClick={()=>{ try{ _liteImgSurprise(); }catch(_){} if(immersive) _fireInspiredFlash(); }} disabled={!_liteImg||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
           {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); if(immersive) _fireInspiredFlash(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}

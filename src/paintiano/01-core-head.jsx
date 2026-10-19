@@ -28,15 +28,12 @@ const ONBOARDING_V3 = false;
 //   • gold       #f0c040 — the BRIGHT gold reserved for emphasis: the wordmark,
 //     active/primary accents, focus glow. Use sparingly so it stays special.
 //   • gold2      #ffd96e — the lightest gold, for glow/hover highlights only.
-// Helper goldA(a) builds the quiet-gold rgba so call sites stop hand-writing
-// rgba(201,168,76,a) (351 of them) and can't drift.
 const PF = {
   bg:'#0e0c14', card:'#161320', card2:'#1d1929', card3:'#231f31',
   gold:'#f0c040', gold2:'#ffd96e', goldQuiet:'#c9a84c', goldQuietRGB:'201,168,76',
   cream:'#f2eee8', muted:'rgba(242,238,232,0.42)', faint:'rgba(242,238,232,0.1)',
   blue:'#5b9cf6', purple:'#a97ff5', green:'#4ecb8d', orange:'#f47c3c', pink:'#f06292',
 };
-const goldA = (a)=>`rgba(${PF.goldQuietRGB},${a})`;
 // Built once at module load — referenced by the render so the style string
 // isn't re-interpolated on every React render (which thrashes during playback
 // when setDisp fires many times per second).
@@ -224,9 +221,6 @@ const PF_STYLE = `
            JSX layout untouched. (A later stage splits this into a true two-pane
            tools-left / stage-right grid.)
            Mobile (<769px): no changes, app fills the viewport edge-to-edge. */
-        /* Mobile: hide the desktop left-edge transport wrapper entirely. It only
-           materialises inside the @media block below (desktop play screen). */
-        .pf-tx-edge-l { display: none; }
         /* INSPIRED BY row (artist palette header) — on DESKTOP only, restack
            from "label-centered + dice-absolute-right" to "label on top, dice
            below, centered". Avoids the dice button overlapping or hugging the
@@ -943,7 +937,6 @@ const PF_STYLE = `
            (uniform with the edge columns). Tablet PORTRAIT (3-col) and
            MOBILE LANDSCAPE (also 3-col now) are untouched. */
         @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape) {
-          .pf-app-root:not(.pf-mode-setup) > .pf-tx-edge-l > button,
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button {
             min-height: 56px;
             padding: 8px 5px !important;
@@ -1182,23 +1175,6 @@ const customColPastel=(m,v=100,palette)=>{
 //   • Lightness:   35-55 %  (rich shadow band, not crushed — chocolate /
 //                  burgundy / forest range, hue stays clearly identifiable)
 //   • Octave + velocity still modulate within the dark window
-const _octLDark = m => 35 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*20;     // 35..55
-const _darkSat  = v => 50 + (v/127)*15;                                            // 50..65
-const harmColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(COF[m%12],         _darkSat(v), _octLDark(m));return[r,g,b,0.72+(v/127)*0.28];};
-const specColDark  =(m,v=100)=>{const[r,g,b]=fromHsl(SPEC_HUE[m%12],    _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
-const phiColDark   =(m,v=100)=>{const[r,g,b]=fromHsl(PHI_HUE[m%12],     _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
-const kontraColDark=(m,v=100)=>{const[r,g,b]=fromHsl(KONTRA_HUE[m%12],  _darkSat(v), _octLDark(m));return[r,g,b,0.65+(v/127)*0.35];};
-const customColDark=(m,v=100,palette)=>{
-  const pc=m%12;
-  const hex=(palette&&palette[pc])||'#888888';
-  const[r0,g0,b0]=hexToRgb(hex);
-  const[h0,s0]=toHsl(r0,g0,b0);
-  const isGrey = s0<=0.5;
-  const sat = isGrey ? 0 : _darkSat(v);
-  const l = _octLDark(m) + (v/127-0.5)*4;
-  const[rr,gg,bb]=fromHsl(h0,sat,Math.max(28,Math.min(58,l)));
-  return[rr,gg,bb,0.7+(v/127)*0.3];
-};
 // most famous synaesthete in music history actually saw each pitch class
 // as a specific colour. Follows the circle of fifths around a rainbow:
 //   C  → red                G → rose/orange       D  → yellow
@@ -1428,7 +1404,8 @@ function parseMidi(buf){
     throw new Error('Not a MIDI file (missing MThd header).');
   }
   p+=4;u32();u16();
-  const nT=u16(),div=u16();
+  const nT=u16(); let div=u16();
+  if(!div || (div&0x8000)) div=480;   // 0 → division by zero; SMPTE time division → treat as 480 ppq (timing stays sane)
   const temps=[{tick:0,uspb:500000}],raw=[],skipped=[];
   for(let t=0;t<nT;t++){
     // Scan forward to next MTrk header
@@ -1451,7 +1428,7 @@ function parseMidi(buf){
         else if(tp===0xc0||tp===0xd0){u8();}
       }
       // Flush any held notes at track end
-      for(const pi in held)raw.push([parseInt(pi),held[pi][0],held[pi][1],tEnd]);
+      for(const pi in held)raw.push([parseInt(pi),held[pi][0],held[pi][1],tick]);   // notes still held at track end end at the last tick (tEnd is a BYTE offset)
     }catch(err){
       skipped.push(t+1); // 1-based track number for the user
     }
@@ -1728,7 +1705,20 @@ function parseMusicXml(xmlText){
 //                    doubled so real repertoire spans the range; 0 = consonant
 //   contour    0..1  linear trend of the mean chord pitch over the piece
 //                    (0 = falling line, 0.5 = flat, 1 = rising line)
+// Memoised per chords array (identity + length): every overlay painter calls
+// this on every repaint, and the answer only changes when the piece changes.
+const _songCharCache = new WeakMap();
 function computeSongCharacter(chords){
+  if(Array.isArray(chords) && chords.length){
+    const hit=_songCharCache.get(chords);
+    if(hit && hit.n===chords.length) return hit.v;
+    const v=_computeSongCharacter(chords);
+    _songCharCache.set(chords,{n:chords.length,v});
+    return v;
+  }
+  return _computeSongCharacter(chords);
+}
+function _computeSongCharacter(chords){
   const empty = { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:null, tempo:0.5, regularity:0.5, tension:0, contour:0.5 };
   if(!Array.isArray(chords) || chords.length===0) return empty;
   let vSum=0, vN=0, vMin=127, vMax=0, mSum=0, mN=0, nSum=0, nN=0;

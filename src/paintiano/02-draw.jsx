@@ -13,7 +13,7 @@
 //              per-cell-architecture limitation)
 //   mosaic:    the implicit default — sharp rectangles + thin halo, used when
 //              no artist is explicitly selected. Not exposed in the toggle.
-// (drawRembrandt remains in the source for reference but is no longer wired
+// (the old drawRembrandt painter was retired — no longer wired
 // into the dispatcher — removed from the style picker.)
 
 // Seeded RNG helper — same seed → same marks → no flicker between repaints.
@@ -24,7 +24,12 @@
 const _RND_STATE = new Uint32Array(1);
 const _rnd = () => { _RND_STATE[0] = (_RND_STATE[0]*1664525+1013904223)>>>0; return _RND_STATE[0]/0x100000000; };
 function _seedRnd(bx,by,BW,BH){
-  _RND_STATE[0] = ((bx*73)^(by*113)^(BW*271)^(BH*947))>>>0;
+  // Mix the seed (lowbias32 finaliser): without it, neighbouring item seeds
+  // (i, i+1, i+2 …) produced near-identical first draws — marks lined up in
+  // bands and some session seeds clumped into one corner.
+  let s = ((bx*73)^(by*113)^(BW*271)^(BH*947))>>>0;
+  s ^= s>>>16; s = Math.imul(s, 0x7feb352d)>>>0; s ^= s>>>15; s = Math.imul(s, 0x846ca68b)>>>0; s ^= s>>>16;
+  _RND_STATE[0] = s>>>0;
   return _rnd;
 }
 // Per-painting seed for per-cell renderers that need a stable whole-painting
@@ -33,6 +38,13 @@ function _seedRnd(bx,by,BW,BH){
 // safe as a module global like _RND_STATE.
 let _artistSeed = 0;
 function _setArtistSeed(s){ _artistSeed = s>>>0; }
+// Canvas state baseline before any painter runs. Painters set what they need
+// but not everything; without this a stroke could inherit lineCap / alpha /
+// composite / dash / shadow from whatever was painted before — and the same
+// song would come out differently depending on paint history.
+function _resetCtxState(ctx){
+  try{ ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; ctx.lineCap='butt'; ctx.lineJoin='miter'; ctx.miterLimit=10; ctx.lineWidth=1; ctx.setLineDash([]); ctx.lineDashOffset=0; ctx.shadowBlur=0; ctx.shadowColor='rgba(0,0,0,0)'; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0; ctx.imageSmoothingEnabled=true; if('filter' in ctx) ctx.filter='none'; }catch(_){}
+}
 
 // ─── Variant cap (free-tier gating, set by 05-main before each paint) ───────
 // When non-null, every artist's TOP-LEVEL variant chooser is capped to that
@@ -106,13 +118,6 @@ function _progressive(lim, cn, max){
 // note velocity v (0..127). 'floor' is the lowest satKeep when v is tiny -- use
 // 0.25 in mosaic/notes (strong effect), 0.55-0.75 in artist styles (subtle, to
 // preserve each artist's signature palette). Returns [R,G,B] as integers.
-function _velSat(r,g,b,v,floor){
-  const vN=Math.max(0,Math.min(1,((v||80)-30)/90));
-  const f=(floor==null?0.25:floor);
-  const k=f + vN*(1-f);
-  const grey=0.299*r+0.587*g+0.114*b;
-  return [Math.round(grey+(r-grey)*k), Math.round(grey+(g-grey)*k), Math.round(grey+(b-grey)*k)];
-}
 
 // ── Mix palette (energy → saturation/lightness) ────────────────────────────
 // Built-in 'fourth axis': phrase energy modulates colour. Energy per chord =
@@ -142,7 +147,6 @@ function _getSongEnergy(){ return _songEnergy; }
 // image as PHOTO or PAINTING. Null before the first image has been scanned.
 let _lastImageIsPhoto = null;
 function _setLastImageIsPhoto(v){ _lastImageIsPhoto = (v==null) ? null : !!v; }
-function _getLastImageIsPhoto(){ return _lastImageIsPhoto; }
 // Set the average octave of the current chord — used by Real mode to nudge
 // high-register chords toward Pastel and low-register chords toward Dark
 // (regardless of the chord's energy band). Call alongside _setCurE on each
@@ -165,7 +169,6 @@ function _setCurOct(chord){
   const avgMidi = sumM / c;
   _curOct = Math.max(0, Math.min(8, Math.floor(avgMidi/12) - 1));
 }
-function _getCurOct(){ return _curOct; }
 let _mixOn = false;
 function _setMixOn(b){ _mixOn = !!b; }
 
@@ -337,130 +340,6 @@ function drawBlockPollockCream(ctx,bx,by,notes,gc,BW,BH){
   ctx.fillRect(bx-2, by-2, BW+4, BH+4);
 }
 
-function drawRembrandt(ctx,bx,by,notes,gc,BW,BH){
-  // Rembrandt — chunky, sculptural, BLENDED. Opposite of Van Gogh in nearly
-  // every axis:
-  // • Strokes overflow cell boundaries (origins can drift 25% past edge)
-  // • Length 0.8-2.4× cell long axis; occasional "long sweep" 1.6-2.4×
-  // • SFUMATO tone gradient ALONG each stroke (radial gradient: light core
-  //   fades to dark edges) — soft transitions, not pure pigment
-  // • Faint dark underglow beneath strokes (the Rembrandt ground)
-  // • 3-5 weighty strokes per voice
-  // • Bristle marks subtle (within the stroke, very low contrast)
-  // Result: sculpted, weighty marks that break out of the raster grid while
-  // keeping the blended-pigment identity.
-  const sorted=[...notes].sort((a,b)=>b.m-a.m),n=sorted.length,bh=BH/n;
-  const rnd=_seedRnd(bx,by,BW,BH);
-  const rough=(ax,ay,rx,ry)=>{
-    const segs=12;
-    ctx.beginPath();
-    for(let i=0;i<segs;i++){
-      const a=(i/segs)*Math.PI*2;
-      const j=0.82+rnd()*0.36;
-      const x=ax+Math.cos(a)*rx*j;
-      const y=ay+Math.sin(a)*ry*j;
-      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    }
-    ctx.closePath();ctx.fill();
-  };
-  // 1) Faint dark wash underglow — Rembrandt's signature dark ground
-  // covering the cell, providing depth.
-  sorted.forEach((note,vi)=>{
-    const[r,g,b,a]=gc(note.m,note.v);
-    const yOff=by+vi*bh;
-    // Dark wash: large radial gradient covering most of the voice slice
-    const wR=Math.round(r*0.22), wG=Math.round(g*0.22), wB=Math.round(b*0.22);
-    const washGrad=ctx.createRadialGradient(
-      bx+BW*0.5, yOff+bh*0.5, 0,
-      bx+BW*0.5, yOff+bh*0.5, Math.max(BW,bh)*0.7
-    );
-    washGrad.addColorStop(0, `rgba(${wR},${wG},${wB},${(a*0.50).toFixed(3)})`);
-    washGrad.addColorStop(0.7, `rgba(${wR},${wG},${wB},${(a*0.20).toFixed(3)})`);
-    washGrad.addColorStop(1, `rgba(${wR},${wG},${wB},0)`);
-    ctx.fillStyle=washGrad;
-    ctx.fillRect(bx-bh*0.2, yOff-bh*0.2, BW+bh*0.4, bh+bh*0.4);
-  });
-  // 2) Strokes — short, stubby, contained, with sfumato gradient
-  sorted.forEach((note,vi)=>{
-    const[r,g,b,a]=gc(note.m,note.v);
-    const yOff=by+vi*bh;
-    const chordAngle=rnd()*Math.PI*2;
-    const count=3+Math.floor(rnd()*3); // 3-5 strokes per voice — slightly more
-    for(let k=0;k<count;k++){
-      // Stroke center can drift 25% past cell boundary — breaks the raster
-      // grid while preserving Rembrandt's sculptural identity (achieved
-      // through the strokes' inner character, not their position).
-      const cx=bx+(rnd()*1.25-0.125)*BW;
-      const cy=yOff+(rnd()*1.25-0.125)*bh;
-      const angle=chordAngle+(rnd()-0.5)*Math.PI/3;
-      // Occasional "long sweep" stroke — spans beyond the cell entirely
-      const longSweep = rnd() < 0.22;
-      const length = longSweep
-        ? Math.max(BW,bh)*(1.6+rnd()*0.8)   // 1.6-2.4× — clearly overflows
-        : Math.min(BW,bh)*(0.8+rnd()*0.9)*1.4; // 1.1-2.4× short axis
-      // Width: thicker — 0.45-0.85× of bh
-      const width=bh*(0.45+rnd()*0.4);
-      ctx.save();
-      ctx.translate(cx,cy);
-      ctx.rotate(angle);
-
-      // Shadow — slight offset, dark
-      const sR=Math.round(r*0.32), sG=Math.round(g*0.32), sB=Math.round(b*0.32);
-      ctx.fillStyle=`rgba(${sR},${sG},${sB},${(a*0.65).toFixed(3)})`;
-      rough(2.0, 2.0, length*1.08, width*0.58);
-
-      // Main body — SFUMATO RADIAL GRADIENT (light core → dark edges)
-      // This is the key visual change: tone modulates SMOOTHLY within the
-      // stroke rather than via discrete bristles. Light hits one spot, fades
-      // outward into shadow.
-      const lightOffsetX = (rnd()-0.5)*length*0.4; // where the light hits
-      const lightOffsetY = (rnd()-0.5)*width*0.3;
-      // Lighter core color
-      const cR=Math.min(255,Math.round(r+45+rnd()*20));
-      const cG=Math.min(255,Math.round(g+45+rnd()*20));
-      const cB=Math.min(255,Math.round(b+45+rnd()*20));
-      // Edge color (back to base)
-      const eR=Math.max(0,Math.round(r-15));
-      const eG=Math.max(0,Math.round(g-15));
-      const eB=Math.max(0,Math.round(b-15));
-      const bodyGrad=ctx.createRadialGradient(
-        lightOffsetX, lightOffsetY, 0,
-        lightOffsetX, lightOffsetY, Math.max(length, width)*0.65
-      );
-      bodyGrad.addColorStop(0, `rgba(${cR},${cG},${cB},${(a*0.98).toFixed(3)})`);
-      bodyGrad.addColorStop(0.5, `rgba(${r},${g},${b},${(a*0.94).toFixed(3)})`);
-      bodyGrad.addColorStop(1, `rgba(${eR},${eG},${eB},${(a*0.88).toFixed(3)})`);
-      ctx.fillStyle=bodyGrad;
-      rough(0, 0, length/2, width/2);
-
-      // Subtle bristle texture INSIDE the stroke — very low contrast,
-      // just enough to break up the smooth gradient without dominating
-      const bristles = 2 + Math.floor(rnd()*2); // 2-3 faint bristle marks
-      for(let bi=0;bi<bristles;bi++){
-        const t=(bi+0.5)/bristles;
-        const yB=(t-0.5)*width*0.7;
-        const tone=(rnd()-0.5)*15; // very small variance now
-        const br=Math.max(0,Math.min(255,Math.round(r+tone)));
-        const bg=Math.max(0,Math.min(255,Math.round(g+tone)));
-        const bb=Math.max(0,Math.min(255,Math.round(b+tone)));
-        ctx.fillStyle=`rgba(${br},${bg},${bb},${(a*0.35).toFixed(3)})`;
-        rough(0, yB, length*0.42, width*0.08);
-      }
-
-      // Highlight ridge — small, contained, lighter
-      const hR=Math.min(255,Math.round(r+70)), hG=Math.min(255,Math.round(g+70)), hB=Math.min(255,Math.round(b+70));
-      ctx.fillStyle=`rgba(${hR},${hG},${hB},${(a*0.55).toFixed(3)})`;
-      rough(lightOffsetX*0.6, -width*0.28+lightOffsetY*0.5, length*0.35, width*0.10);
-
-      // Specular sparkle — small near-white speck on wet paint
-      if(rnd()>0.55){
-        ctx.fillStyle=`rgba(255,250,240,${(a*0.55).toFixed(3)})`;
-        rough(lightOffsetX*0.5+(rnd()-0.5)*length*0.2, -width*0.22, length*0.06, width*0.035);
-      }
-      ctx.restore();
-    }
-  });
-}
 
 function drawKusama(ctx,bx,by,notes,gc,BW,BH){
   // Kusama — fields of polka dots on a 3D-shaded "pumpkin" field. Each voice
@@ -1568,14 +1447,27 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 // Soft feathered rounded-rect field helper for new Rothko phases.
 function _rothkoField(ctx,x,y,w,h,r,g,b,a){
   ctx.save();
-  ctx.shadowColor=`rgba(${r},${g},${b},${a})`;ctx.shadowBlur=Math.max(8,Math.min(w,h)*0.12);
+  const rad=Math.min(w,h)*0.06;
+  const path=(grow)=>{
+    const X=x-grow,Y=y-grow,W=w+grow*2,H=h+grow*2,R=rad+grow*0.5;
+    ctx.beginPath();
+    ctx.moveTo(X+R,Y);ctx.lineTo(X+W-R,Y);ctx.quadraticCurveTo(X+W,Y,X+W,Y+R);
+    ctx.lineTo(X+W,Y+H-R);ctx.quadraticCurveTo(X+W,Y+H,X+W-R,Y+H);
+    ctx.lineTo(X+R,Y+H);ctx.quadraticCurveTo(X,Y+H,X,Y+H-R);
+    ctx.lineTo(X,Y+R);ctx.quadraticCurveTo(X,Y,X+R,Y);
+    ctx.closePath();
+  };
+  // Feathered halo: a few expanding, fading rings (like drawField's feather)
+  // stand in for the former shadowBlur, which rasterised a blur per field —
+  // up to 20× per frame.
+  const feather=Math.max(8,Math.min(w,h)*0.12), RINGS=6;
+  for(let s=RINGS;s>=1;s--){
+    const t=s/(RINGS+1);
+    ctx.fillStyle=`rgba(${r},${g},${b},${(a*(1-t)*(1-t)*0.6).toFixed(3)})`;
+    path(feather*t); ctx.fill();
+  }
   ctx.fillStyle=`rgba(${r},${g},${b},${a})`;
-  ctx.beginPath();const rad=Math.min(w,h)*0.06;
-  ctx.moveTo(x+rad,y);ctx.lineTo(x+w-rad,y);ctx.quadraticCurveTo(x+w,y,x+w,y+rad);
-  ctx.lineTo(x+w,y+h-rad);ctx.quadraticCurveTo(x+w,y+h,x+w-rad,y+h);
-  ctx.lineTo(x+rad,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-rad);
-  ctx.lineTo(x,y+rad);ctx.quadraticCurveTo(x,y,x+rad,y);
-  ctx.closePath();ctx.fill();
+  path(0); ctx.fill();
   ctx.restore();
 }
 
@@ -1773,11 +1665,11 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      three vertical bands (pale lavender · dark sepia centre · pale olive)
   //      with painterly vertical brushstroke texture, segmented dividers, and
   //      2-5 pendulum hanging lines. (Replaces the previous Stained Glass slot;
-  //      archived as _matissePhaseStainedGlass_archived below.)
+  //      retired.)
   //  F = La Gerbe / The Snail (1953) — radial cut-out gesture: chord-derived
   //      vivid leaves fanning from central anchor across calm cream; jagged
   //      scissor edges, no outlines, asymmetric accents. (Replaces the old
-  //      Jazz cuts shape-menu; archived as _matissePhaseJazz_archived below.)
+  //      Jazz cuts shape-menu; retired.)
   //  G = Memory of Oceania (1953) — late cut-out tapestry: 7-11 large flat
   //      colour blocks on warm cream priming + biomorphic curve connectors +
   //      small white blob accents.
@@ -2370,190 +2262,6 @@ function matissePhaseFrenchWindow(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // in slot 4 by matissePhaseFrenchWindow (Collioure 1914 manner). To restore,
 // rename back to matissePhaseStainedGlass and call from drawMatisseOverlay
 // slot 4.
-function _matissePhaseStainedGlass_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0;
-  const isBW=mode==='bw';
-  const cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const D=Math.min(CW,CH);
-
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const energy=_ch?_ch.energy:0.5;
-  const density=_ch?_ch.density:0.3;
-  const register=_ch?_ch.register:0.5;
-
-  // Warm cream priming — visible through ornament cut-outs and behind every pane.
-  const PRIMING=isBW?[226,222,212]:[232,222,200];
-  ctx.fillStyle=`rgb(${PRIMING[0]},${PRIMING[1]},${PRIMING[2]})`;
-  ctx.fillRect(0,0,CW,CH);
-
-  // Lead colour — near-black, the structural "cames" between panes.
-  const LEAD=isBW?[18,18,22]:[12,10,14];
-
-  // ── Grid dimensions ──
-  // Base 5×7 for portrait, but density drives variation: calm = looser
-  // (4×6, fewer larger panes), energetic = tighter (6×8, many small panes).
-  const aspect=CH/CW;
-  const baseCols=aspect>1.2?5:7;          // portrait → fewer cols
-  const baseRows=aspect>1.2?7:5;
-  const denseAdj=Math.round((density-0.30)*3); // -1..+3 from typical density
-  const cols=Math.max(3,Math.min(8,baseCols+denseAdj));
-  const rows=Math.max(3,Math.min(10,baseRows+denseAdj));
-  const cellW=CW/cols;
-  const cellH=CH/rows;
-  const totalCells=cols*rows;
-
-  // ── Cell colour assignment via chord permutation ──
-  // Each cell gets a chord-derived colour from a SHUFFLED chord index map,
-  // stable per session. This creates the rhythmic colour scatter of stained
-  // glass without per-cell randomness in fill colour.
-  const permRnd=_seedRnd(44001,ss,0,0); permRnd(); permRnd();
-  const perm=[];
-  for(let i=0;i<totalCells;i++) perm.push(i);
-  for(let i=perm.length-1;i>0;i--){
-    const j=Math.floor(permRnd()*(i+1));
-    const t=perm[i]; perm[i]=perm[j]; perm[j]=t;
-  }
-
-  // Dark structural cells — count scales with chord complexity (more harmonic
-  // density = more structural weight). Bounded so the grid never goes too dark.
-  const darkCount=Math.max(rows,Math.min(Math.floor(totalCells*0.18),rows+Math.floor(density*8)));
-  const darkCells=new Set();
-  for(let i=0;i<darkCount;i++) darkCells.add(perm[i]);
-
-  // Jewel pane colour from chord — pushed toward saturation; Vence palette is
-  // jewel-rich, not pastel.
-  const _jewel=(idx)=>{
-    const {rgb,energy:eC}=_picChord(chords,idx%cn,gc,isBW);
-    let r=rgb[0], g=rgb[1], b=rgb[2];
-    if(isBW){
-      const lum=Math.round(r*0.299+g*0.587+b*0.114);
-      r=g=b=lum;
-    } else {
-      // Saturation boost — jewel tones must be vivid. Skipped in pastel tone.
-      if(!_pastelOn){
-        const mx=Math.max(r,g,b,1);
-        const boost=180/mx; // ensure max channel hits ~180+ for vivid read
-        if(boost>1){
-          r=Math.min(255,Math.round(r*boost));
-          g=Math.min(255,Math.round(g*boost));
-          b=Math.min(255,Math.round(b*boost));
-        }
-      }
-    }
-    if(typeof _energyTint==='function'){const t=_energyTint(r,g,b);r=t[0];g=t[1];b=t[2];}
-    if(typeof _pastelTint==='function'){const t=_pastelTint(r,g,b);r=t[0];g=t[1];b=t[2];}
-    return [r|0,g|0,b|0,eC];
-  };
-
-  // ── Cell pass — fill panes, draw ornaments ──
-  // Lead inset breathing room around each pane (lead lines drawn on top).
-  const inset=2.5;
-  const visCells=Math.max(1,Math.ceil(totalCells*reveal));
-  let cellIdx=0;
-
-  // Reveal order: row-major (top-to-bottom, left-to-right), so the song builds
-  // the window from the top down as more chords play. Predictable, not random.
-  for(let ry=0;ry<rows;ry++){
-    for(let cxi=0;cxi<cols;cxi++){
-      if(cellIdx>=visCells){ cellIdx++; continue; }
-      const xx=cxi*cellW, yy=ry*cellH;
-      const idx=ry*cols+cxi;
-
-      if(darkCells.has(idx)){
-        // Dark structural pane — composes mass into the grid.
-        ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
-        ctx.fillRect(xx+inset,yy+inset,cellW-2*inset,cellH-2*inset);
-        cellIdx++;
-        continue;
-      }
-
-      // Jewel pane
-      const jewelChordIdx=perm[idx];
-      const jc=_jewel(jewelChordIdx);
-      ctx.fillStyle=`rgb(${jc[0]},${jc[1]},${jc[2]})`;
-      ctx.fillRect(xx+inset,yy+inset,cellW-2*inset,cellH-2*inset);
-
-      // Ornament — energy gates frequency (calm songs = simpler grid, energetic
-      // = more ornament). Ornament kind cycles through 4 chapel motifs.
-      const ornRnd=_seedRnd(idx+45000,ss,0,0); ornRnd(); ornRnd();
-      const ornChance=0.25+energy*0.25; // 0.25–0.50
-      if(ornRnd()<ornChance){
-        const ccx=xx+cellW/2, ccy=yy+cellH/2;
-        const ornKind=Math.floor(ornRnd()*4);
-        const innerC=_jewel(jewelChordIdx+3);
-
-        if(ornKind===0){
-          // Concentric circle — lead ring + inner jewel
-          const orR=Math.min(cellW,cellH)*0.28;
-          ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
-          ctx.beginPath(); ctx.arc(ccx,ccy,orR,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle=`rgb(${innerC[0]},${innerC[1]},${innerC[2]})`;
-          ctx.beginPath(); ctx.arc(ccx,ccy,orR*0.55,0,Math.PI*2); ctx.fill();
-        } else if(ornKind===1){
-          // Cross / plus — chapel motif
-          const armW=cellW*0.16, armL=Math.min(cellW,cellH)*0.32;
-          ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
-          ctx.fillRect(ccx-armW/2,ccy-armL,armW,armL*2);
-          ctx.fillRect(ccx-armL,ccy-armW/2,armL*2,armW);
-        } else if(ornKind===2){
-          // Leaf / flame — vegetal vertical form (chapel organic motif)
-          const orR=Math.min(cellW,cellH)*0.36;
-          ctx.fillStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
-          ctx.beginPath();
-          const nPts=14;
-          for(let ti=0;ti<=nPts;ti++){
-            const t=ti/nPts;
-            const yLocal=(t-0.5)*orR*1.7;
-            const xMax=orR*0.55*Math.pow(Math.sin(t*Math.PI),1.3);
-            if(ti===0) ctx.moveTo(ccx+xMax,ccy+yLocal);
-            else ctx.lineTo(ccx+xMax,ccy+yLocal);
-          }
-          for(let ti=nPts;ti>=0;ti--){
-            const t=ti/nPts;
-            const yLocal=(t-0.5)*orR*1.7;
-            const xMax=orR*0.55*Math.pow(Math.sin(t*Math.PI),1.3);
-            ctx.lineTo(ccx-xMax,ccy+yLocal);
-          }
-          ctx.closePath(); ctx.fill();
-        } else {
-          // Diagonal split — dynamic note in the static grid
-          ctx.fillStyle=`rgb(${innerC[0]},${innerC[1]},${innerC[2]})`;
-          ctx.beginPath();
-          if(ornRnd()<0.5){
-            ctx.moveTo(xx+inset,yy+inset);
-            ctx.lineTo(xx+cellW-inset,yy+inset);
-            ctx.lineTo(xx+inset,yy+cellH-inset);
-          } else {
-            ctx.moveTo(xx+cellW-inset,yy+inset);
-            ctx.lineTo(xx+cellW-inset,yy+cellH-inset);
-            ctx.lineTo(xx+inset,yy+cellH-inset);
-          }
-          ctx.closePath(); ctx.fill();
-        }
-      }
-      cellIdx++;
-    }
-  }
-
-  // ── Lead lines (drawn AFTER panes, on top) ──
-  // Vertical
-  const leadW=Math.max(2.5,D*0.005);
-  ctx.strokeStyle=`rgb(${LEAD[0]},${LEAD[1]},${LEAD[2]})`;
-  ctx.lineWidth=leadW;
-  for(let cxi=0;cxi<=cols;cxi++){
-    const xx=cxi*cellW;
-    ctx.beginPath(); ctx.moveTo(xx,0); ctx.lineTo(xx,CH); ctx.stroke();
-  }
-  for(let ry=0;ry<=rows;ry++){
-    const yy=ry*cellH;
-    ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(CW,yy); ctx.stroke();
-  }
-  // Outer frame thicker
-  ctx.lineWidth=leadW*2.2;
-  ctx.strokeRect(0,0,CW,CH);
-}
 
 
 // ── Matisse D: Nice interior v2 — 2-4 vertical panels with 4 pattern types. ──
@@ -2630,50 +2338,6 @@ function matissePhaseNice(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // Dispatcher no longer calls this; kept for possible future return. Replaced
 // in slot 4 by matissePhaseStainedGlass (Vence chapel jewel grid). To restore,
 // rename back to matissePhaseDance and call from drawMatisseOverlay slot 4.
-function _matissePhaseDance_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(42001,ss,0,0); sR(); sR();
-  const {rgb:sky}=_picChord(chords,0,gc,isBW);
-  const {rgb:gnd}=_picChord(chords,1%cn,gc,isBW);
-  const skyY=CH*(0.35+sR()*0.30);
-  ctx.fillStyle=`rgb(${sky[0]},${sky[1]},${sky[2]})`; ctx.fillRect(0,0,CW,CH);
-  ctx.fillStyle=`rgb(${gnd[0]},${gnd[1]},${gnd[2]})`; ctx.fillRect(0,skyY,CW,CH-skyY);
-  const nFigs=3+((sR()*6)|0);
-  const arr=(sR()*3)|0;
-  const {rgb:fc}=_picChord(chords,2%cn,gc,isBW);
-  const ft=[Math.min(255,Math.round(fc[0]*0.5+160)),Math.min(255,Math.round(fc[1]*0.3+50)),Math.min(255,Math.round(fc[2]*0.3+30))];
-  const vis=Math.max(1,Math.ceil(N/cn*nFigs*2.5));
-  for(let i=0;i<Math.min(nFigs,vis);i++){
-    let fx,fy;
-    if(arr===0){
-      const cxc=CW/2, cyc=skyY, R=Math.min(CW,CH)*(0.25+sR()*0.15);
-      const a=i/nFigs*Math.PI*2-Math.PI/2;
-      fx=cxc+Math.cos(a)*R; fy=cyc+Math.sin(a)*R*0.7;
-    } else if(arr===1){
-      fx=CW*((i+0.5)/nFigs); fy=skyY+CH*(sR()-0.5)*0.10;
-    } else {
-      fx=CW*(0.20+sR()*0.60); fy=skyY+(sR()-0.5)*CH*0.20;
-    }
-    const s=Math.min(CW,CH)*0.12;
-    ctx.fillStyle=`rgb(${ft[0]},${ft[1]},${ft[2]})`;
-    ctx.beginPath(); ctx.arc(fx,fy-s*0.9,s*0.22,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=`rgb(${ft[0]},${ft[1]},${ft[2]})`;
-    ctx.lineCap='round';
-    ctx.lineWidth=Math.max(3,s*0.28);
-    // Curvy body
-    ctx.beginPath(); ctx.moveTo(fx,fy-s*0.65);
-    const lean=i%2===0?1:-1;
-    ctx.quadraticCurveTo(fx+lean*s*0.20,fy,fx,fy+s*0.6);
-    ctx.stroke();
-    // Arms
-    ctx.lineWidth=Math.max(3,s*0.20);
-    ctx.beginPath(); ctx.moveTo(fx-s*0.6,fy-s*0.15); ctx.lineTo(fx+s*0.6,fy-s*0.15); ctx.stroke();
-    // Legs
-    ctx.lineWidth=Math.max(3,s*0.22);
-    ctx.beginPath(); ctx.moveTo(fx,fy+s*0.60); ctx.lineTo(fx-s*0.35,fy+s*1.10); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(fx,fy+s*0.60); ctx.lineTo(fx+s*0.35,fy+s*1.10); ctx.stroke();
-  }
-}
 
 // ── Matisse F: La Gerbe / The Snail (1953) manner — a radial fan of cut-out
 // leaves blooming from a central anchor across a calm cream priming. Each
@@ -3001,74 +2665,6 @@ function matissePhaseMemoryOceania(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // circle-cut, half-moon, algae, star) with INK outlines on cream. Dispatcher
 // no longer calls this; kept for possible future return. Replaced in slot 5
 // by matissePhaseLaGerbe (radial cut-out gesture).
-function _matissePhaseJazz_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(43001,ss,0,0); sR(); sR();
-  ctx.fillStyle=isBW?'#ece8e0':'#f2ece0'; ctx.fillRect(0,0,CW,CH);
-  const INK=isBW?'rgba(20,20,20,1)':'rgba(15,12,20,1)';
-  const nShapes=5+((sR()*7)|0);
-  const vis=Math.max(1,Math.ceil(N/cn*nShapes*2.5));
-  for(let i=0;i<Math.min(nShapes,vis);i++){
-    const {rgb}=_picChord(chords,i%cn,gc,isBW);
-    const cx=CW*(0.15+sR()*0.70), cy=CH*(0.15+sR()*0.70);
-    const r=Math.min(CW,CH)*(0.08+sR()*0.16);
-    const shape=(sR()*5)|0;
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.strokeStyle=INK; ctx.lineWidth=2;
-    if(shape===0){
-      // Icarus: body + wings
-      ctx.beginPath();
-      for(let ti=0;ti<20;ti++){
-        const t=ti/20*Math.PI*2;
-        const rr=r*0.4*(1+0.3*Math.sin(t*2));
-        const px=cx+Math.cos(t)*rr*0.4, py=cy+Math.sin(t)*rr*1.5;
-        if(ti===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      }
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      for(let side=-1;side<=1;side+=2){
-        ctx.beginPath();
-        for(let ti=0;ti<12;ti++){
-          const t=ti/12*Math.PI*2;
-          const rr=r*0.5;
-          const px=cx+side*r*0.4+Math.cos(t)*rr*1.3, py=cy+Math.sin(t)*rr*0.6;
-          if(ti===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-        }
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-      }
-    } else if(shape===1){
-      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
-      ctx.lineWidth=3; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx-r*0.8,cy+r*0.2); ctx.lineTo(cx+r*0.8,cy-r*0.2); ctx.stroke();
-    } else if(shape===2){
-      ctx.beginPath();
-      for(let ti=0;ti<20;ti++){
-        const t=Math.PI*ti/19;
-        const px=cx+Math.cos(t)*r, py=cy+Math.sin(t)*r;
-        if(ti===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      }
-      ctx.lineTo(cx-r,cy); ctx.closePath();
-      ctx.fill(); ctx.lineWidth=3; ctx.stroke();
-    } else if(shape===3){
-      ctx.beginPath();
-      for(let ti=0;ti<24;ti++){
-        const t=ti/24*Math.PI*2;
-        const rr=r*(0.7+0.4*Math.sin(t*4+i));
-        const px=cx+Math.cos(t)*rr, py=cy+Math.sin(t)*rr;
-        if(ti===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      }
-      ctx.closePath(); ctx.fill(); ctx.lineWidth=3; ctx.stroke();
-    } else {
-      ctx.beginPath();
-      for(let ti=0;ti<12;ti++){
-        const t=ti/12*Math.PI*2-Math.PI/2;
-        const rr=ti%2===0?r:r*0.5;
-        const px=cx+Math.cos(t)*rr, py=cy+Math.sin(t)*rr;
-        if(ti===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      }
-      ctx.closePath(); ctx.fill(); ctx.lineWidth=3; ctx.stroke();
-    }
-  }
-}
 
 // Pollock canvas-wide drip overlay. Painted on the cream substrate to simulate
 // real Pollock dense drip painting (modeled on works like Number 17A). Far
@@ -3244,16 +2840,24 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const passCount = Math.max(4, Math.round(
     (pollVariant === 1 ? passCount0 * 0.55 : passCount0) * _passCharMul
   ));
+  // Full-song pass count (what passCount becomes at lim === chords.length).
+  // The pass→chord mapping goes through THIS so a pass keeps its chord (and
+  // therefore its colour / thickness) as the song reveals — mapping through the
+  // lim-dependent passCount shifted every earlier drip by ±1 chord per frame.
+  const passCountFull = Math.max(4, Math.round(
+    (pollVariant === 1 ? passMaxFull * 0.55 : passMaxFull) * _passCharMul
+  ));
   const _pollWidthMul = (pollVariant === 1 ? 1.8 : 1.0) * (0.73 + 0.54*_charDrive);
 
   // Map pass index → chord index. The first pass corresponds to the first
-  // chord, last pass corresponds to the latest chord, evenly distributed.
-  // This way each pass "represents" a specific chord in the music -- its color
-  // and velocity drive the drip's appearance.
+  // chord, last pass corresponds to the last chord of the SONG, evenly
+  // distributed. This way each pass "represents" a specific chord in the
+  // music -- its color and velocity drive the drip's appearance.
+  const cnAll = chords.length;
   const chordForPass = (passIdx) => {
-    if(passCount <= 1) return chords[N-1];
-    const t = passIdx / (passCount - 1);
-    const ci = Math.min(N-1, Math.floor(t * (N - 1)));
+    if(passCountFull <= 1) return chords[cnAll-1];
+    const t = passIdx / (passCountFull - 1);
+    const ci = Math.min(cnAll-1, Math.floor(t * (cnAll - 1)));
     return chords[ci];
   };
 
@@ -4072,11 +3676,10 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // phase (dense pencil-grain hatching) and caused jank on lower-end devices,
   // so it's moved OUT of the Free slots: Free gets LightLine + BlueAtmo
   // (both light to draw). Pro reaches Analytic and the rest at higher indices.
-  // SyntheticPlanes was retired from the wheel (curation, Aug 2026) — the
-  // function stays below for reference but is no longer reachable.
+  // SyntheticPlanes was retired from the wheel (curation, Aug 2026).
   const _picassoOrder = [picassoPhaseLightLine, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseFacetedDrift, picassoPhaseStillLife, picassoPhaseTonalCubism];
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  (_picassoOrder[pick]||picassoPhaseSyntheticPlanes)(ctx,CW,CH,chords,lim,gc,ss,mode);
+  _picassoOrder[pick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // ── Picasso phase LIGHT LINE — the 1949 "light drawings". ──
@@ -4123,14 +3726,20 @@ function picassoPhaseLightLine(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
       if(y<CH*0.07||y>CH*0.93){ ang=-ang; y=Math.max(CH*0.07,Math.min(CH*0.93,y)); }
       ctx.lineTo(x,y);
     }
-    // glow pass + bright core in one shadowed stroke
-    ctx.shadowColor=col; ctx.shadowBlur=D*0.016*(0.8+E);
+    // glow pass + bright core: the same path stroked three times (wide faint
+    // halo, mid halo, core) — reads like the former shadowed stroke without a
+    // shadowBlur raster per chord segment.
+    const gb=D*0.016*(0.8+E);
+    const halo='rgba('+R+','+G+','+B+',';
+    ctx.strokeStyle=halo+'0.03)'; ctx.lineWidth=w+gb*1.6; ctx.stroke();
+    ctx.strokeStyle=halo+'0.05)'; ctx.lineWidth=w+gb*0.7; ctx.stroke();
     ctx.strokeStyle=col; ctx.lineWidth=w; ctx.stroke();
   }
-  ctx.shadowBlur=0;
 }
 
 // ── Picasso phase A: Analytic Cubism — the original angular shard composition. ──
+// Memoised plane partition (see _partCache for the same pattern).
+let _picPlaneCache = { key:'', planes:null };
 function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const ss=sessionSeed|0;
   const N=Math.min(lim,chords.length);
@@ -4172,17 +3781,28 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     :405+Math.floor((chords.length-700)*0.35)
   )*_planeMul)));
   const paintCount=Math.min(MAX_PLANES,Math.round(lim*(MAX_PLANES/chords.length)));
-  let planes=[[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}]];
-  for(let cut=0;cut<MAX_PLANES-1;cut++){
-    const cr=_seedRnd(cut+1,ss,0,0);
-    let bigIdx=0,bigArea=0;
-    for(let pi=0;pi<planes.length;pi++){const p=planes[pi];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of p){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}const ar=(xMax-xMin)*(yMax-yMin);if(ar>bigArea){bigArea=ar;bigIdx=pi;}}
-    const target=planes[bigIdx];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of target){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}
-    const cutAng=cr()*Math.PI*2,pivX=xMin+(xMax-xMin)*(0.28+cr()*0.44),pivY=yMin+(yMax-yMin)*(0.28+cr()*0.44);
-    const nX=-Math.sin(cutAng),nY=Math.cos(cutAng);
-    const sA=[],sB=[];
-    for(let i=0;i<target.length;i++){const v=target[i],next=target[(i+1)%target.length];const dv=(v.x-pivX)*nX+(v.y-pivY)*nY,dn=(next.x-pivX)*nX+(next.y-pivY)*nY;if(dv>=0)sA.push(v);else sB.push(v);if((dv>=0)!==(dn>=0)){const t=dv/(dv-dn);const ip={x:v.x+(next.x-v.x)*t,y:v.y+(next.y-v.y)*t};sA.push(ip);sB.push({...ip});}}
-    if(sA.length>=3&&sB.length>=3)planes.splice(bigIdx,1,sA,sB);
+  // The O(P²) plane partition depends only on (cn, ss, _planeMul) — never on
+  // lim — but it was rebuilt on every playback frame (~1.9 s per paint at
+  // 500 planes). Memoise it like _partitionCanvas does; only the cheap
+  // paintCount prefix is recomputed per frame.
+  const _pKey=chords.length+'|'+ss+'|'+_planeMul.toFixed(3)+'|'+CW+'|'+CH;
+  let planes;
+  if(_picPlaneCache.key===_pKey && _picPlaneCache.planes){
+    planes=_picPlaneCache.planes;
+  } else {
+    planes=[[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}]];
+    for(let cut=0;cut<MAX_PLANES-1;cut++){
+      const cr=_seedRnd(cut+1,ss,0,0);
+      let bigIdx=0,bigArea=0;
+      for(let pi=0;pi<planes.length;pi++){const p=planes[pi];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of p){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}const ar=(xMax-xMin)*(yMax-yMin);if(ar>bigArea){bigArea=ar;bigIdx=pi;}}
+      const target=planes[bigIdx];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of target){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}
+      const cutAng=cr()*Math.PI*2,pivX=xMin+(xMax-xMin)*(0.28+cr()*0.44),pivY=yMin+(yMax-yMin)*(0.28+cr()*0.44);
+      const nX=-Math.sin(cutAng),nY=Math.cos(cutAng);
+      const sA=[],sB=[];
+      for(let i=0;i<target.length;i++){const v=target[i],next=target[(i+1)%target.length];const dv=(v.x-pivX)*nX+(v.y-pivY)*nY,dn=(next.x-pivX)*nX+(next.y-pivY)*nY;if(dv>=0)sA.push(v);else sB.push(v);if((dv>=0)!==(dn>=0)){const t=dv/(dv-dn);const ip={x:v.x+(next.x-v.x)*t,y:v.y+(next.y-v.y)*t};sA.push(ip);sB.push({...ip});}}
+      if(sA.length>=3&&sB.length>=3)planes.splice(bigIdx,1,sA,sB);
+    }
+    _picPlaneCache={key:_pKey,planes};
   }
   planes.slice(0,paintCount).forEach((poly,pIdx)=>{
     const scaled=poly.map(v=>({x:v.x*CW,y:v.y*CH}));
@@ -4205,8 +3825,12 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     const grainAng=rnd()*Math.PI*2,cosG=Math.cos(grainAng),sinG=Math.sin(grainAng);
     const gap=Math.max(1.5,minDim*0.06),sLen=Math.max(3,minDim*0.20),sW=Math.max(0.6,minDim*0.022);
     const rows=Math.ceil(reach*2/gap)+2;
-    const noteColors=notes.length?notes.map(n=>{const m=n.m!==undefined?n.m:n;const v=n.v!==undefined?n.v:80;return gc(m,v);}):[[[cR,cG,cB,cA]]];
-    for(let ri=-rows;ri<=rows;ri++){const off=ri*gap+(rnd()-0.5)*gap*0.4;const nInRow=Math.ceil(reach/sLen)+1;for(let si=-nInRow;si<=nInRow;si++){const along=si*sLen*0.85+(rnd()-0.5)*sLen*0.3;const x0=cX+cosG*along+(-sinG)*off,y0=cY+sinG*along+cosG*off;const len=sLen*(0.7+rnd()*0.6);const nc=noteColors[Math.floor(rnd()*noteColors.length)];const[nr,ng,nb]=nc;const tj=(rnd()-0.5)*22;const sR2=Math.max(0,Math.min(255,Math.round(nr+tj))),sG2=Math.max(0,Math.min(255,Math.round(ng+tj*0.8))),sB2=Math.max(0,Math.min(255,Math.round(nb+tj*0.6)));ctx.strokeStyle=`rgba(${sR2},${sG2},${sB2},${(0.55+rnd()*0.28).toFixed(2)})`;ctx.lineWidth=sW*(0.7+rnd()*0.5);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x0-cosG*len*0.5,y0-sinG*len*0.5);ctx.lineTo(x0+cosG*len*0.5,y0+sinG*len*0.5);ctx.stroke();}}
+    const noteColors=notes.length?notes.map(n=>{const m=n.m!==undefined?n.m:n;const v=n.v!==undefined?n.v:80;return gc(m,v);}):[[cR,cG,cB,cA]];
+    // The hatch square (2·reach wide) is ~8× the plane's bounding box, so most
+    // strokes land wholly outside the clip. Every rnd() is still drawn in the
+    // same order (output identical); only the canvas calls are skipped for a
+    // stroke that cannot touch the clip's bbox (+1px AA margin).
+    for(let ri=-rows;ri<=rows;ri++){const off=ri*gap+(rnd()-0.5)*gap*0.4;const nInRow=Math.ceil(reach/sLen)+1;for(let si=-nInRow;si<=nInRow;si++){const along=si*sLen*0.85+(rnd()-0.5)*sLen*0.3;const x0=cX+cosG*along+(-sinG)*off,y0=cY+sinG*along+cosG*off;const len=sLen*(0.7+rnd()*0.6);const nc=noteColors[Math.floor(rnd()*noteColors.length)];const[nr,ng,nb]=nc;const tj=(rnd()-0.5)*22;const sR2=Math.max(0,Math.min(255,Math.round(nr+tj))),sG2=Math.max(0,Math.min(255,Math.round(ng+tj*0.8))),sB2=Math.max(0,Math.min(255,Math.round(nb+tj*0.6)));const sAl=(0.55+rnd()*0.28).toFixed(2);const sLw=sW*(0.7+rnd()*0.5);const hx=Math.abs(cosG)*len*0.5+sLw*0.5+1,hy=Math.abs(sinG)*len*0.5+sLw*0.5+1;if(x0+hx<xMin||x0-hx>xMax||y0+hy<yMin||y0-hy>yMax)continue;ctx.strokeStyle=`rgba(${sR2},${sG2},${sB2},${sAl})`;ctx.lineWidth=sLw;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x0-cosG*len*0.5,y0-sinG*len*0.5);ctx.lineTo(x0+cosG*len*0.5,y0+sinG*len*0.5);ctx.stroke();}}
     ctx.restore();
     if(rnd()<0.25+energy*0.20){ctx.save();buildPath();ctx.clip();const patNc=noteColors[Math.floor(rnd()*noteColors.length)];const useContrast=rnd()<0.35;const patC=useContrast?[Math.round(patNc[0]),Math.round(patNc[1]),Math.round(patNc[2])]:(isBW?[30,30,30]:[15,8,18]);const patA=(0.75+rnd()*0.18).toFixed(2);if(rnd()<0.55){ctx.fillStyle=`rgba(${patC[0]},${patC[1]},${patC[2]},${patA})`;const dg=Math.max(3,minDim*0.12),dr=dg*(0.22+rnd()*0.12);for(let dy=yMin;dy<yMax;dy+=dg){const ro=(Math.round((dy-yMin)/dg)%2)*dg*0.5;for(let dx=xMin;dx<xMax;dx+=dg){ctx.beginPath();ctx.arc(dx+ro,dy,dr,0,Math.PI*2);ctx.fill();}}}else{ctx.strokeStyle=`rgba(${patC[0]},${patC[1]},${patC[2]},${patA})`;const sg=Math.max(2,minDim*0.09);ctx.lineWidth=sg*0.28;const sa=rnd()*Math.PI,cosS=Math.cos(sa),sinS=Math.sin(sa);const cnt=Math.ceil(reach*2/sg)+2;for(let st=-cnt;st<cnt;st++){const off=st*sg;ctx.beginPath();ctx.moveTo(cX+(-sinS)*off-cosS*reach,cY+cosS*off-sinS*reach);ctx.lineTo(cX+(-sinS)*off+cosS*reach,cY+cosS*off+sinS*reach);ctx.stroke();}}ctx.restore();}
     const jS=D*0.003;ctx.beginPath();ctx.moveTo(scaled[0].x+(rnd()-0.5)*jS,scaled[0].y+(rnd()-0.5)*jS);for(let i=1;i<scaled.length;i++){const prev=scaled[i-1],cur=scaled[i];for(let s=1;s<=3;s++){const t=s/3;ctx.lineTo(prev.x+(cur.x-prev.x)*t+(rnd()-0.5)*jS,prev.y+(cur.y-prev.y)*t+(rnd()-0.5)*jS);}}ctx.closePath();
@@ -4220,145 +3844,6 @@ function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 // One dark plane (heaviest), one bright chord-coloured accent, mid planes pulled
 // toward restrained earth tones. Thick irregular charcoal contours. NO objects,
 // NO silhouettes — Picasso 1921–25 mass/edge/overlap signature without subject.
-function picassoPhaseSyntheticPlanes(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0;
-  const isBW=mode==='bw';
-  const cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const D=Math.min(CW,CH);
-
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const energy=_ch?_ch.energy:0.5;
-  const density=_ch?_ch.density:0.3;
-  const register=_ch?_ch.register:0.5;
-
-  // Cream paper ground.
-  ctx.fillStyle=isBW?'#e4e1d8':'#e8dabc';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Subtle paper grain (stable per-session, not per-frame).
-  ctx.save();
-  ctx.globalAlpha=0.07;
-  ctx.fillStyle=isBW?'rgb(50,42,32)':'rgb(70,52,28)';
-  for(let i=0;i<600;i++){
-    const gr=_seedRnd(i+7700,ss,0,0);
-    ctx.fillRect(gr()*CW,gr()*CH,1,1);
-  }
-  ctx.restore();
-
-  // Plane count: 5–9 driven by song character.
-  const planeCountFull=Math.max(5,Math.min(9,5+Math.round((energy+density)*2)));
-  const visPlanes=Math.max(1,Math.ceil(planeCountFull*reveal));
-
-  // Asymmetric composition: dark mass loaded to one side.
-  // Side chosen per session, vertical bias chosen by register
-  // (low register → bottom heavy; high register → top heavy).
-  const dirR=_seedRnd(7701,ss,0,0); dirR(); dirR();
-  const heavyLeft=dirR()<0.5;
-  const heavyTop=register<0.5;
-
-  // Generate plane data (deterministic from session seed + index).
-  const planes=[];
-  for(let i=0;i<planeCountFull;i++){
-    const r=_seedRnd(i+7900,ss,0,0); r(); r();
-    let cx, cy, sz;
-    if(i===0){
-      // DARK MASS — largest, one side
-      cx=heavyLeft?CW*(0.10+r()*0.18):CW*(0.72+r()*0.18);
-      cy=heavyTop?CH*(0.15+r()*0.30):CH*(0.55+r()*0.30);
-      sz=D*(0.55+r()*0.18);
-    } else if(i===planeCountFull-1){
-      // ACCENT — small, off-centre
-      cx=CW*(0.30+r()*0.40);
-      cy=CH*(0.32+r()*0.36);
-      sz=D*(0.10+r()*0.07);
-    } else {
-      // MID — spread across canvas
-      cx=CW*(0.18+r()*0.64);
-      cy=CH*(0.18+r()*0.64);
-      sz=D*(0.28+r()*0.22);
-    }
-    // Irregular polygon, 5–7 sides, deliberately uneven.
-    const sides=5+Math.floor(r()*3);
-    const verts=[];
-    for(let s=0;s<sides;s++){
-      const a=(s/sides)*Math.PI*2+(r()-0.5)*0.7;
-      const rr=sz*(0.60+r()*0.65);
-      verts.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]);
-    }
-    planes.push({cx,cy,sz,verts,idx:i,isDark:i===0,isAccent:i===planeCountFull-1});
-  }
-
-  // Draw in order: dark first (background), mid, accent last (top).
-  for(let i=0;i<visPlanes;i++){
-    const p=planes[i];
-    const {rgb,energy:cE}=_picChord(chords,Math.floor(i*cn/planeCountFull),gc,isBW);
-
-    let fR, fG, fB;
-    if(p.isDark){
-      fR=isBW?35:28; fG=isBW?35:22; fB=isBW?38:28;
-    } else if(p.isAccent){
-      // Boost saturation — bright chord colour.
-      const mx=Math.max(rgb[0],rgb[1],rgb[2]);
-      const k=mx>10?240/mx:1;
-      fR=Math.min(255,rgb[0]*k);
-      fG=Math.min(255,rgb[1]*k);
-      fB=Math.min(255,rgb[2]*k);
-    } else {
-      // Pull mid planes toward muted earth.
-      fR=Math.round(rgb[0]*0.72+34);
-      fG=Math.round(rgb[1]*0.72+28);
-      fB=Math.round(rgb[2]*0.72+26);
-    }
-    // Tone adjustments (Real energy, Pastel softness).
-    if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
-    if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
-
-    const buildPath=()=>{
-      ctx.beginPath();
-      ctx.moveTo(p.verts[0][0],p.verts[0][1]);
-      for(let v=1;v<p.verts.length;v++)ctx.lineTo(p.verts[v][0],p.verts[v][1]);
-      ctx.closePath();
-    };
-
-    buildPath();
-    ctx.fillStyle=`rgba(${fR|0},${fG|0},${fB|0},${(0.90+cE*0.08).toFixed(2)})`;
-    ctx.fill();
-
-    // Subtle inner grain texture — barely visible, gives surface depth.
-    ctx.save();
-    buildPath();
-    ctx.clip();
-    ctx.fillStyle=p.isDark?'rgba(255,250,240,0.045)':'rgba(15,10,18,0.07)';
-    for(let g=0;g<80;g++){
-      const r=_seedRnd(g+i*200+8500,ss,0,0);
-      ctx.fillRect(p.cx+(r()-0.5)*p.sz*2,p.cy+(r()-0.5)*p.sz*2,1.2,1.2);
-    }
-    ctx.restore();
-
-    // Thick irregular charcoal contour — per-segment jitter, no clean line.
-    const jR=_seedRnd(i+9100,ss,0,0);
-    const jit=D*0.005;
-    ctx.beginPath();
-    ctx.moveTo(p.verts[0][0]+(jR()-0.5)*jit,p.verts[0][1]+(jR()-0.5)*jit);
-    for(let v=1;v<p.verts.length;v++){
-      const prev=p.verts[v-1], cur=p.verts[v];
-      for(let s=1;s<=3;s++){
-        const t=s/3;
-        ctx.lineTo(
-          prev[0]+(cur[0]-prev[0])*t+(jR()-0.5)*jit,
-          prev[1]+(cur[1]-prev[1])*t+(jR()-0.5)*jit
-        );
-      }
-    }
-    ctx.closePath();
-    ctx.strokeStyle=isBW?'rgba(15,15,18,0.94)':'rgba(15,8,18,0.94)';
-    ctx.lineWidth=Math.max(2,D*(0.0055+cE*0.003));
-    ctx.lineJoin='round'; ctx.lineCap='round';
-    ctx.stroke();
-  }
-}
 
 // Shared helper for the new Picasso phases: average a chord's colour + energy.
 function _picChord(chords,idx,gc,isBW){
@@ -4512,84 +3997,6 @@ function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Picasso Rose Atmosphere: warm palette cubist mood, no figures. Same
 // structure as Blue Atmo but with warm pink/ochre bias. Rose Period warmth
 // via colour, not via harlequin figures.
-function picassoPhaseRoseAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-  const sR = _seedRnd(8501,ss,0,13); sR(); sR();
-
-  const shardCountFull = 70 + Math.floor(sR()*40);
-  const hatchCountFull = 250 + Math.floor(sR()*120);
-  const hatchAngleBase = Math.PI/4 + (sR()-0.5)*0.4;
-
-  // Warm pink/ochre ground.
-  const _adjHex = (hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  const grad = ctx.createLinearGradient(0,0,CW,CH);
-  if(isBW){
-    grad.addColorStop(0, _adjHex('#4a4038'));
-    grad.addColorStop(0.5, _adjHex('#6a5848'));
-    grad.addColorStop(1, _adjHex('#4a4038'));
-  } else {
-    grad.addColorStop(0, _adjHex('#7a3830'));
-    grad.addColorStop(0.5, _adjHex('#a05848'));
-    grad.addColorStop(1, _adjHex('#7a4030'));
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,CW,CH);
-
-  const visShards = Math.max(8, Math.ceil(shardCountFull * reveal));
-  for(let i=0;i<visShards;i++){
-    const r1 = _seedRnd(i+8600,ss,0,0); r1(); r1();
-    const cx = r1()*CW, cy = r1()*CH;
-    const sz = 25 + r1()*120;
-    const rot = r1()*Math.PI*2;
-    const sides = 3 + Math.floor(r1()*3);
-    const {rgb} = _picChord(chords, i%cn, gc, isBW);
-    // Bias toward warm.
-    const cr = isBW ? Math.round(rgb[0]*0.55+55) : Math.round(rgb[0]*0.70 + 55);
-    const cg = isBW ? Math.round(rgb[1]*0.55+45) : Math.round(rgb[1]*0.50 + 35);
-    const cb = isBW ? Math.round(rgb[2]*0.55+35) : Math.round(rgb[2]*0.35 + 30);
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rot);
-    ctx.beginPath();
-    for(let s=0;s<sides;s++){
-      const a = (s/sides)*Math.PI*2;
-      const r = sz * (0.65 + r1()*0.70);
-      const px = Math.cos(a)*r, py = Math.sin(a)*r;
-      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.55 + r1()*0.35).toFixed(2)})`;
-    ctx.fill();
-    ctx.strokeStyle = isBW ? 'rgba(20,15,12,0.7)' : 'rgba(25,8,8,0.7)';
-    ctx.lineWidth = 1 + r1();
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  const visHatches = Math.ceil(hatchCountFull * reveal);
-  ctx.globalAlpha = 0.18;
-  ctx.strokeStyle = isBW ? 'rgba(20,15,12,0.9)' : 'rgba(30,15,12,0.9)';
-  ctx.lineWidth = 0.5;
-  for(let k=0;k<visHatches;k++){
-    const hR = _seedRnd(k+8700,ss,0,0); hR();
-    const sx = hR()*CW, sy = hR()*CH;
-    const len = 8 + hR()*20;
-    const a = hatchAngleBase + (hR()-0.5)*0.2;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
 
 // ── Picasso Faceted Drift: directional analytic cubism — dense overlapping
 // facets across the canvas, mostly monochrome, faint chord-colour bias only.
@@ -4849,7 +4256,10 @@ function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
   // 10–18 larger softer planes.
   const planeFull=Math.max(10,Math.min(18,10+Math.round((energy+density)*4)));
-  const visPlanes=Math.max(2,Math.ceil(planeFull*reveal));
+  // Planes ease in (see the draw loop): plane i starts at x=i-1 and is at full
+  // strength by x=i+1, so one extra plane is in flight beyond today's ceil().
+  const planeX=planeFull*reveal;
+  const visPlanes=Math.min(planeFull,Math.max(2,Math.ceil(planeX)+1));
 
   // Loose jittered grid of plane centres — Voronoi-like, no obvious rows.
   const cols=Math.ceil(Math.sqrt(planeFull));
@@ -4878,8 +4288,12 @@ function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 
   // Draw planes — heavily desaturated, pulled toward warm grey.
+  // Each plane is up to ~20% of the canvas, so it eases in over two plane
+  // intervals (full strength = today's look at full reveal) instead of
+  // popping in whole mid-playback.
   for(let i=0;i<visPlanes;i++){
     const p=planes[i];
+    const fade=Math.min(1,Math.max(0,(planeX-i+1)/2));
     const {rgb,energy:pE}=_picChord(chords,i%cn,gc,isBW);
     let fR=Math.round(rgb[0]*0.38+92);
     let fG=Math.round(rgb[1]*0.38+86);
@@ -4887,6 +4301,8 @@ function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
     if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
 
+    ctx.save();
+    ctx.globalAlpha=fade;
     ctx.beginPath();
     ctx.moveTo(p.verts[0][0],p.verts[0][1]);
     for(let v=1;v<p.verts.length;v++)ctx.lineTo(p.verts[v][0],p.verts[v][1]);
@@ -4896,11 +4312,15 @@ function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.strokeStyle=isBW?'rgba(40,32,28,0.42)':'rgba(50,38,28,0.46)';
     ctx.lineWidth=Math.max(0.8,D*0.0018);
     ctx.stroke();
+    ctx.restore();
   }
 
   // Charcoal wash regions — 2 large translucent dark masses as compositional weight.
-  // Drawn after ~30% reveal so the painting builds up before the masses land.
+  // Drawn after ~30% reveal so the painting builds up before the masses land;
+  // they ease in over the next 20% of the song rather than landing in one frame.
   if(reveal>0.30){
+    ctx.save();
+    ctx.globalAlpha=Math.min(1,(reveal-0.30)/0.20);
     for(let w=0;w<2;w++){
       const wR=_seedRnd(w+11500,ss,0,0); wR(); wR();
       const wx=CW*(0.20+wR()*0.60);
@@ -4918,10 +4338,14 @@ function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       ctx.fillStyle=isBW?`rgba(28,26,22,${(0.16+w*0.06).toFixed(2)})`:`rgba(35,28,22,${(0.18+w*0.06).toFixed(2)})`;
       ctx.fill();
     }
+    ctx.restore();
   }
 
   // Single muted chord-colour wash after ~50% — adds one tonal warm/cool note.
+  // Eases in over the next 20% of the song.
   if(reveal>0.50){
+    ctx.save();
+    ctx.globalAlpha=Math.min(1,(reveal-0.50)/0.20);
     const wcR=_seedRnd(12100,ss,0,0); wcR(); wcR();
     const wcx=CW*(0.25+wcR()*0.50);
     const wcy=CH*(0.25+wcR()*0.50);
@@ -4941,6 +4365,7 @@ function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.closePath();
     ctx.fillStyle=`rgba(${wR},${wG},${wB},0.30)`;
     ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -5968,14 +5393,17 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
         rMax: Math.min(CW,CH) * (0.35 + rnd()*0.25),
       });
     }
-    let colIdx = 0;
-    for(const an of anchors){
+    // Chord index per band is fixed from the FULL band count (fan*BANDS+b) —
+    // a running counter over the visible bands recoloured every later fan as
+    // more bands were revealed.
+    for(let fi=0; fi<anchors.length; fi++){
+      const an = anchors[fi];
       const bandW = an.rMax / BANDS;
       for(let b=0; b<visBands; b++){
         const rOuter = an.rMax - b * bandW;
         const rInner = rOuter - bandW * 0.86;
         if(rInner <= 0) continue;
-        const col = chordCol(colIdx++, ((b & 1) ? 1.0 : 0.85));
+        const col = chordCol(fi*BANDS + b, ((b & 1) ? 1.0 : 0.85));
         ctx.fillStyle = css(col);
         ctx.beginPath();
         ctx.arc(an.x, an.y, rOuter, an.a0, an.a0 + an.sweep, false);
@@ -6407,38 +5835,6 @@ function francisPhaseHangingDrips(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── ARCHIVED: previous Sam Francis F — Big Red mural (dominant red field +
-// edge incursions). Replaced by Hanging Drips because the central polygon
-// read as too dominant and visually clashed with adjacent Francis phases
-// (Cluster, Bloom). Preserved here for reference and potential revival.
-function francisPhaseBigRed_archived(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  // central red mass grows with reveal
-  const base=_picChord(chords,0,gc,isBW).rgb;
-  const rr=isBW?base[0]:Math.min(255,Math.round(160+base[0]*0.3)),rg=isBW?base[1]:Math.round(30+base[1]*0.15),rb=isBW?base[2]:Math.round(28+base[2]*0.15);
-  const mw=CW*(0.3+reveal*0.5),mh=CH*(0.4+reveal*0.45);
-  ctx.fillStyle=`rgb(${rr},${rg},${rb})`;
-  ctx.save();ctx.translate(CW/2,CH/2);
-  ctx.beginPath();
-  const pts=10;for(let p=0;p<=pts;p++){const a=p/pts*Math.PI*2,wob=0.82+0.18*Math.sin(a*3+ss);const x=Math.cos(a)*mw*0.5*wob,y=Math.sin(a)*mh*0.5*wob;p?ctx.lineTo(x,y):ctx.moveTo(x,y);}
-  ctx.closePath();ctx.fill();ctx.restore();
-  // edge incursions of other chord colours
-  const inc=Math.max(3,Math.min(40,Math.round(cn/5)));
-  const vis=Math.max(1,Math.ceil(reveal*inc));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4100,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/inc))+1,gc,isBW);
-    const edge=i%4;
-    const x=edge===0?rnd()*CW:edge===1?rnd()*CW:edge===2?rnd()*CW*0.2:CW-rnd()*CW*0.2;
-    const y=edge===0?rnd()*CH*0.2:edge===1?CH-rnd()*CH*0.2:rnd()*CH;
-    const R=Math.min(CW,CH)*(0.03+rnd()*0.05);
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
-    ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
-  }
-}
-
 // ── Sam Francis G: Mandala (1970s series). White ground + 10 concentric
 // chord-coloured rings + 24 petal spokes radiating outward + white centre
 // dot. Sam Francis's late spiritual phase — ordered, centred, mystical.
@@ -6454,8 +5850,18 @@ function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const rings = 10;
   const visRings = Math.max(1, Math.ceil(rings*reveal));
 
-  // Concentric rings outer→inner (so inner sits on top).
-  for(let r=visRings;r>=1;r--){
+  // Concentric rings outer→inner (so inner sits on top). The rings are
+  // translucent, so every inner ring's colour is a composite of all the rings
+  // beneath it: ALL rings are always stacked (the full composition) and the
+  // reveal clips the stack to the visible disc — otherwise each newly revealed
+  // outer ring recoloured the whole mandala.
+  ctx.save();
+  if(visRings<rings){
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR*(visRings/rings), 0, Math.PI*2);
+    ctx.clip();
+  }
+  for(let r=rings;r>=1;r--){
     const radius = maxR * (r/rings);
     const {rgb} = _picChord(chords, Math.floor(r/rings * cn)%cn, gc, isBW);
     ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.55 + (r%2)*0.15).toFixed(2)})`;
@@ -6463,6 +5869,7 @@ function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.arc(cx, cy, radius, 0, Math.PI*2);
     ctx.fill();
   }
+  ctx.restore();
 
   // Petal spokes radiating.
   const spokes = 24;
@@ -7219,7 +6626,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     // phase from density/energy → opens loops into knots/stars; key adds offset
     const delta = (Math.PI/2)*(0.3 + dnaD*1.4) + _slot*0.13;
     const Ax = A*(0.85+0.15*dnaE), Ay = A*(0.85+0.15*(1-dnaE));
-    const steps=Math.max(480, N*12);
+    const steps=Math.max(480, cn*12);
     ctx.lineCap='round'; ctx.lineJoin='round';
     // gold underglow
     let prev=null;
@@ -7228,9 +6635,12 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       if(prev){ ctx.strokeStyle='rgba(201,168,76,.05)'; ctx.lineWidth=Math.max(3,S*0.011); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
       prev={x,y};
     }
-    // colour core (colour flows with the chords)
+    // colour core (colour flows with the chords) - chord index maps through the
+    // FULL song so played segments keep their colour; the core grows along the
+    // curve with playback instead of re-flowing every frame.
     prev=null;
-    for(let s2=0;s2<=steps;s2++){ const t=s2/steps, idx=Math.min(N-1,(t*N)|0), col=chordCol(idx), m=chordMeta(idx), tt=t*Math.PI*2;
+    const coreT=N/cn;
+    for(let s2=0;s2<=steps;s2++){ const t=s2/steps; if(t>coreT) break; const idx=Math.min(N-1,(t*cn)|0), col=chordCol(idx), m=chordMeta(idx), tt=t*Math.PI*2;
       const x=cx+Math.sin(fa*tt+delta)*Ax, y=cy+Math.sin(fb*tt)*Ay;
       if(prev){ ctx.strokeStyle=css(col, 0.55+0.3*m.vel); ctx.lineWidth=Math.max(1.3,S*0.0038); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
       prev={x,y};
@@ -7247,7 +6657,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       let pm=60; if(notes.length){ let s=0,c=0; for(const nt of notes){ const mm=nt.m!==undefined?nt.m:nt; s+=mm; c++; } pm=s/Math.max(1,c); }
       const pcv=((Math.round(pm)%12)+12)%12; const slot=[0,7,2,9,4,11,6,1,8,3,10,5].indexOf(pcv);
       const a=-Math.PI/2 + slot/12*Math.PI*2;
-      const rr=R*(0.30+0.68*(i/Math.max(1,N-1)));
+      const rr=R*(0.30+0.68*(i/Math.max(1,cn-1)));
       pts.push({x:cx+Math.cos(a)*rr, y:cy+Math.sin(a)*rr, i, slot});
     }
     for(let i=1;i<pts.length;i++){ const d=Math.abs(pts[i].slot-pts[i-1].slot); if(!(d<=1||d>=11)) continue;
@@ -7320,14 +6730,14 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     ctx.beginPath(); ctx.moveTo(CW*0.06,baseY); ctx.lineTo(CW*0.94,baseY); ctx.stroke();
     const span=CW*0.88, x0=CW*0.06;
     for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
-      const x=x0+(i/Math.max(1,N-1))*span;
+      const x=x0+(i/Math.max(1,cn-1))*span;
       const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
       let pm=60; if(notes.length){ const mm=notes[0].m!==undefined?notes[0].m:notes[0]; pm=mm; }
       const pcv=((Math.round(pm)%12)+12)%12; const dir=(pcv%2===0)?-1:1;
       const hgt=(S*0.04 + (pcv/11)*S*0.30)*(0.5+0.5*m.dur);
-      ctx.strokeStyle=css(col, 0.6+0.3*m.vel); ctx.lineWidth=Math.max(1.4, span/N*0.5); ctx.lineCap='round';
+      ctx.strokeStyle=css(col, 0.6+0.3*m.vel); ctx.lineWidth=Math.max(1.4, span/cn*0.5); ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(x,baseY); ctx.lineTo(x,baseY+dir*hgt); ctx.stroke();
-      ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.9); ctx.beginPath(); ctx.arc(x,baseY+dir*hgt, Math.max(1, span/N*0.3),0,7); ctx.fill(); }
+      ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.9); ctx.beginPath(); ctx.arc(x,baseY+dir*hgt, Math.max(1, span/cn*0.3),0,7); ctx.fill(); }
     return;
   }
 
@@ -7346,7 +6756,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   if(pick===5){
     // — 6 · VLNENIE — interference field (coarse cells for mobile) —
     const srcs=[];
-    const stride=Math.max(1, Math.ceil(N/28));
+    const stride=Math.max(1, Math.ceil(cn/28));   // full-song stride: sources stay put as N grows
     for(let i=0;i<N;i+=stride){
       const m=chordMeta(i), col=chordCol(i);
       const r=S*0.012*Math.sqrt(i+1)*3.0, a=i*GA;
@@ -7826,6 +7236,17 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         turns: 2+rnd()*3,
       });
     }
+    // Pre-roll the remaining per-form parameters for the FULL count, in the
+    // same stream order the full reveal used to consume them (connector
+    // jitters, then ring counts / spiral widths) — so the full-reveal look is
+    // unchanged and no form re-rolls as later forms appear.
+    for(let i=1;i<FORMS;i++) forms[i].jit=(rnd()-0.5)*60;
+    for(let i=0;i<FORMS;i++){
+      const f=forms[i];
+      if(f.kind < 0.34){ /* flower: no extra draws */ }
+      else if(f.kind < 0.67){ f.ringsN=3+Math.floor(rnd()*3); }
+      else { f.lw=1.5+rnd()*2; }
+    }
     // thin connecting curves first (behind)
     ctx.strokeStyle = 'rgba(255,255,255,0.35)';
     ctx.lineWidth = 1;
@@ -7833,7 +7254,7 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       const a=forms[i-1], b=forms[i];
       ctx.beginPath();
       ctx.moveTo(a.x,a.y);
-      ctx.quadraticCurveTo((a.x+b.x)/2 + (rnd()-0.5)*60, (a.y+b.y)/2, b.x, b.y);
+      ctx.quadraticCurveTo((a.x+b.x)/2 + b.jit, (a.y+b.y)/2, b.x, b.y);
       ctx.stroke();
     }
     for(let i=0;i<visForms;i++){
@@ -7843,12 +7264,12 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       if(f.kind < 0.34){
         flower(f.x, f.y, f.r, f.petals, col, colC);
       } else if(f.kind < 0.67){
-        rings(f.x, f.y, f.r, 3+Math.floor(rnd()*3), f.ci);
+        rings(f.x, f.y, f.r, f.ringsN, f.ci);
       } else {
         // filled pale disc behind spiral for contrast
         ctx.fillStyle = css(col, 0.4);
         ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI*2); ctx.fill();
-        snail(f.x, f.y, f.r*0.95, f.turns, colC, 1.5+rnd()*2);
+        snail(f.x, f.y, f.r*0.95, f.turns, colC, f.lw);
       }
     }
   }
@@ -8273,7 +7694,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       const cy = row*ch + ch/2;
       const col1 = chordCol(i, 1.0);
       const col2 = chordCol(i+3, 1.1);
-      const kind = (i*7 + (ss%5)) % 4;
+      const kind = (((i*7 + (ss%5)) % 4) + 4) % 4;   // ss may be negative: keep kind in 0..3
       const pad = Math.min(cw,ch)*0.14;
       const w = cw - pad*2, h = ch - pad*2;
       const x0 = col*cw + pad, y0 = row*ch + pad;
@@ -8727,14 +8148,17 @@ function klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     }
   }
 
-  // Bright highlight specks — scale with reveal.
+  // Bright highlight specks — scale with reveal. Own per-index seed: they used
+  // to continue the shared stream after the reveal-dependent satellite loop,
+  // so every speck jumped once reveal passed 0.5.
   const visHighlights = Math.ceil(highlightCountFull * reveal);
   for(let i=0;i<visHighlights;i++){
-    const x = rnd()*CW, y = rnd()*CH;
+    const hr = _seedRnd(39400+i, ss, 0, 0);
+    const x = hr()*CW, y = hr()*CH;
     const {rgb} = _picChord(chords, (i+200)%cn, gc, isBW);
     ctx.fillStyle = `rgba(${Math.min(255,rgb[0]+60)|0},${Math.min(255,rgb[1]+60)|0},${Math.min(255,rgb[2]+70)|0},0.75)`;
     ctx.beginPath();
-    ctx.arc(x, y, 2+rnd()*3, 0, Math.PI*2);
+    ctx.arc(x, y, 2+hr()*3, 0, Math.PI*2);
     ctx.fill();
   }
 
@@ -8916,7 +8340,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
       ctx.strokeRect(col*cw, row*ch, cw, ch);
       // glyph in contrasting colour
       const gcol = chordCol(i+4, 1.0);
-      const kind = (i*5 + (ss%5)) % 5;
+      const kind = (((i*5 + (ss%5)) % 5) + 5) % 5;   // ss may be negative: keep kind in 0..4
       if(kind===0) glyphFigure(cx, cy, s, gcol);
       else if(kind===1) glyphHeart(cx, cy, s, gcol);
       else if(kind===2) glyphStar(cx, cy, s, gcol);
@@ -9302,61 +8726,6 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // Black + cream grid of squares that compress horizontally toward a vertical
 // band — creates an optical bend illusion. Subtle chord-coloured tint overlay
 // per row preserves the optical effect while staying palette-driven.
-function rileyPhaseMovement(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-  const sR = _seedRnd(34001, ss, 0, 0); sR(); sR();
-
-  // Cream ground.
-  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Grid dimensions — scale with chord count.
-  const rows = cn<=8?8:cn<=24?10:cn<=60?12:14;
-  const cols = cn<=8?14:cn<=24?18:cn<=60?22:24;
-  const cellH = CH/rows;
-  // Compression centre — varies per painting via seed.
-  const centerX = CW * (0.45 + sR()*0.30);
-
-  // Compute column widths — symmetric compression toward centerX.
-  const widths = [];
-  let totalW = 0;
-  for(let c=0;c<cols;c++){
-    const t = c/cols;
-    const x = t*CW;
-    const dist = Math.abs(x - centerX) / CW;
-    const w = (CW/cols) * (0.25 + Math.pow(dist, 0.7) * 1.0);
-    widths.push(w);
-    totalW += w;
-  }
-  const scale = CW/totalW;
-  for(let i=0;i<widths.length;i++) widths[i] *= scale;
-
-  // Reveal-based: rows appear top-to-bottom.
-  const visRows = Math.max(1, Math.ceil(rows*reveal));
-  const dark = isBW ? '#1a1a1a' : '#1a1a1a';
-  const light = isBW ? '#e8e8e4' : '#f0ece2';
-
-  // Draw checkerboard.
-  let x = 0;
-  for(let c=0;c<cols;c++){
-    const w = widths[c];
-    for(let r=0;r<visRows;r++){
-      const y = r*cellH;
-      const k = (r+c) % 2;
-      ctx.fillStyle = k ? dark : light;
-      ctx.fillRect(x, y, w, cellH);
-    }
-    x += w;
-  }
-
-  // Subtle chord-coloured tint overlay per row — preserves optical effect.
-  for(let r=0;r<visRows;r++){
-    const {rgb} = _picChord(chords, Math.floor(r/rows * cn)%cn, gc, isBW);
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.04)`;
-    ctx.fillRect(0, r*cellH, CW, cellH);
-  }
-}
 
 // ── Riley: Warp Field — colour columns warping toward a vertical axis ──
 // Replaces the old B/W "Movement in Squares": vertical bands whose WIDTH narrows
@@ -9461,33 +8830,6 @@ function rileyPhaseFall(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // post-1967 colour signature. Pure vertical stripes of chord colours, no
 // waves, no patterns. Stripe count scales with song length; reveal sweeps
 // left-to-right.
-function rileyPhaseStripes(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  // Stripe count grows with chord density.
-  const stripes = cn<=8?16:cn<=24?28:cn<=60?42:cn<=120?56:cn<=240?72:cn<=400?96:120;
-  const stripeW = CW/stripes;
-  // Reveal-based: stripes appear left-to-right.
-  const visStripes = Math.max(1, Math.ceil(stripes*reveal));
-
-  // Light ground for un-revealed area.
-  ctx.fillStyle = isBW ? '#e8e8e4' : '#f0ece2';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Slight saturation boost so colours pop as pure bands.
-  // Pastel tone: skip the boost.
-  for(let i=0;i<visStripes;i++){
-    const t = i/stripes;
-    const {rgb} = _picChord(chords, Math.floor(t * cn)%cn, gc, isBW);
-    const _k = _pastelOn ? 1 : 1.05;
-    const r = Math.min(255, rgb[0]*_k);
-    const g = Math.min(255, rgb[1]*_k);
-    const b = Math.min(255, rgb[2]*_k);
-    ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
-    ctx.fillRect(i*stripeW, 0, stripeW+1, CH);
-  }
-}
 
 // ── Riley I: Crest (1964) — single-gesture Riley. 24 parallel S-curve
 // bands sweeping horizontally — all share the same sinusoid so the painting
@@ -9536,11 +8878,14 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.fill();
   }
 
-  // Second pass: chord-coloured overlay tints (one per ~4 bands).
-  const tintCount = Math.max(2, Math.ceil(visBands/4));
+  // Second pass: chord-coloured overlay tints (one per ~4 bands). Laid out
+  // over the FULL band count (positions/chords fixed for the song); a tint is
+  // drawn once its top band has been revealed.
+  const tintCount = Math.max(2, Math.ceil(bands/4));
   for(let i=0;i<tintCount;i++){
     const t = i/Math.max(1, tintCount-1);
-    const yBase = yStart + t*(visBands*bandH - bandH*4);
+    if(t*(bands-4) >= visBands) continue;
+    const yBase = yStart + t*(bands*bandH - bandH*4);
     const {rgb} = _picChord(chords, Math.floor(t*cn)%cn, gc, isBW);
     ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`;
     ctx.beginPath();
@@ -10090,7 +9435,9 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
 // layer the same chord colours back on top with mild lightness modulation.
 function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
-  const rnd = _seedRnd(91, ss, lim, 2);
+  // Seed must not include lim — otherwise the cathedral position/width and
+  // every stroke re-roll on each chord. Reveal only scales the stroke count.
+  const rnd = _seedRnd(91, ss, 0, 2);
 
   // Sample three depth-points from the piece for a chord-driven gradient.
   // The lift makes the gradient feel like daylight playing on stone, but
@@ -10099,8 +9446,8 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
-    const note = notes[0];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[0] : { m: 60, v: 90 };
     const m = note.m !== undefined ? note.m : note;
     const [r, g, b] = gc(m, 100);
     const lr = Math.max(0, Math.min(255, r + lightLift));
@@ -10157,7 +9504,9 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
     const y = rnd() * CH;
     const lenY = 30 + rnd() * 120;
     const w = 1 + rnd() * 3;
-    const ci = Math.floor((x / CW) * Math.min(lim, cn)) % Math.max(1, cn);
+    // Chord is tied to the stroke's x-slot over the WHOLE piece (not the
+    // played-so-far prefix) so a stroke keeps its colour once painted.
+    const ci = Math.floor((x / CW) * cn) % Math.max(1, cn);
     const chord = chords[ci];
     _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
@@ -10196,14 +9545,15 @@ function monetPhaseCathedral(ctx, CW, CH, chords, lim, gc, ss, mode){
 // stays present.
 function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
-  const rnd = _seedRnd(91, ss, lim, 5);
+  // Seed must not include lim — otherwise the horizon re-rolls every chord.
+  const rnd = _seedRnd(91, ss, 0, 5);
 
   function chordColor(t){
     const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{ m: 60, v: 90 }];
-    const note = notes[0];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[0] : { m: 60, v: 90 };
     const m = note.m !== undefined ? note.m : note;
     return gc(m, 100);
   }
@@ -10260,12 +9610,17 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.globalAlpha = 1;
 
   // Soft horizontal painterly veils — chord colour, lifted modestly.
+  // Roll the geometry for ALL 80 veils up front so the rnd stream consumed
+  // here (and therefore the ripples below) does not shift with the reveal.
+  const VEILS_FULL = 80;
+  const veilsVis = Math.min(VEILS_FULL, Math.max(40, lim));
+  const veilGeo = [];
+  for(let i = 0; i < VEILS_FULL; i++){
+    veilGeo.push([rnd() * CH, CW * (0.3 + rnd() * 0.5), (rnd() - 0.3) * CW, CH * (0.015 + rnd() * 0.04)]);
+  }
   ctx.globalAlpha = 0.28;
-  for(let i = 0; i < Math.min(80, Math.max(40, lim)); i++){
-    const y = rnd() * CH;
-    const w = CW * (0.3 + rnd() * 0.5);
-    const x = (rnd() - 0.3) * CW;
-    const h = CH * (0.015 + rnd() * 0.04);
+  for(let i = 0; i < veilsVis; i++){
+    const [y, w, x, h] = veilGeo[i];
     const chord = chords[i % Math.max(1, cn)];
     _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes);
@@ -10350,8 +9705,8 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[0];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[0] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const [r,g,b] = gc(m, 100);
     if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
@@ -10361,8 +9716,8 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[i % notes.length];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[i % notes.length] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r,g,b] = gc(m, v);
@@ -10378,13 +9733,16 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = sky;
   ctx.fillRect(0,0,CW,skyHeight);
 
-  // Sky veils (soft chord clouds) — scale with reveal.
+  // Sky veils (soft chord clouds) — geometry is rolled for the FULL veil
+  // count every frame (keeps the shared rnd stream independent of lim);
+  // reveal only gates which veils are drawn.
   const visVeils = Math.ceil(veilCount * Math.min(1, reveal*1.5));
   ctx.globalAlpha = 0.25;
-  for(let i=0;i<visVeils;i++){
+  for(let i=0;i<veilCount;i++){
     const y = rnd()*skyHeight;
     const w = CW*(0.4+rnd()*0.5);
     const x = (rnd()-0.3)*CW;
+    if(i >= visVeils) continue;
     const [r,g,b] = chordColIdx(i);
     ctx.fillStyle = `rgb(${Math.min(255,r+60)|0},${Math.min(255,g+60)|0},${Math.min(255,b+70)|0})`;
     ctx.beginPath();
@@ -10393,18 +9751,25 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
   ctx.globalAlpha = 1;
 
-  // Tree-line at horizon (optional, appears after 15% reveal).
-  if(treeLineActive && reveal > 0.15){
-    ctx.globalAlpha = 0.30;
-    const [hrR,hrG,hrB] = chordCol(0.25);
-    ctx.fillStyle = `rgb(${Math.round(hrR*0.35+15)},${Math.round(hrG*0.4+30)},${Math.round(hrB*0.30+10)})`;
-    ctx.beginPath();
-    ctx.moveTo(0, skyHeight);
-    for(let x=0;x<=CW;x+=CW/30) ctx.lineTo(x, skyHeight + (rnd()-0.5)*CH*0.022 - CH*0.008);
-    ctx.lineTo(CW, skyHeight);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha = 1;
+  // Tree-line at horizon (optional, appears after 15% reveal). Its jitter is
+  // rolled whenever the tree-line is active (not only past 15%), so the band
+  // boundaries and strokes below don't shift when it pops in.
+  if(treeLineActive){
+    const treeJit = [];
+    for(let x=0;x<=CW;x+=CW/30) treeJit.push((rnd()-0.5)*CH*0.022 - CH*0.008);
+    if(reveal > 0.15){
+      ctx.globalAlpha = 0.30;
+      const [hrR,hrG,hrB] = chordCol(0.25);
+      ctx.fillStyle = `rgb(${Math.round(hrR*0.35+15)},${Math.round(hrG*0.4+30)},${Math.round(hrB*0.30+10)})`;
+      ctx.beginPath();
+      ctx.moveTo(0, skyHeight);
+      let tj = 0;
+      for(let x=0;x<=CW;x+=CW/30) ctx.lineTo(x, skyHeight + treeJit[tj++]);
+      ctx.lineTo(CW, skyHeight);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
   }
 
   // Horizontal tulip bands — count grows with reveal.
@@ -10429,7 +9794,11 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Sky tone for atmospheric mixing — lightened first-chord colour.
   const [_skR,_skG,_skB] = chordCol(0.05);
   const skyMix=[Math.min(255,_skR*0.4+165),Math.min(255,_skG*0.4+150),Math.min(255,_skB*0.4+150)];
-  for(let b=0;b<visBands;b++){
+  // Every band and every stroke is ROLLED each frame (full count) so the
+  // shared rnd stream never depends on lim; only the visible prefix of
+  // bands/strokes is drawn. Full reveal is pixel-identical to the old code.
+  for(let b=0;b<bandCountFull;b++){
+    const bandVis = b < visBands;
     const t = bandCountFull<=1 ? 1 : b/(bandCountFull-1);
     const yStart = _bounds[b];
     const yEnd = _bounds[b+1];
@@ -10438,36 +9807,42 @@ function monetPhaseTulipFields(ctx, CW, CH, chords, lim, gc, ss, mode){
     // Atmospheric desaturation toward the horizon.
     const mixT = 0.45*(1-t);
     const base=[r0*(1-mixT)+skyMix[0]*mixT, g0*(1-mixT)+skyMix[1]*mixT, b0*(1-mixT)+skyMix[2]*mixT];
-    const dark=[base[0]*0.75+8, base[1]*0.75+8, base[2]*0.75+14];
-    const lite=[Math.min(255,base[0]+42), Math.min(255,base[1]+42), Math.min(255,base[2]+42)];
-    const grad = ctx.createLinearGradient(0, yStart, 0, yEnd);
-    grad.addColorStop(0, `rgb(${dark[0]|0},${dark[1]|0},${dark[2]|0})`);
-    grad.addColorStop(0.55, `rgb(${base[0]|0},${base[1]|0},${base[2]|0})`);
-    grad.addColorStop(1, `rgb(${lite[0]|0},${lite[1]|0},${lite[2]|0})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, yStart, CW, yH+1);
+    if(bandVis){
+      const dark=[base[0]*0.75+8, base[1]*0.75+8, base[2]*0.75+14];
+      const lite=[Math.min(255,base[0]+42), Math.min(255,base[1]+42), Math.min(255,base[2]+42)];
+      const grad = ctx.createLinearGradient(0, yStart, 0, yEnd);
+      grad.addColorStop(0, `rgb(${dark[0]|0},${dark[1]|0},${dark[2]|0})`);
+      grad.addColorStop(0.55, `rgb(${base[0]|0},${base[1]|0},${base[2]|0})`);
+      grad.addColorStop(1, `rgb(${lite[0]|0},${lite[1]|0},${lite[2]|0})`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, yStart, CW, yH+1);
+    }
     // Dabs — density tracks song character; foreground bands get more/larger.
     const strokesFull = Math.round((140 + Math.floor(rnd()*110)) * _monetStrokeMul * (0.5+t*0.8));
-    const visStrokes = Math.ceil(strokesFull * reveal);
-    for(let k=0;k<visStrokes;k++){
+    const visStrokes = bandVis ? Math.ceil(strokesFull * reveal) : 0;
+    for(let k=0;k<strokesFull;k++){
+      // Roll every parameter first (same draw order as before), then gate.
       const sx = rnd()*CW;
       const sy = yStart + rnd()*yH;
+      const accent = rnd() < 0.10;
+      const f = accent ? 0 : (rnd()-0.42)*1.0;      // -0.42..0.58 → dark..light in-family
+      const lenR = rnd(), lwR = rnd(), dyR = rnd();
+      if(k >= visStrokes) continue;
       let dr,dg,db;
-      if(rnd() < 0.10){
+      if(accent){
         const [ar,ag,ab] = chordColIdx(b*30 + k);   // accent from another chord
         dr=ar; dg=ag; db=ab;
       } else {
-        const f = (rnd()-0.42)*1.0;                 // -0.42..0.58 → dark..light in-family
         if(f>=0){ dr=Math.min(255,base[0]+f*120); dg=Math.min(255,base[1]+f*120); db=Math.min(255,base[2]+f*120); }
         else    { dr=base[0]*(1+f*0.9); dg=base[1]*(1+f*0.9); db=base[2]*(1+f*0.9); }
       }
-      const len = (5 + rnd()*13) * (0.5 + t*0.9);   // tulip-row dabs grow toward foreground
+      const len = (5 + lenR*13) * (0.5 + t*0.9);    // tulip-row dabs grow toward foreground
       ctx.strokeStyle = `rgba(${dr|0},${dg|0},${db|0},0.85)`;
-      ctx.lineWidth = (1.4+rnd()*2.2) * (0.5 + t*0.7);
+      ctx.lineWidth = (1.4+lwR*2.2) * (0.5 + t*0.7);
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(sx, sy);
-      ctx.lineTo(sx+len, sy+(rnd()-0.5)*1.5);
+      ctx.lineTo(sx+len, sy+(dyR-0.5)*1.5);
       ctx.stroke();
     }
   }
@@ -10493,8 +9868,8 @@ function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[0];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[0] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const [r,g,b] = gc(m, 100);
     if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
@@ -10504,8 +9879,8 @@ function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[i % notes.length];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[i % notes.length] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r,g,b] = gc(m, v);
@@ -10517,14 +9892,19 @@ function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = isBW ? '#1c1c20' : '#1a2d35';
   ctx.fillRect(0,0,CW,CH);
 
+  // Every element group below is ROLLED at its full count each frame (so the
+  // shared rnd stream, and therefore every later group, is independent of
+  // lim); reveal only gates which prefix is drawn.
+
   // Vertical sky reflection streaks — scale with reveal.
   const visStreaks = Math.ceil(streakCountFull * reveal);
   ctx.globalAlpha = 0.72;
-  for(let i=0;i<visStreaks;i++){
+  for(let i=0;i<streakCountFull;i++){
     const x = (i/streakCountFull)*CW + (rnd()-0.5)*CW*0.02;
     const sw = CW/streakCountFull*(1.5+rnd()*1.0);
     const yStart = rnd()*CH*0.4;
     const len = CH*(0.45+rnd()*0.50);
+    if(i >= visStreaks) continue;
     const [r,g,b] = chordCol(i/streakCountFull);
     ctx.fillStyle = `rgb(${Math.min(255,r+70)|0},${Math.min(255,g+70)|0},${Math.min(255,b+85)|0})`;
     ctx.fillRect(x, yStart, sw, len);
@@ -10534,11 +9914,12 @@ function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Dark reflective patches (chord darkened) — appear with reveal.
   const visPatches = Math.ceil(patchCount * reveal);
   ctx.globalAlpha = 0.55;
-  for(let i=0;i<visPatches;i++){
+  for(let i=0;i<patchCount;i++){
     const x = rnd()*CW;
     const w = CW*(0.05+rnd()*0.10);
     const y = rnd()*CH;
     const h = CH*(0.15+rnd()*0.35);
+    if(i >= visPatches) continue;
     const [r,g,b] = chordColIdx(i);
     ctx.fillStyle = `rgb(${Math.round(r*0.25)},${Math.round(g*0.30+15)},${Math.round(b*0.30+10)})`;
     ctx.fillRect(x, y, w, h);
@@ -10548,31 +9929,36 @@ function monetPhaseReflections(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Horizontal ripple highlights — scale with reveal.
   const visRipples = Math.ceil(rippleCountFull * reveal);
   ctx.globalAlpha = 0.65;
-  for(let k=0;k<visRipples;k++){
+  for(let k=0;k<rippleCountFull;k++){
     const y = rnd()*CH;
     const x = rnd()*CW;
     const len = 8+rnd()*22;
-    const [r,g,b] = chordColIdx(k+300);
     const lift = 50 + rnd()*30;
+    const lw = 0.8+rnd()*1.2;
+    const dy = (rnd()-0.5)*1.5;
+    if(k >= visRipples) continue;
+    const [r,g,b] = chordColIdx(k+300);
     ctx.strokeStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.6)`;
-    ctx.lineWidth = 0.8+rnd()*1.2;
+    ctx.lineWidth = lw;
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(x+len, y+(rnd()-0.5)*1.5);
+    ctx.lineTo(x+len, y+dy);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
   // Floating chord-colour highlights — small dabs scattered.
   const visSpots = Math.ceil(spotCount * reveal);
-  for(let i=0;i<visSpots;i++){
+  for(let i=0;i<spotCount;i++){
     const x = rnd()*CW;
     const y = rnd()*CH;
+    const rx = 3+rnd()*5, ry = 2+rnd()*3, rot = rnd()*Math.PI;
+    if(i >= visSpots) continue;
     const [r,g,b] = chordColIdx(i+500);
     const lift = 60;
     ctx.fillStyle = `rgba(${Math.min(255,r+lift)|0},${Math.min(255,g+lift)|0},${Math.min(255,b+lift)|0},0.75)`;
     ctx.beginPath();
-    ctx.ellipse(x, y, 3+rnd()*5, 2+rnd()*3, rnd()*Math.PI, 0, Math.PI*2);
+    ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI*2);
     ctx.fill();
   }
 }
@@ -10597,8 +9983,8 @@ function monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[0];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[0] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const [r,g,b] = gc(m, 100);
     if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
@@ -10608,8 +9994,8 @@ function monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[i % notes.length];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[i % notes.length] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r,g,b] = gc(m, v);
@@ -10633,13 +10019,16 @@ function monetPhaseBridgeMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = water;
   ctx.fillRect(0, bridgeY, CW, CH-bridgeY);
 
-  // Vertical reflection streaks in water — scale with reveal.
+  // Vertical reflection streaks in water — rolled at FULL count every frame
+  // (keeps the rnd stream feeding the veils below independent of lim);
+  // reveal only gates which prefix is drawn.
   const visStreaks = Math.ceil(streakCountFull * reveal);
   ctx.globalAlpha = 0.45;
-  for(let i=0;i<visStreaks;i++){
+  for(let i=0;i<streakCountFull;i++){
     const x = (i/streakCountFull)*CW + (rnd()-0.5)*CW*0.02;
     const sw = CW/streakCountFull*(0.8+rnd()*0.8);
     const len = (CH-bridgeY)*(0.50+rnd()*0.45);
+    if(i >= visStreaks) continue;
     const [r,g,b] = chordCol(i/streakCountFull);
     ctx.fillStyle = `rgb(${Math.min(255,r+80)|0},${Math.min(255,g+80)|0},${Math.min(255,b+95)|0})`;
     ctx.fillRect(x, bridgeY, sw, len);
@@ -10705,8 +10094,8 @@ function monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, Math.floor(t*cn)));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[0];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[0] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const [r,g,b] = gc(m, 100);
     if(isBW){ const v = Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; }
@@ -10716,8 +10105,8 @@ function monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode){
     const ci = Math.min(cn-1, Math.max(0, i%cn));
     const chord = chords[ci];
     _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [{m:60,v:90}];
-    const note = notes[i % notes.length];
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes.length ? notes[i % notes.length] : {m:60,v:90};
     const m = note.m !== undefined ? note.m : note;
     const v = note.v !== undefined ? note.v : 100;
     const [r,g,b] = gc(m, v);
@@ -10743,29 +10132,34 @@ function monetPhaseWisteria(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = `rgb(${Math.round(botR*0.45+30)},${Math.round(botG*0.50+40)},${Math.round(botB*0.55+50)})`;
   ctx.fillRect(0, CH*0.85, CW, CH*0.15);
 
-  // Cascading dabs — count grows with reveal.
+  // Cascading dabs — count grows with reveal. Every cascade and every dab is
+  // ROLLED at full count each frame (stable rnd stream for later cascades and
+  // the highlights); reveal only gates the drawn prefix. Dab spacing uses the
+  // FULL dab count so a dab never moves once painted.
   const visCascades = Math.ceil(cascadeCountFull * reveal);
-  for(let c=0;c<visCascades;c++){
+  for(let c=0;c<cascadeCountFull;c++){
     const x = (c/cascadeCountFull)*CW + (rnd()-0.5)*CW*0.025;
     const startY = CH*0.06 + rnd()*CH*0.10;
     const length = CH*(0.55 + rnd()*0.35);
     const dabsFull = 18 + Math.floor(rnd()*15);
     // Per-cascade dabs also scale slightly with reveal (denser as more chords arrive).
-    const dabs = Math.max(6, Math.ceil(dabsFull * (0.4 + reveal*0.6)));
-    for(let d=0;d<dabs;d++){
-      const t = d/dabs;
-      const y = startY + t*length;
+    const dabs = c < visCascades ? Math.max(6, Math.ceil(dabsFull * (0.4 + reveal*0.6))) : 0;
+    for(let d=0;d<dabsFull;d++){
       const dx = (rnd()-0.5)*7;
+      const a = 0.65 + rnd()*0.25;
+      const sz = 2 + rnd()*3;
+      const rot = rnd()*Math.PI;
+      if(d >= dabs) continue;
+      const t = d/dabsFull;
+      const y = startY + t*length;
       const [r,g,b] = chordColIdx(c*3 + d);
       // Shift toward violet without flattening palette.
       const jr = Math.round(r*0.65 + 30);
       const jg = Math.round(g*0.45 + 20);
       const jb = Math.round(b*0.85 + 60);
-      const a = 0.65 + rnd()*0.25;
       ctx.fillStyle = `rgba(${Math.max(0,Math.min(255,jr))},${Math.max(0,Math.min(255,jg))},${Math.max(0,Math.min(255,jb))},${a.toFixed(2)})`;
-      const sz = 2 + rnd()*3;
       ctx.beginPath();
-      ctx.ellipse(x+dx, y, sz, sz*0.85, rnd()*Math.PI, 0, Math.PI*2);
+      ctx.ellipse(x+dx, y, sz, sz*0.85, rot, 0, Math.PI*2);
       ctx.fill();
     }
   }
@@ -10809,7 +10203,6 @@ function drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
 
 // ── Shared palette + helpers ──
 const HOKUSAI_PRUSSIAN = '#1B3A5B';
-const HOKUSAI_FOAM = '#F7F4EA';
 const HOKUSAI_PAPER = '#EAE3CE';
 // Convert any [r,g,b] toward the woodblock palette: drop saturation, blend
 // with Prussian to keep all panels visually unified.
@@ -10827,7 +10220,10 @@ function _hokusaiMute(r, g, b, blendAmt, dim){
 // hue tilted ±12° by the secondary pitch class, depth by energy. Everything
 // routes through gc() so palette modes and BW keep working.
 function _hokusaiInk(chords, lim, gc){
-  const cn = Math.max(1, Math.min(chords.length, lim || chords.length));
+  // The ink-set is a WHOLE-SONG property (tonal centre, climax chord, energy):
+  // it must not drift as chords play, or every Hokusai phase recolours mid
+  // playback. `lim` is kept in the signature for call-site compatibility.
+  const cn = Math.max(1, chords.length);
   const hist = new Array(12).fill(0);
   let velSum=0, velN=0, cxIdx=0, cxVel=-1;
   for(let i=0;i<cn;i++){
@@ -10853,13 +10249,15 @@ function _hokusaiInk(chords, lim, gc){
   const S=0.40+energy*0.15, LD=0.32-energy*0.10;
   const mk=(lig,sMul)=>h2r(rh+tilt, Math.min(rs, S*sMul), lig);   // Math.min keeps BW gray
   const inkFrom=(m, sat, lig)=>{ const [r,g,b]=gc(m,100); const [h,s]=r2h(r,g,b); return h2r(h, Math.min(s,sat), lig); };
-  const cxN=chords[cxIdx]&&(chords[cxIdx].n||chords[cxIdx].notes)||[{m:60}];
-  const cm=cxN[0].m!==undefined?cxN[0].m:cxN[0];
+  // Rest chords carry n: [] — guard [0] access (an empty array is truthy).
+  const cxN=(chords[cxIdx]&&(chords[cxIdx].n||chords[cxIdx].notes))||[];
+  const cx0=cxN.length?cxN[0]:{m:60};
+  const cm=cx0.m!==undefined?cx0.m:cx0;
   return {
     D: mk(LD,1), M: mk(LD+0.19,0.96), L: mk(LD+0.40,0.85),
     A: inkFrom(cm, 0.56, 0.48),
     energy: energy,
-    voice: (i)=>{ const ch=chords[Math.min(cn-1,Math.max(0,i%cn))]; const nn=ch&&(ch.n||ch.notes)||[{m:60}]; const m=nn[0].m!==undefined?nn[0].m:nn[0]; return inkFrom(m, 0.50, 0.52); },
+    voice: (i)=>{ const ch=chords[Math.min(cn-1,Math.max(0,i%cn))]; const nn=(ch&&(ch.n||ch.notes))||[]; const n0=nn.length?nn[0]:{m:60}; const m=n0.m!==undefined?n0.m:n0; return inkFrom(m, 0.50, 0.52); },
     paper: [234,227,206], sumi: [24,26,32],
   };
 }
@@ -10888,8 +10286,9 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = P;
   ctx.beginPath(); ctx.moveTo(fx-fw*0.30, fy-fw*0.56); ctx.lineTo(fx, fy-fw*0.82); ctx.lineTo(fx+fw*0.30, fy-fw*0.56);
   ctx.lineTo(fx+fw*0.15, fy-fw*0.63); ctx.lineTo(fx+fw*0.02, fy-fw*0.53); ctx.lineTo(fx-fw*0.15, fy-fw*0.64); ctx.closePath(); ctx.fill();
-  // Melody envelope → swells. Moving average of top pitches over the piece.
-  const N = Math.max(1, Math.min(chords.length, lim));
+  // Melody envelope → swells. Moving average of top pitches over the WHOLE
+  // piece (not the played prefix), so the swells never relocate during playback.
+  const N = Math.max(1, chords.length);
   const pit = [];
   for(let i=0;i<N;i++){
     const ch=chords[i]; if(!ch){ pit.push(60); continue; }
@@ -11070,7 +10469,9 @@ function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
 
 // Variant 2 — Plum/Cherry blossom branch.
 function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const rnd = _seedRnd(92, ss, lim, 2);
+  // Seed must not include lim — otherwise the branch relocates every chord.
+  const rnd = _seedRnd(92, ss, 0, 2);
+  const cn = Math.max(1, chords.length);
   ctx.fillStyle = HOKUSAI_PAPER;
   ctx.fillRect(0, 0, CW, CH);
 
@@ -11122,7 +10523,9 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Blossoms — circular flowers along branch using chord colours.
   const blossomCount = Math.min(60, Math.max(12, lim));
   for(let i = 0; i < blossomCount; i++){
-    const ci = i % lim;
+    // Blossom i is tied to chord i over the WHOLE piece (not i % lim), so a
+    // painted blossom keeps its colour as more chords arrive.
+    const ci = i % cn;
     const chord = chords[ci] || chords[0];
     _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [];
@@ -11307,16 +10710,18 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
 
 // Variant 4 — Rain: diagonal lines + muted village band.
 function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const rnd = _seedRnd(92, ss, lim, 4);
+  // Seed must not include lim — otherwise mountain + houses relocate every chord.
+  const rnd = _seedRnd(92, ss, 0, 4);
+  const cn = Math.max(1, chords.length);
   const K = _hokusaiInk(chords, lim, gc);   // HK v2 note-driven ink-set
   // Soft grey paper.
   ctx.fillStyle = '#D8D4C2';
   ctx.fillRect(0, 0, CW, CH);
 
-  // Distant mountain silhouette band.
-  const midChord = chords[Math.floor(lim / 2)] || chords[0];
-  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
-  const midNote = midNotes[0];
+  // Distant mountain silhouette band — colour from the piece's middle chord.
+  const midChord = chords[Math.floor(cn / 2)] || chords[0];
+  const midNotes = (midChord && (midChord.n || midChord.notes)) || [];
+  const midNote = midNotes.length ? midNotes[0] : {m:60,v:80};
   const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
   ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.7);
   ctx.beginPath();
@@ -11339,7 +10744,7 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
   // HK v2: organic spacing — variable widths and gaps, no comb grid.
   let _hxWalk = CW * (0.02 + rnd() * 0.05);
   for(let i = 0; i < houseCount; i++){
-    const ci = Math.floor((i / houseCount) * lim);
+    const ci = Math.floor((i / houseCount) * cn);
     const chord = chords[ci] || chords[0];
     _setCurE(chord && chord._E);
     const notes = chord && (chord.n || chord.notes) || [];
@@ -11395,15 +10800,17 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
 
 // Variant 5 — Bridge: drum bridge arch over water + reeds.
 function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
-  const rnd = _seedRnd(92, ss, lim, 5);
+  // Seed must not include lim — otherwise reeds + ripples relocate every chord.
+  const rnd = _seedRnd(92, ss, 0, 5);
+  const cn = Math.max(1, chords.length);
   const K = _hokusaiInk(chords, lim, gc);   // HK v2 note-driven ink-set
   ctx.fillStyle = HOKUSAI_PAPER;
   ctx.fillRect(0, 0, CW, CH);
 
   // Sky band at top — gradient-free, just 2 bands.
   const skyChord = chords[0];
-  const skyNotes = skyChord && (skyChord.n || skyChord.notes) || [{m:72,v:80}];
-  const skyNote = skyNotes[0];
+  const skyNotes = (skyChord && (skyChord.n || skyChord.notes)) || [];
+  const skyNote = skyNotes.length ? skyNotes[0] : {m:72,v:80};
   const [sr, sg, sb] = gc(skyNote.m!==undefined?skyNote.m:skyNote, 80);
   // HK v2: bokashi sky — ink gradation instead of a flat band.
   const skg = ctx.createLinearGradient(0, 0, 0, CH*0.40);
@@ -11412,10 +10819,10 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = skg;
   ctx.fillRect(0, 0, CW, CH * 0.4);
 
-  // Water — bottom 50%, flat colour from middle chord.
-  const midChord = chords[Math.floor(lim / 2)] || chords[0];
-  const midNotes = midChord && (midChord.n || midChord.notes) || [{m:60,v:80}];
-  const midNote = midNotes[0];
+  // Water — bottom 50%, flat colour from the piece's middle chord.
+  const midChord = chords[Math.floor(cn / 2)] || chords[0];
+  const midNotes = (midChord && (midChord.n || midChord.notes)) || [];
+  const midNote = midNotes.length ? midNotes[0] : {m:60,v:80};
   const [wr, wg, wb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
   ctx.fillStyle = _hokusaiMute(wr, wg, wb, 0.5, 0.7);
   ctx.fillRect(0, CH * 0.55, CW, CH * 0.45);
@@ -11438,10 +10845,11 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.lineTo(bridgeCX + topRad, bridgeCY);
   ctx.arc(bridgeCX, bridgeCY, topRad, 0, Math.PI, true);
   ctx.closePath();
-  // Bridge colour — chord-derived earthy brown.
-  const lastChord = chords[lim - 1] || chords[0];
-  const lastNotes = lastChord && (lastChord.n || lastChord.notes) || [{m:60,v:80}];
-  const lastNote = lastNotes[0];
+  // Bridge colour — chord-derived earthy brown (from the piece's LAST chord,
+  // fixed for the whole playback rather than the chord just played).
+  const lastChord = chords[cn - 1] || chords[0];
+  const lastNotes = (lastChord && (lastChord.n || lastChord.notes)) || [];
+  const lastNote = lastNotes.length ? lastNotes[0] : {m:60,v:80};
   const [br, bg, bb] = gc(lastNote.m!==undefined?lastNote.m:lastNote, 100);
   ctx.fillStyle = _hokusaiMute(br, bg, bb, 0.4, 0.7);
   ctx.fill();
@@ -11450,12 +10858,14 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.lineJoin = 'round';
   ctx.stroke();
 
-  // Bridge ribbing — radial spokes from centre to inner arc.
-  const ribCount = Math.min(16, Math.max(6, Math.floor(lim / 5)));
+  // Bridge ribbing — radial spokes from centre to inner arc. Spoke ANGLES come
+  // from the full-song rib count (so ribs never slide); reveal only adds ribs.
+  const ribCountFull = Math.min(16, Math.max(6, Math.floor(cn / 5)));
+  const ribCount = Math.min(ribCountFull, Math.max(6, Math.floor(lim / 5)));
   ctx.strokeStyle = HOKUSAI_PRUSSIAN;
   ctx.lineWidth = 0.9;
   for(let i = 1; i < ribCount; i++){
-    const ang = Math.PI + (i / ribCount) * Math.PI;
+    const ang = Math.PI + (i / ribCountFull) * Math.PI;
     const x1 = bridgeCX + Math.cos(ang) * bridgeRadius;
     const y1 = bridgeCY + Math.sin(ang) * bridgeRadius;
     const x2 = bridgeCX + Math.cos(ang) * topRad;
@@ -11469,16 +10879,11 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Reeds at water edges + middle scatter — chord-driven height, thickness,
   // bend direction, and seedheads. Concept is realised here: every chord
   // contributes one visible reed with a chord-coloured tip.
-  const reedCount = Math.min(180, Math.max(30, lim * 3));
-  for(let i = 0; i < reedCount; i++){
-    const ci = i % lim;
-    const chord = chords[ci] || chords[0];
-    _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [];
-    const note = notes[0] || {m:60,v:80};
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 80;
-    const [r, g, b] = gc(m, v);
+  // Reed geometry is ROLLED for the full-song reed count every frame (keeps the
+  // ripple stream below independent of lim); reveal only gates the drawn prefix.
+  const reedCountFull = Math.min(180, Math.max(30, cn * 3));
+  const reedCount = Math.min(reedCountFull, Math.max(30, lim * 3));
+  for(let i = 0; i < reedCountFull; i++){
     // Position: 60% in side clusters, 40% scattered along full water edge.
     const zoneRoll = rnd();
     let rx;
@@ -11493,6 +10898,16 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
       rx = CW * 0.10 + rnd() * CW * 0.80;
     }
     const ry = CH * 0.55 + rnd() * CH * 0.08;
+    if(i >= reedCount) continue;
+    // Reed i is tied to chord i over the WHOLE piece (not i % lim).
+    const ci = i % cn;
+    const chord = chords[ci] || chords[0];
+    _setCurE(chord && chord._E);
+    const notes = (chord && (chord.n || chord.notes)) || [];
+    const note = notes[0] || {m:60,v:80};
+    const m = note.m !== undefined ? note.m : note;
+    const v = note.v !== undefined ? note.v : 80;
+    const [r, g, b] = gc(m, v);
     // Chord-driven height — pitch + velocity each contribute.
     const pitchNorm = Math.max(0, Math.min(1, (m - 40) / 40));
     const velNorm   = Math.max(0, Math.min(1, v / 110));
@@ -11658,7 +11073,9 @@ function kusamaPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed){
   // Dominant (most-saturated) chord color = the family hue; track average
   // luminance (for the light/dark ground decision) and velocity (for energy).
   let domR=110,domG=120,domB=160,domSat=-1,aLum=0,aV=0,c=0;
-  const upto=Math.min(cn,Math.max(1,lim));
+  // Scan the WHOLE piece (not the played prefix): the ground's light/dark
+  // decision and the family hue must be fixed from the first frame.
+  const upto=cn;
   for(let i=0;i<upto;i++){
     const chord=chords[i];
     const notes=chord&&(chord.n||chord.notes||(Array.isArray(chord)?chord:null));
@@ -11869,7 +11286,8 @@ function kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const reveal = Math.max(0, Math.min(1, N/cn));
   // Dominant (most-saturated) chord = ground colour.
   let domR=80,domG=80,domB=110,domSat=-1;
-  const upto = Math.min(cn, Math.max(1, lim));
+  // Scan the WHOLE piece so the ground colour is fixed from the first frame.
+  const upto = cn;
   for(let i=0;i<upto;i++){
     const {rgb} = _kusChord(chords, i, gc);
     const sat = Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2]);
@@ -12249,7 +11667,8 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // Dominant (most-saturated) chord color → the family for the ground tint.
   let domR=120,domG=110,domB=170,domSat=-1,c=0;
-  const upto=Math.min(N,Math.max(1,lim));
+  // Scan the WHOLE piece so the ground tint is fixed from the first frame.
+  const upto=chords.length;
   for(let i=0;i<upto;i++){
     const chord=chords[i];const notes=chord&&(chord.n||chord.notes||[]);
     if(!notes||!notes.length) continue;
@@ -12292,7 +11711,9 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
     return [r,g,b];
   };
   const chordRGB=(idx)=>{
-    const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,paintCount))*cn))];
+    // Slot → chord over the FULL shape count (not the revealed count), so a
+    // placed shape keeps its chord/colour as playback advances.
+    const chord=chords[Math.min(cn-1,Math.floor((idx/Math.max(1,shapeCount))*cn))];
     _setCurE(chord && chord._E);
     const notes=chord&&(chord.n||chord.notes||[]);
     const pick = (slot)=> chord ? _miroAccentRGB(slot, chord, gc, isBW, chords) : _tonedRGB({RED,GRN,BLU,YEL,ORA,SKIN}[slot] || RED);
@@ -12374,8 +11795,28 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 // so the LOUD notes drive the palette identity, not silent passing tones.
 // Deterministic: same chords → same ranking → same anchors → same painting.
 // Returns null if no usable pitch data — callers must keep a static fallback.
+// Cell lightness is stored 0..1 (_lum); the composer analysers reason in 0..100.
+function _lum100(c){ return (c && typeof c._lum==='number') ? c._lum*100 : 50; }
+// Per-chords-array memo: Miró's per-element accent picker calls this (via
+// _miroPal / _miroAccentRGB) for EVERY element, re-scanning the whole song
+// each time. The result depends only on (chords, N); the length check guards
+// against an array that is still being appended to during a live take.
+const _songTopPitchesCache = new WeakMap();
 function _songTopPitches(chords, N){
   if(!chords || !chords.length) return null;
+  const _cacheable = typeof chords === 'object';
+  let _hit = _cacheable ? _songTopPitchesCache.get(chords) : null;
+  if(_hit && _hit.n !== chords.length) _hit = null;
+  const _key = 'N' + (N|0);
+  if(_hit && Object.prototype.hasOwnProperty.call(_hit.byN, _key)) return _hit.byN[_key];
+  const _v = _songTopPitchesUncached(chords, N);
+  if(_cacheable){
+    if(!_hit){ _hit = { n: chords.length, byN: {} }; _songTopPitchesCache.set(chords, _hit); }
+    _hit.byN[_key] = _v;
+  }
+  return _v;
+}
+function _songTopPitchesUncached(chords, N){
   const hist = new Array(12).fill(0);
   let total = 0;
   for(const ch of chords){
@@ -12578,13 +12019,15 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     }
   }
 
-  // Build edges: each visible node connects to 1-2 nearest visible neighbours.
+  // Build edges: each node connects to 1-2 nearest neighbours. The graph is
+  // built over ALL nodes (fixed for the song); reveal only draws the edges
+  // whose endpoints are both visible, so a wire never re-routes mid playback.
   const edges=[]; const seen=new Set();
-  for(let i=0;i<visN;i++){
+  for(let i=0;i<nodeCountFull;i++){
     const pr=_seedRnd(i*31+777,ss,0,0); pr();
     const partnerCount=1+Math.floor(pr()*2);
     const candidates=[];
-    for(let j=0;j<visN;j++){
+    for(let j=0;j<nodeCountFull;j++){
       if(j===i) continue;
       const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
       candidates.push({j, d2:dx*dx+dy*dy});
@@ -12602,6 +12045,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.lineWidth=Math.max(1.0, D*0.0028);
   ctx.lineCap='round';
   for(const e of edges){
+    if(e.a>=visN || e.b>=visN) continue;   // reveal gate — both ends visible
     const A=nodes[e.a], B=nodes[e.b];
     const er=_seedRnd(e.a*101+e.b+1234,ss,0,0); er();
     const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
@@ -12674,7 +12118,8 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const slots = ['RED','GRN','BLU','YEL','BLK','WHT'];
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+701,ss,0,0);
-    const ci = Math.min(cn-1, Math.floor((i/vis)*cn));
+    // Slot → chord over the FULL unit count (not the revealed count).
+    const ci = Math.min(cn-1, Math.floor((i/units)*cn));
     const chord = chords[ci];
     const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.012+rnd()*0.03);
     const slot = slots[(rnd()*slots.length)|0];
@@ -12736,8 +12181,14 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // piece grows the chaos shapes. 0.5/0.5 = the untuned 0.60 split, size ×1.
   const _chO=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   const _bgShare = 0.60 - (((_chO?_chO.density:0.5))-0.5)*0.54;
-  const bgCount = Math.max(4, Math.floor(lim * _bgShare));
-  const fgCount = Math.max(0, lim - bgCount);
+  // Layer split is decided from the WHOLE piece, never from lim: the
+  // partition, the shuffle, tile↔chord assignment and shape sizes are all
+  // fixed for the song. lim only reveals: tiles i<lim, then shapes
+  // i<lim-bgCount. Full reveal keeps today's 60/40-ish proportions.
+  const cn = chords.length;
+  const bgCount = Math.max(4, Math.floor(cn * _bgShare));
+  const fgCount = Math.max(0, cn - bgCount);
+  const fgVis = Math.max(0, Math.min(fgCount, lim - bgCount));
   // ── LAYER 1: tile fill via guillotine partition ─────────────────────────
   const rects = [{x:0, y:0, w:CW, h:CH}];
   while(rects.length < bgCount){
@@ -12767,42 +12218,49 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     [rects[i], rects[j]] = [rects[j], rects[i]];
   }
   const topNote = (ch)=>{
-    const notes = ch.n || ch.notes || (Array.isArray(ch) ? ch : null);
+    const notes = ch && (ch.n || ch.notes || (Array.isArray(ch) ? ch : null));
     if(!notes || !notes.length) return null;
     if(notes.length === 1) return notes[0];
     let best = notes[0];
     for(let i=1; i<notes.length; i++){ if((notes[i].m||0) > (best.m||0)) best = notes[i]; }
     return best;
   };
-  for(let i=0; i<bgCount && i<lim; i++){
+  for(let i=0; i<bgCount && i<cn; i++){
     const chord = chords[i];
+    const note = topNote(chord); if(!note) continue;
+    const rect = rects[i]; if(!rect) continue;
+    // Roll EVERY tile's decoration dice (revealed or not) so the R() stream —
+    // and with it every later tile and every chaos shape — never shifts with lim.
+    const decoTop = R() < 0.20;
+    const decoBot = !decoTop && (R() < 0.15);
+    const decoBorder = R() < 0.30;
+    const decoLabel = R() < 0.12;
+    if(i >= lim) continue;
     // Set per-tile chord energy so gc() picks up Real-mode modulation here.
     // Without this every tile reads default mid-energy and the OneM grid
     // ignores dynamic changes in the piece.
     _setCurE(chord && chord._E);
-    const note = topNote(chord); if(!note) continue;
     const m = note.m, v = note.v != null ? note.v : 100;
     const [r,g,b,a] = gc(m, v);
-    const rect = rects[i]; if(!rect) continue;
     const {x, y, w, h} = rect;
     ctx.fillStyle = _rgbaStr(r, g, b, Math.max(0.92, a));
     ctx.fillRect(x, y, w, h);
-    if(R() < 0.20){
+    if(decoTop){
       const acc = gc((m + 7) % 128, 110);
       ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
       ctx.fillRect(x, y, w, Math.max(2, h * 0.15));
-    } else if(R() < 0.15){
+    } else if(decoBot){
       const acc = gc((m + 9) % 128, 110);
       const bh = Math.max(2, h * 0.15);
       ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
       ctx.fillRect(x, y + h - bh, w, bh);
     }
-    if(R() < 0.30){
+    if(decoBorder){
       ctx.strokeStyle = 'rgba(0,0,0,0.85)';
       ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.04);
       ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
     }
-    if(R() < 0.12 && w > 16 && h > 14){
+    if(decoLabel && w > 16 && h > 14){
       const name = _midiToName[m] || '';
       const fs = Math.max(8, Math.min(h*0.45, w*0.36));
       ctx.save();
@@ -12815,12 +12273,14 @@ function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     }
   }
   // ── LAYER 2: chaos shapes via Vogel-spiral placement ────────────────────
-  if(fgCount === 0) return;
+  // Shape i's R() draws depend only on shapes 0..i-1 (all revealed before it),
+  // so drawing the prefix i<fgVis is stable; size/radius use the FULL count.
+  if(fgVis <= 0) return;
   const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60 * (0.73+0.54*(_chO?_chO.energy:0.5));
   const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));
   const ccx = CW/2, ccy = CH/2;
   const maxR = Math.min(CW, CH) * 0.46;
-  for(let i=0; i<fgCount; i++){
+  for(let i=0; i<fgVis; i++){
     const chord = chords[bgCount + i];
     _setCurE(chord && chord._E);
     const note = topNote(chord); if(!note) continue;
@@ -13358,7 +12818,9 @@ function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette, ch
     const ox = (corner % 2 === 0) ? CW*0.04 : CW - CW*0.04 - n*sq;
     const oy = (corner < 2)        ? CH*0.04 : CH - CH*0.04 - n*sq;
     const cA = pickFill(0);
-    const cB = lineColors[5]; // near-black
+    // Near-black — fixed, not lineColors[5]: with a supplied palette that slot
+    // is just the 6th song colour and the checkerboard lost its dark squares.
+    const cB = (mode==='bw') ? '#1a1a1a' : 'rgba(8,4,12,0.92)';
     for(let yy=0; yy<n; yy++) for(let xx=0; xx<n; xx++){
       ctx.fillStyle = (xx+yy) % 2 === 0 ? cA : cB;
       ctx.fillRect(ox + xx*sq, oy + yy*sq, sq+0.5, sq+0.5);
@@ -13459,29 +12921,6 @@ function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chor
 }
 
 // ── Kandinsky E: Improvisation — loose colourful washes + black gesture lines. ──
-function kandinskyPhaseImprov(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
-  const ss=sessionSeed|0,isBW=mode==='bw';
-  ctx.fillStyle=isBW?'#d8d4cc':'#f0ead8';ctx.fillRect(0,0,CW,CH);
-  const TH=[2,6,11,18,27,40,56,76,100,130,170,215];
-  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/215))*TH.length));
-  // soft washes
-  for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2400+i,ss, 0, 0);
-    const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.08+rnd()*0.18);
-    ctx.fillStyle=_kandAlpha(_kandPickCol(i, n, chords, gc, palette),'0.35');
-    ctx.beginPath();
-    const pts=7;for(let p=0;p<=pts;p++){const a=p/pts*Math.PI*2,rr=R*(0.6+rnd()*0.6);const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;p?ctx.lineTo(x,y):ctx.moveTo(x,y);}
-    ctx.closePath();ctx.fill();
-  }
-  // black gesture lines
-  const gn=Math.max(1,(n*0.6)|0);
-  for(let i=0;i<gn;i++){
-    const rnd=_seedRnd(2450+i,ss, 0, 0);
-    ctx.strokeStyle='rgba(10,8,14,0.9)';ctx.lineWidth=Math.max(1.5,Math.min(CW,CH)*0.004);ctx.lineCap='round';
-    let x=rnd()*CW,y=rnd()*CH;ctx.beginPath();ctx.moveTo(x,y);
-    const segs=3+((rnd()*4)|0);for(let s=0;s<segs;s++){const nx=x+(rnd()-0.5)*CW*0.4,ny=y+(rnd()-0.5)*CH*0.4;ctx.quadraticCurveTo((x+nx)/2+(rnd()-0.5)*30,(y+ny)/2+(rnd()-0.5)*30,nx,ny);x=nx;y=ny;}ctx.stroke();
-  }
-}
 
 // ── Kandinsky F: Paris biomorphic — soft organic shapes, late lighter palette. ──
 function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
@@ -14573,13 +14012,13 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // Instead, measure each bar's average brightness (from the _bright proxy) and
   // its position in the overall light/dark range, so the chord chosen per bar can
   // track whether THIS strip of the painting is luminous or shadowed.
-  const _barCount=Math.max(1, Math.ceil(evts.length / 16));
+  const _barCount=Math.max(1, Math.ceil(evts.length / BAR_EVENTS));
   const barBright=new Array(_barCount).fill(0);
   const barBN=new Array(_barCount).fill(0);
   const barChroma=new Array(_barCount).fill(0);
   const barCN=new Array(_barCount).fill(0);
   for(let i=0;i<evts.length;i++){
-    const b=Math.floor(i/16);
+    const b=Math.floor(i/BAR_EVENTS);
     if(evts[i]._bright!=null){ barBright[b]+=evts[i]._bright; barBN[b]++; }
     if(evts[i]._chroma!=null){ barChroma[b]+=evts[i]._chroma; barCN[b]++; }
   }
@@ -16061,7 +15500,7 @@ function composeImageGlass(px,nc,nr,table,colorMode,dir){
     if(!cells.length) continue;
     const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
-      lum+=(c._lum||50); chr+=(c._chroma||0);
+      lum+=_lum100(c); chr+=(c._chroma||0);
       for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
@@ -16193,7 +15632,7 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
     if(!cells.length) continue;
     const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
-      lum+=(c._lum||50); chr+=(c._chroma||0);
+      lum+=_lum100(c); chr+=(c._chroma||0);
       for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
@@ -16201,7 +15640,7 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir){
     let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
     // luminance PROFILE left→right (4 samples) — the picture's own melody line
     const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
     secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
   }
   if(!secs.length) return base;
@@ -16332,7 +15771,7 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
     if(!cells.length) continue;
     const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
-      lum+=(c._lum||50); chr+=(c._chroma||0);
+      lum+=_lum100(c); chr+=(c._chroma||0);
       for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
@@ -16340,7 +15779,7 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir){
     let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
     // luminance PROFILE left→right (4 samples) — the picture's own melody line
     const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
     secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
   }
   if(!secs.length) return base;
@@ -16508,7 +15947,7 @@ function composeImageVine(px,nc,nr,table,colorMode,dir){
     if(!cells.length) continue;
     const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
-      lum+=(c._lum||50); chr+=(c._chroma||0);
+      lum+=_lum100(c); chr+=(c._chroma||0);
       for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
@@ -16627,13 +16066,13 @@ function composeImageGershwin(px,nc,nr,table,colorMode,dir){
     if(!cells.length) continue;
     const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
-      lum+=(c._lum||50); chr+=(c._chroma||0);
+      lum+=_lum100(c); chr+=(c._chroma||0);
       for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
     lum/=cells.length; chr/=cells.length;
     const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
     secs.push({hist,src,lum,chr,cells,prof});
   }
   if(!secs.length) return base;
@@ -16754,13 +16193,13 @@ function composeImageYiruma(px,nc,nr,table,colorMode,dir){
     if(!cells.length) continue;
     const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
-      lum+=(c._lum||50); chr+=(c._chroma||0);
+      lum+=_lum100(c); chr+=(c._chroma||0);
       for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
     lum/=cells.length; chr/=cells.length;
     const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
     secs.push({hist,src,lum,chr,cells,prof});
   }
   if(!secs.length) return base;
@@ -16883,14 +16322,14 @@ function _composerAnalyse(px,nc,nr,table,colorMode,saltBase,Smin,Smax){
     if(!cells.length) continue;
     const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
     for(const c of cells){
-      lum+=(c._lum||50); chr+=(c._chroma||0);
+      lum+=_lum100(c); chr+=(c._chroma||0);
       for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
         hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
     }
     lum/=cells.length; chr/=cells.length;
     let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
     const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=(byPos[z]._lum||50); return sL/(q1-q0); });
+    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
     secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
   }
   if(!secs.length) return {base,secs:null};
@@ -17948,17 +17387,22 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
 // the engines depend on the song (and the seed), so no table can know them.
 // Cached per (artist, variant, seed, song).
 let _fuSampleCache = new Map();
+// The real engines by key. (A globalThis['draw…Overlay'] lookup silently found
+// nothing in the module-scoped Vite build, so every fusion except Kusama /
+// Kandinsky sampled a blank canvas and painted on a black ground.)
+const _FU_ENGINES={raffel:drawRaffelOverlay,picasso:drawPicassoOverlay,matisse:drawMatisseOverlay,pollock:drawPollockOverlay,bloom:drawBloomOverlay,miro:drawMiroOverlay,mondrian:drawMondrianOverlay,bauhaus:drawBauhausOverlay,gold:drawGoldOverlay,rothko:drawRothkoOverlay,bulge:drawBulgeOverlay,wave:drawWaveOverlay,spiral:drawSpiralOverlay,arcs:drawArcsOverlay,pop:drawPopOverlay,mitchell:drawMitchellOverlay,monet:drawMonetOverlay,hokusai:drawHokusaiOverlay,lichtenstein:drawLichtensteinOverlay,klee:drawKleeOverlay,delaunay:drawDelaunayOverlay};
 function _fuRealOverlay(k, ctx, CW, CH, chords, lim, gc, seed, mode, ph){
   switch(k){
     case 'kusama':    return drawKusamaOverlay(ctx,CW,CH,chords,lim,gc,seed,ph);
     case 'kandinsky': return drawKandinskyOverlay(ctx,CW,CH,lim,seed,mode,gc,ph,chords.length,chords);
     case 'oneM':      return drawOneMOverlay(ctx,CW,CH,chords,lim,gc,seed,mode,0);
     case 'mosaic': case 'notes': return;
-    default: { const fn=(typeof globalThis!=='undefined') ? globalThis['draw'+k.charAt(0).toUpperCase()+k.slice(1)+'Overlay'] : null; if(typeof fn==='function') fn(ctx,CW,CH,chords,lim,gc,seed,mode,ph); }
+    default: { const fn=_FU_ENGINES[k]; if(typeof fn==='function') fn(ctx,CW,CH,chords,lim,gc,seed,mode,ph); }
   }
 }
 function _fuSample(k, chords, gc, seed, mode, ph){
-  const key=k+'|'+(ph|0)+'|'+(seed|0)+'|'+(chords.length)+'|'+(chords.__fuId||0);
+  let _pk=''; try{ _pk=String(gc(60,100))+String(gc(67,100))+String(gc(72,100)); }catch(_){}
+  const key=k+'|'+(ph|0)+'|'+(seed|0)+'|'+(chords.length)+'|'+(mode||'')+'|'+_pk+'|'+(chords[0]&&chords[0].n&&chords[0].n[0]?chords[0].n[0].m:0);
   const hit=_fuSampleCache.get(key); if(hit) return hit;
   let out={ground:null, pal:[]};
   try{
@@ -17969,13 +17413,14 @@ function _fuSample(k, chords, gc, seed, mode, ph){
     c.fillStyle = k==='pollock' ? '#f2ede0' : '#04040a'; c.fillRect(0,0,W,H);
     const savedSeed=_artistSeed, savedE=_curE;
     _setArtistSeed(seed); _setCurE(0.5);
+    _resetCtxState(c);
     _fuRealOverlay(k, c, W, H, chords, chords.length, gc, seed, mode, ph);
     _setArtistSeed(savedSeed); _setCurE(savedE);
     const d=c.getImageData(0,0,W,H).data; const cnt=new Map();
     for(let i=0;i<d.length;i+=4){ if(d[i+3]<128) continue; const q=((d[i]>>4)<<8)|((d[i+1]>>4)<<4)|(d[i+2]>>4); cnt.set(q,(cnt.get(q)||0)+1); }
     const arr=[...cnt.entries()].sort((a,b)=>b[1]-a[1]);
     const toRgb=(q)=>[((q>>8)&15)*17,((q>>4)&15)*17,(q&15)*17];
-    if(arr.length){ out.ground=toRgb(arr[0][0]); }
+    if(arr.length>1){ out.ground=toRgb(arr[0][0]); }
     const tot=W*H;
     for(let i=1;i<arr.length && out.pal.length<6;i++){ if(arr[i][1]<tot*0.012) break; const c2=toRgb(arr[i][0]); const g=out.ground; if(g && Math.abs(c2[0]-g[0])+Math.abs(c2[1]-g[1])+Math.abs(c2[2]-g[2])<60) continue; out.pal.push(c2); }
   }catch(_){ }
@@ -18215,7 +17660,6 @@ function _bhChordCol(chords, cn, gc, i, mul){
   return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
 }
 function _bhCss(c){ return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; }
-function _bhCssA(c,a){ return `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`; }
 // Bauhaus accent palette — fully song-aware. 6 chord-derived colours sampled
 // across the timeline + 6 anchor colours from the song's top pitch classes
 // (replaces the old canonical Bauhaus hardcoded hues so the painting reflects
@@ -18278,17 +17722,29 @@ function bauhausPhaseGrid(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const cols=4, rows=6, cw=CW/cols, ch=CH/rows;
   const reveal=Math.max(0,Math.min(1,lim/cn));
   const shown=Math.ceil(cols*rows*reveal);
-  let idx=0;
+  // Pre-roll every cell for the FULL grid (same stream order as before) and
+  // draw only the visible prefix — the target / petals that follow on the
+  // shared stream used to re-roll their colours as cells appeared.
+  const cells=[];
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    if(idx++>shown) { continue; }
-    if(rnd()<0.30) continue;
-    const x=c*cw,y=r*ch;
-    if(rnd()<0.45) _bhSq(ctx,x,y,cw,ch,_bhPick(pal,rnd));
+    const cell={x:c*cw,y:r*ch,skip:false,sq:null,shape:0,col:null,rot:0};
+    cells.push(cell);
+    if(rnd()<0.30){ cell.skip=true; continue; }
+    if(rnd()<0.45) cell.sq=_bhPick(pal,rnd);
     const s=rnd();
-    if(s<0.22) _bhHalf(ctx,x,y,cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
-    else if(s<0.42) _bhQuarter(ctx,x,y,cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
-    else if(s<0.55) _bhTri(ctx,x,y,cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
-    else if(s<0.65) _bhCircle(ctx,x+cw/2,y+ch/2,Math.min(cw,ch)*0.42,_bhPick(pal,rnd));
+    if(s<0.22){ cell.shape=1; cell.col=_bhPick(pal,rnd); cell.rot=Math.floor(rnd()*4); }
+    else if(s<0.42){ cell.shape=2; cell.col=_bhPick(pal,rnd); cell.rot=Math.floor(rnd()*4); }
+    else if(s<0.55){ cell.shape=3; cell.col=_bhPick(pal,rnd); cell.rot=Math.floor(rnd()*4); }
+    else if(s<0.65){ cell.shape=4; cell.col=_bhPick(pal,rnd); }
+  }
+  for(let i=0;i<cells.length && i<=shown;i++){
+    const cell=cells[i]; if(cell.skip) continue;
+    const x=cell.x,y=cell.y;
+    if(cell.sq) _bhSq(ctx,x,y,cw,ch,cell.sq);
+    if(cell.shape===1) _bhHalf(ctx,x,y,cw,ch,cell.col,cell.rot);
+    else if(cell.shape===2) _bhQuarter(ctx,x,y,cw,ch,cell.col,cell.rot);
+    else if(cell.shape===3) _bhTri(ctx,x,y,cw,ch,cell.col,cell.rot);
+    else if(cell.shape===4) _bhCircle(ctx,x+cw/2,y+ch/2,Math.min(cw,ch)*0.42,cell.col);
   }
   if(reveal>0.4) _bhTarget(ctx,cw*1.4,ch*2.3,Math.min(cw,ch)*0.7,pal,rnd);
   if(reveal>0.6) _bhPetals(ctx,cw*2.5,ch*4.3,Math.min(cw,ch)*0.95,pal,rnd);
@@ -18352,16 +17808,22 @@ function bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const reveal=Math.max(0,Math.min(1,lim/cn));
   // Strict reveal — was Math.max(0.3, reveal) on every layer, so the phase
   // jumped to ~30 % full on the very first chord. Now each layer grows from 0.
-  const N=Math.ceil((10+rnd()*6)*reveal);
-  for(let i=0;i<N;i++) _bhCircle(ctx,rnd()*CW,rnd()*CH,CW*(0.08+rnd()*0.22),_bhPick(pal,rnd),0.55+rnd()*0.25);
+  // Every layer is pre-rolled for its FULL count (same stream order as the
+  // full reveal) and only the visible prefix is drawn — each layer's stream
+  // position used to depend on how many of the previous layer were shown.
+  const Nfull=10+rnd()*6, N=Math.ceil(Nfull*reveal);
+  const circ=[]; for(let i=0;i<Math.ceil(Nfull);i++) circ.push({x:rnd()*CW,y:rnd()*CH,r:CW*(0.08+rnd()*0.22),col:_bhPick(pal,rnd),a:0.55+rnd()*0.25});
+  const acc=[];  for(let i=0;i<5;i++) acc.push({x:rnd()*CW,y:rnd()*CH,r:CW*(0.02+rnd()*0.03),col:_bhPick(pal,rnd)});
+  const lines=[]; for(let i=0;i<14;i++){ const lw=1+rnd()*2;
+    if(rnd()<0.5){ const x=rnd()*CW; lines.push({lw,x0:x,y0:rnd()*CH*0.3,x1:x,y1:CH*(0.5+rnd()*0.5)}); }
+    else { const y=rnd()*CH; lines.push({lw,x0:rnd()*CW*0.3,y0:y,x1:CW*(0.5+rnd()*0.5),y1:y}); } }
+  for(let i=0;i<N&&i<circ.length;i++){ const o=circ[i]; _bhCircle(ctx,o.x,o.y,o.r,o.col,o.a); }
   const NA=Math.ceil(5*reveal);
-  for(let i=0;i<NA;i++) _bhCircle(ctx,rnd()*CW,rnd()*CH,CW*(0.02+rnd()*0.03),_bhPick(pal,rnd));
+  for(let i=0;i<NA;i++){ const o=acc[i]; _bhCircle(ctx,o.x,o.y,o.r,o.col); }
   // thin black orthogonal construction lines
   ctx.strokeStyle='rgb(26,26,24)';
   const NL=Math.ceil(14*reveal);
-  for(let i=0;i<NL;i++){ ctx.lineWidth=1+rnd()*2; ctx.beginPath();
-    if(rnd()<0.5){ const x=rnd()*CW; ctx.moveTo(x,rnd()*CH*0.3); ctx.lineTo(x,CH*(0.5+rnd()*0.5)); }
-    else { const y=rnd()*CH; ctx.moveTo(rnd()*CW*0.3,y); ctx.lineTo(CW*(0.5+rnd()*0.5),y); } ctx.stroke(); }
+  for(let i=0;i<NL;i++){ const o=lines[i]; ctx.lineWidth=o.lw; ctx.beginPath(); ctx.moveTo(o.x0,o.y0); ctx.lineTo(o.x1,o.y1); ctx.stroke(); }
 }
 
 // ── Phase 4: Stacked arches (rainbow nested half-rings) ───────────────────
@@ -18392,16 +17854,22 @@ function bauhausPhaseOffset(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // Reveal the grid cells progressively (was: all 24 cells drawn at once,
   // making the phase look like it appeared instantly on the first chord).
   const cellsShown=Math.ceil(cols*rows*reveal);
+  // Pre-roll all cells, circles and halves for the FULL counts (same stream
+  // order as the full reveal), then draw the visible prefixes — the big
+  // circles used to re-place themselves until every cell was shown.
+  const cellCols=[]; for(let i=0;i<cols*rows;i++) cellCols.push(_bhPick(pal,rnd));
+  const Nfull=7+rnd()*4, N=Math.ceil(Nfull*reveal);
+  const circles=[]; for(let i=0;i<Math.ceil(Nfull);i++){ const ccx=cw*(0.5+Math.floor(rnd()*cols)), ccy=ch*(0.5+Math.floor(rnd()*rows)); circles.push({ccx,ccy,r:Math.min(cw,ch)*(0.7+rnd()*0.5),col:_bhPick(pal,rnd)}); }
+  const halves=[]; for(let i=0;i<5;i++){ const x=cw*Math.floor(rnd()*cols), y=ch*Math.floor(rnd()*rows); halves.push({x,y,col:_bhPick(pal,rnd),rot:Math.floor(rnd()*4)}); }
   let idx=0;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    if(idx++>cellsShown) continue;
-    _bhSq(ctx,c*cw,r*ch,cw,ch,_bhPick(pal,rnd));
+    const i=idx++; if(i>cellsShown) continue;
+    _bhSq(ctx,c*cw,r*ch,cw,ch,cellCols[i]);
   }
   // Big circles + accent halves driven strictly by reveal (no 30 % floor).
-  const N=Math.ceil((7+rnd()*4)*reveal);
-  for(let i=0;i<N;i++){ const ccx=cw*(0.5+Math.floor(rnd()*cols)), ccy=ch*(0.5+Math.floor(rnd()*rows)); _bhCircle(ctx,ccx,ccy,Math.min(cw,ch)*(0.7+rnd()*0.5),_bhPick(pal,rnd)); }
+  for(let i=0;i<N&&i<circles.length;i++){ const o=circles[i]; _bhCircle(ctx,o.ccx,o.ccy,o.r,o.col); }
   const halfN=Math.ceil(5*reveal);
-  for(let i=0;i<halfN;i++) _bhHalf(ctx,cw*Math.floor(rnd()*cols),ch*Math.floor(rnd()*rows),cw,ch,_bhPick(pal,rnd),Math.floor(rnd()*4));
+  for(let i=0;i<halfN;i++){ const o=halves[i]; _bhHalf(ctx,o.x,o.y,cw,ch,o.col,o.rot); }
 }
 
 // ── Phase 6: Line construction (thick black bars + basic shapes) ──────────
@@ -18413,16 +17881,23 @@ function bauhausPhaseLines(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // Strict reveal everywhere — was Math.max(0.3, reveal) on each layer, which
   // made every layer pop in at 30 % on the very first chord (the phase looked
   // mostly done after one chord). Now each layer scales with reveal from 0.
+  // All three layers are pre-rolled for their FULL counts (same stream order
+  // as the full reveal) and drawn as visible prefixes — otherwise each layer
+  // shifted on the shared stream whenever the previous layer grew.
+  const fields=[]; for(let i=0;i<6;i++){ const col=_bhPick(pal,rnd); fields.push({col,x:rnd()*CW*0.6,y:rnd()*CH*0.6,w:CW*(0.2+rnd()*0.3),h:CH*(0.15+rnd()*0.3)}); }
+  const shapes=[]; for(let i=0;i<6;i++){ const x=rnd()*CW,y=rnd()*CH,s=CW*(0.08+rnd()*0.12),k=Math.floor(rnd()*3);
+    const col=_bhPick(pal,rnd), rot=(k===1)?Math.floor(rnd()*4):0; shapes.push({x,y,s,k,col,rot}); }
+  const bars=[]; for(let i=0;i<5;i++){ if(rnd()<0.5) bars.push({h:true,p:rnd()*CH}); else bars.push({h:false,p:rnd()*CW}); }
   const NF=Math.ceil(6*reveal);
-  for(let i=0;i<NF;i++){ ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle=_bhCss(_bhPick(pal,rnd)); ctx.fillRect(rnd()*CW*0.6,rnd()*CH*0.6,CW*(0.2+rnd()*0.3),CH*(0.15+rnd()*0.3)); ctx.restore(); }
+  for(let i=0;i<NF;i++){ const o=fields[i]; ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle=_bhCss(o.col); ctx.fillRect(o.x,o.y,o.w,o.h); ctx.restore(); }
   const NS=Math.ceil(6*reveal);
-  for(let i=0;i<NS;i++){ const x=rnd()*CW,y=rnd()*CH,s=CW*(0.08+rnd()*0.12),k=Math.floor(rnd()*3);
-    if(k===0) _bhCircle(ctx,x,y,s/2,_bhPick(pal,rnd));
-    else if(k===1) _bhHalf(ctx,x-s/2,y-s/2,s,s,_bhPick(pal,rnd),Math.floor(rnd()*4));
-    else _bhSq(ctx,x-s/2,y-s/2,s,s,_bhPick(pal,rnd)); }
+  for(let i=0;i<NS;i++){ const o=shapes[i], x=o.x,y=o.y,s=o.s;
+    if(o.k===0) _bhCircle(ctx,x,y,s/2,o.col);
+    else if(o.k===1) _bhHalf(ctx,x-s/2,y-s/2,s,s,o.col,o.rot);
+    else _bhSq(ctx,x-s/2,y-s/2,s,s,o.col); }
   // Thick black construction bars also reveal progressively (was: all 5 drawn
   // immediately, giving the phase a finished "framed" look from chord 1).
   ctx.fillStyle='rgb(26,26,24)';
   const NB=Math.ceil(5*reveal);
-  for(let i=0;i<NB;i++){ if(rnd()<0.5) ctx.fillRect(0,rnd()*CH,CW,CW*0.02); else ctx.fillRect(rnd()*CW,0,CW*0.02,CH); }
+  for(let i=0;i<NB;i++){ const o=bars[i]; if(o.h) ctx.fillRect(0,o.p,CW,CW*0.02); else ctx.fillRect(o.p,0,CW*0.02,CH); }
 }

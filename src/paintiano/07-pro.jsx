@@ -66,6 +66,8 @@ const PRO_CFG = {
   // Early-bird values shown until the first-50 window closes (then 14.99/24.99).
   displayPricePro:   '€9.99',
   displayPriceProAI: '€19.99',
+  displayPriceProRegular:   '€14.99',   // struck-through regular prices (early-bird window)
+  displayPriceProAIRegular: '€24.99',
 };
 
 // Accent colour used to brand AI features across the paywall (Pro AI tier card,
@@ -99,16 +101,23 @@ function _proClearCache() {
 
 // ─── server validation (through our own endpoint) ────────────────────────────
 async function _proValidate(key) {
+  const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const tm = ac ? setTimeout(() => { try { ac.abort(); } catch (_) {} }, 15000) : null;
   try {
     const r = await fetch(PRO_CFG.validateEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key }),
+      signal: ac ? ac.signal : undefined,
     });
-    if (!r.ok) return { valid: false, reason: 'http_' + r.status };
+    // A backend outage (5xx / 429) is not a verdict on the key — treat it like
+    // being offline so a cached paid tier is kept, never demoted.
+    if (!r.ok) return { valid: false, reason: 'http_' + r.status, offline: (r.status >= 500 || r.status === 429) };
     return await r.json();
   } catch (_) {
     return { valid: false, reason: 'network', offline: true };
+  } finally {
+    if (tm) clearTimeout(tm);
   }
 }
 
@@ -382,6 +391,7 @@ function applyWatermark(canvas, isPro) {
     const stepY = Math.round(fontPx * 3.2);  // ~4 rows per typical export
     const angle = -Math.PI / 6;              // -30°
     ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);     // the export context carries a scale() — tile in pixel space
     ctx.translate(w / 2, h / 2);
     ctx.rotate(angle);
     ctx.font = '700 ' + fontPx + 'px "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
@@ -456,7 +466,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
-  const tr = (k, fb) => (t && t(k)) || fb;
+  const tr = (k, fb) => { const v = t && t(k); return (v && v !== k) ? v : fb; };   // t() returns the key when missing
 
   const submit = async () => {
     setBusy(true); setErrMsg('');
