@@ -17165,8 +17165,8 @@ const ARTIST_VARIANTS = {
     {mark:{ring:.7,crest:.3},size:[.02,.06],layout:{stack:1},density:.3},
     {mark:{crest:.6,arc:.4},size:[.03,.12],layout:{flow:1},density:.15},
     {mark:{cloud:1},size:[.03,.1],edge:.1,alpha:.8,layout:{radial:1},density:.4,tone:'pastel'},
-    {ground:'#5a4a6a',mark:{rain:1},size:[.05,.2],layout:{scatter:1},density:.5},
-    {ground:'#c8c0a8',mark:{rain:.7,tri:.3},size:[.05,.2],layout:{scatter:1},density:.6},
+    {ground:'#5a4a6a',mark:{rain:1},size:[.05,.2],layout:{scatter:1},density:.3},
+    {ground:'#c8c0a8',mark:{rain:.7,tri:.3},size:[.05,.2],layout:{scatter:1},density:.35},
     {ground:'#e8e0d0',mark:{beam:1},size:[.1,.3],layout:{grid:1},density:.5,tone:'dark'},
     {mark:{ring:.7,crest:.3},size:[.02,.06],layout:{stack:1},density:.3},
     {mark:{crest:.6,arc:.4},size:[.03,.12],layout:{flow:1},density:.15},
@@ -17370,7 +17370,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'bulge': { // Vasarely: a small grid of discs swelling toward the centre
         for(let yy=-2;yy<=2;yy++) for(let xx=-2;xx<=2;xx++){ const d=Math.sqrt(xx*xx+yy*yy)/2.9; const q=rr*.22*(1.3-d); ctx.beginPath(); ctx.fillStyle=((xx+yy)%2)?col:col2; ctx.arc(xx*rr*.45,yy*rr*.45,Math.max(.5,q),0,6.2832); ctx.fill(); } break; }
       case 'stripes': { // Riley: a bundle of parallel bands
-        ctx.lineWidth=Math.max(1,rr*.28); for(let j=-2;j<=2;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(-rr*80,j*rr*.6); ctx.lineTo(rr*80,j*rr*.6); ctx.stroke(); } break; }
+        ctx.lineWidth=Math.max(1,rr*.28); for(let j=-1;j<=1;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(-rr*80,j*rr*.6); ctx.lineTo(rr*80,j*rr*.6); ctx.stroke(); } break; }
       case 'target': { // af Klint: concentric rings in two colours
         for(let q=4;q>=1;q--){ ctx.beginPath(); ctx.fillStyle=(q%2)?col:col2; ctx.arc(0,0,rr*q/4,0,6.2832); ctx.fill(); } break; }
       case 'protractor': { // Stella: nested quarter-arcs
@@ -17445,7 +17445,12 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'scallop': { ctx.lineWidth=Math.max(1,rr*.12); for(let j=-1;j<=1;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.arc(j*rr*1.1,0,rr*.55,Math.PI,0); ctx.stroke(); } break; }
       case 'sphere': { ctx.arc(0,0,rr,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,.35)'; ctx.arc(-rr*.3,-rr*.3,rr*.45,0,6.2832); ctx.fill(); ctx.fillStyle='rgba(0,0,0,.6)'; for(let j=0;j<10;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr*.9; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*.07,0,6.2832); ctx.fill(); } break; }
       case 'gridline': { ctx.lineWidth=Math.max(1.5,rr*.06); ctx.moveTo(-rr*80,0); ctx.lineTo(rr*80,0); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.moveTo(0,-rr*80); ctx.lineTo(0,rr*80); ctx.stroke(); break; }
-      case 'vstripes': { ctx.lineWidth=Math.max(1,rr*.28); for(let j=-2;j<=2;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(j*rr*.6,-rr*80); ctx.lineTo(j*rr*.6,rr*80); ctx.stroke(); } break; }
+      case 'band': { // Riley / Lichtenstein: a short bundle of bands (the full-width ones are budgeted)
+        ctx.lineWidth=Math.max(1,rr*.28); for(let j=-1;j<=1;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(-rr*3,j*rr*.6); ctx.lineTo(rr*3,j*rr*.6); ctx.stroke(); } break; }
+      case 'vband': { ctx.lineWidth=Math.max(1,rr*.28); for(let j=-1;j<=1;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(j*rr*.6,-rr*3); ctx.lineTo(j*rr*.6,rr*3); ctx.stroke(); } break; }
+      case 'shortbeam': { ctx.lineWidth=Math.max(1.5,rr*.08); ctx.moveTo(-rr*1.2,rr*.24); ctx.lineTo(rr*1.2,-rr*.24); ctx.stroke(); break; }
+      case 'gridstub': { ctx.lineWidth=Math.max(1.5,rr*.06); ctx.moveTo(-rr*2.5,0); ctx.lineTo(rr*2.5,0); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.moveTo(0,-rr*2.5); ctx.lineTo(0,rr*2.5); ctx.stroke(); break; }
+      case 'vstripes': { ctx.lineWidth=Math.max(1,rr*.28); for(let j=-1;j<=1;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col:col2; ctx.moveTo(j*rr*.6,-rr*80); ctx.lineTo(j*rr*.6,rr*80); ctx.stroke(); } break; }
       case 'checker': { const st=rr*.5; for(let yy=-1;yy<=1;yy++) for(let xx=-1;xx<=1;xx++){ ctx.fillStyle=((xx+yy)%2)?col:col2; ctx.fillRect(xx*st-st/2,yy*st-st/2,st,st); } break; }
       case 'zigzag': { ctx.lineWidth=Math.max(1.5,rr*.08); ctx.moveTo(-rr*2,0); for(let j=1;j<=6;j++){ ctx.lineTo(-rr*2+j*rr*.66,(j%2?-1:1)*rr*.5);} ctx.stroke(); break; }
       case 'eye': { ctx.ellipse(0,0,rr,rr*.6,0,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,0,rr*.4,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.fillStyle='#111'; ctx.arc(0,0,rr*.18,0,6.2832); ctx.fill(); break; }
@@ -17454,7 +17459,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'step': { ctx.lineWidth=Math.max(1.5,rr*.1); let px=-rr,py=rr; ctx.moveTo(px,py); for(let j=0;j<4;j++){ px+=rr*.5; ctx.lineTo(px,py); py-=rr*.5; ctx.lineTo(px,py);} ctx.stroke(); break; }
       case 'nestpoly': { const k=5; for(let q=4;q>=1;q--){ ctx.beginPath(); for(let j=0;j<k;j++){ const a=j/k*6.2832-1.5708, e=rr*q/4; j?ctx.lineTo(Math.cos(a)*e,Math.sin(a)*e):ctx.moveTo(Math.cos(a)*e,Math.sin(a)*e);} ctx.closePath(); ctx.fillStyle=(q%2)?col:col2; ctx.fill(); } break; }
       case 'speech': { ctx.rect(-rr,-rr*.55,rr*2,rr*1.1); ctx.fill(); ctx.beginPath(); ctx.moveTo(-rr*.5,rr*.55); ctx.lineTo(-rr*.3,rr*.95); ctx.lineTo(-rr*.1,rr*.55); ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.5,rr*.1); ctx.strokeRect(-rr,-rr*.55,rr*2,rr*1.1); break; }
-      case 'rain': { ctx.lineWidth=Math.max(1,rr*.03); for(let j=0;j<6;j++){ ctx.beginPath(); const x0=(R()-.5)*rr*2; ctx.moveTo(x0,-rr); ctx.lineTo(x0-rr*.4,rr); ctx.stroke(); } break; }
+      case 'rain': { ctx.lineWidth=Math.max(1,rr*.03); for(let j=0;j<3;j++){ ctx.beginPath(); const x0=(R()-.5)*rr*2; ctx.moveTo(x0,-rr); ctx.lineTo(x0-rr*.4,rr); ctx.stroke(); } break; }
       case 'dotline': { for(let j=0;j<=10;j++){ ctx.beginPath(); ctx.arc(-rr+j*rr*.2, Math.sin(j*.6)*rr*.3, rr*.04, 0, 6.2832); ctx.fill(); } break; }
       case 'arrow': { ctx.lineWidth=Math.max(2,rr*.14); ctx.moveTo(0,rr); ctx.lineTo(0,-rr*.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-rr*.4,-rr*.3); ctx.lineTo(0,-rr); ctx.lineTo(rr*.4,-rr*.3); ctx.closePath(); ctx.fill(); break; }
       case 'pixels': { // $1M$: a patch of tiny squares
@@ -17548,50 +17553,77 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const allP=[]; for(let i=0;i<n;i++){ const ns=chordAt(i); if(ns.length) allP.push(meanOf(ns)); } allP.sort((a,b)=>a-b);
   const pLo=allP.length?allP[Math.floor(allP.length*.05)]:40, pHi=allP.length?allP[Math.floor(allP.length*.95)]:80, pSpan=Math.max(8,pHi-pLo);
   const pitchOf = (ns)=> Math.max(0,Math.min(1,(meanOf(ns)-pLo)/pSpan));
+  // big-mark idioms (Rothko fields…) say less: fewer, larger marks, one per chord
+  const bigCap = F.size[1]>0.2 ? Math.max(0.3, 0.2/F.size[1]) : 1;
+  // breathing room: fewer marks the more painters share the canvas
+  const crowd = 0.6/Math.sqrt(F.keys.length);
+  // A short piece (a 64-chord mood) used to leave the canvas nearly empty.
+  // Below a mark budget every chord paints REPS times, the extra passes placed
+  // between it and the next chord on the time axis — long pieces keep REPS=1
+  // and paint exactly as before.
+  let _exp=0; for(let ly=0; ly<F.layers; ly++){ const lf=(ly+1)/F.layers; _exp += Math.ceil(n/stride)*Math.min(1, F.density*(0.45+lf*0.55)*bigCap*crowd); }
+  _exp *= (F.size[1]>0.2 ? 1 : (F.keys.length>=3 ? 1.6 : 2));
+  const REPS = Math.max(1, Math.min(6, Math.ceil((70*bigCap)/Math.max(1,_exp))));
+  const nV = n*REPS;
+  // Full-width idioms (Riley's bands, Mondrian's grid lines, Lichtenstein's
+  // wavy lines) are a STRUCTURE, not a per-chord mark: a long piece used to
+  // bury its partner under hundreds of them. A budget of evenly spaced slots
+  // keeps ~2×budget of them per painting; every other chord paints the short
+  // echo of the same idiom, so the music's density still shows.
+  const _SPAN={stripes:['band',5],vstripes:['vband',5],gridline:['gridstub',6],wavyline:['wave',8],beam:['shortbeam',8]};
+  const _spanUsed=new Set();
   for(let layer=0; layer<F.layers; layer++){
     const lf=(layer+1)/F.layers;                  // first layers big & quiet, last layer crisp
     for(let i=0;i<L;i+=stride){
       const ns=chordAt(i); if(!ns.length) continue;
-      const R=_seedRnd(i*31+layer*977, ss, 7, 11);
-      // big-mark idioms (Rothko fields…) say less: fewer, larger marks, one per chord
-      const bigCap = F.size[1]>0.2 ? Math.max(0.3, 0.2/F.size[1]) : 1;
-      // breathing room: fewer marks the more painters share the canvas
-      const crowd = 0.6/Math.sqrt(F.keys.length);
-      if(R() > F.density*(0.45+lf*0.55)*bigCap*crowd) continue;
+      for(let rep=0; rep<REPS; rep++){
+      const R=rep ? _seedRnd(i*31+layer*977+rep*7919, ss, 13, 17) : _seedRnd(i*31+layer*977, ss, 7, 11);
+      // this chord's painter — a fair round-robin over the chords actually
+      // painted (the stride of a long piece used to hand EVERY chord of a duo
+      // to the first painter), so a duo really is 50/50. Its own density
+      // decides whether the chord paints, compressed towards the middle: a
+      // sparse hand (Matisse) must stay visible beside a dense one (Riley),
+      // and a dense hand must leave the other room.
+      const _pi=(((i/stride)|0)+layer)%F.keys.length;
+      const PD=_dnaOf(F.keys[_pi], F.phs[_pi]);
+      if(R() > (0.3+0.5*PD.density)*(0.45+lf*0.55)*bigCap*crowd) continue;
       const E=(chords[i]&&typeof chords[i]._E==='number')?chords[i]._E:0.5;
       _setCurE(E);
       const pitch=pitchOf(ns);
-      const [x,y]=_fuPlace(i/Math.max(1,n-1), pitch, F, CW, CH, R(), R(), i, n);
-      if(layer===0) pos[i]=[x,y];
+      const vi=i*REPS+rep;
+      const [x,y]=_fuPlace(vi/Math.max(1,nV-1), pitch, F, CW, CH, R(), R(), vi, nV);
+      if(layer===0 && rep===0) pos[i]=[x,y];
       const k=F.size[1]>0.2 ? 1 : Math.min(ns.length, F.keys.length>=3 ? 2 : 3);
       for(let j=0;j<k;j++){
         const note=ns[j]; const m=note.m!==undefined?note.m:(typeof note==='number'?note:60), v=note.v!==undefined?note.v:80;
-        // this chord's painter — a fair round-robin, so a duo really is 50/50;
         // the painter keeps its own vocabulary and size, the hand stays fused
-        const PD=_dnaOf(F.keys[(i+layer)%F.keys.length], F.phs[(i+layer)%F.keys.length]);
         let kind=_fuPick(PD.mark,R());
+        if(_SPAN[kind]){ const sl=kind+Math.floor(i*_SPAN[kind][1]*2/Math.max(1,n)); if(_spanUsed.has(sl)){ if(R()<0.7) continue; kind=_SPAN[kind][0]; } else _spanUsed.add(sl); }
         // Kusama's flat patchwork panels read as plain squares next to another
         // hand — in a crossing they become a loose drift of polka dots.
-        const _kus = F.keys[(i+layer)%F.keys.length]==='kusama';
+        const _kus = F.keys[_pi]==='kusama';
         if(_kus && kind==='panel') kind='dotcluster';
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
         let r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : 1.2, base*(0.8+R()*0.4));
         if(kind==='rays') r=Math.min(r, S*0.17);          // a radiance, not a net over the whole canvas
         else if(kind==='brush') r=Math.min(r, S*0.13);
+        else if(kind==='rain') r=Math.min(r, S*0.09);     // Hokusai's rain: streaks, not a lattice
+        else if(kind==='beam') r=Math.min(r, S*0.09);     // a beam crosses part of the canvas, not all of it
         const [cr,cg,cb]=gc(m,v);
-        const _pi=(i+layer)%F.keys.length, _pal=SM[_pi]&&SM[_pi].pal;
+        const _pal=SM[_pi]&&SM[_pi].pal;
         const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
-        const ang=(/^(field|stripe|stripes|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         if(_FU_UNDER.test(kind)){
           ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, F, R, ang, col2); ctx.restore();
         } else {
           const vals=[]; _fuMark(_FU_NULL, kind, r, col, F, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
           _defer.push([tx, ty, kind, r, col, ang, col2, vals]);
         }
+      }
       }
     }
   }
