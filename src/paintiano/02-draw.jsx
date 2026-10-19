@@ -17035,7 +17035,7 @@ const ARTIST_VARIANTS = {
     {ground:'#5a4a2a',mark:{scallop:1},size:[.03,.06],layout:{grid:1},density:1},
     {ground:'#1a1410',mark:{sphere:1},size:[.08,.25],layout:{scatter:1},density:.3},
     {ground:'#111111',mark:{target:.6,dotcluster:.4},size:[.1,.3],layout:{scatter:1},density:.25},
-    {ground:'#d85a1a',mark:{chain:1},size:[.02,.05],layout:{scatter:1},density:.3,lines:.6},
+    {ground:'#d85a1a',mark:{net:1},size:[.05,.1],layout:{scatter:1},density:.3,lines:0},
   ],
   miro: [
     {ground:'#1b1812',mark:{tri:.3,blob:.3,target:.2,dot:.2},size:[.02,.07],layout:{scatter:1},density:.2,outline:.2},
@@ -17450,8 +17450,14 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(1,rr*0.018); ctx.arc(0,0,r0*0.85,0,6.2832); ctx.stroke();
         ctx.beginPath(); break; }
       case 'stem': { ctx.lineCap='round'; ctx.lineWidth=Math.max(1.5,rr*.09); ctx.moveTo(0,rr); ctx.lineTo(0,-rr); ctx.stroke(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,-rr,rr*.18,0,6.2832); ctx.fill(); break; }
-      case 'chain': { // Kusama: a run of linked loops (her nets), each a little off the line
-        ctx.lineWidth=Math.max(1.2,rr*.09); let px=-rr,py=0; for(let j=0;j<5;j++){ ctx.beginPath(); ctx.strokeStyle=(j%2)?col2:col; const q=rr*(.22+R()*.1); ctx.arc(px,py,q,0,6.2832); ctx.stroke(); px+=rr*.42; py+=(R()-.5)*rr*.5; } break; }
+      case 'chain': { // RafFel: a constellation — chords as stars, joined by one thin thread
+        ctx.lineCap='round'; ctx.lineWidth=Math.max(1,rr*.045); let px=-rr,py=0; const pts=[[px,py]]; ctx.moveTo(px,py); for(let j=0;j<4;j++){ px+=rr*.5; py+=(R()-.5)*rr*.9; ctx.lineTo(px,py); pts.push([px,py]); } ctx.stroke();
+        pts.forEach((p,j)=>{ ctx.beginPath(); ctx.fillStyle=(j%2)?col2:col; ctx.arc(p[0],p[1],rr*(.09+R()*.06),0,6.2832); ctx.fill(); }); break; }
+      case 'net': { // Kusama: a patch of Infinity Net — a cellular mesh of small open loops, brushed, never a row of rings
+        ctx.lineCap='round'; ctx.lineWidth=Math.max(1,rr*.055); const st=rr*.34, a0=R()*6.2832;
+        for(let gy=-3;gy<=3;gy++) for(let gx=-3;gx<=3;gx++){ const x=(gx+(gy%2?.5:0))*st, y=gy*st*.87; if(x*x+y*y>rr*rr*.85) continue;
+          const q=st*(.5+R()*.18), b0=a0+R()*6.2832; ctx.beginPath(); ctx.strokeStyle=(gx+gy)%3===0?col2:col; ctx.arc(x+(R()-.5)*st*.2, y+(R()-.5)*st*.2, q, b0, b0+4.4+R()*1.2); ctx.stroke(); }
+        ctx.beginPath(); break; }
       case 'hatch': { const k=5; const a0=R()*6.28; const pts=[]; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.7+R()*0.4); pts.push([Math.cos(a)*q,Math.sin(a)*q]); } const poly=()=>{ ctx.beginPath(); pts.forEach((p,j)=> j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); };
         poly(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1; const st=Math.max(3,rr*.14); for(let d=-rr*2;d<rr*2;d+=st){ ctx.beginPath(); ctx.moveTo(d,-rr*2); ctx.lineTo(d+rr*2,rr*2); ctx.stroke(); } ctx.restore(); poly(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.07); ctx.stroke(); break; }
       case 'poly': { const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.6+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
@@ -17602,7 +17608,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const PDs=F.keys.map((k,i)=>_dnaOf(k,F.phs[i]));
   const FPs=PDs.map(pd=>(pd.edge===F.edge && pd.alpha===F.alpha) ? F : Object.assign({},F,{edge:pd.edge,alpha:pd.alpha}));
   // idioms whose size is a length, not an area — the area cap below leaves them alone
-  const _FU_LINEAR=/^(field|stripe|stripes|vstripes|band|vband|gridline|gridstub|wavyline|wave|beam|shortbeam|drip|rays|brush|rain|zigzag|dab|bar|vdrip|stem|dotline|chain|neon|splat|dotcluster|radiant|step|scallop|crest|phiarc|arc)$/;
+  const _FU_LINEAR=/^(field|stripe|stripes|vstripes|band|vband|gridline|gridstub|wavyline|wave|beam|shortbeam|drip|rays|brush|rain|zigzag|dab|bar|vdrip|stem|dotline|chain|net|neon|splat|dotcluster|radiant|step|scallop|crest|phiarc|arc)$/;
   const _SPAN={stripes:['band',5],vstripes:['vband',5],gridline:['gridstub',6],wavyline:['wave',8],beam:['shortbeam',8]};
   const _spanUsed=new Set();
   for(let layer=0; layer<F.layers; layer++){
@@ -17644,7 +17650,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='rain') r=Math.min(r, S*0.09);     // Hokusai's rain: streaks, not a lattice
         else if(kind==='beam') r=Math.min(r, S*0.09);     // a beam crosses part of the canvas, not all of it
         else if(kind==='cloud') r=Math.min(r, S*0.13);    // a cloud, not a fog over everything
-        else if(kind==='chain') r=Math.min(r, S*0.045);   // Kusama's nets are fine — small loops, never big hoops
+        else if(kind==='chain') r=Math.min(r, S*0.07);    // RafFel's constellation stays a small figure
+        else if(kind==='net') r=Math.min(r, S*0.1);       // a patch of Kusama's net — fine mesh, never a hoop
         else if(!_FU_LINEAR.test(kind)){
           r=Math.min(r, S*0.21);   // no single shape swallows a third of the canvas (Delaunay discs, Bauhaus targets…)
           // and big shapes are budgeted by the area they cover (~1.6 canvases in all), spread
