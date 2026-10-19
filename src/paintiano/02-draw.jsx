@@ -9547,6 +9547,7 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   const cn = chords.length;
   // Seed must not include lim — otherwise the horizon re-rolls every chord.
   const rnd = _seedRnd(91, ss, 0, 5);
+  const R_ = _hkReveal(lim, chords);   // played fraction — the mist lifts with the music
 
   function chordColor(t){
     const ci = Math.min(cn - 1, Math.max(0, Math.floor(t * cn)));
@@ -9583,8 +9584,8 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fillStyle = water;
   ctx.fillRect(0, horizon, CW, CH - horizon);
 
-  // Faint tree-line at horizon — mid-chord darkened.
-  ctx.globalAlpha = 0.35;
+  // Faint tree-line at horizon — mid-chord darkened; emerges from the haze early on.
+  ctx.globalAlpha = 0.35 * _hkWin(R_, 0.05, 0.22);
   const [hrR, hrG, hrB] = chordColor(0.45);
   ctx.fillStyle =
     `rgb(${Math.round(hrR * 0.5 + 40)},${Math.round(hrG * 0.5 + 45)},${Math.round(hrB * 0.55 + 55)})`;
@@ -9598,7 +9599,7 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.fill();
 
   // Mirrored into water (paler).
-  ctx.globalAlpha = 0.22;
+  ctx.globalAlpha = 0.22 * _hkWin(R_, 0.08, 0.26);
   ctx.beginPath();
   ctx.moveTo(0, horizon);
   for(let x = 0; x <= CW; x += CW / 40){
@@ -9613,7 +9614,7 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Roll the geometry for ALL 80 veils up front so the rnd stream consumed
   // here (and therefore the ripples below) does not shift with the reveal.
   const VEILS_FULL = 80;
-  const veilsVis = Math.min(VEILS_FULL, Math.max(40, lim));
+  const veilsVis = Math.round(VEILS_FULL * R_);   // veils drift in across the whole piece
   const veilGeo = [];
   for(let i = 0; i < VEILS_FULL; i++){
     veilGeo.push([rnd() * CH, CW * (0.3 + rnd() * 0.5), (rnd() - 0.3) * CW, CH * (0.015 + rnd() * 0.04)]);
@@ -9641,17 +9642,21 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.globalAlpha = 1;
 
   // Water ripple short strokes — water chord colour with a slight lift.
+  // Rolled for all 200, drawn as a growing prefix.
   ctx.globalAlpha = 0.55;
+  const _ripVis = Math.round(200 * _hkWin(R_, 0.15, 1.0));
   for(let k = 0; k < 200; k++){
     const y = horizon + rnd() * (CH - horizon);
     const x = rnd() * CW;
     const len = 6 + rnd() * 16;
+    const _ra = rnd(), _rw = rnd();
+    if(k >= _ripVis) continue;
     const rr = Math.min(255, Math.round(watR * 0.5 + 110));
     const gg = Math.min(255, Math.round(watG * 0.5 + 115));
     const bb = Math.min(255, Math.round(watB * 0.5 + 130));
-    const a = 0.4 + rnd() * 0.4;
+    const a = 0.4 + _ra * 0.4;
     ctx.strokeStyle = `rgba(${rr},${gg},${bb},${a.toFixed(2)})`;
-    ctx.lineWidth = 0.8 + rnd() * 1.2;
+    ctx.lineWidth = 0.8 + _rw * 1.2;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x + len, y);
@@ -9664,8 +9669,10 @@ function monetPhaseMist(ctx, CW, CH, chords, lim, gc, ss, mode){
   const glowGrad = ctx.createRadialGradient(CW * 0.5, horizon, 4, CW * 0.5, horizon, CW * 0.16);
   glowGrad.addColorStop(0, 'rgba(255,230,200,0.45)');
   glowGrad.addColorStop(1, 'rgba(255,230,200,0)');
+  ctx.globalAlpha = _hkWin(R_, 0.70, 0.95);   // the sun breaks through near the end
   ctx.fillStyle = glowGrad;
   ctx.fillRect(0, horizon - CH * 0.15, CW, CH * 0.3);
+  ctx.globalAlpha = 1;
 }
 
 // Variant 6 — Poppy Field (Coquelicots, 1873): horizontal landscape with sky,
@@ -10202,6 +10209,11 @@ function drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
 }
 
 // ── Shared palette + helpers ──
+// Reveal choreography: every Hokusai print is composed once (seed + whole song)
+// and then GROWS with the music — elements enter in a fixed order as the
+// played fraction r = lim/cn advances. _hkWin(r,a,b) eases 0→1 over r∈[a,b].
+function _hkReveal(lim, chords){ const cn=Math.max(1,(chords&&chords.length)||1); return Math.max(0, Math.min(1, lim/cn)); }
+function _hkWin(r, a, b){ const x=Math.max(0, Math.min(1, (r-a)/Math.max(1e-6, b-a))); return x*x*(3-2*x); }
 const HOKUSAI_PRUSSIAN = '#1B3A5B';
 const HOKUSAI_PAPER = '#EAE3CE';
 // Convert any [r,g,b] toward the woodblock palette: drop saturation, blend
@@ -10270,6 +10282,7 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   // (oshiokuri-bune, sumi hull + climax gunwale) appear when energy is high.
   const rnd = _seedRnd(92, ss, 0, 0);
   const K = _hokusaiInk(chords, lim, gc);
+  const R_ = _hkReveal(lim, chords);
   const P = `rgb(${K.paper[0]},${K.paper[1]},${K.paper[2]})`;
   const SM = `rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.55)`;
   ctx.fillStyle = P; ctx.fillRect(0,0,CW,CH);
@@ -10278,14 +10291,16 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   skg.addColorStop(0, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0.40)`);
   skg.addColorStop(1, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0)`);
   ctx.fillStyle = skg; ctx.fillRect(0,0,CW,CH*0.22);
-  // Distant Fuji.
+  // Distant Fuji — fades in with the first bars.
   const fx = CW*0.62, fy = CH*0.40, fw = CW*0.12;
+  ctx.globalAlpha = _hkWin(R_, 0.0, 0.06);
   ctx.fillStyle = `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0.55)`;
   ctx.strokeStyle = SM; ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.moveTo(fx-fw, fy); ctx.lineTo(fx, fy-fw*0.82); ctx.lineTo(fx+fw, fy); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = P;
   ctx.beginPath(); ctx.moveTo(fx-fw*0.30, fy-fw*0.56); ctx.lineTo(fx, fy-fw*0.82); ctx.lineTo(fx+fw*0.30, fy-fw*0.56);
   ctx.lineTo(fx+fw*0.15, fy-fw*0.63); ctx.lineTo(fx+fw*0.02, fy-fw*0.53); ctx.lineTo(fx-fw*0.15, fy-fw*0.64); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
   // Melody envelope → swells. Moving average of top pitches over the WHOLE
   // piece (not the played prefix), so the swells never relocate during playback.
   const N = Math.max(1, chords.length);
@@ -10320,7 +10335,11 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   const geo=[];
   for(let j=0;j<swells.length;j++){
     const col = cols[Math.min(2, j + (3-swells.length))];
-    const cx = CW*swells[j].px, h = CH*swells[j].hf;
+    // Each swell rises from the water line in its own window, back to front.
+    const _sa = 0.03 + j*(0.62/Math.max(1,swells.length)), _sb = _sa + 0.62/Math.max(1,swells.length) + 0.08;
+    const _rise = _hkWin(R_, _sa, _sb);
+    const cx = CW*swells[j].px, h = CH*swells[j].hf*Math.max(0.04,_rise);
+    if(_rise<=0){ geo.push({cx, base: CH*(0.93 + j*0.03), w: CW*(0.95 + j*0.30), h: 0, hidden:true}); continue; }
     const base = CH*(0.93 + j*0.03), w = CW*(0.95 + j*0.30);
     ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
     ctx.strokeStyle = SM; ctx.lineWidth = 1.4;
@@ -10333,8 +10352,10 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
   // Claw curl(s) + foam fingers on the front-most 1-2 swells (by energy).
   const curls = K.energy > 0.45 ? (K.energy > 0.85 ? 2 : 1) : 1;
+  const _foamWin = _hkWin(R_, 0.72, 0.96);
   for(let q=0;q<Math.min(curls, geo.length); q++){
     const G = geo[geo.length-1-q];
+    if(G.hidden || _foamWin<=0) continue;
     const hx=G.cx, hy=G.base-G.h;
     ctx.strokeStyle = P; ctx.lineWidth = Math.max(3.5, G.w*0.010); ctx.lineCap='round';
     ctx.beginPath();
@@ -10344,14 +10365,17 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
       if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
     ctx.stroke();
+    const _foamN = Math.round(18*_foamWin);
     for(let k=0;k<18;k++){
       const t=k/17;
       const fxp=hx-G.w*0.31+t*G.w*0.57, fyp=hy-5+Math.sin(t*Math.PI)*(-G.h*0.10);
+      const _fr = rnd();   // keep the stream identical whether or not the finger is drawn yet
+      if(k>=_foamN) continue;
       const vc = (k%3===0) ? K.voice(k) : K.paper;
       const mixv=[Math.round(K.paper[0]*0.65+vc[0]*0.35),Math.round(K.paper[1]*0.65+vc[1]*0.35),Math.round(K.paper[2]*0.65+vc[2]*0.35)];
       ctx.fillStyle = `rgb(${mixv[0]},${mixv[1]},${mixv[2]})`;
       ctx.strokeStyle = `rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.40)`; ctx.lineWidth=0.7;
-      ctx.beginPath(); ctx.arc(fxp, fyp, 1.6+2.9*Math.sin(t*Math.PI)+rnd(), 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(fxp, fyp, 1.6+2.9*Math.sin(t*Math.PI)+_fr, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     }
   }
   // Water base + voice wavelets.
@@ -10360,11 +10384,13 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
   for(let k=0;k<5;k++){
     const vc=K.voice(k*3);
     const wl=[Math.round(vc[0]*0.7+K.paper[0]*0.3),Math.round(vc[1]*0.7+K.paper[1]*0.3),Math.round(vc[2]*0.7+K.paper[2]*0.3)];
+    const _w1=rnd()*5, _w2=rnd()*5;   // rolled for every wavelet — the stream never depends on reveal
+    if(R_ < 0.05 + k*0.07) continue;
     ctx.strokeStyle = `rgba(${wl[0]},${wl[1]},${wl[2]},0.55)`; ctx.lineWidth=1.3;
     const yy=CH*(0.93+k*0.013);
     ctx.beginPath(); ctx.moveTo(0,yy);
-    ctx.quadraticCurveTo(CW*0.25, yy+5+rnd()*5, CW*0.5, yy);
-    ctx.quadraticCurveTo(CW*0.75, yy-5-rnd()*5, CW, yy);
+    ctx.quadraticCurveTo(CW*0.25, yy+5+_w1, CW*0.5, yy);
+    ctx.quadraticCurveTo(CW*0.75, yy-5-_w2, CW, yy);
     ctx.stroke();
   }
   // Boats — proportional oshiokuri-bune riding the front slope.
@@ -10380,7 +10406,9 @@ function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
     return {x, y, ang: Math.atan2(dy,dx)*0.7};
   };
   for(let b=0;b<Math.min(boats, geo.length); b++){
+    if(R_ < 0.86 + b*0.07) continue;
     const G = geo[Math.max(0, geo.length-1-b)];
+    if(G.hidden) continue;
     const Lb = Math.max(24, geo[geo.length-1].h*0.34) * (b?0.8:1);
     const hb = Lb*0.16;
     const pos = bezAt(G, 0.45+b*0.12);
@@ -10412,6 +10440,7 @@ function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
   // sumi keyline, mist band; birds carry chord voices through the ink.
   const rnd = _seedRnd(92, ss, 0, 1);
   const K = _hokusaiInk(chords, lim, gc);
+  const R_ = _hkReveal(lim, chords);
   const P = `rgb(${K.paper[0]},${K.paper[1]},${K.paper[2]})`;
   ctx.fillStyle = P; ctx.fillRect(0,0,CW,CH);
   const g1 = ctx.createLinearGradient(0,0,0,CH*0.30);
@@ -10423,7 +10452,10 @@ function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
   g2.addColorStop(1, `rgba(${K.L[0]},${K.L[1]},${K.L[2]},0)`);
   ctx.fillStyle=g2; ctx.fillRect(0,CH*0.55,CW,CH*0.17);
   // Fuji body — horizontal gradient in the climax accent.
-  const fpx=CW*0.52, fpy=CH*0.22, fby=CH*0.80;
+  // The mountain rises out of the plain over the first half of the piece.
+  const _rise = _hkWin(R_, 0.0, 0.55);
+  const fpx=CW*0.52, fby=CH*0.80, fpy=fby-(fby-CH*0.22)*Math.max(0.02,_rise);
+  const _mid=(y)=> fby-(fby-y)*Math.max(0.02,_rise);   // scale a y toward the base line
   const gf = ctx.createLinearGradient(CW*0.10,0,CW*0.92,0);
   const shd=[Math.round(K.A[0]*0.65+K.sumi[0]*0.35),Math.round(K.A[1]*0.65+K.sumi[1]*0.35),Math.round(K.A[2]*0.65+K.sumi[2]*0.35)];
   const lit=[Math.round(K.A[0]*0.75+K.paper[0]*0.25),Math.round(K.A[1]*0.75+K.paper[1]*0.25),Math.round(K.A[2]*0.75+K.paper[2]*0.25)];
@@ -10434,10 +10466,11 @@ function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.strokeStyle=`rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.6)`; ctx.lineWidth=2;
   ctx.beginPath();
   ctx.moveTo(CW*0.10, fby);
-  ctx.bezierCurveTo(CW*0.30, CH*0.62, CW*0.42, CH*0.34, fpx, fpy);
-  ctx.bezierCurveTo(CW*0.62, CH*0.36, CW*0.76, CH*0.64, CW*0.92, fby);
+  ctx.bezierCurveTo(CW*0.30, _mid(CH*0.62), CW*0.42, _mid(CH*0.34), fpx, fpy);
+  ctx.bezierCurveTo(CW*0.62, _mid(CH*0.36), CW*0.76, _mid(CH*0.64), CW*0.92, fby);
   ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Dappled snow cap.
+  // Dappled snow cap — settles once the summit stands.
+  ctx.globalAlpha = _hkWin(R_, 0.55, 0.70);
   ctx.fillStyle=P; ctx.strokeStyle=`rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.35)`; ctx.lineWidth=1;
   ctx.beginPath();
   ctx.moveTo(fpx-CW*0.085, fpy+CH*0.068);
@@ -10449,16 +10482,18 @@ function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.lineTo(px,py);
   }
   ctx.lineTo(fpx+CW*0.085, fpy+CH*0.068); ctx.lineTo(fpx, fpy); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = 1;
   // Mist foreground + ground keyline.
   ctx.fillStyle=`rgba(${K.M[0]},${K.M[1]},${K.M[2]},0.12)`;
   ctx.fillRect(0, fby, CW, CH-fby);
   ctx.strokeStyle=`rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.5)`; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(0,fby); ctx.lineTo(CW,fby); ctx.stroke();
   // Birds — chord voices through the ink filter; count grows with reveal.
-  const reveal=Math.max(0,Math.min(1, lim/Math.max(1,chords.length)));
-  const nb=Math.max(2, Math.ceil(6*reveal));
-  for(let i=0;i<nb;i++){
+  // Birds — the last thing the print receives, one by one over the final third.
+  const nb=Math.round(6*_hkWin(R_, 0.66, 1.0));
+  for(let i=0;i<6;i++){
     const bx=CW*(0.12+rnd()*0.55), by=CH*(0.08+rnd()*0.13);
+    if(i>=nb) continue;
     const vc=K.voice(i*2);
     const bc=[Math.round(vc[0]*0.65+K.sumi[0]*0.35),Math.round(vc[1]*0.65+K.sumi[1]*0.35),Math.round(vc[2]*0.65+K.sumi[2]*0.35)];
     ctx.strokeStyle=`rgba(${bc[0]},${bc[1]},${bc[2]},0.8)`; ctx.lineWidth=1.4; ctx.lineCap='round';
@@ -10472,6 +10507,7 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Seed must not include lim — otherwise the branch relocates every chord.
   const rnd = _seedRnd(92, ss, 0, 2);
   const cn = Math.max(1, chords.length);
+  const R_ = _hkReveal(lim, chords);
   ctx.fillStyle = HOKUSAI_PAPER;
   ctx.fillRect(0, 0, CW, CH);
 
@@ -10512,6 +10548,7 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
     const flen = 30 + rnd() * 60;
     const fx = bx + Math.cos(ang) * flen;
     const fy = by + Math.sin(ang) * flen;
+    if(R_ < 0.04 + f*(0.22/forks)) continue;   // forks sprout one after another
     ctx.strokeStyle = '#3D2412';
     ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(fx, fy); ctx.stroke();
@@ -10521,8 +10558,11 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
 
   // Blossoms — circular flowers along branch using chord colours.
-  const blossomCount = Math.min(60, Math.max(12, lim));
-  for(let i = 0; i < blossomCount; i++){
+  // Blossoms open over the whole piece: the full count is a song property,
+  // the visible prefix follows the played fraction.
+  const blossomFull = Math.min(60, Math.max(12, cn));
+  const blossomCount = Math.max(1, Math.round(blossomFull * R_));
+  for(let i = 0; i < blossomFull; i++){
     // Blossom i is tied to chord i over the WHOLE piece (not i % lim), so a
     // painted blossom keeps its colour as more chords arrive.
     const ci = i % cn;
@@ -10558,6 +10598,7 @@ function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
     const cx = bx + (rnd() - 0.5) * 70;
     const cy = by + (rnd() - 0.5) * 70 - 10;
     const rad = 5 + rnd() * 8;
+    if(i >= blossomCount) continue;
 
     // 5-petal flower: 5 overlapping circles around a centre. Each petal gets
     // a small ±12 jitter from the blossom's base colour for realistic floral
@@ -10596,6 +10637,7 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Differs from the Fuji phase by SILHOUETTE and composition, not just tone.
   const rnd = _seedRnd(92, ss, 0, 3);
   const K = _hokusaiInk(chords, lim, gc);
+  const R_ = _hkReveal(lim, chords);
   const dk=[Math.round(K.D[0]*0.65+K.sumi[0]*0.35),Math.round(K.D[1]*0.65+K.sumi[1]*0.35),Math.round(K.D[2]*0.65+K.sumi[2]*0.35)];
   ctx.fillStyle = `rgb(${dk[0]},${dk[1]},${dk[2]})`;
   ctx.fillRect(0,0,CW,CH);
@@ -10639,7 +10681,10 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
   ctx.lineTo(fpx+CW*0.045, fpy+CH*0.035); ctx.lineTo(fpx, fpy); ctx.closePath(); ctx.fill();
   // Cloud bank at ~60% — swallows the lower slope; billows along the top.
+  // It drifts in over the second quarter of the piece.
   const cloudY=CH*0.60;
+  const _cloudA = _hkWin(R_, 0.18, 0.42);
+  ctx.globalAlpha = _cloudA;
   const gcb=ctx.createLinearGradient(0,cloudY,0,CH);
   const cbTop=[Math.round(K.M[0]*0.75+K.paper[0]*0.25),Math.round(K.M[1]*0.75+K.paper[1]*0.25),Math.round(K.M[2]*0.75+K.paper[2]*0.25)];
   gcb.addColorStop(0, `rgba(${cbTop[0]},${cbTop[1]},${cbTop[2]},0.92)`);
@@ -10658,7 +10703,10 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.fillStyle=`rgba(${cbBill[0]},${cbBill[1]},${cbBill[2]},0.85)`;
     ctx.beginPath(); ctx.arc(cx, cy, CW*(0.045+rnd()*0.03), 0, Math.PI*2); ctx.fill();
   }
+  ctx.globalAlpha = 1;
   // Lightning BELOW the cloud line — climax glow + main bolt + branches.
+  // The strike lands past the middle of the piece; branches fork after it.
+  const _boltA = _hkWin(R_, 0.50, 0.58);
   const strikeX=CW*(0.55+rnd()*0.14);
   const glow=[Math.round(K.A[0]*0.55+K.paper[0]*0.45),Math.round(K.A[1]*0.55+K.paper[1]*0.45),Math.round(K.A[2]*0.55+K.paper[2]*0.45)];
   const rg=ctx.createRadialGradient(strikeX, CH*0.82, 0, strikeX, CH*0.82, CW*0.26);
@@ -10666,6 +10714,7 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
   rg.addColorStop(0.55, `rgba(${glow[0]},${glow[1]},${glow[2]},0.16)`);
   rg.addColorStop(1, `rgba(${glow[0]},${glow[1]},${glow[2]},0)`);
   ctx.fillStyle=rg;
+  ctx.globalAlpha = _boltA;
   ctx.beginPath(); ctx.arc(strikeX, CH*0.82, CW*0.26, 0, Math.PI*2); ctx.fill();
   let px=CW*0.55, py=cloudY+CH*0.02;
   const boltPts=[[px,py]];
@@ -10688,6 +10737,7 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
     const bi=brAt[bq];
     let qx=boltPts[bi][0], qy=boltPts[bi][1];
     const side=(bq%2===0)?-1:1;
+    ctx.globalAlpha = _hkWin(R_, 0.60+bq*0.08, 0.66+bq*0.08);
     ctx.beginPath(); ctx.moveTo(qx,qy);
     for(let s=0;s<3;s++){ qx+=side*(12+rnd()*24); qy+=CH*0.040; ctx.lineTo(qx,qy); }
     ctx.strokeStyle=`rgba(${glow[0]},${glow[1]},${glow[2]},0.45)`; ctx.lineWidth=5; ctx.stroke();
@@ -10696,7 +10746,11 @@ function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Rain — TWO tones, denser below the cloud line; count scales with lim.
   const vc=K.voice(1);
   const pale=[Math.round(vc[0]*0.55+K.paper[0]*0.45),Math.round(vc[1]*0.55+K.paper[1]*0.45),Math.round(vc[2]*0.55+K.paper[2]*0.45)];
-  const rainCount=Math.min(320, Math.max(140, lim*4));
+  ctx.globalAlpha = 1;
+  // Rain thickens with the piece: the full count is a song property, the
+  // drawn prefix follows the played fraction.
+  const rainFull=Math.min(320, Math.max(140, Math.max(1,chords.length)*4));
+  const rainCount=Math.round(rainFull*R_);
   for(let i=0;i<rainCount;i++){
     const ry=rnd()*CH;
     if(ry<cloudY && rnd()<0.5) continue;   // sparser above the clouds
@@ -10714,6 +10768,7 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
   const rnd = _seedRnd(92, ss, 0, 4);
   const cn = Math.max(1, chords.length);
   const K = _hokusaiInk(chords, lim, gc);   // HK v2 note-driven ink-set
+  const R_ = _hkReveal(lim, chords);
   // Soft grey paper.
   ctx.fillStyle = '#D8D4C2';
   ctx.fillRect(0, 0, CW, CH);
@@ -10723,6 +10778,7 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
   const midNotes = (midChord && (midChord.n || midChord.notes)) || [];
   const midNote = midNotes.length ? midNotes[0] : {m:60,v:80};
   const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
+  ctx.globalAlpha = _hkWin(R_, 0.0, 0.10);   // the mountain band surfaces from the mist
   ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.7);
   ctx.beginPath();
   ctx.moveTo(0, CH * 0.5);
@@ -10736,8 +10792,9 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.strokeStyle = HOKUSAI_PRUSSIAN;
   ctx.lineWidth = 1.4;
   ctx.stroke();
+  ctx.globalAlpha = 1;
 
-  // Village strip — flat brown/grey houses.
+  // Village strip — flat brown/grey houses, built one after another.
   const houseRow = CH * 0.72;
   const houseH = CH * 0.1;
   const houseCount = 5 + Math.floor(rnd() * 4);
@@ -10756,6 +10813,7 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
     const hx = _hxWalk;
     const hyTop = houseRow + (rnd() - 0.5) * houseH * 0.10;
     _hxWalk += hwInner + CW * (0.015 + rnd() * 0.05);
+    if(R_ < 0.14 + i*(0.50/houseCount)) continue;   // geometry rolled above; only the drawing waits
     // House body.
     ctx.fillStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
     ctx.fillRect(hx, hyTop, hwInner, houseH);
@@ -10773,7 +10831,8 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.stroke();
   }
 
-  // Water at bottom.
+  // Water at bottom — fills in just before the first house.
+  ctx.globalAlpha = _hkWin(R_, 0.06, 0.14);
   ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.6, 0.55);
   ctx.fillRect(0, houseRow + houseH, CW, CH - houseRow - houseH);
   ctx.strokeStyle = HOKUSAI_PRUSSIAN;
@@ -10782,9 +10841,12 @@ function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.moveTo(0, houseRow + houseH);
   ctx.lineTo(CW, houseRow + houseH);
   ctx.stroke();
+  ctx.globalAlpha = 1;
 
-  // Rain — diagonal lines across entire canvas. Density follows lim.
-  const rainCount = Math.min(380, Math.max(120, lim * 6));
+  // Rain — diagonal lines across the canvas. The full density is a song
+  // property; the shower thickens with the played fraction.
+  const rainFull = Math.min(380, Math.max(120, cn * 6));
+  const rainCount = Math.round(rainFull * R_);
   ctx.strokeStyle = `rgba(${K.D[0]},${K.D[1]},${K.D[2]},0.55)`;   // HK v2: single ink-family tone
   ctx.lineWidth = 0.9;
   for(let i = 0; i < rainCount; i++){
@@ -10804,6 +10866,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   const rnd = _seedRnd(92, ss, 0, 5);
   const cn = Math.max(1, chords.length);
   const K = _hokusaiInk(chords, lim, gc);   // HK v2 note-driven ink-set
+  const R_ = _hkReveal(lim, chords);
   ctx.fillStyle = HOKUSAI_PAPER;
   ctx.fillRect(0, 0, CW, CH);
 
@@ -10833,7 +10896,9 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   ctx.lineTo(CW, CH * 0.55);
   ctx.stroke();
 
-  // Drum bridge — semi-circular arch spanning canvas, water below.
+  // Drum bridge — semi-circular arch spanning canvas, water below. The arch
+  // is drawn in over the first fifth of the piece.
+  ctx.globalAlpha = _hkWin(R_, 0.01, 0.14);
   const bridgeCY = CH * 0.55;
   const bridgeRadius = CW * 0.5;
   const bridgeCX = CW * 0.5;
@@ -10861,7 +10926,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Bridge ribbing — radial spokes from centre to inner arc. Spoke ANGLES come
   // from the full-song rib count (so ribs never slide); reveal only adds ribs.
   const ribCountFull = Math.min(16, Math.max(6, Math.floor(cn / 5)));
-  const ribCount = Math.min(ribCountFull, Math.max(6, Math.floor(lim / 5)));
+  const ribCount = 1 + Math.round((ribCountFull-1) * _hkWin(R_, 0.12, 0.45));
   ctx.strokeStyle = HOKUSAI_PRUSSIAN;
   ctx.lineWidth = 0.9;
   for(let i = 1; i < ribCount; i++){
@@ -10875,6 +10940,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
     ctx.lineTo(x2, y2);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 
   // Reeds at water edges + middle scatter — chord-driven height, thickness,
   // bend direction, and seedheads. Concept is realised here: every chord
@@ -10882,7 +10948,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Reed geometry is ROLLED for the full-song reed count every frame (keeps the
   // ripple stream below independent of lim); reveal only gates the drawn prefix.
   const reedCountFull = Math.min(180, Math.max(30, cn * 3));
-  const reedCount = Math.min(reedCountFull, Math.max(30, lim * 3));
+  const reedCount = Math.round(reedCountFull * _hkWin(R_, 0.10, 1.0));
   for(let i = 0; i < reedCountFull; i++){
     // Position: 60% in side clusters, 40% scattered along full water edge.
     const zoneRoll = rnd();
@@ -10955,11 +11021,13 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Water ripples — horizontal short strokes (ink family).
   ctx.strokeStyle = `rgba(${K.D[0]},${K.D[1]},${K.D[2]},0.85)`;
   ctx.lineWidth = 1;
-  const ripples = Math.min(60, Math.max(20, lim));
-  for(let i = 0; i < ripples; i++){
+  const ripplesFull = Math.min(60, Math.max(20, cn));
+  const ripples = Math.round(ripplesFull * R_);
+  for(let i = 0; i < ripplesFull; i++){
     const y = CH * (0.58 + rnd() * 0.4);
     const x = rnd() * CW;
     const len = 16 + rnd() * 30;
+    if(i >= ripples) continue;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.quadraticCurveTo(x + len/2, y - 2, x + len, y);
@@ -10967,7 +11035,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   }
   // HK v2: climax lantern — one accent dot at the crest of the arch.
   const _lanY = bridgeCY - topRad - 7;
-  if(_lanY > CH*0.03){
+  if(_lanY > CH*0.03 && R_ >= 0.9){
     ctx.fillStyle = `rgb(${K.A[0]},${K.A[1]},${K.A[2]})`;
     ctx.strokeStyle = `rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.6)`;
     ctx.lineWidth = 1.2;
