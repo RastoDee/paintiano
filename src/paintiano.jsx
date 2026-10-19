@@ -19320,12 +19320,16 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         const rings=3+(R()*2|0); for(let q=rings;q>=1;q--){ const rq=rr*q/rings; for(let sgm=0;sgm<4;sgm++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rq,sgm*1.5708,(sgm+1)*1.5708); ctx.closePath(); ctx.fillStyle=((q+sgm)%2)?col:col2; ctx.fill(); } } break; }
       case 'facet': { // Picasso: angular shard with a hard contour
         const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.55+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.08); ctx.stroke(); break; }
-      case 'cutout': { // Matisse: a scissors leaf — lobed down one side and back up the other, cut in one go
-        const lobes=3+(R()*2|0), w=rr*(0.55+R()*0.35), st=2*rr/lobes;
-        ctx.moveTo(0,-rr);
-        for(let j=0;j<lobes;j++){ const t1=-rr+(j+1)*st; ctx.quadraticCurveTo(w*(1.1+R()*.3), t1-st/2, j===lobes-1?0:w*.35, t1); }
-        for(let j=lobes-1;j>=0;j--){ const t0=-rr+j*st; ctx.quadraticCurveTo(-w*(1.1+R()*.3), t0+st/2, j===0?0:-w*.35, t0); }
-        ctx.closePath(); ctx.fill(); break; }
+      case 'cutout': { // Matisse: an algue — rounded fronds fanning up from one stem, as in his scissor cut-outs; never a symmetric blob
+        const n=3+(R()*3|0), tilt=(R()-.5)*0.7, spread=0.9+R()*0.7, by=rr*0.85;
+        for(let j=0;j<n;j++){
+          const a=-1.5708+tilt+((n===1?0:(j/(n-1)-0.5))*spread), L=rr*(1.05+R()*0.65), w=rr*(0.15+R()*0.12);
+          const dx=Math.cos(a), dy=Math.sin(a), px=-dy, py=dx;                       // along the frond · across it
+          const P=(u,v)=>[dx*L*u+px*w*v, by+dy*L*u+py*w*v];
+          const c1=P(0.35,1.4), c2=P(1.08,1.0), tip=P(1.0,0), c3=P(1.08,-1.0), c4=P(0.35,-1.4);
+          ctx.moveTo(0,by); ctx.bezierCurveTo(c1[0],c1[1],c2[0],c2[1],tip[0],tip[1]); ctx.bezierCurveTo(c3[0],c3[1],c4[0],c4[1],0,by);
+        }
+        ctx.fill(); break; }
       case 'cloud': { for(let j=0;j<6;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.35+R()*.4),0,6.2832); ctx.fill(); } break; }
       case 'dotcluster': { // Kusama: a loose drift of polka dots — uneven sizes, no grid
         const k=4+Math.floor(R()*5), pts=[];
