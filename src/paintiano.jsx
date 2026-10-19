@@ -18916,7 +18916,7 @@ const ARTIST_DNA = {
   raffel:       {ground:'#06060c',mark:{phiarc:.8,ring:.2},               size:[.15,.4], edge:.2, alpha:.9, layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:.1, lines:.2,layers:1,density:.15,halftone:0},
   picasso:      {ground:'#0a0a0e',mark:{neon:.7,ring:.3},                 size:[.06,.22],edge:.5, alpha:.95,layout:{flow:.6,scatter:.4},     outline:0, tone:'pure',    wobble:.6, lines:.3,layers:1,density:.2, halftone:0},
   matisse:      {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},              size:[.05,.18],edge:0,  alpha:1,  layout:{grid:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.5, lines:0, layers:1,density:.6, halftone:0},
-  pollock:      {ground:'#f2ede0',mark:{drip:.7,splat:.3},                size:[.004,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:3,density:1,  halftone:0},
+  pollock:      {ground:'#f2ede0',mark:{drip:.75,splat:.25},              size:[.006,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:2,density:.6, halftone:0},
   bloom:        {ground:'#f6f3ec',mark:{cloud:.6,dot:.4},                 size:[.05,.18],edge:.9, alpha:.6, layout:{scatter:.7,field:.3},    outline:0, tone:'pastel',  wobble:.6, lines:.2,layers:3,density:.5, halftone:0},
   kusama:       {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},          size:[.03,.09],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:.2, lines:.2,layers:1,density:1,  halftone:0},
   miro:         {ground:'#f5f2e8',mark:{star:.35,dot:.25,cross:.2,target:.2},size:[.02,.08],edge:0,alpha:1, layout:{scatter:1},              outline:0, tone:'primary', wobble:.4, lines:.15,layers:1,density:.25,halftone:0},
@@ -18971,13 +18971,13 @@ const ARTIST_VARIANTS = {
     {ground:'#e8e2cc',mark:{panel:.6,cutout:.4},size:[.1,.35],layout:{scatter:1},density:.15},
   ],
   pollock: [
-    {mark:{drip:.7,splat:.3},size:[.004,.03],layout:{flow:.8,scatter:.2},density:1,layers:3},
+    {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
     {ground:'#d9c9a8',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.6,layers:1,lines:0},
-    {ground:'#9a9aa0',mark:{drip:.6,splat:.4},size:[.006,.04],alpha:.7,layout:{flow:1},density:1,layers:4},
+    {ground:'#9a9aa0',mark:{drip:.6,splat:.4},size:[.006,.04],alpha:.85,layout:{flow:1},density:.6,layers:2},
     {ground:'#e8dcc0',mark:{cloud:.4,splat:.3,dot:.3},size:[.01,.08],edge:.8,alpha:.5,layout:{scatter:1},density:.4,layers:2},
-    {ground:'#2a2420',mark:{drip:1},size:[.004,.03],layout:{flow:1},density:1,layers:4,tone:'pastel'},
+    {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
     {ground:'#e8e0cc',mark:{bar:.7,splat:.3},size:[.01,.05],layout:{grid:1},density:.5,layers:1},
-    {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:1,layers:3},
+    {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:.6,layers:2},
   ],
   bloom: [
     {mark:{cloud:.6,dot:.4},size:[.05,.18],edge:.9,alpha:.6,layout:{scatter:.7,field:.3},density:.5},
@@ -19304,7 +19304,14 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'stripe': ctx.lineWidth=Math.max(1,rr*.5); ctx.moveTo(-rr*6,0); ctx.lineTo(rr*6,0); ctx.stroke(); break;
       case 'wave': { ctx.lineWidth=Math.max(1,rr*.22); ctx.moveTo(-rr*2.5,0); for(let j=1;j<=4;j++){ ctx.quadraticCurveTo(-rr*2.5+rr*1.25*j-rr*.6, (j%2?-1:1)*rr*.9, -rr*2.5+rr*1.25*j, 0);} ctx.stroke(); break; }
       case 'spiral': { ctx.lineWidth=Math.max(1,rr*.1); for(let j=0;j<=40;j++){ const t=j/40*6.2832*2.5, q=rr*j/40; j?ctx.lineTo(Math.cos(t)*q,Math.sin(t)*q):ctx.moveTo(0,0);} ctx.stroke(); break; }
-      case 'drip': { ctx.lineWidth=Math.max(1,rr*.35); let px=-rr*6,py=0; ctx.moveTo(px,py); for(let j=0;j<5;j++){ px+=rr*2.4; py+=(R()-.5)*rr*4*(0.3+F.wobble); ctx.quadraticCurveTo(px-rr,py+(R()-.5)*rr*3,px,py);} ctx.stroke(); for(let j=0;j<3;j++){ ctx.beginPath(); ctx.arc((R()-.5)*rr*8,(R()-.5)*rr*3,rr*(.2+R()*.5),0,6.2832); ctx.fill(); } break; }
+      case 'drip': { // Pollock: one thrown line, thick where it lands and thinning as it flies, a few beads along it
+        ctx.lineCap='round'; const segs=7, L=rr*16, a=(R()-.5)*1.2; const ca=Math.cos(a), sa=Math.sin(a);
+        let px=-L/2, py=0, pw=(R()-.5)*rr*3;
+        for(let j=0;j<segs;j++){ const nx=px+L/segs, ny=py+(R()-.5)*rr*3.5*(0.4+F.wobble); const cx=px+L/segs*.5, cy=py+(R()-.5)*rr*3;
+          ctx.beginPath(); ctx.lineWidth=Math.max(1, rr*(0.55-0.42*j/segs)*(0.7+R()*0.6));
+          ctx.moveTo(px*ca-py*sa, px*sa+py*ca); ctx.quadraticCurveTo(cx*ca-cy*sa, cx*sa+cy*ca, nx*ca-ny*sa, nx*sa+ny*ca); ctx.stroke(); px=nx; py=ny; }
+        for(let j=0;j<2;j++){ ctx.beginPath(); const bx=(R()-.5)*L*.8, by=(R()-.5)*rr*2; ctx.arc(bx*ca-by*sa, bx*sa+by*ca, rr*(.25+R()*.45),0,6.2832); ctx.fill(); }
+        ctx.beginPath(); break; }
       case 'splat': { for(let j=0;j<7;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr*2.2; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.1+R()*.5),0,6.2832); ctx.fill(); } break; }
       // ── signature motifs — each artist's own, so the parent stays recognisable ──
       case 'orphic': { // Delaunay: concentric disc, quartered, two colours alternating
@@ -19479,7 +19486,13 @@ function _fuSample(k, chords, gc, seed, mode, ph){
     const toRgb=(q)=>[((q>>8)&15)*17,((q>>4)&15)*17,(q&15)*17];
     if(arr.length>1){ out.ground=toRgb(arr[0][0]); }
     const tot=W*H;
-    for(let i=1;i<arr.length && out.pal.length<6;i++){ if(arr[i][1]<tot*0.012) break; const c2=toRgb(arr[i][0]); const g=out.ground; if(g && Math.abs(c2[0]-g[0])+Math.abs(c2[1]-g[1])+Math.abs(c2[2]-g[2])<60) continue; out.pal.push(c2); }
+    // Mid-greys (Stella's grey frames, Monet's haze) are dropped from the
+    // palette the partner's colours snap to: every mark snapped to them read
+    // as mud. Black and white stay (Pollock's drips, Kusama's dots).
+    const _greys=[];
+    for(let i=1;i<arr.length && out.pal.length<6;i++){ if(arr[i][1]<tot*0.012) break; const c2=toRgb(arr[i][0]); const g=out.ground; if(g && Math.abs(c2[0]-g[0])+Math.abs(c2[1]-g[1])+Math.abs(c2[2]-g[2])<60) continue;
+      const _mx=Math.max(c2[0],c2[1],c2[2]), _mn=Math.min(c2[0],c2[1],c2[2]); if(_mx-_mn<40 && _mx>40 && _mn<215){ _greys.push(c2); continue; } out.pal.push(c2); }
+    if(out.pal.length<3) out.pal.push(..._greys.slice(0,3-out.pal.length));
   }catch(_){ }
   if(_fuSampleCache.size>64) _fuSampleCache.clear();
   _fuSampleCache.set(key,out); return out;
@@ -19532,6 +19545,11 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // bury its partner under hundreds of them. A budget of evenly spaced slots
   // keeps ~2×budget of them per painting; every other chord paints the short
   // echo of the same idiom, so the music's density still shows.
+  // Each parent keeps its own EDGE and OPACITY: a soft hand (Rothko's veils)
+  // averaged into a crisp one (Pollock, Mondrian) used to blur BOTH into mud.
+  // Size, layout, hand-shake and contour stay the one fused hand.
+  const PDs=F.keys.map((k,i)=>_dnaOf(k,F.phs[i]));
+  const FPs=PDs.map(pd=>(pd.edge===F.edge && pd.alpha===F.alpha) ? F : Object.assign({},F,{edge:pd.edge,alpha:pd.alpha}));
   const _SPAN={stripes:['band',5],vstripes:['vband',5],gridline:['gridstub',6],wavyline:['wave',8],beam:['shortbeam',8]};
   const _spanUsed=new Set();
   for(let layer=0; layer<F.layers; layer++){
@@ -19547,7 +19565,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       // sparse hand (Matisse) must stay visible beside a dense one (Riley),
       // and a dense hand must leave the other room.
       const _pi=(((i/stride)|0)+layer)%F.keys.length;
-      const PD=_dnaOf(F.keys[_pi], F.phs[_pi]);
+      const PD=PDs[_pi], FP=FPs[_pi];
       if(R() > (0.3+0.5*PD.density)*(0.45+lf*0.55)*bigCap*crowd) continue;
       const E=(chords[i]&&typeof chords[i]._E==='number')?chords[i]._E:0.5;
       _setCurE(E);
@@ -19580,19 +19598,19 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
         const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         if(_FU_UNDER.test(kind)){
-          ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, F, R, ang, col2); ctx.restore();
+          ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, FP, R, ang, col2); ctx.restore();
         } else {
-          const vals=[]; _fuMark(_FU_NULL, kind, r, col, F, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
-          _defer.push([tx, ty, kind, r, col, ang, col2, vals]);
+          const vals=[]; _fuMark(_FU_NULL, kind, r, col, FP, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
+          _defer.push([tx, ty, kind, r, col, ang, col2, vals, FP]);
         }
       }
       }
     }
   }
   // the gestures, over the underpainting
-  for(const [tx,ty,kind,r,col,ang,col2,vals] of _defer){
+  for(const [tx,ty,kind,r,col,ang,col2,vals,FP] of _defer){
     let q=0; ctx.save(); ctx.translate(tx, ty);
-    _fuMark(ctx, kind, r, col, F, ()=> q<vals.length ? vals[q++] : 0.5, ang, col2);
+    _fuMark(ctx, kind, r, col, FP, ()=> q<vals.length ? vals[q++] : 0.5, ang, col2);
     ctx.restore();
   }
   // connecting line — inherited from the line-drawers (orthogonal if the hand
@@ -24615,6 +24633,14 @@ const SIG_ROLES={
   light:{bias:0.450,w:{reg:0.704,spread:0.503,leaps:0.402,major:0.302},painters:{spiral:-0.131,delaunay:-0.131,matisse:0.262}},
 };
 const SIG_ROLE_TAU=1.1;
+// Pairs that never share a Signature (the few left flat after the 209-pair
+// gallery review): the crossing came out as haze, or one hand buried the other. When a role's best
+// painter would clash with a member already chosen, the role takes its next
+// best. Order inside a pair does not matter.
+const SIG_BLACKLIST=new Set([
+  'rothko|matisse','bauhaus|raffel','bauhaus|rothko','mitchell|rothko','pollock|bloom','pollock|matisse','bloom|spiral',
+].map(s=>s.split('|').sort().join('|')));
+const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 
 // Audio recordings: what survives transcription is TONALITY — mode, key centre
 // and how busy the texture is. Mode × energy picks the leading role, the key
@@ -24688,10 +24714,14 @@ function computeSongSignature(events, opts){
       roles=[rsc[0][1], rsc[1][1]];
       for(let i=2;i<5;i++) if(rsc[0][0]-rsc[i][0] < SIG_ROLE_TAU) roles.push(rsc[i][1]);
     }
-    const keys = roles.map((r,ri)=>{
+    const keys = [];
+    roles.forEach((r,ri)=>{
       const P=SIG_ROLES[r].painters, names=Object.keys(P);
-      if(_audio) return names[((bestR*7)%12 + ri*3) % names.length];
-      return names.map(a=>{ const pr=SIG_PROFILES[a][1]; let s=P[a]; for(const k in pr) s+=pr[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
+      let ranked;
+      if(_audio){ const s0=((bestR*7)%12 + ri*3) % names.length; ranked=names.map((_,j)=>names[(s0+j)%names.length]); }
+      else ranked=names.map(a=>{ const pr=SIG_PROFILES[a][1]; let s=P[a]; for(const k in pr) s+=pr[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0]).map(x=>x[1]);
+      // the best painter of the role that does not clash with a member already in
+      keys.push(ranked.find(a=>!keys.some(b=>_sigClash(a,b))) || ranked[0]);
     });
     // palette by character — the same scoring, four palette profiles; never custom
     const mode = _audio

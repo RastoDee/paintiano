@@ -121,6 +121,14 @@ const SIG_ROLES={
   light:{bias:0.450,w:{reg:0.704,spread:0.503,leaps:0.402,major:0.302},painters:{spiral:-0.131,delaunay:-0.131,matisse:0.262}},
 };
 const SIG_ROLE_TAU=1.1;
+// Pairs that never share a Signature (the few left flat after the 209-pair
+// gallery review): the crossing came out as haze, or one hand buried the other. When a role's best
+// painter would clash with a member already chosen, the role takes its next
+// best. Order inside a pair does not matter.
+const SIG_BLACKLIST=new Set([
+  'rothko|matisse','bauhaus|raffel','bauhaus|rothko','mitchell|rothko','pollock|bloom','pollock|matisse','bloom|spiral',
+].map(s=>s.split('|').sort().join('|')));
+const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 
 // Audio recordings: what survives transcription is TONALITY — mode, key centre
 // and how busy the texture is. Mode × energy picks the leading role, the key
@@ -194,10 +202,14 @@ function computeSongSignature(events, opts){
       roles=[rsc[0][1], rsc[1][1]];
       for(let i=2;i<5;i++) if(rsc[0][0]-rsc[i][0] < SIG_ROLE_TAU) roles.push(rsc[i][1]);
     }
-    const keys = roles.map((r,ri)=>{
+    const keys = [];
+    roles.forEach((r,ri)=>{
       const P=SIG_ROLES[r].painters, names=Object.keys(P);
-      if(_audio) return names[((bestR*7)%12 + ri*3) % names.length];
-      return names.map(a=>{ const pr=SIG_PROFILES[a][1]; let s=P[a]; for(const k in pr) s+=pr[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
+      let ranked;
+      if(_audio){ const s0=((bestR*7)%12 + ri*3) % names.length; ranked=names.map((_,j)=>names[(s0+j)%names.length]); }
+      else ranked=names.map(a=>{ const pr=SIG_PROFILES[a][1]; let s=P[a]; for(const k in pr) s+=pr[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0]).map(x=>x[1]);
+      // the best painter of the role that does not clash with a member already in
+      keys.push(ranked.find(a=>!keys.some(b=>_sigClash(a,b))) || ranked[0]);
     });
     // palette by character — the same scoring, four palette profiles; never custom
     const mode = _audio
