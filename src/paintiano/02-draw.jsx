@@ -15476,9 +15476,9 @@ const ARTIST_VARIANTS = {
     {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},
     {ground:'#1b2a6b',mark:{beam:1},size:[.1,.3],edge:.3,alpha:.8,layout:{scatter:1},density:.3,lines:.6},
     {ground:'#2a2a3a',mark:{hatch:.7,facet:.3},size:[.06,.2],edge:0,alpha:1,layout:{grid:.7,scatter:.3},outline:.9,density:.8},
-    {ground:'#6b5a3a',mark:{poly:.6,tri:.4},size:[.05,.18],edge:0,alpha:.6,layout:{scatter:1},outline:.3,density:.7},
+    {ground:'#6b5a3a',mark:{facet:.7,tri:.3},size:[.05,.18],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.7,nosnap:true},   // analytic: shards with a contour, in the song's colours — the solo browns would be mud beside a partner
     {ground:'#8a8a3a',mark:{poly:.5,arch:.3,disc:.2},size:[.08,.3],edge:0,alpha:.85,layout:{grid:.6,scatter:.4},outline:.6,density:.4},
-    {ground:'#9a9a8a',mark:{poly:1},size:[.08,.3],edge:0,alpha:.5,layout:{scatter:1},outline:.2,density:.5},
+    {ground:'#9a9a8a',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // late analytic: opaque facets with a contour in the song's colours, not tan washes
   ],
   matisse: [
     {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},size:[.05,.18],layout:{grid:.8,scatter:.2},density:.6},
@@ -15493,11 +15493,11 @@ const ARTIST_VARIANTS = {
   ],
   pollock: [
     {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
-    {ground:'#d9c9a8',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.6,layers:1,lines:0},
+    {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},                 // Autumn Rhythm: skeins on raw canvas
     {ground:'#9a9aa0',mark:{drip:.6,splat:.4},size:[.006,.04],alpha:.85,layout:{flow:1},density:.6,layers:2},
-    {ground:'#e8dcc0',mark:{cloud:.4,splat:.3,dot:.3},size:[.01,.08],edge:.8,alpha:.5,layout:{scatter:1},density:.4,layers:2},
+    {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},   // Lavender Mist: a fine pale web
     {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
-    {ground:'#e8e0cc',mark:{bar:.7,splat:.3},size:[.01,.05],layout:{grid:1},density:.5,layers:1},
+    {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},        // Blue Poles: the web with leaning poles
     {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:.6,layers:2},
   ],
   bloom: [   // slot order = solo phases: field, Blue Balls, edge, Big Red, Disappearance, Hanging, Matrix, Mandala
@@ -15715,7 +15715,11 @@ function _fuVariantOf(k, slot, ph){
 function fuseDNA(keys, ph){
   const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
   if(!ks.length) return null;
-  const phs=ks.map((k,i)=>_fuVariantOf(k,i,ph));
+  // a curated Signature may pin every member's variant (globalThis.__PAINT_SIG_PHS, set by the app for the built-in pieces);
+  // it applies only to that exact ensemble, so the hash stays the rule for everything the user builds
+  const _ov=(typeof globalThis!=='undefined') ? globalThis.__PAINT_SIG_PHS : null;
+  const _ovOn=!!(_ov && _ov.keys && _ov.phs && _ov.keys.join()===ks.join());
+  const phs=ks.map((k,i)=> (_ovOn && _ov.phs[i]!=null) ? (_ov.phs[i]|0) : _fuVariantOf(k,i,ph));
   const ws=ks.map((k,i)=>[_dnaOf(k,phs[i]), 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
@@ -15948,10 +15952,10 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'chain': { // RafFel: a constellation — chords as stars, joined by one thin thread
         ctx.lineCap='round'; ctx.lineWidth=Math.max(1,rr*.045); let px=-rr,py=0; const pts=[[px,py]]; ctx.moveTo(px,py); for(let j=0;j<4;j++){ px+=rr*.5; py+=(R()-.5)*rr*.9; ctx.lineTo(px,py); pts.push([px,py]); } ctx.stroke();
         pts.forEach((p,j)=>{ ctx.beginPath(); ctx.fillStyle=(j%2)?col2:col; ctx.arc(p[0],p[1],rr*(.09+R()*.06),0,6.2832); ctx.fill(); }); break; }
-      case 'net': { // Kusama: a patch of Infinity Net — a cellular mesh of small open loops, brushed, never a row of rings
-        ctx.lineCap='round'; ctx.lineWidth=Math.max(1,rr*.055); const st=rr*.34, a0=R()*6.2832;
-        for(let gy=-3;gy<=3;gy++) for(let gx=-3;gx<=3;gx++){ const x=(gx+(gy%2?.5:0))*st, y=gy*st*.87; if(x*x+y*y>rr*rr*.85) continue;
-          const q=st*(.5+R()*.18), b0=a0+R()*6.2832; ctx.beginPath(); ctx.strokeStyle=(gx+gy)%3===0?col2:col; ctx.arc(x+(R()-.5)*st*.2, y+(R()-.5)*st*.2, q, b0, b0+4.4+R()*1.2); ctx.stroke(); }
+      case 'net': { // Kusama: a patch of Infinity Net — hundreds of tiny open loops in ONE colour, packed like cells, the patch edge ragged; never a honeycomb of rings
+        ctx.lineCap='round'; ctx.lineWidth=Math.max(0.8,rr*.028); ctx.strokeStyle=col; const st=rr*.15, a0=R()*6.2832, rag=0.72+R()*0.2;
+        for(let gy=-7;gy<=7;gy++) for(let gx=-7;gx<=7;gx++){ const x=(gx+(gy%2?.5:0))*st, y=gy*st*.87; const d2=(x*x+y*y)/(rr*rr); if(d2>rag+(R()-.5)*0.25) continue;
+          const q=st*(.42+R()*.2), b0=a0+R()*6.2832; ctx.beginPath(); ctx.arc(x+(R()-.5)*st*.3, y+(R()-.5)*st*.3, q, b0, b0+4.2+R()*1.6); ctx.stroke(); }
         ctx.beginPath(); break; }
       case 'hatch': { const k=5; const a0=R()*6.28; const pts=[]; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.7+R()*0.4); pts.push([Math.cos(a)*q,Math.sin(a)*q]); } const poly=()=>{ ctx.beginPath(); pts.forEach((p,j)=> j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); };
         poly(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1; const st=Math.max(3,rr*.14); for(let d=-rr*2;d<rr*2;d+=st){ ctx.beginPath(); ctx.moveTo(d,-rr*2); ctx.lineTo(d+rr*2,rr*2); ctx.stroke(); } ctx.restore(); poly(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.07); ctx.stroke(); break; }
@@ -16150,7 +16154,10 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='cloud') r=Math.min(r, S*0.13);    // a cloud, not a fog over everything
         else if(kind==='chain') r=Math.min(r, S*0.07);    // RafFel's constellation stays a small figure
         else if(kind==='net') r=Math.min(r, S*0.1);       // a patch of Kusama's net — fine mesh, never a hoop
-        else if(kind==='surface') r=Math.max(S*0.07, Math.min(r, S*0.13));   // Monet's patch of water: big enough to tile a surface, never a single swatch — whatever the partner's scale or the register
+        else if(kind==='drip'||kind==='splat') r=Math.min(r, S*0.03);   // Pollock's thrown line stays a line beside a big-shape partner (Delaunay, Rothko), never a fat ribbon
+        else if(kind==='surface'){ r=Math.max(S*0.07, Math.min(r, S*0.13));   // Monet's patch of water: big enough to tile a surface, never a single swatch — whatever the partner's scale or the register
+          // and the water is budgeted like the big shapes: ~1.1 canvases of full patches spread evenly over the piece; past the budget a chord adds a handful of touches, so a long piece never floods the partner
+          const B=Math.max(8, Math.min(60, Math.round(1.1/(Math.PI*1.3*0.95*(r/S)*(r/S))))); const sl='W'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)){ if(R()<0.5) continue; r*=0.4; } else _spanUsed.add(sl); }
         else if(!_FU_LINEAR.test(kind)){
           r=Math.min(r, S*0.21);   // no single shape swallows a third of the canvas (Delaunay discs, Bauhaus targets…)
           // and big shapes are budgeted by the area they cover (~1.6 canvases in all), spread
@@ -16162,7 +16169,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         }
         const [cr,cg,cb]=gc(m,v);
         // Monet's touches are the song's own colours, broken — never snapped to a sampled palette
-        const _pal=(F.keys[_pi]==='monet') ? null : (SM[_pi]&&SM[_pi].pal);
+        const _pal=(F.keys[_pi]==='monet' || PD.nosnap) ? null : (SM[_pi]&&SM[_pi].pal);   // a variant whose solo palette is a monochrome wash (Picasso's analytic browns) keeps the song's colours in a fusion
         const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
@@ -16170,7 +16177,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         if(_FU_UNDER.test(kind)){
           ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, FP, R, ang, col2); ctx.restore();
-          if(kind==='surface' && _monetIn && R()<0.3) _veil.push([tx, ty, r, col, col2, FP]);
+          if(kind==='surface' && _monetIn>=0 && r>S*0.065 && R()<0.35) _veil.push([tx, ty, r, col, col2, FP]);
         } else {
           const vals=[]; _fuMark(_FU_NULL, kind, r, col, FP, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
           _defer.push([tx, ty, kind, r, col, ang, col2, vals, FP, _pi]);

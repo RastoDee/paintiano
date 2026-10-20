@@ -133,8 +133,9 @@ const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 // sees. Their Signatures are hung by hand (still the same for everyone); every
 // other piece keeps the computed one. Roles must match SIG_ROLES membership.
 const SIG_CURATED = {
-  [SAMPLE_MIDI_NAME]:   {keys:['gold','bloom'],    roles:['ornament','field'], ph:1, mode:'harmony'},   // Liebestraum: Klimt's gold over soft blooms
-  [SAMPLE_MIDI_NAME_3]: {keys:['raffel','picasso'], roles:['field','gesture'],   ph:0, mode:'kontra'},    // Metamorphosis One: RafFel's dark arcs, Picasso's neon line
+  [SAMPLE_MIDI_NAME]:   {keys:['gold','bloom'],    roles:['ornament','field'], ph:1, phs:[1,1], mode:'harmony'},   // Liebestraum: Klimt's gold over soft blooms (phs pins Francis's Blue Balls under Klimt-1, whatever the variant hash says)
+  [SAMPLE_MIDI_NAME_2]: {keys:['pollock','kusama'], roles:['gesture','ornament'], ph:1, phs:[1,1], mode:'harmony'},   // Bumble-Bee: Pollock's Autumn Rhythm skeins as the flight, Kusama's dots as pollen
+  [SAMPLE_MIDI_NAME_3]: {keys:['raffel','picasso'], roles:['field','gesture'],   ph:0, phs:[0,5], mode:'kontra'},    // Metamorphosis One: RafFel's dark arcs, Picasso's late-analytic facets with a contour
 };
 
 // Audio recordings: what survives transcription is TONALITY — mode, key centre
@@ -6406,6 +6407,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
       if(_sg && title && SIG_CURATED[title]) Object.assign(_sg, SIG_CURATED[title]);
+      try{ globalThis.__PAINT_SIG_PHS = (_sg && _sg.phs && _sg.keys) ? {keys:_sg.keys.slice(), phs:_sg.phs.slice()} : null; }catch(_){}
       const _sgMusic = sigMusicNextRef.current; sigMusicNextRef.current=false;
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
@@ -10102,6 +10104,7 @@ Hard requirements:
   const startMicListening=useCallback(async()=>{
     // Incremental mode — no precomputed piece, paint with neutral DNA.
     try{ globalThis.__PAINT_MUSIC_DNA = null; }catch(_){}
+    try{ globalThis.__PAINT_SIG_PHS = null; }catch(_){}
     if(micListeningRef.current){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
@@ -10433,6 +10436,7 @@ Hard requirements:
   const startMicPainting=useCallback(async()=>{
     // Incremental mode — no precomputed piece, paint with neutral DNA.
     try{ globalThis.__PAINT_MUSIC_DNA = null; }catch(_){}
+    try{ globalThis.__PAINT_SIG_PHS = null; }catch(_){}
     if(micPaintingRef.current)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
