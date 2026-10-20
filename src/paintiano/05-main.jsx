@@ -138,6 +138,20 @@ const SIG_CURATED = {
   [SAMPLE_MIDI_NAME_3]: {keys:['raffel','picasso'], roles:['field','gesture'],   ph:0, phs:[0,5], mode:'kontra'},    // Metamorphosis One: RafFel's dark arcs, Picasso's late-analytic facets with a contour
 };
 
+// Image composers write a bar layer by layer — the whole left-hand figure, then
+// the right-hand line over the same beats — so their events are NOT in time
+// order, while the image player walks events in array order. Put them in time
+// order (stable, so notes written together keep their order) and mark them
+// _composed: the player then plays them on their written timeline (notes that
+// start together sound together) at their written length and strength. A scan
+// (every event carries its own _stepMs) is returned untouched.
+function _composerTimeline(evts){
+  if(!Array.isArray(evts) || !evts.length || evts.some(e=>e && e._stepMs)) return evts;
+  return evts.map((e,i)=>({e,i}))
+    .sort((a,b)=>((a.e.startMs||0)-(b.e.startMs||0)) || (a.i-b.i))
+    .map(({e})=>({...e, _composed:true}));
+}
+
 // Audio recordings: what survives transcription is TONALITY — mode, key centre
 // and how busy the texture is. Mode × energy picks the leading role, the key
 // centre (circle-of-fifths position) picks the second role and every painter;
@@ -6654,12 +6668,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // a fast content hash of the image data URL, persisted in localStorage so the
   // SAME picture replays for free — across sessions, and regardless of filename.
   // The built-in sample is a special always-present entry (see SAMPLE_IMGMOOD).
+  // The image's data URL is several MB; hash it once per image and reuse the
+  // result (MELODY toggles and AI Compose plays ask for the same image again).
+  const _imgHashMemoRef=useRef({u:null,h:0});
   const _imgMoodHash=useCallback((dataUrl)=>{
+    const s=String(dataUrl||'');
+    const memo=_imgHashMemoRef.current; if(memo.u===s) return memo.h;
     // FNV-1a style 32-bit hash over the string; cheap and good enough for keying.
-    const s=String(dataUrl||''); let h=0x811c9dc5>>>0;
+    let h=0x811c9dc5>>>0;
     for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; }
     // length-salted to further reduce accidental collisions
-    return (h^(s.length*2654435761))>>>0;
+    const out=(h^(s.length*2654435761))>>>0;
+    _imgHashMemoRef.current={u:s,h:out};
+    return out;
   },[]);
   const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v2';
   const _imgMoodCacheGet=useCallback((hash)=>{
@@ -7875,7 +7896,7 @@ Output ONLY valid JSON, no prose, no markdown:
       return null;
     }
     finally{ setMelodyBusy(false); }
-  },[melodyBusy,extractImageMaterial,lang,gateAI,t,originalImgUrl,_imgMoodHash,_melodyCacheKey,_melodyCacheGet,_melodyCacheSet]);
+  },[melodyBusy,extractImageMaterial,gateAI,t,originalImgUrl,_imgMoodHash,_melodyCacheKey,_melodyCacheGet,_melodyCacheSet]);
 
   // MELODY chip tap. Only meaningful before Play (the chip is disabled during
   // playback/anim). ON → fetch (or cache-replay) the sung line, store it, enable
@@ -8202,7 +8223,7 @@ Hard requirements:
             : COF;                                     // harmony & bw both read via COF
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
           const _crKeys0 = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
-          const evts=(_crKeys0.length>=2)
+          const evts=_composerTimeline((_crKeys0.length>=2)
             ? composeImageCallResponse(px,nc,nr,hueTable,startMode,imgDirRef.current,_crKeys0)
             : (imgComposerRef.current==='glass')
             ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
@@ -8228,7 +8249,7 @@ Hard requirements:
             ? composeImageEinaudi(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='hisaishi')
             ? composeImageHisaishi(px,nc,nr,hueTable,startMode,imgDirRef.current)
-            : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
+            : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current));
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
@@ -8363,7 +8384,8 @@ Hard requirements:
       ? composeImageHisaishi(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
-    const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
+    const _evtsT=_composerTimeline(_evtsLit);
+    const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsT,atmoMood,true):_evtsT;
     // MELODY stays a separate voice: the texture in chordsRef is never altered by it
     // (the sung line is computed and scheduled in parallel by startPlay), so the
     // events here are always just the texture.
@@ -8691,13 +8713,19 @@ Hard requirements:
       // image-liveliness curve, which broke a composer's rhythm into rushes and
       // drags and pulled the sung line out of step with it.)
       // _gapAt(src,k) = the wait after event k-1 before event k. Prefer the event's
-      // own _stepMs (image-scan native pace); otherwise the delta between the two
-      // events' startMs (composers, a See-music bake), clamped to a sane range; the
-      // 150ms literal is only the last resort when neither field exists.
+      // own _stepMs (image-scan native pace). A composer piece (time-ordered and
+      // _composed, see _composerTimeline) plays its written timeline exactly —
+      // notes written together sound together (gap 0), a written pause up to 4 s
+      // is kept. Other timed events use the startMs delta clamped to 40..2000ms;
+      // the 150ms literal is only the last resort when neither field exists.
       const _gapAt=(src,k)=>{
         const p=src[k-1], c=src[k];
         if(p && p._stepMs) return p._stepMs;
-        if(p && c && typeof p.startMs==='number' && typeof c.startMs==='number' && c.startMs>p.startMs) return Math.max(40, Math.min(2000, c.startMs - p.startMs));
+        if(p && c && typeof p.startMs==='number' && typeof c.startMs==='number'){
+          const d=c.startMs - p.startMs;
+          if(c._composed && d>=0) return Math.min(4000, d);
+          if(d>0) return Math.max(40, Math.min(2000, d));
+        }
         return 150;
       };
       const step=()=>{
@@ -8728,9 +8756,13 @@ Hard requirements:
         if(liveChords[i] && liveChords[i]._playable!==false){
           // Unmerged: 3× step interval → notes ring into next 2 chords for legato blend
           // Merged run: exact run length (held note up to whole)
-          const durMul=liveChords[i]._runLen||3;
-          // Soften velocity for unmerged (overlapping notes can pile up, want gentle blend)
-          const velScale=liveChords[i]._runLen?1:0.75;
+          // Composer piece: the note's written length — the composer already wrote
+          // the overlap it wants.
+          const _cmp=!!liveChords[i]._composed;
+          const durMul=liveChords[i]._runLen||(_cmp?1:3);
+          // Soften velocity for unmerged (overlapping notes can pile up, want gentle blend);
+          // a composer piece keeps its written dynamics.
+          const velScale=(liveChords[i]._runLen||_cmp)?1:0.75;
           try{
             const notes=liveChords[i].n;
             // PIANO TECHNIQUE: TREMOLO. A chord flagged _tremolo (a long merged
@@ -15154,7 +15186,7 @@ Hard requirements:
                 padding:'0 4px',
               }}>
                 <span style={{color:'#dcb4ff',fontSize:(.72*effScale)+'rem',marginRight:4}}>✦</span>
-                {t('tierIntro')||'AI features (the ✦ items above + AI Compose & Atmosphere inside Image) use credits on Free.'}
+                {t('tierIntro')||'AI features (the ✦ items above + AI Compose, Atmosphere and Melody inside Image): one free try per mode on Free and Pro, unlimited on Pro AI.'}
               </div>
               {(()=>{
                 const GOLD_BG='rgba(201,168,76,.08)';
@@ -15202,7 +15234,7 @@ Hard requirements:
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
                   [t('tierRowWmark')  ||'Watermark',       yes,     no,         no,    null],
-                  [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'3 credits'),  (t('tier3Credits')||'3 credits'),  inf, '✦'],
+                  [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'1 try per mode'),  (t('tier3Credits')||'1 try per mode'),  inf, '✦'],
                 ];
                 return (
                   <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'inherit'}}>
@@ -15237,7 +15269,7 @@ Hard requirements:
                 );
               })()}
               <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em',lineHeight:1.45}}>
-                {t('tierAiCreditsNote')||'AI text & image compose = 1 credit · Atmosphere = 0.5 credit'}
+                {t('tierAiCreditsNote')||'One free try per AI mode: text mood · Mood-from-image · AI Compose · Atmosphere + Melody share two.'}
                 <br/>
                 {t('tierFootnote')||'One-time payment · Lifetime access'}
               </div>

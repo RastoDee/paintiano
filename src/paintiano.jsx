@@ -18927,7 +18927,7 @@ const I18N = {
     moodTypeToSearch:'Type to search any of 95 moods…',
     // Tier comparison table in the ? help popup
     tierOverviewTitle:'Free · Pro · Pro AI',
-    tierIntro:'AI features (the ✦ items above + AI Compose & Atmosphere inside Image) use credits on Free.',
+    tierIntro:'AI features (the ✦ items above + AI Compose, Atmosphere and Melody inside Image): one free try per mode on Free and Pro, unlimited on Pro AI.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -18948,18 +18948,18 @@ const I18N = {
     tierRowDpi:'300 DPI export',
     tierRowWmark:'Watermark',
     tierRowAi:'AI features',
-    tier3Credits:'3 credits',
-    tierAiCreditsNote:'AI text & image compose = 1 credit · Atmosphere = 0.5 credit',
+    tier3Credits:'1 try per mode',
+    tierAiCreditsNote:'One free try per AI mode: text mood · Mood-from-image · AI Compose · Atmosphere + Melody share two.',
     proAboutTitle3:'Paintiano Pro · Pro AI',
     proAboutLead3:'Two ways to unlock — pick what fits how you create.',
     proAboutCompareTitle3:'Free · Pro · Pro AI',
     proAboutHowFreeTitle:'How Free tier behaves',
     proAboutHowFree1:'Nine artists are unlocked from day one. Each unlocked artist has a Pro partner — tap them to see who it is, but only Pro paints with that partner.',
     proAboutHowFree2:'Custom palette shows the default 12 colours; editing your own colours is Pro.',
-    proAboutHowFree3:'AI features (✦) work for 3 trial credits, then ask you to upgrade to Pro AI for unlimited use. Exports always carry a watermark on Free.',
+    proAboutHowFree3:'Each AI feature (✦) has 1 free try — text mood, Mood-from-image, AI Compose; Atmosphere + Melody share two — then Pro AI unlocks unlimited use. Exports always carry a watermark on Free.',
     proAboutHonestTitle3:'Honest about Pro and Pro AI',
     proAboutHonest3_1:'Both tiers are one-time payments. No subscription, ever. The price you pay today stays valid forever.',
-    proAboutHonest3_2:'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI calls still come from the same 3-credit trial pool as Free.',
+    proAboutHonest3_2:'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI features keep the same one free try per mode as Free.',
     proAboutHonest3_3:'Pro AI is for people who actually use the ✦ AI features regularly. If you mostly play your own music or load files, plain Pro is the better fit.',
     proAboutHonest3_4:'No cloud storage. Paintings save to your own device. Your license key works on up to 5 devices, one at a time.',
     proTierPriceShort:'€9.99',
@@ -19088,7 +19088,7 @@ const I18N = {
     moodPickFromList:'Wähle eine Stimmung aus der Liste — eigene Stimmungen sind Pro KI',
     moodTypeToSearch:'Tippe, um aus 95 Stimmungen zu suchen…',
     tierOverviewTitle:'Free · Pro · Pro KI',
-    tierIntro:'KI-Funktionen (die ✦ Elemente oben + KI-Komposition & Atmosphäre in Bild) verbrauchen auf Free Credits.',
+    tierIntro:'KI-Funktionen (die ✦ Elemente oben + KI komponieren, Atmosphäre und Melodie in Bild): auf Free und Pro 1 Gratisversuch je Modus, mit Pro KI unbegrenzt.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro KI',
@@ -19109,18 +19109,18 @@ const I18N = {
     tierRowDpi:'300-DPI-Export',
     tierRowWmark:'Wasserzeichen',
     tierRowAi:'KI-Funktionen',
-    tier3Credits:'3 Credits',
-    tierAiCreditsNote:'KI Text & Bild = 1 Credit · Atmosphäre = 0,5 Credit',
+    tier3Credits:'1 Versuch je Modus',
+    tierAiCreditsNote:'1 Gratisversuch je KI-Modus: Text-Stimmung · Stimmung aus Bild · KI komponieren · Atmosphäre + Melodie teilen sich zwei.',
     proAboutTitle3:'Paintiano Pro · Pro KI',
     proAboutLead3:'Zwei Wege zum Freischalten — wähle, was zu deiner Arbeitsweise passt.',
     proAboutCompareTitle3:'Free · Pro · Pro KI',
     proAboutHowFreeTitle:'So funktioniert Free',
     proAboutHowFree1:'Neun Künstler sind von Anfang an freigeschaltet. Jeder hat einen Pro-Partner — tippe drauf, um zu sehen welcher, aber nur Pro malt mit diesem Partner.',
     proAboutHowFree2:'Eigene Palette zeigt die Standard-12-Farben; eigene Farben festlegen ist Pro.',
-    proAboutHowFree3:'KI-Funktionen (✦) gehen für 3 Test-Credits, dann brauchst du Pro KI für unbegrenzt. Exporte tragen auf Free immer ein Wasserzeichen.',
+    proAboutHowFree3:'Jede KI-Funktion (✦) hat 1 Gratisversuch — Text-Stimmung, Stimmung aus Bild, KI komponieren; Atmosphäre + Melodie teilen sich zwei —, danach schaltet Pro KI unbegrenzte Nutzung frei. Exporte tragen auf Free immer ein Wasserzeichen.',
     proAboutHonestTitle3:'Ehrlich zu Pro und Pro KI',
     proAboutHonest3_1:'Beide Tarife sind Einmalzahlungen. Kein Abo, nie. Der Preis heute gilt für immer.',
-    proAboutHonest3_2:'Normales Pro entfernt das Wasserzeichen und schaltet alle Künstler, Mal-Typen und die eigene Palette frei — KI-Aufrufe kommen aber aus dem gleichen 3-Credit-Test-Pool wie bei Free.',
+    proAboutHonest3_2:'Normales Pro entfernt das Wasserzeichen und schaltet alle Künstler, Mal-Typen und die eigene Palette frei — KI-Funktionen behalten aber denselben 1 Gratisversuch je Modus wie Free.',
     proAboutHonest3_3:'Pro KI ist für Leute, die ✦ KI-Funktionen wirklich regelmäßig nutzen. Wer hauptsächlich eigene Musik spielt oder Dateien lädt, fährt mit Pro besser.',
     proAboutHonest3_4:'Kein Cloud-Speicher. Bilder landen auf deinem Gerät. Dein Lizenzschlüssel funktioniert auf bis zu 5 Geräten, eines zur Zeit.',
     proTierPriceShort:'9,99 €',
@@ -19249,7 +19249,7 @@ const I18N = {
     moodPickFromList:'Choisissez dans la liste — les ambiances personnalisées sont Pro IA',
     moodTypeToSearch:'Tapez pour chercher parmi 95 ambiances…',
     tierOverviewTitle:'Free · Pro · Pro IA',
-    tierIntro:'Las funciones IA (los elementos ✦ arriba + IA Compose y Atmósfera en Imagen) usan créditos en Free.',
+    tierIntro:'Fonctions IA (les ✦ ci-dessus + composer IA, Atmosphère et Mélodie dans Image) : 1 essai gratuit par mode sur Free et Pro, illimité avec Pro IA.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro IA',
@@ -19270,18 +19270,18 @@ const I18N = {
     tierRowDpi:'Export 300 DPI',
     tierRowWmark:'Filigrane',
     tierRowAi:'Fonctions IA',
-    tier3Credits:'3 crédits',
-    tierAiCreditsNote:'IA texte & image = 1 crédit · Atmosphère = 0,5 crédit',
+    tier3Credits:'1 essai par mode',
+    tierAiCreditsNote:'1 essai gratuit par mode IA : ambiance texte · ambiance image · composer IA · Atmosphère + Mélodie en partagent deux.',
     proAboutTitle3:'Paintiano Pro · Pro IA',
     proAboutLead3:'Deux façons de débloquer — choisissez selon votre usage.',
     proAboutCompareTitle3:'Free · Pro · Pro IA',
     proAboutHowFreeTitle:'Comment fonctionne Free',
     proAboutHowFree1:'Neuf artistes sont débloqués dès le départ. Chacun a un partenaire Pro — tapez pour voir qui, mais seul Pro peint avec ce partenaire.',
     proAboutHowFree2:'La palette personnalisée affiche les 12 couleurs par défaut ; modifier vos couleurs est Pro.',
-    proAboutHowFree3:'Les fonctions IA (✦) marchent 3 crédits d\'essai, puis demandent Pro IA pour l\'illimité. Les exports portent toujours un filigrane sur Free.',
+    proAboutHowFree3:'Chaque fonction IA (✦) a 1 essai gratuit — ambiance texte, ambiance image, composer IA ; Atmosphère + Mélodie en partagent deux — puis Pro IA débloque un usage illimité. Les exports portent toujours un filigrane sur Free.',
     proAboutHonestTitle3:'Honnête sur Pro et Pro IA',
     proAboutHonest3_1:'Les deux tarifs sont des paiements uniques. Aucun abonnement, jamais. Le prix d\'aujourd\'hui reste valable à vie.',
-    proAboutHonest3_2:'Pro retire le filigrane et débloque tous les artistes, types de peinture et la palette perso — mais les appels IA viennent du même pool de 3 crédits d\'essai que Free.',
+    proAboutHonest3_2:'Pro retire le filigrane et débloque tous les artistes, types de peinture et la palette perso — mais les fonctions IA gardent le même essai gratuit par mode que Free.',
     proAboutHonest3_3:'Pro IA est pour ceux qui utilisent vraiment les fonctions ✦ IA régulièrement. Si vous jouez surtout votre musique ou chargez des fichiers, Pro suffit.',
     proAboutHonest3_4:'Pas de stockage cloud. Les peintures restent sur votre appareil. Votre clé fonctionne sur 5 appareils maximum, un à la fois.',
     proTierPriceShort:'9,99 €',
@@ -19410,7 +19410,7 @@ const I18N = {
     moodPickFromList:'Elige de la lista — los moods personalizados son Pro IA',
     moodTypeToSearch:'Escribe para buscar entre 95 moods…',
     tierOverviewTitle:'Free · Pro · Pro IA',
-    tierIntro:'AI funkcie (✦ položky vyššie + AI Compose a Atmosféra v Image) používajú kredity na Free.',
+    tierIntro:'Funciones IA (los ✦ de arriba + componer IA, Atmósfera y Melodía en Imagen): 1 prueba gratis por modo en Free y Pro, ilimitado con Pro IA.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro IA',
@@ -19431,18 +19431,18 @@ const I18N = {
     tierRowDpi:'Export 300 DPI',
     tierRowWmark:'Marca de agua',
     tierRowAi:'Funciones IA',
-    tier3Credits:'3 créditos',
-    tierAiCreditsNote:'IA texto e imagen = 1 crédito · Atmósfera = 0,5 crédito',
+    tier3Credits:'1 prueba por modo',
+    tierAiCreditsNote:'1 prueba gratis por modo IA: estado de texto · estado imagen · componer IA · Atmósfera + Melodía comparten dos.',
     proAboutTitle3:'Paintiano Pro · Pro IA',
     proAboutLead3:'Dos formas de desbloquear — elige según cómo creas.',
     proAboutCompareTitle3:'Free · Pro · Pro IA',
     proAboutHowFreeTitle:'Cómo funciona Free',
     proAboutHowFree1:'Nueve artistas están desbloqueados desde el primer día. Cada uno tiene un compañero Pro — pulsa para ver cuál, pero solo Pro pinta con ese compañero.',
     proAboutHowFree2:'La paleta personalizada muestra los 12 colores por defecto; editar tus colores es Pro.',
-    proAboutHowFree3:'Las funciones IA (✦) duran 3 créditos de prueba, luego piden Pro IA para ilimitado. Las exportaciones siempre llevan marca de agua en Free.',
+    proAboutHowFree3:'Cada función IA (✦) tiene 1 prueba gratis — estado de texto, estado imagen, componer IA; Atmósfera + Melodía comparten dos — y luego Pro IA desbloquea el uso ilimitado. Las exportaciones siempre llevan marca de agua en Free.',
     proAboutHonestTitle3:'Honesto sobre Pro y Pro IA',
     proAboutHonest3_1:'Ambos planes son pagos únicos. Sin suscripción, nunca. El precio de hoy se mantiene de por vida.',
-    proAboutHonest3_2:'Pro normal quita la marca de agua y desbloquea todos los artistas, tipos de pintura y paleta personalizada — pero las llamadas IA vienen del mismo pool de 3 créditos que Free.',
+    proAboutHonest3_2:'Pro normal quita la marca de agua y desbloquea todos los artistas, tipos de pintura y paleta personalizada — pero las funciones IA mantienen la misma prueba gratis por modo que Free.',
     proAboutHonest3_3:'Pro IA es para quien usa las funciones ✦ IA con frecuencia. Si tocas tu música o cargas archivos, Pro es mejor opción.',
     proAboutHonest3_4:'Sin almacenamiento en la nube. Las pinturas se guardan en tu dispositivo. Tu clave funciona en hasta 5 dispositivos, uno a la vez.',
     proTierPriceShort:'9,99 €',
@@ -19570,7 +19570,7 @@ const I18N = {
     moodPickFromList:'Vyber zo zoznamu — vlastné moody sú Pro AI',
     moodTypeToSearch:'Napíš a vyhľadaj z 95 moodov…',
     tierOverviewTitle:'Free · Pro · Pro AI',
-    tierIntro:'AI funkcie (✦ položky vyššie + AI Compose a Atmosféra v Image) používajú kredity na Free.',
+    tierIntro:'AI funkcie (✦ položky vyššie + AI skladba, Atmosféra a Melódia v Obraze): na Free aj Pro 1 skúška zadarmo na každý mód, s Pro AI bez obmedzenia.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -19591,18 +19591,18 @@ const I18N = {
     tierRowDpi:'300 DPI export',
     tierRowWmark:'Vodoznak',
     tierRowAi:'AI funkcie',
-    tier3Credits:'3 kredity',
-    tierAiCreditsNote:'AI text a obrázok = 1 kredit · Atmosféra = 0,5 kreditu',
+    tier3Credits:'1 skúška na mód',
+    tierAiCreditsNote:'1 skúška zadarmo na každý AI mód: textová nálada · Nálada z obrazu · AI skladba · Atmosféra + Melódia zdieľajú 2.',
     proAboutTitle3:'Paintiano Pro · Pro AI',
     proAboutLead3:'Dva spôsoby ako odomknúť — vyber, ktorý ti sedí.',
     proAboutCompareTitle3:'Free · Pro · Pro AI',
     proAboutHowFreeTitle:'Ako funguje Free',
     proAboutHowFree1:'Deväť umelcov je odomknutých od začiatku. Každý má Pro partnera — kliknutím zistíš ktorého, ale len Pro maľuje s tým partnerom.',
     proAboutHowFree2:'Vlastná paleta ukazuje predvolených 12 farieb; editácia vlastných farieb je Pro.',
-    proAboutHowFree3:'AI funkcie (✦) fungujú za 3 trialové kredity, potom potrebujú Pro AI pre neobmedzené použitie. Exporty na Free vždy nesú vodoznak.',
+    proAboutHowFree3:'Každá AI funkcia (✦) má 1 skúšku zadarmo — textová nálada, Nálada z obrazu, AI skladba; Atmosféra + Melódia zdieľajú 2 — potom Pro AI odomkne neobmedzené použitie. Exporty na Free vždy nesú vodoznak.',
     proAboutHonestTitle3:'Úprimne o Pro a Pro AI',
     proAboutHonest3_1:'Oba tiery sú jednorázové platby. Žiadne predplatné, nikdy. Cena ktorú platíš dnes platí navždy.',
-    proAboutHonest3_2:'Obyčajné Pro odstráni vodoznak a odomkne všetkých umelcov, typy maľby a vlastnú paletu — ale AI volania ide stále zo spoločného 3-kreditového triala ako pri Free.',
+    proAboutHonest3_2:'Obyčajné Pro odstráni vodoznak a odomkne všetkých umelcov, typy maľby a vlastnú paletu — AI funkcie však majú rovnako ako Free 1 skúšku zadarmo na každý mód.',
     proAboutHonest3_3:'Pro AI je pre ľudí, ktorí naozaj pravidelne používajú ✦ AI funkcie. Ak väčšinou hráš svoju hudbu alebo nahrávaš súbory, obyčajné Pro je lepšia voľba.',
     proAboutHonest3_4:'Žiadne cloud úložisko. Maľby sa ukladajú na tvoje zariadenie. Tvoj licenčný kľúč funguje na max 5 zariadeniach, jedno naraz.',
     proTierPriceShort:'9,99 €',
@@ -19730,7 +19730,7 @@ const I18N = {
     moodPickFromList:'从列表中选择 — 自定义情绪属于 Pro AI',
     moodTypeToSearch:'输入以搜索 95 种情绪…',
     tierOverviewTitle:'Free · Pro · Pro AI',
-    tierIntro:'AI 功能（上方 ✦ 項目 + Image 中的 AI Compose 與氛圍）在 Free 中使用額度。',
+    tierIntro:'AI 功能（上方 ✦ 项目 + 图像中的 AI 作曲、氛围与旋律）：Free 和 Pro 每种模式可免费试用 1 次，Pro AI 无限使用。',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -19751,18 +19751,18 @@ const I18N = {
     tierRowDpi:'300 DPI 导出',
     tierRowWmark:'水印',
     tierRowAi:'AI 功能',
-    tier3Credits:'3 个额度',
-    tierAiCreditsNote:'AI 文字与图片 = 1 个额度 · 氛围 = 0.5 个额度',
+    tier3Credits:'每种模式 1 次',
+    tierAiCreditsNote:'每个 AI 模式 1 次免费试用：文字情绪 · 从图像取情绪 · AI 作曲 · 氛围 + 旋律 共享 2 次。',
     proAboutTitle3:'Paintiano Pro · Pro AI',
     proAboutLead3:'两种解锁方式 — 选择适合您创作方式的。',
     proAboutCompareTitle3:'Free · Pro · Pro AI',
     proAboutHowFreeTitle:'Free 如何运作',
     proAboutHowFree1:'九位艺术家从第一天起已解锁。每位都有一位 Pro 伙伴 — 点击查看是谁,但只有 Pro 与该伙伴一起作画。',
     proAboutHowFree2:'自定义调色板显示默认 12 种颜色;编辑您自己的颜色属于 Pro。',
-    proAboutHowFree3:'AI 功能 (✦) 提供 3 次试用额度,之后需要升级 Pro AI 享无限。Free 导出始终带有水印。',
+    proAboutHowFree3:'每个 AI 功能 (✦) 有 1 次免费试用——文字情绪、从图像取情绪、AI 作曲；氛围 + 旋律 共享 2 次——之后升级 Pro AI 即可无限使用。Free 导出始终带有水印。',
     proAboutHonestTitle3:'关于 Pro 和 Pro AI 的实话',
     proAboutHonest3_1:'两个级别都是一次性付款。永无订阅。今天的价格永久有效。',
-    proAboutHonest3_2:'普通 Pro 移除水印并解锁所有艺术家、画法和自定义调色板 — 但 AI 调用仍来自与 Free 相同的 3 个试用额度池。',
+    proAboutHonest3_2:'普通 Pro 移除水印并解锁所有艺术家、画法和自定义调色板 — 但 AI 功能与 Free 相同，每种模式 1 次免费试用。',
     proAboutHonest3_3:'Pro AI 适合真正经常使用 ✦ AI 功能的人。如果您主要演奏自己的音乐或加载文件,普通 Pro 是更好的选择。',
     proAboutHonest3_4:'无云存储。绘画保存到您自己的设备。许可证密钥最多可在 5 台设备上使用,一次一台。',
     proTierPriceShort:'€9.99',
@@ -19884,7 +19884,7 @@ const I18N = {
     moodPickFromList:'從列表中選擇 — 自訂情緒屬於 Pro AI',
     moodTypeToSearch:'輸入以搜尋 95 種情緒…',
     tierOverviewTitle:'Free · Pro · Pro AI',
-    tierIntro:'Recursos de IA (os ✦ acima + IA Compose e Atmosfera em Imagem) usam créditos no Free.',
+    tierIntro:'AI 功能（上方 ✦ 項目 + 圖像中的 AI 作曲、氛圍與旋律）：Free 和 Pro 每種模式可免費試用 1 次，Pro AI 無限使用。',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -19905,18 +19905,18 @@ const I18N = {
     tierRowDpi:'300 DPI 匯出',
     tierRowWmark:'浮水印',
     tierRowAi:'AI 功能',
-    tier3Credits:'3 個額度',
-    tierAiCreditsNote:'AI 文字與圖片 = 1 個額度 · 氛圍 = 0.5 個額度',
+    tier3Credits:'每種模式 1 次',
+    tierAiCreditsNote:'每個 AI 模式 1 次免費試用：文字情緒 · 從圖像取情緒 · AI 作曲 · 氛圍 + 旋律 共享 2 次。',
     proAboutTitle3:'Paintiano Pro · Pro AI',
     proAboutLead3:'兩種解鎖方式 — 選擇適合您創作方式的。',
     proAboutCompareTitle3:'Free · Pro · Pro AI',
     proAboutHowFreeTitle:'Free 如何運作',
     proAboutHowFree1:'九位藝術家從第一天起已解鎖。每位都有一位 Pro 夥伴 — 點擊查看是誰，但只有 Pro 與該夥伴一起作畫。',
     proAboutHowFree2:'自訂調色盤顯示預設 12 種顏色；編輯您自己的顏色屬於 Pro。',
-    proAboutHowFree3:'AI 功能 (✦) 提供 3 次試用額度，之後需要升級 Pro AI 享無限。Free 匯出始終帶有浮水印。',
+    proAboutHowFree3:'每個 AI 功能 (✦) 有 1 次免費試用——文字情緒、從圖像取情緒、AI 作曲；氛圍 + 旋律 共享 2 次——之後升級 Pro AI 即可無限使用。Free 匯出始終帶有浮水印。',
     proAboutHonestTitle3:'關於 Pro 和 Pro AI 的實話',
     proAboutHonest3_1:'兩個級別都是一次性付款。永無訂閱。今天的價格永久有效。',
-    proAboutHonest3_2:'普通 Pro 移除浮水印並解鎖所有藝術家、畫法和自訂調色盤 — 但 AI 呼叫仍來自與 Free 相同的 3 個試用額度池。',
+    proAboutHonest3_2:'普通 Pro 移除浮水印並解鎖所有藝術家、畫法和自訂調色盤 — 但 AI 功能與 Free 相同，每種模式 1 次免費試用。',
     proAboutHonest3_3:'Pro AI 適合真正經常使用 ✦ AI 功能的人。如果您主要演奏自己的音樂或載入檔案，普通 Pro 是更好的選擇。',
     proAboutHonest3_4:'無雲端儲存。繪畫儲存到您自己的裝置。授權金鑰最多可在 5 台裝置上使用，一次一台。',
     proTierPriceShort:'€9.99',
@@ -20049,7 +20049,7 @@ const I18N = {
     moodPickFromList:'Escolha da lista — moods personalizados são Pro IA',
     moodTypeToSearch:'Digite para buscar entre 95 moods…',
     tierOverviewTitle:'Free · Pro · Pro IA',
-    tierIntro:'Recursos de IA (os ✦ acima + IA Compose e Atmosfera em Imagem) usam créditos no Free.',
+    tierIntro:'Recursos de IA (os ✦ acima + compor IA, Atmosfera e Melodia em Imagem): 1 tentativa grátis por modo no Free e no Pro, ilimitado com Pro IA.',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro IA',
@@ -20070,18 +20070,18 @@ const I18N = {
     tierRowDpi:'Export 300 DPI',
     tierRowWmark:'Marca d\'água',
     tierRowAi:'Recursos de IA',
-    tier3Credits:'3 créditos',
-    tierAiCreditsNote:'IA texto e imagem = 1 crédito · Atmosfera = 0,5 crédito',
+    tier3Credits:'1 tentativa por modo',
+    tierAiCreditsNote:'1 tentativa grátis por modo IA: estado de texto · humor da imagem · compor IA · Atmosfera + Melodia partilham duas.',
     proAboutTitle3:'Paintiano Pro · Pro IA',
     proAboutLead3:'Dois caminhos para desbloquear — escolha o que combina com você.',
     proAboutCompareTitle3:'Free · Pro · Pro IA',
     proAboutHowFreeTitle:'Como funciona Free',
     proAboutHowFree1:'Nove artistas estão desbloqueados desde o primeiro dia. Cada um tem um parceiro Pro — toque para ver qual, mas só Pro pinta com esse parceiro.',
     proAboutHowFree2:'Paleta personalizada mostra as 12 cores padrão; editar suas próprias cores é Pro.',
-    proAboutHowFree3:'Recursos IA (✦) duram 3 créditos de teste, depois pedem Pro IA para uso ilimitado. Exportações sempre levam marca d\'água no Free.',
+    proAboutHowFree3:'Cada recurso de IA (✦) tem 1 tentativa grátis — estado de texto, humor da imagem, compor IA; Atmosfera + Melodia partilham duas — depois o Pro IA desbloqueia uso ilimitado. As exportações levam sempre marca d’água no Free.',
     proAboutHonestTitle3:'Honesto sobre Pro e Pro IA',
     proAboutHonest3_1:'Ambos os planos são pagamentos únicos. Sem assinatura, nunca. O preço de hoje permanece válido para sempre.',
-    proAboutHonest3_2:'Pro normal remove a marca d\'água e desbloqueia todos os artistas, tipos de pintura e paleta personalizada — mas chamadas IA vêm do mesmo pool de 3 créditos do Free.',
+    proAboutHonest3_2:'Pro normal remove a marca d’água e desbloqueia todos os artistas, tipos de pintura e a paleta personalizada — mas os recursos de IA mantêm a mesma tentativa grátis por modo que o Free.',
     proAboutHonest3_3:'Pro IA é para quem realmente usa os recursos ✦ IA regularmente. Se você toca sua própria música ou carrega arquivos, Pro é a melhor escolha.',
     proAboutHonest3_4:'Sem armazenamento na nuvem. Pinturas são salvas no seu dispositivo. Sua chave funciona em até 5 dispositivos, um por vez.',
     proTierPriceShort:'€9.99',
@@ -20209,7 +20209,7 @@ const I18N = {
     moodPickFromList:'リストからムードを選ぶ — カスタム mood は Pro AI',
     moodTypeToSearch:'入力して 95 個のムードを検索…',
     tierOverviewTitle:'Free · Pro · Pro AI',
-    tierIntro:'AI 機能(上記 ✦ アイテム + Image 内の AI Compose と Atmosphere)は Free でクレジットを使います。',
+    tierIntro:'AI 機能(上記 ✦ アイテム + 画像内の AI 作曲・雰囲気・メロディ):Free と Pro はモードごとに 1 回の無料お試し、Pro AI は無制限。',
     tierFreeName:'Free',
     tierProName:'Pro',
     tierProAiName:'Pro AI',
@@ -20230,18 +20230,18 @@ const I18N = {
     tierRowDpi:'300 DPI エクスポート',
     tierRowWmark:'ウォーターマーク',
     tierRowAi:'AI 機能',
-    tier3Credits:'3 クレジット',
-    tierAiCreditsNote:'AI テキスト & 画像 compose = 各 1 クレジット · Atmosphere = 0.5 クレジット',
+    tier3Credits:'モードごとに 1 回',
+    tierAiCreditsNote:'AI モードごとに 1 回の無料お試し:テキスト気分 · 画像からムード · AI 作曲 · 雰囲気 + メロディは 2 回を共有。',
     proAboutTitle3:'Paintiano Pro · Pro AI',
     proAboutLead3:'2 つの解放方法 — 創作スタイルに合うものを選ぶ。',
     proAboutCompareTitle3:'Free · Pro · Pro AI',
     proAboutHowFreeTitle:'Free ティアの動作',
     proAboutHowFree1:'9 人のアーティストが初日から解放。各人に Pro パートナーがいる — タップして見られるが、Pro だけがそのパートナーで描ける。',
     proAboutHowFree2:'Custom パレットはデフォルトの 12 色を表示;自分の色を編集するのは Pro。',
-    proAboutHowFree3:'AI 機能(✦)は 3 回の試用クレジット、その後 Pro AI への無制限アップグレードを促す。Free のエクスポートには常にウォーターマーク。',
+    proAboutHowFree3:'各 AI 機能(✦)には 1 回の無料お試し——テキスト気分、画像からムード、AI 作曲;雰囲気 + メロディは 2 回を共有——その後 Pro AI で無制限に。Free のエクスポートには常にウォーターマーク。',
     proAboutHonestTitle3:'Pro と Pro AI について正直に',
     proAboutHonest3_1:'両方とも一回払い。サブスクは絶対なし。今日払う価格は永久に有効。',
-    proAboutHonest3_2:'プレーン Pro はウォーターマークを取り、全アーティスト・描き方・カスタムパレットを解放 — ただし AI 呼び出しは Free と同じ 3 クレジット試用プールから。',
+    proAboutHonest3_2:'プレーン Pro はウォーターマークを取り、全アーティスト・描き方・カスタムパレットを解放 — ただし AI 機能は Free と同じく、モードごとに 1 回の無料お試し。',
     proAboutHonest3_3:'Pro AI は ✦ AI 機能を日常的に使う人のため。自分の音楽を弾いたりファイルを読み込んだりすることが多いなら、プレーン Pro が合う。',
     proAboutHonest3_4:'クラウドストレージなし。絵は自分のデバイスに保存。ライセンスキーは最大 5 台で動作、同時 1 台。',
     proTierPriceShort:'€9.99',
@@ -23182,7 +23182,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               const allWord = tr('tierAll', 'all');
               const inf = tr('tierUnlimited', '∞');
               const ronly = tr('tierReadOnly', 'preview only');
-              const credits3 = tr('tier3Credits', '3 credits');
+              const credits3 = tr('tier3Credits', '1 try per mode');
               const rows = [
                 [tr('tierRowArtists', 'Artists'),       '9',     '24',     '24',  null],
                 [tr('tierRowComposers', 'Composers'),   '2',     '12',     '12',  null],
@@ -23227,7 +23227,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               );
             })()}
             <p style={{ fontSize: (.58*readScale)+'rem', color: 'rgba(242,238,232,.45)', fontStyle: 'italic', letterSpacing: '.04em', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.45 }}>
-              {tr('tierAiCreditsNote', 'AI text & image compose = 1 credit · Atmosphere = 0.5 credit')}
+              {tr('tierAiCreditsNote', 'One free try per AI mode: text mood · Mood-from-image · AI Compose · Atmosphere + Melody share two.')}
             </p>
 
             {/* ─── How Free tier actually behaves ─────────────────────────
@@ -23242,7 +23242,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               {[
                 ['proAboutHowFree1', 'Eight artists are unlocked from day one. Each unlocked artist has a Pro partner — tap them to see who it is, but only Pro paints with that partner.'],
                 ['proAboutHowFree2', 'Custom palette shows the default 12 colours; editing your own colours is Pro.'],
-                ['proAboutHowFree3', 'AI features (✦) work for 3 trial credits, then ask you to upgrade to Pro AI for unlimited use. Exports always carry a watermark on Free.'],
+                ['proAboutHowFree3', 'Each AI feature (✦) has 1 free try — text mood, Mood-from-image, AI Compose; Atmosphere + Melody share two — then Pro AI unlocks unlimited use. Exports always carry a watermark on Free.'],
               ].map(([k, fb], i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: (.68*readScale)+'rem', lineHeight: 1.5, color: '#cccccc' }}>
                   <span style={{ color: GOLD, flexShrink: 0, marginTop: 1, fontSize: (.7*readScale)+'rem' }}>·</span>
@@ -23261,7 +23261,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
               {[
                 ['proAboutHonest3_1', 'Both tiers are one-time payments. No subscription, ever. The price you pay today stays valid forever.'],
-                ['proAboutHonest3_2', 'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI calls still come from the same 3-credit trial pool as Free.'],
+                ['proAboutHonest3_2', 'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI features keep the same one free try per mode as Free.'],
                 ['proAboutHonest3_3', 'Pro AI is for people who actually use the ✦ AI features regularly. If you mostly play your own music or load files, plain Pro is the better fit.'],
                 ['proAboutHonest3_4', 'No cloud storage. Paintings save to your own device. Your license key works on up to 5 devices, one at a time.'],
               ].map(([k, fb], i) => (
@@ -23479,6 +23479,20 @@ const SIG_CURATED = {
   [SAMPLE_MIDI_NAME_2]: {keys:['pollock','kusama'], roles:['gesture','ornament'], ph:1, phs:[1,1], mode:'harmony'},   // Bumble-Bee: Pollock's Autumn Rhythm skeins as the flight, Kusama's dots as pollen
   [SAMPLE_MIDI_NAME_3]: {keys:['raffel','picasso'], roles:['field','gesture'],   ph:0, phs:[0,5], mode:'kontra'},    // Metamorphosis One: RafFel's dark arcs, Picasso's late-analytic facets with a contour
 };
+
+// Image composers write a bar layer by layer — the whole left-hand figure, then
+// the right-hand line over the same beats — so their events are NOT in time
+// order, while the image player walks events in array order. Put them in time
+// order (stable, so notes written together keep their order) and mark them
+// _composed: the player then plays them on their written timeline (notes that
+// start together sound together) at their written length and strength. A scan
+// (every event carries its own _stepMs) is returned untouched.
+function _composerTimeline(evts){
+  if(!Array.isArray(evts) || !evts.length || evts.some(e=>e && e._stepMs)) return evts;
+  return evts.map((e,i)=>({e,i}))
+    .sort((a,b)=>((a.e.startMs||0)-(b.e.startMs||0)) || (a.i-b.i))
+    .map(({e})=>({...e, _composed:true}));
+}
 
 // Audio recordings: what survives transcription is TONALITY — mode, key centre
 // and how busy the texture is. Mode × energy picks the leading role, the key
@@ -29996,12 +30010,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // a fast content hash of the image data URL, persisted in localStorage so the
   // SAME picture replays for free — across sessions, and regardless of filename.
   // The built-in sample is a special always-present entry (see SAMPLE_IMGMOOD).
+  // The image's data URL is several MB; hash it once per image and reuse the
+  // result (MELODY toggles and AI Compose plays ask for the same image again).
+  const _imgHashMemoRef=useRef({u:null,h:0});
   const _imgMoodHash=useCallback((dataUrl)=>{
+    const s=String(dataUrl||'');
+    const memo=_imgHashMemoRef.current; if(memo.u===s) return memo.h;
     // FNV-1a style 32-bit hash over the string; cheap and good enough for keying.
-    const s=String(dataUrl||''); let h=0x811c9dc5>>>0;
+    let h=0x811c9dc5>>>0;
     for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; }
     // length-salted to further reduce accidental collisions
-    return (h^(s.length*2654435761))>>>0;
+    const out=(h^(s.length*2654435761))>>>0;
+    _imgHashMemoRef.current={u:s,h:out};
+    return out;
   },[]);
   const IMGMOOD_CACHE_KEY='paintiano_imgmood_cache_v2';
   const _imgMoodCacheGet=useCallback((hash)=>{
@@ -31217,7 +31238,7 @@ Output ONLY valid JSON, no prose, no markdown:
       return null;
     }
     finally{ setMelodyBusy(false); }
-  },[melodyBusy,extractImageMaterial,lang,gateAI,t,originalImgUrl,_imgMoodHash,_melodyCacheKey,_melodyCacheGet,_melodyCacheSet]);
+  },[melodyBusy,extractImageMaterial,gateAI,t,originalImgUrl,_imgMoodHash,_melodyCacheKey,_melodyCacheGet,_melodyCacheSet]);
 
   // MELODY chip tap. Only meaningful before Play (the chip is disabled during
   // playback/anim). ON → fetch (or cache-replay) the sung line, store it, enable
@@ -31544,7 +31565,7 @@ Hard requirements:
             : COF;                                     // harmony & bw both read via COF
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
           const _crKeys0 = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
-          const evts=(_crKeys0.length>=2)
+          const evts=_composerTimeline((_crKeys0.length>=2)
             ? composeImageCallResponse(px,nc,nr,hueTable,startMode,imgDirRef.current,_crKeys0)
             : (imgComposerRef.current==='glass')
             ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
@@ -31570,7 +31591,7 @@ Hard requirements:
             ? composeImageEinaudi(px,nc,nr,hueTable,startMode,imgDirRef.current)
             : (imgComposerRef.current==='hisaishi')
             ? composeImageHisaishi(px,nc,nr,hueTable,startMode,imgDirRef.current)
-            : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current);
+            : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current));
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
@@ -31705,7 +31726,8 @@ Hard requirements:
       ? composeImageHisaishi(px,nc,nr,hueTable,mode,imgDirRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
-    const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsLit,atmoMood,true):_evtsLit;
+    const _evtsT=_composerTimeline(_evtsLit);
+    const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsT,atmoMood,true):_evtsT;
     // MELODY stays a separate voice: the texture in chordsRef is never altered by it
     // (the sung line is computed and scheduled in parallel by startPlay), so the
     // events here are always just the texture.
@@ -32033,13 +32055,19 @@ Hard requirements:
       // image-liveliness curve, which broke a composer's rhythm into rushes and
       // drags and pulled the sung line out of step with it.)
       // _gapAt(src,k) = the wait after event k-1 before event k. Prefer the event's
-      // own _stepMs (image-scan native pace); otherwise the delta between the two
-      // events' startMs (composers, a See-music bake), clamped to a sane range; the
-      // 150ms literal is only the last resort when neither field exists.
+      // own _stepMs (image-scan native pace). A composer piece (time-ordered and
+      // _composed, see _composerTimeline) plays its written timeline exactly —
+      // notes written together sound together (gap 0), a written pause up to 4 s
+      // is kept. Other timed events use the startMs delta clamped to 40..2000ms;
+      // the 150ms literal is only the last resort when neither field exists.
       const _gapAt=(src,k)=>{
         const p=src[k-1], c=src[k];
         if(p && p._stepMs) return p._stepMs;
-        if(p && c && typeof p.startMs==='number' && typeof c.startMs==='number' && c.startMs>p.startMs) return Math.max(40, Math.min(2000, c.startMs - p.startMs));
+        if(p && c && typeof p.startMs==='number' && typeof c.startMs==='number'){
+          const d=c.startMs - p.startMs;
+          if(c._composed && d>=0) return Math.min(4000, d);
+          if(d>0) return Math.max(40, Math.min(2000, d));
+        }
         return 150;
       };
       const step=()=>{
@@ -32070,9 +32098,13 @@ Hard requirements:
         if(liveChords[i] && liveChords[i]._playable!==false){
           // Unmerged: 3× step interval → notes ring into next 2 chords for legato blend
           // Merged run: exact run length (held note up to whole)
-          const durMul=liveChords[i]._runLen||3;
-          // Soften velocity for unmerged (overlapping notes can pile up, want gentle blend)
-          const velScale=liveChords[i]._runLen?1:0.75;
+          // Composer piece: the note's written length — the composer already wrote
+          // the overlap it wants.
+          const _cmp=!!liveChords[i]._composed;
+          const durMul=liveChords[i]._runLen||(_cmp?1:3);
+          // Soften velocity for unmerged (overlapping notes can pile up, want gentle blend);
+          // a composer piece keeps its written dynamics.
+          const velScale=(liveChords[i]._runLen||_cmp)?1:0.75;
           try{
             const notes=liveChords[i].n;
             // PIANO TECHNIQUE: TREMOLO. A chord flagged _tremolo (a long merged
@@ -38496,7 +38528,7 @@ Hard requirements:
                 padding:'0 4px',
               }}>
                 <span style={{color:'#dcb4ff',fontSize:(.72*effScale)+'rem',marginRight:4}}>✦</span>
-                {t('tierIntro')||'AI features (the ✦ items above + AI Compose & Atmosphere inside Image) use credits on Free.'}
+                {t('tierIntro')||'AI features (the ✦ items above + AI Compose, Atmosphere and Melody inside Image): one free try per mode on Free and Pro, unlimited on Pro AI.'}
               </div>
               {(()=>{
                 const GOLD_BG='rgba(201,168,76,.08)';
@@ -38544,7 +38576,7 @@ Hard requirements:
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
                   [t('tierRowWmark')  ||'Watermark',       yes,     no,         no,    null],
-                  [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'3 credits'),  (t('tier3Credits')||'3 credits'),  inf, '✦'],
+                  [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'1 try per mode'),  (t('tier3Credits')||'1 try per mode'),  inf, '✦'],
                 ];
                 return (
                   <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'inherit'}}>
@@ -38579,7 +38611,7 @@ Hard requirements:
                 );
               })()}
               <div style={{textAlign:'center',marginTop:10,fontSize:(.58*effScale)+'rem',color:'rgba(242,238,232,.4)',fontStyle:'italic',letterSpacing:'.04em',lineHeight:1.45}}>
-                {t('tierAiCreditsNote')||'AI text & image compose = 1 credit · Atmosphere = 0.5 credit'}
+                {t('tierAiCreditsNote')||'One free try per AI mode: text mood · Mood-from-image · AI Compose · Atmosphere + Melody share two.'}
                 <br/>
                 {t('tierFootnote')||'One-time payment · Lifetime access'}
               </div>

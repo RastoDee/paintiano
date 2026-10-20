@@ -808,7 +808,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               const allWord = tr('tierAll', 'all');
               const inf = tr('tierUnlimited', '∞');
               const ronly = tr('tierReadOnly', 'preview only');
-              const credits3 = tr('tier3Credits', '3 credits');
+              const credits3 = tr('tier3Credits', '1 try per mode');
               const rows = [
                 [tr('tierRowArtists', 'Artists'),       '9',     '24',     '24',  null],
                 [tr('tierRowComposers', 'Composers'),   '2',     '12',     '12',  null],
@@ -853,7 +853,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               );
             })()}
             <p style={{ fontSize: (.58*readScale)+'rem', color: 'rgba(242,238,232,.45)', fontStyle: 'italic', letterSpacing: '.04em', textAlign: 'center', margin: '0 0 22px', lineHeight: 1.45 }}>
-              {tr('tierAiCreditsNote', 'AI text & image compose = 1 credit · Atmosphere = 0.5 credit')}
+              {tr('tierAiCreditsNote', 'One free try per AI mode: text mood · Mood-from-image · AI Compose · Atmosphere + Melody share two.')}
             </p>
 
             {/* ─── How Free tier actually behaves ─────────────────────────
@@ -868,7 +868,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               {[
                 ['proAboutHowFree1', 'Eight artists are unlocked from day one. Each unlocked artist has a Pro partner — tap them to see who it is, but only Pro paints with that partner.'],
                 ['proAboutHowFree2', 'Custom palette shows the default 12 colours; editing your own colours is Pro.'],
-                ['proAboutHowFree3', 'AI features (✦) work for 3 trial credits, then ask you to upgrade to Pro AI for unlimited use. Exports always carry a watermark on Free.'],
+                ['proAboutHowFree3', 'Each AI feature (✦) has 1 free try — text mood, Mood-from-image, AI Compose; Atmosphere + Melody share two — then Pro AI unlocks unlimited use. Exports always carry a watermark on Free.'],
               ].map(([k, fb], i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: (.68*readScale)+'rem', lineHeight: 1.5, color: '#cccccc' }}>
                   <span style={{ color: GOLD, flexShrink: 0, marginTop: 1, fontSize: (.7*readScale)+'rem' }}>·</span>
@@ -887,7 +887,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px' }}>
               {[
                 ['proAboutHonest3_1', 'Both tiers are one-time payments. No subscription, ever. The price you pay today stays valid forever.'],
-                ['proAboutHonest3_2', 'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI calls still come from the same 3-credit trial pool as Free.'],
+                ['proAboutHonest3_2', 'Plain Pro removes the watermark and unlocks all artists, paint types and the custom palette — but AI features keep the same one free try per mode as Free.'],
                 ['proAboutHonest3_3', 'Pro AI is for people who actually use the ✦ AI features regularly. If you mostly play your own music or load files, plain Pro is the better fit.'],
                 ['proAboutHonest3_4', 'No cloud storage. Paintings save to your own device. Your license key works on up to 5 devices, one at a time.'],
               ].map(([k, fb], i) => (
