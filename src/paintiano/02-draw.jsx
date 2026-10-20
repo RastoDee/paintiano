@@ -15452,7 +15452,7 @@ const ARTIST_DNA = {
   arcs:         {ground:'#eeeec0',mark:{nest:1},                          size:[.1,.4],  edge:0,  alpha:1,  layout:{radial:.5,grid:.5},      outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:.3, halftone:0},
   pop:          {ground:'#ffd23f',mark:{heart:.5,radiant:.3,figure:.2},   size:[.05,.15],edge:0,  alpha:1,  layout:{grid:.7,scatter:.3},     outline:1, tone:'primary', wobble:.2, lines:0, layers:1,density:.6, halftone:0},
   mitchell:     {ground:'#f3f0e8',mark:{brush:1},                         size:[.04,.14],edge:.2, alpha:.85,layout:{scatter:1},              outline:0, tone:'pure',    wobble:.9, lines:.4,layers:2,density:.35,halftone:0},
-  monet:        {ground:'#cfd6c8',mark:{dab:.8,field:.2},                 size:[.012,.035],edge:0,  alpha:.92,layout:{scatter:.7,field:.3},    outline:0, tone:'pastel',  wobble:.5, lines:0, layers:2,density:.9, halftone:0},
+  monet:        {ground:'#cfd6c8',mark:{surface:1},                       size:[.09,.14],  edge:0,  alpha:.92,layout:{field:.8,scatter:.2},    outline:0, tone:'pastel',  wobble:.5, lines:0, layers:2,density:.9, halftone:0},
   hokusai:      {ground:'#e6e0d0',mark:{crest:.5,ring:.5},                size:[.03,.16],edge:0,  alpha:.95,layout:{stack:.6,flow:.4},      outline:.6,tone:'pure',    wobble:.3, lines:.3,layers:1,density:.25,halftone:0},
   lichtenstein: {ground:'#fffdf5',mark:{benday:.7,blob:.3},               size:[.05,.2], edge:0,  alpha:1,  layout:{scatter:.6,grid:.4},     outline:1, tone:'primary', wobble:.1, lines:0, layers:1,density:.4, halftone:1},
   klee:         {ground:'#d9cfb6',mark:{tile:1},                          size:[.04,.1], edge:.35,alpha:.9, layout:{grid:1},                 outline:0, tone:'pastel',  wobble:.1, lines:.2,layers:1,density:1,  halftone:0},
@@ -15634,13 +15634,13 @@ const ARTIST_VARIANTS = {
     {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
     {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
   ],
-  monet: [
-    {mark:{dab:.8,field:.2},size:[.012,.035],edge:0,alpha:.92,layout:{scatter:.7,field:.3},density:.9},                 // Nymphéas
-    {ground:'#c8ccd8',mark:{dab:.85,disc:.15},size:[.012,.035],edge:0,alpha:.92,layout:{field:.6,scatter:.4},density:.9},   // Impression
-    {ground:'#e8e0cc',mark:{dab:1},size:[.012,.03],edge:0,alpha:.92,layout:{stack:.6,grid:.4},density:1},                 // Rouen
-    {ground:'#e4d8a8',mark:{dab:.75,field:.25},size:[.012,.035],edge:0,alpha:.92,layout:{field:.6,scatter:.4},density:.9,tone:'pastel'},   // Meules
-    {ground:'#d8e0d0',mark:{dab:.7,stem:.3},size:[.012,.035],edge:0,alpha:.92,layout:{grid:.6,scatter:.4},density:.9},     // Peupliers
-    {ground:'#4a6a5a',mark:{dab:.8,arc:.2},size:[.012,.035],edge:0,alpha:.92,layout:{scatter:.6,field:.4},density:.9},     // Pont japonais
+  monet: [   // in a fusion Monet is the water the partner paints on: every chord lays a patch of tonal touches UNDER the other hand
+    {mark:{surface:1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.8,scatter:.2},density:.9},                          // Nymphéas
+    {ground:'#c8ccd8',mark:{surface:.9,disc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.7,scatter:.3},density:.9},   // Impression
+    {ground:'#e8e0cc',mark:{surface:1},size:[.08,.12],edge:0,alpha:.92,layout:{stack:.6,grid:.4},density:1},                // Rouen
+    {ground:'#e4d8a8',mark:{surface:1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.7,scatter:.3},density:.9,tone:'pastel'},   // Meules
+    {ground:'#d8e0d0',mark:{surface:.85,stem:.15},size:[.09,.14],edge:0,alpha:.92,layout:{grid:.6,field:.4},density:.9},   // Peupliers
+    {ground:'#4a6a5a',mark:{surface:.9,arc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.6,scatter:.4},density:.9},   // Pont japonais
   ],
   hokusai: [
     {mark:{ring:.7,crest:.3},size:[.02,.06],layout:{stack:1},density:.3},
@@ -15757,6 +15757,7 @@ function _fuMusic(F){
 }
 function _fuPick(d,x){ for(const k in d){ x-=d[k]; if(x<=0) return k; } for(const k in d) return k; return 'dot'; }
 // One palette treatment, blended from the parents' — not one per mark.
+function _fuRgb(css){ const m=String(css).match(/\d+(?:\.\d+)?/g); return m&&m.length>=3 ? [+m[0],+m[1],+m[2]] : [128,128,128]; }
 function _fuTone(rgb, F, r1){
   let [r,g,b]=rgb; let R=0,G=0,B=0;
   for(const t in F.tones){ const w=F.tones[t]; let x=r,y=g,z=b;
@@ -15821,11 +15822,13 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'blob': { const k=6+(R()*4|0); for(let j=0;j<=k;j++){ const a=j/k*6.2832, q=rr*(0.7+R()*0.6*(0.3+F.wobble)); const px=Math.cos(a)*q, py=Math.sin(a)*q; j?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); break; }
       case 'petal': { ctx.moveTo(0,0); ctx.bezierCurveTo(rr*1.2,-rr*1.1,rr*1.2,rr*1.1,0,rr*.1); ctx.bezierCurveTo(-rr*.3,rr*.6,-rr*.3,-rr*.6,0,0); ctx.fill(); break; }
       case 'star': { for(let j=0;j<10;j++){ const a=j/10*6.2832, q=j%2?rr*.45:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
-      case 'dab': { // Monet: the comma dab — a short tapered ribbon, slightly bent
-        const L=rr*2.2, w=rr*0.9, bend=(R()-.5)*L*0.45, K=6, pts=[]; const ca=1, sa=0;
-        for(let k=0;k<=K;k++){ const u=k/K,q=u-0.5,arc=bend*(1-4*q*q); pts.push([ca*q*L-sa*arc, sa*q*L+ca*arc, w*(1-0.45*u)]); }
-        ctx.beginPath(); for(let k=0;k<=K;k++){ const [px,py,pw]=pts[k]; const h=pw/2; k?ctx.lineTo(px-sa*h,py+ca*h):ctx.moveTo(px-sa*h,py+ca*h); } for(let k=K;k>=0;k--){ const [px,py,pw]=pts[k]; const h=pw/2; ctx.lineTo(px+sa*h,py-ca*h); } ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(pts[0][0],pts[0][1],w/2,0,6.2832); ctx.fill(); ctx.beginPath(); break; }
+      case 'surface': { // Monet: not a mark but a patch of WATER — dozens of small horizontal touches, tonal (the chord's colour broken toward the next note, lighter and darker), laid under everything else; patch by patch the piece tiles a shimmering surface the partner paints on
+        const n=48+(R()*30|0), L=rr*0.32, w=rr*0.105; ctx.lineCap='round';
+        const c1=_fuRgb(col), c2=_fuRgb(col2);
+        for(let j=0;j<n;j++){ const pa=R()*6.2832, pd=Math.sqrt(R())*rr; const px=Math.cos(pa)*pd*1.3, py=Math.sin(pa)*pd*0.95; const tm=R()*0.55, lt=(R()-.5)*0.36; const c=[c1[0]+(c2[0]-c1[0])*tm, c1[1]+(c2[1]-c1[1])*tm, c1[2]+(c2[2]-c1[2])*tm].map(v=> lt>0 ? v+(255-v)*lt : v*(1+lt));
+          ctx.strokeStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; ctx.lineWidth=w*(0.7+R()*0.6); const tl=(R()-.5)*0.28, len=L*(0.6+R()*0.8), cx=Math.cos(tl)*len/2, sy=Math.sin(tl)*len/2;
+          ctx.beginPath(); ctx.moveTo(px-cx,py-sy); ctx.lineTo(px+cx,py+sy); ctx.stroke(); }
+        ctx.beginPath(); break; }
       case 'stripe': ctx.lineWidth=Math.max(1,rr*.5); ctx.moveTo(-rr*6,0); ctx.lineTo(rr*6,0); ctx.stroke(); break;
       case 'wave': { ctx.lineWidth=Math.max(1,rr*.22); ctx.moveTo(-rr*2.5,0); for(let j=1;j<=4;j++){ ctx.quadraticCurveTo(-rr*2.5+rr*1.25*j-rr*.6, (j%2?-1:1)*rr*.9, -rr*2.5+rr*1.25*j, 0);} ctx.stroke(); break; }
       case 'spiral': { ctx.lineWidth=Math.max(1,rr*.1); for(let j=0;j<=40;j++){ const t=j/40*6.2832*2.5, q=rr*j/40; j?ctx.lineTo(Math.cos(t)*q,Math.sin(t)*q):ctx.moveTo(0,0);} ctx.stroke(); break; }
@@ -16056,7 +16059,7 @@ function _fuSnap(rgb, pal){ if(!pal||pal.length<2) return rgb; let best=pal[0], 
 // replayed with exactly those numbers after the underpainting — so the random
 // stream (the painting's identity) is untouched, and it works the same on the
 // live canvas, the raster export and the vector (SVG) export.
-const _FU_UNDER=/^(field|stripe|stripes|vstripes|panel|cloud|checker)$/;
+const _FU_UNDER=/^(field|stripe|stripes|vstripes|panel|cloud|checker|surface)$/;
 const _FU_NULL=(()=>{ let P; const f=function(){ return P; }; P=new Proxy(f,{ get:(o,p)=> p===Symbol.toPrimitive ? (()=>0) : P, set:()=>true, apply:()=>P }); return P; })();
 function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
   const F = fuseDNA(keys, phaseIndex); if(!F || !chords || !chords.length) return;
@@ -16068,6 +16071,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
   const _defer=[];   // gestures, replayed over the underpainting (see _FU_UNDER)
+  const _monetIn=F.keys.indexOf('monet'); const _veil=[];   // Monet in the fusion: his water also reflects the partner and veils it (see below)
   // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~320 marks/layer — room to breathe
   const stride = Math.max(1, Math.ceil(n/320));
   const L = Math.min(lim|0, n);
@@ -16102,7 +16106,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // keeps ~2×budget of them per painting; every other chord paints the short
   // echo of the same idiom, so the music's density still shows.
   // idioms whose size is a length, not an area — the area cap below leaves them alone
-  const _FU_LINEAR=/^(field|stripe|stripes|vstripes|band|vband|gridline|gridstub|wavyline|wave|beam|shortbeam|drip|rays|brush|rain|zigzag|dab|bar|vdrip|stem|dotline|chain|net|neon|splat|dotcluster|radiant|step|scallop|crest|phiarc|arc)$/;
+  const _FU_LINEAR=/^(field|stripe|stripes|vstripes|band|vband|gridline|gridstub|wavyline|wave|beam|shortbeam|drip|rays|brush|rain|zigzag|dab|bar|vdrip|stem|dotline|chain|net|neon|splat|dotcluster|radiant|step|scallop|crest|phiarc|arc|surface)$/;
   const _SPAN={stripes:['band',5],vstripes:['vband',5],gridline:['gridstub',6],wavyline:['wave',8],beam:['shortbeam',8]};
   const _spanUsed=new Set();
   for(let layer=0; layer<F.layers; layer++){
@@ -16146,6 +16150,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='cloud') r=Math.min(r, S*0.13);    // a cloud, not a fog over everything
         else if(kind==='chain') r=Math.min(r, S*0.07);    // RafFel's constellation stays a small figure
         else if(kind==='net') r=Math.min(r, S*0.1);       // a patch of Kusama's net — fine mesh, never a hoop
+        else if(kind==='surface') r=Math.max(S*0.07, Math.min(r, S*0.13));   // Monet's patch of water: big enough to tile a surface, never a single swatch — whatever the partner's scale or the register
         else if(!_FU_LINEAR.test(kind)){
           r=Math.min(r, S*0.21);   // no single shape swallows a third of the canvas (Delaunay discs, Bauhaus targets…)
           // and big shapes are budgeted by the area they cover (~1.6 canvases in all), spread
@@ -16162,12 +16167,13 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
-        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         if(_FU_UNDER.test(kind)){
           ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, FP, R, ang, col2); ctx.restore();
+          if(kind==='surface' && _monetIn && R()<0.3) _veil.push([tx, ty, r, col, col2, FP]);
         } else {
           const vals=[]; _fuMark(_FU_NULL, kind, r, col, FP, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
-          _defer.push([tx, ty, kind, r, col, ang, col2, vals, FP]);
+          _defer.push([tx, ty, kind, r, col, ang, col2, vals, FP, _pi]);
         }
       }
       }
@@ -16178,6 +16184,30 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     let q=0; ctx.save(); ctx.translate(tx, ty);
     _fuMark(ctx, kind, r, col, FP, ()=> q<vals.length ? vals[q++] : 0.5, ang, col2);
     ctx.restore();
+  }
+  // Monet in a fusion is not a layer the partner sits on — the water takes the
+  // partner in. Three things make one painting of two hands:
+  //  1 reflection: under every partner shape the water repeats its colour in a
+  //    loose patch of touches (the lily reflected), so the partner's colours
+  //    run through the surface;
+  //  2 dissolve: a few touches in the shape's own colour straddle its lower
+  //    rim, so the contour breaks into the water instead of floating on it;
+  //  3 veil: a third of Monet's patches come back OVER everything at low
+  //    opacity — the same light falls on the shapes and on the water.
+  if(_monetIn>=0){
+    const FPm=FPs[_monetIn]; const Rm=_seedRnd(8081, ss, 5, 9);
+    const touch=(x,y,len,w,c)=>{ ctx.strokeStyle=c; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x-len/2,y); ctx.lineTo(x+len/2,y); ctx.stroke(); };
+    ctx.save(); ctx.lineCap='round';
+    for(const g of _defer){ const [tx,ty,kind,r,col,,col2,,,pi]=g; if(pi===_monetIn || _FU_LINEAR.test(kind)) continue; if(Rm()>0.75) continue;
+      const c=_fuRgb(col), L=Math.max(S*0.006, r*0.3), w=Math.max(1, r*0.1);
+      ctx.globalAlpha=0.5;
+      const nr=10+(Rm()*10|0); for(let j=0;j<nr;j++){ const px=tx+(Rm()-.5)*r*2.2, py=ty+r*1.05+Rm()*r*1.1; const lt=(Rm()-.5)*0.4; const cc=c.map(v=> lt>0 ? v+(255-v)*lt : v*(1+lt)); touch(px, py, L*(0.6+Rm()*0.8), w*(0.7+Rm()*0.6), `rgb(${cc[0]|0},${cc[1]|0},${cc[2]|0})`); }
+      ctx.globalAlpha=0.6;
+      const nd=4+(Rm()*4|0); for(let j=0;j<nd;j++){ const a=0.5+Rm()*2.1; const px=tx+Math.cos(a)*r*(0.9+Rm()*0.25), py=ty+Math.sin(a)*r*(0.9+Rm()*0.25); const lt=0.1+Rm()*0.3; const cc=c.map(v=> v+(255-v)*lt); touch(px, py, L*(0.7+Rm()*0.7), w*(0.8+Rm()*0.5), `rgb(${cc[0]|0},${cc[1]|0},${cc[2]|0})`); }
+    }
+    ctx.restore();
+    const FPv=Object.assign({}, FPm, {alpha:0.42});
+    for(const [tx,ty,r,col,col2] of _veil){ ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, 'surface', r*0.85, col, FPv, Rm, 0, col2); ctx.restore(); }
   }
   // connecting thread — only from the hands that really draw one (Pollock's
   // web, Miró's wires: lines ≥ .45): a loose curved thread, faint and short-
