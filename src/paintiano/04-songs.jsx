@@ -1403,7 +1403,7 @@ function _atmoTransform(evts, mood, skipTiming){
 //
 // Returns { events, voice } — events is the texture (clone, never mutated); voice
 // is [{pos, m, v, durMs}] or [] if nothing to sing.
-function _melodyVoice(evts, mel, atmo){
+function _melodyVoice(evts, mel, atmo, totalMs){
   const empty={ events:evts, voice:[] };
   if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return empty;
   // KEY MATCH: when ATM is on, the texture has been snapped to a mood scale
@@ -1428,9 +1428,13 @@ function _melodyVoice(evts, mel, atmo){
     }
     snap=(m)=>{ const pc=((m-root)%12+12)%12; let best=SC[0],bd=99; for(const d of SC){ const dd=Math.min(((pc-d)%12+12)%12,((d-pc)%12+12)%12); if(dd<bd){bd=dd;best=d;} } let delta=((best-pc)%12+12)%12; if(delta>6) delta-=12; return m+delta; };
   }
-  // Texture ceiling (highest scan pitch) so the melody can sit just above it.
-  let scanHi=0, scanLo=128;
-  for(const ev of evts){ for(const no of (ev.n||[])){ if(no.m>scanHi)scanHi=no.m; if(no.m<scanLo)scanLo=no.m; } }
+  // Texture ceiling so the melody can sit just above it: the 90th percentile of
+  // each event's top note, not the single highest pitch — a few octave-doubled
+  // peaks (a composer's agitato, a bright scan cell) must not decide the register.
+  const _tops=[];
+  for(const ev of evts){ let top=0; for(const no of (ev.n||[])){ if(no.m>top) top=no.m; } if(top>0) _tops.push(top); }
+  _tops.sort((a,b)=>a-b);
+  const scanHi=_tops.length ? _tops[Math.min(_tops.length-1, Math.floor(_tops.length*0.9))] : 72;
   // Parse melody notes into {m, startBeat, durBeats, vel}.
   const parsed=[];
   let melMinBeat=Infinity, melMaxBeat=-Infinity, melHi=0, melLo=128;
@@ -1457,10 +1461,19 @@ function _melodyVoice(evts, mel, atmo){
   const _liftFloorShift = (_atmoE!=null)
     ? (_atmoE<0.5 ? -2*(0.5-_atmoE)/0.5 : +4*(_atmoE-0.5)/0.5)
     : 0;
-  let lift=0;
+  // The line must stay singable: never above A6 (93), never below E3 (52). Pick the
+  // octave shift that keeps the WHOLE line in that range and sits it above the
+  // texture; when the texture is too high for that, the line keeps its best
+  // register inside it. (The old loop could lift past the top, and the per-note
+  // clamp then squashed the whole tune onto one repeated C#7.)
   const targetFloor=scanHi+4+Math.round(_liftFloorShift);
-  while(melLo+lift < targetFloor && (melHi+lift) < 94) lift+=12;
-  while((melHi+lift) > 96 && (melLo+lift) > scanHi+4) lift-=12;
+  // Only ever lift — a line the AI wrote too high is the one case that comes down.
+  const _cands=[-24,-12,0,12,24,36].filter(L=> melHi+L<=93 && melLo+L>=52);
+  const _up=_cands.filter(L=>L>=0);
+  let lift=null;
+  if(_up.length){ for(const L of _up){ if(melLo+L>=targetFloor){ lift=L; break; } lift=L; } }
+  else if(_cands.length){ lift=Math.max(..._cands); }
+  if(lift===null) lift=Math.round((79-(melLo+melHi)/2)/12)*12;   // a line wider than the range: centre it on G5
   // Lead velocity — default 92..120. Mood reshapes it: serene softens (down to
   // ~78..104), agitato hardens (up to ~102..127), so the melody actually sings
   // quieter on a calm tag and louder on a frantic one.
@@ -1480,12 +1493,16 @@ function _melodyVoice(evts, mel, atmo){
   const secPerBeat = 60/tempo;
   const cellBeats = melMaxBeat - melMinBeat;            // length of one melodic cell, in beats
   const cellSec = Math.max(2, cellBeats*secPerBeat);    // …in seconds
-  // Total scan duration in seconds (from the last texture event's timing).
+  // Total texture duration in seconds: the REAL playback length measured by the
+  // player (totalMs) when given — so the line keeps the AI's tempo over a scan or a
+  // composer piece alike — else estimated from the last texture event's timing.
   const lastEv = evts[evts.length-1];
-  const scanSec = Math.max(cellSec, ((lastEv && (lastEv.startMs||0)) || (evts.length*150)) / 1000 + 0.5);
+  const scanSec = (typeof totalMs==='number' && totalMs>0)
+    ? Math.max(cellSec, totalMs/1000)
+    : Math.max(cellSec, ((lastEv && (lastEv.startMs||0)) || (evts.length*150)) / 1000 + 0.5);
 
   // Build one cell as {tBeat (from 0), durB, m, v} for melody, plus chords.
-  const cellNotes = parsed.map(p=>({ tBeat:p.startB-melMinBeat, durB:p.durB, m:Math.max(52,Math.min(97,p.m+lift)), v:leadVel(p.vel) }))
+  const cellNotes = parsed.map(p=>({ tBeat:p.startB-melMinBeat, durB:p.durB, m:Math.max(40,Math.min(100,p.m+lift)), v:leadVel(p.vel) }))
                           .sort((a,b)=>a.tBeat-b.tBeat);
   const cellChords=[];
   if(Array.isArray(mel.chords) && mel.chords.length){
@@ -1519,16 +1536,21 @@ function _melodyVoice(evts, mel, atmo){
   const _cellStretch = (_atmoE!=null)
     ? (_atmoE<0.5 ? +1.5*(0.5-_atmoE)/0.5 : -0.15*(_atmoE-0.5)/0.5)
     : 0;
-  const cellFrac = Math.min(0.7, Math.max(0.06, (cellSec/scanSec) * (1 + _cellStretch)));
+  // No floor that would stretch the line on a long piece: the cell keeps the AI's
+  // tempo (times the atmo stretch) whatever the painting's length.
+  const cellFrac = Math.min(0.7, Math.max(0.005, (cellSec/scanSec) * (1 + _cellStretch)));
+  // Texture-only intro and outro: ~14 % / 12 % of the piece, but never more than
+  // ~8 s — on a five-minute piece the line must not wait 40 s to come in.
+  const _intro = Math.min(0.14, 8/scanSec), _outro = Math.min(0.12, 8/scanSec);
   // How many entries the piece can host (leave room for intro + gaps + outro).
-  const capacity = Math.floor((1 - 0.16 /*intro*/ - 0.12 /*outro*/) / (cellFrac*1.7 /*gap≈0.7·cell*/));
+  const capacity = Math.floor((1 - _intro - _outro) / (cellFrac*1.7 /*gap≈0.7·cell*/));
   // Serene atmo prefers fewer entries (more breath, fewer reps); agitato fills in.
   const _entryBias = (_atmoE!=null) ? (_atmoE<0.5 ? -1 : (_atmoE>0.7 ? +1 : 0)) : 0;
-  const entries = Math.max(1, Math.min(5, capacity + _entryBias));
-  // Distribute entry start-positions: first after a texture-only intro (~14%),
-  // spread evenly, last finishing before a texture-only outro (~12%).
-  const firstStart = 0.14;
-  const lastStart  = Math.max(firstStart, 1 - 0.12 - cellFrac);
+  const entries = Math.max(1, Math.min(8, capacity + _entryBias));
+  // Distribute entry start-positions: first after the texture-only intro, spread
+  // evenly, last finishing before the texture-only outro.
+  const firstStart = _intro;
+  const lastStart  = Math.max(firstStart, 1 - _outro - cellFrac);
   const span = (entries>1) ? (lastStart-firstStart)/(entries-1) : 0;
 
   const voice=[];
@@ -1549,7 +1571,7 @@ function _melodyVoice(evts, mel, atmo){
     // Strong-calm atmo: no octave-up answer (no large leaps in a dream).
     let octShift = 0;
     const _noLeap = (_atmoE!=null && _atmoE<0.30);
-    if(!_noLeap && E>0 && (E%2===1) && cellHi+12 <= 96) octShift = 12;
+    if(!_noLeap && E>0 && (E%2===1) && cellHi+12 <= 93) octShift = 12;
     // #3 INTRA-PHRASE DYNAMICS: within each entry, swell toward the melodic peak
     // and ease off at the phrase ends, so the line breathes like a singer rather
     // than playing every note at one level.

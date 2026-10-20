@@ -4551,9 +4551,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             // Recompute color only when the chord changes.
             if (chord.idx !== cachedIdx) {
               cachedIdx = chord.idx;
-              const note = chord.n.reduce((a, b) => b.v > a.v ? b : a, chord.n[0]);
-              const c = gc(note.m, note.v);
-              cachedR = c[0]; cachedG = c[1]; cachedB = c[2];
+              // A rest (scan cell with no notes) keeps the last colour — reading
+              // its loudest note used to throw and stop this loop.
+              const _ns = chord.n || [];
+              if (_ns.length) {
+                const note = _ns.reduce((a, b) => b.v > a.v ? b : a, _ns[0]);
+                const c = gc(note.m, note.v);
+                cachedR = c[0]; cachedG = c[1]; cachedB = c[2];
+              }
             }
             const alpha = 0.35 + pulse * 0.55;
             const lw = 1.5 + pulse * 1.5;
@@ -8680,53 +8685,21 @@ Hard requirements:
       const CHORD_SIZE=4;
       const colStep=pixelRef.current.colStep||1;
       const effCols=Math.ceil(nc/colStep);
-      // MELODY dynamic tempo — DRIVEN BY THE IMAGE. With MELODY on we leave the
-      // rigid grid and let each part of the painting set its own pace: vivid,
-      // saturated, energetic regions push FORWARD (shorter steps); dark, calm,
-      // sparse regions BREATHE (longer steps). So the music speeds up and slows
-      // down with the picture — real dynamics, not a flat pulse. The whole curve
-      // is normalized so the AVERAGE step stays ≈150ms (the familiar feel), the
-      // variation just rides on top. Lead (melody) events inherit the local pace.
-      // Precompute a per-event step (ms) array aligned to chordsRef indices.
-      const _computeMelSteps=(src)=>{
-        const raw=new Array(src.length).fill(150);
-        if(!melodyOnRef.current) return raw;
-        // "Liveliness" per event from real image data the scan already carries:
-        //   _chroma (0..1) colour saturation/vibrancy of the cell,
-        //   note velocity (chroma-derived energy), and note count (motif density).
-        const live=new Array(src.length).fill(0.5);
-        for(let k=0;k<src.length;k++){
-          const e=src[k]; if(!e) continue;
-          const ch=typeof e._chroma==='number'?Math.max(0,Math.min(1,e._chroma)):0.4;
-          const ns=e.n||[];
-          let vAvg=0; for(const nn of ns) vAvg+=(nn.v||60); vAvg=ns.length?vAvg/ns.length:60;
-          const vNorm=Math.max(0,Math.min(1,(vAvg-38)/68));   // back out the 38+68·chroma mapping
-          const dens=Math.max(0,Math.min(1,(ns.length-1)/4)); // 1 note→0, 5+→1
-          // Weighted vibrancy. Chroma leads (colour), energy and density support.
-          live[k]=Math.max(0,Math.min(1, 0.55*ch + 0.30*vNorm + 0.15*dens));
-        }
-        // Map liveliness → step. Calmer, more musical range: vivid (1) → 150ms,
-        // calm (0) → 300ms. The old 85ms floor turned saturated full-colour images
-        // into a machine-gun; a 150ms floor keeps even vibrant scans listenable,
-        // and dynamics still read because the smoothstep preserves contrast.
-        const FAST=150, SLOW=300;
-        for(let k=0;k<src.length;k++){
-          const L=live[k];
-          const e2=L*L*(3-2*L);                       // smoothstep — read dynamics clearly
-          raw[k]=SLOW-(SLOW-FAST)*e2;
-        }
-        // Normalize so the MEAN step ≈195ms — a calmer overall pace than the old
-        // 150ms, so the painting breathes as a piece of music rather than a salvo;
-        // dynamics ride on top regardless of how vivid/dark the image is.
-        let sum=0,cnt=0; for(let k=0;k<raw.length;k++){ if(src[k]){ sum+=raw[k]; cnt++; } }
-        const mean=cnt?sum/cnt:195;
-        const norm=mean>0?195/mean:1;
-        for(let k=0;k<raw.length;k++){ raw[k]=Math.max(120,Math.min(520,raw[k]*norm)); }
-        return raw;
+      // The texture keeps ITS OWN timeline whether MELODY is on or off: the scan's
+      // agogic _stepMs, or a composer's real startMs rhythm. MELODY is a layer on
+      // top and never re-conducts the texture. (It used to swap every gap for an
+      // image-liveliness curve, which broke a composer's rhythm into rushes and
+      // drags and pulled the sung line out of step with it.)
+      // _gapAt(src,k) = the wait after event k-1 before event k. Prefer the event's
+      // own _stepMs (image-scan native pace); otherwise the delta between the two
+      // events' startMs (composers, a See-music bake), clamped to a sane range; the
+      // 150ms literal is only the last resort when neither field exists.
+      const _gapAt=(src,k)=>{
+        const p=src[k-1], c=src[k];
+        if(p && p._stepMs) return p._stepMs;
+        if(p && c && typeof p.startMs==='number' && typeof c.startMs==='number' && c.startMs>p.startMs) return Math.max(40, Math.min(2000, c.startMs - p.startMs));
+        return 150;
       };
-      let _melSteps=_computeMelSteps(chordsRef.current||[]);
-      let _melStepsLen=(chordsRef.current||[]).length;
-      let _melStepsOn=melodyOnRef.current;
       const step=()=>{
         if(genRef.current!==gen)return;
         // Read chords LIVE from the ref each step (not the captured local), so a
@@ -8859,28 +8832,7 @@ Hard requirements:
                 }
               }
               setDisp(i+1); i++;
-              {
-                let _gapMs2;
-                if(melodyOnRef.current !== _melStepsOn || liveChords.length !== _melStepsLen){
-                  _melSteps=_computeMelSteps(liveChords);
-                  _melStepsLen=liveChords.length;
-                  _melStepsOn=melodyOnRef.current;
-                }
-                if(melodyOnRef.current && _melSteps && _melSteps.length){
-                  _gapMs2 = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
-                } else {
-                  const _prev2 = liveChords[i-1];
-                  const _cur2  = liveChords[i];
-                  if(_prev2 && _prev2._stepMs){
-                    _gapMs2 = _prev2._stepMs;
-                  } else if(_prev2 && _cur2 && typeof _prev2.startMs==='number' && typeof _cur2.startMs==='number' && _cur2.startMs>_prev2.startMs){
-                    _gapMs2 = Math.max(40, Math.min(2000, _cur2.startMs - _prev2.startMs));
-                  } else {
-                    _gapMs2 = 150;
-                  }
-                }
-                pushTimer(step, Math.round(_gapMs2/playbackSpeedRef.current));
-              }
+              pushTimer(step, Math.round(_gapAt(liveChords,i)/playbackSpeedRef.current));
               return;
             }
             // Per-note onset offset (offsetMs) supports piano techniques: arpeggio,
@@ -8923,79 +8875,36 @@ Hard requirements:
         }
         setDisp(i+1);
         i++;
-        // Step interval. Two modes:
-        //  • Normal scan: the fixed per-event agogic step (or 150ms fallback) —
-        //    the familiar scan pulse.
-        //  • MELODY on: BREAK the scan grid. Schedule each event by its REAL
-        //    startMs gap (event[i].startMs − event[i-1].startMs), so texture +
-        //    the sung lead both play on the true timeline. This stops the texture
-        //    from marching in a rigid 150ms grid and lets the melody's own-clock
-        //    notes land where they belong — a flowing line instead of ticks
-        //    sprinkled between grid steps. Gap clamped to keep it sane.
-        let _gapMs;
-        // Recompute the per-event tempo curve if the live chords changed length or
-        // MELODY was toggled mid-playback (colour swap / melody on/off). Cheap: only
-        // on actual change, not every step.
-        if(melodyOnRef.current !== _melStepsOn || liveChords.length !== _melStepsLen){
-          _melSteps=_computeMelSteps(liveChords);
-          _melStepsLen=liveChords.length;
-          _melStepsOn=melodyOnRef.current;
-        }
-        if(melodyOnRef.current && _melSteps && _melSteps.length){
-          // Image-driven dynamic pace: the step that just elapsed (event i-1)
-          // determines the wait to the next. Vivid passages rush, calm ones
-          // breathe — the painting conducts the tempo. Mean stays ≈150ms.
-          _gapMs = Math.max(8, Math.min(1400, _melSteps[i-1] || 150));
-        } else {
-          // Prefer the chord's own _stepMs (image-scan native pace). When absent
-          // — e.g. a parsed MIDI, including a See music bake whose chords carry
-          // real startMs from groupToEvents — derive the gap from the actual
-          // timeline: the delta between this chord's startMs and the previous
-          // one. Without this the loop falls back to a flat 150ms tick, which
-          // crushes a piece whose chords are spread over tens of seconds into a
-          // 2-5× too-fast playback. Clamp to a sane range. Only the 150ms literal
-          // remains as a last resort when neither field exists.
-          const _prev = liveChords[i-1];
-          const _cur  = liveChords[i];
-          if(_prev && _prev._stepMs){
-            _gapMs = _prev._stepMs;
-          } else if(_prev && _cur && typeof _prev.startMs==='number' && typeof _cur.startMs==='number' && _cur.startMs>_prev.startMs){
-            _gapMs = Math.max(40, Math.min(2000, _cur.startMs - _prev.startMs));
-          } else {
-            _gapMs = 150;
-          }
-        }
+        // Step interval: the texture's own timeline (see _gapAt) — the same with
+        // MELODY on or off.
+        const _gapMs=_gapAt(liveChords,i);
         timers.current.push(setTimeout(step,Math.round(_gapMs/playbackSpeedRef.current)));
       };
       // ── Parallel MELODY voice ────────────────────────────────────────────────
       // The sung line is NOT in chordsRef (texture stays clean). Schedule it on its
       // own timers, in parallel with the texture step-loop above, so it flows as a
-      // second voice over the (dynamically-paced) painting. Each voice note's `pos`
-      // (0..1) maps onto the texture's REAL total duration — computed from the same
-      // _melSteps tempo curve — so the melody lands correctly however the dynamic
-      // tempo stretches the timeline. Timers go into timers.current, so Stop/Pause/
-      // Clear (which clear that array + bump genRef) tear the voice down cleanly.
-      // Compute the voice DIRECTLY from the live texture + melody data here. This
-      // guarantees: MELODY on → the line plays; MELODY off → nothing is scheduled.
-      // No race with the rebuild effect.
+      // second voice over the painting. The texture's REAL duration is measured with
+      // the same _gapAt rule the step-loop plays by, and handed to _melodyVoice so the
+      // line keeps the AI's own tempo; each note's `pos` (0..1 of that duration) then
+      // lands at its true time. Resuming mid-piece offsets by the TIME already played
+      // (not the index fraction — events are not evenly spaced). Timers go into
+      // timers.current, so Stop/Pause/Clear (which clear that array + bump genRef)
+      // tear the voice down cleanly. Computed directly from the live texture + melody
+      // data here: MELODY on → the line plays; MELODY off → nothing is scheduled.
       if(melodyOnRef.current && melodyDataRef.current){
+        const _src=chordsRef.current||[];
+        let totalMs=0, playedMs=0;
+        for(let k=1;k<_src.length;k++){ const g=_gapAt(_src,k); totalMs+=g; if(k<=fromIdx) playedMs+=g; }
+        totalMs+=200;   // the last event's own sounding time
         let voice=[];
-        try{ const _atmoForMel=(atmoOnRef.current&&atmoMoodRef.current)?atmoMoodRef.current:null; const _mv=_melodyVoice(chordsRef.current||[], melodyDataRef.current, _atmoForMel); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
+        try{ const _atmoForMel=(atmoOnRef.current&&atmoMoodRef.current)?atmoMoodRef.current:null; const _mv=_melodyVoice(_src, melodyDataRef.current, _atmoForMel, totalMs); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
         if(voice.length){
-          // Real total duration of the texture at the current dynamic tempo, from
-          // the not-yet-elapsed portion (so a resume mid-piece still lines up).
-          let totalMs=0;
-          for(let k=Math.max(1,fromIdx);k<(_melSteps?_melSteps.length:0);k++){ totalMs += (_melSteps[k]||150); }
-          if(totalMs<=0){ totalMs = (chordsRef.current.length||1)*150; }
-          const startedAtFrac = (_melSteps&&_melSteps.length)
-            ? (fromIdx>0 ? Math.min(1, fromIdx/_melSteps.length) : 0) : 0;
           const voiceGen = genRef.current;
           const voiceGen2 = melodyVoiceGenRef.current;
           for(const mn of voice){
-            // Skip notes already passed when resuming from the middle.
-            if(mn.pos < startedAtFrac) continue;
-            const relPos = (mn.pos - startedAtFrac) / Math.max(1e-6, (1 - startedAtFrac));
-            const atMs = Math.round((relPos * totalMs) / playbackSpeedRef.current);
+            const atRaw = mn.pos*totalMs - playedMs;
+            if(atRaw < 0) continue;   // already passed when resuming from the middle
+            const atMs = Math.round(atRaw / playbackSpeedRef.current);
             const durMs = Math.max(300, Math.round((mn.durFrac||0.01) * totalMs));
             const id = setTimeout(()=>{
               if(genRef.current!==voiceGen) return;          // stopped → don't sound
