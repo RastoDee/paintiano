@@ -3206,30 +3206,29 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const _energy = _ch ? _ch.energy : 0.5;
   const _density = _ch ? _ch.density : 0.3;
   // ── 8-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic Rothko Stacked (vertical, the canonical layout).
-  //  1 = Pastel / Light period (cream ground + pale fields, high luminosity).
-  //  2 = Classic Rothko Row (horizontal Classic).
-  //  3 = Classic Rothko Grid (grid-arranged Classic).
-  //  4 = Multiform (early 1948, free blurred patches).
+  //  0 = Stacked (veil engine): two or three fields, the canonical layout.
+  //  1 = Light (veil engine): cream ground, pale glowing fields.
+  //  2 = Horizon (veil engine): two fields meeting at a glowing seam.
+  //  3 = Bands (veil engine): one great field and thin bands.
+  //  4 = Multiform (veil engine): early 1948, soft patches afloat.
   //  5 = Seagram (dark portal frames 1958-59).
   //  6 = Chapel (Houston, 1964-67, triptych ultra-dark monochrome).
   //  7 = Incandescent (warm glowing 1955-58).
   //  Free (cap=2) sees Stacked + Pastel — dark saturated vs light luminous
   //  is the strongest art-historical contrast in Rothko's late career.
   //  Slot 1 stays Pastel (not Row Classic) so Free keeps maximal contrast.
-  let _rothkoForcedLayout = null; // null = seed-roll; else 0=stack, 1=row, 2=grid
+  let _rothkoForcedLayout = null; // the Classic body below is kept for reference; slots 0–4 now go to the veil engine
   {
     const _pn=_capN(8); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_ropick===1){ rothkoPhasePastel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===0){ rothkoPhaseStacked(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===1){ rothkoPhaseLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===2){ rothkoPhaseHorizon(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ropick===3){ rothkoPhaseBands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===4){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===5){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===6){ rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ropick===7){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // Slots 0, 2, 3 fall through to the Classic body with forced layout —
-    // each layout is now its own Vary slot rather than a hidden seed sub-pick.
-    if(_ropick===0) _rothkoForcedLayout = 0;
-    else if(_ropick===2) _rothkoForcedLayout = 1;
-    else if(_ropick===3) _rothkoForcedLayout = 2;
+    _rothkoForcedLayout = 0;
   }
   // Rothko is intentionally minimal — even 12 fields is at the high end of his
   // late stacked compositions, so we cap there rather than chasing density.
@@ -3433,19 +3432,94 @@ function _rothkoField(ctx,x,y,w,h,r,g,b,a){
   ctx.restore();
 }
 
-// ── Rothko D: Multiform — free blurred colour patches floating on a field. ──
-function rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const g=_picChord(chords,0,gc,isBW).rgb;
-  ctx.fillStyle=isBW?'#6a6660':`rgb(${Math.min(255,g[0]*0.5+90)},${Math.round(g[1]*0.5+60)},${Math.round(g[2]*0.4+30)})`;ctx.fillRect(0,0,CW,CH);
-  const patches=Math.max(3,Math.min(20,Math.round(cn/6)));
-  const vis=Math.max(1,Math.ceil(N/cn*patches));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+6000,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/patches)),gc,isBW);
-    const x=CW*(0.1+rnd()*0.6),y=CH*(0.1+rnd()*0.6),w=CW*(0.2+rnd()*0.35),h=CH*(0.12+rnd()*0.25);
-    _rothkoField(ctx,x,y,w,h,rgb[0],rgb[1],rgb[2],0.7);
-  }
+// ── Rothko veil engine ───────────────────────────────────────────────────────
+// One primitive: the VEIL — a rectangle of thin colour with a feathered,
+// uneven edge, laid over and over until the field glows from inside. A field is
+// a stack of veils; each veil takes its colour from the chord playing when it
+// is laid (pulled toward the field's own colour), so the finished field is the
+// passage's colours fused, and while the music plays the field deepens. Under
+// every field a lighter halo, so the edge burns the way Rothko's do.
+const _rkR=(a,ss)=>_seedRnd(a,ss,0,0);
+const _rkClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const _rkMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _rkCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+// deepen: Rothko's pigment — chroma kept, value pulled toward a chosen key (0 dark .. 1 light)
+function _rkTone(rgb,key,isBW){ const l=(rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114); if(isBW){ const v=_rkClamp(l*0.5+key*140,10,245); return [v,v,v]; }
+  const g=(rgb[0]+rgb[1]+rgb[2])/3; let c=rgb.map(v=>_rkClamp(g+(v-g)*1.6,0,255)); const want=40+key*180; const have=(c[0]*0.299+c[1]*0.587+c[2]*0.114)||1; const k=want/have; return c.map(v=>_rkClamp(v*k,0,255)); }
+// a feathered rectangle: edge wobble from low-frequency sines, drawn as one filled path
+function _rkRect(ctx,x,y,w,h,f,rnd){
+  const N=14, p=[]; const wob=(i,n,amp,ph)=>Math.sin(i/n*3.14159*2.3+ph)*amp*0.6+Math.sin(i/n*3.14159*5.1+ph*1.7)*amp*0.4;
+  const a1=rnd()*6.28,a2=rnd()*6.28,a3=rnd()*6.28,a4=rnd()*6.28;
+  for(let i=0;i<=N;i++) p.push([x+w*i/N, y+wob(i,N,f,a1)]);
+  for(let i=1;i<=N;i++) p.push([x+w+wob(i,N,f,a2), y+h*i/N]);
+  for(let i=N-1;i>=0;i--) p.push([x+w*i/N, y+h+wob(i,N,f,a3)]);
+  for(let i=N-1;i>=1;i--) p.push([x+wob(i,N,f,a4), y+h*i/N]);
+  ctx.beginPath(); p.forEach((q,i)=> i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.closePath(); ctx.fill();
+}
+// one veil of a field: {x,y,w,h, col, a, feather, k (0 outer .. 1 inner)}
+function _rkVeil(ctx,v,rnd){ const e=v.feather*(1-v.k); ctx.fillStyle=_rkCss(v.col,v.a); _rkRect(ctx,v.x-e,v.y-e,v.w+2*e,v.h+2*e,v.feather*0.22*(1-v.k*0.4),rnd); }
+function _rkSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  const col=(t)=>_picChord(chords,_rkClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb;
+  const avg=(t0,t1)=>{ let c=[0,0,0],k=0; for(let t=t0;t<=t1;t+=Math.max(0.01,(t1-t0)/12)){ const q=col(t); c[0]+=q[0]; c[1]+=q[1]; c[2]+=q[2]; k++; } return c.map(v=>v/k); };
+  return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col,avg}; }
+// a field: lay K veils over the passage t0..t1; halo first. key = value of the field (0 dark .. 1 light)
+function _rkField(list,S,x,y,w,h,t0,t1,key,o){
+  o=o||{}; const K=o.K||12, feather=o.feather, base=_rkTone(S.avg(t0,t1),key,S.isBW); let id=list.length;
+  const halo=_rkTone(base,_rkClamp(key+0.18,0,1),S.isBW);
+  list.push({id:id++,t:t0,x,y,w,h,col:halo,a:0.28,feather:feather*1.6,k:-0.1,ss:o.ss});
+  for(let i=0;i<K;i++){ const u=i/(K-1), t=t0+(t1-t0)*(i+0.5)/K; const kk=_rkClamp(key-0.1+u*0.22,0,1);   // outer veils darker, inner lighter — the glow comes from inside
+    const c=_rkMix(_rkTone(base,kk,S.isBW),_rkTone(S.col(t),kk,S.isBW),0.35);
+    list.push({id:id++,t,x,y,w,h,col:c,a:0.13+0.09*u,feather,k:u,ss:o.ss}); }
+  return base;
+}
+function _rkDraw(ctx,list,reveal,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_rkClamp(reveal,0,1)); for(let i=0;i<n;i++){ const v=list[i]; const rnd=_rkR(v.id*29+61001,ss); rnd(); _rkVeil(ctx,v,rnd); } }
+function _rkGround(ctx,CW,CH,c,ss){ ctx.fillStyle=_rkCss(_rkMix(c,[0,0,0],0.3)); ctx.fillRect(0,0,CW,CH); const rnd=_rkR(61000,ss|0); rnd(); const f=Math.min(CW,CH)*0.05;   // the stain: darker at the edges, three feathered veils of the ground colour inward — paths only, so the SVG export matches to the pixel
+  for(let i=0;i<3;i++){ const e=f*(2.2-i*0.6); ctx.fillStyle=_rkCss(c,0.4); _rkRect(ctx,e,e,CW-2*e,CH-2*e,f*0.3,rnd); } }
+// stacked fields helper: heights from the passages' energy, margins Rothko's
+function _rkStack(list,S,CW,CH,ss,n,keys,o){ o=o||{}; const r=_rkR(62000,ss); r(); const mx=CW*(o.mx||0.07), gap=CH*(o.gap||0.035), top=CH*(o.top||0.06), bot=CH*(o.bot||0.06);
+  const ws=[]; for(let i=0;i<n;i++) ws.push((o.weights&&o.weights[i])||(0.7+r()*0.6)); const T=ws.reduce((a,b)=>a+b,0); const H=CH-top-bot-gap*(n-1);
+  let y=top; for(let i=0;i<n;i++){ const h=H*ws[i]/T; const t0=i/n, t1=(i+1)/n; _rkField(list,S,mx+(r()-.5)*CW*0.01,y,CW-2*mx,h,t0,t1,keys[i],{feather:Math.min(CW,CH)*(o.feather||0.035),ss,K:o.K}); y+=h+gap; } }
+
+// ── Rothko 0 · Stacked — two or three fields on a stained ground, the canonical late layout.
+function rothkoPhaseStacked(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
+  const n=S.density>0.55?3:2; const ground=_rkTone(S.avg(0,1),0.18,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
+  const list=[]; const keys=n===2?[0.64,0.3]:[0.66,0.44,0.26]; _rkStack(list,S,CW,CH,ss,n,keys,{weights:n===2?[1.3,0.8]:[1.1,0.9,0.6]});
+  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
+}
+// ── Rothko 1 · Light — cream ground, pale fields that glow instead of weigh (the 1950s high-key canvases).
+function rothkoPhaseLight(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
+  const ground=_rkMix(_rkTone(S.avg(0,1),0.86,S.isBW),[246,240,226],0.6); _rkGround(ctx,CW,CH,ground,ss);
+  const list=[]; _rkStack(list,S,CW,CH,ss,3,[0.8,0.68,0.74],{weights:[1.2,0.7,0.9],feather:0.045});
+  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
+}
+// ── Rothko 2 · Horizon — two fields meeting at a seam that glows: the upper dark and deep, the lower lit.
+function rothkoPhaseHorizon(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH);
+  const ground=_rkTone(S.avg(0,1),0.14,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
+  const list=[]; const yh=CH*(0.5+(0.5-S.register)*0.2), mx=CW*0.06;
+  _rkField(list,S,mx,CH*0.05,CW-2*mx,yh-CH*0.05-D*0.012,0,0.5,0.26,{feather:D*0.03,ss,K:10});
+  _rkField(list,S,mx,yh+D*0.012,CW-2*mx,CH*0.95-yh-D*0.012,0.5,1,0.62,{feather:D*0.03,ss,K:10});
+  // the seam: a thin bright veil along the meeting line, laid last
+  const seam=_rkTone(S.avg(0.4,0.6),0.9,S.isBW); list.push({id:list.length,t:0.98,x:mx*1.3,y:yh-D*0.012,w:CW-2.6*mx,h:D*0.024,col:seam,a:0.55,feather:D*0.02,k:0.4,ss});
+  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
+}
+// ── Rothko 3 · Bands — one great field and two thin bands below it (No. 14, No. 10).
+function rothkoPhaseBands(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
+  const ground=_rkTone(S.avg(0,1),0.3,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
+  const list=[]; _rkStack(list,S,CW,CH,ss,3,[0.5,0.72,0.28],{weights:[2.6,0.35,0.5],gap:0.03,feather:0.03});
+  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
+}
+// ── Rothko 4 · Multiform (1948) — soft patches of colour afloat on a warm field, before the fields settled into rows.
+function rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH);
+  const ground=_rkTone(S.avg(0,1),0.55,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
+  const list=[]; const r=_rkR(63000,ss); r(); const n=4+Math.round(S.density*4);
+  for(let i=0;i<n;i++){ const t0=i/n, t1=(i+1)/n; const w=CW*(0.2+r()*0.4), h=CH*(0.1+r()*0.22); const x=CW*0.06+r()*(CW*0.88-w), y=CH*0.06+r()*(CH*0.88-h);
+    _rkField(list,S,x,y,w,h,t0,t1,0.3+r()*0.45,{feather:D*0.05,ss,K:7}); }
+  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
 }
 
 // ── Rothko E: Seagram — dark maroon/black portal / blocked window. ──
@@ -5177,9 +5251,9 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //  LightLine       = 1949 "light drawings": one unbroken luminous stroke.
   //  BlueAtmo        = Blue Atmosphere veils (cool palette, soft edges).
   //  Analytic (A)    = recursive plane subdivision + pencil-grain hatching.
-  //  FacetedDrift    = directional flow field of small angular facets.
+  //  Guernica        = black/white/grey shards flung from the lamp (facet engine).
   //  StillLife       = geometric still-life via composition only (no outlines).
-  //  TonalCubism     = meditative warm-grey planes with charcoal wash masses.
+  //  Demoiselles     = rose/ochre figures against the blue curtain (facet engine).
   // No phase carries a literal subject — every Picasso phase is pure spatial
   // fragmentation. Identity comes from mass, edge, overlap, tonality.
   // Free (cap=2) sees positions 0,1. Analytic Cubism is the most expensive
@@ -5187,7 +5261,7 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // so it's moved OUT of the Free slots: Free gets LightLine + BlueAtmo
   // (both light to draw). Pro reaches Analytic and the rest at higher indices.
   // SyntheticPlanes was retired from the wheel (curation, Aug 2026).
-  const _picassoOrder = [picassoPhaseLightLine, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseFacetedDrift, picassoPhaseStillLife, picassoPhaseTonalCubism];
+  const _picassoOrder = [picassoPhaseLightLine, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseGuernica, picassoPhaseStillLife, picassoPhaseDemoiselles];
   const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   _picassoOrder[pick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
@@ -5247,106 +5321,32 @@ function picassoPhaseLightLine(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
-// ── Picasso phase A: Analytic Cubism — the original angular shard composition. ──
-// Memoised plane partition (see _partCache for the same pattern).
-let _picPlaneCache = { key:'', planes:null };
+// ── Picasso phase A · Ma Jolie (1911–12) — analytic cubism on the facet engine
+// (the earlier pencil-grain version cost ~1 s per repaint). A pyramidal mass of
+// small interlocking facets in the centre, dissolving toward the edges; ochre,
+// umber and grey with the song's hue only as a cast; strong hatch, soft brown
+// contours, many passages. Time runs left to right through the mass.
 function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0;
-  const N=Math.min(lim,chords.length);
-  const D=Math.min(CW,CH);
-  const isBW=mode==='bw';
-  const grey=(r,g,b)=>{const v=Math.round(r*0.299+g*0.587+b*0.114);return[v,v,v];};
-  const _pal=[[60,110,70],[200,55,40],[100,55,130],[50,90,150],[210,170,30],[220,200,170],[15,8,18],[180,80,50]];
-  const pal=isBW?_pal.map(([r,g,b])=>grey(r,g,b)):_pal;
-  // Tone-adjust helper: feed colour through Real (energy) + Pastel filters so
-  // Picasso's hard-coded palette breathes with the music. No-op in Pure mode.
-  const _tonedRGB = (r,g,b)=>{
-    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return [r,g,b];
-  };
-  const pickColor=(r,g,b,hint,rnd)=>{
-    const lum=(r*0.299+g*0.587+b*0.114)/255;
-    let c;
-    if(hint%3===0){if(lum<0.25)c=pal[6];else if(lum<0.45)c=pal[3];else if(lum<0.65)c=pal[0];else if(lum<0.85)c=pal[4];else c=pal[5];}
-    else if(hint%3===1){if(r>g&&r>b)c=pal[1];else if(g>r&&g>b)c=pal[0];else if(b>r&&b>g)c=pal[2];else c=pal[7];}
-    else{c=pal[hint%pal.length];}
-    const tr=Math.max(0,Math.min(255,c[0]+Math.round((rnd()-0.5)*28)));
-    const tg=Math.max(0,Math.min(255,c[1]+Math.round((rnd()-0.5)*28)));
-    const tb=Math.max(0,Math.min(255,c[2]+Math.round((rnd()-0.5)*28)));
-    return _tonedRGB(tr,tg,tb);
-  };
-  // MAX_PLANES grows with chord count and is capped to prevent runaway subdivision
-  // (each plane = one subdivision step). Curve calibrated so short pieces stay
-  // legible (30 chords → 30 planes) and long pieces keep adding planes well
-  // past the 300-mark (was previous cap).
-  const _chP = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _planeMul = _chP ? (0.50 + 1.01*(0.55*_chP.energy + 0.45*_chP.density)) : 1;
-  const MAX_PLANES=Math.max(2,Math.round(Math.min(chords.length,Math.min(500,
-    chords.length<=30  ? chords.length
-    :chords.length<=80 ? 30+Math.floor((chords.length-30)*0.60)
-    :chords.length<=200? 60+Math.floor((chords.length-80)*0.50)
-    :chords.length<=400? 120+Math.floor((chords.length-200)*0.60)
-    :chords.length<=700? 240+Math.floor((chords.length-400)*0.55)
-    :405+Math.floor((chords.length-700)*0.35)
-  )*_planeMul)));
-  const paintCount=Math.min(MAX_PLANES,Math.round(lim*(MAX_PLANES/chords.length)));
-  // The O(P²) plane partition depends only on (cn, ss, _planeMul) — never on
-  // lim — but it was rebuilt on every playback frame (~1.9 s per paint at
-  // 500 planes). Memoise it like _partitionCanvas does; only the cheap
-  // paintCount prefix is recomputed per frame.
-  const _pKey=chords.length+'|'+ss+'|'+_planeMul.toFixed(3)+'|'+CW+'|'+CH;
-  let planes;
-  if(_picPlaneCache.key===_pKey && _picPlaneCache.planes){
-    planes=_picPlaneCache.planes;
-  } else {
-    planes=[[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}]];
-    for(let cut=0;cut<MAX_PLANES-1;cut++){
-      const cr=_seedRnd(cut+1,ss,0,0);
-      let bigIdx=0,bigArea=0;
-      for(let pi=0;pi<planes.length;pi++){const p=planes[pi];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of p){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}const ar=(xMax-xMin)*(yMax-yMin);if(ar>bigArea){bigArea=ar;bigIdx=pi;}}
-      const target=planes[bigIdx];let xMin=1,xMax=0,yMin=1,yMax=0;for(const v of target){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;}
-      const cutAng=cr()*Math.PI*2,pivX=xMin+(xMax-xMin)*(0.28+cr()*0.44),pivY=yMin+(yMax-yMin)*(0.28+cr()*0.44);
-      const nX=-Math.sin(cutAng),nY=Math.cos(cutAng);
-      const sA=[],sB=[];
-      for(let i=0;i<target.length;i++){const v=target[i],next=target[(i+1)%target.length];const dv=(v.x-pivX)*nX+(v.y-pivY)*nY,dn=(next.x-pivX)*nX+(next.y-pivY)*nY;if(dv>=0)sA.push(v);else sB.push(v);if((dv>=0)!==(dn>=0)){const t=dv/(dv-dn);const ip={x:v.x+(next.x-v.x)*t,y:v.y+(next.y-v.y)*t};sA.push(ip);sB.push({...ip});}}
-      if(sA.length>=3&&sB.length>=3)planes.splice(bigIdx,1,sA,sB);
-    }
-    _picPlaneCache={key:_pKey,planes};
-  }
-  planes.slice(0,paintCount).forEach((poly,pIdx)=>{
-    const scaled=poly.map(v=>({x:v.x*CW,y:v.y*CH}));
-    const chord=chords[Math.min(chords.length-1,Math.floor(pIdx*(chords.length/MAX_PLANES)))];
-    _setCurE(chord && chord._E);
-    const notes=chord.n||chord.notes||[];
-    let aR=0,aG=0,aB=0,aA=0,aV=0,c=0;
-    for(const note of notes){const m=note.m!==undefined?note.m:note;const v=note.v!==undefined?note.v:80;const[r,g,b,a]=gc(m,v);aR+=r;aG+=g;aB+=b;aA+=(a||0.9);aV+=v;c++;}
-    if(!c){aR=120;aG=100;aB=160;aA=0.9;aV=80;c=1;}
-    const cR=aR/c,cG=aG/c,cB=aB/c,cA=Math.min(1,aA/c),energy=Math.max(0,Math.min(1,(aV/c-30)/90));
-    const rnd=_seedRnd(pIdx+500,ss,0,0);
-    let xMin=CW,xMax=0,yMin=CH,yMax=0,cX=0,cY=0;
-    for(const v of scaled){if(v.x<xMin)xMin=v.x;if(v.x>xMax)xMax=v.x;if(v.y<yMin)yMin=v.y;if(v.y>yMax)yMax=v.y;cX+=v.x;cY+=v.y;}
-    cX/=scaled.length;cY/=scaled.length;
-    const reach=Math.sqrt((xMax-xMin)**2+(yMax-yMin)**2),minDim=Math.min(xMax-xMin,yMax-yMin);
-    const[pR,pG,pB]=pickColor(cR,cG,cB,pIdx,rnd);
-    const buildPath=()=>{ctx.beginPath();ctx.moveTo(scaled[0].x,scaled[0].y);for(let i=1;i<scaled.length;i++)ctx.lineTo(scaled[i].x,scaled[i].y);ctx.closePath();};
-    buildPath();ctx.fillStyle=`rgba(${Math.round(cR)},${Math.round(cG)},${Math.round(cB)},${(Math.min(0.97,0.80+energy*0.17)).toFixed(2)})`;ctx.fill();
-    ctx.save();buildPath();ctx.clip();
-    const grainAng=rnd()*Math.PI*2,cosG=Math.cos(grainAng),sinG=Math.sin(grainAng);
-    const gap=Math.max(1.5,minDim*0.06),sLen=Math.max(3,minDim*0.20),sW=Math.max(0.6,minDim*0.022);
-    const rows=Math.ceil(reach*2/gap)+2;
-    const noteColors=notes.length?notes.map(n=>{const m=n.m!==undefined?n.m:n;const v=n.v!==undefined?n.v:80;return gc(m,v);}):[[cR,cG,cB,cA]];
-    // The hatch square (2·reach wide) is ~8× the plane's bounding box, so most
-    // strokes land wholly outside the clip. Every rnd() is still drawn in the
-    // same order (output identical); only the canvas calls are skipped for a
-    // stroke that cannot touch the clip's bbox (+1px AA margin).
-    for(let ri=-rows;ri<=rows;ri++){const off=ri*gap+(rnd()-0.5)*gap*0.4;const nInRow=Math.ceil(reach/sLen)+1;for(let si=-nInRow;si<=nInRow;si++){const along=si*sLen*0.85+(rnd()-0.5)*sLen*0.3;const x0=cX+cosG*along+(-sinG)*off,y0=cY+sinG*along+cosG*off;const len=sLen*(0.7+rnd()*0.6);const nc=noteColors[Math.floor(rnd()*noteColors.length)];const[nr,ng,nb]=nc;const tj=(rnd()-0.5)*22;const sR2=Math.max(0,Math.min(255,Math.round(nr+tj))),sG2=Math.max(0,Math.min(255,Math.round(ng+tj*0.8))),sB2=Math.max(0,Math.min(255,Math.round(nb+tj*0.6)));const sAl=(0.55+rnd()*0.28).toFixed(2);const sLw=sW*(0.7+rnd()*0.5);const hx=Math.abs(cosG)*len*0.5+sLw*0.5+1,hy=Math.abs(sinG)*len*0.5+sLw*0.5+1;if(x0+hx<xMin||x0-hx>xMax||y0+hy<yMin||y0-hy>yMax)continue;ctx.strokeStyle=`rgba(${sR2},${sG2},${sB2},${sAl})`;ctx.lineWidth=sLw;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x0-cosG*len*0.5,y0-sinG*len*0.5);ctx.lineTo(x0+cosG*len*0.5,y0+sinG*len*0.5);ctx.stroke();}}
-    ctx.restore();
-    if(rnd()<0.25+energy*0.20){ctx.save();buildPath();ctx.clip();const patNc=noteColors[Math.floor(rnd()*noteColors.length)];const useContrast=rnd()<0.35;const patC=useContrast?[Math.round(patNc[0]),Math.round(patNc[1]),Math.round(patNc[2])]:(isBW?[30,30,30]:[15,8,18]);const patA=(0.75+rnd()*0.18).toFixed(2);if(rnd()<0.55){ctx.fillStyle=`rgba(${patC[0]},${patC[1]},${patC[2]},${patA})`;const dg=Math.max(3,minDim*0.12),dr=dg*(0.22+rnd()*0.12);for(let dy=yMin;dy<yMax;dy+=dg){const ro=(Math.round((dy-yMin)/dg)%2)*dg*0.5;for(let dx=xMin;dx<xMax;dx+=dg){ctx.beginPath();ctx.arc(dx+ro,dy,dr,0,Math.PI*2);ctx.fill();}}}else{ctx.strokeStyle=`rgba(${patC[0]},${patC[1]},${patC[2]},${patA})`;const sg=Math.max(2,minDim*0.09);ctx.lineWidth=sg*0.28;const sa=rnd()*Math.PI,cosS=Math.cos(sa),sinS=Math.sin(sa);const cnt=Math.ceil(reach*2/sg)+2;for(let st=-cnt;st<cnt;st++){const off=st*sg;ctx.beginPath();ctx.moveTo(cX+(-sinS)*off-cosS*reach,cY+cosS*off-sinS*reach);ctx.lineTo(cX+(-sinS)*off+cosS*reach,cY+cosS*off+sinS*reach);ctx.stroke();}}ctx.restore();}
-    const jS=D*0.003;ctx.beginPath();ctx.moveTo(scaled[0].x+(rnd()-0.5)*jS,scaled[0].y+(rnd()-0.5)*jS);for(let i=1;i<scaled.length;i++){const prev=scaled[i-1],cur=scaled[i];for(let s=1;s<=3;s++){const t=s/3;ctx.lineTo(prev.x+(cur.x-prev.x)*t+(rnd()-0.5)*jS,prev.y+(cur.y-prev.y)*t+(rnd()-0.5)*jS);}}ctx.closePath();
-    ctx.strokeStyle=isBW?`rgba(20,20,20,${(0.82+energy*0.15).toFixed(2)})`:(rnd()<0.88?`rgba(15,8,18,${(0.82+energy*0.15).toFixed(2)})`:`rgba(200,55,40,0.88)`);
-    ctx.lineWidth=Math.max(0.8,D*(0.003+energy*0.004));ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-  });
+  const ss=sessionSeed|0; const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn, isBW=S.isBW;
+  const GROUND=isBW?[178,174,166]:[186,172,146]; ctx.fillStyle=_pcCss(GROUND); ctx.fillRect(0,0,CW,CH);
+  const r0=_pcR(95000,ss); r0();
+  const OCHRE=[196,160,96], UMBER=[106,78,56], GREY=[150,146,138], PALE=[222,208,180];
+  // the mass: an irregular octagon, wider at the base, leaning with the register
+  const cx=CW*(0.5+(S.register-.5)*0.1), top=CH*(0.08+r0()*0.06), bot=CH*(0.96), hw=CW*(0.34+S.density*0.1);
+  const mass=[[cx-hw*0.25,top],[cx+hw*0.3,top+CH*0.04],[cx+hw*0.75,CH*0.42],[cx+hw*1.0,bot-CH*0.02],[cx-hw*0.95,bot],[cx-hw*0.8,CH*0.45]];
+  const list=[]; let id=0; const minA=CW*CH/(140+S.density*160);
+  const inner=[]; const rr=_pcR(95100,ss); rr(); _pcCut(mass,rr,minA,0,1.5708+(rr()-.5)*0.9,inner);
+  for(const poly of inner){ const pc=_pcCentre(poly); const t=_pcClamp((pc[0]-(cx-hw))/(2*hw)*0.94+rr()*0.06,0,1); const {rgb,energy}=S.col(t);
+    const u=rr(); const base=u<0.3?OCHRE:u<0.5?UMBER:u<0.75?GREY:PALE; let col=isBW?_pcMix(rgb,base,0.6):_pcMix(base,rgb,0.22);
+    const dy=(pc[1]-top)/(bot-top); col=_pcMix(col,[0,0,0],_pcClamp(energy*0.35+dy*0.15-0.1,0,0.4));   // loud and low → darker
+    if(rr()<0.06) col=isBW?[236,232,226]:_pcMix(PALE,[255,250,240],0.6);                               // a lit facet
+    list.push({id:id++,t,poly,col,hatch:rr()<0.7?0.4+rr()*0.5:0,hang:(rr()<0.5?0.9:-0.9)+(rr()-.5)*0.5,ink:0.55+energy*0.3,inkCol:[52,36,28],open:rr()<0.45?Math.floor(rr()*poly.length):-1,lw:Math.max(0.9,D*0.0035)}); }
+  // the surround: a few large quiet planes close to the ground, faint contours — the mass dissolves into them
+  const outer=[]; const ro=_pcR(95200,ss); ro(); _pcCut([[0,0],[CW,0],[CW,CH],[0,CH]],ro,minA*5,0,1.5708,outer);
+  for(const poly of outer){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW*0.5-0.02,0,1); const {rgb}=S.col(t); const u=ro();
+    list.push({id:id++,t,poly,col:_pcMix(GROUND,isBW?rgb:_pcMix(u<0.5?OCHRE:GREY,rgb,0.3),0.22+ro()*0.2),hatch:ro()<0.4?0.25:0,hang:1.1+(ro()-.5)*0.6,ink:0.22,inkCol:[70,56,44],open:ro()<0.5?Math.floor(ro()*poly.length):-1,lw:Math.max(0.8,D*0.0025),alpha:1}); }
+  _pcDraw(ctx,list,reveal,D,ss);
+  _setCurE(0.5);
 }
 
 // ── Picasso Synthetic Planes: pure abstract spatial fragmentation. 5–9 large
@@ -5504,127 +5504,111 @@ function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.globalAlpha = 1;
 }
 
-// ── Picasso Rose Atmosphere: warm palette cubist mood, no figures. Same
-// structure as Blue Atmo but with warm pink/ochre bias. Rose Period warmth
-// via colour, not via harlequin figures.
+// ── Picasso cubist facet engine ──────────────────────────────────────────────
+// One primitive: the FACET — a plane cut out of the picture by straight lines,
+// filled flat, shaded by a pencil hatch in one direction, and closed by a
+// charcoal contour that is now and then left open so one plane passes into the
+// next (the cubist "passage"). The composition is a recursive subdivision of a
+// region into facets; facets are listed, sorted by musical time and drawn up to
+// the reveal, so the picture fragments as the music goes and repaints
+// identically for the same song and seed.
+const _pcR=(a,ss)=>_seedRnd(a,ss,0,0);
+const _pcClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const _pcMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _pcCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+function _pcArea(p){ let a=0; for(let i=0;i<p.length;i++){ const q=p[(i+1)%p.length]; a+=p[i][0]*q[1]-q[0]*p[i][1]; } return Math.abs(a)/2; }
+function _pcCentre(p){ let x=0,y=0; for(const q of p){ x+=q[0]; y+=q[1]; } return [x/p.length,y/p.length]; }
+// split a convex polygon by the line through (px,py) at angle ang → [left,right]
+function _pcSplit(poly,px,py,ang){
+  const nx=-Math.sin(ang), ny=Math.cos(ang); const L=[],R=[]; const n=poly.length;
+  for(let i=0;i<n;i++){ const a=poly[i], b=poly[(i+1)%n]; const da=(a[0]-px)*nx+(a[1]-py)*ny, db=(b[0]-px)*nx+(b[1]-py)*ny;
+    (da>=0?L:R).push(a);
+    if((da>=0)!==(db>=0)){ const t=da/(da-db); const ix=[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]; L.push(ix); R.push(ix); } }
+  return [L,R];
+}
+// recursive subdivision: cut until the facet is small enough; grain biases the cut direction
+function _pcCut(poly,rnd,minA,depth,grain,out){
+  const A=_pcArea(poly); if(poly.length<3) return;
+  if(A<minA*(0.6+rnd()*0.8) || depth>9){ out.push(poly); return; }
+  const c=_pcCentre(poly); const px=c[0]+(rnd()-.5)*Math.sqrt(A)*0.5, py=c[1]+(rnd()-.5)*Math.sqrt(A)*0.5;
+  const ang=(rnd()<0.6 ? grain+(rnd()-.5)*0.6 : rnd()*3.1416);
+  const [L,R]=_pcSplit(poly,px,py,ang);
+  if(L.length<3||R.length<3||_pcArea(L)<minA*0.15||_pcArea(R)<minA*0.15){ out.push(poly); return; }
+  _pcCut(L,rnd,minA,depth+1,grain,out); _pcCut(R,rnd,minA,depth+1,grain,out);
+}
+function _pcPath(ctx,p){ ctx.beginPath(); for(let i=0;i<p.length;i++){ i?ctx.lineTo(p[i][0],p[i][1]):ctx.moveTo(p[i][0],p[i][1]); } ctx.closePath(); }
+// draw one facet: {poly, col, hatch (0..1), hang, ink (contour alpha), open (edge index left open or -1), lw}
+function _pcFacet(ctx,f,D,rnd){
+  const p=f.poly;
+  _pcPath(ctx,p); ctx.fillStyle=_pcCss(f.col,f.alpha==null?1:f.alpha); ctx.fill();
+  if(f.hatch>0){ ctx.save(); _pcPath(ctx,p); ctx.clip(); const c=_pcCentre(p); const R=Math.sqrt(_pcArea(p))*1.2+D*0.02; const st=D*(0.009+(1-f.hatch)*0.012); const ca=Math.cos(f.hang), sa=Math.sin(f.hang);
+    ctx.strokeStyle=_pcCss(f.inkCol||[20,18,16],0.14+f.hatch*0.22); ctx.lineWidth=Math.max(0.6,D*0.0022); ctx.lineCap='butt'; ctx.beginPath();
+    for(let d=-R; d<=R; d+=st){ const jx=(rnd()-.5)*st*0.4; const x0=c[0]+ca*(d+jx)-sa*R, y0=c[1]+sa*(d+jx)+ca*R, x1=c[0]+ca*(d+jx)+sa*R, y1=c[1]+sa*(d+jx)-ca*R; ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); }
+    ctx.stroke(); ctx.restore(); }
+  if(f.ink>0){ ctx.strokeStyle=_pcCss(f.inkCol||[22,20,18],f.ink); ctx.lineWidth=f.lw||Math.max(1,D*0.004); ctx.lineCap='round'; ctx.lineJoin='round';
+    for(let i=0;i<p.length;i++){ if(i===f.open) continue; const a=p[i], b=p[(i+1)%p.length]; const g=rnd()<0.22; // a broken edge: two short strokes with a gap
+      ctx.beginPath(); if(g){ const u=0.35+rnd()*0.3; ctx.moveTo(a[0],a[1]); ctx.lineTo(a[0]+(b[0]-a[0])*(u-0.12),a[1]+(b[1]-a[1])*(u-0.12)); ctx.moveTo(a[0]+(b[0]-a[0])*(u+0.12),a[1]+(b[1]-a[1])*(u+0.12)); ctx.lineTo(b[0],b[1]); } else { ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); } ctx.stroke(); } }
+}
+function _pcSetup(chords,gc,mode){ const isBW=mode==='bw'; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  return {cn:chords.length,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.5,register:ch?ch.register:0.5,tempo:ch?ch.tempo:0.5,
+    col:(t)=>{ const cn=chords.length; const r=_picChord(chords,_pcClamp(Math.floor(t*cn),0,cn-1),gc,isBW); return r; }}; }
+function _pcDraw(ctx,list,reveal,D,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_pcClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_pcR(f.id*17+91001,ss); rnd(); _pcFacet(ctx,f,D,rnd); } }
 
-// ── Picasso Faceted Drift: directional analytic cubism — dense overlapping
-// facets across the canvas, mostly monochrome, faint chord-colour bias only.
-// Flow direction comes from song register (low → vertical, high → horizontal,
-// mid → diagonal). Density gradient: tighter band for calm songs, dispersed
-// for energetic. Strong charcoal hatching ties the field together (Ma Jolie /
-// Kahnweiler 1910–11 feel). NO subject — pure fragmentation field.
-function picassoPhaseFacetedDrift(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0;
-  const isBW=mode==='bw';
-  const cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const D=Math.min(CW,CH);
-
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const energy=_ch?_ch.energy:0.5;
-  const density=_ch?_ch.density:0.3;
-  const register=_ch?_ch.register:0.5;
-
-  // Cool grey-brown ground — analytic cubism muted base, NOT golden tobacco.
-  ctx.fillStyle=isBW?'#5a5650':'#4a4438';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Dense facet count — analytic cubism is busy and overlapping.
-  const facetFull=Math.max(180,Math.min(380,220+Math.round((energy+density)*70)));
-  const visFacets=Math.max(20,Math.ceil(facetFull*reveal));
-
-  // Flow direction from register: low → vertical, high → horizontal, mid → diagonal.
-  const dirR=_seedRnd(9701,ss,0,0); dirR(); dirR();
-  let flowAng;
-  if(register<0.35) flowAng=Math.PI/2+(dirR()-0.5)*0.45;
-  else if(register>0.65) flowAng=(dirR()-0.5)*0.45;
-  else flowAng=Math.PI/4+(dirR()-0.5)*0.6;
-  const dx=Math.cos(flowAng), dy=Math.sin(flowAng);
-  const px=-dy, py=dx;
-
-  for(let i=0;i<visFacets;i++){
-    const r=_seedRnd(i+9900,ss,0,0); r(); r();
-
-    // Position along flow axis + perpendicular density gradient.
-    // Calm songs → tighter band; energetic → dispersed.
-    const tAlong=r();
-    let tPerp=(r()-0.5)*2;
-    tPerp*=(0.55+(1-density)*0.45);
-    const flowLen=Math.sqrt(CW*CW+CH*CH);
-    const cx=CW*0.5+dx*(tAlong-0.5)*flowLen+px*tPerp*flowLen*0.50;
-    const cy=CH*0.5+dy*(tAlong-0.5)*flowLen+py*tPerp*flowLen*0.50;
-    if(cx<-40||cx>CW+40||cy<-40||cy>CH+40) continue;
-
-    // Facet size — bigger than before so they overlap and build a continuous field.
-    const sz=D*(0.045+r()*0.075);
-    const rot=flowAng+(r()-0.5)*0.9;
-    const sides=3+Math.floor(r()*2);            // triangles + quads
-    const {rgb,energy:fE}=_picChord(chords,i%cn,gc,isBW);
-
-    // VERY heavy pull toward earth tones — almost monochrome.
-    // Only ~22% of chord-colour bleeds through. Picasso analytic is not colourful.
-    let fR=isBW?Math.round(rgb[0]*0.18+72):Math.round(rgb[0]*0.22+58);
-    let fG=isBW?Math.round(rgb[1]*0.18+68):Math.round(rgb[1]*0.22+46);
-    let fB=isBW?Math.round(rgb[2]*0.18+62):Math.round(rgb[2]*0.22+32);
-    if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
-    if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
-
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(rot);
-    ctx.beginPath();
-    for(let s=0;s<sides;s++){
-      const a=(s/sides)*Math.PI*2;
-      const rr=sz*(0.60+r()*0.80);
-      const x=Math.cos(a)*rr, y=Math.sin(a)*rr;
-      if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.closePath();
-    ctx.fillStyle=`rgba(${fR|0},${fG|0},${fB|0},${(0.78+fE*0.18).toFixed(2)})`;
-    ctx.fill();
-
-    // Tonal modelling: darken one edge slightly so each facet has dimension.
-    // This is the analytic cubism "sculpted facet" read.
-    if(r()<0.6){
-      ctx.fillStyle='rgba(15,10,8,0.18)';
-      ctx.beginPath();
-      const a0=r()*Math.PI*2;
-      ctx.moveTo(0,0);
-      ctx.arc(0,0,sz,a0,a0+Math.PI);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    // Thin charcoal outline.
-    ctx.strokeStyle=isBW?'rgba(15,12,10,0.70)':'rgba(20,12,8,0.78)';
-    ctx.lineWidth=Math.max(0.6,D*0.0014);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Dense charcoal hatching — analytic cubism signature. Scales with reveal.
-  // Crosshatch in two diagonals, biased toward the flow direction.
-  const hatchFull=400+Math.floor(_seedRnd(11000,ss,0,0)()*250);
-  const visHatches=Math.ceil(hatchFull*reveal);
-  ctx.save();
-  ctx.globalAlpha=0.24;
-  ctx.strokeStyle=isBW?'rgba(15,12,10,0.95)':'rgba(20,14,8,0.95)';
-  ctx.lineWidth=0.55;
-  for(let k=0;k<visHatches;k++){
-    const hR=_seedRnd(k+11200,ss,0,0); hR();
-    const sx=hR()*CW, sy=hR()*CH;
-    const len=6+hR()*18;
-    // 70% follow flow direction (parallel to flowAng), 30% cross-hatch.
-    const useFlow=hR()<0.70;
-    const a=useFlow ? flowAng+(hR()-0.5)*0.30 : flowAng+Math.PI/2+(hR()-0.5)*0.30;
-    ctx.beginPath();
-    ctx.moveTo(sx,sy);
-    ctx.lineTo(sx+Math.cos(a)*len,sy+Math.sin(a)*len);
-    ctx.stroke();
-  }
-  ctx.restore();
+// ── Picasso 3 · Guernica (1937) — black, white and grey only: shards flung from
+// the lamp at the top, the light itself a jagged white star; a dark piece is
+// loud, a pale one quiet (the colour of the chord survives only as a value, with
+// a faint cool or warm cast); hatch on the half-tones; contours hard.
+function picassoPhaseGuernica(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
+  ctx.fillStyle='#d6d4ce'; ctx.fillRect(0,0,CW,CH);
+  const r0=_pcR(93000,ss); r0();
+  const lx=CW*(0.42+r0()*0.16), ly=CH*(0.06+r0()*0.06);
+  // first cuts: rays from the lamp, then the grain of each sector follows its ray
+  let regions=[[[0,0],[CW,0],[CW,CH],[0,CH]]]; const nr=5+Math.round(S.density*4);
+  for(let k=0;k<nr;k++){ const ang=0.35+(k+0.5)/nr*2.45+(r0()-.5)*0.2; const next=[]; for(const p of regions){ const [L,R]=_pcSplit(p,lx,ly,ang); if(L.length>=3) next.push(L); if(R.length>=3) next.push(R); } regions=next; }
+  const list=[]; let id=0; const minA=CW*CH/(90+S.density*120);
+  for(const reg of regions){ const c=_pcCentre(reg); const grain=Math.atan2(c[1]-ly,c[0]-lx); const out=[]; const rr=_pcR(93100+id,ss); rr(); _pcCut(reg,rr,minA,0,grain,out);
+    for(const poly of out){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW*0.9+rr()*0.1,0,1); const {rgb,energy}=S.col(t);
+      const lum=(rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114)/255; const dist=Math.hypot(pc[0]-lx,pc[1]-ly)/D;
+      let v=_pcClamp(0.92-energy*0.6+(lum-0.5)*0.2-dist*0.38+(rr()-.5)*0.3,0.04,0.96);   // value: loud → dark, far from the lamp → darker
+      if(rr()<0.12) v=rr()<0.5?0.03:0.97;                                                   // a pure black or pure white shard
+      const warm=S.isBW?0:(rgb[0]-rgb[2])/255*10; const col=[_pcClamp(v*255+warm,0,255),_pcClamp(v*255,0,255),_pcClamp(v*255-warm,0,255)];
+      const half=v>0.3&&v<0.72;
+      list.push({id:id++,t,poly,col,hatch:half?0.45+rr()*0.4:(v<=0.3?0.2:0),hang:grain+1.5708+(rr()-.5)*0.4,ink:0.85,open:rr()<0.3?Math.floor(rr()*poly.length):-1,lw:Math.max(1,D*0.0045)}); } }
+  // the lamp: a jagged white star with a black eye, drawn last
+  const nst=9+Math.round(S.energy*4); const star=[]; for(let k=0;k<nst*2;k++){ const a=k/(nst*2)*6.2832; const rad=D*(k%2?0.035:0.075)*(0.85+r0()*0.3); star.push([lx+Math.cos(a)*rad, ly+Math.sin(a)*rad]); }
+  list.push({id:id++,t:1,poly:star,col:[246,244,238],hatch:0,hang:0,ink:0.95,open:-1,lw:Math.max(1,D*0.005)});
+  const eye=[]; for(let k=0;k<10;k++){ const a=k/10*6.2832; eye.push([lx+Math.cos(a)*D*0.022, ly+Math.sin(a)*D*0.016]); }
+  list.push({id:id++,t:1,poly:eye,col:[18,16,14],hatch:0,hang:0,ink:0,open:-1});
+  _pcDraw(ctx,list,reveal,D,ss);
+  _setCurE(0.5);
+}
+// ── Picasso 5 · Les Demoiselles (1907) — tall angular figures side by side,
+// rose and ochre flesh cut by the blue of the curtain, white highlights and
+// black contours; each figure is one passage of the song, left to right.
+function picassoPhaseDemoiselles(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn, isBW=S.isBW;
+  ctx.fillStyle=isBW?'#cfcac2':'#dcc0a2'; ctx.fillRect(0,0,CW,CH);
+  const r0=_pcR(94000,ss); r0();
+  const ROSE=[232,160,128], OCHRE=[214,164,96], BLUE=[112,146,188], WHITE=[244,236,222], SHADOW=[132,84,70];
+  const nf=3+Math.round(S.density*2); const list=[]; let id=0;
+  // the figures: tall strips with leaning sides; the curtain: what is left between them
+  const strips=[]; for(let k=0;k<nf;k++){ const x0=(k+0.08+r0()*0.1)/nf, x1=(k+0.92-r0()*0.1)/nf; const lean=(r0()-.5)*0.08, top=0.04+r0()*0.12, bot=0.92+r0()*0.08;
+    const w=(x1-x0), sh=0.2+r0()*0.3, hp=0.55+r0()*0.2, fl=0.05+r0()*0.08;   // shoulders, hips, flare
+    strips.push([[CW*(x0+lean+w*0.15),CH*top],[CW*(x1+lean-w*0.1),CH*(top+0.02)],[CW*(x1+lean*0.5+fl),CH*sh],[CW*(x1-lean+fl*0.5),CH*hp],[CW*(x1-lean-w*0.05),CH*bot],[CW*(x0-lean+w*0.05),CH*(bot+0.02)],[CW*(x0-lean-fl*0.5),CH*hp],[CW*(x0+lean*0.5-fl),CH*sh]]); }
+  const minA=CW*CH/(70+S.density*80);
+  strips.forEach((strip,k)=>{ const rr=_pcR(94100+k,ss); rr(); const out=[]; _pcCut(strip,rr,minA*0.8,0,1.5708+(rr()-.5)*0.5,out); const cx=_pcCentre(strip)[0];
+    for(const poly of out){ const pc=_pcCentre(poly); const t=_pcClamp((k+(pc[1]/CH))/nf*0.96+rr()*0.03,0,1); const {rgb,energy}=S.col(t);
+      const side=(pc[0]-cx)/(CW/nf); const u=rr(); let base = u<0.08 ? WHITE : u<0.2 ? SHADOW : (side<-0.15 ? ROSE : side>0.2 ? OCHRE : (rr()<0.5?ROSE:OCHRE));
+      let col=isBW?rgb:_pcMix(base,rgb,0.28); if(base===WHITE) col=isBW?[240,236,230]:_pcMix(WHITE,rgb,0.12);
+      col=_pcMix(col,[0,0,0],Math.max(0,energy-0.6)*0.5);
+      list.push({id:id++,t,poly,col,hatch:base===SHADOW?0.6:(rr()<0.25?0.3:0),hang:(rr()-.5)*0.8+(side>0?0.8:-0.8),ink:0.9,inkCol:[24,18,16],open:rr()<0.35?Math.floor(rr()*poly.length):-1,lw:Math.max(1.2,D*0.005)}); } });
+  // the curtain behind: blue and white planes cut with a vertical grain, quiet, drawn first (t slightly ahead of the figure beside them)
+  const back=[[[0,0],[CW,0],[CW,CH],[0,CH]]]; const bk=[]; const rb=_pcR(94900,ss); rb(); _pcCut(back[0],rb,minA*2.2,0,1.5708,bk);
+  for(const poly of bk){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW,0,1); const {rgb}=S.col(t); const u=rb(); const base=u<0.55?BLUE:u<0.8?WHITE:[196,170,140];
+    list.push({id:id++,t:_pcClamp(Math.floor(pc[0]/CW*nf)/nf-0.02,0,1),poly,col:isBW?_pcMix(rgb,[200,200,200],0.5):_pcMix(base,rgb,0.18),hatch:base===BLUE?0.35:0,hang:1.4+(rb()-.5)*0.4,ink:0.45,inkCol:[40,36,40],open:rb()<0.4?Math.floor(rb()*poly.length):-1,lw:Math.max(1,D*0.003)}); }
+  _pcDraw(ctx,list,reveal,D,ss);
+  _setCurE(0.5);
 }
 
 // ── Picasso Geometric Still-Life: synthetic cubism still-life via geometry
@@ -5731,152 +5715,6 @@ function picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.moveTo(0, tableY + CH*0.05);
   ctx.lineTo(CW, tableY);
   ctx.stroke();
-}
-
-// ── Picasso Tonal Cubism: meditative warm-grey atmospheric cubism. 10–18 larger
-// softer planes on a desaturated palette, charcoal wash regions as compositional
-// masses, optional muted chord-colour wash. Soft outlines (less ink violence
-// than the analytic phases). The "Cézanne-influenced 1908–09 transition" feel —
-// contemplative, restrained, tonal. NO biomorphs, NO eyes, NO subject.
-function picassoPhaseTonalCubism(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0;
-  const isBW=mode==='bw';
-  const cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const D=Math.min(CW,CH);
-
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const energy=_ch?_ch.energy:0.5;
-  const density=_ch?_ch.density:0.3;
-
-  // Soft warm-grey ground.
-  ctx.fillStyle=isBW?'#a8a59c':'#a89e8a';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Paper grain.
-  ctx.save();
-  ctx.globalAlpha=0.07;
-  ctx.fillStyle=isBW?'rgb(35,32,28)':'rgb(50,40,32)';
-  for(let i=0;i<500;i++){
-    const gr=_seedRnd(i+10800,ss,0,0);
-    ctx.fillRect(gr()*CW,gr()*CH,1,1);
-  }
-  ctx.restore();
-
-  // 10–18 larger softer planes.
-  const planeFull=Math.max(10,Math.min(18,10+Math.round((energy+density)*4)));
-  // Planes ease in (see the draw loop): plane i starts at x=i-1 and is at full
-  // strength by x=i+1, so one extra plane is in flight beyond today's ceil().
-  const planeX=planeFull*reveal;
-  const visPlanes=Math.min(planeFull,Math.max(2,Math.ceil(planeX)+1));
-
-  // Loose jittered grid of plane centres — Voronoi-like, no obvious rows.
-  const cols=Math.ceil(Math.sqrt(planeFull));
-  const rows=Math.ceil(planeFull/cols);
-  const planes=[];
-  let idx=0;
-  for(let ry=0;ry<rows && idx<planeFull;ry++){
-    for(let cx=0;cx<cols && idx<planeFull;cx++){
-      const r=_seedRnd(idx+10900,ss,0,0); r(); r();
-      const gridX=CW*(cx+0.5)/cols;
-      const gridY=CH*(ry+0.5)/rows;
-      const jit=D*0.11;
-      const px=gridX+(r()-0.5)*jit*2;
-      const py=gridY+(r()-0.5)*jit*2;
-      const sz=D*(0.19+r()*0.16);
-      const sides=4+Math.floor(r()*3);
-      const verts=[];
-      for(let s=0;s<sides;s++){
-        const a=(s/sides)*Math.PI*2+(r()-0.5)*0.45;
-        const rr=sz*(0.72+r()*0.48);
-        verts.push([px+Math.cos(a)*rr,py+Math.sin(a)*rr]);
-      }
-      planes.push({cx:px,cy:py,sz,verts,idx});
-      idx++;
-    }
-  }
-
-  // Draw planes — heavily desaturated, pulled toward warm grey.
-  // Each plane is up to ~20% of the canvas, so it eases in over two plane
-  // intervals (full strength = today's look at full reveal) instead of
-  // popping in whole mid-playback.
-  for(let i=0;i<visPlanes;i++){
-    const p=planes[i];
-    const fade=Math.min(1,Math.max(0,(planeX-i+1)/2));
-    const {rgb,energy:pE}=_picChord(chords,i%cn,gc,isBW);
-    let fR=Math.round(rgb[0]*0.38+92);
-    let fG=Math.round(rgb[1]*0.38+86);
-    let fB=Math.round(rgb[2]*0.38+76);
-    if(typeof _energyTint==='function'){const t=_energyTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
-    if(typeof _pastelTint==='function'){const t=_pastelTint(fR,fG,fB);fR=t[0];fG=t[1];fB=t[2];}
-
-    ctx.save();
-    ctx.globalAlpha=fade;
-    ctx.beginPath();
-    ctx.moveTo(p.verts[0][0],p.verts[0][1]);
-    for(let v=1;v<p.verts.length;v++)ctx.lineTo(p.verts[v][0],p.verts[v][1]);
-    ctx.closePath();
-    ctx.fillStyle=`rgba(${fR|0},${fG|0},${fB|0},${(0.72+pE*0.18).toFixed(2)})`;
-    ctx.fill();
-    ctx.strokeStyle=isBW?'rgba(40,32,28,0.42)':'rgba(50,38,28,0.46)';
-    ctx.lineWidth=Math.max(0.8,D*0.0018);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Charcoal wash regions — 2 large translucent dark masses as compositional weight.
-  // Drawn after ~30% reveal so the painting builds up before the masses land;
-  // they ease in over the next 20% of the song rather than landing in one frame.
-  if(reveal>0.30){
-    ctx.save();
-    ctx.globalAlpha=Math.min(1,(reveal-0.30)/0.20);
-    for(let w=0;w<2;w++){
-      const wR=_seedRnd(w+11500,ss,0,0); wR(); wR();
-      const wx=CW*(0.20+wR()*0.60);
-      const wy=CH*(0.20+wR()*0.60);
-      const wsz=D*(0.42+wR()*0.20);
-      const wsides=5+Math.floor(wR()*3);
-      ctx.beginPath();
-      for(let s=0;s<wsides;s++){
-        const a=(s/wsides)*Math.PI*2;
-        const rr=wsz*(0.70+wR()*0.50);
-        const x=wx+Math.cos(a)*rr, y=wy+Math.sin(a)*rr;
-        if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      }
-      ctx.closePath();
-      ctx.fillStyle=isBW?`rgba(28,26,22,${(0.16+w*0.06).toFixed(2)})`:`rgba(35,28,22,${(0.18+w*0.06).toFixed(2)})`;
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  // Single muted chord-colour wash after ~50% — adds one tonal warm/cool note.
-  // Eases in over the next 20% of the song.
-  if(reveal>0.50){
-    ctx.save();
-    ctx.globalAlpha=Math.min(1,(reveal-0.50)/0.20);
-    const wcR=_seedRnd(12100,ss,0,0); wcR(); wcR();
-    const wcx=CW*(0.25+wcR()*0.50);
-    const wcy=CH*(0.25+wcR()*0.50);
-    const wcsz=D*(0.38+wcR()*0.15);
-    const wcsides=5+Math.floor(wcR()*3);
-    const {rgb:wcRgb}=_picChord(chords,Math.floor(cn*0.5),gc,isBW);
-    const wR=Math.round(wcRgb[0]*0.52+72);
-    const wG=Math.round(wcRgb[1]*0.52+62);
-    const wB=Math.round(wcRgb[2]*0.52+56);
-    ctx.beginPath();
-    for(let s=0;s<wcsides;s++){
-      const a=(s/wcsides)*Math.PI*2;
-      const rr=wcsz*(0.70+wcR()*0.50);
-      const x=wcx+Math.cos(a)*rr, y=wcy+Math.sin(a)*rr;
-      if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.closePath();
-    ctx.fillStyle=`rgba(${wR},${wG},${wB},0.30)`;
-    ctx.fill();
-    ctx.restore();
-  }
 }
 
 // Mondrian canvas-wide overlay. The per-cell drawMondrian goes pixely on long
@@ -6406,28 +6244,102 @@ function mondrianPhasePier(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // chord at the corresponding position via gc(); brightness of facets builds the
 // 3D read. Spheres pull cells outward and enlarge them near their centre, then
 // release back to the flat grid at their rim.
+// ── Vasarely grid engine — Folklore planétaire, Supernovae, Zebra, Vonal tunnel ──
+// Each cell / stripe / frame is one chord, read in time order (row by row,
+// top to bottom, rim to focus), so the picture assembles with the piece and
+// repaints identically for the same song and seed.
+const _vsR=(a,ss)=>_seedRnd(a,ss,0,0);
+const _vsClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const _vsMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _vsCss=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+function _vsPure(rgb,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; return [l,l,l]; } const g=(rgb[0]+rgb[1]+rgb[2])/3; const c=rgb.map(v=>_vsClamp(g+(v-g)*1.7,0,255)); const m=Math.max(c[0],c[1],c[2])||1; return c.map(v=>_vsClamp(v*Math.min(1.35,235/m),0,255)); }
+function _vsSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col:(t)=>_vsPure(_picChord(chords,_vsClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb,isBW)}; }
+// the cell's partner colour: the complement, brought to a contrasting value
+function _vsPartner(c){ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; const q=[255-c[0],255-c[1],255-c[2]]; const lq=q[0]*0.299+q[1]*0.587+q[2]*0.114; const k=(l>128?(l-60):(l+60))/Math.max(1,lq); return q.map(v=>_vsClamp(v*k,0,255)); }
+
+// ── Vasarely 0 · Folklore planétaire — the plastic unit: a lattice of square cells,
+// each a colour with a contrasting form inside (disc, square, ellipse, lozenge).
+function vasarelyPhaseFolklore(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_vsSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
+  const cols=6+Math.round(S.density*4), cell=CW/cols, rows=Math.ceil(CH/cell), n=cols*rows, vis=Math.ceil(n*reveal);
+  ctx.fillStyle=S.isBW?'#1a1a1a':'#141418'; ctx.fillRect(0,0,CW,CH);
+  for(let i=0;i<vis;i++){ const r=_vsR(70000+i,ss); r(); const cx=i%cols, cy=Math.floor(i/cols); const c=S.col(i/n); const flip=r()<0.5; const bg=flip?c:_vsPartner(c), fg=flip?_vsPartner(c):c;
+    const x=cx*cell, y=cy*cell, g=cell*0.03; ctx.fillStyle=_vsCss(bg); ctx.fillRect(x+g,y+g,cell-2*g,cell-2*g);
+    const kind=r(), sz=cell*(0.28+r()*0.14), mx=x+cell/2, my=y+cell/2; ctx.fillStyle=_vsCss(fg); ctx.beginPath();
+    if(kind<0.4) ctx.arc(mx,my,sz,0,6.2832);
+    else if(kind<0.65) ctx.rect(mx-sz,my-sz,2*sz,2*sz);
+    else if(kind<0.85) ctx.ellipse(mx,my,sz*1.15,sz*0.75,r()<0.5?0:1.5708,0,6.2832);
+    else { ctx.moveTo(mx,my-sz*1.2); ctx.lineTo(mx+sz*0.9,my); ctx.lineTo(mx,my+sz*1.2); ctx.lineTo(mx-sz*0.9,my); ctx.closePath(); }
+    ctx.fill();
+    if(r()<0.2){ ctx.fillStyle=_vsCss(bg); ctx.beginPath(); ctx.arc(mx,my,sz*0.4,0,6.2832); ctx.fill(); } }
+}
+// ── Vasarely 3 · Supernovae (1959–61) — a field of small squares; along a wave
+// across the grid they turn into lozenges and shrink, at its crests into discs.
+function vasarelyPhaseSupernova(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_vsSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const r=_vsR(73000,ss); r();
+  const cols=12+Math.round(S.density*6), cell=CW/cols, rows=Math.ceil(CH/cell), n=cols*rows, vis=Math.ceil(n*reveal);
+  let avg=[0,0,0]; for(let k=0;k<12;k++){ const c=S.col(k/12); avg=[avg[0]+c[0]/12,avg[1]+c[1]/12,avg[2]+c[2]/12]; }
+  ctx.fillStyle=_vsCss(S.isBW?[16,16,16]:_vsMix(avg,[10,10,14],0.82)); ctx.fillRect(0,0,CW,CH);
+  const fx=0.3+r()*0.4, fy=0.3+(0.5-S.register)*0.3+r()*0.2, ph=r()*3.14, freq=1.6+S.energy*1.4;
+  for(let i=0;i<vis;i++){ const cx=i%cols, cy=Math.floor(i/cols); const u=(cx+0.5)/cols, v=(cy+0.5)/rows*CH/CW;
+    const d=Math.hypot(u-fx,v-fy*CH/CW); const w=0.5+0.5*Math.cos(d*freq*6.2832+ph);
+    const c=_vsMix(S.col(i/n),[250,248,240],0.55); const x=(cx+0.5)*cell, y=(cy+0.5)*cell, sz=cell*(0.42-0.22*w), rot=w*0.7854;
+    ctx.fillStyle=_vsCss(c); ctx.beginPath();
+    if(w>0.86) ctx.arc(x,y,sz*1.05,0,6.2832);
+    else { for(let k=0;k<4;k++){ const a=rot+k*1.5708+0.7854; const px=x+Math.cos(a)*sz*1.414, py=y+Math.sin(a)*sz*1.414; k?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); }
+    ctx.fill(); }
+}
+// ── Vasarely 5 · Zebra — pale and dark stripes, bent by a sphere pressing
+// through the middle of the surface; the pale stripes carry a tint of the chord.
+function vasarelyPhaseZebra(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_vsSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const r=_vsR(72000,ss); r();
+  const n=26+Math.round(S.density*12), vis=Math.ceil(n*reveal), D=Math.min(CW,CH); const bx=CW*(0.4+r()*0.2), by=CH*(0.4+r()*0.2), br=D*(0.32+S.energy*0.1), amp=0.55;
+  const warp=(x,y)=>{ const dx=x-bx, dy=y-by, d=Math.hypot(dx,dy); if(d>=br) return [x,y]; const q=d/br; const k=1+amp*(1-q*q)*Math.sqrt(1-q*q); return [bx+dx*k, by+dy*k]; };
+  ctx.fillStyle=S.isBW?'#0c0c0c':'#0e0c10'; ctx.fillRect(0,0,CW,CH);
+  const h=CH/n, N=80;
+  for(let i=0;i<vis;i++){ if(i%2) continue; const c=_vsMix(S.col(i/n),[248,246,240],0.72); ctx.fillStyle=_vsCss(c); ctx.beginPath();
+    for(let k=0;k<=N;k++){ const [px,py]=warp(k/N*CW,i*h); k?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    for(let k=N;k>=0;k--){ const [px,py]=warp(k/N*CW,(i+1)*h); ctx.lineTo(px,py); }
+    ctx.closePath(); ctx.fill(); }
+}
+// ── Vasarely 6 · Vonal tunnel — nested frames shrinking toward an off-centre
+// focus (its height from the register): dark at the rim, light at the focus.
+function vasarelyPhaseTunnel(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_vsSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const r=_vsR(71000,ss); r();
+  const n=34+Math.round(S.density*16), vis=Math.ceil(n*reveal); const fx=CW*(0.35+r()*0.3), fy=CH*(0.35+(0.5-S.register)*0.3+r()*0.2);
+  ctx.fillStyle=S.isBW?'#101010':'#0e0e14'; ctx.fillRect(0,0,CW,CH);
+  for(let i=0;i<vis;i++){ const u=i/n, k=Math.pow(1-u,1.35); const c=S.col(u);
+    const x0=fx-fx*k, y0=fy-fy*k, x1=fx+(CW-fx)*k, y1=fy+(CH-fy)*k;
+    const lit=_vsMix(_vsMix(c,[0,0,0],0.55*(1-u)),[255,250,240],0.75*u*u);
+    ctx.fillStyle=_vsCss(lit); ctx.fillRect(x0,y0,x1-x0,y1-y0); }
+}
+
 function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
   const rnd = _seedRnd(53, ss, 0, 0);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic bulge (Sphere swell / Cube grid, seed-driven internal pick —
-  //      the two layouts read as one "bulge" identity so they share a slot).
+  //  0 = Folklore planétaire — the plastic unit: colour cells with a contrasting form.
   //  1 = Vonal — sphere with radiating rays (1968, centrifugal motion).
   //  2 = Vega — colour deformed checkerboard with central bulge.
-  //  3 = Banya — diagonal split cells (1964, zigzag color rhythm).
+  //  3 = Supernovae — squares turning to lozenges and discs along a wave.
   //  4 = Hexagon cubes — isometric tumbling block (3D).
-  //  5 = Plastic-unit cells — discs in cells with central bulge.
+  //  5 = Zebra — pale and dark stripes bent by a sphere pressing through.
+  //  6 = Vonal tunnel — nested frames toward a lit focus.
+  //  (the earlier sphere/cube body below, Banya and Cells are no longer reached)
   //  Free (cap=2) sees Sphere/Cube + Vonal — grid-warp vs ray-radiate is the
   //  strongest op-art contrast Vasarely\'s catalogue offers.
   {
-    const _pn=_capN(6); const _vpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(7); const _vpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_vpick===0){ vasarelyPhaseFolklore(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===1){ vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===2){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_vpick===3){ vasarelyPhaseBanya(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===3){ vasarelyPhaseSupernova(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===4){ vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_vpick===5){ vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===5){ vasarelyPhaseZebra(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_vpick===6){ vasarelyPhaseTunnel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     // else fall through to original sphere/cube body (variant 0; the sphere
     // vs cube sub-pick within is seed-driven, kept as natural micro-variation
     // rather than its own Vary slot).
@@ -13052,11 +12964,11 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   } else {
     if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette, chords, gc); return; }
     if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette, chords, gc); return; }
-    if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(255), ss, mode, palette, chords, gc); return; }
-    if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(180), ss, mode, palette, chords, gc); return; }
+    if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(1000), ss, mode, palette, chords, gc); return; }
+    if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(1000), ss, mode, palette, chords, gc); return; }
     if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette, chords, gc); return; }
     if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette, chords, gc); return; }
-    if(pick===7){ kandinskyPhaseFloat(ctx, CW, CH, eff(200), ss, mode, palette, chords, gc); return; }
+    if(pick===7){ kandinskyPhaseFloat(ctx, CW, CH, eff(1000), ss, mode, palette, chords, gc); return; }
   }
   kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette, chords);
 }
@@ -13434,54 +13346,113 @@ function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette, ch
   }
 }
 
-// ── Kandinsky D: Composition VIII — geometric circles, lines, triangles cool. ──
-function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
-  const ss=sessionSeed|0,isBW=mode==='bw';
-  ctx.fillStyle=isBW?'#cac6be':'#e8e4d8';ctx.fillRect(0,0,CW,CH);
-  const TH=[1,4,8,13,19,27,38,52,70,95,125,160,205,255];
-  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/255))*TH.length));
-  // long lines
-  for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2300+i,ss, 0, 0);
-    const k=(rnd()*3)|0;
-    ctx.strokeStyle=_kandPickCol(i, n, chords, gc, palette);
-    ctx.lineWidth=Math.max(1,Math.min(CW,CH)*0.004);
-    if(k===0){ // line
-      ctx.beginPath();ctx.moveTo(rnd()*CW,rnd()*CH);ctx.lineTo(rnd()*CW,rnd()*CH);ctx.stroke();
-    } else if(k===1){ // circle (sometimes haloed)
-      const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.02+rnd()*0.06);
-      ctx.fillStyle=_kandPickCol(i, n, chords, gc, palette);ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
-      if(rnd()<0.5){ctx.beginPath();ctx.arc(cx,cy,R*1.6,0,Math.PI*2);ctx.stroke();}
-    } else { // small triangle
-      const cx=rnd()*CW,cy=rnd()*CH,s=Math.min(CW,CH)*(0.02+rnd()*0.05);
-      ctx.fillStyle=_kandPickCol(i, n, chords, gc, palette);ctx.beginPath();ctx.moveTo(cx,cy-s);ctx.lineTo(cx+s,cy+s);ctx.lineTo(cx-s,cy+s);ctx.closePath();ctx.fill();
-    }
-  }
-}
-
 // ── Kandinsky E: Improvisation — loose colourful washes + black gesture lines. ──
 
-// ── Kandinsky F: Paris biomorphic — soft organic shapes, late lighter palette. ──
-function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
-  const ss=sessionSeed|0,isBW=mode==='bw';
-  ctx.fillStyle=isBW?'#9a96a0':'#5a6a8a';ctx.fillRect(0,0,CW,CH);
-  const TH=[2,5,9,15,23,33,46,62,82,108,140,180];
-  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/180))*TH.length));
-  for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2500+i,ss, 0, 0);
-    const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.04+rnd()*0.10);
-    ctx.fillStyle=_kandPickCol(i, n, chords, gc, palette);
-    const k=(rnd()*3)|0;
-    if(k===0){ // amoeba
-      ctx.beginPath();const pts=8;for(let p=0;p<=pts;p++){const a=p/pts*Math.PI*2,rr=R*(0.6+rnd()*0.7);const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr*0.7;p?ctx.quadraticCurveTo(cx+Math.cos(a-0.3)*rr*1.1,cy+Math.sin(a-0.3)*rr*0.8,x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();
-    } else if(k===1){ // wavy ribbon
-      ctx.strokeStyle=_kandPickCol(i, n, chords, gc, palette);ctx.lineWidth=Math.max(2,R*0.3);ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.quadraticCurveTo(cx,cy-R,cx+R,cy);ctx.quadraticCurveTo(cx+R*2,cy+R,cx+R*3,cy);ctx.stroke();
-    } else { // ladder / comb sign
-      ctx.strokeStyle=_kandPickCol(i, n, chords, gc, palette);ctx.lineWidth=Math.max(1.5,R*0.16);
-      ctx.beginPath();ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);for(let b=-2;b<=2;b++){ctx.moveTo(cx,cy+b*R*0.4);ctx.lineTo(cx+R*0.7,cy+b*R*0.4);}ctx.stroke();
-    }
+// ── Kandinsky Bauhaus engine ─────────────────────────────────────────────────
+// The vocabulary of the Bauhaus years, each form a primitive: the circle with
+// its coloured halo, the bundle of straight lines, the acute triangle, the
+// checkerboard patch, the arc, the free lobed form. A composition is a list of
+// forms with musical time; drawn up to the reveal, so the picture assembles
+// as the piece plays and repaints identically for the same song and seed.
+const _kdR=(a,ss)=>_seedRnd(a,ss,0,0);
+const _kdClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const _kdMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _kdCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+const _KD_Y=[236,196,36], _KD_R=[204,52,42], _KD_B=[38,74,160], _KD_K=[26,24,28], _KD_W=[244,240,230];
+// a chord colour pushed to Kandinsky's flat poster chroma
+function _kdPure(rgb,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; return [l,l,l]; } const g=(rgb[0]+rgb[1]+rgb[2])/3; const c=rgb.map(v=>_kdClamp(g+(v-g)*1.6,0,255)); const m=Math.max(c[0],c[1],c[2])||1; const k=Math.min(1.3,225/m); return c.map(v=>_kdClamp(v*k,0,255)); }
+function _kdSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords?chords.length:1; const ch=(typeof computeSongCharacter==='function'&&chords)?computeSongCharacter(chords):null;
+  const col=(t)=>_kdPure(_picChord(chords,_kdClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb,isBW);
+  return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col,K:isBW?[20,20,20]:_KD_K,W:_KD_W,Y:isBW?[220,220,220]:_KD_Y,Rd:isBW?[90,90,90]:_KD_R,Bl:isBW?[60,60,60]:_KD_B}; }
+function _kdDrawForm(ctx,f,D,rnd){
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  switch(f.kind){
+    case 'circle': { // the disc and its halo rings — Kandinsky's circle is never alone, it radiates
+      if(f.halo){ for(let i=f.halo.length-1;i>=0;i--){ ctx.fillStyle=_kdCss(f.halo[i],0.55); ctx.beginPath(); ctx.arc(f.x,f.y,f.r*(1+0.28*(i+1)),0,6.2832); ctx.fill(); } }
+      ctx.fillStyle=_kdCss(f.col); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,6.2832); ctx.fill();
+      if(f.ring){ ctx.strokeStyle=_kdCss(f.ring); ctx.lineWidth=Math.max(1,f.r*0.12); ctx.beginPath(); ctx.arc(f.x,f.y,f.r*1.06,0,6.2832); ctx.stroke(); }
+      break; }
+    case 'lines': { // a bundle of straight lines, fanning slightly, one thicker
+      const n=f.n||3; for(let i=0;i<n;i++){ const a=f.ang+(i-(n-1)/2)*f.fan, L=f.len*(0.8+rnd()*0.4), w=(i===0?f.w*1.8:f.w)*(0.8+rnd()*0.4);
+        ctx.strokeStyle=_kdCss(i%2&&f.col2?f.col2:f.col); ctx.lineWidth=Math.max(0.8,w); ctx.beginPath(); ctx.moveTo(f.x-Math.cos(a)*L/2,f.y-Math.sin(a)*L/2); ctx.lineTo(f.x+Math.cos(a)*L/2,f.y+Math.sin(a)*L/2); ctx.stroke(); }
+      break; }
+    case 'tri': { // an acute triangle, flat, pointing somewhere
+      const a=f.ang, L=f.len, hw=f.len*(f.aspect||0.22); const tx=f.x+Math.cos(a)*L, ty=f.y+Math.sin(a)*L; const px=-Math.sin(a)*hw, py=Math.cos(a)*hw;
+      ctx.fillStyle=_kdCss(f.col,f.a==null?1:f.a); ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(f.x+px,f.y+py); ctx.lineTo(f.x-px,f.y-py); ctx.closePath(); ctx.fill();
+      if(f.ring){ ctx.strokeStyle=_kdCss(f.ring); ctx.lineWidth=Math.max(0.8,D*0.003); ctx.stroke(); }
+      break; }
+    case 'checker': { const n=f.n||4, c=f.size/n; ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.ang||0);
+      for(let i=0;i<n;i++) for(let j=0;j<n;j++){ ctx.fillStyle=_kdCss((i+j)%2?f.col:f.col2); ctx.fillRect(-f.size/2+i*c,-f.size/2+j*c,c+0.5,c+0.5); } ctx.restore(); break; }
+    case 'arc': { ctx.strokeStyle=_kdCss(f.col); ctx.lineWidth=Math.max(1,f.w); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,f.a0,f.a1); ctx.stroke(); break; }
+    case 'blob': { // a free lobed form (Composition X): a circle breathed on by two sines
+      const N=26, k1=2+(rnd()*2|0), k2=3+(rnd()*3|0), p1=rnd()*6.28, p2=rnd()*6.28, a1=0.18+rnd()*0.2, a2=0.08+rnd()*0.1;
+      ctx.beginPath(); for(let i=0;i<=N;i++){ const th=i/N*6.2832, rr=f.r*(1+a1*Math.sin(k1*th+p1)+a2*Math.sin(k2*th+p2)); const x=f.x+Math.cos(th)*rr*(f.sx||1), y=f.y+Math.sin(th)*rr*(f.sy||1); i?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.closePath();
+      ctx.fillStyle=_kdCss(f.col); ctx.fill(); if(f.ring){ ctx.strokeStyle=_kdCss(f.ring); ctx.lineWidth=Math.max(1,D*0.004); ctx.stroke(); }
+      break; }
+    case 'dots': { for(let i=0;i<f.n;i++){ const a=rnd()*6.2832, d=rnd()*f.r; ctx.fillStyle=_kdCss(f.col); ctx.beginPath(); ctx.arc(f.x+Math.cos(a)*d,f.y+Math.sin(a)*d,f.dr*(0.6+rnd()*0.8),0,6.2832); ctx.fill(); } break; }
   }
+}
+function _kdDraw(ctx,list,reveal,D,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_kdClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_kdR(f.id*23+51001,ss); rnd(); _kdDrawForm(ctx,f,D,rnd); } }
+
+// ── Kandinsky D · Composition VIII (1923) — cream ground; the great dark circle
+// with its halo top-left, bundles of diagonals, acute triangles, small circles
+// with rings, a checkerboard, a few arcs. Time runs left to right.
+function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette,chords,gc){
+  const ss=sessionSeed|0, S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(chordCount/1000,0,1);
+  ctx.fillStyle=S.isBW?'#ece9e2':'#efe8d6'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(52000,ss); r(); const list=[]; let id=0; const push=(f)=>{ f.id=id++; list.push(f); };
+  // the anchor: a dark disc with a violet-rose halo, top-left
+  const ax=CW*(0.14+r()*0.08), ay=CH*(0.12+r()*0.06), ar=D*(0.075+S.energy*0.03);
+  push({kind:'circle',t:0.0,x:ax,y:ay,r:ar,col:S.isBW?[30,30,30]:[40,30,60],halo:[S.col(0.02),_kdMix(S.col(0.05),S.W,0.45),_kdMix(S.col(0.08),S.W,0.7)]});
+  // diagonals: two bundles crossing the picture
+  const nb=3+Math.round(S.density*2); for(let i=0;i<nb;i++){ const t=0.1+i*0.2; push({kind:'lines',t,x:CW*(0.3+r()*0.5),y:CH*(0.25+r()*0.5),ang:(r()<0.5?-0.9:-0.5)+(r()-.5)*0.5,fan:0.04+r()*0.05,len:D*(0.7+r()*0.6),w:D*0.003,n:2+(r()*3|0),col:S.K,col2:S.col(t)}); }
+  // triangles: acute, flat, pointing up-right
+  const nt=6+Math.round(S.density*5); for(let i=0;i<nt;i++){ const t=0.15+i/nt*0.8; push({kind:'tri',t,x:CW*(0.1+r()*0.8),y:CH*(0.2+r()*0.7),ang:-1.2+(r()-.5)*1.2,len:D*(0.12+r()*0.22),aspect:0.16+r()*0.12,col:i%3===0?S.K:S.col(t),ring:r()<0.4?S.K:null}); }
+  // small circles with rings, in a loose cluster
+  const nc=12+Math.round(S.density*10); const cx=CW*(0.55+r()*0.25), cy=CH*(0.55+r()*0.25);
+  for(let i=0;i<nc;i++){ const t=0.3+i/nc*0.65; const big=r()<0.25; push({kind:'circle',t,x:cx+(r()-.5)*CW*0.5,y:cy+(r()-.5)*CH*0.5,r:D*(big?0.035+r()*0.03:0.012+r()*0.018),col:S.col(t),ring:r()<0.6?S.K:null,halo:big&&r()<0.6?[_kdMix(S.col(t+0.02),S.W,0.5)]:null}); }
+  push({kind:'checker',t:0.5+r()*0.3,x:CW*(0.75+r()*0.15),y:CH*(0.12+r()*0.15),size:D*(0.09+r()*0.05),n:4,ang:(r()-.5)*0.4,col:S.K,col2:S.col(0.6)});
+  for(let i=0;i<5;i++){ const t=0.5+i*0.09; const a0=r()*6.28; push({kind:'arc',t,x:CW*(0.2+r()*0.6),y:CH*(0.3+r()*0.5),r:D*(0.08+r()*0.12),a0,a1:a0+1.2+r()*1.6,w:D*0.004,col:i?S.col(t):S.K}); }
+  push({kind:'dots',t:0.9,x:CW*0.5,y:CH*0.5,r:D*0.45,n:8+Math.round(S.density*8),dr:D*0.004,col:S.K});
+  _kdDraw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── Kandinsky F · Yellow–Red–Blue (1925) — the yellow panel with its black
+// lines on the left, the blue disc with a dark halo on the right, a black
+// serpent line between, small red forms and a checkerboard.
+function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette,chords,gc){
+  const ss=sessionSeed|0, S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(chordCount/1000,0,1);
+  ctx.fillStyle=S.isBW?'#d8d4cc':'#d9ccb0'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(53000,ss); r(); const list=[]; let id=0; const push=(f)=>{ f.id=id++; list.push(f); };
+  // the yellow panel: a soft-edged upright rectangle, as a blob with low lobes
+  const yel=_kdMix(S.Y,S.col(0.1),0.25); push({kind:'blob',t:0.0,x:CW*0.3,y:CH*0.42,r:D*0.2,sx:0.95,sy:1.45,col:yel});
+  // its black lines: short verticals and a few bent strokes over the panel
+  for(let i=0;i<5+Math.round(S.density*4);i++){ const t=0.05+i*0.06; push({kind:'lines',t,x:CW*(0.18+r()*0.24),y:CH*(0.2+r()*0.45),ang:1.5708+(r()-.5)*0.5,fan:0.03,len:D*(0.1+r()*0.18),w:D*0.004,n:1+(r()*2|0),col:S.K}); }
+  for(let i=0;i<3;i++){ const t=0.12+i*0.1; push({kind:'circle',t,x:CW*(0.14+r()*0.3),y:CH*(0.15+r()*0.5),r:D*(0.012+r()*0.014),col:i?S.col(t):S.Rd,ring:S.K}); }
+  // the blue disc with a dark halo, right
+  const bx=CW*(0.7+r()*0.1), by=CH*(0.45+r()*0.15), br=D*(0.11+S.energy*0.04);
+  push({kind:'circle',t:0.5,x:bx,y:by,r:br,col:_kdMix(S.Bl,S.col(0.55),0.3),halo:[S.isBW?[70,70,70]:[28,26,52],_kdMix(S.col(0.5),S.K,0.6)]});
+  // the serpent: a black line that bends between the two — drawn as chained arcs
+  for(let i=0;i<4;i++){ const t=0.3+i*0.07; const a0=(i%2?3.1:0)+r()*0.6; push({kind:'arc',t,x:CW*(0.42+i*0.07),y:CH*(0.5+(i%2?0.06:-0.06)),r:D*0.05,a0,a1:a0+2.6,w:D*0.006,col:S.K}); }
+  // red forms and a checkerboard
+  for(let i=0;i<3+Math.round(S.density*3);i++){ const t=0.6+i*0.08; push({kind:'tri',t,x:CW*(0.5+r()*0.4),y:CH*(0.1+r()*0.8),ang:r()*6.28,len:D*(0.06+r()*0.1),aspect:0.3,col:i%2?S.Rd:S.col(t),ring:S.K}); }
+  push({kind:'checker',t:0.75,x:CW*(0.82+r()*0.1),y:CH*(0.15+r()*0.1),size:D*(0.08+r()*0.04),n:3,ang:0,col:S.K,col2:S.W});
+  push({kind:'dots',t:0.9,x:bx,y:by,r:br*2.2,n:6+Math.round(S.density*6),dr:D*0.005,col:S.K});
+  _kdDraw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── Kandinsky H · Composition X (1939) — black ground; free coloured forms afloat:
+// lobed bodies, crescents, barred triangles, confetti; some rimmed in white.
+function kandinskyPhaseFloat(ctx,CW,CH,chordCount,sessionSeed,mode,palette,chords,gc){
+  const ss=sessionSeed|0, S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(chordCount/1000,0,1);
+  ctx.fillStyle=S.isBW?'#161616':'#141216'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(54000,ss); r(); const list=[]; let id=0; const push=(f)=>{ f.id=id++; list.push(f); };
+  const n=9+Math.round(S.density*7);
+  for(let i=0;i<n;i++){ const t=i/n; const x=CW*(0.1+r()*0.8), y=CH*(0.1+r()*0.8); const c=_kdMix(S.col(t),S.W,0.15);
+    push({kind:'blob',t,x,y,r:D*(0.05+r()*0.09),sx:0.8+r()*0.6,sy:0.8+r()*0.6,col:c,ring:r()<0.4?S.W:null});
+    if(r()<0.6) push({kind:'circle',t:t+0.02,x:x+(r()-.5)*D*0.2,y:y+(r()-.5)*D*0.2,r:D*(0.012+r()*0.02),col:_kdMix(S.col(t+0.03),S.W,0.3),ring:r()<0.5?S.W:null});
+    if(r()<0.5) push({kind:'tri',t:t+0.03,x:x+(r()-.5)*D*0.3,y:y+(r()-.5)*D*0.3,ang:r()*6.28,len:D*(0.06+r()*0.1),aspect:0.25,col:_kdMix(S.col(t+0.05),S.W,0.2),ring:S.W}); }
+  for(let i=0;i<3;i++){ const t=0.3+i*0.2; push({kind:'lines',t,x:CW*(0.2+r()*0.6),y:CH*(0.2+r()*0.6),ang:r()*3.14,fan:0.05,len:D*(0.3+r()*0.4),w:D*0.003,n:2+(r()*2|0),col:S.W,col2:S.col(t)}); }
+  push({kind:'dots',t:0.85,x:CW*0.5,y:CH*0.5,r:D*0.5,n:24+Math.round(S.density*30),dr:D*0.004,col:S.W});
+  _kdDraw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
 
 // ── Kandinsky phase: Geometric "Komposition" ──
@@ -13585,72 +13556,6 @@ function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette
   }
 }
 
-
-// ── Kandinsky phase H: Floating composition — shapes drift freely on a single
-// colour field, threaded by a few thin construction lines. Sparse, airy, the
-// Bauhaus-era "free abstract" Kandinsky. Progressive reveal via chordCount. ──
-function kandinskyPhaseFloat(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
-  const ss = sessionSeed|0, isBW = mode==='bw';
-  const cn = chords ? chords.length : 0;
-  // Local colour helper that ALWAYS returns an [r,g,b] array for chord i.
-  const colAt = (i)=>{
-    if(typeof gc!=='function' || !cn){ return [180,180,190]; }
-    const idx = Math.min(cn-1, Math.max(0, ((i%cn)+cn)%cn));
-    const ch = chords[idx];
-    _setCurE(ch && ch._E);
-    const notes = ch && (ch.n || ch.notes);
-    if(!notes || !notes.length) return [180,180,190];
-    let R=0,G=0,B=0,c=0;
-    for(const note of notes){ const m=note.m!==undefined?note.m:note; const v=note.v!==undefined?note.v:90; const cc=gc(m,v); R+=cc[0]; G+=cc[1]; B+=cc[2]; c++; }
-    return [R/c, G/c, B/c];
-  };
-  // ── Dark (not black) ground, tinted by the piece. Take the average chord
-  //    colour and pull it down into a deep — but coloured — backdrop so the
-  //    field reads as "in tune" with the music, distinct from the cream and
-  //    pure-black grounds other phases use. ──
-  let gr=[40,38,52];
-  if(!isBW && cn){
-    let R=0,G=0,B=0; const steps=Math.min(cn,8);
-    for(let i=0;i<steps;i++){ const c=colAt(Math.floor(i*cn/steps)); R+=c[0]; G+=c[1]; B+=c[2]; }
-    R/=steps; G/=steps; B/=steps;
-    // deepen: scale toward dark, keep hue, floor so it's never pure black
-    gr = [Math.max(18, R*0.32), Math.max(16, G*0.32), Math.max(24, B*0.34)];
-  } else if(isBW){ gr=[34,34,34]; }
-  ctx.fillStyle = `rgb(${gr[0]|0},${gr[1]|0},${gr[2]|0})`;
-  ctx.fillRect(0,0,CW,CH);
-
-  const minD = Math.min(CW,CH);
-  const p = Math.max(0.25, Math.min(1, chordCount / 200));
-  const N = Math.max(8, Math.round(p * 30));
-  // brighten a chord colour so shapes pop on the dark ground
-  const lift = (c, amt)=> `rgb(${Math.min(255,c[0]+amt)|0},${Math.min(255,c[1]+amt)|0},${Math.min(255,c[2]+amt)|0})`;
-  for(let i=0;i<N;i++){
-    const r = _seedRnd(3300+i, ss, 0, 0);
-    const x = r()*CW, y = r()*CH, s = minD*(0.05 + r()*0.17);
-    const base = colAt(i);
-    const col = isBW ? 'rgb(230,230,230)' : lift(base, 70);
-    const k = Math.floor(r()*5);
-    ctx.save();
-    ctx.fillStyle = col; ctx.strokeStyle = col;
-    if(k===0){ ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.fill(); }
-    else if(k===1){ ctx.fillRect(x-s/2,y-s/2,s,s); }
-    else if(k===2){ const rot=r()*Math.PI*2; ctx.beginPath(); for(let t=0;t<3;t++){ const a=rot+t*2.094; ctx[t?'lineTo':'moveTo'](x+Math.cos(a)*s*0.6, y+Math.sin(a)*s*0.6); } ctx.closePath(); ctx.fill(); }
-    else if(k===3){ ctx.lineWidth=Math.max(2.5,s*0.18); ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.stroke(); }
-    else { const rot=r()*Math.PI*2; ctx.beginPath(); ctx.arc(x,y,s/2,rot,rot+Math.PI); ctx.closePath(); ctx.fill(); }
-    ctx.restore();
-  }
-  // a few thin construction lines crossing the field (light, low opacity)
-  ctx.strokeStyle = isBW ? 'rgba(220,220,220,0.5)' : 'rgba(235,230,210,0.45)';
-  const NL = Math.max(2, Math.round(p*5));
-  for(let i=0;i<NL;i++){
-    const r = _seedRnd(3400+i, ss, 0, 0);
-    ctx.lineWidth = 1 + r()*2.2;
-    ctx.beginPath();
-    ctx.moveTo(r()*CW, r()*CH);
-    ctx.lineTo(r()*CW, r()*CH);
-    ctx.stroke();
-  }
-}
 
 // Convert a downsampled-image pixel array into musical events using a given hue→pitch table
 // (COF for harmony mode, SPEC_HUE for spectral mode). Pure: same input + same table → same output.
@@ -17464,9 +17369,9 @@ const ARTIST_VARIANTS = {
     {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},
     {ground:'#1b2a6b',mark:{beam:1},size:[.1,.3],edge:.3,alpha:.8,layout:{scatter:1},density:.3,lines:.6},
     {ground:'#2a2a3a',mark:{hatch:.7,facet:.3},size:[.06,.2],edge:0,alpha:1,layout:{grid:.7,scatter:.3},outline:.9,density:.8},
-    {ground:'#6b5a3a',mark:{facet:.7,tri:.3},size:[.05,.18],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.7,nosnap:true},   // analytic: shards with a contour, in the song's colours — the solo browns would be mud beside a partner
+    {ground:'#d6d4ce',mark:{facet:.7,tri:.3},size:[.05,.18],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.7,nosnap:true},   // Guernica: shards with a contour, in the song's colours beside a partner
     {ground:'#8a8a3a',mark:{poly:.5,arch:.3,disc:.2},size:[.08,.3],edge:0,alpha:.85,layout:{grid:.6,scatter:.4},outline:.6,density:.4},
-    {ground:'#9a9a8a',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // late analytic: opaque facets with a contour in the song's colours, not tan washes
+    {ground:'#dcc0a2',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // Demoiselles: big facets with a contour in the song's colours
   ],
   matisse: [
     {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},size:[.05,.18],layout:{grid:.8,scatter:.2},density:.6},
@@ -17564,13 +17469,14 @@ const ARTIST_VARIANTS = {
     {ground:'#1a1418',mark:{field:1},size:[.3,.6],edge:.7,alpha:.5,layout:{stack:1},density:.4,tone:'dark'},
     {ground:'#c84a1a',mark:{field:1},size:[.3,.6],edge:.2,alpha:.9,layout:{stack:1},density:.4},
   ],
-  bulge: [
-    {mark:{cube:1},size:[.02,.05],layout:{grid:1},density:1},
+  bulge: [   // slot order = solo phases: Folklore, Vonal sphere, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
+    {ground:'#141418',mark:{rect:.5,disc:.5},size:[.03,.06],layout:{grid:1},density:1},
     {ground:'#3a3a2a',mark:{vstripes:1},size:[.02,.05],layout:{stack:1},density:.8},
     {mark:{checker:1},size:[.02,.05],layout:{grid:1},density:1},
-    {mark:{tri:1},size:[.02,.05],layout:{grid:1},density:1},
+    {ground:'#16161a',mark:{rect:.6,dot:.4},size:[.01,.03],layout:{grid:1},density:1},
     {mark:{cube:1},size:[.015,.04],layout:{grid:1},density:1},
-    {ground:'#1a1030',mark:{dot:1},size:[.01,.03],layout:{grid:1},density:1},
+    {ground:'#0e0c10',mark:{band:1},size:[.02,.04],layout:{stack:1},density:.8},
+    {ground:'#0e0e14',mark:{rect:1},size:[.05,.15],layout:{radial:1},density:.5},
   ],
   wave: [
     {mark:{stripes:1},size:[.01,.03],layout:{stack:1},density:.8},
@@ -17683,7 +17589,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
@@ -17698,7 +17604,12 @@ function _fuHex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),
 function _fuVariantOf(k, slot, ph){
   if(slot===0) return ph|0;
   let h=((ph|0)*2654435761)>>>0; for(let i=0;i<k.length;i++){ h=(h*31 + k.charCodeAt(i) + slot*7919)>>>0; }
-  const n=ARTIST_VARIANT_N[k]||1; return (h>>>8)%n;
+  // jump consistent hash (Lamping–Veach): when a painter gains a variant, only
+  // ~1/n of the fusions that include it move to the new slot — the rest keep
+  // the partner variant they had (a plain modulo reshuffled every one of them)
+  const n=ARTIST_VARIANT_N[k]||1; let b=-1, j=0, key=h>>>0;
+  while(j<n){ b=j; key=(Math.imul(key,1664525)+1013904223)>>>0; j=Math.floor((b+1)*(2147483648/((key>>>1)+1))); }
+  return b;
 }
 function fuseDNA(keys, ph){
   const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
@@ -25388,7 +25299,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Exception: during a taste preview the tasted artist shows its FULL
   // variant range (the whole point of the teaser), read via ref so stale
   // closures can't pin it to 2.
-  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky'||style==='rothko'||style==='bloom') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 9 : (style==='pollock' ? 7 : 6)))));
+  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky'||style==='rothko'||style==='bloom') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 9 : ((style==='pollock'||style==='bulge') ? 7 : 6)))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -32287,7 +32198,7 @@ Hard requirements:
     const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
     const _familyAllowed = setupArtists.includes('mosaicFamily');
     // Free = 2 variants, except the artist of the day (full range, like Pro).
-    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : (k==='matisse' ? 9 : ((k==='kandinsky'||k==='rothko'||k==='bloom') ? 8 : ((k==='wave'||k==='pollock') ? 7 : 6))));
+    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : (k==='matisse' ? 9 : ((k==='kandinsky'||k==='rothko'||k==='bloom') ? 8 : ((k==='wave'||k==='pollock'||k==='bulge') ? 7 : 6))));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.

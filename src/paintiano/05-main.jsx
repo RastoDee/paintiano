@@ -2284,7 +2284,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Exception: during a taste preview the tasted artist shows its FULL
   // variant range (the whole point of the teaser), read via ref so stale
   // closures can't pin it to 2.
-  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky'||style==='rothko'||style==='bloom') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 9 : (style==='pollock' ? 7 : 6)))));
+  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky'||style==='rothko'||style==='bloom') ? 8 : (style==='wave' ? 7 : (style==='matisse' ? 9 : ((style==='pollock'||style==='bulge') ? 7 : 6)))));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -9183,7 +9183,7 @@ Hard requirements:
     const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
     const _familyAllowed = setupArtists.includes('mosaicFamily');
     // Free = 2 variants, except the artist of the day (full range, like Pro).
-    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : (k==='matisse' ? 9 : ((k==='kandinsky'||k==='rothko'||k==='bloom') ? 8 : ((k==='wave'||k==='pollock') ? 7 : 6))));
+    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : (k==='matisse' ? 9 : ((k==='kandinsky'||k==='rothko'||k==='bloom') ? 8 : ((k==='wave'||k==='pollock'||k==='bulge') ? 7 : 6))));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
