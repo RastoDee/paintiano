@@ -17814,12 +17814,12 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'blob': { const k=6+(R()*4|0); for(let j=0;j<=k;j++){ const a=j/k*6.2832, q=rr*(0.7+R()*0.6*(0.3+F.wobble)); const px=Math.cos(a)*q, py=Math.sin(a)*q; j?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); ctx.fill(); break; }
       case 'petal': { ctx.moveTo(0,0); ctx.bezierCurveTo(rr*1.2,-rr*1.1,rr*1.2,rr*1.1,0,rr*.1); ctx.bezierCurveTo(-rr*.3,rr*.6,-rr*.3,-rr*.6,0,0); ctx.fill(); break; }
       case 'star': { for(let j=0;j<10;j++){ const a=j/10*6.2832, q=j%2?rr*.45:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); break; }
-      case 'surface': { // Monet: not a mark but a patch of WATER — dozens of small horizontal touches, tonal (the chord's colour broken toward the next note, lighter and darker), laid under everything else; patch by patch the piece tiles a shimmering surface the partner paints on
-        const n=48+(R()*30|0), L=rr*0.32, w=rr*0.105; ctx.lineCap='round';
+      case 'surface': { // Monet: not a mark but a patch of WATER — dozens of small horizontal touches, tonal (the chord's colour broken toward the next note, lighter and darker), laid under everything else; patch by patch the piece tiles a shimmering surface the partner paints on. Each touch is the same loaded two-tone dab as solo Monet (_monDab), so the fusion carries his hand, not a flat pill.
+        const n=18+(R()*14|0), L=rr*0.5, w=rr*0.19;
         const c1=_fuRgb(col), c2=_fuRgb(col2);
         for(let j=0;j<n;j++){ const pa=R()*6.2832, pd=Math.sqrt(R())*rr; const px=Math.cos(pa)*pd*1.3, py=Math.sin(pa)*pd*0.95; const tm=R()*0.55, lt=(R()-.5)*0.36; const c=[c1[0]+(c2[0]-c1[0])*tm, c1[1]+(c2[1]-c1[1])*tm, c1[2]+(c2[2]-c1[2])*tm].map(v=> lt>0 ? v+(255-v)*lt : v*(1+lt));
-          ctx.strokeStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; ctx.lineWidth=w*(0.7+R()*0.6); const tl=(R()-.5)*0.28, len=L*(0.6+R()*0.8), cx=Math.cos(tl)*len/2, sy=Math.sin(tl)*len/2;
-          ctx.beginPath(); ctx.moveTo(px-cx,py-sy); ctx.lineTo(px+cx,py+sy); ctx.stroke(); }
+          const tl=(R()-.5)*0.28, len=L*(0.6+R()*0.8), wd=w*(0.7+R()*0.6);
+          _monDab(ctx,px,py,len,wd,tl,c,1,R,false); }
         ctx.beginPath(); break; }
       case 'stripe': ctx.lineWidth=Math.max(1,rr*.5); ctx.moveTo(-rr*6,0); ctx.lineTo(rr*6,0); ctx.stroke(); break;
       case 'wave': { ctx.lineWidth=Math.max(1,rr*.22); ctx.moveTo(-rr*2.5,0); for(let j=1;j<=4;j++){ ctx.quadraticCurveTo(-rr*2.5+rr*1.25*j-rr*.6, (j%2?-1:1)*rr*.9, -rr*2.5+rr*1.25*j, 0);} ctx.stroke(); break; }
@@ -18191,14 +18191,14 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   //    opacity — the same light falls on the shapes and on the water.
   if(_monetIn>=0){
     const FPm=FPs[_monetIn]; const Rm=_seedRnd(8081, ss, 5, 9);
-    const touch=(x,y,len,w,c)=>{ ctx.strokeStyle=c; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x-len/2,y); ctx.lineTo(x+len/2,y); ctx.stroke(); };
+    const touch=(x,y,len,w,cc)=>_monDab(ctx,x,y,len,w,(Rm()-.5)*0.25,cc,1,Rm,false);   // the same loaded touch as everywhere Monet paints
     ctx.save(); ctx.lineCap='round';
     for(const g of _defer){ const [tx,ty,kind,r,col,,col2,,,pi]=g; if(pi===_monetIn || _FU_LINEAR.test(kind)) continue; if(Rm()>0.75) continue;
-      const c=_fuRgb(col), L=Math.max(S*0.006, r*0.3), w=Math.max(1, r*0.1);
+      const c=_fuRgb(col), L=Math.max(S*0.008, r*0.36), w=Math.max(1.5, r*0.13);
       ctx.globalAlpha=0.5;
-      const nr=10+(Rm()*10|0); for(let j=0;j<nr;j++){ const px=tx+(Rm()-.5)*r*2.2, py=ty+r*1.05+Rm()*r*1.1; const lt=(Rm()-.5)*0.4; const cc=c.map(v=> lt>0 ? v+(255-v)*lt : v*(1+lt)); touch(px, py, L*(0.6+Rm()*0.8), w*(0.7+Rm()*0.6), `rgb(${cc[0]|0},${cc[1]|0},${cc[2]|0})`); }
+      const nr=10+(Rm()*10|0); for(let j=0;j<nr;j++){ const px=tx+(Rm()-.5)*r*2.2, py=ty+r*1.05+Rm()*r*1.1; const lt=(Rm()-.5)*0.4; const cc=c.map(v=> lt>0 ? v+(255-v)*lt : v*(1+lt)); touch(px, py, L*(0.6+Rm()*0.8), w*(0.7+Rm()*0.6), cc); }
       ctx.globalAlpha=0.6;
-      const nd=4+(Rm()*4|0); for(let j=0;j<nd;j++){ const a=0.5+Rm()*2.1; const px=tx+Math.cos(a)*r*(0.9+Rm()*0.25), py=ty+Math.sin(a)*r*(0.9+Rm()*0.25); const lt=0.1+Rm()*0.3; const cc=c.map(v=> v+(255-v)*lt); touch(px, py, L*(0.7+Rm()*0.7), w*(0.8+Rm()*0.5), `rgb(${cc[0]|0},${cc[1]|0},${cc[2]|0})`); }
+      const nd=4+(Rm()*4|0); for(let j=0;j<nd;j++){ const a=0.5+Rm()*2.1; const px=tx+Math.cos(a)*r*(0.9+Rm()*0.25), py=ty+Math.sin(a)*r*(0.9+Rm()*0.25); const lt=0.1+Rm()*0.3; const cc=c.map(v=> v+(255-v)*lt); touch(px, py, L*(0.7+Rm()*0.7), w*(0.8+Rm()*0.5), cc); }
     }
     ctx.restore();
     const FPv=Object.assign({}, FPm, {alpha:0.42});
