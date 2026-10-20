@@ -8481,20 +8481,39 @@ function _monBrk(rgb,warm,light,isBW){
 // broken colour inside one touch). No round cap. Three fills, no strokes: the
 // whole canvas is repainted ~9×/s during playback, so each touch stays cheap.
 const _MON_PX=new Float64Array(7), _MON_PY=new Float64Array(7), _MON_PW=new Float64Array(7);   // scratch — no allocation per dab
-function _monDab(ctx,x,y,L,w,ang,rgb,a,rnd){
+function _monDab(ctx,x,y,L,w,ang,rgb,a,rnd,flat){
   const ca=Math.cos(ang), sa=Math.sin(ang), bend=(rnd()-.5)*L*0.45, K=5, dry=0.5+rnd()*0.3;
   for(let k=0;k<=K;k++){ const u=k/K,q=u-0.5,arc=bend*(1-4*q*q); _MON_PX[k]=x+ca*q*L-sa*arc; _MON_PY[k]=y+sa*q*L+ca*arc; _MON_PW[k]=w*(1-dry*u)*(0.86+rnd()*0.28); }
   const r=rgb[0]|0, g=rgb[1]|0, b=rgb[2]|0;
   // a ribbon offset across the stroke by (ox,oy), scaled in width by sc, shifted sideways by sh (fraction of width)
   const rib=(ox,oy,sc,sh)=>{ ctx.beginPath(); for(let k=0;k<=K;k++){ const h=_MON_PW[k]*sc/2, o=_MON_PW[k]*sh; k?ctx.lineTo(_MON_PX[k]+ox-sa*(h+o),_MON_PY[k]+oy+ca*(h+o)):ctx.moveTo(_MON_PX[k]+ox-sa*(h+o),_MON_PY[k]+oy+ca*(h+o)); } for(let k=K;k>=0;k--){ const h=_MON_PW[k]*sc/2, o=_MON_PW[k]*sh; ctx.lineTo(_MON_PX[k]+ox+sa*(h-o),_MON_PY[k]+oy-ca*(h-o)); } ctx.closePath(); ctx.fill(); };
-  if(w>7){ ctx.fillStyle=`rgba(${(r*0.5)|0},${(g*0.5)|0},${(b*0.55)|0},${(a*0.3).toFixed(2)})`; rib(-sa*w*0.12+w*0.05, ca*w*0.12+w*0.07, 1.0, 0); }   // relief (only where the touch is big enough to cast one)
+  if(w>7 && !flat){ ctx.fillStyle=`rgba(${(r*0.5)|0},${(g*0.5)|0},${(b*0.55)|0},${(a*0.3).toFixed(2)})`; rib(-sa*w*0.12+w*0.05, ca*w*0.12+w*0.07, 1.0, 0); }   // relief (only where the touch is big enough to cast one; the underpainting is flat)
   ctx.fillStyle=`rgba(${r},${g},${b},${a})`; rib(0,0,1.0,0);                                                                                  // the body
+  if(flat) return;                                                                                                                             // the underpainting: one calm fill, no second colour
   const warm=rnd()<0.5; const r2=warm?Math.min(255,r+34):Math.max(0,r-18), g2=warm?Math.min(255,g+18):Math.max(0,g-10), b2=warm?Math.max(0,b-16):Math.min(255,b+36);
   ctx.fillStyle=`rgba(${r2|0},${g2|0},${b2|0},${(a*0.75).toFixed(2)})`; rib(0,0,0.46,0.24);                                                 // the second colour on one flank
 }
 function _monGlow(ctx,x,y,r,rgb,a){ const g=ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,`rgba(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0},${a})`); g.addColorStop(1,`rgba(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0},0)`); ctx.fillStyle=g; ctx.fillRect(x-r,y-r,2*r,2*r); }
 const _MON_SZ=1.42;   // fewer, broader touches — a flush-friendly surface
-function _monDraw(ctx,list,reveal){ list.sort((a,b)=>a.t-b.t||a.id-b.id); const n=Math.max(1,Math.ceil(list.length*_monClamp(reveal,0,1))); for(let i=0;i<n;i++){ const d=list[i]; const rnd=_monR(d.id+70000,d.ss); rnd(); if(d.disc){ _monGlow(ctx,d.x,d.y,d.w*2.2,d.c,0.5); ctx.beginPath(); ctx.fillStyle=`rgba(${d.c[0]|0},${d.c[1]|0},${d.c[2]|0},${d.a})`; ctx.arc(d.x,d.y,d.w/2,0,6.2832); ctx.fill(); continue; } _monDab(ctx,d.x,d.y,d.L*_MON_SZ,d.w*_MON_SZ,d.ang,d.c,d.a,rnd); } }
+// The underpainting. Monet never left the canvas showing: before the touches
+// there is a bed of broad, calmer strokes in the same local colours. Built from
+// the list itself — the canvas is bucketed into cells, each cell lays two broad
+// flat touches in the colour of a touch that will land there (lightened,
+// translucent so the ground's light still breathes through), timed just ahead of it — so the surface fills as the music goes and
+// the detail lands on prepared ground. Deterministic: seeded per cell.
+function _monUnder(list,CW,CH,ss){
+  const D=Math.min(CW,CH), GX=12, GY=Math.max(8,Math.round(12*CH/CW)), cells=[]; for(let i=0;i<GX*GY;i++) cells.push([]);
+  // the subject (stack, trunks, bridge, boats…) is never spread into the bed
+  for(const d of list){ if(d.disc || d.sub || d.w<D*0.008 || d.L>D*0.12) continue; const cx=Math.min(GX-1,Math.max(0,(d.x/CW*GX)|0)), cy=Math.min(GY-1,Math.max(0,(d.y/CH*GY)|0)); cells[cy*GX+cx].push(d); }
+  const out=[]; let id=900000; const NB=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]];
+  for(let cy=0;cy<GY;cy++) for(let cx=0;cx<GX;cx++){ const r=_monR(80000+cy*GX+cx,ss); r(); let src=cells[cy*GX+cx];
+    if(!src.length){ for(const [ox,oy] of NB){ const nx=cx+ox, ny=cy+oy; if(nx<0||ny<0||nx>=GX||ny>=GY) continue; if(cells[ny*GX+nx].length){ src=cells[ny*GX+nx]; break; } } }
+    if(!src.length) continue;
+    for(let k=0;k<3;k++){ const d=src[(r()*src.length)|0]; const x=CW*((cx+r())/GX), y=CH*((cy+r())/GY);
+      out.push({x,y,L:d.L*(1.3+r()*0.5),w:d.w*(1.5+r()*0.5),ang:d.ang+(r()-.5)*0.25,c:_monBrk(d.c,0,0.3,false),a:0.62,t:Math.max(0,d.t-0.04),id:id++,ss:d.ss,flat:true}); } }
+  return out;
+}
+function _monDraw(ctx,list,reveal,CW,CH){ const under=_monUnder(list,CW,CH,list.length?list[0].ss:0); const all=under.concat(list); all.sort((a,b)=>a.t-b.t||a.id-b.id); const n=Math.max(1,Math.ceil(all.length*_monClamp(reveal,0,1))); for(let i=0;i<n;i++){ const d=all[i]; const rnd=_monR(d.id+70000,d.ss); rnd(); if(d.disc){ _monGlow(ctx,d.x,d.y,d.w*2.2,d.c,0.5); ctx.beginPath(); ctx.fillStyle=`rgba(${d.c[0]|0},${d.c[1]|0},${d.c[2]|0},${d.a})`; ctx.arc(d.x,d.y,d.w/2,0,6.2832); ctx.fill(); continue; } _monDab(ctx,d.x,d.y,d.L*_MON_SZ,d.w*_MON_SZ,d.ang,d.c,d.a,rnd,d.flat); } }
 function _monMeanM(ch){ const ns=ch&&(ch.n||ch.notes)||[]; if(!ns.length) return 60; let s=0; for(const n of ns) s+=(n.m!==undefined?n.m:n); return s/ns.length; }
 function _monSetup(chords,gc,mode){
   const cn=chords.length, isBW=mode==='bw';
@@ -8522,12 +8541,12 @@ function monetPhaseNympheas(ctx,CW,CH,chords,lim,gc,ss,mode){
   const K=5+Math.round(density*5);
   for(let k=0;k<K;k++){ const r=_monR(60500+k,ss); r(); const cx=0.1+r()*0.8, cy=0.3+r()*0.62, n=8+(r()*10|0); const ci=Math.floor((k+0.5)*cn/K);
     for(let j=0;j<n;j++){ const c=_monBrk(_monMix(col(ci+j*3),[64,132,72],isBW?0:0.5),(j%2?1:-1),0.1+r()*0.15,isBW);
-      list.push({x:CW*(cx+(r()-.5)*0.22),y:CH*(cy+(r()-.5)*0.1),L:D*(0.03+r()*0.02),w:D*(0.022+r()*0.012),ang:(r()-.5)*0.3,c,a:0.92,t:k/K+r()*0.3,id:id++,ss}); }
-    for(let j=0;j<1+(r()*2|0);j++){ const c=_monBrk(col(ci),+1,0.72,isBW); list.push({x:CW*(cx+(r()-.5)*0.18),y:CH*(cy+(r()-.5)*0.08),L:D*0.02,w:D*0.016,ang:-0.6+r()*1.2,c,a:0.95,t:0.55+r()*0.45,id:id++,ss}); } }
+      list.push({x:CW*(cx+(r()-.5)*0.22),y:CH*(cy+(r()-.5)*0.1),L:D*(0.03+r()*0.02),w:D*(0.022+r()*0.012),ang:(r()-.5)*0.3,c,a:0.92,t:k/K+r()*0.3,id:id++,ss,sub:true}); }
+    for(let j=0;j<1+(r()*2|0);j++){ const c=_monBrk(col(ci),+1,0.72,isBW); list.push({x:CW*(cx+(r()-.5)*0.18),y:CH*(cy+(r()-.5)*0.08),L:D*0.02,w:D*0.016,ang:-0.6+r()*1.2,c,a:0.95,t:0.55+r()*0.45,id:id++,ss,sub:true}); } }
   // willow strands at the edges
   for(let i=0;i<40;i++){ const r=_monR(60700+i,ss); r(); const side=r()<0.5; const c=_monBrk(_monMix(col(Math.floor(r()*cn)),[40,70,60],isBW?0:0.55),-1,-0.25,isBW);
-    list.push({x:CW*(side?0.02+r()*0.12:0.86+r()*0.12),y:CH*(r()*0.7),L:D*(0.05+r()*0.07),w:D*0.006,ang:1.5708+(r()-.5)*0.25,c,a:0.5,t:r(),id:id++,ss}); }
-  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn);
+    list.push({x:CW*(side?0.02+r()*0.12:0.86+r()*0.12),y:CH*(r()*0.7),L:D*(0.05+r()*0.07),w:D*0.006,ang:1.5708+(r()-.5)*0.25,c,a:0.5,t:r(),id:id++,ss,sub:true}); }
+  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH);
   _setCurE(0.5);
 }
 
@@ -8550,15 +8569,15 @@ function monetPhaseImpression(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the sun, then its reflection — short orange dabs down the water
   list.push({x:sx,y:sy,L:0,w:D*0.1,ang:0,c:sun,a:1,t:0.985,id:id++,ss,disc:true});
   const nr=26+Math.round(density*10);
-  for(let i=0;i<nr;i++){ const r=_monR(61800+i,ss); r(); const y=yh+0.02+(i/nr)*(0.94-yh); list.push({x:sx+(r()-.5)*D*(0.05+i*0.005),y:CH*y,L:D*(0.035+r()*0.05),w:D*(0.013+r()*0.008),ang:(r()-.5)*0.2,c:_monBrk(sun,+1,r()*0.15,isBW),a:0.95,t:0.75+i/nr*0.23,id:id++,ss}); }
+  for(let i=0;i<nr;i++){ const r=_monR(61800+i,ss); r(); const y=yh+0.02+(i/nr)*(0.94-yh); list.push({x:sx+(r()-.5)*D*(0.05+i*0.005),y:CH*y,L:D*(0.035+r()*0.05),w:D*(0.013+r()*0.008),ang:(r()-.5)*0.2,c:_monBrk(sun,+1,r()*0.15,isBW),a:0.95,t:0.75+i/nr*0.23,id:id++,ss,sub:true}); }
   // distant masts in the haze, two boats in the foreground
-  for(let i=0;i<8;i++){ const r=_monR(61900+i,ss); r(); list.push({x:CW*(0.05+r()*0.9),y:CH*(yh-0.02-r()*0.16),L:D*(0.08+r()*0.1),w:D*0.005,ang:1.5708+(r()-.5)*0.1,c:_monBrk(avg,-1,-0.3,isBW),a:0.22,t:r()*0.5,id:id++,ss}); }
+  for(let i=0;i<8;i++){ const r=_monR(61900+i,ss); r(); list.push({x:CW*(0.05+r()*0.9),y:CH*(yh-0.02-r()*0.16),L:D*(0.08+r()*0.1),w:D*0.005,ang:1.5708+(r()-.5)*0.1,c:_monBrk(avg,-1,-0.3,isBW),a:0.22,t:r()*0.5,id:id++,ss,sub:true}); }
   const dark=isBW?[40,40,40]:_monMix(_monBrk(avg,-1,-0.55,isBW),[30,28,60],0.5);
   for(let b=0;b<2;b++){ const r=_monR(61950+b,ss); r(); const bx=CW*(0.22+r()*0.5+b*0.2), by=CH*(0.68+r()*0.2);
-    list.push({x:bx,y:by,L:D*(0.09+r()*0.04),w:D*0.02,ang:0,c:dark,a:0.9,t:0.7+b*0.15,id:id++,ss});
-    list.push({x:bx+D*0.015,y:by-D*0.07,L:D*0.13,w:D*0.006,ang:-1.5708,c:dark,a:0.85,t:0.72+b*0.15,id:id++,ss});
-    list.push({x:bx+D*0.02,y:by-D*0.025,L:D*0.025,w:D*0.014,ang:-1.5708,c:dark,a:0.9,t:0.74+b*0.15,id:id++,ss}); }
-  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn);
+    list.push({x:bx,y:by,L:D*(0.09+r()*0.04),w:D*0.02,ang:0,c:dark,a:0.9,t:0.7+b*0.15,id:id++,ss,sub:true});
+    list.push({x:bx+D*0.015,y:by-D*0.07,L:D*0.13,w:D*0.006,ang:-1.5708,c:dark,a:0.85,t:0.72+b*0.15,id:id++,ss,sub:true});
+    list.push({x:bx+D*0.02,y:by-D*0.025,L:D*0.025,w:D*0.014,ang:-1.5708,c:dark,a:0.9,t:0.74+b*0.15,id:id++,ss,sub:true}); }
+  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH);
   _setCurE(0.5);
 }
 
@@ -8574,13 +8593,13 @@ function monetPhaseRouen(ctx,CW,CH,chords,lim,gc,ss,mode){
     const y=_monClamp(t*0.94+(r()-.5)*0.12,-0.02,0.95), x=x0+r()*(x1-x0)+(r()-.5)*0.04;
     const dx=(x-0.5); const portal = Math.abs(dx)<hw && y>0.66+0.14*(dx/hw)*(dx/hw);
     const lit=x<0.5; let cc = portal ? _monBrk(c,-1,-0.5,isBW) : lit ? _monBrk(c,+1,0.22+(0.9-y)*0.2,isBW) : _monBrk(c,-1,-0.02+(0.9-y)*0.2,isBW);
-    list.push({x:CW*x,y:CH*y,L:D*(0.035+r()*0.03)*(0.85+energy*0.3),w:D*(0.011+r()*0.008),ang:-1.5708+(r()-.5)*0.35,c:cc,a:portal?0.92:0.8+y*0.12,t,id:id++,ss}); }
+    list.push({x:CW*x,y:CH*y,L:D*(0.035+r()*0.03)*(0.85+energy*0.3),w:D*(0.011+r()*0.008),ang:-1.5708+(r()-.5)*0.35,c:cc,a:portal?0.92:0.8+y*0.12,t,id:id++,ss,sub:portal}); }
   // the rose window
-  for(let i=0;i<16;i++){ const r=_monR(62800+i,ss); r(); const a=i/16*6.2832; list.push({x:CW*(0.5+Math.cos(a)*0.075),y:CH*(0.38+Math.sin(a)*0.06),L:D*0.028,w:D*0.012,ang:a+1.5708,c:_monBrk(col(Math.floor(r()*cn)),+1,0.5,isBW),a:0.8,t:0.35+r()*0.3,id:id++,ss}); }
+  for(let i=0;i<16;i++){ const r=_monR(62800+i,ss); r(); const a=i/16*6.2832; list.push({x:CW*(0.5+Math.cos(a)*0.075),y:CH*(0.38+Math.sin(a)*0.06),L:D*0.028,w:D*0.012,ang:a+1.5708,c:_monBrk(col(Math.floor(r()*cn)),+1,0.5,isBW),a:0.8,t:0.35+r()*0.3,id:id++,ss,sub:true}); }
   // sky around, long pale horizontal dabs
   for(let i=0;i<Math.round(170*_MON_DN);i++){ const r=_monR(62900+i,ss); r(); const x=r()<0.5?r()*0.26:0.74+r()*0.26, y=r()*0.95; const c=col(Math.floor(r()*cn));
     list.push({x:CW*x,y:CH*y,L:D*(0.06+r()*0.05),w:D*(0.011+r()*0.006),ang:(r()-.5)*0.2,c:_monBrk(c,(i%2?1:-1),0.5,isBW),a:0.65,t:r(),id:id++,ss}); }
-  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn);
+  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH);
   _setCurE(0.5);
 }
 
@@ -8604,12 +8623,12 @@ function monetPhaseMeules(ctx,CW,CH,chords,lim,gc,ss,mode){
       const c=col(Math.floor(r()*cn)); const cap=v<0.22; const lit=u>-0.1;
       const cc = cap ? _monBrk(c,+1,0.5,isBW) : lit ? _monBrk(c,+1,0.12+(u)*0.15,isBW) : _monBrk(c,-1,-0.3+u*0.1,isBW);
       const ang=Math.atan2(ay-y,ax-x)+(r()-.5)*0.5;
-      list.push({x:CW*x,y:CH*y,L:D*(0.03+r()*0.025),w:D*(0.011+r()*0.008),ang,c:cc,a:0.88,t:tOff+i/n*(1-tOff),id:id++,ss}); }
+      list.push({x:CW*x,y:CH*y,L:D*(0.03+r()*0.025),w:D*(0.011+r()*0.008),ang,c:cc,a:0.88,t:tOff+i/n*(1-tOff),id:id++,ss,sub:true}); }
     for(let i=0;i<70;i++){ const r=_monR(i0+900+i,ss); r(); const x=ax-HW*(0.4+r()*1.6), y=by+(r()-.3)*D*0.0004*sz*100/CH; const c=col(Math.floor(r()*cn));
-      list.push({x:CW*x,y:CH*_monClamp(by-0.01+r()*0.06,0,0.99),L:D*(0.04+r()*0.03),w:D*0.01,ang:-0.15+(r()-.5)*0.2,c:_monBrk(c,-1,-0.25,isBW),a:0.55,t:0.5+r()*0.5,id:id++,ss}); } };
+      list.push({x:CW*x,y:CH*_monClamp(by-0.01+r()*0.06,0,0.99),L:D*(0.04+r()*0.03),w:D*0.01,ang:-0.15+(r()-.5)*0.2,c:_monBrk(c,-1,-0.25,isBW),a:0.55,t:0.5+r()*0.5,id:id++,ss,sub:true}); } };
   stack(0.4,yh-0.4*D/CH,D/CH,63600,0.05);
   if(density>0.55) stack(0.8,yh-0.21*D/CH,0.55*D/CH,64000,0.35);
-  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn);
+  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH);
   _setCurE(0.5);
 }
 
@@ -8628,17 +8647,17 @@ function monetPhasePeupliers(ctx,CW,CH,chords,lim,gc,ss,mode){
     const trunk=_monBrk(_monMix(col(ci0),[60,40,80],isBW?0:0.6),-1,-0.4,isBW);
     const T=(y)=>k/n+((y-top)/(yh-top))*0.9/n;
     const lean=(r()-.5)*0.05;
-    for(let j=0;j<22;j++){ const y=top+(yh-top)*j/21, xx=x+lean*(y-top)/(yh-top); list.push({x:CW*(xx+(r()-.5)*0.006),y:CH*y,L:D*0.05,w:D*(0.008+r()*0.005),ang:-1.5708-lean*2,c:trunk,a:0.85,t:T(y),id:id++,ss});
-      list.push({x:CW*(xx+(r()-.5)*0.02),y:CH*(2*yh-y),L:D*0.04,w:D*0.008,ang:-1.5708+(r()-.5)*0.3,c:trunk,a:0.4,t:T(y)+0.03,id:id++,ss}); }
+    for(let j=0;j<22;j++){ const y=top+(yh-top)*j/21, xx=x+lean*(y-top)/(yh-top); list.push({x:CW*(xx+(r()-.5)*0.006),y:CH*y,L:D*0.05,w:D*(0.008+r()*0.005),ang:-1.5708-lean*2,c:trunk,a:0.85,t:T(y),id:id++,ss,sub:true});
+      list.push({x:CW*(xx+(r()-.5)*0.02),y:CH*(2*yh-y),L:D*0.04,w:D*0.008,ang:-1.5708+(r()-.5)*0.3,c:trunk,a:0.4,t:T(y)+0.03,id:id++,ss,sub:true}); }
     // the crown: a few clumps of foliage up the trunk, each a cloud of dabs
     const nc=3+(r()*3|0);
     for(let q=0;q<nc;q++){ const v=0.05+q/nc*0.7+r()*0.1, cy=top+v*(yh-top), cxx=x+lean*v, rad=0.03+r()*0.035, nf=Math.round((28+density*16)*_MON_DN*0.5);
       for(let j=0;j<nf;j++){ const a=r()*6.2832, d=Math.sqrt(r()); const c=_monBrk(_monMix(col(ci0+Math.floor((v+r()*0.1)*span)),green,isBW?0:0.45),(j%2?1:-1),0.05+r()*0.25,isBW);
         const px=cxx+Math.cos(a)*d*rad*0.8, py=cy+Math.sin(a)*d*rad*1.3;
-        list.push({x:CW*px,y:CH*py,L:D*(0.022+r()*0.02),w:D*(0.01+r()*0.008),ang:-1.5708+(r()-.5)*1.4,c,a:0.9,t:T(cy),id:id++,ss});
-        if(r()<0.32) list.push({x:CW*(px+(r()-.5)*0.02),y:CH*(2*yh-py),L:D*(0.02+r()*0.02),w:D*0.009,ang:(r()-.5)*0.7,c,a:0.35,t:T(cy)+0.03,id:id++,ss}); } } }
+        list.push({x:CW*px,y:CH*py,L:D*(0.022+r()*0.02),w:D*(0.01+r()*0.008),ang:-1.5708+(r()-.5)*1.4,c,a:0.9,t:T(cy),id:id++,ss,sub:true});
+        if(r()<0.32) list.push({x:CW*(px+(r()-.5)*0.02),y:CH*(2*yh-py),L:D*(0.02+r()*0.02),w:D*0.009,ang:(r()-.5)*0.7,c,a:0.35,t:T(cy)+0.03,id:id++,ss,sub:true}); } } }
   for(let i=0;i<40;i++){ const r=_monR(65900+i,ss); r(); const c=col(Math.floor(r()*cn)); list.push({x:CW*r(),y:CH*(yh+(r()-.5)*0.02),L:D*(0.05+r()*0.04),w:D*0.012,ang:0,c:_monBrk(c,+1,0.3,isBW),a:0.7,t:r(),id:id++,ss}); }
-  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn);
+  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH);
   _setCurE(0.5);
 }
 
@@ -8656,21 +8675,21 @@ function monetPhasePont(ctx,CW,CH,chords,lim,gc,ss,mode){
     list.push({x:CW*x,y:CH*y,L:D*(0.04+r()*0.035),w:D*0.012,ang:(r()-.5)*0.2,c,a:0.85,t:r(),id:id++,ss}); }
   const K=7+Math.round(density*4);
   for(let k=0;k<K;k++){ const r=_monR(66500+k,ss); r(); const cx=0.08+r()*0.84, cy=0.66+r()*0.3, n=8+(r()*9|0); const ci=Math.floor((k+0.5)*cn/K);
-    for(let j=0;j<n;j++){ const c=_monBrk(_monMix(col(ci+j*2),[64,132,72],isBW?0:0.55),(j%2?1:-1),0.12+r()*0.15,isBW); list.push({x:CW*(cx+(r()-.5)*0.2),y:CH*(cy+(r()-.5)*0.08),L:D*(0.03+r()*0.02),w:D*(0.02+r()*0.012),ang:(r()-.5)*0.3,c,a:0.92,t:0.3+r()*0.7,id:id++,ss}); }
-    if(r()<0.7){ const c=_monBrk(col(ci),+1,0.7,isBW); list.push({x:CW*(cx+(r()-.5)*0.15),y:CH*(cy+(r()-.5)*0.06),L:D*0.02,w:D*0.015,ang:-0.6+r()*1.2,c,a:0.95,t:0.6+r()*0.4,id:id++,ss}); } }
+    for(let j=0;j<n;j++){ const c=_monBrk(_monMix(col(ci+j*2),[64,132,72],isBW?0:0.55),(j%2?1:-1),0.12+r()*0.15,isBW); list.push({x:CW*(cx+(r()-.5)*0.2),y:CH*(cy+(r()-.5)*0.08),L:D*(0.03+r()*0.02),w:D*(0.02+r()*0.012),ang:(r()-.5)*0.3,c,a:0.92,t:0.3+r()*0.7,id:id++,ss,sub:true}); }
+    if(r()<0.7){ const c=_monBrk(col(ci),+1,0.7,isBW); list.push({x:CW*(cx+(r()-.5)*0.15),y:CH*(cy+(r()-.5)*0.06),L:D*0.02,w:D*0.015,ang:-0.6+r()*1.2,c,a:0.95,t:0.6+r()*0.4,id:id++,ss,sub:true}); } }
   // the bridge: two rails of dabs along the arch (time runs left to right), balusters between, its reflection below
   const bc=(i)=>_monBrk(_monMix(col(i),[70,120,150],isBW?0:0.5),(i%2?-1:1),0.05,isBW);
   const nb=90+Math.round(density*40);
   for(let i=0;i<nb;i++){ const r=_monR(66800+i,ss); r(); const x=0.03+0.94*i/(nb-1), y=yb(x), tan=Math.atan2((yb(x+0.01)-y)*CH,0.01*CW); const ci=Math.floor(i/nb*cn);
-    for(let rail=0;rail<2;rail++){ list.push({x:CW*x,y:CH*(y+rail*0.065)+(r()-.5)*D*0.006,L:D*(0.03+r()*0.02),w:D*(0.018+r()*0.006),ang:tan+(r()-.5)*0.15,c:bc(ci+rail*3),a:0.9,t:i/nb,id:id++,ss});
-      list.push({x:CW*x+(r()-.5)*D*0.02,y:CH*(2*0.62-(y+rail*0.065)),L:D*(0.03+r()*0.02),w:D*0.01,ang:-tan+(r()-.5)*0.4,c:bc(ci+rail*3),a:0.32,t:i/nb+0.04,id:id++,ss}); }
-    if(i%2===0) list.push({x:CW*x,y:CH*(y+0.033),L:D*0.062,w:D*0.007,ang:-1.5708+tan*0.3,c:bc(ci+1),a:0.8,t:i/nb+0.01,id:id++,ss}); }
+    for(let rail=0;rail<2;rail++){ list.push({x:CW*x,y:CH*(y+rail*0.065)+(r()-.5)*D*0.006,L:D*(0.03+r()*0.02),w:D*(0.018+r()*0.006),ang:tan+(r()-.5)*0.15,c:bc(ci+rail*3),a:0.9,t:i/nb,id:id++,ss,sub:true});
+      list.push({x:CW*x+(r()-.5)*D*0.02,y:CH*(2*0.62-(y+rail*0.065)),L:D*(0.03+r()*0.02),w:D*0.01,ang:-tan+(r()-.5)*0.4,c:bc(ci+rail*3),a:0.32,t:i/nb+0.04,id:id++,ss,sub:true}); }
+    if(i%2===0) list.push({x:CW*x,y:CH*(y+0.033),L:D*0.062,w:D*0.007,ang:-1.5708+tan*0.3,c:bc(ci+1),a:0.8,t:i/nb+0.01,id:id++,ss,sub:true}); }
   // wisteria hanging from the top
   const nw=8+Math.round(density*5);
   for(let k=0;k<nw;k++){ const r=_monR(67200+k,ss); r(); const x=0.03+r()*0.94, top=r()*0.06, len=0.12+r()*0.2, ci=Math.floor(r()*cn);
     for(let j=0;j<30;j++){ const v=r(); const wdt=0.05*(1-v*0.7); const c=_monBrk(_monMix(col(ci+j),[176,120,214],isBW?0:0.45),(j%2?-1:1),0.2+r()*0.35,isBW);
-      list.push({x:CW*(x+(r()-.5)*wdt),y:CH*(top+v*len),L:D*(0.016+r()*0.014),w:D*(0.01+r()*0.006),ang:1.5708+(r()-.5)*0.8,c,a:0.9,t:0.2+v*0.6,id:id++,ss}); } }
-  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn);
+      list.push({x:CW*(x+(r()-.5)*wdt),y:CH*(top+v*len),L:D*(0.016+r()*0.014),w:D*(0.01+r()*0.006),ang:1.5708+(r()-.5)*0.8,c,a:0.9,t:0.2+v*0.6,id:id++,ss,sub:true}); } }
+  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH);
   _setCurE(0.5);
 }
 
