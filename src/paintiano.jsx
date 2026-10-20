@@ -26973,6 +26973,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       try{ const _ctx=cv.getContext('2d'); _ctx.clearRect(0,0,CW,CH); }catch(_){}
       return;
     }
+    // Same for a loaded photo whose scan data is missing (only MFI paints over
+    // a picture): keep the photo clean rather than run the painter on top of it.
+    if(viewMode==='image' && !pixelRef.current && loadedSourceRef.current==='image' && !moodFromImgRef.current){
+      try{ const _ctx=cv.getContext('2d'); _ctx.clearRect(0,0,CW,CH); }catch(_){}
+      return;
+    }
     // Image mode: keep the canvas transparent so the original painting shows through
     // unobstructed. The 96×60 pixel mosaic that used to render here was useful as
     // a "what the algorithm sees" preview, but it obscured the artwork on a phone-sized
@@ -28902,6 +28908,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         compositionName: meta.compositionName||'',
         originalImgUrl: meta.originalImgUrl||null,
         pixel: pixelRef.current,               // {nc,nr,px,lastMode,lastSig,colStep}
+        pixelBackup: scanPixelBackupRef.current, // the scan behind an AI composition
         mode: meta.mode||'harmony',
         imgDir: imgDirRef.current||'lr',
         imgPlayMode: imgPlayModeRef.current||'scan',
@@ -29117,6 +29124,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setCompositionName(s.compositionName || '');
       // image-specific
       pixelRef.current = s.pixel;
+      if(s.pixelBackup) scanPixelBackupRef.current = s.pixelBackup;
       imgComposeRef.current = !!s.imgCompose;
       setImgPlayMode(s.imgPlayMode||'scan'); imgPlayModeRef.current=s.imgPlayMode||'scan';
       if(s.mode){ setMode(s.mode); }
@@ -29472,6 +29480,26 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ setLiteImageMode(false); liteImageModeRef.current=false; _liteImgAppliedRef.current=false; }catch(_){}
   },[clear,stopAll,micPainting,micListening]);
 
+  // Leaving an AI composition for the Scan or Composer reading of the same
+  // picture. aiComposeFromImage nulls pixelRef (so re-transcribe/Vary don't run
+  // over the composed piece), and the canvas stays transparent only while
+  // imgComposeRef is set. Switching the read mode used to drop that flag without
+  // bringing the scan back: the composer never re-transcribed (Play repeated the
+  // AI piece under its title) and the draw effect fell through to the painter,
+  // which painted over the photo. Restore the scan from its backup, rewind, force
+  // a re-transcribe and give the picture its own title back. Returns true when
+  // there was a composition to leave.
+  const leaveImgCompose = useCallback(()=>{
+    const bk=scanPixelBackupRef.current;
+    if(!imgComposeRef.current && (pixelRef.current || !bk)) return false;
+    imgComposeRef.current=false;
+    if(bk){ pixelRef.current=bk; bk.lastSig=null; }
+    idxRef.current=0; setDisp(0); setPlayedOnce(false);
+    setInfo(i=>i ? {...i, title:(bk&&bk.imgTitle)||''} : i);
+    setScanBump(b=>b+1);
+    return true;
+  },[]);
+
   // Clear from the painting view. For a loaded source (mood / MIDI / audio /
   // score / image) Clear is a FULL reset — it drops the loaded piece and returns
   // to an empty setup. For compose / mic the "painting" IS the chord draft, so it
@@ -29521,13 +29549,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
       setImgPlayMode('scan'); imgPlayModeRef.current='scan';
-      if(imgComposeRef.current){
-        // Was an AI compose: its chords are the AI piece, not a scan. Restore the
-        // scan pixels and force a re-scan so Play performs a fresh SCAN (not replay).
-        imgComposeRef.current=false;
+      // Was an AI compose: its chords are the AI piece, not a scan. Restore the
+      // scan pixels and force a re-scan so Play performs a fresh SCAN (not replay).
+      if(leaveImgCompose()){
         setComposeSource(null); composeSourceRef.current=null; setCurrentMood(null); setSongQ('');
-        if(scanPixelBackupRef.current){ pixelRef.current=scanPixelBackupRef.current; pixelRef.current.lastSig=null; }
-        setScanBump(b=>b+1);
       }
       // KEEP: pixelRef, scanPixelBackupRef, originalImgUrl (the picture stays) AND
       // the chord array (the current scan). We only reset the PLAYBACK POSITION
@@ -29710,7 +29735,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     draftOwnerRef.current=null;
     // Reset Colour + Style to defaults so returning to Setup is a clean slate.
     setMode('harmony'); setStyle(null); setSetupNoSel(false); setShowColorPalette(false); setCustomArmed(false);
-  },[stopAll,clear,composeMode,micPainting,micListening,micArmed,micPreset,loadedSource,mode,activePalette,atmoOn,atmoMood,moodFromImg,moodContext,varySource,melodyOn,melodyData]);
+  },[stopAll,clear,composeMode,micPainting,micListening,micArmed,micPreset,loadedSource,mode,activePalette,atmoOn,atmoMood,moodFromImg,moodContext,varySource,melodyOn,melodyData,leaveImgCompose]);
 
   const fullClear = useCallback(()=>{
     stopAll();clearTimeout(kbTimer.current);
@@ -31624,6 +31649,7 @@ Hard requirements:
             || /^(IMG|DSC|PXL|Screenshot|image|photo)[-_ ]?\d+$/i.test(_rawName)                              // camera/auto codes
             || /^\d{6,}$/.test(_rawName);                                                                      // pure long number
           const _imgTitle = _isJunkName ? '' : _rawName;
+          if(pixelRef.current) pixelRef.current.imgTitle=_imgTitle; // restored when leaving an AI composition
           setInfo({title:_imgTitle,count:evts.length,dur:Math.round(realDurMs/1000)});
           // New piece → reset the save name to THIS image's filename so the SAVE
           // picker doesn't carry a stale name from a previous mood/piece.
@@ -36225,8 +36251,8 @@ Hard requirements:
             )}
             {isDesktop && <div style={{textAlign:'center',fontSize:(.46*effScale)+'rem',letterSpacing:'.22em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{t('imgReadLabel')!=='imgReadLabel'?t('imgReadLabel'):(lang==='SK'?'čítanie':'reading')}</div>}
             <div style={{display:'flex',flexDirection:isDesktop?'column':'row',gap:6}}>
-              <button onClick={()=>{ if(working||anim) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } imgComposerRef.current=null; setImgComposer(null); }} disabled={working||anim} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&!imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&!imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&!imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
-              <button onClick={()=>{ if(working||anim) return; if(imgPlayMode!=='scan'){ stopAll(); imgComposeRef.current=false; setImgPlayMode('scan'); } if(!imgComposer){ let c=_lastComposerRef.current; if(!c||composerIsLocked(c)) c=setupComposers.find(k=>!composerIsLocked(k))||'chopin'; imgComposerRef.current=c; setImgComposer(c); } }} disabled={working||anim} title={'the picture recomposed in a composer\u2019s style'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'\u266b '+(({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer')}</button>
+              <button onClick={()=>{ if(working||anim) return; if(imgPlayMode!=='scan' || imgComposeRef.current || !pixelRef.current){ stopAll(); setImgPlayMode('scan'); imgPlayModeRef.current='scan'; leaveImgCompose(); } imgComposerRef.current=null; setImgComposer(null); }} disabled={working||anim} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&!imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&!imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&!imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'◫ '+(t('imgScan')!=='imgScan'?t('imgScan'):'scan')}</button>
+              <button onClick={()=>{ if(working||anim) return; if(imgPlayMode!=='scan' || imgComposeRef.current || !pixelRef.current){ stopAll(); setImgPlayMode('scan'); imgPlayModeRef.current='scan'; leaveImgCompose(); } if(!imgComposer){ let c=_lastComposerRef.current; if(!c||composerIsLocked(c)) c=setupComposers.find(k=>!composerIsLocked(k))||'chopin'; imgComposerRef.current=c; setImgComposer(c); } }} disabled={working||anim} title={'the picture recomposed in a composer\u2019s style'} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:(imgPlayMode==='scan'&&imgComposer)?'rgba(201,168,76,.18)':'rgba(20,18,30,.5)',color:(imgPlayMode==='scan'&&imgComposer)?'rgba(220,180,90,.98)':'rgba(201,168,76,.5)',boxShadow:(imgPlayMode==='scan'&&imgComposer)?'0 0 0 1px rgba(201,168,76,.45)':'0 0 0 1px rgba(201,168,76,.22)'}}>{'\u266b '+(({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer')}</button>
               <button onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }} disabled={busy||working} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} style={{flex:isDesktop?undefined:1,width:isDesktop?'100%':undefined,padding:'9px 0',textAlign:'center',borderRadius:10,border:'none',cursor:(busy||working)?'default':'pointer',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',transition:'all .18s',background:imgPlayMode==='compose'?'rgba(220,150,255,.2)':'rgba(20,18,30,.5)',color:aiLocked?'rgba(225,175,255,.7)':(imgPlayMode==='compose'?'rgba(228,178,255,.98)':'rgba(225,175,255,.5)'),boxShadow:imgPlayMode==='compose'?'0 0 0 1px rgba(220,150,255,.5)':'0 0 0 1px rgba(220,150,255,.24)',opacity:aiLocked?.85:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:4,position:'relative'}}>{(proStatus!=='pro_ai') && (modeExhausted('compose') ? (<span style={{position:'absolute',top:-7,right:8,zIndex:3,pointerEvents:'none'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></span>) : (<span style={{position:'absolute',top:-7,right:8,fontSize:(.4*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',whiteSpace:'nowrap',color:'rgba(228,178,255,.98)',background:'rgba(40,20,55,.95)',border:'1px solid rgba(220,150,255,.6)',borderRadius:8,padding:'1px 6px',pointerEvents:'none',zIndex:3}}>{ts('aiTrialBadge','1 free AI try')}</span>))}
                 <span>{'✦ '+(t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose')}</span>
               </button>
