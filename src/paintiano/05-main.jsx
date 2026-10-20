@@ -2284,7 +2284,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Exception: during a taste preview the tasted artist shows its FULL
   // variant range (the whole point of the teaser), read via ref so stale
   // closures can't pin it to 2.
-  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((style==='kandinsky'||style==='rothko'||style==='bloom'||style==='wave') ? 8 : (style==='matisse' ? 9 : ((style==='pollock'||style==='bulge') ? 7 : 6))));
+  const _effVariants = () => ((proStatus==='free' && style!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[style]>1) ? ARTIST_VARIANT_N[style] : 6));
   // Dice roll for Next/Play. The roll only CHOOSES the next address — the
   // painting at that address is still a pure function of (seed, artist,
   // variant), so re-landing on the same address looks identical.
@@ -9183,7 +9183,7 @@ Hard requirements:
     const artists = _allowedArtists.length ? _allowedArtists : ['pollock'];
     const _familyAllowed = setupArtists.includes('mosaicFamily');
     // Free = 2 variants, except the artist of the day (full range, like Pro).
-    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : (k==='matisse' ? 9 : ((k==='kandinsky'||k==='rothko'||k==='bloom'||k==='wave') ? 8 : ((k==='pollock'||k==='bulge') ? 7 : 6))));
+    const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6));
     // The shuffle pool of "artists" includes the three Mosaic-family stops
     // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
@@ -15078,7 +15078,7 @@ Hard requirements:
       )}
       </div>
       )}
-      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.5{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.6{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
