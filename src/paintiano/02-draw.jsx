@@ -8465,7 +8465,7 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   [monetPhaseNympheas,monetPhaseImpression,monetPhaseRouen,monetPhaseMeules,monetPhasePeupliers,monetPhasePont][_fpick](ctx, CW, CH, chords, lim, gc, ss, mode);
 }
 const _monR=(a,ss)=>_seedRnd(a,ss,0,0);
-const _monClamp=(v,a,b)=>Math.max(a,Math.min(b,v)); const _MON_DN=1.15;   // dab density — Monet covers the canvas
+const _monClamp=(v,a,b)=>Math.max(a,Math.min(b,v)); const _MON_DN=1.0;    // dab density — loaded touches are broader, fewer of them cover the canvas
 const _monMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
 // broken colour: warm (+1) toward orange-pink light, cool (-1) toward blue-violet; light -1..1
 function _monBrk(rgb,warm,light,isBW){
@@ -8475,18 +8475,25 @@ function _monBrk(rgb,warm,light,isBW){
   if(light>0) c=_monMix(c,[255,252,244],light); else if(light<0) c=_monMix(c,[18,14,40],-light);
   return c;
 }
-// the comma dab: a tapered ribbon, slightly bent, rounded head, a soft halo under it
+// the comma dab — a LOADED touch, like Mitchell's stroke but short: a thick head
+// tapering to the tail, slightly bent; a relief shadow under it, the body, a
+// second colour riding one flank (the brush loaded with two tones — Monet's
+// broken colour inside one touch). No round cap. Three fills, no strokes: the
+// whole canvas is repainted ~9×/s during playback, so each touch stays cheap.
 const _MON_PX=new Float64Array(7), _MON_PY=new Float64Array(7), _MON_PW=new Float64Array(7);   // scratch — no allocation per dab
 function _monDab(ctx,x,y,L,w,ang,rgb,a,rnd){
-  const ca=Math.cos(ang), sa=Math.sin(ang), bend=(rnd()-.5)*L*0.45, K=5;
-  for(let k=0;k<=K;k++){ const u=k/K,q=u-0.5,arc=bend*(1-4*q*q); _MON_PX[k]=x+ca*q*L-sa*arc; _MON_PY[k]=y+sa*q*L+ca*arc; _MON_PW[k]=w*(1-0.45*u); }
-  const col=`rgba(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0},`;
-  // one path per pass: the ribbon and its round head together (one fill, not two)
-  const rib=(sc,al)=>{ ctx.beginPath(); for(let k=0;k<=K;k++){ const h=_MON_PW[k]*sc/2; k?ctx.lineTo(_MON_PX[k]-sa*h,_MON_PY[k]+ca*h):ctx.moveTo(_MON_PX[k]-sa*h,_MON_PY[k]+ca*h); } for(let k=K;k>=0;k--){ const h=_MON_PW[k]*sc/2; ctx.lineTo(_MON_PX[k]+sa*h,_MON_PY[k]-ca*h); } ctx.closePath(); ctx.moveTo(_MON_PX[0]+w*sc/2,_MON_PY[0]); ctx.arc(_MON_PX[0],_MON_PY[0],w*sc/2,0,6.2832); ctx.fillStyle=col+al+')'; ctx.fill(); };
-  rib(1, a);
+  const ca=Math.cos(ang), sa=Math.sin(ang), bend=(rnd()-.5)*L*0.45, K=5, dry=0.5+rnd()*0.3;
+  for(let k=0;k<=K;k++){ const u=k/K,q=u-0.5,arc=bend*(1-4*q*q); _MON_PX[k]=x+ca*q*L-sa*arc; _MON_PY[k]=y+sa*q*L+ca*arc; _MON_PW[k]=w*(1-dry*u)*(0.86+rnd()*0.28); }
+  const r=rgb[0]|0, g=rgb[1]|0, b=rgb[2]|0;
+  // a ribbon offset across the stroke by (ox,oy), scaled in width by sc, shifted sideways by sh (fraction of width)
+  const rib=(ox,oy,sc,sh)=>{ ctx.beginPath(); for(let k=0;k<=K;k++){ const h=_MON_PW[k]*sc/2, o=_MON_PW[k]*sh; k?ctx.lineTo(_MON_PX[k]+ox-sa*(h+o),_MON_PY[k]+oy+ca*(h+o)):ctx.moveTo(_MON_PX[k]+ox-sa*(h+o),_MON_PY[k]+oy+ca*(h+o)); } for(let k=K;k>=0;k--){ const h=_MON_PW[k]*sc/2, o=_MON_PW[k]*sh; ctx.lineTo(_MON_PX[k]+ox+sa*(h-o),_MON_PY[k]+oy-ca*(h-o)); } ctx.closePath(); ctx.fill(); };
+  if(w>7){ ctx.fillStyle=`rgba(${(r*0.5)|0},${(g*0.5)|0},${(b*0.55)|0},${(a*0.3).toFixed(2)})`; rib(-sa*w*0.12+w*0.05, ca*w*0.12+w*0.07, 1.0, 0); }   // relief (only where the touch is big enough to cast one)
+  ctx.fillStyle=`rgba(${r},${g},${b},${a})`; rib(0,0,1.0,0);                                                                                  // the body
+  const warm=rnd()<0.5; const r2=warm?Math.min(255,r+34):Math.max(0,r-18), g2=warm?Math.min(255,g+18):Math.max(0,g-10), b2=warm?Math.max(0,b-16):Math.min(255,b+36);
+  ctx.fillStyle=`rgba(${r2|0},${g2|0},${b2|0},${(a*0.75).toFixed(2)})`; rib(0,0,0.46,0.24);                                                 // the second colour on one flank
 }
 function _monGlow(ctx,x,y,r,rgb,a){ const g=ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,`rgba(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0},${a})`); g.addColorStop(1,`rgba(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0},0)`); ctx.fillStyle=g; ctx.fillRect(x-r,y-r,2*r,2*r); }
-const _MON_SZ=1.28;   // fewer, broader touches — a flush-friendly surface
+const _MON_SZ=1.42;   // fewer, broader touches — a flush-friendly surface
 function _monDraw(ctx,list,reveal){ list.sort((a,b)=>a.t-b.t||a.id-b.id); const n=Math.max(1,Math.ceil(list.length*_monClamp(reveal,0,1))); for(let i=0;i<n;i++){ const d=list[i]; const rnd=_monR(d.id+70000,d.ss); rnd(); if(d.disc){ _monGlow(ctx,d.x,d.y,d.w*2.2,d.c,0.5); ctx.beginPath(); ctx.fillStyle=`rgba(${d.c[0]|0},${d.c[1]|0},${d.c[2]|0},${d.a})`; ctx.arc(d.x,d.y,d.w/2,0,6.2832); ctx.fill(); continue; } _monDab(ctx,d.x,d.y,d.L*_MON_SZ,d.w*_MON_SZ,d.ang,d.c,d.a,rnd); } }
 function _monMeanM(ch){ const ns=ch&&(ch.n||ch.notes)||[]; if(!ns.length) return 60; let s=0; for(const n of ns) s+=(n.m!==undefined?n.m:n); return s/ns.length; }
 function _monSetup(chords,gc,mode){
