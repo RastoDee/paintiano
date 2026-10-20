@@ -5038,352 +5038,200 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ── Bloom (Sam Francis) ──────────────────────────────────────────────────────
-// Saturated colour blots that bleed and bloom on a field of white, with thin
-// drips running down from the masses (Sam Francis's abstract-expressionist
-// color-field watercolours). Density auto-scales with track length: short
-// pieces breathe with lots of white, long pieces crowd the canvas. Each blot
-// is a soft radial bloom coloured from a chord via gc(); drips fall from the
-// heavier blots. Reveals progressively as lim advances.
+// The wet cell. One primitive: a CELL — a pool of thinned acrylic thrown on raw
+// white canvas: an amoeba outline, translucent flat colour with a darker wet
+// edge where the pigment settled, gravity drips running off its underside and
+// a flick of fine spatter thrown outward. Everything else is composition —
+// where the cells sit (field / edge / mass / corner / curtain / matrix) and how
+// much white they leave. Cells are listed first, sorted by musical time and
+// drawn up to the reveal, so the painting grows with the piece and is
+// deterministic per (seed, song). Colours come through gc() per chord so the
+// palette mode applies; the piece's four strongest hues form a small palette
+// for the structural elements (matrix bars, corner accents).
+//  0 Cellular field   (1950s — In Lovely Blueness): clustered cells, white gaps
+//  1 Blue Balls       (1960–63): big blue biomorphs floating in white
+//  2 Edge painting    (1960s — Sail, Mako): colour only at the borders
+//  3 Big Red          (1953): one massed cluster in the piece's dominant hue
+//  4 Towards Disappearance (1957–58): a corner anchor, the far corner left void
+//  5 Hanging          (1960s): a curtain of cells along the top, long drips
+//  6 Matrix           (1970s — Fresh Air): a loose lattice of translucent bars
+//  7 Mandala          (1970s): concentric rings + spokes (kept from the first build)
+//  Free (cap=2) sees Cellular field + Blue Balls — many small coloured cells vs
+//  a few big blue ones is the strongest contrast in Sam Francis's catalogue.
 function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  let _forcedBloomVariant = 0; // set by phase dispatcher: 0 = field, 1 = edge
-  const cn = chords.length;
-  const rnd = _seedRnd(83, ss, 0, 0);
+  const _pn=_capN(8); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _ph=[francisPhaseField,francisPhaseBlueBalls,francisPhaseEdge,francisPhaseBigRed,francisPhaseDisappear,francisPhaseHanging,francisPhaseMatrix,francisPhaseMandala];
+  _ph[_fpick](ctx,CW,CH,chords,lim,gc,ss,mode);
+}
 
-  function chordCol(i, mul){
-    const idx = Math.min(cn-1, Math.max(0, i % cn));
-    const chord = chords[idx];
-    _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) return [120,100,200];
-    let R=0,G=0,B=0,c=0;
-    for(const note of notes){
-      const m = note.m!==undefined?note.m:note;
-      const v = note.v!==undefined?note.v:80;
-      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
-    }
-    const k = mul===undefined?1:mul;
-    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
-  }
-
-  // White ground (Sam Francis canvases are mostly raw white).
-  ctx.fillStyle = '#f7f5ef';
-  ctx.fillRect(0, 0, CW, CH);
-  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic Sam Francis (Bloom blots / Edge, seed-driven internal pick —
-  //      the two layouts read as one "white-ground bloom" identity so they
-  //      share a single Vary slot).
-  //  1 = Mandala (1970s concentric/spiritual phase).
-  //  2 = Clustered masses (centre).
-  //  3 = Blue Balls (blue dominant).
-  //  4 = Towards Disappearance (1957-58, minimal sparse marks).
-  //  5 = Hanging Drips (1960s "Hanging" series — vertical color streams).
-  //  Free (cap=2) sees Bloom + Mandala — dense organic vs ordered concentric
-  //  is the strongest visual contrast in Sam Francis's catalogue.
-  {
-    const _pn=_capN(7); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_fpick===1){ francisPhaseMandala(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_fpick===2){ francisPhaseCluster(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_fpick===3){ francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_fpick===4){ francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_fpick===5){ francisPhaseHangingDrips(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // Slots 0 and 6 share the bloom body; the slot picks the layout (0 = top-
-    // weighted field with drips, 6 = Edge composition: blots ring the borders,
-    // open white centre) instead of a hidden seed bit — both reachable via Vary.
-    _forcedBloomVariant = (_fpick===6) ? 1 : 0;
-  }
-
-  // Sam Francis's whole tension is colour vs breathing white. Song character
-  // drives both how many blots and — more importantly — COVERAGE, the share of
-  // canvas the colour claims. A calm, sparse piece leaves expansive white (his
-  // "Towards Disappearance"); a loud, dense one crowds toward a full field.
-  const _chFr = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _frDrive = _chFr ? (0.5*_chFr.energy + 0.5*_chFr.density) : 0.5;
-  const BLOTS = Math.max(1, Math.round(_adaptiveMax(cn, 'bloom') * (0.8 + 0.4*_frDrive)));
-  const visBlots = Math.max(1, Math.ceil((lim / cn) * BLOTS));
-
-  // Coverage fraction grows with length AND character — calm pieces keep more
-  // white, energetic ones fill more. Clamped so the white ground never fully
-  // vanishes (it's the signature of the style).
-  const _covBase = cn<=12 ? 0.42 : cn<=40 ? 0.55 : cn<=100 ? 0.68 : cn<=300 ? 0.8 : 0.88;
-  const coverage = Math.max(0.32, Math.min(0.92, _covBase * (0.82 + 0.32*_frDrive)));
-
-  // ── Variant chooser (stable per painting, re-rolls on Vary) ──
-  //  A = top-weighted field with drips falling down (classic Sam Francis).
-  //  B = "edge" composition: blots ring the borders, open white centre.
-  const bloomVariant = _forcedBloomVariant;   // phase-driven (slot 0 vs 6), not seed
-
-  // Pre-roll blot positions (stable per painting).
-  const blots = [];
-  for(let i=0; i<BLOTS; i++){
-    let bx, by;
-    if(bloomVariant === 1){
-      const edge = Math.floor(rnd()*4);
-      const t = rnd();
-      const m = 0.16;
-      if(edge===0){ bx = t*CW; by = rnd()*CH*m; }
-      else if(edge===1){ bx = t*CW; by = CH*(1-m) + rnd()*CH*m; }
-      else if(edge===2){ bx = rnd()*CW*m; by = t*CH; }
-      else { bx = CW*(1-m) + rnd()*CW*m; by = t*CH; }
-    } else {
-      const topBias = rnd();
-      bx = rnd() * CW;
-      by = (topBias*topBias) * CH * 0.85 + CH*0.02;
-    }
-    blots.push({
-      x: bx,
-      y: by,
-      r: Math.min(CW,CH) * (0.05 + rnd()*0.14) * (0.6 + coverage*0.8),
-      ci: i,
-      drip: rnd(),
-    });
-  }
-
+// ── Francis engine ───────────────────────────────────────────────────────────
+const _frR=(a,ss)=>_seedRnd(a,ss,0,0);
+const _frClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const _frMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _frCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+// wet: a chord colour as thinned acrylic — chroma up, value kept luminous
+function _frWet(rgb){ const g=(rgb[0]+rgb[1]+rgb[2])/3; const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]); if(mx-mn<20) return [120,120,124]; const c=rgb.map(v=>_frClamp(g+(v-g)*1.55,0,255)); const m2=Math.max(c[0],c[1],c[2]); const k=Math.min(1.3,238/Math.max(1,m2)); return c.map(v=>_frClamp(v*k,0,255)); }
+function _frHue(c){ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<1e-6) return 0; let h= mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; if(h<0) h+=360; return h; }
+// the piece's palette: up to 4 hues it uses most (weighted by chroma), each as its purest chord colour
+function _frPalette(chords,gc,isBW){
+  const cn=chords.length; if(isBW) return [[70,70,72],[130,130,132],[180,180,182],[210,210,212]];
+  const bins=new Array(12).fill(0), best=new Array(12).fill(null), bs=new Array(12).fill(-1);
+  for(let i=0;i<cn;i+=Math.max(1,Math.floor(cn/120))){ const {rgb}=_picChord(chords,i,gc,isBW); const sat=Math.max(rgb[0],rgb[1],rgb[2])-Math.min(rgb[0],rgb[1],rgb[2]); if(sat<28) continue; const b=Math.floor(_frHue(rgb)/30)%12; bins[b]+=sat; if(sat>bs[b]){ bs[b]=sat; best[b]=rgb; } }
+  const order=bins.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]); const picked=[];
+  for(const [w,i] of order){ if(w<=0) break; if(picked.some(j=>Math.min(Math.abs(j-i),12-Math.abs(j-i))<2)) continue; picked.push(i); if(picked.length===4) break; }
+  const cols=picked.map(i=>_frWet(best[i])); while(cols.length<4) cols.push(cols.length?cols[cols.length-1]:[40,80,200]);
+  return cols;
+}
+// chord colour at a time position 0..1
+function _frChordAt(chords,gc,isBW,t){ const cn=chords.length; const {rgb}=_picChord(chords,_frClamp(Math.floor(t*cn),0,cn-1),gc,isBW); return _frWet(rgb); }
+// outline: amoeba — a circle breathed on by three sine lobes + grain
+function _frOutline(rnd,x,y,r,sx,sy){ sx=sx||1; sy=sy||1; const k1=2+Math.floor(rnd()*2), k2=4+Math.floor(rnd()*2), k3=6+Math.floor(rnd()*3);
+  const a1=0.14+rnd()*0.14, a2=0.08+rnd()*0.1, a3=0.04+rnd()*0.05, p1=rnd()*6.2832, p2=rnd()*6.2832, p3=rnd()*6.2832; const N=30, pts=[];
+  for(let i=0;i<N;i++){ const th=i/N*6.2832; const rr=r*(1+a1*Math.sin(k1*th+p1)+a2*Math.sin(k2*th+p2)+a3*Math.sin(k3*th+p3)+(rnd()-.5)*0.05); pts.push([x+Math.cos(th)*rr*sx, y+Math.sin(th)*rr*sy]); }
+  return pts; }
+function _frTrace(ctx,pts){ const n=pts.length; ctx.beginPath(); const m=[(pts[n-1][0]+pts[0][0])/2,(pts[n-1][1]+pts[0][1])/2]; ctx.moveTo(m[0],m[1]);
+  for(let i=0;i<n;i++){ const p=pts[i], q=pts[(i+1)%n]; const mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2; ctx.quadraticCurveTo(p[0],p[1],mx,my); } ctx.closePath(); }
+// one cell from its spec {x,y,r,col,alpha,drip,dripLen,spat,spatN,spatR,flick,sx,sy,edge,bleed}
+function _frMakeCell(rnd,c,D){
+  const pts=_frOutline(rnd,c.x,c.y,c.r,c.sx,c.sy);
+  // the pool inside: a smaller offset lobe where the paint sat thicker
+  const inner=rnd()<0.7 ? _frOutline(rnd,c.x+(rnd()-.5)*c.r*0.5,c.y+(rnd()-.5)*c.r*0.5,c.r*(0.45+rnd()*0.25),c.sx,c.sy) : null;
+  // drips: off the underside, straight down, tapered, wobbling
+  const drips=[]; const nd=c.drip? (rnd()<c.drip ? 1+Math.floor(rnd()*3) : 0) : 0;
+  for(let d=0;d<nd;d++){ let lo=pts[0]; for(const p of pts) if(p[1]>lo[1] && Math.abs(p[0]-c.x)<c.r*0.9*(c.sx||1)) lo=p; const x0=lo[0]+(rnd()-.5)*c.r*0.6, y0=lo[1]-c.r*0.15;
+    const len=D*(0.05+rnd()*0.22)*(c.dripLen||1), w=D*(0.0035+rnd()*0.005); const seg=14, path=[]; let wob=0;
+    for(let s=0;s<=seg;s++){ const t=s/seg; wob+=(rnd()-.5)*D*0.004; path.push([x0+wob*(0.3+t), y0+len*t, w*(1-t*0.75)+D*0.0012]); }
+    drips.push({path, end:[path[seg][0],path[seg][1], w*(0.9+rnd()*0.8)]}); }
+  // spatter: a flick thrown out of the cell in one direction, droplets stretched along the flight
+  const spat=[]; if(c.spat && rnd()<c.spat){ const dir=(c.flick!=null)?c.flick:rnd()*6.2832; const n=Math.round((8+Math.floor(rnd()*22))*(c.spatN||1)); const spread=c.r*(1.4+rnd()*1.8)*(c.spatR||1);
+    for(let k=0;k<n;k++){ const a=dir+(rnd()-.5)*1.3*(rnd()<0.3?3:1); const dd=c.r*0.6+Math.pow(rnd(),0.8)*spread; const rr=D*(0.0012+rnd()*0.0045)*(1-dd/(spread+c.r)*0.5); spat.push([c.x+Math.cos(a)*dd, c.y+Math.sin(a)*dd, rr, a, 1+rnd()*2.2]); } }
+  return {pts,inner,drips,spat,col:c.col,alpha:c.alpha,edge:c.edge==null?1:c.edge,bleed:c.bleed||0,r:c.r};
+}
+function _frDrawCell(ctx,cell,D){
+  const col=cell.col, a=cell.alpha; const dark=_frMix(col,[0,0,0],0.28);
+  if(cell.bleed>0){ _frTrace(ctx,cell.pts); ctx.strokeStyle=_frCss(col,a*0.16*cell.bleed); ctx.lineWidth=cell.r*0.28; ctx.lineJoin='round'; ctx.stroke(); }
+  _frTrace(ctx,cell.pts); ctx.fillStyle=_frCss(col,a); ctx.fill();
+  if(cell.inner){ _frTrace(ctx,cell.inner); ctx.fillStyle=_frCss(col,a*0.42); ctx.fill(); }
+  if(cell.edge>0){ _frTrace(ctx,cell.pts); ctx.strokeStyle=_frCss(dark,0.32*cell.edge); ctx.lineWidth=Math.max(0.6,cell.r*0.03); ctx.lineJoin='round'; ctx.stroke(); }
+  ctx.lineCap='round';
+  for(const d of cell.drips){ const p=d.path; for(let s=0;s<p.length-1;s++){ ctx.strokeStyle=_frCss(col,a*(0.9-0.5*s/p.length)); ctx.lineWidth=p[s][2]; ctx.beginPath(); ctx.moveTo(p[s][0],p[s][1]); ctx.lineTo(p[s+1][0],p[s+1][1]); ctx.stroke(); }
+    ctx.fillStyle=_frCss(col,a*0.7); ctx.beginPath(); ctx.arc(d.end[0],d.end[1],d.end[2],0,6.2832); ctx.fill(); }
+  const tiny=D*0.004;
+  for(const s of cell.spat){ ctx.fillStyle=_frCss(col,a*(s[2]>tiny?0.55:0.95)); ctx.beginPath(); ctx.ellipse(s[0],s[1],s[2]*s[4],s[2],s[3],0,6.2832); ctx.fill(); }
+}
+function _frGround(ctx,CW,CH,isBW){ ctx.fillStyle=isBW?'#f4f2ee':'#f8f6f0'; ctx.fillRect(0,0,CW,CH); }
+function _frSetup(chords,gc,mode){ const isBW=mode==='bw'; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
+  return {cn:chords.length,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.5,tempo:ch?ch.tempo:0.5,register:ch?ch.register:0.5,pal:_frPalette(chords,gc,isBW),col:(t)=>_frChordAt(chords,gc,isBW,t)}; }
+// build: spec(S,D,CW,CH) returns cell specs with t; cells are made & drawn in time order up to the reveal
+function _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,spec){
+  const S=_frSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=_frClamp(Math.max(1,Math.min(cn,lim))/cn,0,1);
+  const list=spec(S,D,CW,CH); list.sort((a,b)=>(a.t-b.t)||(a.id-b.id));
+  const n=Math.ceil(list.length*reveal);
   ctx.save();
-  for(let i=0; i<visBlots && i<blots.length; i++){
-    const bl = blots[i];
-    const col = chordCol(bl.ci, 1.0);
-    const colCss = `rgb(${col[0]|0},${col[1]|0},${col[2]|0})`;
-    // Soft radial bloom — translucent so overlaps mix like wet pigment.
-    const g = ctx.createRadialGradient(bl.x, bl.y, 0, bl.x, bl.y, bl.r);
-    g.addColorStop(0, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.85)`);
-    g.addColorStop(0.55, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.55)`);
-    g.addColorStop(1, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0)`);
-    ctx.fillStyle = g;
-    // Irregular bloom: blob made of a few overlapping circles.
-    const lobes = 3 + Math.floor(rnd()*4);
-    for(let l=0; l<lobes; l++){
-      const ang = rnd()*Math.PI*2;
-      const dist = rnd() * bl.r * 0.5;
-      const lr = bl.r * (0.5 + rnd()*0.6);
-      const lx = bl.x + Math.cos(ang)*dist;
-      const ly = bl.y + Math.sin(ang)*dist;
-      const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
-      lg.addColorStop(0, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.7)`);
-      lg.addColorStop(1, `rgba(${col[0]|0},${col[1]|0},${col[2]|0},0)`);
-      ctx.fillStyle = lg;
-      ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI*2); ctx.fill();
-    }
-    // Drips — thin trails running down from heavier blots.
-    if(bl.drip > 0.45){
-      const nDrips = 1 + Math.floor(rnd()*3);
-      for(let d=0; d<nDrips; d++){
-        const dx = bl.x + (rnd()-0.5) * bl.r * 1.2;
-        const dyStart = bl.y + bl.r*0.4;
-        const dLen = (0.1 + rnd()*0.45) * CH;
-        ctx.strokeStyle = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},${(0.25+rnd()*0.35).toFixed(2)})`;
-        ctx.lineWidth = 1 + rnd()*2.5;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(dx, dyStart);
-        // slight wobble
-        const midx = dx + (rnd()-0.5)*6;
-        ctx.quadraticCurveTo(midx, dyStart+dLen*0.5, dx+(rnd()-0.5)*4, dyStart+dLen);
-        ctx.stroke();
-        // small pooled drop at the end
-        ctx.fillStyle = colCss;
-        ctx.globalAlpha = 0.4;
-        ctx.beginPath(); ctx.arc(dx+(rnd()-0.5)*4, dyStart+dLen, 1.5+rnd()*2.5, 0, Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    }
-    // Occasional fine spatter around a blot (Sam Francis speckle).
-    if(rnd() > 0.5){
-      ctx.fillStyle = colCss;
-      const spat = 6 + Math.floor(rnd()*14);
-      for(let s=0; s<spat; s++){
-        const sa = rnd()*Math.PI*2, sd = bl.r*(0.6+rnd()*1.1);
-        const sx = bl.x + Math.cos(sa)*sd, sy = bl.y + Math.sin(sa)*sd;
-        ctx.globalAlpha = 0.3 + rnd()*0.4;
-        ctx.beginPath(); ctx.arc(sx, sy, 0.6+rnd()*1.8, 0, Math.PI*2); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-  }
+  for(let i=0;i<n;i++){ const c=list[i]; const rnd=_frR(c.id*13+70001,ss); _frDrawCell(ctx,_frMakeCell(rnd,c,D),D); }
   ctx.restore();
 }
 
-// ── Sam Francis C: Clustered masses — tight cluster of colour blots centre. ──
-function francisPhaseCluster(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
-  const blots=Math.max(6,Math.min(120,Math.round(cn*0.9)));
-  const vis=Math.max(1,Math.ceil(N/cn*blots));
-  const cx=CW/2,cy=CH/2;
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+3800,ss,0,0);
-    const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/blots)),gc,isBW);
-    const a=rnd()*Math.PI*2, rr=Math.pow(rnd(),0.6)*Math.min(CW,CH)*0.38;
-    const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
-    const R=Math.min(CW,CH)*(0.04+energy*0.08+rnd()*0.03);
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.5+rnd()*0.35).toFixed(2)})`;
-    ctx.beginPath();
-    const pts=7;for(let p=0;p<=pts;p++){const aa=p/pts*Math.PI*2,r2=R*(0.7+rnd()*0.6);const px=x+Math.cos(aa)*r2,py=y+Math.sin(aa)*r2;p?ctx.lineTo(px,py):ctx.moveTo(px,py);}
-    ctx.closePath();ctx.fill();
-    // drip
-    if(rnd()<0.4){ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.4)`;ctx.fillRect(x-1,y,2,R*(1+rnd()*2));}
-  }
+// ── Sam Francis 0: Cellular field (1950s — In Lovely Blueness) — cells gather
+// around a handful of attractors, white breathing through the gaps, drips everywhere.
+function francisPhaseField(ctx,CW,CH,chords,lim,gc,ss,mode){
+  _frGround(ctx,CW,CH,mode==='bw');
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const drive=0.5*S.energy+0.5*S.density; const n=Math.round(70+drive*90); let id=0;
+    const ra=_frR(80900,ss); ra(); const na=6+Math.floor(ra()*5); const att=[]; for(let k=0;k<na;k++){ const u=ra(); att.push([CW*(0.1+ra()*0.8), CH*(0.05+Math.pow(u,1.3)*0.85), D*(0.08+ra()*0.12)]); }
+    for(let i=0;i<n;i++){ const r=_frR(80000+i,ss); r(); const t=i/n; let x,y; if(r()<0.78){ const A=att[Math.floor(r()*na)]; const a=r()*6.2832, dd=Math.pow(r(),0.7)*A[2]; x=A[0]+Math.cos(a)*dd; y=A[1]+Math.sin(a)*dd*0.85; } else { const u=r(); y=CH*(0.02+Math.pow(u,1.35)*0.92); x=CW*(0.03+r()*0.94); }
+      const big=r()<0.15; const rad=D*(big?0.055+r()*0.06:0.02+r()*0.04)*(0.8+drive*0.4);
+      list.push({id:id++,t,x,y,r:rad,sx:0.85+r()*0.5,sy:0.8+r()*0.45,col:S.col(t),alpha:0.5+r()*0.3,drip:0.45,spat:0.5,edge:1,bleed:0.6}); }
+    return list; });
+}
+// ── Sam Francis 1: Blue Balls (1960–63) — big blue biomorphs floating in white,
+// explosive spatter, drips. The blue baseline bends 25% toward the song's top
+// pitch colour (_songTint, 15%) and each cell takes 30% of its own chord colour.
+function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode){
+  _frGround(ctx,CW,CH,mode==='bw');
+  const _tint = (mode!=='bw' && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
+  const base = (typeof _tintBaseline === 'function') ? _tintBaseline([20,50,190], _tint, 0.15) : [20,50,190];
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const n=Math.round(12+S.density*14); let id=0; const b0=S.isBW?[60,60,64]:base;
+    for(let i=0;i<n;i++){ const r=_frR(83000+i,ss); r(); const t=i/n; const x=CW*(0.08+r()*0.84), y=CH*(0.06+r()*0.88); const c=S.col(t); const col=S.isBW?c:_frMix(b0,c,0.3);
+      const big=r()<0.35; list.push({id:id++,t,x,y,r:D*(big?0.08+r()*0.07:0.035+r()*0.04),sx:0.8+r()*0.5,sy:0.8+r()*0.5,col,alpha:0.6+r()*0.3,drip:0.6,dripLen:1.3,spat:0.95,spatN:1.6,spatR:1.3,edge:1,bleed:0.5});
+      if(r()<0.6){ list.push({id:id++,t:t+0.5/n,x:x+(r()-.5)*D*0.22,y:y+(r()-.5)*D*0.22,r:D*(0.012+r()*0.022),col,alpha:0.6+r()*0.3,drip:0.3,spat:0.6,edge:1}); } }
+    return list; });
+}
+// ── Sam Francis 2: Edge painting (1960s — Sail, Mako) — colour only at the four
+// borders, the centre an open white; spatter flicked inward, drips off the top.
+function francisPhaseEdge(ctx,CW,CH,chords,lim,gc,ss,mode){
+  _frGround(ctx,CW,CH,mode==='bw');
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const n=Math.round(50+S.density*50); const m=0.13; let id=0;
+    for(let i=0;i<n;i++){ const r=_frR(86000+i,ss); r(); const t=i/n; const side=Math.floor(r()*4); const u=r(), v=Math.pow(r(),1.6)*m; let x,y,flick;
+      if(side===0){ x=u*CW; y=v*CH; flick=1.5708; } else if(side===1){ x=u*CW; y=CH*(1-v); flick=-1.5708; } else if(side===2){ x=v*CW; y=u*CH; flick=0; } else { x=CW*(1-v); y=u*CH; flick=3.1416; }
+      list.push({id:id++,t,x,y,r:D*(0.025+r()*0.045),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col:S.col(t),alpha:0.55+r()*0.3,drip:side===0?0.6:0.2,dripLen:1.6,spat:0.55,flick:flick+(r()-.5)*0.8,edge:1}); }
+    return list; });
+}
+// ── Sam Francis 3: Big Red (1953) — one massed cluster of cells in the piece's
+// dominant hue, other chords glinting inside it, heavy drips running off below.
+function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode){
+  _frGround(ctx,CW,CH,mode==='bw');
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const cx=CW*0.5, cy=CH*0.42; const n=Math.round(70+S.density*60); const dom=S.pal[0]; let id=0;
+    for(let i=0;i<n;i++){ const r=_frR(82000+i,ss); r(); const t=i/n; const a=r()*6.2832, dd=Math.pow(r(),0.6); const x=cx+Math.cos(a)*dd*D*0.34, y=cy+Math.sin(a)*dd*D*0.30;
+      const own=r()<0.35; const col=own?S.col(t):_frMix(dom,S.col(t),0.3);
+      list.push({id:id++,t,x,y,r:D*(0.03+r()*0.055),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col,alpha:0.55+r()*0.3,drip:0.5,dripLen:1.8,spat:0.45,spatR:1.4,edge:0.8,bleed:0.5}); }
+    return list; });
+}
+// ── Sam Francis 4: Towards Disappearance (1957–58) — a few splashes anchored in
+// one seed-picked corner, spatter flung toward the diagonally opposite corner,
+// which stays an intentional void.
+function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,ss,mode){
+  _frGround(ctx,CW,CH,mode==='bw');
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const r0=_frR(84900,ss); r0(); const corner=Math.floor(r0()*4); const ax=(corner===0||corner===3)?0.26:0.74, ay=(corner<2)?0.22:0.78; const ex=(corner===0||corner===3)?0.1:0.9;
+    const n=Math.round(6+S.density*8); let id=0;
+    for(let i=0;i<n;i++){ const r=_frR(84000+i,ss); r(); const t=i/n; let x,y,rad;
+      if(i===0){ x=CW*ax+(r()-.5)*D*0.1; y=CH*ay+(r()-.5)*D*0.1; rad=D*(0.10+r()*0.05); for(let k=0;k<2;k++) list.push({id:1000+k,t:0.02+k*0.01,x:x+(r()-.5)*rad*1.4,y:y+(r()-.5)*rad*1.2,r:rad*(0.45+r()*0.35),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col:S.col(0.02),alpha:0.5+r()*0.25,drip:0.6,dripLen:1.4,spat:1,spatN:1.8,spatR:1.6,flick:Math.atan2(CH*(1-ay)-y, CW*(1-ax)-x),edge:1}); }
+      else if(r()<0.55){ x=CW*(ex+(r()-.5)*0.2); y=CH*(0.25+r()*0.65); rad=D*(0.03+r()*0.05); }
+      else { x=CW*(0.15+r()*0.65); y=CH*(0.84+(r()-.5)*0.12); rad=D*(0.03+r()*0.04); }
+      list.push({id:id++,t,x,y,r:rad,sx:0.85+r()*0.4,sy:0.85+r()*0.4,col:S.col(t),alpha:0.55+r()*0.3,drip:0.7,dripLen:1.5,spat:1,spatN:i===0?2:1.3,spatR:i===0?1.8:1.3,flick:Math.atan2(CH*(1-ay)-y, CW*(1-ax)-x),edge:1,bleed:0.6}); }
+    return list; });
+}
+// ── Sam Francis 5: Hanging (1960s) — a curtain of cells along the top edge, long
+// drips raining into the white, a couple of cells resting on the floor.
+function francisPhaseHanging(ctx,CW,CH,chords,lim,gc,ss,mode){
+  _frGround(ctx,CW,CH,mode==='bw');
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const drive=0.5*S.energy+0.5*S.density; const n=Math.round(7+drive*8); let id=0;
+    for(let i=0;i<n;i++){ const r=_frR(85000+i,ss); r(); const t=i/n; const x=CW*((i+0.5)/n)+(r()-.5)*CW/n*0.6, y=CH*(0.03+r()*0.05);
+      list.push({id:id++,t,x,y,r:D*(0.035+r()*0.04),sx:1.1+r()*0.5,sy:0.6+r()*0.3,col:S.col(t),alpha:0.6+r()*0.3,drip:1,dripLen:1.2+Math.pow(r(),0.7)*4.2,spat:0.6,flick:1.5708+(r()-.5)*1.2,edge:1,bleed:0.5}); }
+    const m=2+Math.round(S.density*3); for(let k=0;k<m;k++){ const r=_frR(85500+k,ss); r(); list.push({id:id++,t:0.85+k/m*0.15,x:CW*(0.1+r()*0.8),y:CH*(0.9+r()*0.06),r:D*(0.025+r()*0.03),sx:1.2,sy:0.7,col:S.col(0.85+k/m*0.15),alpha:0.6,drip:0,spat:0.5,flick:-1.5708,edge:1}); }
+    return list; });
+}
+// ── Sam Francis 6: Matrix (1970s — Fresh Air) — a loose lattice of translucent
+// bars in the piece's palette, brushed in ragged passes with spatter along
+// them, and cells seated on the crossings. Bars come in first (by reveal*1.6),
+// cells follow the music.
+function francisPhaseMatrix(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw'; _frGround(ctx,CW,CH,isBW);
+  const S=_frSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=_frClamp(Math.max(1,Math.min(cn,lim))/cn,0,1);
+  const r=_frR(87000,ss); r(); const nv=3+Math.floor(r()*2), nh=3+Math.floor(r()*2); const bars=[];
+  for(let i=0;i<nv;i++){ const x=CW*((i+0.5)/nv+(r()-.5)*0.12); bars.push({v:true,p:x,w:D*(0.035+r()*0.03),col:S.pal[i%4]}); }
+  for(let j=0;j<nh;j++){ const y=CH*((j+0.5)/nh+(r()-.5)*0.12); bars.push({v:false,p:y,w:D*(0.035+r()*0.03),col:S.pal[(j+2)%4]}); }
+  ctx.save();
+  const nb=Math.ceil(bars.length*Math.min(1,reveal*1.6));
+  for(let b=0;b<nb;b++){ const B=bars[b]; const rb=_frR(87100+b,ss); rb(); const seg=28; const L=B.v?CH:CW;
+    const passes=1+Math.floor(rb()*3); for(let ps=0;ps<passes;ps++){ const q0=L*(ps===0?-0.02:rb()*0.5), q1=ps===0?L*1.02:q0+L*(0.3+rb()*0.6); const off=(ps?(rb()-.5)*B.w*0.9:0); const wk=ps?0.35+rb()*0.4:1;
+      let w0=0,w1=0; const left=[],right=[]; for(let s=0;s<=seg;s++){ const tt=s/seg; w0+=(rb()-.5)*B.w*0.3; w1+=(rb()-.5)*B.w*0.3; const taper=0.75+0.25*Math.sin(tt*3.1416); left.push(B.p+off-B.w*wk*taper/2+w0); right.push(B.p+off+B.w*wk*taper/2+w1); }
+      ctx.fillStyle=_frCss(B.col,ps?0.4:0.5); ctx.beginPath();
+      for(let s=0;s<=seg;s++){ const q=q0+(q1-q0)*s/seg; if(B.v){ if(s) ctx.lineTo(left[s],q); else ctx.moveTo(left[s],q); } else { if(s) ctx.lineTo(q,left[s]); else ctx.moveTo(q,left[s]); } }
+      for(let s=seg;s>=0;s--){ const q=q0+(q1-q0)*s/seg; if(B.v) ctx.lineTo(right[s],q); else ctx.lineTo(q,right[s]); }
+      ctx.closePath(); ctx.fill(); }
+    const ns=10+Math.floor(rb()*16); for(let k=0;k<ns;k++){ const q=rb()*L, o=B.p+(rb()-.5)*B.w*3.2; ctx.fillStyle=_frCss(B.col,0.4+rb()*0.4); ctx.beginPath(); const rr=D*(0.0012+rb()*0.004); if(B.v) ctx.ellipse(o,q,rr,rr*(1.2+rb()*1.5),0,0,6.2832); else ctx.ellipse(q,o,rr*(1.2+rb()*1.5),rr,0,0,6.2832); ctx.fill(); } }
+  const list=[]; let id=0; const n=Math.round(24+S.density*26);
+  for(let i=0;i<n;i++){ const rc=_frR(87500+i,ss); rc(); const t=i/n; const vb=bars[Math.floor(rc()*nv)], hb=bars[nv+Math.floor(rc()*nh)]; const onCross=rc()<0.5; const onV=rc()<0.5; let x,y;
+    if(onCross){ x=vb.p+(rc()-.5)*vb.w; y=hb.p+(rc()-.5)*hb.w; } else if(onV){ x=vb.p+(rc()-.5)*vb.w*1.4; y=CH*rc(); } else { x=CW*rc(); y=hb.p+(rc()-.5)*hb.w*1.4; }
+    list.push({id:id++,t,x,y,r:D*(0.028+rc()*0.04),sx:0.85+rc()*0.4,sy:0.85+rc()*0.4,col:S.col(t),alpha:0.6+rc()*0.3,drip:0.4,spat:0.6,edge:1}); }
+  list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const nn=Math.ceil(list.length*reveal);
+  for(let i=0;i<nn;i++){ const c=list[i]; const rnd=_frR(c.id*13+70001,ss); _frDrawCell(ctx,_frMakeCell(rnd,c,D),D); }
+  ctx.restore();
 }
 
-// ── Sam Francis D: Blue Balls — blue-dominant cellular blobs. ──
-function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';ctx.fillRect(0,0,CW,CH);
-  // Song-aware baseline tint (25% lerp — blue must stay dominant). The
-  // phase is named "Blue Balls" after a specific Francis painting, so the
-  // identity is the blue mass. Tint only nudges the baseline: an F-major
-  // piece picks up a teal-warm undertone, a magenta-rich synth-pop piece
-  // shifts toward indigo-violet — never away from "blue".
-  const _tint = (!isBW && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
-  const _T = (b)=> (typeof _tintBaseline === 'function') ? _tintBaseline(b, _tint, 0.25) : b.slice();
-  const _bBall = _T([0, 30, 120]);
-  const balls=Math.max(5,Math.min(80,Math.round(cn*0.6)));
-  const vis=Math.max(1,Math.ceil(N/cn*balls));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+3900,ss,0,0);
-    const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/balls)),gc,isBW);
-    // push blue, now song-tinted at the baseline
-    const r=isBW?rgb[0]:Math.round(_bBall[0]+rgb[0]*0.4),g=isBW?rgb[1]:Math.round(_bBall[1]+rgb[1]*0.5),b=isBW?rgb[2]:Math.min(255,Math.round(_bBall[2]+rgb[2]*0.6));
-    const x=rnd()*CW,y=rnd()*CH,R=Math.min(CW,CH)*(0.03+energy*0.07+rnd()*0.02);
-    ctx.fillStyle=`rgba(${r},${g},${b},${(0.55+rnd()*0.3).toFixed(2)})`;
-    ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
-    // halo ring
-    ctx.strokeStyle=`rgba(${r},${g},${b},0.4)`;ctx.lineWidth=Math.max(1,R*0.12);ctx.beginPath();ctx.arc(x,y,R*1.4,0,Math.PI*2);ctx.stroke();
-  }
-}
-
-// ── Sam Francis E: Grid/lattice — colour blots seated in an open white grid. ──
-
-// ── Sam Francis F: Hanging Drips — vertical color streams from top (1960s
-// "Hanging" series). Replaces the previous "Big Red mural" — that one read as
-// one dominant red polygon vs Cluster's centralised dots, and visually crowded
-// the canvas. Hanging Drips is the only Francis phase (and the only style on
-// the whole bench) that reads top-down: a curtain of chord-coloured heads
-// raining vertical drips into the white. Density drives stream count: 5
-// streams for calm pieces, up to 11 for dense ones. Each stream picks one
-// chord, with ~40% chance of a drop pooling at the bottom.
-function francisPhaseHangingDrips(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
-  const N=Math.max(1, Math.min(cn, lim));
-  const reveal=Math.max(0, Math.min(1, N/cn));
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  // White ground — Sam Francis raw canvas
-  ctx.fillStyle=isBW?'#f4f2ee':'#f7f5ef';
-  ctx.fillRect(0,0,CW,CH);
-  // Song character drives the curtain density: a calm sparse piece gets 5
-  // streams of breathing white, an energetic dense one fills to 11 streams.
-  const _chFr = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _drive = _chFr ? (0.5*_chFr.energy + 0.5*_chFr.density) : 0.5;
-  const streamCountFull = Math.max(5, Math.min(11, Math.round(5 + _drive*6)));
-  const visStreams = Math.max(1, Math.ceil(streamCountFull * reveal));
-  const spacing = CW / (streamCountFull+1);
-  for(let i=0; i<visStreams; i++){
-    const rnd = _seedRnd(i+5500, ss, 0, 0); rnd(); rnd();
-    const {rgb} = _picChord(chords, i%cn, gc, isBW);
-    // X: spaced evenly across width with small jitter so it doesn't read as a comb
-    const x = spacing*(i+1) + (rnd()-0.5)*spacing*0.4;
-    // Head ellipse at top of stream
-    const headW = Math.min(CW,CH) * (0.025 + rnd()*0.025);
-    const headH = headW * 0.45;
-    const headY = CH * (0.02 + rnd()*0.04);
-    // (H2) Head = irregular bloom mass: 2-3 overlapping soft ellipses with
-    // offset/rotation + a few spatter dots — paint, not a pushpin head.
-    for(let k=0;k<3;k++){
-      const ox=(rnd()-0.5)*headW*0.8, oy=(rnd()-0.5)*headH*0.8;
-      const rx=headW*(0.6+rnd()*0.55), ry=rx*(0.38+rnd()*0.22);
-      const rot=(rnd()-0.5)*0.7;
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.55+rnd()*0.3).toFixed(2)})`;
-      ctx.beginPath();
-      ctx.ellipse(x+ox, headY+oy, rx, ry, rot, 0, Math.PI*2);
-      ctx.fill();
-    }
-    for(let k=0;k<5;k++){
-      const a=rnd()*Math.PI*2, d=headW*(0.8+rnd()*1.4);
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.3+rnd()*0.35).toFixed(2)})`;
-      ctx.beginPath();
-      ctx.arc(x+Math.cos(a)*d, headY+Math.sin(a)*d*0.5, 0.8+rnd()*2.0, 0, Math.PI*2);
-      ctx.fill();
-    }
-    // (H1) Drip = tapering, gently wobbling filled path: wide at the head,
-    // thin at the tail, opacity fading as it falls — gravity, not geometry.
-    const dripLength = CH * (0.30 + rnd()*0.60);
-    const segs=26;
-    const wob=[0]; for(let s=1;s<=segs;s++) wob.push(wob[s-1]+(rnd()-0.5)*3.2);
-    const grad = ctx.createLinearGradient(x, headY, x, headY+dripLength);
-    grad.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.82)`);
-    grad.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.10)`);
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    for(let s=0;s<=segs;s++){
-      const t=s/segs, y=headY+headH*0.4+dripLength*t;
-      const w=(headW*0.55)*(1-t*0.82)+0.8;
-      const xx=x+wob[s]*(0.4+t);
-      if(s===0) ctx.moveTo(xx-w/2, y); else ctx.lineTo(xx-w/2, y);
-    }
-    for(let s=segs;s>=0;s--){
-      const t=s/segs, y=headY+headH*0.4+dripLength*t;
-      const w=(headW*0.55)*(1-t*0.82)+0.8;
-      const xx=x+wob[s]*(0.4+t);
-      ctx.lineTo(xx+w/2, y);
-    }
-    ctx.closePath();
-    ctx.fill();
-    const endX=x+wob[segs]*1.4, endY=headY+headH*0.4+dripLength;
-    // (H3) Pool ONLY when the drip reaches the floor; otherwise a droplet.
-    if(rnd() < 0.4 && dripLength > CH*0.80){
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
-      ctx.beginPath();
-      ctx.ellipse(endX, CH*0.965, headW*0.9, headW*0.30, 0, 0, Math.PI*2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.6)`;
-      ctx.beginPath();
-      ctx.arc(endX, endY, 1.6+rnd()*1.8, 0, Math.PI*2);
-      ctx.fill();
-    }
-    // Occasional thin secondary trail beside the main drip.
-    if(rnd() < 0.5){
-      const sx=x+headW*(rnd()-0.5)*1.2;
-      const sl=dripLength*(0.3+rnd()*0.4);
-      const g2=ctx.createLinearGradient(sx, headY, sx, headY+sl);
-      g2.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.4)`);
-      g2.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.05)`);
-      ctx.strokeStyle=g2; ctx.lineWidth=1.4; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(sx, headY+headH*0.3);
-      ctx.quadraticCurveTo(sx+(rnd()-0.5)*6, headY+sl*0.5, sx+(rnd()-0.5)*4, headY+sl);
-      ctx.stroke();
-    }
-  }
-  // Bottom-edge incursions (a couple of other-chord dots resting on the floor —
-  // visual ground note so the curtain doesn't float).
-  const incCount = Math.max(2, Math.min(6, Math.round(cn/15)));
-  const visInc = Math.max(0, Math.ceil(reveal * incCount));
-  for(let i=0; i<visInc; i++){
-    const rnd = _seedRnd(i+5700, ss, 0, 0); rnd(); rnd();
-    const {rgb} = _picChord(chords, (i+streamCountFull) % cn, gc, isBW);
-    const x = rnd()*CW;
-    const y = CH - rnd()*CH*0.15;
-    const R = Math.min(CW,CH)*(0.025+rnd()*0.04);
-    // Soft bloom instead of a flat vector dot.
-    const g = ctx.createRadialGradient(x, y, 0, x, y, R);
-    g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.6)`);
-    g.addColorStop(0.7, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`);
-    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, R, 0, Math.PI*2);
-    ctx.fill();
-    if(rnd() < 0.6){
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
-      ctx.beginPath();
-      ctx.arc(x+(rnd()-0.5)*R, y+(rnd()-0.5)*R*0.6, 1.5+rnd()*2, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-}
-
-// ── Sam Francis G: Mandala (1970s series). White ground + 10 concentric
+// ── Sam Francis 7: Mandala (1970s series) — kept from the first build. White ground + 10 concentric
 // chord-coloured rings + 24 petal spokes radiating outward + white centre
 // dot. Sam Francis's late spiritual phase — ordered, centred, mystical.
 function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -5448,98 +5296,6 @@ function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.beginPath();
   ctx.arc(cx, cy, maxR*0.12, 0, Math.PI*2);
   ctx.fill();
-}
-
-// ── Sam Francis H: Towards Disappearance (1957-58). Minimal — but COMPOSED.
-// (F1) A seed-picked corner region anchors the weight; the diagonally
-// opposite corner stays an INTENTIONAL void (Francis' edge-painting
-// instinct), so sparseness reads as a decision, not confetti.
-// (F2) Marks carry gravity drips + spatter — they read as PAINT, not blur.
-// (F3) One dominant anchor bloom + smaller satellites — a composition even
-// on short tracks. All seed-deterministic; reveal grows with lim.
-function francisPhaseDisappear(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  ctx.fillStyle = isBW ? '#f6f4f0' : '#f9f7f1';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Faint canvas grain.
-  for(let i=0;i<400;i++){
-    const rnd = _seedRnd(i+6000, ss, 0, 0);
-    const tone = isBW ? '195,195,195' : '200,195,180';
-    ctx.fillStyle = `rgba(${tone},${(0.06+rnd()*0.10).toFixed(2)})`;
-    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
-  }
-
-  // (F1) Anchor corner (seed-stable) — the far corner stays empty.
-  const _crn = _seedRnd(6090, ss, 0, 0);
-  const corner = Math.floor(_crn()*4);              // 0 TL, 1 TR, 2 BR, 3 BL
-  const acx = (corner===0||corner===3) ? CW*0.24 : CW*0.76;
-  const acy = (corner===0||corner===1) ? CH*0.20 : CH*0.80;
-  const edgeX = (corner===0||corner===3) ? 0.10 : 0.90; // vertical edge near anchor
-  const dn = Math.min(CW,CH);
-
-  const mkBloom = (x,y,r,rgb,aMax)=>{
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${aMax})`);
-    g.addColorStop(0.6, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(aMax*0.42).toFixed(2)})`);
-    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-  };
-  // (F2) Gravity drip: thin quadratic fall + end droplet.
-  const mkDrip = (x,y,rgb,len,w,rnd)=>{
-    ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.42)`;
-    ctx.lineWidth = w; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(x, y);
-    ctx.quadraticCurveTo(x+(rnd()-0.5)*6, y+len*0.55, x+(rnd()-0.5)*4, y+len);
-    ctx.stroke();
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.5)`;
-    ctx.beginPath(); ctx.arc(x+(rnd()-0.5)*4, y+len, w*0.9, 0, Math.PI*2); ctx.fill();
-  };
-  const mkSpatter = (x,y,rgb,n,spread,rnd)=>{
-    for(let k=0;k<n;k++){
-      const a=rnd()*Math.PI*2, d=rnd()*spread;
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.28+rnd()*0.3).toFixed(2)})`;
-      ctx.beginPath(); ctx.arc(x+Math.cos(a)*d, y+Math.sin(a)*d, 0.8+rnd()*1.8, 0, Math.PI*2); ctx.fill();
-    }
-  };
-
-  // Sparse marks — anchor first, satellites hug the anchor's edges as lim grows.
-  const marks = Math.max(5, Math.min(12, Math.round(cn/14) + 5));
-  const vis = Math.max(2, Math.ceil(marks*reveal));
-
-  for(let i=0;i<vis;i++){
-    const rnd = _seedRnd(i+6100, ss, 0, 0);
-    const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
-    if(i===0){
-      // (F3) THE anchor — one dominant bloom in the corner region.
-      const x = acx + (rnd()-0.5)*dn*0.10;
-      const y = acy + (rnd()-0.5)*dn*0.10;
-      const r = dn * (0.16 + rnd()*0.06);
-      mkBloom(x, y, r, rgb, 0.5);
-      mkBloom(x + r*0.25, y - r*0.2, r*0.5, rgb, 0.4);   // inner density
-      mkDrip(x - r*0.3, y + r*0.45, rgb, dn*(0.10+rnd()*0.08), 2.4, rnd);
-      mkDrip(x + r*0.35, y + r*0.5, rgb, dn*(0.14+rnd()*0.10), 1.8, rnd);
-      mkSpatter(x, y, rgb, 8, r*0.9, rnd);
-      continue;
-    }
-    // (F1) Satellites: bias to the vertical edge near the anchor and the
-    // bottom edge — the far corner stays empty (the void carries the frame).
-    let x, y;
-    if(rnd() < 0.55){
-      x = CW * (edgeX + (rnd()-0.5)*0.16);
-      y = CH * (0.30 + rnd()*0.62);
-    } else {
-      x = CW * (0.15 + rnd()*0.62);
-      y = CH * (0.86 + (rnd()-0.5)*0.10);
-    }
-    const r = dn * (0.035 + rnd()*0.05);
-    mkBloom(x, y, r, rgb, 0.32 + rnd()*0.14);
-    if(i%2===0) mkDrip(x + (rnd()-0.5)*r, y + r*0.4, rgb, dn*(0.05+rnd()*0.06), 1.6, rnd);
-    else mkSpatter(x, y, rgb, 4, r*1.1, rnd);
-  }
 }
 
 // ── Spiral (Hilma af Klint) ──────────────────────────────────────────────────
@@ -15744,15 +15500,15 @@ const ARTIST_VARIANTS = {
     {ground:'#e8e0cc',mark:{bar:.7,splat:.3},size:[.01,.05],layout:{grid:1},density:.5,layers:1},
     {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:.6,layers:2},
   ],
-  bloom: [
+  bloom: [   // slot order = solo phases: field, Blue Balls, edge, Big Red, Disappearance, Hanging, Matrix, Mandala
     {mark:{cloud:.6,dot:.4},size:[.05,.18],edge:.9,alpha:.6,layout:{scatter:.7,field:.3},density:.5},
-    {ground:'#f8f8f4',mark:{fan:1},size:[.3,.5],edge:0,alpha:.9,layout:{radial:1},density:.08},
-    {ground:'#f8f8f4',mark:{poly:.6,cloud:.4},size:[.05,.2],edge:.2,alpha:.55,layout:{scatter:1},density:.4},
-    {ground:'#f8f8f4',mark:{ring:.6,disc:.4},size:[.04,.14],edge:.3,alpha:.6,layout:{scatter:1},density:.5},
+    {ground:'#f8f8f4',mark:{disc:.7,dot:.3},size:[.06,.16],edge:.3,alpha:.65,layout:{scatter:1},density:.35},
+    {mark:{cloud:.7,vdrip:.3},size:[.05,.2],edge:.8,alpha:.6,layout:{scatter:1},density:.5},
+    {ground:'#f8f8f4',mark:{cloud:.7,dot:.3},size:[.05,.16],edge:.5,alpha:.6,layout:{field:1},density:.7},
     {ground:'#f8f8f4',mark:{dot:1},size:[.004,.01],edge:0,alpha:.8,layout:{scatter:1},density:.3},
     {ground:'#f8f8f4',mark:{vdrip:1},size:[.03,.08],edge:.3,alpha:.85,layout:{grid:1},density:.3},
-    {mark:{cloud:.7,vdrip:.3},size:[.05,.2],edge:.8,alpha:.6,layout:{scatter:1},density:.5},
-    {mark:{cloud:.6,dot:.4},size:[.05,.18],edge:.9,alpha:.6,layout:{field:1},density:.6},
+    {ground:'#f8f8f4',mark:{band:.4,vband:.4,dot:.2},size:[.04,.1],edge:.2,alpha:.55,layout:{grid:1},density:.4},
+    {ground:'#f8f8f4',mark:{fan:1},size:[.3,.5],edge:0,alpha:.9,layout:{radial:1},density:.08},
   ],
   kusama: [
     {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},size:[.03,.09],layout:{grid:1},density:1},
@@ -15939,7 +15695,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:9,pollock:7,bloom:7,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:7,kandinsky:8,gold:8,rothko:8,bulge:6,wave:8,spiral:6,arcs:6,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
