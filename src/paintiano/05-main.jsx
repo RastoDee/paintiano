@@ -1048,15 +1048,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. In Lite, Surprise now and then plays an ensemble.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. V Lite Prekvap ma občas zahrá ensemble.'},
-  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. In Lite spielt Überrasch mich ab und zu ein Ensemble.'},
-  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. En Lite, Surprends-moi joue parfois un ensemble.'},
-  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. En Lite, Sorpréndeme toca a veces un ensemble.'},
-  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. No Lite, Surpreende-me toca às vezes um ensemble.'},
-  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。在 Lite 中，「给我惊喜」偶尔会奏出合奏。'},
-  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。在 Lite 中，「給我驚喜」偶爾會奏出合奏。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。Lite では「おまかせ」がときどきアンサンブルを奏でる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 ALL, tap painters to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes the variant only. Tap a painter to unpin.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. S 🔀 ALL ťukaním maliarov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len variant. Ťuk na maliara ho odopne.'},
+  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 ALL heftest du Maler per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur die Variante. Tippen löst einen Maler.'},
+  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 ALL, touche des peintres pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que la variante. Touche un peintre pour le libérer.'},
+  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 ALL, toca pintores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia la variante. Toca un pintor para soltarlo.'},
+  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ALL, toca em pintores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda a variante. Toca num pintor para o soltar.'},
+  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。在 🔀 ALL 下点按画家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换变体。点按画家即可取消固定。'},
+  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。在 🔀 ALL 下點按畫家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換變體。點按畫家即可取消固定。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 ALL では画家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」はバリエーションだけを変える。画家をタップで解除。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
@@ -2333,6 +2333,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Ensemble × shuffle ALL: every Next draws a fresh crossing (how many and who
   // are random). Shuffle 1 needs no flag: Next rolls the variant of the crossing.
   const [jamAll, setJamAll] = useState(false);
+  // Ensemble × ALL with PINS: the painters the user keeps; every Next draws only
+  // the guests (1–3) around them. Pinned members lead the stage, in pin order.
+  // Exists only while Ensemble and ALL are both on.
+  const [jamPins, setJamPins] = useState([]);
+  const jamPinsRef = useRef([]); useEffect(()=>{ jamPinsRef.current = jamPins; },[jamPins]);
+  useEffect(()=>{ if(!jamOn || !jamAll) setJamPins(p=>p.length?[]:p); },[jamOn, jamAll]);
   useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
   useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
   const STAGE_MAX = 5;
@@ -2478,7 +2484,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       if(style===null){ const pool=ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k)); if(pool.length) setStyleTo(pool[(Math.random()*pool.length)|0]); }
       _shuffleOn(); return; }
     if(_artMode===1){                                               // → 2 (ALL)
-      if(jamOn){ setJamAll(true); return; }                         // ensemble: the stage stays until the next draw
+      if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
       const keep=style; setStyleTo(null);                           // release the selection, keep shuffling —
       const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix);   // but the draw starts on the SAME artist
       return; }
@@ -2501,9 +2507,44 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(jamAll){ const keep=style; setJamAll(false); setStyle(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
     setJamOn(false);
   };
-  // Ensemble ALL draw: 2–5 painters from the shuffle pool, count and members
-  // random; member 1 gets a random variant, the others derive theirs.
+  // Ensemble ALL, chip tap = pin toggle. Pinning a painter not on stage seats it
+  // right away (after the other pins); unpinning keeps it on the canvas as a guest
+  // until the next draw. The stage is always pins first, then guests, max 5.
+  const _jamPinTap = (k)=>{
+    if(!k || k==='mosaic' || k==='notes' || k==='oneM') return;
+    const pins=jamPinsRef.current.slice(); const st=_jamStage().filter(Boolean);
+    const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
+    if(!nextPins) return;
+    const guests = st.filter(x=>!nextPins.includes(x));
+    const stage = nextPins.concat(guests).slice(0, STAGE_MAX);
+    jamPinsRef.current = nextPins; setJamPins(nextPins);
+    if(stage.length){ setNotesMode(false); setOneMMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
+    try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
+  };
+  // Ensemble ALL draw. With pins: the pins stay exactly as they are (same order,
+  // same phase → same variants) and 1–3 guests are drawn around them; five pins
+  // leave no room, so Next rolls the crossing's variant instead. Without pins:
+  // 2–5 painters from the shuffle pool, count and members random; member 1 gets
+  // a random variant, the others derive theirs.
   const _jamAllRoll = ()=>{
+    const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
+    if(pins.length){
+      const vN1=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[pins[0]]) || 6;
+      const room=STAGE_MAX-pins.length;
+      const gpool=SHUFFLE_POOL.filter(k=>k!=='oneM' && !pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+      if(room<=0 || !gpool.length){ setPhaseIndex(p=>{ let n=(Math.random()*vN1)|0; if(vN1>1 && n===(p|0)) n=(n+1)%vN1; return n; }); return; }
+      const curGuests=painterStage.filter(k=>!pins.includes(k)).join('+');
+      let guests=[];
+      for(let tries=0; tries<4; tries++){
+        const a=gpool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
+        guests=a.slice(0, Math.min(a.length, 1+((Math.random()*Math.min(3,room))|0)));
+        if(guests.join('+')!==curGuests) break;            // never the same guests twice in a row
+      }
+      setNotesMode(false); setOneMMode(false);
+      setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests));
+      try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n:pins.length+guests.length, pinned:pins.length}); }catch(_){}
+      return;
+    }
     const pool=SHUFFLE_POOL.filter(k=>k!=='oneM' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
     if(pool.length<2) return;
     const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
@@ -2535,7 +2576,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     </button>
     );
   };
-  const _stageBadge = (ix, roles)=> (ix>=0) ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>) : null;
+  // kind: undefined = stage member (gold), 'pin' = pinned in Ensemble ALL (gold + pin),
+  // 'guest' = drawn by Next around the pins (outlined, like the white shuffle frame).
+  const _stageBadge = (ix, roles, kind)=> (ix<0) ? null : (kind==='guest')
+    ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'0 5px',borderRadius:9,background:PF.card2,border:'1px solid rgba(242,238,232,.75)',color:PF.cream,lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
+    : (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none',...(kind==='pin'?{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:2}:{})}}>{kind==='pin' && _pinIcon('#1a1408', 7)}{ix+1}</span>);
+  const _pinIcon = (col, px)=> (<svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth={px<9?3:2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2Z"/></svg>);
   const _diceRoll = () => {
     if(jamOn && jamAll){ _jamAllRoll(); return; }
     const N = _effVariants();
@@ -11749,6 +11795,7 @@ Hard requirements:
             // variant — the same variants fuseDNA paints (slot 1 = the phase, the others
             // from _fuVariantOf, or pinned by a curated Signature).
             const _fa=_fusionAddr(_jamStage(), paintPhase);
+            if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode}</>);
             if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode;
             const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null);
             return (_k ? (STYLE_INSPIRED[_k]||_k) : '—')+' · v'+(style?(phaseIndex|0):(shufVariant|0))+' · '+mode;
@@ -13158,7 +13205,7 @@ Hard requirements:
                 if(!notesMode){ setNotesMode(true); }
                 else { setNotesMode(false); }
               }
-            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
+            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:(!cockpitEdit && jamOn && jamAll && _mosIx<0)?0.35:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
             ); })()}
             {/* ── Per-artist chips (un-paired). Every artist is its own toggle.
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
@@ -13169,18 +13216,23 @@ Hard requirements:
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
               const locked = styleIsLocked(k);            // Pro-only & user is Free
-              const _stIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf(k) : -1;
+              const _stIx = (jamOn && !cockpitEdit && (_jamStage().length>1 || jamAll)) ? _jamStage().indexOf(k) : -1;
               const _inSig = _sigK.includes(k);
-              const isOn = (!cockpitEdit) && (style===k || _stIx>0 || _inSig);
+              // Ensemble ALL: pinned members show as chosen (gold), drawn guests as a shuffle hit (white)
+              const _pinned = jamOn && jamAll && jamPins.includes(k);
+              const isOn = (!cockpitEdit) && (jamOn && jamAll ? _pinned : (style===k || _stIx>0 || _inSig));
               const inSet = setupArtists.includes(k);
-              const shufHit = (!cockpitEdit) && (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0));
+              const shufHit = (!cockpitEdit) && (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0 && !_pinned));
               const _ghost = cockpitEdit && !inSet;
               const onClick = ()=>{
                 if(cockpitEdit){
                   toggleArtSafe(k);
                   return;
                 }
-                if(_artMode===2) return;                      // shuffle ALL: the chips are locked — the draw decides
+                if(_artMode===2){                               // shuffle ALL: the draw decides — except Ensemble ALL, where a tap pins / unpins
+                  if(jamOn && jamAll && !locked) _jamPinTap(k);
+                  return;
+                }
                 if(locked && _inSig){ setPaywallReason('settings'); return; }   // a Pro ✦ member on Free: on its own it is Pro
                 // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
                 // must not slide into ALL just because nothing is selected any more).
@@ -13193,19 +13245,25 @@ Hard requirements:
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
-                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:(jamAll ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?((k==='oneM'||locked)?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {label}
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
                   )}
                   {isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
                   {_inSig && !isDailyArtist(k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}
-                  {_stageBadge(_stIx, [])}
+                  {_stageBadge(_stIx, [], (jamOn && jamAll) ? (_pinned ? 'pin' : 'guest') : undefined)}
                 </button>
               );
             })}
           </div>
           ); })()}
+          {!cockpitEdit && jamOn && jamAll && (
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginTop:8,padding:'0 6px',fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(220,180,90,.9)',lineHeight:1.45}}>
+              {_pinIcon('#f0c040', 11)}
+              <span>{_ensT(jamPins.length===0 ? 'pinNone' : jamPins.length>=STAGE_MAX ? 'pinFull' : 'pinHint').replace('{next}', t('next'))}</span>
+            </div>
+          )}
           {cockpitEdit && (
             <div style={{textAlign:'center',marginTop:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(230,222,196,.55)',lineHeight:1.5}}>
               <span>{ts('editHint','Tap to add or remove from your set.')}</span>
