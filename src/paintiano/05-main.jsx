@@ -2408,6 +2408,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // any), then painterStage. Mosaic is a chip like any other ('mosaic' key) —
   // an empty selection is NOT an implicit mosaic on stage.
   const _jamStage = ()=> (style!==null ? [style] : []).concat(painterStage);
+  // A fusion's exact address: every member with the variant fuseDNA paints for it
+  // (slot 1 = the phase, the others _fuVariantOf — or pinned by a curated
+  // Signature / a poster QR through __PAINT_SIG_PHS). null for a single painter.
+  const _fusionAddr = (st, ph)=>{
+    const ks=(st||[]).map(k=>k||'mosaic').filter(k=>typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[k]);
+    if(ks.length<2) return null;
+    const ov=(typeof globalThis!=='undefined') ? globalThis.__PAINT_SIG_PHS : null;
+    const on=!!(ov && ov.keys && ov.phs && ov.keys.join()===ks.join());
+    return { keys:ks, phs:ks.map((k,i)=> (on && ov.phs[i]!=null) ? (ov.phs[i]|0) : _fuVariantOf(k,i,ph|0)) };
+  };
   const _jamTap = (k)=>{
     const cur=_jamStage(); const i=cur.indexOf(k);
     if(i>=0){
@@ -2649,12 +2659,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // artist, the pin disarms for good and normal behaviour takes over.
   useEffect(()=>{
     if(!qrArtistRef.current) return;
-    if(style && style!==qrArtistRef.current){ qrArtistRef.current=null; return; }
+    // the fusion part disarms with the artist (and on leaving Lite — see the Lite/Advanced reset)
+    if(style && style!==qrArtistRef.current){ qrArtistRef.current=null; _qrDropStage(); return; }
     if(style===qrArtistRef.current){
       tastePreviewKeyRef.current = qrArtistRef.current;
       if((phaseIndex|0)!==(qrVariantRef.current|0)) setPhaseIndex(qrVariantRef.current|0);
+      const q=qrStageRef.current;
+      if(q){
+        try{ globalThis.__PAINT_SIG_PHS = _qrPhs(); }catch(_){}
+        if(painterStage.join('+')!==q.keys.join('+')){ _liteJamStyleRef.current = qrArtistRef.current; setPainterStage(q.keys.slice()); }
+      }
     }
-  },[style,phaseIndex]);
+  },[style,phaseIndex,painterStage]);
   // ── POSTER MAKER (internal, ?postermaker=raffel2026) ───────────────────────
   // Renders the CURRENT canvas as a print master: dark gallery layout, gold
   // typography, and a gold QR whose URL is the exact address of what is on
@@ -2674,7 +2690,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
         alert('Poster maker: Mosaic/Notes stop nema QR adresu - vyber konkretneho umelca.'); return;
       }
       if(mode==='custom'){ alert('Poster maker: vlastna paleta nie je QR-adresovatelna - zvol standardnu.'); return; }
-      const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+artKey+'&v='+vNow+'&p='+mode+'&t='+tone;
+      // A fusion (Ensemble or a Signature) adds every other member with the exact
+      // variant on screen (&with=k.v,…), so the QR reopens the same painting.
+      let _withQ='', _artQ=artKey;
+      const _fa=_fusionAddr((style!==null ? [style] : []).concat(painterStageRef.current||[]), vNow);
+      if(_fa){
+        if(!ALL_ARTIST_KEYS.includes(_fa.keys[0]) || _fa.keys[0]==='mosaicFamily'){ alert('Poster maker: fuzia musi zacinat konkretnym umelcom (nie Mosaic) - zmen poradie.'); return; }
+        _artQ=_fa.keys[0];
+        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',');
+      }
+      const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+_artQ+'&v='+vNow+_withQ+'&p='+mode+'&t='+tone;
       // fonts first (Cormorant is already imported by the app shell)
       try{ await document.fonts.load('italic 600 84px "Cormorant Garamond"'); await document.fonts.load('600 120px "Cormorant Garamond"'); }catch(_){}
       // QR (H error correction) fetched, then recoloured gold-on-transparent
@@ -2723,7 +2748,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       cx.fillText('\u03c6', W-140, H-110);
       // PRODUCTION PACKAGE — one ZIP (iOS Safari drops extra downloads), no libs:
       // a minimal STORED zip is ~40 lines. Contains poster / raw art / print QR.
-      const base='paintiano-'+pieceKey+'-'+artKey+'-v'+vNow+'-'+mode+'-'+tone;
+      const base='paintiano-'+pieceKey+'-'+(_fa ? _fa.keys.map((k,i)=>k+_fa.phs[i]).join('+') : artKey+'-v'+vNow)+'-'+mode+'-'+tone;
       const posterBlob=await new Promise(r=>cv.toBlob(r,'image/png'));
       const artBlob=srcCv?await new Promise(r=>srcCv.toBlob(r,'image/png')):null;
       let qrBlob=null; try{ qrBlob=await fetch(qrImg.src).then(r=>r.ok?r.blob():null); }catch(_){}
@@ -2922,6 +2947,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const qrPieceRef = useRef(undefined);
   const qrArtistRef = useRef(null);
   const qrVariantRef = useRef(0);
+  // Poster of a FUSION: the other members and their variants (?with=k.v,k.v).
+  // The lead stays (qrArtistRef, qrVariantRef). _qrPhs() is the full pin.
+  const qrStageRef = useRef(null);
+  const _qrDropStage = ()=>{ if(!qrStageRef.current) return; qrStageRef.current=null;
+    try{ const sg=songSigRef.current; globalThis.__PAINT_SIG_PHS=(sg && sg.phs && sg.keys) ? {keys:sg.keys.slice(), phs:sg.phs.slice()} : null; }catch(_){} };
+  const _qrPhs = ()=> (qrArtistRef.current && qrStageRef.current)
+    ? { keys:[qrArtistRef.current].concat(qrStageRef.current.keys), phs:[qrVariantRef.current|0].concat(qrStageRef.current.vs) } : null;
   const litePieceRef = useRef(0);
   const qrModeRef = useRef(null);
   const qrToneRef = useRef(null);
@@ -2945,7 +2977,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // Seed is a deterministic hash of the piece, so (piece, artist, v) pins
       // the buyer's poster exactly.
       const _qv=parseInt(_u.get('v'),10);
-      if(qrArtistRef.current && Number.isInteger(_qv) && _qv>=0 && _qv<=7){ qrVariantRef.current=_qv; }
+      const _vN=(k)=> (typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]) || 8;
+      if(qrArtistRef.current && Number.isInteger(_qv) && _qv>=0 && _qv<_vN(qrArtistRef.current)){ qrVariantRef.current=_qv; }
+      // ?with=mondrian.2,miro.3 — the other members of a fusion poster, each with
+      // the exact variant printed. Up to 4 (a stage holds 5).
+      const _qw=_u.get('with');
+      if(qrArtistRef.current && _qw){
+        const _ws=_qw.split(',').slice(0,4).map(x=>{ const a=String(x).split('.'); return {k:a[0], n:parseInt(a[1],10)}; })
+          .filter(o=> o.k && ((typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(o.k) && o.k!=='mosaicFamily') || o.k==='mosaic')
+                      && typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[o.k] && Number.isInteger(o.n) && o.n>=0 && o.n<_vN(o.k));
+        if(_ws.length) qrStageRef.current={ keys:_ws.map(o=>o.k), vs:_ws.map(o=>o.n) };
+      }
       // ?p= palette and ?t= tone — the rest of the painting's address. Without
       // them a poster made in e.g. spectral/pastel would repaint in the scanner's
       // defaults and NOT match the print. Custom palette is not addressable.
@@ -3019,7 +3061,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // Lite ⇄ Advanced: an ensemble never travels across the switch — Lite fills
   // its stage only from Surprise, Advanced only from chip taps.
   const _ensModeFirstRef = useRef(true);
-  useEffect(()=>{ if(_ensModeFirstRef.current){ _ensModeFirstRef.current=false; return; } setJamOn(false); setCrOn(false); setPainterStage(p=>p.length?[]:p); setComposerStage(p=>p.length?[]:p); },[basicMode]);
+  useEffect(()=>{ if(_ensModeFirstRef.current){ _ensModeFirstRef.current=false; return; } _qrDropStage(); setJamOn(false); setCrOn(false); setPainterStage(p=>p.length?[]:p); setComposerStage(p=>p.length?[]:p); },[basicMode]);
   // Once the user has taken the bridge into Advanced, don't offer it again
   // this session — they now know the top-bar Lite/Advanced switch.
   const [bridgeUsed, setBridgeUsed] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_discovered')==='1'; }catch(_){ return false; } });
@@ -6451,7 +6493,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
       if(_sg && title && SIG_CURATED[title]) Object.assign(_sg, SIG_CURATED[title]);
-      try{ globalThis.__PAINT_SIG_PHS = (_sg && _sg.phs && _sg.keys) ? {keys:_sg.keys.slice(), phs:_sg.phs.slice()} : null; }catch(_){}
+      try{ globalThis.__PAINT_SIG_PHS = _qrPhs() || ((_sg && _sg.phs && _sg.keys) ? {keys:_sg.keys.slice(), phs:_sg.phs.slice()} : null); }catch(_){}
       const _sgMusic = sigMusicNextRef.current; sigMusicNextRef.current=false;
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
@@ -9096,6 +9138,11 @@ Hard requirements:
         // Free (ref-only taste latch; state stays null so no countdown starts).
         tastePreviewKeyRef.current = qrArtistRef.current;
         _liteNextIsMosaicRef.current = false;
+        if(qrStageRef.current){
+          _liteJamStyleRef.current = qrArtistRef.current;      // the Lite style effect keeps this stage
+          setPainterStage(qrStageRef.current.keys.slice());
+          try{ globalThis.__PAINT_SIG_PHS = _qrPhs(); }catch(_){}
+        }
         if(qrModeRef.current){ try{ setMode(qrModeRef.current); }catch(_){} }
         if(qrToneRef.current){ try{ setTone(qrToneRef.current); }catch(_){} }
       } else {
@@ -11696,8 +11743,16 @@ Hard requirements:
       {/* Address chip: visible with ANY content while poster-maker is on — also
           for external songs where the POSTER button itself stays hidden. */}
       {(addrChip || posterMaker) && chords.length>0 && (
-        <div style={{position:'fixed',left:14,bottom:132,zIndex:9999,padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',fontVariantNumeric:'tabular-nums'}}>
-          {(()=>{ const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null); return _k ? (STYLE_INSPIRED[_k]||_k) : '—'; })()} · v{style?(phaseIndex|0):(shufVariant|0)} · {mode}
+        <div style={{position:'fixed',left:14,bottom:132,zIndex:9999,maxWidth:'calc(100vw - 170px)',padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',lineHeight:1.35,fontVariantNumeric:'tabular-nums'}}>
+          {(()=>{
+            // A fusion (Ensemble / Signature) is addressed by EVERY member and its own
+            // variant — the same variants fuseDNA paints (slot 1 = the phase, the others
+            // from _fuVariantOf, or pinned by a curated Signature).
+            const _fa=_fusionAddr(_jamStage(), paintPhase);
+            if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode;
+            const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null);
+            return (_k ? (STYLE_INSPIRED[_k]||_k) : '—')+' · v'+(style?(phaseIndex|0):(shufVariant|0))+' · '+mode;
+          })()}
         </div>
       )}
       {dailyToast && proStatus==='free' && !showOnboarding && !showIntro && (
@@ -13050,7 +13105,9 @@ Hard requirements:
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
                 Shown when in set, or in edit mode (as a ghost when out of set). */}
             {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
-              const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes' || shuffleStyle==='oneM');
+              // $1M$ left the Mosaic family — it is an artist chip of its own, so a
+              // shuffle draw of 'oneM' lights the $1M$ chip only, never this one.
+              const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes');
               // Manual mosaic = selected and NOT being driven by the dice. Like
               // the artist pairs, a shuffle-hit shows the white frame (no gold
               // glow); a manual pick shows the gold glow. Splitting these keeps
@@ -13059,7 +13116,6 @@ Hard requirements:
               const mosaicManual = (style===null && !shuffleStyle && !(jamOn && painterStage.length)) || _mosIx>=0;
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes') ? 'notes'
-                            : (shuffleStyle==='oneM') ? 'oneM'
                             : (shuffleStyle==='mosaic') ? 'mosaic'
                             : (!shuffleStyle && oneMMode) ? 'oneM'
                             : (!shuffleStyle && notesMode) ? 'notes'
