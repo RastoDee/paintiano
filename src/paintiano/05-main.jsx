@@ -10476,8 +10476,8 @@ Hard requirements:
         setDisp(p=>p+1);
       };
       // Hybrid event builder:
-      //  • Strong chord-template match → triadic voicing (root + 3 + 5 + bass)
-      //  • Otherwise, if a dominant pitch is clearly above the rest → single note
+      //  • A triad really heard (3+ distinct tones fitting it) → triadic voicing (root + 3 + 5 + bass)
+      //  • Otherwise, if a dominant pitch is clearly above the rest → single note (melody)
       //  • Otherwise, if multiple comparable peaks → 2–3 raw pitches as-is
       // Returns {sig, notes} or null.
       // TRANSCRIPTION FIX (music mode): sig is a sorted pitch-class set, NOT
@@ -10499,13 +10499,27 @@ Hard requirements:
           for(let k=0;k<chromaHist.length;k++)for(let i=0;i<12;i++)chromaAvg[i]+=chromaHist[k][i];
           for(let i=0;i<12;i++)chromaAvg[i]/=chromaHist.length;
         }
-        const det=detectChord(chromaAvg); // null below 0.60 conf
-        const peaks=pickPitches(mag,liveSr,0.02); // original sensitivity
-        if(det){
-          const notes=generateVoicing(det.root,det.quality);
-          return { sig:pcSig(notes), notes };
-        }
+        const peaks=pickPitches(mag,liveSr,0.02); // original sensitivity (harmonics already folded out)
         if(peaks.length===0) return null;
+        // A CHORD only when one is really heard: at least three distinct pitch
+        // classes sound (each ≥ 35% of the loudest) AND they are the three tones of
+        // a clear major/minor triad (template match ≥ 0.80). The template test on
+        // its own passed EVERY single tone — one pure tone already scores 0.63
+        // against the 0.60 bar, a piano or voice tone with its overtones up to
+        // 0.72 — so a melody came out as a chain of four-tone chords.
+        const strong=peaks.filter(p=>p.mag>=peaks[0].mag*0.35);
+        const heardPcs=new Set(strong.map(p=>((p.midi%12)+12)%12));
+        if(heardPcs.size>=3){
+          const det=detectChord(chromaAvg);
+          if(det && det.conf>=0.80){
+            const tri=[det.root,(det.root+(det.quality==='maj'?4:3))%12,(det.root+7)%12];
+            let fit=0; for(const pc of heardPcs) if(tri.includes(pc)) fit++;
+            if(fit>=3){
+              const notes=generateVoicing(det.root,det.quality);
+              return { sig:pcSig(notes), notes };
+            }
+          }
+        }
         // Single dominant pitch: top peak ≥ 2.0× the next one → treat as melody.
         if(peaks.length===1 || peaks[0].mag >= peaks[1].mag*2.0){
           let m=peaks[0].midi;
