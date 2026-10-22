@@ -195,11 +195,19 @@ function _ensureEnergies(chords, causal){
     raw[i]=0.45*velN + 0.20*densN - 0.40*regN + 0.20;     // shift baseline so the range still spans well
   }
   // A live take (Compose / Mic, causal): each note's energy comes from itself and
-  // the note before it, on a fixed scale — never from notes still to come or
-  // from the take's range so far — so a new note never changes an earlier one's
-  // energy, and nothing already painted shifts its colour, width or path.
+  // the note before it, set against the range of the take UP TO that note —
+  // never against notes still to come — so it keeps the song-wide spread (and
+  // Picasso's light line its colour) while a new note never changes an earlier
+  // one's energy: nothing already painted shifts its colour, width or path. A
+  // floor on the range keeps the first few notes near the middle.
   if(_ck){
-    for(let i=0;i<chords.length;i++){ const a=(i>0?raw[i-1]:raw[i]); chords[i]._E = Math.max(0, Math.min(1, 0.5 + ((0.3*a + 0.7*raw[i]) - 0.33)*1.8)); }
+    let lo=Infinity, hi=-Infinity;
+    for(let i=0;i<chords.length;i++){
+      const a=(i>0?raw[i-1]:raw[i]), v=0.3*a+0.7*raw[i];
+      if(v<lo) lo=v; if(v>hi) hi=v;
+      const sp=Math.max(0.15, hi-lo), mid=(hi+lo)/2;
+      chords[i]._E = Math.max(0, Math.min(1, 0.5 + (v-mid)/sp));
+    }
     return;
   }
   const sm2=new Array(raw.length);
