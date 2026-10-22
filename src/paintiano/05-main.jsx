@@ -2195,6 +2195,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // It's set by VARY (Random off), and cleared when Random turns on, on a new
   // mood/source, or on Clear.
   const [structureSeedLock, setStructureSeedLock] = useState(null);
+  // Painters that keep their ORIGINAL Compose / Mic take (no take plan — see
+  // _takeSkip): Kandinsky, and the tile painters, whose tiles must always fill the
+  // whole canvas — Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein.
+  const _TAKE_ORIG = ['kandinsky','kusama','bulge','gold','pop','klee','lichtenstein'];
   const pollockSessionSeed = useMemo(() => {
     if(structureSeedLock!=null) return structureSeedLock>>>0;
     if(!chords || !chords.length) return 0;
@@ -2203,7 +2207,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // each new note, so Pollock re-threw his whole web (and the dice re-rolled the
     // look) while you played. One take keeps one painting that grows, like Music;
     // the take still replays and exports as that same painting.
-    const _hashTo = (chords[0] && chords[0].recorded) ? 1 : chords.length;
+    // Kandinsky and the tile painters, when chosen, keep their original take:
+    // hashed over every note (see _TAKE_ORIG / _takeSkip).
+    const _hashTo = (chords[0] && chords[0].recorded && !_TAKE_ORIG.includes(style)) ? 1 : chords.length;
     // FNV-1a-ish hash over each chord's pitches and velocities.
     let h = 2166136261 >>> 0;
     for(let i=0; i<_hashTo; i++){
@@ -2227,7 +2233,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // SHUFFLE changes only the artist → chord hash stays → painting stays
     // identical for that song in the new artist's style.
     return (h >>> 0);
-  }, [chords, structureSeedLock]);
+  }, [chords, structureSeedLock, style]);
   // ── SHUFFLE MODE ──────────────────────────────────────────────────────────
   // When NO artist is selected but Random is ON, the painting shuffles across
   // all artist styles: each variation (Play / Next / Vary → new seed) picks a
@@ -3593,41 +3599,24 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return { CW:cw, CH:Math.max(140, Math.round(cw/PHI)) };
   };
   const _takePainter = (st)=> !!(st && st!=='mosaic' && st!=='notes') || (painterStage && painterStage.length>0);
+  // Kandinsky and the tile painters (_TAKE_ORIG) painting alone keep their ORIGINAL
+  // take: the live grid / tiles that reflow over the whole canvas as you play, no
+  // plan, no take frame, re-seeded on every note when chosen. In a Jam they follow
+  // the take plan like everyone on stage.
+  const _takeSkip = (st)=> _TAKE_ORIG.includes(st) && ((styleRef.current!==null ? 1 : 0) + ((painterStageRef.current||[]).length)) < 2;
   // The cells under a painter (Kandinsky's, Miró's, Picasso's… blocks). The live
   // grid reflows on every note — one note filled the whole canvas with a single
   // giant block — so a take's painter sits on a grid laid out once for the PLAN:
   // plan-many equal cells, each new note filling the next one, the same way a
   // Music piece of that length is laid out. The visible plain mosaic keeps its own
   // live grid (rows shrinking as you add).
-  // Kandinsky's blocks are his big framed squares and rings; on a 96-cell plan they
-  // shrank to a row of dots. In a take he gets a COLLAGE instead: one big frame
-  // every 6 notes, each its own size (two fifths to three quarters of the canvas
-  // height, up to half again as wide) and place — spread over the canvas on a
-  // low-discrepancy walk, all fixed by the take's seed — so the frames arrive one
-  // after another, overlapping like his compositions, and never move once painted.
-  const _KAND_TAKE_STEP = 6;
-  const _takeCellStep = (st)=> st==='kandinsky' ? _KAND_TAKE_STEP : 1;   // 0 = no blocks, painter only
   const _takeGridRef = useRef({ key:'', g:null });
   const _takeGrid = (st, arr)=>{
-    const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || !_takeFrame()) return null;
+    const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || _takeSkip(st) || !_takeFrame()) return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const step=_takeCellStep(st), cnt=step>0 ? Math.ceil(ti.nv/step) : 1;
-    const collage = st==='kandinsky' && step>1;
-    const key=cnt+'|'+vp+(collage ? '|k'+(pollockSessionSeed>>>0) : '');
-    if(_takeGridRef.current.key!==key && collage){
-      const f=_takeFrame(), S=Math.min(f.CW, f.CH);
-      let h=(pollockSessionSeed>>>0)||1; const rnd=()=>{ h=(Math.imul(h,1664525)+1013904223)>>>0; return h/4294967296; };
-      const cells=[];
-      const ox=rnd(), oy=rnd();
-      for(let j=0;j<cnt;j++){
-        const side=S*(0.42+0.36*rnd()), w=Math.min(f.CW, side*(1+0.5*rnd())), hh=side;
-        const u=(ox+j*0.7548776662)%1, v=(oy+j*0.5698402910)%1;   // R2 sequence: even spread, no clumps
-        cells.push({ x:Math.round(u*(f.CW-w)), y:Math.round(v*(f.CH-hh)), w:Math.round(w), h:Math.round(hh) });
-      }
-      _takeGridRef.current={ key, g:{ N:1, BW:f.CW, BH:f.CH, CW:f.CW, CH:f.CH, cells } };
-    }
+    const key=ti.nv+'|'+vp;
     if(_takeGridRef.current.key!==key){
-      const evs=Array.from({length:cnt},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
+      const evs=Array.from({length:ti.nv},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
       let g=null; try{ g=computeGrid(evs,{liveMode:true}); }catch(_){ g=null; }
       _takeGridRef.current={ key, g };
     }
@@ -3808,16 +3797,20 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // it costs one pass per piece, not per frame. Hue is never affected.
     try{
       if(typeof _setSongEnergy==='function'){
-        if(_songEnergyCacheRef.current.src !== chords){
-          const _sc = (chords && chords.length && typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-          _songEnergyCacheRef.current = { src: chords, e: _sc ? _sc.energy : 0.5 };
+        // A live take (Compose / Mic, painted against its plan) stays neutral, so a
+        // new note never tilts the colours of everything already painted.
+        const _seLive = !!(_takeInfo(chords) && !_takeSkip(effectiveStyle));
+        if(_songEnergyCacheRef.current.src !== chords || _songEnergyCacheRef.current.live !== _seLive){
+          const _sc = (!_seLive && chords && chords.length && typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+          _songEnergyCacheRef.current = { src: chords, live: _seLive, e: _sc ? _sc.energy : 0.5 };
         }
         _setSongEnergy(_songEnergyCacheRef.current.e);
       }
     }catch(_){}
     const{N,BW,BH}=grid; let{CW,CH}=grid;
     // A recorded take with a painter is painted on the take's own frame (see _takeFrame).
-    if(_takeInfo(chords) && _takePainter(effectiveStyle)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
+    if(_takeInfo(chords) && _takePainter(effectiveStyle) && !_takeSkip(effectiveStyle)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
+    const _liveE = !!(_takeInfo(chords) && !_takeSkip(effectiveStyle));   // live take: causal note energies (see _ensureEnergies)
     // SUPERSAMPLING (immersive fullscreen, painted modes only). Renders the painting
     // at SS× internal resolution + pre-scales the context, exactly like the export
     // path, so fullscreen on a big/tablet screen is crisp instead of a stretched
@@ -3959,7 +3952,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           : c)
       : chords;
     // A recorded take (Compose / Mic) is painted against its plan — see _takePad.
-    const _chordsPaint = _takePad(_chordsPaint0);
+    const _chordsPaint = _takeSkip(effectiveStyle) ? _chordsPaint0 : _takePad(_chordsPaint0);
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -4084,7 +4077,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
       style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='raffel' && style!=='lichtenstein' && style!=='klee' && style!=='delaunay' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
-      _ensureEnergies(chords);
+      _ensureEnergies(chords, _liveE);
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
     }else{
       // Overlay styles repaint the whole canvas every frame. During active
@@ -4113,7 +4106,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(_jamKeys && lim>0){
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
-        _ensureEnergies(chords);
+        _ensureEnergies(chords, _liveE);
         ctx.clearRect(0,0,CW,CH);
         { const _jg=_takeGrid('ensemble', chords) || grid;
           _jamPaint(ctx, CW, CH, _jg.N, _jg.BW, _jg.BH, _jg, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false, SS); }
@@ -4166,15 +4159,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
-        _ensureEnergies(chords);
-        const _step = (_sg===grid) ? 1 : _takeCellStep(style);   // a take: one block per _step notes (see _takeGrid)
-        if(!fullCanvasOverlay && _step>0){
+        _ensureEnergies(chords, _liveE);
+        if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
             const chord=chords[i];if(!chord)break; _setCurE(chord._E); // stale disp / lim past chords → bail, don't destructure undefined
             const{n:notes,idx}=chord;
-            if(_step>1 && (idx%_step)) continue;
-            const cell=_sg.cells&&_sg.cells[_step>1 ? Math.floor(idx/_step) : idx];
-            if(!cell && _sg!==grid) continue;
+            const cell=_sg.cells&&_sg.cells[idx];
             if(cell){
               if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
               else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
@@ -4229,7 +4219,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
       ctx.strokeStyle='rgba(255,255,255,0.025)';ctx.lineWidth=.5;
       for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*BW,0);ctx.lineTo(i*BW,CH);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*BH);ctx.lineTo(CW,i*BH);ctx.stroke();}
-      _ensureEnergies(chords);
+      _ensureEnergies(chords, _liveE);
       for(let i=0;i<lim;i++) drawOne(chords[i]);
       _setCurE(0.5);
       // Pollock global drip overlay — runs AFTER all cells have rendered.
@@ -11057,8 +11047,9 @@ Hard requirements:
       const style = effectiveStyle;
       const{BW,BH}=grid; let{CW,CH}=grid;
       // A recorded take exports exactly the painting on screen: its frame and its plan (see _takePad).
-      if(_takeInfo(chords) && _takePainter(style)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
-      const _expChords=_takePad(chords);
+      if(_takeInfo(chords) && _takePainter(style) && !_takeSkip(style)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
+      const _expChords=_takeSkip(style) ? chords : _takePad(chords);
+      const _liveE = !!(_takeInfo(chords) && !_takeSkip(style));   // live take: causal note energies, as on screen
       // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 print
       let SCALE, label, dpi;
       if(sizeMode==='print'){
@@ -11143,7 +11134,7 @@ Hard requirements:
         _setArtistSeed(pollockSessionSeed);
         _setNoBg(noBg);
         _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
-        _ensureEnergies(chords);
+        _ensureEnergies(chords, _liveE);
         // ── overlay pass as a function — called twice in transparent mode:
         // once into a throwaway probe ctx to DETECT whether this style/variant
         // paints its own full-canvas ground, then into the real ctx. ──
@@ -11254,10 +11245,7 @@ Hard requirements:
         if(_eg!==grid && style==='pollock'){ if(!(noBg && _cellsHidden)){ hctx.fillStyle='#f2ede0'; hctx.fillRect(0,0,CW,CH); } }
         else if(!(noBg && _cellsHidden))         chords.forEach((chord)=>{
           const {n:notes,idx}=chord; _setCurE(chord._E);
-          const _step=(_eg===grid) ? 1 : _takeCellStep(style);
-          if(_step===0 || (_step>1 && (idx%_step))) return;
-          const cell=_eg.cells&&_eg.cells[_step>1 ? Math.floor(idx/_step) : idx];
-          if(!cell && _eg!==grid) return;
+          const cell=_eg.cells&&_eg.cells[idx];
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
           else if(cell)drawBlock(hctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
           else{const si=idx%(_eg.N*_eg.N),col=si%_eg.N,row=Math.floor(si/_eg.N);drawBlock(hctx,col*_eg.BW,row*_eg.BH,notes,gc,_eg.BW,_eg.BH,style);}
@@ -15050,11 +15038,12 @@ Hard requirements:
         )}
         {(effectiveStyle||shuffleStyle)&&chords.length>0&&!recording&&!micActive&&viewMode!=='image'&&(()=>{
           // Next is available whenever there's a painting on the canvas — during
-          // Play, during Pause, AND after the track ends. Manual artist → cycle
-          // styles via phaseIndex. Shuffle (no manual artist + randomMode) →
-          // cycle artists via shuffleArtistIndex. Hidden if neither (plain Mosaic
-          // with no randomMode).
-          const canRoll = (disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive;
+          // Play, during Pause, after the track ends, AND while composing (the
+          // take on the canvas switches painter / variant as you play).
+          // Manual artist → cycle styles via phaseIndex. Shuffle (no manual
+          // artist + randomMode) → cycle artists via shuffleArtistIndex. Hidden
+          // if neither (plain Mosaic with no randomMode).
+          const canRoll = (disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive;
           if(!randomMode) return null;
           return (
             <button className="pf-lift" onClick={()=>{ if(!canRoll) return; nextRollInProgressRef.current=true; _diceRoll(); }} disabled={!canRoll} title={canRoll?'next painting — jump to a new variation':'wait for the current action to finish'} aria-label="next painting" style={txStyle('pink',{effScale,disabled:!canRoll})}><TxIcon n="next" s={14*effScale}/>{t('next')!=='next'?t('next'):'Next'}</button>

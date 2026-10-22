@@ -173,10 +173,12 @@ let _mixOn = false;
 function _setMixOn(b){ _mixOn = !!b; }
 
 let _enChords = null;
-function _ensureEnergies(chords){
+let _enCausal = false;   // _ensureEnergies: last array was a live take's (causal energies)
+function _ensureEnergies(chords, causal){
   if(!chords || !chords.length){ _enChords=chords; return; }
-  if(chords===_enChords && chords[chords.length-1]._E!==undefined) return;
-  _enChords = chords;
+  const _ck = !!causal;
+  if(chords===_enChords && _enCausal===_ck && chords[chords.length-1]._E!==undefined) return;
+  _enChords = chords; _enCausal = _ck;
   const raw = new Array(chords.length);
   for(let i=0;i<chords.length;i++){
     const ns=(chords[i]&&chords[i].n)||[]; const k=ns.length||1;
@@ -191,6 +193,14 @@ function _ensureEnergies(chords){
     // the pastel threshold (0.20) even at mezzo dynamics, and a low-bass
     // passage at mezzo dynamics pushes above the dark threshold (0.80).
     raw[i]=0.45*velN + 0.20*densN - 0.40*regN + 0.20;     // shift baseline so the range still spans well
+  }
+  // A live take (Compose / Mic, causal): each note's energy comes from itself and
+  // the note before it, on a fixed scale — never from notes still to come or
+  // from the take's range so far — so a new note never changes an earlier one's
+  // energy, and nothing already painted shifts its colour, width or path.
+  if(_ck){
+    for(let i=0;i<chords.length;i++){ const a=(i>0?raw[i-1]:raw[i]); chords[i]._E = Math.max(0, Math.min(1, 0.5 + ((0.3*a + 0.7*raw[i]) - 0.33)*1.8)); }
+    return;
   }
   const sm2=new Array(raw.length);
   for(let i=0;i<raw.length;i++){
@@ -2618,8 +2628,13 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // last one. Curve is calibrated so short mood pieces stay airy (30 chords →
   // 25 passes) while long songs build real Pollock density (400 chords → 260
   // passes). No early ceiling — the painting completes on the final chord.
-  const passMaxFull = _adaptiveMax(chords.length, 'pollock');
-  const passCount0 = _progressive(N, chords.length, passMaxFull);
+  // A live take (Compose / Mic, chords._livePad): the drips follow the notes
+  // PLAYED — a steady number per note, set on the take's first plan (96 notes) —
+  // and each drip keeps the note it was poured on. Nothing already poured
+  // changes: not its path, not its colour, and not when the take's plan doubles.
+  const _live = !!chords._livePad;
+  const passMaxFull = _adaptiveMax(_live ? 96 : chords.length, 'pollock');
+  const passCount0 = _live ? Math.max(1, Math.round(passMaxFull * N / 96)) : _progressive(N, chords.length, passMaxFull);
   // ── Variant chooser (stable per painting, re-rolls on Vary) ──
   //  A = dense all-over web (the classic Pollock).
   //  B = sparse, bolder strokes with more open canvas + thicker beads.
@@ -2646,7 +2661,20 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // distributed. This way each pass "represents" a specific chord in the
   // music -- its color and velocity drive the drip's appearance.
   const cnAll = chords.length;
+  // Live take: the note on which each drip first appeared (its colour source).
+  let _liveFirst = null;
+  if(_live){
+    _liveFirst = new Int32Array(passCount);
+    let p0 = 0;
+    for(let n=1; n<=N && p0<passCount; n++){
+      const c0 = Math.max(1, Math.round(passMaxFull * n / 96));
+      const c = Math.max(4, Math.round((pollVariant === 1 ? c0 * 0.55 : c0) * _passCharMul));
+      while(p0 < Math.min(c, passCount)) _liveFirst[p0++] = n;
+    }
+    while(p0 < passCount) _liveFirst[p0++] = N;
+  }
   const chordForPass = (passIdx) => {
+    if(_liveFirst) return chords[Math.max(0, _liveFirst[passIdx]-1)];
     if(passCountFull <= 1) return chords[cnAll-1];
     const t = passIdx / (passCountFull - 1);
     const ci = Math.min(cnAll-1, Math.floor(t * (cnAll - 1)));
@@ -2870,7 +2898,8 @@ function pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // chord's averaged colour. This is the "voice" of the song in paint —
   // different songs will pour in different colours.
   let tR=0,tG=0,tB=0,tC=0;
-  for(let i=0;i<chords.length;i++){
+  const _thN = chords._livePad ? 1 : chords.length;   // live take: theme from its first note, so pours never recolour
+  for(let i=0;i<_thN;i++){
     const notes=chords[i] && (chords[i].n || chords[i].notes || []);
     if(!notes || !notes.length) continue;
     for(const note of notes){
@@ -3045,6 +3074,9 @@ function _polEnamel(rgb){ const g=(rgb[0]+rgb[1]+rgb[2])/3; const mx=Math.max(..
 function _polHue(c){ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<1e-6) return 0; let h= mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; if(h<0) h+=360; return h; }
 function _polPalette(chords,gc,isBW){
   const cn=chords.length; if(isBW) return [[90,90,90],[150,150,150],[200,200,200]];
+  // A live take keeps one palette from its first note (root, third, fifth), so
+  // later notes never recolour skeins already flung.
+  if(chords._livePad){ const n0=(chords[0]&&(chords[0].n||chords[0].notes))||[]; const m0=(n0[0]&&n0[0].m!==undefined)?n0[0].m:60, v0=(n0[0]&&n0[0].v)||100; return [0,4,7].map(k=>_polEnamel(gc(m0+k,v0).slice(0,3))); }
   const bins=new Array(12).fill(0), best=new Array(12).fill(null), bs=new Array(12).fill(-1);
   for(let i=0;i<cn;i+=Math.max(1,Math.floor(cn/90))){ const {rgb}=_picChord(chords,i,gc,isBW); const sat=Math.max(...rgb)-Math.min(...rgb); if(sat<30) continue; const b=Math.floor(_polHue(rgb)/30)%12; bins[b]+=sat; if(sat>bs[b]){ bs[b]=sat; best[b]=rgb; } }
   const order=bins.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]); const picked=[];
@@ -3094,7 +3126,7 @@ function _polSetup(chords,gc,mode){
 // the painting: a list of skein specs in Pollock's layer order within each passage; drawn up to reveal
 function _polBuild(ctx,CW,CH,chords,lim,gc,ss,mode,spec){
   const S=_polSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn;
-  const reveal=_polClamp(Math.max(1,Math.min(cn,lim))/cn,0,1);
+  const reveal=chords._livePad ? _polClamp(Math.max(1,lim)/96,0,1) : _polClamp(Math.max(1,Math.min(cn,lim))/cn,0,1);   // live take: on its first plan, so a doubling never takes skeins away
   const list=spec(S,D,CW,CH); // [{t,layer,x,y,ang,len,col,alpha,o}]
   list.sort((a,b)=> (Math.floor(a.t*16)-Math.floor(b.t*16)) || (a.layer-b.layer) || (a.t-b.t));
   const n=Math.max(1,Math.ceil(list.length*reveal));
