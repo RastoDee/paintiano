@@ -9080,11 +9080,12 @@ Hard requirements:
       // data here: MELODY on → the line plays; MELODY off → nothing is scheduled.
       if(melodyOnRef.current && melodyDataRef.current){
         const _src=chordsRef.current||[];
-        let totalMs=0, playedMs=0;
-        for(let k=1;k<_src.length;k++){ const g=_gapAt(_src,k); totalMs+=g; if(k<=fromIdx) playedMs+=g; }
+        let totalMs=0, playedMs=0; const _evT=_src.length?[0]:[];
+        for(let k=1;k<_src.length;k++){ const g=_gapAt(_src,k); totalMs+=g; _evT.push(totalMs); if(k<=fromIdx) playedMs+=g; }
         totalMs+=200;   // the last event's own sounding time
         let voice=[];
-        try{ const _atmoForMel=(atmoOnRef.current&&atmoMoodRef.current)?atmoMoodRef.current:null; const _mv=_melodyVoice(_src, melodyDataRef.current, _atmoForMel, totalMs); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
+        // _evT (each texture event's real start) lets the line fit the texture's key, chords and pulse
+        try{ const _atmoForMel=(atmoOnRef.current&&atmoMoodRef.current)?atmoMoodRef.current:null; const _mv=_melodyVoice(_src, melodyDataRef.current, _atmoForMel, totalMs, _evT); voice=(_mv&&_mv.voice)||[]; }catch(_){ voice=[]; }
         if(voice.length){
           const voiceGen = genRef.current;
           const voiceGen2 = melodyVoiceGenRef.current;
@@ -9092,7 +9093,7 @@ Hard requirements:
             const atRaw = mn.pos*totalMs - playedMs;
             if(atRaw < 0) continue;   // already passed when resuming from the middle
             const atMs = Math.round(atRaw / playbackSpeedRef.current);
-            const durMs = Math.max(300, Math.round((mn.durFrac||0.01) * totalMs));
+            const durMs = Math.max(260, Math.round((mn.durFrac||0.01) * totalMs));
             const id = setTimeout(()=>{
               if(genRef.current!==voiceGen) return;          // stopped → don't sound
               if(melodyVoiceGenRef.current!==voiceGen2) return; // melody switched off → silence

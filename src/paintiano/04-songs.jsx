@@ -1403,9 +1403,134 @@ function _atmoTransform(evts, mood, skipTiming){
 //
 // Returns { events, voice } — events is the texture (clone, never mutated); voice
 // is [{pos, m, v, durMs}] or [] if nothing to sing.
-function _melodyVoice(evts, mel, atmo, totalMs){
+// ── MELODY FITTED TO THE TEXTURE ─────────────────────────────────────────────
+// The AI writes its line from the picture alone, in its own key and tempo. Laid
+// over a composer (Satie's slow chords, Bach's running notes) or a scan as-is it
+// clashed: wrong key, its own fast pulse, high and loud — a hail of notes. Here
+// the line keeps only its CONTOUR and RHYTHMIC PROPORTIONS and is re-set onto the
+// texture that actually plays:
+//   • key   — the texture's own key (Krumhansl), every note on that scale
+//   • harmony — a note that would rub (semitone / tritone) against what sounds at
+//               that moment moves to the nearest tone of that chord
+//   • pulse — notes land ON the texture's onsets (never faster than ~2.5 / s,
+//             one per chord when the texture is slow), long notes span several
+//   • voice — just above the texture, never above C6, a touch louder than it,
+//             legato; the AI's own chords are dropped (the texture is the harmony)
+//   • form  — texture-only intro, the phrase, a breath, the answer (an octave up
+//             when it fits), … and a texture-only close
+// evT = the time (ms) each texture event starts in real playback; totalMs = the
+// whole length. Returns { events, voice } like _melodyVoice, or null.
+function _melodyFit(evts, mel, atmo, evT, totalMs){
+  const n=evts.length; if(n<2) return null;
+  // ── the line: contour + rhythm of the AI cell
+  const raw=[];
+  for(const r of mel.notes){
+    if(!Array.isArray(r)||r.length<3) continue;
+    let m=r[0]; if(typeof m==='string') m=name2midi(m);
+    if(typeof m!=='number'||!isFinite(m)) continue;
+    raw.push({ m, b:Math.max(0,+r[2]||0), d:Math.max(0.25,+r[1]||0.5), v:Math.max(1,Math.min(127,Math.round(+r[3]||90))) });
+  }
+  if(raw.length<2) return null;
+  raw.sort((a,b)=>a.b-b.b);
+  const cell=[]; for(const x of raw){ const l=cell[cell.length-1]; if(l && Math.abs(l.b-x.b)<1e-6){ if(x.m>l.m) cell[cell.length-1]=x; } else cell.push(x); }   // one line: top note of any stacked onset
+  if(cell.length<2) return null;
+  const iois=[]; for(let i=0;i<cell.length-1;i++) iois.push(cell[i+1].b-cell[i].b);
+  const _cnt=new Map(); for(const d of iois){ const q=Math.max(0.125,Math.round(d*8)/8); _cnt.set(q,(_cnt.get(q)||0)+1); }
+  let unit=0.5, _best=-1; for(const [q,c] of _cnt){ if(c>_best || (c===_best && q<unit)){ _best=c; unit=q; } }
+  const lens=cell.map((x,i)=> Math.max(1, Math.min(4, Math.round((i<iois.length ? iois[i] : x.d)/unit))));
+  const phraseSlots=lens.reduce((a,b)=>a+b,0);
+  // ── the texture: onsets grouped, what sounds when, its key, loudness, register
+  const evNotes=evts.map(e=>(e&&e.n)||[]);
+  const groups=[]; for(let k=0;k<n;k++){ const t=evT[k]|0; const g=groups[groups.length-1]; if(g && t-g.t<35) g.ks.push(k); else groups.push({t, ks:[k]}); }
+  const pcH=new Array(12).fill(0), vels=[], tops=[];
+  for(let k=0;k<n;k++){ let top=0; for(const no of evNotes[k]){ const w=(no.v||64)*Math.min(4,Math.max(.25,(no.durMs||300)/400)); pcH[((no.m%12)+12)%12]+=w; vels.push(no.v||64); if(no.m>top) top=no.m; } if(top) tops.push(top); }
+  if(!vels.length) return null;
+  const MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88], MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+  const corr=(prof,root)=>{ let mx=0,my=0; for(let i=0;i<12;i++){ mx+=pcH[(i+root)%12]; my+=prof[i]; } mx/=12; my/=12; let a=0,bx=0,by=0; for(let i=0;i<12;i++){ const dx=pcH[(i+root)%12]-mx, dy=prof[i]-my; a+=dx*dy; bx+=dx*dx; by+=dy*dy; } return (bx>0&&by>0)?a/Math.sqrt(bx*by):-1; };
+  let root=0, minor=false, kb=-2; for(let r=0;r<12;r++){ const a=corr(MAJ,r), b=corr(MIN,r); if(a>kb){kb=a;root=r;minor=false;} if(b>kb){kb=b;root=r;minor=true;} }
+  const scale=(minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]).map(d=>(d+root)%12);
+  vels.sort((a,b)=>a-b); tops.sort((a,b)=>a-b);
+  const texVel=vels[Math.floor(vels.length*0.6)];
+  const texTop=tops.length ? tops[Math.floor(tops.length*0.75)] : 72;
+  const soundingAt=(T)=>{ const pcs=new Set(); for(let k=0;k<n;k++){ const t=evT[k]; if(t>T+35) break; if(t<T-6000) continue; for(const no of evNotes[k]){ if(t+(no.durMs||300)>=T-10) pcs.add(((no.m%12)+12)%12); } } return pcs; };
+  // ── slots: the texture's onsets, thinned to a singable pulse (≥ ~400 ms apart);
+  // a long chord is divided (~600 ms steps) so over a slow texture the line can
+  // still move — those in-between notes sit on the chord that is still sounding
+  const MIN_STEP=400, slots=[];
+  const fill=(a,b)=>{ const parts=Math.max(1, Math.min(4, Math.round((b-a)/600))); for(let q=1;q<parts;q++) slots.push(Math.round(a+(b-a)*q/parts)); };
+  for(let i=0;i<groups.length;i++){
+    const t=groups[i].t, last=slots[slots.length-1];
+    if(last!=null && t-last<MIN_STEP*0.9) continue;
+    if(last!=null) fill(last, t);
+    slots.push(t);
+  }
+  { const end=totalMs-200, last=slots[slots.length-1]; if(last!=null) fill(last, end); }
+  if(slots.length<8) return { events:evts, voice:[] };   // too short to sing over: no line rather than the free-tempo hail
+  // ── register: whole-octave shift so the line sits just over the texture, within E3..C6
+  let lo=128, hi=0; for(const x of cell){ if(x.m<lo) lo=x.m; if(x.m>hi) hi=x.m; }
+  const LO=52, HI=84, floor=Math.min(HI-(hi-lo), texTop+3);
+  const cands=[-36,-24,-12,0,12,24,36].filter(L=>lo+L>=LO && hi+L<=HI);
+  let lift = cands.length ? cands.reduce((best,L)=>{ const ok=(lo+L)>=floor, bok=(lo+best)>=floor; if(ok&&!bok) return L; if(ok&&bok) return L<best?L:best; if(!ok&&!bok) return L>best?L:best; return best; }, cands[0])
+                          : Math.round((72-(lo+hi)/2)/12)*12;
+  // ── pitch: on the scale, and no semitone / tritone against what sounds
+  const onScale=(m)=>{ for(let d=0;d<=2;d++){ for(const s of (d? [m-d,m+d] : [m])){ if(scale.includes(((s%12)+12)%12)) return s; } } return m; };
+  const fitPitch=(m,T)=>{
+    let p=onScale(m);
+    const pcs=soundingAt(T); if(!pcs.size) return p;
+    const rub=(x)=>{ const pc=((x%12)+12)%12; for(const t of pcs){ const ic=Math.min(((pc-t)%12+12)%12, ((t-pc)%12+12)%12); if(ic===1||ic===6) return true; } return false; };
+    if(!rub(p)) return p;
+    let best=null, bd=99;
+    for(let d=1; d<=4; d++){ for(const c of [p-d,p+d]){ const pc=((c%12)+12)%12; if(pcs.has(pc) && !rub(c)){ const sc=d+(scale.includes(pc)?0:0.5); if(sc<bd){bd=sc;best=c;} } } if(best!=null) break; }
+    if(best==null){ for(let d=1; d<=3 && best==null; d++){ for(const c of [p-d,p+d]){ if(scale.includes(((c%12)+12)%12) && !rub(c)){ best=c; break; } } } }
+    return best!=null ? best : p;
+  };
+  // ── form: intro, phrase, breath, answer … close
+  const introS=Math.max(2, Math.min(Math.round(slots.length*0.1), slots.findIndex(t=>t>=8000)>0 ? slots.findIndex(t=>t>=8000) : 6));
+  const outroS=Math.max(2, Math.round(slots.length*0.08));
+  const restS=Math.max(2, Math.round(phraseSlots*0.5));
+  const _atmoE=(atmo && typeof atmo.e==='number') ? atmo.e : null;
+  const velShift=(_atmoE!=null) ? (_atmoE<0.5 ? -8*(0.5-_atmoE)/0.5 : 6*(_atmoE-0.5)/0.5) : 0;
+  const placed=[];
+  let s0=introS, E=0;
+  while(s0+Math.min(phraseSlots,4) < slots.length-outroS){
+    const oct=(E%2===1 && hi+lift+12<=HI) ? 12 : 0;
+    let si=s0; const startCount=placed.length;
+    for(let i=0;i<cell.length;i++){
+      if(si>=slots.length-outroS) break;
+      const T=slots[si], L=lens[i];
+      const endI=Math.min(slots.length-1, si+L);
+      const endT=(endI>si) ? slots[endI] : T+600;
+      placed.push({ T, end:endT, m:cell[i].m+lift+oct, v0:cell[i].v, i });
+      si+=L;
+    }
+    if(placed.length===startCount) break;
+    s0=si+restS; E++;
+  }
+  if(!placed.length) return null;
+  const voice=[];
+  const nP=placed.length;
+  for(let j=0;j<nP;j++){
+    const p=placed[j];
+    const m=Math.max(LO, Math.min(HI+2, fitPitch(p.m, p.T)));
+    const arcPos=p.T/totalMs, climax=1-Math.abs(arcPos-0.72)*1.2, dyn=0.88+0.12*Math.max(0,Math.min(1,climax));
+    const edge=1-Math.abs((p.i/Math.max(1,cell.length-1))-0.5)*0.4;
+    const v=Math.max(Math.min(60,texVel+6), Math.min(100, Math.round((texVel*1.2+10+velShift)*dyn*edge + (p.v0-90)*0.08)));
+    const durMs=Math.max(260, Math.min(3200, (p.end-p.T)*1.05));
+    voice.push({ pos:Math.min(1,p.T/totalMs), durFrac:durMs/totalMs, m, v });
+  }
+  voice.sort((a,b)=>a.pos-b.pos);
+  return { events:evts, voice, key:{root, minor} };
+}
+
+function _melodyVoice(evts, mel, atmo, totalMs, evT){
   const empty={ events:evts, voice:[] };
   if(!evts||!evts.length||!mel||!mel.notes||!mel.notes.length) return empty;
+  // With the texture's real timeline the line is FITTED to what plays under it
+  // (key, chords, pulse, loudness) — see _melodyFit. The free-tempo loop below is
+  // the fallback when no timeline is given.
+  if(Array.isArray(evT) && evT.length===evts.length && typeof totalMs==='number' && totalMs>0){
+    try{ const f=_melodyFit(evts, mel, atmo, evT, totalMs); if(f) return f; }catch(_){}
+  }
   // KEY MATCH: when ATM is on, the texture has been snapped to a mood scale
   // (root + major/minor/lydian). Snap the melody + chords to the SAME scale so the
   // sung line stays in tune with the retuned texture instead of clashing.
