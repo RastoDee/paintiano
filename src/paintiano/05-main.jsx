@@ -131,10 +131,10 @@ const SIG_BLACKLIST=new Set([
 const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 // The built-in pieces are the shop window — the first painting a new user ever
 // sees. Their Signatures are hung by hand (still the same for everyone); every
-// other piece keeps the computed one. Roles must match SIG_ROLES membership.
+// other piece keeps the computed one. Roles follow SIG_ROLES, or the part a painter plays in that very painting (one role per member).
 const SIG_CURATED = {
   [SAMPLE_MIDI_NAME]:   {keys:['bloom','monet'],   roles:['field','gesture'],  ph:0, phs:[0,5], mode:'harmony'},   // Liebestraum: Sam Francis's soft clouds with Monet's Japanese-bridge touches — a pastel dream (Rasto's pick, Oct 2026)
-  [SAMPLE_MIDI_NAME_2]: {keys:['pollock','kusama'], roles:['gesture','ornament'], ph:1, phs:[1,1], mode:'harmony'},   // Bumble-Bee: Pollock's Autumn Rhythm skeins as the flight, Kusama's dots as pollen
+  [SAMPLE_MIDI_NAME_2]: {keys:['bauhaus','wave','bulge'], roles:['structure','gesture','ornament'], ph:2, phs:[2,0,3], mode:'harmony'},   // Bumble-Bee: Bauhaus's bars and targets as the rhythm, Riley's stripes as the running line, Vasarely's squares and dots as the swarm (Rasto's pick, Oct 2026)
   [SAMPLE_MIDI_NAME_3]: {keys:['delaunay','kandinsky'], roles:['structure','gesture'], ph:0, phs:[0,0], mode:'spectral'},   // Metamorphosis One: Delaunay's discs on cream, Kandinsky's rings and lines — Spectral (Rasto's pick, Oct 2026)
 };
 
