@@ -25763,6 +25763,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // identical for that song in the new artist's style.
     return (h >>> 0);
   }, [chords, structureSeedLock, style]);
+  // The shuffle draw's seed. A recorded take (Compose / Mic) keeps the draw of the
+  // empty canvas it started on: keys played never pick another artist — only
+  // Next, swipe up in fullscreen or Show do.
+  const shuffleSeed = (chords && chords[0] && chords[0].recorded) ? 0 : pollockSessionSeed;
   // ── SHUFFLE MODE ──────────────────────────────────────────────────────────
   // When NO artist is selected but Random is ON, the painting shuffles across
   // all artist styles: each variation (Play / Next / Vary → new seed) picks a
@@ -25803,7 +25807,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
     const base = familyOn ? [...filteredArtists, ...MOSAIC_FAMILY] : filteredArtists;
     if(base.length === 0) return null;          // user disabled everything — guard
-    let s = ((pollockSessionSeed >>> 0) ^ 0x9E3779B1) >>> 0;
+    let s = ((shuffleSeed >>> 0) ^ 0x9E3779B1) >>> 0;
     if(s === 0) s = 1;
     const _rnd = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
     const pool = base.slice();
@@ -25811,11 +25815,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       const j = Math.floor(_rnd() * (i + 1));
       const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
     }
-    let h = (pollockSessionSeed>>>0);
+    let h = (shuffleSeed>>>0);
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
     const basePick = (h>>>0) % pool.length;
     return pool[(basePick + shuffleArtistIndex) % pool.length];
-  }, [style, randomMode, pollockSessionSeed, SHUFFLE_POOL, shuffleArtistIndex, mosaicShuffleLock, setupArtists]);
+  }, [style, randomMode, shuffleSeed, SHUFFLE_POOL, shuffleArtistIndex, mosaicShuffleLock, setupArtists]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // shuffleStyle==='mosaic' is the plain-mosaic stop in the shuffle pool — it
   // maps to effectiveStyle=null so the default Mosaic renderer takes over.
@@ -26027,11 +26031,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
     const base = familyOn ? [...filteredArtists, ...MOSAIC_FAMILY] : filteredArtists;
     if(!base.length) return -1;
-    let s2 = ((pollockSessionSeed >>> 0) ^ 0x9E3779B1) >>> 0; if(s2===0) s2=1;
+    let s2 = ((shuffleSeed >>> 0) ^ 0x9E3779B1) >>> 0; if(s2===0) s2=1;
     const _rnd = () => { s2 = (Math.imul(s2, 1664525) + 1013904223) >>> 0; return s2 / 4294967296; };
     const pool = base.slice();
     for(let i = pool.length - 1; i > 0; i--){ const j = Math.floor(_rnd() * (i + 1)); const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp; }
-    let h = (pollockSessionSeed>>>0); h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
+    let h = (shuffleSeed>>>0); h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
     const basePick = (h>>>0) % pool.length;
     const at = pool.indexOf(key); if(at<0) return -1;
     return ((at - basePick) % pool.length + pool.length) % pool.length;
@@ -26253,7 +26257,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // Ensemble × ALL: the draw itself changes the artist on screen — rolling
       // again here would chain draw → style change → draw … forever. Ensemble
       // crossings are drawn only by Next / Play / Show.
-      if((seed !== 0 || art) && randomMode && !(jamOn && jamAll)){
+      // A recorded take (Compose / Mic): a key played never reshuffles — only
+      // Next, swipe up in fullscreen or Show roll the next combination.
+      const _isTake = !!((chords && chords[0] && chords[0].recorded) || (chordsRef.current && chordsRef.current[0] && chordsRef.current[0].recorded));
+      if((seed !== 0 || art) && randomMode && !(jamOn && jamAll) && !_isTake){
         // Full shuffle: the roll itself moves effectiveStyle → this effect would
         // run again and roll again (until a draw landed on the same artist).
         // Consume that one re-run.
