@@ -11761,6 +11761,7 @@ Hard requirements:
     // new variation; if NOT playing, just load it (don't auto-play).
     const varyBlocked = composeMode||micPainting||micListening||recording||working;
     if(varyBlocked) return;
+    if(!(playing||holdPausedRef.current)) return;   // VARY only while the piece plays: on a stopped canvas it loaded a blank variation
     if(!varySource||!chords.length){return;}
     const varied=rerollSong(varySource, !randomMode);
     if(!varied)return;
@@ -14063,7 +14064,7 @@ Hard requirements:
           // VARY in fullscreen — mood + mood-from-image pieces only (same gate as
           // the dock chip); fullscreen CTAs hide instead of disabling, so it only
           // renders when actually actionable.
-          const showVaryFs = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && varySource && chords.length>0 && !(composeMode||micPainting||micListening||recording||working));
+          const showVaryFs = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && varySource && chords.length>0 && (playing||holdPaused) && !(composeMode||micPainting||micListening||recording||working));
           if(!exportReadyFs && !showNextFs && !showNextComposerFs && !showPaletteFs && !showVaryFs && !(showSlideFs && !immersive)) return null;
           return (
             <div className="pf-fs-controls" style={{position:'fixed',zIndex:10000,display:'flex',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease',...(immersive?{
@@ -14907,7 +14908,7 @@ Hard requirements:
         {/* VARY — moved from the look strip to the dock (row 1, right of Loop).
             Same visibility gate as Loop: mood + mood-from-image pieces only. */}
         {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && (
-          <button className="pf-lift pf-dock-vary" onClick={_doVary} disabled={composeMode||micPainting||micListening||recording||working||!chords.length} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{...txStyle('neutral',{effScale}),border:'none',color:'#fff',background:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&!(composeMode||micPainting||micListening||recording||working)?1:.55}}>{t('vary')}</button>
+          <button className="pf-lift pf-dock-vary" onClick={_doVary} disabled={composeMode||micPainting||micListening||recording||working||!chords.length||!(playing||holdPaused)} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{...txStyle('neutral',{effScale}),border:'none',color:'#fff',background:varySource&&chords.length&&(playing||holdPaused)&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&(playing||holdPaused)&&!(composeMode||micPainting||micListening||recording||working)?1:.55}}>{t('vary')}</button>
         )}
         {/* Original ⇄ Piano source toggle — appears once the mic session
             (Voice or Music) has a finalised audio blob and the mic is no
