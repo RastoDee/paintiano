@@ -814,6 +814,8 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 [tr('tierRowComposers', 'Composers'),   '2',     '12',     '12',  null],
                 [tr('tierRowDaily', 'Artist of the day'), yes,   no,       no,    '✦'],
                 [tr('tierRowTypes', 'Paint types'),     '2',     allWord,  allWord, null],
+                [tr('tierRowSig', 'Signature'),         yes,     yes,      yes,   null],
+                [tr('tierRowFusion', 'Fusion & Jam session'), no, yes,     yes,   null],
                 [tr('tierRowPalette', 'Custom palette'),ronly,   yes,      yes,   null],
                 [tr('tierRowDpi', '300 DPI export'),    no,      yes,      yes,   null],
                 [tr('tierRowWmark', 'Watermark'),       yes,     no,       no,    null],

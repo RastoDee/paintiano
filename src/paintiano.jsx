@@ -19005,6 +19005,8 @@ const I18N = {
     tierRowMusic:'Music (MIDI · mp3 · score)',
     tierRowImage:'Image scan',
     tierRowLive:'Compose & Mic (live)',
+    tierRowSig:'Signature',
+    tierRowFusion:'Fusion & Jam session',
     tierRowTypes:'Paint types',
     tierRowPalette:'Custom palette',
     tierRowDpi:'300 DPI export',
@@ -19166,6 +19168,8 @@ const I18N = {
     tierRowMusic:'Musik (MIDI · mp3 · Noten)',
     tierRowImage:'Bild-Scan',
     tierRowLive:'Komponieren & Mikro (live)',
+    tierRowSig:'Signatur',
+    tierRowFusion:'Fusion & Jam session',
     tierRowTypes:'Mal-Typen',
     tierRowPalette:'Eigene Palette',
     tierRowDpi:'300-DPI-Export',
@@ -19327,6 +19331,8 @@ const I18N = {
     tierRowMusic:'Musique (MIDI · mp3 · partition)',
     tierRowImage:'Scan d’image',
     tierRowLive:'Composer & Micro (direct)',
+    tierRowSig:'Signature',
+    tierRowFusion:'Fusion & Jam session',
     tierRowTypes:'Types de peinture',
     tierRowPalette:'Palette perso.',
     tierRowDpi:'Export 300 DPI',
@@ -19488,6 +19494,8 @@ const I18N = {
     tierRowMusic:'Música (MIDI · mp3 · partitura)',
     tierRowImage:'Escaneo de imagen',
     tierRowLive:'Componer & Micro (en vivo)',
+    tierRowSig:'Firma',
+    tierRowFusion:'Fusión & Jam session',
     tierRowTypes:'Tipos de pintura',
     tierRowPalette:'Paleta person.',
     tierRowDpi:'Export 300 DPI',
@@ -19648,6 +19656,8 @@ const I18N = {
     tierRowMusic:'Hudba (MIDI · mp3 · noty)',
     tierRowImage:'Sken obrazu',
     tierRowLive:'Komponovať & Mikro (naživo)',
+    tierRowSig:'Signatúra',
+    tierRowFusion:'Fúzia & Jam session',
     tierRowTypes:'Typy maľby',
     tierRowPalette:'Vlastná paleta',
     tierRowDpi:'300 DPI export',
@@ -19808,6 +19818,8 @@ const I18N = {
     tierRowMusic:'音乐（MIDI · mp3 · 乐谱）',
     tierRowImage:'图像扫描',
     tierRowLive:'弹奏 & 麦克风（实时）',
+    tierRowSig:'签名',
+    tierRowFusion:'融合 & Jam session',
     tierRowTypes:'画法类型',
     tierRowPalette:'自定义调色板',
     tierRowDpi:'300 DPI 导出',
@@ -19962,6 +19974,8 @@ const I18N = {
     tierRowMusic:'音樂（MIDI · mp3 · 樂譜）',
     tierRowImage:'圖像掃描',
     tierRowLive:'彈奏 & 麥克風（即時）',
+    tierRowSig:'簽名',
+    tierRowFusion:'融合 & Jam session',
     tierRowTypes:'畫法類型',
     tierRowPalette:'自訂調色盤',
     tierRowDpi:'300 DPI 匯出',
@@ -20127,6 +20141,8 @@ const I18N = {
     tierRowMusic:'Música (MIDI · mp3 · partitura)',
     tierRowImage:'Scan de imagem',
     tierRowLive:'Compor & Micro (ao vivo)',
+    tierRowSig:'Assinatura',
+    tierRowFusion:'Fusão & Jam session',
     tierRowTypes:'Tipos de pintura',
     tierRowPalette:'Paleta person.',
     tierRowDpi:'Export 300 DPI',
@@ -20287,6 +20303,8 @@ const I18N = {
     tierRowMusic:'音楽（MIDI · mp3 · 楽譜）',
     tierRowImage:'画像スキャン',
     tierRowLive:'演奏 & マイク（ライブ）',
+    tierRowSig:'署名',
+    tierRowFusion:'フュージョン & Jam session',
     tierRowTypes:'描き方',
     tierRowPalette:'Custom パレット',
     tierRowDpi:'300 DPI エクスポート',
@@ -23375,6 +23393,8 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 [tr('tierRowComposers', 'Composers'),   '2',     '12',     '12',  null],
                 [tr('tierRowDaily', 'Artist of the day'), yes,   no,       no,    '✦'],
                 [tr('tierRowTypes', 'Paint types'),     '2',     allWord,  allWord, null],
+                [tr('tierRowSig', 'Signature'),         yes,     yes,      yes,   null],
+                [tr('tierRowFusion', 'Fusion & Jam session'), no, yes,     yes,   null],
                 [tr('tierRowPalette', 'Custom palette'),ronly,   yes,      yes,   null],
                 [tr('tierRowDpi', '300 DPI export'),    no,      yes,      yes,   null],
                 [tr('tierRowWmark', 'Watermark'),       yes,     no,       no,    null],
@@ -25946,7 +25966,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // “why”: each member with the musical role that brought it in — Rhythm → Mondrian · …
   const _sigRole = (r)=>{ const d=(SIG_I18N[lang]||SIG_I18N.EN).roles||SIG_I18N.EN.roles; return d[r]||SIG_I18N.EN.roles[r]||r; };
   const _sigWhy = (s)=>{ s = s || songSigRef.current; if(!s || !s.keys || !s.roles) return []; return s.keys.map((k,i)=>[_sigRole(s.roles[i]), _painterLabel(k), k]); };
-  const _toggleSig = ()=>{ if(working||anim) return; if(sigActiveRef.current) _sigOff(); else _applySig(); };
+  const _toggleSig = ()=>{ if(working||anim) return; if(sigActiveRef.current) _sigOff(); else if(chords.length) _applySig(); };
+  // An empty canvas has no song to sign: ✦ is inactive there, and a lit ✦ goes
+  // out (back to the selection before it) the moment the canvas is cleared.
+  useEffect(()=>{ if(!chords.length && sigActiveRef.current) _sigOff(); },[chords.length]);
   const applySigRef = useRef(null); applySigRef.current = _applySig;
   useEffect(()=>{
     if(!sigActive) return;
@@ -26259,7 +26282,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // crossings are drawn only by Next / Play / Show.
       // A recorded take (Compose / Mic): a key played never reshuffles — only
       // Next, swipe up in fullscreen or Show roll the next combination.
-      const _isTake = !!((chords && chords[0] && chords[0].recorded) || (chordsRef.current && chordsRef.current[0] && chordsRef.current[0].recorded));
+      // (In Compose the same holds before the first note: picking an artist keeps the
+      // variant it opens on — Pollock and Monet open on their exact-colour first.)
+      const _isTake = !!(composeMode || (chords && chords[0] && chords[0].recorded) || (chordsRef.current && chordsRef.current[0] && chordsRef.current[0].recorded));
       if((seed !== 0 || art) && randomMode && !(jamOn && jamAll) && !_isTake){
         // Full shuffle: the roll itself moves effectiveStyle → this effect would
         // run again and roll again (until a draw landed on the same artist).
@@ -26417,6 +26442,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
         if(next===null){ setStructureSeedLock(null); }
         else {
           setNotesMode(false); setOneMMode(false); setMosaicShuffleLock(false); // choosing an artist exits Notes/$oneM$ mode + clears shuffle lock
+          // Compose: Pollock and Monet open on their first variant — the one that
+          // paints each stroke in its note's exact colour (see _exactTone).
+          if(composeMode && (next==='pollock' || next==='monet')) setPhaseIndex(0);
           // Compose/Mic mode + dice off: re-establish the seed lock when an
           // artist is re-selected. The lock may have been cleared by a prior
           // deselect (e.g. user toggled Pollock → Mosaic, which clears it).
@@ -26442,6 +26470,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
         if(k===null){ setStructureSeedLock(null); }
         else {
           setNotesMode(false); setOneMMode(false);
+          if(composeMode && (k==='pollock' || k==='monet')) setPhaseIndex(0);   // Compose: their exact-colour first variant (see selectStyle)
           // Compose/Mic + dice off: re-establish the seed lock when an artist
           // is re-selected through the paired-button cycle. Same rationale as
           // selectStyle — without this the painting flickers per note after a
@@ -36789,7 +36818,7 @@ Hard requirements:
             {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && viewMode!=='image' && (
-              <button onClick={_toggleSig} className="pf-sig" title={_sigT('tip')} aria-label={_sigT('label')} aria-pressed={sigActive} style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s',background:sigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(sigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:sigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:sigActive?700:500}}>✦ {_sigT('label')}</button>
+              <button onClick={_toggleSig} disabled={!chords.length} className="pf-sig" title={_sigT('tip')} aria-label={_sigT('label')} aria-pressed={sigActive} style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:chords.length?'pointer':'default',opacity:chords.length?1:0.35,whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s, opacity .18s',background:sigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(sigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:sigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:sigActive?700:500}}>✦ {_sigT('label')}</button>
             )}
           </div>
           )}
@@ -39073,6 +39102,8 @@ Hard requirements:
                   [t('tierRowImage')  ||'Image scan',      yes,     yes,        yes,   null],
                   [t('tierRowLive')   ||'Compose & Mic (live)', yes, yes,       yes,   null],
                   [t('tierRowTypes')  ||'Paint types',     '2',     allWord,    allWord, null],
+                  [t('tierRowSig')    ||'Signature',       yes,     yes,        yes,   null],
+                  [t('tierRowFusion') ||'Fusion & Jam session', no, yes,       yes,   null],
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
                   [t('tierRowWmark')  ||'Watermark',       yes,     no,         no,    null],
