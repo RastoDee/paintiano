@@ -2713,7 +2713,13 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
     _setCurE(chord && chord._E);
     const stats = chord ? chordStats(chord) : null;
     const weights = biasedWeights(stats);
-    const colBase = pickColor(rnd, weights);
+    let colBase = pickColor(rnd, weights);   // (always drawn: keeps the drip's path the same)
+    // A Compose take (chords._exactTone), classic Dense web: each drip is poured in
+    // the exact colour of a note it was poured on — a green note, a green drip.
+    if(chords._exactTone && pollVariant === 0 && chord){
+      const ns = chord.n || chord.notes || [];
+      if(ns.length){ const nt = ns[p % ns.length]; const c = gc(nt.m !== undefined ? nt.m : nt, nt.v !== undefined ? nt.v : 100); colBase = `rgba(${c[0]|0},${c[1]|0},${c[2]|0},`; }
+    }
     // Velocity scaling: low velocity (40) → 0.55× thickness, max (127) → 1.45×
     const vNorm = stats ? Math.max(0, Math.min(1, (stats.v - 30) / 90)) : 0.5;
     const velScale = 0.55 + vNorm * 0.90;
@@ -8723,6 +8729,9 @@ function monetPhaseNympheas(ctx,CW,CH,chords,lim,gc,ss,mode){
   // willow strands at the edges
   for(let i=0;i<40;i++){ const r=_monR(60700+i,ss); r(); const side=r()<0.5; const c=_monBrk(_monMix(col(Math.floor(r()*cn)),[40,70,60],isBW?0:0.55),-1,-0.25,isBW);
     list.push({x:CW*(side?0.02+r()*0.12:0.86+r()*0.12),y:CH*(r()*0.7),L:D*(0.05+r()*0.07),w:D*0.006,ang:1.5708+(r()-.5)*0.25,c,a:0.5,t:r(),id:id++,ss,sub:true}); }
+  // A Compose take (chords._exactTone): every touch in the exact colour of the note
+  // it appears on — the note sounding when the touch is laid (its place in time).
+  if(chords._exactTone) for(const it of list) it.c = col(Math.min(cn-1, Math.max(0, Math.floor(it.t*cn))));
   _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH);
   _setCurE(0.5);
 }

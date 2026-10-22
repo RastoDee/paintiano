@@ -3953,6 +3953,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       : chords;
     // A recorded take (Compose / Mic) is painted against its plan — see _takePad.
     const _chordsPaint = _takeSkip(effectiveStyle) ? _chordsPaint0 : _takePad(_chordsPaint0);
+    // A COMPOSE take (not Mic): Pollock's and Monet's first variants paint each
+    // stroke in the exact colour of its note (see _exactTone in 02-draw).
+    if(_chordsPaint!==_chordsPaint0 && _chordsPaint._livePad && draftOwnerRef.current==='compose') _chordsPaint._exactTone = true;
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -5430,6 +5433,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Apply scale snap. Velocity comes from the event (touch position / pressure),
     // duration from how long the key is held (see releaseNote).
     midi = paintSnapMidi(midi, paintScale);
+    // A key struck while PICK A LOOK is open folds it away (no scroll) — the
+    // canvas is where the note lands.
+    setStripOpen(false);
     const vel = event && typeof event === 'object' ? velocityFromEvent(event) : 88;
     unlockAudio();playNote(midi,vel,2500);
     pressInfo.current[midi]={pressTime:performance.now(),vel};
@@ -11063,6 +11069,7 @@ Hard requirements:
       // A recorded take exports exactly the painting on screen: its frame and its plan (see _takePad).
       if(_takeInfo(chords) && _takePainter(style) && !_takeSkip(style)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
       const _expChords=_takeSkip(style) ? chords : _takePad(chords);
+      if(_expChords!==chords && _expChords._livePad && draftOwnerRef.current==='compose') _expChords._exactTone = true;   // as on screen
       const _liveE = !!(_takeInfo(chords) && !_takeSkip(style));   // live take: causal note energies, as on screen
       // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 print
       let SCALE, label, dpi;
