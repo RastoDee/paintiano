@@ -2198,9 +2198,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const pollockSessionSeed = useMemo(() => {
     if(structureSeedLock!=null) return structureSeedLock>>>0;
     if(!chords || !chords.length) return 0;
+    // A LIVE take (Compose keyboard, Mic — its chords carry recorded:true) is
+    // seeded by its FIRST note only: hashing every note re-seeded the painter on
+    // each new note, so Pollock re-threw his whole web (and the dice re-rolled the
+    // look) while you played. One take keeps one painting that grows, like Music;
+    // the take still replays and exports as that same painting.
+    const _hashTo = (chords[0] && chords[0].recorded) ? 1 : chords.length;
     // FNV-1a-ish hash over each chord's pitches and velocities.
     let h = 2166136261 >>> 0;
-    for(let i=0; i<chords.length; i++){
+    for(let i=0; i<_hashTo; i++){
       const ch = chords[i];
       const notes = ch.n || ch.notes || (Array.isArray(ch) ? ch : null);
       if(!notes) continue;
@@ -3550,6 +3556,83 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     : (loadedSource==='image' && (!pixelRef.current || (disp===0 && !playedOnce))) ? null
     : loadedSource;
   const composedModeRef = useRef(false);
+  // ── A RECORDED TAKE (Compose keyboard, Mic — chords carry recorded:true) ──
+  // Its length is unknown while it is played, so painters paint it against a
+  // PLAN: 96 notes, doubling whenever the take passes 85 % of it. The notes
+  // played are drawn; the rest of the plan is padding the painters never draw
+  // (copies of the first note with extrapolated times, so time-based layouts stay
+  // sane), tagged _livePad so song character and palette stay neutral. The plan
+  // depends only on the take's length, so the painting you watch grow, the one
+  // left when the piano closes, the replay (built from zero to that same end) and
+  // the export are one and the same picture.
+  const _takeInfo = (arr)=>{
+    if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
+    let nv=96; while(arr.length > nv*0.85) nv*=2;
+    return { nv };
+  };
+  const _takePad = (arr)=>{
+    const ti=_takeInfo(arr); if(!ti) return arr;
+    const len=arr.length, first=arr[0]||{}, last=arr[len-1]||{};
+    const t0=(typeof first.startMs==='number')?first.startMs:0, t1=(typeof last.startMs==='number')?last.startMs:0;
+    const gap=Math.max(120, Math.min(1500, len>1 ? (t1-t0)/(len-1) : 400));
+    const pad=arr.slice();
+    for(let i=len;i<ti.nv;i++) pad.push({ ...first, idx:i, startMs:t1+(i-len+1)*gap, _pad:true });
+    pad._livePad=true;
+    return pad;
+  };
+  // The take's canvas frame. The live grid keeps a fixed frame, but its width is
+  // N×floor(width/N), so it shifts by a pixel or two as columns are added — and
+  // painters seed from the canvas size, so one pixel re-threw the whole painting.
+  // With a painter on, a take is painted on the frame itself (the grid's few
+  // spare pixels stay ground). Lite and the Mic music-listener grow their canvas
+  // downward instead, so they keep the grid's own size.
+  const _takeFrame = ()=>{
+    if(basicModeRef.current || draftOwnerRef.current==='listen') return null;
+    const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
+    const cw=Math.min(820, Math.max(360, vp-32));
+    return { CW:cw, CH:Math.max(140, Math.round(cw/PHI)) };
+  };
+  const _takePainter = (st)=> !!(st && st!=='mosaic' && st!=='notes') || (painterStage && painterStage.length>0);
+  // The cells under a painter (Kandinsky's, Miró's, Picasso's… blocks). The live
+  // grid reflows on every note — one note filled the whole canvas with a single
+  // giant block — so a take's painter sits on a grid laid out once for the PLAN:
+  // plan-many equal cells, each new note filling the next one, the same way a
+  // Music piece of that length is laid out. The visible plain mosaic keeps its own
+  // live grid (rows shrinking as you add).
+  // Kandinsky's blocks are his big framed squares and rings; on a 96-cell plan they
+  // shrank to a row of dots. In a take he gets a COLLAGE instead: one big frame
+  // every 6 notes, each its own size (two fifths to three quarters of the canvas
+  // height, up to half again as wide) and place — spread over the canvas on a
+  // low-discrepancy walk, all fixed by the take's seed — so the frames arrive one
+  // after another, overlapping like his compositions, and never move once painted.
+  const _KAND_TAKE_STEP = 6;
+  const _takeCellStep = (st)=> st==='kandinsky' ? _KAND_TAKE_STEP : 1;   // 0 = no blocks, painter only
+  const _takeGridRef = useRef({ key:'', g:null });
+  const _takeGrid = (st, arr)=>{
+    const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || !_takeFrame()) return null;
+    const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
+    const step=_takeCellStep(st), cnt=step>0 ? Math.ceil(ti.nv/step) : 1;
+    const collage = st==='kandinsky' && step>1;
+    const key=cnt+'|'+vp+(collage ? '|k'+(pollockSessionSeed>>>0) : '');
+    if(_takeGridRef.current.key!==key && collage){
+      const f=_takeFrame(), S=Math.min(f.CW, f.CH);
+      let h=(pollockSessionSeed>>>0)||1; const rnd=()=>{ h=(Math.imul(h,1664525)+1013904223)>>>0; return h/4294967296; };
+      const cells=[];
+      const ox=rnd(), oy=rnd();
+      for(let j=0;j<cnt;j++){
+        const side=S*(0.42+0.36*rnd()), w=Math.min(f.CW, side*(1+0.5*rnd())), hh=side;
+        const u=(ox+j*0.7548776662)%1, v=(oy+j*0.5698402910)%1;   // R2 sequence: even spread, no clumps
+        cells.push({ x:Math.round(u*(f.CW-w)), y:Math.round(v*(f.CH-hh)), w:Math.round(w), h:Math.round(hh) });
+      }
+      _takeGridRef.current={ key, g:{ N:1, BW:f.CW, BH:f.CH, CW:f.CW, CH:f.CH, cells } };
+    }
+    if(_takeGridRef.current.key!==key){
+      const evs=Array.from({length:cnt},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
+      let g=null; try{ g=computeGrid(evs,{liveMode:true}); }catch(_){ g=null; }
+      _takeGridRef.current={ key, g };
+    }
+    return _takeGridRef.current.g;
+  };
   // True while an image-Composition piece is playing: the canvas must stay blank
   // (the original <img> shows through) — NOT painted with the active artist style.
   const imgComposeRef = useRef(false);
@@ -3732,7 +3815,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _setSongEnergy(_songEnergyCacheRef.current.e);
       }
     }catch(_){}
-    const{N,BW,BH,CW,CH}=grid;
+    const{N,BW,BH}=grid; let{CW,CH}=grid;
+    // A recorded take with a painter is painted on the take's own frame (see _takeFrame).
+    if(_takeInfo(chords) && _takePainter(effectiveStyle)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
     // SUPERSAMPLING (immersive fullscreen, painted modes only). Renders the painting
     // at SS× internal resolution + pre-scales the context, exactly like the export
     // path, so fullscreen on a big/tablet screen is crisp instead of a stretched
@@ -3868,11 +3953,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Plain MIDI/audio sources carry no _domPc, so _chordsPaint stays === chords
     // and nothing changes for them.
     const _hasDomPc = chords && chords.length>0 && chords.some && chords.some(c=>c&&typeof c._domPc==='number');
-    const _chordsPaint = _hasDomPc
+    const _chordsPaint0 = _hasDomPc
       ? chords.map(c => (c && typeof c._domPc==='number' && c.n)
           ? { ...c, n: c.n.map(n => ({ ...n, m: Math.floor(n.m/12)*12 + c._domPc })) }
           : c)
       : chords;
+    // A recorded take (Compose / Mic) is painted against its plan — see _takePad.
+    const _chordsPaint = _takePad(_chordsPaint0);
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -4028,7 +4115,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
         ctx.clearRect(0,0,CW,CH);
-        _jamPaint(ctx, CW, CH, N, BW, BH, grid, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false, SS);
+        { const _jg=_takeGrid('ensemble', chords) || grid;
+          _jamPaint(ctx, CW, CH, _jg.N, _jg.BW, _jg.BH, _jg, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false, SS); }
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
@@ -4040,7 +4128,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const sub=substrateRef.current;
         // Cache key: anything that invalidates the whole substrate. Note `lim`
         // is intentionally NOT in the key — growth is handled incrementally.
-        const subKey=`${CW}x${CH}|${style}|${mode}|${tone}|${stamp}|${pollockSessionSeed}`;
+        // A recorded take's painter sits on its plan grid (see _takeGrid).
+        const _sg=_takeGrid(style, chords) || grid;
+        const subKey=`${CW}x${CH}|${style}|${mode}|${tone}|${stamp}|${pollockSessionSeed}|${_sg===grid?'g':'plan'+_sg.cells.length}`;
         let sctx=sub.ctx;
         if(sub.key!==subKey||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS||!sub.canvas){
           if(!sub.canvas||sub.CW!==CW||sub.CH!==CH||sub.SS!==SS){
@@ -4054,7 +4144,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           // Fresh substrate: paint background + grid, reset reveal counter.
           sctx.fillStyle='#04040a';sctx.fillRect(0,0,CW,CH);
           sctx.strokeStyle='rgba(255,255,255,0.025)';sctx.lineWidth=.5;
-          for(let i=0;i<=N;i++){sctx.beginPath();sctx.moveTo(i*BW,0);sctx.lineTo(i*BW,CH);sctx.stroke();sctx.beginPath();sctx.moveTo(0,i*BH);sctx.lineTo(CW,i*BH);sctx.stroke();}
+          for(let i=0;i<=_sg.N;i++){sctx.beginPath();sctx.moveTo(i*_sg.BW,0);sctx.lineTo(i*_sg.BW,CH);sctx.stroke();sctx.beginPath();sctx.moveTo(0,i*_sg.BH);sctx.lineTo(CW,i*_sg.BH);sctx.stroke();}
           sub.key=subKey; sub.builtTo=0;
         }
         // If playback rewound (lim < builtTo), the cached cells past lim are
@@ -4064,7 +4154,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         if(lim<sub.builtTo){
           sctx.fillStyle='#04040a';sctx.fillRect(0,0,CW,CH);
           sctx.strokeStyle='rgba(255,255,255,0.025)';sctx.lineWidth=.5;
-          for(let i=0;i<=N;i++){sctx.beginPath();sctx.moveTo(i*BW,0);sctx.lineTo(i*BW,CH);sctx.stroke();sctx.beginPath();sctx.moveTo(0,i*BH);sctx.lineTo(CW,i*BH);sctx.stroke();}
+          for(let i=0;i<=_sg.N;i++){sctx.beginPath();sctx.moveTo(i*_sg.BW,0);sctx.lineTo(i*_sg.BW,CH);sctx.stroke();sctx.beginPath();sctx.moveTo(0,i*_sg.BH);sctx.lineTo(CW,i*_sg.BH);sctx.stroke();}
           sub.builtTo=0;
         }
         // Draw only the newly-revealed substrate cells into the offscreen canvas.
@@ -4077,17 +4167,20 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords);
-        if(!fullCanvasOverlay){
+        const _step = (_sg===grid) ? 1 : _takeCellStep(style);   // a take: one block per _step notes (see _takeGrid)
+        if(!fullCanvasOverlay && _step>0){
           for(let i=sub.builtTo;i<lim;i++){
             const chord=chords[i];if(!chord)break; _setCurE(chord._E); // stale disp / lim past chords → bail, don't destructure undefined
             const{n:notes,idx}=chord;
-            const cell=grid.cells&&grid.cells[idx];
+            if(_step>1 && (idx%_step)) continue;
+            const cell=_sg.cells&&_sg.cells[_step>1 ? Math.floor(idx/_step) : idx];
+            if(!cell && _sg!==grid) continue;
             if(cell){
               if(cell.segments) cell.segments.forEach(s=>drawBlock(sctx,s.x,s.y,notes,gc,s.w,s.h,style));
               else drawBlock(sctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
             }else{
-              const si=idx%(N*N),col=si%N,row=Math.floor(si/N);
-              drawBlock(sctx,col*BW,row*BH,notes,gc,BW,BH,style);
+              const si=idx%(_sg.N*_sg.N),col=si%_sg.N,row=Math.floor(si/_sg.N);
+              drawBlock(sctx,col*_sg.BW,row*_sg.BH,notes,gc,_sg.BW,_sg.BH,style);
             }
           }
         }
@@ -10962,7 +11055,10 @@ Hard requirements:
       // Export the style actually on screen — in shuffle mode that's the
       // seed-derived draw, not the (null) user selection.
       const style = effectiveStyle;
-      const{N,BW,BH,CW,CH}=grid;
+      const{BW,BH}=grid; let{CW,CH}=grid;
+      // A recorded take exports exactly the painting on screen: its frame and its plan (see _takePad).
+      if(_takeInfo(chords) && _takePainter(style)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
+      const _expChords=_takePad(chords);
       // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 print
       let SCALE, label, dpi;
       if(sizeMode==='print'){
@@ -11057,77 +11153,77 @@ Hard requirements:
         // _octx is already scaled; pass canvas-space CW/CH so the splatters
         // span the painting at export resolution.
         if(style==='pollock' && chords.length>0){
-          drawPollockOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawPollockOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='picasso' && chords.length>0){
-          drawPicassoOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawPicassoOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='kusama' && chords.length>0){
-          drawKusamaOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, paintPhase);
+          drawKusamaOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, paintPhase);
         }
         if(style==='miro' && chords.length>0){
-          drawMiroOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawMiroOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         // Kandinsky canvas-wide contour overlay.
         if(style==='kandinsky' && chords.length>0){
-          drawKandinskyOverlay(_octx, CW, CH, chords.length, pollockSessionSeed, mode, gc, paintPhase, chords.length, chords);
+          drawKandinskyOverlay(_octx, CW, CH, chords.length, pollockSessionSeed, mode, gc, paintPhase, _expChords.length, _expChords);
         }
         if(style==='rothko' && chords.length>0){
-          drawRothkoOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawRothkoOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='matisse' && chords.length>0){
-          drawMatisseOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawMatisseOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='mondrian' && chords.length>0){
-          drawMondrianOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawMondrianOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='bauhaus' && chords.length>0){
-          drawBauhausOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawBauhausOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='bulge' && chords.length>0){
-          drawBulgeOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawBulgeOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='arcs' && chords.length>0){
-          drawArcsOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawArcsOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='bloom' && chords.length>0){
-          drawBloomOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawBloomOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='spiral' && chords.length>0){
-          drawSpiralOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawSpiralOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='gold' && chords.length>0){
-          drawGoldOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawGoldOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='pop' && chords.length>0){
-          drawPopOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawPopOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='wave' && chords.length>0){
-          drawWaveOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawWaveOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='mitchell' && chords.length>0){
-          drawMitchellOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawMitchellOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='monet' && chords.length>0){
-          drawMonetOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawMonetOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='hokusai' && chords.length>0){
-          drawHokusaiOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawHokusaiOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='raffel' && chords.length>0){
-          drawRaffelOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawRaffelOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='lichtenstein' && chords.length>0){
-          drawLichtensteinOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawLichtensteinOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='klee' && chords.length>0){
-          drawKleeOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawKleeOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='delaunay' && chords.length>0){
-          drawDelaunayOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
+          drawDelaunayOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         if(style==='oneM' && chords.length>0){
-          drawOneMOverlay(_octx, CW, CH, chords, chords.length, gc, pollockSessionSeed, mode, 0);
+          drawOneMOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, 0);
         }
         };
         // Transparent export = exactly what the live canvas shows, minus the
@@ -11141,7 +11237,8 @@ Hard requirements:
         const _jamX = (_jamAllX.length>=2 && viewMode!=='image') ? _jamAllX : null;
         if(_jamX){
           // JAM export: the same layered render as the live canvas, at export resolution.
-          _jamPaint(hctx, CW, CH, N, BW, BH, grid, chords, chords.length, gc, _jamX, pollockSessionSeed, mode, paintPhase, !!noBg, _isGallery?1:SCALE);
+          { const _jg=_takeGrid('ensemble', chords) || grid;
+            _jamPaint(hctx, CW, CH, _jg.N, _jg.BW, _jg.BH, _jg, _expChords, chords.length, gc, _jamX, pollockSessionSeed, mode, paintPhase, !!noBg, _isGallery?1:SCALE); }
         } else {
         let _cellsHidden = false;
         if(noBg){
@@ -11151,12 +11248,19 @@ Hard requirements:
           _setCurE(0.5);
           _runOverlays(_probe);
         }
-        if(!(noBg && _cellsHidden))         chords.forEach((chord)=>{
+        const _eg=_takeGrid(style, chords) || grid;   // a take's painter: its plan grid (see _takeGrid)
+        // Pollock on screen is one raw cream canvas, no cells; a take's plan grid is
+        // only partly filled, so export that same cream ground instead of cells.
+        if(_eg!==grid && style==='pollock'){ if(!(noBg && _cellsHidden)){ hctx.fillStyle='#f2ede0'; hctx.fillRect(0,0,CW,CH); } }
+        else if(!(noBg && _cellsHidden))         chords.forEach((chord)=>{
           const {n:notes,idx}=chord; _setCurE(chord._E);
-          const cell=grid.cells&&grid.cells[idx];
+          const _step=(_eg===grid) ? 1 : _takeCellStep(style);
+          if(_step===0 || (_step>1 && (idx%_step))) return;
+          const cell=_eg.cells&&_eg.cells[_step>1 ? Math.floor(idx/_step) : idx];
+          if(!cell && _eg!==grid) return;
           if(cell&&cell.segments)cell.segments.forEach(s=>drawBlock(hctx,s.x,s.y,notes,gc,s.w,s.h,style));
           else if(cell)drawBlock(hctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
-          else{const si=idx%(N*N),col=si%N,row=Math.floor(si/N);drawBlock(hctx,col*BW,row*BH,notes,gc,BW,BH,style);}
+          else{const si=idx%(_eg.N*_eg.N),col=si%_eg.N,row=Math.floor(si/_eg.N);drawBlock(hctx,col*_eg.BW,row*_eg.BH,notes,gc,_eg.BW,_eg.BH,style);}
         });
         _setCurE(0.5);
         _runOverlays(hctx);

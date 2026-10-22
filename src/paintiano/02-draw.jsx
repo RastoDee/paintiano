@@ -10499,6 +10499,7 @@ function _lum100(c){ return (c && typeof c._lum==='number') ? c._lum*100 : 50; }
 const _songTopPitchesCache = new WeakMap();
 function _songTopPitches(chords, N){
   if(!chords || !chords.length) return null;
+  if(chords._livePad) return null;   // live take: painters keep their static palette — no re-colouring as notes arrive
   const _cacheable = typeof chords === 'object';
   let _hit = _cacheable ? _songTopPitchesCache.get(chords) : null;
   if(_hit && _hit.n !== chords.length) _hit = null;

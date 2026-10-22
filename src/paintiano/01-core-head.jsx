@@ -1709,6 +1709,10 @@ function parseMusicXml(xmlText){
 // this on every repaint, and the answer only changes when the piece changes.
 const _songCharCache = new WeakMap();
 function computeSongCharacter(chords){
+  // A LIVE take (Compose / Mic) is painted against a padded, still-growing array
+  // (see the draw effect's _livePad): its character is held neutral so every new
+  // note ADDS to the painting instead of re-shaping what is already there.
+  if(chords && chords._livePad){ return { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:new Array(chords.length).fill(1), tempo:0.5, regularity:0.5, tension:0, contour:0.5 }; }
   if(Array.isArray(chords) && chords.length){
     const hit=_songCharCache.get(chords);
     if(hit && hit.n===chords.length) return hit.v;
