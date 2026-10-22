@@ -8882,6 +8882,12 @@ function klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // blocks — mosaic squares, spirals, concentric eyes, and triangle fields — each
 // filled with colour from a chord via gc(). The gold dominates; colour blocks
 // are inlaid like jewels. Ornaments reveal progressively as lim advances.
+// A live take (Compose / Mic) painted by a fixed number of ornaments: once the take
+// is longer than the ornaments, ornament i takes the note at its share of the take
+// (i·cn/n) instead of note i — otherwise every note after the n-th changed nothing
+// and the painting stood still while you kept playing. Music and shorter takes
+// keep their exact mapping.
+function _ornIdx(chords, i, n, cn){ return (chords && chords[0] && chords[0].recorded && cn > n && n > 0) ? Math.min(cn-1, Math.floor(i*cn/n)) : i; }
 function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
@@ -8967,7 +8973,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       const x0 = c*colW;
       const baseI = c*5;
       // band background tint
-      const bandCol = chordCol(baseI, 0.92);
+      const bandCol = chordCol(_ornIdx(chords, baseI, COLS*5, cn), 0.92);
       ctx.fillStyle = css(bandCol, 0.55);
       ctx.fillRect(x0+colW*0.08, 0, colW*0.84, CH);
       ctx.strokeStyle = 'rgba(60,40,8,0.5)'; ctx.lineWidth = 1.5;
@@ -8981,8 +8987,9 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       for(let m=0; m<motifs; m++){
         const cx = x0 + colW/2;
         const cy = m*mH + mH/2;
-        const col1 = chordCol(baseI+m, 1.0);
-        const col2 = chordCol(baseI+m+2, 1.1);
+        const _om = (cn > COLS*motifs && chords[0] && chords[0].recorded) ? _ornIdx(chords, c*motifs+m, COLS*motifs, cn) : baseI+m;   // live take: spread over the take
+        const col1 = chordCol(_om, 1.0);
+        const col2 = chordCol(_om+2, 1.1);
         const r = Math.min(colW*0.7, mH*0.7)/2;
         const motifKind = (c + m) % 3;
         if(motifKind === 0){
@@ -9028,8 +9035,9 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       const i = row*COLS+col;
       const cx = col*cw + cw/2;
       const cy = row*ch + ch/2;
-      const col1 = chordCol(i, 1.0);
-      const col2 = chordCol(i+3, 1.1);
+      const _oi = _ornIdx(chords, i, total, cn);
+      const col1 = chordCol(_oi, 1.0);
+      const col2 = chordCol(_oi+3, 1.1);
       const kind = (((i*7 + (ss%5)) % 4) + 4) % 4;   // ss may be negative: keep kind in 0..3
       const pad = Math.min(cw,ch)*0.14;
       const w = cw - pad*2, h = ch - pad*2;
@@ -9254,7 +9262,7 @@ function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const a = 0.6 + i*0.42, rr = nestR*0.9*(1 + i*0.22);
     if(rr > CW*0.38) break;
     const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*0.88;
-    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    const {rgb} = _picChord(chords, _ornIdx(chords, i, 26, cn)%cn, gc, isBW);
     const gold = isBW ? '#d0ccc0' : '#e8c862';
     if(i%3===0){
       ctx.save(); ctx.translate(x, y); ctx.rotate(i*0.3);
@@ -9414,7 +9422,7 @@ function klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const size = 12 + rnd()*40;
     const dir = rnd()<0.5 ? 1 : -1;
     const turns = 14 + Math.floor(rnd()*10);
-    const {rgb} = _picChord(chords, i%cn, gc, isBW);
+    const {rgb} = _picChord(chords, _ornIdx(chords, i, spiralCountFull, cn)%cn, gc, isBW);
 
     // Spiral line (slightly darkened chord)
     ctx.strokeStyle = `rgba(${Math.round(rgb[0]*0.7+40)},${Math.round(rgb[1]*0.6+30)},${Math.round(rgb[2]*0.4+10)},0.85)`;
@@ -9763,7 +9771,7 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
         x: CW*(0.08+rnd()*0.84),
         y: CH*(0.08+rnd()*0.84),
         s: Math.min(CW,CH)*(0.08+rnd()*0.16),
-        ci: i,
+        ci: _ornIdx(chords, i, N, cn),   // live take: spread over the take (see _ornIdx)
         kind: Math.floor(rnd()*4),
       });
     }
@@ -9788,14 +9796,14 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
       const cx = col*cw+cw/2, cy = row*ch+ch/2;
       const s = Math.min(cw,ch)*0.62;
       // flat colour tile
-      const tile = chordCol(i, 1.0);
+      const tile = chordCol(_ornIdx(chords, i, total, cn), 1.0);
       ctx.fillStyle = css(tile);
       ctx.fillRect(col*cw, row*ch, cw, ch);
       // black grid seam
       ctx.strokeStyle = BLACK; ctx.lineWidth = 2;
       ctx.strokeRect(col*cw, row*ch, cw, ch);
       // glyph in contrasting colour
-      const gcol = chordCol(i+4, 1.0);
+      const gcol = chordCol(_ornIdx(chords, i, total, cn)+4, 1.0);
       const kind = (((i*5 + (ss%5)) % 5) + 5) % 5;   // ss may be negative: keep kind in 0..4
       if(kind===0) glyphFigure(cx, cy, s, gcol);
       else if(kind===1) glyphHeart(cx, cy, s, gcol);
