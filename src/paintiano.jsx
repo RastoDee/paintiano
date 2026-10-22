@@ -23682,9 +23682,9 @@ const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 // sees. Their Signatures are hung by hand (still the same for everyone); every
 // other piece keeps the computed one. Roles must match SIG_ROLES membership.
 const SIG_CURATED = {
-  [SAMPLE_MIDI_NAME]:   {keys:['gold','bloom'],    roles:['ornament','field'], ph:1, phs:[1,1], mode:'harmony'},   // Liebestraum: Klimt's gold over soft blooms (phs pins Francis's Blue Balls under Klimt-1, whatever the variant hash says)
+  [SAMPLE_MIDI_NAME]:   {keys:['bloom','monet'],   roles:['field','gesture'],  ph:0, phs:[0,5], mode:'harmony'},   // Liebestraum: Sam Francis's soft clouds with Monet's Japanese-bridge touches — a pastel dream (Rasto's pick, Oct 2026)
   [SAMPLE_MIDI_NAME_2]: {keys:['pollock','kusama'], roles:['gesture','ornament'], ph:1, phs:[1,1], mode:'harmony'},   // Bumble-Bee: Pollock's Autumn Rhythm skeins as the flight, Kusama's dots as pollen
-  [SAMPLE_MIDI_NAME_3]: {keys:['raffel','picasso'], roles:['field','gesture'],   ph:0, phs:[0,5], mode:'kontra'},    // Metamorphosis One: RafFel's dark arcs, Picasso's late-analytic facets with a contour
+  [SAMPLE_MIDI_NAME_3]: {keys:['delaunay','kandinsky'], roles:['structure','gesture'], ph:0, phs:[0,0], mode:'spectral'},   // Metamorphosis One: Delaunay's discs on cream, Kandinsky's rings and lines — Spectral (Rasto's pick, Oct 2026)
 };
 
 // Image composers write a bar layer by layer — the whole left-hand figure, then
