@@ -25049,9 +25049,11 @@ export default function Paintiano() {
   // Pollock's overlay density. From the third tap onwards, the normal random
   // shuffle-bag takes over. Set by litePlayStart, consumed once by basicSurprise.
   const _liteNextIsMosaicRef = useRef(false);
-  // Lite after a piece opens on ✦ Signature: Surprise 1 = Kandinsky v0, Surprise 2 =
-  // Mosaic (via the flag above), then the shuffle. Armed by applyEvents.
-  const _liteNextIsKandRef = useRef(false);
+  // The very first Lite song on this device opens on Kandinsky v0 (liteOpenRef);
+  // Surprise 1 = Mosaic (flag above), Surprise 2 = the song's ✦ Signature (this
+  // flag), then the shuffle. Every later song opens on ✦, then the shuffle.
+  const _liteNextIsSigRef = useRef(false);
+  const liteOpenRef = useRef(null);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -30875,7 +30877,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // MUSIC DNA — one deterministic vector per piece; 02-draw choosers read it.
     try{ globalThis.__PAINT_MUSIC_DNA = computeMusicDNA(events); }catch(_){}
     // SONG SIGNATURE — one per piece, the same for everyone. A new piece drops
-    // the latch (and a latch-only Free stage); Lite opens every piece on it.
+    // the latch (and a latch-only Free stage); Lite opens every piece on it (the first-ever Lite song gets there via Kandinsky → Mosaic).
     try{
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
       if(_sg && title && SIG_CURATED[title]) Object.assign(_sg, SIG_CURATED[title]);
@@ -30886,9 +30888,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
       // Lite: every piece. Advanced: music files and samples (MIDI · audio · score) open on ✦.
-      const _sgOn = !!(_sg && (basicModeRef.current || _sgMusic) && !qrArtistRef.current && applySigRef.current);
-      if(_sgOn) applySigRef.current(_sg);
-      if(basicModeRef.current){ _liteNextIsKandRef.current = _sgOn; if(_sgOn) _liteNextIsMosaicRef.current = false; }
+      // Lite (no poster QR): Kandinsky v0 → Mosaic → ✦ (liteOpenRef). Advanced: music files and samples open on ✦.
+      if(basicModeRef.current && !qrArtistRef.current && liteOpenRef.current) liteOpenRef.current(_sg);
+      else if(_sg && _sgMusic && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
     }catch(_){}
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
@@ -33558,24 +33560,27 @@ Hard requirements:
   // Lite (Play disc, flavour flip, auto-play) takes the stage down.
   const _liteJamStyleRef = useRef(null);
   useEffect(()=>{ if(basicModeRef.current && painterStageRef.current.length && style!==_liteJamStyleRef.current){ _liteJamStyleRef.current=null; setPainterStage(p=>p.length?[]:p); } },[style]);
+  // Lite: the FIRST song ever on this device (paintiano_lite_arc unset) is the arc —
+  // Kandinsky v0 (first playable artist of the Set if Kandinsky is out), then Mosaic,
+  // then ✦ Signature; a solo Kandinsky v0 signature IS the opener and opens lit as ✦.
+  // Every later song opens on its ✦ Signature, and Surprise shuffles from there.
+  liteOpenRef.current = (sg)=>{
+    const _k = setupArtists.includes('kandinsky') ? 'kandinsky' : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kandinsky');
+    const _hasSig = !!(sg && sg.keys && sg.keys.length && applySigRef.current);
+    let _arc = true; try{ _arc = localStorage.getItem('paintiano_lite_arc')!=='1'; localStorage.setItem('paintiano_lite_arc','1'); }catch(_){}
+    _liteNextIsMosaicRef.current = _arc;
+    _liteNextIsSigRef.current = false;
+    if(_hasSig && (!_arc || (sg.keys.length===1 && sg.keys[0]===_k && (sg.ph|0)===0))){ applySigRef.current(sg); return; }
+    _liteNextIsSigRef.current = _arc && _hasSig;
+    setRandomMode(false); randomModeRef.current=false;
+    setStyle(_k); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+    _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
+  };
   const basicSurprise = useCallback(()=>{
     // ── Forced Mosaic on the first Surprise after Lite Play ─────────────
     // litePlayStart lands on Pollock. The very next Surprise tap goes to
     // Mosaic (contrast: dense overlay → bare grid). From the tap after that,
     // the shuffle-bag rotation below runs normally.
-    // ── After ✦ Signature: Kandinsky v0 first, then the forced Mosaic below ──
-    if(_liteNextIsKandRef.current){
-      _liteNextIsKandRef.current = false;
-      _liteNextIsMosaicRef.current = true;
-      // already on screen (a solo Kandinsky v0 signature) or out of the Set → straight to Mosaic
-      const _kOn = style==='kandinsky' && (phaseIndex|0)===0 && !painterStageRef.current.length;
-      if(setupArtists.includes('kandinsky') && !_kOn){
-        setRandomMode(false); randomModeRef.current=false;
-        setStyle('kandinsky'); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
-        _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
-        return;
-      }
-    }
     if(_liteNextIsMosaicRef.current){
       _liteNextIsMosaicRef.current = false;
       setRandomMode(false); randomModeRef.current=false;
@@ -33584,6 +33589,16 @@ Hard requirements:
       // a Signature / Jam stage leaves together with its lead — never one frame of the rest without it
       _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
+    }
+    // ── The tap after the Mosaic: the song's ✦ Signature (see liteOpenRef) ──
+    if(_liteNextIsSigRef.current){
+      _liteNextIsSigRef.current = false;
+      const _s = songSigRef.current;
+      if(_s && _s.keys && _s.keys.length && !qrArtistRef.current && applySigRef.current){
+        setRandomMode(false); randomModeRef.current=false;
+        applySigRef.current(_s);
+        return;
+      }
     }
     // Surprise rotates through every (artist × variant) address available on the
     // current tier — for Free that's the 9 unlocked artists, each with 2 style
