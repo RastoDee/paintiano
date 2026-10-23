@@ -254,6 +254,214 @@ const SIG_I18N = {
   ja:{label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
 };
 
+// ── FAVORITES ─────────────────────────────────────────────────────────────────
+const FAV_I18N = {
+  EN:{label:'Favorites',close:'Close',saved:'Saved to Favorites',removed:'Removed from Favorites',undo:'Undo',add:'Add to Favorites',del:'Remove from Favorites',empty:'No favorites yet. Tap ♡ at the top left of a finished painting to keep it here.',today:'saved today',yday:'saved yesterday',on:'saved {d}',prev:'Previous painting',next:'Next painting',lost:'This painting can’t be opened.',failed:'Could not save — private browsing blocks storage.',mm:'My Music',mmSaved:'Saved in My Music',tones:{pure:'Pure',real:'Real',pastel:'Pastel'}},
+  SK:{label:'Obľúbené',close:'Zavrieť',saved:'Uložené do Obľúbených',removed:'Odstránené z Obľúbených',undo:'Späť',add:'Pridať do Obľúbených',del:'Odstrániť z Obľúbených',empty:'Zatiaľ žiadne obľúbené. Ťukni na ♡ vľavo hore na hotovom obraze a ostane tu.',today:'uložené dnes',yday:'uložené včera',on:'uložené {d}',prev:'Predchádzajúci obraz',next:'Ďalší obraz',lost:'Tento obraz sa nedá otvoriť.',failed:'Nedá sa uložiť — súkromné prehliadanie blokuje úložisko.',mm:'Moja hudba',mmSaved:'Uložené v Mojej hudbe',tones:{pure:'Čistý',real:'Skutočný',pastel:'Pastelový'}},
+  DE:{label:'Favoriten',close:'Schließen',saved:'Zu Favoriten hinzugefügt',removed:'Aus Favoriten entfernt',undo:'Rückgängig',add:'Zu Favoriten hinzufügen',del:'Aus Favoriten entfernen',empty:'Noch keine Favoriten. Tippe bei einem fertigen Bild oben links auf ♡, um es hier zu behalten.',today:'heute gespeichert',yday:'gestern gespeichert',on:'gespeichert am {d}',prev:'Vorheriges Bild',next:'Nächstes Bild',lost:'Dieses Bild lässt sich nicht öffnen.',failed:'Speichern nicht möglich — privates Surfen blockiert den Speicher.',mm:'Meine Musik',mmSaved:'In Meine Musik gespeichert',tones:{pure:'Pur',real:'Real',pastel:'Pastell'}},
+  FR:{label:'Favoris',close:'Fermer',saved:'Ajouté aux favoris',removed:'Retiré des favoris',undo:'Annuler',add:'Ajouter aux favoris',del:'Retirer des favoris',empty:'Pas encore de favoris. Touche ♡ en haut à gauche d’une peinture terminée pour la garder ici.',today:'enregistré aujourd’hui',yday:'enregistré hier',on:'enregistré le {d}',prev:'Peinture précédente',next:'Peinture suivante',lost:'Cette peinture ne peut pas être ouverte.',failed:'Enregistrement impossible — la navigation privée bloque le stockage.',mm:'Ma musique',mmSaved:'Enregistré dans Ma musique',tones:{pure:'Pur',real:'Réel',pastel:'Pastel'}},
+  ES:{label:'Favoritos',close:'Cerrar',saved:'Guardado en Favoritos',removed:'Quitado de Favoritos',undo:'Deshacer',add:'Añadir a Favoritos',del:'Quitar de Favoritos',empty:'Aún no hay favoritos. Toca ♡ arriba a la izquierda de una pintura terminada para guardarla aquí.',today:'guardado hoy',yday:'guardado ayer',on:'guardado el {d}',prev:'Pintura anterior',next:'Pintura siguiente',lost:'Esta pintura no se puede abrir.',failed:'No se pudo guardar — la navegación privada bloquea el almacenamiento.',mm:'Mi música',mmSaved:'Guardado en Mi música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'}},
+  PT:{label:'Favoritos',close:'Fechar',saved:'Guardado nos Favoritos',removed:'Removido dos Favoritos',undo:'Desfazer',add:'Adicionar aos Favoritos',del:'Remover dos Favoritos',empty:'Ainda não há favoritos. Toca em ♡ no canto superior esquerdo de uma pintura terminada para a guardares aqui.',today:'guardado hoje',yday:'guardado ontem',on:'guardado a {d}',prev:'Pintura anterior',next:'Próxima pintura',lost:'Não é possível abrir esta pintura.',failed:'Não foi possível guardar — a navegação privada bloqueia o armazenamento.',mm:'Minha música',mmSaved:'Guardado em Minha música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'}},
+  zh:{label:'收藏',close:'关闭',saved:'已加入收藏',removed:'已从收藏中移除',undo:'撤销',add:'加入收藏',del:'从收藏中移除',empty:'还没有收藏。在完成的画作左上角轻点 ♡，就能把它留在这里。',today:'今天保存',yday:'昨天保存',on:'{d} 保存',prev:'上一幅',next:'下一幅',lost:'这幅画无法打开。',failed:'无法保存——无痕浏览阻止了存储。',mm:'我的音乐',mmSaved:'已保存到我的音乐',tones:{pure:'纯净',real:'真实',pastel:'柔和'}},
+  zhTW:{label:'收藏',close:'關閉',saved:'已加入收藏',removed:'已從收藏中移除',undo:'復原',add:'加入收藏',del:'從收藏中移除',empty:'還沒有收藏。在完成的畫作左上角輕點 ♡，就能把它留在這裡。',today:'今天儲存',yday:'昨天儲存',on:'{d} 儲存',prev:'上一幅',next:'下一幅',lost:'這幅畫無法開啟。',failed:'無法儲存——無痕瀏覽阻擋了儲存空間。',mm:'我的音樂',mmSaved:'已儲存到我的音樂',tones:{pure:'純淨',real:'真實',pastel:'柔和'}},
+  ja:{label:'お気に入り',close:'閉じる',saved:'お気に入りに保存しました',removed:'お気に入りから削除しました',undo:'元に戻す',add:'お気に入りに追加',del:'お気に入りから削除',empty:'お気に入りはまだありません。完成した絵の左上の ♡ をタップすると、ここに残ります。',today:'今日保存',yday:'昨日保存',on:'{d} に保存',prev:'前の絵',next:'次の絵',lost:'この絵は開けません。',failed:'保存できません——プライベートブラウズでは保存領域が使えません。',mm:'マイミュージック',mmSaved:'マイミュージックに保存済み',tones:{pure:'ピュア',real:'リアル',pastel:'パステル'}},
+};
+const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',zhTW:'zh-TW',ja:'ja'};
+// A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
+function _takeInfoM(arr){
+  if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
+  let nv=96; while(arr.length > nv*0.85) nv*=2;
+  return { nv };
+}
+function _takePadM(arr){
+  const ti=_takeInfoM(arr); if(!ti) return arr;
+  const len=arr.length, first=arr[0]||{}, last=arr[len-1]||{};
+  const t0=(typeof first.startMs==='number')?first.startMs:0, t1=(typeof last.startMs==='number')?last.startMs:0;
+  const gap=Math.max(120, Math.min(1500, len>1 ? (t1-t0)/(len-1) : 400));
+  const pad=arr.slice();
+  for(let i=len;i<ti.nv;i++) pad.push({ ...first, idx:i, startMs:t1+(i-len+1)*gap, _pad:true });
+  pad._livePad=true;
+  return pad;
+}
+// Song key of a Favorite: a hash over everything in the notes that reaches the paint.
+function _favHash(arr){
+  let h=2166136261>>>0;
+  const mix=(x)=>{ h^=(x|0); h=Math.imul(h,16777619); };
+  mix(arr.length);
+  for(const c of arr){
+    if(!c){ mix(-1); continue; }
+    mix(c.recorded?1:0); mix(Math.round(c.startMs||0)); mix(Math.round((c.durQ||0)*1000));
+    mix(typeof c._domPc==='number' ? c._domPc+1 : 0); mix(typeof c._lum==='number' ? Math.round(c._lum*1000) : -1);
+    for(const n of (c.n||[])){ const m=(n && n.m!==undefined) ? n.m : n; mix(m); mix(n && n.v!==undefined ? n.v : 100); mix(Math.round((n && n.durMs)||0)); }
+  }
+  return 'p'+(h>>>0).toString(36)+'.'+arr.length;
+}
+// The painting's identity: same key = the same painting, so ♥ shows it is saved.
+function _favAddrKey(o){
+  return [o.pk, o.style||'', (o.keys||[]).map(k=>k||'mosaic').join('+'), o.phase|0, o.seed>>>0, o.mode, o.tone,
+          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].join('|');
+}
+const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
+const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
+// Paint a Favorite from its address onto canvas `cv` at S× resolution. The same
+// steps as the live canvas for a finished painting (the draw effect in the app):
+// its notes on the grid this screen gives them (lay — see _favLayout), the
+// painter or the fusion with each member's variant, its palette, tone and seed.
+// Every knob of the draw module it turns is put back, so the live painting
+// underneath is untouched. Returns false if it can't paint.
+function _favPaint(cv, fav, piece, S, liveTone, lay){
+  const chords = piece && piece.chords;
+  const g = lay && lay.g, pg = (lay && lay.pg) || null;
+  if(!cv || !chords || !chords.length || !g) return false;
+  const CW = lay.CW, CH = lay.CH;
+  cv.width = Math.max(1, Math.round(CW*S)); cv.height = Math.max(1, Math.round(CH*S));
+  const ctx = cv.getContext('2d'); if(!ctx) return false;
+  ctx.setTransform(S,0,0,S,0,0);
+  const G = globalThis;
+  const keep = { fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
+  let ok = true;
+  try{
+    G.__PAINT_FU_PHS = fav.fa ? { keys:fav.fa.keys.slice(), phs:fav.fa.phs.slice() } : null;
+    G.__PAINT_SIG_PHS = null;
+    G.__PAINT_MUSIC_DNA = fav.dna || null;
+    _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
+    const gc = _gcMake(fav.mode, fav.tone, fav.pal);
+    const style = fav.style || null, seed = fav.seed>>>0, mode = fav.mode, ph = fav.phase|0, lim = chords.length;
+    // See music: every note in the source cell's carrying hue (as on screen).
+    const hasDom = chords.some(c=> c && typeof c._domPc==='number');
+    const cp0 = hasDom ? chords.map(c=> (c && typeof c._domPc==='number' && c.n) ? { ...c, n:c.n.map(n=>({ ...n, m:Math.floor(n.m/12)*12 + c._domPc })) } : c) : chords;
+    const cp = fav.skip ? cp0 : _takePadM(cp0);
+    if(cp!==cp0 && cp._livePad && fav.compose){ cp._exactTone = true; cp._objFirst = true; }
+    _ensureEnergies(chords, !!fav.liveE);
+    ctx.clearRect(0,0,CW,CH);
+    const lines = (q)=>{ ctx.strokeStyle='rgba(255,255,255,0.025)'; ctx.lineWidth=.5;
+      for(let i=0;i<=q.N;i++){ ctx.beginPath(); ctx.moveTo(i*q.BW,0); ctx.lineTo(i*q.BW,CH); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,i*q.BH); ctx.lineTo(CW,i*q.BH); ctx.stroke(); } };
+    if(fav.keys){
+      const jg = pg || g;
+      _jamPaint(ctx, CW, CH, jg.N, jg.BW, jg.BH, jg, cp, lim, gc, fav.keys, seed, mode, ph, false, S);
+    } else if(style && _FAV_OVERLAY.includes(style)){
+      const sg = pg || g;
+      if(style==='pollock'){ ctx.fillStyle='#f2ede0'; ctx.fillRect(0,0,CW,CH); }
+      else if(!_FAV_FULL.includes(style)){
+        ctx.fillStyle='#04040a'; ctx.fillRect(0,0,CW,CH); lines(sg);
+        for(let i=0;i<lim;i++){
+          const chord=chords[i]; if(!chord) break; _setCurE(chord._E);
+          const cell=sg.cells && sg.cells[chord.idx];
+          if(cell){ if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,chord.n,gc,s.w,s.h,style)); else drawBlock(ctx,cell.x,cell.y,chord.n,gc,cell.w,cell.h,style); }
+          else{ const si=chord.idx%(sg.N*sg.N), col=si%sg.N, row=Math.floor(si/sg.N); drawBlock(ctx,col*sg.BW,row*sg.BH,chord.n,gc,sg.BW,sg.BH,style); }
+        }
+      }
+      _setCurE(0.5);
+      _resetCtxState(ctx);
+      _fuRealOverlay(style, ctx, CW, CH, cp, lim, gc, seed, mode, ph);
+    } else {
+      ctx.fillStyle='#04040a'; ctx.fillRect(0,0,CW,CH); lines(g);
+      for(let i=0;i<lim;i++){
+        const chord=chords[i]; if(!chord) continue; _setCurE(chord._E);
+        const idx=chord.idx, pc=(cp!==chords) ? cp[idx] : null, notes=(pc && pc.n) ? pc.n : chord.n;
+        const lum=(pc && typeof pc._lum==='number') ? pc._lum : (typeof chord._lum==='number' ? chord._lum : null);
+        let gcUse=gc;
+        if(lum!=null){
+          gcUse=(m,v)=>{
+            const c=gc(m,v); if(!c) return c;
+            const srcL=(0.299*c[0]+0.587*c[1]+0.114*c[2])/255, pull=Math.max(-0.55, Math.min(0.55, lum-srcL)), tgt=pull>=0 ? 255 : 0, k=Math.abs(pull);
+            return [Math.round(c[0]+(tgt-c[0])*k), Math.round(c[1]+(tgt-c[1])*k), Math.round(c[2]+(tgt-c[2])*k), c[3]];
+          };
+        }
+        const cell=g.cells && g.cells[idx];
+        if(cell){ if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gcUse,s.w,s.h,style)); else drawBlock(ctx,cell.x,cell.y,notes,gcUse,cell.w,cell.h,style); }
+        else{ const fw=Math.max(2,Math.floor(CW/Math.max(1,chords.length))); drawBlock(ctx,idx*fw,0,notes,gc,fw,CH,style); }
+      }
+      _setCurE(0.5);
+    }
+  }catch(_){ ok = false; }
+  finally{
+    G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna;
+    _setSongEnergy(keep.se); _setMixOn(liveTone==='real'); _setCurE(0.5); _setNoBg(false);
+  }
+  return ok;
+}
+
+// The colour of a note for a palette (mode), a tone and a Custom palette — the
+// app's gc. A factory, so a Favorite can repaint in ITS palette and tone while
+// the live canvas keeps its own (see _favPaint).
+function _gcMake(mode, tone, activePalette){
+  return (m,v)=>{
+    if(mode==='bw') return bwCol(m,v);
+    // Tone routing:
+    //   Pure   → pure palette variant (no modulation)
+    //   Pastel → pastel palette variant (uniform, no modulation)
+    //   Real   → CONTINUOUS Pure↔Pastel mix per chord energy:
+    //     t = 0.15 + 0.75 * _curE      (range 0.15..0.90)
+    //     out = pastel*(1-t) + pure*t  (linear RGB interp)
+    //
+    //   At e=0 (piano) the colour is 85% pastel + 15% pure → soft but the
+    //   hue identity stays readable (pure C bumps red into the lavender
+    //   blur). At e=1 (forte) it's 90% pure + 10% pastel → vivid but never
+    //   crushing. At mezzo it's a 50/50 mix — visibly its own thing,
+    //   neither Pure nor Pastel. This is the defining character of Real:
+    //   it never reduces to either neighbour mode. Same hue across the
+    //   entire range (pastel C and pure C both have hue 0°), so no mud
+    //   from HSL rotation in the middle.
+    //
+    //   Note: Dark variant is no longer used by Real — it stays in the
+    //   code for possible future use but Real never routes to it.
+    const isReal = (tone === 'real');
+    const useBandPastel = (tone === 'pastel');
+    let _c;
+    if(mode==='custom'){
+      _c = useBandPastel ? customColPastel(m,v,activePalette)
+                         : customCol(m,v,activePalette);
+    } else if(mode==='spectral'){
+      _c = useBandPastel ? specColPastel(m,v) : specCol(m,v);
+    } else if(mode==='phi'){
+      _c = useBandPastel ? phiColPastel(m,v)  : phiCol(m,v);
+    } else if(mode==='kontra'){
+      _c = useBandPastel ? kontraColPastel(m,v) : kontraCol(m,v);
+    } else {
+      _c = useBandPastel ? harmColPastel(m,v) : harmCol(m,v);
+    }
+    // Real: mix the pure colour above with its pastel sibling, weighted by
+    // the current chord energy. We compute the pastel variant on the fly so
+    // both hues stay identical (no HSL rotation = no mud).
+    if(isReal){
+      let _p;
+      if(mode==='custom')        _p = customColPastel(m,v,activePalette);
+      else if(mode==='spectral') _p = specColPastel(m,v);
+      else if(mode==='phi')      _p = phiColPastel(m,v);
+      else if(mode==='kontra')   _p = kontraColPastel(m,v);
+      else                       _p = harmColPastel(m,v);
+      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
+      const t = 0.15 + 0.75 * Math.max(0, Math.min(1, e));
+      const mt = 1 - t;
+      _c = [
+        Math.round(_p[0]*mt + _c[0]*t),
+        Math.round(_p[1]*mt + _c[1]*t),
+        Math.round(_p[2]*mt + _c[2]*t),
+        _c[3],
+      ];
+    }
+    // Song-energy colour tilt (B1): shift the whole piece's saturation/lightness
+    // by its overall energy so a heavy song reads deeper+more saturated and a
+    // soft one lighter+airier. Hue is preserved (blue stays blue). Neutral at
+    // 0.5 (no change), so pure modes / character-less pieces are untouched.
+    // Gentle: ±~14% saturation, ±~10% lightness at the extremes.
+    if(typeof _getSongEnergy === 'function'){
+      const _se = _getSongEnergy();
+      const _d = _se - 0.5;                 // -0.5..+0.5
+      if(_d > 0.001 || _d < -0.001){
+        const r=_c[0], g=_c[1], b=_c[2];
+        const[hh,ss2,ll]=toHsl(r,g,b);
+        const ss3 = Math.max(0, Math.min(100, ss2 * (1 + 0.28*_d)));   // louder → more saturated
+        const ll2 = Math.max(0, Math.min(100, ll  * (1 - 0.20*_d)));   // louder → slightly darker
+        const[r2,g2,b2]=fromHsl(hh, ss3, ll2);
+        _c = [r2, g2, b2, _c[3]];
+      }
+    }
+    return _c;
+  };
+}
+
 // §6  MEMOIZED SUB-COMPONENTS (keyboard keys)
 // ─────────────────────────────────────────────────────────────────────────────
 const WhiteKey = memo(function WhiteKey({midi, wi, snapped, isActive, isHovered, isPending, hoverColor, busy, playing, loadedMode, pressNote, releaseNote, setHoveredKey, pressInfo}){
@@ -1048,15 +1256,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
-  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
-  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
-  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
-  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
-  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
-  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants and the palette. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty a paletu. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
+  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten und die Palette. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
+  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes et la palette. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
+  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes y la paleta. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
+  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles e a paleta. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
+  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体和调色板。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
+  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
@@ -1086,7 +1294,7 @@ export default function Paintiano() {
   // plays the full, unchanged harmony. Pure Image / pure Music never set this.
   const _imageDomPcsRef = useRef(null);
   // Tracks whether the currently-loaded piece came from a My Music slot.
-  // When set (to the slot id 1-5), the ♡ Save button on the canvas is hidden
+  // When set (to the slot id 1-5), the ♫ MY MUSIC chip shows ✓ (no save)
   // to prevent duplicate entries — user loaded from slot N, playing it back,
   // no reason to save it again. Cleared by clear() and by fresh uploads via
   // loadAudio/loadMidi (their _fromMyMusic=false default resets it), so any
@@ -1490,6 +1698,8 @@ export default function Paintiano() {
       const arr = JSON.parse(raw);
       if(!Array.isArray(arr)) return DEFAULT_TONES.slice();
       const valid = arr.filter(k => ALL_TONE_KEYS.includes(k));
+      // Tone is ONE choice in Setup now: an older saved set of two or three keeps the tone on screen
+      if(valid.length>1){ let cur=null; try{ cur=localStorage.getItem('paintiano_tone'); }catch(_){} if(cur==='normal') cur='pure'; if(cur==='mix') cur='real'; return [valid.includes(cur) ? cur : valid[0]]; }
       return valid.length ? valid : DEFAULT_TONES.slice();
     } catch(_) { return DEFAULT_TONES.slice(); }
   });
@@ -1989,7 +2199,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   },[audioBlob]);
   const [audioName, setAudioName] = useState('');
   // ── My Music archive state (shared Lite + Advanced) ──────────────────────
-  // showMyMusicSaveModal: Save-flow modal (♡ tap on canvas when file audio is
+  // showMyMusicSaveModal: Save-flow modal (♫ MY MUSIC chip by the title when file audio is
   // loaded) that lets the user confirm/edit the name before writing to IDB.
   // myMusicSaveTargetSlot: pre-computed first-empty slot (1..5) shown to the
   // user so they know where it'll land. Null if archive is full.
@@ -2474,6 +2684,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     setPhaseIndex(phs[0]); _setFuRoll({ keys:ks, phs });
     return true;
   };
+  // Next on a Fusion also rolls the PALETTE, from the palettes ticked in Setup, in a
+  // no-repeat bag (each comes round before one repeats; never the one on screen).
+  const fuPalBagRef = useRef([]);
+  const _fuRollPal = ()=>{
+    const pool = ALL_PALETTE_KEYS.filter(p => setupPalettes.includes(p));
+    if(pool.length<2) return;
+    let bag = fuPalBagRef.current.filter(p => pool.includes(p));
+    if(!bag.length){ bag = pool.slice(); for(let i=bag.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=bag[i]; bag[i]=bag[j]; bag[j]=x; } }
+    let np = bag.shift(); if(np===mode && bag.length){ bag.push(np); np = bag.shift(); }
+    fuPalBagRef.current = bag;
+    if(np && np!==mode){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(np); }
+  };
   useEffect(()=>{ const r=fuRollRef.current; if(!r) return;
     if(_fuKeys(_jamStage()).join()!==r.keys.join() || (phaseIndex|0)!==(r.phs[0]|0)) _setFuRoll(null);
   },[style, painterStage, phaseIndex]);
@@ -2600,7 +2822,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(pins.length){
       const room=STAGE_MAX-pins.length;
       const gpool=SHUFFLE_POOL.filter(k=>k!=='oneM' && !pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
-      if(room<=0 || !gpool.length){ _fuRollAll(_jamStage()); return; }   // no room for guests: the crossing's variants roll
+      if(room<=0 || !gpool.length){ _fuRollAll(_jamStage()); _fuRollPal(); return; }   // no room for guests: the crossing's variants and palette roll
       const curGuests=painterStage.filter(k=>!pins.includes(k)).join('+');
       let guests=[];
       for(let tries=0; tries<4; tries++){
@@ -2611,7 +2833,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       // a pin keeps the PAINTER on stage, not its variant: the guests reshape the whole
       // crossing anyway, so every member — pinned or not — rolls a new variant
       setNotesMode(false); setOneMMode(false);
-      setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests)); _fuRollAll(pins.concat(guests));
+      setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests)); _fuRollAll(pins.concat(guests)); _fuRollPal();
       try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n:pins.length+guests.length, pinned:pins.length}); }catch(_){}
       return;
     }
@@ -2622,7 +2844,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     const n=Math.min(a.length, 2+((Math.random()*4)|0));
     const lead=a[0];
     setNotesMode(false); setOneMMode(false);
-    setStyle(lead); setPainterStage(a.slice(1,n)); _fuRollAll(a.slice(0,n));
+    setStyle(lead); setPainterStage(a.slice(1,n)); _fuRollAll(a.slice(0,n)); _fuRollPal();
     try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n}); }catch(_){}
   };
   const _getCompMode = ()=> composerDice ? 1 : 0;   // lazy: composerDice is declared further down
@@ -2658,7 +2880,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _diceRoll = () => {
     if(jamOn && jamAll){ _jamAllRoll(); return; }
     // a Fusion on screen: every member gets a new variant of its own
-    if(style!==null && painterStage.length && viewMode!=='image' && _fuRollAll(_jamStage())) return;
+    if(style!==null && painterStage.length && viewMode!=='image' && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
     const N = _effVariants();
     if(style){
       // ── SELECTED ARTIST ── bag = this artist's variants [0..N-1], no repeat.
@@ -3335,7 +3557,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // full Setup modal alike.
   const togglePalSafe = useCallback((k)=> setSetupPalettes(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
   const toggleArtSafe = useCallback((k)=> setSetupArtists(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
-  const toggleToneSafe = useCallback((k)=> setSetupTones(prev => prev.includes(k) ? (prev.length>1 ? prev.filter(x=>x!==k) : prev) : [...prev, k]),[]);
+  const toggleToneSafe = useCallback((k)=> setSetupTones([k]),[]);   // Tone is one choice: a tap picks it
   const [showMorphMenu, setShowMorphMenu] = useState(false);
   const [morphSel, setMorphSel] = useState([]); // ordered target moods for chain-morph (max 3)
   const [morphPool, setMorphPool] = useState([]);
@@ -3619,29 +3841,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // depends only on the take's length, so the painting you watch grow, the one
   // left when the piano closes, the replay (built from zero to that same end) and
   // the export are one and the same picture.
-  const _takeInfo = (arr)=>{
-    if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
-    let nv=96; while(arr.length > nv*0.85) nv*=2;
-    return { nv };
-  };
-  const _takePad = (arr)=>{
-    const ti=_takeInfo(arr); if(!ti) return arr;
-    const len=arr.length, first=arr[0]||{}, last=arr[len-1]||{};
-    const t0=(typeof first.startMs==='number')?first.startMs:0, t1=(typeof last.startMs==='number')?last.startMs:0;
-    const gap=Math.max(120, Math.min(1500, len>1 ? (t1-t0)/(len-1) : 400));
-    const pad=arr.slice();
-    for(let i=len;i<ti.nv;i++) pad.push({ ...first, idx:i, startMs:t1+(i-len+1)*gap, _pad:true });
-    pad._livePad=true;
-    return pad;
-  };
+  const _takeInfo = _takeInfoM;   // (module level — a Favorite repaints a take the same way)
+  const _takePad = _takePadM;
   // The take's canvas frame. The live grid keeps a fixed frame, but its width is
   // N×floor(width/N), so it shifts by a pixel or two as columns are added — and
   // painters seed from the canvas size, so one pixel re-threw the whole painting.
   // With a painter on, a take is painted on the frame itself (the grid's few
   // spare pixels stay ground). Lite and the Mic music-listener grow their canvas
   // downward instead, so they keep the grid's own size.
-  const _takeFrame = ()=>{
-    if(basicModeRef.current || draftOwnerRef.current==='listen') return null;
+  const _takeFrame = (own)=>{   // own: a favorite's authoring mode (else the live one)
+    if(basicModeRef.current || (own!==undefined ? own : draftOwnerRef.current)==='listen') return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
     const cw=Math.min(820, Math.max(360, vp-32));
     return { CW:cw, CH:Math.max(140, Math.round(cw/PHI)) };
@@ -3661,10 +3870,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _takeGridRef = useRef({ key:'', g:null });
   const _takeGrid = (st, arr)=>{
     const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || _takeSkip(st) || !_takeFrame()) return null;
+    return _planGrid(ti.nv);
+  };
+  const _planGrid = (nv)=>{
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const key=ti.nv+'|'+vp;
+    const key=nv+'|'+vp;
     if(_takeGridRef.current.key!==key){
-      const evs=Array.from({length:ti.nv},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
+      const evs=Array.from({length:nv},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
       let g=null; try{ g=computeGrid(evs,{liveMode:true}); }catch(_){ g=null; }
       _takeGridRef.current={ key, g };
     }
@@ -3751,80 +3963,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
 
 
-  const gc = useCallback((m,v)=>{
-    if(mode==='bw') return bwCol(m,v);
-    // Tone routing:
-    //   Pure   → pure palette variant (no modulation)
-    //   Pastel → pastel palette variant (uniform, no modulation)
-    //   Real   → CONTINUOUS Pure↔Pastel mix per chord energy:
-    //     t = 0.15 + 0.75 * _curE      (range 0.15..0.90)
-    //     out = pastel*(1-t) + pure*t  (linear RGB interp)
-    //
-    //   At e=0 (piano) the colour is 85% pastel + 15% pure → soft but the
-    //   hue identity stays readable (pure C bumps red into the lavender
-    //   blur). At e=1 (forte) it's 90% pure + 10% pastel → vivid but never
-    //   crushing. At mezzo it's a 50/50 mix — visibly its own thing,
-    //   neither Pure nor Pastel. This is the defining character of Real:
-    //   it never reduces to either neighbour mode. Same hue across the
-    //   entire range (pastel C and pure C both have hue 0°), so no mud
-    //   from HSL rotation in the middle.
-    //
-    //   Note: Dark variant is no longer used by Real — it stays in the
-    //   code for possible future use but Real never routes to it.
-    const isReal = (tone === 'real');
-    const useBandPastel = (tone === 'pastel');
-    let _c;
-    if(mode==='custom'){
-      _c = useBandPastel ? customColPastel(m,v,activePalette)
-                         : customCol(m,v,activePalette);
-    } else if(mode==='spectral'){
-      _c = useBandPastel ? specColPastel(m,v) : specCol(m,v);
-    } else if(mode==='phi'){
-      _c = useBandPastel ? phiColPastel(m,v)  : phiCol(m,v);
-    } else if(mode==='kontra'){
-      _c = useBandPastel ? kontraColPastel(m,v) : kontraCol(m,v);
-    } else {
-      _c = useBandPastel ? harmColPastel(m,v) : harmCol(m,v);
-    }
-    // Real: mix the pure colour above with its pastel sibling, weighted by
-    // the current chord energy. We compute the pastel variant on the fly so
-    // both hues stay identical (no HSL rotation = no mud).
-    if(isReal){
-      let _p;
-      if(mode==='custom')        _p = customColPastel(m,v,activePalette);
-      else if(mode==='spectral') _p = specColPastel(m,v);
-      else if(mode==='phi')      _p = phiColPastel(m,v);
-      else if(mode==='kontra')   _p = kontraColPastel(m,v);
-      else                       _p = harmColPastel(m,v);
-      const e = (typeof _getCurE === 'function') ? _getCurE() : 0.5;
-      const t = 0.15 + 0.75 * Math.max(0, Math.min(1, e));
-      const mt = 1 - t;
-      _c = [
-        Math.round(_p[0]*mt + _c[0]*t),
-        Math.round(_p[1]*mt + _c[1]*t),
-        Math.round(_p[2]*mt + _c[2]*t),
-        _c[3],
-      ];
-    }
-    // Song-energy colour tilt (B1): shift the whole piece's saturation/lightness
-    // by its overall energy so a heavy song reads deeper+more saturated and a
-    // soft one lighter+airier. Hue is preserved (blue stays blue). Neutral at
-    // 0.5 (no change), so pure modes / character-less pieces are untouched.
-    // Gentle: ±~14% saturation, ±~10% lightness at the extremes.
-    if(typeof _getSongEnergy === 'function'){
-      const _se = _getSongEnergy();
-      const _d = _se - 0.5;                 // -0.5..+0.5
-      if(_d > 0.001 || _d < -0.001){
-        const r=_c[0], g=_c[1], b=_c[2];
-        const[hh,ss2,ll]=toHsl(r,g,b);
-        const ss3 = Math.max(0, Math.min(100, ss2 * (1 + 0.28*_d)));   // louder → more saturated
-        const ll2 = Math.max(0, Math.min(100, ll  * (1 - 0.20*_d)));   // louder → slightly darker
-        const[r2,g2,b2]=fromHsl(hh, ss3, ll2);
-        _c = [r2, g2, b2, _c[3]];
-      }
-    }
-    return _c;
-  },[mode,activePalette,tone]);
+  const gc = useMemo(()=>_gcMake(mode, tone, activePalette),[mode,activePalette,tone]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -4361,6 +4500,282 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
   },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage,fuRoll]);
+
+  // ── FAVORITES (♥) ───────────────────────────────────────────────────────────
+  // ♥ at the top left of a FINISHED painting saves its address (favAdd in
+  // 01-core-head): the notes, the grid and every knob that picks the painting.
+  // ☰ → ♥ Favorites opens the viewer, which repaints them on the canvas one by
+  // one (_favPaint) — swipe or ‹ › to move. Nothing plays there: the strip, Play
+  // and Clear are off; Save exports the painting on screen. No limit.
+  const [favs, setFavs] = useState([]);              // newest first
+  const [favView, setFavView] = useState(null);      // {i} while the viewer is open
+  const favViewRef = useRef(null);
+  useEffect(()=>{ favViewRef.current = favView; },[favView]);
+  const [favFs, setFavFs] = useState(false);         // the viewer in fullscreen
+  const [favToast, setFavToast] = useState(null);    // {kind:'saved'|'removed'|'failed', n, undo}
+  const [favGone, setFavGone] = useState(null);      // id un-hearted in the viewer — it stays until you move on
+  const [favBad, setFavBad] = useState(false);       // the open favorite could not be painted
+  const favCanvasRef = useRef(null);
+  const favPiecesRef = useRef(new Map());            // pk → piece, the last few kept warm
+  const favToastTimerRef = useRef(null);
+  const favSwipeRef = useRef(null);
+  const favLiveToneRef = useRef(tone);
+  useEffect(()=>{ favLiveToneRef.current = tone; },[tone]);
+  useEffect(()=>{
+    let dead=false;
+    favList().then(l=>{ if(!dead) setFavs(l); });
+    return ()=>{ dead=true; if(favToastTimerRef.current) clearTimeout(favToastTimerRef.current); };
+  },[]);
+  const _favT = (k)=>{ const d=FAV_I18N[lang]||FAV_I18N.EN; return d[k]!==undefined ? d[k] : FAV_I18N.EN[k]; };
+  const _favToastShow = (o)=>{
+    if(favToastTimerRef.current) clearTimeout(favToastTimerRef.current);
+    setFavToast(o);
+    favToastTimerRef.current=setTimeout(()=>{ favToastTimerRef.current=null; setFavToast(null); }, o.kind==='removed' ? 4500 : 2200);
+  };
+  // A finished painting on the canvas: everything played is drawn, nothing plays
+  // or records, the piano is closed, and it is a painted canvas (no image scan).
+  const _favLim = anim ? disp : playing ? disp : holdPaused ? disp : composedModeRef.current ? chords.length : Math.min(disp, chords.length);
+  const favReady = chords.length>0 && _favLim>=chords.length && !playing && !anim && !recording && !composeMode && !micActive && !busy && !working && !demoReelOn && viewMode!=='image' && !imgComposeRef.current && !favView;
+  const _favPk = useMemo(()=> favReady ? _favHash(chords) : null, [favReady, chords]);
+  // The address of the painting on screen (see _favAddrKey).
+  const _favAddrNow = ()=>{
+    if(!_favPk) return null;
+    const a=(style!==null ? [style] : []).concat(painterStage||[]);
+    const keys=(a.length>=2 && viewMode!=='image') ? a : null;
+    return { pk:_favPk, style:effectiveStyle||null, keys: keys ? keys.slice() : null, fa: keys ? _fusionAddr(keys, paintPhase) : null,
+             phase:paintPhase|0, seed:pollockSessionSeed>>>0,
+             cap:(proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
+             mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null };
+  };
+  const _favCurAddr = favReady ? _favAddrNow() : null;
+  const _favCurKey = _favCurAddr ? _favAddrKey(_favCurAddr) : null;
+  const favHit = _favCurKey ? favs.find(f=>f.ak===_favCurKey) : null;
+  const _favUndo = async (u)=>{
+    if(favToastTimerRef.current){ clearTimeout(favToastTimerRef.current); favToastTimerRef.current=null; }
+    setFavToast(null);
+    if(!u || !u.pc) return;
+    const r=await favAdd(u.f, u.pc.chords);
+    if(!r) return;
+    setFavGone(g=> g===u.f.id ? null : g);
+    setFavs(l=> l.some(x=>x.id===u.f.id) ? l : [u.f].concat(l).sort((x,y)=>(y.at||0)-(x.at||0)));
+  };
+  // ♥ on the canvas: save this painting, or take it out again (with Undo).
+  const _favToggle = async ()=>{
+    const addr=_favCurAddr, ak=_favCurKey; if(!addr) return;
+    const hit=favs.find(f=>f.ak===ak);
+    if(hit){
+      const pc=favPiecesRef.current.get(hit.pk) || await favPiece(hit.pk);
+      await favRemove(hit.id);
+      setFavs(l=>l.filter(x=>x.id!==hit.id));
+      _favToastShow({kind:'removed', undo: pc ? {f:hit, pc} : null});
+      return;
+    }
+    const st=effectiveStyle;
+    const clone=(o)=> JSON.parse(JSON.stringify(o));
+    const seLive=!!(_takeInfo(chords) && !_takeSkip(st));
+    let se=0.5;
+    if(!seLive){
+      const sc=_songEnergyCacheRef.current;
+      if(sc && sc.src===chords && sc.live===seLive) se=sc.e;
+      else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} }
+    }
+    const own=draftOwnerRef.current;
+    const fav={ id:'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), at:Date.now(), ak, ...addr, se, own: own||null,
+      dna: globalThis.__PAINT_MUSIC_DNA ? clone(globalThis.__PAINT_MUSIC_DNA) : null,
+      skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive,
+      src: own==='compose' ? 'compose' : (own==='sing'||own==='listen') ? 'mic' : (chords[0] && chords[0].recorded) ? 'compose' : (loadedSource || (moodContext ? 'mood' : '')),
+      title: (info && info.title) ? String(info.title) : '', mood: moodContext ? (currentMood||'') : '', n: chords.length };
+    const r=await favAdd(fav, clone(chords));
+    if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); }
+    else _favToastShow({kind:'failed'});
+  };
+  // The grid and frame a favorite gets on THIS screen — exactly what the live
+  // canvas would give that piece here, in Lite or Advanced: a played piece is
+  // laid out like a loaded song, a Compose / Mic take like a take (its frame and
+  // plan grid when a painter paints it). So it paints as it would live, here.
+  const _favLayout = (fv, chords)=>{
+    const ti=_takeInfoM(chords);
+    let g=null;
+    try{
+      if(!ti) g=computeGrid(chords);
+      else{
+        const basic=basicModeRef.current;
+        const evs=chords.map(c=>({durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
+        g=computeGrid(evs,{liveMode: basic ? false : fv.own!=='listen', liteWide: basic, portraitGrow: basic && !liteImageModeRef.current});
+      }
+    }catch(_){ g=null; }
+    if(!g) return null;
+    let CW=g.CW, CH=g.CH, pg=null;
+    const painter = !!fv.keys || !!(fv.style && fv.style!=='mosaic' && fv.style!=='notes');
+    if(ti && painter && !fv.skip){ const tf=_takeFrame(fv.own||null); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv); } }
+    return { g, pg, CW, CH };
+  };
+  const [favDim, setFavDim] = useState(null);   // {id, CW, CH} of the favorite on screen, as laid out here
+  const [favVp, setFavVp] = useState(0);        // the window resized: lay it out again, as live does
+  // ── the viewer ──
+  const favCur = favView ? (favs[favView.i] || null) : null;
+  const _favOpen = ()=>{
+    setNavMenuOpen(false);
+    if(micActive || recording) return;
+    try{ if(playing && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
+    if(composeMode) setComposeMode(false);
+    setImmersive(false); setFavFs(false); setFavGone(null); setFavBad(false); setFavToast(null);
+    setFavView({i:0});
+    favList().then(l=>{ setFavs(l); setFavView(v=> v ? {i:Math.min(v.i, Math.max(0, l.length-1))} : v); });
+    try{ window.scrollTo(0,0); }catch(_){}
+  };
+  const _favClose = ()=>{
+    const gone=favGone;
+    if(gone!=null) setFavs(l=>l.filter(x=>x.id!==gone));
+    setFavGone(null); setFavView(null); setFavFs(false); setFavToast(null); setFavBad(false);
+  };
+  const _favMove = (d)=>{
+    const v=favViewRef.current; if(!v) return;
+    let list=favs, i=v.i;
+    if(favGone!=null && list[i] && list[i].id===favGone){ list=list.filter(x=>x.id!==favGone); setFavs(list); setFavGone(null); if(d<0) i-=1; }
+    else i+=d;
+    if(!list.length){ setFavView({i:0}); return; }
+    setFavView({i:((i%list.length)+list.length)%list.length});
+  };
+  const _favMoveRef = useRef(null);
+  _favMoveRef.current = _favMove;
+  // ♥ in the viewer: take the painting out (Undo brings it back; so does ♥ again).
+  const _favViewHeart = async ()=>{
+    const f=favCur; if(!f) return;
+    const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk);
+    if(favGone===f.id){ await _favUndo({f, pc}); return; }
+    await favRemove(f.id);
+    setFavGone(f.id);
+    _favToastShow({kind:'removed', undo: pc ? {f, pc} : null});
+  };
+  // Paint the open favorite (again when it changes, or for fullscreen's sharper canvas).
+  useEffect(()=>{
+    if(!favCur) return;
+    let dead=false;
+    const tm=setTimeout(async ()=>{
+      let pc=favPiecesRef.current.get(favCur.pk);
+      if(!pc){
+        pc=await favPiece(favCur.pk); if(dead) return;
+        if(pc){ const m=favPiecesRef.current; m.set(favCur.pk, pc); if(m.size>6) m.delete(m.keys().next().value); }
+      }
+      if(dead) return;
+      const lay = pc ? _favLayout(favCur, pc.chords) : null;
+      if(lay) setFavDim({id:favCur.id, CW:lay.CW, CH:lay.CH});
+      const S = favFs ? 2 : Math.min(2, Math.max(1, (typeof window!=='undefined' && window.devicePixelRatio) || 1));
+      setFavBad(!_favPaint(favCanvasRef.current, favCur, pc, S, favLiveToneRef.current, lay));
+    }, 30);
+    return ()=>{ dead=true; clearTimeout(tm); };
+  },[favCur, favFs, favVp]);
+  useEffect(()=>{
+    if(!favView) return;
+    let tm=null;
+    const on=()=>{ if(tm) clearTimeout(tm); tm=setTimeout(()=>setFavVp(window.innerWidth*10000+window.innerHeight), 200); };
+    window.addEventListener('resize', on);
+    return ()=>{ window.removeEventListener('resize', on); if(tm) clearTimeout(tm); };
+  },[!!favView]);
+  useEffect(()=>{
+    if(!favView) return;
+    const onKey=(e)=>{
+      const a=document.activeElement; if(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable)) return;
+      if(e.key==='ArrowRight' || (favFs && e.key==='ArrowDown')){ e.preventDefault(); if(_favMoveRef.current) _favMoveRef.current(1); }
+      else if(e.key==='ArrowLeft' || (favFs && e.key==='ArrowUp')){ e.preventDefault(); if(_favMoveRef.current) _favMoveRef.current(-1); }
+      else if(e.key==='Escape' && favFs){ e.preventDefault(); setFavFs(false); }
+    };
+    window.addEventListener('keydown', onKey);
+    return ()=>window.removeEventListener('keydown', onKey);
+  },[favView, favFs]);
+  const _favTouchStart = (e)=>{ if(e.touches.length!==1){ favSwipeRef.current=null; return; } const tt=e.touches[0]; favSwipeRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; };
+  const _favTouchEnd = (e)=>{
+    const s=favSwipeRef.current; favSwipeRef.current=null; if(!s) return;
+    const tt=e.changedTouches && e.changedTouches[0]; if(!tt || Date.now()-s.t>800) return;
+    const dx=tt.clientX-s.x, dy=tt.clientY-s.y;
+    if(favFs && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3) _favMove(dy<0 ? 1 : -1);   // fullscreen: up = next
+    else if(Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3) _favMove(dx<0 ? 1 : -1);       // left = next
+  };
+  // A favorite as the source of Save (see exportImage): its notes, grid, painter(s),
+  // variants, palette and tone, plus the draw-module knobs swapped in only while
+  // it is painted (enter / leave), so the live painting underneath stays untouched.
+  const _favExportX = (fv, pc, lay)=>{
+    const G=globalThis; let keep=null;
+    const lead = fv.keys ? fv.keys[0] : (fv.style||null);
+    const key = fv.style || 'mosaic', bare = (key==='mosaic' || key==='notes' || key==='raffel');
+    const insp0 = fv.keys ? fv.keys.map(_painterLabel).join(' × ') : (bare ? STYLE_INSPIRED[key] : ('inspired by '+STYLE_INSPIRED[key]));
+    return {
+      chords: pc.chords, grid: lay.g, effectiveStyle: lead, shuffleStyle: null, pollockSessionSeed: fv.seed>>>0,
+      mode: fv.mode, gc: _gcMake(fv.mode, fv.tone, fv.pal), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
+      info: {title:_favTitle(fv)}, compositionName: '', painterStageRef: {current: fv.keys ? fv.keys.slice(1) : []},
+      sigActiveRef: {current:!!fv.sig}, draftOwnerRef: {current: fv.compose ? 'compose' : null},
+      originalImgUrl: null, imgMoodThumb: null, currentMood: fv.mood || '',
+      _takeInfo: _takeInfoM, _takeGrid: ()=> lay.pg, _takeFrame: ()=>({CW:lay.CW, CH:lay.CH}), _takePainter: ()=>true, _takeSkip: ()=>!!fv.skip,
+      cap: fv.cap || null,
+      insp: insp0 ? ((fv.sig ? '✦ '+_sigT('label')+' · ' : '') + insp0) : null,
+      caption: _favCaption(fv),
+      enter: ()=>{
+        if(keep) return;
+        keep={ fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
+        G.__PAINT_FU_PHS = fv.fa ? { keys:fv.fa.keys.slice(), phs:fv.fa.phs.slice() } : null;
+        G.__PAINT_SIG_PHS = null; G.__PAINT_MUSIC_DNA = fv.dna || null;
+        _setSongEnergy(fv.se); _setMixOn(fv.tone==='real');
+      },
+      leave: ()=>{
+        if(!keep) return;
+        G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna;
+        _setSongEnergy(keep.se); _setMixOn(favLiveToneRef.current==='real'); _setCurE(0.5); keep=null;
+      },
+    };
+  };
+  const _favCaption = (f)=>{
+    const tpl=(t('storyCaption')||{}), pick=(k)=> tpl[k] || tpl.default || 'music turns into paintings ✦ paintiano.com';
+    if(f.src==='compose') return pick('compose');
+    if(f.src==='mic') return pick('micMusic');
+    if(f.mood){ const mn=((t('moodNames')||{})[f.mood]) || f.mood; return pick('mood').replace('{mood}', mn); }
+    if(f.src==='midi' || f.src==='audio' || f.src==='score') return pick(f.src);
+    return pick('default');
+  };
+  // Story from Favorites: like live — the painting plus its music (an imported file: the painting alone).
+  const _favStory = async ()=>{
+    const f=favCur; if(!f) return;
+    if(f.src==='midi' || f.src==='audio' || f.src==='score'){ await exportImage('story', true, null, null, false); return; }
+    const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk); if(!pc) return;
+    const title=(_favTitle(f)||'Paintiano').trim()||'Paintiano';
+    const audioName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+    let audioBlob=null;
+    try{ audioBlob=await renderAudioOffline(pc.chords,{speed:1}); }catch(_){}
+    try{ await unlockAudio(); }catch(_){}
+    await exportImage('story', true, audioBlob, audioName, false);
+  };
+  const _favTitle = (f)=> f.src==='compose' ? t('compose').replace(/[^\p{L} ]/gu,'').trim() : f.src==='mic' ? t('mic').replace(/[^\p{L} ]/gu,'').trim() : (f.title||'');
+  const _favWho = (f)=> (f.sig ? '✦ '+_sigT('label')+' · ' : '') + (f.keys ? f.keys.map(_painterLabel).join(' × ') : _painterLabel(f.style));
+  const _favWhen = (f)=>{
+    const d=new Date(f.at||0), now=new Date(), day=(x)=>Math.floor((x.getTime()-x.getTimezoneOffset()*60000)/86400000), dd=day(now)-day(d);
+    if(dd<=0) return _favT('today');
+    if(dd===1) return _favT('yday');
+    let s=''; try{ s=d.toLocaleDateString(FAV_LOCALE[lang]||'en', {day:'numeric', month:'short'}); }catch(_){ s=d.toDateString(); }
+    return _favT('on').replace('{d}', s);
+  };
+  const _favMeta = (f)=>{ const m=String(t(f.mode)||f.mode||''); return [m.charAt(0).toUpperCase()+m.slice(1), (_favT('tones')||{})[f.tone]||f.tone, _favWhen(f)].filter(Boolean).join(' · '); };
+  const _favToastEl = ()=> favToast ? (
+    <div role="status" aria-live="polite" onClick={e=>e.stopPropagation()} style={{position:'absolute',left:'50%',bottom:12,transform:'translateX(-50%)',zIndex:13,display:'inline-flex',alignItems:'center',gap:10,padding:(favToast.kind==='removed' && favToast.undo)?'6px 6px 6px 16px':'8px 16px',borderRadius:22,background:'rgba(14,11,22,.94)',border:'1px solid rgba(201,168,76,.4)',boxShadow:'0 6px 22px rgba(0,0,0,.5)',color:favToast.kind==='failed'?'#ff9ab4':'#f0d78a',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',letterSpacing:'.03em',whiteSpace:'nowrap',lineHeight:1.3,maxWidth:'92%'}}>
+      <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{favToast.kind==='saved' ? '♥ '+_favT('saved') : favToast.kind==='removed' ? _favT('removed') : _favT('failed')}</span>
+      {favToast.kind==='saved' && (<span style={{opacity:.55}}>· {favToast.n}</span>)}
+      {favToast.kind==='removed' && favToast.undo && (<button onClick={(e)=>{ e.stopPropagation(); _favUndo(favToast.undo); }} style={{padding:'5px 12px',borderRadius:16,border:'1px solid rgba(240,192,64,.6)',background:'transparent',color:'#f0c040',fontFamily:'inherit',fontSize:'1em',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'}}>{_favT('undo')}</button>)}
+    </div>) : null;
+  // ♫ MY MUSIC chip (next to the song title): opens the save sheet for the loaded file.
+  const _openMyMusicSave = ()=>{
+    const _pad=n=>String(n).padStart(2,'0');
+    const _now=new Date();
+    const _autoWord=({EN:'Song',SK:'Skladba',DE:'Lied',FR:'Chanson',ES:'Canción',PT:'Música',zh:'歌曲',zhTW:'歌曲',ja:'曲'})[lang]||'Song';
+    const _rawName = loadedSource==='audio' ? audioName
+                   : loadedSource==='midi'  ? midiName
+                   : loadedSource==='score' ? scoreName
+                   : '';
+    const _stem=(_rawName||'').replace(/\.[^.]+$/,'').trim();
+    const _autoName=_autoWord+' '+_now.getFullYear()+'-'+_pad(_now.getMonth()+1)+'-'+_pad(_now.getDate())+' '+_pad(_now.getHours())+':'+_pad(_now.getMinutes());
+    setMyMusicSaveName(_stem || _autoName);
+    setMyMusicSaveTargetSlot(null);
+    myMusicFirstEmpty().then(slot=>setMyMusicSaveTargetSlot(slot));
+    setShowMyMusicSaveModal(true);
+  };
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -5633,6 +6048,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     };
     const dn=e=>{
       if(inputFocus.current)return;
+      if(favViewRef.current)return;   // the Favorites viewer: no notes, no Play
       const _ae=document.activeElement; if(_ae&&(_ae.tagName==='INPUT'||_ae.tagName==='TEXTAREA'||_ae.isContentEditable))return;
       if(e.key==='Backspace'&&composeMode&&!busy&&!recording){e.preventDefault();undoLast();return;}
       if((e.key===' '||e.key==='Enter')&&isInteractive())return;
@@ -6320,7 +6736,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setInfo(null);setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;
     setLoadedSource(null);
     // Clearing content also drops the "loaded from My Music" tag — after
-    // Clear + fresh upload, the ♡ Save button must reappear so the fresh
+    // Clear + fresh upload, the ♫ MY MUSIC chip must offer ＋ again so the fresh
     // piece can be archived.
     _loadedFromMyMusicRef.current=null;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');
@@ -6761,7 +7177,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const mName=file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' ');
         sigMusicNextRef.current=true; applyEvents(evts,mName);
         setCompositionName(mName);
-        // Persist the original MIDI bytes so the ♡ Save button can put
+        // Persist the original MIDI bytes so the ♫ MY MUSIC chip can put
         // them into a My Music slot for byte-perfect replay later.
         try { setMidiBlob(new Blob([evt.target.result], { type: file.type || 'audio/midi' })); setMidiName(file.name); } catch (_) {}
         setLoadedSource('midi');
@@ -6948,7 +7364,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _fileName = /\.[a-z0-9]+$/i.test(rec.name) ? rec.name : (rec.name + _ext);
     const _file = new File([rec.blob], _fileName, { type: rec.mime || 'application/octet-stream' });
     const _fakeEvent = { target: { files: [_file], value: '' } };
-    // Tag this load so the ♡ Save button hides — replaying a slot never
+    // Tag this load so the ♫ MY MUSIC chip shows ✓ — replaying a slot never
     // needs a fresh save entry. Set BEFORE dispatch so the render triggered
     // by loadedSource/blob updates already sees the ref populated.
     _loadedFromMyMusicRef.current = rec.id;
@@ -7701,7 +8117,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setCompositionName(sName);
       sigMusicNextRef.current=true; applyEvents(evts,sName);
       // Persist the original MusicXML bytes (compressed .mxl OR plain
-      // .xml/.musicxml) so the ♡ Save button can put them into a My Music
+      // .xml/.musicxml) so the ♫ MY MUSIC chip can put them into a My Music
       // slot for byte-perfect replay later.
       try { const _mime = isZip ? 'application/vnd.recordare.musicxml+xml' : 'application/vnd.recordare.musicxml'; setScoreBlob(new Blob([buf], { type: _mime })); } catch (_) {}
       setLoadedSource('score');setPickMode(null);
@@ -11115,7 +11531,19 @@ Hard requirements:
   // Artifact iframes block <a download>, window.open, and rewrite blob: URLs to a
   // sandbox-internal scheme — the only thing that reliably works is rendering the PNG
   // inside the iframe as <img> and letting iOS native long-press → Save to Photos do the job.
+  // Save takes the painting on screen: the live one — or, while the Favorites
+  // viewer is open, the favorite on screen, fed from its address into this very
+  // same export (Story, Web, Print A1, Gallery, watermark). See _favExportX.
   const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
+    const fv=(favView && favCur) ? favCur : null;
+    if(!fv) return _exportWith({ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip }, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
+    const pc=favPiecesRef.current.get(fv.pk) || await favPiece(fv.pk);
+    const lay=pc ? _favLayout(fv, pc.chords) : null;
+    if(!lay){ setFavBad(true); return; }
+    return _exportWith(_favExportX(fv, pc, lay), sizeMode, directShare, audioBlob, audioName, withSource, noBg);
+  };
+  const _exportWith=async(X, sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
+    const { chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip } = X;
     try{
       if(!chords.length){setErr(t('errs').nothingToPrint);setErrInfo(false);return;}
       // Export the style actually on screen — in shuffle mode that's the
@@ -11200,6 +11628,7 @@ Hard requirements:
         const _origFillRect = hctx.fillRect.bind(hctx);
         hctx.fillRect = (x,y,w,h)=>{ if(x<=1 && y<=1 && w>=CW-2 && h>=CH-2) return; _origFillRect(x,y,w,h); };
       }
+      if(X.enter) X.enter();   // a favorite: its palette knobs in, until it is painted
       if(viewMode==='image'&&pixelRef.current){
         const{nc,nr,px}=pixelRef.current;
         for(let i=0;i<nc*nr;i++){
@@ -11210,7 +11639,7 @@ Hard requirements:
       }else{
         _setArtistSeed(pollockSessionSeed);
         _setNoBg(noBg);
-        _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap(X.cap!==undefined ? X.cap : ((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null));
         _ensureEnergies(chords, _liveE);
         // ── overlay pass as a function — called twice in transparent mode:
         // once into a throwaway probe ctx to DETECT whether this style/variant
@@ -11332,6 +11761,7 @@ Hard requirements:
         }
       }
       _setNoBg(false);
+      if(X.leave) X.leave();
       // ── GALLERY (vector SVG) export: branch out here, before all the
       // canvas-only postprocessing (watermark, source thumb overlay, story
       // compositing). The SVG carries everything the renderer drew; print
@@ -11491,7 +11921,7 @@ Hard requirements:
           : _inspKey
           ? (_inspBare ? STYLE_INSPIRED[_inspKey] : `inspired by ${STYLE_INSPIRED[_inspKey]}`)
           : null;
-        const _inspLabel = (_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0;
+        const _inspLabel = (X.insp!==undefined) ? X.insp : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
         const paintingBottomReserve = 290; // mood + wordmark + tagline
@@ -11584,7 +12014,7 @@ Hard requirements:
           // pre-fills into the IG/TikTok post body. Web/Print exports don't (they
           // go to Photos/Files where caption is irrelevant).
           const sharePayload = {files:shareFiles, title:'Paintiano'};
-          if(sizeMode==='story') sharePayload.text = buildStoryCaption();
+          if(sizeMode==='story') sharePayload.text = (X.caption!==undefined) ? X.caption : buildStoryCaption();
           await navigator.share(sharePayload);
           // iOS suspends the AudioContext while the share sheet is on screen.
           // After it dismisses, resume so subsequent Play / REC still has audio.
@@ -11600,7 +12030,7 @@ Hard requirements:
         }
       }
       setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label});
-    }catch(e){ try{ _setNoBg(false); }catch(_){} setErr('Print: '+e.message);setErrInfo(false);}
+    }catch(e){ try{ _setNoBg(false); }catch(_){} if(X.leave) X.leave(); setErr('Print: '+e.message);setErrInfo(false);}
   };
 
 
@@ -11992,7 +12422,7 @@ Hard requirements:
   };
 
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
@@ -12134,7 +12564,7 @@ Hard requirements:
       })()}
       {/* My Music — Save modal + Saved flash (rendered at top
           level so it works in both Lite and Advanced). */}
-      {/* My Music — Save modal (♡ tap on canvas). Prefilled name, target
+      {/* My Music — Save modal (♫ MY MUSIC chip by the song title). Prefilled name, target
           slot info, Save/Cancel. If archive is full, shows warning instead
           of the input. Fáza 2 will add the drawer for view/delete/load. */}
       {showMyMusicSaveModal && (
@@ -12169,8 +12599,8 @@ Hard requirements:
                 setMyMusicSaving(false);
                 if(_r){
                   // Duplicate-save guard: also for Files-loaded audio/midi/score.
-                  // Tag this session as "loaded from My Music" so the ♡ Save
-                  // button hides — pressing Save again on the same file would
+                  // Tag this session as "loaded from My Music" so the ♫ chip
+                  // shows ✓ — pressing Save again on the same file would
                   // otherwise create another slot entry.
                   _loadedFromMyMusicRef.current = _r.id;
                   setShowMyMusicSaveModal(false);
@@ -12231,7 +12661,7 @@ Hard requirements:
           </div>
         </div>
       )}
-      <div className="pf-topbar" style={{width:'100%',maxWidth:560,display:immersive?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
+      <div className="pf-topbar" style={{width:'100%',maxWidth:560,display:(immersive||favFs)?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
         {/* ── V2 nav: hamburger (left) opens a glass menu panel; zoom + language
             sit together in a segmented control (right). The five destinations
             (Concept · Book · Guide · Setup · Pro) moved out of the always-on
@@ -12253,6 +12683,8 @@ Hard requirements:
                   {key:'concept', label:t('concept'),                          onClick:()=>{setNavMenuOpen(false);setShowAbout(true);}},
                   {key:'book',    label:ts('gcat_book','Book'),                onClick:()=>{setNavMenuOpen(false);setShowBook(true);}},
                   {key:'guide',   label:t('guide'),                           onClick:()=>{setNavMenuOpen(false);setGuideReturnCardId(null);setShowGuide(true);}},
+                  // ♥ Favorites — the saved paintings, browsed on the canvas (not while recording).
+                  {key:'favs',    label:'♥ '+_favT('label'), count:Math.max(0, favs.length-(favGone!=null?1:0)), off:(micActive||recording), onClick:()=>{ if(micActive||recording){ setNavMenuOpen(false); return; } _favOpen(); }},
                   // Setup temporarily removed from the menu — testing the inline
                   // "Pick a look" edit mode as the single mechanism. Restore by
                   // un-commenting (the modal code itself is untouched).
@@ -12273,8 +12705,9 @@ Hard requirements:
                   <div key={it.key} role="menuitem" tabIndex={0}
                     onClick={it.onClick}
                     onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();it.onClick();}}}
-                    style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',cursor:'pointer',color:it.pro==='purple'?'#dcb4ff':it.pro==='gold'?'#f0d98a':'rgba(201,168,76,.9)',fontWeight:it.pro?700:500,fontSize:(.72*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:'inherit',borderBottom:i<arr.length-1?'1px solid rgba(201,168,76,.09)':'none',WebkitTapHighlightColor:'transparent'}}>
+                    style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',cursor:it.off?'default':'pointer',opacity:it.off?.4:1,color:it.key==='favs'?'#f0c040':it.pro==='purple'?'#dcb4ff':it.pro==='gold'?'#f0d98a':'rgba(201,168,76,.9)',fontWeight:it.pro?700:500,fontSize:(.72*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:'inherit',borderBottom:i<arr.length-1?'1px solid rgba(201,168,76,.09)':'none',WebkitTapHighlightColor:'transparent'}}>
                     <span>{it.label}</span>
+                    {it.count!=null && (<span style={{marginLeft:'auto',marginRight:12,opacity:.6,letterSpacing:'.04em',fontWeight:500}}>{it.count}</span>)}
                     <span style={{opacity:it.pro?.6:.35,fontSize:(.8*effScale)+'rem'}}>→</span>
                   </div>
                 ))}
@@ -12415,6 +12848,84 @@ Hard requirements:
         {isPro && !basicMode && <div style={{textAlign:'center',marginBottom:6}}><ProBadge t={t} readScale={readScale} tier={isProAI ? 'ai' : 'pro'} /></div>}
         {!isActiveView && !isDesktop && !basicMode && <div style={{fontFamily:"'Cormorant Garamond',serif",fontStyle:'italic',fontSize:'.85rem',letterSpacing:'.06em',color:pianoColor[piano]}}>{pianoLabel[piano]}</div>}
       </header>
+      {/* ── FAVORITES viewer — the saved paintings, repainted from their addresses
+          one by one (see _favPaint). Stands in for the stage while open; nothing
+          plays here: the strip, Play and Clear are off, Save exports the PNG. ── */}
+      {favView && (()=>{
+        const N=favs.length, f=favCur, i=favView.i, gone=!!(f && favGone===f.id);
+        const dim = (f && favDim && favDim.id===f.id) ? favDim : null;   // as laid out on this screen
+        const ratio = dim ? (dim.CW/(dim.CH||1)) : 1;
+        const frameW = favFs ? `min(100vw, calc((100dvh - 150px) * ${ratio}))` : `min(100%, ${dim ? dim.CW : 560}px, calc((100dvh - 340px) * ${ratio}))`;
+        const dotN=Math.min(N,12), d0=Math.max(0, Math.min(i-5, N-dotN));
+        const pill={display:'inline-flex',alignItems:'center',gap:8,height:34,padding:'0 16px',boxSizing:'border-box',borderRadius:17,fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.16em',textTransform:'uppercase',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'};
+        const sq={position:'absolute',zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',padding:0,WebkitTapHighlightColor:'transparent'};
+        const arrow=(dir)=> (N>1 && !favFs) ? (
+          <button onClick={(e)=>{ e.stopPropagation(); _favMove(dir); }} aria-label={dir<0 ? _favT('prev') : _favT('next')} title={dir<0 ? _favT('prev') : _favT('next')}
+            style={{...sq,top:'50%',[dir<0?'left':'right']:8,transform:'translateY(-50%)',borderRadius:17,background:'rgba(6,6,12,.5)',border:'1px solid rgba(201,168,76,.28)',color:'rgba(240,222,180,.92)',fontSize:'1.15rem',lineHeight:1,fontFamily:'inherit'}}>{dir<0 ? '‹' : '›'}</button>) : null;
+        const who = f ? _favWho(f) : '';
+        const count = N>0 ? (<span style={{opacity:.85,letterSpacing:'.08em'}}>{Math.min(i+1,N)} / {N}</span>) : null;
+        return (
+        <div className="pf-fav-stage" style={{width:'100%',maxWidth:560,boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'stretch',paddingBottom:'calc(92px + env(safe-area-inset-bottom))'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:14}}>
+            <button onClick={_favClose} className="pf-lift" style={{...pill,cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(242,238,232,.78)'}}>✕ {_favT('close')}</button>
+            <div style={{...pill,border:'1px solid rgba(201,168,76,.6)',color:'#f0c040',background:'rgba(201,168,76,.07)'}}>♥ {_favT('label')}{count}</div>
+          </div>
+          <div aria-disabled="true" style={{textAlign:'center',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.3)',marginBottom:10,userSelect:'none'}}>{ts('pickLook','Pick a look')} ▾</div>
+          {N>1 && (<div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:5,marginBottom:14}}>{Array.from({length:dotN},(_,k)=>{ const on=(d0+k)===i; return (<span key={k} style={{width:on?14:5,height:5,borderRadius:3,background:on?'#f0c040':'rgba(242,238,232,.22)',transition:'width .2s ease'}}/>); })}
+          </div>)}
+          {N===0 ? (
+            <div style={{textAlign:'center',padding:'56px 28px',color:'rgba(242,238,232,.62)',fontSize:(.7*effScale)+'rem',lineHeight:1.6}}>
+              <div aria-hidden="true" style={{fontSize:'2.2rem',color:'rgba(201,168,76,.6)',marginBottom:10,lineHeight:1}}>♡</div>{_favT('empty')}
+            </div>
+          ) : (<>
+            <div style={{width:'100%',maxWidth:frameW,margin:'0 auto 4px',fontSize:(.57*effScale)+'rem',color:'rgba(242,238,232,.52)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{f ? _favTitle(f) : ''}</div>
+            <div aria-hidden="true" style={{width:'100%',maxWidth:frameW,height:5,margin:'0 auto 8px',borderRadius:3,background:'rgba(201,168,76,.32)'}}/>
+            <div onTouchStart={_favTouchStart} onTouchEnd={_favTouchEnd} style={favFs ? {position:'fixed',inset:0,zIndex:10000,background:'#06060c',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',touchAction:'none'} : {position:'relative',touchAction:'pan-y'}}>
+              {favFs && (
+                <div style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',left:'max(12px, env(safe-area-inset-left))',right:'max(12px, env(safe-area-inset-right))',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,zIndex:2}}>
+                  <div style={{...pill,height:30,padding:'0 12px',border:'1px solid rgba(201,168,76,.55)',color:'#f0c040',background:'rgba(6,6,12,.6)'}}>♥ {count}</div>
+                  <div style={{fontSize:(.62*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap',overflow:'hidden'}}>{(isCoarse && N>1) ? t('advSwipeHint') : ''}</div>
+                  <button onClick={(e)=>{ e.stopPropagation(); setFavFs(false); }} aria-label="exit fullscreen" title="Exit fullscreen" style={{width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:'rgba(6,6,12,.6)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',padding:0,flexShrink:0,fontSize:'1rem',fontFamily:'inherit'}}>✕</button>
+                </div>
+              )}
+              <div style={{position:'relative',width:'100%',maxWidth:frameW,margin:'0 auto',lineHeight:0,boxSizing:'border-box',border:favFs?'none':'1px solid rgba(201,168,76,.12)',boxShadow:favFs?'none':'0 0 40px rgba(0,0,0,.6)'}}>
+                <canvas ref={favCanvasRef} role="img" aria-label={f ? (_favTitle(f)+' — '+who) : ''} style={{display:'block',width:'100%',height:'auto',aspectRatio:dim ? (dim.CW+' / '+dim.CH) : undefined,background:'#04040a'}}/>
+                {!favFs && f && (
+                  <button onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} title={gone ? _favT('add') : _favT('del')} aria-pressed={!gone}
+                    style={{...sq,top:8,left:8,background:gone?'rgba(6,6,12,.45)':'linear-gradient(180deg,#f0d78a,#c9a84c)',border:'1px solid '+(gone?'rgba(201,168,76,.35)':'rgba(240,215,138,.9)'),color:gone?'rgba(201,168,76,.85)':'#1a1408'}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={gone?'none':'currentColor'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  </button>
+                )}
+                {!favFs && f && (
+                  <button onClick={(e)=>{ e.stopPropagation(); setFavFs(true); }} aria-label="fullscreen" title="Fullscreen" style={{...sq,top:8,right:8,background:'rgba(6,6,12,.45)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)'}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                  </button>
+                )}
+                {arrow(-1)}{arrow(1)}
+                {favBad && (<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',padding:24,textAlign:'center',lineHeight:1.5,color:'rgba(242,238,232,.7)',fontSize:(.62*effScale)+'rem'}}>{_favT('lost')}</div>)}
+                {_favToastEl()}
+              </div>
+              {favFs && f && (
+                <div style={{marginTop:14,padding:'0 16px',textAlign:'center',lineHeight:1.6}}>
+                  <div style={{fontStyle:'italic',color:'rgba(201,168,76,.82)',fontSize:(.62*effScale)+'rem',letterSpacing:'.04em'}}>{_favTitle(f)}</div>
+                  <div style={{color:'rgba(242,238,232,.45)',fontSize:(.52*effScale)+'rem',letterSpacing:'.05em'}}>{who} · {_favMeta(f).split(' · ').slice(0,1)}</div>
+                </div>
+              )}
+            </div>
+            {f && (
+              <div style={{textAlign:'center',marginTop:10,lineHeight:1.6,padding:'0 8px'}}>
+                <div style={{fontStyle:'italic',letterSpacing:'.08em',color:'rgba(201,168,76,.75)',fontSize:(.56*effScale)+'rem'}}>{who}</div>
+                <div style={{color:'rgba(242,238,232,.42)',fontSize:(.5*effScale)+'rem',letterSpacing:'.06em'}}>{_favMeta(f)}</div>
+              </div>
+            )}
+          </>)}
+          <div role="region" aria-label={_favT('label')} style={{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'10px 8px calc(12px + env(safe-area-inset-bottom))',display:'flex',justifyContent:'center',alignItems:'center',gap:8}}>
+            <button disabled aria-disabled="true" className="pf-tx-play" style={{...txStyle('primary',{effScale,primary:true,disabled:true}),cursor:'default'}}><TxIcon n="play" s={15*effScale}/>{t('play')}</button>
+            <button onClick={()=>{ setFavFs(false); setShowSizePicker(true); }} disabled={!f||favBad} className="pf-lift pf-tx-save" style={txStyle('save',{effScale,disabled:!f||favBad})}><TxIcon n="save" s={14*effScale}/>{t('save')}</button>
+            <button disabled aria-disabled="true" className="pf-tx-clear" style={{...txStyle('ghost',{effScale,disabled:true}),cursor:'default'}}>{t('clear')}</button>
+          </div>
+        </div>);
+      })()}
 
       {/* ─────────────────────────────────────────────────────────────
           Control panel (introduced v2.6.0). Grouped into four labelled sections:
@@ -12423,7 +12934,7 @@ Hard requirements:
           hairline dividers; labels are tiny and faded (recede for return
           users, orient first-timers). lbl() / divider markup inline.
           ───────────────────────────────────────────────────────────── */}
-      {isSetupView && !basicMode && (
+      {isSetupView && !basicMode && !favView && (
       <div className="pf-fade pf-panel-part" style={{width:'100%',maxWidth:560,display:'flex',flexDirection:'column',gap:14,marginBottom:18}}>
 
 
@@ -12568,7 +13079,7 @@ Hard requirements:
           would be empty. This quiet placeholder fills it — a golden-ratio frame
           hint with a soft prompt — so the screen never reads as broken. Mobile
           (<769px) hides it via CSS; the mobile flow stacks panel-only as before. */}
-      {isSetupView && !showOnboarding && !basicMode && (
+      {isSetupView && !showOnboarding && !basicMode && !favView && (
       <div className="pf-setup-stage" aria-hidden="true">
         <div className="pf-setup-stage-inner">
           <div className="pf-setup-stage-mark">Paintiano</div>
@@ -12581,7 +13092,7 @@ Hard requirements:
           is on the canvas, without the full setup panel. Collapsed by default
           so the canvas keeps the room; tap the header to expand. ── */}
       {isActiveView && !basicMode && (
-      <div ref={stripWrapRef} className="pf-panel-part" style={{width:'100%',maxWidth:480,marginBottom:(composeMode||micActive)?4:12}}>
+      <div ref={stripWrapRef} className="pf-panel-part" style={{width:'100%',maxWidth:480,marginBottom:(composeMode||micActive)?4:12,...(favView?{display:'none'}:{})}}>
         {/* Back to setup — abandons the current mood/source and returns to the
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
@@ -13799,6 +14310,7 @@ Hard requirements:
       )}
 
       {(() => {
+        if(favView) return null;   // the Favorites viewer has its own title row
         // Body 8: in image mode with AI atmosphere ON, the seek row shows the
         // AI-detected title + atmosphere word (same form as Mood from Image),
         // flagged with the ✦ AI badge — replacing the separate blue pill above.
@@ -13823,6 +14335,14 @@ Hard requirements:
         // mirrors the morph-pool 'offline' label so the user can tell at a
         // glance the piece was NOT AI-composed. 'crafted' (library) stays bare.
         const _showOffBadge = !_showAiBadge && moodContext && composeSource==='offline';
+        // ♫ MY MUSIC — keep the loaded file (MIDI · MP3 · score) in My Music. A small
+        // chip in the Signature style; ✓ once it is there (saved, or opened from it).
+        const _mmOn = !immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && ((loadedSource==='audio' && !!audioBlob) || (loadedSource==='midi' && !!midiBlob) || (loadedSource==='score' && !!scoreBlob));
+        const _mmDone = !!_loadedFromMyMusicRef.current;
+        const _mmChipSt = {flexShrink:0,padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',lineHeight:1.5,background:'transparent',fontStyle:'normal'};
+        const _mmChip = !_mmOn ? null : _mmDone
+          ? (<span className="pf-mm-chip" title={_favT('mmSaved')} style={{..._mmChipSt,border:'1px solid rgba(201,168,76,.22)',color:'rgba(201,168,76,.5)',fontWeight:500}}>♫ ✓ {_favT('mm')}</span>)
+          : (<button className="pf-mm-chip" onClick={(e)=>{ e.stopPropagation(); _openMyMusicSave(); }} title={ts('mymusicSaveAria','Save to My Music')} aria-label={ts('mymusicSaveAria','Save to My Music')} style={{..._mmChipSt,cursor:'pointer',border:'1px solid rgba(201,168,76,.4)',color:'rgba(201,168,76,.8)',fontWeight:500}}>♫ ＋ {_favT('mm')}</button>);
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : _showOffBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>offline</span>) : null;
         return (<>
         {showTransport && (<>
@@ -13833,7 +14353,7 @@ Hard requirements:
         )}
         <div className="pf-seek-block" style={{width:'100%',maxWidth:(viewMode==='image'&&originalImgUrl)?`min(100%, 560px)`:`min(100%, ${CW}px)`,marginLeft:'auto',marginRight:'auto',boxSizing:'border-box',marginBottom:basicMode?7:8}}>
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
-            <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}</span>
+            <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}{_mmChip}</span>
             {!immersive && basicMode && !liteImageMode && painterStage.length>0 && style!==null && (
               <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{_stageNames('art')}</span>
             )}
@@ -13953,7 +14473,7 @@ Hard requirements:
         </>);
       })()}
 
-        {basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current && (
+        {basicMode && !liteImageMode && !favView && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current && (
           <div style={{minHeight:'46dvh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18}}>
             <div onClick={(e)=>{ e.stopPropagation(); if(!liteEverUnlockedRef.current) litePlayStart(); }} onPointerDown={(e)=>{ e.stopPropagation(); if(!liteEverUnlockedRef.current) litePlayStart(); }} role="button" aria-label={t('play')||'Play'}
               style={{position:'relative',width:130,height:130,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',WebkitTapHighlightColor:'transparent'}}>
@@ -13965,7 +14485,7 @@ Hard requirements:
           </div>
         )}
       {isActiveView && (<>
-      {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !is5Col && !(disp===0 && !playing && !anim) && (()=>{
+      {(imgMoodThumb || (moodFromImg && originalImgUrl)) && moodContext && !favView && !is5Col && !(disp===0 && !playing && !anim) && (()=>{
         // Body 11: once playback begins / the mood pic has been drawn (disp>0),
         // the picture appears as a small thumbnail above the canvas, acting as
         // a reminder of the source. Before that (step 1), the picture lives
@@ -14041,7 +14561,7 @@ Hard requirements:
           </div>
         );
       })()}
-      <div ref={canvasWrapRef} className="pf-stage-part" style={{position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
+      <div ref={canvasWrapRef} className="pf-stage-part" style={{...(favView?{display:'none'}:{}),position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={()=>{ if(_swipeStartRef.current) return; if(playing||immersive) wakeControls(); }}
         onTouchStart={e=>{
@@ -14182,35 +14702,16 @@ Hard requirements:
           }
         }}
       >
-        {/* My Music ♡ Save button — top-LEFT mirror of the fullscreen ⛶ button
-            on top-right. Appears whenever any imported piece is loaded (audio
-            mp3/wav/m4a, midi, or MusicXML — all get saved to the same shared
-            archive). Tap opens the save modal which prefills the name from
-            the file (if any) or an auto-timestamped fallback, and shows the
-            target slot. */}
-        {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && !_loadedFromMyMusicRef.current && (
-          (loadedSource==='audio' && !!audioBlob)
-          || (loadedSource==='midi'  && !!midiBlob)
-          || (loadedSource==='score' && !!scoreBlob)
-        ) && (
-        <button onClick={(e)=>{
-          e.stopPropagation();
-          const _pad=n=>String(n).padStart(2,'0');
-          const _now=new Date();
-          const _autoWord=({EN:'Song',SK:'Skladba',DE:'Lied',FR:'Chanson',ES:'Canción',PT:'Música',zh:'歌曲',zhTW:'歌曲',ja:'曲'})[lang]||'Song';
-          const _rawName = loadedSource==='audio' ? audioName
-                         : loadedSource==='midi'  ? midiName
-                         : loadedSource==='score' ? scoreName
-                         : '';
-          const _stem=(_rawName||'').replace(/\.[^.]+$/,'').trim();
-          const _autoName=_autoWord+' '+_now.getFullYear()+'-'+_pad(_now.getMonth()+1)+'-'+_pad(_now.getDate())+' '+_pad(_now.getHours())+':'+_pad(_now.getMinutes());
-          setMyMusicSaveName(_stem || _autoName);
-          setMyMusicSaveTargetSlot(null);
-          myMusicFirstEmpty().then(slot=>setMyMusicSaveTargetSlot(slot));
-          setShowMyMusicSaveModal(true);
-        }} aria-label={ts('mymusicSaveAria','Save to My Music')} title={ts('mymusicSaveAria','Save to My Music')} className="pf-mymusic-btn" style={{position:'absolute',top:8,left:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        {/* ♥ Favorites — top-LEFT mirror of the fullscreen ⛶ button, on a FINISHED
+            painting only (favReady: nothing plays or records, the piano is closed).
+            Tap saves the painting's address; filled gold while it is saved — tap
+            again takes it out (with Undo). The song's own file goes to My Music
+            from the ♫ chip next to its title. */}
+        {!immersive && favReady && (
+        <button onClick={(e)=>{ e.stopPropagation(); _favToggle(); }} aria-label={favHit ? _favT('del') : _favT('add')} title={favHit ? _favT('del') : _favT('add')} aria-pressed={!!favHit} className="pf-fav-btn" style={{position:'absolute',top:8,left:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:favHit?'linear-gradient(180deg,#f0d78a,#c9a84c)':'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid '+(favHit?'rgba(240,215,138,.9)':'rgba(201,168,76,.35)'),color:favHit?'#1a1408':'rgba(201,168,76,.85)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, background .18s'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={favHit?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>)}
+        {!immersive && !favView && _favToastEl()}
         {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && <button onClick={(e)=>{e.stopPropagation(); if(basicMode){ try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'manual' }); }catch(_){} } setImmersive(v=>!v);}} aria-label="fullscreen" title="Fullscreen" className="pf-fs-btn" style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>}
@@ -14416,7 +14917,7 @@ Hard requirements:
         )}
       </div>
       {/* ✦ why — under the picture: which musical role brought in which painter */}
-      {sigActive && songSig && viewMode!=='image' && !composeMode && !immersive && (
+      {sigActive && songSig && viewMode!=='image' && !composeMode && !immersive && !favView && (
         <div className="pf-sig-why" style={{textAlign:'center',marginTop:6,padding:'0 12px',fontSize:(.5*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.72)',fontStyle:'italic',lineHeight:1.5}}>{_sigWhy(songSig).map(([r,n],i)=>(i?' · ':'')+r+' → '+n).join('')}</div>
       )}
 
@@ -14461,12 +14962,12 @@ Hard requirements:
         // is redundant. For these, the picker shows ONLY visual exports
         // (Story / Web / Print). Image/Mood/MFI/compose/mic keep the full
         // option set because their pieces are newly composed.
-        const isImportedMedia = loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score';
+        const isImportedMedia = favView ? !!(favCur && (favCur.src==='midi' || favCur.src==='audio' || favCur.src==='score')) : (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score');
         return (
         <div onClick={()=>setShowSizePicker(false)} className="pf-save-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:'4vh 16px'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',minWidth:260,maxWidth:340,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>{_sent(t('save'))}</div>
-            <input
+            {!favView && (<input
               ref={compInputRef}
               type="text"
               value={compositionName}
@@ -14477,9 +14978,9 @@ Hard requirements:
               maxLength={80}
               aria-label={t('nameThisPiece')}
               style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,.018)',border:'1px solid '+(focusedInput==='comp'?'rgba(255,255,255,.25)':'rgba(255,255,255,.08)'),borderRadius:12,padding:'10px 14px',color:'rgba(247,243,236,.95)',fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none',letterSpacing:0,textAlign:'center',marginBottom:14,transition:'border-color .15s ease'}}
-            />
+            />)}
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              {viewMode==='image' ? (
+              {(viewMode==='image' && !favView) ? (
                 <>
                   {/* Image mode export set:
                       • Story — 9:16 PNG (the ORIGINAL image, not the mosaic) + audio, for IG/TikTok
@@ -14529,13 +15030,13 @@ Hard requirements:
                 </>
               ) : (
                 <>
-                  {(originalImgUrl || imgMoodThumb) && (
+                  {!favView && (originalImgUrl || imgMoodThumb) && (
                     <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'10px 12px',background:'transparent',color:includeSourceThumb?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
                       <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,border:'1px solid '+(includeSourceThumb?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',lineHeight:1,fontWeight:600,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
                     </button>
                   )}
-                  {!immersive && (imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource || isImportedMedia) && (
+                  {!immersive && (favView || imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource || isImportedMedia) && (
                     <button onClick={async ()=>{
                       setShowSizePicker(false);
                       // For MIDI/Audio/Score the user already has the original
@@ -14545,6 +15046,7 @@ Hard requirements:
                       // social asset). For Image/MFI/Mood/Compose/Mic we still
                       // render audio offline and bundle both files into one
                       // share-sheet drop.
+                      if(favView){ await _favStory(); return; }
                       if(isImportedMedia){
                         await exportImage('story', true, null, null, true);
                         return;
@@ -14613,13 +15115,13 @@ Hard requirements:
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file
                       format the user just imported is redundant. */}
-                  {!isImportedMedia && (
+                  {!isImportedMedia && !favView && (
                     <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                       <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="rec" s={14}/>{t('saveAudioLabel')||'Audio'}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                     </button>
                   )}
-                  {!isImportedMedia && (
+                  {!isImportedMedia && !favView && (
                     <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                       <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="notes" s={14}/>{t('scoreExport')}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
@@ -14978,7 +15480,7 @@ Hard requirements:
       )}
 
       {/* ZASAH — Pro AI success teaser (free user finished an AI piece). */}
-      {!isPro && composeSource==='ai' && chords.length>0 && !playing && disp>=chords.length && !recording && !busy && !composeMode && !micActive && isActiveView && (
+      {!isPro && !favView && composeSource==='ai' && chords.length>0 && !playing && disp>=chords.length && !recording && !busy && !composeMode && !micActive && isActiveView && (
         <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'calc(env(safe-area-inset-bottom,0px) + 158px)',zIndex:51,pointerEvents:'auto'}}>
           <button onClick={()=>{ try{ window.posthog && window.posthog.capture('pro_teaser_click',{ at:'ai_success', ai:true }); }catch(_){} setPaywallReason('ai_trial'); }} className="pf-lift" style={{display:'inline-flex',alignItems:'center',gap:7,padding:'10px 18px',borderRadius:24,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:600,color:'#f0dcff',background:'rgba(28,14,42,.94)',border:'1px solid rgba(220,150,255,.85)',boxShadow:'0 6px 22px rgba(0,0,0,.55), 0 0 18px rgba(200,120,255,.35)',WebkitBackdropFilter:'blur(6px)',backdropFilter:'blur(6px)'}}>
             ✦ {ts('proTeaserAi','p\u00e1\u010di sa? odomkni Pro AI')}
@@ -14986,7 +15488,7 @@ Hard requirements:
         </div>
       )}
       {isActiveView && !basicMode && (
-      <div role="region" aria-label="playback controls" className="pf-transport-dock" style={isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
+      <div role="region" aria-label="playback controls" className="pf-transport-dock" style={favView?{display:'none'}:isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
         <div style={{fontSize:(.48*effScale)+'rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
@@ -15381,7 +15883,7 @@ Hard requirements:
       )}
       </div>
       )}
-      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.6{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.7{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
@@ -15408,7 +15910,7 @@ Hard requirements:
           scroll; the popup it opens is also fixed and covers the full
           viewport. zIndex high enough to sit above app chrome but below
           the paywall modal. ── */}
-      {!showOnboarding && !showIntro && !isActiveView && !basicMode && !showGuide && !showAbout && !showBook && !showSetupModal && !showHelp && !legalDoc && !paywallReason && (
+      {!showOnboarding && !showIntro && !isActiveView && !favView && !basicMode && !showGuide && !showAbout && !showBook && !showSetupModal && !showHelp && !legalDoc && !paywallReason && (
         <button
           className="pf-help-fab"
           onClick={()=>setShowHelp(true)}
@@ -15758,7 +16260,6 @@ Hard requirements:
         };
         const togglePal = (k)=> setSetupPalettes(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
         const toggleArt = (k)=> setSetupArtists(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
-        const toggleTone = (k)=> setSetupTones(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
         const okMin = setupPalettes.length>=1 && setupArtists.length>=1 && setupTones.length>=1;
         const isFree = proStatus==='free';
         return (
@@ -15871,16 +16372,12 @@ Hard requirements:
               <div className="pf-setup-tones">
                 <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10,gap:8}}>
                   <span style={{fontSize:(.55*effScale)+'rem',fontWeight:500,letterSpacing:'.22em',color:'rgba(201,168,76,.65)',textTransform:'uppercase',fontStyle:'italic'}}>{ts('setupTonesTitle',({EN:'Tone',SK:'Tón',DE:'Ton',FR:'Tonalité',ES:'Tono',PT:'Tom',zh:'色调',zhTW:'色調',ja:'トーン'})[lang]||'Tone')}</span>
-                  <span style={{display:'inline-flex',gap:6,fontSize:(.5*effScale)+'rem',letterSpacing:'.04em'}}>
-                    <span onClick={()=>setSetupTones(ALL_TONE_KEYS.slice())} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones(ALL_TONE_KEYS.slice());}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(201,168,76,.35)',color:'rgba(220,180,90,.85)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupAll','All'))}</span>
-                    <span onClick={()=>setSetupTones([])} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSetupTones([]);}}} style={{cursor:'pointer',padding:'2px 9px',borderRadius:11,border:'1px solid rgba(230,222,196,.2)',color:'rgba(230,222,196,.55)',textTransform:'uppercase',fontStyle:'italic'}}>{_sent(ts('setupNone','None'))}</span>
-                  </span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
                   {ALL_TONE_KEYS.map(k=>{
                     const on = setupTones.includes(k);
                     return (
-                    <button key={k} onClick={()=>toggleTone(k)} style={{width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{_sent(_toneLabels[k])}</button>
+                    <button key={k} onClick={()=>setSetupTones([k])} aria-pressed={on} style={{width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'color .18s, border-color .18s',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{_sent(_toneLabels[k])}</button>
                     );
                   })}
                 </div>
@@ -15903,7 +16400,7 @@ Hard requirements:
           contextual — Pause/Resume while playing, Save once the song finishes;
           My song opens the file picker straight away (no intermediate tile).
           Shown whenever Basic is active and the intro has cleared. */}
-      {basicMode && !showIntro && (()=>{
+      {basicMode && !showIntro && !favView && (()=>{
         const btn = {flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'13px 8px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',fontSize:(.72*effScale)+'rem',fontWeight:600,letterSpacing:'.02em',border:'1px solid rgba(242,238,232,.16)',background:'rgba(37,32,48,.92)',color:'rgba(232,228,220,.95)',whiteSpace:'nowrap',WebkitTapHighlightColor:'transparent'};
         const primary = {...btn,background:'rgba(220,180,90,.95)',color:'#0b0b0f',border:'1px solid rgba(220,180,90,.95)'};
         // Secondary accent — "Use my song" is the main next-step once a painting

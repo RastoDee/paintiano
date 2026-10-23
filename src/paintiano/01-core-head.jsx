@@ -404,6 +404,12 @@ const PF_STYLE = `
              canvas stage between them. Mobile (<769px) never hits this block, so
              the strip stays a normal stacked column there. */
           .pf-app-root > .pf-panel-part { display: contents !important; }
+          /* Favorites viewer open: the strip, the stage and the dock step aside and
+             the viewer takes the middle of the grid (rows of the stage, all columns). */
+          .pf-app-root.pf-fav-open > .pf-panel-part,
+          .pf-app-root.pf-fav-open > .pf-stage-part,
+          .pf-app-root.pf-fav-open > .pf-transport-dock { display: none !important; }
+          .pf-app-root > .pf-fav-stage { grid-column: 1 / -1; grid-row: 3 / span 5; justify-self: center; max-width: 640px !important; }
           .pf-app-root .pf-strip-grid { display: contents !important; }
           .pf-app-root .pf-inspired-label { text-align: left !important; padding-right: 32px !important; }
           .pf-app-root .pf-colors-inner {
@@ -1383,6 +1389,99 @@ async function myMusicCompact(){
         const rec = { ...r, id: i + 1 };
         st.put(rec);
       });
+      tx.oncomplete = ()=> resolve();
+      tx.onerror    = ()=> resolve();
+    });
+    return true;
+  }catch(_){ return false; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §1.6  FAVORITES — IndexedDB (painting addresses, no limit)
+// ─────────────────────────────────────────────────────────────────────────────
+// A favorite is a painting's ADDRESS, not a picture: the song's notes (kept once
+// per song in `pieces`, shared by every favorite of that song) and the knobs that
+// choose the painting — painter(s), variants, palette, tone, seed. The Favorites
+// viewer paints it from that address on the screen it is opened on, exactly as
+// the live canvas would paint it there; no thumbnail, no canvas size stored.
+// Shared by Lite and Advanced. Promise-based, never throws.
+const FAV_DB = 'paintiano-favs';
+let _favDbPromise = null;
+function favOpen(){
+  if(_favDbPromise) return _favDbPromise;
+  _favDbPromise = new Promise((resolve, reject)=>{
+    try{
+      const req = indexedDB.open(FAV_DB, 1);
+      req.onupgradeneeded = ()=>{
+        const db = req.result;
+        if(!db.objectStoreNames.contains('favs'))   db.createObjectStore('favs',   { keyPath:'id' });
+        if(!db.objectStoreNames.contains('pieces')) db.createObjectStore('pieces', { keyPath:'pk' });
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror   = ()=> reject(req.error);
+    }catch(err){ reject(err); }
+  });
+  _favDbPromise.catch(()=>{ _favDbPromise = null; });   // a failed open may be retried later
+  return _favDbPromise;
+}
+// favList() → every favorite, newest first. Light records: the notes stay in
+// `pieces` until a favorite is opened.
+async function favList(){
+  try{
+    const db = await favOpen();
+    return await new Promise((resolve)=>{
+      const req = db.transaction('favs','readonly').objectStore('favs').getAll();
+      req.onsuccess = ()=> resolve((req.result || []).sort((a,b)=> (b.at||0) - (a.at||0)));
+      req.onerror   = ()=> resolve([]);
+    });
+  }catch(_){ return []; }
+}
+// favPiece(pk) → {pk, chords} behind a favorite, or null.
+async function favPiece(pk){
+  try{
+    const db = await favOpen();
+    return await new Promise((resolve)=>{
+      const req = db.transaction('pieces','readonly').objectStore('pieces').get(pk);
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror   = ()=> resolve(null);
+    });
+  }catch(_){ return null; }
+}
+// favAdd(fav, chords) → saves one favorite in one transaction. The notes are
+// written only for a song not stored yet. Returns the record, or null (private
+// mode, quota).
+async function favAdd(fav, chords){
+  try{
+    const db = await favOpen();
+    await new Promise((resolve, reject)=>{
+      const tx = db.transaction(['favs','pieces'], 'readwrite');
+      const ps = tx.objectStore('pieces');
+      const g  = ps.get(fav.pk);
+      g.onsuccess = ()=>{
+        if(!g.result) ps.put({ pk:fav.pk, chords });
+        tx.objectStore('favs').put(fav);
+      };
+      tx.oncomplete = ()=> resolve();
+      tx.onerror    = ()=> reject(tx.error);
+      tx.onabort    = ()=> reject(tx.error);
+    });
+    return fav;
+  }catch(_){ return null; }
+}
+// favRemove(id) → deletes one favorite; its song goes too once no favorite uses it.
+async function favRemove(id){
+  try{
+    const db = await favOpen();
+    await new Promise((resolve)=>{
+      const tx = db.transaction(['favs','pieces'], 'readwrite');
+      const fs = tx.objectStore('favs');
+      const g  = fs.get(id);
+      g.onsuccess = ()=>{
+        const rec = g.result; if(!rec) return;
+        fs.delete(id);
+        const all = fs.getAll();
+        all.onsuccess = ()=>{ if(!(all.result || []).some(r=> r.id!==id && r.pk===rec.pk)) tx.objectStore('pieces').delete(rec.pk); };
+      };
       tx.oncomplete = ()=> resolve();
       tx.onerror    = ()=> resolve();
     });
