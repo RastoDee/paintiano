@@ -36563,7 +36563,15 @@ Hard requirements:
             <div onTouchStart={_favTouchStart} onTouchEnd={_favTouchEnd} style={favFs ? {position:'fixed',inset:0,zIndex:10000,background:'#06060c',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',touchAction:'none'} : {position:'relative',touchAction:'pan-y'}}>
               {favFs && (
                 <div style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',left:'max(12px, env(safe-area-inset-left))',right:'max(12px, env(safe-area-inset-right))',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,zIndex:2}}>
-                  <div style={{...pill,height:30,padding:'0 12px',border:'1px solid rgba(201,168,76,.55)',color:'#f0c040',background:'rgba(6,6,12,.6)'}}>♥ {count}</div>
+                  <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+                    {f && (
+                      <button onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} title={gone ? _favT('add') : _favT('del')} aria-pressed={!gone}
+                        style={{width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',padding:0,flexShrink:0,WebkitTapHighlightColor:'transparent',background:gone?'rgba(6,6,12,.6)':'linear-gradient(180deg,#f0d78a,#c9a84c)',border:'1px solid '+(gone?'rgba(201,168,76,.35)':'rgba(240,215,138,.9)'),color:gone?'rgba(201,168,76,.9)':'#1a1408'}}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill={gone?'none':'currentColor'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      </button>
+                    )}
+                    <div style={{...pill,height:30,padding:'0 12px',border:'1px solid rgba(201,168,76,.55)',color:'#f0c040',background:'rgba(6,6,12,.6)'}}>{count}</div>
+                  </div>
                   <div style={{fontSize:(.62*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap',overflow:'hidden'}}>{(isCoarse && N>1) ? t('advSwipeHint') : ''}</div>
                   <button onClick={(e)=>{ e.stopPropagation(); setFavFs(false); }} aria-label="exit fullscreen" title="Exit fullscreen" style={{width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:'rgba(6,6,12,.6)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',padding:0,flexShrink:0,fontSize:'1rem',fontFamily:'inherit'}}>✕</button>
                 </div>
@@ -38193,6 +38201,13 @@ Hard requirements:
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
         </button>
       )}
+      {/* ♥ Favorites in fullscreen — top-LEFT, the mirror of the exit button; on a
+          finished painting only (favReady), filled gold while it is saved. */}
+      {immersive && favReady && (
+        <button onClick={(e)=>{ e.stopPropagation(); _favToggle(); }} aria-label={favHit ? _favT('del') : _favT('add')} title={favHit ? _favT('del') : _favT('add')} aria-pressed={!!favHit} className="pf-fav-btn" style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',left:'max(12px, env(safe-area-inset-left))',zIndex:10002,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:favHit?'linear-gradient(180deg,#f0d78a,#c9a84c)':'rgba(6,6,12,.6)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid '+(favHit?'rgba(240,215,138,.9)':'rgba(201,168,76,.35)'),color:favHit?'#1a1408':'rgba(201,168,76,.9)',padding:0,WebkitTapHighlightColor:'transparent',transition:'background .18s'}}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill={favHit?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+      )}
       {/* Top-of-screen artist attribution intentionally removed in Lite fullscreen:
           the swipe-up flash (below) is the sole feedback mechanism — nothing
           permanent sits on the painting or in the letterbox. */}
@@ -38391,7 +38406,7 @@ Hard requirements:
         <button onClick={(e)=>{ e.stopPropagation(); _favToggle(); }} aria-label={favHit ? _favT('del') : _favT('add')} title={favHit ? _favT('del') : _favT('add')} aria-pressed={!!favHit} className="pf-fav-btn" style={{position:'absolute',top:8,left:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:favHit?'linear-gradient(180deg,#f0d78a,#c9a84c)':'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid '+(favHit?'rgba(240,215,138,.9)':'rgba(201,168,76,.35)'),color:favHit?'#1a1408':'rgba(201,168,76,.85)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, background .18s'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill={favHit?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>)}
-        {!immersive && !favView && _favToastEl()}
+        {!favView && _favToastEl()}
         {!immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && <button onClick={(e)=>{e.stopPropagation(); if(basicMode){ try{ window.posthog && window.posthog.capture('lite_enter_fs', { source:'manual' }); }catch(_){} } setImmersive(v=>!v);}} aria-label="fullscreen" title="Fullscreen" className="pf-fs-btn" style={{position:'absolute',top:8,right:8,zIndex:12,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:9,cursor:'pointer',background:'rgba(6,6,12,.45)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.2)',color:'rgba(201,168,76,.7)',padding:0,WebkitTapHighlightColor:'transparent',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease, top .25s ease'}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>}
