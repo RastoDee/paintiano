@@ -4257,6 +4257,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+')+(fuRoll ? '|'+fuRoll.phs.join(',') : '') : '';
     const canAppend =
       !_jamKeys &&
+      (prev.jamSig||'')==='' &&      // the last frame was a Jam (stage just went down): repaint, don't append onto it
       (playing||anim) &&
       prev.chords===chords &&
       prev.grid===grid &&
@@ -9864,6 +9865,8 @@ Hard requirements:
       setRandomMode(false); randomModeRef.current=false;
       // NOTE: no setSetupArtists here — Surprise is read-only over the setup.
       setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      // a Signature / Jam stage leaves together with its lead — never one frame of the rest without it
+      _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
     }
     // Surprise rotates through every (artist × variant) address available on the
