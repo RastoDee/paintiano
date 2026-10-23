@@ -36364,7 +36364,7 @@ Hard requirements:
                   {key:'book',    label:ts('gcat_book','Book'),                onClick:()=>{setNavMenuOpen(false);setShowBook(true);}},
                   {key:'guide',   label:t('guide'),                           onClick:()=>{setNavMenuOpen(false);setGuideReturnCardId(null);setShowGuide(true);}},
                   // ♥ Favorites — the saved paintings, browsed on the canvas (not while recording).
-                  {key:'favs',    label:'♥ '+_favT('label'), count:Math.max(0, favs.length-(favGone!=null?1:0)), off:(micActive||recording), onClick:()=>{ if(micActive||recording){ setNavMenuOpen(false); return; } _favOpen(); }},
+                  {key:'favs',    label:'♥ '+_favT('label'), count:(favs.length-(favGone!=null?1:0))>0 ? favs.length-(favGone!=null?1:0) : null, lit:(favs.length-(favGone!=null?1:0))>0, off:(micActive||recording), onClick:()=>{ if(micActive||recording){ setNavMenuOpen(false); return; } _favOpen(); }},
                   // Setup temporarily removed from the menu — testing the inline
                   // "Pick a look" edit mode as the single mechanism. Restore by
                   // un-commenting (the modal code itself is untouched).
@@ -36385,7 +36385,7 @@ Hard requirements:
                   <div key={it.key} role="menuitem" tabIndex={0}
                     onClick={it.onClick}
                     onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();it.onClick();}}}
-                    style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',cursor:it.off?'default':'pointer',opacity:it.off?.4:1,color:it.key==='favs'?'#f0c040':it.pro==='purple'?'#dcb4ff':it.pro==='gold'?'#f0d98a':'rgba(201,168,76,.9)',fontWeight:it.pro?700:500,fontSize:(.72*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:'inherit',borderBottom:i<arr.length-1?'1px solid rgba(201,168,76,.09)':'none',WebkitTapHighlightColor:'transparent'}}>
+                    style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',cursor:it.off?'default':'pointer',opacity:it.off?.4:1,color:it.lit?'#f0c040':it.pro==='purple'?'#dcb4ff':it.pro==='gold'?'#f0d98a':'rgba(201,168,76,.9)',fontWeight:it.pro?700:500,fontSize:(.72*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontFamily:'inherit',borderBottom:i<arr.length-1?'1px solid rgba(201,168,76,.09)':'none',WebkitTapHighlightColor:'transparent'}}>
                     <span>{it.label}</span>
                     {it.count!=null && (<span style={{marginLeft:'auto',marginRight:12,opacity:.6,letterSpacing:'.04em',fontWeight:500}}>{it.count}</span>)}
                     <span style={{opacity:it.pro?.6:.35,fontSize:(.8*effScale)+'rem'}}>→</span>
@@ -38029,7 +38029,7 @@ Hard requirements:
         const _mmDone = !!_loadedFromMyMusicRef.current;
         const _mmChipSt = {flexShrink:0,padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',lineHeight:1.5,background:'transparent',fontStyle:'normal'};
         const _mmChip = !_mmOn ? null : _mmDone
-          ? (<span className="pf-mm-chip" title={_favT('mmSaved')} style={{..._mmChipSt,border:'1px solid rgba(201,168,76,.22)',color:'rgba(201,168,76,.5)',fontWeight:500}}>♫ ✓ {_favT('mm')}</span>)
+          ? (<span className="pf-mm-chip" title={_favT('mmSaved')} style={{..._mmChipSt,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',border:'1px solid rgba(240,215,138,.9)',color:'#1a1408',fontWeight:700}}>♫ ✓ {_favT('mm')}</span>)
           : (<button className="pf-mm-chip" onClick={(e)=>{ e.stopPropagation(); _openMyMusicSave(); }} title={ts('mymusicSaveAria','Save to My Music')} aria-label={ts('mymusicSaveAria','Save to My Music')} style={{..._mmChipSt,cursor:'pointer',border:'1px solid rgba(201,168,76,.4)',color:'rgba(201,168,76,.8)',fontWeight:500}}>♫ ＋ {_favT('mm')}</button>);
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : _showOffBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>offline</span>) : null;
         return (<>
