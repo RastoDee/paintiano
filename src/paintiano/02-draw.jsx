@@ -3636,7 +3636,7 @@ function _pcFacet(ctx,f,D,rnd){
 function _pcSetup(chords,gc,mode){ const isBW=mode==='bw'; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   return {cn:chords.length,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.5,register:ch?ch.register:0.5,tempo:ch?ch.tempo:0.5,
     col:(t)=>{ const cn=chords.length; const r=_picChord(chords,_pcClamp(Math.floor(t*cn),0,cn-1),gc,isBW); return r; }}; }
-function _pcDraw(ctx,list,reveal,D,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_pcClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_pcR(f.id*17+91001,ss); rnd(); _pcFacet(ctx,f,D,rnd); } }
+function _pcDraw(ctx,list,reveal,D,ss){ const oa=list._objA; list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_pcClamp(reveal,0,1)); for(let i=0;i<(oa?list.length:n);i++){ const f=list[i]; if(i>=n && !f.fig) continue; const rnd=_pcR(f.id*17+91001,ss); rnd(); _pcFacet(ctx,f,D,rnd); } }
 
 // ── Picasso 3 · Guernica (1937) — black, white and grey only: shards flung from
 // the lamp at the top, the light itself a jagged white star; a dark piece is
@@ -3686,11 +3686,12 @@ function picassoPhaseDemoiselles(ctx,CW,CH,chords,lim,gc,ss,mode){
       const side=(pc[0]-cx)/(CW/nf); const u=rr(); let base = u<0.08 ? WHITE : u<0.2 ? SHADOW : (side<-0.15 ? ROSE : side>0.2 ? OCHRE : (rr()<0.5?ROSE:OCHRE));
       let col=isBW?rgb:_pcMix(base,rgb,0.28); if(base===WHITE) col=isBW?[240,236,230]:_pcMix(WHITE,rgb,0.12);
       col=_pcMix(col,[0,0,0],Math.max(0,energy-0.6)*0.5);
-      list.push({id:id++,t,poly,col,hatch:base===SHADOW?0.6:(rr()<0.25?0.3:0),hang:(rr()-.5)*0.8+(side>0?0.8:-0.8),ink:0.9,inkCol:[24,18,16],open:rr()<0.35?Math.floor(rr()*poly.length):-1,lw:Math.max(1.2,D*0.005)}); } });
+      list.push({fig:true,id:id++,t,poly,col,hatch:base===SHADOW?0.6:(rr()<0.25?0.3:0),hang:(rr()-.5)*0.8+(side>0?0.8:-0.8),ink:0.9,inkCol:[24,18,16],open:rr()<0.35?Math.floor(rr()*poly.length):-1,lw:Math.max(1.2,D*0.005)}); } });
   // the curtain behind: blue and white planes cut with a vertical grain, quiet, drawn first (t slightly ahead of the figure beside them)
   const back=[[[0,0],[CW,0],[CW,CH],[0,CH]]]; const bk=[]; const rb=_pcR(94900,ss); rb(); _pcCut(back[0],rb,minA*2.2,0,1.5708,bk);
   for(const poly of bk){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW,0,1); const {rgb}=S.col(t); const u=rb(); const base=u<0.55?BLUE:u<0.8?WHITE:[196,170,140];
     list.push({id:id++,t:_pcClamp(Math.floor(pc[0]/CW*nf)/nf-0.02,0,1),poly,col:isBW?_pcMix(rgb,[200,200,200],0.5):_pcMix(base,rgb,0.18),hatch:base===BLUE?0.35:0,hang:1.4+(rb()-.5)*0.4,ink:0.45,inkCol:[40,36,40],open:rb()<0.4?Math.floor(rb()*poly.length):-1,lw:Math.max(1,D*0.003)}); }
+  list._objA=!!chords._objFirst;   // a Compose take: every figure stands from the first note
   _pcDraw(ctx,list,reveal,D,ss);
   _setCurE(0.5);
 }
@@ -4211,7 +4212,8 @@ function mondrianPhaseTree(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const ang=side>0?-(0.1+r()*0.35):Math.PI+(0.1+r()*0.35); grow(p0,ang,CW*(0.32+r()*0.2),D*(0.026-0.01*u),1); }
   items.sort((a,b)=>a.lvl-b.lvl);
   items.forEach((it,i)=>it.t=i/items.length);
-  for(const it of items){ if(it.t>=reveal) break; _gtTaper(ctx,it.p,it.w0,it.w1,css(mix([30,28,28],raw(it.t),0.12))); }
+  for(const it of items){ if(!chords._objFirst && it.t>=reveal) break;   // a Compose take: the whole tree from the first note
+    _gtTaper(ctx,it.p,it.w0,it.w1,css(mix([30,28,28],raw(it.t),0.12))); }
   ctx.restore();
 }
 
@@ -5695,8 +5697,8 @@ function delaunayPhaseEiffel(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the tower: segments from the foot up, each slightly shifted and tilted, a lattice inside
   const ns=9; let yb=base;
   for(let k=0;k<ns;k++){ const r=_dlR(89500+k,ss); r(); const u0=k/ns, u1=(k+1)/ns, y0=base-(base-top)*u0, y1=base-(base-top)*u1; const wb=w0*Math.pow(1-u0,1.6)+D*0.02, wt=w0*Math.pow(1-u1,1.6)+D*0.015; const sh=(r()-.5)*D*0.09*(1+S.energy), tilt=(r()-.5)*0.28;
-    const c=S.isBW?RED:_dlMix(RED,S.col(0.5+u0*0.5),0.3); const t=0.2+u0*0.7;
-    items.push({t,f:()=>{ ctx.save(); ctx.translate(cx+sh,(y0+y1)/2); ctx.rotate(tilt); const h=(y0-y1); const pts=[[-wb/2,h/2],[-wt/2,-h/2],[wt/2,-h/2],[wb/2,h/2]];
+    const c=S.isBW?RED:_dlMix(RED,S.col(0.5+u0*0.5),0.3); const t0=0.2+u0*0.7, t=chords._objFirst?-1:t0;   // a Compose take: the tower stands from the first note
+    items.push({t,z:t0,f:()=>{ ctx.save(); ctx.translate(cx+sh,(y0+y1)/2); ctx.rotate(tilt); const h=(y0-y1); const pts=[[-wb/2,h/2],[-wt/2,-h/2],[wt/2,-h/2],[wb/2,h/2]];
       ctx.fillStyle=_dlCss(c); _dlPoly(ctx,pts); ctx.fill(); ctx.fillStyle=_dlCss(_dlMix(c,[0,0,0],0.3)); _dlPoly(ctx,[[0,h/2],[0,-h/2],[wt/2,-h/2],[wb/2,h/2]]); ctx.fill();   // the shadowed half
       ctx.save(); _dlPoly(ctx,pts); ctx.clip(); ctx.strokeStyle=_dlCss(_dlMix(c,[0,0,0],0.55),0.6); ctx.lineWidth=Math.max(0.8,D*0.0025); ctx.beginPath(); for(let q=-wb;q<=wb;q+=D*0.022){ ctx.moveTo(q-h,h/2); ctx.lineTo(q+h,-h/2); ctx.moveTo(q+h,h/2); ctx.lineTo(q-h,-h/2); } ctx.stroke(); ctx.restore();
       if(k<2){ ctx.fillStyle=_dlCss(sky); ctx.beginPath(); ctx.arc(0,h/2,wb*0.28,Math.PI,0); ctx.fill(); }   // the arch between the legs
@@ -5705,6 +5707,7 @@ function delaunayPhaseEiffel(ctx,CW,CH,chords,lim,gc,ss,mode){
   const nc=3+Math.round(S.density*3);
   for(let i=0;i<nc;i++){ const r=_dlR(89800+i,ss); r(); const t=0.85+i/nc*0.15; const x=cx+(r()-.5)*CW*0.7, y=CH*(0.08+r()*0.25), rr=D*(0.08+r()*0.08);
     items.push({t,f:()=>{ const c=S.isBW?[236,236,236]:_dlMix([246,244,240],S.col(t),0.12); ctx.fillStyle=_dlCss(c,0.92); for(let k=0;k<4;k++){ ctx.beginPath(); ctx.arc(x+(k-1.5)*rr*0.5,y+((k%2)?-rr*0.2:rr*0.1),rr*(0.55+0.15*(k%2)),0,6.2832); ctx.fill(); } }}); }
+  if(chords._objFirst){ const vis=items.filter(it=>!(it.t>reveal && it.t>0)); vis.sort((a,b)=>(a.z!=null?a.z:a.t)-(b.z!=null?b.z:b.t)); for(const it of vis) it.f(); return; }   // still laid in its place among the buildings
   items.sort((a,b)=>a.t-b.t); for(const it of items){ if(it.t>reveal && it.t>0) break; it.f(); }
 }
 
@@ -8653,7 +8656,9 @@ function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const ss = sessionSeed | 0;
   const _pn = _capN(6);
   const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
+  _monObj = (chords._objFirst && _fpick>=1) ? _picChord(chords, 0, gc, mode==='bw').rgb : null;
   [monetPhaseNympheas,monetPhaseImpression,monetPhaseRouen,monetPhaseMeules,monetPhasePeupliers,monetPhasePont][_fpick](ctx, CW, CH, chords, lim, gc, ss, mode);
+  _monObj = null;
 }
 const _monR=(a,ss)=>_seedRnd(a,ss,0,0);
 const _monClamp=(v,a,b)=>Math.max(a,Math.min(b,v)); const _MON_DN=1.0;    // dab density — loaded touches are broader, fewer of them cover the canvas
@@ -8704,7 +8709,21 @@ function _monUnder(list,CW,CH,ss){
       out.push({x,y,L:d.L*(1.3+r()*0.5),w:d.w*(1.5+r()*0.5),ang:d.ang+(r()-.5)*0.25,c:_monBrk(d.c,0,0.3,false),a:0.62,t:Math.max(0,d.t-0.04),id:id++,ss:d.ss,flat:true}); } }
   return out;
 }
-function _monDraw(ctx,list,reveal,CW,CH){ const under=_monUnder(list,CW,CH,list.length?list[0].ss:0); const all=under.concat(list); all.sort((a,b)=>a.t-b.t||a.id-b.id); const n=Math.max(1,Math.ceil(all.length*_monClamp(reveal,0,1))); for(let i=0;i<n;i++){ const d=all[i]; const rnd=_monR(d.id+70000,d.ss); rnd(); if(d.disc){ _monGlow(ctx,d.x,d.y,d.w*2.2,d.c,0.5); ctx.beginPath(); ctx.fillStyle=`rgba(${d.c[0]|0},${d.c[1]|0},${d.c[2]|0},${d.a})`; ctx.arc(d.x,d.y,d.w/2,0,6.2832); ctx.fill(); continue; } _monDab(ctx,d.x,d.y,d.L*_MON_SZ,d.w*_MON_SZ,d.ang,d.c,d.a,rnd,d.flat); } }
+// A Compose take (chords._objFirst, set by the app): the subject — Impression's sun
+// and boats, the Rouen façade, the haystack, the poplars, the bridge — stands complete
+// from the first note, in that note's colour (its hue and saturation; every touch keeps
+// its own lightness). The music then paints over it touch by touch in its own colours.
+let _monObj = null;
+function _monObjCol(c,F){
+  const hsl=(r,g,b)=>{ r/=255; g/=255; b/=255; const mx=Math.max(r,g,b), mn=Math.min(r,g,b); let h=0, sa=0; const l=(mx+mn)/2; if(mx!==mn){ const d=mx-mn; sa=l>0.5?d/(2-mx-mn):d/(mx+mn); h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4; h/=6; } return [h,sa,l]; };
+  const [h,sa]=hsl(F[0],F[1],F[2]); const l=hsl(c[0],c[1],c[2])[2];
+  const q=l<0.5?l*(1+sa):l+sa-l*sa, p=2*l-q; const f=(t)=>{ t=(t+1)%1; return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p; };
+  return [f(h+1/3)*255, f(h)*255, f(h-1/3)*255];
+}
+function _monDraw(ctx,list,reveal,CW,CH){ const under=_monUnder(list,CW,CH,list.length?list[0].ss:0); const all=under.concat(list); all.sort((a,b)=>a.t-b.t||a.id-b.id); const n=Math.max(1,Math.ceil(all.length*_monClamp(reveal,0,1)));
+  const one=(d)=>{ const rnd=_monR(d.id+70000,d.ss); rnd(); if(d.disc){ _monGlow(ctx,d.x,d.y,d.w*2.2,d.c,0.5); ctx.beginPath(); ctx.fillStyle=`rgba(${d.c[0]|0},${d.c[1]|0},${d.c[2]|0},${d.a})`; ctx.arc(d.x,d.y,d.w/2,0,6.2832); ctx.fill(); return; } _monDab(ctx,d.x,d.y,d.L*_MON_SZ,d.w*_MON_SZ,d.ang,d.c,d.a,rnd,d.flat); };
+  if(_monObj) for(const d of list){ if(d.sub||d.obj) one(Object.assign({}, d, {c:_monObjCol(d.c,_monObj)})); }   // the subject, whole, first
+  for(let i=0;i<n;i++) one(all[i]); }
 function _monMeanM(ch){ const ns=ch&&(ch.n||ch.notes)||[]; if(!ns.length) return 60; let s=0; for(const n of ns) s+=(n.m!==undefined?n.m:n); return s/ns.length; }
 function _monSetup(chords,gc,mode){
   const cn=chords.length, isBW=mode==='bw';
@@ -8761,7 +8780,7 @@ function monetPhaseImpression(ctx,CW,CH,chords,lim,gc,ss,mode){
   for(let i=0;i<Nw;i++){ const r=_monR(61400+i,ss); r(); const t=i/Nw; const c=col(Math.floor(t*cn)); const y=yh+0.02+r()*(0.96-yh);
     list.push({x:CW*_monClamp(t+(r()-.5)*0.5,0.01,0.99),y:CH*y,L:D*(0.045+r()*0.04)*(0.8+energy*0.4),w:D*(0.011+r()*0.008),ang:(r()-.5)*0.2,c:_monBrk(c,(i%3?-1:1),-0.05-(y-yh)*0.35,isBW),a:0.85,t,id:id++,ss}); }
   // the sun, then its reflection — short orange dabs down the water
-  list.push({x:sx,y:sy,L:0,w:D*0.1,ang:0,c:sun,a:1,t:0.985,id:id++,ss,disc:true});
+  list.push({x:sx,y:sy,L:0,w:D*0.1,ang:0,c:sun,a:1,t:0.985,id:id++,ss,disc:true,obj:true});
   const nr=26+Math.round(density*10);
   for(let i=0;i<nr;i++){ const r=_monR(61800+i,ss); r(); const y=yh+0.02+(i/nr)*(0.94-yh); list.push({x:sx+(r()-.5)*D*(0.05+i*0.005),y:CH*y,L:D*(0.035+r()*0.05),w:D*(0.013+r()*0.008),ang:(r()-.5)*0.2,c:_monBrk(sun,+1,r()*0.15,isBW),a:0.95,t:0.75+i/nr*0.23,id:id++,ss,sub:true}); }
   // distant masts in the haze, two boats in the foreground
@@ -8787,7 +8806,7 @@ function monetPhaseRouen(ctx,CW,CH,chords,lim,gc,ss,mode){
     const y=_monClamp(t*0.94+(r()-.5)*0.12,-0.02,0.95), x=x0+r()*(x1-x0)+(r()-.5)*0.04;
     const dx=(x-0.5); const portal = Math.abs(dx)<hw && y>0.66+0.14*(dx/hw)*(dx/hw);
     const lit=x<0.5; let cc = portal ? _monBrk(c,-1,-0.5,isBW) : lit ? _monBrk(c,+1,0.22+(0.9-y)*0.2,isBW) : _monBrk(c,-1,-0.02+(0.9-y)*0.2,isBW);
-    list.push({x:CW*x,y:CH*y,L:D*(0.035+r()*0.03)*(0.85+energy*0.3),w:D*(0.011+r()*0.008),ang:-1.5708+(r()-.5)*0.35,c:cc,a:portal?0.92:0.8+y*0.12,t,id:id++,ss,sub:portal}); }
+    list.push({x:CW*x,y:CH*y,L:D*(0.035+r()*0.03)*(0.85+energy*0.3),w:D*(0.011+r()*0.008),ang:-1.5708+(r()-.5)*0.35,c:cc,a:portal?0.92:0.8+y*0.12,t,id:id++,ss,sub:portal,obj:true}); }
   // the rose window
   for(let i=0;i<16;i++){ const r=_monR(62800+i,ss); r(); const a=i/16*6.2832; list.push({x:CW*(0.5+Math.cos(a)*0.075),y:CH*(0.38+Math.sin(a)*0.06),L:D*0.028,w:D*0.012,ang:a+1.5708,c:_monBrk(col(Math.floor(r()*cn)),+1,0.5,isBW),a:0.8,t:0.35+r()*0.3,id:id++,ss,sub:true}); }
   // sky around, long pale horizontal dabs
@@ -9601,7 +9620,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
 
   // Drum bridge — semi-circular arch spanning canvas, water below. The arch
   // is drawn in over the first fifth of the piece.
-  ctx.globalAlpha = _hkWin(R_, 0.01, 0.14);
+  ctx.globalAlpha = chords._objFirst ? 1 : _hkWin(R_, 0.01, 0.14);   // a Compose take: the arch stands from the first note
   const bridgeCY = CH * 0.55;
   const bridgeRadius = CW * 0.5;
   const bridgeCX = CW * 0.5;
@@ -9629,7 +9648,7 @@ function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
   // Bridge ribbing — radial spokes from centre to inner arc. Spoke ANGLES come
   // from the full-song rib count (so ribs never slide); reveal only adds ribs.
   const ribCountFull = Math.min(16, Math.max(6, Math.floor(cn / 5)));
-  const ribCount = 1 + Math.round((ribCountFull-1) * _hkWin(R_, 0.12, 0.45));
+  const ribCount = 1 + Math.round((ribCountFull-1) * (chords._objFirst ? 1 : _hkWin(R_, 0.12, 0.45)));
   ctx.strokeStyle = HOKUSAI_PRUSSIAN;
   ctx.lineWidth = 0.9;
   for(let i = 1; i < ribCount; i++){
@@ -16808,7 +16827,7 @@ function bauhausPhaseHomage(ctx,CW,CH,chords,lim,gc,ss,mode){
   // a 10-unit square: inner squares 8/6/4 units, side gaps equal, the bottom gap half a side gap, the top gap one and a half
   const side=Math.min(CW,CH), U=side/10, ox=(CW-side)/2, oy=(CH-side)/2+(CH>CW?(CH-side)*0.12:0);
   ctx.save(); ctx.fillStyle=_bhxCss([236,232,222]); ctx.fillRect(0,0,CW,CH);
-  for(let k=0;k<4;k++){ const f=_bhxClamp((reveal-k/4)*4,0,1); if(f<=0) break;
+  for(let k=0;k<4;k++){ const f=chords._objFirst ? 1 : _bhxClamp((reveal-k/4)*4,0,1);   // a Compose take: all four squares from the first note if(f<=0) break;
     if(k===0){ ctx.fillStyle=_bhxCss(cols[0]); ctx.fillRect(0,CH*(1-f),CW,CH*f); continue; }
     const s=(10-2*k)*U, x=ox+k*U, y=oy+10*U-0.5*k*U-s; ctx.fillStyle=_bhxCss(cols[k]); ctx.fillRect(x,y+s*(1-f),s,s*f); }
   // the knife: short horizontal pulls, a shade lighter or darker, over the whole surface

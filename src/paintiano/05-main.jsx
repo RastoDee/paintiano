@@ -4003,7 +4003,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _chordsPaint = _takeSkip(effectiveStyle) ? _chordsPaint0 : _takePad(_chordsPaint0);
     // A COMPOSE take (not Mic): Pollock's and Monet's first variants paint each
     // stroke in the exact colour of its note (see _exactTone in 02-draw).
-    if(_chordsPaint!==_chordsPaint0 && _chordsPaint._livePad && draftOwnerRef.current==='compose') _chordsPaint._exactTone = true;
+    // …and a painting with a subject (Monet's haystack, the Eiffel Tower, Albers' squares…) stands
+    // complete from the first note, in its colour (see _objFirst in 02-draw).
+    if(_chordsPaint!==_chordsPaint0 && _chordsPaint._livePad && draftOwnerRef.current==='compose'){ _chordsPaint._exactTone = true; _chordsPaint._objFirst = true; }
     // Helper: draw a single chord at its grid cell. Pulled out for the
     // incremental-append fast path below.
     const drawOne = (chord) => {
@@ -11123,7 +11125,7 @@ Hard requirements:
       // A recorded take exports exactly the painting on screen: its frame and its plan (see _takePad).
       if(_takeInfo(chords) && _takePainter(style) && !_takeSkip(style)){ const _tf=_takeFrame(); if(_tf){ CW=_tf.CW; CH=_tf.CH; } }
       const _expChords=_takeSkip(style) ? chords : _takePad(chords);
-      if(_expChords!==chords && _expChords._livePad && draftOwnerRef.current==='compose') _expChords._exactTone = true;   // as on screen
+      if(_expChords!==chords && _expChords._livePad && draftOwnerRef.current==='compose'){ _expChords._exactTone = true; _expChords._objFirst = true; }   // as on screen
       const _liveE = !!(_takeInfo(chords) && !_takeSkip(style));   // live take: causal note energies, as on screen
       // sizeMode: 'web' = 4× (good for screens/social), 'print' = A1 print
       let SCALE, label, dpi;
