@@ -501,7 +501,10 @@ const PF_STYLE = `
             grid-area: stage;
             max-width: 100% !important;
             margin-left: 0; margin-right: 0;
-            align-self: center;
+            /* top of the stage, not its middle: the stage spans the rows of the
+               long artist column, so a centred painting sank far below the
+               header whenever it was shorter than that column (landscape phone) */
+            align-self: start;
             justify-self: center;
           }
           /* Image-scan mode: the <img> overlay (position:absolute, inset:0) fills
@@ -1482,6 +1485,21 @@ async function favRemove(id){
         const all = fs.getAll();
         all.onsuccess = ()=>{ if(!(all.result || []).some(r=> r.id!==id && r.pk===rec.pk)) tx.objectStore('pieces').delete(rec.pk); };
       };
+      tx.oncomplete = ()=> resolve();
+      tx.onerror    = ()=> resolve();
+    });
+    return true;
+  }catch(_){ return false; }
+}
+
+// favClear() → removes every favorite and every song behind them, at once.
+async function favClear(){
+  try{
+    const db = await favOpen();
+    await new Promise((resolve)=>{
+      const tx = db.transaction(['favs','pieces'], 'readwrite');
+      tx.objectStore('favs').clear();
+      tx.objectStore('pieces').clear();
       tx.oncomplete = ()=> resolve();
       tx.onerror    = ()=> resolve();
     });

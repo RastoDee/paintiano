@@ -256,15 +256,15 @@ const SIG_I18N = {
 
 // ── FAVORITES ─────────────────────────────────────────────────────────────────
 const FAV_I18N = {
-  EN:{label:'Favorites',close:'Close',saved:'Saved to Favorites',removed:'Removed from Favorites',undo:'Undo',add:'Add to Favorites',del:'Remove from Favorites',empty:'No favorites yet. Tap ♡ at the top left of a finished painting to keep it here.',today:'saved today',yday:'saved yesterday',on:'saved {d}',prev:'Previous painting',next:'Next painting',lost:'This painting can’t be opened.',failed:'Could not save — private browsing blocks storage.',mm:'My Music',mmSaved:'Saved in My Music',tones:{pure:'Pure',real:'Real',pastel:'Pastel'}},
-  SK:{label:'Obľúbené',close:'Zavrieť',saved:'Uložené do Obľúbených',removed:'Odstránené z Obľúbených',undo:'Späť',add:'Pridať do Obľúbených',del:'Odstrániť z Obľúbených',empty:'Zatiaľ žiadne obľúbené. Ťukni na ♡ vľavo hore na hotovom obraze a ostane tu.',today:'uložené dnes',yday:'uložené včera',on:'uložené {d}',prev:'Predchádzajúci obraz',next:'Ďalší obraz',lost:'Tento obraz sa nedá otvoriť.',failed:'Nedá sa uložiť — súkromné prehliadanie blokuje úložisko.',mm:'Moja hudba',mmSaved:'Uložené v Mojej hudbe',tones:{pure:'Čistý',real:'Skutočný',pastel:'Pastelový'}},
-  DE:{label:'Favoriten',close:'Schließen',saved:'Zu Favoriten hinzugefügt',removed:'Aus Favoriten entfernt',undo:'Rückgängig',add:'Zu Favoriten hinzufügen',del:'Aus Favoriten entfernen',empty:'Noch keine Favoriten. Tippe bei einem fertigen Bild oben links auf ♡, um es hier zu behalten.',today:'heute gespeichert',yday:'gestern gespeichert',on:'gespeichert am {d}',prev:'Vorheriges Bild',next:'Nächstes Bild',lost:'Dieses Bild lässt sich nicht öffnen.',failed:'Speichern nicht möglich — privates Surfen blockiert den Speicher.',mm:'Meine Musik',mmSaved:'In Meine Musik gespeichert',tones:{pure:'Pur',real:'Real',pastel:'Pastell'}},
-  FR:{label:'Favoris',close:'Fermer',saved:'Ajouté aux favoris',removed:'Retiré des favoris',undo:'Annuler',add:'Ajouter aux favoris',del:'Retirer des favoris',empty:'Pas encore de favoris. Touche ♡ en haut à gauche d’une peinture terminée pour la garder ici.',today:'enregistré aujourd’hui',yday:'enregistré hier',on:'enregistré le {d}',prev:'Peinture précédente',next:'Peinture suivante',lost:'Cette peinture ne peut pas être ouverte.',failed:'Enregistrement impossible — la navigation privée bloque le stockage.',mm:'Ma musique',mmSaved:'Enregistré dans Ma musique',tones:{pure:'Pur',real:'Réel',pastel:'Pastel'}},
-  ES:{label:'Favoritos',close:'Cerrar',saved:'Guardado en Favoritos',removed:'Quitado de Favoritos',undo:'Deshacer',add:'Añadir a Favoritos',del:'Quitar de Favoritos',empty:'Aún no hay favoritos. Toca ♡ arriba a la izquierda de una pintura terminada para guardarla aquí.',today:'guardado hoy',yday:'guardado ayer',on:'guardado el {d}',prev:'Pintura anterior',next:'Pintura siguiente',lost:'Esta pintura no se puede abrir.',failed:'No se pudo guardar — la navegación privada bloquea el almacenamiento.',mm:'Mi música',mmSaved:'Guardado en Mi música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'}},
-  PT:{label:'Favoritos',close:'Fechar',saved:'Guardado nos Favoritos',removed:'Removido dos Favoritos',undo:'Desfazer',add:'Adicionar aos Favoritos',del:'Remover dos Favoritos',empty:'Ainda não há favoritos. Toca em ♡ no canto superior esquerdo de uma pintura terminada para a guardares aqui.',today:'guardado hoje',yday:'guardado ontem',on:'guardado a {d}',prev:'Pintura anterior',next:'Próxima pintura',lost:'Não é possível abrir esta pintura.',failed:'Não foi possível guardar — a navegação privada bloqueia o armazenamento.',mm:'Minha música',mmSaved:'Guardado em Minha música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'}},
-  zh:{label:'收藏',close:'关闭',saved:'已加入收藏',removed:'已从收藏中移除',undo:'撤销',add:'加入收藏',del:'从收藏中移除',empty:'还没有收藏。在完成的画作左上角轻点 ♡，就能把它留在这里。',today:'今天保存',yday:'昨天保存',on:'{d} 保存',prev:'上一幅',next:'下一幅',lost:'这幅画无法打开。',failed:'无法保存——无痕浏览阻止了存储。',mm:'我的音乐',mmSaved:'已保存到我的音乐',tones:{pure:'纯净',real:'真实',pastel:'柔和'}},
-  zhTW:{label:'收藏',close:'關閉',saved:'已加入收藏',removed:'已從收藏中移除',undo:'復原',add:'加入收藏',del:'從收藏中移除',empty:'還沒有收藏。在完成的畫作左上角輕點 ♡，就能把它留在這裡。',today:'今天儲存',yday:'昨天儲存',on:'{d} 儲存',prev:'上一幅',next:'下一幅',lost:'這幅畫無法開啟。',failed:'無法儲存——無痕瀏覽阻擋了儲存空間。',mm:'我的音樂',mmSaved:'已儲存到我的音樂',tones:{pure:'純淨',real:'真實',pastel:'柔和'}},
-  ja:{label:'お気に入り',close:'閉じる',saved:'お気に入りに保存しました',removed:'お気に入りから削除しました',undo:'元に戻す',add:'お気に入りに追加',del:'お気に入りから削除',empty:'お気に入りはまだありません。完成した絵の左上の ♡ をタップすると、ここに残ります。',today:'今日保存',yday:'昨日保存',on:'{d} に保存',prev:'前の絵',next:'次の絵',lost:'この絵は開けません。',failed:'保存できません——プライベートブラウズでは保存領域が使えません。',mm:'マイミュージック',mmSaved:'マイミュージックに保存済み',tones:{pure:'ピュア',real:'リアル',pastel:'パステル'}},
+  EN:{label:'Favorites',close:'Close',saved:'Saved to Favorites',removed:'Removed from Favorites',undo:'Undo',add:'Add to Favorites',del:'Remove from Favorites',empty:'No favorites yet. Tap ♡ at the top left of a finished painting to keep it here.',today:'saved today',yday:'saved yesterday',on:'saved {d}',prev:'Previous painting',next:'Next painting',lost:'This painting can’t be opened.',failed:'Could not save — private browsing blocks storage.',mm:'My Music',mmSaved:'Saved in My Music',tones:{pure:'Pure',real:'Real',pastel:'Pastel'},clearAll:'Clear all',clearAllQ:'Clear all {n}?',clearedAll:'All {n} favorites removed'},
+  SK:{label:'Obľúbené',close:'Zavrieť',saved:'Uložené do Obľúbených',removed:'Odstránené z Obľúbených',undo:'Späť',add:'Pridať do Obľúbených',del:'Odstrániť z Obľúbených',empty:'Zatiaľ žiadne obľúbené. Ťukni na ♡ vľavo hore na hotovom obraze a ostane tu.',today:'uložené dnes',yday:'uložené včera',on:'uložené {d}',prev:'Predchádzajúci obraz',next:'Ďalší obraz',lost:'Tento obraz sa nedá otvoriť.',failed:'Nedá sa uložiť — súkromné prehliadanie blokuje úložisko.',mm:'Moja hudba',mmSaved:'Uložené v Mojej hudbe',tones:{pure:'Čistý',real:'Skutočný',pastel:'Pastelový'},clearAll:'Vymazať všetky',clearAllQ:'Vymazať všetky ({n})?',clearedAll:'Všetky obľúbené odstránené ({n})'},
+  DE:{label:'Favoriten',close:'Schließen',saved:'Zu Favoriten hinzugefügt',removed:'Aus Favoriten entfernt',undo:'Rückgängig',add:'Zu Favoriten hinzufügen',del:'Aus Favoriten entfernen',empty:'Noch keine Favoriten. Tippe bei einem fertigen Bild oben links auf ♡, um es hier zu behalten.',today:'heute gespeichert',yday:'gestern gespeichert',on:'gespeichert am {d}',prev:'Vorheriges Bild',next:'Nächstes Bild',lost:'Dieses Bild lässt sich nicht öffnen.',failed:'Speichern nicht möglich — privates Surfen blockiert den Speicher.',mm:'Meine Musik',mmSaved:'In Meine Musik gespeichert',tones:{pure:'Pur',real:'Real',pastel:'Pastell'},clearAll:'Alle löschen',clearAllQ:'Alle {n} löschen?',clearedAll:'Alle {n} Favoriten entfernt'},
+  FR:{label:'Favoris',close:'Fermer',saved:'Ajouté aux favoris',removed:'Retiré des favoris',undo:'Annuler',add:'Ajouter aux favoris',del:'Retirer des favoris',empty:'Pas encore de favoris. Touche ♡ en haut à gauche d’une peinture terminée pour la garder ici.',today:'enregistré aujourd’hui',yday:'enregistré hier',on:'enregistré le {d}',prev:'Peinture précédente',next:'Peinture suivante',lost:'Cette peinture ne peut pas être ouverte.',failed:'Enregistrement impossible — la navigation privée bloque le stockage.',mm:'Ma musique',mmSaved:'Enregistré dans Ma musique',tones:{pure:'Pur',real:'Réel',pastel:'Pastel'},clearAll:'Tout effacer',clearAllQ:'Effacer les {n} ?',clearedAll:'Les {n} favoris ont été retirés'},
+  ES:{label:'Favoritos',close:'Cerrar',saved:'Guardado en Favoritos',removed:'Quitado de Favoritos',undo:'Deshacer',add:'Añadir a Favoritos',del:'Quitar de Favoritos',empty:'Aún no hay favoritos. Toca ♡ arriba a la izquierda de una pintura terminada para guardarla aquí.',today:'guardado hoy',yday:'guardado ayer',on:'guardado el {d}',prev:'Pintura anterior',next:'Pintura siguiente',lost:'Esta pintura no se puede abrir.',failed:'No se pudo guardar — la navegación privada bloquea el almacenamiento.',mm:'Mi música',mmSaved:'Guardado en Mi música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'},clearAll:'Borrar todos',clearAllQ:'¿Borrar los {n}?',clearedAll:'Se quitaron los {n} favoritos'},
+  PT:{label:'Favoritos',close:'Fechar',saved:'Guardado nos Favoritos',removed:'Removido dos Favoritos',undo:'Desfazer',add:'Adicionar aos Favoritos',del:'Remover dos Favoritos',empty:'Ainda não há favoritos. Toca em ♡ no canto superior esquerdo de uma pintura terminada para a guardares aqui.',today:'guardado hoje',yday:'guardado ontem',on:'guardado a {d}',prev:'Pintura anterior',next:'Próxima pintura',lost:'Não é possível abrir esta pintura.',failed:'Não foi possível guardar — a navegação privada bloqueia o armazenamento.',mm:'Minha música',mmSaved:'Guardado em Minha música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'},clearAll:'Apagar todos',clearAllQ:'Apagar os {n}?',clearedAll:'Os {n} favoritos foram removidos'},
+  zh:{label:'收藏',close:'关闭',saved:'已加入收藏',removed:'已从收藏中移除',undo:'撤销',add:'加入收藏',del:'从收藏中移除',empty:'还没有收藏。在完成的画作左上角轻点 ♡，就能把它留在这里。',today:'今天保存',yday:'昨天保存',on:'{d} 保存',prev:'上一幅',next:'下一幅',lost:'这幅画无法打开。',failed:'无法保存——无痕浏览阻止了存储。',mm:'我的音乐',mmSaved:'已保存到我的音乐',tones:{pure:'纯净',real:'真实',pastel:'柔和'},clearAll:'全部清除',clearAllQ:'清除全部 {n} 幅？',clearedAll:'已移除全部 {n} 幅收藏'},
+  zhTW:{label:'收藏',close:'關閉',saved:'已加入收藏',removed:'已從收藏中移除',undo:'復原',add:'加入收藏',del:'從收藏中移除',empty:'還沒有收藏。在完成的畫作左上角輕點 ♡，就能把它留在這裡。',today:'今天儲存',yday:'昨天儲存',on:'{d} 儲存',prev:'上一幅',next:'下一幅',lost:'這幅畫無法開啟。',failed:'無法儲存——無痕瀏覽阻擋了儲存空間。',mm:'我的音樂',mmSaved:'已儲存到我的音樂',tones:{pure:'純淨',real:'真實',pastel:'柔和'},clearAll:'全部清除',clearAllQ:'清除全部 {n} 幅？',clearedAll:'已移除全部 {n} 幅收藏'},
+  ja:{label:'お気に入り',close:'閉じる',saved:'お気に入りに保存しました',removed:'お気に入りから削除しました',undo:'元に戻す',add:'お気に入りに追加',del:'お気に入りから削除',empty:'お気に入りはまだありません。完成した絵の左上の ♡ をタップすると、ここに残ります。',today:'今日保存',yday:'昨日保存',on:'{d} に保存',prev:'前の絵',next:'次の絵',lost:'この絵は開けません。',failed:'保存できません——プライベートブラウズでは保存領域が使えません。',mm:'マイミュージック',mmSaved:'マイミュージックに保存済み',tones:{pure:'ピュア',real:'リアル',pastel:'パステル'},clearAll:'すべて削除',clearAllQ:'{n} 枚すべて削除？',clearedAll:'お気に入り {n} 枚をすべて削除しました'},
 };
 const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',zhTW:'zh-TW',ja:'ja'};
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
@@ -3286,6 +3286,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
+  // Landscape / computer (≥769 px, palettes left, artists right): PICK A LOOK folds
+  // both columns away as well — open by default there, the last choice remembered.
+  // A fresh Play folds it, as on a phone held upright; a new canvas starts from the choice remembered.
+  const _deskStripPref = ()=>{ try{ return localStorage.getItem('paintiano_desk_strip')!=='0'; }catch(_){ return true; } };
+  const [deskStripOpen, setDeskStripOpen] = useState(_deskStripPref);
   // Cockpit-roll nudge: a soft gold pulse on the collapsed "choose look" bar,
   // shown until the user opens the roll for the first time ever.
   const [cockpitOpened, setCockpitOpened] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_cockpit_opened')==='1'; }catch(_){ return false; } });
@@ -4530,7 +4535,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _favToastShow = (o)=>{
     if(favToastTimerRef.current) clearTimeout(favToastTimerRef.current);
     setFavToast(o);
-    favToastTimerRef.current=setTimeout(()=>{ favToastTimerRef.current=null; setFavToast(null); }, o.kind==='removed' ? 4500 : 2200);
+    favToastTimerRef.current=setTimeout(()=>{ favToastTimerRef.current=null; setFavToast(null); }, o.kind==='cleared' ? 7000 : o.kind==='removed' ? 4500 : 2200);
   };
   // A finished painting on the canvas: everything played is drawn, nothing plays
   // or records, the piano is closed, and it is a painted canvas (no image scan).
@@ -4627,10 +4632,43 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _favClose = ()=>{
     const gone=favGone;
     if(gone!=null) setFavs(l=>l.filter(x=>x.id!==gone));
-    setFavGone(null); setFavView(null); setFavFs(false); setFavToast(null); setFavBad(false);
+    setFavGone(null); setFavView(null); setFavFs(false); setFavToast(null); setFavBad(false); _favDisarm();
+  };
+  // CLEAR ALL in the viewer: two taps, like Clear everywhere — the first turns it
+  // red and asks (it settles back after 3 s), the second removes every favorite.
+  // Undo brings them all back (the songs are kept in memory until the toast goes).
+  const [favClearArmed, setFavClearArmed] = useState(false);
+  const favClearTimerRef = useRef(null);
+  const _favDisarm = ()=>{ if(favClearTimerRef.current){ clearTimeout(favClearTimerRef.current); favClearTimerRef.current=null; } setFavClearArmed(false); };
+  const _favClearAll = async ()=>{
+    const list=favs.filter(x=>x.id!==favGone);
+    if(!list.length) return;
+    if(!favClearArmed){
+      setFavClearArmed(true);
+      if(favClearTimerRef.current) clearTimeout(favClearTimerRef.current);
+      favClearTimerRef.current=setTimeout(()=>{ favClearTimerRef.current=null; setFavClearArmed(false); }, 3000);
+      return;
+    }
+    _favDisarm();
+    const pieces={};
+    for(const f of list){ if(!pieces[f.pk]) pieces[f.pk]=favPiecesRef.current.get(f.pk) || await favPiece(f.pk); }
+    await favClear();
+    favPiecesRef.current.clear();
+    setFavs([]); setFavGone(null); setFavBad(false); setFavFs(false); setFavView({i:0});
+    _favToastShow({kind:'cleared', n:list.length, undoAll:{list, pieces, i:(favView ? favView.i : 0)}});
+  };
+  const _favUndoAll = async (u)=>{
+    if(favToastTimerRef.current){ clearTimeout(favToastTimerRef.current); favToastTimerRef.current=null; }
+    setFavToast(null);
+    if(!u) return;
+    const back=[];
+    for(const f of u.list){ const pc=u.pieces[f.pk]; if(pc && await favAdd(f, pc.chords)) back.push(f); }
+    setFavs(l=> l.concat(back.filter(f=>!l.some(x=>x.id===f.id))).sort((x,y)=>(y.at||0)-(x.at||0)));
+    if(favViewRef.current) setFavView({i:Math.min(u.i, Math.max(0, back.length-1))});
   };
   const _favMove = (d)=>{
     const v=favViewRef.current; if(!v) return;
+    if(favClearArmed) _favDisarm();
     let list=favs, i=v.i;
     if(favGone!=null && list[i] && list[i].id===favGone){ list=list.filter(x=>x.id!==favGone); setFavs(list); setFavGone(null); if(d<0) i-=1; }
     else i+=d;
@@ -4755,9 +4793,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   };
   const _favMeta = (f)=>{ const m=String(t(f.mode)||f.mode||''); return [m.charAt(0).toUpperCase()+m.slice(1), (_favT('tones')||{})[f.tone]||f.tone, _favWhen(f)].filter(Boolean).join(' · '); };
   const _favToastEl = ()=> favToast ? (
-    <div role="status" aria-live="polite" onClick={e=>e.stopPropagation()} style={{position:'absolute',left:'50%',bottom:12,transform:'translateX(-50%)',zIndex:13,display:'inline-flex',alignItems:'center',gap:10,padding:(favToast.kind==='removed' && favToast.undo)?'6px 6px 6px 16px':'8px 16px',borderRadius:22,background:'rgba(14,11,22,.94)',border:'1px solid rgba(201,168,76,.4)',boxShadow:'0 6px 22px rgba(0,0,0,.5)',color:favToast.kind==='failed'?'#ff9ab4':'#f0d78a',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',letterSpacing:'.03em',whiteSpace:'nowrap',lineHeight:1.3,maxWidth:'92%'}}>
-      <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{favToast.kind==='saved' ? '♥ '+_favT('saved') : favToast.kind==='removed' ? _favT('removed') : _favT('failed')}</span>
+    <div role="status" aria-live="polite" onClick={e=>e.stopPropagation()} style={{position:'absolute',left:'50%',bottom:12,transform:'translateX(-50%)',zIndex:13,display:'inline-flex',alignItems:'center',gap:10,padding:((favToast.kind==='removed' && favToast.undo) || (favToast.kind==='cleared' && favToast.undoAll))?'6px 6px 6px 16px':'8px 16px',borderRadius:22,background:'rgba(14,11,22,.94)',border:'1px solid rgba(201,168,76,.4)',boxShadow:'0 6px 22px rgba(0,0,0,.5)',color:favToast.kind==='failed'?'#ff9ab4':'#f0d78a',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',letterSpacing:'.03em',whiteSpace:'nowrap',lineHeight:1.3,maxWidth:'92%'}}>
+      <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{favToast.kind==='saved' ? '♥ '+_favT('saved') : favToast.kind==='removed' ? _favT('removed') : favToast.kind==='cleared' ? _favT('clearedAll').replace('{n}', favToast.n) : _favT('failed')}</span>
       {favToast.kind==='saved' && (<span style={{opacity:.55}}>· {favToast.n}</span>)}
+      {favToast.kind==='cleared' && favToast.undoAll && (<button onClick={(e)=>{ e.stopPropagation(); _favUndoAll(favToast.undoAll); }} style={{padding:'5px 12px',borderRadius:16,border:'1px solid rgba(240,192,64,.6)',background:'transparent',color:'#f0c040',fontFamily:'inherit',fontSize:'1em',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'}}>{_favT('undo')}</button>)}
       {favToast.kind==='removed' && favToast.undo && (<button onClick={(e)=>{ e.stopPropagation(); _favUndo(favToast.undo); }} style={{padding:'5px 12px',borderRadius:16,border:'1px solid rgba(240,192,64,.6)',background:'transparent',color:'#f0c040',fontFamily:'inherit',fontSize:'1em',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'}}>{_favT('undo')}</button>)}
     </div>) : null;
   // ♫ MY MUSIC chip (next to the song title): opens the save sheet for the loaded file.
@@ -6128,6 +6167,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // text moods only; Vary is offered for both. Cleared by text-mood entry points.
   const [moodFromImg,setMoodFromImg]=useState(false);
   const moodFromImgRef=useRef(false); useEffect(()=>{ moodFromImgRef.current=moodFromImg; },[moodFromImg]);
+  // Folded on a wide screen: only where its PICK A LOOK toggle is shown (music
+  // pieces with their title row — not an image scan, Compose or Mic).
+  const deskFolded = isDesktop && !basicMode && !deskStripOpen && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive
+    && (!!info || (chords.length>0 && (playing||holdPaused) && !micPainting && !micListening));
 
   // ── Phase-1 multi-draft: MOOD source stash ─────────────────────────────────
   // Parallel to the compose/sing/listen draft stashes, but for the Mood SOURCE
@@ -9344,7 +9387,7 @@ Hard requirements:
     // full focus. Only on fresh Play (not resume): the user can re-open the strip
     // during playback to change colour/style, and we must NOT yank it shut again —
     // nothing here closes it mid-play, so it stays open until the next fresh Play.
-    if(!isResume) setStripOpen(false);
+    if(!isResume){ setStripOpen(false); setDeskStripOpen(false); }
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -12348,8 +12391,10 @@ Hard requirements:
     if(isActiveView){ requestAnimationFrame(()=>setStamp(s=>s+1)); }
     // Attributes (color/style/scan) live in the canvas strip. The strip now
     // defaults to COLLAPSED on every canvas entry (all modes) — the user
-    // opens it via the ▾ header. Desktop is unaffected (renders via isDesktop).
+    // opens it via the ▾ header. Wide screens start from their remembered choice
+    // (open unless folded by hand) — Play folds them, as here.
     setStripOpen(false);
+    setDeskStripOpen(_deskStripPref());
   },[isActiveView,composeMode,micActive]);
   const isSetupView = !isActiveView;
   // Shared VARY action — called from the dock chip and the fullscreen CTA.
@@ -12863,12 +12908,12 @@ Hard requirements:
           <button onClick={(e)=>{ e.stopPropagation(); _favMove(dir); }} aria-label={dir<0 ? _favT('prev') : _favT('next')} title={dir<0 ? _favT('prev') : _favT('next')}
             style={{...sq,top:'50%',[dir<0?'left':'right']:8,transform:'translateY(-50%)',borderRadius:17,background:'rgba(6,6,12,.5)',border:'1px solid rgba(201,168,76,.28)',color:'rgba(240,222,180,.92)',fontSize:'1.15rem',lineHeight:1,fontFamily:'inherit'}}>{dir<0 ? '‹' : '›'}</button>) : null;
         const who = f ? _favWho(f) : '';
-        const count = N>0 ? (<span style={{opacity:.85,letterSpacing:'.08em'}}>{Math.min(i+1,N)} / {N}</span>) : null;
+        const count = N>0 ? (<span style={{opacity:.6,fontWeight:500,letterSpacing:'.08em'}}>{Math.min(i+1,N)} / {N}</span>) : null;
         return (
         <div className="pf-fav-stage" style={{width:'100%',maxWidth:560,boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'stretch',paddingBottom:'calc(92px + env(safe-area-inset-bottom))'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:14}}>
             <button onClick={_favClose} className="pf-lift" style={{...pill,cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(242,238,232,.78)'}}>✕ {_favT('close')}</button>
-            <div style={{...pill,border:'1px solid rgba(201,168,76,.6)',color:'#f0c040',background:'rgba(201,168,76,.07)'}}>♥ {_favT('label')}{count}</div>
+            <div role="heading" aria-level="2" style={{display:'inline-flex',alignItems:'baseline',gap:10,fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#f0c040'}}>♥ {_favT('label')}{count}</div>
           </div>
           <div aria-disabled="true" style={{textAlign:'center',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.3)',marginBottom:10,userSelect:'none'}}>{ts('pickLook','Pick a look')} ▾</div>
           {N>1 && (<div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:5,marginBottom:14}}>{Array.from({length:dotN},(_,k)=>{ const on=(d0+k)===i; return (<span key={k} style={{width:on?14:5,height:5,borderRadius:3,background:on?'#f0c040':'rgba(242,238,232,.22)',transition:'width .2s ease'}}/>); })}
@@ -12876,6 +12921,7 @@ Hard requirements:
           {N===0 ? (
             <div style={{textAlign:'center',padding:'56px 28px',color:'rgba(242,238,232,.62)',fontSize:(.7*effScale)+'rem',lineHeight:1.6}}>
               <div aria-hidden="true" style={{fontSize:'2.2rem',color:'rgba(201,168,76,.6)',marginBottom:10,lineHeight:1}}>♡</div>{_favT('empty')}
+              {favToast && (<div style={{position:'relative',height:52,marginTop:22}}>{_favToastEl()}</div>)}
             </div>
           ) : (<>
             <div style={{width:'100%',maxWidth:frameW,margin:'0 auto 4px',fontSize:(.57*effScale)+'rem',color:'rgba(242,238,232,.52)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{f ? _favTitle(f) : ''}</div>
@@ -12890,7 +12936,7 @@ Hard requirements:
                         <svg width="17" height="17" viewBox="0 0 24 24" fill={gone?'none':'currentColor'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                       </button>
                     )}
-                    <div style={{...pill,height:30,padding:'0 12px',border:'1px solid rgba(201,168,76,.55)',color:'#f0c040',background:'rgba(6,6,12,.6)'}}>{count}</div>
+                    <div style={{fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',color:'#f0c040',whiteSpace:'nowrap'}}>{count}</div>
                   </div>
                   <div style={{fontSize:(.62*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap',overflow:'hidden'}}>{(isCoarse && N>1) ? t('advSwipeHint') : ''}</div>
                   <button onClick={(e)=>{ e.stopPropagation(); setFavFs(false); }} aria-label="exit fullscreen" title="Exit fullscreen" style={{width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:'rgba(6,6,12,.6)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',padding:0,flexShrink:0,fontSize:'1rem',fontFamily:'inherit'}}>✕</button>
@@ -12927,10 +12973,10 @@ Hard requirements:
               </div>
             )}
           </>)}
-          <div role="region" aria-label={_favT('label')} style={{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'10px 8px calc(12px + env(safe-area-inset-bottom))',display:'flex',justifyContent:'center',alignItems:'center',gap:8}}>
+          <div role="region" aria-label={_favT('label')} style={{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'10px 8px calc(12px + env(safe-area-inset-bottom))',display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:8}}>
             <button disabled aria-disabled="true" className="pf-tx-play" style={{...txStyle('primary',{effScale,primary:true,disabled:true}),cursor:'default'}}><TxIcon n="play" s={15*effScale}/>{t('play')}</button>
             <button onClick={()=>{ setFavFs(false); setShowSizePicker(true); }} disabled={!f||favBad} className="pf-lift pf-tx-save" style={txStyle('save',{effScale,disabled:!f||favBad})}><TxIcon n="save" s={14*effScale}/>{t('save')}</button>
-            <button disabled aria-disabled="true" className="pf-tx-clear" style={{...txStyle('ghost',{effScale,disabled:true}),cursor:'default'}}>{t('clear')}</button>
+            <button onClick={_favClearAll} disabled={!(N - (favGone!=null ? 1 : 0))} className="pf-lift pf-tx-clear" title={_favT('clearAll')} style={favClearArmed ? txStyle('danger',{effScale,on:true}) : txStyle('ghost',{effScale,disabled:!(N - (favGone!=null ? 1 : 0))})}>{favClearArmed ? _favT('clearAllQ').replace('{n}', N - (favGone!=null ? 1 : 0)) : _favT('clearAll')}</button>
           </div>
         </div>);
       })()}
@@ -13492,7 +13538,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _stageNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
         )}
         </>)}
-        {(stripOpen || isDesktop) && (
+        {(isDesktop ? !deskFolded : stripOpen) && (
         <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Color */}
@@ -14349,7 +14395,7 @@ Hard requirements:
         const _mmDone = !!_loadedFromMyMusicRef.current;
         const _mmChipSt = {flexShrink:0,padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',lineHeight:1.5,background:'transparent',fontStyle:'normal'};
         const _mmChip = !_mmOn ? null : _mmDone
-          ? (<span className="pf-mm-chip" title={_favT('mmSaved')} style={{..._mmChipSt,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',border:'1px solid rgba(240,215,138,.9)',color:'#1a1408',fontWeight:700}}>♫ ✓ {_favT('mm')}</span>)
+          ? (<span className="pf-mm-chip" title={_favT('mmSaved')} style={{..._mmChipSt,background:'rgba(201,168,76,.16)',border:'1px solid rgba(240,215,138,.6)',color:'#f0d78a',fontWeight:600}}>♫ ✓ {_favT('mm')}</span>)
           : (<button className="pf-mm-chip" onClick={(e)=>{ e.stopPropagation(); _openMyMusicSave(); }} title={ts('mymusicSaveAria','Save to My Music')} aria-label={ts('mymusicSaveAria','Save to My Music')} style={{..._mmChipSt,cursor:'pointer',border:'1px solid rgba(201,168,76,.4)',color:'rgba(201,168,76,.8)',fontWeight:500}}>♫ ＋ {_favT('mm')}</button>);
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : _showOffBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>offline</span>) : null;
         return (<>
@@ -14472,8 +14518,25 @@ Hard requirements:
               seek bar and the styles box (this block sits in grid-area rtop, the box
               in styles below it). Mobile has its own header up top. Music modes only. */}
           {isDesktop && !basicMode && (loadedSource!=='image' || moodFromImg) && !composeMode && !micActive && (
+          <div style={{position:'relative'}}>
           <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,marginBottom:0,padding:'0 2px'}}>
-            <span style={{flex:1,fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.7)'}}>{ts('pickLook','Pick a look')}</span>
+            <button onClick={()=>{ if(demoReelOn) return; setDeskStripOpen(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_desk_strip', nv?'1':'0'); }catch(_){} return nv; }); }} disabled={demoReelOn} aria-expanded={!deskFolded} className="pf-fold-toggle"
+              style={{flex:1,display:'inline-flex',alignItems:'center',gap:8,background:'transparent',border:'none',padding:'2px 0',cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',textAlign:'left',WebkitTapHighlightColor:'transparent'}}>
+              <span>{ts('pickLook','Pick a look')}</span>
+              <span aria-hidden="true" style={{fontSize:'1.35em',lineHeight:1,transform:deskFolded?'none':'rotate(180deg)',transition:'transform .2s ease'}}>▾</span>
+            </button>
+          </div>
+          {/* folded: one line in the empty column below — out of the row's flow, so the painting stays put */}
+          {deskFolded && (
+            <div className="pf-fold-caption" style={{position:'absolute',left:0,right:0,top:'100%',marginTop:6,padding:'0 2px',fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',lineHeight:1.6,color:'rgba(201,168,76,.65)'}}>
+              <span style={{textTransform:'capitalize'}}>{t(mode)}</span>
+              <span> · </span>
+              <span style={{fontStyle:'italic'}}>{(painterStage.length>0 && style!==null) ? _stageNames('art')
+                : (effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle]) ? (effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle]))
+                : (effectiveStyle==='notes' ? t('notesStyle') : t('mosaicStyle'))}</span>
+              {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,whiteSpace:'nowrap'}}> · ✦ {_sigT('label')}</span>)}
+            </div>
+          )}
           </div>
           )}
         </div>
