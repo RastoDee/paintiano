@@ -2634,9 +2634,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     }
     try{ window.posthog && window.posthog.capture('signature_off'); }catch(_){}
   };
-  // “why”: each member with the musical role that brought it in — Rhythm → Mondrian · …
-  const _sigRole = (r)=>{ const d=(SIG_I18N[lang]||SIG_I18N.EN).roles||SIG_I18N.EN.roles; return d[r]||SIG_I18N.EN.roles[r]||r; };
-  const _sigWhy = (s)=>{ s = s || songSigRef.current; if(!s || !s.keys || !s.roles) return []; return s.keys.map((k,i)=>[_sigRole(s.roles[i]), _painterLabel(k), k]); };
   const _toggleSig = ()=>{ if(working||anim) return; if(sigActiveRef.current) _sigOff(); else if(chords.length) _applySig(); };
   // An empty canvas has no song to sign: ✦ is inactive there, and a lit ✦ goes
   // out (back to the selection before it) the moment the canvas is cleared.
@@ -14055,13 +14052,11 @@ Hard requirements:
               <span>{ts('editHint','Tap to add or remove from your set.')}</span>
             </div>
           )}
-          {/* Signature info row — who paints the ✦ fusion and why.
-              the ✦ members get a chip in the grid above while ✦ is on (see _sigK);
-              this row says which role brought each one in. */}
+          {/* Signature info row — the ✦ members get a chip in the grid above while
+              ✦ is on (see _sigK); this row names it (no roles: too much information). */}
           {sigActive && songSig && !cockpitEdit && (
             <div className="pf-sig-info" style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'0 6px',fontSize:(.56*effScale)+'rem',letterSpacing:'.04em',color:'rgba(201,168,76,.8)',lineHeight:1.6}}>
               <div style={{fontWeight:600,color:'rgba(226,196,119,1)',letterSpacing:'.16em',textTransform:'uppercase',fontSize:'.82em'}}>✦ {_sigT('label')}{songSig.keys.length>1 ? ' · '+_ensT('fusion') : ''}</div>
-              <div style={{fontStyle:'italic'}}>{_sigWhy(songSig).map(([r,n,k],i)=>(<Fragment key={k}>{i>0 && (<span style={{opacity:.55}}> · </span>)}<span style={{whiteSpace:'nowrap'}}><span style={{opacity:.65}}>{r}</span> → <span style={{fontStyle:'normal',fontWeight:600}}>{n}</span></span></Fragment>))}</div>
             </div>
           )}
           {/* Locked-partner info row — Free tier only. Shows the 'b' (Pro)
@@ -14634,7 +14629,7 @@ Hard requirements:
               if(!_ens) return (<div>{_fLabel}</div>);
               const _sep = _isImgFlash ? '↔' : '×';
               const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
-              return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div>{_sigF && songSig && songSig.roles && songSig.roles[i] && (<div style={{fontStyle:'normal',fontSize:'.4em',letterSpacing:'.3em',opacity:.75,marginTop:1}}>{_sigRole(songSig.roles[i])}</div>)}</Fragment>))}</div>);
+              return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div></Fragment>))}</div>);
             })()}
           </div>
         );
@@ -14994,10 +14989,6 @@ Hard requirements:
           </div>
         )}
       </div>
-      {/* ✦ why — under the picture: which musical role brought in which painter */}
-      {sigActive && songSig && viewMode!=='image' && !composeMode && !immersive && !favView && (
-        <div className="pf-sig-why" style={{textAlign:'center',marginTop:6,padding:'0 12px',fontSize:(.5*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.72)',fontStyle:'italic',lineHeight:1.5}}>{_sigWhy(songSig).map(([r,n],i)=>(i?' · ':'')+r+' → '+n).join('')}</div>
-      )}
 
       </>)}
 
