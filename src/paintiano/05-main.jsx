@@ -1351,6 +1351,9 @@ export default function Paintiano() {
   // Pollock's overlay density. From the third tap onwards, the normal random
   // shuffle-bag takes over. Set by litePlayStart, consumed once by basicSurprise.
   const _liteNextIsMosaicRef = useRef(false);
+  // Lite after a piece opens on ✦ Signature: Surprise 1 = Kandinsky v0, Surprise 2 =
+  // Mosaic (via the flag above), then the shuffle. Armed by applyEvents.
+  const _liteNextIsKandRef = useRef(false);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -7185,7 +7188,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
       // Lite: every piece. Advanced: music files and samples (MIDI · audio · score) open on ✦.
-      if(_sg && (basicModeRef.current || _sgMusic) && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
+      const _sgOn = !!(_sg && (basicModeRef.current || _sgMusic) && !qrArtistRef.current && applySigRef.current);
+      if(_sgOn) applySigRef.current(_sg);
+      if(basicModeRef.current){ _liteNextIsKandRef.current = _sgOn; if(_sgOn) _liteNextIsMosaicRef.current = false; }
     }catch(_){}
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
@@ -9860,6 +9865,19 @@ Hard requirements:
     // litePlayStart lands on Pollock. The very next Surprise tap goes to
     // Mosaic (contrast: dense overlay → bare grid). From the tap after that,
     // the shuffle-bag rotation below runs normally.
+    // ── After ✦ Signature: Kandinsky v0 first, then the forced Mosaic below ──
+    if(_liteNextIsKandRef.current){
+      _liteNextIsKandRef.current = false;
+      _liteNextIsMosaicRef.current = true;
+      // already on screen (a solo Kandinsky v0 signature) or out of the Set → straight to Mosaic
+      const _kOn = style==='kandinsky' && (phaseIndex|0)===0 && !painterStageRef.current.length;
+      if(setupArtists.includes('kandinsky') && !_kOn){
+        setRandomMode(false); randomModeRef.current=false;
+        setStyle('kandinsky'); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+        _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
+        return;
+      }
+    }
     if(_liteNextIsMosaicRef.current){
       _liteNextIsMosaicRef.current = false;
       setRandomMode(false); randomModeRef.current=false;
