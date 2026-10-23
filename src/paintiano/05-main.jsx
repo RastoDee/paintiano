@@ -1048,15 +1048,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes the variant only. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len variant. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
-  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur die Variante. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
-  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que la variante. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
-  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia la variante. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
-  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda a variante. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
-  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换变体。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
-  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換變體。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」はバリエーションだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
+  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
+  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
+  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
+  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
+  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
+  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
@@ -2382,9 +2382,19 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _sigT = (k)=>{ const d=SIG_I18N[lang]||SIG_I18N.EN; return d[k]!==undefined ? d[k] : SIG_I18N.EN[k]; };
   // What was on screen before ✦ — tapping ✦ again (while lit) returns to it.
   const sigPrevRef = useRef(null);
+  // A Fusion's rolled address. Next on a Fusion gives EVERY member a variant of its
+  // own — before, only member 1 rolled and the others were derived from it, so a trio
+  // reached 9 of its 504 paintings. {keys, phs} in fuseDNA's own key order; fuseDNA
+  // paints it ahead of a curated/poster pin and the hash. It holds while that stage
+  // and member 1's variant stand; any other change drops it (effect after _fuRollAll).
+  const [fuRoll, setFuRoll] = useState(null);
+  const fuRollRef = useRef(null);
+  const _setFuRoll = (r)=>{ fuRollRef.current = r; try{ globalThis.__PAINT_FU_PHS = r; }catch(_){} setFuRoll(r); };
+  const _fuKeys = (st)=> (st||[]).map(k=>k||'mosaic').filter(k=>typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[k]);
   const _applySig = (s)=>{
     s = s || songSigRef.current;
     if(!s || !s.keys || !s.keys.length) return;
+    if(fuRollRef.current) _setFuRoll(null);       // a rolled crossing gives way to the signature's own variants
     if(!sigActiveRef.current) sigPrevRef.current = { style, stage: painterStage.slice(), ph: phaseIndex|0, mode, jamOn, notesMode, oneMMode };
     sigActiveRef.current = true;                  // sync — the Setup guards run before the state effect
     _shuffleOff();
@@ -2427,12 +2437,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     const s = songSigRef.current;
     const rest = s ? s.keys.slice(1).join('+') : '';
     const ok = !!s && style===s.keys[0] && painterStage.join('+')===rest && (phaseIndex|0)===(s.ph|0) && mode===s.mode
-      && !randomMode && !composeMode && !micPainting && !micListening && viewMode!=='image';
+      && !randomMode && !composeMode && !micPainting && !micListening && viewMode!=='image' && !fuRoll;
     if(ok) return;
     sigActiveRef.current = false; setSigActive(false);
     // a Free fusion stage has no Ensemble behind it — take it down with the latch
     if(!jamOnRef.current && painterStage.length && painterStage.join('+')===rest) setPainterStage(p=>p.length?[]:p);
-  },[sigActive, style, painterStage, phaseIndex, mode, randomMode, composeMode, micPainting, micListening, viewMode]);
+  },[sigActive, style, painterStage, phaseIndex, mode, randomMode, composeMode, micPainting, micListening, viewMode, fuRoll]);
   // chip taps while JAM / C&R is on: add · remove · (first slot) promote the next
   // The stage holds only EXPLICIT members: slot 1 = the selected artist (if
   // any), then painterStage. Mosaic is a chip like any other ('mosaic' key) —
@@ -2444,10 +2454,29 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _fusionAddr = (st, ph)=>{
     const ks=(st||[]).map(k=>k||'mosaic').filter(k=>typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[k]);
     if(ks.length<2) return null;
+    const fr=fuRollRef.current; if(fr && fr.keys.join()===ks.join()) return { keys:ks, phs:fr.phs.slice() };
     const ov=(typeof globalThis!=='undefined') ? globalThis.__PAINT_SIG_PHS : null;
     const on=!!(ov && ov.keys && ov.phs && ov.keys.join()===ks.join());
     return { keys:ks, phs:ks.map((k,i)=> (on && ov.phs[i]!=null) ? (ov.phs[i]|0) : _fuVariantOf(k,i,ph|0)) };
   };
+  // Roll every member's variant at once. keep: {key: variant} for members that stay as
+  // they are (pinned painters in Ensemble ALL, the drawn lead of a Lite Surprise).
+  // Never the same painting twice in a row.
+  const _fuRollAll = (keys, keep)=>{
+    const ks=_fuKeys(keys); if(ks.length<2) return false;
+    const free = proStatus==='free' && !sigActiveRef.current;
+    const cur=_fusionAddr(ks, (phaseIndexRef.current|0)); const curS=cur ? cur.phs.join(',') : '';
+    let phs=null;
+    for(let t=0;t<8;t++){
+      phs=ks.map(k=>{ if(keep && keep[k]!=null) return keep[k]|0; const n=Math.max(1,(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k])||1); return (Math.random()*(free?Math.min(2,n):n))|0; });
+      if(phs.join(',')!==curS) break;
+    }
+    setPhaseIndex(phs[0]); _setFuRoll({ keys:ks, phs });
+    return true;
+  };
+  useEffect(()=>{ const r=fuRollRef.current; if(!r) return;
+    if(_fuKeys(_jamStage()).join()!==r.keys.join() || (phaseIndex|0)!==(r.phs[0]|0)) _setFuRoll(null);
+  },[style, painterStage, phaseIndex]);
   const _jamTap = (k)=>{
     const cur=_jamStage(); const i=cur.indexOf(k);
     if(i>=0){
@@ -2561,18 +2590,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(stage.length){ setNotesMode(false); setOneMMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
     try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
   };
-  // Ensemble ALL draw. With pins: the pins stay exactly as they are (same order,
-  // same phase → same variants) and 1–3 guests are drawn around them; five pins
-  // leave no room, so Next rolls the crossing's variant instead. Without pins:
+  // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
+  // guests are drawn around them, every member with a new variant; five pins
+  // leave no room, so Next rolls the crossing's variants instead. Without pins:
   // 2–5 painters from the shuffle pool, count and members random; member 1 gets
   // a random variant, the others derive theirs.
   const _jamAllRoll = ()=>{
     const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
     if(pins.length){
-      const vN1=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[pins[0]]) || 6;
       const room=STAGE_MAX-pins.length;
       const gpool=SHUFFLE_POOL.filter(k=>k!=='oneM' && !pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
-      if(room<=0 || !gpool.length){ setPhaseIndex(p=>{ let n=(Math.random()*vN1)|0; if(vN1>1 && n===(p|0)) n=(n+1)%vN1; return n; }); return; }
+      if(room<=0 || !gpool.length){ _fuRollAll(_jamStage()); return; }   // no room for guests: the crossing's variants roll
       const curGuests=painterStage.filter(k=>!pins.includes(k)).join('+');
       let guests=[];
       for(let tries=0; tries<4; tries++){
@@ -2580,8 +2608,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
         guests=a.slice(0, Math.min(a.length, 1+((Math.random()*Math.min(3,room))|0)));
         if(guests.join('+')!==curGuests) break;            // never the same guests twice in a row
       }
+      // a pin keeps the PAINTER on stage, not its variant: the guests reshape the whole
+      // crossing anyway, so every member — pinned or not — rolls a new variant
       setNotesMode(false); setOneMMode(false);
-      setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests));
+      setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests)); _fuRollAll(pins.concat(guests));
       try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n:pins.length+guests.length, pinned:pins.length}); }catch(_){}
       return;
     }
@@ -2590,9 +2620,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
     if(a[0]===style && a.length>2){ const x=a[0]; a[0]=a[1]; a[1]=x; }
     const n=Math.min(a.length, 2+((Math.random()*4)|0));
-    const lead=a[0], vN=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[lead]) || 6;
+    const lead=a[0];
     setNotesMode(false); setOneMMode(false);
-    setStyle(lead); setPainterStage(a.slice(1,n)); setPhaseIndex((Math.random()*vN)|0);
+    setStyle(lead); setPainterStage(a.slice(1,n)); _fuRollAll(a.slice(0,n));
     try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n}); }catch(_){}
   };
   const _getCompMode = ()=> composerDice ? 1 : 0;   // lazy: composerDice is declared further down
@@ -2627,6 +2657,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _pinIcon = (col, px)=> (<svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth={px<9?3:2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2Z"/></svg>);
   const _diceRoll = () => {
     if(jamOn && jamAll){ _jamAllRoll(); return; }
+    // a Fusion on screen: every member gets a new variant of its own
+    if(style!==null && painterStage.length && viewMode!=='image' && _fuRollAll(_jamStage())) return;
     const N = _effVariants();
     if(style){
       // ── SELECTED ARTIST ── bag = this artist's variants [0..N-1], no repeat.
@@ -4079,7 +4111,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _jamExtra = painterStageRef.current;
     const _jamAll = (styleRef.current!==null ? [styleRef.current] : []).concat(_jamExtra||[]);
     const _jamKeys = (_jamAll.length>=2 && viewMode!=='image') ? _jamAll : null;
-    const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+') : '';
+    const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+')+(fuRoll ? '|'+fuRoll.phs.join(',') : '') : '';
     const canAppend =
       !_jamKeys &&
       (playing||anim) &&
@@ -4326,7 +4358,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage,fuRoll]);
 
   // Whenever keyboard-recorded chords change (new chord committed, or a
   // release updated a chord's durMs/durQ), re-run computeGrid so each
@@ -5744,7 +5776,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         midiBlob: meta.midiBlob||null, midiName: meta.midiName||'',
         // Variant knobs — freeze the exact painting so Back restores it, not a
         // re-rolled one. Style/variant only advances via Next/Swipe, not Back.
-        _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current,
+        _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current, _fuRoll: fuRollRef.current,
       };
       setHasMoodDraft(true);
     }
@@ -5771,7 +5803,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         audioSideImage: ls==='audio' ? (meta.audioSideImage||null) : null,
         audioRowOpen: ls==='audio' ? !!meta.audioRowOpen : false,
         // Variant knobs — freeze the exact painting so Back restores it.
-        _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current,
+        _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current, _fuRoll: fuRollRef.current,
       };
       setHasMusicDraft(true);
     }
@@ -5910,6 +5942,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(s._shufVariant!=null){ setShufVariant(s._shufVariant|0); }
       if(s._phaseIndex!=null){ setPhaseIndex(s._phaseIndex|0); }
       if(s._rndSalt!=null){ setRndSalt(s._rndSalt|0); }
+      _setFuRoll(s._fuRoll || null);
       setMidiBlob(s.midiBlob || null); setMidiName(s.midiName || '');
       setMoodFromImg(false);
       setMoodContext(true);
@@ -5976,6 +6009,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(s._shufVariant!=null){ setShufVariant(s._shufVariant|0); }
       if(s._phaseIndex!=null){ setPhaseIndex(s._phaseIndex|0); }
       if(s._rndSalt!=null){ setRndSalt(s._rndSalt|0); }
+      _setFuRoll(s._fuRoll || null);
       setLoadedSource(_sub);
       setStamp(prev=>prev+1);
       setTimeout(()=>{ restoringRef.current = false; }, 0);
@@ -6686,6 +6720,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
       if(_sg && title && SIG_CURATED[title]) Object.assign(_sg, SIG_CURATED[title]);
       try{ globalThis.__PAINT_SIG_PHS = _qrPhs() || ((_sg && _sg.phs && _sg.keys) ? {keys:_sg.keys.slice(), phs:_sg.phs.slice()} : null); }catch(_){}
+      if(fuRollRef.current) _setFuRoll(null);   // a new piece opens on its own variants
       const _sgMusic = sigMusicNextRef.current; sigMusicNextRef.current=false;
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
@@ -9481,6 +9516,7 @@ Hard requirements:
     }
     _liteJamStyleRef.current = _jamExtra.length ? nk : null;
     setPainterStage(_jamExtra);
+    if(_jamExtra.length) _fuRollAll([nk].concat(_jamExtra), {[nk]: nv|0});   // the drawn variant stays, the others roll their own
   },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode, setupPalettes, mode, setupArtists, artistOfDay]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
@@ -10312,6 +10348,7 @@ Hard requirements:
     // Incremental mode — no precomputed piece, paint with neutral DNA.
     try{ globalThis.__PAINT_MUSIC_DNA = null; }catch(_){}
     try{ globalThis.__PAINT_SIG_PHS = null; }catch(_){}
+    if(fuRollRef.current) _setFuRoll(null);
     if(micListeningRef.current){stopMicListening();return;}
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)
@@ -10658,6 +10695,7 @@ Hard requirements:
     // Incremental mode — no precomputed piece, paint with neutral DNA.
     try{ globalThis.__PAINT_MUSIC_DNA = null; }catch(_){}
     try{ globalThis.__PAINT_SIG_PHS = null; }catch(_){}
+    if(fuRollRef.current) _setFuRoll(null);
     if(micPaintingRef.current)return stopMicPainting();
     if(!navigator.mediaDevices?.getUserMedia){setErr(t('micUnavailable'));setErrInfo(false);return;}
     try{ if(navigator.audioSession){ navigator.audioSession.type='play-and-record'; } }catch(_){} // allow mic input (playback type blocks it)

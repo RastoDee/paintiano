@@ -15959,7 +15959,11 @@ function fuseDNA(keys, ph){
   // it applies only to that exact ensemble, so the hash stays the rule for everything the user builds
   const _ov=(typeof globalThis!=='undefined') ? globalThis.__PAINT_SIG_PHS : null;
   const _ovOn=!!(_ov && _ov.keys && _ov.phs && _ov.keys.join()===ks.join());
-  const phs=ks.map((k,i)=> (_ovOn && _ov.phs[i]!=null) ? (_ov.phs[i]|0) : _fuVariantOf(k,i,ph));
+  // Next on a Fusion rolls EVERY member's variant (globalThis.__PAINT_FU_PHS, set by the app); that exact
+  // address comes first — then a curated/poster pin, then the hash from member 1's variant
+  const _ur=(typeof globalThis!=='undefined') ? globalThis.__PAINT_FU_PHS : null;
+  const _urOn=!!(_ur && _ur.keys && _ur.phs && _ur.keys.join()===ks.join());
+  const phs=ks.map((k,i)=> (_urOn && _ur.phs[i]!=null) ? (_ur.phs[i]|0) : (_ovOn && _ov.phs[i]!=null) ? (_ov.phs[i]|0) : _fuVariantOf(k,i,ph));
   const ws=ks.map((k,i)=>[_dnaOf(k,phs[i]), 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
