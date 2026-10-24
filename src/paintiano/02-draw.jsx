@@ -12214,8 +12214,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // Run LAST so the final event structure (after Alberti / Run-length / Tremolo
   // expansions reflipping _playable) is what's reflected in _stepMs.
   // A silent continuation cell of a held plane (a run the player skips) passes at
-  // this share of a sounding step — see the LENGTH GOVERNOR below.
-  const _CONT_W = 0.5;
+  // 40% of a sounding step, a rest (no note at all) at half — see the LENGTH GOVERNOR below.
+  const _CONT_W = 0.4, _REST_W = 0.5;
   {
     // Per-cell interval. Centre at 200ms (was 150 — default was a machine gun).
     // Serene atmo widens up to 260ms (real breathing room); frantic atmo compresses
@@ -12258,29 +12258,31 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // Safety clamp: never absurdly fast or slow per cell.
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
-    // ─── LENGTH GOVERNOR — a scan lasts what its image's energy planned ────────
-    // targetMs (above) is the planned length: 1:15 for a restless canvas … 4:00
-    // for a calm one. The steps above give the pace its SHAPE (dark→slow, bar
-    // breath, closing ritardando) around a fixed 200 ms, so left alone a scan ran
-    // 3–10 minutes whatever the image. Here the whole shape is rescaled so its
-    // total lands on the plan. The silent continuation cells of a held plane pass
-    // at half time (a flat sky wipes in quicker than a detailed passage), so the
-    // sounding steps keep most of their room.
+    // ─── LENGTH GOVERNOR — the pace comes first, the length follows ────────────
+    // The steps above give the pace its SHAPE (dark→slow, bar breath, closing
+    // ritardando); left alone a scan ran 5–8 minutes whatever the image. Here the
+    // shape is rescaled towards the planned length (targetMs: 1:15 for a restless
+    // canvas … 4:00 for a calm one) — but the sounding steps never run faster than
+    // 92% of the pace the shape was tuned at (a median of ≈210–230 ms: calm enough
+    // to follow, never a machine gun), so a big or busy picture takes up to 5:30
+    // rather than being squeezed. Silent continuation cells and rests pass quicker
+    // (a flat sky wipes in faster than a detailed passage), so the sounding steps
+    // keep most of their room.
     let _govK = 1;
     {
       const _isCont = (ev)=> ev._playable===false && !ev._rest && !ev._melRest && ev.n && ev.n.length>0;
       const nat = evts.map(ev=>ev._stepMs||200);
-      let tw=0; for(let i=0;i<evts.length;i++) tw += nat[i]*(_isCont(evts[i])?_CONT_W:1);
-      // The plan, but the sounding steps never run faster than 55% of the pace the
-      // shape was tuned at (≈120 ms and up): a busy canvas with many sounding cells
-      // takes more of the 4:00 instead of turning into a machine gun.
-      const want = Math.max(DUR_MIN, Math.min(240000, Math.max(targetMs, 0.55*tw)));
+      const _wOf = (ev)=> _isCont(ev) ? _CONT_W : ((ev._rest||ev._melRest||!ev.n||!ev.n.length) ? _REST_W : 1);
+      let tw=0; for(let i=0;i<evts.length;i++) tw += nat[i]*_wOf(evts[i]);
+      // The plan — unless that would push the pace under 92% of the tuned one; and
+      // never beyond 5:30 whatever the picture.
+      const want = Math.max(DUR_MIN, Math.min(330000, Math.max(targetMs, 0.92*tw)));
       if(tw>0 && evts.length>1){
         let K = want/tw;
         for(let pass=0; pass<4; pass++){
           let tot=0;
           for(let i=0;i<evts.length;i++){
-            const s=Math.max(40, Math.round(nat[i]*(_isCont(evts[i])?_CONT_W:1)*K));
+            const s=Math.max(40, Math.round(nat[i]*_wOf(evts[i])*K));
             evts[i]._stepMs=s; tot+=s;
           }
           const err=want/tot;
