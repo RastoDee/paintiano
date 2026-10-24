@@ -2156,33 +2156,13 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const isBW = mode==='bw';
   const toGrey = (r,g,b) => { const v=Math.round(r*0.299+g*0.587+b*0.114); return [v,v,v]; };
   let _forcedPollVariant = 0; // set by the phase dispatcher: 0 = Dense, 1 = Sparse
-  // ── 7-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic drip — Dense all-over web.
-  //  1 = Autumn Rhythm (1950) — thrown skeins flowing left to right (skein engine).
-  //  2 = Black pourings / theme colour pour.
-  //  3 = Lavender Mist (1950) — a pale dense web of fine thrown threads (skein engine).
-  //  4 = White Light (post-drip 1954, INVERTED palette on dark ground).
-  //  5 = Blue Poles (1952) — a coloured web with eight leaning poles poured last (skein engine).
-  //  6 = Sparse — bolder strokes, more open canvas, thicker beads (was a hidden
-  //      seed bit inside slot 0; now its own cyclable phase).
-  //  Free (cap=2) sees Dense + Autumn Rhythm — two distinct drip
-  //  compositions (all-over web vs horizontal rhythm).
+  // ── VARIANT: 0 Classic drip (the dense web below) · 1 Autumn Rhythm · 2 Lavender Mist ·
+  // 3 Blue Poles · 4 Convergence · 5 Number 14 (black pouring) — the _pol2 skeins, read
+  // from the music · 6 Sparse (the open web below) · 7 White Light. Free: 0 and 1.
   {
-    const _pn=_capN(7); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_variantCap === 2){
-      // Free: 0 = Dense (fall through), 1 = Stenographic.
-      if(_ppick===1){ pollockPhaseAutumnRhythm(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    } else {
-      // Pro+: full ladder.
-      if(_ppick===1){ pollockPhaseAutumnRhythm(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(_ppick===2){ pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(_ppick===3){ pollockPhaseLavenderMist(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(_ppick===4){ pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(_ppick===5){ pollockPhaseBluePoles(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    }
-    // Slots 0 and 6 share the dense/sparse body below; the slot decides the
-    // variant (0 = Dense all-over web, 6 = Sparse bolder strokes) instead of a
-    // hidden seed bit — so BOTH are always reachable by cycling Vary.
+    const _pn=_capN(8); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_ppick>=1&&_ppick<=5){ _pol2Paint(_ppick,ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ppick===7){ pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     _forcedPollVariant = (_ppick===6) ? 1 : 0;
   }
 
@@ -2541,202 +2521,13 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
 }
 
 // Shared drip-line helper for new Pollock phases: a curving spattered trail.
-function _pollDrip(ctx,x0,y0,x1,y1,col,w,ss,seed){
-  const rnd=_seedRnd(seed,ss,0,0);
-  ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(x0,y0);
-  const segs=4+((rnd()*5)|0); let px=x0,py=y0;
-  for(let s=1;s<=segs;s++){const t=s/segs;const nx=x0+(x1-x0)*t+(rnd()-0.5)*60,ny=y0+(y1-y0)*t+(rnd()-0.5)*60;ctx.quadraticCurveTo((px+nx)/2+(rnd()-0.5)*30,(py+ny)/2+(rnd()-0.5)*30,nx,ny);px=nx;py=ny;}
-  ctx.stroke();
-  // beads
-  for(let b=0;b<segs*2;b++){const t=rnd();const bx=x0+(x1-x0)*t+(rnd()-0.5)*50,by=y0+(y1-y0)*t+(rnd()-0.5)*50;ctx.fillStyle=col;ctx.beginPath();ctx.arc(bx,by,w*(0.4+rnd()*0.6),0,Math.PI*2);ctx.fill();}
-}
-
-// ── Pollock C: Black pourings — monochrome black drip on raw canvas. ──
-// ── Pollock C: Color Pour — chord-derived dominant theme colour over a
-// session-varied ground. Every chord still contributes a drip, but the
-// painting reads as ONE colour story (with supporting accents) instead of
-// the previous monochrome ink dump. Background is one of 5 grounds chosen
-// from session seed → different songs land on different surfaces. Same drip
-// shape vocabulary as the main body (curves + beads + specks + blobs).
-function pollockPhaseBlack(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim)),isBW=mode==='bw';
-  // Background palette — five grounds Pollock actually painted on.
-  const GROUNDS = isBW
-    ? ['#cfc3a8','#bdb39a','#c8b894','#cabb96','#c2b8a0']
-    : ['#cfc3a8','#b8a07e','#c8a899','#b8b0a4','#d4c6a8']; // cream, ochre, dusty rose, cool grey, deep cream
-  const _gpick=_seedRnd(411,ss,7,13); _gpick();_gpick();
-  ctx.fillStyle = GROUNDS[(_gpick()*GROUNDS.length)|0];
-  ctx.fillRect(0,0,CW,CH);
-  // Compute the painting's dominant theme colour: weighted average of every
-  // chord's averaged colour. This is the "voice" of the song in paint —
-  // different songs will pour in different colours.
-  let tR=0,tG=0,tB=0,tC=0;
-  const _thN = chords._livePad ? 1 : chords.length;   // live take: theme from its first note, so pours never recolour
-  for(let i=0;i<_thN;i++){
-    const notes=chords[i] && (chords[i].n || chords[i].notes || []);
-    if(!notes || !notes.length) continue;
-    for(const note of notes){
-      const m=note.m!==undefined?note.m:note;
-      const v=note.v!==undefined?note.v:80;
-      const [r,g,b]=gc(m,v);
-      tR+=r; tG+=g; tB+=b; tC++;
-    }
-  }
-  const theme = tC ? [Math.round(tR/tC), Math.round(tG/tC), Math.round(tB/tC)] : [180,80,60];
-  // Three supporting accents pulled from a fixed Pollock-ish chromatic set,
-  // ranked by distance to the theme so accents harmonise with the lead.
-  const ACCENTS = [[190,40,35],[235,200,55],[40,70,190],[40,140,60],[220,100,30],[130,40,170],[60,160,180]];
-  const sorted = ACCENTS.map(a=>{
-    const d=Math.sqrt((a[0]-theme[0])**2+(a[1]-theme[1])**2+(a[2]-theme[2])**2);
-    return {a,d};
-  }).sort((x,y)=>x.d-y.d);
-  const supports = sorted.slice(0,3).map(s=>s.a);
-  // Drip count scales with chord count (~0.7×).
-  const passes = Math.max(8, Math.min(220, Math.round(cn*0.7)));
-  const vis = Math.max(1, Math.ceil(N/cn*passes));
-  // Tone-adjust helper: Real -> energy modulates, Pastel -> soft. No-op Pure.
-  const _tonedRGB = (col)=>{
-    let r=col[0], g=col[1], b=col[2];
-    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return [r,g,b];
-  };
-  for(let i=0;i<vis;i++){
-    // Set energy from this pass's chord so Real mode breathes per-drip.
-    const _pi = Math.min(cn-1, Math.floor((i/Math.max(1,passes))*cn));
-    const _ch = chords[_pi];
-    _setCurE(_ch && _ch._E);
-    const rnd = _seedRnd(i+3100, ss, 0, 0);
-    // 65% theme, 30% supporting accent, 5% deep ink for definition
-    const pick = rnd();
-    let col;
-    if(pick < 0.65){
-      // theme with slight per-drip drift so it doesn't look painted-by-numbers
-      const dr = (rnd()-0.5)*40;
-      col = [Math.max(0,Math.min(255,theme[0]+dr)),
-             Math.max(0,Math.min(255,theme[1]+dr*0.7)),
-             Math.max(0,Math.min(255,theme[2]+dr*0.9))];
-    } else if(pick < 0.95){
-      col = supports[(rnd()*supports.length)|0];
-    } else {
-      col = [15,12,18];
-    }
-    if(isBW){
-      const v = Math.round(col[0]*0.299+col[1]*0.587+col[2]*0.114);
-      col = [v,v,v];
-    }
-    // Tone-adjust the picked colour with the current chord's energy.
-    col = _tonedRGB(col);
-    const colStr = `rgba(${col[0]|0},${col[1]|0},${col[2]|0},`;
-    // Drip from one edge to the other for span; some "loopy" stay central.
-    const padding = Math.max(CW,CH)*0.3;
-    const loopy = rnd() < 0.20;
-    let x0,y0,x1,y1;
-    if(loopy){
-      const cx=rnd()*CW, cy=rnd()*CH;
-      const reach=Math.min(CW,CH)*(0.25+rnd()*0.3);
-      const a1=rnd()*Math.PI*2, a2=a1+Math.PI+(rnd()-0.5)*1.5;
-      x0=cx+Math.cos(a1)*reach; y0=cy+Math.sin(a1)*reach;
-      x1=cx+Math.cos(a2)*reach; y1=cy+Math.sin(a2)*reach;
-    } else {
-      const side=(rnd()*4)|0;
-      if(side===0){x0=rnd()*CW;y0=-padding;x1=rnd()*CW;y1=CH+padding;}
-      else if(side===1){x0=CW+padding;y0=rnd()*CH;x1=-padding;y1=rnd()*CH;}
-      else if(side===2){x0=rnd()*CW;y0=CH+padding;x1=rnd()*CW;y1=-padding;}
-      else {x0=-padding;y0=rnd()*CH;x1=CW+padding;y1=rnd()*CH;}
-    }
-    // Polyline + wobble (mirrors main-body logic for shape consistency).
-    const segs = loopy ? 12+((rnd()*6)|0) : 8+((rnd()*5)|0);
-    const dx=x1-x0, dy=y1-y0;
-    const len=Math.sqrt(dx*dx+dy*dy)||1;
-    const px=-dy/len, py=dx/len;
-    const wobScale = loopy ? 0.42 : (rnd()<0.4 ? 0.18 : 0.25);
-    const pts=[];
-    for(let s=0;s<=segs;s++){
-      const t=s/segs;
-      const lx=x0+dx*t, ly=y0+dy*t;
-      const amp=Math.sin(t*Math.PI)*Math.min(CW,CH)*wobScale;
-      const wob=(rnd()-0.5)*2*amp;
-      pts.push({x:lx+px*wob, y:ly+py*wob});
-    }
-    // Stroke
-    const lineW = Math.min(CW,CH)*(0.004+rnd()*0.016);
-    const alpha = 0.78+rnd()*0.18;
-    ctx.strokeStyle = colStr+alpha.toFixed(2)+')';
-    ctx.lineWidth = lineW;
-    ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for(let k=1;k<pts.length-1;k++){
-      const m={x:(pts[k].x+pts[k+1].x)/2, y:(pts[k].y+pts[k+1].y)/2};
-      ctx.quadraticCurveTo(pts[k].x, pts[k].y, m.x, m.y);
-    }
-    ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
-    ctx.stroke();
-    // Beads along the trail
-    const beads = 10+((rnd()*10)|0);
-    for(let b=0;b<beads;b++){
-      const t=b/beads+(rnd()-0.5)*0.02;
-      const ti=Math.max(0,Math.min(pts.length-2,(t*(pts.length-1))|0));
-      const tt=(t*(pts.length-1))-ti;
-      const bx=pts[ti].x+(pts[ti+1].x-pts[ti].x)*tt;
-      const by=pts[ti].y+(pts[ti+1].y-pts[ti].y)*tt;
-      const drift=lineW*(0.3+rnd()*1.4);
-      const ang=rnd()*Math.PI*2;
-      const br=lineW*(0.3+rnd()*0.7);
-      ctx.fillStyle = colStr+(0.85+rnd()*0.10).toFixed(2)+')';
-      ctx.beginPath();
-      ctx.arc(bx+Math.cos(ang)*drift, by+Math.sin(ang)*drift, br, 0, Math.PI*2);
-      ctx.fill();
-    }
-    // Specks (micro-scatter)
-    const specks = 30+((rnd()*30)|0);
-    for(let s=0;s<specks;s++){
-      const t=rnd();
-      const ti=Math.max(0,Math.min(pts.length-2,(t*(pts.length-1))|0));
-      const tt=(t*(pts.length-1))-ti;
-      const px2=pts[ti].x+(pts[ti+1].x-pts[ti].x)*tt;
-      const py2=pts[ti].y+(pts[ti+1].y-pts[ti].y)*tt;
-      const fly=lineW*(1.5+rnd()*12);
-      const fa=rnd()*Math.PI*2;
-      const sr=rnd()<0.85 ? lineW*(0.10+rnd()*0.22) : lineW*(0.35+rnd()*0.55);
-      ctx.fillStyle = colStr+(0.65+rnd()*0.25).toFixed(2)+')';
-      ctx.beginPath();
-      ctx.arc(px2+Math.cos(fa)*fly, py2+Math.sin(fa)*fly, sr, 0, Math.PI*2);
-      ctx.fill();
-    }
-    // Pools — large irregular blobs where paint spread (1 per 4 drips)
-    if(rnd() < 0.25){
-      const t=0.25+rnd()*0.5;
-      const ti=Math.max(0,Math.min(pts.length-2,(t*(pts.length-1))|0));
-      const tt=(t*(pts.length-1))-ti;
-      const blx=pts[ti].x+(pts[ti+1].x-pts[ti].x)*tt;
-      const bly=pts[ti].y+(pts[ti+1].y-pts[ti].y)*tt;
-      const br=lineW*(2.2+rnd()*3.0);
-      ctx.fillStyle = colStr+'0.88)';
-      ctx.beginPath();
-      // Irregular pool: 6-8 vertex blob
-      const verts=6+((rnd()*3)|0);
-      for(let v=0;v<=verts;v++){
-        const va=(v/verts)*Math.PI*2;
-        const vr=br*(0.7+rnd()*0.6);
-        const vx=blx+Math.cos(va)*vr, vy=bly+Math.sin(va)*vr;
-        if(v===0) ctx.moveTo(vx,vy); else ctx.lineTo(vx,vy);
-      }
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-}
-
 // ── The thrown line. One primitive — a SKEIN, a long line flung from a stick:
 // it thins where the hand moved fast, pools where it paused or turned, loops
 // back on itself and throws fine spatter as it flies. A limited enamel palette
 // (black, white, silver + three colours taken from the song), laid in Pollock's
 // order — black skeleton, colour, white on top — inside every passage of the
-// music, so the web still grows in time. Used by Autumn Rhythm, Lavender Mist
-// and Blue Poles (slots 1, 3, 5); the other slots keep their own engines.
+// music, so the web still grows in time. The _pol2 painters below throw the
+// skeins along the melody.
 const _polR=(a,ss)=>_seedRnd(a,ss,0,0);
 const _polClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const _polMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
@@ -2758,29 +2549,6 @@ function _polPalette(chords,gc,isBW){
   const cols=picked.map(i=>_polEnamel(best[i])); while(cols.length<3) cols.push(cols.length?cols[cols.length-1]:[200,70,40]);
   return cols;
 }
-// one skein: a flung path. Returns {pts:[[x,y,w]...], pools:[[x,y,r]], spat:[[x,y,r]]}
-function _polSkein(rnd, x0,y0, ang0, len, D, o){
-  o=o||{}; const speed0=o.speed||1, wob=o.wob||1, wBase=(o.w||0.011)*D, loopy=(o.loopy!=null)?o.loopy:0.3;
-  const pts=[], pools=[], spat=[];
-  let x=x0,y=y0,a=ang0, curv=o.straight?0:(rnd()-.5)*0.3, v=speed0*(0.7+rnd()*0.6), travelled=0;
-  const step=D*0.012;
-  while(travelled<len){
-    // the hand: curvature drifts, now and then a tight loop or a flick
-    curv+= (rnd()-.5)*0.25*wob; curv*=(o.straight?0.5:0.86);
-    if(rnd()<0.035*loopy){ curv+=(rnd()<.5?1:-1)*(0.9+rnd()*0.6); }
-    a+=curv;
-    // speed: slows into the turns, races on the straights
-    const want=speed0*(0.35+0.9*(1-Math.min(1,Math.abs(curv)*2.2)))*(0.8+rnd()*0.4); v+=(want-v)*0.3;
-    const dx=Math.cos(a)*step*v, dy=Math.sin(a)*step*v; x+=dx; y+=dy; travelled+=Math.hypot(dx,dy);
-    if(x<-D*0.05||x>o.CW+D*0.05||y<-D*0.05||y>o.CH+D*0.05){ if(o.noBounce) break; a+=Math.PI*(0.6+rnd()*0.8); curv=0; }
-    const w=wBase*(0.5+0.9*Math.min(1.6,1/Math.max(0.3,v)))*(0.85+rnd()*0.3);   // thin when fast, fat when slow
-    pts.push([x,y,w]);
-    if(v<0.5 && rnd()<0.09) pools.push([x,y,w*(0.8+rnd()*0.9)]);             // paint pooling where the hand paused
-    if(rnd()<0.22*v){ const px=x+(rnd()-.5)*D*0.05*v, py=y+(rnd()-.5)*D*0.05*v; spat.push([px,py,wBase*(0.1+rnd()*0.28)]); }
-  }
-  if(o.endPool!==false) pools.push([x,y,wBase*(1.1+rnd()*0.9)]);
-  return {pts,pools,spat};
-}
 function _polDrawSkein(ctx,sk,col,alpha,soft){
   const {pts,pools,spat}=sk; if(pts.length<2) return;
   ctx.fillStyle=_polCss(col,alpha); ctx.strokeStyle=_polCss(col,alpha); ctx.lineCap='round'; ctx.lineJoin='round';
@@ -2797,47 +2565,121 @@ function _polSetup(chords,gc,mode){
   const pal=_polPalette(chords,gc,isBW);
   return {cn,isBW,energy,density,tempo,register,pal,ink:[18,16,20],white:[244,240,230],silver:[168,168,166]};
 }
-// the painting: a list of skein specs in Pollock's layer order within each passage; drawn up to reveal
-function _polBuild(ctx,CW,CH,chords,lim,gc,ss,mode,spec){
-  const S=_polSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn;
-  const reveal=chords._livePad ? _polClamp(Math.max(1,lim)/96,0,1) : _polClamp(Math.max(1,Math.min(cn,lim))/cn,0,1);   // live take: on its first plan, so a doubling never takes skeins away
-  const list=spec(S,D,CW,CH); // [{t,layer,x,y,ang,len,col,alpha,o}]
-  list.sort((a,b)=> (Math.floor(a.t*16)-Math.floor(b.t*16)) || (a.layer-b.layer) || (a.t-b.t));
-  const n=Math.max(1,Math.ceil(list.length*reveal));
-  for(let i=0;i<n;i++){ const s=list[i]; const rnd=_polR(s.id*7+90001,ss); rnd(); const sk=_polSkein(rnd,s.x,s.y,s.ang,s.len,D,Object.assign({CW,CH},s.o||{})); _polDrawSkein(ctx,sk,s.col,s.alpha,s.soft); }
-  return S;
-}
 function _polGround(ctx,CW,CH,c){ ctx.fillStyle=_polCss(c,1); ctx.fillRect(0,0,CW,CH); }
 
-// 1 · Autumn Rhythm (1950) — horizontal rhythm: long sweeping skeins flow left to right, black first, then white and tan
-function pollockPhaseAutumnRhythm(ctx,CW,CH,chords,lim,gc,ss,mode){
-  _polGround(ctx,CW,CH,mode==='bw'?[226,222,212]:[226,214,186]);
-  _polBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const n=34+Math.round(S.density*22); const tan=mode==='bw'?S.silver:_polMix(S.pal[0],[150,110,70],0.6);
-    for(let i=0;i<n;i++){ const r=_polR(92000+i,ss); r(); const t=i/n; const li=r(); const layer=li<0.45?0:li<0.72?1:2;
-      const col=layer===0?S.ink:layer===1?(r()<0.6?tan:S.pal[1]):S.white;
-      list.push({id:id++,t,layer,x:CW*_polClamp(t+(r()-.5)*0.3,0.02,0.98),y:CH*(0.1+r()*0.8),ang:(r()<0.5?0:Math.PI)+(r()-.5)*0.8,len:D*(2+r()*2.5),col,alpha:0.95,o:{speed:1.1+S.tempo*0.5,w:layer===0?0.013:0.011,loopy:0.5,wob:0.8}}); }
-    return list; });
+// ═══════════════════════════════════════════════════════════════════════════
+// Pollock · the skein read from the music. A skein is a phrase flung across
+// the canvas: the hand follows the melody (the line swings with the pitch),
+// the velocity decides the width — forte fat with pools, piano a thread —
+// the spatter the attack. Layers in Pollock's order: the bass in black first,
+// the melody in the song's enamel colours, the accents in white on top; the
+// web thickens as the piece plays. Palette: the song's enamel (_polPalette).
+// ═══════════════════════════════════════════════════════════════════════════
+function _pol2Setup(chords,gc,mode){ const S=_polSetup(chords,gc,mode); const A=_kd2Analyze(chords,gc,mode); S.A=A; const cn=S.cn;
+  S.groups=(n)=>_kd2Phrases(A,Math.max(1,n)).map(g=>({t0:g.t0,t1:g.t1,t:g.t,dur:g.n/cn,reg:A.reg(g.top),bass:A.reg(g.bass),v:g.v,vmax:g.vmax,n:g.n,a:g.a,b:g.b}));
+  S.climax=()=>{ let b=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn}; for(const p of A.phrases) if(p.vmax>b.vmax) b=p; return b; };
+  S.regAll=A.reg(A.phrases.reduce((s,p)=>s+p.top*p.n,0)/Math.max(1,cn));
+  // the melody and the dynamics over chords a..b, n samples: [register 0..1, velocity 0..1, bass register]
+  S.trace=(a,b,n)=>{ const out=[]; const w=Math.max(1,Math.round((b-a)/n/2)); for(let i=0;i<n;i++){ const c=a+(b-a)*i/Math.max(1,n-1); let s=0,v=0,bs=0,k=0; for(let j=Math.max(0,Math.round(c-w));j<=Math.min(cn-1,Math.round(c+w));j++){ const e=A.ev[j]; if(e){ s+=e.top; v+=e.v; bs+=e.bass; k++; } } out.push(k?[A.reg(s/k),v/k,A.reg(bs/k)]:[0.5,0.6,0.3]); } return out; };
+  // the piece cut into n equal windows (for the web's density, which is the piece's length, not its phrasing)
+  S.spans=(n)=>{ const out=[]; for(let i=0;i<n;i++){ const a=Math.floor(cn*i/n), b=Math.max(a+1,Math.floor(cn*(i+1)/n)); let top=0,bs=0,v=0,vmax=0,k=0; for(let j=a;j<b;j++){ const e=A.ev[j]; if(!e) continue; top+=e.top; bs+=e.bass; v+=e.v; if(e.v>vmax) vmax=e.v; k++; } out.push({t0:a/cn,t1:b/cn,t:(a+b)/2/cn,dur:(b-a)/cn,reg:A.reg(k?top/k:60),bass:A.reg(k?bs/k:40),v:k?v/k:0.6,vmax:vmax||0.6,n:b-a,a,b}); } return out; };
+  S.accents=(a,b)=>{ const out=[]; for(let i=a;i<b;i++){ const e=A.ev[i]; if(e&&(e.v>=A.vHi||(A.gapHi>0&&e.gap>A.gapHi))) out.push(e); } return out; };
+  return S; }
+// a guided skein: like _polSkein, but the hand is drawn toward the guide points (the melody) and the width follows their velocity
+function _pol2Skein(rnd, x0,y0, ang0, len, D, o){
+  o=o||{}; const speed0=o.speed||1, wob=o.wob||1, wBase=(o.w||0.011)*D, loopy=(o.loopy!=null)?o.loopy:0.3, G=o.guide||null, follow=o.follow==null?0.22:o.follow;
+  const pts=[], pools=[], spat=[];
+  let x=x0,y=y0,a=ang0, curv=o.straight?0:(rnd()-.5)*0.3, v=speed0*(0.7+rnd()*0.6), travelled=0, gi=0;
+  const step=D*0.012;
+  while(travelled<len){
+    curv+= (rnd()-.5)*0.25*wob; curv*=(o.straight?0.5:0.86);
+    if(rnd()<0.035*loopy){ curv+=(rnd()<.5?1:-1)*(0.9+rnd()*0.6); }
+    a+=curv;
+    let wm=1;
+    if(G){ while(gi<G.length-1 && travelled>len*(gi+0.5)/G.length) gi++; const g=G[gi]; const ta=Math.atan2(g[1]-y,g[0]-x); let da=ta-a; da=Math.atan2(Math.sin(da),Math.cos(da)); a+=da*follow; wm=g[2]==null?1:g[2]; }
+    const want=speed0*(0.35+0.9*(1-Math.min(1,Math.abs(curv)*2.2)))*(0.8+rnd()*0.4); v+=(want-v)*0.3;
+    const dx=Math.cos(a)*step*v, dy=Math.sin(a)*step*v; x+=dx; y+=dy; travelled+=Math.hypot(dx,dy);
+    if(x<-D*0.05||x>o.CW+D*0.05||y<-D*0.05||y>o.CH+D*0.05){ if(o.noBounce) break; a+=Math.PI*(0.6+rnd()*0.8); curv=0; }
+    const w=wBase*wm*(0.5+0.9*Math.min(1.6,1/Math.max(0.3,v)))*(0.85+rnd()*0.3);
+    pts.push([x,y,w]);
+    if((v<0.5||wm>1.25) && rnd()<0.09) pools.push([x,y,w*(0.8+rnd()*0.9)]);
+    if(rnd()<0.22*v*wm){ const px=x+(rnd()-.5)*D*0.05*v, py=y+(rnd()-.5)*D*0.05*v; spat.push([px,py,wBase*(0.1+rnd()*0.28)]); }
+  }
+  if(o.endPool!==false) pools.push([x,y,wBase*(1.1+rnd()*0.9)]);
+  return {pts,pools,spat};
 }
-// 3 · Lavender Mist (1950) — a pale dense web: white, pale pink and grey threads, a few black ones, a mist of fine spatter
-function pollockPhaseLavenderMist(ctx,CW,CH,chords,lim,gc,ss,mode){
-  _polGround(ctx,CW,CH,mode==='bw'?[222,218,210]:[222,208,196]);
-  _polBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const n=60+Math.round(S.density*30);
-    const pale=S.pal.map(c=>_polMix(c,[240,232,228],0.62));
-    for(let i=0;i<n;i++){ const r=_polR(94000+i,ss); r(); const t=i/n; const li=r(); const layer=li<0.18?0:li<0.6?1:2;
-      const col=layer===0?S.ink:layer===1?pale[Math.floor(r()*3)]:(r()<0.6?S.white:S.silver);
-      list.push({id:id++,t,layer,x:CW*r(),y:CH*r(),ang:r()*6.2832,len:D*(1.4+r()*2),col,alpha:layer===0?0.8:0.9,o:{speed:1.3+S.tempo*0.5,w:0.007,loopy:0.3,wob:1.1}}); }
-    return list; });
+// the guide of a phrase: n points along a direction, swung sideways by the melody (amp), the width by the velocity
+function _pol2Guide(S,g,x0,y0,ang,len,amp,n,bassLine){ const T=S.trace(g.a,g.b,n); const ux=Math.cos(ang),uy=Math.sin(ang), nx=-uy,ny=ux; return T.map((q,i)=>{ const d=len*i/Math.max(1,n-1); const off=(0.5-(bassLine?q[2]:q[0]))*amp; return [x0+ux*d+nx*off, y0+uy*d+ny*off, 0.55+0.9*q[1]]; }); }
+// the painting: skein specs drawn in time order up to the reveal; each spec {id,t,layer,x,y,ang,len,col,alpha,o,soft}
+function _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,spec){
+  const S=_pol2Setup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn;
+  const reveal=chords._livePad ? _polClamp(Math.max(1,lim)/96,0,1) : _polClamp(Math.max(1,Math.min(cn,lim))/cn,0,1);
+  const list=spec(S,D,CW,CH);
+  list.sort((a,b)=> (Math.floor(a.t*16)-Math.floor(b.t*16)) || (a.layer-b.layer) || (a.t-b.t));
+  const n=Math.max(1,Math.ceil(list.length*reveal));
+  for(let i=0;i<n;i++){ const s=list[i]; if(s.f){ s.f(ctx); continue; } const rnd=_polR(s.id*7+90001,ss); rnd(); const sk=_pol2Skein(rnd,s.x,s.y,s.ang,s.len,D,Object.assign({CW,CH},s.o||{})); if(s.relief) _pol2Relief(ctx,sk,s.col,s.alpha,D); else _polDrawSkein(ctx,sk,s.col,s.alpha,s.soft); }
+  return S;
 }
-// 4 · Blue Poles (1952) — a dense coloured web with eight dark-blue poles leaning across it, poured last
-function pollockPhaseBluePoles(ctx,CW,CH,chords,lim,gc,ss,mode){
-  _polGround(ctx,CW,CH,mode==='bw'?[224,220,210]:[226,214,186]);
-  _polBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const n=44+Math.round(S.density*26); const blue=mode==='bw'?[30,30,34]:[28,40,120];
-    for(let i=0;i<n;i++){ const r=_polR(95000+i,ss); r(); const t=i/n*0.9; const li=r(); const layer=li<0.3?0:li<0.7?1:2;
-      const col=layer===0?S.ink:layer===1?S.pal[Math.floor(r()*3)]:(r()<0.6?S.white:_polMix(S.pal[2],[240,200,60],0.5));
-      list.push({id:id++,t,layer,x:CW*r(),y:CH*r(),ang:r()*6.2832,len:D*(1.6+r()*2.2),col,alpha:0.95,o:{speed:1+S.tempo*0.6,w:0.012,loopy:0.4}}); }
-    const np=8; for(let k=0;k<np;k++){ const r=_polR(95600+k,ss); r(); const x=(k+0.5)/np+(r()-.5)*0.05, lean=(k%2?1:-1)*(0.08+r()*0.14);
-      list.push({id:id++,t:0.9+k/np*0.1,layer:3,x:CW*x+Math.sin(lean)*CH*0.55,y:-CH*0.03,ang:1.5708-lean,len:CH*1.25,col:blue,alpha:0.97,o:{speed:1.0,w:0.018,loopy:0,wob:0.1,straight:true,noBounce:true,endPool:false}}); }
-    return list; });
+// poured enamel with body: the shadow under it, the paint, the gloss along its ridge
+function _pol2Relief(ctx,sk,col,alpha,D){ const sc=(k)=>({pts:sk.pts.map(p=>[p[0],p[1],p[2]*k]),pools:sk.pools.map(p=>[p[0],p[1],p[2]*k]),spat:k<1?[]:sk.spat});
+  ctx.save(); ctx.translate(D*0.006,D*0.009); _polDrawSkein(ctx,sc(1.08),_polMix(col,[0,0,0],0.5),alpha*0.55,false); ctx.restore();
+  _polDrawSkein(ctx,sk,col,alpha,false);
+  ctx.save(); ctx.translate(-D*0.002,-D*0.004); _polDrawSkein(ctx,sc(0.42),_polMix(col,[255,255,255],0.42),alpha*0.85,false); ctx.restore();
+  ctx.save(); ctx.translate(-D*0.003,-D*0.006); _polDrawSkein(ctx,sc(0.14),_polMix(col,[255,255,255],0.8),alpha*0.7,false); ctx.restore(); }
+// a handprint (Number 1A, Lavender Mist): the palm and five fingers, pressed at an angle
+function _pol2Hand(ctx,x,y,s,ang,col,alpha){ ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.fillStyle=_polCss(col,alpha); ctx.beginPath(); ctx.ellipse(0,0,s*0.42,s*0.5,0,0,6.2832); ctx.fill();
+  const F=[[-0.62,-0.1,0.55,0.9],[-0.28,-0.6,0.8,-0.15],[0,-0.68,0.9,0],[0.27,-0.62,0.82,0.14],[0.5,-0.45,0.68,0.3]];
+  for(const [fx,fy,fl,fa] of F){ ctx.save(); ctx.translate(fx*s,fy*s); ctx.rotate(fa); ctx.beginPath(); ctx.ellipse(0,-fl*s*0.45,s*0.11,fl*s*0.5,0,0,6.2832); ctx.fill(); ctx.restore(); } ctx.restore(); }
+// ── the _pol2 variants: 1 Autumn Rhythm 1950 · 2 Lavender Mist 1950 · 3 Blue Poles 1952 · 4 Convergence 1952 ·
+// 5 Number 14 (black pouring) 1951. Slots 0 and 6 (the dense and sparse drip web) and 7 (White Light) keep their own engines.
+function _pol2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
+  const bw=mode==='bw';
+  switch(pick){
+    case 1: { // Autumn Rhythm — the horizontal rhythm: every phrase a long skein flowing left to right on the melody; black, then tan and white
+      _polGround(ctx,CW,CH,bw?[226,222,212]:[226,214,186]);
+      _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.spans(_polClamp(Math.round(S.cn/20),30,56)); const n=G.length; const tan=bw?S.silver:_polMix(S.pal[0],[150,110,70],0.6);
+        G.forEach((g,i)=>{ const r=_polR(92000+i,ss); r(); const li=r(); const layer=li<0.42?0:li<0.72?1:2; const col=layer===0?S.ink:layer===1?(r()<0.6?tan:S.pal[1]):S.white; const dir=r()<0.5?0:Math.PI; const len=D*(1.6+2.2*Math.min(1.5,g.dur*n)); const x0=dir===0?CW*(-0.02+0.5*r()):CW*(0.52+0.5*r()), y0=CH*(0.06+0.88*r());
+          list.push({id:id++,t:g.t,layer,x:x0,y:y0,ang:dir+(r()-.5)*0.5,len,col,alpha:0.95,o:{speed:1.1+S.tempo*0.5,w:layer===0?0.013:0.011,loopy:0.45,wob:0.7,guide:_pol2Guide(S,g,x0,y0,dir,len,CH*0.5,10,layer===0),follow:0.2}}); });
+        return list; });
+      break; }
+    case 2: { // Lavender Mist — a pale dense web of fine threads, one a phrase, black only at the accents; the handprints at the top edge are the loudest ones
+      _polGround(ctx,CW,CH,bw?[222,218,210]:[222,208,196]);
+      _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.spans(_polClamp(Math.round(S.cn/10),60,110)); const n=G.length; const pale=S.pal.map(c=>_polMix(c,[240,232,228],0.62));
+        G.forEach((g,i)=>{ const r=_polR(94000+i,ss); r(); const acc=g.vmax>=S.A.vHi; const li=r(); const layer=acc&&li<0.5?0:li<0.6?1:2; const col=layer===0?S.ink:layer===1?pale[Math.floor(r()*3)]:(r()<0.6?S.white:S.silver); const ang=r()*6.2832; const len=D*(1.2+1.6*Math.min(1.5,g.dur*n)); const x0=CW*r(), y0=CH*r();
+          list.push({id:id++,t:g.t,layer,x:x0,y:y0,ang,len,col,alpha:layer===0?0.8:0.9,o:{speed:1.3+S.tempo*0.5,w:0.007,loopy:0.3,wob:1.0,guide:_pol2Guide(S,g,x0,y0,ang,len,D*0.35,8,false),follow:0.18}}); });
+        const c=S.climax(); const acc=S.accents(c.a,c.b).slice(0,6); acc.forEach((e,k)=>{ list.push({id:id++,t:e.t,layer:3,f:(ctx)=>_pol2Hand(ctx,CW*(0.62+0.07*k),CH*(0.05+0.03*(k%2)),D*0.07,-0.3+0.15*k,S.ink,0.55)}); });
+        return list; });
+      break; }
+    case 3: { // Blue Poles — the coloured web of the phrases, then the poles: one for each of the strongest accents, leaning with the register
+      _polGround(ctx,CW,CH,bw?[224,220,210]:[226,214,186]);
+      _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.spans(_polClamp(Math.round(S.cn/14),44,80)); const n=G.length; const blue=bw?[30,30,34]:[28,40,120];
+        G.forEach((g,i)=>{ const r=_polR(95000+i,ss); r(); const li=r(); const layer=li<0.3?0:li<0.7?1:2; const col=layer===0?S.ink:layer===1?S.pal[Math.floor(r()*3)]:(r()<0.6?S.white:_polMix(S.pal[2],[240,200,60],0.5)); const ang=r()*6.2832; const len=D*(1.4+1.8*Math.min(1.5,g.dur*n)); const x0=CW*r(), y0=CH*r();
+          list.push({id:id++,t:g.t*0.9,layer,x:x0,y:y0,ang,len,col,alpha:0.95,o:{speed:1+S.tempo*0.6,w:0.012,loopy:0.4,guide:_pol2Guide(S,g,x0,y0,ang,len,D*0.4,8,layer===0),follow:0.2}}); });
+        const E=_kd2Events(S.A,40).filter(e=>e.acc).sort((a,b)=>b.v-a.v).slice(0,8).sort((a,b)=>a.t-b.t); const np=E.length||1;
+        E.forEach((e,k)=>{ const r=_polR(95600+k,ss); r(); const x=(k+0.5)/np+(r()-.5)*0.05, lean=(S.A.reg(e.top)-0.5)*0.5+(k%2?0.05:-0.05);
+          list.push({id:id++,t:0.9+k/np*0.1,layer:3,x:CW*x+Math.sin(lean)*CH*0.55,y:-CH*0.03,ang:1.5708-lean,len:CH*1.25,col:blue,alpha:0.97,o:{speed:1.0,w:0.014+0.01*e.v,loopy:0,wob:0.1,straight:true,noBounce:true,endPool:false}}); });
+        return list; });
+      break; }
+    case 4: { // Convergence — colour masses first, one for every phrase's climax, then the black web on the melody, white splashes last
+      _polGround(ctx,CW,CH,bw?[232,230,224]:[236,232,222]);
+      _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.spans(_polClamp(Math.round(S.cn/30),14,30)); const n=G.length;
+        G.forEach((g,i)=>{ const r=_polR(96000+i,ss); r(); const col=bw?S.silver:_polMix(S.pal[i%3],[255,255,255],0.1); const x=CW*(0.1+0.8*r()), y=CH*(0.1+0.8*(0.5*r()+0.5*(1-g.reg))); const R=D*(0.035+0.09*g.vmax);
+          list.push({id:id++,t:g.t,layer:0,x,y,ang:r()*6.2832,len:R*9,col,alpha:0.95,relief:true,o:{speed:0.5,w:0.02+0.02*g.vmax,loopy:2.5,wob:1.6,endPool:true}});
+          const ang=r()*6.2832; const len=D*(1.6+2*Math.min(1.5,g.dur*n)); const x0=CW*r(), y0=CH*r();
+          list.push({id:id++,t:g.t,layer:1,x:x0,y:y0,ang,len,col:S.ink,alpha:0.95,o:{speed:1.1+S.tempo*0.5,w:0.014,loopy:0.5,wob:0.8,guide:_pol2Guide(S,g,x0,y0,ang,len,D*0.4,8,false),follow:0.22}});
+          if(g.vmax>=S.A.vHi*0.95){ const x1=CW*r(), y1=CH*r(); list.push({id:id++,t:g.t1,layer:2,x:x1,y:y1,ang:r()*6.2832,len:D*0.9,col:S.white,alpha:0.95,o:{speed:1.4,w:0.01,loopy:0.2,wob:1.2}}); } });
+        return list; });
+      break; }
+    default: { // Number 14 (black pouring) — black enamel on raw canvas: a bold skein for every phrase, soaked at the edges, the figure of the melody
+      _polGround(ctx,CW,CH,bw?[214,210,200]:[214,198,166]);
+      _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.groups(_polClamp(Math.round(S.A.phrases.length/4),5,10)); const n=G.length;
+        G.forEach((g,i)=>{ const r=_polR(98000+i,ss); r(); const ang=r()*6.2832; const len=D*(1.2+1.6*Math.min(1.5,g.dur*n)); const x0=CW*(0.15+0.7*r()), y0=CH*(0.1+0.8*(1-g.reg)*0.7+0.1*r());
+          list.push({id:id++,t:g.t,layer:1,x:x0,y:y0,ang,len,col:S.ink,alpha:0.92,soft:true,o:{speed:0.8+S.tempo*0.4,w:0.022+0.012*g.vmax,loopy:0.8,wob:0.9,guide:_pol2Guide(S,g,x0,y0,ang,len,D*0.45,10,false),follow:0.26}});
+          if(g.v<0.5){ list.push({id:id++,t:g.t+0.01,layer:2,x:x0+D*0.05,y:y0+D*0.03,ang:ang+0.4,len:len*0.5,col:_polMix(S.ink,bw?[214,210,200]:[214,198,166],0.45),alpha:0.8,soft:true,o:{speed:1.3,w:0.008,loopy:0.3,wob:1.2}}); } });
+        return list; });
+      break; }
+  }
+  _setCurE(0.5);
 }
 
 function pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
@@ -14248,14 +14090,15 @@ const ARTIST_VARIANTS = {
     {ground:'#e8e2cc',mark:{panel:.6,cutout:.4},size:[.1,.35],layout:{scatter:1},density:.15},
     {ground:'#141418',mark:{cutout:.5,star:.3,panel:.2},size:[.08,.25],layout:{scatter:1},density:.2},   // Jazz
   ],
-  pollock: [
+  pollock: [   // slot order = solo variants: Classic drip, Autumn Rhythm, Lavender Mist, Blue Poles, Convergence, Number 14 black, Sparse, White Light
     {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
-    {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},                 // Autumn Rhythm: skeins on raw canvas
-    {ground:'#9a9aa0',mark:{drip:.6,splat:.4},size:[.006,.04],alpha:.85,layout:{flow:1},density:.6,layers:2},
-    {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},   // Lavender Mist: a fine pale web
-    {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
-    {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},        // Blue Poles: the web with leaning poles
+    {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},
+    {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},
+    {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},
+    {ground:'#ece8de',mark:{drip:.5,blob:.5},size:[.01,.08],layout:{flow:.6,scatter:.4},density:.6,layers:2},
+    {ground:'#d6c6a6',mark:{drip:1},size:[.012,.05],alpha:.9,layout:{flow:1},density:.3,layers:1,tone:'dark'},
     {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:.6,layers:2},
+    {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
   ],
   bloom: [   // slot order = solo phases: field, Blue Balls, edge, Big Red, Disappearance, Hanging, Matrix, Mandala
     {mark:{cloud:.6,dot:.4},size:[.05,.18],edge:.9,alpha:.6,layout:{scatter:.7,field:.3},density:.5},
@@ -14453,7 +14296,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,oneM:1,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
