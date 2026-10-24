@@ -12263,20 +12263,44 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
     // ritardando); left alone a scan ran 5–8 minutes whatever the image. Here the
     // shape is rescaled towards the planned length (targetMs: 1:15 for a restless
     // canvas … 4:00 for a calm one) — but the sounding steps never run faster than
-    // 92% of the pace the shape was tuned at (a median of ≈210–230 ms: calm enough
-    // to follow, never a machine gun), so a big or busy picture takes up to 5:30
-    // rather than being squeezed. Silent continuation cells and rests pass quicker
-    // (a flat sky wipes in faster than a detailed passage), so the sounding steps
-    // keep most of their room.
+    // 110% of the pace the shape was tuned at (a median of ≈270–300 ms: calm enough
+    // to follow, never a machine gun). Silent continuation cells and rests pass
+    // quicker (a flat sky wipes in faster than a detailed passage). When a big or
+    // busy picture still cannot fit 6:00 at that pace, the ONSET BUDGET below thins
+    // the music instead of speeding it up: the quietest off-beat onsets become
+    // silent steps (the chord before keeps ringing); the picture is still read cell
+    // by cell, only fewer of its cells strike a chord.
     let _govK = 1;
     {
       const _isCont = (ev)=> ev._playable===false && !ev._rest && !ev._melRest && ev.n && ev.n.length>0;
       const nat = evts.map(ev=>ev._stepMs||200);
-      const _wOf = (ev)=> _isCont(ev) ? _CONT_W : ((ev._rest||ev._melRest||!ev.n||!ev.n.length) ? _REST_W : 1);
+      const _wOf = (ev)=> ev._thin ? _CONT_W : _isCont(ev) ? _CONT_W : ((ev._rest||ev._melRest||!ev.n||!ev.n.length) ? _REST_W : 1);
+      const _PACE_K = 1.1, _CAP_MS = 360000;
       let tw=0; for(let i=0;i<evts.length;i++) tw += nat[i]*_wOf(evts[i]);
-      // The plan — unless that would push the pace under 92% of the tuned one; and
-      // never beyond 5:30 whatever the picture.
-      const want = Math.max(DUR_MIN, Math.min(330000, Math.max(targetMs, 0.92*tw)));
+      // ONSET BUDGET — never a downbeat or a bar start, never a run of more than
+      // three silent steps; the quietest onsets go first.
+      if(tw*_PACE_K > _CAP_MS){
+        let need = tw - _CAP_MS/_PACE_K;
+        const silent = (j)=>{ const e=evts[j]; return !!e && (e._playable===false || !e.n || !e.n.length); };
+        const cand = [];
+        for(let i=0;i<evts.length;i++){ const e=evts[i];
+          if(!e.n || !e.n.length || e._playable===false || e._rest || e._melRest || (e._runLen||0)>1) continue;
+          if(i%BEAT===0 || i%BAR_EVENTS===0) continue;
+          cand.push([i, e.n.reduce((a,n)=>a+(n.v||0),0)]); }
+        cand.sort((a,b)=>a[1]-b[1] || a[0]-b[0]);
+        for(const [i] of cand){
+          if(need<=0) break;
+          let l=0; while(l<3 && silent(i-1-l)) l++;
+          let r=0; while(r<3 && silent(i+1+r)) r++;
+          if(l+r+1>3) continue;
+          evts[i]._playable=false; evts[i]._rest=true; evts[i]._thin=true;
+          need -= nat[i]*(1-_CONT_W);
+        }
+        tw=0; for(let i=0;i<evts.length;i++) tw += nat[i]*_wOf(evts[i]);
+      }
+      // The plan — unless that would push the pace under 110% of the tuned one; and
+      // never beyond 6:00 whatever the picture.
+      const want = Math.max(DUR_MIN, Math.min(_CAP_MS, Math.max(targetMs, _PACE_K*tw)));
       if(tw>0 && evts.length>1){
         let K = want/tw;
         for(let pass=0; pass<4; pass++){
