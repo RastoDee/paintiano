@@ -12413,7 +12413,7 @@ const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 // Deterministic: (pixels, direction, base) → the same DNA, always.
 // ═══════════════════════════════════════════════════════════════════════════
 const _DNA_N=64;
-function _imgDNA(px, nc, nr, dir, base, table){
+function _imgDNA(px, nc, nr, base, table){
   const N=_DNA_N, npx=nc*nr;
   const Lm=new Float32Array(npx), Hm=new Float32Array(npx), Cm=new Float32Array(npx);
   let lSum=0, cSum=0, wSum=0, warm=0;
@@ -12422,13 +12422,11 @@ function _imgDNA(px, nc, nr, dir, base, table){
     if(ch>8){ warm+=ch*Math.cos((h-30)*Math.PI/180); wSum+=ch; } }
   const lightness=lSum/npx/100, chroma=cSum/npx, warmth=wSum?warm/wSum:0;
   // the reading axis: u along it (0..1), v across it (0..1, up = 1)
-  const uvOf=(x,y)=>{ if(dir==='vert') return [y/nr, x/nc];
-    if(dir==='spiralIn'||dir==='spiralOut'){ const rr=Math.min(x/nc,1-x/nc,y/nr,1-y/nr)*2; return [dir==='spiralIn'?rr:1-rr, (Math.atan2(y-nr/2,x-nc/2)/Math.PI+1)/2]; }
-    return [x/nc, 1-y/nr]; };
+  const uvOf=(x,y)=>[x/nc, 1-y/nr];
   const gu=new Float32Array(npx), gv=new Float32Array(npx);            // |dL| along u and along v
   for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x;
     const dx=x+1<nc ? Math.abs(Lm[i+1]-Lm[i]) : 0, dy=y+1<nr ? Math.abs(Lm[i+nc]-Lm[i]) : 0;
-    if(dir==='vert'){ gu[i]=dy; gv[i]=dx; } else { gu[i]=dx; gv[i]=dy; } }
+    gu[i]=dx; gv[i]=dy; }
   // per bin along u: the contour (edge-weighted mean of v), its strength, the accents (edges across), the light
   const cV=new Float32Array(N), cW=new Float32Array(N), acc=new Float32Array(N), lig=new Float32Array(N), cnt=new Float32Array(N), chr=new Float32Array(N);
   for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x; const [u,v]=uvOf(x,y); const k=Math.min(N-1,Math.floor(u*N));
@@ -12452,7 +12450,7 @@ function _imgDNA(px, nc, nr, dir, base, table){
   const modeIdx=Math.max(0,Math.min(5,Math.round(modeScore*5)));
   // symmetry: the picture mirrored along the reading axis
   let sNum=0,sA=0,sB=0; const mL=lSum/npx;
-  for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x; const j=dir==='vert' ? (nr-1-y)*nc+x : y*nc+(nc-1-x); const a=Lm[i]-mL, b=Lm[j]-mL; sNum+=a*b; sA+=a*a; sB+=b*b; }
+  for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x; const j=y*nc+(nc-1-x); const a=Lm[i]-mL, b=Lm[j]-mL; sNum+=a*b; sA+=a*a; sB+=b*b; }
   const symmetry=Math.max(0,sA&&sB ? sNum/Math.sqrt(sA*sB) : 0);
   // the focus: the window where saturation and local contrast are both strongest
   const W=Math.max(8,Math.round(Math.min(nc,nr)/8)), st=Math.max(4,W>>1); let fBest=0,fx=0,fy=0,fSum=0,fN=0;
@@ -12476,7 +12474,7 @@ function _imgDNA(px, nc, nr, dir, base, table){
   const pcHist=new Float32Array(12); if(base) for(const c of base) for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; pcHist[((n0.m%12)+12)%12]+=(n0.v||60); }
   let tonic=0,tb=-1; for(let p=0;p<12;p++) if(pcHist[p]>tb){ tb=pcHist[p]; tonic=p; }
   let cStrMax=0; for(let k=0;k<N;k++) cStrMax=Math.max(cStrMax,contourStr[k]);
-  return {N, dir, contour, contourStr, cStrMax, verticals, accents, light, chromaU, energy:energyN, energyRaw:energy, chroma, contrast, busyness:busy, texture, lightness, warmth, modeScore, modeIdx, symmetry, focus, regions, pcHist, tonic};
+  return {N, contour, contourStr, cStrMax, verticals, accents, light, chromaU, energy:energyN, energyRaw:energy, chroma, contrast, busyness:busy, texture, lightness, warmth, modeScore, modeIdx, symmetry, focus, regions, pcHist, tonic};
 }
 // ── reading the DNA while composing ──
 // the melody's target at axis position u (0..1): the contour mapped into [lo..hi] (midi), the range widened by how much the line moves
@@ -12509,20 +12507,6 @@ function _dnaRoots(D, nBars, inScale, tonic){ const rs=D.regions.filter(r=>r.pc>
 function _dnaProg(D, nBars, inScale, tonic, prog){ const areas=_dnaRoots(D,nBars,inScale,tonic); const out=[]; let a0=areas[0], k=0;
   for(let b=0;b<nBars;b++){ if(areas[b]!==a0){ a0=areas[b]; k=0; } out.push(inScale((a0+prog[k%prog.length])%12)); k++; } return out; }
 
-// ── the four forms of one reading (the classical forms of a tone row, applied to the picture's DNA):
-//   0 PRIME — as read · 1 RETROGRADE — from the far end (line, colours, edges, focus all reversed)
-//   2 INVERSION — the picture's negative: the line turned upside down, the mode from the other half of the ladder, calm ⇄ busy
-//   3 RETROGRADE-INVERSION — both. Deterministic: (picture, composer, direction, form) → one piece.
-function _dnaVariant(D, vr){ vr=vr|0; if(!vr) return D; const rev=(vr&1)===1, inv=(vr&2)===2; const E=Object.assign({},D);
-  const flip=(a)=>{ const o=new Float32Array(a.length); for(let k=0;k<a.length;k++) o[k]=a[a.length-1-k]; return o; };
-  if(rev){ E.contour=flip(D.contour); E.contourStr=flip(D.contourStr); E.verticals=flip(D.verticals); E.light=flip(D.light); E.chromaU=flip(D.chromaU);
-    E.accents=D.accents.map(a=>1-a).reverse(); E.focus=D.focus ? Object.assign({},D.focus,{pos:1-D.focus.pos}) : null;
-    E.regions=D.regions.map(r=>Object.assign({},r,{pos:1-r.pos})).reverse(); }
-  if(inv){ let mn=1,mx=0; for(let k=0;k<E.contour.length;k++){ mn=Math.min(mn,E.contour[k]); mx=Math.max(mx,E.contour[k]); }
-    const c=new Float32Array(E.contour.length); for(let k=0;k<c.length;k++) c[k]=mn+mx-E.contour[k]; E.contour=c;
-    E.modeIdx=D.modeIdx<=2 ? D.modeIdx+3 : D.modeIdx-3; E.modeScore=1-D.modeScore; E.energy=1-D.energy; }
-  return E; }
-
 // shared helpers of every composer
 // scale helpers bound to an absolute pitch-class set
 function _scaleKit(scAbs){
@@ -12543,23 +12527,22 @@ const _ev=(evts,idxRef,ns,startMs,sc,sec,domPc)=>{ evts.push({n:ns,startMs:Math.
 //   the ACCENTS fall on its edges (verticals), the CLIMAX where the eye is
 //   pulled (focus), the MODE from its light and warmth, the TEMPO from its
 //   energy, the FORM from its symmetry (ABA when it mirrors itself), and the
-//   piece is read in the direction the user chose (rows · columns · spiral).
+//   piece is read in rows, top to bottom.
 // Two pictures with one composer are two pieces; one picture with twelve
 // composers is one picture twelve times.
 // ═══════════════════════════════════════════════════════════════════════════
 // Shared PHASE 1 — the scan, the sections along the reading axis, the DNA.
-function _cAnalyse(px,nc,nr,table,colorMode,dir,saltBase,Smin,Smax,vr){
+function _cAnalyse(px,nc,nr,table,colorMode,saltBase,Smin,Smax){
   const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
   if(!base || !base.length) return {base:base||[],secs:null};
-  const D=_dnaVariant(_imgDNA(px,nc,nr,dir,base,table),vr);
+  const D=_imgDNA(px,nc,nr,base,table);
   let ss=0x811c9dc5;
   for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
   const R=(salt)=>{ const f=_seedRnd(saltBase+salt,ss,0,0); f(); return f; };
-  // the cells grouped along the reading axis: rows, columns, or the spiral's rings
-  let nB=0,nC=0; for(const e of base){ nB=Math.max(nB,(e.band|0)+1); nC=Math.max(nC,(e.cg|0)+1); }
-  const keyOf=(e)=>{ if(dir==='vert') return e.cg|0; if(dir==='spiralIn'||dir==='spiralOut'){ const r=Math.min(e.band|0,e.cg|0,nB-1-(e.band|0),nC-1-(e.cg|0)); return dir==='spiralIn'?r:(Math.min(nB,nC)>>1)-r; } return e.band|0; };
+  // the cells grouped along the reading axis: the rows, top to bottom
+  const keyOf=(e)=>e.band|0;
   const groups=new Map(); for(const e of base){ const k=keyOf(e); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(e); }
-  const keys=[...groups.keys()].sort((a,b)=>((vr|0)&1)?b-a:a-b);   // retrograde reads the sections from the far end
+  const keys=[...groups.keys()].sort((a,b)=>a-b);
   const S=Math.max(Smin,Math.min(Smax,keys.length));
   const secs=[];
   for(let si=0;si<S;si++){
@@ -12597,8 +12580,8 @@ function _cFinal(evts,ix,base,gl,gc2,sec,tonic,third,t,v,dur){ _ev(evts,ix,[{m:2
 // ── GLASS — additive cells, pendulum arpeggio, pedal bass; the cell's notes are the colour field the
 // reading is in, the register its light, the tempo the picture's energy; the chorale falls on the
 // calmest stretch, the climax where the eye is pulled.
-function composeImageGlass(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,9700,12,28,vr); if(!A.secs) return A.base;
+function composeImageGlass(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,9700,12,28); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const scale=_dnaMode(D,[[0,2,4,6,7,9,11],[0,2,4,5,7,9,11],[0,2,3,5,7,9,10],[0,2,3,5,7,8,10]]);
   const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const inScale=kit.inScale;
@@ -12653,8 +12636,8 @@ function composeImageGlass(px,nc,nr,table,colorMode,dir,vr){
 
 // ── SATIE — Gymnopédie: the slow 3/4 sway between two chords — the two colour fields the reading is
 // crossing — and a melody that walks the picture's own line; the stiller the picture, the more it rests.
-function composeImageSatie(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,9800,10,22,vr); if(!A.secs) return A.base;
+function composeImageSatie(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,9800,10,22); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const scale=_dnaMode(D,[[0,2,4,6,7,9,11],[0,2,4,5,7,9,11],[0,2,3,5,7,9,10],[0,1,3,5,7,8,10]]);   // lydian · major · dorian · phrygian (the gnossienne)
   const major=scale[2]===4; const seventh=major?11:10;
@@ -12710,8 +12693,8 @@ function composeImageSatie(px,nc,nr,table,colorMode,dir,vr){
 // ── CHOPIN — nocturne: the left hand's broken chords walk the picture's colour fields (the cadences
 // stay Chopin's), the right hand sings the picture's line, an ornament on every edge, the climax
 // where the eye is pulled; the agitato comes where the picture is busiest.
-function composeImageChopin(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,9900,10,20,vr); if(!A.secs) return A.base;
+function composeImageChopin(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,9900,10,20); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const minor=_dnaMode(D,[false,true]);
   const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
@@ -12779,8 +12762,8 @@ function composeImageChopin(px,nc,nr,table,colorMode,dir,vr){
 // ── CARL VINE — toccata: the sixteenth motor whose accents fall where the picture has its edges,
 // add2 harmonies from its colour fields, the breather on its stillest stretch, the coda where the
 // eye is pulled.
-function composeImageVine(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10200,8,16,vr); if(!A.secs) return A.base;
+function composeImageVine(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10200,8,16); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const minor=_dnaMode(D,[false,false,true]);                     // Vine leans bright
   const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
@@ -12833,8 +12816,8 @@ function composeImageVine(px,nc,nr,table,colorMode,dir,vr){
 // ── GERSHWIN — stride-lite over seventh chords: the loop's chords are the picture's colour fields
 // (ii–V kept for the turnarounds), the tune sings the picture's line, blue notes on its edges, the
 // bridge on its brightest stretch.
-function composeImageGershwin(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10300,8,16,vr); if(!A.secs) return A.base;
+function composeImageGershwin(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10300,8,16); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const scale=_jamMinorNow()?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const scAbs=scale.map(d=>(tonic+d)%12); const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
   const blue=(tonic+3)%12;
@@ -12883,8 +12866,8 @@ function composeImageGershwin(px,nc,nr,table,colorMode,dir,vr){
 
 // ── YIRUMA — the hook that returns: a two-bar hook drawn from the picture's line where it moves most,
 // over a four-chord loop of the picture's colour fields; the B lifts on the brightest block.
-function composeImageYiruma(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10400,8,14,vr); if(!A.secs) return A.base;
+function composeImageYiruma(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10400,8,14); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const scale=_jamMinorNow()?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const scAbs=scale.map(d=>(tonic+d)%12); const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
   const eighth=Math.round(520-D.energy*180);                    // 340 … 520
@@ -12933,8 +12916,8 @@ function composeImageYiruma(px,nc,nr,table,colorMode,dir,vr){
 // ── BACH — two-part invention: the subject is the picture's line (eight sixteenths of its contour),
 // the sequences walk its colour fields, the dominant pedal sits where the eye is pulled; terraced
 // dynamics follow its light; major, dorian or harmonic minor by its mood.
-function composeImageBach(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10500,10,18,vr); if(!A.secs) return A.base;
+function composeImageBach(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10500,10,18); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const scale=_dnaMode(D,[[0,2,4,5,7,9,11],[0,2,3,5,7,9,10],[0,2,3,5,7,8,11]]);
   const minor=scale[2]===3;
@@ -12988,8 +12971,8 @@ function composeImageBach(px,nc,nr,table,colorMode,dir,vr){
 
 // ── BEETHOVEN — sonata in four rooms: adagio where the picture is still, allegro where it moves,
 // the storm on its busiest stretch, the sforzandi on its edges, the climax where the eye is pulled.
-function composeImageBeethoven(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10600,10,18,vr); if(!A.secs) return A.base;
+function composeImageBeethoven(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10600,10,18); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const minor=_dnaMode(D,[false,true]);
   const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];
@@ -13053,8 +13036,8 @@ function composeImageBeethoven(px,nc,nr,table,colorMode,dir,vr){
 // ── DEBUSSY — the scale is the picture's: lydian where it is bright and warm, pentatonic where muted,
 // whole-tone where vivid; the washes break where it has edges, the planing slides through its colour
 // fields, the melody is its line, the swell where the eye is pulled.
-function composeImageDebussy(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10700,10,20,vr); if(!A.secs) return A.base;
+function composeImageDebussy(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10700,10,20); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const pent=[0,2,4,7,9].map(d=>(tonic+d)%12), whole=[0,2,4,6,8,10].map(d=>(tonic+d)%12), lyd=[0,2,4,6,7,9,11].map(d=>(tonic+d)%12), dor=[0,2,3,5,7,9,10].map(d=>(tonic+d)%12);
   const home=_dnaMode(D,[lyd,pent,pent,dor],true); const kitH=_scaleKit(home), kitW=_scaleKit(whole);
@@ -13109,8 +13092,8 @@ function composeImageDebussy(px,nc,nr,table,colorMode,dir,vr){
 
 // ── RACHMANINOV — the left hand sweeps the picture's colour fields, the melody in octaves sighs along
 // its line, the bells toll on its dark stretches, the climax of full chords where the eye is pulled.
-function composeImageRachmaninov(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10800,10,18,vr); if(!A.secs) return A.base;
+function composeImageRachmaninov(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10800,10,18); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const minor=_dnaMode(D,[false,true,true]);                      // minor by nature
   const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
@@ -13161,8 +13144,8 @@ function composeImageRachmaninov(px,nc,nr,table,colorMode,dir,vr){
 
 // ── EINAUDI — the ostinato never changes; the four chords under it are the picture's colour fields,
 // the sparse melody its line, the one long crescendo peaks where the eye is pulled.
-function composeImageEinaudi(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10900,8,14,vr); if(!A.secs) return A.base;
+function composeImageEinaudi(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,10900,8,14); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const scale=_dnaMode(D,[[0,2,4,5,7,9,11],[0,2,4,5,7,9,11],[0,2,3,5,7,8,10]]);
   const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const {snap,stepSc,inScale,dPc}=kit;
@@ -13198,8 +13181,8 @@ function composeImageEinaudi(px,nc,nr,table,colorMode,dir,vr){
 // ── HISAISHI — the waltz: the verse walks the picture's colour fields, the chorus is Hisaishi's royal
 // road and comes on the picture's brightest stretches, the melody leaps a sixth where the picture
 // has an edge and walks its line between.
-function composeImageHisaishi(px,nc,nr,table,colorMode,dir,vr){
-  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,11000,8,16,vr); if(!A.secs) return A.base;
+function composeImageHisaishi(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,11000,8,16); if(!A.secs) return A.base;
   const {base,secs,tonic,gl,gc2,R,D}=A;
   const scale=_jamMinorNow()?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const {snap,stepSc,inScale,dPc}=kit;
   const q=Math.round(520-D.energy*160);                         // waltz quarter 360 … 520
@@ -13267,7 +13250,7 @@ function _jamWarp(ev,w){ if(Math.abs(w-1)<0.004) return ev;
   return ev.map(e=>Object.assign({},e,{startMs:Math.round((e.startMs||0)*w),n:e.n.map(o=>Object.assign({},o,{durMs:Math.max(40,Math.round((o.durMs||0)*w))}))})); }
 function _jamOrder(out){ out.sort((x,y)=>x.startMs-y.startMs); for(let i=0;i<out.length;i++) out[i].idx=i; return out; }
 // the picture's address: composers · direction · form · a sample of its pixels
-function _jamHash(ks,px,dir,vr){ let h=2166136261; const s=ks.join('+')+'|'+dir+'|'+(vr|0);
+function _jamHash(ks,px){ let h=2166136261; const s=ks.join('+')+'|lr|0';   // 'lr|0' is kept as it was, so the pieces already heard stay exactly as they were
   for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
   for(let i=0;i<px.length;i+=97){ const c=px[i]; h^=(((c.r|0)+(c.g|0)*7+(c.b|0)*13)&0xffff); h=Math.imul(h,16777619); }
   h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return h>>>0; }
@@ -13343,15 +13326,15 @@ function _jamBred(P,h){
   return res;
 }
 
-function composeImageCallResponse(px,nc,nr,table,colorMode,dir,keys,vr){
+function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
   const ks=(keys||[]).filter(k=>COMPOSER_ENGINES[k]);
-  if(ks.length<2) return ks.length===1 ? COMPOSER_ENGINES[ks[0]](px,nc,nr,table,colorMode,dir,vr) : [];
+  if(ks.length<2) return ks.length===1 ? COMPOSER_ENGINES[ks[0]](px,nc,nr,table,colorMode) : [];
   const prev=_jamCtx; _jamCtx={minor:null}; const P=[];
-  try{ for(const k of ks){ _jamNoteInfo=null; let ev=[]; try{ ev=COMPOSER_ENGINES[k](px,nc,nr,table,colorMode,dir,vr)||[]; }catch(_){ ev=[]; }
+  try{ for(const k of ks){ _jamNoteInfo=null; let ev=[]; try{ ev=COMPOSER_ENGINES[k](px,nc,nr,table,colorMode)||[]; }catch(_){ ev=[]; }
       if(ev.length){ const inf=_jamNoteInfo||{barMs:2000,qpb:4}; P.push({k,ev,bar0:inf.barMs,qpb:inf.qpb}); } } }
   finally{ _jamCtx=prev; _jamNoteInfo=null; }
   if(P.length<2) return P.length ? P[0].ev : [];
-  const h=_jamHash(ks,px,dir,vr); let style=_jamStyleOf(h); let out=null;
+  const h=_jamHash(ks,px); let style=_jamStyleOf(h); let out=null;
   if(style==='E') out=_jamBred(P,h);
   if(!out){ style='A'; out=_jamRelay(P); }
   try{ globalThis.__COMP_JAM_STYLE={sig:ks.join(),style,roles:out._roles||null}; }catch(_){}

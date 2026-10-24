@@ -3832,7 +3832,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Image reading direction: 'lr' (default), 'vert', 'spiralIn', 'spiralOut'.
   // Mirrored to a ref so transcription loops read the current value live.
   const [imgDir, setImgDir] = useState('lr');
-  const [imgVar, setImgVar] = useState(0);   // the composers' FORM of the reading: 0 original · 1 backwards · 2 inverted · 3 both
   // COMPOSER for painting→music: null = plain scan (the "mosaic" of image
   // mode), 'glass' = the piece re-composed in a composer's style from the
   // analysed whole picture. Mirrors mosaic-vs-artists on the music side.
@@ -3921,9 +3920,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return true;
   },[setupComposers, isDailyComposer, composerIsLocked]);
   const imgDirRef = useRef('lr');
-  const imgVarRef = useRef(0);
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
-  useEffect(()=>{ imgVarRef.current=imgVar; },[imgVar]);
   // FULLSCREEN SCROLL LOCK — on iOS the swipe-up gesture also scrolled the whole
   // page (canvas, hint and the ⤢ button slid away). In immersive mode lock the
   // document: no overflow, no touch-driven scrolling, no rubber-banding. The
@@ -5445,7 +5442,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
             const nowT = performance.now();
             if (d !== phMemo.d) { phMemo.d = d; phMemo.t = nowT; }
             try {
-              _drawImagePlayhead(ctx, { chords, d, grid, pix, gc, dir: imgDirRef.current, now: nowT, tCur: phMemo.t,
+              _drawImagePlayhead(ctx, { chords, d, grid, pix, gc, dir: imgComposerRef.current ? 'lr' : imgDirRef.current, now: nowT, tCur: phMemo.t,
                 speed: playbackSpeedRef.current || 1, aiOn: !!(melodyOnRef.current && melodyDataRef.current),
                 beads: melBeadsRef.current, reduced: _reduced }, phMemo);
             } catch (_) {}
@@ -6471,7 +6468,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         pixelBackup: scanPixelBackupRef.current, // the scan behind an AI composition
         mode: meta.mode||'harmony',
         imgDir: imgDirRef.current||'lr',
-        imgVar: imgVarRef.current||0,
         imgPlayMode: imgPlayModeRef.current||'scan',
         imgCompose: !!imgComposeRef.current,
         atmoOn: !!atmoOnRef.current,
@@ -6692,7 +6688,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setImgPlayMode(s.imgPlayMode||'scan'); imgPlayModeRef.current=s.imgPlayMode||'scan';
       if(s.mode){ setMode(s.mode); }
       setImgDir(s.imgDir||'lr'); imgDirRef.current = s.imgDir||'lr';
-      setImgVar(s.imgVar||0); imgVarRef.current = s.imgVar||0;
       if(typeof s.appMode!=='undefined') appModeRef.current = s.appMode;
       if(typeof s.kontraAuto!=='undefined') kontraAutoRef.current = s.kontraAuto;
       setAtmoOn(!!s.atmoOn); atmoOnRef.current=!!s.atmoOn;
@@ -9158,31 +9153,31 @@ Hard requirements:
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
           const _crKeys0 = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
           const evts=_composerTimeline((_crKeys0.length>=2)
-            ? composeImageCallResponse(px,nc,nr,hueTable,startMode,imgDirRef.current,_crKeys0,imgVarRef.current)
+            ? composeImageCallResponse(px,nc,nr,hueTable,startMode,_crKeys0)
             : (imgComposerRef.current==='glass')
-            ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageGlass(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='satie')
-            ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageSatie(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='chopin')
-            ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageChopin(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='vine')
-            ? composeImageVine(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageVine(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='gershwin')
-            ? composeImageGershwin(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageGershwin(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='yiruma')
-            ? composeImageYiruma(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageYiruma(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='bach')
-            ? composeImageBach(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageBach(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='beethoven')
-            ? composeImageBeethoven(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageBeethoven(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='debussy')
-            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageDebussy(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='rachmaninov')
-            ? composeImageRachmaninov(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageRachmaninov(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='einaudi')
-            ? composeImageEinaudi(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageEinaudi(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='hisaishi')
-            ? composeImageHisaishi(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
+            ? composeImageHisaishi(px,nc,nr,hueTable,startMode)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current));
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -9251,14 +9246,14 @@ Hard requirements:
     if(restoringRef.current)return; // multi-draft restore in progress — keep the stashed chords/disp
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const _varEff = imgComposer ? imgVar : 0;
-    const sig = mode + '|' + imgDir + (_varEff ? '|v'+_varEff : '') + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleNow!=='A') ? '|f'+fuStyleNow : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    const _effDir = imgComposer ? 'lr' : imgDir;   // composers always read in rows
+    const sig = mode + '|' + _effDir + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleNow!=='A') ? '|f'+fuStyleNow : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
     // than resume mid-stream (resuming would jump to an unrelated cell). A
     // palette/mode change keeps the same order and resumes seamlessly.
-    const _dirChanged = (pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir) || (pixelRef.current.lastVar !== undefined && pixelRef.current.lastVar !== _varEff) || _composerNextRef.current;
+    const _dirChanged = (pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== _effDir) || _composerNextRef.current;
     _composerNextRef.current=false;
     // COMPOSER change: the pieces differ in length and density, so keeping the
     // same event INDEX jumps the progress bar (Rachmaninov at 27% → Bach at 18%
@@ -9277,8 +9272,7 @@ Hard requirements:
       let best=0, bd=Infinity; for(let k=0;k<newArr.length;k++){ const dd=Math.abs((newArr[k].startMs||0)-target); if(dd<bd){bd=dd;best=k;} }
       return best;
     };
-    pixelRef.current.lastDir=imgDir;
-    pixelRef.current.lastVar=_varEff;
+    pixelRef.current.lastDir=_effDir;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
     const{nc,nr,px}=pixelRef.current;
@@ -9294,31 +9288,31 @@ Hard requirements:
     try{ _setImgForcedBands((pixelRef.current&&pixelRef.current.mosaicBands)||0); }catch(_){}
     const _crKeys = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
     const _evtsLit = (_crKeys.length>=2)
-      ? composeImageCallResponse(px,nc,nr,hueTable,mode,imgDirRef.current,_crKeys,imgVarRef.current)
+      ? composeImageCallResponse(px,nc,nr,hueTable,mode,_crKeys)
       : (imgComposerRef.current==='glass')
-      ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageGlass(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='satie')
-      ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageSatie(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='chopin')
-      ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageChopin(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='vine')
-      ? composeImageVine(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageVine(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='gershwin')
-      ? composeImageGershwin(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageGershwin(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='yiruma')
-      ? composeImageYiruma(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageYiruma(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='bach')
-      ? composeImageBach(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageBach(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='beethoven')
-      ? composeImageBeethoven(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageBeethoven(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='debussy')
-      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageDebussy(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='rachmaninov')
-      ? composeImageRachmaninov(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageRachmaninov(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='einaudi')
-      ? composeImageEinaudi(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageEinaudi(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='hisaishi')
-      ? composeImageHisaishi(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
+      ? composeImageHisaishi(px,nc,nr,hueTable,mode)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsT=_composerTimeline(_evtsLit);
@@ -9397,7 +9391,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,imgVar,imgComposer,composerStage,fuStyleNow,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,fuStyleNow,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
@@ -13568,7 +13562,7 @@ Hard requirements:
               // direction/palette → different signature), fall through to a fresh
               // bake so the new scan is heard.
               try{
-                const _curSig = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + (imgVarRef.current||0) + '|' + (chordsRef.current ? chordsRef.current.length : 0);
+                const _curSig = (mode||'') + '|' + (imgComposerRef.current ? 'lr' : (imgDirRef.current||'lr')) + '|' + (chordsRef.current ? chordsRef.current.length : 0);
                 if(musicStashRef.current && _seeMusicSrcSigRef.current === _curSig){
                   try{ stashMode('image'); }catch(_){}   // keep the Image draft for Back
                   _musicFromImageRef.current = true;
@@ -13587,7 +13581,7 @@ Hard requirements:
                 // Fresh bake → any stale Music draft from a previous See music is
                 // now superseded; clear it and record the source signature so a
                 // later Back can tag the new draft for reuse.
-                _seeMusicSrcSigRef.current = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + (imgVarRef.current||0) + '|' + chords.length;
+                _seeMusicSrcSigRef.current = (mode||'') + '|' + (imgComposerRef.current ? 'lr' : (imgDirRef.current||'lr')) + '|' + chords.length;
                 musicStashRef.current = null; setHasMusicDraft(false);
                 // Bake image-mode runtime expansion (tremolo re-strikes,
                 // arpeggio per-note offsets, sustained-plane durations,
@@ -13745,7 +13739,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _stageNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}<span style={{fontStyle:'normal'}}>•</span><span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}{imgVar>0 ? ' \u2022 '+t('var_'+imgVar) : ''}</span></>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _stageNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
         )}
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
@@ -14044,7 +14038,8 @@ Hard requirements:
                 </div>
               )}
             </>)}
-            <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:imgComposer?10:4,textTransform:'uppercase'}}>{imgComposer?t('dirLabelRead'):t('dirLabel')}</div>
+            {!imgComposer && (<>
+            <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
                   const sel = imgDir===d;
@@ -14058,17 +14053,6 @@ Hard requirements:
                   const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
                   return (
                     <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
-                  );
-                })}
-              </div>
-            {imgComposer && (<>
-              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:10,textTransform:'uppercase'}}>{t('varLabel')}</div>
-              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-                {[0,1,2,3].map(v=>{
-                  const sel = imgVar===v; const locked = working;
-                  const glyph = v===0?'→':v===1?'←':v===2?'↕':'⇆';
-                  return (
-                    <button key={v} disabled={locked} onClick={()=>{ if(locked)return; setImgVar(v); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('var_'+v)}</button>
                   );
                 })}
               </div>
