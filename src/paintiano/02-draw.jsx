@@ -4390,7 +4390,7 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 //  4 Towards Disappearance (1957–58): a corner anchor, the far corner left void
 //  5 Hanging          (1960s): a curtain of cells along the top, long drips
 //  6 Matrix           (1970s — Fresh Air): a loose lattice of translucent bars
-//  7 Mandala          (1970s): concentric rings + spokes (kept from the first build)
+//  7 Mandala          (1970s): a ring of cells around the white void, one a passage
 //  Free (cap=2) sees Cellular field + Blue Balls — many small coloured cells vs
 //  a few big blue ones is the strongest contrast in Sam Francis's catalogue.
 function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
@@ -4566,71 +4566,20 @@ function francisPhaseMatrix(ctx,CW,CH,chords,lim,gc,ss,mode){
   ctx.restore();
 }
 
-// ── Sam Francis 7: Mandala (1970s series) — kept from the first build. White ground + 10 concentric
-// chord-coloured rings + 24 petal spokes radiating outward + white centre
-// dot. Sam Francis's late spiritual phase — ordered, centred, mystical.
-function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  ctx.fillStyle = isBW ? '#f4f2ee' : '#f7f5ef';
-  ctx.fillRect(0,0,CW,CH);
-
-  const cx = CW/2, cy = CH/2;
-  const maxR = Math.min(CW,CH)*0.45;
-  const rings = 10;
-  const visRings = Math.max(1, Math.ceil(rings*reveal));
-
-  // Concentric rings outer→inner (so inner sits on top). The rings are
-  // translucent, so every inner ring's colour is a composite of all the rings
-  // beneath it: ALL rings are always stacked (the full composition) and the
-  // reveal clips the stack to the visible disc — otherwise each newly revealed
-  // outer ring recoloured the whole mandala.
-  ctx.save();
-  if(visRings<rings){
-    ctx.beginPath();
-    ctx.arc(cx, cy, maxR*(visRings/rings), 0, Math.PI*2);
-    ctx.clip();
-  }
-  for(let r=rings;r>=1;r--){
-    const radius = maxR * (r/rings);
-    const {rgb} = _picChord(chords, Math.floor(r/rings * cn)%cn, gc, isBW);
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.55 + (r%2)*0.15).toFixed(2)})`;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI*2);
-    ctx.fill();
-  }
-  ctx.restore();
-
-  // Petal spokes radiating.
-  const spokes = 24;
-  const visSpokes = Math.max(2, Math.ceil(spokes*reveal));
-  for(let s=0;s<visSpokes;s++){
-    const ang = (s/spokes)*Math.PI*2;
-    const {rgb} = _picChord(chords, (s*5)%cn, gc, isBW);
-    const rnd = _seedRnd(s+5000, ss, 0, 0);
-    const inner = maxR*0.35;
-    const outer = maxR*(0.9+rnd()*0.15);
-    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.65)`;
-    ctx.beginPath();
-    const ax = cx + Math.cos(ang)*inner;
-    const ay = cy + Math.sin(ang)*inner;
-    const bx = cx + Math.cos(ang+0.06)*outer;
-    const by = cy + Math.sin(ang+0.06)*outer;
-    const cxx = cx + Math.cos(ang-0.06)*outer;
-    const cyy = cy + Math.sin(ang-0.06)*outer;
-    ctx.moveTo(ax, ay);
-    ctx.lineTo(bx, by);
-    ctx.lineTo(cxx, cyy);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // White centre dot — the still point.
-  ctx.fillStyle = isBW ? '#f4f2ee' : '#f7f5ef';
-  ctx.beginPath();
-  ctx.arc(cx, cy, maxR*0.12, 0, Math.PI*2);
-  ctx.fill();
+// ── Sam Francis 7: Mandala (1970s) — a ring of cells around the white void: one cell
+// for every passage, laid clockwise from the top in the order of the music, as big
+// as its dynamics, nudged in or out by its register; the drips run down with
+// gravity, the spatter flies inward; the loudest accents land outside the ring.
+function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,ss,mode){
+  _frGround(ctx,CW,CH,mode==='bw');
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const A=_kd2Analyze(chords,gc,mode); const cn=chords.length;
+    const G=_kd2Phrases(A,Math.max(1,Math.min(22,Math.max(10,Math.round(A.phrases.length/3))))); const n=G.length; const cx=CW/2, cy=CH*0.5, R=D*0.3;
+    G.forEach((g,i)=>{ const r=_frR(86000+i,ss); r(); const a=-1.5708+6.2832*(i+0.5)/n; const reg=A.reg(g.top); const rr=R*(0.9+0.25*(reg-0.5))+(r()-.5)*D*0.03; const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
+      list.push({id:id++,t:g.t0,x,y,r:D*(0.035+0.05*g.vmax),sx:0.9+r()*0.5,sy:0.8+r()*0.4,col:_frChordAt(chords,gc,S.isBW,g.t),alpha:0.55+0.35*g.v,drip:Math.sin(a)>0?0.9:0.25,dripLen:0.6+1.8*Math.max(0,Math.sin(a)),spat:0.8,flick:a+3.1416+(r()-.5)*0.8,spatR:1.2,edge:1,bleed:0.4});
+      if(g.n>cn/n*1.3){ list.push({id:id++,t:g.t,x:x+Math.cos(a)*D*0.06+(r()-.5)*D*0.03,y:y+Math.sin(a)*D*0.06,r:D*(0.02+0.025*g.v),sx:1,sy:1,col:_frChordAt(chords,gc,S.isBW,g.t1-0.01),alpha:0.5,drip:0.3,spat:0.5,flick:a,edge:1}); } });
+    const acc=[]; for(let i=0;i<cn;i++){ const e=A.ev[i]; if(e&&e.v>=A.vHi) acc.push(e); } acc.sort((p,q)=>q.v-p.v); acc.slice(0,4).sort((p,q)=>p.t-q.t).forEach((e,k)=>{ const r=_frR(86500+k,ss); r(); const a=-1.5708+6.2832*e.t; const rr=R*(1.55+0.3*r()); const x=_frClamp(cx+Math.cos(a)*rr,D*0.06,CW-D*0.06), y=_frClamp(cy+Math.sin(a)*rr,D*0.06,CH-D*0.06);
+      list.push({id:id++,t:e.t,x,y,r:D*(0.025+0.03*e.v),sx:1.2,sy:0.8,col:_frChordAt(chords,gc,S.isBW,e.t),alpha:0.8,drip:0.7,dripLen:1.5,spat:0.9,flick:a+3.1416,spatR:1.5,edge:1}); });
+    return list; });
 }
 
 // ── Spiral (Hilma af Klint) ──────────────────────────────────────────────────
@@ -7132,8 +7081,6 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
-  let _forcedWaveVariant = 0; // set by phase dispatcher: 0 = stripes, 1 = ripple
-  const rnd = _seedRnd(103, ss, 0, 0);
 
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
@@ -7151,17 +7098,9 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
   }
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Classic Riley (Wavy stripes / Concentric ripple, seed-driven internal
-  //      pick — the two layouts read as one "wave Riley" identity so they
-  //      share a single Vary slot).
-  //  1 = Movement in Squares (1961, Riley's breakthrough optical bend).
-  //  2 = Late Morning vertical stripes (1967, pure colour signature).
-  //  3 = Cataract (1967, radiating petal wobble).
-  //  4 = Crest (1964, single S-curve gesture).
-  //  5 = Triangle tessellation.
-  //  Free (cap=2) sees Wavy/Ripple + Movement in Squares — wave Riley vs
-  //  square Riley is the strongest visual contrast in her catalogue.
+  // ── VARIANT: 0 Fall ribbons (the body below) · 1 Warp (Late Morning stripes) · 2 Blaze ·
+  // 3 Cataract 3 · 4 Crest · 5 Triangles · 6 Fall (dense diagonal) · 7 Movement in Squares.
+  // Free: 0 and 1.
   {
     const _pn=_capN(8); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_rpick===1){ rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -7170,10 +7109,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     if(_rpick===4){ rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===5){ rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===6){ rileyPhaseFall(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // Slots 0 and 7 share the body below; the slot picks the composition (0 =
-    // wavy vertical stripes, 7 = concentric ripple rings) instead of a hidden
-    // seed bit — both reachable via Vary.
-    _forcedWaveVariant = (_rpick===7) ? 1 : 0;
+    if(_rpick===7){ rileyPhaseSquares(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   }
   const darkC = chordCol(0, 0.5);
   const liteC = chordCol(Math.floor(cn/2), 1.25);
@@ -7181,41 +7117,6 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // Light ground.
   ctx.fillStyle = css([Math.min(255,liteC[0]+60),Math.min(255,liteC[1]+60),Math.min(255,liteC[2]+60)]);
   ctx.fillRect(0, 0, CW, CH);
-
-  // ── Composition: two variants by seed ─────────────────────────────────────
-  const waveVariant = _forcedWaveVariant;   // phase-driven (slot 0 vs 7), not seed
-
-  if(waveVariant === 1){
-    // Variant B — concentric ripple rings (Riley "Blaze"): nested wavy circles
-    // radiating from a centre, alternating two tones, with rotational wobble.
-    const cx = CW*0.5, cy = CH*0.5;
-    const maxR = Math.hypot(CW, CH)*0.55;
-    const RINGS = cn<=8?14:cn<=24?22:cn<=60?34:cn<=120?48:cn<=240?68:cn<=400?92:120;
-    const visRings = Math.max(1, Math.ceil((lim/cn)*RINGS));
-    const ringStep = maxR / RINGS;
-    // Draw outer→inner so inner rings sit on top.
-    for(let r=visRings; r>=1; r--){
-      const rad = r*ringStep;
-      const ch2 = chords[Math.min(cn-1, Math.floor((r/RINGS)*cn))];
-      const notes = ch2 && (ch2.n||ch2.notes);
-      const topNote = notes&&notes.length?(notes[0].m!==undefined?notes[0].m:notes[0]):60;
-      const wobN = 5 + (topNote%7);      // petals of wobble
-      const wobAmp = ringStep * (0.4 + ((r%5)/5)*0.9);
-      const col = (r&1) ? chordCol(r, 0.55) : chordCol(r+3, 1.2);
-      ctx.fillStyle = css(col);
-      ctx.beginPath();
-      const segs = 80;
-      for(let s=0;s<=segs;s++){
-        const a = (s/segs)*Math.PI*2;
-        const rr = rad + Math.sin(a*wobN + r*0.5)*wobAmp;
-        const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
-        if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      }
-      ctx.closePath();
-      ctx.fill();
-    }
-    return;
-  }
 
   // ── Variant A — Riley "Fall" ribbons: full-width horizontal wavy stripes ──
   // (W1) Chromatic discipline: the WHOLE painting uses one deep stripe tone
@@ -7282,33 +7183,47 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
 // ── Riley C: Wavy stripes v2. Random orientation (h/v/diag/anti-diag), random
 // count 12-40, wavelength, amplitude. Both colours chord-derived per painting. ──
 
-// ── Riley D: Concentric ripple v2. Off-centre, random count + petals. ──
+// ── Riley: Cataract 3 (1967) — horizontal bands that swell and twist: every band is a passage of
+// the piece from the top down, its wave as deep as the passage's dynamics, its phase drifting with
+// the melody; the bands alternate the song's two tones against the pale ground, the twist tightening
+// toward the climax. ──
 function rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const sR=_seedRnd(31001,ss,0,0); sR(); sR();
-  ctx.fillStyle=isBW?'#ecece6':'#f0ece2'; ctx.fillRect(0,0,CW,CH);
-  const cx=CW*(0.20+sR()*0.60), cy=CH*(0.20+sR()*0.60);
-  const nRings=12+((sR()*29)|0);
-  const maxR=Math.hypot(CW,CH)*0.7, step=maxR/nRings;
-  const petals=4+((sR()*9)|0);
-  const wobPh=sR()*Math.PI*2;
-  const vis=Math.max(1,Math.min(nRings,Math.ceil(N/cn*nRings)));
-  for(let r=Math.min(nRings,vis);r>=1;r--){
-    const rad=r*step;
-    const {rgb}=_picChord(chords,r%cn,gc,isBW);
-    let col=rgb;
-    if(r%2===1) col=[Math.min(255,Math.round(rgb[0]*0.35+30)),Math.min(255,Math.round(rgb[1]*0.35+30)),Math.min(255,Math.round(rgb[2]*0.35+30))];
-    ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
-    ctx.beginPath();
-    for(let ti=0;ti<60;ti++){
-      const t=ti/60*Math.PI*2;
-      const wob=step*0.4*Math.sin(t*petals+wobPh);
-      const rr=rad+wob;
-      const px=cx+Math.cos(t)*rr, py=cy+Math.sin(t)*rr;
-      if(ti===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-    }
-    ctx.closePath(); ctx.fill();
-  }
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=Math.max(0,Math.min(1,N/cn));
+  const A=_kd2Analyze(chords,gc,mode); const sR=_seedRnd(31001,ss,0,0); sR();
+  ctx.fillStyle=isBW?'#ecece6':'#efebe2'; ctx.fillRect(0,0,CW,CH);
+  const nB=cn<=24?22:cn<=120?34:48; const bh=CH/nB; const vis=Math.max(1,Math.ceil(nB*reveal));
+  let c=A.phrases[0]||{t:0.5,vmax:0.7}; for(const p of A.phrases) if(p.vmax>c.vmax) c=p; const tc=c.t;
+  const wl=CW/(2.2+1.3*sR()); const ph0=sR()*6.2832;
+  // the piece's two tones: the loudest and the quietest chord colours, each at mid value
+  const tone=(rgb,k)=>{ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114||1; const s=k/l; return rgb.map(v=>Math.max(0,Math.min(255,v*s))); };
+  const T1=tone(_picChord(chords,Math.min(cn-1,c.a),gc,isBW).rgb,isBW?70:95), T2=tone(_picChord(chords,Math.min(cn-1,Math.round(cn*0.5)),gc,isBW).rgb,isBW?150:140);
+  for(let i=0;i<vis;i++){ const u=(i+0.5)/nB; const a=Math.floor(u*cn), b=Math.max(a+1,Math.floor((i+1)/nB*cn)); let v=0,top=0,k=0; for(let j=a;j<b;j++){ const e=A.ev[j]; if(!e) continue; v+=e.v; top+=e.top; k++; } v=k?v/k:0.6; const reg=k?A.reg(top/k):0.5;
+    const amp=bh*(0.6+2.6*v)*(0.55+0.45*(1-Math.min(1,Math.abs(u-tc)*2.5))); const twist=(u-tc)*3.2+(reg-0.5)*1.5+ph0;
+    const col=(i%2)?T1:T2; const {rgb}=_picChord(chords,a,gc,isBW); ctx.fillStyle=`rgb(${(col[0]*0.6+rgb[0]*0.4)|0},${(col[1]*0.6+rgb[1]*0.4)|0},${(col[2]*0.6+rgb[2]*0.4)|0})`;
+    ctx.beginPath(); for(let x=0;x<=CW;x+=4){ const y=i*bh+Math.sin(x/wl*6.2832+twist)*amp*(0.5+0.5*Math.sin(x/CW*3.1416)); x?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    for(let x=CW;x>=0;x-=4){ const y=i*bh+bh*0.55+Math.sin(x/wl*6.2832+twist+0.35)*amp*(0.5+0.5*Math.sin(x/CW*3.1416)); ctx.lineTo(x,y); } ctx.closePath(); ctx.fill(); }
+}
+// ── Riley: Movement in Squares (1961) — the checkerboard folded by the music: the columns are the
+// piece in time, and every strong accent folds them — a sharp attack into the fold, a slow release
+// out of it, as deep as the accent is loud (the climax the deepest); the rows fold gently toward
+// the height the melody lives at. Black on white, or the song's dark tone on its light. ──
+function rileyPhaseSquares(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=Math.max(0,Math.min(1,N/cn));
+  const A=_kd2Analyze(chords,gc,mode); let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0}; for(const p of A.phrases) if(p.vmax>c.vmax) c=p;
+  // the folds: the climax and up to three more of the strongest accents, at least a tenth of the piece apart
+  const F=[{t:Math.max(0.12,Math.min(0.88,c.t)),d:0.55+0.4*c.vmax}]; const E=[]; for(let i=0;i<cn;i++){ const e=A.ev[i]; if(e&&e.v>=A.vHi) E.push(e); } E.sort((p,q)=>q.v-p.v);
+  for(const e of E){ if(F.length>=4) break; if(F.every(f=>Math.abs(f.t-e.t)>0.12)) F.push({t:e.t,d:0.3+0.4*e.v}); }
+  const regAll=A.reg(A.phrases.reduce((s,p)=>s+p.top*p.n,0)/Math.max(1,cn)); const yr=0.3+0.4*(1-regAll);
+  const dark=_picChord(chords,Math.min(cn-1,c.a),gc,isBW).rgb; const dl=dark[0]*0.299+dark[1]*0.587+dark[2]*0.114||1; const D=isBW?[18,18,20]:dark.map(v=>Math.max(0,Math.min(255,v*40/dl))*0.55+6);   // the song's dark tone, pulled toward Riley's black
+  const lite=_picChord(chords,Math.min(cn-1,Math.round(cn*0.5)),gc,isBW).rgb; const L=isBW?[244,244,240]:[Math.min(255,236+lite[0]*0.06),Math.min(255,234+lite[1]*0.06),Math.min(255,230+lite[2]*0.06)];
+  ctx.fillStyle=`rgb(${L[0]|0},${L[1]|0},${L[2]|0})`; ctx.fillRect(0,0,CW,CH);
+  const nC=cn<=24?18:cn<=120?26:34, nR=Math.round(nC*CH/CW*1.05);
+  const w=(u)=>{ let k=1; for(const f of F){ const d=u-f.t; k-=f.d*Math.exp(-Math.pow(d<0?d/0.045:d/0.13,2)); } return Math.max(0.07,k); };
+  const h=(v)=>Math.max(0.3,1-0.45*Math.exp(-Math.pow((v-yr)/0.09,2)));
+  const xs=[0]; let acc=0; const ws=[]; for(let i=0;i<nC;i++){ ws.push(w((i+0.5)/nC)); acc+=ws[i]; } for(let i=0;i<nC;i++) xs.push(xs[i]+CW*ws[i]/acc);
+  const ys=[0]; let acy=0; const hs=[]; for(let r=0;r<nR;r++){ hs.push(h((r+0.5)/nR)); acy+=hs[r]; } for(let r=0;r<nR;r++) ys.push(ys[r]+CH*hs[r]/acy);
+  const visC=Math.max(1,Math.ceil(nC*reveal)); ctx.fillStyle=`rgb(${D[0]|0},${D[1]|0},${D[2]|0})`;
+  for(let i=0;i<visC;i++){ for(let r=0;r<nR;r++){ if((i+r)%2) continue; ctx.fillRect(xs[i],ys[r],xs[i+1]-xs[i]+0.5,ys[r+1]-ys[r]+0.5); } }
 }
 
 // ── Riley E: Lozenge grid v2 — random cols/rows + skew. ──
@@ -14108,7 +14023,7 @@ const ARTIST_VARIANTS = {
     {ground:'#f8f8f4',mark:{dot:1},size:[.004,.01],edge:0,alpha:.8,layout:{scatter:1},density:.3},
     {ground:'#f8f8f4',mark:{vdrip:1},size:[.03,.08],edge:.3,alpha:.85,layout:{grid:1},density:.3},
     {ground:'#f8f8f4',mark:{band:.4,vband:.4,dot:.2},size:[.04,.1],edge:.2,alpha:.55,layout:{grid:1},density:.4},
-    {ground:'#f8f8f4',mark:{fan:1},size:[.3,.5],edge:0,alpha:.9,layout:{radial:1},density:.08},
+    {ground:'#f8f8f4',mark:{blob:.7,dot:.3},size:[.05,.12],edge:.3,alpha:.7,layout:{radial:1},density:.3},
   ],
   kusama: [
     {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},size:[.03,.09],layout:{grid:1},density:1},
@@ -14190,11 +14105,11 @@ const ARTIST_VARIANTS = {
     {mark:{stripes:1},size:[.01,.03],layout:{stack:1},density:.8},
     {ground:'#2a2a3a',mark:{vstripes:1},size:[.01,.03],layout:{grid:1},density:1},
     {ground:'#1a1a2a',mark:{arc:1},size:[.2,.5],layout:{radial:1},density:.5,tone:'pure'},
-    {ground:'#2a4a3a',mark:{wavyline:1},size:[.02,.05],layout:{stack:1},density:.7},
+    {ground:'#efebe2',mark:{wavyline:1},size:[.02,.05],layout:{stack:1},density:.8},                     // Cataract 3
     {ground:'#f4f4ec',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.8,tone:'mono'},
     {ground:'#f4f4ec',mark:{tri:1},size:[.05,.12],layout:{grid:1},density:1},
     {ground:'#1a1a2a',mark:{stripes:1},size:[.004,.01],layout:{stack:1},density:1},
-    {ground:'#1a1a2a',mark:{arc:.6,wavyline:.4},size:[.1,.4],layout:{radial:1},density:.5},
+    {ground:'#f4f4f0',mark:{checker:1},size:[.03,.06],layout:{grid:1},density:1,tone:'mono'},              // Movement in Squares
   ],
   spiral: [
     {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:.6,scatter:.4},density:.4},                                             // Spiral: floating forms
