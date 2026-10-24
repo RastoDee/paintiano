@@ -4151,8 +4151,6 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const cn = chords.length;
-  const rnd = _seedRnd(67, ss, 0, 0);
-
   // Colour for chord i, optional brightness multiplier.
   function chordCol(i, mul){
     const idx = Math.min(cn-1, Math.max(0, i % cn));
@@ -4170,20 +4168,17 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
   }
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-  // ── 7-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0/1 = Concentric squares / Protractor arcs (original body below).
-  //  2 = Black Paintings (colour nested frames, recoloured).
-  //  3 = Hyena Stomp (mitred spiral).  4 = Eccentric polygons.  5 = Interlocking arcs.
-  //  6 = Notched stripes (aluminium / copper paintings).
-  let _stellaConcentric = true;
+  // ── VARIANT: 0 Concentric Squares (the body below) · 1 Protractor (Harran II / Flin Flon) ·
+  // 2 Black Paintings · 3 Hyena Stomp · 4 Irregular Polygon (Moultonboro) · 5 Interlocking arcs ·
+  // 6 Notched stripes. Free: 0 and 1.
   {
     const _pn=_capN(7); const _spick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_spick===1){ stellaPhaseProtractor(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===2){ stellaPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===3){ stellaPhaseHyena(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===4){ stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===5){ stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===6){ stellaPhaseNotched(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    _stellaConcentric = (_spick===0); // 0 = concentric squares, 1 = protractor arcs
   }
 
   // Background — cream/light like Stella's grounds, tinted slightly by the piece.
@@ -4192,15 +4187,13 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   ctx.fillRect(0, 0, CW, CH);
 
   const revealFrac = Math.max(0, Math.min(1, lim / cn));
-  // pick 0 = concentric squares, pick 1 = protractor arcs (decided by chooser above)
-  const concentric = _stellaConcentric;
 
   // Stella's statement is the RHYTHM of nested bands — their count and tightness.
   // Song character drives it: a dense, energetic piece nests more (tighter) rings
   // for an intense optical pulse; a calm, sparse one keeps fewer, broader bands.
   const _chSt = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const _stMul = _chSt ? (0.60 + 0.90*(0.5*_chSt.energy + 0.5*_chSt.density)) : 1;
-  if(concentric){
+  {
     // ── Concentric Squares ──────────────────────────────────────────────────
     const RINGS = Math.max(2, Math.round((cn<=6 ? Math.max(2,cn) : cn<=16 ? 6 : cn<=40 ? 9 : cn<=90 ? 12 : 16) * _stMul));
     const visRings = Math.max(1, Math.ceil(revealFrac * RINGS));
@@ -4231,42 +4224,6 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       const col = chordCol(r, ((r & 1) ? 1.0 : 0.82));
       ctx.fillStyle = css(col);
       ctx.fillRect(cx - sz, cy - sz, sz*2, sz*2);
-    }
-  } else {
-    // ── Protractor arcs ─────────────────────────────────────────────────────
-    // A few fans of concentric arcs (rainbow bands) anchored at corners/edges.
-    const FANS = cn<=12 ? 2 : cn<=40 ? 3 : 4;
-    const BANDS = Math.max(3, Math.round((cn<=12 ? 5 : cn<=40 ? 7 : 9) * _stMul));
-    const visBands = Math.max(1, Math.ceil(revealFrac * BANDS));
-    // Anchor points for fan centres.
-    const anchors = [];
-    for(let f=0; f<FANS; f++){
-      anchors.push({
-        x: CW * (0.15 + rnd()*0.7),
-        y: CH * (0.15 + rnd()*0.7),
-        a0: rnd() * Math.PI * 2,
-        sweep: (0.5 + rnd()*1.5) * Math.PI,
-        rMax: Math.min(CW,CH) * (0.35 + rnd()*0.25),
-      });
-    }
-    // Chord index per band is fixed from the FULL band count (fan*BANDS+b) —
-    // a running counter over the visible bands recoloured every later fan as
-    // more bands were revealed.
-    for(let fi=0; fi<anchors.length; fi++){
-      const an = anchors[fi];
-      const bandW = an.rMax / BANDS;
-      for(let b=0; b<visBands; b++){
-        const rOuter = an.rMax - b * bandW;
-        const rInner = rOuter - bandW * 0.86;
-        if(rInner <= 0) continue;
-        const col = chordCol(fi*BANDS + b, ((b & 1) ? 1.0 : 0.85));
-        ctx.fillStyle = css(col);
-        ctx.beginPath();
-        ctx.arc(an.x, an.y, rOuter, an.a0, an.a0 + an.sweep, false);
-        ctx.arc(an.x, an.y, rInner, an.a0 + an.sweep, an.a0, true);
-        ctx.closePath();
-        ctx.fill();
-      }
     }
   }
 }
@@ -4334,26 +4291,52 @@ function stellaPhaseNotched(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.restore();
 }
 
-// ── Stella E: Eccentric polygons — irregular nested colour polygons. ──
-function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#dcd8ce':'#e4dccc';ctx.fillRect(0,0,CW,CH);
-  const polys=Math.max(2,Math.min(10,Math.round(cn/14)));
-  const vis=Math.max(1,Math.ceil(N/cn*polys));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4300,ss,0,0);
-    const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.1+rnd()*0.18);
-    const sides=4+((rnd()*4)|0);
-    const rot=rnd()*Math.PI*2;
-    // nested rings of this polygon
-    const rings=2+((rnd()*3)|0);
-    for(let r=rings;r>=1;r--){
-      const {rgb}=_picChord(chords,Math.floor(i*(cn/polys))+r,gc,isBW);
-      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      const rr=R*(r/rings);
-      ctx.beginPath();for(let s=0;s<sides;s++){const a=rot+s/sides*Math.PI*2;const x=cx+Math.cos(a)*rr*(0.8+0.4*((s%2)));const y=cy+Math.sin(a)*rr;s?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();
-    }
-  }
+// ── Stella: Protractor (Harran II / Flin Flon, 1967–69) — a protractor opening up and one opening
+// down, joined by their straight sides into one great track of bands: a band for every passage of
+// the piece, as wide as it lasts, in its colour, laid from the inside out as the music plays; in the
+// straight run the bands cross over one another — the interlace. ──
+function stellaPhaseProtractor(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=Math.max(0,Math.min(1,N/cn));
+  const A=_kd2Analyze(chords,gc,mode); const G=_kd2Phrases(A,Math.max(1,Math.min(12,Math.max(7,Math.round(A.phrases.length/5))))); const n=G.length;
+  const col=(t)=>{ const {rgb}=_picChord(chords,Math.max(0,Math.min(cn-1,Math.floor(t*cn))),gc,isBW); const g=(rgb[0]+rgb[1]+rgb[2])/3; const c=rgb.map(v=>Math.max(0,Math.min(255,g+(v-g)*1.5))); return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; };
+  const {rgb:bg}=_picChord(chords,0,gc,isBW); ctx.fillStyle=`rgb(${Math.min(255,bg[0]*0.3+170)|0},${Math.min(255,bg[1]*0.3+165)|0},${Math.min(255,bg[2]*0.3+155)|0})`; ctx.fillRect(0,0,CW,CH);
+  const R=CW*0.5, gap=Math.max(1.5,R*0.012); const ws=G.map(g=>Math.max(0.5,g.n/cn*n)); const T=ws.reduce((a,b)=>a+b,0);
+  const edges=[0]; for(let i=0;i<n;i++) edges.push(edges[i]+ws[i]/T);
+  const yT=Math.max(R,CH*0.3), yB=Math.min(CH-R,CH*0.7); const cx=CW*0.5; const vis=Math.max(1,Math.ceil(n*reveal));
+  for(let i=0;i<vis;i++){ const r0=R*edges[i]+gap, r1=R*edges[i+1]-gap; if(r1<=r0) continue; ctx.fillStyle=col(G[i].t);
+    ctx.beginPath(); ctx.arc(cx,yT,r1,3.1416,0); ctx.arc(cx,yT,r0,0,3.1416,true); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,yB,r1,0,3.1416); ctx.arc(cx,yB,r0,3.1416,0,true); ctx.closePath(); ctx.fill(); }
+  // the straight run: every band continues as two verticals, but swapped in pairs so they cross — the interlace
+  if(yB>yT){ const h=yB-yT; for(let i=0;i<vis;i++){ const j=(i%2===0&&i+1<vis)?i+1:(i%2===1?i-1:i); const r0=R*edges[i]+gap, r1=R*edges[i+1]-gap, q0=R*edges[j]+gap, q1=R*edges[j+1]-gap; if(r1<=r0||q1<=q0) continue; ctx.fillStyle=col(G[i].t);
+      for(const sgn of [-1,1]){ const x0=cx+sgn*r0, x1=cx+sgn*r1, x2=cx+sgn*q0, x3=cx+sgn*q1; ctx.beginPath(); ctx.moveTo(x0,yT); ctx.lineTo(x1,yT); ctx.lineTo(x3,yT+h*0.5); ctx.lineTo(x1,yB); ctx.lineTo(x0,yB); ctx.lineTo(x2,yT+h*0.5); ctx.closePath(); ctx.fill(); } } }
+}
+// ── Stella: Irregular Polygon (Moultonboro, 1966) — the canvas cut into a few great flat shapes, one
+// for each section of the piece: the cuts run at the angles the melody takes, each shape as large as
+// its section lasts, in its colour, with Stella's thin inner band in the colour of its loudest chord. ──
+function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=Math.max(0,Math.min(1,N/cn));
+  const A=_kd2Analyze(chords,gc,mode); const G=_kd2Phrases(A,Math.max(1,Math.min(5,Math.max(3,Math.round(A.phrases.length/12))))); const n=G.length;
+  const pure=(rgb,k)=>{ const g=(rgb[0]+rgb[1]+rgb[2])/3; return rgb.map(v=>Math.max(0,Math.min(255,(g+(v-g)*1.5)*(k||1)))); };
+  const css=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  ctx.fillStyle=isBW?'#dcd8ce':'#e6dfd0'; ctx.fillRect(0,0,CW,CH);
+  // split a convex polygon by the line through (px,py) at angle ang
+  const split=(poly,px,py,ang)=>{ const nx=-Math.sin(ang), ny=Math.cos(ang); const L=[],Rr=[]; const m=poly.length; for(let i=0;i<m;i++){ const a=poly[i], b=poly[(i+1)%m]; const da=(a[0]-px)*nx+(a[1]-py)*ny, db=(b[0]-px)*nx+(b[1]-py)*ny; (da>=0?L:Rr).push(a); if((da>=0)!==(db>=0)){ const t=da/(da-db); const ip=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]; L.push(ip); Rr.push(ip); } } return [L,Rr]; };
+  const area=(p)=>{ let s=0; for(let i=0;i<p.length;i++){ const q=p[(i+1)%p.length]; s+=p[i][0]*q[1]-q[0]*p[i][1]; } return Math.abs(s)/2; };
+  // cut the canvas section by section: each cut leaves the section its share of the remaining area
+  let rest=[[0,0],[CW,0],[CW,CH],[0,CH]]; const shapes=[]; let left=1;
+  for(let i=0;i<n-1;i++){ const g=G[i]; const share=(g.n/cn)/left; left-=g.n/cn; const reg=A.reg(g.top); const ang=(i%2?1.5708:0)+(reg-0.5)*1.2+(i%2?0.3:-0.3);
+    // slide the cut along its normal until the piece in front holds the share
+    const nx=-Math.sin(ang), ny=Math.cos(ang); let lo=-1e9,hi=1e9; for(const p of rest){ const d=p[0]*nx+p[1]*ny; lo=Math.min(lo,d); hi=Math.max(hi,d); } const total=area(rest); let a=lo,b=hi,px=0,py=0,best=null;
+    for(let k=0;k<22;k++){ const d=(a+b)/2; px=nx*d; py=ny*d; const [L,Rr]=split(rest,px,py,ang); const fr=area(Rr)/total; best=[L,Rr]; if(fr<share) a=d; else b=d; }
+    const [L,Rr]=best; if(Rr.length>2) shapes.push({poly:Rr,g}); rest=L.length>2?L:rest; }
+  shapes.push({poly:rest,g:G[n-1]});
+  const vis=Math.max(1,Math.ceil(n*reveal)); const D=Math.min(CW,CH);
+  shapes.slice(0,vis).forEach(({poly,g},i)=>{ const c=pure(_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb); let lo=g.a; for(let j=g.a;j<g.b;j++){ const e=A.ev[j]; if(e&&A.ev[lo]&&e.v>A.ev[lo].v) lo=j; } const acc=pure(_picChord(chords,Math.min(cn-1,lo),gc,isBW).rgb,0.85);
+    ctx.fillStyle=css(c); ctx.beginPath(); poly.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill();
+    // the inner band: the shape shrunk toward its centre, drawn as a stroke
+    let cx=0,cy=0; poly.forEach(p=>{cx+=p[0];cy+=p[1];}); cx/=poly.length; cy/=poly.length; const k=1-D*0.07/Math.max(1,Math.sqrt(area(poly)));
+    ctx.strokeStyle=css(acc); ctx.lineWidth=Math.max(2,D*0.022); ctx.lineJoin='miter'; ctx.beginPath(); poly.forEach((p,q)=>{ const x=cx+(p[0]-cx)*k, y=cy+(p[1]-cy)*k; q?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.closePath(); ctx.stroke();
+    ctx.strokeStyle=isBW?'#e8e4da':'#efe9dc'; ctx.lineWidth=Math.max(1.5,D*0.008); ctx.beginPath(); poly.forEach((p,q)=>q?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); });
 }
 
 // ── Stella F: Interlocking arcs — rainbow protractor arcs interleaved. ──
@@ -14122,10 +14105,10 @@ const ARTIST_VARIANTS = {
   ],
   arcs: [
     {mark:{nest:1},size:[.1,.4],layout:{radial:.5,grid:.5},density:.3},
-    {mark:{protractor:1},size:[.15,.45],layout:{radial:1},density:.2},
+    {mark:{protractor:.7,arc:.3},size:[.2,.5],layout:{radial:1},density:.25},   // Protractor
     {mark:{nest:1},size:[.2,.5],layout:{grid:1},density:.2},
     {ground:'#eee8da',mark:{nest:.7,stripes:.3},size:[.15,.45],layout:{grid:1},density:.25},   // Hyena Stomp
-    {mark:{nestpoly:1},size:[.1,.3],alpha:.8,layout:{scatter:1},density:.3},
+    {mark:{poly:.7,bar:.3},size:[.3,.6],alpha:.95,layout:{grid:1},density:.15},   // Irregular Polygon
     {ground:'#141420',mark:{ring:.6,arc:.4},size:[.08,.25],layout:{scatter:1},density:.5},
     {ground:'#eee8da',mark:{step:.6,nest:.4},size:[.1,.35],layout:{radial:.5,grid:.5},density:.3,lines:0},   // Notched stripes
     {mark:{protractor:.6,nest:.4},size:[.15,.45],layout:{radial:1},density:.2},
