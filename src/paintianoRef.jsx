@@ -7316,12 +7316,7 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
 // literal. Phases: 0 simultaneous discs · 1 Rythme column · 2 endless rhythm
 // · 3 windows · 4 electric prisms · 5 sun & moon.
 // Song character: energy → ring counts / radiance, density → disc population.
-// ── Delaunay non-disc idioms ─────────────────────────────────────────────────
-// Les Fenêtres simultanées (slot 3): the pane cut along a few prism directions
-// into soft facets of related colour (a third of them in the simultaneous
-// complement), light planes over them, the green tower glimpsed through, the
-// frame last. La Tour Eiffel (slot 5): the red tower broken into tilting
-// segments, buildings leaning in from both sides, clouds biting into its top.
+// ── Delaunay helpers: the pure colour, its simultaneous partner, the song reading ──
 const _dlR=(a,ss)=>_seedRnd(a,ss,0,0);
 const _dlClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const _dlMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
@@ -7331,216 +7326,110 @@ function _dlPure(rgb,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0
 function _dlComp(c){ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; const q=[255-c[0],255-c[1],255-c[2]]; const lq=q[0]*0.299+q[1]*0.587+q[2]*0.114||1; return q.map(v=>_dlClamp(v*l/lq,0,255)); }
 function _dlSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col:(t)=>_dlPure(_picChord(chords,_dlClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb,isBW)}; }
-const _dlPoly=(ctx,pts)=>{ ctx.beginPath(); pts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); };
 
-// 3 · Les Fenêtres simultanées (1912) — a window opened onto light: the whole pane is cut along a few prism directions into facets of contrasting colour pairs; over them, larger translucent planes; the green tower glimpsed through the middle; the frame last
-function _dlSplit(poly,px,py,ang){ const nx=-Math.sin(ang), ny=Math.cos(ang); const L=[],Rr=[]; const n=poly.length; for(let i=0;i<n;i++){ const a=poly[i], b=poly[(i+1)%n]; const da=(a[0]-px)*nx+(a[1]-py)*ny, db=(b[0]-px)*nx+(b[1]-py)*ny; (da>=0?L:Rr).push(a); if((da>=0)!==(db>=0)){ const t=da/(da-db); const ip=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]; L.push(ip); Rr.push(ip); } } return [L,Rr]; }
-function _dlArea(p){ let a=0; for(let i=0;i<p.length;i++){ const q=p[(i+1)%p.length]; a+=p[i][0]*q[1]-q[0]*p[i][1]; } return Math.abs(a)/2; }
-function delaunayPhaseWindows(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_dlSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
-  const r0=_dlR(88000,ss); r0(); ctx.fillStyle=_dlCss(S.isBW?[200,200,200]:_dlMix(S.col(0.5),[230,226,214],0.6)); ctx.fillRect(0,0,CW,CH);
-  const dirs=[0.62,-0.62,1.5708,0.2]; let cells=[[[0,0],[CW,0],[CW,CH],[0,CH]]]; const minA=CW*CH/(70+S.density*70);
-  for(let pass=0;pass<9;pass++){ const nx=[]; for(const c of cells){ if(_dlArea(c)<minA){ nx.push(c); continue; } let cx=0,cy=0; c.forEach(q=>{cx+=q[0];cy+=q[1];}); cx/=c.length; cy/=c.length; const [L,Rr]=_dlSplit(c,cx+(r0()-.5)*D*0.08,cy+(r0()-.5)*D*0.08,dirs[(r0()*dirs.length)|0]+(r0()-.5)*0.15); if(L.length>2) nx.push(L); if(Rr.length>2) nx.push(Rr); } cells=nx; }
-  const items=[]; const n=cells.length;
-  cells.forEach((c,i)=>{ let cx=0; c.forEach(q=>cx+=q[0]); cx/=c.length; const t=Math.min(0.9,cx/CW*0.85+r0()*0.1); const k=S.col(t); const pair=(r0()<0.3); const base=pair?_dlComp(k):k; const col=_dlMix(base,S.col(Math.min(0.999,t+0.08)),0.35); const lt=0.35+r0()*0.35;
-    items.push({t,f:()=>{ ctx.fillStyle=_dlCss(_dlMix(col,[250,248,240],lt),0.82); _dlPoly(ctx,c); ctx.fill(); ctx.strokeStyle=_dlCss(_dlMix(col,[255,255,255],0.75),0.5); ctx.lineWidth=D*0.0025; ctx.stroke(); }}); });
-  const tx=CW*(0.45+r0()*0.1);
-  items.push({t:0.93,f:()=>{ ctx.fillStyle=_dlCss(S.isBW?[90,90,90]:[40,110,64],0.72); _dlPoly(ctx,[[tx-D*0.07,CH*0.98],[tx,CH*0.1],[tx+D*0.07,CH*0.98]]); ctx.fill(); }});
-  const np=10+Math.round(S.density*8);
-  for(let i=0;i<np;i++){ const r=_dlR(88100+i,ss); r(); const t=0.5+i/np*0.45; const c=S.col(t); const col=(i%2)?_dlComp(c):c; const cx=CW*(0.05+r()*0.9), cy=CH*(0.05+r()*0.9), a=dirs[(r()*dirs.length)|0], L=D*(0.3+r()*0.4), W=D*(0.1+r()*0.16); const ux=Math.cos(a), uy=Math.sin(a), vx=-uy, vy=ux;
-    const pts=[[cx-ux*L/2-vx*W/2,cy-uy*L/2-vy*W/2],[cx+ux*L/2-vx*W/2,cy+uy*L/2-vy*W/2],[cx+ux*L/2+vx*W/2,cy+uy*L/2+vy*W/2],[cx-ux*L/2+vx*W/2,cy-uy*L/2+vy*W/2]];
-    items.push({t,f:()=>{ ctx.fillStyle=_dlCss(_dlMix(col,[255,250,236],0.3),0.18); _dlPoly(ctx,pts); ctx.fill(); }}); }
-  items.push({t:0.99,f:()=>{ ctx.strokeStyle=_dlCss(S.isBW?[60,60,60]:[60,52,46],0.55); ctx.lineWidth=D*0.008; ctx.beginPath(); ctx.moveTo(CW*0.5,0); ctx.lineTo(CW*0.5,CH); ctx.moveTo(0,CH*0.42); ctx.lineTo(CW,CH*0.42); ctx.stroke(); ctx.lineWidth=D*0.02; ctx.strokeRect(0,0,CW,CH); }});
-  items.sort((a,b)=>a.t-b.t); for(const it of items){ if(it.t>reveal && it.t>0) break; it.f(); }
-}
-// 5 · La Tour Eiffel (1910–11) — the red tower broken into tilting segments, buildings leaning toward it from both sides, clouds biting into its top
-function delaunayPhaseEiffel(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_dlSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
-  const r0=_dlR(89000,ss); r0(); const sky=S.isBW?[200,204,208]:_dlMix(S.col(0.5),[176,196,214],0.7);
-  const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,_dlCss(_dlMix(sky,[255,255,255],0.3))); g.addColorStop(1,_dlCss(_dlMix(sky,[120,120,130],0.25))); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
-  const items=[]; const cx=CW*(0.5+(r0()-.5)*0.06), base=CH*0.97, top=CH*0.05, w0=CW*0.3;
-  const RED=S.isBW?[90,90,90]:[196,62,40];
-  // buildings: tilted blocks at both sides, lowest first
-  const nbld=8+Math.round(S.density*6);
-  for(let i=0;i<nbld;i++){ const r=_dlR(89100+i,ss); r(); const t=i/nbld*0.5; const side=(i%2)?1:-1; const bw=CW*(0.12+r()*0.12), bh=CH*(0.18+r()*0.28); const x=cx+side*(CW*0.18+r()*CW*0.26), y=base-bh*0.4-r()*CH*0.15; const tilt=side*(0.12+r()*0.22);
-    const c=S.isBW?[150+r()*60,150+r()*60,150+r()*60]:_dlMix(S.col(t),[r()<0.5?220:160,r()<0.5?200:150,r()<0.5?170:140],0.55);
-    items.push({t,f:()=>{ ctx.save(); ctx.translate(x,y); ctx.rotate(tilt); ctx.fillStyle=_dlCss(c); ctx.fillRect(-bw/2,-bh/2,bw,bh); const sp=-bw/2+bw*(0.3+r()*0.4); ctx.fillStyle=_dlCss(_dlMix(c,[30,30,40],0.3)); ctx.fillRect(sp,-bh/2,bw/2-sp,bh); ctx.fillStyle=_dlCss(_dlMix(c,[255,252,240],0.35)); _dlPoly(ctx,[[-bw/2,-bh/2],[sp,-bh/2],[sp-bw*0.15,bh*0.1],[-bw/2,bh*0.25]]); ctx.fill(); ctx.restore(); }}); }
-  // the tower: segments from the foot up, each slightly shifted and tilted, a lattice inside
-  const ns=9; let yb=base;
-  for(let k=0;k<ns;k++){ const r=_dlR(89500+k,ss); r(); const u0=k/ns, u1=(k+1)/ns, y0=base-(base-top)*u0, y1=base-(base-top)*u1; const wb=w0*Math.pow(1-u0,1.6)+D*0.02, wt=w0*Math.pow(1-u1,1.6)+D*0.015; const sh=(r()-.5)*D*0.09*(1+S.energy), tilt=(r()-.5)*0.28;
-    const c=S.isBW?RED:_dlMix(RED,S.col(0.5+u0*0.5),0.3); const t0=0.2+u0*0.7, t=chords._objFirst?-1:t0;   // a Compose take: the tower stands from the first note
-    items.push({t,z:t0,f:()=>{ ctx.save(); ctx.translate(cx+sh,(y0+y1)/2); ctx.rotate(tilt); const h=(y0-y1); const pts=[[-wb/2,h/2],[-wt/2,-h/2],[wt/2,-h/2],[wb/2,h/2]];
-      ctx.fillStyle=_dlCss(c); _dlPoly(ctx,pts); ctx.fill(); ctx.fillStyle=_dlCss(_dlMix(c,[0,0,0],0.3)); _dlPoly(ctx,[[0,h/2],[0,-h/2],[wt/2,-h/2],[wb/2,h/2]]); ctx.fill();   // the shadowed half
-      ctx.save(); _dlPoly(ctx,pts); ctx.clip(); ctx.strokeStyle=_dlCss(_dlMix(c,[0,0,0],0.55),0.6); ctx.lineWidth=Math.max(0.8,D*0.0025); ctx.beginPath(); for(let q=-wb;q<=wb;q+=D*0.022){ ctx.moveTo(q-h,h/2); ctx.lineTo(q+h,-h/2); ctx.moveTo(q+h,h/2); ctx.lineTo(q-h,-h/2); } ctx.stroke(); ctx.restore();
-      if(k<2){ ctx.fillStyle=_dlCss(sky); ctx.beginPath(); ctx.arc(0,h/2,wb*0.28,Math.PI,0); ctx.fill(); }   // the arch between the legs
-      ctx.restore(); }}); }
-  // clouds: round masses biting into the top of the tower
-  const nc=3+Math.round(S.density*3);
-  for(let i=0;i<nc;i++){ const r=_dlR(89800+i,ss); r(); const t=0.85+i/nc*0.15; const x=cx+(r()-.5)*CW*0.7, y=CH*(0.08+r()*0.25), rr=D*(0.08+r()*0.08);
-    items.push({t,f:()=>{ const c=S.isBW?[236,236,236]:_dlMix([246,244,240],S.col(t),0.12); ctx.fillStyle=_dlCss(c,0.92); for(let k=0;k<4;k++){ ctx.beginPath(); ctx.arc(x+(k-1.5)*rr*0.5,y+((k%2)?-rr*0.2:rr*0.1),rr*(0.55+0.15*(k%2)),0,6.2832); ctx.fill(); } }}); }
-  if(chords._objFirst){ const vis=items.filter(it=>!(it.t>reveal && it.t>0)); vis.sort((a,b)=>(a.z!=null?a.z:a.t)-(b.z!=null?b.z:b.t)); for(const it of vis) it.f(); return; }   // still laid in its place among the buildings
-  items.sort((a,b)=>a.t-b.t); for(const it of items){ if(it.t>reveal && it.t>0) break; it.f(); }
+// ═══════════════════════════════════════════════════════════════════════════
+// Delaunay · simultaneous discs read from the music. A disc is a passage of the
+// piece: its rings are the chords laid from the centre outward, each ring cut
+// into sectors — the chord's colour against its simultaneous partner (the
+// complement at the same value) — so the disc turns as the harmony turns. Its
+// size is the passage's dynamics, its place its time. Every print is composed
+// from the whole piece and grows with it.
+// ═══════════════════════════════════════════════════════════════════════════
+function _dl2Setup(chords,gc,mode){ const S=_dlSetup(chords,gc,mode); const A=_kd2Analyze(chords,gc,mode); S.A=A; const cn=S.cn;
+  S.groups=(n)=>_kd2Phrases(A,Math.max(1,n)).map(g=>({t0:g.t0,t1:g.t1,t:g.t,dur:g.n/cn,reg:A.reg(g.top),v:g.v,vmax:g.vmax,n:g.n,a:g.a,b:g.b}));
+  S.span=(ta,tb)=>{ const a=_dlClamp(Math.round(ta*cn),0,cn-1), b=_dlClamp(Math.round(tb*cn),a+1,cn); let top=0,v=0,vmax=0,n=0; for(let i=a;i<b;i++){ const e=A.ev[i]; if(!e) continue; top+=e.top; v+=e.v; if(e.v>vmax) vmax=e.v; n++; } return {t0:a/cn,t1:b/cn,t:(a+b)/2/cn,dur:(b-a)/cn,reg:A.reg(n?top/n:60),v:n?v/n:0.6,vmax:vmax||0.6,n:b-a,a,b}; };
+  S.climax=()=>{ let b=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn}; for(const p of A.phrases) if(p.vmax>b.vmax) b=p; return b; };
+  S.quiet=()=>{ let b=A.phrases[0]||{t:0.5,v:0.5,a:0,b:cn}; for(const p of A.phrases) if(p.v<b.v) b=p; return b; };
+  S.regAll=A.reg(A.phrases.reduce((s,p)=>s+p.top*p.n,0)/Math.max(1,cn)); S.dyn=A.ch?A.ch.dynRange:0.5;
+  S.contour=(a,b,n)=>{ const out=[]; const w=Math.max(1,Math.round((b-a)/n)); for(let i=0;i<n;i++){ const c=a+(b-a)*i/Math.max(1,n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(c-w));j<=Math.min(cn-1,Math.round(c+w));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; };
+  return S; }
+// an annulus r0..r1 cut into sectors of the given colours, starting at angle rot
+function _dl2Ring(ctx,x,y,r0,r1,cols,rot,alpha){ const n=cols.length; for(let i=0;i<n;i++){ const a0=rot+i/n*6.2832, a1=rot+(i+1)/n*6.2832+(n>1?0.004:0); ctx.fillStyle=_dlCss(cols[i],alpha); ctx.beginPath(); ctx.arc(x,y,r1,a0,a1); if(r0>0) ctx.arc(x,y,r0,a1,a0,true); else ctx.lineTo(x,y); ctx.closePath(); ctx.fill(); } }
+// the colours of a ring laid over [ta,tb): q sectors, the chords' colours against their simultaneous partners
+function _dl2Cols(S,ta,tb,q,flip){ const out=[]; for(let j=0;j<q;j++){ const c=S.col(_dlClamp(ta+(tb-ta)*(j+0.5)/q,0,0.999)); out.push(((j+(flip?1:0))%2)?_dlComp(c):c); } return out; }
+// a disc for the passage [ta,tb): K rings from the centre outward (or inward with o.in), q sectors a ring, rotated a little each ring
+function _dl2Disc(items,S,x,y,R,ta,tb,o){ o=o||{}; const K=o.K||_dlClamp(Math.round((tb-ta)*S.cn/5),3,8), q=o.q||4, rot=o.rot||0, alpha=o.alpha;
+  for(let i=0;i<K;i++){ const ia=o.in?K-1-i:i; const r0=R*ia/K, r1=R*(ia+1)/K; const u0=ta+(tb-ta)*i/K, u1=ta+(tb-ta)*(i+1)/K; const cols=_dl2Cols(S,u0,u1,q,i%2===1); const rr=rot+(i%2?6.2832/q/2:0)+(o.spin||0)*i;
+    items.push({t:(u0+u1)/2,z:o.z!=null?o.z:0,f:(ctx)=>_dl2Ring(ctx,x,y,r0,r1,cols,rr,alpha)}); }
+  if(o.rim){ items.push({t:tb,z:o.z!=null?o.z:0,f:(ctx)=>{ ctx.strokeStyle=_dlCss(o.rim,0.35); ctx.lineWidth=Math.max(1,R*0.012); ctx.beginPath(); ctx.arc(x,y,R,0,6.2832); ctx.stroke(); }}); } }
+function _dl2Draw(ctx,items,reveal){ items.sort((a,b)=>(a.z-b.z)||(a.t-b.t)); for(const it of items){ if(it.t>reveal && it.t>0) continue; it.f(ctx); } }
+// ── VARIANT: 0 Le Premier Disque · 1 Rythme sans fin · 2 Rythme n°1 · 3 Soleil, Lune, Simultané 2 ·
+// 4 Formes circulaires · 5 Hommage à Blériot · 6 Prismes électriques (Sonia) · 7 Bal Bullier (Sonia). Free: 0 and 1.
+function _dl2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_dl2Setup(chords,gc,mode), cn=S.cn, A=S.A, bw=S.isBW; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH), W=CW, H=CH; const items=[]; const nP=A.phrases.length; const r0=_dlR(90000+pick*31,ss); r0();
+  const cream=bw?[228,226,220]:[240,234,220], dark=bw?[24,24,26]:[22,20,34]; const c=S.climax();
+  switch(pick){
+    case 1: { // Rythme sans fin 1934 — the serpentine: a half-disc for every passage, alternating sides, as large as its dynamics
+      ctx.fillStyle=_dlCss(dark); ctx.fillRect(0,0,W,H); const G=S.groups(_dlClamp(Math.round(nP/5),5,9)); const n=G.length;
+      const B=G.map((g,i)=>[W*(0.5+(i%2?0.14:-0.14)+0.06*(g.reg-0.5)),H*(0.08+0.84*(i+0.5)/n)]); const P=[[W*0.5,-H*0.02]].concat(B,[[W*0.5,H*1.02]]);
+      items.push({t:0,z:0,f:(ctx)=>{ ctx.strokeStyle=_dlCss(cream,0.95); ctx.lineWidth=D*0.035; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]); for(let i=0;i<P.length-1;i++){ const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||p2; ctx.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]); } ctx.stroke(); }});
+      G.forEach((g,i0)=>{ const i=1+i0; const R=D*(0.1+0.11*g.vmax); const side=i0%2?1:-1; const rot=side>0?-1.5708:1.5708;
+        items.push({t:g.t0,z:1,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(P[i][0],P[i][1],R*1.08,rot,rot+3.1416); ctx.closePath(); ctx.fill(); }});
+        const K=_dlClamp(Math.round(g.n/6),2,5); for(let k=0;k<K;k++){ const r1=R*(K-k)/K; const u0=g.t0+(g.t1-g.t0)*k/K, u1=g.t0+(g.t1-g.t0)*(k+1)/K; const cols=_dl2Cols(S,u0,u1,2,k%2===1); items.push({t:(u0+u1)/2,z:2,f:(ctx)=>{ ctx.fillStyle=_dlCss(cols[0]); ctx.beginPath(); ctx.arc(P[i][0],P[i][1],r1,rot,rot+1.5708); ctx.lineTo(P[i][0],P[i][1]); ctx.closePath(); ctx.fill(); ctx.fillStyle=_dlCss(cols[1]); ctx.beginPath(); ctx.arc(P[i][0],P[i][1],r1,rot+1.5708,rot+3.1416); ctx.lineTo(P[i][0],P[i][1]); ctx.closePath(); ctx.fill(); }}); } });
+      break; }
+    case 2: { // Rythme n°1 1938 — the column: three to five great discs, one a passage, cut in halves along the register's tilt; the side discs bitten by the frame
+      ctx.fillStyle=_dlCss(cream); ctx.fillRect(0,0,W,H); const G=S.groups(_dlClamp(Math.round(nP/8),3,5)); const n=G.length;
+      G.forEach((g,i)=>{ const R=D*(0.2+0.14*g.vmax); const x=W*(0.5+(i%2?0.08:-0.08)), y=H*(0.12+0.76*(i+0.5)/n); const rot=-0.4+0.8*(g.reg-0.5)+(i%2?3.1416:0);
+        _dl2Disc(items,S,x,y,R,g.t0,g.t1,{q:2,rot,K:_dlClamp(Math.round(g.n/5),3,7),in:true,z:1,spin:0.18});
+        const sx=i%2?W:0, sy=y+H*0.08, sr=D*(0.14+0.1*g.v); _dl2Disc(items,S,sx,sy,sr,g.t0,g.t1,{q:2,rot:rot+1.5708,K:2,z:0}); });
+      break; }
+    case 3: { // Soleil, Lune, Simultané 2 1913 — the sun is the loudest phrase, the moon the quietest, the swirl between them the melody
+      ctx.fillStyle=_dlCss(cream); ctx.fillRect(0,0,W,H);
+      items.push({t:0,z:0,f:(ctx)=>{ ctx.fillStyle=_dlCss(bw?[200,200,200]:_dlMix(S.col(0.5),[230,222,200],0.55)); ctx.beginPath(); ctx.ellipse(W/2,H/2,W*0.49,H*0.49,0,0,6.2832); ctx.fill(); }});
+      const n=16; const C=S.contour(0,cn,n); const cx=W*0.5, cy=H*0.52;
+      for(let i=0;i<n-1;i++){ const u0=i/(n-1), u1=(i+1)/(n-1); const a0=-2.4+u0*5.6, a1=-2.4+u1*5.6; const rr=D*(0.18+0.28*(1-C[i])); const col=S.col(u0); const q=(i%3===1)?_dlComp(col):col; const ev=A.ev[Math.min(cn-1,Math.round(u0*cn))]; const bwid=D*(0.06+0.05*(ev?ev.v:0.6));
+        items.push({t:(u0+u1)/2,z:1,f:(ctx)=>{ ctx.fillStyle=_dlCss(q,0.85); ctx.beginPath(); ctx.arc(cx,cy,rr+bwid,a0,a1+0.05); ctx.arc(cx,cy,rr*0.7,a1+0.05,a0,true); ctx.closePath(); ctx.fill(); }}); }
+      const sx=W*0.36, sy=H*0.4, SR=D*(0.16+0.14*c.vmax); const sg=S.span(c.a/cn,c.b/cn);
+      items.push({t:sg.t0,z:2,f:(ctx)=>{ const cols=[]; for(let k=0;k<24;k++){ const col=S.col(_dlClamp(sg.t0+(sg.t1-sg.t0)*k/24,0,0.999)); cols.push(k%2?_dlComp(col):col); } _dl2Ring(ctx,sx,sy,SR*1.02,SR*1.32,cols,0.1,0.95); }});
+      _dl2Disc(items,S,sx,sy,SR,sg.t0,sg.t1,{q:4,K:5,z:3});
+      const qg=S.quiet(); const mg=S.span(qg.a/cn,qg.b/cn); const mx=W*0.7, my=H*0.66, MR=D*0.14;
+      for(let k=4;k>=1;k--){ const col=S.col(_dlClamp(mg.t0+(mg.t1-mg.t0)*k/5,0,0.999)); items.push({t:mg.t0+(mg.t1-mg.t0)*(5-k)/5,z:4,f:(ctx)=>{ ctx.fillStyle=_dlCss(_dlMix(col,cream,0.3)); ctx.beginPath(); ctx.arc(mx,my,MR*k/4,0,6.2832); ctx.fill(); ctx.fillStyle=_dlCss(bw?[200,200,200]:_dlMix(S.col(0.5),[230,222,200],0.55)); ctx.beginPath(); ctx.arc(mx+MR*k/4*0.38,my-MR*k/4*0.1,MR*k/4*0.8,0,6.2832); ctx.fill(); }}); }
+      break; }
+    case 4: { // Formes circulaires 1930 — three to five disc clusters, one a passage, on a plain ground, overlapping where the passages touch
+      ctx.fillStyle=_dlCss(cream); ctx.fillRect(0,0,W,H); const G=S.groups(_dlClamp(Math.round(nP/7),3,5)); const n=G.length;
+      G.forEach((g,i)=>{ const u=(i+0.5)/n; const R=D*(0.16+0.17*g.vmax); const x=W*(0.25+0.5*((i*0.618+0.3)%1))+W*0.1*(g.reg-0.5), y=H*(0.14+0.72*u);
+        _dl2Disc(items,S,x,y,R,g.t0,g.t1,{q:4,rot:u*3+0.3,K:_dlClamp(Math.round(g.n/5),3,7),z:1,spin:0.25,rim:dark});
+        if(g.vmax>0.7){ const sr=R*0.45; _dl2Disc(items,S,x+R*0.9*Math.cos(u*6),y+R*0.9*Math.sin(u*6),sr,g.t0,g.t1,{q:2,K:3,z:2}); } });
+      break; }
+    case 5: { // Hommage à Blériot 1914 — a vortex of discs, one a phrase, the propeller at the climax, the tower and the plane at the edge
+      ctx.fillStyle=_dlCss(cream); ctx.fillRect(0,0,W,H); const G=S.groups(_dlClamp(Math.round(nP/2),12,30)); const n=G.length; const cx=W*0.46, cy=H*0.52;
+      G.forEach((g,i)=>{ const u=(i+0.5)/n; const ang=u*6.2832*1.6-1.2, rad=D*(0.08+0.4*Math.sqrt(u)); const x=cx+Math.cos(ang)*rad*0.9, y=cy+Math.sin(ang)*rad; const R=D*(0.035+0.09*g.vmax+0.04*Math.min(1,g.dur*n/2));
+        _dl2Disc(items,S,x,y,R,g.t0,g.t1,{q:(i%3)?2:4,rot:ang,K:_dlClamp(Math.round(g.n/4),2,5),z:1+g.vmax}); });
+      const pr=D*(0.12+0.1*c.vmax); const px=cx+Math.cos(c.t*6.2832*1.6-1.2)*D*(0.08+0.4*Math.sqrt(c.t))*0.9, py=cy+Math.sin(c.t*6.2832*1.6-1.2)*D*(0.08+0.4*Math.sqrt(c.t));
+      items.push({t:c.t,z:3,f:(ctx)=>{ ctx.fillStyle=_dlCss(dark,0.85); for(let k=0;k<3;k++){ const a=k/3*6.2832+c.t*4; ctx.beginPath(); ctx.moveTo(px,py); ctx.quadraticCurveTo(px+Math.cos(a-0.5)*pr,py+Math.sin(a-0.5)*pr,px+Math.cos(a)*pr*1.1,py+Math.sin(a)*pr*1.1); ctx.quadraticCurveTo(px+Math.cos(a+0.5)*pr,py+Math.sin(a+0.5)*pr,px,py); ctx.fill(); } ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(px,py,pr*0.12,0,6.2832); ctx.fill(); }});
+      items.push({t:0.95,z:4,f:(ctx)=>{ const tx=W*0.9, tb=H*0.98, th=H*(0.3+0.25*S.regAll); ctx.fillStyle=_dlCss(bw?[90,90,90]:[196,62,40],0.85); ctx.beginPath(); ctx.moveTo(tx-D*0.07,tb); ctx.quadraticCurveTo(tx-D*0.02,tb-th*0.55,tx-D*0.012,tb-th); ctx.lineTo(tx+D*0.012,tb-th); ctx.quadraticCurveTo(tx+D*0.02,tb-th*0.55,tx+D*0.07,tb); ctx.closePath(); ctx.fill(); ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(tx,tb,D*0.028,3.1416,0); ctx.fill();
+        ctx.strokeStyle=_dlCss(dark,0.8); ctx.lineWidth=Math.max(1.5,D*0.005); const ax=W*0.14, ay=H*0.1; ctx.beginPath(); ctx.moveTo(ax-D*0.09,ay); ctx.lineTo(ax+D*0.09,ay); ctx.moveTo(ax-D*0.07,ay+D*0.03); ctx.lineTo(ax+D*0.07,ay+D*0.03); ctx.moveTo(ax-D*0.05,ay); ctx.lineTo(ax-D*0.05,ay+D*0.03); ctx.moveTo(ax+D*0.05,ay); ctx.lineTo(ax+D*0.05,ay+D*0.03); ctx.moveTo(ax,ay+D*0.03); ctx.lineTo(ax+D*0.16,ay+D*0.05); ctx.stroke(); }});
+      break; }
+    case 6: { // Prismes électriques (Sonia Delaunay) 1914 — two discs, the two halves of the piece, a sector a chord, the rings its dynamics; the lamp between
+      ctx.fillStyle=_dlCss(bw?[40,40,44]:_dlMix(S.col(0.5),[40,36,50],0.75)); ctx.fillRect(0,0,W,H);
+      [[W*0.36,H*0.4,0,0.5],[W*0.66,H*0.6,0.5,1]].forEach(([x,y,ta,tb],k)=>{ const g=S.span(ta,tb); const R=D*(0.3+0.12*g.vmax); const ns=_dlClamp(Math.round(g.n/8),16,44); const K=5;
+        for(let i=K-1;i>=0;i--){ const r1=R*(i+1)/K, rr0=R*i/K; const cols=[]; for(let j=0;j<ns;j++){ const u=ta+(tb-ta)*((j+0.5)/ns); const col=S.col(_dlClamp(u,0,0.999)); const e=A.ev[Math.min(cn-1,Math.round(u*cn))]; const lift=(e?e.v:0.6)*0.5*(1-i/K); cols.push(((j+i)%2)?_dlMix(_dlComp(col),[255,255,255],lift):_dlMix(col,[255,255,255],lift)); }
+          const u0=ta+(tb-ta)*i/K; items.push({t:u0,z:1,f:(ctx)=>_dl2Ring(ctx,x,y,rr0,r1,cols,k*0.7+i*0.1,0.75)}); } });
+      items.push({t:0.5,z:2,f:(ctx)=>{ ctx.strokeStyle=_dlCss(cream,0.5); ctx.lineWidth=D*0.012; ctx.beginPath(); ctx.moveTo(W*0.5,H*0.08); ctx.lineTo(W*0.5,H*0.92); ctx.stroke(); ctx.fillStyle=_dlCss(cream,0.9); ctx.beginPath(); ctx.arc(W*0.5,H*0.08,D*0.02,0,6.2832); ctx.fill(); }});
+      _kd2Events(A,10).filter(e=>e.acc).slice(0,4).forEach((e,i)=>{ const x=W*(0.15+0.7*e.t), y=H*(0.1+0.8*(1-A.reg(e.top))); _dl2Disc(items,S,x,y,D*(0.04+0.05*e.v),e.t,Math.min(1,e.t+0.04),{q:4,K:3,z:3}); });
+      break; }
+    case 7: { // Bal Bullier (Sonia Delaunay) 1913 — the dancers: a couple for every passage, a stack of colour, leaning with the register, tall with the dynamics; the floor and the lamps run beneath
+      ctx.fillStyle=_dlCss(dark); ctx.fillRect(0,0,W,H); const G=S.groups(_dlClamp(Math.round(nP/5),5,9)); const n=G.length;
+      items.push({t:0,z:0,f:(ctx)=>{ for(let k=0;k<6;k++){ const col=S.col(k/6); ctx.fillStyle=_dlCss(_dlMix(k%2?_dlComp(col):col,dark,0.45),0.9); ctx.beginPath(); ctx.moveTo(0,H*(0.55+0.08*k)); for(let i=0;i<=10;i++){ const u=i/10; ctx.lineTo(W*u,H*(0.55+0.08*k+0.03*Math.sin(u*6.3+k))); } ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill(); } }});
+      G.forEach((g,i)=>{ const x=W*(0.08+0.84*(i+0.5)/n), hgt=H*(0.3+0.3*g.vmax), lean=W*0.12*(g.reg-0.5), base=H*0.78; const np=4+Math.round(g.v*3); const bw2=W*(0.06+0.04*g.v);
+        for(let p=0;p<np;p++){ const u0=g.t0+(g.t1-g.t0)*p/np, u1=g.t0+(g.t1-g.t0)*(p+1)/np; const col=S.col(u0); const q=(p%2)?_dlComp(col):col; const y1=base-hgt*(p+1)/np, y0=base-hgt*p/np; const x0=x+lean*p/np, x1=x+lean*(p+1)/np; const w2=bw2*(1.1-0.4*p/np);
+          items.push({t:(u0+u1)/2,z:1,f:(ctx)=>{ ctx.fillStyle=_dlCss(q,0.95); ctx.beginPath(); ctx.moveTo(x0-w2,y0); ctx.quadraticCurveTo(x0-w2*1.2,(y0+y1)/2,x1-w2*0.8,y1); ctx.quadraticCurveTo(x1,y1-(y0-y1)*0.25,x1+w2*0.8,y1); ctx.quadraticCurveTo(x0+w2*1.2,(y0+y1)/2,x0+w2,y0); ctx.closePath(); ctx.fill(); }}); }
+        items.push({t:g.t1,z:2,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream,0.95); ctx.beginPath(); ctx.arc(x+lean,base-hgt-bw2*0.5,bw2*0.42,0,6.2832); ctx.fill(); }}); });
+      break; }
+    default: { // Le Premier Disque 1913 — the piece as the first disc: seven rings from the centre outward, each a seventh of the piece, each cut into its four quarters
+      ctx.fillStyle=_dlCss(bw?[60,60,62]:_dlMix(S.col(0.5),[52,48,60],0.8)); ctx.fillRect(0,0,W,H); const R=D*0.47, x=W/2, y=H/2;
+      items.push({t:0,z:0,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(x,y,R*1.02,0,6.2832); ctx.fill(); }});
+      _dl2Disc(items,S,x,y,R,0,1,{q:4,K:7,z:1,rot:0.7854,spin:0});
+      break; }
+  }
+  _dl2Draw(ctx,items,reveal); _setCurE(0.5);
 }
 
 function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
-  const ss=sessionSeed|0, rnd=_seedRnd(85, ss, 0, 0);
-  const {col, meta, css, shade, cn}=_trioChordTools(chords, gc);
-  const N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH);
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const dnaE=_ch?_ch.energy:0.5, dnaD=_ch?_ch.density:0.5;
-  const PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI);
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===3){ delaunayPhaseWindows(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ delaunayPhaseEiffel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  // segment colour: rotate the chord colour's channels + lightness stepping —
-  // simultaneous contrast from within the active palette, no foreign hues.
-  const seg=(base,s2,k)=>{
-    const rot=[[0,1,2],[1,2,0],[2,0,1]][s2%3];
-    const c=[base[rot[0]],base[rot[1]],base[rot[2]]];
-    return shade(c, 0.7+((s2+k)%3)*0.22);
-  };
-  function disc(x,y,R,i,vel,ringAdd){
-    const base=col(i,1.05);
-    const ringN=3+((vel*3*(0.75+0.5*dnaE))|0)+(ringAdd||0);
-    for(let k=ringN;k>=1;k--){
-      const rr=R*k/ringN, segs=4+((i+k)%4);
-      for(let s2=0;s2<segs;s2++){
-        const a0=(s2/segs)*Math.PI*2+k*0.35, a1=((s2+1)/segs)*Math.PI*2+k*0.35;
-        ctx.fillStyle=css(seg(base,s2,k),0.92);
-        ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,rr,a0,a1); ctx.closePath(); ctx.fill();
-      }
-    }
-    ctx.strokeStyle='rgba(30,26,20,.25)'; ctx.lineWidth=Math.max(1.5,S*0.0026);
-    ctx.beginPath(); ctx.arc(x,y,R,0,7); ctx.stroke();
-  }
-
-  if(pick===0){ // simultaneous discs
-    ctx.fillStyle='#f0e9da'; ctx.fillRect(0,0,CW,CH);
-    const stride=Math.max(Math.ceil(cn/14), Math.round(5*(1.3-0.6*dnaD)));
-    const ds=[];
-    for(let i=0;i<N;i+=stride){
-      const m=meta(i);
-      ds.push({x:CW*(0.14+0.72*((i*GA/(Math.PI*2))%1)), y:CH*(0.16+0.68*rnd()),
-               r:S*0.07+m.dur*S*0.10, i, vel:m.vel});
-    }
-    ds.sort((a,b)=>b.r-a.r);
-    for(const d of ds) disc(d.x,d.y,d.r,d.i,d.vel,0);
-    return;
-  }
-  if(pick===1){ // Rythme column
-    ctx.fillStyle='#efe7d6'; ctx.fillRect(0,0,CW,CH);
-    for(let k=0;k<6;k++){
-      const ni=Math.min(cn-1,k*9); const m=meta(ni);
-      ctx.fillStyle=css(col(ni,0.9+k*0.06),0.9);
-      ctx.beginPath(); ctx.arc(k%2?0:CW, CH*(0.12+k*0.16), CW*0.16+m.dur*CW*0.05, 0, 7); ctx.fill();
-    }
-    const per=Math.ceil(cn/4);
-    for(let k=0;k<4;k++){
-      const ni=Math.min(cn-1,k*per); if(ni>=N && k>0) break;
-      const m=meta(ni);
-      disc(CW*0.5+(k%2?CW*0.05:-CW*0.05), CH*(0.16+k*0.225), CW*0.15+m.dur*CW*0.06, ni, m.vel, 1);
-    }
-    return;
-  }
-  if(pick===2){ // endless rhythm
-    ctx.fillStyle='#151220'; ctx.fillRect(0,0,CW,CH);
-    ctx.strokeStyle='rgba(240,233,218,.22)'; ctx.lineWidth=CW*0.02;
-    ctx.beginPath();
-    for(let s2=0;s2<=40;s2++){const t=s2/40;
-      const x=CW*(0.2+0.6*t), y=CH*(0.14+0.72*t);
-      s2?ctx.lineTo(x,y):ctx.moveTo(x,y);}
-    ctx.stroke();
-    const per=Math.ceil(cn/5);
-    for(let k=0;k<5;k++){
-      const ni=Math.min(cn-1,k*per); if(ni>=N && k>0) break;
-      const m=meta(ni); const base=col(ni,1.05);
-      const t=k/4, x=CW*(0.2+0.6*t), y=CH*(0.14+0.72*t)+Math.sin(t*Math.PI)*(k%2?-1:1)*CH*0.10;
-      const R=CW*0.13+m.dur*CW*0.05;
-      ctx.beginPath(); ctx.arc(x,y,R,Math.PI*0.5,Math.PI*1.5); ctx.closePath();
-      ctx.fillStyle=css(base,0.95); ctx.fill();
-      ctx.beginPath(); ctx.arc(x+R*0.22,y,R,Math.PI*1.5,Math.PI*0.5); ctx.closePath();
-      ctx.fillStyle=css(seg(base,1,1),0.95); ctx.fill();
-      ctx.fillStyle=css(seg(base,2,2),0.95);
-      ctx.beginPath(); ctx.arc(x+R*0.11,y,R*0.4,0,7); ctx.fill();
-    }
-    return;
-  }
-  if(pick===3){ // windows — prismatic shards fanning around the centre
-    // (Fenêtres): light radiates outward through pastel panes; completely
-    // different composition from Klee's woven rectangles.
-    ctx.fillStyle='#e9e2cf'; ctx.fillRect(0,0,CW,CH);
-    ctx.globalCompositeOperation='multiply';
-    const wx=CW/2, wy=CH*0.46;
-    // cap the fan at ~44 shards — hundreds of chords otherwise stack every
-    // golden angle into a solid black ring
-    const _dstep=Math.max(1,Math.ceil(cn/44));
-    for(let i=0;i<N;i+=_dstep){
-      const m=meta(i);
-      const a=i*GA;
-      const r0=S*0.05+((0.7548776662*(i+1))%1)*S*0.26;
-      const len=S*0.13+m.dur*S*0.22;
-      const wid=0.10+m.vel*0.15;
-      const pale=_glaze(col(i,1.05));
-      ctx.fillStyle=css(pale,0.92);
-      ctx.beginPath();
-      ctx.moveTo(wx+Math.cos(a)*(r0+len), wy+Math.sin(a)*(r0+len));
-      ctx.lineTo(wx+Math.cos(a-wid)*r0,  wy+Math.sin(a-wid)*r0);
-      ctx.lineTo(wx+Math.cos(a+wid)*r0,  wy+Math.sin(a+wid)*r0);
-      ctx.closePath(); ctx.fill();
-    }
-    ctx.globalCompositeOperation='source-over';
-    ctx.strokeStyle='rgba(60,80,60,.35)'; ctx.lineWidth=Math.max(3,S*0.006);
-    ctx.beginPath(); ctx.moveTo(CW*0.46,CH*0.9); ctx.lineTo(CW*0.5,CH*0.22); ctx.lineTo(CW*0.54,CH*0.9); ctx.stroke();
-    return;
-  }
-  if(pick===4){ // electric prisms
-    ctx.fillStyle='#efe8d8'; ctx.fillRect(0,0,CW,CH);
-    const _sstep=Math.max(7,Math.ceil(cn/9));
-    for(let i=0;i<N;i+=_sstep){
-      const m=meta(i);
-      disc(CW*(0.1+0.8*rnd()), CH*(0.1+0.8*rnd()), S*0.05+m.dur*S*0.03, i, m.vel, 0);
-    }
-    const p1=Math.min(cn-1,8), p2=Math.min(cn-1,Math.max(9,(cn*0.62)|0));
-    [p1,p2].forEach((ni,k)=>{
-      if(ni>=N && k>0) return;
-      const base=col(ni,1.1);
-      const x=CW*(k?0.66:0.34), y=CH*(k?0.6:0.4), R=S*0.30*(0.8+0.4*dnaE);
-      for(let ring=14;ring>=1;ring--){
-        const rr=R*ring/14, segs=10+ring*2;
-        for(let s2=0;s2<segs;s2++){
-          const a0=s2/segs*Math.PI*2+ring*0.22+k, a1=(s2+1)/segs*Math.PI*2+ring*0.22+k;
-          ctx.fillStyle=css(seg(base,s2,ring),0.5);
-          ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,rr,a0,a1); ctx.closePath(); ctx.fill();
-        }
-      }
-    });
-    return;
-  }
-  { // 5 sun & moon
-    ctx.fillStyle='#101425'; ctx.fillRect(0,0,CW,CH);
-    let sunI=0, moonI=0, mx2=-1, mn2=2;
-    for(let i=0;i<N;i++){ const m=meta(i); if(m.vel>mx2){mx2=m.vel;sunI=i;} if(m.vel<mn2){mn2=m.vel;moonI=i;} }
-    const sb=col(sunI,1.25);
-    const sx=CW*0.34, sy=CH*0.42, SR=S*0.26*(0.85+0.3*dnaE);
-    for(let k=0;k<24;k++){
-      const a=k/24*Math.PI*2;
-      ctx.fillStyle=css(seg(sb,k,0),0.9);
-      ctx.beginPath(); ctx.moveTo(sx,sy);
-      ctx.lineTo(sx+Math.cos(a)*SR*1.35, sy+Math.sin(a)*SR*1.35);
-      ctx.lineTo(sx+Math.cos(a+0.13)*SR, sy+Math.sin(a+0.13)*SR);
-      ctx.closePath(); ctx.fill();
-    }
-    disc(sx,sy,SR*0.8,sunI,mx2,2);
-    const mb=col(moonI,0.7);
-    const mx=CW*0.74, my=CH*0.68, MR=S*0.17;
-    for(let k=5;k>=1;k--){
-      ctx.fillStyle=css(shade(mb,0.55+k*0.16),0.9);
-      ctx.beginPath(); ctx.arc(mx,my,MR*k/5,0,7); ctx.fill();
-      ctx.fillStyle='#101425';
-      ctx.beginPath(); ctx.arc(mx+MR*k/5*0.35, my-MR*k/5*0.12, MR*k/5*0.82, 0, 7); ctx.fill();
-    }
-  }
+  const ss=sessionSeed|0;
+  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  _dl2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
@@ -16624,15 +16513,15 @@ const ARTIST_VARIANTS = {
     {mark:{tile:1},size:[.04,.1],layout:{grid:1},density:1},
     {ground:'#e8e0d0',mark:{rect:1},size:[.04,.12],alpha:.6,layout:{scatter:1},density:.6,edge:0},
   ],
-  delaunay: [
-    {mark:{orphic:1},size:[.06,.3],layout:{scatter:.6,radial:.4},density:.35},
-    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{scatter:.55,radial:.45},density:.2},
-    {ground:'#141420',mark:{arch:.5,disc:.5},size:[.12,.28],alpha:.95,layout:{scatter:.55,radial:.45},density:.25},
-    {ground:'#e6e0d0',mark:{tri:.5,rect:.3,band:.2},size:[.08,.22],alpha:.6,layout:{scatter:.6,field:.4},density:.4},   // Les Fenêtres
-    {mark:{fan:1},size:[.3,.6],layout:{scatter:.55,radial:.45},density:.08},
-    {ground:'#b8c8d6',mark:{rect:.5,tri:.3,cloud:.2},size:[.06,.18],layout:{stack:.6,scatter:.4},density:.35},          // La Tour Eiffel
-    {mark:{orphic:1},size:[.06,.3],layout:{scatter:1},density:.35},
-    {mark:{arch:.6,orphic:.4},size:[.12,.3],layout:{scatter:.55,radial:.45},density:.2},
+  delaunay: [   // slot order = solo variants: Premier Disque, Rythme sans fin, Rythme n°1, Soleil Lune, Formes circulaires, Blériot, Prismes électriques, Bal Bullier
+    {ground:'#343040',mark:{orphic:1},size:[.4,.7],layout:{radial:1},density:.1},
+    {ground:'#161422',mark:{arch:.7,orphic:.3},size:[.12,.28],layout:{stack:1},density:.25},
+    {mark:{orphic:.7,arch:.3},size:[.2,.4],layout:{stack:1},density:.2},
+    {ground:'#e6dcc8',mark:{fan:.5,orphic:.3,arch:.2},size:[.15,.4],layout:{radial:1},density:.2},
+    {mark:{orphic:1},size:[.14,.36],layout:{scatter:1},density:.25},
+    {mark:{orphic:.8,disc:.2},size:[.05,.16],layout:{radial:.6,scatter:.4},density:.5},
+    {ground:'#282434',mark:{fan:1},size:[.3,.6],layout:{scatter:.55,radial:.45},density:.1},
+    {ground:'#161422',mark:{blob:.7,disc:.3},size:[.05,.12],layout:{stack:.6,grid:.4},density:.45},
   ],
   oneM: [
     {mark:{panel:.6,pixels:.4},size:[.02,.07],layout:{grid:1},density:1},
@@ -16647,7 +16536,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,oneM:1,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
