@@ -1245,247 +1245,17 @@ function _rectChordColor(chords, pIdx, MAX_RECTS, gc){
 
 // Rothko canvas-wide overlay. The classic Rothko is NOT a patchwork grid — it's
 // a small number of soft-edged horizontal color fields STACKED VERTICALLY,
-// centered within generous margins, hovering on a saturated ground. We build
-// that arrangement directly (instead of the recursive partition the other
-// overlays use): pick 2–4 fields whose count grows gently with track length,
-// stack them with uneven heights (Rothko rarely splits evenly), inset them from
-// the canvas edges, and feather every edge so the fields breathe like stained
-// washes. Fields reveal progressively as lim advances.
+// centered within generous margins, hovering on a saturated ground. Every
+// variant is painted by the veil engine below (_rk2Paint), which reads the
+// fields' count, heights, values and edges from the music.
 function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
-  const cn=chords.length;
-  // Song character (A2): differentiate pieces beyond raw chord count. Energetic,
-  // dense music → deeper saturated ground and a touch more stacked fields; calm,
-  // sparse music → lighter ground, fewer fields. Deterministic; audio untouched.
-  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _energy = _ch ? _ch.energy : 0.5;
-  const _density = _ch ? _ch.density : 0.3;
-  // ── 8-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Stacked (veil engine): two or three fields, the canonical layout.
-  //  1 = Light (veil engine): cream ground, pale glowing fields.
-  //  2 = Horizon (veil engine): two fields meeting at a glowing seam.
-  //  3 = Bands (veil engine): one great field and thin bands.
-  //  4 = Multiform (veil engine): early 1948, soft patches afloat.
-  //  5 = Seagram (dark portal frames 1958-59).
-  //  6 = Chapel (Houston, 1964-67, triptych ultra-dark monochrome).
-  //  7 = Incandescent (warm glowing 1955-58).
-  //  Free (cap=2) sees Stacked + Pastel — dark saturated vs light luminous
-  //  is the strongest art-historical contrast in Rothko's late career.
-  //  Slot 1 stays Pastel (not Row Classic) so Free keeps maximal contrast.
-  let _rothkoForcedLayout = null; // the Classic body below is kept for reference; slots 0–4 now go to the veil engine
-  {
-    const _pn=_capN(8); const _ropick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_ropick===0){ rothkoPhaseStacked(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===1){ rothkoPhaseLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===2){ rothkoPhaseHorizon(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===3){ rothkoPhaseBands(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===4){ rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===5){ rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===6){ rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_ropick===7){ rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    _rothkoForcedLayout = 0;
-  }
-  // Rothko is intentionally minimal — even 12 fields is at the high end of his
-  // late stacked compositions, so we cap there rather than chasing density.
-  const FIELDS = (()=>{
-    let f = cn<=2 ? Math.max(1,cn)
-              : cn<=8  ? 2
-              : cn<=20 ? 3
-              : cn<=45 ? 4
-              : cn<=90 ? 5
-              : cn<=160? 6
-              : cn<=280? 7
-              : cn<=500? 8
-              : cn<=800? 9
-              : cn<=1200?10
-              : cn<=1800?11
-              : 12;
-    // Dense pieces lean +1 field, very sparse pieces -1 — still capped 1..12.
-    if(_density>0.6 && f<12) f+=1;
-    else if(_density<0.2 && f>1) f-=1;
-    return f;
-  })();
-  const lume=(r,g,b,boost)=>{if(_pastelOn) return [Math.round(r),Math.round(g),Math.round(b)];const mx=Math.max(r,g,b,1),k=(255*boost)/mx;let R=r*k,G=g*k,B=b*k,m2=Math.max(R,G,B);const pull=(x)=>x===m2?x:x*0.7;return[Math.min(255,pull(R)),Math.min(255,pull(G)),Math.min(255,pull(B))];};
-
-  // Ground: a deep saturated wash sampled from the whole piece, darkened.
-  // Energy modulates the darkness — a forte piece sits on a deeper ground
-  // (boost 0.24), a pianissimo one on a more luminous ground (boost 0.40).
-  const gBase=_rectChordColor(chords,0,Math.max(1,FIELDS),gc);
-  const _gBoost = 0.40 - 0.16*_energy;
-  const gnd=lume(gBase[0],gBase[1],gBase[2],_gBoost);
-  ctx.fillStyle=`rgb(${gnd[0]|0},${gnd[1]|0},${gnd[2]|0})`; ctx.fillRect(0,0,CW,CH);
-
-  const marginX=CW*0.08, marginTop=CH*0.06, marginBot=CH*0.06;
-  const innerX=marginX, innerW=CW-2*marginX;
-  const innerY=marginTop, innerH=CH-marginTop-marginBot;
-
-  // ── Layout chooser ──
-  // If a Vary slot forced a specific layout (slots 0/2/3 = stack/row/grid),
-  // honour it. Otherwise fall back to the legacy seed-driven micro-variation
-  // (kept defensive — should not trigger now that all 3 are explicit slots).
-  const lr=_seedRnd(99,ss,0,0);
-  const layoutRoll=lr();
-  const layout = (_rothkoForcedLayout != null)
-               ? _rothkoForcedLayout
-               : (FIELDS<=2 ? 0
-                  : layoutRoll<0.62 ? 0
-                  : layoutRoll<0.82 ? 1
-                  : 2);
-  const wr=_seedRnd(7,ss,0,0);
-
-  // Build the list of field rects {x,y,w,h} based on the chosen layout.
-  const fieldRects=[];
-  if(layout===0){
-    // Vertical stack — uneven heights.
-    const gap=Math.max(6,innerH*0.030);
-    const weights=[];for(let i=0;i<FIELDS;i++)weights.push(0.7+wr()*0.9);
-    const wsum=weights.reduce((a,b)=>a+b,0), availH=innerH-gap*(FIELDS-1);
-    let cy=innerY;
-    for(let f=0;f<FIELDS;f++){const fh=availH*(weights[f]/wsum);fieldRects.push({x:innerX,y:cy,w:innerW,h:fh});cy+=fh+gap;}
-  }else if(layout===1){
-    // Horizontal row — uneven widths.
-    const gap=Math.max(6,innerW*0.030);
-    const weights=[];for(let i=0;i<FIELDS;i++)weights.push(0.7+wr()*0.9);
-    const wsum=weights.reduce((a,b)=>a+b,0), availW=innerW-gap*(FIELDS-1);
-    let cx=innerX;
-    for(let f=0;f<FIELDS;f++){const fw=availW*(weights[f]/wsum);fieldRects.push({x:cx,y:innerY,w:fw,h:innerH});cx+=fw+gap;}
-  }else{
-    // Grid — cols×rows that best fit FIELDS, uneven row heights & col widths.
-    const cols=Math.ceil(Math.sqrt(FIELDS)), rows=Math.ceil(FIELDS/cols);
-    const gapX=Math.max(5,innerW*0.025), gapY=Math.max(5,innerH*0.025);
-    const cw=(innerW-gapX*(cols-1))/cols, chh=(innerH-gapY*(rows-1))/rows;
-    for(let f=0;f<FIELDS;f++){
-      const r=Math.floor(f/cols), c=f%cols;
-      // jitter size a touch so the grid isn't mechanical
-      const jw=cw*(0.86+wr()*0.12), jh=chh*(0.86+wr()*0.12);
-      const ox=(cw-jw)*0.5, oy=(chh-jh)*0.5;
-      fieldRects.push({x:innerX+c*(cw+gapX)+ox, y:innerY+r*(chh+gapY)+oy, w:jw, h:jh});
-    }
-  }
-
-  // Reveal progressively top→bottom / left→right by field order.
-  const revealed=Math.max(1,Math.min(FIELDS,Math.ceil(lim*(FIELDS/cn))));
-
-  // ── Per-field renderer: wavering, feathered, scumbled, frayed field drawn
-  // into rect {x,y,w,h}, optionally rotated by `angle` radians about its centre.
-  const drawField=(f, rect, angle)=>{
-    const rnd=_seedRnd(f+1500,ss,0,0);
-    const sampled=_rectChordColor(chords, f, Math.max(1,FIELDS), gc);
-    const col=lume(sampled[0],sampled[1],sampled[2], 0.92+rnd()*0.14);
-    const R=col[0]|0,G=col[1]|0,B=col[2]|0;
-
-    ctx.save();
-    if(angle){
-      const ccx=rect.x+rect.w/2, ccy=rect.y+rect.h/2;
-      ctx.translate(ccx,ccy); ctx.rotate(angle); ctx.translate(-ccx,-ccy);
-    }
-    const fx=rect.x + rect.w*0.02*(rnd()-0.5);
-    const fw=rect.w*(0.97+rnd()*0.03);
-    const by=rect.y, bh=rect.h;
-
-    // Halo bleed into the ground.
-    const halo=lume(sampled[0],sampled[1],sampled[2],0.55);
-    ctx.fillStyle=`rgba(${halo[0]|0},${halo[1]|0},${halo[2]|0},0.5)`;
-    ctx.fillRect(fx-fw*0.02, by-bh*0.06, fw*1.04, bh*1.12);
-
-    const rimX=Math.max(4,fw*0.06), rimY=Math.max(6,bh*0.16);
-    if(fw-2*rimX<=2||bh-2*rimY<=2){
-      ctx.fillStyle=`rgb(${R},${G},${B})`; ctx.fillRect(fx,by,fw,bh); ctx.restore(); return;
-    }
-    const cx0=fx+rimX, cy0=by+rimY, cw0=fw-2*rimX, ch0=bh-2*rimY;
-    const ej=_seedRnd(f+1701,ss,0,0);
-    const phx=ej()*6.28, phy=ej()*6.28, ph2=ej()*6.28, ph3=ej()*6.28;
-    const wob=Math.min(rimX,rimY)*0.5;
-    const waver=(p,ph)=>Math.sin(p*Math.PI*2*1.5+ph)*0.6+Math.sin(p*Math.PI*2*2.7+ph*1.7)*0.4;
-    const edgePt=(side,t)=>{
-      if(side===0) return [cx0+t*cw0, cy0 + waver(t,phy)*wob];
-      if(side===1) return [cx0+cw0 - waver(t,ph2)*wob*0.6, cy0+t*ch0];
-      if(side===2) return [cx0+(1-t)*cw0, cy0+ch0 - waver(1-t,ph3)*wob];
-      return [cx0 + waver(1-t,phx)*wob*0.6, cy0+(1-t)*ch0];
-    };
-    const traceCore=(grow)=>{
-      ctx.beginPath(); const SEG=18; let first=true;
-      for(let side=0;side<4;side++){
-        for(let i=0;i<SEG;i++){
-          let [x,y]=edgePt(side,i/SEG);
-          if(grow){const mx=cx0+cw0/2,my=cy0+ch0/2;x+=(x-mx)/(cw0/2)*grow;y+=(y-my)/(ch0/2)*grow;}
-          if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
-        }
-      }
-      ctx.closePath();
-    };
-    const RINGS=16;
-    for(let s=RINGS;s>=1;s--){
-      const t=s/RINGS, grow=Math.max(rimX,rimY)*t, a=(1-t)*(1-t)*0.85;
-      ctx.fillStyle=`rgba(${R},${G},${B},${a.toFixed(3)})`; traceCore(grow); ctx.fill();
-    }
-    ctx.fillStyle=`rgb(${R},${G},${B})`; traceCore(0); ctx.fill();
-
-    const sc=_seedRnd(f+1801,ss,0,0);
-    const passes=3+Math.floor(sc()*3);
-    for(let p=0;p<passes;p++){
-      const lift=0.82+sc()*0.4;
-      const cr=Math.min(255,R*lift)|0, cg=Math.min(255,G*lift)|0, cb=Math.min(255,B*lift)|0;
-      const px=cx0+cw0*(0.15+sc()*0.7), py=cy0+ch0*(0.15+sc()*0.7);
-      const pr=Math.min(cw0,ch0)*(0.18+sc()*0.22);
-      const grd=ctx.createRadialGradient(px,py,0,px,py,pr);
-      grd.addColorStop(0,`rgba(${cr},${cg},${cb},0.16)`);grd.addColorStop(1,`rgba(${cr},${cg},${cb},0)`);
-      ctx.fillStyle=grd; ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fill();
-    }
-    const fr=_seedRnd(f+1901,ss,0,0);
-    const frays=10+Math.floor(fr()*10);
-    for(let i=0;i<frays;i++){
-      const side=Math.floor(fr()*4), tt=fr();
-      let [ex,ey]=edgePt(side,tt);
-      const mx=cx0+cw0/2, my=cy0+ch0/2;
-      const dx=(ex-mx), dy=(ey-my), dl=Math.hypot(dx,dy)||1;
-      const reach=(Math.max(rimX,rimY))*(0.5+fr()*1.1);
-      const tx=ex+dx/dl*reach, ty=ey+dy/dl*reach;
-      const ga=0.10+fr()*0.12;
-      const grd=ctx.createRadialGradient(ex,ey,0,tx,ty,reach);
-      grd.addColorStop(0,`rgba(${R},${G},${B},${ga.toFixed(3)})`);grd.addColorStop(1,`rgba(${R},${G},${B},0)`);
-      ctx.fillStyle=grd; ctx.beginPath();ctx.arc(tx,ty,reach*0.7,0,Math.PI*2);ctx.fill();
-    }
-    ctx.restore();
-  };
-
-  // Per-field gentle rotation. Stacked/row layouts get a very subtle tilt;
-  // the grid layout allows a touch more drift. Seeded per field.
-  const ar=_seedRnd(311,ss,0,0);
-  const maxTilt = layout===2 ? 0.10 : 0.045; // radians (~6° grid, ~2.5° else)
-  for(let f=0;f<FIELDS;f++){
-    if(f>=revealed) continue;
-    const angle=(ar()-0.5)*2*maxTilt;
-    drawField(f, fieldRects[f], angle);
-  }
-}
-
-// Soft feathered rounded-rect field helper for new Rothko phases.
-function _rothkoField(ctx,x,y,w,h,r,g,b,a){
-  ctx.save();
-  const rad=Math.min(w,h)*0.06;
-  const path=(grow)=>{
-    const X=x-grow,Y=y-grow,W=w+grow*2,H=h+grow*2,R=rad+grow*0.5;
-    ctx.beginPath();
-    ctx.moveTo(X+R,Y);ctx.lineTo(X+W-R,Y);ctx.quadraticCurveTo(X+W,Y,X+W,Y+R);
-    ctx.lineTo(X+W,Y+H-R);ctx.quadraticCurveTo(X+W,Y+H,X+W-R,Y+H);
-    ctx.lineTo(X+R,Y+H);ctx.quadraticCurveTo(X,Y+H,X,Y+H-R);
-    ctx.lineTo(X,Y+R);ctx.quadraticCurveTo(X,Y,X+R,Y);
-    ctx.closePath();
-  };
-  // Feathered halo: a few expanding, fading rings (like drawField's feather)
-  // stand in for the former shadowBlur, which rasterised a blur per field —
-  // up to 20× per frame.
-  const feather=Math.max(8,Math.min(w,h)*0.12), RINGS=6;
-  for(let s=RINGS;s>=1;s--){
-    const t=s/(RINGS+1);
-    ctx.fillStyle=`rgba(${r},${g},${b},${(a*(1-t)*(1-t)*0.6).toFixed(3)})`;
-    path(feather*t); ctx.fill();
-  }
-  ctx.fillStyle=`rgba(${r},${g},${b},${a})`;
-  path(0); ctx.fill();
-  ctx.restore();
+  // ── VARIANT: 0 No. 61 (Rust and Blue) · 1 Orange and Yellow · 2 White Center ·
+  // 3 Four Darks in Red · 4 Black on Maroon (Seagram) · 5 Multiform No. 9 · 6 No. 10 ·
+  // 7 Chapel. Free: 0 and 1 — the deep classic stack against the luminous one.
+  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // ── Rothko veil engine ───────────────────────────────────────────────────────
@@ -1518,215 +1288,105 @@ function _rkSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.lengt
   const col=(t)=>_picChord(chords,_rkClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb;
   const avg=(t0,t1)=>{ let c=[0,0,0],k=0; for(let t=t0;t<=t1;t+=Math.max(0.01,(t1-t0)/12)){ const q=col(t); c[0]+=q[0]; c[1]+=q[1]; c[2]+=q[2]; k++; } return c.map(v=>v/k); };
   return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col,avg}; }
-// a field: lay K veils over the passage t0..t1; halo first. key = value of the field (0 dark .. 1 light)
-function _rkField(list,S,x,y,w,h,t0,t1,key,o){
-  o=o||{}; const K=o.K||12, feather=o.feather, base=_rkTone(S.avg(t0,t1),key,S.isBW); let id=list.length;
-  const halo=_rkTone(base,_rkClamp(key+0.18,0,1),S.isBW);
-  list.push({id:id++,t:t0,x,y,w,h,col:halo,a:0.28,feather:feather*1.6,k:-0.1,ss:o.ss});
-  for(let i=0;i<K;i++){ const u=i/(K-1), t=t0+(t1-t0)*(i+0.5)/K; const kk=_rkClamp(key-0.1+u*0.22,0,1);   // outer veils darker, inner lighter — the glow comes from inside
-    const c=_rkMix(_rkTone(base,kk,S.isBW),_rkTone(S.col(t),kk,S.isBW),0.35);
-    list.push({id:id++,t,x,y,w,h,col:c,a:0.13+0.09*u,feather,k:u,ss:o.ss}); }
-  return base;
-}
 function _rkDraw(ctx,list,reveal,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_rkClamp(reveal,0,1)); for(let i=0;i<n;i++){ const v=list[i]; const rnd=_rkR(v.id*29+61001,ss); rnd(); _rkVeil(ctx,v,rnd); } }
 function _rkGround(ctx,CW,CH,c,ss){ ctx.fillStyle=_rkCss(_rkMix(c,[0,0,0],0.3)); ctx.fillRect(0,0,CW,CH); const rnd=_rkR(61000,ss|0); rnd(); const f=Math.min(CW,CH)*0.05;   // the stain: darker at the edges, three feathered veils of the ground colour inward — paths only, so the SVG export matches to the pixel
   for(let i=0;i<3;i++){ const e=f*(2.2-i*0.6); ctx.fillStyle=_rkCss(c,0.4); _rkRect(ctx,e,e,CW-2*e,CH-2*e,f*0.3,rnd); } }
-// stacked fields helper: heights from the passages' energy, margins Rothko's
-function _rkStack(list,S,CW,CH,ss,n,keys,o){ o=o||{}; const r=_rkR(62000,ss); r(); const mx=CW*(o.mx||0.07), gap=CH*(o.gap||0.035), top=CH*(o.top||0.06), bot=CH*(o.bot||0.06);
-  const ws=[]; for(let i=0;i<n;i++) ws.push((o.weights&&o.weights[i])||(0.7+r()*0.6)); const T=ws.reduce((a,b)=>a+b,0); const H=CH-top-bot-gap*(n-1);
-  let y=top; for(let i=0;i<n;i++){ const h=H*ws[i]/T; const t0=i/n, t1=(i+1)/n; _rkField(list,S,mx+(r()-.5)*CW*0.01,y,CW-2*mx,h,t0,t1,keys[i],{feather:Math.min(CW,CH)*(o.feather||0.035),ss,K:o.K}); y+=h+gap; } }
-
-// ── Rothko 0 · Stacked — two or three fields on a stained ground, the canonical late layout.
-function rothkoPhaseStacked(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
-  const n=S.density>0.55?3:2; const ground=_rkTone(S.avg(0,1),0.18,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
-  const list=[]; const keys=n===2?[0.64,0.3]:[0.66,0.44,0.26]; _rkStack(list,S,CW,CH,ss,n,keys,{weights:n===2?[1.3,0.8]:[1.1,0.9,0.6]});
+// ═══════════════════════════════════════════════════════════════════════════
+// Rothko · the veil engine read from the music. Every field is a passage of
+// the piece: its height the passage's length, its value the register (high →
+// light), its edge the dynamics (piano → wide and soft, forte → firm), its
+// colour the passage's chords fused. Time runs from the top of the canvas to
+// the bottom, so the painting can be read like the music. Veils only — no
+// gradients, no blur — so the SVG export matches to the pixel.
+// ═══════════════════════════════════════════════════════════════════════════
+function _rk2Setup(chords,gc,mode){ const S=_rkSetup(chords,gc,mode); const A=_kd2Analyze(chords,gc,mode); S.A=A;
+  // a passage [ta,tb) of the piece: register, dynamics, length
+  S.span=(ta,tb)=>{ const a=_rkClamp(Math.round(ta*A.cn),0,A.cn-1), b=_rkClamp(Math.round(tb*A.cn),a+1,A.cn); let top=0,v=0,vmax=0,n=0; for(let i=a;i<b;i++){ const e=A.ev[i]; if(!e) continue; top+=e.top; v+=e.v; if(e.v>vmax) vmax=e.v; n++; } return {t0:a/A.cn,t1:b/A.cn,t:(a+b)/2/A.cn,dur:(b-a)/A.cn,reg:A.reg(n?top/n:60),v:n?v/n:0.6,vmax:vmax||0.6,n:b-a}; };
+  // the piece cut into about n passages at its phrase boundaries
+  S.groups=(n)=>_kd2Phrases(A,Math.max(1,n)).map(g=>({t0:g.t0,t1:g.t1,t:g.t,dur:g.n/A.cn,reg:A.reg(g.top),v:g.v,vmax:g.vmax,n:g.n,pc:g.pc}));
+  S.climax=()=>{ let b=A.phrases[0]||{t:0.5,vmax:0.6}; for(const p of A.phrases) if(p.vmax>b.vmax) b=p; return b; };
+  S.regAll=A.reg(A.phrases.reduce((s,p)=>s+p.top*p.n,0)/Math.max(1,A.cn));
+  S.tonicCol=A.pcCol(A.tonic,52); S.dyn=A.ch?_rkClamp(A.ch.dynRange,0,1):0.5;
+  return S; }
+// a pigment: toned to its key, the darks capped (blue and magenta read lighter than their luminance)
+function _rk2Pig(rgb,key,S){ let c=_rkTone(rgb,key,S.isBW); if(key<0.25){ const mx=Math.max(c[0],c[1],c[2]), cap=50+key*360; if(mx>cap) c=c.map(v=>v*cap/mx); } return c; }
+// a field read from a passage g: a halo, K veils, an inner core (the glow comes from inside), a few brush streaks
+function _rk2Field(list,S,x,y,w,h,g,key,o){ o=o||{}; const D=o.D; const feather=o.feather!=null?o.feather:D*(0.022+0.03*(1-g.v)); const K=o.K||_rkClamp(6+Math.round(g.n/4),6,16); const al=o.alpha||1;
+  let base=S.avg(g.t0,g.t1); if(o.pull) base=_rkMix(_rkTone(base,key,S.isBW),o.pull[0],o.pull[1]); base=_rk2Pig(base,key,S);
+  if(o.halo!==false){ const halo=_rk2Pig(base,_rkClamp(key+(o.haloK==null?0.18:o.haloK),0,1),S); list.push({id:list.length,t:g.t0,x,y,w,h,col:halo,a:0.28*al,feather:feather*1.6,k:-0.1,ss:o.ss}); }
+  for(let i=0;i<K;i++){ const u=i/(K-1), t=g.t0+(g.t1-g.t0)*(i+0.5)/K; const kk=_rkClamp(key-0.1+u*0.22,0,1);
+    const c=_rk2Pig(_rkMix(base,S.col(t),o.pull?0.15:0.35),kk,S); list.push({id:list.length,t,x,y,w,h,col:c,a:(0.13+0.09*u)*al,feather,k:u,ss:o.ss}); }
+  const r=_rkR(70000+list.length*7,o.ss); r();
+  const core=o.core==null?2:o.core; for(let i=0;i<core;i++){ const t=g.t0+(g.t1-g.t0)*(0.6+0.35*i/Math.max(1,core-1)); list.push({id:list.length,t,x,y,w,h,col:_rk2Pig(base,_rkClamp(key+0.12+0.06*i,0,1),S),a:0.13*al,feather:feather*0.9,k:1.25+0.35*i,ss:o.ss}); }
+  const m=o.streaks==null?2+Math.round(S.density*12):o.streaks; for(let i=0;i<m;i++){ const sy=y+h*(0.08+0.84*r()), sh=h*(0.05+0.1*r()); const t=g.t0+(g.t1-g.t0)*r(); const kk=_rkClamp(key+(r()<0.5?-0.12:0.12),0,1);
+    list.push({id:list.length,t,x:x+w*0.02,y:sy,w:w*0.96,h:sh,col:_rk2Pig(base,kk,S),a:0.08*al,feather:feather*0.6,k:0.9,ss:o.ss}); }
+  return base; }
+// values for a row of fields: from the register, pushed apart where neighbours would match
+function _rk2Keys(G,lo,hi){ const ks=G.map(g=>lo+(hi-lo)*g.reg); for(let i=1;i<ks.length;i++){ if(Math.abs(ks[i]-ks[i-1])<0.14) ks[i]=_rkClamp(ks[i-1]+(i%2?-0.16:0.16),lo-0.08,hi+0.08); } return ks; }
+// stacked fields: heights from the passages' lengths (or o.weights), Rothko's margins
+function _rk2Stack(list,S,CW,CH,ss,G,keys,o){ o=o||{}; const D=Math.min(CW,CH); const mx=CW*(o.mx||0.07), gap=CH*(o.gap||0.03), top=CH*(o.top||0.06), bot=CH*(o.bot||0.06); const n=G.length;
+  let ws=G.map((g,i)=>o.weights?o.weights[i]:Math.pow(Math.max(0.03,g.dur),0.7)); let T=ws.reduce((a,b)=>a+b,0); ws=ws.map(w=>Math.max(w,T*0.1)); T=ws.reduce((a,b)=>a+b,0);
+  const H=CH-top-bot-gap*(n-1); const rects=[]; let y=top;
+  for(let i=0;i<n;i++){ const h=H*ws[i]/T; const r=_rkR(62100+i,ss); r(); const x=mx+(r()-.5)*CW*0.01;
+    _rk2Field(list,S,x,y,CW-2*mx,h,G[i],keys[i],{D,ss,feather:o.feather?D*o.feather:undefined,K:o.K,core:o.core,streaks:o.streaks,pull:o.pulls?o.pulls[i]:undefined}); rects.push({x,y,w:CW-2*mx,h}); y+=h+gap; }
+  return rects; }
+// ── VARIANT: 0 No. 61 (Rust and Blue) 1953 · 1 Orange and Yellow 1956 · 2 White Center 1950 ·
+// 3 Four Darks in Red 1958 · 4 Black on Maroon (Seagram) 1959 · 5 Multiform No. 9 1948 ·
+// 6 No. 10 1950 · 7 Chapel 1964–67. Free: 0 and 1 — the deep classic stack against the luminous one.
+function _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rk2Setup(chords,gc,mode), cn=S.cn, A=S.A, bw=S.isBW; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH); const list=[]; const nP=A.phrases.length;
+  switch(pick){
+    case 1: { // Orange and Yellow — two fields of light; the seam sits where the music peaks
+      const tc=_rkClamp(S.climax().t,0.3,0.72); const G=[S.span(0,tc),S.span(tc,1)];
+      _rkGround(ctx,CW,CH,_rkMix(_rkTone(S.avg(0,1),0.8,bw),[250,234,196],bw?0:0.45),ss);
+      _rk2Stack(list,S,CW,CH,ss,G,[0.58+0.12*G[0].reg,0.76+0.12*G[1].reg],{weights:[tc,1-tc],feather:0.05,core:3,gap:0.025}); break; }
+    case 2: { // White Center — three or four high-key fields and a thin white band laid last, at the climax
+      const G=S.groups(nP>=40?4:3); const keys=_rk2Keys(G,0.5,0.78);
+      _rkGround(ctx,CW,CH,_rkTone(S.avg(0,1),0.5,bw),ss);
+      const R=_rk2Stack(list,S,CW,CH,ss,G,keys,{gap:0.028});
+      const c=S.climax(); let bi=0,bd=9; for(let i=0;i<G.length-1;i++){ const d=Math.abs(G[i].t1-c.t); if(d<bd){bd=d;bi=i;} }
+      const ra=R[bi], rb=R[bi+1]||ra; const yb=(ra.y+ra.h+rb.y)/2, hb=CH*(0.025+0.03*c.vmax); const white=_rkTone(S.avg(Math.max(0,G[bi].t1-0.05),Math.min(1,G[bi].t1+0.05)),0.93,bw);
+      list.push({id:list.length,t:0.995,x:ra.x+ra.w*0.03,y:yb-hb/2,w:ra.w*0.94,h:hb,col:white,a:0.75,feather:D*0.02,k:0.5,ss}); break; }
+    case 3: { // Four Darks in Red — dark bands on a red ground: forte is black, piano barely darker than the ground
+      const G=S.groups(_rkClamp(Math.round(nP/12),2,5)); let lo=9,hi=0; for(const g of G){ if(g.v<lo)lo=g.v; if(g.v>hi)hi=g.v; }
+      const ground=_rkMix(_rkTone(S.avg(0,1),0.24,bw),[128,22,28],bw?0:0.45); _rkGround(ctx,CW,CH,ground,ss);
+      const keys=G.map(g=>0.19-0.15*((g.v-lo)/Math.max(0.05,hi-lo)));
+      _rk2Stack(list,S,CW,CH,ss,G,keys,{mx:0.09,gap:0.035,feather:0.022,K:8,core:1,streaks:1,pulls:G.map(()=>[ground,0.45])}); break; }
+    case 4: { // Black on Maroon (Seagram) — one or two portals: the frame heavier the louder, taller the higher the music
+      const G=nP>=40?[S.span(0,0.5),S.span(0.5,1)]:[S.span(0,1)];
+      const ground=_rkMix(_rkTone(S.avg(0,1),0.2,bw),[96,20,36],bw?0:0.45); _rkGround(ctx,CW,CH,ground,ss);
+      const n=G.length, mx=CW*0.08, gap=CW*0.06, pw=(CW-2*mx-gap*(n-1))/n;
+      G.forEach((g,i)=>{ const ph=CH*(0.56+0.3*g.reg), py=(CH-ph)/2, px=mx+i*(pw+gap); const th=pw*(0.1+0.12*g.v);
+        _rk2Field(list,S,px,py,pw,ph,g,0.04,{D,ss,feather:D*0.02,K:8,core:0,streaks:1,pull:[ground,0.4]});
+        const gv=S.span(g.t0+(g.t1-g.t0)*0.45,g.t1); _rk2Field(list,S,px+th,py+th,pw-2*th,ph-2*th,gv,0.1+0.06*(1-g.v),{D,ss,feather:D*0.015,K:8,core:1,streaks:1,pull:[ground,0.85],halo:false}); });
+      break; }
+    case 5: { // Multiform No. 9 — soft patches afloat: time runs down, the register across, the loud ones large
+      const n=_rkClamp(Math.round(nP/6),4,9); const G=S.groups(n); const rr=_rkR(64600,ss); rr();
+      _rkGround(ctx,CW,CH,_rkMix(_rkTone(S.avg(0,1),0.66,bw),[236,210,160],bw?0:0.35),ss);
+      G.forEach(g=>{ const L=_rkClamp(g.dur*n,0.3,2)*0.5; const w=CW*(0.16+0.2*L+0.12*g.v), h=CH*(0.07+0.08*L+0.05*g.vmax);
+        const cx=CW*(0.2+0.6*g.reg)+(rr()-.5)*CW*0.24, cy=CH*(0.1+0.8*g.t)+(rr()-.5)*CH*0.1;
+        _rk2Field(list,S,_rkClamp(cx-w/2,CW*0.04,CW*0.96-w),_rkClamp(cy-h/2,CH*0.04,CH*0.96-h),w,h,g,0.4+0.38*g.reg,{D,ss,feather:D*0.05,K:5,core:1,streaks:0,alpha:0.85}); });
+      break; }
+    case 6: { // No. 10 — the key itself: a field for each of the three pitch classes the piece leans on, as tall as its weight
+      const idx=[0,1,2,3,4,5,6,7,8,9,10,11].sort((a,b)=>A.pcW[b]-A.pcW[a]).slice(0,3); const T=idx.reduce((s,p)=>s+A.pcW[p],0)||1; const m0=44+Math.round(S.regAll*24);
+      const G=idx.map(pc=>Object.assign(S.span(0,1),{dur:A.pcW[pc]/T,pcc:A.pcCol(pc,m0)})); const keys=[0.6,0.34,0.74].map(k=>_rkClamp(k+(S.regAll-0.5)*0.2,0,1));
+      _rkGround(ctx,CW,CH,_rkTone(_rkMix(G[0].pcc,S.avg(0,1),0.3),0.18,bw),ss);
+      _rk2Stack(list,S,CW,CH,ss,G,keys,{weights:G.map(g=>g.dur),pulls:G.map(g=>[g.pcc,0.85])}); break; }
+    case 7: { // Chapel — one plum-black field and, inside it, the black rectangle; the music sets its size and height
+      const ground=_rkMix(_rkTone(S.avg(0,1),0.1,bw),[28,14,26],bw?0:0.6); _rkGround(ctx,CW,CH,ground,ss);
+      const g=S.span(0,1), mx=CW*0.07, my=CH*0.06;
+      _rk2Field(list,S,mx,my,CW-2*mx,CH-2*my,g,0.12+0.08*S.energy,{D,ss,feather:D*0.03,K:12,core:1,streaks:3,pull:[[74,30,58],bw?0:0.5],haloK:0.08});
+      const c=S.climax(); const g2=S.span(Math.max(0,c.t-0.2),Math.min(1,c.t+0.2)); g2.t0=0.35; g2.t1=1;
+      const w=(CW-2*mx)*(0.45+0.35*S.dyn), h=(CH-2*my)*(0.4+0.3*S.dyn); const x=CW/2-w/2, y=my+(CH-2*my-h)*(0.15+0.7*(1-S.regAll));
+      _rk2Field(list,S,x,y,w,h,g2,0.03,{D,ss,feather:D*0.015,K:8,core:0,streaks:0,pull:[[8,6,10],bw?0:0.6],halo:false});
+      list.push({id:list.length,t:0.99,x:mx*1.5,y:my*0.6,w:CW-3*mx,h:CH*0.08,col:bw?[200,200,200]:[255,236,200],a:0.06,feather:D*0.06,k:0.2,ss});
+      break; }
+    default: { // No. 61 (Rust and Blue) — the canonical stack, read from the passages
+      const G=S.groups(nP<3?2:2+(nP>=25?1:0)+(S.energy>0.6?1:0)); const keys=_rk2Keys(G,0.3,0.42+0.3*S.dyn);
+      _rkGround(ctx,CW,CH,_rkTone(_rkMix(S.avg(0,1),S.tonicCol,0.4),0.16,bw),ss);
+      _rk2Stack(list,S,CW,CH,ss,G,keys,{}); }
+  }
   _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
-}
-// ── Rothko 1 · Light — cream ground, pale fields that glow instead of weigh (the 1950s high-key canvases).
-function rothkoPhaseLight(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
-  const ground=_rkMix(_rkTone(S.avg(0,1),0.86,S.isBW),[246,240,226],0.6); _rkGround(ctx,CW,CH,ground,ss);
-  const list=[]; _rkStack(list,S,CW,CH,ss,3,[0.8,0.68,0.74],{weights:[1.2,0.7,0.9],feather:0.045});
-  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
-}
-// ── Rothko 2 · Horizon — two fields meeting at a seam that glows: the upper dark and deep, the lower lit.
-function rothkoPhaseHorizon(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH);
-  const ground=_rkTone(S.avg(0,1),0.14,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
-  const list=[]; const yh=CH*(0.5+(0.5-S.register)*0.2), mx=CW*0.06;
-  _rkField(list,S,mx,CH*0.05,CW-2*mx,yh-CH*0.05-D*0.012,0,0.5,0.26,{feather:D*0.03,ss,K:10});
-  _rkField(list,S,mx,yh+D*0.012,CW-2*mx,CH*0.95-yh-D*0.012,0.5,1,0.62,{feather:D*0.03,ss,K:10});
-  // the seam: a thin bright veil along the meeting line, laid last
-  const seam=_rkTone(S.avg(0.4,0.6),0.9,S.isBW); list.push({id:list.length,t:0.98,x:mx*1.3,y:yh-D*0.012,w:CW-2.6*mx,h:D*0.024,col:seam,a:0.55,feather:D*0.02,k:0.4,ss});
-  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
-}
-// ── Rothko 3 · Bands — one great field and two thin bands below it (No. 14, No. 10).
-function rothkoPhaseBands(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
-  const ground=_rkTone(S.avg(0,1),0.3,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
-  const list=[]; _rkStack(list,S,CW,CH,ss,3,[0.5,0.72,0.28],{weights:[2.6,0.35,0.5],gap:0.03,feather:0.03});
-  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
-}
-// ── Rothko 4 · Multiform (1948) — soft patches of colour afloat on a warm field, before the fields settled into rows.
-function rothkoPhaseMultiform(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_rkSetup(chords,gc,mode), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH);
-  const ground=_rkTone(S.avg(0,1),0.55,S.isBW); _rkGround(ctx,CW,CH,ground,ss);
-  const list=[]; const r=_rkR(63000,ss); r(); const n=4+Math.round(S.density*4);
-  for(let i=0;i<n;i++){ const t0=i/n, t1=(i+1)/n; const w=CW*(0.2+r()*0.4), h=CH*(0.1+r()*0.22); const x=CW*0.06+r()*(CW*0.88-w), y=CH*0.06+r()*(CH*0.88-h);
-    _rkField(list,S,x,y,w,h,t0,t1,0.3+r()*0.45,{feather:D*0.05,ss,K:7}); }
-  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
-}
-
-// ── Rothko E: Seagram — dark maroon/black portal / blocked window. ──
-function rothkoPhaseSeagram(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const base=_picChord(chords,0,gc,isBW).rgb;
-  // deep maroon ground
-  const gr=isBW?40:Math.round(50+base[0]*0.12),gg=isBW?20:Math.round(8+base[1]*0.05),gb=isBW?22:Math.round(10+base[2]*0.05);
-  ctx.fillStyle=`rgb(${gr},${gg},${gb})`;ctx.fillRect(0,0,CW,CH);
-  // portal frame(s)
-  const portals=Math.max(1,Math.min(3,Math.round(cn/40)));
-  const vis=Math.max(1,Math.ceil(reveal*portals));
-  const pw=CW/portals;
-  for(let i=0;i<vis;i++){
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/portals)),gc,isBW);
-    const cx=i*pw+pw/2;
-    const ox=pw*0.5,oy=CH*0.42,iw=pw*0.34,ih=CH*0.3;
-    // outer dark frame
-    _rothkoField(ctx,cx-ox/2,CH*0.5-oy/2,ox,oy,Math.round(gr*1.6),Math.round(gg*1.3),Math.round(gb*1.3),0.85);
-    // inner darker void tinted by chord
-    _rothkoField(ctx,cx-iw/2,CH*0.5-ih/2,iw,ih,Math.round(rgb[0]*0.3+20),Math.round(rgb[1]*0.2),Math.round(rgb[2]*0.2),0.85);
-  }
-}
-
-// ── Rothko F: Black on Grey recoloured — blue field over warm ochre. ──
-
-// ── Rothko G: Incandescent — glowing orange/red/yellow stacked fields. ──
-function rothkoPhaseIncandescent(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const base=_picChord(chords,0,gc,isBW).rgb;
-  // Song-aware baseline tint (35% lerp) — Rothko's late incandescent series
-  // glowed warm orange/red/yellow; we keep that fire but let each piece
-  // burn in its own colour. A magenta-rich song shifts the bands into hot
-  // pink-coral; a wandering Romantic piece into burnt sienna and rust.
-  const _tint = (!isBW && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
-  const _T = (b)=> (typeof _tintBaseline === 'function') ? _tintBaseline(b, _tint, 0.35) : b.slice();
-  const _bGnd   = _T([200, 70, 16]);
-  const _bField = _T([180, 60, 20]);
-  // hot ground
-  ctx.fillStyle=isBW?'#8a8580':`rgb(${Math.min(255,_bGnd[0]+base[0]*0.2)},${Math.round(_bGnd[1]+base[1]*0.2)},${Math.round(_bGnd[2]+base[2]*0.1)})`;ctx.fillRect(0,0,CW,CH);
-  const fields=Math.max(2,Math.min(4,Math.round(cn/30)));
-  const vis=Math.max(1,Math.ceil(N/cn*fields));
-  const marginX=CW*0.08,innerW=CW*0.84,innerY=CH*0.06,innerH=CH*0.88,gap=innerH*0.03;
-  const availH=innerH-gap*(fields-1),fh=availH/fields;
-  for(let i=0;i<vis;i++){
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/fields)),gc,isBW);
-    // push toward incandescent warm, now song-tinted
-    const r=isBW?Math.round((rgb[0]+rgb[1]+rgb[2])/3):Math.min(255,Math.round(_bField[0]+rgb[0]*0.3));
-    const g=isBW?r:Math.min(255,Math.round(_bField[1]+rgb[1]*0.5));
-    const b=isBW?r:Math.round(_bField[2]+rgb[2]*0.3);
-    _rothkoField(ctx,marginX,innerY+i*(fh+gap),innerW,fh,r,g,b,0.9);
-  }
-}
-
-// ── Rothko H: Pastel / Light period — soft pinks, pale neutrals, high
-// luminosity. The opposite of Seagram/Chapel: cream ground + 3 stacked pale
-// fields. Each field's chord colour is pushed toward pastel (chord*0.35 + 175)
-// so saturation stays low and brightness stays high. The "happy" Rothko.
-function rothkoPhasePastel(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  // Warm cream ground (or pale grey in B/W).
-  ctx.fillStyle = isBW ? '#e0dcd2' : '#f0e2d6';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Canvas grain noise — palette-independent.
-  for(let i=0;i<800;i++){
-    const rnd = _seedRnd(i+10000, ss, 0, 0);
-    const tone = isBW ? '200,200,200' : '220,200,180';
-    ctx.fillStyle = `rgba(${tone},${(0.1+rnd()*0.15).toFixed(2)})`;
-    ctx.fillRect(rnd()*CW, rnd()*CH, 1+rnd()*2, 1+rnd()*2);
-  }
-
-  // 3 stacked pale fields with low saturation, high luminosity.
-  const fields = 3;
-  const marginX = CW*0.08, marginY = CH*0.08;
-  const fieldGap = CH*0.025;
-  const availH = CH - 2*marginY - (fields-1)*fieldGap;
-  const fh = availH/fields;
-  const vis = Math.max(1, Math.ceil(fields*reveal));
-
-  for(let i=0;i<vis;i++){
-    const ci = Math.floor((i+0.5)/fields * cn);
-    const {rgb} = _picChord(chords, ci, gc, isBW);
-    // Push toward pastel: high lightness, low saturation
-    const r = isBW
-      ? Math.min(255, Math.round(rgb[0]*0.35 + 175))
-      : Math.min(255, Math.round(rgb[0]*0.35 + 175));
-    const g = isBW
-      ? r
-      : Math.min(255, Math.round(rgb[1]*0.35 + 160));
-    const b = isBW
-      ? r
-      : Math.min(255, Math.round(rgb[2]*0.40 + 170));
-    const y = marginY + i*(fh + fieldGap);
-    _rothkoField(ctx, marginX, y, CW - 2*marginX, fh, r, g, b, 0.92);
-  }
-}
-
-// ── Rothko I: Chapel — Houston Rothko Chapel (1964-67). Triptych of three
-// ultra-dark monochromatic panels (deep plum-maroon-blackish range). Chord
-// saturation pushed down ~90%, brightness pushed down. Subtle vertical light
-// gradient simulates the chapel skylight. Pure meditation, no contrast.
-function rothkoPhaseChapel(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  // Pure dark plum-black ground (or near-black grey in B/W).
-  ctx.fillStyle = isBW ? '#15131a' : '#1a0d12';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Triptych: 3 vertical panels.
-  const margins = CW*0.05;
-  const gap = CW*0.015;
-  const panelW = (CW - 2*margins - 2*gap)/3;
-  const panelY = CH*0.08;
-  const panelH = CH*0.84;
-  const vis = Math.max(1, Math.ceil(3*reveal));
-
-  for(let p=0;p<vis;p++){
-    const x = margins + p*(panelW+gap);
-    const ci = Math.floor((p+0.5)/3 * cn);
-    const {rgb} = _picChord(chords, ci, gc, isBW);
-    // Very dark, low saturation
-    const r = isBW
-      ? Math.round((rgb[0]+rgb[1]+rgb[2])/3 * 0.18 + 22)
-      : Math.round(rgb[0]*0.12 + 18);
-    const g = isBW
-      ? r
-      : Math.round(rgb[1]*0.05 + 5);
-    const b = isBW
-      ? r
-      : Math.round(rgb[2]*0.10 + 10);
-    _rothkoField(ctx, x, panelY, panelW, panelH, r, g, b, 0.92);
-  }
-
-  // Subtle vertical light gradient overlay — simulates chapel skylight.
-  const grad = ctx.createLinearGradient(0,0,0,CH);
-  if(isBW){
-    grad.addColorStop(0, 'rgba(245,245,245,0.06)');
-    grad.addColorStop(0.5, 'rgba(245,245,245,0.0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.15)');
-  } else {
-    grad.addColorStop(0, 'rgba(255,240,210,0.07)');
-    grad.addColorStop(0.5, 'rgba(255,240,210,0.0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.15)');
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,CW,CH);
 }
 
 // Matisse canvas-wide overlay. Like Mondrian's Classic/Boogie split, Matisse
@@ -3330,24 +2990,14 @@ function pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
-  // ── PHASE CHOOSER: commit to ONE of Picasso's modes per painting ──
-  // Stable from session seed, re-rolls on Vary/Random. Six abstract phases:
-  //  LightLine       = 1949 "light drawings": one unbroken luminous stroke.
-  //  BlueAtmo        = Blue Atmosphere veils (cool palette, soft edges).
-  //  Analytic (A)    = recursive plane subdivision + pencil-grain hatching.
-  //  Guernica        = black/white/grey shards flung from the lamp (facet engine).
-  //  StillLife       = geometric still-life via composition only (no outlines).
-  //  Demoiselles     = rose/ochre figures against the blue curtain (facet engine).
-  // No phase carries a literal subject — every Picasso phase is pure spatial
-  // fragmentation. Identity comes from mass, edge, overlap, tonality.
-  // Free (cap=2) sees positions 0,1. Analytic Cubism is the most expensive
-  // phase (dense pencil-grain hatching) and caused jank on lower-end devices,
-  // so it's moved OUT of the Free slots: Free gets LightLine + BlueAtmo
-  // (both light to draw). Pro reaches Analytic and the rest at higher indices.
-  // SyntheticPlanes was retired from the wheel (curation, Aug 2026).
-  const _picassoOrder = [picassoPhaseLightLine, picassoPhaseBlueAtmo, picassoPhaseA, picassoPhaseGuernica, picassoPhaseStillLife, picassoPhaseDemoiselles];
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  _picassoOrder[pick](ctx,CW,CH,chords,lim,gc,ss,mode);
+  // ── VARIANT: 0 Light line (the 1949 light drawings) · 1 Weeping Woman · 2 Guitar ·
+  // 3 Three Musicians · 4 Guernica · 5 The Old Guitarist · 6 Les Demoiselles — the
+  // paintings on the facet engine below (_pc2Paint). Free: 0 and 1. The Next
+  // button cycles phaseIndex; _capN caps it on Free.
+  const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick===0) return picassoPhaseLightLine(ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===6) return picassoPhaseDemoiselles(ctx,CW,CH,chords,lim,gc,ss,mode);
+  _pc2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // ── Picasso phase LIGHT LINE — the 1949 "light drawings". ──
@@ -3405,40 +3055,6 @@ function picassoPhaseLightLine(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
 }
 
-// ── Picasso phase A · Ma Jolie (1911–12) — analytic cubism on the facet engine
-// (the earlier pencil-grain version cost ~1 s per repaint). A pyramidal mass of
-// small interlocking facets in the centre, dissolving toward the edges; ochre,
-// umber and grey with the song's hue only as a cast; strong hatch, soft brown
-// contours, many passages. Time runs left to right through the mass.
-function picassoPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0; const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn, isBW=S.isBW;
-  const GROUND=isBW?[178,174,166]:[186,172,146]; ctx.fillStyle=_pcCss(GROUND); ctx.fillRect(0,0,CW,CH);
-  const r0=_pcR(95000,ss); r0();
-  const OCHRE=[196,160,96], UMBER=[106,78,56], GREY=[150,146,138], PALE=[222,208,180];
-  // the mass: an irregular octagon, wider at the base, leaning with the register
-  const cx=CW*(0.5+(S.register-.5)*0.1), top=CH*(0.08+r0()*0.06), bot=CH*(0.96), hw=CW*(0.34+S.density*0.1);
-  const mass=[[cx-hw*0.25,top],[cx+hw*0.3,top+CH*0.04],[cx+hw*0.75,CH*0.42],[cx+hw*1.0,bot-CH*0.02],[cx-hw*0.95,bot],[cx-hw*0.8,CH*0.45]];
-  const list=[]; let id=0; const minA=CW*CH/(140+S.density*160);
-  const inner=[]; const rr=_pcR(95100,ss); rr(); _pcCut(mass,rr,minA,0,1.5708+(rr()-.5)*0.9,inner);
-  for(const poly of inner){ const pc=_pcCentre(poly); const t=_pcClamp((pc[0]-(cx-hw))/(2*hw)*0.94+rr()*0.06,0,1); const {rgb,energy}=S.col(t);
-    const u=rr(); const base=u<0.3?OCHRE:u<0.5?UMBER:u<0.75?GREY:PALE; let col=isBW?_pcMix(rgb,base,0.6):_pcMix(base,rgb,0.22);
-    const dy=(pc[1]-top)/(bot-top); col=_pcMix(col,[0,0,0],_pcClamp(energy*0.35+dy*0.15-0.1,0,0.4));   // loud and low → darker
-    if(rr()<0.06) col=isBW?[236,232,226]:_pcMix(PALE,[255,250,240],0.6);                               // a lit facet
-    list.push({id:id++,t,poly,col,hatch:rr()<0.7?0.4+rr()*0.5:0,hang:(rr()<0.5?0.9:-0.9)+(rr()-.5)*0.5,ink:0.55+energy*0.3,inkCol:[52,36,28],open:rr()<0.45?Math.floor(rr()*poly.length):-1,lw:Math.max(0.9,D*0.0035)}); }
-  // the surround: a few large quiet planes close to the ground, faint contours — the mass dissolves into them
-  const outer=[]; const ro=_pcR(95200,ss); ro(); _pcCut([[0,0],[CW,0],[CW,CH],[0,CH]],ro,minA*5,0,1.5708,outer);
-  for(const poly of outer){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW*0.5-0.02,0,1); const {rgb}=S.col(t); const u=ro();
-    list.push({id:id++,t,poly,col:_pcMix(GROUND,isBW?rgb:_pcMix(u<0.5?OCHRE:GREY,rgb,0.3),0.22+ro()*0.2),hatch:ro()<0.4?0.25:0,hang:1.1+(ro()-.5)*0.6,ink:0.22,inkCol:[70,56,44],open:ro()<0.5?Math.floor(ro()*poly.length):-1,lw:Math.max(0.8,D*0.0025),alpha:1}); }
-  _pcDraw(ctx,list,reveal,D,ss);
-  _setCurE(0.5);
-}
-
-// ── Picasso Synthetic Planes: pure abstract spatial fragmentation. 5–9 large
-// irregular planes, asymmetric tonal mass loaded to one side per song direction.
-// One dark plane (heaviest), one bright chord-coloured accent, mid planes pulled
-// toward restrained earth tones. Thick irregular charcoal contours. NO objects,
-// NO silhouettes — Picasso 1921–25 mass/edge/overlap signature without subject.
-
 // Shared helper for the new Picasso phases: average a chord's colour + energy.
 function _picChord(chords,idx,gc,isBW){
   const grey=(r,g,b)=>{const v=Math.round(r*0.299+g*0.587+b*0.114);return[v,v,v];};
@@ -3454,138 +3070,6 @@ function _picChord(chords,idx,gc,isBW){
   if(!c)return{rgb:[120,100,160],energy:0.5};
   let rgb=[aR/c,aG/c,aB/c]; if(isBW)rgb=grey(rgb[0],rgb[1],rgb[2]);
   return{rgb:rgb.map(Math.round),energy:Math.max(0,Math.min(1,(aV/c-30)/90))};
-}
-
-// ── Picasso phase C: Blue Period — cool monochrome vertical columns. Each chord
-// becomes a tall column; its hue is pulled toward Picasso's melancholic blues,
-// lightness tracks the music. Reveals left-to-right with lim. ──
-// ── Picasso phase C: Three Musicians v4. Each session: random figure count (1-4),
-// random positions (scattered or row), 6 instrument types, 3 head shapes, 4 arm
-// poses. Chord-driven colours per shard. ──
-
-// ── Picasso phase D: Harlequin Mosaic v2. Random grid dims, 3 orientations,
-// skip probability for gaps, per-cell size jitter. ──
-
-// ── Picasso phase E: Cubist Mask v3. Random 1-2 masks, 4 face aspects, 4 eye
-// styles, 3 nose styles, 3 mouth styles, tilt. ──
-
-// ── Picasso phase F: Cubist Dove v3. Random 1-3 doves, 3 poses (standing,
-// flying, looking-back), mirror, optional olive branch. ──
-
-
-// ── Picasso Blue Atmosphere: cool blue cubist mood via palette shift, no
-// figures. Cool gradient ground + dense overlapping shards in blue-biased
-// chord palette + diagonal pencil hatching. Blue Period melancholy via colour,
-// not via drawing sad people.
-function picassoPhaseBlueAtmo(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-  const D=Math.min(CW,CH);
-  const sR = _seedRnd(8201,ss,0,12); sR(); sR();
-
-  // Song character → plane count + size. Calm/sparse music = fewer, larger,
-  // softer planes (meditative depth). Energetic/dense = more, busier overlap.
-  // Markedly distinct compositional logic from FacetedField's dense small shards.
-  const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const drive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;
-  const planeCountFull = Math.max(6, Math.round(9 + drive*7));    // 9-16 LARGE planes (was 70-110)
-
-  // Cool blue atmospheric ground (palette-independent so the mood reads as Blue
-  // Period). Tone-adjust each gradient stop so Pastel softens, Real picks up
-  // the opening chord's energy.
-  const _adjHex = (hex)=>{
-    let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-    if(typeof _energyTint === 'function'){ const t=_energyTint(r,g,b); r=t[0]; g=t[1]; b=t[2]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(r,g,b); r=p[0]; g=p[1]; b=p[2]; }
-    return `rgb(${r},${g},${b})`;
-  };
-  if(chords && chords.length){ const _c0=chords[0]; _setCurE(_c0 && _c0._E); }
-  const grad = ctx.createLinearGradient(0,0,CW,CH);
-  if(isBW){
-    grad.addColorStop(0, _adjHex('#28282c'));
-    grad.addColorStop(0.5, _adjHex('#3a3a40'));
-    grad.addColorStop(1, _adjHex('#22222a'));
-  } else {
-    grad.addColorStop(0, _adjHex('#16203a'));
-    grad.addColorStop(0.5, _adjHex('#243a5c'));
-    grad.addColorStop(1, _adjHex('#141d2e'));
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,CW,CH);
-
-  // Few LARGE layered translucent planes — Blue Period as depth/atmosphere,
-  // not scattered confetti. Each plane has an inner radial gradient so it
-  // reads as a soft veil, not a flat shard. Overlap creates depth.
-  const visPlanes = Math.max(2, Math.ceil(planeCountFull * reveal));
-  for(let i=0;i<visPlanes;i++){
-    const r1 = _seedRnd(i+8300,ss,0,0); r1(); r1();
-    const cx = r1()*CW;
-    const cy = r1()*CH;
-    const sz = D*(0.30 + r1()*0.45);                              // LARGE (30-75% of min dim)
-    const rot = r1()*Math.PI*2;
-    const sides = 3 + Math.floor(r1()*3);
-    const {rgb,energy} = _picChord(chords, i%cn, gc, isBW);
-    // Blue-bias the chord colour for the plane.
-    const cr = isBW ? Math.round(rgb[0]*0.5+40) : Math.round(rgb[0]*0.30 + 25);
-    const cg = isBW ? Math.round(rgb[1]*0.5+45) : Math.round(rgb[1]*0.42 + 40);
-    const cb = isBW ? Math.round(rgb[2]*0.5+55) : Math.round(rgb[2]*0.75 + 70);
-    // Inner radial gradient: bright-ish centre, fades to near-transparent edge.
-    // This is the depth/atmosphere read — soft veil, not hard shard.
-    const pg = ctx.createRadialGradient(cx, cy, 0, cx, cy, sz);
-    pg.addColorStop(0, `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.36+energy*0.14).toFixed(2)})`);
-    pg.addColorStop(1, `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb+20)|0},0.08)`);
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rot);
-    ctx.beginPath();
-    for(let s=0;s<sides;s++){
-      const a = (s/sides)*Math.PI*2;
-      const r = sz * (0.70 + r1()*0.55);
-      const px = Math.cos(a)*r, py = Math.sin(a)*r;
-      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fillStyle = pg;
-    ctx.fill();
-    // Thin chord-coloured contour — Paintiano signature bleeds through the
-    // cool veils. Picasso's Blue Period was never pure blue: skin, rose,
-    // ochre touches cut through the melancholy. Here the contour carries the
-    // song's harmony. Boost dark chord colours up so the line reads against
-    // the deep blue ground, without washing out the hue.
-    const _mx = Math.max(rgb[0], rgb[1], rgb[2], 1);
-    const _boost = _mx < 170 ? 170/_mx : 1;
-    const _cR = Math.min(255, Math.round(rgb[0]*_boost));
-    const _cG = Math.min(255, Math.round(rgb[1]*_boost));
-    const _cB = Math.min(255, Math.round(rgb[2]*_boost));
-    if(isBW){
-      const _lum = Math.round(_cR*0.299 + _cG*0.587 + _cB*0.114);
-      ctx.strokeStyle = `rgba(${Math.min(255,_lum+50)},${Math.min(255,_lum+50)},${Math.min(255,_lum+50)},0.78)`;
-    } else {
-      ctx.strokeStyle = `rgba(${_cR},${_cG},${_cB},${(0.78 + energy*0.14).toFixed(2)})`;
-    }
-    ctx.lineWidth = Math.max(0.9, D*0.0017);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Very faint, sparse hatching — atmospheric texture only, not the dense
-  // pencil-grain signature of analytic cubism.
-  const visHatches = Math.ceil(80 * reveal);
-  ctx.globalAlpha = 0.08;
-  ctx.strokeStyle = isBW ? 'rgba(15,15,18,0.9)' : 'rgba(15,20,30,0.9)';
-  ctx.lineWidth = 0.5;
-  for(let k=0;k<visHatches;k++){
-    const hR = _seedRnd(k+8400,ss,0,0); hR();
-    const sx = hR()*CW, sy = hR()*CH;
-    const len = 10 + hR()*22;
-    const a = -Math.PI/3 + (hR()-0.5)*0.3;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(a)*len, sy + Math.sin(a)*len);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
 }
 
 // ── Picasso cubist facet engine ──────────────────────────────────────────────
@@ -3638,35 +3122,6 @@ function _pcSetup(chords,gc,mode){ const isBW=mode==='bw'; const ch=(typeof comp
     col:(t)=>{ const cn=chords.length; const r=_picChord(chords,_pcClamp(Math.floor(t*cn),0,cn-1),gc,isBW); return r; }}; }
 function _pcDraw(ctx,list,reveal,D,ss){ const oa=list._objA; list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_pcClamp(reveal,0,1)); for(let i=0;i<(oa?list.length:n);i++){ const f=list[i]; if(i>=n && !f.fig) continue; const rnd=_pcR(f.id*17+91001,ss); rnd(); _pcFacet(ctx,f,D,rnd); } }
 
-// ── Picasso 3 · Guernica (1937) — black, white and grey only: shards flung from
-// the lamp at the top, the light itself a jagged white star; a dark piece is
-// loud, a pale one quiet (the colour of the chord survives only as a value, with
-// a faint cool or warm cast); hatch on the half-tones; contours hard.
-function picassoPhaseGuernica(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
-  ctx.fillStyle='#d6d4ce'; ctx.fillRect(0,0,CW,CH);
-  const r0=_pcR(93000,ss); r0();
-  const lx=CW*(0.42+r0()*0.16), ly=CH*(0.06+r0()*0.06);
-  // first cuts: rays from the lamp, then the grain of each sector follows its ray
-  let regions=[[[0,0],[CW,0],[CW,CH],[0,CH]]]; const nr=5+Math.round(S.density*4);
-  for(let k=0;k<nr;k++){ const ang=0.35+(k+0.5)/nr*2.45+(r0()-.5)*0.2; const next=[]; for(const p of regions){ const [L,R]=_pcSplit(p,lx,ly,ang); if(L.length>=3) next.push(L); if(R.length>=3) next.push(R); } regions=next; }
-  const list=[]; let id=0; const minA=CW*CH/(90+S.density*120);
-  for(const reg of regions){ const c=_pcCentre(reg); const grain=Math.atan2(c[1]-ly,c[0]-lx); const out=[]; const rr=_pcR(93100+id,ss); rr(); _pcCut(reg,rr,minA,0,grain,out);
-    for(const poly of out){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW*0.9+rr()*0.1,0,1); const {rgb,energy}=S.col(t);
-      const lum=(rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114)/255; const dist=Math.hypot(pc[0]-lx,pc[1]-ly)/D;
-      let v=_pcClamp(0.92-energy*0.6+(lum-0.5)*0.2-dist*0.38+(rr()-.5)*0.3,0.04,0.96);   // value: loud → dark, far from the lamp → darker
-      if(rr()<0.12) v=rr()<0.5?0.03:0.97;                                                   // a pure black or pure white shard
-      const warm=S.isBW?0:(rgb[0]-rgb[2])/255*10; const col=[_pcClamp(v*255+warm,0,255),_pcClamp(v*255,0,255),_pcClamp(v*255-warm,0,255)];
-      const half=v>0.3&&v<0.72;
-      list.push({id:id++,t,poly,col,hatch:half?0.45+rr()*0.4:(v<=0.3?0.2:0),hang:grain+1.5708+(rr()-.5)*0.4,ink:0.85,open:rr()<0.3?Math.floor(rr()*poly.length):-1,lw:Math.max(1,D*0.0045)}); } }
-  // the lamp: a jagged white star with a black eye, drawn last
-  const nst=9+Math.round(S.energy*4); const star=[]; for(let k=0;k<nst*2;k++){ const a=k/(nst*2)*6.2832; const rad=D*(k%2?0.035:0.075)*(0.85+r0()*0.3); star.push([lx+Math.cos(a)*rad, ly+Math.sin(a)*rad]); }
-  list.push({id:id++,t:1,poly:star,col:[246,244,238],hatch:0,hang:0,ink:0.95,open:-1,lw:Math.max(1,D*0.005)});
-  const eye=[]; for(let k=0;k<10;k++){ const a=k/10*6.2832; eye.push([lx+Math.cos(a)*D*0.022, ly+Math.sin(a)*D*0.016]); }
-  list.push({id:id++,t:1,poly:eye,col:[18,16,14],hatch:0,hang:0,ink:0,open:-1});
-  _pcDraw(ctx,list,reveal,D,ss);
-  _setCurE(0.5);
-}
 // ── Picasso 5 · Les Demoiselles (1907) — tall angular figures side by side,
 // rose and ochre flesh cut by the blue of the curtain, white highlights and
 // black contours; each figure is one passage of the song, left to right.
@@ -3696,110 +3151,243 @@ function picassoPhaseDemoiselles(ctx,CW,CH,chords,lim,gc,ss,mode){
   _setCurE(0.5);
 }
 
-// ── Picasso Geometric Still-Life: synthetic cubism still-life via geometry
-// placement only. Earth-tone ground + table-edge gradient + chord-coloured
-// rectangles/ovals/trapezoids/hexagons with cubist splits. Vase/fruit implied
-// by composition (vertical-ish shapes near centre, horizontal table line)
-// without any literal outlines.
-function picassoPhaseStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length;
-  const N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-  const sR = _seedRnd(9101,ss,0,15); sR(); sR();
 
-  const shapeCountFull = 30 + Math.floor(sR()*20);           // 30-50 shapes
-  const tableY = CH * (0.45 + sR()*0.15);                    // 45-60% table edge
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO — six paintings, each built on the facet engine above (_pcCut /
+// _pcFacet) from flat planes with charcoal contours, and read from the music:
+// the head's facets are the phrases, the eyes the tonic and the dominant, the
+// strings the voices, the figures the sections, the one line the melody.
+// ═══════════════════════════════════════════════════════════════════════════
+const _pgEll=(cx,cy,rx,ry,rot,n)=>{ const p=[]; const c=Math.cos(rot||0), s=Math.sin(rot||0); for(let i=0;i<(n||18);i++){ const a=i/(n||18)*6.2832; const x=Math.cos(a)*rx, y=Math.sin(a)*ry; p.push([cx+x*c-y*s, cy+x*s+y*c]); } return p; };
+const _pgRot=(pts,cx,cy,rot)=>{ const c=Math.cos(rot), s=Math.sin(rot); return pts.map(([x,y])=>[cx+(x-cx)*c-(y-cy)*s, cy+(x-cx)*s+(y-cy)*c]); };
+const _pgRect=(cx,cy,w,h,rot)=>_pgRot([[cx-w/2,cy-h/2],[cx+w/2,cy-h/2],[cx+w/2,cy+h/2],[cx-w/2,cy+h/2]],cx,cy,rot||0);
+const _pgN=(pts,CW,CH)=>pts.map(([x,y])=>[x*CW,y*CH]);
+// a flat plane: facet record without hatch, with a contour
+const _pgF=(id,t,poly,col,o)=>Object.assign({id,t,poly,col,hatch:0,hang:0,ink:0.9,inkCol:[22,20,18],open:-1},o||{});
+// Picasso's 1937 palette pushed onto a song colour
+const _PC_PAL={ yellow:[232,196,60], green:[120,170,90], violet:[150,110,170], rose:[228,160,140], white:[244,238,226], red:[200,60,50], blue:[70,110,160], ochre:[196,150,80], black:[24,22,20] };
+function _pcFlat(rgb,base,k,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; const b=base[0]*0.299+base[1]*0.587+base[2]*0.114; const v=l*(1-k)+b*k; return [v,v,v]; } return _pcMix(rgb,base,k); }
+// facet a polygon and push the pieces: t over the span [t0,t1] by the sweep axis
+function _pcFacets(list,poly,rnd,minA,grain,t0,t1,colFn,o){ const out=[]; _pcCut(poly,rnd,minA,0,grain,out); const ax=o&&o.axis||0; let lo=1e9,hi=-1e9; const cs=out.map(p=>{ const c=_pcCentre(p); const v=ax===1?c[1]:ax===2?-(c[0]+c[1]):c[0]; lo=Math.min(lo,v); hi=Math.max(hi,v); return v; });
+  out.forEach((p,i)=>{ const u=hi>lo?(cs[i]-lo)/(hi-lo):0.5; const t=t0+(t1-t0)*u; const f=colFn(t,p,i); list.push(Object.assign({id:list.length,t,poly:p},f)); }); }
 
-  // Earth-tone ground.
-  ctx.fillStyle = isBW ? '#8a8478' : '#c0a880';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Table-plane gradient.
-  const tableGrad = ctx.createLinearGradient(0, tableY, 0, CH);
-  if(isBW){
-    tableGrad.addColorStop(0, 'rgba(50,45,40,0)');
-    tableGrad.addColorStop(0.3, 'rgba(50,45,40,0.5)');
-    tableGrad.addColorStop(1, 'rgba(35,30,25,0.85)');
-  } else {
-    tableGrad.addColorStop(0, 'rgba(80,50,30,0)');
-    tableGrad.addColorStop(0.3, 'rgba(80,50,30,0.5)');
-    tableGrad.addColorStop(1, 'rgba(60,35,20,0.85)');
-  }
-  ctx.fillStyle = tableGrad;
-  ctx.fillRect(0, tableY, CW, CH-tableY);
-
-  // Generate shapes upfront so we can z-sort.
-  const shapes = [];
-  for(let i=0;i<shapeCountFull;i++){
-    const r1 = _seedRnd(i+9200,ss,0,0); r1(); r1();
-    const cx = CW * (0.15 + r1()*0.70);
-    const cy = CH * (0.20 + r1()*0.65);
-    const w = 30 + r1()*180;
-    const h = 30 + r1()*180;
-    const kind = (r1()*4)|0;
-    const splitChance = r1();
-    const sliceLift = r1();
-    shapes.push({cx, cy, w, h, kind, i, splitChance, sliceLift});
-  }
-  shapes.sort((a,b)=>(b.w*b.h) - (a.w*a.h));
-
-  const visShapes = Math.max(2, Math.ceil(shapeCountFull * reveal));
-  let drawn = 0;
-  for(const sh of shapes){
-    if(drawn >= visShapes) break;
-    drawn++;
-    const {rgb} = _picChord(chords, sh.i%cn, gc, isBW);
-    const cr = Math.round(rgb[0]*0.75 + 25);
-    const cg = Math.round(rgb[1]*0.65 + 20);
-    const cb = Math.round(rgb[2]*0.50 + 15);
-    ctx.fillStyle = `rgba(${Math.min(255,cr)|0},${Math.min(255,cg)|0},${Math.min(255,cb)|0},${(0.75 + sh.splitChance*0.20).toFixed(2)})`;
-    ctx.strokeStyle = 'rgba(15,8,5,0.85)';
-    ctx.lineWidth = 1.5 + sh.sliceLift;
-    if(sh.kind === 0){
-      ctx.fillRect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
-      ctx.strokeRect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
-    } else if(sh.kind === 1){
-      ctx.beginPath();
-      ctx.ellipse(sh.cx, sh.cy, sh.w/2, sh.h/2, 0, 0, Math.PI*2);
-      ctx.fill(); ctx.stroke();
-    } else if(sh.kind === 2){
-      ctx.beginPath();
-      ctx.moveTo(sh.cx-sh.w/2, sh.cy+sh.h/2);
-      ctx.lineTo(sh.cx+sh.w/2, sh.cy+sh.h/2);
-      ctx.lineTo(sh.cx+sh.w/4, sh.cy-sh.h/2);
-      ctx.lineTo(sh.cx-sh.w/4, sh.cy-sh.h/2);
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    } else {
-      ctx.beginPath();
-      for(let s=0;s<6;s++){
-        const a = (s/6)*Math.PI*2;
-        const px = sh.cx + Math.cos(a)*sh.w/2;
-        const py = sh.cy + Math.sin(a)*sh.h/2;
-        if(s===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      }
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    }
-    // Cubist split — light bias on right half for larger shapes.
-    if(sh.w > 80 && sh.splitChance < 0.4){
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(sh.cx - sh.w/2, sh.cy - sh.h/2, sh.w, sh.h);
-      ctx.clip();
-      ctx.fillStyle = isBW ? 'rgba(220,210,190,0.25)' : 'rgba(255,220,180,0.25)';
-      ctx.fillRect(sh.cx, sh.cy - sh.h, sh.w, sh.h*2);
-      ctx.restore();
-    }
-  }
-
-  // Faint table-edge perspective line.
-  ctx.strokeStyle = isBW ? 'rgba(15,15,12,0.4)' : 'rgba(20,10,5,0.4)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, tableY + CH*0.05);
-  ctx.lineTo(CW, tableY);
-  ctx.stroke();
+// ── 1 · Weeping Woman (1937) — the cubist head that fills the canvas, two profiles
+//        in one face. Facets are the phrases, the eyes the tonic and the dominant,
+//        the teeth the accents, the tears the long quiet notes.
+function pc2_head(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_pcR(97000,ss); r(); const list=[]; const P=_PC_PAL;
+  const flat=(t,base,k)=>_pcFlat(S.col(t).rgb,base,k==null?0.55:k,isBW);
+  // the wall behind: a few tall planes, two tones
+  const wall=[]; _pcCut([[0,0],[CW,0],[CW,CH],[0,CH]],r,CW*CH/5,0,1.5708,wall);
+  wall.forEach((p,i)=>list.push(_pgF(list.length,0,p,flat(_pcCentre(p)[0]/CW*0.3,i%2?P.green:P.yellow,0.7),{ink:0.5,hatch:0.25,hang:1.2+(r()-.5)*0.4,lw:Math.max(1,D*0.003)})));
+  // the head: a big tilted egg, leaning with the melody's contour
+  const tilt=(A.ch.contour-0.5)*0.5+(r()-.5)*0.2; const hx=CW*0.5, hy=CH*0.5; const head=_pgEll(hx,hy,CW*0.3,CH*0.33,tilt,22);
+  const rr=_pcR(97100,ss); rr(); const minA=CW*CH/(28+A.ch.density*40);
+  const bases=[P.yellow,P.green,P.violet,P.rose,P.white,P.yellow,P.rose];
+  _pcFacets(list,head,rr,minA,tilt+0.9,0.04,0.52,(t,p,i)=>{ const {rgb,energy}=S.col(t); const base=bases[(i*7+(rr()*3|0))%bases.length]; let col=_pcFlat(rgb,base,0.5,isBW); col=_pcMix(col,[0,0,0],Math.max(0,energy-0.65)*0.5);
+    return {col,hatch:rr()<0.35?0.3+rr()*0.3:0,hang:tilt+(rr()<0.5?0.3:1.6),ink:0.95,inkCol:[20,18,16],open:rr()<0.3?Math.floor(rr()*p.length):-1,lw:Math.max(1.2,D*0.005)}; },{axis:2});
+  // hair: dark curved planes on the left, a hat with a flower on top
+  const hairCol=_pcFlat(A.pcCol((A.tonic+5)%12,48),P.black,0.6,isBW);
+  list.push({id:list.length,t:0.53,stroke:head,w:head.map(()=>D*0.009),close:true,col:[20,18,16]});
+  list.push(_pgF(list.length,0.54,_pgRot(_pgN([[0.2,0.24],[0.3,0.17],[0.27,0.42],[0.24,0.66],[0.17,0.56],[0.16,0.36]],CW,CH),hx,hy,tilt),hairCol,{hatch:0.5,hang:1.3,lw:Math.max(1.4,D*0.006)}));
+  const brim=_pgRot(_pgN([[0.16,0.2],[0.84,0.17],[0.82,0.23],[0.18,0.26]],CW,CH),hx,hy,tilt), crown=_pgRot(_pgN([[0.3,0.2],[0.36,0.06],[0.66,0.05],[0.72,0.18]],CW,CH),hx,hy,tilt);
+  list.push(_pgF(list.length,0.55,crown,flat(0.05,P.blue,0.5),{hatch:0.3,hang:0.4,lw:Math.max(1.4,D*0.006)})); list.push(_pgF(list.length,0.555,brim,flat(0.06,P.violet,0.5),{hatch:0.2,hang:1.2,lw:Math.max(1.4,D*0.006)}));
+  list.push(_pgF(list.length,0.56,_pgEll(hx+CW*0.14,hy-CH*0.36,D*0.05,D*0.045,0,9),flat(0.1,P.red,0.4),{lw:Math.max(1.2,D*0.005)}));
+  // eyes: the left one frontal (the tonic), the right one in profile (the dominant)
+  const eyeL=_pgRot(_pgEll(hx-CW*0.12,hy-CH*0.08,D*0.06,D*0.038,0.3,12),hx,hy,tilt), eyeR=_pgRot(_pgEll(hx+CW*0.1,hy-CH*0.11,D*0.05,D*0.03,-0.5,10),hx,hy,tilt);
+  list.push(_pgF(list.length,0.6,eyeL,isBW?[240,240,236]:P.white,{lw:Math.max(1.4,D*0.006)})); list.push(_pgF(list.length,0.6,eyeR,isBW?[240,240,236]:P.white,{lw:Math.max(1.4,D*0.006)}));
+  list.push(_pgF(list.length,0.61,_pgEll(_pcCentre(eyeL)[0],_pcCentre(eyeL)[1],D*0.024,D*0.024,0,10),_pcFlat(A.pcCol(A.tonic,60),P.black,0.35,isBW),{ink:0.8}));
+  list.push(_pgF(list.length,0.61,_pgEll(_pcCentre(eyeR)[0],_pcCentre(eyeR)[1],D*0.018,D*0.02,0,10),_pcFlat(A.pcCol((A.tonic+7)%12,60),P.black,0.35,isBW),{ink:0.8}));
+  // the nose in profile, the mouth with its teeth (one per accent, at most nine)
+  const nose=_pgRot(_pgN([[0.5,0.44],[0.6,0.6],[0.49,0.61]],CW,CH),hx,hy,tilt); list.push(_pgF(list.length,0.64,nose,flat(0.5,P.rose,0.4),{hatch:0.4,hang:0.9,lw:Math.max(1.4,D*0.006)}));
+  const acc=_kd2Events(A,24).filter(e=>e.acc).length; const nt=Math.max(2,Math.min(9,acc)); const mx=hx-CW*0.02, my=hy+CH*0.17; const mw=CW*0.22, mh=CH*0.07;
+  list.push(_pgF(list.length,0.7,_pgRot(_pgEll(mx,my,mw/2,mh/2,0.1,14),hx,hy,tilt),isBW?[30,28,26]:P.black,{ink:0.9}));
+  for(let i=0;i<nt;i++){ const x=mx-mw*0.4+mw*0.8*(i/(nt-1||1)); list.push(_pgF(list.length,0.72+i*0.01,_pgRot([[x-mw*0.04,my-mh*0.1],[x+mw*0.04,my-mh*0.1],[x,my+mh*0.35]],hx,hy,tilt),isBW?[236,232,226]:P.white,{ink:0.7,lw:Math.max(1,D*0.003)})); }
+  // the handkerchief: a white jagged plane bitten at the mouth, when the piece is quiet; tears from both eyes on the long notes
+  if(A.ch.energy<0.62){ const hk=_pgRot(_pgN([[0.3,0.74],[0.46,0.7],[0.6,0.76],[0.56,0.9],[0.42,0.96],[0.32,0.88]],CW,CH),hx,hy,tilt); list.push(_pgF(list.length,0.66,hk,isBW?[238,236,230]:P.white,{hatch:0.25,hang:0.3,lw:Math.max(1.4,D*0.006)})); }
+  const longN=A.phrases.filter(p=>p.n>0&&p.v<0.55).length; const tears=Math.min(3,Math.round(longN/4));
+  for(let k=0;k<tears;k++){ const ex=k%2?_pcCentre(eyeR):_pcCentre(eyeL); const L=CH*(0.08+k*0.05); list.push({id:list.length,t:0.85+k*0.03,line:[[ex[0]+(k-1)*D*0.015,ex[1]+D*0.03],[ex[0]+(k-1)*D*0.02+D*0.01,ex[1]+D*0.03+L]],col:[20,18,16],lw:Math.max(1,D*0.004)}); }
+  _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 2 · Guitar (1913, papier collé) — the two bouts, the neck, the strings (one per
+//        voice), the sound hole in the tonic's colour, faux bois, wallpaper, newspaper —
+//        and the lettering is the song's own: its three strongest notes.
+function pc2_guitar(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_pcR(97200,ss); r(); const list=[]; const P=_PC_PAL; const flat=(t,base,k)=>_pcFlat(S.col(t).rgb,base,k==null?0.7:k,isBW);
+  const KRAFT=isBW?[196,190,180]:[214,196,160];
+  list.push(_pgF(list.length,0,[[0,0],[CW,0],[CW,CH],[0,CH]],KRAFT,{ink:0}));
+  // wallpaper on the left, a blue plane on the right, a newspaper column below
+  list.push(_pgF(list.length,0,_pgN([[0,0],[0.42,0],[0.36,1],[0,1]],CW,CH),flat(0.02,P.ochre,0.75),{hatch:0.5,hang:0.8,ink:0.35}));
+  list.push(_pgF(list.length,0.02,_pgN([[0.62,0.08],[1,0.02],[1,0.7],[0.7,0.76]],CW,CH),flat(0.08,P.blue,0.6),{ink:0.5,hatch:0.2,hang:1.5}));
+  list.push({id:list.length,t:0.05,poly:_pgN([[0.55,0.62],[0.95,0.66],[0.93,0.98],[0.52,0.96]],CW,CH),col:isBW?[232,230,226]:[236,230,214],hatch:0,hang:0,ink:0.6,news:true,lw:Math.max(1,D*0.003)});
+  // the body: lower and upper bout, tilted, cut into big planes with a vertical grain
+  const tilt=-0.35+(r()-.5)*0.2+(A.ch.contour-0.5)*0.3; const gx=CW*0.46, gy=CH*0.58;
+  const lower=_pgEll(gx,gy+CH*0.08,CW*0.24,CH*0.19,tilt,20), upper=_pgEll(gx+Math.sin(tilt)*CH*0.16,gy-CH*0.14,CW*0.18,CH*0.14,tilt,18);
+  const rr=_pcR(97300,ss); rr(); const minA=CW*CH/(10+A.ch.density*8); const bases=[P.ochre,P.white,P.black,P.ochre,P.blue,P.rose];
+  const bodyCol=(t,p,i)=>{ const base=bases[(i+(rr()*2|0))%bases.length]; const wood=base===P.ochre; return {col:flat(t,base,wood?0.6:0.7),hatch:wood?0.55:(rr()<0.3?0.3:0),hang:wood?0.2+(rr()-.5)*0.3:1.4,ink:0.85,inkCol:[30,26,22],open:rr()<0.3?Math.floor(rr()*p.length):-1,lw:Math.max(1.4,D*0.0055),wood}; };
+  _pcFacets(list,lower,rr,minA,1.5708,0.2,0.6,bodyCol,{axis:0}); _pcFacets(list,upper,rr,minA*0.8,1.5708,0.15,0.4,bodyCol,{axis:0});
+  // the sound hole (tonic), the bridge, the neck with its frets (one per phrase, at most 12), the strings (one per voice)
+  const hole=_pgEll(gx,gy-CH*0.02,D*0.07,D*0.07,0,16); list.push(_pgF(list.length,0.5,hole,_pcFlat(A.pcCol(A.tonic,48),P.black,0.55,isBW),{lw:Math.max(1.4,D*0.006)}));
+  list.push(_pgF(list.length,0.52,_pgRect(gx,gy+CH*0.12,CW*0.16,CH*0.025,tilt*0.3),isBW?[30,28,26]:P.black,{ink:0.6}));
+  const nAng=tilt-1.5708; const nx0=gx+Math.cos(nAng)*CH*0.1, ny0=gy+Math.sin(nAng)*CH*0.1, nlen=CH*0.5; const nx1=nx0+Math.cos(nAng)*nlen, ny1=ny0+Math.sin(nAng)*nlen;
+  const neck=_pgRot(_pgRect((nx0+nx1)/2,(ny0+ny1)/2,CW*0.07,nlen,0),(nx0+nx1)/2,(ny0+ny1)/2,nAng+1.5708); list.push(_pgF(list.length,0.6,neck,flat(0.7,P.ochre,0.55),{hatch:0.5,hang:nAng,lw:Math.max(1.4,D*0.0055)}));
+  const frets=Math.min(12,A.phrases.length); for(let i=0;i<frets;i++){ const u=0.15+0.8*i/Math.max(1,frets-1); const cx=nx0+(nx1-nx0)*u, cy=ny0+(ny1-ny0)*u; const px=-Math.sin(nAng)*CW*0.035, py=Math.cos(nAng)*CW*0.035; list.push({id:list.length,t:0.62+i*0.01,line:[[cx-px,cy-py],[cx+px,cy+py]],col:[30,26,22],lw:Math.max(1,D*0.003)}); }
+  const ns=Math.max(3,Math.min(6,Math.round(A.ch.density*5+1))); for(let i=0;i<ns;i++){ const off=(i-(ns-1)/2)*CW*0.012; const px=-Math.sin(nAng)*off, py=Math.cos(nAng)*off; list.push({id:list.length,t:0.75+i*0.02,line:[[nx1+px,ny1+py],[gx+px,gy+CH*0.12+py]],col:isBW?[30,30,30]:[36,30,26],lw:Math.max(1,D*0.0032)}); }
+  // the lettering: the song's three strongest pitch classes, stencil-cut into the collage
+  const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; const order=A.pcW.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>NAMES[x[1]]);
+  list.push({id:list.length,t:0.9,text:order.join(' '),x:CW*0.74,y:CH*0.85,size:D*0.085,col:[28,26,24],rot:-0.08});
+  _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 3 · Three Musicians (1921) — cut-paper figures interlocked like a jigsaw: Pierrot
+//        with the clarinet, Harlequin with the guitar, the monk with the score — and the
+//        score carries the song's own notes. How many play is the density; each one is
+//        a section of the piece; the diamonds are its beats.
+function pc2_musicians(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_pcR(97400,ss); r(); const list=[]; const P=_PC_PAL; const BR=[118,80,50], DB=[52,34,26];
+  const tint=(base,pc,k)=>_pcFlat(A.pcCol(pc,60),base,k==null?0.72:k,isBW);
+  const g=(pts)=>_pgN(pts,CW,CH); const F=(t,pts,col,o)=>list.push(_pgF(list.length,t,g(pts),col,Object.assign({lw:Math.max(1.6,D*0.006),inkCol:[16,14,12]},o||{})));
+  // the room: a dark panel, a lighter one, the black floor, the table in front
+  F(0,[[0,0],[1,0],[1,1],[0,1]],tint(DB,A.tonic,0.85),{ink:0});
+  F(0,[[0,0],[0.55,0],[0.52,0.78],[0,0.78]],tint(BR,A.tonic,0.8),{ink:0.6,hatch:0.25,hang:1.5});
+  F(0.01,[[0.55,0],[1,0],[1,0.78],[0.52,0.78]],tint([150,112,74],(A.tonic+7)%12,0.8),{ink:0.6,hatch:0.2,hang:0.5});
+  F(0.02,[[0,0.78],[1,0.78],[1,1],[0,1]],isBW?[22,22,22]:[26,20,18],{ink:0.4});
+  const nf=A.cn<60?2:A.ch.density>0.5?4:3; const w=1/nf; const kinds=['pierrot','harlequin','monk','harlequin'];   // each with his instrument: the clarinet, the guitar, the score
+  for(let k=0;k<nf;k++){ const kind=kinds[k%4]; const t0=0.05+k/nf*0.85, t1=0.05+(k+1)/nf*0.85; const ph=A.phrases.filter(p=>p.t>=k/nf&&p.t<(k+1)/nf); const pc=ph.length?ph[Math.floor(ph.length/2)].pc:A.tonic, pc2=ph.length?ph[0].pc2:(A.tonic+7)%12;
+    const x0=w*(k+0.05), x1=w*(k+0.95), xm=(x0+x1)/2, ww=x1-x0; const loud=ph.length?Math.max(...ph.map(p=>p.vmax)):0.6; const top=0.1+(1-loud)*0.06;
+    const Fk=(t,pts,col,o)=>F(t0+(t1-t0)*t,pts,col,o); const WH=isBW?[242,240,236]:P.white, BK=isBW?[18,18,18]:P.black;
+    if(kind==='pierrot'){ const BL=tint(P.blue,pc2,0.6);
+      Fk(0.1,[[x0+0.05,top+0.22],[xm,top+0.2],[xm+0.02,0.78],[x0+0.02,0.78]],WH,{});                                   // left half of the body, white
+      Fk(0.12,[[xm,top+0.2],[x1-0.04,top+0.24],[x1-0.02,0.78],[xm+0.02,0.78]],BL,{});                                  // right half, blue
+      Fk(0.14,[[x0+0.05,top+0.4],[x1-0.04,top+0.38],[x1-0.05,top+0.46],[x0+0.06,top+0.48]],BL,{});                     // the sash
+      const col=[]; for(let i=0;i<=8;i++) col.push([x0+0.03+(ww-0.06)*i/8, top+(i%2?0.17:0.22)]); Fk(0.16,[[x0+0.03,top+0.25]].concat(col,[[x1-0.03,top+0.25]]),WH,{});   // the ruff
+      Fk(0.05,[[xm-0.08,top+0.04],[xm+0.08,top+0.04],[xm+0.1,top-0.06],[xm-0.1,top-0.06]],WH,{}); Fk(0.06,[[xm-0.11,top-0.06],[xm+0.11,top-0.06],[xm+0.12,top-0.03],[xm-0.12,top-0.03]],BK,{ink:0});   // the conical hat
+      Fk(0.07,_pgEll(xm,top+0.1,ww*0.3,0.09,0,14),WH,{}); Fk(0.08,[[xm-0.05,top+0.05],[xm-0.03,top+0.05],[xm-0.03,top+0.11],[xm-0.05,top+0.11]],BK,{ink:0}); Fk(0.08,[[xm+0.02,top+0.05],[xm+0.04,top+0.05],[xm+0.04,top+0.11],[xm+0.02,top+0.11]],BK,{ink:0}); Fk(0.09,[[xm-0.02,top+0.15],[xm+0.03,top+0.15],[xm+0.02,top+0.17],[xm-0.01,top+0.17]],BK,{ink:0});   // the mask
+      Fk(0.4,[[xm-0.02,top+0.26],[xm+0.02,top+0.26],[xm+0.04,top+0.68],[xm-0.04,top+0.68]],BK,{});                      // the clarinet
+      for(let i=0;i<4;i++) Fk(0.42+i*0.01,_pgEll(xm,top+0.34+i*0.07,0.008,0.007,0,8),WH,{ink:0});
+      Fk(0.5,[[xm-0.08,top+0.3],[xm+0.03,top+0.29],[xm+0.03,top+0.36],[xm-0.08,top+0.37]],WH,{}); Fk(0.52,[[xm-0.06,top+0.5],[xm+0.05,top+0.49],[xm+0.05,top+0.56],[xm-0.06,top+0.57]],WH,{});   // the hands
+      for(let i=0;i<3;i++){ Fk(0.53,[[xm-0.08+i*0.035,top+0.3],[xm-0.065+i*0.035,top+0.3],[xm-0.065+i*0.035,top+0.36],[xm-0.08+i*0.035,top+0.36]],WH,{ink:0.6,lw:Math.max(1,D*0.003)}); }   // the comb of fingers
+    } else if(kind==='harlequin'){ const OR=tint(P.ochre,pc,0.5), YE=tint(P.yellow,pc2,0.5), BL=tint(P.blue,pc2,0.55);
+      Fk(0.1,[[x0+0.03,top+0.2],[x1-0.03,top+0.18],[x1-0.01,0.78],[x0+0.01,0.78]],OR,{});                               // the body
+      const nd=3+Math.round(A.ch.density*3); const rows=Math.round(nd*2.6); for(let i=0;i<nd;i++) for(let j=0;j<rows;j++){ if((i+j)%2) continue; const cx=x0+0.03+(ww-0.06)*(i+0.5)/nd, cy=top+0.2+0.58*(j+0.5)/rows; const dx=(ww-0.06)/nd/2, dy=0.58/rows/2; Fk(0.14+j*0.01,[[cx,cy-dy],[cx+dx,cy],[cx,cy+dy],[cx-dx,cy]],(i+j)%4?YE:BL,{ink:0.35,lw:Math.max(1,D*0.003)}); }   // the diamonds: the beats
+      Fk(0.05,[[xm-0.1,top+0.02],[xm+0.1,top+0.02],[xm+0.14,top-0.08],[xm,top-0.03],[xm-0.14,top-0.08]],BK,{});          // the bicorn hat
+      Fk(0.06,[[xm-0.08,top+0.02],[xm+0.08,top+0.02],[xm+0.06,top+0.2],[xm-0.1,top+0.2]],OR,{}); Fk(0.07,[[xm+0.02,top+0.06],[xm+0.08,top+0.1],[xm+0.02,top+0.13]],BK,{ink:0});   // the face in profile, the eye
+      Fk(0.08,[[xm-0.06,top+0.15],[xm+0.02,top+0.15],[xm+0.01,top+0.18],[xm-0.05,top+0.18]],tint(P.red,pc,0.4),{ink:0.3});
+      Fk(0.45,_pgEll(xm+0.02,top+0.5,ww*0.36,0.11,0.25,16),tint(BR,A.tonic,0.55),{hatch:0.45,hang:0.2});                   // the guitar body
+      Fk(0.46,[[xm+0.1,top+0.44],[xm+0.26,top+0.26],[xm+0.29,top+0.3],[xm+0.13,top+0.48]],BK,{});                      // the neck
+      Fk(0.47,_pgEll(xm+0.02,top+0.5,0.025,0.025,0,10),BK,{ink:0}); for(let i=0;i<3;i++) list.push({id:list.length,t:t0+(t1-t0)*(0.48+i*0.01),line:g([[xm-0.08+i*0.004,top+0.56+i*0.01],[xm+0.26+i*0.004,top+0.28+i*0.01]]),col:WH,lw:Math.max(0.8,D*0.002)});
+      Fk(0.52,[[xm-0.1,top+0.52],[xm+0.0,top+0.5],[xm+0.0,top+0.58],[xm-0.1,top+0.6]],WH,{}); Fk(0.53,[[xm+0.16,top+0.3],[xm+0.24,top+0.26],[xm+0.26,top+0.32],[xm+0.18,top+0.36]],WH,{});   // the hands
+    } else { const HD=tint([96,64,44],pc,0.6);
+      Fk(0.1,[[x0+0.04,top+0.16],[x1-0.04,top+0.14],[x1-0.02,0.78],[x0+0.02,0.78]],BK,{hatch:0.3,hang:0.7,inkCol:[90,86,80]});   // the robe
+      Fk(0.05,[[xm-0.1,top+0.2],[xm-0.08,top-0.02],[xm+0.1,top-0.02],[xm+0.12,top+0.2]],BK,{inkCol:[90,86,80]}); Fk(0.06,[[xm-0.06,top+0.03],[xm+0.07,top+0.03],[xm+0.06,top+0.19],[xm-0.07,top+0.19]],HD,{});   // the hood and the face
+      Fk(0.07,[[xm-0.04,top+0.07],[xm-0.01,top+0.07],[xm-0.01,top+0.1],[xm-0.04,top+0.1]],WH,{ink:0}); Fk(0.07,[[xm+0.02,top+0.07],[xm+0.05,top+0.07],[xm+0.05,top+0.1],[xm+0.02,top+0.1]],WH,{ink:0});
+      // the score: five lines and the song's own notes — the first twelve top voices, high is high
+      const sx0=xm-0.12, sx1=xm+0.13, sy0=top+0.3, sy1=top+0.5; Fk(0.4,[[sx0,sy0],[sx1,sy0-0.01],[sx1,sy1],[sx0,sy1+0.01]],WH,{});
+      for(let i=0;i<5;i++) list.push({id:list.length,t:t0+(t1-t0)*0.41,line:g([[sx0+0.01,sy0+0.04+i*0.03],[sx1-0.01,sy0+0.035+i*0.03]]),col:BK,lw:Math.max(0.6,D*0.0015)});
+      const ev=_kd2Events(A,12).slice(0,12); ev.forEach((e,i)=>{ const x=sx0+0.02+(sx1-sx0-0.04)*i/11, y=sy0+0.16-0.12*A.reg(e.top); Fk(0.42+i*0.005,_pgEll(x,y,0.009,0.007,-0.3,8),BK,{ink:0}); });
+      Fk(0.5,[[sx0-0.03,sy1-0.04],[sx0+0.05,sy1-0.04],[sx0+0.05,sy1+0.03],[sx0-0.03,sy1+0.03]],WH,{}); Fk(0.51,[[sx1-0.05,sy0-0.02],[sx1+0.03,sy0-0.02],[sx1+0.03,sy0+0.05],[sx1-0.05,sy0+0.05]],WH,{});   // the hands
+    } }
+  // the table in front, and the dog beneath it on the dense pieces
+  F(0.93,[[0.05,0.72],[0.95,0.7],[0.98,0.86],[0.02,0.88]],tint([140,96,58],A.tonic,0.7),{hatch:0.3,hang:0.1});
+  F(0.94,[[0.1,0.86],[0.14,0.86],[0.15,0.98],[0.11,0.98]],isBW?[16,16,16]:[18,14,12],{}); F(0.94,[[0.86,0.85],[0.9,0.85],[0.9,0.98],[0.86,0.98]],isBW?[16,16,16]:[18,14,12],{});
+  if(A.ch.density>0.3||A.ch.energy>0.6){ F(0.96,[[0.2,0.9],[0.3,0.86],[0.52,0.87],[0.58,0.92],[0.5,0.97],[0.22,0.97]],isBW?[30,30,30]:[34,28,26],{inkCol:[110,104,98]}); F(0.97,[[0.5,0.89],[0.53,0.89],[0.53,0.91],[0.5,0.91]],isBW?[220,220,220]:P.white,{ink:0}); }
+  _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 4 · Guernica (1937) — the shards from the lamp (as before), and over them the
+//        bull at the left, the horse screaming in the centre, the face at the window
+//        with the lamp. Grey, black and white; loud is dark.
+function pc2_guernica(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), cn=A.cn, reveal=Math.max(1,Math.min(cn,lim))/cn;
+  ctx.fillStyle='#d6d4ce'; ctx.fillRect(0,0,CW,CH);
+  const r0=_pcR(93000,ss); r0(); const lx=CW*(0.42+r0()*0.16), ly=CH*(0.06+r0()*0.06);
+  let regions=[[[0,0],[CW,0],[CW,CH],[0,CH]]]; const nr=5+Math.round(A.ch.density*4);
+  for(let k=0;k<nr;k++){ const ang=0.35+(k+0.5)/nr*2.45+(r0()-.5)*0.2; const next=[]; for(const p of regions){ const [L,R]=_pcSplit(p,lx,ly,ang); if(L.length>=3) next.push(L); if(R.length>=3) next.push(R); } regions=next; }
+  const list=[]; let id=0; const minA=CW*CH/(60+A.ch.density*80);
+  for(const reg of regions){ const c=_pcCentre(reg); const grain=Math.atan2(c[1]-ly,c[0]-lx); const out=[]; const rr=_pcR(93100+id,ss); rr(); _pcCut(reg,rr,minA,0,grain,out);
+    for(const poly of out){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW*0.9+rr()*0.1,0,1); const {rgb,energy}=S.col(t);
+      const lum=(rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114)/255; const dist=Math.hypot(pc[0]-lx,pc[1]-ly)/D;
+      let v=_pcClamp(0.92-energy*0.6+(lum-0.5)*0.2-dist*0.38+(rr()-.5)*0.3,0.04,0.96); if(rr()<0.12) v=rr()<0.5?0.03:0.97;
+      const warm=A.isBW?0:(rgb[0]-rgb[2])/255*10; const col=[_pcClamp(v*255+warm,0,255),_pcClamp(v*255,0,255),_pcClamp(v*255-warm,0,255)]; const half=v>0.3&&v<0.72;
+      list.push({id:id++,t:t*0.9,poly,col,hatch:half?0.45+rr()*0.4:(v<=0.3?0.2:0),hang:grain+1.5708+(rr()-.5)*0.4,ink:0.85,open:rr()<0.3?Math.floor(rr()*poly.length):-1,lw:Math.max(1,D*0.0045)}); } }
+  const K=[22,20,20], W=[240,238,232], G=[150,148,142]; const LW=Math.max(2.2,D*0.009);
+  const F=(t,pts,col,o)=>list.push(_pgF(id++,t,_pgN(pts,CW,CH),col,Object.assign({lw:LW,inkCol:K},o)));
+  // the bull: the great head at the left, horns up, the eyes set apart, the body in black behind
+  F(0.12,[[0.0,0.36],[0.2,0.3],[0.3,0.4],[0.26,0.62],[0.0,0.66]],K,{hatch:0.45,hang:0.3,inkCol:[200,200,196],lw:Math.max(1,D*0.004)});
+  F(0.13,[[0.02,0.1],[0.1,0.04],[0.24,0.04],[0.36,0.1],[0.4,0.24],[0.32,0.36],[0.18,0.4],[0.04,0.34]],W,{});
+  F(0.13,[[0.06,0.1],[0.0,-0.02],[0.14,0.06]],K,{}); F(0.13,[[0.24,0.05],[0.32,-0.04],[0.33,0.1]],K,{});
+  F(0.14,[[0.09,0.16],[0.15,0.15],[0.15,0.21],[0.09,0.21]],K,{ink:0}); F(0.14,[[0.25,0.15],[0.31,0.14],[0.31,0.2],[0.25,0.2]],K,{ink:0}); F(0.14,[[0.17,0.26],[0.23,0.26],[0.24,0.33],[0.16,0.33]],K,{ink:0}); F(0.14,[[0.12,0.33],[0.28,0.33],[0.26,0.37],[0.14,0.37]],G,{ink:0.7,lw:Math.max(1,D*0.003)});
+  // the horse: the body of newsprint, the head thrown back and screaming, the spear-tongue
+  const hx=0.52+(A.ch.contour-0.5)*0.08, hy=0.34;
+  F(0.44,[[hx-0.26,hy+0.3],[hx+0.3,hy+0.24],[hx+0.36,hy+0.62],[hx-0.3,hy+0.68]],_pcMix(W,G,0.4),{news:true,ink:0.8,lw:Math.max(1.6,D*0.006)});
+  F(0.45,[[hx-0.22,hy+0.06],[hx-0.08,hy-0.16],[hx+0.14,hy-0.14],[hx+0.24,hy+0.04],[hx+0.12,hy+0.2],[hx-0.14,hy+0.2]],W,{});
+  F(0.46,[[hx-0.06,hy+0.14],[hx+0.2,hy+0.34],[hx+0.1,hy+0.38],[hx-0.14,hy+0.2]],W,{});                                  // the open jaw
+  F(0.47,[[hx-0.0,hy+0.18],[hx+0.14,hy+0.3],[hx+0.08,hy+0.33],[hx-0.06,hy+0.22]],K,{ink:0});                           // the black of the mouth
+  for(let i=0;i<4;i++) F(0.47,[[hx-0.02+i*0.04,hy+0.19+i*0.03],[hx+0.01+i*0.04,hy+0.21+i*0.03],[hx-0.02+i*0.04,hy+0.24+i*0.03]],W,{ink:0.7,lw:Math.max(1,D*0.003)});   // the teeth
+  F(0.47,[[hx+0.04,hy+0.24],[hx+0.14,hy+0.32],[hx+0.1,hy+0.33]],W,{});                                                 // the spear of the tongue
+  F(0.46,[[hx-0.14,hy-0.06],[hx-0.08,hy-0.07],[hx-0.08,hy],[hx-0.14,hy]],K,{ink:0}); F(0.46,[[hx-0.2,hy-0.12],[hx-0.12,hy-0.22],[hx-0.08,hy-0.1]],K,{}); F(0.46,[[hx+0.02,hy-0.12],[hx+0.1,hy-0.24],[hx+0.14,hy-0.1]],K,{});   // eye and ears
+  // the face at the window holding the lamp, and the head thrown up at the right
+  F(0.76,[[0.68,0.04],[0.9,0.02],[0.94,0.26],[0.72,0.3]],W,{}); F(0.77,[[0.73,0.13],[0.8,0.08],[0.84,0.15]],K,{ink:0}); F(0.77,[[0.74,0.21],[0.86,0.2],[0.84,0.26],[0.76,0.26]],K,{ink:0}); F(0.78,[[0.84,0.24],[1,0.46],[0.92,0.5],[0.78,0.3]],W,{});
+  F(0.9,[[0.8,0.56],[0.98,0.5],[1,0.78],[0.84,0.82]],W,{}); F(0.91,[[0.87,0.61],[0.95,0.57],[0.94,0.68]],K,{ink:0}); F(0.91,[[0.86,0.72],[0.97,0.71],[0.93,0.78]],K,{ink:0});
+  // the fallen soldier's hand with the flower, bottom left
+  F(0.6,[[0.02,0.8],[0.2,0.76],[0.26,0.86],[0.2,0.96],[0.04,0.96]],W,{}); for(let i=0;i<4;i++) list.push({id:id++,t:0.61,line:[[CW*(0.06+i*0.04),CH*0.8],[CW*(0.08+i*0.04),CH*0.92]],col:K,lw:Math.max(1,D*0.003)}); F(0.62,_pgEll(0.22,0.78,0.03,0.03,0,8),W,{});
+  // the lamp: the jagged star with the eye, last
+  const nst=9+Math.round(A.ch.energy*4); const star=[]; for(let k=0;k<nst*2;k++){ const a=k/(nst*2)*6.2832; const rad=D*(k%2?0.035:0.075)*(0.85+r0()*0.3); star.push([lx+Math.cos(a)*rad, ly+Math.sin(a)*rad]); }
+  list.push({id:id++,t:1,poly:star,col:[246,244,238],hatch:0,hang:0,ink:0.95,open:-1,lw:Math.max(1,D*0.005)});
+  const eye=[]; for(let k=0;k<10;k++){ const a=k/10*6.2832; eye.push([lx+Math.cos(a)*D*0.022, ly+Math.sin(a)*D*0.016]); } list.push({id:id++,t:1,poly:eye,col:[18,16,14],hatch:0,hang:0,ink:0,open:-1});
+  _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 5 · The Old Guitarist (1903) — the Blue Period: one bent figure in Prussian blue,
+//        head fallen to the left, the guitar across the lap its single warm note. The
+//        quieter the piece, the lower the head; the register sets how deep the blue;
+//        the strings are the voices.
+function pc2_blue(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_pcR(97600,ss); r(); const list=[]; const P=_PC_PAL;
+  const deep=isBW?[30,32,36]:[18,34,70], pale=isBW?[160,164,170]:[132,168,196];
+  const blue=(t,k)=>{ const {rgb}=S.col(t); const base=_pcMix(deep,pale,_pcClamp(A.ch.register*0.5+k,0,1)); return isBW?_pcFlat(rgb,base,0.85,true):_pcMix(base,rgb,0.16); };
+  const INK=[8,14,30]; const g=(pts)=>_pgN(pts,CW,CH);
+  // the wall and floor: tall planes of blue, darker low
+  const wall=[]; _pcCut([[0,0],[CW,0],[CW,CH],[0,CH]],r,CW*CH/6,0,1.5708,wall);
+  wall.forEach(p=>{ const c=_pcCentre(p); list.push(_pgF(list.length,0,p,blue(c[0]/CW*0.2,0.05+(1-c[1]/CH)*0.3),{ink:0.3,inkCol:INK,hatch:0.3,hang:1.4,lw:Math.max(1,D*0.003)})); });
+  const bow=(1-A.ch.energy)*0.08;   // a quiet piece bows the head lower
+  // the figure, one silhouette: head fallen to the left, the hunched back, the crossed legs
+  const SIL=[[0.2,0.3+bow],[0.26,0.17+bow],[0.36,0.14+bow],[0.42,0.24+bow],[0.4,0.34],[0.56,0.3],[0.72,0.36],[0.76,0.58],[0.7,0.74],[0.84,0.84],[0.9,0.96],[0.12,0.96],[0.1,0.86],[0.2,0.76],[0.16,0.6],[0.22,0.42]];
+  const sil=g(SIL); const rr=_pcR(97700,ss); rr();
+  _pcFacets(list,sil,rr,CW*CH/16,1.2,0.1,0.45,(t,p,i)=>({col:blue(t,0.35+(rr()-.5)*0.25),hatch:0.4,hang:1.2+(rr()-.5)*0.6,ink:0.6,inkCol:INK,open:rr()<0.4?Math.floor(rr()*p.length):-1,lw:Math.max(1.2,D*0.004)}),{axis:1});
+  list.push({id:list.length,t:0.46,stroke:sil,w:SIL.map(()=>D*0.008),close:true,col:INK});
+  // the head: bowed, the hair dark, the eye closed; the neck a long thin plane
+  const hc=[0.33,0.24+bow]; list.push(_pgF(list.length,0.5,_pgEll(CW*hc[0],CH*hc[1],D*0.085,D*0.11,-0.7,16),blue(0.5,0.6),{hatch:0.35,hang:1.0,ink:0.9,inkCol:INK,lw:Math.max(1.6,D*0.006)}));
+  list.push(_pgF(list.length,0.51,g([[0.24,0.18+bow],[0.34,0.12+bow],[0.42,0.17+bow],[0.4,0.26+bow],[0.3,0.3+bow]]),blue(0.51,0.1),{hatch:0.6,hang:0.6,ink:0.8,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
+  list.push({id:list.length,t:0.52,line:g([[0.3,0.27+bow],[0.36,0.3+bow]]),col:INK,lw:Math.max(1.2,D*0.004)});
+  // the arms: the left one long, down to the frets; the right one over the body
+  list.push(_pgF(list.length,0.55,g([[0.22,0.42],[0.3,0.4],[0.24,0.66],[0.14,0.7]]),blue(0.55,0.45),{hatch:0.4,hang:1.3,ink:0.8,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
+  list.push(_pgF(list.length,0.56,g([[0.6,0.38],[0.72,0.4],[0.72,0.56],[0.6,0.58]]),blue(0.56,0.45),{hatch:0.4,hang:1.1,ink:0.8,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
+  // the guitar: ochre with the tonic, the one warm thing; its neck down to the left
+  const gcol=isBW?[150,146,138]:_pcMix(P.ochre,A.pcCol(A.tonic,48),0.3), gink=[46,32,18];
+  list.push(_pgF(list.length,0.6,_pgEll(CW*0.52,CH*0.62,CW*0.19,CH*0.12,0.35,18),gcol,{hatch:0.5,hang:0.3,ink:0.9,inkCol:gink,lw:Math.max(1.6,D*0.006)}));
+  list.push(_pgF(list.length,0.6,_pgEll(CW*0.52,CH*0.62,D*0.04,D*0.04,0,12),isBW?[24,24,24]:[36,26,18],{ink:0.5}));
+  list.push(_pgF(list.length,0.62,_pgRot(_pgRect(CW*0.3,CH*0.72,CW*0.045,CH*0.3,0),CW*0.3,CH*0.72,-0.95),gcol,{hatch:0.5,hang:-0.95,ink:0.9,inkCol:gink,lw:Math.max(1.6,D*0.006)}));
+  const ns=Math.max(3,Math.min(6,Math.round(A.ch.density*5+1))); for(let i=0;i<ns;i++){ const o=(i-(ns-1)/2)*D*0.011; list.push({id:list.length,t:0.7+i*0.02,line:[[CW*0.16-o*0.7,CH*0.84+o],[CW*0.66-o*0.7,CH*0.58+o]],col:isBW?[210,210,210]:[226,216,196],lw:Math.max(0.7,D*0.0018)}); }
+  // the hands: on the frets, and strumming
+  list.push(_pgF(list.length,0.85,g([[0.13,0.7],[0.22,0.66],[0.26,0.74],[0.17,0.78]]),blue(0.85,0.75),{ink:0.85,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
+  list.push(_pgF(list.length,0.88,g([[0.56,0.56],[0.66,0.54],[0.68,0.63],[0.58,0.65]]),blue(0.88,0.75),{ink:0.85,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
+  _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// the facet engine's draw, plus three records the paintings above use: a plain
+// line, a brush stroke with a width per point, and stencil lettering; `news` fills a
+// plane with newsprint lines
+function _pc2Draw(ctx,list,reveal,D,ss){ const oa=list._objA; list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_pcClamp(reveal,0,1));
+  for(let i=0;i<(oa?list.length:n);i++){ const f=list[i]; if(i>=n && !f.fig) continue; const rnd=_pcR(f.id*17+91001,ss); rnd(); ctx.lineCap='round'; ctx.lineJoin='round';
+    if(f.line){ ctx.strokeStyle=_pcCss(f.col); ctx.lineWidth=f.lw; ctx.beginPath(); ctx.moveTo(f.line[0][0],f.line[0][1]); ctx.lineTo(f.line[1][0],f.line[1][1]); ctx.stroke(); continue; }
+    if(f.stroke){ const P=f.stroke; ctx.strokeStyle=_pcCss(f.col,0.95); const m=f.close?P.length:P.length-1; for(let k=0;k<m;k++){ const a=P[k], b=P[(k+1)%P.length], p=P[(k-1+P.length)%P.length], q=P[(k+2)%P.length]; ctx.lineWidth=Math.max(0.8,(f.w[k]+f.w[(k+1)%P.length])/2); ctx.beginPath();
+        const sx=f.close||k>0?(p[0]+a[0])/2:a[0], sy=f.close||k>0?(p[1]+a[1])/2:a[1], ex=f.close||k<m-1?(b[0]+q[0])/2:b[0], ey=f.close||k<m-1?(b[1]+q[1])/2:b[1]; ctx.moveTo(sx,sy); ctx.quadraticCurveTo(a[0],a[1],(a[0]+b[0])/2,(a[1]+b[1])/2); ctx.quadraticCurveTo(b[0],b[1],ex,ey); ctx.stroke(); } continue; }
+    if(f.text){ ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.rot||0); ctx.font='700 '+Math.round(f.size)+'px Outfit, Helvetica, Arial, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=_pcCss(f.col,0.9); ctx.fillText(f.text,0,0); ctx.restore(); continue; }
+    _pcFacet(ctx,f,D,rnd);
+    if(f.news){ ctx.save(); _pcPath(ctx,f.poly); ctx.clip(); const c=_pcCentre(f.poly), R=Math.sqrt(_pcArea(f.poly))*1.1; ctx.strokeStyle='rgba(40,38,36,0.35)'; ctx.lineWidth=Math.max(0.6,D*0.0018); const st=D*0.0075; ctx.beginPath(); for(let y=c[1]-R;y<c[1]+R;y+=st){ const w=R*(0.5+rnd()*0.5); ctx.moveTo(c[0]-w,y); ctx.lineTo(c[0]+w,y); } ctx.stroke(); ctx.restore(); } } }
+function _pc2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
+  switch(pick){ case 2: return pc2_guitar(ctx,CW,CH,chords,lim,gc,ss,mode); case 3: return pc2_musicians(ctx,CW,CH,chords,lim,gc,ss,mode); case 4: return pc2_guernica(ctx,CW,CH,chords,lim,gc,ss,mode); case 5: return pc2_blue(ctx,CW,CH,chords,lim,gc,ss,mode); default: return pc2_head(ctx,CW,CH,chords,lim,gc,ss,mode); }
 }
 
 // ── Mondrian A: Victory Boogie Woogie (1942–44) — the mosaic. A packed field of
@@ -6433,24 +6021,14 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillRect(0, 0, CW, CH);
 
   const revealFrac = Math.max(0, Math.min(1, lim / cn));
-  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Spiral (original body below).  1 = The Tree of Knowledge (vesica, symmetric tree, doves).
-  //  2 = Ten Largest (stacked ovoid forms).  3 = The Swan (split field + swans, recoloured).
-  //  4 = Altarpiece pyramid (triangle + disc).  5 = Botanical (symmetric plant chart).
-  let _klintMandala = false;
+  // ── VARIANT: 0 Spiral (the floating forms below) · 1 The Ten Largest · 2 Altarpiece
+  // No. 1 · 3 The Swan, No. 17 · 4 The Tree of Knowledge · 5 Primordial Chaos (the
+  // _hk2 painters) · 6 Botanical (the plant chart). Free: 0 and 1.
   {
-    const _pn=_capN(6); const _kpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_kpick===1){ klintPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_kpick===2){ klintPhaseTen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_kpick===3){ klintPhaseSwan(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_kpick===4){ klintPhaseAltar(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_kpick===5){ klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // variant 0 = spiral, variant 1 = radiant mandala — DETERMINISTIC per index
-    // so the two looks are independent (previously both fell through to a coin
-    // flip, which made them interchangeable instead of distinct styles).
-    _klintMandala = (_kpick===1);
+    const _pn=_capN(7); const _kpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_kpick===6){ klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_kpick>0){ _hk2Paint(_kpick,ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   }
-  const mandala = _klintMandala;
 
   // Draw a snail-spiral.
   function snail(cx, cy, rMax, turns, col, lw){
@@ -6496,54 +6074,7 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     }
   }
 
-  if(mandala){
-    // ── Mandala: big segmented disc + ray crown + descending column ──────────
-    // Per-song variance — off-centre + R + ray count multiplier.
-    const cx = CW * (0.45 + rnd()*0.10);
-    const cy = CH * (0.28 + rnd()*0.10);
-    const R = Math.min(CW, CH) * (0.26 + rnd()*0.10);
-    // Ray crown — count grows for very long pieces AND with song character: a
-    // dense, energetic piece blooms a denser, more radiant crown; a calm one
-    // stays serene. The radiance is the mandala's pulse, so character belongs here.
-    const _chKl = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-    const _klDrive = _chKl ? (0.55*_chKl.energy + 0.45*_chKl.density) : 0.5;
-    const raysBase = cn<=120 ? 36 : cn<=300 ? 48 : cn<=600 ? 60 : 72;
-    const rays = Math.max(24, Math.round(raysBase * (0.85 + rnd()*0.30) * (0.82 + 0.42*_klDrive)));
-    const visRays = Math.ceil(revealFrac * rays);
-    for(let i=0; i<visRays; i++){
-      const ang = (i/rays)*Math.PI*2 - Math.PI/2;
-      const col = chordCol(i, 1.0);
-      ctx.fillStyle = css(col, 0.85);
-      const r0 = R*1.02, r1 = R*1.35;
-      const w = (Math.PI*2/rays)*0.4;
-      ctx.beginPath();
-      ctx.moveTo(cx+Math.cos(ang-w)*r0, cy+Math.sin(ang-w)*r0);
-      ctx.lineTo(cx+Math.cos(ang)*r1, cy+Math.sin(ang)*r1);
-      ctx.lineTo(cx+Math.cos(ang+w)*r0, cy+Math.sin(ang+w)*r0);
-      ctx.closePath(); ctx.fill();
-    }
-    // Golden disc
-    const disc = chordCol(0, 1.1);
-    ctx.fillStyle = css([Math.min(255,disc[0]+40), Math.min(255,disc[1]+20), disc[2]], 1);
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
-    // Descending column of small rings (chakra ladder)
-    const cols = cn<=8?6:cn<=24?10:cn<=60?16:cn<=120?22:cn<=300?32:cn<=600?44:56;
-    const visCols = Math.ceil(revealFrac*cols);
-    const colTop = cy + R*1.0;
-    const colBot = CH*0.98;
-    for(let i=0; i<visCols; i++){
-      const t = i/(cols-1);
-      const y = colTop + t*(colBot-colTop);
-      const halfW = (CW*0.06) + t*(CW*0.34);
-      const col = chordCol(i+1, (i&1)?1.0:0.8);
-      ctx.fillStyle = css(col, 0.7);
-      ctx.fillRect(cx-halfW, y, halfW*2, (colBot-colTop)/cols*0.9);
-      // small mandala dot in centre
-      const dot = chordCol(i+3, 1.15);
-      ctx.fillStyle = css(dot, 0.95);
-      ctx.beginPath(); ctx.arc(cx, y+(colBot-colTop)/cols*0.45, Math.min(10, halfW*0.18), 0, Math.PI*2); ctx.fill();
-    }
-  } else {
+  {
     // ── Floating forms: flowers, circles, spirals scattered on warm field ────
     const FORMS = _adaptiveMax(cn, 'spiral');
     const visForms = Math.ceil(revealFrac * FORMS);
@@ -6596,249 +6127,6 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         snail(f.x, f.y, f.r*0.95, f.turns, colC, f.lw);
       }
     }
-  }
-}
-
-// ── af Klint C: Ten Largest — stacked ovoid forms with spirals on pale ground. ──
-function klintPhaseTen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#dcd6cc':'#e8dcc8';ctx.fillRect(0,0,CW,CH);
-  const forms=Math.max(3,Math.min(30,Math.round(cn/4)));
-  const vis=Math.max(1,Math.ceil(N/cn*forms));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4500,ss,0,0);
-    const {rgb,energy}=_picChord(chords,Math.floor(i*(cn/forms)),gc,isBW);
-    const x=rnd()*CW,y=rnd()*CH,R=Math.min(CW,CH)*(0.05+energy*0.10);
-    // Per-form shape kind (oval / circle / hexagon).
-    const shapeKind = Math.floor(rnd()*3);
-    // Per-form inner pattern kind (spiral / concentric rings / radiating).
-    const innerKind = Math.floor(rnd()*3);
-
-    ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.7)`;
-    if(shapeKind === 0){
-      // Ovoid (original).
-      ctx.beginPath();ctx.ellipse(x,y,R*0.8,R,0,0,Math.PI*2);ctx.fill();
-    } else if(shapeKind === 1){
-      // Circle.
-      ctx.beginPath();ctx.arc(x,y,R,0,Math.PI*2);ctx.fill();
-    } else {
-      // Hexagon.
-      ctx.beginPath();
-      for(let h=0;h<6;h++){
-        const a = (h/6)*Math.PI*2;
-        const hx = x + Math.cos(a)*R, hy = y + Math.sin(a)*R;
-        if(h===0) ctx.moveTo(hx,hy); else ctx.lineTo(hx,hy);
-      }
-      ctx.closePath();ctx.fill();
-    }
-
-    ctx.strokeStyle=`rgba(${255-rgb[0]},${255-rgb[1]},${255-rgb[2]},0.7)`;
-    ctx.lineWidth=Math.max(1.5,R*0.08);
-    if(innerKind === 0){
-      // Inner snail spiral (original).
-      ctx.beginPath();let pr=0,pa=0;
-      for(let t=0;t<24;t++){pa=t*0.5;pr=R*0.7*(t/24);const px=x+Math.cos(pa)*pr,py=y+Math.sin(pa)*pr;t?ctx.lineTo(px,py):ctx.moveTo(px,py);}
-      ctx.stroke();
-    } else if(innerKind === 1){
-      // Concentric rings.
-      for(let ring=1;ring<=3;ring++){
-        ctx.beginPath();
-        ctx.arc(x, y, R*ring/4, 0, Math.PI*2);
-        ctx.stroke();
-      }
-    } else {
-      // Radiating rays.
-      for(let ray=0;ray<6;ray++){
-        const a = (ray/6)*Math.PI*2;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x+Math.cos(a)*R*0.7, y+Math.sin(a)*R*0.7);
-        ctx.stroke();
-      }
-    }
-  }
-}
-
-// ── af Klint D: Swan abstract — split colour field with paired ovoid forms.
-// Replaces the original literal swan silhouettes. Duality (light/dark, upper/
-// lower) is preserved via the colour split + opposed ovoids; companion forms
-// scatter around each main ovoid like Klint's Ten Largest vocabulary.
-function klintPhaseSwan(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  const sR = _seedRnd(91, ss, 0, 31); sR(); sR();
-
-  // Per-song decisions.
-  const splitLine = 0.45 + sR()*0.10;                  // 45-55% horizon
-  const upperX = 0.40 + sR()*0.20;                     // ovoid x offset
-  const lowerX = 0.40 + sR()*0.20;
-  const mainR = Math.min(CW,CH) * (0.16 + sR()*0.06);  // 16-22%
-  const companionsPerSide = 4 + Math.floor(sR()*4);    // 4-7 each
-  const withSpiral = sR() < 0.7;                       // inner spiral most songs
-
-  // Split colour field — top light, bottom dark (duality).
-  const top = _picChord(chords, 0, gc, isBW).rgb;
-  const bot = _picChord(chords, Math.floor(cn/2)%cn, gc, isBW).rgb;
-  ctx.fillStyle = isBW
-    ? '#e8e4dc'
-    : `rgb(${Math.min(255,top[0]+60)},${Math.min(255,top[1]+60)},${Math.min(255,top[2]+60)})`;
-  ctx.fillRect(0, 0, CW, CH*splitLine);
-  ctx.fillStyle = isBW
-    ? '#2a2e3a'
-    : `rgb(${Math.round(bot[0]*0.4)},${Math.round(bot[1]*0.4)},${Math.round(bot[2]*0.5+40)})`;
-  ctx.fillRect(0, CH*splitLine, CW, CH*(1-splitLine));
-  // Horizon line.
-  ctx.strokeStyle = 'rgba(40,30,40,0.4)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, CH*splitLine);
-  ctx.lineTo(CW, CH*splitLine);
-  ctx.stroke();
-
-  // Draw one ovoid with optional inner spiral.
-  function drawOvoid(cx, cy, R, fillCol, strokeCol){
-    ctx.fillStyle = fillCol;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, R*0.85, R, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = strokeCol;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    if(withSpiral){
-      ctx.strokeStyle = strokeCol;
-      ctx.lineWidth = Math.max(1.5, R*0.06);
-      ctx.beginPath();
-      for(let t=0;t<32;t++){
-        const pa = t*0.4;
-        const pr = R*0.65*(t/32);
-        const px = cx+Math.cos(pa)*pr;
-        const py = cy+Math.sin(pa)*pr*1.15;
-        if(t===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      }
-      ctx.stroke();
-    }
-  }
-
-  // Upper bright ovoid (appears first with reveal).
-  if(reveal > 0.1){
-    const upR = mainR * Math.min(1, reveal*1.5);
-    const upY = CH * splitLine * 0.65;
-    drawOvoid(CW * upperX, upY, upR,
-      `rgba(${Math.min(255,top[0]+90)|0},${Math.min(255,top[1]+85)|0},${Math.min(255,top[2]+70)|0},0.85)`,
-      `rgba(${Math.round(bot[0]*0.3)},${Math.round(bot[1]*0.3)},${Math.round(bot[2]*0.4)},0.85)`);
-  }
-  // Lower dark ovoid (appears after upper).
-  if(reveal > 0.4){
-    const downR = mainR * Math.min(1, (reveal-0.3)*1.5);
-    const downY = CH * splitLine + (CH * (1-splitLine)) * 0.5;
-    drawOvoid(CW * lowerX, downY, downR,
-      `rgba(${Math.round(bot[0]*0.5)},${Math.round(bot[1]*0.5)},${Math.round(bot[2]*0.6)},0.9)`,
-      `rgba(${Math.min(255,top[0]+80)|0},${Math.min(255,top[1]+80)|0},${Math.min(255,top[2]+80)|0},0.85)`);
-  }
-
-  // Companion forms — small ovoids/circles scattered around each main one.
-  // Count grows with reveal; chord-coloured.
-  const visCompPerSide = Math.ceil(companionsPerSide * reveal);
-  for(let side=0; side<2; side++){
-    const mainCX = CW * (side===0 ? upperX : lowerX);
-    const mainCY = side===0 ? CH*splitLine*0.65 : CH*splitLine + CH*(1-splitLine)*0.5;
-    const isUpper = side === 0;
-    for(let i=0;i<visCompPerSide;i++){
-      const ang = (i/companionsPerSide)*Math.PI*2 + (side*Math.PI/6);
-      const compR = mainR * (0.18 + (i%3)*0.04);
-      const compX = mainCX + Math.cos(ang) * mainR * (1.5 + (i%2)*0.3);
-      const compY = mainCY + Math.sin(ang) * mainR * 0.7;
-      const {rgb} = _picChord(chords, (i + side*3 + 7)%cn, gc, isBW);
-      const lift = isUpper ? 60 : -30;
-      const cr = Math.max(0,Math.min(255, rgb[0]+lift));
-      const cg = Math.max(0,Math.min(255, rgb[1]+lift));
-      const cb = Math.max(0,Math.min(255, rgb[2]+lift));
-      ctx.fillStyle = `rgba(${cr},${cg},${cb},0.7)`;
-      ctx.beginPath();
-      ctx.arc(compX, compY, compR, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-}
-
-// ── af Klint B · The Tree of Knowledge (W series, 1913–15) — a pale vesica on a
-// soft ground; inside it a symmetric tree whose branch pairs curl into snail
-// spirals and bear two-coloured blossoms, one pair per passage of the song;
-// a ring of light crowns it and two doves settle on the top branches at the end.
-function klintPhaseTree(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, reveal=Math.max(0,Math.min(1,Math.max(1,Math.min(cn,lim))/cn)), D=Math.min(CW,CH);
-  const col=(t)=>{ const c=_picChord(chords,Math.max(0,Math.min(cn-1,Math.floor(t*cn))),gc,isBW).rgb; return isBW?c:[c[0]*0.62+250*0.38,c[1]*0.62+238*0.38,c[2]*0.62+222*0.38]; };   // Hilma's softened, chalky colour
-  const deep=(t)=>{ const c=_picChord(chords,Math.max(0,Math.min(cn-1,Math.floor(t*cn))),gc,isBW).rgb; return isBW?c.map(v=>v*0.6):[c[0]*0.7,c[1]*0.7,c[2]*0.7]; };
-  const css=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
-  const r0=_seedRnd(93,ss,0,40); r0(); r0();
-  const g0=col(0.5); ctx.fillStyle=css(isBW?[226,224,218]:[g0[0]*0.35+232*0.65,g0[1]*0.35+214*0.65,g0[2]*0.35+190*0.65]); ctx.fillRect(0,0,CW,CH);
-  const cx=CW/2, top=CH*0.07, bot=CH*0.95, hw=Math.min(CW*0.36,(bot-top)*0.36);
-  const ink=isBW?[40,40,40]:[78,58,46];
-  const ops=[]; const push=(t,f)=>ops.push([t,f]);
-  // the vesica: two arcs meeting at top and bottom
-  const vesica=(c,a,lw)=>{ const h=(bot-top)/2, my=(top+bot)/2, R=(h*h+hw*hw)/(2*hw); ctx.beginPath(); ctx.arc(cx-(R-hw),my,R,-Math.asin(h/R),Math.asin(h/R)); ctx.arc(cx+(R-hw),my,R,Math.PI-Math.asin(h/R),Math.PI+Math.asin(h/R)); ctx.closePath(); if(c){ ctx.fillStyle=css(c,a); ctx.fill(); } if(lw){ ctx.strokeStyle=css(ink,0.8); ctx.lineWidth=lw; ctx.stroke(); } };
-  push(0,()=>{ vesica(isBW?[242,240,236]:[250,242,226],1,0); const L=col(0.2), Rr=col(0.8); ctx.save(); vesica(null,0,0); ctx.clip();   // the vesica in Hilma's paired halves, warm and cool, washed pale
-    ctx.fillStyle=css(isBW?[226,226,226]:[L[0]*0.3+250*0.7,L[1]*0.3+242*0.7,L[2]*0.3+226*0.7]); ctx.fillRect(cx-hw-2,top-2,hw+2,bot-top+4); ctx.fillStyle=css(isBW?[236,236,236]:[Rr[0]*0.3+250*0.7,Rr[1]*0.3+242*0.7,Rr[2]*0.3+226*0.7]); ctx.fillRect(cx,top-2,hw+2,bot-top+4); ctx.restore(); vesica(null,0,D*0.006); });
-  // trunk
-  const ty0=bot-CH*0.06, ty1=top+CH*0.24;
-  push(0.02,()=>{ ctx.strokeStyle=css(ink); ctx.lineWidth=D*0.016; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx,ty0); ctx.lineTo(cx,ty1); ctx.stroke(); });
-  // branch pairs, one per passage, low to high; each curls into a snail spiral and bears a blossom
-  const nb=4+Math.round((r0()*0.5+0.5)*3), spir=(x,y,r,turns,sgn)=>{ ctx.beginPath(); for(let s2=0;s2<=40;s2++){ const t=s2/40, a=sgn*t*turns*6.2832, rr=r*(1-t); const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr; s2?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.stroke(); };
-  for(let k=0;k<nb;k++){ const t=(k+0.5)/nb, by=ty0-(ty0-ty1)*(k+0.5)/(nb+0.6), reach=hw*(0.66-0.3*k/nb)*(0.85+r0()*0.3), lift=CH*(0.07+r0()*0.06), sr=D*(0.024+r0()*0.016), c1=col(t), c2=col(Math.min(0.999,t+0.12));
-    for(const sgn of [-1,1]) push(t,()=>{ const ex=cx+sgn*reach, ey=by-lift;
-      ctx.strokeStyle=css(ink); ctx.lineWidth=D*0.008; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx,by); ctx.quadraticCurveTo(cx+sgn*reach*0.55,by+lift*0.4,ex,ey); ctx.stroke();
-      ctx.lineWidth=D*0.005; spir(ex,ey-sr,sr,1.6,sgn);
-      const bx=cx+sgn*reach*0.5, byy=by-lift*0.05-D*0.042, br=D*(0.032+0.008*(k%2));   // the blossom: a disc split in two of Hilma's paired colours
-      ctx.fillStyle=css(c1); ctx.beginPath(); ctx.arc(bx,byy,br,Math.PI/2,Math.PI*1.5); ctx.closePath(); ctx.fill();
-      ctx.fillStyle=css(c2); ctx.beginPath(); ctx.arc(bx,byy,br,-Math.PI/2,Math.PI/2); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle=css(ink,0.8); ctx.lineWidth=D*0.003; ctx.beginPath(); ctx.arc(bx,byy,br,0,6.2832); ctx.stroke(); }); }
-  // roots: two curls at the base
-  push(0.06,()=>{ ctx.strokeStyle=css(ink); ctx.lineWidth=D*0.007; for(const sgn of [-1,1]){ ctx.beginPath(); ctx.moveTo(cx,ty0); ctx.quadraticCurveTo(cx+sgn*hw*0.25,ty0+CH*0.02,cx+sgn*hw*0.38,ty0-CH*0.01); ctx.stroke(); spir(cx+sgn*hw*0.38,ty0-CH*0.01-D*0.015,D*0.015,1.4,sgn); } });
-  // the crown: a ring of light in concentric bands of two colours
-  push(0.82,()=>{ const ry=ty1-D*0.06, R=hw*0.42; const a=col(0.9), b=deep(0.15); for(let i=6;i>=1;i--){ ctx.fillStyle=css(i%2?a:b); ctx.beginPath(); ctx.arc(cx,ry,R*i/6,0,6.2832); ctx.fill(); } ctx.strokeStyle=css(ink,0.8); ctx.lineWidth=D*0.004; ctx.beginPath(); ctx.arc(cx,ry,R,0,6.2832); ctx.stroke(); });
-  // two doves on the top branches
-  const dove=(x,y,sgn)=>{ const s=D*0.042; ctx.fillStyle=css([250,248,242]); ctx.strokeStyle=css(ink,0.85); ctx.lineWidth=D*0.003;
-    ctx.beginPath(); ctx.ellipse(x,y,s*1.1,s*0.6,0,0,6.2832); ctx.fill(); ctx.stroke();                    // body
-    ctx.beginPath(); ctx.arc(x+sgn*s*1.05,y-s*0.45,s*0.38,0,6.2832); ctx.fill(); ctx.stroke();              // head
-    ctx.beginPath(); ctx.moveTo(x-sgn*s*0.2,y-s*0.2); ctx.lineTo(x-sgn*s*0.9,y-s*1.0); ctx.lineTo(x+sgn*s*0.4,y-s*0.35); ctx.closePath(); ctx.fill(); ctx.stroke();   // wing
-    ctx.beginPath(); ctx.moveTo(x-sgn*s*1.0,y); ctx.lineTo(x-sgn*s*1.7,y-s*0.35); ctx.lineTo(x-sgn*s*1.6,y+s*0.3); ctx.closePath(); ctx.fill(); ctx.stroke();      // tail
-    ctx.fillStyle=css(ink); ctx.beginPath(); ctx.arc(x+sgn*s*1.15,y-s*0.5,s*0.07,0,6.2832); ctx.fill(); };
-  push(0.94,()=>{ const ry=ty1-D*0.06, R=hw*0.42; dove(cx-R-D*0.06,ry+R*0.55,1); dove(cx+R+D*0.06,ry+R*0.55,-1); });   // two doves face each other at the crown
-  // outside the vesica: two small emblems in the lower corners — a crescent and a quartered circle
-  push(0.6,()=>{ const s=D*0.05, a=deep(0.6); ctx.fillStyle=css(a); ctx.beginPath(); ctx.arc(CW*0.12,CH*0.86,s,0,6.2832); ctx.fill(); ctx.fillStyle=ctx.fillStyle; const g=col(0.5); ctx.fillStyle=css(isBW?[226,224,218]:[g[0]*0.35+232*0.65,g[1]*0.35+214*0.65,g[2]*0.35+190*0.65]); ctx.beginPath(); ctx.arc(CW*0.12+s*0.4,CH*0.86-s*0.15,s*0.85,0,6.2832); ctx.fill(); });
-  push(0.7,()=>{ const s=D*0.05, x=CW*0.88, y=CH*0.86; const c1=col(0.3), c2=deep(0.75); for(let q=0;q<4;q++){ ctx.fillStyle=css(q%2?c1:c2); ctx.beginPath(); ctx.moveTo(x,y); ctx.arc(x,y,s,q*Math.PI/2,(q+1)*Math.PI/2); ctx.closePath(); ctx.fill(); } ctx.strokeStyle=css(ink,0.8); ctx.lineWidth=D*0.003; ctx.beginPath(); ctx.arc(x,y,s,0,6.2832); ctx.stroke(); });
-  ops.sort((a,b)=>a[0]-b[0]); for(const [t,f] of ops){ if(t>reveal+1e-9 && t>0) break; f(); }
-}
-
-// ── af Klint E: Altarpiece pyramid — triangle ascending to a disc on dark. ──
-function klintPhaseAltar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const sR = _seedRnd(91, ss, 0, 32); sR(); sR();
-  ctx.fillStyle=isBW?'#1c1c22':'#16121e';ctx.fillRect(0,0,CW,CH);
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  // Per-song variance: apex position, base width, disc size, step count.
-  const apexX = CW * (0.42 + sR()*0.16);
-  const apexY = CH * (0.08 + sR()*0.08);
-  const baseHalfWidth = CW * (0.27 + sR()*0.08);
-  const apex=[apexX, apexY];
-  const bl=[CW*0.5-baseHalfWidth, CH*0.9];
-  const br=[CW*0.5+baseHalfWidth, CH*0.9];
-  const stepsBase = Math.max(4,Math.min(24,Math.round(cn/4)));
-  const steps = Math.max(4, Math.round(stepsBase * (0.85 + sR()*0.30)));
-  const vis=Math.max(1,Math.ceil(reveal*steps));
-  for(let i=vis-1;i>=0;i--){
-    const t=i/steps;
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/steps)),gc,isBW);
-    const lx=apex[0]+(bl[0]-apex[0])*t, ly=apex[1]+(bl[1]-apex[1])*t;
-    const rx=apex[0]+(br[0]-apex[0])*t, ry=apex[1]+(br[1]-apex[1])*t;
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-    ctx.beginPath();ctx.moveTo(apex[0],apex[1]);ctx.lineTo(lx,ly);ctx.lineTo(rx,ry);ctx.closePath();ctx.fill();
-  }
-  // Golden disc — variable size.
-  if(reveal>0.2){
-    const discR = Math.min(CW,CH) * (0.04 + sR()*0.04);
-    ctx.fillStyle=isBW?'#d8d4c8':'#e8c84a';
-    ctx.beginPath();ctx.arc(apex[0],apex[1],discR,0,Math.PI*2);ctx.fill();
   }
 }
 
@@ -6912,6 +6200,143 @@ function klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       }
     }
   }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HILMA AF KLINT — variants 1–5: five paintings from the Paintings for the Temple
+// (0 stays the floating forms above, 6 the botanical chart below), read from the
+// music: the stage of life from the piece's character, a form for every phrase
+// (a spiral when the melody climbs, a seed when it falls, a flower when the
+// chords are full, a halved disc when it is loud), the sun the tonic, the
+// quarters the sections, the tree's branches its phrases.
+// ═══════════════════════════════════════════════════════════════════════════
+const _hkMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _hkCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+const _hkR=(a,ss)=>_seedRnd(a,ss,0,0);
+// her tempera: a song colour softened toward a pastel, kept flat
+function _hkPastel(rgb,k,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; const v=l+(235-l)*(k==null?0.45:k); return [v,v,v]; } return _hkMix(rgb,[246,240,228],k==null?0.42:k); }
+function _hk2DrawForm(ctx,f,D,rnd){
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  switch(f.kind){
+    case 'spiral': { // a snail: turns, width, the colour; drawn from the centre out
+      ctx.strokeStyle=_hkCss(f.col,f.a==null?0.95:f.a); ctx.lineWidth=Math.max(0.8,f.w||D*0.004); ctx.beginPath(); const steps=Math.max(24,Math.round(f.turns*36));
+      for(let s=0;s<=steps;s++){ const t=s/steps; const ang=(f.a0||0)+t*f.turns*6.2832*(f.dir||1); const r=t*f.r; const x=f.x+Math.cos(ang)*r, y=f.y+Math.sin(ang)*r*(f.sy||1); s?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke(); break; }
+    case 'flower': { const n=f.n||6; for(let p=0;p<n;p++){ const ang=(f.a0||0)+(p/n)*6.2832; ctx.save(); ctx.translate(f.x+Math.cos(ang)*f.r*0.55,f.y+Math.sin(ang)*f.r*0.55); ctx.rotate(ang); ctx.fillStyle=_hkCss(p%2&&f.col2?f.col2:f.col,f.a==null?0.92:f.a); ctx.beginPath(); ctx.ellipse(0,0,f.r*0.5,f.r*0.24,0,0,6.2832); ctx.fill(); if(f.ring){ ctx.strokeStyle=_hkCss(f.ring); ctx.lineWidth=Math.max(0.8,D*0.0025); ctx.stroke(); } ctx.restore(); }
+      ctx.fillStyle=_hkCss(f.core||f.col2||f.col); ctx.beginPath(); ctx.arc(f.x,f.y,f.r*0.26,0,6.2832); ctx.fill(); break; }
+    case 'seed': { ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.ang||0); ctx.fillStyle=_hkCss(f.col,f.a==null?0.92:f.a); ctx.beginPath(); ctx.ellipse(0,0,f.rx,f.ry,0,0,6.2832); ctx.fill(); if(f.ring){ ctx.strokeStyle=_hkCss(f.ring); ctx.lineWidth=Math.max(0.8,D*0.003); ctx.stroke(); } if(f.col2){ ctx.fillStyle=_hkCss(f.col2); ctx.beginPath(); ctx.ellipse(0,0,f.rx*0.42,f.ry*0.42,0,0,6.2832); ctx.fill(); } ctx.restore(); break; }
+    case 'half': { // her duality: a disc split by a line, one side each colour, a thin ring
+      ctx.fillStyle=_hkCss(f.col); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,f.ang,f.ang+3.1416); ctx.closePath(); ctx.fill(); ctx.fillStyle=_hkCss(f.col2); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,f.ang+3.1416,f.ang+6.2832); ctx.closePath(); ctx.fill();
+      if(f.ring){ ctx.strokeStyle=_hkCss(f.ring); ctx.lineWidth=Math.max(0.8,D*0.0028); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,6.2832); ctx.stroke(); } break; }
+    case 'rings': { for(let k=f.n;k>=1;k--){ ctx.fillStyle=_hkCss(k%2?f.col:f.col2,f.a==null?0.92:f.a); ctx.beginPath(); ctx.arc(f.x,f.y,f.r*k/f.n,0,6.2832); ctx.fill(); } break; }
+    case 'disc': { ctx.fillStyle=_hkCss(f.col,f.a==null?1:f.a); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,6.2832); ctx.fill(); if(f.ring){ ctx.strokeStyle=_hkCss(f.ring); ctx.lineWidth=Math.max(0.8,f.rw||D*0.003); ctx.stroke(); } break; }
+    case 'ring': { ctx.strokeStyle=_hkCss(f.col,f.a==null?1:f.a); ctx.lineWidth=Math.max(0.8,f.w||D*0.003); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,f.a0||0,f.a1==null?6.2832:f.a1); ctx.stroke(); break; }
+    case 'poly': { ctx.beginPath(); f.pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); if(f.col){ ctx.fillStyle=_hkCss(f.col,f.a==null?1:f.a); ctx.fill(); } if(f.ring){ ctx.strokeStyle=_hkCss(f.ring); ctx.lineWidth=Math.max(0.8,f.w||D*0.003); ctx.stroke(); } break; }
+    case 'curve': { // a smooth line through points, one width
+      const P=f.pts; if(P.length<2) break; ctx.strokeStyle=_hkCss(f.col,f.a==null?1:f.a); ctx.lineWidth=Math.max(0.6,f.w||D*0.0025); ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]);
+      for(let i=1;i<P.length-1;i++){ ctx.quadraticCurveTo(P[i][0],P[i][1],(P[i][0]+P[i+1][0])/2,(P[i][1]+P[i+1][1])/2); } ctx.lineTo(P[P.length-1][0],P[P.length-1][1]); ctx.stroke(); break; }
+    case 'text': { ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.rot||0); ctx.font=(f.weight||'400')+' '+Math.round(f.size)+'px "EB Garamond", Georgia, serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=_hkCss(f.col,f.a==null?0.9:f.a); ctx.fillText(f.text,0,0); ctx.restore(); break; }
+  }
+}
+function _hk2Draw(ctx,list,reveal,D,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_kdClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_hkR(f.id*29+71001,ss); rnd(); _hk2DrawForm(ctx,f,D,rnd); } }
+// the stage of life a piece belongs to (The Ten Largest): its ground and its palette
+function _hk2Stage(A){ const e=A.ch.energy, r=A.ch.register; if(e>0.62) return 'youth'; if(e<0.42&&r<0.5) return 'age'; if(r>0.6) return 'childhood'; return 'adulthood'; }
+const _HK_STAGE={ childhood:{ground:[70,96,150],  pal:[[244,236,200],[236,180,110],[230,120,130],[150,190,220]], ink:[240,236,220]},
+                  youth:    {ground:[232,150,104], pal:[[120,150,210],[240,210,120],[232,120,150],[130,190,160]], ink:[70,60,80]},
+                  adulthood:{ground:[238,222,140], pal:[[236,160,170],[170,140,200],[130,180,210],[244,236,200]], ink:[90,70,70]},
+                  age:      {ground:[196,170,200], pal:[[238,200,210],[180,210,220],[240,228,180],[150,130,170]], ink:[80,70,90]} };
+
+// ── 1 · The Ten Largest (1907) — the stage of life from the piece's character; a form
+//        for every phrase, floating on the tempera ground, joined by thin threads.
+function hk2_ten(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const st=_HK_STAGE[_hk2Stage(A)]; const r=_hkR(81000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); };
+  const tone=(rgb)=>isBW?_hkPastel(rgb,0.3,true):_hkMix(rgb,[250,246,236],0.3);
+  const ground=isBW?_hkPastel(st.ground,0.2,true):_hkMix(st.ground,A.pcCol(A.tonic,60),0.18); ctx.fillStyle=_hkCss(ground); ctx.fillRect(0,0,CW,CH);
+  const P=_kd2Phrases(A,14+Math.round(A.ch.density*8)); const n=P.length; const cols=Math.max(2,Math.round(Math.sqrt(n*CW/CH))), rows=Math.max(2,Math.ceil(n/cols));
+  const pos=P.map((p,k)=>{ const gx=(k%cols+0.5)/cols, gy=(Math.floor(k/cols)+0.5)/rows; return [CW*(0.1+0.8*gx)+(r()-.5)*CW*0.14, CH*(0.1+0.8*gy)+(r()-.5)*CH*0.1]; });
+  // the threads between consecutive forms, first
+  for(let k=1;k<n;k++){ const a=pos[k-1], b=pos[k]; push({kind:'curve',t:P[k].t0,pts:[a,[(a[0]+b[0])/2+(r()-.5)*D*0.2,(a[1]+b[1])/2+(r()-.5)*D*0.2],b],col:st.ink,a:0.45,w:D*0.0022}); }
+  P.forEach((p,k)=>{ const [x,y]=pos[k]; const c=tone(A.pcCol(p.pc,Math.round(p.top))), c2=tone(A.pcCol(p.pc2,Math.round(p.top)+12)); const pal=st.pal[k%st.pal.length]; const col=isBW?c:_hkMix(c,pal,0.35), col2=isBW?c2:_hkMix(c2,st.pal[(k+1)%st.pal.length],0.35);
+    const R=D*(0.05+Math.min(1,p.n/40)*0.05+p.v*0.06); const rise=k+1<n?P[k+1].top-p.top:0; const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=ev.length?ev.reduce((s,e)=>s+e.nn,0)/ev.length:2;
+    if(p.vmax>=A.vHi&&r()<0.6) push({kind:'half',t:p.t,x,y,r:R,ang:r()*3.14,col,col2,ring:st.ink});
+    else if(nn>=3.2) push({kind:'flower',t:p.t,x,y,r:R*1.15,n:5+Math.round(r()*4),a0:r()*6.28,col,col2,core:st.ink});
+    else if(rise>1) push({kind:'spiral',t:p.t,x,y,r:R*1.1,turns:2+Math.round(p.n/8),w:D*(0.004+p.v*0.004),col:isBW?st.ink:_hkMix(col,st.ink,0.3),dir:r()<0.5?1:-1,a0:r()*6.28});
+    else push({kind:'seed',t:p.t,x,y,rx:R*0.65,ry:R*1.05,ang:(r()-.5)*1.2,col,col2,ring:st.ink});
+    if(p.vmax>=A.vHi) push({kind:'text',t:p.t1,x:x+R*1.3,y:y-R*0.9,size:D*0.035,text:r()<0.5?'u':'w',col:st.ink,rot:(r()-.5)*0.5}); });
+  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 2 · Altarpiece No. 1 (1915) — the black ground, the triangle of bands climbing to
+//        the sun. A band for every phrase in its own colour; the sun is the tonic.
+function hk2_altar(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_hkR(82000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); };
+  ctx.fillStyle=isBW?'#171717':'#14101a'; ctx.fillRect(0,0,CW,CH);
+  const P=_kd2Phrases(A,10+Math.round(A.ch.density*10)); const n=P.length; const apex=[CW*0.5,CH*(0.16+(1-A.ch.register)*0.06)], base=CH*0.92, hw=CW*(0.3+A.ch.energy*0.08);
+  for(let i=n-1;i>=0;i--){ const t0=i/n, t1=(i+1)/n; const y0=apex[1]+(base-apex[1])*t0, y1=apex[1]+(base-apex[1])*t1; const w0=hw*t0, w1=hw*t1; const p=P[n-1-i]; const c=A.pcCol(p.pc,Math.round(p.top)); const col=isBW?_hkPastel(c,0.1,true):_hkMix(c,[255,255,255],0.1+p.v*0.15);
+    push({kind:'poly',t:p.t,pts:[[apex[0]-w0,y0],[apex[0]+w0,y0],[apex[0]+w1,y1],[apex[0]-w1,y1]],col,ring:[20,16,24],w:D*0.002}); }
+  // the sun: the tonic in gold, a thin ring, the small rainbow ring inside
+  const sun=isBW?[220,216,204]:_hkMix([236,196,70],A.pcCol(A.tonic,72),0.35); const sr=D*(0.07+A.ch.energy*0.03);
+  push({kind:'disc',t:0.92,x:apex[0],y:apex[1],r:sr,col:sun,ring:[250,240,210],rw:D*0.003});
+  const spec=[[220,60,60],[236,140,50],[240,210,80],[90,170,100],[70,120,200],[120,80,160]]; spec.forEach((c,i)=>push({kind:'ring',t:0.94+i*0.005,x:apex[0],y:apex[1],r:sr*(0.55-i*0.06),col:isBW?_hkPastel(c,0.5,true):c,w:D*0.0035}));
+  push({kind:'poly',t:0.99,pts:[[apex[0],apex[1]-sr*0.3],[apex[0]-sr*0.25,apex[1]+sr*0.15],[apex[0]+sr*0.25,apex[1]+sr*0.15]],col:[20,16,24]});
+  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 3 · The Swan, No. 17 (1915) — the circle quartered on white; each quarter a
+//        section of the piece in its colour, the cube at the centre the tonic, the
+//        rays the voices.
+function hk2_quarters(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_hkR(84000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); }; const K=[24,22,24], W=[248,245,238];
+  ctx.fillStyle=_hkCss(W); ctx.fillRect(0,0,CW,CH);
+  const cx=CW*0.5, cy=CH*0.5, R=D*0.4; const P=_kd2Phrases(A,4); const Q=[0,1,2,3].map(i=>P[Math.min(P.length-1,i)]);
+  Q.forEach((p,i)=>{ const c=A.pcCol(p.pc,Math.round(p.top)); const col=isBW?_hkPastel(c,0.3,true):_hkMix(c,W,0.25); const a0=-1.5708+i*1.5708;
+    const pts=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts.push([cx+Math.cos(a)*R,cy+Math.sin(a)*R]); } push({kind:'poly',t:0.05+i*0.22,pts,col:i%2?col:(isBW?[60,60,60]:_hkMix(col,K,0.7)),ring:K,w:D*0.003});
+    // inside each quarter: a smaller arc of the other colour, and the rays for its voices
+    const pts2=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts2.push([cx+Math.cos(a)*R*0.55,cy+Math.sin(a)*R*0.55]); } push({kind:'poly',t:0.1+i*0.22,pts:pts2,col:i%2?(isBW?[200,200,200]:_hkMix(A.pcCol(p.pc2,60),W,0.3)):W,ring:K,w:D*0.002});
+    const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=ev.length?Math.round(ev.reduce((s,e)=>s+e.nn,0)/ev.length):2; for(let k=0;k<nn+1;k++){ const a=a0+(k+0.5)/(nn+1)*1.5708; push({kind:'curve',t:0.15+i*0.22,pts:[[cx+Math.cos(a)*R*0.58,cy+Math.sin(a)*R*0.58],[cx+Math.cos(a)*R*0.98,cy+Math.sin(a)*R*0.98]],col:K,w:D*0.002}); } });
+  push({kind:'ring',t:0.9,x:cx,y:cy,r:R,col:K,w:D*0.004}); push({kind:'curve',t:0.9,pts:[[cx,cy-R],[cx,cy+R]],col:K,w:D*0.003}); push({kind:'curve',t:0.9,pts:[[cx-R,cy],[cx+R,cy]],col:K,w:D*0.003});
+  const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60); const q=D*0.07; push({kind:'poly',t:0.95,pts:[[cx-q,cy-q],[cx+q,cy-q],[cx+q,cy+q],[cx-q,cy+q]],col:tc,ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx-q,cy-q],[cx-q*0.5,cy-q*1.5],[cx+q*1.5,cy-q*1.5],[cx+q,cy-q]],col:_hkMix(tc,W,0.4),ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx+q,cy-q],[cx+q*1.5,cy-q*1.5],[cx+q*1.5,cy+q*0.5],[cx+q,cy+q]],col:_hkMix(tc,K,0.4),ring:K,w:D*0.003});
+  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 4 · The Tree of Knowledge (1913) — the symmetrical tree inside its almond: the
+//        trunk, a branch for every phrase, a leaf for every chord in the phrase's colour,
+//        the birds on the accents, the heart at the crown the tonic.
+function hk2_tree(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_hkR(85000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); }; const INK=isBW?[60,58,56]:[86,70,60];
+  ctx.fillStyle=isBW?'#ece9e2':'#efe6d2'; ctx.fillRect(0,0,CW,CH);
+  const cx=CW*0.5; const pts=[]; for(let k=0;k<=40;k++){ const a=k/40*6.2832; pts.push([cx+Math.cos(a)*CW*0.42, CH*0.5+Math.sin(a)*CH*0.46]); } push({kind:'poly',t:0,pts,col:isBW?[232,230,226]:_hkMix([236,226,206],A.pcCol(A.tonic,60),0.12),ring:INK,w:D*0.003});
+  const top=CH*(0.2+(1-A.ch.register)*0.08), bot=CH*0.72; push({kind:'poly',t:0.02,pts:[[cx-D*0.012,top],[cx+D*0.012,top],[cx+D*0.02,bot],[cx-D*0.02,bot]],col:INK});
+  for(let k=0;k<4;k++){ const a=(k-1.5)*0.5; push({kind:'curve',t:0.03,pts:[[cx,bot],[cx+Math.sin(a)*D*0.1,bot+D*0.08],[cx+Math.sin(a)*D*0.2,bot+D*0.16]],col:INK,w:D*0.004}); }   // the roots
+  const P=_kd2Phrases(A,8+Math.round(A.ch.density*6)); const n=P.length;
+  P.forEach((p,i)=>{ const u=(i+0.5)/n; const y=bot-(bot-top)*u; const len=CW*(0.08+(1-u)*0.24)*(0.8+p.v*0.4); const side=i%2?1:-1; const c=A.pcCol(p.pc,Math.round(p.top)); const leaf=isBW?_hkPastel(c,0.3,true):_hkMix(c,[250,244,230],0.25);
+    for(const sd of [side,-side]){ const ex=cx+sd*len, ey=y-D*0.06-p.v*D*0.04; push({kind:'curve',t:p.t0,pts:[[cx,y],[cx+sd*len*0.5,y-D*0.02],[ex,ey]],col:INK,w:D*0.0035});
+      const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nl=Math.min(9,Math.max(2,Math.round(ev.length/3))); for(let k=0;k<nl;k++){ const q=(k+1)/(nl+1); const lx=cx+sd*len*q, ly=y-D*0.02*q*2-(ey-y)*(-q)*0; push({kind:'seed',t:p.t0+(p.t1-p.t0)*q,x:lx,y:ly-D*0.025,rx:D*0.012,ry:D*0.02,ang:sd*0.6,col:leaf,ring:INK}); }
+      if(p.vmax>=A.vHi){ push({kind:'curve',t:p.t1,pts:[[ex-D*0.02,ey-D*0.03],[ex,ey-D*0.05],[ex+D*0.02,ey-D*0.03]],col:INK,w:D*0.003}); } } });
+  const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60); push({kind:'disc',t:0.95,x:cx,y:top-D*0.05,r:D*0.045,col:_hkMix(tc,[250,244,230],0.2),ring:INK,rw:D*0.003});
+  push({kind:'poly',t:0.97,pts:[[cx,top-D*0.03],[cx-D*0.022,top-D*0.062],[cx-D*0.01,top-D*0.078],[cx,top-D*0.066],[cx+D*0.01,top-D*0.078],[cx+D*0.022,top-D*0.062]],col:isBW?[90,90,90]:[200,70,70]});
+  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 5 · Primordial Chaos (1906–07) — the deep blue-green of the first series: the melody
+//        as one long snail of time, white; small spirals and shells at the accents; the
+//        letters at the phrases; a seed of gold for the tonic.
+function hk2_chaos(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_hkR(86000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); };
+  const ground=isBW?[40,42,46]:_hkMix([28,58,82],A.pcCol(A.tonic,48),0.25); ctx.fillStyle=_hkCss(ground); ctx.fillRect(0,0,CW,CH);
+  const g=ctx.createRadialGradient(CW*0.5,CH*0.45,0,CW*0.5,CH*0.45,D*0.8); g.addColorStop(0,'rgba(255,255,255,0.06)'); g.addColorStop(1,'rgba(0,0,0,0.25)'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+  const W=[244,240,226], Y=isBW?[200,200,200]:[236,200,90];
+  // the snail of time: angle by time, radius growing with it, the register breathing in the radius
+  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/4),60,260)); const cx=CW*0.5, cy=CH*0.46; const turns=2.4+A.ch.density; const pts=E.map(e=>{ const a=e.t*turns*6.2832; const rad=D*(0.04+0.38*e.t)+(A.reg(e.top)-0.5)*D*0.05; return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad*1.1]; });
+  push({kind:'curve',t:0.02,pts,col:W,w:D*0.0035,a:0.9});
+  E.forEach((e,i)=>{ if(!e.acc) return; const p=pts[i]; const c=isBW?W:_hkMix(A.col(e.i),W,0.4); push({kind:'spiral',t:e.t,x:p[0],y:p[1],r:D*(0.02+e.v*0.035),turns:2+Math.round(e.v*2),w:D*0.0025,col:c,dir:i%2?1:-1,a0:r()*6.28}); });
+  const P=_kd2Phrases(A,12); P.forEach((p,i)=>{ const a=p.t*turns*6.2832; const rad=D*(0.04+0.38*p.t)+D*0.07; push({kind:'text',t:p.t0,x:cx+Math.cos(a)*rad,y:cy+Math.sin(a)*rad*1.1,size:D*0.04,text:p.pc===A.tonic?'u':'w',col:Y,rot:a+1.5708,a:0.85}); });
+  push({kind:'seed',t:0.0,x:cx,y:cy,rx:D*0.025,ry:D*0.04,ang:0.3,col:Y,ring:W});
+  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+function _hk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
+  switch(pick){ case 2: return hk2_altar(ctx,CW,CH,chords,lim,gc,ss,mode); case 3: return hk2_quarters(ctx,CW,CH,chords,lim,gc,ss,mode); case 4: return hk2_tree(ctx,CW,CH,chords,lim,gc,ss,mode); case 5: return hk2_chaos(ctx,CW,CH,chords,lim,gc,ss,mode); default: return hk2_ten(ctx,CW,CH,chords,lim,gc,ss,mode); }
 }
 
 // ── Gold (Gustav Klimt) ──────────────────────────────────────────────────────
@@ -8907,47 +8332,185 @@ function monetPhasePont(ctx,CW,CH,chords,lim,gc,ss,mode){
 }
 
 
-// ─── Hokusai (Woodblock) — 6 variants ───────────────────────────────────────
-// All flat colour fields + Prussian-blue contours, no gradients. Beige paper
-// ground throughout. Woodblock rules: every region is one solid colour, hard
-// edges, dark contour line.
-//  0/Wave:    Great Wave at Kanagawa — layered sea + foam claws
-//  1/Fuji:    Red/grey Mt Fuji silhouette + sky bands
-//  2/Blossom: Plum/cherry branch with circular flowers
-//  3/Storm:   Lightning zigzag through dark sky
-//  4/Rain:    Diagonal rain lines + muted village band
-//  5/Bridge:  Drum bridge arch over water + reeds
+// ─── Hokusai (Woodblock) ─────────────────────────────────────────────────────
+// Flat colour fields, stepped bokashi, one Prussian ink-set from the song's
+// tonal centre (_hokusaiInk). Every variant is a print from the Thirty-six Views
+// or the flower-and-bird series, painted by _wvPaint below and read from the
+// music: the print is composed once from the whole piece and grows with it.
 function drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  const _pn = _capN(6);
+  const _pn = _capN(8);
   const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
-  if(_fpick === 1){ hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 2){ hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 3){ hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 4){ hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  if(_fpick === 5){ hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode); return; }
-  hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode);
+  _wvPaint(_fpick, ctx, CW, CH, chords, lim, gc, ss, mode);
 }
 
-// ── Shared palette + helpers ──
-// Reveal choreography: every Hokusai print is composed once (seed + whole song)
-// and then GROWS with the music — elements enter in a fixed order as the
-// played fraction r = lim/cn advances. _hkWin(r,a,b) eases 0→1 over r∈[a,b].
-function _hkReveal(lim, chords){ const cn=Math.max(1,(chords&&chords.length)||1); return Math.max(0, Math.min(1, lim/cn)); }
-function _hkWin(r, a, b){ const x=Math.max(0, Math.min(1, (r-a)/Math.max(1e-6, b-a))); return x*x*(3-2*x); }
-const HOKUSAI_PRUSSIAN = '#1B3A5B';
-const HOKUSAI_PAPER = '#EAE3CE';
-// Convert any [r,g,b] toward the woodblock palette: drop saturation, blend
-// with Prussian to keep all panels visually unified.
-function _hokusaiMute(r, g, b, blendAmt, dim){
-  const ba = blendAmt == null ? 0.4 : blendAmt;
-  const dm = dim == null ? 1 : dim;
-  const mr = Math.round((r * (1 - ba) + 27 * ba) * dm);
-  const mg = Math.round((g * (1 - ba) + 58 * ba) * dm);
-  const mb = Math.round((b * (1 - ba) + 91 * ba) * dm);
-  return `rgb(${Math.max(0,Math.min(255,mr))},${Math.max(0,Math.min(255,mg))},${Math.max(0,Math.min(255,mb))})`;
+// ═══════════════════════════════════════════════════════════════════════════
+// Hokusai · the woodblock read from the music. The print is composed once from
+// the whole piece and grows with it: the sea rises with the swells (one per
+// passage, the great one at the climax), the foam claws are the accents, the
+// clouds are the phrases at their register, the lightning is the melody of the
+// loudest phrase, the papers in the gust are the notes. Flat colour fields,
+// stepped bokashi bands, one Prussian ink-set from the song's tonal centre.
+// ═══════════════════════════════════════════════════════════════════════════
+function _wvSetup(chords,lim,gc,mode){ const I=_hokusaiInk(chords,lim,gc); const A=_kd2Analyze(chords,gc,mode); const cn=chords.length; const r=Math.max(0,Math.min(1,lim/cn)); const bw=mode==='bw';
+  const mix=_hkMix, css=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`; const paper=bw?[232,230,224]:I.paper;
+  const groups=(n)=>_kd2Phrases(A,Math.max(1,n)).map(g=>({t0:g.t0,t1:g.t1,t:g.t,dur:g.n/cn,reg:A.reg(g.top),v:g.v,vmax:g.vmax,n:g.n,a:g.a,b:g.b}));
+  const climax=()=>{ let b=A.phrases[0]||{a:0,b:cn,t:0.5,vmax:0.7,top:64,v:0.6}; for(const p of A.phrases) if(p.vmax>b.vmax) b=p; return b; };
+  const regAll=A.reg(A.phrases.reduce((s,p)=>s+p.top*p.n,0)/Math.max(1,cn)); const density=A.ch?A.ch.density:0.12;
+  const accents=(a,b)=>{ let k=0; for(let i=a;i<b;i++){ const e=A.ev[i]; if(e&&(e.v>=A.vHi||(A.gapHi>0&&e.gap>A.gapHi))) k++; } return k; };
+  // the melody contour over chords a..b, n samples of register 0..1 (low-passed)
+  const contour=(a,b,n)=>{ const out=[]; const w=Math.max(1,Math.round((b-a)/n)); for(let i=0;i<n;i++){ const c=a+(b-a)*i/Math.max(1,n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(c-w));j<=Math.min(cn-1,Math.round(c+w));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; };
+  return {I,A,cn,r,bw,mix,css,paper,D:I.D,M:I.M,L:I.L,Acc:I.A,sumi:I.sumi,groups,climax,regAll,density,energy:I.energy,dyn:A.ch?A.ch.dynRange:0.5,accents,contour,win:_hkWin}; }
+// bokashi: a stepped gradient of flat bands (a woodblock has no gradients), c0 at y → c1 at y+h
+function _wvBok(ctx,S,x,y,w,h,c0,c1,n){ for(let i=0;i<n;i++){ ctx.fillStyle=S.css(S.mix(c0,c1,i/(n-1))); ctx.fillRect(x,y+h*i/n,w,h/n+1); } }
+// a smooth path through points (Catmull-Rom as beziers); close=true closes it
+function _wvPath(ctx,P,close){ ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]); for(let i=0;i<P.length-1;i++){ const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||p2; ctx.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]); } if(close) ctx.closePath(); }
+// a foam claw hanging from the lip at p, pointing along (dx,dy), length len
+function _wvClaw(ctx,p,dx,dy,len,col){ const nx=-dy,ny=dx; ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(p[0]-nx*len*0.22,p[1]-ny*len*0.22); ctx.quadraticCurveTo(p[0]+dx*len*0.45-nx*len*0.3,p[1]+dy*len*0.45-ny*len*0.3,p[0]+dx*len,p[1]+dy*len); ctx.quadraticCurveTo(p[0]+dx*len*0.5+nx*len*0.1,p[1]+dy*len*0.5+ny*len*0.1,p[0]+nx*len*0.22,p[1]+ny*len*0.22); ctx.closePath(); ctx.fill(); }
+// Fuji: summit (sx,sy), feet at (x0,y0) and (x1,y1), snow fingers down the slopes
+function _wvFuji(ctx,S,sx,sy,x0,y0,x1,y1,body,snow,fingers,rnd){ const sw=(x1-x0)*0.05;
+  ctx.fillStyle=S.css(body); ctx.beginPath(); ctx.moveTo(x0,y0); ctx.quadraticCurveTo(sx-(sx-x0)*0.45,sy+(y0-sy)*0.42,sx-sw,sy); ctx.lineTo(sx+sw,sy); ctx.quadraticCurveTo(sx+(x1-sx)*0.45,sy+(y1-sy)*0.42,x1,y1); ctx.closePath(); ctx.fill();
+  if(fingers>0){ const h=(y0-sy)*0.16; ctx.fillStyle=S.css(snow); ctx.beginPath(); ctx.moveTo(sx-sw*2.6,sy+h*0.55); ctx.lineTo(sx-sw,sy); ctx.lineTo(sx+sw,sy); ctx.lineTo(sx+sw*2.6,sy+h*0.55);
+    for(let i=fingers;i>=0;i--){ const u=i/fingers; const x=sx-sw*2.6+sw*5.2*u; const fy=sy+h*(0.5+(i%2?0.5+0.4*rnd():0.15)); ctx.lineTo(x+sw*0.3,fy-h*0.1); ctx.lineTo(x,fy); } ctx.closePath(); ctx.fill(); } }
+// ── VARIANT: 0 The Great Wave off Kanagawa · 1 Fine Wind, Clear Morning (Red Fuji) · 2 Thunderstorm
+// beneath the Summit · 3 Kajikazawa in Kai Province (aizuri-e) · 4 Masculine Wave · 5 Poppies in the
+// Wind · 6 Ejiri in Suruga (the gust) · 7 Bullfinch and Weeping Cherry. Free: 0 and 1.
+function _wvPaint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_wvSetup(chords,lim,gc,mode); const {css,mix,paper,D,M,L,Acc,sumi,r,win}=S; const rnd=_seedRnd(81001+pick*17,ss,0,0); rnd(); const W=CW,H=CH, Dm=Math.min(W,H);
+  ctx.fillStyle=css(paper); ctx.fillRect(0,0,W,H); ctx.lineCap='round'; ctx.lineJoin='round';
+  const c=S.climax(); const nP=S.A.phrases.length;
+  switch(pick){
+    case 1: { // Fine Wind, Clear Morning (Red Fuji) — the clouds are the phrases at their register, the snow fingers the accents, the trees the chords
+      _wvBok(ctx,S,0,0,W,H*0.42,mix(D,paper,0.08),paper,9);
+      const G=S.groups(Math.min(7,Math.max(3,Math.round(nP/8)))); const rr=_seedRnd(81200,ss,0,0); rr();
+      G.forEach((g,i)=>{ if(r<g.t0+0.02) return; const y=H*(0.06+0.3*(1-g.reg)), x0=W*(0.02+0.7*g.t0), len=W*Math.max(0.12,Math.min(0.5,g.dur*1.6+0.08)); const h=H*(0.012+0.012*g.v); ctx.fillStyle=css(paper);
+        const n=Math.max(3,Math.round(len/(h*2.2))); for(let k=0;k<n;k++){ const x=x0+len*(k+0.5)/n; ctx.beginPath(); ctx.ellipse(x,y,len/n*0.75,h*(0.8+0.4*rr()),0,0,6.2832); ctx.fill(); } });
+      const sy=H*(0.14+0.2*(1-S.regAll)), sx=W*0.62; const rise=win(r,0,0.5); const sy2=H*0.92-(H*0.92-sy)*Math.max(0.03,rise);
+      _wvFuji(ctx,S,sx,sy2,-W*0.02,H*0.92,W*1.02,H*0.8,S.bw?mix(D,paper,0.35):mix(Acc,sumi,0.1),paper,r>0.5?3+Math.min(6,S.accents(c.a,c.b)):0,rnd);
+      // the forest: a dark scalloped band along the foot, dotted with trees — one dot per few chords
+      const fy=H*0.74; ctx.fillStyle=css(mix(D,sumi,0.35)); ctx.beginPath(); ctx.moveTo(-W*0.02,H*0.92); for(let i=0;i<=24;i++){ const u=i/24; const x=-W*0.02+W*1.04*u; const yy=fy+H*0.1*u+H*0.02*Math.sin(u*31+1)+H*0.012*Math.sin(u*77); ctx.lineTo(x,Math.max(yy,sy2+(H*0.92-sy2)*0.55)); } ctx.lineTo(W*1.02,H); ctx.lineTo(-W*0.02,H); ctx.closePath(); ctx.fill();
+      const nd=Math.round(Math.min(160,30+S.cn*0.12)*win(r,0.3,0.9)); ctx.fillStyle=css(mix(M,paper,0.25)); for(let i=0;i<nd;i++){ const u=rr(); const x=-W*0.02+W*1.04*u, yy=fy+H*0.1*u+H*0.02*Math.sin(u*31+1)-H*0.03*rr()*rr(); const d=Dm*0.004; ctx.beginPath(); ctx.ellipse(x,yy,d,d*1.5,0,0,6.2832); ctx.fill(); }
+      break; }
+    case 2: { // Thunderstorm beneath the Summit — the lightning is the melody of the loudest phrase; the cloud rises with the energy
+      _wvBok(ctx,S,0,0,W,H*0.5,mix(D,paper,0.35),mix(D,paper,0.75),8);
+      const sy=H*(0.12+0.18*(1-S.regAll)); const rise=win(r,0,0.45); const sy2=H*0.95-(H*0.95-sy)*Math.max(0.03,rise);
+      _wvFuji(ctx,S,W*0.58,sy2,-W*0.02,H*0.95,W*1.02,H*0.86,mix(D,sumi,0.3),paper,r>0.45?2+Math.min(5,S.accents(c.a,c.b)):0,rnd);
+      const cy=H*(0.72-0.14*S.energy); ctx.fillStyle=css(mix(sumi,D,0.25)); ctx.beginPath(); ctx.moveTo(-W*0.02,H); ctx.lineTo(-W*0.02,cy+H*0.04); for(let i=0;i<=16;i++){ const u=i/16; ctx.lineTo(-W*0.02+W*1.04*u,cy+H*0.05*Math.sin(u*9+2)+H*0.03*Math.sin(u*23)); } ctx.lineTo(W*1.02,H); ctx.closePath(); ctx.fill();
+      if(r>0.5){ const n=Math.min(12,Math.max(6,c.b-c.a)); const C=S.contour(c.a,c.b,n); const P=[]; for(let i=0;i<n;i++){ const u=i/(n-1); P.push([W*(0.12+0.7*u),cy+H*0.02+H*0.2*u+H*0.16*(0.5-C[i])+(i%2?-1:1)*H*(0.012+0.02*rnd())]); }
+        const k=win(r,0.5,0.75); const m=Math.max(2,Math.round(P.length*k)); const lc=css(S.bw?paper:mix(mix(Acc,[250,200,120],0.5),paper,0.25)); ctx.strokeStyle=lc; ctx.lineWidth=Math.max(2.5,Dm*0.01); ctx.beginPath(); P.slice(0,m).forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+        ctx.lineWidth=Math.max(1,Dm*0.0035); for(let j=3;j<m-2;j+=4){ const p=P[j]; const d=(j%8<4)?1:-1; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(p[0]+W*0.04,p[1]+d*H*0.035); ctx.lineTo(p[0]+W*0.09,p[1]+d*H*0.03); ctx.lineTo(p[0]+W*0.12,p[1]+d*H*0.07); ctx.stroke(); } }
+      break; }
+    case 3: { // Kajikazawa in Kai Province (aizuri-e) — one blue ink: the fisherman's lines are the voices, the crests the phrases, Fuji in the mist as the register
+      const B=S.bw?mix(D,sumi,0.3):mix(D,[20,52,96],0.5); const Mb=mix(B,paper,0.4), Lb=mix(B,paper,0.72);
+      _wvBok(ctx,S,0,0,W,H*0.3,mix(B,paper,0.3),paper,7);
+      const fh=H*(0.16+0.16*S.regAll); ctx.fillStyle=css(Lb); ctx.beginPath(); ctx.moveTo(W*0.28,H*0.6); ctx.quadraticCurveTo(W*0.5,H*0.6-fh*0.5,W*0.68,H*0.6-fh); ctx.lineTo(W*0.72,H*0.6-fh); ctx.quadraticCurveTo(W*0.9,H*0.6-fh*0.5,W*1.05,H*0.6); ctx.closePath(); ctx.fill();
+      _wvBok(ctx,S,0,H*0.5,W,H*0.14,paper,Mb,6); ctx.fillStyle=css(Mb); ctx.fillRect(0,H*0.63,W,H*0.37);
+      // the wave-line ornament: a crest per phrase, curled the harder the louder, drifting right with time
+      const G=S.groups(Math.min(14,Math.max(6,Math.round(nP/4)))); const rr=_seedRnd(81300,ss,0,0); rr(); ctx.strokeStyle=css(paper); ctx.lineWidth=Math.max(1.2,Dm*0.0035);
+      G.forEach((g,i)=>{ if(r<g.t0+0.03) return; const row=i%3; const x=W*(0.3+0.72*((g.t*1.3+row*0.37)%1)), y=H*(0.66+0.1*row+0.05*rr()); const s=Dm*(0.03+0.06*g.vmax);
+        ctx.beginPath(); ctx.moveTo(x-s*1.6,y+s*0.3); ctx.quadraticCurveTo(x-s*0.6,y-s*0.1,x,y-s*0.8); ctx.quadraticCurveTo(x+s*0.6,y-s*1.3,x+s*0.5,y-s*0.3); ctx.quadraticCurveTo(x+s*0.4,y+s*0.1,x+s*0.05,y-s*0.1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x-s*1.4,y+s*0.7); ctx.quadraticCurveTo(x-s*0.3,y+s*0.3,x+s*0.9,y+s*0.6); ctx.stroke(); });
+      // the rock, the fisherman, the boy, the lines
+      ctx.fillStyle=css(B); _wvPath(ctx,[[-W*0.02,H*0.98],[-W*0.02,H*0.52],[W*0.1,H*0.44],[W*0.26,H*0.4],[W*0.4,H*0.43],[W*0.47,H*0.5],[W*0.44,H*0.62],[W*0.3,H*0.7],[W*0.18,H*0.84],[W*0.1,H*1.02]],true); ctx.fill();
+      ctx.strokeStyle=css(Mb); ctx.lineWidth=Math.max(1,Dm*0.004); for(let i=0;i<5;i++){ ctx.beginPath(); ctx.moveTo(W*(0.02+0.06*i),H*(0.5+0.04*i)); ctx.quadraticCurveTo(W*(0.14+0.06*i),H*(0.52+0.05*i),W*(0.3+0.03*i),H*(0.46+0.07*i)); ctx.stroke(); }
+      if(r>0.3){ ctx.fillStyle=css(mix(B,sumi,0.6)); _wvPath(ctx,[[W*0.36,H*0.43],[W*0.37,H*0.36],[W*0.4,H*0.31],[W*0.44,H*0.3],[W*0.46,H*0.33],[W*0.445,H*0.38],[W*0.43,H*0.43]],true); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(W*0.45,H*0.29,Dm*0.028,Dm*0.012,-0.3,0,6.2832); ctx.fill(); // the hat
+        _wvPath(ctx,[[W*0.3,H*0.41],[W*0.3,H*0.36],[W*0.32,H*0.34],[W*0.34,H*0.36],[W*0.335,H*0.41]],true); ctx.fill(); ctx.beginPath(); ctx.arc(W*0.32,H*0.335,Dm*0.012,0,6.2832); ctx.fill();
+        ctx.strokeStyle=css(sumi); ctx.lineWidth=Math.max(1,Dm*0.003); ctx.beginPath(); ctx.moveTo(W*0.42,H*0.34); ctx.lineTo(W*0.56,H*0.24); ctx.stroke();
+        const nl=Math.min(5,2+Math.round(S.density*20)); ctx.strokeStyle=css(Lb); ctx.lineWidth=Math.max(0.8,Dm*0.0018); for(let i=0;i<nl;i++){ const k=win(r,0.3+0.1*i,0.5+0.1*i); if(k<=0) continue; const ex=W*(0.6+0.3*(i/Math.max(1,nl-1)))+W*0.08*(S.regAll-0.5), ey=H*(0.58+0.14*(1-S.regAll)+0.05*i); ctx.beginPath(); ctx.moveTo(W*0.56,H*0.24); ctx.lineTo(W*0.56+(ex-W*0.56)*k,H*0.24+(ey-H*0.24)*k); ctx.stroke(); } }
+      break; }
+    case 4: { // Masculine Wave — the piece as one wave: the crest is the melody, a curl at every accent, foam for every chord
+      _wvBok(ctx,S,0,0,W,H*0.3,mix(D,paper,0.55+0.3*(1-S.energy)),paper,7);
+      const n=28; const C=S.contour(0,S.cn,n); const P=[]; for(let i=0;i<n;i++){ const u=i/(n-1); P.push([-W*0.02+W*1.04*u,H*(0.3+0.22*(1-C[i])+0.08*Math.sin(u*6.3))]); }
+      const k=win(r,0,0.95); const m=Math.max(2,Math.round(n*k)); const Q=P.slice(0,m);
+      ctx.fillStyle=css(D); _wvPath(ctx,Q.concat([[Q[m-1][0],H*1.02],[-W*0.02,H*1.02]]),true); ctx.fill();
+      const ns=4+Math.round(S.density*30); for(let j=1;j<=ns;j++){ const off=H*0.035*j; ctx.strokeStyle=css(j%2?L:M,0.9); ctx.lineWidth=Math.max(1,Dm*0.004); _wvPath(ctx,Q.map(p=>[p[0],p[1]+off]),false); ctx.stroke(); }
+      ctx.strokeStyle=css(paper); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wvPath(ctx,Q,false); ctx.stroke();
+      const E=_kd2Events(S.A,Math.round(24+S.density*80)); const rr=_seedRnd(81400,ss,0,0); rr(); const keep=new Set(E.filter(e=>e.acc).sort((a,b)=>b.v-a.v).slice(0,7).map(e=>e.i));
+      E.forEach(e=>{ if(e.t>k) return; if(e.acc&&!keep.has(e.i)) e=Object.assign({},e,{acc:false}); const u=e.t; const i=Math.min(n-2,Math.floor(u*(n-1))); const f=u*(n-1)-i; const x=P[i][0]+(P[i+1][0]-P[i][0])*f, y=P[i][1]+(P[i+1][1]-P[i][1])*f;
+        if(e.acc){ const s=Dm*(0.035+0.08*e.v); const cx=x, cy=y-s*0.7; ctx.fillStyle=css(D); ctx.beginPath(); ctx.arc(cx,cy,s,0.9,3.5,true); ctx.arc(cx,cy,s*0.42,3.5,0.9,false); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(x+s*1.1,y+s*0.35); ctx.lineTo(cx+Math.cos(0.9)*s,cy+Math.sin(0.9)*s); ctx.lineTo(cx+Math.cos(0.9)*s*0.48,cy+Math.sin(0.9)*s*0.48); ctx.lineTo(x-s*0.3,y+s*0.35); ctx.closePath(); ctx.fill();
+          const nc=3+Math.round(e.v*4); for(let q=0;q<nc;q++){ const a=2.9+0.7*q/(nc-1); _wvClaw(ctx,[cx+Math.cos(a)*s*0.98,cy+Math.sin(a)*s*0.98],-0.5-0.2*rr(),0.85,s*(0.4+0.35*rr()),css(paper)); } }
+        else { ctx.fillStyle=css(paper); const d=Dm*(0.002+0.006*e.v); ctx.beginPath(); ctx.arc(x+(rr()-.5)*W*0.03,y+rr()*H*0.05,d,0,6.2832); ctx.fill(); } });
+      break; }
+    case 5: { // Poppies in the Wind — a stem per passage, bent by the energy; the bloom's size the dynamics, its height the register, petals torn off at the accents
+      const G=S.groups(Math.min(5,Math.max(3,Math.round(nP/10)))); const n=G.length; const bend=W*(0.08+0.22*S.energy); const rr=_seedRnd(81500,ss,0,0); rr();
+      ctx.fillStyle=css(mix(M,paper,0.6)); ctx.fillRect(0,H*0.9,W,H*0.1);
+      G.forEach((g,i)=>{ const k=win(r,g.t0,Math.min(1,g.t0+0.25)); if(k<=0) return; const bx=W*(0.12+0.62*i/Math.max(1,n-1))+W*0.04*(rr()-.5), top=H*(0.9-(0.3+0.45*g.reg)*k); const tx=bx+bend*k;
+        const leaf=mix(D,[70,110,60],S.bw?0:0.4); ctx.strokeStyle=css(leaf); ctx.lineWidth=Math.max(1.5,Dm*0.006); ctx.beginPath(); ctx.moveTo(bx,H*0.92); ctx.quadraticCurveTo(bx+bend*0.2,(H*0.92+top)/2,tx,top); ctx.stroke();
+        ctx.fillStyle=css(leaf); for(let j=0;j<3;j++){ const u=0.25+0.25*j; const lx=bx+(tx-bx)*u*u+bend*0.1*u, ly=H*0.92+(top-H*0.92)*u; const ll=Dm*(0.05+0.03*rr()); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.quadraticCurveTo(lx+ll*0.6,ly-ll*0.25,lx+ll*1.3,ly-ll*0.35); ctx.quadraticCurveTo(lx+ll*0.6,ly+ll*0.05,lx,ly); ctx.fill(); }
+        const col=S.bw?mix(Acc,paper,0.2):mix(S.I.voice(Math.round((g.a+g.b)/2)),Acc,0.35); const R=Dm*(0.04+0.07*g.vmax)*Math.min(1,k*1.5); const np=g.v<0.45?3:4+(g.vmax>0.8?1:0);
+        if(g.v<0.45&&np===3){ ctx.fillStyle=css(mix(col,leaf,0.4)); ctx.beginPath(); ctx.ellipse(tx,top-R*0.5,R*0.45,R*0.8,0.5,0,6.2832); ctx.fill(); return; }
+        for(let p=0;p<np;p++){ const a=p/np*6.2832+0.4; ctx.fillStyle=css(p%2?col:mix(col,paper,0.18)); ctx.beginPath(); const cx=tx+Math.cos(a)*R*0.55, cy=top-R*0.3+Math.sin(a)*R*0.45; for(let q=0;q<=14;q++){ const th=q/14*6.2832; const rr2=R*0.62*(1+0.12*Math.sin(th*3+p)); const x=cx+Math.cos(th)*rr2, y=cy+Math.sin(th)*rr2*0.8; q?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.closePath(); ctx.fill(); }
+        ctx.fillStyle=css(sumi); ctx.beginPath(); ctx.arc(tx,top-R*0.3,R*0.22,0,6.2832); ctx.fill(); ctx.fillStyle=css(paper); for(let q=0;q<7;q++){ const a=q/7*6.2832; ctx.beginPath(); ctx.arc(tx+Math.cos(a)*R*0.3,top-R*0.3+Math.sin(a)*R*0.3,R*0.035,0,6.2832); ctx.fill(); }
+        const na=Math.min(4,S.accents(g.a,g.b)); for(let q=0;q<na;q++){ const px=tx+R+W*(0.05+0.2*rr()), py=top-R*(0.5+rr()); ctx.fillStyle=css(col,0.9); ctx.beginPath(); ctx.ellipse(px,py,R*0.28,R*0.16,rr()*3,0,6.2832); ctx.fill(); } });
+      break; }
+    case 6: { // Ejiri in Suruga (the gust) — the papers are the notes, blown along the melody; the trees bend with the energy; Fuji stands at the register
+      _wvBok(ctx,S,0,0,W,H*0.35,mix(D,paper,0.5),paper,7);
+      const fh=H*(0.12+0.14*S.regAll); ctx.fillStyle=css(mix(L,paper,0.3)); ctx.beginPath(); ctx.moveTo(W*0.2,H*0.56); ctx.quadraticCurveTo(W*0.45,H*0.56-fh*0.55,W*0.6,H*0.56-fh); ctx.lineTo(W*0.64,H*0.56-fh); ctx.quadraticCurveTo(W*0.8,H*0.56-fh*0.5,W*1.02,H*0.56); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=css(mix(M,paper,0.55)); ctx.beginPath(); ctx.moveTo(-W*0.02,H*0.6); for(let i=0;i<=12;i++){ const u=i/12; ctx.lineTo(-W*0.02+W*1.04*u,H*(0.6-0.04*Math.sin(u*7)+0.02*Math.sin(u*19))); } ctx.lineTo(W*1.02,H); ctx.lineTo(-W*0.02,H); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=css(mix(paper,M,0.25)); ctx.beginPath(); ctx.moveTo(-W*0.02,H*0.82); ctx.quadraticCurveTo(W*0.4,H*0.7,W*1.02,H*0.74); ctx.lineTo(W*1.02,H*0.84); ctx.quadraticCurveTo(W*0.4,H*0.82,-W*0.02,H*0.95); ctx.closePath(); ctx.fill();
+      // two trees bent by the wind
+      const bend=W*(0.05+0.2*S.energy); [[W*0.14,H*0.86,0.42],[W*0.78,H*0.8,0.3]].forEach(([tx,ty,th],ti)=>{ const top=[tx+bend,ty-H*th]; ctx.fillStyle=css(mix(D,sumi,0.5)); ctx.beginPath(); ctx.moveTo(tx-Dm*0.02,ty); ctx.quadraticCurveTo(tx+bend*0.2,ty-H*th*0.6,top[0],top[1]); ctx.quadraticCurveTo(tx+bend*0.25+Dm*0.012,ty-H*th*0.6,tx+Dm*0.02,ty); ctx.closePath(); ctx.fill();
+        const nl=12+Math.round(S.density*60); for(let i=0;i<nl;i++){ const u=rnd(); ctx.fillStyle=css(mix(D,[60,100,50],S.bw?0:0.4)); ctx.beginPath(); ctx.ellipse(top[0]+bend*u*0.9+(rnd()-.3)*W*0.08,top[1]-H*0.06+(rnd()-.5)*H*0.12+u*H*0.03,Dm*0.012,Dm*0.006,rnd()*3,0,6.2832); ctx.fill(); } });
+      // travellers on the road, bent into the wind
+      [[W*0.3,H*0.78],[W*0.5,H*0.77],[W*0.62,H*0.79]].forEach(([px,py],i)=>{ if(r<0.1+0.1*i) return; ctx.fillStyle=css(sumi); _wvPath(ctx,[[px-Dm*0.012,py],[px-Dm*0.005,py-Dm*0.04],[px+Dm*0.02,py-Dm*0.06],[px+Dm*0.035,py-Dm*0.05],[px+Dm*0.02,py-Dm*0.03],[px+Dm*0.012,py]],true); ctx.fill(); ctx.beginPath(); ctx.ellipse(px+Dm*0.03,py-Dm*0.065,Dm*0.02,Dm*0.008,0.4,0,6.2832); ctx.fill(); });
+      // the papers: one per sampled note, along the gust — the melody's contour, rising to the right
+      const E=_kd2Events(S.A,Math.round(14+S.density*120)); const n=12; const C=S.contour(0,S.cn,n); ctx.strokeStyle=css(sumi,0.7); ctx.lineWidth=Math.max(0.6,Dm*0.0015);
+      E.forEach(e=>{ if(e.t>r) return; const u=e.t; const i=Math.min(n-2,Math.floor(u*(n-1))); const f=u*(n-1)-i; const cy=C[i]+(C[i+1]-C[i])*f; const x=W*(0.3+0.68*u)+(rnd()-.5)*W*0.1, y=H*(0.72-0.5*u)-H*0.25*(cy-0.5)+(rnd()-.5)*H*0.12; const s=Dm*(0.008+0.012*e.v); const a=rnd()*3;
+        ctx.save(); ctx.translate(x,y); ctx.rotate(a); ctx.fillStyle=css(e.acc?Acc:paper); ctx.beginPath(); ctx.rect(-s,-s*0.7,s*2,s*1.4); ctx.fill(); ctx.stroke(); ctx.restore(); });
+      break; }
+    case 7: { // Bullfinch and Weeping Cherry — the bough follows the melody, a twig hangs for every passage, a blossom for every chord (open when loud, a bud when soft), the bullfinch hangs at the climax
+      _wvBok(ctx,S,0,0,W,H,S.bw?mix(D,sumi,0.2):mix(D,[16,48,100],0.45),mix(D,paper,0.5),12);
+      const n=12; const C=S.contour(0,S.cn,n); const P=[]; for(let i=0;i<n;i++){ const u=i/(n-1); P.push([W*(1.04-0.92*u),H*(0.07+0.26*u)+H*0.08*(0.5-C[i])]); }
+      const k=win(r,0,0.6); const m=Math.max(2,Math.round(n*k)); const at=(u)=>{ const i=Math.min(n-2,Math.floor(u*(n-1))); const f=u*(n-1)-i; return [P[i][0]+(P[i+1][0]-P[i][0])*f,P[i][1]+(P[i+1][1]-P[i][1])*f]; };
+      ctx.strokeStyle=css(sumi); for(let i=0;i<m-1;i++){ ctx.lineWidth=Math.max(1.5,Dm*(0.022-0.017*i/(n-1))); ctx.beginPath(); ctx.moveTo(P[i][0],P[i][1]); ctx.lineTo(P[i+1][0],P[i+1][1]); ctx.stroke(); }
+      const G=S.groups(Math.min(8,Math.max(4,Math.round(nP/7)))); const ng=G.length; const E=_kd2Events(S.A,Math.round(20+S.density*180)); const pink=S.bw?mix(paper,D,0.1):mix(paper,Acc,0.22), deep=S.bw?mix(paper,D,0.35):mix(Acc,paper,0.35);
+      let ci=0; for(let i=0;i<ng;i++) if(c.t>=G[i].t0&&c.t<=G[i].t1) ci=i;
+      G.forEach((g,gi)=>{ if(g.t0>r) return; const a0=at(g.t); const len=H*(0.22+0.3*Math.min(2,g.dur*ng)); const sway=W*(0.12*(g.reg-0.5)-0.05); const tip=[a0[0]+sway,a0[1]+len]; const mid=[a0[0]+sway*0.2-W*0.04,a0[1]+len*0.5]; const kk=win(r,g.t0,Math.min(1,g.t0+0.08));
+        const tw=(f)=>[ (1-f)*(1-f)*a0[0]+2*(1-f)*f*mid[0]+f*f*tip[0], (1-f)*(1-f)*a0[1]+2*(1-f)*f*mid[1]+f*f*tip[1] ];
+        ctx.strokeStyle=css(sumi); ctx.lineWidth=Math.max(1,Dm*0.004); ctx.beginPath(); ctx.moveTo(a0[0],a0[1]); const e1=tw(kk); ctx.quadraticCurveTo((1-kk)*a0[0]+kk*mid[0],(1-kk)*a0[1]+kk*mid[1],e1[0],e1[1]); ctx.stroke();
+        E.forEach(e=>{ if(e.t<g.t0||e.t>=g.t1||e.t>r) return; const f=0.08+0.9*(e.t-g.t0)/Math.max(0.001,g.t1-g.t0); const q=tw(f); const side=(e.i%2?1:-1); const x=q[0]+side*Dm*(0.012+0.02*rnd()), y=q[1]+Dm*0.01*rnd(); const R=Dm*(0.012+0.02*e.v);
+          ctx.strokeStyle=css(sumi); ctx.lineWidth=Math.max(0.7,Dm*0.002); ctx.beginPath(); ctx.moveTo(q[0],q[1]); ctx.lineTo(x,y); ctx.stroke();
+          if(e.v<0.5&&!e.acc){ ctx.fillStyle=css(deep); ctx.beginPath(); ctx.ellipse(x,y,R*0.7,R*1.05,side*0.3,0,6.2832); ctx.fill(); return; }
+          ctx.fillStyle=css(pink); for(let p5=0;p5<5;p5++){ const a=p5/5*6.2832+rnd()*0.3; ctx.beginPath(); ctx.ellipse(x+Math.cos(a)*R*0.62,y+Math.sin(a)*R*0.62,R*0.5,R*0.36,a,0,6.2832); ctx.fill(); }
+          ctx.fillStyle=css(deep); ctx.beginPath(); ctx.arc(x,y,R*0.18,0,6.2832); ctx.fill(); });
+        if(gi===ci&&r>=c.t){ const q=tw(0.45); const s=Dm*0.12; const bx=q[0]+s*0.1, by=q[1]+s*0.7; // the bullfinch, hanging head-down from the twig
+          ctx.strokeStyle=css(sumi); ctx.lineWidth=Math.max(1,Dm*0.003); ctx.beginPath(); ctx.moveTo(q[0]-s*0.05,q[1]); ctx.lineTo(bx-s*0.02,by-s*0.42); ctx.moveTo(q[0]+s*0.08,q[1]+s*0.04); ctx.lineTo(bx+s*0.14,by-s*0.38); ctx.stroke();
+          ctx.fillStyle=css(S.bw?mix(paper,D,0.45):mix(mix(D,paper,0.55),[150,160,175],0.4)); ctx.beginPath(); ctx.ellipse(bx,by,s*0.36,s*0.5,-0.35,0,6.2832); ctx.fill();
+          ctx.fillStyle=css(sumi); ctx.beginPath(); ctx.moveTo(bx+s*0.1,by-s*0.42); ctx.lineTo(bx+s*0.4,by-s*1.0); ctx.lineTo(bx+s*0.54,by-s*0.9); ctx.lineTo(bx+s*0.28,by-s*0.3); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(bx-s*0.26,by+s*0.08,s*0.26,s*0.36,-0.25,0,6.2832); ctx.fill();
+          ctx.fillStyle=css(S.bw?mix(paper,D,0.1):Acc); ctx.beginPath(); ctx.arc(bx-s*0.14,by+s*0.64,s*0.27,0,6.2832); ctx.fill();
+          ctx.fillStyle=css(sumi); ctx.beginPath(); ctx.ellipse(bx-s*0.3,by+s*0.74,s*0.25,s*0.16,0.4,0,6.2832); ctx.fill();
+          ctx.fillStyle=css(paper); ctx.beginPath(); ctx.arc(bx-s*0.21,by+s*0.62,s*0.035,0,6.2832); ctx.fill();
+          ctx.fillStyle=css(sumi); ctx.beginPath(); ctx.moveTo(bx-s*0.46,by+s*0.82); ctx.lineTo(bx-s*0.64,by+s*1.0); ctx.lineTo(bx-s*0.38,by+s*0.92); ctx.closePath(); ctx.fill(); } });
+      break; }
+    default: { // The Great Wave off Kanagawa — the swells are the passages, the great one the climax; its claws the accents, the boats the phrases, Fuji the register
+      _wvBok(ctx,S,0,0,W,H*0.26,mix(D,paper,0.5+0.3*(1-S.energy)),paper,7);
+      const yS=H*0.62; const rise=win(r,0.05,0.6); const G=S.groups(Math.min(3,Math.max(1,Math.round(nP/12))));
+      _wvFuji(ctx,S,W*0.66,yS-H*(0.07+0.1*S.regAll),W*0.5,yS,W*0.82,yS,mix(D,paper,0.3),paper,2,rnd);
+      const H1=H*(0.24+0.2*c.vmax)*Math.max(0.05,rise); const xc=W*0.28, yc=yS-H1; const lip=[W*0.64,yc+H1*0.3];
+      const B=[[-W*0.03,yS+H*0.03],[W*0.04,yS-H1*0.2],[W*0.13,yc+H1*0.32],[W*0.21,yc+H1*0.06],[xc,yc],[W*0.4,yc-H1*0.04],[W*0.52,yc+H1*0.06]];   // the back slope, up to the lip
+      const P=B.concat([lip,[W*0.6,yc+H1*0.46],[W*0.5,yc+H1*0.4],[W*0.47,yc+H1*0.62],[W*0.54,yS-H*0.04],[W*0.63,yS+H*0.03]]);
+      G.forEach((g,i)=>{ if(i===0&&G.length>1) return; const x=W*(0.7+0.26*(G.length>1?(i-1)/Math.max(1,G.length-2):0.5)); P.push([x-W*0.07,yS+H*0.02],[x,yS-H*(0.04+0.12*g.vmax)*Math.max(0.05,rise)],[x+W*0.08,yS+H*0.02]); });
+      P.push([W*1.03,yS+H*0.03]);
+      ctx.fillStyle=css(D); _wvPath(ctx,P.concat([[W*1.03,H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill();
+      const ns=3+Math.round(S.density*25); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.85); ctx.lineWidth=Math.max(1,Dm*0.0045); _wvPath(ctx,B.map(p=>[p[0],p[1]+H*0.028*j]),false); ctx.stroke(); }
+      ctx.strokeStyle=css(mix(paper,L,0.3)); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wvPath(ctx,B,false); ctx.stroke();
+      // boats riding the swells — one per passage once the sea is up
+      if(S.energy>0.25){ const nb=Math.min(3,G.length); ctx.strokeStyle=css(sumi); ctx.lineWidth=Math.max(2,Dm*0.008); [[0.52,0.08,0.55],[0.8,-0.08,0.7],[0.92,0.05,0.85]].slice(0,nb).forEach(([u,ang,at])=>{ if(r<at) return; const x=W*u; let y=yS; for(let i=0;i<P.length-1;i++) if(x>=P[i][0]&&x<=P[i+1][0]){ y=P[i][1]+(P[i+1][1]-P[i][1])*(x-P[i][0])/Math.max(1,P[i+1][0]-P[i][0]); } const l=W*0.11;
+          ctx.beginPath(); ctx.moveTo(x-l*Math.cos(ang),y+H*0.02-l*Math.sin(ang)); ctx.quadraticCurveTo(x,y+H*0.045,x+l*Math.cos(ang),y+H*0.01+l*Math.sin(ang)); ctx.stroke(); ctx.fillStyle=css(paper); for(let q=0;q<5;q++){ const px=x-l*0.7+l*1.4*q/4; ctx.beginPath(); ctx.arc(px,y+H*0.012-(px-x)*Math.tan(ang)*0.5,Dm*0.004,0,6.2832); ctx.fill(); } }); }
+      // the claws along the lip, one per accent of the climax, and the spray
+      if(r>0.6){ const na=7+Math.min(9,S.accents(c.a,c.b)); const kk=win(r,0.6,0.85); const m=Math.round(na*kk); for(let i=0;i<m;i++){ const u=i/(na-1); const p=[xc+(lip[0]-xc)*u,yc-H1*0.06*Math.sin(u*3.14)+(lip[1]-yc)*u*u*0.9]; const len=Dm*(0.05+0.09*c.vmax)*(1.15-0.7*u); const a=2.3+0.6*u; _wvClaw(ctx,p,Math.cos(a),Math.sin(a),len,css(paper)); }
+        ctx.fillStyle=css(paper); const nd=Math.round((30+S.density*260)*win(r,0.7,1)); for(let i=0;i<nd;i++){ const x=W*(0.34+0.34*rnd()), y=yc+H1*(0.25+0.9*rnd()); if(y>yS+H*0.02) continue; const d=Dm*(0.0025+0.006*rnd()); ctx.beginPath(); ctx.arc(x,y,d,0,6.2832); ctx.fill(); } }
+    }
+  }
+  _setCurE(0.5);
 }
+
+// _hkWin(r,a,b) eases 0→1 over r∈[a,b] — the reveal windows of the prints above.
+function _hkWin(r, a, b){ const x=Math.max(0, Math.min(1, (r-a)/Math.max(1e-6, b-a))); return x*x*(3-2*x); }
 // ── HK v2: note-driven woodblock ink-set. The song's tonal centre becomes
 // the print's ink (Paintiano law: notes ARE colours), pushed into ukiyo-e
 // pigment range: saturation clamped ~40-55%, lightness at woodblock levels,
@@ -8994,777 +8557,6 @@ function _hokusaiInk(chords, lim, gc){
     voice: (i)=>{ const ch=chords[Math.min(cn-1,Math.max(0,i%cn))]; const nn=(ch&&(ch.n||ch.notes))||[]; const n0=nn.length?nn[0]:{m:60}; const m=n0.m!==undefined?n0.m:n0; return inkFrom(m, 0.50, 0.52); },
     paper: [234,227,206], sumi: [24,26,32],
   };
-}
-
-// Variant 0 — Wave (Great Wave at Kanagawa).
-function hokusaiPhaseWave(ctx, CW, CH, chords, lim, gc, ss, mode){
-  // HK v2 — The Great Wave rebuilt: a low-frequency melody envelope forms
-  // 1-3 great swells (not a per-chord waveform); the front swell carries the
-  // Kanagawa claw curl + foam-finger dots tinted by chord voices; boats
-  // (oshiokuri-bune, sumi hull + climax gunwale) appear when energy is high.
-  const rnd = _seedRnd(92, ss, 0, 0);
-  const K = _hokusaiInk(chords, lim, gc);
-  const R_ = _hkReveal(lim, chords);
-  const P = `rgb(${K.paper[0]},${K.paper[1]},${K.paper[2]})`;
-  const SM = `rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.55)`;
-  ctx.fillStyle = P; ctx.fillRect(0,0,CW,CH);
-  // Bokashi sky.
-  const skg = ctx.createLinearGradient(0,0,0,CH*0.22);
-  skg.addColorStop(0, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0.40)`);
-  skg.addColorStop(1, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0)`);
-  ctx.fillStyle = skg; ctx.fillRect(0,0,CW,CH*0.22);
-  // Distant Fuji — fades in with the first bars.
-  const fx = CW*0.62, fy = CH*0.40, fw = CW*0.12;
-  ctx.globalAlpha = _hkWin(R_, 0.0, 0.06);
-  ctx.fillStyle = `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0.55)`;
-  ctx.strokeStyle = SM; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.moveTo(fx-fw, fy); ctx.lineTo(fx, fy-fw*0.82); ctx.lineTo(fx+fw, fy); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = P;
-  ctx.beginPath(); ctx.moveTo(fx-fw*0.30, fy-fw*0.56); ctx.lineTo(fx, fy-fw*0.82); ctx.lineTo(fx+fw*0.30, fy-fw*0.56);
-  ctx.lineTo(fx+fw*0.15, fy-fw*0.63); ctx.lineTo(fx+fw*0.02, fy-fw*0.53); ctx.lineTo(fx-fw*0.15, fy-fw*0.64); ctx.closePath(); ctx.fill();
-  ctx.globalAlpha = 1;
-  // Melody envelope → swells. Moving average of top pitches over the WHOLE
-  // piece (not the played prefix), so the swells never relocate during playback.
-  const N = Math.max(1, chords.length);
-  const pit = [];
-  for(let i=0;i<N;i++){
-    const ch=chords[i]; if(!ch){ pit.push(60); continue; }
-    const nn=ch.n||ch.notes; if(!nn||!nn.length){ pit.push(60); continue; }
-    let m0=0; for(const nt of nn){ const m=nt.m!==undefined?nt.m:nt; if(m>m0) m0=m; }
-    _setCurE(ch._E);
-    pit.push(m0);
-  }
-  const win = Math.max(2, Math.floor(pit.length/6));
-  const env = [];
-  let mnP=1e9, mxP=-1e9;
-  for(let i=0;i<pit.length;i++){
-    let s=0,c=0;
-    for(let k=Math.max(0,i-win); k<=Math.min(pit.length-1,i+win); k++){ s+=pit[k]; c++; }
-    const v=s/c; env.push(v); if(v<mnP)mnP=v; if(v>mxP)mxP=v;
-  }
-  const span = Math.max(1, mxP-mnP);
-  const swellN = 1 + Math.round(K.energy*2);      // 1..3
-  // Pick swellN evenly spaced envelope samples as swell centres; height from env.
-  const swells = [];
-  for(let s=0;s<swellN;s++){
-    const t = swellN===1 ? 0.5 : 0.22 + s*(0.56/(swellN-1));
-    const ei = Math.min(env.length-1, Math.floor(t*env.length));
-    const hf = 0.22 + 0.42*((env[ei]-mnP)/span) * (0.6+0.4*K.energy);
-    swells.push({ px: 0.24 + t*0.55 + (rnd()-0.5)*0.06, hf: hf });
-  }
-  swells.sort((a,b)=>a.hf-b.hf);   // back (small) → front (tall)
-  const cols=[K.L, K.M, K.D];
-  const geo=[];
-  for(let j=0;j<swells.length;j++){
-    const col = cols[Math.min(2, j + (3-swells.length))];
-    // Each swell rises from the water line in its own window, back to front.
-    const _sa = 0.03 + j*(0.62/Math.max(1,swells.length)), _sb = _sa + 0.62/Math.max(1,swells.length) + 0.08;
-    const _rise = _hkWin(R_, _sa, _sb);
-    const cx = CW*swells[j].px, h = CH*swells[j].hf*Math.max(0.04,_rise);
-    if(_rise<=0){ geo.push({cx, base: CH*(0.93 + j*0.03), w: CW*(0.95 + j*0.30), h: 0, hidden:true}); continue; }
-    const base = CH*(0.93 + j*0.03), w = CW*(0.95 + j*0.30);
-    ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
-    ctx.strokeStyle = SM; ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(cx-w*0.55, base);
-    ctx.bezierCurveTo(cx-w*0.30, base-h*0.25, cx-w*0.22, base-h*0.9, cx, base-h);
-    ctx.bezierCurveTo(cx+w*0.16, base-h*1.06, cx+w*0.30, base-h*0.75, cx+w*0.55, base-h*0.18);
-    ctx.lineTo(cx+w*0.55, base); ctx.closePath(); ctx.fill(); ctx.stroke();
-    geo.push({cx, base, w, h});
-  }
-  // Claw curl(s) + foam fingers on the front-most 1-2 swells (by energy).
-  const curls = K.energy > 0.45 ? (K.energy > 0.85 ? 2 : 1) : 1;
-  const _foamWin = _hkWin(R_, 0.72, 0.96);
-  for(let q=0;q<Math.min(curls, geo.length); q++){
-    const G = geo[geo.length-1-q];
-    if(G.hidden || _foamWin<=0) continue;
-    const hx=G.cx, hy=G.base-G.h;
-    ctx.strokeStyle = P; ctx.lineWidth = Math.max(3.5, G.w*0.010); ctx.lineCap='round';
-    ctx.beginPath();
-    for(let s=0;s<28;s++){
-      const aa=-0.4+s*0.29, r2=G.w*0.14*(1-s/32);
-      const x=hx+G.w*0.09+Math.cos(aa)*r2, y=hy+G.h*0.06+Math.sin(aa)*r2;
-      if(s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.stroke();
-    const _foamN = Math.round(18*_foamWin);
-    for(let k=0;k<18;k++){
-      const t=k/17;
-      const fxp=hx-G.w*0.31+t*G.w*0.57, fyp=hy-5+Math.sin(t*Math.PI)*(-G.h*0.10);
-      const _fr = rnd();   // keep the stream identical whether or not the finger is drawn yet
-      if(k>=_foamN) continue;
-      const vc = (k%3===0) ? K.voice(k) : K.paper;
-      const mixv=[Math.round(K.paper[0]*0.65+vc[0]*0.35),Math.round(K.paper[1]*0.65+vc[1]*0.35),Math.round(K.paper[2]*0.65+vc[2]*0.35)];
-      ctx.fillStyle = `rgb(${mixv[0]},${mixv[1]},${mixv[2]})`;
-      ctx.strokeStyle = `rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.40)`; ctx.lineWidth=0.7;
-      ctx.beginPath(); ctx.arc(fxp, fyp, 1.6+2.9*Math.sin(t*Math.PI)+_fr, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    }
-  }
-  // Water base + voice wavelets.
-  ctx.fillStyle = `rgb(${K.D[0]},${K.D[1]},${K.D[2]})`;
-  ctx.fillRect(0, CH*0.92, CW, CH*0.10);
-  for(let k=0;k<5;k++){
-    const vc=K.voice(k*3);
-    const wl=[Math.round(vc[0]*0.7+K.paper[0]*0.3),Math.round(vc[1]*0.7+K.paper[1]*0.3),Math.round(vc[2]*0.7+K.paper[2]*0.3)];
-    const _w1=rnd()*5, _w2=rnd()*5;   // rolled for every wavelet — the stream never depends on reveal
-    if(R_ < 0.05 + k*0.07) continue;
-    ctx.strokeStyle = `rgba(${wl[0]},${wl[1]},${wl[2]},0.55)`; ctx.lineWidth=1.3;
-    const yy=CH*(0.93+k*0.013);
-    ctx.beginPath(); ctx.moveTo(0,yy);
-    ctx.quadraticCurveTo(CW*0.25, yy+5+_w1, CW*0.5, yy);
-    ctx.quadraticCurveTo(CW*0.75, yy-5-_w2, CW, yy);
-    ctx.stroke();
-  }
-  // Boats — proportional oshiokuri-bune riding the front slope.
-  const boats = K.energy > 0.85 ? 2 : (K.energy > 0.60 ? 1 : 0);
-  const bezAt=(G,t)=>{
-    const p0x=G.cx-G.w*0.55, p0y=G.base, p1x=G.cx-G.w*0.30, p1y=G.base-G.h*0.25;
-    const p2x=G.cx-G.w*0.22, p2y=G.base-G.h*0.9, p3x=G.cx, p3y=G.base-G.h;
-    const mt=1-t;
-    const x=mt*mt*mt*p0x+3*mt*mt*t*p1x+3*mt*t*t*p2x+t*t*t*p3x;
-    const y=mt*mt*mt*p0y+3*mt*mt*t*p1y+3*mt*t*t*p2y+t*t*t*p3y;
-    const dx=3*mt*mt*(p1x-p0x)+6*mt*t*(p2x-p1x)+3*t*t*(p3x-p2x);
-    const dy=3*mt*mt*(p1y-p0y)+6*mt*t*(p2y-p1y)+3*t*t*(p3y-p2y);
-    return {x, y, ang: Math.atan2(dy,dx)*0.7};
-  };
-  for(let b=0;b<Math.min(boats, geo.length); b++){
-    if(R_ < 0.86 + b*0.07) continue;
-    const G = geo[Math.max(0, geo.length-1-b)];
-    if(G.hidden) continue;
-    const Lb = Math.max(24, geo[geo.length-1].h*0.34) * (b?0.8:1);
-    const hb = Lb*0.16;
-    const pos = bezAt(G, 0.45+b*0.12);
-    ctx.save(); ctx.translate(pos.x, pos.y-Lb*0.10); ctx.rotate(pos.ang);
-    ctx.fillStyle = `rgb(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]})`;
-    ctx.strokeStyle = `rgba(${K.paper[0]},${K.paper[1]},${K.paper[2]},0.5)`; ctx.lineWidth=0.8;
-    ctx.beginPath();
-    ctx.moveTo(-Lb/2, -hb*0.55);
-    ctx.quadraticCurveTo(-Lb*0.42, hb*0.5, -Lb*0.18, hb*0.62);
-    ctx.lineTo(Lb*0.22, hb*0.62);
-    ctx.quadraticCurveTo(Lb*0.44, hb*0.45, Lb/2, -hb*0.75);
-    ctx.lineTo(Lb*0.42, -hb*0.30); ctx.lineTo(-Lb*0.42, -hb*0.30); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = `rgb(${K.A[0]},${K.A[1]},${K.A[2]})`; ctx.lineWidth=hb*0.28;
-    ctx.beginPath(); ctx.moveTo(-Lb*0.40, -hb*0.30); ctx.lineTo(Lb*0.40, -hb*0.30); ctx.stroke();
-    ctx.strokeStyle = `rgb(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]})`; ctx.lineWidth=2; ctx.lineCap='round';
-    for(let i=0;i<5;i++){
-      const cxx=-Lb*0.30+i*Lb*0.14;
-      ctx.beginPath(); ctx.moveTo(cxx, -hb*0.35); ctx.lineTo(cxx+3, -hb*1.12); ctx.stroke();
-    }
-    ctx.restore();
-  }
-}
-
-// Variant 1 — Mt Fuji silhouette + sky bands.
-function hokusaiPhaseFuji(ctx, CW, CH, chords, lim, gc, ss, mode){
-  // HK v2 — bokashi sky gradations, Fuji body in the CLIMAX accent
-  // (Red-Fuji hommage: shadow → accent → light), dappled snow cap,
-  // sumi keyline, mist band; birds carry chord voices through the ink.
-  const rnd = _seedRnd(92, ss, 0, 1);
-  const K = _hokusaiInk(chords, lim, gc);
-  const R_ = _hkReveal(lim, chords);
-  const P = `rgb(${K.paper[0]},${K.paper[1]},${K.paper[2]})`;
-  ctx.fillStyle = P; ctx.fillRect(0,0,CW,CH);
-  const g1 = ctx.createLinearGradient(0,0,0,CH*0.30);
-  g1.addColorStop(0, `rgba(${K.D[0]},${K.D[1]},${K.D[2]},0.80)`);
-  g1.addColorStop(1, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0)`);
-  ctx.fillStyle=g1; ctx.fillRect(0,0,CW,CH*0.30);
-  const g2 = ctx.createLinearGradient(0,CH*0.55,0,CH*0.72);
-  g2.addColorStop(0, `rgba(${K.L[0]},${K.L[1]},${K.L[2]},0.40)`);
-  g2.addColorStop(1, `rgba(${K.L[0]},${K.L[1]},${K.L[2]},0)`);
-  ctx.fillStyle=g2; ctx.fillRect(0,CH*0.55,CW,CH*0.17);
-  // Fuji body — horizontal gradient in the climax accent.
-  // The mountain rises out of the plain over the first half of the piece.
-  const _rise = _hkWin(R_, 0.0, 0.55);
-  const fpx=CW*0.52, fby=CH*0.80, fpy=fby-(fby-CH*0.22)*Math.max(0.02,_rise);
-  const _mid=(y)=> fby-(fby-y)*Math.max(0.02,_rise);   // scale a y toward the base line
-  const gf = ctx.createLinearGradient(CW*0.10,0,CW*0.92,0);
-  const shd=[Math.round(K.A[0]*0.65+K.sumi[0]*0.35),Math.round(K.A[1]*0.65+K.sumi[1]*0.35),Math.round(K.A[2]*0.65+K.sumi[2]*0.35)];
-  const lit=[Math.round(K.A[0]*0.75+K.paper[0]*0.25),Math.round(K.A[1]*0.75+K.paper[1]*0.25),Math.round(K.A[2]*0.75+K.paper[2]*0.25)];
-  gf.addColorStop(0, `rgb(${shd[0]},${shd[1]},${shd[2]})`);
-  gf.addColorStop(0.55, `rgb(${K.A[0]},${K.A[1]},${K.A[2]})`);
-  gf.addColorStop(1, `rgb(${lit[0]},${lit[1]},${lit[2]})`);
-  ctx.fillStyle=gf;
-  ctx.strokeStyle=`rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.6)`; ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(CW*0.10, fby);
-  ctx.bezierCurveTo(CW*0.30, _mid(CH*0.62), CW*0.42, _mid(CH*0.34), fpx, fpy);
-  ctx.bezierCurveTo(CW*0.62, _mid(CH*0.36), CW*0.76, _mid(CH*0.64), CW*0.92, fby);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Dappled snow cap — settles once the summit stands.
-  ctx.globalAlpha = _hkWin(R_, 0.55, 0.70);
-  ctx.fillStyle=P; ctx.strokeStyle=`rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.35)`; ctx.lineWidth=1;
-  ctx.beginPath();
-  ctx.moveTo(fpx-CW*0.085, fpy+CH*0.068);
-  const nz=9;
-  for(let i=1;i<=nz;i++){
-    const t=i/nz;
-    const px=fpx-CW*0.085+t*CW*0.17;
-    const py=fpy+CH*(0.068-0.016*Math.sin(t*Math.PI))+(i%2?CH*0.024:0);
-    ctx.lineTo(px,py);
-  }
-  ctx.lineTo(fpx+CW*0.085, fpy+CH*0.068); ctx.lineTo(fpx, fpy); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.globalAlpha = 1;
-  // Mist foreground + ground keyline.
-  ctx.fillStyle=`rgba(${K.M[0]},${K.M[1]},${K.M[2]},0.12)`;
-  ctx.fillRect(0, fby, CW, CH-fby);
-  ctx.strokeStyle=`rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.5)`; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(0,fby); ctx.lineTo(CW,fby); ctx.stroke();
-  // Birds — chord voices through the ink filter; count grows with reveal.
-  // Birds — the last thing the print receives, one by one over the final third.
-  const nb=Math.round(6*_hkWin(R_, 0.66, 1.0));
-  for(let i=0;i<6;i++){
-    const bx=CW*(0.12+rnd()*0.55), by=CH*(0.08+rnd()*0.13);
-    if(i>=nb) continue;
-    const vc=K.voice(i*2);
-    const bc=[Math.round(vc[0]*0.65+K.sumi[0]*0.35),Math.round(vc[1]*0.65+K.sumi[1]*0.35),Math.round(vc[2]*0.65+K.sumi[2]*0.35)];
-    ctx.strokeStyle=`rgba(${bc[0]},${bc[1]},${bc[2]},0.8)`; ctx.lineWidth=1.4; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(bx-6,by); ctx.quadraticCurveTo(bx,by-8,bx+6,by);
-    ctx.quadraticCurveTo(bx,by-3,bx-6,by); ctx.stroke();
-  }
-}
-
-// Variant 2 — Plum/Cherry blossom branch.
-function hokusaiPhaseBlossom(ctx, CW, CH, chords, lim, gc, ss, mode){
-  // Seed must not include lim — otherwise the branch relocates every chord.
-  const rnd = _seedRnd(92, ss, 0, 2);
-  const cn = Math.max(1, chords.length);
-  const R_ = _hkReveal(lim, chords);
-  ctx.fillStyle = HOKUSAI_PAPER;
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Branch — thick curved line entering from bottom-left or right.
-  const fromLeft = (ss & 1) === 0;
-  const startX = fromLeft ? 0 : CW;
-  const startY = CH * (0.7 + rnd() * 0.2);
-  const endX = fromLeft ? CW * (0.6 + rnd() * 0.3) : CW * (0.1 + rnd() * 0.3);
-  const endY = CH * (0.15 + rnd() * 0.2);
-
-  // Bezier control points.
-  const c1x = (startX + endX) * 0.5 + (fromLeft ? CW * 0.1 : -CW * 0.1);
-  const c1y = startY - (startY - endY) * 0.3;
-  const c2x = endX + (fromLeft ? -CW * 0.05 : CW * 0.05);
-  const c2y = endY + (startY - endY) * 0.2;
-
-  // Branch trunk — flat dark.
-  ctx.strokeStyle = '#3D2412';
-  ctx.lineWidth = 7;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.bezierCurveTo(c1x, c1y, c2x, c2y, endX, endY);
-  ctx.stroke();
-  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-
-  // Sub-branches — short forks at jittered points along the main branch.
-  const forks = 4 + Math.floor(rnd() * 4);
-  for(let f = 0; f < forks; f++){
-    const t = 0.2 + rnd() * 0.7;
-    // Approximate point on bezier curve.
-    const ot = 1 - t;
-    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
-    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
-    const ang = (rnd() - 0.5) * 1.6 + (fromLeft ? -1 : -2);
-    const flen = 30 + rnd() * 60;
-    const fx = bx + Math.cos(ang) * flen;
-    const fy = by + Math.sin(ang) * flen;
-    if(R_ < 0.04 + f*(0.22/forks)) continue;   // forks sprout one after another
-    ctx.strokeStyle = '#3D2412';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(fx, fy); ctx.stroke();
-    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  // Blossoms — circular flowers along branch using chord colours.
-  // Blossoms open over the whole piece: the full count is a song property,
-  // the visible prefix follows the played fraction.
-  const blossomFull = Math.min(60, Math.max(12, cn));
-  const blossomCount = Math.max(1, Math.round(blossomFull * R_));
-  for(let i = 0; i < blossomFull; i++){
-    // Blossom i is tied to chord i over the WHOLE piece (not i % lim), so a
-    // painted blossom keeps its colour as more chords arrive.
-    const ci = i % cn;
-    const chord = chords[ci] || chords[0];
-    _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [];
-    const note = notes[i % Math.max(1, notes.length)] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const v = note.v!==undefined?note.v:100;
-    const [r, g, b] = gc(m, v);
-    // Paintiano DNA: chord-driven petal palette (sakura family preserved but
-    // chord identity dominates — white/pink/coral/peach varies by chord).
-    // Sakura family anchor: the chord voice tints WITHIN the family (30%
-    // mix into a warm blossom base), so a blue chord gives a cool-leaning
-    // pink — never a blue flower. Chord identity stays audible, family holds.
-    const br = Math.round(238*0.70 + r*0.30);
-    const bg = Math.round(172*0.70 + g*0.30);
-    const bbv = Math.round(178*0.70 + b*0.30);
-    // Chord-derived warm centre (gold/coral/peach varies per chord) — replaces
-    // the hardcoded yellow #E8C24A so each flower's heart carries the chord too.
-    const cR = Math.min(255, Math.round(r * 0.55 + 130));
-    const cG = Math.min(255, Math.round(g * 0.50 + 100));
-    const cB = Math.min(255, Math.round(b * 0.30 + 40));
-    // Per-blossom RNG for petal-level micro-jitter (±12 from base).
-    const petalRnd = _seedRnd(i + 95300, ss, 0, 0); petalRnd(); petalRnd();
-
-    // Position roughly along branch.
-    const t = 0.1 + rnd() * 0.9;
-    const ot = 1 - t;
-    const bx = ot*ot*ot*startX + 3*ot*ot*t*c1x + 3*ot*t*t*c2x + t*t*t*endX;
-    const by = ot*ot*ot*startY + 3*ot*ot*t*c1y + 3*ot*t*t*c2y + t*t*t*endY;
-    // Cluster around branch.
-    const cx = bx + (rnd() - 0.5) * 70;
-    const cy = by + (rnd() - 0.5) * 70 - 10;
-    const rad = 5 + rnd() * 8;
-    if(i >= blossomCount) continue;
-
-    // 5-petal flower: 5 overlapping circles around a centre. Each petal gets
-    // a small ±12 jitter from the blossom's base colour for realistic floral
-    // variation (no two petals exactly the same shade).
-    const jit = 12;
-    for(let p = 0; p < 5; p++){
-      const pang = (p / 5) * Math.PI * 2;
-      const px = cx + Math.cos(pang) * rad * 0.55;
-      const py = cy + Math.sin(pang) * rad * 0.55;
-      const pR  = Math.max(0, Math.min(255, br  + (petalRnd() - 0.5) * jit));
-      const pG  = Math.max(0, Math.min(255, bg  + (petalRnd() - 0.5) * jit));
-      const pBb = Math.max(0, Math.min(255, bbv + (petalRnd() - 0.5) * jit));
-      ctx.fillStyle = `rgb(${pR|0},${pG|0},${pBb|0})`;
-      ctx.beginPath();
-      ctx.arc(px, py, rad * 0.6, 0, 6.2832);
-      ctx.fill();
-      ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-    }
-    // Chord-derived centre — no longer hardcoded yellow.
-    ctx.fillStyle = `rgb(${cR},${cG},${cB})`;
-    ctx.beginPath();
-    ctx.arc(cx, cy, rad * 0.25, 0, 6.2832);
-    ctx.fill();
-  }
-}
-
-// Variant 3 — Storm: lightning zigzag through dark sky.
-function hokusaiPhaseStorm(ctx, CW, CH, chords, lim, gc, ss, mode){
-  // HK v2.1 — Sanka Haku'u (Rainstorm Beneath the Summit): the pair print
-  // to Red Fuji. A GIANT off-centre black Fuji (peak ~0.38, near the top
-  // edge, base beyond the canvas) rises above a cloud bank at ~60% that
-  // swallows its lower slope; lightning with a climax-tinted glow strikes
-  // BELOW the cloud line. Rain in two ink tones, denser under the clouds.
-  // Differs from the Fuji phase by SILHOUETTE and composition, not just tone.
-  const rnd = _seedRnd(92, ss, 0, 3);
-  const K = _hokusaiInk(chords, lim, gc);
-  const R_ = _hkReveal(lim, chords);
-  const dk=[Math.round(K.D[0]*0.65+K.sumi[0]*0.35),Math.round(K.D[1]*0.65+K.sumi[1]*0.35),Math.round(K.D[2]*0.65+K.sumi[2]*0.35)];
-  ctx.fillStyle = `rgb(${dk[0]},${dk[1]},${dk[2]})`;
-  ctx.fillRect(0,0,CW,CH);
-  // Bokashi storm sky — one family, layered gradations with wavy bottoms.
-  for(let i=0;i<3;i++){
-    const y0=i*CH*0.12;
-    const g=ctx.createLinearGradient(0,y0,0,y0+CH*0.14);
-    const t0=[Math.round(K.D[0]*(0.9-i*0.08)),Math.round(K.D[1]*(0.9-i*0.08)),Math.round(K.D[2]*(0.9-i*0.08))];
-    g.addColorStop(0, `rgba(${t0[0]},${t0[1]},${t0[2]},0.80)`);
-    g.addColorStop(1, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0)`);
-    ctx.fillStyle=g;
-    ctx.beginPath(); ctx.moveTo(0,y0); ctx.lineTo(CW,y0);
-    for(let x=CW;x>=0;x-=CW/24) ctx.lineTo(x, y0+CH*0.14 + Math.sin(x*0.02+i)*CH*0.010);
-    ctx.closePath(); ctx.fill();
-  }
-  // Giant off-centre black Fuji — sumi+ink silhouette, base beyond edges.
-  const fpx=CW*(0.38+(rnd()-0.5)*0.04), fpy=CH*0.06;
-  const fuji=[Math.round(K.sumi[0]*0.78+K.D[0]*0.22),Math.round(K.sumi[1]*0.78+K.D[1]*0.22),Math.round(K.sumi[2]*0.78+K.D[2]*0.22)];
-  const fujiTop=[Math.round(fuji[0]*0.7+K.D[0]*0.3),Math.round(fuji[1]*0.7+K.D[1]*0.3),Math.round(fuji[2]*0.7+K.D[2]*0.3)];
-  const gm=ctx.createLinearGradient(0,fpy,0,CH);
-  gm.addColorStop(0, `rgb(${fujiTop[0]},${fujiTop[1]},${fujiTop[2]})`);
-  gm.addColorStop(1, `rgb(${fuji[0]},${fuji[1]},${fuji[2]})`);
-  ctx.fillStyle=gm;
-  ctx.strokeStyle=`rgba(${K.paper[0]},${K.paper[1]},${K.paper[2]},0.35)`; ctx.lineWidth=1.6;
-  const baseY=CH*1.05;
-  ctx.beginPath();
-  ctx.moveTo(-CW*0.35, baseY);
-  ctx.bezierCurveTo(CW*0.02, CH*0.62, CW*0.22, CH*0.20, fpx, fpy);
-  ctx.bezierCurveTo(CW*0.55, CH*0.22, CW*0.80, CH*0.68, CW*1.30, baseY);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Tiny snow remnant (Hokusai keeps it even on the black Fuji).
-  ctx.fillStyle=`rgba(${K.paper[0]},${K.paper[1]},${K.paper[2]},0.85)`;
-  ctx.beginPath();
-  ctx.moveTo(fpx-CW*0.045, fpy+CH*0.035);
-  const nz=7;
-  for(let i=1;i<=nz;i++){
-    const t=i/nz;
-    const px=fpx-CW*0.045+t*CW*0.09;
-    const py=fpy+CH*(0.035-0.009*Math.sin(t*Math.PI))+(i%2?CH*0.013:0);
-    ctx.lineTo(px,py);
-  }
-  ctx.lineTo(fpx+CW*0.045, fpy+CH*0.035); ctx.lineTo(fpx, fpy); ctx.closePath(); ctx.fill();
-  // Cloud bank at ~60% — swallows the lower slope; billows along the top.
-  // It drifts in over the second quarter of the piece.
-  const cloudY=CH*0.60;
-  const _cloudA = _hkWin(R_, 0.18, 0.42);
-  ctx.globalAlpha = _cloudA;
-  const gcb=ctx.createLinearGradient(0,cloudY,0,CH);
-  const cbTop=[Math.round(K.M[0]*0.75+K.paper[0]*0.25),Math.round(K.M[1]*0.75+K.paper[1]*0.25),Math.round(K.M[2]*0.75+K.paper[2]*0.25)];
-  gcb.addColorStop(0, `rgba(${cbTop[0]},${cbTop[1]},${cbTop[2]},0.92)`);
-  gcb.addColorStop(1, `rgba(${Math.round(K.D[0]*0.8+K.sumi[0]*0.2)},${Math.round(K.D[1]*0.8+K.sumi[1]*0.2)},${Math.round(K.D[2]*0.8+K.sumi[2]*0.2)},0.85)`);
-  ctx.fillStyle=gcb;
-  ctx.beginPath();
-  ctx.moveTo(0, cloudY);
-  for(let k=0;k<=22;k++){
-    const x=k*CW/22;
-    ctx.lineTo(x, cloudY + Math.sin(k*0.9)*CH*0.020 - (k%2?CH*0.015:0));
-  }
-  ctx.lineTo(CW, CH); ctx.lineTo(0, CH); ctx.closePath(); ctx.fill();
-  const cbBill=[Math.round(K.M[0]*0.70+K.paper[0]*0.30),Math.round(K.M[1]*0.70+K.paper[1]*0.30),Math.round(K.M[2]*0.70+K.paper[2]*0.30)];
-  for(let i=0;i<9;i++){
-    const cx=CW*(0.04+i*0.115), cy=cloudY+Math.sin(i*0.9)*CH*0.015;
-    ctx.fillStyle=`rgba(${cbBill[0]},${cbBill[1]},${cbBill[2]},0.85)`;
-    ctx.beginPath(); ctx.arc(cx, cy, CW*(0.045+rnd()*0.03), 0, Math.PI*2); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  // Lightning BELOW the cloud line — climax glow + main bolt + branches.
-  // The strike lands past the middle of the piece; branches fork after it.
-  const _boltA = _hkWin(R_, 0.50, 0.58);
-  const strikeX=CW*(0.55+rnd()*0.14);
-  const glow=[Math.round(K.A[0]*0.55+K.paper[0]*0.45),Math.round(K.A[1]*0.55+K.paper[1]*0.45),Math.round(K.A[2]*0.55+K.paper[2]*0.45)];
-  const rg=ctx.createRadialGradient(strikeX, CH*0.82, 0, strikeX, CH*0.82, CW*0.26);
-  rg.addColorStop(0, `rgba(${glow[0]},${glow[1]},${glow[2]},0.55)`);
-  rg.addColorStop(0.55, `rgba(${glow[0]},${glow[1]},${glow[2]},0.16)`);
-  rg.addColorStop(1, `rgba(${glow[0]},${glow[1]},${glow[2]},0)`);
-  ctx.fillStyle=rg;
-  ctx.globalAlpha = _boltA;
-  ctx.beginPath(); ctx.arc(strikeX, CH*0.82, CW*0.26, 0, Math.PI*2); ctx.fill();
-  let px=CW*0.55, py=cloudY+CH*0.02;
-  const boltPts=[[px,py]];
-  for(let s=0;s<6;s++){
-    px+=(rnd()-0.5)*CW*0.09 + (strikeX-px)*0.15;
-    py+=CH*0.058;
-    boltPts.push([px,py]);
-  }
-  ctx.lineJoin='round'; ctx.lineCap='round';
-  ctx.strokeStyle=`rgba(${glow[0]},${glow[1]},${glow[2]},0.5)`; ctx.lineWidth=9;
-  ctx.beginPath();
-  for(let s=0;s<boltPts.length;s++){ if(s===0)ctx.moveTo(boltPts[s][0],boltPts[s][1]); else ctx.lineTo(boltPts[s][0],boltPts[s][1]); }
-  ctx.stroke();
-  ctx.strokeStyle=`rgb(${K.paper[0]},${K.paper[1]},${K.paper[2]})`; ctx.lineWidth=3.4;
-  ctx.stroke();
-  // Branches — more for energetic pieces.
-  const brN = K.energy>0.55 ? 3 : 2;
-  const brAt=[2,4,3];
-  for(let bq=0;bq<brN;bq++){
-    const bi=brAt[bq];
-    let qx=boltPts[bi][0], qy=boltPts[bi][1];
-    const side=(bq%2===0)?-1:1;
-    ctx.globalAlpha = _hkWin(R_, 0.60+bq*0.08, 0.66+bq*0.08);
-    ctx.beginPath(); ctx.moveTo(qx,qy);
-    for(let s=0;s<3;s++){ qx+=side*(12+rnd()*24); qy+=CH*0.040; ctx.lineTo(qx,qy); }
-    ctx.strokeStyle=`rgba(${glow[0]},${glow[1]},${glow[2]},0.45)`; ctx.lineWidth=5; ctx.stroke();
-    ctx.strokeStyle=`rgba(${K.paper[0]},${K.paper[1]},${K.paper[2]},0.9)`; ctx.lineWidth=1.7; ctx.stroke();
-  }
-  // Rain — TWO tones, denser below the cloud line; count scales with lim.
-  const vc=K.voice(1);
-  const pale=[Math.round(vc[0]*0.55+K.paper[0]*0.45),Math.round(vc[1]*0.55+K.paper[1]*0.45),Math.round(vc[2]*0.55+K.paper[2]*0.45)];
-  ctx.globalAlpha = 1;
-  // Rain thickens with the piece: the full count is a song property, the
-  // drawn prefix follows the played fraction.
-  const rainFull=Math.min(320, Math.max(140, Math.max(1,chords.length)*4));
-  const rainCount=Math.round(rainFull*R_);
-  for(let i=0;i<rainCount;i++){
-    const ry=rnd()*CH;
-    if(ry<cloudY && rnd()<0.5) continue;   // sparser above the clouds
-    const rx=rnd()*CW*1.1-CW*0.05, ln=10+rnd()*20;
-    const col=(i%3===0)?pale:K.paper;
-    ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},${(0.22+rnd()*0.26).toFixed(2)})`;
-    ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-ln*0.45, ry+ln); ctx.stroke();
-  }
-}
-
-// Variant 4 — Rain: diagonal lines + muted village band.
-function hokusaiPhaseRain(ctx, CW, CH, chords, lim, gc, ss, mode){
-  // Seed must not include lim — otherwise mountain + houses relocate every chord.
-  const rnd = _seedRnd(92, ss, 0, 4);
-  const cn = Math.max(1, chords.length);
-  const K = _hokusaiInk(chords, lim, gc);   // HK v2 note-driven ink-set
-  const R_ = _hkReveal(lim, chords);
-  // Soft grey paper.
-  ctx.fillStyle = '#D8D4C2';
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Distant mountain silhouette band — colour from the piece's middle chord.
-  const midChord = chords[Math.floor(cn / 2)] || chords[0];
-  const midNotes = (midChord && (midChord.n || midChord.notes)) || [];
-  const midNote = midNotes.length ? midNotes[0] : {m:60,v:80};
-  const [mr, mg, mb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
-  ctx.globalAlpha = _hkWin(R_, 0.0, 0.10);   // the mountain band surfaces from the mist
-  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.55, 0.7);
-  ctx.beginPath();
-  ctx.moveTo(0, CH * 0.5);
-  for(let x = 0; x <= CW; x += CW / 16){
-    ctx.lineTo(x, CH * 0.5 + (rnd() - 0.5) * 30 - 10);
-  }
-  ctx.lineTo(CW, CH * 0.7);
-  ctx.lineTo(0, CH * 0.7);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // Village strip — flat brown/grey houses, built one after another.
-  const houseRow = CH * 0.72;
-  const houseH = CH * 0.1;
-  const houseCount = 5 + Math.floor(rnd() * 4);
-  // HK v2: organic spacing — variable widths and gaps, no comb grid.
-  let _hxWalk = CW * (0.02 + rnd() * 0.05);
-  for(let i = 0; i < houseCount; i++){
-    const ci = Math.floor((i / houseCount) * cn);
-    const chord = chords[ci] || chords[0];
-    _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes) || [];
-    const note = notes[0] || {m:60,v:80};
-    const m = note.m!==undefined?note.m:note;
-    const [r, g, b] = gc(m, 90);
-    if(_hxWalk > CW * 0.90) break;
-    const hwInner = CW * (0.075 + rnd() * 0.055);
-    const hx = _hxWalk;
-    const hyTop = houseRow + (rnd() - 0.5) * houseH * 0.10;
-    _hxWalk += hwInner + CW * (0.015 + rnd() * 0.05);
-    if(R_ < 0.14 + i*(0.50/houseCount)) continue;   // geometry rolled above; only the drawing waits
-    // House body.
-    ctx.fillStyle = _hokusaiMute(r, g, b, 0.45, 0.7);
-    ctx.fillRect(hx, hyTop, hwInner, houseH);
-    ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-    ctx.lineWidth = 1.3;
-    ctx.strokeRect(hx, hyTop, hwInner, houseH);
-    // Roof — triangle.
-    ctx.fillStyle = '#3D2412';
-    ctx.beginPath();
-    ctx.moveTo(hx - 4, hyTop);
-    ctx.lineTo(hx + hwInner / 2, hyTop - houseH * 0.55);
-    ctx.lineTo(hx + hwInner + 4, hyTop);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  // Water at bottom — fills in just before the first house.
-  ctx.globalAlpha = _hkWin(R_, 0.06, 0.14);
-  ctx.fillStyle = _hokusaiMute(mr, mg, mb, 0.6, 0.55);
-  ctx.fillRect(0, houseRow + houseH, CW, CH - houseRow - houseH);
-  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(0, houseRow + houseH);
-  ctx.lineTo(CW, houseRow + houseH);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-
-  // Rain — diagonal lines across the canvas. The full density is a song
-  // property; the shower thickens with the played fraction.
-  const rainFull = Math.min(380, Math.max(120, cn * 6));
-  const rainCount = Math.round(rainFull * R_);
-  ctx.strokeStyle = `rgba(${K.D[0]},${K.D[1]},${K.D[2]},0.55)`;   // HK v2: single ink-family tone
-  ctx.lineWidth = 0.9;
-  for(let i = 0; i < rainCount; i++){
-    const x = rnd() * CW * 1.2 - CW * 0.1;
-    const y = rnd() * CH;
-    const len = 12 + rnd() * 18;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x - len * 0.4, y + len);  // diagonal fall to bottom-left
-    ctx.stroke();
-  }
-}
-
-// Variant 5 — Bridge: drum bridge arch over water + reeds.
-function hokusaiPhaseBridge(ctx, CW, CH, chords, lim, gc, ss, mode){
-  // Seed must not include lim — otherwise reeds + ripples relocate every chord.
-  const rnd = _seedRnd(92, ss, 0, 5);
-  const cn = Math.max(1, chords.length);
-  const K = _hokusaiInk(chords, lim, gc);   // HK v2 note-driven ink-set
-  const R_ = _hkReveal(lim, chords);
-  ctx.fillStyle = HOKUSAI_PAPER;
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Sky band at top — gradient-free, just 2 bands.
-  const skyChord = chords[0];
-  const skyNotes = (skyChord && (skyChord.n || skyChord.notes)) || [];
-  const skyNote = skyNotes.length ? skyNotes[0] : {m:72,v:80};
-  const [sr, sg, sb] = gc(skyNote.m!==undefined?skyNote.m:skyNote, 80);
-  // HK v2: bokashi sky — ink gradation instead of a flat band.
-  const skg = ctx.createLinearGradient(0, 0, 0, CH*0.40);
-  skg.addColorStop(0, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0.65)`);
-  skg.addColorStop(1, `rgba(${K.M[0]},${K.M[1]},${K.M[2]},0)`);
-  ctx.fillStyle = skg;
-  ctx.fillRect(0, 0, CW, CH * 0.4);
-
-  // Water — bottom 50%, flat colour from the piece's middle chord.
-  const midChord = chords[Math.floor(cn / 2)] || chords[0];
-  const midNotes = (midChord && (midChord.n || midChord.notes)) || [];
-  const midNote = midNotes.length ? midNotes[0] : {m:60,v:80};
-  const [wr, wg, wb] = gc(midNote.m!==undefined?midNote.m:midNote, 100);
-  ctx.fillStyle = _hokusaiMute(wr, wg, wb, 0.5, 0.7);
-  ctx.fillRect(0, CH * 0.55, CW, CH * 0.45);
-  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, CH * 0.55);
-  ctx.lineTo(CW, CH * 0.55);
-  ctx.stroke();
-
-  // Drum bridge — semi-circular arch spanning canvas, water below. The arch
-  // is drawn in over the first fifth of the piece.
-  ctx.globalAlpha = chords._objFirst ? 1 : _hkWin(R_, 0.01, 0.14);   // a Compose take: the arch stands from the first note
-  const bridgeCY = CH * 0.55;
-  const bridgeRadius = CW * 0.5;
-  const bridgeCX = CW * 0.5;
-  // Bridge bottom curve (visible part above water = top half of circle).
-  ctx.beginPath();
-  ctx.arc(bridgeCX, bridgeCY, bridgeRadius, Math.PI, 0, false);
-  // Top: thicker bridge surface (offset arc above).
-  const topRad = bridgeRadius + CH * 0.06;
-  ctx.lineTo(bridgeCX + topRad, bridgeCY);
-  ctx.arc(bridgeCX, bridgeCY, topRad, 0, Math.PI, true);
-  ctx.closePath();
-  // Bridge colour — chord-derived earthy brown (from the piece's LAST chord,
-  // fixed for the whole playback rather than the chord just played).
-  const lastChord = chords[cn - 1] || chords[0];
-  const lastNotes = (lastChord && (lastChord.n || lastChord.notes)) || [];
-  const lastNote = lastNotes.length ? lastNotes[0] : {m:60,v:80};
-  const [br, bg, bb] = gc(lastNote.m!==undefined?lastNote.m:lastNote, 100);
-  ctx.fillStyle = _hokusaiMute(br, bg, bb, 0.4, 0.7);
-  ctx.fill();
-  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-  ctx.lineWidth = 2.2;
-  ctx.lineJoin = 'round';
-  ctx.stroke();
-
-  // Bridge ribbing — radial spokes from centre to inner arc. Spoke ANGLES come
-  // from the full-song rib count (so ribs never slide); reveal only adds ribs.
-  const ribCountFull = Math.min(16, Math.max(6, Math.floor(cn / 5)));
-  const ribCount = 1 + Math.round((ribCountFull-1) * (chords._objFirst ? 1 : _hkWin(R_, 0.12, 0.45)));
-  ctx.strokeStyle = HOKUSAI_PRUSSIAN;
-  ctx.lineWidth = 0.9;
-  for(let i = 1; i < ribCount; i++){
-    const ang = Math.PI + (i / ribCountFull) * Math.PI;
-    const x1 = bridgeCX + Math.cos(ang) * bridgeRadius;
-    const y1 = bridgeCY + Math.sin(ang) * bridgeRadius;
-    const x2 = bridgeCX + Math.cos(ang) * topRad;
-    const y2 = bridgeCY + Math.sin(ang) * topRad;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  // Reeds at water edges + middle scatter — chord-driven height, thickness,
-  // bend direction, and seedheads. Concept is realised here: every chord
-  // contributes one visible reed with a chord-coloured tip.
-  // Reed geometry is ROLLED for the full-song reed count every frame (keeps the
-  // ripple stream below independent of lim); reveal only gates the drawn prefix.
-  const reedCountFull = Math.min(180, Math.max(30, cn * 3));
-  const reedCount = Math.round(reedCountFull * _hkWin(R_, 0.10, 1.0));
-  for(let i = 0; i < reedCountFull; i++){
-    // Position: 60% in side clusters, 40% scattered along full water edge.
-    const zoneRoll = rnd();
-    let rx;
-    if(zoneRoll < 0.40){
-      // Left cluster — denser near bank, falls off with quadratic bias.
-      rx = Math.pow(rnd(), 1.5) * CW * 0.30;
-    } else if(zoneRoll < 0.80){
-      // Right cluster.
-      rx = CW - Math.pow(rnd(), 1.5) * CW * 0.30;
-    } else {
-      // Sparse middle scatter along full water edge.
-      rx = CW * 0.10 + rnd() * CW * 0.80;
-    }
-    const ry = CH * 0.55 + rnd() * CH * 0.08;
-    if(i >= reedCount) continue;
-    // Reed i is tied to chord i over the WHOLE piece (not i % lim).
-    const ci = i % cn;
-    const chord = chords[ci] || chords[0];
-    _setCurE(chord && chord._E);
-    const notes = (chord && (chord.n || chord.notes)) || [];
-    const note = notes[0] || {m:60,v:80};
-    const m = note.m !== undefined ? note.m : note;
-    const v = note.v !== undefined ? note.v : 80;
-    const [r, g, b] = gc(m, v);
-    // Chord-driven height — pitch + velocity each contribute.
-    const pitchNorm = Math.max(0, Math.min(1, (m - 40) / 40));
-    const velNorm   = Math.max(0, Math.min(1, v / 110));
-    const rh = 40 + pitchNorm * 80 + velNorm * 30;
-    // Chord-driven thickness — more notes in chord = thicker reed.
-    const lw = 2.0 + Math.min(notes.length, 4) / 4 * 1.5;
-    // HK v2: stems in TWO ink tones only — chord identity lives in the tips.
-    const _rt = (i % 2 === 0) ? K.D : K.M;
-    const reedColor = `rgb(${_rt[0]},${_rt[1]},${_rt[2]})`;
-    // Bend direction from pitch parity, amount from velocity.
-    const bendDir = (m % 2 === 0 ? 1 : -1);
-    const bendAmt = 5 + velNorm * 10;
-    ctx.strokeStyle = reedColor;
-    ctx.lineWidth = lw;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(rx, ry);
-    const tipX = rx + bendDir * bendAmt * 1.5;
-    const tipY = ry - rh;
-    ctx.quadraticCurveTo(
-      rx + bendDir * bendAmt,
-      ry - rh * 0.5,
-      tipX, tipY
-    );
-    ctx.stroke();
-    // Seedhead — chord-coloured dab at top, brighter than the stem.
-    const seedSz = 1.5 + Math.min(notes.length, 4) / 4 * 1.5;
-    ctx.fillStyle = `rgb(${Math.round(r*0.60+K.paper[0]*0.40)},${Math.round(g*0.60+K.paper[1]*0.40)},${Math.round(b*0.60+K.paper[2]*0.40)})`;
-    ctx.beginPath();
-    ctx.ellipse(tipX, tipY, seedSz, seedSz * 1.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Secondary seedhead for multi-note chords — uses the second note's colour.
-    if(notes.length > 1){
-      const n2 = notes[1];
-      const m2 = n2.m !== undefined ? n2.m : n2;
-      const v2 = n2.v !== undefined ? n2.v : 80;
-      const [r2, g2, b2] = gc(m2, v2);
-      ctx.fillStyle = `rgb(${Math.round(r2*0.55+K.paper[0]*0.45)},${Math.round(g2*0.55+K.paper[1]*0.45)},${Math.round(b2*0.55+K.paper[2]*0.45)})`;
-      ctx.beginPath();
-      ctx.ellipse(tipX + bendDir * 3, tipY - 3, seedSz * 0.7, seedSz * 1.1, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // Water ripples — horizontal short strokes (ink family).
-  ctx.strokeStyle = `rgba(${K.D[0]},${K.D[1]},${K.D[2]},0.85)`;
-  ctx.lineWidth = 1;
-  const ripplesFull = Math.min(60, Math.max(20, cn));
-  const ripples = Math.round(ripplesFull * R_);
-  for(let i = 0; i < ripplesFull; i++){
-    const y = CH * (0.58 + rnd() * 0.4);
-    const x = rnd() * CW;
-    const len = 16 + rnd() * 30;
-    if(i >= ripples) continue;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.quadraticCurveTo(x + len/2, y - 2, x + len, y);
-    ctx.stroke();
-  }
-  // HK v2: climax lantern — one accent dot at the crest of the arch.
-  const _lanY = bridgeCY - topRad - 7;
-  if(_lanY > CH*0.03 && R_ >= 0.9){
-    ctx.fillStyle = `rgb(${K.A[0]},${K.A[1]},${K.A[2]})`;
-    ctx.strokeStyle = `rgba(${K.sumi[0]},${K.sumi[1]},${K.sumi[2]},0.6)`;
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(bridgeCX, _lanY, Math.max(4, CW*0.008), 0, Math.PI*2);
-    ctx.fill(); ctx.stroke();
-  }
 }
 
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex){
@@ -11306,29 +10098,12 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
     const pitches = (tops && tops.length) ? tops : [60,64,67,71,74,77,55,48];   // fallback: mid/low spread
     return pitches.map(m=>{ const c=gc(m,100); return Array.isArray(c)?`rgb(${c[0]},${c[1]},${c[2]})`:c; });
   })();
-  // ── PHASE CHOOSER: commit to ONE of Kandinsky's compositional modes ──
-  // Determined by phaseIndex (modulo phase count). The Next button cycles it.
-  //  A = Cosmic scatter (free composition).  B = Bauhaus grid.
-  //  C = Circles (concentric).  D = Composition 8.  E = Improvisation.  F = Paris.
-  // REF per phase = that phase's highest threshold (A's RING 280 is the max).
-  // 7 phases: A Cosmic · B Bauhaus · Circles · Comp8 · Paris · Geom · Dense.
-  // (Improvisation was retired; Geom + Dense added.)
+  // ── VARIANT: 0 Cosmic scatter (the free composition below) · 1 Composition VIII ·
+  // 2 Several Circles · 3 Circles in a Circle · 4 Yellow–Red–Blue · 5 Improvisation ·
+  // 6 On White II · 7 Composition X (the _kd2 painters). Free: 0 and 1. The Next
+  // button cycles phaseIndex; _capN caps it on Free.
   const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(_variantCap === 2){
-    // Free: 0 = Cosmic scatter (fall through), 1 = Dense circles+radials —
-    // the phase closest in spirit to Cosmic scatter (energetic cosmic density),
-    // so both free looks share the scattered vocabulary instead of pairing
-    // scatter with the Bauhaus grid.
-    if(pick===1){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette, chords, gc); return; }
-  } else {
-    if(pick===1){ kandinskyPhaseB(ctx, CW, CH, eff(60), ss, mode, palette, chords, gc); return; }
-    if(pick===2){ kandinskyPhaseCircles(ctx, CW, CH, eff(230), ss, mode, palette, chords, gc); return; }
-    if(pick===3){ kandinskyPhaseComp8(ctx, CW, CH, eff(1000), ss, mode, palette, chords, gc); return; }
-    if(pick===4){ kandinskyPhaseParis(ctx, CW, CH, eff(1000), ss, mode, palette, chords, gc); return; }
-    if(pick===5){ kandinskyPhaseGeom(ctx, CW, CH, eff(240), ss, mode, palette, chords, gc); return; }
-    if(pick===6){ kandinskyPhaseDense(ctx, CW, CH, eff(260), ss, mode, palette, chords, gc); return; }
-    if(pick===7){ kandinskyPhaseFloat(ctx, CW, CH, eff(1000), ss, mode, palette, chords, gc); return; }
-  }
+  if(pick>0){ _kd2Paint(pick, ctx, CW, CH, chordCount, ss, mode, chords, gc); return; }
   kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette, chords);
 }
 
@@ -11496,217 +10271,6 @@ function kandinskyPhaseA(ctx, CW, CH, chordCount, sessionSeed, mode, palette, ch
   }
 }
 
-// ── Kandinsky phase B: "Bauhaus grid" — his orderly teaching-era side. A loose
-// grid of cells, each holding concentric circles or a target; a few bold
-// diagonals cross the whole canvas; one corner gets a small checkerboard. Same
-// palette and seeded-rng discipline as phase A, but a structured composition
-// instead of a free scatter, so Vary/Random produces a genuinely different
-// Kandinsky rather than just reshuffled positions.
-function kandinskyPhaseB(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
-  const ss = sessionSeed|0;
-  // Palette tuned to the active scheme when supplied (see drawKandinskyOverlay);
-  // otherwise the classic fixed Bauhaus set.
-  const lineColors = palette || [
-    'rgba(225, 60, 50, 0.92)', 'rgba(240, 180, 30, 0.92)', 'rgba(40, 70, 200, 0.92)',
-    'rgba(180, 60, 200, 0.90)', 'rgba(245, 238, 220, 0.90)', 'rgba(8, 4, 12, 0.92)',
-    'rgba(50, 160, 80, 0.90)', 'rgba(240, 130, 40, 0.92)',
-  ];
-  const fillColors = palette || [
-    'rgba(225, 60, 50, 0.85)', 'rgba(240, 180, 30, 0.85)', 'rgba(40, 70, 200, 0.82)',
-    'rgba(180, 60, 200, 0.80)', 'rgba(50, 160, 80, 0.80)', 'rgba(240, 130, 40, 0.85)',
-  ];
-  const _parseCol = (s)=>{
-    const m=String(s).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s]+([\d.]+))?\)/);
-    if(!m) return [128,128,128,1];
-    return [+m[1], +m[2], +m[3], m[4]!=null?+m[4]:1];
-  };
-  const _cn = chords && chords.length ? chords.length : 1;
-  // Per-cell colour: setCurE on the cell's chord BEFORE calling gc, so Real
-  // mode routes to the right palette band (pastel/pure/dark). Uses the
-  // shared _kandPickCol helper which samples gc at 8 fixed pitches.
-  const _alphaOf = (s)=>{ const m=String(s).match(/rgba\([^)]+,\s*([\d.]+)\)/); return m?+m[1]:0.9; };
-  const pickLine = (ci)=>{
-    if(typeof gc === 'function' && chords && chords.length){
-      const col = _kandPickCol(ci, Math.max(1, chordCount), chords, gc, palette);
-      // _kandPickCol returns "rgb(r,g,b)"; preserve the lineColors alpha.
-      const a = _alphaOf(lineColors[ci % lineColors.length]);
-      const m=String(col).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
-      if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`;
-      return col;
-    }
-    return lineColors[ci % lineColors.length];
-  };
-  const pickFill = (ci)=>{
-    if(typeof gc === 'function' && chords && chords.length){
-      const col = _kandPickCol(ci, Math.max(1, chordCount), chords, gc, palette);
-      const a = _alphaOf(fillColors[ci % fillColors.length]);
-      const m=String(col).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
-      if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`;
-      return col;
-    }
-    return fillColors[ci % fillColors.length];
-  };
-
-  // Grid dimensions scale with how much music there is: more chords → finer grid.
-  const cols = chordCount < 8 ? 2 : chordCount < 24 ? 3 : chordCount < 60 ? 4 : 5;
-  const rows = chordCount < 12 ? 2 : chordCount < 40 ? 3 : 4;
-  const cellW = CW / cols, cellH = CH / rows;
-  const minCell = Math.min(cellW, cellH);
-
-  // === 1. GRID CELLS — each holds concentric circles, a target, or a dot ===
-  for(let r=0; r<rows; r++){
-    for(let c=0; c<cols; c++){
-      const cellIdx = r*cols + c;
-      const rnd = _seedRnd(7000 + cellIdx, ss, 0, 0);
-      const cx = c*cellW + cellW*0.5;
-      const cy = r*cellH + cellH*0.5;
-      // A little jitter so the grid feels hand-placed, not mechanical.
-      const jx = (rnd()-0.5)*cellW*0.18;
-      const jy = (rnd()-0.5)*cellH*0.18;
-      const baseR = minCell * (0.26 + rnd()*0.16);
-      const kind = rnd();
-      if(kind < 0.50){
-        // Concentric rings (2–4), alternating two colors.
-        const nested = 2 + Math.floor(rnd()*3);
-        const c1 = pickLine(cellIdx);
-        const c2 = pickLine(cellIdx);
-        for(let k=0; k<nested; k++){
-          ctx.strokeStyle = k % 2 === 0 ? c1 : c2;
-          ctx.lineWidth = Math.max(1.5, minCell*(0.018 + rnd()*0.01));
-          ctx.beginPath();
-          ctx.arc(cx+jx, cy+jy, baseR*(1 - k*(0.7/nested)), 0, Math.PI*2);
-          ctx.stroke();
-        }
-      } else if(kind < 0.80){
-        // Filled target: solid disc with a contrasting ring + center dot.
-        ctx.fillStyle = pickFill(cellIdx);
-        ctx.beginPath(); ctx.arc(cx+jx, cy+jy, baseR, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = pickLine(cellIdx);
-        ctx.lineWidth = Math.max(1.5, minCell*0.02);
-        ctx.beginPath(); ctx.arc(cx+jx, cy+jy, baseR, 0, Math.PI*2); ctx.stroke();
-        ctx.fillStyle = pickLine(cellIdx);
-        ctx.beginPath(); ctx.arc(cx+jx, cy+jy, baseR*0.28, 0, Math.PI*2); ctx.fill();
-      } else {
-        // A small triangle seated in the cell (Kandinsky's recurring triangle motif).
-        const rot = rnd()*Math.PI*2;
-        ctx.strokeStyle = pickLine(cellIdx);
-        ctx.lineWidth = Math.max(1.5, minCell*0.02);
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        for(let k=0; k<3; k++){
-          const a = rot + k*(Math.PI*2/3);
-          const x = cx+jx + Math.cos(a)*baseR, y = cy+jy + Math.sin(a)*baseR;
-          if(k===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-        }
-        ctx.closePath(); ctx.stroke();
-      }
-    }
-  }
-
-  // === 2. A FEW BOLD DIAGONALS crossing the whole canvas ===
-  const diagCount = chordCount < 6 ? 1 : chordCount < 30 ? 2 : 3;
-  for(let i=0; i<diagCount; i++){
-    const rnd = _seedRnd(7700+i, ss, 0, 0);
-    const angle = rnd() * Math.PI;
-    const cx = rnd()*CW, cy = rnd()*CH;
-    const length = Math.max(CW, CH) * 1.4;
-    ctx.strokeStyle = pickLine(i);
-    ctx.lineWidth = Math.max(1.5, Math.min(CW,CH)*(0.004 + rnd()*0.004));
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(cx - Math.cos(angle)*length/2, cy - Math.sin(angle)*length/2);
-    ctx.lineTo(cx + Math.cos(angle)*length/2, cy + Math.sin(angle)*length/2);
-    ctx.stroke();
-  }
-
-  // === 3. CHECKERBOARD CORNER (only when there's enough music) ===
-  if(chordCount >= 10){
-    const rnd = _seedRnd(7800, ss, 0, 0);
-    const n = 3 + Math.floor(rnd()*2);            // 3–4 squares per side
-    const sq = minCell * 0.22;
-    const corner = Math.floor(rnd()*4);            // which corner
-    const ox = (corner % 2 === 0) ? CW*0.04 : CW - CW*0.04 - n*sq;
-    const oy = (corner < 2)        ? CH*0.04 : CH - CH*0.04 - n*sq;
-    const cA = pickFill(0);
-    // Near-black — fixed, not lineColors[5]: with a supplied palette that slot
-    // is just the 6th song colour and the checkerboard lost its dark squares.
-    const cB = (mode==='bw') ? '#1a1a1a' : 'rgba(8,4,12,0.92)';
-    for(let yy=0; yy<n; yy++) for(let xx=0; xx<n; xx++){
-      ctx.fillStyle = (xx+yy) % 2 === 0 ? cA : cB;
-      ctx.fillRect(ox + xx*sq, oy + yy*sq, sq+0.5, sq+0.5);
-    }
-  }
-}
-
-// Default Kandinsky palette (used when no palette supplied OR when gc/chords
-// missing — fallback static palette).
-function _kandPal(palette){
-  return palette || [
-    'rgba(225,60,50,0.92)','rgba(240,180,30,0.92)','rgba(40,70,200,0.92)',
-    'rgba(180,60,200,0.90)','rgba(245,238,220,0.90)','rgba(8,4,12,0.92)',
-    'rgba(50,160,80,0.90)','rgba(240,130,40,0.92)'
-  ];
-}
-// Per-element Kandinsky colour picker — REPLACES static palette indexing in
-// phase loops. For element i of total n, it:
-//   1) maps i to a chord (i/n × chords.length)
-//   2) sets _curE so gc() can route to the band-correct palette variant
-//      (Real mode: pastel for piano chords, dark for forte chords)
-//   3) samples gc() at one of 8 fixed pitches (chosen by element index, so
-//      element identity is stable across re-renders and Vary)
-//   4) returns the colour as an "rgb(r,g,b)" string for direct fillStyle use
-// Falls back to _kandPal indexing when gc or chords are unavailable.
-function _kandPickCol(i, n, chords, gc, fallbackPalette){
-  if(typeof gc !== 'function' || !chords || !chords.length){
-    const pal = _kandPal(fallbackPalette);
-    return pal[Math.abs(i) % pal.length];
-  }
-  const cn = chords.length;
-  const chordIdx = Math.min(cn-1, Math.max(0, Math.floor((i/Math.max(1,n)) * cn)));
-  const chord = chords[chordIdx];
-  _setCurE(chord && chord._E);
-  // Song-aware anchors: 8 most prominent pitch classes of the piece.
-  // Matches the song-aware palette build in drawKandinskyOverlay so per-
-  // element colours track the song's actual harmonic DNA. Falls back to a
-  // mid/low fixed spread when chord data isn't usable here.
-  const tops = (typeof _songTopPitches === 'function') ? _songTopPitches(chords, 8) : null;
-  const pitches = (tops && tops.length) ? tops : [60,64,67,71,74,77,55,48];
-  const m = pitches[Math.abs(i) % pitches.length];
-  const c = gc(m, 100);
-  if(!Array.isArray(c)) return c;
-  return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-}
-// Robustly set the alpha of any colour string (rgb/rgba/hex) without throwing.
-function _kandAlpha(col,a){
-  if(typeof col!=='string') return `rgba(120,120,120,${a})`;
-  const m=col.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
-  if(m) return `rgba(${m[1]},${m[2]},${m[3]},${a})`;
-  return col; // hex or unknown — leave as-is (still a valid fillStyle)
-}
-
-// ── Kandinsky C: Several Circles — concentric translucent discs on dark. ──
-function kandinskyPhaseCircles(ctx,CW,CH,chordCount,sessionSeed,mode,palette, chords, gc){
-  const ss=sessionSeed|0,isBW=mode==='bw';
-  ctx.fillStyle=isBW?'#1a1a1a':'#0c0a14';ctx.fillRect(0,0,CW,CH);
-  const TH=[2,5,9,14,20,28,38,50,65,82,100,125,155,190,230];
-  let n=Math.max(1,Math.round(Math.max(0,Math.min(1,chordCount/230))*TH.length));
-  n=Math.max(1,n);
-  for(let i=0;i<n;i++){
-    const rnd=_seedRnd(2200+i,ss, 0, 0);
-    const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.05+rnd()*0.13);
-    const rings=2+((rnd()*4)|0);
-    // One chord per concentric stack — every ring of this circle inherits
-    // the same chord's energy band, so Real mode reads as a coherent unit.
-    const baseCol = _kandPickCol(i, n, chords, gc, palette);
-    for(let r=rings;r>=1;r--){
-      ctx.fillStyle=_kandAlpha(baseCol,(0.45+rnd()*0.4).toFixed(2));
-      ctx.beginPath();ctx.arc(cx,cy,R*(r/rings),0,Math.PI*2);ctx.fill();
-    }
-  }
-}
-
-// ── Kandinsky E: Improvisation — loose colourful washes + black gesture lines. ──
-
 // ── Kandinsky Bauhaus engine ─────────────────────────────────────────────────
 // The vocabulary of the Bauhaus years, each form a primitive: the circle with
 // its coloured halo, the bundle of straight lines, the acute triangle, the
@@ -11753,166 +10317,217 @@ function _kdDrawForm(ctx,f,D,rnd){
 }
 function _kdDraw(ctx,list,reveal,D,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_kdClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_kdR(f.id*23+51001,ss); rnd(); _kdDrawForm(ctx,f,D,rnd); } }
 
-// ── Kandinsky D · Composition VIII (1923) — cream ground; the great dark circle
-// with its halo top-left, bundles of diagonals, acute triangles, small circles
-// with rings, a checkerboard, a few arcs. Time runs left to right.
-function kandinskyPhaseComp8(ctx,CW,CH,chordCount,sessionSeed,mode,palette,chords,gc){
-  const ss=sessionSeed|0, S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(chordCount/1000,0,1);
-  ctx.fillStyle=S.isBW?'#ece9e2':'#efe8d6'; ctx.fillRect(0,0,CW,CH);
-  const r=_kdR(52000,ss); r(); const list=[]; let id=0; const push=(f)=>{ f.id=id++; list.push(f); };
-  // the anchor: a dark disc with a violet-rose halo, top-left
-  const ax=CW*(0.14+r()*0.08), ay=CH*(0.12+r()*0.06), ar=D*(0.075+S.energy*0.03);
-  push({kind:'circle',t:0.0,x:ax,y:ay,r:ar,col:S.isBW?[30,30,30]:[40,30,60],halo:[S.col(0.02),_kdMix(S.col(0.05),S.W,0.45),_kdMix(S.col(0.08),S.W,0.7)]});
-  // diagonals: two bundles crossing the picture
-  const nb=3+Math.round(S.density*2); for(let i=0;i<nb;i++){ const t=0.1+i*0.2; push({kind:'lines',t,x:CW*(0.3+r()*0.5),y:CH*(0.25+r()*0.5),ang:(r()<0.5?-0.9:-0.5)+(r()-.5)*0.5,fan:0.04+r()*0.05,len:D*(0.7+r()*0.6),w:D*0.003,n:2+(r()*3|0),col:S.K,col2:S.col(t)}); }
-  // triangles: acute, flat, pointing up-right
-  const nt=6+Math.round(S.density*5); for(let i=0;i<nt;i++){ const t=0.15+i/nt*0.8; push({kind:'tri',t,x:CW*(0.1+r()*0.8),y:CH*(0.2+r()*0.7),ang:-1.2+(r()-.5)*1.2,len:D*(0.12+r()*0.22),aspect:0.16+r()*0.12,col:i%3===0?S.K:S.col(t),ring:r()<0.4?S.K:null}); }
-  // small circles with rings, in a loose cluster
-  const nc=12+Math.round(S.density*10); const cx=CW*(0.55+r()*0.25), cy=CH*(0.55+r()*0.25);
-  for(let i=0;i<nc;i++){ const t=0.3+i/nc*0.65; const big=r()<0.25; push({kind:'circle',t,x:cx+(r()-.5)*CW*0.5,y:cy+(r()-.5)*CH*0.5,r:D*(big?0.035+r()*0.03:0.012+r()*0.018),col:S.col(t),ring:r()<0.6?S.K:null,halo:big&&r()<0.6?[_kdMix(S.col(t+0.02),S.W,0.5)]:null}); }
-  push({kind:'checker',t:0.5+r()*0.3,x:CW*(0.75+r()*0.15),y:CH*(0.12+r()*0.15),size:D*(0.09+r()*0.05),n:4,ang:(r()-.5)*0.4,col:S.K,col2:S.col(0.6)});
-  for(let i=0;i<5;i++){ const t=0.5+i*0.09; const a0=r()*6.28; push({kind:'arc',t,x:CW*(0.2+r()*0.6),y:CH*(0.3+r()*0.5),r:D*(0.08+r()*0.12),a0,a1:a0+1.2+r()*1.6,w:D*0.004,col:i?S.col(t):S.K}); }
-  push({kind:'dots',t:0.9,x:CW*0.5,y:CH*0.5,r:D*0.45,n:8+Math.round(S.density*8),dr:D*0.004,col:S.K});
-  _kdDraw(ctx,list,reveal,D,ss); _setCurE(0.5);
-}
-// ── Kandinsky F · Yellow–Red–Blue (1925) — the yellow panel with its black
-// lines on the left, the blue disc with a dark halo on the right, a black
-// serpent line between, small red forms and a checkerboard.
-function kandinskyPhaseParis(ctx,CW,CH,chordCount,sessionSeed,mode,palette,chords,gc){
-  const ss=sessionSeed|0, S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(chordCount/1000,0,1);
-  ctx.fillStyle=S.isBW?'#d8d4cc':'#d9ccb0'; ctx.fillRect(0,0,CW,CH);
-  const r=_kdR(53000,ss); r(); const list=[]; let id=0; const push=(f)=>{ f.id=id++; list.push(f); };
-  // the yellow panel: a soft-edged upright rectangle, as a blob with low lobes
-  const yel=_kdMix(S.Y,S.col(0.1),0.25); push({kind:'blob',t:0.0,x:CW*0.3,y:CH*0.42,r:D*0.2,sx:0.95,sy:1.45,col:yel});
-  // its black lines: short verticals and a few bent strokes over the panel
-  for(let i=0;i<5+Math.round(S.density*4);i++){ const t=0.05+i*0.06; push({kind:'lines',t,x:CW*(0.18+r()*0.24),y:CH*(0.2+r()*0.45),ang:1.5708+(r()-.5)*0.5,fan:0.03,len:D*(0.1+r()*0.18),w:D*0.004,n:1+(r()*2|0),col:S.K}); }
-  for(let i=0;i<3;i++){ const t=0.12+i*0.1; push({kind:'circle',t,x:CW*(0.14+r()*0.3),y:CH*(0.15+r()*0.5),r:D*(0.012+r()*0.014),col:i?S.col(t):S.Rd,ring:S.K}); }
-  // the blue disc with a dark halo, right
-  const bx=CW*(0.7+r()*0.1), by=CH*(0.45+r()*0.15), br=D*(0.11+S.energy*0.04);
-  push({kind:'circle',t:0.5,x:bx,y:by,r:br,col:_kdMix(S.Bl,S.col(0.55),0.3),halo:[S.isBW?[70,70,70]:[28,26,52],_kdMix(S.col(0.5),S.K,0.6)]});
-  // the serpent: a black line that bends between the two — drawn as chained arcs
-  for(let i=0;i<4;i++){ const t=0.3+i*0.07; const a0=(i%2?3.1:0)+r()*0.6; push({kind:'arc',t,x:CW*(0.42+i*0.07),y:CH*(0.5+(i%2?0.06:-0.06)),r:D*0.05,a0,a1:a0+2.6,w:D*0.006,col:S.K}); }
-  // red forms and a checkerboard
-  for(let i=0;i<3+Math.round(S.density*3);i++){ const t=0.6+i*0.08; push({kind:'tri',t,x:CW*(0.5+r()*0.4),y:CH*(0.1+r()*0.8),ang:r()*6.28,len:D*(0.06+r()*0.1),aspect:0.3,col:i%2?S.Rd:S.col(t),ring:S.K}); }
-  push({kind:'checker',t:0.75,x:CW*(0.82+r()*0.1),y:CH*(0.15+r()*0.1),size:D*(0.08+r()*0.04),n:3,ang:0,col:S.K,col2:S.W});
-  push({kind:'dots',t:0.9,x:bx,y:by,r:br*2.2,n:6+Math.round(S.density*6),dr:D*0.005,col:S.K});
-  _kdDraw(ctx,list,reveal,D,ss); _setCurE(0.5);
-}
-// ── Kandinsky H · Composition X (1939) — black ground; free coloured forms afloat:
-// lobed bodies, crescents, barred triangles, confetti; some rimmed in white.
-function kandinskyPhaseFloat(ctx,CW,CH,chordCount,sessionSeed,mode,palette,chords,gc){
-  const ss=sessionSeed|0, S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(chordCount/1000,0,1);
-  ctx.fillStyle=S.isBW?'#161616':'#141216'; ctx.fillRect(0,0,CW,CH);
-  const r=_kdR(54000,ss); r(); const list=[]; let id=0; const push=(f)=>{ f.id=id++; list.push(f); };
-  const n=9+Math.round(S.density*7);
-  for(let i=0;i<n;i++){ const t=i/n; const x=CW*(0.1+r()*0.8), y=CH*(0.1+r()*0.8); const c=_kdMix(S.col(t),S.W,0.15);
-    push({kind:'blob',t,x,y,r:D*(0.05+r()*0.09),sx:0.8+r()*0.6,sy:0.8+r()*0.6,col:c,ring:r()<0.4?S.W:null});
-    if(r()<0.6) push({kind:'circle',t:t+0.02,x:x+(r()-.5)*D*0.2,y:y+(r()-.5)*D*0.2,r:D*(0.012+r()*0.02),col:_kdMix(S.col(t+0.03),S.W,0.3),ring:r()<0.5?S.W:null});
-    if(r()<0.5) push({kind:'tri',t:t+0.03,x:x+(r()-.5)*D*0.3,y:y+(r()-.5)*D*0.3,ang:r()*6.28,len:D*(0.06+r()*0.1),aspect:0.25,col:_kdMix(S.col(t+0.05),S.W,0.2),ring:S.W}); }
-  for(let i=0;i<3;i++){ const t=0.3+i*0.2; push({kind:'lines',t,x:CW*(0.2+r()*0.6),y:CH*(0.2+r()*0.6),ang:r()*3.14,fan:0.05,len:D*(0.3+r()*0.4),w:D*0.003,n:2+(r()*2|0),col:S.W,col2:S.col(t)}); }
-  push({kind:'dots',t:0.85,x:CW*0.5,y:CH*0.5,r:D*0.5,n:24+Math.round(S.density*30),dr:D*0.004,col:S.W});
-  _kdDraw(ctx,list,reveal,D,ss); _setCurE(0.5);
-}
 
-// ── Kandinsky phase: Geometric "Komposition" ──
-// Sharp shapes (triangles, outlined circles, a checkerboard), clean saturated
-// colours, bold black lines. Cleaner than Cosmic scatter, fuller plane. Element
-// counts scale LINEARLY with progress (chordCount is the eff(240) for this phase).
-function kandinskyPhaseGeom(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
-  const ss = sessionSeed|0, isBW = mode==='bw';
-  const ink = isBW ? '#1a1a1a' : '#0a060c';
-  ctx.fillStyle = isBW ? '#e8e4dc' : '#f4f0e6';
-  ctx.fillRect(0,0,CW,CH);
-  const p = Math.max(0, Math.min(1, chordCount / 240));
-  const minD = Math.min(CW,CH);
-  // big translucent ground triangles (1–4)
-  const grounds = Math.max(1, Math.round(p*4));
-  for(let i=0;i<grounds;i++){
-    const r=_seedRnd(2100+i, ss, 0, 0);
-    ctx.globalAlpha=.42; ctx.fillStyle=_kandPickCol(i, grounds, chords, gc, palette);
-    ctx.beginPath();
-    const cx=r()*CW, cy=r()*CH, s=minD*(0.28+r()*0.30), rot=r()*Math.PI*2;
-    for(let k=0;k<3;k++){const a=rot+k*2.094+(r()-0.5)*0.5; ctx[k?'lineTo':'moveTo'](cx+Math.cos(a)*s, cy+Math.sin(a)*s);}
-    ctx.closePath(); ctx.fill();
-  }
-  ctx.globalAlpha=1;
-  // outlined filled circles (0–9)
-  const circs = Math.round(p*9);
-  for(let i=0;i<circs;i++){
-    const r=_seedRnd(2200+i, ss, 0, 0);
-    const cx=r()*CW, cy=r()*CH, R=minD*(0.05+r()*0.10);
-    ctx.fillStyle=_kandPickCol(i+grounds, grounds+circs, chords, gc, palette);
-    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=ink; ctx.lineWidth=Math.max(1.5,minD*0.006); ctx.stroke();
-  }
-  // a checkerboard block appears past mid-song
-  if(p>0.45){
-    const r=_seedRnd(2300, ss, 0, 0);
-    const cell=minD*0.035, gx=r()*CW*0.6, gy=r()*CH*0.6, rot=(r()-0.5)*0.6;
-    ctx.save(); ctx.translate(gx,gy); ctx.rotate(rot);
-    ctx.fillStyle=ink;
-    for(let a=0;a<4;a++)for(let b=0;b<3;b++) if((a+b)%2) ctx.fillRect(a*cell,b*cell,cell,cell);
-    ctx.restore();
-  }
-  // bold black lines (0–5)
-  const lines = Math.round(p*5);
-  ctx.strokeStyle=ink; ctx.lineWidth=Math.max(2,minD*0.008);
-  for(let i=0;i<lines;i++){
-    const r=_seedRnd(2400+i, ss, 0, 0);
-    ctx.beginPath(); ctx.moveTo(r()*CW, r()*CH); ctx.lineTo(r()*CW, r()*CH); ctx.stroke();
-  }
-  // small accent triangles (0–6)
-  const tris = Math.round(p*6);
-  for(let i=0;i<tris;i++){
-    const r=_seedRnd(2500+i, ss, 0, 0);
-    const cx=r()*CW, cy=r()*CH, s=minD*(0.03+r()*0.04);
-    ctx.fillStyle=_kandPickCol(i+grounds+circs, grounds+circs+tris, chords, gc, palette);
-    ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx+s,cy+s); ctx.lineTo(cx-s,cy+s); ctx.closePath(); ctx.fill();
+// ═══════════════════════════════════════════════════════════════════════════
+// KANDINSKY — variants 1–7: seven paintings from his three periods (0 stays the
+// free Cosmic scatter above), every one read from the music with his own grammar (On the Spiritual in Art · Point and Line to
+// Plane): the warm hues are triangles, the cold ones circles, red is the
+// square, green the horizontal; the deep register is the great circle, the
+// high one the point; forte is the black accent, piano the halo. Time runs
+// through the picture, so the painting can be read like the music.
+// ═══════════════════════════════════════════════════════════════════════════
+function _kd2Hue(rgb){ const r=rgb[0]/255,g=rgb[1]/255,b=rgb[2]/255; const mx=Math.max(r,g,b), mn=Math.min(r,g,b); const d=mx-mn; if(d<1e-6) return -1; let h; if(mx===r) h=((g-b)/d)%6; else if(mx===g) h=(b-r)/d+2; else h=(r-g)/d+4; h*=60; if(h<0)h+=360; return h; }
+// the form a colour wants (Kandinsky): yellow/orange → acute triangle · red/magenta → square · blue/violet → circle · green/cyan → horizontal
+function _kd2Form(rgb){ const h=_kd2Hue(rgb); if(h<0) return 'circle'; if(h>=25&&h<80) return 'tri'; if(h>=80&&h<170) return 'bar'; if(h>=170&&h<300) return 'circle'; return 'rect'; }
+function _kd2Lum(rgb){ return (rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114)/255; }
+// one reading of the piece: per-chord events, phrases, tonic, colour helpers
+function _kd2Analyze(chords,gc,mode){
+  const isBW=mode==='bw'; const cn=chords.length; const ch=computeSongCharacter(chords);
+  const pcW=new Array(12).fill(0); const ev=new Array(cn); let prevEnd=null; const gaps=[];
+  for(let i=0;i<cn;i++){ const c=chords[i]; const notes=(c&&c.n)||[]; if(!notes.length){ ev[i]=null; continue; }
+    let top=-1,bass=999,vs=0,dm=0; for(const n of notes){ const m=n.m|0; const v=(typeof n.v==='number')?n.v:80; if(m>top)top=m; if(m<bass)bass=m; vs+=v; if((n.durMs||0)>dm) dm=n.durMs||0; pcW[((m%12)+12)%12]+=(c.durQ||1)*(v/127); }
+    const gap=(prevEnd!=null&&typeof c.startMs==='number')?Math.max(0,c.startMs-prevEnd):0;
+    ev[i]={i,t:i/Math.max(1,cn-1),top,bass,v:vs/notes.length/127,nn:notes.length,dur:Math.max(0.25,Math.min(8,c.durQ||1)),gap,E:(c._E!=null?c._E:0.5)};
+    if(typeof c.startMs==='number'){ prevEnd=c.startMs+(dm||300); if(i) gaps.push(gap); } }
+  const gs=gaps.filter(g=>g>0).sort((a,b)=>a-b); const gapHi=gs.length?gs[Math.floor(gs.length*0.88)]:0;
+  let tonic=0; for(let p=1;p<12;p++) if(pcW[p]>pcW[tonic]) tonic=p;
+  // phrases: cut at a long gap, else every ~cn/22 chords
+  const cuts=[]; let a=0; const maxLen=Math.max(6,Math.round(cn/22));
+  for(let i=1;i<=cn;i++){ const e=ev[i]; if(i===cn||(e&&gapHi>0&&e.gap>gapHi&&i-a>=3)||(i-a>=maxLen)){ cuts.push([a,i]); a=i; } }
+  const phrases=cuts.map(([a,b])=>{ let top=0,bass=0,v=0,n=0,vmax=0,rep=0,last=-1; const pw=new Array(12).fill(0);
+    for(let i=a;i<b;i++){ const e=ev[i]; if(!e) continue; top+=e.top; bass+=e.bass; v+=e.v; n++; if(e.v>vmax) vmax=e.v; if(e.top===last) rep++; last=e.top; for(const nt of chords[i].n){ pw[((nt.m%12)+12)%12]+=(chords[i].durQ||1); } }
+    let pc=0,pc2=0; for(let p=1;p<12;p++) if(pw[p]>pw[pc]) pc=p; for(let p=0;p<12;p++) if(p!==pc&&pw[p]>pw[pc2]) pc2=p; if(pc2===pc) pc2=(pc+7)%12;
+    return {a,b,t:(a+b)/2/cn,t0:a/cn,t1:b/cn,top:n?top/n:60,bass:n?bass/n:48,v:n?v/n:0.6,vmax,n:b-a,pc,pc2,rep:n?rep/n:0}; });
+  const vs=ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b); const vHi=vs.length?vs[Math.floor(vs.length*0.86)]:0.78;
+  const col=(i)=>_kdPure(_picChord(chords,_kdClamp(i,0,cn-1),gc,isBW).rgb,isBW);
+  const pcCol=(pc,m0)=>{ const base=(m0||60); const m=base-((base%12)+12)%12+pc; _setCurE(0.6); const c=gc(m,100); return _kdPure(Array.isArray(c)?[c[0],c[1],c[2]]:[120,120,120],isBW); };
+  const reg=(m)=>_kdClamp((m-40)/48,0,1);
+  return {cn,isBW,ch,ev,phrases,tonic,pcW,col,pcCol,reg,gapHi,vHi};
+}
+function _kd2DrawForm(ctx,f,D,rnd){
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  switch(f.kind){
+    case 'rect': { ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.ang||0); ctx.fillStyle=_kdCss(f.col,f.a==null?1:f.a); ctx.fillRect(-f.w/2,-f.h/2,f.w,f.h); if(f.ring){ ctx.strokeStyle=_kdCss(f.ring); ctx.lineWidth=Math.max(0.8,D*0.003); ctx.strokeRect(-f.w/2,-f.h/2,f.w,f.h); } ctx.restore(); break; }
+    case 'band': { ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.ang||0); ctx.globalAlpha*=(f.a==null?0.4:f.a); ctx.fillStyle=_kdCss(f.col); ctx.fillRect(-f.len/2,-f.w/2,f.len,f.w); ctx.restore(); break; }
+    case 'disc': { // Several Circles: a glowing halo, a translucent body, a faint lighter rim
+      const g=ctx.createRadialGradient(f.x,f.y,f.r*0.85,f.x,f.y,f.r*(f.glow||1.7)); g.addColorStop(0,_kdCss(f.halo||f.col,0.55)); g.addColorStop(1,_kdCss(f.halo||f.col,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(f.x,f.y,f.r*(f.glow||1.7),0,6.2832); ctx.fill();
+      ctx.fillStyle=_kdCss(f.col,f.a==null?0.86:f.a); ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,6.2832); ctx.fill();
+      if(f.rim){ ctx.strokeStyle=_kdCss(f.rim,0.7); ctx.lineWidth=Math.max(0.8,f.r*0.05); ctx.beginPath(); ctx.arc(f.x,f.y,f.r*0.97,0,6.2832); ctx.stroke(); }
+      break; }
+    case 'wash': { // Improvisation: a soft colour mass, elliptical, breathing at the edge
+      ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.ang||0); ctx.scale(f.sx||1,f.sy||1);
+      const g=ctx.createRadialGradient(0,0,0,0,0,f.r); g.addColorStop(0,_kdCss(f.col,f.a==null?0.7:f.a)); g.addColorStop(0.55,_kdCss(f.col,(f.a==null?0.7:f.a)*0.75)); g.addColorStop(1,_kdCss(f.col,0));
+      ctx.fillStyle=g; ctx.beginPath(); const N=28; for(let i=0;i<=N;i++){ const th=i/N*6.2832, rr=f.r*(1+0.12*Math.sin(3*th+(f.ph||0))+0.07*Math.sin(5*th)); i?ctx.lineTo(Math.cos(th)*rr,Math.sin(th)*rr):ctx.moveTo(Math.cos(th)*rr,Math.sin(th)*rr); } ctx.closePath(); ctx.fill(); ctx.restore(); break; }
+    case 'stroke': { // a brush line through points, width per point (velocity)
+      const P=f.pts; if(!P||P.length<2) break; ctx.strokeStyle=_kdCss(f.col,f.a==null?0.95:f.a);
+      for(let i=0;i<P.length-1;i++){ const a=P[i],b=P[i+1]; ctx.lineWidth=Math.max(0.8,(a.w+b.w)/2); ctx.beginPath(); if(i===0) ctx.moveTo(a.x,a.y); else { const p=P[i-1]; ctx.moveTo((p.x+a.x)/2,(p.y+a.y)/2); } const nx=(i+2<P.length)?(b.x+P[i+2].x)/2:b.x, ny=(i+2<P.length)?(b.y+P[i+2].y)/2:b.y; ctx.quadraticCurveTo(a.x,a.y,(a.x+b.x)/2,(a.y+b.y)/2); ctx.quadraticCurveTo(b.x,b.y,nx,ny); ctx.stroke(); }
+      break; }
+    case 'ladder': { ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.ang||0); ctx.strokeStyle=_kdCss(f.col); ctx.lineWidth=Math.max(0.8,f.w||D*0.003); const n=f.n||4, s=f.len/(n-1||1); for(let i=0;i<n;i++){ ctx.beginPath(); ctx.moveTo(-f.len/2+i*s,-f.h/2); ctx.lineTo(-f.len/2+i*s,f.h/2); ctx.stroke(); } ctx.restore(); break; }
+    default: _kdDrawForm(ctx,f,D,rnd);
   }
 }
+function _kd2Draw(ctx,list,reveal,D,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_kdClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_kdR(f.id*23+61001,ss); rnd(); _kd2DrawForm(ctx,f,D,rnd); } }
+// sample ~nF events evenly through the piece, keeping every accent (forte or after a rest)
+function _kd2Events(A,nF){ const out=[]; const step=A.cn/Math.max(1,nF); let next=0; let accLeft=Math.round(nF*0.16); for(let i=0;i<A.cn;i++){ const e=A.ev[i]; if(!e) continue; const acc=e.v>=A.vHi||(A.gapHi>0&&e.gap>A.gapHi); if(i>=next||(acc&&accLeft>0)){ out.push(Object.assign({acc},e)); if(i>=next) next+=step; else accLeft--; } } return out; }
+// merge consecutive phrases down to about `target` of them (long pieces)
+function _kd2Phrases(A,target){ const P=A.phrases; if(P.length<=target) return P; const k=Math.ceil(P.length/target); const out=[]; for(let i=0;i<P.length;i+=k){ const g=P.slice(i,i+k); const n=g.reduce((s,p)=>s+p.n,0); const w=(f)=>g.reduce((s,p)=>s+f(p)*p.n,0)/Math.max(1,n); let best=g[0]; for(const p of g) if(p.vmax>best.vmax) best=p; out.push({a:g[0].a,b:g[g.length-1].b,t:(g[0].a+g[g.length-1].b)/2/A.cn,t0:g[0].t0,t1:g[g.length-1].t1,top:w(p=>p.top),bass:w(p=>p.bass),v:w(p=>p.v),vmax:best.vmax,n,pc:best.pc,pc2:best.pc2,rep:w(p=>p.rep)}); } return out; }
 
-// ── Kandinsky phase: Dense "Circles + radials" ──
-// A big concentric-circle nucleus, radial spokes, plus many small circles/dots
-// filling the whole plane — energetic cosmic density, no empty space. Progressive.
-function kandinskyPhaseDense(ctx, CW, CH, chordCount, sessionSeed, mode, palette, chords, gc){
-  const ss = sessionSeed|0, isBW = mode==='bw';
-  ctx.fillStyle = isBW ? '#ececec' : '#f4f0e6';
-  ctx.fillRect(0,0,CW,CH);
-  const p = Math.max(0, Math.min(1, chordCount / 260));
-  const ink = isBW ? '#1a1a1a' : '#0a060c';
-  const minD = Math.min(CW,CH);
-  const r0 = _seedRnd(2600, ss, 0, 0);
-  const cx = CW*(0.35+r0()*0.30), cy = CH*(0.30+r0()*0.25);
-  // central concentric nucleus — ring count grows with progress
-  const rings = Math.max(2, Math.round(p*7));
-  const Rmax = minD*0.34;
-  for(let i=rings;i>=0;i--){
-    ctx.globalAlpha=.88; ctx.fillStyle=_kandPickCol(i, rings+1, chords, gc, palette);
-    ctx.beginPath(); ctx.arc(cx,cy,Rmax*(i+1)/(rings+1),0,Math.PI*2); ctx.fill();
-  }
-  ctx.globalAlpha=1;
-  // radial spokes (grow with progress)
-  const spokes = Math.max(3, Math.round(p*12));
-  ctx.strokeStyle=ink; ctx.lineWidth=Math.max(1,minD*0.004);
-  for(let a=0;a<spokes;a++){
-    const an=a/spokes*Math.PI*2;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(an)*minD*0.9, cy+Math.sin(an)*minD*0.9); ctx.stroke();
-  }
-  // scattered small circles + dots across the whole plane (0–44)
-  const dots = Math.round(p*44);
-  for(let i=0;i<dots;i++){
-    const r=_seedRnd(2700+i, ss, 0, 0);
-    ctx.globalAlpha=0.5+r()*0.5; ctx.fillStyle=_kandPickCol(i+rings+1, rings+1+dots, chords, gc, palette);
-    ctx.beginPath(); ctx.arc(r()*CW, r()*CH, minD*(0.01+r()*0.035), 0, Math.PI*2); ctx.fill();
-  }
-  ctx.globalAlpha=1;
-  // a couple of small concentric satellites past mid-song
-  if(p>0.5){
-    [[0.82,0.80],[0.18,0.86]].forEach((f,si)=>{
-      const sx=CW*f[0], sy=CH*f[1];
-      for(let i=3;i>=0;i--){ ctx.fillStyle=_kandPickCol(i+si*10+rings+1+dots, rings+1+dots+20, chords, gc, palette); ctx.beginPath(); ctx.arc(sx,sy,minD*0.02*(i+1)/4*2,0,Math.PI*2); ctx.fill(); }
-    });
-  }
+// ── 1 · Composition VIII (1923) — cream; the tonic as the great dark disc with its halo;
+//        time runs on the diagonal, the register up and down it; every chord its form.
+function kd2_comp8(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
+  ctx.fillStyle=A.isBW?'#ece9e2':'#efe8d6'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(62000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
+  const px=t=>CW*(0.08+0.84*t), py=(t,reg)=>_kdClamp(CH*(0.3+0.5*t)-(reg-0.5)*CH*0.5,CH*0.06,CH*0.94);
+  const tc=A.pcCol(A.tonic,48); const fifth=A.pcCol((A.tonic+7)%12,60), second=A.pcCol((A.tonic+2)%12,60);
+  const ax=CW*(0.2+r()*0.08), ay=CH*(0.14+r()*0.05), ar=D*(0.075+A.ch.energy*0.05);
+  push({kind:'circle',t:0,x:ax,y:ay,r:ar,col:_kdMix(tc,S.K,0.75),halo:[_kdMix(fifth,S.W,0.3),_kdMix(fifth,S.W,0.58),_kdMix(second,S.W,0.78)]});
+  const loud=A.phrases.slice().sort((a,b)=>b.vmax-a.vmax).slice(0,3+Math.round(A.ch.density*3));
+  for(const p of loud){ const x=px(p.t),y=py(p.t,A.reg(p.top)); const n=_kdClamp(Math.round(2+A.ch.density*3),2,5);
+    push({kind:'lines',t:p.t0,x,y,ang:-0.95+(r()-.5)*0.4,fan:0.03+r()*0.04,len:D*(0.5+p.v*0.6),w:D*0.0025,n,col:S.K,col2:A.col(p.a)}); }
+  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/12),28,72));
+  for(const e of E){ const c=A.col(e.i); const f=_kd2Form(c); const x=px(e.t)+(r()-.5)*CW*0.26, y=py(e.t,A.reg(e.top))+(r()-.5)*CH*0.2; const sz=D*(0.009+e.dur*0.012+e.v*0.016+(1-A.reg(e.top))*0.02);
+    if(f==='tri') push({kind:'tri',t:e.t,x,y,ang:-1.35+(r()-.5)*0.9,len:sz*3.4,aspect:0.17+r()*0.1,col:e.acc?S.K:c,ring:e.acc?null:(r()<0.4?S.K:null)});
+    else if(f==='circle') push({kind:'circle',t:e.t,x,y,r:sz,col:c,ring:r()<0.65?S.K:null,halo:(e.dur>=2&&r()<0.6)?[_kdMix(c,S.W,0.5)]:null});
+    else if(f==='rect') push({kind:'rect',t:e.t,x,y,w:sz*2.3,h:sz*1.5,ang:-0.95+(r()-.5)*0.3,col:e.acc?S.K:c,ring:S.K});
+    else { const a0=r()*6.28; push({kind:'arc',t:e.t,x,y,r:sz*2.4,a0,a1:a0+1.1+r()*1.5,w:D*0.0035,col:e.acc?S.K:c}); } }
+  let dp=A.phrases[0]||{t:0.5,top:60,n:1,v:0.5,a:0}; for(const p of A.phrases) if(p.n*p.v>dp.n*dp.v) dp=p;
+  push({kind:'checker',t:dp.t,x:_kdClamp(px(dp.t)+CW*0.12,CW*0.1,CW*0.9),y:_kdClamp(py(dp.t,A.reg(dp.top))-CH*0.14,CH*0.08,CH*0.92),size:D*(0.08+A.ch.density*0.04),n:4,ang:(r()-.5)*0.4,col:S.K,col2:A.col(dp.a)});
+  push({kind:'dots',t:0.96,x:CW*0.5,y:CH*0.5,r:D*0.46,n:6+Math.round(A.ch.density*8),dr:D*0.0035,col:S.K});
+  _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 2 · Several Circles (1926) — night ground; one disc per phrase, the tonic the great
+//        blue-black one; the bass the big discs, the treble the small; they glow and overlap.
+function kd2_circles(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
+  ctx.fillStyle=A.isBW?'#141414':'#0b0a12'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(63000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
+  const tc=A.pcCol(A.tonic,48); const gx=CW*(0.58+r()*0.1), gy=CH*(0.36+r()*0.08);
+  push({kind:'disc',t:0.02,x:gx,y:gy,r:D*(0.2+A.ch.energy*0.08),col:_kdMix(tc,S.K,0.55),halo:_kdMix(tc,S.W,0.25),glow:1.55,a:0.92,rim:_kdMix(tc,S.W,0.5)});
+  const P=_kd2Phrases(A,14+Math.round(A.ch.density*8)); const n=P.length; const turns=1.3+A.ch.density*0.6;
+  P.forEach((p,k)=>{ const ang=(k/Math.max(1,n))*6.2832*turns+r()*0.5; const rad=D*(0.16+0.34*Math.pow(k/Math.max(1,n-1),0.6)); const x=_kdClamp(gx+Math.cos(ang)*rad,D*0.07,CW-D*0.07), y=_kdClamp(gy+Math.sin(ang)*rad*1.2,D*0.07,CH-D*0.07);
+    const c=_kdMix(A.pcCol(p.pc,Math.round(p.top)),S.K,0.12); const rr=D*(0.018+(1-A.reg(p.bass))*0.06+p.v*0.03);
+    push({kind:'disc',t:p.t0,x,y,r:rr,col:c,halo:_kdMix(c,S.W,0.2),glow:1.35+p.v*0.4,a:0.78+p.v*0.15,rim:p.vmax>=A.vHi?_kdMix(c,S.W,0.6):null});
+    if(p.n>6&&r()<0.7) push({kind:'disc',t:p.t,x:x+(r()-.5)*rr*2.2,y:y+(r()-.5)*rr*2.2,r:rr*(0.2+r()*0.25),col:A.pcCol(p.pc2,Math.round(p.top)+12),halo:null,glow:1.25,a:0.85}); });
+  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/30),8,22));
+  for(const e of E){ const c=A.col(e.i); push({kind:'disc',t:e.t,x:D*0.05+r()*(CW-D*0.1),y:D*0.05+r()*(CH-D*0.1),r:D*(0.005+e.v*0.009),col:_kdMix(c,S.W,0.35),halo:_kdMix(c,S.K,0.5),glow:1.15,a:0.9}); }
+  _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 3 · Circles in a Circle (1923) — white; the great ring holds the whole piece; two
+//        beams of light cross it; inside, the chords as rimmed circles on a spiral in time.
+function kd2_circleInCircle(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
+  ctx.fillStyle=A.isBW?'#f1efea':'#f6f2e8'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(64000,ss); r(); const cx=CW/2, cy=CH/2, R=D*0.44;
+  const tc=A.pcCol(A.tonic,55), dc=A.pcCol((A.tonic+7)%12,55);
+  ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,6.2832); ctx.clip();
+  const bl=[]; let id=0; const push=f=>{ f.id=id++; bl.push(f); };
+  push({kind:'band',t:0,x:cx,y:cy,ang:-1.05+(r()-.5)*0.2,len:R*2.4,w:R*(0.42+A.ch.density*0.2),col:_kdMix(tc,S.W,0.45),a:0.5});
+  push({kind:'band',t:0,x:cx,y:cy,ang:-0.45+(r()-.5)*0.2,len:R*2.4,w:R*(0.3+A.ch.energy*0.2),col:_kdMix(dc,S.W,0.5),a:0.45});
+  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/14),24,70)); const turns=1.9;
+  for(const e of E){ const ang=e.t*6.2832*turns+r()*0.6; const rad=R*(0.08+0.8*Math.sqrt(e.t)); const x=cx+Math.cos(ang)*rad*0.93, y=cy+Math.sin(ang)*rad*0.93; const c=A.col(e.i); const rr=D*(0.01+e.dur*0.01+(1-A.reg(e.top))*0.04+e.v*0.02);
+    push({kind:'circle',t:e.t,x,y,r:rr,col:c,ring:S.K}); if(e.acc) push({kind:'circle',t:e.t,x:x+(r()-.5)*rr*2,y:y+(r()-.5)*rr*2,r:rr*0.35,col:S.K}); }
+  for(let i=0;i<2+Math.round(A.ch.density*2);i++){ const t=0.2+i*0.2; push({kind:'lines',t,x:cx+(r()-.5)*R,y:cy+(r()-.5)*R,ang:r()*3.14,fan:0.02,len:R*2.2,w:D*0.002,n:1,col:S.K}); }
+  _kd2Draw(ctx,bl,reveal,D,ss); ctx.restore();
+  ctx.strokeStyle=_kdCss(S.K); ctx.lineWidth=Math.max(2,D*0.018); ctx.beginPath(); ctx.arc(cx,cy,R,0,6.2832); ctx.stroke();
+  const ol=[]; id=0; const pushO=f=>{ f.id=id++; ol.push(f); };
+  for(const p of A.phrases){ if(A.reg(p.top)<0.78) continue; const ang=r()*6.2832; const rad=R*(1.08+r()*0.1); pushO({kind:'circle',t:p.t,x:_kdClamp(cx+Math.cos(ang)*rad,D*0.03,CW-D*0.03),y:_kdClamp(cy+Math.sin(ang)*rad,D*0.03,CH-D*0.03),r:D*(0.008+p.v*0.012),col:A.pcCol(p.pc,Math.round(p.top)),ring:S.K}); }
+  _kd2Draw(ctx,ol,reveal,D,ss); _setCurE(0.5);
+}
+// ── 4 · Yellow–Red–Blue (1925) — the yellow panel carries the bass as black verticals,
+//        the black serpent is the melody's own contour, the blue disc is the tonic.
+function kd2_yrb(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
+  ctx.fillStyle=A.isBW?'#d8d4cc':'#dacdb2'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(65000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
+  let warm=A.tonic,cold=A.tonic,wb=-1,cb=-1; for(let p=0;p<12;p++){ const h=_kd2Hue(A.pcCol(p,60)); const w=A.pcW[p]; if(h>=20&&h<90&&w>wb){ wb=w; warm=p; } if(h>=180&&h<290&&w>cb){ cb=w; cold=p; } }
+  const yel=_kdMix(S.Y,A.pcCol(warm,64),0.35), blu=_kdMix(S.Bl,A.pcCol(cold,50),0.4);
+  const pw=CW*(0.3+A.ch.density*0.06), phh=CH*(0.5+A.ch.energy*0.1), pxc=CW*0.3, pyc=CH*0.44;
+  push({kind:'rect',t:0,x:pxc,y:pyc,w:pw,h:phh,ang:-0.04+(r()-.5)*0.06,col:yel});
+  const bassP=_kd2Phrases(A,7+Math.round(A.ch.density*4));
+  bassP.forEach((p,k)=>{ const x=pxc-pw*0.4+pw*0.8*(k/Math.max(1,bassP.length-1)); push({kind:'lines',t:p.t0,x,y:pyc+(A.reg(p.bass)-0.5)*phh*0.45,ang:1.5708+(r()-.5)*0.2,fan:0.02,len:phh*(0.14+p.v*0.22),w:D*0.0045,n:1+(A.ch.density>0.5?1:0),col:S.K}); });
+  push({kind:'circle',t:0.1,x:pxc-pw*0.3,y:pyc-phh*0.3,r:D*0.016,col:S.Rd,ring:S.K});
+  const melP=_kd2Phrases(A,12); const pts=melP.map((p,k)=>({x:CW*(0.4+0.3*(k/Math.max(1,melP.length-1))),y:_kdClamp(CH*(0.72-0.5*A.reg(p.top)),CH*0.14,CH*0.86),w:D*(0.005+p.v*0.008)}));
+  push({kind:'stroke',t:0.25,pts,col:S.K});
+  const bx=CW*(0.72+r()*0.06), by=CH*(0.5+r()*0.12), br=D*(0.11+A.ch.energy*0.05);
+  push({kind:'circle',t:0.5,x:bx,y:by,r:br,col:blu,halo:[A.isBW?[70,70,70]:[30,28,54],_kdMix(blu,S.K,0.55)]});
+  const acc=_kd2Events(A,8).filter(e=>e.acc).slice(0,4+Math.round(A.ch.density*3));
+  acc.forEach((e,k)=>{ const c=A.col(e.i); const f=_kd2Form(c); const x=CW*(0.55+r()*0.38), y=CH*(0.08+r()*0.84); const sz=D*(0.03+e.v*0.04);
+    if(f==='circle') push({kind:'circle',t:e.t,x,y,r:sz*0.6,col:c,ring:S.K}); else if(f==='rect') push({kind:'rect',t:e.t,x,y,w:sz,h:sz,ang:r()*0.6,col:k%2?S.Rd:c,ring:S.K}); else push({kind:'tri',t:e.t,x,y,ang:r()*6.28,len:sz*1.6,aspect:0.3,col:k%2?S.Rd:c,ring:S.K}); });
+  push({kind:'checker',t:0.75,x:CW*(0.83+r()*0.08),y:CH*(0.12+r()*0.08),size:D*(0.07+A.ch.density*0.03),n:3,ang:0,col:S.K,col2:S.W});
+  push({kind:'dots',t:0.9,x:bx,y:by,r:br*2.2,n:5+Math.round(A.ch.density*6),dr:D*0.005,col:S.K});
+  _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 5 · Improvisation (1911–13) — the Blue Rider years: colour masses that breathe, one per
+//        phrase; over them the melody as a black brush line, hooks at every accent.
+function kd2_improv(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
+  ctx.fillStyle=A.isBW?'#f0ede6':'#f3eee1'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(66000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
+  const px=t=>CW*(0.1+0.8*t), py=(reg)=>CH*(0.84-0.68*reg);
+  const P4=_kd2Phrases(A,10+Math.round(A.ch.density*6));
+  P4.forEach((p,k)=>{ const c=_kdMix(A.pcCol(p.pc,Math.round(p.top)),S.W,0.18); const x=px(p.t)+(r()-.5)*CW*0.18, y=py(A.reg((p.top+p.bass)/2))+(r()-.5)*CH*0.14;
+    push({kind:'wash',t:p.t0,x,y,r:D*(0.1+Math.min(1,p.n/16)*0.12+p.v*0.08),sx:0.8+r()*0.7,sy:0.7+r()*0.6,ang:r()*3.14,ph:r()*6.28,col:c,a:0.5+p.v*0.3});
+    if(p.vmax>0.7) push({kind:'wash',t:p.t,x:x+(r()-.5)*D*0.2,y:y+(r()-.5)*D*0.2,r:D*(0.05+p.v*0.06),sx:1,sy:1,ph:r()*6.28,col:_kdMix(A.pcCol(p.pc2,Math.round(p.top)),S.W,0.1),a:0.75}); });
+  const mel=_kd2Phrases(A,36); let seg=[];
+  const flush=(t)=>{ if(seg.length>=3) push({kind:'stroke',t,pts:seg,col:S.K,a:0.9}); seg=[]; };
+  mel.forEach((p,k)=>{ seg.push({x:px(p.t)+(r()-.5)*D*0.03,y:py(A.reg(p.top))+(r()-.5)*D*0.06,w:D*(0.005+p.v*0.016)}); if(seg.length>=8+Math.round(r()*5)) flush(p.t); }); flush(1);
+  const acc=_kd2Events(A,_kdClamp(Math.round(A.cn/20),12,40));
+  for(const e of acc){ if(!e.acc) continue; const x=px(e.t), y=py(A.reg(e.top)); const a0=r()*6.28; push({kind:'arc',t:e.t,x:x+(r()-.5)*D*0.08,y:y+(r()-.5)*D*0.08,r:D*(0.02+e.v*0.03),a0,a1:a0+1.5+r()*1.8,w:D*(0.004+e.v*0.006),col:r()<0.75?S.K:A.col(e.i)}); if(r()<0.5) push({kind:'circle',t:e.t,x:x+(r()-.5)*D*0.12,y:y+(r()-.5)*D*0.12,r:D*(0.006+e.v*0.01),col:A.col(e.i)}); }
+  _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 6 · On White II (1923) — white; the transverse black bar; the forms sharp and
+//        rectilinear along it, the bass on one diagonal, the treble on the other.
+function kd2_onWhite(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
+  ctx.fillStyle=A.isBW?'#f4f2ee':'#f7f4ec'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(67000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
+  const ang1=-0.62+(r()-.5)*0.2, ang2=0.95+(r()-.5)*0.2; const cx=CW*0.5, cy=CH*0.5;
+  push({kind:'band',t:0,x:cx,y:cy,ang:ang1,len:D*1.45,w:D*(0.05+A.ch.energy*0.03),col:S.K,a:0.94});
+  push({kind:'band',t:0.05,x:cx+D*0.1,y:cy-D*0.05,ang:ang2,len:D*1.2,w:D*0.012,col:S.K,a:0.9});
+  const along=(t,ang,off)=>({x:cx+Math.cos(ang)*(t-0.5)*D*1.3+Math.cos(ang+1.5708)*off, y:cy+Math.sin(ang)*(t-0.5)*D*1.3+Math.sin(ang+1.5708)*off});
+  const big=A.phrases.slice().sort((a,b)=>b.vmax*b.n-a.vmax*a.n).slice(0,2+Math.round(A.ch.energy*2));
+  for(const p of big){ const q=along(p.t,ang1,(A.reg(p.top)-0.5)*D*0.5); push({kind:'rect',t:p.t0,x:_kdClamp(q.x,D*0.1,CW-D*0.1),y:_kdClamp(q.y,D*0.1,CH-D*0.1),w:D*(0.14+p.v*0.16),h:D*(0.08+Math.min(1,p.n/16)*0.12),ang:ang1+(r()<0.5?0:1.5708),col:A.pcCol(p.pc,Math.round(p.top)),a:0.9,ring:S.K}); }
+  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/12),24,80));
+  for(const e of E){ const c=A.col(e.i); const f=_kd2Form(c); const treble=e.top>=66; const ang=treble?ang2:ang1; const off=(A.reg(e.top)-0.5)*D*0.5+(r()-.5)*D*0.1; const q=along(e.t,ang,off); const x=_kdClamp(q.x,D*0.04,CW-D*0.04), y=_kdClamp(q.y,D*0.04,CH-D*0.04); const sz=D*(0.012+e.dur*0.01+e.v*0.025);
+    if(f==='tri') push({kind:'tri',t:e.t,x,y,ang:ang-1.5708+(r()-.5)*0.4,len:sz*3.6,aspect:0.14+r()*0.1,col:e.acc?S.K:c,ring:e.acc?null:S.K});
+    else if(f==='rect') push({kind:'rect',t:e.t,x,y,w:sz*(1.4+e.dur*0.4),h:sz*1.1,ang:ang+(r()<0.5?0:1.5708),col:e.acc?S.K:c,ring:S.K});
+    else if(f==='circle') push({kind:'circle',t:e.t,x,y,r:sz*0.8,col:c,ring:S.K});
+    else push({kind:'rect',t:e.t,x,y,w:sz*3.2,h:sz*0.5,ang:ang,col:e.acc?S.K:c}); }
+  for(let i=0;i<2+Math.round(A.ch.density*2);i++){ const t=0.25+i*0.22; push({kind:'lines',t,x:CW*(0.25+r()*0.5),y:CH*(0.25+r()*0.5),ang:ang2+(r()-.5)*0.3,fan:0.025,len:D*(0.5+r()*0.4),w:D*0.002,n:3+(r()*3|0),col:S.K,col2:A.col(Math.round(t*A.cn))}); }
+  push({kind:'checker',t:0.6,x:CW*(0.14+r()*0.1),y:CH*(0.8+r()*0.08),size:D*0.09,n:4,ang:ang1,col:S.K,col2:A.pcCol(A.tonic,60)});
+  push({kind:'circle',t:0.3,x:CW*(0.78+r()*0.1),y:CH*(0.14+r()*0.08),r:D*(0.04+A.ch.energy*0.03),col:A.pcCol(A.tonic,60),ring:S.K,halo:[_kdMix(A.pcCol((A.tonic+7)%12,60),S.W,0.5)]});
+  _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ── 7 · Composition X (1939) — black; a lobed body per phrase, its markings the notes
+//        inside it; confetti for the short notes; white rims on the forte.
+function kd2_compX(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
+  ctx.fillStyle=A.isBW?'#161616':'#131117'; ctx.fillRect(0,0,CW,CH);
+  const r=_kdR(68000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
+  const P6=_kd2Phrases(A,9+Math.round(A.ch.density*5)); const n=P6.length; const cols=Math.max(2,Math.round(Math.sqrt(n*CW/CH))), rows=Math.max(2,Math.ceil(n/cols));
+  P6.forEach((p,k)=>{ const gx=(k%cols+0.5)/cols, gy=(Math.floor(k/cols)+0.5)/rows; const x=CW*(0.12+0.76*gx)+(r()-.5)*CW*0.1, y=CH*(0.1+0.8*gy)+(r()-.5)*CH*0.08; const c=_kdMix(A.pcCol(k%2?p.pc2:p.pc,Math.round(p.top)+(k%2?12:0)),S.W,0.12); const rr=D*(0.04+Math.min(1,p.n/40)*0.05+p.v*0.04);
+    push({kind:'blob',t:p.t0,x,y,r:rr,sx:0.8+r()*0.7,sy:0.8+r()*0.6,col:c,ring:p.vmax>0.8?S.W:null});
+    const inner=A.pcCol(p.pc2,Math.round(p.top)+12); const nm=2+Math.min(5,Math.round(p.n/3));
+    for(let i=0;i<nm;i++){ const a=r()*6.28,d=r()*rr*0.6; if(r()<0.5) push({kind:'circle',t:p.t,x:x+Math.cos(a)*d,y:y+Math.sin(a)*d,r:rr*(0.06+r()*0.08),col:i%2?S.K:inner}); else push({kind:'tri',t:p.t,x:x+Math.cos(a)*d,y:y+Math.sin(a)*d,ang:r()*6.28,len:rr*(0.25+r()*0.25),aspect:0.3,col:i%2?S.W:inner}); }
+    if(p.rep>0.3) push({kind:'ladder',t:p.t,x:x+(r()-.5)*rr,y:y+(r()-.5)*rr,ang:r()*3.14,len:rr*0.9,h:rr*0.35,n:3+Math.round(p.rep*4),w:D*0.0025,col:S.K}); });
+  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/10),24,90));
+  for(const e of E){ if(e.dur>1.5&&!e.acc) continue; const c=_kdMix(A.col(e.i),S.W,0.2); push({kind:'circle',t:e.t,x:D*0.03+r()*(CW-D*0.06),y:D*0.03+r()*(CH-D*0.06),r:D*(0.004+e.v*0.008),col:c,ring:e.acc?S.W:null}); }
+  for(let i=0;i<2;i++){ const t=0.35+i*0.3; push({kind:'lines',t,x:CW*(0.2+r()*0.6),y:CH*(0.2+r()*0.6),ang:r()*3.14,fan:0.05,len:D*(0.25+r()*0.3),w:D*0.0025,n:2,col:S.W,col2:A.col(Math.round(t*A.cn))}); }
+  _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+function _kd2Paint(pick,ctx,CW,CH,cc,ss,mode,chords,gc){
+  switch(pick){ case 2: return kd2_circles(ctx,CW,CH,cc,ss,mode,chords,gc); case 3: return kd2_circleInCircle(ctx,CW,CH,cc,ss,mode,chords,gc); case 4: return kd2_yrb(ctx,CW,CH,cc,ss,mode,chords,gc); case 5: return kd2_improv(ctx,CW,CH,cc,ss,mode,chords,gc); case 6: return kd2_onWhite(ctx,CW,CH,cc,ss,mode,chords,gc); case 7: return kd2_compX(ctx,CW,CH,cc,ss,mode,chords,gc); default: return kd2_comp8(ctx,CW,CH,cc,ss,mode,chords,gc); }
 }
 
 
@@ -15725,11 +14340,12 @@ const ARTIST_VARIANTS = {
     {mark:{rays:.5,chain:.5},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
   ],
   picasso: [
-    {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},
-    {ground:'#1b2a6b',mark:{beam:1},size:[.1,.3],edge:.3,alpha:.8,layout:{scatter:1},density:.3,lines:.6},
-    {ground:'#2a2a3a',mark:{hatch:.7,facet:.3},size:[.06,.2],edge:0,alpha:1,layout:{grid:.7,scatter:.3},outline:.9,density:.8},
-    {ground:'#d6d4ce',mark:{facet:.7,tri:.3},size:[.05,.18],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.7,nosnap:true},   // Guernica: shards with a contour, in the song's colours beside a partner
-    {ground:'#8a8a3a',mark:{poly:.5,arch:.3,disc:.2},size:[.08,.3],edge:0,alpha:.85,layout:{grid:.6,scatter:.4},outline:.6,density:.4},
+    {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},                                            // Light line
+    {ground:'#c8b468',mark:{facet:.5,poly:.3,disc:.2},size:[.06,.2],edge:0,alpha:1,layout:{scatter:.6,radial:.4},outline:.9,density:.6,nosnap:true},   // Weeping Woman: the faceted head
+    {ground:'#d6c4a0',mark:{facet:.4,panel:.4,disc:.2},size:[.08,.26],edge:0,alpha:.95,layout:{scatter:1},outline:.7,density:.4,lines:.5,nosnap:true},   // Guitar: papier collé planes
+    {ground:'#5c3e2a',mark:{panel:.5,poly:.3,diamond:.2},size:[.06,.24],edge:0,alpha:1,layout:{grid:.6,scatter:.4},outline:.8,density:.5},   // Three Musicians: cut paper
+    {ground:'#d6d4ce',mark:{facet:.7,tri:.3},size:[.05,.18],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.7,nosnap:true},   // Guernica: shards with a contour, in the song's colours beside a
+    {ground:'#1a2c52',mark:{facet:.6,poly:.4},size:[.1,.3],edge:0,alpha:.9,layout:{scatter:1},outline:.6,density:.3,tone:'dark',nosnap:true},   // The Old Guitarist: blue planes
     {ground:'#dcc0a2',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // Demoiselles: big facets with a contour in the song's colours
   ],
   matisse: [
@@ -15800,14 +14416,14 @@ const ARTIST_VARIANTS = {
     {ground:'#eae5da',mark:{beam:.5,disc:.3,bar:.2},size:[.12,.4],alpha:.55,layout:{scatter:1},density:.25},   // Construction (Moholy-Nagy)
   ],
   kandinsky: [
-    {mark:{kring:.4,beam:.3,disc:.3},size:[.02,.16],layout:{scatter:.7,radial:.3},density:.6},
-    {mark:{target:.5,dot:.3,beam:.2},size:[.02,.14],layout:{scatter:1},density:.6},
-    {mark:{disc:1},size:[.08,.25],edge:.4,alpha:.7,layout:{scatter:1},density:.3},
-    {ground:'#f4f2ec',mark:{tri:.6,beam:.4},size:[.04,.12],layout:{scatter:1},density:.25},
-    {ground:'#5a6a8a',mark:{bar:.5,panel:.5},size:[.05,.2],layout:{scatter:1},density:.15},
-    {ground:'#d8c8e8',mark:{tri:.4,disc:.4,kring:.2},size:[.08,.3],alpha:.8,layout:{scatter:1},density:.3,outline:.5},
-    {ground:'#f4f2ec',mark:{disc:.5,beam:.3,target:.2},size:[.03,.2],layout:{radial:1},density:.4,lines:.6},
-    {ground:'#2a2428',mark:{ring:.4,tri:.3,beam:.3},size:[.04,.14],layout:{scatter:1},density:.3,tone:'pastel'},
+    {mark:{kring:.4,beam:.3,disc:.3},size:[.02,.16],layout:{scatter:.7,radial:.3},density:.6},                       // Cosmic scatter
+    {ground:'#efe8d6',mark:{tri:.4,beam:.3,disc:.2,checker:.1},size:[.03,.14],layout:{flow:.7,scatter:.3},density:.35,outline:.4},   // Composition VIII
+    {ground:'#0b0a12',mark:{disc:1},size:[.06,.26],edge:.5,alpha:.8,layout:{scatter:1},density:.3},                 // Several Circles
+    {ground:'#f6f2e8',mark:{disc:.6,ring:.2,beam:.2},size:[.03,.1],layout:{radial:1},density:.45,outline:.8},        // Circles in a Circle
+    {ground:'#dacdb2',mark:{panel:.35,disc:.3,bar:.2,tri:.15},size:[.05,.3],layout:{scatter:1},density:.2,outline:.3},   // Yellow–Red–Blue
+    {ground:'#f3eee1',mark:{cloud:.6,beam:.25,dot:.15},size:[.08,.28],edge:.8,alpha:.65,layout:{flow:.6,scatter:.4},density:.4,layers:2,lines:.5},   // Improvisation
+    {ground:'#f7f4ec',mark:{bar:.3,tri:.3,rect:.2,disc:.2},size:[.03,.16],layout:{flow:1},density:.3,outline:.6,lines:.4},   // On White II
+    {ground:'#131117',mark:{blob:.5,dot:.3,tri:.2},size:[.04,.16],layout:{scatter:1},density:.3,outline:.3,tone:'pastel'},   // Composition X
   ],
   gold: [
     {mark:{tile:.4,goldspiral:.3,target:.3},size:[.03,.08],layout:{grid:1},density:.8},
@@ -15819,15 +14435,15 @@ const ARTIST_VARIANTS = {
     {ground:'#784020',mark:{dot:.6,vstripes:.4},size:[.01,.05],layout:{stack:.6,scatter:.4},density:.8},   // Birch Forest
     {ground:'#2c4628',mark:{dot:.7,disc:.3},size:[.02,.06],layout:{grid:1},density:1},   // Farm Garden with Sunflowers
   ],
-  rothko: [
+  rothko: [   // slot order = solo variants: No. 61, Orange and Yellow, White Center, Four Darks in Red, Seagram, Multiform, No. 10, Chapel
     {mark:{field:1},size:[.3,.6],edge:.9,alpha:.75,layout:{stack:1},density:.5},
-    {ground:'#e8e4d8',mark:{field:1},size:[.3,.6],edge:.5,alpha:.7,layout:{stack:1},density:.4,tone:'pastel'},
+    {ground:'#e8d8a8',mark:{field:1},size:[.35,.6],edge:.6,alpha:.7,layout:{stack:1},density:.4,tone:'pastel'},
+    {ground:'#d8b8b8',mark:{field:1},size:[.25,.5],edge:.6,alpha:.75,layout:{stack:1},density:.45,tone:'pastel'},
+    {ground:'#6a1418',mark:{field:1},size:[.2,.45],edge:.8,alpha:.8,layout:{stack:1},density:.5,tone:'dark'},
+    {ground:'#4a1a1a',mark:{nest:1},size:[.3,.6],edge:.5,alpha:.7,layout:{grid:1},density:.3,tone:'dark'},
+    {ground:'#e4c89a',mark:{field:1},size:[.15,.35],edge:.3,alpha:.6,layout:{scatter:1},density:.5},
     {mark:{field:1},size:[.3,.6],edge:.9,alpha:.8,layout:{stack:1},density:.5},
-    {ground:'#d8d4c0',mark:{field:1},size:[.25,.5],edge:.6,alpha:.75,layout:{stack:1},density:.4},
-    {ground:'#b8963c',mark:{field:1},size:[.3,.6],edge:.3,alpha:.8,layout:{stack:1},density:.3,tone:'gold'},
-    {ground:'#4a1a1a',mark:{nest:1},size:[.2,.45],edge:.4,alpha:.7,layout:{grid:1},density:.3,tone:'dark'},
-    {ground:'#1a1418',mark:{field:1},size:[.3,.6],edge:.7,alpha:.5,layout:{stack:1},density:.4,tone:'dark'},
-    {ground:'#c84a1a',mark:{field:1},size:[.3,.6],edge:.2,alpha:.9,layout:{stack:1},density:.4},
+    {ground:'#1a1418',mark:{field:1},size:[.4,.7],edge:.7,alpha:.5,layout:{stack:1},density:.3,tone:'dark'},
   ],
   bulge: [   // slot order = solo phases: Folklore, Vonal sphere, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
     {ground:'#141418',mark:{rect:.5,disc:.5},size:[.03,.06],layout:{grid:1},density:1},
@@ -15849,14 +14465,13 @@ const ARTIST_VARIANTS = {
     {ground:'#1a1a2a',mark:{arc:.6,wavyline:.4},size:[.1,.4],layout:{radial:1},density:.5},
   ],
   spiral: [
-    {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:.6,scatter:.4},density:.4},
-    {ground:'#e8d6be',mark:{goldspiral:.5,petal:.3,disc:.2},size:[.04,.12],layout:{radial:.6,scatter:.4},density:.25},   // Tree of Knowledge
-    {ground:'#e8e2cc',mark:{asterisk:.5,goldspiral:.3,cloud:.2},size:[.05,.15],edge:.3,alpha:.7,layout:{scatter:1},density:.3},
-    {ground:'#f0e84a',mark:{ring:.6,dot:.4},size:[.05,.2],layout:{scatter:1},density:.15},
-    {ground:'#1a1418',mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},
-    {ground:'#e8e2cc',mark:{stem:1},size:[.1,.3],layout:{grid:1},density:.3},
-    {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:1},density:.4},
-    {mark:{rays:.7,target:.3},size:[.1,.24],layout:{radial:1},density:.1},
+    {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:.6,scatter:.4},density:.4},                                             // Spiral: floating forms
+    {ground:'#e8d48c',mark:{disc:.4,petal:.3,goldspiral:.3},size:[.08,.24],edge:.1,alpha:.95,layout:{scatter:1},density:.3,tone:'pastel',lines:.3},   // The Ten Largest
+    {ground:'#1a1418',mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},                                                     // Altarpiece
+    {ground:'#f6f2e8',mark:{ring:.4,disc:.4,gridline:.2},size:[.15,.4],layout:{radial:1},density:.15,outline:.8},                  // The Swan, No. 17
+    {ground:'#e8d6be',mark:{goldspiral:.5,petal:.3,disc:.2},size:[.04,.12],layout:{radial:.6,scatter:.4},density:.25},             // The Tree of Knowledge
+    {ground:'#1c3a52',mark:{goldspiral:.6,ring:.4},size:[.03,.12],layout:{radial:1},density:.3,tone:'pastel',lines:.6},            // Primordial Chaos
+    {ground:'#e8e2cc',mark:{stem:1},size:[.1,.3],layout:{grid:1},density:.3},                                                       // Botanical
   ],
   arcs: [
     {mark:{nest:1},size:[.1,.4],layout:{radial:.5,grid:.5},density:.3},
@@ -15896,15 +14511,15 @@ const ARTIST_VARIANTS = {
     {ground:'#d8e0d0',mark:{surface:.85,stem:.15},size:[.09,.14],edge:0,alpha:.92,layout:{grid:.6,field:.4},density:.9},   // Peupliers
     {ground:'#4a6a5a',mark:{surface:.9,arc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.6,scatter:.4},density:.9},   // Pont japonais
   ],
-  hokusai: [
-    {mark:{ring:.7,crest:.3},size:[.02,.06],layout:{stack:1},density:.3},
-    {mark:{crest:.6,arc:.4},size:[.03,.12],layout:{flow:1},density:.15},
-    {mark:{cloud:1},size:[.03,.1],edge:.1,alpha:.8,layout:{radial:1},density:.4,tone:'pastel'},
-    {ground:'#5a4a6a',mark:{rain:1},size:[.05,.2],layout:{scatter:1},density:.3},
-    {ground:'#c8c0a8',mark:{rain:.7,tri:.3},size:[.05,.2],layout:{scatter:1},density:.35},
-    {ground:'#e8e0d0',mark:{beam:1},size:[.1,.3],layout:{grid:1},density:.5,tone:'dark'},
-    {mark:{ring:.7,crest:.3},size:[.02,.06],layout:{stack:1},density:.3},
-    {mark:{crest:.6,arc:.4},size:[.03,.12],layout:{flow:1},density:.15},
+  hokusai: [   // slot order = solo variants: Great Wave, Red Fuji, Thunderstorm, Kajikazawa, Masculine Wave, Poppies, Ejiri gust, Weeping Cherry
+    {mark:{crest:.6,arc:.4},size:[.06,.2],layout:{flow:1},density:.2},
+    {ground:'#e6e0d0',mark:{tri:.6,cloud:.4},size:[.1,.35],layout:{stack:1},density:.2},
+    {ground:'#2a2a36',mark:{tri:.5,beam:.5},size:[.1,.3],layout:{stack:1},density:.2,tone:'dark'},
+    {ground:'#1b3a5b',mark:{crest:.7,arc:.3},size:[.03,.1],layout:{flow:1},density:.3,tone:'dark'},
+    {mark:{crest:.5,ring:.3,dot:.2},size:[.03,.12],layout:{flow:1},density:.35},
+    {ground:'#e8e2cc',mark:{petal:.6,stem:.4},size:[.06,.2],layout:{grid:1},density:.3},
+    {ground:'#e6e0d0',mark:{rect:.6,tri:.4},size:[.02,.05],layout:{scatter:1},density:.4},
+    {ground:'#1e3f6e',mark:{petal:.7,stem:.3},size:[.02,.06],layout:{flow:1},density:.4,tone:'dark'},
   ],
   lichtenstein: [
     {ground:'#faf8f0',mark:{panel:.4,benday:.3,starburst:.2,speech:.1},size:[.06,.14],layout:{grid:1},density:.6,outline:1},   // Mosaic: comic panels
@@ -15949,7 +14564,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:6,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:6,arcs:7,pop:7,mitchell:6,monet:6,hokusai:6,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:7,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:6,oneM:1,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
