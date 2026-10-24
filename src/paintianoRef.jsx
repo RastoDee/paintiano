@@ -14296,6 +14296,9 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   // Rests advance a little quicker so silence doesn't drag.
   // Run LAST so the final event structure (after Alberti / Run-length / Tremolo
   // expansions reflipping _playable) is what's reflected in _stepMs.
+  // A silent continuation cell of a held plane (a run the player skips) passes at
+  // this share of a sounding step — see the LENGTH GOVERNOR below.
+  const _CONT_W = 0.5;
   {
     // Per-cell interval. Centre at 200ms (was 150 — default was a machine gun).
     // Serene atmo widens up to 260ms (real breathing room); frantic atmo compresses
@@ -14338,9 +14341,41 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // Safety clamp: never absurdly fast or slow per cell.
       ev._stepMs = Math.round(Math.max(70, Math.min(520, stepMs)));
     }
+    // ─── LENGTH GOVERNOR — a scan lasts what its image's energy planned ────────
+    // targetMs (above) is the planned length: 1:15 for a restless canvas … 4:00
+    // for a calm one. The steps above give the pace its SHAPE (dark→slow, bar
+    // breath, closing ritardando) around a fixed 200 ms, so left alone a scan ran
+    // 3–10 minutes whatever the image. Here the whole shape is rescaled so its
+    // total lands on the plan. The silent continuation cells of a held plane pass
+    // at half time (a flat sky wipes in quicker than a detailed passage), so the
+    // sounding steps keep most of their room.
+    let _govK = 1;
+    {
+      const _isCont = (ev)=> ev._playable===false && !ev._rest && !ev._melRest && ev.n && ev.n.length>0;
+      const nat = evts.map(ev=>ev._stepMs||200);
+      let tw=0; for(let i=0;i<evts.length;i++) tw += nat[i]*(_isCont(evts[i])?_CONT_W:1);
+      // The plan, but the sounding steps never run faster than 55% of the pace the
+      // shape was tuned at (≈120 ms and up): a busy canvas with many sounding cells
+      // takes more of the 4:00 instead of turning into a machine gun.
+      const want = Math.max(DUR_MIN, Math.min(240000, Math.max(targetMs, 0.55*tw)));
+      if(tw>0 && evts.length>1){
+        let K = want/tw;
+        for(let pass=0; pass<4; pass++){
+          let tot=0;
+          for(let i=0;i<evts.length;i++){
+            const s=Math.max(40, Math.round(nat[i]*(_isCont(evts[i])?_CONT_W:1)*K));
+            evts[i]._stepMs=s; tot+=s;
+          }
+          const err=want/tot;
+          if(Math.abs(err-1)<0.01) break;
+          K*=err;
+        }
+        _govK=K;
+      }
+    }
     // startMs was initially laid out as evIdx*msPerBlock (a FLAT grid pace). But
     // the image scan actually PLAYS at the agogic _stepMs above (dark→slow,
-    // bar-breath, ritardando — 70..520ms, mean ~200). When those two disagree
+    // bar-breath, ritardando, scaled to the planned length). When those two disagree
     // (e.g. many cells make msPerBlock ~100ms while mean _stepMs ~200ms), a See
     // music MIDI bake — which encodes startMs — plays ~2× too fast vs the image.
     // Re-lay startMs as the CUMULATIVE SUM of _stepMs so the exported timeline
@@ -14358,7 +14393,7 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       let _acc = 0;
       for(const ev of evts){
         const _jit = (typeof ev.band==='number' && typeof ev.cg==='number')
-          ? (_detRnd(ev.band, ev.cg, 2) - 0.5) * 40 : 0;
+          ? (_detRnd(ev.band, ev.cg, 2) - 0.5) * 40 * Math.min(1,_govK) : 0;
         ev.startMs = Math.max(0, Math.round(_acc + _jit));
         _acc += (ev._stepMs || 200);
       }
@@ -14376,9 +14411,15 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   for(const ev of evts){
     if(!ev.n || !ev.n.length) continue;
     const stepMs = ev._stepMs || 200;
+    // A held plane's silent continuation cells pass faster now (_CONT_W), so the
+    // head's hold (durMs × run length) shrinks with its slot — same proportion.
+    const _rl = ev._runLen||1;
+    const _hold = (_rl>1 && ev._playable!==false) ? (1+(_rl-1)*_CONT_W)/_rl : 1;
     ev.n = ev.n.map(n => {
       const cap = (n.bass ? 6 : 4) * stepMs;
-      return n.durMs > cap ? {...n, durMs: cap} : n;
+      const d = n.durMs > cap ? cap : n.durMs;
+      if(_hold<1) return {...n, durMs: Math.max(120, Math.round(d*_hold))};
+      return d!==n.durMs ? {...n, durMs: d} : n;
     });
   }
   return evts;
@@ -14430,871 +14471,142 @@ const _nameToMidi = Object.fromEntries(_midiToName.map((n,i)=>[n,i]));
 // from per-chord _tremSeed already in the array, or fall back to position).
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPOSER LAYER — painting → music in a composer's STYLE.
-// Two-phase design: Phase 1 ANALYSES the whole picture first (the plain scan,
-// row-major, is the material map: per-cell notes + colour statistics), then
-// Phase 2 COMPOSES over the complete map — so form, climax and ending are
+// Two-phase design: Phase 1 READS the whole picture first — the plain scan
+// (row-major, the material map: per-cell notes + colour statistics), the
+// sections along the reading axis, and the picture's DNA (below) — then
+// Phase 2 COMPOSES over the complete map, so form, climax and ending are
 // planned from the whole image, never guessed locally. Deterministic:
-// (pixels, composer) → identical piece, always. Mirrors mosaic vs artists.
+// (pixels, composer, direction) → identical piece, always. Mirrors mosaic vs
+// artists.
 // ═══════════════════════════════════════════════════════════════════════════
-function composeImageGlass(px,nc,nr,table,colorMode,dir){
-  // ── PHASE 1 · analyse ────────────────────────────────────────────────────
-  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
-  if(!base || !base.length) return base||[];
-  // seed from the pixels themselves (FNV over a sparse sample)
-  let ss=0x811c9dc5;
-  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(9700+salt,ss,0,0); f(); return f; };
-  // group scan cells into row-bands, then merge bands into 12-28 SECTIONS
-  const bandsMap=new Map();
-  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
-  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
-  const S=Math.max(12,Math.min(28,bandKeys.length));
-  const secs=[];
-  for(let si=0;si<S;si++){
-    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
-    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
-    if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
-    for(const c of cells){
-      lum+=_lum100(c); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
-        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
-    }
-    lum/=cells.length; chr/=cells.length;
-    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
-  }
-  if(!secs.length) return base;
-  // ── globals: tonic, mode, tempo, dynamic arc ──
-  const g=new Float32Array(12); let gl=0,gc2=0;
-  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
-  gl/=secs.length; gc2/=secs.length;
-  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  const major = gl>50;
-  const scale = major?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10];
-  const inScale=(pc)=>{ let best=pc,bd=99; for(const d of scale){ const a=(tonic+d)%12; const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
-  const c01=Math.min(1,gc2/45);
-  const bpm=94+Math.round(c01*40);
-  const eighth=Math.round(60000/bpm/2);
-  const arc=(pos)=>0.72+0.44*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.22*0.22));
-  // bar budget so the piece lands ~1.5-3 min regardless of image size
-  let bars=secs.map(sec=>2+Math.round(sec.homog*2));
-  const maxBars=Math.floor(170000/(8*eighth));
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
-  // ── PHASE 2 · compose (additive cells, pendulum arpeggio, pedal bass) ──
-  const evts=[]; let t=0, evIdx=0, prevPcs=[];
-  const jit=R(1);
-  // ── EPISODIC FORM ── the piece is not one texture varied but SIX moods:
-  // intro (bare cell) → flow (cell+pedal) → CHORALE (block chords — a whole
-  // different fabric, the Metamorphosis contrast) → flow' (octave up, terrace)
-  // → climax (doubled, loud) → outro (stripped, slowing). Material still
-  // comes from the picture's rows; only the clothing changes per episode.
-  const NS=secs.length;
-  const phaseOf=(si)=>{ const f=NS<=1?0:si/(NS-1);
-    if(f<0.12) return 'intro';
-    if(f<0.40) return 'flow';
-    if(f<0.55) return 'chorale';
-    if(f<0.74) return 'flow2';
-    if(f<0.90) return 'climax';
-    return 'outro'; };
-  for(let si=0;si<NS;si++){
-    const sec=secs[si], last=si===NS-1;
-    const ph=phaseOf(si);
-    const shift=(ph==='flow2' && si%2===1)?5:0;
-    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(p2=>inScale((p2+shift)%12));
-    const uniqR=[...new Set(ranked)];
-    let K=(ph==='intro'||ph==='outro')?2:3+(sec.chr>28?1:0)+(sec.homog<0.4?1:0);
-    const cellPcs=[];
-    for(const p2 of prevPcs){ if(cellPcs.length<2 && uniqR.includes(p2)) cellPcs.push(p2); }
-    for(const p2 of uniqR){ if(cellPcs.length>=K) break; if(!cellPcs.includes(p2)) cellPcs.push(p2); }
-    while(cellPcs.length<Math.min(K,3)) cellPcs.push((tonic+scale[(cellPcs.length*2)%scale.length])%12);
-    prevPcs=cellPcs.slice();
-    let octBase=sec.lum<40?3:(sec.lum<62?4:5);
-    if(ph==='flow2') octBase=Math.min(5,octBase+1);
-    if(ph==='climax') octBase=Math.min(5,octBase+1);
-    const mids=[]; let lastM=-1;
-    for(const p2 of cellPcs.slice().sort((a,b)=>a-b)){ let m=12*(octBase+1)+p2; while(m<=lastM) m+=12; lastM=m; mids.push({m,pc:p2}); }
-    const seq=mids.concat(mids.slice(1,Math.max(1,mids.length-1)).reverse());
-    const trip=(ph==='flow'||ph==='flow2') && sec.chr>32;
-    const perBar=trip?12:8;
-    const pulse=trip?Math.round(eighth*2/3):eighth;
-    const bassPc=(si%2===0)?((tonic+shift)%12):((tonic+shift+7)%12);
-    const bsrc=sec.cells[0];
-    const vPh=(ph==='intro'?0.72:ph==='chorale'?0.9:ph==='climax'?1.12:ph==='outro'?0.7:1);
-    // LEFT HAND lives the whole section: the pedal is re-struck EVERY BAR,
-    // root and fifth alternating — the two hands breathe together, always.
-    if(ph!=='intro' && ph!=='chorale'){
-      const barLen=perBar*pulse;
-      for(let bb=0;bb<bars[si];bb++){
-        const bp=(bb%2===0)?bassPc:((bassPc+7)%12);
-        evts.push({n:[{m:36+bp,v:Math.round((bb===0?54:46)*vPh*arc(si/NS)),durMs:Math.round(barLen*1.15),bass:true}],startMs:t+bb*barLen,idx:evIdx++,cg:bsrc.cg,band:bsrc.band,colStep:bsrc.colStep||4,_chroma:sec.chr,_flat:0,_domPc:bp,_lum:sec.lum});
-      }
-    }
-    if(ph==='chorale'){
-      // BLOCK CHORDS — the whole cell rings together in slow quarters; the
-      // total textural opposite of the arpeggio, and the piece breathes.
-      const nCh=bars[si]*4;
-      for(let q=0;q<nCh;q++){
-        const pos=t/Math.max(1,(maxBars*8*eighth));
-        const v=Math.round((46+Math.min(30,sec.chr))*arc(Math.min(1,pos))*vPh + (q%4===0?6:0));
-        const ns=mids.map((o,oi)=>({m:o.m-12,v:Math.max(26,v-oi*5),durMs:Math.round(eighth*2*1.8)}));
-        ns.push({m:36+bassPc,v:Math.round(v*0.85),durMs:Math.round(eighth*2*1.8),bass:true});
-        const srcC=sec.src[mids[0].pc]||{cg:bsrc.cg,band:bsrc.band,_lum:sec.lum,_chroma:sec.chr};
-        evts.push({n:ns,startMs:t,idx:evIdx++,cg:srcC.cg,band:srcC.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:mids[0].pc,_lum:sec.lum});
-        t+=eighth*2;
-      }
-      continue;
-    }
-    let pulseMs=pulse;
-    for(let b2=0;b2<bars[si];b2++){
-      for(let k=0;k<perBar;k++){
-        const note=seq[k%seq.length];
-        const srcC=sec.src[note.pc]||sec.src[cellPcs[0]]||{cg:bsrc.cg,band:bsrc.band,_lum:sec.lum,_chroma:sec.chr};
-        const pos=t/Math.max(1,(maxBars*8*eighth));
-        const v=Math.max(26,Math.min(112,Math.round((50+Math.min(40,sec.chr))*arc(Math.min(1,pos))*vPh + (jit()-0.5)*10)));
-        const ns=[{m:note.m,v,durMs:Math.round(pulseMs*1.9)}];
-        if(ph==='climax'){ ns.push({m:note.m+12,v:Math.max(24,v-16),durMs:Math.round(pulseMs*1.9)}); }
-        evts.push({n:ns,startMs:t,idx:evIdx++,cg:srcC.cg,band:srcC.band,colStep:4,_chroma:srcC._chroma||sec.chr,_flat:0,_domPc:note.pc,_lum:srcC._lum||sec.lum});
-        t+=pulseMs;
-        if(last) pulseMs=Math.round(pulseMs*1.02);
-      }
-    }
-  }
-  // final tonic chord, long and soft — the picture closes on its key
-  const third=(tonic+(major?4:3))%12, fifth=(tonic+7)%12;
-  evts.push({n:[{m:48+tonic,v:46,durMs:2600},{m:60+third,v:42,durMs:2600},{m:60+fifth,v:40,durMs:2600}],startMs:t+eighth,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
-  return evts;
-}
-
-// ── SATIE — Gymnopédie: slow 3/4, bass-chord sway, a sparse floating melody. ──
-// Same two-phase design as Glass: the whole picture is analysed first, then
-// the piece is composed over the complete map. Sections become harmonic
-// regions (one chord colour each); homogeneous regions breathe with rests.
-function composeImageSatie(px,nc,nr,table,colorMode,dir){
-  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
-  if(!base || !base.length) return base||[];
-  let ss=0x811c9dc5;
-  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(9800+salt,ss,0,0); f(); return f; };
-  const bandsMap=new Map();
-  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
-  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
-  const S=Math.max(10,Math.min(22,bandKeys.length));
-  const secs=[];
-  for(let si=0;si<S;si++){
-    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
-    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
-    if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
-    for(const c of cells){
-      lum+=_lum100(c); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
-        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
-    }
-    lum/=cells.length; chr/=cells.length;
-    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    // luminance PROFILE left→right (4 samples) — the picture's own melody line
-    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
-  }
-  if(!secs.length) return base;
-  const g=new Float32Array(12); let gl=0;
-  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; }
-  gl/=secs.length;
-  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  const bright = gl>50;
-  // bright → major with a lydian shimmer; dark → dorian. Chords are 7ths —
-  // the gymnopédie sonority — never plain triads.
-  const scale = bright?[0,2,4,6,7,9,11]:[0,2,3,5,7,9,10];
-  const inScale=(pc)=>{ let best=pc,bd=99; for(const d of scale){ const a=(tonic+d)%12; const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
-  const beat=Math.round(60000/66);              // lent — quarter ≈ 909ms
-  const barMs=beat*3;
-  const arc=(pos)=>0.88+0.14*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.24*0.24));
-  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));   // busy regions get more bars
-  const maxBars=Math.floor(160000/barMs);
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
-  const totalMs=bars.reduce((a,b)=>a+b,0)*barMs;
-  const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0, lastGest=-1, melSkip=0;
-  const jr=R(1);
-  const seventh = bright?11:10;
-  const totBars=bars.reduce((a,b)=>a+b,0);
-  // the single form gesture: a short "trio" near phi drifting to the RELATIVE
-  // key and back — everything else keeps the clean original sway
-  const trioStart=Math.floor(totBars*0.58), trioEnd=Math.min(totBars-2,trioStart+4);
-  const rel=bright?(tonic+9)%12:(tonic+3)%12;
-  for(let si=0;si<secs.length;si++){
-    const sec=secs[si], last=si===secs.length-1;
-    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
-    const uniqR=[...new Set(ranked)];
-    const rootA=uniqR[0]!=null?uniqR[0]:tonic;
-    const rootB=uniqR[1]!=null?uniqR[1]:(tonic+7)%12;      // sway between two colours
-    const srcOf=(pc)=>sec.src[pc]||sec.src[rootA]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
-    for(let b2=0;b2<bars[si];b2++,barNo++){
-      const inTrio=barNo>=trioStart&&barNo<trioEnd;
-      const fPos=barNo/Math.max(1,totBars-1);
-      // EPISODES: naked opening (no chord) → sway → ROLLED mid-episode (the
-      // chord arpeggiated, melody an octave up) → trio → sway home.
-      const phS = fPos<0.14 ? 'naked' : (fPos>=0.56&&fPos<0.74&&!inTrio) ? 'rolled' : 'sway';
-      let root=(b2%2===0)?rootA:rootB;
-      if(inTrio) root=(barNo%2===0)?rel:(rel+7)%12;
-      const pos=t/Math.max(1,totalMs);
-      const env=arc(Math.min(1,pos));
-      const sc=srcOf(root);
-      // beat 1 — low bass (always the anchor)
-      evts.push({n:[{m:36+root,v:Math.round(50*env),durMs:Math.round(beat*2.7),bass:true}],startMs:t,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-      const third=(root+(bright?4:3))%12;
-      if(phS!=='naked'){
-        const chTones=[{m:48+root,vv:42},{m:48+third+(third<root?12:0),vv:38},{m:48+((root+seventh)%12)+(((root+seventh)%12)<root?12:0),vv:36}];
-        if(phS==='rolled'){
-          // arpeggiated roll — three quick soft tones instead of the block
-          for(let q=0;q<chTones.length;q++){
-            evts.push({n:[{m:chTones[q].m,v:Math.round(chTones[q].vv*env),durMs:Math.round(beat*1.7)}],startMs:t+beat+q*Math.round(beat*0.34),idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-          }
-        } else {
-          evts.push({n:chTones.map(o=>({m:o.m,v:Math.round(o.vv*env),durMs:Math.round(beat*1.9)})),startMs:t+beat,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        }
-      }
-      const cadence=(barNo%4===3);   // every 4th bar the song rests — a breath
-      // melody speaks in GESTURES with memory — never the same shape twice in
-      // a row: 0 whole-bar tone · 1 "da-taaa" · 2 "da-da·" · 3 tie over the
-      // barline (the Satie suspension; the next bar's melody then rests).
-      const restP=0.18+sec.homog*0.4;
-      if(melSkip>0){ melSkip--; }
-      else if(!cadence && jr()>restP && !last){
-        let cands=uniqR.slice(0,5); if(!cands.length) cands=[tonic];
-        // the row's LIGHT chooses the direction: rising luminance pulls the
-        // melody up, falling pulls it down — the picture draws its own line
-        const _qi=Math.min(3,Math.floor((b2/Math.max(1,bars[si]))*4));
-        const _trend=(sec.prof?sec.prof[_qi]:sec.lum)-sec.lum;
-        let melPc=cands[0];
-        if(prevMel!=null){
-          let bd=99, near=[];
-          for(const p2 of cands){ const dd=Math.min((p2-prevMel%12+12)%12,(prevMel%12-p2+12)%12); near.push([dd,p2]); }
-          near.sort((a,b)=>a[0]-b[0]);
-          melPc=near[0][1];
-          if(near.length>1 && Math.abs(_trend)>4){
-            const dirOf=(pc)=>{ const up=(pc-prevMel%12+12)%12, dn=(prevMel%12-pc+12)%12; return up<=dn?1:-1; };
-            if(dirOf(near[0][1])!==Math.sign(_trend) && dirOf(near[1][1])===Math.sign(_trend)) melPc=near[1][1];
-          }
-        }
-        let mm=60+melPc; if(prevMel!=null){ while(mm-prevMel>7) mm-=12; while(prevMel-mm>7) mm+=12; }
-        if(phS==='rolled'){ mm=Math.min(89,mm+12); }
-        mm=Math.max(55,Math.min(84,mm));
-        const msc=srcOf(melPc);
-        const vB=(58+Math.min(18,sec.chr*0.5))*env;
-        const P=(m2,vv,startB,durB2)=>{ evts.push({n:[{m:m2,v:Math.round(vv),durMs:Math.round(beat*durB2*0.96)}],startMs:t+Math.round(startB*beat),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum}); };
-        let gi; do{ gi=Math.floor(jr()*4); }while(gi===lastGest);
-        lastGest=gi;
-        if(gi===0){ P(mm,vB,0,2.9); prevMel=mm; }
-        else if(gi===1){ const nb=Math.max(55,Math.min(84,mm+(jr()<0.5?-2:2))); P(nb,vB*0.86,0,0.95); P(mm,vB,1,1.9); prevMel=mm; }
-        else if(gi===2){ const nb=Math.max(55,Math.min(84,mm+(jr()<0.5?-1:2))); P(mm,vB*0.95,0,0.95); P(nb,vB*0.85,1,0.95); prevMel=nb; }
-        else { P(mm,vB*0.96,(jr()<0.5?1:2),4.6); prevMel=mm; melSkip=1; }
-      }
-      t+=barMs;
-    }
-  }
-  // final bar — bass + 7th chord, long and very soft
-  evts.push({n:[{m:36+tonic,v:44,durMs:3200,bass:true},{m:48+tonic,v:40,durMs:3200},{m:48+((tonic+(bright?4:3))%12),v:36,durMs:3200},{m:48+((tonic+seventh)%12),v:34,durMs:3200}],startMs:t+beat,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:0,_flat:0,_domPc:tonic,_lum:gl});
-  return evts;
-}
-
-// ── CHOPIN — nocturne: arpeggiated left hand, cantabile melody, rubato. ──
-// Two-phase like the others. The harmonic floor is FUNCTIONAL (i-VI-iv-V
-// cycling), coloured by each section's pitch material; the right hand sings
-// two-bar phrases with grace-note ornaments and a phi-placed climax.
-function composeImageChopin(px,nc,nr,table,colorMode,dir){
-  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
-  if(!base || !base.length) return base||[];
-  let ss=0x811c9dc5;
-  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(9900+salt,ss,0,0); f(); return f; };
-  // Diatonic walking — EVERY melodic step moves along the key's scale, never
-  // by raw semitone arithmetic (that's what made runs sound false).
-  let _scAbs=null;
-  const _snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of _scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
-  const _stepSc=(m,nSteps)=>{ let cur=_snap(m); const dir=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir; while(_scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir; cur=nxt; } return cur; };
-  const bandsMap=new Map();
-  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
-  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
-  const S=Math.max(10,Math.min(20,bandKeys.length));
-  const secs=[];
-  for(let si=0;si<S;si++){
-    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
-    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
-    if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
-    for(const c of cells){
-      lum+=_lum100(c); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
-        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
-    }
-    lum/=cells.length; chr/=cells.length;
-    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    // luminance PROFILE left→right (4 samples) — the picture's own melody line
-    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
-  }
-  if(!secs.length) return base;
-  const g=new Float32Array(12); let gl=0,gc2=0;
-  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
-  gl/=secs.length; gc2/=secs.length;
-  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  const minor = gl<=55;                              // nocturnes lean minor
-  const scale = minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
-  const inScale=(pc)=>{ let best=pc,bd=99; for(const d of scale){ const a=(tonic+d)%12; const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
-  // 6/8 nocturne pulse — dotted-quarter ~ 50, so an eighth ≈ 400ms; brighter
-  // pictures flow a touch quicker
-  const eighth=Math.round(400-Math.min(1,gc2/45)*70);
-  const barMs=eighth*6;
-  const arc=(pos)=>0.78+0.36*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.2*0.2));
-  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
-  const maxBars=Math.floor(155000/barMs);
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
-  const totBars=bars.reduce((a,b)=>a+b,0);
-  const totalMs=totBars*barMs;
-  // functional floor: i - VI - iv - V (minor) / I - vi - IV - V (major)
-  const prog=minor?[0,8,5,7]:[0,9,5,7];
-  _scAbs=scale.map(d=>(tonic+d)%12);
-  const evts=[]; let t=0, evIdx=0, prevMel=null, barNo=0, lastGestC=-1;
-  const jr=R(1), rb=R(2);
-  const climBar=Math.floor(totBars*0.618);
-  for(let si=0;si<secs.length;si++){
-    const sec=secs[si], last=si===secs.length-1;
-    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
-    const uniqR=[...new Set(ranked)];
-    const srcOf=(pc)=>sec.src[pc]||sec.src[uniqR[0]]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
-    for(let b2=0;b2<bars[si];b2++,barNo++){
-      const deg=prog[barNo%4];
-      const fPos=barNo/Math.max(1,totBars-1);
-      // EPISODES: recitative opening (bare octaves under free song) →
-      // nocturne → AGITATO middle (flowing arpeggio LH, melody in octaves,
-      // relative key) → nocturne home. One piece, four different rooms.
-      const phC = fPos<0.10 ? 'recit' : (fPos>=0.48&&fPos<0.68) ? 'agitato' : 'nocturne';
-      const relC = minor?(tonic+3)%12:(tonic+9)%12;
-      let root=(tonic+deg)%12;
-      if(phC==='agitato'){ root=(barNo%2===0)?relC:(relC+7)%12; }
-      const isV=deg===7 && phC!=='agitato';
-      const third=(root+((minor&&!isV)?3:4))%12;
-      const fifth=(root+7)%12;
-      const pos=t/Math.max(1,totalMs);
-      const env=arc(Math.min(1,pos));
-      const nearClim=Math.abs(barNo-climBar)<=1;
-      const sc=srcOf(root);
-      if(phC==='recit'){
-        // bare low octaves — the song floats free above them
-        evts.push({n:[{m:36+root,v:Math.round(46*env),durMs:Math.round(barMs*0.95),bass:true},{m:48+root,v:Math.round(38*env),durMs:Math.round(barMs*0.95)}],startMs:t,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-      } else if(phC==='agitato'){
-        // flowing continuous arpeggio — six eighths R-5-10-12-10-5, urgent
-        const t3=52+third+(third<root?12:0)-4, t5=48+fifth+(fifth<root?12:0)-12;
-        const flow=[36+root,t5,t3,t3+12,t3,t5];
-        for(let q=0;q<6;q++){
-          evts.push({n:[{m:flow[q],v:Math.round((44+q*1.5)*env),durMs:Math.round(eighth*1.7),bass:q===0}],startMs:t+q*eighth,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        }
-      } else {
-        const lh=[ {m:36+root,off:0,v:50,dur:2.2,bass:true},
-                   {m:48+fifth+(fifth<root?12:0)-12,off:1,v:40,dur:1.6},
-                   {m:52+third+(third<root?12:0)-4,off:2,v:42,dur:1.6},
-                   {m:48+fifth+(fifth<root?12:0)-12,off:3,v:38,dur:1.6},
-                   {m:48+root,off:4,v:41,dur:1.6},
-                   {m:48+fifth+(fifth<root?12:0)-12,off:5,v:37,dur:1.6} ];
-        for(const L of lh){
-          evts.push({n:[{m:L.m,v:Math.round(L.v*env),durMs:Math.round(eighth*L.dur),bass:!!L.bass}],startMs:t+L.off*eighth,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        }
-      }
-      const cadence=(barNo%8===7);   // phrase-end bar: the voice breathes
-      // RIGHT HAND — cantabile in GESTURES with memory (no "ta-da" grind):
-      //   0 dotted-half across the bar (with the grace-note sigh)
-      //   1 nocturne lilt (the old ta-da — now just one voice among four)
-      //   2 three sinking quarters
-      //   3 an eighth-note run rising into a held tone (the ornamental scale)
-      const restP=0.06+sec.homog*0.20;
-      if(cadence){
-        // the phrase-end bar RESOLVES aloud: fifth falling home to the root —
-        // the right hand sings the cadence instead of going silent.
-        const c5=Math.max(60,Math.min(88,64+fifth));
-        const c1=Math.max(58,Math.min(86,(64+root)>c5?(64+root-12):(64+root)));
-        const scC=srcOf(root);
-        evts.push({n:[{m:c5,v:Math.round(56*env),durMs:Math.round(eighth*2.6)}],startMs:t+Math.round((rb()-0.5)*80),idx:evIdx++,cg:scC.cg,band:scC.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:fifth,_lum:sec.lum});
-        evts.push({n:[{m:c1,v:Math.round(60*env),durMs:Math.round(eighth*4.6)}],startMs:t+3*eighth,idx:evIdx++,cg:scC.cg,band:scC.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        prevMel=c1;
-      }
-      if(!cadence && jr()>restP){
-        let cands=uniqR.slice(0,6).filter(p2=>p2===root||p2===third||p2===fifth||jr()<0.5);
-        if(!cands.length) cands=[third];
-        let melPc=cands[Math.floor(jr()*cands.length)]||third;
-        // light-trend bias: prefer the candidate that moves with the row's
-        // luminance direction (the melody traces the picture)
-        if(prevMel!=null && cands.length>1 && sec.prof){
-          const _qi=Math.min(3,Math.floor((b2/Math.max(1,bars[si]))*4));
-          const _trend=sec.prof[_qi]-sec.lum;
-          if(Math.abs(_trend)>4){
-            const dirOf=(pc)=>{ const up=(pc-prevMel%12+12)%12, dn=(prevMel%12-pc+12)%12; return up<=dn?1:-1; };
-            const match=cands.filter(pc=>dirOf(pc)===Math.sign(_trend));
-            if(match.length){ melPc=match[Math.floor(jr()*match.length)]; }
-          }
-        }
-        let mm=64+melPc; if(prevMel!=null){ while(mm-prevMel>9) mm-=12; while(prevMel-mm>9) mm+=12; }
-        mm=Math.max(58,Math.min(88,mm));
-        if(nearClim) mm=Math.min(93,mm+12);        // climax sings an octave up
-        const msc=srcOf(melPc);
-        const rubato=Math.round((rb()-0.5)*(phC==='recit'?220:120));   // breathes around the beat
-        const vMel=Math.round((66+Math.min(20,sec.chr*0.6))*env*(nearClim?1.12:1));
-        const PE=(m2,vv,offE,durE)=>{ const _ns=[{m:m2,v:Math.round(vv),durMs:Math.round(eighth*durE)}]; if(phC==='agitato'){ _ns.push({m:Math.min(96,m2+12),v:Math.round(vv*0.8),durMs:Math.round(eighth*durE)}); } evts.push({n:_ns,startMs:Math.max(0,t+Math.round(offE*eighth)+rubato),idx:evIdx++,cg:msc.cg,band:msc.band,colStep:4,_chroma:msc._chroma||sec.chr,_flat:0,_domPc:melPc,_lum:msc._lum||sec.lum}); };
-        let gi; do{ gi=Math.floor(jr()*4); }while(gi===lastGestC);
-        lastGestC=gi;
-        if(gi===0){
-          if(jr()<0.6){ PE(Math.min(94,_stepSc(mm,1)),Math.max(30,vMel-22),-0.3,0.28); }
-          PE(mm,vMel,0,5.2); prevMel=mm;
-        } else if(gi===1){
-          PE(mm,vMel,0,1.9);
-          const st=Math.max(56,Math.min(90,_stepSc(mm,jr()<0.5?-1:1)));
-          PE(st,vMel-8,2,0.95);
-          // finish on the NEAREST chord tone to where the line is
-          let ct=st,cbd=99;
-          for(const pc of [root,third,fifth]){ for(let o=4;o<=6;o++){ const c2=12*o+pc; const dd=Math.abs(c2-st); if(dd>0&&dd<cbd){cbd=dd;ct=c2;} } }
-          ct=Math.max(56,Math.min(90,ct));
-          PE(ct,vMel-4,3,1.9); prevMel=ct;
-        } else if(gi===2){
-          const d1=Math.max(55,_stepSc(mm,-1)), d2=Math.max(54,_stepSc(mm,-2));
-          PE(mm,vMel,0,1.8); PE(d1,vMel-6,2,1.8); PE(d2,vMel-10,4,1.8);
-          prevMel=d2;
-        } else {
-          for(let q=4;q>=1;q--){ PE(Math.max(55,_stepSc(mm,-q)),Math.max(28,vMel-16),(4-q)*1,0.9); }
-          PE(mm,vMel,4,3.4); prevMel=mm;
-        }
-      }
-      t+=barMs;
-      if(last && b2>=bars[si]-2){ t+=Math.round(barMs*0.12); }   // ritardando
-    }
-  }
-  // final: dominant sigh, then rolled tonic chord — long, fading
-  const fifthT=(tonic+7)%12, thirdT=(tonic+(minor?3:4))%12;
-  const roll=[{m:36+tonic,v:52,d:0},{m:48+tonic,v:46,d:80},{m:48+thirdT+(thirdT<tonic?12:0),v:42,d:160},{m:48+fifthT+(fifthT<tonic?12:0),v:40,d:240},{m:60+tonic,v:44,d:320}];
-  for(const r2 of roll){
-    evts.push({n:[{m:r2.m,v:r2.v,durMs:3600,bass:r2.m<45}],startMs:t+eighth+r2.d,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
-  }
-  return evts;
-}
-
-// ── CARL VINE — driving toccata: shifting accents, added-note brightness. ──
-// The modern engine none of the others have: a relentless sixteenth pulse
-// whose accents keep migrating (3+3+2 / 2+3+3), punchy bass octaves ONLY on
-// the accents, luminous add2 harmonies from the picture's colours, a floating
-// lyrical breather mid-piece, and a rising coda. Energy is the picture's.
-function composeImageVine(px,nc,nr,table,colorMode,dir){
-  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
-  if(!base || !base.length) return base||[];
-  let ss=0x811c9dc5;
-  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(10200+salt,ss,0,0); f(); return f; };
-  const bandsMap=new Map();
-  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
-  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
-  const S=Math.max(8,Math.min(16,bandKeys.length));
-  const secs=[];
-  for(let si=0;si<S;si++){
-    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
-    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
-    if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
-    for(const c of cells){
-      lum+=_lum100(c); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
-        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
-    }
-    lum/=cells.length; chr/=cells.length;
-    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells});
-  }
-  if(!secs.length) return base;
-  const g=new Float32Array(12); let gl=0,gc2=0;
-  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
-  gl/=secs.length; gc2/=secs.length;
-  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  const minor = gl<=42;                                    // Vine leans bright
-  const scale = minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
-  const stepSc=(m,nSteps)=>{ let cur=snap(m); const dir2=nSteps>0?1:-1; for(let q=0;q<Math.abs(nSteps);q++){ let nxt=cur+dir2; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir2; cur=nxt; } return cur; };
-  const inScale=(pc)=>{ let best=pc,bd=99; for(const a of scAbs){ const dd=Math.min((a-pc+12)%12,(pc-a+12)%12); if(dd<bd){bd=dd;best=a;} } return best; };
-  // sixteenth motor — vivid pictures push harder
-  const six=Math.round(165-Math.min(1,gc2/45)*35);         // ~130-165ms
-  const barMs=six*8;                                       // 8 sixteenths per bar
-  let bars=secs.map(sec=>3+Math.round((1-sec.homog)*2));   // 3-5 bars each
-  const maxBars=Math.floor(140000/barMs);
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(2,Math.round(b*maxBars/tot))); }
-  const totBars=bars.reduce((a,b)=>a+b,0);
-  const totalMs=totBars*barMs;
-  const evts=[]; let t=0, evIdx=0, barNo=0;
-  const rv=R(1);
-  // breather: 3 bars around phi — the pulse stops and add9 clouds float
-  const brStart=Math.floor(totBars*0.60), brEnd=Math.min(totBars-4,brStart+3);
-  const srcOf=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
-  for(let si=0;si<secs.length;si++){
-    const sec=secs[si], last=si===secs.length-1;
-    const ranked=[...Array(12).keys()].filter(p2=>sec.hist[p2]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
-    const uniqR=[...new Set(ranked)];
-    const rootX=uniqR[0]!=null?uniqR[0]:tonic;
-    const rootY=uniqR[1]!=null?uniqR[1]:((tonic+5)%12);
-    for(let b2=0;b2<bars[si];b2++,barNo++){
-      const pos=t/Math.max(1,totalMs);
-      const swell=0.8+0.3*Math.exp(-((pos-0.85)*(pos-0.85))/(2*0.12*0.12)); // coda grows
-      if(barNo>=brStart && barNo<brEnd){
-        // BREATHER — floating added-note cloud, very soft, no pulse
-        const r0=snap(52+rootX);
-        const cl=[r0, stepSc(r0,2), stepSc(r0,4), stepSc(r0,1)+12];
-        const scB=srcOf(sec,rootX);
-        for(let q=0;q<cl.length;q++){
-          evts.push({n:[{m:cl[q],v:Math.round(34-q*2),durMs:Math.round(barMs*1.15),bass:q===0}],startMs:t+q*Math.round(six*0.9),idx:evIdx++,cg:scB.cg,band:scB.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((cl[q]%12)+12)%12,_lum:sec.lum});
-        }
-        t+=barMs;
-        continue;
-      }
-      const root=(b2%2===0)?rootX:rootY;
-      const fPos=barNo/Math.max(1,totBars-1);
-      // EPISODES: 4-bar BUILD (bass+stabs only) → motor → periodic HALF-TIME
-      // groove breaks (2 bars of accented stabs with air) → motor → coda.
-      const phV = barNo<4 ? 'build' : ((barNo%12>=10 && fPos<0.8 && !(barNo>=brStart&&barNo<brEnd)) ? 'half' : 'motor');
-      const b0=snap(60+root);
-      const tones=[b0, stepSc(b0,1), stepSc(b0,2), stepSc(b0,4)];
-      const acc=(barNo%4===3)?[0,2,5]:[0,3,6];
-      const isCoda=last;
-      const lift=isCoda?Math.min(12,(b2)*2):0;
-      const scS=srcOf(sec,root);
-      // continuous LH foundation under the motor: a soft root+fifth dyad on
-      // beats 1 and 3 — the accents punch ON TOP of a hand that never leaves.
-      if(phV!=='build'){
-        for(const hb of [0,4]){
-          const bR=snap(36+root);
-          evts.push({n:[{m:bR,v:Math.round(46*swell),durMs:Math.round(six*4.4),bass:true},{m:stepSc(bR,4),v:Math.round(38*swell),durMs:Math.round(six*4.4),bass:true}],startMs:t+hb*six,idx:evIdx++,cg:scS.cg,band:scS.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        }
-      }
-      for(let k=0;k<8;k++){
-        const isAcc=acc.indexOf(k)>=0;
-        if(phV!=='motor' && !isAcc && !(phV==='build'&&k%2===0&&barNo>=2)) continue;
-        const tone=tones[(k*2+((barNo>>1)&1))%4]+ (isCoda?lift:0);
-        const vv0=(44+Math.min(22,sec.chr*0.6))*(isAcc?1.35:1)*swell*(phV==='build'?0.8:1);
-        const v=Math.round(vv0);
-        const ns=[{m:tone,v:Math.min(112,v),durMs:Math.round(six*(phV==='half'?2.6:1.5))}];
-        if(isAcc && phV!=='build'){ ns.push({m:tone+12,v:Math.max(26,v-18),durMs:Math.round(six*1.5)}); }
-        const pcT=((tone%12)+12)%12; const scT=srcOf(sec,pcT);
-        evts.push({n:ns,startMs:t+k*six,idx:evIdx++,cg:scT.cg,band:scT.band,colStep:4,_chroma:scT._chroma||sec.chr,_flat:0,_domPc:pcT,_lum:scT._lum||sec.lum});
-        if(isAcc){
-          const bm=snap(36+root)+(isCoda?Math.min(7,lift):0);
-          evts.push({n:[{m:bm,v:Math.min(110,Math.round(80*swell*(phV==='build'?0.9:1))),durMs:Math.round(six*(phV==='half'?2.2:1.1)),bass:true}],startMs:t+k*six,idx:evIdx++,cg:scS.cg,band:scS.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-        }
-      }
-      t+=barMs;
-    }
-  }
-  // final stab: tonic add2, accented, then a ringing hold
-  const f0=snap(48+tonic);
-  evts.push({n:[{m:f0-12,v:104,durMs:260,bass:true},{m:f0,v:100,durMs:260},{m:stepSc(f0,1),v:92,durMs:260},{m:stepSc(f0,4),v:94,durMs:260}],startMs:t+six,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
-  evts.push({n:[{m:f0-12,v:56,durMs:3400,bass:true},{m:f0,v:52,durMs:3400},{m:stepSc(f0,2),v:48,durMs:3400},{m:stepSc(f0,4),v:46,durMs:3400}],startMs:t+six+320,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
-  return evts;
-}
-
-// ── GERSHWIN — blue-tinged swagger: stride-lite left hand, swung tune. ──
-// Seventh-chord harmony (I6 · vi7 · ii7 · V7, a IV7 lean in the bridge),
-// swing pairs (2:1), syncopated entries and the blue-note grace before the
-// third. Episodes: vamp intro → tune A → bridge → A → tag. The picture sets
-// key, tempo, register and the melody's contour (luminance profile).
-function composeImageGershwin(px,nc,nr,table,colorMode,dir){
-  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
-  if(!base || !base.length) return base||[];
-  let ss=0x811c9dc5;
-  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(10300+salt,ss,0,0); f(); return f; };
-  const bandsMap=new Map();
-  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
-  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
-  const S=Math.max(8,Math.min(16,bandKeys.length));
-  const secs=[];
-  for(let si=0;si<S;si++){
-    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
-    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
-    if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
-    for(const c of cells){
-      lum+=_lum100(c); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
-        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
-    }
-    lum/=cells.length; chr/=cells.length;
-    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
-    secs.push({hist,src,lum,chr,cells,prof});
-  }
-  if(!secs.length) return base;
-  const g=new Float32Array(12); let gl=0,gc2=0;
-  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
-  gl/=secs.length; gc2/=secs.length;
-  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  const scale=[0,2,4,5,7,9,11];                            // major with blue colours
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
-  const blue=(tonic+3)%12;                                 // the b3 — grace only
-  const q=Math.round(660-Math.min(1,gc2/45)*130);          // quarter ~ 530-660ms
-  const swA=Math.round(q*0.66), swB=q-swA;                 // swing pair
-  const barMs=q*4;
-  const maxBars=Math.max(24,Math.floor(150000/barMs));
-  const totBars=maxBars-(maxBars%8);
-  const totalMs=totBars*barMs;
-  const evts=[]; let evIdx=0;
-  const jz=R(1);
-  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
-  const srcOf=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
-  const dPc=(d)=>scAbs[((d%7)+7)%7];
-  // degrees per bar in 8-bar loops: A = I vi ii V ×2 · bridge leans on IV
-  const degA=[0,5,1,4,0,5,1,4];
-  const degBr=[3,3,0,0,1,4,0,4];
-  let prevMel=null;
-  for(let bar=0;bar<totBars;bar++){
-    const sec=secAt(bar), pos=(bar*barMs)/totalMs;
-    const env=0.82+0.26*Math.exp(-((pos-0.62)*(pos-0.62))/(2*0.2*0.2));
-    const blk=(bar>>3)%4;                                  // A A Br A
-    const isBr=blk===2;
-    const deg=(isBr?degBr:degA)[bar%8];
-    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4), sev=dPc(deg+6);
-    const t0=bar*barMs;
-    const sc=srcOf(sec,root);
-    const vamp=bar<2;
-    // STRIDE-LITE: 1 low octave · 2 mid 7th-chord · 3 low fifth · 4 chord
-    const chordMid=()=>{ let r=48+root; r=snap(r); let t3=r+1; while(((t3%12)+12)%12!==third) t3++; let s7=t3+1; while(((s7%12)+12)%12!==sev) s7++; return [r,t3,s7]; };
-    const cm=chordMid();
-    const strid=[
-      {ms:0,   ns:[{m:36+root,v:56,d:q*0.9,bass:true},{m:24+root,v:44,d:q*0.9,bass:true}]},
-      {ms:q,   ns:cm.map((m2,i2)=>({m:m2,v:44-i2*3,d:q*0.85}))},
-      {ms:q*2, ns:[{m:36+fifth+(fifth<root?12:0)-12+12,v:50,d:q*0.9,bass:true}]},
-      {ms:q*3, ns:cm.map((m2,i2)=>({m:m2,v:40-i2*3,d:q*0.85}))}
-    ];
-    for(const st of strid){
-      evts.push({n:st.ns.map(o=>({m:o.m,v:Math.round(o.v*env),durMs:Math.round(o.d),bass:!!o.bass})),startMs:t0+st.ms,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-    }
-    if(vamp) continue;                                     // intro: left hand alone
-    // TUNE — call & response: even bars sing the phrase, odd bars ANSWER it
-    // with a lighter one-two — the right hand never walks off stage.
-    if(bar%2===1){
-      const qi2=Math.min(3,(bar>>1)%4);
-      const trend2=(sec.prof?sec.prof[qi2]:sec.lum)-sec.lum;
-      let am=prevMel!=null?prevMel:snap(76+third);
-      am=snap(Math.max(63,Math.min(93,am+Math.max(-4,Math.min(5,Math.round(trend2/9))))));
-      const vA=Math.round((52+Math.min(14,sec.chr*0.4))*env);
-      const pcA2=((am%12)+12)%12; const scA2=srcOf(sec,pcA2);
-      evts.push({n:[{m:am,v:vA,durMs:Math.round(swA*1.5)}],startMs:t0+q+swA,idx:evIdx++,cg:scA2.cg,band:scA2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcA2,_lum:sec.lum});
-      const am2=snap(Math.max(60,am-((jz()<0.5)?3:1)));
-      evts.push({n:[{m:am2,v:Math.max(30,vA-8),durMs:Math.round(q*1.6)}],startMs:t0+q*3,idx:evIdx++,cg:scA2.cg,band:scA2.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:((am2%12)+12)%12,_lum:sec.lum});
-      prevMel=am2;
-    }
-    if(bar%2===0){
-      const nN=2+((jz()<0.5)?1:0);
-      for(let ni=0;ni<nN;ni++){
-        const qi=Math.min(3,ni+((bar>>1)%2));
-        const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
-        const anchors=[third,fifth,root,dPc(deg+1)];
-        let mm=snap(72+anchors[ni%anchors.length]);
-        mm+=Math.max(-5,Math.min(7,Math.round(trend/8)));
-        mm=snap(Math.max(63,Math.min(93,mm)));
-        if(prevMel!=null && Math.abs(mm-prevMel)>9){ mm=snap(prevMel+(mm>prevMel?5:-5)); }
-        prevMel=mm;
-        // syncopation: entries on the off-beat of the swing pair
-        const offMs=(ni===0)?(q+swA):(ni===1)?(q*2+swA):(q*3);
-        const longN=(ni===nN-1);
-        const vM=Math.round((62+Math.min(18,sec.chr*0.5))*env*(isBr?1.06:1));
-        const pcM=((mm%12)+12)%12; const scM=srcOf(sec,pcM);
-        if(longN && jz()<0.55){
-          evts.push({n:[{m:snap(mm)-((((mm%12)+12)%12===third)?1:0)===mm?mm-1:mm-1,v:Math.max(28,vM-24),durMs:120}],startMs:Math.max(0,t0+offMs-130),idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:blue,_lum:sec.lum});
-        }
-        evts.push({n:[{m:mm,v:vM,durMs:Math.round(longN?q*2.2:swA*1.4)}],startMs:t0+offMs,idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:scM._chroma||sec.chr,_flat:0,_domPc:pcM,_lum:scM._lum||sec.lum});
-      }
-    }
-  }
-  // TAG: ii7 → V7 → I6 with a high blue sigh, then a fat final sixth chord
-  let tE=totBars*barMs;
-  const tags=[[1,0],[4,1],[0,2]];
-  for(const [dg,k] of tags){
-    const r2=dPc(dg); const sc2=srcOf(secs[secs.length-1],r2);
-    evts.push({n:[{m:36+r2,v:58,durMs:Math.round(q*1.8),bass:true},{m:snap(52+dPc(dg+2)),v:44,durMs:Math.round(q*1.8)},{m:snap(55+dPc(dg+6)),v:40,durMs:Math.round(q*1.8)}],startMs:tE+k*q*2,idx:evIdx++,cg:sc2.cg,band:sc2.band,colStep:4,_chroma:gc2,_flat:0,_domPc:r2,_lum:gl});
-  }
-  evts.push({n:[{m:24+tonic,v:70,durMs:3800,bass:true},{m:36+tonic,v:62,durMs:3800,bass:true},{m:snap(52+dPc(2)),v:50,durMs:3800},{m:snap(57+dPc(5)),v:46,durMs:3800},{m:snap(64+tonic),v:52,durMs:3800}],startMs:tE+q*6,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
-  return evts;
-}
-
-// ── YIRUMA — modern lyrical piano: a HOOK that returns, warm pop loop. ──
-// Broken-chord eighths in the left hand over vi·IV·I·V (dark) or I·V·vi·IV
-// (bright), and a simple singable two-bar hook cycling A A' B A — literal
-// returns are the style. The hook's contour is drawn by the picture's light;
-// appoggiatura sighs soften the long notes. Episodes: LH intro → sparse A →
-// doubled A → higher B → final A with ritardando.
-function composeImageYiruma(px,nc,nr,table,colorMode,dir){
-  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
-  if(!base || !base.length) return base||[];
-  let ss=0x811c9dc5;
-  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(10400+salt,ss,0,0); f(); return f; };
-  const bandsMap=new Map();
-  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
-  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
-  const S=Math.max(8,Math.min(14,bandKeys.length));
-  const secs=[];
-  for(let si=0;si<S;si++){
-    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
-    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
-    if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
-    for(const c of cells){
-      lum+=_lum100(c); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
-        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
-    }
-    lum/=cells.length; chr/=cells.length;
-    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
-    secs.push({hist,src,lum,chr,cells,prof});
-  }
-  if(!secs.length) return base;
-  const g=new Float32Array(12); let gl=0,gc2=0;
-  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
-  gl/=secs.length; gc2/=secs.length;
-  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  const scale=[0,2,4,5,7,9,11];
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
-  const stepSc=(m,nSteps)=>{ let cur=snap(m); const dir2=nSteps>0?1:-1; for(let q2=0;q2<Math.abs(nSteps);q2++){ let nxt=cur+dir2; while(scAbs.indexOf(((nxt%12)+12)%12)<0) nxt+=dir2; cur=nxt; } return cur; };
-  const dPc=(d)=>scAbs[((d%7)+7)%7];
-  const dark = gl<=50;
-  const loop = dark?[5,3,0,4]:[0,4,5,3];                   // vi IV I V / I V vi IV
-  const eighth=Math.round(430-Math.min(1,gc2/45)*70);      // slow, singing
-  const barMs=eighth*8;
-  const maxBars=Math.max(24,Math.floor(155000/barMs));
-  const totBars=maxBars-(maxBars%8);
-  const totalMs=totBars*barMs;
-  const evts=[]; let evIdx=0;
-  const ry=R(1);
-  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
-  const srcOf=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
-  // THE HOOK — one two-bar melody for the whole piece, drawn once from the
-  // strongest section's light profile, then literally returning (the style).
-  let hsec=secs[0]; let hw=-1;
-  for(const sec of secs){ let w=0; for(let p2=0;p2<12;p2++) w+=sec.hist[p2]; if(w>hw){hw=w;hsec=sec;} }
-  const hookBase=snap(76+dPc(2));
-  const hookOffs=[[0,3],[3,2],[5,3],[8,2],[10,2],[12,4]];  // across 2 bars (16 eighths)
-  const hook=hookOffs.map((o,i2)=>{ const qi=Math.min(3,Math.floor(i2*4/hookOffs.length));
-    const st=Math.max(-3,Math.min(4,Math.round(((hsec.prof?hsec.prof[qi]:hsec.lum)-hsec.lum)/9)));
-    return {offE:o[0],durE:o[1],m:stepSc(hookBase,st-(i2===hookOffs.length-1?2:0))}; });
-  for(let bar=0;bar<totBars;bar++){
-    const sec=secAt(bar), pos=(bar*barMs)/totalMs;
-    const env=0.8+0.28*Math.exp(-((pos-0.66)*(pos-0.66))/(2*0.2*0.2));
-    const blk=(bar>>3)%4;                                  // 8-bar blocks: intro/A · A+ · B · A
-    const deg=loop[(bar>>1)%4];
-    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4);
-    const t0=bar*barMs;
-    const sc=srcOf(sec,root);
-    const last8=bar>=totBars-2;
-    const rit=last8?1.12:1;
-    // ── the RIVER TEXTURE: right hand runs CONTINUOUS eighths where the
-    // hook's melody notes sit ON TOP of soft chord-fill tones — shimmer under
-    // song, both hands present every beat. Left hand: deep octave + fifth,
-    // long sustains (the classic Yiruma floor).
-    let r0=snap(40+root); let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
-    let t3=t5+1; while(((t3%12)+12)%12!==third) t3++;
-    // LH: octave dyad on beat 1, fifth on the half-bar — sustained
-    evts.push({n:[{m:r0-12,v:Math.round(50*env),durMs:Math.round(barMs*0.62*rit),bass:true},{m:r0,v:Math.round(44*env),durMs:Math.round(barMs*0.62*rit),bass:true}],startMs:t0,idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:root,_lum:sec.lum});
-    evts.push({n:[{m:t5-12,v:Math.round(42*env),durMs:Math.round(barMs*0.55*rit),bass:true}],startMs:t0+Math.round(4*eighth*rit),idx:evIdx++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:fifth,_lum:sec.lum});
-    // RH: melody map for this bar from the hook (even bar = offs 0-7, odd = 8-15)
-    const half=(bar%2)*8;
-    const melMap={};
-    if(!(blk===0 && bar<2)){
-      const lift=(blk===2)?2:0;
-      const dbl=(blk===1||blk===3);
-      for(const h of hook){
-        if(h.offE<half || h.offE>=half+8) continue;
-        const mm=snap(Math.max(67,Math.min(94,stepSc(h.m,lift))));
-        melMap[h.offE-half]={mm,durE:h.durE,dbl,isLast:h===hook[hook.length-1]};
-      }
-    }
-    const fills=[t3+12,t5+12,stepSc(t3,2)+12,t5+12];
-    let melHold=0;
-    for(let k=0;k<8;k++){
-      const t1=t0+Math.round(k*eighth*rit);
-      const me=melMap[k];
-      if(me){
-        const vM=Math.round((58+Math.min(16,sec.chr*0.5))*env*(blk===2?1.08:1));
-        const pcM=((me.mm%12)+12)%12; const scM=srcOf(sec,pcM);
-        if(me.isLast && ry()<0.6){
-          evts.push({n:[{m:stepSc(me.mm,1),v:Math.max(26,vM-22),durMs:Math.round(eighth*0.8)}],startMs:Math.max(0,t1-Math.round(eighth*0.9)),idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcM,_lum:sec.lum});
-        }
-        const ns=[{m:me.mm,v:vM,durMs:Math.round(me.durE*eighth*1.3*rit)}];
-        if(me.dbl){ ns.push({m:me.mm+12>94?me.mm-12:me.mm+12,v:Math.max(24,vM-18),durMs:Math.round(me.durE*eighth*1.25*rit)}); }
-        evts.push({n:ns,startMs:t1,idx:evIdx++,cg:scM.cg,band:scM.band,colStep:4,_chroma:scM._chroma||sec.chr,_flat:0,_domPc:pcM,_lum:scM._lum||sec.lum});
-        melHold=me.durE-1;
-      } else {
-        // soft chord-fill eighth — quieter while a melody note still rings
-        const fm=snap(fills[k%4]);
-        const under=melHold>0; if(melHold>0) melHold--;
-        const pcF=((fm%12)+12)%12; const scF=srcOf(sec,pcF);
-        evts.push({n:[{m:fm,v:Math.round((under?26:33)*env),durMs:Math.round(eighth*1.7*rit)}],startMs:t1,idx:evIdx++,cg:scF.cg,band:scF.band,colStep:4,_chroma:sec.chr,_flat:0,_domPc:pcF,_lum:sec.lum});
-      }
-    }
-  }
-  // ending: IV → I, high tonic sigh, long fade
-  let tE=totBars*barMs;
-  const iv=dPc(3);
-  evts.push({n:[{m:snap(40+iv),v:44,durMs:Math.round(barMs*0.9),bass:true},{m:snap(52+dPc(5)),v:36,durMs:Math.round(barMs*0.9)},{m:snap(57+iv),v:34,durMs:Math.round(barMs*0.9)}],startMs:tE,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:iv,_lum:gl});
-  tE+=Math.round(barMs*0.9);
-  evts.push({n:[{m:snap(28+tonic),v:46,durMs:4600,bass:true},{m:snap(40+tonic),v:40,durMs:4600,bass:true},{m:snap(55+dPc(2)),v:34,durMs:4600},{m:snap(59+dPc(4)),v:32,durMs:4600},{m:snap(76+tonic),v:38,durMs:4600}],startMs:tE+300,idx:evIdx++,cg:base[0].cg,band:base[0].band,colStep:4,_chroma:gc2,_flat:0,_domPc:tonic,_lum:gl});
-  return evts;
-}
-
-
 // ═══════════════════════════════════════════════════════════════════════════
-// SIX MORE COMPOSERS (Oct 2026) — Bach · Beethoven · Debussy · Rachmaninov ·
-// Einaudi · Hisaishi. Same two-phase contract as the first six: analyse the
-// whole picture into sections (shared helper below), then compose over the
-// complete map. Deterministic: (pixels, composer) → identical piece.
+// §IMAGE DNA — what a picture says about the music it is, read once, before any
+// composer writes a note. The scan (pixelsToImageEvents) hears the picture cell
+// by cell; this reads it as a whole, along the READING AXIS (rows, columns or
+// the spiral): the line its shapes draw, where its edges fall, how it breathes
+// from one end to the other, which colours rule where, where the eye is pulled.
+//   contour[u]   the main silhouette line — the melody the picture draws
+//   verticals[u] edges across the reading axis — the accents
+//   light[u]     brightness along the axis — the dynamics
+//   regions[]    the colour fields in reading order — the harmony (one root each)
+//   focus        the focal point (strong, saturated, busy) — the climax
+//   symmetry     mirror likeness along the axis — the form (ABA or through)
+//   energy       saturation · contrast · busyness — tempo and density
+//   warmth, lightness → modeIdx 0..5 (lydian · major · mixolydian · dorian · aeolian · phrygian)
+// Deterministic: (pixels, direction, base) → the same DNA, always.
 // ═══════════════════════════════════════════════════════════════════════════
-// Shared PHASE 1 — identical to what Glass…Yiruma inline, factored once.
-// Returns null when the scan is empty (caller returns base||[]).
-function _composerAnalyse(px,nc,nr,table,colorMode,saltBase,Smin,Smax){
-  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
-  if(!base || !base.length) return {base:base||[],secs:null};
-  let ss=0x811c9dc5;
-  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
-  const R=(salt)=>{ const f=_seedRnd(saltBase+salt,ss,0,0); f(); return f; };
-  const bandsMap=new Map();
-  for(const e of base){ if(!bandsMap.has(e.band)) bandsMap.set(e.band,[]); bandsMap.get(e.band).push(e); }
-  const bandKeys=[...bandsMap.keys()].sort((a,b)=>a-b);
-  const S=Math.max(Smin,Math.min(Smax,bandKeys.length));
-  const secs=[];
-  for(let si=0;si<S;si++){
-    const b0=Math.floor(si*bandKeys.length/S), b1=Math.floor((si+1)*bandKeys.length/S);
-    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=bandKeys[b]; if(bk!=null) cells.push(...bandsMap.get(bk)); }
-    if(!cells.length) continue;
-    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
-    for(const c of cells){
-      lum+=_lum100(c); chr+=(c._chroma||0);
-      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60);
-        hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } }
-    }
-    lum/=cells.length; chr/=cells.length;
-    let uniq=0; for(let p2=0;p2<12;p2++) if(hist[p2]>0) uniq++;
-    const byPos=cells.slice().sort((a,b)=>(a.band-b.band)||((a.cg||0)-(b.cg||0)));
-    const prof=[0,1,2,3].map(qi=>{ const q0=Math.floor(qi*byPos.length/4), q1=Math.max(q0+1,Math.floor((qi+1)*byPos.length/4)); let sL=0; for(let z=q0;z<q1;z++) sL+=_lum100(byPos[z]); return sL/(q1-q0); });
-    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,prof});
-  }
-  if(!secs.length) return {base,secs:null};
-  const g=new Float32Array(12); let gl=0,gc2=0;
-  for(const sec of secs){ for(let p2=0;p2<12;p2++) g[p2]+=sec.hist[p2]; gl+=sec.lum; gc2+=sec.chr; }
-  gl/=secs.length; gc2/=secs.length;
-  let tonic=0,tb=-1; for(let p2=0;p2<12;p2++) if(g[p2]>tb){tb=g[p2];tonic=p2;}
-  return {base,secs,tonic,gl,gc2,R};
+const _DNA_N=64;
+function _imgDNA(px, nc, nr, dir, base, table){
+  const N=_DNA_N, npx=nc*nr;
+  const Lm=new Float32Array(npx), Hm=new Float32Array(npx), Cm=new Float32Array(npx);
+  let lSum=0, cSum=0, wSum=0, warm=0;
+  for(let i=0;i<npx;i++){ const p=px[i]; const r=p.r!==undefined?p.r:p[0], g=p.g!==undefined?p.g:p[1], b=p.b!==undefined?p.b:p[2];
+    const [h,s,l]=toHsl(r,g,b); const ch=s*Math.min(l,100-l)/50; Lm[i]=l; Hm[i]=h; Cm[i]=ch; lSum+=l; cSum+=ch;
+    if(ch>8){ warm+=ch*Math.cos((h-30)*Math.PI/180); wSum+=ch; } }
+  const lightness=lSum/npx/100, chroma=cSum/npx, warmth=wSum?warm/wSum:0;
+  // the reading axis: u along it (0..1), v across it (0..1, up = 1)
+  const uvOf=(x,y)=>{ if(dir==='vert') return [y/nr, x/nc];
+    if(dir==='spiralIn'||dir==='spiralOut'){ const rr=Math.min(x/nc,1-x/nc,y/nr,1-y/nr)*2; return [dir==='spiralIn'?rr:1-rr, (Math.atan2(y-nr/2,x-nc/2)/Math.PI+1)/2]; }
+    return [x/nc, 1-y/nr]; };
+  const gu=new Float32Array(npx), gv=new Float32Array(npx);            // |dL| along u and along v
+  for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x;
+    const dx=x+1<nc ? Math.abs(Lm[i+1]-Lm[i]) : 0, dy=y+1<nr ? Math.abs(Lm[i+nc]-Lm[i]) : 0;
+    if(dir==='vert'){ gu[i]=dy; gv[i]=dx; } else { gu[i]=dx; gv[i]=dy; } }
+  // per bin along u: the contour (edge-weighted mean of v), its strength, the accents (edges across), the light
+  const cV=new Float32Array(N), cW=new Float32Array(N), acc=new Float32Array(N), lig=new Float32Array(N), cnt=new Float32Array(N), chr=new Float32Array(N);
+  for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x; const [u,v]=uvOf(x,y); const k=Math.min(N-1,Math.floor(u*N));
+    const w=gv[i]*gv[i]; cV[k]+=v*w; cW[k]+=w; acc[k]+=gu[i]; lig[k]+=Lm[i]; chr[k]+=Cm[i]; cnt[k]++; }
+  const contour=new Float32Array(N), contourStr=new Float32Array(N), verticals=new Float32Array(N), light=new Float32Array(N), chromaU=new Float32Array(N);
+  let accMax=0; for(let k=0;k<N;k++){ contour[k]=cW[k]>0?cV[k]/cW[k]:0.5; contourStr[k]=cnt[k]?Math.sqrt(cW[k]/cnt[k]):0; verticals[k]=cnt[k]?acc[k]/cnt[k]:0; light[k]=cnt[k]?lig[k]/cnt[k]/100:lightness; chromaU[k]=cnt[k]?chr[k]/cnt[k]:0; accMax=Math.max(accMax,verticals[k]); }
+  // smooth the contour (median of 3) and normalise the accents
+  const sm=new Float32Array(N); for(let k=0;k<N;k++){ const a=contour[Math.max(0,k-1)], b=contour[k], c=contour[Math.min(N-1,k+1)]; sm[k]=[a,b,c].sort((p,q)=>p-q)[1]; }
+  for(let k=0;k<N;k++){ contour[k]=sm[k]; verticals[k]=accMax?verticals[k]/accMax:0; }
+  let aMean=0; for(let k=0;k<N;k++) aMean+=verticals[k]; aMean/=N;
+  let aSd=0; for(let k=0;k<N;k++) aSd+=(verticals[k]-aMean)**2; aSd=Math.sqrt(aSd/N);
+  const accents=[]; for(let k=1;k<N-1;k++){ if(verticals[k]>aMean+aSd && verticals[k]>=verticals[k-1] && verticals[k]>=verticals[k+1]) accents.push((k+0.5)/N); }
+  // energy — the scan's own reading (saturation · contrast · busyness)
+  let lSq=0; for(let i=0;i<npx;i++) lSq+=Lm[i]*Lm[i]; const contrast=Math.sqrt(Math.max(0,lSq/npx-(lSum/npx)**2));
+  let busy=0, bn=0; for(let i=0;i<npx;i++){ if((i%nc)!==nc-1){ busy+=Math.abs(Lm[i+1]-Lm[i]); bn++; } } busy=bn?busy/bn:0;
+  const energy=Math.max(0,Math.min(1,0.45*Math.min(1,chroma/55)+0.35*Math.min(1,contrast/42)+0.2*Math.min(1,busy/22)));
+  const texture=Math.min(1,busy/22);
+  const energyN=Math.max(0,Math.min(1,(energy-0.25)/0.5));   // the band real pictures fall in, stretched to 0..1 for tempo and density
+  // the mode ladder: dark and cool sinks from lydian to phrygian; bright and warm rises
+  const modeScore=Math.max(0,Math.min(1,0.55*(1-lightness)+0.45*(0.5-0.5*warmth)));
+  const modeIdx=Math.max(0,Math.min(5,Math.round(modeScore*5)));
+  // symmetry: the picture mirrored along the reading axis
+  let sNum=0,sA=0,sB=0; const mL=lSum/npx;
+  for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x; const j=dir==='vert' ? (nr-1-y)*nc+x : y*nc+(nc-1-x); const a=Lm[i]-mL, b=Lm[j]-mL; sNum+=a*b; sA+=a*a; sB+=b*b; }
+  const symmetry=Math.max(0,sA&&sB ? sNum/Math.sqrt(sA*sB) : 0);
+  // the focus: the window where saturation and local contrast are both strongest
+  const W=Math.max(8,Math.round(Math.min(nc,nr)/8)), st=Math.max(4,W>>1); let fBest=0,fx=0,fy=0,fSum=0,fN=0;
+  for(let y0=0;y0+W<=nr;y0+=st) for(let x0=0;x0+W<=nc;x0+=st){ let s=0,s2=0,c=0,n=0; for(let y=y0;y<y0+W;y++) for(let x=x0;x<x0+W;x++){ const i=y*nc+x; s+=Lm[i]; s2+=Lm[i]*Lm[i]; c+=Cm[i]; n++; }
+    const sd=Math.sqrt(Math.max(0,s2/n-(s/n)**2)); const sc=(0.5+c/n/60)*(0.3+sd/30); fSum+=sc; fN++; if(sc>fBest){ fBest=sc; fx=x0+W/2; fy=y0+W/2; } }
+  const fMean=fN?fSum/fN:1; const [fu,fv]=uvOf(fx,fy);
+  const focus=(fBest>fMean*1.35) ? {pos:fu, y:fv, strength:Math.min(1,(fBest/fMean-1)/1.5)} : null;
+  // the colour regions: pixels quantised to a hue (chromatic) or a grey level, joined by 4-neighbourhood; kept at ≥1.5% of the picture
+  const lab=new Int32Array(npx).fill(-1); const q=new Int16Array(npx);
+  for(let i=0;i<npx;i++){ q[i]= Cm[i]>14 ? Math.floor(((Hm[i]%360)+360)%360/30) : (100+(Lm[i]<30?0:Lm[i]<70?1:2)); }
+  const regs=[]; const stack=[];
+  for(let s0=0;s0<npx;s0++){ if(lab[s0]>=0) continue; const id=regs.length; const R={n:0,sx:0,sy:0,hs:0,hc:0,ls:0,cs:0,grey:q[s0]>=100,hist:new Float32Array(12)}; regs.push(R); lab[s0]=id; stack.push(s0);
+    while(stack.length){ const i=stack.pop(); R.n++; const x=i%nc, y=(i/nc)|0; R.sx+=x; R.sy+=y; R.ls+=Lm[i]; R.cs+=Cm[i]; if(!R.grey){ const a=Hm[i]*Math.PI/180; R.hs+=Math.sin(a)*Cm[i]; R.hc+=Math.cos(a)*Cm[i]; }
+      const nb=[x>0?i-1:-1, x<nc-1?i+1:-1, y>0?i-nc:-1, y<nr-1?i+nc:-1]; for(const j of nb){ if(j>=0 && lab[j]<0 && q[j]===q[i]){ lab[j]=id; stack.push(j); } } } }
+  // the pitch material of each region from the scan's own cells (so the palette mode is honoured)
+  if(base && base.length){ for(const c of base){ const b=c.band|0, g=c.cg|0, cs=c.colStep||4; const x0=g*cs, y0=b*4; const votes={}; for(let y=y0;y<Math.min(nr,y0+4);y++) for(let x=x0;x<Math.min(nc,x0+cs);x++){ const id=lab[y*nc+x]; votes[id]=(votes[id]||0)+1; }
+      let bid=-1,bv=0; for(const k in votes) if(votes[k]>bv){ bv=votes[k]; bid=+k; } if(bid<0) continue; const R=regs[bid]; for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; R.hist[((n0.m%12)+12)%12]+=(n0.v||60); } } }
+  const regions=regs.filter(R=>R.n>=npx*0.015).map(R=>{ const cx=R.sx/R.n, cy=R.sy/R.n; const [u,v]=uvOf(cx,cy); let pc=-1,pw=0; for(let p=0;p<12;p++) if(R.hist[p]>pw){ pw=R.hist[p]; pc=p; }
+    return {pc, grey:R.grey, hue:R.grey?null:((Math.atan2(R.hs,R.hc)*180/Math.PI)+360)%360, lum:R.ls/R.n/100, chroma:R.cs/R.n, area:R.n/npx, pos:u, y:v}; }).sort((a,b)=>a.pos-b.pos);
+  // the key: the scan's pitch material (velocity-weighted) — the picture's palette in notes
+  const pcHist=new Float32Array(12); if(base) for(const c of base) for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; pcHist[((n0.m%12)+12)%12]+=(n0.v||60); }
+  let tonic=0,tb=-1; for(let p=0;p<12;p++) if(pcHist[p]>tb){ tb=pcHist[p]; tonic=p; }
+  let cStrMax=0; for(let k=0;k<N;k++) cStrMax=Math.max(cStrMax,contourStr[k]);
+  return {N, dir, contour, contourStr, cStrMax, verticals, accents, light, chromaU, energy:energyN, energyRaw:energy, chroma, contrast, busyness:busy, texture, lightness, warmth, modeScore, modeIdx, symmetry, focus, regions, pcHist, tonic};
 }
+// ── reading the DNA while composing ──
+// the melody's target at axis position u (0..1): the contour mapped into [lo..hi] (midi), the range widened by how much the line moves
+function _dnaLine(D, u, lo, hi, hold){ const k=Math.max(0,Math.min(D.N-1,Math.floor(u*D.N))); if(hold && D.cStrMax && D.contourStr[k]<0.3*D.cStrMax) return null;   // hold: no edge here, nothing to follow — the voice keeps its note
+  let mn=1,mx=0; for(let i=0;i<D.N;i++){ mn=Math.min(mn,D.contour[i]); mx=Math.max(mx,D.contour[i]); } const span=Math.max(0.12,mx-mn); const t=(D.contour[k]-mn)/span; return lo+(hi-lo)*Math.max(0,Math.min(1,t)); }
+// the accent at u: 0..1 (edges across the reading axis — a trunk, a column, a stripe)
+function _dnaAccent(D, u){ const k=Math.max(0,Math.min(D.N-1,Math.floor(u*D.N))); return D.verticals[k]; }
+// the light at u: 0..1
+function _dnaLight(D, u){ const k=Math.max(0,Math.min(D.N-1,Math.floor(u*D.N))); return D.light[k]; }
+// the climax: where the eye is pulled, else the golden section
+function _dnaClimax(D){ return D.focus ? Math.max(0.3,Math.min(0.85,D.focus.pos)) : 0.618; }
+// the mode from the composer's own ladder (brightest first): 2 entries → major/minor split at the middle, more → spread over the six steps
+// JAM: while an ensemble is composed (_jamCtx set) every composer keeps ONE mode class — the picture's (bright below the middle of
+// its mode scale, dark above) — and picks, from its own ladder, the entry of that class nearest to its natural one. `abs`: the
+// ladder holds absolute pitch classes (Debussy), not degrees above the tonic.
+let _jamCtx=null, _jamNoteInfo=null;
+function _jamNote(barMs,qpb){ _jamNoteInfo={barMs:barMs,qpb:qpb}; }
+const _jamMinorNow=()=>!!(_jamCtx && _jamCtx.minor);                  // the jam's mode class (fixed by the first composer's read of the picture)      // a composer says how long its bar is (ms) and how many quarter notes it holds
+function _dnaMode(D, ladder, abs){ const n=ladder.length; let i=Math.min(n-1,Math.floor(D.modeIdx/6*n));
+  if(_jamCtx){ if(_jamCtx.minor===null) _jamCtx.minor=D.modeIdx>=3; const off=abs?D.tonic:0;
+    const isMin=(e)=> (e===true||e===false) ? e : (Array.isArray(e) && e.indexOf((off+3)%12)>=0 && e.indexOf((off+4)%12)<0);
+    if(isMin(ladder[i])!==_jamCtx.minor){ let best=-1,bd=99; for(let j=0;j<n;j++){ if(isMin(ladder[j])===_jamCtx.minor && Math.abs(j-i)<bd){ bd=Math.abs(j-i); best=j; } } if(best>=0) i=best; } }
+  return ladder[i]; }
+// the harmonic roots in reading order: one per region (its own pitch class, snapped into the scale), each lasting its share of the bars;
+// a composer keeps its cadences by overriding the slots it must (V before I, the final tonic)
+function _dnaRoots(D, nBars, inScale, tonic){ const rs=D.regions.filter(r=>r.pc>=0); if(!rs.length) return new Array(nBars).fill(tonic);
+  const tot=rs.reduce((s,r)=>s+r.area,0); const out=[]; let acc=0, ri=0; const edges=rs.map(r=>{ acc+=r.area/tot; return acc; });
+  for(let b=0;b<nBars;b++){ const f=(b+0.5)/nBars; while(ri<rs.length-1 && f>edges[ri]) ri++; out.push(inScale(rs[ri].pc)); } return out; }
+// the harmony: the colour fields are KEY AREAS; inside each the composer's own progression (degrees) runs from that area's root
+function _dnaProg(D, nBars, inScale, tonic, prog){ const areas=_dnaRoots(D,nBars,inScale,tonic); const out=[]; let a0=areas[0], k=0;
+  for(let b=0;b<nBars;b++){ if(areas[b]!==a0){ a0=areas[b]; k=0; } out.push(inScale((a0+prog[k%prog.length])%12)); k++; } return out; }
+
+// ── the four forms of one reading (the classical forms of a tone row, applied to the picture's DNA):
+//   0 PRIME — as read · 1 RETROGRADE — from the far end (line, colours, edges, focus all reversed)
+//   2 INVERSION — the picture's negative: the line turned upside down, the mode from the other half of the ladder, calm ⇄ busy
+//   3 RETROGRADE-INVERSION — both. Deterministic: (picture, composer, direction, form) → one piece.
+function _dnaVariant(D, vr){ vr=vr|0; if(!vr) return D; const rev=(vr&1)===1, inv=(vr&2)===2; const E=Object.assign({},D);
+  const flip=(a)=>{ const o=new Float32Array(a.length); for(let k=0;k<a.length;k++) o[k]=a[a.length-1-k]; return o; };
+  if(rev){ E.contour=flip(D.contour); E.contourStr=flip(D.contourStr); E.verticals=flip(D.verticals); E.light=flip(D.light); E.chromaU=flip(D.chromaU);
+    E.accents=D.accents.map(a=>1-a).reverse(); E.focus=D.focus ? Object.assign({},D.focus,{pos:1-D.focus.pos}) : null;
+    E.regions=D.regions.map(r=>Object.assign({},r,{pos:1-r.pos})).reverse(); }
+  if(inv){ let mn=1,mx=0; for(let k=0;k<E.contour.length;k++){ mn=Math.min(mn,E.contour[k]); mx=Math.max(mx,E.contour[k]); }
+    const c=new Float32Array(E.contour.length); for(let k=0;k<c.length;k++) c[k]=mn+mx-E.contour[k]; E.contour=c;
+    E.modeIdx=D.modeIdx<=2 ? D.modeIdx+3 : D.modeIdx-3; E.modeScore=1-D.modeScore; E.energy=1-D.energy; }
+  return E; }
+
+// shared helpers of every composer
 // scale helpers bound to an absolute pitch-class set
 function _scaleKit(scAbs){
   const snap=(m)=>{ let best=m,bd=99; for(let o=-1;o<=1;o++){ for(const pc of scAbs){ const c2=12*Math.floor(m/12)+pc+12*o; const dd=Math.abs(c2-m); if(dd<bd){bd=dd;best=c2;} } } return best; };
@@ -15305,522 +14617,827 @@ function _scaleKit(scAbs){
 }
 const _srcOfSec=(sec,pc)=>sec.src[pc]||{cg:sec.cells[0].cg,band:sec.cells[0].band,_lum:sec.lum,_chroma:sec.chr};
 const _ev=(evts,idxRef,ns,startMs,sc,sec,domPc)=>{ evts.push({n:ns,startMs:Math.max(0,Math.round(startMs)),idx:idxRef.i++,cg:sc.cg,band:sc.band,colStep:4,_chroma:sc._chroma||sec.chr,_flat:0,_domPc:domPc,_lum:sc._lum||sec.lum}); };
-
-// ── BACH — two-part invention: subject · answer a fifth below · sequences
-// round the circle of fifths · running sixteenths over a walking bass ·
-// dominant pedal at phi · cadence (Picardy third in minor). No pedal: every
-// note detached, dynamics TERRACED (forte / piano blocks), never swelling.
-function composeImageBach(px,nc,nr,table,colorMode,dir){
-  const A=_composerAnalyse(px,nc,nr,table,colorMode,10500,10,18);
-  if(!A.secs) return A.base;
-  const {base,secs,tonic,gl,gc2,R}=A;
-  const minor=gl<=50;
-  const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];      // harmonic minor: the leading tone
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
-  const six=Math.round(175-Math.min(1,gc2/45)*30);           // 145-175ms sixteenth
-  const barMs=six*16;
-  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*1));
-  const maxBars=Math.floor(140000/barMs);
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
-  const totBars=bars.reduce((a,b)=>a+b,0);
-  const evts=[]; const ix={i:0}; let t=0, barNo=0;
-  const rb=R(1);
-  // SUBJECT — 8 sixteenths drawn from the strongest section's pcs, snapped to
-  // the key, shaped as Bach shapes them: leap up, then step back down.
-  let hsec=secs[0], hw=-1; for(const s of secs){ let w=0; for(let p=0;p<12;p++) w+=s.hist[p]; if(w>hw){hw=w;hsec=s;} }
-  const sub0=snap(60+tonic);
-  const subj=[0,2,4,3,2,1,0,-1].map(st=>stepSc(sub0,st));
-  const seqDeg=[0,3,6,2,5,1,4,0];                            // I IV vii iii vi ii V I
-  const pedalStart=Math.floor(totBars*0.60), pedalEnd=Math.min(totBars-3,pedalStart+3);
-  for(let si=0;si<secs.length;si++){
-    const sec=secs[si], last=si===secs.length-1;
-    for(let b2=0;b2<bars[si];b2++,barNo++){
-      const f=barNo/Math.max(1,totBars-1);
-      const inPedal=barNo>=pedalStart&&barNo<pedalEnd;
-      // EPISODES: exposition (subject RH, answer LH) → sequence (running
-      // sixteenths, bass walks the circle) → pedal → sequence' → cadence
-      const ph = barNo<2 ? 'expo' : inPedal ? 'pedal' : (barNo>=2&&barNo<4) ? 'answer' : 'seq';
-      const terr = ((barNo>>2)&1)===0 ? 1 : 0.78;             // terraced f / p blocks
-      const deg=seqDeg[barNo%8];
-      const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4);
-      const sc=_srcOfSec(sec,root);
-      const vBase=(60+Math.min(18,sec.chr*0.5))*terr;
-      if(ph==='expo'||ph==='answer'){
-        const up=ph==='expo';
-        const tr=up?0:-7;                                     // answer a fifth below in LH
-        for(let k=0;k<16;k++){
-          // second half of the bar restates the subject one scale step higher
-          let mm=stepSc(subj[k%8]+tr,(k>=8?1:0));
-          mm=up?Math.min(96,mm):Math.max(36,mm-12);
-          const pcm=((mm%12)+12)%12;
-          _ev(evts,ix,[{m:snap(mm),v:Math.round(vBase*(k%4===0?1.08:0.92)),durMs:Math.round(six*0.9),bass:!up}],t+k*six,_srcOfSec(sec,pcm),sec,pcm);
-          if(!up && k%4===0){ // RH counter-subject: held chord tones above
-            _ev(evts,ix,[{m:snap(72+[root,third,fifth][(k>>2)%3]),v:Math.round(vBase*0.8),durMs:Math.round(six*3.6)}],t+k*six,sc,sec,root);
-          }
-        }
-      } else if(ph==='pedal'){
-        // DOMINANT PEDAL — bass hammers the fifth in eighths; RH figures
-        // circle above it, tension before home.
-        const dom=dPc(4);
-        for(let k=0;k<8;k++){
-          _ev(evts,ix,[{m:snap(36+dom),v:Math.round((58+(k%2?0:8))*terr),durMs:Math.round(six*1.8),bass:true}],t+k*2*six,_srcOfSec(sec,dom),sec,dom);
-        }
-        const fig=[0,2,1,3,2,4,3,5,4,6,5,7,6,7,7,8].map(st=>stepSc(snap(67+dom),st));
-        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)),durMs:Math.round(six*0.9)}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
-      } else {
-        // SEQUENCE — RH running sixteenths: broken-chord figure R-3-5-8-5-3
-        // (the prelude shape) coloured by the section's own pcs; LH walking
-        // eighths root → fifth → third → fifth.
-        const r0=snap(60+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=t3+1; while(((t5%12)+12)%12!==fifth) t5++;
-        const lift=(f>0.75&&!last)?12:0;
-        const fig=[r0,t3,t5,r0+12,t5,t3,r0,t3, r0,t3,t5,r0+12,t5,t3,r0,t3].map(m=>m+lift);
-        // choose the picture's own strongest pc as a passing colour on beat 3
-        const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
-        if(ranked[0]!=null){ fig[9]=snap(60+ranked[0]+lift); fig[13]=snap(60+ranked[0]+lift); }
-        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)+(rb()-0.5)*4),durMs:Math.round(six*0.9)}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
-        const walk=[root,fifth,third,fifth,root,dPc(deg+1),third,fifth];
-        for(let k=0;k<8;k++){ const bm=snap(36+walk[k]); _ev(evts,ix,[{m:bm,v:Math.round((52+(k%2?0:6))*terr),durMs:Math.round(six*1.7),bass:true}],t+k*2*six,_srcOfSec(sec,walk[k]),sec,walk[k]); }
-      }
-      t+=barMs;
-      if(last && b2===bars[si]-1) t+=Math.round(barMs*0.1);
-    }
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPOSERS · the picture writes the piece. Every composer keeps his own idiom
+// — Glass's additive cells, Satie's sway, Chopin's nocturne, Bach's invention —
+// but every decision inside it is the picture's (see §IMAGE DNA):
+//   the MELODY follows the line the picture draws (contour),
+//   the HARMONY walks through its colour fields in reading order (regions),
+//   the ACCENTS fall on its edges (verticals), the CLIMAX where the eye is
+//   pulled (focus), the MODE from its light and warmth, the TEMPO from its
+//   energy, the FORM from its symmetry (ABA when it mirrors itself), and the
+//   piece is read in the direction the user chose (rows · columns · spiral).
+// Two pictures with one composer are two pieces; one picture with twelve
+// composers is one picture twelve times.
+// ═══════════════════════════════════════════════════════════════════════════
+// Shared PHASE 1 — the scan, the sections along the reading axis, the DNA.
+function _cAnalyse(px,nc,nr,table,colorMode,dir,saltBase,Smin,Smax,vr){
+  const base = pixelsToImageEvents(px,nc,nr,table,colorMode,'lr',0);
+  if(!base || !base.length) return {base:base||[],secs:null};
+  const D=_dnaVariant(_imgDNA(px,nc,nr,dir,base,table),vr);
+  let ss=0x811c9dc5;
+  for(let i=0;i<px.length;i+=97){ const q=px[i]; ss=((ss^(q.r+q.g*7+q.b*13))*0x01000193)>>>0; }
+  const R=(salt)=>{ const f=_seedRnd(saltBase+salt,ss,0,0); f(); return f; };
+  // the cells grouped along the reading axis: rows, columns, or the spiral's rings
+  let nB=0,nC=0; for(const e of base){ nB=Math.max(nB,(e.band|0)+1); nC=Math.max(nC,(e.cg|0)+1); }
+  const keyOf=(e)=>{ if(dir==='vert') return e.cg|0; if(dir==='spiralIn'||dir==='spiralOut'){ const r=Math.min(e.band|0,e.cg|0,nB-1-(e.band|0),nC-1-(e.cg|0)); return dir==='spiralIn'?r:(Math.min(nB,nC)>>1)-r; } return e.band|0; };
+  const groups=new Map(); for(const e of base){ const k=keyOf(e); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(e); }
+  const keys=[...groups.keys()].sort((a,b)=>((vr|0)&1)?b-a:a-b);   // retrograde reads the sections from the far end
+  const S=Math.max(Smin,Math.min(Smax,keys.length));
+  const secs=[];
+  for(let si=0;si<S;si++){
+    const b0=Math.floor(si*keys.length/S), b1=Math.floor((si+1)*keys.length/S);
+    const cells=[]; for(let b=b0;b<Math.max(b0+1,b1);b++){ const bk=keys[b]; if(bk!=null) cells.push(...groups.get(bk)); }
+    if(!cells.length) continue;
+    const hist=new Float32Array(12); const src={}; let lum=0,chr=0;
+    for(const c of cells){ lum+=_lum100(c); chr+=(c._chroma||0);
+      for(const n0 of (c.n||[])){ if(!n0||n0.bass) continue; const pc=((n0.m%12)+12)%12; const w=(n0.v||60); hist[pc]+=w; if(!src[pc]||w>src[pc].w){ src[pc]={w,cg:c.cg,band:c.band,_lum:c._lum,_chroma:c._chroma}; } } }
+    lum/=cells.length; chr/=cells.length;
+    let uniq=0; for(let p=0;p<12;p++) if(hist[p]>0) uniq++;
+    secs.push({hist,src,lum,chr,homog:1-Math.min(1,uniq/9),cells,u0:si/S,u1:(si+1)/S});
   }
-  // CADENCE — ii · V · I, then the final chord: Picardy third in minor.
-  const cad=[[1,0],[4,1]];
-  for(const [dg,k] of cad){ const r=dPc(dg); _ev(evts,ix,[{m:snap(36+r),v:60,durMs:Math.round(six*7),bass:true},{m:snap(55+dPc(dg+2)),v:52,durMs:Math.round(six*7)},{m:snap(60+dPc(dg+4)),v:50,durMs:Math.round(six*7)}],t+k*8*six,_srcOfSec(secs[secs.length-1],r),secs[secs.length-1],r); }
-  const thirdF=(tonic+4)%12;                                  // major third always — Picardy
-  _ev(evts,ix,[{m:24+tonic,v:66,durMs:3200,bass:true},{m:36+tonic,v:60,durMs:3200,bass:true},{m:52+thirdF+(thirdF<tonic?12:0),v:52,durMs:3200},{m:55+((tonic+7)%12)+(((tonic+7)%12)<tonic?12:0),v:50,durMs:3200},{m:72+tonic,v:56,durMs:3200}],t+16*six,{cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2},secs[0],tonic);
+  if(!secs.length) return {base,secs:null};
+  const gl=D.lightness*100, gc2=D.chroma;
+  if(_jamCtx && _jamCtx.minor===null) _jamCtx.minor=D.modeIdx>=3;
+  return {base,secs,tonic:D.tonic,gl,gc2,R,D};
+}
+// the form: a picture that mirrors itself (symmetry ≥ .6) closes as it opened — the last fifth of the
+// piece reads the opening fifth again (ABA); any other picture is read through, start to end
+const _cU=(D,f)=> (D.symmetry>=0.6 && f>0.8) ? (f-0.8) : f;
+// the melody's next note: the contour's target at u (in the voice's range), reached by scale steps — a line, never a jump over a sixth
+function _cMel(D,kit,u,lo,hi,prev){ const fit=(m)=>{ let g=0; while(m<lo&&g++<40) m=kit.stepSc(m,1); while(m>hi&&g++<80) m=kit.stepSc(m,-1); return Math.max(lo,Math.min(hi,m)); };   // back into the voice's range, by scale steps
+  const tgt=_dnaLine(D,u,lo,hi,true); if(tgt==null && prev!=null) return fit(prev); let m=kit.snap(Math.round(tgt==null?(lo+hi)/2:tgt)); if(prev!=null){ while(m-prev>9) m=kit.stepSc(m,-1); while(prev-m>9) m=kit.stepSc(m,1); } return fit(m); }
+// a chord loop of n roots from the picture's colour fields in reading order (the tonic always among them, the loop never closing on it)
+function _cLoop(D,n,inScale,tonic,dom,idiom){ const seen=[]; for(const r of D.regions){ if(r.pc<0) continue; const p=inScale(r.pc); if(!seen.includes(p)) seen.push(p); if(seen.length>=n) break; }
+  if(seen.length<3){ const a=seen.length?seen[0]:tonic; return idiom.map(d=>inScale((a+d)%12)); }   // a picture of one or two colours: the composer's own loop, in that colour's key
+  while(seen.length<n) seen.push(seen.length%2?dom:tonic); if(!seen.includes(tonic)) seen[0]=tonic; if(seen[n-1]===tonic) seen[n-1]=dom; return seen; }
+// bars per section: busy sections (many colours, strong edges) get more
+const _cBars=(secs,lo,hi)=>secs.map(sec=>lo+Math.round((1-sec.homog)*(hi-lo)));
+const _cFit=(bars,maxBars,minB)=>{ const tot=bars.reduce((a,b)=>a+b,0); return tot>maxBars ? bars.map(b=>Math.max(minB,Math.round(b*maxBars/tot))) : bars; };
+// the final chord of every piece: tonic, spread, long
+function _cFinal(evts,ix,base,gl,gc2,sec,tonic,third,t,v,dur){ _ev(evts,ix,[{m:24+tonic,v:v,durMs:dur,bass:true},{m:36+tonic,v:v-6,durMs:dur,bass:true},{m:52+third+(third<tonic?12:0),v:v-12,durMs:dur},{m:55+((tonic+7)%12)+(((tonic+7)%12)<tonic?12:0),v:v-14,durMs:dur},{m:72+tonic,v:v-8,durMs:dur}],t,{cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2},sec,tonic); }
+
+// ── GLASS — additive cells, pendulum arpeggio, pedal bass; the cell's notes are the colour field the
+// reading is in, the register its light, the tempo the picture's energy; the chorale falls on the
+// calmest stretch, the climax where the eye is pulled.
+function composeImageGlass(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,9700,12,28,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const scale=_dnaMode(D,[[0,2,4,6,7,9,11],[0,2,4,5,7,9,11],[0,2,3,5,7,9,10],[0,2,3,5,7,8,10]]);
+  const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const inScale=kit.inScale;
+  const bpm=80+Math.round(D.energy*80);                       // 80 … 160
+  const eighth=Math.round(60000/bpm/2); _jamNote(eighth*8,4);
+  const clim=_dnaClimax(D);
+  const arc=(pos)=>0.72+0.44*Math.exp(-((pos-clim)*(pos-clim))/(2*0.22*0.22));
+  let bars=_cFit(_cBars(secs,2,4),Math.floor(170000/(8*eighth)),1);
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const roots=_dnaRoots(D,totBars,inScale,tonic);
+  // the chorale: the calmest fifth of the reading (fewest edges)
+  let cs=0,cb=1e9; for(let k=0;k<D.N-12;k++){ let s=0; for(let j=0;j<12;j++) s+=D.verticals[k+j]; if(s<cb){cb=s;cs=k;} } const chU0=cs/D.N, chU1=(cs+12)/D.N;
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevPcs=[];
+  const jit=R(1); const NS=secs.length;
+  for(let si=0;si<NS;si++){
+    const sec=secs[si], last=si===NS-1;
+    const f0=barNo/Math.max(1,totBars); const u=_cU(D,f0);
+    const ph = f0<0.1 ? 'intro' : (u>=chU0&&u<chU1&&f0>0.2&&f0<0.9) ? 'chorale' : f0>0.92 ? 'outro' : (Math.abs(f0-clim)<0.12) ? 'climax' : 'flow';
+    const root=roots[Math.min(totBars-1,barNo)];
+    const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
+    let K=(ph==='intro'||ph==='outro')?2:3+(sec.chr>28?1:0)+(_dnaAccent(D,u)>0.5?1:0);
+    const cellPcs=[root]; for(const p of prevPcs){ if(cellPcs.length<2 && ranked.includes(p) && !cellPcs.includes(p)) cellPcs.push(p); }
+    for(const p of ranked){ if(cellPcs.length>=K) break; if(!cellPcs.includes(p)) cellPcs.push(p); }
+    while(cellPcs.length<Math.min(K,3)) cellPcs.push((tonic+scale[(cellPcs.length*2)%scale.length])%12);
+    prevPcs=cellPcs.slice();
+    const lt=_dnaLight(D,u); let octBase=lt<0.4?3:(lt<0.62?4:5); if(ph==='climax') octBase=Math.min(5,octBase+1);
+    const mids=[]; let lastM=-1; for(const p of cellPcs.slice().sort((a,b)=>a-b)){ let m=12*(octBase+1)+p; while(m<=lastM) m+=12; lastM=m; mids.push({m,pc:p}); }
+    const seq=mids.concat(mids.slice(1,Math.max(1,mids.length-1)).reverse());
+    const trip=(ph==='flow') && _dnaAccent(D,u)>0.45;          // an edge in the picture → the cell turns to triplets
+    const perBar=trip?12:8, pulse=trip?Math.round(eighth*2/3):eighth;
+    const bsrc=sec.cells[0];
+    const vPh=(ph==='intro'?0.72:ph==='chorale'?0.9:ph==='climax'?1.12:ph==='outro'?0.7:1)*(0.85+0.3*lt);
+    if(ph!=='intro' && ph!=='chorale'){ const barLen=perBar*pulse;
+      for(let bb=0;bb<bars[si];bb++){ const bp=(bb%2===0)?root:((root+7)%12);
+        _ev(evts,ix,[{m:36+bp,v:Math.round((bb===0?54:46)*vPh*arc(f0)),durMs:Math.round(barLen*1.15),bass:true}],t+bb*barLen,{cg:bsrc.cg,band:bsrc.band,_lum:sec.lum,_chroma:sec.chr},sec,bp); } }
+    if(ph==='chorale'){ const nCh=bars[si]*4;
+      for(let q=0;q<nCh;q++){ const v=Math.round((46+Math.min(30,sec.chr))*arc(f0)*vPh+(q%4===0?6:0));
+        const ns=mids.map((o,oi)=>({m:o.m-12,v:Math.max(26,v-oi*5),durMs:Math.round(eighth*2*1.8)})); ns.push({m:36+root,v:Math.round(v*0.85),durMs:Math.round(eighth*2*1.8),bass:true});
+        _ev(evts,ix,ns,t,_srcOfSec(sec,mids[0].pc),sec,mids[0].pc); t+=eighth*2; }
+      barNo+=bars[si]; continue; }
+    let pulseMs=pulse;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      for(let k=0;k<perBar;k++){ const note=seq[k%seq.length];
+        const v=Math.max(26,Math.min(112,Math.round((50+Math.min(40,sec.chr))*arc(f0)*vPh+(jit()-0.5)*10)));
+        const ns=[{m:note.m,v,durMs:Math.round(pulseMs*1.9),mel:true}]; if(ph==='climax') ns.push({m:note.m+12,v:Math.max(24,v-16),durMs:Math.round(pulseMs*1.9),mel:true});
+        _ev(evts,ix,ns,t,_srcOfSec(sec,note.pc),sec,note.pc); t+=pulseMs; if(last) pulseMs=Math.round(pulseMs*1.02); } }
+  }
+  const third=(tonic+scale[2])%12;
+  _ev(evts,ix,[{m:48+tonic,v:46,durMs:2600},{m:60+third,v:42,durMs:2600},{m:60+((tonic+7)%12),v:40,durMs:2600}],t+eighth,{cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2},secs[0],tonic);
   return evts;
 }
 
-// ── BEETHOVEN — sonata in four rooms, no slogans: ADAGIO (Moonlight — low
-// octaves, continuous triplet broken chords, a slow dotted melody above, pp)
-// → ALLEGRO (Alberti bass, a singing theme in two-bar gestures that never
-// repeat back-to-back, sforzando on the downbeat, a sudden piano every fourth
-// bar) → STORM (tremolo octaves, melody in octaves falling down the scale,
-// climax at phi) → ADAGIO again, higher and softer → two bars of hammered
-// chords. The picture sets key, tempo and the melody's contour.
-function composeImageBeethoven(px,nc,nr,table,colorMode,dir){
-  const A=_composerAnalyse(px,nc,nr,table,colorMode,10600,10,18);
-  if(!A.secs) return A.base;
-  const {base,secs,tonic,gl,gc2,R}=A;
-  const minor=gl<=58;
-  const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
-  const eighth=Math.round(300-Math.min(1,gc2/45)*50);
-  const barMs=eighth*8;
-  const trip=Math.round(eighth*2/3);                        // triplet eighth
-  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
-  const maxBars=Math.floor(150000/barMs);
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
-  const totBars=bars.reduce((a,b)=>a+b,0);
-  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null, lastG=-1;
-  const rv=R(1), rb=R(2);
-  const prog=minor?[0,5,3,4, 0,3,4,0]:[0,5,3,4, 0,3,4,0];    // i VI iv V · i iv V i
-  const climBar=Math.floor(totBars*0.618);
+// ── SATIE — Gymnopédie: the slow 3/4 sway between two chords — the two colour fields the reading is
+// crossing — and a melody that walks the picture's own line; the stiller the picture, the more it rests.
+function composeImageSatie(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,9800,10,22,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const scale=_dnaMode(D,[[0,2,4,6,7,9,11],[0,2,4,5,7,9,11],[0,2,3,5,7,9,10],[0,1,3,5,7,8,10]]);   // lydian · major · dorian · phrygian (the gnossienne)
+  const major=scale[2]===4; const seventh=major?11:10;
+  const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const inScale=kit.inScale;
+  const beat=Math.round(60000/(54+D.energy*26));             // lent — 54 … 80
+  const barMs=beat*3; _jamNote(barMs,3);
+  const clim=_dnaClimax(D);
+  const arc=(pos)=>0.88+0.14*Math.exp(-((pos-clim)*(pos-clim))/(2*0.24*0.24));
+  let bars=_cFit(_cBars(secs,2,4),Math.floor(160000/barMs),1);
+  const totBars=bars.reduce((a,b)=>a+b,0); const totalMs=totBars*barMs;
+  const roots=_dnaRoots(D,totBars,inScale,tonic);
+  const evts=[]; const ix={i:0}; let t=0, prevMel=null, barNo=0, lastGest=-1, melSkip=0;
+  const jr=R(1);
   for(let si=0;si<secs.length;si++){
     const sec=secs[si], last=si===secs.length-1;
-    const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
     for(let b2=0;b2<bars[si];b2++,barNo++){
-      const f=barNo/Math.max(1,totBars-1);
-      const ph = f<0.30 ? 'adagio' : f<0.62 ? 'allegro' : f<0.80 ? 'storm' : f<0.94 ? 'adagio2' : 'coda';
-      let root=dPc(prog[barNo%8]);
-      if(ph==='allegro' && b2%2===1 && ranked[0]!=null) root=ranked[0];   // the picture colours every other bar
-      const third=inScale((root+(minor?3:4))%12), fifth=inScale((root+7)%12);
+      const fPos=barNo/Math.max(1,totBars-1); const u=_cU(D,fPos);
+      const phS = fPos<0.14 ? 'naked' : (Math.abs(fPos-clim)<0.1) ? 'rolled' : 'sway';
+      // the sway: this bar's field, the next bar the neighbouring one (a fifth up when the picture has only one)
+      const rootA=roots[Math.min(totBars-1,barNo)]; const rootN=roots[Math.min(totBars-1,barNo+1)];
+      const root=(b2%2===0)?rootA:(rootN!==rootA?rootN:inScale((rootA+7)%12));
+      const env=arc(fPos)*(0.85+0.3*_dnaLight(D,u));
       const sc=_srcOfSec(sec,root);
-      const nearClim=Math.abs(barNo-climBar)<=1;
-      const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
-      const r0=snap(48+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
-      if(ph==='adagio'||ph==='adagio2'){
-        const hi=ph==='adagio2';
-        const env=hi?0.8:0.9;
-        // low octave held under the whole bar
-        _ev(evts,ix,[{m:snap(36+root),v:Math.round(44*env),durMs:Math.round(barMs*1.05),bass:true},{m:snap(24+root),v:Math.round(40*env),durMs:Math.round(barMs*1.05),bass:true}],t,sc,sec,root);
-        // continuous triplets: R · 3 · 5 up and up, the Moonlight wheel
-        const wheel=[r0,t3,t5,r0,t3,t5,r0,t3,t5,r0,t3,t5].map((m,i2)=>m+(hi?12:0));
-        for(let k=0;k<12;k++){ _ev(evts,ix,[{m:wheel[k],v:Math.round((30+(k%3===0?6:0))*env),durMs:Math.round(trip*1.9)}],t+k*trip,sc,sec,((wheel[k]%12)+12)%12); }
-        // the slow melody above: one dotted figure per two bars, drawn by the light
-        if(barNo%2===0){
-          let mm=prevMel!=null?prevMel:snap(72+fifth);
-          mm=snap(Math.max(67,Math.min(hi?93:88,mm+Math.max(-3,Math.min(3,Math.round(trend/9))))));
-          if(barNo%4===2) mm=snap(Math.max(67,Math.min(93,67+root+(hi?12:0))));           // every second phrase rests on the chord
-          const pcm=((mm%12)+12)%12; const scM=_srcOfSec(sec,pcm);
-          const vM=Math.round((50+Math.min(12,sec.chr*0.4))*env);
-          _ev(evts,ix,[{m:mm,v:vM,durMs:Math.round(eighth*5.6)}],t+Math.round((rb()-0.5)*60),scM,sec,pcm);
-          _ev(evts,ix,[{m:mm,v:Math.round(vM*0.8),durMs:Math.round(eighth*0.9)}],t+6*eighth,scM,sec,pcm);                      // the dotted tail
-          const up=stepSc(mm,trend>=0?1:-1); _ev(evts,ix,[{m:up,v:Math.round(vM*0.85),durMs:Math.round(eighth*0.9)}],t+7*eighth,scM,sec,((up%12)+12)%12);
-          prevMel=up;
-        }
-        t+=barMs; continue;
+      _ev(evts,ix,[{m:36+root,v:Math.round(50*env),durMs:Math.round(beat*2.7),bass:true}],t,sc,sec,root);
+      const third=inScale((root+(major?4:3))%12);
+      if(phS!=='naked'){
+        const chTones=[{m:48+root,vv:42},{m:48+third+(third<root?12:0),vv:38},{m:48+((root+seventh)%12)+(((root+seventh)%12)<root?12:0),vv:36}];
+        if(phS==='rolled'){ for(let q=0;q<chTones.length;q++) _ev(evts,ix,[{m:chTones[q].m,v:Math.round(chTones[q].vv*env),durMs:Math.round(beat*1.7)}],t+beat+q*Math.round(beat*0.34),sc,sec,root); }
+        else _ev(evts,ix,chTones.map(o=>({m:o.m,v:Math.round(o.vv*env),durMs:Math.round(beat*1.9)})),t+beat,sc,sec,root);
       }
-      if(ph==='coda'){
-        for(let k=0;k<8;k+=2){
-          _ev(evts,ix,[{m:snap(36+root),v:Math.round(92*(k===0?1:0.9)),durMs:Math.round(eighth*1.5),bass:true},{m:snap(24+root),v:84,durMs:Math.round(eighth*1.5),bass:true}],t+k*eighth,sc,sec,root);
-          _ev(evts,ix,[{m:snap(60+root),v:92,durMs:Math.round(eighth*1.5)},{m:snap(64+third+(third<root?12:0)),v:86,durMs:Math.round(eighth*1.5)},{m:snap(67+fifth+(fifth<root?12:0)),v:88,durMs:Math.round(eighth*1.5)},{m:snap(72+root),v:94,durMs:Math.round(eighth*1.5)}],t+k*eighth,sc,sec,root);
-        }
-        t+=barMs; continue;
+      const cadence=(barNo%4===3);
+      const restP=0.12+(1-D.texture)*0.45;                      // a still picture breathes more
+      if(melSkip>0){ melSkip--; }
+      else if(!cadence && jr()>restP && !last){
+        let mm=_cMel(D,kit,u,55,84,prevMel); if(phS==='rolled') mm=Math.min(89,mm+12);
+        const melPc=((mm%12)+12)%12; const msc=_srcOfSec(sec,melPc);
+        const vB=(58+Math.min(18,sec.chr*0.5))*env;
+        const P=(m2,vv,startB,durB2)=>_ev(evts,ix,[{m:m2,v:Math.round(vv),durMs:Math.round(beat*durB2*0.96),mel:true}],t+Math.round(startB*beat),msc,sec,melPc);
+        let gi; do{ gi=Math.floor(jr()*4); }while(gi===lastGest); lastGest=gi;
+        if(_dnaAccent(D,u)>0.55) gi=1;                            // an edge → the "da-taaa"
+        if(gi===0){ P(mm,vB,0,2.9); prevMel=mm; }
+        else if(gi===1){ const nb=Math.max(55,Math.min(84,kit.stepSc(mm,jr()<0.5?-1:1))); P(nb,vB*0.86,0,0.95); P(mm,vB,1,1.9); prevMel=mm; }
+        else if(gi===2){ const nb=Math.max(55,Math.min(84,kit.stepSc(mm,jr()<0.5?-1:1))); P(mm,vB*0.95,0,0.95); P(nb,vB*0.85,1,0.95); prevMel=nb; }
+        else { P(mm,vB*0.96,(jr()<0.5?1:2),4.6); prevMel=mm; melSkip=1; }
       }
-      // ── ALLEGRO / STORM ──
-      const storm=ph==='storm';
-      const subito=(!storm && barNo%4===3)?0.55:1;            // sudden piano
-      const sfz=(barNo%2===0)?1.15:1;                          // downbeat accent
-      const vB=Math.min(118,(66+Math.min(22,sec.chr*0.6))*(storm?1.1:1)*(nearClim?1.12:1)*subito);
-      if(storm){
-        for(let k=0;k<8;k++){ const bm=snap(36+root)-(k%2?12:0); _ev(evts,ix,[{m:bm,v:Math.round(52+(k%4===0?12:0)),durMs:Math.round(eighth*1.1),bass:true}],t+k*eighth,sc,sec,root); }
+      t+=barMs;
+    }
+  }
+  _ev(evts,ix,[{m:36+tonic,v:44,durMs:3200,bass:true},{m:48+tonic,v:40,durMs:3200},{m:48+((tonic+(major?4:3))%12),v:36,durMs:3200},{m:48+((tonic+seventh)%12),v:34,durMs:3200}],t+beat,{cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2},secs[0],tonic);
+  return evts;
+}
+
+// ── CHOPIN — nocturne: the left hand's broken chords walk the picture's colour fields (the cadences
+// stay Chopin's), the right hand sings the picture's line, an ornament on every edge, the climax
+// where the eye is pulled; the agitato comes where the picture is busiest.
+function composeImageChopin(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,9900,10,20,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const minor=_dnaMode(D,[false,true]);
+  const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const inScale=kit.inScale;
+  const eighth=Math.round(500-D.energy*200);                   // 300 … 500
+  const barMs=eighth*6; _jamNote(barMs,3);
+  const clim=_dnaClimax(D);
+  const arc=(pos)=>0.78+0.36*Math.exp(-((pos-clim)*(pos-clim))/(2*0.2*0.2));
+  let bars=_cFit(_cBars(secs,2,4),Math.floor(155000/barMs),1);
+  const totBars=bars.reduce((a,b)=>a+b,0); const totalMs=totBars*barMs;
+  const roots=_dnaProg(D,totBars,inScale,tonic,minor?[0,8,5,7]:[0,9,5,7]); const dom=inScale((tonic+7)%12);   // i VI iv V inside every colour field
+  // the busiest fifth of the reading → agitato
+  let as=0,ab=-1; for(let k=0;k<D.N-12;k++){ let s=0; for(let j=0;j<12;j++) s+=D.verticals[k+j]; if(s>ab){ab=s;as=k;} } const agU0=as/D.N, agU1=(as+12)/D.N;
+  const evts=[]; const ix={i:0}; let t=0, prevMel=null, barNo=0, lastGestC=-1;
+  const jr=R(1), rb=R(2);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const fPos=barNo/Math.max(1,totBars-1); const u=_cU(D,fPos);
+      const phC = fPos<0.10 ? 'recit' : (u>=agU0&&u<agU1&&fPos>0.25&&fPos<0.85) ? 'agitato' : 'nocturne';
+      // the root: the picture's field — except every 4th bar, Chopin's own dominant, and the 8th, home
+      let root=roots[Math.min(totBars-1,barNo)]; if(barNo%8===7) root=tonic; else if(barNo%4===3) root=dom;
+      const isV=root===dom;
+      const third=inScale((root+((minor&&!isV)?3:4))%12), fifth=inScale((root+7)%12);
+      const env=arc(fPos)*(0.85+0.3*_dnaLight(D,u));
+      const nearClim=Math.abs(fPos-clim)<0.04;
+      const sc=_srcOfSec(sec,root);
+      if(phC==='recit'){
+        _ev(evts,ix,[{m:36+root,v:Math.round(46*env),durMs:Math.round(barMs*0.95),bass:true},{m:48+root,v:Math.round(38*env),durMs:Math.round(barMs*0.95)}],t,sc,sec,root);
+      } else if(phC==='agitato'){
+        const t3=52+third+(third<root?12:0)-4, t5=48+fifth+(fifth<root?12:0)-12; const flow=[36+root,t5,t3,t3+12,t3,t5];
+        for(let q=0;q<6;q++) _ev(evts,ix,[{m:flow[q],v:Math.round((44+q*1.5)*env),durMs:Math.round(eighth*1.7),bass:q===0}],t+q*eighth,sc,sec,root);
       } else {
-        const alb=[r0,t5,t3,t5,r0,t5,t3,t5];
-        for(let k=0;k<8;k++){ _ev(evts,ix,[{m:alb[k],v:Math.round((36+(k%4===0?8:0))*subito),durMs:Math.round(eighth*1.2),bass:k%4===0}],t+k*eighth,sc,sec,root); }
+        const lh=[{m:36+root,off:0,v:50,dur:2.2,bass:true},{m:48+fifth+(fifth<root?12:0)-12,off:1,v:40,dur:1.6},{m:52+third+(third<root?12:0)-4,off:2,v:42,dur:1.6},{m:48+fifth+(fifth<root?12:0)-12,off:3,v:38,dur:1.6},{m:48+root,off:4,v:41,dur:1.6},{m:48+fifth+(fifth<root?12:0)-12,off:5,v:37,dur:1.6}];
+        for(const L of lh) _ev(evts,ix,[{m:L.m,v:Math.round(L.v*env),durMs:Math.round(eighth*L.dur),bass:!!L.bass}],t+L.off*eighth,sc,sec,root);
       }
-      // THEME in two-bar gestures with memory — never the same shape twice:
-      // 0 scale run up to a held tone · 1 dotted figure (long-short-long) ·
-      // 2 leap up a fourth then step down · 3 three repeated quarters then a
-      // fall — repeated notes exist, but only once per phrase and never twice in a row.
-      let mm=prevMel!=null?prevMel:snap(74+third);
-      mm=snap(Math.max(64,Math.min(storm?93:89,mm+Math.max(-4,Math.min(4,Math.round(trend/8))))));
-      const PE=(m,off,d,vv)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:Math.round(Math.min(122,vv)),durMs:Math.round(eighth*d)}]; if(storm) ns.push({m:m-12,v:Math.round(vv*0.82),durMs:Math.round(eighth*d)}); _ev(evts,ix,ns,t+off*eighth+Math.round((rb()-0.5)*40),_srcOfSec(sec,pcm),sec,pcm); };
-      let gi; do{ gi=Math.floor(rv()*4); }while(gi===lastG);
-      lastG=gi;
-      if(storm) gi=(barNo%2===0)?0:3;                        // the storm only runs and falls
+      const cadence=(barNo%8===7);
+      const restP=0.04+(1-D.texture)*0.2;
+      if(cadence){ const c5=Math.max(60,Math.min(88,64+fifth)); const c1=Math.max(58,Math.min(86,(64+root)>c5?(64+root-12):(64+root)));
+        _ev(evts,ix,[{m:c5,v:Math.round(56*env),durMs:Math.round(eighth*2.6),mel:true}],t+Math.round((rb()-0.5)*80),sc,sec,fifth);
+        _ev(evts,ix,[{m:c1,v:Math.round(60*env),durMs:Math.round(eighth*4.6),mel:true}],t+3*eighth,sc,sec,root); prevMel=c1; }
+      if(!cadence && jr()>restP){
+        let mm=_cMel(D,kit,u,58,88,prevMel); if(nearClim) mm=Math.min(93,mm+12);
+        const melPc=((mm%12)+12)%12; const msc=_srcOfSec(sec,melPc);
+        const rubato=Math.round((rb()-0.5)*(phC==='recit'?220:120));
+        const vMel=Math.round((66+Math.min(20,sec.chr*0.6))*env*(nearClim?1.12:1));
+        const PE=(m2,vv,offE,durE)=>{ const ns=[{m:m2,v:Math.round(vv),durMs:Math.round(eighth*durE),mel:true}]; if(phC==='agitato') ns.push({m:Math.min(96,m2+12),v:Math.round(vv*0.8),durMs:Math.round(eighth*durE),mel:true}); _ev(evts,ix,ns,Math.max(0,t+Math.round(offE*eighth)+rubato),msc,sec,melPc); };
+        let gi; do{ gi=Math.floor(jr()*4); }while(gi===lastGestC); lastGestC=gi;
+        const acc=_dnaAccent(D,u);
+        if(gi===0){ if(acc>0.3) PE(Math.min(94,kit.stepSc(mm,1)),Math.max(30,vMel-22),-0.3,0.28); PE(mm,vMel,0,5.2); prevMel=mm; }   // the grace-note sigh on an edge
+        else if(gi===1){ PE(mm,vMel,0,1.9); const st=Math.max(56,Math.min(90,kit.stepSc(mm,jr()<0.5?-1:1))); PE(st,vMel-8,2,0.95);
+          let ct=st,cbd=99; for(const pc of [root,third,fifth]){ for(let o=4;o<=6;o++){ const c2=12*o+pc; const dd=Math.abs(c2-st); if(dd>0&&dd<cbd){cbd=dd;ct=c2;} } } ct=Math.max(56,Math.min(90,ct)); PE(ct,vMel-4,3,1.9); prevMel=ct; }
+        else if(gi===2){ const d1=Math.max(55,kit.stepSc(mm,-1)), d2=Math.max(54,kit.stepSc(mm,-2)); PE(mm,vMel,0,1.8); PE(d1,vMel-6,2,1.8); PE(d2,vMel-10,4,1.8); prevMel=d2; }
+        else { for(let q=4;q>=1;q--) PE(Math.max(55,kit.stepSc(mm,-q)),Math.max(28,vMel-16),(4-q)*1,0.9); PE(mm,vMel,4,3.4); prevMel=mm; }
+      }
+      t+=barMs; if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.12);
+    }
+  }
+  const fifthT=(tonic+7)%12, thirdT=(tonic+(minor?3:4))%12;
+  const roll=[{m:36+tonic,v:52,d:0},{m:48+tonic,v:46,d:80},{m:48+thirdT+(thirdT<tonic?12:0),v:42,d:160},{m:48+fifthT+(fifthT<tonic?12:0),v:40,d:240},{m:60+tonic,v:44,d:320}];
+  for(const r2 of roll) _ev(evts,ix,[{m:r2.m,v:r2.v,durMs:3600,bass:r2.m<45}],t+eighth+r2.d,{cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2},secs[0],tonic);
+  return evts;
+}
+
+// ── CARL VINE — toccata: the sixteenth motor whose accents fall where the picture has its edges,
+// add2 harmonies from its colour fields, the breather on its stillest stretch, the coda where the
+// eye is pulled.
+function composeImageVine(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10200,8,16,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const minor=_dnaMode(D,[false,false,true]);                     // Vine leans bright
+  const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12); const {snap,stepSc,inScale}=_scaleKit(scAbs);
+  const six=Math.round(185-D.energy*70);                        // 115 … 185 ms
+  const barMs=six*8; _jamNote(barMs,2);
+  let bars=_cFit(_cBars(secs,3,5),Math.floor(140000/barMs),2);
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const roots=_dnaRoots(D,totBars,inScale,tonic);
+  // the breather: 3 bars on the stillest stretch; the coda from the climax on
+  let bs=0,bb=1e9; for(let k=0;k<D.N-8;k++){ let s=0; for(let j=0;j<8;j++) s+=D.verticals[k+j]; if(s<bb){bb=s;bs=k;} } const brU=bs/D.N;
+  const brStart=Math.max(4,Math.round(brU*totBars)), brEnd=Math.min(totBars-4,brStart+3);
+  const clim=_dnaClimax(D);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0;
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const fPos=barNo/Math.max(1,totBars-1); const u=_cU(D,fPos);
+      const swell=0.8+0.3*Math.exp(-((fPos-clim)*(fPos-clim))/(2*0.12*0.12));
+      const root=roots[Math.min(totBars-1,barNo)];
+      if(barNo>=brStart && barNo<brEnd){ const r0=snap(52+root); const cl=[r0,stepSc(r0,2),stepSc(r0,4),stepSc(r0,1)+12]; const scB=_srcOfSec(sec,root);
+        for(let q=0;q<cl.length;q++) _ev(evts,ix,[{m:cl[q],v:Math.round(34-q*2),durMs:Math.round(barMs*1.15),bass:q===0}],t+q*Math.round(six*0.9),scB,sec,((cl[q]%12)+12)%12);
+        t+=barMs; continue; }
+      const phV = barNo<4 ? 'build' : ((barNo%12>=10 && fPos<0.8) ? 'half' : 'motor');
+      const b0=snap(Math.round(_dnaLine(D,u,56,70)));            // the motor's register follows the picture's line
+      const tones=[b0, stepSc(b0,1), stepSc(b0,2), stepSc(b0,4)];
+      // the accents: the picture's edges inside this bar (u0..u1), else Vine's own 3+3+2 / 2+3+3
+      const u0=_cU(D,barNo/totBars), u1=_cU(D,(barNo+1)/totBars); const acc=[];
+      for(let k=0;k<8;k++){ const uu=u0+(u1-u0)*(k+0.5)/8; if(_dnaAccent(D,uu)>0.5) acc.push(k); }
+      const accs = acc.length>=2 ? acc.slice(0,4) : ((barNo%4===3)?[0,2,5]:[0,3,6]);
+      const isCoda=fPos>=clim && last; const lift=isCoda?Math.min(12,b2*2):0;
+      const scS=_srcOfSec(sec,root);
+      if(phV!=='build'){ for(const hb of [0,4]){ const bR=snap(36+root); _ev(evts,ix,[{m:bR,v:Math.round(46*swell),durMs:Math.round(six*4.4),bass:true},{m:stepSc(bR,4),v:Math.round(38*swell),durMs:Math.round(six*4.4),bass:true}],t+hb*six,scS,sec,root); } }
+      for(let k=0;k<8;k++){ const isAcc=accs.indexOf(k)>=0;
+        if(phV!=='motor' && !isAcc && !(phV==='build'&&k%2===0&&barNo>=2)) continue;
+        const tone=tones[(k*2+((barNo>>1)&1))%4]+(isCoda?lift:0);
+        const v=Math.round((44+Math.min(22,sec.chr*0.6))*(isAcc?1.35:1)*swell*(phV==='build'?0.8:1)*(0.85+0.3*_dnaLight(D,u)));
+        const ns=[{m:tone,v:Math.min(112,v),durMs:Math.round(six*(phV==='half'?2.6:1.5)),mel:true}]; if(isAcc && phV!=='build') ns.push({m:tone+12,v:Math.max(26,v-18),durMs:Math.round(six*1.5),mel:true});
+        const pcT=((tone%12)+12)%12; _ev(evts,ix,ns,t+k*six,_srcOfSec(sec,pcT),sec,pcT);
+        if(isAcc){ const bm=snap(36+root)+(isCoda?Math.min(7,lift):0); _ev(evts,ix,[{m:bm,v:Math.min(110,Math.round(80*swell*(phV==='build'?0.9:1))),durMs:Math.round(six*(phV==='half'?2.2:1.1)),bass:true}],t+k*six,scS,sec,root); } }
+      t+=barMs;
+    }
+  }
+  const f0=snap(48+tonic); const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2};
+  _ev(evts,ix,[{m:f0-12,v:104,durMs:260,bass:true},{m:f0,v:100,durMs:260},{m:stepSc(f0,1),v:92,durMs:260},{m:stepSc(f0,4),v:94,durMs:260}],t+six,scT,secs[0],tonic);
+  _ev(evts,ix,[{m:f0-12,v:56,durMs:3400,bass:true},{m:f0,v:52,durMs:3400},{m:stepSc(f0,2),v:48,durMs:3400},{m:stepSc(f0,4),v:46,durMs:3400}],t+six+320,scT,secs[0],tonic);
+  return evts;
+}
+
+// ── GERSHWIN — stride-lite over seventh chords: the loop's chords are the picture's colour fields
+// (ii–V kept for the turnarounds), the tune sings the picture's line, blue notes on its edges, the
+// bridge on its brightest stretch.
+function composeImageGershwin(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10300,8,16,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const scale=_jamMinorNow()?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const scAbs=scale.map(d=>(tonic+d)%12); const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const blue=(tonic+3)%12;
+  const q=Math.round(740-D.energy*280);                         // quarter 460 … 740
+  const swA=Math.round(q*0.66), swB=q-swA; const barMs=q*4; _jamNote(barMs,4);
+  const maxBars=Math.max(24,Math.floor(150000/barMs)); const totBars=maxBars-(maxBars%8); const totalMs=totBars*barMs;
+  const evts=[]; const ix={i:0}; const jz=R(1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const loop=_cLoop(D,4,inScale,tonic,dPc(4),[0,9,2,7]);         // the A loop: the picture's fields (I vi ii V in a plain one)
+  const degOf=(pc)=>{ const i=scAbs.indexOf(pc); return i<0?0:i; };
+  const degA=[degOf(loop[0]),degOf(loop[1]),degOf(loop[2]),4, degOf(loop[0]),degOf(loop[3]),1,4];   // … ii V turnarounds stay
+  const degBr=[3,3,degOf(loop[1]),degOf(loop[1]),1,4,0,4];
+  // the bridge: the 8-bar block that reads the brightest stretch
+  let bestB=2,bl=-1; for(let blk=1;blk<totBars/8-1;blk++){ let s=0; for(let k=0;k<8;k++) s+=_dnaLight(D,_cU(D,(blk*8+k)/totBars)); if(s>bl){bl=s;bestB=blk;} }
+  const clim=_dnaClimax(D);
+  let prevMel=null;
+  for(let bar=0;bar<totBars;bar++){
+    const sec=secAt(bar), pos=bar/totBars; const u=_cU(D,pos);
+    const env=(0.82+0.26*Math.exp(-((pos-clim)*(pos-clim))/(2*0.2*0.2)))*(0.85+0.3*_dnaLight(D,u));
+    const isBr=(bar>>3)===bestB;
+    const deg=(isBr?degBr:degA)[bar%8];
+    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4), sev=dPc(deg+6);
+    const t0=bar*barMs; const sc=_srcOfSec(sec,root); const vamp=bar<2;
+    const chordMid=()=>{ let r=snap(48+root); let t3=r+1; while(((t3%12)+12)%12!==third) t3++; let s7=t3+1; while(((s7%12)+12)%12!==sev) s7++; return [r,t3,s7]; };
+    const cm=chordMid();
+    const strid=[{ms:0,ns:[{m:36+root,v:56,d:q*0.9,bass:true},{m:24+root,v:44,d:q*0.9,bass:true}]},{ms:q,ns:cm.map((m2,i2)=>({m:m2,v:44-i2*3,d:q*0.85}))},{ms:q*2,ns:[{m:36+fifth+(fifth<root?12:0),v:50,d:q*0.9,bass:true}]},{ms:q*3,ns:cm.map((m2,i2)=>({m:m2,v:40-i2*3,d:q*0.85}))}];
+    for(const st of strid) _ev(evts,ix,st.ns.map(o=>({m:o.m,v:Math.round(o.v*env),durMs:Math.round(o.d),bass:!!o.bass})),t0+st.ms,sc,sec,root);
+    if(vamp) continue;
+    const kit={snap,stepSc};
+    if(bar%2===1){ // the answer: a lighter one-two from the line
+      const am=_cMel(D,kit,u,63,93,prevMel); const vA=Math.round((52+Math.min(14,sec.chr*0.4))*env); const pcA=((am%12)+12)%12;
+      _ev(evts,ix,[{m:am,v:vA,durMs:Math.round(swA*1.5),mel:true}],t0+q+swA,_srcOfSec(sec,pcA),sec,pcA);
+      const am2=snap(Math.max(60,am-((jz()<0.5)?3:1))); _ev(evts,ix,[{m:am2,v:Math.max(30,vA-8),durMs:Math.round(q*1.6),mel:true}],t0+q*3,_srcOfSec(sec,pcA),sec,((am2%12)+12)%12); prevMel=am2; }
+    else { const nN=2+((jz()<0.5)?1:0);
+      for(let ni=0;ni<nN;ni++){ const uu=_cU(D,(bar+ni/nN)/totBars); let mm=_cMel(D,kit,uu,63,93,prevMel); prevMel=mm;
+        const offMs=(ni===0)?(q+swA):(ni===1)?(q*2+swA):(q*3); const longN=(ni===nN-1);
+        const vM=Math.round((62+Math.min(18,sec.chr*0.5))*env*(isBr?1.06:1)); const pcM=((mm%12)+12)%12; const scM=_srcOfSec(sec,pcM);
+        if(longN && _dnaAccent(D,uu)>0.35) _ev(evts,ix,[{m:mm-1,v:Math.max(28,vM-24),durMs:120,mel:true}],Math.max(0,t0+offMs-130),scM,sec,blue);   // the blue grace on an edge
+        _ev(evts,ix,[{m:mm,v:vM,durMs:Math.round(longN?q*2.2:swA*1.4),mel:true}],t0+offMs,scM,sec,pcM); } }
+  }
+  let tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2};
+  for(const [dg,k] of [[1,0],[4,1],[0,2]]){ const r2=dPc(dg); _ev(evts,ix,[{m:36+r2,v:58,durMs:Math.round(q*1.8),bass:true},{m:snap(52+dPc(dg+2)),v:44,durMs:Math.round(q*1.8)},{m:snap(55+dPc(dg+6)),v:40,durMs:Math.round(q*1.8)}],tE+k*q*2,_srcOfSec(secs[secs.length-1],r2),secs[secs.length-1],r2); }
+  _ev(evts,ix,[{m:24+tonic,v:70,durMs:3800,bass:true},{m:36+tonic,v:62,durMs:3800,bass:true},{m:snap(52+dPc(2)),v:50,durMs:3800},{m:snap(57+dPc(5)),v:46,durMs:3800},{m:snap(64+tonic),v:52,durMs:3800}],tE+q*6,scT,secs[0],tonic);
+  return evts;
+}
+
+// ── YIRUMA — the hook that returns: a two-bar hook drawn from the picture's line where it moves most,
+// over a four-chord loop of the picture's colour fields; the B lifts on the brightest block.
+function composeImageYiruma(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10400,8,14,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const scale=_jamMinorNow()?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const scAbs=scale.map(d=>(tonic+d)%12); const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
+  const eighth=Math.round(520-D.energy*180);                    // 340 … 520
+  const barMs=eighth*8; _jamNote(barMs,4);
+  const maxBars=Math.max(24,Math.floor(155000/barMs)); const totBars=maxBars-(maxBars%8); const totalMs=totBars*barMs;
+  const evts=[]; const ix={i:0}; const ry=R(1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const loop=_cLoop(D,4,inScale,tonic,dPc(4),D.lightness<=0.5?[9,5,0,7]:[0,7,9,5]);
+  // THE HOOK — the two bars of the picture's line where it moves most (the most melodic stretch)
+  let hs=0,hv=-1; for(let k=0;k<D.N-10;k++){ let s=0; for(let j=1;j<10;j++) s+=Math.abs(D.contour[k+j]-D.contour[k+j-1]); if(s>hv){hv=s;hs=k;} }
+  const hookOffs=[[0,3],[3,2],[5,3],[8,2],[10,2],[12,4]];
+  const hook=hookOffs.map((o,i2)=>({offE:o[0],durE:o[1],m:snap(Math.round(_dnaLine(D,(hs+i2*2)/D.N,70,88)))}));
+  { let up=0,dn=0; for(let i2=1;i2<hook.length;i2++){ if(hook[i2].m>hook[i2-1].m) up++; else if(hook[i2].m<hook[i2-1].m) dn++; }
+    if(!up||!dn){ for(let i2=3;i2<hook.length;i2++) hook[i2].m=hook[hook.length-1-i2+0].m; hook[hook.length-1].m=snap(hook[0].m); } }   // a line that only climbs (or only falls) sings as an arch
+  const clim=_dnaClimax(D);
+  let bestB=2,bl=-1; for(let blk=1;blk<totBars/8-1;blk++){ let s=0; for(let k=0;k<8;k++) s+=_dnaLight(D,_cU(D,(blk*8+k)/totBars)); if(s>bl){bl=s;bestB=blk;} }
+  for(let bar=0;bar<totBars;bar++){
+    const sec=secAt(bar), pos=bar/totBars; const u=_cU(D,pos);
+    const env=(0.8+0.28*Math.exp(-((pos-clim)*(pos-clim))/(2*0.2*0.2)))*(0.85+0.3*_dnaLight(D,u));
+    const blk=(bar>>3); const isB=blk===bestB;
+    const root=loop[(bar>>1)%4]; const third=inScale((root+4)%12), fifth=inScale((root+7)%12);
+    const t0=bar*barMs; const sc=_srcOfSec(sec,root);
+    const last8=bar>=totBars-2; const rit=last8?1.12:1;
+    let r0=snap(40+root); let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++; let t3=t5+1; while(((t3%12)+12)%12!==third) t3++;
+    _ev(evts,ix,[{m:r0-12,v:Math.round(50*env),durMs:Math.round(barMs*0.62*rit),bass:true},{m:r0,v:Math.round(44*env),durMs:Math.round(barMs*0.62*rit),bass:true}],t0,sc,sec,root);
+    _ev(evts,ix,[{m:t5-12,v:Math.round(42*env),durMs:Math.round(barMs*0.55*rit),bass:true}],t0+Math.round(4*eighth*rit),sc,sec,fifth);
+    const half=(bar%2)*8; const melMap={};
+    if(!(blk===0 && bar<2)){ const lift=isB?2:0; const dbl=(blk%2===1)||isB;
+      for(const h of hook){ if(h.offE<half || h.offE>=half+8) continue; const mm=snap(Math.max(67,Math.min(94,stepSc(h.m,lift)))); melMap[h.offE-half]={mm,durE:h.durE,dbl,isLast:h===hook[hook.length-1]}; } }
+    const fills=[t3+12,t5+12,stepSc(t3,2)+12,t5+12]; let melHold=0;
+    for(let k=0;k<8;k++){ const t1=t0+Math.round(k*eighth*rit); const me=melMap[k];
+      if(me){ const vM=Math.round((58+Math.min(16,sec.chr*0.5))*env*(isB?1.08:1)); const pcM=((me.mm%12)+12)%12; const scM=_srcOfSec(sec,pcM);
+        if(me.isLast && _dnaAccent(D,u)>0.3) _ev(evts,ix,[{m:stepSc(me.mm,1),v:Math.max(26,vM-22),durMs:Math.round(eighth*0.8),mel:true}],Math.max(0,t1-Math.round(eighth*0.9)),scM,sec,pcM);
+        const ns=[{m:me.mm,v:vM,durMs:Math.round(me.durE*eighth*1.3*rit),mel:true}]; if(me.dbl) ns.push({m:me.mm+12>94?me.mm-12:me.mm+12,v:Math.max(24,vM-18),durMs:Math.round(me.durE*eighth*1.25*rit),mel:true});
+        _ev(evts,ix,ns,t1,scM,sec,pcM); melHold=me.durE-1; }
+      else { const fm=snap(fills[k%4]); const under=melHold>0; if(melHold>0) melHold--; const pcF=((fm%12)+12)%12;
+        _ev(evts,ix,[{m:fm,v:Math.round((under?26:33)*env),durMs:Math.round(eighth*1.7*rit)}],t1,_srcOfSec(sec,pcF),sec,pcF); } }
+  }
+  let tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}; const iv=dPc(3);
+  _ev(evts,ix,[{m:snap(40+iv),v:44,durMs:Math.round(barMs*0.9),bass:true},{m:snap(52+dPc(5)),v:36,durMs:Math.round(barMs*0.9)},{m:snap(57+iv),v:34,durMs:Math.round(barMs*0.9)}],tE,scT,secs[0],iv);
+  tE+=Math.round(barMs*0.9);
+  _ev(evts,ix,[{m:snap(28+tonic),v:46,durMs:4600,bass:true},{m:snap(40+tonic),v:40,durMs:4600,bass:true},{m:snap(55+dPc(2)),v:34,durMs:4600},{m:snap(59+dPc(4)),v:32,durMs:4600},{m:snap(76+tonic),v:38,durMs:4600}],tE+300,scT,secs[0],tonic);
+  return evts;
+}
+
+// ── BACH — two-part invention: the subject is the picture's line (eight sixteenths of its contour),
+// the sequences walk its colour fields, the dominant pedal sits where the eye is pulled; terraced
+// dynamics follow its light; major, dorian or harmonic minor by its mood.
+function composeImageBach(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10500,10,18,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const scale=_dnaMode(D,[[0,2,4,5,7,9,11],[0,2,3,5,7,9,10],[0,2,3,5,7,8,11]]);
+  const minor=scale[2]===3;
+  const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const {snap,stepSc,inScale,dPc}=kit;
+  const six=Math.round(200-D.energy*70);                        // 130 … 200
+  const barMs=six*16; _jamNote(barMs,4);
+  let bars=_cFit(_cBars(secs,2,3),Math.floor(140000/barMs),1);
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const roots=_dnaProg(D,totBars,inScale,tonic,[0,5,11,4,9,2,7,0]); const dom=dPc(4);   // the circle of fifths inside every colour field
+  const evts=[]; const ix={i:0}; let t=0, barNo=0; const rb=R(1);
+  // THE SUBJECT — eight sixteenths of the picture's line from where it starts, snapped to the key
+  const subj=[]; for(let k=0;k<8;k++) subj.push(snap(Math.round(_dnaLine(D,k/32,58,72))));
+  const clim=_dnaClimax(D); const pedalStart=Math.max(4,Math.round(clim*totBars)-1), pedalEnd=Math.min(totBars-3,pedalStart+3);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1); const u=_cU(D,f);
+      const inPedal=barNo>=pedalStart&&barNo<pedalEnd;
+      const ph = barNo<2 ? 'expo' : inPedal ? 'pedal' : (barNo>=2&&barNo<4) ? 'answer' : 'seq';
+      const terr = _dnaLight(D,u)>D.lightness ? 1 : 0.78;         // terraced: forte where the picture is lighter than its mean
+      let root=roots[Math.min(totBars-1,barNo)]; if(barNo%8===6) root=dom; if(barNo%8===7) root=tonic;
+      const third=inScale((root+(minor?3:4))%12), fifth=inScale((root+7)%12);
+      const sc=_srcOfSec(sec,root); const vBase=(60+Math.min(18,sec.chr*0.5))*terr;
+      if(ph==='expo'||ph==='answer'){ const up=ph==='expo'; const tr=up?0:-7;
+        for(let k=0;k<16;k++){ let mm=stepSc(subj[k%8]+tr,(k>=8?1:0)); mm=up?Math.min(96,mm):Math.max(36,mm-12); const pcm=((mm%12)+12)%12;
+          _ev(evts,ix,[{m:snap(mm),v:Math.round(vBase*(k%4===0?1.08:0.92)),durMs:Math.round(six*0.9),bass:!up,mel:up}],t+k*six,_srcOfSec(sec,pcm),sec,pcm);
+          if(!up && k%4===0) _ev(evts,ix,[{m:snap(72+[root,third,fifth][(k>>2)%3]),v:Math.round(vBase*0.8),durMs:Math.round(six*3.6)}],t+k*six,sc,sec,root); }
+      } else if(ph==='pedal'){
+        for(let k=0;k<8;k++) _ev(evts,ix,[{m:snap(36+dom),v:Math.round((58+(k%2?0:8))*terr),durMs:Math.round(six*1.8),bass:true}],t+k*2*six,_srcOfSec(sec,dom),sec,dom);
+        const fig=[0,2,1,3,2,4,3,5,4,6,5,7,6,7,7,8].map(st=>stepSc(snap(67+dom),st));
+        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)),durMs:Math.round(six*0.9),mel:true}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
+      } else {
+        const r0=snap(60+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=t3+1; while(((t5%12)+12)%12!==fifth) t5++;
+        const lift=(f>0.75&&!last)?12:0;
+        const pk=(_cMel(D,kit,u,67,84,null)||r0+12)+lift, pk2=(_cMel(D,kit,_cU(D,(barNo+0.5)/totBars),67,84,null)||r0+12)+lift;   // the figure's peaks are the picture's line
+        const fig=[r0,t3,t5,pk,t5,t3,r0,t3, r0,t3,t5,pk2,t5,t3,r0,t3].map(m=>m+lift);
+        // the subject's head returns on beat 3 where the picture has an edge
+        if(_dnaAccent(D,u)>0.4){ for(let k=0;k<4;k++) fig[8+k]=Math.min(96,snap(subj[k]+lift)); }
+        for(let k=0;k<16;k++){ const pcm=((fig[k]%12)+12)%12; _ev(evts,ix,[{m:Math.min(96,fig[k]),v:Math.round(vBase*(k%4===0?1.06:0.9)+(rb()-0.5)*4),durMs:Math.round(six*0.9),mel:true}],t+k*six,_srcOfSec(sec,pcm),sec,pcm); }
+        const walk=[root,fifth,third,fifth,root,inScale((root+2)%12),third,fifth];
+        for(let k=0;k<8;k++){ const bm=snap(36+walk[k]); _ev(evts,ix,[{m:bm,v:Math.round((52+(k%2?0:6))*terr),durMs:Math.round(six*1.7),bass:true}],t+k*2*six,_srcOfSec(sec,walk[k]),sec,walk[k]); }
+      }
+      t+=barMs; if(last && b2===bars[si]-1) t+=Math.round(barMs*0.1);
+    }
+  }
+  const T=secs[secs.length-1];
+  for(const [dg,k] of [[1,0],[4,1]]){ const r=dPc(dg); _ev(evts,ix,[{m:snap(36+r),v:60,durMs:Math.round(six*7),bass:true},{m:snap(55+dPc(dg+2)),v:52,durMs:Math.round(six*7)},{m:snap(60+dPc(dg+4)),v:50,durMs:Math.round(six*7)}],t+k*8*six,_srcOfSec(T,r),T,r); }
+  _cFinal(evts,ix,base,gl,gc2,T,tonic,(tonic+4)%12,t+16*six,66,3200);   // Picardy third
+  return evts;
+}
+
+// ── BEETHOVEN — sonata in four rooms: adagio where the picture is still, allegro where it moves,
+// the storm on its busiest stretch, the sforzandi on its edges, the climax where the eye is pulled.
+function composeImageBeethoven(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10600,10,18,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const minor=_dnaMode(D,[false,true]);
+  const scale=minor?[0,2,3,5,7,8,11]:[0,2,4,5,7,9,11];
+  const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const {snap,stepSc,inScale,dPc}=kit;
+  const eighth=Math.round(340-D.energy*120);                    // 220 … 340
+  const barMs=eighth*8; _jamNote(barMs,4); const trip=Math.round(eighth*2/3);
+  let bars=_cFit(_cBars(secs,2,4),Math.floor(150000/barMs),1);
+  const totBars=bars.reduce((a,b)=>a+b,0);
+  const roots=_dnaProg(D,totBars,inScale,tonic,minor?[0,8,5,7,0,5,7,0]:[0,9,5,7,0,5,7,0]); const dom=dPc(4);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null, lastG=-1;
+  const rv=R(1), rb=R(2);
+  const clim=_dnaClimax(D);
+  // the rooms: the storm is the busiest fifth, the adagios the stillest stretches at the ends
+  let ss2=0,sb=-1; for(let k=0;k<D.N-12;k++){ let s=0; for(let j=0;j<12;j++) s+=D.verticals[k+j]*(0.5+D.texture); if(s>sb){sb=s;ss2=k;} } const stU0=Math.max(0.35,ss2/D.N), stU1=Math.min(0.85,stU0+0.2);
+  for(let si=0;si<secs.length;si++){
+    const sec=secs[si], last=si===secs.length-1;
+    for(let b2=0;b2<bars[si];b2++,barNo++){
+      const f=barNo/Math.max(1,totBars-1); const u=_cU(D,f);
+      const ph = f<0.28 ? 'adagio' : (u>=stU0&&u<stU1) ? 'storm' : f<0.94 ? (f>0.8 && D.symmetry>=0.6 ? 'adagio2' : 'allegro') : 'coda';
+      let root=roots[Math.min(totBars-1,barNo)]; if(barNo%8===6) root=dom; if(barNo%8===7) root=tonic;
+      const third=inScale((root+(minor?3:4))%12), fifth=inScale((root+7)%12);
+      const sc=_srcOfSec(sec,root); const nearClim=Math.abs(f-clim)<0.04;
+      const r0=snap(48+root); let t3=r0+1; while(((t3%12)+12)%12!==third) t3++; let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++;
+      const lt=_dnaLight(D,u);
+      if(ph==='adagio'||ph==='adagio2'){ const hi=ph==='adagio2'; const env=(hi?0.8:0.9)*(0.85+0.3*lt);
+        _ev(evts,ix,[{m:snap(36+root),v:Math.round(44*env),durMs:Math.round(barMs*1.05),bass:true},{m:snap(24+root),v:Math.round(40*env),durMs:Math.round(barMs*1.05),bass:true}],t,sc,sec,root);
+        const wheel=[r0,t3,t5,r0,t3,t5,r0,t3,t5,r0,t3,t5].map(m=>m+(hi?12:0));
+        for(let k=0;k<12;k++) _ev(evts,ix,[{m:wheel[k],v:Math.round((30+(k%3===0?6:0))*env),durMs:Math.round(trip*1.9)}],t+k*trip,sc,sec,((wheel[k]%12)+12)%12);
+        if(barNo%2===0){ const mm=_cMel(D,kit,u,67,hi?93:88,prevMel); const pcm=((mm%12)+12)%12; const scM=_srcOfSec(sec,pcm); const vM=Math.round((50+Math.min(12,sec.chr*0.4))*env);
+          _ev(evts,ix,[{m:mm,v:vM,durMs:Math.round(eighth*5.6),mel:true}],t+Math.round((rb()-0.5)*60),scM,sec,pcm);
+          _ev(evts,ix,[{m:mm,v:Math.round(vM*0.8),durMs:Math.round(eighth*0.9),mel:true}],t+6*eighth,scM,sec,pcm);
+          const up=_cMel(D,kit,_cU(D,(barNo+1.5)/totBars),67,93,mm); _ev(evts,ix,[{m:up,v:Math.round(vM*0.85),durMs:Math.round(eighth*0.9),mel:true}],t+7*eighth,scM,sec,((up%12)+12)%12); prevMel=up; }
+        t+=barMs; continue; }
+      if(ph==='coda'){ for(let k=0;k<8;k+=2){
+          _ev(evts,ix,[{m:snap(36+root),v:Math.round(92*(k===0?1:0.9)),durMs:Math.round(eighth*1.5),bass:true},{m:snap(24+root),v:84,durMs:Math.round(eighth*1.5),bass:true}],t+k*eighth,sc,sec,root);
+          _ev(evts,ix,[{m:snap(60+root),v:92,durMs:Math.round(eighth*1.5)},{m:snap(64+third+(third<root?12:0)),v:86,durMs:Math.round(eighth*1.5)},{m:snap(67+fifth+(fifth<root?12:0)),v:88,durMs:Math.round(eighth*1.5)},{m:snap(72+root),v:94,durMs:Math.round(eighth*1.5)}],t+k*eighth,sc,sec,root); }
+        t+=barMs; continue; }
+      const storm=ph==='storm';
+      const subito=(!storm && barNo%4===3)?0.55:1;
+      const acc=_dnaAccent(D,u); const sfz=1+0.3*acc;                 // the sforzando is the picture's edge
+      const vB=Math.min(118,(66+Math.min(22,sec.chr*0.6))*(storm?1.1:1)*(nearClim?1.12:1)*subito*(0.85+0.3*lt));
+      if(storm){ for(let k=0;k<8;k++){ const bm=snap(36+root)-(k%2?12:0); _ev(evts,ix,[{m:bm,v:Math.round(52+(k%4===0?12:0)),durMs:Math.round(eighth*1.1),bass:true}],t+k*eighth,sc,sec,root); } }
+      else { const alb=[r0,t5,t3,t5,r0,t5,t3,t5]; for(let k=0;k<8;k++) _ev(evts,ix,[{m:alb[k],v:Math.round((36+(k%4===0?8:0))*subito),durMs:Math.round(eighth*1.2),bass:k%4===0}],t+k*eighth,sc,sec,root); }
+      const mm=_cMel(D,kit,u,64,storm?93:89,prevMel);
+      const PE=(m,off,d,vv)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:Math.round(Math.min(122,vv)),durMs:Math.round(eighth*d),mel:true}]; if(storm) ns.push({m:m-12,v:Math.round(vv*0.82),durMs:Math.round(eighth*d),mel:true}); _ev(evts,ix,ns,t+off*eighth+Math.round((rb()-0.5)*40),_srcOfSec(sec,pcm),sec,pcm); };
+      let gi; do{ gi=Math.floor(rv()*4); }while(gi===lastG); lastG=gi;
+      if(storm) gi=(barNo%2===0)?0:3; else if(acc>0.55) gi=3;        // an edge → the hammered repeated notes
       if(gi===0){ for(let q=4;q>=1;q--) PE(stepSc(mm,-q),(4-q),0.95,vB*0.8); PE(mm,4,3.8,vB*sfz); prevMel=mm; }
       else if(gi===1){ PE(mm,0,2.8,vB*sfz); PE(stepSc(mm,-1),3,0.95,vB*0.85); PE(stepSc(mm,1),4,3.8,vB); prevMel=stepSc(mm,1); }
       else if(gi===2){ const up=stepSc(mm,3); PE(mm,0,1.9,vB*sfz); PE(up,2,2.8,vB); PE(stepSc(up,-1),5,1.4,vB*0.9); PE(stepSc(up,-2),6,1.9,vB*0.85); prevMel=stepSc(up,-2); }
       else { PE(mm,0,1.9,vB*sfz); PE(mm,2,1.9,vB*0.9); PE(mm,4,1.9,vB*0.9); PE(stepSc(mm,-2),6,1.9,vB); prevMel=stepSc(mm,-2); }
-      t+=barMs;
-      if(ph==='allegro' && barNo%8===7) t+=Math.round(eighth*1.5);   // the Beethoven breath between phrases
+      t+=barMs; if(ph==='allegro' && barNo%8===7) t+=Math.round(eighth*1.5);
     }
   }
-  // FINAL — tonic hammered thrice, then one long ff chord
   const T=secs[secs.length-1], scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2};
-  for(let k=0;k<3;k++){ _ev(evts,ix,[{m:24+tonic,v:96,durMs:Math.round(eighth*1.4),bass:true},{m:36+tonic,v:92,durMs:Math.round(eighth*1.4),bass:true},{m:snap(55+dPc(2)),v:84,durMs:Math.round(eighth*1.4)},{m:snap(60+tonic),v:88,durMs:Math.round(eighth*1.4)}],t+k*2*eighth,scT,T,tonic); }
+  for(let k=0;k<3;k++) _ev(evts,ix,[{m:24+tonic,v:96,durMs:Math.round(eighth*1.4),bass:true},{m:36+tonic,v:92,durMs:Math.round(eighth*1.4),bass:true},{m:snap(55+dPc(2)),v:84,durMs:Math.round(eighth*1.4)},{m:snap(60+tonic),v:88,durMs:Math.round(eighth*1.4)}],t+k*2*eighth,scT,T,tonic);
   _ev(evts,ix,[{m:24+tonic,v:100,durMs:3600,bass:true},{m:36+tonic,v:96,durMs:3600,bass:true},{m:snap(52+dPc(2)),v:86,durMs:3600},{m:snap(55+dPc(4)),v:84,durMs:3600},{m:snap(72+tonic),v:92,durMs:3600}],t+7*eighth,scT,T,tonic);
   return evts;
 }
 
-// ── DEBUSSY — impressionism: pentatonic calm · whole-tone shimmer · parallel
-// ninth chords sliding (planing) · arpeggio washes up the keyboard · long
-// pedal, pp-mp, one swell. The picture's chroma picks the scale per section:
-// muted rows go pentatonic, vivid rows whole-tone. Form A · B(whole-tone) · A'.
-function composeImageDebussy(px,nc,nr,table,colorMode,dir){
-  const A=_composerAnalyse(px,nc,nr,table,colorMode,10700,10,20);
-  if(!A.secs) return A.base;
-  const {base,secs,tonic,gl,gc2,R}=A;
-  const pent=[0,2,4,7,9].map(d=>(tonic+d)%12);
-  const whole=[0,2,4,6,8,10].map(d=>(tonic+d)%12);
-  const kitP=_scaleKit(pent), kitW=_scaleKit(whole);
-  const q=Math.round(720-Math.min(1,gc2/45)*120);            // quarter ≈ 600-720ms, lent
-  const barMs=q*4;
-  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*1));
-  const maxBars=Math.floor(160000/barMs);
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+// ── DEBUSSY — the scale is the picture's: lydian where it is bright and warm, pentatonic where muted,
+// whole-tone where vivid; the washes break where it has edges, the planing slides through its colour
+// fields, the melody is its line, the swell where the eye is pulled.
+function composeImageDebussy(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10700,10,20,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const pent=[0,2,4,7,9].map(d=>(tonic+d)%12), whole=[0,2,4,6,8,10].map(d=>(tonic+d)%12), lyd=[0,2,4,6,7,9,11].map(d=>(tonic+d)%12), dor=[0,2,3,5,7,9,10].map(d=>(tonic+d)%12);
+  const home=_dnaMode(D,[lyd,pent,pent,dor],true); const kitH=_scaleKit(home), kitW=_scaleKit(whole);
+  const q=Math.round(800-D.energy*260);                         // quarter 540 … 800, lent
+  const barMs=q*4; _jamNote(barMs,4);
+  let bars=_cFit(_cBars(secs,2,3),Math.floor(160000/barMs),1);
   const totBars=bars.reduce((a,b)=>a+b,0);
+  const rootsH=_dnaRoots(D,totBars,kitH.inScale,tonic);
   const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null;
   const rd=R(1), rub=R(2);
-  const arc=(pos)=>0.86+0.22*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.16*0.16));
+  const clim=_dnaClimax(D);
+  const arc=(pos)=>0.86+0.22*Math.exp(-((pos-clim)*(pos-clim))/(2*0.16*0.16));
   for(let si=0;si<secs.length;si++){
     const sec=secs[si], last=si===secs.length-1;
     for(let b2=0;b2<bars[si];b2++,barNo++){
-      const f=barNo/Math.max(1,totBars-1);
-      const env=arc(f);
-      const wt=(f>=0.40&&f<0.66) || sec.chr>34;              // B section, or any vivid row → whole-tone
-      const kit=wt?kitW:kitP; const scAbs=wt?whole:pent;
-      const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(kit.inScale);
-      const root=ranked[0]!=null?ranked[0]:tonic;
-      const sc=_srcOfSec(sec,root);
-      const ph = f<0.12 ? 'open' : (barNo%6===5) ? 'wash' : wt ? 'plane' : 'cloud';
-      const rb=()=>Math.round((rub()-0.5)*160);             // rubato
+      const f=barNo/Math.max(1,totBars-1); const u=_cU(D,f);
+      const env=arc(f)*(0.85+0.3*_dnaLight(D,u));
+      const wt=D.chromaU[Math.min(D.N-1,Math.floor(u*D.N))]>34;    // a vivid stretch → whole-tone
+      const kit=wt?kitW:kitH; const root=wt?kitW.inScale(rootsH[Math.min(totBars-1,barNo)]):rootsH[Math.min(totBars-1,barNo)];
+      const sc=_srcOfSec(sec,root); const acc=_dnaAccent(D,u);
+      const ph = f<0.12 ? 'open' : (acc>0.5 && barNo%2===1) ? 'wash' : wt ? 'plane' : 'cloud';
+      const rb=()=>Math.round((rub()-0.5)*160);
       if(ph==='open'){
-        // bare low fifth, pp, and one high pentatonic tone hanging in the air
         _ev(evts,ix,[{m:kit.snap(36+root),v:Math.round(36*env),durMs:Math.round(barMs*1.6),bass:true},{m:kit.snap(43+root),v:Math.round(30*env),durMs:Math.round(barMs*1.6),bass:true}],t,sc,sec,root);
-        const hi=kit.snap(84+root); _ev(evts,ix,[{m:hi,v:Math.round(34*env),durMs:Math.round(barMs*1.2)}],t+q*2+rb(),_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12);
+        const hi=kit.snap(Math.round(_dnaLine(D,u,79,91))); _ev(evts,ix,[{m:hi,v:Math.round(34*env),durMs:Math.round(barMs*1.2),mel:true}],t+q*2+rb(),_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12);
       } else if(ph==='wash'){
-        // ARPEGGIO WASH — eight quick tones sweeping two octaves up the scale,
-        // pedal down, then the top held: the Debussy spray
         const s0=kit.snap(48+root);
         for(let k=0;k<8;k++){ const m=Math.min(100,kit.stepSc(s0,k*2)); const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((38+k*2)*env),durMs:Math.round(q*2.6),bass:k===0}],t+k*Math.round(q*0.22)+rb()*0.3,_srcOfSec(sec,pcm),sec,pcm); }
         const top=Math.min(100,kit.stepSc(s0,16)); _ev(evts,ix,[{m:top,v:Math.round(44*env),durMs:Math.round(q*3.4)}],t+8*Math.round(q*0.22),_srcOfSec(sec,((top%12)+12)%12),sec,((top%12)+12)%12);
       } else if(ph==='plane'){
-        // PLANING — parallel 9th chords sliding by whole steps, each a half-bar
-        for(let h=0;h<2;h++){
-          const r=kit.snap(48+root)+(h?2:0);
-          const ch=[r,r+4,r+10,r+14,r+16].map(m=>kit.snap(m));
+        for(let h=0;h<2;h++){ const r=kit.snap(48+root)+(h?2:0); const ch=[r,r+4,r+10,r+14,r+16].map(m=>kit.snap(m));
           _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((40-i2*2)*env),durMs:Math.round(q*2.3),bass:i2===0})),t+h*2*q+rb(),sc,sec,((r%12)+12)%12);
-          _ev(evts,ix,[{m:kit.snap(r-12),v:Math.round(36*env),durMs:Math.round(q*2.3),bass:true}],t+h*2*q+rb(),sc,sec,((r%12)+12)%12);
-        }
+          _ev(evts,ix,[{m:kit.snap(r-12),v:Math.round(36*env),durMs:Math.round(q*2.3),bass:true}],t+h*2*q+rb(),sc,sec,((r%12)+12)%12); }
       } else {
-        // CLOUD — pentatonic: bass fifth held, a soft 9th chord mid, melody
-        // fragment of 2-3 tones drawn by the row's light, pp
         _ev(evts,ix,[{m:kit.snap(36+root),v:Math.round(40*env),durMs:Math.round(barMs*1.3),bass:true},{m:kit.snap(43+root),v:Math.round(34*env),durMs:Math.round(barMs*1.3),bass:true}],t,sc,sec,root);
         const r=kit.snap(55+root); const ch=[r,kit.stepSc(r,1),kit.stepSc(r,3)];
         _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((34-i2*2)*env),durMs:Math.round(q*3.2)})),t+q+rb(),sc,sec,root);
-        if(rd()>0.25){
-          const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
-          let mm=prevMel!=null?prevMel:kit.snap(79+root);
-          mm=kit.snap(Math.max(70,Math.min(94,mm+Math.max(-4,Math.min(4,Math.round(trend/8))))));
-          const n2=kit.stepSc(mm,trend>=0?1:-1), n3=kit.stepSc(mm,trend>=0?-1:1);
+        if(rd()>0.15+(1-D.texture)*0.25){
+          const mm=_cMel(D,kit,u,70,94,prevMel); const n2=_cMel(D,kit,_cU(D,(barNo+0.5)/totBars),70,94,mm), n3=kit.stepSc(mm,n2>=mm?-1:1);
           const seq=[[mm,0,2.6],[n2,2,1.2],[n3,3,2.2]]; const nN=2+(rd()<0.5?1:0);
-          for(let k=0;k<nN;k++){ const [m,off,d]=seq[k]; const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((46+Math.min(10,sec.chr*0.3))*env-k*3),durMs:Math.round(q*d)}],t+off*q+rb(),_srcOfSec(sec,pcm),sec,pcm); }
-          prevMel=seq[nN-1][0];
-        }
+          for(let k=0;k<nN;k++){ const [m,off,d]=seq[k]; const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((46+Math.min(10,sec.chr*0.3))*env-k*3),durMs:Math.round(q*d),mel:true}],t+off*q+rb(),_srcOfSec(sec,pcm),sec,pcm); }
+          prevMel=seq[nN-1][0]; }
       }
-      t+=barMs;
-      if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.15);
+      t+=barMs; if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.15);
     }
   }
-  // ENDING — a last wash up to the tonic, then a pentatonic 6/9 chord fading
-  const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
-  const s0=kitP.snap(48+tonic);
-  for(let k=0;k<6;k++){ _ev(evts,ix,[{m:Math.min(100,kitP.stepSc(s0,k*2)),v:36+k,durMs:Math.round(q*3),bass:k===0}],t+k*Math.round(q*0.24),scT,T,tonic); }
-  _ev(evts,ix,[{m:24+tonic,v:38,durMs:5200,bass:true},{m:36+tonic,v:36,durMs:5200,bass:true},{m:kitP.snap(55+pent[2]),v:32,durMs:5200},{m:kitP.snap(59+pent[3]),v:30,durMs:5200},{m:kitP.snap(62+pent[1]),v:30,durMs:5200},{m:kitP.snap(76+tonic),v:34,durMs:5200}],t+q*2,scT,T,tonic);
+  const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1]; const s0=kitH.snap(48+tonic);
+  for(let k=0;k<6;k++) _ev(evts,ix,[{m:Math.min(100,kitH.stepSc(s0,k*2)),v:36+k,durMs:Math.round(q*3),bass:k===0}],t+k*Math.round(q*0.24),scT,T,tonic);
+  _ev(evts,ix,[{m:24+tonic,v:38,durMs:5200,bass:true},{m:36+tonic,v:36,durMs:5200,bass:true},{m:kitH.snap(55+home[2]),v:32,durMs:5200},{m:kitH.snap(59+home[3]),v:30,durMs:5200},{m:kitH.snap(62+home[1]),v:30,durMs:5200},{m:kitH.snap(76+tonic),v:34,durMs:5200}],t+q*2,scT,T,tonic);
   return evts;
 }
 
-// ── RACHMANINOV — the big Russian canvas: left hand sweeps arpeggios across
-// three octaves (root · fifth · tenth · octave), bells in the deep bass, a
-// melody in OCTAVES that falls stepwise in long sighs, a chromatic inner voice,
-// a phi-placed climax of full chords ff, and a quiet bell coda. Minor by nature.
-function composeImageRachmaninov(px,nc,nr,table,colorMode,dir){
-  const A=_composerAnalyse(px,nc,nr,table,colorMode,10800,10,18);
-  if(!A.secs) return A.base;
-  const {base,secs,tonic,gl,gc2,R}=A;
-  const minor=gl<=64;
+// ── RACHMANINOV — the left hand sweeps the picture's colour fields, the melody in octaves sighs along
+// its line, the bells toll on its dark stretches, the climax of full chords where the eye is pulled.
+function composeImageRachmaninov(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10800,10,18,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const minor=_dnaMode(D,[false,true,true]);                      // minor by nature
   const scale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
-  const eighth=Math.round(330-Math.min(1,gc2/45)*50);        // broad, moderato
-  const barMs=eighth*8;
-  let bars=secs.map(sec=>2+Math.round((1-sec.homog)*2));
-  const maxBars=Math.floor(160000/barMs);
-  const tot=bars.reduce((a,b)=>a+b,0);
-  if(tot>maxBars){ bars=bars.map(b=>Math.max(1,Math.round(b*maxBars/tot))); }
+  const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const {snap,stepSc,inScale,dPc}=kit;
+  const eighth=Math.round(380-D.energy*120);                    // 260 … 380, broad
+  const barMs=eighth*8; _jamNote(barMs,4);
+  let bars=_cFit(_cBars(secs,2,4),Math.floor(160000/barMs),1);
   const totBars=bars.reduce((a,b)=>a+b,0);
-  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null;
-  const rr=R(1);
-  const prog=minor?[0,5,3,4, 0,5,1,4]:[0,5,3,4, 0,2,3,4];    // i VI iv V · i VI ii V
-  const climBar=Math.floor(totBars*0.618);
-  const arc=(pos)=>0.74+0.5*Math.exp(-((pos-0.618)*(pos-0.618))/(2*0.17*0.17));
+  const roots=_dnaProg(D,totBars,inScale,tonic,minor?[0,8,5,7,0,8,2,7]:[0,9,5,7,0,2,5,7]); const dom=dPc(4);
+  const evts=[]; const ix={i:0}; let t=0, barNo=0, prevMel=null; const rr=R(1);
+  const clim=_dnaClimax(D);
+  const arc=(pos)=>0.74+0.5*Math.exp(-((pos-clim)*(pos-clim))/(2*0.17*0.17));
   for(let si=0;si<secs.length;si++){
     const sec=secs[si], last=si===secs.length-1;
     for(let b2=0;b2<bars[si];b2++,barNo++){
-      const f=barNo/Math.max(1,totBars-1);
-      const env=arc(f);
-      const ph = f<0.10 ? 'bells' : Math.abs(barNo-climBar)<=1 ? 'climax' : f>0.90 ? 'coda' : 'sweep';
-      const deg=prog[barNo%8];
-      let root=dPc(deg);
-      const ranked=[...Array(12).keys()].filter(p=>sec.hist[p]>0).sort((a,b)=>sec.hist[b]-sec.hist[a]).map(inScale);
-      if(ph==='sweep' && b2%2===1 && ranked[0]!=null) root=ranked[0]; // the picture colours every other bar
+      const f=barNo/Math.max(1,totBars-1); const u=_cU(D,f); const env=arc(f)*(0.85+0.3*_dnaLight(D,u));
+      const dark=_dnaLight(D,u)<Math.max(0.2,D.lightness-0.18);
+      const ph = f<0.10 ? 'bells' : Math.abs(f-clim)<=0.04 ? 'climax' : f>0.90 ? 'coda' : dark ? 'bells' : 'sweep';
+      let root=roots[Math.min(totBars-1,barNo)]; if(barNo%8===6) root=dom; if(barNo%8===7) root=tonic;
       const third=inScale((root+(minor?3:4))%12), fifth=inScale((root+7)%12);
-      const sc=_srcOfSec(sec,root);
-      const vB=Math.min(120,(60+Math.min(26,sec.chr*0.7))*env);
+      const sc=_srcOfSec(sec,root); const vB=Math.min(120,(60+Math.min(26,sec.chr*0.7))*env);
       if(ph==='bells'||ph==='coda'){
-        // BELLS — deep octave on the beat, a soft chord answering, the Kremlin
-        // tolling that opens and closes
         _ev(evts,ix,[{m:24+root,v:Math.round((ph==='coda'?48:70)*env),durMs:Math.round(barMs*1.1),bass:true},{m:36+root,v:Math.round((ph==='coda'?42:62)*env),durMs:Math.round(barMs*1.1),bass:true}],t,sc,sec,root);
         _ev(evts,ix,[{m:snap(52+root),v:Math.round(40*env),durMs:Math.round(eighth*5)},{m:snap(55+third+(third<root?12:0)),v:Math.round(36*env),durMs:Math.round(eighth*5)},{m:snap(59+fifth+(fifth<root?12:0)),v:Math.round(36*env),durMs:Math.round(eighth*5)}],t+3*eighth,sc,sec,root);
-        if(ph==='coda'){ const hi=snap(84+root); _ev(evts,ix,[{m:hi,v:Math.round(40*env),durMs:Math.round(eighth*6)}],t+4*eighth,_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12); }
-        t+=barMs; continue;
-      }
-      // ── LEFT HAND SWEEP — R · 5 · 10 · R' · 10 · 5 · R · 5 over three octaves
+        if(ph==='coda' || f>=0.1){ const hi=_cMel(D,kit,u,76,91,prevMel); _ev(evts,ix,[{m:hi,v:Math.round(40*env),durMs:Math.round(eighth*6),mel:true}],t+4*eighth,_srcOfSec(sec,((hi%12)+12)%12),sec,((hi%12)+12)%12); prevMel=hi; }
+        t+=barMs; continue; }
       const r0=snap(28+root); let t5=r0+1; while(((t5%12)+12)%12!==fifth) t5++; let t10=t5+1; while(((t10%12)+12)%12!==third) t10++;
       const sweep=[r0,t5,t10,r0+24,t10+12,t5+12,t10,t5];
       for(let k=0;k<8;k++){ const pcm=((sweep[k]%12)+12)%12; _ev(evts,ix,[{m:sweep[k],v:Math.round((ph==='climax'?62:48)*env*(k===0?1.15:1)+(k%2?-3:0)),durMs:Math.round(eighth*1.9),bass:k===0||k===1}],t+k*eighth,_srcOfSec(sec,pcm),sec,pcm); }
-      if(ph==='climax'){
-        // CLIMAX — full chords in both hands on every beat, ff, melody on top
-        for(let k=0;k<8;k+=2){
-          const top=snap(79+[root,fifth,third,root][k>>1]+((k>>1)===3?12:0));
-          _ev(evts,ix,[{m:top-24,v:Math.round(vB*0.9),durMs:Math.round(eighth*2.1)},{m:snap(top-17),v:Math.round(vB*0.85),durMs:Math.round(eighth*2.1)},{m:snap(top-12),v:Math.round(vB*0.95),durMs:Math.round(eighth*2.1)},{m:top,v:Math.round(Math.min(124,vB*1.08)),durMs:Math.round(eighth*2.1)}],t+k*eighth,_srcOfSec(sec,((top%12)+12)%12),sec,((top%12)+12)%12);
-        }
-        t+=barMs; continue;
-      }
-      // ── MELODY IN OCTAVES — long sighs that fall stepwise, the row's light
-      // pulling the line; a chromatic inner voice creeping under it
-      const qi=Math.min(3,b2%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
-      let mm=prevMel!=null?prevMel:snap(76+third);
-      if(trend>6 || prevMel==null || mm<66) mm=snap(Math.min(91,mm+5)); // a leap UP to start the sigh
-      else mm=stepSc(mm,-1);
-      mm=snap(Math.max(64,Math.min(91,mm)));
-      const sigh=[[mm,0,3.2],[stepSc(mm,-1),3,1.6],[stepSc(mm,-2),5,2.8]];
-      const nN=(rr()<0.7)?3:2;
-      for(let k=0;k<nN;k++){
-        const [m,off,d]=sigh[k]; const pcm=((m%12)+12)%12;
-        const v=Math.round(vB*(k===0?1:0.9-k*0.04));
-        _ev(evts,ix,[{m,v,durMs:Math.round(eighth*d)},{m:m-12,v:Math.round(v*0.82),durMs:Math.round(eighth*d)}],t+off*eighth,_srcOfSec(sec,pcm),sec,pcm);
-      }
+      if(ph==='climax'){ for(let k=0;k<8;k+=2){ const top=snap(79+[root,fifth,third,root][k>>1]+((k>>1)===3?12:0));
+          _ev(evts,ix,[{m:top-24,v:Math.round(vB*0.9),durMs:Math.round(eighth*2.1)},{m:snap(top-17),v:Math.round(vB*0.85),durMs:Math.round(eighth*2.1)},{m:snap(top-12),v:Math.round(vB*0.95),durMs:Math.round(eighth*2.1)},{m:top,v:Math.round(Math.min(124,vB*1.08)),durMs:Math.round(eighth*2.1)}],t+k*eighth,_srcOfSec(sec,((top%12)+12)%12),sec,((top%12)+12)%12); }
+        t+=barMs; continue; }
+      // the sigh: the line's target, then two steps down
+      const mm=_cMel(D,kit,u,64,91,prevMel);
+      const sigh=[[mm,0,3.2],[stepSc(mm,-1),3,1.6],[stepSc(mm,-2),5,2.8]]; const nN=(_dnaAccent(D,u)>0.4||rr()<0.7)?3:2;
+      for(let k=0;k<nN;k++){ const [m,off,d]=sigh[k]; const pcm=((m%12)+12)%12; const v=Math.round(vB*(k===0?1:0.9-k*0.04));
+        _ev(evts,ix,[{m,v,durMs:Math.round(eighth*d),mel:true},{m:m-12,v:Math.round(v*0.82),durMs:Math.round(eighth*d),mel:true}],t+off*eighth,_srcOfSec(sec,pcm),sec,pcm); }
       prevMel=sigh[nN-1][0];
-      // inner voice: a chromatic step between the hands on beats 2 and 4
       const inn=snap(60+third+(third<root?12:0)); _ev(evts,ix,[{m:inn,v:Math.round(38*env),durMs:Math.round(eighth*1.8)}],t+2*eighth,sc,sec,third); _ev(evts,ix,[{m:inn-1,v:Math.round(36*env),durMs:Math.round(eighth*1.8)}],t+6*eighth,sc,sec,third);
-      t+=barMs;
-      if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.12);
+      t+=barMs; if(last && b2>=bars[si]-2) t+=Math.round(barMs*0.12);
     }
   }
-  // FINAL — one great tonic bell, then the chord dying away
   const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
   _ev(evts,ix,[{m:21+((tonic+3)%12),v:60,durMs:1400,bass:true}],t,scT,T,tonic);
   _ev(evts,ix,[{m:24+tonic,v:74,durMs:5200,bass:true},{m:36+tonic,v:68,durMs:5200,bass:true},{m:snap(52+dPc(2)),v:56,durMs:5200},{m:snap(55+dPc(4)),v:54,durMs:5200},{m:snap(64+tonic),v:58,durMs:5200},{m:snap(76+tonic),v:52,durMs:5200}],t+eighth*3,scT,T,tonic);
   return evts;
 }
 
-// ── EINAUDI — the ostinato: one broken-chord figure in the left hand that
-// NEVER changes, a four-chord loop, a sparse melody, and one long crescendo
-// built by adding layers (LH alone → melody → melody in octaves → RH eighths
-// doubling the ostinato) until everything is stripped back for the end.
-// The picture's light writes the melody; its colours pick the four chords.
-function composeImageEinaudi(px,nc,nr,table,colorMode,dir){
-  const A=_composerAnalyse(px,nc,nr,table,colorMode,10900,8,14);
-  if(!A.secs) return A.base;
-  const {base,secs,tonic,gl,gc2,R}=A;
-  const scale=[0,2,4,5,7,9,11];
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
-  const dark=gl<=52;
-  const loop=dark?[5,3,0,4]:[0,5,3,4];                       // vi IV I V / I vi IV V
-  const eighth=Math.round(300-Math.min(1,gc2/45)*40);        // steady, walking
-  const barMs=eighth*8;
-  const maxBars=Math.max(32,Math.floor(165000/barMs));
-  const totBars=maxBars-(maxBars%8);
-  const totalMs=totBars*barMs;
-  const evts=[]; const ix={i:0}; let prevMel=null;
-  const re=R(1);
+// ── EINAUDI — the ostinato never changes; the four chords under it are the picture's colour fields,
+// the sparse melody its line, the one long crescendo peaks where the eye is pulled.
+function composeImageEinaudi(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,10900,8,14,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const scale=_dnaMode(D,[[0,2,4,5,7,9,11],[0,2,4,5,7,9,11],[0,2,3,5,7,8,10]]);
+  const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const {snap,stepSc,inScale,dPc}=kit;
+  const loop=_cLoop(D,4,inScale,tonic,dPc(4),D.lightness<=0.52?[9,5,0,7]:[0,9,5,7]);
+  const eighth=Math.round(350-D.energy*100);                    // 250 … 350
+  const barMs=eighth*8; _jamNote(barMs,4);
+  const maxBars=Math.max(32,Math.floor(165000/barMs)); const totBars=maxBars-(maxBars%8);
+  const evts=[]; const ix={i:0}; let prevMel=null; const re=R(1);
   const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
-  // the ostinato shape: R · 5 · 8 · 10 · 8 · 5 · R · 5 — fixed for the piece
-  const shape=[0,4,7,9,7,4,0,4];                             // scale steps from the root
+  const shape=[0,4,7,9,7,4,0,4];
+  const clim=_dnaClimax(D);
   for(let bar=0;bar<totBars;bar++){
-    const sec=secAt(bar);
-    const f=bar/Math.max(1,totBars-1);
-    // one long crescendo to ~0.82, then the strip-down
-    const env=f<0.82 ? 0.62+0.5*(f/0.82) : 1.12-0.6*((f-0.82)/0.18);
-    const blk=Math.floor(f*6);                               // 0 LH · 1 +mel · 2 +mel · 3 octaves · 4 full · 5 strip
-    const deg=loop[(bar>>1)%4];
-    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4);
-    const t0=bar*barMs;
-    const sc=_srcOfSec(sec,root);
-    const r0=snap(40+root);
-    // ── OSTINATO LH — every bar, every eighth, unchanged
+    const sec=secAt(bar); const f=bar/Math.max(1,totBars-1); const u=_cU(D,f);
+    const env=(f<clim ? 0.62+0.5*(f/clim) : 1.12-0.6*((f-clim)/Math.max(0.05,1-clim)))*(0.85+0.3*_dnaLight(D,u));
+    const blk=Math.floor(f*6);
+    const root=loop[(bar>>1)%4]; const third=inScale((root+scale[2])%12);
+    const t0=bar*barMs; const sc=_srcOfSec(sec,root); const r0=snap(40+root);
     for(let k=0;k<8;k++){ const m=stepSc(r0,shape[k]); const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.round((40+(k===0?10:0))*env),durMs:Math.round(eighth*1.6),bass:k===0}],t0+k*eighth,_srcOfSec(sec,pcm),sec,pcm); }
-    if(blk===4){ // full: RH doubles the ostinato an octave up in eighths, soft
-      for(let k=0;k<8;k++){ const m=stepSc(r0,shape[k])+12; _ev(evts,ix,[{m,v:Math.round(30*env),durMs:Math.round(eighth*1.4)}],t0+k*eighth,sc,sec,((m%12)+12)%12); }
-    }
-    if(blk===0 || (blk===5 && bar>=totBars-3)) continue;    // LH alone at both ends
-    // ── MELODY — sparse: 1-2 long notes per bar, stepwise, drawn by the light
-    const qi=Math.min(3,(bar>>1)%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
-    let mm=prevMel!=null?prevMel:snap(72+third);
-    const step=Math.max(-2,Math.min(2,Math.round(trend/10)));
-    mm=stepSc(mm,step===0?((bar%4===3)?-1:1):step);
-    if(bar%8===7) mm=snap(Math.max(64,Math.min(88,snap(72+root))));   // phrase-end lands on the chord root
-    mm=snap(Math.max(64,Math.min(89,mm)));
-    const vM=Math.round((52+Math.min(16,sec.chr*0.5))*env);
-    const oct=(blk>=3);
-    const two=re()<0.45;
-    const push=(m,off,d)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:vM,durMs:Math.round(eighth*d)}]; if(oct) ns.push({m:m-12,v:Math.round(vM*0.8),durMs:Math.round(eighth*d)}); _ev(evts,ix,ns,t0+off*eighth,_srcOfSec(sec,pcm),sec,pcm); };
-    if(two){ push(mm,0,4.2); const m2=stepSc(mm,trend>=0?1:-1); push(m2,4,4.2); prevMel=m2; }
-    else { push(mm,0,8.4); prevMel=mm; }
+    if(blk===4){ for(let k=0;k<8;k++){ const m=stepSc(r0,shape[k])+12; _ev(evts,ix,[{m,v:Math.round(30*env),durMs:Math.round(eighth*1.4)}],t0+k*eighth,sc,sec,((m%12)+12)%12); } }
+    if(blk===0 || (blk===5 && bar>=totBars-3)) continue;
+    let mm=_cMel(D,kit,u,64,89,prevMel); if(bar%8===7) mm=snap(Math.max(64,Math.min(88,snap(72+root))));
+    const vM=Math.round((52+Math.min(16,sec.chr*0.5))*env); const oct=(blk>=3);
+    const two=_dnaAccent(D,u)>0.35 || re()<0.3;
+    const push=(m,off,d)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:vM,durMs:Math.round(eighth*d),mel:true}]; if(oct) ns.push({m:m-12,v:Math.round(vM*0.8),durMs:Math.round(eighth*d),mel:true}); _ev(evts,ix,ns,t0+off*eighth,_srcOfSec(sec,pcm),sec,pcm); };
+    if(two){ push(mm,0,4.2); const m2=_cMel(D,kit,_cU(D,(bar+0.5)/totBars),64,89,mm); push(m2,4,4.2); prevMel=m2; } else { push(mm,0,8.4); prevMel=mm; }
   }
-  // ENDING — the ostinato's root alone, then the tonic chord held
   const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
   _ev(evts,ix,[{m:snap(40+tonic),v:40,durMs:Math.round(barMs*0.8),bass:true}],tE,scT,T,tonic);
   _ev(evts,ix,[{m:snap(28+tonic),v:44,durMs:5000,bass:true},{m:snap(40+tonic),v:40,durMs:5000,bass:true},{m:snap(55+dPc(4)),v:32,durMs:5000},{m:snap(59+dPc(2)),v:30,durMs:5000},{m:snap(72+tonic),v:36,durMs:5000}],tE+Math.round(barMs*0.8),scT,T,tonic);
   return evts;
 }
 
-// ── HISAISHI — the Ghibli waltz: 3/4 lilt (bass · chord · chord), a wide
-// diatonic melody that leaps a sixth and walks back down, add9 colour on
-// every chord, the IV · V · iii · vi "royal road" turn in the chorus, melody
-// in octaves when it lifts. Warm major; a dark picture goes to the relative
-// minor for the verse and brightens in the chorus.
-function composeImageHisaishi(px,nc,nr,table,colorMode,dir){
-  const A=_composerAnalyse(px,nc,nr,table,colorMode,11000,8,16);
-  if(!A.secs) return A.base;
-  const {base,secs,tonic,gl,gc2,R}=A;
-  const scale=[0,2,4,5,7,9,11];
-  const scAbs=scale.map(d=>(tonic+d)%12);
-  const {snap,stepSc,inScale,dPc}=_scaleKit(scAbs);
-  const dark=gl<=48;
-  const q=Math.round(470-Math.min(1,gc2/45)*90);             // waltz quarter 380-470ms
-  const barMs=q*3;
-  const maxBars=Math.max(32,Math.floor(150000/barMs));
-  const totBars=maxBars-(maxBars%8);
-  const evts=[]; const ix={i:0}; let prevMel=null;
-  const rh=R(1);
+// ── HISAISHI — the waltz: the verse walks the picture's colour fields, the chorus is Hisaishi's royal
+// road and comes on the picture's brightest stretches, the melody leaps a sixth where the picture
+// has an edge and walks its line between.
+function composeImageHisaishi(px,nc,nr,table,colorMode,dir,vr){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,dir,11000,8,16,vr); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const scale=_jamMinorNow()?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const scAbs=scale.map(d=>(tonic+d)%12); const kit=_scaleKit(scAbs); const {snap,stepSc,inScale,dPc}=kit;
+  const q=Math.round(520-D.energy*160);                         // waltz quarter 360 … 520
+  const barMs=q*3; _jamNote(barMs,3);
+  const maxBars=Math.max(32,Math.floor(150000/barMs)); const totBars=maxBars-(maxBars%8);
+  const evts=[]; const ix={i:0}; let prevMel=null; const rh=R(1);
   const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
-  const verse=dark?[5,3,0,4, 5,3,1,4]:[0,4,5,3, 0,4,1,4];    // vi IV I V / I V vi IV
-  const chorus=[3,4,2,5, 3,4,0,0];                           // IV V iii vi · IV V I I — the royal road
+  const vloop=_cLoop(D,4,inScale,tonic,dPc(4),D.lightness<=0.48?[9,5,0,7]:[0,7,9,5]); const verse=[vloop[0],vloop[1],vloop[2],vloop[3], vloop[0],vloop[1],dPc(1),dPc(4)];
+  const chorus=[3,4,2,5, 3,4,0,0].map(dPc);
+  // the chorus: the 8-bar blocks reading the brighter half of the picture's light
+  const blkLight=[]; for(let blk=0;blk<totBars/8;blk++){ let s=0; for(let k=0;k<8;k++) s+=_dnaLight(D,_cU(D,(blk*8+k)/totBars)); blkLight.push(s/8); }
+  const med=blkLight.slice().sort((a,b)=>a-b)[blkLight.length>>1];
+  const clim=_dnaClimax(D);
   for(let bar=0;bar<totBars;bar++){
-    const sec=secAt(bar);
-    const f=bar/Math.max(1,totBars-1);
-    const blk=(bar>>3)%4;                                    // 8-bar blocks: intro/verse · chorus · verse · chorus
-    const ph = bar<4 ? 'intro' : (blk%2===1) ? 'chorus' : (f>0.92) ? 'outro' : 'verse';
-    const env=0.82+0.26*Math.exp(-((f-0.66)*(f-0.66))/(2*0.2*0.2));
-    const deg=(ph==='chorus'?chorus:verse)[bar%8];
-    const root=dPc(deg), third=dPc(deg+2), fifth=dPc(deg+4), ninth=dPc(deg+1);
-    const t0=bar*barMs;
-    const sc=_srcOfSec(sec,root);
-    // ── WALTZ LH — bass on 1, add9 chord on 2 and 3
+    const sec=secAt(bar); const f=bar/Math.max(1,totBars-1); const u=_cU(D,f); const blk=(bar>>3);
+    const ph = bar<4 ? 'intro' : (blkLight[blk]>=med && blk>0) ? 'chorus' : (f>0.92) ? 'outro' : 'verse';
+    const env=(0.82+0.26*Math.exp(-((f-clim)*(f-clim))/(2*0.2*0.2)))*(0.85+0.3*_dnaLight(D,u));
+    const root=(ph==='chorus'?chorus:verse)[bar%8]; const third=inScale((root+4)%12), fifth=inScale((root+7)%12), ninth=inScale((root+2)%12);
+    const t0=bar*barMs; const sc=_srcOfSec(sec,root);
     _ev(evts,ix,[{m:snap(36+root),v:Math.round((52+(ph==='chorus'?6:0))*env),durMs:Math.round(q*1.3),bass:true}],t0,sc,sec,root);
     const r=snap(52+root); const ch=[r,snap(r+(third-root+12)%12),snap(r+(fifth-root+12)%12),snap(r+(ninth-root+12)%12+12)];
-    for(const hb of [1,2]){ _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((34-i2*2+(hb===1?2:0))*env),durMs:Math.round(q*0.9)})),t0+hb*q,sc,sec,root); }
-    if(ph==='intro'){ // intro: a rising arpeggio each bar instead of melody — the music box
-      const a0=snap(64+root); for(let k=0;k<3;k++){ const m=stepSc(a0,k*2); _ev(evts,ix,[{m,v:Math.round(40*env),durMs:Math.round(q*1.8)}],t0+k*q,_srcOfSec(sec,((m%12)+12)%12),sec,((m%12)+12)%12); }
-      continue;
-    }
+    for(const hb of [1,2]) _ev(evts,ix,ch.map((m,i2)=>({m,v:Math.round((34-i2*2+(hb===1?2:0))*env),durMs:Math.round(q*0.9)})),t0+hb*q,sc,sec,root);
+    if(ph==='intro'){ const a0=snap(64+root); for(let k=0;k<3;k++){ const m=stepSc(a0,k*2); _ev(evts,ix,[{m,v:Math.round(40*env),durMs:Math.round(q*1.8),mel:true}],t0+k*q,_srcOfSec(sec,((m%12)+12)%12),sec,((m%12)+12)%12); } continue; }
     if(ph==='outro' && bar>=totBars-2) continue;
-    // ── MELODY — leap a SIXTH up at the phrase start, then walk down; the
-    // row's light bends the walk; chorus sings in octaves and a step higher
-    const qi=Math.min(3,(bar>>1)%4); const trend=(sec.prof?sec.prof[qi]:sec.lum)-sec.lum;
-    const phraseStart=bar%4===0;
+    const phraseStart=bar%4===0 || _dnaAccent(D,u)>0.6;
     let mm;
-    if(phraseStart || prevMel==null){ mm=snap(Math.min(91,stepSc(snap(67+third),5))); }        // the sixth leap
-    else { mm=stepSc(prevMel,(trend>8)?1:-1); }
+    if(phraseStart || prevMel==null){ mm=snap(Math.min(91,stepSc(_cMel(D,kit,u,64,80,prevMel),5))); }   // the sixth leap, from the line
+    else mm=_cMel(D,kit,u,64,91,prevMel);
     if(ph==='chorus') mm=Math.min(93,stepSc(mm,1));
     mm=snap(Math.max(64,Math.min(93,mm)));
-    const vM=Math.round((56+Math.min(16,sec.chr*0.5))*env*(ph==='chorus'?1.08:1));
-    const oct=ph==='chorus';
-    const push=(m,off,d,vv)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:Math.round(vv),durMs:Math.round(q*d)}]; if(oct) ns.push({m:m-12,v:Math.round(vv*0.78),durMs:Math.round(q*d)}); _ev(evts,ix,ns,t0+off*q,_srcOfSec(sec,pcm),sec,pcm); };
+    const vM=Math.round((56+Math.min(16,sec.chr*0.5))*env*(ph==='chorus'?1.08:1)); const oct=ph==='chorus';
+    const push=(m,off,d,vv)=>{ const pcm=((m%12)+12)%12; const ns=[{m,v:Math.round(vv),durMs:Math.round(q*d),mel:true}]; if(oct) ns.push({m:m-12,v:Math.round(vv*0.78),durMs:Math.round(q*d),mel:true}); _ev(evts,ix,ns,t0+off*q,_srcOfSec(sec,pcm),sec,pcm); };
     const g=rh();
-    if(phraseStart){ push(mm,0,3.1,vM); prevMel=mm; }                                  // the long held leap note
-    else if(g<0.4){ push(mm,0,2.1,vM); const m2=stepSc(mm,-1); push(m2,2,1.1,vM-6); prevMel=m2; }   // half + quarter
-    else if(g<0.7){ push(mm,0,1.1,vM); const m2=stepSc(mm,1); push(m2,1,1.1,vM-4); const m3=stepSc(mm,-1); push(m3,2,1.1,vM-6); prevMel=m3; } // three quarters
+    if(phraseStart){ push(mm,0,3.1,vM); prevMel=mm; }
+    else if(g<0.4){ push(mm,0,2.1,vM); const m2=stepSc(mm,-1); push(m2,2,1.1,vM-6); prevMel=m2; }
+    else if(g<0.7){ push(mm,0,1.1,vM); const m2=stepSc(mm,1); push(m2,1,1.1,vM-4); const m3=stepSc(mm,-1); push(m3,2,1.1,vM-6); prevMel=m3; }
     else { push(mm,0,3.1,vM-2); prevMel=mm; }
   }
-  // ENDING — IV add9 → I, high tonic, long
-  const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
-  const iv=dPc(3);
+  const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1]; const iv=dPc(3);
   _ev(evts,ix,[{m:snap(36+iv),v:48,durMs:Math.round(barMs*0.95),bass:true},{m:snap(52+iv),v:38,durMs:Math.round(barMs*0.95)},{m:snap(55+dPc(5)),v:36,durMs:Math.round(barMs*0.95)},{m:snap(59+dPc(4)),v:34,durMs:Math.round(barMs*0.95)}],tE,scT,T,iv);
   _ev(evts,ix,[{m:snap(24+tonic),v:52,durMs:5000,bass:true},{m:snap(36+tonic),v:48,durMs:5000,bass:true},{m:snap(55+dPc(2)),v:38,durMs:5000},{m:snap(59+dPc(4)),v:36,durMs:5000},{m:snap(62+dPc(1)),v:34,durMs:5000},{m:snap(76+tonic),v:42,durMs:5000}],tE+barMs,scT,T,tonic);
   return evts;
 }
 
-// ── CALL & RESPONSE — an ensemble of 2–5 composers trading phrases on the
-// SAME picture. Every composer first writes the whole piece in their own voice
-// (their own engine, untouched). The relay then passes the floor along every
-// ~5 s phrase: composer k plays the slice of THEIR piece that sits at that
-// point of the form (by time fraction, so pieces of different lengths line
-// up), then the next composer answers from the same spot in theirs. Their own
-// tempo and note lengths are kept inside the window — nothing is stretched.
-// Total length = the first composer's piece. Every event is tagged `_who`
-// (composer key) so the stage/caption can light up who is playing right now.
+// ── JAM SESSION — an ensemble of 2–5 composers on the SAME picture. Every composer first writes the whole
+// piece in their own voice (their own engine, untouched). The ensemble then joins them by the Fusion style
+// (Setup → Ensemble — the painters' switch):
+//   A  RELAY — they trade phrases on ONE pulse, in ONE key and mode. Every piece is brought to the lead's
+//      pulse (or its half / double — a metric modulation), a phrase is four bars of the player's own metre,
+//      the call (bars 1–4 of an eight-bar period) is answered by a reply that closes the period (bars 5–8);
+//      the next composer enters on the downbeat and the floor is cleared at the end of the phrase.
+//   E  ONE COMPOSER BRED FROM THEM — one lends the ground (harmony, accompaniment, form), another the tune
+//      (the line they would sing), a third the pulse. The tune is re-laid on the ground's bars and its strong
+//      beats are pulled onto the ground's chord, its other notes into the ground's key.
+//   A+E  either, by a coin tossed on the picture's address (picture · composers · direction · form).
+// Every event is tagged `_who` (the composer key it came from).
 const COMPOSER_ENGINES={glass:composeImageGlass,satie:composeImageSatie,chopin:composeImageChopin,vine:composeImageVine,gershwin:composeImageGershwin,yiruma:composeImageYiruma,bach:composeImageBach,beethoven:composeImageBeethoven,debussy:composeImageDebussy,rachmaninov:composeImageRachmaninov,einaudi:composeImageEinaudi,hisaishi:composeImageHisaishi};
-const CALL_RESPONSE_PHRASE_MS=5000;
-function composeImageCallResponse(px,nc,nr,table,colorMode,dir,keys){
-  const ks=(keys||[]).filter(k=>COMPOSER_ENGINES[k]);
-  if(ks.length<2) return ks.length===1 ? COMPOSER_ENGINES[ks[0]](px,nc,nr,table,colorMode,dir) : [];
-  const pieces=ks.map(k=>{ try{ return COMPOSER_ENGINES[k](px,nc,nr,table,colorMode,dir)||[]; }catch(_){ return []; } });
-  const tot=(arr)=>{ let m=0; for(const e of arr){ const d=(e.n&&e.n[0]&&e.n[0].durMs)||0; m=Math.max(m,(e.startMs||0)+d); } return m||1; };
-  const T=tot(pieces[0]), PH=CALL_RESPONSE_PHRASE_MS;
-  const out=[];
-  for(let j=0, a=0; a<T; j++, a+=PH){
-    const k=j%ks.length, P=pieces[k]; if(!P.length) continue;
-    const Tk=tot(P), b=Math.min(T,a+PH), len=b-a;
-    // same point of the form in composer k's own timeline, window kept at its own pace
-    const ka=Math.min(Math.max(0,Tk-len),(a/T)*Tk), kb=ka+len;
-    for(const e of P){ const s=e.startMs||0; if(s<ka||s>=kb) continue;
-      out.push(Object.assign({},e,{startMs:Math.round(a+(s-ka)),_who:ks[k]})); }
+// composers whose tagged line IS their texture (Glass's cells, Vine's motor, Bach's figure): as the ground they keep it
+const _KEEP_MEL={glass:1,vine:1,bach:1};
+const _jamFold=(q,q0)=>q0*Math.pow(2,Math.round(Math.log(q/q0)/Math.LN2));      // q0, or its octave nearest to q: the same pulse at half / double speed
+const _jamNear=(q,q0)=>q/Math.pow(2,Math.round(Math.log(q/q0)/Math.LN2));       // q itself, moved by octaves to sit next to q0
+const _jamLen=(ev)=>{ let m=0; for(const e of ev){ const d=(e.n&&e.n[0]&&e.n[0].durMs)||0; m=Math.max(m,(e.startMs||0)+d); } return m||1; };
+const _jamLast=(ev)=>{ let m=0; for(const e of ev) m=Math.max(m,e.startMs||0); return m; };
+function _jamWarp(ev,w){ if(Math.abs(w-1)<0.004) return ev;
+  return ev.map(e=>Object.assign({},e,{startMs:Math.round((e.startMs||0)*w),n:e.n.map(o=>Object.assign({},o,{durMs:Math.max(40,Math.round((o.durMs||0)*w))}))})); }
+function _jamOrder(out){ out.sort((x,y)=>x.startMs-y.startMs); for(let i=0;i<out.length;i++) out[i].idx=i; return out; }
+// the picture's address: composers · direction · form · a sample of its pixels
+function _jamHash(ks,px,dir,vr){ let h=2166136261; const s=ks.join('+')+'|'+dir+'|'+(vr|0);
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  for(let i=0;i<px.length;i+=97){ const c=px[i]; h^=(((c.r|0)+(c.g|0)*7+(c.b|0)*13)&0xffff); h=Math.imul(h,16777619); }
+  h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return h>>>0; }
+// the Fusion style of a jam: the Setup switch ('A' | 'E' | 'AE' — the painters' own), AE = a coin on the address
+function _jamStyleOf(h){ const G=(typeof globalThis!=='undefined') ? globalThis : {}; const g=G.__PAINT_FU_STYLE;
+  if(g==='E') return 'E'; if(g==='AE') return ((h>>>7)&1) ? 'E' : 'A'; return 'A'; }
+
+// A — the relay
+function _jamRelay(P){
+  const q0=P[0].bar0/P[0].qpb;
+  const R=P.map(p=>{ const q=p.bar0/p.qpb; const w=_jamFold(q,q0)/q; const ev=_jamWarp(p.ev,w); return {k:p.k,ev,bar:p.bar0*w,last:_jamLast(ev)}; });
+  const T=_jamLen(R[0].ev); const out=[]; let a=0;
+  for(let j=0;j<400;j++){
+    const r=R[j%R.length]; const L=4*r.bar; const fin=(T-a)<=L*1.3;
+    let s0;
+    if(fin) s0=Math.max(0,Math.floor(r.last/r.bar)-3)*r.bar;                       // the last phrase: the end of their own piece
+    else { const par=j%2; const nb=Math.max(1,Math.round(r.last/r.bar));          // call = bars 1–4 of the period, reply = bars 5–8
+      let bi=Math.round(((a/T)*nb-par*4)/8)*8+par*4; bi=Math.min(bi,Math.floor((nb-8-par*4)/8)*8+par*4); bi=Math.max(0,bi); s0=bi*r.bar; }
+    const s1=fin ? Infinity : s0+L;
+    for(const e of r.ev){ const s=e.startMs||0; if(s<s0||s>=s1) continue; const rel=s-s0; const cap=fin ? 1e9 : (L-rel+120);   // nothing rings over the handoff
+      const n2=e.n.map(o=>(o.durMs>cap) ? Object.assign({},o,{durMs:Math.max(60,Math.round(cap))}) : o);
+      out.push(Object.assign({},e,{n:n2,startMs:Math.round(a+rel),_who:r.k})); }
+    if(fin) break; a+=L;
   }
-  out.sort((x,y)=>x.startMs-y.startMs);
-  for(let i=0;i<out.length;i++) out[i].idx=i;
+  return _jamOrder(out);
+}
+
+// E — one composer bred from the parents
+function _jamBred(P,h){
+  const n=P.length; const gi=(h>>>11)%n, hi=(gi+1)%n, pi=n>=3 ? (gi+2)%n : -1;
+  const hands=[hi]; for(let i=0;i<n;i++) if(i!==gi && i!==hi && i!==pi) hands.push(i);
+  const qOf=(p)=>p.bar0/p.qpb; const G=P[gi]; const qg=qOf(G);
+  const qE = pi>=0 ? _jamNear(qOf(P[pi]),qg) : Math.sqrt(qg*_jamNear(qOf(P[hi]),qg));      // the pulse: the third parent's, else the two parents' mean
+  // the ground: harmony, accompaniment, form — without its own tune (unless the tune IS its texture)
+  const gEv=_jamWarp(G.ev,qE/qg); const gBar=G.bar0*qE/qg; const keep=!!_KEEP_MEL[G.k];
+  const acc=[]; for(const e of gEv){ const ns=keep ? e.n : e.n.filter(o=>o.mel!==true); if(ns.length) acc.push(Object.assign({},e,{n:ns,_who:G.k})); }
+  const body=_jamLast(gEv);
+  // the hands: each one's tune, brought to the ground's pulse
+  const Tn={}; let nTune=0;
+  for(const i of hands){ const p=P[i]; const w=_jamFold(qOf(p),qE)/qOf(p); const ev=_jamWarp(p.ev,w); const mel=[];
+    for(const e of ev){ const ns=e.n.filter(o=>o.mel===true); if(ns.length) mel.push(Object.assign({},e,{n:ns,_who:p.k})); }
+    Tn[i]={k:p.k,mel,bar:p.bar0*w,qpb:p.qpb,last:_jamLast(ev)}; nTune+=mel.length; }
+  if(!nTune || !acc.length) return null;
+  // the ground's harmony, a slot of two quarters at a time; its key = every pitch class it really uses
+  const slot=2*qE, nS=Math.ceil((body+slot)/slot)+2; const W=[]; for(let i=0;i<nS;i++) W.push(new Float32Array(12)); const tot=new Float32Array(12);
+  let vSum=0, vN=0;
+  for(const e of acc){ const s0=e.startMs||0; for(const o of e.n){ const d=o.durMs||0, s1=s0+d; const wv=(o.v||60)*(o.bass?1.5:1); const pc=((o.m%12)+12)%12;
+      tot[pc]+=wv*Math.min(d,slot*2); if(!o.bass){ vSum+=(o.v||60); vN++; }
+      for(let si=Math.floor(s0/slot); si<=Math.min(nS-1,Math.floor((s1-1)/slot)); si++){ const ov=Math.min(s1,(si+1)*slot)-Math.max(s0,si*slot); if(ov>0) W[si][pc]+=wv*ov/slot; } } }
+  let tmax=0; for(let p=0;p<12;p++) tmax=Math.max(tmax,tot[p]);
+  const inKey=new Array(12).fill(false); for(let p=0;p<12;p++) if(tot[p]>=0.06*tmax) inKey[p]=true;
+  const chordAt=(ms)=>{ const w=W[Math.max(0,Math.min(nS-1,Math.floor(ms/slot)))]; let mx=0; for(let p=0;p<12;p++) mx=Math.max(mx,w[p]);
+    if(mx<=0) return null; const c=new Array(12).fill(false); for(let p=0;p<12;p++) if(w[p]>=0.4*mx) c[p]=true; return c; };
+  const near=(m,set,maxd)=>{ if(set[((m%12)+12)%12]) return m; for(let d=1;d<=maxd;d++){ if(set[(((m+d)%12)+12)%12]) return m+d; if(set[(((m-d)%12)+12)%12]) return m-d; } return m; };
+  const vG=vN ? vSum/vN : 50;
+  const gcd=(x,y)=>y ? gcd(y,x%y) : x;
+  const out=acc.slice(); let a=0;
+  for(let blk=0; blk<400 && a<body-gBar*0.9; blk++){
+    const H=Tn[hands[blk%hands.length]];
+    const l=H.qpb*G.qpb/gcd(H.qpb,G.qpb); const Lq=Math.max(l,Math.round(8*G.qpb/l)*l); const L=Lq*qE;   // about eight ground bars, a whole number of bars of both
+    if(!H.mel.length){ a+=L; continue; }
+    const end=Math.min(a+L,body), len=end-a; const ph=4*H.bar;
+    let hs=Math.round(((a/body)*H.last)/ph)*ph; hs=Math.max(0,Math.min(hs,Math.max(0,H.last-len)));      // the tune's phrase that sits at this point of the picture
+    let vH=0, vHn=0; for(const e of H.mel) for(const o of e.n){ vH+=(o.v||60); vHn++; } const vs=Math.max(0.8,Math.min(1.3,(vHn ? vG/(vH/vHn) : 1)))*0.97;
+    for(const e of H.mel){ const s=e.startMs||0; if(s<hs||s>=hs+len) continue; const at=a+(s-hs); const rel=(at-a)/qE; const onBeat=Math.abs(rel-Math.round(rel))<0.14;
+      const ns=e.n.map(o=>{ let m=o.m; if(!inKey[((m%12)+12)%12]) m=near(m,inKey,3);
+        if(onBeat || (o.durMs||0)>=0.8*qE){ const c=chordAt(at); if(c) m=near(m,c,4); }
+        return Object.assign({},o,{m:Math.max(52,Math.min(101,m)),v:Math.max(24,Math.min(120,Math.round((o.v||60)*vs))),durMs:Math.max(60,Math.min(o.durMs||0,Math.round(end-at+150)))}); });
+      out.push(Object.assign({},e,{n:ns,startMs:Math.round(at)})); }
+    a+=L;
+  }
+  const res=_jamOrder(out); res._roles={ground:G.k,hands:hands.map(i=>P[i].k),pulse:pi>=0?P[pi].k:null,q:Math.round(qE)};
+  return res;
+}
+
+function composeImageCallResponse(px,nc,nr,table,colorMode,dir,keys,vr){
+  const ks=(keys||[]).filter(k=>COMPOSER_ENGINES[k]);
+  if(ks.length<2) return ks.length===1 ? COMPOSER_ENGINES[ks[0]](px,nc,nr,table,colorMode,dir,vr) : [];
+  const prev=_jamCtx; _jamCtx={minor:null}; const P=[];
+  try{ for(const k of ks){ _jamNoteInfo=null; let ev=[]; try{ ev=COMPOSER_ENGINES[k](px,nc,nr,table,colorMode,dir,vr)||[]; }catch(_){ ev=[]; }
+      if(ev.length){ const inf=_jamNoteInfo||{barMs:2000,qpb:4}; P.push({k,ev,bar0:inf.barMs,qpb:inf.qpb}); } } }
+  finally{ _jamCtx=prev; _jamNoteInfo=null; }
+  if(P.length<2) return P.length ? P[0].ev : [];
+  const h=_jamHash(ks,px,dir,vr); let style=_jamStyleOf(h); let out=null;
+  if(style==='E') out=_jamBred(P,h);
+  if(!out){ style='A'; out=_jamRelay(P); }
+  try{ globalThis.__COMP_JAM_STYLE={sig:ks.join(),style,roles:out._roles||null}; }catch(_){}
   return out;
 }
 
@@ -17337,7 +16954,7 @@ const I18N = {
   EN:{
     proArtist:'{artist} is Pro', mymusicSaveAria:'Save to My Music', tapToDeselect:'tap to deselect', tapToAdd:'tap to add to your set', inYourSet:'in your set — tap to remove',
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', liteMosaicStyle:'TONES → COLOURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Next', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', palettesTitle:'palettes', selAll:'all', selNone:'none', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, or AI Compose (Pro) writes a full piece from it; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', hearImage:'Hear image', hearImageDis:'Finish the painting first', seeMusic:'See music', seeMusicDis:'Finish the painting first', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmo', atmoDetect:'read mood', melodyLabel:'melody', melodyHint:'AI sings a melody from the picture, in the key and pulse of what plays under it', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', liteMosaicStyle:'TONES → COLOURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Next', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', palettesTitle:'palettes', selAll:'all', selNone:'none', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, or AI Compose (Pro) writes a full piece from it; flip on atmosphere to match its mood', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', hearImage:'Hear image', hearImageDis:'Finish the painting first', seeMusic:'See music', seeMusicDis:'Finish the painting first', newSource:'new', dirLabel:'scan', dirLabelRead:'reading direction', varLabel:'form', var_0:'original', var_1:'backwards', var_2:'inverted', var_3:'both', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmo', atmoDetect:'read mood', melodyLabel:'melody', melodyHint:'AI sings a melody from the picture, in the key and pulse of what plays under it', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
     harmony:'harmony', spectral:'spectral', phi:'φ / Phi', kontra:'kontra', custom:'custom', bw:'b/w', pickLook:'Pick a look', editSet:'Edit your set', editHint:'Tap to add or remove from your set.', editFull:'Manage all →', setupPickerLabel:'Styles & palettes', setupPickerHint:'choose which palettes and artists appear in the canvas pickers', setupPalettesTitle:'Palettes', setupArtistsTitle:'Artists', setupMosaicFamily:'Mosaic family', setupSave:'Done', setupMinError:'Choose at least 1 palette and 1 artist.', setupAll:'All', setupNone:'None', gcat_all:'All', gcat_start:'Start', gcat_colors:'Colors', gcat_style:'Style', gcat_music:'Music', gcat_tools:'Tools', gcat_save:'Save', gcat_pro:'Pro', gcat_book:'Book', guideMore:'More', guideLess:'Less', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Advanced', surpriseMe:'Surprise me', saveLabel:'Save', useMySong:'Use my song', useMyPicture:'Use my picture', tapToFlip:'tap to flip', useMySongFile:'File', useMySongMic:'Mic', useMySongImage:'Image', useMySongSample:'Sample', recLabel:'Rec', stopLabel:'Stop', cancelLabel:'Cancel', tapToBegin:'Tap to begin',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'describe any mood — e.g. rainy day in Paris', moodHowFeel:'how do you feel?', moodTwoWays:'Type anything above — or start typing to pick a one-word mood from the list.', moodExamples:['describe any mood in your own words…','e.g. rainy day in Paris','e.g. first snow at midnight','— or just start typing and pick a mood as it appears —','e.g. furious','e.g. nostalgic'], storyCaption:{mood:'this is what {mood} sounds like ✦ paintiano.app',moodFromImg:'the mood of this image, painted ✦ paintiano.app',compose:'made this on the piano · turned it into a painting ✦ paintiano.app',micVoice:'sang into the mic, got back a painting ✦ paintiano.app',micMusic:'caught a song in the room, painted it ✦ paintiano.app',midi:'music turned into colour ✦ paintiano.app',audio:'heard it, painted it ✦ paintiano.app',score:'sheet music, turned into a painting ✦ paintiano.app',image:'what this image sounds like ✦ paintiano.app',default:'music turns into paintings ✦ paintiano.app'}, storyImageHint:'painting + audio · for IG / TikTok', storyImageHintNoAudio:'painting · for IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · save to files', scoreExportHint:'MusicXML · for MuseScore', includeSourceThumb:'include source thumbnail', includeSourceImage:'include source original image', saveAudioHintImg:'image + audio · save to files', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -17502,7 +17119,7 @@ const I18N = {
     proArtist:'{artist} ist Pro', mymusicSaveAria:'In Meine Musik speichern', tapToDeselect:'tippen zum Abwählen', tapToAdd:'tippen, um ins Set zu nehmen', inYourSet:'in deinem Set — tippen zum Entfernen',
     palettesTitle:'Paletten', selAll:'alle', selNone:'keine',
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', liteMosaicStyle:'TÖNE → FARBEN', liteSwipeHint:'Swipe ↑ Überraschung', advSwipeHint:'Swipe ↑ Weiter', notesStyle:'noten', oneMStyle:'$oneM$', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, oder KI komponiert (Pro) ein ganzes Stück daraus; mit Atmosphäre trifft es die Stimmung', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', hearImage:'Bild hören', hearImageDis:'Erst das Bild fertig malen', seeMusic:'Musik sehen', seeMusicDis:'Erst das Bild fertig malen', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'Atmo', atmoDetect:'stimmung lesen', melodyLabel:'Melodie', melodyHint:'KI singt eine Melodie aus dem Bild, in Tonart und Puls dessen, was darunter spielt', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Spielen.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', liteMosaicStyle:'TÖNE → FARBEN', liteSwipeHint:'Swipe ↑ Überraschung', advSwipeHint:'Swipe ↑ Weiter', notesStyle:'noten', oneMStyle:'$oneM$', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, oder KI komponiert (Pro) ein ganzes Stück daraus; mit Atmosphäre trifft es die Stimmung', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', hearImage:'Bild hören', hearImageDis:'Erst das Bild fertig malen', seeMusic:'Musik sehen', seeMusicDis:'Erst das Bild fertig malen', newSource:'neu', dirLabel:'scan', dirLabelRead:'Leserichtung', varLabel:'Form', var_0:'original', var_1:'rückwärts', var_2:'umgekehrt', var_3:'beides', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'Atmo', atmoDetect:'stimmung lesen', melodyLabel:'Melodie', melodyHint:'KI singt eine Melodie aus dem Bild, in Tonart und Puls dessen, was darunter spielt', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Spielen.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
     harmony:'harmonie', spectral:'spektral', phi:'φ / Phi', kontra:'kontra', custom:'eigen', bw:'s/w', pickLook:'Wähle einen Look', editSet:'Set bearbeiten', editHint:'Tippe zum Hinzufügen oder Entfernen.', editFull:'Alle verwalten →', setupPickerLabel:'Stile & Paletten', setupPickerHint:'wähle, welche Paletten und Künstler in den Canvas-Wählern erscheinen', setupPalettesTitle:'Paletten', setupArtistsTitle:'Künstler', setupMosaicFamily:'Mosaik-Familie', setupSave:'Fertig', setupMinError:'Wähle mindestens 1 Palette und 1 Künstler.', setupAll:'Alle', setupNone:'Keine', gcat_all:'Alle', gcat_start:'Start', gcat_colors:'Farben', gcat_style:'Stil', gcat_music:'Musik', gcat_tools:'Werkzeuge', gcat_save:'Sichern', gcat_pro:'Pro', gcat_book:'Buch', guideMore:'Mehr', guideLess:'Weniger', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Advanced', surpriseMe:'Überrasch mich', saveLabel:'Sichern', useMySong:'Mein Song', useMyPicture:'Mein Bild', tapToFlip:'tippen zum Wechseln', useMySongFile:'Datei', useMySongMic:'Mikro', useMySongImage:'Bild', useMySongSample:'Beispiel', recLabel:'Auf', stopLabel:'Stopp', cancelLabel:'Abbr.', tapToBegin:'Zum Starten tippen',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'beschreibe eine Stimmung — z.B. Regentag in Paris', moodHowFeel:'wie fühlst du dich?', moodTwoWays:'Tippe oben irgendetwas — oder tippe los und wähle eine Ein-Wort-Stimmung aus der Liste.', moodExamples:['beschreibe eine Stimmung in eigenen Worten…','z.B. Regentag in Paris','z.B. erster Schnee um Mitternacht','— oder tippe einfach los und wähle eine vorgeschlagene Stimmung —','z.B. wütend','z.B. nostalgisch'], storyCaption:{mood:'so klingt {mood} ✦ paintiano.app',moodFromImg:'die Stimmung dieses Bildes, gemalt ✦ paintiano.app',compose:'am Klavier gespielt · in ein Bild verwandelt ✦ paintiano.app',micVoice:'ins Mikro gesungen, ein Bild zurückbekommen ✦ paintiano.app',micMusic:'einen Song im Raum eingefangen, gemalt ✦ paintiano.app',midi:'Musik in Farbe verwandelt ✦ paintiano.app',audio:'gehört, gemalt ✦ paintiano.app',score:'Noten, in ein Bild verwandelt ✦ paintiano.app',image:'wie dieses Bild klingt ✦ paintiano.app',default:'Musik wird zu Bildern ✦ paintiano.app'}, storyImageHint:'Bild + Audio · für IG / TikTok', storyImageHintNoAudio:'Bild · für IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · in Dateien speichern', scoreExportHint:'MusicXML · für MuseScore', includeSourceThumb:'Quellminiatur einfügen', includeSourceImage:'Originalbild beifügen', saveAudioHintImg:'Bild + Audio · in Dateien speichern', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -17665,7 +17282,7 @@ const I18N = {
     proArtist:'{artist} est Pro', mymusicSaveAria:'Enregistrer dans Ma musique', tapToDeselect:'touche pour désélectionner', tapToAdd:'touche pour l’ajouter à ton set', inYourSet:'dans ton set — touche pour retirer',
     palettesTitle:'palettes', selAll:'toutes', selNone:'aucune',
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', liteMosaicStyle:'TONS → COULEURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Suivant', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, ou Composer IA (Pro) en écrit un morceau entier ; active l’atmosphère pour son ambiance', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', hearImageDis:`Finis d'abord la peinture`, hearImage:'Écouter l’image', seeMusic:'Voir musique', seeMusicDis:`Finis d'abord la peinture`, newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'amb.', atmoDetect:'lire ambiance', melodyLabel:'mélodie', melodyHint:'l\'IA chante une mélodie issue de l\'image, dans la tonalité et le pouls de ce qui joue dessous', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Jouer.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', liteMosaicStyle:'TONS → COULEURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Suivant', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, ou Composer IA (Pro) en écrit un morceau entier ; active l’atmosphère pour son ambiance', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', hearImageDis:`Finis d'abord la peinture`, hearImage:'Écouter l’image', seeMusic:'Voir musique', seeMusicDis:`Finis d'abord la peinture`, newSource:'nouveau', dirLabel:'lecture', dirLabelRead:'sens de lecture', varLabel:'forme', var_0:'originale', var_1:'à rebours', var_2:'renversée', var_3:'les deux', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'amb.', atmoDetect:'lire ambiance', melodyLabel:'mélodie', melodyHint:'l\'IA chante une mélodie issue de l\'image, dans la tonalité et le pouls de ce qui joue dessous', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Jouer.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
     harmony:'harmonie', spectral:'spectral', phi:'φ / Phi', kontra:'contre', custom:'perso', bw:'n/b', pickLook:'Choisis un style', editSet:'Modifier ta sélection', editHint:'Touche pour ajouter ou retirer.', editFull:'Tout gérer →', setupPickerLabel:'Styles et palettes', setupPickerHint:'choisis quelles palettes et quels artistes apparaissent dans les sélecteurs', setupPalettesTitle:'Palettes', setupArtistsTitle:'Artistes', setupMosaicFamily:'Famille Mosaïque', setupSave:'Terminé', setupMinError:'Choisis au moins 1 palette et 1 artiste.', setupAll:'Tout', setupNone:'Aucun', gcat_all:'Tout', gcat_start:'Début', gcat_colors:'Couleurs', gcat_style:'Style', gcat_music:'Musique', gcat_tools:'Outils', gcat_save:'Sauver', gcat_pro:'Pro', gcat_book:'Livre', guideMore:'Plus', guideLess:'Moins', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Avancé', surpriseMe:'Surprends-moi', saveLabel:'Sauver', useMySong:'Ma chanson', useMyPicture:'Mon image', tapToFlip:'touche pour changer', useMySongFile:'Fichier', useMySongMic:'Micro', useMySongImage:'Image', useMySongSample:'Exemple', recLabel:'Rec', stopLabel:'Stop', cancelLabel:'Annuler', tapToBegin:'Touche pour commencer',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'décris une humeur — ex. jour de pluie à Paris', moodHowFeel:'comment tu te sens ?', moodTwoWays:'Écris ce que tu veux ci-dessus — ou commence à taper pour choisir une humeur d\'un mot dans la liste.', moodExamples:['décris une humeur avec tes mots…','ex. jour de pluie à Paris','ex. première neige à minuit','— ou commence à taper et choisis une humeur proposée —','ex. furieux','ex. nostalgique'], storyCaption:{mood:'voilà à quoi {mood} ressemble ✦ paintiano.app',moodFromImg:'l\'humeur de cette image, peinte ✦ paintiano.app',compose:'joué au piano · transformé en peinture ✦ paintiano.app',micVoice:'chanté au micro, récupéré une peinture ✦ paintiano.app',micMusic:'attrapé un son dans la pièce, peint ✦ paintiano.app',midi:'musique transformée en couleur ✦ paintiano.app',audio:'entendu, peint ✦ paintiano.app',score:'partition, devenue peinture ✦ paintiano.app',image:'à quoi cette image ressemble en son ✦ paintiano.app',default:'la musique devient peinture ✦ paintiano.app'}, storyImageHint:'image + audio · pour IG / TikTok', storyImageHintNoAudio:'image · pour IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · sauver dans fichiers', scoreExportHint:'MusicXML · pour MuseScore', includeSourceThumb:'inclure la miniature source', includeSourceImage:'inclure l\'image source', saveAudioHintImg:'image + audio · sauver dans fichiers', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -17828,7 +17445,7 @@ const I18N = {
     proArtist:'{artist} es Pro', mymusicSaveAria:'Guardar en Mi música', tapToDeselect:'toca para deseleccionar', tapToAdd:'toca para añadir a tu set', inYourSet:'en tu set — toca para quitar',
     palettesTitle:'paletas', selAll:'todas', selNone:'ninguna',
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONOS → COLORES', liteSwipeHint:'Swipe ↑ Sorpresa', advSwipeHint:'Swipe ↑ Siguiente', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, o Componer IA (Pro) escribe una pieza entera; activa atmósfera para su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', hearImage:'Oír imagen', hearImageDis:'Termina primero la pintura', seeMusic:'Ver música', seeMusicDis:'Termina primero la pintura', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'amb.', atmoDetect:'leer ambiente', melodyLabel:'melodía', melodyHint:'la IA canta una melodía de la imagen, en la tonalidad y el pulso de lo que suena debajo', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Tocar.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONOS → COLORES', liteSwipeHint:'Swipe ↑ Sorpresa', advSwipeHint:'Swipe ↑ Siguiente', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, o Componer IA (Pro) escribe una pieza entera; activa atmósfera para su ánimo', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', hearImage:'Oír imagen', hearImageDis:'Termina primero la pintura', seeMusic:'Ver música', seeMusicDis:'Termina primero la pintura', newSource:'nuevo', dirLabel:'lectura', dirLabelRead:'dirección de lectura', varLabel:'forma', var_0:'original', var_1:'al revés', var_2:'invertida', var_3:'ambas', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'amb.', atmoDetect:'leer ambiente', melodyLabel:'melodía', melodyHint:'la IA canta una melodía de la imagen, en la tonalidad y el pulso de lo que suena debajo', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Tocar.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
     harmony:'armonía', spectral:'espectral', phi:'φ / Phi', kontra:'contra', custom:'personal', bw:'b/n', pickLook:'Elige un estilo', editSet:'Editar tu conjunto', editHint:'Toca para añadir o quitar.', editFull:'Gestionar todo →', setupPickerLabel:'Estilos y paletas', setupPickerHint:'elige qué paletas y artistas aparecen en los selectores', setupPalettesTitle:'Paletas', setupArtistsTitle:'Artistas', setupMosaicFamily:'Familia Mosaico', setupSave:'Listo', setupMinError:'Elige al menos 1 paleta y 1 artista.', setupAll:'Todo', setupNone:'Nada', gcat_all:'Todo', gcat_start:'Inicio', gcat_colors:'Colores', gcat_style:'Estilo', gcat_music:'Música', gcat_tools:'Herramientas', gcat_save:'Guardar', gcat_pro:'Pro', gcat_book:'Libro', guideMore:'Más', guideLess:'Menos', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Avanzado', surpriseMe:'Sorpréndeme', saveLabel:'Guardar', useMySong:'Mi canción', useMyPicture:'Mi imagen', tapToFlip:'toca para cambiar', useMySongFile:'Archivo', useMySongMic:'Micro', useMySongImage:'Imagen', useMySongSample:'Muestra', recLabel:'Grabar', stopLabel:'Parar', cancelLabel:'Cancelar', tapToBegin:'Toca para empezar',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'describe un estado — p.ej. día lluvioso en París', moodHowFeel:'¿cómo te sientes?', moodTwoWays:'Escribe lo que quieras arriba — o empieza a teclear para elegir un estado de una palabra de la lista.', moodExamples:['describe un estado con tus palabras…','p.ej. día lluvioso en París','p.ej. primera nieve a medianoche','— o empieza a escribir y elige un estado de los sugeridos —','p.ej. furioso','p.ej. nostálgico'], storyCaption:{mood:'así suena {mood} ✦ paintiano.app',moodFromImg:'el estado de esta imagen, pintado ✦ paintiano.app',compose:'tocado al piano · convertido en pintura ✦ paintiano.app',micVoice:'canté al micro, me devolvió una pintura ✦ paintiano.app',micMusic:'cogí un sonido en la sala, lo pinté ✦ paintiano.app',midi:'música convertida en color ✦ paintiano.app',audio:'lo escuché, lo pinté ✦ paintiano.app',score:'partitura, convertida en pintura ✦ paintiano.app',image:'cómo suena esta imagen ✦ paintiano.app',default:'la música se vuelve pintura ✦ paintiano.app'}, storyImageHint:'imagen + audio · para IG / TikTok', storyImageHintNoAudio:'imagen · para IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · guardar en archivos', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura origen', includeSourceImage:'incluir imagen original', saveAudioHintImg:'imagen + audio · guardar en archivos', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -17990,7 +17607,7 @@ const I18N = {
   SK:{
     proArtist:'{artist} je Pro', mymusicSaveAria:'Uložiť do Mojej hudby', tapToDeselect:'ťukni pre zrušenie výberu', tapToAdd:'ťukni a pridaj do svojho setu', inYourSet:'v tvojom sete — ťukni pre odobratie',
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', liteMosaicStyle:'TÓNY → FARBY', liteSwipeHint:'Swipe ↑ Prekvapenie', advSwipeHint:'Swipe ↑ Ďalší', notesStyle:'noty', oneMStyle:'$oneM$', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', palettesTitle:'palety', selAll:'všetko', selNone:'žiadne', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, alebo AI skladba (Pro) z neho zloží celú skladbu; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, bruč, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', hearImage:'Počuť obraz', hearImageDis:'Najprv domaľuj obraz', seeMusic:'Vidieť hudbu', seeMusicDis:'Najprv domaľuj obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmo', atmoDetect:'rozpoznať náladu', melodyLabel:'melódia', melodyHint:'AI zaspieva melódiu z obrazu, v tónine a pulze toho, čo hrá pod ňou', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Prehrať.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', liteMosaicStyle:'TÓNY → FARBY', liteSwipeHint:'Swipe ↑ Prekvapenie', advSwipeHint:'Swipe ↑ Ďalší', notesStyle:'noty', oneMStyle:'$oneM$', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', palettesTitle:'palety', selAll:'všetko', selNone:'žiadne', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, alebo AI skladba (Pro) z neho zloží celú skladbu; zapni atmosféru a vystihne aj náladu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, bruč, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', hearImage:'Počuť obraz', hearImageDis:'Najprv domaľuj obraz', seeMusic:'Vidieť hudbu', seeMusicDis:'Najprv domaľuj obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dirLabelRead:'smer čítania', varLabel:'podoba', var_0:'pôvodná', var_1:'odzadu', var_2:'prevrátená', var_3:'obe', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmo', atmoDetect:'rozpoznať náladu', melodyLabel:'melódia', melodyHint:'AI zaspieva melódiu z obrazu, v tónine a pulze toho, čo hrá pod ňou', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Prehrať.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
     harmony:'harmónia', spectral:'spektrum', phi:'φ / Phi', kontra:'kontra', custom:'vlastná', bw:'č/b', pickLook:'Vyber vzhľad', editSet:'Uprav si zostavu', editHint:'Ťukni pre pridanie alebo odobranie.', editFull:'Spravovať všetko →', setupPickerLabel:'Štýly a palety', setupPickerHint:'vyber palety a umelcov, ktorí sa zobrazia v canvas selektoroch', setupPalettesTitle:'Palety', setupArtistsTitle:'Umelci', setupMosaicFamily:'Mosaic rodina', setupSave:'Hotovo', setupMinError:'Vyber aspoň 1 paletu a 1 umelca.', setupAll:'Všetko', setupNone:'Nič', gcat_all:'Všetko', gcat_start:'Začni', gcat_colors:'Farby', gcat_style:'Štýl', gcat_music:'Hudba', gcat_tools:'Nástroje', gcat_save:'Ulož', gcat_pro:'Pro', gcat_book:'Kniha', guideMore:'Viac', guideLess:'Menej', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Rozšírený', surpriseMe:'Prekvap ma', saveLabel:'Ulož', useMySong:'Moja skladba', useMyPicture:'Môj obrázok', tapToFlip:'ťukni pre prepnutie', useMySongFile:'Súbor', useMySongMic:'Mikro', useMySongImage:'Obrázok', useMySongSample:'Ukážka', recLabel:'Nahraj', stopLabel:'Stop', cancelLabel:'Zrušiť', tapToBegin:'Ťukni pre štart',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'opíš akúkoľvek náladu — napr. daždivý deň v Paríži', moodHowFeel:'ako sa cítiš?', moodTwoWays:'Napíš hore čokoľvek — alebo začni písať a vyber jednoslovnú náladu zo zoznamu.', moodExamples:['opíš náladu vlastnými slovami…','napr. daždivý deň v Paríži','napr. prvý sneh o polnoci','— alebo začni písať a vyber z ponúkaných nálad —','napr. zúrivá','napr. nostalgická'], storyCaption:{mood:'takto znie {mood} ✦ paintiano.app',moodFromImg:'nálada tohto obrazu, namaľovaná ✦ paintiano.app',compose:'zahral som si · vznikol obraz ✦ paintiano.app',micVoice:'spieval do mikrofónu, vrátilo to obraz ✦ paintiano.app',micMusic:'zachytil zvuk v miestnosti, namaľoval ✦ paintiano.app',midi:'hudba premenená na farbu ✦ paintiano.app',audio:'vypočul, namaľoval ✦ paintiano.app',score:'noty premenené na obraz ✦ paintiano.app',image:'tak znie tento obraz ✦ paintiano.app',default:'hudba sa stáva maľbou ✦ paintiano.app'}, storyImageHint:'obraz + audio · pre IG / TikTok', storyImageHintNoAudio:'obraz · pre IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'mp3 · uložiť do súborov', scoreExportHint:'MusicXML · pre MuseScore', includeSourceThumb:'pridať zdrojový náhľad', includeSourceImage:'pridať pôvodný obrázok', saveAudioHintImg:'obrázok + audio · uložiť do súborov', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -18152,7 +17769,7 @@ const I18N = {
     proArtist:'{artist} 为 Pro', mymusicSaveAria:'保存到我的音乐', tapToDeselect:'点按取消选择', tapToAdd:'点按加入你的组合', inYourSet:'已在你的组合中——点按移除',
     palettesTitle:'调色板', selAll:'全部', selNone:'无',
     concept:'理念', demo:'演示', guide:'指南',
-    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑动 ↑ 惊喜', advSwipeHint:'滑动 ↑ 下一个', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，或 AI 作曲(Pro)从中谱写一首完整曲子；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', hearImage:'听画', hearImageDis:'先完成绘画', seeMusic:'看音乐', seeMusicDis:'先完成绘画', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', melodyLabel:'旋律', melodyHint:'AI 从图像唱出一条旋律，跟随下方音乐的调性与节拍', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按播放。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
+    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑动 ↑ 惊喜', advSwipeHint:'滑动 ↑ 下一个', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，或 AI 作曲(Pro)从中谱写一首完整曲子；开启氛围模式还能捕捉它的情绪', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', hearImage:'听画', hearImageDis:'先完成绘画', seeMusic:'看音乐', seeMusicDis:'先完成绘画', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dirLabelRead:'阅读方向', varLabel:'形态', var_0:'原样', var_1:'倒读', var_2:'倒影', var_3:'两者', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', melodyLabel:'旋律', melodyHint:'AI 从图像唱出一条旋律，跟随下方音乐的调性与节拍', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按播放。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
     harmony:'和声', spectral:'光谱', phi:'φ / Phi', kontra:'反向', custom:'自定义', bw:'黑白', pickLook:'选个风格', editSet:'编辑你的组合', editHint:'点按以添加或移除。', editFull:'管理全部 →', setupPickerLabel:'风格与调色板', setupPickerHint:'选择哪些调色板和艺术家出现在画布选择器中', setupPalettesTitle:'调色板', setupArtistsTitle:'艺术家', setupMosaicFamily:'Mosaic 家族', setupSave:'完成', setupMinError:'至少选择 1 个调色板和 1 位艺术家。', setupAll:'全部', setupNone:'无', gcat_all:'全部', gcat_start:'开始', gcat_colors:'颜色', gcat_style:'风格', gcat_music:'音乐', gcat_tools:'工具', gcat_save:'保存', gcat_pro:'Pro', gcat_book:'书', guideMore:'更多', guideLess:'收起', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'高级', surpriseMe:'给我惊喜', saveLabel:'保存', useMySong:'用我的歌', useMyPicture:'用我的图片', tapToFlip:'点按切换', useMySongFile:'文件', useMySongMic:'麦克风', useMySongImage:'图片', useMySongSample:'示例', recLabel:'录制', stopLabel:'停止', cancelLabel:'取消', tapToBegin:'点按开始',
     editPalette:'编辑调色板', editShort:'编辑', paletteEditorTitle:'你的调色板', resetPalette:'全部清除', defaultPalette:'默认',
     selectMood:'✦ 选择情绪…', moodPlaceholder:'描述任意情绪 — 例如 巴黎的雨天', moodHowFeel:'你现在感觉如何?', moodTwoWays:'在上方输入任意内容 — 或开始输入,从列表选一个单词情绪。', moodExamples:['用你自己的话描述情绪…','例如 巴黎的雨天','例如 午夜初雪','— 或直接输入,从浮现的情绪中选择 —','例如 愤怒','例如 怀旧'], storyCaption:{mood:'这就是 {mood} 的声音 ✦ paintiano.app',moodFromImg:'这幅图像的情绪,画了出来 ✦ paintiano.app',compose:'弹了钢琴 · 变成了一幅画 ✦ paintiano.app',micVoice:'对着麦克风唱,得到一幅画 ✦ paintiano.app',micMusic:'抓住了房间里的一段声音,画了下来 ✦ paintiano.app',midi:'音乐变成了颜色 ✦ paintiano.app',audio:'听见了,画了下来 ✦ paintiano.app',score:'乐谱,变成了画 ✦ paintiano.app',image:'这张图听起来是这样 ✦ paintiano.app',default:'音乐变成画 ✦ paintiano.app'}, storyImageHint:'图像 + 音频 · 给 IG / TikTok', storyImageHintNoAudio:'图像 · 给 IG / TikTok', saveAudioLabel:'音频', saveAudioHint:'mp3 · 保存到文件', scoreExportHint:'MusicXML · 给 MuseScore', includeSourceThumb:'附加来源缩略图', includeSourceImage:'附加原始图像', saveAudioHintImg:'图像 + 音频 · 保存到文件', moodGo:'开始', morph:'✦ 变形', vary:'✦ 变奏',
@@ -18314,7 +17931,7 @@ const I18N = {
     proArtist:'{artist} 為 Pro', mymusicSaveAria:'儲存到我的音樂', tapToDeselect:'點按取消選取', tapToAdd:'點按加入你的組合', inYourSet:'已在你的組合中——點按移除',
     palettesTitle:'調色盤', selAll:'全部', selNone:'無',
     concept:'理念', demo:'示範', guide:'指南',
-    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑動 ↑ 驚喜', advSwipeHint:'滑動 ↑ 下一個', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，或 AI 作曲(Pro)從中譜寫一首完整曲子；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', hearImage:'聽畫', hearImageDis:'先完成繪畫', seeMusic:'看音樂', seeMusicDis:'先完成繪畫', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', melodyLabel:'旋律', melodyHint:'AI 從圖像唱出一條旋律，跟隨下方音樂的調性與節拍', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按播放。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
+    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑動 ↑ 驚喜', advSwipeHint:'滑動 ↑ 下一個', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，或 AI 作曲(Pro)從中譜寫一首完整曲子；開啟氛圍模式還能捕捉它的情緒', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', hearImage:'聽畫', hearImageDis:'先完成繪畫', seeMusic:'看音樂', seeMusicDis:'先完成繪畫', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dirLabelRead:'閱讀方向', varLabel:'形態', var_0:'原樣', var_1:'倒讀', var_2:'倒影', var_3:'兩者', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', melodyLabel:'旋律', melodyHint:'AI 從圖像唱出一條旋律，跟隨下方音樂的調性與節拍', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按播放。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
     harmony:'和聲', spectral:'光譜', phi:'φ / Phi', kontra:'反向', custom:'自訂', bw:'黑白', pickLook:'選個風格', editSet:'編輯你的組合', editHint:'點按以新增或移除。', editFull:'管理全部 →', setupPickerLabel:'風格與調色盤', setupPickerHint:'選擇哪些調色盤和藝術家出現在畫布選擇器中', setupPalettesTitle:'調色盤', setupArtistsTitle:'藝術家', setupMosaicFamily:'Mosaic 家族', setupSave:'完成', setupMinError:'至少選擇 1 個調色盤和 1 位藝術家。', setupAll:'全部', setupNone:'無', gcat_all:'全部', gcat_start:'開始', gcat_colors:'顏色', gcat_style:'風格', gcat_music:'音樂', gcat_tools:'工具', gcat_save:'儲存', next:'下一個', showLabel:'放映', gcat_pro:'Pro', gcat_book:'書', guideMore:'更多', guideLess:'收起', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'進階', surpriseMe:'給我驚喜', saveLabel:'儲存', useMySong:'用我的歌', useMyPicture:'用我的圖片', tapToFlip:'點按切換', useMySongFile:'檔案', useMySongMic:'麥克風', useMySongImage:'圖片', useMySongSample:'範例', recLabel:'錄製', stopLabel:'停止', cancelLabel:'取消', tapToBegin:'點按開始',
     editPalette:'編輯調色盤', editShort:'編輯', paletteEditorTitle:'你的調色盤', resetPalette:'全部清除', defaultPalette:'預設',
     selectMood:'✦ 選擇情緒…', moodPlaceholder:'描述任意情緒 — 例如 巴黎的雨天', moodHowFeel:'你現在感覺如何?', moodTwoWays:'在上方輸入任意內容 — 或開始輸入,從列表選一個單詞情緒。', moodExamples:['用你自己的話描述情緒…','例如 巴黎的雨天','例如 午夜初雪','— 或直接輸入,從浮現的情緒中選擇 —','例如 憤怒','例如 懷舊'], storyCaption:{mood:'這就是 {mood} 的聲音 ✦ paintiano.app',moodFromImg:'這幅圖像的情緒,畫了出來 ✦ paintiano.app',compose:'彈了鋼琴 · 變成了一幅畫 ✦ paintiano.app',micVoice:'對著麥克風唱,得到一幅畫 ✦ paintiano.app',micMusic:'抓住了房間裡的一段聲音,畫了下來 ✦ paintiano.app',midi:'音樂變成了顏色 ✦ paintiano.app',audio:'聽見了,畫了下來 ✦ paintiano.app',score:'樂譜,變成了畫 ✦ paintiano.app',image:'這張圖聽起來是這樣 ✦ paintiano.app',default:'音樂變成畫 ✦ paintiano.app'}, storyImageHint:'圖像 + 音訊 · 給 IG / TikTok', storyImageHintNoAudio:'圖像 · 給 IG / TikTok', saveAudioLabel:'音訊', saveAudioHint:'mp3 · 儲存到檔案', scoreExportHint:'MusicXML · 給 MuseScore', includeSourceThumb:'附加來源縮圖', includeSourceImage:'附加原始圖像', saveAudioHintImg:'圖像 + 音訊 · 儲存到檔案', moodGo:'開始', morph:'✦ 變形', vary:'✦ 變奏',
@@ -18475,7 +18092,7 @@ const I18N = {
     proArtist:'{artist} é Pro', mymusicSaveAria:'Guardar em A minha música', tapToDeselect:'toca para desmarcar', tapToAdd:'toca para juntar ao teu set', inYourSet:'no teu set — toca para remover',
     palettesTitle:'paletas', selAll:'todas', selNone:'nenhuma',
     concept:'conceito', demo:'demo', guide:'guia',
-    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONS → CORES', liteSwipeHint:'Swipe ↑ Surpresa', advSwipeHint:'Swipe ↑ Próximo', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, ou Compor IA (Pro) escreve uma peça inteira; ative atmosfera para o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', hearImage:'Ouvir imagem', hearImageDis:'Termina primeiro a pintura', seeMusic:'Ver música', seeMusicDis:'Termina primeiro a pintura', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atm', atmoDetect:'detectar humor', melodyLabel:'melodia', melodyHint:'a IA canta uma melodia da imagem, na tonalidade e no pulso do que toca por baixo', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Tocar.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
+    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONS → CORES', liteSwipeHint:'Swipe ↑ Surpresa', advSwipeHint:'Swipe ↑ Próximo', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, ou Compor IA (Pro) escreve uma peça inteira; ative atmosfera para o humor', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', hearImage:'Ouvir imagem', hearImageDis:'Termina primeiro a pintura', seeMusic:'Ver música', seeMusicDis:'Termina primeiro a pintura', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dirLabelRead:'direção de leitura', varLabel:'forma', var_0:'original', var_1:'de trás', var_2:'invertida', var_3:'ambas', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atm', atmoDetect:'detectar humor', melodyLabel:'melodia', melodyHint:'a IA canta uma melodia da imagem, na tonalidade e no pulso do que toca por baixo', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Tocar.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
     harmony:'harmonia', spectral:'espectral', phi:'φ / Phi', kontra:'contra', custom:'personalizada', bw:'p&b', pickLook:'Escolhe um estilo', editSet:'Editar o teu conjunto', editHint:'Toca para adicionar ou remover.', editFull:'Gerir tudo →', setupPickerLabel:'Estilos e paletas', setupPickerHint:'escolhe que paletas e artistas aparecem nos seletores da tela', setupPalettesTitle:'Paletas', setupArtistsTitle:'Artistas', setupMosaicFamily:'Família Mosaico', setupSave:'Pronto', setupMinError:'Escolhe pelo menos 1 paleta e 1 artista.', setupAll:'Tudo', setupNone:'Nenhum', gcat_all:'Tudo', gcat_start:'Início', gcat_colors:'Cores', gcat_style:'Estilo', gcat_music:'Música', gcat_tools:'Ferramentas', gcat_save:'Guardar', gcat_pro:'Pro', gcat_book:'Livro', guideMore:'Mais', guideLess:'Menos', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Avançado', surpriseMe:'Surpreende-me', saveLabel:'Guardar', useMySong:'A minha música', useMyPicture:'A minha imagem', tapToFlip:'toca para trocar', useMySongFile:'Ficheiro', useMySongMic:'Micro', useMySongImage:'Imagem', useMySongSample:'Amostra', recLabel:'Gravar', stopLabel:'Parar', cancelLabel:'Cancelar', tapToBegin:'Toca para começar',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'SUA PALETA', resetPalette:'limpar tudo', defaultPalette:'padrão',
     selectMood:'✦ escolha um humor…', moodPlaceholder:'descreva um humor — ex. dia chuvoso em Paris', moodHowFeel:'como te sentes?', moodTwoWays:'Escreve o que quiseres acima — ou começa a digitar para escolher um humor de uma palavra da lista.', moodExamples:['descreve um humor com as tuas palavras…','ex. dia chuvoso em Paris','ex. primeira neve à meia-noite','— ou começa a escrever e escolhe um humor sugerido —','ex. furioso','ex. nostálgico'], storyCaption:{mood:'é assim que {mood} soa ✦ paintiano.app',moodFromImg:'o humor desta imagem, pintado ✦ paintiano.app',compose:'toquei piano · virou pintura ✦ paintiano.app',micVoice:'cantei para o microfone, voltou uma pintura ✦ paintiano.app',micMusic:'apanhei um som na sala, pintei ✦ paintiano.app',midi:'música transformada em cor ✦ paintiano.app',audio:'ouvi, pintei ✦ paintiano.app',score:'partitura, virou pintura ✦ paintiano.app',image:'como esta imagem soa ✦ paintiano.app',default:'a música torna-se pintura ✦ paintiano.app'}, storyImageHint:'imagem + áudio · para IG / TikTok', storyImageHintNoAudio:'imagem · para IG / TikTok', saveAudioLabel:'Áudio', saveAudioHint:'mp3 · guardar em ficheiros', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura de origem', includeSourceImage:'incluir imagem original', saveAudioHintImg:'imagem + áudio · guardar em ficheiros', moodGo:'iniciar', morph:'✦ morph', vary:'✦ variar',
@@ -18637,7 +18254,7 @@ const I18N = {
     proArtist:'{artist} は Pro', mymusicSaveAria:'マイミュージックに保存', tapToDeselect:'タップで選択解除', tapToAdd:'タップでセットに追加', inYourSet:'セットに入っています — タップで外す',
     palettesTitle:'パレット', selAll:'すべて', selNone:'なし',
     concept:'コンセプト', demo:'デモ', guide:'ガイド',
-    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', liteMosaicStyle:'音 → 色', liteSwipeHint:'スワイプ ↑ サプライズ', advSwipeHint:'スワイプ ↑ 次へ', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'{artist} に着想を得て', inspiredByTitle:'着想', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、AI Compose(Pro)は全曲を書く;atmosphere で画像のムードに合わせる', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', hearImage:'絵を聴く', hearImageDis:'まず絵を完成させて', seeMusic:'音楽を見る', seeMusicDis:'まず絵を完成させて', newSource:'新規', dirLabel:'スキャン', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'雰囲気', atmoDetect:'ムードを読む', melodyLabel:'メロディ', melodyHint:'AI が画像からメロディを歌い、下で鳴る音楽の調とリズムに合わせる', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI 作曲', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。再生を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
+    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', liteMosaicStyle:'音 → 色', liteSwipeHint:'スワイプ ↑ サプライズ', advSwipeHint:'スワイプ ↑ 次へ', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'{artist} に着想を得て', inspiredByTitle:'着想', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、AI Compose(Pro)は全曲を書く;atmosphere で画像のムードに合わせる', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', hearImage:'絵を聴く', hearImageDis:'まず絵を完成させて', seeMusic:'音楽を見る', seeMusicDis:'まず絵を完成させて', newSource:'新規', dirLabel:'スキャン', dirLabelRead:'読む方向', varLabel:'形', var_0:'原形', var_1:'逆行', var_2:'反転', var_3:'両方', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'雰囲気', atmoDetect:'ムードを読む', melodyLabel:'メロディ', melodyHint:'AI が画像からメロディを歌い、下で鳴る音楽の調とリズムに合わせる', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI 作曲', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。再生を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
     harmony:'ハーモニー', spectral:'スペクトル', phi:'φ / Phi', kontra:'反転', custom:'カスタム', bw:'白黒', pickLook:'ルックを選ぶ', editSet:'セットを編集', editHint:'タップで追加・削除。', editFull:'すべて管理 →', setupPickerLabel:'スタイルとパレット', setupPickerHint:'キャンバスのピッカーに出すパレットとアーティストを選ぶ', setupPalettesTitle:'パレット', setupArtistsTitle:'アーティスト', setupMosaicFamily:'Mosaic ファミリー', setupSave:'完了', setupMinError:'最低 1 パレット + 1 アーティストを選んでください。', setupAll:'すべて', setupNone:'なし', gcat_all:'すべて', gcat_start:'はじめ', gcat_colors:'色', gcat_style:'スタイル', gcat_music:'音楽', gcat_tools:'ツール', gcat_save:'保存', gcat_pro:'Pro', gcat_book:'本', guideMore:'もっと', guideLess:'閉じる', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'アドバンス', surpriseMe:'おまかせ', saveLabel:'保存', useMySong:'自分の曲', useMyPicture:'自分の画像', tapToFlip:'タップで切替', useMySongFile:'ファイル', useMySongMic:'マイク', useMySongImage:'画像', useMySongSample:'サンプル', recLabel:'録音', stopLabel:'停止', cancelLabel:'キャンセル', tapToBegin:'タップして開始',
     editPalette:'パレット編集', editShort:'編集', paletteEditorTitle:'あなたのパレット', resetPalette:'すべてクリア', defaultPalette:'デフォルト',
     selectMood:'✦ ムードを選ぶ…', moodPlaceholder:'どんなムードでも — 例:パリの雨の日', moodHowFeel:'今、どう感じる?', moodTwoWays:'上に何でも書く — または入力を始めてリストから一語ムードを選ぶ。', moodExamples:['自分の言葉でムードを書く…','例:パリの雨の日','例:真夜中の初雪','— または入力を始めて、出てきたムードを選ぶ —','例:激怒','例:ノスタルジック'], storyCaption:{mood:'{mood} はこんな音 ✦ paintiano.app',moodFromImg:'この画像のムード、描きました ✦ paintiano.app',compose:'ピアノで作った曲 · 絵にした ✦ paintiano.app',micVoice:'マイクに歌ったら絵が返ってきた ✦ paintiano.app',micMusic:'部屋の歌を捕まえて描いた ✦ paintiano.app',midi:'音楽が色になった ✦ paintiano.app',audio:'聴いて、描いた ✦ paintiano.app',score:'楽譜を絵にした ✦ paintiano.app',image:'この画像の音 ✦ paintiano.app',default:'音楽が絵画になる ✦ paintiano.app'}, storyImageHint:'絵 + 音声 · IG / TikTok 用', storyImageHintNoAudio:'絵 · IG / TikTok 用', saveAudioLabel:'音声', saveAudioHint:'mp3 · ファイルに保存', scoreExportHint:'MusicXML · MuseScore 用', includeSourceThumb:'ソースサムネを含める', includeSourceImage:'ソースの元画像を含める', saveAudioHintImg:'画像 + 音声 · ファイルに保存', moodGo:'実行', morph:'✦ モーフ', vary:'✦ バリエーション',
@@ -19753,13 +19370,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`Your live piano`, body:`Tap ♪ Compose. Tap a key for a stab, hold for a wider block. Chord names appear live. Backspace undo, Space play.`, more:`Tap ♪ COMPOSE (or hit Enter). The piano opens. Tap a key for a quick stab, hold for a wider block — longer hold, wider paint. Hardware keyboard works too: A–L white, W/E/T/Y/U/O/P black. Backspace = undo, Space = play/pause, Enter toggles the piano. Hold a chord and its name (C maj, A min, D7…) appears live. The canvas is a fixed golden-ratio frame — rows shrink as you add more, the painting densifies. With a painter chosen, the painting grows note by note just as with Music — each note adds to it, nothing already painted is redrawn. The same goes for Mic. Kandinsky and the tile painters (Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein) are the exception: their tiles always fill the whole canvas and rearrange as you add notes. Pollock and Monet in their first variant paint each stroke here in the exact colour of its note — a green note, a green stroke. A painting with a subject stands complete from your first note, in its colour, and every further note paints into it: Monet's Impression, Rouen Cathedral, haystack, poplars and Japanese bridge, Delaunay's Eiffel Tower, Hokusai's bridge, Picasso's Demoiselles, Albers' Homage to the Square in Bauhaus and Mondrian's tree. ◆ Mobile: the full 88 keys are there — swipe horizontally to pan, C4 sits roughly centre. ◆ Scale snap: tap ⚙ to snap everything you play to a key (C maj, A min, G maj…); "Free" (default) stays fully chromatic.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Sing it, paint it`, body:`Two MIC modes. 🔊 Music listens to the room. 🎤 Voice snaps your humming to C major. Both paint live. Original ⇄ Piano toggle after.`, more:`Tap 🎙 MIC. The canvas opens armed with a big REC button. ◆ 🔊 Music (blue, default): listens to whatever's playing in the room — speaker, Spotify, ambient anything — and paints what it hears, silently: a melody as single notes, a real chord as a chord. Long recordings welcome; the canvas grows downward. ◆ 🎤 Voice (red): sing, hum or whistle. Pitch snaps to C major, plays through the piano, paints note by note in a fixed φ-frame. ◆ The top-left badge flips music ⇄ voice; each keeps its own draft (a small ● means one is waiting). Clear wipes only the active mode. ◆ While recording, the canvas gently breathes with room volume — louder pushes it wider, silence lets it rest.`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio or score`, body:`One button for every musical file. MIDI, MP3/WAV/M4A, or MusicXML from MuseScore/Finale. Type detected automatically.`, more:`One button for every musical file. ◆ MIDI (.mid / .midi) — multi-track condenses into chords, tempo-mapped, painted. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decoded, pitch-detected, painted; best on clean monophonic or sparse material (solo piano, vocal, simple guitar) — dense mixes are harder. ◆ Score (.musicxml .xml .mxl from MuseScore, Finale, Dorico) — pitches, durations, dynamics and chords all come through exact; the most accurate input there is. Paintiano detects the type automatically. Open Music without a file for the built-in samples. ◆ Hear image — when a music piece finishes painting, tap Hear image to send the painting itself through the picture scanner. Same painting, heard as a picture. Music ↔ painting, both ways.`},
-    {id:'image', glyph:'📷', cat:'music', title:`Photo → music → painting`, body:`Drop in an image. Its colours and energy become a piano piece, then paint in any artist style. Free does Scan, Pro adds AI Compose.`, more:`Upload any image. Paintiano reads it as a score — left to right, top to bottom; length scales with the image's energy (~1½–2¾ min). ◆ The app picks the reading from how colourful the work is: colourful → Harmony or Spectral (hue=pitch, lightness=octave, vividness=loudness); near-monochrome (Guernica, ink, sepia) → B/W. ◆ Custom is yours: only colours close to your 12 swatches sound, the rest fall silent — filter Guernica through tropical pinks and see what survives. ◆ Two ways to play: SCAN reads the picture left-to-right as a score (choose the direction). AI COMPOSE (Pro) writes a whole new piece from the image's palette, energy and mood — and keeps the picture on screen while it plays. ◆ COMPOSER sits between them: the same picture recomposed in Chopin's, Glass's or Bach's voice — see the Composers card.`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`Twelve composers`, body:`Painting → music: a picture can play as a pure Scan — or recomposed in a composer's voice. Chopin & Satie free, all twelve in Pro — plus one Pro composer and one Pro artist unlock for everyone each day (✦ today). Setup → Composers picks the set.`, more:`Composers live on the image side — the painting→music mirror of the 24 artists. Load a picture and it can play two ways. ◆ SCAN reads it literally, left to right, like a score. ◆ COMPOSER recomposes the same picture in a composer's voice — its colours and energy, phrased by a different musical mind. ◆ Frédéric Chopin — the Romantic poet of the piano; singing lines, rich harmony. ◆ Erik Satie — French minimalism before the word existed; sparse chords that float. ◆ George Gershwin — jazz harmony in the concert hall; blue notes bloom. ◆ Philip Glass — repeating cells shifting one degree at a time; the music breathes in patterns. ◆ Carl Vine — contemporary Australian energy; angular, bright, rhythmic. ◆ Yiruma — modern lyrical piano; wide, calm waves. ◆ J. S. Bach — two-voice invention; running sixteenths over a walking bass, terraced loud/soft, no pedal. ◆ Beethoven — sonata in four rooms: Moonlight triplets, an Allegro theme over Alberti bass, a tremolo storm, hammered chords; sforzando and sudden piano. ◆ Debussy — impressionism; pentatonic calm, whole-tone shimmer, parallel chords under a long pedal. ◆ Rachmaninov — the big Russian canvas; three-octave arpeggios, melody in octaves, bells. ◆ Einaudi — one ostinato that never changes; layers pile up into a single long crescendo. ◆ Hisaishi — the Ghibli waltz; a melody that leaps a sixth and walks back down, add9 warmth. ◆ Same picture, different composer → a genuinely different piece; the header credits “inspired by …”. In Lite, ↻ Surprise rolls Scan or another composer on the same picture. In Advanced, the 🔀 button above the composers shuffles them (Next, or swipe up in fullscreen, rolls another composer); beside it, Jam session (Ensemble, Pro) seats several composers trading phrases. Setup → Composers picks who's in play. Free includes Chopin + Satie; Pro unlocks all twelve.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Photo → music → painting`, body:`Drop in an image. Its colours and energy become a piano piece, then paint in any artist style. Free does Scan, Pro adds AI Compose.`, more:`Upload any image. Paintiano reads it as a score — left to right, top to bottom; length scales with the image's energy (~1¼–4 min). While it plays, a soft band of light shows where the music is reading, and the melody draws a thread along the way. ◆ The app picks the reading from how colourful the work is: colourful → Harmony or Spectral (hue=pitch, lightness=octave, vividness=loudness); near-monochrome (Guernica, ink, sepia) → B/W. ◆ Custom is yours: only colours close to your 12 swatches sound, the rest fall silent — filter Guernica through tropical pinks and see what survives. ◆ Two ways to play: SCAN reads the picture left-to-right as a score (choose the direction). AI COMPOSE (Pro) writes a whole new piece from the image's palette, energy and mood — and keeps the picture on screen while it plays. ◆ COMPOSER sits between them: the same picture recomposed in Chopin's, Glass's or Bach's voice — see the Composers card.`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`Twelve composers`, body:`Painting → music: a picture can play as a pure Scan — or recomposed in a composer's voice. Chopin & Satie free, all twelve in Pro — plus one Pro composer and one Pro artist unlock for everyone each day (✦ today). Setup → Composers picks the set.`, more:`Composers live on the image side — the painting→music mirror of the 24 artists. Load a picture and it can play two ways. ◆ SCAN reads it literally, left to right, like a score. ◆ COMPOSER recomposes the same picture in a composer's voice. The composer keeps his idiom; every decision inside it is the picture's: the melody follows the line the picture draws, the harmony walks through its colour fields in reading order, accents fall on its edges, the climax lands where the eye is pulled, the mode comes from its light and warmth, the tempo from its energy, the form from its symmetry — and the reading direction (rows, columns, spiral; the chips sit right under the composers) gives a different piece. Each composer also reads the picture in four forms — original, backwards, inverted (its negative) or both — so one picture, one composer and one direction still give four different pieces. ◆ Frédéric Chopin — the Romantic poet of the piano; singing lines, rich harmony. ◆ Erik Satie — French minimalism before the word existed; sparse chords that float. ◆ George Gershwin — jazz harmony in the concert hall; blue notes bloom. ◆ Philip Glass — repeating cells shifting one degree at a time; the music breathes in patterns. ◆ Carl Vine — contemporary Australian energy; angular, bright, rhythmic. ◆ Yiruma — modern lyrical piano; wide, calm waves. ◆ J. S. Bach — two-voice invention; running sixteenths over a walking bass, terraced loud/soft, no pedal. ◆ Beethoven — sonata in four rooms: Moonlight triplets, an Allegro theme over Alberti bass, a tremolo storm, hammered chords; sforzando and sudden piano. ◆ Debussy — impressionism; pentatonic calm, whole-tone shimmer, parallel chords under a long pedal. ◆ Rachmaninov — the big Russian canvas; three-octave arpeggios, melody in octaves, bells. ◆ Einaudi — one ostinato that never changes; layers pile up into a single long crescendo. ◆ Hisaishi — the Ghibli waltz; a melody that leaps a sixth and walks back down, add9 warmth. ◆ Same picture, different composer → a genuinely different piece; the header credits “inspired by …”. In Lite, ↻ Surprise rolls Scan or another composer on the same picture. In Advanced, the 🔀 button above the composers shuffles them (Next, or swipe up in fullscreen, rolls another composer); beside it, Jam session (Ensemble, Pro) seats several composers trading phrases. Setup → Composers picks who's in play. Free includes Chopin + Satie; Pro unlocks all twelve.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause and seek the bar. ⟳ Loop repeats. 🔊 Mute paints in silence. Clear resets — smartly, per mode.`, more:`The playback controls. ◆ Play starts and pauses (Space too); tap the progress bar to jump, drag to scrub. ◆ ⟳ LOOP keeps a mood piece repeating; gold when on. ◆ 🔊 / 🔇 Mute silences all audio while the painting still renders — remembered across sessions. ◆ Clear is mode-aware: Compose wipes the canvas and stays; MIC drops only the active mode's draft; Image drops the draft so Setup goes back to fresh — the picture itself stays on canvas; MIDI/audio/score/text mood do a full reset. ◆ If status says "loading piano…", wait a few seconds (~5 MB sample); it falls back to a synth if that fails.`},
     {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to print-ready.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A1 · print-ready (high-res, gallery-grade). Same song always gives the same painting — your songs have signatures now. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A1 · print-ready size.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favorites`, body:`Tap ♡ at the top left of a finished painting to keep it. ☰ → ♥ Favorites shows them again, one by one on the canvas. No limit.`, more:`♥ keeps the painting's address, not a picture: the song's notes, the painter — or the fusion with each member's variant — the palette, the tone and the canvas; opening it repaints the painting from there. ◆ The heart shows only on a finished painting — not while the music plays or you record. Tap it again to take the painting out (Undo brings it back). ◆ ☰ → ♥ Favorites: swipe left / right or tap ‹ › to move between them; in fullscreen, swipe up for the next. Nothing plays there — the Pick a look strip and Play are off. CLEAR ALL removes every favorite at once (tap twice; Undo brings them back). ↓ Save works as always — Story, Web, Print A1, Gallery — for the painting on screen; ✕ Close takes you back exactly where you were. ◆ Favorites live on this device, in this browser. A painting is painted for the screen you open it on, exactly as it would be painted there live — after an update to a painter it may look a little different. ◆ The song itself goes to My Music with the small ♫ + MY MUSIC chip next to its title (MIDI, MP3 or score files).`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 (early-bird, then €14.99) → all 24 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 (early-bird, then €24.99) adds unlimited AI. Tip: on Free, tap your favourite locked artist once — it unlocks for you to try.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked, 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark. Each AI mode gets 1 free try: text mood, Mood-from-image, AI Compose — and Atmosphere + Melody share two tries between them. ◆ Pro €9.99 (early-bird, then €14.99) — all 24 artists, all paint types, editable Custom palette, print-ready exports without watermark, lifetime access (no AI). ◆ Pro AI €19.99 (early-bird, then €24.99) — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere & Melody. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time. ◆ Composer voices for pictures: Free has Chopin + Satie; Pro unlocks all twelve. ◆ Ensemble — Fusion (painters crossed into one style) and Jam session (composers trading phrases) — is Pro too; switch it on in Setup.`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, on by default with Pro (Setup → Ensemble). Fusion: 2–5 painters crossed into one new style that paints the whole song. Jam session: 2–5 composers trading phrases on one picture. Each has its own button next to 🔀 — and the two combine.`, more:`Switch Ensemble on in Setup and a second button appears beside 🔀 ◎. Tap it to put a stage up: tap chips to build it — up to five, in the order you tap them; each wears its number, tapping it again takes it off. The artist on screen when you enter is member 1. ◆ ENSEMBLE × 🔀 — off: the stage stays as you built it. 1: Next rolls a new variant for every painter of the same crossing, each on its own. ALL: the stage you had is pinned — gold chips with a pin. Every Next keeps the pinned painters and draws 1–3 others around them (white frame, 5 at most in all); every member, pinned or not, gets a new variant. Tap a chip to pin or unpin; an unpinned painter stays on the canvas until the next draw. Nothing pinned: every Next draws a whole new crossing — 2 to 5 painters, how many and who at random from your Setup selection. Five pinned: Next rolls their variants. In 1 and ALL every Next also draws a new palette from those ticked in Setup. Switching Ensemble off in ALL hands the draw back to the plain shuffle, starting on member 1. ◆ FUSION (painting) is a crossing, not a collage. Every artist is reduced to a DNA of a dozen genes — ground, stroke vocabulary, size, edge, opacity, layout grammar, contour, palette treatment, hand-shake, connecting lines, layers, density — one gene set per variant. The painters you pick are crossed with equal weights (two → 50/50, five → 20 % each) and ONE renderer paints the whole song with the result: size, edge, contour, layout and layering become a single blended hand, while every parent keeps its signature motif (Delaunay's quartered disc, Kusama's dot swarm, Haring's figure…) and takes every Nth chord in turn — a duo really is half and half. Member 1 brings the variant you were looking at; each added painter brings a variant of their own. After that every Next draws a new variant for each member on its own — any variant of one painter can meet any variant of another. The music shapes the genes too: a dense, fast piece paints denser and more layered, a quiet one sparser and larger; register sets the stroke size, tension the contour, regularity the grid-vs-flow balance. The caption and the export read “Rothko × Pollock × Kusama”; in fullscreen a tap shows FUSION and the names. ◆ JAM SESSION (picture → music): every composer on the stage writes the whole picture in their own voice, then the floor passes along every ~5 s — one calls, the next answers from the same point of the form. It has its own button beside the composers' 🔀; switching 🔀 on pins the composers on the stage (gold chips with a pin), and every Next keeps them and seats 1–3 others around them (white frame, 5 at most). Tap a chip to pin or unpin; an unpinned composer keeps playing until the next draw. Nothing pinned: Next seats a whole new random ensemble — 2 to 5 composers, how many and who at random. ◆ IN LITE (with Ensemble on): about one Surprise in four becomes an ensemble — on music a Fusion of the drawn painter plus 1–4 more, on a picture a Jam session of 2–5 composers; how many and who is random, taken from your Setup selection. The header reads “Rothko × Kusama” or “Chopin ↔ Glass”. The next Surprise may be a soloist again. ◆ Exports stay deterministic: same song, same stage, same picture.`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, on by default with Pro (Setup → Ensemble). Fusion: 2–5 painters crossed into one new style that paints the whole song. Jam session: 2–5 composers trading phrases on one picture. Each has its own button next to 🔀 — and the two combine.`, more:`Switch Ensemble on in Setup and a second button appears beside 🔀 ◎. Tap it to put a stage up: tap chips to build it — up to five, in the order you tap them; each wears its number, tapping it again takes it off. The artist on screen when you enter is member 1. ◆ ENSEMBLE × 🔀 — off: the stage stays as you built it. 1: Next rolls a new variant for every painter of the same crossing, each on its own. ALL: the stage you had is pinned — gold chips with a pin. Every Next keeps the pinned painters and draws 1–3 others around them (white frame, 5 at most in all); every member, pinned or not, gets a new variant. Tap a chip to pin or unpin; an unpinned painter stays on the canvas until the next draw. Nothing pinned: every Next draws a whole new crossing — 2 to 5 painters, how many and who at random from your Setup selection. Five pinned: Next rolls their variants. In 1 and ALL every Next also draws a new palette from those ticked in Setup. Switching Ensemble off in ALL hands the draw back to the plain shuffle, starting on member 1. ◆ FUSION (painting) is a crossing, not a collage. Every artist is reduced to a DNA of a dozen genes — ground, stroke vocabulary, size, edge, opacity, layout grammar, contour, palette treatment, hand-shake, connecting lines, layers, density — one gene set per variant. The painters you pick are crossed with equal weights (two → 50/50, five → 20 % each) and ONE renderer paints the whole song with the result: size, edge, contour, layout and layering become a single blended hand, while every parent keeps its signature motif (Delaunay's quartered disc, Kusama's dot swarm, Haring's figure…) and takes every Nth chord in turn — a duo really is half and half. Member 1 brings the variant you were looking at; each added painter brings a variant of their own. After that every Next draws a new variant for each member on its own — any variant of one painter can meet any variant of another. The music shapes the genes too: a dense, fast piece paints denser and more layered, a quiet one sparser and larger; register sets the stroke size, tension the contour, regularity the grid-vs-flow balance. The caption and the export read “Rothko × Pollock × Kusama”; in fullscreen a tap shows FUSION and the names. ◆ JAM SESSION (picture → music): every composer on the stage writes the whole picture in their own voice, then they join on one shared pulse and in one key. The Fusion style (Setup → Ensemble) decides how: A — the floor passes every phrase (four bars), one calls, the next answers from the same point of the form; E — one new composer bred from them: one lends the harmony and accompaniment, another the tune, a third the pulse; A+E — a coin tossed on the picture’s address. It has its own button beside the composers' 🔀; switching 🔀 on pins the composers on the stage (gold chips with a pin), and every Next keeps them and seats 1–3 others around them (white frame, 5 at most). Tap a chip to pin or unpin; an unpinned composer keeps playing until the next draw. Nothing pinned: Next seats a whole new random ensemble — 2 to 5 composers, how many and who at random. ◆ IN LITE (with Ensemble on): about one Surprise in four becomes an ensemble — on music a Fusion of the drawn painter plus 1–4 more, on a picture a Jam session of 2–5 composers; how many and who is random, taken from your Setup selection. The header reads “Rothko × Kusama”, “Chopin ↔ Glass” (a relay) or “Chopin × Glass” (one bred composer). The next Surprise may be a soloist again. ◆ Exports stay deterministic: same song, same stage, same picture.`}
   ],
   DE: [
     {id:'overview', glyph:'◈', cat:'start', title:`Musik ⇄ Malerei`, body:`Gleiches Rad, beide Richtungen. Singen, tippen oder Foto droppen — die Leinwand füllt sich mit der Musik. Bild sichern, Song aufnehmen. Nimm beides mit.`, more:`Paintiano ist ein Übersetzer in beide Richtungen. Dasselbe Farbrad und Tonhöhenrad laufen in beide Richtungen. Wähle eine Quelle — Komponieren, Mikro, Musik, Bild oder eine Stimmung — und die Leinwand füllt sich, während die Musik spielt. Zwei Wege hinein: ◆ Musik → Bild: tippe eine Stimmung (jedes Gefühl, jede Sprache), spiele Klavier, sing ins Mikrofon, oder droppe MIDI, MP3 oder Noten. ◆ Bild → Musik: droppe ein Bild. Wähle einen Farbmodus, vielleicht einen Künstler. Gleiche Musik = gleiches Bild, immer. Tipp 🔀, und Next bringt eine frische Lesart — gleicher Song, andere Hand. Dann sichere das Bild und nimm die Musik auf — das sind die Teile, die du behältst.`},
@@ -19780,13 +19397,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`Dein Live-Klavier`, body:`Tippe ♪ Komponieren. Taste antippen = Stoß, halten = breiterer Block. Akkordnamen live. Backspace zurück, Leertaste Play.`, more:`Tippe ♪ KOMPONIEREN (oder Enter). Das Klavier öffnet sich. Taste antippen = kurzer Stoß, halten = breiterer Block — länger halten, breiter malen. Hardware-Tastatur geht auch: A–L weiß, W/E/T/Y/U/O/P schwarz. Backspace = rückgängig, Leertaste = Play/Pause, Enter schaltet das Klavier um. Halte einen Akkord und sein Name (C-Dur, a-Moll, D7…) erscheint live. Die Leinwand ist ein fester Rahmen im goldenen Schnitt — Reihen schrumpfen, je mehr du hinzufügst, das Bild verdichtet sich. Mit einem gewählten Maler wächst das Bild Note für Note wie bei Musik — jede Note fügt hinzu, nichts Gemaltes wird neu gezeichnet. Dasselbe gilt für Mic. Ausnahme sind Kandinsky und die Kachelmaler (Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein): Ihre Kacheln füllen immer die ganze Leinwand und ordnen sich mit jeder Note neu. Pollock und Monet malen hier in ihrer ersten Variante jeden Strich in der genauen Farbe seiner Note — grüne Note, grüner Strich. Ein Bild mit Motiv steht ab deiner ersten Note vollständig da, in ihrer Farbe, und jede weitere Note malt hinein: Monets Impression, Kathedrale von Rouen, Heuhaufen, Pappeln und japanische Brücke, Delaunays Eiffelturm, Hokusais Brücke, Picassos Demoiselles, Albers' Hommage an das Quadrat bei Bauhaus und Mondrians Baum. ◆ Mobil: alle 88 Tasten — wische horizontal zum Schwenken, C4 sitzt etwa mittig. ◆ Scale Snap: tippe ⚙, um alles Gespielte auf eine Tonart zu rasten; „Free" (Standard) bleibt voll chromatisch.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Sing es, mal es`, body:`Zwei MIC-Modi. 🔊 Musik hört den Raum. 🎤 Stimme rastet dein Summen auf C-Dur. Beide malen live. Original ⇄ Klavier-Umschalter danach.`, more:`Tippe 🎙 MIC. Die Leinwand öffnet scharf mit einem großen REC-Knopf. ◆ 🔊 Musik (blau, Standard): hört, was im Raum läuft — Lautsprecher, Spotify, Umgebung — und malt still, was es hört: eine Melodie als einzelne Töne, einen echten Akkord als Akkord. Lange Aufnahmen willkommen; die Leinwand wächst nach unten. ◆ 🎤 Stimme (rot): singen, summen, pfeifen. Tonhöhe rastet auf C-Dur, spielt durchs Klavier, malt Note für Note in festem φ-Rahmen. ◆ Das Badge oben links kippt Musik ⇄ Stimme; jeder behält seinen eigenen Entwurf (ein kleines ● heißt, einer wartet). Clear löscht nur den aktiven Modus. ◆ Beim Aufnehmen atmet die Leinwand sanft mit der Raumlautstärke — lauter drückt sie breiter, Stille lässt sie ruhen.`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, Audio oder Noten`, body:`Ein Knopf für jede Musikdatei. MIDI, MP3/WAV/M4A oder MusicXML aus MuseScore/Finale. Typ wird automatisch erkannt.`, more:`Ein Knopf für jede Musikdatei. ◆ MIDI (.mid / .midi) — Mehrspur kondensiert zu Akkorden, tempo-gemappt, gemalt. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekodiert, tonhöhenerkannt, gemalt; am besten bei klarem monophonem oder dünnem Material (Solo-Klavier, Gesang, einfache Gitarre) — dichte Mixe sind schwerer. ◆ Noten (.musicxml .xml .mxl aus MuseScore, Finale, Dorico) — Tonhöhen, Dauern, Dynamik und Akkorde kommen exakt durch; der genaueste Input überhaupt. Paintiano erkennt den Typ automatisch. Öffne Musik ohne Datei für die eingebauten Beispiele. ◆ Bild hören — wenn ein Musikstück fertig gemalt ist, tippe Bild hören, um das Bild selbst durch den Bildscanner laufen zu lassen. Dasselbe Bild, als Bild gehört. Musik ↔ Bild, in beide Richtungen.`},
-    {id:'image', glyph:'📷', cat:'music', title:`Foto → Musik → Bild`, body:`Droppe ein Bild. Seine Farben und Energie werden ein Klavierstück, dann malt es in jedem Künstlerstil. Free macht Scan, Pro fügt AI Compose hinzu.`, more:`Lade ein beliebiges Bild. Paintiano liest es als Partitur — links nach rechts, oben nach unten; die Länge skaliert mit der Energie des Bildes (~1½–2¾ Min). ◆ Die App wählt die Lesart danach, wie farbig das Werk ist: farbig → Harmonie oder Spektral (Farbton=Tonhöhe, Helligkeit=Oktave, Lebendigkeit=Lautstärke); fast monochrom (Guernica, Tusche, Sepia) → S/W. ◆ Eigen ist deins: nur Farben nah deinen 12 klingen, der Rest verstummt — filtere Guernica durch tropische Pinks und sieh, was überlebt. ◆ Zwei Arten zu spielen: SCAN liest das Bild links-nach-rechts als Partitur (wähle die Richtung). AI COMPOSE (Pro) schreibt ein ganz neues Stück aus Palette, Energie und Stimmung des Bildes — und behält das Bild auf dem Schirm, während es spielt. ◆ KOMPONIST liegt dazwischen: dasselbe Bild neu komponiert in der Stimme von Chopin, Glass oder Bach — siehe Karte Komponisten.`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`Zwölf Komponisten`, body:`Bild → Musik: ein Bild kann als reiner Scan spielen — oder neu komponiert in der Stimme eines Komponisten. Chopin & Satie gratis, alle zwölf in Pro — dazu wird täglich ein Pro-Komponist und ein Pro-Künstler für alle freigeschaltet (✦ heute). Setup → Komponisten wählt das Set.`, more:`Die Komponisten leben auf der Bildseite — der Bild→Musik-Spiegel der 24 Künstler. Lade ein Bild, und es kann auf zwei Arten spielen. ◆ SCAN liest es wörtlich, von links nach rechts, wie eine Partitur. ◆ KOMPONIST komponiert dasselbe Bild neu in der Stimme eines Komponisten — seine Farben und Energie, phrasiert von einem anderen musikalischen Geist. ◆ Frédéric Chopin — der romantische Dichter des Klaviers; singende Linien, reiche Harmonik. ◆ Erik Satie — französischer Minimalismus, bevor es das Wort gab; karge Akkorde, die schweben. ◆ George Gershwin — Jazzharmonik im Konzertsaal; Blue Notes blühen. ◆ Philip Glass — sich wiederholende Zellen, die sich um einen Grad verschieben; die Musik atmet in Mustern. ◆ Carl Vine — zeitgenössische australische Energie; kantig, hell, rhythmisch. ◆ Yiruma — modernes lyrisches Klavier; weite, ruhige Wellen. ◆ J. S. Bach — zweistimmige Invention; laufende Sechzehntel über einem schreitenden Bass, Terrassendynamik, kein Pedal. ◆ Beethoven — Sonate in vier Räumen: Mondschein-Triolen, ein Allegro-Thema über Alberti-Bass, ein Tremolo-Sturm, gehämmerte Akkorde; Sforzato und plötzliches Piano. ◆ Debussy — Impressionismus; pentatonische Ruhe, Ganzton-Schimmer, Parallelakkorde unter langem Pedal. ◆ Rachmaninow — die große russische Leinwand; Arpeggien über drei Oktaven, Melodie in Oktaven, Glocken. ◆ Einaudi — ein Ostinato, das sich nie ändert; Schicht auf Schicht bis zu einem einzigen langen Crescendo. ◆ Hisaishi — der Ghibli-Walzer; eine Melodie, die eine Sexte springt und wieder herabsteigt, add9-Wärme. ◆ Gleiches Bild, anderer Komponist → ein wirklich anderes Stück; die Kopfzeile nennt „inspired by …“. In Lite würfelt ↻ Überrasch mich Scan oder einen anderen Komponisten auf demselben Bild. In Advanced mischt der 🔀-Knopf über den Komponisten (Next, oder Wischen nach oben im Vollbild, würfelt einen anderen Komponisten); daneben setzt Jam session (Ensemble, Pro) mehrere Komponisten an, die sich Phrasen zuspielen. Setup → Komponisten bestimmt, wer im Spiel ist. Free enthält Chopin + Satie; Pro schaltet alle zwölf frei.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → Musik → Bild`, body:`Droppe ein Bild. Seine Farben und Energie werden ein Klavierstück, dann malt es in jedem Künstlerstil. Free macht Scan, Pro fügt AI Compose hinzu.`, more:`Lade ein beliebiges Bild. Paintiano liest es als Partitur — links nach rechts, oben nach unten; die Länge skaliert mit der Energie des Bildes (~1¼–4 Min). Beim Abspielen zeigt ein sanftes Lichtband, wo die Musik gerade liest, und die Melodie zieht einen Faden entlang des Wegs. ◆ Die App wählt die Lesart danach, wie farbig das Werk ist: farbig → Harmonie oder Spektral (Farbton=Tonhöhe, Helligkeit=Oktave, Lebendigkeit=Lautstärke); fast monochrom (Guernica, Tusche, Sepia) → S/W. ◆ Eigen ist deins: nur Farben nah deinen 12 klingen, der Rest verstummt — filtere Guernica durch tropische Pinks und sieh, was überlebt. ◆ Zwei Arten zu spielen: SCAN liest das Bild links-nach-rechts als Partitur (wähle die Richtung). AI COMPOSE (Pro) schreibt ein ganz neues Stück aus Palette, Energie und Stimmung des Bildes — und behält das Bild auf dem Schirm, während es spielt. ◆ KOMPONIST liegt dazwischen: dasselbe Bild neu komponiert in der Stimme von Chopin, Glass oder Bach — siehe Karte Komponisten.`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`Zwölf Komponisten`, body:`Bild → Musik: ein Bild kann als reiner Scan spielen — oder neu komponiert in der Stimme eines Komponisten. Chopin & Satie gratis, alle zwölf in Pro — dazu wird täglich ein Pro-Komponist und ein Pro-Künstler für alle freigeschaltet (✦ heute). Setup → Komponisten wählt das Set.`, more:`Die Komponisten leben auf der Bildseite — der Bild→Musik-Spiegel der 24 Künstler. Lade ein Bild, und es kann auf zwei Arten spielen. ◆ SCAN liest es wörtlich, von links nach rechts, wie eine Partitur. ◆ KOMPONIST komponiert dasselbe Bild neu in der Stimme eines Komponisten. Der Komponist behält seine Sprache; jede Entscheidung darin trifft das Bild: die Melodie folgt der Linie, die das Bild zeichnet, die Harmonie wandert in Leserichtung durch seine Farbfelder, Akzente fallen auf seine Kanten, der Höhepunkt liegt dort, wohin das Auge gezogen wird, der Modus kommt aus Licht und Wärme, das Tempo aus der Energie, die Form aus der Symmetrie — und die Leserichtung (Zeilen, Spalten, Spirale; die Chips stehen direkt unter den Komponisten) ergibt ein anderes Stück. Jeder Komponist liest das Bild außerdem in vier Formen — original, rückwärts, umgekehrt (sein Negativ) oder beides — so ergeben ein Bild, ein Komponist und eine Richtung trotzdem vier verschiedene Stücke. ◆ Frédéric Chopin — der romantische Dichter des Klaviers; singende Linien, reiche Harmonik. ◆ Erik Satie — französischer Minimalismus, bevor es das Wort gab; karge Akkorde, die schweben. ◆ George Gershwin — Jazzharmonik im Konzertsaal; Blue Notes blühen. ◆ Philip Glass — sich wiederholende Zellen, die sich um einen Grad verschieben; die Musik atmet in Mustern. ◆ Carl Vine — zeitgenössische australische Energie; kantig, hell, rhythmisch. ◆ Yiruma — modernes lyrisches Klavier; weite, ruhige Wellen. ◆ J. S. Bach — zweistimmige Invention; laufende Sechzehntel über einem schreitenden Bass, Terrassendynamik, kein Pedal. ◆ Beethoven — Sonate in vier Räumen: Mondschein-Triolen, ein Allegro-Thema über Alberti-Bass, ein Tremolo-Sturm, gehämmerte Akkorde; Sforzato und plötzliches Piano. ◆ Debussy — Impressionismus; pentatonische Ruhe, Ganzton-Schimmer, Parallelakkorde unter langem Pedal. ◆ Rachmaninow — die große russische Leinwand; Arpeggien über drei Oktaven, Melodie in Oktaven, Glocken. ◆ Einaudi — ein Ostinato, das sich nie ändert; Schicht auf Schicht bis zu einem einzigen langen Crescendo. ◆ Hisaishi — der Ghibli-Walzer; eine Melodie, die eine Sexte springt und wieder herabsteigt, add9-Wärme. ◆ Gleiches Bild, anderer Komponist → ein wirklich anderes Stück; die Kopfzeile nennt „inspired by …“. In Lite würfelt ↻ Überrasch mich Scan oder einen anderen Komponisten auf demselben Bild. In Advanced mischt der 🔀-Knopf über den Komponisten (Next, oder Wischen nach oben im Vollbild, würfelt einen anderen Komponisten); daneben setzt Jam session (Ensemble, Pro) mehrere Komponisten an, die sich Phrasen zuspielen. Setup → Komponisten bestimmt, wer im Spiel ist. Free enthält Chopin + Satie; Pro schaltet alle zwölf frei.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, Loop, Mute, Clear`, body:`Play/Pause und Leiste suchen. ⟳ Loop wiederholt. 🔊 Mute malt in Stille. Clear setzt zurück — klug, je Modus.`, more:`Die Wiedergabe-Steuerung. ◆ Play startet und pausiert (auch Leertaste); tippe die Fortschrittsleiste zum Springen, ziehe zum Scrubben. ◆ ⟳ LOOP lässt ein Stimmungsstück wiederholen; gold wenn an. ◆ 🔊 / 🔇 Mute stummschaltet alles Audio, während das Bild weiter entsteht — über Sitzungen gemerkt. ◆ Clear ist modusbewusst: Compose löscht die Leinwand und bleibt; MIC verwirft nur den Entwurf des aktiven Modus; Image verwirft den Entwurf, sodass Setup wieder leer ist — das Bild bleibt auf der Leinwand; MIDI/Audio/Noten/Text-Stimmung machen einen vollen Reset. ◆ Steht da „loading piano…", warte ein paar Sekunden (~5 MB Sample); klappt das nicht, schaltet es auf ein Synth-Klavier.`},
     {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Sichern → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf druckfertig.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SICHERN exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A1 · druckfertig (hochauflösend, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. ◆ ⏺ AUFNEHMEN (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ NOTEN wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A1 · druckfertig frei.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoriten`, body:`Tippe bei einem fertigen Bild oben links auf ♡, um es zu behalten. ☰ → ♥ Favoriten zeigt sie wieder, eins nach dem anderen auf der Leinwand. Ohne Limit.`, more:`♥ behält die Adresse des Bildes, kein Bild: die Noten des Songs, den Maler — oder die Fusion mit der Variante jedes Mitglieds —, Palette, Ton und Leinwand; beim Öffnen wird das Bild daraus neu gemalt. ◆ Das Herz erscheint nur bei einem fertigen Bild — nicht, während die Musik spielt oder du aufnimmst. Erneut tippen nimmt das Bild heraus (Rückgängig holt es zurück). ◆ ☰ → ♥ Favoriten: nach links / rechts wischen oder ‹ › tippen zum Blättern; im Vollbild nach oben wischen für das nächste. Dort spielt nichts — die Leiste „Wähle einen Look“ und Play sind aus. ALLE LÖSCHEN entfernt alle Favoriten auf einmal (zweimal tippen; Rückgängig holt sie zurück). ↓ Sichern funktioniert wie immer — Story, Web, Druck A1, Galerie — für das Bild auf der Leinwand; ✕ Schließen bringt dich genau dorthin zurück, wo du warst. ◆ Favoriten liegen auf diesem Gerät, in diesem Browser. Ein Bild wird für den Bildschirm gemalt, auf dem du es öffnest — genau so, wie es dort live gemalt würde; nach einem Update eines Malers kann es etwas anders aussehen. ◆ Den Song selbst legst du mit dem kleinen Chip ♫ + MEINE MUSIK neben seinem Titel in Meine Musik (MIDI-, MP3- oder Notendateien).`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € (Early-bird, dann 14,99 €) → alle 24 Künstler, editierbare Eigen-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € (Early-bird, dann 24,99 €) fügt unbegrenzte KI hinzu. Tipp: Tippe bei Free deinen liebsten gesperrten Künstler einmal an — er wird zum Ausprobieren freigeschaltet.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet, 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Eigen-Palette schreibgeschützt, Exporte mit Wasserzeichen. Jeder KI-Modus hat 1 Gratisversuch: Text-Stimmung, Stimmung aus Bild, KI komponieren — und Atmosphäre + Melodie teilen sich zwei Versuche. ◆ Pro €9.99 (Early-bird, dann €14.99) — alle 24 Künstler, alle Maltypen, editierbare Eigen-Palette, druckfertige Exporte ohne Wasserzeichen, lebenslanger Zugang (ohne KI). ◆ Pro KI €19.99 (Early-bird, dann €24.99) — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Stimmung aus Bild, KI komponieren, KI-Atmosphäre & Melodie. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit. ◆ Komponistenstimmen für Bilder: Free hat Chopin + Satie; Pro schaltet alle zwölf frei. ◆ Ensemble — Fusion (Maler zu einer Handschrift gekreuzt) und Jam session (Komponisten spielen sich Phrasen zu) — ist ebenfalls Pro; im Setup einschalten.`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, mit Pro standardmäßig an (Setup → Ensemble). Fusion: 2–5 Maler zu einer neuen Handschrift gekreuzt, die den ganzen Song malt. Jam session: 2–5 Komponisten spielen sich auf einem Bild Phrasen zu. Jedes hat einen eigenen Knopf neben 🔀 — und beide lassen sich kombinieren.`, more:`Schalte Ensemble im Setup ein, und neben 🔀 erscheint ein zweiter Knopf ◎. Tipp ihn, um eine Bühne aufzubauen: Chips tippen — bis zu fünf, in der Reihenfolge des Tippens; jeder trägt seine Nummer, nochmal tippen nimmt ihn herunter. Der Künstler auf dem Schirm beim Einstieg ist Mitglied 1. ◆ ENSEMBLE × 🔀 — aus: die Bühne bleibt, wie du sie gebaut hast. 1: Next würfelt jedem Maler derselben Kreuzung eine neue Variante, jedem für sich. ALL: die Bühne, die du hattest, wird angeheftet — goldene Chips mit Nadel. Jedes Next behält die Angehefteten und zieht 1–3 weitere dazu (weißer Rahmen, insgesamt höchstens 5); jedes Mitglied, angeheftet oder nicht, bekommt eine neue Variante. Ein Tipp auf einen Chip heftet an oder löst; ein gelöster Maler bleibt bis zur nächsten Ziehung auf der Leinwand. Nichts angeheftet: jedes Next zieht eine ganz neue Kreuzung — 2 bis 5 Maler, wie viele und wer per Zufall aus deiner Setup-Auswahl. Fünf angeheftet: Next würfelt ihre Varianten. In 1 und ALL zieht jedes Next auch eine neue Palette aus den im Setup gewählten. Schaltest du Ensemble in ALL aus, übernimmt wieder der normale Zufall, beginnend bei Mitglied 1. ◆ FUSION (Malerei) ist eine Kreuzung, keine Collage. Jeder Künstler wird auf eine DNA aus einem Dutzend Genen reduziert — Grund, Strichvokabular, Größe, Kante, Deckkraft, Layout-Grammatik, Kontur, Palettenbehandlung, Handzittern, Verbindungslinien, Schichten, Dichte — ein Gensatz pro Variante. Die gewählten Maler werden mit gleichen Gewichten gekreuzt (zwei → 50/50, fünf → je 20 %), und EIN Renderer malt damit den ganzen Song: Größe, Kante, Kontur, Layout und Schichtung werden eine einzige gemischte Hand, während jeder Elternteil sein Signaturmotiv behält (Delaunays geviertelte Scheibe, Kusamas Punktschwarm, Harings Figur …) und reihum jeden N-ten Akkord übernimmt — ein Duo ist wirklich halb und halb. Mitglied 1 bringt die Variante mit, die du gerade gesehen hast; jeder hinzugefügte Maler bringt eine eigene. Danach würfelt jedes Next jedem Mitglied eine neue Variante, jedem für sich — jede Variante eines Malers kann jeder Variante eines anderen begegnen. Auch die Musik formt die Gene: ein dichtes, schnelles Stück malt dichter und geschichteter, ein leises spärlicher und größer; das Register setzt die Strichgröße, die Spannung die Kontur, die Regelmäßigkeit das Verhältnis Raster/Fluss. Bildunterschrift und Export lauten „Rothko × Pollock × Kusama“; im Vollbild zeigt ein Tipp FUSION und die Namen. ◆ JAM SESSION (Bild → Musik): jeder Komponist auf der Bühne schreibt das ganze Bild in seiner Stimme, dann wandert das Wort alle ~5 s weiter — einer ruft, der nächste antwortet von derselben Stelle der Form. Es hat einen eigenen Knopf neben dem 🔀 der Komponisten; schaltest du 🔀 an, werden die Komponisten auf der Bühne angeheftet (goldene Chips mit Nadel), und jedes Next behält sie und setzt 1–3 weitere dazu (weißer Rahmen, höchstens 5). Ein Tipp auf einen Chip heftet an oder löst; ein gelöster Komponist spielt bis zur nächsten Ziehung weiter. Nichts angeheftet: Next setzt ein ganz neues zufälliges Ensemble — 2 bis 5 Komponisten, wie viele und wer per Zufall. ◆ IN LITE (mit Ensemble an): etwa jedes vierte Überrasch mich wird ein Ensemble — bei Musik eine Fusion aus dem gezogenen Maler plus 1–4 weiteren, bei einem Bild eine Jam session aus 2–5 Komponisten; wie viele und wer, ist Zufall, gezogen aus deiner Setup-Auswahl. Die Kopfzeile lautet „Rothko × Kusama“ oder „Chopin ↔ Glass“. Das nächste Überrasch mich kann wieder ein Solist sein. ◆ Exporte bleiben deterministisch: gleicher Song, gleiche Bühne, gleiches Bild.`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, mit Pro standardmäßig an (Setup → Ensemble). Fusion: 2–5 Maler zu einer neuen Handschrift gekreuzt, die den ganzen Song malt. Jam session: 2–5 Komponisten spielen sich auf einem Bild Phrasen zu. Jedes hat einen eigenen Knopf neben 🔀 — und beide lassen sich kombinieren.`, more:`Schalte Ensemble im Setup ein, und neben 🔀 erscheint ein zweiter Knopf ◎. Tipp ihn, um eine Bühne aufzubauen: Chips tippen — bis zu fünf, in der Reihenfolge des Tippens; jeder trägt seine Nummer, nochmal tippen nimmt ihn herunter. Der Künstler auf dem Schirm beim Einstieg ist Mitglied 1. ◆ ENSEMBLE × 🔀 — aus: die Bühne bleibt, wie du sie gebaut hast. 1: Next würfelt jedem Maler derselben Kreuzung eine neue Variante, jedem für sich. ALL: die Bühne, die du hattest, wird angeheftet — goldene Chips mit Nadel. Jedes Next behält die Angehefteten und zieht 1–3 weitere dazu (weißer Rahmen, insgesamt höchstens 5); jedes Mitglied, angeheftet oder nicht, bekommt eine neue Variante. Ein Tipp auf einen Chip heftet an oder löst; ein gelöster Maler bleibt bis zur nächsten Ziehung auf der Leinwand. Nichts angeheftet: jedes Next zieht eine ganz neue Kreuzung — 2 bis 5 Maler, wie viele und wer per Zufall aus deiner Setup-Auswahl. Fünf angeheftet: Next würfelt ihre Varianten. In 1 und ALL zieht jedes Next auch eine neue Palette aus den im Setup gewählten. Schaltest du Ensemble in ALL aus, übernimmt wieder der normale Zufall, beginnend bei Mitglied 1. ◆ FUSION (Malerei) ist eine Kreuzung, keine Collage. Jeder Künstler wird auf eine DNA aus einem Dutzend Genen reduziert — Grund, Strichvokabular, Größe, Kante, Deckkraft, Layout-Grammatik, Kontur, Palettenbehandlung, Handzittern, Verbindungslinien, Schichten, Dichte — ein Gensatz pro Variante. Die gewählten Maler werden mit gleichen Gewichten gekreuzt (zwei → 50/50, fünf → je 20 %), und EIN Renderer malt damit den ganzen Song: Größe, Kante, Kontur, Layout und Schichtung werden eine einzige gemischte Hand, während jeder Elternteil sein Signaturmotiv behält (Delaunays geviertelte Scheibe, Kusamas Punktschwarm, Harings Figur …) und reihum jeden N-ten Akkord übernimmt — ein Duo ist wirklich halb und halb. Mitglied 1 bringt die Variante mit, die du gerade gesehen hast; jeder hinzugefügte Maler bringt eine eigene. Danach würfelt jedes Next jedem Mitglied eine neue Variante, jedem für sich — jede Variante eines Malers kann jeder Variante eines anderen begegnen. Auch die Musik formt die Gene: ein dichtes, schnelles Stück malt dichter und geschichteter, ein leises spärlicher und größer; das Register setzt die Strichgröße, die Spannung die Kontur, die Regelmäßigkeit das Verhältnis Raster/Fluss. Bildunterschrift und Export lauten „Rothko × Pollock × Kusama“; im Vollbild zeigt ein Tipp FUSION und die Namen. ◆ JAM SESSION (Bild → Musik): jeder Komponist auf der Bühne schreibt das ganze Bild in seiner Stimme, dann spielen sie auf gemeinsamem Puls und in einer Tonart zusammen. Der Fusionsstil (Setup → Ensemble) entscheidet, wie: A — das Wort wandert jede Phrase (vier Takte) weiter, einer ruft, der nächste antwortet von derselben Stelle der Form; E — ein neuer Komponist, aus ihnen gekreuzt: einer gibt Harmonie und Begleitung, ein anderer die Melodie, ein dritter den Puls; A+E — eine Münze auf der Adresse des Bildes. Es hat einen eigenen Knopf neben dem 🔀 der Komponisten; schaltest du 🔀 an, werden die Komponisten auf der Bühne angeheftet (goldene Chips mit Nadel), und jedes Next behält sie und setzt 1–3 weitere dazu (weißer Rahmen, höchstens 5). Ein Tipp auf einen Chip heftet an oder löst; ein gelöster Komponist spielt bis zur nächsten Ziehung weiter. Nichts angeheftet: Next setzt ein ganz neues zufälliges Ensemble — 2 bis 5 Komponisten, wie viele und wer per Zufall. ◆ IN LITE (mit Ensemble an): etwa jedes vierte Überrasch mich wird ein Ensemble — bei Musik eine Fusion aus dem gezogenen Maler plus 1–4 weiteren, bei einem Bild eine Jam session aus 2–5 Komponisten; wie viele und wer, ist Zufall, gezogen aus deiner Setup-Auswahl. Die Kopfzeile lautet „Rothko × Kusama“, „Chopin ↔ Glass“ (Wechsel) oder „Chopin × Glass“ (ein gekreuzter Komponist). Das nächste Überrasch mich kann wieder ein Solist sein. ◆ Exporte bleiben deterministisch: gleicher Song, gleiche Bühne, gleiches Bild.`}
   ],
   FR: [
     {id:'overview', glyph:'◈', cat:'start', title:`Musique ⇄ peinture`, body:`Même roue, les deux sens. Chante, tape ou dépose une photo — la toile se remplit avec la musique. Sauve l'art, enregistre le morceau. Repars avec les deux.`, more:`Paintiano est un traducteur à double sens. La même roue des couleurs et roue des hauteurs tournent dans les deux sens. Choisis une source — Composer, Micro, Musique, Image ou une humeur — et la toile se remplit pendant que la musique joue. Deux voies d'entrée : ◆ Musique → peinture : tape une humeur (n'importe quel ressenti, n'importe quelle langue), joue du piano, chante dans le micro, ou dépose un MIDI, MP3 ou une partition. ◆ Peinture → musique : dépose une image. Choisis un mode couleur, peut-être un artiste. Même musique = même peinture, toujours. Touche 🔀 et Next apporte une lecture neuve — même morceau, autre main. Puis Sauve la peinture et Enregistre la musique — ce sont les parties que tu gardes.`},
@@ -19807,13 +19424,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`Ton piano en direct`, body:`Tape ♪ Composer. Tape une touche = coup, maintiens = bloc plus large. Noms d'accords en direct. Backspace annule, Espace joue.`, more:`Tape ♪ COMPOSER (ou Entrée). Le piano s'ouvre. Tape une touche = coup rapide, maintiens = bloc plus large — plus long maintien, plus large peinture. Le clavier matériel marche aussi : A–L blanches, W/E/T/Y/U/O/P noires. Backspace = annuler, Espace = play/pause, Entrée bascule le piano. Maintiens un accord et son nom (Do maj, La min, Ré7…) apparaît en direct. La toile est un cadre fixe au nombre d'or — les rangées rétrécissent à mesure que tu ajoutes, la peinture se densifie. Avec un peintre choisi, la peinture grandit note après note comme avec Musique — chaque note ajoute, rien de déjà peint n'est redessiné. Pareil pour Mic. Exception : Kandinsky et les peintres à tuiles (Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein) — leurs tuiles remplissent toujours toute la toile et se réorganisent à chaque note. Ici, Pollock et Monet dans leur première variante peignent chaque trait dans la couleur exacte de sa note — note verte, trait vert. Une peinture avec un motif est entière dès ta première note, dans sa couleur, et chaque note suivante peint dedans : Impression, la cathédrale de Rouen, la meule, les peupliers et le pont japonais de Monet, la tour Eiffel de Delaunay, le pont d'Hokusai, les Demoiselles de Picasso, l'Hommage au carré d'Albers chez Bauhaus et l'arbre de Mondrian. ◆ Mobile : les 88 touches sont là — glisse horizontalement pour faire défiler, Do4 est à peu près au centre. ◆ Scale snap : tape ⚙ pour caler tout ce que tu joues sur une tonalité ; « Free » (défaut) reste pleinement chromatique.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Chante-le, peins-le`, body:`Deux modes MIC. 🔊 Musique écoute la pièce. 🎤 Voix cale ton fredonnement sur Do majeur. Les deux peignent en direct. Bascule Original ⇄ Piano après.`, more:`Tape 🎙 MIC. La toile s'ouvre armée avec un gros bouton REC. ◆ 🔊 Musique (bleu, défaut) : écoute ce qui joue dans la pièce — enceinte, Spotify, ambiance quelconque — et peint en silence ce qu'il entend : une mélodie en notes seules, un vrai accord en accord. Longs enregistrements bienvenus ; la toile grandit vers le bas. ◆ 🎤 Voix (rouge) : chante, fredonne ou siffle. La hauteur se cale sur Do majeur, joue via le piano, peint note par note dans un cadre φ fixe. ◆ Le badge en haut à gauche bascule musique ⇄ voix ; chacun garde son propre brouillon (un petit ● signifie qu'un attend). Clear n'efface que le mode actif. ◆ Pendant l'enregistrement, la toile respire doucement avec le volume de la pièce — plus fort la pousse plus large, le silence la laisse reposer.`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio ou partition`, body:`Un bouton pour tout fichier musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Type détecté automatiquement.`, more:`Un bouton pour tout fichier musical. ◆ MIDI (.mid / .midi) — le multipiste se condense en accords, mappé au tempo, peint. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — décodé, hauteurs détectées, peint ; mieux sur matériel monophonique propre ou clairsemé (piano solo, voix, guitare simple) — les mix denses sont plus durs. ◆ Partition (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — hauteurs, durées, dynamiques et accords passent exacts ; l'entrée la plus précise qui soit. Paintiano détecte le type automatiquement. Ouvre Musique sans fichier pour les exemples intégrés. ◆ Écouter l'image — quand un morceau finit de peindre, touche Écouter l'image pour repasser le tableau lui-même par le scanner d'image. Le même tableau, entendu comme une image. Musique ↔ peinture, dans les deux sens.`},
-    {id:'image', glyph:'📷', cat:'music', title:`Photo → musique → peinture`, body:`Dépose une image. Ses couleurs et son énergie deviennent un morceau de piano, puis peint dans tout style d'artiste. Free fait Scan, Pro ajoute Composer IA.`, more:`Charge n'importe quelle image. Paintiano la lit comme une partition — de gauche à droite, de haut en bas ; la durée s'échelonne avec l'énergie de l'image (~1½–2¾ min). ◆ L'app choisit la lecture selon la couleur de l'œuvre : coloré → Harmonie ou Spectral (teinte=hauteur, luminosité=octave, vivacité=force) ; quasi monochrome (Guernica, encre, sépia) → N/B. ◆ Perso est à toi : seules les couleurs proches de tes 12 cases sonnent, le reste se tait — filtre Guernica par des roses tropicaux et vois ce qui survit. ◆ Deux façons de jouer : SCAN lit l'image de gauche à droite comme une partition (choisis le sens). COMPOSER IA (Pro) écrit un tout nouveau morceau à partir de la palette, l'énergie et l'humeur de l'image — et garde l'image à l'écran pendant qu'il joue. ◆ COMPOSITEUR se place entre les deux : la même image recomposée dans la voix de Chopin, Glass ou Bach — voir la carte Compositeurs.`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`Douze compositeurs`, body:`Peinture → musique : une image peut jouer en Scan pur — ou recomposée dans la voix d'un compositeur. Chopin & Satie gratuits, les douze en Pro — et chaque jour un compositeur et un artiste Pro se débloquent pour tous (✦ aujourd’hui). Setup → Compositeurs choisit le set.`, more:`Les compositeurs vivent côté image — le miroir peinture→musique des 24 artistes. Charge une image : elle peut jouer de deux façons. ◆ SCAN la lit littéralement, de gauche à droite, comme une partition. ◆ COMPOSITEUR recompose la même image dans la voix d'un compositeur — ses couleurs et son énergie, phrasées par un autre esprit musical. ◆ Frédéric Chopin — le poète romantique du piano ; lignes chantantes, harmonie riche. ◆ Erik Satie — le minimalisme français avant que le mot existe ; accords épars qui flottent. ◆ George Gershwin — l'harmonie jazz dans la salle de concert ; les blue notes fleurissent. ◆ Philip Glass — des cellules répétées qui glissent d'un degré à la fois ; la musique respire en motifs. ◆ Carl Vine — énergie australienne contemporaine ; anguleuse, claire, rythmique. ◆ Yiruma — piano lyrique moderne ; larges vagues calmes. ◆ J. S. Bach — invention à deux voix ; doubles croches courantes sur une basse qui marche, nuances en terrasses, sans pédale. ◆ Beethoven — sonate en quatre pièces : triolets du Clair de lune, un thème Allegro sur basse d'Alberti, une tempête en trémolo, accords martelés ; sforzando et piano subito. ◆ Debussy — l'impressionnisme ; calme pentatonique, miroitement par tons entiers, accords parallèles sous une longue pédale. ◆ Rachmaninov — la grande toile russe ; arpèges sur trois octaves, mélodie en octaves, cloches. ◆ Einaudi — un ostinato qui ne change jamais ; les couches s'empilent en un seul long crescendo. ◆ Hisaishi — la valse Ghibli ; une mélodie qui saute une sixte et redescend, chaleur add9. ◆ Même image, autre compositeur → un morceau vraiment différent ; l'en-tête crédite « inspired by … ». En Lite, ↻ Surprends-moi tire Scan ou un autre compositeur sur la même image. En Advanced, le bouton 🔀 au-dessus des compositeurs les mélange (Next, ou glisser vers le haut en plein écran, tire un autre compositeur) ; à côté, Jam session (Ensemble, Pro) installe plusieurs compositeurs qui s'échangent des phrases. Setup → Compositeurs décide qui est en jeu. Free inclut Chopin + Satie ; Pro débloque les douze.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Photo → musique → peinture`, body:`Dépose une image. Ses couleurs et son énergie deviennent un morceau de piano, puis peint dans tout style d'artiste. Free fait Scan, Pro ajoute Composer IA.`, more:`Charge n'importe quelle image. Paintiano la lit comme une partition — de gauche à droite, de haut en bas ; la durée s'échelonne avec l'énergie de l'image (~1¼–4 min). Pendant la lecture, une douce bande de lumière montre où la musique lit, et la mélodie trace un fil le long du parcours. ◆ L'app choisit la lecture selon la couleur de l'œuvre : coloré → Harmonie ou Spectral (teinte=hauteur, luminosité=octave, vivacité=force) ; quasi monochrome (Guernica, encre, sépia) → N/B. ◆ Perso est à toi : seules les couleurs proches de tes 12 cases sonnent, le reste se tait — filtre Guernica par des roses tropicaux et vois ce qui survit. ◆ Deux façons de jouer : SCAN lit l'image de gauche à droite comme une partition (choisis le sens). COMPOSER IA (Pro) écrit un tout nouveau morceau à partir de la palette, l'énergie et l'humeur de l'image — et garde l'image à l'écran pendant qu'il joue. ◆ COMPOSITEUR se place entre les deux : la même image recomposée dans la voix de Chopin, Glass ou Bach — voir la carte Compositeurs.`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`Douze compositeurs`, body:`Peinture → musique : une image peut jouer en Scan pur — ou recomposée dans la voix d'un compositeur. Chopin & Satie gratuits, les douze en Pro — et chaque jour un compositeur et un artiste Pro se débloquent pour tous (✦ aujourd’hui). Setup → Compositeurs choisit le set.`, more:`Les compositeurs vivent côté image — le miroir peinture→musique des 24 artistes. Charge une image : elle peut jouer de deux façons. ◆ SCAN la lit littéralement, de gauche à droite, comme une partition. ◆ COMPOSITEUR recompose la même image dans la voix d'un compositeur. Le compositeur garde son langage ; chaque décision à l'intérieur appartient à l'image : la mélodie suit la ligne que l'image dessine, l'harmonie traverse ses champs de couleur dans le sens de lecture, les accents tombent sur ses contours, le climax là où l'œil est attiré, le mode vient de sa lumière et de sa chaleur, le tempo de son énergie, la forme de sa symétrie — et le sens de lecture (lignes, colonnes, spirale ; les puces sont juste sous les compositeurs) donne un autre morceau. Chaque compositeur lit aussi l'image sous quatre formes — originale, à rebours, renversée (son négatif) ou les deux — un même tableau, un même compositeur et un même sens donnent donc encore quatre morceaux différents. ◆ Frédéric Chopin — le poète romantique du piano ; lignes chantantes, harmonie riche. ◆ Erik Satie — le minimalisme français avant que le mot existe ; accords épars qui flottent. ◆ George Gershwin — l'harmonie jazz dans la salle de concert ; les blue notes fleurissent. ◆ Philip Glass — des cellules répétées qui glissent d'un degré à la fois ; la musique respire en motifs. ◆ Carl Vine — énergie australienne contemporaine ; anguleuse, claire, rythmique. ◆ Yiruma — piano lyrique moderne ; larges vagues calmes. ◆ J. S. Bach — invention à deux voix ; doubles croches courantes sur une basse qui marche, nuances en terrasses, sans pédale. ◆ Beethoven — sonate en quatre pièces : triolets du Clair de lune, un thème Allegro sur basse d'Alberti, une tempête en trémolo, accords martelés ; sforzando et piano subito. ◆ Debussy — l'impressionnisme ; calme pentatonique, miroitement par tons entiers, accords parallèles sous une longue pédale. ◆ Rachmaninov — la grande toile russe ; arpèges sur trois octaves, mélodie en octaves, cloches. ◆ Einaudi — un ostinato qui ne change jamais ; les couches s'empilent en un seul long crescendo. ◆ Hisaishi — la valse Ghibli ; une mélodie qui saute une sixte et redescend, chaleur add9. ◆ Même image, autre compositeur → un morceau vraiment différent ; l'en-tête crédite « inspired by … ». En Lite, ↻ Surprends-moi tire Scan ou un autre compositeur sur la même image. En Advanced, le bouton 🔀 au-dessus des compositeurs les mélange (Next, ou glisser vers le haut en plein écran, tire un autre compositeur) ; à côté, Jam session (Ensemble, Pro) installe plusieurs compositeurs qui s'échangent des phrases. Setup → Compositeurs décide qui est en jeu. Free inclut Chopin + Satie ; Pro débloque les douze.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause et navigation. ⟳ Loop répète. 🔊 Mute peint en silence. Clear réinitialise — intelligemment, par mode.`, more:`Les commandes de lecture. ◆ Play démarre et met en pause (Espace aussi) ; tape la barre de progression pour sauter, glisse pour scruber. ◆ ⟳ LOOP fait répéter une pièce d'humeur ; or quand actif. ◆ 🔊 / 🔇 Mute coupe tout l'audio pendant que la peinture continue — mémorisé entre sessions. ◆ Clear est sensible au mode : Compose efface la toile et reste ; MIC abandonne seulement le brouillon du mode actif ; Image abandonne le brouillon, Setup repart à zéro — l'image reste sur la toile ; MIDI/audio/partition/humeur texte font un reset complet. ◆ Si le statut dit « loading piano… », attends quelques secondes (~5 Mo d'échantillon) ; si ça échoue, il bascule sur un piano synthé.`},
     {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Sauver → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte en qualité prête à imprimer.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAUVER exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A1 · prêt à imprimer (haute résolution, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. ◆ ⏺ ENREGISTRER (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ PARTITION transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A1 · prête à imprimer.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoris`, body:`Touche ♡ en haut à gauche d’une peinture terminée pour la garder. ☰ → ♥ Favoris te les remontre, une par une sur la toile. Sans limite.`, more:`♥ garde l’adresse de la peinture, pas une image : les notes du morceau, le peintre — ou la fusion avec la variante de chaque membre —, la palette, le ton et la toile ; l’ouvrir repeint la peinture à partir de là. ◆ Le cœur n’apparaît que sur une peinture terminée — pas pendant que la musique joue ou que tu enregistres. Touche-le à nouveau pour retirer la peinture (Annuler la ramène). ◆ ☰ → ♥ Favoris : glisse à gauche / à droite ou touche ‹ › pour passer de l’une à l’autre ; en plein écran, glisse vers le haut pour la suivante. Rien ne joue ici — le bandeau « Choisis un style » et Lecture sont coupés. TOUT EFFACER retire tous les favoris d’un coup (touche deux fois ; Annuler les ramène). ↓ Sauver fonctionne comme d’habitude — Story, Web, Impression A1, Galerie — pour la peinture à l’écran ; ✕ Fermer te ramène exactement où tu étais. ◆ Les favoris restent sur cet appareil, dans ce navigateur. Une peinture est peinte pour l’écran où tu l’ouvres, exactement comme elle y serait peinte en direct — après une mise à jour d’un peintre, elle peut paraître un peu différente. ◆ Le morceau lui-même va dans Ma musique avec la petite puce ♫ + MA MUSIQUE à côté de son titre (fichiers MIDI, MP3 ou partition).`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € (early-bird, puis 14,99 €) → les 24 artistes, palette Perso éditable, sans filigrane, à vie. Pro IA 19,99 € (early-bird, puis 24,99 €) ajoute l'IA illimitée. Astuce : en Free, touche ton artiste verrouillé préféré — il se déverrouille pour l'essayer.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués, 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Perso en lecture seule, exports avec filigrane. Chaque mode IA a 1 essai gratuit : ambiance texte, ambiance image, composer IA — et Atmosphère + Mélodie partagent deux essais. ◆ Pro €9.99 (early-bird, puis €14.99) — les 24 artistes, tous les types de peinture, palette Perso éditable, exports prêts à imprimer sans filigrane, accès à vie (sans IA). ◆ Pro IA €19.99 (early-bird, puis €24.99) — tout Pro plus IA illimitée : ambiances texte, ambiance image, composer IA, Atmosphère & Mélodie IA. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois. ◆ Voix de compositeurs pour les images : Free a Chopin + Satie ; Pro débloque les douze. ◆ Ensemble — Fusion (peintres croisés en un style) et Jam session (compositeurs qui s'échangent des phrases) — est Pro aussi ; active-le dans Setup.`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, activé par défaut avec Pro (Setup → Ensemble). Fusion : 2–5 peintres croisés en un nouveau style qui peint tout le morceau. Jam session : 2–5 compositeurs qui s'échangent des phrases sur une image. Chacun a son propre bouton à côté de 🔀 — et les deux se combinent.`, more:`Active Ensemble dans Setup et un second bouton apparaît à côté de 🔀 ◎. Touche-le pour monter une scène : touche des puces — jusqu'à cinq, dans l'ordre où tu les touches ; chacune porte son numéro, la toucher à nouveau la retire. L'artiste à l'écran à l'entrée est le membre 1. ◆ ENSEMBLE × 🔀 — off : la scène reste telle que tu l'as bâtie. 1 : Next tire une nouvelle variante pour chaque peintre du même croisement, chacun pour soi. ALL : la scène que tu avais est épinglée — puces dorées avec une épingle. Chaque Next garde les peintres épinglés et en tire 1 à 3 autres autour d'eux (cadre blanc, 5 au plus en tout) ; chaque membre, épinglé ou non, reçoit une nouvelle variante. Touche une puce pour épingler ou libérer ; un peintre libéré reste sur la toile jusqu'au tirage suivant. Rien d'épinglé : chaque Next tire un croisement entièrement nouveau — 2 à 5 peintres, combien et lesquels au hasard dans ta sélection du Setup. Cinq épinglés : Next tire leurs variantes. En 1 et ALL, chaque Next tire aussi une nouvelle palette parmi celles cochées dans le Setup. Couper Ensemble en ALL rend la main à l'aléatoire simple, en partant du membre 1. ◆ FUSION (peinture) est un croisement, pas un collage. Chaque artiste est réduit à un ADN d'une douzaine de gènes — fond, vocabulaire de traits, taille, bord, opacité, grammaire de mise en page, contour, traitement de palette, tremblé de main, lignes de liaison, couches, densité — un jeu de gènes par variante. Les peintres choisis sont croisés à poids égaux (deux → 50/50, cinq → 20 % chacun) et UN seul moteur peint tout le morceau avec le résultat : taille, bord, contour, mise en page et couches deviennent une seule main mêlée, tandis que chaque parent garde son motif signature (le disque en quartiers de Delaunay, l'essaim de points de Kusama, la figure de Haring…) et prend chaque N-ième accord à son tour — un duo est vraiment moitié-moitié. Le membre 1 apporte la variante que tu regardais ; chaque peintre ajouté apporte la sienne. Ensuite, chaque Next tire une nouvelle variante pour chaque membre, chacun pour soi — n'importe quelle variante d'un peintre peut rencontrer n'importe quelle variante d'un autre. La musique façonne aussi les gènes : un morceau dense et rapide peint plus serré et plus en couches, un morceau calme plus clairsemé et plus large ; le registre règle la taille des traits, la tension le contour, la régularité l'équilibre grille/flux. La légende et l'export indiquent « Rothko × Pollock × Kusama » ; en plein écran, une touche montre FUSION et les noms. ◆ JAM SESSION (image → musique) : chaque compositeur sur scène écrit toute l'image dans sa propre voix, puis la parole passe toutes les ~5 s — l'un appelle, le suivant répond depuis le même point de la forme. Il a son propre bouton à côté du 🔀 des compositeurs ; activer 🔀 épingle les compositeurs sur scène (puces dorées avec une épingle), et chaque Next les garde et en installe 1 à 3 autres autour d'eux (cadre blanc, 5 au plus). Touche une puce pour épingler ou libérer ; un compositeur libéré continue de jouer jusqu'au tirage suivant. Rien d'épinglé : Next installe un ensemble entièrement nouveau au hasard — 2 à 5 compositeurs, combien et lesquels au hasard. ◆ EN LITE (Ensemble activé) : environ un Surprends-moi sur quatre devient un ensemble — sur la musique une Fusion du peintre tiré plus 1 à 4 autres, sur une image un Jam session de 2 à 5 compositeurs ; combien et qui, c'est le hasard, puisé dans ta sélection du Setup. L'en-tête indique « Rothko × Kusama » ou « Chopin ↔ Glass ». Le Surprends-moi suivant peut redevenir un soliste. ◆ Les exports restent déterministes : même morceau, même scène, même image.`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, activé par défaut avec Pro (Setup → Ensemble). Fusion : 2–5 peintres croisés en un nouveau style qui peint tout le morceau. Jam session : 2–5 compositeurs qui s'échangent des phrases sur une image. Chacun a son propre bouton à côté de 🔀 — et les deux se combinent.`, more:`Active Ensemble dans Setup et un second bouton apparaît à côté de 🔀 ◎. Touche-le pour monter une scène : touche des puces — jusqu'à cinq, dans l'ordre où tu les touches ; chacune porte son numéro, la toucher à nouveau la retire. L'artiste à l'écran à l'entrée est le membre 1. ◆ ENSEMBLE × 🔀 — off : la scène reste telle que tu l'as bâtie. 1 : Next tire une nouvelle variante pour chaque peintre du même croisement, chacun pour soi. ALL : la scène que tu avais est épinglée — puces dorées avec une épingle. Chaque Next garde les peintres épinglés et en tire 1 à 3 autres autour d'eux (cadre blanc, 5 au plus en tout) ; chaque membre, épinglé ou non, reçoit une nouvelle variante. Touche une puce pour épingler ou libérer ; un peintre libéré reste sur la toile jusqu'au tirage suivant. Rien d'épinglé : chaque Next tire un croisement entièrement nouveau — 2 à 5 peintres, combien et lesquels au hasard dans ta sélection du Setup. Cinq épinglés : Next tire leurs variantes. En 1 et ALL, chaque Next tire aussi une nouvelle palette parmi celles cochées dans le Setup. Couper Ensemble en ALL rend la main à l'aléatoire simple, en partant du membre 1. ◆ FUSION (peinture) est un croisement, pas un collage. Chaque artiste est réduit à un ADN d'une douzaine de gènes — fond, vocabulaire de traits, taille, bord, opacité, grammaire de mise en page, contour, traitement de palette, tremblé de main, lignes de liaison, couches, densité — un jeu de gènes par variante. Les peintres choisis sont croisés à poids égaux (deux → 50/50, cinq → 20 % chacun) et UN seul moteur peint tout le morceau avec le résultat : taille, bord, contour, mise en page et couches deviennent une seule main mêlée, tandis que chaque parent garde son motif signature (le disque en quartiers de Delaunay, l'essaim de points de Kusama, la figure de Haring…) et prend chaque N-ième accord à son tour — un duo est vraiment moitié-moitié. Le membre 1 apporte la variante que tu regardais ; chaque peintre ajouté apporte la sienne. Ensuite, chaque Next tire une nouvelle variante pour chaque membre, chacun pour soi — n'importe quelle variante d'un peintre peut rencontrer n'importe quelle variante d'un autre. La musique façonne aussi les gènes : un morceau dense et rapide peint plus serré et plus en couches, un morceau calme plus clairsemé et plus large ; le registre règle la taille des traits, la tension le contour, la régularité l'équilibre grille/flux. La légende et l'export indiquent « Rothko × Pollock × Kusama » ; en plein écran, une touche montre FUSION et les noms. ◆ JAM SESSION (image → musique) : chaque compositeur sur scène écrit toute l'image dans sa propre voix, puis ils se joignent sur un même pouls et dans une même tonalité. Le style de fusion (Setup → Ensemble) décide comment : A — la parole passe à chaque phrase (quatre mesures), l'un appelle, le suivant répond depuis le même point de la forme ; E — un nouveau compositeur né d'eux : l'un prête l'harmonie et l'accompagnement, un autre la mélodie, un troisième le pouls ; A+E — une pièce lancée sur l'adresse de l'image. Il a son propre bouton à côté du 🔀 des compositeurs ; activer 🔀 épingle les compositeurs sur scène (puces dorées avec une épingle), et chaque Next les garde et en installe 1 à 3 autres autour d'eux (cadre blanc, 5 au plus). Touche une puce pour épingler ou libérer ; un compositeur libéré continue de jouer jusqu'au tirage suivant. Rien d'épinglé : Next installe un ensemble entièrement nouveau au hasard — 2 à 5 compositeurs, combien et lesquels au hasard. ◆ EN LITE (Ensemble activé) : environ un Surprends-moi sur quatre devient un ensemble — sur la musique une Fusion du peintre tiré plus 1 à 4 autres, sur une image un Jam session de 2 à 5 compositeurs ; combien et qui, c'est le hasard, puisé dans ta sélection du Setup. L'en-tête indique « Rothko × Kusama », « Chopin ↔ Glass » (relais) ou « Chopin × Glass » (un compositeur né d'eux). Le Surprends-moi suivant peut redevenir un soliste. ◆ Les exports restent déterministes : même morceau, même scène, même image.`}
   ],
   ES: [
     {id:'overview', glyph:'◈', cat:'start', title:`Música ⇄ pintura`, body:`La misma rueda, ambos sentidos. Canta, escribe o suelta una foto — el lienzo se llena con la música. Guarda el arte, graba la canción. Llévate ambos.`, more:`Paintiano es un traductor de doble sentido. La misma rueda de colores y rueda de tonos giran en ambos sentidos. Elige una fuente — Componer, Micro, Música, Imagen o un estado de ánimo — y el lienzo se llena mientras suena la música. Dos vías de entrada: ◆ Música → pintura: escribe un ánimo (cualquier sentimiento, cualquier idioma), toca el piano, canta al micro, o suelta un MIDI, MP3 o partitura. ◆ Pintura → música: suelta una imagen. Elige un modo de color, quizá un artista. La misma música = la misma pintura, siempre. Toca 🔀 y Next trae una lectura nueva — misma canción, otra mano. Luego Guarda la pintura y Graba la música — esas son las partes que te quedas.`},
@@ -19834,13 +19451,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`Tu piano en vivo`, body:`Toca ♪ Componer. Toca una tecla = golpe, mantén = bloque más ancho. Nombres de acordes en vivo. Backspace deshace, Espacio reproduce.`, more:`Toca ♪ COMPONER (o Enter). Se abre el piano. Toca una tecla = golpe rápido, mantén = bloque más ancho — más tiempo, más ancha la pintura. El teclado físico también: A–L blancas, W/E/T/Y/U/O/P negras. Backspace = deshacer, Espacio = play/pausa, Enter alterna el piano. Mantén un acorde y su nombre (Do may, La min, Re7…) aparece en vivo. El lienzo es un marco fijo en proporción áurea — las filas encogen al añadir, la pintura se densifica. Con un pintor elegido, la pintura crece nota a nota como con Música — cada nota añade, nada de lo ya pintado se redibuja. Lo mismo vale para Mic. Excepción: Kandinsky y los pintores de teselas (Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein) — sus teselas llenan siempre todo el lienzo y se reorganizan con cada nota. Aquí Pollock y Monet en su primera variante pintan cada trazo en el color exacto de su nota: nota verde, trazo verde. Una pintura con motivo está entera desde tu primera nota, en su color, y cada nota siguiente pinta dentro: Impresión, la catedral de Ruan, el almiar, los álamos y el puente japonés de Monet, la torre Eiffel de Delaunay, el puente de Hokusai, las Señoritas de Picasso, el Homenaje al cuadrado de Albers en Bauhaus y el árbol de Mondrian. ◆ Móvil: las 88 teclas están ahí — desliza horizontal para desplazar, Do4 queda casi al centro. ◆ Scale snap: toca ⚙ para ajustar todo lo que tocas a una tonalidad; «Free» (defecto) sigue plenamente cromático.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Cántalo, píntalo`, body:`Dos modos MIC. 🔊 Música escucha la sala. 🎤 Voz ajusta tu tarareo a Do mayor. Ambos pintan en vivo. Alterna Original ⇄ Piano después.`, more:`Toca 🎙 MIC. El lienzo se abre armado con un gran botón REC. ◆ 🔊 Música (azul, defecto): escucha lo que suena en la sala — altavoz, Spotify, ambiente cualquiera — y pinta en silencio lo que oye: una melodía como notas sueltas, un acorde real como acorde. Grabaciones largas bienvenidas; el lienzo crece hacia abajo. ◆ 🎤 Voz (rojo): canta, tararea o silba. La altura se ajusta a Do mayor, suena por el piano, pinta nota a nota en marco φ fijo. ◆ La insignia arriba a la izquierda alterna música ⇄ voz; cada uno guarda su borrador (un pequeño ● indica que uno espera). Clear borra solo el modo activo. ◆ Al grabar, el lienzo respira suave con el volumen de la sala — más fuerte lo empuja más ancho, el silencio lo deja descansar.`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio o partitura`, body:`Un botón para todo archivo musical. MIDI, MP3/WAV/M4A, o MusicXML de MuseScore/Finale. Tipo detectado automáticamente.`, more:`Un botón para todo archivo musical. ◆ MIDI (.mid / .midi) — el multipista se condensa en acordes, mapeado al tempo, pintado. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — decodificado, alturas detectadas, pintado; mejor en material monofónico limpio o escaso (piano solo, voz, guitarra simple) — las mezclas densas cuestan más. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, duraciones, dinámicas y acordes pasan exactos; la entrada más precisa que hay. Paintiano detecta el tipo automáticamente. Abre Música sin archivo para las muestras integradas. ◆ Oír imagen — cuando una pieza musical termina de pintar, pulsa Oír imagen para pasar el cuadro mismo por el escáner de imagen. El mismo cuadro, escuchado como imagen. Música ↔ pintura, en ambos sentidos.`},
-    {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Suelta una imagen. Sus colores y energía se vuelven una pieza de piano, luego pinta en cualquier estilo. Free hace Scan, Pro añade Componer IA.`, more:`Sube cualquier imagen. Paintiano la lee como partitura — de izquierda a derecha, de arriba abajo; la duración escala con la energía de la imagen (~1½–2¾ min). ◆ La app elige la lectura según lo colorida que sea: colorida → Armonía o Espectral (tono=altura, luminosidad=octava, viveza=volumen); casi monocroma (Guernica, tinta, sepia) → B/N. ◆ Personal es tuya: solo suenan los colores cercanos a tus 12 muestras, el resto calla — filtra Guernica por rosas tropicales y mira qué sobrevive. ◆ Dos formas de tocar: SCAN lee la imagen de izquierda a derecha como partitura (elige la dirección). COMPONER IA (Pro) escribe una pieza nueva a partir de la paleta, energía y ánimo de la imagen — y mantiene la imagen en pantalla mientras suena. ◆ COMPOSITOR está entre ambos: la misma imagen recompuesta con la voz de Chopin, Glass o Bach — ver la tarjeta Compositores.`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`Doce compositores`, body:`Pintura → música: una imagen puede sonar como Scan puro — o recompuesta en la voz de un compositor. Chopin y Satie gratis, los doce en Pro — y cada día un compositor y un artista Pro se desbloquean para todos (✦ hoy). Setup → Compositores elige el set.`, more:`Los compositores viven en el lado de la imagen — el espejo pintura→música de los 24 artistas. Carga una imagen y puede sonar de dos maneras. ◆ SCAN la lee literalmente, de izquierda a derecha, como una partitura. ◆ COMPOSITOR recompone la misma imagen en la voz de un compositor — sus colores y energía, fraseados por otra mente musical. ◆ Frédéric Chopin — el poeta romántico del piano; líneas que cantan, armonía rica. ◆ Erik Satie — minimalismo francés antes de que existiera la palabra; acordes escasos que flotan. ◆ George Gershwin — armonía de jazz en la sala de conciertos; las blue notes florecen. ◆ Philip Glass — células que se repiten y se desplazan un grado cada vez; la música respira en patrones. ◆ Carl Vine — energía australiana contemporánea; angulosa, brillante, rítmica. ◆ Yiruma — piano lírico moderno; olas anchas y calmas. ◆ J. S. Bach — invención a dos voces; semicorcheas corriendo sobre un bajo que camina, dinámica en terrazas, sin pedal. ◆ Beethoven — sonata en cuatro salas: tresillos de Claro de luna, un tema Allegro sobre bajo de Alberti, una tormenta en trémolo, acordes martillados; sforzando y piano súbito. ◆ Debussy — impresionismo; calma pentatónica, brillo de tonos enteros, acordes paralelos bajo un pedal largo. ◆ Rachmaninov — el gran lienzo ruso; arpegios de tres octavas, melodía en octavas, campanas. ◆ Einaudi — un ostinato que nunca cambia; las capas se apilan en un único crescendo largo. ◆ Hisaishi — el vals Ghibli; una melodía que salta una sexta y baja caminando, calidez add9. ◆ Misma imagen, otro compositor → una pieza genuinamente distinta; la cabecera acredita «inspired by …». En Lite, ↻ Sorpréndeme sortea Scan u otro compositor sobre la misma imagen. En Advanced, el botón 🔀 sobre los compositores los baraja (Next, o deslizar hacia arriba en pantalla completa, sortea otro compositor); a su lado, Jam session (Ensemble, Pro) sienta a varios compositores intercambiando frases. Setup → Compositores decide quién está en juego. Free incluye Chopin + Satie; Pro desbloquea los doce.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Suelta una imagen. Sus colores y energía se vuelven una pieza de piano, luego pinta en cualquier estilo. Free hace Scan, Pro añade Componer IA.`, more:`Sube cualquier imagen. Paintiano la lee como partitura — de izquierda a derecha, de arriba abajo; la duración escala con la energía de la imagen (~1¼–4 min). Mientras suena, una suave banda de luz muestra dónde lee la música, y la melodía dibuja un hilo a lo largo del recorrido. ◆ La app elige la lectura según lo colorida que sea: colorida → Armonía o Espectral (tono=altura, luminosidad=octava, viveza=volumen); casi monocroma (Guernica, tinta, sepia) → B/N. ◆ Personal es tuya: solo suenan los colores cercanos a tus 12 muestras, el resto calla — filtra Guernica por rosas tropicales y mira qué sobrevive. ◆ Dos formas de tocar: SCAN lee la imagen de izquierda a derecha como partitura (elige la dirección). COMPONER IA (Pro) escribe una pieza nueva a partir de la paleta, energía y ánimo de la imagen — y mantiene la imagen en pantalla mientras suena. ◆ COMPOSITOR está entre ambos: la misma imagen recompuesta con la voz de Chopin, Glass o Bach — ver la tarjeta Compositores.`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`Doce compositores`, body:`Pintura → música: una imagen puede sonar como Scan puro — o recompuesta en la voz de un compositor. Chopin y Satie gratis, los doce en Pro — y cada día un compositor y un artista Pro se desbloquean para todos (✦ hoy). Setup → Compositores elige el set.`, more:`Los compositores viven en el lado de la imagen — el espejo pintura→música de los 24 artistas. Carga una imagen y puede sonar de dos maneras. ◆ SCAN la lee literalmente, de izquierda a derecha, como una partitura. ◆ COMPOSITOR recompone la misma imagen en la voz de un compositor. El compositor conserva su lenguaje; cada decisión dentro de él es de la imagen: la melodía sigue la línea que dibuja la imagen, la armonía recorre sus campos de color en el orden de lectura, los acentos caen en sus bordes, el clímax donde la mirada es atraída, el modo nace de su luz y calidez, el tempo de su energía, la forma de su simetría — y la dirección de lectura (filas, columnas, espiral; los chips están justo debajo de los compositores) da otra pieza. Cada compositor lee además la imagen en cuatro formas — original, al revés, invertida (su negativo) o ambas — así, una imagen, un compositor y una dirección dan aún cuatro piezas distintas. ◆ Frédéric Chopin — el poeta romántico del piano; líneas que cantan, armonía rica. ◆ Erik Satie — minimalismo francés antes de que existiera la palabra; acordes escasos que flotan. ◆ George Gershwin — armonía de jazz en la sala de conciertos; las blue notes florecen. ◆ Philip Glass — células que se repiten y se desplazan un grado cada vez; la música respira en patrones. ◆ Carl Vine — energía australiana contemporánea; angulosa, brillante, rítmica. ◆ Yiruma — piano lírico moderno; olas anchas y calmas. ◆ J. S. Bach — invención a dos voces; semicorcheas corriendo sobre un bajo que camina, dinámica en terrazas, sin pedal. ◆ Beethoven — sonata en cuatro salas: tresillos de Claro de luna, un tema Allegro sobre bajo de Alberti, una tormenta en trémolo, acordes martillados; sforzando y piano súbito. ◆ Debussy — impresionismo; calma pentatónica, brillo de tonos enteros, acordes paralelos bajo un pedal largo. ◆ Rachmaninov — el gran lienzo ruso; arpegios de tres octavas, melodía en octavas, campanas. ◆ Einaudi — un ostinato que nunca cambia; las capas se apilan en un único crescendo largo. ◆ Hisaishi — el vals Ghibli; una melodía que salta una sexta y baja caminando, calidez add9. ◆ Misma imagen, otro compositor → una pieza genuinamente distinta; la cabecera acredita «inspired by …». En Lite, ↻ Sorpréndeme sortea Scan u otro compositor sobre la misma imagen. En Advanced, el botón 🔀 sobre los compositores los baraja (Next, o deslizar hacia arriba en pantalla completa, sortea otro compositor); a su lado, Jam session (Ensemble, Pro) sienta a varios compositores intercambiando frases. Setup → Compositores decide quién está en juego. Free incluye Chopin + Satie; Pro desbloquea los doce.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa y navegar la barra. ⟳ Loop repite. 🔊 Mute pinta en silencio. Clear reinicia — listo, por modo.`, more:`Los controles de reproducción. ◆ Play inicia y pausa (Espacio también); toca la barra de progreso para saltar, arrastra para hacer scrub. ◆ ⟳ LOOP mantiene una pieza de ánimo repitiendo; oro cuando está activo. ◆ 🔊 / 🔇 Mute silencia todo el audio mientras la pintura sigue generándose — recordado entre sesiones. ◆ Clear es consciente del modo: Compose borra el lienzo y se queda; MIC descarta solo el borrador del modo activo; Image descarta el borrador, Setup vuelve a empezar — la imagen sigue en el lienzo; MIDI/audio/partitura/ánimo de texto hacen un reinicio completo. ◆ Si el estado dice «loading piano…», espera unos segundos (~5 MB de muestra); si falla, pasa a un piano sintético.`},
     {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Guardar → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a calidad lista para imprimir.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ GUARDAR exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A1 · listo para imprimir (alta resolución, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. ◆ ⏺ GRABAR (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ PARTITURA convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A1 · listo para imprimir.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoritos`, body:`Toca ♡ arriba a la izquierda de una pintura terminada para guardarla. ☰ → ♥ Favoritos te las vuelve a mostrar, una a una en el lienzo. Sin límite.`, more:`♥ guarda la dirección de la pintura, no una imagen: las notas de la canción, el pintor — o la fusión con la variante de cada miembro —, la paleta, el tono y el lienzo; al abrirla se vuelve a pintar desde ahí. ◆ El corazón solo aparece en una pintura terminada — no mientras suena la música ni mientras grabas. Tócalo otra vez para quitar la pintura (Deshacer la devuelve). ◆ ☰ → ♥ Favoritos: desliza a la izquierda / derecha o toca ‹ › para pasar de una a otra; en pantalla completa, desliza hacia arriba para la siguiente. Ahí no suena nada — la tira «Elige un estilo» y Play están apagados. BORRAR TODOS quita todos los favoritos de una vez (toca dos veces; Deshacer los devuelve). ↓ Guardar funciona como siempre — Story, Web, Impresión A1, Galería — con la pintura en pantalla; ✕ Cerrar te devuelve justo a donde estabas. ◆ Los favoritos viven en este dispositivo, en este navegador. Una pintura se pinta para la pantalla en la que la abres, tal como se pintaría allí en directo — tras actualizar un pintor puede verse algo distinta. ◆ La canción en sí va a Mi música con el pequeño chip ♫ + MI MÚSICA junto a su título (archivos MIDI, MP3 o partitura).`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € (early-bird, luego 14,99 €) → los 24 artistas, paleta Personal editable, sin marca de agua, de por vida. Pro IA 19,99 € (early-bird, luego 24,99 €) añade IA ilimitada. Truco: en Free, toca tu artista bloqueado favorito — se desbloquea para probarlo.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Personal de solo lectura, exports con marca de agua. Cada modo IA tiene 1 prueba gratis: estado de texto, estado imagen, componer IA — y Atmósfera + Melodía comparten dos pruebas. ◆ Pro €9.99 (early-bird, luego €14.99) — los 24 artistas, todos los tipos de pintura, paleta Personal editable, exports listos para imprimir sin marca de agua, acceso de por vida (sin IA). ◆ Pro IA €19.99 (early-bird, luego €24.99) — todo Pro más IA ilimitada: estados de texto, estado imagen, componer IA, Atmósfera y Melodía IA. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez. ◆ Voces de compositores para imágenes: Free tiene Chopin + Satie; Pro desbloquea los doce. ◆ Ensemble — Fusión (pintores cruzados en un estilo) y Jam session (compositores intercambiando frases) — también es Pro; actívalo en Setup.`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusión & Jam session`, body:`Pro, encendido por defecto con Pro (Setup → Ensemble). Fusión: 2–5 pintores cruzados en un estilo nuevo que pinta toda la canción. Jam session: 2–5 compositores intercambiando frases sobre una imagen. Cada uno tiene su propio botón junto a 🔀 — y ambos se combinan.`, more:`Activa Ensemble en Setup y aparece un segundo botón junto a 🔀 ◎. Tócalo para montar un escenario: toca fichas — hasta cinco, en el orden en que las tocas; cada una lleva su número, tocarla otra vez la retira. El artista en pantalla al entrar es el miembro 1. ◆ ENSEMBLE × 🔀 — off: el escenario queda como lo montaste. 1: Next sortea una variante nueva para cada pintor del mismo cruce, a cada uno por separado. ALL: el escenario que tenías queda fijado — fichas doradas con una chincheta. Cada Next mantiene a los fijados y sortea de 1 a 3 más a su alrededor (marco blanco, 5 como máximo en total); cada miembro, fijado o no, recibe una variante nueva. Toca una ficha para fijarla o soltarla; un pintor soltado sigue en el lienzo hasta el siguiente sorteo. Nada fijado: cada Next sortea un cruce totalmente nuevo — de 2 a 5 pintores, cuántos y quiénes al azar de tu selección del Setup. Cinco fijados: Next sortea sus variantes. En 1 y ALL, cada Next sortea también una paleta nueva entre las marcadas en el Setup. Apagar Ensemble en ALL devuelve el sorteo al aleatorio normal, empezando por el miembro 1. ◆ FUSIÓN (pintura) es un cruce, no un collage. Cada artista se reduce a un ADN de una docena de genes — fondo, vocabulario de trazos, tamaño, borde, opacidad, gramática de composición, contorno, tratamiento de paleta, temblor de mano, líneas de unión, capas, densidad — un juego de genes por variante. Los pintores elegidos se cruzan con pesos iguales (dos → 50/50, cinco → 20 % cada uno) y UN solo motor pinta toda la canción con el resultado: tamaño, borde, contorno, composición y capas se vuelven una sola mano mezclada, mientras cada padre conserva su motivo firma (el disco en cuartos de Delaunay, el enjambre de puntos de Kusama, la figura de Haring…) y toma cada N-ésimo acorde por turnos — un dúo es de verdad mitad y mitad. El miembro 1 trae la variante que estabas viendo; cada pintor añadido trae una propia. Después, cada Next sortea una variante nueva para cada miembro, a cada uno por separado — cualquier variante de un pintor puede encontrarse con cualquier variante de otro. La música también moldea los genes: una pieza densa y rápida pinta más denso y con más capas, una tranquila más escasa y grande; el registro fija el tamaño del trazo, la tensión el contorno, la regularidad el equilibrio rejilla/flujo. El pie y la exportación dicen «Rothko × Pollock × Kusama»; en pantalla completa un toque muestra FUSIÓN y los nombres. ◆ JAM SESSION (imagen → música): cada compositor del escenario escribe toda la imagen con su propia voz y luego la palabra pasa cada ~5 s — uno llama, el siguiente responde desde el mismo punto de la forma. Tiene su propio botón junto al 🔀 de los compositores; al activar 🔀 quedan fijados los compositores del escenario (fichas doradas con una chincheta), y cada Next los mantiene y sienta de 1 a 3 más a su alrededor (marco blanco, 5 como máximo). Toca una ficha para fijarla o soltarla; un compositor soltado sigue tocando hasta el siguiente sorteo. Nada fijado: Next sienta un ensemble totalmente nuevo al azar — de 2 a 5 compositores, cuántos y quiénes al azar. ◆ EN LITE (con Ensemble activo): más o menos uno de cada cuatro Sorpréndeme se vuelve un ensemble — en música una Fusión del pintor sorteado más 1–4 más, en una imagen un Jam session de 2–5 compositores; cuántos y quiénes es azar, tomado de tu selección del Setup. La cabecera dice «Rothko × Kusama» o «Chopin ↔ Glass». El siguiente Sorpréndeme puede volver a ser un solista. ◆ Las exportaciones siguen siendo deterministas: misma canción, mismo escenario, misma imagen.`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusión & Jam session`, body:`Pro, encendido por defecto con Pro (Setup → Ensemble). Fusión: 2–5 pintores cruzados en un estilo nuevo que pinta toda la canción. Jam session: 2–5 compositores intercambiando frases sobre una imagen. Cada uno tiene su propio botón junto a 🔀 — y ambos se combinan.`, more:`Activa Ensemble en Setup y aparece un segundo botón junto a 🔀 ◎. Tócalo para montar un escenario: toca fichas — hasta cinco, en el orden en que las tocas; cada una lleva su número, tocarla otra vez la retira. El artista en pantalla al entrar es el miembro 1. ◆ ENSEMBLE × 🔀 — off: el escenario queda como lo montaste. 1: Next sortea una variante nueva para cada pintor del mismo cruce, a cada uno por separado. ALL: el escenario que tenías queda fijado — fichas doradas con una chincheta. Cada Next mantiene a los fijados y sortea de 1 a 3 más a su alrededor (marco blanco, 5 como máximo en total); cada miembro, fijado o no, recibe una variante nueva. Toca una ficha para fijarla o soltarla; un pintor soltado sigue en el lienzo hasta el siguiente sorteo. Nada fijado: cada Next sortea un cruce totalmente nuevo — de 2 a 5 pintores, cuántos y quiénes al azar de tu selección del Setup. Cinco fijados: Next sortea sus variantes. En 1 y ALL, cada Next sortea también una paleta nueva entre las marcadas en el Setup. Apagar Ensemble en ALL devuelve el sorteo al aleatorio normal, empezando por el miembro 1. ◆ FUSIÓN (pintura) es un cruce, no un collage. Cada artista se reduce a un ADN de una docena de genes — fondo, vocabulario de trazos, tamaño, borde, opacidad, gramática de composición, contorno, tratamiento de paleta, temblor de mano, líneas de unión, capas, densidad — un juego de genes por variante. Los pintores elegidos se cruzan con pesos iguales (dos → 50/50, cinco → 20 % cada uno) y UN solo motor pinta toda la canción con el resultado: tamaño, borde, contorno, composición y capas se vuelven una sola mano mezclada, mientras cada padre conserva su motivo firma (el disco en cuartos de Delaunay, el enjambre de puntos de Kusama, la figura de Haring…) y toma cada N-ésimo acorde por turnos — un dúo es de verdad mitad y mitad. El miembro 1 trae la variante que estabas viendo; cada pintor añadido trae una propia. Después, cada Next sortea una variante nueva para cada miembro, a cada uno por separado — cualquier variante de un pintor puede encontrarse con cualquier variante de otro. La música también moldea los genes: una pieza densa y rápida pinta más denso y con más capas, una tranquila más escasa y grande; el registro fija el tamaño del trazo, la tensión el contorno, la regularidad el equilibrio rejilla/flujo. El pie y la exportación dicen «Rothko × Pollock × Kusama»; en pantalla completa un toque muestra FUSIÓN y los nombres. ◆ JAM SESSION (imagen → música): cada compositor del escenario escribe toda la imagen con su propia voz y luego se unen con un mismo pulso y en una misma tonalidad. El estilo de fusión (Setup → Ensemble) decide cómo: A — la palabra pasa cada frase (cuatro compases), uno llama, el siguiente responde desde el mismo punto de la forma; E — un compositor nuevo nacido de ellos: uno presta la armonía y el acompañamiento, otro la melodía, un tercero el pulso; A+E — una moneda lanzada sobre la dirección de la imagen. Tiene su propio botón junto al 🔀 de los compositores; al activar 🔀 quedan fijados los compositores del escenario (fichas doradas con una chincheta), y cada Next los mantiene y sienta de 1 a 3 más a su alrededor (marco blanco, 5 como máximo). Toca una ficha para fijarla o soltarla; un compositor soltado sigue tocando hasta el siguiente sorteo. Nada fijado: Next sienta un ensemble totalmente nuevo al azar — de 2 a 5 compositores, cuántos y quiénes al azar. ◆ EN LITE (con Ensemble activo): más o menos uno de cada cuatro Sorpréndeme se vuelve un ensemble — en música una Fusión del pintor sorteado más 1–4 más, en una imagen un Jam session de 2–5 compositores; cuántos y quiénes es azar, tomado de tu selección del Setup. La cabecera dice «Rothko × Kusama», «Chopin ↔ Glass» (relevo) o «Chopin × Glass» (un compositor nacido de ellos). El siguiente Sorpréndeme puede volver a ser un solista. ◆ Las exportaciones siguen siendo deterministas: misma canción, mismo escenario, misma imagen.`}
   ],
   SK: [
     {id:'overview', glyph:'◈', cat:'start', title:`Hudba ⇄ maľba`, body:`To isté koleso, oboma smermi. Spievaj, píš alebo hoď fotku — plátno sa plní s hudbou. Ulož maľbu, nahraj pieseň. Odnesieš si oboje.`, more:`Paintiano je obojsmerný prekladač. To isté farebné koleso a koleso tónov beží oboma smermi. Vyber zdroj — Komponovať, Mikro, Hudba, Obraz alebo nálada — a plátno sa plní, ako hrá hudba. Dve cesty dnu: ◆ Hudba → maľba: napíš náladu (akýkoľvek pocit, akýkoľvek jazyk), hraj na klavíri, spievaj do mikrofónu, alebo hoď MIDI, MP3 či noty. ◆ Maľba → hudba: hoď obrázok. Vyber farebný mód, prípadne umelca. Tá istá hudba = tá istá maľba, vždy. Ťukni na 🔀 a Next prinesie nový pohľad — tá istá skladba, iná ruka. Potom Ulož maľbu a Nahraj hudbu — to sú časti, ktoré si necháš.`},
@@ -19861,13 +19478,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`Tvoj živý klavír`, body:`Klikni ♪ Komponovať. Klik na kláves = úder, podrž = širší blok. Názvy akordov naživo. Backspace späť, Space play.`, more:`Klikni ♪ KOMPONOVAŤ (alebo Enter). Otvorí sa klavír. Klik na kláves = rýchly úder, podrž = širší blok — dlhšie držanie, širšia maľba. Funguje aj hardvérová klávesnica: A–L biele, W/E/T/Y/U/O/P čierne. Backspace = späť, Space = play/pause, Enter prepína klavír. Podrž akord a jeho názov (C dur, A mol, D7…) sa zjaví naživo. Plátno je pevný rám zlatého rezu — riadky sa zmenšujú, ako pridávaš, maľba hustne. So zvoleným maliarom maľba rastie nota po note ako pri Music — každá nota pridáva, nič už namaľované sa neprekresľuje. To isté platí pre Mic. Výnimkou sú Kandinsky a dlaždicoví maliari (Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein): ich dlaždice vždy vyplnia celé plátno a s každou notou sa preusporiadajú. Pollock a Monet v prvom variante tu maľujú každý ťah presnou farbou jeho noty — zelený tón, zelený ťah. Maľba s motívom stojí celá od tvojej prvej noty, v jej farbe, a každá ďalšia nota do nej maľuje: Monetova Impression, katedrála v Rouene, stoh, topole a japonský most, Delaunayho Eiffelova veža, Hokusaiho most, Picassove Avignonské slečny, Albersova Pocta štvorcu v Bauhause a Mondrianov strom. ◆ Mobil: celých 88 klávesov — potiahni vodorovne na posun, C4 je zhruba v strede. ◆ Scale snap: klikni ⚙ a všetko, čo hráš, prichytíš na tóninu; „Free" (default) ostáva plne chromatický.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Zaspievaj, namaľuj`, body:`Dva MIC módy. 🔊 Hudba počúva miestnosť. 🎤 Hlas prichytí tvoje hmkanie na C dur. Oba maľujú live. Original ⇄ Piano prepínač potom.`, more:`Klikni 🎙 MIC. Plátno sa otvorí nabité veľkým REC tlačidlom. ◆ 🔊 Hudba (modrá, default): počúva, čo hrá v miestnosti — reproduktor, Spotify, ambient čokoľvek — a ticho maľuje, čo počuje: melódiu ako jednotlivé tóny, skutočný akord ako akord. Dlhé nahrávky vítané; plátno rastie nadol. ◆ 🎤 Hlas (červená): spievaj, hmkaj alebo pískaj. Tón sa prichytí na C dur, hrá cez klavír, maľuje tón po tóne v pevnom φ-ráme. ◆ Odznak vľavo hore prepína hudba ⇄ hlas; každý drží vlastný draft (malé ● znamená, že jeden čaká). Clear zmaže len aktívny mód. ◆ Počas nahrávania plátno jemne dýcha s hlasitosťou miestnosti — hlasnejšie ho potlačí širšie, ticho ho nechá oddýchnuť.`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, audio či noty`, body:`Jedno tlačidlo pre každý hudobný súbor. MIDI, MP3/WAV/M4A, alebo MusicXML z MuseScore/Finale. Typ sa rozpozná automaticky.`, more:`Jedno tlačidlo pre každý hudobný súbor. ◆ MIDI (.mid / .midi) — multi-track sa zhustí na akordy, tempo-mapuje, maľuje. ◆ Audio (.mp3 .wav .m4a .ogg .aac) — dekóduje, deteguje tóny, maľuje; najlepšie na čistý monofónny alebo riedky materiál (sólo klavír, vokál, jednoduchá gitara) — husté mixy sú ťažšie. ◆ Noty (.musicxml .xml .mxl z MuseScore, Finale, Dorico) — tóny, trvania, dynamika aj akordy prejdú presne; najpresnejší vstup, aký je. Paintiano rozpozná typ automaticky. Otvor Hudbu bez súboru pre vstavané ukážky. ◆ Počuť obraz — keď hudobná skladba dokončí maľovanie, klepni Počuť obraz a maľba sa sama pošle cez obrazový skener. Tá istá maľba, počutá ako obrázok. Hudba ↔ maľba, oboma smermi.`},
-    {id:'image', glyph:'📷', cat:'music', title:`Foto → hudba → maľba`, body:`Hoď fotku. Jej farby a energia sa stanú klavírnou skladbou, potom maľuje v štýle umelca. Free robí Scan, Pro pridáva AI Compose.`, more:`Nahraj akýkoľvek obrázok. Paintiano ho číta ako partitúru — zľava doprava, zhora nadol; dĺžka škáluje s energiou obrázka (~1½–2¾ min). ◆ Appka vyberie čítanie podľa toho, aký farebný je: farebný → Harmónia alebo Spektrum (odtieň=tón, svetlosť=oktáva, živosť=hlasitosť); takmer monochromatický (Guernica, tuš, sépia) → B/W. ◆ Vlastná je tvoja: znejú len farby blízke tvojim 12 farbám, zvyšok stíchne — prefiltruj Guernicu cez tropické ružové a uvidíš, čo prežije. ◆ Dva spôsoby hry: SCAN číta obrázok zľava doprava ako partitúru (vyber smer). AI COMPOSE (Pro) napíše celkom novú skladbu z palety, energie a nálady obrázka — a nechá obraz na obrazovke, kým hrá. ◆ SKLADATEĽ sedí medzi nimi: ten istý obrázok prekomponovaný hlasom Chopina, Glassa či Bacha — pozri kartu Skladatelia.`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`Dvanásť skladateľov`, body:`Obraz → hudba: obrázok môže hrať ako čistý Scan — alebo prekomponovaný v hlase skladateľa. Chopin a Satie zadarmo, všetkých dvanásť v Pro — a každý deň sa pre všetkých odomkne jeden Pro skladateľ a jeden Pro umelec (✦ dnes). Setup → Skladatelia určí výber.`, more:`Skladatelia žijú na obrazovej strane — zrkadlo 24 umelcov v smere obraz→hudba. Nahraj obrázok a môže hrať dvoma spôsobmi. ◆ SCAN ho číta doslovne, zľava doprava, ako partitúru. ◆ SKLADATEĽ ten istý obrázok prekomponuje v hlase skladateľa — jeho farby a energiu frázuje iná hudobná myseľ. ◆ Frédéric Chopin — romantický básnik klavíra; spievajúce línie, bohatá harmónia. ◆ Erik Satie — francúzsky minimalizmus skôr, než to slovo existovalo; riedke akordy, ktoré sa vznášajú. ◆ George Gershwin — jazzová harmónia v koncertnej sále; blue notes rozkvitajú. ◆ Philip Glass — opakujúce sa bunky posúvané o jeden stupeň; hudba dýcha vo vzoroch. ◆ Carl Vine — súčasná austrálska energia; hranatá, jasná, rytmická. ◆ Yiruma — moderný lyrický klavír; široké, pokojné vlny. ◆ J. S. Bach — dvojhlasná invencia; bežiace šestnástiny nad kráčajúcim basom, terasová dynamika, bez pedálu. ◆ Beethoven — sonáta v štyroch izbách: trioly z Mesačnej, Allegro téma nad Albertiho basom, tremolová búrka, tlčené akordy; sforzando a náhle piano. ◆ Debussy — impresionizmus; pentatonický pokoj, celotónové chvenie, paralelné akordy pod dlhým pedálom. ◆ Rachmaninov — veľké ruské plátno; arpeggiá cez tri oktávy, melódia v oktávach, zvony. ◆ Einaudi — jedno ostinato, ktoré sa nikdy nemení; vrstvy sa skladajú do jediného dlhého crescenda. ◆ Hisaishi — valčík z Ghibli; melódia, ktorá skočí o sextu a kráča späť dole, teplo add9. ◆ Ten istý obrázok, iný skladateľ → skutočne iná skladba; hlavička uvádza „inspired by …“. V Lite ↻ Prekvap ma žrebuje Scan alebo iného skladateľa na tom istom obrázku. V Advanced tlačidlo 🔀 nad skladateľmi ich mieša (Next, alebo potiahnutie nahor vo fullscreene, vyžrebuje iného skladateľa); vedľa neho Jam session (Ensemble, Pro) posadí viacerých skladateľov, ktorí si striedajú frázy. Setup → Skladatelia určuje, kto je v hre. Free má Chopina + Satieho; Pro odomkne všetkých dvanásť.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → hudba → maľba`, body:`Hoď fotku. Jej farby a energia sa stanú klavírnou skladbou, potom maľuje v štýle umelca. Free robí Scan, Pro pridáva AI Compose.`, more:`Nahraj akýkoľvek obrázok. Paintiano ho číta ako partitúru — zľava doprava, zhora nadol; dĺžka škáluje s energiou obrázka (~1¼–4 min). Pri prehrávaní jemný pás svetla ukazuje, kde hudba práve číta, a melódia kreslí niť po jej ceste. ◆ Appka vyberie čítanie podľa toho, aký farebný je: farebný → Harmónia alebo Spektrum (odtieň=tón, svetlosť=oktáva, živosť=hlasitosť); takmer monochromatický (Guernica, tuš, sépia) → B/W. ◆ Vlastná je tvoja: znejú len farby blízke tvojim 12 farbám, zvyšok stíchne — prefiltruj Guernicu cez tropické ružové a uvidíš, čo prežije. ◆ Dva spôsoby hry: SCAN číta obrázok zľava doprava ako partitúru (vyber smer). AI COMPOSE (Pro) napíše celkom novú skladbu z palety, energie a nálady obrázka — a nechá obraz na obrazovke, kým hrá. ◆ SKLADATEĽ sedí medzi nimi: ten istý obrázok prekomponovaný hlasom Chopina, Glassa či Bacha — pozri kartu Skladatelia.`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`Dvanásť skladateľov`, body:`Obraz → hudba: obrázok môže hrať ako čistý Scan — alebo prekomponovaný v hlase skladateľa. Chopin a Satie zadarmo, všetkých dvanásť v Pro — a každý deň sa pre všetkých odomkne jeden Pro skladateľ a jeden Pro umelec (✦ dnes). Setup → Skladatelia určí výber.`, more:`Skladatelia žijú na obrazovej strane — zrkadlo 24 umelcov v smere obraz→hudba. Nahraj obrázok a môže hrať dvoma spôsobmi. ◆ SCAN ho číta doslovne, zľava doprava, ako partitúru. ◆ SKLADATEĽ ten istý obrázok prekomponuje v hlase skladateľa. Skladateľ si nechá svoj jazyk; každé rozhodnutie v ňom je obrazu: melódia sleduje líniu, ktorú obraz kreslí, harmónia prechádza jeho farebnými plochami v smere čítania, akcenty padajú na jeho hrany, vrchol tam, kam ťahá oko, modus vychádza z jeho svetla a teploty, tempo z energie, forma zo symetrie — a smer čítania (riadky, stĺpce, špirála; čipy sú hneď pod skladateľmi) dá inú skladbu. Každý skladateľ číta obraz aj v štyroch podobách — pôvodná, odzadu, prevrátená (jeho negatív) alebo obe — takže jeden obraz, jeden skladateľ a jeden smer dajú stále štyri rôzne skladby. ◆ Frédéric Chopin — romantický básnik klavíra; spievajúce línie, bohatá harmónia. ◆ Erik Satie — francúzsky minimalizmus skôr, než to slovo existovalo; riedke akordy, ktoré sa vznášajú. ◆ George Gershwin — jazzová harmónia v koncertnej sále; blue notes rozkvitajú. ◆ Philip Glass — opakujúce sa bunky posúvané o jeden stupeň; hudba dýcha vo vzoroch. ◆ Carl Vine — súčasná austrálska energia; hranatá, jasná, rytmická. ◆ Yiruma — moderný lyrický klavír; široké, pokojné vlny. ◆ J. S. Bach — dvojhlasná invencia; bežiace šestnástiny nad kráčajúcim basom, terasová dynamika, bez pedálu. ◆ Beethoven — sonáta v štyroch izbách: trioly z Mesačnej, Allegro téma nad Albertiho basom, tremolová búrka, tlčené akordy; sforzando a náhle piano. ◆ Debussy — impresionizmus; pentatonický pokoj, celotónové chvenie, paralelné akordy pod dlhým pedálom. ◆ Rachmaninov — veľké ruské plátno; arpeggiá cez tri oktávy, melódia v oktávach, zvony. ◆ Einaudi — jedno ostinato, ktoré sa nikdy nemení; vrstvy sa skladajú do jediného dlhého crescenda. ◆ Hisaishi — valčík z Ghibli; melódia, ktorá skočí o sextu a kráča späť dole, teplo add9. ◆ Ten istý obrázok, iný skladateľ → skutočne iná skladba; hlavička uvádza „inspired by …“. V Lite ↻ Prekvap ma žrebuje Scan alebo iného skladateľa na tom istom obrázku. V Advanced tlačidlo 🔀 nad skladateľmi ich mieša (Next, alebo potiahnutie nahor vo fullscreene, vyžrebuje iného skladateľa); vedľa neho Jam session (Ensemble, Pro) posadí viacerých skladateľov, ktorí si striedajú frázy. Setup → Skladatelia určuje, kto je v hre. Free má Chopina + Satieho; Pro odomkne všetkých dvanásť.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pauza a posun lišty. ⟳ Loop opakuje. 🔊 Mute maľuje v tichu. Clear resetuje — chytro, podľa módu.`, more:`Ovládanie prehrávania. ◆ Play spustí a pozastaví (aj Space); klik na lištu skočí, ťahaj na scrub. ◆ ⟳ LOOP necháva náladovú skladbu opakovať; zlatá keď je zapnutá. ◆ 🔊 / 🔇 Mute stíši všetko audio, kým maľba stále vzniká — pamätá sa medzi sedeniami. ◆ Clear rozlišuje módy: Compose zmaže plátno a ostane; MIC zahodí len draft aktívneho módu; Image zahodí draft, Setup sa vráti do čistého stavu — samotný obrázok ostáva na plátne; MIDI/audio/noty/text mood spravia plný reset. ◆ Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample); ak to zlyhá, prepne na syntetický klavír.`},
     {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Ulož → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a odomkne kvalitu pripravenú na tlač.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ ULOŽIŤ exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A1 · pripravené na tlač (vysoké rozlíšenie, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. ◆ ⏺ NAHRAJ (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ NOTY premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A1 · pripravenú na tlač.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Obľúbené`, body:`Ťukni na ♡ vľavo hore na hotovom obraze a ostane ti. ☰ → ♥ Obľúbené ti ich ukáže znova, jeden po druhom na plátne. Bez limitu.`, more:`♥ si uloží adresu obrazu, nie obrázok: tóny skladby, maliara — alebo fúziu s variantom každého člena —, paletu, tón a plátno; keď ho otvoríš, obraz sa z nej znova namaľuje. ◆ Srdiečko je len na hotovom obraze — nie počas hrania ani nahrávania. Ďalšie ťuknutie obraz odoberie (Späť ho vráti). ◆ ☰ → ♥ Obľúbené: potiahni doľava / doprava alebo ťukni na ‹ › a prechádzaš medzi nimi; na celej obrazovke potiahni hore pre ďalší. Nič sa tam nehrá — roleta Vyber vzhľad aj Play sú vypnuté. VYMAZAŤ VŠETKY odstráni naraz všetky obľúbené (ťukni dvakrát; Späť ich vráti). ↓ Ulož funguje ako vždy — Story, Web, Tlač A1, Galéria — pre obraz na plátne; ✕ Zavrieť ťa vráti presne tam, kde si bol. ◆ Obľúbené sú v tomto zariadení, v tomto prehliadači. Obraz sa namaľuje pre obrazovku, na ktorej ho otvoríš — presne tak, ako by sa tam maľoval naživo; po aktualizácii maliara môže vyzerať trochu inak. ◆ Samotnú skladbu uložíš do Mojej hudby malým čipom ♫ + MOJA HUDBA pri jej názve (súbory MIDI, MP3 alebo partitúra).`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 (early-bird, potom €14.99) → všetkých 24 umelcov, editovateľná Vlastná paleta, bez watermarku, doživotne. Pro AI €19.99 (early-bird, potom €24.99) pridáva neobmedzené AI. Tip: vo Free ťukni na svojho obľúbeného zamknutého umelca — odomkne sa ti na vyskúšanie.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých, 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Vlastná paleta len na čítanie, exporty s watermarkom. Každý AI mód má 1 skúšku zadarmo: textová nálada, Nálada z obrazu, AI skladba — a Atmosféra + Melódia zdieľajú 2 skúšky medzi sebou. ◆ Pro €9.99 (early-bird, potom €14.99) — všetkých 24 umelcov, všetky typy maľby, editovateľná Vlastná paleta, exporty pripravené na tlač bez watermarku, doživotný prístup (bez AI). ◆ Pro AI €19.99 (early-bird, potom €24.99) — všetko z Pro plus neobmedzené AI: textové moody, Nálada z obrazu, AI skladba, AI Atmosféra a Melódia. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz. ◆ Skladateľské hlasy pre obrázky: Free má Chopina + Satieho; Pro odomkne všetkých dvanásť. ◆ Ensemble — Fúzia (maliari skrížení do jedného rukopisu) a Jam session (skladatelia si striedajú frázy) — je tiež Pro; zapni ho v Setupe.`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fúzia & Jam session`, body:`Pro, s Pro predvolene zapnuté (Setup → Ensemble). Fúzia: 2–5 maliarov skrížených do jedného nového rukopisu, ktorý maľuje celú skladbu. Jam session: 2–5 skladateľov, ktorí si nad jedným obrázkom striedajú frázy. Každé má vlastné tlačidlo vedľa 🔀 — a dajú sa kombinovať.`, more:`Zapni Ensemble v Setupe a vedľa 🔀 sa objaví druhé tlačidlo ◎. Ťukni naň a postav scénu: ťukaj na čipy — až päť, v poradí, v akom ťukáš; každý nesie svoje číslo, ďalšie ťuknutie ho zo scény zloží. Umelec na obrazovke pri zapnutí je člen 1. ◆ ENSEMBLE × 🔀 — vyp: scéna ostáva, ako si ju postavil. 1: Next vyžrebuje každému maliarovi toho istého kríženia nový variant, každému zvlášť. ALL: doterajšia scéna sa pripne — zlaté čipy so špendlíkom. Každé Next nechá pripnutých a vyžrebuje k nim 1–3 ďalších (biely rámik, spolu najviac 5); každý člen, pripnutý či nie, dostane nový variant. Ťuk na čip pripne alebo odopne; odopnutý maliar ostane na plátne do ďalšieho žrebu. Nič nepripnuté: každé Next vyžrebuje celé nové kríženie — 2 až 5 maliarov, koľko a kto náhodne z tvojho výberu v Setupe. Päť pripnutých: Next žrebuje ich varianty. V 1 aj ALL každé Next vyžrebuje aj novú paletu z tých, ktoré máš zaškrtnuté v Setupe. Vypnutím Ensemble v ALL prevezme žreb obyčajné zamiešanie, začne na členovi 1. ◆ FÚZIA (maľba) je kríženie, nie koláž. Každý umelec je zredukovaný na DNA z tucta génov — podklad, slovník ťahov, veľkosť, hrana, krytie, gramatika rozloženia, kontúra, spracovanie palety, chvenie ruky, spojnice, vrstvy, hustota — jedna sada génov na variant. Vybraní maliari sa krížia s rovnakými váhami (dvaja → 50/50, piati → po 20 %) a JEDEN renderer maľuje výsledkom celú skladbu: veľkosť, hrana, kontúra, rozloženie a vrstvenie sa stanú jednou zmiešanou rukou, pričom každý rodič si nechá svoj podpisový motív (Delaunayov štvrtený disk, Kusamin roj bodiek, Haringova figúra…) a berie si každý N-tý akord po rade — duo je naozaj pol na pol. Člen 1 prináša variant, na ktorý si sa práve pozeral; každý pridaný maliar prinesie svoj vlastný. Potom každé Next vyžrebuje nový variant každému členovi zvlášť — ktorýkoľvek variant jedného maliara sa môže stretnúť s ktorýmkoľvek variantom iného. Gény tvaruje aj hudba: hustá rýchla skladba maľuje hustejšie a vrstvenejšie, tichá redšie a väčšie; register určí veľkosť ťahu, napätie kontúru, pravidelnosť pomer mriežka/tok. Popis a export znejú „Rothko × Pollock × Kusama“; vo fullscreene ťuknutie ukáže FÚZIA a mená. ◆ JAM SESSION (obrázok → hudba): každý skladateľ na scéne napíše celý obrázok vlastným hlasom, potom slovo každých ~5 s putuje ďalej — jeden volá, ďalší odpovedá z toho istého miesta formy. Má vlastné tlačidlo vedľa 🔀 pri skladateľoch; zapnutím 🔀 sa skladatelia na scéne pripnú (zlaté čipy so špendlíkom) a každé Next ich nechá a posadí k nim 1–3 ďalších (biely rámik, najviac 5). Ťuk na čip pripne alebo odopne; odopnutý skladateľ hrá ďalej do ďalšieho žrebu. Nič nepripnuté: Next posadí celý nový náhodný ensemble — 2 až 5 skladateľov, koľko a kto náhodne. ◆ V LITE (so zapnutým Ensemble): zhruba každé štvrté Prekvap ma je ensemble — pri hudbe Fúzia vyžrebovaného maliara plus 1–4 ďalších, pri obrázku Jam session 2–5 skladateľov; koľko a kto, je náhoda, z tvojho výberu v Setupe. Hlavička ukáže „Rothko × Kusama“ alebo „Chopin ↔ Glass“. Ďalšie Prekvap ma môže byť zas sólista. ◆ Exporty ostávajú deterministické: tá istá skladba, tá istá scéna, ten istý obraz.`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fúzia & Jam session`, body:`Pro, s Pro predvolene zapnuté (Setup → Ensemble). Fúzia: 2–5 maliarov skrížených do jedného nového rukopisu, ktorý maľuje celú skladbu. Jam session: 2–5 skladateľov, ktorí si nad jedným obrázkom striedajú frázy. Každé má vlastné tlačidlo vedľa 🔀 — a dajú sa kombinovať.`, more:`Zapni Ensemble v Setupe a vedľa 🔀 sa objaví druhé tlačidlo ◎. Ťukni naň a postav scénu: ťukaj na čipy — až päť, v poradí, v akom ťukáš; každý nesie svoje číslo, ďalšie ťuknutie ho zo scény zloží. Umelec na obrazovke pri zapnutí je člen 1. ◆ ENSEMBLE × 🔀 — vyp: scéna ostáva, ako si ju postavil. 1: Next vyžrebuje každému maliarovi toho istého kríženia nový variant, každému zvlášť. ALL: doterajšia scéna sa pripne — zlaté čipy so špendlíkom. Každé Next nechá pripnutých a vyžrebuje k nim 1–3 ďalších (biely rámik, spolu najviac 5); každý člen, pripnutý či nie, dostane nový variant. Ťuk na čip pripne alebo odopne; odopnutý maliar ostane na plátne do ďalšieho žrebu. Nič nepripnuté: každé Next vyžrebuje celé nové kríženie — 2 až 5 maliarov, koľko a kto náhodne z tvojho výberu v Setupe. Päť pripnutých: Next žrebuje ich varianty. V 1 aj ALL každé Next vyžrebuje aj novú paletu z tých, ktoré máš zaškrtnuté v Setupe. Vypnutím Ensemble v ALL prevezme žreb obyčajné zamiešanie, začne na členovi 1. ◆ FÚZIA (maľba) je kríženie, nie koláž. Každý umelec je zredukovaný na DNA z tucta génov — podklad, slovník ťahov, veľkosť, hrana, krytie, gramatika rozloženia, kontúra, spracovanie palety, chvenie ruky, spojnice, vrstvy, hustota — jedna sada génov na variant. Vybraní maliari sa krížia s rovnakými váhami (dvaja → 50/50, piati → po 20 %) a JEDEN renderer maľuje výsledkom celú skladbu: veľkosť, hrana, kontúra, rozloženie a vrstvenie sa stanú jednou zmiešanou rukou, pričom každý rodič si nechá svoj podpisový motív (Delaunayov štvrtený disk, Kusamin roj bodiek, Haringova figúra…) a berie si každý N-tý akord po rade — duo je naozaj pol na pol. Člen 1 prináša variant, na ktorý si sa práve pozeral; každý pridaný maliar prinesie svoj vlastný. Potom každé Next vyžrebuje nový variant každému členovi zvlášť — ktorýkoľvek variant jedného maliara sa môže stretnúť s ktorýmkoľvek variantom iného. Gény tvaruje aj hudba: hustá rýchla skladba maľuje hustejšie a vrstvenejšie, tichá redšie a väčšie; register určí veľkosť ťahu, napätie kontúru, pravidelnosť pomer mriežka/tok. Popis a export znejú „Rothko × Pollock × Kusama“; vo fullscreene ťuknutie ukáže FÚZIA a mená. ◆ JAM SESSION (obrázok → hudba): každý skladateľ na scéne napíše celý obrázok vlastným hlasom, potom sa spoja na spoločnom pulze a v jednej tónine. Ako, rozhoduje štýl fúzie (Setup → Ensemble): A — slovo putuje každú frázu (štyri takty), jeden volá, ďalší odpovedá z toho istého miesta formy; E — jeden nový skladateľ splodený z nich: jeden dá harmóniu a sprievod, druhý melódiu, tretí pulz; A+E — minca hodená na adresu obrazu. Má vlastné tlačidlo vedľa 🔀 pri skladateľoch; zapnutím 🔀 sa skladatelia na scéne pripnú (zlaté čipy so špendlíkom) a každé Next ich nechá a posadí k nim 1–3 ďalších (biely rámik, najviac 5). Ťuk na čip pripne alebo odopne; odopnutý skladateľ hrá ďalej do ďalšieho žrebu. Nič nepripnuté: Next posadí celý nový náhodný ensemble — 2 až 5 skladateľov, koľko a kto náhodne. ◆ V LITE (so zapnutým Ensemble): zhruba každé štvrté Prekvap ma je ensemble — pri hudbe Fúzia vyžrebovaného maliara plus 1–4 ďalších, pri obrázku Jam session 2–5 skladateľov; koľko a kto, je náhoda, z tvojho výberu v Setupe. Hlavička ukáže „Rothko × Kusama“, „Chopin ↔ Glass“ (striedanie) alebo „Chopin × Glass“ (jeden splodený skladateľ). Ďalšie Prekvap ma môže byť zas sólista. ◆ Exporty ostávajú deterministické: tá istá skladba, tá istá scéna, ten istý obraz.`}
   ],
   PT: [
     {id:'overview', glyph:'◈', cat:'start', title:`Música ⇄ pintura`, body:`A mesma roda, ambos os sentidos. Canta, escreve ou larga uma foto — a tela enche-se com a música. Guarda a arte, grava a canção. Leva os dois.`, more:`O Paintiano é um tradutor de duplo sentido. A mesma roda de cores e roda de alturas correm nos dois sentidos. Escolhe uma fonte — Compor, Micro, Música, Imagem ou um estado de espírito — e a tela enche-se enquanto a música toca. Duas vias de entrada: ◆ Música → pintura: escreve um estado (qualquer sentimento, qualquer língua), toca piano, canta ao micro, ou larga um MIDI, MP3 ou partitura. ◆ Pintura → música: larga uma imagem. Escolhe um modo de cor, talvez um artista. A mesma música = a mesma pintura, sempre. Toca em 🔀 e o Next traz uma leitura nova — mesma música, outra mão. Depois Guarda a pintura e Grava a música — são as partes que ficas.`},
@@ -19888,13 +19505,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`O teu piano ao vivo`, body:`Toca ♪ Compor. Toca uma tecla = batida, segura = bloco mais largo. Nomes de acordes ao vivo. Backspace desfaz, Espaço toca.`, more:`Toca ♪ COMPOR (ou Enter). O piano abre. Toca uma tecla = batida rápida, segura = bloco mais largo — mais tempo, pintura mais larga. O teclado físico também funciona: A–L brancas, W/E/T/Y/U/O/P pretas. Backspace = desfazer, Espaço = play/pausa, Enter alterna o piano. Segura um acorde e o seu nome (Dó maior, Lá menor, Ré7…) aparece ao vivo. A tela é uma moldura fixa em proporção áurea — as linhas encolhem à medida que adicionas, a pintura adensa. Com um pintor escolhido, a pintura cresce nota a nota como na Música — cada nota acrescenta, nada do que já está pintado é redesenhado. O mesmo vale para o Mic. Exceção: Kandinsky e os pintores de azulejos (Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein) — os seus azulejos preenchem sempre toda a tela e reorganizam-se a cada nota. Aqui Pollock e Monet, na primeira variante, pintam cada traço na cor exata da sua nota — nota verde, traço verde. Uma pintura com motivo fica inteira desde a tua primeira nota, na sua cor, e cada nota seguinte pinta dentro dela: Impressão, a catedral de Rouen, o monte de feno, os choupos e a ponte japonesa de Monet, a torre Eiffel de Delaunay, a ponte de Hokusai, as Demoiselles de Picasso, a Homenagem ao Quadrado de Albers no Bauhaus e a árvore de Mondrian. ◆ Móvel: as 88 teclas estão lá — desliza horizontal para percorrer, Dó4 fica quase ao centro. ◆ Scale snap: toca ⚙ para encaixar tudo o que tocas numa tonalidade; «Free» (padrão) fica plenamente cromático.`},
     {id:'mic', glyph:'🎙', cat:'music', title:`Canta, pinta`, body:`Dois modos MIC. 🔊 Música ouve a sala. 🎤 Voz encaixa o teu trautear em Dó maior. Ambos pintam ao vivo. Alterna Original ⇄ Piano depois.`, more:`Toca 🎙 MIC. A tela abre armada com um grande botão REC. ◆ 🔊 Música (azul, padrão): ouve o que toca na sala — coluna, Spotify, ambiente qualquer — e pinta em silêncio o que ouve: uma melodia como notas soltas, um acorde real como acorde. Gravações longas bem-vindas; a tela cresce para baixo. ◆ 🎤 Voz (vermelho): canta, trauteia ou assobia. A altura encaixa em Dó maior, toca pelo piano, pinta nota a nota numa moldura φ fixa. ◆ O emblema no topo esquerdo alterna música ⇄ voz; cada um guarda o seu rascunho (um pequeno ● indica que um espera). Clear apaga só o modo ativo. ◆ Ao gravar, a tela respira suave com o volume da sala — mais alto empurra-a mais larga, o silêncio deixa-a descansar.`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI, áudio ou partitura`, body:`Um botão para todo ficheiro musical. MIDI, MP3/WAV/M4A, ou MusicXML de MuseScore/Finale. Tipo detetado automaticamente.`, more:`Um botão para todo ficheiro musical. ◆ MIDI (.mid / .midi) — multi-faixa condensa em acordes, mapeado ao tempo, pintado. ◆ Áudio (.mp3 .wav .m4a .ogg .aac) — descodificado, alturas detetadas, pintado; melhor em material monofónico limpo ou esparso (piano solo, voz, guitarra simples) — misturas densas são mais difíceis. ◆ Partitura (.musicxml .xml .mxl de MuseScore, Finale, Dorico) — alturas, durações, dinâmicas e acordes passam exatos; a entrada mais precisa que há. O Paintiano deteta o tipo automaticamente. Abre Música sem ficheiro para as amostras integradas. ◆ Ouvir imagem — quando uma peça musical termina de pintar, toca em Ouvir imagem para passar o próprio quadro pelo scanner de imagem. O mesmo quadro, ouvido como imagem. Música ↔ pintura, nos dois sentidos.`},
-    {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Larga uma imagem. As suas cores e energia tornam-se uma peça de piano, depois pinta em qualquer estilo. Free faz Scan, Pro adiciona Compor IA.`, more:`Carrega qualquer imagem. O Paintiano lê-a como partitura — da esquerda para a direita, de cima para baixo; a duração escala com a energia da imagem (~1½–2¾ min). ◆ A app escolhe a leitura pela cor da obra: colorida → Harmonia ou Espectral (tom=altura, luminosidade=oitava, vivacidade=volume); quase monocromática (Guernica, tinta, sépia) → P&B. ◆ Personalizada é tua: só soam as cores próximas das tuas 12 amostras, o resto cala — filtra a Guernica por rosas tropicais e vê o que sobrevive. ◆ Duas formas de tocar: SCAN lê a imagem da esquerda para a direita como partitura (escolhe a direção). COMPOR IA (Pro) escreve uma peça nova a partir da paleta, energia e estado da imagem — e mantém a imagem no ecrã enquanto toca. ◆ COMPOSITOR fica entre os dois: a mesma imagem recomposta na voz de Chopin, Glass ou Bach — ver o cartão Compositores.`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`Doce compositores`, body:`Pintura → música: uma imagem pode tocar como Scan puro — ou recomposta na voz de um compositor. Chopin e Satie grátis, os doze no Pro — e todos os dias um compositor e um artista Pro desbloqueiam para todos (✦ hoje). Setup → Compositores escolhe o conjunto.`, more:`Os compositores vivem do lado da imagem — o espelho pintura→música dos 24 artistas. Carrega uma imagem e ela pode tocar de duas formas. ◆ SCAN lê-a literalmente, da esquerda para a direita, como uma partitura. ◆ COMPOSITOR recompõe a mesma imagem na voz de um compositor — as suas cores e energia, fraseadas por outra mente musical. ◆ Frédéric Chopin — o poeta romântico do piano; linhas que cantam, harmonia rica. ◆ Erik Satie — minimalismo francês antes de a palavra existir; acordes esparsos que flutuam. ◆ George Gershwin — harmonia de jazz na sala de concertos; as blue notes florescem. ◆ Philip Glass — células que se repetem e deslocam um grau de cada vez; a música respira em padrões. ◆ Carl Vine — energia australiana contemporânea; angulosa, clara, rítmica. ◆ Yiruma — piano lírico moderno; ondas largas e calmas. ◆ J. S. Bach — invenção a duas vozes; semicolcheias a correr sobre um baixo que caminha, dinâmica em terraços, sem pedal. ◆ Beethoven — sonata em quatro salas: tercinas do Luar, um tema Allegro sobre baixo de Alberti, uma tempestade em trémulo, acordes martelados; sforzando e piano súbito. ◆ Debussy — impressionismo; calma pentatónica, brilho de tons inteiros, acordes paralelos sob um pedal longo. ◆ Rachmaninov — a grande tela russa; arpejos de três oitavas, melodia em oitavas, sinos. ◆ Einaudi — um ostinato que nunca muda; as camadas acumulam-se num único crescendo longo. ◆ Hisaishi — a valsa Ghibli; uma melodia que salta uma sexta e desce a caminhar, calor add9. ◆ Mesma imagem, outro compositor → uma peça genuinamente diferente; o cabeçalho credita «inspired by …». No Lite, ↻ Surpreende-me sorteia Scan ou outro compositor sobre a mesma imagem. No Advanced, o botão 🔀 por cima dos compositores baralha-os (Next, ou deslizar para cima em ecrã inteiro, sorteia outro compositor); ao lado, Jam session (Ensemble, Pro) senta vários compositores a trocar frases. Setup → Compositores decide quem está em jogo. O Free inclui Chopin + Satie; o Pro desbloqueia os doze.`},
+    {id:'image', glyph:'📷', cat:'music', title:`Foto → música → pintura`, body:`Larga uma imagem. As suas cores e energia tornam-se uma peça de piano, depois pinta em qualquer estilo. Free faz Scan, Pro adiciona Compor IA.`, more:`Carrega qualquer imagem. O Paintiano lê-a como partitura — da esquerda para a direita, de cima para baixo; a duração escala com a energia da imagem (~1¼–4 min). Enquanto toca, uma suave faixa de luz mostra onde a música está a ler, e a melodia desenha um fio ao longo do percurso. ◆ A app escolhe a leitura pela cor da obra: colorida → Harmonia ou Espectral (tom=altura, luminosidade=oitava, vivacidade=volume); quase monocromática (Guernica, tinta, sépia) → P&B. ◆ Personalizada é tua: só soam as cores próximas das tuas 12 amostras, o resto cala — filtra a Guernica por rosas tropicais e vê o que sobrevive. ◆ Duas formas de tocar: SCAN lê a imagem da esquerda para a direita como partitura (escolhe a direção). COMPOR IA (Pro) escreve uma peça nova a partir da paleta, energia e estado da imagem — e mantém a imagem no ecrã enquanto toca. ◆ COMPOSITOR fica entre os dois: a mesma imagem recomposta na voz de Chopin, Glass ou Bach — ver o cartão Compositores.`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`Doce compositores`, body:`Pintura → música: uma imagem pode tocar como Scan puro — ou recomposta na voz de um compositor. Chopin e Satie grátis, os doze no Pro — e todos os dias um compositor e um artista Pro desbloqueiam para todos (✦ hoje). Setup → Compositores escolhe o conjunto.`, more:`Os compositores vivem do lado da imagem — o espelho pintura→música dos 24 artistas. Carrega uma imagem e ela pode tocar de duas formas. ◆ SCAN lê-a literalmente, da esquerda para a direita, como uma partitura. ◆ COMPOSITOR recompõe a mesma imagem na voz de um compositor. O compositor mantém a sua linguagem; cada decisão dentro dela é da imagem: a melodia segue a linha que a imagem desenha, a harmonia percorre os seus campos de cor na ordem de leitura, os acentos caem nas suas arestas, o clímax onde o olhar é atraído, o modo nasce da sua luz e calor, o tempo da sua energia, a forma da sua simetria — e a direção de leitura (linhas, colunas, espiral; os chips ficam logo abaixo dos compositores) dá outra peça. Cada compositor lê ainda a imagem em quatro formas — original, de trás para a frente, invertida (o seu negativo) ou ambas — assim, uma imagem, um compositor e uma direção dão ainda quatro peças diferentes. ◆ Frédéric Chopin — o poeta romântico do piano; linhas que cantam, harmonia rica. ◆ Erik Satie — minimalismo francês antes de a palavra existir; acordes esparsos que flutuam. ◆ George Gershwin — harmonia de jazz na sala de concertos; as blue notes florescem. ◆ Philip Glass — células que se repetem e deslocam um grau de cada vez; a música respira em padrões. ◆ Carl Vine — energia australiana contemporânea; angulosa, clara, rítmica. ◆ Yiruma — piano lírico moderno; ondas largas e calmas. ◆ J. S. Bach — invenção a duas vozes; semicolcheias a correr sobre um baixo que caminha, dinâmica em terraços, sem pedal. ◆ Beethoven — sonata em quatro salas: tercinas do Luar, um tema Allegro sobre baixo de Alberti, uma tempestade em trémulo, acordes martelados; sforzando e piano súbito. ◆ Debussy — impressionismo; calma pentatónica, brilho de tons inteiros, acordes paralelos sob um pedal longo. ◆ Rachmaninov — a grande tela russa; arpejos de três oitavas, melodia em oitavas, sinos. ◆ Einaudi — um ostinato que nunca muda; as camadas acumulam-se num único crescendo longo. ◆ Hisaishi — a valsa Ghibli; uma melodia que salta uma sexta e desce a caminhar, calor add9. ◆ Mesma imagem, outro compositor → uma peça genuinamente diferente; o cabeçalho credita «inspired by …». No Lite, ↻ Surpreende-me sorteia Scan ou outro compositor sobre a mesma imagem. No Advanced, o botão 🔀 por cima dos compositores baralha-os (Next, ou deslizar para cima em ecrã inteiro, sorteia outro compositor); ao lado, Jam session (Ensemble, Pro) senta vários compositores a trocar frases. Setup → Compositores decide quem está em jogo. O Free inclui Chopin + Satie; o Pro desbloqueia os doze.`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa e navegar a barra. ⟳ Loop repete. 🔊 Mute pinta em silêncio. Clear reinicia — esperto, por modo.`, more:`Os controlos de reprodução. ◆ Play inicia e pausa (Espaço também); toca a barra de progresso para saltar, arrasta para fazer scrub. ◆ ⟳ LOOP mantém uma peça de estado a repetir; dourado quando ligado. ◆ 🔊 / 🔇 Mute silencia todo o áudio enquanto a pintura continua a gerar-se — lembrado entre sessões. ◆ Clear é consciente do modo: Compose apaga a tela e fica; MIC descarta só o rascunho do modo ativo; Image descarta o rascunho, Setup volta ao início — a imagem fica na tela; MIDI/áudio/partitura/estado de texto fazem um reset completo. ◆ Se o estado diz «loading piano…», espera uns segundos (~5 MB de amostra); se falhar, passa para um piano sintético.`},
     {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Guardar → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para qualidade pronta para imprimir.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ GUARDAR exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A1 · pronto para imprimir (alta resolução, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. ◆ ⏺ GRAVAR (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ PARTITURA transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A1 · pronto para imprimir.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoritos`, body:`Toca em ♡ no canto superior esquerdo de uma pintura terminada para a guardares. ☰ → ♥ Favoritos mostra-tas de novo, uma a uma na tela. Sem limite.`, more:`♥ guarda o endereço da pintura, não uma imagem: as notas da música, o pintor — ou a fusão com a variante de cada membro —, a paleta, o tom e a tela; ao abri-la, volta a ser pintada a partir daí. ◆ O coração só aparece numa pintura terminada — não enquanto a música toca ou gravas. Toca outra vez para tirar a pintura (Desfazer trá-la de volta). ◆ ☰ → ♥ Favoritos: desliza para a esquerda / direita ou toca em ‹ › para passar de uma para outra; em ecrã inteiro, desliza para cima para a seguinte. Ali nada toca — a faixa «Escolhe um estilo» e o Play estão desligados. APAGAR TODOS remove todos os favoritos de uma vez (toca duas vezes; Desfazer trá-los de volta). ↓ Guardar funciona como sempre — Story, Web, Impressão A1, Galeria — para a pintura na tela; ✕ Fechar leva-te exatamente de volta onde estavas. ◆ Os favoritos ficam neste dispositivo, neste navegador. Uma pintura é pintada para o ecrã onde a abres, tal como seria pintada ali ao vivo — depois de uma atualização de um pintor pode parecer um pouco diferente. ◆ A música em si vai para Minha música com o pequeno chip ♫ + MINHA MÚSICA junto ao título (ficheiros MIDI, MP3 ou partitura).`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € (early-bird, depois 14,99 €) → todos os 24 artistas, paleta Personalizada editável, sem marca de água, vitalício. Pro IA 19,99 € (early-bird, depois 24,99 €) adiciona IA ilimitada. Dica: no Free, toca no teu artista bloqueado favorito — desbloqueia para experimentares.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Personalizada só de leitura, exports com marca de água. Cada modo IA tem 1 tentativa grátis: estado de texto, humor da imagem, compor IA — e Atmosfera + Melodia partilham duas tentativas. ◆ Pro €9.99 (early-bird, depois €14.99) — todos os 24 artistas, todos os tipos de pintura, paleta Personalizada editável, exports prontos para imprimir sem marca de água, acesso vitalício (sem IA). ◆ Pro IA €19.99 (early-bird, depois €24.99) — tudo do Pro mais IA ilimitada: estados de texto, humor da imagem, compor IA, Atmosfera e Melodia IA. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez. ◆ Vozes de compositores para imagens: o Free tem Chopin + Satie; o Pro desbloqueia os doze. ◆ Ensemble — Fusão (pintores cruzados num estilo) e Jam session (compositores a trocar frases) — também é Pro; liga-o no Setup.`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusão & Jam session`, body:`Pro, ligado por defeito com o Pro (Setup → Ensemble). Fusão: 2–5 pintores cruzados num estilo novo que pinta a música inteira. Jam session: 2–5 compositores a trocar frases sobre uma imagem. Cada um tem o seu próprio botão ao lado de 🔀 — e os dois combinam-se.`, more:`Liga o Ensemble no Setup e aparece um segundo botão ao lado de 🔀 ◎. Toca nele para montar um palco: toca em fichas — até cinco, pela ordem em que tocas; cada uma leva o seu número, tocar outra vez retira-a. O artista no ecrã ao entrar é o membro 1. ◆ ENSEMBLE × 🔀 — off: o palco fica como o montaste. 1: Next sorteia uma variante nova para cada pintor do mesmo cruzamento, a cada um por si. ALL: o palco que tinhas fica fixado — fichas douradas com um alfinete. Cada Next mantém os fixados e sorteia mais 1 a 3 à volta deles (moldura branca, 5 no máximo ao todo); cada membro, fixado ou não, recebe uma variante nova. Toca numa ficha para a fixar ou soltar; um pintor solto fica na tela até ao sorteio seguinte. Nada fixado: cada Next sorteia um cruzamento totalmente novo — de 2 a 5 pintores, quantos e quem ao acaso da tua seleção no Setup. Cinco fixados: Next sorteia as variantes deles. Em 1 e ALL, cada Next sorteia também uma paleta nova entre as marcadas no Setup. Desligar o Ensemble em ALL devolve o sorteio ao aleatório normal, a começar no membro 1. ◆ FUSÃO (pintura) é um cruzamento, não uma colagem. Cada artista é reduzido a um ADN de uma dúzia de genes — fundo, vocabulário de traços, tamanho, bordo, opacidade, gramática de composição, contorno, tratamento de paleta, tremor da mão, linhas de ligação, camadas, densidade — um jogo de genes por variante. Os pintores escolhidos são cruzados com pesos iguais (dois → 50/50, cinco → 20 % cada) e UM só motor pinta a música inteira com o resultado: tamanho, bordo, contorno, composição e camadas tornam-se uma única mão misturada, enquanto cada progenitor mantém o seu motivo-assinatura (o disco em quartos de Delaunay, o enxame de pontos de Kusama, a figura de Haring…) e toma cada N-ésimo acorde à vez — um duo é mesmo meio a meio. O membro 1 traz a variante que estavas a ver; cada pintor acrescentado traz uma sua. Depois, cada Next sorteia uma variante nova para cada membro, a cada um por si — qualquer variante de um pintor pode encontrar qualquer variante de outro. A música também molda os genes: uma peça densa e rápida pinta mais denso e com mais camadas, uma calma mais esparsa e maior; o registo fixa o tamanho do traço, a tensão o contorno, a regularidade o equilíbrio grelha/fluxo. A legenda e a exportação dizem «Rothko × Pollock × Kusama»; em ecrã inteiro um toque mostra FUSÃO e os nomes. ◆ JAM SESSION (imagem → música): cada compositor no palco escreve a imagem inteira na sua própria voz, depois a palavra passa a cada ~5 s — um chama, o seguinte responde do mesmo ponto da forma. Tem o seu próprio botão ao lado do 🔀 dos compositores; ligar o 🔀 fixa os compositores do palco (fichas douradas com um alfinete), e cada Next mantém-nos e senta mais 1 a 3 à volta deles (moldura branca, 5 no máximo). Toca numa ficha para a fixar ou soltar; um compositor solto continua a tocar até ao sorteio seguinte. Nada fixado: o Next senta um ensemble totalmente novo ao acaso — de 2 a 5 compositores, quantos e quem ao acaso. ◆ NO LITE (com Ensemble ligado): mais ou menos um em cada quatro Surpreende-me torna-se um ensemble — na música uma Fusão do pintor sorteado mais 1–4 outros, numa imagem um Jam session de 2–5 compositores; quantos e quem é ao acaso, tirado da tua seleção no Setup. O cabeçalho diz «Rothko × Kusama» ou «Chopin ↔ Glass». O Surpreende-me seguinte pode voltar a ser um solista. ◆ As exportações ficam deterministas: mesma música, mesmo palco, mesma imagem.`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusão & Jam session`, body:`Pro, ligado por defeito com o Pro (Setup → Ensemble). Fusão: 2–5 pintores cruzados num estilo novo que pinta a música inteira. Jam session: 2–5 compositores a trocar frases sobre uma imagem. Cada um tem o seu próprio botão ao lado de 🔀 — e os dois combinam-se.`, more:`Liga o Ensemble no Setup e aparece um segundo botão ao lado de 🔀 ◎. Toca nele para montar um palco: toca em fichas — até cinco, pela ordem em que tocas; cada uma leva o seu número, tocar outra vez retira-a. O artista no ecrã ao entrar é o membro 1. ◆ ENSEMBLE × 🔀 — off: o palco fica como o montaste. 1: Next sorteia uma variante nova para cada pintor do mesmo cruzamento, a cada um por si. ALL: o palco que tinhas fica fixado — fichas douradas com um alfinete. Cada Next mantém os fixados e sorteia mais 1 a 3 à volta deles (moldura branca, 5 no máximo ao todo); cada membro, fixado ou não, recebe uma variante nova. Toca numa ficha para a fixar ou soltar; um pintor solto fica na tela até ao sorteio seguinte. Nada fixado: cada Next sorteia um cruzamento totalmente novo — de 2 a 5 pintores, quantos e quem ao acaso da tua seleção no Setup. Cinco fixados: Next sorteia as variantes deles. Em 1 e ALL, cada Next sorteia também uma paleta nova entre as marcadas no Setup. Desligar o Ensemble em ALL devolve o sorteio ao aleatório normal, a começar no membro 1. ◆ FUSÃO (pintura) é um cruzamento, não uma colagem. Cada artista é reduzido a um ADN de uma dúzia de genes — fundo, vocabulário de traços, tamanho, bordo, opacidade, gramática de composição, contorno, tratamento de paleta, tremor da mão, linhas de ligação, camadas, densidade — um jogo de genes por variante. Os pintores escolhidos são cruzados com pesos iguais (dois → 50/50, cinco → 20 % cada) e UM só motor pinta a música inteira com o resultado: tamanho, bordo, contorno, composição e camadas tornam-se uma única mão misturada, enquanto cada progenitor mantém o seu motivo-assinatura (o disco em quartos de Delaunay, o enxame de pontos de Kusama, a figura de Haring…) e toma cada N-ésimo acorde à vez — um duo é mesmo meio a meio. O membro 1 traz a variante que estavas a ver; cada pintor acrescentado traz uma sua. Depois, cada Next sorteia uma variante nova para cada membro, a cada um por si — qualquer variante de um pintor pode encontrar qualquer variante de outro. A música também molda os genes: uma peça densa e rápida pinta mais denso e com mais camadas, uma calma mais esparsa e maior; o registo fixa o tamanho do traço, a tensão o contorno, a regularidade o equilíbrio grelha/fluxo. A legenda e a exportação dizem «Rothko × Pollock × Kusama»; em ecrã inteiro um toque mostra FUSÃO e os nomes. ◆ JAM SESSION (imagem → música): cada compositor no palco escreve a imagem inteira na sua própria voz, depois juntam-se no mesmo pulso e na mesma tonalidade. O estilo de fusão (Setup → Ensemble) decide como: A — a palavra passa a cada frase (quatro compassos), um chama, o seguinte responde do mesmo ponto da forma; E — um compositor novo nascido deles: um empresta a harmonia e o acompanhamento, outro a melodia, um terceiro o pulso; A+E — uma moeda lançada sobre o endereço da imagem. Tem o seu próprio botão ao lado do 🔀 dos compositores; ligar o 🔀 fixa os compositores do palco (fichas douradas com um alfinete), e cada Next mantém-nos e senta mais 1 a 3 à volta deles (moldura branca, 5 no máximo). Toca numa ficha para a fixar ou soltar; um compositor solto continua a tocar até ao sorteio seguinte. Nada fixado: o Next senta um ensemble totalmente novo ao acaso — de 2 a 5 compositores, quantos e quem ao acaso. ◆ NO LITE (com Ensemble ligado): mais ou menos um em cada quatro Surpreende-me torna-se um ensemble — na música uma Fusão do pintor sorteado mais 1–4 outros, numa imagem um Jam session de 2–5 compositores; quantos e quem é ao acaso, tirado da tua seleção no Setup. O cabeçalho diz «Rothko × Kusama», «Chopin ↔ Glass» (revezamento) ou «Chopin × Glass» (um compositor nascido deles). O Surpreende-me seguinte pode voltar a ser um solista. ◆ As exportações ficam deterministas: mesma música, mesmo palco, mesma imagem.`}
   ],
   zh: [
     {id:'overview', glyph:'◈', cat:'start', title:`音乐 ⇄ 绘画`, body:`同一个轮盘,两个方向。唱、打字或丢一张照片——画布随音乐填满。保存画作,录下乐曲。两者都带走。`, more:`Paintiano 是双向翻译器。同一个色轮和音高轮双向运转。选一个来源——作曲、麦克风、音乐、图像或一种情绪——音乐播放时画布随之填满。两条入口:◆ 音乐 → 绘画:输入一种情绪(任何感受、任何语言)、弹钢琴、对麦克风唱,或丢入 MIDI、MP3 或乐谱。◆ 绘画 → 音乐:丢入一张图。选个颜色模式,也许选个艺术家。同样的音乐 = 同样的画,始终如此。点 🔀，Next 带来新解读——同一首歌，另一只手。然后保存画作、录下音乐——这两样是你留下的。`},
@@ -19915,13 +19532,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`你的现场钢琴`, body:`点 ♪ 作曲。点键 = 一击,按住 = 更宽的块。和弦名实时显示。Backspace 撤销,空格播放。`, more:`点 ♪ 作曲(或按 Enter)。钢琴打开。点键 = 快速一击,按住 = 更宽的块——按得越久,画得越宽。硬件键盘也行:A–L 白键,W/E/T/Y/U/O/P 黑键。Backspace = 撤销,空格 = 播放/暂停,Enter 切换钢琴。按住一个和弦,它的名字(C 大、A 小、D7…)实时出现。画布是固定的黄金比例框——添加越多,行越缩,画越密。选了画家时，画面像音乐模式一样逐音生长——每个音只做加法，已画的不会重画。Mic 也一样。例外是 Kandinsky 和拼贴类画家（Kusama、Vasarely、Klimt、Haring、Klee、Lichtenstein）：它们的图块始终铺满整个画布，每添一个音就重新排列。在这里，Pollock 和 Monet 的第一个变体用每个音的准确颜色画每一笔——绿色的音，绿色的笔触。有主题的画从你的第一个音起就完整出现，用它的颜色，之后的每个音都在其中作画：莫奈的《印象》、鲁昂大教堂、干草堆、白杨和日本桥，德劳内的埃菲尔铁塔，北斋的桥，毕加索的《亚维农少女》，包豪斯里阿尔伯斯的《向正方形致敬》，以及蒙德里安的树。◆ 移动端:全部 88 键都在——横向滑动来平移,C4 大致居中。◆ 音阶吸附:点 ⚙ 把你弹的一切吸附到某个调;「Free」(默认)保持完全半音。`},
     {id:'mic', glyph:'🎙', cat:'music', title:`唱出来,画出来`, body:`两个 MIC 模式。🔊 音乐 听房间。🎤 人声 把你的哼唱吸附到 C 大调。两者都实时画。之后切换 Original ⇄ Piano。`, more:`点 🎙 MIC。画布以一个大 REC 按钮就绪打开。◆ 🔊 音乐(蓝,默认):听房间里在放的——音箱、Spotify、任何环境声——并静默地画出听到的:旋律画成单音，真正的和弦画成和弦。欢迎长录;画布向下生长。◆ 🎤 人声(红):唱、哼或吹口哨。音高吸附到 C 大调,经钢琴发声,在固定 φ 框里逐音作画。◆ 左上角徽章翻转 音乐 ⇄ 人声;每个保留自己的草稿(小 ● 表示有一个在等)。Clear 只擦除当前模式。◆ 录制时,画布随房间音量轻轻呼吸——更响把它推得更宽,安静让它歇息。`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音频或乐谱`, body:`一个按钮搞定每种音乐文件。MIDI、MP3/WAV/M4A,或来自 MuseScore/Finale 的 MusicXML。类型自动识别。`, more:`一个按钮搞定每种音乐文件。◆ MIDI(.mid / .midi)——多轨凝缩成和弦,按速度映射,作画。◆ 音频(.mp3 .wav .m4a .ogg .aac)——解码、检测音高、作画;在干净的单音或稀疏素材(独奏钢琴、人声、简单吉他)上最佳——密集混音更难。◆ 乐谱(.musicxml .xml .mxl 来自 MuseScore、Finale、Dorico)——音高、时值、力度、和弦全都精确通过;现有最准确的输入。Paintiano 自动识别类型。不带文件打开「音乐」可得内置示例。◆ 听画 —— 当一首乐曲画完后，点击 听画 让画作本身穿过图像扫描器。同一幅画，作为图像被听到。音乐 ↔ 绘画，双向通行。`},
-    {id:'image', glyph:'📷', cat:'music', title:`照片 → 音乐 → 绘画`, body:`丢入一张图。它的颜色和能量变成一段钢琴曲,然后以任一艺术家风格作画。Free 做扫描,Pro 增加 AI 作曲。`, more:`上传任意图像。Paintiano 把它当乐谱读——从左到右、从上到下;时长随图像能量缩放(约 1½–2¾ 分钟)。◆ 应用按作品有多彩来选读法:多彩 → 和声或光谱(色相=音高,明度=八度,鲜艳=响度);近单色(格尔尼卡、水墨、棕褐)→ 黑白。◆ 自定义是你的:只有接近你 12 格的颜色发声,其余静默——把格尔尼卡过滤成热带粉,看看什么存活。◆ 两种播放方式:扫描 把图从左到右当乐谱读(选扫描方向)。AI 作曲(Pro)从图的调色、能量与情绪写一整首新曲——播放时把图留在屏上。◆ 作曲家在两者之间：同一张图以肖邦、格拉斯或巴赫的声音重新谱写——见「作曲家」卡。`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`十二位作曲家`, body:`绘画 → 音乐：图像可以以纯 Scan 播放——或用作曲家的声音重新谱写。肖邦与萨蒂免费，Pro 解锁全部十二位——此外每天为所有人解锁一位 Pro 作曲家和一位 Pro 艺术家（✦ 今日）。设置 → 作曲家选择阵容。`, more:`作曲家位于图像一侧——是 24 位画家在绘画→音乐方向的镜像。载入一张图，它可以两种方式播放。◆ SCAN 从左到右逐字读取，如同读谱。◆ 作曲家模式用作曲家的声音重新谱写同一张图——它的色彩与能量，由另一个音乐心灵来叙述。◆ 肖邦——钢琴的浪漫主义诗人；歌唱般的线条，丰富的和声。◆ 萨蒂——“极简主义”一词诞生前的法国极简；稀疏而漂浮的和弦。◆ 格什温——音乐厅里的爵士和声；蓝调音绽放。◆ 格拉斯——每次移动一个音级的重复音型；音乐在图案中呼吸。◆ 瓦因——当代澳大利亚的能量；棱角分明、明亮、富于节奏。◆ 李闰珉——现代抒情钢琴；宽阔平静的波浪。◆ 巴赫——二声部创意曲；十六分音符在行走低音上奔跑，阶梯式强弱，不用踏板。◆ 贝多芬——四个房间的奏鸣曲：月光三连音、阿尔贝蒂低音上的快板主题、震音风暴、锤击和弦；突强与突弱。◆ 德彪西——印象主义；五声音阶的宁静、全音阶的闪烁、长踏板下的平行和弦。◆ 拉赫玛尼诺夫——俄罗斯的宏大画布；跨三个八度的琶音、八度旋律、钟声。◆ 埃奥迪——永不改变的固定音型；层层叠加成一个漫长的渐强。◆ 久石让——吉卜力圆舞曲；旋律跳上六度再缓步而下，add9 的温暖。◆ 同一张图，不同作曲家 → 截然不同的乐曲；标题标注 “inspired by …”。在 Lite 中，↻ 「给我惊喜」会在同一张图上抽取 Scan 或另一位作曲家。在 Advanced 中，作曲家上方的 🔀 按钮随机切换作曲家（Next 或全屏上滑抽另一位）；旁边的 Jam session（合奏，Pro）让多位作曲家轮流接句。设置 → 作曲家决定谁参与。免费版含肖邦与萨蒂；Pro 解锁全部十二位。`},
+    {id:'image', glyph:'📷', cat:'music', title:`照片 → 音乐 → 绘画`, body:`丢入一张图。它的颜色和能量变成一段钢琴曲,然后以任一艺术家风格作画。Free 做扫描,Pro 增加 AI 作曲。`, more:`上传任意图像。Paintiano 把它当乐谱读——从左到右、从上到下;时长随图像能量缩放(约 1¼–4 分钟)。播放时,一道柔和的光带标出音乐正在读取的位置,旋律则沿路径画出一条细线。◆ 应用按作品有多彩来选读法:多彩 → 和声或光谱(色相=音高,明度=八度,鲜艳=响度);近单色(格尔尼卡、水墨、棕褐)→ 黑白。◆ 自定义是你的:只有接近你 12 格的颜色发声,其余静默——把格尔尼卡过滤成热带粉,看看什么存活。◆ 两种播放方式:扫描 把图从左到右当乐谱读(选扫描方向)。AI 作曲(Pro)从图的调色、能量与情绪写一整首新曲——播放时把图留在屏上。◆ 作曲家在两者之间：同一张图以肖邦、格拉斯或巴赫的声音重新谱写——见「作曲家」卡。`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`十二位作曲家`, body:`绘画 → 音乐：图像可以以纯 Scan 播放——或用作曲家的声音重新谱写。肖邦与萨蒂免费，Pro 解锁全部十二位——此外每天为所有人解锁一位 Pro 作曲家和一位 Pro 艺术家（✦ 今日）。设置 → 作曲家选择阵容。`, more:`作曲家位于图像一侧——是 24 位画家在绘画→音乐方向的镜像。载入一张图，它可以两种方式播放。◆ SCAN 从左到右逐字读取，如同读谱。◆ 作曲家模式用作曲家的声音重新谱写同一张图。作曲家保留自己的语汇，其中的每一个决定都来自画面：旋律跟随画面勾勒的线条，和声按阅读顺序走过它的色块，重音落在它的边缘，高潮落在目光被吸引之处，调式来自它的光与冷暖，速度来自它的能量，曲式来自它的对称——而阅读方向（横向、纵向、螺旋，选项就在作曲家下方）会带来另一首曲子。每位作曲家还能以四种形态读取画面——原样、倒读、倒影（它的底片）或两者兼用——所以同一幅画、同一位作曲家、同一个方向，仍然能得到四首不同的曲子。◆ 肖邦——钢琴的浪漫主义诗人；歌唱般的线条，丰富的和声。◆ 萨蒂——“极简主义”一词诞生前的法国极简；稀疏而漂浮的和弦。◆ 格什温——音乐厅里的爵士和声；蓝调音绽放。◆ 格拉斯——每次移动一个音级的重复音型；音乐在图案中呼吸。◆ 瓦因——当代澳大利亚的能量；棱角分明、明亮、富于节奏。◆ 李闰珉——现代抒情钢琴；宽阔平静的波浪。◆ 巴赫——二声部创意曲；十六分音符在行走低音上奔跑，阶梯式强弱，不用踏板。◆ 贝多芬——四个房间的奏鸣曲：月光三连音、阿尔贝蒂低音上的快板主题、震音风暴、锤击和弦；突强与突弱。◆ 德彪西——印象主义；五声音阶的宁静、全音阶的闪烁、长踏板下的平行和弦。◆ 拉赫玛尼诺夫——俄罗斯的宏大画布；跨三个八度的琶音、八度旋律、钟声。◆ 埃奥迪——永不改变的固定音型；层层叠加成一个漫长的渐强。◆ 久石让——吉卜力圆舞曲；旋律跳上六度再缓步而下，add9 的温暖。◆ 同一张图，不同作曲家 → 截然不同的乐曲；标题标注 “inspired by …”。在 Lite 中，↻ 「给我惊喜」会在同一张图上抽取 Scan 或另一位作曲家。在 Advanced 中，作曲家上方的 🔀 按钮随机切换作曲家（Next 或全屏上滑抽另一位）；旁边的 Jam session（合奏，Pro）让多位作曲家轮流接句。设置 → 作曲家决定谁参与。免费版含肖邦与萨蒂；Pro 解锁全部十二位。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循环、静音、清除`, body:`播放/暂停并拖进度条。⟳ 循环重复。🔊 静音在无声中作画。Clear 智能重置,按模式。`, more:`播放控制。◆ 播放开始并暂停(空格也行);点进度条跳转,拖动来 scrub。◆ ⟳ LOOP 让情绪曲重复;开启时为金色。◆ 🔊 / 🔇 静音在画作仍照常生成时静掉所有音频——跨会话记住。◆ Clear 感知模式:Compose 擦画布并留下;MIC 只丢当前模式的草稿;Image 丢弃草稿,Setup 回到初始——图片本身留在画布上;MIDI/音频/乐谱/文字情绪做完整重置。◆ 若状态显示「loading piano…」,等几秒(约 5 MB 采样);若失败,切换到合成钢琴。`},
     {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`保存 → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到可印刷品质。`, more:`两颗钻石——图与乐。◆ ↓ 保存 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A1 · 可印刷 (高分辨率, 画廊级)。同一首歌总给同样的画——你的歌现在有了签名。◆ ⏺ 录制(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ 乐谱 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A1 · 可印刷尺寸。`},
     {id:'favorites', glyph:'♥', cat:'save', title:`收藏`, body:`在完成的画作左上角轻点 ♡ 即可留下它。☰ → ♥ 收藏 会在画布上一幅一幅地再给你看。没有数量限制。`, more:`♥ 保存的是画作的地址，而不是图片：曲子的音符、画家——或融合及每位成员的变体——调色板、色调和画布；打开时据此重新画出。◆ 只有完成的画作才会出现爱心——音乐播放或录音时不会。再点一次即可移除（撤销可找回）。◆ ☰ → ♥ 收藏：向左 / 向右滑动或点 ‹ › 切换；全屏时向上滑看下一幅。这里不播放任何声音——「选个风格」条和播放都已关闭。全部清除 可一次移除所有收藏（点两下；撤销可找回）。↓ 保存 和平时一样——Story、Web、打印 A1、画廊——作用于画布上的这幅画；✕ 关闭 让你回到原来的位置。◆ 收藏保存在这台设备、这个浏览器里。画作会按你打开它的屏幕来画，和在那里现场画出的一模一样——某位画家更新后，可能略有不同。◆ 曲子本身可用标题旁的小标签 ♫ + 我的音乐 存入「我的音乐」（MIDI、MP3 或乐谱文件）。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99(早鸟价,之后 €14.99)→ 全部 24 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99(早鸟价,之后 €24.99)增加无限 AI。提示:在 Free,点一下你最喜欢的锁定艺术家——会为你解锁试用。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家,每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印。每个 AI 模式有 1 次免费试用:文字情绪、从图像取情绪、AI 作曲——而 氛围 + 旋律 之间共享 2 次试用。◆ Pro €9.99(早鸟价,之后 €14.99)——全部 24 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的可印刷导出、终身访问(无 AI)。◆ Pro AI €19.99(早鸟价,之后 €24.99)——Pro 的一切外加无限 AI:文字情绪、从图像取情绪、AI 作曲、AI 氛围与旋律。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。◆ 图像的作曲家之声：免费版有肖邦与萨蒂；Pro 解锁全部十二位。◆ 合奏——融合（画家杂交成一种风格）与 Jam session（作曲家轮流接句）——也是 Pro；在设置中开启。`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`合奏——融合 与 Jam session`, body:`Pro，有 Pro 时默认开启（设置 → 合奏）。融合：2–5 位画家杂交成一种新风格，画完整首歌。Jam session：2–5 位作曲家在同一张图上轮流接句。两者在 🔀 旁各有自己的按钮——并且可以与 🔀 组合。`, more:`在设置中开启合奏，🔀 旁会出现第二个按钮◎。点它搭起舞台：点芯片组建——最多五位，按点按顺序；每位带编号，再点一次移出。开启时屏上的艺术家是 1 号成员。◆ 合奏 × 🔀——关：舞台保持你搭的样子。1：Next 为同一杂交中的每位画家各自抽一个新变体。ALL：原有的舞台被固定——带图钉的金色芯片。每次 Next 保留已固定的画家，并在旁边再抽 1–3 位（白框，总共最多 5 位）；每位成员，无论是否固定，都会得到新变体。点按芯片可固定或取消固定；取消固定的画家会留在画布上，直到下一次抽取。没有固定：每次 Next 抽一个全新的杂交——2 到 5 位画家，人数与人选从你的设置选择中随机。固定了五位：Next 抽他们的变体。在 1 和 ALL 中，每次 Next 还会从设置里勾选的调色板中抽一个新调色板。在 ALL 中关闭合奏，抽取交还给普通随机，从 1 号成员开始。◆ 融合（绘画）是杂交，不是拼贴。每位艺术家被归结为十来个基因的 DNA——底色、笔触词汇、尺寸、边缘、透明度、布局语法、轮廓、调色处理、手抖、连线、层数、密度——每个变体一套基因。所选画家以相等权重杂交（两位 → 50/50，五位 → 各 20%），由一个渲染器用结果画完整首歌：尺寸、边缘、轮廓、布局与层次融为一只混合的手，而每位父母保留自己的签名母题（德劳内的四分圆盘、草间弥生的点群、哈林的人形……），并轮流承担每第 N 个和弦——二重奏真的是一半一半。1 号成员带来你正在看的变体；每位加入的画家带来自己的变体。之后每次 Next 都为每位成员各自抽一个新变体——一位画家的任何变体都能遇上另一位的任何变体。音乐也塑造基因：密集快速的曲子画得更密、层次更多，安静的曲子更疏、更大；音区决定笔触大小，张力决定轮廓，规律性决定网格与流动的比例。标题和导出写作「Rothko × Pollock × Kusama」；全屏时轻点会显示「融合」和名字。◆ JAM SESSION（图像 → 音乐）：舞台上每位作曲家以自己的声音写完整张图，然后每 ~5 秒换人——一人呼，下一人从曲式同一处应。它在作曲家的 🔀 旁有自己的按钮；开启 🔀 会固定舞台上的作曲家（带图钉的金色芯片），每次 Next 保留他们并在旁边再安排 1–3 位（白框，最多 5 位）。点按芯片可固定或取消固定；取消固定的作曲家会继续演奏，直到下一次抽取。没有固定：Next 会安排一个全新的随机合奏——2 到 5 位作曲家，人数与人选随机。◆ 在 Lite 中（开启合奏时）：大约每四次「给我惊喜」有一次变成合奏——音乐上是抽中的画家加 1–4 位的 融合，图像上是 2–5 位作曲家的 Jam session；人数与人选随机，取自你的设置选择。标题显示「Rothko × Kusama」或「Chopin ↔ Glass」。下一次「给我惊喜」可能又是独奏。◆ 导出保持确定：同一首歌、同一舞台、同一幅画。`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`合奏——融合 与 Jam session`, body:`Pro，有 Pro 时默认开启（设置 → 合奏）。融合：2–5 位画家杂交成一种新风格，画完整首歌。Jam session：2–5 位作曲家在同一张图上轮流接句。两者在 🔀 旁各有自己的按钮——并且可以与 🔀 组合。`, more:`在设置中开启合奏，🔀 旁会出现第二个按钮◎。点它搭起舞台：点芯片组建——最多五位，按点按顺序；每位带编号，再点一次移出。开启时屏上的艺术家是 1 号成员。◆ 合奏 × 🔀——关：舞台保持你搭的样子。1：Next 为同一杂交中的每位画家各自抽一个新变体。ALL：原有的舞台被固定——带图钉的金色芯片。每次 Next 保留已固定的画家，并在旁边再抽 1–3 位（白框，总共最多 5 位）；每位成员，无论是否固定，都会得到新变体。点按芯片可固定或取消固定；取消固定的画家会留在画布上，直到下一次抽取。没有固定：每次 Next 抽一个全新的杂交——2 到 5 位画家，人数与人选从你的设置选择中随机。固定了五位：Next 抽他们的变体。在 1 和 ALL 中，每次 Next 还会从设置里勾选的调色板中抽一个新调色板。在 ALL 中关闭合奏，抽取交还给普通随机，从 1 号成员开始。◆ 融合（绘画）是杂交，不是拼贴。每位艺术家被归结为十来个基因的 DNA——底色、笔触词汇、尺寸、边缘、透明度、布局语法、轮廓、调色处理、手抖、连线、层数、密度——每个变体一套基因。所选画家以相等权重杂交（两位 → 50/50，五位 → 各 20%），由一个渲染器用结果画完整首歌：尺寸、边缘、轮廓、布局与层次融为一只混合的手，而每位父母保留自己的签名母题（德劳内的四分圆盘、草间弥生的点群、哈林的人形……），并轮流承担每第 N 个和弦——二重奏真的是一半一半。1 号成员带来你正在看的变体；每位加入的画家带来自己的变体。之后每次 Next 都为每位成员各自抽一个新变体——一位画家的任何变体都能遇上另一位的任何变体。音乐也塑造基因：密集快速的曲子画得更密、层次更多，安静的曲子更疏、更大；音区决定笔触大小，张力决定轮廓，规律性决定网格与流动的比例。标题和导出写作「Rothko × Pollock × Kusama」；全屏时轻点会显示「融合」和名字。◆ JAM SESSION（图像 → 音乐）：舞台上每位作曲家以自己的声音写完整张图，然后它们在同一脉动与同一调性上汇合。怎么汇合，由融合风格决定（设置 → 合奏）：A——每个乐句（四小节）换人，一人呼，下一人从曲式同一处应；E——由他们孕育出的一位新作曲家：一位给出和声与伴奏，一位给出旋律，第三位给出脉动；A+E——按图像的地址抛一次硬币。它在作曲家的 🔀 旁有自己的按钮；开启 🔀 会固定舞台上的作曲家（带图钉的金色芯片），每次 Next 保留他们并在旁边再安排 1–3 位（白框，最多 5 位）。点按芯片可固定或取消固定；取消固定的作曲家会继续演奏，直到下一次抽取。没有固定：Next 会安排一个全新的随机合奏——2 到 5 位作曲家，人数与人选随机。◆ 在 Lite 中（开启合奏时）：大约每四次「给我惊喜」有一次变成合奏——音乐上是抽中的画家加 1–4 位的 融合，图像上是 2–5 位作曲家的 Jam session；人数与人选随机，取自你的设置选择。标题显示「Rothko × Kusama」、「Chopin ↔ Glass」（轮奏）或「Chopin × Glass」（孕育出的一位作曲家）。下一次「给我惊喜」可能又是独奏。◆ 导出保持确定：同一首歌、同一舞台、同一幅画。`}
   ],
   zhTW: [
     {id:'overview', glyph:'◈', cat:'start', title:`音樂 ⇄ 繪畫`, body:`同一個輪盤,兩個方向。唱、打字或丟一張照片——畫布隨音樂填滿。保存畫作,錄下樂曲。兩者都帶走。`, more:`Paintiano 是雙向翻譯器。同一個色輪和音高輪雙向運轉。選一個來源——作曲、麥克風、音樂、圖像或一種情緒——音樂播放時畫布隨之填滿。兩條入口:◆ 音樂 → 繪畫:輸入一種情緒(任何感受、任何語言)、彈鋼琴、對麥克風唱,或丟入 MIDI、MP3 或樂譜。◆ 繪畫 → 音樂:丟入一張圖。選個顏色模式,也許選個藝術家。同樣的音樂 = 同樣的畫,始終如此。點 🔀，Next 帶來新解讀——同一首歌，另一隻手。然後保存畫作、錄下音樂——這兩樣是你留下的。`},
@@ -19942,13 +19559,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`你的現場鋼琴`, body:`點 ♪ 作曲。點鍵 = 一擊,按住 = 更寬的塊。和弦名即時顯示。Backspace 復原,空格播放。`, more:`點 ♪ 作曲(或按 Enter)。鋼琴打開。點鍵 = 快速一擊,按住 = 更寬的塊——按得越久,畫得越寬。硬體鍵盤也行:A–L 白鍵,W/E/T/Y/U/O/P 黑鍵。Backspace = 復原,空格 = 播放/暫停,Enter 切換鋼琴。按住一個和弦,它的名字(C 大、A 小、D7…)即時出現。畫布是固定的黃金比例框——添加越多,行越縮,畫越密。選了畫家時，畫面像音樂模式一樣逐音生長——每個音只做加法，已畫的不會重畫。Mic 也一樣。例外是 Kandinsky 和拼貼類畫家（Kusama、Vasarely、Klimt、Haring、Klee、Lichtenstein）：它們的圖塊始終鋪滿整個畫布，每加一個音就重新排列。在這裡，Pollock 和 Monet 的第一個變體用每個音的準確顏色畫每一筆——綠色的音，綠色的筆觸。有主題的畫從你的第一個音起就完整出現，用它的顏色，之後的每個音都在其中作畫：莫內的《印象》、盧昂大教堂、乾草堆、白楊和日本橋，德洛內的艾菲爾鐵塔，北齋的橋，畢卡索的《亞維農的少女》，包浩斯裡阿伯斯的《向正方形致敬》，以及蒙德里安的樹。◆ 行動端:全部 88 鍵都在——橫向滑動來平移,C4 大致置中。◆ 音階吸附:點 ⚙ 把你彈的一切吸附到某個調;「Free」(預設)保持完全半音。`},
     {id:'mic', glyph:'🎙', cat:'music', title:`唱出來,畫出來`, body:`兩個 MIC 模式。🔊 音樂 聽房間。🎤 人聲 把你的哼唱吸附到 C 大調。兩者都即時畫。之後切換 Original ⇄ Piano。`, more:`點 🎙 MIC。畫布以一個大 REC 按鈕就緒打開。◆ 🔊 音樂(藍,預設):聽房間裡在放的——喇叭、Spotify、任何環境聲——並靜默地畫出聽到的:旋律畫成單音，真正的和弦畫成和弦。歡迎長錄;畫布向下生長。◆ 🎤 人聲(紅):唱、哼或吹口哨。音高吸附到 C 大調,經鋼琴發聲,在固定 φ 框裡逐音作畫。◆ 左上角徽章翻轉 音樂 ⇄ 人聲;每個保留自己的草稿(小 ● 表示有一個在等)。Clear 只擦除當前模式。◆ 錄製時,畫布隨房間音量輕輕呼吸——更響把它推得更寬,安靜讓它歇息。`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音訊或樂譜`, body:`一個按鈕搞定每種音樂檔。MIDI、MP3/WAV/M4A,或來自 MuseScore/Finale 的 MusicXML。類型自動辨識。`, more:`一個按鈕搞定每種音樂檔。◆ MIDI(.mid / .midi)——多軌凝縮成和弦,按速度映射,作畫。◆ 音訊(.mp3 .wav .m4a .ogg .aac)——解碼、偵測音高、作畫;在乾淨的單音或稀疏素材(獨奏鋼琴、人聲、簡單吉他)上最佳——密集混音更難。◆ 樂譜(.musicxml .xml .mxl 來自 MuseScore、Finale、Dorico)——音高、時值、力度、和弦全都精確通過;現有最準確的輸入。Paintiano 自動辨識類型。不帶檔案打開「音樂」可得內建範例。◆ 聽畫 —— 當一首樂曲畫完後，點擊 聽畫 讓畫作本身穿過圖像掃描器。同一幅畫，作為圖像被聽到。音樂 ↔ 繪畫，雙向通行。`},
-    {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 繪畫`, body:`丟入一張圖。它的顏色和能量變成一段鋼琴曲,然後以任一藝術家風格作畫。Free 做掃描,Pro 增加 AI 作曲。`, more:`上傳任意圖像。Paintiano 把它當樂譜讀——從左到右、從上到下;時長隨圖像能量縮放(約 1½–2¾ 分鐘)。◆ 應用按作品有多彩來選讀法:多彩 → 和聲或光譜(色相=音高,明度=八度,鮮豔=響度);近單色(格爾尼卡、水墨、棕褐)→ 黑白。◆ 自訂是你的:只有接近你 12 格的顏色發聲,其餘靜默——把格爾尼卡濾成熱帶粉,看看什麼存活。◆ 兩種播放方式:掃描 把圖從左到右當樂譜讀(選掃描方向)。AI 作曲(Pro)從圖的調色、能量與情緒寫一整首新曲——播放時把圖留在螢幕上。◆ 作曲家在兩者之間：同一張圖以蕭邦、葛拉斯或巴赫的聲音重新譜寫——見「作曲家」卡。`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`十二位作曲家`, body:`繪畫 → 音樂：圖像可以以純 Scan 播放——或用作曲家的聲音重新譜寫。蕭邦與薩提免費，Pro 解鎖全部十二位——此外每天為所有人解鎖一位 Pro 作曲家和一位 Pro 藝術家（✦ 今日）。設定 → 作曲家選擇陣容。`, more:`作曲家位於圖像一側——是 24 位畫家在繪畫→音樂方向的鏡像。載入一張圖，它可以兩種方式播放。◆ SCAN 從左到右逐字讀取，如同讀譜。◆ 作曲家模式用作曲家的聲音重新譜寫同一張圖——它的色彩與能量，由另一個音樂心靈來敘述。◆ 蕭邦——鋼琴的浪漫主義詩人；歌唱般的線條，豐富的和聲。◆ 薩提——「極簡主義」一詞誕生前的法國極簡；稀疏而飄浮的和弦。◆ 蓋希文——音樂廳裡的爺士和聲；藍調音綠放。◆ 葛拉斯——每次移動一個音級的重複音型；音樂在圖案中呼吸。◆ 瓦因——當代澳洲的能量；棱角分明、明亮、富於節奏。◆ 李閏珉——現代抒情鋼琴；寬闊平靜的波浪。◆ 巴哈——二聲部創意曲；十六分音符在行走低音上奔跑，階梯式強弱，不用踏板。◆ 貝多芬——四個房間的奏鳴曲：月光三連音、阿爾貝蒂低音上的快板主題、震音風暴、錘擊和弦；突強與突弱。◆ 德布西——印象主義；五聲音階的寧靜、全音階的閃爍、長踏板下的平行和弦。◆ 拉赫曼尼諾夫——俄羅斯的宏大畫布；跨三個八度的琶音、八度旋律、鐘聲。◆ 艾奧迪——永不改變的固定音型；層層疊加成一個漫長的漸強。◆ 久石讓——吉卜力圓舞曲；旋律跳上六度再緩步而下，add9 的溫暖。◆ 同一張圖，不同作曲家 → 截然不同的樂曲；標題標註 “inspired by …”。在 Lite 中，↻ 「給我驚喜」會在同一張圖上抽取 Scan 或另一位作曲家。在 Advanced 中，作曲家上方的 🔀 按鈕隨機切換作曲家（Next 或全螢幕上滑抽另一位）；旁邊的 Jam session（合奏，Pro）讓多位作曲家輪流接句。設定 → 作曲家決定誰參與。免費版含蕭邦與薩提；Pro 解鎖全部十二位。`},
+    {id:'image', glyph:'📷', cat:'music', title:`照片 → 音樂 → 繪畫`, body:`丟入一張圖。它的顏色和能量變成一段鋼琴曲,然後以任一藝術家風格作畫。Free 做掃描,Pro 增加 AI 作曲。`, more:`上傳任意圖像。Paintiano 把它當樂譜讀——從左到右、從上到下;時長隨圖像能量縮放(約 1¼–4 分鐘)。播放時,一道柔和的光帶標出音樂正在讀取的位置,旋律則沿路徑畫出一條細線。◆ 應用按作品有多彩來選讀法:多彩 → 和聲或光譜(色相=音高,明度=八度,鮮豔=響度);近單色(格爾尼卡、水墨、棕褐)→ 黑白。◆ 自訂是你的:只有接近你 12 格的顏色發聲,其餘靜默——把格爾尼卡濾成熱帶粉,看看什麼存活。◆ 兩種播放方式:掃描 把圖從左到右當樂譜讀(選掃描方向)。AI 作曲(Pro)從圖的調色、能量與情緒寫一整首新曲——播放時把圖留在螢幕上。◆ 作曲家在兩者之間：同一張圖以蕭邦、葛拉斯或巴赫的聲音重新譜寫——見「作曲家」卡。`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`十二位作曲家`, body:`繪畫 → 音樂：圖像可以以純 Scan 播放——或用作曲家的聲音重新譜寫。蕭邦與薩提免費，Pro 解鎖全部十二位——此外每天為所有人解鎖一位 Pro 作曲家和一位 Pro 藝術家（✦ 今日）。設定 → 作曲家選擇陣容。`, more:`作曲家位於圖像一側——是 24 位畫家在繪畫→音樂方向的鏡像。載入一張圖，它可以兩種方式播放。◆ SCAN 從左到右逐字讀取，如同讀譜。◆ 作曲家模式用作曲家的聲音重新譜寫同一張圖。作曲家保留自己的語彙，其中的每一個決定都來自畫面：旋律跟隨畫面勾勒的線條，和聲按閱讀順序走過它的色塊，重音落在它的邊緣，高潮落在目光被吸引之處，調式來自它的光與冷暖，速度來自它的能量，曲式來自它的對稱——而閱讀方向（橫向、縱向、螺旋，選項就在作曲家下方）會帶來另一首曲子。每位作曲家還能以四種形態讀取畫面——原樣、倒讀、倒影（它的底片）或兩者兼用——所以同一幅畫、同一位作曲家、同一個方向，仍然能得到四首不同的曲子。◆ 蕭邦——鋼琴的浪漫主義詩人；歌唱般的線條，豐富的和聲。◆ 薩提——「極簡主義」一詞誕生前的法國極簡；稀疏而飄浮的和弦。◆ 蓋希文——音樂廳裡的爺士和聲；藍調音綠放。◆ 葛拉斯——每次移動一個音級的重複音型；音樂在圖案中呼吸。◆ 瓦因——當代澳洲的能量；棱角分明、明亮、富於節奏。◆ 李閏珉——現代抒情鋼琴；寬闊平靜的波浪。◆ 巴哈——二聲部創意曲；十六分音符在行走低音上奔跑，階梯式強弱，不用踏板。◆ 貝多芬——四個房間的奏鳴曲：月光三連音、阿爾貝蒂低音上的快板主題、震音風暴、錘擊和弦；突強與突弱。◆ 德布西——印象主義；五聲音階的寧靜、全音階的閃爍、長踏板下的平行和弦。◆ 拉赫曼尼諾夫——俄羅斯的宏大畫布；跨三個八度的琶音、八度旋律、鐘聲。◆ 艾奧迪——永不改變的固定音型；層層疊加成一個漫長的漸強。◆ 久石讓——吉卜力圓舞曲；旋律跳上六度再緩步而下，add9 的溫暖。◆ 同一張圖，不同作曲家 → 截然不同的樂曲；標題標註 “inspired by …”。在 Lite 中，↻ 「給我驚喜」會在同一張圖上抽取 Scan 或另一位作曲家。在 Advanced 中，作曲家上方的 🔀 按鈕隨機切換作曲家（Next 或全螢幕上滑抽另一位）；旁邊的 Jam session（合奏，Pro）讓多位作曲家輪流接句。設定 → 作曲家決定誰參與。免費版含蕭邦與薩提；Pro 解鎖全部十二位。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循環、靜音、清除`, body:`播放/暫停並拖進度條。⟳ 循環重複。🔊 靜音在無聲中作畫。Clear 智慧重置,按模式。`, more:`播放控制。◆ 播放開始並暫停(空格也行);點進度條跳轉,拖動來 scrub。◆ ⟳ LOOP 讓情緒曲重複;開啟時為金色。◆ 🔊 / 🔇 靜音在畫作仍照常生成時靜掉所有音訊——跨工作階段記住。◆ Clear 感知模式:Compose 擦畫布並留下;MIC 只丟當前模式的草稿;Image 丟棄草稿,Setup 回到初始——圖片本身留在畫布上;MIDI/音訊/樂譜/文字情緒做完整重置。◆ 若狀態顯示「loading piano…」,等幾秒(約 5 MB 取樣);若失敗,切換到合成鋼琴。`},
     {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`儲存 → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到可列印品質。`, more:`兩顆鑽石——圖與樂。◆ ↓ 儲存 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A1 · 可列印 (高解析度, 畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。◆ ⏺ 錄製(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ 樂譜 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A1 · 可列印尺寸。`},
     {id:'favorites', glyph:'♥', cat:'save', title:`收藏`, body:`在完成的畫作左上角輕點 ♡ 即可留下它。☰ → ♥ 收藏 會在畫布上一幅一幅地再給你看。沒有數量限制。`, more:`♥ 儲存的是畫作的位址，而不是圖片：曲子的音符、畫家——或融合及每位成員的變體——調色盤、色調與畫布；開啟時據此重新畫出。◆ 只有完成的畫作才會出現愛心——音樂播放或錄音時不會。再點一次即可移除（復原可找回）。◆ ☰ → ♥ 收藏：向左 / 向右滑動或點 ‹ › 切換；全螢幕時向上滑看下一幅。這裡不播放任何聲音——「選個風格」條與播放都已關閉。全部清除 可一次移除所有收藏（點兩下；復原可找回）。↓ 儲存 和平常一樣——Story、Web、列印 A1、畫廊——作用於畫布上的這幅畫；✕ 關閉 讓你回到原來的位置。◆ 收藏保存在這台裝置、這個瀏覽器裡。畫作會依你開啟它的螢幕來畫，和在那裡現場畫出的一模一樣——某位畫家更新後，可能略有不同。◆ 曲子本身可用標題旁的小標籤 ♫ + 我的音樂 存入「我的音樂」（MIDI、MP3 或樂譜檔案）。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99(早鳥價,之後 €14.99)→ 全部 24 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99(早鳥價,之後 €24.99)增加無限 AI。提示:在 Free,點一下你最喜歡的鎖定藝術家——會為你解鎖試用。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家,每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印。每個 AI 模式有 1 次免費試用:文字情緒、從圖像取情緒、AI 作曲——而 氛圍 + 旋律 之間共享 2 次試用。◆ Pro €9.99(早鳥價,之後 €14.99)——全部 24 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的可列印匯出、終身存取(無 AI)。◆ Pro AI €19.99(早鳥價,之後 €24.99)——Pro 的一切外加無限 AI:文字情緒、從圖像取情緒、AI 作曲、AI 氛圍與旋律。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。◆ 圖像的作曲家之聲：免費版有蕭邦與薩提；Pro 解鎖全部十二位。◆ 合奏——融合（畫家雜交成一種風格）與 Jam session（作曲家輪流接句）——也是 Pro；在設定中開啟。`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`合奏——融合 與 Jam session`, body:`Pro，有 Pro 時預設開啟（設定 → 合奏）。融合：2–5 位畫家雜交成一種新風格，畫完整首歌。Jam session：2–5 位作曲家在同一張圖上輪流接句。兩者在 🔀 旁各有自己的按鈕——並且可以與 🔀 組合。`, more:`在設定中開啟合奏，🔀 旁會出現第二個按鈕◎。點它搭起舞台：點晶片組建——最多五位，按點按順序；每位帶編號，再點一次移出。開啟時螢幕上的藝術家是 1 號成員。◆ 合奏 × 🔀——關：舞台保持你搭的樣子。1：Next 為同一雜交中的每位畫家各自抽一個新變體。ALL：原有的舞台被固定——帶圖釘的金色晶片。每次 Next 保留已固定的畫家，並在旁邊再抽 1–3 位（白框，總共最多 5 位）；每位成員，無論是否固定，都會得到新變體。點按晶片可固定或取消固定；取消固定的畫家會留在畫布上，直到下一次抽取。沒有固定：每次 Next 抽一個全新的雜交——2 到 5 位畫家，人數與人選從你的設定選擇中隨機。固定了五位：Next 抽他們的變體。在 1 和 ALL 中，每次 Next 還會從設定裡勾選的調色盤中抽一個新調色盤。在 ALL 中關閉合奏，抽取交還給普通隨機，從 1 號成員開始。◆ 融合（繪畫）是雜交，不是拼貼。每位藝術家被歸結為十來個基因的 DNA——底色、筆觸詞彙、尺寸、邊緣、透明度、佈局語法、輪廓、調色處理、手抖、連線、層數、密度——每個變體一套基因。所選畫家以相等權重雜交（兩位 → 50/50，五位 → 各 20%），由一個渲染器用結果畫完整首歌：尺寸、邊緣、輪廓、佈局與層次融為一隻混合的手，而每位父母保留自己的簽名母題（德洛內的四分圓盤、草間彌生的點群、哈林的人形……），並輪流承擔每第 N 個和弦——二重奏真的是一半一半。1 號成員帶來你正在看的變體；每位加入的畫家帶來自己的變體。之後每次 Next 都為每位成員各自抽一個新變體——一位畫家的任何變體都能遇上另一位的任何變體。音樂也塑造基因：密集快速的曲子畫得更密、層次更多，安靜的曲子更疏、更大；音域決定筆觸大小，張力決定輪廓，規律性決定網格與流動的比例。標題和匯出寫作「Rothko × Pollock × Kusama」；全螢幕時輕點會顯示「融合」和名字。◆ JAM SESSION（圖像 → 音樂）：舞台上每位作曲家以自己的聲音寫完整張圖，然後每 ~5 秒換人——一人呼，下一人從曲式同一處應。它在作曲家的 🔀 旁有自己的按鈕；開啟 🔀 會固定舞台上的作曲家（帶圖釘的金色晶片），每次 Next 保留他們並在旁邊再安排 1–3 位（白框，最多 5 位）。點按晶片可固定或取消固定；取消固定的作曲家會繼續演奏，直到下一次抽取。沒有固定：Next 會安排一個全新的隨機合奏——2 到 5 位作曲家，人數與人選隨機。◆ 在 Lite 中（開啟合奏時）：大約每四次「給我驚喜」有一次變成合奏——音樂上是抽中的畫家加 1–4 位的 融合，圖像上是 2–5 位作曲家的 Jam session；人數與人選隨機，取自你的設定選擇。標題顯示「Rothko × Kusama」或「Chopin ↔ Glass」。下一次「給我驚喜」可能又是獨奏。◆ 匯出保持確定：同一首歌、同一舞台、同一幅畫。`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`合奏——融合 與 Jam session`, body:`Pro，有 Pro 時預設開啟（設定 → 合奏）。融合：2–5 位畫家雜交成一種新風格，畫完整首歌。Jam session：2–5 位作曲家在同一張圖上輪流接句。兩者在 🔀 旁各有自己的按鈕——並且可以與 🔀 組合。`, more:`在設定中開啟合奏，🔀 旁會出現第二個按鈕◎。點它搭起舞台：點晶片組建——最多五位，按點按順序；每位帶編號，再點一次移出。開啟時螢幕上的藝術家是 1 號成員。◆ 合奏 × 🔀——關：舞台保持你搭的樣子。1：Next 為同一雜交中的每位畫家各自抽一個新變體。ALL：原有的舞台被固定——帶圖釘的金色晶片。每次 Next 保留已固定的畫家，並在旁邊再抽 1–3 位（白框，總共最多 5 位）；每位成員，無論是否固定，都會得到新變體。點按晶片可固定或取消固定；取消固定的畫家會留在畫布上，直到下一次抽取。沒有固定：每次 Next 抽一個全新的雜交——2 到 5 位畫家，人數與人選從你的設定選擇中隨機。固定了五位：Next 抽他們的變體。在 1 和 ALL 中，每次 Next 還會從設定裡勾選的調色盤中抽一個新調色盤。在 ALL 中關閉合奏，抽取交還給普通隨機，從 1 號成員開始。◆ 融合（繪畫）是雜交，不是拼貼。每位藝術家被歸結為十來個基因的 DNA——底色、筆觸詞彙、尺寸、邊緣、透明度、佈局語法、輪廓、調色處理、手抖、連線、層數、密度——每個變體一套基因。所選畫家以相等權重雜交（兩位 → 50/50，五位 → 各 20%），由一個渲染器用結果畫完整首歌：尺寸、邊緣、輪廓、佈局與層次融為一隻混合的手，而每位父母保留自己的簽名母題（德洛內的四分圓盤、草間彌生的點群、哈林的人形……），並輪流承擔每第 N 個和弦——二重奏真的是一半一半。1 號成員帶來你正在看的變體；每位加入的畫家帶來自己的變體。之後每次 Next 都為每位成員各自抽一個新變體——一位畫家的任何變體都能遇上另一位的任何變體。音樂也塑造基因：密集快速的曲子畫得更密、層次更多，安靜的曲子更疏、更大；音域決定筆觸大小，張力決定輪廓，規律性決定網格與流動的比例。標題和匯出寫作「Rothko × Pollock × Kusama」；全螢幕時輕點會顯示「融合」和名字。◆ JAM SESSION（圖像 → 音樂）：舞台上每位作曲家以自己的聲音寫完整張圖，然後它們在同一脈動與同一調性上匯合。怎麼匯合，由融合風格決定（設定 → 合奏）：A——每個樂句（四小節）換人，一人呼，下一人從曲式同一處應；E——由他們孕育出的一位新作曲家：一位給出和聲與伴奏，一位給出旋律，第三位給出脈動；A+E——按圖像的位址擲一次硬幣。它在作曲家的 🔀 旁有自己的按鈕；開啟 🔀 會固定舞台上的作曲家（帶圖釘的金色晶片），每次 Next 保留他們並在旁邊再安排 1–3 位（白框，最多 5 位）。點按晶片可固定或取消固定；取消固定的作曲家會繼續演奏，直到下一次抽取。沒有固定：Next 會安排一個全新的隨機合奏——2 到 5 位作曲家，人數與人選隨機。◆ 在 Lite 中（開啟合奏時）：大約每四次「給我驚喜」有一次變成合奏——音樂上是抽中的畫家加 1–4 位的 融合，圖像上是 2–5 位作曲家的 Jam session；人數與人選隨機，取自你的設定選擇。標題顯示「Rothko × Kusama」、「Chopin ↔ Glass」（輪奏）或「Chopin × Glass」（孕育出的一位作曲家）。下一次「給我驚喜」可能又是獨奏。◆ 匯出保持確定：同一首歌、同一舞台、同一幅畫。`}
   ],
   ja: [
     {id:'overview', glyph:'◈', cat:'start', title:`音楽 ⇄ 絵画`, body:`同じ輪、両方向。歌う、打つ、写真をドロップ——音楽が流れるとキャンバスが満ちる。絵を保存、曲を録音。両方を持ち帰る。`, more:`Paintiano は双方向の翻訳機。同じ色相環と音高環が両方向に回る。ソースを選ぶ——作曲、マイク、音楽、画像、または気持ち——と、音楽が流れる間キャンバスが満ちる。二つの入口:◆ 音楽 → 絵画:気分を打つ(どんな感情でも、どんな言語でも)、ピアノを弾く、マイクに歌う、または MIDI・MP3・楽譜をドロップ。◆ 絵画 → 音楽:画像をドロップ。色モードを選び、必要ならアーティストも。同じ音楽 = 同じ絵、いつも。🔀 をタップすれば Next が新しい解釈を——同じ曲、別の手。そして絵を保存し音楽を録音——それが手元に残る部分。`},
@@ -19969,13 +19586,13 @@ const GUIDE_CARDS_I18N = {
     {id:'compose', glyph:'♪', cat:'music', title:`あなたのライブピアノ`, body:`♪ 作曲 をタップ。鍵をタップ = 一撃、長押し = より広いブロック。和音名がライブで。Backspace で取消、スペースで再生。`, more:`♪ 作曲 をタップ(または Enter)。ピアノが開く。鍵をタップ = 素早い一撃、長押し = より広いブロック——長く押すほど広く描く。ハードウェアキーボードも:A–L 白鍵、W/E/T/Y/U/O/P 黒鍵。Backspace = 取消、スペース = 再生/停止、Enter でピアノ切替。和音を押さえるとその名(C メジャー、A マイナー、D7…)がライブで現れる。キャンバスは固定の黄金比フレーム——足すほど行が縮み、絵が密になる。画家を選ぶと、Music と同じく絵は一音ずつ育つ——音は描き足すだけで、描いたものは描き直さない。Mic も同じ。例外は Kandinsky とタイル型の画家(Kusama、Vasarely、Klimt、Haring、Klee、Lichtenstein):タイルは常にキャンバス全体を埋め、音を足すたびに並び直す。ここでは Pollock と Monet の最初のバリエーションが、各筆を音の正確な色で描く——緑の音は緑の筆。モチーフのある絵は最初の音から全体が立ち、その音の色で描かれ、続く音がその中に描き込む：モネの《印象》、ルーアン大聖堂、積みわら、ポプラ、日本の橋、ドローネーのエッフェル塔、北斎の橋、ピカソの《アヴィニョンの娘たち》、バウハウスのアルバース《正方形へのオマージュ》、モンドリアンの木。◆ モバイル:88 鍵すべてある——横にスワイプしてパン、C4 はほぼ中央。◆ スケールスナップ:⚙ をタップで弾く全てを調にスナップ;「Free」(既定)は完全に半音のまま。`},
     {id:'mic', glyph:'🎙', cat:'music', title:`歌って、描いて`, body:`二つの MIC モード。🔊 音楽 は部屋を聞く。🎤 声 はあなたのハミングを C メジャーにスナップ。両方ライブで描く。後で Original ⇄ Piano 切替。`, more:`🎙 MIC をタップ。キャンバスが大きな REC ボタンと共に構えて開く。◆ 🔊 音楽(青、既定):部屋で流れているもの——スピーカー、Spotify、何でも環境音——を聞き、聞こえたものを静かに描く:旋律は単音で、本当の和音は和音で。長い録音歓迎;キャンバスは下へ伸びる。◆ 🎤 声(赤):歌う、ハミング、口笛。音高は C メジャーにスナップし、ピアノを通して鳴り、固定 φ フレームで一音ずつ描く。◆ 左上のバッジが 音楽 ⇄ 声 を切替;各モードは自分の下書きを保つ(小さな ● は一つ待っている印)。Clear はアクティブなモードだけ消す。◆ 録音中、キャンバスは部屋の音量と共にそっと呼吸する——大きいと少し広く押し、静けさは休ませる。`},
     {id:'music', glyph:'🎵', cat:'music', title:`MIDI、音声、楽譜`, body:`あらゆる音楽ファイルに一つのボタン。MIDI、MP3/WAV/M4A、または MuseScore/Finale の MusicXML。種類は自動判別。`, more:`あらゆる音楽ファイルに一つのボタン。◆ MIDI(.mid / .midi)——マルチトラックが和音に凝縮、テンポマップされ、描かれる。◆ 音声(.mp3 .wav .m4a .ogg .aac)——デコードされ、音高検出され、描かれる;きれいな単音または疎な素材(ソロピアノ、声、シンプルなギター)で最良——密なミックスは難しい。◆ 楽譜(.musicxml .xml .mxl、MuseScore・Finale・Dorico から)——音高、長さ、強弱、和音すべて正確に通る;現存する最も正確な入力。Paintiano は種類を自動判別。ファイルなしで 音楽 を開けば内蔵サンプル。◆ 絵を聴く — 楽曲が描き終わったら、絵を聴く をタップ。絵そのものを画像スキャナーに通す。同じ絵を、画像として聴く。音楽 ↔ 絵画、双方向。`},
-    {id:'image', glyph:'📷', cat:'music', title:`写真 → 音楽 → 絵画`, body:`画像をドロップ。その色とエネルギーがピアノ曲になり、好きなアーティストのスタイルで描く。Free はスキャン、Pro は AI 作曲 を追加。`, more:`どんな画像でもアップロード。Paintiano はそれを楽譜として読む——左から右、上から下;長さは画像のエネルギーで変わる(約 1½–2¾ 分)。◆ アプリは作品がどれだけ色鮮やかかで読みを選ぶ:色鮮やか → ハーモニーかスペクトル(色相=音高、明度=八度、鮮やかさ=音量);ほぼ単色(ゲルニカ、墨、セピア)→ 白黒。◆ カスタムはあなたのもの:あなたの 12 色に近い色だけが鳴り、残りは静まる——ゲルニカを熱帯ピンクで濾して何が生き残るか見る。◆ 二つの再生法:スキャン は画像を左から右へ楽譜として読む(走査方向を選ぶ)。AI 作曲(Pro)は画像のパレット・エネルギー・気分から全く新しい曲を書く——再生中は画像を画面に残す。◆ 作曲家はその間にある：同じ画像をショパン、グラス、バッハの声で書き直す——「作曲家」カード参照。`},
-    {id:'composers', glyph:'🎹', cat:'music', title:`12人の作曲家`, body:`絵 → 音楽：画像は純粋な Scan としても、作曲家の声で再作曲しても演奏できます。ショパンとサティは無料、Pro で12人すべて——さらに毎日、Pro の作曲家1人とアーティスト1人が全員に解放されます（✦ 今日）。設定 → 作曲家で顔ぶれを選べます。`, more:`作曲家は画像側にいます——24人の画家の、絵→音楽方向の鏡像です。画像を読み込むと、二つの方法で演奏できます。◆ SCAN は左から右へ、楽譜のようにそのまま読みます。◆ 作曲家モードは同じ画像を作曲家の声で再作曲します——その色とエネルギーを、別の音楽的知性がフレーズします。◆ ショパン——ピアノのロマン派詩人。歌う旋律線と豊かな和声。◆ サティ——その言葉が生まれる前のフランス的ミニマリズム。まばらに漂う和音。◆ ガーシュウィン——コンサートホールのジャズ和声。ブルーノートが咲きます。◆ グラス——一度に一段ずつずれる反復セル。音楽がパターンの中で呼吸します。◆ ヴァイン——現代オーストラリアのエネルギー。角ばって明るく、リズミカル。◆ イルマ——現代の叙情的ピアノ。広く静かな波。◆ バッハ——二声のインヴェンション。歩くベースの上を走る十六分音符、段階的な強弱、ペダルなし。◆ ベートーヴェン——四つの部屋のソナタ。月光の三連符、アルベルティ・バスの上のアレグロ主題、トレモロの嵐、打ち鳴らす和音。スフォルツァンドと突然のピアノ。◆ ドビュッシー——印象主義。五音音階の静けさ、全音音階のきらめき、長いペダルの下の平行和音。◆ ラフマニノフ——ロシアの大きなカンヴァス。三オクターブのアルペジオ、オクターブの旋律、鐘。◆ エイナウディ——決して変わらないオスティナート。層が積み重なり、ひとつの長いクレッシェンドへ。◆ 久石譲——ジブリのワルツ。六度跳んで歩いて降りる旋律、add9 の温もり。◆ 同じ画像でも作曲家が違えば → まったく別の曲に。ヘッダーには “inspired by …” と示されます。Lite では ↻ 「おまかせ」が同じ画像の上で Scan か別の作曲家を抽選します。Advanced では作曲家の上の 🔀 ボタンでシャッフル（Next、または全画面で上スワイプで別の作曲家）；その隣の Jam session（アンサンブル、Pro）で複数の作曲家がフレーズを掛け合う。設定 → 作曲家で誰が参加するか決めます。Free はショパン + サティ、Pro で12人すべて解放。`},
+    {id:'image', glyph:'📷', cat:'music', title:`写真 → 音楽 → 絵画`, body:`画像をドロップ。その色とエネルギーがピアノ曲になり、好きなアーティストのスタイルで描く。Free はスキャン、Pro は AI 作曲 を追加。`, more:`どんな画像でもアップロード。Paintiano はそれを楽譜として読む——左から右、上から下;長さは画像のエネルギーで変わる(約 1¼–4 分)。再生中は、やわらかな光の帯が音楽の読んでいる位置を示し、メロディはその道筋に沿って糸を描きます。◆ アプリは作品がどれだけ色鮮やかかで読みを選ぶ:色鮮やか → ハーモニーかスペクトル(色相=音高、明度=八度、鮮やかさ=音量);ほぼ単色(ゲルニカ、墨、セピア)→ 白黒。◆ カスタムはあなたのもの:あなたの 12 色に近い色だけが鳴り、残りは静まる——ゲルニカを熱帯ピンクで濾して何が生き残るか見る。◆ 二つの再生法:スキャン は画像を左から右へ楽譜として読む(走査方向を選ぶ)。AI 作曲(Pro)は画像のパレット・エネルギー・気分から全く新しい曲を書く——再生中は画像を画面に残す。◆ 作曲家はその間にある：同じ画像をショパン、グラス、バッハの声で書き直す——「作曲家」カード参照。`},
+    {id:'composers', glyph:'🎹', cat:'music', title:`12人の作曲家`, body:`絵 → 音楽：画像は純粋な Scan としても、作曲家の声で再作曲しても演奏できます。ショパンとサティは無料、Pro で12人すべて——さらに毎日、Pro の作曲家1人とアーティスト1人が全員に解放されます（✦ 今日）。設定 → 作曲家で顔ぶれを選べます。`, more:`作曲家は画像側にいます——24人の画家の、絵→音楽方向の鏡像です。画像を読み込むと、二つの方法で演奏できます。◆ SCAN は左から右へ、楽譜のようにそのまま読みます。◆ 作曲家モードは同じ画像を作曲家の声で再作曲します。作曲家は自分の語法を保ち、その中のすべての決定は画像のものです：旋律は画像が描く線をたどり、和声は読む順に色面を歩き、アクセントは輪郭に落ち、クライマックスは目を引く場所に、旋法は光と暖かさから、テンポはエネルギーから、形式は対称性から——そして読む方向（行・列・螺旋。チップは作曲家の真下）で別の曲になります。さらに各作曲家は画像を四つの形——原形・逆行・反転（ネガ）・その両方——で読むので、同じ画像・同じ作曲家・同じ方向でも四つの違う曲になります。◆ ショパン——ピアノのロマン派詩人。歌う旋律線と豊かな和声。◆ サティ——その言葉が生まれる前のフランス的ミニマリズム。まばらに漂う和音。◆ ガーシュウィン——コンサートホールのジャズ和声。ブルーノートが咲きます。◆ グラス——一度に一段ずつずれる反復セル。音楽がパターンの中で呼吸します。◆ ヴァイン——現代オーストラリアのエネルギー。角ばって明るく、リズミカル。◆ イルマ——現代の叙情的ピアノ。広く静かな波。◆ バッハ——二声のインヴェンション。歩くベースの上を走る十六分音符、段階的な強弱、ペダルなし。◆ ベートーヴェン——四つの部屋のソナタ。月光の三連符、アルベルティ・バスの上のアレグロ主題、トレモロの嵐、打ち鳴らす和音。スフォルツァンドと突然のピアノ。◆ ドビュッシー——印象主義。五音音階の静けさ、全音音階のきらめき、長いペダルの下の平行和音。◆ ラフマニノフ——ロシアの大きなカンヴァス。三オクターブのアルペジオ、オクターブの旋律、鐘。◆ エイナウディ——決して変わらないオスティナート。層が積み重なり、ひとつの長いクレッシェンドへ。◆ 久石譲——ジブリのワルツ。六度跳んで歩いて降りる旋律、add9 の温もり。◆ 同じ画像でも作曲家が違えば → まったく別の曲に。ヘッダーには “inspired by …” と示されます。Lite では ↻ 「おまかせ」が同じ画像の上で Scan か別の作曲家を抽選します。Advanced では作曲家の上の 🔀 ボタンでシャッフル（Next、または全画面で上スワイプで別の作曲家）；その隣の Jam session（アンサンブル、Pro）で複数の作曲家がフレーズを掛け合う。設定 → 作曲家で誰が参加するか決めます。Free はショパン + サティ、Pro で12人すべて解放。`},
     {id:'tools', glyph:'🎛', cat:'tools', title:`再生・ループ・ミュート・消去`, body:`再生/停止とバー移動。⟳ ループで繰返し。🔊 ミュートで無音で描く。Clear はモードごとに賢くリセット。`, more:`再生コントロール。◆ 再生は開始と停止(スペースも);進捗バーをタップでジャンプ、ドラッグでスクラブ。◆ ⟳ LOOP は気分の曲を繰り返させる;オンで金色。◆ 🔊 / 🔇 ミュートは絵が通常通り生成される間、全音声を消す——セッションをまたいで記憶。◆ Clear はモードを意識する:Compose はキャンバスを消して留まる;MIC はアクティブなモードの下書きだけ捨てる;Image はドラフトを破棄し、Setup は再び初期状態へ — 画像自体はキャンバスに残る;MIDI/音声/楽譜/テキスト気分は完全リセット。◆ 状態が「loading piano…」と出たら数秒待つ(約 5 MB サンプル);失敗すればシンセピアノに切り替わる。`},
     {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`保存 → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 印刷可能品質に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ 保存 は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A1 · 印刷可能 (高解像度, ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。◆ ⏺ 録音(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ 楽譜 は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A1 · 印刷可能サイズを解放する。`},
     {id:'favorites', glyph:'♥', cat:'save', title:`お気に入り`, body:`完成した絵の左上の ♡ をタップすると残せます。☰ → ♥ お気に入り で、キャンバスに一枚ずつまた表示されます。上限なし。`, more:`♥ が残すのは画像ではなく絵の「住所」です：曲の音、画家——またはフュージョンと各メンバーのバリエーション——、パレット、トーン、キャンバス。開くとそこから絵を描き直します。◆ ハートは完成した絵にだけ表示されます——音楽の再生中や録音中は出ません。もう一度タップすると外せます（元に戻すで復活）。◆ ☰ → ♥ お気に入り：左右にスワイプするか ‹ › で切り替え。全画面では上にスワイプで次へ。ここでは何も鳴りません——「ルックを選ぶ」のストリップと再生はオフです。すべて削除 でお気に入りを一度に消せます（2 回タップ。元に戻すで復活）。↓ 保存 はいつもどおり（Story、Web、印刷 A1、ギャラリー）画面の絵を書き出し、✕ 閉じる で元いた場所に戻ります。◆ お気に入りはこの端末、このブラウザに保存されます。絵は開いた画面に合わせて、そこでライブで描くのとまったく同じように描かれます——画家のアップデート後は少し違って見えることがあります。◆ 曲そのものは、タイトル横の小さなチップ ♫ + マイミュージック でマイミュージックに保存できます（MIDI、MP3、楽譜ファイル）。`},
     {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99(早割、以降 €14.99)→ 全 24 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99(早割、以降 €24.99)は無制限 AI を追加。ヒント:Free では、好きなロックされたアーティストをタップ—試すために解除されます。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放、各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き。各 AI モードに 1 回の無料お試し:テキスト気分、画像からムード、AI 作曲——そして 雰囲気 + メロディ は 2 回のお試しを共有。◆ Pro €9.99(早割、以降 €14.99)——全 24 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの印刷可能な書き出し、永久アクセス(AI なし)。◆ Pro AI €19.99(早割、以降 €24.99)——Pro の全てに無制限 AI:テキスト気分、画像からムード、AI 作曲、AI 雰囲気とメロディ。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。◆ 画像のための作曲家ボイス：Free はショパン + サティ、Pro で12人すべて解放。◆ アンサンブル——フュージョン（画家をひとつの筆致に掛け合わせ）と Jam session（作曲家がフレーズを掛け合う）——も Pro；設定でオンに。`},
-    {id:'ensemble', glyph:'🎭', cat:'pro', title:`アンサンブル——フュージョン と Jam session`, body:`Pro、Pro なら既定でオン（設定 → アンサンブル）。フュージョン：2〜5 人の画家を掛け合わせ、曲全体を描くひとつの新しい筆致に。Jam session：2〜5 人の作曲家が一枚の画像の上でフレーズを掛け合う。どちらも 🔀 の隣に専用ボタンがあり、🔀 と組み合わせられる。`, more:`設定でアンサンブルをオンにすると 🔀 の隣に二つ目のボタン◎が現れる。タップしてステージを組む：チップをタップ——最大五人、タップした順；それぞれ番号を帯び、もう一度タップで外れる。オンにしたとき画面にいたアーティストがメンバー 1。◆ アンサンブル × 🔀——オフ：ステージは組んだまま。1：Next で同じ掛け合わせの画家それぞれに新しいバリエーションを個別に抽選。ALL：それまでのステージがピン留めされる——ピン付きの金色のチップ。Next のたびにピン留めした画家を残し、1〜3 人を加えて抽選（白い枠、合計 5 人まで）；ピン留めの有無にかかわらず、全員に新しいバリエーション。チップをタップでピン留め／解除；解除した画家は次の抽選までキャンバスに残る。ピン留めなし：Next のたびにまったく新しい掛け合わせ——2〜5 人の画家、人数も顔ぶれも設定の選択からランダム。5 人ピン留め：Next は全員のバリエーションを抽選。1 と ALL では、Next のたびに設定で選んだパレットから新しいパレットも抽選。ALL でアンサンブルを切ると、メンバー 1 から普通のシャッフルに戻る。◆ フュージョン（絵画）は掛け合わせであってコラージュではない。各アーティストは十数個の遺伝子の DNA に還元される——地、筆致の語彙、大きさ、縁、不透明度、配置の文法、輪郭、パレットの扱い、手の震え、結ぶ線、層、密度——バリエーションごとに一組。選んだ画家は等しい重みで掛け合わされ（二人 → 50/50、五人 → 各 20%）、ひとつのレンダラーがその結果で曲全体を描く：大きさ・縁・輪郭・配置・層はひとつの混ざった手になり、各親は署名モチーフ（ドローネーの四分円盤、草間の点の群れ、ヘリングの人型…）を保ち、N 個ごとの和音を順番に受け持つ——デュオは本当に半分ずつ。メンバー 1 は見ていたバリエーションを持ち込み、追加した画家はそれぞれ自分のバリエーションを持ち込む。その後の Next は各メンバーのバリエーションを個別に抽選——ある画家のどのバリエーションも、別の画家のどのバリエーションとも出会える。音楽も遺伝子を形づくる：密で速い曲はより密に層を重ねて描き、静かな曲はより疎に大きく；音域が筆致の大きさを、緊張が輪郭を、規則性が格子と流れの釣り合いを決める。キャプションと書き出しは「Rothko × Pollock × Kusama」；全画面ではタップでフュージョンと名前が出る。◆ JAM SESSION（画像 → 音楽）：ステージの各作曲家が画像全体を自分の声で書き、約 5 秒ごとに発言権が移る——一人が呼び、次が形式の同じ地点から応える。作曲家の 🔀 の隣に専用ボタンがある；🔀 をオンにするとステージの作曲家がピン留めされ（ピン付きの金色のチップ）、Next のたびに彼らを残して 1〜3 人を加える（白い枠、最大 5 人）。チップをタップでピン留め／解除；解除した作曲家は次の抽選まで演奏を続ける。ピン留めなし：Next が新しいアンサンブルをランダムに座らせる——2〜5 人、人数も顔ぶれもランダム。◆ Lite では（アンサンブルがオンのとき）：「おまかせ」のおよそ四回に一回がアンサンブルになる——音楽では抽選された画家 + 1〜4 人の フュージョン、画像では 2〜5 人の作曲家の Jam session；人数も顔ぶれもランダムで、設定での選択から選ばれる。ヘッダーは「Rothko × Kusama」や「Chopin ↔ Glass」。次の「おまかせ」はまたソロかもしれない。◆ 書き出しは決定論のまま：同じ曲、同じステージ、同じ絵。`}
+    {id:'ensemble', glyph:'🎭', cat:'pro', title:`アンサンブル——フュージョン と Jam session`, body:`Pro、Pro なら既定でオン（設定 → アンサンブル）。フュージョン：2〜5 人の画家を掛け合わせ、曲全体を描くひとつの新しい筆致に。Jam session：2〜5 人の作曲家が一枚の画像の上でフレーズを掛け合う。どちらも 🔀 の隣に専用ボタンがあり、🔀 と組み合わせられる。`, more:`設定でアンサンブルをオンにすると 🔀 の隣に二つ目のボタン◎が現れる。タップしてステージを組む：チップをタップ——最大五人、タップした順；それぞれ番号を帯び、もう一度タップで外れる。オンにしたとき画面にいたアーティストがメンバー 1。◆ アンサンブル × 🔀——オフ：ステージは組んだまま。1：Next で同じ掛け合わせの画家それぞれに新しいバリエーションを個別に抽選。ALL：それまでのステージがピン留めされる——ピン付きの金色のチップ。Next のたびにピン留めした画家を残し、1〜3 人を加えて抽選（白い枠、合計 5 人まで）；ピン留めの有無にかかわらず、全員に新しいバリエーション。チップをタップでピン留め／解除；解除した画家は次の抽選までキャンバスに残る。ピン留めなし：Next のたびにまったく新しい掛け合わせ——2〜5 人の画家、人数も顔ぶれも設定の選択からランダム。5 人ピン留め：Next は全員のバリエーションを抽選。1 と ALL では、Next のたびに設定で選んだパレットから新しいパレットも抽選。ALL でアンサンブルを切ると、メンバー 1 から普通のシャッフルに戻る。◆ フュージョン（絵画）は掛け合わせであってコラージュではない。各アーティストは十数個の遺伝子の DNA に還元される——地、筆致の語彙、大きさ、縁、不透明度、配置の文法、輪郭、パレットの扱い、手の震え、結ぶ線、層、密度——バリエーションごとに一組。選んだ画家は等しい重みで掛け合わされ（二人 → 50/50、五人 → 各 20%）、ひとつのレンダラーがその結果で曲全体を描く：大きさ・縁・輪郭・配置・層はひとつの混ざった手になり、各親は署名モチーフ（ドローネーの四分円盤、草間の点の群れ、ヘリングの人型…）を保ち、N 個ごとの和音を順番に受け持つ——デュオは本当に半分ずつ。メンバー 1 は見ていたバリエーションを持ち込み、追加した画家はそれぞれ自分のバリエーションを持ち込む。その後の Next は各メンバーのバリエーションを個別に抽選——ある画家のどのバリエーションも、別の画家のどのバリエーションとも出会える。音楽も遺伝子を形づくる：密で速い曲はより密に層を重ねて描き、静かな曲はより疎に大きく；音域が筆致の大きさを、緊張が輪郭を、規則性が格子と流れの釣り合いを決める。キャプションと書き出しは「Rothko × Pollock × Kusama」；全画面ではタップでフュージョンと名前が出る。◆ JAM SESSION（画像 → 音楽）：ステージの各作曲家が画像全体を自分の声で書き、共通の拍と調で合流する。どう合流するかは、フュージョン様式（設定 → アンサンブル）が決める：A——フレーズ（4 小節）ごとに発言権が移り、一人が呼び、次が形式の同じ地点から応える；E——彼らから生まれた新しい作曲家がひとり：ひとりが和声と伴奏を、もうひとりが旋律を、三人目が拍を受け継ぐ；A+E——画像のアドレスでコインを投げる。作曲家の 🔀 の隣に専用ボタンがある；🔀 をオンにするとステージの作曲家がピン留めされ（ピン付きの金色のチップ）、Next のたびに彼らを残して 1〜3 人を加える（白い枠、最大 5 人）。チップをタップでピン留め／解除；解除した作曲家は次の抽選まで演奏を続ける。ピン留めなし：Next が新しいアンサンブルをランダムに座らせる——2〜5 人、人数も顔ぶれもランダム。◆ Lite では（アンサンブルがオンのとき）：「おまかせ」のおよそ四回に一回がアンサンブルになる——音楽では抽選された画家 + 1〜4 人の フュージョン、画像では 2〜5 人の作曲家の Jam session；人数も顔ぶれもランダムで、設定での選択から選ばれる。ヘッダーは「Rothko × Kusama」、「Chopin ↔ Glass」（リレー）、「Chopin × Glass」（生まれた作曲家）など。次の「おまかせ」はまたソロかもしれない。◆ 書き出しは決定論のまま：同じ曲、同じステージ、同じ絵。`}
   ]
 };
 function getGuideCards(lang){ return GUIDE_CARDS_I18N[lang] || GUIDE_CARDS_I18N.EN; }
@@ -22138,9 +21755,154 @@ const SIG_CURATED = {
 // (every event carries its own _stepMs) is returned untouched.
 function _composerTimeline(evts){
   if(!Array.isArray(evts) || !evts.length || evts.some(e=>e && e._stepMs)) return evts;
-  return evts.map((e,i)=>({e,i}))
+  const out=evts.map((e,i)=>({e,i}))
     .sort((a,b)=>((a.e.startMs||0)-(b.e.startMs||0)) || (a.i-b.i))
     .map(({e})=>({...e, _composed:true}));
+  // A composed piece lasts 1:15 … 4:00, like a scan. The forms are written in
+  // bars, so a wide fusion can overshoot: rescale the whole timeline (starts,
+  // note lengths and offsets together) so it lands inside the window — the tempo
+  // moves, the music does not change.
+  let end=0;
+  for(const e of out){ let d=0; if(e.n) for(const n of e.n){ if((n.durMs||0)>d) d=n.durMs; } if((e.startMs||0)+d>end) end=(e.startMs||0)+d; }
+  const k=end>240000 ? 240000/end : (end>0 && end<75000 ? 75000/end : 1);
+  if(k===1) return out;
+  const kk=Math.max(0.5,Math.min(2,k));
+  return out.map(e=>({...e, startMs:Math.round((e.startMs||0)*kk),
+    n:(e.n||[]).map(n=>{ const o={...n, durMs:Math.round((n.durMs||0)*kk)}; if(n.offsetMs) o.offsetMs=Math.round(n.offsetMs*kk); return o; })}));
+}
+
+// ── Image playback: where the music is reading ───────────────────────────────
+// An image used to play with no sign of where it was (only the thin progress
+// bar). The overlay now draws a soft band of light on the strip being read — a
+// row of cells for ROWS, a column for COLUMNS, the ring for the SPIRALS, a touch
+// brighter behind the head where it has already read — a bright head on the cell
+// sounding now with a short fading trail, and the melody as a thread of beads
+// along that path that rises and falls with the pitch. Derived from the playing
+// event's own cell (band, cg) and its neighbours in time, so it follows every
+// direction, scan or composer, at any playback speed, with no hook in the player.
+const _PH_TRAIL_MS=1000, _PH_THREAD_MS=3600;
+const _phLift=(c,k)=>[Math.round(c[0]+(255-c[0])*k),Math.round(c[1]+(255-c[1])*k),Math.round(c[2]+(255-c[2])*k)];
+function _phRect(ev,pix,BW,BH){
+  const cs=ev.colStep||pix.colStep||4;
+  return { x:ev.cg*cs*BW, y:ev.band*4*BH,
+    w:Math.max(1,Math.min(cs,pix.nc-ev.cg*cs))*BW, h:Math.max(1,Math.min(4,pix.nr-ev.band*4))*BH };
+}
+function _drawImagePlayhead(ctx,o,memo){
+  const chords=o.chords, d=o.d, pix=o.pix, BW=o.grid.BW, BH=o.grid.BH, dir=o.dir, now=o.now, speed=o.speed||1;
+  const cur=chords[d-1];
+  if(!cur || typeof cur.band!=='number' || typeof cur.cg!=='number' || !(BW>0) || !(BH>0)) return;
+  const W=pix.nc*BW, H=pix.nr*BH;
+  const R=_phRect(cur,pix,BW,BH), cx=R.x+R.w/2, cy=R.y+R.h/2;
+  const noteCol=(t)=>{ try{ const c=o.gc ? o.gc(t.m,t.v||80) : null; return (c && c.length>=3) ? c : null; }catch(_){ return null; } };
+  const colOf=(ev)=>{
+    const ns=ev && ev.n; if(!ns || !ns.length) return null;
+    let t=ns[0]; for(const n of ns){ if((n.v||0)>(t.v||0)) t=n; }
+    return noteCol(t);
+  };
+  const here=colOf(cur); if(here) memo.col=here;
+  const base=memo.col||[240,205,120];
+  const br=o.reduced ? 1 : 0.9+0.1*Math.sin(now/650);
+  const warm='255,232,170';
+  const cs=cur.colStep||pix.colStep||4, cellW=cs*BW, cellH=4*BH;
+  const nC=Math.ceil(pix.nc/cs), nB=Math.floor(pix.nr/4);
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  // 1 · the band
+  const feather=(x,y,w,h,vert,a)=>{
+    const g=vert ? ctx.createLinearGradient(0,y,0,y+h) : ctx.createLinearGradient(x,0,x+w,0);
+    g.addColorStop(0,'rgba('+warm+',0)'); g.addColorStop(0.5,'rgba('+warm+','+a.toFixed(3)+')'); g.addColorStop(1,'rgba('+warm+',0)');
+    ctx.fillStyle=g; ctx.fillRect(x,y,w,h);
+  };
+  if(dir==='vert'){
+    feather(R.x-R.w*0.7,0,R.w*2.4,H,false,0.30*br);
+    ctx.fillStyle='rgba('+warm+','+(0.10*br).toFixed(3)+')'; ctx.fillRect(R.x,0,R.w,R.y);
+  }else if(dir==='spiralIn' || dir==='spiralOut'){
+    const k=Math.min(cur.band,cur.cg,nB-1-cur.band,nC-1-cur.cg);
+    const x0=(k+0.5)*cellW, y0=(k+0.5)*cellH, x1=(nC-k-0.5)*cellW, y1=(nB-k-0.5)*cellH;
+    if(x1>x0 && y1>y0){
+      const m=Math.min(cellW,cellH); ctx.lineJoin='round';
+      for(const [lw,a] of [[m*1.5,0.07],[m*0.9,0.12],[m*0.4,0.24]]){
+        ctx.lineWidth=lw; ctx.strokeStyle='rgba('+warm+','+(a*br).toFixed(3)+')'; ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+      }
+    }
+  }else{
+    feather(0,R.y-R.h*0.7,W,R.h*2.4,true,0.30*br);
+    ctx.fillStyle='rgba('+warm+','+(0.10*br).toFixed(3)+')'; ctx.fillRect(0,R.y,R.x,R.h);
+  }
+  // 2 · a short fading trail of the cells just read
+  const tNow=cur.startMs||0, dt=now-o.tCur;
+  const ageOf=(ev)=>dt+Math.max(0,tNow-(ev.startMs||0))/speed;
+  for(let j=d-2;j>=0 && d-2-j<260;j--){
+    const ev=chords[j]; if(!ev || typeof ev.band!=='number') continue;
+    const age=ageOf(ev); if(age>_PH_TRAIL_MS) break;
+    if(ev.band===cur.band && ev.cg===cur.cg) continue;
+    const r=_phRect(ev,pix,BW,BH), k=1-age/_PH_TRAIL_MS, l=_phLift(colOf(ev)||base,0.4);
+    ctx.fillStyle='rgba('+l[0]+','+l[1]+','+l[2]+','+(0.30*k*k).toFixed(3)+')'; ctx.fillRect(r.x,r.y,r.w,r.h);
+  }
+  // 3 · the head
+  const hr=Math.max(R.w,R.h)*1.35, l1=_phLift(base,0.45);
+  const hg=ctx.createRadialGradient(cx,cy,0,cx,cy,hr);
+  hg.addColorStop(0,'rgba(255,255,255,'+(0.80*br).toFixed(3)+')');
+  hg.addColorStop(0.3,'rgba('+l1[0]+','+l1[1]+','+l1[2]+','+(0.45*br).toFixed(3)+')');
+  hg.addColorStop(1,'rgba('+base[0]+','+base[1]+','+base[2]+',0)');
+  ctx.fillStyle=hg; ctx.fillRect(cx-hr,cy-hr,hr*2,hr*2);
+  ctx.lineWidth=1.5; ctx.strokeStyle='rgba('+l1[0]+','+l1[1]+','+l1[2]+','+(0.6*br).toFixed(3)+')';
+  ctx.strokeRect(R.x+0.75,R.y+0.75,R.w-1.5,R.h-1.5);
+  // 4 · the melody: a thread of beads along the reading path, pitch lifting it
+  const beads=[];
+  if(o.aiOn){
+    for(const b of o.beads){
+      const age=now-b.t; if(age<0 || age>_PH_THREAD_MS) continue;
+      const ev=chords[b.i]; if(!ev || typeof ev.band!=='number') continue;
+      const r=_phRect(ev,pix,BW,BH); beads.push({x:r.x+r.w/2,y:r.y+r.h/2,m:b.m,age,v:b.v||80,c:noteCol({m:b.m,v:b.v})||base});
+    }
+  }else{
+    if(memo.cRef!==chords){
+      memo.cRef=chords; memo.hasMel=false;
+      outer: for(const e of chords){ const ns=e && e.n; if(!ns) continue; for(const n of ns){ if(n.mel || n._melody){ memo.hasMel=true; break outer; } } }
+    }
+    let lastAge=-1e9;
+    for(let j=d-1;j>=0 && d-1-j<500;j--){
+      const ev=chords[j]; if(!ev || typeof ev.band!=='number' || !ev.n || !ev.n.length) continue;
+      const age=ageOf(ev); if(age>_PH_THREAD_MS) break;
+      if(!memo.hasMel && ev._playable===false) continue;
+      let top=null;
+      for(const n of ev.n){ if(!memo.hasMel || n.mel || n._melody){ if(!top || n.m>top.m) top=n; } }
+      if(!top) continue;
+      if(!memo.hasMel && age-lastAge<300) continue;     // no flagged melody: the top voice, thinned
+      lastAge=age;
+      const r=_phRect(ev,pix,BW,BH); beads.push({x:r.x+r.w/2,y:r.y+r.h/2,m:top.m,age,v:top.v||80,c:noteCol(top)||base});
+    }
+  }
+  if(beads.length){
+    // the pitch lifts the thread off the path: measured against the range of the
+    // thread on screen (at least a fifth wide), so a calm line still shows its contour
+    let lo=1e9, hi=-1e9; for(const b of beads){ if(b.m<lo) lo=b.m; if(b.m>hi) hi=b.m; }
+    const half=Math.max(7,hi-lo)/2, mid=(hi+lo)/2;
+    for(const b of beads){
+      const u=Math.max(-1,Math.min(1,((b.m||mid)-mid)/half));
+      if(dir==='vert') b.x+=u*cellW*0.9; else b.y-=u*cellH*0.7;
+    }
+    beads.sort((a,b)=>b.age-a.age);                      // oldest first
+    const fade=(age)=>Math.pow(Math.max(0,1-age/_PH_THREAD_MS),1.3);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    for(let i=1;i<beads.length;i++){
+      const a=beads[i-1], b=beads[i];
+      if(Math.abs(a.age-b.age)>1500 || Math.hypot(b.x-a.x,b.y-a.y)>cellW*5) continue;
+      const al=fade(b.age), tc=_phLift(b.c,0.35);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.lineWidth=5; ctx.strokeStyle='rgba('+tc[0]+','+tc[1]+','+tc[2]+','+(0.10*al).toFixed(3)+')'; ctx.stroke();
+      ctx.lineWidth=1.8; ctx.strokeStyle='rgba('+tc[0]+','+tc[1]+','+tc[2]+','+(0.7*al).toFixed(3)+')'; ctx.stroke();
+    }
+    for(const b of beads){
+      const al=fade(b.age), rad=2+(b.v/127)*2.6, tc=_phLift(b.c,0.35);
+      ctx.fillStyle='rgba('+tc[0]+','+tc[1]+','+tc[2]+','+(0.22*al).toFixed(3)+')';
+      ctx.beginPath(); ctx.arc(b.x,b.y,rad*2.2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,'+(0.9*al).toFixed(3)+')';
+      ctx.beginPath(); ctx.arc(b.x,b.y,rad,0,Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 // Audio recordings: what survives transcription is TONALITY — mode, key centre
@@ -23247,15 +23009,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',fsTitle:'Fusion style',fsA:'side by side',fsE:'one painter',fsAE:'random',fsHint:'A — the painters take turns, each in his own hand. E — a new painter bred from them: one lends the hand, another the ground, a third the composition; {next} changes who lends what. A+E — each crossing is A or E by chance. Favorites keep the style they were painted in.',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants and the palette. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',fsTitle:'Štýl fúzie',fsA:'vedľa seba',fsE:'jeden maliar',fsAE:'náhodne',fsHint:'A — maliari sa striedajú, každý vlastnou rukou. E — nový maliar splodený z nich: jeden mu dá ruku, druhý podklad, tretí kompozíciu; „{next}“ mení, kto dá čo. A+E — každá fúzia je náhodne A alebo E. Obľúbené si nechajú štýl, v ktorom vznikli.',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty a paletu. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
-  DE:{title:'Ensemble',fusion:'Fusion',fsTitle:'Fusionsstil',fsA:'nebeneinander',fsE:'ein Maler',fsAE:'zufällig',fsHint:'A — die Maler wechseln sich ab, jeder mit eigener Hand. E — ein neuer Maler, aus ihnen gekreuzt: einer gibt die Hand, ein anderer den Grund, ein dritter die Komposition; „{next}“ wechselt, wer was gibt. A+E — jede Kreuzung ist zufällig A oder E. Favoriten behalten den Stil, in dem sie entstanden sind.',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten und die Palette. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
-  FR:{title:'Ensemble',fusion:'Fusion',fsTitle:'Style de fusion',fsA:'côte à côte',fsE:'un seul peintre',fsAE:'au hasard',fsHint:'A — les peintres se relaient, chacun de sa propre main. E — un nouveau peintre né d’eux : l’un prête la main, un autre le fond, un troisième la composition ; « {next} » change qui prête quoi. A+E — chaque croisement est A ou E au hasard. Les favoris gardent le style dans lequel ils ont été peints.',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes et la palette. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
-  ES:{title:'Ensemble',fusion:'Fusión',fsTitle:'Estilo de fusión',fsA:'lado a lado',fsE:'un solo pintor',fsAE:'al azar',fsHint:'A — los pintores se turnan, cada uno con su propia mano. E — un pintor nuevo nacido de ellos: uno presta la mano, otro el fondo, un tercero la composición; «{next}» cambia quién presta qué. A+E — cada cruce es A o E al azar. Los Favoritos conservan el estilo en que se pintaron.',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes y la paleta. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
-  PT:{title:'Ensemble',fusion:'Fusão',fsTitle:'Estilo de fusão',fsA:'lado a lado',fsE:'um só pintor',fsAE:'ao acaso',fsHint:'A — os pintores alternam, cada um com a sua mão. E — um pintor novo nascido deles: um empresta a mão, outro o fundo, um terceiro a composição; «{next}» muda quem empresta o quê. A+E — cada cruzamento é A ou E ao acaso. Os Favoritos mantêm o estilo em que foram pintados.',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles e a paleta. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
-  zh:{title:'合奏',fusion:'融合',fsTitle:'融合风格',fsA:'并肩',fsE:'一位画家',fsAE:'随机',fsHint:'A——画家们轮流作画，各用各的笔触。E——由他们孕育出的一位新画家：一位给出笔触，一位给出底色，第三位给出构图；「{next}」会更换由谁给出什么。A+E——每次融合随机为 A 或 E。收藏会保留作画时的风格。',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体和调色板。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
-  zhTW:{title:'合奏',fusion:'融合',fsTitle:'融合風格',fsA:'並肩',fsE:'一位畫家',fsAE:'隨機',fsHint:'A——畫家們輪流作畫，各用各的筆觸。E——由他們孕育出的一位新畫家：一位給出筆觸，一位給出底色，第三位給出構圖；「{next}」會更換由誰給出什麼。A+E——每次融合隨機為 A 或 E。收藏會保留作畫時的風格。',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',fsTitle:'フュージョンの様式',fsA:'並んで',fsE:'ひとりの画家',fsAE:'ランダム',fsHint:'A——画家たちが交代で、それぞれ自分の筆致で描く。E——彼らから生まれた新しい画家：ひとりが筆致を、もうひとりが地を、三人目が構図を受け継ぐ。「{next}」で誰が何を受け継ぐかが変わる。A+E——掛け合わせごとに A か E がランダムに決まる。お気に入りは描かれたときの様式のまま残る。',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',fsTitle:'Fusion style',fsA:'side by side',fsE:'one artist',fsAE:'random',fsHint:'A — the painters take turns, each in his own hand. E — a new painter bred from them: one lends the hand, another the ground, a third the composition; {next} changes who lends what. A+E — each crossing is A or E by chance. Composers follow the same switch: A — they trade phrases on one shared pulse and in one key; E — one new composer: one lends the harmony and accompaniment, another the tune, a third the pulse. Favorites keep the style they were painted in.',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants and the palette. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',fsTitle:'Štýl fúzie',fsA:'vedľa seba',fsE:'jeden umelec',fsAE:'náhodne',fsHint:'A — maliari sa striedajú, každý vlastnou rukou. E — nový maliar splodený z nich: jeden mu dá ruku, druhý podklad, tretí kompozíciu; „{next}“ mení, kto dá čo. A+E — každá fúzia je náhodne A alebo E. Skladatelia idú podľa rovnakého prepínača: A — striedajú sa vo frázach na spoločnom pulze a v jednej tónine; E — jeden nový skladateľ: jeden mu dá harmóniu a sprievod, druhý melódiu, tretí pulz. Obľúbené si nechajú štýl, v ktorom vznikli.',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty a paletu. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
+  DE:{title:'Ensemble',fusion:'Fusion',fsTitle:'Fusionsstil',fsA:'nebeneinander',fsE:'ein Künstler',fsAE:'zufällig',fsHint:'A — die Maler wechseln sich ab, jeder mit eigener Hand. E — ein neuer Maler, aus ihnen gekreuzt: einer gibt die Hand, ein anderer den Grund, ein dritter die Komposition; „{next}“ wechselt, wer was gibt. A+E — jede Kreuzung ist zufällig A oder E. Die Komponisten folgen demselben Schalter: A — sie wechseln sich in Phrasen ab, auf gemeinsamem Puls und in einer Tonart; E — ein neuer Komponist: einer gibt Harmonie und Begleitung, ein anderer die Melodie, ein dritter den Puls. Favoriten behalten den Stil, in dem sie entstanden sind.',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten und die Palette. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
+  FR:{title:'Ensemble',fusion:'Fusion',fsTitle:'Style de fusion',fsA:'côte à côte',fsE:'un seul artiste',fsAE:'au hasard',fsHint:'A — les peintres se relaient, chacun de sa propre main. E — un nouveau peintre né d’eux : l’un prête la main, un autre le fond, un troisième la composition ; « {next} » change qui prête quoi. A+E — chaque croisement est A ou E au hasard. Les compositeurs suivent le même réglage : A — ils se relaient par phrases, sur un même pouls et dans une même tonalité ; E — un nouveau compositeur : l’un prête l’harmonie et l’accompagnement, un autre la mélodie, un troisième le pouls. Les favoris gardent le style dans lequel ils ont été peints.',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes et la palette. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
+  ES:{title:'Ensemble',fusion:'Fusión',fsTitle:'Estilo de fusión',fsA:'lado a lado',fsE:'un solo artista',fsAE:'al azar',fsHint:'A — los pintores se turnan, cada uno con su propia mano. E — un pintor nuevo nacido de ellos: uno presta la mano, otro el fondo, un tercero la composición; «{next}» cambia quién presta qué. A+E — cada cruce es A o E al azar. Los compositores siguen el mismo ajuste: A — se turnan por frases, con un mismo pulso y en una misma tonalidad; E — un compositor nuevo: uno presta la armonía y el acompañamiento, otro la melodía, un tercero el pulso. Los Favoritos conservan el estilo en que se pintaron.',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes y la paleta. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
+  PT:{title:'Ensemble',fusion:'Fusão',fsTitle:'Estilo de fusão',fsA:'lado a lado',fsE:'um só artista',fsAE:'ao acaso',fsHint:'A — os pintores alternam, cada um com a sua mão. E — um pintor novo nascido deles: um empresta a mão, outro o fundo, um terceiro a composição; «{next}» muda quem empresta o quê. A+E — cada cruzamento é A ou E ao acaso. Os compositores seguem o mesmo ajuste: A — alternam frases, com o mesmo pulso e na mesma tonalidade; E — um compositor novo: um empresta a harmonia e o acompanhamento, outro a melodia, um terceiro o pulso. Os Favoritos mantêm o estilo em que foram pintados.',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles e a paleta. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
+  zh:{title:'合奏',fusion:'融合',fsTitle:'融合风格',fsA:'并肩',fsE:'一位艺术家',fsAE:'随机',fsHint:'A——画家们轮流作画，各用各的笔触。E——由他们孕育出的一位新画家：一位给出笔触，一位给出底色，第三位给出构图；「{next}」会更换由谁给出什么。A+E——每次融合随机为 A 或 E。作曲家遵循同一个开关：A——共用同一脉动与调性，轮流演奏乐句；E——一位新的作曲家：一位给出和声与伴奏，一位给出旋律，第三位给出脉动。收藏会保留作画时的风格。',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体和调色板。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
+  zhTW:{title:'合奏',fusion:'融合',fsTitle:'融合風格',fsA:'並肩',fsE:'一位藝術家',fsAE:'隨機',fsHint:'A——畫家們輪流作畫，各用各的筆觸。E——由他們孕育出的一位新畫家：一位給出筆觸，一位給出底色，第三位給出構圖；「{next}」會更換由誰給出什麼。A+E——每次融合隨機為 A 或 E。作曲家遵循同一個開關：A——共用同一脈動與調性，輪流演奏樂句；E——一位新的作曲家：一位給出和聲與伴奏，一位給出旋律，第三位給出脈動。收藏會保留作畫時的風格。',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',fsTitle:'フュージョンの様式',fsA:'並んで',fsE:'ひとりの芸術家',fsAE:'ランダム',fsHint:'A——画家たちが交代で、それぞれ自分の筆致で描く。E——彼らから生まれた新しい画家：ひとりが筆致を、もうひとりが地を、三人目が構図を受け継ぐ。「{next}」で誰が何を受け継ぐかが変わる。A+E——掛け合わせごとに A か E がランダムに決まる。作曲家も同じスイッチに従う。A——共通の拍と調で、フレーズを交代で奏でる。E——新しい作曲家がひとり：ひとりが和声と伴奏を、もうひとりが旋律を、三人目が拍を受け継ぐ。お気に入りは描かれたときの様式のまま残る。',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
@@ -24576,9 +24338,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const STAGE_MAX = 5;
   const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
   const _painterLabel = (k)=>{ if(!k||k==='mosaic') return t('mosaicStyle'); if(k==='notes') return t('notesStyle'); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
+  const _compSep = ()=>{ try{ const J=globalThis.__COMP_JAM_STYLE; const ks=[imgComposer, ...composerStage].filter(Boolean).join(); return (J && J.sig===ks && J.style==='E') ? ' \u00d7 ' : ' \u2194 '; }catch(_){ return ' \u2194 '; } };   // E = one composer bred from them (×), A = they trade phrases (↔)
   const _stageNames = (kind)=> kind==='art'
     ? _jamStage().map(_painterLabel).join(' × ')
-    : [imgComposer, ...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k).join(' ↔ ');
+    : [imgComposer, ...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k).join(_compSep());
   // the artists' shuffle, switched off the same way its own button does it
   const _shuffleOff = ()=>{ if(!randomModeRef.current) return; setRandomMode(false); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; setMosaicShuffleLock(false); if(composeMode||micPainting) setStructureSeedLock((pollockSessionSeed>>>0)||1); };
   // ── SONG SIGNATURE ── the one painting every piece "is" (computeSongSignature).
@@ -25677,6 +25440,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Image reading direction: 'lr' (default), 'vert', 'spiralIn', 'spiralOut'.
   // Mirrored to a ref so transcription loops read the current value live.
   const [imgDir, setImgDir] = useState('lr');
+  const [imgVar, setImgVar] = useState(0);   // the composers' FORM of the reading: 0 original · 1 backwards · 2 inverted · 3 both
   // COMPOSER for painting→music: null = plain scan (the "mosaic" of image
   // mode), 'glass' = the piece re-composed in a composer's style from the
   // analysed whole picture. Mirrors mosaic-vs-artists on the music side.
@@ -25765,7 +25529,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return true;
   },[setupComposers, isDailyComposer, composerIsLocked]);
   const imgDirRef = useRef('lr');
+  const imgVarRef = useRef(0);
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
+  useEffect(()=>{ imgVarRef.current=imgVar; },[imgVar]);
   // FULLSCREEN SCROLL LOCK — on iOS the swipe-up gesture also scrolled the whole
   // page (canvas, hint and the ⤢ button slid away). In immersive mode lock the
   // document: no overflow, no touch-driven scrolling, no rubber-banding. The
@@ -27249,10 +27015,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const highlightRunningRef = useRef(false);
   const highlightRafRef = useRef(0);
   const wakeHighlightRef = useRef(null);
+  const melBeadsRef = useRef([]);    // AI melody notes as they sound: {t, m, v, i = event playing}
   useEffect(() => {
     // Cache the highlight color per chord. The reduce-and-slice was running
     // 60×/sec on a value that only changes when the chord changes.
     let cachedIdx = -1, cachedR = 0, cachedG = 0, cachedB = 0;
+    // Image playback overlay state (see _drawImagePlayhead): the event now playing
+    // and when it started, the last colour, the melody-flag scan of the piece.
+    const phMemo = { d:-1, t:0, col:null, cRef:null, hasMel:false };
+    const _reduced = !!(typeof window!=='undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const tick = () => {
       const canvas = highlightCanvasRef.current;
       // Stop when not playing — but first clear any lingering highlight from
@@ -27263,6 +27034,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
           ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
         cachedIdx = -1;
+        phMemo.d = -1;
         highlightRunningRef.current = false;
         return;
       }
@@ -27275,7 +27047,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
         const isOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
-        if (d > 0 && chords.length && grid && gc && !isOverlay) {
+        if (viewModeRef.current === 'image') {
+          const pix = pixelRef.current;
+          if (d > 0 && chords.length && grid && pix && pix.nc) {
+            const nowT = performance.now();
+            if (d !== phMemo.d) { phMemo.d = d; phMemo.t = nowT; }
+            try {
+              _drawImagePlayhead(ctx, { chords, d, grid, pix, gc, dir: imgDirRef.current, now: nowT, tCur: phMemo.t,
+                speed: playbackSpeedRef.current || 1, aiOn: !!(melodyOnRef.current && melodyDataRef.current),
+                beads: melBeadsRef.current, reduced: _reduced }, phMemo);
+            } catch (_) {}
+          }
+        } else if (d > 0 && chords.length && grid && gc && !isOverlay) {
           const chord = chords[d - 1];
           if (chord) {
             const cell = grid.cells && grid.cells[chord.idx];
@@ -28296,6 +28079,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         pixelBackup: scanPixelBackupRef.current, // the scan behind an AI composition
         mode: meta.mode||'harmony',
         imgDir: imgDirRef.current||'lr',
+        imgVar: imgVarRef.current||0,
         imgPlayMode: imgPlayModeRef.current||'scan',
         imgCompose: !!imgComposeRef.current,
         atmoOn: !!atmoOnRef.current,
@@ -28516,6 +28300,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setImgPlayMode(s.imgPlayMode||'scan'); imgPlayModeRef.current=s.imgPlayMode||'scan';
       if(s.mode){ setMode(s.mode); }
       setImgDir(s.imgDir||'lr'); imgDirRef.current = s.imgDir||'lr';
+      setImgVar(s.imgVar||0); imgVarRef.current = s.imgVar||0;
       if(typeof s.appMode!=='undefined') appModeRef.current = s.appMode;
       if(typeof s.kontraAuto!=='undefined') kontraAutoRef.current = s.kontraAuto;
       setAtmoOn(!!s.atmoOn); atmoOnRef.current=!!s.atmoOn;
@@ -30981,31 +30766,31 @@ Hard requirements:
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
           const _crKeys0 = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
           const evts=_composerTimeline((_crKeys0.length>=2)
-            ? composeImageCallResponse(px,nc,nr,hueTable,startMode,imgDirRef.current,_crKeys0)
+            ? composeImageCallResponse(px,nc,nr,hueTable,startMode,imgDirRef.current,_crKeys0,imgVarRef.current)
             : (imgComposerRef.current==='glass')
-            ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageGlass(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='satie')
-            ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageSatie(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='chopin')
-            ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageChopin(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='vine')
-            ? composeImageVine(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageVine(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='gershwin')
-            ? composeImageGershwin(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageGershwin(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='yiruma')
-            ? composeImageYiruma(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageYiruma(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='bach')
-            ? composeImageBach(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageBach(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='beethoven')
-            ? composeImageBeethoven(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageBeethoven(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='debussy')
-            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageDebussy(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='rachmaninov')
-            ? composeImageRachmaninov(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageRachmaninov(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='einaudi')
-            ? composeImageEinaudi(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageEinaudi(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : (imgComposerRef.current==='hisaishi')
-            ? composeImageHisaishi(px,nc,nr,hueTable,startMode,imgDirRef.current)
+            ? composeImageHisaishi(px,nc,nr,hueTable,startMode,imgDirRef.current,imgVarRef.current)
             : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current));
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
@@ -31074,20 +30859,21 @@ Hard requirements:
     if(restoringRef.current)return; // multi-draft restore in progress — keep the stashed chords/disp
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const sig = mode + '|' + imgDir + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    const _varEff = imgComposer ? imgVar : 0;
+    const sig = mode + '|' + imgDir + (_varEff ? '|v'+_varEff : '') + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleNow!=='A') ? '|f'+fuStyleNow : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
     // than resume mid-stream (resuming would jump to an unrelated cell). A
     // palette/mode change keeps the same order and resumes seamlessly.
-    const _dirChanged = (pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir) || _composerNextRef.current;
+    const _dirChanged = (pixelRef.current.lastDir !== undefined && pixelRef.current.lastDir !== imgDir) || (pixelRef.current.lastVar !== undefined && pixelRef.current.lastVar !== _varEff) || _composerNextRef.current;
     _composerNextRef.current=false;
     // COMPOSER change: the pieces differ in length and density, so keeping the
     // same event INDEX jumps the progress bar (Rachmaninov at 27% → Bach at 18%
     // → Debussy at 88%). Map the position by TIME FRACTION instead: where we are
     // in the old piece (0..1) → the event nearest that fraction in the new one.
     const _prevC = pixelRef.current.lastComposer;
-    const _compKey = (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '');
+    const _compKey = (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleNow!=='A') ? '|'+fuStyleNow : '');
     pixelRef.current.lastComposer = _compKey;
     const _compChanged = _prevC !== undefined && _prevC !== _compKey;
     const _mapIdx = (oldArr, oldIdx, newArr)=>{
@@ -31100,6 +30886,7 @@ Hard requirements:
       return best;
     };
     pixelRef.current.lastDir=imgDir;
+    pixelRef.current.lastVar=_varEff;
     pixelRef.current.lastSig=sig;
     pixelRef.current.lastMode=mode;
     const{nc,nr,px}=pixelRef.current;
@@ -31115,31 +30902,31 @@ Hard requirements:
     try{ _setImgForcedBands((pixelRef.current&&pixelRef.current.mosaicBands)||0); }catch(_){}
     const _crKeys = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
     const _evtsLit = (_crKeys.length>=2)
-      ? composeImageCallResponse(px,nc,nr,hueTable,mode,imgDirRef.current,_crKeys)
+      ? composeImageCallResponse(px,nc,nr,hueTable,mode,imgDirRef.current,_crKeys,imgVarRef.current)
       : (imgComposerRef.current==='glass')
-      ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageGlass(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='satie')
-      ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageSatie(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='chopin')
-      ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageChopin(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='vine')
-      ? composeImageVine(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageVine(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='gershwin')
-      ? composeImageGershwin(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageGershwin(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='yiruma')
-      ? composeImageYiruma(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageYiruma(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='bach')
-      ? composeImageBach(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageBach(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='beethoven')
-      ? composeImageBeethoven(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageBeethoven(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='debussy')
-      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageDebussy(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='rachmaninov')
-      ? composeImageRachmaninov(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageRachmaninov(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='einaudi')
-      ? composeImageEinaudi(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageEinaudi(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : (imgComposerRef.current==='hisaishi')
-      ? composeImageHisaishi(px,nc,nr,hueTable,mode,imgDirRef.current)
+      ? composeImageHisaishi(px,nc,nr,hueTable,mode,imgDirRef.current,imgVarRef.current)
       : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsT=_composerTimeline(_evtsLit);
@@ -31218,7 +31005,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,imgVar,imgComposer,composerStage,fuStyleNow,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
@@ -31703,6 +31490,7 @@ Hard requirements:
               if(!melodyOnRef.current) return;                // belt-and-braces: off → silent
               try{
                 playNote(mn.m, mn.v, Math.round(durMs/playbackSpeedRef.current));
+                try{ const bd=melBeadsRef.current; bd.push({t:performance.now(), m:mn.m, v:mn.v, i:Math.max(0,(dispRef.current||1)-1)}); if(bd.length>48) bd.splice(0,bd.length-48); }catch(_){}
                 setActive(p=>{const s=new Set(p); s.add(mn.m); return s;});
                 pushTimer(()=>setActive(p=>{const s=new Set(p); s.delete(mn.m); return s;}), Math.min(900, Math.round(durMs/playbackSpeedRef.current)));
               }catch(_){}
@@ -35388,7 +35176,7 @@ Hard requirements:
               // direction/palette → different signature), fall through to a fresh
               // bake so the new scan is heard.
               try{
-                const _curSig = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + (chordsRef.current ? chordsRef.current.length : 0);
+                const _curSig = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + (imgVarRef.current||0) + '|' + (chordsRef.current ? chordsRef.current.length : 0);
                 if(musicStashRef.current && _seeMusicSrcSigRef.current === _curSig){
                   try{ stashMode('image'); }catch(_){}   // keep the Image draft for Back
                   _musicFromImageRef.current = true;
@@ -35407,7 +35195,7 @@ Hard requirements:
                 // Fresh bake → any stale Music draft from a previous See music is
                 // now superseded; clear it and record the source signature so a
                 // later Back can tag the new draft for reuse.
-                _seeMusicSrcSigRef.current = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + chords.length;
+                _seeMusicSrcSigRef.current = (mode||'') + '|' + (imgDirRef.current||'lr') + '|' + (imgVarRef.current||0) + '|' + chords.length;
                 musicStashRef.current = null; setHasMusicDraft(false);
                 // Bake image-mode runtime expansion (tremolo re-strikes,
                 // arpeggio per-note offsets, sustained-plane durations,
@@ -35565,7 +35353,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _stageNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _stageNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}<span style={{fontStyle:'normal'}}>•</span><span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}{imgVar>0 ? ' \u2022 '+t('var_'+imgVar) : ''}</span></>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
         )}
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
@@ -35825,25 +35613,7 @@ Hard requirements:
               </button>
             </div>
             {imgPlayMode==='scan' ? (<>
-            {!imgComposer ? (<>
-              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
-              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
-                {['lr','vert','spiralIn','spiralOut'].map(d=>{
-                  const sel = imgDir===d;
-                  // Direction may be changed during playback now: unlike a palette
-                  // swap (same scan order, just different tones → seamless), a
-                  // direction change re-orders the scan, so the re-transcribe
-                  // effect restarts it from the top. Only a load/export (working)
-                  // blocks it — note `busy` includes `playing`, so we must NOT use
-                  // it here or the button would stay locked during scan.
-                  const locked = working;
-                  const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
-                  return (
-                    <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
-                  );
-                })}
-              </div>
-            </>) : (<>
+            {!imgComposer ? null : (<>
               <div style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',minHeight:28,display:'flex',alignItems:'center'}}>
                 <span>{t('inspiredByTitle')}</span>
                 {/* composer dice (🎲 mirror) + NEXT — only when there is more than one composer to roll between */}
@@ -35881,6 +35651,35 @@ Hard requirements:
                   <span>{_ensT(crPins.length===0 ? 'cPinNone' : crPins.length>=STAGE_MAX ? 'cPinFull' : 'cPinHint').replace('{next}', t('next'))}</span>
                 </div>
               )}
+            </>)}
+            <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:imgComposer?10:4,textTransform:'uppercase'}}>{imgComposer?t('dirLabelRead'):t('dirLabel')}</div>
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+                {['lr','vert','spiralIn','spiralOut'].map(d=>{
+                  const sel = imgDir===d;
+                  // Direction may be changed during playback now: unlike a palette
+                  // swap (same scan order, just different tones → seamless), a
+                  // direction change re-orders the scan, so the re-transcribe
+                  // effect restarts it from the top. Only a load/export (working)
+                  // blocks it — note `busy` includes `playing`, so we must NOT use
+                  // it here or the button would stay locked during scan.
+                  const locked = working;
+                  const glyph = d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
+                  return (
+                    <button key={d} disabled={locked} onClick={()=>{ if(locked)return; setImgDir(d); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('dir_'+d)}</button>
+                  );
+                })}
+              </div>
+            {imgComposer && (<>
+              <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:10,textTransform:'uppercase'}}>{t('varLabel')}</div>
+              <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+                {[0,1,2,3].map(v=>{
+                  const sel = imgVar===v; const locked = working;
+                  const glyph = v===0?'→':v===1?'←':v===2?'↕':'⇆';
+                  return (
+                    <button key={v} disabled={locked} onClick={()=>{ if(locked)return; setImgVar(v); }} style={{width:isDesktop?'100%':undefined,padding:'7px 0',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, opacity .18s',opacity:locked&&!sel?0.4:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',...chipStyle(sel)}}>{glyph} {t('var_'+v)}</button>
+                  );
+                })}
+              </div>
             </>)}
             </>) : (
               <div style={{padding:'10px 12px',marginTop:2,borderRadius:10,background:'rgba(220,150,255,.06)',border:'1px solid rgba(220,150,255,.18)',fontSize:(.54*effScale)+'rem',lineHeight:1.5,color:'rgba(228,200,255,.8)',fontStyle:'italic'}}>{t('imgComposeBlurb')!=='imgComposeBlurb'?t('imgComposeBlurb'):'AI composes a full piece from this image — its colours, energy and mood. Press Play.'}</div>
@@ -37985,7 +37784,7 @@ Hard requirements:
       )}
       </div>
       )}
-      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.7{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.8{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
