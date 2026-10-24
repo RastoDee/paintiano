@@ -14052,13 +14052,19 @@ function _fuVariantOf(k, slot, ph){
 //     strongest), the PALETTE one world for the whole painting, scale and
 //     density the mean. Which parent lends what follows the whole address (every
 //     member's variant), so Next walks through the painters one ensemble holds.
+// A+E — either, by chance: a coin tossed on the painting's address (its members
+//     and their variants), so a painting never flips while it grows and Next
+//     tosses again.
 // The style of a painting: its own address first (a Favorite: __PAINT_FU_PHS.fs;
-// a poster QR: __PAINT_SIG_PHS.fs), else the Setup switch (__PAINT_FU_STYLE).
-function _fuStyleOf(ks){
+// a poster QR: __PAINT_SIG_PHS.fs — always the resolved A or E), else the Setup
+// switch (__PAINT_FU_STYLE: 'A' | 'E' | 'AE').
+function _fuStyleOf(ks, phs){
   const G=(typeof globalThis!=='undefined') ? globalThis : {}; const j=(ks||[]).join();
   const ur=G.__PAINT_FU_PHS; if(ur && ur.keys && ur.fs && ur.keys.join()===j) return ur.fs==='E' ? 'E' : 'A';
   const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.fs && ov.keys.join()===j) return ov.fs==='E' ? 'E' : 'A';
-  return G.__PAINT_FU_STYLE==='E' ? 'E' : 'A';
+  const g=G.__PAINT_FU_STYLE;
+  if(g==='AE'){ const s=j+'|'+(phs||[]).join(','); let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return ((h>>>7)&1) ? 'E' : 'A'; }
+  return g==='E' ? 'E' : 'A';
 }
 // how a painter's hand paints a form — by the artist where the genes alone would mislead
 // (Picasso's glow belongs to his line, not to a veil; Monet's hand is the touch)
@@ -14093,7 +14099,7 @@ function fuseDNA(keys, ph){
   const ws=ks.map((k,i)=>[_dnaOf(k,phs[i]), 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
-  if(_fuStyleOf(ks)==='E') return _fuMusic(_fuOnePainter(ks, ph, phs, ws, T, num));
+  if(_fuStyleOf(ks, phs)==='E') return _fuMusic(_fuOnePainter(ks, ph, phs, ws, T, num));
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
