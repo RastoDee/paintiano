@@ -16125,6 +16125,42 @@ function _fuVariantOf(k, slot, ph){
   while(j<n){ b=j; key=(Math.imul(key,1664525)+1013904223)>>>0; j=Math.floor((b+1)*(2147483648/((key>>>1)+1))); }
   return b;
 }
+// ── FUSION STYLE · A / E ──────────────────────────────────────────────────────
+// A — side by side: every chord is painted by one member of the ensemble in its
+//     own hand, edge and palette; the crossing is the parents taking turns.
+// E — one painter: the crossing is a painter of its own whose genes come whole
+//     from the parents: the HAND (edge, opacity, contour, shake, layers, screen)
+//     from one, the GROUND from another, the COMPOSITION from a third; the
+//     VOCABULARY is the parents' signature forms side by side (each parent's two
+//     strongest), the PALETTE one world for the whole painting, scale and
+//     density the mean. Which parent lends what follows the whole address (every
+//     member's variant), so Next walks through the painters one ensemble holds.
+// The style of a painting: its own address first (a Favorite: __PAINT_FU_PHS.fs;
+// a poster QR: __PAINT_SIG_PHS.fs), else the Setup switch (__PAINT_FU_STYLE).
+function _fuStyleOf(ks){
+  const G=(typeof globalThis!=='undefined') ? globalThis : {}; const j=(ks||[]).join();
+  const ur=G.__PAINT_FU_PHS; if(ur && ur.keys && ur.fs && ur.keys.join()===j) return ur.fs==='E' ? 'E' : 'A';
+  const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.fs && ov.keys.join()===j) return ov.fs==='E' ? 'E' : 'A';
+  return G.__PAINT_FU_STYLE==='E' ? 'E' : 'A';
+}
+// how a painter's hand paints a form — by the artist where the genes alone would mislead
+// (Picasso's glow belongs to his line, not to a veil; Monet's hand is the touch)
+const _FU_HAND={rothko:'veil',klee:'veil',bloom:'veil',monet:'touches',pollock:'ragged',mitchell:'ragged',picasso:'flat'};
+function _fuOnePainter(ks, ph, phs, ws, T, num){
+  const n=ks.length, h=(phs.reduce((a,b)=>a+(b|0),0)%n+n)%n;
+  const hi=h, gi=(h+1)%n, li=n>=3 ? (h+2)%n : (h+1)%n;
+  const H=ws[hi][0], G=ws[gi][0], Lp=ws[li][0];
+  const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ mark[k]=(mark[k]||0)+d.mark[k]/t*w/T; }); });
+  let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
+  { const l=_fuHex(G.ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
+  const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
+  return { fs:'E', keys:ks, ph:(ph|0), phs, roles:{hand:hi, ground:gi, layout:li}, hand:(_FU_HAND[ks[hi]] || (H.edge>=0.3 ? 'veil' : H.wobble>=0.6 ? 'ragged' : 'flat')),
+    ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
+    mark, layout:Object.assign({}, Lp.layout),
+    size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
+    edge:H.edge, alpha:H.alpha, outline:H.outline, wobble:H.wobble, lines:H.lines,
+    layers:Math.max(1,H.layers|0), density:num('density'), halftone:H.halftone, tones, tilt:0 };
+}
 function fuseDNA(keys, ph){
   const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
   if(!ks.length) return null;
@@ -16140,6 +16176,7 @@ function fuseDNA(keys, ph){
   const ws=ks.map((k,i)=>[_dnaOf(k,phs[i]), 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
+  if(_fuStyleOf(ks)==='E') return _fuMusic(_fuOnePainter(ks, ph, phs, ws, T, num));
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
@@ -16217,11 +16254,157 @@ function _fuPlace(u, pitch, F, CW, CH, r1, r2, i, n){
   x=Math.max(.04,Math.min(.96,x)); y=Math.max(.05,Math.min(.95,y));
   return [x*CW, y*CH];
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// §FUSION · the forms and the hand. A crossing is ONE painter (see fuseDNA):
+// every closed form of its vocabulary — the parents' signature silhouettes,
+// each with its own inner structure (Delaunay's sectors, Klee's square within
+// the square, Lichtenstein's screen, Stella's nest…) — is painted by the
+// painting's one HAND: as a luminous veil (Rothko, Klee, Francis), flat with an
+// ink contour (Hokusai, Mondrian, Haring), with a ragged dry contour (Pollock,
+// Mitchell) or as a cluster of broken touches (Monet). The gestures — a thrown
+// line, a loaded stroke, a band, the water — stay their parent's.
+// ═══════════════════════════════════════════════════════════════════════════
+// the inner structure each form carries — how its parent treats the inside of the form
+const _FU_FILL={orphic:'sectors',fan:'sectors',arch:'sectors',protractor:'sectors',
+  target:'rings',kring:'rings',ring:'rings',nest:'rings',nestpoly:'rings',
+  tile:'inset',checker:'tiles',pixels:'tiles',cube:'tiles',
+  benday:'benday', dot:'polka',sphere:'polka',
+  field:'veil',cloud:'veil',cell:'veil', pour:'skein', eye:'gold'};
+// the second colour must read against the first, or the fill gene is invisible
+function _fuApart(c1,c2){ const a=_fuRgb(c1), b=_fuRgb(c2); if(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])>=90) return c2;
+  const l=a[0]*.299+a[1]*.587+a[2]*.114; const f=l>140 ? (v)=>v*0.55 : (v)=>v+(255-v)*0.45; return `rgb(${f(a[0])|0},${f(a[1])|0},${f(a[2])|0})`; }
+// the half-extents of a form's box (bounds the fill patterns; the clip does the rest)
+function _fuExt(kind, rr){ switch(kind){ case 'field': return [rr*2.3,rr*0.7]; case 'bar': return [rr*.4,rr*2.6]; case 'cutout': return [rr*1.7,rr*2]; case 'fuji': return [rr*2,rr*.9]; case 'panel': return [rr*1.2,rr*.9]; default: return [rr*1.35,rr*1.35]; } }
+// the silhouette of a form, as a closed path around (0,0): each parent's own geometry
+function _fuSil(ctx, kind, rr, R, F){
+  ctx.beginPath();
+  switch(kind){
+    case 'field': { const h=rr*(0.35+R()*.3); ctx.rect(-rr*2.2,-h,rr*4.4,2*h); break; }
+    case 'rect': { const h=rr*(0.55+R()*0.9); ctx.rect(-rr,-h,2*rr,2*h); break; }
+    case 'gridrect': { const h=rr*(0.6+R()*0.8); ctx.rect(-rr,-h,2*rr,2*h); break; }
+    case 'tile': case 'nest': case 'checker': case 'pixels': case 'mosaic': ctx.rect(-rr,-rr,2*rr,2*rr); break;
+    case 'panel': ctx.rect(-rr*1.1,-rr*.8,rr*2.2,rr*1.6); break;
+    case 'paper': ctx.rect(-rr*.65,-rr*.45,rr*1.3,rr*.9); break;
+    case 'speech': ctx.rect(-rr,-rr*.55,rr*2,rr*1.1); break;
+    case 'tvbox': ctx.rect(-rr*.8,-rr*.5,rr*1.6,rr*1.0); break;
+    case 'bar': ctx.rect(-rr*.3,-rr*2.5,rr*.6,rr*5); break;
+    case 'cube': { for(let j=0;j<6;j++){ const a=j/6*6.2832-1.5708; j?ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr); } ctx.closePath(); break; }
+    case 'facet': case 'poly': { const k=4+(R()*3|0), a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.55+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q); } ctx.closePath(); break; }
+    case 'tri': { const a=R()*6.28; for(let j=0;j<3;j++){ const t=a+j*2.094; j?ctx.lineTo(Math.cos(t)*rr,Math.sin(t)*rr):ctx.moveTo(Math.cos(t)*rr,Math.sin(t)*rr);} ctx.closePath(); break; }
+    case 'diamond': ctx.moveTo(0,-rr); ctx.lineTo(rr*.6,0); ctx.lineTo(0,rr); ctx.lineTo(-rr*.6,0); ctx.closePath(); break;
+    case 'star': { for(let j=0;j<10;j++){ const a=j/10*6.2832-1.5708, q=j%2?rr*.45:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); break; }
+    case 'starburst': { for(let j=0;j<16;j++){ const a=j/16*6.2832, q=j%2?rr*.4:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); break; }
+    case 'blob': case 'miroblob': case 'cloud': case 'pour': case 'bulge': { const k=kind==='miroblob'?6:7+(R()*4|0); const P=[]; for(let j=0;j<k;j++){ const a=j/k*6.2832; P.push([Math.cos(a)*rr*(0.65+R()*0.55),Math.sin(a)*rr*(0.65+R()*0.55)]); }
+      ctx.moveTo((P[0][0]+P[k-1][0])/2,(P[0][1]+P[k-1][1])/2); for(let j=0;j<k;j++){ const q=P[j], nx=P[(j+1)%k]; ctx.quadraticCurveTo(q[0],q[1],(q[0]+nx[0])/2,(q[1]+nx[1])/2); } ctx.closePath(); break; }
+    case 'cell': { const pts=_frOutline(R,0,0,rr,1+R()*.4,.8+R()*.4); pts.forEach((q,j)=>j?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.closePath(); break; }
+    case 'cutout': { // Matisse: the algue — rounded fronds fanning up from one stem
+      const n=3+(R()*3|0), tilt=(R()-.5)*0.7, spread=0.9+R()*0.7, by=rr*0.85;
+      for(let j=0;j<n;j++){ const a=-1.5708+tilt+((n===1?0:(j/(n-1)-0.5))*spread), L=rr*(1.05+R()*0.65), w=rr*(0.15+R()*0.12); const dx=Math.cos(a), dy=Math.sin(a), px=-dy, py=dx;
+        const P=(u,v)=>[dx*L*u+px*w*v, by+dy*L*u+py*w*v]; const c1=P(0.35,1.4), c2=P(1.08,1.0), tip=P(1.0,0), c3=P(1.08,-1.0), c4=P(0.35,-1.4);
+        ctx.moveTo(0,by); ctx.bezierCurveTo(c1[0],c1[1],c2[0],c2[1],tip[0],tip[1]); ctx.bezierCurveTo(c3[0],c3[1],c4[0],c4[1],0,by); }
+      break; }
+    case 'fuji': ctx.moveTo(-rr*1.9,rr*.8); ctx.quadraticCurveTo(-rr*.9,rr*.55,-rr*.22,-rr*.75); ctx.lineTo(rr*.22,-rr*.75); ctx.quadraticCurveTo(rr*.9,rr*.55,rr*1.9,rr*.8); ctx.closePath(); break;
+    case 'petal': case 'leaf': ctx.moveTo(0,rr); ctx.bezierCurveTo(rr*1.2,rr*.3, rr*.9,-rr*1.0, 0,-rr); ctx.bezierCurveTo(-rr*.9,-rr*1.0,-rr*1.2,rr*.3, 0,rr); ctx.closePath(); break;
+    case 'heart': ctx.moveTo(0,rr*.9); ctx.bezierCurveTo(-rr*1.3,rr*.1,-rr*.9,-rr*.9,0,-rr*.35); ctx.bezierCurveTo(rr*.9,-rr*.9,rr*1.3,rr*.1,0,rr*.9); ctx.closePath(); break;
+    case 'figure': { // Haring: the dancing figure — arms up, legs apart, the head a disc
+      const P=[[-.22,-.42],[-.7,-.82],[-.58,-.97],[-.1,-.6],[.1,-.6],[.58,-.97],[.7,-.82],[.22,-.42],[.22,.1],[.52,.85],[.3,.97],[0,.38],[-.3,.97],[-.52,.85],[-.22,.1]];
+      P.forEach((p,j)=>j?ctx.lineTo(p[0]*rr,p[1]*rr):ctx.moveTo(p[0]*rr,p[1]*rr)); ctx.closePath(); ctx.moveTo(rr*.24,-rr*.74); ctx.arc(0,-rr*.74,rr*.24,0,6.2832); break; }
+    case 'dog': { // Haring: the barking dog — the box of a body, the head up, the jaw open, the tail up
+      const d=R()<.5?1:-1; const P=[[-.95,.1],[-.95,-.3],[.3,-.3],[.3,-.58],[.78,-.58],[.98,-.38],[.98,-.22],[.58,-.22],[.98,.0],[.6,.1],[.3,.1],[.3,.5],[.14,.5],[.14,.1],[-.1,.1],[-.1,.5],[-.26,.5],[-.26,.1],[-.56,.1],[-.56,.5],[-.72,.5],[-.72,.1],[-.95,.1],[-1.15,-.42],[-1.05,-.52],[-.86,-.3]];
+      P.forEach((p,j)=>j?ctx.lineTo(p[0]*rr*d,p[1]*rr):ctx.moveTo(p[0]*rr*d,p[1]*rr)); ctx.closePath(); break; }
+    case 'eye': ctx.ellipse(0,0,rr,rr*.6,0,0,6.2832); break;
+    case 'arch': ctx.arc(0,rr*.3,rr,Math.PI,0); ctx.closePath(); break;
+    case 'fan': case 'protractor': { const a0=(R()*4|0)*1.5708; ctx.moveTo(0,0); ctx.arc(0,0,rr,a0,a0+1.5708); ctx.closePath(); break; }
+    default: ctx.arc(0,0,rr,0,6.2832);   // disc · dot · ring · target · orphic · benday · sphere · kring
+  }
+}
+// the parent's signature detail that survives a foreign fill (Fuji's snow, the pupil of Klimt's eye)
+function _fuSilDetail(ctx, kind, rr, col, col2, F, R){
+  if(kind==='fuji'){ ctx.fillStyle=F.groundLum>128?'#fbf8f0':'#f0ece0'; ctx.beginPath(); ctx.moveTo(-rr*.44,-rr*.42); ctx.lineTo(-rr*.22,-rr*.75); ctx.lineTo(rr*.22,-rr*.75); ctx.lineTo(rr*.44,-rr*.42); for(let j=4;j>=0;j--){ const x=-rr*.44+rr*.88*j/4; ctx.lineTo(x+rr*.08,-rr*.47); ctx.lineTo(x,-rr*(j%2?.2:.38)); } ctx.closePath(); ctx.fill(); }
+  else if(kind==='eye'){ ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(0,0,rr*.18,0,6.2832); ctx.fill(); }
+  else if(kind==='cell'){ // Sam Francis: a drip or two off the underside, a flick of spatter
+    ctx.fillStyle=col; ctx.strokeStyle=col; ctx.lineCap='round';
+    if(R()<.75){ const nd=1+(R()*2|0); for(let j=0;j<nd;j++){ const x=(R()-.5)*rr*1.2, len=rr*(.8+R()*2.2); ctx.lineWidth=Math.max(1,rr*.09); ctx.beginPath(); ctx.moveTo(x,rr*.6); ctx.lineTo(x+(R()-.5)*rr*.2,rr*.6+len); ctx.stroke(); ctx.beginPath(); ctx.arc(x+(R()-.5)*rr*.2,rr*.6+len,rr*.08,0,6.2832); ctx.fill(); } }
+    const a=R()*6.2832; for(let j=0;j<6;j++){ const d=rr*(1.1+R()*1.4), b=a+(R()-.5)*.9; ctx.beginPath(); ctx.arc(Math.cos(b)*d,Math.sin(b)*d,rr*(.03+R()*.07),0,6.2832); ctx.fill(); } }
+}
+// the form's own inner structure, painted inside the clipped body (ctx at the form's centre, clipped to it)
+function _fuFill(ctx, fill, rr, w, h, col, col2, R, F, a0, path){
+  const W2=Math.max(w,h);
+  switch(fill){
+    case 'sectors': { // Delaunay: concentric rings, quartered, the two colours alternating
+      const rings=3+(R()*2|0), rot=(R()*4|0)*1.5708, Rm=W2*1.05; for(let q=rings;q>=1;q--){ const rq=Rm*q/rings; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,rq,0,6.2832); ctx.fill(); ctx.fillStyle=col2; for(let sgm=0;sgm<4;sgm++){ if(((q+sgm)%2)===0) continue; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rq,rot+sgm*1.5708,rot+(sgm+1)*1.5708); ctx.closePath(); ctx.fill(); } } break; }
+    case 'inset': { // Klee: the square within the square, in the second colour
+      ctx.fillStyle=col2; ctx.save(); ctx.scale(0.55,0.55); path(); ctx.fill(); ctx.restore(); break; }
+    case 'rings': { // af Klint / Kandinsky / Stella: the form nested in itself, the two colours alternating
+      const n=4; for(let q=n-1;q>=1;q--){ ctx.save(); ctx.scale(q/n,q/n); ctx.fillStyle=(q%2)?col2:col; path(); ctx.fill(); ctx.restore(); } break; }
+    case 'tiles': { // Klee: the magic squares — a grid of squares, the tone breathing across it
+      const st=Math.max(3, Math.min(Math.min(w,h)*0.32, (F._S||600)*0.06)), g=st*0.07, ph=R()*6.28; ctx.fillStyle=col2; for(let yy=-h;yy<h;yy+=st) for(let xx=-w;xx<w;xx+=st){ const t=0.25+0.6*(0.5+0.5*Math.sin(xx/w*2.1+ph)*Math.cos(yy/h*1.7+ph*.7)); ctx.globalAlpha=a0*Math.min(1,t*(0.8+R()*0.4)); ctx.fillRect(xx+g,yy+g,st-2*g,st-2*g); } ctx.globalAlpha=a0; break; }
+    case 'benday': { // Lichtenstein: the regular dot screen
+      const st=Math.max(2.5, Math.min(rr*0.2, (F._S||600)*0.022)); ctx.fillStyle=col2; for(let yy=-h;yy<=h;yy+=st) for(let xx=-w;xx<=w;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*0.31,0,6.2832); ctx.fill(); } break; }
+    case 'polka': { // Kusama: polka dots — uneven sizes, a loose hex drift
+      const st=Math.max(3, Math.min(rr*0.3, (F._S||600)*0.05)); let row=0; ctx.fillStyle=col2; for(let yy=-h;yy<=h;yy+=st*0.87,row++) for(let xx=-w+(row%2?st/2:0);xx<=w;xx+=st){ const q=st*(0.12+R()*0.26); ctx.beginPath(); ctx.arc(xx+(R()-.5)*st*.3,yy+(R()-.5)*st*.3,q,0,6.2832); ctx.fill(); } break; }
+    case 'veil': { // Rothko: veils within the form, the second colour glowing in the middle one
+      for(let q=1;q<=3;q++){ ctx.save(); ctx.scale(1-q*0.17,1-q*0.17); ctx.globalAlpha=a0*0.28; ctx.fillStyle=q===2?col2:col; path(); ctx.fill(); ctx.restore(); } ctx.globalAlpha=a0; break; }
+    case 'skein': { // Pollock: thrown threads wandering across the form, beads where they landed
+      const dark=F.groundLum>128?'#1a1612':'#f2ead8'; ctx.lineCap='round'; const n=5+(R()*4|0); for(let j=0;j<n;j++){ ctx.strokeStyle=(j%3===2)?dark:col2; ctx.lineWidth=Math.max(0.8, rr*(0.025+R()*0.05)); let x=(R()-.5)*W2*2, y=(R()-.5)*W2*2; const a=R()*6.28; const ux=Math.cos(a)*W2*0.35, uy=Math.sin(a)*W2*0.35; ctx.beginPath(); ctx.moveTo(x,y); for(let s=0;s<7;s++){ const nx=x+ux+(R()-.5)*W2*.5, ny=y+uy+(R()-.5)*W2*.5; ctx.quadraticCurveTo(x+ux*.5+(R()-.5)*W2*.4, y+uy*.5+(R()-.5)*W2*.4, nx, ny); x=nx; y=ny; } ctx.stroke(); }
+      for(let j=0;j<4;j++){ ctx.fillStyle=(j%2)?dark:col2; ctx.beginPath(); ctx.arc((R()-.5)*W2*1.6,(R()-.5)*W2*1.6,rr*(0.03+R()*0.05),0,6.2832); ctx.fill(); } break; }
+    case 'gold': { // Klimt: small spirals and squares of the second colour scattered through the form
+      ctx.strokeStyle=col2; ctx.lineWidth=Math.max(1,rr*0.04); const n=3+(R()*3|0); for(let j=0;j<n;j++){ const cx=(R()-.5)*w*1.4, cy=(R()-.5)*h*1.4, q0=rr*(0.14+R()*0.14); ctx.beginPath(); for(let s=0;s<=30;s++){ const t=s/30*6.2832*2, q=q0*s/30; s?ctx.lineTo(cx+Math.cos(t)*q,cy+Math.sin(t)*q):ctx.moveTo(cx,cy); } ctx.stroke(); }
+      ctx.fillStyle=col2; ctx.globalAlpha=a0*0.7; for(let j=0;j<10;j++){ const s=rr*(0.05+R()*0.06); ctx.fillRect((R()-.5)*w*1.8,(R()-.5)*h*1.8,s,s); } ctx.globalAlpha=a0; break; }
+    default: break;
+  }
+}
+// one form, painted by the hand: F.hand = veil | flat | ragged | touches (the hand parent's, see fuseDNA)
+function _fuForm(ctx, kind, r, col, col2, R, F){
+  col2=_fuApart(col, col2||col);
+  const S=F._S||600, rr=r;
+  let sv=null, qi=0; const path=()=>{ if(!sv){ sv=[]; _fuSil(ctx,kind,rr,()=>{ const v=R(); sv.push(v); return v; },F); } else { qi=0; _fuSil(ctx,kind,rr,()=>sv[qi++],F); } };
+  const [w,h]=_fuExt(kind,rr); const own=_FU_FILL[kind]||'flat';
+  const a0=(F.alpha>=0.85 && F.edge<=0.2) ? F.alpha : F.alpha/Math.sqrt(F.layers);
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  const inner=(a)=>{ if(own==='flat') return; ctx.save(); path(); ctx.clip(); ctx.globalAlpha=a; _fuFill(ctx, own, rr, w, h, col, col2, R, F, a, path); ctx.restore(); };
+  switch(F.hand){
+    case 'veil': { // Rothko's build-up on any silhouette: a halo, then veils from the feathered rim inward (their edges wandering, the colour drifting toward the next note), two lighter cores
+      const al=Math.min(1,F.alpha/0.75), fe=Math.min(rr*0.5, S*0.045)*(0.5+F.edge*0.6), big=kind==='field';
+      const sc=(e)=>{ const k=(rr+e)/rr; ctx.scale(big?1+(k-1)*0.3:k, k); };
+      const c0=_fuRgb(col), c1=_fuRgb(col2);
+      const mix=(t,l)=>{ const c=[0,1,2].map(q=>{ const v=c0[q]+(c1[q]-c0[q])*t; return l>0 ? v+(255-v)*l : v*(1+l); }); return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; };
+      ctx.save(); sc(fe*1.6); ctx.globalAlpha=0.22*al; ctx.fillStyle=mix(0.2,0.18); path(); ctx.fill(); ctx.restore();
+      const K=7; for(let i=0;i<K;i++){ const u=i/(K-1); ctx.save(); ctx.translate((R()-.5)*fe*0.5,(R()-.5)*fe*0.5); sc(fe*(1-u)); ctx.globalAlpha=(0.13+0.09*u)*al; ctx.fillStyle=mix(i%2?0.35:0.1,(u-0.5)*0.12); path(); ctx.fill(); ctx.restore(); }
+      for(let i=0;i<2;i++){ ctx.save(); sc(-fe*(0.25+0.35*i)); ctx.globalAlpha=0.13*al; ctx.fillStyle=mix(0.15,0.12+0.06*i); path(); ctx.fill(); ctx.restore(); }
+      inner(0.5*al);
+      break; }
+    case 'ragged': { // a dry, broken contour: the body laid down three times a hair apart, spatter off its edge
+      for(let p=0;p<3;p++){ ctx.save(); ctx.translate((R()-.5)*rr*.14,(R()-.5)*rr*.14); ctx.rotate((R()-.5)*.07); ctx.globalAlpha=a0*(p?0.3:0.75); ctx.fillStyle=col; path(); ctx.fill(); ctx.restore(); }
+      inner(a0*0.9);
+      ctx.globalAlpha=a0*0.8; ctx.fillStyle=col; const ns=3+(R()*4|0); for(let j=0;j<ns;j++){ const a=R()*6.2832, d=Math.max(w,h)*(1.0+R()*0.35); ctx.beginPath(); ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(0.02+R()*0.05),0,6.2832); ctx.fill(); }
+      break; }
+    case 'touches': { // Monet's hand on any silhouette: the form built of his loaded two-tone touches, a few straddling the rim so the contour dissolves into the surface
+      const c1=_fuRgb(col), c2=_fuRgb(col2); const L=Math.max(S*0.012, rr*0.3), wd=Math.max(2, rr*0.12);
+      const dab=(x,y)=>{ const tm=R()*0.6, lt=(R()-.5)*0.4; const c=[0,1,2].map(q=>{ const v=c1[q]+(c2[q]-c1[q])*tm; return lt>0?v+(255-v)*lt:v*(1+lt); }); _monDab(ctx,x,y,L*(0.6+R()*0.8),wd*(0.7+R()*0.6),(R()-.5)*0.3,c,1,R,false); };
+      ctx.globalAlpha=0.5*a0; ctx.fillStyle=col; path(); ctx.fill();
+      ctx.save(); path(); ctx.clip(); ctx.globalAlpha=0.9; const n=Math.min(160, 18+((w*h)/(L*wd)*1.1|0)); for(let j=0;j<n;j++) dab((R()-.5)*w*2,(R()-.5)*h*2); ctx.restore();
+      inner(0.45);
+      ctx.globalAlpha=0.7; const ne=4+(R()*5|0); for(let j=0;j<ne;j++){ const a=R()*6.2832; dab(Math.cos(a)*w*(0.9+R()*0.2), Math.sin(a)*h*(0.9+R()*0.2)); }
+      break; }
+    default: { // flat: the body (a field of colour stays a wash, whatever the hand), its inner structure, the hand's contour and screen
+      ctx.globalAlpha=a0*(kind==='field'?0.72:1); ctx.fillStyle=col; path(); ctx.fill();
+      inner(a0);
+      if(F.halftone>0.3 && rr>8 && R()<F.halftone){ ctx.save(); path(); ctx.clip(); ctx.fillStyle=F.groundLum>128?'rgba(255,255,255,.55)':'rgba(0,0,0,.35)'; const st=Math.max(3,Math.min(rr*.22,S*0.02)); for(let yy=-h;yy<h;yy+=st) for(let xx=-w;xx<w;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*.28,0,6.2832); ctx.fill(); } ctx.restore(); }
+      if(F.outline>0 && R()<F.outline){ ctx.globalAlpha=1; ctx.strokeStyle=F.groundLum>128?'#141414':'#f4efe4'; ctx.lineWidth=Math.max(1.4, Math.min(rr*.09, S*0.008)); path(); ctx.stroke(); }
+    }
+  }
+  ctx.globalAlpha=a0; _fuSilDetail(ctx, kind, rr, col, col2, F, R);
+  ctx.globalAlpha=1;
+}
+// the gestures — a thrown line, a loaded stroke, a ray, a band, the water, Hokusai's curling crest: drawn once, in their parent's own
+// geometry (_fuMark), whatever the hand; every other mark is a closed form the hand paints (_fuForm)
+const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest)$/;
 function _fuMark(ctx, kind, r, col, F, R, ang, col2){
   col2 = col2 || col;
-  // line idioms (af Klint's rays, Mitchell's strokes) stay crisp: a soft halo
+  // line idioms (af Klint's rays, Mitchell's strokes; in E every gesture) stay crisp: a soft halo
   // pass would re-draw them with fresh random angles → a tangle, or blur them fat
-  const soft = F.edge>0.15 && kind!=='rays' && kind!=='brush';
+  const soft = F.edge>0.15 && (F.fs==='E' ? !_FU_GEST.test(kind) : (kind!=='rays' && kind!=='brush'));
   const passes = soft ? 3 : 1;
   for(let p=passes-1;p>=0;p--){
     const rr = soft ? r*(1+p*F.edge*0.45) : r;
@@ -16500,11 +16683,13 @@ const _FU_UNDER=/^(field|stripe|stripes|vstripes|panel|cloud|checker|surface)$/;
 const _FU_NULL=(()=>{ let P; const f=function(){ return P; }; P=new Proxy(f,{ get:(o,p)=> p===Symbol.toPrimitive ? (()=>0) : P, set:()=>true, apply:()=>P }); return P; })();
 function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
   const F = fuseDNA(keys, phaseIndex); if(!F || !chords || !chords.length) return;
+  const _E = F.fs==='E';   // one painter (see FUSION STYLE · A / E)
   const ss = (sessionSeed|0) ^ ((phaseIndex|0)*7919);
   const S = Math.min(CW,CH), n = chords.length; F._S = S;
   // samples of every parent's real engine for this song / seed / variant
   const SM = F.keys.map((k,i)=>_fuSample(k, chords, gc, sessionSeed, mode, F.phs[i]));
-  const g0 = SM[0] && SM[0].ground;
+  const _gi = _E ? F.roles.ground : 0;   // E: the ground parent's real ground for this song
+  const g0 = SM[_gi] && SM[_gi].ground;
   if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
   const _defer=[];   // gestures, replayed over the underpainting (see _FU_UNDER)
@@ -16532,7 +16717,13 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // Size, layout, hand-shake and contour stay the one fused hand.
   const PDs=F.keys.map((k,i)=>_dnaOf(k,F.phs[i]));
   const FPs=PDs.map(pd=>(pd.edge===F.edge && pd.alpha===F.alpha) ? F : Object.assign({},F,{edge:pd.edge,alpha:pd.alpha}));
-  const _dAvg = PDs.reduce((s,pd)=>s+(0.3+0.5*pd.density),0)/PDs.length;   // the compressed density the loop really uses
+  // E: one hand for every form (F); a form keeps the scale of the parent it comes from (_own); ONE palette for the whole
+  // painting — the parents' sampled palettes interleaved (≤6), unless a parent keeps the song's own colours (Monet, a monochrome variant)
+  const _own={}; let _palE=null;
+  if(_E){ PDs.forEach((pd,i)=>{ for(const k in pd.mark){ if(_own[k]===undefined || pd.mark[k]>PDs[_own[k]].mark[k]) _own[k]=i; } });
+    const P=[]; if(!F.keys.some((k,i)=>k==='monet'||PDs[i].nosnap)){ for(let q=0;q<6;q++) for(let i=0;i<SM.length && P.length<6;i++){ const p=SM[i]&&SM[i].pal; if(p&&p[q]) P.push(p[q]); } }
+    _palE=P.length>=3 ? P : null; }
+  const _dAvg = _E ? 0.3+0.5*F.density : PDs.reduce((s,pd)=>s+(0.3+0.5*pd.density),0)/PDs.length;   // the compressed density the loop really uses
   let _exp=0; for(let ly=0; ly<F.layers; ly++){ const lf=(ly+1)/F.layers; _exp += Math.ceil(n/stride)*Math.min(1, _dAvg*(0.45+lf*0.55)*bigCap*crowd); }
   _exp *= (F.size[1]>0.2 ? 1 : (F.keys.length>=3 ? 1.6 : 2));
   const REPS = Math.max(1, Math.min(6, Math.ceil((90*bigCap)/Math.max(1,_exp))));
@@ -16558,9 +16749,10 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       // decides whether the chord paints, compressed towards the middle: a
       // sparse hand (Matisse) must stay visible beside a dense one (Riley),
       // and a dense hand must leave the other room.
+      // E: one painter — the painting's density decides, every chord draws from the one vocabulary
       const _pi=(((i/stride)|0)+layer)%F.keys.length;
-      const PD=PDs[_pi], FP=FPs[_pi];
-      if(R() > (0.3+0.5*PD.density)*(0.45+lf*0.55)*bigCap*crowd) continue;
+      const PD0=PDs[_pi], FP=FPs[_pi];
+      if(R() > (_E ? _dAvg : (0.3+0.5*PD0.density))*(0.45+lf*0.55)*bigCap*crowd) continue;
       const E=(chords[i]&&typeof chords[i]._E==='number')?chords[i]._E:0.5;
       _setCurE(E);
       const pitch=pitchOf(ns);
@@ -16570,12 +16762,13 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       const k=F.size[1]>0.2 ? 1 : Math.min(ns.length, F.keys.length>=3 ? 2 : 3);
       for(let j=0;j<k;j++){
         const note=ns[j]; const m=note.m!==undefined?note.m:(typeof note==='number'?note:60), v=note.v!==undefined?note.v:80;
-        // the painter keeps its own vocabulary and size, the hand stays fused
-        let kind=_fuPick(PD.mark,R());
+        // A: the painter keeps its own vocabulary and size; E: the form from the one vocabulary, its parent lends the scale
+        let kind=_fuPick(_E ? F.mark : PD0.mark, R());
+        const _po=_E ? (_own[kind]!==undefined ? _own[kind] : 0) : _pi; const PD=PDs[_po];
         if(_SPAN[kind]){ const sl=kind+Math.floor(i*_SPAN[kind][1]*2/Math.max(1,n)); if(_spanUsed.has(sl)){ if(R()<0.85) continue; kind=_SPAN[kind][0]; } else _spanUsed.add(sl); }
         // Kusama's flat patchwork panels read as plain squares next to another
         // hand — in a crossing they become a loose drift of polka dots.
-        const _kus = F.keys[_pi]==='kusama';
+        const _kus = F.keys[_po]==='kusama';
         if(_kus && kind==='panel') kind='dotcluster';
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
@@ -16602,18 +16795,24 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         }
         const [cr,cg,cb]=gc(m,v);
         // Monet's touches are the song's own colours, broken — never snapped to a sampled palette
-        const _pal=(F.keys[_pi]==='monet' || PD.nosnap) ? null : (SM[_pi]&&SM[_pi].pal);   // a variant whose solo palette is a monochrome wash (Picasso's analytic browns) keeps the song's colours in a fusion
+        const _pal=_E ? _palE : ((F.keys[_pi]==='monet' || PD.nosnap) ? null : (SM[_pi]&&SM[_pi].pal));   // a variant whose solo palette is a monochrome wash (Picasso's analytic browns) keeps the song's colours in a fusion
         const col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
         const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface|fuji|dog|cell|pour)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        // E: a closed form is painted by the painting's one hand (_fuForm); a gesture stays its parent's (_fuMark)
+        if(_E && !_FU_GEST.test(kind)){
+          if(_FU_UNDER.test(kind)){ ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); _fuForm(ctx, kind, r, col, col2, R, F); ctx.restore(); }
+          else { const vals=[]; _fuForm(_FU_NULL, kind, r, col, col2, ()=>{ const v=R(); vals.push(v); return v; }, F); _defer.push([tx, ty, 'FM:'+kind, r, col, ang, col2, vals, F, _po]); }
+          continue; }
+        const FPd=_E ? F : FP;
         if(_FU_UNDER.test(kind)){
-          ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, FP, R, ang, col2); ctx.restore();
-          if(kind==='surface' && _monetIn>=0 && r>S*0.065 && R()<0.35) _veil.push([tx, ty, r, col, col2, FP]);
+          ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, FPd, R, ang, col2); ctx.restore();
+          if(kind==='surface' && _monetIn>=0 && r>S*0.065 && R()<0.35) _veil.push([tx, ty, r, col, col2, FPd]);
         } else {
-          const vals=[]; _fuMark(_FU_NULL, kind, r, col, FP, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
-          _defer.push([tx, ty, kind, r, col, ang, col2, vals, FP, _pi]);
+          const vals=[]; _fuMark(_FU_NULL, kind, r, col, FPd, ()=>{ const v=R(); vals.push(v); return v; }, ang, col2);
+          _defer.push([tx, ty, kind, r, col, ang, col2, vals, FPd, _po]);
         }
       }
       }
@@ -16622,7 +16821,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // the gestures, over the underpainting
   for(const [tx,ty,kind,r,col,ang,col2,vals,FP] of _defer){
     let q=0; ctx.save(); ctx.translate(tx, ty);
-    _fuMark(ctx, kind, r, col, FP, ()=> q<vals.length ? vals[q++] : 0.5, ang, col2);
+    if(kind.slice(0,3)==='FM:'){ ctx.rotate(ang); _fuForm(ctx, kind.slice(3), r, col, col2, ()=> q<vals.length ? vals[q++] : 0.5, FP); }
+    else _fuMark(ctx, kind, r, col, FP, ()=> q<vals.length ? vals[q++] : 0.5, ang, col2);
     ctx.restore();
   }
   // Monet in a fusion is not a layer the partner sits on — the water takes the
@@ -16635,7 +16835,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   //  3 veil: a third of Monet's patches come back OVER everything at low
   //    opacity — the same light falls on the shapes and on the water.
   if(_monetIn>=0){
-    const FPm=FPs[_monetIn]; const Rm=_seedRnd(8081, ss, 5, 9);
+    const FPm=_E ? Object.assign({}, F, {edge:0, alpha:PDs[_monetIn].alpha}) : FPs[_monetIn]; const Rm=_seedRnd(8081, ss, 5, 9);   // E: the water keeps its own opacity
     const touch=(x,y,len,w,cc)=>_monDab(ctx,x,y,len,w,(Rm()-.5)*0.25,cc,1,Rm,false);   // the same loaded touch as everywhere Monet paints
     ctx.save(); ctx.lineCap='round';
     for(const g of _defer){ const [tx,ty,kind,r,col,,col2,,,pi]=g; if(pi===_monetIn || _FU_LINEAR.test(kind)) continue; if(Rm()>0.75) continue;
@@ -22084,7 +22284,7 @@ function _favHash(arr){
 // The painting's identity: same key = the same painting, so ♥ shows it is saved.
 function _favAddrKey(o){
   return [o.pk, o.style||'', (o.keys||[]).map(k=>k||'mosaic').join('+'), o.phase|0, o.seed>>>0, o.mode, o.tone,
-          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].join('|');
+          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.fa && o.fa.fs==='E' ? ['E'] : []).join('|');   // an E fusion is another painting (an A one keeps the old key)
 }
 const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
 const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
@@ -22106,7 +22306,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
   const keep = { fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
   let ok = true;
   try{
-    G.__PAINT_FU_PHS = fav.fa ? { keys:fav.fa.keys.slice(), phs:fav.fa.phs.slice() } : null;
+    G.__PAINT_FU_PHS = fav.fa ? { keys:fav.fa.keys.slice(), phs:fav.fa.phs.slice(), fs:(fav.fa.fs==='E' ? 'E' : 'A') } : null;   // a Favorite keeps the fusion style it was painted in
     G.__PAINT_SIG_PHS = null;
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
@@ -23041,15 +23241,15 @@ const TxIcon = ({n, s=15}) => {
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi'};
 const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants and the palette. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty a paletu. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
-  DE:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten und die Palette. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
-  FR:{title:'Ensemble',fusion:'Fusion',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes et la palette. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
-  ES:{title:'Ensemble',fusion:'Fusión',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes y la paleta. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
-  PT:{title:'Ensemble',fusion:'Fusão',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles e a paleta. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
-  zh:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体和调色板。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
-  zhTW:{title:'合奏',fusion:'融合',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',fsTitle:'Fusion style',fsA:'A · side by side',fsE:'E · one painter',fsHint:'A — the painters take turns, each in his own hand. E — a new painter bred from them: one lends the hand, another the ground, a third the composition; {next} changes who lends what. Saved Favorites keep the style they were painted in.',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants and the palette. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',fsTitle:'Štýl fúzie',fsA:'A · vedľa seba',fsE:'E · jeden maliar',fsHint:'A — maliari sa striedajú, každý vlastnou rukou. E — nový maliar splodený z nich: jeden mu dá ruku, druhý podklad, tretí kompozíciu; „{next}“ mení, kto dá čo. Obľúbené si nechajú štýl, v ktorom vznikli.',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty a paletu. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
+  DE:{title:'Ensemble',fusion:'Fusion',fsTitle:'Fusionsstil',fsA:'A · nebeneinander',fsE:'E · ein Maler',fsHint:'A — die Maler wechseln sich ab, jeder mit eigener Hand. E — ein neuer Maler, aus ihnen gekreuzt: einer gibt die Hand, ein anderer den Grund, ein dritter die Komposition; „{next}“ wechselt, wer was gibt. Favoriten behalten den Stil, in dem sie entstanden sind.',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten und die Palette. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
+  FR:{title:'Ensemble',fusion:'Fusion',fsTitle:'Style de fusion',fsA:'A · côte à côte',fsE:'E · un seul peintre',fsHint:'A — les peintres se relaient, chacun de sa propre main. E — un nouveau peintre né d’eux : l’un prête la main, un autre le fond, un troisième la composition ; « {next} » change qui prête quoi. Les favoris gardent le style dans lequel ils ont été peints.',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes et la palette. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
+  ES:{title:'Ensemble',fusion:'Fusión',fsTitle:'Estilo de fusión',fsA:'A · lado a lado',fsE:'E · un solo pintor',fsHint:'A — los pintores se turnan, cada uno con su propia mano. E — un pintor nuevo nacido de ellos: uno presta la mano, otro el fondo, un tercero la composición; «{next}» cambia quién presta qué. Los Favoritos conservan el estilo en que se pintaron.',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes y la paleta. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
+  PT:{title:'Ensemble',fusion:'Fusão',fsTitle:'Estilo de fusão',fsA:'A · lado a lado',fsE:'E · um só pintor',fsHint:'A — os pintores alternam, cada um com a sua mão. E — um pintor novo nascido deles: um empresta a mão, outro o fundo, um terceiro a composição; «{next}» muda quem empresta o quê. Os Favoritos mantêm o estilo em que foram pintados.',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles e a paleta. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
+  zh:{title:'合奏',fusion:'融合',fsTitle:'融合风格',fsA:'A · 并肩',fsE:'E · 一位画家',fsHint:'A——画家们轮流作画，各用各的笔触。E——由他们孕育出的一位新画家：一位给出笔触，一位给出底色，第三位给出构图；「{next}」会更换由谁给出什么。收藏会保留作画时的风格。',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体和调色板。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
+  zhTW:{title:'合奏',fusion:'融合',fsTitle:'融合風格',fsA:'A · 並肩',fsE:'E · 一位畫家',fsHint:'A——畫家們輪流作畫，各用各的筆觸。E——由他們孕育出的一位新畫家：一位給出筆觸，一位給出底色，第三位給出構圖；「{next}」會更換由誰給出什麼。收藏會保留作畫時的風格。',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',fsTitle:'フュージョンの様式',fsA:'A · 並んで',fsE:'E · ひとりの画家',fsHint:'A——画家たちが交代で、それぞれ自分の筆致で描く。E——彼らから生まれた新しい画家：ひとりが筆致を、もうひとりが地を、三人目が構図を受け継ぐ。「{next}」で誰が何を受け継ぐかが変わる。お気に入りは描かれたときの様式のまま残る。',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
@@ -24331,6 +24531,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _ensPrevProRef = useRef(proStatus);
   useEffect(()=>{ const prev=_ensPrevProRef.current; _ensPrevProRef.current=proStatus; if(prev==='free' && (proStatus==='pro'||proStatus==='pro_ai')){ setEnsembleOn(true); try{ localStorage.setItem('paintiano_setup_ensemble','1'); }catch(_){} } },[proStatus]);
   const ensembleActive = ensembleOn && proStatus!=='free';
+  // Fusion style (Setup › Ensemble): A side by side · E one painter (see FUSION STYLE · A / E in 02-draw).
+  // Default A; Free stays A. The draw module reads it from globalThis, set here before any paint of this render.
+  const [fuStyle, setFuStyle] = useState(()=>{ try{ return localStorage.getItem('paintiano_setup_fustyle')==='E' ? 'E' : 'A'; }catch(_){ return 'A'; } });
+  const fuStyleNow = (proStatus!=='free' && fuStyle==='E') ? 'E' : 'A';
+  try{ globalThis.__PAINT_FU_STYLE = fuStyleNow; }catch(_){}
   const ensembleOnRef = useRef(false); useEffect(()=>{ ensembleOnRef.current = ensembleActive; },[ensembleActive]);
   const [painterStage, setPainterStage] = useState([]);   // extra painters, slots 2..5 (slot 1 = style)
   const painterStageRef = useRef([]); useEffect(()=>{ painterStageRef.current = painterStage; },[painterStage]);
@@ -24451,10 +24656,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _fusionAddr = (st, ph)=>{
     const ks=(st||[]).map(k=>k||'mosaic').filter(k=>typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[k]);
     if(ks.length<2) return null;
-    const fr=fuRollRef.current; if(fr && fr.keys.join()===ks.join()) return { keys:ks, phs:fr.phs.slice() };
+    const fs=_fuStyleOf(ks);
+    const fr=fuRollRef.current; if(fr && fr.keys.join()===ks.join()) return { keys:ks, phs:fr.phs.slice(), fs };
     const ov=(typeof globalThis!=='undefined') ? globalThis.__PAINT_SIG_PHS : null;
     const on=!!(ov && ov.keys && ov.phs && ov.keys.join()===ks.join());
-    return { keys:ks, phs:ks.map((k,i)=> (on && ov.phs[i]!=null) ? (ov.phs[i]|0) : _fuVariantOf(k,i,ph|0)) };
+    return { keys:ks, phs:ks.map((k,i)=> (on && ov.phs[i]!=null) ? (ov.phs[i]|0) : _fuVariantOf(k,i,ph|0)), fs };
   };
   // Roll every member's variant at once. keep: {key: variant} for members that stay as
   // they are (pinned painters in Ensemble ALL, the drawn lead of a Lite Surprise).
@@ -24832,7 +25038,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
       if(_fa){
         if(!ALL_ARTIST_KEYS.includes(_fa.keys[0]) || _fa.keys[0]==='mosaicFamily'){ alert('Poster maker: fuzia musi zacinat konkretnym umelcom (nie Mosaic) - zmen poradie.'); return; }
         _artQ=_fa.keys[0];
-        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',');
+        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',')+(_fa.fs==='E' ? '&fs=E' : '');
       }
       const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+_artQ+'&v='+vNow+_withQ+'&p='+mode+'&t='+tone;
       // fonts first (Cormorant is already imported by the app shell)
@@ -25097,7 +25303,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _qrDropStage = ()=>{ if(!qrStageRef.current) return; qrStageRef.current=null;
     try{ const sg=songSigRef.current; globalThis.__PAINT_SIG_PHS=(sg && sg.phs && sg.keys) ? {keys:sg.keys.slice(), phs:sg.phs.slice()} : null; }catch(_){} };
   const _qrPhs = ()=> (qrArtistRef.current && qrStageRef.current)
-    ? { keys:[qrArtistRef.current].concat(qrStageRef.current.keys), phs:[qrVariantRef.current|0].concat(qrStageRef.current.vs) } : null;
+    ? { keys:[qrArtistRef.current].concat(qrStageRef.current.keys), phs:[qrVariantRef.current|0].concat(qrStageRef.current.vs), fs:qrStageRef.current.fs||'A' } : null;
   const litePieceRef = useRef(0);
   const qrModeRef = useRef(null);
   const qrToneRef = useRef(null);
@@ -25130,7 +25336,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
         const _ws=_qw.split(',').slice(0,4).map(x=>{ const a=String(x).split('.'); return {k:a[0], n:parseInt(a[1],10)}; })
           .filter(o=> o.k && ((typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(o.k) && o.k!=='mosaicFamily') || o.k==='mosaic')
                       && typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[o.k] && Number.isInteger(o.n) && o.n>=0 && o.n<_vN(o.k));
-        if(_ws.length) qrStageRef.current={ keys:_ws.map(o=>o.k), vs:_ws.map(o=>o.n) };
+        if(_ws.length) qrStageRef.current={ keys:_ws.map(o=>o.k), vs:_ws.map(o=>o.n), fs:(_u.get('fs')==='E' ? 'E' : 'A') };   // &fs=E — the poster's fusion style
       }
       // ?p= palette and ?t= tone — the rest of the painting's address. Without
       // them a poster made in e.g. spectral/pastel would repaint in the scanner's
@@ -26044,7 +26250,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const _jamExtra = painterStageRef.current;
     const _jamAll = (styleRef.current!==null ? [styleRef.current] : []).concat(_jamExtra||[]);
     const _jamKeys = (_jamAll.length>=2 && viewMode!=='image') ? _jamAll : null;
-    const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+')+(fuRoll ? '|'+fuRoll.phs.join(',') : '') : '';
+    const _jamSig = _jamKeys ? _jamKeys.map(k=>k||'mosaic').join('+')+(fuRoll ? '|'+fuRoll.phs.join(',') : '')+(_fuStyleOf(_fuKeys(_jamKeys))==='E' ? '|E' : '') : '';
     const canAppend =
       !_jamKeys &&
       (prev.jamSig||'')==='' &&      // the last frame was a Jam (stage just went down): repaint, don't append onto it
@@ -26292,7 +26498,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage,fuRoll]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage,fuRoll,fuStyleNow]);
 
   // ── FAVORITES (♥) ───────────────────────────────────────────────────────────
   // ♥ at the top left of a FINISHED painting saves its address (favAdd in
@@ -26539,7 +26745,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       enter: ()=>{
         if(keep) return;
         keep={ fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
-        G.__PAINT_FU_PHS = fv.fa ? { keys:fv.fa.keys.slice(), phs:fv.fa.phs.slice() } : null;
+        G.__PAINT_FU_PHS = fv.fa ? { keys:fv.fa.keys.slice(), phs:fv.fa.phs.slice(), fs:(fv.fa.fs==='E' ? 'E' : 'A') } : null;
         G.__PAINT_SIG_PHS = null; G.__PAINT_MUSIC_DNA = fv.dna || null;
         _setSongEnergy(fv.se); _setMixOn(fv.tone==='real');
       },
@@ -34301,7 +34507,7 @@ Hard requirements:
             // from _fuVariantOf, or pinned by a curated Signature).
             const _fa=_fusionAddr(_jamStage(), paintPhase);
             if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode}</>);
-            if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode;
+            if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode+(_fa.fs==='E' ? ' · E' : '');
             const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null);
             return (_k ? (STYLE_INSPIRED[_k]||_k) : '—')+' · v'+(style?(phaseIndex|0):(shufVariant|0))+' · '+mode;
           })()}
@@ -38257,6 +38463,19 @@ Hard requirements:
                   <button onClick={()=>{ if(proStatus==='free'){ try{ window.posthog && window.posthog.capture('ensemble_locked_tap'); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setEnsembleOn(v=>{ const nx=!v; try{ localStorage.setItem('paintiano_setup_ensemble', nx?'1':'0'); }catch(_){} try{ window.posthog && window.posthog.capture('ensemble_toggle',{on:nx}); }catch(_){} return nx; }); }} role="switch" aria-checked={ensembleActive} aria-label={_ensT('title')} style={{flex:'0 0 auto',width:46,height:26,borderRadius:13,border:'1px solid '+(ensembleActive?'rgba(226,196,119,.9)':'rgba(201,168,76,.35)'),background:ensembleActive?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.04)',position:'relative',cursor:'pointer',padding:0}}>
                     <span style={{position:'absolute',top:3,left:ensembleActive?23:3,width:18,height:18,borderRadius:'50%',background:ensembleActive?'#1a1408':'rgba(201,168,76,.6)',transition:'left .18s'}}/>
                   </button>
+                </div>
+                {/* Fusion style — A side by side · E one painter (FUSION STYLE · A / E in 02-draw). Pro; stored on this device. */}
+                <div style={{marginTop:12,opacity:proStatus==='free'?0.5:1}}>
+                  <div style={{fontSize:(.5*effScale)+'rem',fontWeight:500,letterSpacing:'.2em',color:'rgba(201,168,76,.6)',textTransform:'uppercase',fontStyle:'italic',marginBottom:6}}>{_ensT('fsTitle')}</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                    {['A','E'].map(v=>{
+                      const on = fuStyleNow===v;
+                      return (
+                      <button key={v} onClick={()=>{ if(proStatus==='free'){ try{ window.posthog && window.posthog.capture('ensemble_locked_tap',{what:'fusion_style'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } if(v===fuStyle) return; setFuStyle(v); try{ localStorage.setItem('paintiano_setup_fustyle', v); }catch(_){} try{ window.posthog && window.posthog.capture('fusion_style',{style:v}); }catch(_){} }} aria-pressed={on} style={{width:'100%',padding:'8px 4px',textAlign:'center',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,transition:'color .18s, border-color .18s',...(on?{background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)'}:{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'})}}>{_ensT(v==='A'?'fsA':'fsE')}</button>
+                      );
+                    })}
+                  </div>
+                  <div style={{fontSize:(.48*effScale)+'rem',lineHeight:1.45,color:'rgba(230,222,196,.5)',marginTop:6}}>{_ensT('fsHint').replace('{next}', t('next'))}</div>
                 </div>
               </div>
               <div className="pf-setup-tones">
