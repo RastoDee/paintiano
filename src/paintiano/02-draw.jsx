@@ -6769,175 +6769,11 @@ function haringPhaseDoodle(ctx,CW,CH,chords,lim,gc,ss,mode){
 function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  const cn = chords.length;
-  let _forcedPopVariant = 0; // set by phase dispatcher: 0 = grid, 1 = mural
-  const rnd = _seedRnd(101, ss, 0, 0);
-
-  function chordCol(i, mul){
-    const idx = Math.min(cn-1, Math.max(0, i % cn));
-    const chord = chords[idx];
-    _setCurE(chord && chord._E);
-    const notes = chord && (chord.n || chord.notes);
-    if(!notes || !notes.length) return [240,80,80];
-    let R=0,G=0,B=0,c=0;
-    for(const note of notes){
-      const m = note.m!==undefined?note.m:note;
-      const v = note.v!==undefined?note.v:80;
-      const [r,g,b] = gc(m, v); R+=r; G+=g; B+=b; c++;
-    }
-    const k = mul===undefined?1:mul;
-    // Punch up saturation toward flat pop colour.
-    return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
-  }
-  const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-  // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Mosaic: one tile per chord, a member of the cast on each (cast engine).
-  //  1 = Mural (big scattered glyphs).  2 = Subway chalk (colour figures on dark, recoloured).
-  //  3 = Doodle: all-over black doodle with characters caught in it (cast engine).
-  //  4 = Barking dog row.  5 = Dancing figures crowd.
-  {
-    const _pn=_capN(7); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_hpick===0){ haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_hpick===1){ haringPhaseMural(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_hpick===2){ haringPhaseSubway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_hpick===3){ haringPhaseDoodle(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_hpick===4){ haringPhaseDog(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_hpick===5){ haringPhaseDance(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    // Slots 0 and 6 share the body below; the slot picks the composition (0 =
-    // glyph grid, 6 = inline mural of big scattered glyphs) instead of a hidden
-    // seed bit — both reachable via Vary.
-    _forcedPopVariant = (_hpick===6) ? 1 : 0;
-  }
-  // Haring's language is kinetic energy — song character sets how densely the
-  // wall fills with figures: a loud, dense piece swarms with glyphs, a calm one
-  // stays sparse and bold.
-  const _chPo = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
-  const _poMul = _chPo ? (0.68 + 0.76*(0.55*_chPo.energy + 0.45*_chPo.density)) : 1;
-  const COLS = Math.max(3, Math.round((cn<=6?3:cn<=18?4:cn<=45?5:cn<=100?6:cn<=200?7:cn<=350?9:12) * _poMul));
-  const ROWS = Math.max(3, Math.round(COLS*(CH/CW)));
-  const cw = CW/COLS, ch = CH/ROWS;
-  const total = COLS*ROWS;
-  const revealFrac = Math.max(0, Math.min(1, lim/cn));
-  const visCells = Math.ceil(revealFrac*total);
-
-  // Bright flat background — pick a vivid base from the piece.
-  const bg = chordCol(0, 1.0);
-  ctx.fillStyle = css([Math.min(255,bg[0]*0.6+90), Math.min(255,bg[1]*0.6+90), Math.min(255,bg[2]*0.6+90)]);
-  ctx.fillRect(0, 0, CW, CH);
-
-  const BLACK = '#0c0c0c';
-
-  function glyphFigure(cx, cy, s, col){
-    // dancing figure — head + body + limbs
-    ctx.fillStyle = css(col);
-    ctx.strokeStyle = BLACK;
-    ctx.lineWidth = Math.max(3, s*0.13);
-    ctx.lineJoin = 'round'; ctx.lineCap='round';
-    // head
-    ctx.beginPath(); ctx.arc(cx, cy-s*0.55, s*0.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    // body
-    ctx.beginPath(); ctx.moveTo(cx, cy-s*0.32); ctx.lineTo(cx, cy+s*0.1); ctx.stroke();
-    // arms
-    ctx.beginPath(); ctx.moveTo(cx, cy-s*0.2); ctx.lineTo(cx-s*0.35, cy-s*0.4); ctx.moveTo(cx, cy-s*0.2); ctx.lineTo(cx+s*0.35, cy-s*0.05); ctx.stroke();
-    // legs
-    ctx.beginPath(); ctx.moveTo(cx, cy+s*0.1); ctx.lineTo(cx-s*0.3, cy+s*0.5); ctx.moveTo(cx, cy+s*0.1); ctx.lineTo(cx+s*0.3, cy+s*0.45); ctx.stroke();
-  }
-  function glyphHeart(cx, cy, s, col){
-    ctx.fillStyle = css(col); ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(3,s*0.12); ctx.lineJoin='round';
-    ctx.beginPath();
-    ctx.moveTo(cx, cy+s*0.4);
-    ctx.bezierCurveTo(cx-s*0.6, cy-s*0.1, cx-s*0.25, cy-s*0.5, cx, cy-s*0.18);
-    ctx.bezierCurveTo(cx+s*0.25, cy-s*0.5, cx+s*0.6, cy-s*0.1, cx, cy+s*0.4);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-  function glyphStar(cx, cy, s, col){
-    ctx.fillStyle = css(col); ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(3,s*0.12); ctx.lineJoin='round';
-    ctx.beginPath();
-    for(let p=0;p<10;p++){
-      const ang = -Math.PI/2 + p*Math.PI/5;
-      const r = (p&1) ? s*0.22 : s*0.5;
-      const x=cx+Math.cos(ang)*r, y=cy+Math.sin(ang)*r;
-      if(p===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-  function glyphBurst(cx, cy, s, col){
-    ctx.fillStyle = css(col); ctx.strokeStyle = BLACK; ctx.lineWidth = Math.max(2.5,s*0.1);
-    ctx.beginPath(); ctx.arc(cx, cy, s*0.32, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-  }
-
-  // Radiating energy ticks around a glyph.
-  function energy(cx, cy, s){
-    ctx.strokeStyle = BLACK;
-    ctx.lineWidth = Math.max(2, s*0.06);
-    ctx.lineCap='round';
-    const n = 8;
-    for(let i=0;i<n;i++){
-      const a = (i/n)*Math.PI*2 + 0.2;
-      const r0 = s*0.62, r1 = s*0.82;
-      ctx.beginPath();
-      ctx.moveTo(cx+Math.cos(a)*r0, cy+Math.sin(a)*r0);
-      ctx.lineTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1);
-      ctx.stroke();
-    }
-  }
-
-  // ── Composition: two variants by seed ─────────────────────────────────────
-  const popVariant = _forcedPopVariant;   // phase-driven (slot 0 vs 6), not seed
-
-  if(popVariant === 1){
-    // Variant B — mural: big scattered glyphs of varying size overlapping on a
-    // single vivid ground, each with energy ticks. Haring wall style.
-    const N = cn<=6?5:cn<=18?9:cn<=45?16:cn<=100?26:38;
-    const visN = Math.ceil(revealFrac * N);
-    const items = [];
-    for(let i=0;i<N;i++){
-      items.push({
-        x: CW*(0.08+rnd()*0.84),
-        y: CH*(0.08+rnd()*0.84),
-        s: Math.min(CW,CH)*(0.08+rnd()*0.16),
-        ci: _ornIdx(chords, i, N, cn),   // live take: spread over the take (see _ornIdx)
-        kind: Math.floor(rnd()*4),
-      });
-    }
-    for(let i=0;i<visN && i<items.length;i++){
-      const it = items[i];
-      const gcol = chordCol(it.ci, 1.0);
-      if(it.kind===0) glyphFigure(it.x, it.y, it.s, gcol);
-      else if(it.kind===1) glyphHeart(it.x, it.y, it.s, gcol);
-      else if(it.kind===2) glyphStar(it.x, it.y, it.s, gcol);
-      else glyphBurst(it.x, it.y, it.s, gcol);
-      energy(it.x, it.y, it.s);
-    }
-    return;
-  }
-
-  // ── Variant A — glyph grid (default) ──────────────────────────────────────
-  let drawn=0;
-  for(let row=0; row<ROWS; row++){
-    for(let col=0; col<COLS; col++){
-      if(drawn++ >= visCells) break;
-      const i = row*COLS+col;
-      const cx = col*cw+cw/2, cy = row*ch+ch/2;
-      const s = Math.min(cw,ch)*0.62;
-      // flat colour tile
-      const tile = chordCol(_ornIdx(chords, i, total, cn), 1.0);
-      ctx.fillStyle = css(tile);
-      ctx.fillRect(col*cw, row*ch, cw, ch);
-      // black grid seam
-      ctx.strokeStyle = BLACK; ctx.lineWidth = 2;
-      ctx.strokeRect(col*cw, row*ch, cw, ch);
-      // glyph in contrasting colour
-      const gcol = chordCol(_ornIdx(chords, i, total, cn)+4, 1.0);
-      const kind = (((i*5 + (ss%5)) % 5) + 5) % 5;   // ss may be negative: keep kind in 0..4
-      if(kind===0) glyphFigure(cx, cy, s, gcol);
-      else if(kind===1) glyphHeart(cx, cy, s, gcol);
-      else if(kind===2) glyphStar(cx, cy, s, gcol);
-      else if(kind===3) glyphBurst(cx, cy, s, gcol);
-      else glyphFigure(cx, cy, s, gcol);
-      energy(cx, cy, s);
-    }
-  }
+  // ── VARIANT: 0 Mosaic · 1 Mural · 2 Subway chalk · 3 Doodle · 4 Barking Dogs · 5 Dancing crowd ·
+  // 6 Figures (the cast engine throughout). Free: 0 and 1.
+  const _pn=_capN(7); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _ph=[haringPhaseMosaic,haringPhaseMural,haringPhaseSubway,haringPhaseDoodle,haringPhaseDog,haringPhaseDance,haringPhaseFigures];
+  _ph[_hpick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // Shared Haring figure (dancing person) drawn as thick strokes.
@@ -6997,43 +6833,33 @@ function haringPhaseSubway(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── Haring D: Radiant baby — one big central radiant baby + smaller ones. ──
-function haringPhaseBaby(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const bg=_picChord(chords,0,gc,isBW).rgb;
-  ctx.fillStyle=isBW?'#d4d0c6':`rgb(${Math.min(255,bg[0]*0.5+120)},${Math.min(255,bg[1]*0.5+100)},${Math.round(bg[2]*0.4)})`;ctx.fillRect(0,0,CW,CH);
-  const babies=Math.max(1,Math.min(12,Math.round(cn/12)));
-  const vis=Math.max(1,Math.ceil(N/cn*babies));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+5300,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/babies)),gc,isBW);
-    const x=i===0?CW/2:rnd()*CW,y=i===0?CH/2:rnd()*CH,s=i===0?Math.min(CW,CH)*0.18:Math.min(CW,CH)*(0.05+rnd()*0.05);
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.strokeStyle='#0c0c0c';ctx.lineWidth=Math.max(2,s*0.12);
-    // crawling body
-    ctx.beginPath();ctx.ellipse(x,y,s*0.5,s*0.4,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.arc(x+s*0.4,y-s*0.3,s*0.22,0,Math.PI*2);ctx.fill();ctx.stroke(); // head
-    // rays
-    ctx.lineWidth=Math.max(2,s*0.08);for(let r=0;r<10;r++){const a=r/10*Math.PI*2;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*s*0.7,y+Math.sin(a)*s*0.6);ctx.lineTo(x+Math.cos(a)*s*0.95,y+Math.sin(a)*s*0.85);ctx.stroke();}
-  }
+// ── Haring: Barking Dogs (1982) — the dogs at Haring's scale: rows of big barking dogs on one flat
+// colour, a dog for every passage of the piece, facing the way the melody goes (up → right, down →
+// left), as big as the passage is loud, its bark the passage's accents; the rows fill as the piece plays. ──
+function haringPhaseDog(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_hrSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode);
+  const G=_kd2Phrases(A,Math.max(1,Math.min(9,Math.max(4,Math.round(A.phrases.length/6))))); const n=G.length; const rows=n<=4?2:3, perRow=Math.ceil(n/rows);
+  const bg=S.col(0.5); ctx.fillStyle=_hrCss(bg); ctx.fillRect(0,0,CW,CH);
+  const vis=Math.max(1,Math.ceil(n*reveal)); const rh=CH/rows, cw=CW/perRow;
+  for(let i=0;i<vis;i++){ const g=G[i]; const r=_hrR(77000+i,ss); r(); const row=Math.floor(i/perRow), k=i%perRow; const dir=(row%2?-1:1);
+    const C=A.ev.slice(g.a,g.b).filter(Boolean); const first=C[0]?C[0].top:60, last=C[C.length-1]?C[C.length-1].top:60; const face=(last>=first?1:-1)*dir;
+    const u=Math.min(cw/7.4,rh/6.4)*(0.6+0.4*g.vmax); const x=(k+0.5)*cw+(dir<0?0:0), y=(row+0.62)*rh;
+    const cr=_hrDog(x+0.4*u*face,y,u,r,A.ch?A.ch.energy:0.5,face); let acc=0; for(const e of C) if(e.v>=A.vHi) acc++; cr.glow=[x+face*2.8*u,y-2.6*u,1.2*u,1.2*u+u*(0.8+0.25*Math.min(6,acc)),Math.max(2,Math.min(8,2+acc)),face>0?-1.2:-1.94,1.4];
+    _hrCreature(ctx,cr,_hrFar(S.col(g.t),bg),u,r); }
 }
-
-// ── Haring E: Barking dog — row of dog glyphs on a bright band. ──
-function haringPhaseDog(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const bg=_picChord(chords,0,gc,isBW).rgb;
-  ctx.fillStyle=isBW?'#c8c4ba':`rgb(${Math.round(bg[0]*0.4)},${Math.min(255,bg[1]*0.6+80)},${Math.round(bg[2]*0.5+40)})`;ctx.fillRect(0,0,CW,CH);
-  const dogs=Math.max(3,Math.min(40,Math.round(cn/3)));
-  const vis=Math.max(1,Math.ceil(N/cn*dogs));
-  const perRow=Math.ceil(Math.sqrt(dogs*CW/CH));
-  for(let i=0;i<vis;i++){
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/dogs)),gc,isBW);
-    const col=i%perRow,row=(i/perRow)|0;
-    const s=Math.min(CW/perRow,CH/Math.ceil(dogs/perRow))*0.4;
-    const x=col*(CW/perRow)+CW/perRow/2,y=row*(s*2.4)+s*1.4;
-    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.strokeStyle='#0c0c0c';ctx.lineWidth=Math.max(2,s*0.18);
-    // dog body
-    ctx.beginPath();ctx.moveTo(x-s,y+s*0.4);ctx.lineTo(x-s,y-s*0.3);ctx.lineTo(x-s*0.5,y-s*0.3);ctx.lineTo(x-s*0.3,y-s*0.7);ctx.lineTo(x-s*0.1,y-s*0.3);ctx.lineTo(x+s,y-s*0.3);ctx.lineTo(x+s*1.2,y);ctx.lineTo(x+s,y+s*0.4);ctx.closePath();ctx.fill();ctx.stroke();
-  }
+// ── Haring: Figures (Untitled, 1982–89) — the big interlocking cast: one great figure for every
+// section of the piece, dancer or runner or jumper by the way the melody moves, as tall as the
+// section is loud, in its colour, its energy marks its accents; the radiant baby stands at the climax. ──
+function haringPhaseFigures(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_hrSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode);
+  const G=_kd2Phrases(A,Math.max(1,Math.min(6,Math.max(3,Math.round(A.phrases.length/10))))); const n=G.length; let ci=0; for(let i=1;i<n;i++) if(G[i].vmax>G[ci].vmax) ci=i;
+  const bg=S.col(0.02); ctx.fillStyle=_hrCss(bg); ctx.fillRect(0,0,CW,CH);
+  const vis=Math.max(1,Math.ceil(n*reveal)); const D=Math.min(CW,CH);
+  for(let i=0;i<vis;i++){ const g=G[i]; const r=_hrR(78000+i,ss); r(); const C=A.ev.slice(g.a,g.b).filter(Boolean); const first=C[0]?C[0].top:60, last=C[C.length-1]?C[C.length-1].top:60; const dir=last>=first?1:-1;
+    const kind=i===ci?'baby':(g.rep>0.3?'waver':Math.abs(last-first)>7?'runner':g.v>0.65?'jumper':'dancer'); const u=D*(0.038+0.034*g.vmax);
+    const x=CW*(0.14+0.72*((i+0.5)/n))+(r()-.5)*CW*0.08, y=CH*(0.28+0.44*(1-A.reg(g.top)))+(r()-.5)*CH*0.12;
+    const cr=_HR_CAST[kind](x,y+(kind==='baby'?-0.5*u:0),u,r,A.ch?A.ch.energy:0.5,dir); let acc=0; for(const e of C) if(e.v>=A.vHi) acc++; if(cr.glow){ cr.glow[4]=Math.max(3,Math.min(kind==='baby'?16:9,3+acc)); }
+    _hrCreature(ctx,cr,_hrFar(S.col(g.t),bg),u,r,i===ci?S.col(g.t):null); }
 }
 
 // ── Haring F: Dancing figures — dense crowd of colourful dancing people. ──
@@ -13934,7 +13760,7 @@ const ARTIST_DNA = {
   picasso:      {ground:'#0a0a0e',mark:{neon:.7,ring:.3},                 size:[.06,.22],edge:.5, alpha:.95,layout:{flow:.6,scatter:.4},     outline:0, tone:'pure',    wobble:.6, lines:.3,layers:1,density:.2, halftone:0},
   matisse:      {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},              size:[.05,.18],edge:0,  alpha:1,  layout:{grid:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.5, lines:0, layers:1,density:.6, halftone:0},
   pollock:      {ground:'#f2ede0',mark:{drip:.75,splat:.25},              size:[.006,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:2,density:.6, halftone:0},
-  bloom:        {ground:'#f6f3ec',mark:{cloud:.6,dot:.4},                 size:[.05,.18],edge:.9, alpha:.6, layout:{scatter:.7,field:.3},    outline:0, tone:'pastel',  wobble:.6, lines:.2,layers:3,density:.5, halftone:0},
+  bloom:        {ground:'#f6f3ec',mark:{cell:.7,dot:.3},                  size:[.05,.18],edge:.3, alpha:.65,layout:{scatter:.7,field:.3},    outline:0, tone:'pastel',  wobble:.6, lines:.2,layers:2,density:.5, halftone:0},
   kusama:       {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},          size:[.03,.09],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:.2, lines:.2,layers:1,density:1,  halftone:0},
   miro:         {ground:'#f5f2e8',mark:{star:.35,dot:.25,cross:.2,target:.2},size:[.02,.08],edge:0,alpha:1, layout:{scatter:1},              outline:0, tone:'primary', wobble:.4, lines:.15,layers:1,density:.25,halftone:0},
   mondrian:     {ground:'#f3efe6',mark:{gridrect:1},                      size:[.08,.35],edge:0,  alpha:1,  layout:{grid:1},                 outline:1, tone:'primary', wobble:0,  lines:1, layers:1,density:.5, halftone:0},
@@ -13949,7 +13775,7 @@ const ARTIST_DNA = {
   pop:          {ground:'#ffd23f',mark:{heart:.5,radiant:.3,figure:.2},   size:[.05,.15],edge:0,  alpha:1,  layout:{grid:.7,scatter:.3},     outline:1, tone:'primary', wobble:.2, lines:0, layers:1,density:.6, halftone:0},
   mitchell:     {ground:'#f3f0e8',mark:{brush:1},                         size:[.04,.14],edge:.2, alpha:.85,layout:{scatter:1},              outline:0, tone:'pure',    wobble:.9, lines:.4,layers:2,density:.35,halftone:0},
   monet:        {ground:'#cfd6c8',mark:{surface:1},                       size:[.09,.14],  edge:0,  alpha:.92,layout:{field:.8,scatter:.2},    outline:0, tone:'pastel',  wobble:.5, lines:0, layers:2,density:.9, halftone:0},
-  hokusai:      {ground:'#e6e0d0',mark:{crest:.5,ring:.5},                size:[.03,.16],edge:0,  alpha:.95,layout:{stack:.6,flow:.4},      outline:.6,tone:'pure',    wobble:.3, lines:.3,layers:1,density:.25,halftone:0},
+  hokusai:      {ground:'#e6e0d0',mark:{crest:.5,fuji:.3,arc:.2},         size:[.05,.2], edge:0,  alpha:.95,layout:{stack:.6,flow:.4},      outline:.6,tone:'pure',    wobble:.3, lines:.3,layers:1,density:.25,halftone:0},
   lichtenstein: {ground:'#fffdf5',mark:{benday:.7,blob:.3},               size:[.05,.2], edge:0,  alpha:1,  layout:{scatter:.6,grid:.4},     outline:1, tone:'primary', wobble:.1, lines:0, layers:1,density:.4, halftone:1},
   klee:         {ground:'#d9cfb6',mark:{tile:1},                          size:[.04,.1], edge:.35,alpha:.9, layout:{grid:1},                 outline:0, tone:'pastel',  wobble:.1, lines:.2,layers:1,density:1,  halftone:0},
   delaunay:     {ground:'#f0e9da',mark:{orphic:1},                        size:[.06,.3], edge:0,  alpha:.9, layout:{scatter:.6,radial:.4},   outline:0, tone:'pure',    wobble:.1, lines:0, layers:2,density:.35,halftone:0},
@@ -13993,20 +13819,20 @@ const ARTIST_VARIANTS = {
     {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},
     {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},
     {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},
-    {ground:'#ece8de',mark:{drip:.5,blob:.5},size:[.01,.08],layout:{flow:.6,scatter:.4},density:.6,layers:2},
+    {ground:'#ece8de',mark:{drip:.5,pour:.5},size:[.01,.08],layout:{flow:.6,scatter:.4},density:.6,layers:2},
     {ground:'#d6c6a6',mark:{drip:1},size:[.012,.05],alpha:.9,layout:{flow:1},density:.3,layers:1,tone:'dark'},
     {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:.6,layers:2},
     {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
   ],
   bloom: [   // slot order = solo phases: field, Blue Balls, edge, Big Red, Disappearance, Hanging, Matrix, Mandala
-    {mark:{cloud:.6,dot:.4},size:[.05,.18],edge:.9,alpha:.6,layout:{scatter:.7,field:.3},density:.5},
-    {ground:'#f8f8f4',mark:{disc:.7,dot:.3},size:[.06,.16],edge:.3,alpha:.65,layout:{scatter:1},density:.35},
-    {mark:{cloud:.7,vdrip:.3},size:[.05,.2],edge:.8,alpha:.6,layout:{scatter:1},density:.5},
-    {ground:'#f8f8f4',mark:{cloud:.7,dot:.3},size:[.05,.16],edge:.5,alpha:.6,layout:{field:1},density:.7},
-    {ground:'#f8f8f4',mark:{dot:1},size:[.004,.01],edge:0,alpha:.8,layout:{scatter:1},density:.3},
-    {ground:'#f8f8f4',mark:{vdrip:1},size:[.03,.08],edge:.3,alpha:.85,layout:{grid:1},density:.3},
-    {ground:'#f8f8f4',mark:{band:.4,vband:.4,dot:.2},size:[.04,.1],edge:.2,alpha:.55,layout:{grid:1},density:.4},
-    {ground:'#f8f8f4',mark:{blob:.7,dot:.3},size:[.05,.12],edge:.3,alpha:.7,layout:{radial:1},density:.3},
+    {mark:{cell:.7,dot:.3},size:[.05,.16],edge:.3,alpha:.65,layout:{scatter:.7,field:.3},density:.5},
+    {ground:'#f8f8f4',mark:{cell:1},size:[.08,.2],edge:.2,alpha:.7,layout:{scatter:1},density:.3},
+    {mark:{cell:.7,vdrip:.3},size:[.05,.18],edge:.3,alpha:.65,layout:{scatter:1},density:.5},
+    {ground:'#f8f8f4',mark:{cell:.8,dot:.2},size:[.05,.16],edge:.3,alpha:.65,layout:{field:1},density:.7},
+    {ground:'#f8f8f4',mark:{dot:.7,cell:.3},size:[.01,.05],edge:.1,alpha:.8,layout:{scatter:1},density:.3},
+    {ground:'#f8f8f4',mark:{vdrip:.6,cell:.4},size:[.03,.1],edge:.2,alpha:.8,layout:{grid:1},density:.35},
+    {ground:'#f8f8f4',mark:{band:.4,vband:.4,cell:.2},size:[.04,.1],edge:.2,alpha:.55,layout:{grid:1},density:.4},
+    {ground:'#f8f8f4',mark:{cell:.8,dot:.2},size:[.05,.12],edge:.3,alpha:.7,layout:{radial:1},density:.3},
   ],
   kusama: [
     {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},size:[.03,.09],layout:{grid:1},density:1},
@@ -14118,9 +13944,9 @@ const ARTIST_VARIANTS = {
     {ground:'#f4f44a',mark:{figure:.7,disc:.3},size:[.15,.35],layout:{scatter:1},density:.12},
     {ground:'#1a1a2a',mark:{figure:.45,radiant:.35,tvbox:.2},size:[.04,.1],layout:{scatter:1},density:.3},
     {ground:'#e8d82a',mark:{zigzag:.4,figure:.35,heart:.25},size:[.04,.12],layout:{scatter:1},density:.4},          // Doodle
-    {ground:'#6ad83a',mark:{speech:1},size:[.05,.1],layout:{grid:1},density:.8},
+    {ground:'#2a7ae8',mark:{dog:.8,radiant:.2},size:[.1,.2],layout:{grid:1},density:.5},                              // Barking Dogs
     {ground:'#e8e4b8',mark:{figure:1},size:[.03,.08],layout:{scatter:1},density:.4},
-    {ground:'#f4f4ec',mark:{star:.4,heart:.3,radiant:.3},size:[.04,.12],layout:{scatter:1},density:.4},
+    {ground:'#e8187a',mark:{figure:.7,radiant:.3},size:[.2,.4],layout:{scatter:1},density:.2},                         // Figures
     {mark:{heart:.6,radiant:.4},size:[.05,.15],layout:{grid:1},density:.6},
   ],
   mitchell: [
@@ -14142,13 +13968,13 @@ const ARTIST_VARIANTS = {
     {ground:'#4a6a5a',mark:{surface:.9,arc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.6,scatter:.4},density:.9},   // Pont japonais
   ],
   hokusai: [   // slot order = solo variants: Great Wave, Red Fuji, Thunderstorm, Kajikazawa, Masculine Wave, Poppies, Ejiri gust, Weeping Cherry
-    {mark:{crest:.6,arc:.4},size:[.06,.2],layout:{flow:1},density:.2},
-    {ground:'#e6e0d0',mark:{tri:.6,cloud:.4},size:[.1,.35],layout:{stack:1},density:.2},
-    {ground:'#2a2a36',mark:{tri:.5,beam:.5},size:[.1,.3],layout:{stack:1},density:.2,tone:'dark'},
-    {ground:'#1b3a5b',mark:{crest:.7,arc:.3},size:[.03,.1],layout:{flow:1},density:.3,tone:'dark'},
-    {mark:{crest:.5,ring:.3,dot:.2},size:[.03,.12],layout:{flow:1},density:.35},
+    {mark:{crest:.6,fuji:.2,arc:.2},size:[.06,.2],layout:{flow:1},density:.2},
+    {ground:'#e6e0d0',mark:{fuji:.6,cloud:.4},size:[.12,.35],layout:{stack:1},density:.2},
+    {ground:'#2a2a36',mark:{fuji:.5,zigzag:.3,beam:.2},size:[.1,.3],layout:{stack:1},density:.2,tone:'dark'},
+    {ground:'#1b3a5b',mark:{crest:.6,arc:.2,fuji:.2},size:[.04,.12],layout:{flow:1},density:.3,tone:'dark'},
+    {mark:{crest:.6,dot:.4},size:[.03,.12],layout:{flow:1},density:.35},
     {ground:'#e8e2cc',mark:{petal:.6,stem:.4},size:[.06,.2],layout:{grid:1},density:.3},
-    {ground:'#e6e0d0',mark:{rect:.6,tri:.4},size:[.02,.05],layout:{scatter:1},density:.4},
+    {ground:'#e6e0d0',mark:{paper:.7,fuji:.3},size:[.02,.06],layout:{scatter:1},density:.4},
     {ground:'#1e3f6e',mark:{petal:.7,stem:.3},size:[.02,.06],layout:{flow:1},density:.4,tone:'dark'},
   ],
   lichtenstein: [
@@ -14416,6 +14242,22 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
           if(R()<0.16){ const [x,y,wk]=pts[3]; ctx.beginPath(); ctx.strokeStyle=c; ctx.lineCap='round'; ctx.lineWidth=Math.max(1,w0*.16); ctx.moveTo(x,y+wk*.3); ctx.lineTo(x+(R()-.5)*3, y+wk*.3+rr*(0.35+R()*0.5)); ctx.stroke(); }
         }
         ctx.globalAlpha=la; ctx.beginPath(); break; }
+      case 'fuji': { // Hokusai: the mountain — a long concave slope each side, the flat summit, the snow cap in the second colour
+        ctx.beginPath(); ctx.moveTo(-rr*1.9,rr*.8); ctx.quadraticCurveTo(-rr*.9,rr*.55,-rr*.22,-rr*.75); ctx.lineTo(rr*.22,-rr*.75); ctx.quadraticCurveTo(rr*.9,rr*.55,rr*1.9,rr*.8); ctx.closePath(); ctx.fill();
+        ctx.fillStyle=col2; ctx.beginPath(); ctx.moveTo(-rr*.44,-rr*.42); ctx.lineTo(-rr*.22,-rr*.75); ctx.lineTo(rr*.22,-rr*.75); ctx.lineTo(rr*.44,-rr*.42); for(let j=4;j>=0;j--){ const x=-rr*.44+rr*.88*j/4; ctx.lineTo(x+rr*.08,-rr*.47); ctx.lineTo(x,-rr*(j%2?.2:.38)); } ctx.closePath(); ctx.fill(); ctx.beginPath(); break; }
+      case 'paper': { // Hokusai (Ejiri): a sheet of paper blown by the gust — a pale rectangle turning in the air, a thin dark edge
+        const w=rr*1.3,h=rr*.9; ctx.fillStyle=F.groundLum>128?'#f6f2e6':'#efe9da'; ctx.beginPath(); ctx.rect(-w/2,-h/2,w,h); ctx.fill(); ctx.strokeStyle='rgba(30,28,34,.7)'; ctx.lineWidth=Math.max(.8,rr*.06); ctx.stroke(); ctx.beginPath(); break; }
+      case 'cell': { // Sam Francis: the wet cell — an amoeba of thinned colour with a darker rim, a drip or two off its underside, a flick of spatter
+        const pts=_frOutline(R,0,0,rr,1+R()*.4,.8+R()*.4); ctx.beginPath(); pts.forEach((q,j)=>j?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.closePath(); ctx.fill();
+        ctx.lineWidth=Math.max(1,rr*.07); ctx.strokeStyle=col2; ctx.stroke();
+        if(R()<.75){ const nd=1+(R()*2|0); ctx.lineCap='round'; for(let j=0;j<nd;j++){ const x=(R()-.5)*rr*1.2, len=rr*(.8+R()*2.2); ctx.lineWidth=Math.max(1,rr*.09); ctx.beginPath(); ctx.moveTo(x,rr*.6); ctx.lineTo(x+(R()-.5)*rr*.2,rr*.6+len); ctx.stroke(); ctx.beginPath(); ctx.arc(x+(R()-.5)*rr*.2,rr*.6+len,rr*.08,0,6.2832); ctx.fill(); } }
+        const a=R()*6.2832; for(let j=0;j<6;j++){ const d=rr*(1.1+R()*1.4), b=a+(R()-.5)*.9; ctx.beginPath(); ctx.arc(Math.cos(b)*d,Math.sin(b)*d,rr*(.03+R()*.07),0,6.2832); ctx.fill(); } ctx.beginPath(); break; }
+      case 'pour': { // Pollock (Convergence): a poured mass of enamel with body — the shadow under it, the paint, the gloss along its ridge
+        const k=7+(R()*4|0); const P=[]; for(let j=0;j<k;j++){ const a=j/k*6.2832; P.push([Math.cos(a)*rr*(.7+R()*.6),Math.sin(a)*rr*(.6+R()*.5)]); }
+        const blob=(dx,dy,s)=>{ ctx.beginPath(); P.forEach((q,j)=>{ const x=dx+q[0]*s,y=dy+q[1]*s; j?ctx.quadraticCurveTo(x,y,(x+dx+P[(j+1)%k][0]*s)/2,(y+dy+P[(j+1)%k][1]*s)/2):ctx.moveTo((x+dx+P[k-1][0]*s)/2,(y+dy+P[k-1][1]*s)/2); }); ctx.closePath(); };
+        ctx.fillStyle='rgba(0,0,0,.35)'; blob(rr*.12,rr*.16,1.04); ctx.fill(); ctx.fillStyle=col; blob(0,0,1); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.35)'; blob(-rr*.08,-rr*.12,.45); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.7)'; blob(-rr*.12,-rr*.18,.16); ctx.fill(); ctx.beginPath(); break; }
+      case 'dog': { // Haring: the barking dog — his outline, flat colour, the bark lines
+        const u=rr*.36, dir=R()<.5?1:-1; const cr=_hrDog(-0.4*u*dir,u*.4,u,R,.5,dir); cr.glow=[dir*2.8*u,-2.2*u,1.2*u,2.2*u,4,dir>0?-1.2:-1.94,1.4]; const c=_fuRgb(col); const sv=ctx.lineWidth; _hrCreature(ctx,cr,c,u,R); ctx.lineWidth=sv; ctx.beginPath(); break; }
       case 'crest': { // Hokusai: the curling wave — a thick rise that curls over, foam fingers hanging from the lip
         ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(1.5,rr*.22);
         ctx.beginPath(); ctx.moveTo(-rr*1.6,rr*.5); ctx.bezierCurveTo(-rr*.9,-rr*.9, rr*.6,-rr*1.25, rr*.9,-rr*.4); ctx.bezierCurveTo(rr*1.0,rr*.1, rr*.45,rr*.2, rr*.35,-rr*.15); ctx.stroke();
@@ -14682,7 +14524,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
-        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface|fuji|dog|cell|pour)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         if(_FU_UNDER.test(kind)){
           ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, kind, r, col, FP, R, ang, col2); ctx.restore();
           if(kind==='surface' && _monetIn>=0 && r>S*0.065 && R()<0.35) _veil.push([tx, ty, r, col, col2, FP]);
