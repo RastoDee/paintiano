@@ -2866,7 +2866,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _fsTapStyle = { display:'inline-flex', alignItems:'center', gap:8, color:'rgba(214,178,92,.95)', background:'none', border:0, padding:'10px 14px', margin:'-10px -14px', font:'inherit', letterSpacing:'inherit', textTransform:'inherit', fontStyle:'inherit', cursor:'pointer', WebkitTapHighlightColor:'transparent' };
   const _fsWord = (v, kind)=> v==='E' ? _ensT(kind==='art' ? 'fsNewP' : 'fsNewC') : _ensT('fsTurns');
   // the little mark before the names: which style this fusion / jam is (null when there is none)
-  const _fsIcon = (kind, w, h, mr)=>{ const v=_fusionStyleNow(kind); return v ? (<FsGlyph v={v} w={w||21} h={h||15} mr={mr||0} title={_fsWord(v,kind)}/>) : null; };
+  // always: Lite's normal screen has no open panel to tell the style in, so the mark is always there (the caption's only style cue)
+  const _fsIcon = (kind, w, h, mr, always)=>{ const v=(always ? _fusionStyleOf(kind) : _fusionStyleNow(kind)); return v ? (<FsGlyph v={v} w={w||21} h={h||15} mr={mr||0} title={_fsWord(v,kind)}/>) : null; };
   // Tap the style → this very fusion / jam in the OTHER style, at once, whatever the Setup says (it only sets the default) (painters: the same address with the other style;
   // composers: the style is pinned for this ensemble on this picture and the jam is composed again).
   const _flipFusionStyle = (kind)=>{
@@ -2885,11 +2886,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   };
   // The names of the fusion / jam in a caption, with the style mark before them (when the mark is shown). For Pro the mark and the names are ONE tap target
   // — like the ✦ Signature label next to them — and a tap switches this very fusion / jam to the other style.
-  const _fsNames = (kind, w, h, mr)=>{
+  const _fsNames = (kind, w, h, mr, always)=>{
     const names=_stageNames(kind);
-    const ico=_fsIcon(kind, w, h, mr); if(!ico) return names;
+    const ico=_fsIcon(kind, w, h, mr, always); if(!ico) return names;
     if(proStatus==='free') return (<>{ico}{names}</>);
-    const v=_fusionStyleNow(kind); const o=_fsWord(v==='E'?'A':'E',kind);
+    const v=(always ? _fusionStyleOf(kind) : _fusionStyleNow(kind)); const o=_fsWord(v==='E'?'A':'E',kind);
     const go=(e)=>{ e.stopPropagation(); _flipFusionStyle(kind); };
     return (<span role="button" tabIndex={0} title={'\u2192 '+o} aria-label={'\u2192 '+o} onClick={go} onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); go(e); } }}
       style={{display:(mr ? 'inline' : 'inline-flex'),alignItems:'center',gap:5,cursor:'pointer',padding:'8px 4px',margin:'-8px -4px',WebkitTapHighlightColor:'transparent'}}>{ico}{names}</span>);
@@ -14713,7 +14714,7 @@ Hard requirements:
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}{_mmChip}</span>
             {!immersive && basicMode && !liteImageMode && painterStage.length>0 && style!==null && (
-              <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{_fsNames('art',20,14,6)}</span>
+              <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{_fsNames('art',20,14,6,true)}</span>
             )}
             {!immersive && basicMode && !liteImageMode && !(painterStage.length>0 && style!==null) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
@@ -14722,7 +14723,7 @@ Hard requirements:
             )}
             {!immersive && basicMode && liteImageMode && (
               <span key={'inspc-'+(imgComposer||'scan')+(composerStage.length?'+'+composerStage.join('+'):'')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                {(imgComposer && composerStage.length) ? (<>{_fsNames('comp',20,14,6)}</>)
+                {(imgComposer && composerStage.length) ? (<>{_fsNames('comp',20,14,6,true)}</>)
                   : imgComposer && COMPOSER_INSPIRED[imgComposer]
                   ? (<>{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
                   : 'Scan'}
