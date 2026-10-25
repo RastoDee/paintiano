@@ -2850,6 +2850,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // (without one yet: the Setup switch, unless it is Random — then it is not known until the jam is written).
   const _fusionStyleOf = (kind)=>{
     try{
+      if(kind==='art' && (sigActive || sigActiveRef.current)) return null;   // ✦ Signature is its own painting: no style to tell, switch or flip
       if(kind==='art'){ const fa=painterStage.length ? _fusionAddr(_jamStage(), paintPhase|0) : null; return fa ? (fa.fs==='E' ? 'E' : 'A') : null; }
       const ks=[imgComposer, ...composerStage].filter(Boolean); if(!imgComposer || ks.length<2) return null;
       const J=globalThis.__COMP_JAM_STYLE; if(J && J.sig===ks.join()) return J.style==='E' ? 'E' : 'A';
@@ -14176,7 +14177,7 @@ Hard requirements:
               </div>
             )}
             {!cockpitEdit && _modeBtn(_artMode, _cycleArt, true)}
-            {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
+            {!cockpitEdit && ensembleActive && !sigActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && viewMode!=='image' && (
               <button onClick={_toggleSig} disabled={!chords.length} className="pf-sig" title={_sigT('tip')} aria-label={_sigT('label')} aria-pressed={sigActive} style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:chords.length?'pointer':'default',opacity:chords.length?1:0.35,whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s, opacity .18s',background:sigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(sigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:sigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:sigActive?700:500}}>✦ {_sigT('label')}</button>
