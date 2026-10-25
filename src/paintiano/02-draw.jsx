@@ -13361,9 +13361,13 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
   finally{ _jamCtx=prev; _jamNoteInfo=null; }
   if(P.length<2) return P.length ? P[0].ev : [];
   const h=_jamHash(ks,px); let style=_jamStyleOf(h); let out=null;
+  // The user tapped the style (strip / fullscreen pill) → this jam on this picture is pinned to the other one (the pin names the ensemble AND the picture's hash)
+  try{ const pin=globalThis.__JAM_STYLE_PIN; if(pin && pin.sig===ks.join() && pin.h===h && (pin.style==='E' || pin.style==='A')) style=pin.style; }catch(_){}
   if(style==='E') out=_jamBred(P,h);
   if(!out){ style='A'; out=_jamRelay(P); }
-  try{ globalThis.__COMP_JAM_STYLE={sig:ks.join(),style,roles:out._roles||null}; }catch(_){}
+  try{ globalThis.__COMP_JAM_STYLE={sig:ks.join(),h,style,roles:out._roles||null}; }catch(_){}
+  // tell the UI the style of this jam is known now (captions / fullscreen flash re-read it)
+  try{ if(typeof globalThis.__onJamStyle==='function') globalThis.__onJamStyle(); }catch(_){}
   return out;
 }
 
