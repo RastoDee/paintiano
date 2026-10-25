@@ -36321,8 +36321,9 @@ Hard requirements:
         const _mmOn = !immersive && !(basicMode && chords.length===0 && (working||micArmed||micActive)) && ((loadedSource==='audio' && !!audioBlob) || (loadedSource==='midi' && !!midiBlob) || (loadedSource==='score' && !!scoreBlob));
         const _mmDone = !!_loadedFromMyMusicRef.current;
         const _mmChipSt = {flexShrink:0,padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',lineHeight:1.5,background:'transparent',fontStyle:'normal'};
+        // Lite: only while the song is not in My Music yet (the “＋” chip to add it) — once it is there, there is nothing left to do, so no ✓ chip
         const _mmChip = !_mmOn ? null : _mmDone
-          ? (<span className="pf-mm-chip" title={_favT('mmSaved')} style={{..._mmChipSt,background:'rgba(201,168,76,.16)',border:'1px solid rgba(240,215,138,.6)',color:'#f0d78a',fontWeight:600}}>♫ ✓ {_favT('mm')}</span>)
+          ? (basicMode ? null : <span className="pf-mm-chip" title={_favT('mmSaved')} style={{..._mmChipSt,background:'rgba(201,168,76,.16)',border:'1px solid rgba(240,215,138,.6)',color:'#f0d78a',fontWeight:600}}>♫ ✓ {_favT('mm')}</span>)
           : (<button className="pf-mm-chip" onClick={(e)=>{ e.stopPropagation(); _openMyMusicSave(); }} title={ts('mymusicSaveAria','Save to My Music')} aria-label={ts('mymusicSaveAria','Save to My Music')} style={{..._mmChipSt,cursor:'pointer',border:'1px solid rgba(201,168,76,.4)',color:'rgba(201,168,76,.8)',fontWeight:500}}>♫ ＋ {_favT('mm')}</button>);
         const _badgeSpan = _showAiBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(220,170,255,.95)',border:'1px solid rgba(220,170,255,.4)'}}>✦ AI</span>) : _showOffBadge ? (<span style={{flexShrink:0,fontSize:(.46*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',padding:'1px 5px',borderRadius:6,whiteSpace:'nowrap',color:'rgba(207,197,168,.55)',border:'1px solid rgba(207,197,168,.3)'}}>offline</span>) : null;
         return (<>
