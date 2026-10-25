@@ -23811,13 +23811,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _swipeWasGestureRef = useRef(false);
   const [_swipeFlashKey, _setSwipeFlashKey] = useState(null);
   const _swipeFlashTimerRef = useRef(null);
+  // how long the fullscreen flash stays: 1.2 s for a solo, longer for a fusion / jam (more names to take in) — kept current every render
+  const _flashMsRef = useRef(1200);
   // Same ~1.2s “inspired by …” flash the fullscreen swipe fires — reused by the
   // Surprise me button so a tap and a swipe give identical feedback (only in
   // fullscreen, where the inspired-by caption is hidden and the flash is the
   // sole feedback).
   const _fireInspiredFlash = useCallback(()=>{
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; }
-    setTimeout(()=>{ _setSwipeFlashKey('flash-'+Date.now()); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },1200); },0);
+    setTimeout(()=>{ const ms=_flashMsRef.current||1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },ms); },0);
   },[]);
   // Lite fullscreen press-and-hold: the label stays up while the finger rests
   // on the painting and fades out on release (a short tap still gives the
@@ -25485,6 +25487,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // mode), 'glass' = the piece re-composed in a composer's style from the
   // analysed whole picture. Mirrors mosaic-vs-artists on the music side.
   const [imgComposer, setImgComposer] = useState(null);
+  // flash length: a solo 1.2 s; a fusion / jam stays up 2.5 s (more to take in) — whoever wants it longer holds (press-and-hold keeps it up)
+  _flashMsRef.current = (()=>{ try{ const img=(basicMode && liteImageMode) || (!basicMode && viewMode==='image');
+    const n = img ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).length : 0) : (painterStage.length && style!==null ? _jamStage().length : 0);
+    return n>1 ? 2500 : 1200; }catch(_){ return 1200; } })();
   const imgComposerRef = useRef(null);
   const _lastComposerRef = useRef('glass');   // remembered pick for the Composer mode button
   // disabled-in-Setup composer → release the picture back to plain Scan
@@ -34321,7 +34327,7 @@ Hard requirements:
 
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
         <button onClick={exportPoster} style={{position:'fixed',right:14,bottom:132,zIndex:9999,padding:'10px 16px',borderRadius:22,border:'1px solid rgba(201,168,76,.8)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.18em',cursor:'pointer'}}>⬇ POSTER</button>
@@ -36461,6 +36467,7 @@ Hard requirements:
           the label always reflects the newly-picked artist. */}
       {immersive && _swipeFlashKey && (()=>{
         const _isImgFlash = (basicMode && liteImageMode) || (!basicMode && viewMode==='image');
+        const _fMs = +(String(_swipeFlashKey).split('~')[1]) || 1200;
         const _fKey = _isImgFlash ? ('c-'+(imgComposer||'scan')) : (effectiveStyle || 'mosaic');
         const _fBare = _isImgFlash ? !imgComposer : (_fKey === 'mosaic' || _fKey === 'notes' || _fKey === 'raffel');
         const _fLabel = _isImgFlash ? (imgComposer ? COMPOSER_INSPIRED[imgComposer] : 'Scan')
@@ -36484,7 +36491,7 @@ Hard requirements:
           }catch(_){ return null; }
         })();
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':'pfSwipeFlash 1.2s ease-out both'),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
+          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
               {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” — or ✦ SIGNATURE */}
               <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')+(_ensF?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
@@ -36576,8 +36583,9 @@ Hard requirements:
             // it stays legible on any background — no luminance sampling.
             if(_swipeFlashTimerRef.current) { clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
             setTimeout(()=>{
-              _setSwipeFlashKey('flash-' + Date.now());
-              _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, 1200);
+              const ms = _flashMsRef.current || 1200;
+              _setSwipeFlashKey('flash-' + Date.now() + '~' + ms);
+              _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms);
             }, 0);
           }
           // Swipe down: intentionally does nothing — exit stays on the X
