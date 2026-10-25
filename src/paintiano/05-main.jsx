@@ -14101,7 +14101,7 @@ Hard requirements:
             {imgPlayMode==='scan' ? (<>
             {!imgComposer ? null : (<>
               <div style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',minHeight:28,display:'flex',alignItems:'center'}}>
-                <span>{_fsStripLabel('comp', t('inspiredByTitle'))}</span>
+                <span style={{flex:1,textAlign:'center',fontStyle:'italic',fontWeight:400,letterSpacing:'.22em',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{_fsStripLabel('comp', t('inspiredByTitle'))}</span>
                 {/* composer dice (🎲 mirror) + NEXT — only when there is more than one composer to roll between */}
                 {(ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k)).length>1) && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
