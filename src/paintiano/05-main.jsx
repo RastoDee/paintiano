@@ -3739,7 +3739,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // The target may sit below the fold of the Setup sheet (Composers grew to
     // 12 chips, pushing Tones off-screen) — bring it into view FIRST, then
     // measure, or the ring lands on whatever is at the stale rect (the footer).
-    const TOUR_SELS=['.pf-setup-chip','.pf-setup-artists','.pf-setup-palettes','.pf-setup-composers','.pf-setup-ensemble','.pf-setup-tones'];
+    const TOUR_SELS=['.pf-setup-chip','.pf-setup-artists','.pf-setup-palettes','.pf-setup-composers','.pf-setup-ensemble-head','.pf-setup-tones'];
     const s0=setTimeout(()=>{ try{ const el=document.querySelector(TOUR_SELS[tourStep]||''); if(el && el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'auto'}); }catch(_){} },40);
     const a=setTimeout(()=>setTourTick(t=>t+1),160); const b=setTimeout(()=>setTourTick(t=>t+1),420);
     return ()=>{ clearTimeout(s0); clearTimeout(a); clearTimeout(b); };
@@ -16836,7 +16836,8 @@ Hard requirements:
               {/* Ensemble — opt-in (Pro), one master switch; the Fusion style is chosen separately for painters and composers.
                   Default ON for Pro; the choice is stored only when the switch is flipped. */}
               <div className="pf-setup-ensemble" style={{border:'1px solid rgba(201,168,76,.28)',borderRadius:22,background:'#13101b',padding:16}}>
-                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                {/* the tour points at this header row (title + master switch): the whole card is taller than a phone screen */}
+                <div className="pf-setup-ensemble-head" style={{display:'flex',alignItems:'center',gap:12}}>
                   <div aria-hidden="true" style={{flex:'0 0 auto',width:40,height:40,borderRadius:'50%',border:'1px solid rgba(201,168,76,.4)',display:'flex',alignItems:'center',justifyContent:'center',color:'#dcb45a'}}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="9" cy="12" r="5.5"/><circle cx="15" cy="12" r="5.5"/></svg>
                   </div>
@@ -17079,7 +17080,7 @@ Hard requirements:
                       zh:'\u753b\u4f5c\u53ef\u4ee5\u4ee5\u7eaf\u626b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98ce\u683c\u91cd\u65b0\u8c31\u5199\u2014\u2014\u4ece Bach \u5230 Hisaishi\u3002\u8096\u90a6\u4e0e\u8428\u8482\u514d\u8d39\u2014\u2014Pro \u89e3\u9501\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
                       zhTW:'\u756b\u4f5c\u53ef\u4ee5\u4ee5\u7d14\u639b\u63cf\u64ad\u653e\uff0c\u4e5f\u53ef\u4ee5\u7528\u4f5c\u66f2\u5bb6\u7684\u98a8\u683c\u91cd\u65b0\u8b5c\u5beb\u2014\u2014\u5f9e Bach \u5230 Hisaishi\u3002\u856d\u90a6\u8207\u85a9\u63d0\u514d\u8cbb\u2014\u2014Pro \u89e3\u9396\u5168\u90e8\u5341\u4e8c\u4f4d\u3002',
                       ja:'\u7d75\u306f\u7d14\u7c8b\u306a\u30b9\u30ad\u30e3\u30f3\u3068\u3057\u3066\u3082\u3001Bach \u304b\u3089 Hisaishi \u307e\u3067\u4f5c\u66f2\u5bb6\u306e\u30b9\u30bf\u30a4\u30eb\u3067\u518d\u69cb\u7bc9\u3057\u3066\u3082\u6f14\u594f\u3067\u304d\u307e\u3059\u3002\u30b7\u30e7\u30d1\u30f3\u3068\u30b5\u30c6\u30a3\u306f\u7121\u6599\u2014\u2014Pro \u306712\u4eba\u3059\u3079\u3066\u89e3\u653e\u3002'})[lang]||'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.') },
-            { sel:'.pf-setup-ensemble', inModal:true, pad:8,
+            { sel:'.pf-setup-ensemble-head', inModal:true, pad:8,
               title:_ensT('title'),
               body:(({EN:'Pro: cross 2–5 painters into one new style (Fusion) or let composers trade phrases (Jam session). Switch it on here — a ◎ button then appears beside each 🔀.',
                       SK:'Pro: skríž 2–5 maliarov do jedného nového rukopisu (Fúzia) alebo nechaj skladateľov striedať si frázy (Jam session). Zapni to tu — vedľa každého 🔀 potom pribudne tlačidlo ◎.',
@@ -17127,11 +17128,13 @@ Hard requirements:
           let r=null; try{ if(st.sel){ const el=document.querySelector(st.sel); if(el) r=el.getBoundingClientRect(); } }catch(_){}
           const pad=st.pad||8;
           const below = r ? (r.top < window.innerHeight*0.5) : true;
+          // a target so tall that the card would fall off the screen on its side → the card sits at the bottom edge instead
+          const _pin = !!r && (below ? (r.top+r.height+pad+14+230 > window.innerHeight) : (r.top-pad-14-230 < 0));
           return (
             <div style={{position:'fixed',inset:0,zIndex:100050}}>
               <div style={{position:'fixed',inset:0,background:'rgba(4,3,9,.38)',pointerEvents:'none'}} />
               {r && (<div style={{position:'fixed',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:16,boxShadow:'0 0 0 2px rgba(201,168,76,.9), 0 0 22px 4px rgba(201,168,76,.55)',background:'rgba(201,168,76,.06)',pointerEvents:'none',transition:'all .35s cubic-bezier(.4,0,.2,1)'}} />)}
-              <div style={{position:'fixed',left:14,right:14,...(below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
+              <div style={{position:'fixed',left:14,right:14,...(_pin?{bottom:'calc(14px + env(safe-area-inset-bottom,0px))'}:below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
                 <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}</div>
                 <div style={{fontSize:(.96*effScale)+'rem',color:'#e8c96a',fontWeight:600,marginBottom:5}}>{st.title}</div>
                 <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{pfIcons(st.body)}</div>
