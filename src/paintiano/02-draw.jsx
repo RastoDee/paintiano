@@ -13280,8 +13280,8 @@ function _jamHash(ks,px){ let h=2166136261; const s=ks.join('+')+'|lr|0';   // '
   for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
   for(let i=0;i<px.length;i+=97){ const c=px[i]; h^=(((c.r|0)+(c.g|0)*7+(c.b|0)*13)&0xffff); h=Math.imul(h,16777619); }
   h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return h>>>0; }
-// the Fusion style of a jam: the Setup switch ('A' | 'E' | 'AE' — the painters' own), AE = a coin on the address
-function _jamStyleOf(h){ const G=(typeof globalThis!=='undefined') ? globalThis : {}; const g=G.__PAINT_FU_STYLE;
+// the Fusion style of a jam: the composers' own Setup switch (__PAINT_JAM_STYLE: 'A' | 'E' | 'AE'; without it the painters' one), AE = a coin on the address
+function _jamStyleOf(h){ const G=(typeof globalThis!=='undefined') ? globalThis : {}; const g=(G.__PAINT_JAM_STYLE!==undefined) ? G.__PAINT_JAM_STYLE : G.__PAINT_FU_STYLE;
   if(g==='E') return 'E'; if(g==='AE') return ((h>>>7)&1) ? 'E' : 'A'; return 'A'; }
 
 // A — the relay
@@ -13695,15 +13695,16 @@ function _fuStyleOf(ks, phs){
 // how a painter's hand paints a form — by the artist where the genes alone would mislead
 // (Picasso's glow belongs to his line, not to a veil; Monet's hand is the touch)
 const _FU_HAND={rothko:'veil',klee:'veil',bloom:'veil',monet:'touches',pollock:'ragged',mitchell:'ragged',picasso:'flat'};
+// who lends what to a new painter (Fusion style E): indexes into the members — the hand, the ground, the composition
+function _fuRolesOf(phs){ const n=(phs||[]).length||1, h=((phs||[]).reduce((a,b)=>a+(b|0),0)%n+n)%n; return { hand:h, ground:(h+1)%n, layout:n>=3 ? (h+2)%n : (h+1)%n }; }
 function _fuOnePainter(ks, ph, phs, ws, T, num){
-  const n=ks.length, h=(phs.reduce((a,b)=>a+(b|0),0)%n+n)%n;
-  const hi=h, gi=(h+1)%n, li=n>=3 ? (h+2)%n : (h+1)%n;
+  const R=_fuRolesOf(phs), hi=R.hand, gi=R.ground, li=R.layout;
   const H=ws[hi][0], G=ws[gi][0], Lp=ws[li][0];
   const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ mark[k]=(mark[k]||0)+d.mark[k]/t*w/T; }); });
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(G.ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
   const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
-  return { fs:'E', keys:ks, ph:(ph|0), phs, roles:{hand:hi, ground:gi, layout:li}, hand:(_FU_HAND[ks[hi]] || (H.edge>=0.3 ? 'veil' : H.wobble>=0.6 ? 'ragged' : 'flat')),
+  return { fs:'E', keys:ks, ph:(ph|0), phs, roles:R, hand:(_FU_HAND[ks[hi]] || (H.edge>=0.3 ? 'veil' : H.wobble>=0.6 ? 'ragged' : 'flat')),
     ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
     mark, layout:Object.assign({}, Lp.layout),
     size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
