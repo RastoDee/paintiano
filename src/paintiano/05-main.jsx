@@ -5275,9 +5275,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // blob. Without this, a piece that finishes on its own leaves the recorder
       // running and the eventual blob comes back empty ("recording too short").
       const r=recorderRef.current;
+      // Lite painting→music: a PAUSE (the Pause button, or the tab going to the background) keeps the take open — the capture is paused with the
+      // playback and Resume carries on into the same file. Only the end of the piece (or a reset) closes it.
+      const _keepTake = !!(holdPausedRef.current && basicModeRef.current && liteImageModeRef.current && r && typeof r.pause==='function');
       if(r&&r.state!=='inactive'){
-        try{ r.requestData(); }catch(_){}
-        try{ r.stop(); }catch(_){}
+        if(_keepTake){ try{ if(r.state==='recording') r.pause(); }catch(_){ try{ r.requestData(); }catch(__){} try{ r.stop(); }catch(__){} } }
+        else{
+          try{ r.requestData(); }catch(_){}
+          try{ r.stop(); }catch(_){}
+        }
       }
       // IMAGE finish: the scan loop paints blocks straight onto the main canvas
       // during playback, and on the very last step the canvas gets cleared once
@@ -5964,6 +5970,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setActive(new Set());
     setPlaying(false);setAnim(false);
     setHoldPaused(false);holdPausedRef.current=false;resumeFromRef.current=null;
+    // a PAUSED Lite painting→music take that is abandoned here (another picture, a reset) is dropped \u2014 nothing else would ever close it
+    try{ const _pr=recorderRef.current; if(_pr && _pr.state==='paused'){ _suppressRecOnStopRef.current=true; _pr.stop(); } }catch(_){}
   },[]);
 
   // Pause playback when the tab goes to background. The audio context suspends
@@ -10876,7 +10884,7 @@ Hard requirements:
       playStartedDuringRecRef.current = false;
       const r=recorderRef.current;
       setTimeout(()=>{
-        try{ if(r && r.state==='recording') r.stop(); }catch(_){}
+        try{ if(r && r.state==='recording' && !(holdPausedRef.current && basicModeRef.current && liteImageModeRef.current)) r.stop(); }catch(_){}
       },700);
     }
     if(!recording) playStartedDuringRecRef.current = false;
@@ -16915,19 +16923,25 @@ Hard requirements:
         const _litePlayChipShown = basicMode && !liteImageMode && chords.length===0 && !playing && !busy && !composeMode && !micActive && !loadedSource && !liteEverUnlockedRef.current;
         const _liteImgRecording = _liteImg && recording;
         const _liteImgHasRec = _liteImg && !recording && !!recBlob;
-        const _icoStop = (<svg width={_icoSize} height={_icoSize} viewBox="0 0 24 24" fill="currentColor" style={{flexShrink:0}} aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>);
-        const _midLabel = _liteImgRecording ? (<>{_icoStop}<span>{ts('stopLabel','Stop')}</span></>)
-                          : _liteImgHasRec ? (<>{_icoSave}<span>{ts('saveLabel','Save')}</span></>)
-                          : (_liteImg && (playing || holdPaused)) ? (<>{_icoStop}<span>{ts('stopLabel','Stop')}</span></>)
+        // Painting→music is the same transport as music→painting: Pause ↔ Resume while the piece plays (the take is recorded live and is paused with it),
+        // Save only once it has played to the end.
+        const _midLabel = _liteImgHasRec ? (<>{_icoSave}<span>{ts('saveLabel','Save')}</span></>)
+                          : (_liteImg && holdPaused) ? (<>{_icoPlay}<span>{t('resume')!=='resume'?t('resume'):'Resume'}</span></>)
+                          : (_liteImg && (playing || _liteImgRecording)) ? (<>{_icoPause}<span>{t('pause')!=='pause'?t('pause'):'Pause'}</span></>)
                           : _liteImg ? (<>{_icoPlay}<span>{t('play')!=='play'?t('play'):'Play'}</span></>)
                           : _done ? (<>{_icoSave}<span>{ts('saveLabel','Save')}</span></>)
                                 : (holdPaused ? (<>{_icoPlay}<span>{t('resume')!=='resume'?t('resume'):'Resume'}</span></>)
                                               : (playing ? (<>{_icoPause}<span>{t('pause')!=='pause'?t('pause'):'Pause'}</span></>)
                                                          : (<>{_icoPlay}<span>{t('play')!=='play'?t('play'):'Play'}</span></>)));
         const _midClick = ()=>{
-          if(_liteImgRecording){ try{ stopRecord(); }catch(_){} return; }
           if(_liteImgHasRec){ try{ if(recBlob){ const f=new File([recBlob],recName||'paintiano.m4a',{type:recBlob.type||'audio/mp4'}); const _dl=()=>{ try{ const u=URL.createObjectURL(recBlob); const a=document.createElement('a'); a.href=u; a.download=recName||'paintiano.m4a'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>{try{URL.revokeObjectURL(u);}catch(_){}} ,10000); }catch(_){} }; if(navigator.share && navigator.canShare && navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'Paintiano audio'}).catch(()=>{ _dl(); }); } else { _dl(); } } }catch(_){} return; }
-          if(_liteImg && (playing || holdPaused)){ try{ stopAll(); }catch(_){} return; }
+          if(_liteImg && holdPaused){   // Resume: reopen the paused capture, then carry on from where it stopped
+            try{ const _r=recorderRef.current; if(_r && _r.state==='paused') _r.resume(); }catch(_){}
+            try{ handlePauseClick(); }catch(_){} return; }
+          if(_liteImg && (playing || recording)){
+            if(!playing) return;   // the take is just starting or closing — nothing to pause
+            try{ const _r=recorderRef.current; if(_r && _r.state==='recording' && typeof _r.pause==='function') _r.pause(); }catch(_){}   // capture pauses WITH the playback
+            try{ handlePauseClick(); }catch(_){} return; }
           if(_liteImg){ /* stopped, no take yet (adopted content): Play = fresh take from the top, recording as standard Lite does */ try{ (startRecordRef.current||startRecord)(); }catch(_){} return; }
           if(_done){ try{ exportImage('web'); }catch(_){} return; }
           try{ handlePauseClick(); }catch(_){}
@@ -17045,7 +17059,7 @@ Hard requirements:
           {!immersive && (liteImageMode
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
-          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgRecording?ts('stopLabel','Stop'):((_liteImgHasRec||_done)?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
+          <button onClick={_midClickAware} disabled={_litePlayChipShown || (!_liteImg && !_capturing && !_haveArt)} title={_liteImgHasRec?ts('saveLabel','Save'):(_liteImg&&holdPaused)?t('resume'):(_liteImg&&(playing||_liteImgRecording))?t('pause'):(_done?ts('saveLabel','Save'):(_capturing?ts('stopLabel','Stop'):(playing?t('pause'):t('play'))))} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),...(_capturing?{background:'rgba(220,70,70,.95)',border:'1px solid rgba(220,70,70,.95)',color:'#fff'}:{}),opacity:_litePlayChipShown?.5:((_capturing||_haveArt||_liteImg)?1:.5)}}>{_midMicAware}</button>
           {liteImageMode && <button onClick={()=>{ try{ _liteImgSurprise(); }catch(_){} if(immersive) _fireInspiredFlash(); }} disabled={!_liteImg||!chords.length} title={ts('surpriseMe','Surprise me')} style={{...primary,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(!_liteImg||!chords.length)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
           {!liteImageMode && <button onClick={()=>{ if(demoReelOn) return; basicSurprise(); if(immersive) _fireInspiredFlash(); }} disabled={demoReelOn||!_haveArt||_litePlayChipShown} title={ts('surpriseMe','Surprise me')} style={{...(_litePlayChipShown?btn:primary),...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:(demoReelOn||!_haveArt||_litePlayChipShown)?.5:1}}>{_icoShuffle}<span>{ts('surpriseMe','Surprise me')}</span></button>}
         </div>}
