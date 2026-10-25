@@ -13700,9 +13700,21 @@ function _fuStyleOf(ks, phs){
 // (Picasso's glow belongs to his line, not to a veil; Monet's hand is the touch)
 const _FU_HAND={rothko:'veil',klee:'veil',bloom:'veil',monet:'touches',pollock:'ragged',mitchell:'ragged',picasso:'flat'};
 // who lends what to a new painter (Fusion style E): indexes into the members — the hand, the ground, the composition
-function _fuRolesOf(phs){ const n=(phs||[]).length||1, h=((phs||[]).reduce((a,b)=>a+(b|0),0)%n+n)%n; return { hand:h, ground:(h+1)%n, layout:n>=3 ? (h+2)%n : (h+1)%n }; }
+// a soft hand — veils (Rothko, Klee, Sam Francis) or touches (Monet): every form painted that way turns the whole picture into a wash
+function _fuSoftHand(k, ph){ const h=_FU_HAND[k]; if(h) return h==='veil' || h==='touches'; const d=_dnaOf(k, ph); return !!d && d.edge>=0.3; }
+function _fuRolesOf(phs, ks){
+  const n=(phs||[]).length||1; let h=((phs||[]).reduce((a,b)=>a+(b|0),0)%n+n)%n;
+  if(ks && ks.length===n && n>=2){
+    // the hand never goes to a soft member while a crisp one is there: it passes on to the next crisp member and the soft one lends the ground instead
+    const soft=ks.map((k,i)=>_fuSoftHand(k, (phs[i]|0)));
+    if(soft[h] && soft.some(s=>!s)){ const g=h; for(let t=1;t<n;t++){ const c=(h+t)%n; if(!soft[c]){ h=c; break; } }
+      let l=g; if(n>=3){ for(let t=1;t<n;t++){ const c=(h+t)%n; if(c!==g){ l=c; break; } } }
+      return { hand:h, ground:g, layout:l }; }
+  }
+  return { hand:h, ground:(h+1)%n, layout:n>=3 ? (h+2)%n : (h+1)%n };
+}
 function _fuOnePainter(ks, ph, phs, ws, T, num){
-  const R=_fuRolesOf(phs), hi=R.hand, gi=R.ground, li=R.layout;
+  const R=_fuRolesOf(phs, ks), hi=R.hand, gi=R.ground, li=R.layout;
   const H=ws[hi][0], G=ws[gi][0], Lp=ws[li][0];
   const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ mark[k]=(mark[k]||0)+d.mark[k]/t*w/T; }); });
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
