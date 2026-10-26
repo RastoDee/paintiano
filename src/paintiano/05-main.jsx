@@ -394,17 +394,74 @@ function computeSongSignature(events, opts){
     return {v:SIG_V, keys, roles, ph, mode, z, f, seed};
   }catch(_){ return null; }
 }
+// ── PICTURE SIGNATURE ── the one piece a picture "is": its composer (or a Jam session of two–three), the jam's style and
+// the palette. Read from the picture's DNA (_imgDNA) on a fixed 96-wide grid, so it is the same on every screen; each
+// composer has a profile over the DNA's z-scores (ISIG_REF: the spread of a calibration set of paintings). A second
+// composer joins when it is nearly as close and the picture has the variety for it (regions · hues), a third only on a
+// rich one; two of one family (the still ones, the motor ones) never share a stage. Collage (A) when the picture is
+// made of distinct parts, Synthesis (E) when it is one whole (mirror symmetry over variety); in a Synthesis the
+// best-matching composer is the ground. ISIG_CURATED: hand-picked for the built-in pictures (by title).
+const ISIG_REF = {E:[0.423,0.217],L:[0.415,0.097],W:[0.207,0.438],C:[31.453,11.494],K:[17.571,6.54],T:[0.288,0.133],S:[0.278,0.262],R:[2.055,0.74],H:[2.647,2.027],M:[2.529,0.696]};
+// E energy · L lightness · W warmth · C chroma · K contrast · T texture · S symmetry · R regions (log) · H hue groups · M mode (0 lydian … 5 phrygian)
+const ISIG_PROFILES = {
+  satie:{E:-0.8,T:-0.4,K:-0.3,H:-0.3,R:-0.3}, debussy:{E:-0.6,K:-0.5,R:0.4,T:-0.1,C:0.1}, einaudi:{E:-0.5,H:-0.4,K:-0.2,S:0.2},
+  chopin:{L:-0.5,E:-0.2,W:-0.2,T:0.2,M:0.4}, schubert:{L:-0.2,W:0.3,E:-0.2,R:0.2}, rachmaninov:{L:-0.6,K:0.4,M:0.5,C:0.2},
+  beethoven:{K:0.7,E:0.4,W:0.2,L:-0.2}, mozart:{L:0.7,M:-0.5,K:-0.2,S:0.3}, bach:{S:0.7,T:0.4,H:-0.3}, glass:{S:0.5,T:0.5,E:0.2,H:-0.3},
+  vine:{E:0.9,T:0.4,K:0.3}, gershwin:{W:0.6,E:0.5,C:0.3}, yiruma:{L:0.4,E:-0.3,K:-0.5,C:-0.2}, hisaishi:{W:0.4,C:0.4,L:0.2,H:0.2},
+  tchaikovsky:{C:0.4,H:0.4,M:0.2,E:-0.1},
+};
+const ISIG_FAMILY = {satie:'still', einaudi:'still', yiruma:'still', glass:'motor', vine:'motor'};
+const ISIG_CURATED = {
+  'The Starry Night — Van Gogh': {keys:['debussy','rachmaninov'], fs:'A', mode:'harmony'},   // the swirling sky in Debussy's colours, the dark village and cypress in Rachmaninov's — taking turns
+  'Water Lily Pond — Monet':     {keys:['debussy'], mode:'harmony'},                          // Monet's pond is Debussy's own water
+  'The Scream — Munch':          {keys:['beethoven','schubert'], fs:'A', mode:'harmony'},     // Beethoven's storm and Schubert's lonely wanderer — taking turns
+};
+// img: the decoded <img>; title: the file name without its extension. → {keys, fs, mode, h} | null
+function computeImageSignature(img, title){
+  try{
+    const iw=img.naturalWidth||img.width||1, ih=img.naturalHeight||img.height||1;
+    const nc=96, nr=Math.max(40,Math.min(200,Math.round(96*ih/iw)));
+    // drawn 4× larger and box-averaged: the browser's own downscaling differs a little from browser to browser, the average hardly at all
+    const cv=document.createElement('canvas'); cv.width=nc*4; cv.height=nr*4; const cx=cv.getContext('2d');
+    try{ cx.imageSmoothingQuality='high'; }catch(_){}
+    cx.drawImage(img,0,0,nc*4,nr*4);
+    const raw=cx.getImageData(0,0,nc*4,nr*4).data; const W4=nc*4; const px=new Array(nc*nr);
+    let vivid=0;
+    for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ let r=0,g=0,b=0;
+      for(let dy=0;dy<4;dy++) for(let dx=0;dx<4;dx++){ const i=((y*4+dy)*W4+(x*4+dx))*4; r+=raw[i]; g+=raw[i+1]; b+=raw[i+2]; }
+      const p={r:Math.round(r/16),g:Math.round(g/16),b:Math.round(b/16)}; px[y*nc+x]=p;
+      const [,ss,ll]=toHsl(p.r,p.g,p.b); if(ss>25 && ll<85 && ll>6) vivid++; }
+    const cur=(title && ISIG_CURATED[title]) ? ISIG_CURATED[title] : null;
+    const bw=(vivid/(nc*nr))<0.05;
+    if(cur) return { keys:cur.keys.slice(), fs:cur.fs||null, mode:bw?'bw':(cur.mode||'harmony'), h:0 };
+    const base=pixelsToImageEvents(px,nc,nr,COF,'harmony','lr',0); const D=_imgDNA(px,nc,nr,base,COF);
+    const hues=new Set(D.regions.filter(r=>!r.grey).map(r=>Math.round(r.hue/30)%12));
+    const f={E:D.energy,L:D.lightness,W:D.warmth,C:D.chroma,K:D.contrast,T:D.texture,S:D.symmetry,R:Math.log(1+D.regions.length),H:hues.size,M:D.modeIdx};
+    const z={}; for(const k in ISIG_REF){ const m=ISIG_REF[k][0], s=ISIG_REF[k][1]; const v=+f[k]; z[k]=Math.max(-3,Math.min(3,((isFinite(v)?v:m)-m)/s)); }
+    const rank=Object.keys(ISIG_PROFILES).map(k=>{ const P=ISIG_PROFILES[k]; let s=0; for(const a in P) s+=P[a]*z[a]; return [s,k]; })
+      .sort((a,b)=>(b[0]-a[0]) || (a[1]<b[1]?-1:1));
+    const rich=(z.R+z.H)/2; const keys=[rank[0][1]]; const fam=new Set([ISIG_FAMILY[keys[0]]].filter(Boolean));
+    for(let i=1;i<rank.length && keys.length<3;i++){
+      const s=rank[i][0], k=rank[i][1]; if(s<rank[0][0]-0.35) break;
+      const fm=ISIG_FAMILY[k]; if(fm && fam.has(fm)) continue;
+      if(keys.length===1 ? rich>-0.3 : rich>0.8){ keys.push(k); if(fm) fam.add(fm); } else break;
+    }
+    const mode = bw ? 'bw' : (z.K>0.8 || (z.C>0.5 && z.E>0.5)) ? 'kontra' : z.H>0.6 ? 'spectral' : z.S>0.6 ? 'phi' : 'harmony';
+    const fs = keys.length>1 ? (((z.S-rich)/2)>0.2 ? 'E' : 'A') : null;
+    return { keys, fs, mode, h:0 };
+  }catch(_){ return null; }
+}
 // intro = the line over the canvas the first time a Signature plays (what the word means)
 const SIG_I18N = {
-  EN:{label:'Signature',intro:'The one painting this song chose for itself — the same for everyone.',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'}},
-  SK:{label:'Signatúra',intro:'Jediný obraz, ktorý si táto skladba vybrala sama — u každého rovnaký.',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'}},
-  DE:{label:'Signatur',intro:'Das eine Bild, das sich dieses Stück selbst ausgesucht hat — für alle gleich.',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'}},
-  FR:{label:'Signature',intro:'Le seul tableau que ce morceau a choisi lui-même — le même pour tous.',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'}},
-  ES:{label:'Firma',intro:'El único cuadro que esta canción eligió por sí misma — el mismo para todos.',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'}},
-  PT:{label:'Assinatura',intro:'O único quadro que esta música escolheu para si — igual para todos.',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'}},
-  zh:{label:'签名',intro:'这首曲子为自己选出的唯一一幅画——人人看到的都一样。',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'}},
-  zhTW:{label:'簽名',intro:'這首曲子為自己選出的唯一一幅畫——人人看到的都一樣。',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'}},
-  ja:{label:'署名',intro:'この曲が自分で選んだ、ただ一枚の絵——誰にとっても同じ。',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
+  EN:{label:'Signature',intro:'The one painting this song chose for itself — the same for everyone.',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'},introImg:'The one piece this picture chose for itself — the same for everyone.',tipImg:'This picture’s signature piece — one composer or a Jam session of two or three, with style and palette chosen by the picture’s character. The same for everyone. Tap again to switch it off.'},
+  SK:{label:'Signatúra',intro:'Jediný obraz, ktorý si táto skladba vybrala sama — u každého rovnaký.',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'},introImg:'Jediná skladba, ktorú si tento obraz vybral sám — u každého rovnaká.',tipImg:'Signatúrna skladba tohto obrazu — jeden skladateľ alebo Jam session dvoch až troch, štýl a paleta podľa charakteru obrazu. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.'},
+  DE:{label:'Signatur',intro:'Das eine Bild, das sich dieses Stück selbst ausgesucht hat — für alle gleich.',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'},introImg:'Das eine Stück, das sich dieses Bild selbst ausgesucht hat — für alle gleich.',tipImg:'Das Signaturstück dieses Bildes — ein Komponist oder eine Jam session aus zwei bis drei, Stil und Palette nach dem Charakter des Bildes. Für alle gleich. Erneut tippen schaltet es aus.'},
+  FR:{label:'Signature',intro:'Le seul tableau que ce morceau a choisi lui-même — le même pour tous.',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'},introImg:'Le seul morceau que cette image a choisi elle-même — le même pour tous.',tipImg:'Le morceau-signature de cette image — un compositeur ou une Jam session de deux ou trois, style et palette d’après le caractère de l’image. Le même pour tous. Touche à nouveau pour le désactiver.'},
+  ES:{label:'Firma',intro:'El único cuadro que esta canción eligió por sí misma — el mismo para todos.',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'},introImg:'La única pieza que esta imagen eligió por sí misma — la misma para todos.',tipImg:'La pieza-firma de esta imagen — un compositor o una Jam session de dos o tres, estilo y paleta según el carácter de la imagen. La misma para todos. Toca de nuevo para desactivarla.'},
+  PT:{label:'Assinatura',intro:'O único quadro que esta música escolheu para si — igual para todos.',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'},introImg:'A única peça que esta imagem escolheu para si — igual para todos.',tipImg:'A peça-assinatura desta imagem — um compositor ou uma Jam session de dois ou três, estilo e paleta pelo carácter da imagem. Igual para todos. Toca de novo para a desligar.'},
+  zh:{label:'签名',intro:'这首曲子为自己选出的唯一一幅画——人人看到的都一样。',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'},introImg:'这幅画为自己选出的唯一一首曲子——人人听到的都一样。',tipImg:'这幅画的签名曲——一位作曲家，或两到三位的 Jam session，风格与调色板由画的性格选出。人人相同。 再点一次即可关闭。'},
+  zhTW:{label:'簽名',intro:'這首曲子為自己選出的唯一一幅畫——人人看到的都一樣。',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'},introImg:'這幅畫為自己選出的唯一一首曲子——人人聽到的都一樣。',tipImg:'這幅畫的簽名曲——一位作曲家，或兩到三位的 Jam session，風格與調色盤由畫的性格選出。人人相同。 再點一次即可關閉。'},
+  ja:{label:'署名',intro:'この曲が自分で選んだ、ただ一枚の絵——誰にとっても同じ。',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'},introImg:'この絵が自分で選んだ、ただ一つの曲——誰にとっても同じ。',tipImg:'この絵の署名曲——一人の作曲家、または二〜三人の Jam session。スタイルとパレットは絵の性格から選ばれます。誰にとっても同じ一曲。 もう一度タップでオフ。'},
 };
 
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
@@ -1614,6 +1671,8 @@ export default function Paintiano() {
   const painterIntroDoneRef = useRef(false); const _piTimersRef = useRef([]);
   const [sigIntroShow, setSigIntroShow] = useState(false);          // ✦ Signature: what it is, over the canvas — the first time one plays
   const sigIntroDoneRef = useRef(false); const _siTimersRef = useRef([]);
+  const [isigIntroShow, setIsigIntroShow] = useState(false);        // … and a picture's ✦ — the first time one plays
+  const isigIntroDoneRef = useRef(false); const _isiTimersRef = useRef([]);
   const [mosaicIntroShow, setMosaicIntroShow] = useState(false);   // the line + the colour key over the canvas (first 3 times)
   const [surpriseHint, setSurpriseHint] = useState(false);         // "same notes – a different hand" over Surprise (once)
   const mosaicIntroDoneRef = useRef(false);
@@ -2007,6 +2066,8 @@ export default function Paintiano() {
   // while the signature is on screen the Setup-picker guards below leave its
   // artist / palette / tone alone, Free gets the full variant range.
   const sigActiveRef = useRef(false);
+  // PICTURE SIGNATURE latch (the state lives further down, past the TDZ): the same courtesy for the composers on stage and the palette
+  const imgSigActiveRef = useRef(false);
   const sigAudioNextRef = useRef(false);
   const sigMusicNextRef = useRef(false);   // the next applyEvents is a music file / sample → Advanced opens it on ✦ too   // the next applyEvents comes from audio transcription
   // If the current tone is no longer in setupTones (user disabled it), fall
@@ -2588,7 +2649,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // are already in scope — putting it earlier hit a TDZ on first render.
   useEffect(()=>{
     if(mode==='bw') return;                       // bw is image-only, never in setupPalettes
-    if(sigActiveRef.current) return;
+    if(sigActiveRef.current || imgSigActiveRef.current) return;
     if(!setupPalettes.includes(mode)){
       const fb = setupPalettes.includes('harmony') ? 'harmony' : (setupPalettes[0] || 'harmony');
       setMode(fb);
@@ -2963,6 +3024,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _fusionStyleOf = (kind)=>{
     try{
       if(kind==='art' && (sigActive || sigActiveRef.current)) return null;   // ✦ Signature is its own painting: no style to tell, switch or flip
+      if(kind!=='art' && imgSigActiveRef.current) return null;                // … and a picture's ✦ its own piece
       if(kind==='art'){ const fa=painterStage.length ? _fusionAddr(_jamStage(), paintPhase|0) : null; return fa ? (fa.fs==='E' ? 'E' : 'A') : null; }
       const ks=[imgComposer, ...composerStage].filter(Boolean); if(!imgComposer || ks.length<2) return null;
       const J=globalThis.__COMP_JAM_STYLE; if(J && J.sig===ks.join()) return J.style==='E' ? 'E' : 'A';
@@ -4064,6 +4126,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _lastComposerRef = useRef('glass');   // remembered pick for the Composer mode button
   // disabled-in-Setup composer → release the picture back to plain Scan
   useEffect(()=>{
+    if(imgSigActiveRef.current) return;   // ✦ a picture's Signature plays its own composers, enabled in Setup or not
     if(imgComposer && (!setupComposers.includes(imgComposer) || composerIsLocked(imgComposer))){
       imgComposerRef.current=null; setImgComposer(null);
     }
@@ -4172,6 +4235,87 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgPlayMode, setImgPlayMode] = useState('scan');
   const imgPlayModeRef = useRef('scan');
   useEffect(()=>{ imgPlayModeRef.current=imgPlayMode; },[imgPlayMode]);
+  // ── PICTURE SIGNATURE ── the one piece a picture "is" (computeImageSignature): its composer or Jam session, the
+  // jam's style and the palette. imgSig is set per loaded picture; imgSigActive means exactly it is playing.
+  // Applying it seats the composers (a Jam session goes up when Ensemble is on), pins the jam's style and ground
+  // (__IMG_SIG, read by composeImageCallResponse) and sets the palette. Any other choice afterwards (another
+  // composer, one taken off, the palette, the 🔀, AI compose) drops the latch; with Ensemble on the stage carries
+  // on as a Jam session. Lite opens every picture on it (the very first one on this device: Scan, then ✦).
+  const [imgSig, setImgSig] = useState(null);
+  const imgSigRef = useRef(null);
+  const [imgSigActive, setImgSigActive] = useState(false);
+  useEffect(()=>{ imgSigActiveRef.current = imgSigActive; },[imgSigActive]);
+  const imgSigPrevRef = useRef(null);            // what was playing before ✦ — tapping ✦ again returns to it
+  const imgNameRef = useRef('');                 // the picture's file name — "← image" brings it back under it (title, a hand-picked ✦)
+  const _liteImgNextIsSigRef = useRef(false);   // Lite: the first picture ever opens on Scan, its first Surprise is ✦
+  const _setImgSigPin = (s)=>{ try{ globalThis.__IMG_SIG = s ? { keys:s.keys.slice(), fs:s.fs||null, h:(s.h|0) } : null; }catch(_){} };
+  const _cOk = (k)=> !!k && (setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k);
+  // a composer the signature seated without Setup / Pro behind it leaves with the latch
+  const _imgSigRelease = ()=>{
+    const st=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+    if(st.every(_cOk)) return;
+    const keep=st.filter(_cOk);
+    const lead=keep.length ? keep[0] : null;
+    if(lead) _lastComposerRef.current=lead;
+    imgComposerRef.current=lead; setImgComposer(lead);
+    composerStageRef.current=keep.slice(1); setComposerStage(keep.slice(1));
+  };
+  // seats it through the refs at once too: loadImage composes right after, before any state has settled
+  const _applyImgSig = (s)=>{
+    s = s || imgSigRef.current;
+    if(!s || !s.keys || !s.keys.length) return;
+    if(!imgSigActiveRef.current) imgSigPrevRef.current = { comp: imgComposerRef.current, stage: composerStageRef.current.slice(), mode, crOn: crOnRef.current };
+    imgSigActiveRef.current = true;               // sync — the Setup guards run before the state effect
+    _setImgSigPin(s);
+    setComposerDice(false);
+    if(s.keys.length>1 && ensembleOnRef.current && !crOnRef.current){ crOnRef.current=true; setCrOn(true); }
+    _lastComposerRef.current = s.keys[0];
+    imgComposerRef.current = s.keys[0]; setImgComposer(s.keys[0]);
+    composerStageRef.current = s.keys.slice(1); setComposerStage(s.keys.slice(1));
+    if(s.mode && s.mode!==mode){ kontraAutoRef.current = (s.mode==='kontra'); setShowColorPalette(false); setCustomArmed(false); setMode(s.mode); }
+    setImgSigActive(true);
+    try{ window.posthog && window.posthog.capture('signature_apply',{kind:'img',n:s.keys.length,lead:s.keys[0]}); }catch(_){}
+  };
+  const _imgSigOff = ()=>{
+    if(!imgSigActiveRef.current) return;
+    imgSigActiveRef.current = false; setImgSigActive(false); _setImgSigPin(null);
+    const p = imgSigPrevRef.current; imgSigPrevRef.current = null;
+    const s = imgSigRef.current;
+    if(p && (!s || p.comp!==s.keys[0] || p.stage.join('+')!==s.keys.slice(1).join('+') || p.mode!==s.mode)){
+      // back to what was playing before (composer, stage, palette)
+      if(p.comp) _lastComposerRef.current = p.comp;
+      imgComposerRef.current = p.comp; setImgComposer(p.comp);
+      composerStageRef.current = p.stage.slice(); setComposerStage(p.stage.slice());
+      if(p.mode!==mode) setMode(p.mode);
+      if(!p.crOn && crOnRef.current){ crOnRef.current=false; setCrOn(false); }
+    } else if(!crOnRef.current){
+      // nothing to return to: keep the lead, drop a stage only ✦ put up
+      composerStageRef.current = []; setComposerStage(q=>q.length?[]:q);
+    }
+    _imgSigRelease();
+    try{ window.posthog && window.posthog.capture('signature_off',{kind:'img'}); }catch(_){}
+  };
+  const _toggleImgSig = ()=>{
+    if(working||anim) return;
+    if(imgSigActiveRef.current){ _imgSigOff(); return; }
+    if(!imgSigRef.current || !pixelRef.current) return;
+    if(imgPlayMode!=='scan' || imgComposeRef.current){ stopAll(); setImgPlayMode('scan'); imgPlayModeRef.current='scan'; leaveImgCompose(); }
+    _applyImgSig();
+  };
+  const imgSigFnRef = useRef(null); imgSigFnRef.current = { apply:_applyImgSig, release:_imgSigRelease };
+  const _isigBtn = (side)=> (<button onClick={_toggleImgSig} disabled={!chords.length} className="pf-sig" title={_sigT('tipImg')} aria-label={_sigT('label')} aria-pressed={imgSigActive} style={{position:'absolute',[side]:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:chords.length?'pointer':'default',opacity:chords.length?1:0.35,whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s, opacity .18s',background:imgSigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(imgSigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:imgSigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:imgSigActive?700:500}}>✦ {_sigT('label')}</button>);
+  useEffect(()=>{
+    if(!imgSigActive) return;
+    const s = imgSigRef.current;
+    const rest = s ? s.keys.slice(1).join('+') : '';
+    const ok = !!s && imgComposer===s.keys[0] && composerStage.join('+')===rest && mode===s.mode && !composerDice
+      && imgPlayMode==='scan' && (viewMode==='image' || (basicMode && liteImageMode));
+    if(ok) return;
+    imgSigActiveRef.current = false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current = null;
+    // a stage only ✦ put up (no Jam session behind it) leaves with the latch
+    if(!crOnRef.current && composerStage.length && composerStage.join('+')===rest){ composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); }
+    _imgSigRelease();
+  },[imgSigActive, imgComposer, composerStage, mode, composerDice, imgPlayMode, viewMode, basicMode, liteImageMode]);
   const busy = playing || anim || working;
   // Mode exclusion: once a file/song is loaded OR an image is dropped, the
   // keyboard is locked until clear (no mixing loaded content with new live
@@ -9363,7 +9507,26 @@ Hard requirements:
           // Keep a manual Custom choice if the user already had it; otherwise apply
           // the app's pick. (spectral/other non-image modes fall back to autoMode.)
           // When arriving from Music, keep the current palette verbatim.
-          const startMode = _fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode);
+          // ✦ PICTURE SIGNATURE — one per picture, the same for everyone (computeImageSignature, on its own 96-wide grid).
+          // A new picture drops the latch (and a stage only ✦ put up); Lite opens it on ✦ — the very first picture on
+          // this device opens on Scan (every colour its own tone) and its first Surprise is ✦.
+          imgNameRef.current = file.name||'';
+          let _isg=null; try{ _isg=computeImageSignature(img, file.name.replace(/\.[^.]+$/,'')); }catch(_){}
+          if(_isg){ if(autoMode==='bw') _isg.mode='bw'; else if(_isg.mode==='bw') _isg.mode='harmony'; }   // the canvas's own colour reading decides B/W
+          if(imgSigActiveRef.current){
+            imgSigActiveRef.current=false; setImgSigActive(false); imgSigPrevRef.current=null;
+            if(!crOnRef.current){ composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); }
+            try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){}
+          }
+          try{ globalThis.__IMG_SIG=null; }catch(_){}
+          imgSigRef.current=_isg; setImgSig(_isg);
+          let _isgOpen=false;
+          if(basicModeRef.current && liteImageModeRef.current && !_fromMusic && _isg){
+            let _arc=false; try{ _arc = localStorage.getItem('paintiano_lite_img_arc')!=='1'; localStorage.setItem('paintiano_lite_img_arc','1'); }catch(_){}
+            _liteImgNextIsSigRef.current = _arc; _isgOpen = !_arc;
+          } else _liteImgNextIsSigRef.current = false;
+          const startMode = _isgOpen ? _isg.mode : (_fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode));
+          if(_isgOpen){ try{ imgSigFnRef.current.apply(_isg); }catch(_){} }
           kontraAutoRef.current = (!_fromMusic && startMode==='kontra'); // auto-kontra only on a fresh image, never when palette carried from Music
           if(startMode!==mode) setMode(startMode);
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4,mosaicBands:(_mosRows|0)||null};
@@ -9488,7 +9651,7 @@ Hard requirements:
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
     const _effDir = imgComposer ? 'lr' : imgDir;   // composers always read in rows
-    const sig = mode + '|' + _effDir + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    const sig = mode + '|' + _effDir + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (imgSigActive ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
@@ -9501,7 +9664,7 @@ Hard requirements:
     // → Debussy at 88%). Map the position by TIME FRACTION instead: where we are
     // in the old piece (0..1) → the event nearest that fraction in the new one.
     const _prevC = pixelRef.current.lastComposer;
-    const _compKey = (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleCNow!=='A') ? '|'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '');
+    const _compKey = (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleCNow!=='A') ? '|'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (imgSigActive ? '|\u2726' : '');
     pixelRef.current.lastComposer = _compKey;
     const _compChanged = _prevC !== undefined && _prevC !== _compKey;
     const _mapIdx = (oldArr, oldIdx, newArr)=>{
@@ -9638,7 +9801,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,fuStyleCNow,jamFlipN,atmoOn,atmoMood,melodyOn,melodyData,scanBump]);
+  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,fuStyleCNow,jamFlipN,atmoOn,atmoMood,melodyOn,melodyData,scanBump,imgSigActive]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
@@ -9660,7 +9823,7 @@ Hard requirements:
       const mime=(u.match(/^data:([^;]+);/)||[])[1]||'image/jpeg';
       const b64=u.split(',')[1]; const buffer=b64ToArrayBuffer(b64);
       const blob=new Blob([buffer],{type:mime}); const ext=(mime.split('/')[1]||'jpg').replace('jpeg','jpg');
-      const file=new File([blob],'image.'+ext,{type:mime});
+      const file=new File([blob],imgNameRef.current||('image.'+ext),{type:mime});
       setImgReturnUrl(null);
       loadImage({target:{files:[file],value:''}});
     }catch(e){ setErr('Image: '+((e&&e.message)||'restore failed')); setErrInfo(false); }
@@ -10317,7 +10480,7 @@ Hard requirements:
   const _miOn = !!(basicMode && !liteImageMode && liteIntroPiece && style===null && !painterStage.length && !sigActive);
   const _miT = (k)=>{ const d=MOSAIC_INTRO_I18N[lang]||MOSAIC_INTRO_I18N.EN; return d[k]!==undefined ? d[k] : MOSAIC_INTRO_I18N.EN[k]; };
   // the mirror: Lite painting → music scanning a picture — every colour has its own tone (the same key, lit by the tones the scan plays)
-  const _miImgOn = !!(basicMode && liteImageMode && viewMode==='image' && chords.length>0);
+  const _miImgOn = !!(basicMode && liteImageMode && viewMode==='image' && chords.length>0 && !imgComposer);   // the plain Scan only — a composer's piece is not one tone per colour
   const _miKind = _miOn ? 'm' : (_miImgOn ? 'i' : null);
   useEffect(()=>{
     const clear=()=>{ _miTimersRef.current.forEach(t=>clearTimeout(t)); _miTimersRef.current=[]; };
@@ -10345,6 +10508,18 @@ Hard requirements:
     _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(false); }, 1500+5600));
   },[sigActive, _hasPaint, viewMode]);
   useEffect(()=>()=>{ _siTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
+  // … and the first picture Signature ever (Lite or Advanced): the same line, said of the picture
+  useEffect(()=>{
+    const clear=()=>{ _isiTimersRef.current.forEach(t=>clearTimeout(t)); _isiTimersRef.current=[]; };
+    if(!imgSigActive || viewMode!=='image'){ clear(); setIsigIntroShow(false); return; }
+    if(!playing || isigIntroDoneRef.current) return;
+    isigIntroDoneRef.current = true;
+    let n=0; try{ n=(+localStorage.getItem('paintiano_isig_intro_n'))||0; }catch(_){}
+    if(n>=1) return;
+    _isiTimersRef.current.push(setTimeout(()=>{ setIsigIntroShow(true); try{ localStorage.setItem('paintiano_isig_intro_n', String(n+1)); }catch(_){} }, 1500));
+    _isiTimersRef.current.push(setTimeout(()=>{ setIsigIntroShow(false); }, 1500+5600));
+  },[imgSigActive, playing, viewMode]);
+  useEffect(()=>()=>{ _isiTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
   // Lite's first painter (Kandinsky on the very first song): one line over the canvas, and the INSPIRED BY label up top lights up
   const _piOn = !!(basicMode && !liteImageMode && style && style!=='notes' && style!=='mosaic' && !painterStage.length && !sigActive && STYLE_INSPIRED[style]);
   useEffect(()=>{
@@ -11145,6 +11320,11 @@ Hard requirements:
   // mechanics as a palette change), mirroring the music-side artist swipe.
   // A running take simply spans the style change; Stop → Save still applies.
   const _liteImgSurprise = useCallback(()=>{
+    if(_liteImgNextIsSigRef.current){
+      _liteImgNextIsSigRef.current = false;
+      const _s = imgSigRef.current;
+      if(_s && _s.keys && _s.keys.length && imgSigFnRef.current){ try{ imgSigFnRef.current.apply(_s); }catch(_){} return; }
+    }
     try{ _liteRollComposer(); }catch(_){}
   },[_liteRollComposer]);
   const startRecord=()=>{
@@ -14094,7 +14274,7 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp') : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}{imgSig && imgPlayMode==='scan' && (<span onClick={_toggleImgSig} role="button" tabIndex={0} title={_sigT('tipImg')} aria-pressed={imgSigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:imgSigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
@@ -14362,8 +14542,10 @@ Hard requirements:
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
                   {ensembleActive && _modeBtn(crOn?1:0, _toggleCr, false, true, 36)}
                 </>)}
+                {/* ✦ SIGNATURE — the picture's own piece (computeImageSignature); lit while it plays */}
+                {imgSig && _isigBtn('left')}
               </div>
-              {(()=>{ const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'},{k:'mozart',n:'Mozart'},{k:'schubert',n:'Schubert'},{k:'tchaikovsky',n:'Tchaikovsky'}].filter(c=>(setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)); const _cols=Math.max(1,Math.min(3,_cs.length));
+              {(()=>{ const _isgK=(imgSigActive && imgSig && imgSig.keys) ? imgSig.keys : []; const _cs=[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'},{k:'mozart',n:'Mozart'},{k:'schubert',n:'Schubert'},{k:'tchaikovsky',n:'Tchaikovsky'}].filter(c=>_isgK.includes(c.k) || ((setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k))); const _cols=Math.max(1,Math.min(3,_cs.length));
               // a SINGLE enabled composer = nothing to choose — show the name as
               // plain gold text, exactly like a lone artist under INSPIRED BY
               if(_cs.length===1){ return (
@@ -14376,12 +14558,13 @@ Hard requirements:
                   const _cIx = (crOn && (composerStage.length || _crAll)) ? [imgComposer,...composerStage].indexOf(c.k) : -1;
                   const _cPinned = _crAll && crPins.includes(c.k);
                   const _cGuest = _crAll && _cIx>=0 && !_cPinned;
-                  const sel = _crAll ? _cPinned : (imgComposer===c.k || _cIx>0);
+                  const _inSigC = _isgK.includes(c.k);
+                  const sel = _crAll ? _cPinned : (imgComposer===c.k || _cIx>0 || _inSigC);
                   const locked=working;
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; if(crOn && composerDice){ _crPinTap(c.k); return; } if(crOn){ _crTap(c.k); return; } _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
+                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked)return; if(_inSigC && composerIsLocked(c.k)){ setPaywallReason('settings'); return; } if(crOn && composerDice){ _crPinTap(c.k); return; } if(crOn){ _crTap(c.k); return; } _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
+                      style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:locked?'default':'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:locked?.5:1,...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
                   );
                 })}
               </div>
@@ -14392,9 +14575,15 @@ Hard requirements:
                   <span>{_ensT(crPins.length===0 ? 'cPinNone' : crPins.length>=STAGE_MAX ? 'cPinFull' : 'cPinHint').replace('{next}', t('next'))}</span>
                 </div>
               )}
+              {/* Signature info row — the picture's ✦ is on (its members are lit and marked above) */}
+              {imgSigActive && imgSig && (
+                <div className="pf-sig-info" style={{textAlign:'center',marginTop:8,marginBottom:2,padding:'0 6px',fontSize:(.56*effScale)+'rem',letterSpacing:'.04em',color:'rgba(201,168,76,.8)',lineHeight:1.6}}>
+                  <div style={{fontWeight:600,color:'rgba(226,196,119,1)',letterSpacing:'.16em',textTransform:'uppercase',fontSize:'.82em'}}>✦ {_sigT('label')}{imgSig.keys.length>1 ? ' · '+_ensT('cr') : ''}</div>
+                </div>
+              )}
             </>)}
             {!imgComposer && (<>
-            <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase'}}>{t('dirLabel')}</div>
+            <div style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',...(imgSig?{minHeight:24,display:'flex',alignItems:'center'}:{})}}>{t('dirLabel')}{imgSig && _isigBtn('right')}</div>
               <div style={isDesktop?{display:'flex',flexDirection:'column',gap:6}:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                 {['lr','vert','spiralIn','spiralOut'].map(d=>{
                   const sel = imgDir===d;
@@ -14431,7 +14620,8 @@ Hard requirements:
               </div>
             )}
             {!cockpitEdit && _modeBtn(_artMode, _cycleArt, true)}
-            {!cockpitEdit && ensembleActive && !sigActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
+            {/* Ensemble stays under ✦ too (lit when the signature is a fusion): another painter, or one taken off, and ✦ gives way to the Ensemble */}
+            {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && viewMode!=='image' && (
               <button onClick={_toggleSig} disabled={!chords.length} className="pf-sig" title={_sigT('tip')} aria-label={_sigT('label')} aria-pressed={sigActive} style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:chords.length?'pointer':'default',opacity:chords.length?1:0.35,whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s, opacity .18s',background:sigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(sigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:sigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:sigActive?700:500}}>✦ {_sigT('label')}</button>
@@ -14977,7 +15167,7 @@ Hard requirements:
             )}
             {!immersive && basicMode && liteImageMode && (
               <span key={'inspc-'+(imgComposer||'scan')+(composerStage.length?'+'+composerStage.join('+'):'')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                {(imgComposer && composerStage.length) ? (<>{_fsNames('comp',20,14,6,true)}</>)
+                {imgSigActive && imgComposer && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{(imgComposer && composerStage.length) ? (<>{_fsNames('comp',20,14,6,true)}</>)
                   : imgComposer && COMPOSER_INSPIRED[imgComposer]
                   ? (<>{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span> {COMPOSER_INSPIRED[imgComposer]}</>)
                   : 'Scan'}
@@ -15178,7 +15368,7 @@ Hard requirements:
                       : _fKey === 'mosaic' ? t(basicMode ? 'liteMosaicStyle' : 'mosaicStyle')
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
-        const _sigF = sigActive && !_isImgFlash;
+        const _sigF = _isImgFlash ? (imgSigActive && !!imgComposer) : sigActive;
         const _ensF = _isImgFlash ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k) : null)
                                   : (painterStage.length && style!==null ? _jamStage().map(_painterLabel) : null);
         const _fsK = _isImgFlash ? 'comp' : 'art';
@@ -15193,7 +15383,7 @@ Hard requirements:
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
               {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” — or ✦ SIGNATURE */}
-              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')+(_ensF?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
+              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')+((_ensF && !_isImgFlash)?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
               <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
               {_fsV && !_fsTap && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
@@ -15507,10 +15697,10 @@ Hard requirements:
           </div>
         )}
         {/* the first Signature: what the word means — the same overlay as the opening Mosaic's line */}
-        {sigIntroShow && sigActive && (
+        {((sigIntroShow && sigActive) || (isigIntroShow && imgSigActive)) && (
           <div ref={_ovRef} role="status" style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
             <div style={{fontSize:(.64*effScale)+'rem',letterSpacing:'.3em',fontWeight:600,textTransform:'uppercase',color:'rgba(226,196,119,1)',textShadow:'0 1px 10px rgba(0,0,0,.85)'}}>✦ {_sigT('label')}</div>
-            <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_sigT('intro')}</div>
+            <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_sigT((isigIntroShow && imgSigActive) ? 'introImg' : 'intro')}</div>
           </div>
         )}
         {demoReelOn && demoPrintBeat && (
