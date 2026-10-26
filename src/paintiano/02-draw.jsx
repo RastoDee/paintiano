@@ -13688,12 +13688,15 @@ function _fuVariantOf(k, slot, ph){
 // The style of a painting: its own address first (a Favorite: __PAINT_FU_PHS.fs;
 // a poster QR: __PAINT_SIG_PHS.fs — always the resolved A or E), else the Setup
 // switch (__PAINT_FU_STYLE: 'A' | 'E' | 'AE').
+// the coin of an address: Take turns or New painter, the same for the same painters and variants
+function _fuCoin(j, phs){ const s=j+'|'+(phs||[]).join(','); let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return ((h>>>7)&1) ? 'E' : 'A'; }
 function _fuStyleOf(ks, phs){
   const G=(typeof globalThis!=='undefined') ? globalThis : {}; const j=(ks||[]).join();
   const ur=G.__PAINT_FU_PHS; if(ur && ur.keys && ur.fs && ur.keys.join()===j) return ur.fs==='E' ? 'E' : 'A';
-  const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.fs && ov.keys.join()===j) return ov.fs==='E' ? 'E' : 'A';
+  // a Signature is the same for everyone: its pinned style (the built-in pieces, a poster QR), else the coin — never the tier
+  const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.keys.join()===j){ if(ov.fs) return ov.fs==='E' ? 'E' : 'A'; if(ov.sig) return _fuCoin(j, phs); }
   const g=G.__PAINT_FU_STYLE;
-  if(g==='AE'){ const s=j+'|'+(phs||[]).join(','); let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return ((h>>>7)&1) ? 'E' : 'A'; }
+  if(g==='AE') return _fuCoin(j, phs);
   return g==='E' ? 'E' : 'A';
 }
 // how a painter's hand paints a form — by the artist where the genes alone would mislead

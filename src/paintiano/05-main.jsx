@@ -132,10 +132,17 @@ const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 // The built-in pieces are the shop window — the first painting a new user ever
 // sees. Their Signatures are hung by hand (still the same for everyone); every
 // other piece keeps the computed one. Roles follow SIG_ROLES, or the part a painter plays in that very painting (one role per member).
+// fs pins the Fusion style (A take turns · E new painter), so the shop window looks the same on every tier.
+// what the draw module needs to paint a Signature the same for everyone: its members, the pinned variants and style of a hung one;
+// sig:true makes an unpinned one take the coin of its address instead of the tier's fusion style (Free would otherwise always take turns)
+function _sigPin(sg){
+  if(!sg || !sg.keys || !sg.keys.length) return null;
+  return { keys:sg.keys.slice(), ...(sg.phs?{phs:sg.phs.slice()}:{}), ...(sg.fs?{fs:sg.fs}:{}), sig:true };
+}
 const SIG_CURATED = {
-  [SAMPLE_MIDI_NAME]:   {keys:['bloom','monet'],   roles:['field','gesture'],  ph:0, phs:[0,5], mode:'harmony'},   // Liebestraum: Sam Francis's soft clouds with Monet's Japanese-bridge touches — a pastel dream (Rasto's pick, Oct 2026)
-  [SAMPLE_MIDI_NAME_2]: {keys:['bauhaus','wave','bulge'], roles:['structure','gesture','ornament'], ph:2, phs:[2,0,3], mode:'harmony'},   // Bumble-Bee: Bauhaus's bars and targets as the rhythm, Riley's stripes as the running line, Vasarely's squares and dots as the swarm (Rasto's pick, Oct 2026)
-  [SAMPLE_MIDI_NAME_3]: {keys:['delaunay','kandinsky'], roles:['structure','gesture'], ph:0, phs:[0,0], mode:'spectral'},   // Metamorphosis One: Delaunay's discs on cream, Kandinsky's rings and lines — Spectral (Rasto's pick, Oct 2026)
+  [SAMPLE_MIDI_NAME]:   {keys:['gold','spiral'],   roles:['ornament','light'], ph:3, phs:[3,1], mode:'harmony', fs:'A'},   // Liebestraum: Klimt's gold and Hilma af Klint's spirals on a warm rust ground — the warm one of the three (Rasto's pick, Oct 2026; replaced Sam Francis × Monet)
+  [SAMPLE_MIDI_NAME_2]: {keys:['bauhaus','wave','bulge'], roles:['structure','gesture','ornament'], ph:2, phs:[2,0,3], mode:'harmony', fs:'E'},   // Bumble-Bee: Bauhaus's bars and targets as the rhythm, Riley's stripes as the running line, Vasarely's squares and dots as the swarm (Rasto's pick, Oct 2026)
+  [SAMPLE_MIDI_NAME_3]: {keys:['delaunay','kandinsky'], roles:['structure','gesture'], ph:0, phs:[0,0], mode:'spectral', fs:'A'},   // Metamorphosis One: Delaunay's discs on cream, Kandinsky's rings and lines — Spectral (Rasto's pick, Oct 2026)
 };
 
 // Image composers write a bar layer by layer — the whole left-hand figure, then
@@ -3642,7 +3649,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // The lead stays (qrArtistRef, qrVariantRef). _qrPhs() is the full pin.
   const qrStageRef = useRef(null);
   const _qrDropStage = ()=>{ if(!qrStageRef.current) return; qrStageRef.current=null;
-    try{ const sg=songSigRef.current; globalThis.__PAINT_SIG_PHS=(sg && sg.phs && sg.keys) ? {keys:sg.keys.slice(), phs:sg.phs.slice()} : null; }catch(_){} };
+    try{ const sg=songSigRef.current; globalThis.__PAINT_SIG_PHS=_sigPin(sg); }catch(_){} };
   const _qrPhs = ()=> (qrArtistRef.current && qrStageRef.current)
     ? { keys:[qrArtistRef.current].concat(qrStageRef.current.keys), phs:[qrVariantRef.current|0].concat(qrStageRef.current.vs), fs:qrStageRef.current.fs||'A' } : null;
   const litePieceRef = useRef(0);
@@ -7549,7 +7556,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
       if(_sg && title && SIG_CURATED[title]) Object.assign(_sg, SIG_CURATED[title]);
-      try{ globalThis.__PAINT_SIG_PHS = _qrPhs() || ((_sg && _sg.phs && _sg.keys) ? {keys:_sg.keys.slice(), phs:_sg.phs.slice()} : null); }catch(_){}
+      try{ globalThis.__PAINT_SIG_PHS = _qrPhs() || _sigPin(_sg); }catch(_){}
       if(fuRollRef.current) _setFuRoll(null);   // a new piece opens on its own variants
       const _sgMusic = sigMusicNextRef.current; sigMusicNextRef.current=false;
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
