@@ -410,15 +410,15 @@ const SIG_I18N = {
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
 // twelve colours (the notes sounding now lit), and once, when the piece has played, a hint that Surprise brings the painters.
 const MOSAIC_INTRO_I18N = {
-  EN:{lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  SK:{lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  DE:{lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  FR:{lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  ES:{lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  PT:{lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
-  zh:{lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  zhTW:{lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  ja:{lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  EN:{painter:'The same notes – now {name} paints them.',painterSub:'Who is painting is always shown up top',lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  SK:{painter:'Tie isté tóny – teraz ich maľuje {name}.',painterSub:'Kto maľuje, uvidíš vždy hore',lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  DE:{painter:'Dieselben Töne – jetzt malt sie {name}.',painterSub:'Wer malt, steht immer oben',lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  FR:{painter:'Les mêmes notes – c’est maintenant {name} qui les peint.',painterSub:'Qui peint, c’est toujours écrit en haut',lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  ES:{painter:'Las mismas notas – ahora las pinta {name}.',painterSub:'Quién pinta, siempre lo ves arriba',lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  PT:{painter:'As mesmas notas – agora pintadas por {name}.',painterSub:'Quem pinta, vês sempre em cima',lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
+  zh:{painter:'同样的音——现在由 {name} 来画。',painterSub:'谁在画，始终显示在上方',lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  zhTW:{painter:'同樣的音——現在由 {name} 來畫。',painterSub:'誰在畫，始終顯示在上方',lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  ja:{painter:'同じ音を、いまは {name} が描く。',painterSub:'誰が描いているかは、いつも上に',lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
 };
 
 // The song's colours: how much each of the twelve tones sounds (notes per pitch class).
@@ -1604,6 +1604,8 @@ export default function Paintiano() {
     }catch(_){}
   },[]);
   const _ovPos = ovBand ? { top: ovBand.top+'px', bottom: ovBand.bottom+'px' } : { top:'26%', bottom:'6%' };
+  const [painterIntroShow, setPainterIntroShow] = useState(false);  // Lite's first painter: the same notes in a painter's hand — and who it is, up top (once)
+  const painterIntroDoneRef = useRef(false); const _piTimersRef = useRef([]);
   const [sigIntroShow, setSigIntroShow] = useState(false);          // ✦ Signature: what it is, over the canvas — the first time one plays
   const sigIntroDoneRef = useRef(false); const _siTimersRef = useRef([]);
   const [mosaicIntroShow, setMosaicIntroShow] = useState(false);   // the line + the colour key over the canvas (first 3 times)
@@ -10305,18 +10307,32 @@ Hard requirements:
     _miTimersRef.current.push(setTimeout(()=>{ setMosaicIntroShow(false); }, 1500+5600));
   },[_miKind, playing]);
   useEffect(()=>()=>{ _miTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
+  const _hasPaint = chords.length>0 && disp>0;   // something painted on the canvas (playing, or a finished painting a Surprise repainted)
   // the first Signature ever (Lite or Advanced): one line over the canvas says what the word means — like the opening Mosaic's line
   useEffect(()=>{
     const clear=()=>{ _siTimersRef.current.forEach(t=>clearTimeout(t)); _siTimersRef.current=[]; };
     if(!sigActive || viewMode==='image'){ clear(); setSigIntroShow(false); return; }
-    if(!playing || sigIntroDoneRef.current) return;
+    if(!_hasPaint || sigIntroDoneRef.current) return;
     sigIntroDoneRef.current = true;
     let n=0; try{ n=(+localStorage.getItem('paintiano_sig_intro_n'))||0; }catch(_){}
     if(n>=1) return;
     _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(true); try{ localStorage.setItem('paintiano_sig_intro_n', String(n+1)); }catch(_){} }, 1500));
     _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(false); }, 1500+5600));
-  },[sigActive, playing, viewMode]);
+  },[sigActive, _hasPaint, viewMode]);
   useEffect(()=>()=>{ _siTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
+  // Lite's first painter (Kandinsky on the very first song): one line over the canvas, and the INSPIRED BY label up top lights up
+  const _piOn = !!(basicMode && !liteImageMode && !immersive && style && style!=='notes' && style!=='mosaic' && !painterStage.length && !sigActive && STYLE_INSPIRED[style]);
+  useEffect(()=>{
+    const clear=()=>{ _piTimersRef.current.forEach(t=>clearTimeout(t)); _piTimersRef.current=[]; };
+    if(!_piOn){ clear(); setPainterIntroShow(false); return; }
+    if(!_hasPaint || painterIntroDoneRef.current) return;
+    painterIntroDoneRef.current = true;
+    let n=0; try{ n=(+localStorage.getItem('paintiano_painter_intro_n'))||0; }catch(_){}
+    if(n>=1) return;
+    _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(true); try{ localStorage.setItem('paintiano_painter_intro_n', String(n+1)); }catch(_){} }, 1200));
+    _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(false); }, 1200+5600));
+  },[_piOn, _hasPaint]);
+  useEffect(()=>()=>{ _piTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
   useEffect(()=>{
     if(!_miOn){ setSurpriseHint(false); return; }
     if(!(chords.length>0 && !playing && !holdPaused && disp>=chords.length)) return;
@@ -12975,7 +12991,7 @@ Hard requirements:
   };
 
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
@@ -14920,7 +14936,7 @@ Hard requirements:
               <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{_fsNames('art',20,14,6,true)}</span>
             )}
             {!immersive && basicMode && !liteImageMode && !(painterStage.length>0 && style!==null) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-              <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
+              <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',...(painterIntroShow?{padding:'2px 8px',borderRadius:12,border:'1px solid rgba(226,196,119,.85)',color:'#f4e7c6',animation:'pfStagePulse 1.4s ease-in-out infinite'}:{})}}>
                 {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
@@ -15436,6 +15452,13 @@ Hard requirements:
               </div>
             </div>);
         })()}
+        {/* Lite's first painter: the same notes in a painter's hand — who it is stands up top (the label pulses meanwhile) */}
+        {painterIntroShow && style && STYLE_INSPIRED[style] && (
+          <div ref={_ovRef} role="status" style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
+            <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_miT('painter').replace('{name}', STYLE_INSPIRED[style])}</div>
+            <div style={{fontSize:(.7*effScale)+'rem',letterSpacing:'.04em',color:'rgba(226,196,119,1)',textShadow:'0 1px 10px rgba(0,0,0,.85)'}}>↑ {_miT('painterSub')}</div>
+          </div>
+        )}
         {/* the first Signature: what the word means — the same overlay as the opening Mosaic's line */}
         {sigIntroShow && sigActive && (
           <div ref={_ovRef} role="status" style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
