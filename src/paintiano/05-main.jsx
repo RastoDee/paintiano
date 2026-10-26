@@ -387,17 +387,17 @@ function computeSongSignature(events, opts){
     return {v:SIG_V, keys, roles, ph, mode, z, f, seed};
   }catch(_){ return null; }
 }
-// label = the term in Advanced; lite = the same thing in plain words for Lite, where a new user meets it first
+// intro = the line over the canvas the first time a Signature plays (what the word means)
 const SIG_I18N = {
-  EN:{lite:'The song’s painting',label:'Signature',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'}},
-  SK:{lite:'Obraz skladby',label:'Signatúra',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'}},
-  DE:{lite:'Das Bild des Stücks',label:'Signatur',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'}},
-  FR:{lite:'Le tableau du morceau',label:'Signature',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'}},
-  ES:{lite:'El cuadro de la canción',label:'Firma',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'}},
-  PT:{lite:'O quadro da música',label:'Assinatura',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'}},
-  zh:{lite:'这首曲子的画',label:'签名',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'}},
-  zhTW:{lite:'這首曲子的畫',label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'}},
-  ja:{lite:'この曲の絵',label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
+  EN:{label:'Signature',intro:'The one painting this song chose for itself — the same for everyone.',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'}},
+  SK:{label:'Signatúra',intro:'Jediný obraz, ktorý si táto skladba vybrala sama — u každého rovnaký.',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'}},
+  DE:{label:'Signatur',intro:'Das eine Bild, das sich dieses Stück selbst ausgesucht hat — für alle gleich.',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'}},
+  FR:{label:'Signature',intro:'Le seul tableau que ce morceau a choisi lui-même — le même pour tous.',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'}},
+  ES:{label:'Firma',intro:'El único cuadro que esta canción eligió por sí misma — el mismo para todos.',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'}},
+  PT:{label:'Assinatura',intro:'O único quadro que esta música escolheu para si — igual para todos.',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'}},
+  zh:{label:'签名',intro:'这首曲子为自己选出的唯一一幅画——人人看到的都一样。',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'}},
+  zhTW:{label:'簽名',intro:'這首曲子為自己選出的唯一一幅畫——人人看到的都一樣。',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'}},
+  ja:{label:'署名',intro:'この曲が自分で選んだ、ただ一枚の絵——誰にとっても同じ。',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
 };
 
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
@@ -1584,6 +1584,8 @@ export default function Paintiano() {
   // own colour. Set by litePlayStart, read once by liteOpenRef; liteIntroPiece stays true while that piece is on the canvas.
   const _liteIntroRef = useRef(false);
   const [liteIntroPiece, setLiteIntroPiece] = useState(false);
+  const [sigIntroShow, setSigIntroShow] = useState(false);          // ✦ Signature: what it is, over the canvas — the first time one plays
+  const sigIntroDoneRef = useRef(false); const _siTimersRef = useRef([]);
   const [mosaicIntroShow, setMosaicIntroShow] = useState(false);   // the line + the colour key over the canvas (first 3 times)
   const [surpriseHint, setSurpriseHint] = useState(false);         // "same notes – a different hand" over Surprise (once)
   const mosaicIntroDoneRef = useRef(false);
@@ -2844,8 +2846,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const [sigActive, setSigActive] = useState(false);
   useEffect(()=>{ sigActiveRef.current = sigActive; },[sigActive]);
   const _sigT = (k)=>{ const d=SIG_I18N[lang]||SIG_I18N.EN; return d[k]!==undefined ? d[k] : SIG_I18N.EN[k]; };
-  // the name on screen: 'Signature' in Advanced, 'The song’s painting' in Lite (basicMode is declared further down; called only at render)
-  const _sigName = ()=> _sigT(basicMode ? 'lite' : 'label');
   // What was on screen before ✦ — tapping ✦ again (while lit) returns to it.
   const sigPrevRef = useRef(null);
   // A Fusion's rolled address. Next on a Fusion gives EVERY member a variant of its
@@ -5090,7 +5090,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       originalImgUrl: null, imgMoodThumb: null, currentMood: fv.mood || '',
       _takeInfo: _takeInfoM, _takeGrid: ()=> lay.pg, _takeFrame: ()=>({CW:lay.CW, CH:lay.CH}), _takePainter: ()=>true, _takeSkip: ()=>!!fv.skip,
       cap: fv.cap || null,
-      insp: insp0 ? ((fv.sig ? '✦ '+_sigName()+' · ' : '') + insp0) : null,
+      insp: insp0 ? ((fv.sig ? '✦ '+_sigT('label')+' · ' : '') + insp0) : null,
       caption: _favCaption(fv),
       enter: ()=>{
         if(keep) return;
@@ -5127,7 +5127,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     await exportImage('story', true, audioBlob, audioName, false);
   };
   const _favTitle = (f)=> f.src==='compose' ? t('compose').replace(/[^\p{L} ]/gu,'').trim() : f.src==='mic' ? t('mic').replace(/[^\p{L} ]/gu,'').trim() : (f.title||'');
-  const _favWho = (f)=> (f.sig ? '✦ '+_sigName()+' · ' : '') + (f.keys ? f.keys.map(_painterLabel).join(' × ') : _painterLabel(f.style));
+  const _favWho = (f)=> (f.sig ? '✦ '+_sigT('label')+' · ' : '') + (f.keys ? f.keys.map(_painterLabel).join(' × ') : _painterLabel(f.style));
   const _favWhen = (f)=>{
     const d=new Date(f.at||0), now=new Date(), day=(x)=>Math.floor((x.getTime()-x.getTimezoneOffset()*60000)/86400000), dd=day(now)-day(d);
     if(dd<=0) return _favT('today');
@@ -9295,7 +9295,9 @@ Hard requirements:
             }
           }
           const vividPct = considered ? (vivid/considered)*100 : 0;
-          const autoMode = vividPct < 5 ? 'bw' : 'kontra';   // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default
+          // <5% colour ⇒ monochrome reading; colourful ⇒ Kontra (painter's reading) as the image default — except in Lite, which has no
+          // palette control and promises one wheel both ways: a picture is read with the same palette the music painted with (Harmony by default)
+          const autoMode = vividPct < 5 ? 'bw' : (basicModeRef.current ? ((mode==='bw'||mode==='custom') ? 'harmony' : mode) : 'kontra');
           // B/W · ACCENT: a crescent moon is 0.1% of the pixels, so the image
           // rightly reads as monochrome — yet the fragment deserves to be seen
           // and heard. If the B/W image still contains a COHERENT colour
@@ -10283,6 +10285,18 @@ Hard requirements:
     _miTimersRef.current.push(setTimeout(()=>{ setMosaicIntroShow(false); }, 1500+5600));
   },[_miKind, playing]);
   useEffect(()=>()=>{ _miTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
+  // the first Signature ever (Lite or Advanced): one line over the canvas says what the word means — like the opening Mosaic's line
+  useEffect(()=>{
+    const clear=()=>{ _siTimersRef.current.forEach(t=>clearTimeout(t)); _siTimersRef.current=[]; };
+    if(!sigActive || viewMode==='image'){ clear(); setSigIntroShow(false); return; }
+    if(!playing || sigIntroDoneRef.current) return;
+    sigIntroDoneRef.current = true;
+    let n=0; try{ n=(+localStorage.getItem('paintiano_sig_intro_n'))||0; }catch(_){}
+    if(n>=1) return;
+    _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(true); try{ localStorage.setItem('paintiano_sig_intro_n', String(n+1)); }catch(_){} }, 1500));
+    _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(false); }, 1500+5600));
+  },[sigActive, playing, viewMode]);
+  useEffect(()=>()=>{ _siTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
   useEffect(()=>{
     if(!_miOn){ setSurpriseHint(false); return; }
     if(!(chords.length>0 && !playing && !holdPaused && disp>=chords.length)) return;
@@ -12340,7 +12354,7 @@ Hard requirements:
           const _sp=_tt.split(/\s+[\u2014\u2013-]\s+/); const _title=_sp[0]||''; const _comp=_sp.length>1 ? _sp.slice(1).join(' \u2013 ') : '';
           const _insp=(X.insp!==undefined) ? X.insp : (()=>{ const k=effectiveStyle || (shuffleStyle && shuffleStyle!=='mosaic' ? shuffleStyle : 'mosaic'); const bare=(k==='mosaic'||k==='notes'||k==='raffel');
             const l0=(painterStage.length && !favView) ? _stageNames('art') : (STYLE_INSPIRED[k] ? (bare ? STYLE_INSPIRED[k] : `inspired by ${STYLE_INSPIRED[k]}`) : '');
-            return (l0 && sigActiveRef.current) ? ('\u2726 '+_sigT(basicModeRef.current?'lite':'label')+' \u00b7 '+l0) : l0; })();
+            return (l0 && sigActiveRef.current) ? ('\u2726 '+_sigT('label')+' \u00b7 '+l0) : l0; })();
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           outCanvas=_frameExport(hi, sizeMode, {title:_title, composer:_comp, insp:_insp, wts:_pcWeights(chords), gc, names:_miT('names')});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
@@ -12431,7 +12445,7 @@ Hard requirements:
           : _inspKey
           ? (_inspBare ? STYLE_INSPIRED[_inspKey] : `inspired by ${STYLE_INSPIRED[_inspKey]}`)
           : null;
-        const _inspLabel = (X.insp!==undefined) ? X.insp : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT(basicModeRef.current?'lite':'label')+' · '+_inspLabel0) : _inspLabel0);
+        const _inspLabel = (X.insp!==undefined) ? X.insp : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
         const _stW = chords.length ? _pcWeights(chords) : null;   // the song's colours (between the painting and the wordmark)
@@ -14878,11 +14892,11 @@ Hard requirements:
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}{_mmChip}</span>
             {!immersive && basicMode && !liteImageMode && painterStage.length>0 && style!==null && (
-              <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('lite')} · </span>)}{_fsNames('art',20,14,6,true)}</span>
+              <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{_fsNames('art',20,14,6,true)}</span>
             )}
             {!immersive && basicMode && !liteImageMode && !(painterStage.length>0 && style!==null) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('lite')} · </span>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
+                {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
             {!immersive && basicMode && liteImageMode && (
@@ -15003,7 +15017,7 @@ Hard requirements:
               <span style={{fontStyle:'italic'}}>{(painterStage.length>0 && style!==null) ? (<>{_fsNames('art',20,14,6)}</>)
                 : (effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle]) ? (effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle]))
                 : (effectiveStyle==='notes' ? t('notesStyle') : t('mosaicStyle'))}</span>
-              {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,whiteSpace:'nowrap'}}> · ✦ {_sigName()}</span>)}
+              {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,whiteSpace:'nowrap'}}> · ✦ {_sigT('label')}</span>)}
             </div>
           )}
           </div>
@@ -15098,7 +15112,7 @@ Hard requirements:
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
               {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” — or ✦ SIGNATURE */}
-              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigName()+(_ensF?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
+              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')+(_ensF?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
               <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
               {_fsV && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
@@ -15397,6 +15411,13 @@ Hard requirements:
               </div>
             </div>);
         })()}
+        {/* the first Signature: what the word means — the same overlay as the opening Mosaic's line */}
+        {sigIntroShow && sigActive && (
+          <div role="status" style={{position:'absolute',left:0,right:0,top:'26%',bottom:'6%',zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
+            <div style={{fontSize:(.64*effScale)+'rem',letterSpacing:'.3em',fontWeight:600,textTransform:'uppercase',color:'rgba(226,196,119,1)',textShadow:'0 1px 10px rgba(0,0,0,.85)'}}>✦ {_sigT('label')}</div>
+            <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_sigT('intro')}</div>
+          </div>
+        )}
         {demoReelOn && demoPrintBeat && (
           /* Golden frame around the canvas — print-beat flourish. Stays here
              (not in the fullscreen overlay) because it visually wraps the
