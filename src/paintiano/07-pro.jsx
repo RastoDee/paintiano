@@ -811,8 +811,8 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               const credits3 = tr('tier3Credits', '1 try per mode');
               const rows = [
                 [tr('tierRowArtists', 'Artists'),       '9',     '24',     '24',  null],
-                [tr('tierRowComposers', 'Composers'),   '2',     '12',     '12',  null],
-                [tr('tierRowDaily', 'Artist of the day'), yes,   no,       no,    '✦'],
+                [tr('tierRowComposers', 'Composers'),   '3',     '15',     '15',  null],
+                [tr('tierRowDaily', 'Artist & composer of the day'), yes,   no,       no,    '✦'],
                 [tr('tierRowTypes', 'Paint types'),     '2',     allWord,  allWord, null],
                 [tr('tierRowSig', 'Signature'),         yes,     yes,      yes,   null],
                 [tr('tierRowFusion', 'Fusion & Jam session'), no, yes,     yes,   null],
