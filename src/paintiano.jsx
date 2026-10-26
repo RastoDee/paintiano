@@ -22799,6 +22799,73 @@ const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, art
   );
 });
 
+// GUIDE · the long text made readable: "◆" cuts it into sections — a short name before " — " or ":" becomes the
+// section's label — each section a card, each sentence its own line (a section without a label opens on its first
+// sentence in bold). Button names in CAPITALS and quoted captions stand out; 🔀 and ◎ stay icons (pfIcons).
+// (No lookbehind in these patterns: Safari before 16.4 cannot even parse one, and the whole app would not start.)
+// an initial: a single capital right before the dot, at the start or after a space / bracket (J. S. Bach)
+const _gInitial = (s, at)=> at>0 && /\p{Lu}/u.test(s.charAt(at-1)) && (at===1 || /[\s(]/.test(s.charAt(at-2)));
+// a Latin sentence ends where the next one starts with no small letter
+const _gBreaks = (s)=>{ const out=[]; s.replace(/([.!?…])\s+(?=[^\s\p{Ll}])/gu, (m, p, at)=>{ if(!_gInitial(s, at)) out.push(at+1); return m; }); return out; };
+const _gSentences = (s)=>{
+  s=String(s||'').trim(); const cuts=_gBreaks(s); let t='', a=0;
+  for(const c of cuts){ t+=s.slice(a,c)+'\u0001'; a=c; } t+=s.slice(a);
+  return t.replace(/([。！？]+[」』”）)]*)(?=\S)/gu, '$1\u0001')    // CJK: after 。！？ (and a closing quote)
+    .split('\u0001').map(x=>x.trim()).filter(Boolean);
+};
+const _gRich = (s, k0)=>{
+  const out=[]; let k=0;
+  String(s).split(/(„[^“”„]+[“”]|“[^”]+”|«[^»]+»|"[^"]+"|「[^」]+」|『[^』]+』)/u).forEach((q)=>{
+    if(!q) return;
+    if(/^[„“«"「『]/.test(q)){ out.push(<span key={k0+'q'+(k++)} style={{fontStyle:'italic',color:'rgba(247,240,224,.96)'}}>{pfIcons(q)}</span>); return; }
+    // a word in CAPITALS (two letters or more, not glued to another letter or digit; ENSEMBLE × ALL stays one)
+    const re=/(^|[^\p{L}\d])(\p{Lu}[\p{Lu}\d/+&-]*\p{Lu}(?:\s(?:×\s)?\p{Lu}[\p{Lu}\d/+&-]*\p{Lu})*)(?![\p{L}\d])/gu;
+    let a=0, m;
+    while((m=re.exec(q))){
+      const st=m.index+m[1].length;
+      if(st>a) out.push(<Fragment key={k0+'t'+(k++)}>{pfIcons(q.slice(a,st))}</Fragment>);
+      out.push(<span key={k0+'c'+(k++)} style={{color:PF.gold2,fontWeight:600,letterSpacing:'.03em'}}>{m[2]}</span>);
+      a=st+m[2].length; re.lastIndex=a;
+    }
+    if(a<q.length) out.push(<Fragment key={k0+'t'+(k++)}>{pfIcons(q.slice(a))}</Fragment>);
+  });
+  return out;
+};
+const GuideMore = ({text, readScale})=>{
+  const blocks = String(text||'').split(/\s*◆\s*/).map((p,i)=>{
+    p=p.trim(); if(!p) return null;
+    let head=null, body=p;
+    if(i>0){
+      const m=p.match(/^(.{1,56}?)(\s[—–]\s|——|[:：]\s*)/u);
+      if(m && !/[。！？]/u.test(m[1]) && !_gBreaks(m[1]+' X').filter(c=>c<m[1].length).length){ head=m[1].trim(); body=p.slice(m[0].length); body=body.charAt(0).toLocaleUpperCase()+body.slice(1); }
+    }
+    return { head, lines:_gSentences(body), lead:i===0 };
+  }).filter(b=>b && b.lines.length);
+  if(blocks.length===1) blocks[0].lead=false;   // a text without sections is one card
+  return (
+    <div className="pf-guide-more" style={{width:'100%',maxWidth:480,display:'flex',flexDirection:'column',gap:10,textAlign:'left'}}>
+      {blocks.map((b,bi)=>(
+        <div key={bi} className="pf-guide-sec" style={{animationDelay:(bi*55)+'ms',padding:b.lead?'2px 2px 2px 13px':'12px 14px 13px',borderRadius:b.lead?0:14,background:b.lead?'transparent':'rgba(255,255,255,.035)',border:b.lead?'none':'1px solid rgba(201,168,76,.16)',borderLeft:b.lead?'2px solid rgba(214,178,92,.6)':undefined}}>
+          {b.head && (
+            <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,fontSize:(.6*readScale)+'rem',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:PF.gold2}}>
+              <span aria-hidden="true" style={{fontSize:'.8em',opacity:.85}}>◆</span><span>{pfIcons(b.head)}</span>
+            </div>
+          )}
+          <div style={{display:'flex',flexDirection:'column',gap:b.lead?6:7}}>
+            {b.lines.map((ln,li)=>(
+              <div key={li} style={{position:'relative',paddingLeft:b.lead?0:14,fontSize:((b.lead?.86:.8)*readScale)+'rem',lineHeight:1.5,color:b.lead?'rgba(240,233,214,.9)':'rgba(230,222,196,.8)',...((!b.lead && !b.head && li===0)?{fontWeight:600,color:'rgba(244,236,214,.95)'}:{})}}>
+                {!b.lead && (<span aria-hidden="true" style={{position:'absolute',left:2,top:'.62em',width:5,height:5,borderRadius:'50%',background:'rgba(214,178,92,.75)'}}/>)}
+                {(()=>{ const tm=(!b.lead && (b.head || li>0)) ? ln.match(/^([^.!?。！？—–:：]{1,24}?)(\s[—–]\s|——|[:：]\s?)/u) : null;
+                  return tm ? (<><span style={{fontWeight:600,color:'rgba(247,240,224,.96)'}}>{_gRich(tm[1], bi+'-'+li+'-t')}</span>{tm[2]}{_gRich(ln.slice(tm[0].length), bi+'-'+li+'-')}</>) : _gRich(ln, bi+'-'+li+'-'); })()}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // Self-contained searchable guide modal. Same memoization rationale as
 // AboutModal — without this lift, opening the guide and then leaving it open
 // during playback would reconcile its full subtree (input + filtered details
@@ -22895,6 +22962,9 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         .pf-guide-card{scroll-snap-align:start;scroll-snap-stop:always;}
         @keyframes pf-guide-card-in{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
         .pf-guide-card-inner{animation:pf-guide-card-in .4s cubic-bezier(.2,.8,.2,1) both;}
+        @keyframes pf-guide-sec-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+        .pf-guide-sec{animation:pf-guide-sec-in .35s cubic-bezier(.2,.8,.2,1) both;}
+        @media (prefers-reduced-motion: reduce){ .pf-guide-sec{animation:none;} }
       `}</style>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="paintiano-guide-title" className="pf-guide-panel" style={{position:'relative',width:'100%',maxWidth:480,height:'100%',display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit',borderLeft:'1px solid rgba(201,168,76,.08)',borderRight:'1px solid rgba(201,168,76,.08)',background:'rgba(8,6,14,0.35)'}}>
         {/* Top bar */}
@@ -22949,7 +23019,8 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
                   )}
                   {card.more && expandedId===card.id && (
                     <>
-                      <div className="pf-guide-card-inner" style={{fontSize:(.82*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.78)',fontFamily:'inherit',letterSpacing:'.01em',textAlign:'left',maxWidth:480}}>{pfIcons(card.more)}</div>
+                      {(!isConcept && !isBook) ? (<GuideMore text={card.more} readScale={readScale}/>) : (
+                      <div className="pf-guide-card-inner" style={{fontSize:(.82*readScale)+'rem',lineHeight:1.6,color:'rgba(230,222,196,.78)',fontFamily:'inherit',letterSpacing:'.01em',textAlign:'left',maxWidth:480}}>{pfIcons(card.more)}</div>)}
                       <button onClick={()=>setExpandedId(null)} style={{marginTop:2,padding:'7px 18px',background:'transparent',color:'rgba(201,168,76,.6)',border:'1px solid rgba(201,168,76,.3)',borderRadius:22,cursor:'pointer',fontFamily:'inherit',fontSize:(.58*readScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>{(t('guideLess')&&t('guideLess')!=='guideLess')?t('guideLess'):'Less'} ↑</button>
                     </>
                   )}
