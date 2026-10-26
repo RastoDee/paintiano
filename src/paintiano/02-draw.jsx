@@ -13253,6 +13253,259 @@ function composeImageHisaishi(px,nc,nr,table,colorMode){
   return evts;
 }
 
+// shared by the three below: a key (tonic + mode) with its scale kit and diatonic triads, and a theme drawn
+// from the picture's line — the stretch where the line moves most (rank 0), the next such stretch (rank 1) …
+function _cKey(tn, minor){ const sc=(minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]).map(d=>(tn+d)%12); const kit=_scaleKit(sc);
+  const tri=(r)=>{ const i=Math.max(0,sc.indexOf(kit.inScale(r))); return (minor&&i===4) ? [sc[4],(sc[4]+4)%12,sc[1]] : [sc[i],sc[(i+2)%7],sc[(i+4)%7]]; };   // the dominant stays major: the leading tone lives there only
+  return {tn, minor:!!minor, sc, kit, tri, deg:(d)=>sc[((d%7)+7)%7]}; }
+function _cTheme(D, K, n, lo, hi, rank){
+  const W=Math.max(6,Math.round(D.N*0.12)); const cand=[];
+  for(let k=0;k<=D.N-W;k++){ let s=0; for(let j=1;j<W;j++) s+=Math.abs(D.contour[k+j]-D.contour[k+j-1]); cand.push({k,s}); }
+  cand.sort((a,b)=>b.s-a.s); const picked=[]; for(const c of cand){ if(picked.every(p=>Math.abs(p.k-c.k)>=W)) picked.push(c); if(picked.length>rank) break; }
+  const k0=(picked[Math.min(rank,picked.length-1)]||{k:0}).k; const ms=[];
+  for(let i=0;i<n;i++){ const u=(k0+i*(W-1)/Math.max(1,n-1))/D.N; let m=K.kit.snap(Math.round(_dnaLine(D,u,lo,hi)));
+    if(i){ while(m-ms[i-1]>9) m-=12; while(ms[i-1]-m>9) m+=12; if(m===ms[i-1] && i>1 && ms[i-2]===m) m=K.kit.stepSc(m,ms[i-1]>=(lo+hi)/2?-1:1); } ms.push(Math.max(lo,Math.min(hi,m))); }
+  let up=0,dn=0; for(let i=1;i<n;i++){ if(ms[i]>ms[i-1]) up++; else if(ms[i]<ms[i-1]) dn++; }
+  if(!up||!dn){ const h=n>>1; for(let i=h+1;i<n;i++) ms[i]=ms[n-1-i]; }        // a line that only climbs or only falls sings as an arch
+  return ms;
+}
+// the nearest chord tone (within a fourth) to m
+function _cSafe(m, pcs){ const pc=((m%12)+12)%12; return pcs.some(p=>{ const d=Math.abs(p-pc)%12; return d===1||d===11; }) ? _cNear(m,pcs) : m; }
+function _cNear(m, pcs){ let best=m,bd=99; for(let d=-5;d<=5;d++){ const pc=(((m+d)%12)+12)%12; if(pcs.includes(pc) && Math.abs(d)<bd){ bd=Math.abs(d); best=m+d; } } return best; }
+
+// ── MOZART — sonata-allegro: an Alberti bass under everything; the first theme is the picture's line where
+// it moves most, in a period — a four-bar question that stops on the dominant, a four-bar answer that
+// closes on the tonic — the second theme the next such stretch, in the dominant; the development sends the
+// theme's head through the picture's colour fields in the minor, a scale run leads home; an appoggiatura
+// on every edge, a trill at every cadence, forte where the picture is bright, piano where it is dim.
+function composeImageMozart(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,11100,8,16); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const minor=_dnaMode(D,[false,false,false,false,true,true]);      // only a dark, cool picture turns to the minor (K. 310)
+  const K0=_cKey(tonic,minor), KB=_cKey(minor?(tonic+3)%12:(tonic+7)%12,false), KD=_cKey(minor?(tonic+7)%12:(tonic+9)%12,true);
+  const q=Math.round(60000/(100+D.energy*32));                   // ♩ 100 … 132
+  const e8=Math.round(q/2), barMs=q*4; _jamNote(barMs,4);
+  const clim=_dnaClimax(D); const rn=R(1);
+  const maxBars=Math.max(48,Math.floor(165000/barMs)); const nPer=Math.max(6,Math.floor(maxBars/8)); const totBars=nPer*8;
+  const thA=_cTheme(D,K0,8,67,84,0), thB=_cTheme(D,KB,8,64,81,1);
+  // the form, period by period
+  const form = nPer<=6 ? ['A','T','B','D','R','C'] : nPer===7 ? ['A','A2','T','B','D','R','C'] : ['A','A2','T','B','D','R','B2','C'];
+  while(form.length<nPer) form.splice(4,0,'D');
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const evts=[]; const ix={i:0}; let lastHi=null;
+  const arc=(f)=>0.86+0.26*Math.exp(-((f-clim)*(f-clim))/(2*0.2*0.2));
+  const fieldDeg=(K,sec)=>{ let fp=K.tn,fw=-1; for(let p=0;p<12;p++) if(sec.hist[p]>fw){ fw=sec.hist[p]; fp=p; } const i=K.sc.indexOf(K.kit.inScale(fp)); return (i===0||i===4||i<0) ? 5 : i; };
+  // one bar: the Alberti bass on `chords` (one or two triads), the melody notes [off(beats), dur(beats), midi, vel]
+  const bar=(bi,K,chords,mel,dyn,opt)=>{
+    opt=opt||{}; const sec=secAt(bi); const f=bi/Math.max(1,totBars-1); const u=_cU(D,f);
+    const env=arc(f)*dyn*(0.86+0.28*_dnaLight(D,u)); const t0=bi*barMs;
+    for(let k=0;k<8;k++){ const tr=chords[Math.min(chords.length-1,Math.floor(k*chords.length/8))]; const lo=48+tr[0]-(tr[0]>6?12:0);
+      const th=lo+((tr[1]-tr[0]+12)%12), fi=lo+((tr[2]-tr[0]+12)%12); const m=opt.oct ? [lo-12,lo,fi,lo][k%4] : [lo,fi,th,fi][k%4]; const pcm=((m%12)+12)%12;
+      _ev(evts,ix,[{m,v:Math.max(18,Math.round((k%4===0?44:35)*env)),durMs:Math.round(e8*1.2),bass:k%4===0}],t0+k*e8,_srcOfSec(sec,pcm),sec,pcm); }
+    for(const n of mel){ const m=n[2]; const pcm=((m%12)+12)%12; const vv=Math.max(22,Math.min(114,Math.round(n[3]*env)));
+      const ns=[{m,v:vv,durMs:Math.round(q*n[1]*0.9),mel:true}]; if(opt.oct && n[1]>=1) ns.push({m:m-12,v:Math.round(vv*0.78),durMs:Math.round(q*n[1]*0.9),mel:true});
+      _ev(evts,ix,ns,t0+Math.round(n[0]*q)+Math.round((rn()-0.5)*36),_srcOfSec(sec,pcm),sec,pcm); }
+  };
+  const vM=(sec)=>60+Math.min(12,sec.chr*0.35);
+  // a period of eight bars on theme `th` in key K: question (bars 0–3, ends on V) and answer (bars 4–7, ends on I)
+  const period=(b0,K,th,dyn,orn)=>{
+    const I=K.tri(K.tn), V=K.tri(K.deg(4)), ii=K.tri(K.deg(1));
+    const fit=(m)=>K.kit.snap(Math.max(62,Math.min(89,m)));
+    for(let pb=0;pb<8;pb++){ const bi=b0+pb; const sec=secAt(bi); const u=_cU(D,bi/Math.max(1,totBars-1)); const acc=_dnaAccent(D,u);
+      const F=K.tri(K.deg(fieldDeg(K,sec))); const d=dyn*(pb<4?1:0.86); const v=vM(sec); const mel=[];
+      const seq=(i)=>fit(K.kit.stepSc(th[i], (th[3]<th[0]||pb>=4)?-1:1));
+      if(pb===0||pb===4){ const a=fit(_cNear(th[0],I)); mel.push([0,1,a,v+4],[1,0.5,fit(th[1]),v-4],[1.5,0.5,fit(th[2]),v-6],[2,2,fit(_cNear(th[3],I)),v]);
+        if(orn && acc>0.35){ mel[0]=[0,0.5,fit(K.kit.stepSc(a,1)),v+6]; mel.splice(1,0,[0.5,0.5,a,v-2]); }   // the appoggiatura: on the beat, resolving down
+        bar(bi,K,[I],mel,d); }
+      else if(pb===1||pb===5){ const c=pb===1?V:F; const a=fit(_cNear(th[4],c)); const b=fit(th[5]), c2=fit(th[6]), e=fit(th[7]);
+        mel.push([0,0.5,a,v],[0.5,0.5,b,v-6],[1,0.5,c2,v-4],[1.5,0.5,e,v-6],[2,1,fit(_cNear(e,c)),v-2],[3,1,fit(_cSafe(K.kit.stepSc(e,-1),c)),v-8]);
+        if(orn){ const g=mel[4][2]; mel.splice(5,0,[3,0.25,fit(K.kit.stepSc(g,1)),v-10],[3.25,0.25,g,v-10],[3.5,0.25,fit(K.kit.stepSc(g,-1)),v-12]); mel[mel.length-1][0]=3.75; mel[mel.length-1][1]=0.25; }   // the turn
+        bar(bi,K,[c],mel,d); }
+      else if(pb===2){ mel.push([0,1,fit(_cNear(seq(0),F)),v+2],[1,0.5,seq(1),v-4],[1.5,0.5,seq(2),v-6],[2,2,fit(_cNear(seq(3),F)),v-2]); bar(bi,K,[F],mel,d); }
+      else if(pb===3){ const a=fit(_cNear(th[3],V)); const b=fit(K.kit.stepSc(a,-1)); mel.push([0,1,a,v],[1,1,b,v-4],[2,2,fit(_cNear(b,V)),v-2]); bar(bi,K,[ii,V],mel,d); }   // the half cadence
+      else if(pb===6){ const re=fit(_cNear(th[7],ii)); const tr=K.kit.snap(Math.max(64,Math.min(86,60+K.deg(1)+(K.deg(1)<K.tn?12:0)))); mel.push([0,1,re,v],[1,1,fit(K.kit.stepSc(re,-1)),v-4]);
+        for(let k=0;k<8;k++) mel.push([2+k/4,0.25,k%2?K.kit.stepSc(tr,1):tr,v-10-(k%2?4:0)]); mel.push([3.75+0.0,0.25,K.kit.stepSc(tr,-1),v-10]); lastHi=tr; bar(bi,K,[ii,V],mel,d); }   // the cadential trill on the second degree
+      else { const doN=K.kit.snap(60+K.tn+((lastHi||72)>72+K.tn?12:0)); mel.push([0,2.6,doN,v+2]); bar(bi,K,[I],mel,d); }   // home — and a breath
+    }
+  };
+  let b=0;
+  for(const P of form){
+    if(P==='A'){ period(b,K0,thA,1,false); b+=8; }
+    else if(P==='A2'){ period(b,K0,thA,0.82,true); b+=8; }
+    else if(P==='R'){ period(b,K0,thA,1.06,true); b+=8; }
+    else if(P==='B'){ period(b,KB,thB,0.8,false); b+=8; }
+    else if(P==='B2'){ period(b,K0,thB.map(m=>K0.kit.snap(m)),0.86,true); b+=8; }
+    else if(P==='T'){ // the transition: the theme's head sequenced up the picture's colour fields, then the dominant of the new key with a run
+      const rs=_dnaRoots(D,6,K0.kit.inScale,K0.tn); const fit=(m)=>K0.kit.snap(Math.max(62,Math.min(89,m)));
+      for(let k=0;k<6;k++){ const tr=K0.tri(rs[k]); const sh=Math.floor(k/2); const h=thA.slice(0,4).map(m=>fit(K0.kit.stepSc(m,sh))); const v=vM(secAt(b+k));
+        bar(b+k,K0,[tr],[[0,1,fit(_cNear(h[0],tr)),v+2],[1,0.5,h[1],v-4],[1.5,0.5,h[2],v-6],[2,2,fit(_cNear(h[3],tr)),v-2]],0.92+k*0.02); }
+      const VB=KB.tri(KB.deg(4)); const v=vM(secAt(b+6)); const a=fit(_cNear(thA[0],VB));
+      bar(b+6,KB,[VB],[[0,1,a,v+2],[1,1,fit(KB.kit.stepSc(a,-1)),v-4],[2,2,fit(_cNear(a,VB)),v]],1);
+      const run=[]; let m=KB.kit.snap(Math.max(60,a-14)); for(let k=0;k<16;k++){ run.push([k/4,0.3,m,v-6+k*1.2]); m=KB.kit.stepSc(m,1); } bar(b+7,KB,[VB],run,1); b+=8; }
+    else if(P==='D'){ // the development: the head in the minor, through the picture's fields; the last two bars the dominant pedal and the run home
+      const rs=_dnaRoots(D,6,KD.kit.inScale,KD.tn); const fit=(m)=>KD.kit.snap(Math.max(62,Math.min(91,m)));
+      for(let k=0;k<6;k++){ const tr=KD.tri(rs[k]); const f=(b+k)/Math.max(1,totBars-1); const oct=Math.abs(f-clim)<0.1 || _dnaAccent(D,_cU(D,f))>0.6; const v=vM(secAt(b+k))+4;
+        const h=thA.slice(0,4).map(m=>fit(KD.kit.stepSc(m,(k%2?-2:0)+(k>=4?2:0)))); const mel=[[0,1,fit(_cNear(h[0],tr)),v+4],[1,0.5,h[1],v-2],[1.5,0.5,h[2],v-4],[2,1,fit(_cNear(h[3],tr)),v],[3,0.5,fit(KD.kit.stepSc(h[3],-1)),v-6],[3.5,0.5,fit(KD.kit.stepSc(h[3],-2)),v-8]];
+        bar(b+k,KD,[tr],mel,1.02+k*0.02,{oct}); }
+      const V7=K0.tri(K0.deg(4)); const v=vM(secAt(b+6))+4; const a=fit(_cNear(thA[0],V7));
+      bar(b+6,K0,[V7],[[0,0.5,a,v+4],[0.5,0.5,K0.kit.stepSc(a,-1),v-2],[1,0.5,a,v+2],[1.5,0.5,K0.kit.stepSc(a,1),v-2],[2,2,fit(_cNear(a,V7)),v+2]],1.08,{oct:true});
+      const run=[]; let m=K0.kit.snap(Math.max(57,a-16)); for(let k=0;k<16;k++){ run.push([k/4,0.3,m,v-4+k*1.4]); m=K0.kit.stepSc(m,1); } bar(b+7,K0,[V7],run,1.1); b+=8; }
+    else { // the coda: the head once more, the cadential six-four with its trill, the run to the top, V – I – I – I
+      const I=K0.tri(K0.tn), V=K0.tri(K0.deg(4)); const fit=(m)=>K0.kit.snap(Math.max(62,Math.min(91,m))); const v=vM(secAt(b))+6;
+      bar(b,K0,[I],[[0,1,fit(_cNear(thA[0],I)),v+4],[1,0.5,fit(thA[1]),v-2],[1.5,0.5,fit(thA[2]),v-4],[2,2,fit(_cNear(thA[3],I)),v]],1.1);
+      bar(b+1,K0,[V],[[0,1,fit(_cNear(thA[4],V)),v+2],[1,0.5,fit(thA[5]),v-2],[1.5,0.5,fit(thA[6]),v-4],[2,2,fit(_cNear(thA[7],V)),v]],1.06);
+      const tr=K0.kit.snap(Math.max(64,Math.min(86,60+K0.deg(1)+(K0.deg(1)<K0.tn?12:0)))); const cad=[[0,1,fit(K0.kit.stepSc(tr,2)),v+2],[1,1,fit(K0.kit.stepSc(tr,1)),v-2]]; for(let k=0;k<8;k++) cad.push([2+k/4,0.25,k%2?K0.kit.stepSc(tr,1):tr,v-8-(k%2?4:0)]);
+      bar(b+2,K0,[I,V],cad,1.08); bar(b+3,K0,[I],[[0,2.6,K0.kit.snap(60+K0.tn+(tr>72+K0.tn?12:0)),v+4]],1.08);
+      const run=[]; let m=K0.kit.snap(60+K0.tn-(K0.tn>5?12:0)); for(let k=0;k<32;k++){ run.push([k/4,0.3,m,v-8+k*0.9]); m=K0.kit.stepSc(m,1); if(m>93){ m=K0.kit.stepSc(m,-7); } }
+      bar(b+4,K0,[I],run.slice(0,16),1.1); bar(b+5,K0,[V],run.slice(16).map(n=>[n[0]-4,n[1],n[2],n[3]]),1.12);
+      const cad2=[]; for(let k=0;k<12;k++) cad2.push([1+k/4,0.25,k%2?K0.kit.stepSc(tr,1):tr,v-6-(k%2?4:0)]); cad2.unshift([0,1,fit(K0.kit.stepSc(tr,2)),v+4]);
+      bar(b+6,K0,[I,V],cad2,1.12); bar(b+7,K0,[I],[[0,1,K0.kit.snap(72+K0.tn-(K0.tn>5?12:0)),v+6],[1,1,K0.kit.snap(67+K0.deg(4)-(K0.deg(4)>7?12:0)),v],[2,2,K0.kit.snap(72+K0.tn-(K0.tn>5?12:0)),v+6]],1.14,{oct:true}); b+=8; }
+  }
+  const tE=totBars*barMs; const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  const tT=K0.tri(tonic), tV=K0.tri(K0.deg(4));
+  const blk=(tr,v,d)=>[{m:36+tr[0]-(tr[0]>6?12:0),v,durMs:d,bass:true},{m:48+tr[0]-(tr[0]>6?12:0),v:v-6,durMs:d,bass:true},{m:60+tr[1],v:v-8,durMs:d},{m:60+tr[2],v:v-10,durMs:d},{m:72+tr[0],v:v-4,durMs:d}];
+  _ev(evts,ix,blk(tV,66,Math.round(q*0.85)),tE,scT,T,tV[0]); _ev(evts,ix,blk(tT,72,Math.round(q*0.85)),tE+q,scT,T,tonic); _ev(evts,ix,blk(tT,68,Math.round(q*0.85)),tE+2*q,scT,T,tonic); _ev(evts,ix,blk(tT,64,3600),tE+3*q,scT,T,tonic);
+  return evts;
+}
+
+// ── SCHUBERT — impromptu, a song without words: a bass octave on the first and third beat, murmuring
+// triplets between, the melody long above them — the picture's line in four-bar verses that return;
+// the key wanders to the picture's colour fields (a third away: Schubert's own step), the mode turns
+// to the minor where the picture goes dark and back to the major where it lightens; a sigh on every
+// edge, the one swell where the eye is pulled and the sudden hush after it; the stiller the picture,
+// the longer the breath between verses.
+function composeImageSchubert(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,11200,8,16); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const minorHome=_dnaMode(D,[false,false,false,true,true,true]);
+  const q=Math.round(60000/(58+D.energy*18));                    // ♩ 58 … 76
+  const t3=Math.round(q/3), barMs=q*4; _jamNote(barMs,4);
+  const clim=_dnaClimax(D); const rn=R(1);
+  const maxBars=Math.max(34,Math.floor(165000/barMs)); const nStr=Math.max(1,Math.floor((maxBars-2)/16)); const extra=(maxBars-2-nStr*16)>=8;
+  const phrases=[]; for(let s=0;s<nStr;s++) phrases.push('A','A2','B','A3'); if(extra) phrases.push('B','A3');
+  const totBars=phrases.length*4+2;
+  const K0=_cKey(tonic,minorHome);
+  // the wandering: the picture's colour fields a third away from home (the mediant step), else the flat sixth
+  const medOf=(dark)=> minorHome ? _cKey(dark?(tonic+8)%12:(tonic+3)%12,false) : (dark ? _cKey((tonic+9)%12,true) : _cKey((tonic+8)%12,false));
+  const thA=_cTheme(D,K0,8,64,81,0), thB=_cTheme(D,K0,8,69,86,1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const evts=[]; const ix={i:0}; let prevMel=null, hush=false;
+  const arc=(f)=>0.84+0.3*Math.exp(-((f-clim)*(f-clim))/(2*0.16*0.16));
+  // one bar: bass octaves on 1 and 3, the triplets rolling through the chord, the melody above (notes: [off beats, dur beats, midi, vel])
+  const bar=(bi,K,chords,mel,dyn,opt)=>{
+    opt=opt||{}; const sec=secAt(bi); const f=bi/Math.max(1,totBars-1); const u=_cU(D,f); const lt=_dnaLight(D,u);
+    const env=arc(f)*dyn*(0.86+0.26*lt); const stretch=opt.rit?1.1:1; const t0=opt.t0;
+    for(let k=0;k<4;k++){ const tr=chords[Math.min(chords.length-1,Math.floor(k*chords.length/4))]; const lo=48+tr[0];
+      const notes=[lo-12+((tr[2]-tr[0]+12)%12), lo, lo+((tr[1]-tr[0]+12)%12)].map(m=>m<48?m+12:m); const seq=k%2?[notes[2],notes[1],notes[0]]:notes;
+      if(k%2===0) _ev(evts,ix,[{m:lo-24<24?lo-12:lo-24,v:Math.max(18,Math.round(46*env)),durMs:Math.round(q*2.2*stretch),bass:true},{m:lo-12,v:Math.max(16,Math.round(40*env)),durMs:Math.round(q*2.2*stretch),bass:true}],t0+Math.round(k*q*stretch),_srcOfSec(sec,tr[0]),sec,tr[0]);
+      for(let j=0;j<3;j++){ const m=seq[j]; const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.max(14,Math.round((j===0?34:28)*env*(opt.full?1.25:1))),durMs:Math.round(t3*1.9*stretch)}],t0+Math.round((k*q+j*t3)*stretch),_srcOfSec(sec,pcm),sec,pcm);
+        if(opt.full) _ev(evts,ix,[{m:m+12,v:Math.max(14,Math.round(26*env)),durMs:Math.round(t3*1.9*stretch)}],t0+Math.round((k*q+j*t3)*stretch),_srcOfSec(sec,pcm),sec,pcm); } }
+    for(const n of mel){ const m=n[2]; const pcm=((m%12)+12)%12; const vv=Math.max(22,Math.min(112,Math.round(n[3]*env)));
+      const ns=[{m,v:vv,durMs:Math.round(q*n[1]*0.95*stretch),mel:true}]; if(opt.full) ns.push({m:m-12,v:Math.round(vv*0.8),durMs:Math.round(q*n[1]*0.95*stretch),mel:true});
+      _ev(evts,ix,ns,t0+Math.round(n[0]*q*stretch)+Math.round((rn()-0.5)*70),_srcOfSec(sec,pcm),sec,pcm); }
+    return Math.round(barMs*stretch);
+  };
+  let t=0, bi=0;
+  // the opening bar: the triplets alone
+  t+=bar(bi++,K0,[K0.tri(tonic)],[],0.9,{t0:t});
+  for(let pi=0;pi<phrases.length;pi++){
+    const P=phrases[pi]; const f0=bi/Math.max(1,totBars-1); const u0=_cU(D,f0); const dark=_dnaLight(D,u0)<0.42;
+    const Kp=(P==='B') ? medOf(dark) : _cKey(tonic,P==='A3'?minorHome:(minorHome||dark));   // the mode: dark → minor; the last verse comes home
+    const th=(P==='B'?thB:thA).map(m=>Kp.kit.snap(m));
+    const I=Kp.tri(Kp.tn), IV=Kp.tri(Kp.deg(3)), V=Kp.tri(Kp.deg(4)), vi=Kp.tri(Kp.deg(5)), ii=Kp.tri(Kp.deg(1));
+    const plan = P==='A' ? [[I],[vi],[IV],[V]] : P==='A2' ? [[I],[IV],[ii,V],[I]] : P==='B' ? [[I],[V],[vi],[IV,V]] : [[I],[IV],[ii,V],[I]];
+    const nearClim=Math.abs((bi+2)/Math.max(1,totBars-1)-clim)<0.08; const full=nearClim && !hush; const dyn=hush?0.7:(P==='B'?1.0:0.92);
+    for(let pb=0;pb<4;pb++){ const sec=secAt(bi); const u=_cU(D,bi/Math.max(1,totBars-1)); const acc=_dnaAccent(D,u); const ch=plan[pb];
+      const v=62+Math.min(14,sec.chr*0.4); const mel=[]; const a=Kp.kit.snap(Math.max(62,Math.min(88,_cNear(th[pb*2],ch[0])))), b2raw=Kp.kit.snap(Math.max(62,Math.min(88,th[pb*2+1])));
+      const b2=_cSafe(b2raw,ch[ch.length-1]); const g=rn(); const endBar=pb===3; const lastV=endBar&&(P==='A2'||P==='A3');
+      if(lastV){ const dn=Kp.kit.snap(Math.max(60,Math.min(84,60+Kp.tn+((a>72+Kp.tn)?12:0)))); mel.push([0,1,a,v],[1,1,Kp.kit.stepSc(dn,1),v-4],[2,2,dn,v-2]); if(P==='A3'&&pi===phrases.length-1) mel[2][1]=1.8; }
+      else if(g<0.4) mel.push([0,2,a,v],[2,2,b2,v-4]);
+      else if(g<0.7) mel.push([0,1.5,a,v],[1.5,0.5,Kp.kit.stepSc(a,a>b2?-1:1),v-8],[2,2,b2,v-3]);
+      else mel.push([0,1,a,v],[1,1,Kp.kit.stepSc(a,a>b2?-1:1),v-6],[2,2,b2,v-2]);
+      if(acc>0.5 && !lastV){ const s=mel[0][2]; mel[0]=[0,0.5,Kp.kit.stepSc(s,1),v+4]; mel.splice(1,0,[0.5,mel[0][1]===0.5?0.5:1,s,v-4]); if(mel[1][0]+mel[1][1]>mel[2][0]) mel[1][1]=mel[2][0]-mel[1][0]; }   // the sigh on an edge
+      if(endBar && !lastV) mel[mel.length-1][1]=Math.max(1,mel[mel.length-1][1]-0.5-(1-D.texture)*0.5);   // the breath before the next verse
+      t+=bar(bi++,Kp,ch,mel,dyn,{t0:t,full,rit:endBar&&(P==='A3'||P==='B')});
+      prevMel=mel.length?mel[mel.length-1][2]:prevMel; }
+    hush=full;                                                    // the hush after the swell
+  }
+  // the close: the plagal, in the major where the picture allows, long and soft
+  const KE=_cKey(tonic,minorHome && D.lightness<0.38); const IV=KE.tri(KE.deg(3)), I=KE.tri(tonic);
+  const hi=KE.kit.snap(72+tonic-(tonic>5?12:0));
+  t+=bar(bi++,KE,[IV],[[0,3.5,KE.kit.snap(_cNear(hi,IV)),54]],0.72,{t0:t,rit:true});
+  const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+  _ev(evts,ix,[{m:24+tonic,v:40,durMs:7000,bass:true},{m:36+tonic,v:36,durMs:7000,bass:true},{m:48+I[1]+(I[1]<tonic?12:0),v:30,durMs:7000},{m:48+I[2]+(I[2]<tonic?12:0),v:28,durMs:7000},{m:hi,v:40,durMs:7000,mel:true}],t,scT,T,tonic);
+  return evts;
+}
+
+// ── TCHAIKOVSKY — barcarolle (The Seasons): the rocking 6/8 of the left hand on the picture's colour
+// fields, a broad singing melody that is the picture's line, its answer echoed an octave lower, the
+// descending scale into every cadence; the middle section turns to the major where the picture is
+// brightest and runs in broken chords; the return sings in sixths, the climax where the eye is
+// pulled; the coda rocks away under a high bell.
+function composeImageTchaikovsky(px,nc,nr,table,colorMode){
+  const A=_cAnalyse(px,nc,nr,table,colorMode,11300,8,16); if(!A.secs) return A.base;
+  const {base,secs,tonic,gl,gc2,R,D}=A;
+  const minor=_dnaMode(D,[false,false,true,true,true,true]);        // minor by nature
+  const K0=_cKey(tonic,minor), KB=_cKey(minor?(tonic+3)%12:(tonic+9)%12,!minor);   // the middle: the relative key, the other mode
+  const e8=Math.round(372-D.energy*84);                          // ♪ 288 … 372
+  const barMs=e8*6; _jamNote(barMs,2);
+  const clim=_dnaClimax(D); const rn=R(1);
+  const maxBars=Math.max(40,Math.floor(165000/barMs)); const nPer=Math.max(5,Math.floor(maxBars/8));
+  const form = nPer<=5 ? ['A','A2','B','R','C'] : ['A','A2','B','B2','R','C']; while(form.length<nPer) form.splice(form.length-2,0,form.length%2?'B2':'R');
+  const totBars=nPer*8;
+  const thA=_cTheme(D,K0,8,64,81,0), thB=_cTheme(D,KB,8,67,84,1);
+  const secAt=(bar)=>secs[Math.min(secs.length-1,Math.floor(bar/totBars*secs.length))];
+  const evts=[]; const ix={i:0};
+  const arc=(f)=>0.82+0.34*Math.exp(-((f-clim)*(f-clim))/(2*0.18*0.18));
+  // one bar: the rocking left hand (bass · chord · chord · fifth · chord · chord) or, animato, broken chords in eighths; the melody [off eighths, dur eighths, midi, vel]
+  const bar=(bi,K,tr,mel,dyn,opt)=>{
+    opt=opt||{}; const sec=secAt(bi); const f=bi/Math.max(1,totBars-1); const u=_cU(D,f);
+    const env=arc(f)*dyn*(0.86+0.26*_dnaLight(D,u)); const stretch=opt.rit?1.12:1; const t0=opt.t0; const sc=_srcOfSec(sec,tr[0]);
+    const lo=36+tr[0]-(tr[0]>6?12:0); const fi=lo+((tr[2]-tr[0]+12)%12); const ch=[48+tr[0]-(tr[0]>6?12:0)]; ch.push(ch[0]+((tr[1]-tr[0]+12)%12), ch[0]+((tr[2]-tr[0]+12)%12));
+    if(opt.anim){ const seq=[lo,fi,ch[0],ch[1],ch[2],ch[1]]; for(let k=0;k<6;k++){ const m=seq[k]; const pcm=((m%12)+12)%12; _ev(evts,ix,[{m,v:Math.max(16,Math.round((k===0?46:34-k)*env)),durMs:Math.round(e8*1.6*stretch),bass:k===0}],t0+Math.round(k*e8*stretch),_srcOfSec(sec,pcm),sec,pcm); } }
+    else { _ev(evts,ix,[{m:lo-12<21?lo:lo-12,v:Math.max(18,Math.round(48*env)),durMs:Math.round(e8*2.8*stretch),bass:true}],t0,sc,sec,tr[0]);
+      _ev(evts,ix,[{m:fi-12<24?fi:fi-12,v:Math.max(16,Math.round(42*env)),durMs:Math.round(e8*2.8*stretch),bass:true}],t0+Math.round(3*e8*stretch),sc,sec,tr[2]);
+      for(const k of [1,2,4,5]) _ev(evts,ix,ch.map((m,i2)=>({m:m+(opt.full&&i2===0?12:0),v:Math.max(14,Math.round((k%3===1?34:29)*env*(opt.full?1.15:1)-i2*2)),durMs:Math.round(e8*1.5*stretch)})),t0+Math.round(k*e8*stretch),sc,sec,tr[0]); }
+    for(const n of mel){ const m=n[2]; const pcm=((m%12)+12)%12; const vv=Math.max(22,Math.min(114,Math.round(n[3]*env)));
+      const ns=[{m,v:vv,durMs:Math.round(e8*n[1]*0.95*stretch),mel:true}]; if(opt.sixths && n[1]>=2) ns.push({m:K.kit.stepSc(m,-5),v:Math.round(vv*0.78),durMs:Math.round(e8*n[1]*0.95*stretch),mel:true});
+      _ev(evts,ix,ns,t0+Math.round(n[0]*e8*stretch)+Math.round((rn()-0.5)*80),_srcOfSec(sec,pcm),sec,pcm); }
+    return Math.round(barMs*stretch);
+  };
+  let t=0, bi=0;
+  const period=(K,th,dyn,opt)=>{
+    opt=opt||{}; const I=K.tri(K.tn), iv=K.tri(K.deg(3)), V=K.tri(K.deg(4)), VI=K.tri(K.deg(5)), ii=K.tri(K.deg(1));
+    const fit=(m)=>K.kit.snap(Math.max(62+(opt.up?7:0),Math.min(86+(opt.up?3:0),m+(opt.up?7:0))));
+    const plan=opt.anim ? [I,VI,ii,V, I,iv,V,I] : [I,iv,V,I, VI,iv,V,I];
+    for(let pb=0;pb<8;pb++){ const sec=secAt(bi); const u=_cU(D,bi/Math.max(1,totBars-1)); const acc=_dnaAccent(D,u); const tr=plan[pb];
+      const v=(opt.anim?60:62)+Math.min(14,sec.chr*0.4); let mel=[]; const a=fit(_cNear(th[pb],tr)), b2=fit(_cSafe(th[(pb+1)%8],tr));
+      const g=rn();
+      if(pb===3){ const x=fit(_cNear(a,V)); mel=[[0,3,x,v],[3,3,fit(K.kit.stepSc(x,-1)),v-6]]; }                                              // the half cadence
+      else if(pb===7){ let m=fit(_cNear(th[7],V)); const run=[]; for(let k=0;k<4;k++){ run.push([k,1,m,v-4-k]); m=K.kit.stepSc(m,-1); } const doN=K.kit.snap(60+K.tn+((m>66+K.tn)?12:0)); run.push([4,2,doN,v]); mel=run; }   // the descending scale into the tonic
+      else if(opt.anim){ mel=(g<0.5)?[[0,1.5,a,v+2],[1.5,0.5,fit(K.kit.stepSc(a,-1)),v-8],[2,1,a,v-2],[3,3,b2,v-2]]:[[0,3,a,v+2],[3,2,b2,v-2],[5,1,fit(K.kit.stepSc(b2,-1)),v-8]]; }                                         // the dotted lilt
+      else if(g<0.45) mel=[[0,3,a,v],[3,3,b2,v-3]];
+      else if(g<0.75) mel=[[0,2,a,v],[2,1,fit(K.kit.stepSc(a,a>b2?-1:1)),v-8],[3,3,b2,v-2]];
+      else mel=[[0,4,a,v],[4,1,fit(K.kit.stepSc(b2,1)),v-8],[5,1,b2,v-4]];
+      if(acc>0.5 && pb!==7){ const s=mel[0][2]; const d0=mel[0][1]; mel[0]=[0,1,fit(K.kit.stepSc(s,1)),v+4]; mel.splice(1,0,[1,Math.max(1,d0-1),s,v-4]); }   // the sigh on an edge
+      const echo=opt.echo && pb>=6; const f=bi/Math.max(1,totBars-1); const full=opt.full || Math.abs(f-clim)<0.06;
+      t+=bar(bi++,K,tr,echo?mel.map(n=>[n[0],n[1],n[2]>=64?n[2]-12:n[2],n[3]-14]):mel,dyn*(echo?0.78:1)*(pb>=4&&!opt.anim?0.94:1),{t0:t,anim:opt.anim,full,sixths:opt.sixths&&!echo,rit:pb===7});
+    }
+  };
+  for(const P of form){
+    if(P==='A') period(K0,thA,0.96,{});
+    else if(P==='A2') period(K0,thA,0.9,{echo:true});
+    else if(P==='B') period(KB,thB,1.0,{anim:true});
+    else if(P==='B2') period(KB,thB,1.04,{anim:true,up:true});
+    else if(P==='R') period(K0,thA,1.08,{sixths:true,full:true});
+    else { // the coda: iv – i rocking away under the high bell, softer and slower
+      const I=K0.tri(tonic), iv=K0.tri(K0.deg(3)); const bell=K0.kit.snap(84+tonic-(tonic>4?12:0));
+      for(let k=0;k<6;k++){ const tr=k%2?I:iv; const mel=k<5?[[0,5,bell,46-k*4]]:[[0,6,bell,34]]; t+=bar(bi++,K0,tr,mel,0.78-k*0.05,{t0:t,rit:k>=3}); }
+      const scT={cg:base[0].cg,band:base[0].band,_lum:gl,_chroma:gc2}, T=secs[secs.length-1];
+      _ev(evts,ix,[{m:24+tonic,v:40,durMs:7000,bass:true},{m:36+tonic,v:36,durMs:7000,bass:true},{m:48+I[1]+(I[1]<tonic?12:0),v:28,durMs:7000},{m:48+I[2]+(I[2]<tonic?12:0),v:26,durMs:7000},{m:bell,v:36,durMs:7000,mel:true}],t,scT,T,tonic);
+      bi+=2; }
+  }
+  return evts;
+}
+
 // ── JAM SESSION — an ensemble of 2–5 composers on the SAME picture. Every composer first writes the whole
 // piece in their own voice (their own engine, untouched). The ensemble then joins them by the Fusion style
 // (Setup → Ensemble — the painters' switch):
@@ -13265,7 +13518,7 @@ function composeImageHisaishi(px,nc,nr,table,colorMode){
 //      beats are pulled onto the ground's chord, its other notes into the ground's key.
 //   A+E  either, by a coin tossed on the picture's address (picture · composers · direction · form).
 // Every event is tagged `_who` (the composer key it came from).
-const COMPOSER_ENGINES={glass:composeImageGlass,satie:composeImageSatie,chopin:composeImageChopin,vine:composeImageVine,gershwin:composeImageGershwin,yiruma:composeImageYiruma,bach:composeImageBach,beethoven:composeImageBeethoven,debussy:composeImageDebussy,rachmaninov:composeImageRachmaninov,einaudi:composeImageEinaudi,hisaishi:composeImageHisaishi};
+const COMPOSER_ENGINES={glass:composeImageGlass,satie:composeImageSatie,chopin:composeImageChopin,vine:composeImageVine,gershwin:composeImageGershwin,yiruma:composeImageYiruma,bach:composeImageBach,beethoven:composeImageBeethoven,debussy:composeImageDebussy,rachmaninov:composeImageRachmaninov,einaudi:composeImageEinaudi,hisaishi:composeImageHisaishi,mozart:composeImageMozart,schubert:composeImageSchubert,tchaikovsky:composeImageTchaikovsky};
 // composers whose tagged line IS their texture (Glass's cells, Vine's motor, Bach's figure): as the ground they keep it
 const _KEEP_MEL={glass:1,vine:1,bach:1};
 const _jamFold=(q,q0)=>q0*Math.pow(2,Math.round(Math.log(q/q0)/Math.LN2));      // q0, or its octave nearest to q: the same pulse at half / double speed

@@ -587,7 +587,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     ] : [
       ['proValueArtists', '24 artists (free has 9)'],
       ['proValueTypes',   '6 paint types per artist (free has 2)'],
-      ['proValueComposers','All 12 composers — picture recomposition (free has 2)'],
+      ['proValueComposers','All 15 composers — picture recomposition (free has 2)'],
       ['proValueDaily',    'Free gets one extra artist a day — Pro has them all, always'],
       ['proValuePalette', 'Custom palette — set your own 12 colours'],
       ['proValueDpi',     '300 DPI exports, no watermark'],
