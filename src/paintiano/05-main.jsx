@@ -9650,8 +9650,13 @@ Hard requirements:
     if(restoringRef.current)return; // multi-draft restore in progress — keep the stashed chords/disp
     // Use mode+palette+direction signature so swapping individual swatches in
     // custom mode, OR changing the reading direction, forces a re-transcribe.
-    const _effDir = imgComposer ? 'lr' : imgDir;   // composers always read in rows
-    const sig = mode + '|' + _effDir + '|c:' + (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (imgSigActive ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    // The composers and ✦ are read from the REFS — exactly what is composed below. A change made by an effect (✦ dropping
+    // takes down its stage / its Pro members) reaches the refs one render before the state; keyed on the state, the same
+    // piece was composed twice in a row and the second pass, mid-restart, found playback stopped: the piece went back to
+    // the top and the panel folded.
+    const _cLead = imgComposerRef.current, _cStage = composerStageRef.current||[], _cSig = imgSigActiveRef.current;
+    const _effDir = _cLead ? 'lr' : imgDir;   // composers always read in rows
+    const sig = mode + '|' + _effDir + '|c:' + (_cLead||'scan') + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
@@ -9664,7 +9669,7 @@ Hard requirements:
     // → Debussy at 88%). Map the position by TIME FRACTION instead: where we are
     // in the old piece (0..1) → the event nearest that fraction in the new one.
     const _prevC = pixelRef.current.lastComposer;
-    const _compKey = (imgComposer||'scan') + (composerStage.length ? '+'+composerStage.join('+') : '') + ((imgComposer && composerStage.length && fuStyleCNow!=='A') ? '|'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (imgSigActive ? '|\u2726' : '');
+    const _compKey = (_cLead||'scan') + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '');
     pixelRef.current.lastComposer = _compKey;
     const _compChanged = _prevC !== undefined && _prevC !== _compKey;
     const _mapIdx = (oldArr, oldIdx, newArr)=>{
@@ -9972,7 +9977,8 @@ Hard requirements:
     // full focus. Only on fresh Play (not resume): the user can re-open the strip
     // during playback to change colour/style, and we must NOT yank it shut again —
     // nothing here closes it mid-play, so it stays open until the next fresh Play.
-    if(!isResume){ setStripOpen(false); setDeskStripOpen(false); }
+    // (A restart the app makes itself — another composer or reading direction while playing — is not a fresh Play: the panel stays.)
+    if(!isResume && !_melodyRearm && !_dirRestart){ setStripOpen(false); setDeskStripOpen(false); }
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -16768,7 +16774,7 @@ Hard requirements:
       )}
       </div>
       )}
-      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v2.9{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v3.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
