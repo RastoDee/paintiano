@@ -13968,6 +13968,8 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
 }
 // the gestures — a thrown line, a loaded stroke, a ray, a band, the water, Hokusai's curling crest: drawn once, in their parent's own
 // geometry (_fuMark), whatever the hand; every other mark is a closed form the hand paints (_fuForm)
+// Haring's cast keeps his own hand in a crossing too: as a silhouette in the fused hand it reads as a pictogram
+const _FU_HRC=/^(figure|dog)$/;
 const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest)$/;
 function _fuMark(ctx, kind, r, col, F, R, ang, col2){
   col2 = col2 || col;
@@ -14053,7 +14055,9 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         for(let q=4;q>=1;q--){ ctx.beginPath(); ctx.fillStyle=(q%2)?col:col2; ctx.arc(0,0,rr*q/4,0,6.2832); ctx.fill(); } break; }
       case 'protractor': { // Stella: nested quarter-arcs
         ctx.lineWidth=Math.max(1.5,rr*.16); const a0=(R()*4|0)*1.5708; for(let q=1;q<=4;q++){ ctx.beginPath(); ctx.strokeStyle=(q%2)?col:col2; ctx.arc(0,0,rr*q/4,a0,a0+1.5708); ctx.stroke(); } break; }
-      case 'figure': { // Haring: outlined dancing figure
+      case 'figure': { // Haring: outlined dancing figure — in a new painter (E) one of his dancers: thick limbs, the black outline, flat colour, the motion lines
+        if(F && F.fs==='E'){ const u=rr*.27, dir=R()<.5?1:-1, cast=['dancer','jumper','waver','runner']; const kind2=cast[(R()*cast.length)|0];
+          const cr=_HR_CAST[kind2](0,u*1.0,u,R,.6,dir); const c=_hrFar(_fuRgb(col),_fuRgb(F.ground)); const sv=ctx.lineWidth, sa=ctx.globalAlpha; ctx.globalAlpha=1; _hrCreature(ctx,cr,c,u,R); ctx.lineWidth=sv; ctx.globalAlpha=sa; ctx.beginPath(); break; }
         ctx.lineCap='round';
         ctx.beginPath(); ctx.arc(0,-rr*.7,rr*.22,0,6.2832); ctx.fillStyle=col; ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1,rr*.08); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0,-rr*.45); ctx.lineTo(0,rr*.2); ctx.moveTo(-rr*.6,-rr*.5); ctx.lineTo(0,-rr*.25); ctx.lineTo(rr*.6,-rr*.6); ctx.moveTo(-rr*.5,rr*.8); ctx.lineTo(0,rr*.2); ctx.lineTo(rr*.5,rr*.8); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(4,rr*.42); ctx.stroke(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,rr*.26); ctx.stroke(); break; }
@@ -14092,7 +14096,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         const blob=(dx,dy,s)=>{ ctx.beginPath(); P.forEach((q,j)=>{ const x=dx+q[0]*s,y=dy+q[1]*s; j?ctx.quadraticCurveTo(x,y,(x+dx+P[(j+1)%k][0]*s)/2,(y+dy+P[(j+1)%k][1]*s)/2):ctx.moveTo((x+dx+P[k-1][0]*s)/2,(y+dy+P[k-1][1]*s)/2); }); ctx.closePath(); };
         ctx.fillStyle='rgba(0,0,0,.35)'; blob(rr*.12,rr*.16,1.04); ctx.fill(); ctx.fillStyle=col; blob(0,0,1); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.35)'; blob(-rr*.08,-rr*.12,.45); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.7)'; blob(-rr*.12,-rr*.18,.16); ctx.fill(); ctx.beginPath(); break; }
       case 'dog': { // Haring: the barking dog — his outline, flat colour, the bark lines
-        const u=rr*.36, dir=R()<.5?1:-1; const cr=_hrDog(-0.4*u*dir,u*.4,u,R,.5,dir); cr.glow=[dir*2.8*u,-2.2*u,1.2*u,2.2*u,4,dir>0?-1.2:-1.94,1.4]; const c=_fuRgb(col); const sv=ctx.lineWidth; _hrCreature(ctx,cr,c,u,R); ctx.lineWidth=sv; ctx.beginPath(); break; }
+        const u=rr*.36, dir=R()<.5?1:-1; const cr=_hrDog(-0.4*u*dir,u*.4,u,R,.5,dir); cr.glow=[dir*2.8*u,-2.2*u,1.2*u,2.2*u,4,dir>0?-1.2:-1.94,1.4]; const E1=!!(F && F.fs==='E'); const c=E1 ? _hrFar(_fuRgb(col),_fuRgb(F.ground)) : _fuRgb(col); const sv=ctx.lineWidth, sa=ctx.globalAlpha; if(E1) ctx.globalAlpha=1; _hrCreature(ctx,cr,c,u,R); ctx.lineWidth=sv; ctx.globalAlpha=sa; ctx.beginPath(); break; }
       case 'crest': { // Hokusai: the curling wave — a thick rise that curls over, foam fingers hanging from the lip
         ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(1.5,rr*.22);
         ctx.beginPath(); ctx.moveTo(-rr*1.6,rr*.5); ctx.bezierCurveTo(-rr*.9,-rr*.9, rr*.6,-rr*1.25, rr*.9,-rr*.4); ctx.bezierCurveTo(rr*1.0,rr*.1, rr*.45,rr*.2, rr*.35,-rr*.15); ctx.stroke();
@@ -14349,6 +14353,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='cloud') r=Math.min(r, S*0.13);    // a cloud, not a fog over everything
         else if(kind==='chain') r=Math.min(r, S*0.07);    // RafFel's constellation stays a small figure
         else if(kind==='net') r=Math.min(r, S*0.1);       // a patch of Kusama's net — fine mesh, never a hoop
+        else if(_E && _FU_HRC.test(kind)){ r=Math.max(S*0.05, Math.min(r, S*0.095));   // Haring's cast: a readable figure, never confetti, never a giant
+          const B=Math.max(6, Math.min(14, Math.round(n/6))); const sl='H'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)) continue; _spanUsed.add(sl); }   // a handful spread over the piece, not a crowd
         else if(kind==='drip'||kind==='splat') r=Math.min(r, S*0.03);   // Pollock's thrown line stays a line beside a big-shape partner (Delaunay, Rothko), never a fat ribbon
         else if(kind==='surface'){ r=Math.max(S*0.07, Math.min(r, S*0.13));   // Monet's patch of water: big enough to tile a surface, never a single swatch — whatever the partner's scale or the register
           // and the water is budgeted like the big shapes: ~1.1 canvases of full patches spread evenly over the piece; past the budget a chord adds a handful of touches, so a long piece never floods the partner
@@ -14371,7 +14377,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
         const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface|fuji|dog|cell|pour)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         // E: a closed form is painted by the painting's one hand (_fuForm); a gesture stays its parent's (_fuMark)
-        if(_E && !_FU_GEST.test(kind)){
+        if(_E && !_FU_GEST.test(kind) && !_FU_HRC.test(kind)){
           if(_FU_UNDER.test(kind)){ ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); _fuForm(ctx, kind, r, col, col2, R, F); ctx.restore(); }
           else { const vals=[]; _fuForm(_FU_NULL, kind, r, col, col2, ()=>{ const v=R(); vals.push(v); return v; }, F); _defer.push([tx, ty, 'FM:'+kind, r, col, ang, col2, vals, F, _po]); }
           continue; }
