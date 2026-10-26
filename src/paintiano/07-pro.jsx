@@ -584,6 +584,8 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
       ['proAiValueText',  'AI composition from text moods'],
       ['proAiValueImage', 'AI composition from your images'],
       ['proAiValueAtmo',  'AI atmospheric tinting'],
+      ['proAiValueCompose','AI compose — a new piece written from your picture'],
+      ['proAiValueMelody', 'AI melody — a line sung over your picture'],
     ] : [
       ['proValueArtists', '24 artists (free has 9)'],
       ['proValueTypes',   '6–9 paint types per artist (free has 2)'],
