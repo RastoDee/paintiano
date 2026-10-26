@@ -399,6 +399,72 @@ const SIG_I18N = {
   ja:{label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
 };
 
+// Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
+// twelve colours (the notes sounding now lit), and once, when the piece has played, a hint that Surprise brings the painters.
+const MOSAIC_INTRO_I18N = {
+  EN:{lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  SK:{lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  DE:{lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  FR:{lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  ES:{lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  PT:{lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
+  zh:{lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  zhTW:{lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  ja:{lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+};
+
+// The song's colours: how much each of the twelve tones sounds (notes per pitch class).
+function _pcWeights(chords){ const w=new Array(12).fill(0); for(const c of (chords||[])){ const ns=(c&&(c.n||c.notes))||[]; for(const x of ns){ const m=(x&&x.m!==undefined)?x.m:x; w[((Math.round(+m||0)%12)+12)%12]+=1; } } return w; }
+const _FIFTHS=[0,7,2,9,4,11,6,1,8,3,10,5];
+function _rrect(cx,x,y,w,h,r){ cx.beginPath(); cx.moveTo(x+r,y); cx.lineTo(x+w-r,y); cx.quadraticCurveTo(x+w,y,x+w,y+r); cx.lineTo(x+w,y+h); cx.lineTo(x,y+h); cx.lineTo(x,y+r); cx.quadraticCurveTo(x,y,x+r,y); cx.closePath(); }
+// Twelve bars in fifths, in the palette's colours (gc), each as tall as its tone sounds in the song, the tone's name under it.
+function _drawPcStrip(cx, x, y, w, h, wts, gc, names, o){
+  o=o||{}; const gap=(o.gap!=null) ? o.gap : w*0.014; const bw=(w-11*gap)/12; const fs=o.font||Math.max(8,Math.round(bw*0.36)); const lh=Math.round(fs*1.6);
+  const bh=h-lh; const mx=Math.max(1,...wts); const minH=Math.max(2,bh*0.06);
+  cx.save(); cx.textAlign='center'; cx.textBaseline='alphabetic'; cx.font=`500 ${fs}px "Outfit", Arial, sans-serif`;
+  _FIFTHS.forEach((pc,i)=>{ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){}
+    const bx=x+i*(bw+gap); const hh=wts[pc]>0 ? Math.max(minH, bh*wts[pc]/mx) : minH*0.5;
+    cx.fillStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; _rrect(cx,bx,y+bh-hh,bw,hh,Math.min(bw*0.14,hh/2)); cx.fill();
+    cx.fillStyle=o.labelColor||'rgba(230,222,196,.72)'; cx.fillText((names&&names[pc])||'', bx+bw/2, y+bh+lh*0.85); });
+  cx.restore();
+}
+// one line that fits: the font shrinks to `min`, then the text is cut with an ellipsis
+function _fitText(cx, txt, maxW, size, min, fontFn){ let s=size; cx.font=fontFn(s); while(s>min && cx.measureText(txt).width>maxW){ s-=1; cx.font=fontFn(s); } if(cx.measureText(txt).width<=maxW) return txt; let t=txt; while(t.length>1 && cx.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
+// Web / Print with a caption: the painting on the dark ground; under it the title, the painters and the song's colours.
+// Print is an A1 sheet (594 × 841) holding as many pixels as the painting had, so a phone's canvas limit still holds.
+function _frameExport(hi, kind, o){
+  const GOLD='rgba(201,168,76,.85)', CREAM='#f4e7c6', SOFT='rgba(230,222,196,.72)';
+  const serifI=(s)=>`italic 600 ${s}px "Cormorant Garamond", Georgia, serif`, serifI5=(s)=>`italic 500 ${s}px "Cormorant Garamond", Georgia, serif`, sans=(s)=>`500 ${s}px "Outfit", Arial, sans-serif`;
+  const cv=document.createElement('canvas'); let cx;
+  if(kind==='print'){
+    const area=hi.width*hi.height; const Wf=Math.round(Math.sqrt(area*594/841)), Hf=Math.round(Wf*841/594);
+    cv.width=Wf; cv.height=Hf; cx=cv.getContext('2d');
+    cx.fillStyle='#0b0b10'; cx.fillRect(0,0,Wf,Hf);
+    const m=Math.round(Wf*0.094), cb=Math.round(Hf*0.25);
+    const bw=Wf-2*m, bh=Hf-m-cb; const k=Math.min(bw/hi.width, bh/hi.height); const pw=Math.round(hi.width*k), ph=Math.round(hi.height*k);
+    const px=Math.round((Wf-pw)/2), py=m+Math.round((bh-ph)/2);
+    cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph);
+    cx.strokeStyle='rgba(201,168,76,.5)'; cx.lineWidth=Math.max(2,Wf*0.0017); cx.strokeRect(px,py,pw,ph);
+    cx.textAlign='center'; let y=Hf-cb+Math.round(Wf*0.07);
+    if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,bw,Math.round(Wf*0.044),Math.round(Wf*0.02),serifI); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.036); }
+    if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,bw,Math.round(Wf*0.02),Math.round(Wf*0.012),sans); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.034); }
+    if(o.insp){ cx.fillStyle=GOLD; const t=_fitText(cx,o.insp,bw,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
+    const sw=Math.round(Wf*0.54); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
+    cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · music → φ painting', Wf/2, Hf-Math.round(m*0.5));
+    return cv;
+  }
+  const W=hi.width, m=Math.round(W*0.038), pw=W-2*m, ph=Math.round(hi.height*pw/hi.width), band=Math.round(W*0.19);
+  const H=m+ph+band; cv.width=W; cv.height=H; cx=cv.getContext('2d');
+  cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H); cx.imageSmoothingQuality='high'; cx.drawImage(hi,m,m,pw,ph);
+  const sw=Math.round(W*0.42), sh=Math.round(W*0.11), sx=W-m-sw, sy=H-Math.round(m*0.8)-sh;
+  _drawPcStrip(cx, sx, sy, sw, sh, o.wts, o.gc, o.names, {font:Math.round(W*0.016)});
+  const tw=sx-m-Math.round(W*0.03); cx.textAlign='left'; let y=m+ph+Math.round(W*0.06);
+  if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,tw,Math.round(W*0.036),Math.round(W*0.018),serifI); cx.fillText(t,m,y); y+=Math.round(W*0.033); }
+  if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,m,y); y+=Math.round(W*0.033); }
+  cx.fillStyle=GOLD; const t=_fitText(cx,(o.insp ? o.insp+' · ' : '')+'Paintiano',tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,m,y);
+  return cv;
+}
+
 // ── FAVORITES ─────────────────────────────────────────────────────────────────
 const FAV_I18N = {
   EN:{label:'Favorites',close:'Close',saved:'Saved to Favorites',removed:'Removed from Favorites',undo:'Undo',add:'Add to Favorites',del:'Remove from Favorites',empty:'No favorites yet. Tap ♡ at the top left of a finished painting to keep it here.',today:'saved today',yday:'saved yesterday',on:'saved {d}',prev:'Previous painting',next:'Next painting',lost:'This painting can’t be opened.',failed:'Could not save — private browsing blocks storage.',mm:'My Music',mmSaved:'Saved in My Music',tones:{pure:'Pure',real:'Real',pastel:'Pastel'},clearAll:'Clear all',clearAllQ:'Clear all {n}?',clearedAll:'All {n} favorites removed'},
@@ -1410,15 +1476,15 @@ function FsGlyph({ v, w=28, h=20, fo=.6, mr=0, shadow=false, title }){
     : (<svg width={w} height={h} viewBox="0 0 28 20" {...a11y} style={sty}>{title && <title>{title}</title>}<rect x="1.5" y="4" width="5" height="12" rx="1.6" fill="#dcb45a"/><rect x="8.5" y="4" width="5" height="12" rx="1.6" fill="#a97ff5"/><rect x="15.5" y="4" width="5" height="12" rx="1.6" fill="#dcb45a"/><rect x="22" y="4" width="5" height="12" rx="1.6" fill="#a97ff5"/></svg>);
 }
 const ENSEMBLE_I18N = {
-  EN:{title:'Ensemble',fusion:'Fusion',sub:'Several painters in one fusion, several composers in one jam.',how:'How they combine',painters:'Painters',composers:'Composers',fsTurns:'Take turns',fsNewP:'New painter',fsNewC:'New composer',fsRandom:'Random',fsDefault:'Default style',fsRndP:'The style is drawn for every fusion',fsRndC:'The style is drawn for every jam',howTo:'How it works',fsNote:'You can switch the style of any fusion or jam with a tap. Favorites keep the style they were painted in.',dP_A:'The painters take turns, each in their own hand.',dP_E:'One new painter bred from them: one lends the hand, another the ground, a third the composition.',dP_AE:'Each fusion is, by chance, either turns or a new painter.',dC_A:'They trade phrases on one shared pulse and in one key.',dC_E:'One new composer: one lends the harmony and accompaniment, another the tune, a third the pulse.',dC_AE:'Each jam is, by chance, either turns or a new composer.',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants and the palette. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
-  SK:{title:'Ensemble',fusion:'Fúzia',sub:'Viac maliarov v jednej fúzii, viac skladateľov v jednom jame.',how:'Ako sa spájajú',painters:'Maliari',composers:'Skladatelia',fsTurns:'Striedanie',fsNewP:'Nový maliar',fsNewC:'Nový skladateľ',fsRandom:'Náhodne',fsDefault:'Predvolený štýl',fsRndP:'Štýl sa losuje pri každej fúzii',fsRndC:'Štýl sa losuje pri každom jame',howTo:'Ako to funguje',fsNote:'Štýl môžeš pri konkrétnej fúzii či jame prepnúť ťuknutím. Obľúbené si nechajú štýl, v ktorom vznikli.',dP_A:'Maliari sa striedajú, každý svojou rukou.',dP_E:'Z nich vznikne jeden nový maliar: jeden mu dá ruku, druhý podklad, tretí kompozíciu.',dP_AE:'Každá fúzia je náhodne striedanie alebo nový maliar.',dC_A:'Striedajú sa vo frázach na spoločnom pulze a v jednej tónine.',dC_E:'Jeden nový skladateľ: jeden mu dá harmóniu a sprievod, druhý melódiu, tretí pulz.',dC_AE:'Každý jam je náhodne striedanie alebo nový skladateľ.',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty a paletu. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
-  DE:{title:'Ensemble',fusion:'Fusion',sub:'Mehrere Maler in einer Fusion, mehrere Komponisten in einer Jam Session.',how:'Wie sie sich verbinden',painters:'Maler',composers:'Komponisten',fsTurns:'Abwechselnd',fsNewP:'Neuer Maler',fsNewC:'Neuer Komponist',fsRandom:'Zufällig',fsDefault:'Standardstil',fsRndP:'Der Stil wird bei jeder Fusion gelost',fsRndC:'Der Stil wird bei jeder Jam Session gelost',howTo:'So funktioniert es',fsNote:'Den Stil einer Fusion oder Jam Session kannst du mit einem Tipp wechseln. Favoriten behalten den Stil, in dem sie entstanden sind.',dP_A:'Die Maler wechseln sich ab, jeder mit eigener Hand.',dP_E:'Ein neuer Maler, aus ihnen gekreuzt: einer gibt die Hand, ein anderer den Grund, ein dritter die Komposition.',dP_AE:'Jede Fusion ist zufällig abwechselnd oder ein neuer Maler.',dC_A:'Sie wechseln sich in Phrasen ab, auf gemeinsamem Puls und in einer Tonart.',dC_E:'Ein neuer Komponist: einer gibt Harmonie und Begleitung, ein anderer die Melodie, ein dritter den Puls.',dC_AE:'Jede Jam Session ist zufällig abwechselnd oder ein neuer Komponist.',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten und die Palette. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
-  FR:{title:'Ensemble',fusion:'Fusion',sub:'Plusieurs peintres dans une fusion, plusieurs compositeurs dans un jam.',how:'Comment ils se combinent',painters:'Peintres',composers:'Compositeurs',fsTurns:'À tour de rôle',fsNewP:'Nouveau peintre',fsNewC:'Nouveau compositeur',fsRandom:'Au hasard',fsDefault:'Style par défaut',fsRndP:'Le style est tiré au sort à chaque fusion',fsRndC:'Le style est tiré au sort à chaque jam',howTo:'Comment ça marche',fsNote:'Tu peux changer le style d\'une fusion ou d\'un jam d\'un simple toucher. Les favoris gardent le style dans lequel ils ont été peints.',dP_A:'Les peintres se relaient, chacun de sa propre main.',dP_E:'Un nouveau peintre né d’eux : l’un prête la main, un autre le fond, un troisième la composition.',dP_AE:'Chaque fusion est, au hasard, à tour de rôle ou un nouveau peintre.',dC_A:'Ils se relaient par phrases, sur un même pouls et dans une même tonalité.',dC_E:'Un nouveau compositeur : l’un prête l’harmonie et l’accompagnement, un autre la mélodie, un troisième le pouls.',dC_AE:'Chaque jam est, au hasard, à tour de rôle ou un nouveau compositeur.',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes et la palette. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
-  ES:{title:'Ensemble',fusion:'Fusión',sub:'Varios pintores en una fusión, varios compositores en un jam.',how:'Cómo se combinan',painters:'Pintores',composers:'Compositores',fsTurns:'Por turnos',fsNewP:'Nuevo pintor',fsNewC:'Nuevo compositor',fsRandom:'Al azar',fsDefault:'Estilo predeterminado',fsRndP:'El estilo se sortea en cada fusión',fsRndC:'El estilo se sortea en cada jam',howTo:'Cómo funciona',fsNote:'Puedes cambiar el estilo de una fusión o un jam con un toque. Los Favoritos conservan el estilo en que se pintaron.',dP_A:'Los pintores se turnan, cada uno con su propia mano.',dP_E:'Un pintor nuevo nacido de ellos: uno presta la mano, otro el fondo, un tercero la composición.',dP_AE:'Cada fusión sale al azar: por turnos o un pintor nuevo.',dC_A:'Se turnan por frases, con un mismo pulso y en una misma tonalidad.',dC_E:'Un compositor nuevo: uno presta la armonía y el acompañamiento, otro la melodía, un tercero el pulso.',dC_AE:'Cada jam sale al azar: por turnos o un compositor nuevo.',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes y la paleta. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
-  PT:{title:'Ensemble',fusion:'Fusão',sub:'Vários pintores numa fusão, vários compositores num jam.',how:'Como se combinam',painters:'Pintores',composers:'Compositores',fsTurns:'Por turnos',fsNewP:'Novo pintor',fsNewC:'Novo compositor',fsRandom:'Ao acaso',fsDefault:'Estilo predefinido',fsRndP:'O estilo é sorteado em cada fusão',fsRndC:'O estilo é sorteado em cada jam',howTo:'Como funciona',fsNote:'Podes mudar o estilo de uma fusão ou jam com um toque. Os Favoritos mantêm o estilo em que foram pintados.',dP_A:'Os pintores alternam, cada um com a sua mão.',dP_E:'Um pintor novo nascido deles: um empresta a mão, outro o fundo, um terceiro a composição.',dP_AE:'Cada fusão sai ao acaso: por turnos ou um pintor novo.',dC_A:'Alternam frases, com o mesmo pulso e na mesma tonalidade.',dC_E:'Um compositor novo: um empresta a harmonia e o acompanhamento, outro a melodia, um terceiro o pulso.',dC_AE:'Cada jam sai ao acaso: por turnos ou um compositor novo.',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles e a paleta. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
-  zh:{title:'合奏',fusion:'融合',sub:'多位画家融合为一，多位作曲家同台 Jam。',how:'组合方式',painters:'画家',composers:'作曲家',fsTurns:'轮流',fsNewP:'新画家',fsNewC:'新作曲家',fsRandom:'随机',fsDefault:'默认风格',fsRndP:'每次融合都会抽取风格',fsRndC:'每场 Jam 都会抽取风格',howTo:'运作方式',fsNote:'轻点即可切换某次融合或 Jam 的风格。收藏会保留作画时的风格。',dP_A:'画家们轮流作画，各用各的笔触。',dP_E:'由他们孕育出的一位新画家：一位给出笔触，一位给出底色，第三位给出构图。',dP_AE:'每次融合随机为轮流或新画家。',dC_A:'共用同一脉动与调性，轮流演奏乐句。',dC_E:'一位新的作曲家：一位给出和声与伴奏，一位给出旋律，第三位给出脉动。',dC_AE:'每场 Jam 随机为轮流或新作曲家。',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体和调色板。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
-  zhTW:{title:'合奏',fusion:'融合',sub:'多位畫家融合為一，多位作曲家同台 Jam。',how:'組合方式',painters:'畫家',composers:'作曲家',fsTurns:'輪流',fsNewP:'新畫家',fsNewC:'新作曲家',fsRandom:'隨機',fsDefault:'預設風格',fsRndP:'每次融合都會抽取風格',fsRndC:'每場 Jam 都會抽取風格',howTo:'運作方式',fsNote:'輕點即可切換某次融合或 Jam 的風格。收藏會保留作畫時的風格。',dP_A:'畫家們輪流作畫，各用各的筆觸。',dP_E:'由他們孕育出的一位新畫家：一位給出筆觸，一位給出底色，第三位給出構圖。',dP_AE:'每次融合隨機為輪流或新畫家。',dC_A:'共用同一脈動與調性，輪流演奏樂句。',dC_E:'一位新的作曲家：一位給出和聲與伴奏，一位給出旋律，第三位給出脈動。',dC_AE:'每場 Jam 隨機為輪流或新作曲家。',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
-  ja:{title:'アンサンブル',fusion:'フュージョン',sub:'複数の画家をひとつのフュージョンに、複数の作曲家をひとつのジャムに。',how:'組み合わせ方',painters:'画家',composers:'作曲家',fsTurns:'交代で',fsNewP:'新しい画家',fsNewC:'新しい作曲家',fsRandom:'ランダム',fsDefault:'既定の様式',fsRndP:'フュージョンごとに様式を抽選',fsRndC:'ジャムごとに様式を抽選',howTo:'仕組み',fsNote:'タップするだけで、そのフュージョンやジャムの様式を切り替えられる。お気に入りは描かれたときの様式のまま残る。',dP_A:'画家たちが交代で、それぞれ自分の筆致で描きます。',dP_E:'彼らから生まれた新しい画家：ひとりが筆致を、もうひとりが地を、三人目が構図を受け継ぎます。',dP_AE:'フュージョンごとに、交代か新しい画家かが偶然で決まります。',dC_A:'共通の拍と同じ調で、フレーズを交代で奏でます。',dC_E:'新しい作曲家がひとり：ひとりが和声と伴奏を、もうひとりが旋律を、三人目が拍を受け継ぎます。',dC_AE:'ジャムごとに、交代か新しい作曲家かが偶然で決まります。',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
+  EN:{title:'Ensemble',fusion:'Fusion',sub:'Several painters in one fusion, several composers in one jam.',painters:'Painters',composers:'Composers',fsTurns:'Take turns',fsNewP:'New painter',fsNewC:'New composer',howTo:'How it works',fsNote:'Favorites keep the style they were painted in.',fsDrawn:'The style is drawn for every fusion and jam',fsNew:'New painter / composer',fsTap:'The mark stands before the names. Tap it and the fusion or jam switches to the other style.',cr:'Jam session',desc:'Several painters crossed into one new style (Fusion) and composers trading phrases (Jam session). When on, an Ensemble button ◎ appears beside each 🔀; tap up to five artists or composers — or combine it with 🔀 1 / ALL. With 🔀 on (ALL for painters), tap painters or composers to pin them: they stay, and Next draws 1–3 others around them. In Lite, Surprise now and then plays an ensemble.',pinHint:'Pinned painters stay. {next} adds 1–3 others. Tap a painter to pin or unpin.',pinNone:'Nothing pinned: {next} draws a whole new crossing. Tap a painter to pin it.',pinFull:'Five pinned: {next} changes only their variants and the palette. Tap a painter to unpin.',cPinHint:'Pinned composers stay. {next} adds 1–3 others. Tap a composer to pin or unpin.',cPinNone:'Nothing pinned: {next} seats a whole new ensemble. Tap a composer to pin it.',cPinFull:'Five pinned: unpin one so {next} can bring in others.'},
+  SK:{title:'Ensemble',fusion:'Fúzia',sub:'Viac maliarov v jednej fúzii, viac skladateľov v jednom jame.',painters:'Maliari',composers:'Skladatelia',fsTurns:'Striedanie',fsNewP:'Nový maliar',fsNewC:'Nový skladateľ',howTo:'Ako to funguje',fsNote:'Obľúbené si nechajú štýl, v ktorom vznikli.',fsDrawn:'Štýl sa losuje pri každej fúzii a jame',fsNew:'Nový maliar / skladateľ',fsTap:'Značka stojí pred menami. Ťukni na ňu a fúzia či jam sa prepne na druhý štýl.',cr:'Jam session',desc:'Viac maliarov skrížených do jedného nového rukopisu (Fúzia) a skladatelia, ktorí si striedajú frázy (Jam session). Keď je zapnuté, vedľa každého 🔀 pribudne tlačidlo Ensemble ◎; ťukni až na päť umelcov či skladateľov — alebo ho skombinuj s 🔀 1 / ALL. So zapnutým 🔀 (pri maliaroch ALL) ťukaním maliarov či skladateľov pripneš: ostanú a Next k nim vyžrebuje 1–3 ďalších. V Lite Prekvap ma občas zahrá ensemble.',pinHint:'Pripnutí maliari ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na maliara ho pripne alebo odopne.',pinNone:'Nič nie je pripnuté: „{next}“ vyžrebuje celú novú zostavu. Ťuk na maliara ho pripne.',pinFull:'Päť pripnutých: „{next}“ zmení len ich varianty a paletu. Ťuk na maliara ho odopne.',cPinHint:'Pripnutí skladatelia ostávajú, „{next}“ k nim pridá 1–3 hostí. Ťuk na skladateľa ho pripne alebo odopne.',cPinNone:'Nič nie je pripnuté: „{next}“ posadí celý nový súbor. Ťuk na skladateľa ho pripne.',cPinFull:'Päť pripnutých: odopni jedného, aby „{next}“ mohol priviesť ďalších.'},
+  DE:{title:'Ensemble',fusion:'Fusion',sub:'Mehrere Maler in einer Fusion, mehrere Komponisten in einer Jam Session.',painters:'Maler',composers:'Komponisten',fsTurns:'Abwechselnd',fsNewP:'Neuer Maler',fsNewC:'Neuer Komponist',howTo:'So funktioniert es',fsNote:'Favoriten behalten den Stil, in dem sie entstanden sind.',fsDrawn:'Der Stil wird für jede Fusion und Jam Session gelost',fsNew:'Neuer Maler / Komponist',fsTap:'Das Zeichen steht vor den Namen. Tippst du darauf, wechselt die Fusion oder Jam Session in den anderen Stil.',cr:'Jam session',desc:'Mehrere Maler zu einer neuen Handschrift gekreuzt (Fusion) und Komponisten, die sich Phrasen zuspielen (Jam session). Eingeschaltet erscheint neben jedem 🔀 ein Ensemble-Knopf ◎; bis zu fünf Künstler oder Komponisten antippen — oder mit 🔀 1 / ALL kombinieren. Mit 🔀 an (bei Malern ALL) heftest du Maler oder Komponisten per Tipp an: sie bleiben, und Next zieht 1–3 weitere dazu. In Lite spielt Überrasch mich ab und zu ein Ensemble.',pinHint:'Angeheftete Maler bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Maler an oder löst ihn.',pinNone:'Nichts angeheftet: „{next}“ zieht eine ganz neue Kreuzung. Tippen heftet einen Maler an.',pinFull:'Fünf angeheftet: „{next}“ ändert nur ihre Varianten und die Palette. Tippen löst einen Maler.',cPinHint:'Angeheftete Komponisten bleiben, „{next}“ fügt 1–3 weitere hinzu. Tippen heftet einen Komponisten an oder löst ihn.',cPinNone:'Nichts angeheftet: „{next}“ setzt ein ganz neues Ensemble. Tippen heftet einen Komponisten an.',cPinFull:'Fünf angeheftet: löse einen, damit „{next}“ andere dazuholen kann.'},
+  FR:{title:'Ensemble',fusion:'Fusion',sub:'Plusieurs peintres dans une fusion, plusieurs compositeurs dans un jam.',painters:'Peintres',composers:'Compositeurs',fsTurns:'À tour de rôle',fsNewP:'Nouveau peintre',fsNewC:'Nouveau compositeur',howTo:'Comment ça marche',fsNote:'Les favoris gardent le style dans lequel ils ont été peints.',fsDrawn:'Le style est tiré au sort pour chaque fusion et chaque jam',fsNew:'Nouveau peintre / compositeur',fsTap:'La marque est placée devant les noms. Touche-la et la fusion ou le jam passe à l’autre style.',cr:'Jam session',desc:'Plusieurs peintres croisés en une nouvelle écriture (Fusion) et des compositeurs qui s’échangent des phrases (Jam session). Une fois activé, un bouton Ensemble ◎ apparaît à côté de chaque 🔀 ; touche jusqu’à cinq artistes ou compositeurs — ou combine-le avec 🔀 1 / ALL. Avec 🔀 actif (ALL pour les peintres), touche des peintres ou des compositeurs pour les épingler : ils restent et Next en tire 1 à 3 autres autour d’eux. En Lite, Surprends-moi joue parfois un ensemble.',pinHint:'Les peintres épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un peintre pour l’épingler ou le libérer.',pinNone:'Rien d’épinglé : « {next} » tire un croisement entièrement nouveau. Touche un peintre pour l’épingler.',pinFull:'Cinq épinglés : « {next} » ne change que leurs variantes et la palette. Touche un peintre pour le libérer.',cPinHint:'Les compositeurs épinglés restent, « {next} » en ajoute 1 à 3 autres. Touche un compositeur pour l’épingler ou le libérer.',cPinNone:'Rien d’épinglé : « {next} » installe un ensemble entièrement nouveau. Touche un compositeur pour l’épingler.',cPinFull:'Cinq épinglés : libères-en un pour que « {next} » puisse en faire venir d’autres.'},
+  ES:{title:'Ensemble',fusion:'Fusión',sub:'Varios pintores en una fusión, varios compositores en un jam.',painters:'Pintores',composers:'Compositores',fsTurns:'Por turnos',fsNewP:'Nuevo pintor',fsNewC:'Nuevo compositor',howTo:'Cómo funciona',fsNote:'Los Favoritos conservan el estilo en que se pintaron.',fsDrawn:'El estilo se sortea en cada fusión y cada jam',fsNew:'Nuevo pintor / compositor',fsTap:'La marca va delante de los nombres. Tócala y la fusión o el jam pasa al otro estilo.',cr:'Jam session',desc:'Varios pintores cruzados en un estilo nuevo (Fusión) y compositores que se intercambian frases (Jam session). Al activarlo, aparece un botón Ensemble ◎ junto a cada 🔀; toca hasta cinco artistas o compositores — o combínalo con 🔀 1 / ALL. Con 🔀 activo (ALL para pintores), toca pintores o compositores para fijarlos: se quedan y Next sortea de 1 a 3 más a su alrededor. En Lite, Sorpréndeme toca a veces un ensemble.',pinHint:'Los pintores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un pintor para fijarlo o soltarlo.',pinNone:'Nada fijado: «{next}» sortea un cruce totalmente nuevo. Toca un pintor para fijarlo.',pinFull:'Cinco fijados: «{next}» solo cambia sus variantes y la paleta. Toca un pintor para soltarlo.',cPinHint:'Los compositores fijados se quedan; «{next}» añade de 1 a 3 más. Toca un compositor para fijarlo o soltarlo.',cPinNone:'Nada fijado: «{next}» sienta un ensemble totalmente nuevo. Toca un compositor para fijarlo.',cPinFull:'Cinco fijados: suelta uno para que «{next}» pueda traer a otros.'},
+  PT:{title:'Ensemble',fusion:'Fusão',sub:'Vários pintores numa fusão, vários compositores num jam.',painters:'Pintores',composers:'Compositores',fsTurns:'Por turnos',fsNewP:'Novo pintor',fsNewC:'Novo compositor',howTo:'Como funciona',fsNote:'Os Favoritos mantêm o estilo em que foram pintados.',fsDrawn:'O estilo é sorteado em cada fusão e cada jam',fsNew:'Novo pintor / compositor',fsTap:'A marca fica antes dos nomes. Toca nela e a fusão ou o jam passa para o outro estilo.',cr:'Jam session',desc:'Vários pintores cruzados num estilo novo (Fusão) e compositores a trocar frases (Jam session). Quando ligado, aparece um botão Ensemble ◎ ao lado de cada 🔀; toca até cinco artistas ou compositores — ou combina-o com 🔀 1 / ALL. Com 🔀 ligado (ALL nos pintores), toca em pintores ou compositores para os fixar: ficam, e o Next sorteia mais 1 a 3 à volta deles. No Lite, Surpreende-me toca às vezes um ensemble.',pinHint:'Os pintores fixados ficam; «{next}» junta mais 1 a 3. Toca num pintor para o fixar ou soltar.',pinNone:'Nada fixado: «{next}» sorteia um cruzamento totalmente novo. Toca num pintor para o fixar.',pinFull:'Cinco fixados: «{next}» só muda as variantes deles e a paleta. Toca num pintor para o soltar.',cPinHint:'Os compositores fixados ficam; «{next}» junta mais 1 a 3. Toca num compositor para o fixar ou soltar.',cPinNone:'Nada fixado: «{next}» senta um ensemble totalmente novo. Toca num compositor para o fixar.',cPinFull:'Cinco fixados: solta um para que «{next}» possa trazer outros.'},
+  zh:{title:'合奏',fusion:'融合',sub:'多位画家融合为一，多位作曲家同台 Jam。',painters:'画家',composers:'作曲家',fsTurns:'轮流',fsNewP:'新画家',fsNewC:'新作曲家',howTo:'运作方式',fsNote:'收藏会保留作画时的风格。',fsDrawn:'每次融合和 Jam 都会抽取风格',fsNew:'新画家 / 新作曲家',fsTap:'标记位于名字前面。点按它，这次融合或 Jam 就会切换到另一种风格。',cr:'Jam session',desc:'多位画家杂交成一种新风格（融合），作曲家轮流接句（Jam session）。开启后，每个 🔀 旁出现合奏按钮 ◎；点按最多五位艺术家或作曲家——或与 🔀 1 / ALL 组合。开启 🔀 时（画家为 ALL），点按画家或作曲家即可固定：他们保留，Next 在旁边再抽 1–3 位。在 Lite 中，「给我惊喜」偶尔会奏出合奏。',pinHint:'已固定的画家保留，「{next}」再加入 1–3 位。点按画家即可固定或取消固定。',pinNone:'没有固定的画家：「{next}」会抽出全新的杂交。点按画家即可固定。',pinFull:'已固定五位：「{next}」只更换他们的变体和调色板。点按画家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。点按作曲家即可固定或取消固定。',cPinNone:'没有固定的作曲家：「{next}」会安排一个全新的合奏。点按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能请来其他人。'},
+  zhTW:{title:'合奏',fusion:'融合',sub:'多位畫家融合為一，多位作曲家同台 Jam。',painters:'畫家',composers:'作曲家',fsTurns:'輪流',fsNewP:'新畫家',fsNewC:'新作曲家',howTo:'運作方式',fsNote:'收藏會保留作畫時的風格。',fsDrawn:'每次融合和 Jam 都會抽取風格',fsNew:'新畫家 / 新作曲家',fsTap:'標記位於名字前面。點按它，這次融合或 Jam 就會切換到另一種風格。',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
+  ja:{title:'アンサンブル',fusion:'フュージョン',sub:'複数の画家をひとつのフュージョンに、複数の作曲家をひとつのジャムに。',painters:'画家',composers:'作曲家',fsTurns:'交代で',fsNewP:'新しい画家',fsNewC:'新しい作曲家',howTo:'仕組み',fsNote:'お気に入りは描かれたときの様式のまま残る。',fsDrawn:'フュージョンとジャムの様式は毎回抽選される',fsNew:'新しい画家／作曲家',fsTap:'マークは名前の前にある。タップすると、そのフュージョンやジャムがもう一方の様式に切り替わる。',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
 };
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
@@ -1510,6 +1576,15 @@ export default function Paintiano() {
   // flag), then the shuffle. Every later song opens on ✦, then the shuffle.
   const _liteNextIsSigRef = useRef(false);
   const liteOpenRef = useRef(null);
+  // Lite's OPENING piece (the one the Play chip starts) opens on the Mosaic — the concept itself: every note that sounds has its
+  // own colour. Set by litePlayStart, read once by liteOpenRef; liteIntroPiece stays true while that piece is on the canvas.
+  const _liteIntroRef = useRef(false);
+  const [liteIntroPiece, setLiteIntroPiece] = useState(false);
+  const [mosaicIntroShow, setMosaicIntroShow] = useState(false);   // the line + the colour key over the canvas (first 3 times)
+  const [surpriseHint, setSurpriseHint] = useState(false);         // "same notes – a different hand" over Surprise (once)
+  const mosaicIntroDoneRef = useRef(false);
+  const imgIntroDoneRef = useRef(false);   // the mirror in painting → music: once per session, the first 3 sessions
+  const _miTimersRef = useRef([]);
   const pendingRef   = useRef([]);
   const kbTimer      = useRef(null);
   const timers       = useRef([]);
@@ -2702,20 +2777,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _ensPrevProRef = useRef(proStatus);
   useEffect(()=>{ const prev=_ensPrevProRef.current; _ensPrevProRef.current=proStatus; if(prev==='free' && (proStatus==='pro'||proStatus==='pro_ai')){ setEnsembleOn(true); try{ localStorage.setItem('paintiano_setup_ensemble','1'); }catch(_){} } },[proStatus]);
   const ensembleActive = ensembleOn && proStatus!=='free';
-  // Fusion style (Setup › Ensemble): A side by side · E one painter · AE either, by chance (see FUSION STYLE · A / E in 02-draw).
-  // Default A; Free stays A. The draw module reads it from globalThis, set here before any paint of this render.
-  const [fuStyle, setFuStyle] = useState(()=>{ try{ const v=localStorage.getItem('paintiano_setup_fustyle'); return (v==='E'||v==='AE') ? v : 'A'; }catch(_){ return 'A'; } });
+  // Fusion style (A take turns · E one new painter / composer): drawn for every fusion and jam ('AE', a coin on its address) — there is
+  // no Setup choice any more; a tap on the mark before the names flips one. Free stays A. The draw module reads it from globalThis.
+  const fuStyle = 'AE';
   const fuStyleNow = proStatus!=='free' ? fuStyle : 'A';
   try{ globalThis.__PAINT_FU_STYLE = fuStyleNow; }catch(_){}
   // the composers' own Fusion style (Jam session) — a separate switch; until it is first touched it follows the painters' value
   const [jamFlipN, setJamFlipN] = useState(0);
   const [, setJamTick] = useState(0);
   useEffect(()=>{ globalThis.__onJamStyle = ()=>{ setJamTick(n=>n+1); }; return ()=>{ globalThis.__onJamStyle = null; }; },[]);   // bumps when the user flips a jam's style (Random only) — makes the composition run again
-  const [fuStyleC, setFuStyleC] = useState(()=>{ try{ const c=localStorage.getItem('paintiano_setup_fustyle_c'); const v=(c!==null) ? c : localStorage.getItem('paintiano_setup_fustyle'); return (v==='E'||v==='AE') ? v : 'A'; }catch(_){ return 'A'; } });
+  const fuStyleC = 'AE';
   const fuStyleCNow = proStatus!=='free' ? fuStyleC : 'A';
-  // Setup › Ensemble: "Default style" (A | E) is remembered separately, so the Random switch can go on and off without losing it
-  const [fuBase, setFuBase] = useState(()=>{ try{ const b=localStorage.getItem('paintiano_setup_fustyle_base'); if(b==='A'||b==='E') return b; return localStorage.getItem('paintiano_setup_fustyle')==='E' ? 'E' : 'A'; }catch(_){ return 'A'; } });
-  const [fuBaseC, setFuBaseC] = useState(()=>{ try{ const b=localStorage.getItem('paintiano_setup_fustyle_base_c'); if(b==='A'||b==='E') return b; const c=localStorage.getItem('paintiano_setup_fustyle_c'); const v=(c!==null) ? c : localStorage.getItem('paintiano_setup_fustyle'); return v==='E' ? 'E' : 'A'; }catch(_){ return 'A'; } });
   try{ globalThis.__PAINT_JAM_STYLE = fuStyleCNow; }catch(_){}
   const [ensHelp, setEnsHelp] = useState(false);   // Setup › Ensemble: the long explanation behind “How it works”
   const ensembleOnRef = useRef(false); useEffect(()=>{ ensembleOnRef.current = ensembleActive; },[ensembleActive]);
@@ -3487,6 +3559,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // what the chord painting was generated from. Resets to off when the
   // picker re-opens so the user explicitly opts in each time.
   const [includeSourceThumb, setIncludeSourceThumb] = useState(false);
+  // Web / Print carry the caption (title, painters, the song's colours) unless switched off for the bare painting; remembered
+  const [exportBand, setExportBand] = useState(()=>{ try{ return localStorage.getItem('paintiano_export_band')!=='0'; }catch(_){ return true; } });
+  const exportBandRef = useRef(true); exportBandRef.current = exportBand;
+  const _toggleExportBand = ()=>setExportBand(v=>{ const n=!v; try{ localStorage.setItem('paintiano_export_band', n?'1':'0'); }catch(_){} return n; });
   const includeSourceThumbRef = useRef(false);
   useEffect(()=>{ includeSourceThumbRef.current=includeSourceThumb; },[includeSourceThumb]);
   const pendingWithSourceRef = useRef(false);
@@ -3741,7 +3817,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // The target may sit below the fold of the Setup sheet (Composers grew to
     // 12 chips, pushing Tones off-screen) — bring it into view FIRST, then
     // measure, or the ring lands on whatever is at the stale rect (the footer).
-    const TOUR_SELS=['.pf-setup-chip','.pf-setup-artists','.pf-setup-palettes','.pf-setup-composers','.pf-setup-ensemble-head','.pf-setup-tones'];
+    const TOUR_SELS=['.pf-setup-chip','.pf-setup-palettes','.pf-setup-artists','.pf-setup-composers','.pf-setup-ensemble-head','.pf-setup-tones'];
     const s0=setTimeout(()=>{ try{ const el=document.querySelector(TOUR_SELS[tourStep]||''); if(el && el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'auto'}); }catch(_){} },40);
     const a=setTimeout(()=>setTourTick(t=>t+1),160); const b=setTimeout(()=>setTourTick(t=>t+1),420);
     return ()=>{ clearTimeout(s0); clearTimeout(a); clearTimeout(b); };
@@ -7470,6 +7546,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
       // Lite: every piece. Advanced: music files and samples (MIDI · audio · score) open on ✦.
       // Lite (no poster QR): Kandinsky v0 → Mosaic → ✦ (liteOpenRef). Advanced: music files and samples open on ✦.
+      setLiteIntroPiece(false);
       if(basicModeRef.current && !qrArtistRef.current && liteOpenRef.current) liteOpenRef.current(_sg);
       else if(_sg && _sgMusic && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
     }catch(_){}
@@ -10124,6 +10201,8 @@ Hard requirements:
       // Arm the "next Surprise = Mosaic" flag so the second impression is the
       // bare grid, high contrast with the painterly Pollock opener.
       _liteNextIsMosaicRef.current = true;
+      // ...overridden by liteOpenRef: the opening piece now opens ON the Mosaic (see _liteIntroRef)
+      _liteIntroRef.current = true;
       }
     }catch(_){}
     // Inherit the user's active palette and tone (set in Advanced or stored
@@ -10151,6 +10230,18 @@ Hard requirements:
     const _k = setupArtists.includes('kandinsky') ? 'kandinsky' : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'kandinsky');
     const _hasSig = !!(sg && sg.keys && sg.keys.length && applySigRef.current);
     let _arc = true; try{ _arc = localStorage.getItem('paintiano_lite_arc')!=='1'; localStorage.setItem('paintiano_lite_arc','1'); }catch(_){}
+    const _intro = _liteIntroRef.current; _liteIntroRef.current = false;
+    setLiteIntroPiece(_intro);
+    if(_intro){
+      // the opening piece: the Mosaic first (every note its colour), the first Surprise brings the piece's ✦ Signature, then the shuffle
+      mosaicIntroDoneRef.current = false;
+      _liteNextIsMosaicRef.current = false;
+      _liteNextIsSigRef.current = _hasSig;
+      setRandomMode(false); randomModeRef.current=false;
+      setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
+      return;
+    }
     _liteNextIsMosaicRef.current = _arc;
     _liteNextIsSigRef.current = false;
     if(_hasSig && (!_arc || (sg.keys.length===1 && sg.keys[0]===_k && (sg.ph|0)===0))){ applySigRef.current(sg); return; }
@@ -10159,6 +10250,33 @@ Hard requirements:
     setStyle(_k); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
     _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
   };
+  // the opening piece is on screen as the bare Mosaic (Lite, music → painting)
+  const _miOn = !!(basicMode && !liteImageMode && liteIntroPiece && style===null && !painterStage.length && !sigActive);
+  const _miT = (k)=>{ const d=MOSAIC_INTRO_I18N[lang]||MOSAIC_INTRO_I18N.EN; return d[k]!==undefined ? d[k] : MOSAIC_INTRO_I18N.EN[k]; };
+  // the mirror: Lite painting → music scanning a picture — every colour has its own tone (the same key, lit by the tones the scan plays)
+  const _miImgOn = !!(basicMode && liteImageMode && viewMode==='image' && chords.length>0);
+  const _miKind = _miOn ? 'm' : (_miImgOn ? 'i' : null);
+  useEffect(()=>{
+    const clear=()=>{ _miTimersRef.current.forEach(t=>clearTimeout(t)); _miTimersRef.current=[]; };
+    if(!_miKind){ clear(); setMosaicIntroShow(false); return; }
+    const doneRef = (_miKind==='m') ? mosaicIntroDoneRef : imgIntroDoneRef;
+    if(!playing || doneRef.current) return;
+    doneRef.current = true;
+    const K = (_miKind==='m') ? 'paintiano_mosaic_intro_n' : 'paintiano_img_intro_n';
+    let n=0; try{ n=(+localStorage.getItem(K))||0; }catch(_){}
+    if(n>=3) return;
+    _miTimersRef.current.push(setTimeout(()=>{ setMosaicIntroShow(true); try{ localStorage.setItem(K, String(n+1)); }catch(_){} }, 1500));
+    _miTimersRef.current.push(setTimeout(()=>{ setMosaicIntroShow(false); }, 1500+5600));
+  },[_miKind, playing]);
+  useEffect(()=>()=>{ _miTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
+  useEffect(()=>{
+    if(!_miOn){ setSurpriseHint(false); return; }
+    if(!(chords.length>0 && !playing && !holdPaused && disp>=chords.length)) return;
+    let seen=false; try{ seen=localStorage.getItem('paintiano_lite_surprise_hint')==='1'; }catch(_){}
+    if(seen) return;
+    try{ localStorage.setItem('paintiano_lite_surprise_hint','1'); }catch(_){}
+    setSurpriseHint(true);
+  },[_miOn, playing, holdPaused, disp, chords.length]);
   const basicSurprise = useCallback(()=>{
     // ── Forced Mosaic on the first Surprise after Lite Play ─────────────
     // litePlayStart lands on Pollock. The very next Surprise tap goes to
@@ -12193,6 +12311,19 @@ Hard requirements:
       // canvas, centered, with a small Paintiano wordmark below. Built for IG/
       // TikTok stories. Everything else ('web'/'print') downloads `hi` as-is.
       let outCanvas = hi;
+      // Web / Print with the caption (Save can switch it off for the bare painting): title, painters and the song's colours under the painting
+      if((sizeMode==='web' || sizeMode==='print') && exportBandRef.current && viewMode!=='image' && chords.length){
+        try{
+          const _tt=String((compositionName||'').trim() || (info && info.title) || '').trim();
+          const _sp=_tt.split(/\s+[\u2014\u2013-]\s+/); const _title=_sp[0]||''; const _comp=_sp.length>1 ? _sp.slice(1).join(' \u2013 ') : '';
+          const _insp=(X.insp!==undefined) ? X.insp : (()=>{ const k=effectiveStyle || (shuffleStyle && shuffleStyle!=='mosaic' ? shuffleStyle : 'mosaic'); const bare=(k==='mosaic'||k==='notes'||k==='raffel');
+            const l0=(painterStage.length && !favView) ? _stageNames('art') : (STYLE_INSPIRED[k] ? (bare ? STYLE_INSPIRED[k] : `inspired by ${STYLE_INSPIRED[k]}`) : '');
+            return (l0 && sigActiveRef.current) ? ('\u2726 '+_sigT('label')+' \u00b7 '+l0) : l0; })();
+          try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
+          outCanvas=_frameExport(hi, sizeMode, {title:_title, composer:_comp, insp:_insp, wts:_pcWeights(chords), gc, names:_miT('names')});
+          if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
+        }catch(_){ outCanvas=hi; }
+      }
       if(sizeMode==='story'){
         const SW=1080, SH=1920;
         const st=document.createElement('canvas'); st.width=SW; st.height=SH;
@@ -12281,7 +12412,8 @@ Hard requirements:
         const _inspLabel = (X.insp!==undefined) ? X.insp : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
-        const paintingBottomReserve = 290; // mood + wordmark + tagline
+        const _stW = chords.length ? _pcWeights(chords) : null;   // the song's colours (between the painting and the wordmark)
+        const paintingBottomReserve = 290 + (_stW ? 190 : 0); // mood + wordmark + tagline (+ the song's colours)
         const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
         // Scale painting to fit BOTH dimensions. Width-only scaling overflowed
         // the canvas footer on tall sources (mood-from-image with a portrait
@@ -12318,6 +12450,7 @@ Hard requirements:
         sctx.textAlign='center';
         const moodLabel = (currentMood||'').trim();
         let cursorY = dy + dh + 110;
+        if(_stW){ const _sw=852, _sh=150; _drawPcStrip(sctx, Math.round((SW-_sw)/2), dy+dh+44, _sw, _sh, _stW, gc, _miT('names'), {font:22, gap:12}); cursorY = dy + dh + 44 + _sh + 96; }
         if(moodLabel){
           sctx.fillStyle='rgba(255,220,140,.95)';
           sctx.font='italic 500 44px "Cormorant Garamond", Georgia, serif';
@@ -12782,7 +12915,7 @@ Hard requirements:
 
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,background:'radial-gradient(ellipse at 50% -10%,#0e0b16,#06060c 55%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px 160px':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
-      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
+      <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
         <button onClick={exportPoster} style={{position:'fixed',right:14,bottom:132,zIndex:9999,padding:'10px 16px',borderRadius:22,border:'1px solid rgba(201,168,76,.8)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.18em',cursor:'pointer'}}>⬇ POSTER</button>
@@ -15221,6 +15354,27 @@ Hard requirements:
         <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
+        {/* Lite's opening Mosaic: every note that sounds has its own colour — the line, and the twelve colours in fifths with the notes sounding now lit */}
+        {mosaicIntroShow && _miKind && (()=>{
+          const _cur = chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))];
+          const _lit = new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; }));
+          const _nm = _miT('names');
+          // music → painting reads tone → colour, so the tones go round the fifths; painting → music reads colour → tone, so the colours go round the hue circle
+          const _col = (pc)=>{ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){} return c; };
+          const _hue = (c)=>{ const r=c[0]/255, g=c[1]/255, b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(!d) return 0; const h = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; return ((h*60)+360)%360; };
+          const _ord = (_miKind==='i') ? [0,1,2,3,4,5,6,7,8,9,10,11].sort((a,b)=>_hue(_col(a))-_hue(_col(b))) : [0,7,2,9,4,11,6,1,8,3,10,5];
+          return (
+            <div style={{position:'absolute',left:0,right:0,top:'26%',bottom:'6%',zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(14px, 4.5%, 24px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
+              <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_miT(_miKind==='i' ? 'lineImg' : 'line')}</div>
+              <div role="img" aria-label={_miT('keyAria')} style={{display:'grid',gridTemplateColumns:'repeat(12, minmax(0, 1fr))',gap:4,width:'min(90%, 300px)'}}>
+                {_ord.map(pc=>{ const c=_col(pc); const on=_lit.has(pc); return (
+                  <div key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:5,minWidth:0}}>
+                    <div style={{width:'100%',maxWidth:20,aspectRatio:'1',borderRadius:4,background:`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`,opacity:on?1:.62,boxShadow:on?`0 0 0 2px #f4e7c6, 0 0 12px 2px rgba(${c[0]|0},${c[1]|0},${c[2]|0},.85)`:'none',transition:'opacity .12s, box-shadow .12s'}}/>
+                    <div style={{fontSize:(.56*effScale)+'rem',fontWeight:on?700:500,color:on?'#f4e7c6':'rgba(230,222,196,.62)',whiteSpace:'nowrap'}}>{_nm[pc]}</div>
+                  </div>); })}
+              </div>
+            </div>);
+        })()}
         {demoReelOn && demoPrintBeat && (
           /* Golden frame around the canvas — print-beat flourish. Stays here
              (not in the fullscreen overlay) because it visually wraps the
@@ -15435,6 +15589,10 @@ Hard requirements:
                       <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
                     </button>
                   )}
+                  <button onClick={_toggleExportBand} aria-pressed={exportBand} style={{padding:'10px 12px',background:'transparent',color:exportBand?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
+                    <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,border:'1px solid '+(exportBand?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',lineHeight:1,fontWeight:600,flexShrink:0}}>{exportBand?'\u2713':''}</span>
+                    <span style={{flex:1,textAlign:'left'}}>{_miT('band')}</span>
+                  </button>
                   {!immersive && (favView || imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource || isImportedMedia) && (
                     <button onClick={async ()=>{
                       setShowSizePicker(false);
@@ -16660,7 +16818,6 @@ Hard requirements:
         const togglePal = (k)=> setSetupPalettes(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
         const toggleArt = (k)=> setSetupArtists(prev => prev.includes(k) ? prev.filter(x=>x!==k) : [...prev, k]);
         const okMin = setupPalettes.length>=1 && setupArtists.length>=1 && setupTones.length>=1;
-        const isFree = proStatus==='free';
         const _px = (n)=> ((n/16)*effScale)+'rem';
         const _hStyle = {margin:0,fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:'italic',fontWeight:600,fontSize:_px(23),lineHeight:1.1,color:PF.cream};
         const _icoS = (kids, sz)=>(<svg width={sz||18} height={sz||18} viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}>{kids}</svg>);
@@ -16693,66 +16850,6 @@ Hard requirements:
         const _glyph = (v)=> (v==='A' || v==='E')
           ? (<FsGlyph v={v}/>)
           : (<svg width="28" height="20" viewBox="0 0 28 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="6.5" y="2" width="15" height="16" rx="4"/><circle cx="11.5" cy="7" r="1.1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="13" r="1.1" fill="currentColor" stroke="none"/><circle cx="14" cy="10" r="1.1" fill="currentColor" stroke="none"/></svg>);
-        // Fusion style is set separately for the painters ('p' → paintiano_setup_fustyle) and the composers ('c' → paintiano_setup_fustyle_c).
-        // Two controls per kind: the DEFAULT style (Take turns | New painter / composer — what a new fusion / jam starts with; it never locks anything, a tap
-        // on the style of any fusion / jam flips that one) and a Random switch (on: the style is drawn for every fusion / jam → stored 'AE'; the default is kept aside).
-        const _fsFree = ()=>{ if(proStatus!=='free') return false; try{ window.posthog && window.posthog.capture('ensemble_locked_tap',{what:'fusion_style'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return true; };
-        const _setFs = (who, style, base)=>{
-          if(who==='p'){ setFuStyle(style); setFuBase(base); try{ localStorage.setItem('paintiano_setup_fustyle', style); localStorage.setItem('paintiano_setup_fustyle_base', base); }catch(_){} }
-          else { setFuStyleC(style); setFuBaseC(base); try{ localStorage.setItem('paintiano_setup_fustyle_c', style); localStorage.setItem('paintiano_setup_fustyle_base_c', base); }catch(_){} }
-          try{ window.posthog && window.posthog.capture('fusion_style',{style, base, who:(who==='p'?'painters':'composers')}); }catch(_){}
-        };
-        const _pickFs = (who, v)=>{
-          if(_fsFree()) return;
-          const cur = who==='p' ? fuStyle : fuStyleC;
-          if(cur==='AE' || v===cur) return;
-          _setFs(who, v, v);
-        };
-        const _toggleFsRnd = (who)=>{
-          if(_fsFree()) return;
-          const cur = who==='p' ? fuStyle : fuStyleC;
-          const base = who==='p' ? fuBase : fuBaseC;
-          if(cur==='AE') _setFs(who, base, base); else _setFs(who, 'AE', (cur==='E' ? 'E' : 'A'));
-        };
-        const _fsBlock = (who)=>{
-          const cur = who==='p' ? fuStyleNow : fuStyleCNow;
-          const rnd = cur==='AE';
-          const base = rnd ? (who==='p' ? fuBase : fuBaseC) : cur;
-          const opts = [['A','fsTurns'],['E',(who==='p'?'fsNewP':'fsNewC')]];
-          const dis = !isFree && !ensembleOn;
-          const nm = _ensT(who==='p' ? 'painters' : 'composers');
-          return (
-            <div style={{marginTop:(who==='p'?12:16),opacity:ensembleActive?1:0.42}}>
-              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-                {_icoS(who==='p' ? _kBrush : _kNote, 16)}
-                <span style={{fontSize:_px(14),fontWeight:600,color:PF.cream}}>{nm}</span>
-              </div>
-              <div style={{fontSize:_px(11.5),color:'rgba(230,222,196,.66)',margin:'0 2px 6px'}}>{_ensT('fsDefault')}</div>
-              <div role="group" aria-label={_ensT('fsDefault')+' · '+nm} style={{..._segWrap(PF.bg),gridTemplateColumns:'repeat(2,minmax(0,1fr))',opacity:rnd?0.42:1}}>
-                {opts.map(([v,k])=>{
-                  const on = base===v;
-                  return (
-                  <button key={v} type="button" disabled={dis || rnd} aria-pressed={on} onClick={()=>_pickFs(who, v)} style={{..._segBtn(on),justifyContent:'flex-start'}}>
-                    <span style={{height:20,display:'flex',alignItems:'center',opacity:on?1:0.65}}>{_glyph(v)}</span>
-                    <span style={{whiteSpace:'nowrap'}}>{_ensT(k)}</span>
-                  </button>
-                  );
-                })}
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:12,marginTop:8,padding:'10px 12px',borderRadius:14,background:PF.bg,border:'1px solid rgba(242,238,232,.1)'}}>
-                <span style={{flex:'0 0 auto',display:'flex',color:rnd?'#dcb45a':'rgba(230,222,196,.45)'}}>{_glyph('AE')}</span>
-                <div style={{flex:'1 1 auto',minWidth:0}}>
-                  <div style={{fontSize:_px(13.5),fontWeight:600,color:PF.cream}}>{_ensT('fsRandom')}</div>
-                  <div style={{marginTop:2,fontSize:_px(12),lineHeight:1.35,color:'rgba(230,222,196,.68)'}}>{_ensT(who==='p' ? 'fsRndP' : 'fsRndC')}</div>
-                </div>
-                <button type="button" role="switch" aria-checked={rnd} aria-label={_ensT('fsRandom')+' · '+nm} disabled={dis} onClick={()=>_toggleFsRnd(who)} style={{flex:'0 0 auto',width:46,height:26,borderRadius:13,border:'1px solid '+(rnd?'rgba(226,196,119,.9)':'rgba(201,168,76,.4)'),background:rnd?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.05)',position:'relative',cursor:dis?'default':'pointer',padding:0}}>
-                  <span style={{position:'absolute',top:3,left:rnd?23:3,width:18,height:18,borderRadius:'50%',background:rnd?'#1a1408':'rgba(201,168,76,.7)',transition:'left .18s'}}/>
-                </button>
-              </div>
-              <p style={{margin:'8px 2px 0',minHeight:'2.9em',fontSize:_px(12.5),lineHeight:1.45,color:'rgba(230,222,196,.72)'}}>{_ensT((who==='p' ? 'dP_' : 'dC_')+(rnd ? 'AE' : base))}</p>
-            </div>
-          );
-        };
         return (
         <div onClick={(e)=>{ if(e.target===e.currentTarget && okMin) closeSetup(); }} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(8,6,14,0.96)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',display:'flex',justifyContent:'center'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="setup" className="pf-setup-dialog" style={{position:'relative',width:'100%',maxWidth:980,height:'100%',display:'flex',flexDirection:'column',color:'rgba(247,243,236,.92)',fontFamily:'inherit',borderLeft:'1px solid rgba(201,168,76,.08)',borderRight:'1px solid rgba(201,168,76,.08)',background:'rgba(8,6,14,0.35)'}}>
@@ -16859,9 +16956,18 @@ Hard requirements:
                 </button>
                 {ensHelp && (<div style={{marginTop:4,padding:'12px 14px',borderRadius:14,background:PF.card2,fontSize:_px(12.5),lineHeight:1.5,color:'rgba(230,222,196,.78)'}}>{pfIcons(_ensT('desc'))}</div>)}
                 <div style={{height:1,background:'rgba(255,255,255,.07)',margin:'12px 0 14px'}}/>
-                <div style={{fontSize:_px(11),fontWeight:500,letterSpacing:'.16em',color:'rgba(201,168,76,.85)',textTransform:'uppercase'}}>{_ensT('how')}</div>
-                {_fsBlock('p')}
-                {_fsBlock('c')}
+                {/* the fusion style is drawn for every fusion and jam; the mark before the names tells which, and a tap flips it */}
+                <div style={{display:'flex',flexDirection:'column',gap:10,opacity:ensembleActive?1:0.42}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{flex:'0 0 auto',display:'flex',color:'rgba(230,222,196,.8)'}}>{_glyph('AE')}</span>
+                    <span style={{fontSize:_px(14),fontWeight:500,color:PF.cream}}>{_ensT('fsDrawn')}</span>
+                  </div>
+                  <div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:'8px 14px',paddingLeft:38,fontSize:_px(12.5),color:'rgba(230,222,196,.78)'}}>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}><FsGlyph v="A" w={21} h={15}/>{_ensT('fsTurns')}</span>
+                    <span style={{display:'inline-flex',alignItems:'center',gap:6}}><FsGlyph v="E" w={21} h={15}/>{_ensT('fsNew')}</span>
+                  </div>
+                  <div style={{paddingLeft:38,fontSize:_px(12.5),lineHeight:1.45,color:'rgba(230,222,196,.62)'}}>{_ensT('fsTap')}</div>
+                </div>
                 <p style={{margin:'12px 2px 0',fontSize:_px(12),lineHeight:1.4,fontStyle:'italic',color:'rgba(230,222,196,.58)'}}>{_ensT('fsNote')}</p>
               </div>
               {!okMin && (
@@ -17046,6 +17152,13 @@ Hard requirements:
           </div>
         )}
         {!_litePlayChipShown && !(immersive && isCoarse && isNotPhone) && <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+          {surpriseHint && _miOn && !immersive && (
+            <div role="status" style={{position:'absolute',zIndex:2,pointerEvents:'none',boxSizing:'border-box',padding:'12px 16px 13px',borderRadius:14,border:'1px solid rgba(220,180,90,.55)',background:'#1a1522',boxShadow:'0 10px 30px rgba(0,0,0,.55)',display:'flex',flexDirection:'column',gap:4,textAlign:'left',...((basicMode&&isDesktop)?{right:'calc(100% + 14px)',bottom:20,width:236}:{right:12,bottom:'calc(100% + 12px)',width:'min(236px, calc(100% - 24px))'})}}>
+              <span style={{fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?.95:1.12)*effScale)+'rem',lineHeight:1.25,color:'#f4e7c6'}}>{_miT('hint')}</span>
+              <span style={{fontSize:(.66*effScale)+'rem',lineHeight:1.35,color:'rgba(230,222,196,.78)'}}>{_miT('hintSub').replace('{btn}', ts('surpriseMe','Surprise me'))}</span>
+              <span aria-hidden="true" style={{position:'absolute',width:12,height:12,background:'#1a1522',transform:'rotate(45deg)',...((basicMode&&isDesktop)?{right:-7,bottom:29,borderTop:'1px solid rgba(220,180,90,.55)',borderRight:'1px solid rgba(220,180,90,.55)'}:{bottom:-7,right:'calc((100vw - 40px) / 6 - 6px)',borderRight:'1px solid rgba(220,180,90,.55)',borderBottom:'1px solid rgba(220,180,90,.55)'})}}/>
+            </div>
+          )}
           {!immersive && (liteImageMode
             ? <button onClick={()=>setLiteImgPicker(true)} disabled={_litePlayChipShown} title={ts('useMyPicture','Use my picture')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoPic}<span>{ts('useMyPicture','Use my picture')}</span></button>
             : <button onClick={()=>setLiteSrcPicker(true)} disabled={_litePlayChipShown} title={ts('useMySong','Use my song')} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{}),opacity:_litePlayChipShown?.5:1}}>{_icoWave}<span>{ts('useMySong','Use my song')}</span></button>)}
@@ -17059,7 +17172,7 @@ Hard requirements:
             which is where the taste-preview + success teaser then do the selling.
             Solves discovery (the missing lite_to_advanced step) at the exact
             instant of delight. Free users only; keeps Lite calm otherwise. */}
-        {basicMode && !isPro && !bridgeUsed && _done && !_litePlayChipShown && (
+        {basicMode && !isPro && !bridgeUsed && _done && !_litePlayChipShown && !(surpriseHint && _miOn) && (
           <div style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'calc(52% + 220px)'}:{top:480}),right:24,width:150,zIndex:immersive?10001:62,pointerEvents:'auto',display:'flex',justifyContent:'center'}:{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom,0px) + 74px)',transform:'translateX(-50%)',zIndex:immersive?10001:62,pointerEvents:'auto'}}>
             <button onClick={()=>{ try{ window.posthog && window.posthog.capture('lite_bridge_click'); }catch(_){} try{ localStorage.setItem('paintiano_discovered','1'); }catch(_){} setBridgeUsed(true); setImmersive(false); tourPendingRef.current=true; setBasicMode(false); }}
               style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.6)',color:'#e8c96a',whiteSpace:'nowrap',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'}}>
@@ -17074,8 +17187,8 @@ Hard requirements:
         {!basicMode && !isPro && (tourWelcome || tourStep>=0) && (()=>{
           const TOUR = [
             { sel:'.pf-setup-chip', title:ts('tourChipTitle','Tvoje \u0161t\u00fadio'), body:ts('tourChipBody','Tu sa otv\u00e1ra setup \u2014 v\u0161etci umelci, palety a t\u00f3ny na jednom mieste. Pozrime sa dnu.'), pad:10 },
+            { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Ka\u017ed\u00fd t\u00f3n, svoja farba'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
             { sel:'.pf-setup-artists', title:ts('tourArtTitle','24 umelcov'), body:ts('tourArtBody','9 je zadarmo, zvy\u0161ok odomkne Pro \u2014 no prv\u00fd \u0165uk na ktor\u00e9hoko\u013evek m\u00e1\u0161 zadarmo. Z\u00e1mky nie s\u00fa stena, ale pozv\u00e1nka.'), pad:8, inModal:true },
-            { sel:'.pf-setup-palettes', title:ts('tourPalTitle','Palety'), body:ts('tourPalBody','Paleta men\u00ed, ako hudba znie vo farbe \u2014 od zlata po spektrum.'), pad:8, inModal:true },
             { sel:'.pf-setup-composers', inModal:true, pad:8,
               title:(({EN:'Composers',SK:'Skladatelia',DE:'Komponisten',FR:'Compositeurs',ES:'Compositores',PT:'Compositores',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composers'),
               body:(({EN:'A painting can play as a pure scan \u2014 or recomposed in a composer\u2019s style, from Bach to Hisaishi. Chopin + Satie are free \u2014 Pro unlocks all twelve.',
