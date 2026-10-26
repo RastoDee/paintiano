@@ -22805,14 +22805,25 @@ const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, art
 // (No lookbehind in these patterns: Safari before 16.4 cannot even parse one, and the whole app would not start.)
 // an initial: a single capital right before the dot, at the start or after a space / bracket (J. S. Bach)
 const _gInitial = (s, at)=> at>0 && /\p{Lu}/u.test(s.charAt(at-1)) && (at===1 || /[\s(]/.test(s.charAt(at-2)));
-// a Latin sentence ends where the next one starts with no small letter
-const _gBreaks = (s)=>{ const out=[]; s.replace(/([.!?…])\s+(?=[^\s\p{Ll}])/gu, (m, p, at)=>{ if(!_gInitial(s, at)) out.push(at+1); return m; }); return out; };
+// how deep in brackets each position is (d[i] = before character i) — a remark in brackets stays one line;
+// null when the brackets do not pair up (then they are ignored)
+const _gDepth = (s)=>{ const d=new Int16Array(s.length+1); let x=0;
+  for(let i=0;i<s.length;i++){ const c=s[i]; if(c==='('||c==='（') x++; else if((c===')'||c==='）') && x>0) x--; d[i+1]=x; }
+  return x===0 ? d : null; };
+// a Latin sentence ends where the next one starts with no small letter — and not with Chinese / Japanese, which has its
+// own full stop (a closing bracket or quote stays with the sentence)
+const _gBreaks = (s)=>{ const out=[]; const d=_gDepth(s);
+  s.replace(/([.!?…][)）"”»」』]*)\s+(?=[^\s\p{Ll}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])/gu, (m, p, at)=>{ const c=at+p.length; if(!_gInitial(s, at) && (!d || d[c]===0)) out.push(c); return m; });
+  return out; };
 const _gSentences = (s)=>{
-  s=String(s||'').trim(); const cuts=_gBreaks(s); let t='', a=0;
-  for(const c of cuts){ t+=s.slice(a,c)+'\u0001'; a=c; } t+=s.slice(a);
-  return t.replace(/([。！？]+[」』”）)]*)(?=\S)/gu, '$1\u0001')    // CJK: after 。！？ (and a closing quote)
-    .split('\u0001').map(x=>x.trim()).filter(Boolean);
+  s=String(s||'').trim(); const d=_gDepth(s); const cuts=_gBreaks(s);
+  s.replace(/[。！？]+[」』”）)]*(?=\S)/gu, (m, at)=>{ const c=at+m.length; if(!d || d[c]===0) cuts.push(c); return m; });   // CJK: after 。！？ (and a closing quote)
+  cuts.sort((x,y)=>x-y);
+  const out=[]; let a=0; for(const c of cuts){ if(c>a){ out.push(s.slice(a,c)); a=c; } } out.push(s.slice(a));
+  return out.map(x=>x.trim()).filter(Boolean);
 };
+// a line that is a remark in brackets — set as an aside (italic, quieter), never opened in bold
+const _gAside = (ln)=> /^[(（]/.test(ln) && /[)）][.。!！?？]?$/.test(ln);
 const _gRich = (s, k0)=>{
   const out=[]; let k=0;
   String(s).split(/(„[^“”„]+[“”]|“[^”]+”|«[^»]+»|"[^"]+"|「[^」]+」|『[^』]+』)/u).forEach((q)=>{
@@ -22853,9 +22864,9 @@ const GuideMore = ({text, readScale})=>{
           )}
           <div style={{display:'flex',flexDirection:'column',gap:b.lead?6:7}}>
             {b.lines.map((ln,li)=>(
-              <div key={li} style={{position:'relative',paddingLeft:b.lead?0:14,fontSize:((b.lead?.86:.8)*readScale)+'rem',lineHeight:1.5,color:b.lead?'rgba(240,233,214,.9)':'rgba(230,222,196,.8)',...((!b.lead && !b.head && li===0)?{fontWeight:600,color:'rgba(244,236,214,.95)'}:{})}}>
-                {!b.lead && (<span aria-hidden="true" style={{position:'absolute',left:2,top:'.62em',width:5,height:5,borderRadius:'50%',background:'rgba(214,178,92,.75)'}}/>)}
-                {(()=>{ const tm=(!b.lead && (b.head || li>0)) ? ln.match(/^([^.!?。！？—–:：]{1,24}?)(\s[—–]\s|——|[:：]\s?)/u) : null;
+              <div key={li} style={{position:'relative',paddingLeft:b.lead?0:14,fontSize:((b.lead?.86:.8)*readScale)+'rem',lineHeight:1.5,color:b.lead?'rgba(240,233,214,.9)':'rgba(230,222,196,.8)',...((!b.lead && !b.head && li===0 && !_gAside(ln))?{fontWeight:600,color:'rgba(244,236,214,.95)'}:{}),...(_gAside(ln)?{fontStyle:'italic',color:'rgba(230,222,196,.62)'}:{})}}>
+                {!b.lead && (<span aria-hidden="true" style={{position:'absolute',left:2,top:'.62em',width:5,height:5,borderRadius:'50%',background:_gAside(ln)?'rgba(214,178,92,.4)':'rgba(214,178,92,.75)'}}/>)}
+                {(()=>{ const tm=(!b.lead && (b.head || li>0) && !_gAside(ln)) ? ln.match(/^([^.!?。！？—–:：]{1,24}?)(\s[—–]\s|——|[:：]\s?)/u) : null;
                   return tm ? (<><span style={{fontWeight:600,color:'rgba(247,240,224,.96)'}}>{_gRich(tm[1], bi+'-'+li+'-t')}</span>{tm[2]}{_gRich(ln.slice(tm[0].length), bi+'-'+li+'-')}</>) : _gRich(ln, bi+'-'+li+'-'); })()}
               </div>
             ))}
