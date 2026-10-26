@@ -25335,6 +25335,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // whole thing self-expires at launch time (7 Oct 2026, 09:00 CEST) so no
   // cleanup release is ever needed.
   // Daily-artist toast: once per local day for Free users (localStorage remembers the day index).
+  // Artist of the day toast: lives only on a screen with a free bottom edge (the Lite Play chip,
+  // the Advanced home) and only until the first Play of the session — after that the Lite chips or
+  // the transport dock own the bottom and the toast would cover them. Not stored: next visit it is back.
+  const [dailyPlayed,setDailyPlayed]=useState(false);
+  useEffect(()=>{ if(playing) setDailyPlayed(true); },[playing]);
   const [dailyToast,setDailyToast]=useState(()=>{ try{ const d=new Date(); const n=Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/86400000); return localStorage.getItem('paintiano_daily_toast_v1')!==String(n); }catch(_){ return false; } });
   const _pmTapsRef=useRef({n:0,t:0,tm:null});
   const _pmLogoTap=useCallback(()=>{
@@ -34570,7 +34575,7 @@ Hard requirements:
           })()}
         </div>
       )}
-      {dailyToast && proStatus==='free' && !showOnboarding && !showIntro && (
+      {dailyToast && !dailyPlayed && proStatus==='free' && !showOnboarding && !showIntro && !isActiveView && !favView && (!basicMode || (!liteImageMode && !loadedSource && !liteEverUnlockedRef.current)) && (
         <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw'}}>
           <span onClick={()=>{ try{ window.posthog && window.posthog.capture('daily_toast_tap',{artist:artistOfDay,composer:composerOfDay}); }catch(_){} setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ if(!liteImageMode) selectStyle(artistOfDay); }catch(_){} }}
             style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
