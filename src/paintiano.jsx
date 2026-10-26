@@ -35052,6 +35052,16 @@ Hard requirements:
     : loadedSource==='image' ? 'image'
     : (loadedSource==='midi'||loadedSource==='audio'||loadedSource==='score') ? 'music' : null;
   const tintCol = ({music:'#14224a', image:'#381c0b', compose:'#0e311e', mic:'#3b1128', mood:'#362a12', mfi:'#291747'})[tintKey] || '#0e0b16';
+  // ☰ MENU closes by itself as soon as the user does something else: a tap anywhere outside it (Play, the strip, a chip — the
+  // tap still does its job) or playback / recording / fullscreen starting some other way. A tap on the dimmed page only closes it.
+  const navMenuWrapRef = useRef(null);
+  useEffect(()=>{
+    if(!navMenuOpen) return;
+    const onDown=(e)=>{ const w=navMenuWrapRef.current; if(w && e.target && w.contains(e.target)) return; setNavMenuOpen(false); };
+    document.addEventListener('pointerdown', onDown, true);
+    return ()=> document.removeEventListener('pointerdown', onDown, true);
+  },[navMenuOpen]);
+  useEffect(()=>{ if(playing || recording || immersive) setNavMenuOpen(false); },[playing, recording, immersive]);
   // ── ♥ A PICTURE (Image mode) ── its address is the picture itself plus what reads it: the palette, Scan's direction, the
   // composer(s) and the jam's style, ✦, AI compose (with its piece), atmosphere and melody. It can be saved while it plays.
   // The picture is kept once, as the original file's bytes (favAdd) — any copy would read differently: a photo's grain decides
@@ -35596,7 +35606,7 @@ Hard requirements:
             (Concept · Book · Guide · Setup · Pro) moved out of the always-on
             text row into the dropdown — same handlers, just relocated. ── */}
         <div style={{display:'inline-flex',alignItems:'center',gap:6}}>
-        <div style={{position:'relative'}}>
+        <div ref={navMenuWrapRef} style={{position:'relative'}}>
           <button onClick={()=>setNavMenuOpen(v=>!v)} aria-label="menu" aria-expanded={navMenuOpen} title="menu" style={{width:38,height:38,display:'inline-flex',alignItems:'center',justifyContent:'center',background:navMenuOpen?'rgba(201,168,76,.12)':'rgba(255,255,255,.03)',border:'1px solid '+(navMenuOpen?'rgba(201,168,76,.45)':'rgba(201,168,76,.26)'),borderRadius:19,cursor:'pointer',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'background .18s,border-color .18s'}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,.92)" strokeWidth="1.7" strokeLinecap="round">
               {navMenuOpen
