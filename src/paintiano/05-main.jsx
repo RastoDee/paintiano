@@ -410,15 +410,15 @@ const SIG_I18N = {
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
 // twelve colours (the notes sounding now lit), and once, when the piece has played, a hint that Surprise brings the painters.
 const MOSAIC_INTRO_I18N = {
-  EN:{painter:'The same notes – now {name} paints them.',painterSub:'Who is painting is always shown up top',painterSubFs:'Tap the canvas to see who is painting',lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  SK:{painter:'Tie isté tóny – teraz ich maľuje {name}.',painterSub:'Kto maľuje, uvidíš vždy hore',painterSubFs:'Ťukni na plátno a uvidíš, kto maľuje',lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  DE:{painter:'Dieselben Töne – jetzt malt sie {name}.',painterSub:'Wer malt, steht immer oben',painterSubFs:'Tippe auf die Leinwand, um zu sehen, wer malt',lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  FR:{painter:'Les mêmes notes – c’est maintenant {name} qui les peint.',painterSub:'Qui peint, c’est toujours écrit en haut',painterSubFs:'Touche la toile pour voir qui peint',lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  ES:{painter:'Las mismas notas – ahora las pinta {name}.',painterSub:'Quién pinta, siempre lo ves arriba',painterSubFs:'Toca el lienzo para ver quién pinta',lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  PT:{painter:'As mesmas notas – agora pintadas por {name}.',painterSub:'Quem pinta, vês sempre em cima',painterSubFs:'Toca na tela para veres quem pinta',lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
-  zh:{painter:'同样的音——现在由 {name} 来画。',painterSub:'谁在画，始终显示在上方',painterSubFs:'点一下画布，就能看到是谁在画',lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  zhTW:{painter:'同樣的音——現在由 {name} 來畫。',painterSub:'誰在畫，始終顯示在上方',painterSubFs:'點一下畫布，就能看到是誰在畫',lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  ja:{painter:'同じ音を、いまは {name} が描く。',painterSub:'誰が描いているかは、いつも上に',painterSubFs:'キャンバスをタップすると、誰が描いているかが見える',lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  EN:{painter:'The same notes – now {name} paints them.',painterSub:'Who is painting is always shown up top',painterSubFs:'Tap the canvas to see who is painting',lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',palLine:'{p} palette',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  SK:{painter:'Tie isté tóny – teraz ich maľuje {name}.',painterSub:'Kto maľuje, uvidíš vždy hore',painterSubFs:'Ťukni na plátno a uvidíš, kto maľuje',lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',palLine:'paleta {p}',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  DE:{painter:'Dieselben Töne – jetzt malt sie {name}.',painterSub:'Wer malt, steht immer oben',painterSubFs:'Tippe auf die Leinwand, um zu sehen, wer malt',lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',palLine:'Palette {P}',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  FR:{painter:'Les mêmes notes – c’est maintenant {name} qui les peint.',painterSub:'Qui peint, c’est toujours écrit en haut',painterSubFs:'Touche la toile pour voir qui peint',lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',palLine:'palette {p}',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  ES:{painter:'Las mismas notas – ahora las pinta {name}.',painterSub:'Quién pinta, siempre lo ves arriba',painterSubFs:'Toca el lienzo para ver quién pinta',lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',palLine:'paleta {p}',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  PT:{painter:'As mesmas notas – agora pintadas por {name}.',painterSub:'Quem pinta, vês sempre em cima',painterSubFs:'Toca na tela para veres quem pinta',lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',palLine:'paleta {p}',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
+  zh:{painter:'同样的音——现在由 {name} 来画。',painterSub:'谁在画，始终显示在上方',painterSubFs:'点一下画布，就能看到是谁在画',lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',palLine:'{p}调色板',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  zhTW:{painter:'同樣的音——現在由 {name} 來畫。',painterSub:'誰在畫，始終顯示在上方',painterSubFs:'點一下畫布，就能看到是誰在畫',lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',palLine:'{p}調色盤',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  ja:{painter:'同じ音を、いまは {name} が描く。',painterSub:'誰が描いているかは、いつも上に',painterSubFs:'キャンバスをタップすると、誰が描いているかが見える',lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',palLine:'{p}パレット',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
 };
 
 // The song's colours: how much each of the twelve tones sounds (notes per pitch class).
@@ -436,6 +436,9 @@ function _drawPcStrip(cx, x, y, w, h, wts, gc, names, o){
     cx.fillStyle=o.labelColor||'rgba(230,222,196,.72)'; cx.fillText((names&&names[pc])||'', bx+bw/2, y+bh+lh*0.85); });
   cx.restore();
 }
+// a palette's name in a caption, capitalised (Harmónia); the two-letter marks (b/w, č/b) in capitals
+const _PAL_KEYS=/^(harmony|spectral|phi|kontra|custom|bw)$/;
+function _palCap(s){ s=String(s||''); return /^\S{1,2}[\/&]\S{1,2}$/.test(s) ? s.toUpperCase() : s.charAt(0).toUpperCase()+s.slice(1); }
 // one line that fits: the font shrinks to `min`, then the text is cut with an ellipsis
 function _fitText(cx, txt, maxW, size, min, fontFn){ let s=size; cx.font=fontFn(s); while(s>min && cx.measureText(txt).width>maxW){ s-=1; cx.font=fontFn(s); } if(cx.measureText(txt).width<=maxW) return txt; let t=txt; while(t.length>1 && cx.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
 // Web / Print with a caption: the painting on the dark ground; under it the title, the painters and the song's colours.
@@ -456,7 +459,8 @@ function _frameExport(hi, kind, o){
     cx.textAlign='center'; let y=Hf-cb+Math.round(Wf*0.07);
     if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,bw,Math.round(Wf*0.044),Math.round(Wf*0.02),serifI); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.036); }
     if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,bw,Math.round(Wf*0.02),Math.round(Wf*0.012),sans); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.034); }
-    if(o.insp){ cx.fillStyle=GOLD; const t=_fitText(cx,o.insp,bw,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
+    const _il=o.insp ? (o.palN ? o.insp+'  |  '+o.palN : o.insp) : (o.pal||'');
+    if(_il){ cx.fillStyle=GOLD; const t=_fitText(cx,_il,bw,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
     const sw=Math.round(Wf*0.54); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
     cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · music → φ painting', Wf/2, Hf-Math.round(m*0.5));
     return cv;
@@ -470,6 +474,7 @@ function _frameExport(hi, kind, o){
   if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,tw,Math.round(W*0.036),Math.round(W*0.018),serifI); cx.fillText(t,m,y); y+=Math.round(W*0.033); }
   if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,m,y); y+=Math.round(W*0.033); }
   cx.fillStyle=GOLD; const t=_fitText(cx,(o.insp ? o.insp+' · ' : '')+'Paintiano',tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,m,y);
+  if(o.pal){ const fs=parseInt((/(\d+)px/.exec(cx.font)||[0,Math.round(W*0.021)])[1],10); y+=Math.round(W*0.033); cx.fillText(_fitText(cx,o.pal,tw,fs,Math.round(W*0.012),sans),m,y); }
   return cv;
 }
 
@@ -12397,7 +12402,9 @@ Hard requirements:
             const l0=(painterStage.length && !favView) ? _stageNames('art') : (STYLE_INSPIRED[k] ? (bare ? STYLE_INSPIRED[k] : `inspired by ${STYLE_INSPIRED[k]}`) : '');
             return (l0 && sigActiveRef.current) ? ('\u2726 '+_sigT('label')+' \u00b7 '+l0) : l0; })();
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
-          outCanvas=_frameExport(hi, sizeMode, {title:_title, composer:_comp, insp:_insp, wts:_pcWeights(chords), gc, names:_miT('names')});
+          const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
+          const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
+          outCanvas=_frameExport(hi, sizeMode, {title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:_pcWeights(chords), gc, names:_miT('names')});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
         }catch(_){ outCanvas=hi; }
       }
@@ -12508,10 +12515,12 @@ Hard requirements:
           sctx.save();
           sctx.textAlign='center';
           sctx.fillStyle='rgba(201,168,76,.78)';
-          // Italic serif matches the FS header; size scales to fit oneM's long label.
-          const _fontSize = _inspLabel.length > 28 ? 36 : 44;
+          // Italic serif matches the FS header; size scales to fit oneM's long label. The palette follows the painters.
+          const _iLine = _PAL_KEYS.test(mode||'') ? (_inspLabel+'  |  '+_palCap(t(mode))) : _inspLabel;
+          let _fontSize = _iLine.length > 28 ? 36 : 44;
           sctx.font=`italic 500 ${_fontSize}px "Cormorant Garamond", Georgia, serif`;
-          sctx.fillText(_inspLabel, SW/2, dy - 30);
+          while(_fontSize>26 && sctx.measureText(_iLine).width > SW-96){ _fontSize-=2; sctx.font=`italic 500 ${_fontSize}px "Cormorant Garamond", Georgia, serif`; }
+          sctx.fillText(_iLine, SW/2, dy - 30);
           sctx.restore();
         }
         sctx.save();
