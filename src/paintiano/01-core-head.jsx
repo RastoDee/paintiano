@@ -1457,8 +1457,8 @@ async function favPiece(pk){
 }
 // favAdd(fav, chords, pc) → saves one favorite in one transaction. The notes are
 // written only for a song not stored yet. A picture favorite (Image mode) brings
-// its picture instead: pc = {img: data URL, name: the file name}, kept once per
-// picture like a song. Returns the record, or null (private mode, quota).
+// its picture instead: pc = {buf: the original file's bytes, mime, name}, kept
+// once per picture like a song. Returns the record, or null (private mode, quota).
 async function favAdd(fav, chords, pc){
   try{
     const db = await favOpen();
@@ -1467,7 +1467,7 @@ async function favAdd(fav, chords, pc){
       const ps = tx.objectStore('pieces');
       const g  = ps.get(fav.pk);
       g.onsuccess = ()=>{
-        if(!g.result) ps.put((pc && pc.img) ? { pk:fav.pk, img:pc.img, name:pc.name||'' } : { pk:fav.pk, chords });
+        if(!g.result) ps.put((pc && pc.buf) ? { pk:fav.pk, buf:pc.buf, mime:pc.mime||'', name:pc.name||'' } : (pc && pc.img) ? { pk:fav.pk, img:pc.img, name:pc.name||'' } : { pk:fav.pk, chords });
         tx.objectStore('favs').put(fav);
       };
       tx.oncomplete = ()=> resolve();

@@ -1457,8 +1457,8 @@ async function favPiece(pk){
 }
 // favAdd(fav, chords, pc) → saves one favorite in one transaction. The notes are
 // written only for a song not stored yet. A picture favorite (Image mode) brings
-// its picture instead: pc = {img: data URL, name: the file name}, kept once per
-// picture like a song. Returns the record, or null (private mode, quota).
+// its picture instead: pc = {buf: the original file's bytes, mime, name}, kept
+// once per picture like a song. Returns the record, or null (private mode, quota).
 async function favAdd(fav, chords, pc){
   try{
     const db = await favOpen();
@@ -1467,7 +1467,7 @@ async function favAdd(fav, chords, pc){
       const ps = tx.objectStore('pieces');
       const g  = ps.get(fav.pk);
       g.onsuccess = ()=>{
-        if(!g.result) ps.put((pc && pc.img) ? { pk:fav.pk, img:pc.img, name:pc.name||'' } : { pk:fav.pk, chords });
+        if(!g.result) ps.put((pc && pc.buf) ? { pk:fav.pk, buf:pc.buf, mime:pc.mime||'', name:pc.name||'' } : (pc && pc.img) ? { pk:fav.pk, img:pc.img, name:pc.name||'' } : { pk:fav.pk, chords });
         tx.objectStore('favs').put(fav);
       };
       tx.oncomplete = ()=> resolve();
@@ -27130,6 +27130,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   };
   const [favDim, setFavDim] = useState(null);   // {id, CW, CH} of the favorite on screen, as laid out here
   const [favImg, setFavImg] = useState(null);   // {id, src} — a picture favorite's picture, once decoded
+  const favImgUrlRef = useRef(null);             // the object URL it is shown through (revoked when the next one comes / the viewer closes)
+  useEffect(()=>{ if(favView) return; const u=favImgUrlRef.current; favImgUrlRef.current=null; if(u){ try{ URL.revokeObjectURL(u); }catch(_){} } setFavImg(null); },[!!favView]);
   const [favVp, setFavVp] = useState(0);        // the window resized: lay it out again, as live does
   // ── the viewer ──
   const favCur = favView ? (favs[favView.i] || null) : null;
@@ -27213,11 +27215,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(dead) return;
       if(favCur.kind==='img'){
         // a picture favorite shows the picture itself (its music is made again by Open, exactly as saved)
-        if(!pc || !pc.img){ setFavBad(true); return; }
+        if(!pc || !(pc.buf || pc.img)){ setFavBad(true); return; }
+        let src=pc.img;
+        if(pc.buf){ try{ src=URL.createObjectURL(new Blob([pc.buf],{type:pc.mime||'image/jpeg'})); }catch(_){ setFavBad(true); return; } }
         const im=new Image();
-        im.onload=()=>{ if(dead) return; setFavDim({id:favCur.id, CW:im.naturalWidth||1, CH:im.naturalHeight||1}); setFavImg({id:favCur.id, src:pc.img}); setFavBad(false); };
-        im.onerror=()=>{ if(!dead) setFavBad(true); };
-        im.src=pc.img;
+        im.onload=()=>{ if(dead){ if(pc.buf) try{ URL.revokeObjectURL(src); }catch(_){} return; } const old=favImgUrlRef.current; favImgUrlRef.current=pc.buf ? src : null; if(old && old!==src) try{ URL.revokeObjectURL(old); }catch(_){} setFavDim({id:favCur.id, CW:im.naturalWidth||1, CH:im.naturalHeight||1}); setFavImg({id:favCur.id, src}); setFavBad(false); };
+        im.onerror=()=>{ if(pc.buf) try{ URL.revokeObjectURL(src); }catch(_){} if(!dead) setFavBad(true); };
+        im.src=src;
         return;
       }
       const lay = pc ? _favLayout(favCur, pc.chords) : null;
@@ -35047,10 +35051,11 @@ Hard requirements:
     : moodContext ? 'mood'
     : loadedSource==='image' ? 'image'
     : (loadedSource==='midi'||loadedSource==='audio'||loadedSource==='score') ? 'music' : null;
-  const tintCol = ({music:'#101a38', image:'#2a160b', compose:'#0c2519', mic:'#2c0e20', mood:'#282010', mfi:'#1f1236'})[tintKey] || '#0e0b16';
+  const tintCol = ({music:'#14224a', image:'#381c0b', compose:'#0e311e', mic:'#3b1128', mood:'#362a12', mfi:'#291747'})[tintKey] || '#0e0b16';
   // ── ♥ A PICTURE (Image mode) ── its address is the picture itself plus what reads it: the palette, Scan's direction, the
   // composer(s) and the jam's style, ✦, AI compose (with its piece), atmosphere and melody. It can be saved while it plays.
-  // The picture is kept once (favAdd: the original file up to ~3 MB, a 2048-px copy above that). In Favorites it shows the
+  // The picture is kept once, as the original file's bytes (favAdd) — any copy would read differently: a photo's grain decides
+  // the notes, so a smaller copy plays another piece (and ✦ may seat other composers). In Favorites it shows the
   // picture; Open brings it back in Image exactly so and plays it (_favOpenImg → loadImage → favRestorePostRef).
   const favReadyImg = viewMode==='image' && loadedSource==='image' && !moodFromImg && !!originalImgUrl && chords.length>0
     && !working && !composeMode && !micActive && !demoReelOn && !favView   // a recording (Lite records as it plays) may go on
@@ -35072,16 +35077,8 @@ Hard requirements:
   const favHitImg = _favImgCurKey ? favs.find(f=>f.ak===_favImgCurKey) : null;
   const favReadyAny = favReady || favReadyImg;
   const favHitAny = favReady ? favHit : favHitImg;
-  // the picture to keep: the file as it came (≤ ~3 MB, so it reads exactly the same again), else a 2048-px JPEG copy
-  const _favImgData = (u)=> new Promise((res)=>{
-    if(!u) return res(null);
-    if(u.length<=4500000) return res(u);
-    try{
-      const im=new Image();
-      im.onload=()=>{ try{ const k=Math.min(1, 2048/Math.max(im.naturalWidth||1, im.naturalHeight||1)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round((im.naturalWidth||1)*k)); c.height=Math.max(1,Math.round((im.naturalHeight||1)*k)); c.getContext('2d').drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',0.9)); }catch(_){ res(null); } };
-      im.onerror=()=>res(null); im.src=u;
-    }catch(_){ res(null); }
-  });
+  // the picture to keep: the file exactly as it came (its bytes, out of the data URL loadImage read) — so it reads the same again
+  const _favImgBytes = (u)=>{ try{ const m=String(u||'').match(/^data:([^;,]+)(;base64)?,/); if(!m || !m[2]) return null; return { buf:b64ToArrayBuffer(u.slice(m[0].length)), mime:m[1] }; }catch(_){ return null; } };
   const _favToggleImg = async ()=>{
     if(!favReadyImg) return;
     const addr=_favImgAddrNow(), ak=_favImgKey(addr);
@@ -35095,13 +35092,13 @@ Hard requirements:
     }
     const aic = addr.ai ? (_imgComposeCacheGet(addr.ih) || null) : null;
     if(addr.ai && !aic){ _favToastShow({kind:'failed'}); return; }
-    const img = await _favImgData(originalImgUrl);
-    if(!img){ _favToastShow({kind:'failed'}); return; }
+    const bytes = _favImgBytes(originalImgUrl);
+    if(!bytes){ _favToastShow({kind:'failed'}); return; }
     const bk = scanPixelBackupRef.current;
     const fav={ id:'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), at:Date.now(), ak, ...addr, src:'image',
       title: (bk && bk.imgTitle) || ((!addr.ai && info && info.title) ? String(info.title) : ''),
       aiTitle: (addr.ai && info && info.title) ? String(info.title) : '', aic };
-    const r=await favAdd(fav, null, { img, name: imgNameRef.current||'' });
+    const r=await favAdd(fav, null, { buf: bytes.buf, mime: bytes.mime, name: imgNameRef.current||'' });
     if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); }
     else _favToastShow({kind:'failed'});
   };
@@ -35111,11 +35108,11 @@ Hard requirements:
     const f=favCur; if(!f || f.kind!=='img') return;
     try{ wakeAudio(); }catch(_){}   // in the tap: the audio device is live when it starts playing
     const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk);
-    if(!pc || !pc.img){ setFavBad(true); return; }
+    if(!pc || !(pc.buf || pc.img)){ setFavBad(true); return; }
     let file=null;
     try{
-      const u=pc.img, mime=(u.match(/^data:([^;]+);/)||[])[1]||'image/jpeg';
-      const blob=new Blob([b64ToArrayBuffer(u.split(',')[1])],{type:mime});
+      const u=pc.img||'', mime=pc.buf ? (pc.mime||'image/jpeg') : ((u.match(/^data:([^;]+);/)||[])[1]||'image/jpeg');
+      const blob=new Blob([pc.buf ? pc.buf : b64ToArrayBuffer(u.split(',')[1])],{type:mime});
       file=new File([blob], pc.name || ((f.title||'image')+'.'+((mime.split('/')[1]||'jpg').replace('jpeg','jpg'))), {type:mime});
     }catch(_){ setFavBad(true); return; }
     _favClose();
@@ -35355,7 +35352,7 @@ Hard requirements:
   };
 
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 120% 60% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 62%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
