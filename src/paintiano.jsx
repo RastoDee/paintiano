@@ -23228,6 +23228,19 @@ export default function Paintiano() {
   // own colour. Set by litePlayStart, read once by liteOpenRef; liteIntroPiece stays true while that piece is on the canvas.
   const _liteIntroRef = useRef(false);
   const [liteIntroPiece, setLiteIntroPiece] = useState(false);
+  // the line over the canvas (opening Mosaic, first Signature) sits in the part of the canvas that is on screen — on a desktop the
+  // tall canvas runs past the bottom edge, and the middle of the canvas would be out of sight
+  const [ovBand, setOvBand] = useState(null);
+  const _ovRef = useCallback((el)=>{
+    if(!el){ setOvBand(null); return; }
+    try{
+      const host=el.parentElement; if(!host) return; const r=host.getBoundingClientRect(); const vh=window.innerHeight||document.documentElement.clientHeight||0;
+      const vTop=Math.max(0, -r.top), vBot=Math.min(r.height, vh - r.top), vis=vBot - vTop;
+      if(r.height<=0 || vis<=0 || (vTop<=1 && vBot>=r.height-1)){ setOvBand(null); return; }   // all of it on screen: the usual place
+      setOvBand({ top: Math.round(vTop + vis*0.12), bottom: Math.round((r.height - vBot) + vis*0.06) });
+    }catch(_){}
+  },[]);
+  const _ovPos = ovBand ? { top: ovBand.top+'px', bottom: ovBand.bottom+'px' } : { top:'26%', bottom:'6%' };
   const [sigIntroShow, setSigIntroShow] = useState(false);          // ✦ Signature: what it is, over the canvas — the first time one plays
   const sigIntroDoneRef = useRef(false); const _siTimersRef = useRef([]);
   const [mosaicIntroShow, setMosaicIntroShow] = useState(false);   // the line + the colour key over the canvas (first 3 times)
@@ -25352,8 +25365,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   // cleanup release is ever needed.
   // Daily-artist toast: once per local day for Free users (localStorage remembers the day index).
   // Artist of the day toast: lives only on a screen with a free bottom edge (the Lite Play chip,
-  // the Advanced home) and only until the first Play of the session — after that the Lite chips or
-  // the transport dock own the bottom and the toast would cover them. Not stored: next visit it is back.
+  // the Advanced home) — after the first Play the Lite chips or the transport dock own the bottom.
+  // 5 s or the first Play retire it for the day (see _dailyShown).
   const [dailyPlayed,setDailyPlayed]=useState(false);
   useEffect(()=>{ if(playing) setDailyPlayed(true); },[playing]);
   const [dailyToast,setDailyToast]=useState(()=>{ try{ const d=new Date(); const n=Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/86400000); return localStorage.getItem('paintiano_daily_toast_v1')!==String(n); }catch(_){ return false; } });
@@ -34384,6 +34397,11 @@ Hard requirements:
   // the Setup⇄Canvas navigation is consistent across ALL modes.
   const hasContent = chords.length>0 || composeMode || micActive || micArmed || hasComposeDraft || hasMicDraft;
   const isActiveView = !forceSetup && (playing || chords.length>0 || composeMode || micActive || micArmed || working || stayActive);
+  // Artist of the day toast: it is only info — on screen for 5 s (or until the first Play), then gone for the day; tomorrow brings a new one
+  const _dailyShown = !!(dailyToast && !dailyPlayed && proStatus==='free' && !showOnboarding && !showIntro && !isActiveView && !favView && (!basicMode || (!liteImageMode && !loadedSource && !liteEverUnlockedRef.current)));
+  const _dailyDone = ()=>{ setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} };
+  useEffect(()=>{ if(!_dailyShown) return; const t=setTimeout(_dailyDone, 5000); return ()=>clearTimeout(t); },[_dailyShown]);
+  useEffect(()=>{ if(dailyPlayed && dailyToast) _dailyDone(); },[dailyPlayed]);
   // Lite: when the canvas first appears (active view), snap the page to the top
   // so the header sits up top and the canvas fills the screen — the intended
   // opening pose. Without this the page can stay scrolled mid-way after the
@@ -34616,7 +34634,7 @@ Hard requirements:
           })()}
         </div>
       )}
-      {dailyToast && !dailyPlayed && proStatus==='free' && !showOnboarding && !showIntro && !isActiveView && !favView && (!basicMode || (!liteImageMode && !loadedSource && !liteEverUnlockedRef.current)) && (
+      {_dailyShown && (
         <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw'}}>
           <span onClick={()=>{ try{ window.posthog && window.posthog.capture('daily_toast_tap',{artist:artistOfDay,composer:composerOfDay}); }catch(_){} setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ if(!liteImageMode) selectStyle(artistOfDay); }catch(_){} }}
             style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
@@ -37044,7 +37062,7 @@ Hard requirements:
           const _hue = (c)=>{ const r=c[0]/255, g=c[1]/255, b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(!d) return 0; const h = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; return ((h*60)+360)%360; };
           const _ord = (_miKind==='i') ? [0,1,2,3,4,5,6,7,8,9,10,11].sort((a,b)=>_hue(_col(a))-_hue(_col(b))) : [0,7,2,9,4,11,6,1,8,3,10,5];
           return (
-            <div style={{position:'absolute',left:0,right:0,top:'26%',bottom:'6%',zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(14px, 4.5%, 24px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
+            <div ref={_ovRef} style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(14px, 4.5%, 24px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
               <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_miT(_miKind==='i' ? 'lineImg' : 'line')}</div>
               <div role="img" aria-label={_miT('keyAria')} style={{display:'grid',gridTemplateColumns:'repeat(12, minmax(0, 1fr))',gap:4,width:'min(90%, 300px)'}}>
                 {_ord.map(pc=>{ const c=_col(pc); const on=_lit.has(pc); return (
@@ -37057,7 +37075,7 @@ Hard requirements:
         })()}
         {/* the first Signature: what the word means — the same overlay as the opening Mosaic's line */}
         {sigIntroShow && sigActive && (
-          <div role="status" style={{position:'absolute',left:0,right:0,top:'26%',bottom:'6%',zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
+          <div ref={_ovRef} role="status" style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
             <div style={{fontSize:(.64*effScale)+'rem',letterSpacing:'.3em',fontWeight:600,textTransform:'uppercase',color:'rgba(226,196,119,1)',textShadow:'0 1px 10px rgba(0,0,0,.85)'}}>✦ {_sigT('label')}</div>
             <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_sigT('intro')}</div>
           </div>
