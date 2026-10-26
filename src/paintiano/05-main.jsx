@@ -410,15 +410,15 @@ const SIG_I18N = {
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
 // twelve colours (the notes sounding now lit), and once, when the piece has played, a hint that Surprise brings the painters.
 const MOSAIC_INTRO_I18N = {
-  EN:{painter:'The same notes – now {name} paints them.',painterSub:'Who is painting is always shown up top',painterSubFs:'Tap the canvas to see who is painting',lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',palLine:'{p} palette',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  SK:{painter:'Tie isté tóny – teraz ich maľuje {name}.',painterSub:'Kto maľuje, uvidíš vždy hore',painterSubFs:'Ťukni na plátno a uvidíš, kto maľuje',lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',palLine:'paleta {p}',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  DE:{painter:'Dieselben Töne – jetzt malt sie {name}.',painterSub:'Wer malt, steht immer oben',painterSubFs:'Tippe auf die Leinwand, um zu sehen, wer malt',lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',palLine:'Palette {P}',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  FR:{painter:'Les mêmes notes – c’est maintenant {name} qui les peint.',painterSub:'Qui peint, c’est toujours écrit en haut',painterSubFs:'Touche la toile pour voir qui peint',lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',palLine:'palette {p}',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  ES:{painter:'Las mismas notas – ahora las pinta {name}.',painterSub:'Quién pinta, siempre lo ves arriba',painterSubFs:'Toca el lienzo para ver quién pinta',lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',palLine:'paleta {p}',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  PT:{painter:'As mesmas notas – agora pintadas por {name}.',painterSub:'Quem pinta, vês sempre em cima',painterSubFs:'Toca na tela para veres quem pinta',lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',palLine:'paleta {p}',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
-  zh:{painter:'同样的音——现在由 {name} 来画。',painterSub:'谁在画，始终显示在上方',painterSubFs:'点一下画布，就能看到是谁在画',lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',palLine:'{p}调色板',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  zhTW:{painter:'同樣的音——現在由 {name} 來畫。',painterSub:'誰在畫，始終顯示在上方',painterSubFs:'點一下畫布，就能看到是誰在畫',lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',palLine:'{p}調色盤',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  ja:{painter:'同じ音を、いまは {name} が描く。',painterSub:'誰が描いているかは、いつも上に',painterSubFs:'キャンバスをタップすると、誰が描いているかが見える',lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',palLine:'{p}パレット',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  EN:{painter:'The same notes – now {name} paints them.',painterSub:'Who is painting is always shown up top',painterSubFs:'Press and hold the canvas to see who is painting',lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',palLine:'{p} palette',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  SK:{painter:'Tie isté tóny – teraz ich maľuje {name}.',painterSub:'Kto maľuje, uvidíš vždy hore',painterSubFs:'Podrž na plátne a uvidíš, kto maľuje',lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',palLine:'paleta {p}',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  DE:{painter:'Dieselben Töne – jetzt malt sie {name}.',painterSub:'Wer malt, steht immer oben',painterSubFs:'Halte die Leinwand gedrückt, um zu sehen, wer malt',lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',palLine:'Palette {P}',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  FR:{painter:'Les mêmes notes – c’est maintenant {name} qui les peint.',painterSub:'Qui peint, c’est toujours écrit en haut',painterSubFs:'Appuie longuement sur la toile pour voir qui peint',lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',palLine:'palette {p}',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  ES:{painter:'Las mismas notas – ahora las pinta {name}.',painterSub:'Quién pinta, siempre lo ves arriba',painterSubFs:'Mantén pulsado el lienzo para ver quién pinta',lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',palLine:'paleta {p}',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  PT:{painter:'As mesmas notas – agora pintadas por {name}.',painterSub:'Quem pinta, vês sempre em cima',painterSubFs:'Mantém premida a tela para veres quem pinta',lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',palLine:'paleta {p}',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
+  zh:{painter:'同样的音——现在由 {name} 来画。',painterSub:'谁在画，始终显示在上方',painterSubFs:'长按画布，就能看到是谁在画',lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',palLine:'{p}调色板',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  zhTW:{painter:'同樣的音——現在由 {name} 來畫。',painterSub:'誰在畫，始終顯示在上方',painterSubFs:'長按畫布，就能看到是誰在畫',lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',palLine:'{p}調色盤',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  ja:{painter:'同じ音を、いまは {name} が描く。',painterSub:'誰が描いているかは、いつも上に',painterSubFs:'キャンバスを長押しすると、誰が描いているかが見える',lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',palLine:'{p}パレット',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
 };
 
 // The song's colours: how much each of the twelve tones sounds (notes per pitch class).
@@ -2312,16 +2312,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; }
     setTimeout(()=>{ const ms=_flashMsRef.current||1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms+(withStyle===true ? '~s' : '')); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },ms); },0);
   },[]);
-  // Lite fullscreen press-and-hold: the label stays up while the finger rests
-  // on the painting and fades out on release (a short tap still gives the
-  // regular 1.2 s flash). A swipe cancels the hold before it shows.
+  // Fullscreen press-and-hold (Lite + Advanced, finger or mouse): the info — who paints, and for a fusion its style — stays up while
+  // the finger rests on the painting and 3 s after it lets go. A plain tap shows the controls instead. A swipe cancels the hold before it shows.
   const _holdTimerRef = useRef(null);
   const _holdingRef = useRef(false);
   const _holdReleasedRef = useRef(false);
   const _holdCancel = ()=>{ if(_holdTimerRef.current){ clearTimeout(_holdTimerRef.current); _holdTimerRef.current=null; } };
   const _holdPosRef = useRef(null);
   const _holdStart = (x,y)=>{ _holdCancel(); _holdReleasedRef.current=false; _holdPosRef.current={x,y}; _holdTimerRef.current=setTimeout(()=>{ _holdTimerRef.current=null; if(_swipeWasGestureRef.current) return; _holdingRef.current=true; if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey('hold-'+Date.now()); },300); };
-  const _holdEnd = ()=>{ _holdCancel(); if(!_holdingRef.current) return; _holdingRef.current=false; _holdReleasedRef.current=true; _setSwipeFlashKey('out-'+Date.now()); if(_swipeFlashTimerRef.current) clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey(null); },420); };
+  // let go → the info stays 3 s (time to tap the style on it), then fades
+  const _holdKeep = ()=>{ if(_swipeFlashTimerRef.current) clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey('out-'+Date.now()); _swipeFlashTimerRef.current=setTimeout(()=>{ _swipeFlashTimerRef.current=null; _setSwipeFlashKey(null); },420); },3000); };
+  const _holdEnd = ()=>{ _holdCancel(); if(!_holdingRef.current) return; _holdingRef.current=false; _holdReleasedRef.current=true; _holdKeep(); };
   const [stamp,     setStamp]     = useState(0);
   const [piano,     setPiano]     = useState('loading');
   const [songQ,     setSongQ]     = useState('');
@@ -3023,7 +3024,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     const v=_fusionStyleOf(kind); if(!v) return null;
     const o=_fsWord(v==='E'?'A':'E',kind);
     const _onFlash = immersive && !!_swipeFlashKey && !String(_swipeFlashKey).startsWith('out');   // the flash carries this very switch on the painting — keep the slot, hide the twin
-    return (<button type="button" onClick={(e)=>{ e.stopPropagation(); _flipFusionStyle(kind); _fireInspiredFlash(true); wakeControls(); }} className={lite ? undefined : 'pf-lift'} aria-label={'\u2192 '+o} title={'\u2192 '+o}
+    return (<button type="button" onClick={(e)=>{ e.stopPropagation(); _flipFusionStyle(kind); wakeControls(); }} className={lite ? undefined : 'pf-lift'} aria-label={'\u2192 '+o} title={'\u2192 '+o}
       style={{visibility:_onFlash?'hidden':'visible',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'10px 14px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'normal',textAlign:'center',lineHeight:1.25,color:'#f3e2b4',background:'rgba(10,8,16,.66)',border:'1px solid rgba(220,180,90,.8)',boxShadow:'0 6px 22px rgba(0,0,0,.45)',WebkitTapHighlightColor:'transparent',...(lite?{position:'fixed',zIndex:10000,bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',maxWidth:'86vw',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}:null)}}>
       <FsGlyph v={v} w={21} h={15}/><span>{_fsWord(v,kind)} ›</span>
     </button>);
@@ -12877,6 +12878,8 @@ Hard requirements:
     if(liteFloat){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 2000); }
     else if(playing || immersive){ controlsIdleRef.current = setTimeout(()=>setControlsAwake(false), 5000); }
   },[playing,immersive,basicMode,isNotPhone,is5Col]);
+  // the press-and-hold info and the controls never sit on each other: the info puts the controls to sleep (a tap brings them back)
+  useEffect(()=>{ if(immersive && _swipeFlashKey && String(_swipeFlashKey).startsWith('hold-')){ if(controlsIdleRef.current){ clearTimeout(controlsIdleRef.current); controlsIdleRef.current=null; } setControlsAwake(false); } },[_swipeFlashKey, immersive]);
   // When playback stops, reveal controls. Outside fullscreen they then stay put;
   // in fullscreen we re-arm the idle countdown so a finished, still piece also
   // fades its controls. Entering/leaving fullscreen re-evaluates this. Lite
@@ -15165,7 +15168,9 @@ Hard requirements:
         // Pro: always, as a button on the painting — one tap switches this very fusion / jam to the other style (no second trip to the controls).
         const _fsTap = !!_ensF && proStatus!=='free';
         const _fsV = _ensF ? (_fsTap ? _fusionStyleOf(_fsK) : (_fusionStyleNow(_fsK) || (String(_swipeFlashKey).split('~')[2]==='s' ? _fusionStyleOf(_fsK) : null))) : null;
-        const _fsGo = (e)=>{ e.stopPropagation(); e.preventDefault(); _flipFusionStyle(_fsK); _fireInspiredFlash(true); wakeControls(); };
+        const _fsGo = (e)=>{ e.stopPropagation(); e.preventDefault(); _flipFusionStyle(_fsK);
+          if(!String(_swipeFlashKey).startsWith('hold-')) _setSwipeFlashKey('hold-'+Date.now()+'~0~s');
+          _holdKeep(); if(controlsIdleRef.current){ clearTimeout(controlsIdleRef.current); controlsIdleRef.current=null; } setControlsAwake(false); };
         return (
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
@@ -15175,7 +15180,7 @@ Hard requirements:
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
               {_fsV && !_fsTap && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
               {_fsV && _fsTap && (<div style={{display:'flex',justifyContent:'center',marginBottom:'1.3em'}}><button type="button" onPointerDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onClick={_fsGo} aria-label={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)} title={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)}
-                style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:'.8em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.22em',fontWeight:700,textTransform:'uppercase',fontFamily:'inherit',color:'#f3e2b4',background:'rgba(10,8,16,.62)',border:'1px solid rgba(220,180,90,.85)',borderRadius:30,padding:'.75em 1.2em .75em 1.1em',cursor:'pointer',boxShadow:'0 6px 22px rgba(0,0,0,.35)',WebkitTapHighlightColor:'transparent'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)} ›</button></div>)}
+                style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:'.8em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.22em',fontWeight:700,textTransform:'uppercase',fontFamily:'inherit',color:'#f3e2b4',textShadow:'inherit',background:'rgba(16,12,22,.26)',border:'1px solid rgba(226,188,98,.92)',borderRadius:30,padding:'.75em 1.2em .75em 1.1em',cursor:'pointer',boxShadow:'0 3px 12px rgba(0,0,0,.16)',WebkitTapHighlightColor:'transparent'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)} ›</button></div>)}
             </>)}
             {(!_fBare || _ensF || _sigF) && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:(_ensF||_sigF)?14:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             {(()=>{
@@ -15192,7 +15197,10 @@ Hard requirements:
       })()}
       <div ref={canvasWrapRef} className="pf-stage-part" style={{...(favView?{display:'none'}:{}),position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{})}}
         onContextMenu={e=>e.preventDefault()}
-        onPointerMove={()=>{ if(_swipeStartRef.current) return; if(playing||immersive) wakeControls(); }}
+        onPointerMove={(e)=>{ if(e.pointerType==='mouse' && _holdTimerRef.current && _holdPosRef.current && Math.abs(e.clientX-_holdPosRef.current.x)+Math.abs(e.clientY-_holdPosRef.current.y)>14) _holdCancel(); if(_swipeStartRef.current) return; if(_holdingRef.current) return; if(playing||immersive) wakeControls(); }}
+        onPointerDown={(e)=>{ if(immersive && e.pointerType==='mouse' && e.button===0) _holdStart(e.clientX, e.clientY); }}
+        onPointerUp={(e)=>{ if(e.pointerType==='mouse') _holdEnd(); }}
+        onPointerLeave={(e)=>{ if(e.pointerType==='mouse'){ _holdCancel(); _holdEnd(); } }}
         onTouchStart={e=>{
           // Fullscreen (Lite + Advanced): press-and-hold shows who painted it.
           if(immersive){ if(e.touches.length===1) _holdStart(e.touches[0].clientX, e.touches[0].clientY); else _holdCancel(); }
@@ -15278,6 +15286,8 @@ Hard requirements:
             e.preventDefault(); e.stopPropagation();
             return;
           }
+          // the click that ends a press-and-hold: the info is up, nothing else to do
+          if(immersive && _holdReleasedRef.current){ _holdReleasedRef.current=false; return; }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
@@ -15286,9 +15296,9 @@ Hard requirements:
           // the reel and stop processing the click (so we don't also try to
           // select a chord on the painting that's mid-render).
           if(demoReelOn){ demoReelStop(); return; }
-          // Fullscreen (Lite + Advanced): a plain tap brings the “inspired by …” flash back —
-          // the only place the attribution lives while the painting fills the screen.
-          if(immersive){ if(_holdReleasedRef.current) _holdReleasedRef.current=false; else _fireInspiredFlash(); }
+          // Fullscreen (Lite + Advanced): a plain tap is for the controls — who paints is a press-and-hold away;
+          // an info still up fades so the two never sit on each other.
+          if(immersive && _swipeFlashKey && !String(_swipeFlashKey).startsWith('out')){ if(_swipeFlashTimerRef.current) clearTimeout(_swipeFlashTimerRef.current); _setSwipeFlashKey('out-'+Date.now()); _swipeFlashTimerRef.current=setTimeout(()=>{ _swipeFlashTimerRef.current=null; _setSwipeFlashKey(null); },420); }
           if(playing||!chords.length)return;
           const cv=canvasRef.current;if(!cv)return;
           const rect=cv.getBoundingClientRect();
