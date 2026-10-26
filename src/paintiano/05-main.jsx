@@ -11261,9 +11261,11 @@ Hard requirements:
       // startPlay schedules the first note.
       holdPausedRef.current=false; // sync — clear before the scan loop repaints
       setHoldPaused(false);
+      setStripOpen(false); setDeskStripOpen(false);   // Play (Resume too) folds the panel — the canvas gets the stage
       wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }else if(!busy){
       resumeFromRef.current=null;
+      setStripOpen(false); setDeskStripOpen(false);   // … also before an AI compose, which starts playback on its own
       wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }
   },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening,wakeAudio]);
