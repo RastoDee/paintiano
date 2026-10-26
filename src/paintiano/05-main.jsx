@@ -13146,7 +13146,10 @@ Hard requirements:
     : moodContext ? 'mood'
     : loadedSource==='image' ? 'image'
     : (loadedSource==='midi'||loadedSource==='audio'||loadedSource==='score') ? 'music' : null;
-  const tintCol = ({music:'#14224a', image:'#381c0b', compose:'#0e311e', mic:'#3b1128', mood:'#362a12', mfi:'#291747'})[tintKey] || '#0e0b16';
+  const tintCol = ({music:'#14224a', image:'#5e2908', compose:'#0e311e', mic:'#3b1128', mood:'#362a12', mfi:'#291747'})[tintKey] || '#0e0b16';
+  // … and a thin line in the same colour on the top edge of the bottom panel (transport, Lite's bar, the Favorites bar), so the
+  // mode shows where the hands are too. Neutral views keep the faint gold edge.
+  const tintLine = tintKey ? 'rgba('+({music:'91,156,246', image:'244,124,60', compose:'78,203,141', mic:'240,106,166', mood:'220,180,90', mfi:'220,150,255'})[tintKey]+',.55)' : 'rgba(201,168,76,.15)';
   // ☰ MENU closes by itself as soon as the user does something else: a tap anywhere outside it (Play, the strip, a chip — the
   // tap still does its job) or playback / recording / fullscreen starting some other way. A tap on the dimmed page only closes it.
   const navMenuWrapRef = useRef(null);
@@ -13964,7 +13967,7 @@ Hard requirements:
               </div>
             )}
           </>)}
-          <div role="region" aria-label={_favT('label')} style={{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'10px 8px calc(12px + env(safe-area-inset-bottom))',display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:8}}>
+          <div role="region" aria-label={_favT('label')} style={{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid '+tintLine,padding:'10px 8px calc(12px + env(safe-area-inset-bottom))',display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:8}}>
             {isImgFav ? (
               <button onClick={_favOpenImg} disabled={favBad} className="pf-lift pf-tx-play" title={_favT('openTip')} style={txStyle('primary',{effScale,primary:true,disabled:favBad})}><TxIcon n="play" s={15*effScale}/>{_favT('open')}</button>
             ) : (
@@ -16648,7 +16651,7 @@ Hard requirements:
         </div>
       )}
       {isActiveView && !basicMode && (
-      <div role="region" aria-label="playback controls" className="pf-transport-dock" style={favView?{display:'none'}:isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
+      <div role="region" aria-label="playback controls" className="pf-transport-dock" style={favView?{display:'none'}:isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid '+tintLine,padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
         <div style={{fontSize:(.48*effScale)+'rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
@@ -17754,7 +17757,7 @@ Hard requirements:
             </div>
           </div>
         )}
-        {!_litePlayChipShown && !(immersive && isCoarse && isNotPhone) && <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid rgba(201,168,76,.15)'}}>
+        {!_litePlayChipShown && !(immersive && isCoarse && isNotPhone) && <div role="region" aria-label="basic actions" style={(basicMode&&isDesktop)?{position:'fixed',...((isNotPhone&&!is5Col)?{top:'52%',transform:'translateY(-50%)'}:{top:96}),right:24,zIndex:immersive?10001:60,display:'flex',flexDirection:'column',gap:12,width:150,alignItems:'stretch',opacity:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?0:1,pointerEvents:(immersive&&isNotPhone&&!is5Col&&!controlsAwake)?'none':'auto',transition:'opacity .4s ease'}:{position:'fixed',left:0,right:0,bottom:0,zIndex:60,display:immersive?'none':'flex',gap:8,padding:'10px 12px calc(12px + env(safe-area-inset-bottom,0px))',background:'rgba(4,3,8,0.97)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',borderTop:'1px solid '+tintLine}}>
           {surpriseHint && _miOn && !immersive && (
             <div role="status" style={{position:'absolute',zIndex:2,pointerEvents:'none',boxSizing:'border-box',padding:'12px 16px 13px',borderRadius:14,border:'1px solid rgba(220,180,90,.55)',background:'#1a1522',boxShadow:'0 10px 30px rgba(0,0,0,.55)',display:'flex',flexDirection:'column',gap:4,textAlign:'left',...((basicMode&&isDesktop)?{right:'calc(100% + 14px)',bottom:20,width:236}:{right:12,bottom:'calc(100% + 12px)',width:'min(236px, calc(100% - 24px))'})}}>
               <span style={{fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?.95:1.12)*effScale)+'rem',lineHeight:1.25,color:'#f4e7c6'}}>{_miT('hint')}</span>
