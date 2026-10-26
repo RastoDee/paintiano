@@ -22047,15 +22047,15 @@ const SIG_I18N = {
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
 // twelve colours (the notes sounding now lit), and once, when the piece has played, a hint that Surprise brings the painters.
 const MOSAIC_INTRO_I18N = {
-  EN:{painter:'The same notes – now {name} paints them.',painterSub:'Who is painting is always shown up top',lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  SK:{painter:'Tie isté tóny – teraz ich maľuje {name}.',painterSub:'Kto maľuje, uvidíš vždy hore',lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  DE:{painter:'Dieselben Töne – jetzt malt sie {name}.',painterSub:'Wer malt, steht immer oben',lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
-  FR:{painter:'Les mêmes notes – c’est maintenant {name} qui les peint.',painterSub:'Qui peint, c’est toujours écrit en haut',lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  ES:{painter:'Las mismas notas – ahora las pinta {name}.',painterSub:'Quién pinta, siempre lo ves arriba',lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
-  PT:{painter:'As mesmas notas – agora pintadas por {name}.',painterSub:'Quem pinta, vês sempre em cima',lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
-  zh:{painter:'同样的音——现在由 {name} 来画。',painterSub:'谁在画，始终显示在上方',lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  zhTW:{painter:'同樣的音——現在由 {name} 來畫。',painterSub:'誰在畫，始終顯示在上方',lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
-  ja:{painter:'同じ音を、いまは {name} が描く。',painterSub:'誰が描いているかは、いつも上に',lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  EN:{painter:'The same notes – now {name} paints them.',painterSub:'Who is painting is always shown up top',painterSubFs:'Tap the canvas to see who is painting',lineImg:'Every colour in the picture has its own tone.',band:'caption + the song’s colours (Web, Print)',line:'Every note you hear has its own colour on this canvas.',keyAria:'The twelve notes and their colours, in fifths; the notes sounding now are lit',hint:'Same notes – a different hand.',hintSub:'Tap {btn} and a painter paints them.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  SK:{painter:'Tie isté tóny – teraz ich maľuje {name}.',painterSub:'Kto maľuje, uvidíš vždy hore',painterSubFs:'Ťukni na plátno a uvidíš, kto maľuje',lineImg:'Každá farba na obraze má svoj tón.',band:'popis a farby skladby (Web, Tlač)',line:'Každý tón, ktorý počuješ, má na tomto plátne svoju farbu.',keyAria:'Dvanásť tónov a ich farby v kruhu kvínt; svietia tie, ktoré práve znejú',hint:'Tie isté tóny – iný rukopis.',hintSub:'Ťukni na {btn} a namaľuje ich maliar.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  DE:{painter:'Dieselben Töne – jetzt malt sie {name}.',painterSub:'Wer malt, steht immer oben',painterSubFs:'Tippe auf die Leinwand, um zu sehen, wer malt',lineImg:'Jede Farbe im Bild hat ihren eigenen Ton.',band:'Beschriftung + Farben des Stücks (Web, Druck)',line:'Jeder Ton, den du hörst, hat auf dieser Leinwand seine eigene Farbe.',keyAria:'Die zwölf Töne und ihre Farben im Quintenzirkel; die gerade klingenden leuchten',hint:'Dieselben Töne – eine andere Handschrift.',hintSub:'Tippe auf {btn} und ein Maler malt sie.',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B','H']},
+  FR:{painter:'Les mêmes notes – c’est maintenant {name} qui les peint.',painterSub:'Qui peint, c’est toujours écrit en haut',painterSubFs:'Touche la toile pour voir qui peint',lineImg:'Chaque couleur de l’image a sa propre note.',band:'légende + couleurs du morceau (Web, Impression)',line:'Chaque note que tu entends a sa propre couleur sur cette toile.',keyAria:'Les douze notes et leurs couleurs, en quintes ; celles qui sonnent sont allumées',hint:'Les mêmes notes – une autre main.',hintSub:'Touche {btn} et un peintre les peint.',names:['Do','Ré♭','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  ES:{painter:'Las mismas notas – ahora las pinta {name}.',painterSub:'Quién pinta, siempre lo ves arriba',painterSubFs:'Toca el lienzo para ver quién pinta',lineImg:'Cada color de la imagen tiene su propia nota.',band:'pie + colores de la pieza (Web, Impresión)',line:'Cada nota que oyes tiene su propio color en este lienzo.',keyAria:'Las doce notas y sus colores, en quintas; se encienden las que suenan',hint:'Las mismas notas, otra mano.',hintSub:'Toca {btn} y un pintor las pinta.',names:['Do','Re♭','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si']},
+  PT:{painter:'As mesmas notas – agora pintadas por {name}.',painterSub:'Quem pinta, vês sempre em cima',painterSubFs:'Toca na tela para veres quem pinta',lineImg:'Cada cor da imagem tem a sua nota.',band:'legenda + cores da música (Web, Impressão)',line:'Cada nota que ouves tem a sua cor nesta tela.',keyAria:'As doze notas e as suas cores, em quintas; acendem-se as que soam',hint:'As mesmas notas – outra mão.',hintSub:'Toca em {btn} e um pintor pinta-as.',names:['Dó','Ré♭','Ré','Mi♭','Mi','Fá','Fá♯','Sol','Lá♭','Lá','Si♭','Si']},
+  zh:{painter:'同样的音——现在由 {name} 来画。',painterSub:'谁在画，始终显示在上方',painterSubFs:'点一下画布，就能看到是谁在画',lineImg:'画中的每一种颜色，都有自己的音。',band:'标注 + 乐曲的颜色（网页、打印）',line:'你听到的每一个音，在这张画布上都有自己的颜色。',keyAria:'十二个音及其颜色，按五度圈排列；正在发声的音会亮起',hint:'同样的音符——不同的笔触。',hintSub:'点按「{btn}」，由一位画家来画。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  zhTW:{painter:'同樣的音——現在由 {name} 來畫。',painterSub:'誰在畫，始終顯示在上方',painterSubFs:'點一下畫布，就能看到是誰在畫',lineImg:'畫中的每一種顏色，都有自己的音。',band:'標註 + 樂曲的顏色（網頁、列印）',line:'你聽到的每一個音，在這張畫布上都有自己的顏色。',keyAria:'十二個音及其顏色，按五度圈排列；正在發聲的音會亮起',hint:'同樣的音符——不同的筆觸。',hintSub:'點按「{btn}」，由一位畫家來畫。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
+  ja:{painter:'同じ音を、いまは {name} が描く。',painterSub:'誰が描いているかは、いつも上に',painterSubFs:'キャンバスをタップすると、誰が描いているかが見える',lineImg:'絵の中の色には、ひとつひとつ音がある。',band:'キャプション＋曲の色（Web・印刷）',line:'聞こえる音には、ひとつひとつ色がある。',keyAria:'十二の音とその色（五度圏の順）。いま鳴っている音が光る',hint:'同じ音、別の筆致。',hintSub:'「{btn}」をタップすると、画家が描く。',names:['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B']},
 };
 
 // The song's colours: how much each of the twelve tones sounds (notes per pitch class).
@@ -23231,15 +23231,16 @@ export default function Paintiano() {
   // the line over the canvas (opening Mosaic, first Signature) sits in the part of the canvas that is on screen — on a desktop the
   // tall canvas runs past the bottom edge, and the middle of the canvas would be out of sight
   const [ovBand, setOvBand] = useState(null);
-  const _ovRef = useCallback((el)=>{
-    if(!el){ setOvBand(null); return; }
+  const _ovElRef = useRef(null);
+  const _ovMeasure = (el)=>{
     try{
       const host=el.parentElement; if(!host) return; const r=host.getBoundingClientRect(); const vh=window.innerHeight||document.documentElement.clientHeight||0;
       const vTop=Math.max(0, -r.top), vBot=Math.min(r.height, vh - r.top), vis=vBot - vTop;
       if(r.height<=0 || vis<=0 || (vTop<=1 && vBot>=r.height-1)){ setOvBand(null); return; }   // all of it on screen: the usual place
       setOvBand({ top: Math.round(vTop + vis*0.12), bottom: Math.round((r.height - vBot) + vis*0.06) });
     }catch(_){}
-  },[]);
+  };
+  const _ovRef = useCallback((el)=>{ _ovElRef.current = el; if(!el){ setOvBand(null); return; } _ovMeasure(el); },[]);
   const _ovPos = ovBand ? { top: ovBand.top+'px', bottom: ovBand.bottom+'px' } : { top:'26%', bottom:'6%' };
   const [painterIntroShow, setPainterIntroShow] = useState(false);  // Lite's first painter: the same notes in a painter's hand — and who it is, up top (once)
   const painterIntroDoneRef = useRef(false); const _piTimersRef = useRef([]);
@@ -31958,7 +31959,7 @@ Hard requirements:
   },[sigActive, _hasPaint, viewMode]);
   useEffect(()=>()=>{ _siTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
   // Lite's first painter (Kandinsky on the very first song): one line over the canvas, and the INSPIRED BY label up top lights up
-  const _piOn = !!(basicMode && !liteImageMode && !immersive && style && style!=='notes' && style!=='mosaic' && !painterStage.length && !sigActive && STYLE_INSPIRED[style]);
+  const _piOn = !!(basicMode && !liteImageMode && style && style!=='notes' && style!=='mosaic' && !painterStage.length && !sigActive && STYLE_INSPIRED[style]);
   useEffect(()=>{
     const clear=()=>{ _piTimersRef.current.forEach(t=>clearTimeout(t)); _piTimersRef.current=[]; };
     if(!_piOn){ clear(); setPainterIntroShow(false); return; }
@@ -31966,10 +31967,14 @@ Hard requirements:
     painterIntroDoneRef.current = true;
     let n=0; try{ n=(+localStorage.getItem('paintiano_painter_intro_n'))||0; }catch(_){}
     if(n>=1) return;
-    _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(true); try{ localStorage.setItem('paintiano_painter_intro_n', String(n+1)); }catch(_){} }, 1200));
-    _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(false); }, 1200+5600));
+    const _d = immersive ? 2600 : 1200;   // fullscreen: after the “inspired by” flash
+    _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(true); try{ localStorage.setItem('paintiano_painter_intro_n', String(n+1)); }catch(_){} }, _d));
+    _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(false); }, _d+5600));
   },[_piOn, _hasPaint]);
   useEffect(()=>()=>{ _piTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
+  // a line on the canvas re-finds the visible part when the layout changes under it (fullscreen on/off, a resized window)
+  useEffect(()=>{ const el=_ovElRef.current; if(!el) return; const a=setTimeout(()=>_ovMeasure(el), 60), b=setTimeout(()=>_ovMeasure(el), 400); return ()=>{ clearTimeout(a); clearTimeout(b); }; },[immersive]);
+  useEffect(()=>{ const on=()=>{ const el=_ovElRef.current; if(el) _ovMeasure(el); }; window.addEventListener('resize', on); return ()=>window.removeEventListener('resize', on); },[]);
   useEffect(()=>{
     if(!_miOn){ setSurpriseHint(false); return; }
     if(!(chords.length>0 && !playing && !holdPaused && disp>=chords.length)) return;
@@ -34651,12 +34656,11 @@ Hard requirements:
         </div>
       )}
       {_dailyShown && (
-        <div style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',gap:10,padding:'9px 12px 9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw'}}>
-          <span onClick={()=>{ try{ window.posthog && window.posthog.capture('daily_toast_tap',{artist:artistOfDay,composer:composerOfDay}); }catch(_){} setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ if(!liteImageMode) selectStyle(artistOfDay); }catch(_){} }}
-            style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            ✦ {ts('dailyTitle','Artist of the day')}: <b style={{fontWeight:700}}>{STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</b> · {ts('dailyTry','try it')}
+        // only info: who is free today — no action, no close; it retires by itself (5 s or the first Play)
+        <div role="status" style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',padding:'9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw',pointerEvents:'none'}}>
+          <span style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+            ✦ {ts('dailyTitle','Artist of the day')}: <b style={{fontWeight:700}}>{STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</b>
           </span>
-          <span onClick={()=>{ setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} try{ window.posthog && window.posthog.capture('daily_toast_dismiss'); }catch(_){} }} style={{color:'rgba(226,196,119,.7)',cursor:'pointer',fontSize:15,lineHeight:1,padding:'2px 4px'}}>×</span>
         </div>
       )}
       {showOnboarding && !showIntro && !basicMode && (()=>{
@@ -37093,7 +37097,7 @@ Hard requirements:
         {painterIntroShow && style && STYLE_INSPIRED[style] && (
           <div ref={_ovRef} role="status" style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
             <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_miT('painter').replace('{name}', STYLE_INSPIRED[style])}</div>
-            <div style={{fontSize:(.7*effScale)+'rem',letterSpacing:'.04em',color:'rgba(226,196,119,1)',textShadow:'0 1px 10px rgba(0,0,0,.85)'}}>↑ {_miT('painterSub')}</div>
+            <div style={{fontSize:(.7*effScale)+'rem',letterSpacing:'.04em',color:'rgba(226,196,119,1)',textShadow:'0 1px 10px rgba(0,0,0,.85)'}}>{immersive ? _miT('painterSubFs') : ('↑ '+_miT('painterSub'))}</div>
           </div>
         )}
         {/* the first Signature: what the word means — the same overlay as the opening Mosaic's line */}
