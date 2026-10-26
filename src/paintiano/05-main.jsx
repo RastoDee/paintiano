@@ -3022,8 +3022,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const _fsPillEl = (kind, lite)=>{
     const v=_fusionStyleOf(kind); if(!v) return null;
     const o=_fsWord(v==='E'?'A':'E',kind);
+    const _onFlash = immersive && !!_swipeFlashKey && !String(_swipeFlashKey).startsWith('out');   // the flash carries this very switch on the painting — keep the slot, hide the twin
     return (<button type="button" onClick={(e)=>{ e.stopPropagation(); _flipFusionStyle(kind); _fireInspiredFlash(true); wakeControls(); }} className={lite ? undefined : 'pf-lift'} aria-label={'\u2192 '+o} title={'\u2192 '+o}
-      style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'10px 14px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'normal',textAlign:'center',lineHeight:1.25,color:'#f3e2b4',background:'rgba(10,8,16,.66)',border:'1px solid rgba(220,180,90,.8)',boxShadow:'0 6px 22px rgba(0,0,0,.45)',WebkitTapHighlightColor:'transparent',...(lite?{position:'fixed',zIndex:10000,bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',maxWidth:'86vw',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}:null)}}>
+      style={{visibility:_onFlash?'hidden':'visible',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:'10px 14px',borderRadius:26,cursor:'pointer',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',whiteSpace:'normal',textAlign:'center',lineHeight:1.25,color:'#f3e2b4',background:'rgba(10,8,16,.66)',border:'1px solid rgba(220,180,90,.8)',boxShadow:'0 6px 22px rgba(0,0,0,.45)',WebkitTapHighlightColor:'transparent',...(lite?{position:'fixed',zIndex:10000,bottom:'max(20px, env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',maxWidth:'86vw',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease'}:null)}}>
       <FsGlyph v={v} w={21} h={15}/><span>{_fsWord(v,kind)} ›</span>
     </button>);
   };
@@ -15160,8 +15161,11 @@ Hard requirements:
         const _ensF = _isImgFlash ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k) : null)
                                   : (painterStage.length && style!==null ? _jamStage().map(_painterLabel) : null);
         const _fsK = _isImgFlash ? 'comp' : 'art';
-        // the style line: when it is drawn / switched — and always right after a tap on the style pill (the tap is what it confirms)
-        const _fsV = _ensF ? (_fusionStyleNow(_fsK) || (String(_swipeFlashKey).split('~')[2]==='s' ? _fusionStyleOf(_fsK) : null)) : null;
+        // the style line: when it is drawn / switched — and always right after a tap on the style pill (the tap is what it confirms).
+        // Pro: always, as a button on the painting — one tap switches this very fusion / jam to the other style (no second trip to the controls).
+        const _fsTap = !!_ensF && proStatus!=='free';
+        const _fsV = _ensF ? (_fsTap ? _fusionStyleOf(_fsK) : (_fusionStyleNow(_fsK) || (String(_swipeFlashKey).split('~')[2]==='s' ? _fusionStyleOf(_fsK) : null))) : null;
+        const _fsGo = (e)=>{ e.stopPropagation(); e.preventDefault(); _flipFusionStyle(_fsK); _fireInspiredFlash(true); wakeControls(); };
         return (
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
@@ -15169,7 +15173,9 @@ Hard requirements:
               <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')+(_ensF?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
               <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
-              {_fsV && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
+              {_fsV && !_fsTap && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
+              {_fsV && _fsTap && (<div style={{display:'flex',justifyContent:'center',marginBottom:'1.3em'}}><button type="button" onPointerDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onClick={_fsGo} aria-label={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)} title={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)}
+                style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:'.8em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.22em',fontWeight:700,textTransform:'uppercase',fontFamily:'inherit',color:'#f3e2b4',background:'rgba(10,8,16,.62)',border:'1px solid rgba(220,180,90,.85)',borderRadius:30,padding:'.75em 1.2em .75em 1.1em',cursor:'pointer',boxShadow:'0 6px 22px rgba(0,0,0,.35)',WebkitTapHighlightColor:'transparent'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)} ›</button></div>)}
             </>)}
             {(!_fBare || _ensF || _sigF) && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:(_ensF||_sigF)?14:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             {(()=>{
