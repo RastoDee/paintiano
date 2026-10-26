@@ -4329,6 +4329,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{ imgSigActiveRef.current = imgSigActive; },[imgSigActive]);
   const imgSigPrevRef = useRef(null);            // what was playing before ✦ — tapping ✦ again returns to it
   const imgNameRef = useRef('');                 // the picture's file name — "← image" brings it back under it (title, a hand-picked ✦)
+  const imgReturnLoadRef = useRef(false);        // the next loadImage is "← image": the picture comes back as it was, not on ✦
   const _liteImgNextIsSigRef = useRef(false);   // Lite: the first picture ever opens on Scan, its first Surprise is ✦
   const _setImgSigPin = (s)=>{ try{ globalThis.__IMG_SIG = s ? { keys:s.keys.slice(), fs:s.fs||null, h:(s.h|0) } : null; }catch(_){} };
   const _cOk = (k)=> !!k && (setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k);
@@ -9603,10 +9604,15 @@ Hard requirements:
           try{ globalThis.__IMG_SIG=null; }catch(_){}
           imgSigRef.current=_isg; setImgSig(_isg);
           let _isgOpen=false;
+          const _isReturn = imgReturnLoadRef.current; imgReturnLoadRef.current = false;
           if(basicModeRef.current && liteImageModeRef.current && !_fromMusic && _isg){
             let _arc=false; try{ _arc = localStorage.getItem('paintiano_lite_img_arc')!=='1'; localStorage.setItem('paintiano_lite_img_arc','1'); }catch(_){}
             _liteImgNextIsSigRef.current = _arc; _isgOpen = !_arc;
-          } else _liteImgNextIsSigRef.current = false;
+          } else {
+            _liteImgNextIsSigRef.current = false;
+            // Advanced: every picture file and sample opens on ✦ too — the mirror of music files and samples
+            if(!basicModeRef.current && !_fromMusic && _isg && !_isReturn) _isgOpen = true;
+          }
           const startMode = _isgOpen ? _isg.mode : (_fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode));
           if(_isgOpen){ try{ imgSigFnRef.current.apply(_isg); }catch(_){} }
           kontraAutoRef.current = (!_fromMusic && startMode==='kontra'); // auto-kontra only on a fresh image, never when palette carried from Music
@@ -9912,6 +9918,7 @@ Hard requirements:
       const blob=new Blob([buffer],{type:mime}); const ext=(mime.split('/')[1]||'jpg').replace('jpeg','jpg');
       const file=new File([blob],imgNameRef.current||('image.'+ext),{type:mime});
       setImgReturnUrl(null);
+      imgReturnLoadRef.current=true;
       loadImage({target:{files:[file],value:''}});
     }catch(e){ setErr('Image: '+((e&&e.message)||'restore failed')); setErrInfo(false); }
   },[imgReturnUrl,loadImage]);
@@ -13744,7 +13751,7 @@ Hard requirements:
             <button onClick={_favClose} className="pf-lift" style={{...pill,cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(242,238,232,.78)'}}>✕ {_favT('close')}</button>
             <div role="heading" aria-level="2" style={{display:'inline-flex',alignItems:'baseline',gap:10,fontSize:(.62*effScale)+'rem',fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#f0c040'}}>♥ {_favT('label')}{count}</div>
           </div>
-          <div aria-disabled="true" style={{textAlign:'center',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.3)',marginBottom:10,userSelect:'none'}}>{ts('pickLook','Pick a look')} ▾</div>
+          <div aria-disabled="true" style={{textAlign:'center',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.3)',marginBottom:10,userSelect:'none'}}>{ts('pickLook','Palette · Artist')} ▾</div>
           {N>1 && (<div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:5,marginBottom:14}}>{Array.from({length:dotN},(_,k)=>{ const on=(d0+k)===i; return (<span key={k} style={{width:on?14:5,height:5,borderRadius:3,background:on?'#f0c040':'rgba(242,238,232,.22)',transition:'width .2s ease'}}/>); })}
           </div>)}
           {N===0 ? (
@@ -14345,7 +14352,7 @@ Hard requirements:
         <div style={{display:'flex',alignItems:'center',width:'100%',gap:6}}>
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
           <button onClick={()=>{if(demoReelOn)return;setStripOpen(o=>{ const nv=!o; if(nv && !cockpitOpened){ try{ localStorage.setItem('paintiano_cockpit_opened','1'); }catch(_){} setCockpitOpened(true); } return nv; });}} disabled={demoReelOn} aria-expanded={stripOpen} className={(!cockpitOpened && !stripOpen && !demoReelOn) ? 'pf-cockpit-nudge' : undefined} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:(composeMode||micActive)?'2px 0':'6px 0',background:'transparent',border:'none',cursor:demoReelOn?'default':'pointer',color:(!cockpitOpened && !stripOpen && !demoReelOn) ? undefined : (stripOpen?'rgba(201,168,76,.9)':'rgba(201,168,76,.7)'),fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',opacity:demoReelOn?.5:1,transition:'color .15s ease'}}>
-            <span>{(loadedSource==='image' && !moodFromImg) ? (t('colorLabel') + ' · ' + (({EN:'Composer',SK:'Skladate\u013e',DE:'Komponist',FR:'Compositeur',ES:'Compositor',PT:'Compositor',zh:'\u4f5c\u66f2\u5bb6',zhTW:'\u4f5c\u66f2\u5bb6',ja:'\u4f5c\u66f2\u5bb6'})[lang]||'Composer')) : ts('pickLook','Pick a look')}</span>
+            <span>{(loadedSource==='image' && !moodFromImg) ? ts('pickLookImg','Palette · Composer') : ts('pickLook','Palette · Artist')}</span>
             <span style={{fontSize:(.7*effScale)+'rem',transform:stripOpen?'rotate(180deg)':'none',transition:'transform .2s ease'}}>▾</span>
           </button>
           {/* Edit toggle removed — Preset editing is now done via ⚙ in the
@@ -15380,7 +15387,7 @@ Hard requirements:
           <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,marginBottom:0,padding:'0 2px'}}>
             <button onClick={()=>{ if(demoReelOn) return; setDeskStripOpen(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_desk_strip', nv?'1':'0'); }catch(_){} return nv; }); }} disabled={demoReelOn} aria-expanded={!deskFolded} className="pf-fold-toggle"
               style={{flex:1,display:'inline-flex',alignItems:'center',gap:8,background:'transparent',border:'none',padding:'2px 0',cursor:'pointer',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',textAlign:'left',WebkitTapHighlightColor:'transparent'}}>
-              <span>{ts('pickLook','Pick a look')}</span>
+              <span>{ts('pickLook','Palette · Artist')}</span>
               <span aria-hidden="true" style={{fontSize:'1.35em',lineHeight:1,transform:deskFolded?'none':'rotate(180deg)',transition:'transform .2s ease'}}>▾</span>
             </button>
           </div>
@@ -15492,7 +15499,7 @@ Hard requirements:
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
               {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” — or ✦ SIGNATURE */}
-              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')+((_ensF && !_isImgFlash)?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
+              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
               <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
               {_fsV && !_fsTap && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
