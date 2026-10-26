@@ -22418,7 +22418,7 @@ function _frameExport(hi, kind, o){
     const _il=o.insp ? (o.palN ? o.insp+'  |  '+o.palN : o.insp) : (o.pal||'');
     if(_il){ cx.fillStyle=GOLD; const t=_fitText(cx,_il,bw,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
     const sw=Math.round(Wf*0.54); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
-    cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · music → φ painting', Wf/2, Hf-Math.round(m*0.5));
+    cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · '+(o.tag||'music → φ painting'), Wf/2, Hf-Math.round(m*0.5));   // a picture's export: φ painting → music
     return cv;
   }
   const W=hi.width, m=Math.round(W*0.038), pw=W-2*m, ph=Math.round(hi.height*pw/hi.width), band=Math.round(W*0.19);
@@ -34286,6 +34286,15 @@ Hard requirements:
   // Save takes the painting on screen: the live one — or, while the Favorites
   // viewer is open, the favorite on screen, fed from its address into this very
   // same export (Story, Web, Print A1, Gallery, watermark). See _favExportX.
+  // the caption line of a picture's export: who plays it — a composer, a Jam session, or AI compose — with ✦ when it is the picture's Signature
+  const _imgInspLabel = ()=>{
+    try{
+      if(imgPlayModeRef.current==='compose') return (t('imgCompose')!=='imgCompose' ? t('imgCompose') : 'AI compose');
+      if(!imgComposer) return '';
+      const l0 = composerStage.length ? _stageNames('comp') : `inspired by ${COMPOSER_INSPIRED[imgComposer]||imgComposer}`;
+      return imgSigActiveRef.current ? ('\u2726 '+_sigT('label')+' \u00b7 '+l0) : l0;
+    }catch(_){ return ''; }
+  };
   const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
     const fv=(favView && favCur) ? favCur : null;
     if(!fv) return _exportWith({ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip }, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
@@ -34589,17 +34598,18 @@ Hard requirements:
       // TikTok stories. Everything else ('web'/'print') downloads `hi` as-is.
       let outCanvas = hi;
       // Web / Print with the caption (Save can switch it off for the bare painting): title, painters and the song's colours under the painting
-      if((sizeMode==='web' || sizeMode==='print') && exportBandRef.current && viewMode!=='image' && chords.length){
+      // (a picture too: its title, who plays it — composer / Jam session / AI compose, ✦ — and the colours of the notes it sounds)
+      if((sizeMode==='web' || sizeMode==='print') && exportBandRef.current && (viewMode!=='image' || !favView) && chords.length){
         try{
           const _tt=String((compositionName||'').trim() || (info && info.title) || '').trim();
           const _sp=_tt.split(/\s+[\u2014\u2013-]\s+/); const _title=_sp[0]||''; const _comp=_sp.length>1 ? _sp.slice(1).join(' \u2013 ') : '';
-          const _insp=(X.insp!==undefined) ? X.insp : (()=>{ const k=effectiveStyle || (shuffleStyle && shuffleStyle!=='mosaic' ? shuffleStyle : 'mosaic'); const bare=(k==='mosaic'||k==='notes'||k==='raffel');
+          const _insp=(X.insp!==undefined) ? X.insp : (viewMode==='image') ? _imgInspLabel() : (()=>{ const k=effectiveStyle || (shuffleStyle && shuffleStyle!=='mosaic' ? shuffleStyle : 'mosaic'); const bare=(k==='mosaic'||k==='notes'||k==='raffel');
             const l0=(painterStage.length && !favView) ? _stageNames('art') : (STYLE_INSPIRED[k] ? (bare ? STYLE_INSPIRED[k] : `inspired by ${STYLE_INSPIRED[k]}`) : '');
             return (l0 && sigActiveRef.current) ? ('\u2726 '+_sigT('label')+' \u00b7 '+l0) : l0; })();
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
           const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
-          outCanvas=_frameExport(hi, sizeMode, {title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:_pcWeights(chords), gc, names:_miT('names')});
+          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:_pcWeights(chords), gc, names:_miT('names')});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
         }catch(_){ outCanvas=hi; }
       }
@@ -34688,7 +34698,7 @@ Hard requirements:
           : _inspKey
           ? (_inspBare ? STYLE_INSPIRED[_inspKey] : `inspired by ${STYLE_INSPIRED[_inspKey]}`)
           : null;
-        const _inspLabel = (X.insp!==undefined) ? X.insp : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
+        const _inspLabel = (X.insp!==undefined) ? X.insp : imageModeStory ? (_imgInspLabel() || null) : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
         const _stW = chords.length ? _pcWeights(chords) : null;   // the song's colours (between the painting and the wordmark)
@@ -34744,7 +34754,7 @@ Hard requirements:
         cursorY += 48;
         sctx.fillStyle='rgba(201,168,76,.7)';
         sctx.font='500 28px "Outfit", Arial, sans-serif';
-        sctx.fillText('music → φ painting', SW/2, cursorY);
+        sctx.fillText(imageModeStory ? 'φ painting → music' : 'music → φ painting', SW/2, cursorY);
         outCanvas=st;
         // Watermark on the Story composite — the one we applied to `hi` above
         // got shrunk along with the painting when drawImage'd onto this 1080×

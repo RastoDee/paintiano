@@ -65,6 +65,11 @@ const PF_STYLE = `
         }
         .pf-cockpit-nudge { animation: pf-cockpit-nudge 2.2s ease-in-out infinite; }
         .pf-fade { animation: pf-fadeUp .5s ease both; }
+        /* MODE TINT — the page's top glow takes the colour of the mode on screen (05-main tintCol). Registered as a colour so a
+           mode change cross-fades instead of snapping (browsers without @property just switch). */
+        @property --pf-tint { syntax: '<color>'; inherits: false; initial-value: #0e0b16; }
+        .pf-app-root { transition: --pf-tint .6s ease; }
+        @media (prefers-reduced-motion: reduce) { .pf-app-root { transition: none; } }
         .pf-setup-stage { display: none; }
         .pf-tool { transition: all .18s; }
         .pf-tool, .pf-morph, .pf-vary, .pf-lift { -webkit-tap-highlight-color:transparent; }
@@ -1450,10 +1455,11 @@ async function favPiece(pk){
     });
   }catch(_){ return null; }
 }
-// favAdd(fav, chords) → saves one favorite in one transaction. The notes are
-// written only for a song not stored yet. Returns the record, or null (private
-// mode, quota).
-async function favAdd(fav, chords){
+// favAdd(fav, chords, pc) → saves one favorite in one transaction. The notes are
+// written only for a song not stored yet. A picture favorite (Image mode) brings
+// its picture instead: pc = {img: data URL, name: the file name}, kept once per
+// picture like a song. Returns the record, or null (private mode, quota).
+async function favAdd(fav, chords, pc){
   try{
     const db = await favOpen();
     await new Promise((resolve, reject)=>{
@@ -1461,7 +1467,7 @@ async function favAdd(fav, chords){
       const ps = tx.objectStore('pieces');
       const g  = ps.get(fav.pk);
       g.onsuccess = ()=>{
-        if(!g.result) ps.put({ pk:fav.pk, chords });
+        if(!g.result) ps.put((pc && pc.img) ? { pk:fav.pk, img:pc.img, name:pc.name||'' } : { pk:fav.pk, chords });
         tx.objectStore('favs').put(fav);
       };
       tx.oncomplete = ()=> resolve();
