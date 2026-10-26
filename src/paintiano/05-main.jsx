@@ -387,16 +387,17 @@ function computeSongSignature(events, opts){
     return {v:SIG_V, keys, roles, ph, mode, z, f, seed};
   }catch(_){ return null; }
 }
+// label = the term in Advanced; lite = the same thing in plain words for Lite, where a new user meets it first
 const SIG_I18N = {
-  EN:{label:'Signature',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'}},
-  SK:{label:'Signatúra',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'}},
-  DE:{label:'Signatur',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'}},
-  FR:{label:'Signature',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'}},
-  ES:{label:'Firma',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'}},
-  PT:{label:'Assinatura',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'}},
-  zh:{label:'签名',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'}},
-  zhTW:{label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'}},
-  ja:{label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
+  EN:{lite:'The song’s painting',label:'Signature',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'}},
+  SK:{lite:'Obraz skladby',label:'Signatúra',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'}},
+  DE:{lite:'Das Bild des Stücks',label:'Signatur',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'}},
+  FR:{lite:'Le tableau du morceau',label:'Signature',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'}},
+  ES:{lite:'El cuadro de la canción',label:'Firma',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'}},
+  PT:{lite:'O quadro da música',label:'Assinatura',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'}},
+  zh:{lite:'这首曲子的画',label:'签名',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'}},
+  zhTW:{lite:'這首曲子的畫',label:'簽名',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'}},
+  ja:{lite:'この曲の絵',label:'署名',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'}},
 };
 
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
@@ -1575,6 +1576,9 @@ export default function Paintiano() {
   // Surprise 1 = Mosaic (flag above), Surprise 2 = the song's ✦ Signature (this
   // flag), then the shuffle. Every later song opens on ✦, then the shuffle.
   const _liteNextIsSigRef = useRef(false);
+  // The first song EVER opens on the Mosaic (the opening piece, _liteIntroRef); its first Surprise is the first painting —
+  // Kandinsky v0 (this ref holds the key), the next one the song's own painting (✦), then the shuffle.
+  const _liteNextKRef = useRef(null);
   const liteOpenRef = useRef(null);
   // Lite's OPENING piece (the one the Play chip starts) opens on the Mosaic — the concept itself: every note that sounds has its
   // own colour. Set by litePlayStart, read once by liteOpenRef; liteIntroPiece stays true while that piece is on the canvas.
@@ -2840,6 +2844,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
   const [sigActive, setSigActive] = useState(false);
   useEffect(()=>{ sigActiveRef.current = sigActive; },[sigActive]);
   const _sigT = (k)=>{ const d=SIG_I18N[lang]||SIG_I18N.EN; return d[k]!==undefined ? d[k] : SIG_I18N.EN[k]; };
+  // the name on screen: 'Signature' in Advanced, 'The song’s painting' in Lite (basicMode is declared further down; called only at render)
+  const _sigName = ()=> _sigT(basicMode ? 'lite' : 'label');
   // What was on screen before ✦ — tapping ✦ again (while lit) returns to it.
   const sigPrevRef = useRef(null);
   // A Fusion's rolled address. Next on a Fusion gives EVERY member a variant of its
@@ -3822,7 +3828,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie'];
     // The target may sit below the fold of the Setup sheet (Composers grew to
     // 12 chips, pushing Tones off-screen) — bring it into view FIRST, then
     // measure, or the ring lands on whatever is at the stale rect (the footer).
-    const TOUR_SELS=['.pf-setup-chip','.pf-setup-palettes','.pf-setup-artists','.pf-setup-composers','.pf-setup-ensemble-head','.pf-setup-tones'];
+    const TOUR_SELS=['.pf-setup-chip','.pf-setup-palettes','.pf-setup-artists','.pf-setup-composers','.pf-setup-ensemble-head','.pf-setup-tones','.pf-inspired-row .pf-dice'];
     const s0=setTimeout(()=>{ try{ const el=document.querySelector(TOUR_SELS[tourStep]||''); if(el && el.scrollIntoView) el.scrollIntoView({block:'center',behavior:'auto'}); }catch(_){} },40);
     const a=setTimeout(()=>setTourTick(t=>t+1),160); const b=setTimeout(()=>setTourTick(t=>t+1),420);
     return ()=>{ clearTimeout(s0); clearTimeout(a); clearTimeout(b); };
@@ -5084,7 +5090,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       originalImgUrl: null, imgMoodThumb: null, currentMood: fv.mood || '',
       _takeInfo: _takeInfoM, _takeGrid: ()=> lay.pg, _takeFrame: ()=>({CW:lay.CW, CH:lay.CH}), _takePainter: ()=>true, _takeSkip: ()=>!!fv.skip,
       cap: fv.cap || null,
-      insp: insp0 ? ((fv.sig ? '✦ '+_sigT('label')+' · ' : '') + insp0) : null,
+      insp: insp0 ? ((fv.sig ? '✦ '+_sigName()+' · ' : '') + insp0) : null,
       caption: _favCaption(fv),
       enter: ()=>{
         if(keep) return;
@@ -5121,7 +5127,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     await exportImage('story', true, audioBlob, audioName, false);
   };
   const _favTitle = (f)=> f.src==='compose' ? t('compose').replace(/[^\p{L} ]/gu,'').trim() : f.src==='mic' ? t('mic').replace(/[^\p{L} ]/gu,'').trim() : (f.title||'');
-  const _favWho = (f)=> (f.sig ? '✦ '+_sigT('label')+' · ' : '') + (f.keys ? f.keys.map(_painterLabel).join(' × ') : _painterLabel(f.style));
+  const _favWho = (f)=> (f.sig ? '✦ '+_sigName()+' · ' : '') + (f.keys ? f.keys.map(_painterLabel).join(' × ') : _painterLabel(f.style));
   const _favWhen = (f)=>{
     const d=new Date(f.at||0), now=new Date(), day=(x)=>Math.floor((x.getTime()-x.getTimezoneOffset()*60000)/86400000), dd=day(now)-day(d);
     if(dd<=0) return _favT('today');
@@ -10238,9 +10244,11 @@ Hard requirements:
     const _intro = _liteIntroRef.current; _liteIntroRef.current = false;
     setLiteIntroPiece(_intro);
     if(_intro){
-      // the opening piece: the Mosaic first (every note its colour), the first Surprise brings the piece's ✦ Signature, then the shuffle
+      // the opening piece: the Mosaic first (every note its colour). The very first one on this device: Surprise → Kandinsky v0, the first
+      // painting; then the song's own painting (✦); then the shuffle. Every later opening piece: Surprise → ✦ straight away.
       mosaicIntroDoneRef.current = false;
       _liteNextIsMosaicRef.current = false;
+      _liteNextKRef.current = _arc ? _k : null;
       _liteNextIsSigRef.current = _hasSig;
       setRandomMode(false); randomModeRef.current=false;
       setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
@@ -10248,6 +10256,7 @@ Hard requirements:
       return;
     }
     _liteNextIsMosaicRef.current = _arc;
+    _liteNextKRef.current = null;
     _liteNextIsSigRef.current = false;
     if(_hasSig && (!_arc || (sg.keys.length===1 && sg.keys[0]===_k && (sg.ph|0)===0))){ applySigRef.current(sg); return; }
     _liteNextIsSigRef.current = _arc && _hasSig;
@@ -10283,6 +10292,14 @@ Hard requirements:
     setSurpriseHint(true);
   },[_miOn, playing, holdPaused, disp, chords.length]);
   const basicSurprise = useCallback(()=>{
+    // ── The first painting ever: Kandinsky v0 after the opening Mosaic (see liteOpenRef) ──
+    if(_liteNextKRef.current){
+      const _k1 = _liteNextKRef.current; _liteNextKRef.current = null;
+      setRandomMode(false); randomModeRef.current=false;
+      setStyle(_k1); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
+      return;
+    }
     // ── Forced Mosaic on the first Surprise after Lite Play ─────────────
     // litePlayStart lands on Pollock. The very next Surprise tap goes to
     // Mosaic (contrast: dense overlay → bare grid). From the tap after that,
@@ -12323,7 +12340,7 @@ Hard requirements:
           const _sp=_tt.split(/\s+[\u2014\u2013-]\s+/); const _title=_sp[0]||''; const _comp=_sp.length>1 ? _sp.slice(1).join(' \u2013 ') : '';
           const _insp=(X.insp!==undefined) ? X.insp : (()=>{ const k=effectiveStyle || (shuffleStyle && shuffleStyle!=='mosaic' ? shuffleStyle : 'mosaic'); const bare=(k==='mosaic'||k==='notes'||k==='raffel');
             const l0=(painterStage.length && !favView) ? _stageNames('art') : (STYLE_INSPIRED[k] ? (bare ? STYLE_INSPIRED[k] : `inspired by ${STYLE_INSPIRED[k]}`) : '');
-            return (l0 && sigActiveRef.current) ? ('\u2726 '+_sigT('label')+' \u00b7 '+l0) : l0; })();
+            return (l0 && sigActiveRef.current) ? ('\u2726 '+_sigT(basicModeRef.current?'lite':'label')+' \u00b7 '+l0) : l0; })();
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           outCanvas=_frameExport(hi, sizeMode, {title:_title, composer:_comp, insp:_insp, wts:_pcWeights(chords), gc, names:_miT('names')});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
@@ -12414,7 +12431,7 @@ Hard requirements:
           : _inspKey
           ? (_inspBare ? STYLE_INSPIRED[_inspKey] : `inspired by ${STYLE_INSPIRED[_inspKey]}`)
           : null;
-        const _inspLabel = (X.insp!==undefined) ? X.insp : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
+        const _inspLabel = (X.insp!==undefined) ? X.insp : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT(basicModeRef.current?'lite':'label')+' · '+_inspLabel0) : _inspLabel0);
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
         const _stW = chords.length ? _pcWeights(chords) : null;   // the song's colours (between the painting and the wordmark)
@@ -14861,11 +14878,11 @@ Hard requirements:
           <div style={{display:'flex',alignItems:'center',fontSize:(.57*effScale)+'rem',marginBottom:4}}>
             <span style={{display:'inline-flex',alignItems:'center',gap:6,flex:1,minWidth:0,overflow:'hidden'}}>{_titleSpan}{_badgeSpan}{_mmChip}</span>
             {!immersive && basicMode && !liteImageMode && painterStage.length>0 && style!==null && (
-              <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{_fsNames('art',20,14,6,true)}</span>
+              <span key={'insp-jam-'+_jamStage().join('+')} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'62%'}}>{sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('lite')} · </span>)}{_fsNames('art',20,14,6,true)}</span>
             )}
             {!immersive && basicMode && !liteImageMode && !(painterStage.length>0 && style!==null) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
               <span key={'insp-'+effectiveStyle} className="pf-artist-glow" style={{flexShrink:0,marginLeft:8,fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.7)',whiteSpace:'nowrap'}}>
-                {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('label')} · </span>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
+                {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600}}>✦ {_sigT('lite')} · </span>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} · </span>)}{effectiveStyle!=='raffel' && (<span style={{fontStyle:'normal',opacity:.65}}>{t('inspiredByTitle')!=='inspiredByTitle'?t('inspiredByTitle'):'inspired by'}</span>)} {STYLE_INSPIRED[effectiveStyle]}
               </span>
             )}
             {!immersive && basicMode && liteImageMode && (
@@ -14986,7 +15003,7 @@ Hard requirements:
               <span style={{fontStyle:'italic'}}>{(painterStage.length>0 && style!==null) ? (<>{_fsNames('art',20,14,6)}</>)
                 : (effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle]) ? (effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle]))
                 : (effectiveStyle==='notes' ? t('notesStyle') : t('mosaicStyle'))}</span>
-              {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,whiteSpace:'nowrap'}}> · ✦ {_sigT('label')}</span>)}
+              {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,whiteSpace:'nowrap'}}> · ✦ {_sigName()}</span>)}
             </div>
           )}
           </div>
@@ -15081,7 +15098,7 @@ Hard requirements:
           <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
               {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” — or ✦ SIGNATURE */}
-              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')+(_ensF?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
+              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigName()+(_ensF?' · '+_ensT('fusion'):'')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
               <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
               {_fsV && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
@@ -17217,6 +17234,18 @@ Hard requirements:
                       zhTW:'Pro：把 2–5 位畫家雜交成一種新風格（融合），或讓作曲家輪流接句（Jam session）。在這裡開啟——之後每個 🔀 旁會出現 ◎ 按鈕。',
                       ja:'Pro：2〜5 人の画家をひとつの新しい筆致に掛け合わせる（フュージョン）、または作曲家にフレーズを掛け合わせる（Jam session）。ここでオンに——各 🔀 の隣に ◎ ボタンが現れる。'})[lang]||'') },
             { sel:'.pf-setup-tones', title:ts('tourToneTitle','T\u00f3ny'), body:ts('tourToneBody','T\u00f3n lad\u00ed n\u00e1ladu obrazu \u2014 jasn\u00fa, temn\u00fa, alebo pln\u00e9 spektrum.'), pad:8, inModal:true },
+            // Lite's ↻ Surprise me shuffled for them; in Advanced the same lives on 🔀 + Next — without this a new user thinks shuffle is gone
+            { sel:'.pf-inspired-row .pf-dice', closeModal:true, openStrip:true, pad:10,
+              title:(({EN:'Surprise me lives here',SK:'Prekvap ma je tu',DE:'Überrasch mich wohnt hier',FR:'Surprends-moi est ici',ES:'Sorpréndeme está aquí',PT:'O Surpreende-me está aqui',zh:'「给我惊喜」在这里',zhTW:'「給我驚喜」在這裡',ja:'「おまかせ」はここ'})[lang]||'Surprise me lives here'),
+              body:(({EN:'In Lite, {surprise} shuffled for you. Here it is 🔀 plus {next}. Tap 🔀 to cycle: 1 — {next} tries this artist’s variants; ALL — {next} draws artist and variant, like {surprise}; off — the painting stays.',
+                      SK:'V Lite miešalo {surprise}. Tu to robí 🔀 spolu s {next}. Ťukaním na 🔀 prepínaš: 1 — {next} skúša varianty tohto umelca; ALL — {next} losuje umelca aj variant, ako {surprise}; vypnuté — obraz ostane.',
+                      DE:'In Lite hat {surprise} für dich gemischt. Hier übernimmt das 🔀 zusammen mit {next}. Tippe auf 🔀 zum Umschalten: 1 — {next} probiert die Varianten dieses Künstlers; ALL — {next} zieht Künstler und Variante, wie {surprise}; aus — das Bild bleibt.',
+                      FR:'Dans Lite, {surprise} mélangeait pour toi. Ici, c’est 🔀 avec {next}. Touche 🔀 pour passer de l’un à l’autre : 1 — {next} essaie les variantes de cet artiste ; ALL — {next} tire l’artiste et la variante, comme {surprise} ; éteint — le tableau reste.',
+                      ES:'En Lite, {surprise} mezclaba por ti. Aquí lo hace 🔀 junto con {next}. Toca 🔀 para cambiar: 1 — {next} prueba las variantes de este artista; ALL — {next} sortea artista y variante, como {surprise}; apagado — la pintura se queda.',
+                      PT:'No Lite, o {surprise} baralhava por ti. Aqui é o 🔀 com {next}. Toca em 🔀 para alternar: 1 — {next} experimenta as variantes deste artista; ALL — {next} sorteia artista e variante, como o {surprise}; desligado — a pintura fica.',
+                      zh:'在 Lite 中，{surprise} 替你随机切换。这里由 🔀 加 {next} 来做。点 🔀 循环切换：1 —— {next} 试这位艺术家的各个变体；ALL —— {next} 抽取艺术家与变体，就像 {surprise}；关闭 —— 画面保持不变。',
+                      zhTW:'在 Lite 中，{surprise} 替你隨機切換。這裡由 🔀 加 {next} 來做。點 🔀 循環切換：1 —— {next} 試這位藝術家的各個變體；ALL —— {next} 抽取藝術家與變體，就像 {surprise}；關閉 —— 畫面保持不變。',
+                      ja:'Lite では {surprise} がシャッフルしていました。ここでは 🔀 と {next} がその役。🔀 をタップで切り替え：1 —— {next} でこのアーティストのバリアントを試す；ALL —— {next} でアーティストとバリアントを抽選（{surprise} と同じ）；オフ —— 絵はそのまま。'})[lang]||'').split('{surprise}').join(ts('surpriseMe','Surprise me')).split('{next}').join(t('next')) },
           ];
           const endTour = (done)=>{
             try{ window.posthog && window.posthog.capture(done?'tour_complete':'tour_skip'); }catch(_){}
@@ -17232,7 +17261,7 @@ Hard requirements:
           const goStep = (n)=>{
             if(n>=TOUR.length){ endTour(true); return; }
             if(TOUR[n] && TOUR[n].inModal){ try{ setSetupReturnTo(null); setShowSetupModal(true); }catch(_){} setTimeout(()=>setTourStep(n),200); return; }
-            if(TOUR[n] && TOUR[n].closeModal){ try{ setShowSetupModal(false); }catch(_){} setTimeout(()=>setTourStep(n),220); return; }
+            if(TOUR[n] && TOUR[n].closeModal){ try{ setShowSetupModal(false); }catch(_){} try{ if(TOUR[n].openStrip) setStripOpen(true); }catch(_){} setTimeout(()=>setTourStep(n),220); return; }
             setTourStep(n);
           };
           if(tourWelcome){
