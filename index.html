@@ -180,6 +180,16 @@ body.is-proai .welcome .wt b{color:#cdb2ff}
 .way .pic{position:relative}
 .way img{aspect-ratio:2/3;width:100%;object-fit:cover;object-position:bottom;border:1px solid rgba(201,168,76,.16);box-shadow:0 20px 60px rgba(0,0,0,.5)}
 .way .hear{position:absolute;left:14px;top:14px}
+/* while a clip plays: Liebestraum paints itself, The Scream is read band by band */
+.way .art{position:absolute;inset:1px;overflow:hidden;pointer-events:none}
+.way .art .r{position:absolute}
+.way .art video{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;opacity:0;transition:opacity .5s ease}
+.way .art.on video{opacity:1}
+.way .art i{position:absolute;left:0;right:0;opacity:0;transition:opacity .5s ease}
+.way .art.on i{opacity:1}
+.way .art .sv{top:0;bottom:0;background:rgba(6,6,12,.58);-webkit-backdrop-filter:grayscale(.9);backdrop-filter:grayscale(.9);-webkit-mask-image:linear-gradient(180deg,transparent,#000 16px);mask-image:linear-gradient(180deg,transparent,#000 16px)}
+.way .art .sg{height:6.6%;background:linear-gradient(180deg,rgba(255,232,170,0),rgba(255,232,170,.36) 50%,rgba(255,232,170,0));mix-blend-mode:screen;transition:opacity .5s ease,top .2s linear}
+.way .art .sr{right:auto;height:2.72%;background:linear-gradient(90deg,rgba(255,232,170,.05),rgba(255,232,170,.32));box-shadow:0 0 14px rgba(255,232,170,.4);mix-blend-mode:screen;transition:opacity .5s ease,top .2s linear,width .2s linear}
 .way h3{margin:20px 0 6px;display:flex;align-items:center;gap:10px}
 .way h3 i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);flex:none}
 .way p{color:var(--ink2)}
@@ -420,6 +430,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
       <div class="way" style="--c:var(--blue)">
         <div class="pic">
           <img src="/landing/sig-liszt-band.webp" alt="Liebestraum No.3 — Liszt, ✦ Klimt × af Klint" loading="lazy" width="1200" height="1898">
+          <div class="art" id="wl" aria-hidden="true"><div class="r" style="left:3.75%;top:-2.944%;width:92.5%;height:90.333%"><video id="wlv" muted playsinline preload="none"></video></div></div>
           <button class="hear" data-src="/landing/liszt.mp3" data-what="liszt"><span class="ic"></span><span class="eq"><i></i><i></i><i></i></span><span data-i18n="hear_liszt">Hear Liebestraum</span></button>
         </div>
         <h3><i></i><span data-i18n="way1_h">Music → painting</span></h3>
@@ -428,6 +439,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
       <div class="way" style="--c:var(--orange)">
         <div class="pic">
           <img src="/landing/pic-munch.webp" alt="The Scream — Munch, ✦ Beethoven ↔ Schubert" loading="lazy" width="1200" height="1691">
+          <div class="art" id="ws" aria-hidden="true"><div class="r" style="left:.769%;top:2.602%;width:98.462%;height:83.974%"><i class="sv"></i><i class="sr"></i><i class="sg"></i></div></div>
           <button class="hear" data-src="/landing/scream.mp3" data-what="scream"><span class="ic"></span><span class="eq"><i></i><i></i><i></i></span><span data-i18n="hear_scream">Hear The Scream</span></button>
         </div>
         <h3><i></i><span data-i18n="way2_h">Picture → music</span></h3>
@@ -723,7 +735,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
 
   /* one shared player for every Hear-it button */
   var au=new Audio(); au.preload='none'; var cur=null;
-  function reset(){ if(cur){ cur.classList.remove('playing'); cur=null; } }
+  function reset(keep){ if(cur){ var w=cur.getAttribute('data-what'); if(keep!==true && vis[w]) vis[w].stop(); cur.classList.remove('playing'); cur=null; } }
   function backToLoop(){ if(mode!=='listen') return; mode='loop'; setSrc(LOOP); startLoop(); }
   function listen(){
     reset(); mode='listen'; cur=lb; lb.classList.add('playing');
@@ -741,9 +753,43 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
       reset(); au.src=b.getAttribute('data-src');
       try{ var p=au.play(); if(p&&p.catch) p.catch(reset); }catch(_){ reset(); return; }
       cur=b; b.classList.add('playing'); track('landing_hear',{what:b.getAttribute('data-what')});
+      var w=b.getAttribute('data-what'); if(vis[w]) vis[w].start();
     });
   });
-  au.addEventListener('ended',function(){ var wasListen=(cur===lb); reset(); if(wasListen) setTimeout(backToLoop,2500); });
+  au.addEventListener('ended',function(){ var wasListen=(cur===lb), w=cur&&cur.getAttribute('data-what'); if(w && vis[w]) vis[w].end(); reset(true); if(wasListen) setTimeout(backToLoop,2500); });
+
+  /* the two ways while their clip plays: Liebestraum paints itself in step with the music (the first 28 s),
+     The Scream is read band by band where the composers read it; when the music ends, the rest follows in one sweep
+     and the card rests on the finished painting and the fully read picture */
+  function vp(x){ try{ var q=x.play(); if(q&&q.catch) q.catch(function(){}); }catch(_){} }
+  var WL=document.getElementById('wl'), wv=document.getElementById('wlv'), WS=document.getElementById('ws'), gen=0, raf=0, maxB=0;
+  var SC=[0,0,14,0,0,14,0,1,5,19,0,14,39,0,14,59,0,14,79,0,14,99,0,14,118,0,14,138,0,14,158,0,14,178,0,14,178,1,5,198,0,14,207,1,5,217,0,14,237,0,0,237,0,0,257,0,0,277,0,0,297,0,0,316,0,0,336,0,0,356,0,0,376,0,0,396,0,0,415,0,0,435,0,0,455,0,0,473,1,5,475,0,9,475,0,9,495,0,9,514,0,9,534,0,9,554,0,9,574,0,9,594,0,9,613,0,9,633,0,9,653,0,9,653,1,5,673,0,9,683,1,5,693,0,9,712,3,26,712,3,26,732,3,26,752,3,26,772,3,26,792,3,26,811,3,26,831,3,26,851,3,26,871,3,26,891,3,26,910,3,26,930,3,26,950,3,26,950,2,25,953,3,26,990,3,26,1029,2,13,1069,2,13,1108,3,26,1148,2,25,1184,3,26,1188,3,26,1188,2,25,1227,3,26,1267,2,13,1306,2,13,1346,3,26,1385,2,25,1422,3,29,1425,2,9,1425,3,26,1465,2,9,1504,3,29,1544,3,29,1584,2,9,1603,3,27,1623,3,26,1662,3,29,1663,2,9,1663,3,26,1702,2,9,1742,3,29,1782,3,29,1821,2,9,1861,3,26,1900,4,0,1900,4,41,1900,4,0,1940,4,0,1979,5,36,2019,5,36,2059,4,0,2074,4,17,2098,4,41,2136,4,0,2138,4,0,2138,4,41,2178,4,0,2217,5,36,2257,5,36,2296,4,0,2336,4,41,2373,4,0,2376,4,9,2376,5,36,2415,4,9,2455,4,0,2493,4,4,2494,4,0,2534,4,9,2573,5,36,2612,4,9,2613,4,17,2613,4,9,2653,4,17,2692,4,35,2732,4,35,2772,4,17], NB=147/4;
+  var sv=WS&&WS.querySelector('.sv'), sr=WS&&WS.querySelector('.sr'), sg=WS&&WS.querySelector('.sg');
+  function scanAt(band,cg,top){ var bh=400/147; sv.style.top=Math.min(100,(top+1)*bh)+'%'; sg.style.top=((band+.5)*bh-3.3)+'%'; sr.style.top=(band*bh)+'%'; sr.style.width=Math.min(100,(cg+1)*400/192)+'%'; }
+  var vis={
+    liszt:{
+      start:function(){ if(rm||!wv) return; var g=++gen;
+        if(!wv.firstChild){ [['/landing/way-liszt.mp4','video/mp4'],['/landing/way-liszt.webm','video/webm']].forEach(function(x){ var e=document.createElement('source'); e.src=x[0]; e.type=x[1]; wv.appendChild(e); }); }
+        wv.preload='auto';
+        var go=function(){ if(g!==gen || !(cur && cur.getAttribute('data-what')==='liszt')) return; try{ wv.currentTime=au.currentTime||0; }catch(_){} vp(wv); WL.classList.add('on'); };
+        if(wv.readyState>=2) go(); else { wv.addEventListener('canplay',go,{once:true}); try{ wv.load(); }catch(_){} } },
+      stop:function(){ if(!wv) return; ++gen; WL.classList.remove('on'); setTimeout(function(){ if(!WL.classList.contains('on')) try{ wv.pause(); }catch(_){} },520); },
+      end:function(){ if(!wv || !WL.classList.contains('on')) return; var g=gen; vp(wv); wv.addEventListener('ended',function(){ if(g===gen) WL.classList.remove('on'); },{once:true}); }
+    },
+    scream:{
+      start:function(){ if(rm||!WS) return; cancelAnimationFrame(raf); maxB=0; scanAt(0,0,0); WS.classList.add('on');
+        var tick=function(){ if(!(cur && cur.getAttribute('data-what')==='scream')) return; var t=au.currentTime*100, i=-1;
+          for(var k=0;k<SC.length;k+=3){ if(SC[k]<=t) i=k; else break; }
+          if(i>=0){ maxB=Math.max(maxB,SC[i+1]); scanAt(SC[i+1],SC[i+2],maxB); } raf=requestAnimationFrame(tick); };
+        raf=requestAnimationFrame(tick); },
+      stop:function(){ cancelAnimationFrame(raf); if(WS) WS.classList.remove('on'); },
+      end:function(){ if(!WS || !WS.classList.contains('on')) return; cancelAnimationFrame(raf); var b0=maxB, t0=performance.now(), D=2600;
+        var step=function(now){ var x=Math.min(1,(now-t0)/D), e=x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2, b=b0+(NB-b0)*e;
+          scanAt(b,47*(b%1),b); if(x<1) raf=requestAnimationFrame(step); else WS.classList.remove('on'); };
+        raf=requestAnimationFrame(step); }
+    }
+  };
+  au.addEventListener('timeupdate',function(){ if(cur && cur.getAttribute('data-what')==='liszt' && WL && WL.classList.contains('on') && !au.paused && Math.abs(wv.currentTime-au.currentTime)>.3){ try{ wv.currentTime=au.currentTime; }catch(_){} } });
   var sz=document.getElementById('scanzone'), ph=document.getElementById('playhead'), cpick=document.getElementById('cpick'), cplay=document.getElementById('cplaying');
   function compUi(){ var on=!!(cur && cur.classList.contains('comp')); if(sz) sz.classList.toggle('on',on); if(cpick) cpick.hidden=on; if(cplay){ cplay.hidden=!on; if(on){ var nm=cur.querySelector('b'), ds=cur.querySelector('small span'); cplay.textContent='♪ '+(nm?nm.textContent:'')+(ds?' — '+ds.textContent:''); } } }
   au.addEventListener('timeupdate',function(){ if(cur && cur.classList.contains('comp') && ph){ var d=au.duration||23; ph.style.left=Math.min(100,au.currentTime/d*100)+'%'; } });
