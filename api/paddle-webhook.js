@@ -51,7 +51,7 @@ const PRICE_ID_PRO    = process.env.PADDLE_PRICE_ID_PRO    || process.env.PADDLE
 const PRICE_ID_PRO_AI = process.env.PADDLE_PRICE_ID_PRO_AI || null;
 // Upgrade price (Pro → Pro AI). Price IDs are public (the app ships them), so a
 // literal fallback is fine; the env var wins when set.
-const PRICE_ID_UPGRADE = process.env.PADDLE_PRICE_ID_UPGRADE || null;
+const PRICE_ID_UPGRADE = process.env.PADDLE_PRICE_ID_UPGRADE || 'pri_01m5zep41d8kv3m6tcxbbnxsb2';
 const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
 const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
 const EMAIL_REPLY_TO = 'hello@paintiano.app';

@@ -21007,7 +21007,7 @@ const PRO_CFG = {
   // Opened with customData.upgrade_from = the buyer's Pro key; the webhook then
   // turns that same key into Pro AI. Until the ID is set, a Pro user's upgrade
   // falls back to the full Pro AI price.
-  paddlePriceIdUpgrade: null,
+  paddlePriceIdUpgrade: 'pri_01m5zep41d8kv3m6tcxbbnxsb2',
   // Our own Vercel Edge validation endpoint (same origin as the app).
   // Provider-agnostic — reads licenses table that Paddle webhook writes into.
   validateEndpoint: '/api/validate',

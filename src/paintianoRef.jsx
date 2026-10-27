@@ -21474,6 +21474,9 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   const [view, setView] = useState(reason === 'upgraded' ? 'success' : 'intro'); // 'intro'|'key'|'about'|'success'
   // A Pro owner is only ever offered the upgrade to Pro AI, never Pro again.
   const upgradeOnly = proStatus === 'pro';
+  // Until the upgrade price exists in Paddle, a Pro owner is shown (and charged)
+  // the plain Pro AI price — never a €10 label on a €19.99 checkout.
+  const upTier = PRO_CFG.paddlePriceIdUpgrade ? 'upgrade' : 'pro_ai';
   useEffect(() => {
     if (reason !== 'upgraded') return;
     const tm = setTimeout(() => { onClose && onClose(); }, 2800);
@@ -21719,7 +21722,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                     ai_trial → Pro AI on top with "Recommended" ribbon, Pro below.
                     settings → Pro on top (cheaper, sufficient for most non-AI needs), Pro AI below. */}
                 {upgradeOnly ? (
-                  renderTierCard('upgrade', true)
+                  renderTierCard(upTier, true)
                 ) : reason === 'ai_trial' ? (
                   <>
                     {renderTierCard('pro_ai', true)}
@@ -21949,14 +21952,14 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 </button>
                 )}
                 {/* Get Pro AI — purple filled (primary, recommended upgrade) */}
-                <button onClick={() => openCheckout(upgradeOnly ? 'upgrade' : 'pro_ai')}
+                <button onClick={() => openCheckout(upgradeOnly ? upTier : 'pro_ai')}
                   style={{
                     width: '100%', background: AI_PURPLE, color: '#0a0a12', border: 'none',
                     padding: '14px 18px', borderRadius: 5, fontSize: (.78*readScale)+'rem',
                     fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase',
                     cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10,
                   }}>
-                  {upgradeOnly
+                  {(upgradeOnly && upTier === 'upgrade')
                     ? <>{tr('proUpgradeCta', 'Upgrade to Pro AI')} — {tr('proUpgradePriceShort', '€10')}</>
                     : <>{tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}</>}
                 </button>
