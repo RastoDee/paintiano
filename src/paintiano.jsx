@@ -21056,14 +21056,14 @@ function _proClearCache() {
 }
 
 // ─── server validation (through our own endpoint) ────────────────────────────
-async function _proValidate(key) {
+async function _proValidate(key, check = false) {
   const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   const tm = ac ? setTimeout(() => { try { ac.abort(); } catch (_) {} }, 15000) : null;
   try {
     const r = await fetch(PRO_CFG.validateEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key }),
+      body: JSON.stringify(check ? { key, check: true } : { key }),
       signal: ac ? ac.signal : undefined,
     });
     // A backend outage (5xx / 429) is not a verdict on the key — treat it like
@@ -21113,33 +21113,35 @@ function useProStatus() {
     const stale = Date.now() - (cached.validatedAt || 0) > PRO_CFG.revalidateAfterMs;
     if (!stale) {
       setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
-      // A plain Pro key is re-checked quietly on every start, so an upgrade to
-      // Pro AI (bought here or on another device) shows up without re-entering
-      // the key. Right after paying the webhook can lag, so retry for ~20 s.
-      if (_tierToStatus(cached.tier) === 'pro') {
-        (async () => {
-          const tries = upgraded ? 8 : 1;
-          for (let i = 0; i < tries && alive; i++) {
-            if (i) await new Promise((r) => setTimeout(r, 2500));
-            const res = await _proValidate(cached.key);
-            if (!alive) return;
-            if (res.valid) {
-              _proWriteCache(cached.key, { email: res.email, tier: res.tier });
-              if (res.tier === 'pro_ai') {
-                setProStatus('pro_ai'); setMaskedEmail(res.email || null);
-                if (upgraded) { setJustUpgraded(true); try { window.posthog && window.posthog.capture('upgrade_confirmed'); } catch (_) {} }
-                return;
-              }
-            } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
-              _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+      // Every paid key is re-checked quietly on each start (the cache only
+      // decides what shows first), so a tier change on the server reaches every
+      // device: an upgrade to Pro AI, a refunded upgrade back to Pro, or a
+      // refunded licence. Offline or a server hiccup keeps the cached tier.
+      // Right after paying for an upgrade the webhook can lag, so retry ~20 s.
+      (async () => {
+        const tries = upgraded ? 8 : 1;
+        for (let i = 0; i < tries && alive; i++) {
+          if (i) await new Promise((r) => setTimeout(r, 2500));
+          const res = await _proValidate(cached.key, true);
+          if (!alive) return;
+          if (res.valid) {
+            _proWriteCache(cached.key, { email: res.email, tier: res.tier });
+            setProStatus(_tierToStatus(res.tier)); setMaskedEmail(res.email || null);
+            if (res.tier === 'pro_ai' || !upgraded) {
+              if (upgraded) { setJustUpgraded(true); try { window.posthog && window.posthog.capture('upgrade_confirmed'); } catch (_) {} }
               return;
             }
+          } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
+            _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+            return;
+          } else if (res.offline) {
+            return;
           }
-        })();
-      }
+        }
+      })();
       return () => { alive = false; };
     }
-    _proValidate(cached.key).then((res) => {
+    _proValidate(cached.key, true).then((res) => {
       if (!alive) return;
       if (res.valid) {
         _proWriteCache(cached.key, { email: res.email, tier: res.tier });

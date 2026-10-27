@@ -71,8 +71,9 @@ export default async function handler(req) {
     if (row.status === 'refunded') return json({ valid: false, reason: 'refunded' });
     if (row.status === 'disabled') return json({ valid: false, reason: 'disabled' });
 
-    // Fire-and-forget activation counter; don't block on it.
-    incrementActivations(key).catch(() => {});
+    // Fire-and-forget activation counter; don't block on it. The app's quiet
+    // re-check on each start sends check:true and is not an activation.
+    if (body?.check !== true) incrementActivations(key).catch(() => {});
 
     // Mask the email for privacy (return only domain part)
     const masked = row.email ? maskEmail(row.email) : null;
