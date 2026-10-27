@@ -1960,8 +1960,11 @@ export default function Paintiano() {
   // effectivePairs / etc. below. The hook has no parameter dependencies — order
   // among hooks doesn't matter for correctness as long as it stays consistent.
   const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
+          justUpgraded, clearJustUpgraded,
           trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
-  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
+  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings' | 'upgraded'
+  // Back from a confirmed Pro → Pro AI upgrade: show the short success note once.
+  useEffect(() => { if (justUpgraded) { setPaywallReason('upgraded'); clearJustUpgraded(); } }, [justUpgraded, clearJustUpgraded]);
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
   // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
   // mode was active. Persisted across sessions in localStorage.
@@ -2202,7 +2205,7 @@ export default function Paintiano() {
     }
   }, [chords.length]);
   useEffect(() => {
-    if (paywallReason) { try { window.posthog && window.posthog.capture('paywall_shown', { reason: paywallReason }); } catch (_) {} }
+    if (paywallReason && paywallReason !== 'upgraded') { try { window.posthog && window.posthog.capture('paywall_shown', { reason: paywallReason, plan: proStatus }); } catch (_) {} }
   }, [paywallReason]);
   useEffect(() => {
     try { if (new URLSearchParams(window.location.search).get('paid') === '1') window.posthog && window.posthog.capture('purchase_return'); } catch (_) {}
@@ -17308,6 +17311,7 @@ Hard requirements:
         <ProPaywall
           t={t}
           reason={paywallReason}
+          proStatus={proStatus}
           trialLeft={0}
           onClose={()=>setPaywallReason(null)}
           onActivated={()=>setPaywallReason(null)}

@@ -61,6 +61,35 @@ export async function getLicenseByKey(key) {
   return rows[0] || null;
 }
 
+// One row by Paddle transaction id (order_id). raw_event comes back whole and
+// is parsed by the caller, so this works whether the column is json or text.
+export async function getLicenseByOrderId(orderId) {
+  const url = `${SUPABASE_URL}/rest/v1/licenses?order_id=eq.${encodeURIComponent(orderId)}&select=key,status,tier,raw_event&limit=1`;
+  const res = await fetch(url, { headers: headers() });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase select failed: ${res.status} ${text}`);
+  }
+  const rows = await res.json();
+  return rows[0] || null;
+}
+
+// Change the tier of one licence key ('pro' | 'pro_ai'). Used by the
+// Pro → Pro AI upgrade (and to step back to 'pro' if the upgrade is refunded).
+export async function setLicenseTier(key, tier) {
+  const url = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ tier }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase tier update failed: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
 export async function setLicenseStatus(orderId, status, extra = {}) {
   const url = `${SUPABASE_URL}/rest/v1/licenses?order_id=eq.${encodeURIComponent(orderId)}`;
   const res = await fetch(url, {

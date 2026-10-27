@@ -17310,12 +17310,11 @@ const I18N = {
     proPaywallTitle:'Keep the painting your song made.',
     proPaywallTitleAi:'You\u2019ve felt what a mood can do.',
     proPaywallFooter:'One-time payment · No subscription · VAT included',
-    proEarlyBird:'Early-bird prices · first 50 supporters',
     proPaywallSubtitle:'Not a random filter \u2014 a painting your music made, the same every time.',
     proSupportLine:'You’re also keeping a solo art project independent.',
     // Tier card keys (two-tier paywall, Jun 2026)
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'€9.99 · early-bird (then €14.99)',
+    proTierPrice:'€9.99 · once, yours for life',
     proValueArtists:'Every style & artist \u2014 24 in all (free has 9)',proValueComposers:'All 15 composers \u2014 picture recomposition (free has 3)',proTeaser:'this song in 24 styles',proTeaserTaste:'loved it? unlock all 24',liteBridge:'discover the full Paintiano \u2192',
     proValueTypes:'6–9 paint types per artist (free has 2)',
     proValuePalette:'Your own palette \u2014 set all 12 colours',
@@ -17323,7 +17322,7 @@ const I18N = {
     proValueLife:'Yours for life \u2014 pay once',
     proGetCta:'Get Pro',
     proAiTierTitle:'Paintiano Pro AI',
-    proAiTierPrice:'€19.99 · early-bird (then €24.99)',
+    proAiTierPrice:'€19.99 · once, yours for life',
     proAiValueAll:'Everything in Pro, plus:',
     proAiValueText:'AI paints from a mood you describe',
     proAiValueImage:'AI paints from a photo\u2019s feeling',
@@ -17386,6 +17385,7 @@ const I18N = {
     proInvalidKey:'This key is not valid. Check your email for the correct key.',
     proWelcomeTitle:'Welcome to Pro',
     proWelcomeBody:'All features unlocked on this device.',
+    proPaywallSubUpgrade:'You already have every style.', proPaywallTitleUpgrade:'Add unlimited AI', proUpgradePrice:'€10 · upgrade from your Pro', proUpgradePriceShort:'€10', proUpgradeValueAll:'Your Pro stays, plus:', proUpgradeCta:'Upgrade to Pro AI', proAiWelcomeTitle:'Pro AI is active', proAiWelcomeBody:'AI is now unlimited on this device.',
     partnerIsPro:'{a} · {b} is Pro',
       tapReturnShuffle:'tap to return to shuffle',    noNotesGeneric:'No notes.',
     transcribingAudio:'transcribing audio',
@@ -17477,11 +17477,10 @@ const I18N = {
     proPaywallTitle:'Behalte das Bild, das dein Song gemalt hat.',
     proPaywallTitleAi:'Du hast gesp\u00fcrt, was eine Stimmung kann.',
     proPaywallFooter:'Einmalige Zahlung · Kein Abo · inkl. MwSt.',
-    proEarlyBird:'Early-Bird-Preise · erste 50 Unterstützer',
     proPaywallSubtitle:'Kein Zufallsfilter \u2014 ein Bild, das deine Musik gemalt hat, jedes Mal gleich.',
     proSupportLine:'Du hältst damit auch ein unabhängiges Solo-Kunstprojekt am Leben.',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'9,99 € · early-bird (danach 14,99 €)',
+    proTierPrice:'9,99 € · einmalig, für immer',
     proValueArtists:'Jeder Stil & K\u00fcnstler \u2014 24 insgesamt (Free hat 9)',proValueComposers:'Alle 15 Komponisten \u2014 Bild-Rekomposition (Free hat 3)',proTeaser:'dieser Song in 24 Stilen',proTeaserTaste:'gef\u00e4llt? alle 24 freischalten',liteBridge:'entdecke das ganze Paintiano \u2192',
     proValueTypes:'6–9 Mal-Typen pro Künstler (Free hat 2)',
     proValuePalette:'Deine eigene Palette \u2014 alle 12 Farben',
@@ -17489,7 +17488,7 @@ const I18N = {
     proValueLife:'F\u00fcr immer deins \u2014 einmal zahlen',
     proGetCta:'Pro holen',
     proAiTierTitle:'Paintiano Pro KI',
-    proAiTierPrice:'19,99 € · early-bird (danach 24,99 €)',
+    proAiTierPrice:'19,99 € · einmalig, für immer',
     proAiValueAll:'Alles aus Pro, plus:',
     proAiValueText:'KI malt aus einer Stimmung, die du beschreibst',
     proAiValueImage:'KI malt aus dem Gef\u00fchl eines Fotos',
@@ -17551,6 +17550,7 @@ const I18N = {
     proInvalidKey:'Dieser Schlüssel ist ungültig. Bitte prüfe deine E-Mail.',
     proWelcomeTitle:'Willkommen bei Pro',
     proWelcomeBody:'Alle Funktionen auf diesem Gerät freigeschaltet.',
+    proPaywallSubUpgrade:'Alle Stile hast du schon.', proPaywallTitleUpgrade:'Unbegrenzte KI dazu', proUpgradePrice:'10 € · Upgrade von deinem Pro', proUpgradePriceShort:'10 €', proUpgradeValueAll:'Dein Pro bleibt, plus:', proUpgradeCta:'Auf Pro KI upgraden', proAiWelcomeTitle:'Pro KI ist aktiv', proAiWelcomeBody:'KI ist auf diesem Gerät jetzt unbegrenzt.',
     partnerIsPro:'{a} · {b} ist Pro',
       tapReturnShuffle:'tippe, um zum Shuffle zurückzukehren',    noNotesGeneric:'Keine Noten.',
     transcribingAudio:'transkribiere Audio',
@@ -17642,11 +17642,10 @@ const I18N = {
     proPaywallTitle:'Gardez le tableau n\u00e9 de votre chanson.',
     proPaywallTitleAi:'Vous avez senti ce qu\u2019une ambiance peut faire.',
     proPaywallFooter:'Paiement unique · Sans abonnement · TVA incluse',
-    proEarlyBird:'Tarif early-bird · 50 premiers soutiens',
     proPaywallSubtitle:'Pas un filtre al\u00e9atoire \u2014 un tableau n\u00e9 de votre musique, identique \u00e0 chaque fois.',
     proSupportLine:'Vous soutenez aussi un projet d’art solo indépendant.',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'9,99 € · early-bird (puis 14,99 €)',
+    proTierPrice:'9,99 € · une fois, à vie',
     proValueArtists:'Tous les styles & artistes \u2014 24 en tout (Free en a 9)',proValueComposers:'Les 15 compositeurs \u2014 recomposition d\u2019image (Free en a 3)',proTeaser:'ce morceau en 24 styles',proTeaserTaste:'\u00e7a te pla\u00eet ? d\u00e9bloque les 24',liteBridge:'d\u00e9couvre tout Paintiano \u2192',
     proValueTypes:'6 à 9 types de peinture par artiste (Free en a 2)',
     proValuePalette:'Votre propre palette \u2014 vos 12 couleurs',
@@ -17654,7 +17653,7 @@ const I18N = {
     proValueLife:'\u00c0 vous pour la vie \u2014 un seul paiement',
     proGetCta:'Obtenir Pro',
     proAiTierTitle:'Paintiano Pro IA',
-    proAiTierPrice:'19,99 € · early-bird (puis 24,99 €)',
+    proAiTierPrice:'19,99 € · une fois, à vie',
     proAiValueAll:'Tout dans Pro, plus :',
     proAiValueText:'L\u2019IA peint depuis une ambiance que vous d\u00e9crivez',
     proAiValueImage:'L\u2019IA peint depuis l\u2019\u00e9motion d\u2019une photo',
@@ -17716,6 +17715,7 @@ const I18N = {
     proInvalidKey:'Cette clé n’est pas valide. Vérifiez votre e-mail.',
     proWelcomeTitle:'Bienvenue dans Pro',
     proWelcomeBody:'Toutes les fonctions débloquées sur cet appareil.',
+    proPaywallSubUpgrade:'Tu as déjà tous les styles.', proPaywallTitleUpgrade:'Ajoute l\u2019IA illimitée', proUpgradePrice:'10 € · passage depuis ton Pro', proUpgradePriceShort:'10 €', proUpgradeValueAll:'Ton Pro reste, plus :', proUpgradeCta:'Passer à Pro IA', proAiWelcomeTitle:'Pro IA est actif', proAiWelcomeBody:'L\u2019IA est maintenant illimitée sur cet appareil.',
     partnerIsPro:'{a} · {b} est Pro',
       tapReturnShuffle:'touche pour revenir au shuffle',    noNotesGeneric:'Aucune note.',
     transcribingAudio:'transcription audio',
@@ -17807,11 +17807,10 @@ const I18N = {
     proPaywallTitle:'Qu\u00e9date con el cuadro que cre\u00f3 tu canci\u00f3n.',
     proPaywallTitleAi:'Ya sentiste lo que puede hacer un mood.',
     proPaywallFooter:'Pago único · Sin suscripción · IVA incluido',
-    proEarlyBird:'Precios early-bird · primeros 50 apoyos',
     proPaywallSubtitle:'No es un filtro al azar \u2014 un cuadro que cre\u00f3 tu m\u00fasica, igual cada vez.',
     proSupportLine:'También mantienes vivo un proyecto artístico independiente.',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'9,99 € · early-bird (luego 14,99 €)',
+    proTierPrice:'9,99 € · pago único, para siempre',
     proValueArtists:'Todos los estilos y artistas \u2014 24 en total (Free tiene 9)',proValueComposers:'Los 15 compositores \u2014 recomposici\u00f3n de imagen (Free tiene 3)',proTeaser:'esta canci\u00f3n en 24 estilos',proTeaserTaste:'\u00bfte gusta? desbloquea los 24',liteBridge:'descubre todo Paintiano \u2192',
     proValueTypes:'De 6 a 9 tipos de pintura por artista (Free tiene 2)',
     proValuePalette:'Tu propia paleta \u2014 tus 12 colores',
@@ -17819,7 +17818,7 @@ const I18N = {
     proValueLife:'Tuyo de por vida \u2014 pago \u00fanico',
     proGetCta:'Obtener Pro',
     proAiTierTitle:'Paintiano Pro IA',
-    proAiTierPrice:'19,99 € · early-bird (luego 24,99 €)',
+    proAiTierPrice:'19,99 € · pago único, para siempre',
     proAiValueAll:'Todo en Pro, además:',
     proAiValueText:'La IA pinta desde un mood que describes',
     proAiValueImage:'La IA pinta desde el sentimiento de una foto',
@@ -17881,6 +17880,7 @@ const I18N = {
     proInvalidKey:'Esta clave no es válida. Revisa tu correo electrónico.',
     proWelcomeTitle:'Bienvenido a Pro',
     proWelcomeBody:'Todas las funciones desbloqueadas en este dispositivo.',
+    proPaywallSubUpgrade:'Ya tienes todos los estilos.', proPaywallTitleUpgrade:'Añade IA ilimitada', proUpgradePrice:'10 € · mejora desde tu Pro', proUpgradePriceShort:'10 €', proUpgradeValueAll:'Tu Pro se queda, además:', proUpgradeCta:'Mejorar a Pro IA', proAiWelcomeTitle:'Pro IA está activo', proAiWelcomeBody:'La IA ya es ilimitada en este dispositivo.',
     partnerIsPro:'{a} · {b} es Pro',
       tapReturnShuffle:'toca para volver al shuffle',    noNotesGeneric:'Sin notas.',
     transcribingAudio:'transcribiendo audio',
@@ -17971,11 +17971,10 @@ const I18N = {
     proPaywallTitle:'Nechaj si obraz, ktor\u00fd vytvorila tvoja skladba.',
     proPaywallTitleAi:'Za\u017eil si, \u010do dok\u00e1\u017ee n\u00e1lada.',
     proPaywallFooter:'Jednorazová platba · Bez predplatného · DPH v cene',
-    proEarlyBird:'Early-bird ceny · prvých 50 podporovateľov',
     proPaywallSubtitle:'Nie n\u00e1hodn\u00fd filter \u2014 obraz, ktor\u00fd vytvorila tvoja hudba, v\u017edy rovnak\u00fd.',
     proSupportLine:'Zároveň pomáhaš udržať nezávislý umelecký projekt.',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'9,99 € · early-bird (potom 14,99 €)',
+    proTierPrice:'9,99 € · jednorazovo, navždy',
     proValueArtists:'Ka\u017ed\u00fd \u0161t\u00fdl a umelec \u2014 24 spolu (Free m\u00e1 9)',proValueComposers:'V\u0161etk\u00fdch 15 skladate\u013eov \u2014 prekomponovanie obrazu (Free m\u00e1 3)',proTeaser:'t\u00e1to skladba v 24 \u0161t\u00fdloch',proTeaserTaste:'p\u00e1\u010di sa? odomkni v\u0161etk\u00fdch 24',liteBridge:'objav cel\u00e9 Paintiano \u2192',
     proValueTypes:'6–9 typov maľby na umelca (Free má 2)',
     proValuePalette:'Vlastn\u00e1 paleta \u2014 v\u0161etk\u00fdch 12 farieb',
@@ -17983,7 +17982,7 @@ const I18N = {
     proValueLife:'Nav\u017edy tvoje \u2014 zaplat\u00ed\u0161 raz',
     proGetCta:'Získať Pro',
     proAiTierTitle:'Paintiano Pro AI',
-    proAiTierPrice:'19,99 € · early-bird (potom 24,99 €)',
+    proAiTierPrice:'19,99 € · jednorazovo, navždy',
     proAiValueAll:'Všetko z Pro, plus:',
     proAiValueText:'AI ma\u013euje z n\u00e1lady, ktor\u00fa op\u00ed\u0161e\u0161',
     proAiValueImage:'AI ma\u013euje z pocitu fotky',
@@ -18045,6 +18044,7 @@ const I18N = {
     proInvalidKey:'Tento kľúč nie je platný. Skontroluj svoj e-mail.',
     proWelcomeTitle:'Vitaj v Pro',
     proWelcomeBody:'Všetky funkcie odomknuté na tomto zariadení.',
+    proPaywallSubUpgrade:'Všetky štýly už máš.', proPaywallTitleUpgrade:'Pridaj neobmedzenú AI', proUpgradePrice:'10 € · doplatok k tvojmu Pro', proUpgradePriceShort:'10 €', proUpgradeValueAll:'Tvoje Pro ostáva, plus:', proUpgradeCta:'Prejsť na Pro AI', proAiWelcomeTitle:'Pro AI je aktívne', proAiWelcomeBody:'AI je teraz na tomto zariadení neobmedzená.',
     partnerIsPro:'{a} · {b} je Pro',
       tapReturnShuffle:'klikni pre návrat na shuffle',    noNotesGeneric:'Žiadne noty.',
     transcribingAudio:'prepisujem audio',
@@ -18135,11 +18135,10 @@ const I18N = {
     proPaywallTitle:'\u7559\u4f4f\u4f60\u7684\u6b4c\u8c31\u6210\u7684\u753b\u3002',
     proPaywallTitleAi:'\u4f60\u5df2\u611f\u53d7\u5230\u60c5\u7eea\u7684\u529b\u91cf\u3002',
     proPaywallFooter:'一次性付款 · 无订阅 · 含增值税',
-    proEarlyBird:'早鸟价 · 前 50 位支持者',
     proPaywallSubtitle:'\u4e0d\u662f\u968f\u673a\u6ee4\u955c \u2014 \u8fd9\u662f\u4f60\u7684\u97f3\u4e50\u8c31\u6210\u7684\u753b\uff0c\u6bcf\u6b21\u90fd\u4e00\u6837\u3002',
     proSupportLine:'您也在帮助一个独立的艺术项目持续运作。',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'€9.99 · 早鸟价(之后 €14.99)',
+    proTierPrice:'€9.99 · 一次付费，终身拥有',
     proValueArtists:'\u6bcf\u79cd\u98ce\u683c\u4e0e\u827a\u672f\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8d39\u7248 9 \u4f4d\uff09',proValueComposers:'\u5168\u90e8 15 \u4f4d\u4f5c\u66f2\u5bb6\uff0c\u56fe\u50cf\u91cd\u8c31\uff08\u514d\u8d39\u7248 3 \u4f4d\uff09',proTeaser:'\u8fd9\u9996\u66f2\u5b50\u7684 24 \u79cd\u98ce\u683c',proTeaserTaste:'\u559c\u6b22\u5417\uff1f\u89e3\u9501\u5168\u90e8 24 \u79cd',liteBridge:'\u63a2\u7d22\u5b8c\u6574\u7248 Paintiano \u2192',
     proValueTypes:'每位艺术家 6–9 种画法(免费版 2 种)',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8c03\u8272\u677f \u2014 \u5168\u90e8 12 \u79cd\u989c\u8272',
@@ -18147,7 +18146,7 @@ const I18N = {
     proValueLife:'\u7ec8\u8eab\u5f52\u4f60 \u2014 \u4e00\u6b21\u4ed8\u6b3e',
     proGetCta:'获取 Pro',
     proAiTierTitle:'Paintiano Pro AI',
-    proAiTierPrice:'€19.99 · 早鸟价(之后 €24.99)',
+    proAiTierPrice:'€19.99 · 一次付费，终身拥有',
     proAiValueAll:'Pro 中的所有功能,另外:',
     proAiValueText:'AI \u4ece\u4f60\u63cf\u8ff0\u7684\u60c5\u7eea\u4f5c\u753b',
     proAiValueImage:'AI \u4ece\u7167\u7247\u7684\u611f\u89c9\u4f5c\u753b',
@@ -18209,6 +18208,7 @@ const I18N = {
     proInvalidKey:'此密钥无效。请检查您的电子邮件。',
     proWelcomeTitle:'欢迎使用 Pro',
     proWelcomeBody:'此设备上所有功能已解锁。',
+    proPaywallSubUpgrade:'你已拥有所有风格。', proPaywallTitleUpgrade:'加入无限 AI', proUpgradePrice:'€10 · 从你的 Pro 升级', proUpgradePriceShort:'€10', proUpgradeValueAll:'保留你的 Pro，另外：', proUpgradeCta:'升级到 Pro AI', proAiWelcomeTitle:'Pro AI 已启用', proAiWelcomeBody:'此设备上的 AI 现已无限使用。',
     partnerIsPro:'{a} · {b} 是 Pro',
       tapReturnShuffle:'点击返回随机',    noNotesGeneric:'没有音符。',
     transcribingAudio:'正在转录音频',
@@ -18293,11 +18293,10 @@ const I18N = {
     proPaywallTitle:'\u7559\u4f4f\u4f60\u7684\u6b4c\u8b5c\u6210\u7684\u756b\u3002',
     proPaywallTitleAi:'\u4f60\u5df2\u611f\u53d7\u5230\u60c5\u7dd2\u7684\u529b\u91cf\u3002',
     proPaywallFooter:'一次性付款 · 無訂閱 · 含加值稅',
-    proEarlyBird:'早鳥價 · 前 50 位支持者',
     proPaywallSubtitle:'\u4e0d\u662f\u96a8\u6a5f\u6ffe\u93e1 \u2014 \u9019\u662f\u4f60\u7684\u97f3\u6a02\u8b5c\u6210\u7684\u756b\uff0c\u6bcf\u6b21\u90fd\u4e00\u6a23\u3002',
     proSupportLine:'您也在幫助一個獨立的藝術專案持續運作。',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'€9.99 · 早鳥價（之後 €14.99）',
+    proTierPrice:'€9.99 · 一次付費，終身擁有',
     proValueArtists:'\u6bcf\u7a2e\u98a8\u683c\u8207\u85dd\u8853\u5bb6 \u2014 \u5171 24 \u4f4d\uff08\u514d\u8cbb\u7248 9 \u4f4d\uff09',proValueComposers:'\u5168\u90e8 15 \u4f4d\u4f5c\u66f2\u5bb6\uff0c\u5716\u50cf\u91cd\u8b5c\uff08\u514d\u8cbb\u7248 3 \u4f4d\uff09',proTeaser:'\u9019\u9996\u66f2\u5b50\u7684 24 \u7a2e\u98a8\u683c',proTeaserTaste:'\u559c\u6b61\u55ce\uff1f\u89e3\u9396\u5168\u90e8 24 \u7a2e',liteBridge:'\u63a2\u7d22\u5b8c\u6574\u7248 Paintiano \u2192',
     proValueTypes:'每位藝術家 6–9 種畫法（免費版 2 種）',
     proValuePalette:'\u4f60\u81ea\u5df1\u7684\u8abf\u8272\u76e4 \u2014 \u5168\u90e8 12 \u7a2e\u984f\u8272',
@@ -18305,7 +18304,7 @@ const I18N = {
     proValueLife:'\u7d42\u8eab\u6b78\u4f60 \u2014 \u4e00\u6b21\u4ed8\u6b3e',
     proGetCta:'取得 Pro',
     proAiTierTitle:'Paintiano Pro AI',
-    proAiTierPrice:'€19.99 · 早鳥價（之後 €24.99）',
+    proAiTierPrice:'€19.99 · 一次付費，終身擁有',
     proAiValueAll:'Pro 中的所有功能，另外：',
     proAiValueText:'AI \u5f9e\u4f60\u63cf\u8ff0\u7684\u60c5\u7dd2\u4f5c\u756b',
     proAiValueImage:'AI \u5f9e\u7167\u7247\u7684\u611f\u89ba\u4f5c\u756b',
@@ -18367,6 +18366,7 @@ const I18N = {
     proInvalidKey:'此金鑰無效。請檢查您的電子郵件。',
     proWelcomeTitle:'歡迎使用 Pro',
     proWelcomeBody:'此裝置上所有功能已解鎖。',
+    proPaywallSubUpgrade:'你已擁有所有風格。', proPaywallTitleUpgrade:'加入無限 AI', proUpgradePrice:'€10 · 從你的 Pro 升級', proUpgradePriceShort:'€10', proUpgradeValueAll:'保留你的 Pro，另外：', proUpgradeCta:'升級到 Pro AI', proAiWelcomeTitle:'Pro AI 已啟用', proAiWelcomeBody:'此裝置上的 AI 現已無限使用。',
     morphAiUnavailable:'AI 生成的情緒不支援 Morph',
     recentAiGenerated:'最近 AI 生成',
     recentPlayed:'最近播放',
@@ -18462,11 +18462,10 @@ const I18N = {
     proPaywallTitle:'Fique com o quadro que a sua m\u00fasica criou.',
     proPaywallTitleAi:'J\u00e1 sentiu o que um mood consegue fazer.',
     proPaywallFooter:'Pagamento único · Sem assinatura · IVA incluído',
-    proEarlyBird:'Preços early-bird · primeiros 50 apoiadores',
     proPaywallSubtitle:'N\u00e3o \u00e9 um filtro aleat\u00f3rio \u2014 um quadro que a sua m\u00fasica criou, igual de cada vez.',
     proSupportLine:'Você também ajuda a manter um projeto de arte solo independente.',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'€9.99 · early-bird (depois €14.99)',
+    proTierPrice:'€9.99 · pagamento único, para sempre',
     proValueArtists:'Todos os estilos e artistas \u2014 24 no total (Free tem 9)',proValueComposers:'Os 15 compositores \u2014 recomposi\u00e7\u00e3o de imagem (Free tem 3)',proTeaser:'esta m\u00fasica em 24 estilos',proTeaserTaste:'gostou? desbloqueie os 24',liteBridge:'descubra o Paintiano completo \u2192',
     proValueTypes:'De 6 a 9 tipos de pintura por artista (Free tem 2)',
     proValuePalette:'A sua pr\u00f3pria paleta \u2014 as 12 cores',
@@ -18474,7 +18473,7 @@ const I18N = {
     proValueLife:'Seu para sempre \u2014 pague uma vez',
     proGetCta:'Obter Pro',
     proAiTierTitle:'Paintiano Pro IA',
-    proAiTierPrice:'€19.99 · early-bird (depois €24.99)',
+    proAiTierPrice:'€19.99 · pagamento único, para sempre',
     proAiValueAll:'Tudo do Pro, mais:',
     proAiValueText:'A IA pinta a partir de um mood que descreve',
     proAiValueImage:'A IA pinta a partir do sentimento de uma foto',
@@ -18536,6 +18535,7 @@ const I18N = {
     proInvalidKey:'Esta chave não é válida. Verifique seu e-mail.',
     proWelcomeTitle:'Bem-vindo ao Pro',
     proWelcomeBody:'Todos os recursos desbloqueados neste dispositivo.',
+    proPaywallSubUpgrade:'Você já tem todos os estilos.', proPaywallTitleUpgrade:'Adicione IA ilimitada', proUpgradePrice:'€10 · upgrade do seu Pro', proUpgradePriceShort:'€10', proUpgradeValueAll:'Seu Pro continua, mais:', proUpgradeCta:'Fazer upgrade para Pro IA', proAiWelcomeTitle:'Pro IA está ativo', proAiWelcomeBody:'A IA agora é ilimitada neste dispositivo.',
     partnerIsPro:'{a} · {b} é Pro',
       tapReturnShuffle:'toca para voltar ao shuffle',    noNotesGeneric:'Sem notas.',
     transcribingAudio:'a transcrever áudio',
@@ -18626,11 +18626,10 @@ const I18N = {
     proPaywallTitle:'\u3042\u306a\u305f\u306e\u66f2\u304c\u63cf\u3044\u305f\u7d75\u3092\u3001\u624b\u5143\u306b\u3002',
     proPaywallTitleAi:'mood \u306e\u529b\u3092\u3001\u3082\u3046\u4f53\u9a13\u3057\u307e\u3057\u305f\u306d\u3002',
     proPaywallFooter:'一回払い · サブスクなし · VAT 込み',
-    proEarlyBird:'アーリーバード価格 · 先着 50 名',
     proPaywallSubtitle:'\u30e9\u30f3\u30c0\u30e0\u306a\u30d5\u30a3\u30eb\u30bf\u30fc\u3067\u306f\u306a\u3044 \u2014 \u3042\u306a\u305f\u306e\u97f3\u697d\u304c\u63cf\u3044\u305f\u7d75\u3001\u3044\u3064\u3082\u540c\u3058\u3002',
     proSupportLine:'独立アートプロジェクトを支えることにもなります。',
     proTierTitle:'Paintiano Pro',
-    proTierPrice:'€9.99 · アーリーバード(その後 €14.99)',
+    proTierPrice:'€9.99 · 一度の支払いで永久に',
     proValueArtists:'\u3059\u3079\u3066\u306e\u30b9\u30bf\u30a4\u30eb\u3068\u30a2\u30fc\u30c6\u30a3\u30b9\u30c8 \u2014 \u5168 24 \u4eba\uff08Free \u306f 9 \u4eba\uff09',proValueComposers:'15\u4eba\u306e\u4f5c\u66f2\u5bb6\u3059\u3079\u3066 \u2014 \u753b\u50cf\u306e\u518d\u4f5c\u66f2\uff08Free \u306f 3\u4eba\uff09',proTeaser:'\u3053\u306e\u66f2\u3092 24 \u30b9\u30bf\u30a4\u30eb\u3067',proTeaserTaste:'\u6c17\u306b\u5165\u3063\u305f\uff1f24 \u4eba\u3059\u3079\u3066\u89e3\u9664',liteBridge:'Paintiano \u306e\u5168\u6a5f\u80fd\u3092\u898b\u308b \u2192',
     proValueTypes:'各アーティスト 6〜9 種類の描き方(Free は 2 種類)',
     proValuePalette:'\u81ea\u5206\u3060\u3051\u306e\u30d1\u30ec\u30c3\u30c8 \u2014 12 \u8272\u3059\u3079\u3066',
@@ -18638,7 +18637,7 @@ const I18N = {
     proValueLife:'\u4e00\u751f\u3042\u306a\u305f\u306e\u3082\u306e \u2014 \u4e00\u5ea6\u306e\u652f\u6255\u3044',
     proGetCta:'Pro を入手',
     proAiTierTitle:'Paintiano Pro AI',
-    proAiTierPrice:'€19.99 · アーリーバード(その後 €24.99)',
+    proAiTierPrice:'€19.99 · 一度の支払いで永久に',
     proAiValueAll:'Pro のすべて、さらに:',
     proAiValueText:'\u8aac\u660e\u3057\u305f mood \u304b\u3089 AI \u304c\u63cf\u304f',
     proAiValueImage:'\u5199\u771f\u306e\u96f0\u56f2\u6c17\u304b\u3089 AI \u304c\u63cf\u304f',
@@ -18700,6 +18699,7 @@ const I18N = {
     proInvalidKey:'このキーは有効ではありません。正しいキーをメールで確認してください。',
     proWelcomeTitle:'Pro へようこそ',
     proWelcomeBody:'このデバイスのすべての機能が解放されました。',
+    proPaywallSubUpgrade:'すべてのスタイルはもうあなたのものです。', proPaywallTitleUpgrade:'無制限の AI を追加', proUpgradePrice:'€10 · Pro からのアップグレード', proUpgradePriceShort:'€10', proUpgradeValueAll:'あなたの Pro はそのまま、さらに：', proUpgradeCta:'Pro AI にアップグレード', proAiWelcomeTitle:'Pro AI が有効です', proAiWelcomeBody:'このデバイスで AI が無制限になりました。',
     partnerIsPro:'{a} · {b} は Pro 限定',    tapReturnShuffle:'タップでシャッフルに戻る',    noNotesGeneric:'音符なし。',
     transcribingAudio:'オーディオを書き起こし中',
     transcribingAudioLong:'オーディオを書き起こし中 · 1 分ほどかかります',
@@ -19690,7 +19690,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause and seek the bar. ⟳ Loop repeats. 🔊 Mute paints in silence. Clear resets — smartly, per mode.`, more:`The playback controls. ◆ Play starts and pauses (Space too); tap the progress bar to jump, drag to scrub. ◆ ⟳ LOOP keeps a mood piece repeating; gold when on. ◆ 🔊 / 🔇 Mute silences all audio while the painting still renders — remembered across sessions. ◆ Clear is mode-aware: Compose wipes the canvas and stays; MIC drops only the active mode's draft; Image drops the draft so Setup goes back to fresh — the picture itself stays on canvas; MIDI/audio/score/text mood do a full reset. ◆ If status says "loading piano…", wait a few seconds (~5 MB sample); it falls back to a synth if that fails.`},
     {id:'save', glyph:'💾', cat:'save', title:`Take both home`, body:`Save → PNG of the painting + audio of the music. Story mode crops it for Instagram / TikTok. Pro removes the watermark and lifts to print-ready.`, more:`Two diamonds — the picture and the music. ◆ ↓ SAVE exports your painting as a high-resolution PNG: Story (9:16) for IG/TikTok, Web/Social (~4×, feed-ready), or Print A1 · print-ready (high-res, gallery-grade). Same song always gives the same painting — your songs have signatures now. Under the painting runs the song's own colours: the twelve tones in fifths, each bar as tall as that tone sounds in the piece; Web and Print add the title, the painters and the palette (untick “caption + the song’s colours” in Save for the bare painting); Story names the painters and the palette above the painting. ◆ ⏺ RECORD (image mode) captures the audio as the painting plays, straight to a shareable file; stops automatically when the piece ends. ◆ ♫ SCORE turns the painting's notes into a MusicXML file — open it in MuseScore, Sibelius or Finale; actual sheet music from a picture. ◆ Free exports carry a small watermark; Pro and Pro AI strip it and unlock the A1 · print-ready size.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favorites`, body:`Tap ♡ at the top left of a finished painting — or of a picture in Image — to keep it. ☰ → ♥ Favorites shows them again, one by one on the canvas. No limit.`, more:`♥ keeps the painting's address, not a picture: the song's notes, the painter — or the fusion with each member's variant — the palette, the tone and the canvas; opening it repaints the painting from there. ◆ The heart shows only on a finished painting — not while the music plays or you record. Tap it again to take the painting out (Undo brings it back). ◆ ☰ → ♥ Favorites: swipe left / right or tap ‹ › to move between them; in fullscreen, swipe up for the next. Nothing plays there — the Pick a look strip and Play are off. CLEAR ALL removes every favorite at once (tap twice; Undo brings them back). ↓ Save works as always — Story, Web, Print A1, Gallery — for the painting on screen; ✕ Close takes you back exactly where you were. ◆ A picture in Image: ♡ at its top left keeps the picture itself with everything that plays it — the palette, Scan's direction, the composer or Jam session (with its style), ✦ Signature, an AI compose piece, atmosphere and melody. It can be saved while it plays. In Favorites the picture is shown; ▶ Open takes it back to Image exactly as you saved it and plays it. There is no Save for it there — open it and save from Image. ◆ Favorites live on this device, in this browser. A painting is painted for the screen you open it on, exactly as it would be painted there live — after an update to a painter it may look a little different. ◆ The song itself goes to My Music with the small ♫ + MY MUSIC chip next to its title (MIDI, MP3 or score files).`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 (early-bird, then €14.99) → all 24 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 (early-bird, then €24.99) adds unlimited AI. Tip: on Free, tap your favourite locked artist once — it unlocks for you to try.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked, 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark. Each AI mode gets 1 free try: text mood, Mood-from-image, AI Compose — and Atmosphere + Melody share two tries between them. ◆ Pro €9.99 (early-bird, then €14.99) — all 24 artists, all paint types, editable Custom palette, print-ready exports without watermark, lifetime access (no AI). ◆ Pro AI €19.99 (early-bird, then €24.99) — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere & Melody. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time. ◆ Composer voices for pictures: Free has Chopin, Satie + Gershwin; Pro unlocks all fifteen. ◆ Ensemble — Fusion (painters crossed into one style) and Jam session (composers trading phrases) — is Pro too; switch it on in Setup.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro unlocks all of it`, body:`Pro €9.99 → all 24 artists, editable Custom palette, no watermark, lifetime. Pro AI €19.99 adds unlimited AI. Tip: on Free, tap your favourite locked artist once — it unlocks for you to try.`, more:`Three tiers, all one-time payments. ◆ Free — 9 artists unlocked, 2 paint types each; each has a Pro partner (tap an active artist again to see it). Custom palette is read-only, exports carry a watermark. Each AI mode gets 1 free try: text mood, Mood-from-image, AI Compose — and Atmosphere + Melody share two tries between them. ◆ Pro €9.99 — all 24 artists, all paint types, editable Custom palette, print-ready exports without watermark, lifetime access (no AI). ◆ Pro AI €19.99 — everything in Pro plus unlimited AI: text moods, Mood-from-image, AI Compose, AI Atmosphere & Melody. ◆ Already on Pro? Upgrade to Pro AI for €10 — your key stays the same. ◆ Pay once, keep forever. No subscriptions. License works on up to 5 devices, one at a time. ◆ Composer voices for pictures: Free has Chopin, Satie + Gershwin; Pro unlocks all fifteen. ◆ Ensemble — Fusion (painters crossed into one style) and Jam session (composers trading phrases) — is Pro too; switch it on in Setup.`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, on by default with Pro (Setup → Ensemble). Fusion: 2–5 painters on one painting. Jam session: 2–5 composers on one picture. Each has its own ◎ button next to 🔀, and the two combine.`, more:`Tap ◎ to build a stage: tap chips — up to five, in the order you tap; another tap takes a chip off. Member 1 is the artist (and variant) that was on screen. ◆ ENSEMBLE × 🔀 — off: the stage stays. 1: Next gives every member a new variant. ALL: the stage is pinned (gold chips with a pin); Next keeps the pinned, draws 1–3 others (5 at most in all) and gives everyone new variants. Tap a chip to pin or unpin. Nothing pinned: a whole new line-up from your Setup selection; five pinned: new variants only. In 1 and ALL, Next also draws a palette. Switching Ensemble off in ALL returns to the plain shuffle from member 1. ◆ FUSION comes in two styles. Collage — the painters alternate, each in their own hand, side by side on one ground. Synthesis — one new painter is crossed from them: the hand from one, the ground from another, the composition from a third (a soft hand — Rothko, Monet, Klee, Sam Francis — lends only the ground); Next changes who lends what. In both, the painters share the painting equally and each keeps its signature motif. Every painter's variant is a DNA of a dozen genes (ground, strokes, size, edge, contour, layers, density…), and the music shapes them too: a dense, fast piece paints denser, a quiet one sparser and larger; register sets the stroke size, tension the contour. The caption and the export read “Rothko × Pollock × Kusama”. ◆ JAM SESSION (picture → music): every composer writes the picture in their own voice, then they join on one pulse and in one key. Collage — after every phrase (four bars) the next one takes the floor; Synthesis — one new composer: the harmony from one, the tune from another, the pulse from a third. Switching on the composers' 🔀 pins the stage, and Next seats 1–3 others — pinning works as for painters. ◆ STYLE is drawn for every fusion and jam (same stage, same style); Favorites remember it. Switch it by tapping the mark before the names (two bars = Collage, two circles = Synthesis), the style word in the look panel, or in fullscreen the style button or the style in the info that pressing and holding the canvas shows (it stays 3 s after you let go). ◆ IN LITE (with Ensemble) about one Surprise in four is an ensemble — a fusion on music, a jam on a picture. The header reads “Rothko × Kusama”, “Chopin ↔ Glass” (Collage), “Chopin × Glass” (Synthesis). ✦ While Signature is lit no style is shown; Ensemble stays — another painter, or one taken off, turns Signature off. ◆ Exports are deterministic: same song and stage, same painting.`}
   ],
   DE: [
@@ -19717,7 +19717,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, Loop, Mute, Clear`, body:`Play/Pause und Leiste suchen. ⟳ Loop wiederholt. 🔊 Mute malt in Stille. Clear setzt zurück — klug, je Modus.`, more:`Die Wiedergabe-Steuerung. ◆ Play startet und pausiert (auch Leertaste); tippe die Fortschrittsleiste zum Springen, ziehe zum Scrubben. ◆ ⟳ LOOP lässt ein Stimmungsstück wiederholen; gold wenn an. ◆ 🔊 / 🔇 Mute stummschaltet alles Audio, während das Bild weiter entsteht — über Sitzungen gemerkt. ◆ Clear ist modusbewusst: Compose löscht die Leinwand und bleibt; MIC verwirft nur den Entwurf des aktiven Modus; Image verwirft den Entwurf, sodass Setup wieder leer ist — das Bild bleibt auf der Leinwand; MIDI/Audio/Noten/Text-Stimmung machen einen vollen Reset. ◆ Steht da „loading piano…", warte ein paar Sekunden (~5 MB Sample); klappt das nicht, schaltet es auf ein Synth-Klavier.`},
     {id:'save', glyph:'💾', cat:'save', title:`Nimm beides mit`, body:`Sichern → PNG des Bildes + Audio der Musik. Story-Modus schneidet für Instagram / TikTok. Pro entfernt das Wasserzeichen und hebt auf druckfertig.`, more:`Zwei Diamanten — das Bild und die Musik. ◆ ↓ SICHERN exportiert dein Bild als hochauflösendes PNG: Story (9:16) für IG/TikTok, Web/Social (~4×, feed-fertig), oder Print A1 · druckfertig (hochauflösend, galeriereif). Gleicher Song gibt immer dasselbe Bild — deine Songs haben jetzt Signaturen. Unter dem Bild stehen die Farben des Stücks: die zwölf Töne im Quintenzirkel, jeder Balken so hoch, wie oft der Ton im Stück erklingt; Web und Druck fügen Titel, Maler und Palette hinzu (für das reine Bild in Sichern „Beschriftung + Farben des Stücks“ abwählen); Story nennt Maler und Palette über dem Bild. ◆ ⏺ AUFNEHMEN (Bildmodus) nimmt das Audio auf, während das Bild spielt, direkt in eine teilbare Datei; stoppt automatisch am Stückende. ◆ ♫ NOTEN wandelt die Noten des Bildes in eine MusicXML-Datei — öffne sie in MuseScore, Sibelius oder Finale; echte Noten aus einem Bild. ◆ Free-Exporte tragen ein kleines Wasserzeichen; Pro und Pro KI entfernen es und schalten die Größe A1 · druckfertig frei.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoriten`, body:`Tippe bei einem fertigen Bild — oder bei einem Bild im Modus Bild — oben links auf ♡, um es zu behalten. ☰ → ♥ Favoriten zeigt sie wieder, eins nach dem anderen auf der Leinwand. Ohne Limit.`, more:`♥ behält die Adresse des Bildes, kein Bild: die Noten des Songs, den Maler — oder die Fusion mit der Variante jedes Mitglieds —, Palette, Ton und Leinwand; beim Öffnen wird das Bild daraus neu gemalt. ◆ Das Herz erscheint nur bei einem fertigen Bild — nicht, während die Musik spielt oder du aufnimmst. Erneut tippen nimmt das Bild heraus (Rückgängig holt es zurück). ◆ ☰ → ♥ Favoriten: nach links / rechts wischen oder ‹ › tippen zum Blättern; im Vollbild nach oben wischen für das nächste. Dort spielt nichts — die Leiste „Wähle einen Look“ und Play sind aus. ALLE LÖSCHEN entfernt alle Favoriten auf einmal (zweimal tippen; Rückgängig holt sie zurück). ↓ Sichern funktioniert wie immer — Story, Web, Druck A1, Galerie — für das Bild auf der Leinwand; ✕ Schließen bringt dich genau dorthin zurück, wo du warst. ◆ Ein Bild im Modus Bild: ♡ oben links behält das Bild selbst mit allem, was es spielt — Palette, Richtung von Scan, Komponist oder Jam session (samt Stil), ✦ Signatur, ein KI-Stück, Atmosphäre und Melodie. Das geht auch, während es spielt. In Favoriten erscheint das Bild; ▶ Öffnen bringt es genau so in den Modus Bild zurück, wie du es gespeichert hast, und spielt es ab. Sichern gibt es dort dafür nicht — öffne es und sichere im Modus Bild. ◆ Favoriten liegen auf diesem Gerät, in diesem Browser. Ein Bild wird für den Bildschirm gemalt, auf dem du es öffnest — genau so, wie es dort live gemalt würde; nach einem Update eines Malers kann es etwas anders aussehen. ◆ Den Song selbst legst du mit dem kleinen Chip ♫ + MEINE MUSIK neben seinem Titel in Meine Musik (MIDI-, MP3- oder Notendateien).`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € (Early-bird, dann 14,99 €) → alle 24 Künstler, editierbare Eigen-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € (Early-bird, dann 24,99 €) fügt unbegrenzte KI hinzu. Tipp: Tippe bei Free deinen liebsten gesperrten Künstler einmal an — er wird zum Ausprobieren freigeschaltet.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet, 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Eigen-Palette schreibgeschützt, Exporte mit Wasserzeichen. Jeder KI-Modus hat 1 Gratisversuch: Text-Stimmung, Stimmung aus Bild, KI komponieren — und Atmosphäre + Melodie teilen sich zwei Versuche. ◆ Pro €9.99 (Early-bird, dann €14.99) — alle 24 Künstler, alle Maltypen, editierbare Eigen-Palette, druckfertige Exporte ohne Wasserzeichen, lebenslanger Zugang (ohne KI). ◆ Pro KI €19.99 (Early-bird, dann €24.99) — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Stimmung aus Bild, KI komponieren, KI-Atmosphäre & Melodie. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit. ◆ Komponistenstimmen für Bilder: Free hat Chopin, Satie + Gershwin; Pro schaltet alle fünfzehn frei. ◆ Ensemble — Fusion (Maler zu einer Handschrift gekreuzt) und Jam session (Komponisten spielen sich Phrasen zu) — ist ebenfalls Pro; im Setup einschalten.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro schaltet alles frei`, body:`Pro 9,99 € → alle 24 Künstler, editierbare Eigen-Palette, kein Wasserzeichen, lebenslang. Pro KI 19,99 € fügt unbegrenzte KI hinzu. Tipp: Tippe bei Free deinen liebsten gesperrten Künstler einmal an — er wird zum Ausprobieren freigeschaltet.`, more:`Drei Stufen, alle Einmalzahlungen. ◆ Free — 9 Künstler freigeschaltet, 2 Maltypen je; jeder hat einen Pro-Partner (aktiven Künstler erneut antippen). Eigen-Palette schreibgeschützt, Exporte mit Wasserzeichen. Jeder KI-Modus hat 1 Gratisversuch: Text-Stimmung, Stimmung aus Bild, KI komponieren — und Atmosphäre + Melodie teilen sich zwei Versuche. ◆ Pro €9.99 — alle 24 Künstler, alle Maltypen, editierbare Eigen-Palette, druckfertige Exporte ohne Wasserzeichen, lebenslanger Zugang (ohne KI). ◆ Pro KI €19.99 — alles aus Pro plus unbegrenzte KI: Text-Stimmungen, Stimmung aus Bild, KI komponieren, KI-Atmosphäre & Melodie. ◆ Schon Pro? Upgrade auf Pro KI für €10 — dein Schlüssel bleibt derselbe. ◆ Einmal zahlen, für immer behalten. Keine Abos. Lizenz auf bis zu 5 Geräten, eines zur Zeit. ◆ Komponistenstimmen für Bilder: Free hat Chopin, Satie + Gershwin; Pro schaltet alle fünfzehn frei. ◆ Ensemble — Fusion (Maler zu einer Handschrift gekreuzt) und Jam session (Komponisten spielen sich Phrasen zu) — ist ebenfalls Pro; im Setup einschalten.`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, mit Pro standardmäßig an (Setup → Ensemble). Fusion: 2–5 Maler auf einem Bild. Jam session: 2–5 Komponisten über einem Bild. Jedes hat einen eigenen Knopf ◎ neben 🔀, und beide lassen sich kombinieren.`, more:`Tippe ◎ und baue eine Bühne: Chips tippen — bis zu fünf, in der Reihenfolge des Tippens; ein weiterer Tipp nimmt einen Chip herunter. Mitglied 1 ist der Künstler (samt Variante), der gerade auf dem Schirm war. ◆ ENSEMBLE × 🔀 — aus: die Bühne bleibt. 1: Next gibt jedem Mitglied eine neue Variante. ALL: die Bühne wird angeheftet (goldene Chips mit Nadel); Next behält die Angehefteten, zieht 1–3 weitere dazu (insgesamt höchstens 5) und gibt allen neue Varianten. Ein Tipp auf einen Chip heftet an oder löst. Nichts angeheftet: eine ganz neue Besetzung aus deiner Setup-Auswahl; fünf angeheftet: nur neue Varianten. In 1 und ALL zieht Next auch eine Palette. Schaltest du Ensemble in ALL aus, kehrt der normale Zufall ab Mitglied 1 zurück. ◆ FUSION gibt es in zwei Stilen. Collage — die Maler wechseln sich ab, jeder mit eigener Hand, nebeneinander auf einem Grund. Synthese — aus ihnen wird ein neuer Maler gekreuzt: die Hand von einem, der Grund von einem zweiten, die Komposition von einem dritten (eine weiche Hand — Rothko, Monet, Klee, Sam Francis — gibt nur den Grund); Next wechselt, wer was gibt. In beiden teilen sich die Maler das Bild zu gleichen Teilen, und jeder behält sein Signaturmotiv. Jede Variante eines Malers ist eine DNA aus einem Dutzend Genen (Grund, Striche, Größe, Kante, Kontur, Schichten, Dichte …), und auch die Musik formt sie: ein dichtes, schnelles Stück malt dichter, ein leises lockerer und größer; die Lage bestimmt die Strichgröße, die Spannung die Kontur. Beschriftung und Export lauten „Rothko × Pollock × Kusama“. ◆ JAM SESSION (Bild → Musik): Jeder Komponist schreibt das Bild mit eigener Stimme, dann finden sie auf einem Puls und in einer Tonart zusammen. Collage — nach jeder Phrase (vier Takte) übernimmt der Nächste das Wort; Synthese — ein neuer Komponist: die Harmonie von einem, die Melodie von einem zweiten, der Puls von einem dritten. Schaltest du 🔀 bei den Komponisten ein, wird die Bühne angeheftet, und Next setzt 1–3 weitere dazu — Anheften wie bei den Malern. ◆ DER STIL wird für jede Fusion und Jam Session gelost (gleiche Bühne, gleicher Stil); Favoriten merken ihn sich. Wechseln: Tipp auf das Zeichen vor den Namen (zwei Balken = Collage, zwei Kreise = Synthese), auf das Stilwort im Look-Panel oder im Vollbild auf den Stil-Knopf bzw. den Stil in der Info, die langes Drücken auf die Leinwand zeigt (sie bleibt nach dem Loslassen 3 s). ◆ IN LITE (mit Ensemble) ist etwa jedes vierte Überrasch mich ein Ensemble — bei Musik eine Fusion, bei einem Bild eine Jam session. Kopfzeile: „Rothko × Kusama“, „Chopin ↔ Glass“ (Collage), „Chopin × Glass“ (Synthese). ✦ Solange Signatur leuchtet, wird kein Stil gezeigt; Ensemble bleibt — ein anderer Maler oder ein abgewählter schaltet Signatur aus. ◆ Exporte sind deterministisch: gleicher Song und gleiche Bühne, gleiches Bild.`}
   ],
   FR: [
@@ -19744,7 +19744,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pause et navigation. ⟳ Loop répète. 🔊 Mute peint en silence. Clear réinitialise — intelligemment, par mode.`, more:`Les commandes de lecture. ◆ Play démarre et met en pause (Espace aussi) ; tape la barre de progression pour sauter, glisse pour scruber. ◆ ⟳ LOOP fait répéter une pièce d'humeur ; or quand actif. ◆ 🔊 / 🔇 Mute coupe tout l'audio pendant que la peinture continue — mémorisé entre sessions. ◆ Clear est sensible au mode : Compose efface la toile et reste ; MIC abandonne seulement le brouillon du mode actif ; Image abandonne le brouillon, Setup repart à zéro — l'image reste sur la toile ; MIDI/audio/partition/humeur texte font un reset complet. ◆ Si le statut dit « loading piano… », attends quelques secondes (~5 Mo d'échantillon) ; si ça échoue, il bascule sur un piano synthé.`},
     {id:'save', glyph:'💾', cat:'save', title:`Repars avec les deux`, body:`Sauver → PNG de la peinture + audio de la musique. Le mode Story recadre pour Instagram / TikTok. Pro retire le filigrane et monte en qualité prête à imprimer.`, more:`Deux diamants — l'image et la musique. ◆ ↓ SAUVER exporte ta peinture en PNG haute résolution : Story (9:16) pour IG/TikTok, Web/Social (~4×, prêt pour le feed), ou Print A1 · prêt à imprimer (haute résolution, qualité galerie). Même morceau donne toujours la même peinture — tes morceaux ont des signatures maintenant. Sous la peinture, les couleurs du morceau : les douze notes en quintes, chaque barre aussi haute que la note sonne dans la pièce ; Web et Impression ajoutent le titre, les peintres et la palette (décoche « légende + couleurs du morceau » dans Sauver pour la peinture seule) ; Story montre les peintres et la palette au-dessus de la peinture. ◆ ⏺ ENREGISTRER (mode image) capture l'audio pendant que la peinture joue, droit vers un fichier partageable ; s'arrête seul à la fin. ◆ ♫ PARTITION transforme les notes de la peinture en fichier MusicXML — ouvre-le dans MuseScore, Sibelius ou Finale ; de vraies partitions à partir d'une image. ◆ Les exports Free portent un petit filigrane ; Pro et Pro IA le retirent et débloquent la taille A1 · prête à imprimer.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoris`, body:`Touche ♡ en haut à gauche d’une peinture terminée — ou d’une image dans Image — pour la garder. ☰ → ♥ Favoris te les remontre, une par une sur la toile. Sans limite.`, more:`♥ garde l’adresse de la peinture, pas une image : les notes du morceau, le peintre — ou la fusion avec la variante de chaque membre —, la palette, le ton et la toile ; l’ouvrir repeint la peinture à partir de là. ◆ Le cœur n’apparaît que sur une peinture terminée — pas pendant que la musique joue ou que tu enregistres. Touche-le à nouveau pour retirer la peinture (Annuler la ramène). ◆ ☰ → ♥ Favoris : glisse à gauche / à droite ou touche ‹ › pour passer de l’une à l’autre ; en plein écran, glisse vers le haut pour la suivante. Rien ne joue ici — le bandeau « Choisis un style » et Lecture sont coupés. TOUT EFFACER retire tous les favoris d’un coup (touche deux fois ; Annuler les ramène). ↓ Sauver fonctionne comme d’habitude — Story, Web, Impression A1, Galerie — pour la peinture à l’écran ; ✕ Fermer te ramène exactement où tu étais. ◆ Une image dans Image : ♡ en haut à gauche garde l’image elle-même avec tout ce qui la joue — la palette, le sens du Scan, le compositeur ou la Jam session (avec son style), ✦ Signature, une pièce composer IA, l’ambiance et la mélodie. Tu peux la garder pendant qu’elle joue. Dans Favoris, l’image s’affiche ; ▶ Ouvrir la ramène dans Image exactement comme tu l’as enregistrée et la joue. Sauver n’y est pas proposé pour elle — ouvre-la et sauve depuis Image. ◆ Les favoris restent sur cet appareil, dans ce navigateur. Une peinture est peinte pour l’écran où tu l’ouvres, exactement comme elle y serait peinte en direct — après une mise à jour d’un peintre, elle peut paraître un peu différente. ◆ Le morceau lui-même va dans Ma musique avec la petite puce ♫ + MA MUSIQUE à côté de son titre (fichiers MIDI, MP3 ou partition).`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € (early-bird, puis 14,99 €) → les 24 artistes, palette Perso éditable, sans filigrane, à vie. Pro IA 19,99 € (early-bird, puis 24,99 €) ajoute l'IA illimitée. Astuce : en Free, touche ton artiste verrouillé préféré — il se déverrouille pour l'essayer.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués, 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Perso en lecture seule, exports avec filigrane. Chaque mode IA a 1 essai gratuit : ambiance texte, ambiance image, composer IA — et Atmosphère + Mélodie partagent deux essais. ◆ Pro €9.99 (early-bird, puis €14.99) — les 24 artistes, tous les types de peinture, palette Perso éditable, exports prêts à imprimer sans filigrane, accès à vie (sans IA). ◆ Pro IA €19.99 (early-bird, puis €24.99) — tout Pro plus IA illimitée : ambiances texte, ambiance image, composer IA, Atmosphère & Mélodie IA. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois. ◆ Voix de compositeurs pour les images : Free a Chopin, Satie + Gershwin ; Pro débloque les quinze. ◆ Ensemble — Fusion (peintres croisés en un style) et Jam session (compositeurs qui s'échangent des phrases) — est Pro aussi ; active-le dans Setup.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro débloque tout`, body:`Pro 9,99 € → les 24 artistes, palette Perso éditable, sans filigrane, à vie. Pro IA 19,99 € ajoute l'IA illimitée. Astuce : en Free, touche ton artiste verrouillé préféré — il se déverrouille pour l'essayer.`, more:`Trois niveaux, tous en paiement unique. ◆ Free — 9 artistes débloqués, 2 types de peinture chacun ; chacun a un partenaire Pro (retape un artiste actif). Palette Perso en lecture seule, exports avec filigrane. Chaque mode IA a 1 essai gratuit : ambiance texte, ambiance image, composer IA — et Atmosphère + Mélodie partagent deux essais. ◆ Pro €9.99 — les 24 artistes, tous les types de peinture, palette Perso éditable, exports prêts à imprimer sans filigrane, accès à vie (sans IA). ◆ Pro IA €19.99 — tout Pro plus IA illimitée : ambiances texte, ambiance image, composer IA, Atmosphère & Mélodie IA. ◆ Déjà Pro ? Passe à Pro IA pour €10 — ta clé reste la même. ◆ Paie une fois, garde pour toujours. Aucun abonnement. La licence marche sur jusqu'à 5 appareils, un à la fois. ◆ Voix de compositeurs pour les images : Free a Chopin, Satie + Gershwin ; Pro débloque les quinze. ◆ Ensemble — Fusion (peintres croisés en un style) et Jam session (compositeurs qui s'échangent des phrases) — est Pro aussi ; active-le dans Setup.`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusion & Jam session`, body:`Pro, activé par défaut avec Pro (Setup → Ensemble). Fusion : 2–5 peintres sur une même peinture. Jam session : 2–5 compositeurs sur une même image. Chacun a son propre bouton ◎ à côté de 🔀, et les deux se combinent.`, more:`Touche ◎ pour monter une scène : touche des puces — jusqu'à cinq, dans l'ordre où tu les touches ; une nouvelle touche retire la puce. Le membre 1 est l'artiste (avec sa variante) qui était à l'écran. ◆ ENSEMBLE × 🔀 — off : la scène reste. 1 : Next donne une nouvelle variante à chaque membre. ALL : la scène est épinglée (puces dorées avec une épingle) ; Next garde les épinglés, en tire 1 à 3 autres (5 au plus en tout) et donne à tous de nouvelles variantes. Touche une puce pour l'épingler ou la libérer. Rien d'épinglé : une distribution toute neuve tirée de ta sélection du Setup ; cinq épinglés : seulement de nouvelles variantes. En 1 et ALL, Next tire aussi une palette. Couper Ensemble en ALL rend la main à l'aléatoire simple, depuis le membre 1. ◆ FUSION existe en deux styles. Collage — les peintres se relaient, chacun de sa propre main, côte à côte sur un même fond. Synthèse — un nouveau peintre naît de leur croisement : la main de l'un, le fond d'un deuxième, la composition d'un troisième (une main douce — Rothko, Monet, Klee, Sam Francis — ne prête que le fond) ; Next change qui prête quoi. Dans les deux, les peintres se partagent la peinture à parts égales et chacun garde son motif signature. Chaque variante d'un peintre est un ADN d'une douzaine de gènes (fond, traits, taille, bord, contour, couches, densité…), et la musique les façonne aussi : un morceau dense et rapide peint plus dense, un morceau calme plus clairsemé et plus grand ; le registre fixe la taille du trait, la tension le contour. La légende et l'export indiquent « Rothko × Pollock × Kusama ». ◆ JAM SESSION (image → musique) : chaque compositeur écrit l'image de sa propre voix, puis ils se rejoignent sur une même pulsation et dans une même tonalité. Collage — après chaque phrase (quatre mesures), le suivant prend la parole ; Synthèse — un nouveau compositeur : l'harmonie de l'un, la mélodie d'un deuxième, la pulsation d'un troisième. Activer le 🔀 des compositeurs épingle la scène, et Next en fait asseoir 1 à 3 autres — l'épinglage fonctionne comme pour les peintres. ◆ LE STYLE est tiré pour chaque fusion et chaque jam (même scène, même style) ; les favoris s'en souviennent. Pour le changer, touche la marque devant les noms (deux barres = Collage, deux cercles = Synthèse), le mot du style dans le panneau d'aspect, ou en plein écran le bouton de style ou le style dans l'info qu'affiche un appui long sur la toile (elle reste 3 s après avoir lâché). ◆ EN LITE (avec Ensemble), environ un Surprends-moi sur quatre est un ensemble — une fusion sur la musique, un jam sur une image. L'en-tête indique « Rothko × Kusama », « Chopin ↔ Glass » (Collage), « Chopin × Glass » (Synthèse). ✦ Tant que Signature est allumé, aucun style ne s'affiche ; Ensemble reste — un autre peintre, ou un peintre retiré, éteint Signature. ◆ Les exports sont déterministes : même morceau et même scène, même peinture.`}
   ],
   ES: [
@@ -19771,7 +19771,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa y navegar la barra. ⟳ Loop repite. 🔊 Mute pinta en silencio. Clear reinicia — listo, por modo.`, more:`Los controles de reproducción. ◆ Play inicia y pausa (Espacio también); toca la barra de progreso para saltar, arrastra para hacer scrub. ◆ ⟳ LOOP mantiene una pieza de ánimo repitiendo; oro cuando está activo. ◆ 🔊 / 🔇 Mute silencia todo el audio mientras la pintura sigue generándose — recordado entre sesiones. ◆ Clear es consciente del modo: Compose borra el lienzo y se queda; MIC descarta solo el borrador del modo activo; Image descarta el borrador, Setup vuelve a empezar — la imagen sigue en el lienzo; MIDI/audio/partitura/ánimo de texto hacen un reinicio completo. ◆ Si el estado dice «loading piano…», espera unos segundos (~5 MB de muestra); si falla, pasa a un piano sintético.`},
     {id:'save', glyph:'💾', cat:'save', title:`Llévate ambos`, body:`Guardar → PNG de la pintura + audio de la música. El modo Story recorta para Instagram / TikTok. Pro quita la marca de agua y sube a calidad lista para imprimir.`, more:`Dos diamantes — la imagen y la música. ◆ ↓ GUARDAR exporta tu pintura como PNG de alta resolución: Story (9:16) para IG/TikTok, Web/Social (~4×, listo para el feed), o Print A1 · listo para imprimir (alta resolución, calidad galería). La misma canción siempre da la misma pintura — tus canciones tienen firmas ahora. Bajo la pintura van los colores de la pieza: las doce notas en quintas, cada barra tan alta como suena esa nota en la pieza; Web e Impresión añaden el título, los pintores y la paleta (desmarca «pie + colores de la pieza» en Guardar para la pintura sola); Story muestra los pintores y la paleta sobre la pintura. ◆ ⏺ GRABAR (modo imagen) captura el audio mientras la pintura suena, directo a un archivo compartible; se detiene solo al acabar. ◆ ♫ PARTITURA convierte las notas de la pintura en un archivo MusicXML — ábrelo en MuseScore, Sibelius o Finale; partituras reales desde una imagen. ◆ Los exports Free llevan una pequeña marca de agua; Pro y Pro IA la quitan y desbloquean el tamaño A1 · listo para imprimir.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoritos`, body:`Toca ♡ arriba a la izquierda de una pintura terminada — o de una imagen en Imagen — para guardarla. ☰ → ♥ Favoritos te las vuelve a mostrar, una a una en el lienzo. Sin límite.`, more:`♥ guarda la dirección de la pintura, no una imagen: las notas de la canción, el pintor — o la fusión con la variante de cada miembro —, la paleta, el tono y el lienzo; al abrirla se vuelve a pintar desde ahí. ◆ El corazón solo aparece en una pintura terminada — no mientras suena la música ni mientras grabas. Tócalo otra vez para quitar la pintura (Deshacer la devuelve). ◆ ☰ → ♥ Favoritos: desliza a la izquierda / derecha o toca ‹ › para pasar de una a otra; en pantalla completa, desliza hacia arriba para la siguiente. Ahí no suena nada — la tira «Elige un estilo» y Play están apagados. BORRAR TODOS quita todos los favoritos de una vez (toca dos veces; Deshacer los devuelve). ↓ Guardar funciona como siempre — Story, Web, Impresión A1, Galería — con la pintura en pantalla; ✕ Cerrar te devuelve justo a donde estabas. ◆ Una imagen en Imagen: ♡ arriba a la izquierda guarda la imagen misma con todo lo que la toca — la paleta, la dirección del escaneo, el compositor o la Jam session (con su estilo), ✦ Firma, una pieza de componer IA, el ambiente y la melodía. Puedes guardarla mientras suena. En Favoritos se muestra la imagen; ▶ Abrir la devuelve a Imagen tal como la guardaste y la reproduce. Ahí no hay Guardar para ella — ábrela y guarda desde Imagen. ◆ Los favoritos viven en este dispositivo, en este navegador. Una pintura se pinta para la pantalla en la que la abres, tal como se pintaría allí en directo — tras actualizar un pintor puede verse algo distinta. ◆ La canción en sí va a Mi música con el pequeño chip ♫ + MI MÚSICA junto a su título (archivos MIDI, MP3 o partitura).`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € (early-bird, luego 14,99 €) → los 24 artistas, paleta Personal editable, sin marca de agua, de por vida. Pro IA 19,99 € (early-bird, luego 24,99 €) añade IA ilimitada. Truco: en Free, toca tu artista bloqueado favorito — se desbloquea para probarlo.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Personal de solo lectura, exports con marca de agua. Cada modo IA tiene 1 prueba gratis: estado de texto, estado imagen, componer IA — y Atmósfera + Melodía comparten dos pruebas. ◆ Pro €9.99 (early-bird, luego €14.99) — los 24 artistas, todos los tipos de pintura, paleta Personal editable, exports listos para imprimir sin marca de agua, acceso de por vida (sin IA). ◆ Pro IA €19.99 (early-bird, luego €24.99) — todo Pro más IA ilimitada: estados de texto, estado imagen, componer IA, Atmósfera y Melodía IA. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez. ◆ Voces de compositores para imágenes: Free tiene Chopin, Satie + Gershwin; Pro desbloquea los quince. ◆ Ensemble — Fusión (pintores cruzados en un estilo) y Jam session (compositores intercambiando frases) — también es Pro; actívalo en Setup.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloquea todo`, body:`Pro 9,99 € → los 24 artistas, paleta Personal editable, sin marca de agua, de por vida. Pro IA 19,99 € añade IA ilimitada. Truco: en Free, toca tu artista bloqueado favorito — se desbloquea para probarlo.`, more:`Tres niveles, todos pago único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada uno; cada uno tiene un socio Pro (toca de nuevo un artista activo). Paleta Personal de solo lectura, exports con marca de agua. Cada modo IA tiene 1 prueba gratis: estado de texto, estado imagen, componer IA — y Atmósfera + Melodía comparten dos pruebas. ◆ Pro €9.99 — los 24 artistas, todos los tipos de pintura, paleta Personal editable, exports listos para imprimir sin marca de agua, acceso de por vida (sin IA). ◆ Pro IA €19.99 — todo Pro más IA ilimitada: estados de texto, estado imagen, componer IA, Atmósfera y Melodía IA. ◆ ¿Ya tienes Pro? Mejora a Pro IA por €10 — tu clave sigue siendo la misma. ◆ Paga una vez, quédatelo para siempre. Sin suscripciones. La licencia funciona en hasta 5 dispositivos, uno a la vez. ◆ Voces de compositores para imágenes: Free tiene Chopin, Satie + Gershwin; Pro desbloquea los quince. ◆ Ensemble — Fusión (pintores cruzados en un estilo) y Jam session (compositores intercambiando frases) — también es Pro; actívalo en Setup.`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusión & Jam session`, body:`Pro, encendido por defecto con Pro (Setup → Ensemble). Fusión: 2–5 pintores en una misma pintura. Jam session: 2–5 compositores sobre una misma imagen. Cada uno tiene su propio botón ◎ junto a 🔀, y ambos se combinan.`, more:`Toca ◎ para montar un escenario: toca fichas — hasta cinco, en el orden en que las tocas; otro toque retira la ficha. El miembro 1 es el artista (con su variante) que estaba en pantalla. ◆ ENSEMBLE × 🔀 — off: el escenario se queda. 1: Next da una variante nueva a cada miembro. ALL: el escenario queda fijado (fichas doradas con chincheta); Next mantiene a los fijados, sortea de 1 a 3 más (5 como máximo en total) y da a todos variantes nuevas. Toca una ficha para fijarla o soltarla. Nada fijado: un reparto completamente nuevo de tu selección del Setup; cinco fijados: solo variantes nuevas. En 1 y ALL, Next sortea también una paleta. Apagar Ensemble en ALL devuelve el aleatorio normal desde el miembro 1. ◆ FUSIÓN tiene dos estilos. Collage — los pintores se turnan, cada uno con su propia mano, lado a lado sobre un mismo fondo. Síntesis — de ellos se cruza un pintor nuevo: la mano de uno, el fondo de otro, la composición de un tercero (una mano suave — Rothko, Monet, Klee, Sam Francis — solo aporta el fondo); Next cambia quién aporta qué. En ambos, los pintores se reparten la pintura a partes iguales y cada uno conserva su motivo firma. Cada variante de un pintor es un ADN de una docena de genes (fondo, trazos, tamaño, borde, contorno, capas, densidad…), y la música también los moldea: una pieza densa y rápida pinta más densa, una tranquila más dispersa y más grande; el registro fija el tamaño del trazo, la tensión el contorno. El pie y la exportación dicen «Rothko × Pollock × Kusama». ◆ JAM SESSION (imagen → música): cada compositor escribe la imagen con su propia voz y luego se unen en un mismo pulso y una misma tonalidad. Collage — tras cada frase (cuatro compases) toma la palabra el siguiente; Síntesis — un compositor nuevo: la armonía de uno, la melodía de otro, el pulso de un tercero. Encender el 🔀 de los compositores fija el escenario, y Next sienta de 1 a 3 más — fijar funciona como con los pintores. ◆ EL ESTILO se sortea en cada fusión y cada jam (mismo escenario, mismo estilo); Favoritos lo recuerda. Cámbialo tocando la marca delante de los nombres (dos barras = Collage, dos círculos = Síntesis), la palabra del estilo en el panel de aspecto o, en pantalla completa, el botón de estilo o el estilo en la info que aparece al mantener pulsado el lienzo (sigue 3 s al soltar). ◆ EN LITE (con Ensemble), más o menos uno de cada cuatro Sorpréndeme es un ensemble — una fusión en música, un jam en una imagen. La cabecera dice «Rothko × Kusama», «Chopin ↔ Glass» (Collage), «Chopin × Glass» (Síntesis). ✦ Mientras Firma está encendida no se muestra estilo; Ensemble se queda — otro pintor, o uno quitado, apaga Firma. ◆ Las exportaciones son deterministas: misma canción y mismo escenario, misma pintura.`}
   ],
   SK: [
@@ -19798,7 +19798,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pauza a posun lišty. ⟳ Loop opakuje. 🔊 Mute maľuje v tichu. Clear resetuje — chytro, podľa módu.`, more:`Ovládanie prehrávania. ◆ Play spustí a pozastaví (aj Space); klik na lištu skočí, ťahaj na scrub. ◆ ⟳ LOOP necháva náladovú skladbu opakovať; zlatá keď je zapnutá. ◆ 🔊 / 🔇 Mute stíši všetko audio, kým maľba stále vzniká — pamätá sa medzi sedeniami. ◆ Clear rozlišuje módy: Compose zmaže plátno a ostane; MIC zahodí len draft aktívneho módu; Image zahodí draft, Setup sa vráti do čistého stavu — samotný obrázok ostáva na plátne; MIDI/audio/noty/text mood spravia plný reset. ◆ Ak status hovorí „loading piano…", počkaj pár sekúnd (~5 MB sample); ak to zlyhá, prepne na syntetický klavír.`},
     {id:'save', glyph:'💾', cat:'save', title:`Odnes si oboje`, body:`Ulož → PNG maľby + audio piesne. Story mód oreže pre Instagram / TikTok. Pro odstráni watermark a odomkne kvalitu pripravenú na tlač.`, more:`Dva diamanty — obraz a hudba. ◆ ↓ ULOŽIŤ exportuje maľbu ako PNG vo vysokom rozlíšení: Story (9:16) pre IG/TikTok, Web/Social (~4×, do feedu), alebo Print A1 · pripravené na tlač (vysoké rozlíšenie, galériová kvalita). Tá istá pieseň vždy dá tú istú maľbu — tvoje piesne majú teraz podpisy. Pod obrazom sú farby skladby: dvanásť tónov v kruhu kvínt, každý stĺpec taký vysoký, koľko ten tón v skladbe znie; Web a Tlač pridajú názov, maliarov a paletu (pre čistý obraz odškrtni v Ulož „popis a farby skladby“); Story ukáže maliarov a paletu nad obrazom. ◆ ⏺ NAHRAJ (image mód) zachytí audio, ako maľba hrá, rovno do zdieľateľného súboru; zastaví sa, keď skladba skončí. ◆ ♫ NOTY premení noty maľby na MusicXML — otvor ho v MuseScore, Sibelius či Finale; skutočné noty z obrázka. ◆ Free exporty nesú malý watermark; Pro a Pro AI ho odstránia a odomknú veľkosť A1 · pripravenú na tlač.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Obľúbené`, body:`Ťukni na ♡ vľavo hore na hotovom obraze — alebo na obrázku v Obraze — a ostane ti. ☰ → ♥ Obľúbené ti ich ukáže znova, jeden po druhom na plátne. Bez limitu.`, more:`♥ si uloží adresu obrazu, nie obrázok: tóny skladby, maliara — alebo fúziu s variantom každého člena —, paletu, tón a plátno; keď ho otvoríš, obraz sa z nej znova namaľuje. ◆ Srdiečko je len na hotovom obraze — nie počas hrania ani nahrávania. Ďalšie ťuknutie obraz odoberie (Späť ho vráti). ◆ ☰ → ♥ Obľúbené: potiahni doľava / doprava alebo ťukni na ‹ › a prechádzaš medzi nimi; na celej obrazovke potiahni hore pre ďalší. Nič sa tam nehrá — roleta Vyber vzhľad aj Play sú vypnuté. VYMAZAŤ VŠETKY odstráni naraz všetky obľúbené (ťukni dvakrát; Späť ich vráti). ↓ Ulož funguje ako vždy — Story, Web, Tlač A1, Galéria — pre obraz na plátne; ✕ Zavrieť ťa vráti presne tam, kde si bol. ◆ Obrázok v Obraze: ♡ vľavo hore si uloží samotný obrázok so všetkým, čo ho hrá — paletou, smerom Skenu, skladateľom alebo Jam session (aj s jej štýlom), ✦ Signatúrou, AI skladbou, atmosférou a melódiou. Uložiť ho môžeš aj počas hrania. V Obľúbených uvidíš obrázok; ▶ Otvoriť ho vráti do Obrazu presne tak, ako si ho uložil, a prehrá ho. Ukladanie tam preň nie je — otvor ho a ulož z Obrazu. ◆ Obľúbené sú v tomto zariadení, v tomto prehliadači. Obraz sa namaľuje pre obrazovku, na ktorej ho otvoríš — presne tak, ako by sa tam maľoval naživo; po aktualizácii maliara môže vyzerať trochu inak. ◆ Samotnú skladbu uložíš do Mojej hudby malým čipom ♫ + MOJA HUDBA pri jej názve (súbory MIDI, MP3 alebo partitúra).`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 (early-bird, potom €14.99) → všetkých 24 umelcov, editovateľná Vlastná paleta, bez watermarku, doživotne. Pro AI €19.99 (early-bird, potom €24.99) pridáva neobmedzené AI. Tip: vo Free ťukni na svojho obľúbeného zamknutého umelca — odomkne sa ti na vyskúšanie.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých, 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Vlastná paleta len na čítanie, exporty s watermarkom. Každý AI mód má 1 skúšku zadarmo: textová nálada, Nálada z obrazu, AI skladba — a Atmosféra + Melódia zdieľajú 2 skúšky medzi sebou. ◆ Pro €9.99 (early-bird, potom €14.99) — všetkých 24 umelcov, všetky typy maľby, editovateľná Vlastná paleta, exporty pripravené na tlač bez watermarku, doživotný prístup (bez AI). ◆ Pro AI €19.99 (early-bird, potom €24.99) — všetko z Pro plus neobmedzené AI: textové moody, Nálada z obrazu, AI skladba, AI Atmosféra a Melódia. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz. ◆ Skladateľské hlasy pre obrázky: Free má Chopina, Satieho + Gershwina; Pro odomkne všetkých pätnásť. ◆ Ensemble — Fúzia (maliari skrížení do jedného rukopisu) a Jam session (skladatelia si striedajú frázy) — je tiež Pro; zapni ho v Setupe.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro odomkne všetko`, body:`Pro €9.99 → všetkých 24 umelcov, editovateľná Vlastná paleta, bez watermarku, doživotne. Pro AI €19.99 pridáva neobmedzenú AI. Tip: vo Free ťukni na svojho obľúbeného zamknutého umelca — odomkne sa ti na vyskúšanie.`, more:`Tri úrovne, všetky jednorazové platby. ◆ Free — 9 umelcov odomknutých, 2 typy maľby na každého; každý má Pro partnera (klikni aktívneho umelca znova). Vlastná paleta len na čítanie, exporty s watermarkom. Každý AI mód má 1 skúšku zadarmo: textová nálada, Nálada z obrazu, AI skladba — a Atmosféra + Melódia zdieľajú 2 skúšky medzi sebou. ◆ Pro €9.99 — všetkých 24 umelcov, všetky typy maľby, editovateľná Vlastná paleta, exporty pripravené na tlač bez watermarku, doživotný prístup (bez AI). ◆ Pro AI €19.99 — všetko z Pro plus neobmedzenú AI: textové moody, Nálada z obrazu, AI skladba, AI Atmosféra a Melódia. ◆ Už máš Pro? Na Pro AI prejdeš za €10 — kľúč ostáva rovnaký. ◆ Zaplať raz, maj navždy. Žiadne predplatné. Licencia funguje na max 5 zariadeniach, jedno naraz. ◆ Skladateľské hlasy pre obrázky: Free má Chopina, Satieho + Gershwina; Pro odomkne všetkých pätnásť. ◆ Ensemble — Fúzia (maliari skrížení do jedného rukopisu) a Jam session (skladatelia si striedajú frázy) — je tiež Pro; zapni ho v Setupe.`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fúzia & Jam session`, body:`Pro, s Pro predvolene zapnuté (Setup → Ensemble). Fúzia: 2–5 maliarov na jednom obraze. Jam session: 2–5 skladateľov nad jedným obrázkom. Každé má vlastné tlačidlo ◎ vedľa 🔀 a dajú sa kombinovať.`, more:`Ťukni na ◎ a postav scénu: ťukaj na čipy — najviac päť, v poradí ťukania; ďalší ťuk čip zo scény zloží. Člen 1 je umelec (aj s variantom), ktorý bol práve na obrazovke. ◆ ENSEMBLE × 🔀 — vyp: scéna ostáva. 1: Next dá každému členovi nový variant. ALL: scéna sa pripne (zlaté čipy so špendlíkom); Next nechá pripnutých, vyžrebuje k nim 1–3 ďalších (spolu najviac 5) a všetkým dá nové varianty. Ťuk na čip pripne či odopne. Nič nepripnuté: celé nové zloženie z tvojho výberu v Setupe; päť pripnutých: len nové varianty. V 1 aj ALL Next žrebuje aj paletu. Vypnutím Ensemble v ALL sa vráti obyčajné zamiešanie od člena 1. ◆ FÚZIA má dva štýly. Koláž — maliari sa striedajú, každý vlastnou rukou, vedľa seba na jednom podklade. Syntéza — z nich sa skríži jeden nový maliar: ruku má od jedného, podklad od druhého, kompozíciu od tretieho (mäkká ruka — Rothko, Monet, Klee, Sam Francis — dá len podklad); Next mení, kto dá čo. V oboch si maliari delia obraz rovným dielom a každý si nechá svoj podpisový motív. Každý variant maliara je DNA z tucta génov (podklad, ťahy, veľkosť, hrana, kontúra, vrstvy, hustota…) a tvaruje ich aj hudba: hustá rýchla skladba maľuje hustejšie, tichá redšie a väčšie, register určí veľkosť ťahu, napätie kontúru. Popis a export znejú „Rothko × Pollock × Kusama“. ◆ JAM SESSION (obrázok → hudba): každý skladateľ napíše obrázok vlastným hlasom, potom sa spoja na jednom pulze a v jednej tónine. Koláž — po každej fráze (štyri takty) preberá slovo ďalší; Syntéza — jeden nový skladateľ: harmóniu dá jeden, melódiu druhý, pulz tretí. Zapnutím 🔀 pri skladateľoch sa scéna pripne a Next k nej posadí 1–3 ďalších — pripínanie funguje ako pri maliaroch. ◆ ŠTÝL sa losuje pre každú fúziu a jam (tá istá scéna = ten istý štýl); Obľúbené si ho pamätajú. Prepneš ho ťukom na značku pred menami (dva pruhy = Koláž, dva kruhy = Syntéza), na slovo štýlu v paneli vzhľadu, vo fullscreene na tlačidlo štýlu alebo na štýl v infe, ktoré ukáže podržanie na plátne (po pustení ostane 3 s). ◆ V LITE (s Ensemble) je asi každé štvrté Prekvap ma ensemble — pri hudbe fúzia, pri obrázku jam. Hlavička: „Rothko × Kusama“, „Chopin ↔ Glass“ (Koláž), „Chopin × Glass“ (Syntéza). ✦ Kým svieti Signatúra, štýl sa neukazuje; Ensemble ostáva — iný maliar alebo odťuknutý člen Signatúru vypne. ◆ Exporty sú deterministické: tá istá skladba a scéna, ten istý obraz.`}
   ],
   PT: [
@@ -19825,7 +19825,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`Play, loop, mute, clear`, body:`Play/pausa e navegar a barra. ⟳ Loop repete. 🔊 Mute pinta em silêncio. Clear reinicia — esperto, por modo.`, more:`Os controlos de reprodução. ◆ Play inicia e pausa (Espaço também); toca a barra de progresso para saltar, arrasta para fazer scrub. ◆ ⟳ LOOP mantém uma peça de estado a repetir; dourado quando ligado. ◆ 🔊 / 🔇 Mute silencia todo o áudio enquanto a pintura continua a gerar-se — lembrado entre sessões. ◆ Clear é consciente do modo: Compose apaga a tela e fica; MIC descarta só o rascunho do modo ativo; Image descarta o rascunho, Setup volta ao início — a imagem fica na tela; MIDI/áudio/partitura/estado de texto fazem um reset completo. ◆ Se o estado diz «loading piano…», espera uns segundos (~5 MB de amostra); se falhar, passa para um piano sintético.`},
     {id:'save', glyph:'💾', cat:'save', title:`Leva os dois`, body:`Guardar → PNG da pintura + áudio da música. O modo Story recorta para Instagram / TikTok. Pro remove a marca de água e sobe para qualidade pronta para imprimir.`, more:`Dois diamantes — a imagem e a música. ◆ ↓ GUARDAR exporta a tua pintura como PNG de alta resolução: Story (9:16) para IG/TikTok, Web/Social (~4×, pronto para o feed), ou Print A1 · pronto para imprimir (alta resolução, qualidade de galeria). A mesma canção dá sempre a mesma pintura — as tuas canções têm assinaturas agora. Sob a pintura vão as cores da música: as doze notas em quintas, cada barra tão alta quanto essa nota soa na peça; Web e Impressão juntam o título, os pintores e a paleta (desmarca «legenda + cores da música» em Guardar para a pintura sozinha); Story mostra os pintores e a paleta por cima da pintura. ◆ ⏺ GRAVAR (modo imagem) captura o áudio enquanto a pintura toca, direto para um ficheiro partilhável; para sozinho ao terminar. ◆ ♫ PARTITURA transforma as notas da pintura num ficheiro MusicXML — abre-o no MuseScore, Sibelius ou Finale; partituras reais a partir de uma imagem. ◆ Os exports Free levam uma pequena marca de água; Pro e Pro IA removem-na e desbloqueiam o tamanho A1 · pronto para imprimir.`},
     {id:'favorites', glyph:'♥', cat:'save', title:`Favoritos`, body:`Toca em ♡ no canto superior esquerdo de uma pintura terminada — ou de uma imagem em Imagem — para a guardares. ☰ → ♥ Favoritos mostra-tas de novo, uma a uma na tela. Sem limite.`, more:`♥ guarda o endereço da pintura, não uma imagem: as notas da música, o pintor — ou a fusão com a variante de cada membro —, a paleta, o tom e a tela; ao abri-la, volta a ser pintada a partir daí. ◆ O coração só aparece numa pintura terminada — não enquanto a música toca ou gravas. Toca outra vez para tirar a pintura (Desfazer trá-la de volta). ◆ ☰ → ♥ Favoritos: desliza para a esquerda / direita ou toca em ‹ › para passar de uma para outra; em ecrã inteiro, desliza para cima para a seguinte. Ali nada toca — a faixa «Escolhe um estilo» e o Play estão desligados. APAGAR TODOS remove todos os favoritos de uma vez (toca duas vezes; Desfazer trá-los de volta). ↓ Guardar funciona como sempre — Story, Web, Impressão A1, Galeria — para a pintura na tela; ✕ Fechar leva-te exatamente de volta onde estavas. ◆ Uma imagem em Imagem: ♡ no canto superior esquerdo guarda a própria imagem com tudo o que a toca — a paleta, a direção da digitalização, o compositor ou a Jam session (com o seu estilo), ✦ Assinatura, uma peça de compor IA, o ambiente e a melodia. Podes guardá-la enquanto toca. Em Favoritos aparece a imagem; ▶ Abrir leva-a de volta a Imagem exatamente como a guardaste e toca-a. Ali não há Guardar para ela — abre-a e guarda a partir de Imagem. ◆ Os favoritos ficam neste dispositivo, neste navegador. Uma pintura é pintada para o ecrã onde a abres, tal como seria pintada ali ao vivo — depois de uma atualização de um pintor pode parecer um pouco diferente. ◆ A música em si vai para Minha música com o pequeno chip ♫ + MINHA MÚSICA junto ao título (ficheiros MIDI, MP3 ou partitura).`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € (early-bird, depois 14,99 €) → todos os 24 artistas, paleta Personalizada editável, sem marca de água, vitalício. Pro IA 19,99 € (early-bird, depois 24,99 €) adiciona IA ilimitada. Dica: no Free, toca no teu artista bloqueado favorito — desbloqueia para experimentares.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Personalizada só de leitura, exports com marca de água. Cada modo IA tem 1 tentativa grátis: estado de texto, humor da imagem, compor IA — e Atmosfera + Melodia partilham duas tentativas. ◆ Pro €9.99 (early-bird, depois €14.99) — todos os 24 artistas, todos os tipos de pintura, paleta Personalizada editável, exports prontos para imprimir sem marca de água, acesso vitalício (sem IA). ◆ Pro IA €19.99 (early-bird, depois €24.99) — tudo do Pro mais IA ilimitada: estados de texto, humor da imagem, compor IA, Atmosfera e Melodia IA. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez. ◆ Vozes de compositores para imagens: o Free tem Chopin, Satie + Gershwin; o Pro desbloqueia os quinze. ◆ Ensemble — Fusão (pintores cruzados num estilo) e Jam session (compositores a trocar frases) — também é Pro; liga-o no Setup.`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro desbloqueia tudo`, body:`Pro 9,99 € → todos os 24 artistas, paleta Personalizada editável, sem marca de água, vitalício. Pro IA 19,99 € adiciona IA ilimitada. Dica: no Free, toca no teu artista bloqueado favorito — desbloqueia para experimentares.`, more:`Três níveis, todos pagamento único. ◆ Free — 9 artistas desbloqueados, 2 tipos de pintura cada; cada um tem um parceiro Pro (toca de novo num artista ativo). Paleta Personalizada só de leitura, exports com marca de água. Cada modo IA tem 1 tentativa grátis: estado de texto, humor da imagem, compor IA — e Atmosfera + Melodia partilham duas tentativas. ◆ Pro €9.99 — todos os 24 artistas, todos os tipos de pintura, paleta Personalizada editável, exports prontos para imprimir sem marca de água, acesso vitalício (sem IA). ◆ Pro IA €19.99 — tudo do Pro mais IA ilimitada: estados de texto, humor da imagem, compor IA, Atmosfera e Melodia IA. ◆ Já tens Pro? Faz upgrade para Pro IA por €10 — a tua chave fica a mesma. ◆ Paga uma vez, fica para sempre. Sem subscrições. A licença funciona em até 5 dispositivos, um de cada vez. ◆ Vozes de compositores para imagens: o Free tem Chopin, Satie + Gershwin; o Pro desbloqueia os quinze. ◆ Ensemble — Fusão (pintores cruzados num estilo) e Jam session (compositores a trocar frases) — também é Pro; liga-o no Setup.`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`Ensemble — Fusão & Jam session`, body:`Pro, ligado por defeito com o Pro (Setup → Ensemble). Fusão: 2–5 pintores numa mesma pintura. Jam session: 2–5 compositores sobre uma mesma imagem. Cada um tem o seu próprio botão ◎ ao lado de 🔀, e os dois combinam-se.`, more:`Toca em ◎ para montar um palco: toca em fichas — até cinco, pela ordem em que tocas; outro toque retira a ficha. O membro 1 é o artista (com a sua variante) que estava no ecrã. ◆ ENSEMBLE × 🔀 — off: o palco fica. 1: Next dá uma variante nova a cada membro. ALL: o palco fica fixado (fichas douradas com alfinete); Next mantém os fixados, sorteia mais 1 a 3 (5 no máximo ao todo) e dá a todos variantes novas. Toca numa ficha para a fixar ou soltar. Nada fixado: um elenco totalmente novo da tua seleção no Setup; cinco fixados: só variantes novas. Em 1 e ALL, Next sorteia também uma paleta. Desligar o Ensemble em ALL devolve o aleatório normal a partir do membro 1. ◆ FUSÃO tem dois estilos. Colagem — os pintores alternam, cada um com a sua mão, lado a lado sobre um mesmo fundo. Síntese — deles cruza-se um pintor novo: a mão de um, o fundo de outro, a composição de um terceiro (uma mão suave — Rothko, Monet, Klee, Sam Francis — só dá o fundo); Next muda quem dá o quê. Em ambos, os pintores dividem a pintura em partes iguais e cada um mantém o seu motivo-assinatura. Cada variante de um pintor é um ADN de uma dúzia de genes (fundo, traços, tamanho, bordo, contorno, camadas, densidade…), e a música também os molda: uma peça densa e rápida pinta mais densa, uma calma mais rarefeita e maior; o registo define o tamanho do traço, a tensão o contorno. A legenda e a exportação dizem «Rothko × Pollock × Kusama». ◆ JAM SESSION (imagem → música): cada compositor escreve a imagem com a sua própria voz e depois juntam-se num mesmo pulso e numa mesma tonalidade. Colagem — depois de cada frase (quatro compassos) o seguinte toma a palavra; Síntese — um compositor novo: a harmonia de um, a melodia de outro, o pulso de um terceiro. Ligar o 🔀 dos compositores fixa o palco, e Next senta mais 1 a 3 — fixar funciona como com os pintores. ◆ O ESTILO é sorteado em cada fusão e cada jam (mesmo palco, mesmo estilo); os Favoritos lembram-no. Muda-o tocando na marca antes dos nomes (duas barras = Colagem, dois círculos = Síntese), na palavra do estilo no painel de aspeto ou, no ecrã inteiro, no botão de estilo ou no estilo da info que aparece ao manter premida a tela (fica 3 s depois de largares). ◆ NO LITE (com Ensemble), mais ou menos um em cada quatro Surpreende-me é um ensemble — uma fusão na música, um jam numa imagem. O cabeçalho diz «Rothko × Kusama», «Chopin ↔ Glass» (Colagem), «Chopin × Glass» (Síntese). ✦ Enquanto Assinatura está acesa não aparece estilo; o Ensemble fica — outro pintor, ou um retirado, apaga a Assinatura. ◆ As exportações são deterministas: mesma música e mesmo palco, mesma pintura.`}
   ],
   zh: [
@@ -19852,7 +19852,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循环、静音、清除`, body:`播放/暂停并拖进度条。⟳ 循环重复。🔊 静音在无声中作画。Clear 智能重置,按模式。`, more:`播放控制。◆ 播放开始并暂停(空格也行);点进度条跳转,拖动来 scrub。◆ ⟳ LOOP 让情绪曲重复;开启时为金色。◆ 🔊 / 🔇 静音在画作仍照常生成时静掉所有音频——跨会话记住。◆ Clear 感知模式:Compose 擦画布并留下;MIC 只丢当前模式的草稿;Image 丢弃草稿,Setup 回到初始——图片本身留在画布上;MIDI/音频/乐谱/文字情绪做完整重置。◆ 若状态显示「loading piano…」,等几秒(约 5 MB 采样);若失败,切换到合成钢琴。`},
     {id:'save', glyph:'💾', cat:'save', title:`两者都带走`, body:`保存 → 画作的 PNG + 音乐的音频。Story 模式为 Instagram / TikTok 裁切。Pro 去掉水印并提升到可印刷品质。`, more:`两颗钻石——图与乐。◆ ↓ 保存 把你的画导出为高分辨率 PNG:Story(9:16)给 IG/TikTok,Web/Social(约 4×,适合信息流),或 Print A1 · 可印刷 (高分辨率, 画廊级)。同一首歌总给同样的画——你的歌现在有了签名。画下方是乐曲的颜色：按五度圈排列的十二个音，每根柱子的高度对应该音在曲中出现的多少；网页和打印还会加上曲名、画家与调色板（在保存中取消勾选「标注 + 乐曲的颜色」即可得到纯画面）；Story 会在画上方标出画家与调色板。◆ ⏺ 录制(图像模式)在画作播放时录下音频,直接成可分享文件;乐曲结束自动停止。◆ ♫ 乐谱 把画作的音符变成 MusicXML 文件——在 MuseScore、Sibelius 或 Finale 打开;由一张图生成真正的乐谱。◆ Free 导出带小水印;Pro 与 Pro AI 去掉它并解锁 A1 · 可印刷尺寸。`},
     {id:'favorites', glyph:'♥', cat:'save', title:`收藏`, body:`在完成的画作——或“图像”中的图片——左上角轻点 ♡ 即可留下它。☰ → ♥ 收藏 会在画布上一幅一幅地再给你看。没有数量限制。`, more:`♥ 保存的是画作的地址，而不是图片：曲子的音符、画家——或融合及每位成员的变体——调色板、色调和画布；打开时据此重新画出。◆ 只有完成的画作才会出现爱心——音乐播放或录音时不会。再点一次即可移除（撤销可找回）。◆ ☰ → ♥ 收藏：向左 / 向右滑动或点 ‹ › 切换；全屏时向上滑看下一幅。这里不播放任何声音——「选个风格」条和播放都已关闭。全部清除 可一次移除所有收藏（点两下；撤销可找回）。↓ 保存 和平时一样——Story、Web、打印 A1、画廊——作用于画布上的这幅画；✕ 关闭 让你回到原来的位置。◆ “图像”中的图片：左上角的 ♡ 会留下图片本身，以及演奏它的一切——调色板、扫描方向、作曲家或 Jam session（连同风格）、✦ 签名、AI 作曲的曲子、氛围和旋律。播放时也能保存。收藏里显示的是图片；▶ 打开 会按你保存时的样子把它带回“图像”并播放。这里不提供保存——打开后在“图像”中保存。◆ 收藏保存在这台设备、这个浏览器里。画作会按你打开它的屏幕来画，和在那里现场画出的一模一样——某位画家更新后，可能略有不同。◆ 曲子本身可用标题旁的小标签 ♫ + 我的音乐 存入「我的音乐」（MIDI、MP3 或乐谱文件）。`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99(早鸟价,之后 €14.99)→ 全部 24 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99(早鸟价,之后 €24.99)增加无限 AI。提示:在 Free,点一下你最喜欢的锁定艺术家——会为你解锁试用。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家,每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印。每个 AI 模式有 1 次免费试用:文字情绪、从图像取情绪、AI 作曲——而 氛围 + 旋律 之间共享 2 次试用。◆ Pro €9.99(早鸟价,之后 €14.99)——全部 24 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的可印刷导出、终身访问(无 AI)。◆ Pro AI €19.99(早鸟价,之后 €24.99)——Pro 的一切外加无限 AI:文字情绪、从图像取情绪、AI 作曲、AI 氛围与旋律。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。◆ 图像的作曲家之声：免费版有肖邦、萨蒂与格什温；Pro 解锁全部十五位。◆ 合奏——融合（画家杂交成一种风格）与 Jam session（作曲家轮流接句）——也是 Pro；在设置中开启。`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解锁一切`, body:`Pro €9.99→ 全部 24 位艺术家、可编辑自定义调色板、无水印、终身。Pro AI €19.99增加无限 AI。提示:在 Free,点一下你最喜欢的锁定艺术家——会为你解锁试用。`, more:`三个级别,全是一次性付款。◆ Free——解锁 9 位艺术家,每位 2 种绘法;每位有一个 Pro 搭档(再点一次激活的艺术家)。自定义调色板只读,导出带水印。每个 AI 模式有 1 次免费试用:文字情绪、从图像取情绪、AI 作曲——而 氛围 + 旋律 之间共享 2 次试用。◆ Pro €9.99——全部 24 位艺术家、每位所有绘法、可编辑自定义调色板、无水印的可印刷导出、终身访问(无 AI)。◆ Pro AI €19.99——Pro 的一切外加无限 AI:文字情绪、从图像取情绪、AI 作曲、AI 氛围与旋律。◆ 已有 Pro?以 €10 升级到 Pro AI,许可证密钥不变。◆ 一次付清,永久拥有。无订阅。许可证可用于至多 5 台设备,一次一台。◆ 图像的作曲家之声：免费版有肖邦、萨蒂与格什温；Pro 解锁全部十五位。◆ 合奏——融合（画家杂交成一种风格）与 Jam session（作曲家轮流接句）——也是 Pro；在设置中开启。`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`合奏——融合 与 Jam session`, body:`Pro，有 Pro 时默认开启（设置 → 合奏）。融合：2–5 位画家共画一幅画。Jam session：2–5 位作曲家共奏一张图。两者在 🔀 旁各有自己的按钮◎，并且可以组合。`, more:`点◎搭起舞台：点芯片——最多五位，按点按顺序；再点一次移出。1 号成员是当时屏上的艺术家（连同其变体）。◆ 合奏 × 🔀——关：舞台不变。1：Next 给每位成员一个新变体。ALL：舞台被固定（带图钉的金色芯片）；Next 保留已固定的，再抽 1–3 位（总共最多 5 位），并给所有人新变体。点芯片可固定或取消固定。没有固定：从你的设置选择中抽一个全新阵容；固定了五位：只换变体。在 1 和 ALL 中，Next 也会抽调色板。在 ALL 中关闭合奏，回到从 1 号成员开始的普通随机。◆ 融合有两种风格。拼贴——画家们轮流作画，各用各的笔触，在同一底色上并排。合成——由他们杂交出一位新画家：笔触来自一位，底色来自另一位，构图来自第三位（柔和的笔触——Rothko、Monet、Klee、Sam Francis——只给底色）；Next 会更换谁给什么。两种风格中，画家们都平分整幅画，并各自保留签名母题。每位画家的每个变体都是十来个基因的 DNA（底色、笔触、尺寸、边缘、轮廓、层次、密度……），音乐也塑造它们：密集快速的曲子画得更密，安静的更疏、更大；音区决定笔触大小，张力决定轮廓。标题和导出写作「Rothko × Pollock × Kusama」。◆ JAM SESSION（图像 → 音乐）：每位作曲家用自己的声音写下整张图，然后在同一脉动、同一调性上汇合。拼贴——每个乐句（四小节）后由下一位接话；合成——一位新作曲家：和声来自一位，旋律来自另一位，脉动来自第三位。打开作曲家旁的 🔀 会固定舞台，Next 再请 1–3 位入座——固定方式与画家相同。◆ 风格在每次融合和 Jam 时抽取（同一舞台，同一风格）；收藏会记住它。切换方式：点按名字前的标记（两条 = 拼贴，两个圆 = 合成）、外观面板里的风格字样，或在全屏里点按风格按钮，或点按长按画布时信息里的风格（松手后停留 3 秒）。◆ 在 Lite 中（开启合奏时），大约每四次「给我惊喜」有一次是合奏——音乐上是融合，图像上是 Jam。标题：「Rothko × Kusama」、「Chopin ↔ Glass」（拼贴）、「Chopin × Glass」（合成）。✦ 签名亮起时不显示风格；合奏保留——换上或移除一位画家即关闭签名。◆ 导出是确定的：同一首歌、同一舞台，同一幅画。`}
   ],
   zhTW: [
@@ -19879,7 +19879,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`播放、循環、靜音、清除`, body:`播放/暫停並拖進度條。⟳ 循環重複。🔊 靜音在無聲中作畫。Clear 智慧重置,按模式。`, more:`播放控制。◆ 播放開始並暫停(空格也行);點進度條跳轉,拖動來 scrub。◆ ⟳ LOOP 讓情緒曲重複;開啟時為金色。◆ 🔊 / 🔇 靜音在畫作仍照常生成時靜掉所有音訊——跨工作階段記住。◆ Clear 感知模式:Compose 擦畫布並留下;MIC 只丟當前模式的草稿;Image 丟棄草稿,Setup 回到初始——圖片本身留在畫布上;MIDI/音訊/樂譜/文字情緒做完整重置。◆ 若狀態顯示「loading piano…」,等幾秒(約 5 MB 取樣);若失敗,切換到合成鋼琴。`},
     {id:'save', glyph:'💾', cat:'save', title:`兩者都帶走`, body:`儲存 → 畫作的 PNG + 音樂的音訊。Story 模式為 Instagram / TikTok 裁切。Pro 去掉浮水印並提升到可列印品質。`, more:`兩顆鑽石——圖與樂。◆ ↓ 儲存 把你的畫匯出為高解析度 PNG:Story(9:16)給 IG/TikTok,Web/Social(約 4×,適合動態消息),或 Print A1 · 可列印 (高解析度, 畫廊級)。同一首歌總給同樣的畫——你的歌現在有了簽名。畫下方是樂曲的顏色：按五度圈排列的十二個音，每根柱子的高度對應該音在曲中出現的多少；網頁和列印還會加上曲名、畫家與調色盤（在儲存中取消勾選「標註 + 樂曲的顏色」即可得到純畫面）；Story 會在畫上方標出畫家與調色盤。◆ ⏺ 錄製(圖像模式)在畫作播放時錄下音訊,直接成可分享檔案;樂曲結束自動停止。◆ ♫ 樂譜 把畫作的音符變成 MusicXML 檔——在 MuseScore、Sibelius 或 Finale 打開;由一張圖生成真正的樂譜。◆ Free 匯出帶小浮水印;Pro 與 Pro AI 去掉它並解鎖 A1 · 可列印尺寸。`},
     {id:'favorites', glyph:'♥', cat:'save', title:`收藏`, body:`在完成的畫作——或「圖像」中的圖片——左上角輕點 ♡ 即可留下它。☰ → ♥ 收藏 會在畫布上一幅一幅地再給你看。沒有數量限制。`, more:`♥ 儲存的是畫作的位址，而不是圖片：曲子的音符、畫家——或融合及每位成員的變體——調色盤、色調與畫布；開啟時據此重新畫出。◆ 只有完成的畫作才會出現愛心——音樂播放或錄音時不會。再點一次即可移除（復原可找回）。◆ ☰ → ♥ 收藏：向左 / 向右滑動或點 ‹ › 切換；全螢幕時向上滑看下一幅。這裡不播放任何聲音——「選個風格」條與播放都已關閉。全部清除 可一次移除所有收藏（點兩下；復原可找回）。↓ 儲存 和平常一樣——Story、Web、列印 A1、畫廊——作用於畫布上的這幅畫；✕ 關閉 讓你回到原來的位置。◆ 「圖像」中的圖片：左上角的 ♡ 會留下圖片本身，以及演奏它的一切——調色盤、掃描方向、作曲家或 Jam session（連同風格）、✦ 簽名、AI 作曲的曲子、氛圍與旋律。播放時也能儲存。收藏裡顯示的是圖片；▶ 打開 會依你儲存時的樣子把它帶回「圖像」並播放。這裡不提供儲存——打開後在「圖像」中儲存。◆ 收藏保存在這台裝置、這個瀏覽器裡。畫作會依你開啟它的螢幕來畫，和在那裡現場畫出的一模一樣——某位畫家更新後，可能略有不同。◆ 曲子本身可用標題旁的小標籤 ♫ + 我的音樂 存入「我的音樂」（MIDI、MP3 或樂譜檔案）。`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99(早鳥價,之後 €14.99)→ 全部 24 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99(早鳥價,之後 €24.99)增加無限 AI。提示:在 Free,點一下你最喜歡的鎖定藝術家——會為你解鎖試用。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家,每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印。每個 AI 模式有 1 次免費試用:文字情緒、從圖像取情緒、AI 作曲——而 氛圍 + 旋律 之間共享 2 次試用。◆ Pro €9.99(早鳥價,之後 €14.99)——全部 24 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的可列印匯出、終身存取(無 AI)。◆ Pro AI €19.99(早鳥價,之後 €24.99)——Pro 的一切外加無限 AI:文字情緒、從圖像取情緒、AI 作曲、AI 氛圍與旋律。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。◆ 圖像的作曲家之聲：免費版有蕭邦、薩提與蓋希文；Pro 解鎖全部十五位。◆ 合奏——融合（畫家雜交成一種風格）與 Jam session（作曲家輪流接句）——也是 Pro；在設定中開啟。`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro 解鎖一切`, body:`Pro €9.99→ 全部 24 位藝術家、可編輯自訂調色盤、無浮水印、終身。Pro AI €19.99增加無限 AI。提示:在 Free,點一下你最喜歡的鎖定藝術家——會為你解鎖試用。`, more:`三個級別,全是一次性付款。◆ Free——解鎖 9 位藝術家,每位 2 種繪法;每位有一個 Pro 搭檔(再點一次啟用的藝術家)。自訂調色盤唯讀,匯出帶浮水印。每個 AI 模式有 1 次免費試用:文字情緒、從圖像取情緒、AI 作曲——而 氛圍 + 旋律 之間共享 2 次試用。◆ Pro €9.99——全部 24 位藝術家、每位所有繪法、可編輯自訂調色盤、無浮水印的可列印匯出、終身存取(無 AI)。◆ Pro AI €19.99——Pro 的一切外加無限 AI:文字情緒、從圖像取情緒、AI 作曲、AI 氛圍與旋律。◆ 已有 Pro?以 €10 升級到 Pro AI,授權金鑰不變。◆ 一次付清,永久擁有。無訂閱。授權可用於至多 5 台裝置,一次一台。◆ 圖像的作曲家之聲：免費版有蕭邦、薩提與蓋希文；Pro 解鎖全部十五位。◆ 合奏——融合（畫家雜交成一種風格）與 Jam session（作曲家輪流接句）——也是 Pro；在設定中開啟。`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`合奏——融合 與 Jam session`, body:`Pro，有 Pro 時預設開啟（設定 → 合奏）。融合：2–5 位畫家共畫一幅畫。Jam session：2–5 位作曲家共奏一張圖。兩者在 🔀 旁各有自己的按鈕◎，並且可以組合。`, more:`點◎搭起舞台：點晶片——最多五位，按點按順序；再點一次移出。1 號成員是當時螢幕上的藝術家（連同其變體）。◆ 合奏 × 🔀——關：舞台不變。1：Next 給每位成員一個新變體。ALL：舞台被固定（帶圖釘的金色晶片）；Next 保留已固定的，再抽 1–3 位（總共最多 5 位），並給所有人新變體。點晶片可固定或取消固定。沒有固定：從你的設定選擇中抽一個全新陣容；固定了五位：只換變體。在 1 和 ALL 中，Next 也會抽調色盤。在 ALL 中關閉合奏，回到從 1 號成員開始的普通隨機。◆ 融合有兩種風格。拼貼——畫家們輪流作畫，各用各的筆觸，在同一底色上並排。合成——由他們雜交出一位新畫家：筆觸來自一位，底色來自另一位，構圖來自第三位（柔和的筆觸——Rothko、Monet、Klee、Sam Francis——只給底色）；Next 會更換誰給什麼。兩種風格中，畫家們都平分整幅畫，並各自保留簽名母題。每位畫家的每個變體都是十來個基因的 DNA（底色、筆觸、尺寸、邊緣、輪廓、層次、密度……），音樂也塑造它們：密集快速的曲子畫得更密，安靜的更疏、更大；音域決定筆觸大小，張力決定輪廓。標題和匯出寫作「Rothko × Pollock × Kusama」。◆ JAM SESSION（圖像 → 音樂）：每位作曲家用自己的聲音寫下整張圖，然後在同一脈動、同一調性上匯合。拼貼——每個樂句（四小節）後由下一位接話；合成——一位新作曲家：和聲來自一位，旋律來自另一位，脈動來自第三位。打開作曲家旁的 🔀 會固定舞台，Next 再請 1–3 位入座——固定方式與畫家相同。◆ 風格在每次融合和 Jam 時抽取（同一舞台，同一風格）；收藏會記住它。切換方式：點按名字前的標記（兩條 = 拼貼，兩個圓 = 合成）、外觀面板裡的風格字樣，或在全螢幕裡點按風格按鈕，或點按長按畫布時資訊裡的風格（鬆手後停留 3 秒）。◆ 在 Lite 中（開啟合奏時），大約每四次「給我驚喜」有一次是合奏——音樂上是融合，圖像上是 Jam。標題：「Rothko × Kusama」、「Chopin ↔ Glass」（拼貼）、「Chopin × Glass」（合成）。✦ 簽名亮起時不顯示風格；合奏保留——換上或移除一位畫家即關閉簽名。◆ 匯出是確定的：同一首歌、同一舞台，同一幅畫。`}
   ],
   ja: [
@@ -19906,7 +19906,7 @@ const GUIDE_CARDS_I18N = {
     {id:'tools', glyph:'🎛', cat:'tools', title:`再生・ループ・ミュート・消去`, body:`再生/停止とバー移動。⟳ ループで繰返し。🔊 ミュートで無音で描く。Clear はモードごとに賢くリセット。`, more:`再生コントロール。◆ 再生は開始と停止(スペースも);進捗バーをタップでジャンプ、ドラッグでスクラブ。◆ ⟳ LOOP は気分の曲を繰り返させる;オンで金色。◆ 🔊 / 🔇 ミュートは絵が通常通り生成される間、全音声を消す——セッションをまたいで記憶。◆ Clear はモードを意識する:Compose はキャンバスを消して留まる;MIC はアクティブなモードの下書きだけ捨てる;Image はドラフトを破棄し、Setup は再び初期状態へ — 画像自体はキャンバスに残る;MIDI/音声/楽譜/テキスト気分は完全リセット。◆ 状態が「loading piano…」と出たら数秒待つ(約 5 MB サンプル);失敗すればシンセピアノに切り替わる。`},
     {id:'save', glyph:'💾', cat:'save', title:`両方を持ち帰る`, body:`保存 → 絵の PNG + 音楽の音声。Story モードが Instagram / TikTok 用に切り抜く。Pro はウォーターマークを外し 印刷可能品質に上げる。`, more:`二つのダイヤ——絵と音楽。◆ ↓ 保存 は絵を高解像度 PNG に書き出す:Story(9:16)は IG/TikTok 用、Web/Social(約 4×、フィード向き)、または Print A1 · 印刷可能 (高解像度, ギャラリー級)。同じ曲はいつも同じ絵を与える——あなたの曲には今や署名がある。絵の下には曲の色：五度圏に並ぶ十二の音、それぞれの棒の高さはその音が曲で鳴る多さ。Web と印刷には曲名・画家・パレットも入る（絵だけが欲しいときは保存で「キャプション＋曲の色」を外す）。Story では絵の上に画家とパレットが入る。◆ ⏺ 録音(画像モード)は絵が再生される間に音声を録り、共有可能なファイルへ直接;曲が終わると自動停止。◆ ♫ 楽譜 は絵の音符を MusicXML ファイルにする——MuseScore、Sibelius、Finale で開く;一枚の絵から本物の楽譜。◆ Free の書き出しには小さなウォーターマーク;Pro と Pro AI はそれを外し A1 · 印刷可能サイズを解放する。`},
     {id:'favorites', glyph:'♥', cat:'save', title:`お気に入り`, body:`完成した絵——または「画像」の画像——の左上の ♡ をタップすると残せます。☰ → ♥ お気に入り で、キャンバスに一枚ずつまた表示されます。上限なし。`, more:`♥ が残すのは画像ではなく絵の「住所」です：曲の音、画家——またはフュージョンと各メンバーのバリエーション——、パレット、トーン、キャンバス。開くとそこから絵を描き直します。◆ ハートは完成した絵にだけ表示されます——音楽の再生中や録音中は出ません。もう一度タップすると外せます（元に戻すで復活）。◆ ☰ → ♥ お気に入り：左右にスワイプするか ‹ › で切り替え。全画面では上にスワイプで次へ。ここでは何も鳴りません——「ルックを選ぶ」のストリップと再生はオフです。すべて削除 でお気に入りを一度に消せます（2 回タップ。元に戻すで復活）。↓ 保存 はいつもどおり（Story、Web、印刷 A1、ギャラリー）画面の絵を書き出し、✕ 閉じる で元いた場所に戻ります。◆ 「画像」の画像：左上の ♡ は画像そのものと、それを奏でるすべてを残します——パレット、スキャンの方向、作曲家または Jam session（そのスタイルも）、✦ 署名、AI 作曲の曲、雰囲気とメロディ。再生中でも保存できます。お気に入りでは画像が表示され、▶ 開く で保存したときのまま「画像」に戻って再生します。ここでは保存はできません——開いてから「画像」で保存してください。◆ お気に入りはこの端末、このブラウザに保存されます。絵は開いた画面に合わせて、そこでライブで描くのとまったく同じように描かれます——画家のアップデート後は少し違って見えることがあります。◆ 曲そのものは、タイトル横の小さなチップ ♫ + マイミュージック でマイミュージックに保存できます（MIDI、MP3、楽譜ファイル）。`},
-    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99(早割、以降 €14.99)→ 全 24 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99(早割、以降 €24.99)は無制限 AI を追加。ヒント:Free では、好きなロックされたアーティストをタップ—試すために解除されます。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放、各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き。各 AI モードに 1 回の無料お試し:テキスト気分、画像からムード、AI 作曲——そして 雰囲気 + メロディ は 2 回のお試しを共有。◆ Pro €9.99(早割、以降 €14.99)——全 24 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの印刷可能な書き出し、永久アクセス(AI なし)。◆ Pro AI €19.99(早割、以降 €24.99)——Pro の全てに無制限 AI:テキスト気分、画像からムード、AI 作曲、AI 雰囲気とメロディ。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。◆ 画像のための作曲家ボイス：Free はショパン、サティ + ガーシュウィン、Pro で15人すべて解放。◆ アンサンブル——フュージョン（画家をひとつの筆致に掛け合わせ）と Jam session（作曲家がフレーズを掛け合う）——も Pro；設定でオンに。`},
+    {id:'pro', glyph:'⚡', cat:'pro', title:`Pro が全てを解放`, body:`Pro €9.99→ 全 24 人のアーティスト、編集可能なカスタムパレット、ウォーターマークなし、永久。Pro AI €19.99は無制限 AI を追加。ヒント:Free では、好きなロックされたアーティストをタップ—試すために解除されます。`, more:`三段階、すべて一回払い。◆ Free——9 人のアーティスト解放、各 2 種の描法;各人に Pro パートナー(有効なアーティストをもう一度タップ)。カスタムパレットは読取専用、書き出しはウォーターマーク付き。各 AI モードに 1 回の無料お試し:テキスト気分、画像からムード、AI 作曲——そして 雰囲気 + メロディ は 2 回のお試しを共有。◆ Pro €9.99——全 24 人のアーティスト、全描法、編集可能なカスタムパレット、ウォーターマークなしの印刷可能な書き出し、永久アクセス(AI なし)。◆ Pro AI €19.99——Pro の全てに無制限 AI:テキスト気分、画像からムード、AI 作曲、AI 雰囲気とメロディ。◆ もう Pro?€10 で Pro AI にアップグレード、キーはそのまま。◆ 一度払えば永久に。サブスクなし。ライセンスは最大 5 台、一度に一台で動く。◆ 画像のための作曲家ボイス：Free はショパン、サティ + ガーシュウィン、Pro で15人すべて解放。◆ アンサンブル——フュージョン（画家をひとつの筆致に掛け合わせ）と Jam session（作曲家がフレーズを掛け合う）——も Pro；設定でオンに。`},
     {id:'ensemble', glyph:'🎭', cat:'pro', title:`アンサンブル——フュージョン と Jam session`, body:`Pro、Pro なら既定でオン（設定 → アンサンブル）。フュージョン：2〜5 人の画家で一枚の絵を描く。Jam session：2〜5 人の作曲家が一枚の画像を奏でる。どちらも 🔀 の隣に専用ボタン◎があり、組み合わせられる。`, more:`◎をタップしてステージを組む：チップをタップ——最大五人、タップした順；もう一度タップで外れる。メンバー 1 は画面にいたアーティスト（バリエーションごと）。◆ アンサンブル × 🔀——オフ：ステージはそのまま。1：Next で全メンバーに新しいバリエーション。ALL：ステージがピン留めされる（ピン付きの金色のチップ）；Next はピン留めを残し、1〜3 人を加え（合計 5 人まで）、全員に新しいバリエーション。チップをタップでピン留め／解除。ピン留めなし：設定の選択からまったく新しい顔ぶれ；5 人ピン留め：バリエーションだけ新しく。1 と ALL では Next がパレットも抽選。ALL でアンサンブルを切ると、メンバー 1 から普通のシャッフルに戻る。◆ フュージョンには二つの様式がある。コラージュ——画家たちが交代で、それぞれ自分の筆致で、ひとつの地の上に並べて描く。合成——彼らから新しい画家がひとり生まれる：筆致はひとりから、地は二人目から、構図は三人目から（柔らかな筆致——Rothko、Monet、Klee、Sam Francis——は地だけを渡す）；Next で誰が何を渡すかが変わる。どちらでも画家たちは絵を等しく分け合い、各自の署名モチーフを保つ。画家の各バリエーションは十数個の遺伝子の DNA（地、筆致、大きさ、縁、輪郭、層、密度…）で、音楽もそれを形づくる：密で速い曲はより密に、静かな曲はより疎に大きく；音域が筆致の大きさを、緊張が輪郭を決める。キャプションと書き出しは「Rothko × Pollock × Kusama」。◆ JAM SESSION（画像 → 音楽）：各作曲家が自分の声で画像を書き、ひとつの拍とひとつの調で合流する。コラージュ——フレーズ（4 小節）ごとに次の人へ発言権が移る；合成——新しい作曲家がひとり：和声はひとりから、旋律は二人目から、拍は三人目から。作曲家の 🔀 をオンにするとステージがピン留めされ、Next が 1〜3 人を加える——ピン留めは画家と同じ。◆ 様式はフュージョンやジャムのたびに抽選される（同じステージなら同じ様式）；お気に入りはそれを覚えている。切り替えは、名前の前のマーク（二本の棒 = コラージュ、二つの円 = 合成）、外観パネルの様式の言葉、または全画面の様式ボタンか、キャンバスの長押しで出る情報の様式をタップ（離してから 3 秒残る）。◆ Lite では（アンサンブルがオンのとき）「おまかせ」のおよそ四回に一回がアンサンブル——音楽ならフュージョン、画像ならジャム。ヘッダーは「Rothko × Kusama」、「Chopin ↔ Glass」（コラージュ）、「Chopin × Glass」（合成）。✦ 署名が点灯している間は様式は表示されない。アンサンブルは残り、画家を加えるか外すと署名はオフになる。◆ 書き出しは決定論的：同じ曲と同じステージなら、同じ絵。`}
   ]
 };
@@ -20994,8 +20994,8 @@ const PRO_CFG = {
   // Paddle environment: 'production' (live) or 'sandbox' (test).
   paddleEnv: 'production',
   // Price IDs — TWO paid tiers since the 3-tier model (Jun 2026):
-  //   Pro    = full deterministic tool, NO AI (lifetime). Early-bird €9.99 → €14.99.
-  //   Pro AI = Pro + unlimited AI composition (lifetime). Early-bird €19.99 → €24.99.
+  //   Pro    = full deterministic tool, NO AI (lifetime). €9.99.
+  //   Pro AI = Pro + unlimited AI composition (lifetime). €19.99.
   // The legacy single price ID below is the original "Paintiano Pro Lifetime"
   // (€9.99). It is REUSED as the Pro tier price for now; the Pro AI price must
   // be created in the Paddle catalog and its ID pasted into paddlePriceIdProAI.
@@ -21003,6 +21003,11 @@ const PRO_CFG = {
   // is null and openCheckout('pro_ai') will fall back to the Pro price.
   paddlePriceIdPro:   'pri_01kt6s053namfk25tvvdw2eaey',
   paddlePriceIdProAI: 'pri_01ktkmf6ghq0kk3vkg2dtnjd7q',
+  // Pro → Pro AI upgrade (€10, so Pro €9.99 + upgrade = the Pro AI €19.99).
+  // Opened with customData.upgrade_from = the buyer's Pro key; the webhook then
+  // turns that same key into Pro AI. Until the ID is set, a Pro user's upgrade
+  // falls back to the full Pro AI price.
+  paddlePriceIdUpgrade: null,
   // Our own Vercel Edge validation endpoint (same origin as the app).
   // Provider-agnostic — reads licenses table that Paddle webhook writes into.
   validateEndpoint: '/api/validate',
@@ -21016,11 +21021,9 @@ const PRO_CFG = {
   // funnels them to Pro AI. Lowered 5→3 with the 3-tier model (Jun 2026).
   trialMax: 3,
   // Display prices (informational; real price + VAT come from Paddle checkout).
-  // Early-bird values shown until the first-50 window closes (then 14.99/24.99).
+  // No early-bird window any more (Oct 2026): these are the prices, plain.
   displayPricePro:   '€9.99',
   displayPriceProAI: '€19.99',
-  displayPriceProRegular:   '€14.99',   // struck-through regular prices (early-bird window)
-  displayPriceProAIRegular: '€24.99',
 };
 
 // Accent colour used to brand AI features across the paywall (Pro AI tier card,
@@ -21084,6 +21087,8 @@ function useProStatus() {
   const [proStatus, setProStatus] = useState('loading');
   const [licenseKey, setLicenseKey] = useState(null);
   const [maskedEmail, setMaskedEmail] = useState(null);
+  // true once a just-paid upgrade (/play?upgraded=1) is confirmed as Pro AI.
+  const [justUpgraded, setJustUpgraded] = useState(false);
 
   // Map a validated tier string to a proStatus value. Defaults to 'pro' for
   // any unknown/missing tier so a valid-but-untagged key still unlocks the
@@ -21091,17 +21096,55 @@ function useProStatus() {
   const _tierToStatus = (tier) => (tier === 'pro_ai' ? 'pro_ai' : 'pro');
 
   useEffect(() => {
+    // Back from the upgrade checkout? Strip the flag so a reload doesn't repeat it.
+    let upgraded = false;
+    try {
+      const u = new URLSearchParams(window.location.search);
+      upgraded = u.get('upgraded') === '1';
+      if (upgraded) {
+        u.delete('upgraded'); const qs = u.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+        try { window.posthog && window.posthog.capture('upgrade_return'); } catch (_) {}
+      }
+    } catch (_) {}
     const cached = _proReadCache();
     if (!cached) { setProStatus('free'); return; }
+    let alive = true;
     const stale = Date.now() - (cached.validatedAt || 0) > PRO_CFG.revalidateAfterMs;
     if (!stale) {
       setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
-      return;
+      // A plain Pro key is re-checked quietly on every start, so an upgrade to
+      // Pro AI (bought here or on another device) shows up without re-entering
+      // the key. Right after paying the webhook can lag, so retry for ~20 s.
+      if (_tierToStatus(cached.tier) === 'pro') {
+        (async () => {
+          const tries = upgraded ? 8 : 1;
+          for (let i = 0; i < tries && alive; i++) {
+            if (i) await new Promise((r) => setTimeout(r, 2500));
+            const res = await _proValidate(cached.key);
+            if (!alive) return;
+            if (res.valid) {
+              _proWriteCache(cached.key, { email: res.email, tier: res.tier });
+              if (res.tier === 'pro_ai') {
+                setProStatus('pro_ai'); setMaskedEmail(res.email || null);
+                if (upgraded) { setJustUpgraded(true); try { window.posthog && window.posthog.capture('upgrade_confirmed'); } catch (_) {} }
+                return;
+              }
+            } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
+              _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+              return;
+            }
+          }
+        })();
+      }
+      return () => { alive = false; };
     }
     _proValidate(cached.key).then((res) => {
+      if (!alive) return;
       if (res.valid) {
         _proWriteCache(cached.key, { email: res.email, tier: res.tier });
         setProStatus(_tierToStatus(res.tier)); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
+        if (upgraded && res.tier === 'pro_ai') setJustUpgraded(true);
       } else if (res.offline) {
         // Network down during re-check → trust the cache (stay paid) until online.
         setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
@@ -21110,6 +21153,7 @@ function useProStatus() {
         _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
       }
     });
+    return () => { alive = false; };
   }, []);
 
   const activateLicense = useCallback(async (raw) => {
@@ -21163,19 +21207,28 @@ function useProStatus() {
       // Pick the price for the requested tier. Pro AI falls back to the Pro
       // price until its Paddle price ID exists (step C) — so the button never
       // dead-ends; worst case it sells Pro instead of Pro AI.
-      const priceId = (tier === 'pro_ai' && PRO_CFG.paddlePriceIdProAI)
-        ? PRO_CFG.paddlePriceIdProAI
-        : PRO_CFG.paddlePriceIdPro;
+      // 'upgrade' = a Pro key holder buying Pro AI at the upgrade price. It needs
+      // both the upgrade price and the key; otherwise it is a plain Pro AI sale.
+      const isUpgrade = tier === 'upgrade' && !!PRO_CFG.paddlePriceIdUpgrade && !!licenseKey;
+      const wantsAI = tier === 'pro_ai' || tier === 'upgrade';
+      const priceId = isUpgrade
+        ? PRO_CFG.paddlePriceIdUpgrade
+        : (wantsAI && PRO_CFG.paddlePriceIdProAI)
+          ? PRO_CFG.paddlePriceIdProAI
+          : PRO_CFG.paddlePriceIdPro;
       // Initialize is idempotent — calling twice is safe.
       Paddle.Environment.set(PRO_CFG.paddleEnv); // 'production' or 'sandbox'
       Paddle.Initialize({ token: PRO_CFG.paddleClientToken });
       Paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
+        ...(isUpgrade ? { customData: { upgrade_from: licenseKey } } : {}),
         settings: {
           displayMode: 'overlay',
           theme: 'dark',
           locale: (typeof navigator !== 'undefined' && navigator.language) ? navigator.language.slice(0, 2) : 'en',
-          successUrl: typeof window !== 'undefined' ? window.location.origin + '/?paid=1' : undefined,
+          successUrl: typeof window !== 'undefined'
+            ? window.location.origin + (isUpgrade ? '/play?upgraded=1' : '/?paid=1')
+            : undefined,
         },
       });
     } catch (err) {
@@ -21187,12 +21240,14 @@ function useProStatus() {
         }
       } catch (_) {}
     }
-  }, [loadPaddleScript]);
+  }, [loadPaddleScript, licenseKey]);
+
+  const clearJustUpgraded = useCallback(() => setJustUpgraded(false), []);
 
   return { proStatus,
            isPro: proStatus === 'pro' || proStatus === 'pro_ai',
            isProAI: proStatus === 'pro_ai',
-           licenseKey, maskedEmail,
+           licenseKey, maskedEmail, justUpgraded, clearJustUpgraded,
            activateLicense, deactivateLicense, openCheckout };
 }
 
@@ -21413,8 +21468,17 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
 
 // ─── ProPaywall — the modal ────────────────────────────────────────────────────
 // Props: { t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }
-function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false }) {
-  const [view, setView] = useState('intro'); // 'intro'|'key'|'success'
+function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false }) {
+  // reason 'upgraded' = back from a confirmed Pro → Pro AI upgrade: open straight
+  // on the success note and close by itself.
+  const [view, setView] = useState(reason === 'upgraded' ? 'success' : 'intro'); // 'intro'|'key'|'about'|'success'
+  // A Pro owner is only ever offered the upgrade to Pro AI, never Pro again.
+  const upgradeOnly = proStatus === 'pro';
+  useEffect(() => {
+    if (reason !== 'upgraded') return;
+    const tm = setTimeout(() => { onClose && onClose(); }, 2800);
+    return () => clearTimeout(tm);
+  }, [reason]);
   const [keyInput, setKeyInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
@@ -21510,7 +21574,8 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
   // bright border. Pro AI tier uses the purple AI accent throughout (matches
   // the in-app AI feature colour); Pro stays in the gold brand colour.
   const renderTierCard = (tierKey, recommended) => {
-    const isAI = tierKey === 'pro_ai';
+    const isUp = tierKey === 'upgrade';
+    const isAI = tierKey === 'pro_ai' || isUp;
     // Per-tier accent palette — applied to border highlight, glow, check
     // marks, price line, RECOMMENDED ribbon, and the CTA button. Pro = gold;
     // Pro AI = purple (in-app AI accent).
@@ -21529,11 +21594,13 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     const title = isAI
       ? tr('proAiTierTitle', 'Paintiano Pro AI')
       : tr('proTierTitle', 'Paintiano Pro');
-    const priceLine = isAI
-      ? tr('proAiTierPrice', '€19.99 · early-bird (then €24.99)')
-      : tr('proTierPrice',   '€9.99 · early-bird (then €14.99)');
+    const priceLine = isUp
+      ? tr('proUpgradePrice', '€10 · upgrade from your Pro')
+      : isAI
+        ? tr('proAiTierPrice', '€19.99 · once, yours for life')
+        : tr('proTierPrice',   '€9.99 · once, yours for life');
     const values = isAI ? [
-      ['proAiValueAll',   'Everything in Pro, plus:'],
+      isUp ? ['proUpgradeValueAll', 'Your Pro stays, plus:'] : ['proAiValueAll', 'Everything in Pro, plus:'],
       ['proAiValueText',  'AI composition from text moods'],
       ['proAiValueImage', 'AI composition from your images'],
       ['proAiValueAtmo',  'AI atmospheric tinting'],
@@ -21562,7 +21629,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
           marginBottom: 0 };
     return (
       <div style={cardStyle}>
-        {recommended && (
+        {recommended && !isUp && (
           <span style={Object.assign({}, recommendedBadge, { background: accent })}>{tr('proRecommended', 'Recommended')}</span>
         )}
         <p style={tierTitle}>{title}</p>
@@ -21576,9 +21643,11 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
           ))}
         </ul>
         <button style={ctaBtn} onClick={() => openCheckout(tierKey)}>
-          {isAI
-            ? tr('proAiGetCta', 'Get Pro AI')
-            : tr('proGetCta', 'Get Pro')}
+          {isUp
+            ? tr('proUpgradeCta', 'Upgrade to Pro AI')
+            : isAI
+              ? tr('proAiGetCta', 'Get Pro AI')
+              : tr('proGetCta', 'Get Pro')}
         </button>
       </div>
     );
@@ -21608,14 +21677,17 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               }}>✦</div>
             </div>
             <p style={{ fontSize: (.95*readScale)+'rem', fontWeight: 600, textAlign: 'center', margin: '0 0 6px' }}>
-              {reason === 'ai_trial'
-                ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
-                : tr('proPaywallTitle', 'Unlock the full Paintiano')}
+              {upgradeOnly
+                ? tr('proPaywallTitleUpgrade', 'Add unlimited AI')
+                : reason === 'ai_trial'
+                  ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
+                  : tr('proPaywallTitle', 'Unlock the full Paintiano')}
             </p>
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
-              {tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
+              {upgradeOnly ? tr('proPaywallSubUpgrade', 'You already have every style.') : tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
-            {(
+            {/* a Pro owner already has a key — the key entry stays in "Learn more" */}
+            {!upgradeOnly && (
               <button
                 onClick={() => setView('key')}
                 style={{
@@ -21638,7 +21710,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
-                  {tr('proBackOnlineSoon', 'your early-bird price is held · first 50 supporters')}
+                  {tr('proBackOnlineSoon', 'one payment · yours for life')}
                 </p>
               </>
             ) : (
@@ -21646,7 +21718,9 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 {/* Two tier cards, ordered by what brought the user here.
                     ai_trial → Pro AI on top with "Recommended" ribbon, Pro below.
                     settings → Pro on top (cheaper, sufficient for most non-AI needs), Pro AI below. */}
-                {reason === 'ai_trial' ? (
+                {upgradeOnly ? (
+                  renderTierCard('upgrade', true)
+                ) : reason === 'ai_trial' ? (
                   <>
                     {renderTierCard('pro_ai', true)}
                     {renderTierCard('pro', false)}
@@ -21657,9 +21731,6 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                     {renderTierCard('pro_ai', false)}
                   </>
                 )}
-                <p style={{ color: GOLD, fontSize: (.56*readScale)+'rem', textAlign: 'center', margin: '4px 0 12px', letterSpacing: '.04em', opacity: .75 }}>
-                  {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
-                </p>
                 <p style={{ color: '#8a8a8a', fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 14px', fontStyle: 'italic', opacity: .85 }}>
                   {tr('proSupportLine', 'You\u2019re also keeping a solo art project independent.')}
                 </p>
@@ -21870,24 +21941,25 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               </>
             ) : (
               <>
-                {/* Get Pro — gold outline (secondary in the about view) */}
+                {/* Get Pro — gold outline (secondary in the about view); a Pro owner never sees it */}
+                {!upgradeOnly && (
                 <button style={Object.assign({}, btnGoldOutline, { marginBottom: 10 })}
                         onClick={() => openCheckout('pro')}>
                   {tr('proGetCta', 'Get Pro')} — {tr('proTierPriceShort', '€9.99')}
                 </button>
+                )}
                 {/* Get Pro AI — purple filled (primary, recommended upgrade) */}
-                <button onClick={() => openCheckout('pro_ai')}
+                <button onClick={() => openCheckout(upgradeOnly ? 'upgrade' : 'pro_ai')}
                   style={{
                     width: '100%', background: AI_PURPLE, color: '#0a0a12', border: 'none',
                     padding: '14px 18px', borderRadius: 5, fontSize: (.78*readScale)+'rem',
                     fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase',
                     cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10,
                   }}>
-                  {tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}
+                  {upgradeOnly
+                    ? <>{tr('proUpgradeCta', 'Upgrade to Pro AI')} — {tr('proUpgradePriceShort', '€10')}</>
+                    : <>{tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}</>}
                 </button>
-                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
-                  {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
-                </p>
               </>
             )}
             <button style={btnGhost} onClick={() => setView('key')}>
@@ -21911,10 +21983,10 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               background: 'rgba(201,168,76,.15)', color: GOLD, fontSize: 22, marginBottom: 12,
             }}>✓</div>
             <p style={{ fontSize: (.9*readScale)+'rem', fontWeight: 600, margin: '0 0 6px' }}>
-              {tr('proWelcomeTitle', 'Welcome to Pro')}
+              {reason === 'upgraded' ? tr('proAiWelcomeTitle', 'Pro AI is active') : tr('proWelcomeTitle', 'Welcome to Pro')}
             </p>
             <p style={{ fontSize: (.7*readScale)+'rem', color: '#9a9a9a', margin: 0, lineHeight: 1.5 }}>
-              {tr('proWelcomeBody', 'All features unlocked on this device.')}
+              {reason === 'upgraded' ? tr('proAiWelcomeBody', 'AI is now unlimited on this device.') : tr('proWelcomeBody', 'All features unlocked on this device.')}
             </p>
           </div>
         )}
@@ -23885,8 +23957,11 @@ export default function Paintiano() {
   // effectivePairs / etc. below. The hook has no parameter dependencies — order
   // among hooks doesn't matter for correctness as long as it stays consistent.
   const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
+          justUpgraded, clearJustUpgraded,
           trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
-  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings'
+  const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings' | 'upgraded'
+  // Back from a confirmed Pro → Pro AI upgrade: show the short success note once.
+  useEffect(() => { if (justUpgraded) { setPaywallReason('upgraded'); clearJustUpgraded(); } }, [justUpgraded, clearJustUpgraded]);
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
   // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
   // mode was active. Persisted across sessions in localStorage.
@@ -24127,7 +24202,7 @@ export default function Paintiano() {
     }
   }, [chords.length]);
   useEffect(() => {
-    if (paywallReason) { try { window.posthog && window.posthog.capture('paywall_shown', { reason: paywallReason }); } catch (_) {} }
+    if (paywallReason && paywallReason !== 'upgraded') { try { window.posthog && window.posthog.capture('paywall_shown', { reason: paywallReason, plan: proStatus }); } catch (_) {} }
   }, [paywallReason]);
   useEffect(() => {
     try { if (new URLSearchParams(window.location.search).get('paid') === '1') window.posthog && window.posthog.capture('purchase_return'); } catch (_) {}
@@ -39199,8 +39274,8 @@ Hard requirements:
                       <tr>
                         <th style={Object.assign({},cellSty,{textAlign:'left',color:'rgba(242,238,232,.4)',fontSize:(.6*effScale)+'rem',paddingLeft:2,fontWeight:400,letterSpacing:'.04em'})}></th>
                         <th style={Object.assign({},cellSty,{color:FREE_FG,fontSize:(.62*effScale)+'rem',fontWeight:500})}>€0</th>
-                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>{PRO_CFG.displayPricePro} <s style={{opacity:.5,fontWeight:400}}>{PRO_CFG.displayPriceProRegular}</s></th>
-                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>{PRO_CFG.displayPriceProAI} <s style={{opacity:.5,fontWeight:400}}>{PRO_CFG.displayPriceProAIRegular}</s></th>
+                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>{PRO_CFG.displayPricePro}</th>
+                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>{PRO_CFG.displayPriceProAI}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -39233,6 +39308,7 @@ Hard requirements:
         <ProPaywall
           t={t}
           reason={paywallReason}
+          proStatus={proStatus}
           trialLeft={0}
           onClose={()=>setPaywallReason(null)}
           onActivated={()=>setPaywallReason(null)}

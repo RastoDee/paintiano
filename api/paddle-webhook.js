@@ -19,13 +19,24 @@
 //   • transaction.canceled
 //       → no-op; we just 200 OK so Paddle doesn't retry.
 //
+// Pro → Pro AI upgrade (PADDLE_PRICE_ID_UPGRADE):
+//   The app opens the upgrade price with customData { upgrade_from: <Pro key> }.
+//   • valid active Pro key → that SAME key becomes tier 'pro_ai' (nothing to
+//     re-enter), and a record row (key UPGRADE-…, status 'disabled', never a
+//     working key) keeps the transaction so a refund can find it.
+//   • refund of the upgrade → the original key steps back to 'pro'.
+//   • no / unknown / not-Pro key → the buyer paid about the Pro price, so a
+//     fresh Pro licence is issued instead (logged for a manual look).
+//   Paddle sends both transaction.paid and transaction.completed; a second
+//   event for an order_id we already stored is acknowledged and ignored.
+//
 // Security: every request is HMAC-SHA256 verified against PADDLE_WEBHOOK_SECRET.
 // Signature format Paddle uses (header `paddle-signature`):
 //     ts=1234567890;h1=<hex>
 // We reconstruct the signed payload as `${ts}:${rawBody}` and HMAC it with
 // the secret. If the digest doesn't match → 401, no DB writes happen.
 
-import { insertLicense, setLicenseStatus } from './_lib/supabase.js';
+import { insertLicense, setLicenseStatus, getLicenseByKey, getLicenseByOrderId, setLicenseTier } from './_lib/supabase.js';
 
 export const config = { runtime: 'edge' };
 
@@ -38,6 +49,9 @@ const WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET;
 // Back-compat: the legacy single PADDLE_PRICE_ID, if present, is treated as Pro.
 const PRICE_ID_PRO    = process.env.PADDLE_PRICE_ID_PRO    || process.env.PADDLE_PRICE_ID || null;
 const PRICE_ID_PRO_AI = process.env.PADDLE_PRICE_ID_PRO_AI || null;
+// Upgrade price (Pro → Pro AI). Price IDs are public (the app ships them), so a
+// literal fallback is fine; the env var wins when set.
+const PRICE_ID_UPGRADE = process.env.PADDLE_PRICE_ID_UPGRADE || null;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
 const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
 const EMAIL_REPLY_TO = 'hello@paintiano.app';
@@ -139,10 +153,11 @@ function generateLicenseKey() {
   return `PAINT-${chars.slice(0, 4).join('')}-${chars.slice(4, 8).join('')}-${chars.slice(8, 12).join('')}`;
 }
 
-// Map a Paddle price ID to our entitlement tier. Returns 'pro' | 'pro_ai' | null.
+// Map a Paddle price ID to our entitlement tier. Returns 'pro' | 'pro_ai' | 'upgrade' | null.
 // null means the price isn't one of ours (caller treats as price_mismatch).
 function priceIdToTier(priceId) {
   if (!priceId) return null;
+  if (PRICE_ID_UPGRADE && priceId === PRICE_ID_UPGRADE) return 'upgrade';
   if (PRICE_ID_PRO_AI && priceId === PRICE_ID_PRO_AI) return 'pro_ai';
   if (PRICE_ID_PRO    && priceId === PRICE_ID_PRO)    return 'pro';
   return null;
@@ -294,11 +309,93 @@ function buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }) 
   ].join('\n');
 }
 
+// ─── upgrade email (Pro → Pro AI) ───────────────────────────────────────────
+// The buyer keeps their key, so this mail has no key box: it names the key by
+// its last four characters and says there is nothing to enter.
+function keyTail(key) {
+  return String(key || '').replace(/[^A-Z0-9]/g, '').slice(-4) || '????';
+}
+
+function buildUpgradeEmailHtml({ fromKey, amount, currency, orderId }) {
+  const tail = keyTail(fromKey);
+  const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€10';
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your Paintiano Pro is now Pro AI</title>
+</head>
+<body style="margin:0;padding:0;background:#06060c;color:#e8e2d4;font-family:'Outfit',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;">
+<div style="max-width:560px;margin:0 auto;padding:40px 24px 56px;">
+
+  <div style="text-align:center;padding-bottom:32px;border-bottom:1px solid rgba(232,226,212,.12);">
+    <div style="font-family:'Cormorant Garamond',Georgia,'Palatino Linotype',serif;font-size:34px;font-weight:600;color:#c9a84c;letter-spacing:-0.5px;line-height:1;">Paintiano</div>
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;color:#e8e2d4;margin-top:10px;letter-spacing:0.3px;">your Pro is now Pro AI</div>
+  </div>
+
+  <p style="font-size:15px;color:#e8e2d4;margin:32px 0 10px;">Hi,</p>
+  <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you for upgrading. It genuinely means a lot to this little solo art project.</p>
+
+  <div style="margin:28px 0 32px;padding:24px 22px;background:linear-gradient(135deg,rgba(169,127,245,0.12),rgba(220,150,255,0.04));border:1px solid rgba(220,150,255,0.5);border-radius:14px;text-align:center;">
+    <div style="font-size:15px;color:#e8e2d4;line-height:1.6;">Your Pro key ending in <strong style="font-family:'SF Mono','Menlo','Consolas',monospace;color:#dcb4ff;letter-spacing:0.06em;">${tail}</strong> now opens <strong style="color:#dcb4ff;">Pro AI</strong>.<br>There is nothing to enter.</div>
+  </div>
+
+  <p style="font-size:14px;color:#e8e2d4;margin:0 0 10px;">Open <a href="https://paintiano.app/play" style="color:#ffd07a;text-decoration:none;border-bottom:1px solid rgba(255,208,122,0.4);">Paintiano</a> as usual. AI is unlimited from now on: a piece from a feeling you name, a piece from a photo's mood, AI compose from your picture, atmosphere and a sung melody.</p>
+  <p style="font-size:14px;color:rgba(232,226,212,0.78);margin:0 0 8px;">On your other devices Pro AI appears the next time Paintiano opens there.</p>
+
+  <div style="margin:36px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.10);font-size:12px;color:rgba(232,226,212,0.55);line-height:1.7;">
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Order:</strong> ${orderId || '—'}</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time upgrade, lifetime)</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days, no questions asked — your key simply returns to Pro. Reply to this email.</div>
+  </div>
+
+  <div style="margin:32px 0 0;text-align:center;font-size:13px;color:rgba(232,226,212,0.6);">
+    Need help? Just reply to this email — it goes straight to <a href="mailto:hello@paintiano.app" style="color:#ffd07a;text-decoration:none;">hello@paintiano.app</a>.
+  </div>
+
+  <div style="margin:40px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.08);text-align:center;font-size:11px;color:rgba(232,226,212,0.4);letter-spacing:0.02em;line-height:1.7;">
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:15px;font-weight:600;color:rgba(201,168,76,0.7);letter-spacing:0;margin-bottom:8px;">Paintiano</div>
+    Rastislav Ďurica · sole trader · Slovakia · IČO 34 594 671<br>
+    Payments processed by Paddle.com Market Limited (Merchant of Record)<br>
+    <a href="https://paintiano.app/terms.html" style="color:rgba(232,226,212,0.5);text-decoration:none;">Terms</a> ·
+    <a href="https://paintiano.app/privacy.html" style="color:rgba(232,226,212,0.5);text-decoration:none;">Privacy</a> ·
+    <a href="https://paintiano.app/refunds.html" style="color:rgba(232,226,212,0.5);text-decoration:none;">Refunds</a>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+function buildUpgradeEmailText({ fromKey, amount, currency, orderId }) {
+  const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€10';
+  return [
+    'Hi,',
+    '',
+    'Thank you for upgrading.',
+    '',
+    `Your Pro key ending in ${keyTail(fromKey)} now opens Pro AI. There is nothing to enter.`,
+    'Open https://paintiano.app/play as usual — AI is unlimited from now on.',
+    'On your other devices Pro AI appears the next time Paintiano opens there.',
+    '',
+    `Order: ${orderId || '—'}`,
+    `Amount: ${priceLine} (one-time upgrade, lifetime)`,
+    'Refunds: 14 days, no questions asked — your key simply returns to Pro. Just reply to this email.',
+    '',
+    'Need help? hello@paintiano.app',
+    '',
+    '—',
+    'Paintiano · Rastislav Ďurica · Slovakia · IČO 34 594 671',
+    'Payments by Paddle.com Market Limited (Merchant of Record).',
+  ].join('\n');
+}
+
 // Send license email via Resend HTTPS API. Best-effort: never throws — if
 // Resend is down or the API key is missing we log and continue. The license
 // is already in Supabase so we can recover via a manual resend / lookup
 // endpoint.
-async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderId }) {
+async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderId, subject, html, text, category }) {
   if (!RESEND_API_KEY) {
     console.warn('paddle-webhook: RESEND_API_KEY not set — skipping email send');
     return { ok: false, reason: 'no_api_key' };
@@ -320,11 +417,11 @@ async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderI
         to: [to],
         bcc: EMAIL_BCC,
         reply_to: EMAIL_REPLY_TO,
-        subject: `Your Paintiano ${tierName} license`,
-        html: buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }),
-        text: buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }),
+        subject: subject || `Your Paintiano ${tierName} license`,
+        html: html || buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }),
+        text: text || buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }),
         tags: [
-          { name: 'category', value: 'license_delivery' },
+          { name: 'category', value: category || 'license_delivery' },
           { name: 'provider', value: 'paddle' },
         ],
       }),
@@ -388,11 +485,15 @@ export default async function handler(req) {
           return json({ ok: true, ignored: 'price_mismatch' });
         }
 
-        // Avoid duplicate issuance if Paddle re-delivers the same event.
-        // We key on data.id (the transaction id) → if a license with this
-        // order_id already exists, do nothing.
+        // Avoid duplicate issuance if Paddle re-delivers the same event (or
+        // sends both transaction.paid and transaction.completed): if a row
+        // with this order_id already exists, do nothing.
         const orderId = data.id;
         const customerId = data?.customer_id || null;
+        if (orderId) {
+          const seen = await getLicenseByOrderId(orderId);
+          if (seen) return json({ ok: true, ignored: 'duplicate' });
+        }
 
         // Resolve buyer email. Paddle's transaction.* webhooks include
         // `customer_id` but the email is NOT included by default. Try the
@@ -437,6 +538,49 @@ export default async function handler(req) {
         // which could be a different product if a cart ever bundles things).
         const productId = matchedItem?.price?.product_id || null;
         const variantId = matchedItem?.price?.id || null;
+
+        // ── Pro → Pro AI upgrade ──────────────────────────────────────────
+        if (tier === 'upgrade') {
+          const rawFrom = data?.custom_data?.upgrade_from;
+          const fromKey = (typeof rawFrom === 'string') ? rawFrom.trim() : '';
+          const orig = (fromKey && fromKey.length >= 6 && fromKey.length <= 200)
+            ? await getLicenseByKey(fromKey) : null;
+          const eligible = !!orig && orig.status === 'active' && orig.tier !== 'pro_ai';
+          if (eligible) {
+            // Record row first (keeps the transaction for refunds; never a working key).
+            await insertLicense({
+              key: 'UPGRADE-' + generateLicenseKey().slice(6),
+              email,
+              status: 'disabled',
+              tier: 'pro_ai',
+              order_id: orderId,
+              provider: 'paddle',
+              activations: 0,
+              customer_id: customerId,
+              product_id: productId,
+              variant_id: variantId,
+              amount_cents: amountCents,
+              currency: currencyCode,
+              raw_event: evt,
+            });
+            await setLicenseTier(orig.key, 'pro_ai');
+            console.info('paddle-webhook: upgraded licence to pro_ai', { orderId, tail: keyTail(orig.key) });
+            const mail = await sendLicenseEmail({
+              to: email, tier: 'pro_ai', amount: amountMajor, currency: currencyCode, orderId,
+              subject: 'Your Paintiano Pro is now Pro AI',
+              html: buildUpgradeEmailHtml({ fromKey: orig.key, amount: amountMajor, currency: currencyCode, orderId }),
+              text: buildUpgradeEmailText({ fromKey: orig.key, amount: amountMajor, currency: currencyCode, orderId }),
+              category: 'license_upgrade',
+            });
+            if (!mail.ok) console.warn('paddle-webhook: upgrade email NOT sent', mail);
+            return json({ ok: true, upgraded: true, emailed: !!mail.ok });
+          }
+          // Not a valid Pro key: the buyer paid about the Pro price, so they get Pro.
+          console.warn('paddle-webhook: upgrade without an eligible Pro key — issuing Pro instead', {
+            orderId, hadKey: !!fromKey, found: !!orig, status: orig?.status || null, tier: orig?.tier || null,
+          });
+          tier = 'pro';
+        }
 
         const licenseKey = generateLicenseKey();
 
@@ -488,9 +632,25 @@ export default async function handler(req) {
         const orderId = data?.transaction_id;
         if (!orderId) return json({ ok: true, ignored: 'no_transaction_id' });
 
+        // Was this transaction a Pro → Pro AI upgrade? Then the original key
+        // steps back to 'pro' instead of losing Pro altogether.
+        let rec = null;
+        try { rec = await getLicenseByOrderId(orderId); } catch (e) { console.warn('paddle-webhook: refund lookup failed', e); }
+
         await setLicenseStatus(orderId, 'refunded', {
           refunded_at: new Date().toISOString(),
         });
+
+        if (rec && String(rec.key || '').startsWith('UPGRADE-')) {
+          let ev = rec.raw_event;
+          if (typeof ev === 'string') { try { ev = JSON.parse(ev); } catch { ev = null; } }
+          const from = ev?.data?.custom_data?.upgrade_from;
+          if (typeof from === 'string' && from.trim()) {
+            await setLicenseTier(from.trim(), 'pro');
+            console.info('paddle-webhook: upgrade refunded — key back to pro', { orderId, tail: keyTail(from) });
+            return json({ ok: true, revoked: true, downgraded: true });
+          }
+        }
 
         console.info('paddle-webhook: license revoked', { orderId, action });
         return json({ ok: true, revoked: true });

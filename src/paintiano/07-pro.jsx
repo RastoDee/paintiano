@@ -50,6 +50,11 @@ const PRO_CFG = {
   // is null and openCheckout('pro_ai') will fall back to the Pro price.
   paddlePriceIdPro:   'pri_01kt6s053namfk25tvvdw2eaey',
   paddlePriceIdProAI: 'pri_01ktkmf6ghq0kk3vkg2dtnjd7q',
+  // Pro → Pro AI upgrade (€10, so Pro €9.99 + upgrade = the Pro AI €19.99).
+  // Opened with customData.upgrade_from = the buyer's Pro key; the webhook then
+  // turns that same key into Pro AI. Until the ID is set, a Pro user's upgrade
+  // falls back to the full Pro AI price.
+  paddlePriceIdUpgrade: null,
   // Our own Vercel Edge validation endpoint (same origin as the app).
   // Provider-agnostic — reads licenses table that Paddle webhook writes into.
   validateEndpoint: '/api/validate',
@@ -129,6 +134,8 @@ function useProStatus() {
   const [proStatus, setProStatus] = useState('loading');
   const [licenseKey, setLicenseKey] = useState(null);
   const [maskedEmail, setMaskedEmail] = useState(null);
+  // true once a just-paid upgrade (/play?upgraded=1) is confirmed as Pro AI.
+  const [justUpgraded, setJustUpgraded] = useState(false);
 
   // Map a validated tier string to a proStatus value. Defaults to 'pro' for
   // any unknown/missing tier so a valid-but-untagged key still unlocks the
@@ -136,17 +143,55 @@ function useProStatus() {
   const _tierToStatus = (tier) => (tier === 'pro_ai' ? 'pro_ai' : 'pro');
 
   useEffect(() => {
+    // Back from the upgrade checkout? Strip the flag so a reload doesn't repeat it.
+    let upgraded = false;
+    try {
+      const u = new URLSearchParams(window.location.search);
+      upgraded = u.get('upgraded') === '1';
+      if (upgraded) {
+        u.delete('upgraded'); const qs = u.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+        try { window.posthog && window.posthog.capture('upgrade_return'); } catch (_) {}
+      }
+    } catch (_) {}
     const cached = _proReadCache();
     if (!cached) { setProStatus('free'); return; }
+    let alive = true;
     const stale = Date.now() - (cached.validatedAt || 0) > PRO_CFG.revalidateAfterMs;
     if (!stale) {
       setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
-      return;
+      // A plain Pro key is re-checked quietly on every start, so an upgrade to
+      // Pro AI (bought here or on another device) shows up without re-entering
+      // the key. Right after paying the webhook can lag, so retry for ~20 s.
+      if (_tierToStatus(cached.tier) === 'pro') {
+        (async () => {
+          const tries = upgraded ? 8 : 1;
+          for (let i = 0; i < tries && alive; i++) {
+            if (i) await new Promise((r) => setTimeout(r, 2500));
+            const res = await _proValidate(cached.key);
+            if (!alive) return;
+            if (res.valid) {
+              _proWriteCache(cached.key, { email: res.email, tier: res.tier });
+              if (res.tier === 'pro_ai') {
+                setProStatus('pro_ai'); setMaskedEmail(res.email || null);
+                if (upgraded) { setJustUpgraded(true); try { window.posthog && window.posthog.capture('upgrade_confirmed'); } catch (_) {} }
+                return;
+              }
+            } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
+              _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+              return;
+            }
+          }
+        })();
+      }
+      return () => { alive = false; };
     }
     _proValidate(cached.key).then((res) => {
+      if (!alive) return;
       if (res.valid) {
         _proWriteCache(cached.key, { email: res.email, tier: res.tier });
         setProStatus(_tierToStatus(res.tier)); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
+        if (upgraded && res.tier === 'pro_ai') setJustUpgraded(true);
       } else if (res.offline) {
         // Network down during re-check → trust the cache (stay paid) until online.
         setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
@@ -155,6 +200,7 @@ function useProStatus() {
         _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
       }
     });
+    return () => { alive = false; };
   }, []);
 
   const activateLicense = useCallback(async (raw) => {
@@ -208,19 +254,28 @@ function useProStatus() {
       // Pick the price for the requested tier. Pro AI falls back to the Pro
       // price until its Paddle price ID exists (step C) — so the button never
       // dead-ends; worst case it sells Pro instead of Pro AI.
-      const priceId = (tier === 'pro_ai' && PRO_CFG.paddlePriceIdProAI)
-        ? PRO_CFG.paddlePriceIdProAI
-        : PRO_CFG.paddlePriceIdPro;
+      // 'upgrade' = a Pro key holder buying Pro AI at the upgrade price. It needs
+      // both the upgrade price and the key; otherwise it is a plain Pro AI sale.
+      const isUpgrade = tier === 'upgrade' && !!PRO_CFG.paddlePriceIdUpgrade && !!licenseKey;
+      const wantsAI = tier === 'pro_ai' || tier === 'upgrade';
+      const priceId = isUpgrade
+        ? PRO_CFG.paddlePriceIdUpgrade
+        : (wantsAI && PRO_CFG.paddlePriceIdProAI)
+          ? PRO_CFG.paddlePriceIdProAI
+          : PRO_CFG.paddlePriceIdPro;
       // Initialize is idempotent — calling twice is safe.
       Paddle.Environment.set(PRO_CFG.paddleEnv); // 'production' or 'sandbox'
       Paddle.Initialize({ token: PRO_CFG.paddleClientToken });
       Paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
+        ...(isUpgrade ? { customData: { upgrade_from: licenseKey } } : {}),
         settings: {
           displayMode: 'overlay',
           theme: 'dark',
           locale: (typeof navigator !== 'undefined' && navigator.language) ? navigator.language.slice(0, 2) : 'en',
-          successUrl: typeof window !== 'undefined' ? window.location.origin + '/?paid=1' : undefined,
+          successUrl: typeof window !== 'undefined'
+            ? window.location.origin + (isUpgrade ? '/play?upgraded=1' : '/?paid=1')
+            : undefined,
         },
       });
     } catch (err) {
@@ -232,12 +287,14 @@ function useProStatus() {
         }
       } catch (_) {}
     }
-  }, [loadPaddleScript]);
+  }, [loadPaddleScript, licenseKey]);
+
+  const clearJustUpgraded = useCallback(() => setJustUpgraded(false), []);
 
   return { proStatus,
            isPro: proStatus === 'pro' || proStatus === 'pro_ai',
            isProAI: proStatus === 'pro_ai',
-           licenseKey, maskedEmail,
+           licenseKey, maskedEmail, justUpgraded, clearJustUpgraded,
            activateLicense, deactivateLicense, openCheckout };
 }
 
@@ -458,8 +515,20 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
 
 // ─── ProPaywall — the modal ────────────────────────────────────────────────────
 // Props: { t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }
-function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false }) {
-  const [view, setView] = useState('intro'); // 'intro'|'key'|'success'
+function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false }) {
+  // reason 'upgraded' = back from a confirmed Pro → Pro AI upgrade: open straight
+  // on the success note and close by itself.
+  const [view, setView] = useState(reason === 'upgraded' ? 'success' : 'intro'); // 'intro'|'key'|'about'|'success'
+  // A Pro owner is only ever offered the upgrade to Pro AI, never Pro again.
+  const upgradeOnly = proStatus === 'pro';
+  // Until the upgrade price exists in Paddle, a Pro owner is shown (and charged)
+  // the plain Pro AI price — never a €10 label on a €19.99 checkout.
+  const upTier = PRO_CFG.paddlePriceIdUpgrade ? 'upgrade' : 'pro_ai';
+  useEffect(() => {
+    if (reason !== 'upgraded') return;
+    const tm = setTimeout(() => { onClose && onClose(); }, 2800);
+    return () => clearTimeout(tm);
+  }, [reason]);
   const [keyInput, setKeyInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
@@ -555,7 +624,8 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
   // bright border. Pro AI tier uses the purple AI accent throughout (matches
   // the in-app AI feature colour); Pro stays in the gold brand colour.
   const renderTierCard = (tierKey, recommended) => {
-    const isAI = tierKey === 'pro_ai';
+    const isUp = tierKey === 'upgrade';
+    const isAI = tierKey === 'pro_ai' || isUp;
     // Per-tier accent palette — applied to border highlight, glow, check
     // marks, price line, RECOMMENDED ribbon, and the CTA button. Pro = gold;
     // Pro AI = purple (in-app AI accent).
@@ -574,11 +644,13 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
     const title = isAI
       ? tr('proAiTierTitle', 'Paintiano Pro AI')
       : tr('proTierTitle', 'Paintiano Pro');
-    const priceLine = isAI
-      ? tr('proAiTierPrice', '€19.99 · once, yours for life')
-      : tr('proTierPrice',   '€9.99 · once, yours for life');
+    const priceLine = isUp
+      ? tr('proUpgradePrice', '€10 · upgrade from your Pro')
+      : isAI
+        ? tr('proAiTierPrice', '€19.99 · once, yours for life')
+        : tr('proTierPrice',   '€9.99 · once, yours for life');
     const values = isAI ? [
-      ['proAiValueAll',   'Everything in Pro, plus:'],
+      isUp ? ['proUpgradeValueAll', 'Your Pro stays, plus:'] : ['proAiValueAll', 'Everything in Pro, plus:'],
       ['proAiValueText',  'AI composition from text moods'],
       ['proAiValueImage', 'AI composition from your images'],
       ['proAiValueAtmo',  'AI atmospheric tinting'],
@@ -607,7 +679,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
           marginBottom: 0 };
     return (
       <div style={cardStyle}>
-        {recommended && (
+        {recommended && !isUp && (
           <span style={Object.assign({}, recommendedBadge, { background: accent })}>{tr('proRecommended', 'Recommended')}</span>
         )}
         <p style={tierTitle}>{title}</p>
@@ -621,9 +693,11 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
           ))}
         </ul>
         <button style={ctaBtn} onClick={() => openCheckout(tierKey)}>
-          {isAI
-            ? tr('proAiGetCta', 'Get Pro AI')
-            : tr('proGetCta', 'Get Pro')}
+          {isUp
+            ? tr('proUpgradeCta', 'Upgrade to Pro AI')
+            : isAI
+              ? tr('proAiGetCta', 'Get Pro AI')
+              : tr('proGetCta', 'Get Pro')}
         </button>
       </div>
     );
@@ -653,14 +727,17 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               }}>✦</div>
             </div>
             <p style={{ fontSize: (.95*readScale)+'rem', fontWeight: 600, textAlign: 'center', margin: '0 0 6px' }}>
-              {reason === 'ai_trial'
-                ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
-                : tr('proPaywallTitle', 'Unlock the full Paintiano')}
+              {upgradeOnly
+                ? tr('proPaywallTitleUpgrade', 'Add unlimited AI')
+                : reason === 'ai_trial'
+                  ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
+                  : tr('proPaywallTitle', 'Unlock the full Paintiano')}
             </p>
             <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
-              {tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
+              {upgradeOnly ? tr('proPaywallSubUpgrade', 'You already have every style.') : tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
-            {(
+            {/* a Pro owner already has a key — the key entry stays in "Learn more" */}
+            {!upgradeOnly && (
               <button
                 onClick={() => setView('key')}
                 style={{
@@ -691,7 +768,9 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                 {/* Two tier cards, ordered by what brought the user here.
                     ai_trial → Pro AI on top with "Recommended" ribbon, Pro below.
                     settings → Pro on top (cheaper, sufficient for most non-AI needs), Pro AI below. */}
-                {reason === 'ai_trial' ? (
+                {upgradeOnly ? (
+                  renderTierCard(upTier, true)
+                ) : reason === 'ai_trial' ? (
                   <>
                     {renderTierCard('pro_ai', true)}
                     {renderTierCard('pro', false)}
@@ -912,20 +991,24 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               </>
             ) : (
               <>
-                {/* Get Pro — gold outline (secondary in the about view) */}
+                {/* Get Pro — gold outline (secondary in the about view); a Pro owner never sees it */}
+                {!upgradeOnly && (
                 <button style={Object.assign({}, btnGoldOutline, { marginBottom: 10 })}
                         onClick={() => openCheckout('pro')}>
                   {tr('proGetCta', 'Get Pro')} — {tr('proTierPriceShort', '€9.99')}
                 </button>
+                )}
                 {/* Get Pro AI — purple filled (primary, recommended upgrade) */}
-                <button onClick={() => openCheckout('pro_ai')}
+                <button onClick={() => openCheckout(upgradeOnly ? upTier : 'pro_ai')}
                   style={{
                     width: '100%', background: AI_PURPLE, color: '#0a0a12', border: 'none',
                     padding: '14px 18px', borderRadius: 5, fontSize: (.78*readScale)+'rem',
                     fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase',
                     cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10,
                   }}>
-                  {tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}
+                  {(upgradeOnly && upTier === 'upgrade')
+                    ? <>{tr('proUpgradeCta', 'Upgrade to Pro AI')} — {tr('proUpgradePriceShort', '€10')}</>
+                    : <>{tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}</>}
                 </button>
               </>
             )}
@@ -950,10 +1033,10 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
               background: 'rgba(201,168,76,.15)', color: GOLD, fontSize: 22, marginBottom: 12,
             }}>✓</div>
             <p style={{ fontSize: (.9*readScale)+'rem', fontWeight: 600, margin: '0 0 6px' }}>
-              {tr('proWelcomeTitle', 'Welcome to Pro')}
+              {reason === 'upgraded' ? tr('proAiWelcomeTitle', 'Pro AI is active') : tr('proWelcomeTitle', 'Welcome to Pro')}
             </p>
             <p style={{ fontSize: (.7*readScale)+'rem', color: '#9a9a9a', margin: 0, lineHeight: 1.5 }}>
-              {tr('proWelcomeBody', 'All features unlocked on this device.')}
+              {reason === 'upgraded' ? tr('proAiWelcomeBody', 'AI is now unlimited on this device.') : tr('proWelcomeBody', 'All features unlocked on this device.')}
             </p>
           </div>
         )}
