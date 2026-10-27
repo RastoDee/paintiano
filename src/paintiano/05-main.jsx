@@ -137,7 +137,7 @@ const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 // sig:true makes an unpinned one take the coin of its address instead of the tier's fusion style (Free would otherwise always take turns)
 function _sigPin(sg){
   if(!sg || !sg.keys || !sg.keys.length) return null;
-  return { keys:sg.keys.slice(), ...(sg.phs?{phs:sg.phs.slice()}:{}), ...(sg.fs?{fs:sg.fs}:{}), sig:true };
+  return { keys:sg.keys.slice(), ...(sg.phs?{phs:sg.phs.slice()}:{}), ...(sg.fs?{fs:sg.fs}:{}), sig:true, rv:1 };   // rv: the shape rules it was hung with (02-draw _fuRules)
 }
 const SIG_CURATED = {
   [SAMPLE_MIDI_NAME]:   {keys:['gold','spiral'],   roles:['ornament','light'], ph:3, phs:[3,1], mode:'harmony', fs:'A'},   // Liebestraum: Klimt's gold and Hilma af Klint's spirals on a warm rust ground — the warm one of the three (Rasto's pick, Oct 2026; replaced Sam Francis × Monet)
@@ -580,7 +580,7 @@ function _favHash(arr){
 // The painting's identity: same key = the same painting, so ♥ shows it is saved.
 function _favAddrKey(o){
   return [o.pk, o.style||'', (o.keys||[]).map(k=>k||'mosaic').join('+'), o.phase|0, o.seed>>>0, o.mode, o.tone,
-          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.fa && o.fa.fs==='E' ? ['E'] : []).join('|');   // an E fusion is another painting (an A one keeps the old key)
+          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.fa && o.fa.fs==='E' ? ['E'] : []).concat(o.fa && o.fa.rv===2 ? ['r2'] : []).join('|');   // … and a painting under the new shape rules is another painting too   // an E fusion is another painting (an A one keeps the old key)
 }
 const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
 const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
@@ -602,7 +602,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
   const keep = { fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
   let ok = true;
   try{
-    G.__PAINT_FU_PHS = fav.fa ? { keys:fav.fa.keys.slice(), phs:fav.fa.phs.slice(), fs:(fav.fa.fs==='E' ? 'E' : 'A') } : null;   // a Favorite keeps the fusion style it was painted in
+    G.__PAINT_FU_PHS = fav.fa ? { keys:fav.fa.keys.slice(), phs:fav.fa.phs.slice(), fs:(fav.fa.fs==='E' ? 'E' : 'A'), rv:(fav.fa.rv|0)||1 } : null;   // a Favorite keeps the fusion style it was painted in
     G.__PAINT_SIG_PHS = null;
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
@@ -3097,11 +3097,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _fusionAddr = (st, ph)=>{
     const ks=(st||[]).map(k=>k||'mosaic').filter(k=>typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[k]);
     if(ks.length<2) return null;
-    const fr=fuRollRef.current; if(fr && fr.keys.join()===ks.join()) return { keys:ks, phs:fr.phs.slice(), fs:_fuStyleOf(ks, fr.phs) };
+    const fr=fuRollRef.current; if(fr && fr.keys.join()===ks.join()) return { keys:ks, phs:fr.phs.slice(), fs:_fuStyleOf(ks, fr.phs), rv:_fuRules(ks, fr.phs) };
     const ov=(typeof globalThis!=='undefined') ? globalThis.__PAINT_SIG_PHS : null;
     const on=!!(ov && ov.keys && ov.phs && ov.keys.join()===ks.join());
     const phs=ks.map((k,i)=> (on && ov.phs[i]!=null) ? (ov.phs[i]|0) : _fuVariantOf(k,i,ph|0));
-    return { keys:ks, phs, fs:_fuStyleOf(ks, phs) };
+    return { keys:ks, phs, fs:_fuStyleOf(ks, phs), rv:_fuRules(ks, phs) };
   };
   // The Fusion style of what is on stage right now: 'A' (take turns) | 'E' (one new painter / composer) | null (no fusion / jam).
   // Painters: the address fuseDNA paints (a Favorite or a poster keeps its own). Composers: the style the last jam was written in
@@ -3557,7 +3557,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(_fa){
         if(!ALL_ARTIST_KEYS.includes(_fa.keys[0]) || _fa.keys[0]==='mosaicFamily'){ alert('Poster maker: fuzia musi zacinat konkretnym umelcom (nie Mosaic) - zmen poradie.'); return; }
         _artQ=_fa.keys[0];
-        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',')+(_fa.fs==='E' ? '&fs=E' : '');
+        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',')+(_fa.fs==='E' ? '&fs=E' : '')+(_fa.rv===2 ? '&r=2' : '');
       }
       const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+_artQ+'&v='+vNow+_withQ+'&p='+mode+'&t='+tone;
       // fonts first (Cormorant is already imported by the app shell)
@@ -3826,7 +3826,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _qrDropStage = ()=>{ if(!qrStageRef.current) return; qrStageRef.current=null;
     try{ const sg=songSigRef.current; globalThis.__PAINT_SIG_PHS=_sigPin(sg); }catch(_){} };
   const _qrPhs = ()=> (qrArtistRef.current && qrStageRef.current)
-    ? { keys:[qrArtistRef.current].concat(qrStageRef.current.keys), phs:[qrVariantRef.current|0].concat(qrStageRef.current.vs), fs:qrStageRef.current.fs||'A' } : null;
+    ? { keys:[qrArtistRef.current].concat(qrStageRef.current.keys), phs:[qrVariantRef.current|0].concat(qrStageRef.current.vs), fs:qrStageRef.current.fs||'A', rv:qrStageRef.current.rv||1 } : null;
   const litePieceRef = useRef(0);
   const qrModeRef = useRef(null);
   const qrToneRef = useRef(null);
@@ -3859,7 +3859,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _ws=_qw.split(',').slice(0,4).map(x=>{ const a=String(x).split('.'); return {k:a[0], n:parseInt(a[1],10)}; })
           .filter(o=> o.k && ((typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(o.k) && o.k!=='mosaicFamily') || o.k==='mosaic')
                       && typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[o.k] && Number.isInteger(o.n) && o.n>=0 && o.n<_vN(o.k));
-        if(_ws.length) qrStageRef.current={ keys:_ws.map(o=>o.k), vs:_ws.map(o=>o.n), fs:(_u.get('fs')==='E' ? 'E' : 'A') };   // &fs=E — the poster's fusion style
+        if(_ws.length) qrStageRef.current={ keys:_ws.map(o=>o.k), vs:_ws.map(o=>o.n), fs:(_u.get('fs')==='E' ? 'E' : 'A'), rv:(_u.get('r')==='2' ? 2 : 1) };   // &fs=E — the poster's fusion style; &r=2 — its shape rules
       }
       // ?p= palette and ?t= tone — the rest of the painting's address. Without
       // them a poster made in e.g. spectral/pastel would repaint in the scanner's
@@ -5376,7 +5376,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       enter: ()=>{
         if(keep) return;
         keep={ fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
-        G.__PAINT_FU_PHS = fv.fa ? { keys:fv.fa.keys.slice(), phs:fv.fa.phs.slice(), fs:(fv.fa.fs==='E' ? 'E' : 'A') } : null;
+        G.__PAINT_FU_PHS = fv.fa ? { keys:fv.fa.keys.slice(), phs:fv.fa.phs.slice(), fs:(fv.fa.fs==='E' ? 'E' : 'A'), rv:(fv.fa.rv|0)||1 } : null;
         G.__PAINT_SIG_PHS = null; G.__PAINT_MUSIC_DNA = fv.dna || null;
         _setSongEnergy(fv.se); _setMixOn(fv.tone==='real');
       },

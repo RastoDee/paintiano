@@ -13958,6 +13958,32 @@ function _fuStyleOf(ks, phs){
 // how a painter's hand paints a form — by the artist where the genes alone would mislead
 // (Picasso's glow belongs to his line, not to a veil; Monet's hand is the touch)
 const _FU_HAND={rothko:'veil',klee:'veil',bloom:'veil',monet:'touches',pollock:'ragged',mitchell:'ragged',picasso:'flat'};
+// ── SHAPE RULES (rules version 2, Oct 2026) ──────────────────────────────────
+// The main forms of a crossing are circles, wheels, arcs, rectangles, discs and
+// half-discs, bands and lines. Triangles, rhombi, trapezoids and polygons stay,
+// but far fewer; stars of five or more points fewer still; the concentric wheels
+// are a few strong forms. A Synthesis is a new painter, not a collage: no
+// parent's picture-sign is painted as such — Haring's figure, dog and heart,
+// Hokusai's Fuji and curling crest become plain forms, and what they stand for
+// comes in as a trait of the whole painter (Haring's bold contour and motion
+// ticks, Hokusai's ink line). A Collage keeps every original, only fewer.
+// Version 1 is everything painted before: the Signatures, Favorites saved and
+// posters printed until now, and the landing page's Ensemble painting repaint
+// exactly as they were (see _fuRules).
+const _FU_SYN_MAP={figure:'disc',dog:'rect',heart:'disc',starburst:'star',poly:'trap',facet:'trap',arrow:'tri',speech:'panel',tvbox:'panel',fuji:'trap',crest:'wave',eye:'target'};
+const _FU_SYN_TRAIT={pop:{outline:.9,ticks:.45},hokusai:{outline:.6,ticks:0},lichtenstein:{outline:.8,ticks:.2},mondrian:{outline:.8,ticks:0},raffel:{outline:0,ticks:.15}};
+// addresses painted under version 1 wherever they come from (the landing page's Ensemble painting)
+const _FU_LEGACY=new Set(['raffel,pollock,lichtenstein,delaunay|4,0,2,5']);
+// which rules paint this address: a pinned address carries its own (rv), a fresh crossing takes the current ones
+function _fuRules(ks, phs){
+  const G=(typeof globalThis!=='undefined') ? globalThis : {}; const j=(ks||[]).join();
+  if(_FU_LEGACY.has(j+'|'+(phs||[]).join(','))) return 1;
+  const ur=G.__PAINT_FU_PHS; if(ur && ur.keys && ur.keys.join()===j) return ur.rv || 2;
+  const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.keys.join()===j && ov.rv) return ov.rv;
+  return 2;
+}
+// the families whose painters lend a budget a little more room (Delaunay's wheels, Miró's stars, Picasso's planes)
+const _FU_FAM_WHEEL=['delaunay','spiral','arcs','kandinsky','bauhaus'], _FU_FAM_ANG=['picasso','kandinsky','klee','bauhaus','wave','bulge'], _FU_FAM_STAR=['miro','lichtenstein','matisse'];
 // who lends what to a new painter (Fusion style E): indexes into the members — the hand, the ground, the composition
 // a soft hand — veils (Rothko, Klee, Sam Francis) or touches (Monet): every form painted that way turns the whole picture into a wash
 function _fuSoftHand(k, ph){ const h=_FU_HAND[k]; if(h) return h==='veil' || h==='touches'; const d=_dnaOf(k, ph); return !!d && d.edge>=0.3; }
@@ -13972,10 +13998,12 @@ function _fuRolesOf(phs, ks){
   }
   return { hand:h, ground:(h+1)%n, layout:n>=3 ? (h+2)%n : (h+1)%n };
 }
-function _fuOnePainter(ks, ph, phs, ws, T, num){
+function _fuOnePainter(ks, ph, phs, ws, T, num, rv){
   const R=_fuRolesOf(phs, ks), hi=R.hand, gi=R.ground, li=R.layout;
   const H=ws[hi][0], G=ws[gi][0], Lp=ws[li][0];
-  const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ mark[k]=(mark[k]||0)+d.mark[k]/t*w/T; }); });
+  const v2=(rv|0)>=2;
+  const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ const q=v2 ? (_FU_SYN_MAP[k]||k) : k; mark[q]=(mark[q]||0)+d.mark[k]/t*w/T; }); });
+  let _ol=0, _tk=0; if(v2) ks.forEach(k=>{ const t=_FU_SYN_TRAIT[k]; if(t){ _ol=Math.max(_ol,t.outline); _tk=Math.max(_tk,t.ticks); } });
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(G.ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
   const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
@@ -13983,7 +14011,7 @@ function _fuOnePainter(ks, ph, phs, ws, T, num){
     ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
     mark, layout:Object.assign({}, Lp.layout),
     size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
-    edge:H.edge, alpha:H.alpha, outline:H.outline, wobble:H.wobble, lines:H.lines,
+    edge:H.edge, alpha:H.alpha, outline:Math.max(H.outline,_ol), ticks:_tk, wobble:H.wobble, lines:H.lines,
     layers:Math.max(1,H.layers|0), density:num('density'), halftone:H.halftone, tones, tilt:0 };
 }
 function fuseDNA(keys, ph){
@@ -14001,13 +14029,14 @@ function fuseDNA(keys, ph){
   const ws=ks.map((k,i)=>[_dnaOf(k,phs[i]), 1/ks.length]);
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
-  if(_fuStyleOf(ks, phs)==='E') return _fuMusic(_fuOnePainter(ks, ph, phs, ws, T, num));
+  const rv=_fuRules(ks, phs);
+  if(_fuStyleOf(ks, phs)==='E'){ const F1=_fuOnePainter(ks, ph, phs, ws, T, num, rv); F1.rv=rv; return _fuMusic(F1); }
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
   const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
   return _fuMusic({
-    keys:ks, ph:(ph|0), phs, ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
+    keys:ks, ph:(ph|0), phs, rv, ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
     mark:dict('mark'), layout:dict('layout'),
     size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
     edge:num('edge'), alpha:num('alpha'), outline:num('outline'), wobble:num('wobble'), lines:num('lines'),
@@ -14116,6 +14145,7 @@ function _fuSil(ctx, kind, rr, R, F){
     case 'cube': { for(let j=0;j<6;j++){ const a=j/6*6.2832-1.5708; j?ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr); } ctx.closePath(); break; }
     case 'facet': case 'poly': { const k=4+(R()*3|0), a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.55+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q); } ctx.closePath(); break; }
     case 'tri': { const a=R()*6.28; for(let j=0;j<3;j++){ const t=a+j*2.094; j?ctx.lineTo(Math.cos(t)*rr,Math.sin(t)*rr):ctx.moveTo(Math.cos(t)*rr,Math.sin(t)*rr);} ctx.closePath(); break; }
+    case 'trap': { const t=0.4+R()*0.25; ctx.moveTo(-rr,rr*.6); ctx.lineTo(rr,rr*.6); ctx.lineTo(rr*t,-rr*.6); ctx.lineTo(-rr*t,-rr*.6); ctx.closePath(); break; }
     case 'diamond': ctx.moveTo(0,-rr); ctx.lineTo(rr*.6,0); ctx.lineTo(0,rr); ctx.lineTo(-rr*.6,0); ctx.closePath(); break;
     case 'star': { for(let j=0;j<10;j++){ const a=j/10*6.2832-1.5708, q=j%2?rr*.45:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); break; }
     case 'starburst': { for(let j=0;j<16;j++){ const a=j/16*6.2832, q=j%2?rr*.4:rr; j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); break; }
@@ -14220,6 +14250,10 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
     }
   }
   ctx.globalAlpha=a0; _fuSilDetail(ctx, kind, rr, col, col2, F, R);
+  if(F.fs==='E' && (F.rv|0)>=2){ const ink=F.groundLum>128?'#141414':'#f4efe4';   // the painter's traits: an ink contour on every hand, Haring's motion ticks
+    if(F.hand!=='flat' && F.outline>=0.6 && R()<F.outline*0.7){ ctx.globalAlpha=1; ctx.strokeStyle=ink; ctx.lineWidth=Math.max(1.4, Math.min(rr*.08, S*0.007)); path(); ctx.stroke(); }
+    if(F.ticks>0 && kind!=='field' && R()<F.ticks){ const [ew,eh]=_fuExt(kind,rr); const e=Math.max(ew,eh)*0.8; const nt=3+(R()*3|0), a1=R()*6.2832; ctx.globalAlpha=0.95; ctx.strokeStyle=ink; ctx.lineCap='round'; ctx.lineWidth=Math.max(1.3, Math.min(rr*.06, S*0.005));
+      for(let j=0;j<nt;j++){ const a=a1+(j-(nt-1)/2)*0.34, q0=e*1.15, q1=e*(1.36+R()*.14); ctx.beginPath(); ctx.moveTo(Math.cos(a)*q0,Math.sin(a)*q0); ctx.lineTo(Math.cos(a)*q1,Math.sin(a)*q1); ctx.stroke(); } } }
   ctx.globalAlpha=1;
 }
 // the gestures — a thrown line, a loaded stroke, a ray, a band, the water, Hokusai's curling crest: drawn once, in their parent's own
@@ -14549,13 +14583,19 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   // E: one hand for every form (F); a form keeps the scale of the parent it comes from (_own); ONE palette for the whole
   // painting — the parents' sampled palettes interleaved (≤6), unless a parent keeps the song's own colours (Monet, a monochrome variant)
   const _own={}; let _palE=null;
-  if(_E){ PDs.forEach((pd,i)=>{ for(const k in pd.mark){ if(_own[k]===undefined || pd.mark[k]>PDs[_own[k]].mark[k]) _own[k]=i; } });
+  const _v2=(F.rv|0)>=2;
+  if(_E){ PDs.forEach((pd,i)=>{ for(const k in pd.mark){ const q=_v2 ? (_FU_SYN_MAP[k]||k) : k; if(_own[q]===undefined || pd.mark[k]>(PDs[_own[q]].mark[q]||0)) _own[q]=i; } });
     const P=[]; if(!F.keys.some((k,i)=>k==='monet'||PDs[i].nosnap)){ for(let q=0;q<6;q++) for(let i=0;i<SM.length && P.length<6;i++){ const p=SM[i]&&SM[i].pal; if(p&&p[q]) P.push(p[q]); } }
     _palE=P.length>=3 ? P : null; }
   const _dAvg = _E ? 0.3+0.5*F.density : PDs.reduce((s,pd)=>s+(0.3+0.5*pd.density),0)/PDs.length;   // the compressed density the loop really uses
   let _exp=0; for(let ly=0; ly<F.layers; ly++){ const lf=(ly+1)/F.layers; _exp += Math.ceil(n/stride)*Math.min(1, _dAvg*(0.45+lf*0.55)*bigCap*crowd); }
   _exp *= (F.size[1]>0.2 ? 1 : (F.keys.length>=3 ? 1.6 : 2));
   const REPS = Math.max(1, Math.min(6, Math.ceil((90*bigCap)/Math.max(1,_exp))));
+  // the shape budgets (rules 2) follow the painting: a share of the marks it will paint, a little more room where a member's
+  // own family is (Delaunay's wheels, Miró's stars, Picasso's planes), within bounds that keep a short and a long piece balanced
+  const _M=Math.max(30, Math.min(220, _exp*REPS)), _fam=(L)=>F.keys.filter(k=>L.includes(k)).length/Math.max(1,F.keys.length);
+  const _bud=(f,lo,hi,L)=>Math.max(lo, Math.min(hi, Math.round(_M*f*(1+0.6*(L?_fam(L):0)))));
+  const _Bwheel=_bud(0.08,4,12,_FU_FAM_WHEEL), _Bang=_bud(0.06,3,10,_FU_FAM_ANG), _Bstar=_bud(0.035,2,6,_FU_FAM_STAR), _Bhrc=_bud(0.08,4,10), _Btoy=_bud(0.05,2,6);
   const nV = n*REPS;
   // Full-width idioms (Riley's bands, Mondrian's grid lines, Lichtenstein's
   // wavy lines) are a STRUCTURE, not a per-chord mark: a long piece used to
@@ -14599,6 +14639,17 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         // hand — in a crossing they become a loose drift of polka dots.
         const _kus = F.keys[_po]==='kusama';
         if(_kus && kind==='panel') kind='dotcluster';
+        if(_v2){
+          const _slot=(tag,B)=>{ const sl=tag+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)) return false; _spanUsed.add(sl); return true; };
+          // the concentric wheels: a few strong forms; past the budget a Collage leaves them out, a Synthesis paints a round one as a plain disc
+          if(/^(target|kring|orphic|arch|fan|protractor)$/.test(kind) && !_slot('WH',_Bwheel)){ if(_E && /^(target|kring|orphic)$/.test(kind)) kind='disc'; else continue; }
+          // stars (5+ points) and angular shapes stay, far fewer than the main forms; past the budget the main form they stand nearest to
+          if(/^(star|starburst|asterisk)$/.test(kind) && !_slot('ST',_Bstar)){ if(kind==='asterisk') continue; kind='disc'; }
+          if(/^(tri|diamond|poly|facet|trap)$/.test(kind) && !_slot('AN',_Bang)) kind=({tri:'arch',diamond:'disc',trap:'arch'})[kind]||'rect';
+          // a Collage keeps the originals, only fewer: Haring's cast, hearts, arrows, speech bubbles
+          if(!_E && _FU_HRC.test(kind) && !_slot('HC',_Bhrc)) continue;
+          if(!_E && /^(heart|arrow|speech|tvbox)$/.test(kind) && !_slot('TY',_Btoy)) continue;
+        }
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
         let r=Math.max(_kus&&kind==='dotcluster' ? S*0.03 : S*0.006, base*(0.8+R()*0.4));
