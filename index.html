@@ -32,6 +32,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/landing/hero-glass-poster.webp">
+<script>/* a landing always opens at the top: no restored scroll position on reload or a reopened tab */try{if('scrollRestoration' in history)history.scrollRestoration='manual';}catch(_){}</script>
 <script>/* a paid member's welcome bar is reserved before first paint, so nothing shifts when it fills in */try{var _l=JSON.parse(localStorage.getItem('paintiano_license_v1')||'null');if(_l&&typeof _l.key==='string'&&_l.key)document.documentElement.classList.add('pf-member');}catch(_){}</script>
 <style>
 :root{
@@ -637,6 +638,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
 <script>
 (function(){
   var rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!location.hash){ try{ document.documentElement.style.scrollBehavior='auto'; window.scrollTo(0,0); document.documentElement.style.scrollBehavior=''; }catch(_){} }
   function track(ev,props){ try{ window.posthog && window.posthog.capture(ev,props||{}); }catch(_){} }
 
   /* hero: opens on a painting already well under way, then the ✦ Signature flash.
