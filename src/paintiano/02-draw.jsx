@@ -13970,8 +13970,13 @@ const _FU_HAND={rothko:'veil',klee:'veil',bloom:'veil',monet:'touches',pollock:'
 // Version 1 is everything painted before: the Signatures, Favorites saved and
 // posters printed until now, and the landing page's Ensemble painting repaint
 // exactly as they were (see _fuRules).
-const _FU_SYN_MAP={figure:'disc',dog:'rect',heart:'disc',starburst:'star',poly:'trap',facet:'trap',arrow:'tri',speech:'panel',tvbox:'panel',fuji:'trap',crest:'wave',eye:'target'};
-const _FU_SYN_TRAIT={pop:{outline:.9,ticks:.45},hokusai:{outline:.6,ticks:0},lichtenstein:{outline:.8,ticks:.2},mondrian:{outline:.8,ticks:0},raffel:{outline:0,ticks:.15}};
+const _FU_SYN_MAP={figure:'disc',dog:'rect',heart:'disc',starburst:'star',poly:'trap',facet:'trap',arrow:'tri',speech:'panel',tvbox:'panel',fuji:'arch',crest:'wave',eye:'disc',cutout:'disc',leaf:'disc',petal:'disc',net:'dotcluster',miroblob:'blob'};
+// what a painter lends the new painter: a way of drawing, never a picture
+//   outline: an ink contour (pop: on every form, the same width; hokusai: a brush line, thick and thin)
+//   ticks: Haring's motion marks · pack: forms pressed together · echo: Hokusai's wave — an arc repeated smaller, and the field in layers
+//   cut: Matisse's scissor edge, and air around fewer forms · wire: Miró's thin line joining the forms, ink dots with a coloured heart
+//   raster: Lichtenstein's dot screen on half the forms · gold: Klimt's mosaic inside the forms · grounddots: Kusama's dots on everything, the ground too
+const _FU_SYN_TRAIT={pop:{outline:1,ticks:.3,pack:1},hokusai:{outline:.7,taper:1,echo:1,stack:1},matisse:{cut:1,air:1},miro:{wire:1,inkdots:1},lichtenstein:{outline:.9,raster:.5},gold:{gold:.45},kusama:{grounddots:1},mondrian:{outline:.8},raffel:{ticks:.1}};
 // addresses painted under version 1 wherever they come from (the landing page's Ensemble painting)
 const _FU_LEGACY=new Set(['raffel,pollock,lichtenstein,delaunay|4,0,2,5']);
 // which rules paint this address: a pinned address carries its own (rv), a fresh crossing takes the current ones
@@ -14003,7 +14008,7 @@ function _fuOnePainter(ks, ph, phs, ws, T, num, rv){
   const H=ws[hi][0], G=ws[gi][0], Lp=ws[li][0];
   const v2=(rv|0)>=2;
   const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ const q=v2 ? (_FU_SYN_MAP[k]||k) : k; mark[q]=(mark[q]||0)+d.mark[k]/t*w/T; }); });
-  let _ol=0, _tk=0; if(v2) ks.forEach(k=>{ const t=_FU_SYN_TRAIT[k]; if(t){ _ol=Math.max(_ol,t.outline); _tk=Math.max(_tk,t.ticks); } });
+  let _ol=0, _tk=0; const tr={}; if(v2) ks.forEach(k=>{ const t=_FU_SYN_TRAIT[k]; if(t){ _ol=Math.max(_ol,t.outline||0); _tk=Math.max(_tk,t.ticks||0); for(const q in t) tr[q]=Math.max(tr[q]||0,t[q]); } });
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(G.ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
   const tones={}; ws.forEach(([d,w])=>{ tones[d.tone]=(tones[d.tone]||0)+w/T; });
@@ -14011,8 +14016,8 @@ function _fuOnePainter(ks, ph, phs, ws, T, num, rv){
     ground:`rgb(${gr[0]/T|0},${gr[1]/T|0},${gr[2]/T|0})`, groundLum:(gr[0]*.299+gr[1]*.587+gr[2]*.114)/T,
     mark, layout:Object.assign({}, Lp.layout),
     size:[ws.reduce((s,[d,w])=>s+d.size[0]*w,0)/T, ws.reduce((s,[d,w])=>s+d.size[1]*w,0)/T],
-    edge:H.edge, alpha:H.alpha, outline:Math.max(H.outline,_ol), ticks:_tk, wobble:H.wobble, lines:H.lines,
-    layers:Math.max(1,H.layers|0), density:num('density'), halftone:H.halftone, tones, tilt:0 };
+    edge:H.edge, alpha:H.alpha, outline:Math.max(H.outline,_ol), ticks:_tk, tr, wobble:tr.pack ? H.wobble*0.4 : H.wobble, lines:Math.max(H.lines, tr.wire ? 0.6 : 0),
+    layers:Math.max(1,H.layers|0), density:num('density')*(tr.air ? 0.7 : tr.pack ? 1.25 : 1), halftone:Math.max(H.halftone, tr.raster||0), tones, tilt:0 };
 }
 function fuseDNA(keys, ph){
   const ks=(keys||[]).map(k=>k||'mosaic').filter(k=>ARTIST_DNA[k]);
@@ -14030,7 +14035,7 @@ function fuseDNA(keys, ph){
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
   const rv=_fuRules(ks, phs);
-  if(_fuStyleOf(ks, phs)==='E'){ const F1=_fuOnePainter(ks, ph, phs, ws, T, num, rv); F1.rv=rv; return _fuMusic(F1); }
+  if(_fuStyleOf(ks, phs)==='E'){ const F1=_fuOnePainter(ks, ph, phs, ws, T, num, rv); F1.rv=rv; if(F1.tr && F1.tr.stack){ F1.layout=Object.assign({},F1.layout); F1.layout.stack=(F1.layout.stack||0)+0.5; } return _fuMusic(F1); }
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
@@ -14214,7 +14219,9 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
   col2=_fuApart(col, col2||col);
   const S=F._S||600, rr=r;
   let sv=null, qi=0; const path=()=>{ if(!sv){ sv=[]; _fuSil(ctx,kind,rr,()=>{ const v=R(); sv.push(v); return v; },F); } else { qi=0; _fuSil(ctx,kind,rr,()=>sv[qi++],F); } };
-  const [w,h]=_fuExt(kind,rr); const own=_FU_FILL[kind]||'flat';
+  const [w,h]=_fuExt(kind,rr); const _tr=(F.fs==='E' && (F.rv|0)>=2 && F.tr) ? F.tr : null;
+  const own=(_tr && _tr.gold && (_FU_FILL[kind]||'flat')==='flat' && kind!=='field' && R()<_tr.gold) ? 'gold' : (_FU_FILL[kind]||'flat');
+  if(_tr && _tr.cut && kind!=='field'){ ctx.save(); ctx.rotate((R()-.5)*0.08); ctx.scale(1+(R()-.5)*0.07, 1+(R()-.5)*0.07); ctx.globalAlpha=F.alpha; ctx.fillStyle=col; path(); ctx.fill(); ctx.restore(); }   // the scissor edge: a second cut of the same form, a hair off
   const a0=(F.alpha>=0.85 && F.edge<=0.2) ? F.alpha : F.alpha/Math.sqrt(F.layers);
   ctx.lineJoin='round'; ctx.lineCap='round';
   const inner=(a)=>{ if(own==='flat') return; ctx.save(); path(); ctx.clip(); ctx.globalAlpha=a; _fuFill(ctx, own, rr, w, h, col, col2, R, F, a, path); ctx.restore(); };
@@ -14251,7 +14258,8 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
   }
   ctx.globalAlpha=a0; _fuSilDetail(ctx, kind, rr, col, col2, F, R);
   if(F.fs==='E' && (F.rv|0)>=2){ const ink=F.groundLum>128?'#141414':'#f4efe4';   // the painter's traits: an ink contour on every hand, Haring's motion ticks
-    if(F.hand!=='flat' && F.outline>=0.6 && R()<F.outline*0.7){ ctx.globalAlpha=1; ctx.strokeStyle=ink; ctx.lineWidth=Math.max(1.4, Math.min(rr*.08, S*0.007)); path(); ctx.stroke(); }
+    const _t=F.tr||{}; const _always=_t.outline>=1;
+    if((F.hand!=='flat' || _always) && F.outline>=0.6 && (_always || R()<F.outline*0.7)){ ctx.globalAlpha=1; ctx.strokeStyle=ink; const lw=Math.max(1.4, Math.min(rr*.08, S*0.007)); ctx.lineWidth=_t.taper ? lw*(0.5+R()*1.1) : lw; path(); ctx.stroke(); }
     if(F.ticks>0 && kind!=='field' && R()<F.ticks){ const [ew,eh]=_fuExt(kind,rr); const e=Math.max(ew,eh)*0.8; const nt=3+(R()*3|0), a1=R()*6.2832; ctx.globalAlpha=0.95; ctx.strokeStyle=ink; ctx.lineCap='round'; ctx.lineWidth=Math.max(1.3, Math.min(rr*.06, S*0.005));
       for(let j=0;j<nt;j++){ const a=a1+(j-(nt-1)/2)*0.34, q0=e*1.15, q1=e*(1.36+R()*.14); ctx.beginPath(); ctx.moveTo(Math.cos(a)*q0,Math.sin(a)*q0); ctx.lineTo(Math.cos(a)*q1,Math.sin(a)*q1); ctx.stroke(); } } }
   ctx.globalAlpha=1;
@@ -14555,6 +14563,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const g0 = SM[_gi] && SM[_gi].ground;
   if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
   if(!noGround){ ctx.fillStyle=F.ground; ctx.fillRect(0,0,CW,CH); }
+  if(_E && (F.rv|0)>=2 && F.tr && F.tr.grounddots){ const Rg=_seedRnd(9091, ss, 5, 7); const st=S*0.055; ctx.save(); ctx.fillStyle=F.groundLum>128?'rgba(20,18,24,.22)':'rgba(244,239,228,.2)';
+    for(let yy=st*.5; yy<CH; yy+=st) for(let xx=st*.5; xx<CW; xx+=st){ const q=st*(0.08+Rg()*0.16); ctx.beginPath(); ctx.arc(xx+(Rg()-.5)*st*.4, yy+(Rg()-.5)*st*.4, q, 0, 6.2832); ctx.fill(); } ctx.restore(); }
   const _defer=[];   // gestures, replayed over the underpainting (see _FU_UNDER)
   const _monetIn=F.keys.indexOf('monet'); const _veil=[];   // Monet in the fusion: his water also reflects the partner and veils it (see below)
   // long pieces: paint every k-th chord so a 3000-chord MIDI stays ~320 marks/layer — room to breathe
@@ -14686,7 +14696,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         // E: a closed form is painted by the painting's one hand (_fuForm); a gesture stays its parent's (_fuMark)
         if(_E && !_FU_GEST.test(kind) && !_FU_HRC.test(kind)){
           if(_FU_UNDER.test(kind)){ ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); _fuForm(ctx, kind, r, col, col2, R, F); ctx.restore(); }
-          else { const vals=[]; _fuForm(_FU_NULL, kind, r, col, col2, ()=>{ const v=R(); vals.push(v); return v; }, F); _defer.push([tx, ty, 'FM:'+kind, r, col, ang, col2, vals, F, _po]); }
+          else { const vals=[]; _fuForm(_FU_NULL, kind, r, col, col2, ()=>{ const v=R(); vals.push(v); return v; }, F); _defer.push([tx, ty, 'FM:'+kind, r, col, ang, col2, vals, F, _po]);
+            if(F.tr && F.tr.echo && /^(arch|arc|disc)$/.test(kind) && R()<0.5){ const d=R()<.5?-1:1; _defer.push([tx+d*r*1.9, ty+r*.15, 'FM:'+kind, r*.55, col2, ang, col, vals, F, _po]); if(R()<.5) _defer.push([tx+d*r*3.1, ty+r*.25, 'FM:'+kind, r*.3, col, ang, col2, vals, F, _po]); } }   // Hokusai: the wave — the same form again, smaller, and smaller
           continue; }
         const FPd=_E ? F : FP;
         if(_FU_UNDER.test(kind)){
@@ -14731,6 +14742,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     const FPv=Object.assign({}, FPm, {alpha:0.42});
     for(const [tx,ty,r,col,col2] of _veil){ ctx.save(); ctx.translate(tx, ty); _fuMark(ctx, 'surface', r*0.85, col, FPv, Rm, 0, col2); ctx.restore(); }
   }
+  if(_E && (F.rv|0)>=2 && F.tr && F.tr.inkdots){ const Rm=_seedRnd(7071, ss, 3, 5); const ink=F.groundLum>128?'#141414':'#f4efe4'; ctx.save(); let k=0;
+    for(let i=0;i<L && k<9;i+=stride){ if(!pos[i] || Rm()>0.12) continue; const [x,y]=pos[i]; const q=S*(0.012+Rm()*0.014); ctx.globalAlpha=1; ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(x+q*1.6,y-q*1.4,q,0,6.2832); ctx.fill(); const [cr,cg,cb]=gc(60+((i*7)%24),90); ctx.fillStyle=`rgb(${cr},${cg},${cb})`; ctx.beginPath(); ctx.arc(x+q*1.6,y-q*1.4,q*.4,0,6.2832); ctx.fill(); k++; } ctx.restore(); }   // Miró: ink dots with a coloured heart
   // connecting thread — only from the hands that really draw one (Pollock's
   // web, Miró's wires: lines ≥ .45): a loose curved thread, faint and short-
   // lived. The old right-angled version read as a stray wireframe.

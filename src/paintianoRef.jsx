@@ -16066,9 +16066,9 @@ const _FU_LEGACY=new Set(['raffel,pollock,lichtenstein,delaunay|4,0,2,5']);
 // which rules paint this address: a pinned address carries its own (rv), a fresh crossing takes the current ones
 function _fuRules(ks, phs){
   const G=(typeof globalThis!=='undefined') ? globalThis : {}; const j=(ks||[]).join();
+  if(_FU_LEGACY.has(j+'|'+(phs||[]).join(','))) return 1;
   const ur=G.__PAINT_FU_PHS; if(ur && ur.keys && ur.keys.join()===j) return ur.rv || 2;
   const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.keys.join()===j && ov.rv) return ov.rv;
-  if(_FU_LEGACY.has(j+'|'+(phs||[]).join(','))) return 1;
   return 2;
 }
 // the families whose painters lend a budget a little more room (Delaunay's wheels, Miró's stars, Picasso's planes)
