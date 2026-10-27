@@ -41,8 +41,8 @@ const PRO_CFG = {
   // Paddle environment: 'production' (live) or 'sandbox' (test).
   paddleEnv: 'production',
   // Price IDs — TWO paid tiers since the 3-tier model (Jun 2026):
-  //   Pro    = full deterministic tool, NO AI (lifetime). Early-bird €9.99 → €14.99.
-  //   Pro AI = Pro + unlimited AI composition (lifetime). Early-bird €19.99 → €24.99.
+  //   Pro    = full deterministic tool, NO AI (lifetime). €9.99.
+  //   Pro AI = Pro + unlimited AI composition (lifetime). €19.99.
   // The legacy single price ID below is the original "Paintiano Pro Lifetime"
   // (€9.99). It is REUSED as the Pro tier price for now; the Pro AI price must
   // be created in the Paddle catalog and its ID pasted into paddlePriceIdProAI.
@@ -63,11 +63,9 @@ const PRO_CFG = {
   // funnels them to Pro AI. Lowered 5→3 with the 3-tier model (Jun 2026).
   trialMax: 3,
   // Display prices (informational; real price + VAT come from Paddle checkout).
-  // Early-bird values shown until the first-50 window closes (then 14.99/24.99).
+  // No early-bird window any more (Oct 2026): these are the prices, plain.
   displayPricePro:   '€9.99',
   displayPriceProAI: '€19.99',
-  displayPriceProRegular:   '€14.99',   // struck-through regular prices (early-bird window)
-  displayPriceProAIRegular: '€24.99',
 };
 
 // Accent colour used to brand AI features across the paywall (Pro AI tier card,
@@ -577,8 +575,8 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
       ? tr('proAiTierTitle', 'Paintiano Pro AI')
       : tr('proTierTitle', 'Paintiano Pro');
     const priceLine = isAI
-      ? tr('proAiTierPrice', '€19.99 · early-bird (then €24.99)')
-      : tr('proTierPrice',   '€9.99 · early-bird (then €14.99)');
+      ? tr('proAiTierPrice', '€19.99 · once, yours for life')
+      : tr('proTierPrice',   '€9.99 · once, yours for life');
     const values = isAI ? [
       ['proAiValueAll',   'Everything in Pro, plus:'],
       ['proAiValueText',  'AI composition from text moods'],
@@ -685,7 +683,7 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   </span>
                 </div>
                 <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .65 }}>
-                  {tr('proBackOnlineSoon', 'your early-bird price is held · first 50 supporters')}
+                  {tr('proBackOnlineSoon', 'one payment · yours for life')}
                 </p>
               </>
             ) : (
@@ -704,9 +702,6 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                     {renderTierCard('pro_ai', false)}
                   </>
                 )}
-                <p style={{ color: GOLD, fontSize: (.56*readScale)+'rem', textAlign: 'center', margin: '4px 0 12px', letterSpacing: '.04em', opacity: .75 }}>
-                  {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
-                </p>
                 <p style={{ color: '#8a8a8a', fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 14px', fontStyle: 'italic', opacity: .85 }}>
                   {tr('proSupportLine', 'You\u2019re also keeping a solo art project independent.')}
                 </p>
@@ -932,9 +927,6 @@ function ProPaywall({ t, reason, onClose, onActivated, openCheckout, activateLic
                   }}>
                   {tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}
                 </button>
-                <p style={{ color: GOLD, fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 10px', letterSpacing: '.04em', opacity: .85 }}>
-                  {tr('proEarlyBird', 'Early-bird prices · first 50 supporters')}
-                </p>
               </>
             )}
             <button style={btnGhost} onClick={() => setView('key')}>

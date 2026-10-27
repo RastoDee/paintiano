@@ -17274,8 +17274,8 @@ Hard requirements:
                       <tr>
                         <th style={Object.assign({},cellSty,{textAlign:'left',color:'rgba(242,238,232,.4)',fontSize:(.6*effScale)+'rem',paddingLeft:2,fontWeight:400,letterSpacing:'.04em'})}></th>
                         <th style={Object.assign({},cellSty,{color:FREE_FG,fontSize:(.62*effScale)+'rem',fontWeight:500})}>€0</th>
-                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>{PRO_CFG.displayPricePro} <s style={{opacity:.5,fontWeight:400}}>{PRO_CFG.displayPriceProRegular}</s></th>
-                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>{PRO_CFG.displayPriceProAI} <s style={{opacity:.5,fontWeight:400}}>{PRO_CFG.displayPriceProAIRegular}</s></th>
+                        <th style={Object.assign({},cellSty,{color:GOLD_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:GOLD_BG})}>{PRO_CFG.displayPricePro}</th>
+                        <th style={Object.assign({},cellSty,{color:PURPLE_FG,fontSize:(.62*effScale)+'rem',fontWeight:600,background:PURPLE_BG})}>{PRO_CFG.displayPriceProAI}</th>
                       </tr>
                     </thead>
                     <tbody>

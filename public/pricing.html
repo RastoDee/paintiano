@@ -22,7 +22,7 @@
   @media (max-width:680px) { .grid { grid-template-columns:1fr; } }
   .plan { padding:32px 28px; border-radius:18px; background:rgba(255,255,255,.02); border:1px solid var(--rule); display:flex; flex-direction:column; }
   .plan.pro { background:linear-gradient(150deg,rgba(201,168,76,.12),rgba(255,208,122,.03)); border-color:rgba(255,208,122,.55); box-shadow:0 8px 32px rgba(201,168,76,.12); position:relative; }
-  .plan.pro::before { content:attr(data-badge); position:absolute; top:-10px; right:22px; background:linear-gradient(135deg,var(--gold),var(--gold-soft)); color:#0a0a12; font-size:.68rem; font-weight:700; letter-spacing:.15em; padding:5px 12px; border-radius:12px; box-shadow:0 4px 14px rgba(201,168,76,.35); }
+  .plan.pro[data-badge]::before { content:attr(data-badge); position:absolute; top:-10px; right:22px; background:linear-gradient(135deg,var(--gold),var(--gold-soft)); color:#0a0a12; font-size:.68rem; font-weight:700; letter-spacing:.15em; padding:5px 12px; border-radius:12px; box-shadow:0 4px 14px rgba(201,168,76,.35); }
   .plan-name { font-family:'Cormorant Garamond',serif; font-weight:600; font-size:1.6rem; color:var(--ink); margin-bottom:4px; }
   .plan.pro .plan-name { color:var(--gold-soft); }
   .plan-sub { color:var(--muted); font-size:.9rem; margin-bottom:20px; font-style:italic; font-family:'Cormorant Garamond',serif; }
@@ -43,7 +43,7 @@
   .plan.pro .cta:hover { transform:translateY(-1px); }
   .plan.pro .cta-note { text-align:center; color:var(--muted); font-size:.78rem; margin-top:10px; font-family:'Cormorant Garamond',serif; font-style:italic; letter-spacing:.02em; }
   .plan.proai { background:linear-gradient(150deg,rgba(176,108,255,.13),rgba(220,150,255,.03)); border-color:rgba(220,150,255,.5); box-shadow:0 8px 32px rgba(176,108,255,.14); position:relative; }
-  .plan.proai::before { content:attr(data-badge); position:absolute; top:-10px; right:22px; background:linear-gradient(135deg,var(--ai),var(--ai-soft)); color:#0a0a12; font-size:.68rem; font-weight:700; letter-spacing:.15em; padding:5px 12px; border-radius:12px; box-shadow:0 4px 14px rgba(176,108,255,.4); }
+  .plan.proai[data-badge]::before { content:attr(data-badge); position:absolute; top:-10px; right:22px; background:linear-gradient(135deg,var(--ai),var(--ai-soft)); color:#0a0a12; font-size:.68rem; font-weight:700; letter-spacing:.15em; padding:5px 12px; border-radius:12px; box-shadow:0 4px 14px rgba(176,108,255,.4); }
   .plan.proai .plan-name { color:var(--ai-soft); }
   .plan.proai .plan-price .amount { color:var(--ai-soft); }
   .plan.proai ul li::before { color:var(--ai); }
@@ -95,14 +95,13 @@
       <a class="cta" href="https://paintiano.app">Open the app</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">lifetime license · one-time payment</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">Early-bird price for the first 50 supporters · then €14.99</div>
+      <div class="plan-tagline">Pay once — every painter and composer style, for life</div>
       <ul>
         <li><strong>Full</strong> artist library — all 24 styles (Kandinsky, Klimt, Rothko, Mondrian, Matisse, Picasso, Kusama &amp; more)</li>
         <li><strong>6–9 paint types</strong> per artist</li>
@@ -119,14 +118,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">Get Pro</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">lifetime license · one-time payment</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">Early-bird price for the first 50 supporters · then €24.99</div>
+      <div class="plan-tagline">Pay once — everything in Pro, plus unlimited AI</div>
       <ul>
         <li><strong>Everything in Pro</strong>, plus:</li>
         <li><strong>Unlimited</strong> AI mood compositions from text</li>
@@ -151,8 +149,6 @@
     <h3>What happens after I buy?</h3>
     <p>Our payment processor (Paddle) emails you a license key immediately. Paste it into Paintiano → "I already have a key" → done. Pro features unlock instantly.</p>
 
-    <h3>Will my price stay €9.99?</h3>
-    <p>The first 50 supporters lock in €9.99 forever. After that, the price moves to €14.99. Your license never expires.</p>
 
     <h3>Can I get a refund?</h3>
     <p>Yes, 14-day no-questions-asked. See our <a href="/refunds.html">Refund Policy</a>.</p>
@@ -205,14 +201,13 @@
       <a class="cta" href="https://paintiano.app">App öffnen</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">Lifetime-Lizenz · einmalige Zahlung</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">Early-Bird-Preis für die ersten 50 Unterstützer · danach €14.99</div>
+      <div class="plan-tagline">Einmal zahlen — alle Maler- und Komponistenstile, für immer</div>
       <ul>
         <li><strong>Komplette</strong> Künstlerbibliothek — alle 24 Stile (Kandinsky, Klimt, Rothko, Mondrian, Matisse, Picasso, Kusama &amp; mehr)</li>
         <li><strong>6–9 Maltypen</strong> pro Künstler</li>
@@ -229,14 +224,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">Pro holen</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">Lifetime-Lizenz · einmalige Zahlung</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">Early-Bird-Preis für die ersten 50 Unterstützer · danach €24.99</div>
+      <div class="plan-tagline">Einmal zahlen — alles aus Pro, plus unbegrenzte KI</div>
       <ul>
         <li><strong>Alles in Pro</strong>, plus:</li>
         <li><strong>Unbegrenzte</strong> KI-Stimmungskompositionen aus Text</li>
@@ -261,8 +255,6 @@
     <h3>Was passiert nach dem Kauf?</h3>
     <p>Unser Zahlungsabwickler (Paddle) sendet Ihnen sofort einen Lizenzschlüssel per E-Mail. In Paintiano einfügen → „Ich habe bereits einen Schlüssel" → fertig. Pro-Funktionen werden sofort freigeschaltet.</p>
 
-    <h3>Bleibt mein Preis bei €9.99?</h3>
-    <p>Die ersten 50 Unterstützer sichern sich €9.99 für immer. Danach steigt der Preis auf €14.99. Ihre Lizenz läuft nie ab.</p>
 
     <h3>Kann ich eine Rückerstattung erhalten?</h3>
     <p>Ja, 14 Tage ohne Fragen. Siehe unsere <a href="/refunds.html">Rückerstattungsrichtlinie</a>.</p>
@@ -315,14 +307,13 @@
       <a class="cta" href="https://paintiano.app">Ouvrir l'application</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">licence à vie · paiement unique</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">Prix early-bird pour les 50 premiers supporters · puis €14.99</div>
+      <div class="plan-tagline">Un seul paiement — tous les styles de peintres et de compositeurs, à vie</div>
       <ul>
         <li>Bibliothèque <strong>complète</strong> d'artistes — les 24 styles (Kandinsky, Klimt, Rothko, Mondrian, Matisse, Picasso, Kusama &amp; plus)</li>
         <li><strong>6 à 9 types de peinture</strong> par artiste</li>
@@ -339,14 +330,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">Obtenir Pro</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">licence à vie · paiement unique</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">Prix early-bird pour les 50 premiers supporters · puis €24.99</div>
+      <div class="plan-tagline">Un seul paiement — tout Pro, plus l'IA illimitée</div>
       <ul>
         <li><strong>Tout dans Pro</strong>, plus :</li>
         <li>Compositions d'humeur IA <strong>illimitées</strong> à partir de texte</li>
@@ -371,8 +361,6 @@
     <h3>Que se passe-t-il après l'achat ?</h3>
     <p>Notre processeur de paiement (Paddle) vous envoie immédiatement une clé par e-mail. Collez-la dans Paintiano → « J'ai déjà une clé » → terminé. Les fonctionnalités Pro se débloquent instantanément.</p>
 
-    <h3>Mon prix restera-t-il à €9.99 ?</h3>
-    <p>Les 50 premiers supporters verrouillent €9.99 pour toujours. Ensuite, le prix passe à €14.99. Votre licence n'expire jamais.</p>
 
     <h3>Puis-je obtenir un remboursement ?</h3>
     <p>Oui, 14 jours sans questions. Voir notre <a href="/refunds.html">Politique de remboursement</a>.</p>
@@ -425,14 +413,13 @@
       <a class="cta" href="https://paintiano.app">Abrir la app</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">licencia de por vida · pago único</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">Precio early-bird para los primeros 50 supporters · después €14.99</div>
+      <div class="plan-tagline">Un solo pago — todos los estilos de pintores y compositores, para siempre</div>
       <ul>
         <li>Biblioteca <strong>completa</strong> de artistas — los 24 estilos (Kandinsky, Klimt, Rothko, Mondrian, Matisse, Picasso, Kusama y más)</li>
         <li><strong>De 6 a 9 tipos de pintura</strong> por artista</li>
@@ -449,14 +436,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">Obtener Pro</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">licencia de por vida · pago único</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">Precio early-bird para los primeros 50 supporters · después €24.99</div>
+      <div class="plan-tagline">Un solo pago — todo Pro, más IA ilimitada</div>
       <ul>
         <li><strong>Todo lo de Pro</strong>, más:</li>
         <li>Composiciones IA <strong>ilimitadas</strong> desde texto</li>
@@ -481,8 +467,6 @@
     <h3>¿Qué pasa después de comprar?</h3>
     <p>Nuestro procesador de pagos (Paddle) te envía una clave por correo inmediatamente. Pégala en Paintiano → "Ya tengo una clave" → listo. Las funciones Pro se desbloquean al instante.</p>
 
-    <h3>¿Se mantendrá mi precio en €9.99?</h3>
-    <p>Los primeros 50 supporters fijan €9.99 para siempre. Después el precio sube a €14.99. Tu licencia nunca expira.</p>
 
     <h3>¿Puedo obtener un reembolso?</h3>
     <p>Sí, 14 días sin preguntas. Ver nuestra <a href="/refunds.html">Política de reembolso</a>.</p>
@@ -535,14 +519,13 @@
       <a class="cta" href="https://paintiano.app">Otvoriť aplikáciu</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">doživotná licencia · jednorazová platba</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">Early-bird cena pre prvých 50 podporovateľov · potom €14.99</div>
+      <div class="plan-tagline">Zaplatíš raz — všetky štýly maliarov a skladateľov, navždy</div>
       <ul>
         <li><strong>Plná</strong> knižnica umelcov — všetkých 24 štýlov (Kandinsky, Klimt, Rothko, Mondrian, Matisse, Picasso, Kusama a ďalšie)</li>
         <li><strong>6–9 typov maľby</strong> na umelca</li>
@@ -559,14 +542,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">Kúpiť Pro</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">doživotná licencia · jednorazová platba</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">Early-bird cena pre prvých 50 podporovateľov · potom €24.99</div>
+      <div class="plan-tagline">Zaplatíš raz — všetko z Pro plus neobmedzené AI</div>
       <ul>
         <li><strong>Všetko z Pro</strong>, plus:</li>
         <li><strong>Neobmedzené</strong> AI kompozície nálady z textu</li>
@@ -591,8 +573,6 @@
     <h3>Čo sa stane po nákupe?</h3>
     <p>Náš spracovateľ platieb (Paddle) vám okamžite pošle licenčný kľúč e-mailom. Vložte ho do Paintiano → „Mám už kľúč" → hotovo. Pro funkcie sa odomknú okamžite.</p>
 
-    <h3>Zostane moja cena €9.99?</h3>
-    <p>Prvých 50 podporovateľov si zamkne €9.99 navždy. Potom cena vystúpi na €14.99. Vaša licencia nikdy nevyprší.</p>
 
     <h3>Môžem získať vrátenie peňazí?</h3>
     <p>Áno, 14 dní bez otázok. Pozri naše <a href="/refunds.html">Pravidlá vrátenia</a>.</p>
@@ -645,14 +625,13 @@
       <a class="cta" href="https://paintiano.app">Abrir o app</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">licença vitalícia · pagamento único</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">Preço early-bird para os primeiros 50 apoiadores · depois €14.99</div>
+      <div class="plan-tagline">Um só pagamento — todos os estilos de pintores e compositores, para sempre</div>
       <ul>
         <li>Biblioteca <strong>completa</strong> de artistas — todos os 24 estilos (Kandinsky, Klimt, Rothko, Mondrian, Matisse, Picasso, Kusama e mais)</li>
         <li><strong>De 6 a 9 tipos de pintura</strong> por artista</li>
@@ -669,14 +648,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">Obter Pro</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">licença vitalícia · pagamento único</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">Preço early-bird para os primeiros 50 apoiadores · depois €24.99</div>
+      <div class="plan-tagline">Um só pagamento — tudo do Pro, mais IA ilimitada</div>
       <ul>
         <li><strong>Tudo no Pro</strong>, mais:</li>
         <li>Composições IA de humor <strong>ilimitadas</strong> a partir de texto</li>
@@ -701,8 +679,6 @@
     <h3>O que acontece depois da compra?</h3>
     <p>Nosso processador de pagamentos (Paddle) envia uma chave por e-mail imediatamente. Cole no Paintiano → "Já tenho uma chave" → pronto. Recursos Pro são desbloqueados instantaneamente.</p>
 
-    <h3>Meu preço continuará €9.99?</h3>
-    <p>Os primeiros 50 apoiadores travam €9.99 para sempre. Depois o preço sobe para €14.99. Sua licença nunca expira.</p>
 
     <h3>Posso obter reembolso?</h3>
     <p>Sim, 14 dias sem perguntas. Veja nossa <a href="/refunds.html">Política de Reembolso</a>.</p>
@@ -755,14 +731,13 @@
       <a class="cta" href="https://paintiano.app">打开应用</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">终身许可 · 一次性付款</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">前 50 位支持者的早鸟价 · 之后 €14.99</div>
+      <div class="plan-tagline">一次付费——全部画家与作曲家风格，终身拥有</div>
       <ul>
         <li><strong>完整</strong>艺术家风格库 — 全部 24 种风格（Kandinsky、Klimt、Rothko、Mondrian、Matisse、Picasso、Kusama 等）</li>
         <li>每位艺术家 <strong>6–9 种绘画类型</strong></li>
@@ -779,14 +754,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">购买 Pro</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">终身许可 · 一次性付款</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">前 50 位支持者的早鸟价 · 之后 €24.99</div>
+      <div class="plan-tagline">一次付费——Pro 的一切，外加无限 AI</div>
       <ul>
         <li><strong>Pro 的全部内容</strong>，外加：</li>
         <li><strong>无限</strong>从文本生成 AI 情绪作曲</li>
@@ -811,8 +785,6 @@
     <h3>购买后会发生什么？</h3>
     <p>我们的支付处理商（Paddle）会立即通过电子邮件发送许可证密钥。粘贴到 Paintiano → "我已有密钥" → 完成。Pro 功能立即解锁。</p>
 
-    <h3>我的价格会保持 €9.99 吗？</h3>
-    <p>前 50 位支持者永久锁定 €9.99。之后价格将上涨至 €14.99。您的许可证永不过期。</p>
 
     <h3>我能退款吗？</h3>
     <p>可以，14 天无条件退款。请参阅我们的 <a href="/refunds.html">退款政策</a>。</p>
@@ -865,14 +837,13 @@
       <a class="cta" href="https://paintiano.app">打開應用</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">終身授權 · 一次性付款</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">前 50 位支持者的早鳥價 · 之後 €14.99</div>
+      <div class="plan-tagline">一次付費——全部畫家與作曲家風格，終身擁有</div>
       <ul>
         <li><strong>完整</strong>藝術家風格庫 — 全部 24 種風格（Kandinsky、Klimt、Rothko、Mondrian、Matisse、Picasso、Kusama 等）</li>
         <li>每位藝術家 <strong>6–9 種繪畫類型</strong></li>
@@ -889,14 +860,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">購買 Pro</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">終身授權 · 一次性付款</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">前 50 位支持者的早鳥價 · 之後 €24.99</div>
+      <div class="plan-tagline">一次付費——Pro 的一切，外加無限 AI</div>
       <ul>
         <li><strong>Pro 的全部內容</strong>，外加：</li>
         <li><strong>無限</strong>從文字生成 AI 情緒作曲</li>
@@ -921,8 +891,6 @@
     <h3>購買後會發生什麼？</h3>
     <p>我們的支付處理商（Paddle）會立即透過電子郵件發送授權金鑰。貼上到 Paintiano → 「我已有金鑰」 → 完成。Pro 功能立即解鎖。</p>
 
-    <h3>我的價格會保持 €9.99 嗎？</h3>
-    <p>前 50 位支持者永久鎖定 €9.99。之後價格將上漲至 €14.99。您的授權永不過期。</p>
 
     <h3>我能退款嗎？</h3>
     <p>可以，14 天無條件退款。請參閱我們的 <a href="/refunds.html">退款政策</a>。</p>
@@ -975,14 +943,13 @@
       <a class="cta" href="https://paintiano.app">アプリを開く</a>
     </div>
 
-    <div class="plan pro" data-badge="EARLY-BIRD">
+    <div class="plan pro">
       <div class="plan-name">Paintiano Pro</div>
       <div class="plan-sub">買い切りライセンス · 一度きりの支払い</div>
       <div class="plan-price">
         <span class="amount">€9.99</span>
-        <span class="strike">€14.99</span>
       </div>
-      <div class="plan-tagline">最初の 50 人のサポーター向けアーリーバード価格 · その後 €14.99</div>
+      <div class="plan-tagline">一度の支払いで、すべての画風と作風を永久に</div>
       <ul>
         <li><strong>全</strong>アートスタイルライブラリ — 全 24 スタイル（Kandinsky、Klimt、Rothko、Mondrian、Matisse、Picasso、Kusama など）</li>
         <li>作家ごとに <strong>6〜9 種類のペイント</strong></li>
@@ -999,14 +966,13 @@
       <a class="cta" href="javascript:void(0)" onclick="paintianoBuy('pro')">Pro を購入</a>
     </div>
 
-    <div class="plan proai" data-badge="EARLY-BIRD">
+    <div class="plan proai">
       <div class="plan-name">Paintiano Pro AI</div>
       <div class="plan-sub">買い切りライセンス · 一度きりの支払い</div>
       <div class="plan-price">
         <span class="amount">€19.99</span>
-        <span class="strike">€24.99</span>
       </div>
-      <div class="plan-tagline">最初の 50 人のサポーター向けアーリーバード価格 · その後 €24.99</div>
+      <div class="plan-tagline">一度の支払いで、Pro のすべてに無制限の AI を</div>
       <ul>
         <li><strong>Pro のすべて</strong>に加えて：</li>
         <li>テキストからの <strong>無制限</strong> AI ムード作曲</li>
@@ -1031,8 +997,6 @@
     <h3>購入後はどうなりますか？</h3>
     <p>決済処理業者（Paddle）がすぐにライセンスキーをメールで送ります。Paintiano に貼り付け →「すでにキーを持っています」→ 完了。Pro 機能がすぐに解放されます。</p>
 
-    <h3>価格は €9.99 のままですか？</h3>
-    <p>最初の 50 人のサポーターは €9.99 を永久に確保します。その後、価格は €14.99 になります。ライセンスは決して失効しません。</p>
 
     <h3>Pro と Pro AI の違いは何ですか？</h3>
     <p>Pro は全 24 のアートスタイル、それぞれ 6〜9 種類のペイント、15人の作曲家、フュージョン &amp; Jam session、高解像度エクスポート、編集可能なパレットを解放します。Pro AI は Pro のすべてに加えて、無制限の AI 作曲 — テキストから、あなたの画像から、そしてアトモスフィアとメロディ — を追加します。どちらも一度きりの買い切りライセンスです。</p>

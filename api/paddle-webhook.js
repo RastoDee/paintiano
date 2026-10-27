@@ -187,7 +187,7 @@ function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) 
 
   <!-- Greeting -->
   <p style="font-size:15px;color:#e8e2d4;margin:32px 0 10px;">Hi,</p>
-  <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you for supporting Paintiano. You're one of the first 50 founding supporters of this little solo art project — it genuinely means a lot.</p>
+  <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you for supporting Paintiano. You're one of the early supporters of this little solo art project — it genuinely means a lot.</p>
   <p style="font-size:15px;color:#e8e2d4;margin:0 0 28px;">Your lifetime ${tierName} license is below. Keep this email — it's the only place this key lives outside our database.</p>
 
   <!-- License key box -->
