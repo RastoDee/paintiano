@@ -8920,6 +8920,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return loadAudio(e);
   },[loadMidi,loadMusicXml,loadAudio]);
   const loadSampleMidi=useCallback((idx)=>{
+    setMicArmed(false); setMicContext(false);   // a built-in piece is not a Mic take
     try{
       const _si=(idx===1||idx===2)?idx:0;
       const arrayBuffer=b64ToArrayBuffer([SAMPLE_MIDI_B64,SAMPLE_MIDI_B64_2,SAMPLE_MIDI_B64_3][_si]);
@@ -8952,6 +8953,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[stopAll,applyEvents,wipeCanvasNow]);
 
   const loadSampleAudio=useCallback(async()=>{
+    setMicArmed(false); setMicContext(false);   // a built-in piece is not a Mic take
     setWorking(true);setWLabel(t('transcribingSample')||'transcribing sample');setWPct(0);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
@@ -9024,6 +9026,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
 
   const loadSampleScore=useCallback(async()=>{
+    setMicArmed(false); setMicContext(false);   // a built-in piece is not a Mic take
     setWorking(true);setWLabel('reading sample score');setWPct(20);setErr('');setErrInfo(false);stopAll();wipeCanvasNow();
     const myToken=loadTokenRef.current;
     try{
@@ -13354,7 +13357,7 @@ Hard requirements:
   const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
   const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
   // Compose and Mic are "live": the keys (or the Mic's stop) stay at the bottom, both rails stay out, a tap is the canvas's own.
-  const studioLiveSrc = composeMode || micActive || micArmed || micContext;
+  const studioLiveSrc = composeMode || micActive || ((micArmed || micContext) && !(loadedSource || moodContext || moodFromImg || viewMode==='image'));
   const studioSrcOk = studioOn && isActiveView && !favView && !demoReelOn
     && (studioLiveSrc || (chords.length>0 && (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score' || loadedSource==='image' || moodContext || moodFromImg)));
   const studioFs = studioOn && immersive;
@@ -13584,6 +13587,7 @@ Hard requirements:
   const _homeKeyRef = useRef('');
   const _captureHomeArt = ()=>{
     try{
+      if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
       const isImg = viewMode==='image' && !moodFromImg;
       const _k = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : isImg ? 'image' : 'music';
       let _t='', _l=''; try{ _t=_vidTitle(); if(_t==='Paintiano') _t=''; _l=_vidLine(); }catch(_){}
@@ -16489,7 +16493,7 @@ Hard requirements:
         {stNew && (()=>{
           const _sv = (d)=>(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
           const _lk = recording || working;
-          const _cur = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : (viewMode==='image') ? 'image' : (chords.length ? 'music' : '');
+          const _cur = (!chords.length && !micActive && !(viewMode==='image' && originalImgUrl)) ? '' : composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : (viewMode==='image') ? 'image' : (chords.length ? 'music' : '');
           const _dr = {music:hasMusicDraft, image:hasImageDraft, mfi:hasMfiDraft, mood:hasMoodDraft, compose:hasComposeDraft, mic:hasMicDraft};
           const _hc = {music:'#9ad2ff', image:'#ffb08a', mfi:'#cdb2ff', mood:'#f0d78a', compose:'#8fd6a4', mic:'#ff9ec0'};
           const tiles = [
