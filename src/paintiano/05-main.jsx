@@ -3355,12 +3355,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setComposerDice(false);
   };
   const _toggleCr = ()=>{ if(working||anim) return; setCrOn(v=>{ const nx=!v; try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:nx}); }catch(_){} return nx; }); };
-  const _modeBtn = (mode, onClick, isArt, ens, rightPx)=>{
-    const on = mode>0, isEns = !!ens;
+  // dis: shown but greyed out and inert (the painters' Ensemble with a single painter to choose from)
+  const _modeBtn = (mode, onClick, isArt, ens, rightPx, dis)=>{
+    const on = !dis && mode>0, isEns = !!ens;
     const badge = (isArt && !isEns) ? (mode===1 ? '1' : mode===2 ? 'ALL' : '') : '';
     const title = isEns ? _ensT('title') : on ? t('randomOn') : t('randomOff');
     return (
-    <button onClick={onClick} className="pf-dice" title={title} aria-label={title} aria-pressed={on} style={{position:'absolute',right:(rightPx||0),top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:'pointer',transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none',overflow:'visible'}}>
+    <button onClick={dis ? undefined : onClick} disabled={!!dis} className="pf-dice" title={title} aria-label={title} aria-pressed={on} style={{position:'absolute',right:(rightPx||0),top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:dis?'default':'pointer',opacity:dis?.35:1,transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none',overflow:'visible'}}>
       {isEns
         ? (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8.5" cy="9" r="4.6"/><circle cx="15.5" cy="9" r="4.6"/><circle cx="12" cy="15.5" r="4.6"/></svg>)
         : (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>)}
@@ -3368,6 +3369,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     </button>
     );
   };
+  // How many painters a fusion could draw on: the artists in Setup (and the artist of the day), the Mosaic
+  // family, and a ✦ Signature's members while it is on — the same chips the look panel shows. With one there
+  // is nothing to combine: the painters' Ensemble switch is greyed out and an Ensemble left on goes off.
+  // (The composers' switch is not shown at all with a single composer, like their 🔀.)
+  const _artChoiceN = ()=>{
+    const ks=new Set(ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k) || isDailyArtist(k)) && !styleIsLocked(k)));
+    if(setupArtists.includes('mosaicFamily')) ks.add('mosaic');
+    if(sigActive && songSig && songSig.keys) for(const k of songSig.keys) if(k) ks.add(k);
+    return ks.size;
+  };
+  useEffect(()=>{ if(jamOn && _artChoiceN()<2) setJamOn(false); },[jamOn, setupArtists, sigActive, songSig, proStatus, artistOfDay]);
   // kind: undefined = stage member (gold), 'pin' = pinned in Ensemble ALL (gold + pin),
   // 'guest' = drawn by Next around the pins (outlined, like the white shuffle frame).
   const _stageBadge = (ix, roles, kind)=> (ix<0) ? null : (kind==='guest')
@@ -14796,7 +14808,7 @@ Hard requirements:
             )}
             {!cockpitEdit && _modeBtn(_artMode, _cycleArt, true)}
             {/* Ensemble stays under ✦ too (lit when the signature is a fusion): another painter, or one taken off, and ✦ gives way to the Ensemble */}
-            {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36)}
+            {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36, _artChoiceN()<2)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (
               <button onClick={_toggleSig} disabled={!chords.length} className="pf-sig" title={_sigT('tip')} aria-label={_sigT('label')} aria-pressed={sigActive} style={{position:'absolute',left:0,top:'50%',transform:'translateY(-50%)',padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.08em',textTransform:'uppercase',cursor:chords.length?'pointer':'default',opacity:chords.length?1:0.35,whiteSpace:'nowrap',transition:'color .18s, background .18s, border-color .18s, opacity .18s',background:sigActive?'linear-gradient(180deg,#f0d78a,#c9a84c)':'transparent',border:'1px solid '+(sigActive?'rgba(240,215,138,.9)':'rgba(201,168,76,.4)'),color:sigActive?'#1a1408':'rgba(201,168,76,.8)',fontWeight:sigActive?700:500}}>✦ {_sigT('label')}</button>
