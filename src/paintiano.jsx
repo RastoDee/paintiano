@@ -23819,6 +23819,9 @@ const STUDIO_HOME_CSS = `
 .pf-studio-home .pf-topbar button[aria-label="menu"]:not(.pf-st-word){visibility:hidden}
 .pf-st-word{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:0;border-radius:20px;background:none;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:24px;line-height:1;color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-st-word:active{transform:translate(-50%,-50%) scale(.95)}
+.pf-st-chev-new{animation:pfStChev 1.5s ease-in-out .9s 4;filter:drop-shadow(0 0 6px rgba(240,192,64,.8))}
+@keyframes pfStChev{0%,100%{transform:translateY(0);opacity:.7}50%{transform:translateY(4px);opacity:1}}
+@media (prefers-reduced-motion:reduce){.pf-st-chev-new{animation:none}}
 .pf-sh-word{position:absolute;top:calc(env(safe-area-inset-top,0px) + 32px);left:50%;transform:translate(-50%,-50%);font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:21px;line-height:1;color:#f0c040;pointer-events:none;text-shadow:0 2px 18px rgba(0,0,0,.6);white-space:nowrap}
 .pf-sh-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 0 18px;box-sizing:border-box}
 .pf-sh-card{position:relative;height:100%;max-height:440px;aspect-ratio:242/360}
@@ -24517,6 +24520,8 @@ export default function Paintiano() {
   useEffect(()=>{ langRef.current = lang; }, [lang]);
   const [langOpen, setLangOpen] = useState(false);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [stMenuSeen, setStMenuSeen] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_menu_seen')==='1'; }catch(_){ return true; } });
+  useEffect(()=>{ if(!navMenuOpen || stMenuSeen) return; setStMenuSeen(true); try{ localStorage.setItem('paintiano_st_menu_seen','1'); }catch(_){} }, [navMenuOpen, stMenuSeen]);
   const t = useCallback((key) => I18N[lang]?.[key] ?? I18N.EN[key] ?? key, [lang]);
   // Bulletproof fallback wrapper: t() returns the key string itself when no
   // translation exists in either the active language or EN, which means
@@ -36418,7 +36423,7 @@ Hard requirements:
         })()}
         </div>{/* ── end left group (hamburger + mode chip) ── */}
         {studioOn && studioHome && (
-          <button type="button" className="pf-st-word" onClick={()=>setNavMenuOpen(true)} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
+          <button type="button" className="pf-st-word" onClick={()=>setNavMenuOpen(true)} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
         {/* segmented control — text size + language */}
         {(() => {
