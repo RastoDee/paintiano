@@ -35634,7 +35634,8 @@ Hard requirements:
   const stSideRef = useRef(null); useEffect(()=>{ stSideRef.current = stSide; },[stSide]);
   const stIdleRef = useRef(null);
   const stEmptyRef = useRef(false);   // nothing on the canvas: the left rail stays out (the way on)
-  const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; setStInfo(false); setStSide(stEmptyRef.current ? 'left' : null); }, 4000); };
+  const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; const keep = stDoneKeepRef.current && stSideRef.current==='right'; stDoneKeepRef.current=false; setStInfo(false); setStSide(stEmptyRef.current ? 'left' : keep ? 'top' : null); }, 4000); };
+  const stDoneKeepRef = useRef(false);   // the finished painting: when its rail goes, the line on top stays
   // Morph: blend the current mood through _ms (up to three moods, in order); [] goes back to the plain mood.
   // _close: the Classic dialog closes on its Morph button; the Studio sheet stays open and re-morphs on every tap.
   const _morphApply = (_ms, _close)=>{
@@ -36173,7 +36174,7 @@ Hard requirements:
   const _stDoneRef = useRef(false);
   useEffect(()=>{
     const was=_stDoneRef.current; _stDoneRef.current=_stDone;
-    if(_stDone && !was){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStInfo(true); setStSide('right'); }
+    if(_stDone && !was){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStInfo(true); setStSide('right'); stDoneKeepRef.current=true; _stArm(); }
     else if(!_stDone && was && stSideRef.current==='right' && !stIdleRef.current) _stArm();
   },[_stDone]);
   const stVidRecRef = useRef(null), stVidRafRef = useRef(0), stVidLoopRef = useRef(null), stVidLockRef = useRef(null), stVidTextRef = useRef({title:'', line:''});
