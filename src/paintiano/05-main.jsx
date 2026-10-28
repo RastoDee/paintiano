@@ -608,9 +608,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
     const gc = _gcMake(fav.mode, fav.tone, fav.pal);
     const style = fav.style || null, seed = fav.seed>>>0, mode = fav.mode, ph = fav.phase|0, lim = chords.length;
-    // See music: every note in the source cell's carrying hue (as on screen).
-    const hasDom = chords.some(c=> c && typeof c._domPc==='number');
-    const cp0 = hasDom ? chords.map(c=> (c && typeof c._domPc==='number' && c.n) ? { ...c, n:c.n.map(n=>({ ...n, m:Math.floor(n.m/12)*12 + c._domPc })) } : c) : chords;
+    const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
     if(cp!==cp0 && cp._livePad && fav.compose){ cp._exactTone = true; cp._objFirst = true; }
     _ensureEnergies(chords, !!fav.liveE);
@@ -639,16 +637,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
       ctx.fillStyle='#04040a'; ctx.fillRect(0,0,CW,CH); lines(g);
       for(let i=0;i<lim;i++){
         const chord=chords[i]; if(!chord) continue; _setCurE(chord._E);
-        const idx=chord.idx, pc=(cp!==chords) ? cp[idx] : null, notes=(pc && pc.n) ? pc.n : chord.n;
-        const lum=(pc && typeof pc._lum==='number') ? pc._lum : (typeof chord._lum==='number' ? chord._lum : null);
-        let gcUse=gc;
-        if(lum!=null){
-          gcUse=(m,v)=>{
-            const c=gc(m,v); if(!c) return c;
-            const srcL=(0.299*c[0]+0.587*c[1]+0.114*c[2])/255, pull=Math.max(-0.55, Math.min(0.55, lum-srcL)), tgt=pull>=0 ? 255 : 0, k=Math.abs(pull);
-            return [Math.round(c[0]+(tgt-c[0])*k), Math.round(c[1]+(tgt-c[1])*k), Math.round(c[2]+(tgt-c[2])*k), c[3]];
-          };
-        }
+        const idx=chord.idx, notes=chord.n, gcUse=gc;
         const cell=g.cells && g.cells[idx];
         if(cell){ if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gcUse,s.w,s.h,style)); else drawBlock(ctx,cell.x,cell.y,notes,gcUse,cell.w,cell.h,style); }
         else{ const fw=Math.max(2,Math.floor(CW/Math.max(1,chords.length))); drawBlock(ctx,idx*fw,0,notes,gc,fw,CH,style); }
@@ -1656,15 +1645,6 @@ export default function Paintiano() {
   // an Image-scan chord array into Music mode. The ← Back handler routes
   // back to Image (restoreMode('image')) instead of Setup. Single-use.
   const _musicFromImageRef = useRef(false);
-  // See music second channel: per-event dominant carrying tone (_domPc), one
-  // pitch class per image-scan cell, captured in song order before encodeMidi
-  // strips it. After loadMidi parses the MIDI back into chord events, a
-  // post-load effect re-attaches a _domPc onto each Music chord by proportional
-  // song position (the round-trip merges/re-quantizes chords, but left-to-right
-  // order is invariant). Audio never reads _domPc; only the painter does, so the
-  // Music canvas can show each cell's source carrying colour while the audio
-  // plays the full, unchanged harmony. Pure Image / pure Music never set this.
-  const _imageDomPcsRef = useRef(null);
   // Tracks whether the currently-loaded piece came from a My Music slot.
   // When set (to the slot id 1-5), the ♫ MY MUSIC chip shows ✓ (no save)
   // to prevent duplicate entries — user loaded from slot N, playing it back,
@@ -4742,21 +4722,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
     _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
-    // See music carrying-tone paint: when a Music chord carries _domPc (set by
-    // the post-load effect from the source image's per-cell dominant hue), build
-    // a paint-side copy where every note's m is rewritten to (oct*12 + _domPc) —
-    // same register, the cell's carrying colour. This makes the Music mosaic
-    // hold the source painting's dominant tone (blue stays blue) instead of the
-    // harmony-shuffled palette. The audio engine never reads _chordsPaint — it
-    // plays the original, fully-harmonic chords, so musicality is unchanged.
-    // Plain MIDI/audio sources carry no _domPc, so _chordsPaint stays === chords
-    // and nothing changes for them.
-    const _hasDomPc = chords && chords.length>0 && chords.some && chords.some(c=>c&&typeof c._domPc==='number');
-    const _chordsPaint0 = _hasDomPc
-      ? chords.map(c => (c && typeof c._domPc==='number' && c.n)
-          ? { ...c, n: c.n.map(n => ({ ...n, m: Math.floor(n.m/12)*12 + c._domPc })) }
-          : c)
-      : chords;
+    // See music paints what plays. A piece that came from a picture (Image → See
+    // music) is painted like any other music: every tone of a chord in its own
+    // colour, its lightness from the tone. Neither the source picture's colour nor
+    // its lightness reaches the Music canvas — a _domPc / _lum an older saved piece
+    // still carries is ignored here and in _favPaint.
+    const _chordsPaint0 = chords;
     // A recorded take (Compose / Mic) is painted against its plan — see _takePad.
     const _chordsPaint = _takeSkip(effectiveStyle) ? _chordsPaint0 : _takePad(_chordsPaint0);
     // A COMPOSE take (not Mic): Pollock's and Monet's first variants paint each
@@ -4770,44 +4741,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!chord) return; // stale disp can index past chords → undefined chord
       _setCurE(chord._E);
       const{idx}=chord;
-      // Per-cell artists colour from the notes passed here. On the See music
-      // path the carrying-tone notes live on _chordsPaint (chord-level _domPc
-      // rewritten onto every note); pull those when present, else the chord's
-      // own notes. Same index/length as chords.
-      const _pc = (_chordsPaint && _chordsPaint!==chords) ? _chordsPaint[idx] : null;
-      const notes = (_pc && _pc.n) ? _pc.n : chord.n;
-      // Carrying-tone lightness: when this See-music chord knows the source
-      // cell's mean lightness (_lum, 0..1), nudge the palette colour toward that
-      // lightness so a pale cream cell paints pale, not full saturated orange.
-      // We blend the gc() RGB toward white (lum>0.5) or black (lum<0.5) by how
-      // far the cell's lightness sits from the palette colour's own lightness —
-      // only a partial pull (max ~0.55) so the palette hue/identity survives.
-      // Audio is untouched; this only rewrites the paint colour. Plain MIDI
-      // chords have no _lum, so gcUse stays === gc and nothing changes there.
-      let gcUse = gc;
-      const _cellLum = (_pc && typeof _pc._lum==='number') ? _pc._lum
-                     : (typeof chord._lum==='number' ? chord._lum : null);
-      if(_cellLum!=null){
-        gcUse = (m,v)=>{
-          const c = gc(m,v); if(!c) return c;
-          const r=c[0],g=c[1],b=c[2];
-          const srcL=(0.299*r+0.587*g+0.114*b)/255;      // palette colour's lightness
-          const d=_cellLum-srcL;                          // how much lighter/darker the cell is
-          const pull=Math.max(-0.55, Math.min(0.55, d));  // partial, keep hue identity
-          const tgt = pull>=0 ? 255 : 0;                  // toward white or black
-          const k=Math.abs(pull);
-          return [
-            Math.round(r+(tgt-r)*k),
-            Math.round(g+(tgt-g)*k),
-            Math.round(b+(tgt-b)*k),
-            c[3]
-          ];
-        };
-      }
+      const notes = chord.n;
       const cell=grid.cells&&grid.cells[idx];
       if(cell){
-        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gcUse,s.w,s.h,style));
-        else drawBlock(ctx,cell.x,cell.y,notes,gcUse,cell.w,cell.h,style);
+        if(cell.segments) cell.segments.forEach(s=>drawBlock(ctx,s.x,s.y,notes,gc,s.w,s.h,style));
+        else drawBlock(ctx,cell.x,cell.y,notes,gc,cell.w,cell.h,style);
       }else{
         // No precomputed cell yet (one-render gap between commit's setChords and
         // the grid-recompute effect's setGrid). Instead of the tiny default-grid
@@ -5707,35 +5645,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[playing]);
   useEffect(()=>{ dispRef.current=disp; },[disp]);
   useEffect(()=>{ chordsRef.current=chords; },[chords]);
-  // See music post-load: re-attach the per-event dominant carrying tone onto the
-  // freshly parsed Music chords. The capture stashed one _domPc per baked event
-  // (song order) before encodeMidi stripped it. The round-trip merges/re-quant-
-  // izes chords (e.g. ~1216 -> ~674), but left-to-right song order is invariant,
-  // so each Music chord i borrows the _domPc from the source event at the same
-  // RELATIVE position. Chord-level (one tone per chord) is exactly the carrying
-  // tone we want — the cell's dominant colour. Audio is untouched: this only
-  // sets a paint field the renderer reads; the engine plays the chords as-is.
-  useEffect(()=>{
-    if(!_imageDomPcsRef.current) return;
-    if(loadedSource!=='midi') return;
-    if(!chords || chords.length===0) return;
-    const src = _imageDomPcsRef.current;          // per-event _domPc, song order
-    const cur = chordsRef.current;
-    if(!cur || cur.length===0){ return; }
-    const srcLen = src.length;
-    if(srcLen===0){ _imageDomPcsRef.current=null; return; }
-    for(let i=0;i<cur.length;i++){
-      const srcIdx = Math.min(srcLen-1, Math.floor(i * srcLen / cur.length));
-      const ent = src[srcIdx];
-      if(ent && typeof ent.pc === 'number') cur[i]._domPc = ent.pc;
-      if(ent && typeof ent.lum === 'number') cur[i]._lum = ent.lum;
-    }
-    // New array reference so the paint effect re-runs against the chords now
-    // carrying _domPc; in-place mutation alone wouldn't re-render.
-    setChords(prev => (prev && prev.length ? prev.slice() : prev));
-    setStamp(s=>s+1);
-    _imageDomPcsRef.current = null; // single-use
-  },[chords, loadedSource]);
   useEffect(()=>{ gridRef.current=grid; },[grid]);
   useEffect(()=>{ gcRef.current=gc; },[gc]);
   const infoRef = useRef(null);
@@ -14390,19 +14299,6 @@ Hard requirements:
                 // texture-less.
                 const baked = bakeImageChords(chords);
                 if(baked.length===0) return;
-                // Capture the per-event carrying tone (_domPc) AND mean cell
-                // lightness (_lum) in song order, so the Music canvas can paint
-                // each cell in the source painting's carrying colour AND keep its
-                // brightness — without this, a pale cream cell (light, low-chroma
-                // orange) repaints as full saturated orange and the whole piece
-                // darkens, losing the airiness of light originals. The MIDI
-                // round-trip strips both (they aren't MIDI fields), so we stash
-                // them on a side channel and re-attach proportionally after load.
-                // AUDIO IS UNTOUCHED — encodeMidi reads only m/v/timing.
-                _imageDomPcsRef.current = baked.map(c => ({
-                  pc:  (typeof c._domPc==='number' ? c._domPc : null),
-                  lum: (typeof c._lum==='number'   ? c._lum   : null)
-                }));
                 const bytes = encodeMidi(baked, 120); // 120 BPM neutral default — image scan has no native tempo
                 const blob = new Blob([bytes], {type:'audio/midi'});
                 const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';
@@ -14423,10 +14319,6 @@ Hard requirements:
                   if(!chords || chords.length===0) return;
                   const baked = bakeImageChords(chords);
                   if(baked.length===0) return;
-                  _imageDomPcsRef.current = baked.map(c => ({
-                    pc:  (typeof c._domPc==='number' ? c._domPc : null),
-                    lum: (typeof c._lum==='number'   ? c._lum   : null)
-                  }));
                   const bytes = encodeMidi(baked, 120);
                   const blob = new Blob([bytes], {type:'audio/midi'});
                   const fname = ((info && info.title) ? info.title : 'painting').replace(/[^\w\s-]/g,'').replace(/\s+/g,'_').trim() || 'painting';

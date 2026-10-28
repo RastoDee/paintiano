@@ -10448,10 +10448,9 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
       // Dominant-hue accumulator for the cell's CARRYING colour tone. Saturated
       // pixels vote into 36 hue bins weighted by chroma; the winning bin becomes
       // the cell's representative pitch class (_domPc) via the same hue->pc
-      // table pxToNote uses. This is RENDER-ONLY metadata for the Music canvas
-      // (paint a faithful carrying tone instead of the harmony-shuffled pc);
-      // the audio notes built below are never touched by it, so pure Image and
-      // pure Music playback are byte-for-byte unchanged.
+      // table pxToNote uses. Cell metadata only: the audio notes built below
+      // never read it, and no canvas paints with it any more (See music paints
+      // what plays, every tone in its own colour).
       const _domHueHist=new Float32Array(36);
       let _accCnt=0;   // pixels in this cell matching the B/W·accent hue
       for(let sk=0;sk<COL_STEP;sk++){
@@ -10504,11 +10503,10 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
           if(fallback&&!seenM.has(fallback.m)){seenM.add(fallback.m);notes.push(fallback);}
         }
       }
-      // Dominant carrying pitch class for the cell (render-only). Pick the
-      // winning chroma-weighted hue bin and map it through the active hue->pc
-      // table (same table pxToNote uses), so the painted tone matches what the
-      // palette would show for that hue. null when the cell is essentially grey
-      // (no saturated vote) — then the Music canvas just keeps the harmonic pc.
+      // Dominant pitch class for the cell (metadata). Pick the winning
+      // chroma-weighted hue bin and map it through the active hue->pc table
+      // (same table pxToNote uses). null when the cell is essentially grey
+      // (no saturated vote).
       let _domPc=null;
       {
         let bb=-1,bm=0;
