@@ -35595,6 +35595,7 @@ Hard requirements:
     if(basicModeRef.current && qrPieceRef.current==null) setBasicMode(false); },[proStatus]);
   const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
   const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
+  useEffect(()=>{ if(studioOn){ try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){} } },[studioOn]);
   // Compose and Mic are "live": the keys (or the Mic's stop) stay at the bottom, both rails stay out, a tap is the canvas's own.
   const _micCanvas = draftOwnerRef.current==='sing' || draftOwnerRef.current==='listen';
   const studioLiveSrc = composeMode || micActive || ((micArmed || micContext) && !(loadedSource || moodFromImg || viewMode==='image' || (moodContext && chords.length>0 && !_micCanvas)));
