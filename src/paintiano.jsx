@@ -23736,6 +23736,7 @@ const STUDIO_FX_CSS = `
 .pf-st-dot{animation:pfStDot 1.2s ease-in-out infinite}
 @keyframes pfStDot{50%{opacity:.3}}
 .pf-st-row:active{transform:scale(.98)}
+.pf-st-rail-r>button{font-size:0!important;gap:0!important}
 .pf-st-peek{animation:pfStPeek .22s ease both}
 .pf-st-mfi{position:relative;animation:pfStPeek .3s ease both}
 .pf-st-mfi-busy::after{content:"";position:absolute;inset:0;border-radius:14px;background:linear-gradient(100deg,transparent 30%,rgba(220,180,255,.38) 50%,transparent 70%);background-size:250% 100%;animation:pfMfiScan 1.6s linear infinite;pointer-events:none}
@@ -23777,7 +23778,7 @@ const STUDIO_SHEET_CSS = `
 .pf-app-root .pf-st-sheet .pf-sv-gallery2>span:first-of-type>svg{background:linear-gradient(135deg,#8fd6a4,#3fb37a);color:#fff}
 .pf-app-root .pf-st-sheet .pf-sv-chk{border-bottom:0!important;padding:6px 2px!important;margin-bottom:0!important;color:rgba(242,238,232,.82)!important}
 .pf-app-root .pf-st-mood>div{position:relative}
-.pf-app-root .pf-st-sheet.pf-st-mood>div>div:first-of-type{font-family:'Cormorant Garamond',Georgia,serif!important;font-style:italic!important;font-weight:500!important;font-size:calc(var(--pf-read-scale,1) * 1.75rem)!important;letter-spacing:0!important;text-transform:none!important;color:#f2eee8!important;text-align:left!important;margin:2px 52px 16px 4px!important;line-height:1.1!important}
+.pf-app-root .pf-st-sheet.pf-st-mood>div>div:first-of-type{font-family:'Cormorant Garamond',Georgia,serif!important;font-style:italic!important;font-weight:500!important;font-size:calc(var(--pf-read-scale,1) * 1.3rem)!important;letter-spacing:0!important;text-transform:none!important;color:#f2eee8!important;text-align:left!important;margin:2px 52px 16px 4px!important;line-height:1.1!important}
 .pf-sm-x{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(14px,env(safe-area-inset-right,0px));width:36px;height:36px;border-radius:50%;border:1px solid rgba(242,238,232,.18);background:rgba(255,255,255,.05);color:#f2eee8;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
 .pf-app-root .pf-st-mood input{border-radius:28px!important;padding:15px 60px 15px 20px!important;background:rgba(255,255,255,.06)!important;border:1px solid rgba(242,238,232,.16)!important;font-size:16px!important;transition:border-color .2s, box-shadow .2s}
 .pf-app-root .pf-st-mood input:focus{border-color:rgba(190,140,255,.65)!important;box-shadow:0 0 0 4px rgba(150,100,255,.14)}
@@ -23791,6 +23792,8 @@ const STUDIO_SHEET_CSS = `
 .pf-sm-chip:active{transform:scale(.95)}
 .pf-sm-chip i{font-style:normal;font-size:1.25em;line-height:1}
 @media (prefers-reduced-motion: reduce){.pf-sm-send:not(:disabled),.pf-sm-ph{animation:none}}
+.pf-st-glass{height:40px;min-width:40px;padding:0 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-st-glass:active{transform:scale(.94)}
 .pf-app-root .pf-st-sheet input[type="text"]{font-size:16px!important;text-align:left!important;border-radius:14px!important;background:rgba(255,255,255,.05)!important;border:1px solid rgba(242,238,232,.14)!important;padding:12px 14px!important}
 `;
 // the sources as colour circles — the Studio home and New share them
@@ -23813,11 +23816,17 @@ const STUDIO_HOME_CSS = `
 .pf-studio-home .pf-topbar{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 12px)!important;left:max(14px,env(safe-area-inset-left,0px))!important;right:max(14px,env(safe-area-inset-right,0px))!important;width:auto!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .pf-studio-home .pf-topbar button[aria-label="menu"]{background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.1)!important;width:40px!important;height:40px!important;border-radius:50%!important}
 .pf-studio-home .pf-topbar button[aria-label="menu"] svg{stroke:#f2eee8}
-.pf-st-glass{height:40px;min-width:40px;padding:0 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.pf-st-glass:active{transform:scale(.94)}
-.pf-sh-word{position:absolute;top:calc(env(safe-area-inset-top,0px) + 58px);left:50%;transform:translateX(-50%);font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:30px;line-height:1;color:#f0c040;pointer-events:none;text-shadow:0 2px 18px rgba(0,0,0,.6);white-space:nowrap}
-.pf-sh-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
-.pf-sh-card{position:relative;height:min(360px,40dvh);aspect-ratio:242/360}
+.pf-studio-home .pf-topbar button[aria-label="menu"]:not(.pf-st-word){visibility:hidden}
+.pf-st-word{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:0;border-radius:20px;background:none;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:24px;line-height:1;color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-st-word:active{transform:translate(-50%,-50%) scale(.95)}
+.pf-sh-word{position:absolute;top:calc(env(safe-area-inset-top,0px) + 32px);left:50%;transform:translate(-50%,-50%);font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:21px;line-height:1;color:#f0c040;pointer-events:none;text-shadow:0 2px 18px rgba(0,0,0,.6);white-space:nowrap}
+.pf-sh-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 0 18px;box-sizing:border-box}
+.pf-sh-card{position:relative;height:100%;max-height:440px;aspect-ratio:242/360}
+.pf-sh-card{container-type:inline-size}
+.pf-sh-cap{position:absolute;left:0;right:0;bottom:0;padding:20cqw 31cqw 6cqw 6cqw;background:linear-gradient(180deg,rgba(6,5,10,0),rgba(6,5,10,.82));text-align:left;pointer-events:none}
+.pf-sh-cap-t{font-size:clamp(11px,6cqw,15px);font-weight:700;line-height:1.2;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-sh-cap-l{margin-top:3px;font-size:clamp(9px,4.4cqw,11px);letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@container (max-width:180px){.pf-sh-cap-l{display:none}}
 .pf-sh-ghost{position:absolute;inset:0;border-radius:24px;border:1px solid rgba(242,238,232,.12);background:rgba(242,238,232,.07)}
 .pf-sh-g1{transform:rotate(6deg) translate(14px,6px)}.pf-sh-g2{transform:rotate(-5deg) translate(-12px,4px)}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
@@ -23828,14 +23837,16 @@ const STUDIO_HOME_CSS = `
 .pf-sh-play{position:absolute;right:-14px;bottom:-14px;width:66px;height:66px;border-radius:50%;border:0;padding:0;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#14110a;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:pfShPulse 2.4s ease-out infinite;z-index:2}
 @keyframes pfShPulse{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 0 rgba(240,192,64,.5)}50%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 14px rgba(240,192,64,0)}}
 .pf-sh-meta{position:relative;flex-shrink:0;margin-top:24px;text-align:center;max-width:340px;display:flex;flex-direction:column;gap:5px}
-.pf-sh-ttl{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:28px;line-height:1.05;text-wrap:balance}
-.pf-sh-line{font-size:11.5px;letter-spacing:.04em;color:#f0d78a}
+.pf-sh-ttl{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:clamp(22px,7vw,28px);line-height:1.05;text-wrap:balance;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-sh-ttl.pf-sh-long{font-size:clamp(19px,5.6vw,24px)}
+.pf-sh-line{font-size:11.5px;letter-spacing:.04em;color:#f0d78a;text-wrap:balance}
 .pf-sh-q{position:relative;flex-shrink:0;margin-top:22px;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;font-size:23px;line-height:1}
 .pf-sh-links{position:relative;flex-shrink:0;margin-top:14px;display:flex;gap:22px}
 .pf-sh-links button{background:none;border:0;padding:8px 4px;color:rgba(242,238,232,.72);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
 .pf-studio-home .pf-help-fab{display:none!important}
 @media (prefers-reduced-motion: reduce){.pf-sh-bg,.pf-sh-art,.pf-sh-play{animation:none}}
-@media (max-height:720px){.pf-sh-card{height:min(260px,30dvh)}.pf-sh-q{margin-top:14px}.pf-sh-meta{margin-top:16px}.pf-sh-grid{row-gap:10px}}
+@media (max-height:720px){.pf-sh-q{margin-top:14px}.pf-sh-meta{margin-top:10px}.pf-sh-grid{row-gap:10px}}
+@media (max-height:600px){.pf-sh-play{width:52px;height:52px;right:-10px;bottom:-10px}.pf-sh-chip{display:none}.pf-sh-q{display:none}.pf-sh-grid{margin-top:10px;row-gap:8px}.pf-st-home .pf-sh-ic{width:50px;height:50px}.pf-sh-links{margin-top:6px}}
 `;
 const STUDIO_COMP_MONO = {chopin:['Ch','#5a3f8a'],satie:['Sa','#3f7a8a'],gershwin:['Ge','#8a6a3f'],glass:['Gl','#3f8a5e'],vine:['Vi','#8a3f5e'],yiruma:['Yi','#6a8a3f'],bach:['Ba','#8a7a3f'],beethoven:['Be','#3f5a8a'],debussy:['De','#3f8a8a'],rachmaninov:['Ra','#8a3f3f'],einaudi:['Ei','#7a3f8a'],hisaishi:['Hi','#3f8a7a'],mozart:['Mo','#8a5e3f'],schubert:['Sch','#5e8a3f'],tchaikovsky:['Tch','#3f3f8a']};
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
@@ -35428,7 +35439,8 @@ Hard requirements:
   const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
   const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
   // Compose and Mic are "live": the keys (or the Mic's stop) stay at the bottom, both rails stay out, a tap is the canvas's own.
-  const studioLiveSrc = composeMode || micActive || ((micArmed || micContext) && !(loadedSource || moodContext || moodFromImg || viewMode==='image'));
+  const _micCanvas = draftOwnerRef.current==='sing' || draftOwnerRef.current==='listen';
+  const studioLiveSrc = composeMode || micActive || ((micArmed || micContext) && !(loadedSource || moodFromImg || viewMode==='image' || (moodContext && chords.length>0 && !_micCanvas)));
   const studioSrcOk = studioOn && isActiveView && !favView && !demoReelOn
     && (studioLiveSrc || (chords.length>0 && (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score' || loadedSource==='image' || moodContext || moodFromImg)) || (moodFromImg && imgAiBusy && !!originalImgUrl));
   const studioFs = studioOn && immersive;
@@ -36320,6 +36332,8 @@ Hard requirements:
               {k:'guide', label:t('guide'), bg:'linear-gradient(135deg,#f0d78a,#c9a84c)', ic:(<span style={{fontSize:18,fontWeight:700}}>?</span>), go:_go(()=>{ setGuideReturnCardId(null); setShowGuide(true); })},
               {k:'concept', label:t('concept'), bg:'linear-gradient(135deg,#cdb2ff,#8c5cff)', ic:_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>), go:_go(()=>setShowAbout(true))},
               {k:'book', label:ts('gcat_book','Book'), bg:'linear-gradient(135deg,#ffb08a,#ff7a3d)', ic:_sv(<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14zM20 17v4H6.5A2.5 2.5 0 0 1 4 18.5"/>), go:_go(()=>setShowBook(true))},
+              {k:'lang', label:_stT('lang'), val:(lang==='zhTW' ? 'ZH-TW' : String(lang).toUpperCase()), bg:'linear-gradient(135deg,#9ad2ff,#3f7bff)', ic:_sv(<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></>), go:_go(()=>setLangOpen(true))},
+              {k:'setup', label:ts('setupPickerLabel','Styles & palettes'), bg:'linear-gradient(135deg,#8fd6a4,#3fb37a)', ic:_sv(<><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6z"/></>), go:_go(()=>{ setSetupReturnTo(null); setShowSetupModal(true); })},
               {k:'aa', label:t('fsLabel'), val:readScale===1?'1×':readScale===1.25?'1.25×':'1.5×', bg:'linear-gradient(135deg,#8fd6c8,#3fa7b3)', ic:(<span style={{fontSize:15,fontWeight:700,fontFamily:"'Cormorant Garamond',Georgia,serif"}}>Aa</span>), go:()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)},
               (!isPro) ? {k:'pro', label:t('proBadge'), bg:'linear-gradient(135deg,#f0d78a,#b8892f)', ic:(<span style={{fontSize:16}}>✦</span>), go:_go(()=>setPaywallReason('settings'))}
               : (!isProAI) ? {k:'proai', label:t('proAiBadge')||'PRO AI', bg:'linear-gradient(135deg,#c9a2ff,#7a3ff0)', ic:(<span style={{fontSize:16}}>✦</span>), go:_go(()=>setPaywallReason('settings'))}
@@ -36331,8 +36345,8 @@ Hard requirements:
                 <div role="menu" onClick={(e)=>e.stopPropagation()} style={{display:'flex',flexDirection:'column',gap:4}}>
                   <div>Paintiano</div>
                   {rows.map(r=>(
-                    <button key={r.k} type="button" role="menuitem" className="pf-st-row" onClick={r.go} style={{display:'flex',alignItems:'center',gap:14,width:'100%',padding:'9px 10px',borderRadius:16,border:0,background:'transparent',color:r.dim?'rgba(242,238,232,.6)':'#f2eee8',fontFamily:'inherit',textAlign:'left',cursor:r.off?'default':'pointer',opacity:r.off?.4:1,transition:'transform .12s'}}>
-                      <span style={{flexShrink:0,width:42,height:42,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:r.bg,color:r.dim?'rgba(242,238,232,.75)':'#fff'}}>{r.ic}</span>
+                    <button key={r.k} type="button" role="menuitem" className="pf-st-row" onClick={r.go} style={{display:'flex',alignItems:'center',gap:14,width:'100%',padding:'6px 10px',borderRadius:16,border:0,background:'transparent',color:r.dim?'rgba(242,238,232,.6)':'#f2eee8',fontFamily:'inherit',textAlign:'left',cursor:r.off?'default':'pointer',opacity:r.off?.4:1,transition:'transform .12s'}}>
+                      <span style={{flexShrink:0,width:38,height:38,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:r.bg,color:r.dim?'rgba(242,238,232,.75)':'#fff'}}>{r.ic}</span>
                       <span style={{flex:1,minWidth:0,fontSize:(.68*effScale)+'rem',fontWeight:600}}>{_sent(r.label)}</span>
                       {r.val && (<span style={{fontSize:(.6*effScale)+'rem',color:'rgba(242,238,232,.55)',fontVariantNumeric:'tabular-nums'}}>{r.val}</span>)}
                       <span aria-hidden="true" style={{color:'rgba(242,238,232,.3)'}}>›</span>
@@ -36403,6 +36417,8 @@ Hard requirements:
           );
         })()}
         </div>{/* ── end left group (hamburger + mode chip) ── */}
+        {studioOn && studioHome && (
+          <button type="button" className="pf-st-word" onClick={()=>setNavMenuOpen(true)} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
         {/* segmented control — text size + language */}
         {(() => {
@@ -36429,8 +36445,6 @@ Hard requirements:
           });
           if(studioOn) return (
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <button type="button" className="pf-st-glass" onClick={()=>setLangOpen(true)} aria-label={_stT('lang')} aria-expanded={langOpen}>{meta.code}</button>
-              <button type="button" className="pf-st-glass pf-setup-chip" onClick={()=>{ setSetupReturnTo(null); setShowSetupModal(true); }} aria-label={ts('setupPickerLabel','Setup')} title={ts('setupPickerLabel','Setup')} style={{padding:0,width:40}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
               {langOpen && (
                 <div className="pf-st-sheet" onClick={()=>setLangOpen(false)} style={{position:'fixed',inset:0,zIndex:100001,display:'flex'}}>
                   <div role="dialog" aria-label={_stT('lang')} onClick={(e)=>e.stopPropagation()} style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -36567,7 +36581,7 @@ Hard requirements:
         return (
         <div className="pf-st-fav" role="dialog" aria-label={_favT('label')} onTouchStart={_favTouchStart} onTouchEnd={_end}
           style={{position:'fixed',inset:0,zIndex:10000,background:'radial-gradient(120% 60% at 50% 0%,rgba(201,168,76,.10),rgba(7,6,12,0) 60%),#07060c',touchAction:'none',display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          <style>{`.pf-st-fav .pf-sf-meta{animation:pfSfIn .32s ease both}@keyframes pfSfIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
+          <style>{`.pf-st-fav .pf-st-rail-r>button{font-size:0!important;gap:0!important}.pf-st-fav .pf-sf-meta{animation:pfSfIn .32s ease both}@keyframes pfSfIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
           {/* the top: ✕ · ♥ Favorites, where you are · clear all */}
           <div style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'calc(env(safe-area-inset-top, 0px) + 10px) max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px))'}}>
             <button type="button" onClick={_favClose} aria-label={_favT('close')} style={_rd}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -36602,8 +36616,8 @@ Hard requirements:
             {/* what it is */}
             {f && (
               <div key={f.id} className="pf-sf-meta" style={{flexShrink:0,width:'100%',boxSizing:'border-box',textAlign:'center',padding:'0 64px',lineHeight:1.45}}>
-                <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontWeight:600,fontSize:(1.2*effScale)+'rem',lineHeight:1.1,color:'#f2eee8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favTitle(f) || _favT('label')}</div>
-                <div style={{marginTop:5,fontSize:(.56*effScale)+'rem',letterSpacing:'.04em',color:'#f0d78a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favWho(f)}</div>
+                <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontWeight:600,fontSize:(.92*effScale)+'rem',lineHeight:1.1,color:'#f2eee8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favTitle(f) || _favT('label')}</div>
+                <div style={{marginTop:5,fontSize:(.56*effScale)+'rem',letterSpacing:'.04em',color:'#f0d78a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{(()=>{ const w=String(_favWho(f)||''); return w.charAt(0).toUpperCase()+w.slice(1); })()}</div>
                 <div style={{marginTop:2,fontSize:(.5*effScale)+'rem',letterSpacing:'.05em',color:'rgba(242,238,232,.45)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favMeta(f)}</div>
               </div>
             )}
@@ -36615,7 +36629,7 @@ Hard requirements:
               </div>)}
             {/* the rail: ♥ (out and back again) · Open (a picture) · Share (a painting) */}
             {f && (
-              <div style={{position:'fixed',right:'max(12px, env(safe-area-inset-right, 0px))',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:16,zIndex:3}}>
+              <div className="pf-st-rail-r" style={{position:'fixed',right:'max(12px, env(safe-area-inset-right, 0px))',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:16,zIndex:3}}>
                 <button type="button" onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} aria-pressed={!gone} style={_it}>
                   <span style={_ic(gone ? {color:PF.gold2} : {background:'linear-gradient(135deg,#f0d78a,#c9a84c)',border:'1px solid transparent',color:'#1a1408'})}>{_heartSv}</span></button>
                 {isImgFav && (<button type="button" onClick={(e)=>{ e.stopPropagation(); _favOpenImg(); }} disabled={favBad} title={_favT('openTip')} style={{..._it,opacity:favBad?.4:1}}>
@@ -36771,11 +36785,10 @@ Hard requirements:
         const favN = favs.length;
         const K = SRC[kind];
         return (
-          <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 100px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
+          <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
             <img className="pf-sh-bg" src={H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
-            <div className="pf-sh-word" aria-hidden="true">Paintiano</div>
             <div className="pf-sh-stage">
               <div className="pf-sh-card">
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
@@ -36783,12 +36796,12 @@ Hard requirements:
                 <div className="pf-sh-art">
                   <img src={H.u} alt={ttl}/>
                   {!_smp && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
+                  {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>
                 {_canPlay && (<button type="button" className="pf-sh-play" onClick={_play} aria-label={_smp ? _stT('go') : _stT('back')}><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></button>)}
               </div>
             </div>
-            {(ttl || line) && (<div className="pf-sh-meta">{ttl && (<div className="pf-sh-ttl">{ttl}</div>)}{line && (<div className="pf-sh-line">{line}</div>)}</div>)}
-            <div className="pf-sh-q">{_stT('q')}</div>
+            <div style={{height:14,flexShrink:0}}/>
             <div className="pf-sh-grid">
               {ORDER.map(k=>{ const S=SRC[k], on = !_smp && k===kind; return (
                 <button key={k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!!S.off} onClick={()=>_tap(k)}>
@@ -38474,10 +38487,10 @@ Hard requirements:
           <div style={{position:'fixed',left:0,right:0,top:0,zIndex:10001,padding:'calc(env(safe-area-inset-top, 0px) + 14px) max(18px, env(safe-area-inset-right, 0px)) 14px max(18px, env(safe-area-inset-left, 0px))',background:'linear-gradient(180deg,rgba(6,6,12,.9),rgba(6,6,12,0))',opacity:_cap?1:0,pointerEvents:_cap?'auto':'none',transform:_cap?'none':'translateY(-8px)',transition:'opacity .28s, transform .28s'}}>
             <button type="button" onClick={_go(()=>_stShow('left'))} aria-label="menu" style={{position:'absolute',left:'max(12px, env(safe-area-inset-left, 0px))',top:'calc(env(safe-area-inset-top, 0px) + 8px)',width:38,height:38,padding:0,borderRadius:'50%',border:'1px solid rgba(242,238,232,.18)',background:'rgba(10,8,18,.55)',color:'#f2eee8',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
             {moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" onClick={_go(_stPeekTap)} aria-label={_stT('fromImg')} style={{position:'absolute',right:'max(12px, env(safe-area-inset-right, 0px))',top:'calc(env(safe-area-inset-top, 0px) + 8px)',width:38,height:38,padding:0,borderRadius:10,border:'1px solid rgba(220,150,255,.6)',background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat',cursor:'pointer',boxShadow:'0 2px 10px rgba(0,0,0,.5)'}}/>)}
-            <div style={{textAlign:'center',fontSize:(.62*effScale)+'rem',fontWeight:600,color:PF.cream,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',margin:'0 40px 4px'}}>{_ttl}</div>
+            <div style={{textAlign:'center',fontSize:(.62*effScale)+'rem',fontWeight:600,color:PF.cream,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',margin:'0 40px 4px'}}>{_ttl ? _ttl.charAt(0).toUpperCase()+_ttl.slice(1) : ''}</div>
             <div ref={stCapLinesRef}>{_capLines()}</div>
           </div>
-          <div style={_rail('right', _r)}>
+          <div className="pf-st-rail-r" style={_rail('right', _r)}>
             {!_live && (<button type="button" onClick={_go(_stHeartTap, true)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} style={{..._it,opacity:(favReadyAny||stFavPend)?1:.6}}><span style={_ic((stFavPend && !favReadyAny) ? {color:'#ff6b8b',border:'1px solid rgba(255,107,139,.6)'} : {color:PF.gold2})}>{_heart}</span></button>)}
             {_live && favReadyAny && (<button type="button" onClick={_go(_favToggleAny, true)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} style={_it}><span style={_ic({color:PF.gold2})}><svg width="19" height="19" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span></button>)}
             <button type="button" onClick={_go(handlePauseClick, true)} disabled={_playDis} aria-label={playing&&!holdPaused?t('pause'):t('play')} style={{..._it,opacity:_playDis?.4:1}}><span style={_ic({width:58,height:58,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',boxShadow:'0 0 24px rgba(77,227,160,.45)'})}><TxIcon n={playing&&!holdPaused?'pause':'play'} s={22}/></span>{holdPaused?t('resume'):playing?t('pause'):t('play')}</button>
@@ -38584,6 +38597,15 @@ Hard requirements:
             </div>
           </>);
         })()}
+        {studioLive && composeMode && !chords.length && (
+          <div aria-hidden="true" style={{position:'fixed',left:'50%',top:'calc((100dvh - '+stDockH+'px) / 2)',transform:'translate(-50%,-50%)',zIndex:10000,pointerEvents:'none'}}>
+            <div style={{width:150,height:150,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#8fd6a4',border:'1px solid rgba(143,214,164,.38)',background:'radial-gradient(circle, rgba(143,214,164,.16), rgba(143,214,164,0) 70%)',opacity:.85}}>
+              <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2"/>
+                <path d="M8 5v8M12 5v8M16 5v8"/>
+              </svg>
+            </div>
+          </div>)}
         {/* MIC — its own panel under the painting: Music | Voice, the big REC (STOP while it listens), the level, a line */}
         {studioLive && !composeMode && (()=>{
           const voice = micPreset==='voice';
@@ -38757,7 +38779,7 @@ Hard requirements:
           </div>
         );
       })()}
-      <div ref={canvasWrapRef} className="pf-stage-part" style={{...(favView?{display:'none'}:{}),position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:studioLive?`calc((100dvh - ${stDockH}px) / 2)`:'50%',left:'50%',transform:'translate(-50%,-50%)',width:studioLive?`min(98vw, calc((100dvh - ${stDockH+16}px) * ${CW} / ${CH}))`:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{}),...((studioLive && !composeMode && !chords.length)?{visibility:'hidden'}:{})}}
+      <div ref={canvasWrapRef} className="pf-stage-part" style={{...(favView?{display:'none'}:{}),position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:basicMode?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:basicMode?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:studioLive?`calc((100dvh - ${stDockH}px) / 2)`:'50%',left:'50%',transform:'translate(-50%,-50%)',width:studioLive?`min(98vw, calc((100dvh - ${stDockH+16}px) * ${CW} / ${CH}))`:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:'1px solid rgba(201,168,76,.25)'}:{}),...((studioLive && !chords.length)?{visibility:'hidden'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={(e)=>{ if(e.pointerType==='mouse' && _holdTimerRef.current && _holdPosRef.current && Math.abs(e.clientX-_holdPosRef.current.x)+Math.abs(e.clientY-_holdPosRef.current.y)>14) _holdCancel(); if(_swipeStartRef.current) return; if(_holdingRef.current) return; if(playing||immersive) wakeControls(); }}
         onPointerDown={(e)=>{ if(immersive && e.pointerType==='mouse' && e.button===0) _holdStart(e.clientX, e.clientY); }}
