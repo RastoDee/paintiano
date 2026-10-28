@@ -52,7 +52,7 @@ export default defineConfig({
       // and serve the PWA cached HTML instead of the static landing).
       filename: 'sw.js',
       injectRegister: false,
-      includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'],
+      includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable.png', 'studio/home.webp'],
       manifest: {
         name: 'Paintiano',
         short_name: 'Paintiano',

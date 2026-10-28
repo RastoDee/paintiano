@@ -1629,15 +1629,15 @@ const ENSEMBLE_I18N = {
 };
 // Studio (Setup → View): the words of the full-screen studio and its Setup card.
 const STUDIO_I18N = {
-  EN:{title:'View',studio:'Studio',classic:'Classic',sub:'Studio: the painting fills the screen; the controls come when you want them. Classic: the screen as before.',gest:'Swipe up — next · down — look · tap — controls · double tap — menu',look:'Look',sound:'Sound',nu:'New',favs:'Favorites',setup:'Setup',c1:'Swipe up',c1s:'next painting',c2:'Swipe down',c2s:'pick a look',c3:'Tap',c3s:'play · save · ♥',c4:'Double tap',c4s:'new · favorites · setup',go:'Tap to start',back:'Tap — back to the painting',bk:'Back',clr:'Clear',mgo:'Compose & paint'},
-  SK:{title:'Zobrazenie',studio:'Štúdio',classic:'Klasika',sub:'Štúdio: maľba na celú obrazovku, ovládanie len keď ho chceš. Klasika: obrazovka ako doteraz.',gest:'Potiahni hore — ďalšia · dole — vzhľad · ťuk — ovládanie · dvakrát — menu',look:'Vzhľad',sound:'Zvuk',nu:'Nové',favs:'Obľúbené',setup:'Setup',c1:'Potiahni hore',c1s:'ďalšia maľba',c2:'Potiahni dole',c2s:'vyber vzhľad',c3:'Ťukni',c3s:'prehrať · uložiť · ♥',c4:'Ťukni dvakrát',c4s:'nové · obľúbené · setup',go:'Ťukni a začni',back:'Ťukni — späť k maľbe',bk:'Späť',clr:'Vyčistiť',mgo:'Zlož a namaľuj'},
-  DE:{title:'Ansicht',studio:'Studio',classic:'Klassisch',sub:'Studio: das Bild füllt den Bildschirm, die Bedienung kommt, wenn du sie willst. Klassisch: der Bildschirm wie bisher.',gest:'Nach oben — nächstes · nach unten — Look · tippen — Bedienung · doppelt — Menü',look:'Look',sound:'Klang',nu:'Neu',favs:'Favoriten',setup:'Setup',c1:'Nach oben wischen',c1s:'nächstes Bild',c2:'Nach unten wischen',c2s:'Look wählen',c3:'Tippen',c3s:'abspielen · speichern · ♥',c4:'Doppelt tippen',c4s:'neu · Favoriten · Setup',go:'Tippen zum Start',back:'Tippen — zurück zum Bild',bk:'Zurück',clr:'Löschen',mgo:'Komponieren & malen'},
-  FR:{title:'Affichage',studio:'Studio',classic:'Classique',sub:'Studio : la peinture remplit l’écran, les commandes viennent quand tu veux. Classique : l’écran habituel.',gest:'Vers le haut — suivante · vers le bas — style · toucher — commandes · deux fois — menu',look:'Style',sound:'Son',nu:'Nouveau',favs:'Favoris',setup:'Réglages',c1:'Glisser vers le haut',c1s:'peinture suivante',c2:'Glisser vers le bas',c2s:'choisir un style',c3:'Toucher',c3s:'lecture · enregistrer · ♥',c4:'Toucher deux fois',c4s:'nouveau · favoris · réglages',go:'Touchez pour commencer',back:'Touchez — retour à la peinture',bk:'Retour',clr:'Effacer',mgo:'Composer et peindre'},
-  ES:{title:'Vista',studio:'Estudio',classic:'Clásico',sub:'Estudio: la pintura llena la pantalla y los controles aparecen cuando quieres. Clásico: la pantalla de siempre.',gest:'Arriba — siguiente · abajo — aspecto · toque — controles · doble toque — menú',look:'Aspecto',sound:'Sonido',nu:'Nuevo',favs:'Favoritos',setup:'Ajustes',c1:'Desliza arriba',c1s:'siguiente pintura',c2:'Desliza abajo',c2s:'elige un aspecto',c3:'Toca',c3s:'reproducir · guardar · ♥',c4:'Toca dos veces',c4s:'nuevo · favoritos · ajustes',go:'Toca para empezar',back:'Toca — volver a la pintura',bk:'Atrás',clr:'Borrar',mgo:'Componer y pintar'},
-  PT:{title:'Vista',studio:'Estúdio',classic:'Clássico',sub:'Estúdio: a pintura ocupa o ecrã e os controlos aparecem quando quiser. Clássico: o ecrã de sempre.',gest:'Para cima — seguinte · para baixo — visual · toque — controlos · toque duplo — menu',look:'Visual',sound:'Som',nu:'Novo',favs:'Favoritos',setup:'Configurar',c1:'Deslize para cima',c1s:'pintura seguinte',c2:'Deslize para baixo',c2s:'escolha um visual',c3:'Toque',c3s:'tocar · guardar · ♥',c4:'Toque duas vezes',c4s:'novo · favoritos · configurar',go:'Toque para começar',back:'Toque — voltar à pintura',bk:'Voltar',clr:'Limpar',mgo:'Compor e pintar'},
-  zh:{title:'显示',studio:'工作室',classic:'经典',sub:'工作室：画作占满屏幕，需要时才出现控件。经典：原来的界面。',gest:'上滑 — 下一幅 · 下滑 — 外观 · 轻点 — 控件 · 双击 — 菜单',look:'外观',sound:'声音',nu:'新建',favs:'收藏',setup:'设置',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'选择外观',c3:'轻点',c3s:'播放 · 保存 · ♥',c4:'双击',c4s:'新建 · 收藏 · 设置',go:'轻点开始',back:'轻点 — 回到画作',bk:'返回',clr:'清除',mgo:'作曲并作画'},
-  zhTW:{title:'顯示',studio:'工作室',classic:'經典',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。經典：原來的介面。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 輕點 — 控制項 · 雙擊 — 選單',look:'外觀',sound:'聲音',nu:'新增',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'選擇外觀',c3:'輕點',c3s:'播放 · 儲存 · ♥',c4:'雙擊',c4s:'新增 · 收藏 · 設定',go:'輕點開始',back:'輕點 — 回到畫作',bk:'返回',clr:'清除',mgo:'作曲並作畫'},
-  ja:{title:'表示',studio:'スタジオ',classic:'クラシック',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。クラシック：これまでの画面。',gest:'上へ — 次の絵 · 下へ — 見た目 · タップ — 操作 · ダブルタップ — メニュー',look:'見た目',sound:'サウンド',nu:'新規',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c2:'下にスワイプ',c2s:'見た目を選ぶ',c3:'タップ',c3s:'再生 · 保存 · ♥',c4:'ダブルタップ',c4s:'新規 · お気に入り · 設定',go:'タップして開始',back:'タップ — 絵に戻る',bk:'戻る',clr:'クリア',mgo:'作曲して描く'}
+  EN:{title:'View',studio:'Studio',classic:'Classic',sub:'Studio: the painting fills the screen; the controls come when you want them. Classic: the screen as before.',gest:'Swipe up — next · down — look · right — menu · tap — controls · double tap — ♥',look:'Look',sound:'Sound',nu:'New',favs:'Favorites',setup:'Setup',c1:'Swipe up',c1s:'next painting',c2:'Swipe down',c2s:'pick a look',c3:'Tap',c3s:'play · sound · share',c4:'Double tap',c4s:'♥ into favorites',go:'Tap to start',back:'Tap — back to the painting',bk:'Back',clr:'Clear',mgo:'Compose & paint',c5:'Swipe right',c5s:'new · favorites · setup · guide',share:'Share',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — it paints itself to the music',pic:'Story picture',picS:'9:16, with the title and who painted it',sav:'Save · print',savS:'sizes, files, print',snd:'Sound',sndS:'record the picture’s music',vRec:'Recording',vDone:'Your video',vShare:'Share',vSave:'Save',vNo:'This browser can’t record video.',vClose:'Close',hLater:'♥ as soon as it’s painted'},
+  SK:{title:'Zobrazenie',studio:'Štúdio',classic:'Klasika',sub:'Štúdio: maľba na celú obrazovku, ovládanie len keď ho chceš. Klasika: obrazovka ako doteraz.',gest:'Potiahni hore — ďalšia · dole — vzhľad · doprava — menu · ťuk — ovládanie · dvakrát — ♥',look:'Vzhľad',sound:'Zvuk',nu:'Nové',favs:'Obľúbené',setup:'Setup',c1:'Potiahni hore',c1s:'ďalšia maľba',c2:'Potiahni dole',c2s:'vyber vzhľad',c3:'Ťukni',c3s:'prehrať · zvuk · zdieľať',c4:'Ťukni dvakrát',c4s:'♥ do obľúbených',go:'Ťukni a začni',back:'Ťukni — späť k maľbe',bk:'Späť',clr:'Vyčistiť',mgo:'Zlož a namaľuj',c5:'Potiahni doprava',c5s:'nové · obľúbené · setup · príručka',share:'Zdieľať',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — maľuje sa do hudby',pic:'Obrázok do Story',picS:'9:16, s názvom a kto to namaľoval',sav:'Uložiť · tlač',savS:'veľkosti, súbory, tlač',snd:'Zvuk',sndS:'nahraj hudbu obrazu',vRec:'Nahrávam',vDone:'Tvoje video',vShare:'Zdieľať',vSave:'Uložiť',vNo:'Tento prehliadač nevie nahrať video.',vClose:'Zavrieť',hLater:'♥ hneď ako sa domaľuje'},
+  DE:{title:'Ansicht',studio:'Studio',classic:'Klassisch',sub:'Studio: das Bild füllt den Bildschirm, die Bedienung kommt, wenn du sie willst. Klassisch: der Bildschirm wie bisher.',gest:'Nach oben — nächstes · unten — Look · rechts — Menü · tippen — Bedienung · doppelt — ♥',look:'Look',sound:'Klang',nu:'Neu',favs:'Favoriten',setup:'Setup',c1:'Nach oben wischen',c1s:'nächstes Bild',c2:'Nach unten wischen',c2s:'Look wählen',c3:'Tippen',c3s:'abspielen · Ton · teilen',c4:'Doppelt tippen',c4s:'♥ zu den Favoriten',go:'Tippen zum Start',back:'Tippen — zurück zum Bild',bk:'Zurück',clr:'Löschen',mgo:'Komponieren & malen',c5:'Nach rechts wischen',c5s:'neu · Favoriten · Setup · Anleitung',share:'Teilen',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — es malt sich zur Musik',pic:'Story-Bild',picS:'9:16, mit Titel und wer es gemalt hat',sav:'Speichern · Druck',savS:'Größen, Dateien, Druck',snd:'Ton',sndS:'die Musik des Bildes aufnehmen',vRec:'Aufnahme',vDone:'Dein Video',vShare:'Teilen',vSave:'Speichern',vNo:'Dieser Browser kann kein Video aufnehmen.',vClose:'Schließen',hLater:'♥ sobald es fertig gemalt ist'},
+  FR:{title:'Affichage',studio:'Studio',classic:'Classique',sub:'Studio : la peinture remplit l’écran, les commandes viennent quand tu veux. Classique : l’écran habituel.',gest:'Vers le haut — suivante · bas — style · droite — menu · toucher — commandes · deux fois — ♥',look:'Style',sound:'Son',nu:'Nouveau',favs:'Favoris',setup:'Réglages',c1:'Glisser vers le haut',c1s:'peinture suivante',c2:'Glisser vers le bas',c2s:'choisir un style',c3:'Toucher',c3s:'lecture · son · partager',c4:'Toucher deux fois',c4s:'♥ dans les favoris',go:'Touchez pour commencer',back:'Touchez — retour à la peinture',bk:'Retour',clr:'Effacer',mgo:'Composer et peindre',c5:'Glisser vers la droite',c5s:'nouveau · favoris · réglages · guide',share:'Partager',vid:'Vidéo 9:16',vidS:'TikTok · Reels · Stories — elle se peint en musique',pic:'Image Story',picS:'9:16, avec le titre et qui l’a peinte',sav:'Enregistrer · imprimer',savS:'tailles, fichiers, impression',snd:'Son',sndS:'enregistrer la musique de l’image',vRec:'Enregistrement',vDone:'Ta vidéo',vShare:'Partager',vSave:'Enregistrer',vNo:'Ce navigateur ne peut pas enregistrer de vidéo.',vClose:'Fermer',hLater:'♥ dès qu’elle est peinte'},
+  ES:{title:'Vista',studio:'Estudio',classic:'Clásico',sub:'Estudio: la pintura llena la pantalla y los controles aparecen cuando quieres. Clásico: la pantalla de siempre.',gest:'Arriba — siguiente · abajo — aspecto · derecha — menú · toque — controles · doble toque — ♥',look:'Aspecto',sound:'Sonido',nu:'Nuevo',favs:'Favoritos',setup:'Ajustes',c1:'Desliza arriba',c1s:'siguiente pintura',c2:'Desliza abajo',c2s:'elige un aspecto',c3:'Toca',c3s:'reproducir · sonido · compartir',c4:'Toca dos veces',c4s:'♥ a favoritos',go:'Toca para empezar',back:'Toca — volver a la pintura',bk:'Atrás',clr:'Borrar',mgo:'Componer y pintar',c5:'Desliza a la derecha',c5s:'nuevo · favoritos · ajustes · guía',share:'Compartir',vid:'Vídeo 9:16',vidS:'TikTok · Reels · Stories — se pinta con la música',pic:'Imagen para Story',picS:'9:16, con el título y quién la pintó',sav:'Guardar · imprimir',savS:'tamaños, archivos, impresión',snd:'Sonido',sndS:'graba la música de la imagen',vRec:'Grabando',vDone:'Tu vídeo',vShare:'Compartir',vSave:'Guardar',vNo:'Este navegador no puede grabar vídeo.',vClose:'Cerrar',hLater:'♥ en cuanto esté pintada'},
+  PT:{title:'Vista',studio:'Estúdio',classic:'Clássico',sub:'Estúdio: a pintura ocupa o ecrã e os controlos aparecem quando quiser. Clássico: o ecrã de sempre.',gest:'Para cima — seguinte · baixo — visual · direita — menu · toque — controlos · toque duplo — ♥',look:'Visual',sound:'Som',nu:'Novo',favs:'Favoritos',setup:'Configurar',c1:'Deslize para cima',c1s:'pintura seguinte',c2:'Deslize para baixo',c2s:'escolha um visual',c3:'Toque',c3s:'tocar · som · partilhar',c4:'Toque duas vezes',c4s:'♥ nos favoritos',go:'Toque para começar',back:'Toque — voltar à pintura',bk:'Voltar',clr:'Limpar',mgo:'Compor e pintar',c5:'Deslize para a direita',c5s:'novo · favoritos · configurar · guia',share:'Partilhar',vid:'Vídeo 9:16',vidS:'TikTok · Reels · Stories — pinta-se ao som da música',pic:'Imagem para Story',picS:'9:16, com o título e quem a pintou',sav:'Guardar · imprimir',savS:'tamanhos, ficheiros, impressão',snd:'Som',sndS:'grava a música da imagem',vRec:'A gravar',vDone:'O teu vídeo',vShare:'Partilhar',vSave:'Guardar',vNo:'Este navegador não consegue gravar vídeo.',vClose:'Fechar',hLater:'♥ assim que estiver pintada'},
+  zh:{title:'显示',studio:'工作室',classic:'经典',sub:'工作室：画作占满屏幕，需要时才出现控件。经典：原来的界面。',gest:'上滑 — 下一幅 · 下滑 — 外观 · 右滑 — 菜单 · 轻点 — 控件 · 双击 — ♥',look:'外观',sound:'声音',nu:'新建',favs:'收藏',setup:'设置',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'选择外观',c3:'轻点',c3s:'播放 · 声音 · 分享',c4:'双击',c4s:'♥ 加入收藏',go:'轻点开始',back:'轻点 — 回到画作',bk:'返回',clr:'清除',mgo:'作曲并作画',c5:'右滑',c5s:'新建 · 收藏 · 设置 · 指南',share:'分享',vid:'视频 9:16',vidS:'TikTok · Reels · Stories — 随音乐自动作画',pic:'快拍图片',picS:'9:16，附标题和画家',sav:'保存 · 打印',savS:'尺寸、文件、打印',snd:'声音',sndS:'录下这幅图的音乐',vRec:'录制中',vDone:'你的视频',vShare:'分享',vSave:'保存',vNo:'此浏览器无法录制视频。',vClose:'关闭',hLater:'♥ 画完后自动收藏'},
+  zhTW:{title:'顯示',studio:'工作室',classic:'經典',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。經典：原來的介面。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 右滑 — 選單 · 輕點 — 控制項 · 雙擊 — ♥',look:'外觀',sound:'聲音',nu:'新增',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'選擇外觀',c3:'輕點',c3s:'播放 · 聲音 · 分享',c4:'雙擊',c4s:'♥ 加入收藏',go:'輕點開始',back:'輕點 — 回到畫作',bk:'返回',clr:'清除',mgo:'作曲並作畫',c5:'右滑',c5s:'新增 · 收藏 · 設定 · 指南',share:'分享',vid:'影片 9:16',vidS:'TikTok · Reels · Stories — 隨音樂自動作畫',pic:'限動圖片',picS:'9:16，附標題和畫家',sav:'儲存 · 列印',savS:'尺寸、檔案、列印',snd:'聲音',sndS:'錄下這幅圖的音樂',vRec:'錄製中',vDone:'你的影片',vShare:'分享',vSave:'儲存',vNo:'此瀏覽器無法錄製影片。',vClose:'關閉',hLater:'♥ 畫完後自動收藏'},
+  ja:{title:'表示',studio:'スタジオ',classic:'クラシック',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。クラシック：これまでの画面。',gest:'上へ — 次の絵 · 下へ — 見た目 · 右へ — メニュー · タップ — 操作 · ダブルタップ — ♥',look:'見た目',sound:'サウンド',nu:'新規',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c2:'下にスワイプ',c2s:'見た目を選ぶ',c3:'タップ',c3s:'再生 · サウンド · シェア',c4:'ダブルタップ',c4s:'♥ お気に入りへ',go:'タップして開始',back:'タップ — 絵に戻る',bk:'戻る',clr:'クリア',mgo:'作曲して描く',c5:'右にスワイプ',c5s:'新規 · お気に入り · 設定 · ガイド',share:'シェア',vid:'動画 9:16',vidS:'TikTok · Reels · Stories — 音楽に合わせて描かれる',pic:'ストーリー画像',picS:'9:16、タイトルと描いた画家つき',sav:'保存 · 印刷',savS:'サイズ、ファイル、印刷',snd:'サウンド',sndS:'絵の音楽を録音',vRec:'録画中',vDone:'あなたの動画',vShare:'シェア',vSave:'保存',vNo:'このブラウザでは動画を録画できません。',vClose:'閉じる',hLater:'♥ 描き終わったら保存'}
 };
 // STUDIO SKIN — the look sheet in the Studio: palettes as colour rings, painters as round faces (this song painted
 // by each of them), composers as monograms. The buttons and what they do are the Classic ones; only the look changes.
@@ -1659,8 +1659,20 @@ const STUDIO_SKIN_CSS = `
 .pf-sk-face.pf-sk-wait{animation:pfSkWait 1.4s ease-in-out infinite}
 @keyframes pfSkWait{50%{opacity:.55}}
 .pf-sk-mono{display:flex;align-items:center;justify-content:center;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:18px;font-weight:600;color:#f2eee8;letter-spacing:0;text-transform:none}
+.pf-app-root .pf-strip-grid.pf-skin .pf-inspired-label{visibility:hidden}
+.pf-app-root .pf-strip-grid.pf-skin .pf-sig-info{display:none}
 .pf-sk-glyph{display:flex;align-items:center;justify-content:center;font-size:18px;color:#f2eee8;background:rgba(255,255,255,.06)}
 @media (prefers-reduced-motion: reduce){.pf-sk-face.pf-sk-wait{animation:none}}
+`;
+// the Studio's first home (no painting of yours yet): Liebestraum, painted by its ✦ Signature — a tap plays it
+const STUDIO_HOME_SAMPLE = { u:'/studio/home.webp', src:'sample' };
+const STUDIO_FX_CSS = `
+.pf-st-heart{animation:pfStHeart .9s cubic-bezier(.2,.8,.2,1) forwards;transform-origin:50% 60%;filter:drop-shadow(0 6px 18px rgba(255,59,107,.55))}
+@keyframes pfStHeart{0%{transform:scale(.2) rotate(var(--r));opacity:0}15%{transform:scale(1.25) rotate(var(--r));opacity:1}30%{transform:scale(1) rotate(var(--r));opacity:1}100%{transform:translateY(-120px) scale(1.15) rotate(var(--r));opacity:0}}
+.pf-st-dot{animation:pfStDot 1.2s ease-in-out infinite}
+@keyframes pfStDot{50%{opacity:.3}}
+.pf-st-row:active{transform:scale(.98)}
+@media (prefers-reduced-motion: reduce){.pf-st-heart{animation-duration:.2s}.pf-st-dot{animation:none}}
 `;
 const STUDIO_COMP_MONO = {chopin:['Ch','#5a3f8a'],satie:['Sa','#3f7a8a'],gershwin:['Ge','#8a6a3f'],glass:['Gl','#3f8a5e'],vine:['Vi','#8a3f5e'],yiruma:['Yi','#6a8a3f'],bach:['Ba','#8a7a3f'],beethoven:['Be','#3f5a8a'],debussy:['De','#3f8a8a'],rachmaninov:['Ra','#8a3f3f'],einaudi:['Ei','#7a3f8a'],hisaishi:['Hi','#3f8a7a'],mozart:['Mo','#8a5e3f'],schubert:['Sch','#5e8a3f'],tchaikovsky:['Tch','#3f3f8a']};
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
@@ -13244,8 +13256,9 @@ Hard requirements:
   // there: the painting alone. Swipe up = Next, swipe down = the look panel (from the top), tap = the right rail
   // (♥ · play · sound · save; Atmo · Melody on a picture) with the caption on top, double tap = the left rail
   // (New · Look · Favorites · Setup). Classic = the screen as before. Desktop and Lite are not touched.
+  const liteChipRef = useRef(null);   // the Lite / Advanced chip — the Studio is Advanced, so picking it from Lite flips the chip
   const [viewPref, setViewPref] = useState(()=>{ try{ return localStorage.getItem('paintiano_view')==='studio' ? 'studio' : 'classic'; }catch(_){ return 'classic'; } });
-  const _setView = (v)=>{ setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
+  const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
   const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
   // Compose and Mic are "live": the keys (or the Mic's stop) stay at the bottom, both rails stay out, a tap is the canvas's own.
   const studioLiveSrc = composeMode || micActive || micArmed || micContext;
@@ -13341,8 +13354,10 @@ Hard requirements:
   };
   // one tap = the right rail, two taps within 300 ms = the left rail; a tap with a rail out puts it away
   const stTapRef = useRef({ t:0, timer:null });
-  const _stTap = ()=>{ const r=stTapRef.current, now=Date.now(); clearTimeout(r.timer);
-    if(now-r.t<300){ r.t=0; _stShow(stSideRef.current==='left' ? null : 'left'); return; }
+  const _stHeartRef = useRef(null), _stSwipeRef = useRef(null);   // set below, next to the ♥ and the swipes
+  const _stTap = (e)=>{ const r=stTapRef.current, now=Date.now(); clearTimeout(r.timer);
+    const x = (e && e.clientX!=null) ? e.clientX : window.innerWidth/2, y = (e && e.clientY!=null) ? e.clientY : window.innerHeight/2;
+    if(now-r.t<300){ r.t=0; if(_stHeartRef.current) _stHeartRef.current(x, y); return; }
     r.t=now; r.timer=setTimeout(()=>{ _stShow(stSideRef.current ? null : 'right'); }, 260); };
   // the gestures card, once, the first time the studio opens
   const [stCoach, setStCoach] = useState(false);
@@ -13578,6 +13593,228 @@ Hard requirements:
   </>);
   const _atmoTap = ()=>{ if(atmoBusy) return; if(aiLockedMode('atmomelody') && !atmoMood){ setPaywallReason('ai_trial'); return; } if((playingRef.current||holdPausedRef.current)&&melodyOnRef.current) _melodyTogglePlayingRef.current=true; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } };
   const _melodyTap = ()=>{ if(melodyBusy) return; if(aiLockedMode('atmomelody') && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; melodyVoiceGenRef.current++; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; melodyVoiceGenRef.current++; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } };
+  // ── STUDIO, the rest: ♥ by a double tap, the swipes, the phone's Back, autoplay, the bottom line, share & video ──
+  const morphBtnRef = useRef(null), recBtnRef = useRef(null), stCapLinesRef = useRef(null);
+  const _stBuzz = (ms)=>{ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(_){} };
+  const [stToast, setStToast] = useState(null);
+  const stToastTmRef = useRef(null);
+  const _stToastShow = (msg)=>{ if(stToastTmRef.current) clearTimeout(stToastTmRef.current); setStToast(msg); stToastTmRef.current=setTimeout(()=>{ stToastTmRef.current=null; setStToast(null); }, 2400); };
+  const [stSeek, setStSeek] = useState(false);
+  const [stShare, setStShare] = useState(false);
+  // ♥ — two taps (TikTok) put the painting in the favorites; while it is still being painted, the moment it is done
+  const [stHearts, setStHearts] = useState([]);
+  const [stFavPend, setStFavPend] = useState(false);
+  const _stHasArt = chords.length>0 || (viewMode==='image' && !!originalImgUrl);
+  const _stHeartTap = ()=>{ if(favReadyAny){ _favToggleAny(); setStFavPend(false); return; } if(!_stHasArt) return; setStFavPend(p=>{ if(!p) _stToastShow(_stT('hLater')); return !p; }); };
+  _stHeartRef.current = (x, y)=>{
+    const id = Date.now()+Math.random();
+    setStHearts(h=>h.concat({id, x, y, r:Math.round(Math.random()*24-12)}));
+    setTimeout(()=>setStHearts(h=>h.filter(o=>o.id!==id)), 950);
+    _stBuzz(15);
+    if(favReadyAny){ if(!favHitAny) _favToggleAny(); }
+    else if(_stHasArt){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
+  };
+  useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
+  useEffect(()=>{ if(!studioFs){ setStFavPend(false); setStShare(false); } },[studioFs]);
+  // the next painting (a swipe up): the Classic Next — and from a plain Mosaic, a painter drawn from your set;
+  // on a picture, the next composer. The painting slides out and the new one in.
+  const _stSlide = ()=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{ el.animate([{translate:'0 0',opacity:1},{translate:'0 -48px',opacity:0,offset:.36},{translate:'0 64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
+  const _stNext = ()=>{
+    let rolled = false;
+    try{
+      if(viewMode==='image'){
+        if(imgPlayMode!=='compose' && !working && !anim && !recording){
+          rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
+        }
+      } else if((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive){
+        if(!randomMode && style===null && !jamOn){
+          const pool = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k) || isDailyArtist(k)) && !styleIsLocked(k));
+          if(pool.length){ setStyleTo(pool[(Math.random()*pool.length)|0]); rolled = true; }
+        } else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
+      }
+    }catch(_){}
+    if(!rolled) return;
+    setStFavPend(false);
+    _stBuzz(12); _stSlide();
+    if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
+    setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
+  };
+  // swipes: up the next painting, down the look, right the menu rail, left the rails away. True = a swipe.
+  _stSwipeRef.current = (dx, dy, dt)=>{
+    const ax=Math.abs(dx), ay=Math.abs(dy);
+    if(dt>700) return false;
+    if(ax>=60 && ax>ay*1.5){ if(studioLive) return false; if(dx>0){ _stShow('left'); _stBuzz(8); } else _stShow(null); return true; }
+    if(ay<50 || ay<ax*1.5) return false;
+    if(dy<0){ _stNext(); return true; }
+    _stShow(null); setStripOpen(true); return true;
+  };
+  // … also on the dark around the painting
+  const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; _swipeWasGestureRef.current=false; };
+  const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return; if(_stSwipeRef.current && _stSwipeRef.current(tt.clientX-st.x, tt.clientY-st.y, Date.now()-st.t)) _swipeWasGestureRef.current=true; };
+  // a new piece plays at once (when the sound is already awake); once it plays, the rail goes after a while
+  const _stFreshRef = useRef(false); _stFreshRef.current = _stFresh;
+  useEffect(()=>{
+    if(!_stFresh){ if(stSideRef.current==='right' && !stIdleRef.current) _stArm(); return; }
+    const tm=setTimeout(()=>{ try{ if(!_stFreshRef.current || !handlePauseClickRef.current) return; if(Tone.getContext().rawContext.state==='running') handlePauseClickRef.current(); }catch(_){} }, 450);
+    return ()=>clearTimeout(tm);
+  },[_stFresh]);
+  // VIDEO 9:16 — the painting paints itself to the music, recorded as it plays (the title above it, Paintiano under it)
+  const [stVid, setStVid] = useState(null);           // null | {phase:'rec', t0} | {phase:'done', blob, url, type}
+  const [stVidTick, setStVidTick] = useState(0);
+  const stVidRec = !!(stVid && stVid.phase==='rec');
+  const stVidRecRef = useRef(null), stVidRafRef = useRef(0), stVidLoopRef = useRef(null), stVidLockRef = useRef(null), stVidTextRef = useRef({title:'', line:''});
+  const _vidOk = ()=>{ try{ return typeof MediaRecorder!=='undefined' && !!(HTMLCanvasElement.prototype.captureStream); }catch(_){ return false; } };
+  const _vidTitle = ()=>{ const im = viewMode==='image' && !moodFromImg; return (im ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '')) || 'Paintiano'; };
+  const _vidName = (ext)=>'Paintiano - '+(String(_vidTitle()).replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,' ').trim().slice(0,60) || 'painting')+'.'+ext;
+  // under the title: the palette · who painted it (or who composed the picture's music) · ✦ Signature
+  const _vidLine = ()=>{
+    try{
+      const im = viewMode==='image' && !moodFromImg, up=(x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
+      let who;
+      if(im){ const cs=[imgComposer].concat(composerStage||[]).filter(Boolean); who = cs.length ? cs.map(k=>COMPOSER_INSPIRED[k]||k).join(' ↔ ') : 'Scan'; }
+      else {
+        let ks=(style!==null ? [style] : []).concat(painterStage||[]).filter(k=>k && k!=='mosaic' && k!=='notes');
+        if(!ks.length && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ks=[shuffleStyle];
+        who = ks.length ? ks.map(k=>STYLE_INSPIRED[k]||k).join(' × ') : up(t('mosaicStyle'));
+      }
+      const parts=[up(t(mode)), who];
+      if(im ? imgSigActive : sigActive) parts.push('✦ '+_sigT('label'));
+      return parts.filter(Boolean).join('  ·  ');
+    }catch(_){ return ''; }
+  };
+  // the stage as it is on screen: the picture (image mode), the painting over it, the light layers
+  const _vidStage = (x, X, Y, w, h)=>{
+    const cv = canvasRef.current; if(!cv) return;
+    const wrap = canvasWrapRef.current, img = wrap && wrap.querySelector('img[alt="original"]');
+    if(img && img.complete && img.naturalWidth) x.drawImage(img, X, Y, w, h); else { x.fillStyle='#04040a'; x.fillRect(X, Y, w, h); }
+    const op = parseFloat(cv.style.opacity), a = isNaN(op) ? 1 : op;
+    if(a>0){ x.globalAlpha=a; if(img) x.globalCompositeOperation='screen'; x.drawImage(cv, X, Y, w, h); x.globalAlpha=1; }
+    x.globalCompositeOperation='screen';
+    try{ if(visualizerRef.current) x.drawImage(visualizerRef.current, X, Y, w, h); }catch(_){}
+    try{ if(highlightCanvasRef.current) x.drawImage(highlightCanvasRef.current, X, Y, w, h); }catch(_){}
+    x.globalCompositeOperation='source-over';
+  };
+  const _vidFrame = (x, bg)=>{
+    const W=1080, H=1920, cv=canvasRef.current; if(!cv) return;
+    const aw=cv.width||1, ah=cv.height||1;
+    // the backdrop: the painting itself, tiny and stretched — a soft blur at no cost
+    const bx=bg.getContext('2d'), cs=Math.max(bg.width/aw, bg.height/ah);
+    _vidStage(bx, (bg.width-aw*cs)/2, (bg.height-ah*cs)/2, aw*cs, ah*cs);
+    x.imageSmoothingEnabled=true; try{ x.imageSmoothingQuality='high'; }catch(_){}
+    x.drawImage(bg, 0, 0, W, H);
+    x.fillStyle='rgba(4,4,10,.6)'; x.fillRect(0, 0, W, H);
+    // the painting
+    let dw=W-96, dh=dw*ah/aw; const mh=H*0.6; if(dh>mh){ dh=mh; dw=dh*aw/ah; }
+    const dx=Math.round((W-dw)/2), dy=Math.round(H*0.5-dh/2);
+    x.save(); x.shadowColor='rgba(0,0,0,.65)'; x.shadowBlur=48; x.fillStyle='#04040a'; x.fillRect(dx, dy, dw, dh); x.restore();
+    _vidStage(x, dx, dy, dw, dh);
+    // the title, who painted it, the progress, the name
+    const T=stVidTextRef.current, fit=(str, f, mw, z0)=>{ let z=z0; x.font=f.replace('#', z); while(z>22 && x.measureText(str).width>mw){ z-=2; x.font=f.replace('#', z); } };
+    x.textAlign='center'; x.textBaseline='alphabetic';
+    const ty=Math.max(150, dy-118);
+    x.fillStyle='#f2eee8'; fit(T.title, '600 #px "Cormorant Garamond", Georgia, serif', W-140, 74); x.fillText(T.title, W/2, ty);
+    if(T.line){ x.fillStyle='rgba(226,196,119,.95)'; fit(T.line, '500 #px Outfit, "Helvetica Neue", Arial, sans-serif', W-160, 32); x.fillText(T.line, W/2, ty+56); }
+    const p = chords.length ? Math.min(1, (dispRef.current||0)/chords.length) : 0;
+    x.fillStyle='rgba(255,255,255,.16)'; x.fillRect(dx, dy+dh+30, dw, 5); x.fillStyle='#e2c477'; x.fillRect(dx, dy+dh+30, dw*p, 5);
+    x.fillStyle='#e2c477'; x.font='600 66px "Cormorant Garamond", Georgia, serif'; x.fillText('Paintiano', W/2, H-170);
+    x.fillStyle='rgba(242,238,232,.55)'; x.font='500 28px Outfit, "Helvetica Neue", Arial, sans-serif'; x.fillText('paintiano.app', W/2, H-122);
+  };
+  const _vidLock = async ()=>{ try{ if(navigator.wakeLock) stVidLockRef.current = await navigator.wakeLock.request('screen'); }catch(_){} };
+  const _vidUnlock = ()=>{ try{ if(stVidLockRef.current) stVidLockRef.current.release(); }catch(_){} stVidLockRef.current=null; };
+  const _vidStart = ()=>{
+    setStShare(false);
+    const cv = canvasRef.current;
+    if(!_vidOk() || !cv || !chords.length){ _stToastShow(_stT('vNo')); return; }
+    _stShow(null); setStripOpen(false);
+    const out=document.createElement('canvas'); out.width=1080; out.height=1920;
+    const bg=document.createElement('canvas'); bg.width=27; bg.height=48;
+    const x=out.getContext('2d');
+    let dest=null;
+    try{ dest=Tone.getContext().rawContext.createMediaStreamDestination(); Tone.getDestination().connect(dest); }catch(_){ dest=null; }
+    let stream, rec;
+    const mime=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m=>{ try{ return MediaRecorder.isTypeSupported(m); }catch(_){ return false; } }) || '';
+    try{
+      stream = new MediaStream([].concat(out.captureStream(30).getVideoTracks(), dest ? dest.stream.getAudioTracks() : []));
+      rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:8000000} : {});
+    }catch(_){ try{ if(dest) Tone.getDestination().disconnect(dest); }catch(__){} _stToastShow(_stT('vNo')); return; }
+    const parts=[];
+    rec.ondataavailable=(e)=>{ if(e.data && e.data.size) parts.push(e.data); };
+    rec.onstop=()=>{
+      cancelAnimationFrame(stVidRafRef.current); stVidRafRef.current=0;
+      try{ if(dest) Tone.getDestination().disconnect(dest); }catch(_){}
+      try{ stream.getTracks().forEach(tr=>tr.stop()); }catch(_){}
+      _vidUnlock();
+      if(stVidLoopRef.current!=null){ const lp=stVidLoopRef.current; stVidLoopRef.current=null; setLoopMode(lp); loopModeRef.current=lp; }
+      const type=String(rec.mimeType||mime||'video/webm').split(';')[0] || 'video/webm';
+      if(!parts.length){ setStVid(null); _stToastShow(_stT('vNo')); return; }
+      const blob=new Blob(parts, {type});
+      setStVid({phase:'done', blob, url:URL.createObjectURL(blob), type});
+    };
+    stVidTextRef.current = { title:_vidTitle(), line:_vidLine() };
+    // one pass, from the top
+    stVidLoopRef.current = loopModeRef.current; if(loopModeRef.current){ setLoopMode(false); loopModeRef.current=false; }
+    stopAll(); setDisp(0); dispRef.current=0; resumeFromRef.current=null; setHoldPaused(false); holdPausedRef.current=false;
+    const draw=()=>{ try{ _vidFrame(x, bg); }catch(_){} stVidRafRef.current=requestAnimationFrame(draw); };
+    draw();
+    try{ rec.start(1000); }catch(_){ rec.onstop=null; cancelAnimationFrame(stVidRafRef.current); try{ if(dest) Tone.getDestination().disconnect(dest); }catch(__){} _stToastShow(_stT('vNo')); return; }
+    stVidRecRef.current=rec; setStVid({phase:'rec', t0:Date.now()});
+    _vidLock();
+    wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); });
+  };
+  const _vidStop = ()=>{
+    const r=stVidRecRef.current; stVidRecRef.current=null;
+    if(playing && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} }
+    if(r && r.state!=='inactive'){ try{ r.requestData(); }catch(_){} try{ r.stop(); }catch(_){} }
+  };
+  const _vidClose = ()=>{ try{ if(stVid && stVid.url) URL.revokeObjectURL(stVid.url); }catch(_){} setStVid(null); };
+  const _vidSave = ()=>{ if(!stVid || !stVid.url) return; const a=document.createElement('a'); a.href=stVid.url; a.download=_vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm'); document.body.appendChild(a); a.click(); a.remove(); };
+  const _vidShare = async ()=>{
+    if(!stVid || !stVid.blob) return;
+    const f=new File([stVid.blob], _vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm'), {type:stVid.type});
+    try{
+      if(navigator.share && (!navigator.canShare || navigator.canShare({files:[f]}))){
+        let text=''; try{ text=buildStoryCaption(); }catch(_){}
+        await navigator.share(text ? {files:[f], title:'Paintiano', text} : {files:[f], title:'Paintiano'});
+        try{ await unlockAudio(); }catch(_){}
+        return;
+      }
+    }catch(e){ try{ await unlockAudio(); }catch(_){} if(e && e.name==='AbortError') return; }
+    _vidSave();
+  };
+  // the take ends a moment after the last chord (the finished painting stays on screen in the video)
+  useEffect(()=>{
+    if(!stVidRec || playing || anim || !chords.length || disp<chords.length) return;
+    const tm=setTimeout(()=>{ if(stVidRecRef.current) _vidStop(); }, 1600);
+    return ()=>clearTimeout(tm);
+  },[stVidRec, playing, anim, disp, chords.length]);
+  useEffect(()=>{ if(!stVidRec) return; const iv=setInterval(()=>setStVidTick(n=>n+1), 1000); return ()=>clearInterval(iv); },[stVidRec]);
+  useEffect(()=>{ if(!studioFs && stVidRecRef.current) _vidStop(); },[studioFs]);
+  // the phone's Back in the Studio: it closes what is open (a sheet, the rails…), then goes home — never out of the app
+  const stFsRef = useRef(false); stFsRef.current = studioFs;
+  const stBackRef = useRef(null);
+  stBackRef.current = ()=>{
+    if(stVidRecRef.current){ _vidStop(); return; }
+    if(stVid && stVid.phase==='done'){ _vidClose(); return; }
+    if(stShare){ setStShare(false); return; }
+    if(showSetupModal){ closeSetup(); return; }
+    if(showGuide){ closeGuide(); return; }
+    if(showSizePicker){ setShowSizePicker(false); return; }
+    if(showMorphMenu){ setShowMorphMenu(false); return; }
+    if(showMoodMenu){ setShowMoodMenu(false); return; }
+    if(stripOpen){ setStripOpen(false); return; }
+    if(stSideRef.current){ _stShow(null); return; }
+    if(recording) return;
+    if(backBtnRef.current){ try{ _captureHomeArt(); }catch(_){} backBtnRef.current.click(); }
+  };
+  useEffect(()=>{
+    if(!studioFs) return;
+    let armed=false;
+    const arm=()=>{ try{ history.pushState({pfStudio:1}, ''); armed=true; }catch(_){} };
+    arm();
+    const onPop=()=>{ armed=false; try{ if(stBackRef.current) stBackRef.current(); }catch(_){} setTimeout(()=>{ if(stFsRef.current && !armed) arm(); }, 80); };
+    window.addEventListener('popstate', onPop);
+    return ()=>{ window.removeEventListener('popstate', onPop); if(armed){ try{ if(history.state && history.state.pfStudio) history.back(); }catch(_){} } };
+  },[studioFs]);
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+(studioLive?' pf-studio-live':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
@@ -13867,6 +14104,9 @@ Hard requirements:
                     <span style={{opacity:it.pro?.6:.35,fontSize:(.8*effScale)+'rem'}}>→</span>
                   </div>
                 ))}
+                {studioOn && (<div style={{display:'flex',flexWrap:'wrap',gap:'2px 14px',padding:'8px 18px 12px',borderTop:'1px solid rgba(201,168,76,.14)'}}>
+                  {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.72)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
+                </div>)}
               </div>
             </>
           )}
@@ -13875,12 +14115,12 @@ Hard requirements:
         {/* ── LITE / ADVANCED mode chip — same height as the Aa/Lang chip,
             width auto-fits the active mode's label. Tapping toggles the mode.
             Lite = white chip + white text; Advanced = gold chip + gold text. */}
-        {(()=>{
+        {!studioOn && (()=>{
           const adv = !basicMode;
           const accent = adv ? '220,180,90' : '230,205,140';   // full gold | lite gold
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
           return (
-            <button onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ _suppressRecOnStopRef.current=true; const _r=recorderRef.current; if(_r && _r.state!=='inactive'){ try{ _r.stop(); }catch(_){} } setRecording(false); recorderRef.current=null; recChunksRef.current=[]; setRecordIntent(null); recordIntentRef.current=null; }catch(_){} /* NOTE: no stopRecord() here — the suppress block above already tore the recorder down WITHOUT stopAll, so a playing image scan travels across the toggle uninterrupted (stopRecord would stop+reset it). */ try{ setMicArmed(false); }catch(_){} try{ setHasMicDraft(false); listenStashRef.current=null; singStashRef.current=null; }catch(_){} /* ZASAH BEST: the Lite/Advanced switch is a VIEW change, never a reset. */ /* It preserves the current painting both ways (consistent with the bridge */ /* round-trip); a genuine reset lives in the New/clear control. */ try{ const _hasPiece = (chordsRef.current && chordsRef.current.length>0); setForceSetup(goingAdvanced && !_hasPiece); }catch(_){} /* ZASAH BEST: Lite image-mode follows the CONTENT, not history — image */ /* content maps to painting->music, music content to music->painting, */ /* deterministically each way. */ try{ const _isImg = (viewModeRef.current==='image'); setLiteImageMode(_isImg); liteImageModeRef.current=_isImg; /* fresh image mode after a jump: keep the painting, drop any old recording so */ /* the controls show Record-to-this-image, not Save/Play. */ if(_isImg && !goingAdvanced){ try{ setRecBlob(null); setRecName(''); setRecordIntent(null); recordIntentRef.current=null; setHoldPaused(false); holdPausedRef.current=false; resumeFromRef.current=null; }catch(_){} /* CONSISTENCY with default Lite image mode: a fresh arrival AUTO-PLAYS a recorded take. startRecord's own guard (recording||playing) makes this a no-op when a live scan travelled across seamlessly \u2014 only a stopped/paused adoption starts from the top. */ setTimeout(()=>{ try{ if(liteImageModeRef.current){ (startRecordRef.current)&&startRecordRef.current(); } }catch(_){} },300); } }catch(_){} /* ZASAH: a CLEAN Advanced → Lite jump lands on Lite's default (the big */ /* Play chip), exactly like a fresh entry. The audio-unlock latch only */ /* stays set when an actual piece travels along (or we're heading INTO */ /* Advanced, where it's inert); otherwise clear it + re-arm autoplay gate. */ try{ const _piece=(chordsRef.current && chordsRef.current.length>0); if(goingAdvanced || _piece){ liteEverUnlockedRef.current=true; } else { liteEverUnlockedRef.current=false; basicAutoPlayedRef.current=false; /* An EMPTY shell (Clear on a music source keeps loadedSource for the */ /* \"+ new music\" affordance) must not block the Lite landing — drop the */ /* shell flags. Image view is excluded: it flips to the Lite image */ /* flavour which manages its own source. Stashes/drafts untouched. */ if(viewModeRef.current!=='image'){ try{ setLoadedSource(null); setStayActive(false); }catch(_){} } } }catch(_){} /* First-ever entry into Advanced (via this chip) also offers the tour, */ /* unless the user already discovered via the CTA. Same one-shot flag. */ try{ if(goingAdvanced){ let disc=false; try{ disc = (typeof localStorage!=='undefined' && localStorage.getItem('paintiano_discovered')==='1'); }catch(_){} if(!disc){ try{ localStorage.setItem('paintiano_discovered','1'); }catch(_){} setBridgeUsed(true); tourPendingRef.current=true; } } }catch(_){} setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
+            <button ref={liteChipRef} onClick={()=>{ const goingAdvanced = basicMode; try{ if(micListening) stopMicListening(); }catch(_){} try{ if(micPainting) stopMicPainting(); }catch(_){} try{ _suppressRecOnStopRef.current=true; const _r=recorderRef.current; if(_r && _r.state!=='inactive'){ try{ _r.stop(); }catch(_){} } setRecording(false); recorderRef.current=null; recChunksRef.current=[]; setRecordIntent(null); recordIntentRef.current=null; }catch(_){} /* NOTE: no stopRecord() here — the suppress block above already tore the recorder down WITHOUT stopAll, so a playing image scan travels across the toggle uninterrupted (stopRecord would stop+reset it). */ try{ setMicArmed(false); }catch(_){} try{ setHasMicDraft(false); listenStashRef.current=null; singStashRef.current=null; }catch(_){} /* ZASAH BEST: the Lite/Advanced switch is a VIEW change, never a reset. */ /* It preserves the current painting both ways (consistent with the bridge */ /* round-trip); a genuine reset lives in the New/clear control. */ try{ const _hasPiece = (chordsRef.current && chordsRef.current.length>0); setForceSetup(goingAdvanced && !_hasPiece); }catch(_){} /* ZASAH BEST: Lite image-mode follows the CONTENT, not history — image */ /* content maps to painting->music, music content to music->painting, */ /* deterministically each way. */ try{ const _isImg = (viewModeRef.current==='image'); setLiteImageMode(_isImg); liteImageModeRef.current=_isImg; /* fresh image mode after a jump: keep the painting, drop any old recording so */ /* the controls show Record-to-this-image, not Save/Play. */ if(_isImg && !goingAdvanced){ try{ setRecBlob(null); setRecName(''); setRecordIntent(null); recordIntentRef.current=null; setHoldPaused(false); holdPausedRef.current=false; resumeFromRef.current=null; }catch(_){} /* CONSISTENCY with default Lite image mode: a fresh arrival AUTO-PLAYS a recorded take. startRecord's own guard (recording||playing) makes this a no-op when a live scan travelled across seamlessly \u2014 only a stopped/paused adoption starts from the top. */ setTimeout(()=>{ try{ if(liteImageModeRef.current){ (startRecordRef.current)&&startRecordRef.current(); } }catch(_){} },300); } }catch(_){} /* ZASAH: a CLEAN Advanced → Lite jump lands on Lite's default (the big */ /* Play chip), exactly like a fresh entry. The audio-unlock latch only */ /* stays set when an actual piece travels along (or we're heading INTO */ /* Advanced, where it's inert); otherwise clear it + re-arm autoplay gate. */ try{ const _piece=(chordsRef.current && chordsRef.current.length>0); if(goingAdvanced || _piece){ liteEverUnlockedRef.current=true; } else { liteEverUnlockedRef.current=false; basicAutoPlayedRef.current=false; /* An EMPTY shell (Clear on a music source keeps loadedSource for the */ /* \"+ new music\" affordance) must not block the Lite landing — drop the */ /* shell flags. Image view is excluded: it flips to the Lite image */ /* flavour which manages its own source. Stashes/drafts untouched. */ if(viewModeRef.current!=='image'){ try{ setLoadedSource(null); setStayActive(false); }catch(_){} } } }catch(_){} /* First-ever entry into Advanced (via this chip) also offers the tour, */ /* unless the user already discovered via the CTA. Same one-shot flag. */ try{ if(goingAdvanced){ let disc=false; try{ disc = (typeof localStorage!=='undefined' && localStorage.getItem('paintiano_discovered')==='1'); }catch(_){} if(!disc){ try{ localStorage.setItem('paintiano_discovered','1'); }catch(_){} setBridgeUsed(true); tourPendingRef.current=true; } } }catch(_){} setBasicMode(b=>!b); }} aria-label={label} aria-pressed={adv} title={label}
               style={{height:38,padding:'0 16px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,borderRadius:19,cursor:'pointer',fontFamily:'inherit',fontSize:(.66*effScale)+'rem',fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',whiteSpace:'nowrap',background:'transparent',color:'rgba('+accent+',.98)',border:'1px solid rgba('+accent+',.45)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',WebkitTapHighlightColor:'transparent',transition:'color .2s, border-color .2s'}}>
               <span aria-hidden="true" style={{width:7,height:7,borderRadius:'50%',background:'rgba('+accent+',.95)',boxShadow:'0 0 7px rgba('+accent+',.6)',flexShrink:0}}/>
               {label}
@@ -14105,17 +14345,18 @@ Hard requirements:
           hairline dividers; labels are tiny and faded (recede for return
           users, orient first-timers). lbl() / divider markup inline.
           ───────────────────────────────────────────────────────────── */}
-      {studioHome && homeArt && (<>
+      {studioHome && (()=>{ const homeArtX = homeArt || ((hasMusicDraft || hasImageDraft) ? null : STUDIO_HOME_SAMPLE); if(!homeArtX) return null; return (<>
         <style>{`.pf-app-root.pf-studio-home{position:relative;z-index:1;background:transparent!important}
 .pf-studio-home .pf-setup-create-import-wrap{background:rgba(10,8,18,.86)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
-.pf-studio-home .pf-version-footer{display:none}`}</style>
-        <div aria-hidden="true" className="pf-studio-home-art" style={{position:'fixed',inset:0,zIndex:-1,pointerEvents:'none',background:'linear-gradient(180deg,rgba(6,6,12,.5),rgba(6,6,12,.12) 34%,rgba(6,6,12,.2) 55%,rgba(6,6,12,.9)), url('+homeArt.u+') center/cover no-repeat, #06060c'}}/>
-        {(()=>{ const _can = homeArt.src==='image' ? hasImageDraft : hasMusicDraft; return (
-          <button type="button" onClick={()=>{ if(!_can) return; restoreMode(homeArt.src==='image' ? 'image' : 'music'); setForceSetup(false); }} aria-label={_stT('back')} disabled={!_can}
+.pf-studio-home .pf-version-footer{display:none}
+.pf-studio-home .pf-legal-links{display:none}`}</style>
+        <div aria-hidden="true" className="pf-studio-home-art" style={{position:'fixed',inset:0,zIndex:-1,pointerEvents:'none',background:'linear-gradient(180deg,rgba(6,6,12,.5),rgba(6,6,12,.12) 34%,rgba(6,6,12,.2) 55%,rgba(6,6,12,.9)), url('+homeArtX.u+') center/cover no-repeat, #06060c'}}/>
+        {(()=>{ const _smp = homeArtX.src==='sample'; const _can = _smp ? true : homeArtX.src==='image' ? hasImageDraft : hasMusicDraft; return (
+          <button type="button" onClick={()=>{ if(!_can) return; if(_smp){ try{ unlockAudio(); }catch(_){} loadSampleMidi(0); setForceSetup(false); return; } restoreMode(homeArtX.src==='image' ? 'image' : 'music'); setForceSetup(false); }} aria-label={_smp ? _stT('go') : _stT('back')} disabled={!_can}
             style={{flex:'1 1 auto',minHeight:120,width:'100%',background:'transparent',border:0,cursor:_can?'pointer':'default',display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 14px'}}>
-            {_can && (<span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.8)',textShadow:'0 1px 8px rgba(0,0,0,.95)'}}>{_stT('back')}</span>)}
+            {_can && (<span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.2em',textTransform:'uppercase',color:'rgba(242,238,232,.8)',textShadow:'0 1px 8px rgba(0,0,0,.95)'}}>{_smp ? _stT('go') : _stT('back')}</span>)}
           </button>); })()}
-      </>)}
+      </>); })()}
       {isSetupView && !basicMode && !favView && (
       <div className="pf-fade pf-panel-part" style={{width:'100%',maxWidth:560,display:'flex',flexDirection:'column',gap:14,marginBottom:18}}>
 
@@ -14561,7 +14802,7 @@ Hard requirements:
           {/* MORPH — moved from the look strip to the header (mood pieces only;
               MFI has no morph chain). Purple gradient kept; header pill geometry. */}
           {!loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && (
-            <button className="pf-lift pf-hdr-morph" onClick={()=>{
+            <button ref={morphBtnRef} className="pf-lift pf-hdr-morph" onClick={()=>{
               if(sourcePickerLocked)return;
               // Morph cannot remix AI-generated moods (it only works against the
               // library/offline mood pool with known recipes). Show a clear gold
@@ -15710,7 +15951,7 @@ Hard requirements:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={()=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; if(studioFs){ if(!studioLive) _stTap(); return; } wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onTouchStart={studioFs ? _stOvStart : undefined} onTouchEnd={studioFs ? _stOvEnd : undefined} onClick={(e)=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; if(studioFs){ if(!studioLive) _stTap(e); return; } wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       {/* Exit-fullscreen button — rendered OUTSIDE the canvas wrap. The wrap uses
           transform:translate(-50%,-50%) in immersive, and a position:fixed child
           of a transformed element anchors to that element, not the viewport — so
@@ -15735,8 +15976,9 @@ Hard requirements:
       {studioFs && (()=>{
         const _img = viewMode==='image' && !moodFromImg;
         const _live = studioLive;
-        const _r = _live || stSide==='right', _l = _live || stSide==='left';
-        const _cap = !_live && stSide==='right';
+        const _vr = stVidRec || recording;   // a video or the picture's sound is being recorded: the rails rest
+        const _r = !_vr && (_live || stSide==='right'), _l = !_vr && (_live || stSide==='left');
+        const _cap = !_live && !_vr && stSide==='right';
         const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording);
         const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg));
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '');
@@ -15744,30 +15986,46 @@ Hard requirements:
         const _exportOk = !_img && chords.length>0 && disp>0 && !playing && !anim && !holdPaused && !demoReelOn && !micActive && !busy && !recording;
         const _playDis = demoReelOn || recording || ((micPainting||micListening) ? !chords.length : ((!chords.length && !playing && !holdPaused) || (demoMode && !playing && !holdPaused)));
         const _loopOk = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)));
+        const _morphOk = !_live && !loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && !!currentMood;
+        const _showOk = !_live && !_img && playing && randomMode && !!(effectiveStyle||shuffleStyle) && chords.length>0;
+        const _bare = (x)=>String(x||'').replace(/^[^\p{L}\p{N}]+/u,'');   // "⟳ loop" → "loop": the icon is above it
+        const _many = ((_img && originalImgUrl) ? 2 : 0) + (_loopOk?1:0) + (_showVary?1:0) + (_morphOk?1:0) + (_showOk?1:0) > 2;
+        // the speaker: a tap mutes, a press-and-hold brings the sound back (iPhone), as in Classic
+        const _hold = {
+          onPointerDown:()=>{ if(speakerHoldRef.current && speakerHoldRef.current!=='fired') clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; try{ audioHardRecover(); }catch(_){} _stBuzz(20); }, 600); },
+          onPointerUp:()=>{ if(speakerHoldRef.current && speakerHoldRef.current!=='fired'){ clearTimeout(speakerHoldRef.current); speakerHoldRef.current=null; } },
+          onPointerLeave:()=>{ if(speakerHoldRef.current && speakerHoldRef.current!=='fired'){ clearTimeout(speakerHoldRef.current); speakerHoldRef.current=null; } },
+        };
+        const _mute = ()=>{ if(speakerHoldRef.current==='fired'){ speakerHoldRef.current=null; return; } setMuted(m=>!m); };
+        const _heart = (<svg width="19" height="19" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>);
         const _ic = (x)=>({width:46,height:46,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(10,8,18,.62)',border:'1px solid rgba(242,238,232,.18)',color:'#f2eee8',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',...(x||{})});
         const _it = {display:'flex',flexDirection:'column',alignItems:'center',gap:4,background:'none',border:0,padding:0,cursor:'pointer',fontFamily:'inherit',color:'rgba(242,238,232,.92)',fontSize:9,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',textShadow:'0 1px 6px rgba(0,0,0,.85)',WebkitTapHighlightColor:'transparent'};
         // live: the rails sit low, just above the keys (or the Mic's bar), clear of what the canvas shows at its top
-        const _rail = (side, on)=>({position:'fixed',[side]:'max(12px, env(safe-area-inset-'+side+', 0px))',...(_live?{bottom:(stDockH+14)+'px'}:{top:'50%'}),zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:14,opacity:on?1:0,pointerEvents:on?'auto':'none',transform:'translate('+(on?0:(side==='right'?14:-14))+'px,'+(_live?'0':'-50%')+')',transition:'opacity .28s, transform .28s'});
+        const _rail = (side, on)=>({position:'fixed',[side]:'max(12px, env(safe-area-inset-'+side+', 0px))',...(_live?{bottom:(stDockH+14)+'px'}:{top:'50%'}),zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:(side==='right'&&_many)?10:14,opacity:on?1:0,pointerEvents:on?'auto':'none',transform:'translate('+(on?0:(side==='right'?14:-14))+'px,'+(_live?'0':'-50%')+')',transition:'opacity .28s, transform .28s'});
         const _go = (fn, keep)=>(e)=>{ e.stopPropagation(); try{ fn(); }catch(_){} if(keep) _stArm(); };
         const _ai = {color:'#cdb2ff',border:'1px solid rgba(190,140,255,.55)'};
         const _aiOn = {background:'linear-gradient(135deg,#c9a2ff,#8c5cff)',color:'#140a24',border:'1px solid transparent'};
         return (<>
           <div style={{position:'fixed',left:0,right:0,top:0,zIndex:10001,padding:'calc(env(safe-area-inset-top, 0px) + 14px) max(18px, env(safe-area-inset-right, 0px)) 14px max(18px, env(safe-area-inset-left, 0px))',background:'linear-gradient(180deg,rgba(6,6,12,.9),rgba(6,6,12,0))',opacity:_cap?1:0,pointerEvents:_cap?'auto':'none',transform:_cap?'none':'translateY(-8px)',transition:'opacity .28s, transform .28s'}}>
-            <div style={{textAlign:'center',fontSize:(.62*effScale)+'rem',fontWeight:600,color:PF.cream,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{_ttl}</div>
-            {_capLines()}
-            <div style={{marginTop:8,height:4,borderRadius:2,background:'rgba(255,255,255,.12)',overflow:'hidden'}}><div style={{height:'100%',width:_pct+'%',background:playing?'rgba(90,190,110,.75)':'rgba(201,168,76,.7)',transition:'width .3s linear'}}/></div>
+            <button type="button" onClick={_go(()=>_stShow('left'))} aria-label="menu" style={{position:'absolute',left:'max(12px, env(safe-area-inset-left, 0px))',top:'calc(env(safe-area-inset-top, 0px) + 8px)',width:38,height:38,padding:0,borderRadius:'50%',border:'1px solid rgba(242,238,232,.18)',background:'rgba(10,8,18,.55)',color:'#f2eee8',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+            <div style={{textAlign:'center',fontSize:(.62*effScale)+'rem',fontWeight:600,color:PF.cream,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',margin:'0 40px 4px'}}>{_ttl}</div>
+            <div ref={stCapLinesRef}>{_capLines()}</div>
           </div>
           <div style={_rail('right', _r)}>
-            {favReadyAny && (<button type="button" onClick={_go(_favToggleAny, true)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} style={_it}><span style={_ic({color:PF.gold2})}><svg width="19" height="19" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span></button>)}
+            {!_live && (<button type="button" onClick={_go(_stHeartTap, true)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} style={{..._it,opacity:(favReadyAny||stFavPend)?1:.6}}><span style={_ic((stFavPend && !favReadyAny) ? {color:'#ff6b8b',border:'1px solid rgba(255,107,139,.6)'} : {color:PF.gold2})}>{_heart}</span></button>)}
+            {_live && favReadyAny && (<button type="button" onClick={_go(_favToggleAny, true)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} style={_it}><span style={_ic({color:PF.gold2})}><svg width="19" height="19" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span></button>)}
             <button type="button" onClick={_go(handlePauseClick, true)} disabled={_playDis} aria-label={playing&&!holdPaused?t('pause'):t('play')} style={{..._it,opacity:_playDis?.4:1}}><span style={_ic({width:58,height:58,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',boxShadow:'0 0 24px rgba(77,227,160,.45)'})}><TxIcon n={playing&&!holdPaused?'pause':'play'} s={22}/></span>{holdPaused?t('resume'):playing?t('pause'):t('play')}</button>
-            <button type="button" onClick={_go(()=>setMuted(m=>!m), true)} aria-label={muted?'unmute':'mute'} aria-pressed={!!muted} style={_it}><span style={_ic()}><TxIcon n={muted?'mute':'sound'} s={18}/></span></button>
+            <button type="button" onClick={_go(_mute, true)} {..._hold} aria-label={muted?'unmute':'mute'} aria-pressed={!!muted} style={_it}><span style={_ic()}><TxIcon n={muted?'mute':'sound'} s={18}/></span></button>
             {_img && originalImgUrl && imgPlayMode!=='compose' && (<>
               <button type="button" onClick={_go(_atmoTap, true)} disabled={atmoBusy} aria-pressed={!!atmoOn} style={{..._it,opacity:atmoBusy?.5:1}}><span style={_ic(atmoOn?_aiOn:_ai)}><TxIcon n="sparkle" s={16}/></span>{(t('atmoLabel')||'atmo')+(atmoBusy?' …':'')}</button>
               <button type="button" onClick={_go(_melodyTap, true)} disabled={melodyBusy} aria-pressed={!!melodyOn} style={{..._it,opacity:melodyBusy?.5:1}}><span style={_ic(melodyOn?_aiOn:_ai)}><TxIcon n="sparkle" s={16}/></span>{(t('melodyLabel')||'melody')+(melodyBusy?' …':'')}</button>
             </>)}
-            {_loopOk && (<button type="button" onClick={_go(()=>{ if(recording) return; const v=!loopMode; setLoopMode(v); loopModeRef.current=v; }, true)} disabled={recording} aria-pressed={!!loopMode} style={{..._it,opacity:recording?.4:1}}><span style={_ic(loopMode?{background:'rgba(201,168,76,.9)',color:'#14110a',border:'1px solid transparent'}:{color:PF.gold2})}><TxIcon n="loop" s={16}/></span>{t('loop')}</button>)}
-            {_showVary && (<button type="button" onClick={_go(()=>{ if(_varyOk) _doVary(); }, true)} disabled={!_varyOk} aria-label={t('vary')} style={{..._it,opacity:_varyOk?1:.4}}><span style={_ic({color:'#ffb08a',border:'1px solid rgba(244,124,60,.55)'})}><TxIcon n="sparkle" s={16}/></span>{t('vary')}</button>)}
-            {!_img && (<button type="button" onClick={_go(()=>{ if(_exportOk) setShowSizePicker(true); }, true)} disabled={!_exportOk} aria-label={t('save')} style={{..._it,opacity:_exportOk?1:.4}}><span style={_ic({color:PF.gold2})}><TxIcon n="save" s={17}/></span>{t('save')}</button>)}
+            {_loopOk && (<button type="button" onClick={_go(()=>{ if(recording) return; const v=!loopMode; setLoopMode(v); loopModeRef.current=v; }, true)} disabled={recording} aria-pressed={!!loopMode} style={{..._it,opacity:recording?.4:1}}><span style={_ic(loopMode?{background:'rgba(201,168,76,.9)',color:'#14110a',border:'1px solid transparent'}:{color:PF.gold2})}><TxIcon n="loop" s={16}/></span>{_bare(t('loop'))}</button>)}
+            {_showVary && (<button type="button" onClick={_go(()=>{ if(_varyOk) _doVary(); }, true)} disabled={!_varyOk} aria-label={t('vary')} style={{..._it,opacity:_varyOk?1:.4}}><span style={_ic({color:'#ffb08a',border:'1px solid rgba(244,124,60,.55)'})}><TxIcon n="sparkle" s={16}/></span>{_bare(t('vary'))}</button>)}
+            {_morphOk && (<button type="button" onClick={_go(()=>{ const go=()=>{ if(morphBtnRef.current) morphBtnRef.current.click(); }; if(playing && handlePauseClickRef.current){ handlePauseClickRef.current(); setTimeout(go, 160); } else go(); })} disabled={recording || working} aria-label={t('morphInto')} style={{..._it,opacity:(recording||working)?.4:1}}><span style={_ic({color:'#dcb4ff',border:'1px solid rgba(190,140,255,.55)'})}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="9" cy="12" r="5.5"/><circle cx="15" cy="12" r="5.5"/></svg></span>{_bare(t('morph'))}</button>)}
+            {_showOk && (<button type="button" onClick={_go(toggleShow, true)} aria-pressed={!!showMode} style={_it}><span style={_ic(showMode?{background:'rgba(201,168,76,.9)',color:'#14110a',border:'1px solid transparent'}:{color:PF.gold2})}><TxIcon n="show" s={16}/></span>{t('showLabel')!=='showLabel'?t('showLabel'):'Show'}</button>)}
+            {!_live && (<button type="button" onClick={_go(()=>{ _stShow(null); setStShare(true); })} aria-label={_stT('share')} style={_it}><span style={_ic({background:'linear-gradient(135deg,#ff5f8f,#a86bff)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(200,100,255,.35)'})}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>{_stT('share')}</button>)}
+            {_live && !_img && (<button type="button" onClick={_go(()=>{ if(_exportOk) setShowSizePicker(true); }, true)} disabled={!_exportOk} aria-label={t('save')} style={{..._it,opacity:_exportOk?1:.4}}><span style={_ic({color:PF.gold2})}><TxIcon n="save" s={17}/></span>{t('save')}</button>)}
           </div>
           {_live && (<div style={_rail('left', _l)}>
             <button type="button" onClick={_go(()=>{ if(backBtnRef.current) backBtnRef.current.click(); })} style={_it}><span style={_ic({fontSize:20})}>←</span>{_stT('bk')}</button>
@@ -15779,12 +16037,13 @@ Hard requirements:
             <button type="button" onClick={_go(()=>{ _stShow(null); setStripOpen(true); })} style={_it}><span style={_ic()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor"/><path d="M12 21c-2 0-2.5-2-1-3s4-1 4-3-2-3-2-3"/></svg></span>{_img ? _stT('sound') : _stT('look')}</button>
             <button type="button" onClick={_go(()=>{ _stShow(null); _favOpen(); })} style={_it}><span style={_ic()}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>{_stT('favs')}</button>
             <button type="button" onClick={_go(()=>{ _stShow(null); setSetupReturnTo(null); setShowSetupModal(true); })} style={_it}><span style={_ic()}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>{_stT('setup')}</button>
+            <button type="button" onClick={_go(()=>{ _stShow(null); setGuideReturnCardId(null); setShowGuide(true); })} style={_it}><span style={_ic({fontSize:19,fontWeight:600,color:PF.gold2,fontFamily:'inherit'})}>?</span>{t('guide')}</button>
           </div>}
           {stripOpen && (<div onClick={()=>setStripOpen(false)} onTouchEnd={(e)=>{ e.preventDefault(); setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'rgba(4,4,10,.5)',touchAction:'none'}}/>)}
           {stCoach && !stripOpen && (
             <div role="dialog" aria-label={_stT('title')} onClick={(e)=>{ e.stopPropagation(); _stCoachDone(); }} style={{position:'fixed',inset:0,zIndex:10006,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(4,4,10,.62)',cursor:'pointer'}}>
               <div style={{display:'grid',gap:14,padding:'22px 24px',borderRadius:20,background:'rgba(10,8,18,.9)',border:'1px solid rgba(201,168,76,.35)',minWidth:250}}>
-                {[['↑','c1'],['↓','c2'],['●','c3'],['●●','c4']].map(([g,k])=>(
+                {[['↑','c1'],['↓','c2'],['→','c5'],['●','c3'],['●●','c4']].map(([g,k])=>(
                   <div key={k} style={{display:'flex',alignItems:'center',gap:14,fontSize:(.66*effScale)+'rem',color:'rgba(242,238,232,.92)'}}>
                     <span style={{width:40,height:40,borderRadius:'50%',border:'1px solid rgba(201,168,76,.5)',display:'flex',alignItems:'center',justifyContent:'center',color:PF.gold2,fontSize:15,flexShrink:0}}>{g}</span>
                     <span>{_stT(k)}<span style={{display:'block',fontSize:(.48*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(201,168,76,.8)'}}>{_stT(k+'s')}</span></span>
@@ -15795,6 +16054,82 @@ Hard requirements:
           )}
         </>);
       })()}
+      {studioFs && (<>
+        <style>{STUDIO_FX_CSS}</style>
+        {stHearts.map(h=>(<svg key={h.id} className="pf-st-heart" viewBox="0 0 24 24" aria-hidden="true" style={{position:'fixed',left:h.x-46,top:h.y-46,width:92,height:92,zIndex:10003,pointerEvents:'none','--r':h.r+'deg'}}><path fill="#ff3b6b" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>))}
+        {stToast && (<div role="status" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 76px)',transform:'translateX(-50%)',zIndex:10008,padding:'9px 16px',borderRadius:20,background:'rgba(10,8,18,.9)',border:'1px solid rgba(255,107,139,.45)',color:'#f2eee8',fontSize:(.56*effScale)+'rem',letterSpacing:'.03em',whiteSpace:'nowrap',pointerEvents:'none'}}>{stToast}</div>)}
+        {/* the progress, a thin line on the bottom edge — drag it to go anywhere in the piece */}
+        {!studioLive && chords.length>0 && !stVidRec && !(viewMode==='image' && (recording || !!recBlob)) && (()=>{
+          const _p = Math.min(100, 100*disp/Math.max(1, chords.length));
+          const _at = (e)=>Math.min(Math.floor(Math.max(0, Math.min(1, e.clientX/Math.max(1, window.innerWidth)))*chords.length), chords.length-1);
+          return (
+            <div role="slider" aria-label="playback position" aria-valuemin={0} aria-valuemax={Math.max(0,chords.length-1)} aria-valuenow={Math.min(disp,Math.max(0,chords.length-1))}
+              onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()}
+              onPointerDown={(e)=>{ e.stopPropagation(); if(recording) return; e.preventDefault(); try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} setStSeek(true); const idx=_at(e); stopAll(); resumeFromRef.current=idx; setDisp(idx); }}
+              onPointerMove={(e)=>{ if(recording || !e.currentTarget.hasPointerCapture || !e.currentTarget.hasPointerCapture(e.pointerId)) return; e.preventDefault(); const idx=_at(e); setDisp(idx); resumeFromRef.current=idx; }}
+              onPointerUp={(e)=>{ e.stopPropagation(); try{ e.currentTarget.releasePointerCapture(e.pointerId); }catch(_){} setStSeek(false); if(recording) return; const idx=resumeFromRef.current; startPlay(); if(resumeFromRef.current===null && idx!==null) resumeFromRef.current=idx; }}
+              onPointerCancel={()=>setStSeek(false)}
+              style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10002,height:'calc(26px + env(safe-area-inset-bottom, 0px))',paddingBottom:'env(safe-area-inset-bottom, 0px)',boxSizing:'border-box',display:'flex',alignItems:'flex-end',touchAction:'none',cursor:'pointer'}}>
+              <div style={{position:'relative',width:'100%',height:stSeek?6:3,background:'rgba(255,255,255,.16)',transition:'height .15s'}}>
+                <div style={{height:'100%',width:_p+'%',background:playing?'linear-gradient(90deg,#4de3a0,#2fc98a)':'linear-gradient(90deg,#c9a84c,#f0c040)',transition:stSeek?'none':'width .3s linear'}}/>
+                {stSeek && (<div style={{position:'absolute',top:'50%',left:_p+'%',width:16,height:16,borderRadius:'50%',background:'#fff',transform:'translate(-50%,-50%)',boxShadow:'0 0 10px rgba(0,0,0,.55)'}}/>)}
+              </div>
+            </div>);
+        })()}
+        {/* SHARE — a video for TikTok / Reels / Stories, a Story picture, Save · print (or the picture's sound) */}
+        {stShare && (()=>{
+          const _img = viewMode==='image' && !moodFromImg;
+          const _vOk = _vidOk() && chords.length>0 && !working && !recording && !(_img && imgPlayMode==='compose' && !imgComposeRef.current);
+          const _pOk = chords.length>0 || (_img && !!originalImgUrl);
+          const _sOk = !_img && chords.length>0 && disp>0 && !playing && !anim && !holdPaused && !demoReelOn && !micActive && !busy && !recording;
+          const _rOk = _img && !!recBtnRef.current && !recBtnRef.current.disabled;
+          const _sv = (d)=>(<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
+          const rows = [
+            {k:'vid', ok:_vOk, bg:'linear-gradient(135deg,#ff5f8f,#a86bff)', ic:_sv(<><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></>), go:_vidStart},
+            {k:'pic', ok:_pOk, bg:'linear-gradient(135deg,#4de3a0,#2f9fc9)', ic:_sv(<><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 18l3-3 2 2 3-3"/></>), go:()=>{ setStShare(false); exportImage('story', true, null, null, false); }},
+            _img ? {k:'snd', ok:_rOk, bg:'linear-gradient(135deg,#ff8a5c,#e0446a)', ic:_sv(<><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></>), go:()=>{ setStShare(false); if(recBtnRef.current) recBtnRef.current.click(); }}
+                 : {k:'sav', ok:_sOk, bg:'linear-gradient(135deg,#e2c477,#b8892f)', ic:_sv(<><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></>), go:()=>{ setStShare(false); setShowSizePicker(true); }, why:t('exportNeedsPlay')},
+          ];
+          return (<>
+            <div onClick={()=>setStShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); setStShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)',touchAction:'none'}}/>
+            <div role="dialog" aria-label={_stT('share')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10}}>
+              <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 4px'}}/>
+              <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',marginBottom:2}}>{_stT('share')}</div>
+              {rows.map(r=>(
+                <button key={r.k} type="button" className="pf-st-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }} style={{display:'flex',alignItems:'center',gap:14,width:'100%',padding:'12px 14px',borderRadius:16,border:'1px solid rgba(242,238,232,.1)',background:'rgba(255,255,255,.035)',color:'#f2eee8',fontFamily:'inherit',textAlign:'left',cursor:r.ok?'pointer':'default',opacity:r.ok?1:.42,transition:'transform .12s'}}>
+                  <span style={{flexShrink:0,width:44,height:44,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:r.bg,color:'#fff'}}>{r.ic}</span>
+                  <span style={{flex:1,minWidth:0}}>
+                    <span style={{display:'block',fontSize:(.66*effScale)+'rem',fontWeight:600,letterSpacing:'.02em'}}>{_stT(r.k)}</span>
+                    <span style={{display:'block',marginTop:2,fontSize:(.52*effScale)+'rem',lineHeight:1.35,color:'rgba(242,238,232,.6)'}}>{(!r.ok && r.why) ? r.why : _stT(r.k+'S')}</span>
+                  </span>
+                </button>))}
+            </div>
+          </>);
+        })()}
+        {/* a video on the way: the screen is the take (no taps), one button stops it */}
+        {stVidRec && (<div onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',inset:0,zIndex:10002}}/>)}
+        {(stVidRec || (recording && viewMode==='image')) && (
+          <div style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 14px)',transform:'translateX(-50%)',zIndex:10003,display:'flex',alignItems:'center',gap:10,padding:'6px 6px 6px 14px',borderRadius:24,background:'rgba(10,8,18,.88)',border:'1px solid rgba(255,90,110,.55)',color:'#f2eee8',fontSize:(.58*effScale)+'rem',letterSpacing:'.08em',whiteSpace:'nowrap'}}>
+            <span className="pf-st-dot" aria-hidden="true" style={{width:10,height:10,borderRadius:'50%',background:'#ff4d6a',boxShadow:'0 0 10px #ff4d6a'}}/>
+            <span style={{textTransform:'uppercase',fontWeight:600}}>{_stT('vRec')}</span>
+            {stVidRec && (<span style={{fontVariantNumeric:'tabular-nums',color:'rgba(242,238,232,.75)'}}>{(()=>{ const sec=Math.max(0, Math.floor((Date.now()-stVid.t0)/1000)) + 0*stVidTick; return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); })()}</span>)}
+            <button type="button" onClick={(e)=>{ e.stopPropagation(); if(stVidRec) _vidStop(); else if(recBtnRef.current) recBtnRef.current.click(); }} aria-label="stop" style={{width:34,height:34,borderRadius:'50%',border:0,background:'#ff4d6a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0}}><span style={{width:12,height:12,borderRadius:2,background:'#fff'}}/></button>
+          </div>
+        )}
+        {/* the finished video: watch it, share it, keep it */}
+        {stVid && stVid.phase==='done' && (<>
+          <div onClick={_vidClose} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.72)'}}/>
+          <div role="dialog" aria-label={_stT('vDone')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',gap:12,alignItems:'center'}}>
+            <div style={{fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)'}}>{_stT('vDone')}</div>
+            <video src={stVid.url} playsInline autoPlay loop controls style={{display:'block',height:'min(54dvh, 480px)',aspectRatio:'9 / 16',maxWidth:'100%',borderRadius:14,background:'#000'}}/>
+            <div style={{display:'flex',gap:10,width:'100%'}}>
+              <button type="button" onClick={_vidShare} style={{flex:2,padding:'14px 12px',borderRadius:24,border:0,fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'#fff',background:'linear-gradient(135deg,#ff5f8f,#a86bff)',cursor:'pointer'}}>{_stT('vShare')}</button>
+              <button type="button" onClick={_vidSave} style={{flex:1,padding:'14px 12px',borderRadius:24,border:'1px solid rgba(242,238,232,.25)',fontFamily:'inherit',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'#f2eee8',background:'transparent',cursor:'pointer'}}>{_stT('vSave')}</button>
+            </div>
+            <button type="button" onClick={_vidClose} style={{background:'none',border:0,color:'rgba(242,238,232,.55)',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',letterSpacing:'.1em',cursor:'pointer',padding:4}}>{_stT('vClose')}</button>
+          </div>
+        </>)}
+      </>)}
       {/* Top-of-screen artist attribution intentionally removed in Lite fullscreen:
           the swipe-up flash (below) is the sole feedback mechanism — nothing
           permanent sits on the painting or in the letterbox. */}
@@ -15887,6 +16222,7 @@ Hard requirements:
           if(Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx) * 1.2){
             _swipeWasGestureRef.current = true;
           }
+          if(studioFs && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 1.2){ _swipeWasGestureRef.current = true; }
         }}
         onTouchCancel={()=>{ _holdEnd(); }}
         onTouchEnd={e=>{
@@ -15897,6 +16233,8 @@ Hard requirements:
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
           if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x, dt = Date.now() - s.t;
+          // Studio: up the next painting, down the look, right the menu, left the rails away (_stSwipeRef)
+          if(studioFs && _stSwipeRef.current){ _swipeWasGestureRef.current = !!_stSwipeRef.current(dx, dy, dt); return; }
           // Swipe criteria: 50px minimum vertical travel, under 700ms,
           // clearly dominant vertical direction. Otherwise it was a tap or
           // an ambiguous drag — let onClick handle it normally.
@@ -15955,7 +16293,7 @@ Hard requirements:
           // the click that ends a press-and-hold: the info is up, nothing else to do
           if(immersive && _holdReleasedRef.current){ _holdReleasedRef.current=false; return; }
           // Studio: a tap is the right rail, two taps the left one
-          if(studioFs && !studioLive){ if(demoReelOn){ demoReelStop(); return; } _stTap(); return; }
+          if(studioFs && !studioLive){ if(demoReelOn){ demoReelStop(); return; } _stTap(e); return; }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
@@ -17069,7 +17407,7 @@ Hard requirements:
             );
           }
           return (
-            <button onClick={()=>{
+            <button ref={recBtnRef} onClick={()=>{
               if(recording){ stopRecord(); return; }
               if(!canStart) return;
               // Fresh start: nuke stale recording artefacts so the UI is clean
@@ -17674,7 +18012,7 @@ Hard requirements:
                 </div>
               )}
               {/* View — Studio (the painting full screen, controls on a tap) or Classic (the screen as before). Phone, Advanced. */}
-              {!isDesktop && !basicMode && (
+              {!isDesktop && (
               <div className="pf-setup-view" style={{border:'1px solid rgba(201,168,76,.28)',borderRadius:22,background:'#13101b',padding:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div aria-hidden="true" style={{flex:'0 0 auto',width:40,height:40,borderRadius:'50%',border:'1px solid rgba(201,168,76,.4)',display:'flex',alignItems:'center',justifyContent:'center',color:'#dcb45a'}}>
