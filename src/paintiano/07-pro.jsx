@@ -553,32 +553,32 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   };
   const card = {
     position: 'relative', width: '100%', maxWidth: 360,
-    background: '#0a0a12', border: '1px solid rgba(201,168,76,.25)',
-    borderRadius: 8, padding: 26, color: '#f5f5f5',
+    background: '#0e0b16', border: '1px solid rgba(255,255,255,.08)',
+    borderRadius: 24, padding: '26px 20px 20px', color: '#f5f5f5',
     boxShadow: '0 20px 60px rgba(0,0,0,.6)',
     maxHeight: '90vh', overflowY: 'auto',
   };
   const cardWide = Object.assign({}, card, { maxWidth: 460 });
   const btnGold = {
-    width: '100%', background: GOLD, color: '#0a0a12', border: 'none',
-    padding: '11px 12px', borderRadius: 5, fontSize: (.7*readScale)+'rem', fontWeight: 600,
-    letterSpacing: '.08em', textTransform: 'uppercase', cursor: 'pointer',
+    width: '100%', background: 'linear-gradient(135deg,#f0d78a,#c9a84c)', color: '#1a1408', border: 'none',
+    padding: '14px 12px', borderRadius: 24, fontSize: (.74*readScale)+'rem', fontWeight: 700,
+    letterSpacing: '.01em', cursor: 'pointer',
     fontFamily: 'inherit', marginBottom: 8,
   };
   // Secondary CTA — same shape as btnGold but outlined (gold border, transparent
   // bg). Used to offer the OTHER tier alongside the primary CTA.
   const btnGoldOutline = {
-    width: '100%', background: 'transparent', color: GOLD,
-    border: `1px solid ${GOLD}`, padding: '10px 12px', borderRadius: 5,
-    fontSize: (.66*readScale)+'rem', fontWeight: 600, letterSpacing: '.08em',
-    textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'inherit',
+    width: '100%', background: 'transparent', color: '#f0d78a',
+    border: '1px solid rgba(240,215,138,.5)', padding: '13px 12px', borderRadius: 24,
+    fontSize: (.7*readScale)+'rem', fontWeight: 700, letterSpacing: '.01em',
+    cursor: 'pointer', fontFamily: 'inherit',
     marginBottom: 8,
   };
   const btnGhost = {
-    width: '100%', background: 'transparent', color: '#999',
-    border: '1px solid rgba(255,255,255,.18)', padding: '9px 12px',
-    borderRadius: 5, fontSize: (.62*readScale)+'rem', letterSpacing: '.06em',
-    cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase',
+    width: '100%', background: 'rgba(255,255,255,.06)', color: 'rgba(242,238,232,.75)',
+    border: '1px solid rgba(255,255,255,.1)', padding: '12px 12px',
+    borderRadius: 24, fontSize: (.66*readScale)+'rem', fontWeight: 600, letterSpacing: '.01em',
+    cursor: 'pointer', fontFamily: 'inherit',
   };
 
   // ─── Tier card styles (paywall two-tier layout) ──────────────────────────
@@ -587,9 +587,9 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   // used for Pro AI when reason === 'ai_trial' (user just hit the AI wall).
   const tierCard = {
     position: 'relative',
-    border: '1px solid rgba(201,168,76,.25)',
-    borderRadius: 8, padding: '18px 16px 14px',
-    background: 'rgba(255,255,255,.02)',
+    border: '1px solid rgba(255,255,255,.08)',
+    borderRadius: 20, padding: '18px 16px 16px',
+    background: 'rgba(255,255,255,.04)',
     marginBottom: 12,
   };
   const tierCardHighlight = Object.assign({}, tierCard, {
@@ -598,27 +598,28 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     boxShadow: `0 0 0 1px rgba(201,168,76,.25), 0 6px 22px rgba(201,168,76,.10)`,
   });
   const tierTitle = {
-    fontSize: (.85*readScale)+'rem', fontWeight: 600, color: '#f5f5f5',
-    margin: '0 0 2px', letterSpacing: '.02em',
+    fontSize: (.8*readScale)+'rem', fontWeight: 700, color: '#f5f5f5',
+    margin: '0 0 4px', letterSpacing: '.01em',
   };
   const tierPrice = {
-    fontSize: (.7*readScale)+'rem', color: GOLD, margin: '0 0 12px',
-    letterSpacing: '.04em', fontWeight: 500,
+    fontSize: (.7*readScale)+'rem', color: GOLD, margin: '0 0 14px',
+    letterSpacing: '.01em', fontWeight: 500, display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '2px 8px',
   };
   const tierValueRow = {
-    display: 'flex', alignItems: 'flex-start', gap: 8,
-    margin: '0 0 6px', fontSize: (.66*readScale)+'rem', lineHeight: 1.4,
-    color: '#e0e0e0',
+    display: 'flex', alignItems: 'flex-start', gap: 10,
+    margin: '0 0 8px', fontSize: (.64*readScale)+'rem', lineHeight: 1.4,
+    color: 'rgba(242,238,232,.82)',
   };
   const tierCheck = {
-    color: GOLD, fontSize: (.72*readScale)+'rem', flexShrink: 0, marginTop: 1,
+    color: GOLD, fontSize: 11, fontWeight: 800, flexShrink: 0, marginTop: 0, width: 20, height: 20, borderRadius: '50%',
+    background: 'rgba(255,255,255,.08)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   };
   const recommendedBadge = {
     position: 'absolute', top: -10, right: 12,
     background: GOLD, color: '#0a0a12',
     fontSize: (.52*readScale)+'rem', fontWeight: 700,
-    letterSpacing: '.12em', padding: '3px 9px',
-    borderRadius: 3, textTransform: 'uppercase',
+    letterSpacing: '.02em', padding: '4px 10px',
+    borderRadius: 10,
   };
 
   // Inline tier card renderer — used twice (intro view + about view).
@@ -669,23 +670,21 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     ];
     // Tier-coloured button styles. Recommended = filled (primary CTA);
     // non-recommended = outline (secondary).
-    const ctaBtn = recommended
-      ? { width: '100%', background: accent, color: '#0a0a12', border: 'none',
-          padding: '11px 12px', borderRadius: 5, fontSize: (.7*readScale)+'rem',
-          fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase',
-          cursor: 'pointer', fontFamily: 'inherit', marginBottom: 0 }
-      : { width: '100%', background: 'transparent', color: accent,
-          border: `1px solid ${accent}`, padding: '10px 12px', borderRadius: 5,
-          fontSize: (.66*readScale)+'rem', fontWeight: 600, letterSpacing: '.08em',
-          textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'inherit',
-          marginBottom: 0 };
+    const ctaBtn = { width: '100%', border: 'none', padding: '14px 12px', borderRadius: 24,
+      background: isAI ? 'linear-gradient(135deg,#d8b4ff,#8c5cff)' : 'linear-gradient(135deg,#f0d78a,#c9a84c)',
+      color: isAI ? '#fff' : '#1a1408', fontSize: (.74*readScale)+'rem', fontWeight: 700, letterSpacing: '.01em',
+      cursor: 'pointer', fontFamily: 'inherit', marginBottom: 0,
+      boxShadow: recommended ? ('0 10px 28px ' + (isAI ? 'rgba(140,92,255,.4)' : 'rgba(201,168,76,.35)')) : 'none' };
     return (
       <div style={cardStyle}>
         {recommended && !isUp && (
           <span style={Object.assign({}, recommendedBadge, { background: accent })}>{tr('proRecommended', 'Recommended')}</span>
         )}
         <p style={tierTitle}>{title}</p>
-        <p style={Object.assign({}, tierPrice, { color: accent })}>{priceLine}</p>
+        <p style={Object.assign({}, tierPrice, { color: accent })}>{(() => { const i = priceLine.indexOf(' · '); if (i < 0) return priceLine; return [
+          <span key="p" style={{ fontSize: (1.3*readScale)+'rem', fontWeight: 800, letterSpacing: '-.01em', lineHeight: 1.1 }}>{priceLine.slice(0, i)}</span>,
+          <span key="w" style={{ fontSize: (.6*readScale)+'rem', fontWeight: 600, color: 'rgba(242,238,232,.6)' }}>{priceLine.slice(i + 3)}</span>,
+        ]; })()}</p>
         <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px' }}>
           {values.map(([k, fb], i) => (
             <li key={i} style={tierValueRow}>
@@ -711,8 +710,8 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
         <button onClick={onClose} aria-label="Close" style={{
           position: 'fixed', top: 16, right: 16, zIndex: 100001,
           width: 38, height: 38, borderRadius: '50%',
-          background: 'rgba(10,10,18,.85)', backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(201,168,76,.35)',
+          background: 'rgba(255,255,255,.1)', backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,.14)',
           color: '#ddd', fontSize: 22, cursor: 'pointer', lineHeight: 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 14px rgba(0,0,0,.5)',
@@ -723,19 +722,20 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
           <>
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
               <div style={{
-                display: 'inline-flex', width: 46, height: 46, borderRadius: '50%',
+                display: 'inline-flex', width: 64, height: 64, borderRadius: '50%',
                 alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(201,168,76,.12)', color: GOLD, fontSize: 22,
+                background: 'linear-gradient(135deg,#f0d78a,#8c5cff)', color: '#fff', fontSize: 28,
+                boxShadow: '0 10px 30px rgba(140,92,255,.35)',
               }}>✦</div>
             </div>
-            <p style={{ fontSize: (.95*readScale)+'rem', fontWeight: 600, textAlign: 'center', margin: '0 0 6px' }}>
+            <p style={{ fontSize: (1.05*readScale)+'rem', fontWeight: 800, textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>
               {upgradeOnly
                 ? tr('proPaywallTitleUpgrade', 'Add unlimited AI')
                 : reason === 'ai_trial'
                   ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
                   : tr('proPaywallTitle', 'Unlock the full Paintiano')}
             </p>
-            <p style={{ fontSize: (.66*readScale)+'rem', color: GOLD, textAlign: 'center', margin: '0 0 16px', letterSpacing: '.04em', fontStyle: 'italic', opacity: .9 }}>
+            <p style={{ fontSize: (.66*readScale)+'rem', color: 'rgba(242,238,232,.66)', textAlign: 'center', margin: '0 0 18px', lineHeight: 1.45 }}>
               {upgradeOnly ? tr('proPaywallSubUpgrade', 'You already have every style.') : tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
             {/* a Pro owner already has a key — the key entry stays in "Learn more" */}
@@ -744,10 +744,10 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 onClick={() => setView('key')}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  gap: 8, background: 'rgba(201,168,76,.10)', color: GOLD,
-                  border: `1px solid ${GOLD}`, borderRadius: 6, padding: '11px 14px',
-                  margin: '0 0 18px', fontSize: (.7*readScale)+'rem', fontWeight: 600,
-                  letterSpacing: '.04em', cursor: 'pointer', fontFamily: 'inherit',
+                  gap: 8, background: 'rgba(255,255,255,.06)', color: '#f2eee8',
+                  border: '1px solid rgba(255,255,255,.12)', borderRadius: 22, padding: '11px 14px',
+                  margin: '0 0 16px', fontSize: (.66*readScale)+'rem', fontWeight: 600,
+                  letterSpacing: '.01em', cursor: 'pointer', fontFamily: 'inherit',
                 }}>
                 <span aria-hidden="true" style={{ fontSize: (.82*readScale)+'rem', lineHeight: 1 }}>🔑</span>
                 {tr('proHaveKey', 'I already have a key')}
@@ -783,7 +783,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                     {renderTierCard('pro_ai', false)}
                   </>
                 )}
-                <p style={{ color: '#8a8a8a', fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 14px', fontStyle: 'italic', opacity: .85 }}>
+                <p style={{ color: 'rgba(242,238,232,.5)', fontSize: (.58*readScale)+'rem', textAlign: 'center', margin: '0 0 14px' }}>
                   {tr('proSupportLine', 'You\u2019re also keeping a solo art project independent.')}
                 </p>
               </>
@@ -791,7 +791,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
             <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
               <span onClick={() => setView('about')} role="button" tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('about'); } }}
-                style={{ color: GOLD, fontSize: (.6*readScale)+'rem', letterSpacing: '.04em', cursor: 'pointer', opacity: .8, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                style={{ color: 'rgba(242,238,232,.75)', fontSize: (.62*readScale)+'rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
