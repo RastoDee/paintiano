@@ -16453,8 +16453,8 @@ Hard requirements:
             <button type="button" onClick={_go(handlePauseClick, true)} disabled={_playDis} aria-label={playing&&!holdPaused?t('pause'):t('play')} style={{..._it,opacity:_playDis?.4:1}}><span style={_ic({width:58,height:58,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',boxShadow:'0 0 24px rgba(77,227,160,.45)'})}><TxIcon n={playing&&!holdPaused?'pause':'play'} s={22}/></span>{holdPaused?t('resume'):playing?t('pause'):t('play')}</button>
             <button type="button" onClick={_go(_mute, true)} {..._hold} aria-label={muted?'unmute':'mute'} aria-pressed={!!muted} style={_it}><span style={_ic()}><TxIcon n={muted?'mute':'sound'} s={18}/></span></button>
             {_img && originalImgUrl && imgPlayMode!=='compose' && (<>
-              <button type="button" onClick={_go(_atmoTap, true)} disabled={atmoBusy} aria-pressed={!!atmoOn} style={{..._it,opacity:atmoBusy?.5:1}}><span style={_ic(atmoOn?_aiOn:_ai)}><TxIcon n="sparkle" s={16}/></span>{(t('atmoLabel')||'atmo')+(atmoBusy?' …':'')}</button>
-              <button type="button" onClick={_go(_melodyTap, true)} disabled={melodyBusy} aria-pressed={!!melodyOn} style={{..._it,opacity:melodyBusy?.5:1}}><span style={_ic(melodyOn?_aiOn:_ai)}><TxIcon n="sparkle" s={16}/></span>{(t('melodyLabel')||'melody')+(melodyBusy?' …':'')}</button>
+              <button type="button" onClick={_go(_atmoTap, true)} disabled={atmoBusy} aria-pressed={!!atmoOn} style={{..._it,opacity:atmoBusy?.5:1}}><span style={_ic(atmoOn?_aiOn:_ai)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M3 8.5c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 15.5c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg></span>{(t('atmoLabel')||'atmo')+(atmoBusy?' …':'')}</button>
+              <button type="button" onClick={_go(_melodyTap, true)} disabled={melodyBusy} aria-pressed={!!melodyOn} style={{..._it,opacity:melodyBusy?.5:1}}><span style={_ic(melodyOn?_aiOn:_ai)}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 18V4.5l7 2.5"/><circle cx="7.5" cy="18" r="3.5"/></svg></span>{(t('melodyLabel')||'melody')+(melodyBusy?' …':'')}</button>
             </>)}
             {_loopOk && (<button type="button" onClick={_go(()=>{ if(recording) return; const v=!loopMode; setLoopMode(v); loopModeRef.current=v; }, true)} disabled={recording} aria-pressed={!!loopMode} style={{..._it,opacity:recording?.4:1}}><span style={_ic(loopMode?{background:'rgba(201,168,76,.9)',color:'#14110a',border:'1px solid transparent'}:{color:PF.gold2})}><TxIcon n="loop" s={16}/></span>{_bare(t('loop'))}</button>)}
             {_showVary && (<button type="button" onClick={_go(()=>{ if(_varyOk) _doVary(); }, true)} disabled={!_varyOk} aria-label={t('vary')} style={{..._it,opacity:_varyOk?1:.4}}><span style={_ic({color:'#ffb08a',border:'1px solid rgba(244,124,60,.55)'})}><TxIcon n="sparkle" s={16}/></span>{_bare(t('vary'))}</button>)}
@@ -16621,6 +16621,7 @@ Hard requirements:
           const _cur = (!chords.length && !micActive && !(viewMode==='image' && originalImgUrl)) ? '' : composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : (viewMode==='image') ? 'image' : (chords.length ? 'music' : '');
           const _dr = {music:hasMusicDraft, image:hasImageDraft, mfi:hasMfiDraft, mood:hasMoodDraft, compose:hasComposeDraft, mic:hasMicDraft};
           const _hc = {music:'#9ad2ff', image:'#ffb08a', mfi:'#cdb2ff', mood:'#f0d78a', compose:'#8fd6a4', mic:'#ff9ec0'};
+          const _back = {music:'.pf-midi', image:'.pf-image', mfi:'[data-pf="mfi"]', mood:'.pf-moodtile', compose:'.pf-compose', mic:'.pf-mic'};
           const tiles = [
             {k:'music', label:_sent(t('music')!=='music'?t('music'):'Music'), bg:'linear-gradient(135deg,#7ab3ff,#3f7bff)', ic:_sv(<><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></>), ok:!_lk, go:()=>_stNewSrc('sound')},
             {k:'image', label:_sent(t('image').replace(/[^\p{L}]/gu,'')), bg:'linear-gradient(135deg,#ffb08a,#ff7a3d)', ic:_sv(<><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></>), ok:!_lk, go:()=>_stNewSrc('image')},
@@ -16638,7 +16639,7 @@ Hard requirements:
               <style>{STUDIO_SRC_CSS}</style>
               <div className="pf-sh-grid" style={{maxWidth:'none',margin:'4px 0 6px'}}>
                 {tiles.map(r=>{ const on = r.k===_cur; return (
-                  <button key={r.k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}>
+                  <button key={r.k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!r.ok} onClick={()=>{ if(!r.ok) return; if(_dr[r.k] && !on){ setStNew(false); _stViaHome(_back[r.k]); return; } r.go(); }}>
                     <span className="pf-sh-ic" style={{background:r.bg,...(on?{}:{boxShadow:'0 0 0 3px '+_hc[r.k]+'2e'})}}>{r.ic}{_dr[r.k] && !on && (<span className="pf-sh-dot" aria-hidden="true"/>)}</span>
                     <span>{r.label}</span>
                   </button>); })}
