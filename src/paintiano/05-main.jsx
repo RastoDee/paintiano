@@ -1629,16 +1629,40 @@ const ENSEMBLE_I18N = {
 };
 // Studio (Setup → View): the words of the full-screen studio and its Setup card.
 const STUDIO_I18N = {
-  EN:{title:'View',studio:'Studio',classic:'Classic',sub:'Studio: the painting fills the screen; the controls come when you want them. Classic: the screen as before.',gest:'Swipe up — next · down — look · tap — controls · double tap — menu',look:'Look',sound:'Sound',nu:'New',favs:'Favorites',setup:'Setup',c1:'Swipe up',c1s:'next painting',c2:'Swipe down',c2s:'pick a look',c3:'Tap',c3s:'play · save · ♥',c4:'Double tap',c4s:'new · favorites · setup',go:'Tap to start',back:'Tap — back to the painting',bk:'Back',clr:'Clear'},
-  SK:{title:'Zobrazenie',studio:'Štúdio',classic:'Klasika',sub:'Štúdio: maľba na celú obrazovku, ovládanie len keď ho chceš. Klasika: obrazovka ako doteraz.',gest:'Potiahni hore — ďalšia · dole — vzhľad · ťuk — ovládanie · dvakrát — menu',look:'Vzhľad',sound:'Zvuk',nu:'Nové',favs:'Obľúbené',setup:'Setup',c1:'Potiahni hore',c1s:'ďalšia maľba',c2:'Potiahni dole',c2s:'vyber vzhľad',c3:'Ťukni',c3s:'prehrať · uložiť · ♥',c4:'Ťukni dvakrát',c4s:'nové · obľúbené · setup',go:'Ťukni a začni',back:'Ťukni — späť k maľbe',bk:'Späť',clr:'Vyčistiť'},
-  DE:{title:'Ansicht',studio:'Studio',classic:'Klassisch',sub:'Studio: das Bild füllt den Bildschirm, die Bedienung kommt, wenn du sie willst. Klassisch: der Bildschirm wie bisher.',gest:'Nach oben — nächstes · nach unten — Look · tippen — Bedienung · doppelt — Menü',look:'Look',sound:'Klang',nu:'Neu',favs:'Favoriten',setup:'Setup',c1:'Nach oben wischen',c1s:'nächstes Bild',c2:'Nach unten wischen',c2s:'Look wählen',c3:'Tippen',c3s:'abspielen · speichern · ♥',c4:'Doppelt tippen',c4s:'neu · Favoriten · Setup',go:'Tippen zum Start',back:'Tippen — zurück zum Bild',bk:'Zurück',clr:'Löschen'},
-  FR:{title:'Affichage',studio:'Studio',classic:'Classique',sub:'Studio : la peinture remplit l’écran, les commandes viennent quand tu veux. Classique : l’écran habituel.',gest:'Vers le haut — suivante · vers le bas — style · toucher — commandes · deux fois — menu',look:'Style',sound:'Son',nu:'Nouveau',favs:'Favoris',setup:'Réglages',c1:'Glisser vers le haut',c1s:'peinture suivante',c2:'Glisser vers le bas',c2s:'choisir un style',c3:'Toucher',c3s:'lecture · enregistrer · ♥',c4:'Toucher deux fois',c4s:'nouveau · favoris · réglages',go:'Touchez pour commencer',back:'Touchez — retour à la peinture',bk:'Retour',clr:'Effacer'},
-  ES:{title:'Vista',studio:'Estudio',classic:'Clásico',sub:'Estudio: la pintura llena la pantalla y los controles aparecen cuando quieres. Clásico: la pantalla de siempre.',gest:'Arriba — siguiente · abajo — aspecto · toque — controles · doble toque — menú',look:'Aspecto',sound:'Sonido',nu:'Nuevo',favs:'Favoritos',setup:'Ajustes',c1:'Desliza arriba',c1s:'siguiente pintura',c2:'Desliza abajo',c2s:'elige un aspecto',c3:'Toca',c3s:'reproducir · guardar · ♥',c4:'Toca dos veces',c4s:'nuevo · favoritos · ajustes',go:'Toca para empezar',back:'Toca — volver a la pintura',bk:'Atrás',clr:'Borrar'},
-  PT:{title:'Vista',studio:'Estúdio',classic:'Clássico',sub:'Estúdio: a pintura ocupa o ecrã e os controlos aparecem quando quiser. Clássico: o ecrã de sempre.',gest:'Para cima — seguinte · para baixo — visual · toque — controlos · toque duplo — menu',look:'Visual',sound:'Som',nu:'Novo',favs:'Favoritos',setup:'Configurar',c1:'Deslize para cima',c1s:'pintura seguinte',c2:'Deslize para baixo',c2s:'escolha um visual',c3:'Toque',c3s:'tocar · guardar · ♥',c4:'Toque duas vezes',c4s:'novo · favoritos · configurar',go:'Toque para começar',back:'Toque — voltar à pintura',bk:'Voltar',clr:'Limpar'},
-  zh:{title:'显示',studio:'工作室',classic:'经典',sub:'工作室：画作占满屏幕，需要时才出现控件。经典：原来的界面。',gest:'上滑 — 下一幅 · 下滑 — 外观 · 轻点 — 控件 · 双击 — 菜单',look:'外观',sound:'声音',nu:'新建',favs:'收藏',setup:'设置',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'选择外观',c3:'轻点',c3s:'播放 · 保存 · ♥',c4:'双击',c4s:'新建 · 收藏 · 设置',go:'轻点开始',back:'轻点 — 回到画作',bk:'返回',clr:'清除'},
-  zhTW:{title:'顯示',studio:'工作室',classic:'經典',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。經典：原來的介面。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 輕點 — 控制項 · 雙擊 — 選單',look:'外觀',sound:'聲音',nu:'新增',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'選擇外觀',c3:'輕點',c3s:'播放 · 儲存 · ♥',c4:'雙擊',c4s:'新增 · 收藏 · 設定',go:'輕點開始',back:'輕點 — 回到畫作',bk:'返回',clr:'清除'},
-  ja:{title:'表示',studio:'スタジオ',classic:'クラシック',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。クラシック：これまでの画面。',gest:'上へ — 次の絵 · 下へ — 見た目 · タップ — 操作 · ダブルタップ — メニュー',look:'見た目',sound:'サウンド',nu:'新規',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c2:'下にスワイプ',c2s:'見た目を選ぶ',c3:'タップ',c3s:'再生 · 保存 · ♥',c4:'ダブルタップ',c4s:'新規 · お気に入り · 設定',go:'タップして開始',back:'タップ — 絵に戻る',bk:'戻る',clr:'クリア'}
+  EN:{title:'View',studio:'Studio',classic:'Classic',sub:'Studio: the painting fills the screen; the controls come when you want them. Classic: the screen as before.',gest:'Swipe up — next · down — look · tap — controls · double tap — menu',look:'Look',sound:'Sound',nu:'New',favs:'Favorites',setup:'Setup',c1:'Swipe up',c1s:'next painting',c2:'Swipe down',c2s:'pick a look',c3:'Tap',c3s:'play · save · ♥',c4:'Double tap',c4s:'new · favorites · setup',go:'Tap to start',back:'Tap — back to the painting',bk:'Back',clr:'Clear',mgo:'Compose & paint'},
+  SK:{title:'Zobrazenie',studio:'Štúdio',classic:'Klasika',sub:'Štúdio: maľba na celú obrazovku, ovládanie len keď ho chceš. Klasika: obrazovka ako doteraz.',gest:'Potiahni hore — ďalšia · dole — vzhľad · ťuk — ovládanie · dvakrát — menu',look:'Vzhľad',sound:'Zvuk',nu:'Nové',favs:'Obľúbené',setup:'Setup',c1:'Potiahni hore',c1s:'ďalšia maľba',c2:'Potiahni dole',c2s:'vyber vzhľad',c3:'Ťukni',c3s:'prehrať · uložiť · ♥',c4:'Ťukni dvakrát',c4s:'nové · obľúbené · setup',go:'Ťukni a začni',back:'Ťukni — späť k maľbe',bk:'Späť',clr:'Vyčistiť',mgo:'Zlož a namaľuj'},
+  DE:{title:'Ansicht',studio:'Studio',classic:'Klassisch',sub:'Studio: das Bild füllt den Bildschirm, die Bedienung kommt, wenn du sie willst. Klassisch: der Bildschirm wie bisher.',gest:'Nach oben — nächstes · nach unten — Look · tippen — Bedienung · doppelt — Menü',look:'Look',sound:'Klang',nu:'Neu',favs:'Favoriten',setup:'Setup',c1:'Nach oben wischen',c1s:'nächstes Bild',c2:'Nach unten wischen',c2s:'Look wählen',c3:'Tippen',c3s:'abspielen · speichern · ♥',c4:'Doppelt tippen',c4s:'neu · Favoriten · Setup',go:'Tippen zum Start',back:'Tippen — zurück zum Bild',bk:'Zurück',clr:'Löschen',mgo:'Komponieren & malen'},
+  FR:{title:'Affichage',studio:'Studio',classic:'Classique',sub:'Studio : la peinture remplit l’écran, les commandes viennent quand tu veux. Classique : l’écran habituel.',gest:'Vers le haut — suivante · vers le bas — style · toucher — commandes · deux fois — menu',look:'Style',sound:'Son',nu:'Nouveau',favs:'Favoris',setup:'Réglages',c1:'Glisser vers le haut',c1s:'peinture suivante',c2:'Glisser vers le bas',c2s:'choisir un style',c3:'Toucher',c3s:'lecture · enregistrer · ♥',c4:'Toucher deux fois',c4s:'nouveau · favoris · réglages',go:'Touchez pour commencer',back:'Touchez — retour à la peinture',bk:'Retour',clr:'Effacer',mgo:'Composer et peindre'},
+  ES:{title:'Vista',studio:'Estudio',classic:'Clásico',sub:'Estudio: la pintura llena la pantalla y los controles aparecen cuando quieres. Clásico: la pantalla de siempre.',gest:'Arriba — siguiente · abajo — aspecto · toque — controles · doble toque — menú',look:'Aspecto',sound:'Sonido',nu:'Nuevo',favs:'Favoritos',setup:'Ajustes',c1:'Desliza arriba',c1s:'siguiente pintura',c2:'Desliza abajo',c2s:'elige un aspecto',c3:'Toca',c3s:'reproducir · guardar · ♥',c4:'Toca dos veces',c4s:'nuevo · favoritos · ajustes',go:'Toca para empezar',back:'Toca — volver a la pintura',bk:'Atrás',clr:'Borrar',mgo:'Componer y pintar'},
+  PT:{title:'Vista',studio:'Estúdio',classic:'Clássico',sub:'Estúdio: a pintura ocupa o ecrã e os controlos aparecem quando quiser. Clássico: o ecrã de sempre.',gest:'Para cima — seguinte · para baixo — visual · toque — controlos · toque duplo — menu',look:'Visual',sound:'Som',nu:'Novo',favs:'Favoritos',setup:'Configurar',c1:'Deslize para cima',c1s:'pintura seguinte',c2:'Deslize para baixo',c2s:'escolha um visual',c3:'Toque',c3s:'tocar · guardar · ♥',c4:'Toque duas vezes',c4s:'novo · favoritos · configurar',go:'Toque para começar',back:'Toque — voltar à pintura',bk:'Voltar',clr:'Limpar',mgo:'Compor e pintar'},
+  zh:{title:'显示',studio:'工作室',classic:'经典',sub:'工作室：画作占满屏幕，需要时才出现控件。经典：原来的界面。',gest:'上滑 — 下一幅 · 下滑 — 外观 · 轻点 — 控件 · 双击 — 菜单',look:'外观',sound:'声音',nu:'新建',favs:'收藏',setup:'设置',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'选择外观',c3:'轻点',c3s:'播放 · 保存 · ♥',c4:'双击',c4s:'新建 · 收藏 · 设置',go:'轻点开始',back:'轻点 — 回到画作',bk:'返回',clr:'清除',mgo:'作曲并作画'},
+  zhTW:{title:'顯示',studio:'工作室',classic:'經典',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。經典：原來的介面。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 輕點 — 控制項 · 雙擊 — 選單',look:'外觀',sound:'聲音',nu:'新增',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'選擇外觀',c3:'輕點',c3s:'播放 · 儲存 · ♥',c4:'雙擊',c4s:'新增 · 收藏 · 設定',go:'輕點開始',back:'輕點 — 回到畫作',bk:'返回',clr:'清除',mgo:'作曲並作畫'},
+  ja:{title:'表示',studio:'スタジオ',classic:'クラシック',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。クラシック：これまでの画面。',gest:'上へ — 次の絵 · 下へ — 見た目 · タップ — 操作 · ダブルタップ — メニュー',look:'見た目',sound:'サウンド',nu:'新規',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c2:'下にスワイプ',c2s:'見た目を選ぶ',c3:'タップ',c3s:'再生 · 保存 · ♥',c4:'ダブルタップ',c4s:'新規 · お気に入り · 設定',go:'タップして開始',back:'タップ — 絵に戻る',bk:'戻る',clr:'クリア',mgo:'作曲して描く'}
 };
+// STUDIO SKIN — the look sheet in the Studio: palettes as colour rings, painters as round faces (this song painted
+// by each of them), composers as monograms. The buttons and what they do are the Classic ones; only the look changes.
+const STUDIO_SKIN_CSS = `
+.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs{gap:2px!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab{display:flex!important;flex-direction:column;align-items:center;gap:6px;background:none!important;border:0!important;box-shadow:none!important;padding:2px 0 0!important;border-radius:0!important;font-size:8.5px!important;letter-spacing:.1em!important;color:rgba(242,238,232,.62)!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab.pf-tab-on{color:#f0c040!important;font-weight:700!important}
+.pf-sk-ring{display:block;width:44px;height:44px;border-radius:50%;padding:3px;border:2px solid transparent;box-sizing:border-box;transition:border-color .18s, transform .12s}
+.pf-sk-ring i{display:block;width:100%;height:100%;border-radius:50%;border:3px solid #0e0b16;box-sizing:border-box}
+.pf-tab-on .pf-sk-ring{border-color:#f0c040}
+.pf-tab:active .pf-sk-ring{transform:scale(.92)}
+.pf-app-root .pf-strip-grid.pf-skin .pf-art-grid{row-gap:12px!important;column-gap:2px!important;align-items:start!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-artist{display:flex!important;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;box-shadow:none!important;padding:3px 0 0!important;border-radius:0!important;font-size:8px!important;letter-spacing:.05em!important;color:rgba(242,238,232,.66)!important;overflow:visible!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-artist.pf-artist-on{color:#f0c040!important;font-weight:700!important}
+.pf-sk-face{display:block;flex-shrink:0;width:54px;height:54px;border-radius:50%;background:#1b1728 center/cover no-repeat;border:2px solid rgba(242,238,232,.08);box-shadow:0 4px 14px rgba(0,0,0,.5);box-sizing:border-box;transition:transform .12s, border-color .18s, box-shadow .18s}
+.pf-artist:active .pf-sk-face{transform:scale(.92)}
+.pf-artist-on .pf-sk-face{border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.35),0 4px 14px rgba(0,0,0,.5)}
+.pf-sk-face.pf-sk-hit{border-color:rgba(242,238,232,.8)}
+.pf-sk-face.pf-sk-wait{animation:pfSkWait 1.4s ease-in-out infinite}
+@keyframes pfSkWait{50%{opacity:.55}}
+.pf-sk-mono{display:flex;align-items:center;justify-content:center;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:18px;font-weight:600;color:#f2eee8;letter-spacing:0;text-transform:none}
+.pf-sk-glyph{display:flex;align-items:center;justify-content:center;font-size:18px;color:#f2eee8;background:rgba(255,255,255,.06)}
+@media (prefers-reduced-motion: reduce){.pf-sk-face.pf-sk-wait{animation:none}}
+`;
+const STUDIO_COMP_MONO = {chopin:['Ch','#5a3f8a'],satie:['Sa','#3f7a8a'],gershwin:['Ge','#8a6a3f'],glass:['Gl','#3f8a5e'],vine:['Vi','#8a3f5e'],yiruma:['Yi','#6a8a3f'],bach:['Ba','#8a7a3f'],beethoven:['Be','#3f5a8a'],debussy:['De','#3f8a8a'],rachmaninov:['Ra','#8a3f3f'],einaudi:['Ei','#7a3f8a'],hisaishi:['Hi','#3f8a7a'],mozart:['Mo','#8a5e3f'],schubert:['Sch','#5e8a3f'],tchaikovsky:['Tch','#3f3f8a']};
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
   drawFusionOverlay(ctx, CW, CH, chords, lim, gc, seed, mode, ph, keys, !!noGround);
@@ -13249,6 +13273,72 @@ Hard requirements:
   // a piece that has not played yet (a song, a mood): the right rail with play stays out until it plays or a tap hides it
   const _stFresh = studioFs && !studioLive && chords.length>0 && disp===0 && !playing && !anim && !demoReelOn;
   useEffect(()=>{ if(_stFresh){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStSide('right'); } },[_stFresh]);
+  // STUDIO SKIN — each painter's face in the look sheet is THIS song painted by them (_favPaint: the same steps as the
+  // canvas), a small picture made one at a time in the background while the sheet is open, kept for the song and palette.
+  const [skinThumbs, setSkinThumbs] = useState({});
+  const skinThumbRef = useRef({ key:'', done:{} });
+  const _skinPk = useMemo(()=> chords.length ? _favHash(chords) : '', [chords]);
+  const _skinPalKey = mode==='custom' ? (activePalette||[]).join(',') : '';
+  const _skinKey = (studioFs && stripOpen && _skinPk && !(viewMode==='image' && !moodFromImg))
+    ? [_skinPk, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus].join('|') : '';
+  useEffect(()=>{
+    if(!_skinKey) return;
+    const R = skinThumbRef.current;
+    if(R.key!==_skinKey){ R.key=_skinKey; R.done={}; setSkinThumbs({}); }
+    const todo = ['mosaic'].concat(ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily')).filter(k=>!R.done[k]);
+    if(!todo.length) return;
+    const cs = chords, own = draftOwnerRef.current || null;
+    let dead=false, tm=null;
+    const step = ()=>{
+      if(dead) return;
+      const k = todo.shift(); if(!k) return;
+      R.done[k] = 1;
+      try{
+        const st = k==='mosaic' ? null : k;
+        const skip = !!(st && _TAKE_ORIG.includes(st));
+        const seLive = !!(_takeInfo(cs) && !skip);
+        let se = 0.5;
+        if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===cs) se=sc.e; else { try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){} } }
+        const fv = { style:st, keys:null, fa:null, phase:0, seed:pollockSessionSeed>>>0,
+          cap:(proStatus==='free' && st!==artistOfDay) ? 2 : null, mode, tone, pal: mode==='custom' ? activePalette : null,
+          se, dna: globalThis.__PAINT_MUSIC_DNA || null, skip, liveE:seLive, compose: own==='compose', own };
+        const lay = _favLayout(fv, cs);
+        const cv = document.createElement('canvas');
+        if(lay && _favPaint(cv, fv, {chords:cs}, 1, tone, lay)){
+          const w=cv.width, h=cv.height, q=Math.min(w,h), o=document.createElement('canvas'); o.width=o.height=112;
+          const x=o.getContext('2d'); x.drawImage(cv, (w-q)/2, (h-q)/2, q, q, 0, 0, 112, 112);
+          const u=o.toDataURL('image/jpeg', 0.82);
+          if(!dead && skinThumbRef.current.key===R.key) setSkinThumbs(m=>({...m, [k]:u}));
+        }
+      }catch(_){}
+      tm = setTimeout(step, 24);
+    };
+    tm = setTimeout(step, 260);   // after the sheet has slid in
+    return ()=>{ dead=true; clearTimeout(tm); };
+  },[_skinKey]);
+  // a palette as a colour wheel: its 12 notes C … B round the circle, each in its colour
+  const _skinRing = (m)=>{
+    let cols = [];
+    try{
+      if(m==='custom') cols = (activePalette||[]).slice(0,12);
+      else for(let pc=0; pc<12; pc++){ const c=colorPreview(m,pc); cols.push('rgb('+c[0]+','+c[1]+','+c[2]+')'); }
+    }catch(_){}
+    if(cols.length<2) cols = ['#6a6478','#2a2636'];
+    const _st = 360/cols.length;
+    return (<span className="pf-sk-ring" aria-hidden="true" style={{background:'conic-gradient('+cols.map((c,i)=>c+' '+(i*_st)+'deg '+((i+1)*_st)+'deg').join(',')+')'}}><i/></span>);
+  };
+  // a painter's face: the song painted by them, a soft colour while it is being made
+  const _skinFace = (k, hit)=>{
+    const u = skinThumbs[k||'mosaic'];
+    let h=0; for(const c of String(k||'mosaic')) h=(h*31+c.charCodeAt(0))>>>0;
+    return (<span className={'pf-sk-face'+(hit?' pf-sk-hit':'')+(u?'':' pf-sk-wait')} aria-hidden="true"
+      style={u ? {backgroundImage:'url('+u+')'} : {background:'linear-gradient(145deg,hsl('+(h%360)+',34%,30%),hsl('+((h+50)%360)+',30%,13%))'}}/>);
+  };
+  const _skinGlyph = (g)=> <span className="pf-sk-face pf-sk-glyph" aria-hidden="true">{g}</span>;
+  const _skinMono = (k, hit)=>{
+    const d = STUDIO_COMP_MONO[k] || [String(k||'?').slice(0,2), '#3a3350'];
+    return (<span className={'pf-sk-face pf-sk-mono'+(hit?' pf-sk-hit':'')} aria-hidden="true" style={{background:'linear-gradient(145deg,'+d[1]+',#1d1830)'}}>{d[0]}</span>);
+  };
   // one tap = the right rail, two taps within 300 ms = the left rail; a tap with a rail out puts it away
   const stTapRef = useRef({ t:0, timer:null });
   const _stTap = ()=>{ const r=stTapRef.current, now=Date.now(); clearTimeout(r.timer);
@@ -14547,9 +14637,10 @@ Hard requirements:
         {!stripOpen && _capLines()}
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
-        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(studioFs?{position:'fixed',top:0,left:0,right:0,zIndex:10005,maxHeight:'84dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'0 0 22px 22px',border:'none',borderBottom:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'calc(env(safe-area-inset-top, 0px) + 14px) 14px 10px',boxShadow:'0 18px 50px rgba(0,0,0,.6)'}:{})}}
+        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')+(studioFs?' pf-skin':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(studioFs?{position:'fixed',top:0,left:0,right:0,zIndex:10005,maxHeight:'84dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'0 0 22px 22px',border:'none',borderBottom:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'calc(env(safe-area-inset-top, 0px) + 14px) 14px 10px',boxShadow:'0 18px 50px rgba(0,0,0,.6)'}:{})}}
           onTouchStart={studioFs ? (e)=>{ const g=e.currentTarget, y=e.touches[0]&&e.touches[0].clientY; stSheetRef.current = (e.touches.length===1 && (y>g.getBoundingClientRect().bottom-70 || g.scrollTop+g.clientHeight>=g.scrollHeight-2)) ? y : null; } : undefined}
           onTouchEnd={studioFs ? (e)=>{ const y0=stSheetRef.current; stSheetRef.current=null; const t=e.changedTouches&&e.changedTouches[0]; if(y0!=null && t && y0-t.clientY>60) setStripOpen(false); } : undefined}>
+          {studioFs && (<style>{STUDIO_SKIN_CSS}</style>)}
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Color */}
           {loadedSource==='image' && !moodFromImg ? (() => {
@@ -14622,7 +14713,7 @@ Hard requirements:
                     kontraAutoRef.current=false;   // manual palette tap → kontra (if chosen) is now deliberate
                     setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
                   }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',opacity:(dis&&!cockpitEdit)?0.32:1,whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
-                    <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
+                    {studioFs && _skinRing(m)}<span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                       <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                       {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
@@ -14723,7 +14814,7 @@ Hard requirements:
                 kontraAutoRef.current=false;   // manual palette choice → deliberate
                 setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
               }} style={{padding:'8px 0',textAlign:'center',fontSize:(.6*effScale)+'rem',fontWeight:600,letterSpacing:'.06em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',borderRadius:10,transition:'color .18s, background .18s, box-shadow .18s, border-color .18s',whiteSpace:'nowrap',overflow:'visible',...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:((!cockpitEdit && mode===m) ? {background:PF.card2,border:'1px solid rgba(201,168,76,.4)',color:'rgba(220,180,90,.98)',boxShadow:'none'} : chipStyle(cockpitEdit ? _inSet : false)))}}>
-                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
+                {studioFs && _skinRing(m)}<span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:0}}>
                   <span>{armed?('✎ '+t('editShort')):t(m)}</span>
                   {armed && isFree && <ProBadge t={t} readScale={effScale} size="sm" />}
                 </span>
@@ -14814,7 +14905,7 @@ Hard requirements:
                 imgComposerRef.current=null; setImgComposer(null); composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); };
               const _dirGlyph = (d)=> d==='lr'?'☰':d==='vert'?'III':d==='spiralIn'?'⟳':'⟲';
               const _chipBase = {position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2};
-              const _cols = Math.min(4, _cs.length+1);
+              const _cols = Math.min(studioFs?5:4, _cs.length+1);
               return (<>
               <div style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',minHeight:28,display:'flex',alignItems:'center'}}>
                 <span style={{flex:1,textAlign:'center',fontStyle:'italic',fontWeight:400,letterSpacing:'.22em',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{_fsStripLabel('comp', t('inspiredByTitle'))}</span>
@@ -14826,10 +14917,10 @@ Hard requirements:
                 {/* ✦ SIGNATURE — the picture's own piece (computeImageSignature); lit while it plays */}
                 {imgSig && _isigBtn('left')}
               </div>
-              <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}}>
+              <div className="pf-art-grid" style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}}>
                 <button key="scan" disabled={working} onClick={_toScan} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'}
                   className={_scanSel?'pf-artist pf-artist-on':'pf-artist'}
-                  style={{..._chipBase,cursor:working?'default':'pointer',opacity:working?.5:(_aiOn?.4:1),...chipStyle(_scanSel)}}>{_dirGlyph(imgDir)} {t('imgScan')!=='imgScan'?t('imgScan'):'scan'}</button>
+                  style={{..._chipBase,cursor:working?'default':'pointer',opacity:working?.5:(_aiOn?.4:1),...chipStyle(_scanSel)}}>{studioFs && _skinGlyph(_dirGlyph(imgDir))}{!studioFs && (_dirGlyph(imgDir)+' ')}{t('imgScan')!=='imgScan'?t('imgScan'):'scan'}</button>
                 {_cs.map(c=>{
                   const _crAll = crOn && composerDice;                 // Jam session + 🔀: chips pin / unpin
                   const _cIx = (crOn && (composerStage.length || _crAll)) ? [imgComposer,...composerStage].indexOf(c.k) : -1;
@@ -14844,7 +14935,7 @@ Hard requirements:
                         if(!_aiOn && imgComposer===c.k && !composerStage.length){ _toScan(); return; }   // the chosen one tapped again → back to SCAN (an artist → Mosaic)
                         _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      style={{..._chipBase,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
+                      style={{..._chipBase,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest)}{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
                   );
                 })}
               </div>
@@ -14961,7 +15052,7 @@ Hard requirements:
                 default: return 5;
               }
             })();
-            const _cols = _baseCols;
+            const _cols = studioFs ? Math.min(5, Math.max(1, _chipCount)) : _baseCols;
             // Single chip in non-edit → show the name as plain text (no chip),
             // exactly like a single palette. Nothing to switch between.
             if(_chipCount===1 && !cockpitEdit){
@@ -14974,7 +15065,7 @@ Hard requirements:
               );
             }
             return (
-          <div style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
+          <div className="pf-art-grid" style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}} title="painting style — mosaic is the plain reading with no artist overlay">
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
                 Shown when in set, or in edit mode (as a ghost when out of set). */}
             {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
@@ -15031,7 +15122,7 @@ Hard requirements:
                 if(!notesMode){ setNotesMode(true); }
                 else { setNotesMode(false); }
               }
-            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:(!cockpitEdit && jamOn && jamAll && _mosIx<0)?0.35:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
+            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} style={{width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:(!cockpitEdit && jamOn && jamAll && _mosIx<0)?0.35:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{studioFs && _skinFace('mosaic', inFamilyShuffle)}{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
             ); })()}
             {/* ── Per-artist chips (un-paired). Every artist is its own toggle.
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
@@ -15072,6 +15163,7 @@ Hard requirements:
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
                   style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?((k==='oneM'||locked)?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  {studioFs && _skinFace(k, shufHit && !isOn)}
                   {label}
                   {locked && cockpitEdit && (
                     <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
@@ -16489,7 +16581,7 @@ Hard requirements:
       {showMoodMenu && (
         <div onClick={()=>setShowMoodMenu(false)} className="pf-recent-overlay pf-mood-overlay pf-picker-mood" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
-            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(_stripIcon(t('selectMood')))}</div>
+            <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(_stripIcon(studioOn ? t('moodHowFeel') : t('selectMood')))}</div>
             {(()=>{
               const moodLocked = aiLockedMode('mood');
               // For Free + moodLocked the input stays fully editable (so the
@@ -16535,7 +16627,7 @@ Hard requirements:
               const canSubmit = moodLocked
                 ? (_resolveMood(moodEdit) !== null)
                 : !!moodEdit.trim();
-              return (
+              return (<>
               <div style={{display:'flex',gap:6,marginBottom:12,flexShrink:0}}>
                 <div style={{flex:1,minWidth:0,position:'relative'}}>
                   <input value={moodEdit} onChange={e=>setMoodEdit(e.target.value)} placeholder="" autoFocus onFocus={()=>{inputFocus.current=true;}} onBlur={()=>{inputFocus.current=false;}} onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); try{e.nativeEvent.stopImmediatePropagation();}catch(_){} if(canSubmit) submit(moodEdit); } }} style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,.018)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,padding:'12px 14px',color:PF.cream,fontSize:'16px',fontFamily:'inherit',outline:'none'}} />
@@ -16562,15 +16654,34 @@ Hard requirements:
                     </div>
                   )}
                 </div>
-                <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={moodLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>
+                {!studioOn && <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={moodLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>}
               </div>
-            ); })()}
+              {/* STUDIO: emoji chips (two moods in words, Pro AI; six from the list, free) and one big button */}
+              {studioOn && !moodEdit.trim() && (()=>{
+                const _ex = t('moodExamples');
+                const _strip = (x)=>String(x||'').replace(/^(e\.g\.|z\.B\.|ex\.|p\.ej\.|napr\.|例如|例:)\s*/,'').trim();
+                const _words = (!moodLocked && Array.isArray(_ex)) ? [['🌧️', _strip(_ex[1])], ['❄️', _strip(_ex[2])]].filter(x=>x[1]) : [];
+                const _pre = ['furious','nostalgic','calm','joyful','dreamy','epic'].filter(m=>MOODS.includes(m));
+                const _names = t('moodNames')||{};
+                const _chip = {padding:'8px 12px',borderRadius:18,border:'1px solid rgba(242,238,232,.14)',background:'rgba(255,255,255,.03)',color:'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',cursor:'pointer',lineHeight:1.2};
+                return (
+                  <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14,flexShrink:0}}>
+                    {_words.map(([e,w])=>(<button key={'w'+w} type="button" onClick={()=>setMoodEdit(w)} style={{..._chip,borderColor:'rgba(201,168,76,.45)'}}>{e} {w}</button>))}
+                    {_pre.map(m=>(<button key={m} type="button" onClick={()=>submitFree(m)} style={_chip}>{MOOD_EMOJI[m]||'✦'} {_sent(_names[m]||m)}</button>))}
+                  </div>
+                );
+              })()}
+              {studioOn && (
+                <button type="button" onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit}
+                  style={{width:'100%',padding:'15px 16px',marginBottom:12,borderRadius:26,border:0,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:'#fff',cursor:canSubmit?'pointer':'default',background:'linear-gradient(135deg,#a77bff,#7a3ff0)',opacity:canSubmit?1:.4,boxShadow:canSubmit?'0 8px 28px rgba(140,90,255,.35)':'none',flexShrink:0}}>✦ {_stT('mgo')}</button>
+              )}
+            </>); })()}
             {/* Suggestions grid — autocomplete-filtered moods while typing.
                 For Free+moodLocked, when the input is empty we show the full
                 MOODS list alphabetically (so the user has something to pick
                 without typing); once they start typing, normal autocomplete
                 behaviour applies. Clicking any preset is free (no AI). */}
-            <div style={{flex:'1 1 auto',minHeight:'72px',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
+            <div style={{flex:'1 1 auto',minHeight:(studioOn&&!moodEdit.trim())?0:'72px',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
               {(()=>{
                 const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
                 const q=_n(moodEdit.trim());
@@ -16580,7 +16691,7 @@ Hard requirements:
                   // on small screens. Typing reveals normal autocomplete over
                   // the full MOODS list. Others see nothing (their marquee
                   // placeholder cues "type").
-                  if(aiLockedMode('mood')){
+                  if(aiLockedMode('mood') && !studioOn){
                     const SAMPLE=['joyful','calm','melancholic','mysterious','romantic','epic'];
                     return SAMPLE.filter(m=>MOODS.includes(m));
                   }
