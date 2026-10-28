@@ -10207,7 +10207,7 @@ Hard requirements:
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
-      if(randomModeRef.current){
+      if(randomModeRef.current && !(opts && opts.keep)){
         setStructureSeedLock(null);
         nextRollInProgressRef.current = true;
         // Manual artist → rotate style. Shuffle (no manual artist) → rotate
@@ -13418,8 +13418,9 @@ Hard requirements:
   const [stSide, setStSide] = useState(null);            // null | 'right' | 'left' — which rail is out
   const stSideRef = useRef(null); useEffect(()=>{ stSideRef.current = stSide; },[stSide]);
   const stIdleRef = useRef(null);
-  const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; setStSide(null); }, 4000); };
-  const _stShow = (w)=>{ setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
+  const stEmptyRef = useRef(false);   // nothing on the canvas: the left rail stays out (the way on)
+  const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; setStSide(stEmptyRef.current ? 'left' : null); }, 4000); };
+  const _stShow = (w)=>{ if(!w && stEmptyRef.current) w='left'; setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
   useEffect(()=>{ if(!studioFs) _stShow(null); },[studioFs]);
   // a piece that has not played yet (a song, a mood): the right rail with play stays out until it plays or a tap hides it
   const _stFresh = studioFs && !studioLive && chords.length>0 && disp===0 && !playing && !anim && !demoReelOn;
@@ -13790,6 +13791,9 @@ Hard requirements:
   const [stHearts, setStHearts] = useState([]);
   const [stFavPend, setStFavPend] = useState(false);
   const _stHasArt = chords.length>0 || (viewMode==='image' && !!originalImgUrl);
+  const _stEmpty = studioFs && !_stHasArt && !studioLive && !micActive && !composeMode;
+  stEmptyRef.current = _stEmpty;
+  useEffect(()=>{ if(_stEmpty && stSide!=='left') setStSide('left'); }, [_stEmpty, stSide]);
   const _stHeartTap = ()=>{ if(favReadyAny){ _favToggleAny(); setStFavPend(false); return; } if(!_stHasArt) return; setStFavPend(p=>{ if(!p) _stToastShow(_stT('hLater')); return !p; }); };
   _stHeartRef.current = (x, y)=>{
     const id = Date.now()+Math.random();
@@ -13975,7 +13979,7 @@ Hard requirements:
     try{ rec.start(1000); }catch(_){ rec.onstop=null; cancelAnimationFrame(stVidRafRef.current); try{ if(dest) Tone.getDestination().disconnect(dest); }catch(__){} _stToastShow(_stT('vNo')); return; }
     stVidRecRef.current=rec; setStVid({phase:'rec', t0:Date.now()});
     _vidLock();
-    wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); });
+    wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current({keep:true}); }).catch(()=>{ startPlayRef.current && startPlayRef.current({keep:true}); });
   };
   const _vidStop = ()=>{
     const r=stVidRecRef.current; stVidRecRef.current=null;
@@ -16547,15 +16551,16 @@ Hard requirements:
         {stShare && (()=>{
           const _img = viewMode==='image' && !moodFromImg;
           const _vOk = _vidOk() && chords.length>0 && !working && !recording && !(_img && imgPlayMode==='compose' && !imgComposeRef.current);
-          const _pOk = chords.length>0 || (_img && !!originalImgUrl);
           const _sOk = !_img && chords.length>0 && disp>0 && !playing && !anim && !holdPaused && !demoReelOn && !micActive && !busy && !recording;
+          const _pOk = _img ? !!originalImgUrl : _sOk;
+          const _why = (playing || holdPaused || anim) ? t('hearImageDis') : t('exportNeedsPlay');
           const _rOk = _img && !!recBtnRef.current && !recBtnRef.current.disabled;
           const _sv = (d)=>(<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
           const rows = [
             {k:'vid', ok:_vOk, bg:'linear-gradient(135deg,#ff5f8f,#a86bff)', ic:_sv(<><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></>), go:_vidStart},
-            {k:'pic', ok:_pOk, bg:'linear-gradient(135deg,#4de3a0,#2f9fc9)', ic:_sv(<><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 18l3-3 2 2 3-3"/></>), go:()=>{ setStShare(false); exportImage('story', true, null, null, false); }},
+            {k:'pic', ok:_pOk, bg:'linear-gradient(135deg,#4de3a0,#2f9fc9)', ic:_sv(<><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 18l3-3 2 2 3-3"/></>), go:()=>{ setStShare(false); exportImage('story', true, null, null, false); }, why:_why},
             _img ? {k:'snd', ok:_rOk, bg:'linear-gradient(135deg,#ff8a5c,#e0446a)', ic:_sv(<><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></>), go:()=>{ setStShare(false); if(recBtnRef.current) recBtnRef.current.click(); }}
-                 : {k:'sav', ok:_sOk, bg:'linear-gradient(135deg,#e2c477,#b8892f)', ic:_sv(<><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></>), go:()=>{ setStShare(false); setShowSizePicker(true); }, why:t('exportNeedsPlay')},
+                 : {k:'sav', ok:_sOk, bg:'linear-gradient(135deg,#e2c477,#b8892f)', ic:_sv(<><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></>), go:()=>{ setStShare(false); setShowSizePicker(true); }, why:_why},
           ];
           return (<>
             <div onClick={()=>setStShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); setStShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)',touchAction:'none'}}/>
