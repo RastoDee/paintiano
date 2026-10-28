@@ -7619,6 +7619,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     draftOwnerRef.current   = null;
     // Now run the standard content wipe (chords, loaded blob/url, canvas).
     try{ clear(); }catch(_){}
+    // …and the Studio home starts over on its sample
+    try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} try{ setHomeArt(null); }catch(_){}
     // Force back to Setup screen even if the caller was mid-flow.
     setForceSetup(false);
     setPickMode(null);
@@ -13712,6 +13714,10 @@ Hard requirements:
   const studioHome = studioOn && isSetupView && !favView;
   const [homeArt, setHomeArt] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art')||'null'); return (o && typeof o.u==='string') ? o : null; }catch(_){ return null; } });
   const _homeKeyRef = useRef('');
+  // Mic and Compose paint live: once their draft is gone (Clear, a relaunch) there is nothing to go back to
+  useEffect(()=>{ if(!homeArt) return; const k=homeArt.k;
+    if((k==='mic' && !hasMicDraft && !micActive && !micArmed) || (k==='compose' && !hasComposeDraft && !composeMode)){
+      setHomeArt(null); try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} } },[homeArt, hasMicDraft, hasComposeDraft, micActive, micArmed, composeMode]);
   const _captureHomeArt = ()=>{
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
@@ -13842,6 +13848,7 @@ Hard requirements:
   const stToastTmRef = useRef(null);
   const [stHint, setStHint] = useState(null);
   const stHintRef = useRef({tm:null, hide:null, shown:false});
+  useEffect(()=>{ if(stSide==='right' || stSide==='left') return; const R=stHintRef.current; if(R.tm){ clearTimeout(R.tm); R.tm=null; } if(R.hide){ clearTimeout(R.hide); R.hide=null; } R.shown=false; setStHint(null); },[stSide]);
   useEffect(()=>{ if(stSide!=='right' || !studioFs) return; let seen=true; try{ seen=localStorage.getItem('paintiano_st_hold_tip')==='1'; }catch(_){}
     if(seen) return; try{ localStorage.setItem('paintiano_st_hold_tip','1'); }catch(_){}
     const tm=setTimeout(()=>{ try{ _stToastShow(_stT('holdTip')); }catch(_){} }, 700); return ()=>clearTimeout(tm);
@@ -14882,7 +14889,7 @@ Hard requirements:
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 <div className="pf-sh-art">
                   <img src={H.u} alt={ttl}/>
-                  {!_smp && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
+                  {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>
                 {_canPlay && (<button type="button" className="pf-sh-play" onClick={_play} aria-label={_smp ? _stT('go') : _stT('back')}><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></button>)}
@@ -14890,7 +14897,7 @@ Hard requirements:
             </div>
             <div style={{height:14,flexShrink:0}}/>
             <div className="pf-sh-grid">
-              {ORDER.map(k=>{ const S=SRC[k], on = !_smp && k===kind; return (
+              {ORDER.map(k=>{ const S=SRC[k], on = !_smp && _canPlay && k===kind; return (
                 <button key={k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!!S.off} onClick={()=>_tap(k)}>
                   <span className="pf-sh-ic" style={{background:'linear-gradient(135deg,'+S.g+')',...(on?{}:{boxShadow:'0 0 0 3px '+S.c+'2e'})}}>{_sv(S.p)}{S.d && !on && (<span className="pf-sh-dot" aria-hidden="true"/>)}</span>
                   <span>{S.label}</span>
@@ -16642,7 +16649,7 @@ Hard requirements:
               </div>)}
           </div>)}
         {stPeek && (<div aria-hidden="true" style={{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom, 0px) + 44px)',transform:'translateX(-50%)',zIndex:10003,display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderRadius:20,background:'rgba(10,8,18,.88)',border:'1px solid rgba(220,150,255,.5)',color:'#f2eee8',fontSize:(.56*effScale)+'rem',whiteSpace:'nowrap',maxWidth:'90vw',overflow:'hidden',textOverflow:'ellipsis',pointerEvents:'none'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dcb4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>{_stT('fromImg')}</span></div>)}
-        {stHint && studioFs && (()=>{ const raw=String(_stT('h_'+stHint.k)||''), i=raw.indexOf(' — '); const nm=i>0?raw.slice(0,i):raw, sub=i>0?raw.slice(i+3):''; return (
+        {stHint && studioFs && (stSide==='right' || stSide==='left') && (()=>{ const raw=String(_stT('h_'+stHint.k)||''), i=raw.indexOf(' — '); const nm=i>0?raw.slice(0,i):raw, sub=i>0?raw.slice(i+3):''; return (
           <div key={stHint.k+'@'+Math.round(stHint.y)} className={stHint.side==='l' ? 'pf-st-hint pf-st-hint-l' : 'pf-st-hint'} role="status" style={{position:'fixed',...(stHint.side==='l' ? {left:'calc(max(12px, env(safe-area-inset-left, 0px)) + 66px)'} : {right:'calc(max(12px, env(safe-area-inset-right, 0px)) + 62px)'}),top:stHint.y,zIndex:10009,maxWidth:'min(250px, calc(100vw - 110px))',padding:'9px 14px 10px',borderRadius:16,background:'rgba(14,11,22,.95)',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 12px 34px rgba(0,0,0,.55)',color:'#f2eee8',pointerEvents:'none'}}>
             <div style={{fontSize:14*effScale,fontWeight:700,lineHeight:1.2}}>{pfIcons(nm)}</div>
             {sub && (<div style={{marginTop:3,fontSize:12*effScale,lineHeight:1.35,color:'rgba(242,238,232,.7)'}}>{pfIcons(sub)}</div>)}
