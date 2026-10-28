@@ -16463,7 +16463,7 @@ Hard requirements:
         const _live = studioLive;
         const _vr = stVidRec || recording;   // a video or the picture's sound is being recorded: the rails rest
         const _r = !_vr && stSide==='right', _l = !_vr && stSide==='left';
-        const _cap = !_vr && (stSide==='right' || stSide==='top');
+        const _cap = !_vr && stSide==='top';
         const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording);
         const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg));
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '');
