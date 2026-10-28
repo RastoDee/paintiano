@@ -23740,6 +23740,41 @@ const STUDIO_FX_CSS = `
 @keyframes pfStPeek{from{opacity:0;transform:scale(1.02)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.pf-st-heart{animation-duration:.2s}.pf-st-dot{animation:none}}
 `;
+// STUDIO SHEETS — the pickers in the Studio (Add music, image, Save, My Music, mood, morph, recent) as sheets like Share:
+// from the bottom, rows with a coloured circle; the mood sheet comes from the top so the keyboard never covers it.
+const STUDIO_SHEET_CSS = `
+.pf-app-root .pf-st-sheet{align-items:flex-end!important;justify-content:center!important;padding:0!important;background:rgba(4,4,10,.6)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;overflow:hidden!important}
+.pf-app-root .pf-st-sheet>div{width:100%!important;max-width:560px!important;min-width:0!important;box-sizing:border-box!important;margin:0!important;background:rgba(14,11,22,.98)!important;border:0!important;border-top:1px solid rgba(242,238,232,.12)!important;border-radius:22px 22px 0 0!important;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))!important;box-shadow:0 -18px 50px rgba(0,0,0,.6)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;max-height:88dvh!important;overflow-y:auto!important;overscroll-behavior:contain;animation:pfStSheetUp .28s cubic-bezier(.2,.8,.2,1) both}
+.pf-app-root .pf-st-sheet>div::before{content:"";display:block;flex-shrink:0;width:40px;height:4px;border-radius:2px;background:rgba(242,238,232,.25);margin:0 auto 12px}
+.pf-app-root .pf-st-sheet:not(.pf-st-mm)>div>div:first-of-type{font-size:calc(var(--pf-read-scale,1) * .54rem)!important;font-weight:500!important;letter-spacing:.26em!important;text-transform:uppercase!important;color:rgba(201,168,76,.85)!important;margin-bottom:12px!important;text-align:center!important}
+.pf-app-root .pf-st-sheet.pf-st-top{align-items:flex-start!important}
+.pf-app-root .pf-st-sheet.pf-st-top>div{border-top:0!important;border-bottom:1px solid rgba(242,238,232,.12)!important;border-radius:0 0 22px 22px!important;padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))!important;box-shadow:0 18px 50px rgba(0,0,0,.6)!important;max-height:94dvh!important;animation-name:pfStSheetDown}
+.pf-app-root .pf-st-sheet.pf-st-top>div::before{display:none}
+.pf-app-root .pf-st-sheet.pf-st-top>div::after{content:"";display:block;flex-shrink:0;width:40px;height:4px;border-radius:2px;background:rgba(242,238,232,.25);margin:10px auto 0}
+@keyframes pfStSheetUp{from{transform:translateY(48px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pfStSheetDown{from{transform:translateY(-48px);opacity:0}to{transform:none;opacity:1}}
+.pf-app-root .pf-st-sheet .pf-picker-tile,.pf-app-root .pf-st-sheet .pf-sv{position:relative;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:2px;width:100%!important;box-sizing:border-box!important;min-height:68px;padding:12px 14px!important;border-radius:16px!important;border:1px solid rgba(242,238,232,.1)!important;background:rgba(255,255,255,.035)!important;color:#f2eee8!important;text-align:left!important;letter-spacing:0!important;transition:transform .12s!important;-webkit-tap-highlight-color:transparent}
+.pf-app-root .pf-st-sheet .pf-picker-tile:active,.pf-app-root .pf-st-sheet .pf-sv:active{transform:scale(.98)}
+.pf-app-root .pf-st-sheet .pf-pt-ic,.pf-app-root .pf-st-sheet .pf-sv{padding-left:72px!important}
+.pf-app-root .pf-st-sheet .pf-picker-tile>span:first-of-type,.pf-app-root .pf-st-sheet .pf-sv>span:first-of-type{display:flex!important;justify-content:flex-start!important;align-items:center!important;flex-wrap:wrap;gap:6px!important;margin:0!important;font-weight:600!important;color:#f2eee8!important;letter-spacing:.01em!important;text-align:left!important}
+.pf-app-root .pf-st-sheet .pf-picker-tile>span:nth-of-type(2),.pf-app-root .pf-st-sheet .pf-sv>div{display:block!important;margin:0!important;white-space:normal!important;color:rgba(242,238,232,.6)!important;text-align:left!important;letter-spacing:0!important}
+.pf-app-root .pf-st-sheet .pf-pt-ic>span:first-of-type>svg,.pf-app-root .pf-st-sheet .pf-sv>span:first-of-type>svg{position:absolute;left:14px;top:50%;margin-top:-22px;width:44px;height:44px;padding:12px;box-sizing:border-box;border-radius:50%;color:#1a1408;background:linear-gradient(135deg,#e2c477,#b8892f)}
+.pf-app-root .pf-st-sheet .pf-pt-smp>span:first-of-type>svg{background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408}
+.pf-app-root .pf-st-sheet .pf-pt-file>span:first-of-type>svg{color:#fff}
+.pf-app-root .pf-st-sheet.pf-picker-music .pf-pt-file>span:first-of-type>svg{background:linear-gradient(135deg,#7ab3ff,#3f7bff)}
+.pf-app-root .pf-st-sheet.pf-picker-image .pf-pt-file>span:first-of-type>svg{background:linear-gradient(135deg,#ffb08a,#ff7a3d)}
+.pf-app-root .pf-st-sheet.pf-picker-mfi .pf-pt-file>span:first-of-type>svg{background:linear-gradient(135deg,#cdb2ff,#8c5cff)}
+.pf-app-root .pf-st-sheet .pf-pt-mine>span:first-of-type>svg{background:linear-gradient(135deg,#ff9ec0,#ff5a8a);color:#fff}
+.pf-app-root .pf-st-sheet .pf-pt-img{position:absolute;left:14px;top:50%;margin-top:-22px;width:44px;height:44px;border-radius:50%;background:#1b1728 center/cover no-repeat;border:1px solid rgba(242,238,232,.22);box-sizing:border-box}
+.pf-app-root .pf-st-sheet .pf-sv-sparkle>span:first-of-type>svg{background:linear-gradient(135deg,#4de3a0,#2f9fc9);color:#fff}
+.pf-app-root .pf-st-sheet .pf-sv-rec>span:first-of-type>svg{background:linear-gradient(135deg,#ff8a5c,#e0446a);color:#fff}
+.pf-app-root .pf-st-sheet .pf-sv-notes>span:first-of-type>svg{background:linear-gradient(135deg,#b49bff,#6a4fd8);color:#fff}
+.pf-app-root .pf-st-sheet .pf-sv-web>span:first-of-type>svg{background:linear-gradient(135deg,#7ab3ff,#3f7bff);color:#fff}
+.pf-app-root .pf-st-sheet .pf-sv-gallery>span:first-of-type>svg{background:linear-gradient(135deg,#cdb2ff,#8c5cff);color:#fff}
+.pf-app-root .pf-st-sheet .pf-sv-gallery2>span:first-of-type>svg{background:linear-gradient(135deg,#8fd6a4,#3fb37a);color:#fff}
+.pf-app-root .pf-st-sheet .pf-sv-chk{border-bottom:0!important;padding:6px 2px!important;margin-bottom:0!important;color:rgba(242,238,232,.82)!important}
+.pf-app-root .pf-st-sheet input[type="text"]{font-size:16px!important;text-align:left!important;border-radius:14px!important;background:rgba(255,255,255,.05)!important;border:1px solid rgba(242,238,232,.14)!important;padding:12px 14px!important}
+`;
 // STUDIO HOME — the stage: your painting floats as a card (▶ goes back to it), the blurred painting behind,
 // "What will you paint today?" and the six sources as equal circles (gold ring = the card's source, gold dot = a draft).
 const STUDIO_HOME_CSS = `
@@ -35734,7 +35769,6 @@ Hard requirements:
   const _stViaHome = (sel)=>{ _stHome(); setTimeout(()=>{ const el=document.querySelector(sel); if(el && !el.disabled) el.click(); }, 140); };
   const _stNewSrc = (target)=>{ setStNew(false); _stPaused(()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setPickMode(target); }); };
   const _stNewMood = ()=>{ setStNew(false); _stPaused(()=>{ setMoodEdit(''); setShowMoodMenu(true); }); };
-  const _stNewMine = ()=>{ setStNew(false); _stPaused(()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setShowMyMusicDrawer(true); }); };
   // ♥ — two taps (TikTok) put the painting in the favorites; while it is still being painted, the moment it is done
   const [stHearts, setStHearts] = useState([]);
   const [stFavPend, setStFavPend] = useState(false);
@@ -35796,6 +35830,13 @@ Hard requirements:
   const [stVid, setStVid] = useState(null);           // null | {phase:'rec', t0} | {phase:'done', blob, url, type}
   const [stVidTick, setStVidTick] = useState(0);
   const stVidRec = !!(stVid && stVid.phase==='rec');
+  const _stDone = studioFs && !studioLive && chords.length>0 && disp>=chords.length && !playing && !anim && !holdPaused && !demoReelOn && !recording && !stVidRec;
+  const _stDoneRef = useRef(false);
+  useEffect(()=>{
+    const was=_stDoneRef.current; _stDoneRef.current=_stDone;
+    if(_stDone && !was){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStSide('right'); }
+    else if(!_stDone && was && stSideRef.current==='right' && !stIdleRef.current) _stArm();
+  },[_stDone]);
   const stVidRecRef = useRef(null), stVidRafRef = useRef(0), stVidLoopRef = useRef(null), stVidLockRef = useRef(null), stVidTextRef = useRef({title:'', line:''});
   const _vidOk = ()=>{ try{ return typeof MediaRecorder!=='undefined' && !!(HTMLCanvasElement.prototype.captureStream); }catch(_){ return false; } };
   const _vidTitle = ()=>{ const im = viewMode==='image' && !moodFromImg; return (im ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '')) || 'Paintiano'; };
@@ -36152,7 +36193,7 @@ Hard requirements:
           via the "Moja hudba" tile in the Lite source picker or a similar
           entry in Advanced. Shared UI: identical in both modes. */}
       {showMyMusicDrawer && (
-        <div onClick={()=>setShowMyMusicDrawer(false)} style={{position:'fixed',inset:0,zIndex:20000,background:'rgba(4,3,8,0.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+        <div onClick={()=>setShowMyMusicDrawer(false)} className={studioOn ? 'pf-st-sheet pf-st-mm' : undefined} style={{position:'fixed',inset:0,zIndex:studioOn?100001:20000,background:'rgba(4,3,8,0.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
           <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:460,background:'#0e0b16',border:'1px solid rgba(201,168,76,.35)',borderRadius:16,padding:'20px 22px 22px',display:'flex',flexDirection:'column',gap:14,maxHeight:'85dvh',overflow:'hidden'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
               <div style={{fontSize:(.7*effScale)+'rem',fontWeight:500,letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(220,180,90,.9)'}}>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</div>
@@ -36531,7 +36572,6 @@ Hard requirements:
                 </button>); })}
             </div>
             <div className="pf-sh-links">
-              <button type="button" onClick={()=>setShowMyMusicDrawer(true)}>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</button>
               <button type="button" onClick={()=>_favOpen()} disabled={!favN} style={{opacity:favN?1:.45}}>♥ {_favT('label')}{favN ? ' · '+favN : ''}</button>
             </div>
           </div>);
@@ -37751,8 +37791,9 @@ Hard requirements:
       <input ref={refImage} type="file" accept="image/*" onChange={loadImage} style={{display:'none'}}/>
       <input ref={refImgMood} type="file" accept="image/*" onChange={loadImgMood} style={{display:'none'}}/>
 
+      {studioOn && (<style>{STUDIO_SHEET_CSS}</style>)}
       {pickMode && (
-        <div onClick={()=>setPickMode(null)} className={"pf-picker-overlay"+(['imgmood','sound','midi','audio','score','image'].includes(pickMode)?' pf-picker-left':'')+' pf-picker-'+((pickMode==='sound'||pickMode==='midi'||pickMode==='audio'||pickMode==='score')?'music':(pickMode==='image')?'image':(pickMode==='imgmood')?'mfi':(pickMode==='mic')?'mic':'mood')} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:studioFs?10010:1000,padding:20,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>setPickMode(null)} className={(studioOn?'pf-st-sheet ':'')+"pf-picker-overlay"+(['imgmood','sound','midi','audio','score','image'].includes(pickMode)?' pf-picker-left':'')+' pf-picker-'+((pickMode==='sound'||pickMode==='midi'||pickMode==='audio'||pickMode==='score')?'music':(pickMode==='image')?'image':(pickMode==='imgmood')?'mfi':(pickMode==='mic')?'mic':'mood')} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:studioOn?100001:1000,padding:20,backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="choose input" className="pf-picker-dialog" style={{background:'rgba(20,18,30,.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',minWidth:260,maxWidth:340}}>
             <div style={{textAlign:'center',marginBottom:18,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>
               {_sent(_stripIcon(pickMode==='sound'?(t('musicInput')||'add music'):pickMode==='midi'?t('midiInput'):pickMode==='audio'?t('audioInput'):pickMode==='score'?t('scoreInput'):pickMode==='mic'?t('micInput'):pickMode==='imgmood'?(t('imgMood')||'mood from image'):t('imageInput')))}
@@ -37799,7 +37840,8 @@ Hard requirements:
                   loadSampleImage(i);
                   setForceSetup(false);
                   setPickMode(null);
-                }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',textAlign:'center'}}>
+                }} className="pf-picker-tile pf-pt-ic pf-pt-sim" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',textAlign:'center'}}>
+                  {studioOn && (<i aria-hidden="true" className="pf-pt-img" style={{backgroundImage:'url(/studio/s'+i+'.webp)'}}/>)}
                   <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.3,color:'rgba(230,222,196,.9)'}}>{s.n}</span>
                   <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis'}}>{s.d}</span>
                 </button>
@@ -37824,7 +37866,7 @@ Hard requirements:
                   loadSampleMidi(i);
                   setForceSetup(false);
                   setPickMode(null);
-                }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+                }} className="pf-picker-tile pf-pt-ic pf-pt-smp" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
                   <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="play" s={14}/>{s.n}</span>
                   <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.d}</span>
                 </button>
@@ -37850,7 +37892,7 @@ Hard requirements:
                 else loadSampleImage();
                 setForceSetup(false);
                 setPickMode(null);
-              }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+              }} className="pf-picker-tile pf-pt-ic pf-pt-smp" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="play" s={14}/>{_sent(_stripIcon(t('builtInSample')))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'Liszt · Rimsky-Korsakov · Glass':pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?'Liszt · Rimsky-Korsakov · Glass':pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:'The Starry Night — Vincent van Gogh'}</span>
               </button>
@@ -37868,7 +37910,7 @@ Hard requirements:
                 // opens, cancelling it (Choose File appeared to do nothing). The
                 // loaders (loadMidi/loadAudio/loadScore/loadImage) close the modal
                 // via setPickMode(null) once a file is actually selected.
-              }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+              }} className="pf-picker-tile pf-pt-ic pf-pt-file" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="upload" s={14}/>{_sent(_stripIcon(t('chooseFile')))}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'MIDI · audio · MusicXML':pickMode==='midi'?'MIDI · .mid .midi':pickMode==='audio'?'Audio · .mp3 .wav .m4a .ogg .aac':pickMode==='score'?'MusicXML · .musicxml .xml .mxl':'JPG · PNG · GIF · WEBP · HEIC'}</span>
                 {pickMode==='imgmood' && (proStatus!=='pro_ai') && (modeExhausted('mfi') ? <div style={{marginTop:8,display:'flex',justifyContent:'center'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></div> : <span style={{display:'block',marginTop:6,fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',color:'rgba(228,178,255,.9)'}}>{ts('aiTrialBadge','1 free AI try')}</span>)}
@@ -37878,7 +37920,7 @@ Hard requirements:
                   music picker mode (sound/midi/audio/score); drawer itself
                   filters nothing — the user picks by name. */}
               {(pickMode==='sound' || pickMode==='midi' || pickMode==='audio' || pickMode==='score') && (
-              <button onClick={()=>{ setPickMode(null); setShowMyMusicDrawer(true); }} className="pf-picker-tile" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
+              <button onClick={()=>{ setPickMode(null); setShowMyMusicDrawer(true); }} className="pf-picker-tile pf-pt-ic pf-pt-mine" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</span>
                 <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ts('mymusicHint',({EN:'Saved slots · up to 5',SK:'Uložené sloty · max 5',DE:'Gespeicherte Slots · max 5',FR:'Emplacements enregistrés · max 5',ES:'Espacios guardados · máx 5',PT:'Espaços guardados · máx 5',zh:'已保存插槽 · 最多5个',zhTW:'已儲存插槽 · 最多5個',ja:'保存済みスロット · 最大5個'})[lang]||'Saved slots · up to 5')}</span>
               </button>
@@ -38354,7 +38396,6 @@ Hard requirements:
               </div>
               <div style={{display:'flex',justifyContent:'center',gap:10,flexWrap:'wrap'}}>
                 <button type="button" onClick={_stHome} disabled={recording} style={_chip}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>{_stT('home')}</button>
-                <button type="button" onClick={_stNewMine} disabled={recording || working} style={_chip}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>{ts('mymusicTitle',({EN:'My Music',SK:'Moja hudba',DE:'Meine Musik',FR:'Ma musique',ES:'Mi música',PT:'Minha música',zh:'我的音乐',zhTW:'我的音樂',ja:'マイミュージック'})[lang]||'My Music')}</button>
               </div>
             </div>
           </>);
@@ -38897,7 +38938,7 @@ Hard requirements:
         // option set because their pieces are newly composed.
         const isImportedMedia = favView ? !!(favCur && (favCur.src==='midi' || favCur.src==='audio' || favCur.src==='score')) : (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score');
         return (
-        <div onClick={()=>setShowSizePicker(false)} className="pf-save-overlay" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:'4vh 16px'}}>
+        <div onClick={()=>setShowSizePicker(false)} className={"pf-save-overlay"+(studioOn?' pf-st-sheet':'')} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10010,padding:'4vh 16px'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="export" style={{background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',minWidth:260,maxWidth:340,backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>{_sent(t('save'))}</div>
             {!favView && (<input
@@ -38925,12 +38966,12 @@ Hard requirements:
                       • Score — MusicXML in-app row
                       Web/Print removed: in image mode the source already IS a picture. */}
                   {originalImgUrl && (
-                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'10px 12px',background:'transparent',color:includeSourceThumb?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
+                    <button className="pf-sv-chk" onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'10px 12px',background:'transparent',color:includeSourceThumb?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
                       <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,border:'1px solid '+(includeSourceThumb?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',lineHeight:1,fontWeight:600,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left'}}>{t('includeSourceImage')!=='includeSourceImage' ? t('includeSourceImage') : 'include source original image'}</span>
                     </button>
                   )}
-                  <button onClick={()=>{
+                  <button className="pf-sv pf-sv-sparkle" onClick={()=>{
                     pendingWithSourceRef.current=includeSourceThumb;
                     setShowSizePicker(false);
                     if(recBlob && recName) exportImage('story', true, recBlob, recName, includeSourceThumb);
@@ -38939,7 +38980,7 @@ Hard requirements:
                     <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="sparkle" s={14}/>{t('sizeStory')||'Story'}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{t('storyImageHint')||'painting + audio · for IG / TikTok'}</div>
                   </button>
-                  <button onClick={()=>{
+                  <button className="pf-sv pf-sv-rec" onClick={()=>{
                     pendingWithSourceRef.current=includeSourceThumb;
                     setShowSizePicker(false);
                     if(recBlob && recName){
@@ -38956,7 +38997,7 @@ Hard requirements:
                     <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="rec" s={14}/>{t('saveAudioLabel')||'Audio'}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{includeSourceThumb ? (t('saveAudioHintImg')!=='saveAudioHintImg'?t('saveAudioHintImg'):'image + audio · save to files') : (t('saveAudioHint')||'audio · save to files')}</div>
                   </button>
-                  <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
+                  <button className="pf-sv pf-sv-notes" onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="notes" s={14}/>{t('scoreExport')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                   </button>
@@ -38964,17 +39005,17 @@ Hard requirements:
               ) : (
                 <>
                   {!favView && (originalImgUrl || imgMoodThumb) && (
-                    <button onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'10px 12px',background:'transparent',color:includeSourceThumb?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
+                    <button className="pf-sv-chk" onClick={()=>setIncludeSourceThumb(v=>!v)} aria-pressed={includeSourceThumb} style={{padding:'10px 12px',background:'transparent',color:includeSourceThumb?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
                       <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,border:'1px solid '+(includeSourceThumb?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',lineHeight:1,fontWeight:600,flexShrink:0}}>{includeSourceThumb?'✓':''}</span>
                       <span style={{flex:1,textAlign:'left'}}>{t('includeSourceThumb')!=='includeSourceThumb' ? t('includeSourceThumb') : 'include source thumbnail'}</span>
                     </button>
                   )}
-                  <button onClick={_toggleExportBand} aria-pressed={exportBand} style={{padding:'10px 12px',background:'transparent',color:exportBand?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
+                  <button className="pf-sv-chk" onClick={_toggleExportBand} aria-pressed={exportBand} style={{padding:'10px 12px',background:'transparent',color:exportBand?'rgba(247,243,236,.85)':'rgba(247,243,236,.5)',border:'none',borderBottom:'1px solid rgba(255,255,255,.05)',borderRadius:0,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.66*effScale)+'rem',display:'flex',alignItems:'center',gap:10,marginBottom:8,fontWeight:500}}>
                     <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,border:'1px solid '+(exportBand?'rgba(255,255,255,.18)':'rgba(255,255,255,.12)'),background:'transparent',color:'rgba(220,180,90,.95)',fontSize:'.8rem',lineHeight:1,fontWeight:600,flexShrink:0}}>{exportBand?'\u2713':''}</span>
                     <span style={{flex:1,textAlign:'left'}}>{_miT('band')}</span>
                   </button>
                   {!immersive && (favView || imgMoodThumb || originalImgUrl || loadedSource==='image' || moodFromImg || varySource || isImportedMedia) && (
-                    <button onClick={async ()=>{
+                    <button className="pf-sv pf-sv-sparkle" onClick={async ()=>{
                       setShowSizePicker(false);
                       // For MIDI/Audio/Score the user already has the original
                       // audio file — re-bundling a fresh offline render with
@@ -39021,11 +39062,11 @@ Hard requirements:
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(255,210,140,.55)',marginTop:4,letterSpacing:0,fontWeight:400}}>{isImportedMedia ? (t('storyImageHintNoAudio')||'painting · for IG / TikTok') : (t('storyImageHint')||'painting + audio · for IG / TikTok')}</div>
                     </button>
                   )}
-                  <button onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
+                  <button className="pf-sv pf-sv-web" onClick={()=>exportImage('web', false, null, null, includeSourceThumb)} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="web" s={14}/>{t('sizeWeb')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeWebHint')}</div>
                   </button>
-                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                  <button className="pf-sv pf-sv-print" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       <TxIcon n="print" s={14}/>
                       {({EN:'Print A1',SK:'Tlač A1',DE:'Druck A1',FR:'Impression A1',ES:'Impresión A1',PT:'Impressão A1',zh:'打印 A1',zhTW:'列印 A1',ja:'印刷 A1'})[lang]||'Print A1'}
@@ -39033,7 +39074,7 @@ Hard requirements:
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'high-res · large file · print-ready',SK:'vysoké rozlíšenie · veľký súbor · na tlač',DE:'hochauflösend · große Datei · druckfertig',FR:'haute résolution · gros fichier · prêt à imprimer',ES:'alta resolución · archivo grande · listo para imprimir',PT:'alta resolução · ficheiro grande · pronto a imprimir',zh:'高分辨率 · 大文件 · 可印刷',zhTW:'高解析度 · 大檔案 · 可列印',ja:'高解像度 · 大きいファイル · 印刷可能'})[lang]||'high-res · large file · print-ready'}</div>
                   </button>
-                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                  <button className="pf-sv pf-sv-gallery" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       <TxIcon n="gallery" s={14}/>
                       {({EN:'Gallery · vector',SK:'Galéria · vektor',DE:'Galerie · Vektor',FR:'Galerie · vectoriel',ES:'Galería · vector',PT:'Galeria · vetor',zh:'画廊 · 矢量',zhTW:'畫廊 · 向量',ja:'ギャラリー · ベクター'})[lang]||'Gallery · vector'}
@@ -39041,7 +39082,7 @@ Hard requirements:
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'SVG · fine-art print · any DPI',SK:'SVG · fine-art tlač · ľubovoľné DPI',DE:'SVG · Fine-Art-Druck · beliebige DPI',FR:'SVG · impression fine-art · DPI au choix',ES:'SVG · impresión fine-art · cualquier DPI',PT:'SVG · impressão fine-art · qualquer DPI',zh:'SVG · 美术级打印 · 任意 DPI',zhTW:'SVG · 美術級列印 · 任意 DPI',ja:'SVG · ファインアート印刷 · 任意の DPI'})[lang]||'SVG · fine-art print · any DPI'}</div>
                   </button>
-                  <button onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false, true); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                  <button className="pf-sv pf-sv-gallery2" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false, true); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       <TxIcon n="gallery" s={14}/>
                       {({EN:'Gallery · transparent',SK:'Galéria · transparent',DE:'Galerie · transparent',FR:'Galerie · transparent',ES:'Galería · transparente',PT:'Galeria · transparente',zh:'画廊 · 透明',zhTW:'畫廊 · 透明',ja:'ギャラリー · 透明'})[lang]||'Gallery · transparent'}
@@ -39053,20 +39094,20 @@ Hard requirements:
                       (isImportedMedia) — exporting them back to the same file
                       format the user just imported is redundant. */}
                   {!isImportedMedia && !favView && (
-                    <button onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
+                    <button className="pf-sv pf-sv-rec" onClick={()=>{ setShowSizePicker(false); saveAudio(true); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                       <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="rec" s={14}/>{t('saveAudioLabel')||'Audio'}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('saveAudioHint')||'mp3 · save to files'}</div>
                     </button>
                   )}
                   {!isImportedMedia && !favView && (
-                    <button onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
+                    <button className="pf-sv pf-sv-notes" onClick={()=>{ setShowSizePicker(false); saveScore(); }} style={{padding:'14px',background:'rgba(255,255,255,.02)',color:'rgba(247,243,236,.85)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontFamily:'inherit',letterSpacing:0,fontSize:(.72*effScale)+'rem',fontWeight:500}}>
                       <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="notes" s={14}/>{t('scoreExport')}</span>
                       <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('scoreExportHint')||'MusicXML · for MuseScore'}</div>
                     </button>
                   )}
                 </>
               )}
-              <button onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
+              <button className="pf-sv-x" onClick={()=>setShowSizePicker(false)} style={{padding:'8px',background:'transparent',color:'rgba(180,170,150,.5)',border:'none',cursor:'pointer',fontFamily:'inherit',letterSpacing:'.08em',fontSize:(.6*effScale)+'rem',marginTop:4}}>
                 {t('cancel')}
               </button>
             </div>
@@ -39139,7 +39180,7 @@ Hard requirements:
       )}
 
       {showComposeRecent && (
-        <div onClick={()=>setShowComposeRecent(false)} className="pf-recent-overlay pf-picker-compose" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>setShowComposeRecent(false)} className={"pf-recent-overlay pf-picker-compose"+(studioOn?' pf-st-sheet':'')} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('recentPlayed')||'recently played')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
@@ -39155,7 +39196,7 @@ Hard requirements:
       )}
 
       {showMicRecent && (
-        <div onClick={()=>setShowMicRecent(false)} className="pf-recent-overlay pf-picker-mic" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>setShowMicRecent(false)} className={"pf-recent-overlay pf-picker-mic"+(studioOn?' pf-st-sheet':'')} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="recently played" className="pf-recent-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(t('recentPlayed')||'recently played')}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:14}}>
@@ -39171,7 +39212,7 @@ Hard requirements:
       )}
 
       {showMoodMenu && (
-        <div onClick={()=>setShowMoodMenu(false)} className="pf-recent-overlay pf-mood-overlay pf-picker-mood" style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
+        <div onClick={()=>setShowMoodMenu(false)} className={"pf-recent-overlay pf-mood-overlay pf-picker-mood"+(studioOn?' pf-st-sheet pf-st-top':'')} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',overflowY:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="select mood" className="pf-recent-dialog pf-mood-dialog" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',display:'flex',flexDirection:'column',maxHeight:'92vh',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:14,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500,flexShrink:0}}>{_sent(_stripIcon(studioOn ? t('moodHowFeel') : t('selectMood')))}</div>
             {(()=>{
@@ -39249,17 +39290,24 @@ Hard requirements:
                 {!studioOn && <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={moodLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>}
               </div>
               {/* STUDIO: emoji chips (two moods in words, Pro AI; six from the list, free) and one big button */}
-              {studioOn && !moodEdit.trim() && (()=>{
+              {studioOn && (()=>{
                 const _ex = t('moodExamples');
                 const _strip = (x)=>String(x||'').replace(/^(e\.g\.|z\.B\.|ex\.|p\.ej\.|napr\.|例如|例:)\s*/,'').trim();
-                const _words = (!moodLocked && Array.isArray(_ex)) ? [['🌧️', _strip(_ex[1])], ['❄️', _strip(_ex[2])]].filter(x=>x[1]) : [];
-                const _pre = ['furious','nostalgic','calm','joyful','dreamy','epic'].filter(m=>MOODS.includes(m));
                 const _names = t('moodNames')||{};
+                const _q = moodEdit.trim();
+                const _n = (x)=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+                // typing: every mood whose name starts with it, then those that contain it (as Classic's list)
+                let _pre;
+                if(_q){ const q=_n(_q), a=[], b=[]; for(const m of MOODS){ const nm=_n(_names[m]||m); if(nm.startsWith(q)) a.push(m); else if(nm.includes(q)) b.push(m); } _pre=a.concat(b); }
+                else _pre = ['furious','nostalgic','calm','joyful','dreamy','epic'].filter(m=>MOODS.includes(m));
+                const _words = (!_q && !moodLocked && Array.isArray(_ex)) ? [['🌧️', _strip(_ex[1])], ['❄️', _strip(_ex[2])]].filter(x=>x[1]) : [];
+                if(!_pre.length && !_words.length) return null;
                 const _chip = {padding:'8px 12px',borderRadius:18,border:'1px solid rgba(242,238,232,.14)',background:'rgba(255,255,255,.03)',color:'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',cursor:'pointer',lineHeight:1.2};
+                const _on = {borderColor:'rgba(201,168,76,.75)',background:'rgba(201,168,76,.16)',color:PF.gold2};
                 return (
-                  <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14,flexShrink:0}}>
+                  <div style={{display:'flex',flexWrap:'wrap',alignContent:'flex-start',gap:8,marginBottom:14,flexShrink:0,...(_q?{maxHeight:'min(30dvh, 220px)',overflowY:'auto'}:{})}}>
                     {_words.map(([e,w])=>(<button key={'w'+w} type="button" onClick={()=>setMoodEdit(w)} style={{..._chip,borderColor:'rgba(201,168,76,.45)'}}>{e} {w}</button>))}
-                    {_pre.map(m=>(<button key={m} type="button" onClick={()=>submitFree(m)} style={_chip}>{MOOD_EMOJI[m]||'✦'} {_sent(_names[m]||m)}</button>))}
+                    {_pre.map(m=>(<button key={m} type="button" onClick={()=>submitFree(m)} style={(m===currentMood && !imgMoodThumb) ? {..._chip,..._on} : _chip}>{MOOD_EMOJI[m]||'✦'} {_sent(_names[m]||m)}</button>))}
                   </div>
                 );
               })()}
@@ -39273,8 +39321,9 @@ Hard requirements:
                 MOODS list alphabetically (so the user has something to pick
                 without typing); once they start typing, normal autocomplete
                 behaviour applies. Clicking any preset is free (no AI). */}
-            <div style={{flex:'1 1 auto',minHeight:(studioOn&&!moodEdit.trim())?0:'72px',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:moodEdit.trim()?12:0}}>
+            <div style={{flex:'1 1 auto',minHeight:studioOn?0:'72px',overflowY:'auto',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingRight:4,alignContent:'start',marginBottom:(moodEdit.trim() && !studioOn)?12:0}}>
               {(()=>{
+                if(studioOn) return [];   // the Studio shows them as chips, above
                 const _n=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
                 const q=_n(moodEdit.trim());
                 if(!q){
@@ -39349,7 +39398,7 @@ Hard requirements:
         </div>
       )}
       {showMorphMenu && (
-        <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} className={studioOn ? 'pf-st-sheet' : undefined} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
             <div style={{textAlign:'center',marginBottom:4,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>{_sent(t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||''))}</div>
             <div style={{textAlign:'center',marginBottom:12,fontSize:(.58*effScale)+'rem',letterSpacing:0,color:'rgba(230,222,196,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>
