@@ -7668,7 +7668,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // score / image) Clear is a FULL reset — it drops the loaded piece and returns
   // to an empty setup. For compose / mic the "painting" IS the chord draft, so it
   // also falls through to full clear().
+  const _clearAtRef = useRef(0);   // when Clear last ran: the Studio does not start the cleared piece again by itself
   const clearCanvas = useCallback(()=>{
+    _clearAtRef.current = Date.now();
     // Voice/Music mic mode: the mic stream is still live and the capture loop
     // appends new chords continuously. If we only wipe the canvas, the next
     // detected sound instantly repaints — so Clear appears to do nothing. Stop
@@ -13877,7 +13879,7 @@ Hard requirements:
   // at home (the take in progress, or a fresh one); Home is the home screen itself.
   const [stNew, setStNew] = useState(false);
   const _stPaused = (go)=>{ if(playing && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} setTimeout(go, 160); } else go(); };
-  const _stHome = ()=>{ setStNew(false); try{ _captureHomeArt(); }catch(_){} if(backBtnRef.current) backBtnRef.current.click(); };
+  const _stHome = ()=>{ setStNew(false); try{ _captureHomeArt(); }catch(_){} _imageFromMusicRef.current=false; _musicFromImageRef.current=false; if(backBtnRef.current) backBtnRef.current.click(); };
   const _stViaHome = (sel)=>{ _stHome(); setTimeout(()=>{ const el=document.querySelector(sel); if(el && !el.disabled) el.click(); }, 140); };
   const _stNewSrc = (target)=>{ setStNew(false); _stPaused(()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setPickMode(target); }); };
   const _stNewMood = ()=>{ setStNew(false); _stPaused(()=>{ setMoodEdit(''); setShowMoodMenu(true); }); };
@@ -13945,6 +13947,7 @@ Hard requirements:
       if(!_stFreshRef.current || !handlePauseClickRef.current) return;
       if(moodFromImg) return;   // a mood from a picture waits: the picture first, ▶ paints its mood
       if(stPlayIntentRef.current || Date.now()-stAutoAtRef.current<2500) return;   // ▶ on the home card starts it
+      if(Date.now()-_clearAtRef.current<2500) return;   // just cleared: it waits for ▶
       if(Tone.getContext().rawContext.state!=='running') return;
       stAutoAtRef.current=Date.now(); wakeAudioRef.current=Date.now(); handlePauseClickRef.current();
     }catch(_){} }, 450);
