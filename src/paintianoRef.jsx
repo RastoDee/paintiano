@@ -35331,15 +35331,15 @@ Hard requirements:
   const studioFs = studioOn && immersive;
   const studioLive = studioFs && studioLiveSrc;
   // the height of the bottom dock while live: the painting sits in the space above it
-  const stDockRef = useRef(null), clearBtnRef = useRef(null);
+  const stDockRef = useRef(null), clearBtnRef = useRef(null), stMicRef = useRef(null), micPresetBtnRef = useRef(null);
   const [stDockH, setStDockH] = useState(0);
   useEffect(()=>{
     if(!studioLive){ setStDockH(0); return; }
-    const el=stDockRef.current; if(!el) return;
+    const el=(!composeMode && stMicRef.current) ? stMicRef.current : stDockRef.current; if(!el) return;
     const upd=()=>{ try{ setStDockH(Math.round(el.getBoundingClientRect().height)); }catch(_){} };
     upd(); let ro=null; try{ ro=new ResizeObserver(upd); ro.observe(el); }catch(_){}
     return ()=>{ try{ ro && ro.disconnect(); }catch(_){} };
-  },[studioLive]);
+  },[studioLive, composeMode]);
   useEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);
   const [stSide, setStSide] = useState(null);            // null | 'right' | 'left' — which rail is out
   const stSideRef = useRef(null); useEffect(()=>{ stSideRef.current = stSide; },[stSide]);
@@ -35686,7 +35686,7 @@ Hard requirements:
     setTimeout(()=>setStHearts(h=>h.filter(o=>o.id!==id)), 950);
     _stBuzz(15);
     if(favReadyAny){ if(!favHitAny) _favToggleAny(); }
-    else if(_stHasArt){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
+    else if(_stHasArt && !studioLive){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
   };
   useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
   useEffect(()=>{ if(!studioFs){ setStFavPend(false); setStShare(false); setStNew(false); } },[studioFs]);
@@ -35717,7 +35717,7 @@ Hard requirements:
   _stSwipeRef.current = (dx, dy, dt)=>{
     const ax=Math.abs(dx), ay=Math.abs(dy);
     if(dt>700) return false;
-    if(ax>=60 && ax>ay*1.5){ if(studioLive) return false; if(dx>0){ _stShow('left'); _stBuzz(8); } else _stShow(null); return true; }
+    if(ax>=60 && ax>ay*1.5){ if(dx>0){ _stShow('left'); _stBuzz(8); } else _stShow(null); return true; }
     if(ay<50 || ay<ax*1.5) return false;
     if(dy<0){ _stNext(); return true; }
     _stShow(null); setStripOpen(true); return true;
@@ -35891,7 +35891,7 @@ Hard requirements:
     return ()=>{ window.removeEventListener('popstate', onPop); if(armed){ try{ if(history.state && history.state.pfStudio) history.back(); }catch(_){} } };
   },[studioFs]);
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+(studioLive?' pf-studio-live':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+(studioLive?' pf-studio-live':'')+((studioLive && !composeMode)?' pf-studio-mic':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
@@ -38026,7 +38026,7 @@ Hard requirements:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onTouchStart={studioFs ? _stOvStart : undefined} onTouchEnd={studioFs ? _stOvEnd : undefined} onClick={(e)=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; if(studioFs){ if(!studioLive) _stTap(e); return; } wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onTouchStart={studioFs ? _stOvStart : undefined} onTouchEnd={studioFs ? _stOvEnd : undefined} onClick={(e)=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; if(studioFs){ _stTap(e); return; } wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       {/* Exit-fullscreen button — rendered OUTSIDE the canvas wrap. The wrap uses
           transform:translate(-50%,-50%) in immersive, and a position:fixed child
           of a transformed element anchors to that element, not the viewport — so
@@ -38047,13 +38047,15 @@ Hard requirements:
       )}
       {/* STUDIO — the painting alone. A tap brings the right rail and the caption, a double tap the left rail,
           a swipe down the look panel from the top, a swipe up the next painting (see studioOn). */}
+      {studioLive && !composeMode && (<style>{`.pf-studio-mic .pf-transport-dock{visibility:hidden!important;pointer-events:none!important}
+.pf-studio-mic .pf-mic-preset,.pf-studio-mic .pf-mic-recov{display:none!important}`}</style>)}
       {studioLive && (<style>{`.pf-studio-live .pf-transport-row > *:not(.pf-tx-scale):not(.pf-tx-undo):not(.pf-tx-micstop):not(.pf-tx-micsrc):not(.pf-tx-micre){display:none!important}`}</style>)}
       {studioFs && (()=>{
         const _img = viewMode==='image' && !moodFromImg;
         const _live = studioLive;
         const _vr = stVidRec || recording;   // a video or the picture's sound is being recorded: the rails rest
-        const _r = !_vr && (_live || stSide==='right'), _l = !_vr && (_live || stSide==='left');
-        const _cap = !_live && !_vr && stSide==='right';
+        const _r = !_vr && stSide==='right', _l = !_vr && stSide==='left';
+        const _cap = !_vr && stSide==='right';
         const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording);
         const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg));
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '');
@@ -38180,6 +38182,44 @@ Hard requirements:
                 </button>))}
             </div>
           </>);
+        })()}
+        {/* MIC — its own panel under the painting: Music | Voice, the big REC (STOP while it listens), the level, a line */}
+        {studioLive && !composeMode && (()=>{
+          const voice = micPreset==='voice';
+          const col = voice ? '#ff8a8a' : '#8accff', rgb = voice ? '255,90,90' : '90,172,255';
+          const take = !micActive && chords.length>0;
+          const lv = Math.max(0, Math.min(1, +micVolLevel || 0));
+          const _seg = (on, v)=>{ const c = v==='voice' ? '255,120,120' : '100,180,255'; return {flex:1,padding:'9px 0',border:0,borderRadius:18,fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',cursor:(on||recording)?'default':'pointer',background:on?'rgba('+c+',.16)':'transparent',color:on?(v==='voice'?'#ff9a9a':'#9ad2ff'):'rgba(242,238,232,.5)',boxShadow:on?'inset 0 0 0 1px rgba('+c+',.75)':'none'}; };
+          const _to = (v)=>{ if(micPreset===v || recording) return; if(micPresetBtnRef.current) micPresetBtnRef.current.click(); };
+          const _rec = ()=>{ if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); return; } setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); };
+          const _pk = (sel)=>{ const el=document.querySelector(sel); if(el) el.click(); };
+          const _orig = hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen' || draftOwnerRef.current==='sing');
+          const _chip = {display:'inline-flex',alignItems:'center',gap:8,padding:'10px 18px',borderRadius:22,border:'1px solid rgba(242,238,232,.18)',background:'rgba(28,24,40,.6)',color:'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'};
+          const W = [.35,.6,.85,1,.75,.95,.6,.45,.3];
+          return (
+            <div ref={stMicRef} onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10003,padding:'18px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',background:'linear-gradient(180deg,rgba(6,5,11,0),rgba(6,5,11,.94) 18%)',display:'flex',flexDirection:'column',alignItems:'center',gap:14}}>
+              <div role="group" style={{display:'flex',gap:4,padding:3,width:'min(300px, 80vw)',borderRadius:22,border:'1px solid rgba(242,238,232,.14)',background:'rgba(20,16,30,.75)',opacity:recording?.5:1}}>
+                <button type="button" aria-pressed={!voice} onClick={()=>_to('music')} style={_seg(!voice,'music')}>{t('musicPreset').replace(/[^\p{L}]/gu,'')}</button>
+                <button type="button" aria-pressed={voice} onClick={()=>_to('voice')} style={_seg(voice,'voice')}>{t('voicePreset').replace(/[^\p{L}]/gu,'')}</button>
+              </div>
+              {!take && (
+                <button type="button" onClick={_rec} aria-label={micActive ? 'stop' : 'REC'} style={{width:104,height:104,borderRadius:'50%',border:'3px solid '+(micActive?'#ff4d6a':col),background:micActive?'rgba(255,60,90,.14)':'rgba('+rgb+',.12)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:7,cursor:'pointer',color:micActive?'#ff8a9a':col,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',boxShadow:'0 0 0 '+(micActive?Math.round(6+lv*20):10)+'px '+(micActive?'rgba(255,60,90,.14)':'rgba('+rgb+',.1)')+', 0 0 40px '+(micActive?'rgba(255,60,90,.35)':'rgba('+rgb+',.3)'),transition:'box-shadow .12s'}}>
+                  {micActive ? (<span style={{width:28,height:28,borderRadius:6,background:'#ff4d6a'}}/>) : (<><span style={{width:18,height:18,borderRadius:'50%',background:col,boxShadow:'0 0 12px '+col}}/>REC</>)}
+                </button>)}
+              {micActive && (
+                <div aria-hidden="true" style={{display:'flex',alignItems:'flex-end',gap:4,height:30}}>
+                  {W.map((w,i)=>(<i key={i} style={{display:'block',width:4,borderRadius:2,height:Math.round(5+25*lv*w),background:voice?'rgba(255,130,130,.9)':'rgba(122,179,255,.9)',transition:'height .08s'}}/>))}
+                </div>)}
+              {take && (
+                <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'center'}}>
+                  {_orig && (<button type="button" onClick={()=>_pk('.pf-tx-micsrc')} style={_chip}>{playSourceMic==='original' ? 'orig' : 'piano'} ⇄</button>)}
+                  {_orig && (<button type="button" onClick={()=>_pk('.pf-tx-micre')} aria-label="restart from start" style={_chip}>↺</button>)}
+                </div>)}
+              <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.08em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em'}}>
+                {micActive ? (voice ? t('micVoiceHint') : t('micMusicHint')) : take ? '' : t('micTapToRecord')}
+              </div>
+              {micListening && (<div style={{fontSize:(.46*effScale)+'rem',letterSpacing:'.06em',color:'rgba(100,200,255,.45)',textAlign:'center',lineHeight:1.5,maxWidth:340}}>🔊 {t('listenHint')}</div>)}
+            </div>);
         })()}
         {/* NEW — the sources; the painting stays behind as a draft */}
         {stNew && (()=>{
@@ -38400,7 +38440,7 @@ Hard requirements:
           // the click that ends a press-and-hold: the info is up, nothing else to do
           if(immersive && _holdReleasedRef.current){ _holdReleasedRef.current=false; return; }
           // Studio: a tap is the right rail, two taps the left one
-          if(studioFs && !studioLive){ if(demoReelOn){ demoReelStop(); return; } _stTap(e); return; }
+          if(studioFs){ if(demoReelOn){ demoReelStop(); return; } _stTap(e); return; }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
@@ -38625,8 +38665,8 @@ Hard requirements:
           ));
         })()}
         {(micActive || micArmed) && !basicMode && (
-          <div style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
-            <button onClick={()=>{
+          <div className="pf-mic-preset" style={{position:'absolute',top:10,left:10,zIndex:4,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:4}}>
+            <button ref={micPresetBtnRef} onClick={()=>{
               // Voice ⇄ Music are INDEPENDENT modes within MIC. Toggle saves the
               // current preset's draft, switches the preset state, and restores
               // the other preset's draft (or starts blank). They do NOT share a
@@ -38684,7 +38724,7 @@ Hard requirements:
             0 + overflow:hidden makes it invisible and zero-cost. */}
         <div data-mfi-state aria-hidden="true" style={{position:'absolute',width:0,height:0,overflow:'hidden',pointerEvents:'none'}}>{chords.length}|{chordsRef.current?.length ?? 0}|{disp}|{varySource?1:0}|{String(moodFromImg)}|{String(moodContext)}|{currentMood||''}|{String(style||'')}|{String(effectiveStyle||'')}|{rndSalt}|{String(playing)}</div>
         {!basicMode && chords.length===0 && micArmed && !micActive && (
-          <div style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
+          <div className="pf-mic-recov" style={{position:'absolute',top:0,left:0,right:0,zIndex:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:'12%',gap:12,pointerEvents:'none'}}>
             <button onClick={()=>{
               setMicArmed(false);
               if(micPreset==='music') startMicListening(); else startMicPainting();
