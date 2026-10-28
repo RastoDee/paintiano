@@ -35619,6 +35619,58 @@ Hard requirements:
   const stIdleRef = useRef(null);
   const stEmptyRef = useRef(false);   // nothing on the canvas: the left rail stays out (the way on)
   const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; setStInfo(false); setStSide(stEmptyRef.current ? 'left' : null); }, 4000); };
+  // Morph: blend the current mood through _ms (up to three moods, in order); [] goes back to the plain mood.
+  // _close: the Classic dialog closes on its Morph button; the Studio sheet stays open and re-morphs on every tap.
+  const _morphApply = (_ms, _close)=>{
+    // Capture whether playback was active (playing OR paused) BEFORE
+    // stopAll below — if so, the morph result auto-plays from the top.
+    const _morphWasActive = playingRef.current || holdPausedRef.current;
+    // 0 selected → "remove morph": recompose the base mood without
+    // a chain, clear the persistent morph targets, reset the title
+    // to the plain mood name. Same path the user takes when first
+    // picking a mood from the Mood menu.
+    if(_ms.length===0){
+      const song=findSong(currentMood);
+      if(_close){ setShowMorphMenu(false); setMorphSel([]); }
+      setMorphTargets([]);
+      if(!song){ setErr(t('errs').songNotFound); return; }
+      const evts=noteArr2events(song.notes,song.tempo);
+      if(!evts.length){ setErr(t('errs').noNotesGeneric); return; }
+      stopAll();
+      const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[currentMood])||song.title;
+      applyEvents(evts,dispTitle);
+      setComposeSource('crafted');
+      setMoodContext(true);
+      setVarySource(song);
+      setStructureSeedLock(null);
+      const bytes=encodeMidi(evts,song.tempo||120);
+      setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
+      setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
+      if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
+      return;
+    }
+    const chain=[findSong(currentMood), ..._ms.map(findSong)];
+    const morphed = _ms.length===1 ? morphSongs(chain[0],chain[1]) : morphChain(chain);
+    if(!morphed){setErr(t('errs').morphFail);return;}
+    setVarySource(morphed);
+    setStructureSeedLock(null);
+    const sel=[..._ms];
+    if(_close){ setShowMorphMenu(false); setMorphSel([]); }
+    stopAll();
+    const evts=noteArr2events(morphed.notes,morphed.tempo);
+    if(!evts.length){setErr(t('errs').varyFail);return;}
+    const mn=t('moodNames')||{};
+    const morphTitleDisp=[(mn[currentMood]||currentMood), ...sel.map(m=>mn[m]||m)].join(' → ');
+    applyEvents(evts,morphTitleDisp);
+    // applyEvents now clears moodContext; restore it — morph blends
+    // mood pieces, so the result is still mood-sourced.
+    setMoodContext(true);
+    setMorphTargets(sel);
+    const bytes=encodeMidi(evts,morphed.tempo||100);
+    setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
+    setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
+    if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
+  };
   const _stShow = (w)=>{ if(!w && stEmptyRef.current) w='left'; setStInfo(false); setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
   useEffect(()=>{ if(!studioFs) _stShow(null); },[studioFs]);
   // a piece that has not played yet (a song, a mood): the right rail with play stays out until it plays or a tap hides it
@@ -39915,30 +39967,65 @@ Hard requirements:
         </div>
       )}
       {showMorphMenu && (
-        <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} className={studioOn ? 'pf-st-sheet' : undefined} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
+        <div onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} className={studioOn ? 'pf-st-sheet pf-st-mm' : undefined} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="morph mood" style={{maxWidth:340,width:'100%',background:'rgba(20,18,30,0.92)',border:'1px solid rgba(255,255,255,.06)',borderRadius:24,padding:'22px 18px 16px',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)'}}>
-            <div style={{textAlign:'center',marginBottom:4,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>{_sent(t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||''))}</div>
-            <div style={{textAlign:'center',marginBottom:12,fontSize:(.58*effScale)+'rem',letterSpacing:0,color:'rgba(230,222,196,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>
+            {studioOn && (()=>{ const _mh=String(_stT('h_morph')||'').split(' — ');
+              return (
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+                <span aria-hidden="true" style={{flexShrink:0,width:44,height:44,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#8b5cf6,#ec4899)',color:'#fff',boxShadow:'0 6px 18px rgba(200,90,255,.35)'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="9" cy="12" r="5.5"/><circle cx="15" cy="12" r="5.5"/></svg></span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,fontSize:(18*effScale)+'px',fontWeight:800,color:'#fff',lineHeight:1.2}}>
+                    <span>{_mh[0]}</span>
+                    {(morphPoolLoading || morphPoolSource==='ai') && (<span style={{fontSize:(11*effScale)+'px',fontWeight:700,padding:'3px 8px',borderRadius:999,background:'linear-gradient(135deg,#8b5cf6,#ec4899)',color:'#fff',opacity:morphPoolLoading?.6:1}}>{morphPoolLoading?'✦ …':'✦ AI'}</span>)}
+                  </div>
+                  {_mh[1] && (<div style={{fontSize:(13*effScale)+'px',color:'rgba(242,238,232,.55)',marginTop:2,lineHeight:1.3}}>{_sent(_mh[1])}</div>)}
+                </div>
+                <button type="button" aria-label="shuffle" onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} style={{flexShrink:0,width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',cursor:'pointer',fontFamily:'inherit'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+                <button type="button" aria-label={_sent(t('cancel'))} onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flexShrink:0,width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',cursor:'pointer',fontFamily:'inherit'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>); })()}
+            {!studioOn && (<div style={{textAlign:'center',marginBottom:4,letterSpacing:0,color:PF.cream,fontSize:(.78*effScale)+'rem',fontWeight:500}}>{_sent(t('morphTitle').replace('{mood}',(t('moodNames')||{})[currentMood]||currentMood||''))}</div>)}
+            {!studioOn && (<div style={{textAlign:'center',marginBottom:12,fontSize:(.58*effScale)+'rem',letterSpacing:0,color:'rgba(230,222,196,.45)'}}>{t('morphHint')} · <span role="button" tabIndex={0} onClick={()=>{setMorphPool([...morphSel, ...makeMorphPool(currentMood, morphSel)]);setMorphPoolSource('offline');setMorphPoolLoading(false);}} title="shuffle / iné" style={{cursor:'pointer',color:'rgba(220,180,255,.85)',userSelect:'none'}}>↻</span> · <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.06em',textTransform:'uppercase',color:morphPoolLoading?'rgba(220,180,255,.7)':morphPoolSource==='ai'?'rgba(220,170,255,.95)':'rgba(207,197,168,.5)'}}>{morphPoolLoading?'✦ …':morphPoolSource==='ai'?'✦ AI':'offline'}</span></div>)}
             {/* Live chain preview: current → sel1 → sel2 → sel3 */}
+            {studioOn ? (
+            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'center',margin:'0 0 16px'}}>
+              {[currentMood, morphSel[0], morphSel[1], morphSel[2]].map((m,i)=>{
+                const _on=!!m, _start=i===0;
+                return (
+                <div key={i} style={{display:'flex',alignItems:'flex-start'}}>
+                  {i>0 && (<span aria-hidden="true" style={{marginTop:14,width:16,textAlign:'center',fontSize:(14*effScale)+'px',color:_on?'rgba(236,180,255,.9)':'rgba(242,238,232,.22)'}}>→</span>)}
+                  <button type="button" disabled={_start||!_on} onClick={()=>{ if(_start||!_on) return; const _nx=morphSel.filter(x=>x!==m); setMorphSel(_nx); _morphApply(_nx, false); }} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,width:64,padding:0,background:'none',border:'none',fontFamily:'inherit',color:'#fff',cursor:(!_start&&_on)?'pointer':'default'}}>
+                    <span style={{position:'relative',width:46,height:46,boxSizing:'border-box',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,background:_start?'rgba(255,255,255,.06)':_on?'linear-gradient(135deg,#8b5cf6,#ec4899)':'transparent',border:_start?'2px solid #e2c477':_on?'none':'1.5px dashed rgba(242,238,232,.25)',boxShadow:(_on&&!_start)?'0 6px 18px rgba(200,90,255,.35)':'none',transition:'background .2s'}}>
+                      {_on ? (MOOD_EMOJI[m]||'✦') : (<span style={{color:'rgba(242,238,232,.35)',fontSize:18,lineHeight:1}}>+</span>)}
+                      {(!_start && _on) && (<b style={{position:'absolute',top:-3,right:-3,width:18,height:18,borderRadius:'50%',background:'#fff',color:'#7c3aed',fontSize:11,lineHeight:'18px',textAlign:'center'}}>{i}</b>)}
+                    </span>
+                    <span style={{maxWidth:64,fontSize:(11*effScale)+'px',lineHeight:1.2,color:_start?'#e2c477':'rgba(242,238,232,.85)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',visibility:_on?'visible':'hidden'}}>{_on ? _sent((t('moodNames')||{})[m]||m) : '·'}</span>
+                  </button>
+                </div>);
+              })}
+            </div>
+            ) : (
             <div style={{textAlign:'center',marginBottom:12,fontSize:(.62*effScale)+'rem',letterSpacing:'.04em',color:'rgba(220,180,255,.9)',textTransform:'capitalize',minHeight:'1.2em'}}>
               {[(t('moodNames')||{})[currentMood]||currentMood, ...morphSel.map(m=>(t('moodNames')||{})[m]||m)].join(' → ')}
             </div>
-            <div style={{display:studioOn?'flex':'grid',flexWrap:'wrap',alignContent:'flex-start',gridTemplateColumns:'repeat(3,1fr)',gap:studioOn?8:6,maxHeight:'46vh',overflowY:'auto',paddingRight:2}}>
+            )}
+            <div style={{display:studioOn?'flex':'grid',flexWrap:'wrap',alignContent:'flex-start',gridTemplateColumns:'repeat(3,1fr)',gap:studioOn?8:6,maxHeight:'46vh',overflowY:'auto',...(studioOn?{padding:'4px 8px 10px',margin:'-4px -8px 0'}:{paddingRight:2})}}>
               {morphPool.map(m=>{
                 const selIdx = morphSel.indexOf(m);
                 const isSel = selIdx>=0;
                 const full = morphSel.length>=3 && !isSel;
                 return (
                 <button key={m} disabled={full} onClick={()=>{
+                  if(studioOn){ const _i=morphSel.indexOf(m); const _nx=_i>=0 ? morphSel.filter(x=>x!==m) : morphSel.length>=3 ? null : [...morphSel, m];
+                    if(_nx){ setMorphSel(_nx); _morphApply(_nx, false); } return; }
                   setMorphSel(prev=>{
                     const i=prev.indexOf(m);
                     if(i>=0) return prev.filter(x=>x!==m);   // tap again → remove
                     if(prev.length>=3) return prev;          // cap at 3
                     return [...prev, m];                     // add to end of chain
                   });
-                }} style={studioOn ? {padding:'8px 12px',borderRadius:18,border:'1px solid '+(isSel?'rgba(220,150,255,.85)':'rgba(242,238,232,.14)'),background:isSel?'rgba(220,150,255,.2)':'rgba(255,255,255,.03)',color:isSel?'#fff':'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',lineHeight:1.2,whiteSpace:'nowrap',cursor:full?'default':'pointer',opacity:full?.4:1,transition:'background-color .18s, border-color .18s'} : {position:'relative',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',background:isSel?'rgba(220,150,255,.22)':'rgba(220,150,255,.06)',color:isSel?'#fff':(full?'rgba(220,180,255,.3)':PF.cream),border:'1px solid '+(isSel?'rgba(220,150,255,.8)':'rgba(220,150,255,.25)'),borderRadius:12,cursor:full?'default':'pointer',fontFamily:'inherit',opacity:full?.5:1,transition:'all .18s'}}>
+                }} style={studioOn ? {display:'inline-flex',alignItems:'center',gap:7,padding:isSel?'8px 14px 8px 8px':'9px 14px 9px 12px',borderRadius:999,border:'1px solid '+(isSel?'transparent':'rgba(255,255,255,.1)'),background:isSel?'linear-gradient(135deg,#8b5cf6,#ec4899)':'rgba(255,255,255,.06)',color:'#fff',fontFamily:'inherit',fontSize:(14*effScale)+'px',fontWeight:isSel?700:500,lineHeight:1.2,whiteSpace:'nowrap',cursor:full?'default':'pointer',opacity:full?.35:1,boxShadow:isSel?'0 4px 14px rgba(200,90,255,.3)':'none',transition:'opacity .18s'} : {position:'relative',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',background:isSel?'rgba(220,150,255,.22)':'rgba(220,150,255,.06)',color:isSel?'#fff':(full?'rgba(220,180,255,.3)':PF.cream),border:'1px solid '+(isSel?'rgba(220,150,255,.8)':'rgba(220,150,255,.25)'),borderRadius:12,cursor:full?'default':'pointer',fontFamily:'inherit',opacity:full?.5:1,transition:'all .18s'}}>
                   {studioOn ? (<>
-                    {isSel && (<b style={{marginRight:6,color:'#e9c8ff'}}>{selIdx+1}</b>)}
+                    {isSel && (<b style={{display:'inline-block',width:20,height:20,borderRadius:'50%',background:'#fff',color:'#7c3aed',fontSize:(11*effScale)+'px',lineHeight:'20px',textAlign:'center',flexShrink:0}}>{selIdx+1}</b>)}
                     {MOOD_EMOJI[m]||'✦'} {_sent((t('moodNames')||{})[m]||m)}
                   </>) : (<>
                   {isSel && <span style={{position:'absolute',top:3,right:4,fontSize:(.5*effScale)+'rem',fontWeight:700,color:'#e9c8ff'}}>{selIdx+1}</span>}
@@ -39949,58 +40036,9 @@ Hard requirements:
                 );
               })}
             </div>
-            <div style={{display:'flex',gap:8,marginTop:16}}>
+            <div style={{display:studioOn?'none':'flex',gap:8,marginTop:16}}>
               <button onClick={()=>{setShowMorphMenu(false);setMorphSel([]);}} style={{flex:1,padding:'10px 16px',background:'transparent',color:'rgba(230,222,196,.5)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('cancel'))}</button>
-              <button onClick={()=>{
-                // Capture whether playback was active (playing OR paused) BEFORE
-                // stopAll below — if so, the morph result auto-plays from the top.
-                const _morphWasActive = playingRef.current || holdPausedRef.current;
-                // 0 selected → "remove morph": recompose the base mood without
-                // a chain, clear the persistent morph targets, reset the title
-                // to the plain mood name. Same path the user takes when first
-                // picking a mood from the Mood menu.
-                if(morphSel.length===0){
-                  const song=findSong(currentMood);
-                  setShowMorphMenu(false); setMorphSel([]);
-                  setMorphTargets([]);
-                  if(!song){ setErr(t('errs').songNotFound); return; }
-                  const evts=noteArr2events(song.notes,song.tempo);
-                  if(!evts.length){ setErr(t('errs').noNotesGeneric); return; }
-                  stopAll();
-                  const dispTitle=((t('moodNames')||{})[song.mood])||((t('moodNames')||{})[currentMood])||song.title;
-                  applyEvents(evts,dispTitle);
-                  setComposeSource('crafted');
-                  setMoodContext(true);
-                  setVarySource(song);
-                  setStructureSeedLock(null);
-                  const bytes=encodeMidi(evts,song.tempo||120);
-                  setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
-                  setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
-                  if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
-                  return;
-                }
-                const chain=[findSong(currentMood), ...morphSel.map(findSong)];
-                const morphed = morphSel.length===1 ? morphSongs(chain[0],chain[1]) : morphChain(chain);
-                if(!morphed){setErr(t('errs').morphFail);return;}
-                setVarySource(morphed);
-                setStructureSeedLock(null);
-                const sel=[...morphSel];
-                setShowMorphMenu(false); setMorphSel([]);
-                stopAll();
-                const evts=noteArr2events(morphed.notes,morphed.tempo);
-                if(!evts.length){setErr(t('errs').varyFail);return;}
-                const mn=t('moodNames')||{};
-                const morphTitleDisp=[(mn[currentMood]||currentMood), ...sel.map(m=>mn[m]||m)].join(' → ');
-                applyEvents(evts,morphTitleDisp);
-                // applyEvents now clears moodContext; restore it — morph blends
-                // mood pieces, so the result is still mood-sourced.
-                setMoodContext(true);
-                setMorphTargets(sel);
-                const bytes=encodeMidi(evts,morphed.tempo||100);
-                setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
-                setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
-                if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
-              }} style={{flex:1,padding:'10px 16px',background:'linear-gradient(135deg,#7c4df5,#a97ff5)',color:'#fff',border:'none',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('morphGo'))}</button>
+              <button onClick={()=>_morphApply(morphSel, true)} style={{flex:1,padding:'10px 16px',background:'linear-gradient(135deg,#7c4df5,#a97ff5)',color:'#fff',border:'none',borderRadius:12,cursor:'pointer',fontSize:(.66*effScale)+'rem',fontFamily:'inherit',letterSpacing:0,fontWeight:500}}>{_sent(t('morphGo'))}</button>
             </div>
           </div>
         </div>
