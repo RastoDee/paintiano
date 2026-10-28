@@ -23693,15 +23693,15 @@ const ENSEMBLE_I18N = {
 };
 // Studio (Setup → View): the words of the full-screen studio and its Setup card.
 const STUDIO_I18N = {
-  EN:{title:'View',studio:'Studio',classic:'Classic',sub:'Studio: the painting fills the screen; the controls come when you want them. Classic: the screen as before.',gest:'Swipe up — next · down — look · right — menu · tap — controls · double tap — ♥',look:'Look',sound:'Sound',nu:'New',favs:'Favorites',setup:'Setup',c1:'Swipe up',c1s:'next painting',c2:'Swipe down',c2s:'pick a look',c3:'Tap',c3s:'play · sound · share',c4:'Double tap',c4s:'♥ into favorites',go:'Tap to start',back:'Tap — back to the painting',bk:'Back',clr:'Clear',mgo:'Compose & paint',c5:'Swipe right',c5s:'new · favorites · setup · guide',share:'Share',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — it paints itself to the music',pic:'Story picture',picS:'9:16, with the title and who painted it',sav:'Save · print',savS:'sizes, files, print',snd:'Sound',sndS:'record the picture’s music',vRec:'Recording',vDone:'Your video',vShare:'Share',vSave:'Save',vNo:'This browser can’t record video.',vClose:'Close',hLater:'♥ as soon as it’s painted',home:'Home',fromImg:'the picture it comes from',c6:'Press and hold',c6s:'who paints · the picture',q:'What will you paint today?'},
-  SK:{title:'Zobrazenie',studio:'Štúdio',classic:'Klasika',sub:'Štúdio: maľba na celú obrazovku, ovládanie len keď ho chceš. Klasika: obrazovka ako doteraz.',gest:'Potiahni hore — ďalšia · dole — vzhľad · doprava — menu · ťuk — ovládanie · dvakrát — ♥',look:'Vzhľad',sound:'Zvuk',nu:'Nové',favs:'Obľúbené',setup:'Setup',c1:'Potiahni hore',c1s:'ďalšia maľba',c2:'Potiahni dole',c2s:'vyber vzhľad',c3:'Ťukni',c3s:'prehrať · zvuk · zdieľať',c4:'Ťukni dvakrát',c4s:'♥ do obľúbených',go:'Ťukni a začni',back:'Ťukni — späť k maľbe',bk:'Späť',clr:'Vyčistiť',mgo:'Zlož a namaľuj',c5:'Potiahni doprava',c5s:'nové · obľúbené · setup · príručka',share:'Zdieľať',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — maľuje sa do hudby',pic:'Obrázok do Story',picS:'9:16, s názvom a kto to namaľoval',sav:'Uložiť · tlač',savS:'veľkosti, súbory, tlač',snd:'Zvuk',sndS:'nahraj hudbu obrazu',vRec:'Nahrávam',vDone:'Tvoje video',vShare:'Zdieľať',vSave:'Uložiť',vNo:'Tento prehliadač nevie nahrať video.',vClose:'Zavrieť',hLater:'♥ hneď ako sa domaľuje',home:'Domov',fromImg:'obraz, z ktorého vzniká',c6:'Podrž prst',c6s:'kto maľuje · pôvodný obraz',q:'Čo dnes namaľuješ?'},
-  DE:{title:'Ansicht',studio:'Studio',classic:'Klassisch',sub:'Studio: das Bild füllt den Bildschirm, die Bedienung kommt, wenn du sie willst. Klassisch: der Bildschirm wie bisher.',gest:'Nach oben — nächstes · unten — Look · rechts — Menü · tippen — Bedienung · doppelt — ♥',look:'Look',sound:'Klang',nu:'Neu',favs:'Favoriten',setup:'Setup',c1:'Nach oben wischen',c1s:'nächstes Bild',c2:'Nach unten wischen',c2s:'Look wählen',c3:'Tippen',c3s:'abspielen · Ton · teilen',c4:'Doppelt tippen',c4s:'♥ zu den Favoriten',go:'Tippen zum Start',back:'Tippen — zurück zum Bild',bk:'Zurück',clr:'Löschen',mgo:'Komponieren & malen',c5:'Nach rechts wischen',c5s:'neu · Favoriten · Setup · Anleitung',share:'Teilen',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — es malt sich zur Musik',pic:'Story-Bild',picS:'9:16, mit Titel und wer es gemalt hat',sav:'Speichern · Druck',savS:'Größen, Dateien, Druck',snd:'Ton',sndS:'die Musik des Bildes aufnehmen',vRec:'Aufnahme',vDone:'Dein Video',vShare:'Teilen',vSave:'Speichern',vNo:'Dieser Browser kann kein Video aufnehmen.',vClose:'Schließen',hLater:'♥ sobald es fertig gemalt ist',home:'Start',fromImg:'das Bild, aus dem es entsteht',c6:'Gedrückt halten',c6s:'wer malt · das Bild',q:'Was malst du heute?'},
-  FR:{title:'Affichage',studio:'Studio',classic:'Classique',sub:'Studio : la peinture remplit l’écran, les commandes viennent quand tu veux. Classique : l’écran habituel.',gest:'Vers le haut — suivante · bas — style · droite — menu · toucher — commandes · deux fois — ♥',look:'Style',sound:'Son',nu:'Nouveau',favs:'Favoris',setup:'Réglages',c1:'Glisser vers le haut',c1s:'peinture suivante',c2:'Glisser vers le bas',c2s:'choisir un style',c3:'Toucher',c3s:'lecture · son · partager',c4:'Toucher deux fois',c4s:'♥ dans les favoris',go:'Touchez pour commencer',back:'Touchez — retour à la peinture',bk:'Retour',clr:'Effacer',mgo:'Composer et peindre',c5:'Glisser vers la droite',c5s:'nouveau · favoris · réglages · guide',share:'Partager',vid:'Vidéo 9:16',vidS:'TikTok · Reels · Stories — elle se peint en musique',pic:'Image Story',picS:'9:16, avec le titre et qui l’a peinte',sav:'Enregistrer · imprimer',savS:'tailles, fichiers, impression',snd:'Son',sndS:'enregistrer la musique de l’image',vRec:'Enregistrement',vDone:'Ta vidéo',vShare:'Partager',vSave:'Enregistrer',vNo:'Ce navigateur ne peut pas enregistrer de vidéo.',vClose:'Fermer',hLater:'♥ dès qu’elle est peinte',home:'Accueil',fromImg:'l’image d’où elle naît',c6:'Maintenir',c6s:'qui peint · l’image',q:'Que vas-tu peindre aujourd’hui ?'},
-  ES:{title:'Vista',studio:'Estudio',classic:'Clásico',sub:'Estudio: la pintura llena la pantalla y los controles aparecen cuando quieres. Clásico: la pantalla de siempre.',gest:'Arriba — siguiente · abajo — aspecto · derecha — menú · toque — controles · doble toque — ♥',look:'Aspecto',sound:'Sonido',nu:'Nuevo',favs:'Favoritos',setup:'Ajustes',c1:'Desliza arriba',c1s:'siguiente pintura',c2:'Desliza abajo',c2s:'elige un aspecto',c3:'Toca',c3s:'reproducir · sonido · compartir',c4:'Toca dos veces',c4s:'♥ a favoritos',go:'Toca para empezar',back:'Toca — volver a la pintura',bk:'Atrás',clr:'Borrar',mgo:'Componer y pintar',c5:'Desliza a la derecha',c5s:'nuevo · favoritos · ajustes · guía',share:'Compartir',vid:'Vídeo 9:16',vidS:'TikTok · Reels · Stories — se pinta con la música',pic:'Imagen para Story',picS:'9:16, con el título y quién la pintó',sav:'Guardar · imprimir',savS:'tamaños, archivos, impresión',snd:'Sonido',sndS:'graba la música de la imagen',vRec:'Grabando',vDone:'Tu vídeo',vShare:'Compartir',vSave:'Guardar',vNo:'Este navegador no puede grabar vídeo.',vClose:'Cerrar',hLater:'♥ en cuanto esté pintada',home:'Inicio',fromImg:'la imagen de la que nace',c6:'Mantén pulsado',c6s:'quién pinta · la imagen',q:'¿Qué vas a pintar hoy?'},
-  PT:{title:'Vista',studio:'Estúdio',classic:'Clássico',sub:'Estúdio: a pintura ocupa o ecrã e os controlos aparecem quando quiser. Clássico: o ecrã de sempre.',gest:'Para cima — seguinte · baixo — visual · direita — menu · toque — controlos · toque duplo — ♥',look:'Visual',sound:'Som',nu:'Novo',favs:'Favoritos',setup:'Configurar',c1:'Deslize para cima',c1s:'pintura seguinte',c2:'Deslize para baixo',c2s:'escolha um visual',c3:'Toque',c3s:'tocar · som · partilhar',c4:'Toque duas vezes',c4s:'♥ nos favoritos',go:'Toque para começar',back:'Toque — voltar à pintura',bk:'Voltar',clr:'Limpar',mgo:'Compor e pintar',c5:'Deslize para a direita',c5s:'novo · favoritos · configurar · guia',share:'Partilhar',vid:'Vídeo 9:16',vidS:'TikTok · Reels · Stories — pinta-se ao som da música',pic:'Imagem para Story',picS:'9:16, com o título e quem a pintou',sav:'Guardar · imprimir',savS:'tamanhos, ficheiros, impressão',snd:'Som',sndS:'grava a música da imagem',vRec:'A gravar',vDone:'O teu vídeo',vShare:'Partilhar',vSave:'Guardar',vNo:'Este navegador não consegue gravar vídeo.',vClose:'Fechar',hLater:'♥ assim que estiver pintada',home:'Início',fromImg:'a imagem de onde nasce',c6:'Mantenha premido',c6s:'quem pinta · a imagem',q:'O que vais pintar hoje?'},
-  zh:{title:'显示',studio:'工作室',classic:'经典',sub:'工作室：画作占满屏幕，需要时才出现控件。经典：原来的界面。',gest:'上滑 — 下一幅 · 下滑 — 外观 · 右滑 — 菜单 · 轻点 — 控件 · 双击 — ♥',look:'外观',sound:'声音',nu:'新建',favs:'收藏',setup:'设置',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'选择外观',c3:'轻点',c3s:'播放 · 声音 · 分享',c4:'双击',c4s:'♥ 加入收藏',go:'轻点开始',back:'轻点 — 回到画作',bk:'返回',clr:'清除',mgo:'作曲并作画',c5:'右滑',c5s:'新建 · 收藏 · 设置 · 指南',share:'分享',vid:'视频 9:16',vidS:'TikTok · Reels · Stories — 随音乐自动作画',pic:'快拍图片',picS:'9:16，附标题和画家',sav:'保存 · 打印',savS:'尺寸、文件、打印',snd:'声音',sndS:'录下这幅图的音乐',vRec:'录制中',vDone:'你的视频',vShare:'分享',vSave:'保存',vNo:'此浏览器无法录制视频。',vClose:'关闭',hLater:'♥ 画完后自动收藏',home:'首页',fromImg:'它来自的图片',c6:'长按',c6s:'谁在画 · 原图',q:'今天要画什么？'},
-  zhTW:{title:'顯示',studio:'工作室',classic:'經典',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。經典：原來的介面。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 右滑 — 選單 · 輕點 — 控制項 · 雙擊 — ♥',look:'外觀',sound:'聲音',nu:'新增',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'選擇外觀',c3:'輕點',c3s:'播放 · 聲音 · 分享',c4:'雙擊',c4s:'♥ 加入收藏',go:'輕點開始',back:'輕點 — 回到畫作',bk:'返回',clr:'清除',mgo:'作曲並作畫',c5:'右滑',c5s:'新增 · 收藏 · 設定 · 指南',share:'分享',vid:'影片 9:16',vidS:'TikTok · Reels · Stories — 隨音樂自動作畫',pic:'限動圖片',picS:'9:16，附標題和畫家',sav:'儲存 · 列印',savS:'尺寸、檔案、列印',snd:'聲音',sndS:'錄下這幅圖的音樂',vRec:'錄製中',vDone:'你的影片',vShare:'分享',vSave:'儲存',vNo:'此瀏覽器無法錄製影片。',vClose:'關閉',hLater:'♥ 畫完後自動收藏',home:'首頁',fromImg:'它來自的圖片',c6:'長按',c6s:'誰在畫 · 原圖',q:'今天要畫什麼？'},
-  ja:{title:'表示',studio:'スタジオ',classic:'クラシック',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。クラシック：これまでの画面。',gest:'上へ — 次の絵 · 下へ — 見た目 · 右へ — メニュー · タップ — 操作 · ダブルタップ — ♥',look:'見た目',sound:'サウンド',nu:'新規',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c2:'下にスワイプ',c2s:'見た目を選ぶ',c3:'タップ',c3s:'再生 · サウンド · シェア',c4:'ダブルタップ',c4s:'♥ お気に入りへ',go:'タップして開始',back:'タップ — 絵に戻る',bk:'戻る',clr:'クリア',mgo:'作曲して描く',c5:'右にスワイプ',c5s:'新規 · お気に入り · 設定 · ガイド',share:'シェア',vid:'動画 9:16',vidS:'TikTok · Reels · Stories — 音楽に合わせて描かれる',pic:'ストーリー画像',picS:'9:16、タイトルと描いた画家つき',sav:'保存 · 印刷',savS:'サイズ、ファイル、印刷',snd:'サウンド',sndS:'絵の音楽を録音',vRec:'録画中',vDone:'あなたの動画',vShare:'シェア',vSave:'保存',vNo:'このブラウザでは動画を録画できません。',vClose:'閉じる',hLater:'♥ 描き終わったら保存',home:'ホーム',fromImg:'元になった絵',c6:'長押し',c6s:'誰が描く · 元の絵',q:'今日は何を描く？'}
+  EN:{title:'View',studio:'Studio',classic:'Classic',sub:'Studio: the painting fills the screen; the controls come when you want them. Classic: the screen as before.',gest:'Swipe up — next · down — look · right — menu · tap — controls · double tap — ♥',look:'Look',sound:'Sound',nu:'New',favs:'Favorites',setup:'Setup',c1:'Swipe up',c1s:'next painting',c2:'Swipe down',c2s:'pick a look',c3:'Tap',c3s:'play · sound · share',c4:'Double tap',c4s:'♥ into favorites',go:'Tap to start',back:'Tap — back to the painting',bk:'Back',clr:'Clear',mgo:'Compose & paint',c5:'Swipe right',c5s:'new · favorites · setup · guide',share:'Share',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — it paints itself to the music',pic:'Story picture',picS:'9:16, with the title and who painted it',sav:'Save · print',savS:'sizes, files, print',snd:'Sound',sndS:'record the picture’s music',vRec:'Recording',vDone:'Your video',vShare:'Share',vSave:'Save',vNo:'This browser can’t record video.',vClose:'Close',hLater:'♥ as soon as it’s painted',home:'Home',fromImg:'the picture it comes from',c6:'Press and hold',c6s:'who paints · the picture',q:'What will you paint today?',favE:'No favorites yet. Double-tap a finished painting, or tap ♥ on the right, to keep it here.'},
+  SK:{title:'Zobrazenie',studio:'Štúdio',classic:'Klasika',sub:'Štúdio: maľba na celú obrazovku, ovládanie len keď ho chceš. Klasika: obrazovka ako doteraz.',gest:'Potiahni hore — ďalšia · dole — vzhľad · doprava — menu · ťuk — ovládanie · dvakrát — ♥',look:'Vzhľad',sound:'Zvuk',nu:'Nové',favs:'Obľúbené',setup:'Setup',c1:'Potiahni hore',c1s:'ďalšia maľba',c2:'Potiahni dole',c2s:'vyber vzhľad',c3:'Ťukni',c3s:'prehrať · zvuk · zdieľať',c4:'Ťukni dvakrát',c4s:'♥ do obľúbených',go:'Ťukni a začni',back:'Ťukni — späť k maľbe',bk:'Späť',clr:'Vyčistiť',mgo:'Zlož a namaľuj',c5:'Potiahni doprava',c5s:'nové · obľúbené · setup · príručka',share:'Zdieľať',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — maľuje sa do hudby',pic:'Obrázok do Story',picS:'9:16, s názvom a kto to namaľoval',sav:'Uložiť · tlač',savS:'veľkosti, súbory, tlač',snd:'Zvuk',sndS:'nahraj hudbu obrazu',vRec:'Nahrávam',vDone:'Tvoje video',vShare:'Zdieľať',vSave:'Uložiť',vNo:'Tento prehliadač nevie nahrať video.',vClose:'Zavrieť',hLater:'♥ hneď ako sa domaľuje',home:'Domov',fromImg:'obraz, z ktorého vzniká',c6:'Podrž prst',c6s:'kto maľuje · pôvodný obraz',q:'Čo dnes namaľuješ?',favE:'Zatiaľ žiadne obľúbené. Dvakrát ťukni na hotový obraz alebo ťukni na ♥ vpravo a ostane tu.'},
+  DE:{title:'Ansicht',studio:'Studio',classic:'Klassisch',sub:'Studio: das Bild füllt den Bildschirm, die Bedienung kommt, wenn du sie willst. Klassisch: der Bildschirm wie bisher.',gest:'Nach oben — nächstes · unten — Look · rechts — Menü · tippen — Bedienung · doppelt — ♥',look:'Look',sound:'Klang',nu:'Neu',favs:'Favoriten',setup:'Setup',c1:'Nach oben wischen',c1s:'nächstes Bild',c2:'Nach unten wischen',c2s:'Look wählen',c3:'Tippen',c3s:'abspielen · Ton · teilen',c4:'Doppelt tippen',c4s:'♥ zu den Favoriten',go:'Tippen zum Start',back:'Tippen — zurück zum Bild',bk:'Zurück',clr:'Löschen',mgo:'Komponieren & malen',c5:'Nach rechts wischen',c5s:'neu · Favoriten · Setup · Anleitung',share:'Teilen',vid:'Video 9:16',vidS:'TikTok · Reels · Stories — es malt sich zur Musik',pic:'Story-Bild',picS:'9:16, mit Titel und wer es gemalt hat',sav:'Speichern · Druck',savS:'Größen, Dateien, Druck',snd:'Ton',sndS:'die Musik des Bildes aufnehmen',vRec:'Aufnahme',vDone:'Dein Video',vShare:'Teilen',vSave:'Speichern',vNo:'Dieser Browser kann kein Video aufnehmen.',vClose:'Schließen',hLater:'♥ sobald es fertig gemalt ist',home:'Start',fromImg:'das Bild, aus dem es entsteht',c6:'Gedrückt halten',c6s:'wer malt · das Bild',q:'Was malst du heute?',favE:'Noch keine Favoriten. Tippe doppelt auf ein fertiges Gemälde oder rechts auf ♥, um es hier zu behalten.'},
+  FR:{title:'Affichage',studio:'Studio',classic:'Classique',sub:'Studio : la peinture remplit l’écran, les commandes viennent quand tu veux. Classique : l’écran habituel.',gest:'Vers le haut — suivante · bas — style · droite — menu · toucher — commandes · deux fois — ♥',look:'Style',sound:'Son',nu:'Nouveau',favs:'Favoris',setup:'Réglages',c1:'Glisser vers le haut',c1s:'peinture suivante',c2:'Glisser vers le bas',c2s:'choisir un style',c3:'Toucher',c3s:'lecture · son · partager',c4:'Toucher deux fois',c4s:'♥ dans les favoris',go:'Touchez pour commencer',back:'Touchez — retour à la peinture',bk:'Retour',clr:'Effacer',mgo:'Composer et peindre',c5:'Glisser vers la droite',c5s:'nouveau · favoris · réglages · guide',share:'Partager',vid:'Vidéo 9:16',vidS:'TikTok · Reels · Stories — elle se peint en musique',pic:'Image Story',picS:'9:16, avec le titre et qui l’a peinte',sav:'Enregistrer · imprimer',savS:'tailles, fichiers, impression',snd:'Son',sndS:'enregistrer la musique de l’image',vRec:'Enregistrement',vDone:'Ta vidéo',vShare:'Partager',vSave:'Enregistrer',vNo:'Ce navigateur ne peut pas enregistrer de vidéo.',vClose:'Fermer',hLater:'♥ dès qu’elle est peinte',home:'Accueil',fromImg:'l’image d’où elle naît',c6:'Maintenir',c6s:'qui peint · l’image',q:'Que vas-tu peindre aujourd’hui ?',favE:'Pas encore de favoris. Touchez deux fois une peinture terminée, ou ♥ à droite, pour la garder ici.'},
+  ES:{title:'Vista',studio:'Estudio',classic:'Clásico',sub:'Estudio: la pintura llena la pantalla y los controles aparecen cuando quieres. Clásico: la pantalla de siempre.',gest:'Arriba — siguiente · abajo — aspecto · derecha — menú · toque — controles · doble toque — ♥',look:'Aspecto',sound:'Sonido',nu:'Nuevo',favs:'Favoritos',setup:'Ajustes',c1:'Desliza arriba',c1s:'siguiente pintura',c2:'Desliza abajo',c2s:'elige un aspecto',c3:'Toca',c3s:'reproducir · sonido · compartir',c4:'Toca dos veces',c4s:'♥ a favoritos',go:'Toca para empezar',back:'Toca — volver a la pintura',bk:'Atrás',clr:'Borrar',mgo:'Componer y pintar',c5:'Desliza a la derecha',c5s:'nuevo · favoritos · ajustes · guía',share:'Compartir',vid:'Vídeo 9:16',vidS:'TikTok · Reels · Stories — se pinta con la música',pic:'Imagen para Story',picS:'9:16, con el título y quién la pintó',sav:'Guardar · imprimir',savS:'tamaños, archivos, impresión',snd:'Sonido',sndS:'graba la música de la imagen',vRec:'Grabando',vDone:'Tu vídeo',vShare:'Compartir',vSave:'Guardar',vNo:'Este navegador no puede grabar vídeo.',vClose:'Cerrar',hLater:'♥ en cuanto esté pintada',home:'Inicio',fromImg:'la imagen de la que nace',c6:'Mantén pulsado',c6s:'quién pinta · la imagen',q:'¿Qué vas a pintar hoy?',favE:'Aún no hay favoritos. Toca dos veces una pintura terminada, o ♥ a la derecha, para guardarla aquí.'},
+  PT:{title:'Vista',studio:'Estúdio',classic:'Clássico',sub:'Estúdio: a pintura ocupa o ecrã e os controlos aparecem quando quiser. Clássico: o ecrã de sempre.',gest:'Para cima — seguinte · baixo — visual · direita — menu · toque — controlos · toque duplo — ♥',look:'Visual',sound:'Som',nu:'Novo',favs:'Favoritos',setup:'Configurar',c1:'Deslize para cima',c1s:'pintura seguinte',c2:'Deslize para baixo',c2s:'escolha um visual',c3:'Toque',c3s:'tocar · som · partilhar',c4:'Toque duas vezes',c4s:'♥ nos favoritos',go:'Toque para começar',back:'Toque — voltar à pintura',bk:'Voltar',clr:'Limpar',mgo:'Compor e pintar',c5:'Deslize para a direita',c5s:'novo · favoritos · configurar · guia',share:'Partilhar',vid:'Vídeo 9:16',vidS:'TikTok · Reels · Stories — pinta-se ao som da música',pic:'Imagem para Story',picS:'9:16, com o título e quem a pintou',sav:'Guardar · imprimir',savS:'tamanhos, ficheiros, impressão',snd:'Som',sndS:'grava a música da imagem',vRec:'A gravar',vDone:'O teu vídeo',vShare:'Partilhar',vSave:'Guardar',vNo:'Este navegador não consegue gravar vídeo.',vClose:'Fechar',hLater:'♥ assim que estiver pintada',home:'Início',fromImg:'a imagem de onde nasce',c6:'Mantenha premido',c6s:'quem pinta · a imagem',q:'O que vais pintar hoje?',favE:'Ainda sem favoritos. Toque duas vezes numa pintura terminada, ou em ♥ à direita, para a guardar aqui.'},
+  zh:{title:'显示',studio:'工作室',classic:'经典',sub:'工作室：画作占满屏幕，需要时才出现控件。经典：原来的界面。',gest:'上滑 — 下一幅 · 下滑 — 外观 · 右滑 — 菜单 · 轻点 — 控件 · 双击 — ♥',look:'外观',sound:'声音',nu:'新建',favs:'收藏',setup:'设置',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'选择外观',c3:'轻点',c3s:'播放 · 声音 · 分享',c4:'双击',c4s:'♥ 加入收藏',go:'轻点开始',back:'轻点 — 回到画作',bk:'返回',clr:'清除',mgo:'作曲并作画',c5:'右滑',c5s:'新建 · 收藏 · 设置 · 指南',share:'分享',vid:'视频 9:16',vidS:'TikTok · Reels · Stories — 随音乐自动作画',pic:'快拍图片',picS:'9:16，附标题和画家',sav:'保存 · 打印',savS:'尺寸、文件、打印',snd:'声音',sndS:'录下这幅图的音乐',vRec:'录制中',vDone:'你的视频',vShare:'分享',vSave:'保存',vNo:'此浏览器无法录制视频。',vClose:'关闭',hLater:'♥ 画完后自动收藏',home:'首页',fromImg:'它来自的图片',c6:'长按',c6s:'谁在画 · 原图',q:'今天要画什么？',favE:'还没有收藏。双击完成的画作，或点右侧的 ♥，即可保存在这里。'},
+  zhTW:{title:'顯示',studio:'工作室',classic:'經典',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。經典：原來的介面。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 右滑 — 選單 · 輕點 — 控制項 · 雙擊 — ♥',look:'外觀',sound:'聲音',nu:'新增',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'選擇外觀',c3:'輕點',c3s:'播放 · 聲音 · 分享',c4:'雙擊',c4s:'♥ 加入收藏',go:'輕點開始',back:'輕點 — 回到畫作',bk:'返回',clr:'清除',mgo:'作曲並作畫',c5:'右滑',c5s:'新增 · 收藏 · 設定 · 指南',share:'分享',vid:'影片 9:16',vidS:'TikTok · Reels · Stories — 隨音樂自動作畫',pic:'限動圖片',picS:'9:16，附標題和畫家',sav:'儲存 · 列印',savS:'尺寸、檔案、列印',snd:'聲音',sndS:'錄下這幅圖的音樂',vRec:'錄製中',vDone:'你的影片',vShare:'分享',vSave:'儲存',vNo:'此瀏覽器無法錄製影片。',vClose:'關閉',hLater:'♥ 畫完後自動收藏',home:'首頁',fromImg:'它來自的圖片',c6:'長按',c6s:'誰在畫 · 原圖',q:'今天要畫什麼？',favE:'還沒有收藏。雙擊完成的畫作，或點右側的 ♥，即可保存在這裡。'},
+  ja:{title:'表示',studio:'スタジオ',classic:'クラシック',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。クラシック：これまでの画面。',gest:'上へ — 次の絵 · 下へ — 見た目 · 右へ — メニュー · タップ — 操作 · ダブルタップ — ♥',look:'見た目',sound:'サウンド',nu:'新規',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c2:'下にスワイプ',c2s:'見た目を選ぶ',c3:'タップ',c3s:'再生 · サウンド · シェア',c4:'ダブルタップ',c4s:'♥ お気に入りへ',go:'タップして開始',back:'タップ — 絵に戻る',bk:'戻る',clr:'クリア',mgo:'作曲して描く',c5:'右にスワイプ',c5s:'新規 · お気に入り · 設定 · ガイド',share:'シェア',vid:'動画 9:16',vidS:'TikTok · Reels · Stories — 音楽に合わせて描かれる',pic:'ストーリー画像',picS:'9:16、タイトルと描いた画家つき',sav:'保存 · 印刷',savS:'サイズ、ファイル、印刷',snd:'サウンド',sndS:'絵の音楽を録音',vRec:'録画中',vDone:'あなたの動画',vShare:'シェア',vSave:'保存',vNo:'このブラウザでは動画を録画できません。',vClose:'閉じる',hLater:'♥ 描き終わったら保存',home:'ホーム',fromImg:'元になった絵',c6:'長押し',c6s:'誰が描く · 元の絵',q:'今日は何を描く？',favE:'まだお気に入りはありません。完成した絵をダブルタップするか、右の ♥ をタップするとここに残ります。'}
 };
 // STUDIO SKIN — the look sheet in the Studio: palettes as colour rings, painters as round faces (this song painted
 // by each of them), composers as monograms. The buttons and what they do are the Classic ones; only the look changes.
@@ -35760,6 +35760,7 @@ Hard requirements:
   const _stPeekTap = ()=>{ if(!_stPeekOk) return; setStPeek(true); if(stPeekTmRef.current) clearTimeout(stPeekTmRef.current); stPeekTmRef.current=setTimeout(()=>{ stPeekTmRef.current=null; setStPeek(false); }, 2400); };
   useEffect(()=>{ if(!_stPeekOk) setStPeek(false); },[_stPeekOk]);
   const [stShare, setStShare] = useState(false);
+  const [stFavShare, setStFavShare] = useState(false);   // Favorites in the Studio: Story · Save
   // NEW — the sources over the painting, as Classic's "+ New music": the painting on screen is kept as a draft
   // and the new one is picked at once (music, picture, mood, mood from a picture); Compose and Mic as their tiles
   // at home (the take in progress, or a fresh one); Home is the home screen itself.
@@ -35830,6 +35831,20 @@ Hard requirements:
   const [stVid, setStVid] = useState(null);           // null | {phase:'rec', t0} | {phase:'done', blob, url, type}
   const [stVidTick, setStVidTick] = useState(0);
   const stVidRec = !!(stVid && stVid.phase==='rec');
+  // ▶ on the home card: wherever the piece comes back to (the start, a pause, its end), it plays
+  const stPlayIntentRef = useRef(0);
+  useEffect(()=>{
+    const t0=stPlayIntentRef.current; if(!t0) return;
+    if(Date.now()-t0>8000){ stPlayIntentRef.current=0; return; }
+    if(!studioFs || studioLive || !chords.length || anim || working || busy || demoReelOn) return;
+    if(playing && !holdPaused){ stPlayIntentRef.current=0; return; }
+    const tm=setTimeout(()=>{
+      if(!stPlayIntentRef.current) return;
+      stPlayIntentRef.current=0;
+      try{ if(playingRef.current && !holdPausedRef.current) return; if(handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
+    }, 220);
+    return ()=>clearTimeout(tm);
+  },[studioFs, studioLive, chords.length, playing, anim, holdPaused, working, busy, demoReelOn]);
   const _stDone = studioFs && !studioLive && chords.length>0 && disp>=chords.length && !playing && !anim && !holdPaused && !demoReelOn && !recording && !stVidRec;
   const _stDoneRef = useRef(false);
   useEffect(()=>{
@@ -35965,11 +35980,13 @@ Hard requirements:
   useEffect(()=>{ if(!stVidRec) return; const iv=setInterval(()=>setStVidTick(n=>n+1), 1000); return ()=>clearInterval(iv); },[stVidRec]);
   useEffect(()=>{ if(!studioFs && stVidRecRef.current) _vidStop(); },[studioFs]);
   // the phone's Back in the Studio: it closes what is open (a sheet, the rails…), then goes home — never out of the app
-  const stFsRef = useRef(false); stFsRef.current = studioFs;
+  const stArmOn = studioFs || (studioOn && (!!favView || studioSrcOk));
+  const stFsRef = useRef(false); stFsRef.current = stArmOn;
   const stBackRef = useRef(null);
   stBackRef.current = ()=>{
     if(stVidRecRef.current){ _vidStop(); return; }
     if(stVid && stVid.phase==='done'){ _vidClose(); return; }
+    if(favViewRef.current){ if(showSizePicker){ setShowSizePicker(false); return; } if(stFavShare){ setStFavShare(false); return; } _favClose(); return; }
     if(stShare){ setStShare(false); return; }
     if(stNew){ setStNew(false); return; }
     if(showSetupModal){ closeSetup(); return; }
@@ -35983,14 +36000,15 @@ Hard requirements:
     if(backBtnRef.current){ try{ _captureHomeArt(); }catch(_){} backBtnRef.current.click(); }
   };
   useEffect(()=>{
-    if(!studioFs) return;
+    if(!stArmOn) return;
     let armed=false;
     const arm=()=>{ try{ history.pushState({pfStudio:1}, ''); armed=true; }catch(_){} };
     arm();
     const onPop=()=>{ armed=false; try{ if(stBackRef.current) stBackRef.current(); }catch(_){} setTimeout(()=>{ if(stFsRef.current && !armed) arm(); }, 80); };
     window.addEventListener('popstate', onPop);
     return ()=>{ window.removeEventListener('popstate', onPop); if(armed){ try{ if(history.state && history.state.pfStudio) history.back(); }catch(_){} } };
-  },[studioFs]);
+  },[stArmOn]);
+  useEffect(()=>{ if(!favView) setStFavShare(false); },[!!favView]);
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+(studioLive?' pf-studio-live':'')+((studioLive && !composeMode)?' pf-studio-mic':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
@@ -36230,7 +36248,7 @@ Hard requirements:
           </div>
         </div>
       )}
-      <div className="pf-topbar" style={{width:'100%',maxWidth:560,display:(immersive||favFs)?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
+      <div className="pf-topbar" style={{width:'100%',maxWidth:560,display:(immersive||favFs||(studioOn && favView))?'none':'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:(composeMode||micActive)?8:20,position:'relative',zIndex:99999,visibility:showIntro?'hidden':'visible',padding:'9px 6px',borderBottom:'1px solid rgba(201,168,76,.14)',WebkitBackdropFilter:'blur(10px)',backdropFilter:'blur(10px)'}}>
         {/* ── V2 nav: hamburger (left) opens a glass menu panel; zoom + language
             sit together in a segmented control (right). The five destinations
             (Concept · Book · Guide · Setup · Pro) moved out of the always-on
@@ -36423,7 +36441,109 @@ Hard requirements:
       {/* ── FAVORITES viewer — the saved paintings, repainted from their addresses
           one by one (see _favPaint). Stands in for the stage while open; nothing
           plays here: the strip, Play and Clear are off, Save exports the PNG. ── */}
-      {favView && (()=>{
+      {favView && studioOn && (()=>{
+        const N=favs.length, f=favCur, i=favView.i, gone=!!(f && favGone===f.id);
+        const dim = (f && favDim && favDim.id===f.id) ? favDim : null;
+        const ratio = dim ? (dim.CW/(dim.CH||1)) : .72;
+        const isImgFav = !!(f && f.kind==='img');
+        const left = N - (favGone!=null ? 1 : 0);
+        const frameW = 'min(calc(100vw - 24px), calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 210px) * '+ratio+'))';
+        const dotN = Math.min(N, 9), d0 = Math.max(0, Math.min(i-4, N-dotN));
+        const _heartSv = (<svg width="20" height="20" viewBox="0 0 24 24" fill={gone?'none':'currentColor'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>);
+        const _ic = (x)=>({width:48,height:48,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(10,8,18,.62)',border:'1px solid rgba(242,238,232,.18)',color:'#f2eee8',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',...(x||{})});
+        const _it = {display:'flex',flexDirection:'column',alignItems:'center',gap:4,background:'none',border:0,padding:0,cursor:'pointer',fontFamily:'inherit',color:'rgba(242,238,232,.92)',fontSize:9,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',textShadow:'0 1px 6px rgba(0,0,0,.85)',WebkitTapHighlightColor:'transparent'};
+        const _rd = {width:40,height:40,padding:0,borderRadius:'50%',border:'1px solid rgba(242,238,232,.18)',background:'rgba(10,8,18,.55)',color:'#f2eee8',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,WebkitTapHighlightColor:'transparent'};
+        const _end = (e)=>{
+          const st=favSwipeRef.current; favSwipeRef.current=null; if(!st) return;
+          const tt=e.changedTouches && e.changedTouches[0]; if(!tt || Date.now()-st.t>800) return;
+          const dx=tt.clientX-st.x, dy=tt.clientY-st.y;
+          if(Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3) _favMove(dy<0 ? 1 : -1);        // up = the next one
+          else if(Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3) _favMove(dx<0 ? 1 : -1);   // left = the next one
+        };
+        const _shOk = !!f && !favBad && !isImgFav;
+        const _sv = (d)=>(<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
+        const rows = [
+          {k:'pic', bg:'linear-gradient(135deg,#4de3a0,#2f9fc9)', ic:_sv(<><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><circle cx="12" cy="10" r="2.5"/><path d="M8 18l3-3 2 2 3-3"/></>), go:()=>{ setStFavShare(false); _favStory(); }},
+          {k:'sav', bg:'linear-gradient(135deg,#e2c477,#b8892f)', ic:_sv(<><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></>), go:()=>{ setStFavShare(false); setShowSizePicker(true); }},
+        ];
+        return (
+        <div className="pf-st-fav" role="dialog" aria-label={_favT('label')} onTouchStart={_favTouchStart} onTouchEnd={_end}
+          style={{position:'fixed',inset:0,zIndex:10000,background:'radial-gradient(120% 60% at 50% 0%,rgba(201,168,76,.10),rgba(7,6,12,0) 60%),#07060c',touchAction:'none',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <style>{`.pf-st-fav .pf-sf-meta{animation:pfSfIn .32s ease both}@keyframes pfSfIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
+          {/* the top: ✕ · ♥ Favorites, where you are · clear all */}
+          <div style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'calc(env(safe-area-inset-top, 0px) + 10px) max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px))'}}>
+            <button type="button" onClick={_favClose} aria-label={_favT('close')} style={_rd}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            <div style={{flex:1,minWidth:0,textAlign:'center',lineHeight:1.35}}>
+              {favClearArmed ? (<div role="status" style={{fontSize:(.56*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',color:'#ff8a9a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favT('clearAllQ').replace('{n}', left)}</div>) : (<>
+              <div style={{fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.26em',textTransform:'uppercase',color:'#f0c040'}}>♥ {_favT('label')}</div>
+              {N>0 && (<div style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',color:'rgba(242,238,232,.55)',fontVariantNumeric:'tabular-nums'}}>{Math.min(i+1,N)} / {N}</div>)}</>)}
+            </div>
+            {left>0 ? (
+              <button type="button" onClick={_favClearAll} aria-label={_favT('clearAll')} title={_favT('clearAll')}
+                style={favClearArmed ? {..._rd,background:'rgba(220,70,90,.92)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(220,70,90,.5)'} : {..._rd,color:'rgba(242,238,232,.7)'}}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>
+              </button>) : (<span style={{width:40,flexShrink:0}}/>)}
+          </div>
+          {N===0 ? (
+            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:'0 36px',textAlign:'center'}}>
+              <div aria-hidden="true" style={{width:84,height:84,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(201,168,76,.35)',color:'rgba(240,192,64,.85)',fontSize:34,lineHeight:1}}>♡</div>
+              <div style={{maxWidth:300,fontSize:(.64*effScale)+'rem',lineHeight:1.6,color:'rgba(242,238,232,.7)'}}>{_stT('favE')}</div>
+              {favToast && (<div style={{position:'relative',width:'100%',height:56}}>{_favToastEl()}</div>)}
+            </div>
+          ) : (<>
+            {/* the painting */}
+            <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:'4px 12px calc(env(safe-area-inset-bottom, 0px) + 18px)'}}>
+              <div style={{position:'relative',width:frameW,lineHeight:0,borderRadius:14,overflow:'hidden',boxShadow:'0 24px 60px rgba(0,0,0,.7)',border:'1px solid rgba(242,238,232,.08)',background:'#04040a'}}>
+                <canvas ref={favCanvasRef} role="img" aria-label={f ? (_favTitle(f)+' — '+_favWho(f)) : ''} style={{display:isImgFav?'none':'block',width:'100%',height:'auto',aspectRatio:dim ? (dim.CW+' / '+dim.CH) : '0.72',background:'#04040a'}}/>
+                {isImgFav && favImg && favImg.id===f.id && (<img src={favImg.src} alt={_favTitle(f)+' — '+_favWho(f)} draggable={false} style={{display:'block',width:'100%',height:'auto',userSelect:'none',WebkitUserSelect:'none'}}/>)}
+                {isImgFav && !(favImg && favImg.id===f.id) && (<div style={{width:'100%',aspectRatio:'0.72'}}/>)}
+                {gone && (<div aria-hidden="true" style={{position:'absolute',inset:0,background:'rgba(7,6,12,.45)'}}/>)}
+                {favBad && (<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',padding:24,textAlign:'center',lineHeight:1.5,color:'rgba(242,238,232,.75)',fontSize:(.62*effScale)+'rem'}}>{_favT('lost')}</div>)}
+                {_favToastEl()}
+              </div>
+            {/* what it is */}
+            {f && (
+              <div key={f.id} className="pf-sf-meta" style={{flexShrink:0,width:'100%',boxSizing:'border-box',textAlign:'center',padding:'0 64px',lineHeight:1.45}}>
+                <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontWeight:600,fontSize:(1.2*effScale)+'rem',lineHeight:1.1,color:'#f2eee8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favTitle(f) || _favT('label')}</div>
+                <div style={{marginTop:5,fontSize:(.56*effScale)+'rem',letterSpacing:'.04em',color:'#f0d78a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favWho(f)}</div>
+                <div style={{marginTop:2,fontSize:(.5*effScale)+'rem',letterSpacing:'.05em',color:'rgba(242,238,232,.45)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favMeta(f)}</div>
+              </div>
+            )}
+            </div>
+            {/* where you are: the dots down the left (swipe ↑ ↓) */}
+            {N>1 && (
+              <div aria-hidden="true" style={{position:'fixed',left:'max(8px, env(safe-area-inset-left, 0px))',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:5,zIndex:2}}>
+                {Array.from({length:dotN},(_,k)=>{ const on=(d0+k)===i; return (<span key={k} style={{width:4,height:on?16:4,borderRadius:2,background:on?'#f0c040':'rgba(242,238,232,.28)',transition:'height .2s ease'}}/>); })}
+              </div>)}
+            {/* the rail: ♥ (out and back again) · Open (a picture) · Share (a painting) */}
+            {f && (
+              <div style={{position:'fixed',right:'max(12px, env(safe-area-inset-right, 0px))',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:16,zIndex:3}}>
+                <button type="button" onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} aria-pressed={!gone} style={_it}>
+                  <span style={_ic(gone ? {color:PF.gold2} : {background:'linear-gradient(135deg,#f0d78a,#c9a84c)',border:'1px solid transparent',color:'#1a1408'})}>{_heartSv}</span></button>
+                {isImgFav && (<button type="button" onClick={(e)=>{ e.stopPropagation(); _favOpenImg(); }} disabled={favBad} title={_favT('openTip')} style={{..._it,opacity:favBad?.4:1}}>
+                  <span style={_ic({width:58,height:58,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',boxShadow:'0 0 24px rgba(77,227,160,.45)'})}><TxIcon n="play" s={22}/></span>{_favT('open')}</button>)}
+                {!isImgFav && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(_shOk) setStFavShare(true); }} disabled={!_shOk} aria-label={_stT('share')} style={{..._it,opacity:_shOk?1:.4}}>
+                  <span style={_ic({background:'linear-gradient(135deg,#ff5f8f,#a86bff)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(200,100,255,.35)'})}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>{_stT('share')}</button>)}
+              </div>)}
+          </>)}
+          {stFavShare && (<>
+            <div onClick={()=>setStFavShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); e.stopPropagation(); setStFavShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)'}}/>
+            <div role="dialog" aria-label={_stT('share')} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10}}>
+              <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 4px'}}/>
+              <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',marginBottom:2}}>{_stT('share')}</div>
+              {rows.map(r=>(
+                <button key={r.k} type="button" className="pf-st-row" onClick={r.go} style={{display:'flex',alignItems:'center',gap:14,width:'100%',padding:'12px 14px',borderRadius:16,border:'1px solid rgba(242,238,232,.1)',background:'rgba(255,255,255,.035)',color:'#f2eee8',fontFamily:'inherit',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+                  <span style={{flexShrink:0,width:44,height:44,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:r.bg,color:'#fff'}}>{r.ic}</span>
+                  <span style={{flex:1,minWidth:0}}>
+                    <span style={{display:'block',fontSize:(.66*effScale)+'rem',fontWeight:600,letterSpacing:'.02em'}}>{_stT(r.k)}</span>
+                    <span style={{display:'block',marginTop:2,fontSize:(.52*effScale)+'rem',lineHeight:1.35,color:'rgba(242,238,232,.6)'}}>{_stT(r.k+'S')}</span>
+                  </span>
+                </button>))}
+            </div>
+          </>)}
+        </div>);
+      })()}
+      {favView && !studioOn && (()=>{
         const N=favs.length, f=favCur, i=favView.i, gone=!!(f && favGone===f.id);
         const dim = (f && favDim && favDim.id===f.id) ? favDim : null;   // as laid out on this screen
         const ratio = dim ? (dim.CW/(dim.CH||1)) : 1;
@@ -36539,7 +36659,7 @@ Hard requirements:
         const ORDER = ['music','image','mood','compose','mic','mfi'];
         const _tap = (k)=>{ const el=document.querySelector(SRC[k].sel); if(el && !el.disabled) el.click(); };
         const _canPlay = _smp ? !_anyDraft : !!SRC[kind].d;
-        const _play = ()=>{ if(!_canPlay) return; try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } _tap(kind); };
+        const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } _tap(kind); };
         const _up = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
         const ttl = _smp ? SAMPLE_MIDI_NAME : _up(H.t || '');
         const line = _smp ? [_up(t('harmony')), 'Gustav Klimt × Hilma af Klint', '✦ '+_sigT('label')].join('  ·  ') : (H.l || '');
@@ -39406,7 +39526,7 @@ Hard requirements:
             <div style={{textAlign:'center',marginBottom:12,fontSize:(.62*effScale)+'rem',letterSpacing:'.04em',color:'rgba(220,180,255,.9)',textTransform:'capitalize',minHeight:'1.2em'}}>
               {[(t('moodNames')||{})[currentMood]||currentMood, ...morphSel.map(m=>(t('moodNames')||{})[m]||m)].join(' → ')}
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,maxHeight:'46vh',overflowY:'auto',paddingRight:2}}>
+            <div style={{display:studioOn?'flex':'grid',flexWrap:'wrap',alignContent:'flex-start',gridTemplateColumns:'repeat(3,1fr)',gap:studioOn?8:6,maxHeight:'46vh',overflowY:'auto',paddingRight:2}}>
               {morphPool.map(m=>{
                 const selIdx = morphSel.indexOf(m);
                 const isSel = selIdx>=0;
@@ -39419,10 +39539,15 @@ Hard requirements:
                     if(prev.length>=3) return prev;          // cap at 3
                     return [...prev, m];                     // add to end of chain
                   });
-                }} style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',background:isSel?'rgba(220,150,255,.22)':'rgba(220,150,255,.06)',color:isSel?'#fff':(full?'rgba(220,180,255,.3)':PF.cream),border:'1px solid '+(isSel?'rgba(220,150,255,.8)':'rgba(220,150,255,.25)'),borderRadius:12,cursor:full?'default':'pointer',fontFamily:'inherit',opacity:full?.5:1,transition:'all .18s'}}>
+                }} style={studioOn ? {padding:'8px 12px',borderRadius:18,border:'1px solid '+(isSel?'rgba(220,150,255,.85)':'rgba(242,238,232,.14)'),background:isSel?'rgba(220,150,255,.2)':'rgba(255,255,255,.03)',color:isSel?'#fff':'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.62*effScale)+'rem',lineHeight:1.2,whiteSpace:'nowrap',cursor:full?'default':'pointer',opacity:full?.4:1,transition:'background-color .18s, border-color .18s'} : {position:'relative',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'10px 4px',background:isSel?'rgba(220,150,255,.22)':'rgba(220,150,255,.06)',color:isSel?'#fff':(full?'rgba(220,180,255,.3)':PF.cream),border:'1px solid '+(isSel?'rgba(220,150,255,.8)':'rgba(220,150,255,.25)'),borderRadius:12,cursor:full?'default':'pointer',fontFamily:'inherit',opacity:full?.5:1,transition:'all .18s'}}>
+                  {studioOn ? (<>
+                    {isSel && (<b style={{marginRight:6,color:'#e9c8ff'}}>{selIdx+1}</b>)}
+                    {MOOD_EMOJI[m]||'✦'} {_sent((t('moodNames')||{})[m]||m)}
+                  </>) : (<>
                   {isSel && <span style={{position:'absolute',top:3,right:4,fontSize:(.5*effScale)+'rem',fontWeight:700,color:'#e9c8ff'}}>{selIdx+1}</span>}
                   <span style={{fontSize:'1.1rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
                   <span style={{fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',textTransform:'uppercase',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{(t('moodNames')||{})[m]||m}</span>
+                  </>)}
                 </button>
                 );
               })}

@@ -1711,6 +1711,17 @@ const STUDIO_SHEET_CSS = `
 .pf-app-root .pf-st-sheet .pf-sv-chk{border-bottom:0!important;padding:6px 2px!important;margin-bottom:0!important;color:rgba(242,238,232,.82)!important}
 .pf-app-root .pf-st-sheet input[type="text"]{font-size:16px!important;text-align:left!important;border-radius:14px!important;background:rgba(255,255,255,.05)!important;border:1px solid rgba(242,238,232,.14)!important;padding:12px 14px!important}
 `;
+// the sources as colour circles — the Studio home and New share them
+const STUDIO_SRC_CSS = `
+.pf-sh-grid{position:relative;flex-shrink:0;margin-top:16px;width:100%;max-width:380px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:14px;column-gap:4px}
+.pf-sh-src{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;padding:0;color:#f2eee8;font-family:inherit;font-size:11px;font-weight:600;line-height:1.2;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-sh-src:disabled{opacity:.4;cursor:default}
+.pf-sh-ic{position:relative;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#0e0b16;transition:transform .12s}
+.pf-sh-src:active .pf-sh-ic{transform:scale(.92)}
+.pf-sh-src.on .pf-sh-ic{box-shadow:0 0 0 3px #0b0910,0 0 0 5px #f0c040,0 0 22px rgba(240,192,64,.5)}
+.pf-sh-src.on{color:#f0c040}
+.pf-sh-dot{position:absolute;top:0;right:0;width:13px;height:13px;border-radius:50%;background:#f0c040;border:2px solid #0b0910;box-shadow:0 0 8px rgba(240,192,64,.7)}
+`;
 // STUDIO HOME — the stage: your painting floats as a card (▶ goes back to it), the blurred painting behind,
 // "What will you paint today?" and the six sources as equal circles (gold ring = the card's source, gold dot = a draft).
 const STUDIO_HOME_CSS = `
@@ -1734,14 +1745,6 @@ const STUDIO_HOME_CSS = `
 .pf-sh-ttl{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:28px;line-height:1.05;text-wrap:balance}
 .pf-sh-line{font-size:11.5px;letter-spacing:.04em;color:#f0d78a}
 .pf-sh-q{position:relative;flex-shrink:0;margin-top:22px;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;font-size:23px;line-height:1}
-.pf-sh-grid{position:relative;flex-shrink:0;margin-top:16px;width:100%;max-width:380px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:14px;column-gap:4px}
-.pf-sh-src{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;padding:0;color:#f2eee8;font-family:inherit;font-size:11px;font-weight:600;line-height:1.2;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.pf-sh-src:disabled{opacity:.4;cursor:default}
-.pf-sh-ic{position:relative;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#0e0b16;transition:transform .12s}
-.pf-sh-src:active .pf-sh-ic{transform:scale(.92)}
-.pf-sh-src.on .pf-sh-ic{box-shadow:0 0 0 3px #0b0910,0 0 0 5px #f0c040,0 0 22px rgba(240,192,64,.5)}
-.pf-sh-src.on{color:#f0c040}
-.pf-sh-dot{position:absolute;top:0;right:0;width:13px;height:13px;border-radius:50%;background:#f0c040;border:2px solid #0b0910;box-shadow:0 0 8px rgba(240,192,64,.7)}
 .pf-sh-links{position:relative;flex-shrink:0;margin-top:14px;display:flex;gap:22px}
 .pf-sh-links button{background:none;border:0;padding:8px 4px;color:rgba(242,238,232,.72);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
 .pf-studio-home .pf-help-fab{display:none!important}
@@ -13569,7 +13572,13 @@ Hard requirements:
       const isImg = viewMode==='image' && !moodFromImg;
       const _k = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : isImg ? 'image' : 'music';
       let _t='', _l=''; try{ _t=_vidTitle(); if(_t==='Paintiano') _t=''; _l=_vidLine(); }catch(_){}
-      const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} };
+      let _r=null;
+      try{
+        if(_k==='music' && loadedSource==='midi' && builtinPieceRef.current!=null) _r={s:'midi', i:builtinPieceRef.current|0};
+        else if(_k==='image'){ const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===_t); if(ii>=0) _r={s:'img', i:ii}; }
+        else if(_k==='mood' && currentMood && MOODS.includes(currentMood)) _r={s:'mood', m:currentMood};
+      }catch(_){}
+      const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
       if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ save(shrink(on, on.naturalWidth, on.naturalHeight)); return; } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
       if(chords.length && disp < chords.length && !composeMode && !(micActive||micArmed||micContext)){
@@ -13758,9 +13767,15 @@ Hard requirements:
   const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return; if(_stSwipeRef.current && _stSwipeRef.current(tt.clientX-st.x, tt.clientY-st.y, Date.now()-st.t)) _swipeWasGestureRef.current=true; };
   // a new piece plays at once (when the sound is already awake); once it plays, the rail goes after a while
   const _stFreshRef = useRef(false); _stFreshRef.current = _stFresh;
+  const stAutoAtRef = useRef(0);     // when a timer last started the playback by itself (one start at a time)
   useEffect(()=>{
     if(!_stFresh){ if(stSideRef.current==='right' && !stIdleRef.current) _stArm(); return; }
-    const tm=setTimeout(()=>{ try{ if(!_stFreshRef.current || !handlePauseClickRef.current) return; if(Tone.getContext().rawContext.state==='running') handlePauseClickRef.current(); }catch(_){} }, 450);
+    const tm=setTimeout(()=>{ try{
+      if(!_stFreshRef.current || !handlePauseClickRef.current) return;
+      if(stPlayIntentRef.current || Date.now()-stAutoAtRef.current<2500) return;   // ▶ on the home card starts it
+      if(Tone.getContext().rawContext.state!=='running') return;
+      stAutoAtRef.current=Date.now(); wakeAudioRef.current=Date.now(); handlePauseClickRef.current();
+    }catch(_){} }, 450);
     return ()=>clearTimeout(tm);
   },[_stFresh]);
   // VIDEO 9:16 — the painting paints itself to the music, recorded as it plays (the title above it, Paintiano under it)
@@ -13771,13 +13786,17 @@ Hard requirements:
   const stPlayIntentRef = useRef(0);
   useEffect(()=>{
     const t0=stPlayIntentRef.current; if(!t0) return;
-    if(Date.now()-t0>8000){ stPlayIntentRef.current=0; return; }
+    if(Date.now()-t0>20000){ stPlayIntentRef.current=0; return; }
     if(!studioFs || studioLive || !chords.length || anim || working || busy || demoReelOn) return;
     if(playing && !holdPaused){ stPlayIntentRef.current=0; return; }
     const tm=setTimeout(()=>{
       if(!stPlayIntentRef.current) return;
       stPlayIntentRef.current=0;
-      try{ if(playingRef.current && !holdPausedRef.current) return; if(handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
+      try{
+        if(playingRef.current && !holdPausedRef.current) return;
+        if(Date.now()-stAutoAtRef.current<2500 || !handlePauseClickRef.current) return;
+        stAutoAtRef.current=Date.now(); wakeAudioRef.current=Date.now(); handlePauseClickRef.current();
+      }catch(_){}
     }, 220);
     return ()=>clearTimeout(tm);
   },[studioFs, studioLive, chords.length, playing, anim, holdPaused, working, busy, demoReelOn]);
@@ -14592,10 +14611,17 @@ Hard requirements:
           mic:{sel:'.pf-mic', label:_sent(t('mic')), g:'#ff9ec0,#ff5a8a', c:'#ff9ec0', d:hasMicDraft, p:(<><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></>)},
           mfi:{sel:'[data-pf="mfi"]', label:_sent(t('imgMood')||'mood from image'), g:'#cdb2ff,#8c5cff', c:'#cdb2ff', d:hasMfiDraft, off:(!aiUsable || imgAiBusy), p:(<><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></>)},
         };
-        const ORDER = ['music','image','mood','compose','mic','mfi'];
+        const ORDER = ['music','image','mfi','mood','compose','mic'];
         const _tap = (k)=>{ const el=document.querySelector(SRC[k].sel); if(el && !el.disabled) el.click(); };
-        const _canPlay = _smp ? !_anyDraft : !!SRC[kind].d;
-        const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } _tap(kind); };
+        // after the app was closed there is no draft: the card brings its piece back itself (built-in piece / picture, a mood)
+        const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
+        const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
+        const _replay = ()=>{
+          if(_rp.s==='midi'){ loadSampleMidi(_rp.i); setForceSetup(false); return; }
+          if(_rp.s==='img'){ loadSampleImage(_rp.i); setForceSetup(false); return; }
+          if(_rp.s==='mood' && MOODS.includes(_rp.m)){ const m=_rp.m, sg=findSong(m); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(m); setVarySource(sg); setImgMoodThumb(null); setMoodFromImg(false); setLoadedSource(null); setMoodContext(true); setSongQ(m); stopAll(); aiMidi(m); }
+        };
+        const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } if(!SRC[kind].d && _rp){ _replay(); return; } _tap(kind); };
         const _up = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
         const ttl = _smp ? SAMPLE_MIDI_NAME : _up(H.t || '');
         const line = _smp ? [_up(t('harmony')), 'Gustav Klimt × Hilma af Klint', '✦ '+_sigT('label')].join('  ·  ') : (H.l || '');
@@ -14603,7 +14629,7 @@ Hard requirements:
         const K = SRC[kind];
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 100px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
-            <style>{STUDIO_HOME_CSS}</style>
+            <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
             <img className="pf-sh-bg" src={H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className="pf-sh-word" aria-hidden="true">Paintiano</div>
@@ -16427,8 +16453,11 @@ Hard requirements:
         })()}
         {/* NEW — the sources; the painting stays behind as a draft */}
         {stNew && (()=>{
-          const _sv = (d)=>(<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
+          const _sv = (d)=>(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
           const _lk = recording || working;
+          const _cur = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : (viewMode==='image') ? 'image' : (chords.length ? 'music' : '');
+          const _dr = {music:hasMusicDraft, image:hasImageDraft, mfi:hasMfiDraft, mood:hasMoodDraft, compose:hasComposeDraft, mic:hasMicDraft};
+          const _hc = {music:'#9ad2ff', image:'#ffb08a', mfi:'#cdb2ff', mood:'#f0d78a', compose:'#8fd6a4', mic:'#ff9ec0'};
           const tiles = [
             {k:'music', label:_sent(t('music')!=='music'?t('music'):'Music'), bg:'linear-gradient(135deg,#7ab3ff,#3f7bff)', ic:_sv(<><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></>), ok:!_lk, go:()=>_stNewSrc('sound')},
             {k:'image', label:_sent(t('image').replace(/[^\p{L}]/gu,'')), bg:'linear-gradient(135deg,#ffb08a,#ff7a3d)', ic:_sv(<><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></>), ok:!_lk, go:()=>_stNewSrc('image')},
@@ -16443,12 +16472,13 @@ Hard requirements:
             <div role="dialog" aria-label={_stT('nu')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:12}}>
               <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 2px'}}/>
               <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)'}}>{_stT('nu')}</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-                {tiles.map(r=>(
-                  <button key={r.k} type="button" className="pf-st-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,minHeight:96,padding:'12px 6px',borderRadius:18,border:'1px solid rgba(242,238,232,.09)',background:'rgba(255,255,255,.04)',color:'#f2eee8',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,lineHeight:1.25,textAlign:'center',cursor:r.ok?'pointer':'default',opacity:r.ok?1:.4,transition:'transform .12s'}}>
-                    <span style={{width:42,height:42,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:r.bg,color:'#0e0b16',flexShrink:0}}>{r.ic}</span>
+              <style>{STUDIO_SRC_CSS}</style>
+              <div className="pf-sh-grid" style={{maxWidth:'none',margin:'4px 0 6px'}}>
+                {tiles.map(r=>{ const on = r.k===_cur; return (
+                  <button key={r.k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}>
+                    <span className="pf-sh-ic" style={{background:r.bg,...(on?{}:{boxShadow:'0 0 0 3px '+_hc[r.k]+'2e'})}}>{r.ic}{_dr[r.k] && !on && (<span className="pf-sh-dot" aria-hidden="true"/>)}</span>
                     <span>{r.label}</span>
-                  </button>))}
+                  </button>); })}
               </div>
               <div style={{display:'flex',justifyContent:'center',gap:10,flexWrap:'wrap'}}>
                 <button type="button" onClick={_stHome} disabled={recording} style={_chip}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>{_stT('home')}</button>
