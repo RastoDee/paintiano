@@ -16480,7 +16480,7 @@ Hard requirements:
                   {_orig && (<button type="button" onClick={()=>_pk('.pf-tx-micre')} aria-label="restart from start" style={_chip}>↺</button>)}
                 </div>)}
               <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.08em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em'}}>
-                {micActive ? (voice ? t('micVoiceHint') : t('micMusicHint')) : take ? '' : t('micTapToRecord')}
+                {take ? '' : (voice ? t('micVoiceHint') : t('micMusicHint'))}
               </div>
               {micListening && (<div style={{fontSize:(.46*effScale)+'rem',letterSpacing:'.06em',color:'rgba(100,200,255,.45)',textAlign:'center',lineHeight:1.5,maxWidth:340}}>🔊 {t('listenHint')}</div>)}
             </div>);

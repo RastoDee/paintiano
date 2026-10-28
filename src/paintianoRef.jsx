@@ -35821,7 +35821,7 @@ Hard requirements:
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
           rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
         }
-      } else if((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive){
+      } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         if(!randomMode && style===null && !jamOn){
           const pool = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k) || isDailyArtist(k)) && !styleIsLocked(k));
           if(pool.length){ setStyleTo(pool[(Math.random()*pool.length)|0]); rolled = true; }
@@ -37561,6 +37561,15 @@ Hard requirements:
                       style={{..._chipBase,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest)}{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
                   );
                 })}
+                {studioFs && (
+                  <button key="ai" disabled={busy||working} onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }}
+                    title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} aria-pressed={_aiOn}
+                    className={_aiOn?'pf-artist pf-artist-on':'pf-artist'} style={{..._chipBase,cursor:(busy||working)?'default':'pointer',opacity:(working||(busy&&!_aiOn))?.5:1,...chipStyle(_aiOn)}}>
+                    <span className="pf-sk-face pf-sk-glyph" aria-hidden="true" style={{background:'linear-gradient(135deg,#c9a2ff,#7a3ff0)',color:'#fff',fontSize:20,boxShadow:_aiOn?undefined:'0 0 16px rgba(160,110,255,.45)'}}>✦</span>
+                    {(proStatus!=='pro_ai') && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',pointerEvents:'none'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></span>)}
+                    AI
+                  </button>
+                )}
               </div>
               {crOn && composerDice && !_aiOn && (
                 <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginTop:2,padding:'0 6px',fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(220,180,90,.9)',lineHeight:1.45}}>
@@ -37590,6 +37599,7 @@ Hard requirements:
                   })}
                 </div>
               </>)}
+              {!studioFs && (<>
               {/* AI COMPOSE — a piece of its own written from the picture (Pro AI): a card under the grid, lit while it is the piece */}
               <button onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }} disabled={busy||working}
                 title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} aria-pressed={_aiOn}
@@ -37606,6 +37616,7 @@ Hard requirements:
                   ? (<span style={{flexShrink:0,pointerEvents:'none'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></span>)
                   : (<span style={{flexShrink:0,fontSize:(.42*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',whiteSpace:'nowrap',color:'rgba(228,178,255,.98)',border:'1px solid rgba(220,150,255,.6)',borderRadius:9,padding:'2px 7px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free AI try')}</span>))}
               </button>
+              </>)}
               </>);
             })()}
           </div>
@@ -37881,8 +37892,14 @@ Hard requirements:
           {studioFs && (()=>{ const _img=(loadedSource==='image'&&!moodFromImg); const _ref=_img?seeBtnRef:hearBtnRef; const _dis=!_ref.current || _ref.current.disabled;
             return (<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10,paddingTop:2}}>
               <button type="button" onClick={()=>{ if(_ref.current && !_ref.current.disabled){ setStripOpen(false); _ref.current.click(); } }} disabled={_dis}
-                style={{padding:'8px 16px',borderRadius:20,fontFamily:'inherit',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.14em',textTransform:'uppercase',cursor:_dis?'default':'pointer',background:'rgba(28,24,40,.5)',
-                  border:'1px solid '+(_img?'rgba(91,156,246,.55)':'rgba(255,160,110,.5)'),color:_img?'#7ab3ff':'#ffb08a',opacity:_dis?.4:1}}>{_img?(t('seeMusic')||'See music'):(t('hearImage')||'Hear image')}</button>
+                style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,background:'none',border:0,padding:'4px 0 0',fontFamily:'inherit',color:'rgba(242,238,232,.92)',cursor:_dis?'default':'pointer',opacity:_dis?.45:1,WebkitTapHighlightColor:'transparent'}}>
+                <span style={{width:54,height:54,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',background:_img?'linear-gradient(135deg,#7ab3ff,#3f7bff)':'linear-gradient(135deg,#ffb08a,#ff5f8f)',boxShadow:_dis?'none':(_img?'0 0 22px rgba(90,150,255,.45)':'0 0 22px rgba(255,120,130,.45)')}}>
+                  {_img ? (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>)
+                    : (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 15v-3a9 9 0 0 1 18 0v3"/><rect x="2.5" y="14" width="5" height="7" rx="2"/><rect x="16.5" y="14" width="5" height="7" rx="2"/></svg>)}
+                </span>
+                <span style={{fontSize:9,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase'}}>{_img?(t('seeMusic')||'See music'):(t('hearImage')||'Hear image')}</span>
+                {_dis && (<span style={{fontSize:(.46*effScale)+'rem',color:'rgba(242,238,232,.55)'}}>{_img?(t('seeMusicDis')||'Finish the painting first'):(t('hearImageDis')||'Finish the painting first')}</span>)}
+              </button>
               <button type="button" onClick={()=>setStripOpen(false)} aria-label="close" style={{width:60,height:18,display:'flex',alignItems:'center',justifyContent:'center',background:'none',border:0,cursor:'pointer',padding:0}}><span style={{display:'block',width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.3)'}}/></button>
             </div>); })()}
         </div>
@@ -38415,7 +38432,7 @@ Hard requirements:
             {_live && !_img && (<button type="button" onClick={_go(()=>{ if(_exportOk) setShowSizePicker(true); }, true)} disabled={!_exportOk} aria-label={t('save')} style={{..._it,opacity:_exportOk?1:.4}}><span style={_ic({color:PF.gold2})}><TxIcon n="save" s={17}/></span>{t('save')}</button>)}
           </div>
           {_live && (<div style={_rail('left', _l)}>
-            <button type="button" onClick={_go(()=>{ if(backBtnRef.current) backBtnRef.current.click(); })} style={_it}><span style={_ic({fontSize:20})}>←</span>{_stT('bk')}</button>
+            <button type="button" onClick={_go(()=>{ _stShow(null); setStNew(true); })} disabled={recording} style={{..._it,opacity:recording?.4:1}}><span style={_ic({width:52,height:52,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',fontSize:28,fontWeight:600,boxShadow:'0 0 22px rgba(77,227,160,.4)'})}>+</span>{_stT('nu')}</button>
             <button type="button" onClick={_go(()=>{ setStripOpen(true); })} style={_it}><span style={_ic()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor"/><path d="M12 21c-2 0-2.5-2-1-3s4-1 4-3-2-3-2-3"/></svg></span>{_stT('look')}</button>
             <button type="button" onClick={_go(()=>{ if(clearBtnRef.current) clearBtnRef.current.click(); })} disabled={recording} style={{..._it,opacity:recording?.4:1}}><span style={_ic(clearArmed?{background:'rgba(220,70,90,.85)',border:'1px solid transparent'}:{color:'rgba(255,150,150,.95)'})}>✕</span>{clearArmed ? t('clearConfirm') : _stT('clr')}</button>
           </div>)}
