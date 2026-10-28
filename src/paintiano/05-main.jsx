@@ -4115,6 +4115,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [basicMode, setBasicMode] = useState(()=>{
     try{
       if(qrPieceRef.current!=null) return true; // QR poster scan → always land on the Lite Play disc
+      if(!_proReadCache()) return false;          // Free: no Lite — the Studio on a phone, the full app on a desktop
       if(!localStorage.getItem('paintiano_onboarded')) return true; // first visit → Basic
       return localStorage.getItem('paintiano_basic_mode')!=='0';
     }catch(_){ return true; }
@@ -13398,7 +13399,11 @@ Hard requirements:
   // (♥ · play · sound · save; Atmo · Melody on a picture) with the caption on top, double tap = the left rail
   // (New · Look · Favorites · Setup). Classic = the screen as before. Desktop and Lite are not touched.
   const liteChipRef = useRef(null);   // the Lite / Advanced chip — the Studio is Advanced, so picking it from Lite flips the chip
-  const [viewPref, setViewPref] = useState(()=>{ try{ return localStorage.getItem('paintiano_view')==='studio' ? 'studio' : 'classic'; }catch(_){ return 'classic'; } });
+  const [viewPref, setViewPref] = useState(()=>{ try{ if(!_proReadCache()) return 'studio'; return localStorage.getItem('paintiano_view')==='studio' ? 'studio' : 'classic'; }catch(_){ return 'classic'; } });
+  // Free (also a licence that lapsed): the Studio, never Classic or Lite. Written down, so an upgrade keeps the Studio
+  // until the user picks Classic. A QR poster scan keeps its Lite disc for that visit.
+  useEffect(()=>{ if(proStatus!=='free') return; setViewPref('studio'); try{ localStorage.setItem('paintiano_view','studio'); }catch(_){}
+    if(basicModeRef.current && qrPieceRef.current==null) setBasicMode(false); },[proStatus]);
   const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
   const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
   // Compose and Mic are "live": the keys (or the Mic's stop) stay at the bottom, both rails stay out, a tap is the canvas's own.
@@ -14412,7 +14417,7 @@ Hard requirements:
         {/* ── LITE / ADVANCED mode chip — same height as the Aa/Lang chip,
             width auto-fits the active mode's label. Tapping toggles the mode.
             Lite = white chip + white text; Advanced = gold chip + gold text. */}
-        {!studioOn && (()=>{
+        {!studioOn && isPro && (()=>{
           const adv = !basicMode;
           const accent = adv ? '220,180,90' : '230,205,140';   // full gold | lite gold
           const label = adv ? ts('advancedMode','Advanced') : ts('basicMode','Lite');
@@ -18643,7 +18648,7 @@ Hard requirements:
                 </div>
               )}
               {/* View — Studio (the painting full screen, controls on a tap) or Classic (the screen as before). Phone, Advanced. */}
-              {!isDesktop && (
+              {!isDesktop && isPro && (
               <div className="pf-setup-view" style={{border:'1px solid rgba(255,255,255,.07)',borderRadius:20,background:'rgba(255,255,255,.045)',padding:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div aria-hidden="true" style={{flex:'0 0 auto',width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',background:'linear-gradient(135deg,#4de3a0,#2f9fc9)'}}>
