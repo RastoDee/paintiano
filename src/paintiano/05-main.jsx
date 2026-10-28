@@ -13419,16 +13419,17 @@ Hard requirements:
     return ()=>{ try{ ro && ro.disconnect(); }catch(_){} };
   },[studioLive, composeMode]);
   useEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);
-  const [stSide, setStSide] = useState(null);            // null | 'right' | 'left' — which rail is out
+  const [stSide, setStSide] = useState(null);            // null | 'right' | 'left' | 'top' — which rail is out
+  const [stInfo, setStInfo] = useState(false);          // the rail came out by itself on a fresh piece: the top line comes along
   const stSideRef = useRef(null); useEffect(()=>{ stSideRef.current = stSide; },[stSide]);
   const stIdleRef = useRef(null);
   const stEmptyRef = useRef(false);   // nothing on the canvas: the left rail stays out (the way on)
-  const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; setStSide(stEmptyRef.current ? 'left' : null); }, 4000); };
-  const _stShow = (w)=>{ if(!w && stEmptyRef.current) w='left'; setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
+  const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; setStInfo(false); setStSide(stEmptyRef.current ? 'left' : null); }, 4000); };
+  const _stShow = (w)=>{ if(!w && stEmptyRef.current) w='left'; setStInfo(false); setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
   useEffect(()=>{ if(!studioFs) _stShow(null); },[studioFs]);
   // a piece that has not played yet (a song, a mood): the right rail with play stays out until it plays or a tap hides it
   const _stFresh = studioFs && !studioLive && chords.length>0 && disp===0 && !playing && !anim && !demoReelOn;
-  useEffect(()=>{ if(_stFresh){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStSide('right'); } },[_stFresh]);
+  useEffect(()=>{ if(_stFresh){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStInfo(true); setStSide('right'); } },[_stFresh]);
   // STUDIO SKIN — each painter's face in the look sheet is THIS song painted by them (_favPaint: the same steps as the
   // canvas), a small picture made one at a time in the background while the sheet is open, kept for the song and palette.
   const [skinThumbs, setSkinThumbs] = useState({});
@@ -13889,7 +13890,7 @@ Hard requirements:
   const _stDoneRef = useRef(false);
   useEffect(()=>{
     const was=_stDoneRef.current; _stDoneRef.current=_stDone;
-    if(_stDone && !was){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStSide('right'); }
+    if(_stDone && !was){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStInfo(false); setStSide('right'); }
     else if(!_stDone && was && stSideRef.current==='right' && !stIdleRef.current) _stArm();
   },[_stDone]);
   const stVidRecRef = useRef(null), stVidRafRef = useRef(0), stVidLoopRef = useRef(null), stVidLockRef = useRef(null), stVidTextRef = useRef({title:'', line:''});
@@ -16463,7 +16464,7 @@ Hard requirements:
         const _live = studioLive;
         const _vr = stVidRec || recording;   // a video or the picture's sound is being recorded: the rails rest
         const _r = !_vr && stSide==='right', _l = !_vr && stSide==='left';
-        const _cap = !_vr && stSide==='top';
+        const _cap = !_vr && (stSide==='top' || (stSide==='right' && stInfo));
         const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording);
         const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg));
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '');
