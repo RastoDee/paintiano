@@ -13890,7 +13890,7 @@ Hard requirements:
   const _stDoneRef = useRef(false);
   useEffect(()=>{
     const was=_stDoneRef.current; _stDoneRef.current=_stDone;
-    if(_stDone && !was){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStInfo(false); setStSide('right'); }
+    if(_stDone && !was){ if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } setStInfo(true); setStSide('right'); }
     else if(!_stDone && was && stSideRef.current==='right' && !stIdleRef.current) _stArm();
   },[_stDone]);
   const stVidRecRef = useRef(null), stVidRafRef = useRef(0), stVidLoopRef = useRef(null), stVidLockRef = useRef(null), stVidTextRef = useRef({title:'', line:''});
