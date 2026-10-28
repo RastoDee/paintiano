@@ -23691,6 +23691,18 @@ const ENSEMBLE_I18N = {
   zhTW:{title:'合奏',fusion:'融合',sub:'多位畫家融合為一，多位作曲家同台 Jam。',painters:'畫家',composers:'作曲家',fsTurns:'拼貼',fsNewP:'合成',fsNewC:'合成',howTo:'運作方式',fsNote:'收藏會保留作畫時的風格。',fsDrawn:'每次融合和 Jam 都會抽取風格',fsNew:'合成',fsTap:'標記位於名字前面。點按它，這次融合或 Jam 就會切換到另一種風格。',fsOnly:'每次融合和 Jam 都用所選風格',fsPick:'點按風格可開啟或關閉；兩種都開啟時隨機抽取。',cr:'Jam session',desc:'多位畫家雜交成一種新風格（融合），作曲家輪流接句（Jam session）。開啟後，每個 🔀 旁出現合奏按鈕 ◎；點按最多五位藝術家或作曲家——或與 🔀 1 / ALL 組合。開啟 🔀 時（畫家為 ALL），點按畫家或作曲家即可固定：他們保留，Next 在旁邊再抽 1–3 位。在 Lite 中，「給我驚喜」偶爾會奏出合奏。',pinHint:'已固定的畫家保留，「{next}」再加入 1–3 位。點按畫家即可固定或取消固定。',pinNone:'沒有固定的畫家：「{next}」會抽出全新的雜交。點按畫家即可固定。',pinFull:'已固定五位：「{next}」只更換他們的變體和調色盤。點按畫家即可取消固定。',cPinHint:'已固定的作曲家保留，「{next}」再加入 1–3 位。點按作曲家即可固定或取消固定。',cPinNone:'沒有固定的作曲家：「{next}」會安排一個全新的合奏。點按作曲家即可固定。',cPinFull:'已固定五位：取消固定一位，「{next}」才能請來其他人。'},
   ja:{title:'アンサンブル',fusion:'フュージョン',sub:'複数の画家をひとつのフュージョンに、複数の作曲家をひとつのジャムに。',painters:'画家',composers:'作曲家',fsTurns:'コラージュ',fsNewP:'合成',fsNewC:'合成',howTo:'仕組み',fsNote:'お気に入りは描かれたときの様式のまま残る。',fsDrawn:'フュージョンとジャムの様式は毎回抽選される',fsNew:'合成',fsTap:'マークは名前の前にある。タップすると、そのフュージョンやジャムがもう一方の様式に切り替わる。',fsOnly:'フュージョンとジャムはすべて選んだ様式になる',fsPick:'様式をタップしてオン・オフ。両方オンなら抽選。',cr:'Jam session',desc:'複数の画家を掛け合わせてひとつの新しい筆致に（フュージョン）、作曲家がフレーズを掛け合う（Jam session）。オンにすると各 🔀 の隣にアンサンブル・ボタン ◎が現れ、アーティストか作曲家を最大5人までタップできる——🔀 1 / ALL とも組み合わせられる。🔀 オン（画家は ALL）のとき、画家や作曲家をタップしてピン留めでき、残したまま Next が 1〜3 人を加えて抽選する。Lite では「おまかせ」がときどきアンサンブルを奏でる。',pinHint:'ピン留めした画家は残り、「{next}」でさらに 1〜3 人が加わる。画家をタップでピン留め／解除。',pinNone:'ピン留めなし：「{next}」でまったく新しい掛け合わせを抽選。画家をタップでピン留め。',pinFull:'5 人ピン留め：「{next}」は全員のバリエーションとパレットだけを変える。画家をタップで解除。',cPinHint:'ピン留めした作曲家は残り、「{next}」でさらに 1〜3 人が加わる。作曲家をタップでピン留め／解除。',cPinNone:'ピン留めなし：「{next}」でまったく新しいアンサンブルを抽選。作曲家をタップでピン留め。',cPinFull:'5 人ピン留め：1 人を解除すると「{next}」が他の作曲家を呼べる。'},
 };
+// Studio (Setup → View): the words of the full-screen studio and its Setup card.
+const STUDIO_I18N = {
+  EN:{title:'View',studio:'Studio',classic:'Classic',sub:'Studio: the painting fills the screen; the controls come when you want them. Classic: the screen as before.',gest:'Swipe up — next · down — look · tap — controls · double tap — menu',look:'Look',sound:'Sound',nu:'New',favs:'Favorites',setup:'Setup',c1:'Swipe up',c1s:'next painting',c2:'Swipe down',c2s:'pick a look',c3:'Tap',c3s:'play · save · ♥',c4:'Double tap',c4s:'new · favorites · setup',go:'Tap to start'},
+  SK:{title:'Zobrazenie',studio:'Štúdio',classic:'Klasika',sub:'Štúdio: maľba na celú obrazovku, ovládanie len keď ho chceš. Klasika: obrazovka ako doteraz.',gest:'Potiahni hore — ďalšia · dole — vzhľad · ťuk — ovládanie · dvakrát — menu',look:'Vzhľad',sound:'Zvuk',nu:'Nové',favs:'Obľúbené',setup:'Setup',c1:'Potiahni hore',c1s:'ďalšia maľba',c2:'Potiahni dole',c2s:'vyber vzhľad',c3:'Ťukni',c3s:'prehrať · uložiť · ♥',c4:'Ťukni dvakrát',c4s:'nové · obľúbené · setup',go:'Ťukni a začni'},
+  DE:{title:'Ansicht',studio:'Studio',classic:'Klassisch',sub:'Studio: das Bild füllt den Bildschirm, die Bedienung kommt, wenn du sie willst. Klassisch: der Bildschirm wie bisher.',gest:'Nach oben — nächstes · nach unten — Look · tippen — Bedienung · doppelt — Menü',look:'Look',sound:'Klang',nu:'Neu',favs:'Favoriten',setup:'Setup',c1:'Nach oben wischen',c1s:'nächstes Bild',c2:'Nach unten wischen',c2s:'Look wählen',c3:'Tippen',c3s:'abspielen · speichern · ♥',c4:'Doppelt tippen',c4s:'neu · Favoriten · Setup',go:'Tippen zum Start'},
+  FR:{title:'Affichage',studio:'Studio',classic:'Classique',sub:'Studio : la peinture remplit l’écran, les commandes viennent quand tu veux. Classique : l’écran habituel.',gest:'Vers le haut — suivante · vers le bas — style · toucher — commandes · deux fois — menu',look:'Style',sound:'Son',nu:'Nouveau',favs:'Favoris',setup:'Réglages',c1:'Glisser vers le haut',c1s:'peinture suivante',c2:'Glisser vers le bas',c2s:'choisir un style',c3:'Toucher',c3s:'lecture · enregistrer · ♥',c4:'Toucher deux fois',c4s:'nouveau · favoris · réglages',go:'Touchez pour commencer'},
+  ES:{title:'Vista',studio:'Estudio',classic:'Clásico',sub:'Estudio: la pintura llena la pantalla y los controles aparecen cuando quieres. Clásico: la pantalla de siempre.',gest:'Arriba — siguiente · abajo — aspecto · toque — controles · doble toque — menú',look:'Aspecto',sound:'Sonido',nu:'Nuevo',favs:'Favoritos',setup:'Ajustes',c1:'Desliza arriba',c1s:'siguiente pintura',c2:'Desliza abajo',c2s:'elige un aspecto',c3:'Toca',c3s:'reproducir · guardar · ♥',c4:'Toca dos veces',c4s:'nuevo · favoritos · ajustes',go:'Toca para empezar'},
+  PT:{title:'Vista',studio:'Estúdio',classic:'Clássico',sub:'Estúdio: a pintura ocupa o ecrã e os controlos aparecem quando quiser. Clássico: o ecrã de sempre.',gest:'Para cima — seguinte · para baixo — visual · toque — controlos · toque duplo — menu',look:'Visual',sound:'Som',nu:'Novo',favs:'Favoritos',setup:'Configurar',c1:'Deslize para cima',c1s:'pintura seguinte',c2:'Deslize para baixo',c2s:'escolha um visual',c3:'Toque',c3s:'tocar · guardar · ♥',c4:'Toque duas vezes',c4s:'novo · favoritos · configurar',go:'Toque para começar'},
+  zh:{title:'显示',studio:'工作室',classic:'经典',sub:'工作室：画作占满屏幕，需要时才出现控件。经典：原来的界面。',gest:'上滑 — 下一幅 · 下滑 — 外观 · 轻点 — 控件 · 双击 — 菜单',look:'外观',sound:'声音',nu:'新建',favs:'收藏',setup:'设置',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'选择外观',c3:'轻点',c3s:'播放 · 保存 · ♥',c4:'双击',c4s:'新建 · 收藏 · 设置',go:'轻点开始'},
+  zhTW:{title:'顯示',studio:'工作室',classic:'經典',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。經典：原來的介面。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 輕點 — 控制項 · 雙擊 — 選單',look:'外觀',sound:'聲音',nu:'新增',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c2:'下滑',c2s:'選擇外觀',c3:'輕點',c3s:'播放 · 儲存 · ♥',c4:'雙擊',c4s:'新增 · 收藏 · 設定',go:'輕點開始'},
+  ja:{title:'表示',studio:'スタジオ',classic:'クラシック',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。クラシック：これまでの画面。',gest:'上へ — 次の絵 · 下へ — 見た目 · タップ — 操作 · ダブルタップ — メニュー',look:'見た目',sound:'サウンド',nu:'新規',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c2:'下にスワイプ',c2s:'見た目を選ぶ',c3:'タップ',c3s:'再生 · 保存 · ♥',c4:'ダブルタップ',c4s:'新規 · お気に入り · 設定',go:'タップして開始'}
+};
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
   _setArtistSeed(seed); _resetCtxState(ctx);
   drawFusionOverlay(ctx, CW, CH, chords, lim, gc, seed, mode, ph, keys, !!noGround);
@@ -25057,6 +25069,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
   const STAGE_MAX = 5;
   const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
+  const _stT = (k)=>{ const d=STUDIO_I18N[lang]||STUDIO_I18N.EN; return d[k]!==undefined ? d[k] : STUDIO_I18N.EN[k]; };
   const _painterLabel = (k)=>{ if(!k||k==='mosaic') return t('mosaicStyle'); if(k==='notes') return t('notesStyle'); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
   const _compSep = ()=>{ try{ const J=globalThis.__COMP_JAM_STYLE; const ks=[imgComposer, ...composerStage].filter(Boolean).join(); return (J && J.sig===ks && J.style==='E') ? ' \u00d7 ' : ' \u2194 '; }catch(_){ return ' \u2194 '; } };   // E = one composer bred from them (×), A = they trade phrases (↔)
   const _stageNames = (kind)=> kind==='art'
@@ -35262,6 +35275,33 @@ Hard requirements:
     return ()=>{ document.body.style.overflow=prevOverflow; window.removeEventListener('keydown',onKey); };
   },[immersive]);
   useEffect(()=>{ if(!isActiveView && immersive) setImmersive(false); },[isActiveView,immersive]);
+  // ── STUDIO (Setup → View) ── On a phone in Advanced, a music or picture piece opens full screen and stays
+  // there: the painting alone. Swipe up = Next, swipe down = the look panel (from the top), tap = the right rail
+  // (♥ · play · sound · save; Atmo · Melody on a picture) with the caption on top, double tap = the left rail
+  // (New · Look · Favorites · Setup). Classic = the screen as before. Desktop and Lite are not touched.
+  const [viewPref, setViewPref] = useState(()=>{ try{ return localStorage.getItem('paintiano_view')==='studio' ? 'studio' : 'classic'; }catch(_){ return 'classic'; } });
+  const _setView = (v)=>{ setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
+  const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
+  const studioSrcOk = studioOn && isActiveView && chords.length>0 && !favView && !composeMode && !micActive && !micArmed && !moodContext && !demoReelOn
+    && (loadedSource==='midi' || loadedSource==='audio' || loadedSource==='score' || (loadedSource==='image' && !moodFromImg));
+  const studioFs = studioOn && immersive;
+  useEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);
+  const [stSide, setStSide] = useState(null);            // null | 'right' | 'left' — which rail is out
+  const stSideRef = useRef(null); useEffect(()=>{ stSideRef.current = stSide; },[stSide]);
+  const stIdleRef = useRef(null);
+  const _stArm = ()=>{ if(stIdleRef.current) clearTimeout(stIdleRef.current); stIdleRef.current = setTimeout(()=>{ stIdleRef.current=null; setStSide(null); }, 4000); };
+  const _stShow = (w)=>{ setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
+  useEffect(()=>{ if(!studioFs) _stShow(null); },[studioFs]);
+  // one tap = the right rail, two taps within 300 ms = the left rail; a tap with a rail out puts it away
+  const stTapRef = useRef({ t:0, timer:null });
+  const _stTap = ()=>{ const r=stTapRef.current, now=Date.now(); clearTimeout(r.timer);
+    if(now-r.t<300){ r.t=0; _stShow(stSideRef.current==='left' ? null : 'left'); return; }
+    r.t=now; r.timer=setTimeout(()=>{ _stShow(stSideRef.current ? null : 'right'); }, 260); };
+  // the gestures card, once, the first time the studio opens
+  const [stCoach, setStCoach] = useState(false);
+  useEffect(()=>{ if(!studioFs) return; let seen=false; try{ seen = localStorage.getItem('paintiano_studio_coach')==='1'; }catch(_){} if(!seen) setStCoach(true); },[studioFs]);
+  const _stCoachDone = ()=>{ setStCoach(false); try{ localStorage.setItem('paintiano_studio_coach','1'); }catch(_){} };
+  const backBtnRef = useRef(null), hearBtnRef = useRef(null), seeBtnRef = useRef(null), stSheetRef = useRef(null);
   // ── Onboarding: mirror the main canvas into a mini canvas inside the
   // onboarding box during the 'playing' phase. We just drawImage from the
   // main <canvas> (which is doing the real painting) onto our mini one each
@@ -35449,6 +35489,25 @@ Hard requirements:
     if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
   };
 
+  // the caption under a folded look panel (and on top in the studio): palette · the painters / composers · ✦
+  const _capLines = ()=> (<>
+        {(loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+        )}
+        {/* Styles without an artist attribution — mosaic (no style selected) and
+            notes (bare grid with note labels) — get no "inspired by". One Million
+            Dollar Page goes through the artist branch above (it references a real
+            iconic web-art piece). Show the active colour mode • the style name so
+            the collapsed caption isn't blank. */}
+        {(loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+        )}
+        {loadedSource==='image' && !moodFromImg && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp',0,0,0,true) : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}{imgSig && imgPlayMode==='scan' && (<span onClick={_toggleImgSig} role="button" tabIndex={0} title={_sigT('tipImg')} aria-pressed={imgSigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:imgSigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+        )}
+  </>);
+  const _atmoTap = ()=>{ if(atmoBusy) return; if(aiLockedMode('atmomelody') && !atmoMood){ setPaywallReason('ai_trial'); return; } if((playingRef.current||holdPausedRef.current)&&melodyOnRef.current) _melodyTogglePlayingRef.current=true; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } };
+  const _melodyTap = ()=>{ if(melodyBusy) return; if(aiLockedMode('atmomelody') && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; melodyVoiceGenRef.current++; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; melodyVoiceGenRef.current++; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } };
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
@@ -36139,7 +36198,7 @@ Hard requirements:
             clean setup screen. clear() resets chords + mood + source, which
             flips isActiveView back to false. */}
         <div className="pf-controls-inner" style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:(composeMode||micActive)?4:8,position:'relative'}}>
-          <button onClick={()=>{if(demoReelOn){demoReelStop();return;}if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
+          <button ref={backBtnRef} onClick={()=>{if(demoReelOn){demoReelStop();return;}if(recording)return;if(clearArmRef.current){clearTimeout(clearArmRef.current);clearArmRef.current=null;}setClearArmed(false);
             // Special return path: if we entered Image mode via the Hear image
             // chip (canvas-from-music bridge), Back should restore the original
             // Music piece instead of going to Setup. Single-use: consume the
@@ -36270,7 +36329,7 @@ Hard requirements:
               paintings are not yet ready to scan. Pushed rightward via
               marginLeft:'auto' so it sits near + NEW MUSIC (modality pair). */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
-            <button onClick={()=>{
+            <button ref={hearBtnRef} onClick={()=>{
               if(_dis) return;
               // Point 4 — reuse an in-progress Image draft from a PRIOR Hear image
               // on this same Music piece. If the current Music signature matches
@@ -36336,7 +36395,7 @@ Hard requirements:
               its natural end (same _paintingDone gate as Hear image). Blue
               accent (music modality) mirrors Hear image's orange. */}
           {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isImage=(srcBtn==='image'); if(!_isImage) return null; const _paintingDone = chords.length>0 && playedOnce && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
-            <button onClick={()=>{
+            <button ref={seeBtnRef} onClick={()=>{
               if(_dis) return;
               // Point 4 — reuse an in-progress Music draft from a PRIOR See music
               // on this same Image. If the current Image scan signature matches
@@ -36494,23 +36553,12 @@ Hard requirements:
               top-bar (opens Setup modal). The cockpit is selection-only. */}
           <span style={{width:26,flexShrink:0}} aria-hidden="true" />
         </div>
-        {!stripOpen && (loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
-        )}
-        {/* Styles without an artist attribution — mosaic (no style selected) and
-            notes (bare grid with note labels) — get no "inspired by". One Million
-            Dollar Page goes through the artist branch above (it references a real
-            iconic web-art piece). Show the active colour mode • the style name so
-            the collapsed caption isn't blank. */}
-        {!stripOpen && (loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
-        )}
-        {!stripOpen && loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp',0,0,0,true) : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}{imgSig && imgPlayMode==='scan' && (<span onClick={_toggleImgSig} role="button" tabIndex={0} title={_sigT('tipImg')} aria-pressed={imgSigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:imgSigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
-        )}
+        {!stripOpen && _capLines()}
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
-        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14}}>
+        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(studioFs?{position:'fixed',top:0,left:0,right:0,zIndex:10005,maxHeight:'84dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'0 0 22px 22px',border:'none',borderBottom:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'calc(env(safe-area-inset-top, 0px) + 14px) 14px 10px',boxShadow:'0 18px 50px rgba(0,0,0,.6)'}:{})}}
+          onTouchStart={studioFs ? (e)=>{ const g=e.currentTarget, y=e.touches[0]&&e.touches[0].clientY; stSheetRef.current = (e.touches.length===1 && (y>g.getBoundingClientRect().bottom-70 || g.scrollTop+g.clientHeight>=g.scrollHeight-2)) ? y : null; } : undefined}
+          onTouchEnd={studioFs ? (e)=>{ const y0=stSheetRef.current; stSheetRef.current=null; const t=e.changedTouches&&e.changedTouches[0]; if(y0!=null && t && y0-t.clientY>60) setStripOpen(false); } : undefined}>
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Color */}
           {loadedSource==='image' && !moodFromImg ? (() => {
@@ -37124,6 +37172,13 @@ Hard requirements:
           </>
           )}
           </div>
+          {studioFs && (()=>{ const _img=(loadedSource==='image'&&!moodFromImg); const _ref=_img?seeBtnRef:hearBtnRef; const _dis=!_ref.current || _ref.current.disabled;
+            return (<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10,paddingTop:2}}>
+              <button type="button" onClick={()=>{ if(_ref.current && !_ref.current.disabled){ setStripOpen(false); _ref.current.click(); } }} disabled={_dis}
+                style={{padding:'8px 16px',borderRadius:20,fontFamily:'inherit',fontSize:(.5*effScale)+'rem',fontWeight:600,letterSpacing:'.14em',textTransform:'uppercase',cursor:_dis?'default':'pointer',background:'rgba(28,24,40,.5)',
+                  border:'1px solid '+(_img?'rgba(91,156,246,.55)':'rgba(255,160,110,.5)'),color:_img?'#7ab3ff':'#ffb08a',opacity:_dis?.4:1}}>{_img?(t('seeMusic')||'See music'):(t('hearImage')||'Hear image')}</button>
+              <button type="button" onClick={()=>setStripOpen(false)} aria-label="close" style={{width:60,height:18,display:'flex',alignItems:'center',justifyContent:'center',background:'none',border:0,cursor:'pointer',padding:0}}><span style={{display:'block',width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.3)'}}/></button>
+            </div>); })()}
         </div>
         )}
       </div>
@@ -37572,25 +37627,77 @@ Hard requirements:
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onClick={()=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onClick={()=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; if(studioFs){ _stTap(); return; } wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       {/* Exit-fullscreen button — rendered OUTSIDE the canvas wrap. The wrap uses
           transform:translate(-50%,-50%) in immersive, and a position:fixed child
           of a transformed element anchors to that element, not the viewport — so
           an exit button placed inside the wrap flew off-screen with tall images.
           Here it's a sibling of the wrap, truly fixed to the viewport corner,
           always reachable regardless of the painting's size or aspect ratio. */}
-      {immersive && (
+      {immersive && !studioOn && (
         <button onClick={(e)=>{e.stopPropagation(); setImmersive(false);}} aria-label="exit fullscreen" title="Exit fullscreen" style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:'max(12px, env(safe-area-inset-right))',zIndex:10002,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:'rgba(6,6,12,.6)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid rgba(201,168,76,.35)',color:'rgba(201,168,76,.9)',padding:0,WebkitTapHighlightColor:'transparent',transition:'opacity .4s ease'}}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
         </button>
       )}
       {/* ♥ Favorites in fullscreen — top-LEFT, the mirror of the exit button; on a
           finished painting only (favReady), filled gold while it is saved. */}
-      {immersive && favReadyAny && (
+      {immersive && !studioOn && favReadyAny && (
         <button onClick={(e)=>{ e.stopPropagation(); _favToggleAny(); }} aria-label={favHitAny ? _favT('del') : _favT('add')} title={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} className="pf-fav-btn" style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',left:'max(12px, env(safe-area-inset-left))',zIndex:10002,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:10,cursor:'pointer',background:favHitAny?'linear-gradient(180deg,#f0d78a,#c9a84c)':'rgba(6,6,12,.6)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',border:'1px solid '+(favHitAny?'rgba(240,215,138,.9)':'rgba(201,168,76,.35)'),color:favHitAny?'#1a1408':'rgba(201,168,76,.9)',padding:0,WebkitTapHighlightColor:'transparent',transition:'background .18s'}}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
       )}
+      {/* STUDIO — the painting alone. A tap brings the right rail and the caption, a double tap the left rail,
+          a swipe down the look panel from the top, a swipe up the next painting (see studioOn). */}
+      {studioFs && (()=>{
+        const _img = viewMode==='image' && !moodFromImg;
+        const _r = stSide==='right', _l = stSide==='left';
+        const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '');
+        const _pct = chords.length ? Math.min(100, Math.round(100*disp/chords.length)) : 0;
+        const _exportOk = !_img && chords.length>0 && disp>0 && !playing && !anim && !holdPaused && !demoReelOn && !micActive && !busy && !recording;
+        const _playDis = demoReelOn || recording || (!chords.length && !playing && !holdPaused);
+        const _ic = (x)=>({width:46,height:46,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(10,8,18,.62)',border:'1px solid rgba(242,238,232,.18)',color:'#f2eee8',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',...(x||{})});
+        const _it = {display:'flex',flexDirection:'column',alignItems:'center',gap:4,background:'none',border:0,padding:0,cursor:'pointer',fontFamily:'inherit',color:'rgba(242,238,232,.92)',fontSize:9,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',textShadow:'0 1px 6px rgba(0,0,0,.85)',WebkitTapHighlightColor:'transparent'};
+        const _rail = (side, on)=>({position:'fixed',[side]:'max(12px, env(safe-area-inset-'+side+', 0px))',top:'50%',zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:14,opacity:on?1:0,pointerEvents:on?'auto':'none',transform:'translate('+(on?0:(side==='right'?14:-14))+'px,-50%)',transition:'opacity .28s, transform .28s'});
+        const _go = (fn, keep)=>(e)=>{ e.stopPropagation(); try{ fn(); }catch(_){} if(keep) _stArm(); };
+        const _ai = {color:'#cdb2ff',border:'1px solid rgba(190,140,255,.55)'};
+        const _aiOn = {background:'linear-gradient(135deg,#c9a2ff,#8c5cff)',color:'#140a24',border:'1px solid transparent'};
+        return (<>
+          <div style={{position:'fixed',left:0,right:0,top:0,zIndex:10001,padding:'calc(env(safe-area-inset-top, 0px) + 14px) max(18px, env(safe-area-inset-right, 0px)) 14px max(18px, env(safe-area-inset-left, 0px))',background:'linear-gradient(180deg,rgba(6,6,12,.9),rgba(6,6,12,0))',opacity:_r?1:0,pointerEvents:_r?'auto':'none',transform:_r?'none':'translateY(-8px)',transition:'opacity .28s, transform .28s'}}>
+            <div style={{textAlign:'center',fontSize:(.62*effScale)+'rem',fontWeight:600,color:PF.cream,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',marginBottom:4}}>{_ttl}</div>
+            {_capLines()}
+            <div style={{marginTop:8,height:4,borderRadius:2,background:'rgba(255,255,255,.12)',overflow:'hidden'}}><div style={{height:'100%',width:_pct+'%',background:playing?'rgba(90,190,110,.75)':'rgba(201,168,76,.7)',transition:'width .3s linear'}}/></div>
+          </div>
+          <div style={_rail('right', _r)}>
+            {favReadyAny && (<button type="button" onClick={_go(_favToggleAny, true)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} style={_it}><span style={_ic({color:PF.gold2})}><svg width="19" height="19" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span></button>)}
+            <button type="button" onClick={_go(handlePauseClick, true)} disabled={_playDis} aria-label={playing&&!holdPaused?t('pause'):t('play')} style={{..._it,opacity:_playDis?.4:1}}><span style={_ic({width:58,height:58,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',boxShadow:'0 0 24px rgba(77,227,160,.45)'})}><TxIcon n={playing&&!holdPaused?'pause':'play'} s={22}/></span>{holdPaused?t('resume'):playing?t('pause'):t('play')}</button>
+            <button type="button" onClick={_go(()=>setMuted(m=>!m), true)} aria-label={muted?'unmute':'mute'} aria-pressed={!!muted} style={_it}><span style={_ic()}><TxIcon n={muted?'mute':'sound'} s={18}/></span></button>
+            {_img && originalImgUrl && imgPlayMode!=='compose' && (<>
+              <button type="button" onClick={_go(_atmoTap, true)} disabled={atmoBusy} aria-pressed={!!atmoOn} style={{..._it,opacity:atmoBusy?.5:1}}><span style={_ic(atmoOn?_aiOn:_ai)}><TxIcon n="sparkle" s={16}/></span>{(t('atmoLabel')||'atmo')+(atmoBusy?' …':'')}</button>
+              <button type="button" onClick={_go(_melodyTap, true)} disabled={melodyBusy} aria-pressed={!!melodyOn} style={{..._it,opacity:melodyBusy?.5:1}}><span style={_ic(melodyOn?_aiOn:_ai)}><TxIcon n="sparkle" s={16}/></span>{(t('melodyLabel')||'melody')+(melodyBusy?' …':'')}</button>
+            </>)}
+            {!_img && (<button type="button" onClick={_go(()=>{ if(_exportOk) setShowSizePicker(true); }, true)} disabled={!_exportOk} aria-label={t('save')} style={{..._it,opacity:_exportOk?1:.4}}><span style={_ic({color:PF.gold2})}><TxIcon n="save" s={17}/></span>{t('save')}</button>)}
+          </div>
+          <div style={_rail('left', _l)}>
+            <button type="button" onClick={_go(()=>{ _stShow(null); if(backBtnRef.current) backBtnRef.current.click(); })} style={_it}><span style={_ic({width:52,height:52,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',fontSize:28,fontWeight:600,boxShadow:'0 0 22px rgba(77,227,160,.4)'})}>+</span>{_stT('nu')}</button>
+            <button type="button" onClick={_go(()=>{ _stShow(null); setStripOpen(true); })} style={_it}><span style={_ic()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor"/><path d="M12 21c-2 0-2.5-2-1-3s4-1 4-3-2-3-2-3"/></svg></span>{_img ? _stT('sound') : _stT('look')}</button>
+            <button type="button" onClick={_go(()=>{ _stShow(null); _favOpen(); })} style={_it}><span style={_ic()}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>{_stT('favs')}</button>
+            <button type="button" onClick={_go(()=>{ _stShow(null); setSetupReturnTo(null); setShowSetupModal(true); })} style={_it}><span style={_ic()}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>{_stT('setup')}</button>
+          </div>
+          {stripOpen && (<div onClick={()=>setStripOpen(false)} onTouchEnd={(e)=>{ e.preventDefault(); setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'rgba(4,4,10,.5)',touchAction:'none'}}/>)}
+          {stCoach && !stripOpen && (
+            <div role="dialog" aria-label={_stT('title')} onClick={(e)=>{ e.stopPropagation(); _stCoachDone(); }} style={{position:'fixed',inset:0,zIndex:10006,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(4,4,10,.62)',cursor:'pointer'}}>
+              <div style={{display:'grid',gap:14,padding:'22px 24px',borderRadius:20,background:'rgba(10,8,18,.9)',border:'1px solid rgba(201,168,76,.35)',minWidth:250}}>
+                {[['↑','c1'],['↓','c2'],['●','c3'],['●●','c4']].map(([g,k])=>(
+                  <div key={k} style={{display:'flex',alignItems:'center',gap:14,fontSize:(.66*effScale)+'rem',color:'rgba(242,238,232,.92)'}}>
+                    <span style={{width:40,height:40,borderRadius:'50%',border:'1px solid rgba(201,168,76,.5)',display:'flex',alignItems:'center',justifyContent:'center',color:PF.gold2,fontSize:15,flexShrink:0}}>{g}</span>
+                    <span>{_stT(k)}<span style={{display:'block',fontSize:(.48*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(201,168,76,.8)'}}>{_stT(k+'s')}</span></span>
+                  </div>))}
+                <div style={{textAlign:'center',fontSize:(.48*effScale)+'rem',letterSpacing:'.24em',textTransform:'uppercase',color:'rgba(242,238,232,.45)',marginTop:4}}>{_stT('go')}</div>
+              </div>
+            </div>
+          )}
+        </>);
+      })()}
       {/* Top-of-screen artist attribution intentionally removed in Lite fullscreen:
           the swipe-up flash (below) is the sole feedback mechanism — nothing
           permanent sits on the painting or in the letterbox. */}
@@ -37598,7 +37705,7 @@ Hard requirements:
           tells the user what a swipe does in the current mode: Lite → Surprise,
           Advanced → Next. Only rendered when immersive; occupies the letterbox
           area where INSPIRED BY used to be. Swipe flash still fires below. */}
-      {immersive && isCoarse && ((viewMode!=='image' && !(basicMode&&liteImageMode) && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)))) || (basicMode && liteImageMode && chords.length>0) || (!basicMode && viewMode==='image' && composerDice && !!imgComposer && chords.length>0)) && (
+      {immersive && isCoarse && !studioOn && ((viewMode!=='image' && !(basicMode&&liteImageMode) && (basicMode || (randomMode && ((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)))) || (basicMode && liteImageMode && chords.length>0) || (!basicMode && viewMode==='image' && composerDice && !!imgComposer && chords.length>0)) && (
         <div style={{position:'fixed',top:'calc(env(safe-area-inset-top,0px) + 14px)',left:'50%',transform:'translateX(-50%)',zIndex:10000,pointerEvents:'none',fontSize:(.68*effScale)+'rem',letterSpacing:'.18em',textTransform:'uppercase',fontStyle:'italic',color:'rgba(201,168,76,.85)',whiteSpace:'nowrap'}}>
           {basicMode ? t('liteSwipeHint') : t('advSwipeHint')}
         </div>
@@ -37665,7 +37772,7 @@ Hard requirements:
           if(immersive){ if(e.touches.length===1) _holdStart(e.touches[0].clientX, e.touches[0].clientY); else _holdCancel(); }
           // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
           // is bound to the image — no next style to swipe to). Ignore multi-touch.
-          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
+          if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
           _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
@@ -37676,7 +37783,7 @@ Hard requirements:
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
           // trailing onClick after touchend doesn't also trigger.
-          if(!immersive || (viewMode==='image' && !(!basicMode&&composerDice&&imgComposer)) || (basicMode&&liteImageMode)) return;
+          if(!immersive || (viewMode==='image' && !studioFs && !(!basicMode&&composerDice&&imgComposer)) || (basicMode&&liteImageMode)) return;
           const s = _swipeStartRef.current; if(!s) return;
           const tt = e.touches[0]; if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x;
@@ -37687,7 +37794,7 @@ Hard requirements:
         onTouchCancel={()=>{ _holdEnd(); }}
         onTouchEnd={e=>{
           _holdEnd();
-          if(!immersive || (viewMode==='image' && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
+          if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
@@ -37704,6 +37811,8 @@ Hard requirements:
           // Show the inspired-by flash overlay in the centre of the canvas.
           if(dy < 0){
             _swipeWasGestureRef.current = true;
+            // Studio on a picture without the composers' 🔀: nothing to roll to
+            if(studioFs && viewMode==='image' && !(composerDice && imgComposer)) return;
             // Lite: cycle through Surprise shuffle. Advanced: perform the
             // same action the NEXT button used to do (dice roll).
             try {
@@ -37733,8 +37842,9 @@ Hard requirements:
               _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms);
             }, 0);
           }
-          // Swipe down: intentionally does nothing — exit stays on the X
-          // button only (per product decision).
+          // Swipe down: the look panel in the studio (from the top); elsewhere nothing —
+          // exit stays on the X button only (per product decision).
+          if(dy > 0 && studioFs){ _swipeWasGestureRef.current = true; _stShow(null); setStripOpen(true); }
         }}
         onClick={e=>{
           // Swipe-tap guard: if the touch ended as a recognised swipe we must
@@ -37747,6 +37857,8 @@ Hard requirements:
           }
           // the click that ends a press-and-hold: the info is up, nothing else to do
           if(immersive && _holdReleasedRef.current){ _holdReleasedRef.current=false; return; }
+          // Studio: a tap is the right rail, two taps the left one
+          if(studioFs){ if(demoReelOn){ demoReelStop(); return; } _stTap(); return; }
           // Any tap on the canvas reveals the fullscreen control and re-arms its
           // idle countdown (video-player pattern). Done before the demo-reel /
           // chord-select branches so it fires regardless of what the tap does.
@@ -37818,7 +37930,7 @@ Hard requirements:
             while playing too) and Save (when the piece is complete & still). Each
             appears by its own condition; they can show together. Fades with the
             other controls on idle. */}
-        {immersive && !basicMode && (()=>{
+        {immersive && !basicMode && !studioOn && (()=>{
           const exportReadyFs =
             (chords.length>0 && !playing && !anim && !holdPaused && disp>=chords.length &&
              !demoReelOn && !composeMode && !micActive && !micArmed && !busy && !recording && viewMode!=='image')
@@ -38810,11 +38922,11 @@ Hard requirements:
           );
         })()}
         {viewMode==='image'&&originalImgUrl&&!moodFromImg&&imgPlayMode!=='compose'&&(<>
-          <button onClick={()=>{ if(atmoBusy) return; if(aiLockedMode('atmomelody') && !atmoMood){ setPaywallReason('ai_trial'); return; } if((playingRef.current||holdPausedRef.current)&&melodyOnRef.current) _melodyTogglePlayingRef.current=true; if(atmoOn){ setAtmoOn(false); } else if(atmoMood){ setAtmoOn(true); } else { if(aiUsable) detectAtmosphere(); } }} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLockedMode('atmomelody'))} className="pf-lift" title={(aiLockedMode('atmomelody')&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLockedMode('atmomelody')))})}>
+          <button onClick={_atmoTap} disabled={atmoBusy||(!atmoMood&&!aiUsable&&!aiLockedMode('atmomelody'))} className="pf-lift" title={(aiLockedMode('atmomelody')&&!atmoMood)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!atmoMood&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('atmoLabel')||'atmosphere'))} style={txStyle('ai',{effScale,on:atmoOn,disabled:(atmoBusy||(!atmoMood&&!aiUsable&&!aiLockedMode('atmomelody')))})}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('atmoLabel')||'atmosphere')+(atmoBusy?' · …':(!atmoMood&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLockedMode('atmomelody') && !atmoMood && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
-          <button onClick={()=>{ if(melodyBusy) return; if(aiLockedMode('atmomelody') && !melodyData){ setPaywallReason('ai_trial'); return; } if(playingRef.current||holdPausedRef.current) _melodyTogglePlayingRef.current=true; if(melodyOn){ melodyOnRef.current=false; melodyVoiceGenRef.current++; setMelodyOn(false); } else if(melodyData){ melodyOnRef.current=true; melodyVoiceGenRef.current++; setMelodyOn(true); } else { if(aiUsable) toggleMelody(); } }} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLockedMode('atmomelody'))} className="pf-lift" title={(aiLockedMode('atmomelody')&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLockedMode('atmomelody')))})}>
+          <button onClick={_melodyTap} disabled={melodyBusy||(!melodyData&&!aiUsable&&!aiLockedMode('atmomelody'))} className="pf-lift" title={(aiLockedMode('atmomelody')&&!melodyData)?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):((!melodyData&&!aiUsable)?(t('aiOfflineHint')||'AI features need a connection'):(t('melodyHint')||'AI sings a melody from the picture, over the scan'))} style={txStyle('ai',{effScale,on:melodyOn,disabled:(melodyBusy||(!melodyData&&!aiUsable&&!aiLockedMode('atmomelody')))})}>
             <TxIcon n="sparkle" s={14*effScale}/><span>{(t('melodyLabel')||'melody')+(melodyBusy?' · …':(!melodyData&&!aiUsable)?' · '+(t('aiOffline')||'offline'):'')}</span>
             {aiLockedMode('atmomelody') && !melodyData && <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />}
           </button>
@@ -39444,6 +39556,25 @@ Hard requirements:
                   <span onClick={openDailyInfo} role="button" tabIndex={0} style={{cursor:'pointer'}}>✦ <b style={{color:'rgba(226,196,119,1)',fontWeight:600,textDecoration:'underline dotted',textUnderlineOffset:3}}>{ts('dailyTitle','Artist of the day')}:</b> {STYLE_INSPIRED[artistOfDay]||artistOfDay} · {COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</span>
                   <div style={{fontSize:(.5*effScale)+'rem',color:PF.muted,marginTop:2}}>{ts('dailyTomorrow','a new pair tomorrow · Pro has them all')}</div>
                 </div>
+              )}
+              {/* View — Studio (the painting full screen, controls on a tap) or Classic (the screen as before). Phone, Advanced. */}
+              {!isDesktop && !basicMode && (
+              <div className="pf-setup-view" style={{border:'1px solid rgba(201,168,76,.28)',borderRadius:22,background:'#13101b',padding:16}}>
+                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                  <div aria-hidden="true" style={{flex:'0 0 auto',width:40,height:40,borderRadius:'50%',border:'1px solid rgba(201,168,76,.4)',display:'flex',alignItems:'center',justifyContent:'center',color:'#dcb45a'}}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 6h6M9 18h6"/></svg>
+                  </div>
+                  <div style={{flex:'1 1 auto',minWidth:0}}>
+                    <div role="heading" aria-level={2} style={{..._hStyle,fontSize:_px(26),lineHeight:1.05}}>{_stT('title')}</div>
+                  </div>
+                </div>
+                <div role="group" style={{display:'flex',marginTop:12,border:'1px solid rgba(201,168,76,.45)',borderRadius:20,overflow:'hidden'}}>
+                  {['studio','classic'].map(v=>{ const on=viewPref===v; return (
+                    <button key={v} type="button" aria-pressed={on} onClick={()=>_setView(v)} style={{flex:1,padding:'8px 12px',border:0,fontFamily:'inherit',fontSize:_px(13),fontWeight:600,letterSpacing:'.04em',cursor:'pointer',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',color:on?'#0a0a12':'rgba(220,180,90,.9)'}}>{_stT(v)}</button>); })}
+                </div>
+                <div style={{marginTop:10,fontSize:_px(12.5),lineHeight:1.45,color:'rgba(230,222,196,.68)'}}>{_stT('sub')}</div>
+                <div style={{marginTop:6,fontSize:_px(12.5),lineHeight:1.45,color:'rgba(220,180,90,.85)'}}>{_stT('gest')}</div>
+              </div>
               )}
               {/* Inspired by — the painters' set. Order: the big choice first (artists), its colour settings
                   right below (palettes, tone), then the music side (composers), then Ensemble — which joins both. */}
