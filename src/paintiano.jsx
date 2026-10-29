@@ -23991,12 +23991,12 @@ const STUDIO_HOME_CSS = `
 .pf-sh-back{animation:pfShBack .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
 @keyframes pfShBack{from{transform:translateY(-110%) rotate(-8deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
 .pf-sh-fhint{position:absolute;left:-40px;right:-40px;top:calc(100% + 20px);text-align:center;font-size:calc(var(--pf-read-scale,1) * 10.5px);letter-spacing:.05em;color:rgba(242,238,232,.5);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pf-sh-flash{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2cqw;padding:8cqw;text-align:center;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.9);pointer-events:none;animation:pfShFlash 1.7s ease both;text-transform:uppercase;font-style:italic;letter-spacing:.12em}
-.pf-sh-flash small{font-style:normal;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 3.6cqw);letter-spacing:.3em;color:#f3e2b4}
-.pf-sh-flash em{font-style:normal;font-size:calc(var(--pf-read-scale,1) * 3.6cqw);opacity:.75;letter-spacing:.14em}
-.pf-sh-flash b{display:block;font-weight:700;font-size:calc(var(--pf-read-scale,1) * 7.5cqw);line-height:1.15}
-.pf-sh-flash b span{display:block;font-style:normal;font-size:.6em;opacity:.7}
-@keyframes pfShFlash{0%{opacity:0;transform:scale(.92)}12%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0}}
+.pf-sh-flash{position:absolute;left:0;right:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2cqw;padding:10cqw;text-align:center;color:#f7f1e6;pointer-events:none;animation:pfShFlash 1.9s ease both;background:radial-gradient(60% 34% at 50% 50%,rgba(6,5,10,.55),rgba(6,5,10,0) 100%)}
+.pf-sh-flash small{font-family:'Outfit',sans-serif;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 2.7cqw);letter-spacing:.32em;text-transform:uppercase;color:#f0d78a}
+.pf-sh-flash em{font-family:'Outfit',sans-serif;font-style:normal;font-weight:500;font-size:calc(var(--pf-read-scale,1) * 2.6cqw);letter-spacing:.3em;text-transform:uppercase;opacity:.7}
+.pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 6.4cqw);line-height:1.12;letter-spacing:.01em;text-shadow:0 2px 16px rgba(0,0,0,.85)}
+.pf-sh-flash b span{display:block;font-family:'Outfit',sans-serif;font-style:normal;font-weight:400;font-size:.5em;opacity:.6;margin:.2em 0}
+@keyframes pfShFlash{0%{opacity:0;transform:translateY(6px)}14%{opacity:1;transform:none}72%{opacity:1}100%{opacity:0}}
 .pf-sh-heart{position:absolute;left:50%;top:45%;z-index:4;font-size:64px;line-height:1;color:#ff4d7d;transform:translate(-50%,-50%);animation:pfShHeartPop .9s ease forwards;pointer-events:none;text-shadow:0 6px 24px rgba(255,60,120,.5)}
 @keyframes pfShHeartPop{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}25%{transform:translate(-50%,-50%) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
 @keyframes pfShFloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-6px) rotate(-1.5deg)}}
@@ -24828,6 +24828,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
+  const [feedHiRes, setFeedHiRes] = useState(false); // the Studio home feed paints on the card: the same 2× backing as full screen, so the card is sharp
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
   // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
   // Touch tracking for the vertical swipe gesture on the immersive canvas.
@@ -27033,7 +27034,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // ~900px buffer. SS=1 everywhere else → normal & mobile rendering byte-for-byte
     // unchanged. (immersive is declared early, near viewMode, so reading it here is
     // safe — reading it before its declaration was a TDZ crash = black screen.)
-    const SS=(immersive && viewMode==='paint')?2:1;
+    const SS=((immersive || feedHiRes) && viewMode==='paint')?2:1;
     const _bw=Math.max(1,Math.round(CW*SS)), _bh=Math.max(1,Math.round(CH*SS));
     if(cv.width!==_bw) cv.width=_bw;
     if(cv.height!==_bh) cv.height=_bh;
@@ -27487,7 +27488,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage,fuRoll,fuStyleNow]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,feedHiRes,painterStage,fuRoll,fuStyleNow]);
 
   // ── FAVORITES (♥) ───────────────────────────────────────────────────────────
   // ♥ at the top left of a FINISHED painting saves its address (favAdd in
@@ -34744,7 +34745,7 @@ Hard requirements:
   // the JSX-set backing and the effect's transform agree (keeping the backing in
   // JSX, consistent every render, avoids the black-screen window from setting it
   // only inside the effect).
-  const _ssF=(immersive && viewMode==='paint')?2:1;
+  const _ssF=((immersive || feedHiRes) && viewMode==='paint')?2:1;
   const pct=(info||chords.length)?Math.round(disp/Math.max(1,chords.length)*100):null;
   // Pre-build a Set so each of the 88 white keys can do O(1) `.has()`
   // instead of pending.includes() which would be O(88 * len(pending)).
@@ -36252,6 +36253,7 @@ Hard requirements:
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
   const [feedHeart, setFeedHeart] = useState(0);
+  const [feedBg, setFeedBg] = useState(null);   // the blurred light behind the card, from the painting as it grows
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
   const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
   // the painting on the canvas, small, for a card that is left
@@ -36284,7 +36286,7 @@ Hard requirements:
     loadSampleMidi(piece, {noSig:true});
     feedPieceRef.current = true;
     _feedApply(sel);
-    setFeedLoaded(piece);
+    setFeedLoaded(piece); setFeedHiRes(true);
     feedStartRef.current = {t:Date.now(), title:_FEED_NAMES[piece]};
   };
   // the next look: the fixed opening first, then Lite's own shuffle (a painter × variant, a fusion now and then)
@@ -36302,7 +36304,7 @@ Hard requirements:
   // the feed's piece leaves the player (the cards keep their pictures); your painter and palette come back
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
     setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode); setOneMMode(L.oneMMode); };
-  const _feedStop = ()=>{ if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); feedStartRef.current=null; };
+  const _feedStop = ()=>{ if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return; _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
@@ -36347,7 +36349,7 @@ Hard requirements:
     _stBuzz(8);
   };
   // a tap on a playing card: full screen — it plays on, and from now on it is your painting
-  const _feedOpen = ()=>{ feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
+  const _feedOpen = ()=>{ feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
@@ -36361,7 +36363,8 @@ Hard requirements:
   useEffect(()=>{
     if(!_feedLiveOn) return;
     _feedDraw();
-    const iv=setInterval(_feedDraw, 110);
+    let n=0;
+    const iv=setInterval(()=>{ _feedDraw(); if(++n%24===1){ try{ const s=canvasRef.current; if(s && s.width){ const c=document.createElement('canvas'); c.width=96; c.height=Math.max(1, Math.round(96*s.height/s.width)); c.getContext('2d').drawImage(s,0,0,c.width,c.height); setFeedBg(c.toDataURL('image/jpeg',0.7)); } }catch(_){} } }, 110);
     return ()=>clearInterval(iv);
   },[_feedLiveOn, feedAt]);
   useEffect(()=>{ if(!feedFlash) return; const tm=setTimeout(()=>setFeedFlash(0), 1700); return ()=>clearTimeout(tm); },[feedFlash]);
@@ -37296,7 +37299,7 @@ Hard requirements:
         // the look's name over the card, for a moment (Lite's flash): the Mosaic, a painter, ✦ Signature, a fusion
         const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash) return null; const sv=(style!==null ? [style] : []).concat(painterStage).map(k=>STYLE_INSPIRED[k]||k);
           if(sigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:sv};
-          if(style===null) return {h:'', by:'', n:[notesMode ? t('notesStyle') : t('liteMosaicStyle')]};
+          if(style===null) return {h:'', by:'', n:[_fUp(String(notesMode ? t('notesStyle') : t('liteMosaicStyle')).toLowerCase())]};
           if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
@@ -37318,8 +37321,8 @@ Hard requirements:
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
             {/* the feed's piece paints here (off screen) — the card mirrors it; full screen takes over the real stage */}
-            {!isActiveView && feedLoaded && (<canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} aria-hidden="true" style={{position:'absolute',left:-99999,top:0,width:CW,height:CH,opacity:0,pointerEvents:'none'}}/>)}
-            <img className="pf-sh-bg" src={(FC && FC.u) || H.u} alt="" aria-hidden="true"/>
+            {!isActiveView && feedLoaded!==null && (<canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} aria-hidden="true" style={{position:'absolute',left:-99999,top:0,width:CW,height:CH,opacity:0,pointerEvents:'none'}}/>)}
+            <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className="pf-sh-stage">
               <div className="pf-sh-card" onTouchStart={_fTS} onTouchEnd={_fTE}>
@@ -37328,7 +37331,6 @@ Hard requirements:
                 {FC ? (
                 <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : 'pf-sh-in')}>
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
-                  <span className="pf-sh-chip" style={{color:'#f0d78a'}}>✦ {_stT('feedChip')}</span>
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
                   {_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true">{_fFlash.h && (<small>{_fFlash.h}</small>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>×</span>)}{x}</b>))}</div>)}
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
