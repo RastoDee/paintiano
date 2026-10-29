@@ -36440,6 +36440,7 @@ Hard requirements:
     setFeedAt(Math.min(10, feedAt+2)-1);
     try{ Tone.getDestination().volume.rampTo(-48, 0.09); }catch(_){}
     setTimeout(()=>{ _feedLoad(piece, kind==='img' ? {img:true} : {sig:true}, kind); }, 100);
+    setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1) v.rampTo(0, 0.2); }catch(_){} }, 2600);   // never left quiet
     _feedFlashNow(); _feedHintBump(); _stBuzz(8);
   };
   const _feedDown = ()=>{
