@@ -1805,9 +1805,9 @@ const STUDIO_HOME_CSS = `
 .pf-sh-inl{animation:pfShInL .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}.pf-sh-inr{animation:pfShInR .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}
 @keyframes pfShInL{from{transform:translateX(60%) rotate(4deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
 @keyframes pfShInR{from{transform:translateX(-60%) rotate(-6deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
-.pf-sh-bumpl{animation:pfShBumpL .3s ease-out!important}.pf-sh-bumpr{animation:pfShBumpR .3s ease-out!important}
-@keyframes pfShBumpL{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(-14px) rotate(-2.5deg)}}
-@keyframes pfShBumpR{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(14px) rotate(-.5deg)}}
+.pf-sh-bumpl{animation:pfShBumpL .24s ease-out!important}.pf-sh-bumpr{animation:pfShBumpR .24s ease-out!important}
+@keyframes pfShBumpL{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(-5px) rotate(-1.8deg)}}
+@keyframes pfShBumpR{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(5px) rotate(-1.2deg)}}
 .pf-st-tabs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:22px;align-items:center}
 .pf-st-tabs button{position:relative;border:0;background:none;padding:6px 2px 9px;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:22px;line-height:1;color:rgba(240,192,64,.36);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .25s}
 .pf-st-tabs button.on{color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6)}
@@ -14235,7 +14235,7 @@ Hard requirements:
     if(feedFly) return;
     const cur = feedAt>=0 ? feedCards[feedAt] : null;
     const curK = cur ? cur.kind : _feedKind();
-    if(curK===kind){ const d = kind==='img' ? 'l' : 'r'; setFeedBump(d); setTimeout(()=>setFeedBump(null), 320); _stBuzz(4); return; }
+    if(curK===kind){ const d = kind==='img' ? 'l' : 'r'; setFeedBump(d); setTimeout(()=>setFeedBump(null), 260); return; }
     const dir = kind==='img' ? 'l' : 'r';
     setFeedIntro(null); feedStepsRef.current=[];
     if(!cur){ setFeedFly({k:Date.now(), dir}); setTimeout(()=>setFeedFly(null), 340); _feedStart(kind); _stBuzz(8); return; }
@@ -14826,12 +14826,10 @@ Hard requirements:
           );
         })()}
         </div>{/* ── end left group (hamburger + mode chip) ── */}
-        {studioOn && studioHome && feedAt>=0 && feedCards[feedAt] && (()=>{ const k=feedCards[feedAt].kind; return (
-          <div className="pf-st-tabs" role="tablist">{['music','img'].map(x=>(<button key={x} type="button" role="tab" aria-selected={k===x} className={k===x ? 'on' : ''} onClick={()=>_feedSwitch(x)}>{_feedTab(x)}</button>))}</div>); })()}
-        {studioOn && studioHome && _dailyShown && !(feedAt>=0 && feedCards[feedAt]) && (
+        {studioOn && studioHome && _dailyShown && (
           <button type="button" className="pf-st-daily" onClick={openDailyInfo} aria-label={ts('dailyTitle','Artist of the day')}><i aria-hidden="true"/><span><small>✦ {ts('dailyBadgeTitle','Free today')}</small><b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}{composerOfDay ? ' & '+(COMPOSER_INSPIRED[composerOfDay]||composerOfDay) : ''}</b></span></button>
         )}
-        {studioOn && studioHome && !_dailyShown && !(feedAt>=0 && feedCards[feedAt]) && (
+        {studioOn && studioHome && !_dailyShown && (
           <button type="button" className="pf-st-word" onClick={()=>setNavMenuOpen(true)} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
         {/* segmented control — text size + language */}
