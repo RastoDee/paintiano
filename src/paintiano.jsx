@@ -36301,7 +36301,8 @@ Hard requirements:
   const [feedHeart, setFeedHeart] = useState(0);
   const [feedBg, setFeedBg] = useState(null);
   const [feedIntro, setFeedIntro] = useState(null);   // Lite's opening lines on the card: {k:'m'|'p'|'s', t} — the Mosaic's key, the first painter, ✦ Signature
-  useEffect(()=>{ if(!feedIntro) return; const tm=setTimeout(()=>setFeedIntro(null), 7700); return ()=>clearTimeout(tm); },[feedIntro]);   // the blurred light behind the card, from the painting as it grows
+  useEffect(()=>{ if(!feedIntro || !playing) return; const tm=setTimeout(()=>setFeedIntro(null), 7700); return ()=>clearTimeout(tm); },[feedIntro, playing]);   // the lines run with the painting, not before it
+  const [feedSoundOk, setFeedSoundOk] = useState(false);   // the sound has woken once: from now on a swipe starts the card by itself   // the blurred light behind the card, from the painting as it grows
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
   const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
   const _FEED_IMGS = (typeof SAMPLE_IMAGES!=='undefined') ? SAMPLE_IMAGES : [];
@@ -36476,10 +36477,10 @@ Hard requirements:
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);
     return ()=>clearTimeout(tm);
   },[chords, playing, anim, working, info, viewMode, originalImgUrl]);
-  useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); },[playing]);
+  useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); if(playing && !feedSoundOk) setFeedSoundOk(true); },[playing]);
   useEffect(()=>{ const on = feedLoaded!==null; feedLaRef.current = on ? 0.15 : 0; try{ Tone.getContext().lookAhead = on ? 0.15 : 0.03; }catch(_){} },[feedLoaded]);
   // any plain tap wakes a sleeping sound (iOS gives none to a swipe): then a swipe can start the card at once
-  useEffect(()=>{ const f=()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } }; document.addEventListener('click', f, true); return ()=>document.removeEventListener('click', f, true); },[]);
+  useEffect(()=>{ const f=()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} setTimeout(()=>{ if(_acRunning()) setFeedSoundOk(true); }, 400); } else setFeedSoundOk(true); }; document.addEventListener('click', f, true); return ()=>document.removeEventListener('click', f, true); },[]);
   // the card shows the canvas as it paints
   const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
   useEffect(()=>{
@@ -37416,7 +37417,7 @@ Hard requirements:
         const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? (feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? {k:'fh0', ic:['play','up']} : {k:'fhUp', ic:['up']}) : null);
+        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : {k:'fhUp', ic:['up']}) : null);
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
           up:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
@@ -37466,7 +37467,7 @@ Hard requirements:
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   <span key={'ch'+(FC ? FC.id : '')} className="pf-sh-chip fade" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
-                  {_fL && feedIntro && (()=>{
+                  {_fL && feedIntro && _fPlay && (()=>{
                     if(feedIntro.k==='m'){ const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))]; const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; })); const _nm=_miT('names');
                       return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('line')}</p><div className="pf-sh-key">{[0,7,2,9,4,11,6,1,8,3,10,5].map(pc=>{ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){} const on=_lit.has(pc); return (<span key={pc} className={on?'on':''}><i style={{background:'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')',...(on?{boxShadow:'0 0 0 1.5px #f4e7c6,0 0 10px 1px rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+',.85)'}:{})}}/><b>{_nm[pc]}</b></span>); })}</div></div>); }
                     if(feedIntro.k==='p' && style && STYLE_INSPIRED[style]) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('painter').replace('{name}', STYLE_INSPIRED[style])}</p></div>);
@@ -37489,7 +37490,7 @@ Hard requirements:
                 {(FC || _canPlay || _smp) ? (<button type="button" className={'pf-sh-play'+(FC && feedNeedTap && !_fPlay ? ' need' : '')} onClick={_fBtn} aria-label={_fPlay ? t('pause') : _stT('go')}>{_fPlay
                     ? (<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>)
                     : (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>)}</button>) : null}
-                {_fHint && (<div key={_fHint.k} className="pf-sh-fhint" aria-hidden="true"><span className="pf-sh-fpill">{String(_stT(_fHint.k)||'').split('|').concat(_fHint.x ? [_fHint.x] : []).map((x,i)=>(<Fragment key={i}>{i>0 && (<i className="pf-sh-fdot"/>)}<span className={'pf-sh-fit'+(_fHint.ic[i]==='up' && _fHint.k!=='fh' ? ' pf-sh-bob' : '')}><b>{_fIc[_fHint.ic[i]]}</b>{x}</span></Fragment>))}</span></div>)}
+                {_fHint && (<div key={_fHint.k} className="pf-sh-fhint" aria-hidden="true"><span className="pf-sh-fpill">{String(_stT(_fHint.k)||'').split('|').slice(0, _fHint.one ? 1 : 9).concat(_fHint.x ? [_fHint.x] : []).map((x,i)=>(<Fragment key={i}>{i>0 && (<i className="pf-sh-fdot"/>)}<span className={'pf-sh-fit'+(_fHint.ic[i]==='up' && _fHint.k!=='fh' ? ' pf-sh-bob' : '')}><b>{_fIc[_fHint.ic[i]]}</b>{x}</span></Fragment>))}</span></div>)}
               </div>
             </div>
             <div style={{height:14,flexShrink:0}}/>
