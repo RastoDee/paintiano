@@ -14967,7 +14967,7 @@ Hard requirements:
             <div className="pf-sh-links">
               <button type="button" className="pf-sh-fav" onClick={()=>_favOpen()} disabled={!favN} style={{opacity:favN?1:.45}}>
                 {favN ? (<span className="pf-sh-fan" aria-hidden="true">{favs.slice(0,3).map((f,i,a)=>(<i key={f.id} style={{backgroundImage:favShelf[f.id] ? 'url('+favShelf[f.id]+')' : undefined,transform:'rotate('+((i-(a.length-1)/2)*7)+'deg)'}}/>))}</span>) : null}
-                <span>♥ {_favT('label')}{favN ? ' · '+favN : ''}</span>
+                <span>♥ {_favT('label')}</span>
               </button>
             </div>
           </div>);
