@@ -1786,7 +1786,7 @@ const STUDIO_HOME_CSS = `
 .pf-sh-card{position:relative;height:100%;max-height:440px;aspect-ratio:242/360}
 .pf-sh-card{container-type:inline-size}
 .pf-sh-cap{position:absolute;left:0;right:0;bottom:0;padding:20cqw 31cqw 6cqw 6cqw;background:linear-gradient(180deg,rgba(6,5,10,0),rgba(6,5,10,.82));text-align:left;pointer-events:none}
-.pf-sh-cap-t{font-size:calc(var(--pf-read-scale,1) * clamp(11px,6cqw,15px));font-weight:700;line-height:1.2;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-sh-cap-t{font-size:calc(var(--pf-read-scale,1) * clamp(10px,4.7cqw,13px));font-weight:700;line-height:1.2;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pf-sh-cap-l{margin-top:3px;font-size:calc(var(--pf-read-scale,1) * clamp(9px,4.4cqw,11px));letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @container (max-width:180px){.pf-sh-cap-l{display:none}}
 .pf-sh-ghost{position:absolute;inset:0;border-radius:24px;border:1px solid rgba(242,238,232,.12);background:rgba(242,238,232,.07)}
@@ -1831,6 +1831,10 @@ const STUDIO_HOME_CSS = `
 @keyframes pfShFloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-6px) rotate(-1.5deg)}}
 .pf-sh-chip{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:6px;padding:6px 11px 6px 9px;border-radius:16px;background:rgba(10,8,18,.66);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:calc(var(--pf-read-scale,1) * 10px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;border:1px solid currentColor;white-space:nowrap;max-width:calc(100% - 46px);overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
 .pf-sh-chip svg{flex-shrink:0}
+.pf-sh-chip.fade{animation:pfShChipOut .7s ease 3.5s forwards}
+@keyframes pfShChipOut{to{opacity:0;transform:translateY(-4px)}}
+.pf-sh-play.need{animation:pfShNeed 1.1s ease-in-out infinite}
+@keyframes pfShNeed{0%,100%{box-shadow:0 0 0 0 rgba(240,215,138,.55)}50%{box-shadow:0 0 0 14px rgba(240,215,138,0)}}
 .pf-sh-play{position:absolute;right:-14px;bottom:-14px;width:66px;height:66px;border-radius:50%;border:0;padding:0;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#14110a;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:pfShPulse 2.4s ease-out infinite;z-index:2}
 @keyframes pfShPulse{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 0 rgba(240,192,64,.5)}50%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 14px rgba(240,192,64,0)}}
 .pf-sh-meta{position:relative;flex-shrink:0;margin-top:24px;text-align:center;max-width:340px;display:flex;flex-direction:column;gap:5px}
@@ -7029,6 +7033,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // true while the canvas holds a piece from the Studio home feed: it is a preview, not a draft —
   // it never goes into the Music slot (that keeps what you had), and leaves when anything else loads
   const feedPieceRef = useRef(false);
+  const [feedNeedTap, setFeedNeedTap] = useState(false);   // the sound did not start by itself: ▶ asks for a tap
+  const feedTileRef = useRef(null);   // the home circles' latest handlers (a circle tapped during the feed acts after the feed has stopped)
   const feedImgLoadRef = useRef(false);   // the feed is loading a picture: the home stays on screen
   const [hasMusicDraft, setHasMusicDraft] = useState(false);
   // Image source stash (classic pixel-scan image). Lights the Image tile; tap
@@ -14229,10 +14235,12 @@ Hard requirements:
     // if the piece is not playing a moment later, it is started again — up to three times
     const tok=feedTokRef.current;
     const _go=(n)=>{ if(feedTokRef.current!==tok) return; try{ if(!playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
-      if(n<3) setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current && !holdPausedRef.current){ try{ wakeAudio(); }catch(_){} _go(n+1); } }, 700); };
+      if(n<3) setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current && !holdPausedRef.current){ try{ wakeAudio(); }catch(_){} _go(n+1); } }, 700);
+      else setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current) setFeedNeedTap(true); }, 900); };
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);
     return ()=>clearTimeout(tm);
   },[chords, playing, anim, working, info, viewMode, originalImgUrl]);
+  useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); },[playing]);
   // the card shows the canvas as it paints
   const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
   useEffect(()=>{
@@ -15150,6 +15158,7 @@ Hard requirements:
         const _fresh = (k)=>{ if(k==='music'){ if(!importTileLocked) setPickMode('sound'); return; } if(k==='image'){ if(!importTileLocked) setPickMode('image'); return; }
           if(k==='mfi'){ if(!imgAiBusy && !sourcePickerLocked && aiUsable) setPickMode('imgmood'); return; } if(k==='mood'){ if(!sourcePickerLocked){ setMoodEdit(''); setShowMoodMenu(true); } return; } _tap(k); };
         // after the app was closed there is no draft: the card brings its piece back itself (built-in piece / picture, a mood)
+        feedTileRef.current = {t:(k)=>_tap(k), f:(k)=>_fresh(k)};
         const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         const _replay = ()=>{
@@ -15192,13 +15201,13 @@ Hard requirements:
           R.t=now; if(R.tm) clearTimeout(R.tm);
           R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_canPlay) _play(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
         };
-        const _fTS = (e)=>{ if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
+        const _fTS = (e)=>{ try{ unlockAudio(); }catch(_){} if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
-        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
+        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
@@ -15213,7 +15222,7 @@ Hard requirements:
                 {FC ? (
                 <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : 'pf-sh-in')}>
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
-                  <span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
+                  <span key={'ch'+(FC ? FC.id : '')} className="pf-sh-chip fade" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
                   {_fL && feedIntro && (()=>{
                     if(feedIntro.k==='m'){ const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))]; const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; })); const _nm=_miT('names');
@@ -15235,7 +15244,7 @@ Hard requirements:
                   {feedFly.u && (<img src={feedFly.u} alt=""/>)}
                   {(feedFly.t || feedFly.l) && (<div className="pf-sh-cap">{feedFly.t && (<div className="pf-sh-cap-t">{feedFly.t}</div>)}{feedFly.l && (<div className="pf-sh-cap-l">{feedFly.l}</div>)}</div>)}
                 </div>)}
-                {(FC || _canPlay || _smp) ? (<button type="button" className="pf-sh-play" onClick={_fBtn} aria-label={_fPlay ? t('pause') : _stT('go')}>{_fPlay
+                {(FC || _canPlay || _smp) ? (<button type="button" className={'pf-sh-play'+(FC && feedNeedTap && !_fPlay ? ' need' : '')} onClick={_fBtn} aria-label={_fPlay ? t('pause') : _stT('go')}>{_fPlay
                     ? (<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>)
                     : (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>)}</button>) : null}
                 {_fHint && (<div key={_fHint.k} className="pf-sh-fhint" aria-hidden="true"><span className="pf-sh-fpill">{String(_stT(_fHint.k)||'').split('|').map((x,i)=>(<Fragment key={i}>{i>0 && (<i className="pf-sh-fdot"/>)}<span className={'pf-sh-fit'+(_fHint.ic[i]==='up' && _fHint.k!=='fh' ? ' pf-sh-bob' : '')}><b>{_fIc[_fHint.ic[i]]}</b>{x}</span></Fragment>))}</span></div>)}
@@ -15244,7 +15253,7 @@ Hard requirements:
             <div style={{height:14,flexShrink:0}}/>
             <div className="pf-sh-grid">
               {ORDER.map(k=>{ const S=SRC[k], on = FC ? k===(FC.kind==='img' ? 'image' : 'music') : (!_smp && _canPlay && k===kind); return (
-                <button key={k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!!S.off} onClick={()=>{ _feedExit(); if(on) _fresh(k); else _tap(k); }}>
+                <button key={k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!!S.off} onClick={()=>{ if(FC){ _feedExit(); setTimeout(()=>{ const H=feedTileRef.current; if(H){ if(on) H.f(k); else H.t(k); } }, 120); return; } if(on) _fresh(k); else _tap(k); }}>
                   <span className="pf-sh-ic" style={{background:'linear-gradient(135deg,'+S.g+')',...(on?{}:{boxShadow:'0 0 0 3px '+S.c+'2e'})}}>{_sv(S.p)}{S.d && !on && (<span className="pf-sh-dot" aria-hidden="true"/>)}</span>
                   <span>{S.label}</span>
                 </button>); })}
