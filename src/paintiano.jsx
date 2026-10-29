@@ -23848,14 +23848,14 @@ const STUDIO_I18N = {
 // by each of them), composers as monograms. The buttons and what they do are the Classic ones; only the look changes.
 const STUDIO_SKIN_CSS = `
 .pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs{gap:2px!important}
-.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab{display:flex!important;flex-direction:column;align-items:center;gap:6px;background:none!important;border:0!important;box-shadow:none!important;padding:2px 0 0!important;border-radius:0!important;font-size:8.5px!important;letter-spacing:.1em!important;color:rgba(242,238,232,.62)!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab{display:flex!important;flex-direction:column;align-items:center;gap:6px;background:none!important;border:0!important;box-shadow:none!important;padding:2px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 8.5px)!important;letter-spacing:.1em!important;color:rgba(242,238,232,.62)!important;transform:none!important}
 .pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab.pf-tab-on{color:#f0c040!important;font-weight:700!important}
 .pf-sk-ring{display:block;width:44px;height:44px;border-radius:50%;padding:3px;border:2px solid transparent;box-sizing:border-box;transition:border-color .18s, transform .12s}
 .pf-sk-ring i{display:block;width:100%;height:100%;border-radius:50%;border:3px solid #0e0b16;box-sizing:border-box}
 .pf-tab-on .pf-sk-ring{border-color:#f0c040}
 .pf-tab:active .pf-sk-ring{transform:scale(.92)}
 .pf-app-root .pf-strip-grid.pf-skin .pf-art-grid{row-gap:12px!important;column-gap:2px!important;align-items:start!important}
-.pf-app-root .pf-strip-grid.pf-skin .pf-artist{display:flex!important;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;box-shadow:none!important;padding:3px 0 0!important;border-radius:0!important;font-size:8px!important;letter-spacing:.05em!important;color:rgba(242,238,232,.66)!important;overflow:visible!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-artist{display:flex!important;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;box-shadow:none!important;padding:3px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 8px)!important;letter-spacing:.05em!important;color:rgba(242,238,232,.66)!important;overflow:visible!important;transform:none!important}
 .pf-app-root .pf-strip-grid.pf-skin .pf-artist.pf-artist-on{color:#f0c040!important;font-weight:700!important}
 .pf-sk-face{display:block;flex-shrink:0;width:54px;height:54px;border-radius:50%;background:#1b1728 center/cover no-repeat;border:2px solid rgba(242,238,232,.08);box-shadow:0 4px 14px rgba(0,0,0,.5);box-sizing:border-box;transition:transform .12s, border-color .18s, box-shadow .18s}
 .pf-artist:active .pf-sk-face{transform:scale(.92)}
@@ -23939,14 +23939,14 @@ const STUDIO_SHEET_CSS = `
 .pf-sm-chip:active{transform:scale(.95)}
 .pf-sm-chip i{font-style:normal;font-size:1.25em;line-height:1}
 @media (prefers-reduced-motion: reduce){.pf-sm-send:not(:disabled),.pf-sm-ph{animation:none}}
-.pf-st-glass{height:40px;min-width:40px;padding:0 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-st-glass{height:40px;min-width:40px;padding:0 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 12px);font-weight:700;letter-spacing:.08em;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-st-glass:active{transform:scale(.94)}
 .pf-app-root .pf-st-sheet input[type="text"]{font-size:16px!important;text-align:left!important;border-radius:14px!important;background:rgba(255,255,255,.05)!important;border:1px solid rgba(242,238,232,.14)!important;padding:12px 14px!important}
 `;
 // the sources as colour circles — the Studio home and New share them
 const STUDIO_SRC_CSS = `
 .pf-sh-grid{position:relative;flex-shrink:0;margin-top:16px;width:100%;max-width:380px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:14px;column-gap:4px}
-.pf-sh-src{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;padding:0;color:#f2eee8;font-family:inherit;font-size:11px;font-weight:600;line-height:1.2;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-sh-src{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;padding:0;color:#f2eee8;font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;line-height:1.2;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-sh-src:disabled{opacity:.4;cursor:default}
 .pf-sh-ic{position:relative;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#0e0b16;transition:transform .12s}
 .pf-sh-src:active .pf-sh-ic{transform:scale(.92)}
@@ -23974,25 +23974,25 @@ const STUDIO_HOME_CSS = `
 .pf-sh-card{position:relative;height:100%;max-height:440px;aspect-ratio:242/360}
 .pf-sh-card{container-type:inline-size}
 .pf-sh-cap{position:absolute;left:0;right:0;bottom:0;padding:20cqw 31cqw 6cqw 6cqw;background:linear-gradient(180deg,rgba(6,5,10,0),rgba(6,5,10,.82));text-align:left;pointer-events:none}
-.pf-sh-cap-t{font-size:clamp(11px,6cqw,15px);font-weight:700;line-height:1.2;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pf-sh-cap-l{margin-top:3px;font-size:clamp(9px,4.4cqw,11px);letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-sh-cap-t{font-size:calc(var(--pf-read-scale,1) * clamp(11px,6cqw,15px));font-weight:700;line-height:1.2;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-sh-cap-l{margin-top:3px;font-size:calc(var(--pf-read-scale,1) * clamp(9px,4.4cqw,11px));letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @container (max-width:180px){.pf-sh-cap-l{display:none}}
 .pf-sh-ghost{position:absolute;inset:0;border-radius:24px;border:1px solid rgba(242,238,232,.12);background:rgba(242,238,232,.07)}
 .pf-sh-g1{transform:rotate(6deg) translate(14px,6px)}.pf-sh-g2{transform:rotate(-5deg) translate(-12px,4px)}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
 .pf-sh-art img{display:block;width:100%;height:100%;object-fit:cover}
 @keyframes pfShFloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-6px) rotate(-1.5deg)}}
-.pf-sh-chip{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:6px;padding:6px 11px 6px 9px;border-radius:16px;background:rgba(10,8,18,.66);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;border:1px solid currentColor;white-space:nowrap;max-width:calc(100% - 46px);overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
+.pf-sh-chip{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:6px;padding:6px 11px 6px 9px;border-radius:16px;background:rgba(10,8,18,.66);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:calc(var(--pf-read-scale,1) * 10px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;border:1px solid currentColor;white-space:nowrap;max-width:calc(100% - 46px);overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
 .pf-sh-chip svg{flex-shrink:0}
 .pf-sh-play{position:absolute;right:-14px;bottom:-14px;width:66px;height:66px;border-radius:50%;border:0;padding:0;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#14110a;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:pfShPulse 2.4s ease-out infinite;z-index:2}
 @keyframes pfShPulse{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 0 rgba(240,192,64,.5)}50%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 14px rgba(240,192,64,0)}}
 .pf-sh-meta{position:relative;flex-shrink:0;margin-top:24px;text-align:center;max-width:340px;display:flex;flex-direction:column;gap:5px}
 .pf-sh-ttl{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:clamp(22px,7vw,28px);line-height:1.05;text-wrap:balance;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pf-sh-ttl.pf-sh-long{font-size:clamp(19px,5.6vw,24px)}
-.pf-sh-line{font-size:11.5px;letter-spacing:.04em;color:#f0d78a;text-wrap:balance}
+.pf-sh-line{font-size:calc(var(--pf-read-scale,1) * 11.5px);letter-spacing:.04em;color:#f0d78a;text-wrap:balance}
 .pf-sh-q{position:relative;flex-shrink:0;margin-top:22px;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;font-size:23px;line-height:1}
 .pf-sh-links{position:relative;flex-shrink:0;margin-top:14px;display:flex;gap:22px}
-.pf-sh-links button{background:none;border:0;padding:8px 4px;color:rgba(242,238,232,.72);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.pf-sh-links button{background:none;border:0;padding:8px 4px;color:rgba(242,238,232,.72);font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
 .pf-studio-home .pf-help-fab{display:none!important}
 @media (prefers-reduced-motion: reduce){.pf-sh-bg,.pf-sh-art,.pf-sh-play{animation:none}}
 @media (max-height:720px){.pf-sh-q{margin-top:14px}.pf-sh-meta{margin-top:10px}.pf-sh-grid{row-gap:10px}}
