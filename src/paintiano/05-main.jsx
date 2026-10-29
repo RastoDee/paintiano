@@ -3453,6 +3453,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // they combine — Ensemble + 1 = Next rolls the crossing's variant, Ensemble +
   // ALL = Next draws a new random crossing.
   const _artMode = randomMode ? ((style===null || jamAll) ? 2 : 1) : 0;
+  // 🔀 on (ALL) is the only state where ▶ and a new song draw by themselves; off keeps the painting on
+  // screen until Next / swipe up / Show asks for another variant.
+  const artAllRef = useRef(false); artAllRef.current = _artMode===2;
   // 🔀 has two states. Off = the painter you chose, and Next / Play bring more of its variants
   // (randomMode stays on under the hood with an artist chosen — see the effect below). On = ALL:
   // every painter in your set.
@@ -3685,7 +3688,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // (In Compose the same holds before the first note: picking an artist keeps the
       // variant it opens on — Pollock and Monet open on their exact-colour first.)
       const _isTake = !!(composeMode || (chords && chords[0] && chords[0].recorded) || (chordsRef.current && chordsRef.current[0] && chordsRef.current[0].recorded));
-      if((seed !== 0 || art) && randomMode && !(jamOn && jamAll) && !_isTake){
+      if((seed !== 0 || art) && randomMode && style===null && !(jamOn && jamAll) && !_isTake){
         // Full shuffle: the roll itself moves effectiveStyle → this effect would
         // run again and roll again (until a draw landed on the same artist).
         // Consume that one re-run.
@@ -10222,7 +10225,7 @@ Hard requirements:
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
-      if(randomModeRef.current && !(opts && opts.keep)){
+      if(randomModeRef.current && artAllRef.current && !(opts && opts.keep)){
         setStructureSeedLock(null);
         nextRollInProgressRef.current = true;
         // Manual artist → rotate style. Shuffle (no manual artist) → rotate
