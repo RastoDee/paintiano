@@ -6180,6 +6180,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // (a) kick Tone's promise, and (b) synchronously poke the rawContext awake.
   // Cheap to call repeatedly; no-op when context is already running.
 
+  // the home card plays with a longer look-ahead: a small card needs no tight sync, and the sound must not crackle while the card is mirrored
+  const feedLaRef = useRef(0);
+  const _acRunning = ()=>{ try{ const ac=Tone.getContext().rawContext; return !ac || ac.state==='running'; }catch(_){ return true; } };
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
     // Shorten Tone's scheduler look-ahead from its default 100ms to 30ms.
@@ -6190,7 +6193,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // enough to feel synchronised, far enough above zero to avoid scheduler
     // underruns on slow devices. Idempotent — setter is cheap and safe to
     // re-apply on every unlock.
-    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ Tone.getContext().lookAhead = feedLaRef.current || 0.03; }catch(_){}
     // iOS 17+ audio session API. After MediaRecorder runs, iOS WebKit
     // pushes the audio session into the 'play-and-record' category which
     // makes output respect the hardware silent switch — so even with
@@ -6350,7 +6353,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       try{ _old.dispose(); }catch(_){}
     }catch(_){}
     try{ await Tone.start(); }catch(_){}
-    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ Tone.getContext().lookAhead = feedLaRef.current || 0.03; }catch(_){}
     try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type='playback'; } }catch(_){}
     try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     try{
@@ -6367,7 +6370,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const wakeAudioRef = useRef(0);
   const wakeAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
-    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ Tone.getContext().lookAhead = feedLaRef.current || 0.03; }catch(_){}
     try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type = 'playback'; } }catch(_){}
     try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     let ac=null;
@@ -14141,7 +14144,8 @@ Hard requirements:
   };
   // put the piece in the player and start it (call it inside the gesture: the sound wakes there)
   const _feedLoad = (piece, sel, kind)=>{
-    try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){}
+    if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
+    setTimeout(()=>{ if(!_acRunning()) setFeedNeedTap(true); }, 450);   // still asleep (a swipe on iOS): ▶ asks for one tap
     if(!feedLookRef.current){
       feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, oneMMode, comp:imgComposer, cstage:composerStage.slice() };
       try{ stashMode('image'); }catch(_){}       // your picture keeps its place too
@@ -14277,6 +14281,9 @@ Hard requirements:
     return ()=>clearTimeout(tm);
   },[chords, playing, anim, working, info, viewMode, originalImgUrl]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); },[playing]);
+  useEffect(()=>{ const on = feedLoaded!==null; feedLaRef.current = on ? 0.15 : 0; try{ Tone.getContext().lookAhead = on ? 0.15 : 0.03; }catch(_){} },[feedLoaded]);
+  // any plain tap wakes a sleeping sound (iOS gives none to a swipe): then a swipe can start the card at once
+  useEffect(()=>{ const f=()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } }; document.addEventListener('click', f, true); return ()=>document.removeEventListener('click', f, true); },[]);
   // the card shows the canvas as it paints
   const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
   useEffect(()=>{
@@ -15231,21 +15238,22 @@ Hard requirements:
           if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
+          if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }   // a tap is a gesture iOS accepts: the sound wakes here
           const R=feedTapRef.current, now=Date.now();
           if(now-R.t<300){ if(R.tm){ clearTimeout(R.tm); R.tm=null; } R.t=0;
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
             return; }
           R.t=now; if(R.tm) clearTimeout(R.tm);
-          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_canPlay) _play(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
+          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_canPlay) _play(); return; } if(_fL && feedNeedTap && !playingRef.current){ _fBtn(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
         };
-        const _fTS = (e)=>{ try{ unlockAudio(); }catch(_){} if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
+        const _fTS = (e)=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
           if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ _feedSwitch(dx<0 ? 'img' : 'music'); return; }   // ⇆ the other surprise: ← picture, → music
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
-        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
+        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
