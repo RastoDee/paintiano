@@ -36363,9 +36363,9 @@ Hard requirements:
   // the next look: the fixed opening first, then Lite's own shuffle (a painter × variant, a fusion now and then)
   const _feedNextLook = ()=>{
     if(viewMode==='image'){   // a new composer re-reads the picture: the sound dips under the change instead of crackling
-      try{ Tone.getDestination().volume.rampTo(-60, 0.12); }catch(_){}
-      setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer(); }, 150);
-      setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.45); }catch(_){} }, 700);
+      try{ Tone.getDestination().volume.rampTo(-40, 0.08); }catch(_){}
+      setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer(); }, 90);
+      setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.3); }catch(_){} }, 420);
       return; }
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
     while(feedStepsRef.current.length){
