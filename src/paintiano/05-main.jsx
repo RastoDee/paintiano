@@ -13731,7 +13731,7 @@ Hard requirements:
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
       const isImg = viewMode==='image' && !moodFromImg;
       const _k = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : isImg ? 'image' : 'music';
-      let _t='', _l=''; try{ _t=_vidTitle(); if(_t==='Paintiano') _t=''; _l=_vidLine(); }catch(_){}
+      let _t='', _l=''; try{ _t=(_k==='compose'||_k==='mic') ? '' : _vidTitle(); if(_t==='Paintiano') _t=''; _l=_vidLine(); }catch(_){}
       let _r=null;
       try{
         if(_k==='music' && loadedSource==='midi' && builtinPieceRef.current!=null) _r={s:'midi', i:builtinPieceRef.current|0};
@@ -13741,16 +13741,6 @@ Hard requirements:
       const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
       if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ save(shrink(on, on.naturalWidth, on.naturalHeight)); return; } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
-      if(chords.length && disp < chords.length && !composeMode && !(micActive||micArmed||micContext)){
-        try{
-          const a=(style!==null ? [style] : []).concat(painterStage||[]), keys=(a.length>=2) ? a : null;
-          const st=effectiveStyle||null, own=draftOwnerRef.current||null, skip=_takeSkip(st), seLive=!!(_takeInfo(chords) && !skip);
-          let se=0.5; if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
-          const fv={ style:st, keys:keys ? keys.slice() : null, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0, cap:null, mode, tone, pal: mode==='custom' ? activePalette : null, se, dna: globalThis.__PAINT_MUSIC_DNA || null, skip, liveE:seLive, compose: own==='compose', own };
-          const lay=_favLayout(fv, chords), c2=document.createElement('canvas');
-          if(lay && _favPaint(c2, fv, {chords}, 1, tone, lay)){ save(shrink(c2, c2.width, c2.height)); return; }
-        }catch(_){}
-      }
       const cv=canvasRef.current; if(!cv) return; save(shrink(cv, cv.width, cv.height));
     }catch(_){}
   };
@@ -14873,6 +14863,9 @@ Hard requirements:
         };
         const ORDER = ['music','image','mfi','mood','compose','mic'];
         const _tap = (k)=>{ const el=document.querySelector(SRC[k].sel); if(el && !el.disabled) el.click(); };
+        // the lit circle (the card's own source) picks something new — ▶ is the way back to the painting
+        const _fresh = (k)=>{ if(k==='music'){ if(!importTileLocked) setPickMode('sound'); return; } if(k==='image'){ if(!importTileLocked) setPickMode('image'); return; }
+          if(k==='mfi'){ if(!imgAiBusy && !sourcePickerLocked && aiUsable) setPickMode('imgmood'); return; } if(k==='mood'){ if(!sourcePickerLocked){ setMoodEdit(''); setShowMoodMenu(true); } return; } _tap(k); };
         // after the app was closed there is no draft: the card brings its piece back itself (built-in piece / picture, a mood)
         const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
@@ -14883,7 +14876,7 @@ Hard requirements:
         };
         const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } if(!SRC[kind].d && _rp){ _replay(); return; } _tap(kind); };
         const _up = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
-        const ttl = _smp ? SAMPLE_MIDI_NAME : _up(H.t || '');
+        const ttl = _smp ? SAMPLE_MIDI_NAME : (kind==='compose'||kind==='mic') ? '' : _up(H.t || '');
         const line = _smp ? [_up(t('harmony')), 'Gustav Klimt × Hilma af Klint', '✦ '+_sigT('label')].join('  ·  ') : (H.l || '');
         const favN = favs.length;
         const K = SRC[kind];
@@ -14907,7 +14900,7 @@ Hard requirements:
             <div style={{height:14,flexShrink:0}}/>
             <div className="pf-sh-grid">
               {ORDER.map(k=>{ const S=SRC[k], on = !_smp && _canPlay && k===kind; return (
-                <button key={k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!!S.off} onClick={()=>_tap(k)}>
+                <button key={k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!!S.off} onClick={()=>(on ? _fresh(k) : _tap(k))}>
                   <span className="pf-sh-ic" style={{background:'linear-gradient(135deg,'+S.g+')',...(on?{}:{boxShadow:'0 0 0 3px '+S.c+'2e'})}}>{_sv(S.p)}{S.d && !on && (<span className="pf-sh-dot" aria-hidden="true"/>)}</span>
                   <span>{S.label}</span>
                 </button>); })}
