@@ -38492,7 +38492,7 @@ Hard requirements:
               // glow); a manual pick shows the gold glow. Splitting these keeps
               // the Mosaic family visually consistent with the other chips.
               const _mosIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf('mosaic') : -1;
-              const mosaicManual = (style===null && !shuffleStyle && !(jamOn && painterStage.length)) || _mosIx>=0;
+              const mosaicManual = (style===null && (!shuffleStyle || mosaicShuffleLock) && !(jamOn && painterStage.length)) || _mosIx>=0;   // Mosaic chosen (its variants on Next) is lit too
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes') ? 'notes'
                             : (shuffleStyle==='mosaic') ? 'mosaic'
@@ -38520,16 +38520,14 @@ Hard requirements:
               }
               if(jamAll) return;
               if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
-              if(style!==null){ if(_artMode===1) _shuffleOff(); selectStyle(style); return; }   // back to Mosaic leaves 🔀 1 (never slides into ALL)
+              // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
+              const _mosaicOwn = ()=>{ setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };
+              if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
                 // restarts the cycle at 'mosaic' and clears the dice-off
                 // notes/oneM flags so the locked shuffle is the sole driver.
-                setMosaicShuffleLock(v=>{
-                  const nx = !v;
-                  if(nx){ setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); }
-                  return nx;
-                });
+                if(!mosaicShuffleLock) _mosaicOwn();   // from ALL: Mosaic chosen, 🔀 off (already chosen: stays)
               } else {
                 // Dice off → 2-tap cycle Mosaic → Notes → Mosaic ($1M$ is now a
                 // standalone Pro artist chip, no longer a family stop).

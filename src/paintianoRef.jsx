@@ -25709,7 +25709,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // TWO buttons per side: 🔀 shuffle (off → 1 → ALL → off) and Ensemble (on/off);
   // they combine — Ensemble + 1 = Next rolls the crossing's variant, Ensemble +
   // ALL = Next draws a new random crossing.
-  const _artMode = randomMode ? ((style===null || jamAll) ? 2 : 1) : 0;
+  const _artMode = randomMode ? (((style===null && !mosaicShuffleLock) || jamAll) ? 2 : 1) : 0;   // Mosaic chosen (its lock: Mosaic ↔ Notes) is 'off' — your painter's variants
   // 🔀 on (ALL) is the only state where ▶ and a new song draw by themselves; off keeps the painting on
   // screen until Next / swipe up / Show asks for another variant.
   const artAllRef = useRef(false); artAllRef.current = _artMode===2;
@@ -25720,6 +25720,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(working||anim) return;
     if(_artMode!==2){                                               // → on (ALL)
       if(!randomMode) _shuffleOn();
+      if(mosaicShuffleLock) setMosaicShuffleLock(false);   // from Mosaic ↔ Notes to every painter in your set
       if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
       if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }   // the draw starts on the SAME artist
       return; }
@@ -38519,16 +38520,14 @@ Hard requirements:
               }
               if(jamAll) return;
               if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
-              if(style!==null){ if(_artMode===1) _shuffleOff(); selectStyle(style); return; }   // back to Mosaic leaves 🔀 1 (never slides into ALL)
+              // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
+              const _mosaicOwn = ()=>{ setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };
+              if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
                 // restarts the cycle at 'mosaic' and clears the dice-off
                 // notes/oneM flags so the locked shuffle is the sole driver.
-                setMosaicShuffleLock(v=>{
-                  const nx = !v;
-                  if(nx){ setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); }
-                  return nx;
-                });
+                if(!mosaicShuffleLock) _mosaicOwn();   // from ALL: Mosaic chosen, 🔀 off (already chosen: stays)
               } else {
                 // Dice off → 2-tap cycle Mosaic → Notes → Mosaic ($1M$ is now a
                 // standalone Pro artist chip, no longer a family stop).
