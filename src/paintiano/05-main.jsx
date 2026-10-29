@@ -5414,6 +5414,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // red and asks (it settles back after 3 s), the second removes every favorite.
   // Undo brings them all back (the songs are kept in memory until the toast goes).
   const [favClearArmed, setFavClearArmed] = useState(false);
+  // Studio favorites: the rails come out with a sideways swipe (left → ♥ · Share, right → ✕ · 🗑) and go again after a while
+  const [favSide, setFavSide] = useState(null);
+  useEffect(()=>{ if(!favView) setFavSide(null); },[!!favView]);
   const favClearTimerRef = useRef(null);
   const _favDisarm = ()=>{ if(favClearTimerRef.current){ clearTimeout(favClearTimerRef.current); favClearTimerRef.current=null; } setFavClearArmed(false); };
   const _favClearAll = async ()=>{
@@ -13924,6 +13927,7 @@ Hard requirements:
   useEffect(()=>{ if(!_stPeekOk) setStPeek(false); },[_stPeekOk]);
   const [stShare, setStShare] = useState(false);
   const [stFavShare, setStFavShare] = useState(false);
+  useEffect(()=>{ if(!favSide || favClearArmed || stFavShare) return; const tm=setTimeout(()=>setFavSide(null), 4000); return ()=>clearTimeout(tm); },[favSide, favClearArmed, stFavShare, favCur]);
   const [stMoodPh, setStMoodPh] = useState(0);              // the mood sheet: which example the empty field shows
   useEffect(()=>{ if(!(showMoodMenu && studioOn)) return; setStMoodPh(0); const iv=setInterval(()=>setStMoodPh(n=>n+1), 2600); return ()=>clearInterval(iv); },[showMoodMenu, studioOn]);   // Favorites in the Studio: Story · Save
   // NEW — the sources over the painting, as Classic's "+ New music": the painting on screen is kept as a draft
@@ -14722,7 +14726,7 @@ Hard requirements:
           const tt=e.changedTouches && e.changedTouches[0]; if(!tt || Date.now()-st.t>800) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y;
           if(Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3) _favMove(dy<0 ? 1 : -1);        // up = the next one
-          else if(Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3) _favMove(dx<0 ? 1 : -1);   // left = the next one
+          else if(Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ if(dx>0) setFavSide(sd=> sd==='right' ? null : 'left'); else setFavSide(sd=> sd==='left' ? null : 'right'); }   // sideways = a rail
         };
         const _shOk = !!f && !favBad && !isImgFav;
         const _sv = (d)=>(<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
@@ -14733,20 +14737,16 @@ Hard requirements:
         return (
         <div className="pf-st-fav" role="dialog" aria-label={_favT('label')} onTouchStart={_favTouchStart} onTouchEnd={_end}
           style={{position:'fixed',inset:0,zIndex:10000,background:'radial-gradient(120% 60% at 50% 0%,rgba(201,168,76,.10),rgba(7,6,12,0) 60%),#07060c',touchAction:'none',display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          <style>{`.pf-st-fav .pf-st-rail-r>button{font-size:0!important;gap:0!important}.pf-st-fav .pf-sf-meta{animation:pfSfIn .32s ease both}@keyframes pfSfIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
+          <style>{`.pf-st-fav .pf-st-rail-r>button,.pf-st-fav .pf-st-rail-l>button{font-size:0!important;gap:0!important}.pf-st-fav .pf-st-rail-l,.pf-st-fav .pf-st-rail-r{transition:opacity .22s ease, transform .22s ease}.pf-st-fav .pf-sf-meta{animation:pfSfIn .32s ease both}@keyframes pfSfIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
           {/* the top: ✕ · ♥ Favorites, where you are · clear all */}
           <div style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'calc(env(safe-area-inset-top, 0px) + 10px) max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px))'}}>
-            <button type="button" onClick={_favClose} aria-label={_favT('close')} style={_rd}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            <span style={{width:40,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0,textAlign:'center',lineHeight:1.35}}>
               {favClearArmed ? (<div role="status" style={{fontSize:(.56*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',color:'#ff8a9a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favT('clearAllQ').replace('{n}', left)}</div>) : (<>
               <div style={{fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.26em',textTransform:'uppercase',color:'#f0c040'}}>♥ {_favT('label')}</div>
               {N>0 && (<div style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',color:'rgba(242,238,232,.55)',fontVariantNumeric:'tabular-nums'}}>{Math.min(i+1,N)} / {N}</div>)}</>)}
             </div>
-            {left>0 ? (
-              <button type="button" onClick={_favClearAll} aria-label={_favT('clearAll')} title={_favT('clearAll')}
-                style={favClearArmed ? {..._rd,background:'rgba(220,70,90,.92)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(220,70,90,.5)'} : {..._rd,color:'rgba(242,238,232,.7)'}}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>
-              </button>) : (<span style={{width:40,flexShrink:0}}/>)}
+            <span style={{width:40,flexShrink:0}}/>
           </div>
           {N===0 ? (
             <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:'0 36px',textAlign:'center'}}>
@@ -14775,13 +14775,13 @@ Hard requirements:
             )}
             </div>
             {/* where you are: the dots down the left (swipe ↑ ↓) */}
-            {N>1 && (
+            {N>1 && favSide!=='left' && (
               <div aria-hidden="true" style={{position:'fixed',left:'max(8px, env(safe-area-inset-left, 0px))',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:5,zIndex:2}}>
                 {Array.from({length:dotN},(_,k)=>{ const on=(d0+k)===i; return (<span key={k} style={{width:4,height:on?16:4,borderRadius:2,background:on?'#f0c040':'rgba(242,238,232,.28)',transition:'height .2s ease'}}/>); })}
               </div>)}
             {/* the rail: ♥ (out and back again) · Open (a picture) · Share (a painting) */}
             {f && (
-              <div className="pf-st-rail-r" style={{position:'fixed',right:'max(12px, env(safe-area-inset-right, 0px))',top:'50%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:16,zIndex:3}}>
+              <div className="pf-st-rail-r" style={{position:'fixed',right:'max(12px, env(safe-area-inset-right, 0px))',top:'50%',transform:favSide==='right' ? 'translateY(-50%)' : 'translate(24px,-50%)',opacity:favSide==='right' ? 1 : 0,pointerEvents:favSide==='right' ? 'auto' : 'none',display:'flex',flexDirection:'column',alignItems:'center',gap:16,zIndex:3}}>
                 <button type="button" onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} aria-pressed={!gone} style={_it}>
                   <span style={_ic(gone ? {color:PF.gold2} : {background:'linear-gradient(135deg,#f0d78a,#c9a84c)',border:'1px solid transparent',color:'#1a1408'})}>{_heartSv}</span></button>
                 {isImgFav && (<button type="button" onClick={(e)=>{ e.stopPropagation(); _favOpenImg(); }} disabled={favBad} title={_favT('openTip')} style={{..._it,opacity:favBad?.4:1}}>
@@ -14790,6 +14790,12 @@ Hard requirements:
                   <span style={_ic({background:'linear-gradient(135deg,#ff5f8f,#a86bff)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(200,100,255,.35)'})}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>{_stT('share')}</button>)}
               </div>)}
           </>)}
+          {(()=>{ const on = favSide==='left' || N===0; return (
+            <div className="pf-st-rail-l" style={{position:'fixed',left:'max(12px, env(safe-area-inset-left, 0px))',top:'50%',transform:on ? 'translateY(-50%)' : 'translate(-24px,-50%)',opacity:on ? 1 : 0,pointerEvents:on ? 'auto' : 'none',display:'flex',flexDirection:'column',alignItems:'center',gap:16,zIndex:3}}>
+              <button type="button" onClick={(e)=>{ e.stopPropagation(); _favClose(); }} aria-label={_favT('close')} style={_it}><span style={_ic()}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span>{_favT('close')}</button>
+              {left>0 && (<button type="button" onClick={(e)=>{ e.stopPropagation(); _favClearAll(); }} aria-label={_favT('clearAll')} title={_favT('clearAll')} style={_it}>
+                <span style={_ic(favClearArmed ? {background:'rgba(220,70,90,.92)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(220,70,90,.5)'} : {color:'rgba(242,238,232,.75)'})}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg></span>{_favT('clearAll')}</button>)}
+            </div>); })()}
           {stFavShare && (<>
             <div onClick={()=>setStFavShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); e.stopPropagation(); setStFavShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)'}}/>
             <div role="dialog" aria-label={_stT('share')} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10}}>
