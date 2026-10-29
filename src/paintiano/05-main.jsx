@@ -4666,6 +4666,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!crOnRef.current && composerStage.length && composerStage.join('+')===rest){ composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); }
     _imgSigRelease();
   },[imgSigActive, imgComposer, composerStage, mode, composerDice, imgPlayMode, viewMode, basicMode, liteImageMode]);
+  // a composer change while a picture plays re-reads it (a heavy moment on a phone): the sound dips briefly under it — runs before the re-read
+  const _cmpDipRef = useRef({k:null, tm:null});
+  useEffect(()=>{ const D=_cmpDipRef.current, k=(imgComposer||'')+'|'+composerStage.join('+')+'|'+(imgSigActive?1:0); const p=D.k; D.k=k;
+    if(p===null || p===k || !playing || viewMode!=='image') return;
+    try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-24, 0.04); if(D.tm) clearTimeout(D.tm); D.tm=setTimeout(()=>{ D.tm=null; try{ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.16); }catch(_){} }, 230); }catch(_){}
+  },[imgComposer, composerStage, imgSigActive]);
   const busy = playing || anim || working;
   // Mode exclusion: once a file/song is loaded OR an image is dropped, the
   // keyboard is locked until clear (no mixing loaded content with new live
@@ -14021,7 +14027,7 @@ Hard requirements:
   // on a picture, the next composer. The painting slides out and the new one in.
   const _stSlide = ()=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{ el.animate([{translate:'0 0',opacity:1},{translate:'0 -48px',opacity:0,offset:.36},{translate:'0 64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
   // a new composer re-reads the picture (heavy on iOS): the sound dips under the change instead of crackling
-  const _imgDip = (fn)=>{ try{ Tone.getDestination().volume.rampTo(-60, 0.12); }catch(_){} setTimeout(()=>{ try{ fn(); }catch(_){} }, 150); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.45); }catch(_){} }, 700); };
+  const _imgDip = (fn)=>{ try{ fn(); }catch(_){} };   // the dip itself rides on the composer change (see _cmpDipRef)
   const _stNext = ()=>{
     let rolled = false;
     try{
@@ -14178,9 +14184,7 @@ Hard requirements:
   // the next look: the fixed opening first, then Lite's own shuffle (a painter × variant, a fusion now and then)
   const _feedNextLook = ()=>{
     if(viewMode==='image'){   // a new composer re-reads the picture: the sound dips under the change instead of crackling
-      try{ Tone.getDestination().volume.rampTo(-60, 0.12); }catch(_){}
-      setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer(); }, 150);
-      setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.45); }catch(_){} }, 700);
+      try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer();
       return; }
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
     while(feedStepsRef.current.length){

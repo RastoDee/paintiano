@@ -36209,13 +36209,16 @@ Hard requirements:
   // the next painting (a swipe up): the Classic Next — and from a plain Mosaic, a painter drawn from your set;
   // on a picture, the next composer. The painting slides out and the new one in.
   const _stSlide = ()=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{ el.animate([{translate:'0 0',opacity:1},{translate:'0 -48px',opacity:0,offset:.36},{translate:'0 64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
+  // a new composer re-reads the picture (heavy on iOS): the sound dips under the change instead of crackling
+  const _imgDip = (fn)=>{ try{ Tone.getDestination().volume.rampTo(-60, 0.12); }catch(_){} setTimeout(()=>{ try{ fn(); }catch(_){} }, 150); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.45); }catch(_){} }, 700); };
   const _stNext = ()=>{
     let rolled = false;
     try{
       if(viewMode==='image'){
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
           if(!composerDice){ _stToastShow(_stT('nxOff')); return; }   // 🔀 off: the composer you chose stays (as in Classic, no Next)
-          rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
+          if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
+          else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
         }
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         if(!randomMode){ _stToastShow(_stT('nxOff')); return; }   // 🔀 off: the painter you chose stays
