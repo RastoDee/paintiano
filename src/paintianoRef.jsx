@@ -23988,6 +23988,20 @@ const STUDIO_HOME_CSS = `
 .pf-sh-fly{z-index:3;pointer-events:none;animation:pfShFly .32s cubic-bezier(.4,0,.8,.4) forwards!important}
 @keyframes pfShFly{from{transform:translateY(0) rotate(-1.5deg);opacity:1}to{transform:translateY(-125%) rotate(-9deg);opacity:0}}
 .pf-sh-in{animation:pfShIn .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
+.pf-sh-fly.l{animation-name:pfShFlyL!important}.pf-sh-fly.r{animation-name:pfShFlyR!important}
+@keyframes pfShFlyL{from{transform:translateX(0) rotate(-1.5deg);opacity:1}to{transform:translateX(-125%) rotate(-10deg);opacity:0}}
+@keyframes pfShFlyR{from{transform:translateX(0) rotate(-1.5deg);opacity:1}to{transform:translateX(125%) rotate(8deg);opacity:0}}
+.pf-sh-inl{animation:pfShInL .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}.pf-sh-inr{animation:pfShInR .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}
+@keyframes pfShInL{from{transform:translateX(60%) rotate(4deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
+@keyframes pfShInR{from{transform:translateX(-60%) rotate(-6deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
+.pf-sh-bumpl{animation:pfShBumpL .3s ease-out!important}.pf-sh-bumpr{animation:pfShBumpR .3s ease-out!important}
+@keyframes pfShBumpL{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(-14px) rotate(-2.5deg)}}
+@keyframes pfShBumpR{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(14px) rotate(-.5deg)}}
+.pf-st-tabs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:22px;align-items:center}
+.pf-st-tabs button{position:relative;border:0;background:none;padding:6px 2px 9px;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:22px;line-height:1;color:rgba(240,192,64,.36);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .25s}
+.pf-st-tabs button.on{color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+.pf-st-tabs button::after{content:'';position:absolute;left:50%;bottom:0;width:0;height:2px;border-radius:2px;background:#f0c040;transform:translateX(-50%);transition:width .3s}
+.pf-st-tabs button.on::after{width:18px}
 @keyframes pfShIn{from{transform:scale(.93) rotate(-1.5deg);opacity:.4}to{transform:scale(1) rotate(-1.5deg);opacity:1}}
 .pf-sh-back{animation:pfShBack .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
 @keyframes pfShBack{from{transform:translateY(-110%) rotate(-8deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
@@ -29222,7 +29236,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // true while the canvas holds a piece from the Studio home feed: it is a preview, not a draft —
   // it never goes into the Music slot (that keeps what you had), and leaves when anything else loads
   const feedPieceRef = useRef(false);
-  const [feedNeedTap, setFeedNeedTap] = useState(false);   // the sound did not start by itself: ▶ asks for a tap
+  const [feedNeedTap, setFeedNeedTap] = useState(false);
+  const [feedBump, setFeedBump] = useState(null);   // a sideways swipe toward the side you are already on: the card bounces   // the sound did not start by itself: ▶ asks for a tap
   const feedTileRef = useRef(null);   // the home circles' latest handlers (a circle tapped during the feed acts after the feed has stopped)
   const feedImgLoadRef = useRef(false);   // the feed is loading a picture: the home stays on screen
   const [hasMusicDraft, setHasMusicDraft] = useState(false);
@@ -36363,10 +36378,10 @@ Hard requirements:
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
-  const _feedStart = ()=>{
+  const _feedStart = (want)=>{
     // like Lite: the very first time, the arc with its lines — the bare Mosaic, Kandinsky, ✦ Signature; every later time the piece opens on its ✦ Signature, then the shuffle
     let arc=true; try{ arc=localStorage.getItem('paintiano_feed_arc')!=='1'; localStorage.setItem('paintiano_feed_arc','1'); }catch(_){}
-    const kind=_feedKind();
+    const kind=(typeof want==='string' && want) || _feedKind();
     if(kind==='img'){   // a picture: it opens on its ✦ Signature (or its scan), then Lite's composer shuffle
       const piece=_feedPiece('img'); feedStepsRef.current=[];
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:'img', piece, sel:null, u:null, l:'' };
@@ -36390,7 +36405,7 @@ Hard requirements:
     setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
     setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'up'});
     setTimeout(()=>setFeedFly(null), 340);
-    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedAt(feedAt+1); if(feedLoaded===null) _feedLoad(nx.piece, nx.sel || (nx.kind==='img' ? {img:true} : {sig:true}), nx.kind); else if(nx.sel) _feedApply(nx.sel); }
+    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedAt(feedAt+1); _feedGo(nx); }
     else {
       const piece=feedCards[feedAt].piece, kind=feedCards[feedAt].kind;
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'' };
@@ -36401,6 +36416,27 @@ Hard requirements:
     }
     _feedFlashNow(); _stBuzz(8);
   };
+  const _feedTab = (k)=>{ const w=String(t(k==='img' ? 'image' : 'music')||'').replace(/[^\p{L}\s]/gu,'').trim(); return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); };
+  const _feedIsLoaded = (c)=> !!c && feedLoaded!==null && (c.kind==='img' ? feedLoaded==='i'+c.piece : feedLoaded===c.piece);
+  const _feedGo = (c)=>{ if(_feedIsLoaded(c)){ if(c.sel) _feedApply(c.sel); return; } _feedLoad(c.piece, c.sel || (c.kind==='img' ? {img:true} : {sig:true}), c.kind); };
+  // ⇆ Music / Image: the other surprise — the card leaves sideways, the new one plays at once
+  const _feedSwitch = (kind)=>{
+    if(feedFly) return;
+    const cur = feedAt>=0 ? feedCards[feedAt] : null;
+    const curK = cur ? cur.kind : _feedKind();
+    if(curK===kind){ const d = kind==='img' ? 'l' : 'r'; setFeedBump(d); setTimeout(()=>setFeedBump(null), 320); _stBuzz(4); return; }
+    const dir = kind==='img' ? 'l' : 'r';
+    setFeedIntro(null); feedStepsRef.current=[];
+    if(!cur){ setFeedFly({k:Date.now(), dir}); setTimeout(()=>setFeedFly(null), 340); _feedStart(kind); _stBuzz(8); return; }
+    const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=cur.id;
+    setFeedFly({k:Date.now(), u:u0, t:_feedTitle(cur), l:l0, dir}); setTimeout(()=>setFeedFly(null), 340);
+    const piece=_feedPiece(kind);
+    const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'', dir };
+    setFeedCards(cs=>{ const i=cs.findIndex(x=>x.id===id0); const a=cs.slice(0, i+1).map(x=>x.id===id0 ? {...x, u:u0||x.u, sel:sel0, l:l0} : x).concat([c]); return a.length>10 ? a.slice(a.length-10) : a; });
+    setFeedAt(Math.min(10, feedAt+2)-1);
+    _feedLoad(piece, kind==='img' ? {img:true} : {sig:true}, kind);
+    _feedFlashNow(); _feedHintBump(); _stBuzz(8);
+  };
   const _feedDown = ()=>{
     if(feedAt<0 || feedFly) return;
     setFeedIntro(null);
@@ -36409,7 +36445,7 @@ Hard requirements:
     const to=feedAt-1; setFeedAt(to);
     setFeedFly({k:Date.now(), dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
     if(to<0){ _feedStop(); _feedRest(); }
-    else { const pv=feedCards[to]; if(pv.sel) _feedApply(pv.sel); _feedFlashNow(); }
+    else { const pv=feedCards[to]; _feedGo(pv); _feedFlashNow(); }
     _stBuzz(8);
   };
   // a tap on a playing card: full screen — it plays on, and from now on it is your painting
@@ -36979,10 +37015,12 @@ Hard requirements:
           );
         })()}
         </div>{/* ── end left group (hamburger + mode chip) ── */}
-        {studioOn && studioHome && _dailyShown && (
+        {studioOn && studioHome && feedAt>=0 && feedCards[feedAt] && (()=>{ const k=feedCards[feedAt].kind; return (
+          <div className="pf-st-tabs" role="tablist">{['music','img'].map(x=>(<button key={x} type="button" role="tab" aria-selected={k===x} className={k===x ? 'on' : ''} onClick={()=>_feedSwitch(x)}>{_feedTab(x)}</button>))}</div>); })()}
+        {studioOn && studioHome && _dailyShown && !(feedAt>=0 && feedCards[feedAt]) && (
           <button type="button" className="pf-st-daily" onClick={openDailyInfo} aria-label={ts('dailyTitle','Artist of the day')}><i aria-hidden="true"/><span><small>✦ {ts('dailyBadgeTitle','Free today')}</small><b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}{composerOfDay ? ' & '+(COMPOSER_INSPIRED[composerOfDay]||composerOfDay) : ''}</b></span></button>
         )}
-        {studioOn && studioHome && !_dailyShown && (
+        {studioOn && studioHome && !_dailyShown && !(feedAt>=0 && feedCards[feedAt]) && (
           <button type="button" className="pf-st-word" onClick={()=>setNavMenuOpen(true)} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
         {/* segmented control — text size + language */}
@@ -37345,9 +37383,9 @@ Hard requirements:
         const _tap = (k)=>{ const el=document.querySelector(SRC[k].sel); if(el && !el.disabled) el.click(); };
         // the lit circle (the card's own source) picks something new — ▶ is the way back to the painting
         const _fresh = (k)=>{ if(k==='music'){ if(!importTileLocked) setPickMode('sound'); return; } if(k==='image'){ if(!importTileLocked) setPickMode('image'); return; }
-        feedTileRef.current = {t:(k)=>_tap(k), f:(k)=>_fresh(k)};
           if(k==='mfi'){ if(!imgAiBusy && !sourcePickerLocked && aiUsable) setPickMode('imgmood'); return; } if(k==='mood'){ if(!sourcePickerLocked){ setMoodEdit(''); setShowMoodMenu(true); } return; } _tap(k); };
         // after the app was closed there is no draft: the card brings its piece back itself (built-in piece / picture, a mood)
+        feedTileRef.current = {t:(k)=>_tap(k), f:(k)=>_fresh(k)};
         const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         const _replay = ()=>{
@@ -37366,11 +37404,12 @@ Hard requirements:
         const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? (feedHintN<=3 ? {k:'fh', ic:['tap','up','down']} : null) : (feedHintN<=1 ? (_smp ? {k:'fh0', ic:['play','up']} : {k:'fhUp', ic:['up']}) : null);
+        const _fHint = FC ? (feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? {k:'fh0', ic:['play','up']} : {k:'fhUp', ic:['up']}) : null);
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
           up:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
           down:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+          lr:(<svg width="13" height="11" viewBox="0 0 14 12" aria-hidden="true"><path d="M4.5 2.5L1.5 6l3 3.5M9.5 2.5l3 3.5-3 3.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>),
           tap:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.4" opacity=".55"/><circle cx="6" cy="6" r="2" fill="currentColor"/></svg>),
         };
         const _fTitle = FC ? _feedTitle(FC) : '';
@@ -37394,6 +37433,7 @@ Hard requirements:
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
+          if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ _feedSwitch(dx<0 ? 'img' : 'music'); return; }   // ⇆ the other surprise: ← picture, → music
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
@@ -37409,7 +37449,7 @@ Hard requirements:
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
-                <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : 'pf-sh-in')}>
+                <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')+(feedBump ? ' pf-sh-bump'+feedBump : '')}>
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   <span key={'ch'+(FC ? FC.id : '')} className="pf-sh-chip fade" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
@@ -37423,20 +37463,20 @@ Hard requirements:
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
-                <div key="home" className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : '')}>
+                <div key="home" className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')}>
                   <img src={H.u} alt={ttl}/>
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>)}
-                {feedFly && feedFly.dir==='up' && (
-                <div key={feedFly.k} className="pf-sh-art pf-sh-fly" aria-hidden="true">
+                {feedFly && feedFly.dir!=='down' && (feedFly.u || feedFly.t) && (
+                <div key={feedFly.k} className={'pf-sh-art pf-sh-fly'+(feedFly.dir==='l' ? ' l' : feedFly.dir==='r' ? ' r' : '')} aria-hidden="true">
                   {feedFly.u && (<img src={feedFly.u} alt=""/>)}
                   {(feedFly.t || feedFly.l) && (<div className="pf-sh-cap">{feedFly.t && (<div className="pf-sh-cap-t">{feedFly.t}</div>)}{feedFly.l && (<div className="pf-sh-cap-l">{feedFly.l}</div>)}</div>)}
                 </div>)}
                 {(FC || _canPlay || _smp) ? (<button type="button" className={'pf-sh-play'+(FC && feedNeedTap && !_fPlay ? ' need' : '')} onClick={_fBtn} aria-label={_fPlay ? t('pause') : _stT('go')}>{_fPlay
                     ? (<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>)
                     : (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>)}</button>) : null}
-                {_fHint && (<div key={_fHint.k} className="pf-sh-fhint" aria-hidden="true"><span className="pf-sh-fpill">{String(_stT(_fHint.k)||'').split('|').map((x,i)=>(<Fragment key={i}>{i>0 && (<i className="pf-sh-fdot"/>)}<span className={'pf-sh-fit'+(_fHint.ic[i]==='up' && _fHint.k!=='fh' ? ' pf-sh-bob' : '')}><b>{_fIc[_fHint.ic[i]]}</b>{x}</span></Fragment>))}</span></div>)}
+                {_fHint && (<div key={_fHint.k} className="pf-sh-fhint" aria-hidden="true"><span className="pf-sh-fpill">{String(_stT(_fHint.k)||'').split('|').concat(_fHint.x ? [_fHint.x] : []).map((x,i)=>(<Fragment key={i}>{i>0 && (<i className="pf-sh-fdot"/>)}<span className={'pf-sh-fit'+(_fHint.ic[i]==='up' && _fHint.k!=='fh' ? ' pf-sh-bob' : '')}><b>{_fIc[_fHint.ic[i]]}</b>{x}</span></Fragment>))}</span></div>)}
               </div>
             </div>
             <div style={{height:14,flexShrink:0}}/>
