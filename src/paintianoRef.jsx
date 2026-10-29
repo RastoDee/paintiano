@@ -23997,6 +23997,16 @@ const STUDIO_HOME_CSS = `
 .pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 6.4cqw);line-height:1.12;letter-spacing:.01em;text-shadow:0 2px 16px rgba(0,0,0,.85)}
 .pf-sh-flash b span{display:block;font-family:'Outfit',sans-serif;font-style:normal;font-weight:400;font-size:.5em;opacity:.6;margin:.2em 0}
 @keyframes pfShFlash{0%{opacity:0;transform:translateY(6px)}14%{opacity:1;transform:none}72%{opacity:1}100%{opacity:0}}
+.pf-sh-intro{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4cqw;padding:0 8cqw 14cqw;text-align:center;pointer-events:none;background:radial-gradient(70% 42% at 50% 46%,rgba(8,6,14,.72),rgba(8,6,14,0) 100%);animation:pfShIntro 6.2s ease both}
+.pf-sh-intro p{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 6.6cqw);line-height:1.28;color:#f4e7c6;text-shadow:0 1px 14px rgba(0,0,0,.85)}
+.pf-sh-intro small{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 2.9cqw);font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:#e2c477;text-shadow:0 1px 10px rgba(0,0,0,.85)}
+.pf-sh-key{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1.1cqw;width:92%}
+.pf-sh-key span{display:flex;flex-direction:column;align-items:center;gap:1.4cqw;min-width:0}
+.pf-sh-key i{display:block;width:100%;aspect-ratio:1;border-radius:1.2cqw;opacity:.62;transition:opacity .12s, box-shadow .12s}
+.pf-sh-key span.on i{opacity:1}
+.pf-sh-key b{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 2.5cqw);font-weight:500;color:rgba(230,222,196,.62);white-space:nowrap}
+.pf-sh-key span.on b{font-weight:700;color:#f4e7c6}
+@keyframes pfShIntro{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
 .pf-sh-heart{position:absolute;left:50%;top:45%;z-index:4;font-size:64px;line-height:1;color:#ff4d7d;transform:translate(-50%,-50%);animation:pfShHeartPop .9s ease forwards;pointer-events:none;text-shadow:0 6px 24px rgba(255,60,120,.5)}
 @keyframes pfShHeartPop{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}25%{transform:translate(-50%,-50%) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
 @keyframes pfShFloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-6px) rotate(-1.5deg)}}
@@ -24828,6 +24838,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [grid,      setGrid]      = useState({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
   const [info,      setInfo]      = useState(null);
   const [viewMode,  setViewMode]  = useState('paint');
+  const [feedHiRes, setFeedHiRes] = useState(false); // the Studio home feed paints on the card: the same 2× backing as full screen, so the card is sharp
   const [immersive, setImmersive] = useState(false); // CSS fullscreen-ish painting view (works on iOS too); declared here (early) so the paint effect can read it without a TDZ crash
   // ── Lite fullscreen swipe-up = next Surprise ─────────────────────────────
   // Touch tracking for the vertical swipe gesture on the immersive canvas.
@@ -27033,7 +27044,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // ~900px buffer. SS=1 everywhere else → normal & mobile rendering byte-for-byte
     // unchanged. (immersive is declared early, near viewMode, so reading it here is
     // safe — reading it before its declaration was a TDZ crash = black screen.)
-    const SS=(immersive && viewMode==='paint')?2:1;
+    const SS=((immersive || feedHiRes) && viewMode==='paint')?2:1;
     const _bw=Math.max(1,Math.round(CW*SS)), _bh=Math.max(1,Math.round(CH*SS));
     if(cv.width!==_bw) cv.width=_bw;
     if(cv.height!==_bh) cv.height=_bh;
@@ -27487,7 +27498,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,painterStage,fuRoll,fuStyleNow]);
+  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,feedHiRes,painterStage,fuRoll,fuStyleNow]);
 
   // ── FAVORITES (♥) ───────────────────────────────────────────────────────────
   // ♥ at the top left of a FINISHED painting saves its address (favAdd in
@@ -34744,7 +34755,7 @@ Hard requirements:
   // the JSX-set backing and the effect's transform agree (keeping the backing in
   // JSX, consistent every render, avoids the black-screen window from setting it
   // only inside the effect).
-  const _ssF=(immersive && viewMode==='paint')?2:1;
+  const _ssF=((immersive || feedHiRes) && viewMode==='paint')?2:1;
   const pct=(info||chords.length)?Math.round(disp/Math.max(1,chords.length)*100):null;
   // Pre-build a Set so each of the 88 white keys can do O(1) `.has()`
   // instead of pending.includes() which would be O(88 * len(pending)).
@@ -36252,7 +36263,9 @@ Hard requirements:
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
   const [feedHeart, setFeedHeart] = useState(0);
-  const [feedBg, setFeedBg] = useState(null);   // the blurred light behind the card, from the painting as it grows
+  const [feedBg, setFeedBg] = useState(null);
+  const [feedIntro, setFeedIntro] = useState(null);   // Lite's opening lines on the card: {k:'m'|'p'|'s', t} — the Mosaic's key, the first painter, ✦ Signature
+  useEffect(()=>{ if(!feedIntro) return; const tm=setTimeout(()=>setFeedIntro(null), 6200); return ()=>clearTimeout(tm); },[feedIntro]);   // the blurred light behind the card, from the painting as it grows
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
   const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
   // the painting on the canvas, small, for a card that is left
@@ -36285,7 +36298,7 @@ Hard requirements:
     loadSampleMidi(piece, {noSig:true});
     feedPieceRef.current = true;
     _feedApply(sel);
-    setFeedLoaded(piece);
+    setFeedLoaded(piece); setFeedHiRes(true);
     feedStartRef.current = {t:Date.now(), title:_FEED_NAMES[piece]};
   };
   // the next look: the fixed opening first, then Lite's own shuffle (a painter × variant, a fusion now and then)
@@ -36294,8 +36307,8 @@ Hard requirements:
     while(feedStepsRef.current.length){
       const st = feedStepsRef.current.shift();
       if(st==='mosaic'){ _feedApply({style:null, phase:0, mode, notes:false, stage:[], sig:false}); return; }
-      if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:0, mode, notes:false, stage:[], sig:false}); return; }
-      if(st==='sig'){ const sg=songSigRef.current; if(sg && sg.keys && sg.keys.length && applySigRef.current){ _feedApply({sig:true}); return; } continue; }
+      if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:0, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'p', t:Date.now()}); return; }
+      if(st==='sig'){ const sg=songSigRef.current; if(sg && sg.keys && sg.keys.length && applySigRef.current){ _feedApply({sig:true}); setFeedIntro({k:'s', t:Date.now()}); return; } continue; }
     }
     _liteNextKRef.current=null; _liteNextIsMosaicRef.current=false; _liteNextIsSigRef.current=false;
     basicSurprise();
@@ -36303,23 +36316,24 @@ Hard requirements:
   // the feed's piece leaves the player (the cards keep their pictures); your painter and palette come back
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
     setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode); setOneMMode(L.oneMMode); };
-  const _feedStop = ()=>{ if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); feedStartRef.current=null; };
+  const _feedStop = ()=>{ if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return; _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
   const _feedStart = ()=>{
-    const piece=_feedPiece(), sel={style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false};
-    feedStepsRef.current = ['mosaic','kandinsky','sig'];
+    const piece=_feedPiece(), sel={style:null, phase:0, mode, notes:false, stage:[], sig:false};   // Lite opens on the bare Mosaic
+    feedStepsRef.current = ['kandinsky','sig'];
     surpriseArtistBagRef.current = [];
     const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece, sel, u:null, l:'' };
     setFeedCards([c]); setFeedAt(0);
     _feedLoad(piece, sel);
-    _feedFlashNow(); _feedHintBump();
+    setFeedIntro({k:'m', t:Date.now()}); _feedHintBump();
   };
   const _feedUp = (cur)=>{
     if(feedFly) return;
+    setFeedIntro(null);
     if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340); _feedStart(); _stBuzz(8); return; }
     // the card that leaves keeps its painting and its look
     const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
@@ -36339,6 +36353,7 @@ Hard requirements:
   };
   const _feedDown = ()=>{
     if(feedAt<0 || feedFly) return;
+    setFeedIntro(null);
     const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
     setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
     const to=feedAt-1; setFeedAt(to);
@@ -36348,7 +36363,7 @@ Hard requirements:
     _stBuzz(8);
   };
   // a tap on a playing card: full screen — it plays on, and from now on it is your painting
-  const _feedOpen = ()=>{ feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
+  const _feedOpen = ()=>{ feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
@@ -37296,7 +37311,7 @@ Hard requirements:
         const _fTitle = FC ? _FEED_NAMES[FC.piece] : '';
         const _fLine = FC ? (_fL ? _vidLine() : FC.l) : '';
         // the look's name over the card, for a moment (Lite's flash): the Mosaic, a painter, ✦ Signature, a fusion
-        const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash) return null; const sv=(style!==null ? [style] : []).concat(painterStage).map(k=>STYLE_INSPIRED[k]||k);
+        const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash || feedIntro) return null; const sv=(style!==null ? [style] : []).concat(painterStage).map(k=>STYLE_INSPIRED[k]||k);
           if(sigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:sv};
           if(style===null) return {h:'', by:'', n:[_fUp(String(notesMode ? t('notesStyle') : t('liteMosaicStyle')).toLowerCase())]};
           if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
@@ -37331,6 +37346,12 @@ Hard requirements:
                 <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : 'pf-sh-in')}>
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
+                  {_fL && feedIntro && (()=>{
+                    if(feedIntro.k==='m'){ const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))]; const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; })); const _nm=_miT('names');
+                      return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('line')}</p><div className="pf-sh-key">{[0,7,2,9,4,11,6,1,8,3,10,5].map(pc=>{ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){} const on=_lit.has(pc); return (<span key={pc} className={on?'on':''}><i style={{background:'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')',...(on?{boxShadow:'0 0 0 1.5px #f4e7c6,0 0 10px 1px rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+',.85)'}:{})}}/><b>{_nm[pc]}</b></span>); })}</div></div>); }
+                    if(feedIntro.k==='p' && style && STYLE_INSPIRED[style]) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('painter').replace('{name}', STYLE_INSPIRED[style])}</p></div>);
+                    if(feedIntro.k==='s' && sigActive) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><small>✦ {_sigT('label')}</small><p>{_sigT('intro')}</p></div>);
+                    return null; })()}
                   {_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true">{_fFlash.h && (<small>{_fFlash.h}</small>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>×</span>)}{x}</b>))}</div>)}
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
