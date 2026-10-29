@@ -36313,7 +36313,7 @@ Hard requirements:
   // the live canvas, mirrored into the card (cover)
   const _feedDraw = ()=>{ try{ const c=feedCvRef.current, s=canvasRef.current; if(!c || !s || !s.width || !s.height) return; const w=c.clientWidth, h=c.clientHeight; if(!w || !h) return; const d=Math.min(2, window.devicePixelRatio||1); const W=Math.round(w*d), Hh=Math.round(h*d); if(c.width!==W) c.width=W; if(c.height!==Hh) c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh);
     // a picture: the picture itself, the scan's light over it (screen) — as on the stage
-    if(viewMode==='image' && originalImgUrl){ const F=feedImgElRef.current; if(F.u!==originalImgUrl){ const im=new Image(); im.src=originalImgUrl; F.u=originalImgUrl; F.el=im; } const im=F.el; if(im && im.complete && im.naturalWidth){ const ri=Math.max(W/im.naturalWidth, Hh/im.naturalHeight), iw=im.naturalWidth*ri, ih=im.naturalHeight*ri; x.drawImage(im,(W-iw)/2,(Hh-ih)/2,iw,ih);
+    if(viewMode==='image' && originalImgUrl){ const F=feedImgElRef.current; if(F.u!==originalImgUrl){ const im=new Image(); im.src=originalImgUrl; F.u=originalImgUrl; F.el=im; } const im=F.el; if(im && im.complete && im.naturalWidth){ if(!F.cv || F.cw!==W || F.ch!==Hh || F.cu!==F.u){ const o=document.createElement('canvas'); o.width=W; o.height=Hh; const ri=Math.max(W/im.naturalWidth, Hh/im.naturalHeight), iw=im.naturalWidth*ri, ih=im.naturalHeight*ri; o.getContext('2d').drawImage(im,(W-iw)/2,(Hh-ih)/2,iw,ih); F.cv=o; F.cw=W; F.ch=Hh; F.cu=F.u; } x.drawImage(F.cv,0,0);
         if(playing || anim || holdPaused){ const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.globalCompositeOperation='screen'; x.globalAlpha=.7; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); x.globalCompositeOperation='source-over'; x.globalAlpha=1; } return; } }
     const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); }catch(_){} };
   // the look on screen, to keep with a card
@@ -36376,7 +36376,7 @@ Hard requirements:
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
     setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode); setOneMMode(L.oneMMode);
     if(L.comp!==undefined){ imgComposerRef.current=L.comp||null; setImgComposer(L.comp||null); setComposerStage(L.cstage||[]); } };
-  const _feedStop = ()=>{ feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
+  const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return; _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
@@ -36438,7 +36438,9 @@ Hard requirements:
     const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'', dir };
     setFeedCards(cs=>{ const i=cs.findIndex(x=>x.id===id0); const a=cs.slice(0, i+1).map(x=>x.id===id0 ? {...x, u:u0||x.u, sel:sel0, l:l0} : x).concat([c]); return a.length>10 ? a.slice(a.length-10) : a; });
     setFeedAt(Math.min(10, feedAt+2)-1);
-    _feedLoad(piece, kind==='img' ? {img:true} : {sig:true}, kind);
+    try{ Tone.getDestination().volume.rampTo(-48, 0.09); }catch(_){}
+    setTimeout(()=>{ _feedLoad(piece, kind==='img' ? {img:true} : {sig:true}, kind); }, 100);
+    setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1) v.rampTo(0, 0.2); }catch(_){} }, 2600);   // never left quiet
     _feedFlashNow(); _feedHintBump(); _stBuzz(8);
   };
   const _feedDown = ()=>{
@@ -36463,7 +36465,7 @@ Hard requirements:
     // the first tap after opening the app only wakes the sound on iOS (it is still starting when the piece is in):
     // if the piece is not playing a moment later, it is started again — up to three times
     const tok=feedTokRef.current;
-    const _go=(n)=>{ if(feedTokRef.current!==tok) return; try{ if(!playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
+    const _go=(n)=>{ if(feedTokRef.current!==tok) return; try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.12); } }catch(_){} try{ if(!playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
       if(n<3) setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current && !holdPausedRef.current){ try{ wakeAudio(); }catch(_){} _go(n+1); } }, 700);
       else setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current) setFeedNeedTap(true); }, 900); };
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);

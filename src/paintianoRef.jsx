@@ -28369,6 +28369,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // (a) kick Tone's promise, and (b) synchronously poke the rawContext awake.
   // Cheap to call repeatedly; no-op when context is already running.
 
+  // the home card plays with a longer look-ahead: a small card needs no tight sync, and the sound must not crackle while the card is mirrored
+  const feedLaRef = useRef(0);
+  const _acRunning = ()=>{ try{ const ac=Tone.getContext().rawContext; return !ac || ac.state==='running'; }catch(_){ return true; } };
   const unlockAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
     // Shorten Tone's scheduler look-ahead from its default 100ms to 30ms.
@@ -28379,7 +28382,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // enough to feel synchronised, far enough above zero to avoid scheduler
     // underruns on slow devices. Idempotent — setter is cheap and safe to
     // re-apply on every unlock.
-    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ Tone.getContext().lookAhead = feedLaRef.current || 0.03; }catch(_){}
     // iOS 17+ audio session API. After MediaRecorder runs, iOS WebKit
     // pushes the audio session into the 'play-and-record' category which
     // makes output respect the hardware silent switch — so even with
@@ -28539,7 +28542,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       try{ _old.dispose(); }catch(_){}
     }catch(_){}
     try{ await Tone.start(); }catch(_){}
-    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ Tone.getContext().lookAhead = feedLaRef.current || 0.03; }catch(_){}
     try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type='playback'; } }catch(_){}
     try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     try{
@@ -28556,7 +28559,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const wakeAudioRef = useRef(0);
   const wakeAudio = useCallback(async ()=>{
     try{ Tone.start(); }catch(_){}
-    try{ Tone.getContext().lookAhead = 0.03; }catch(_){}
+    try{ Tone.getContext().lookAhead = feedLaRef.current || 0.03; }catch(_){}
     try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type = 'playback'; } }catch(_){}
     try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     let ac=null;
@@ -36310,7 +36313,7 @@ Hard requirements:
   // the live canvas, mirrored into the card (cover)
   const _feedDraw = ()=>{ try{ const c=feedCvRef.current, s=canvasRef.current; if(!c || !s || !s.width || !s.height) return; const w=c.clientWidth, h=c.clientHeight; if(!w || !h) return; const d=Math.min(2, window.devicePixelRatio||1); const W=Math.round(w*d), Hh=Math.round(h*d); if(c.width!==W) c.width=W; if(c.height!==Hh) c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh);
     // a picture: the picture itself, the scan's light over it (screen) — as on the stage
-    if(viewMode==='image' && originalImgUrl){ const F=feedImgElRef.current; if(F.u!==originalImgUrl){ const im=new Image(); im.src=originalImgUrl; F.u=originalImgUrl; F.el=im; } const im=F.el; if(im && im.complete && im.naturalWidth){ const ri=Math.max(W/im.naturalWidth, Hh/im.naturalHeight), iw=im.naturalWidth*ri, ih=im.naturalHeight*ri; x.drawImage(im,(W-iw)/2,(Hh-ih)/2,iw,ih);
+    if(viewMode==='image' && originalImgUrl){ const F=feedImgElRef.current; if(F.u!==originalImgUrl){ const im=new Image(); im.src=originalImgUrl; F.u=originalImgUrl; F.el=im; } const im=F.el; if(im && im.complete && im.naturalWidth){ if(!F.cv || F.cw!==W || F.ch!==Hh || F.cu!==F.u){ const o=document.createElement('canvas'); o.width=W; o.height=Hh; const ri=Math.max(W/im.naturalWidth, Hh/im.naturalHeight), iw=im.naturalWidth*ri, ih=im.naturalHeight*ri; o.getContext('2d').drawImage(im,(W-iw)/2,(Hh-ih)/2,iw,ih); F.cv=o; F.cw=W; F.ch=Hh; F.cu=F.u; } x.drawImage(F.cv,0,0);
         if(playing || anim || holdPaused){ const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.globalCompositeOperation='screen'; x.globalAlpha=.7; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); x.globalCompositeOperation='source-over'; x.globalAlpha=1; } return; } }
     const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); }catch(_){} };
   // the look on screen, to keep with a card
@@ -36330,7 +36333,8 @@ Hard requirements:
   };
   // put the piece in the player and start it (call it inside the gesture: the sound wakes there)
   const _feedLoad = (piece, sel, kind)=>{
-    try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){}
+    if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
+    setTimeout(()=>{ if(!_acRunning()) setFeedNeedTap(true); }, 450);   // still asleep (a swipe on iOS): ▶ asks for one tap
     if(!feedLookRef.current){
       feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, oneMMode, comp:imgComposer, cstage:composerStage.slice() };
       try{ stashMode('image'); }catch(_){}       // your picture keeps its place too
@@ -36372,7 +36376,7 @@ Hard requirements:
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
     setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode); setOneMMode(L.oneMMode);
     if(L.comp!==undefined){ imgComposerRef.current=L.comp||null; setImgComposer(L.comp||null); setComposerStage(L.cstage||[]); } };
-  const _feedStop = ()=>{ feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
+  const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return; _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
@@ -36434,7 +36438,8 @@ Hard requirements:
     const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'', dir };
     setFeedCards(cs=>{ const i=cs.findIndex(x=>x.id===id0); const a=cs.slice(0, i+1).map(x=>x.id===id0 ? {...x, u:u0||x.u, sel:sel0, l:l0} : x).concat([c]); return a.length>10 ? a.slice(a.length-10) : a; });
     setFeedAt(Math.min(10, feedAt+2)-1);
-    _feedLoad(piece, kind==='img' ? {img:true} : {sig:true}, kind);
+    try{ Tone.getDestination().volume.rampTo(-48, 0.09); }catch(_){}
+    setTimeout(()=>{ _feedLoad(piece, kind==='img' ? {img:true} : {sig:true}, kind); }, 100);
     _feedFlashNow(); _feedHintBump(); _stBuzz(8);
   };
   const _feedDown = ()=>{
@@ -36459,13 +36464,16 @@ Hard requirements:
     // the first tap after opening the app only wakes the sound on iOS (it is still starting when the piece is in):
     // if the piece is not playing a moment later, it is started again — up to three times
     const tok=feedTokRef.current;
-    const _go=(n)=>{ if(feedTokRef.current!==tok) return; try{ if(!playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
+    const _go=(n)=>{ if(feedTokRef.current!==tok) return; try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.12); } }catch(_){} try{ if(!playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
       if(n<3) setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current && !holdPausedRef.current){ try{ wakeAudio(); }catch(_){} _go(n+1); } }, 700);
       else setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current) setFeedNeedTap(true); }, 900); };
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);
     return ()=>clearTimeout(tm);
   },[chords, playing, anim, working, info, viewMode, originalImgUrl]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); },[playing]);
+  useEffect(()=>{ const on = feedLoaded!==null; feedLaRef.current = on ? 0.15 : 0; try{ Tone.getContext().lookAhead = on ? 0.15 : 0.03; }catch(_){} },[feedLoaded]);
+  // any plain tap wakes a sleeping sound (iOS gives none to a swipe): then a swipe can start the card at once
+  useEffect(()=>{ const f=()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } }; document.addEventListener('click', f, true); return ()=>document.removeEventListener('click', f, true); },[]);
   // the card shows the canvas as it paints
   const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
   useEffect(()=>{
@@ -37420,21 +37428,22 @@ Hard requirements:
           if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
+          if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }   // a tap is a gesture iOS accepts: the sound wakes here
           const R=feedTapRef.current, now=Date.now();
           if(now-R.t<300){ if(R.tm){ clearTimeout(R.tm); R.tm=null; } R.t=0;
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
             return; }
           R.t=now; if(R.tm) clearTimeout(R.tm);
-          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_canPlay) _play(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
+          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_canPlay) _play(); return; } if(_fL && feedNeedTap && !playingRef.current){ _fBtn(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
         };
-        const _fTS = (e)=>{ try{ unlockAudio(); }catch(_){} if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
+        const _fTS = (e)=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
           if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ _feedSwitch(dx<0 ? 'img' : 'music'); return; }   // ⇆ the other surprise: ← picture, → music
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
-        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
+        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
