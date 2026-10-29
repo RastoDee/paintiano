@@ -19771,8 +19771,8 @@ const GUIDE_I18N = {
    ui:{featS:`The Studio in 30 seconds`, featSsub:`Gestures, Home, ♥ and sharing`, featC:`Paintiano in 30 seconds`, featCsub:`Two directions, three ways in, Artist of the day`, conceptSub:`Why music and painting are one`, search:`Search — loop, video, Chopin…`},
    c:{
     st_canvas:{t:`Just the painting`, b:`The painting fills the screen. Swipe left and the controls appear.`, m:`Left — A rail slides in on the right: ♥, ▶ / pause, sound and share. Hold an icon to see what it does. ◆ Tap — Just the song and who is painting it, on top. ◆ It hides itself — When you don't need the rail, it goes away and only the painting stays. ◆ Mood — The rail adds loop, Vary and Morph. ◆ Image — It adds atmo and melody (AI). ◆ Atelier — With Pro, turn it on in Styles & palettes → View: every tool in sight.`},
-    st_gestures:{t:`Gestures`, b:`You run the Studio with one finger. Controls show up only when you want them.`, m:`Up — With 🔀 on, the next painting of the same song. ◆ Down — Look: palettes, painters, composers. ◆ Right — The left rail: + New, Look, Favorites, Clear. ◆ Left — The right rail: ♥, ▶, sound, share. ◆ Tap — The song and who is painting it. ◆ Double tap — The painting goes into ♥ Favorites. ◆ Hold — Who is painting. With Mood from image, the original picture too.`},
-    st_home:{t:`Home`, b:`Your last painting. ▶ takes you back to it, even after you close the app.`, m:`Six ways in — Under the card: Music, Image, Mood from image, How do you feel?, Compose, Mic. ◆ Lit circle — ▶ takes you back to the painting; the lit circle of its source picks something new. ◆ First time — Liebestraum is waiting; ▶ paints it. ◆ Favorites — At the bottom, under the circles. ◆ Back home — + New → Home. ◆ Mic and Compose — They paint live. You can go back to them until you clear them or close the app.`},
+    st_gestures:{t:`Gestures`, b:`You run the Studio with one finger. Controls show up only when you want them.`, m:`Up — The next painting of the same song (🔀 off: the same painter, on: anyone in your set). ◆ Down — Look: palettes, painters, composers. ◆ Right — The left rail: + New, Look, Favorites, Clear. ◆ Left — The right rail: ♥, ▶, sound, share. ◆ Tap — The song and who is painting it. ◆ Double tap — The painting goes into ♥ Favorites. ◆ Hold — Who is painting. With Mood from image, the original picture too. ◆ On Home — Swipe the card up: a surprise painting.`},
+    st_home:{t:`Home`, b:`Your last painting. ▶ takes you back to it, even after you close the app.`, m:`Six ways in — Under the card: Music, Image, Mood from image, How do you feel?, Compose, Mic. ◆ Lit circle — ▶ takes you back to the painting; the lit circle of its source picks something new. ◆ Surprise — Swipe the card up: a new painting paints itself on it, with its music. Down — the one before. Tap — full screen, it plays on. ◆ First time — Liebestraum is waiting; ▶ paints it. ◆ Favorites — At the bottom, under the circles. ◆ Back home — + New → Home. ◆ Mic and Compose — They paint live. You can go back to them until you clear them or close the app.`},
     st_look:{t:`Look`, b:`Swipe down: palettes and painters. Same notes, a new hand.`, m:`Palettes — Five colour grammars along the top. ◆ Painters — The previews are painted from your song; tap one and the painting repaints. ◆ 🔀 and ◎ — Shuffle and Ensemble: several painters fused into one. ◆ Image — Composers, Scan and ✦ AI instead of painters. ◆ Hear image — Plays the finished painting as a picture. With a picture it's See music instead.`},
     st_share:{t:`♥ and sharing`, b:`Double tap and the painting is in Favorites. Share it as a video or a Story.`, m:`Video 9:16 — It paints itself to the music. For TikTok, Reels and Stories. ◆ Story picture — 9:16, with the title and who painted it. Once the painting is finished. ◆ Save · print — Sizes, files and print, once the painting is finished. ◆ Favorites — In the left rail or at the bottom of Home. Swipe up and down to flip through.`},
     st_menu:{t:`Menu`, b:`Tap Paintiano ⌄ at the top of Home.`, m:`Favorites, Guide, Concept, Book — All in one place. ◆ Language — Nine languages. ◆ Styles & palettes — Which painters, palettes and composers you see. With Pro, also the Studio / Atelier switch. ◆ Text size — Three sizes. ◆ Reset — Start over.`},
@@ -19807,8 +19807,8 @@ const GUIDE_I18N = {
    ui:{featS:`Štúdio za 30 sekúnd`, featSsub:`Gestá, domov, ♥ a zdieľanie`, featC:`Paintiano za 30 sekúnd`, featCsub:`Dva smery, tri spôsoby, Umelec dňa`, conceptSub:`Prečo sú hudba a obraz jedno`, search:`Hľadaj — slučka, video, Chopin…`},
    c:{
     st_canvas:{t:`Len maľba`, b:`Maľba na celú obrazovku. Potiahni doľava a ukáže sa ovládanie.`, m:`Doľava — Vpravo sa ukáže lišta: ♥, ▶ / pauza, zvuk a zdieľanie. Podrž ikonu a ukáže, čo robí. ◆ Ťuk — Hore len názov skladby a kto maľuje. ◆ Sama zmizne — Keď lištu nepotrebuješ, schová sa a ostane len maľba. ◆ Nálada — V lište pribudne slučka, Variácia a Morf. ◆ Obraz — Pribudne atmosféra a melódia (AI). ◆ Ateliér — S Pro ho zapneš v Štýly a palety → Zobrazenie: celé náradie na očiach.`},
-    st_gestures:{t:`Gestá`, b:`Štúdio ovládaš prstom. Ovládanie sa ukáže, až keď ho chceš.`, m:`Hore — So zapnutým 🔀 ďalšia maľba tej istej skladby. ◆ Dole — Vzhľad: palety, maliari, skladatelia. ◆ Doprava — Ľavá lišta: + Nové, Vzhľad, Obľúbené, Vyčistiť. ◆ Doľava — Pravá lišta: ♥, ▶, zvuk, zdieľanie. ◆ Ťuk — Názov skladby a kto maľuje. ◆ Dvakrát ťuk — Maľba ide do ♥ Obľúbených. ◆ Podrž — Kto maľuje. Pri Nálade z obrazu aj pôvodný obrázok.`},
-    st_home:{t:`Domov`, b:`Tvoja posledná maľba. ▶ ťa k nej vráti, aj keď appku zavrieš.`, m:`Šesť ciest — Pod kartou: Hudba, Obraz, Nálada z obrazu, Ako sa cítiš?, Komponovať, Mikro. ◆ Svietiaci krúžok — ▶ ťa vráti k maľbe, svietiaci krúžok jej zdroja vyberie niečo nové. ◆ Prvýkrát — Čaká ťa Liebestraum, ▶ ho namaľuje. ◆ Obľúbené — Dole pod krúžkami. ◆ Späť domov — + Nové → Domov. ◆ Mikro a Komponovať — Maľujú naživo. Vrátiš sa k nim, kým ich nevyčistíš alebo nezavrieš appku.`},
+    st_gestures:{t:`Gestá`, b:`Štúdio ovládaš prstom. Ovládanie sa ukáže, až keď ho chceš.`, m:`Hore — Ďalšia maľba tej istej skladby (🔀 vyp: ten istý maliar, zap: ktokoľvek z výberu). ◆ Dole — Vzhľad: palety, maliari, skladatelia. ◆ Doprava — Ľavá lišta: + Nové, Vzhľad, Obľúbené, Vyčistiť. ◆ Doľava — Pravá lišta: ♥, ▶, zvuk, zdieľanie. ◆ Ťuk — Názov skladby a kto maľuje. ◆ Dvakrát ťuk — Maľba ide do ♥ Obľúbených. ◆ Podrž — Kto maľuje. Pri Nálade z obrazu aj pôvodný obrázok. ◆ Na domove — Kartu potiahni hore: maľba na prekvapenie.`},
+    st_home:{t:`Domov`, b:`Tvoja posledná maľba. ▶ ťa k nej vráti, aj keď appku zavrieš.`, m:`Šesť ciest — Pod kartou: Hudba, Obraz, Nálada z obrazu, Ako sa cítiš?, Komponovať, Mikro. ◆ Svietiaci krúžok — ▶ ťa vráti k maľbe, svietiaci krúžok jej zdroja vyberie niečo nové. ◆ Prekvapenie — Potiahni kartu hore: na ďalšej sa namaľuje nová maľba aj s hudbou. Dole — predchádzajúca. Ťuk — celá obrazovka, hrá ďalej. ◆ Prvýkrát — Čaká ťa Liebestraum, ▶ ho namaľuje. ◆ Obľúbené — Dole pod krúžkami. ◆ Späť domov — + Nové → Domov. ◆ Mikro a Komponovať — Maľujú naživo. Vrátiš sa k nim, kým ich nevyčistíš alebo nezavrieš appku.`},
     st_look:{t:`Vzhľad`, b:`Potiahni dole: palety a maliari. Tie isté tóny, nový rukopis.`, m:`Palety — Hore päť farebných gramatík. ◆ Maliari — Náhľady sa maľujú z tvojej skladby; ťukni a maľba sa premaľuje. ◆ 🔀 a ◎ — Zamiešanie a Ensemble: viac maliarov v jednej fúzii. ◆ Obraz — Namiesto maliarov skladatelia, Sken a ✦ AI. ◆ Počuť obraz — Hotovú maľbu zahrá ako obrázok. Pri obrázku naopak Vidieť hudbu.`},
     st_share:{t:`♥ a zdieľanie`, b:`Dvakrát ťukni a maľba je v Obľúbených. Zdieľaj ju ako video alebo Story.`, m:`Video 9:16 — Maľuje sa do hudby. Pre TikTok, Reels a Stories. ◆ Obrázok do Story — 9:16, s názvom a kto ho namaľoval. Až keď sa maľba domaľuje. ◆ Uložiť · tlač — Veľkosti, súbory a tlač, keď sa maľba domaľuje. ◆ Obľúbené — V ľavej lište alebo dole na domove. Listuješ potiahnutím hore a dole.`},
     st_menu:{t:`Menu`, b:`Ťukni na Paintiano ⌄ hore na domove.`, m:`Obľúbené, Príručka, Koncept, Kniha — Všetko na jednom mieste. ◆ Jazyk — Deväť jazykov. ◆ Štýly a palety — Ktorí maliari, palety a skladatelia sa ukazujú. S Pro aj prepínač Štúdio / Ateliér. ◆ Veľkosť textu — Tri veľkosti. ◆ Reset — Začneš odznova.`},
@@ -19843,8 +19843,8 @@ const GUIDE_I18N = {
    ui:{featS:`Studio in 30 Sekunden`, featSsub:`Gesten, Start, ♥ und Teilen`, featC:`Paintiano in 30 Sekunden`, featCsub:`Zwei Richtungen, drei Modi, Künstler des Tages`, conceptSub:`Warum Musik und Bild eins sind`, search:`Suchen — Loop, Video, Chopin…`},
    c:{
     st_canvas:{t:`Nur das Bild`, b:`Das Bild im Vollbild. Wische nach links, und die Steuerung erscheint.`, m:`Nach links — Rechts erscheint eine Leiste: ♥, ▶ / Pause, Ton und Teilen. Halte ein Symbol gedrückt, und es zeigt, was es tut. ◆ Tippen — Oben nur der Titel des Stücks und wer malt. ◆ Verschwindet von selbst — Brauchst du die Leiste nicht, versteckt sie sich und nur das Bild bleibt. ◆ Stimmung — In der Leiste kommen Loop, Variieren und Morph dazu. ◆ Bild — Dazu kommen Atmo und Melodie (KI). ◆ Atelier — Mit Pro schaltest du es in Stile & Paletten → Ansicht ein: alle Werkzeuge im Blick.`},
-    st_gestures:{t:`Gesten`, b:`Das Studio steuerst du per Finger. Die Steuerung kommt erst, wenn du sie willst.`, m:`Nach oben — Mit 🔀 das nächste Bild zum selben Stück. ◆ Nach unten — Look: Paletten, Maler, Komponisten. ◆ Nach rechts — Linke Leiste: + Neu, Look, Favoriten, Löschen. ◆ Nach links — Rechte Leiste: ♥, ▶, Ton, Teilen. ◆ Tippen — Titel des Stücks und wer malt. ◆ Doppelt tippen — Das Bild kommt in die ♥ Favoriten. ◆ Gedrückt halten — Wer malt. Bei Stimmung aus Bild auch das Originalfoto.`},
-    st_home:{t:`Start`, b:`Dein letztes Bild. ▶ bringt dich dorthin zurück, auch wenn du die App schließt.`, m:`Sechs Wege — Unter der Karte: Musik, Bild, Stimmung aus Bild, Wie fühlst du dich?, Komponieren, Mikro. ◆ Leuchtender Kreis — ▶ bringt dich zum Bild zurück, der leuchtende Kreis seiner Quelle wählt etwas Neues. ◆ Beim ersten Mal — Liebestraum wartet auf dich, ▶ malt ihn. ◆ Favoriten — Unten, unter den Kreisen. ◆ Zurück zum Start — + Neu → Start. ◆ Mikro und Komponieren — Sie malen live. Du kommst zu ihnen zurück, bis du sie löschst oder die App schließt.`},
+    st_gestures:{t:`Gesten`, b:`Das Studio steuerst du per Finger. Die Steuerung kommt erst, wenn du sie willst.`, m:`Nach oben — Das nächste Bild desselben Stücks (🔀 aus: derselbe Maler, an: jeder aus deiner Auswahl). ◆ Nach unten — Look: Paletten, Maler, Komponisten. ◆ Nach rechts — Linke Leiste: + Neu, Look, Favoriten, Löschen. ◆ Nach links — Rechte Leiste: ♥, ▶, Ton, Teilen. ◆ Tippen — Titel des Stücks und wer malt. ◆ Doppelt tippen — Das Bild kommt in die ♥ Favoriten. ◆ Gedrückt halten — Wer malt. Bei Stimmung aus Bild auch das Originalfoto. ◆ Auf dem Start — Karte nach oben wischen: ein Überraschungsbild.`},
+    st_home:{t:`Start`, b:`Dein letztes Bild. ▶ bringt dich dorthin zurück, auch wenn du die App schließt.`, m:`Sechs Wege — Unter der Karte: Musik, Bild, Stimmung aus Bild, Wie fühlst du dich?, Komponieren, Mikro. ◆ Leuchtender Kreis — ▶ bringt dich zum Bild zurück, der leuchtende Kreis seiner Quelle wählt etwas Neues. ◆ Überraschung — Wisch die Karte nach oben: auf der nächsten malt sich ein neues Bild mit seiner Musik. Nach unten — das vorige. Tippen — Vollbild, es spielt weiter. ◆ Beim ersten Mal — Liebestraum wartet auf dich, ▶ malt ihn. ◆ Favoriten — Unten, unter den Kreisen. ◆ Zurück zum Start — + Neu → Start. ◆ Mikro und Komponieren — Sie malen live. Du kommst zu ihnen zurück, bis du sie löschst oder die App schließt.`},
     st_look:{t:`Look`, b:`Wisch nach unten: Paletten und Maler. Dieselben Töne, neue Handschrift.`, m:`Paletten — Oben fünf Farbgrammatiken. ◆ Maler — Die Vorschauen malen sich aus deinem Stück; tippe, und das Bild malt sich neu. ◆ 🔀 und ◎ — Zufall und Ensemble: mehrere Maler in einer Fusion. ◆ Bild — Statt Malern Komponisten, Scan und ✦ KI. ◆ Bild hören — Spielt das fertige Bild ab, als wäre es ein Foto. Bei einem Foto umgekehrt: Musik sehen.`},
     st_share:{t:`♥ und Teilen`, b:`Doppelt tippen, und das Bild ist in den Favoriten. Teile es als Video oder Story.`, m:`Video 9:16 — Malt sich zur Musik. Für TikTok, Reels und Stories. ◆ Story-Bild — 9:16, mit Titel und wer es gemalt hat. Sobald das Bild fertig ist. ◆ Speichern · Druck — Größen, Dateien und Druck, sobald das Bild fertig gemalt ist. ◆ Favoriten — In der linken Leiste oder unten auf Start. Blättern mit Wischen nach oben und unten.`},
     st_menu:{t:`Menü`, b:`Tippe auf Paintiano ⌄ oben auf dem Startbildschirm.`, m:`Favoriten, Anleitung, Konzept, Buch — Alles an einem Ort. ◆ Sprache — Neun Sprachen. ◆ Stile & Paletten — Welche Maler, Paletten und Komponisten erscheinen. Mit Pro auch der Schalter Studio / Atelier. ◆ Schriftgröße — Drei Größen. ◆ Zurücksetzen — Du fängst von vorn an.`},
@@ -19879,8 +19879,8 @@ const GUIDE_I18N = {
    ui:{featS:`Le Studio en 30 secondes`, featSsub:`Gestes, accueil, ♥ et partage`, featC:`Paintiano en 30 secondes`, featCsub:`Deux sens, trois modes, Artiste du jour`, conceptSub:`Pourquoi musique et peinture ne font qu’un`, search:`Cherche — loop, vidéo, Chopin…`},
    c:{
     st_canvas:{t:`Rien que la peinture`, b:`La peinture en plein écran. Glisse vers la gauche, et les commandes apparaissent.`, m:`Vers la gauche — À droite apparaît une barre : ♥, ▶ / pause, son et partage. Maintiens une icône pour voir ce qu’elle fait. ◆ Toucher — En haut, juste le titre du morceau et qui peint. ◆ Disparaît seule — Quand tu n’en as pas besoin, la barre se cache et il ne reste que la peinture. ◆ Humeur — La barre gagne Loop, Varier et Morphe. ◆ Image — S’ajoutent amb. et mélodie (IA). ◆ Atelier — Avec Pro, active-le dans Styles et palettes → Affichage : tous les outils sous les yeux.`},
-    st_gestures:{t:`Gestes`, b:`Le Studio se pilote au doigt. Les commandes n’apparaissent que si tu les veux.`, m:`Vers le haut — Avec 🔀 activé, la peinture suivante du même morceau. ◆ Vers le bas — Style : palettes, peintres, compositeurs. ◆ Vers la droite — Barre de gauche : + Nouveau, Style, Favoris, Effacer. ◆ Vers la gauche — Barre de droite : ♥, ▶, son, partage. ◆ Toucher — Le titre du morceau et qui peint. ◆ Toucher deux fois — La peinture va dans les ♥ Favoris. ◆ Maintenir — Qui peint. Avec Ambiance image, aussi l’image d’origine.`},
-    st_home:{t:`Accueil`, b:`Ta dernière peinture. ▶ t’y ramène, même si tu fermes l’app.`, m:`Six chemins — Sous la carte : Musique, Image, Ambiance image, Comment tu te sens ?, Composer, Micro. ◆ Cercle allumé — ▶ te ramène à la peinture ; le cercle allumé de sa source en choisit une nouvelle. ◆ La première fois — Liebestraum t’attend, ▶ le peint. ◆ Favoris — En bas, sous les cercles. ◆ Retour à l’accueil — + Nouveau → Accueil. ◆ Micro et Composer — Ils peignent en direct. Tu y reviens tant que tu ne les effaces pas ou ne fermes pas l’app.`},
+    st_gestures:{t:`Gestes`, b:`Le Studio se pilote au doigt. Les commandes n’apparaissent que si tu les veux.`, m:`Haut — La peinture suivante du même morceau (🔀 off : le même peintre, actif : n’importe qui de ta sélection). ◆ Vers le bas — Style : palettes, peintres, compositeurs. ◆ Vers la droite — Barre de gauche : + Nouveau, Style, Favoris, Effacer. ◆ Vers la gauche — Barre de droite : ♥, ▶, son, partage. ◆ Toucher — Le titre du morceau et qui peint. ◆ Toucher deux fois — La peinture va dans les ♥ Favoris. ◆ Maintenir — Qui peint. Avec Ambiance image, aussi l’image d’origine. ◆ À l’accueil — Glisse la carte vers le haut : une peinture surprise.`},
+    st_home:{t:`Accueil`, b:`Ta dernière peinture. ▶ t’y ramène, même si tu fermes l’app.`, m:`Six chemins — Sous la carte : Musique, Image, Ambiance image, Comment tu te sens ?, Composer, Micro. ◆ Cercle allumé — ▶ te ramène à la peinture ; le cercle allumé de sa source en choisit une nouvelle. ◆ Surprise — Glisse la carte vers le haut : une nouvelle peinture se peint sur la suivante, avec sa musique. Vers le bas — la précédente. Touche — plein écran, elle continue. ◆ La première fois — Liebestraum t’attend, ▶ le peint. ◆ Favoris — En bas, sous les cercles. ◆ Retour à l’accueil — + Nouveau → Accueil. ◆ Micro et Composer — Ils peignent en direct. Tu y reviens tant que tu ne les effaces pas ou ne fermes pas l’app.`},
     st_look:{t:`Style`, b:`Glisse vers le bas : palettes et peintres. Mêmes notes, autre main.`, m:`Palettes — En haut, cinq grammaires de couleur. ◆ Peintres — Les aperçus se peignent à partir de ton morceau ; touche, et la peinture se repeint. ◆ 🔀 et ◎ — Aléatoire et Ensemble : plusieurs peintres dans une fusion. ◆ Image — À la place des peintres, des compositeurs, Scan et ✦ IA. ◆ Écouter l’image — Joue la peinture finie comme une image. Avec une image, l’inverse : Voir musique.`},
     st_share:{t:`♥ et partage`, b:`Touche deux fois et la peinture est dans tes Favoris. Partage-la en vidéo ou en Story.`, m:`Vidéo 9:16 — Se peint au rythme de la musique. Pour TikTok, Reels et Stories. ◆ Image Story — 9:16, avec le titre et qui l’a peinte. Une fois la peinture terminée. ◆ Enregistrer · imprimer — Formats, fichiers et impression, une fois la peinture finie. ◆ Favoris — Dans la barre de gauche ou en bas de l’Accueil. Fais défiler en glissant vers le haut ou le bas.`},
     st_menu:{t:`Menu`, b:`Touche Paintiano ⌄ en haut de l’Accueil.`, m:`Favoris, Guide, Concept, Livre — Tout au même endroit. ◆ Langue — Neuf langues. ◆ Styles et palettes — Quels peintres, palettes et compositeurs s’affichent. Avec Pro, aussi le choix Studio / Atelier. ◆ Taille du texte — Trois tailles. ◆ Réinitialiser — Tu repars de zéro.`},
@@ -19915,8 +19915,8 @@ const GUIDE_I18N = {
    ui:{featS:`Estudio en 30 segundos`, featSsub:`Gestos, inicio, ♥ y compartir`, featC:`Paintiano en 30 segundos`, featCsub:`Dos sentidos, tres modos, Artista del día`, conceptSub:`Por qué música e imagen son una sola cosa`, search:`Busca — loop, vídeo, Chopin…`},
    c:{
     st_canvas:{t:`Solo la pintura`, b:`La pintura a pantalla completa. Desliza a la izquierda y aparecen los controles.`, m:`Desliza a la izquierda — A la derecha aparece una barra: ♥, ▶ / pausa, sonido y compartir. Mantén pulsado un icono para ver qué hace. ◆ Toca — Arriba, solo el título de la pieza y quién pinta. ◆ Se oculta sola — Cuando no necesitas la barra, se esconde y queda solo la pintura. ◆ Estado de ánimo — En la barra aparecen Loop, Variar y Morfar. ◆ Imagen — Se suman Ambiente y Melodía (IA). ◆ Taller — Con Pro lo activas en Estilos y paletas → Vista: todas las herramientas a la vista.`},
-    st_gestures:{t:`Gestos`, b:`El Estudio se maneja con el dedo. Los controles aparecen solo cuando los quieres.`, m:`Desliza arriba — Con 🔀 activado, otra pintura de la misma pieza. ◆ Desliza abajo — Aspecto: paletas, pintores, compositores. ◆ Desliza a la derecha — Barra izquierda: + Nuevo, Aspecto, Favoritos, Borrar. ◆ Desliza a la izquierda — Barra derecha: ♥, ▶, sonido, compartir. ◆ Toca — El título de la pieza y quién pinta. ◆ Toca dos veces — La pintura va a ♥ Favoritos. ◆ Mantén pulsado — Quién pinta. Con Estado imagen, también la imagen original.`},
-    st_home:{t:`Inicio`, b:`Tu última pintura. ▶ te lleva de vuelta a ella, aunque cierres la app.`, m:`Seis caminos — Bajo la tarjeta: Música, Imagen, Estado imagen, ¿Cómo te sientes?, Componer, Micro. ◆ Círculo encendido — ▶ te devuelve a la pintura; el círculo encendido de su origen elige algo nuevo. ◆ La primera vez — Te espera Liebestraum; ▶ lo pinta. ◆ Favoritos — Abajo, bajo los círculos. ◆ Volver al inicio — + Nuevo → Inicio. ◆ Micro y Componer — Pintan en vivo. Vuelves a ellos hasta que los borres o cierres la app.`},
+    st_gestures:{t:`Gestos`, b:`El Estudio se maneja con el dedo. Los controles aparecen solo cuando los quieres.`, m:`Arriba — La siguiente pintura de la misma pieza (🔀 off: el mismo pintor, activo: cualquiera de tu selección). ◆ Desliza abajo — Aspecto: paletas, pintores, compositores. ◆ Desliza a la derecha — Barra izquierda: + Nuevo, Aspecto, Favoritos, Borrar. ◆ Desliza a la izquierda — Barra derecha: ♥, ▶, sonido, compartir. ◆ Toca — El título de la pieza y quién pinta. ◆ Toca dos veces — La pintura va a ♥ Favoritos. ◆ Mantén pulsado — Quién pinta. Con Estado imagen, también la imagen original. ◆ En Inicio — Desliza la tarjeta hacia arriba: una pintura sorpresa.`},
+    st_home:{t:`Inicio`, b:`Tu última pintura. ▶ te lleva de vuelta a ella, aunque cierres la app.`, m:`Seis caminos — Bajo la tarjeta: Música, Imagen, Estado imagen, ¿Cómo te sientes?, Componer, Micro. ◆ Círculo encendido — ▶ te devuelve a la pintura; el círculo encendido de su origen elige algo nuevo. ◆ Sorpresa — Desliza la tarjeta hacia arriba: en la siguiente se pinta una pintura nueva con su música. Abajo — la anterior. Toca — pantalla completa, sigue sonando. ◆ La primera vez — Te espera Liebestraum; ▶ lo pinta. ◆ Favoritos — Abajo, bajo los círculos. ◆ Volver al inicio — + Nuevo → Inicio. ◆ Micro y Componer — Pintan en vivo. Vuelves a ellos hasta que los borres o cierres la app.`},
     st_look:{t:`Aspecto`, b:`Desliza abajo: paletas y pintores. Las mismas notas, otra mano.`, m:`Paletas — Arriba, cinco gramáticas de color. ◆ Pintores — Las vistas previas se pintan con tu pieza; toca una y la pintura se repinta. ◆ 🔀 y ◎ — Aleatorio y Ensemble: varios pintores en una sola fusión. ◆ Imagen — En lugar de pintores: compositores, Escanear y ✦ IA. ◆ Oír imagen — Hace sonar la pintura terminada como una imagen. Con una imagen, al revés: Ver música.`},
     st_share:{t:`♥ y compartir`, b:`Toca dos veces y la pintura queda en Favoritos. Compártela como vídeo o Story.`, m:`Vídeo 9:16 — Se pinta al ritmo de la música. Para TikTok, Reels y Stories. ◆ Imagen para Story — 9:16, con el título y quién la pintó. Cuando la pintura esté terminada. ◆ Guardar · imprimir — Tamaños, archivos e impresión, cuando la pintura está terminada. ◆ Favoritos — En la barra izquierda o abajo en Inicio. Pasa de una a otra deslizando arriba y abajo.`},
     st_menu:{t:`Menú`, b:`Toca Paintiano ⌄ arriba en Inicio.`, m:`Favoritos, Guía, Concepto, Libro — Todo en un solo lugar. ◆ Idioma — Nueve idiomas. ◆ Estilos y paletas — Qué pintores, paletas y compositores se muestran. Con Pro, también el cambio Estudio / Taller. ◆ Tamaño del texto — Tres tamaños. ◆ Restablecer — Empiezas de cero.`},
@@ -19951,8 +19951,8 @@ const GUIDE_I18N = {
    ui:{featS:`Estúdio em 30 segundos`, featSsub:`Gestos, início, ♥ e partilhar`, featC:`Paintiano em 30 segundos`, featCsub:`Dois sentidos, três modos, Artista do dia`, conceptSub:`Porque é que música e imagem são uma só`, search:`Pesquisa — loop, vídeo, Chopin…`},
    c:{
     st_canvas:{t:`Só a pintura`, b:`A pintura em ecrã inteiro. Desliza para a esquerda e aparecem os controlos.`, m:`Desliza para a esquerda — À direita aparece uma barra: ♥, ▶ / pausa, som e partilhar. Mantém premido um ícone para ver o que faz. ◆ Toca — Em cima, só o título da peça e quem pinta. ◆ Esconde-se sozinha — Quando não precisas da barra, ela esconde-se e fica só a pintura. ◆ Humor — Na barra aparecem Loop, Variar e Morph. ◆ Imagem — Juntam-se Atmosfera e Melodia (IA). ◆ Atelier — Com Pro ligas-o em Estilos e paletas → Vista: todas as ferramentas à vista.`},
-    st_gestures:{t:`Gestos`, b:`O Estúdio controla-se com o dedo. Os controlos só aparecem quando os queres.`, m:`Desliza para cima — Com 🔀 ligado, outra pintura da mesma peça. ◆ Desliza para baixo — Visual: paletas, pintores, compositores. ◆ Desliza para a direita — Barra esquerda: + Novo, Visual, Favoritos, Limpar. ◆ Desliza para a esquerda — Barra direita: ♥, ▶, som, partilhar. ◆ Toca — O título da peça e quem pinta. ◆ Toca duas vezes — A pintura vai para ♥ Favoritos. ◆ Mantém premido — Quem pinta. Em Humor da imagem, também a imagem original.`},
-    st_home:{t:`Início`, b:`A tua última pintura. ▶ leva-te de volta a ela, mesmo que feches a app.`, m:`Seis caminhos — Por baixo do cartão: Música, Imagem, Humor da imagem, Como te sentes?, Compor, Mic. ◆ Círculo aceso — ▶ leva-te de volta à pintura; o círculo aceso da sua origem escolhe algo novo. ◆ Da primeira vez — Espera-te o Liebestraum; ▶ pinta-o. ◆ Favoritos — Em baixo, sob os círculos. ◆ Voltar ao início — + Novo → Início. ◆ Mic e Compor — Pintam ao vivo. Voltas a eles até os limpares ou fechares a app.`},
+    st_gestures:{t:`Gestos`, b:`O Estúdio controla-se com o dedo. Os controlos só aparecem quando os queres.`, m:`Para cima — A pintura seguinte da mesma peça (🔀 off: o mesmo pintor, ligado: qualquer um da tua seleção). ◆ Desliza para baixo — Visual: paletas, pintores, compositores. ◆ Desliza para a direita — Barra esquerda: + Novo, Visual, Favoritos, Limpar. ◆ Desliza para a esquerda — Barra direita: ♥, ▶, som, partilhar. ◆ Toca — O título da peça e quem pinta. ◆ Toca duas vezes — A pintura vai para ♥ Favoritos. ◆ Mantém premido — Quem pinta. Em Humor da imagem, também a imagem original. ◆ No Início — Desliza o cartão para cima: uma pintura surpresa.`},
+    st_home:{t:`Início`, b:`A tua última pintura. ▶ leva-te de volta a ela, mesmo que feches a app.`, m:`Seis caminhos — Por baixo do cartão: Música, Imagem, Humor da imagem, Como te sentes?, Compor, Mic. ◆ Círculo aceso — ▶ leva-te de volta à pintura; o círculo aceso da sua origem escolhe algo novo. ◆ Surpresa — Desliza o cartão para cima: no seguinte pinta-se uma pintura nova com a sua música. Para baixo — a anterior. Toca — ecrã inteiro, continua a tocar. ◆ Da primeira vez — Espera-te o Liebestraum; ▶ pinta-o. ◆ Favoritos — Em baixo, sob os círculos. ◆ Voltar ao início — + Novo → Início. ◆ Mic e Compor — Pintam ao vivo. Voltas a eles até os limpares ou fechares a app.`},
     st_look:{t:`Visual`, b:`Desliza para baixo: paletas e pintores. As mesmas notas, outra mão.`, m:`Paletas — Em cima, cinco gramáticas de cor. ◆ Pintores — As pré-visualizações pintam-se com a tua peça; toca numa e a pintura repinta-se. ◆ 🔀 e ◎ — Aleatório e Ensemble: vários pintores numa só fusão. ◆ Imagem — Em vez de pintores: compositores, Digitalizar e ✦ IA. ◆ Ouvir imagem — Toca a pintura terminada como se fosse uma imagem. Com uma imagem, ao contrário: Ver música.`},
     st_share:{t:`♥ e partilhar`, b:`Toca duas vezes e a pintura fica nos Favoritos. Partilha-a como vídeo ou Story.`, m:`Vídeo 9:16 — Pinta-se ao ritmo da música. Para TikTok, Reels e Stories. ◆ Imagem para Story — 9:16, com o título e quem a pintou. Quando a pintura estiver terminada. ◆ Guardar · imprimir — Tamanhos, ficheiros e impressão, quando a pintura acaba. ◆ Favoritos — Na barra esquerda ou em baixo no Início. Passa de uma para outra a deslizar para cima e para baixo.`},
     st_menu:{t:`Menu`, b:`Toca em Paintiano ⌄ no topo do Início.`, m:`Favoritos, Guia, Conceito, Livro — Tudo num só sítio. ◆ Idioma — Nove idiomas. ◆ Estilos e paletas — Que pintores, paletas e compositores aparecem. Com Pro, também a troca Estúdio / Atelier. ◆ Tamanho do texto — Três tamanhos. ◆ Redefinir — Começas do zero.`},
@@ -19987,8 +19987,8 @@ const GUIDE_I18N = {
    ui:{featS:`30 秒看懂工作室`, featSsub:`手势、首页、♥ 与分享`, featC:`30 秒看懂 Paintiano`, featCsub:`两个方向、三种模式、今日艺术家`, conceptSub:`为什么音乐和画是一体的`, search:`搜索 — 循环、视频、肖邦…`},
    c:{
     st_canvas:{t:`纯画面`, b:`全屏只有画。左滑，控制按钮就会出现。`, m:`左滑 — 右侧出现控制栏：♥、▶ / 暂停、声音和分享。长按图标可查看它的作用。 ◆ 轻点 — 顶部只显示曲名和谁在画。 ◆ 自动隐藏 — 不用时控制栏会收起，只留下画。 ◆ 情绪 — 控制栏多出循环、变奏和 变形。 ◆ 图像 — 多出氛围和旋律（AI）。 ◆ 画室 — 有 Pro 时，在“风格与调色板 → 显示”中开启：所有工具一目了然。`},
-    st_gestures:{t:`手势`, b:`工作室全靠手指操控。控制按钮只在你需要时才出现。`, m:`上滑 — 打开 🔀 时，同一首曲子的下一幅画。 ◆ 下滑 — 外观：调色板、画家、作曲家。 ◆ 右滑 — 左侧栏：+ 新建、外观、收藏、清除。 ◆ 左滑 — 右侧栏：♥、▶、声音、分享。 ◆ 轻点 — 曲名和谁在画。 ◆ 双击 — 画作进入 ♥ 收藏。 ◆ 长按 — 看谁在画。用“从图像取情绪”时还会显示原图。`},
-    st_home:{t:`首页`, b:`你最近的一幅画。就算关掉应用，▶ 也能带你回到它。`, m:`六个入口 — 卡片下方：音乐、图像、从图像取情绪、“你现在感觉如何?”、作曲、麦克风。 ◆ 发光的圆 — ▶ 回到这幅画；它来源那个发光的圆用来选新的。 ◆ 第一次 — 《爱之梦》在等你，按 ▶ 就开始画。 ◆ 收藏 — 在最下方，圆形按钮下面。 ◆ 回到首页 — + 新建 → 首页。 ◆ 麦克风和作曲 — 它们是实时作画。清除或关掉应用之前都能回到它们。`},
+    st_gestures:{t:`手势`, b:`工作室全靠手指操控。控制按钮只在你需要时才出现。`, m:`上滑 — 同一首曲子的下一幅画（🔀 关：同一位画家；开：你选中的任何画家）。 ◆ 下滑 — 外观：调色板、画家、作曲家。 ◆ 右滑 — 左侧栏：+ 新建、外观、收藏、清除。 ◆ 左滑 — 右侧栏：♥、▶、声音、分享。 ◆ 轻点 — 曲名和谁在画。 ◆ 双击 — 画作进入 ♥ 收藏。 ◆ 长按 — 看谁在画。用“从图像取情绪”时还会显示原图。 ◆ 在首页 — 把卡片向上滑：一幅惊喜画作。`},
+    st_home:{t:`首页`, b:`你最近的一幅画。就算关掉应用，▶ 也能带你回到它。`, m:`六个入口 — 卡片下方：音乐、图像、从图像取情绪、“你现在感觉如何?”、作曲、麦克风。 ◆ 发光的圆 — ▶ 回到这幅画；它来源那个发光的圆用来选新的。 ◆ 惊喜 — 把卡片向上滑：下一张会画出一幅新画，并配上音乐。向下 — 上一张。轻点 — 全屏，继续播放。 ◆ 第一次 — 《爱之梦》在等你，按 ▶ 就开始画。 ◆ 收藏 — 在最下方，圆形按钮下面。 ◆ 回到首页 — + 新建 → 首页。 ◆ 麦克风和作曲 — 它们是实时作画。清除或关掉应用之前都能回到它们。`},
     st_look:{t:`外观`, b:`下滑：调色板和画家。同样的音，换一种笔法。`, m:`调色板 — 顶部是五种色彩语法。 ◆ 画家 — 预览用你的曲子画成；轻点一下，画作随即重画。 ◆ 🔀 和 ◎ — 随机与合奏：多位画家融合成一幅。 ◆ 图像 — 画家换成作曲家、扫描和 ✦ AI。 ◆ 听画 — 把画好的作品当图像来演奏。图像这边则反过来：看音乐。`},
     st_share:{t:`♥ 与分享`, b:`双击，画就进了收藏。还能做成视频或快拍分享。`, m:`视频 9:16 — 随音乐边画边播。适合 TikTok、Reels 和快拍。 ◆ 快拍图片 — 9:16，附曲名和作画者。画完后可用。 ◆ 保存 · 打印 — 画完后可选尺寸、文件和打印。 ◆ 收藏 — 在左侧栏，或首页下方。上下滑动翻看。`},
     st_menu:{t:`菜单`, b:`轻点首页顶部的 Paintiano ⌄。`, m:`一处找齐 — 收藏、指南、理念、书，全在这里。 ◆ 语言 — 九种语言。 ◆ 风格与调色板 — 显示哪些画家、调色板和作曲家。有 Pro 时，工作室 / 画室的切换也在这里。 ◆ 字号 — 三种大小。 ◆ 重置 — 从头开始。`},
@@ -20023,8 +20023,8 @@ const GUIDE_I18N = {
    ui:{featS:`30 秒看懂工作室`, featSsub:`手勢、首頁、♥ 與分享`, featC:`30 秒看懂 Paintiano`, featCsub:`兩個方向、三種模式、今日藝術家`, conceptSub:`為什麼音樂和畫是一體的`, search:`搜尋 — 循環、影片、蕭邦…`},
    c:{
     st_canvas:{t:`純畫面`, b:`全螢幕只有畫。左滑，控制按鈕就會出現。`, m:`左滑 — 右側出現控制列：♥、▶ / 暫停、聲音和分享。長按圖示可查看它的作用。 ◆ 輕點 — 上方只顯示曲名和誰在畫。 ◆ 自動隱藏 — 用不到時控制列會收起來，只留下畫。 ◆ 情緒 — 控制列多出循環、變奏和 變形。 ◆ 圖像 — 多出氛圍和旋律（AI）。 ◆ 畫室 — 有 Pro 時，在「風格與調色盤 → 顯示」中開啟：所有工具一目了然。`},
-    st_gestures:{t:`手勢`, b:`工作室用手指就能操控。控制按鈕只在你需要時才出現。`, m:`上滑 — 開啟 🔀 時，同一首曲子的下一幅畫。 ◆ 下滑 — 外觀：調色盤、畫家、作曲家。 ◆ 右滑 — 左側欄：+ 新增、外觀、收藏、清除。 ◆ 左滑 — 右側控制列：♥、▶、聲音、分享。 ◆ 輕點 — 曲名和誰在畫。 ◆ 雙擊 — 畫作加入 ♥ 收藏。 ◆ 長按 — 看誰在畫。用「從圖像取情緒」時也會顯示原圖。`},
-    st_home:{t:`首頁`, b:`你最近的一幅畫。就算關掉 App，▶ 也能帶你回到它。`, m:`六個入口 — 卡片下方：音樂、圖像、從圖像取情緒、「你現在感覺如何?」、作曲、麥克風。 ◆ 發光的圓 — ▶ 回到這幅畫；它來源那個發光的圓用來選新的。 ◆ 第一次 — 《愛之夢》在等你，按 ▶ 就會畫出來。 ◆ 收藏 — 在最下方，圓形按鈕下面。 ◆ 回到首頁 — + 新增 → 首頁。 ◆ 麥克風和作曲 — 它們是即時作畫。清除或關掉 App 之前都能回到它們。`},
+    st_gestures:{t:`手勢`, b:`工作室用手指就能操控。控制按鈕只在你需要時才出現。`, m:`上滑 — 同一首曲子的下一幅畫（🔀 關：同一位畫家；開：你選的任何畫家）。 ◆ 下滑 — 外觀：調色盤、畫家、作曲家。 ◆ 右滑 — 左側欄：+ 新增、外觀、收藏、清除。 ◆ 左滑 — 右側控制列：♥、▶、聲音、分享。 ◆ 輕點 — 曲名和誰在畫。 ◆ 雙擊 — 畫作加入 ♥ 收藏。 ◆ 長按 — 看誰在畫。用「從圖像取情緒」時也會顯示原圖。 ◆ 在首頁 — 把卡片向上滑：一幅驚喜畫作。`},
+    st_home:{t:`首頁`, b:`你最近的一幅畫。就算關掉 App，▶ 也能帶你回到它。`, m:`六個入口 — 卡片下方：音樂、圖像、從圖像取情緒、「你現在感覺如何?」、作曲、麥克風。 ◆ 發光的圓 — ▶ 回到這幅畫；它來源那個發光的圓用來選新的。 ◆ 驚喜 — 把卡片向上滑：下一張會畫出一幅新畫，並配上音樂。向下 — 上一張。輕點 — 全螢幕，繼續播放。 ◆ 第一次 — 《愛之夢》在等你，按 ▶ 就會畫出來。 ◆ 收藏 — 在最下方，圓形按鈕下面。 ◆ 回到首頁 — + 新增 → 首頁。 ◆ 麥克風和作曲 — 它們是即時作畫。清除或關掉 App 之前都能回到它們。`},
     st_look:{t:`外觀`, b:`下滑：調色盤和畫家。同樣的音，換一種筆法。`, m:`調色盤 — 上方是五種色彩語法。 ◆ 畫家 — 預覽是用你的曲子畫的；輕點一下，畫作就會重畫。 ◆ 🔀 和 ◎ — 隨機與合奏：多位畫家融合成一幅。 ◆ 圖像 — 畫家換成作曲家、掃描和 ✦ AI。 ◆ 聽畫 — 把畫好的作品當成圖像來演奏。圖像這邊則反過來：看音樂。`},
     st_share:{t:`♥ 與分享`, b:`雙擊，畫就進了收藏。也能做成影片或限動分享。`, m:`影片 9:16 — 隨著音樂邊畫邊播。適合 TikTok、Reels 和限時動態。 ◆ 限動圖片 — 9:16，附上曲名和作畫者。畫完後可用。 ◆ 儲存 · 列印 — 畫完後可選尺寸、檔案和列印。 ◆ 收藏 — 在左側欄，或首頁下方。上下滑動瀏覽。`},
     st_menu:{t:`選單`, b:`輕點首頁上方的 Paintiano ⌄。`, m:`一次找齊 — 收藏、指南、理念、書，全都在這裡。 ◆ 語言 — 九種語言。 ◆ 風格與調色盤 — 決定顯示哪些畫家、調色盤和作曲家。有 Pro 時，工作室 / 畫室的切換也在這裡。 ◆ 字級 — 三種大小。 ◆ 重置 — 從頭開始。`},
@@ -20059,8 +20059,8 @@ const GUIDE_I18N = {
    ui:{featS:`30 秒でわかるスタジオ`, featSsub:`ジェスチャー、ホーム、♥ とシェア`, featC:`30 秒でわかる Paintiano`, featCsub:`二つの方向、三つのモード、今日のアーティスト`, conceptSub:`なぜ音楽と絵はひとつなのか`, search:`検索 — ループ、動画、ショパン…`},
    c:{
     st_canvas:{t:`絵だけ`, b:`全画面に絵だけ。左にスワイプすると操作が出てくる。`, m:`左にスワイプ — 右にバーが出る：♥、▶ / 一時停止、サウンド、シェア。アイコンを長押しすると、何をするか表示されます。 ◆ タップ — 上に曲名と誰が描いているかだけ。 ◆ 自動で消える — 使わないときはバーが隠れて、絵だけが残る。 ◆ 気分 — バーにループ、バリエーション、モーフ が加わる。 ◆ 画像 — 雰囲気とメロディ（AI）が加わる。 ◆ アトリエ — Pro なら スタイルとパレット → 表示 でオン：すべての道具が見える。`},
-    st_gestures:{t:`ジェスチャー`, b:`スタジオは指で操作。ボタンは必要なときだけ出てくる。`, m:`上にスワイプ — 🔀 がオンのとき、同じ曲の次の絵。 ◆ 下にスワイプ — 見た目：パレット、画家、作曲家。 ◆ 右にスワイプ — 左のバー：+ 新規、見た目、お気に入り、クリア。 ◆ 左にスワイプ — 右のバー：♥、▶、サウンド、シェア。 ◆ タップ — 曲名と誰が描いているか。 ◆ ダブルタップ — 絵が ♥ お気に入りへ。 ◆ 長押し — 誰が描いているか。画像からムードでは元の画像も。`},
-    st_home:{t:`ホーム`, b:`最後に描いた絵。アプリを閉じても ▶ でそこへ戻れる。`, m:`六つの入口 — カードの下に：音楽、画像、画像からムード、「今、どう感じる?」、作曲、マイク。 ◆ 光る丸 — ▶ でその絵に戻る。元の光る丸をタップすると新しく選べる。 ◆ はじめて — 「愛の夢」が待っている。▶ で絵になる。 ◆ お気に入り — 丸いボタンのさらに下。 ◆ ホームへ — + 新規 → ホーム。 ◆ マイクと作曲 — その場で描く。クリアするかアプリを閉じるまでは戻れる。`},
+    st_gestures:{t:`ジェスチャー`, b:`スタジオは指で操作。ボタンは必要なときだけ出てくる。`, m:`上へ — 同じ曲の次の絵（🔀 オフ：同じ画家、オン：選んだ画家の誰か）。 ◆ 下にスワイプ — 見た目：パレット、画家、作曲家。 ◆ 右にスワイプ — 左のバー：+ 新規、見た目、お気に入り、クリア。 ◆ 左にスワイプ — 右のバー：♥、▶、サウンド、シェア。 ◆ タップ — 曲名と誰が描いているか。 ◆ ダブルタップ — 絵が ♥ お気に入りへ。 ◆ 長押し — 誰が描いているか。画像からムードでは元の画像も。 ◆ ホームで — カードを上へスワイプ：サプライズの絵。`},
+    st_home:{t:`ホーム`, b:`最後に描いた絵。アプリを閉じても ▶ でそこへ戻れる。`, m:`六つの入口 — カードの下に：音楽、画像、画像からムード、「今、どう感じる?」、作曲、マイク。 ◆ 光る丸 — ▶ でその絵に戻る。元の光る丸をタップすると新しく選べる。 ◆ サプライズ — カードを上へスワイプ：次のカードに音楽と一緒に新しい絵が描かれる。下へ — 前のカード。タップ — 全画面で続きを再生。 ◆ はじめて — 「愛の夢」が待っている。▶ で絵になる。 ◆ お気に入り — 丸いボタンのさらに下。 ◆ ホームへ — + 新規 → ホーム。 ◆ マイクと作曲 — その場で描く。クリアするかアプリを閉じるまでは戻れる。`},
     st_look:{t:`見た目`, b:`下にスワイプでパレットと画家。同じ音、新しい筆致。`, m:`パレット — 上に五つの色の文法。 ◆ 画家 — プレビューはあなたの曲から描かれる。タップで絵が描き直される。 ◆ 🔀 と ◎ — シャッフルとアンサンブル：複数の画家を一つのフュージョンに。 ◆ 画像 — 画家の代わりに作曲家、スキャン、✦ AI。 ◆ 絵を聴く — 完成した絵を画像として演奏する。画像のときは逆に「音楽を見る」。`},
     st_share:{t:`♥ とシェア`, b:`ダブルタップで絵はお気に入りへ。動画や Story でシェアしよう。`, m:`動画 9:16 — 音楽に合わせて描かれる。TikTok、Reels、Stories 向け。 ◆ ストーリー画像 — 9:16、曲名と誰が描いたか付き。絵が完成してから。 ◆ 保存 · 印刷 — 絵が描き終わったら、サイズ、ファイル、印刷。 ◆ お気に入り — 左のバーか、ホームの下に。上下にスワイプでめくる。`},
     st_menu:{t:`メニュー`, b:`ホームの上の Paintiano ⌄ をタップ。`, m:`全部ここに — お気に入り、ガイド、コンセプト、本がひとつの場所に。 ◆ 言語 — 九つの言語。 ◆ スタイルとパレット — どの画家、パレット、作曲家を表示するか。Pro ならスタジオ / アトリエの切替もここ。 ◆ 文字サイズ — 3 段階。 ◆ リセット — 最初からやり直す。`},
@@ -23991,6 +23991,12 @@ const STUDIO_HOME_CSS = `
 .pf-sh-back{animation:pfShBack .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
 @keyframes pfShBack{from{transform:translateY(-110%) rotate(-8deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
 .pf-sh-fhint{position:absolute;left:-40px;right:-40px;top:calc(100% + 20px);text-align:center;font-size:calc(var(--pf-read-scale,1) * 10.5px);letter-spacing:.05em;color:rgba(242,238,232,.5);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-sh-flash{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2cqw;padding:8cqw;text-align:center;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.9);pointer-events:none;animation:pfShFlash 1.7s ease both;text-transform:uppercase;font-style:italic;letter-spacing:.12em}
+.pf-sh-flash small{font-style:normal;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 3.6cqw);letter-spacing:.3em;color:#f3e2b4}
+.pf-sh-flash em{font-style:normal;font-size:calc(var(--pf-read-scale,1) * 3.6cqw);opacity:.75;letter-spacing:.14em}
+.pf-sh-flash b{display:block;font-weight:700;font-size:calc(var(--pf-read-scale,1) * 7.5cqw);line-height:1.15}
+.pf-sh-flash b span{display:block;font-style:normal;font-size:.6em;opacity:.7}
+@keyframes pfShFlash{0%{opacity:0;transform:scale(.92)}12%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0}}
 .pf-sh-heart{position:absolute;left:50%;top:45%;z-index:4;font-size:64px;line-height:1;color:#ff4d7d;transform:translate(-50%,-50%);animation:pfShHeartPop .9s ease forwards;pointer-events:none;text-shadow:0 6px 24px rgba(255,60,120,.5)}
 @keyframes pfShHeartPop{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}25%{transform:translate(-50%,-50%) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
 @keyframes pfShFloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-6px) rotate(-1.5deg)}}
@@ -29341,6 +29347,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     else if(loadedSourceRef.current==='image') cur='image';
     else if(loadedSourceRef.current==='midi'||loadedSourceRef.current==='audio'||loadedSourceRef.current==='score') cur='music';
     if(cur && cur!==target) stashMode(cur);
+    if(target!=='music') feedPieceRef.current=false;   // a feed preview gives way to the picture / mood / … coming in
   },[]);
 
   // restoreMode: put a stashed SOURCE-mode draft back on the canvas. Returns
@@ -36227,49 +36234,44 @@ Hard requirements:
     }, 220);
     return ()=>clearTimeout(tm);
   },[studioFs, studioLive, chords.length, playing, anim, holdPaused, working, busy, demoReelOn]);
-  // ── STUDIO HOME FEED ── swipe the home card up: it flies off and a surprise painting (a built-in piece ×
-  // a painter and a palette from your set) paints itself on the next card, with its music. Down brings the
-  // previous card back; a tap on a playing card opens it full screen, where it simply plays on (it becomes
-  // your painting). The home card — your last painting — always stays at the bottom of the deck.
-  const [feedCards, setFeedCards] = useState([]);   // the surprise cards, oldest first (10 at most)
+  // ── STUDIO HOME FEED ── Lite's "Surprise me" on the home card. ▶ (or a first swipe up) draws a built-in
+  // piece and paints it on the card, with its music. Every swipe up throws the card off and the SAME piece
+  // goes on in a new look on the next card — the Mosaic, then Kandinsky, then the song's ✦ Signature, then
+  // the Lite shuffle (a painter and its variant, now and then a fusion). Down brings the look before back.
+  // A tap on a playing card opens it full screen, where it simply plays on — from then on it is your painting.
+  const [feedCards, setFeedCards] = useState([]);   // the looks seen, oldest first (10 at most): {id, piece, sel, u, l}
   const [feedAt, setFeedAt] = useState(-1);         // -1 = the home card on top, i = feedCards[i]
-  const [feedLoaded, setFeedLoaded] = useState(null); // the card whose piece is in the player
+  const [feedLoaded, setFeedLoaded] = useState(null); // the piece in the player (0..2), or null
   const [feedFly, setFeedFly] = useState(null);     // the card flying off: {k, u, t, l, dir}
+  const [feedFlash, setFeedFlash] = useState(0);    // the look's name over the card, for a moment
   const [feedHintN, setFeedHintN] = useState(()=>{ try{ return parseInt(localStorage.getItem('paintiano_feed_hint_n')||'0',10)||0; }catch(_){ return 0; } });
   const feedLookRef = useRef(null);   // your painter · palette before the feed, back when you return to the home card
   const feedStartRef = useRef(null);  // {t, title}: start the piece once it is in
+  const feedStepsRef = useRef([]);    // the fixed opening: 'mosaic', 'kandinsky', 'sig' — then the shuffle
   const feedCvRef = useRef(null);
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
   const [feedHeart, setFeedHeart] = useState(0);
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
-  // the painting on the canvas, small, for the card when it stops
+  const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
+  // the painting on the canvas, small, for a card that is left
   const _feedSnap = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const W=Math.min(720, s.width), Hh=Math.round(s.height*W/s.width); const c=document.createElement('canvas'); c.width=W; c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh); x.drawImage(s,0,0,W,Hh); return c.toDataURL('image/jpeg',0.8); }catch(_){ return null; } };
-  const _feedKeepU = (id)=>{ if(!id) return; const u=_feedSnap(); if(u) setFeedCards(cs=>cs.map(c=>c.id===id ? {...c, u} : c)); };
   // the live canvas, mirrored into the card (cover)
   const _feedDraw = ()=>{ try{ const c=feedCvRef.current, s=canvasRef.current; if(!c || !s || !s.width || !s.height) return; const w=c.clientWidth, h=c.clientHeight; if(!w || !h) return; const d=Math.min(2, window.devicePixelRatio||1); const W=Math.round(w*d), Hh=Math.round(h*d); if(c.width!==W) c.width=W; if(c.height!==Hh) c.height=Hh; const x=c.getContext('2d'); const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh); x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); }catch(_){} };
-  const _feedPick = ()=>{
-    const prev = feedCards.length ? feedCards[feedCards.length-1] : null;
-    const _names = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
-    const prevMidi = prev ? prev.sel.midi : (homeArt ? _names.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()) : 0);   // nor the home card's piece
-    const mids = [0,1,2].filter(i=>i!==prevMidi);
-    const midi = mids[(Math.random()*mids.length)|0];
-    let pool = ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k) || isDailyArtist(k)) && !styleIsLocked(k));
-    if(setupArtists.includes('mosaicFamily') && !(prev && prev.sel.style===null)) pool = pool.concat([null]);
-    if(prev && pool.length>1) pool = pool.filter(k=>k!==prev.sel.style);
-    if(!pool.length) pool = [null];
-    const st = pool[(Math.random()*pool.length)|0];
-    let pals = (setupPalettes && setupPalettes.length) ? setupPalettes.slice() : ['harmony'];
-    if(prev && pals.length>1) pals = pals.filter(m=>m!==prev.sel.mode);
-    const md = pals[(Math.random()*pals.length)|0];
-    const nV = !st ? 1 : (proStatus==='free' && st!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[st]>1) ? ARTIST_VARIANT_N[st] : 6);
-    const who = st ? (STYLE_INSPIRED[st]||st) : _fUp(t('mosaicStyle'));
-    return { id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), sel:{midi, style:st, mode:md, phase:(Math.random()*nV)|0},
-      t:[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][midi], l:[_fUp(t(md)), who].join(' · '), u:null };
+  // the look on screen, to keep with a card
+  const _feedSelNow = ()=>({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive });
+  // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
+  const _feedPiece = ()=>{ if(!homeArt) return 0; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
+  // the first painting, like Lite's Play: one of four strong openers from your set (Free: the artist of the day, often)
+  const _feedOpener = ()=>{ let o=['pollock','kandinsky','kusama','spiral'].filter(k=>setupArtists.includes(k) && !styleIsLocked(k)); if(proStatus==='free' && artistOfDay && Math.random()<0.4) o=[artistOfDay]; return o.length ? o[(Math.random()*o.length)|0] : (setupArtists.find(k=>k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'); };
+  const _feedApply = (sel)=>{
+    setRandomMode(false); randomModeRef.current=false;
+    if(sel.sig && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} return; }   // in this same batch: the latch and 🔀 off land together
+    setStyle(sel.style); setPhaseIndex(sel.phase|0); setNotesMode(!!sel.notes); setOneMMode(false); setPainterStage(sel.stage ? sel.stage.slice() : []);
+    if(sel.mode) setMode(sel.mode);
   };
-  // put a card's piece in the player and start it (call it inside the gesture: the sound wakes there)
-  const _feedLoad = (card)=>{
-    if(!card) return;
+  // put the piece in the player and start it (call it inside the gesture: the sound wakes there)
+  const _feedLoad = (piece, sel)=>{
     try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){}
     if(!feedLookRef.current){
       feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, oneMMode };
@@ -36277,49 +36279,76 @@ Hard requirements:
       try{ stashMode('music'); }catch(_){}       // … and your music in the Music slot
     }
     if(jamOn) setJamOn(false);
-    if(painterStage.length) setPainterStage([]);
-    if(randomMode && card.sel.style===null) _shuffleOff();   // 🔀 on would draw another painter at Play
+    _shuffleOff();
     setForceSetup(true);   // the piece plays under the home, on the card
-    loadSampleMidi(card.sel.midi, {noSig:true});
+    loadSampleMidi(piece, {noSig:true});
     feedPieceRef.current = true;
-    setNotesMode(false); setOneMMode(false);
-    setStyle(card.sel.style); setMode(card.sel.mode); setPhaseIndex(card.sel.phase);
-    setFeedLoaded(card.id);
-    feedStartRef.current = {t:Date.now(), title:card.t};
+    _feedApply(sel);
+    setFeedLoaded(piece);
+    feedStartRef.current = {t:Date.now(), title:_FEED_NAMES[piece]};
   };
-  // the feed's piece leaves the player (the card keeps its picture); your painter and palette come back
+  // the next look: the fixed opening first, then Lite's own shuffle (a painter × variant, a fusion now and then)
+  const _feedNextLook = ()=>{
+    const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
+    while(feedStepsRef.current.length){
+      const st = feedStepsRef.current.shift();
+      if(st==='mosaic'){ _feedApply({style:null, phase:0, mode, notes:false, stage:[], sig:false}); return; }
+      if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:0, mode, notes:false, stage:[], sig:false}); return; }
+      if(st==='sig'){ const sg=songSigRef.current; if(sg && sg.keys && sg.keys.length && applySigRef.current){ _feedApply({sig:true}); return; } continue; }
+    }
+    _liteNextKRef.current=null; _liteNextIsMosaicRef.current=false; _liteNextIsSigRef.current=false;
+    basicSurprise();
+  };
+  // the feed's piece leaves the player (the cards keep their pictures); your painter and palette come back
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
     setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode); setOneMMode(L.oneMMode); };
-  const _feedStop = ()=>{ if(feedLoaded && (playing || holdPaused || anim)){ _feedKeepU(feedLoaded); try{ stopAll(); }catch(_){} } setFeedLoaded(null); feedStartRef.current=null; };
+  const _feedStop = ()=>{ if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
-  const _feedExit = ()=>{ if(feedAt<0 && !feedLoaded) return; _feedStop(); _feedRest(); setFeedAt(-1); };
+  const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return; _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
+  const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
+  // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
+  const _feedStart = ()=>{
+    const piece=_feedPiece(), sel={style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false};
+    feedStepsRef.current = ['mosaic','kandinsky','sig'];
+    surpriseArtistBagRef.current = [];
+    const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece, sel, u:null, l:'' };
+    setFeedCards([c]); setFeedAt(0);
+    _feedLoad(piece, sel);
+    _feedFlashNow(); _feedHintBump();
+  };
   const _feedUp = (cur)=>{
     if(feedFly) return;
-    const live = feedAt>=0 && feedLoaded===feedCards[feedAt].id;
-    const u0 = live ? _feedSnap() : (cur && cur.u);
-    if(live && u0){ const id=feedLoaded; setFeedCards(cs=>cs.map(c=>c.id===id ? {...c, u:u0} : c)); }
-    setFeedFly({k:Date.now(), u:u0, t:cur && cur.t, l:cur && cur.l, dir:'up'});
+    if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340); _feedStart(); _stBuzz(8); return; }
+    // the card that leaves keeps its painting and its look
+    const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
+    setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
+    setFeedFly({k:Date.now(), u:u0, t:_FEED_NAMES[feedCards[feedAt].piece], l:l0, dir:'up'});
     setTimeout(()=>setFeedFly(null), 340);
-    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedAt(feedAt+1); _feedLoad(nx); }
+    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedAt(feedAt+1); if(feedLoaded===null) _feedLoad(nx.piece, nx.sel); else _feedApply(nx.sel); }
     else {
-      const c=_feedPick();
-      setFeedCards(cs=>{ const arr=cs.concat([c]); return arr.length>10 ? arr.slice(arr.length-10) : arr; });   // (functional: the card just left keeps its picture)
-      setFeedAt(Math.min(10, feedCards.length+1)-1); _feedLoad(c); _feedHintBump();
+      const piece=feedCards[feedAt].piece;
+      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece, sel:null, u:null, l:'' };
+      setFeedCards(cs=>{ const arr=cs.concat([c]); return arr.length>10 ? arr.slice(arr.length-10) : arr; });
+      setFeedAt(Math.min(10, feedCards.length+1)-1);
+      if(feedLoaded===null) _feedLoad(piece, {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}); else _feedNextLook();
+      _feedHintBump();
     }
-    _stBuzz(8);
+    _feedFlashNow(); _stBuzz(8);
   };
   const _feedDown = ()=>{
     if(feedAt<0 || feedFly) return;
-    _feedStop();
+    const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
+    setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
     const to=feedAt-1; setFeedAt(to);
     setFeedFly({k:Date.now(), dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
-    if(to<0) _feedRest();
+    if(to<0){ _feedStop(); _feedRest(); }
+    else { const pv=feedCards[to]; if(pv.sel) _feedApply(pv.sel); _feedFlashNow(); }
     _stBuzz(8);
   };
   // a tap on a playing card: full screen — it plays on, and from now on it is your painting
-  const _feedOpen = ()=>{ feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); feedStartRef.current=null; setForceSetup(false); };
-  // the piece is in → it starts (the sound was woken in the swipe)
+  const _feedOpen = ()=>{ feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
+  // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
     if(Date.now()-F.t>8000){ feedStartRef.current=null; return; }
@@ -36328,17 +36357,14 @@ Hard requirements:
     return ()=>clearTimeout(tm);
   },[chords, playing, anim, working, info]);
   // the card shows the canvas as it paints
-  const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded===feedCards[feedAt].id;
+  const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
   useEffect(()=>{
     if(!_feedLiveOn) return;
     _feedDraw();
-    if(!(playing || anim)) return;
     const iv=setInterval(_feedDraw, 110);
     return ()=>clearInterval(iv);
-  },[_feedLiveOn, playing, anim, disp, feedAt]);
-  // a card that stops keeps the painting it got to
-  const _feedPlayRef = useRef(false);
-  useEffect(()=>{ const was=_feedPlayRef.current; _feedPlayRef.current=playing; if(was && !playing && _feedLiveOn) _feedKeepU(feedLoaded); },[playing]);
+  },[_feedLiveOn, feedAt]);
+  useEffect(()=>{ if(!feedFlash) return; const tm=setTimeout(()=>setFeedFlash(0), 1700); return ()=>clearTimeout(tm); },[feedFlash]);
   const _stDone = studioFs && !studioLive && chords.length>0 && disp>=chords.length && !playing && !anim && !holdPaused && !demoReelOn && !recording && !stVidRec;
   const _stDoneRef = useRef(false);
   useEffect(()=>{
@@ -37261,25 +37287,33 @@ Hard requirements:
         const K = SRC[kind];
         // the feed: a surprise card on top (or the home card)
         const FC = (feedAt>=0 && feedCards[feedAt]) || null;
-        const _fL = !!(FC && feedLoaded===FC.id);
+        const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? (feedHintN<=3 ? _stT('feedHint') : '') : (feedHintN===0 ? _stT('feedHint0') : '');
+        const _fHint = FC ? (feedHintN<=3 ? _stT('feedHint') : '') : (feedHintN<=1 ? _stT('feedHint0') : '');
+        const _fTitle = FC ? _FEED_NAMES[FC.piece] : '';
+        const _fLine = FC ? (_fL ? _vidLine() : FC.l) : '';
+        // the look's name over the card, for a moment (Lite's flash): the Mosaic, a painter, ✦ Signature, a fusion
+        const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash) return null; const sv=(style!==null ? [style] : []).concat(painterStage).map(k=>STYLE_INSPIRED[k]||k);
+          if(sigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:sv};
+          if(style===null) return {h:'', by:'', n:[notesMode ? t('notesStyle') : t('liteMosaicStyle')]};
+          if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
+          return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
           const R=feedTapRef.current, now=Date.now();
           if(now-R.t<300){ if(R.tm){ clearTimeout(R.tm); R.tm=null; } R.t=0;
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
             return; }
           R.t=now; if(R.tm) clearTimeout(R.tm);
-          R.tm=setTimeout(()=>{ R.tm=null; if(!FC) return; if(_fL && (playing || anim || holdPaused || disp>0)) _feedOpen(); else _feedLoad(FC); }, 300);
+          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_canPlay) _play(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}); }, 300);
         };
         const _fTS = (e)=>{ if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
-          if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC || {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
+          if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
-        const _fBtn = ()=>{ if(!FC) return; if(_fL){ if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC); };
+        const _fBtn = ()=>{ if(!FC){ _feedStart(); return; } if(_fL){ if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}); };
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
@@ -37293,9 +37327,10 @@ Hard requirements:
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
                 <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : 'pf-sh-in')}>
-                  {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={FC.t}/>) : (FC.u ? (<img src={FC.u} alt={FC.t}/>) : null)}
+                  {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   <span className="pf-sh-chip" style={{color:'#f0d78a'}}>✦ {_stT('feedChip')}</span>
-                  <div className="pf-sh-cap"><div className="pf-sh-cap-t">{FC.t}</div><div className="pf-sh-cap-l">{FC.l}</div></div>
+                  <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
+                  {_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true">{_fFlash.h && (<small>{_fFlash.h}</small>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>×</span>)}{x}</b>))}</div>)}
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
@@ -37309,10 +37344,9 @@ Hard requirements:
                   {feedFly.u && (<img src={feedFly.u} alt=""/>)}
                   {(feedFly.t || feedFly.l) && (<div className="pf-sh-cap">{feedFly.t && (<div className="pf-sh-cap-t">{feedFly.t}</div>)}{feedFly.l && (<div className="pf-sh-cap-l">{feedFly.l}</div>)}</div>)}
                 </div>)}
-                {FC ? (<button type="button" className="pf-sh-play" onClick={_fBtn} aria-label={_fPlay ? t('pause') : _stT('go')}>{_fPlay
+                {(FC || _canPlay || _smp) ? (<button type="button" className="pf-sh-play" onClick={_fBtn} aria-label={_fPlay ? t('pause') : _stT('go')}>{_fPlay
                     ? (<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>)
-                    : (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>)}</button>)
-                  : _canPlay && (<button type="button" className="pf-sh-play" onClick={_play} aria-label={_smp ? _stT('go') : _stT('back')}><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></button>)}
+                    : (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>)}</button>) : null}
                 {_fHint && (<div className="pf-sh-fhint" aria-hidden="true">{_fHint}</div>)}
               </div>
             </div>
