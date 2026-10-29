@@ -3453,21 +3453,20 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // they combine — Ensemble + 1 = Next rolls the crossing's variant, Ensemble +
   // ALL = Next draws a new random crossing.
   const _artMode = randomMode ? ((style===null || jamAll) ? 2 : 1) : 0;
+  // 🔀 has two states. Off = the painter you chose, and Next / Play bring more of its variants
+  // (randomMode stays on under the hood with an artist chosen — see the effect below). On = ALL:
+  // every painter in your set.
   const _cycleArt = ()=>{
     if(working||anim) return;
-    if(_artMode===0){                                               // → 1: nothing selected → pick a random artist first
-      if(style===null){ const pool=ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k)); if(pool.length) setStyleTo(pool[(Math.random()*pool.length)|0]); }
-      _shuffleOn(); return; }
-    if(_artMode===1){                                               // → 2 (ALL)
+    if(_artMode!==2){                                               // → on (ALL)
+      if(!randomMode) _shuffleOn();
       if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
-      const keep=style; setStyleTo(null);                           // release the selection, keep shuffling —
-      const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix);   // but the draw starts on the SAME artist
+      if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }   // the draw starts on the SAME artist
       return; }
-    // 2 → 0: the artist (or the crossing) on screen stays
-    if(jamAll){ setJamAll(false); _shuffleOff(); return; }
+    // on → off: the artist (or the crossing) on screen stays, its variants go on
+    if(jamAll){ setJamAll(false); return; }
     const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null;
-    _shuffleOff();
-    if(cur) setStyleTo(cur);
+    if(cur) setStyleTo(cur); else _shuffleOff();
   };
   // Ensemble button (artists): on/off, independent of 🔀. Entering from ALL keeps
   // the drawn artist as member 1 and stays in ALL; leaving ALL hands the draw back
@@ -3545,7 +3544,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // dis: shown but greyed out and inert (the painters' Ensemble with a single painter to choose from)
   const _modeBtn = (mode, onClick, isArt, ens, rightPx, dis)=>{
     const on = !dis && mode>0, isEns = !!ens;
-    const badge = (isArt && !isEns) ? (mode===1 ? '1' : mode===2 ? 'ALL' : '') : '';
+    const badge = '';
     const title = isEns ? _ensT('title') : on ? t('randomOn') : t('randomOff');
     return (
     <button onClick={dis ? undefined : onClick} disabled={!!dis} className="pf-dice" title={title} aria-label={title} aria-pressed={on} style={{position:'absolute',right:(rightPx||0),top:'50%',transform:'translateY(-50%)',width:28,height:28,padding:0,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:'50%',cursor:dis?'default':'pointer',opacity:dis?.35:1,transition:'color .18s, border-color .18s, background .18s',color:on?'#0a0a12':'rgba(201,168,76,.75)',background:on?'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')':'transparent',border:'1px solid '+(on?PF.gold2:'rgba(201,168,76,.4)'),boxShadow:'none',overflow:'visible'}}>
@@ -4222,6 +4221,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // enabled ones to remove) — live, without leaving the canvas. The heavy
   // Styles & palettes modal stays in the menu for full management.
   const [cockpitEdit, setCockpitEdit] = useState(false);
+  // Off means "variants of my painter": with an artist chosen the shuffle runs by itself — except while
+  // Compose / Mic paint live (a key never reshuffles), under ✦ Signature, in Lite and while editing the set.
+  useEffect(()=>{
+    if(basicMode || sigActive || cockpitEdit) return;
+    if(composeMode || micPainting || micListening){ if(randomMode && style!==null && !jamAll) _shuffleOff(); return; }
+    if(!randomMode && style!==null) _shuffleOn();
+  },[style, randomMode, composeMode, micPainting, micListening, basicMode, sigActive, cockpitEdit, jamAll]);
   // Keep cockpitEditRef (declared earlier, near the style-fallback effect) in
   // sync. The earlier effect needs to read cockpitEdit but is positioned
   // before this useState — the ref bridges them without TDZ. On exit (true→
@@ -15805,7 +15811,7 @@ Hard requirements:
                 <button onClick={()=>setSetupArtists(['mosaicFamily'])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(230,222,196,.5)'}}>{ts('selNone','none')}</button>
               </div>
             )}
-            {!cockpitEdit && _modeBtn(_artMode, _cycleArt, true)}
+            {!cockpitEdit && _modeBtn(_artMode===2 ? 2 : 0, _cycleArt, true)}
             {/* Ensemble stays under ✦ too (lit when the signature is a fusion): another painter, or one taken off, and ✦ gives way to the Ensemble */}
             {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36, _artChoiceN()<2)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
