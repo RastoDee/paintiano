@@ -23970,7 +23970,8 @@ const STUDIO_HOME_CSS = `
 @keyframes pfStChev{0%,100%{transform:translateY(0);opacity:.7}50%{transform:translateY(4px);opacity:1}}
 @media (prefers-reduced-motion:reduce){.pf-st-chev-new{animation:none}}
 .pf-sh-word{position:absolute;top:calc(env(safe-area-inset-top,0px) + 32px);left:50%;transform:translate(-50%,-50%);font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:21px;line-height:1;color:#f0c040;pointer-events:none;text-shadow:0 2px 18px rgba(0,0,0,.6);white-space:nowrap}
-.pf-sh-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 0 18px;box-sizing:border-box}
+.pf-sh-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 0 18px;box-sizing:border-box;transition:padding .3s ease}
+.pf-sh-stage.hint{padding-bottom:60px}
 .pf-sh-card{position:relative;height:100%;max-height:440px;aspect-ratio:242/360}
 .pf-sh-card{container-type:inline-size}
 .pf-sh-cap{position:absolute;left:0;right:0;bottom:0;padding:20cqw 31cqw 6cqw 6cqw;background:linear-gradient(180deg,rgba(6,5,10,0),rgba(6,5,10,.82));text-align:left;pointer-events:none}
@@ -23990,7 +23991,7 @@ const STUDIO_HOME_CSS = `
 @keyframes pfShIn{from{transform:scale(.93) rotate(-1.5deg);opacity:.4}to{transform:scale(1) rotate(-1.5deg);opacity:1}}
 .pf-sh-back{animation:pfShBack .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
 @keyframes pfShBack{from{transform:translateY(-110%) rotate(-8deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
-.pf-sh-fhint{position:absolute;left:-60px;right:-60px;top:calc(100% + 18px);display:flex;justify-content:center;pointer-events:none;animation:pfShHintIn .5s ease .6s both}
+.pf-sh-fhint{position:absolute;left:-60px;right:-60px;top:calc(100% + 22px);display:flex;justify-content:center;pointer-events:none;animation:pfShHintIn .5s ease .6s both}
 .pf-sh-fpill{display:inline-flex;align-items:center;gap:9px;padding:6px 13px 6px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:500;letter-spacing:.02em;color:rgba(242,238,232,.88);white-space:nowrap}
 .pf-sh-fit{display:inline-flex;align-items:center;gap:5px}
 .pf-sh-fit b{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408}
@@ -36303,9 +36304,11 @@ Hard requirements:
     if(jamOn) setJamOn(false);
     _shuffleOff();
     setForceSetup(true);   // the piece plays under the home, on the card
-    loadSampleMidi(piece, {noSig:true});
+    // ✦ Signature: the piece opens on its own painting, exactly as a piece does (the latch comes with the load)
+    if(sel && sel.sig){ setRandomMode(false); randomModeRef.current=false; loadSampleMidi(piece); }
+    else loadSampleMidi(piece, {noSig:true});
     feedPieceRef.current = true;
-    _feedApply(sel);
+    if(!(sel && sel.sig)) _feedApply(sel);
     setFeedLoaded(piece); setFeedHiRes(true); feedTokRef.current++;
     feedStartRef.current = {t:Date.now(), title:_FEED_NAMES[piece]};
   };
@@ -36331,13 +36334,16 @@ Hard requirements:
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
   const _feedStart = ()=>{
-    const piece=_feedPiece(), sel={style:null, phase:0, mode, notes:false, stage:[], sig:false};   // Lite opens on the bare Mosaic
-    feedStepsRef.current = ['kandinsky','sig'];
+    // like Lite: the very first time, the arc with its lines — the bare Mosaic, Kandinsky, ✦ Signature; every later time the piece opens on its ✦ Signature, then the shuffle
+    let arc=true; try{ arc=localStorage.getItem('paintiano_feed_arc')!=='1'; localStorage.setItem('paintiano_feed_arc','1'); }catch(_){}
+    const piece=_feedPiece(), sel = arc ? {style:null, phase:0, mode, notes:false, stage:[], sig:false} : {sig:true};
+    feedStepsRef.current = arc ? ['kandinsky','sig'] : [];
     surpriseArtistBagRef.current = [];
     const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece, sel, u:null, l:'' };
     setFeedCards([c]); setFeedAt(0);
     _feedLoad(piece, sel);
-    setFeedIntro({k:'m', t:Date.now()}); _feedHintBump();
+    if(arc) setFeedIntro({k:'m', t:Date.now()}); else _feedFlashNow();
+    _feedHintBump();
   };
   const _feedUp = (cur)=>{
     if(feedFly) return;
@@ -37357,7 +37363,7 @@ Hard requirements:
             {!isActiveView && feedLoaded!==null && (<canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} aria-hidden="true" style={{position:'absolute',left:-99999,top:0,width:CW,height:CH,opacity:0,pointerEvents:'none'}}/>)}
             <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
-            <div className="pf-sh-stage">
+            <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               <div className="pf-sh-card" onTouchStart={_fTS} onTouchEnd={_fTE}>
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
