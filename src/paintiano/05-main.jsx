@@ -14095,6 +14095,7 @@ Hard requirements:
   const _feedTitle = (c)=> c ? (c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
+  const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
   const _feedSnap = ()=>{ try{ if(viewMode==='image' && feedCvRef.current && feedCvRef.current.width){ return feedCvRef.current.toDataURL('image/jpeg',0.82); } const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const W=Math.min(720, s.width), Hh=Math.round(s.height*W/s.width); const c=document.createElement('canvas'); c.width=W; c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh); x.drawImage(s,0,0,W,Hh); return c.toDataURL('image/jpeg',0.8); }catch(_){ return null; } };
   // the live canvas, mirrored into the card (cover)
   const _feedDraw = ()=>{ try{ const c=feedCvRef.current, s=canvasRef.current; if(!c || !s || !s.width || !s.height) return; const w=c.clientWidth, h=c.clientHeight; if(!w || !h) return; const d=Math.min(2, window.devicePixelRatio||1); const W=Math.round(w*d), Hh=Math.round(h*d); if(c.width!==W) c.width=W; if(c.height!==Hh) c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh);
@@ -14103,6 +14104,7 @@ Hard requirements:
         if(playing || anim || holdPaused){ const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.globalCompositeOperation='screen'; x.globalAlpha=.7; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); x.globalCompositeOperation='source-over'; x.globalAlpha=1; } return; } }
     const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); }catch(_){} };
   // the look on screen, to keep with a card
+  feedDrawRef.current = _feedDraw;
   const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive });
   // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
   const _feedPiece = (kind)=>{ if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
@@ -14235,9 +14237,9 @@ Hard requirements:
   const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
   useEffect(()=>{
     if(!_feedLiveOn) return;
-    _feedDraw();
+    feedDrawRef.current();
     let n=0;
-    const iv=setInterval(()=>{ _feedDraw(); if(++n%24===1){ try{ const s=canvasRef.current; if(s && s.width){ const c=document.createElement('canvas'); c.width=96; c.height=Math.max(1, Math.round(96*s.height/s.width)); c.getContext('2d').drawImage(s,0,0,c.width,c.height); setFeedBg(c.toDataURL('image/jpeg',0.7)); } }catch(_){} } }, 110);
+    const iv=setInterval(()=>{ feedDrawRef.current(); if(++n%24===1){ try{ const s=canvasRef.current; if(s && s.width){ const c=document.createElement('canvas'); c.width=96; c.height=Math.max(1, Math.round(96*s.height/s.width)); c.getContext('2d').drawImage(s,0,0,c.width,c.height); setFeedBg(c.toDataURL('image/jpeg',0.7)); } }catch(_){} } }, 110);
     return ()=>clearInterval(iv);
   },[_feedLiveOn, feedAt]);
   useEffect(()=>{ if(!feedFlash) return; const tm=setTimeout(()=>setFeedFlash(0), 1700); return ()=>clearTimeout(tm); },[feedFlash]);
