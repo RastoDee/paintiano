@@ -1807,9 +1807,9 @@ const STUDIO_HOME_CSS = `
 .pf-sh-links .pf-sh-fav.on{color:rgba(242,238,232,.88)}
 .pf-sh-fav i{font-style:normal;font-size:1.25em;line-height:1;color:rgba(242,238,232,.5)}
 .pf-sh-fav.on i{color:#f0c040;text-shadow:0 0 10px rgba(240,192,64,.45)}
-.pf-sh-fav.pf-sh-pulse i{animation:pfShPulse 1.1s ease 2}
+.pf-sh-fav.pf-sh-pulse i{animation:pfShHeart 1.1s ease 2}
 .pf-sh-links .pf-sh-fav.hint{text-transform:none;letter-spacing:.02em;font-weight:500;color:rgba(242,238,232,.75)}
-@keyframes pfShPulse{0%,100%{transform:scale(1)}40%{transform:scale(1.45)}}
+@keyframes pfShHeart{0%,100%{transform:scale(1)}40%{transform:scale(1.45)}}
 .pf-st-daily{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;padding:6px 16px 6px 7px;border-radius:24px;background:rgba(20,16,30,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(240,215,138,.35);box-shadow:0 8px 30px rgba(0,0,0,.45);white-space:nowrap;font-family:'Outfit',sans-serif;cursor:pointer;animation:pfStDaily .5s ease both}
 .pf-st-daily>i{display:block;width:28px;height:28px;border-radius:50%;background:conic-gradient(#e2c477,#8c5cff,#3fb37a,#e2c477);box-shadow:0 0 0 2px #0e0b16,0 0 0 3px rgba(240,215,138,.6)}
 .pf-st-daily>span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15}
