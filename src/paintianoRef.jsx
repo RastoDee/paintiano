@@ -26657,6 +26657,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // flash length: a solo 1.2 s; a fusion / jam stays up 2.5 s (more to take in) — whoever wants it longer holds (press-and-hold keeps it up)
   _flashMsRef.current = (()=>{ try{ const img=(basicMode && liteImageMode) || (!basicMode && viewMode==='image');
     const n = img ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).length : 0) : (painterStage.length && style!==null ? _jamStage().length : 0);
+    if(img ? imgSigActiveRef.current : sigActiveRef.current) return 3200;   // ✦ Signature: a line to read, not one name — it stays longer
     return n>1 ? 2500 : 1200; }catch(_){ return 1200; } })();
   const imgComposerRef = useRef(null);
   const _lastComposerRef = useRef('glass');   // remembered pick for the Composer mode button
@@ -32199,7 +32200,7 @@ Hard requirements:
     const sig = mode + '|' + _effDir + '|c:' + (_cLead||'scan') + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // playing: the sound dips first (a hard cut of the old notes crackles on a phone), the re-read comes 70 ms later, the sound returns after it
-    if(playingRef.current && !imgDipRef.current){ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){} setTimeout(()=>{ imgDipRef.current=true; setImgDipTick(x=>x+1); }, 70); return; }
+    if(playingRef.current && !imgDipRef.current){ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){} setTimeout(()=>{ imgDipRef.current=true; setImgDipTick(x=>x+1); }, 70); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(!imgDipRef.current && v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 650); return; }
     if(imgDipRef.current){ imgDipRef.current=false; setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); }catch(_){} }, 200); }
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
@@ -36372,7 +36373,10 @@ Hard requirements:
   // the next look: the fixed opening first, then Lite's own shuffle (a painter × variant, a fusion now and then)
   const _feedNextLook = ()=>{
     if(viewMode==='image'){   // a new composer re-reads the picture: the sound dips under the change instead of crackling
-      try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer();
+      // the sound goes down BEFORE ✦ lets go (its release cuts the notes itself), the change comes once it is quiet
+      try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){}
+      setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer(); }, 70);
+      setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 700);
       return; }
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
     while(feedStepsRef.current.length){
