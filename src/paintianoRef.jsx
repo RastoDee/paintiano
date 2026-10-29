@@ -37370,7 +37370,7 @@ Hard requirements:
                 {FC ? (
                 <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : 'pf-sh-in')}>
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
-                  <span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{_stT('feedChip')}</span>
+                  <span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
                   {_fL && feedIntro && (()=>{
                     if(feedIntro.k==='m'){ const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))]; const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; })); const _nm=_miT('names');
