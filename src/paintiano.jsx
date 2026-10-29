@@ -36028,6 +36028,7 @@ Hard requirements:
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
       const isImg = viewMode==='image' && !moodFromImg;
+      if(!isImg && !composeMode && !micActive && chords.length && disp < Math.max(6, chords.length*0.12)) return;   // a just-cleared or barely started canvas keeps the last painting on the card
       const _k = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : isImg ? 'image' : 'music';
       let _t='', _l=''; try{ _t=(_k==='compose'||_k==='mic') ? '' : _vidTitle(); if(_t==='Paintiano') _t=''; _l=_vidLine(); }catch(_){}
       let _r=null;
