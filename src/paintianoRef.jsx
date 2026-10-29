@@ -37163,7 +37163,7 @@ Hard requirements:
               <button type="button" className="pf-sh-fav" onClick={()=>{ if(favN) _favOpen(); }} aria-label={_favT('label')}>
                 {favN ? (<span className="pf-sh-fan" aria-hidden="true">{favs.slice(0,3).map((f,i,a)=>(<i key={f.id} style={{backgroundImage:favShelf[f.id] ? 'url('+favShelf[f.id]+')' : undefined,transform:'rotate('+((i-(a.length-1)/2)*7)+'deg)'}}/>))}</span>)
                   : (<span className="pf-sh-fan0" aria-hidden="true">♥</span>)}
-                <span className="pf-sh-fav-t"><b>♥ {_favT('label')}{favN ? ' · '+favN : ''}</b>{!favN && (<small>{_favT('shelfHint')}</small>)}</span>
+                <span className="pf-sh-fav-t"><b>{_favT('label')}{favN ? ' · '+favN : ''}</b>{!favN && (<small>{_favT('shelfHint')}</small>)}</span>
                 {favN ? (<span className="pf-sh-fav-go" aria-hidden="true">›</span>) : null}
               </button>
             </div>
