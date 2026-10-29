@@ -3520,7 +3520,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // TWO buttons per side: 🔀 shuffle (off → 1 → ALL → off) and Ensemble (on/off);
   // they combine — Ensemble + 1 = Next rolls the crossing's variant, Ensemble +
   // ALL = Next draws a new random crossing.
-  const _artMode = randomMode ? ((style===null || jamAll) ? 2 : 1) : 0;
+  const _artMode = randomMode ? (((style===null && !mosaicShuffleLock) || jamAll) ? 2 : 1) : 0;   // Mosaic chosen (its lock: Mosaic ↔ Notes) is 'off' — your painter's variants
   // 🔀 on (ALL) is the only state where ▶ and a new song draw by themselves; off keeps the painting on
   // screen until Next / swipe up / Show asks for another variant.
   const artAllRef = useRef(false); artAllRef.current = _artMode===2;
@@ -3531,6 +3531,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(working||anim) return;
     if(_artMode!==2){                                               // → on (ALL)
       if(!randomMode) _shuffleOn();
+      if(mosaicShuffleLock) setMosaicShuffleLock(false);   // from Mosaic ↔ Notes to every painter in your set
       if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
       if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }   // the draw starts on the SAME artist
       return; }

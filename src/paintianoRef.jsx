@@ -36375,7 +36375,8 @@ Hard requirements:
     if(viewMode==='image'){   // a new composer re-reads the picture: the sound dips under the change instead of crackling
       // the sound goes down BEFORE ✦ lets go (its release cuts the notes itself), the change comes once it is quiet
       try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){}
-      setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer(); }, 70);
+      setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} }, 70);
+      setTimeout(()=>{ _liteRollComposer(); }, 120);   // after ✦ has let go (its own clean-up would undo a composer set in the same moment)
       setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 700);
       return; }
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
