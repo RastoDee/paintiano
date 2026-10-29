@@ -23991,7 +23991,9 @@ const STUDIO_HOME_CSS = `
 .pf-sh-ttl.pf-sh-long{font-size:clamp(19px,5.6vw,24px)}
 .pf-sh-line{font-size:calc(var(--pf-read-scale,1) * 11.5px);letter-spacing:.04em;color:#f0d78a;text-wrap:balance}
 .pf-sh-q{position:relative;flex-shrink:0;margin-top:22px;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;font-size:23px;line-height:1}
-.pf-sh-links{position:relative;flex-shrink:0;margin-top:14px;display:flex;gap:22px}
+.pf-sh-links{position:relative;flex-shrink:0;margin-top:14px;display:flex;flex-wrap:wrap;justify-content:center;gap:0 22px}
+.pf-sh-links button.pf-sh-daily{color:#e2c477;letter-spacing:.03em;text-transform:none;font-weight:500;padding-top:2px}
+.pf-sh-links button.pf-sh-daily b{font-weight:700}
 .pf-sh-links button{background:none;border:0;padding:8px 4px;color:rgba(242,238,232,.72);font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
 .pf-studio-home .pf-help-fab{display:none!important}
 @media (prefers-reduced-motion: reduce){.pf-sh-bg,.pf-sh-art,.pf-sh-play{animation:none}}
@@ -35708,8 +35710,13 @@ Hard requirements:
   const skinThumbRef = useRef({ key:'', done:{} });
   const _skinPk = useMemo(()=> chords.length ? _favHash(chords) : '', [chords]);
   const _skinPalKey = mode==='custom' ? (activePalette||[]).join(',') : '';
-  const _skinKey = (studioFs && stripOpen && _skinPk && !(viewMode==='image' && !moodFromImg))
-    ? [_skinPk, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus].join('|') : '';
+  // Compose / Mic grow the piece note by note: the faces are painted once when the sheet opens and stay
+  // put while it is open (otherwise every new note repaints all of them — they flicker)
+  const _skinPkRef = useRef('');
+  if(!(studioFs && stripOpen)) _skinPkRef.current='';
+  else if(!(composeMode || micActive) || !_skinPkRef.current) _skinPkRef.current=_skinPk;
+  const _skinKey = (studioFs && stripOpen && _skinPkRef.current && !(viewMode==='image' && !moodFromImg))
+    ? [_skinPkRef.current, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus].join('|') : '';
   useEffect(()=>{
     if(!_skinKey) return;
     const R = skinThumbRef.current;
@@ -35745,8 +35752,9 @@ Hard requirements:
     tm = setTimeout(step, 260);   // after the sheet has slid in
     return ()=>{ dead=true; clearTimeout(tm); };
   },[_skinKey]);
-  // a palette as a colour wheel: its 12 notes C … B round the circle, each in its colour
-  const _skinRing = (m)=>{
+  // a palette as a colour wheel: its 12 notes C … B round the circle, each in its colour (the same
+  // wheel in the Studio sheet and in Styles & palettes)
+  const _palWheelBg = (m)=>{
     let cols = [];
     try{
       if(m==='custom') cols = (activePalette||[]).slice(0,12);
@@ -35754,8 +35762,9 @@ Hard requirements:
     }catch(_){}
     if(cols.length<2) cols = ['#6a6478','#2a2636'];
     const _st = 360/cols.length;
-    return (<span className="pf-sk-ring" aria-hidden="true" style={{background:'conic-gradient('+cols.map((c,i)=>c+' '+(i*_st)+'deg '+((i+1)*_st)+'deg').join(',')+')'}}><i/></span>);
+    return 'conic-gradient('+cols.map((c,i)=>c+' '+(i*_st)+'deg '+((i+1)*_st)+'deg').join(',')+')';
   };
+  const _skinRing = (m)=>(<span className="pf-sk-ring" aria-hidden="true" style={{background:_palWheelBg(m)}}><i/></span>);
   // a painter's face: the song painted by them, a soft colour while it is being made
   const _skinFace = (k, hit)=>{
     const u = skinThumbs[k||'mosaic'];
@@ -36356,7 +36365,7 @@ Hard requirements:
           })()}
         </div>
       )}
-      {_dailyShown && (
+      {_dailyShown && !studioHome && (
         // only info: who is free today — no action, no close; it retires by itself (5 s or the first Play)
         <div role="status" style={{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:12,zIndex:9998,display:'flex',alignItems:'center',padding:'9px 16px',borderRadius:24,border:'1px solid rgba(226,196,119,.7)',background:'rgba(11,11,16,.94)',boxShadow:'0 4px 18px rgba(0,0,0,.45),0 0 22px rgba(226,196,119,.18)',maxWidth:'92vw',pointerEvents:'none'}}>
           <span style={{color:'#e2c477',fontSize:12.5,letterSpacing:'.04em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
@@ -37105,6 +37114,7 @@ Hard requirements:
             </div>
             <div className="pf-sh-links">
               <button type="button" onClick={()=>_favOpen()} disabled={!favN} style={{opacity:favN?1:.45}}>♥ {_favT('label')}{favN ? ' · '+favN : ''}</button>
+              {proStatus==='free' && artistOfDay && (<button type="button" className="pf-sh-daily" onClick={openDailyInfo}>✦ {ts('dailyTodayIs','Today')}: <b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}</b>{composerOfDay ? (<> · <b>{COMPOSER_INSPIRED[composerOfDay]||composerOfDay}</b></>) : null}</button>)}
             </div>
           </div>);
       })()}
@@ -37401,7 +37411,7 @@ Hard requirements:
               loaded, not playing, disp at the last chord) — half-finished
               paintings are not yet ready to scan. Pushed rightward via
               marginLeft:'auto' so it sits near + NEW MUSIC (modality pair). */}
-          {(loadedSource || sourceContext) && !composeMode && !micActive && !moodContext && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=(srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
+          {(loadedSource || sourceContext || moodContext) && !composeMode && !micActive && (()=>{ const srcBtn = loadedSource || sourceContext; const _isMusic=moodContext || (srcBtn==='midi'||srcBtn==='audio'||srcBtn==='score'); if(!_isMusic) return null; const _paintingDone = chords.length>0 && !playing && disp>=chords.length; const _dis = recording || !_paintingDone; return (
             <button ref={hearBtnRef} onClick={()=>{
               if(_dis) return;
               // Point 4 — reuse an in-progress Image draft from a PRIOR Hear image
@@ -38805,8 +38815,7 @@ Hard requirements:
             {_showVary && (<button type="button" data-h="vary" onClick={_go(()=>{ if(_varyOk) _doVary(); }, true)} disabled={!_varyOk} aria-label={t('vary')} style={{..._it,opacity:_varyOk?1:.4}}><span style={_ic({color:'#ffb08a',border:'1px solid rgba(244,124,60,.55)'})}><TxIcon n="sparkle" s={16}/></span>{_bare(t('vary'))}</button>)}
             {_morphOk && (<button type="button" data-h="morph" onClick={_go(()=>{ const go=()=>{ if(morphBtnRef.current) morphBtnRef.current.click(); }; if(playing && handlePauseClickRef.current){ handlePauseClickRef.current(); setTimeout(go, 160); } else go(); })} disabled={recording || working} aria-label={t('morphInto')} style={{..._it,opacity:(recording||working)?.4:1}}><span style={_ic({color:'#dcb4ff',border:'1px solid rgba(190,140,255,.55)'})}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="9" cy="12" r="5.5"/><circle cx="15" cy="12" r="5.5"/></svg></span>{_bare(t('morph'))}</button>)}
             {_showOk && (<button type="button" data-h="show" onClick={_go(toggleShow, true)} aria-pressed={!!showMode} style={_it}><span style={_ic(showMode?{background:'rgba(201,168,76,.9)',color:'#14110a',border:'1px solid transparent'}:{color:PF.gold2})}><TxIcon n="show" s={16}/></span>{t('showLabel')!=='showLabel'?t('showLabel'):'Show'}</button>)}
-            {!_live && (<button type="button" data-h="share" onClick={_go(()=>{ _stShow(null); setStShare(true); })} aria-label={_stT('share')} style={_it}><span style={_ic({background:'linear-gradient(135deg,#ff5f8f,#a86bff)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(200,100,255,.35)'})}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>{_stT('share')}</button>)}
-            {_live && !_img && (<button type="button" data-h="save" onClick={_go(()=>{ if(_exportOk) setShowSizePicker(true); }, true)} disabled={!_exportOk} aria-label={t('save')} style={{..._it,opacity:_exportOk?1:.4}}><span style={_ic({color:PF.gold2})}><TxIcon n="save" s={17}/></span>{t('save')}</button>)}
+            {(<button type="button" data-h="share" onClick={_go(()=>{ if(!_live) _stShow(null); setStShare(true); })} aria-label={_stT('share')} style={_it}><span style={_ic({background:'linear-gradient(135deg,#ff5f8f,#a86bff)',border:'1px solid transparent',color:'#fff',boxShadow:'0 0 18px rgba(200,100,255,.35)'})}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></span>{_stT('share')}</button>)}
           </div>
           {_live && (<div className="pf-st-rail-l" style={_rail('left', _l)} {..._hp('l')}>
             <button type="button" data-h="new" onClick={_go(()=>{ _stShow(null); setStNew(true); })} disabled={recording} style={{..._it,opacity:recording?.4:1}}><span style={_ic({width:52,height:52,background:'linear-gradient(135deg,#4de3a0,#2fc98a)',border:'1px solid transparent',color:'#0a1a12',fontSize:28,fontWeight:600,boxShadow:'0 0 22px rgba(77,227,160,.4)'})}>+</span>{_stT('nu')}</button>
@@ -41035,7 +41044,8 @@ Hard requirements:
                     const on = setupPalettes.includes(k);
                     return (
                     <button key={k} type="button" onClick={()=>togglePal(k)} aria-pressed={on} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,minWidth:0,background:'none',border:0,padding:'4px 0',cursor:'pointer',fontFamily:'inherit',fontSize:_px(12.5),fontWeight:600,color:on?'#f2eee8':'rgba(242,238,232,.45)',WebkitTapHighlightColor:'transparent'}}>
-                      <span style={{position:'relative',width:50,height:50,borderRadius:'50%',background:(()=>{ const P=_gPal(k); return 'conic-gradient('+_G_ORDER[P.o].map((pc,i)=>_gCol(P, pc)+' '+(i*30)+'deg '+((i+1)*30)+'deg').join(',')+')'; })(),opacity:on?1:.32,boxShadow:on?'0 0 0 3px #07060c, 0 0 0 5px rgba(240,215,138,.9)':'none',transition:'opacity .18s, box-shadow .18s'}}>
+                      <span style={{position:'relative',width:50,height:50,borderRadius:'50%',background:_palWheelBg(k),opacity:on?1:.32,boxShadow:on?'0 0 0 3px #07060c, 0 0 0 5px rgba(240,215,138,.9)':'none',transition:'opacity .18s, box-shadow .18s'}}>
+                        <span aria-hidden="true" style={{position:'absolute',inset:4,borderRadius:'50%',border:'3px solid #0e0b16'}}/>
                         {on && (<span aria-hidden="true" style={{position:'absolute',right:-5,bottom:-5,width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</span>)}
                       </span>
                       <span style={{maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{_sent(_palLabels[k])}</span>

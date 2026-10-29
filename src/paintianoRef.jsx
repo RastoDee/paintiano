@@ -23848,14 +23848,14 @@ const STUDIO_I18N = {
 // by each of them), composers as monograms. The buttons and what they do are the Classic ones; only the look changes.
 const STUDIO_SKIN_CSS = `
 .pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs{gap:2px!important}
-.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab{display:flex!important;flex-direction:column;align-items:center;gap:6px;background:none!important;border:0!important;box-shadow:none!important;padding:2px 0 0!important;border-radius:0!important;font-size:calc(var(--pf-read-scale,1) * 8.5px)!important;letter-spacing:.1em!important;color:rgba(242,238,232,.62)!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab{display:flex!important;flex-direction:column;align-items:center;gap:6px;background:none!important;border:0!important;box-shadow:none!important;padding:2px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 8.5px)!important;letter-spacing:.1em!important;color:rgba(242,238,232,.62)!important;transform:none!important}
 .pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab.pf-tab-on{color:#f0c040!important;font-weight:700!important}
 .pf-sk-ring{display:block;width:44px;height:44px;border-radius:50%;padding:3px;border:2px solid transparent;box-sizing:border-box;transition:border-color .18s, transform .12s}
 .pf-sk-ring i{display:block;width:100%;height:100%;border-radius:50%;border:3px solid #0e0b16;box-sizing:border-box}
 .pf-tab-on .pf-sk-ring{border-color:#f0c040}
 .pf-tab:active .pf-sk-ring{transform:scale(.92)}
 .pf-app-root .pf-strip-grid.pf-skin .pf-art-grid{row-gap:12px!important;column-gap:2px!important;align-items:start!important}
-.pf-app-root .pf-strip-grid.pf-skin .pf-artist{display:flex!important;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;box-shadow:none!important;padding:3px 0 0!important;border-radius:0!important;font-size:calc(var(--pf-read-scale,1) * 8px)!important;letter-spacing:.05em!important;color:rgba(242,238,232,.66)!important;overflow:visible!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-artist{display:flex!important;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;box-shadow:none!important;padding:3px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 8px)!important;letter-spacing:.05em!important;color:rgba(242,238,232,.66)!important;overflow:visible!important;transform:none!important}
 .pf-app-root .pf-strip-grid.pf-skin .pf-artist.pf-artist-on{color:#f0c040!important;font-weight:700!important}
 .pf-sk-face{display:block;flex-shrink:0;width:54px;height:54px;border-radius:50%;background:#1b1728 center/cover no-repeat;border:2px solid rgba(242,238,232,.08);box-shadow:0 4px 14px rgba(0,0,0,.5);box-sizing:border-box;transition:transform .12s, border-color .18s, box-shadow .18s}
 .pf-artist:active .pf-sk-face{transform:scale(.92)}
