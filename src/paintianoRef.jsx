@@ -23971,7 +23971,7 @@ const STUDIO_HOME_CSS = `
 @media (prefers-reduced-motion:reduce){.pf-st-chev-new{animation:none}}
 .pf-sh-word{position:absolute;top:calc(env(safe-area-inset-top,0px) + 32px);left:50%;transform:translate(-50%,-50%);font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:21px;line-height:1;color:#f0c040;pointer-events:none;text-shadow:0 2px 18px rgba(0,0,0,.6);white-space:nowrap}
 .pf-sh-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 0 18px;box-sizing:border-box;transition:padding .3s ease}
-.pf-sh-stage.hint{padding-bottom:52px}
+.pf-sh-stage.hint{padding-bottom:60px}
 .pf-sh-card{position:relative;height:100%;max-height:440px;aspect-ratio:242/360}
 .pf-sh-card{container-type:inline-size}
 .pf-sh-cap{position:absolute;left:0;right:0;bottom:0;padding:20cqw 31cqw 6cqw 6cqw;background:linear-gradient(180deg,rgba(6,5,10,0),rgba(6,5,10,.82));text-align:left;pointer-events:none}
@@ -23991,7 +23991,7 @@ const STUDIO_HOME_CSS = `
 @keyframes pfShIn{from{transform:scale(.93) rotate(-1.5deg);opacity:.4}to{transform:scale(1) rotate(-1.5deg);opacity:1}}
 .pf-sh-back{animation:pfShBack .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
 @keyframes pfShBack{from{transform:translateY(-110%) rotate(-8deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
-.pf-sh-fhint{position:absolute;left:-60px;right:-60px;top:calc(100% + 14px);display:flex;justify-content:center;pointer-events:none;animation:pfShHintIn .5s ease .6s both}
+.pf-sh-fhint{position:absolute;left:-60px;right:-60px;top:calc(100% + 22px);display:flex;justify-content:center;pointer-events:none;animation:pfShHintIn .5s ease .6s both}
 .pf-sh-fpill{display:inline-flex;align-items:center;gap:9px;padding:6px 13px 6px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:500;letter-spacing:.02em;color:rgba(242,238,232,.88);white-space:nowrap}
 .pf-sh-fit{display:inline-flex;align-items:center;gap:5px}
 .pf-sh-fit b{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408}
