@@ -537,15 +537,15 @@ function _frameExport(hi, kind, o){
 
 // ── FAVORITES ─────────────────────────────────────────────────────────────────
 const FAV_I18N = {
-  EN:{label:'Favorites',close:'Close',saved:'Saved to Favorites',removed:'Removed from Favorites',undo:'Undo',add:'Add to Favorites',del:'Remove from Favorites',empty:'No favorites yet. Tap ♡ at the top left of a finished painting, or of a picture in Image, to keep it here.',today:'saved today',yday:'saved yesterday',on:'saved {d}',prev:'Previous painting',next:'Next painting',lost:'This painting can’t be opened.',failed:'Could not save — private browsing blocks storage.',mm:'My Music',mmSaved:'Saved in My Music',tones:{pure:'Pure',real:'Real',pastel:'Pastel'},clearAll:'Clear all',clearAllQ:'Clear all {n}?',clearedAll:'All {n} favorites removed',open:'Open',openTip:'Opens the picture in Image exactly as you saved it and plays it'},
-  SK:{label:'Obľúbené',close:'Zavrieť',saved:'Uložené do Obľúbených',removed:'Odstránené z Obľúbených',undo:'Späť',add:'Pridať do Obľúbených',del:'Odstrániť z Obľúbených',empty:'Zatiaľ žiadne obľúbené. Ťukni na ♡ vľavo hore na hotovom obraze alebo na obrázku v Obraze a ostane tu.',today:'uložené dnes',yday:'uložené včera',on:'uložené {d}',prev:'Predchádzajúci obraz',next:'Ďalší obraz',lost:'Tento obraz sa nedá otvoriť.',failed:'Nedá sa uložiť — súkromné prehliadanie blokuje úložisko.',mm:'Moja hudba',mmSaved:'Uložené v Mojej hudbe',tones:{pure:'Čistý',real:'Skutočný',pastel:'Pastelový'},clearAll:'Vymazať všetky',clearAllQ:'Vymazať všetky ({n})?',clearedAll:'Všetky obľúbené odstránené ({n})',open:'Otvoriť',openTip:'Otvorí obrázok v Obraze presne tak, ako si ho uložil, a prehrá ho'},
-  DE:{label:'Favoriten',close:'Schließen',saved:'Zu Favoriten hinzugefügt',removed:'Aus Favoriten entfernt',undo:'Rückgängig',add:'Zu Favoriten hinzufügen',del:'Aus Favoriten entfernen',empty:'Noch keine Favoriten. Tippe bei einem fertigen Gemälde oder einem Bild im Modus Bild oben links auf ♡, um es hier zu behalten.',today:'heute gespeichert',yday:'gestern gespeichert',on:'gespeichert am {d}',prev:'Vorheriges Bild',next:'Nächstes Bild',lost:'Dieses Bild lässt sich nicht öffnen.',failed:'Speichern nicht möglich — privates Surfen blockiert den Speicher.',mm:'Meine Musik',mmSaved:'In Meine Musik gespeichert',tones:{pure:'Pur',real:'Real',pastel:'Pastell'},clearAll:'Alle löschen',clearAllQ:'Alle {n} löschen?',clearedAll:'Alle {n} Favoriten entfernt',open:'Öffnen',openTip:'Öffnet das Bild im Modus Bild genau so, wie du es gespeichert hast, und spielt es ab'},
-  FR:{label:'Favoris',close:'Fermer',saved:'Ajouté aux favoris',removed:'Retiré des favoris',undo:'Annuler',add:'Ajouter aux favoris',del:'Retirer des favoris',empty:'Pas encore de favoris. Touche ♡ en haut à gauche d’une peinture terminée, ou d’une image dans Image, pour la garder ici.',today:'enregistré aujourd’hui',yday:'enregistré hier',on:'enregistré le {d}',prev:'Peinture précédente',next:'Peinture suivante',lost:'Cette peinture ne peut pas être ouverte.',failed:'Enregistrement impossible — la navigation privée bloque le stockage.',mm:'Ma musique',mmSaved:'Enregistré dans Ma musique',tones:{pure:'Pur',real:'Réel',pastel:'Pastel'},clearAll:'Tout effacer',clearAllQ:'Effacer les {n} ?',clearedAll:'Les {n} favoris ont été retirés',open:'Ouvrir',openTip:'Ouvre l’image dans Image exactement comme tu l’as enregistrée et la joue'},
-  ES:{label:'Favoritos',close:'Cerrar',saved:'Guardado en Favoritos',removed:'Quitado de Favoritos',undo:'Deshacer',add:'Añadir a Favoritos',del:'Quitar de Favoritos',empty:'Aún no hay favoritos. Toca ♡ arriba a la izquierda de una pintura terminada, o de una imagen en Imagen, para guardarla aquí.',today:'guardado hoy',yday:'guardado ayer',on:'guardado el {d}',prev:'Pintura anterior',next:'Pintura siguiente',lost:'Esta pintura no se puede abrir.',failed:'No se pudo guardar — la navegación privada bloquea el almacenamiento.',mm:'Mi música',mmSaved:'Guardado en Mi música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'},clearAll:'Borrar todos',clearAllQ:'¿Borrar los {n}?',clearedAll:'Se quitaron los {n} favoritos',open:'Abrir',openTip:'Abre la imagen en Imagen tal como la guardaste y la reproduce'},
-  PT:{label:'Favoritos',close:'Fechar',saved:'Guardado nos Favoritos',removed:'Removido dos Favoritos',undo:'Desfazer',add:'Adicionar aos Favoritos',del:'Remover dos Favoritos',empty:'Ainda não há favoritos. Toca em ♡ no canto superior esquerdo de uma pintura terminada, ou de uma imagem em Imagem, para a guardares aqui.',today:'guardado hoje',yday:'guardado ontem',on:'guardado a {d}',prev:'Pintura anterior',next:'Próxima pintura',lost:'Não é possível abrir esta pintura.',failed:'Não foi possível guardar — a navegação privada bloqueia o armazenamento.',mm:'Minha música',mmSaved:'Guardado em Minha música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'},clearAll:'Apagar todos',clearAllQ:'Apagar os {n}?',clearedAll:'Os {n} favoritos foram removidos',open:'Abrir',openTip:'Abre a imagem em Imagem exatamente como a guardaste e toca-a'},
-  zh:{label:'收藏',close:'关闭',saved:'已加入收藏',removed:'已从收藏中移除',undo:'撤销',add:'加入收藏',del:'从收藏中移除',empty:'还没有收藏。在完成的画作或“图像”中的图片左上角轻点 ♡，就能把它留在这里。',today:'今天保存',yday:'昨天保存',on:'{d} 保存',prev:'上一幅',next:'下一幅',lost:'这幅画无法打开。',failed:'无法保存——无痕浏览阻止了存储。',mm:'我的音乐',mmSaved:'已保存到我的音乐',tones:{pure:'纯净',real:'真实',pastel:'柔和'},clearAll:'全部清除',clearAllQ:'清除全部 {n} 幅？',clearedAll:'已移除全部 {n} 幅收藏',open:'打开',openTip:'在“图像”中按你保存时的样子打开这张图片并播放'},
-  zhTW:{label:'收藏',close:'關閉',saved:'已加入收藏',removed:'已從收藏中移除',undo:'復原',add:'加入收藏',del:'從收藏中移除',empty:'還沒有收藏。在完成的畫作或「圖像」中的圖片左上角輕點 ♡，就能把它留在這裡。',today:'今天儲存',yday:'昨天儲存',on:'{d} 儲存',prev:'上一幅',next:'下一幅',lost:'這幅畫無法開啟。',failed:'無法儲存——無痕瀏覽阻擋了儲存空間。',mm:'我的音樂',mmSaved:'已儲存到我的音樂',tones:{pure:'純淨',real:'真實',pastel:'柔和'},clearAll:'全部清除',clearAllQ:'清除全部 {n} 幅？',clearedAll:'已移除全部 {n} 幅收藏',open:'打開',openTip:'在「圖像」中依你儲存時的樣子打開這張圖片並播放'},
-  ja:{label:'お気に入り',close:'閉じる',saved:'お気に入りに保存しました',removed:'お気に入りから削除しました',undo:'元に戻す',add:'お気に入りに追加',del:'お気に入りから削除',empty:'お気に入りはまだありません。完成した絵や「画像」の画像の左上の ♡ をタップすると、ここに残ります。',today:'今日保存',yday:'昨日保存',on:'{d} に保存',prev:'前の絵',next:'次の絵',lost:'この絵は開けません。',failed:'保存できません——プライベートブラウズでは保存領域が使えません。',mm:'マイミュージック',mmSaved:'マイミュージックに保存済み',tones:{pure:'ピュア',real:'リアル',pastel:'パステル'},clearAll:'すべて削除',clearAllQ:'{n} 枚すべて削除？',clearedAll:'お気に入り {n} 枚をすべて削除しました',open:'開く',openTip:'保存したときのまま「画像」で開いて再生します'},
+  EN:{shelfHint:'Double-tap a painting to keep it here',label:'Favorites',close:'Close',saved:'Saved to Favorites',removed:'Removed from Favorites',undo:'Undo',add:'Add to Favorites',del:'Remove from Favorites',empty:'No favorites yet. Tap ♡ at the top left of a finished painting, or of a picture in Image, to keep it here.',today:'saved today',yday:'saved yesterday',on:'saved {d}',prev:'Previous painting',next:'Next painting',lost:'This painting can’t be opened.',failed:'Could not save — private browsing blocks storage.',mm:'My Music',mmSaved:'Saved in My Music',tones:{pure:'Pure',real:'Real',pastel:'Pastel'},clearAll:'Clear all',clearAllQ:'Clear all {n}?',clearedAll:'All {n} favorites removed',open:'Open',openTip:'Opens the picture in Image exactly as you saved it and plays it'},
+  SK:{shelfHint:'Dvakrát ťukni na maľbu a ostane tu',label:'Obľúbené',close:'Zavrieť',saved:'Uložené do Obľúbených',removed:'Odstránené z Obľúbených',undo:'Späť',add:'Pridať do Obľúbených',del:'Odstrániť z Obľúbených',empty:'Zatiaľ žiadne obľúbené. Ťukni na ♡ vľavo hore na hotovom obraze alebo na obrázku v Obraze a ostane tu.',today:'uložené dnes',yday:'uložené včera',on:'uložené {d}',prev:'Predchádzajúci obraz',next:'Ďalší obraz',lost:'Tento obraz sa nedá otvoriť.',failed:'Nedá sa uložiť — súkromné prehliadanie blokuje úložisko.',mm:'Moja hudba',mmSaved:'Uložené v Mojej hudbe',tones:{pure:'Čistý',real:'Skutočný',pastel:'Pastelový'},clearAll:'Vymazať všetky',clearAllQ:'Vymazať všetky ({n})?',clearedAll:'Všetky obľúbené odstránené ({n})',open:'Otvoriť',openTip:'Otvorí obrázok v Obraze presne tak, ako si ho uložil, a prehrá ho'},
+  DE:{shelfHint:'Tippe zweimal auf ein Bild, dann bleibt es hier',label:'Favoriten',close:'Schließen',saved:'Zu Favoriten hinzugefügt',removed:'Aus Favoriten entfernt',undo:'Rückgängig',add:'Zu Favoriten hinzufügen',del:'Aus Favoriten entfernen',empty:'Noch keine Favoriten. Tippe bei einem fertigen Gemälde oder einem Bild im Modus Bild oben links auf ♡, um es hier zu behalten.',today:'heute gespeichert',yday:'gestern gespeichert',on:'gespeichert am {d}',prev:'Vorheriges Bild',next:'Nächstes Bild',lost:'Dieses Bild lässt sich nicht öffnen.',failed:'Speichern nicht möglich — privates Surfen blockiert den Speicher.',mm:'Meine Musik',mmSaved:'In Meine Musik gespeichert',tones:{pure:'Pur',real:'Real',pastel:'Pastell'},clearAll:'Alle löschen',clearAllQ:'Alle {n} löschen?',clearedAll:'Alle {n} Favoriten entfernt',open:'Öffnen',openTip:'Öffnet das Bild im Modus Bild genau so, wie du es gespeichert hast, und spielt es ab'},
+  FR:{shelfHint:'Touche deux fois une peinture pour la garder ici',label:'Favoris',close:'Fermer',saved:'Ajouté aux favoris',removed:'Retiré des favoris',undo:'Annuler',add:'Ajouter aux favoris',del:'Retirer des favoris',empty:'Pas encore de favoris. Touche ♡ en haut à gauche d’une peinture terminée, ou d’une image dans Image, pour la garder ici.',today:'enregistré aujourd’hui',yday:'enregistré hier',on:'enregistré le {d}',prev:'Peinture précédente',next:'Peinture suivante',lost:'Cette peinture ne peut pas être ouverte.',failed:'Enregistrement impossible — la navigation privée bloque le stockage.',mm:'Ma musique',mmSaved:'Enregistré dans Ma musique',tones:{pure:'Pur',real:'Réel',pastel:'Pastel'},clearAll:'Tout effacer',clearAllQ:'Effacer les {n} ?',clearedAll:'Les {n} favoris ont été retirés',open:'Ouvrir',openTip:'Ouvre l’image dans Image exactement comme tu l’as enregistrée et la joue'},
+  ES:{shelfHint:'Toca dos veces una pintura para guardarla aquí',label:'Favoritos',close:'Cerrar',saved:'Guardado en Favoritos',removed:'Quitado de Favoritos',undo:'Deshacer',add:'Añadir a Favoritos',del:'Quitar de Favoritos',empty:'Aún no hay favoritos. Toca ♡ arriba a la izquierda de una pintura terminada, o de una imagen en Imagen, para guardarla aquí.',today:'guardado hoy',yday:'guardado ayer',on:'guardado el {d}',prev:'Pintura anterior',next:'Pintura siguiente',lost:'Esta pintura no se puede abrir.',failed:'No se pudo guardar — la navegación privada bloquea el almacenamiento.',mm:'Mi música',mmSaved:'Guardado en Mi música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'},clearAll:'Borrar todos',clearAllQ:'¿Borrar los {n}?',clearedAll:'Se quitaron los {n} favoritos',open:'Abrir',openTip:'Abre la imagen en Imagen tal como la guardaste y la reproduce'},
+  PT:{shelfHint:'Toca duas vezes numa pintura para a guardar aqui',label:'Favoritos',close:'Fechar',saved:'Guardado nos Favoritos',removed:'Removido dos Favoritos',undo:'Desfazer',add:'Adicionar aos Favoritos',del:'Remover dos Favoritos',empty:'Ainda não há favoritos. Toca em ♡ no canto superior esquerdo de uma pintura terminada, ou de uma imagem em Imagem, para a guardares aqui.',today:'guardado hoje',yday:'guardado ontem',on:'guardado a {d}',prev:'Pintura anterior',next:'Próxima pintura',lost:'Não é possível abrir esta pintura.',failed:'Não foi possível guardar — a navegação privada bloqueia o armazenamento.',mm:'Minha música',mmSaved:'Guardado em Minha música',tones:{pure:'Puro',real:'Real',pastel:'Pastel'},clearAll:'Apagar todos',clearAllQ:'Apagar os {n}?',clearedAll:'Os {n} favoritos foram removidos',open:'Abrir',openTip:'Abre a imagem em Imagem exatamente como a guardaste e toca-a'},
+  zh:{shelfHint:'双击一幅画，它就会留在这里',label:'收藏',close:'关闭',saved:'已加入收藏',removed:'已从收藏中移除',undo:'撤销',add:'加入收藏',del:'从收藏中移除',empty:'还没有收藏。在完成的画作或“图像”中的图片左上角轻点 ♡，就能把它留在这里。',today:'今天保存',yday:'昨天保存',on:'{d} 保存',prev:'上一幅',next:'下一幅',lost:'这幅画无法打开。',failed:'无法保存——无痕浏览阻止了存储。',mm:'我的音乐',mmSaved:'已保存到我的音乐',tones:{pure:'纯净',real:'真实',pastel:'柔和'},clearAll:'全部清除',clearAllQ:'清除全部 {n} 幅？',clearedAll:'已移除全部 {n} 幅收藏',open:'打开',openTip:'在“图像”中按你保存时的样子打开这张图片并播放'},
+  zhTW:{shelfHint:'點兩下一幅畫，它就會留在這裡',label:'收藏',close:'關閉',saved:'已加入收藏',removed:'已從收藏中移除',undo:'復原',add:'加入收藏',del:'從收藏中移除',empty:'還沒有收藏。在完成的畫作或「圖像」中的圖片左上角輕點 ♡，就能把它留在這裡。',today:'今天儲存',yday:'昨天儲存',on:'{d} 儲存',prev:'上一幅',next:'下一幅',lost:'這幅畫無法開啟。',failed:'無法儲存——無痕瀏覽阻擋了儲存空間。',mm:'我的音樂',mmSaved:'已儲存到我的音樂',tones:{pure:'純淨',real:'真實',pastel:'柔和'},clearAll:'全部清除',clearAllQ:'清除全部 {n} 幅？',clearedAll:'已移除全部 {n} 幅收藏',open:'打開',openTip:'在「圖像」中依你儲存時的樣子打開這張圖片並播放'},
+  ja:{shelfHint:'絵をダブルタップするとここに残る',label:'お気に入り',close:'閉じる',saved:'お気に入りに保存しました',removed:'お気に入りから削除しました',undo:'元に戻す',add:'お気に入りに追加',del:'お気に入りから削除',empty:'お気に入りはまだありません。完成した絵や「画像」の画像の左上の ♡ をタップすると、ここに残ります。',today:'今日保存',yday:'昨日保存',on:'{d} に保存',prev:'前の絵',next:'次の絵',lost:'この絵は開けません。',failed:'保存できません——プライベートブラウズでは保存領域が使えません。',mm:'マイミュージック',mmSaved:'マイミュージックに保存済み',tones:{pure:'ピュア',real:'リアル',pastel:'パステル'},clearAll:'すべて削除',clearAllQ:'{n} 枚すべて削除？',clearedAll:'お気に入り {n} 枚をすべて削除しました',open:'開く',openTip:'保存したときのまま「画像」で開いて再生します'},
 };
 const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',zhTW:'zh-TW',ja:'ja'};
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
@@ -1803,10 +1803,13 @@ const STUDIO_HOME_CSS = `
 .pf-sh-line{font-size:calc(var(--pf-read-scale,1) * 11.5px);letter-spacing:.04em;color:#f0d78a;text-wrap:balance}
 .pf-sh-q{position:relative;flex-shrink:0;margin-top:22px;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;font-size:23px;line-height:1}
 .pf-sh-links{position:relative;flex-shrink:0;margin-top:14px;display:flex;flex-wrap:wrap;justify-content:center;gap:0 22px}
-.pf-sh-links .pf-sh-fav{display:flex;align-items:center;gap:10px}
-.pf-sh-fan{display:flex;align-items:center}
-.pf-sh-fan i{display:block;width:28px;height:28px;border-radius:8px;background:#2a2238 center/cover no-repeat;border:2px solid #0e0b16;box-shadow:0 2px 6px rgba(0,0,0,.5)}
-.pf-sh-fan i+i{margin-left:-10px}
+.pf-sh-links .pf-sh-fav{display:flex;align-items:center;gap:7px;color:rgba(242,238,232,.5)}
+.pf-sh-links .pf-sh-fav.on{color:rgba(242,238,232,.88)}
+.pf-sh-fav i{font-style:normal;font-size:1.25em;line-height:1;color:rgba(242,238,232,.5)}
+.pf-sh-fav.on i{color:#f0c040;text-shadow:0 0 10px rgba(240,192,64,.45)}
+.pf-sh-fav.pf-sh-pulse i{animation:pfShPulse 1.1s ease 2}
+.pf-sh-links .pf-sh-fav.hint{text-transform:none;letter-spacing:.02em;font-weight:500;color:rgba(242,238,232,.75)}
+@keyframes pfShPulse{0%,100%{transform:scale(1)}40%{transform:scale(1.45)}}
 .pf-st-daily{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;padding:6px 16px 6px 7px;border-radius:24px;background:rgba(20,16,30,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(240,215,138,.35);box-shadow:0 8px 30px rgba(0,0,0,.45);white-space:nowrap;font-family:'Outfit',sans-serif;cursor:pointer;animation:pfStDaily .5s ease both}
 .pf-st-daily>i{display:block;width:28px;height:28px;border-radius:50%;background:conic-gradient(#e2c477,#8c5cff,#3fb37a,#e2c477);box-shadow:0 0 0 2px #0e0b16,0 0 0 3px rgba(240,215,138,.6)}
 .pf-st-daily>span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15}
@@ -5494,36 +5497,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }, 30);
     return ()=>{ dead=true; clearTimeout(tm); };
   },[favCur, favFs, favVp]);
-  // Studio home: the three newest favorites as small squares on the ♥ shelf
-  const [favShelf, setFavShelf] = useState({});
-  const _favShelfKey = favs.slice(0,3).map(f=>f.id).join(',');
-  useEffect(()=>{
-    if(!_favShelfKey) return;
-    let dead=false;
-    const tm=setTimeout(async ()=>{
-      const out={};
-      for(const f of favs.slice(0,3)){
-        if(dead) return;
-        try{
-          const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk); if(!pc || dead) continue;
-          const o=document.createElement('canvas'); o.width=o.height=96; const x=o.getContext('2d');
-          const put=(el,w,h)=>{ const q=Math.min(w,h); if(!q) return; x.drawImage(el,(w-q)/2,(h-q)/2,q,q,0,0,96,96); out[f.id]=o.toDataURL('image/jpeg',0.8); };
-          if(f.kind==='img'){
-            if(!(pc.buf || pc.img)) continue;
-            const src=pc.buf ? URL.createObjectURL(new Blob([pc.buf],{type:pc.mime||'image/jpeg'})) : pc.img;
-            await new Promise(r=>{ const im=new Image(); im.onload=()=>{ try{ put(im, im.naturalWidth, im.naturalHeight); }catch(_){} r(); }; im.onerror=()=>r(); im.src=src; });
-            if(pc.buf) try{ URL.revokeObjectURL(src); }catch(_){}
-          } else {
-            const lay=_favLayout(f, pc.chords), cv=document.createElement('canvas');
-            if(lay && _favPaint(cv, f, pc, 1, f.tone||tone, lay)) put(cv, cv.width, cv.height);
-          }
-        }catch(_){}
-        await new Promise(r=>setTimeout(r,0));
-      }
-      if(!dead) setFavShelf(out);
-    }, 400);
-    return ()=>{ dead=true; clearTimeout(tm); };
-  },[_favShelfKey]);
   useEffect(()=>{
     if(!favView) return;
     let tm=null;
@@ -13779,6 +13752,12 @@ Hard requirements:
   // The painting is kept (a small JPEG in localStorage) when you leave it with New and when a piece is painted
   // to the end, so the app opens on it next time.
   const studioHome = studioOn && isSetupView && !favView;
+  const [favHint, setFavHint] = useState(false);
+  useEffect(()=>{ if(!favHint) return; const tm=setTimeout(()=>setFavHint(false), 2600); return ()=>clearTimeout(tm); },[favHint]);
+  const [favPulse, setFavPulse] = useState(0);
+  const _favSeenRef = useRef(null);
+  useEffect(()=>{ const n=favs.length; if(studioHome){ if(_favSeenRef.current!==null && n>_favSeenRef.current) setFavPulse(Date.now()); _favSeenRef.current=n; } },[studioHome]);
+  useEffect(()=>{ if(studioHome) _favSeenRef.current=favs.length; },[favs.length]);
   const [homeArt, setHomeArt] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art')||'null'); return (o && typeof o.u==='string') ? o : null; }catch(_){ return null; } });
   const _homeKeyRef = useRef('');
   // Mic and Compose paint live: once their draft is gone (Clear, a relaunch) there is nothing to go back to
@@ -14986,9 +14965,8 @@ Hard requirements:
                 </button>); })}
             </div>
             <div className="pf-sh-links">
-              <button type="button" className="pf-sh-fav" onClick={()=>_favOpen()} disabled={!favN} style={{opacity:favN?1:.45}}>
-                {favN ? (<span className="pf-sh-fan" aria-hidden="true">{favs.slice(0,3).map((f,i,a)=>(<i key={f.id} style={{backgroundImage:favShelf[f.id] ? 'url('+favShelf[f.id]+')' : undefined,transform:'rotate('+((i-(a.length-1)/2)*7)+'deg)'}}/>))}</span>) : null}
-                <span>♥ {_favT('label')}</span>
+              <button type="button" key={'fv'+favPulse} className={'pf-sh-fav'+(favN?' on':'')+(favPulse?' pf-sh-pulse':'')+(favHint?' hint':'')} onClick={()=>{ if(favN){ _favOpen(); return; } setFavHint(true); }} aria-label={_favT('label')}>
+                <i aria-hidden="true">{favN ? '♥' : '♡'}</i><span>{favHint ? _favT('shelfHint') : _favT('label')}</span>
               </button>
             </div>
           </div>);
