@@ -26855,6 +26855,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!crOnRef.current && composerStage.length && composerStage.join('+')===rest){ composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); }
     _imgSigRelease();
   },[imgSigActive, imgComposer, composerStage, mode, composerDice, imgPlayMode, viewMode, basicMode, liteImageMode]);
+  const [imgDipTick, setImgDipTick] = useState(0);   // a re-read of a playing picture waits for the sound to dip first
+  const imgDipRef = useRef(false);
   const busy = playing || anim || working;
   // Mode exclusion: once a file/song is loaded OR an image is dropped, the
   // keyboard is locked until clear (no mixing loaded content with new live
@@ -32196,6 +32198,9 @@ Hard requirements:
     const _effDir = _cLead ? 'lr' : imgDir;   // composers always read in rows
     const sig = mode + '|' + _effDir + '|c:' + (_cLead||'scan') + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
+    // playing: the sound dips first (a hard cut of the old notes crackles on a phone), the re-read comes 70 ms later, the sound returns after it
+    if(playingRef.current && !imgDipRef.current){ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){} setTimeout(()=>{ imgDipRef.current=true; setImgDipTick(x=>x+1); }, 70); return; }
+    if(imgDipRef.current){ imgDipRef.current=false; setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); }catch(_){} }, 200); }
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
     // than resume mid-stream (resuming would jump to an unrelated cell). A
@@ -32344,7 +32349,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,fuStyleCNow,jamFlipN,atmoOn,atmoMood,melodyOn,melodyData,scanBump,imgSigActive]);
+  },[imgDipTick,mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,fuStyleCNow,jamFlipN,atmoOn,atmoMood,melodyOn,melodyData,scanBump,imgSigActive]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
@@ -36210,7 +36215,7 @@ Hard requirements:
   // on a picture, the next composer. The painting slides out and the new one in.
   const _stSlide = ()=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{ el.animate([{translate:'0 0',opacity:1},{translate:'0 -48px',opacity:0,offset:.36},{translate:'0 64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
   // a new composer re-reads the picture (heavy on iOS): the sound dips under the change instead of crackling
-  const _imgDip = (fn)=>{ try{ Tone.getDestination().volume.rampTo(-60, 0.12); }catch(_){} setTimeout(()=>{ try{ fn(); }catch(_){} }, 150); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.45); }catch(_){} }, 700); };
+  const _imgDip = (fn)=>{ try{ fn(); }catch(_){} };   // the dip itself rides on the composer change (see _cmpDipRef)
   const _stNext = ()=>{
     let rolled = false;
     try{
@@ -36367,9 +36372,7 @@ Hard requirements:
   // the next look: the fixed opening first, then Lite's own shuffle (a painter × variant, a fusion now and then)
   const _feedNextLook = ()=>{
     if(viewMode==='image'){   // a new composer re-reads the picture: the sound dips under the change instead of crackling
-      try{ Tone.getDestination().volume.rampTo(-60, 0.12); }catch(_){}
-      setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer(); }, 150);
-      setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.45); }catch(_){} }, 700);
+      try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} _liteRollComposer();
       return; }
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
     while(feedStepsRef.current.length){

@@ -4468,6 +4468,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // flash length: a solo 1.2 s; a fusion / jam stays up 2.5 s (more to take in) — whoever wants it longer holds (press-and-hold keeps it up)
   _flashMsRef.current = (()=>{ try{ const img=(basicMode && liteImageMode) || (!basicMode && viewMode==='image');
     const n = img ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).length : 0) : (painterStage.length && style!==null ? _jamStage().length : 0);
+    if(img ? imgSigActiveRef.current : sigActiveRef.current) return 3200;   // ✦ Signature: a line to read, not one name — it stays longer
     return n>1 ? 2500 : 1200; }catch(_){ return 1200; } })();
   const imgComposerRef = useRef(null);
   const _lastComposerRef = useRef('glass');   // remembered pick for the Composer mode button
@@ -4666,12 +4667,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!crOnRef.current && composerStage.length && composerStage.join('+')===rest){ composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); }
     _imgSigRelease();
   },[imgSigActive, imgComposer, composerStage, mode, composerDice, imgPlayMode, viewMode, basicMode, liteImageMode]);
-  // a composer change while a picture plays re-reads it (a heavy moment on a phone): the sound dips briefly under it — runs before the re-read
-  const _cmpDipRef = useRef({k:null, tm:null});
-  useEffect(()=>{ const D=_cmpDipRef.current, k=(imgComposer||'')+'|'+composerStage.join('+')+'|'+(imgSigActive?1:0); const p=D.k; D.k=k;
-    if(p===null || p===k || !playing || viewMode!=='image') return;
-    try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-24, 0.04); if(D.tm) clearTimeout(D.tm); D.tm=setTimeout(()=>{ D.tm=null; try{ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.16); }catch(_){} }, 230); }catch(_){}
-  },[imgComposer, composerStage, imgSigActive]);
+  const [imgDipTick, setImgDipTick] = useState(0);   // a re-read of a playing picture waits for the sound to dip first
+  const imgDipRef = useRef(false);
   const busy = playing || anim || working;
   // Mode exclusion: once a file/song is loaded OR an image is dropped, the
   // keyboard is locked until clear (no mixing loaded content with new live
@@ -10013,6 +10010,9 @@ Hard requirements:
     const _effDir = _cLead ? 'lr' : imgDir;   // composers always read in rows
     const sig = mode + '|' + _effDir + '|c:' + (_cLead||'scan') + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
+    // playing: the sound dips first (a hard cut of the old notes crackles on a phone), the re-read comes 70 ms later, the sound returns after it
+    if(playingRef.current && !imgDipRef.current){ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){} setTimeout(()=>{ imgDipRef.current=true; setImgDipTick(x=>x+1); }, 70); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(!imgDipRef.current && v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 650); return; }
+    if(imgDipRef.current){ imgDipRef.current=false; setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); }catch(_){} }, 200); }
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
     // than resume mid-stream (resuming would jump to an unrelated cell). A
@@ -10161,7 +10161,7 @@ Hard requirements:
       setPlayedOnce(false);
       setStamp(s=>s+1);
     }
-  },[mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,fuStyleCNow,jamFlipN,atmoOn,atmoMood,melodyOn,melodyData,scanBump,imgSigActive]);
+  },[imgDipTick,mode,viewMode,stopAll,activePalette,imgDir,imgComposer,composerStage,fuStyleCNow,jamFlipN,atmoOn,atmoMood,melodyOn,melodyData,scanBump,imgSigActive]);
 
   const loadSampleImage=useCallback(async(idx)=>{
     try{
