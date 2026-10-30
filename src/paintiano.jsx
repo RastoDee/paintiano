@@ -36399,7 +36399,7 @@ Hard requirements:
   const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive });
   // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
   const _feedPiece = (kind)=>{ const homeArt=_homeCur(); if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
-    if(!homeArt) return 0; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
+    if(!homeArt) return 1; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
   // the first painting, like Lite's Play: one of four strong openers from your set (Free: the artist of the day, often)
   const _feedOpener = ()=>{ let o=['pollock','kandinsky','kusama','spiral'].filter(k=>setupArtists.includes(k) && !styleIsLocked(k)); if(proStatus==='free' && artistOfDay && Math.random()<0.4) o=[artistOfDay]; return o.length ? o[(Math.random()*o.length)|0] : (setupArtists.find(k=>k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'); };
   const _feedApply = (sel)=>{
