@@ -36274,8 +36274,8 @@ Hard requirements:
           else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
         }
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
-        if(!randomMode){ _stToastShow(_stT('nxOff')); return; }   // 🔀 off: the painter you chose stays
-        nextRollInProgressRef.current = true; _diceRoll(); rolled = true;
+        if(!randomMode){ if(style===null && !(jamOn && painterStage.length)){ setOneMMode(false); setNotesMode(n=>!n); rolled = true; } else { _stToastShow(_stT('nxOff')); return; } }   // Mosaic, 🔀 off: its variants — Mosaic ⇆ Notes, never the 'off' message
+        else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
       }
     }catch(_){}
     if(!rolled) return;
