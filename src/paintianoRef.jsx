@@ -35900,13 +35900,13 @@ Hard requirements:
     try{ localStorage.setItem('paintiano_studio_tour', (how==='later' && _stTourSeen()!=='later') ? 'later' : 'done'); }catch(_){}
     try{ window.posthog && window.posthog.capture('studio_tour', { end: how, step: at }); }catch(_){} };
   const _stTourHit = (k)=>{ const s=stTourRef.current; if(s!==k || stTourOkRef.current) return; setStTourOk(true);
-    setTimeout(()=>{ if(k===2) setStripOpen(false); if(k<2) _stShow(null); setStTourOk(false); setStTour(x=> x===k ? k+1 : x); }, k===2 ? 3400 : 2700); };
+    setTimeout(()=>{ if(k===2) setStripOpen(false); if(k<2) _stShow(null); setStTourOk(false); setStTour(x=> x===k ? k+1 : x); }, k===2 ? 5200 : 4400); };   // time to read the ✓ before the next step
   // offered once a painting has been playing a little while (a "later" asks once more on another visit)
   useEffect(()=>{ if(!studioFs || !playing || stTourOfferedRef.current || stripOpen || demoReelOn || stTour!==null) return;
     if(_stTourSeen()==='done') return;
     const tm=setTimeout(()=>{ stTourOfferedRef.current=true; setStTour(-1); }, 9000); return ()=>clearTimeout(tm); },[studioFs, playing, stripOpen, demoReelOn, stTour]);
-  useEffect(()=>{ if(stTour===-1){ const tm=setTimeout(()=>{ if(stTourRef.current===-1) _stTourEnd('later'); }, 15000); return ()=>clearTimeout(tm); }
-    if(stTour===4){ const tm=setTimeout(()=>{ if(stTourRef.current===4) _stTourEnd('done'); }, 9000); return ()=>clearTimeout(tm); } },[stTour]);
+  useEffect(()=>{ if(stTour===-1){ const tm=setTimeout(()=>{ if(stTourRef.current===-1) _stTourEnd('later'); }, 22000); return ()=>clearTimeout(tm); }
+    if(stTour===4){ const tm=setTimeout(()=>{ if(stTourRef.current===4) _stTourEnd('done'); }, 14000); return ()=>clearTimeout(tm); } },[stTour]);
   const _stCoachDone = ()=>{ setStCoach(false); try{ localStorage.setItem('paintiano_studio_coach','1'); }catch(_){} };
   const backBtnRef = useRef(null), hearBtnRef = useRef(null), seeBtnRef = useRef(null), stSheetRef = useRef(null);
   // ── Onboarding: mirror the main canvas into a mini canvas inside the
