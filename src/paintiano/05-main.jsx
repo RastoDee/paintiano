@@ -13837,6 +13837,11 @@ Hard requirements:
   useEffect(()=>{ const n=favs.length; if(studioHome){ if(_favSeenRef.current!==null && n>_favSeenRef.current) setFavPulse(Date.now()); _favSeenRef.current=n; } },[studioHome]);
   useEffect(()=>{ if(studioHome) _favSeenRef.current=favs.length; },[favs.length]);
   const [homeArt, setHomeArt] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art')||'null'); return (o && typeof o.u==='string') ? o : null; }catch(_){ return null; } });
+  // your Music and your Image each keep their own card: ← → on the home switches between them (when you have both)
+  const [homeArtBy, setHomeArtBy] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art_by')||'null'); return (o && typeof o==='object') ? o : {}; }catch(_){ return {}; } });
+  const [homeSide, setHomeSide] = useState(null);   // null = the last painting; 'music' | 'image' = the card you swiped to
+  const [homeSlide, setHomeSlide] = useState(null);   // the home card comes in from a side ('l'|'r')
+  const _homeCur = ()=> (homeSide && homeArtBy[homeSide]) || homeArt;
   const _homeKeyRef = useRef('');
   // Mic and Compose paint live: once their draft is gone (Clear, a relaunch) there is nothing to go back to
   useEffect(()=>{ if(!homeArt) return; const k=homeArt.k;
@@ -13855,7 +13860,8 @@ Hard requirements:
         else if(_k==='image'){ const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===_t); if(ii>=0) _r={s:'img', i:ii}; }
         else if(_k==='mood' && currentMood && MOODS.includes(currentMood)) _r={s:'mood', m:currentMood};
       }catch(_){}
-      const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} };
+      const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
+        if(_k==='music' || _k==='image'){ setHomeArtBy(b=>{ const nb={...b, [_k]:o}; try{ localStorage.setItem('paintiano_home_art_by', JSON.stringify(nb)); }catch(_){} return nb; }); } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
       if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ save(shrink(on, on.naturalWidth, on.naturalHeight)); return; } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
       const cv=canvasRef.current; if(!cv) return; save(shrink(cv, cv.width, cv.height));
@@ -14127,7 +14133,7 @@ Hard requirements:
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
   const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
   const _FEED_IMGS = (typeof SAMPLE_IMAGES!=='undefined') ? SAMPLE_IMAGES : [];
-  const _feedKind = ()=> (homeArt && (homeArt.k==='image' || (!homeArt.k && homeArt.src==='image'))) ? 'img' : 'music';
+  const _feedKind = ()=>{ const h=_homeCur(); return (h && (h.k==='image' || (!h.k && h.src==='image'))) ? 'img' : 'music'; };
   const _feedTitle = (c)=> c ? (c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
@@ -14143,7 +14149,7 @@ Hard requirements:
   feedDrawRef.current = _feedDraw;
   const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive });
   // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
-  const _feedPiece = (kind)=>{ if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
+  const _feedPiece = (kind)=>{ const homeArt=_homeCur(); if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
     if(!homeArt) return 0; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
   // the first painting, like Lite's Play: one of four strong openers from your set (Free: the artist of the day, often)
   const _feedOpener = ()=>{ let o=['pollock','kandinsky','kusama','spiral'].filter(k=>setupArtists.includes(k) && !styleIsLocked(k)); if(proStatus==='free' && artistOfDay && Math.random()<0.4) o=[artistOfDay]; return o.length ? o[(Math.random()*o.length)|0] : (setupArtists.find(k=>k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'); };
@@ -14272,16 +14278,20 @@ Hard requirements:
     setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1) v.rampTo(0, 0.2); }catch(_){} }, 2600);   // never left quiet
     _feedFlashNow(); _feedHintBump(); _stBuzz(8);
   };
+  // ↓ during a surprise: back to the painting it came from (Music or Image) — thrown cards do not come back
   const _feedDown = ()=>{
     if(feedAt<0 || feedFly) return;
     setFeedIntro(null);
-    const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
-    setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
-    const to=feedAt-1; setFeedAt(to);
     setFeedFly({k:Date.now(), dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
-    if(to<0){ _feedStop(); _feedRest(); }
-    else { const pv=feedCards[to]; _feedGo(pv); _feedFlashNow(); }
-    _stBuzz(8);
+    _feedExit(); _stBuzz(8);
+  };
+  // ← → on the home card: your Music ⇆ your Image (only when you have both)
+  const _homeSwitch = (to, ok)=>{
+    const cur=_homeCur(), ck = cur ? (cur.k==='image' || (!cur.k && cur.src==='image') ? 'image' : cur.k) : null;
+    if(feedFly || !ok || ck===to || !homeArtBy[to]){ setFeedBump(to==='image' ? 'l' : 'r'); setTimeout(()=>setFeedBump(null), 260); return; }
+    const d = to==='image' ? 'l' : 'r';
+    setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:d}); setTimeout(()=>setFeedFly(null), 340);
+    setHomeSide(to); setHomeSlide(d); _stBuzz(8);
   };
   // a tap on a playing card: full screen — it plays on, and from now on it is your painting
   const _feedOpen = ()=>{ feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
@@ -15203,8 +15213,9 @@ Hard requirements:
       {studioHome && (()=>{
         // the card: your last painting (▶ = back to it, through its source's own tile), or on a first run Liebestraum
         const _anyDraft = hasMusicDraft || hasImageDraft || hasMoodDraft || hasComposeDraft || hasMicDraft || hasMfiDraft;
-        const _smp = !homeArt;
-        const H = homeArt || STUDIO_HOME_SAMPLE;
+        const _hc = _homeCur();
+        const _smp = !_hc;
+        const H = _hc || STUDIO_HOME_SAMPLE;
         const kind = _smp ? 'music' : (H.k || (H.src==='image' ? 'image' : 'music'));
         const _sv = (d, z)=>(<svg width={z||22} height={z||22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
         const SRC = {
@@ -15224,6 +15235,9 @@ Hard requirements:
         feedTileRef.current = {t:(k)=>_tap(k), f:(k)=>_fresh(k)};
         const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
+        // ← → between your Music and your Image: both need a card and a way back to it (a draft, or a piece / picture to replay)
+        const _sideOk = (k)=>{ const o=homeArtBy[k]; return !!o && (!!SRC[k].d || !!o.r); };
+        const _bothSides = !(feedAt>=0 && feedCards[feedAt]) && _sideOk('music') && _sideOk('image');
         const _replay = ()=>{
           if(_rp.s==='midi'){ loadSampleMidi(_rp.i); setForceSetup(false); return; }
           if(_rp.s==='img'){ loadSampleImage(_rp.i); setForceSetup(false); return; }
@@ -15240,7 +15254,7 @@ Hard requirements:
         const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : {k:'fhUp', ic:['up']}) : null);
+        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down']} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:_feedTab(kind==='image' ? 'music' : 'img').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
           up:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
@@ -15270,7 +15284,7 @@ Hard requirements:
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
-          if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ _feedSwitch(dx<0 ? 'img' : 'music'); return; }   // ⇆ the other surprise: ← picture, → music
+          if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC){ setFeedBump(dx<0 ? 'l' : 'r'); setTimeout(()=>setFeedBump(null), 260); return; } _homeSwitch(dx<0 ? 'image' : 'music', _bothSides); return; }   // ⇆ home only: your Music ⇆ your Image
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
@@ -15300,7 +15314,7 @@ Hard requirements:
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
-                <div key="home" className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')}>
+                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')}>
                   <img src={H.u} alt={ttl}/>
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
