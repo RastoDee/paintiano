@@ -24020,7 +24020,7 @@ const STUDIO_HOME_CSS = `
 .pf-st-tabs button.on::after{width:18px}
 @keyframes pfShIn{from{transform:scale(.93) rotate(-1.5deg);opacity:.4}to{transform:scale(1) rotate(-1.5deg);opacity:1}}
 .pf-sh-back{animation:pfShBack .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
-@keyframes pfShBack{from{transform:translateY(-110%) rotate(-8deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
+@keyframes pfShBack{from{transform:translateY(-110%) rotate(0deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
 .pf-sh-fhint{position:absolute;left:-60px;right:-60px;top:calc(100% + 22px);display:flex;justify-content:center;pointer-events:none;animation:pfShHintIn .5s ease .6s both}
 .pf-sh-fpill{display:inline-flex;align-items:center;gap:9px;padding:6px 13px 6px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:500;letter-spacing:.02em;color:rgba(242,238,232,.88);white-space:nowrap}
 .pf-sh-fit{display:inline-flex;align-items:center;gap:5px}

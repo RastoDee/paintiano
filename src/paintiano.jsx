@@ -37471,7 +37471,7 @@ Hard requirements:
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
         const _fTapCue = !feedSoundOk || (!!FC && feedNeedTap && !_fPlay);
-        const _fLiftCue = false && !FC && _smp;   // no lift: the first move is a tap (the sound wakes only on a tap) — the finger and the ring show it   // the card lifts only on the very first screen (a swipe-up invitation); your own paintings stay still
+        const _fLiftCue = !FC && _smp;   // the card lifts only on the very first screen (a swipe-up invitation); your own paintings stay still
         const _fHint = null;   // no words under the card: the card itself shows tap (a ripple) and swipe (a lift)
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
