@@ -1796,6 +1796,13 @@ const STUDIO_HOME_CSS = `
 .pf-sh-tease i{position:absolute;inset:-35%;background:conic-gradient(from 0deg,#c0392b,#d4762a,#c9b23a,#6aa83a,#2e9e5a,#2aa58a,#2a9fb0,#2f6fc0,#4a3fc8,#8a3be2,#b03ab0,#c0306a,#c0392b);filter:blur(42px) saturate(1.05);opacity:.66;animation:pfShTeaseSpin 24s linear infinite}
 .pf-sh-tease b{position:absolute;inset:0;background:radial-gradient(60% 45% at 50% 46%,rgba(255,240,200,.18),transparent 70%),radial-gradient(120% 80% at 50% 120%,rgba(4,3,10,.85),transparent 60%)}
 @keyframes pfShTeaseSpin{to{transform:rotate(360deg)}}
+.pf-sh-breathe{animation:pfShBreathe 3s ease-in-out infinite!important}
+@keyframes pfShBreathe{0%,100%{transform:scale(1) rotate(-1.5deg)}50%{transform:scale(1.02) rotate(-1.5deg)}}
+.pf-sh-tap{position:absolute;left:50%;top:46%;width:0;height:0;z-index:6;pointer-events:none}
+.pf-sh-tap i{position:absolute;left:-34px;top:-34px;width:68px;height:68px;border-radius:50%;border:2px solid rgba(240,215,138,.85);box-shadow:0 0 18px rgba(240,215,138,.45);opacity:0;animation:pfShTap 3s ease-out infinite}
+.pf-sh-tap i+i{animation-delay:.18s;border-width:1px}
+@keyframes pfShTap{0%{transform:scale(.35);opacity:0}8%{opacity:.95}40%{transform:scale(1.5);opacity:0}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.pf-sh-breathe{animation:none!important}.pf-sh-tap i{animation-duration:6s}}
 .pf-sh-peek{animation:pfShPeek 5s ease-in-out 1.6s infinite!important}
 @keyframes pfShPeek{0%,70%,100%{transform:translateY(0) rotate(-1.5deg)}78%{transform:translateY(-18px) rotate(-2.2deg)}86%{transform:translateY(0) rotate(-1.5deg)}91%{transform:translateY(-6px) rotate(-1.7deg)}}
 @media (prefers-reduced-motion: reduce){.pf-sh-tease i,.pf-sh-peek{animation:none!important}}
@@ -14140,6 +14147,7 @@ Hard requirements:
   const feedCvRef = useRef(null);
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
+  const feedHoldRef = useRef({tm:null, held:false});   // press and hold a playing card: it pauses until you let go
   const [feedHeart, setFeedHeart] = useState(0);
   const [feedBg, setFeedBg] = useState(null);
   const [feedIntro, setFeedIntro] = useState(null);   // Lite's opening lines on the card: {k:'m'|'p'|'s', t} — the Mosaic's key, the first painter, ✦ Signature
@@ -15269,7 +15277,9 @@ Hard requirements:
         const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? null : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:String(SRC[_sides[(_sides.indexOf(kind)+1)%_sides.length]].label||'').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
+        const _fTapCue = !feedSoundOk || (!!FC && feedNeedTap && !_fPlay);
+        const _fLiftCue = !FC && !_fTapCue && feedHintN<=3;
+        const _fHint = null;   // no words under the card: the card itself shows tap (a ripple) and swipe (a lift)
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
           up:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
@@ -15293,10 +15303,14 @@ Hard requirements:
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
             return; }
           R.t=now; if(R.tm) clearTimeout(R.tm);
-          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_smp){ _feedStart(); return; } if(_canPlay) _play(); return; } if(_fL && feedNeedTap && !playingRef.current){ _fBtn(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
+          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_smp){ _feedStart(); return; } if(_canPlay) _play(); return; } if(_fL && !playingRef.current){ _fBtn(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
         };
-        const _fTS = (e)=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
-        const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
+        const _fTS = (e)=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } const HR=feedHoldRef.current; if(HR.tm) clearTimeout(HR.tm); HR.held=false;
+          if(FC && _fL && playingRef.current) HR.tm=setTimeout(()=>{ HR.tm=null; if(feedTouchRef.current && playingRef.current && handlePauseClickRef.current){ HR.held=true; handlePauseClickRef.current(); _stBuzz(6); } }, 380);
+          if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
+        const _fTM = (e)=>{ const st=feedTouchRef.current, tt=e.touches && e.touches[0]; if(!st || !tt) return; if(Math.abs(tt.clientX-st.x)>10 || Math.abs(tt.clientY-st.y)>10){ const HR=feedHoldRef.current; if(HR.tm){ clearTimeout(HR.tm); HR.tm=null; } } };
+        const _fTE = (e)=>{ const HR=feedHoldRef.current; if(HR.tm){ clearTimeout(HR.tm); HR.tm=null; } if(HR.held){ HR.held=false; feedTouchRef.current=null; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} return; }
+          const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
           if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC){ _feedSwitch(dx<0 ? 'img' : 'music'); return; } _sideGo(dx); return; }   // ⇆ surprise: Image ⇆ Music surprise; home: your Music ⇆ your Image
@@ -15311,7 +15325,8 @@ Hard requirements:
             <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
-              <div className="pf-sh-card" onTouchStart={_fTS} onTouchEnd={_fTE}>
+              <div className="pf-sh-card" onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
+                {_fTapCue && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
@@ -15329,7 +15344,7 @@ Hard requirements:
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
-                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(_smp && !feedFly && !feedBump ? ' pf-sh-peek' : '')}>
+                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump ? (_fLiftCue ? ' pf-sh-peek' : _fTapCue ? ' pf-sh-breathe' : '') : '')}>
                   {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><i/><b/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
@@ -15340,9 +15355,6 @@ Hard requirements:
                   {feedFly.u && (<img src={feedFly.u} alt=""/>)}
                   {(feedFly.t || feedFly.l) && (<div className="pf-sh-cap">{feedFly.t && (<div className="pf-sh-cap-t">{feedFly.t}</div>)}{feedFly.l && (<div className="pf-sh-cap-l">{feedFly.l}</div>)}</div>)}
                 </div>)}
-                {(FC || _canPlay || _smp) ? (<button type="button" className={'pf-sh-play'+(FC && feedNeedTap && !_fPlay ? ' need' : '')} onClick={_fBtn} aria-label={_fPlay ? t('pause') : _stT('go')}>{_fPlay
-                    ? (<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>)
-                    : (<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>)}</button>) : null}
                 {_fHint && (<div key={_fHint.k} className="pf-sh-fhint" aria-hidden="true"><span className="pf-sh-fpill">{String(_stT(_fHint.k)||'').split('|').slice(0, _fHint.one ? 1 : 9).concat(_fHint.x ? [_fHint.x] : []).map((x,i)=>(<Fragment key={i}>{i>0 && (<i className="pf-sh-fdot"/>)}<span className={'pf-sh-fit'+(_fHint.ic[i]==='up' && _fHint.k!=='fh' ? ' pf-sh-bob' : '')}><b>{_fIc[_fHint.ic[i]]}</b>{x}</span></Fragment>))}</span></div>)}
               </div>
             </div>
