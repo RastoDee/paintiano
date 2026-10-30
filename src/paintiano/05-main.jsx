@@ -5962,14 +5962,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const cur = chordsRef.current;
     if(!cur || !cur.length) return;
     const snapshot = {chords:cur.slice(), idxCounter:idxRef.current, sessionStart:sessionStart.current};
-    if(owner==='compose'){composeStashRef.current = snapshot; setHasComposeDraft(true);}
+    if(owner==='compose'){composeStashRef.current = snapshot; setHasComposeDraft(true); try{ homeCapRef.current && homeCapRef.current('compose'); }catch(_){}}
     else if(owner==='sing'){
       // Voice and Music are independent modes within MIC — each keeps its own
       // stash. Toggling voice⇄music saves the current preset's draft and
       // restores the other preset's draft (or starts blank). Clear in MIC
       // discards only the active preset's stash, leaving the other intact.
       singStashRef.current = snapshot;
-      setHasMicDraft(true); // any preset having a draft lights the MIC glow
+      setHasMicDraft(true); try{ homeCapRef.current && homeCapRef.current('mic'); }catch(_){} // any preset having a draft lights the MIC glow
     }
     else if(owner==='listen'){
       listenStashRef.current = snapshot;
@@ -7103,7 +7103,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // re-rolled one. Style/variant only advances via Next/Swipe, not Back.
         _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current, _fuRoll: fuRollRef.current,
       };
-      setHasMoodDraft(true);
+      setHasMoodDraft(true); try{ homeCapRef.current && homeCapRef.current('mood'); }catch(_){}
     }
     if(mode==='music'){
       if(feedPieceRef.current) return;
@@ -7133,7 +7133,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // the song's ✦ Signature, and whether it was on (leaving the canvas turns it off)
         _songSig: songSigRef.current || null, _sig: sigActiveRef.current ? (songSigRef.current || null) : null, _sigPhs: (globalThis.__PAINT_SIG_PHS || null),
       };
-      setHasMusicDraft(true);
+      setHasMusicDraft(true); try{ homeCapRef.current && homeCapRef.current('music'); }catch(_){}
     }
     if(mode==='image'){
       if(feedPieceRef.current) return;   // a picture from the Studio home feed is a preview, not a draft
@@ -7173,7 +7173,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         setupNoSel: !!meta.setupNoSel,
         playedOnce: !!meta.playedOnce,
       };
-      setHasImageDraft(true);
+      setHasImageDraft(true); try{ homeCapRef.current && homeCapRef.current('image', meta.originalImgUrl); }catch(_){}
     }
     if(mode==='mfi'){
       if(!moodFromImgRef.current) return;
@@ -7193,7 +7193,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         originalImgUrl: meta.originalImgUrl||null, imgMoodThumb: meta.imgMoodThumb||null,
         mfiImgAspect: meta.mfiImgAspect||null, imgReturnUrl: meta.imgReturnUrl||null,
       };
-      setHasMfiDraft(true);
+      setHasMfiDraft(true); try{ homeCapRef.current && homeCapRef.current('mfi'); }catch(_){}
     }
   },[]);
 
@@ -13839,9 +13839,17 @@ Hard requirements:
   const [homeArt, setHomeArt] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art')||'null'); return (o && typeof o.u==='string') ? o : null; }catch(_){ return null; } });
   // your Music and your Image each keep their own card: ← → on the home switches between them (when you have both)
   const [homeArtBy, setHomeArtBy] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art_by')||'null'); return (o && typeof o==='object') ? o : {}; }catch(_){ return {}; } });
-  const [homeSide, setHomeSide] = useState(null);   // null = the last painting; 'music' | 'image' = the card you swiped to
+  const [homeSide, setHomeSide] = useState(null);
+  const homeCapRef = useRef(null);   // (kind, pictureUrl?) → that mode's card, from the canvas as it is put aside   // null = the last painting; 'music' | 'image' = the card you swiped to
   const [homeSlide, setHomeSlide] = useState(null);   // the home card comes in from a side ('l'|'r')
-  const _homeCur = ()=> (homeSide && homeArtBy[homeSide]) || homeArt;
+  const _homeCur = ()=> (homeSide && (homeArtBy[homeSide] || {k:homeSide, src:homeSide==='image'?'image':'music', u:'', t:'', l:''})) || homeArt;
+  const _homeBySave = (k, o)=> setHomeArtBy(b=>{ const nb={...b, [k]:{...(b[k]||{}), ...o, k}}; try{ localStorage.setItem('paintiano_home_art_by', JSON.stringify(nb)); }catch(_){} return nb; });
+  homeCapRef.current = (k, url)=>{ try{
+    const shrink=(el,w0,h0)=>{ if(!w0||!h0) return null; const W=Math.min(480,w0), Hh=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh); x.drawImage(el,0,0,W,Hh); return c.toDataURL('image/jpeg',0.8); };
+    let t='', l=''; try{ t=(k==='compose'||k==='mic') ? '' : _vidTitle(); if(t==='Paintiano') t=''; l=_vidLine(); }catch(_){}
+    if(k==='image' && url){ const im=new Image(); im.onload=()=>{ const u=shrink(im, im.naturalWidth, im.naturalHeight); if(u) _homeBySave('image', {u, src:'image', t, l}); }; im.src=url; return; }
+    const cv=canvasRef.current; if(!cv || !cv.width) return; const u=shrink(cv, cv.width, cv.height); if(u) _homeBySave(k, {u, src:'music', t, l});
+  }catch(_){} };
   const _homeKeyRef = useRef('');
   // Mic and Compose paint live: once their draft is gone (Clear, a relaunch) there is nothing to go back to
   useEffect(()=>{ if(!homeArt) return; const k=homeArt.k;
@@ -13861,7 +13869,7 @@ Hard requirements:
         else if(_k==='mood' && currentMood && MOODS.includes(currentMood)) _r={s:'mood', m:currentMood};
       }catch(_){}
       const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
-        if(_k==='music' || _k==='image'){ setHomeArtBy(b=>{ const nb={...b, [_k]:o}; try{ localStorage.setItem('paintiano_home_art_by', JSON.stringify(nb)); }catch(_){} return nb; }); } };
+        _homeBySave(_k, o); };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
       if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ save(shrink(on, on.naturalWidth, on.naturalHeight)); return; } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
       const cv=canvasRef.current; if(!cv) return; save(shrink(cv, cv.width, cv.height));
@@ -14286,10 +14294,9 @@ Hard requirements:
     _feedExit(); _stBuzz(8);
   };
   // ← → on the home card: your Music ⇆ your Image (only when you have both)
-  const _homeSwitch = (to, ok)=>{
-    const cur=_homeCur(), ck = cur ? (cur.k==='image' || (!cur.k && cur.src==='image') ? 'image' : cur.k) : null;
-    if(feedFly || !ok || ck===to || !homeArtBy[to]){ setFeedBump(to==='image' ? 'l' : 'r'); setTimeout(()=>setFeedBump(null), 260); return; }
-    const d = to==='image' ? 'l' : 'r';
+  const _homeSwitch = (to, ok, d)=>{
+    const cur=_homeCur(), ck = cur ? (cur.k || (cur.src==='image' ? 'image' : 'music')) : null;
+    if(feedFly || !ok || ck===to){ setFeedBump(d||'l'); setTimeout(()=>setFeedBump(null), 260); return; }
     setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:d}); setTimeout(()=>setFeedFly(null), 340);
     setHomeSide(to); setHomeSlide(d); _stBuzz(8);
   };
@@ -15236,8 +15243,9 @@ Hard requirements:
         const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         // ← → between your Music and your Image: both need a card and a way back to it (a draft, or a piece / picture to replay)
-        const _sideOk = (k)=>{ const o=homeArtBy[k]; return !!o && (!!SRC[k].d || !!o.r); };
-        const _bothSides = !(feedAt>=0 && feedCards[feedAt]) && _sideOk('music') && _sideOk('image');
+        const _sides = ['music','image','mfi','mood','compose','mic'].filter(k=> k===kind || (!!SRC[k].d && !SRC[k].off));
+        const _bothSides = !_smp && !(feedAt>=0 && feedCards[feedAt]) && _sides.length>1;
+        const _sideGo = (dir)=>{ const i=_sides.indexOf(kind); const to=_sides[((i<0?0:i)+(dir<0?1:-1)+_sides.length)%_sides.length]; _homeSwitch(to, _bothSides, dir<0 ? 'l' : 'r'); };
         const _replay = ()=>{
           if(_rp.s==='midi'){ loadSampleMidi(_rp.i); setForceSetup(false); return; }
           if(_rp.s==='img'){ loadSampleImage(_rp.i); setForceSetup(false); return; }
@@ -15254,7 +15262,7 @@ Hard requirements:
         const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:_feedTab(kind==='image' ? 'music' : 'img').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
+        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:String(SRC[_sides[(_sides.indexOf(kind)+1)%_sides.length]].label||'').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
           up:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
@@ -15284,7 +15292,7 @@ Hard requirements:
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
-          if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC){ _feedSwitch(dx<0 ? 'img' : 'music'); return; } _homeSwitch(dx<0 ? 'image' : 'music', _bothSides); return; }   // ⇆ surprise: Image ⇆ Music surprise; home: your Music ⇆ your Image
+          if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC){ _feedSwitch(dx<0 ? 'img' : 'music'); return; } _sideGo(dx); return; }   // ⇆ surprise: Image ⇆ Music surprise; home: your Music ⇆ your Image
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
@@ -15315,7 +15323,7 @@ Hard requirements:
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')}>
-                  <img src={H.u} alt={ttl}/>
+                  {H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>)}
