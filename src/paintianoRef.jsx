@@ -23985,8 +23985,8 @@ const STUDIO_HOME_CSS = `
 .pf-sh-tease img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:pfShReel 18s ease-in-out infinite}
 .pf-sh-tease img:first-child{opacity:1}
 @keyframes pfShReel{0%{opacity:0;transform:scale(1.08)}5%{opacity:1}17%{opacity:1}22%{opacity:0;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
-.pf-sh-segs{position:absolute;left:12px;right:12px;top:9px;z-index:4;display:flex;gap:4px;pointer-events:none}
-.pf-sh-segs span{flex:1;height:2.5px;border-radius:2px;background:rgba(255,255,255,.28);overflow:hidden}
+.pf-sh-segs{position:absolute;left:0;right:0;top:0;padding:10px 12px 34px;z-index:4;display:flex;gap:4px;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.42),transparent)}
+.pf-sh-segs span{flex:1;height:2.5px;border-radius:2px;background:rgba(255,255,255,.35);overflow:hidden;box-shadow:0 0 3px rgba(0,0,0,.3)}
 .pf-sh-segs i{display:block;height:100%;width:0;background:#fff;border-radius:2px}
 @keyframes pfShSeg0{0%{width:0}0.01%{width:0}16.67%{width:100%}99.6%{width:100%}100%{width:0}}
 @keyframes pfShSeg1{0%{width:0}16.67%{width:0}33.33%{width:100%}99.6%{width:100%}100%{width:0}}
