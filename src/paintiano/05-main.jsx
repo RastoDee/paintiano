@@ -13873,8 +13873,8 @@ Hard requirements:
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
       const isImg = viewMode==='image' && !moodFromImg;
-      if(!isImg && !composeMode && !micActive && chords.length && disp < Math.max(6, chords.length*0.12)) return;   // a just-cleared or barely started canvas keeps the last painting on the card
       const _k = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : isImg ? 'image' : 'music';
+      if(!isImg && !composeMode && !micActive && chords.length && disp < 2){ setHomeSide(_k); return; }   // nothing painted yet (or just cleared): the home still shows this mode — its last card
       let _t='', _l=''; try{ _t=(_k==='compose'||_k==='mic') ? '' : _vidTitle(); if(_t==='Paintiano') _t=''; _l=_vidLine(); }catch(_){}
       let _r=null;
       try{
@@ -14236,7 +14236,9 @@ Hard requirements:
     if(L.comp!==undefined){ imgComposerRef.current=L.comp||null; setImgComposer(L.comp||null); setComposerStage(L.cstage||[]); } };
   const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
-  const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return; _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+  const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
+    // after the first surprise the colour card never comes back: with no painting of yours, the home keeps the surprise you just left
+    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=_feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
