@@ -15254,7 +15254,7 @@ Hard requirements:
         const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down']} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:_feedTab(kind==='image' ? 'music' : 'img').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
+        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:_feedTab(kind==='image' ? 'music' : 'img').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
           up:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
@@ -15284,7 +15284,7 @@ Hard requirements:
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && Math.abs(dy)>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(dy<0) _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); else _feedDown(); return; }
-          if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC){ setFeedBump(dx<0 ? 'l' : 'r'); setTimeout(()=>setFeedBump(null), 260); return; } _homeSwitch(dx<0 ? 'image' : 'music', _bothSides); return; }   // ⇆ home only: your Music ⇆ your Image
+          if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC){ _feedSwitch(dx<0 ? 'img' : 'music'); return; } _homeSwitch(dx<0 ? 'image' : 'music', _bothSides); return; }   // ⇆ surprise: Image ⇆ Music surprise; home: your Music ⇆ your Image
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
