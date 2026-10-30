@@ -37520,7 +37520,7 @@ Hard requirements:
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
         hmDownOkRef.current = !!FC && (FC.kind==='img' ? hasImageDraft : hasMusicDraft);
         const _fTapCue = !feedSoundOk || (!!FC && feedNeedTap && !_fPlay);
-        const _fLiftCue = !FC && _smp;   // the first screen: the card lifts now and then, the golden rings call for a tap
+        const _fLiftCue = false;   // the first screen does not lift (it would invite a swipe): the rings and the glow ask for a tap
         const _fHint = null;   // no words under the card: the card itself shows tap (a ripple) and swipe (a lift)
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),

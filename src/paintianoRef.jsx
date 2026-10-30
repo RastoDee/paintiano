@@ -36533,8 +36533,9 @@ Hard requirements:
     _feedFlashNow(); _feedHintBump(); _stBuzz(8);
   };
   // ↓ during a surprise: back to the painting it came from (Music or Image) — thrown cards do not come back
-  useEffect(()=>{ if(!studioHome || feedAt>=0 || hmTour!==null || !feedUpDone) return; let seen=false; try{ seen=localStorage.getItem('paintiano_home_tour')==='1'; }catch(_){} if(seen) return;
-    const tm=setTimeout(()=>{ setHmTour(-1); }, 1400); return ()=>clearTimeout(tm); },[studioHome, feedAt, feedUpDone, hmTour]);
+  const hmOfferedRef = useRef(false);   // offered once per session (Later = not again now)
+  useEffect(()=>{ if(!studioHome || feedAt>=0 || hmTour!==null || !feedUpDone || hmOfferedRef.current) return; let seen=false; try{ seen=localStorage.getItem('paintiano_home_tour')==='1'; }catch(_){} if(seen) return;
+    const tm=setTimeout(()=>{ hmOfferedRef.current=true; setHmTour(-1); }, 1400); return ()=>clearTimeout(tm); },[studioHome, feedAt, feedUpDone, hmTour]);
   useEffect(()=>{ if(hmTour!==-1) return; const tm=setTimeout(()=>{ if(hmTourRef.current===-1){ setHmTour(null); } }, 22000); return ()=>clearTimeout(tm); },[hmTour]);
   const _feedDown = ()=>{
     if(feedAt<0 || feedFly) return;
@@ -40590,6 +40591,7 @@ Hard requirements:
 @keyframes pfTzL{0%{transform:translateX(80px);opacity:0}18%{opacity:1}72%{transform:translateX(-80px);opacity:1}100%{transform:translateX(-80px);opacity:0}}
 @keyframes pfTzD{0%{transform:translateY(-80px);opacity:0}18%{opacity:1}72%{transform:translateY(80px);opacity:1}100%{transform:translateY(80px);opacity:0}}
 @keyframes pfTzU{0%{transform:translateY(80px);opacity:0}18%{opacity:1}72%{transform:translateY(-80px);opacity:1}100%{transform:translateY(-80px);opacity:0}}
+@keyframes pfTzIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes pfTzH{0%,100%{transform:scale(1)}20%,80%{transform:scale(.86)}}
 @keyframes pfTzT{0%,60%,100%{transform:scale(1)}70%{transform:scale(.82)}}
 .pf-hz-hand{position:absolute;left:50%;top:40%;margin-left:-22px;font-size:44px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.6))}
