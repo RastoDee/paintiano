@@ -23981,6 +23981,13 @@ const STUDIO_HOME_CSS = `
 .pf-sh-ghost{position:absolute;inset:0;border-radius:24px;border:1px solid rgba(242,238,232,.12);background:rgba(242,238,232,.07)}
 .pf-sh-g1{transform:rotate(6deg) translate(14px,6px)}.pf-sh-g2{transform:rotate(-5deg) translate(-12px,4px)}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
+.pf-sh-tease{position:absolute;inset:0;overflow:hidden;background:#0a0814}
+.pf-sh-tease i{position:absolute;inset:-35%;background:conic-gradient(from 0deg,#c0392b,#d4762a,#c9b23a,#6aa83a,#2e9e5a,#2aa58a,#2a9fb0,#2f6fc0,#4a3fc8,#8a3be2,#b03ab0,#c0306a,#c0392b);filter:blur(42px) saturate(1.05);opacity:.66;animation:pfShTeaseSpin 24s linear infinite}
+.pf-sh-tease b{position:absolute;inset:0;background:radial-gradient(60% 45% at 50% 46%,rgba(255,240,200,.18),transparent 70%),radial-gradient(120% 80% at 50% 120%,rgba(4,3,10,.85),transparent 60%)}
+@keyframes pfShTeaseSpin{to{transform:rotate(360deg)}}
+.pf-sh-peek{animation:pfShPeek 5s ease-in-out 1.6s infinite!important}
+@keyframes pfShPeek{0%,70%,100%{transform:translateY(0) rotate(-1.5deg)}78%{transform:translateY(-18px) rotate(-2.2deg)}86%{transform:translateY(0) rotate(-1.5deg)}91%{transform:translateY(-6px) rotate(-1.7deg)}}
+@media (prefers-reduced-motion: reduce){.pf-sh-tease i,.pf-sh-peek{animation:none!important}}
 .pf-sh-art img{display:block;width:100%;height:100%;object-fit:cover}
 .pf-sh-live{position:absolute;inset:0;width:100%;height:100%;display:block}
 .pf-sh-prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.14);z-index:2}
@@ -37442,8 +37449,8 @@ Hard requirements:
         };
         const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } if(!SRC[kind].d && _rp){ _replay(); return; } _tap(kind); };
         const _up = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
-        const ttl = _smp ? SAMPLE_MIDI_NAME : (kind==='compose'||kind==='mic') ? '' : _up(H.t || '');
-        const line = _smp ? [_up(t('harmony')), 'Gustav Klimt × Hilma af Klint', '✦ '+_sigT('label')].join('  ·  ') : (H.l || '');
+        const ttl = _smp ? '' : (kind==='compose'||kind==='mic') ? '' : _up(H.t || '');
+        const line = _smp ? '' : (H.l || '');
         const favN = favs.length;
         const K = SRC[kind];
         // the feed: a surprise card on top (or the home card)
@@ -37451,7 +37458,7 @@ Hard requirements:
         const _fL = !!(FC && feedLoaded!==null);
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
-        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? (feedSoundOk ? {k:'fh0', ic:['play','up']} : {k:'fh0', ic:['play'], one:true}) : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:String(SRC[_sides[(_sides.indexOf(kind)+1)%_sides.length]].label||'').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
+        const _fHint = FC ? ((feedNeedTap && !_fPlay) ? {k:'fh0', ic:['play'], one:true} : feedHintN<=3 ? {k:'fh', ic:['tap','up','down','lr'], x:_feedTab(FC.kind==='img' ? 'music' : 'img').toLowerCase()} : null) : (feedHintN<=1 ? (_smp ? null : (_bothSides ? {k:'fhUp', ic:['up','lr'], x:String(SRC[_sides[(_sides.indexOf(kind)+1)%_sides.length]].label||'').toLowerCase()} : {k:'fhUp', ic:['up']})) : null);
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
           up:(<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 7.5L6 4l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
@@ -37475,7 +37482,7 @@ Hard requirements:
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
             return; }
           R.t=now; if(R.tm) clearTimeout(R.tm);
-          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_canPlay) _play(); return; } if(_fL && feedNeedTap && !playingRef.current){ _fBtn(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
+          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_smp){ _feedStart(); return; } if(_canPlay) _play(); return; } if(_fL && feedNeedTap && !playingRef.current){ _fBtn(); return; } if(_fL) _feedOpen(); else _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); }, 300);
         };
         const _fTS = (e)=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
         const _fTE = (e)=>{ const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
@@ -37511,9 +37518,10 @@ Hard requirements:
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
-                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')}>
-                  {H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(_smp && !feedFly && !feedBump ? ' pf-sh-peek' : '')}>
+                  {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><i/><b/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
+                  {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>)}
                 {feedFly && feedFly.dir!=='down' && (feedFly.u || feedFly.t) && (
