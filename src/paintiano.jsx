@@ -23990,8 +23990,8 @@ const STUDIO_HOME_CSS = `
 .pf-sh-tap{position:absolute;left:50%;top:46%;width:0;height:0;z-index:6;pointer-events:none}
 .pf-sh-tap i{position:absolute;left:-34px;top:-34px;width:68px;height:68px;border-radius:50%;border:2px solid rgba(240,215,138,.85);box-shadow:0 0 18px rgba(240,215,138,.45);opacity:0;animation:pfShTap 3s ease-out 2.7s infinite}
 .pf-sh-tap i+i{animation-delay:2.88s;border-width:1px}
-.pf-sh-finger{position:absolute;left:-13px;top:-4px;font-size:30px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));transform-origin:13px 4px;animation:pfShFinger 3s ease-in-out infinite}
-@keyframes pfShFinger{0%{transform:translate(10px,14px) rotate(0deg);opacity:0}12%{opacity:1}78%{transform:translate(10px,14px) rotate(0deg)}90%{transform:translate(0,0) scale(.88) rotate(0deg)}96%{transform:translate(2px,3px) scale(1) rotate(0deg)}100%{transform:translate(10px,14px) rotate(0deg);opacity:1}}
+.pf-sh-finger{position:absolute;left:-16px;top:-6px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));transform-origin:16px 6px;animation:pfShFinger 3s ease-in-out infinite}
+@keyframes pfShFinger{0%{transform:translate(10px,14px) rotate(-8deg);opacity:0}12%{opacity:1}78%{transform:translate(10px,14px) rotate(-8deg)}90%{transform:translate(0,0) scale(.88) rotate(-8deg)}96%{transform:translate(2px,3px) scale(1) rotate(-8deg)}100%{transform:translate(10px,14px) rotate(-8deg);opacity:1}}
 @keyframes pfShTap{0%{transform:scale(.35);opacity:0}8%{opacity:.95}40%{transform:scale(1.5);opacity:0}100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){.pf-sh-breathe{animation:none!important}.pf-sh-tap i{animation-duration:6s}}
 .pf-sh-peek{animation:pfShPeek 5s ease-in-out 1.6s infinite!important}
@@ -37519,7 +37519,7 @@ Hard requirements:
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               <div className="pf-sh-card" onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
-                {_fTapCue && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/><span className="pf-sh-finger">👆</span></span>)}
+                {_fTapCue && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/><svg className="pf-sh-finger" width="46" height="56" viewBox="0 0 46 56"><path d="M14 6.5a4.5 4.5 0 0 1 9 0V24l2.2-.6a4.2 4.2 0 0 1 5 2.6l.3.9 1.5-.4a4.1 4.1 0 0 1 4.9 2.7l.2.7 1-.2a3.9 3.9 0 0 1 4.6 3.5l.3 4.6c.4 6-1.6 10.4-5 13.6-2.2 2-5 3.2-8.6 3.2h-6.2c-3.5 0-6.4-1.5-8.4-4.3L4.3 37.6a4.2 4.2 0 0 1 6.2-5.6L14 35.4z" fill="#fffaf0" stroke="#14110a" strokeWidth="2" strokeLinejoin="round"/></svg></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
