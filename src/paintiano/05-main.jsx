@@ -1791,6 +1791,8 @@ const STUDIO_HOME_CSS = `
 @container (max-width:180px){.pf-sh-cap-l{display:none}}
 .pf-sh-ghost{position:absolute;inset:0;border-radius:24px;border:1px solid rgba(242,238,232,.12);background:rgba(242,238,232,.07)}
 .pf-sh-g1{transform:rotate(6deg) translate(14px,6px)}.pf-sh-g2{transform:rotate(-5deg) translate(-12px,4px)}
+.pf-st-home,.pf-st-home *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.pf-sh-art img{pointer-events:none;-webkit-user-drag:none}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
 .pf-sh-tease{position:absolute;inset:0;overflow:hidden;background:#0a0814}
 .pf-sh-tease img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:pfShReel 18s ease-in-out infinite}
