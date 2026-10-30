@@ -14358,7 +14358,8 @@ Hard requirements:
     const iv=setInterval(()=>{ feedDrawRef.current(); if(++n%24===1){ try{ const s=canvasRef.current; if(s && s.width){ const c=document.createElement('canvas'); c.width=96; c.height=Math.max(1, Math.round(96*s.height/s.width)); c.getContext('2d').drawImage(s,0,0,c.width,c.height); setFeedBg(c.toDataURL('image/jpeg',0.7)); } }catch(_){} } }, 110);
     return ()=>clearInterval(iv);
   },[_feedLiveOn, feedAt]);
-  useEffect(()=>{ if(!feedFlash) return; const tm=setTimeout(()=>setFeedFlash(0), 1700); return ()=>clearTimeout(tm); },[feedFlash]);
+  const feedFlashMsRef = useRef(2000);   // how long the look's name stays: ✦ Signature (a line to read) the longest
+  useEffect(()=>{ if(!feedFlash) return; const tm=setTimeout(()=>setFeedFlash(0), feedFlashMsRef.current); return ()=>clearTimeout(tm); },[feedFlash]);
   const _stDone = studioFs && !studioLive && chords.length>0 && disp>=chords.length && !playing && !anim && !holdPaused && !demoReelOn && !recording && !stVidRec;
   const _stDoneRef = useRef(false);
   useEffect(()=>{
@@ -15354,7 +15355,7 @@ Hard requirements:
                     if(feedIntro.k==='p' && style && STYLE_INSPIRED[style]) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('painter').replace('{name}', STYLE_INSPIRED[style])}</p></div>);
                     if(feedIntro.k==='s' && sigActive) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><small>✦ {_sigT('label')}</small><p>{_sigT('intro')}</p></div>);
                     return null; })()}
-                  {_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true">{_fFlash.h && (<small>{_fFlash.h}</small>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>×</span>)}{x}</b>))}</div>)}
+                  {_fFlash && (()=>{ const ms = String(_fFlash.h||'').indexOf('✦')>=0 ? 5200 : (_fFlash.n.length>1 ? 3400 : 2200); feedFlashMsRef.current = ms; return null; })()}{_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true" style={{animationDuration:feedFlashMsRef.current+'ms'}}>{_fFlash.h && (<small>{_fFlash.h}</small>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>×</span>)}{x}</b>))}</div>)}
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
