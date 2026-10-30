@@ -23999,6 +23999,13 @@ const STUDIO_HOME_CSS = `
 .pf-sh-up{position:absolute;left:50%;bottom:30%;z-index:5;display:flex;flex-direction:column;align-items:center;gap:2px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
 .pf-sh-up svg{opacity:0;animation:pfShUp 1.8s ease-out infinite}.pf-sh-up svg:last-child{animation-delay:.18s}
 @keyframes pfShUp{0%{opacity:0;transform:translateY(10px)}30%{opacity:.95}70%{opacity:0;transform:translateY(-10px)}100%{opacity:0;transform:translateY(-10px)}}
+.pf-sh-tap b{position:absolute;left:-70px;top:-70px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,238,196,.6),rgba(255,226,160,.18) 45%,rgba(255,226,160,0) 70%);mix-blend-mode:screen;opacity:0;animation:pfShGlow 3s ease-out infinite}
+@keyframes pfShGlow{0%{opacity:0;transform:scale(.55)}7%{opacity:1;transform:scale(.8)}45%{opacity:0;transform:scale(1.25)}100%{opacity:0}}
+.pf-sh-burst{position:absolute;width:0;height:0;z-index:7;pointer-events:none}
+.pf-sh-burst i{position:absolute;left:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:#ffe39a;box-shadow:0 0 8px 2px rgba(255,214,120,.8);animation:pfShSpark .7s cubic-bezier(.15,.7,.3,1) both}
+@keyframes pfShSpark{0%{transform:translate(0,0) scale(1.3);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.pf-sh-card.press .pf-sh-art{animation:pfShPress .28s ease-out!important}
+@keyframes pfShPress{0%{transform:scale(1) rotate(-1.5deg)}35%{transform:scale(.97) rotate(-1.5deg)}100%{transform:scale(1) rotate(-1.5deg)}}
 .pf-sh-breathe{animation:pfShBreathe 3s ease-in-out infinite!important}
 @keyframes pfShBreathe{0%,100%{transform:scale(1) rotate(-1.5deg)}50%{transform:scale(1.02) rotate(-1.5deg)}}
 .pf-sh-tap{position:absolute;left:50%;top:46%;width:0;height:0;z-index:6;pointer-events:none}
@@ -29276,6 +29283,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // ↑ is learned once: until the first swipe up ever, a playing surprise lifts now and then and ⌃⌃ rises over its title
   const [feedUpDone, setFeedUpDone] = useState(()=>{ try{ return localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){ return false; } });
   const [feedUpCue, setFeedUpCue] = useState(false);
+  const [feedBurst, setFeedBurst] = useState(null);   // the first tap answers: the card gives, gold sparks fly from the finger {k,x,y}
   const [feedBump, setFeedBump] = useState(null);   // a sideways swipe toward the side you are already on: the card bounces   // the sound did not start by itself: ▶ asks for a tap
   const feedTileRef = useRef(null);   // the home circles' latest handlers (a circle tapped during the feed acts after the feed has stopped)
   const feedImgLoadRef = useRef(false);   // the feed is loading a picture: the home stays on screen
@@ -37514,6 +37522,9 @@ Hard requirements:
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
           if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }   // a tap is a gesture iOS accepts: the sound wakes here
+          if(!FC && _smp){   // the first screen: answer at once — the card gives, sparks fly, the surprise starts
+            try{ const r=e.currentTarget.getBoundingClientRect(), tt=(e.changedTouches && e.changedTouches[0]) || e; setFeedBurst({k:Date.now(), x:Math.round((tt.clientX||r.left+r.width/2)-r.left), y:Math.round((tt.clientY||r.top+r.height/2)-r.top)}); setTimeout(()=>setFeedBurst(null), 900); }catch(_){}
+            _stBuzz(12); _feedStart(); return; }
           const R=feedTapRef.current, now=Date.now();
           if(now-R.t<300){ if(R.tm){ clearTimeout(R.tm); R.tm=null; } R.t=0;
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
@@ -37541,8 +37552,9 @@ Hard requirements:
             <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
-              <div className="pf-sh-card" onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
-                {_smp && !FC && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/></span>)}
+              <div className={'pf-sh-card'+(feedBurst ? ' press' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
+                {_smp && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
+                {feedBurst && (<span key={feedBurst.k} className="pf-sh-burst" aria-hidden="true" style={{left:feedBurst.x, top:feedBurst.y}}>{Array.from({length:12},(_,i)=>{ const a=i/12*Math.PI*2, d=46+((i*37)%5)*9; return (<i key={i} style={{'--dx':Math.round(Math.cos(a)*d)+'px','--dy':Math.round(Math.sin(a)*d)+'px', animationDelay:((i%3)*25)+'ms'}}/>); })}</span>)}
                 {!_smp && _fTapCue && !FC && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 {!!FC && _fTapCue && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>

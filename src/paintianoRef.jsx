@@ -37494,7 +37494,7 @@ Hard requirements:
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
         const _fTapCue = !feedSoundOk || (!!FC && feedNeedTap && !_fPlay);
-        const _fLiftCue = false;   // no lift: the first screen reads as Stories (bars) + a muted Reel (🔇 = tap for sound)   // the card lifts only on the very first screen (a swipe-up invitation); your own paintings stay still
+        const _fLiftCue = !FC && _smp;   // the first screen: the card lifts now and then, the golden rings call for a tap
         const _fHint = null;   // no words under the card: the card itself shows tap (a ripple) and swipe (a lift)
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
@@ -37542,7 +37542,8 @@ Hard requirements:
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               <div className="pf-sh-card" onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
-                {(_smp || _fTapCue) && !FC && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
+                {_smp && !FC && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/></span>)}
+                {!_smp && _fTapCue && !FC && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 {!!FC && _fTapCue && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
