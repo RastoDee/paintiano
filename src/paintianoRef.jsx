@@ -37469,7 +37469,7 @@ Hard requirements:
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
         const _fTapCue = !feedSoundOk || (!!FC && feedNeedTap && !_fPlay);
-        const _fLiftCue = !FC && !_fTapCue && feedHintN<=3;
+        const _fLiftCue = !FC && _smp;   // the card lifts only on the very first screen (a swipe-up invitation); your own paintings stay still
         const _fHint = null;   // no words under the card: the card itself shows tap (a ripple) and swipe (a lift)
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
@@ -37535,7 +37535,7 @@ Hard requirements:
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
-                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump ? (_fLiftCue ? ' pf-sh-peek' : _fTapCue ? ' pf-sh-breathe' : '') : '')}>
+                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump && _fLiftCue ? ' pf-sh-peek' : '')}>
                   {_smp ? (<div className="pf-sh-tease" aria-hidden="true">{['pollock','kusama','monet','kandinsky','lichtenstein','hokusai'].map((k,i)=>(<img key={k} src={'/landing/liszt-'+k+'.webp'} alt="" style={{animationDelay:(i*3)+'s'}}/>))}</div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
