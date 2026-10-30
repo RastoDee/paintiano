@@ -1830,6 +1830,7 @@ const STUDIO_HOME_CSS = `
 .pf-sh-inl{animation:pfShInL .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}.pf-sh-inr{animation:pfShInR .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}
 @keyframes pfShInL{from{transform:translateX(60%) rotate(4deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
 @keyframes pfShInR{from{transform:translateX(-60%) rotate(-6deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
+.pf-sh-bumpd{animation:pfShBumpD .24s ease-out!important}@keyframes pfShBumpD{0%,100%{transform:translateY(0) rotate(-1.5deg)}40%{transform:translateY(6px) rotate(-1.5deg)}}
 .pf-sh-bumpl{animation:pfShBumpL .24s ease-out!important}.pf-sh-bumpr{animation:pfShBumpR .24s ease-out!important}
 @keyframes pfShBumpL{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(-5px) rotate(-1.8deg)}}
 @keyframes pfShBumpR{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(5px) rotate(-1.2deg)}}
@@ -14317,9 +14318,12 @@ Hard requirements:
   // ↓ during a surprise: back to the painting it came from (Music or Image) — thrown cards do not come back
   const _feedDown = ()=>{
     if(feedAt<0 || feedFly) return;
+    // only to your own painting of the same kind: a Music surprise goes back to your Music, an Image one to your Image — nothing there, nothing happens
+    const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music');
+    if(!mine || !(mine==='image' ? hasImageDraft : hasMusicDraft)){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }
     setFeedIntro(null);
     setFeedFly({k:Date.now(), dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
-    _feedExit(); _stBuzz(8);
+    _feedExit(); setHomeSide(mine); _stBuzz(8);
   };
   // ← → on the home card: your Music ⇆ your Image (only when you have both)
   const _homeSwitch = (to, ok, d)=>{
