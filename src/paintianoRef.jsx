@@ -23982,9 +23982,9 @@ const STUDIO_HOME_CSS = `
 .pf-sh-g1{transform:rotate(6deg) translate(14px,6px)}.pf-sh-g2{transform:rotate(-5deg) translate(-12px,4px)}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
 .pf-sh-tease{position:absolute;inset:0;overflow:hidden;background:#0a0814}
-.pf-sh-tease i{position:absolute;inset:-35%;background:conic-gradient(from 0deg,#c0392b,#d4762a,#c9b23a,#6aa83a,#2e9e5a,#2aa58a,#2a9fb0,#2f6fc0,#4a3fc8,#8a3be2,#b03ab0,#c0306a,#c0392b);filter:blur(42px) saturate(1.05);opacity:.66;animation:pfShTeaseSpin 24s linear infinite}
-.pf-sh-tease b{position:absolute;inset:0;background:radial-gradient(60% 45% at 50% 46%,rgba(255,240,200,.18),transparent 70%),radial-gradient(120% 80% at 50% 120%,rgba(4,3,10,.85),transparent 60%)}
-@keyframes pfShTeaseSpin{to{transform:rotate(360deg)}}
+.pf-sh-tease img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:pfShReel 18s ease-in-out infinite}
+.pf-sh-tease img:first-child{opacity:1}
+@keyframes pfShReel{0%{opacity:0;transform:scale(1.08)}5%{opacity:1}17%{opacity:1}22%{opacity:0;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 .pf-sh-breathe{animation:pfShBreathe 3s ease-in-out infinite!important}
 @keyframes pfShBreathe{0%,100%{transform:scale(1) rotate(-1.5deg)}50%{transform:scale(1.02) rotate(-1.5deg)}}
 .pf-sh-tap{position:absolute;left:50%;top:46%;width:0;height:0;z-index:6;pointer-events:none}
@@ -23994,7 +23994,7 @@ const STUDIO_HOME_CSS = `
 @media (prefers-reduced-motion: reduce){.pf-sh-breathe{animation:none!important}.pf-sh-tap i{animation-duration:6s}}
 .pf-sh-peek{animation:pfShPeek 5s ease-in-out 1.6s infinite!important}
 @keyframes pfShPeek{0%,70%,100%{transform:translateY(0) rotate(-1.5deg)}78%{transform:translateY(-18px) rotate(-2.2deg)}86%{transform:translateY(0) rotate(-1.5deg)}91%{transform:translateY(-6px) rotate(-1.7deg)}}
-@media (prefers-reduced-motion: reduce){.pf-sh-tease i,.pf-sh-peek{animation:none!important}}
+@media (prefers-reduced-motion: reduce){.pf-sh-tease img,.pf-sh-peek{animation:none!important}}
 .pf-sh-art img{display:block;width:100%;height:100%;object-fit:cover}
 .pf-sh-live{position:absolute;inset:0;width:100%;height:100%;display:block}
 .pf-sh-prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.14);z-index:2}
@@ -36425,7 +36425,9 @@ Hard requirements:
     if(L.comp!==undefined){ imgComposerRef.current=L.comp||null; setImgComposer(L.comp||null); setComposerStage(L.cstage||[]); } };
   const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
-  const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return; _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+  const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
+    // after the first surprise the colour card never comes back: with no painting of yours, the home keeps the surprise you just left
+    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=_feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
@@ -37534,7 +37536,7 @@ Hard requirements:
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump ? (_fLiftCue ? ' pf-sh-peek' : _fTapCue ? ' pf-sh-breathe' : '') : '')}>
-                  {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><i/><b/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                  {_smp ? (<div className="pf-sh-tease" aria-hidden="true">{['kusama','pollock','kandinsky','hokusai','monet','lichtenstein'].map((k,i)=>(<img key={k} src={'/landing/liszt-'+k+'.webp'} alt="" style={{animationDelay:(i*3)+'s'}}/>))}</div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
