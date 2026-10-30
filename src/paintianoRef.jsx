@@ -23985,6 +23985,17 @@ const STUDIO_HOME_CSS = `
 .pf-sh-tease img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:pfShReel 18s ease-in-out infinite}
 .pf-sh-tease img:first-child{opacity:1}
 @keyframes pfShReel{0%{opacity:0;transform:scale(1.08)}5%{opacity:1}17%{opacity:1}22%{opacity:0;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.pf-sh-segs{position:absolute;left:12px;right:12px;top:9px;z-index:4;display:flex;gap:4px;pointer-events:none}
+.pf-sh-segs span{flex:1;height:2.5px;border-radius:2px;background:rgba(255,255,255,.28);overflow:hidden}
+.pf-sh-segs i{display:block;height:100%;width:0;background:#fff;border-radius:2px}
+@keyframes pfShSeg0{0%{width:0}0.01%{width:0}16.67%{width:100%}99.6%{width:100%}100%{width:0}}
+@keyframes pfShSeg1{0%{width:0}16.67%{width:0}33.33%{width:100%}99.6%{width:100%}100%{width:0}}
+@keyframes pfShSeg2{0%{width:0}33.33%{width:0}50.0%{width:100%}99.6%{width:100%}100%{width:0}}
+@keyframes pfShSeg3{0%{width:0}50.0%{width:0}66.67%{width:100%}99.6%{width:100%}100%{width:0}}
+@keyframes pfShSeg4{0%{width:0}66.67%{width:0}83.33%{width:100%}99.6%{width:100%}100%{width:0}}
+@keyframes pfShSeg5{0%{width:0}83.33%{width:0}100.0%{width:100%}99.6%{width:100%}100%{width:0}}
+.pf-sh-mute{position:absolute;right:12px;bottom:12px;z-index:6;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);color:#fff;pointer-events:none;animation:pfShMute 2.4s ease-in-out infinite}
+@keyframes pfShMute{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,.35)}50%{transform:scale(1.06);box-shadow:0 0 0 8px rgba(255,255,255,0)}}
 .pf-sh-breathe{animation:pfShBreathe 3s ease-in-out infinite!important}
 @keyframes pfShBreathe{0%,100%{transform:scale(1) rotate(-1.5deg)}50%{transform:scale(1.02) rotate(-1.5deg)}}
 .pf-sh-tap{position:absolute;left:50%;top:46%;width:0;height:0;z-index:6;pointer-events:none}
@@ -37469,7 +37480,7 @@ Hard requirements:
         const _fPlay = _fL && (playing || anim);
         const _fPct = (_fL && chords.length) ? Math.min(100, Math.round(disp/chords.length*1000)/10) : 0;
         const _fTapCue = !feedSoundOk || (!!FC && feedNeedTap && !_fPlay);
-        const _fLiftCue = !FC && _smp;   // the card lifts only on the very first screen (a swipe-up invitation); your own paintings stay still
+        const _fLiftCue = false;   // no lift: the first screen reads as Stories (bars) + a muted Reel (🔇 = tap for sound)   // the card lifts only on the very first screen (a swipe-up invitation); your own paintings stay still
         const _fHint = null;   // no words under the card: the card itself shows tap (a ripple) and swipe (a lift)
         const _fIc = {
           play:(<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>),
@@ -37517,7 +37528,8 @@ Hard requirements:
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               <div className="pf-sh-card" onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
-                {_fTapCue && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/></span>)}
+                {(_smp || _fTapCue) && !FC && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
+                {!!FC && _fTapCue && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
@@ -37536,9 +37548,10 @@ Hard requirements:
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump && _fLiftCue ? ' pf-sh-peek' : '')}>
+                  {_smp && (<div className="pf-sh-segs" aria-hidden="true">{[0,1,2,3,4,5].map(i=>(<span key={i}><i style={{animation:'pfShSeg'+i+' 18s linear infinite'}}/></span>))}</div>)}
                   {_smp ? (<div className="pf-sh-tease" aria-hidden="true">{['pollock','kusama','monet','kandinsky','lichtenstein','hokusai'].map((k,i)=>(<img key={k} src={'/landing/liszt-'+k+'.webp'} alt="" style={{animationDelay:(i*3)+'s'}}/>))}</div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
-                  {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
+                  {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a',top:22}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>)}
                 {feedFly && feedFly.dir!=='down' && (feedFly.u || feedFly.t) && (
