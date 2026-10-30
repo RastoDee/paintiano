@@ -23988,8 +23988,10 @@ const STUDIO_HOME_CSS = `
 .pf-sh-breathe{animation:pfShBreathe 3s ease-in-out infinite!important}
 @keyframes pfShBreathe{0%,100%{transform:scale(1) rotate(-1.5deg)}50%{transform:scale(1.02) rotate(-1.5deg)}}
 .pf-sh-tap{position:absolute;left:50%;top:46%;width:0;height:0;z-index:6;pointer-events:none}
-.pf-sh-tap i{position:absolute;left:-34px;top:-34px;width:68px;height:68px;border-radius:50%;border:2px solid rgba(240,215,138,.85);box-shadow:0 0 18px rgba(240,215,138,.45);opacity:0;animation:pfShTap 3s ease-out infinite}
-.pf-sh-tap i+i{animation-delay:.18s;border-width:1px}
+.pf-sh-tap i{position:absolute;left:-34px;top:-34px;width:68px;height:68px;border-radius:50%;border:2px solid rgba(240,215,138,.85);box-shadow:0 0 18px rgba(240,215,138,.45);opacity:0;animation:pfShTap 3s ease-out 2.7s infinite}
+.pf-sh-tap i+i{animation-delay:2.88s;border-width:1px}
+.pf-sh-finger{position:absolute;left:-13px;top:-4px;font-size:30px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));transform-origin:13px 4px;animation:pfShFinger 3s ease-in-out infinite}
+@keyframes pfShFinger{0%{transform:translate(10px,14px) rotate(0deg);opacity:0}12%{opacity:1}78%{transform:translate(10px,14px) rotate(0deg)}90%{transform:translate(0,0) scale(.88) rotate(0deg)}96%{transform:translate(2px,3px) scale(1) rotate(0deg)}100%{transform:translate(10px,14px) rotate(0deg);opacity:1}}
 @keyframes pfShTap{0%{transform:scale(.35);opacity:0}8%{opacity:.95}40%{transform:scale(1.5);opacity:0}100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){.pf-sh-breathe{animation:none!important}.pf-sh-tap i{animation-duration:6s}}
 .pf-sh-peek{animation:pfShPeek 5s ease-in-out 1.6s infinite!important}
@@ -24018,7 +24020,7 @@ const STUDIO_HOME_CSS = `
 .pf-st-tabs button.on::after{width:18px}
 @keyframes pfShIn{from{transform:scale(.93) rotate(-1.5deg);opacity:.4}to{transform:scale(1) rotate(-1.5deg);opacity:1}}
 .pf-sh-back{animation:pfShBack .34s ease-out,pfShFloat 6s ease-in-out .34s infinite}
-@keyframes pfShBack{from{transform:translateY(-110%) rotate(-8deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
+@keyframes pfShBack{from{transform:translateY(-110%) rotate(0deg);opacity:0}to{transform:translateY(0) rotate(-1.5deg);opacity:1}}
 .pf-sh-fhint{position:absolute;left:-60px;right:-60px;top:calc(100% + 22px);display:flex;justify-content:center;pointer-events:none;animation:pfShHintIn .5s ease .6s both}
 .pf-sh-fpill{display:inline-flex;align-items:center;gap:9px;padding:6px 13px 6px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(0,0,0,.35);font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:500;letter-spacing:.02em;color:rgba(242,238,232,.88);white-space:nowrap}
 .pf-sh-fit{display:inline-flex;align-items:center;gap:5px}
@@ -37517,7 +37519,7 @@ Hard requirements:
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               <div className="pf-sh-card" onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
-                {_fTapCue && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/></span>)}
+                {_fTapCue && !feedFly && (<span className="pf-sh-tap" aria-hidden="true"><i/><i/><span className="pf-sh-finger">👆</span></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
