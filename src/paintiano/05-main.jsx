@@ -1830,10 +1830,10 @@ const STUDIO_HOME_CSS = `
 .pf-sh-inl{animation:pfShInL .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}.pf-sh-inr{animation:pfShInR .36s cubic-bezier(.2,.8,.3,1),pfShFloat 6s ease-in-out .36s infinite}
 @keyframes pfShInL{from{transform:translateX(60%) rotate(4deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
 @keyframes pfShInR{from{transform:translateX(-60%) rotate(-6deg);opacity:0}to{transform:translateX(0) rotate(-1.5deg);opacity:1}}
-.pf-sh-bumpd{animation:pfShBumpD .24s ease-out!important}@keyframes pfShBumpD{0%,100%{transform:translateY(0) rotate(-1.5deg)}40%{transform:translateY(6px) rotate(-1.5deg)}}
-.pf-sh-bumpl{animation:pfShBumpL .24s ease-out!important}.pf-sh-bumpr{animation:pfShBumpR .24s ease-out!important}
-@keyframes pfShBumpL{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(-5px) rotate(-1.8deg)}}
-@keyframes pfShBumpR{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(5px) rotate(-1.2deg)}}
+.pf-sh-bumpd{animation:pfShBumpD .18s ease-out!important}@keyframes pfShBumpD{0%,100%{transform:translateY(0) rotate(-1.5deg)}40%{transform:translateY(2px) rotate(-1.5deg)}}
+.pf-sh-bumpl{animation:pfShBumpL .18s ease-out!important}.pf-sh-bumpr{animation:pfShBumpR .18s ease-out!important}
+@keyframes pfShBumpL{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(-2px) rotate(-1.6deg)}}
+@keyframes pfShBumpR{0%,100%{transform:translateX(0) rotate(-1.5deg)}40%{transform:translateX(2px) rotate(-1.4deg)}}
 .pf-st-tabs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:22px;align-items:center}
 .pf-st-tabs button{position:relative;border:0;background:none;padding:6px 2px 9px;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:22px;line-height:1;color:rgba(240,192,64,.36);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .25s}
 .pf-st-tabs button.on{color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6)}
