@@ -14099,12 +14099,12 @@ Hard requirements:
     try{
       if(viewMode==='image'){
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
-          if(!composerDice){ _stToastShow(_stT('nxOff')); return; }   // 🔀 off: the composer you chose stays (as in Classic, no Next)
+          // 🔀 off or on, ↑ always brings something new (a composer has no variants of its own) — never the 'off' message
           if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
           else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
         }
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
-        if(!randomMode){ if(style===null && !(jamOn && painterStage.length)){ setOneMMode(false); setNotesMode(n=>!n); rolled = true; } else { _stToastShow(_stT('nxOff')); return; } }   // Mosaic, 🔀 off: its variants — Mosaic ⇆ Notes, never the 'off' message
+        if(!randomMode){ if(style===null && !(jamOn && painterStage.length)){ setOneMMode(false); setNotesMode(n=>!n); rolled = true; } else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; } }   // 🔀 off: the variants of your painter (Mosaic ⇆ Notes, or its own) — never the 'off' message
         else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
       }
     }catch(_){}
