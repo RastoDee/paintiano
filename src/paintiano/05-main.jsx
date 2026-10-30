@@ -1807,6 +1807,9 @@ const STUDIO_HOME_CSS = `
 @keyframes pfShSeg5{0%{width:0}83.33%{width:0}100.0%{width:100%}99.6%{width:100%}100%{width:0}}
 .pf-sh-mute{position:absolute;right:12px;bottom:12px;z-index:6;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);color:#fff;pointer-events:none;animation:pfShMute 2.4s ease-in-out infinite}
 @keyframes pfShMute{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,.35)}50%{transform:scale(1.06);box-shadow:0 0 0 8px rgba(255,255,255,0)}}
+.pf-sh-up{position:absolute;left:50%;bottom:30%;z-index:5;display:flex;flex-direction:column;align-items:center;gap:2px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.55))}
+.pf-sh-up svg{opacity:0;animation:pfShUp 1.8s ease-out infinite}.pf-sh-up svg:last-child{animation-delay:.18s}
+@keyframes pfShUp{0%{opacity:0;transform:translateY(10px)}30%{opacity:.95}70%{opacity:0;transform:translateY(-10px)}100%{opacity:0;transform:translateY(-10px)}}
 .pf-sh-breathe{animation:pfShBreathe 3s ease-in-out infinite!important}
 @keyframes pfShBreathe{0%,100%{transform:scale(1) rotate(-1.5deg)}50%{transform:scale(1.02) rotate(-1.5deg)}}
 .pf-sh-tap{position:absolute;left:50%;top:46%;width:0;height:0;z-index:6;pointer-events:none}
@@ -7081,6 +7084,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // it never goes into the Music slot (that keeps what you had), and leaves when anything else loads
   const feedPieceRef = useRef(false);
   const [feedNeedTap, setFeedNeedTap] = useState(false);
+  // ↑ is learned once: until the first swipe up ever, a playing surprise lifts now and then and ⌃⌃ rises over its title
+  const [feedUpDone, setFeedUpDone] = useState(()=>{ try{ return localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){ return false; } });
+  const [feedUpCue, setFeedUpCue] = useState(false);
   const [feedBump, setFeedBump] = useState(null);   // a sideways swipe toward the side you are already on: the card bounces   // the sound did not start by itself: ▶ asks for a tap
   const feedTileRef = useRef(null);   // the home circles' latest handlers (a circle tapped during the feed acts after the feed has stopped)
   const feedImgLoadRef = useRef(false);   // the feed is loading a picture: the home stays on screen
@@ -14274,6 +14280,7 @@ Hard requirements:
   };
   const _feedUp = (cur)=>{
     if(feedFly) return;
+    if(feedAt>=0 && !feedUpDone){ setFeedUpDone(true); setFeedUpCue(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} }
     setFeedIntro(null);
     if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340); _feedStart(); _stBuzz(8); return; }
     // the card that leaves keeps its painting and its look
@@ -14349,6 +14356,8 @@ Hard requirements:
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);
     return ()=>clearTimeout(tm);
   },[chords, playing, anim, working, info, viewMode, originalImgUrl]);
+
+  useEffect(()=>{ if(feedUpDone || feedAt<0 || !playing || feedIntro){ if(feedAt<0 && feedUpCue) setFeedUpCue(false); return; } const tm=setTimeout(()=>setFeedUpCue(true), 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedAt, playing, feedIntro]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); if(playing && !feedSoundOk) setFeedSoundOk(true); },[playing]);
   useEffect(()=>{ const on = feedLoaded!==null; feedLaRef.current = on ? 0.15 : 0; try{ Tone.getContext().lookAhead = on ? 0.15 : 0.03; }catch(_){} },[feedLoaded]);
   // any plain tap wakes a sleeping sound (iOS gives none to a swipe): then a swipe can start the card at once
@@ -15349,7 +15358,8 @@ Hard requirements:
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
-                <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')+(feedBump ? ' pf-sh-bump'+feedBump : '')}>
+                <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(feedUpCue && !feedFly && !feedBump ? ' pf-sh-peek' : '')}>
+                  {feedUpCue && (<span className="pf-sh-up" aria-hidden="true">{[0,1].map(i=>(<svg key={i} width="26" height="14" viewBox="0 0 26 14"><path d="M3 12L13 3l10 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg>))}</span>)}
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   <span key={'ch'+(FC ? FC.id : '')} className="pf-sh-chip fade" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
