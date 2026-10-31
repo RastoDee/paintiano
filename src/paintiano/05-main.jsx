@@ -1754,8 +1754,10 @@ const STUDIO_FX_CSS = `
 .pf-st-bar::before{content:"";position:absolute;left:0;right:0;top:0;bottom:-40px;background:linear-gradient(180deg,rgba(6,6,12,0),rgba(6,6,12,.72));z-index:-1}
 .pf-st-meta{width:100%;max-width:520px;text-align:center;color:#f2eee8;text-shadow:0 1px 8px rgba(0,0,0,.8)}
 .pf-st-meta-t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.pf-st-meta-l{font-size:12px;letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-st-meta-e{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;color:#f3ead2}
-.pf-st-acts{display:flex;align-items:center;justify-content:center;gap:22px}
+.pf-st-acts{display:flex;align-items:center;justify-content:center;gap:22px;transition:margin .25s ease}
+.pf-st-acts.tip{margin-top:46px}
 .pf-st-act{pointer-events:auto;width:48px;height:48px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(242,238,232,.2);color:#f2eee8;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s, opacity .2s}
 .pf-st-act:active{transform:scale(.9)}
 .pf-st-act:disabled{opacity:.4;cursor:default}
@@ -2016,6 +2018,34 @@ const STUDIO_HOME_CSS = `
 @media (prefers-reduced-motion: reduce){.pf-sh-bg,.pf-sh-art,.pf-sh-play{animation:none}.pf-sh-fly{animation-duration:.01s!important}}
 @media (max-height:720px){.pf-sh-q{margin-top:14px}.pf-sh-meta{margin-top:10px}.pf-sh-grid{row-gap:10px}}
 @media (max-height:600px){.pf-sh-play{width:52px;height:52px;right:-10px;bottom:-10px}.pf-sh-chip{display:none}.pf-sh-q{display:none}.pf-sh-grid{margin-top:10px;row-gap:8px}.pf-st-home .pf-sh-ic{width:50px;height:50px}.pf-sh-links{margin-top:6px}}
+/* FULL SCREEN — the home is the Studio's screen (the mockup): the painting is the screen, no card, no circles */
+.pf-st-home .pf-sh-bg,.pf-st-home .pf-sh-vig,.pf-st-home .pf-sh-ghost,.pf-st-home .pf-sh-cap,.pf-st-home .pf-sh-up{display:none!important}
+.pf-st-home .pf-sh-stage{position:absolute;inset:0;padding:0;z-index:1}
+.pf-st-home .pf-sh-stage::after{content:"";position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 120px);background:linear-gradient(180deg,rgba(6,6,12,.72),rgba(6,6,12,0));pointer-events:none;z-index:4}
+.pf-st-home .pf-sh-card{position:absolute;inset:0;height:auto;max-height:none;aspect-ratio:auto}
+.pf-st-home .pf-sh-card .pf-sh-art{border-radius:0;border:0;box-shadow:none;animation:none;transform:none}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in{animation:pfFsIn .32s ease-out}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inl{animation:pfFsInL .32s ease-out}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inr{animation:pfFsInR .32s ease-out}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-peek,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-breathe{animation:none!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly{animation:pfFsFly .3s cubic-bezier(.4,0,.8,.4) forwards!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.l{animation-name:pfFsFlyL!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.r{animation-name:pfFsFlyR!important}
+.pf-st-home .pf-sh-card.press .pf-sh-art{animation:pfFsPress .28s ease-out!important}
+@keyframes pfFsIn{from{transform:translateY(16%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes pfFsInL{from{transform:translateX(28%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes pfFsInR{from{transform:translateX(-28%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes pfFsFly{from{transform:none;opacity:1}to{transform:translateY(-100%);opacity:.5}}
+@keyframes pfFsFlyL{from{transform:none;opacity:1}to{transform:translateX(-100%);opacity:.5}}
+@keyframes pfFsFlyR{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.5}}
+@keyframes pfFsPress{0%{transform:scale(1)}35%{transform:scale(.985)}100%{transform:scale(1)}}
+.pf-st-home .pf-sh-chip{top:calc(env(safe-area-inset-top,0px) + 64px);left:max(14px,env(safe-area-inset-left,0px))}
+.pf-st-home .pf-sh-mute{top:calc(env(safe-area-inset-top,0px) + 64px);bottom:auto;right:max(14px,env(safe-area-inset-right,0px))}
+.pf-st-home .pf-sh-paused{top:50%;width:76px;height:76px;margin:-38px 0 0 -38px}
+.pf-st-home .pf-sh-tap{top:50%}
+.pf-st-home .pf-sh-prog{bottom:env(safe-area-inset-bottom,0px);z-index:7}
+.pf-st-home .pf-sh-heart{top:50%}
+@media (prefers-reduced-motion: reduce){.pf-st-home .pf-sh-card .pf-sh-art{animation:none!important}}
 `;
 const STUDIO_COMP_MONO = {chopin:['Ch','#5a3f8a'],satie:['Sa','#3f7a8a'],gershwin:['Ge','#8a6a3f'],glass:['Gl','#3f8a5e'],vine:['Vi','#8a3f5e'],yiruma:['Yi','#6a8a3f'],bach:['Ba','#8a7a3f'],beethoven:['Be','#3f5a8a'],debussy:['De','#3f8a8a'],rachmaninov:['Ra','#8a3f3f'],einaudi:['Ei','#7a3f8a'],hisaishi:['Hi','#3f8a7a'],mozart:['Mo','#8a5e3f'],schubert:['Sch','#5e8a3f'],tchaikovsky:['Tch','#3f3f8a']};
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
@@ -14314,25 +14344,6 @@ Hard requirements:
   const [stVid, setStVid] = useState(null);           // null | {phase:'rec', t0} | {phase:'done', blob, url, type}
   const [stVidTick, setStVidTick] = useState(0);
   const stVidRec = !!(stVid && stVid.phase==='rec');
-  // THE HINTS — three, once each: ⌃ the next painting (it plays a while), ✦ Change (your own song), ♥ (your own painting is done)
-  const [stTip, setStTip] = useState(null);   // null | 'up' | 'chg' | 'fav'
-  const _tipSeen = (k)=>{ try{ return localStorage.getItem('paintiano_tip_'+k)==='1'; }catch(_){ return true; } };
-  const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
-  const _tipQuiet = !studioFs || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
-  useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
-    let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
-    if(!up && !_tipSeen('up')) k='up'; else if(!_tipSeen('chg')) k='chg';
-    if(!k) return; const tm=setTimeout(()=>setStTip(k), k==='up' ? 7000 : 12000); return ()=>clearTimeout(tm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[stTip, _tipQuiet, playing]);
-  useEffect(()=>{ if(!stTip) return; if(_tipQuiet){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipDone(k), 6500); return ()=>clearTimeout(tm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[stTip, _tipQuiet]);
-  // ♥: your own painting (a song, a picture, a mood, a take — not a surprise) is done and not kept yet
-  useEffect(()=>{ if(stTip || _tipQuiet || _tipSeen('fav')) return; const own = !!(loadedSource || moodContext || draftOwnerRef.current);
-    if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>setStTip('fav'), 1200); return ()=>clearTimeout(tm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[stTip, _tipQuiet, favReadyAny, favHitAny]);
   // ▶ on the home card: wherever the piece comes back to (the start, a pause, its end), it plays
   const stPlayIntentRef = useRef(0);
   useEffect(()=>{
@@ -14359,6 +14370,25 @@ Hard requirements:
   const [feedCards, setFeedCards] = useState([]);   // the looks seen, oldest first (10 at most): {id, piece, sel, u, l}
   const [feedAt, setFeedAt] = useState(-1);         // -1 = the home card on top, i = feedCards[i]
   const [feedLoaded, setFeedLoaded] = useState(null); // the piece in the player (0..2), or null
+  // THE HINTS — three, once each: ⌃ the next painting (it plays a while), ✦ Change (your own song), ♥ (your own painting is done)
+  const [stTip, setStTip] = useState(null);   // null | 'up' | 'chg' | 'fav'
+  const _tipSeen = (k)=>{ try{ return localStorage.getItem('paintiano_tip_'+k)==='1'; }catch(_){ return true; } };
+  const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
+  const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
+  useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
+    let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
+    if(studioFs && !up && !_tipSeen('up')) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
+    if(!k) return; const tm=setTimeout(()=>setStTip(k), k==='up' ? 7000 : 12000); return ()=>clearTimeout(tm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[stTip, _tipQuiet, playing]);
+  useEffect(()=>{ if(!stTip) return; if(_tipQuiet){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipDone(k), 6500); return ()=>clearTimeout(tm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[stTip, _tipQuiet]);
+  // ♥: your own painting (a song, a picture, a mood, a take — not a surprise) is done and not kept yet
+  useEffect(()=>{ if(stTip || _tipQuiet || _tipSeen('fav')) return; const own = !!(loadedSource || moodContext || draftOwnerRef.current);
+    if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>setStTip('fav'), 1200); return ()=>clearTimeout(tm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[stTip, _tipQuiet, favReadyAny, favHitAny]);
   const [feedFly, setFeedFly] = useState(null);     // the card flying off: {k, u, t, l, dir}
   const [feedFlash, setFeedFlash] = useState(0);    // the look's name over the card, for a moment
   const [feedHintN, setFeedHintN] = useState(()=>{ try{ return parseInt(localStorage.getItem('paintiano_feed_hint_n')||'0',10)||0; }catch(_){ return 0; } });
@@ -15601,7 +15631,7 @@ Hard requirements:
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
-            <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS}</style>
+            <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS + STUDIO_FX_CSS}</style>
             {/* the feed's piece paints here (off screen) — the card mirrors it; full screen takes over the real stage */}
             {!isActiveView && feedLoaded!==null && (<canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} aria-hidden="true" style={{position:'absolute',left:-99999,top:0,width:CW,height:CH,opacity:0,pointerEvents:'none'}}/>)}
             <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
@@ -15629,10 +15659,10 @@ Hard requirements:
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
-                  {_fL && (<button type="button" className="pf-sh-open" aria-label={_stT('fOpen')} title={_stT('fOpen')} onClick={(e)=>{ e.stopPropagation(); _stBuzz(8); _feedOpen(); }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump && _fLiftCue ? ' pf-sh-peek' : '')}>
                                     {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><img src="/landing/fusion-bee.webp" alt="" style={{opacity:1,animation:'none'}}/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                  {!_smp && _canPlay && !feedFly && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
@@ -15645,19 +15675,59 @@ Hard requirements:
                 {_fHint && (<div key={_fHint.k} className="pf-sh-fhint" aria-hidden="true"><span className="pf-sh-fpill">{String(_stT(_fHint.k)||'').split('|').slice(0, _fHint.one ? 1 : 9).concat(_fHint.x ? [_fHint.x] : []).map((x,i)=>(<Fragment key={i}>{i>0 && (<i className="pf-sh-fdot"/>)}<span className={'pf-sh-fit'+(_fHint.ic[i]==='up' && _fHint.k!=='fh' ? ' pf-sh-bob' : '')}><b>{_fIc[_fHint.ic[i]]}</b>{x}</span></Fragment>))}</span></div>)}
               </div>
             </div>
-            <div style={{height:14,flexShrink:0}}/>
-            <div className="pf-sh-grid">
-              {ORDER.map(k=>{ const S=SRC[k], on = FC ? k===(FC.kind==='img' ? 'image' : 'music') : (!_smp && _canPlay && k===kind); return (
-                <button key={k} type="button" className={'pf-sh-src'+(on?' on':'')} disabled={!!S.off} onClick={()=>{ if(FC){ _feedExit(); setTimeout(()=>{ const H=feedTileRef.current; if(H){ if(on) H.f(k); else H.t(k); } }, 120); return; } if(on) _fresh(k); else _tap(k); }}>
-                  <span className="pf-sh-ic" style={{background:'linear-gradient(135deg,'+S.g+')',...(on?{}:{boxShadow:'0 0 0 3px '+S.c+'2e'})}}>{_sv(S.p)}{S.d && !on && (<span className="pf-sh-dot" aria-hidden="true"/>)}</span>
-                  <span>{S.label}</span>
-                </button>); })}
-            </div>
-            <div className="pf-sh-links">
-              <button type="button" key={'fv'+favPulse} className={'pf-sh-fav'+(favN?' on':'')+(favPulse?' pf-sh-pulse':'')} onClick={()=>{ _feedExit(); _mineOpen('all'); }} aria-label={_stT('mine')}>
-                <i aria-hidden="true">{favN ? '♥' : '♡'}</i><span>{_stT('mine')}</span>
-              </button>
-            </div>
+            {/* the home is the Studio's screen (the mockup): the painting is the screen; under it the song and ♥ · ✦ Change · share */}
+            {(()=>{
+              const _mt = FC ? _fTitle : ttl, _ml = FC ? _fLine : line;
+              const _heartOn = _fL && favHitAny;
+              return (
+              <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
+                {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
+                {(_mt || _ml) && (<div className="pf-st-meta">{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>)}
+                <div className={'pf-st-acts'+(stTip==='chg'?' tip':'')}>
+                  <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')} disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+                  <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+(stTip==='chg'?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); setStChg('music'); }}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
+                  <button type="button" className="pf-st-act" disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(8); _feedOpen(); setTimeout(()=>setStShare(true), 380); }} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
+                </div>
+              </div>); })()}
+            {/* ✦ CHANGE at home: the six ways in (Music · Image), the painter of a surprise, Mine */}
+            {stChg && (()=>{
+              const _on = (k)=> FC ? k===(FC.kind==='img' ? 'image' : 'music') : (!_smp && _canPlay && k===kind);
+              // a way with a painting waiting (a dot) goes back to it; otherwise it picks something new
+              const _go = (k)=>()=>{ if(SRC[k].off) return; setStChg(null); const on=_on(k), back=!!SRC[k].d && !on;
+                if(FC){ _feedExit(); setTimeout(()=>{ const T=feedTileRef.current; if(T){ if(back) T.t(k); else T.f(k); } }, 120); return; }
+                if(back) _tap(k); else _fresh(k); };
+              const _row = (k, t1, s1)=>({k, ic:_sv(SRC[k].p, 20), g:SRC[k].g, t:t1, s:s1, ok:!SRC[k].off, dot:!!SRC[k].d && !_on(k), go:_go(k)});
+              const _isImg = !!(FC && FC.kind==='img');
+              const rows = {
+                music:[_row('music', _stT('chUp'), _stT('chUpS')), _row('mood', SRC.mood.label, _stT('chMoodS')), _row('compose', SRC.compose.label, _stT('chCompS')), _row('mic', SRC.mic.label, _stT('chMicS'))],
+                image:[_row('image', _stT('chImg'), _stT('chImgS')), _row('mfi', SRC.mfi.label, _stT('chMfiS'))],
+                paint:[{k:'look', ic:_sv(<><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor"/><path d="M12 21c-2 0-2.5-2-1-3s4-1 4-3-2-3-2-3"/></>, 20), g:'#f0d78a,#c9a84c', t:_isImg ? _stT('chLookSi') : _stT('look'), s:_isImg ? '' : _stT('chLookS'), ok:true, go:()=>{ setStChg(null); _feedOpen(); setTimeout(()=>setStripOpen(true), 380); }}],
+              };
+              const tabs = [
+                {k:'music', l:SRC.music.label, s:_stT('chMusT'), g:SRC.music.g, ic:SRC.music.p},
+                {k:'image', l:SRC.image.label, s:_stT('chImgT'), g:SRC.image.g, ic:SRC.image.p},
+              ].concat(_fL ? [{k:'paint', l:_isImg ? _stT('chComp') : _stT('chPaint'), s:_isImg ? _stT('chCompT') : _stT('chPaintT'), g:'#f0d78a,#c9a84c', ic:(<path d="M12 3l2.1 5.9L20 11l-5.9 2.1L12 19l-2.1-5.9L4 11l5.9-2.1z"/>)}] : []);
+              const tab = rows[stChg] && (stChg!=='paint' || _fL) ? stChg : 'music';
+              return (<>
+                <div onClick={()=>setStChg(null)} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>{ e.preventDefault(); e.stopPropagation(); setStChg(null); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)',touchAction:'none'}}/>
+                <div role="dialog" aria-label={_stT('chT')} className="pf-chg" onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()}>
+                  <div aria-hidden="true" className="pf-chg-grab"/>
+                  <div className="pf-chg-h">{_stT('chT')}</div>
+                  <div className="pf-chg-tabs" role="tablist" style={{gridTemplateColumns:'repeat('+tabs.length+',minmax(0,1fr))'}}>
+                    {tabs.map(x=>(<button key={x.k} type="button" role="tab" aria-selected={tab===x.k} className={'pf-chg-tab'+(tab===x.k?' on':'')} onClick={()=>setStChg(x.k)}><span className="pf-chg-sw" style={{background:'linear-gradient(135deg,'+x.g+')'}}>{_sv(x.ic, 16)}</span><b>{x.l}</b><small>{x.s}</small></button>))}
+                  </div>
+                  <div className="pf-chg-rows" key={tab}>
+                    {rows[tab].map(r=>(
+                      <button key={r.k} type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}>
+                        <span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}{r.dot && (<span className="pf-chg-dot" aria-hidden="true"/>)}</span>
+                        <span className="pf-chg-tx"><b>{r.t}</b>{r.s && (<small>{r.s}</small>)}</span>
+                      </button>))}
+                  </div>
+                  <div className="pf-chg-chips">
+                    <button type="button" className="pf-chg-chip" onClick={()=>{ setStChg(null); _feedExit(); _mineOpen('all'); }}>{_sv(<><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></>, 15)}{_stT('mine')}</button>
+                  </div>
+                </div>
+              </>); })()}
           </div>);
       })()}
       {isSetupView && !basicMode && !favView && (
@@ -17333,7 +17403,7 @@ Hard requirements:
                 <div ref={stCapLinesRef}>{_capLines()}</div>
               </>)}
             </div>)}
-            <div className="pf-st-acts">
+            <div className={'pf-st-acts'+((stTip==='chg' || stTip==='fav')?' tip':'')}>
               <span className="pf-st-tipw">{stTip==='fav' && (<span className="pf-st-tip l" role="status">{pfIcons(_stT('tipFav'))}</span>)}<button type="button" className={'pf-st-act pf-st-fav'+(favHitAny?' on':'')+((stFavPend && !favReadyAny)?' pend':'')} onClick={_go(()=>{ _tipDone('fav'); if(_live){ if(favReadyAny) _favToggleAny(); } else _stHeartTap(); })} disabled={!_stHasArt || (_live && !favReadyAny)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny}>{_heart}</button></span>
               <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+((_stEmpty || stTip==='chg')?' glow':'')} onClick={_go(()=>{ _tipDone('chg'); _stShow(null); setStChg(stTip==='chg' ? 'music' : (_stHasArt ? 'paint' : 'music')); })}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
               <button type="button" className="pf-st-act" onClick={_go(()=>{ setStShare(true); })} disabled={!_stHasArt} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
