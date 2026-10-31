@@ -29579,6 +29579,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cur || !cur.length) return;
       const meta = moodMetaRef.current || {};
       moodStashRef.current = {
+        _dna: (globalThis.__PAINT_MUSIC_DNA || null),   // the piece's Music DNA: a surprise in between loads another piece (and its DNA)
         chords: cur.slice(),
         grid: gridRef.current,
         idxCounter: idxRef.current,
@@ -29603,6 +29604,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cur || !cur.length) return;
       const meta = moodMetaRef.current || {};
       musicStashRef.current = {
+        _dna: (globalThis.__PAINT_MUSIC_DNA || null),   // the piece's Music DNA: a surprise in between loads another piece (and its DNA)
         sub: ls,
         chords: cur.slice(),
         grid: gridRef.current,
@@ -29642,6 +29644,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cur || !cur.length) return;
       const meta = moodMetaRef.current || {};
       imageStashRef.current = {
+        _dna: (globalThis.__PAINT_MUSIC_DNA || null),   // the piece's Music DNA: a surprise in between loads another piece (and its DNA)
         chords: cur.slice(),
         grid: gridRef.current,
         idxCounter: idxRef.current,
@@ -29671,6 +29674,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cur || !cur.length) return;
       const meta = moodMetaRef.current || {};
       mfiStashRef.current = {
+        _dna: (globalThis.__PAINT_MUSIC_DNA || null),   // the piece's Music DNA: a surprise in between loads another piece (and its DNA)
         chords: cur.slice(),
         grid: gridRef.current,
         idxCounter: idxRef.current,
@@ -29722,6 +29726,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       restoringRef.current = true;
       stopAll();
       enterContext('mood');
+      try{ globalThis.__PAINT_MUSIC_DNA = (s._dna !== undefined) ? s._dna : computeMusicDNA(s.chords); }catch(_){}   // back to this piece's own DNA — or the same ✦ paints a different picture
       // canvas + refs
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
@@ -29782,6 +29787,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       restoringRef.current = true;
       stopAll();
       enterContext('music');
+      try{ globalThis.__PAINT_MUSIC_DNA = (s._dna !== undefined) ? s._dna : computeMusicDNA(s.chords); }catch(_){}   // back to this piece's own DNA — or the same ✦ paints a different picture
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
       idxRef.current = s.idxCounter;
@@ -29846,6 +29852,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       restoringRef.current = true;
       stopAll();
       enterContext('image');
+      try{ globalThis.__PAINT_MUSIC_DNA = (s._dna !== undefined) ? s._dna : computeMusicDNA(s.chords); }catch(_){}   // back to this piece's own DNA — or the same ✦ paints a different picture
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
       idxRef.current = s.idxCounter;
@@ -29898,6 +29905,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       restoringRef.current = true;
       stopAll();
       enterContext('mfi');
+      try{ globalThis.__PAINT_MUSIC_DNA = (s._dna !== undefined) ? s._dna : computeMusicDNA(s.chords); }catch(_){}   // back to this piece's own DNA — or the same ✦ paints a different picture
       setChords(s.chords); chordsRef.current = s.chords;
       if(s.grid){ setGrid(s.grid); gridRef.current = s.grid; }
       idxRef.current = s.idxCounter;
