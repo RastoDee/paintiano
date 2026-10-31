@@ -24244,8 +24244,8 @@ const STUDIO_HOME_CSS = `
 @media (max-height:600px){.pf-sh-play{width:52px;height:52px;right:-10px;bottom:-10px}.pf-sh-chip{display:none}.pf-sh-q{display:none}.pf-sh-grid{margin-top:10px;row-gap:8px}.pf-st-home .pf-sh-ic{width:50px;height:50px}.pf-sh-links{margin-top:6px}}
 /* FULL SCREEN — the home is the Studio's screen (the mockup): the painting is the screen, no card, no circles */
 .pf-st-home .pf-sh-bg,.pf-st-home .pf-sh-vig,.pf-st-home .pf-sh-ghost,.pf-st-home .pf-sh-cap,.pf-st-home .pf-sh-up{display:none!important}
-.pf-st-home .pf-sh-stage{position:absolute;inset:0;padding:0;z-index:1}
-.pf-st-home .pf-sh-stage::after{content:"";position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 120px);background:linear-gradient(180deg,rgba(6,6,12,.72),rgba(6,6,12,0));pointer-events:none;z-index:4}
+.pf-st-home .pf-sh-stage{position:absolute;inset:0;padding:0;z-index:1;border-radius:26px 26px 0 0;overflow:hidden;transform:translateZ(0)}
+.pf-st-home .pf-sh-stage::after{content:"";position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 120px);background:radial-gradient(42% 100% at 50% 0%,rgba(6,6,12,.62),rgba(6,6,12,0));pointer-events:none;z-index:4}
 .pf-st-home .pf-sh-card{position:absolute;inset:0;height:auto;max-height:none;aspect-ratio:auto}
 .pf-st-home .pf-sh-card .pf-sh-art{border-radius:0;border:0;box-shadow:none;animation:none;transform:none}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in{animation:pfFsIn .32s ease-out}
@@ -37834,9 +37834,9 @@ Hard requirements:
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
           if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }   // a tap is a gesture iOS accepts: the sound wakes here
-          if(!FC && _smp){   // the first screen: answer at once — the card gives, sparks fly, the surprise starts
+          if(!FC && (_smp || _canPlay)){   // the first screen, or your painting waiting: answer at once — sparks fly, it starts (in the tap: iOS wakes the sound here)
             try{ const r=e.currentTarget.getBoundingClientRect(), tt=(e.changedTouches && e.changedTouches[0]) || e; setFeedBurst({k:Date.now(), x:Math.round((tt.clientX||r.left+r.width/2)-r.left), y:Math.round((tt.clientY||r.top+r.height/2)-r.top)}); setTimeout(()=>setFeedBurst(null), 900); }catch(_){}
-            _stBuzz(12); _feedStart(); return; }
+            _stBuzz(12); if(_smp) _feedStart(); else _play(); return; }
           const R=feedTapRef.current, now=Date.now();
           if(now-R.t<300){ if(R.tm){ clearTimeout(R.tm); R.tm=null; } R.t=0;
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
@@ -37886,7 +37886,7 @@ Hard requirements:
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump && _fLiftCue ? ' pf-sh-peek' : '')}>
                                     {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><img src="/landing/fusion-bee.webp" alt="" style={{opacity:1,animation:'none'}}/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
-                  {!_smp && _canPlay && !feedFly && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
+                  {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
