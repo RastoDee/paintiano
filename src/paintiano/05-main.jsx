@@ -2038,6 +2038,12 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.l{animation-name:pfFsFlyL!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.r{animation-name:pfFsFlyR!important}
 .pf-st-home .pf-sh-card.press .pf-sh-art{animation:pfFsPress .28s ease-out!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-back{animation:pfFsBack .32s ease-out}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.d{animation-name:pfFsFlyD!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-bumpd{animation:pfFsBumpD .26s ease-out!important}
+@keyframes pfFsBack{from{transform:translateY(-16%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes pfFsFlyD{from{transform:none;opacity:1}to{transform:translateY(100%);opacity:.5}}
+@keyframes pfFsBumpD{0%,100%{transform:none}40%{transform:translateY(14px)}}
 @keyframes pfFsIn{from{transform:translateY(16%);opacity:.3}to{transform:none;opacity:1}}
 @keyframes pfFsInL{from{transform:translateX(28%);opacity:.3}to{transform:none;opacity:1}}
 @keyframes pfFsInR{from{transform:translateX(-28%);opacity:.3}to{transform:none;opacity:1}}
@@ -14572,6 +14578,20 @@ Hard requirements:
   const _feedTab = (k)=>{ const w=String(t(k==='img' ? 'image' : 'music')||'').replace(/[^\p{L}\s]/gu,'').trim(); return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); };
   const _feedIsLoaded = (c)=> !!c && feedLoaded!==null && (c.kind==='img' ? feedLoaded==='i'+c.piece : feedLoaded===c.piece);
   const _feedGo = (c)=>{ if(_feedIsLoaded(c)){ if(c.sel) _feedApply(c.sel); return; } _feedLoad(c.piece, c.sel || (c.kind==='img' ? {img:true} : {sig:true}), c.kind); };
+  // ↓ during a surprise: back, as on TikTok — the previous surprise; from the first one your own painting (the tap goes on with it)
+  const _feedBack = ()=>{
+    if(feedAt<0 || feedFly) return;
+    if(feedAt>0){ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
+      setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
+      setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
+      const pv=feedCards[feedAt-1]; setFeedAt(feedAt-1); setFeedIntro(null); _feedGo(pv); _feedFlashNow(); _stBuzz(8);
+      if(holdPausedRef.current && feedLoaded!==null) setTimeout(()=>{ if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} } }, 220);
+      return; }
+    const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music'), own = !!mine && (mine==='image' ? hasImageDraft : hasMusicDraft);
+    if(!own && !homeArt){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }   // nothing of yours yet: the card just gives
+    setFeedIntro(null); setFeedFly({k:Date.now(), u:_feedSnap(), t:_feedTitle(c), l:'', dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
+    _feedExit(); if(own) setHomeSide(mine); _stBuzz(8);
+  };
   // ⤢ on a playing card: full screen — it plays on, and from now on it is your painting
   const _feedOpen = ()=>{ feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
@@ -15664,6 +15684,7 @@ Hard requirements:
           const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }
+          if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedBack(); return; }   // down: back (the previous surprise, then your painting)
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
@@ -15705,8 +15726,8 @@ Hard requirements:
                   {_smp && (<span className="pf-sh-chip" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>)}
-                {feedFly && feedFly.dir!=='down' && (feedFly.u || feedFly.t) && (
-                <div key={feedFly.k} className={'pf-sh-art pf-sh-fly'+(feedFly.dir==='l' ? ' l' : feedFly.dir==='r' ? ' r' : '')} aria-hidden="true">
+                {feedFly && (feedFly.u || feedFly.t) && (
+                <div key={feedFly.k} className={'pf-sh-art pf-sh-fly'+(feedFly.dir==='l' ? ' l' : feedFly.dir==='r' ? ' r' : feedFly.dir==='down' ? ' d' : '')} aria-hidden="true">
                   {feedFly.u && (<img src={feedFly.u} alt=""/>)}
                   {(feedFly.t || feedFly.l) && (<div className="pf-sh-cap">{feedFly.t && (<div className="pf-sh-cap-t">{feedFly.t}</div>)}{feedFly.l && (<div className="pf-sh-cap-l">{feedFly.l}</div>)}</div>)}
                 </div>)}
