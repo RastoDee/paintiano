@@ -1405,6 +1405,40 @@ async function myMusicCompact(){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// §1.5b  MY IMAGES — IndexedDB (5 slots: the picture as a JPEG blob + a small thumb), the twin of My Music
+// ─────────────────────────────────────────────────────────────────────────────
+const MY_IMG_DB='paintiano-myimages', MY_IMG_STORE='images', MY_IMG_MAX=5;
+let _myImgDbPromise=null;
+function myImgOpen(){
+  if(_myImgDbPromise) return _myImgDbPromise;
+  _myImgDbPromise = new Promise((resolve, reject)=>{ try{ const req=indexedDB.open(MY_IMG_DB, 1);
+    req.onupgradeneeded=()=>{ const db=req.result; if(!db.objectStoreNames.contains(MY_IMG_STORE)) db.createObjectStore(MY_IMG_STORE, { keyPath:'id' }); };
+    req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }catch(err){ reject(err); } });
+  return _myImgDbPromise;
+}
+async function myImgList(){
+  try{ const db=await myImgOpen(); return await new Promise((resolve)=>{ const req=db.transaction(MY_IMG_STORE,'readonly').objectStore(MY_IMG_STORE).getAll();
+    req.onsuccess=()=>{ const byId=new Map((req.result||[]).map(r=>[r.id,r])); const out=[]; for(let i=1;i<=MY_IMG_MAX;i++) out.push(byId.get(i)||{id:i, empty:true}); resolve(out); };
+    req.onerror=()=>resolve([]); }); }catch(_){ return []; }
+}
+async function myImgSaveToSlot(id, {name, blob, thumb}){
+  if(!Number.isInteger(id) || id<1 || id>MY_IMG_MAX || !(blob instanceof Blob)) return null;
+  try{ const db=await myImgOpen(); const rec={ id, name:(name||'Untitled').toString().slice(0,120), blob, thumb:thumb||'', sizeBytes:blob.size, addedAt:Date.now() };
+    await new Promise((resolve, reject)=>{ const tx=db.transaction(MY_IMG_STORE,'readwrite'); tx.objectStore(MY_IMG_STORE).put(rec); tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error); });
+    return rec; }catch(_){ return null; }
+}
+async function myImgDelete(id){
+  try{ const db=await myImgOpen(); await new Promise((resolve)=>{ const tx=db.transaction(MY_IMG_STORE,'readwrite'); tx.objectStore(MY_IMG_STORE).delete(id); tx.oncomplete=()=>resolve(); tx.onerror=()=>resolve(); }); return true; }catch(_){ return false; }
+}
+async function myImgFirstEmpty(){ const l=await myImgList(); const e=l.find(r=>r.empty); return e ? e.id : null; }
+async function myImgCompact(){
+  try{ const db=await myImgOpen(); const raw=await new Promise((resolve)=>{ const req=db.transaction(MY_IMG_STORE,'readonly').objectStore(MY_IMG_STORE).getAll(); req.onsuccess=()=>resolve(req.result||[]); req.onerror=()=>resolve([]); });
+    const occ=raw.slice().sort((a,b)=>a.id-b.id); if(occ.every((r,i)=>r.id===i+1)) return true;
+    await new Promise((resolve)=>{ const tx=db.transaction(MY_IMG_STORE,'readwrite'); const st=tx.objectStore(MY_IMG_STORE); st.clear(); occ.forEach((r,i)=>st.put({...r, id:i+1})); tx.oncomplete=()=>resolve(); tx.onerror=()=>resolve(); });
+    return true; }catch(_){ return false; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // §1.6  FAVORITES — IndexedDB (painting addresses, no limit)
 // ─────────────────────────────────────────────────────────────────────────────
 // A favorite is a painting's ADDRESS, not a picture: the song's notes (kept once
