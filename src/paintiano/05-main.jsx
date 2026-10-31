@@ -1755,7 +1755,7 @@ const STUDIO_FX_CSS = `
 @keyframes pfStPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 .pf-st-bar{position:fixed;left:0;right:0;z-index:10001;display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));pointer-events:none}
 .pf-st-bar:has(.pf-st-meta.hide)::before{opacity:.45}
-.pf-st-bar::before{transition:opacity .6s ease;content:"";position:absolute;left:0;right:0;top:0;bottom:-40px;background:linear-gradient(180deg,rgba(6,6,12,0),rgba(6,6,12,.72));z-index:-1}
+.pf-st-bar::before{transition:opacity .6s ease;content:"";position:absolute;left:0;right:0;top:0;bottom:calc(-1 * (env(safe-area-inset-bottom, 0px) + 140px));background:linear-gradient(180deg,rgba(6,6,12,0) 0,rgba(6,6,12,.72) calc(100% - env(safe-area-inset-bottom, 0px) - 140px),rgba(6,6,12,.72) 100%);z-index:-1}   /* down to the screen's very edge: no seam under the buttons (full display) */
 .pf-st-meta{width:100%;max-width:520px;text-align:center;color:#f2eee8;text-shadow:0 1px 8px rgba(0,0,0,.8)}
 .pf-st-meta{transition:opacity .6s ease, transform .6s ease}
 .pf-st-meta [role="button"],.pf-st-meta button{pointer-events:auto;padding:8px 6px;margin:-8px -6px;-webkit-tap-highlight-color:transparent}   /* ✦ Signature, the artist of the day: the lines' own buttons work (the bar lets the rest through to the painting) */
