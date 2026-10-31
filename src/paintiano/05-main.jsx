@@ -14121,6 +14121,11 @@ Hard requirements:
     if((k==='mic' && !hasMicDraft && !micActive && !micArmed) || (k==='compose' && !hasComposeDraft && !composeMode)){
       setHomeArt(null); try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} } },[homeArt, hasMicDraft, hasComposeDraft, micActive, micArmed, composeMode]);
   // the whole painting of the piece on screen, painted at once (as the Favorites do) — for a card left before the piece is done
+  // the canvas still clean: one color wall to wall (a few faint marks at most) — only then the home shows the whole painting instead
+  const _canvasBlank = (cv)=>{ try{ if(!cv || !cv.width || !cv.height) return true; const n=40, c=document.createElement('canvas'); c.width=n; c.height=n; const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(cv,0,0,n,n); const d=x.getImageData(0,0,n,n).data;
+    const cnt=new Map(); let bk=0, best=0; for(let i=0;i<d.length;i+=4){ const k=((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5); const v=(cnt.get(k)||0)+1; cnt.set(k,v); if(v>best){ best=v; bk=k; } }
+    let r=0,g=0,b=0,m=0; for(let i=0;i<d.length;i+=4){ if((((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5))===bk){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; m++; } } r/=m; g/=m; b/=m;
+    let near=0; for(let i=0;i<d.length;i+=4){ if(Math.abs(d[i]-r)+Math.abs(d[i+1]-g)+Math.abs(d[i+2]-b) <= 42) near++; } return near/(n*n) > 0.99; }catch(_){ return false; } };
   const _fullPaintCanvas = ()=>{ try{
     if(!chords.length || composeMode || micActive || viewMode==='image') return null;
     const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
@@ -14152,7 +14157,7 @@ Hard requirements:
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
       if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ return save(shrink(on, on.naturalWidth, on.naturalHeight)); } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
       const cv=canvasRef.current; if(!cv) return;
-      if(disp < chords.length*0.15){ const full=_fullPaintCanvas(); if(full) return save(shrink(full, full.width, full.height)); }   // left at the very start (the canvas nearly empty): the whole painting; otherwise as far as it got — the tap goes on from there
+      if(_canvasBlank(cv)){ const full=_fullPaintCanvas(); if(full) return save(shrink(full, full.width, full.height)); }   // left on a clean canvas: the whole painting; otherwise as far as it got, even a few shapes — the tap goes on from there
       return save(shrink(cv, cv.width, cv.height));
     }catch(_){}
   };
@@ -14530,7 +14535,7 @@ Hard requirements:
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
     // after the first surprise the colour card never comes back: with no painting of yours, the home keeps the surprise you just left
-    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=(c.kind!=='img' && disp < chords.length*0.15 && _fullPaintUrl()) || _feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=(c.kind!=='img' && _canvasBlank(canvasRef.current) && _fullPaintUrl()) || _feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look

@@ -23989,7 +23989,6 @@ const STUDIO_FX_CSS = `
 .pf-st-meta-l{font-size:12px;letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-st-meta-e{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;color:#f3ead2}
 .pf-st-acts{display:flex;align-items:center;justify-content:center;gap:22px;transition:margin .25s ease}
-.pf-st-acts.tip{margin-top:46px}
 .pf-st-act{pointer-events:auto;width:48px;height:48px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(242,238,232,.2);color:#f2eee8;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s, opacity .2s}
 .pf-st-act:active{transform:scale(.9)}
 .pf-st-act:disabled{opacity:.4;cursor:default}
@@ -24255,18 +24254,17 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-stage{position:absolute;inset:0;padding:0;z-index:1;border-radius:26px 26px 0 0;overflow:hidden;transform:translateZ(0)}
 .pf-st-home .pf-sh-stage::after{content:"";position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 120px);background:radial-gradient(42% 100% at 50% 0%,rgba(6,6,12,.62),rgba(6,6,12,0));pointer-events:none;z-index:4}
 .pf-st-home .pf-sh-card{position:absolute;inset:0;height:auto;max-height:none;aspect-ratio:auto}
-.pf-st-home .pf-sh-card .pf-sh-art{border-radius:0;border:0;box-shadow:none;animation:none;transform:none}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in{animation:pfFsIn .34s cubic-bezier(.2,.8,.2,1)}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inl{animation:pfFsInL .32s ease-out}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inr{animation:pfFsInR .32s ease-out}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-peek,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-breathe{animation:none!important}
+.pf-st-home .pf-sh-card .pf-sh-art{border-radius:0;border:0;box-shadow:none;animation:none!important;transform:none}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in{animation:pfFsIn .34s cubic-bezier(.2,.8,.2,1)!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inl{animation:pfFsInL .32s ease-out!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inr{animation:pfFsInR .32s ease-out!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly{animation:pfFsFly .34s cubic-bezier(.2,.8,.2,1) forwards!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.l{animation-name:pfFsFlyL!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.r{animation-name:pfFsFlyR!important}
-.pf-st-home .pf-sh-card.press .pf-sh-art{animation:pfFsPress .28s ease-out!important}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-back{animation:pfFsBack .34s cubic-bezier(.2,.8,.2,1)}
+.pf-st-home .pf-sh-card.press{animation:pfFsPress .28s ease-out}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-back{animation:pfFsBack .34s cubic-bezier(.2,.8,.2,1)!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.d{animation-name:pfFsFlyD!important}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-bumpd{animation:pfFsBumpD .26s ease-out!important}
+.pf-st-home .pf-sh-card.bumpd{animation:pfFsBumpD .26s ease-out}
 @keyframes pfFsBack{from{transform:translateY(-100%)}to{transform:none}}
 @keyframes pfFsFlyD{from{transform:none}to{transform:translateY(100%)}}
 @keyframes pfFsBumpD{0%,100%{transform:none}40%{transform:translateY(14px)}}
@@ -24283,7 +24281,7 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-tap{top:50%}
 .pf-st-home .pf-sh-prog{bottom:env(safe-area-inset-bottom,0px);z-index:7}
 .pf-st-home .pf-sh-heart{top:50%}
-@media (prefers-reduced-motion: reduce){.pf-st-home .pf-sh-card .pf-sh-art{animation:none!important}}
+@media (prefers-reduced-motion: reduce){.pf-st-home .pf-sh-card,.pf-st-home .pf-sh-card .pf-sh-art,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inl,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inr,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-back{animation:none!important}}
 `;
 const STUDIO_COMP_MONO = {chopin:['Ch','#5a3f8a'],satie:['Sa','#3f7a8a'],gershwin:['Ge','#8a6a3f'],glass:['Gl','#3f8a5e'],vine:['Vi','#8a3f5e'],yiruma:['Yi','#6a8a3f'],bach:['Ba','#8a7a3f'],beethoven:['Be','#3f5a8a'],debussy:['De','#3f8a8a'],rachmaninov:['Ra','#8a3f3f'],einaudi:['Ei','#7a3f8a'],hisaishi:['Hi','#3f8a7a'],mozart:['Mo','#8a5e3f'],schubert:['Sch','#5e8a3f'],tchaikovsky:['Tch','#3f3f8a']};
 function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mode, ph, noGround, pxScale){
@@ -37922,14 +37920,14 @@ Hard requirements:
             <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
-              <div className={'pf-sh-card'+(feedBurst ? ' press' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
+              <div className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
                 {_smp && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
                 {feedBurst && (<span key={feedBurst.k} className="pf-sh-burst" aria-hidden="true" style={{left:feedBurst.x, top:feedBurst.y}}>{Array.from({length:12},(_,i)=>{ const a=i/12*Math.PI*2, d=46+((i*37)%5)*9; return (<i key={i} style={{'--dx':Math.round(Math.cos(a)*d)+'px','--dy':Math.round(Math.sin(a)*d)+'px', animationDelay:((i%3)*25)+'ms'}}/>); })}</span>)}
                 {!!FC && _fTapCue && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
-                <div key={FC.id} className={'pf-sh-art '+(FC.dir==='d' ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(feedUpCue && !feedFly && !feedBump ? ' pf-sh-peek' : '')}>
+                <div key={FC.id} className={'pf-sh-art '+(FC.dir==='d' ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')}>
                   {feedUpCue && (<span className="pf-sh-up" aria-hidden="true">{[0,1].map(i=>(<svg key={i} width="26" height="14" viewBox="0 0 26 14"><path d="M3 12L13 3l10 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg>))}</span>)}
                   {_fL && FC.u && (<img src={FC.u} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>)}
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
@@ -37946,7 +37944,7 @@ Hard requirements:
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
                 </div>) : (
-                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(!feedFly && !feedBump && _fLiftCue ? ' pf-sh-peek' : '')}>
+                <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')}>
                                     {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><img src="/gallery/gallery-06-stella.webp" alt="" style={{opacity:1,animation:'none'}}/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
@@ -37968,8 +37966,8 @@ Hard requirements:
               return (
               <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
                 {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-                {(_mt || _ml) && (<div className={'pf-st-meta'+(metaHide?' hide':'')}>{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>)}
-                <div className={'pf-st-acts'+(stTip==='chg'?' tip':'')}>
+                {(_mt || _ml) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg')?' hide':'')}>{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>)}
+                <div className="pf-st-acts">
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')} disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
                   <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+(stTip==='chg'?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); setStChg('music'); }}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
                   <button type="button" className="pf-st-act" disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(8); _feedOpen(); setTimeout(()=>setStShare(true), 380); }} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
@@ -39684,13 +39682,13 @@ Hard requirements:
           {!_vr && !_live && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className="pf-st-paused" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
           {!_vr && (<div className="pf-st-bar" style={{bottom:_live ? (stDockH+12)+'px' : 'calc(env(safe-area-inset-bottom, 0px) + 30px)'}}>
             {stTip==='up' && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-            {!_live && (_ttl || _stEmpty) && (<div className={'pf-st-meta'+((metaHide && !_stEmpty)?' hide':'')}>
+            {!_live && (_ttl || _stEmpty) && (<div className={'pf-st-meta'+(((metaHide && !_stEmpty) || stTip==='chg' || stTip==='fav')?' hide':'')}>
               {_stEmpty ? (<div className="pf-st-meta-e">{_stT('chEmpty')}</div>) : (<>
                 <div className="pf-st-meta-t">{_ttl.charAt(0).toUpperCase()+_ttl.slice(1)}</div>
                 <div ref={stCapLinesRef}>{_capLines()}</div>
               </>)}
             </div>)}
-            <div className={'pf-st-acts'+((stTip==='chg' || stTip==='fav')?' tip':'')}>
+            <div className="pf-st-acts">
               <span className="pf-st-tipw">{stTip==='fav' && (<span className="pf-st-tip l" role="status">{pfIcons(_stT('tipFav'))}</span>)}<button type="button" className={'pf-st-act pf-st-fav'+(favHitAny?' on':'')+((stFavPend && !favReadyAny)?' pend':'')} onClick={_go(()=>{ _tipDone('fav'); if(_live){ if(favReadyAny) _favToggleAny(); } else _stHeartTap(); })} disabled={!_stHasArt || (_live && !favReadyAny)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny}>{_heart}</button></span>
               <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+((_stEmpty || stTip==='chg')?' glow':'')} onClick={_go(()=>{ _tipDone('chg'); _stShow(null); setStChg(stTip==='chg' ? 'music' : (_stHasArt ? 'paint' : 'music')); })}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
               <button type="button" className="pf-st-act" onClick={_go(()=>{ setStShare(true); })} disabled={!_stHasArt} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
