@@ -39416,6 +39416,7 @@ Hard requirements:
                 <span>{imgAiBusy ? _stT('mfiRead') : _sent(((t('moodNames')||{})[currentMood]) || currentMood || '')}</span>
               </div>)}
           </div>)}
+        {err && !working && (<div role="alert" style={{position:'fixed',left:'max(16px, env(safe-area-inset-left, 0px))',right:'max(16px, env(safe-area-inset-right, 0px))',top:'calc(env(safe-area-inset-top, 0px) + 16px)',maxWidth:460,margin:'0 auto',zIndex:10004,display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',borderRadius:16,background:'rgba(14,12,22,.94)',border:'1px solid '+(errInfo?'rgba(240,215,138,.3)':'rgba(255,120,120,.35)'),color:'#f3ead2',fontSize:(13.5*effScale)+'px',lineHeight:1.4,boxShadow:'0 14px 40px rgba(0,0,0,.5)'}}><span style={{flex:1,minWidth:0,overflowWrap:'anywhere'}}>{err}</span><button type="button" onClick={()=>{setErr('');setErrInfo(false);}} aria-label="dismiss" style={{flexShrink:0,width:28,height:28,borderRadius:'50%',border:'1px solid rgba(255,255,255,.18)',background:'transparent',color:'#fff',cursor:'pointer',lineHeight:1}}>✕</button></div>)}   {/* the Studio's own error line: the page's one sits under the painting */}
         {working && !_stMfiPic && (()=>{ const _wl=String(wLabel||''); const k=/transcrib/i.test(_wl) ? 'wkA' : /score|mxl|pars/i.test(_wl) ? 'wkS' : 'wkC';
           const _ttl = moodContext ? _sent(((t('moodNames')||{})[currentMood]) || songQ || currentMood || '') : (midiName || audioName || '');
           const _art = chords.length>0 || (viewMode==='image' && !!originalImgUrl);
