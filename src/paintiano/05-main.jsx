@@ -14070,6 +14070,20 @@ Hard requirements:
   useEffect(()=>{ if(!homeArt) return; const k=homeArt.k;
     if((k==='mic' && !hasMicDraft && !micActive && !micArmed) || (k==='compose' && !hasComposeDraft && !composeMode)){
       setHomeArt(null); try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} } },[homeArt, hasMicDraft, hasComposeDraft, micActive, micArmed, composeMode]);
+  // the whole painting of the piece on screen, painted at once (as the Favorites do) — for a card left before the piece is done
+  const _fullPaintCanvas = ()=>{ try{
+    if(!chords.length || composeMode || micActive || viewMode==='image') return null;
+    const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
+    const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
+    if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
+    const fv={ style:st||null, keys, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0,
+      cap:(proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
+      mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null,
+      dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive };
+    const lay=_favLayout(fv, chords); if(!lay) return null;
+    const c=document.createElement('canvas'); return _favPaint(c, fv, {chords}, 1, tone, lay) ? c : null;
+  }catch(_){ return null; } };
+  const _fullPaintUrl = ()=>{ const c=_fullPaintCanvas(); if(!c || !c.width || !c.height) return null; try{ const W=Math.min(720, c.width), H=Math.round(c.height*W/c.width); const o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(c,0,0,W,H); return o.toDataURL('image/jpeg',0.82); }catch(_){ return null; } };
   const _captureHomeArt = ()=>{
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
@@ -14087,7 +14101,9 @@ Hard requirements:
         _homeBySave(_k, o); try{ const im=new Image(); im.src=u; return im.decode ? im.decode().catch(()=>{}) : null; }catch(_){ return null; } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
       if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ return save(shrink(on, on.naturalWidth, on.naturalHeight)); } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
-      const cv=canvasRef.current; if(!cv) return; return save(shrink(cv, cv.width, cv.height));
+      const cv=canvasRef.current; if(!cv) return;
+      if(disp < chords.length){ const full=_fullPaintCanvas(); if(full) return save(shrink(full, full.width, full.height)); }   // left before the end: the card still shows the whole painting
+      return save(shrink(cv, cv.width, cv.height));
     }catch(_){}
   };
   // a piece painted to the end in the Studio becomes the home painting
@@ -14443,7 +14459,7 @@ Hard requirements:
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
     // after the first surprise the colour card never comes back: with no painting of yours, the home keeps the surprise you just left
-    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=_feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=(c.kind!=='img' && _fullPaintUrl()) || _feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
@@ -15594,7 +15610,6 @@ Hard requirements:
               <div className={'pf-sh-card'+(feedBurst ? ' press' : '')} onTouchStart={_fTS} onTouchEnd={_fTE}>
                 {_smp && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
                 {feedBurst && (<span key={feedBurst.k} className="pf-sh-burst" aria-hidden="true" style={{left:feedBurst.x, top:feedBurst.y}}>{Array.from({length:12},(_,i)=>{ const a=i/12*Math.PI*2, d=46+((i*37)%5)*9; return (<i key={i} style={{'--dx':Math.round(Math.cos(a)*d)+'px','--dy':Math.round(Math.sin(a)*d)+'px', animationDelay:((i%3)*25)+'ms'}}/>); })}</span>)}
-                {!_smp && _fTapCue && !FC && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 {!!FC && _fTapCue && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
