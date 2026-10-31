@@ -1,5 +1,5 @@
 import * as Tone from "tone";
-import { useState, useRef, useEffect, useCallback, useMemo, memo, Fragment } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, memo, Fragment } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §1  CONSTANTS & MATH UTILITIES

@@ -13597,7 +13597,7 @@ Hard requirements:
     upd(); let ro=null; try{ ro=new ResizeObserver(upd); ro.observe(el); }catch(_){}
     return ()=>{ try{ ro && ro.disconnect(); }catch(_){} };
   },[studioLive, composeMode]);
-  useEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);
+  useLayoutEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);   // before the paint: never a frame of the Atelier on the way into the Studio
   const [stSide, setStSide] = useState(null);            // null | 'right' | 'left' | 'top' — which rail is out
   const [stInfo, setStInfo] = useState(false);          // the rail came out by itself on a fresh piece: the top line comes along
   const stSideRef = useRef(null); useEffect(()=>{ stSideRef.current = stSide; },[stSide]);
@@ -13996,10 +13996,10 @@ Hard requirements:
         else if(_k==='mood' && currentMood && MOODS.includes(currentMood)) _r={s:'mood', m:currentMood};
       }catch(_){}
       const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
-        _homeBySave(_k, o); };
+        _homeBySave(_k, o); try{ const im=new Image(); im.src=u; return im.decode ? im.decode().catch(()=>{}) : null; }catch(_){ return null; } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
-      if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ save(shrink(on, on.naturalWidth, on.naturalHeight)); return; } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
-      const cv=canvasRef.current; if(!cv) return; save(shrink(cv, cv.width, cv.height));
+      if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ return save(shrink(on, on.naturalWidth, on.naturalHeight)); } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
+      const cv=canvasRef.current; if(!cv) return; return save(shrink(cv, cv.width, cv.height));
     }catch(_){}
   };
   // a piece painted to the end in the Studio becomes the home painting
@@ -14144,8 +14144,11 @@ Hard requirements:
   // at home (the take in progress, or a fresh one); Home is the home screen itself.
   const [stNew, setStNew] = useState(false);
   const _stPaused = (go)=>{ if(playing && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} setTimeout(go, 160); } else go(); };
-  const _stHome = ()=>{ setStNew(false); try{ _captureHomeArt(); }catch(_){} _imageFromMusicRef.current=false; _musicFromImageRef.current=false; if(backBtnRef.current) backBtnRef.current.click(); };
-  const _stViaHome = (sel)=>{ _stHome(); setTimeout(()=>{ const el=document.querySelector(sel); if(el && !el.disabled) el.click(); }, 140); };
+  const _stHome = ()=>{ setStNew(false); let pr=null; try{ pr=_captureHomeArt(); }catch(_){} _imageFromMusicRef.current=false; _musicFromImageRef.current=false;
+    // home once its card's picture is ready (a frame or two): the card never shows up empty
+    return new Promise(res=>{ let gone=false; const go=()=>{ if(gone) return; gone=true; if(backBtnRef.current) backBtnRef.current.click(); res(); };
+      if(pr && pr.then){ pr.then(go, go); setTimeout(go, 220); } else go(); }); };
+  const _stViaHome = (sel)=>{ _stHome().then(()=>setTimeout(()=>{ const el=document.querySelector(sel); if(el && !el.disabled) el.click(); }, 140)); };
   const _stNewSrc = (target)=>{ setStNew(false); _stPaused(()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setPickMode(target); }); };
   const _stNewMood = ()=>{ setStNew(false); _stPaused(()=>{ setMoodEdit(''); setShowMoodMenu(true); }); };
   // ♥ — two taps (TikTok) put the painting in the favorites; while it is still being painted, the moment it is done
@@ -14187,7 +14190,7 @@ Hard requirements:
     }catch(_){}
     if(!rolled) return;
     setStFavPend(false);
-    _stBuzz(12); _stSlide();
+    _stBuzz(12); if(viewMode!=='image') _stSlide();   // a picture does not change on ↑ (only who plays it): no slide, no blink
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
   };
@@ -14628,7 +14631,7 @@ Hard requirements:
     if(stripOpen){ setStripOpen(false); return; }
     if(stSideRef.current){ _stShow(null); return; }
     if(recording) return;
-    if(backBtnRef.current){ try{ _captureHomeArt(); }catch(_){} backBtnRef.current.click(); }
+    if(backBtnRef.current){ let pr=null; try{ pr=_captureHomeArt(); }catch(_){} let gone=false; const go=()=>{ if(gone) return; gone=true; if(backBtnRef.current) backBtnRef.current.click(); }; if(pr && pr.then){ pr.then(go, go); setTimeout(go, 220); } else go(); }
   };
   useEffect(()=>{
     if(!stArmOn) return;

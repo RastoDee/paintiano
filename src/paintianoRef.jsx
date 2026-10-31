@@ -1,5 +1,5 @@
 import * as Tone from "tone";
-import { useState, useRef, useEffect, useCallback, useMemo, memo, Fragment } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, memo, Fragment } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §1  CONSTANTS & MATH UTILITIES
@@ -35786,7 +35786,7 @@ Hard requirements:
     upd(); let ro=null; try{ ro=new ResizeObserver(upd); ro.observe(el); }catch(_){}
     return ()=>{ try{ ro && ro.disconnect(); }catch(_){} };
   },[studioLive, composeMode]);
-  useEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);
+  useLayoutEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);   // before the paint: never a frame of the Atelier on the way into the Studio
   const [stSide, setStSide] = useState(null);            // null | 'right' | 'left' | 'top' — which rail is out
   const [stInfo, setStInfo] = useState(false);          // the rail came out by itself on a fresh piece: the top line comes along
   const stSideRef = useRef(null); useEffect(()=>{ stSideRef.current = stSide; },[stSide]);
@@ -35796,6 +35796,15 @@ Hard requirements:
   const stDoneKeepRef = useRef(false);   // the finished painting: when its rail goes, the line on top stays
   // Morph: blend the current mood through _ms (up to three moods, in order); [] goes back to the plain mood.
   // _close: the Classic dialog closes on its Morph button; the Studio sheet stays open and re-morphs on every tap.
+  // the Morph sheet is quiet: the piece pauses while you choose, and plays (the new blend from the top) when it closes
+  const morphQuietRef = useRef(false), morphPlayRef = useRef(false), morphAppliedRef = useRef(false);
+  useEffect(()=>{
+    if(showMorphMenu){ morphQuietRef.current=true; morphAppliedRef.current=false; morphPlayRef.current = playingRef.current || holdPausedRef.current;
+      if(playingRef.current && !holdPausedRef.current){ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} } return; }
+    if(!morphQuietRef.current) return; morphQuietRef.current=false;
+    const play=morphPlayRef.current, applied=morphAppliedRef.current; morphPlayRef.current=false; morphAppliedRef.current=false; if(!play) return;
+    setTimeout(()=>{ try{ if(applied){ resumeFromRef.current=0; startPlayRef.current && startPlayRef.current(); } else if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){} }, 120);
+  },[showMorphMenu]);
   const _morphApply = (_ms, _close)=>{
     // Capture whether playback was active (playing OR paused) BEFORE
     // stopAll below — if so, the morph result auto-plays from the top.
@@ -35821,6 +35830,7 @@ Hard requirements:
       const bytes=encodeMidi(evts,song.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
       setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
+      if(morphQuietRef.current){ morphAppliedRef.current=true; return; }   // the sheet is open: it plays when it closes
       if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
       return;
     }
@@ -35844,6 +35854,7 @@ Hard requirements:
     const bytes=encodeMidi(evts,morphed.tempo||100);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
+    if(morphQuietRef.current){ morphAppliedRef.current=true; return; }   // the sheet is open: it plays when it closes
     if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
   };
   const _stShow = (w)=>{ if(!w && stEmptyRef.current) w='left'; setStInfo(false); setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
@@ -36174,10 +36185,10 @@ Hard requirements:
         else if(_k==='mood' && currentMood && MOODS.includes(currentMood)) _r={s:'mood', m:currentMood};
       }catch(_){}
       const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
-        _homeBySave(_k, o); };
+        _homeBySave(_k, o); try{ const im=new Image(); im.src=u; return im.decode ? im.decode().catch(()=>{}) : null; }catch(_){ return null; } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
-      if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ save(shrink(on, on.naturalWidth, on.naturalHeight)); return; } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
-      const cv=canvasRef.current; if(!cv) return; save(shrink(cv, cv.width, cv.height));
+      if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ return save(shrink(on, on.naturalWidth, on.naturalHeight)); } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
+      const cv=canvasRef.current; if(!cv) return; return save(shrink(cv, cv.width, cv.height));
     }catch(_){}
   };
   // a piece painted to the end in the Studio becomes the home painting
@@ -36322,7 +36333,10 @@ Hard requirements:
   // at home (the take in progress, or a fresh one); Home is the home screen itself.
   const [stNew, setStNew] = useState(false);
   const _stPaused = (go)=>{ if(playing && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} setTimeout(go, 160); } else go(); };
-  const _stHome = ()=>{ setStNew(false); try{ _captureHomeArt(); }catch(_){} _imageFromMusicRef.current=false; _musicFromImageRef.current=false; if(backBtnRef.current) backBtnRef.current.click(); };
+  const _stHome = ()=>{ setStNew(false); let pr=null; try{ pr=_captureHomeArt(); }catch(_){} _imageFromMusicRef.current=false; _musicFromImageRef.current=false;
+    // home once its card's picture is ready (a frame or two): the card never shows up empty
+    let gone=false; const go=()=>{ if(gone) return; gone=true; if(backBtnRef.current) backBtnRef.current.click(); };
+    if(pr && pr.then){ pr.then(go, go); setTimeout(go, 220); } else go(); };
   const _stViaHome = (sel)=>{ _stHome(); setTimeout(()=>{ const el=document.querySelector(sel); if(el && !el.disabled) el.click(); }, 140); };
   const _stNewSrc = (target)=>{ setStNew(false); _stPaused(()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setPickMode(target); }); };
   const _stNewMood = ()=>{ setStNew(false); _stPaused(()=>{ setMoodEdit(''); setShowMoodMenu(true); }); };
@@ -36365,7 +36379,7 @@ Hard requirements:
     }catch(_){}
     if(!rolled) return;
     setStFavPend(false);
-    _stBuzz(12); _stSlide();
+    _stBuzz(12); if(viewMode!=='image') _stSlide();   // a picture does not change on ↑ (only who plays it): no slide, no blink
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
   };
