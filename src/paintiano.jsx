@@ -23978,8 +23978,11 @@ const STUDIO_FX_CSS = `
 .pf-st-paused svg{margin-left:4px}
 @keyframes pfStPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 .pf-st-bar{position:fixed;left:0;right:0;z-index:10001;display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));pointer-events:none}
-.pf-st-bar::before{content:"";position:absolute;left:0;right:0;top:0;bottom:-40px;background:linear-gradient(180deg,rgba(6,6,12,0),rgba(6,6,12,.72));z-index:-1}
+.pf-st-bar:has(.pf-st-meta.hide)::before{opacity:.45}
+.pf-st-bar::before{transition:opacity .6s ease;content:"";position:absolute;left:0;right:0;top:0;bottom:-40px;background:linear-gradient(180deg,rgba(6,6,12,0),rgba(6,6,12,.72));z-index:-1}
 .pf-st-meta{width:100%;max-width:520px;text-align:center;color:#f2eee8;text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.pf-st-meta{transition:opacity .6s ease, transform .6s ease}
+.pf-st-meta.hide{opacity:0;transform:translateY(8px);pointer-events:none}
 .pf-st-meta-t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
 .pf-st-meta-l{font-size:12px;letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-st-meta-e{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;color:#f3ead2}
@@ -36637,6 +36640,12 @@ Hard requirements:
   },[stTip, _tipQuiet, favReadyAny, favHitAny]);
   const [feedFly, setFeedFly] = useState(null);     // the card flying off: {k, u, t, l, dir}
   const [feedFlash, setFeedFlash] = useState(0);    // the look's name over the card, for a moment
+  // FULL SCREEN, QUIET: while a full-screen painting plays (the Studio's Full screen, the home's surprise) the song's lines fade after 4 s —
+  // a pause, the next painting, a sheet, anything that changes brings them back; the three buttons stay
+  const [metaHide, setMetaHide] = useState(false);
+  const _metaQuietOk = !!playing && !stChg && !stShare && !stripOpen && !showMine && ((studioFs && stFill && !studioLive) || (studioHome && feedLoaded!==null && feedAt>=0));
+  useEffect(()=>{ setMetaHide(false); if(!_metaQuietOk) return; const tm=setTimeout(()=>setMetaHide(true), 4000); return ()=>clearTimeout(tm);
+  },[_metaQuietOk, feedFlash, feedAt, _swipeFlashKey, style, painterStage.length, imgComposer, info && info.title]);
   const [feedHintN, setFeedHintN] = useState(()=>{ try{ return parseInt(localStorage.getItem('paintiano_feed_hint_n')||'0',10)||0; }catch(_){ return 0; } });
   const feedLookRef = useRef(null);   // your painter · palette before the feed, back when you return to the home card
   const feedStartRef = useRef(null);
@@ -37928,7 +37937,7 @@ Hard requirements:
               return (
               <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
                 {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-                {(_mt || _ml) && (<div className="pf-st-meta">{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>)}
+                {(_mt || _ml) && (<div className={'pf-st-meta'+(metaHide?' hide':'')}>{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>)}
                 <div className={'pf-st-acts'+(stTip==='chg'?' tip':'')}>
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')} disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
                   <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+(stTip==='chg'?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); setStChg('music'); }}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
@@ -39644,7 +39653,7 @@ Hard requirements:
           {!_vr && !_live && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className="pf-st-paused" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
           {!_vr && (<div className="pf-st-bar" style={{bottom:_live ? (stDockH+12)+'px' : 'calc(env(safe-area-inset-bottom, 0px) + 30px)'}}>
             {stTip==='up' && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-            {!_live && (_ttl || _stEmpty) && (<div className="pf-st-meta">
+            {!_live && (_ttl || _stEmpty) && (<div className={'pf-st-meta'+((metaHide && !_stEmpty)?' hide':'')}>
               {_stEmpty ? (<div className="pf-st-meta-e">{_stT('chEmpty')}</div>) : (<>
                 <div className="pf-st-meta-t">{_ttl.charAt(0).toUpperCase()+_ttl.slice(1)}</div>
                 <div ref={stCapLinesRef}>{_capLines()}</div>
