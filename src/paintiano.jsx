@@ -23982,6 +23982,8 @@ const STUDIO_FX_CSS = `
 .pf-st-bar::before{transition:opacity .6s ease;content:"";position:absolute;left:0;right:0;top:0;bottom:-40px;background:linear-gradient(180deg,rgba(6,6,12,0),rgba(6,6,12,.72));z-index:-1}
 .pf-st-meta{width:100%;max-width:520px;text-align:center;color:#f2eee8;text-shadow:0 1px 8px rgba(0,0,0,.8)}
 .pf-st-meta{transition:opacity .6s ease, transform .6s ease}
+.pf-st-meta [role="button"],.pf-st-meta button{pointer-events:auto;padding:8px 6px;margin:-8px -6px;-webkit-tap-highlight-color:transparent}   /* ✦ Signature, the artist of the day: the lines' own buttons work (the bar lets the rest through to the painting) */
+.pf-st-meta.hide [role="button"],.pf-st-meta.hide button{pointer-events:none}
 .pf-st-meta.hide{opacity:0;transform:translateY(8px);pointer-events:none}
 .pf-st-meta-t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
 .pf-st-meta-l{font-size:12px;letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
