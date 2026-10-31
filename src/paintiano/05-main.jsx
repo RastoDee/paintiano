@@ -2030,24 +2030,24 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-stage::after{content:"";position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 120px);background:radial-gradient(42% 100% at 50% 0%,rgba(6,6,12,.62),rgba(6,6,12,0));pointer-events:none;z-index:4}
 .pf-st-home .pf-sh-card{position:absolute;inset:0;height:auto;max-height:none;aspect-ratio:auto}
 .pf-st-home .pf-sh-card .pf-sh-art{border-radius:0;border:0;box-shadow:none;animation:none;transform:none}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in{animation:pfFsIn .32s ease-out}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in{animation:pfFsIn .34s cubic-bezier(.2,.8,.2,1)}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inl{animation:pfFsInL .32s ease-out}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inr{animation:pfFsInR .32s ease-out}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-peek,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-breathe{animation:none!important}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly{animation:pfFsFly .3s cubic-bezier(.4,0,.8,.4) forwards!important}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly{animation:pfFsFly .34s cubic-bezier(.2,.8,.2,1) forwards!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.l{animation-name:pfFsFlyL!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.r{animation-name:pfFsFlyR!important}
 .pf-st-home .pf-sh-card.press .pf-sh-art{animation:pfFsPress .28s ease-out!important}
-.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-back{animation:pfFsBack .32s ease-out}
+.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-back{animation:pfFsBack .34s cubic-bezier(.2,.8,.2,1)}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-fly.d{animation-name:pfFsFlyD!important}
 .pf-st-home .pf-sh-card .pf-sh-art.pf-sh-bumpd{animation:pfFsBumpD .26s ease-out!important}
-@keyframes pfFsBack{from{transform:translateY(-16%);opacity:.3}to{transform:none;opacity:1}}
-@keyframes pfFsFlyD{from{transform:none;opacity:1}to{transform:translateY(100%);opacity:.5}}
+@keyframes pfFsBack{from{transform:translateY(-100%)}to{transform:none}}
+@keyframes pfFsFlyD{from{transform:none}to{transform:translateY(100%)}}
 @keyframes pfFsBumpD{0%,100%{transform:none}40%{transform:translateY(14px)}}
-@keyframes pfFsIn{from{transform:translateY(16%);opacity:.3}to{transform:none;opacity:1}}
+@keyframes pfFsIn{from{transform:translateY(100%)}to{transform:none}}
 @keyframes pfFsInL{from{transform:translateX(28%);opacity:.3}to{transform:none;opacity:1}}
 @keyframes pfFsInR{from{transform:translateX(-28%);opacity:.3}to{transform:none;opacity:1}}
-@keyframes pfFsFly{from{transform:none;opacity:1}to{transform:translateY(-100%);opacity:.5}}
+@keyframes pfFsFly{from{transform:none}to{transform:translateY(-100%)}}
 @keyframes pfFsFlyL{from{transform:none;opacity:1}to{transform:translateX(-100%);opacity:.5}}
 @keyframes pfFsFlyR{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.5}}
 @keyframes pfFsPress{0%{transform:scale(1)}35%{transform:scale(.985)}100%{transform:scale(1)}}
@@ -14562,7 +14562,7 @@ Hard requirements:
     setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
     setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'up'});
     setTimeout(()=>setFeedFly(null), 340);
-    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedAt(feedAt+1); _feedGo(nx); }
+    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedCards(cs=>cs.map(c=>c.id===nx.id ? {...c, dir:'u'} : c)); setFeedAt(feedAt+1); _feedGo(nx); }
     else {
       const piece=feedCards[feedAt].piece, kind=feedCards[feedAt].kind;
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'' };
@@ -14581,8 +14581,8 @@ Hard requirements:
   // ↓ during a surprise: back, as on TikTok — the previous surprise; from the first one your own painting (the tap goes on with it)
   const _feedBack = ()=>{
     if(feedAt<0 || feedFly) return;
-    if(feedAt>0){ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
-      setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
+    if(feedAt>0){ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id, idP=feedCards[feedAt-1].id;
+      setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c.id===idP ? {...c, dir:'d'} : c));   // it comes back from above
       setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
       const pv=feedCards[feedAt-1]; setFeedAt(feedAt-1); setFeedIntro(null); _feedGo(pv); _feedFlashNow(); _stBuzz(8);
       if(holdPausedRef.current && feedLoaded!==null) setTimeout(()=>{ if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} } }, 220);
@@ -15703,8 +15703,9 @@ Hard requirements:
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
-                <div key={FC.id} className={'pf-sh-art '+((feedFly && feedFly.dir==='down') ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(feedUpCue && !feedFly && !feedBump ? ' pf-sh-peek' : '')}>
+                <div key={FC.id} className={'pf-sh-art '+(FC.dir==='d' ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')+(feedBump ? ' pf-sh-bump'+feedBump : '')+(feedUpCue && !feedFly && !feedBump ? ' pf-sh-peek' : '')}>
                   {feedUpCue && (<span className="pf-sh-up" aria-hidden="true">{[0,1].map(i=>(<svg key={i} width="26" height="14" viewBox="0 0 26 14"><path d="M3 12L13 3l10 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg>))}</span>)}
+                  {_fL && FC.u && (<img src={FC.u} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>)}
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   <span key={'ch'+(FC ? FC.id : '')} className="pf-sh-chip fade" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
