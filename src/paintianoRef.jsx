@@ -30196,6 +30196,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ clear(); }catch(_){}
     // …and the Studio home starts over on its sample
     try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} try{ setHomeArt(null); }catch(_){}
+    // …the surprise on the home goes too (its piece was just wiped: it would stay a black card with a title), every mode's last card, and the first time's
+    // arc and hints — after Reset the home is the first screen again, as for someone new
+    try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){}
+    try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); setOneMMode(F.oneMMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
+    try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
+    try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
+    try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
     // Force back to Setup screen even if the caller was mid-flow.
     setForceSetup(false);
     setPickMode(null);
