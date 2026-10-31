@@ -35796,6 +35796,15 @@ Hard requirements:
   const stDoneKeepRef = useRef(false);   // the finished painting: when its rail goes, the line on top stays
   // Morph: blend the current mood through _ms (up to three moods, in order); [] goes back to the plain mood.
   // _close: the Classic dialog closes on its Morph button; the Studio sheet stays open and re-morphs on every tap.
+  // the Morph sheet is quiet: the piece pauses while you choose, and plays (the new blend from the top) when it closes
+  const morphQuietRef = useRef(false), morphPlayRef = useRef(false), morphAppliedRef = useRef(false);
+  useEffect(()=>{
+    if(showMorphMenu){ morphQuietRef.current=true; morphAppliedRef.current=false; morphPlayRef.current = playingRef.current || holdPausedRef.current;
+      if(playingRef.current && !holdPausedRef.current){ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} } return; }
+    if(!morphQuietRef.current) return; morphQuietRef.current=false;
+    const play=morphPlayRef.current, applied=morphAppliedRef.current; morphPlayRef.current=false; morphAppliedRef.current=false; if(!play) return;
+    setTimeout(()=>{ try{ if(applied){ resumeFromRef.current=0; startPlayRef.current && startPlayRef.current(); } else if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){} }, 120);
+  },[showMorphMenu]);
   const _morphApply = (_ms, _close)=>{
     // Capture whether playback was active (playing OR paused) BEFORE
     // stopAll below — if so, the morph result auto-plays from the top.
@@ -35821,6 +35830,7 @@ Hard requirements:
       const bytes=encodeMidi(evts,song.tempo||120);
       setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
       setMidiName(song.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim()+'.mid');
+      if(morphQuietRef.current){ morphAppliedRef.current=true; return; }   // the sheet is open: it plays when it closes
       if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
       return;
     }
@@ -35844,6 +35854,7 @@ Hard requirements:
     const bytes=encodeMidi(evts,morphed.tempo||100);
     setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
     setMidiName(morphed.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'.mid');
+    if(morphQuietRef.current){ morphAppliedRef.current=true; return; }   // the sheet is open: it plays when it closes
     if(_morphWasActive){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
   };
   const _stShow = (w)=>{ if(!w && stEmptyRef.current) w='left'; setStInfo(false); setStSide(w); if(w) _stArm(); else if(stIdleRef.current){ clearTimeout(stIdleRef.current); stIdleRef.current=null; } };
