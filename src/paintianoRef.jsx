@@ -27377,7 +27377,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // ~900px buffer. SS=1 everywhere else → normal & mobile rendering byte-for-byte
     // unchanged. (immersive is declared early, near viewMode, so reading it here is
     // safe — reading it before its declaration was a TDZ crash = black screen.)
-    const SS=((immersive || feedHiRes) && viewMode==='paint')?2:1;
+    const SS=((immersive || feedHiRes) && (viewMode==='paint' || viewMode==='audio'))?2:1;   // an MP3 (and a song from the Mic) is painted as crisply as any piece
     const _bw=Math.max(1,Math.round(CW*SS)), _bh=Math.max(1,Math.round(CH*SS));
     if(cv.width!==_bw) cv.width=_bw;
     if(cv.height!==_bh) cv.height=_bh;

@@ -551,7 +551,8 @@ const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',z
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
 function _takeInfoM(arr){
   if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
-  let nv=96; while(arr.length > nv*0.85) nv*=2;
+  // the Mic's take starts on a plan of 48 (fuller in its first seconds; a concert takes it to 96, 192… — one re-layout each time)
+  let nv=(arr[0] && arr[0].mic) ? 48 : 96; while(arr.length > nv*0.85) nv*=2;
   return { nv };
 }
 function _takePadM(arr){
@@ -12400,7 +12401,7 @@ Hard requirements:
         const startMs=now2-sessionStart.current;
         const durQ=Math.max(0.25,Math.min(4,heldMs/500));
         const paintedNotes=notes.map(n=>({...n,durMs:Math.round(heldMs)}));
-        setChords(p=>{const next=[...p,{n:paintedNotes,idx,startMs,recorded:true,durQ}];return next;});
+        setChords(p=>{const next=[...p,{n:paintedNotes,idx,startMs,recorded:true,mic:1,durQ}];return next;});
         setDisp(p=>p+1);
       };
       // Hybrid event builder:
@@ -12663,7 +12664,7 @@ Hard requirements:
         if(!sessionStart.current)sessionStart.current=now2;
         const startMs=now2-sessionStart.current;
         const durQ=Math.max(0.25,Math.min(4,heldMs/500));
-        setChords(p=>{const next=[...p,{n:[{m:note.m,v:note.v,durMs:Math.round(heldMs)}],idx,startMs,recorded:true,durQ}];return next;});
+        setChords(p=>{const next=[...p,{n:[{m:note.m,v:note.v,durMs:Math.round(heldMs)}],idx,startMs,recorded:true,mic:1,durQ}];return next;});
         setDisp(p=>p+1);
       };
       const tick=()=>{
@@ -14518,7 +14519,7 @@ Hard requirements:
   const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive });
   // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
   const _feedPiece = (kind)=>{ const homeArt=_homeCur(); if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
-    if(!homeArt) return 1; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
+    if(!homeArt) return (Math.random()*3)|0; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
   // the first painting, like Lite's Play: one of four strong openers from your set (Free: the artist of the day, often)
   const _feedOpener = ()=>{ let o=['pollock','kandinsky','kusama','spiral'].filter(k=>setupArtists.includes(k) && !styleIsLocked(k)); if(proStatus==='free' && artistOfDay && Math.random()<0.4) o=[artistOfDay]; return o.length ? o[(Math.random()*o.length)|0] : (setupArtists.find(k=>k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'); };
   const _feedApply = (sel)=>{
