@@ -170,14 +170,7 @@ async function transcribeAudio(audioBuf, onP) {
         return out;
       })()
     : ch0;
-  // A QUIET RECORDING (the Mic's take — a phone's microphone sits far below a mastered file) is brought up to a
-  // mastered level before the analysis, so its notes clear the same thresholds an MP3's do. A mastered file
-  // (peak ≥ 0.5) is left exactly as it was — its transcription, and so its painting, does not change.
-  let data = data0;
-  {
-    let pk = 0; for (let i = 0; i < data0.length; i += 4) { const x = Math.abs(data0[i]); if (x > pk) pk = x; }
-    if (pk > 1e-4 && pk < 0.5) { const g = 0.9 / pk; data = new Float32Array(data0.length); for (let i = 0; i < data0.length; i++) data[i] = data0[i] * g; }
-  }
+  const data = data0;
   const FRAME = 2048, HOP = 512;
   // Total frames = how many complete FRAME-sized windows fit, slid by HOP.
   // The last full frame ends at sample (total-1)*HOP + FRAME, so any audio

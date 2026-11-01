@@ -19136,14 +19136,7 @@ async function transcribeAudio(audioBuf, onP) {
         return out;
       })()
     : ch0;
-  // A QUIET RECORDING (the Mic's take — a phone's microphone sits far below a mastered file) is brought up to a
-  // mastered level before the analysis, so its notes clear the same thresholds an MP3's do. A mastered file
-  // (peak ≥ 0.5) is left exactly as it was — its transcription, and so its painting, does not change.
-  let data = data0;
-  {
-    let pk = 0; for (let i = 0; i < data0.length; i += 4) { const x = Math.abs(data0[i]); if (x > pk) pk = x; }
-    if (pk > 1e-4 && pk < 0.5) { const g = 0.9 / pk; data = new Float32Array(data0.length); for (let i = 0; i < data0.length; i++) data[i] = data0[i] * g; }
-  }
+  const data = data0;
   const FRAME = 2048, HOP = 512;
   // Total frames = how many complete FRAME-sized windows fit, slid by HOP.
   // The last full frame ends at sample (total-1)*HOP + FRAME, so any audio
@@ -25296,8 +25289,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // canvas / lit the wrong source tile when it finally finished. Applied uniformly
   // to all source loaders so they behave the same.
   const loadTokenRef = useRef(0);
-  const loadAudioRef = useRef(null);   // the Mic develops its take through the MP3 path (set once loadAudio exists)
-  const micTakeT0Ref = useRef(0);      // when the Mic's music take started (a take under 4 s stays as painted live)
   const setAudioBlobAndRef = (b) => { audioBlobRef.current=b; setAudioBlob(b); };
   // Set audio element src whenever audioBlob changes
   useEffect(()=>{
@@ -30829,7 +30820,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     finally{if(loadTokenRef.current===myToken){setWorking(false);setWLabel('');setWPct(0);}}
   },[stopAll,applyEvents,t,wipeCanvasNow]);
 
-  useEffect(()=>{ loadAudioRef.current = loadAudio; },[loadAudio]);
   // ── loadFromMyMusic — replay a saved slot ──────────────────────────────────
   // Reconstitutes a File from the IDB blob (name + mime intact) then routes it
   // through the same handler that a fresh upload would use: loadAudio for audio
@@ -34548,21 +34538,6 @@ Hard requirements:
             listenBlobRef.current = { blob, url, type };
             listenChunksRef.current = [];
             setHasMicBlob(true);
-            // DEVELOP THE TAKE — like a photo: the live blocks were a preview; the recording itself now goes
-            // through the very path an MP3 takes (every note by FFT, the real durations and velocities, then
-            // DNA, Signature and the fixed canvas) and comes back as a Music piece, playing its own sound.
-            // Not in Lite, not a take under 4 s, not once you have already left the Mic.
-            if(!basicModeRef.current && draftOwnerRef.current==='listen' && Date.now()-micTakeT0Ref.current>=4000 && loadAudioRef.current && blob.size>2000){
-              try{
-                const ext = /mp4|aac|m4a/.test(type) ? '.m4a' : /ogg/.test(type) ? '.ogg' : /wav/.test(type) ? '.wav' : '.webm';
-                const d=new Date(), nm=(x=>x.charAt(0).toUpperCase()+x.slice(1).toLowerCase())(String(t('mic')||'Mic').replace(/[^\p{L}\p{N} ]/gu,'').trim())+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-                const file=new File([blob], nm+ext, {type});
-                listenStashRef.current=null; setHasMicDraft(!!singStashRef.current);   // the preview is not a draft any more — the piece is
-                setHasMicBlob(false);
-                setTimeout(()=>{ try{ loadAudioRef.current({target:{files:[file], value:''}}); }catch(_){} }, 80);
-                return;
-              }catch(_){}
-            }
             // Decode blob → AudioBuffer in background so Play can start the
             // original recording instantly. Tone shares its rawContext so the
             // decoded buffer is compatible with our playback path.
@@ -34593,7 +34568,7 @@ Hard requirements:
           setHasMicBlob(false); // fresh session — old blob is gone, new one not ready yet
         }
       }catch(_){ /* recording optional — pitch-track still works without it */ }
-      setMicListening(true);setMicArmed(false);setMicContext(true); micTakeT0Ref.current=Date.now();
+      setMicListening(true);setMicArmed(false);setMicContext(true);
       startMicVol();
       stopAll();
       // Continuation (sibling preset or re-entering): preserve canvas.
@@ -34607,7 +34582,7 @@ Hard requirements:
         composedModeRef.current=true;
       }
       let lastCommit=performance.now();
-      const COMMIT_INTERVAL=120; // sample chord identity frequently
+      const COMMIT_INTERVAL=50; // a tone must be heard in two commits in a row (~100 ms) before it is painted
       const MIN_HOLD_MS=100;     // very short — catch quick changes; only filter very brief flickers
       // Adaptive noise gate is the ONLY filter — distinguishes silence/room
       // noise from any audio. Everything that gets past it gets painted, even
@@ -34670,10 +34645,17 @@ Hard requirements:
       // ONE MIC FOR EVERYTHING — the tones a frame holds, picked the way an MP3 is read (pickPitches: peaks over
       // 12 % of the loudest, octave harmonics folded out, up to four): a voice or a whistle gives one tone, a band
       // or a piano its melody, bass and chord — each with its own loudness. No fixed four-note voicing any more.
+      // A tone counts once it has sounded in two commits in a row (~100 ms) — a flicker, a reverb tail or room noise
+      // does not; the strongest three, and nothing under a quarter of the loudest. Fewer, truer blocks.
+      const seen=new Map();   // midi → consecutive commits heard
       const buildEvent=(mag,liveSr)=>{
-        const peaks=pickPitches(mag,liveSr);
-        if(!peaks.length) return null;
-        const notes=peaks.map(p=>({m:p.midi, v:Math.max(45,Math.min(115,Math.round(40+p.mag*75)))})).sort((a,b)=>a.m-b.m);
+        const peaks=pickPitches(mag,liveSr,0.25);
+        const now=new Set(peaks.map(p=>p.midi));
+        for(const k of [...seen.keys()]) if(!now.has(k)) seen.delete(k);
+        for(const p of peaks) seen.set(p.midi,(seen.get(p.midi)||0)+1);
+        const steady=peaks.filter(p=>(seen.get(p.midi)||0)>=2).slice(0,3);
+        if(!steady.length) return null;
+        const notes=steady.map(p=>({m:p.midi, v:Math.max(45,Math.min(115,Math.round(40+p.mag*75)))})).sort((a,b)=>a.m-b.m);
         return { sig:pcSig(notes), notes };
       };
       const tick=()=>{
@@ -34690,7 +34672,7 @@ Hard requirements:
             pendingNotes=null;pendingSig='';
           }
           candSig='';candNotes=null;candCount=0;pendStreak=0;
-          prevMag=null;chromaHist.length=0;
+          prevMag=null;chromaHist.length=0;seen.clear();
           listenRafRef.current=requestAnimationFrame(tick);return;
         }
         if(now-lastCommit>COMMIT_INTERVAL){
