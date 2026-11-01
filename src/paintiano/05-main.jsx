@@ -555,10 +555,10 @@ const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',z
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
 function _takeInfoM(arr){
   if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
-  // a take (Compose, Mic) starts on a plan of 48 on a landscape frame; at its 41st chord the plan doubles to 96 and the frame
-  // turns portrait (see _pfTakePortrait) — then 192… on that portrait frame, one re-layout each time
-  let nv=48; while(arr.length > nv*0.85) nv*=2;
-  return { nv };
+  // a take starts on a landscape frame — the Mic on a plan of 48, Compose on 96; at the first doubling (Mic's 41st chord,
+  // Compose's 82nd) the frame turns portrait (see _pfTakePortrait) — then on that portrait frame, one re-layout each time
+  const base=_pfTakeBase(arr); let nv=base; while(arr.length > nv*0.85) nv*=2;
+  return { nv, port: nv>base };
 }
 function _takePadM(arr){
   const ti=_takeInfoM(arr); if(!ti) return arr;
@@ -4959,8 +4959,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const o = own!==undefined ? own : draftOwnerRef.current;
     if(basicModeRef.current || (legacy && o==='listen')) return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const n = nv!=null ? nv : ((_takeInfo(chordsRef.current)||{}).nv || 48);
-    const port = !legacy && n>=96;   // landscape φ while the plan is 48, portrait 3:4 from 96 (the same frame computeGrid lays the live take on)
+    const _ti = _takeInfo(chordsRef.current)||{};
+    const port = !legacy && (nv!=null ? (typeof nv==='object' ? !!nv.port : nv>=96) : !!_ti.port);   // landscape until the take's plan first doubles, then portrait 3:4   // landscape φ while the plan is 48, portrait 3:4 from 96 (the same frame computeGrid lays the live take on)
     const cw=_pfFrameW(port, Math.min(820, Math.max(360, vp-32)));
     return port ? { CW:Math.round(cw), CH:Math.round(cw*4/3) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
   };
@@ -4987,7 +4987,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _takeGridRef = useRef({ key:'', g:null });
   const _takeGrid = (st, arr)=>{
     const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || _takeSkip(st) || !_takeFrame()) return null;
-    return _planGrid(ti.nv, ti.nv>=96);
+    return _planGrid(ti.nv, !!ti.port);
   };
   const _planGrid = (nv, portrait)=>{
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
@@ -5685,7 +5685,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!g) return null;
     let CW=g.CW, CH=g.CH, pg=null;
     const painter = !!fv.keys || !!(fv.style && fv.style!=='mosaic' && fv.style!=='notes');
-    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg, ti.nv); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, !_lg && ti.nv>=96); } }
+    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg, ti); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, !_lg && !!ti.port); } }
     return { g, pg, CW, CH };
   };
   const [favDim, setFavDim] = useState(null);   // {id, CW, CH} of the favorite on screen, as laid out here
