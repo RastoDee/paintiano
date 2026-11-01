@@ -13802,7 +13802,7 @@ Hard requirements:
   const studioSrcOk = studioOn && isActiveView && !favView && !demoReelOn;
   const studioFs = studioOn && immersive;
   const studioLive = studioFs && studioLiveSrc;
-  const _micGap = (studioLive && !composeMode && !micActive && chords.length>0) ? 204 : 144;   // a finished Mic take shows its name and painter above the buttons
+  const _micGap = 144;   // a finished Mic take's name and palette sit over the painting's lower edge, as in Music — the frame keeps its size after STOP
   // the height of the bottom dock while live: the painting sits in the space above it
   const stDockRef = useRef(null), clearBtnRef = useRef(null), stMicRef = useRef(null), micPresetBtnRef = useRef(null);
   const [stDockH, setStDockH] = useState(0);
