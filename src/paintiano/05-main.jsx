@@ -14329,7 +14329,7 @@ Hard requirements:
     else if(_stHasArt && !studioLive){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
   };
   // one tap on the painting: pause / play; on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
-  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if(studioLive || recording || demoReelOn) return; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };
+  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (composeMode || micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
   useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
   useEffect(()=>{ if(!studioFs){ setStFavPend(false); setStShare(false); setStChg(null); } },[studioFs]);
   // the next painting (a swipe up): the Classic Next — and from a plain Mosaic, a painter drawn from your set;
@@ -17525,7 +17525,7 @@ Hard requirements:
           {stFill && !_live && (<><span className="pf-st-corner l" aria-hidden="true"/><span className="pf-st-corner r" aria-hidden="true"/></>)}   {/* full screen: the top corners rounded, as at home */}
           {!_vr && !stripOpen && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
           {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={_go(_stPeekTap)} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
-          {!_vr && !_live && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
+          {!_vr && (!_live || (!composeMode && !micActive && !(micSong && micSong.phase==='reading'))) && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true" style={_live ? {top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - 144px - '+stDockH+'px) / 2)'} : undefined}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
           {/* the MIC: the take's clock on top (♥ · ✦ Change · share stay where they are everywhere in the Studio) */}
           {!_vr && _live && !composeMode && micActive && micT0>0 && (<div className="pf-mic-clock" aria-live="off"><i aria-hidden="true"/>{(()=>{ const sec=Math.max(0, Math.floor((Date.now()-micT0)/1000)) + 0*micTick; return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); })()}</div>)}
           {!_vr && (<div className="pf-st-bar" style={{bottom:_live ? (stDockH+12)+'px' : 'calc(env(safe-area-inset-bottom, 0px) + 30px)'}}>
