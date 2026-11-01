@@ -5573,10 +5573,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setFavToast(o);
     favToastTimerRef.current=setTimeout(()=>{ favToastTimerRef.current=null; setFavToast(null); }, o.kind==='cleared' ? 7000 : o.kind==='removed' ? 4500 : 2200);
   };
-  // A finished painting on the canvas: everything played is drawn, nothing plays
-  // or records, the piano is closed, and it is a painted canvas (no image scan).
+  // A painting ♥ can keep: a whole piece (a song, a mood — its address is known in full from the first note) at once,
+  // even while it paints; a Compose / Mic take still grows, so it waits until everything played is drawn and nothing plays.
+  // Never while it records, with the piano open, or on an image scan.
   const _favLim = anim ? disp : playing ? disp : holdPaused ? disp : composedModeRef.current ? chords.length : Math.min(disp, chords.length);
-  const favReady = chords.length>0 && _favLim>=chords.length && !playing && !anim && !recording && !composeMode && !micActive && !busy && !working && !demoReelOn && viewMode!=='image' && !imgComposeRef.current && !favView;
+  const _favWhole = !composedModeRef.current && !(chords[0] && chords[0].recorded) && !micActive && !composeMode && !draftOwnerRef.current;
+  const favReady = chords.length>0 && (_favWhole || (_favLim>=chords.length && !playing && !anim)) && !recording && !composeMode && !micActive && !working && !demoReelOn && viewMode!=='image' && !imgComposeRef.current && !favView;
   const _favPk = useMemo(()=> favReady ? _favHash(chords) : null, [favReady, chords]);
   // The address of the painting on screen (see _favAddrKey).
   const _favAddrNow = ()=>{
