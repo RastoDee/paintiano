@@ -12261,7 +12261,9 @@ Hard requirements:
         hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
         const dst = ac.createMediaStreamDestination();
         if(isiOSrec){
-          src.connect(hp); hp.connect(dst);
+          // iPhone: MediaRecorder records the microphone's own stream reliably; through a Web Audio
+          // destination it may hand back an empty file — keep the raw stream (the catch below)
+          throw 0;
         } else {
           const comp = ac.createDynamicsCompressor();
           comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
@@ -12277,7 +12279,7 @@ Hard requirements:
       try{
         const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
         if(MR){
-          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          const cands = /iPad|iPhone|iPod/.test(navigator.userAgent||'') ? ['audio/mp4','audio/webm;codecs=opus','audio/webm',''] : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];   // iPhone: its own AAC first
           let mime = '';
           for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
           const opts = mime ? { mimeType: mime } : undefined;
@@ -12609,7 +12611,9 @@ Hard requirements:
         hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
         const dst = ac.createMediaStreamDestination();
         if(isiOSrec){
-          src.connect(hp); hp.connect(dst);
+          // iPhone: MediaRecorder records the microphone's own stream reliably; through a Web Audio
+          // destination it may hand back an empty file — keep the raw stream (the catch below)
+          throw 0;
         } else {
           const comp = ac.createDynamicsCompressor();
           comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
@@ -12621,7 +12625,7 @@ Hard requirements:
       try{
         const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
         if(MR){
-          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          const cands = /iPad|iPhone|iPod/.test(navigator.userAgent||'') ? ['audio/mp4','audio/webm;codecs=opus','audio/webm',''] : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];   // iPhone: its own AAC first
           let mime = '';
           for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
           const opts = mime ? { mimeType: mime } : undefined;
@@ -17757,16 +17761,11 @@ Hard requirements:
                 </div>
                 <button type="button" className={'pf-mic-rec'+(micActive?' on':'')} onClick={_rec} aria-label={micActive ? 'stop' : 'REC'}><span/></button>
               </div>
-              {/* while it listens: the level; after a take: what you hear, and from the start */}
+              {/* while it listens: the level */}
               <div style={{minHeight:30,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 {micActive ? (
                   <div aria-hidden="true" style={{display:'flex',alignItems:'flex-end',gap:4,height:24}}>
                     {W.map((w,i)=>(<i key={i} style={{display:'block',width:4,borderRadius:2,height:Math.round(4+20*lv*w),background:voice?'rgba(255,130,130,.9)':'rgba(122,179,255,.9)',transition:'height .08s'}}/>))}
-                  </div>
-                ) : (take && _orig) ? (
-                  <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-                    <button type="button" onClick={()=>_pk('.pf-tx-micsrc')} style={_chip}>{playSourceMic==='original' ? 'orig' : 'piano'} ⇄</button>
-                    <button type="button" onClick={()=>_pk('.pf-tx-micre')} aria-label="restart from start" style={_chip}>↺</button>
                   </div>
                 ) : null}
               </div>

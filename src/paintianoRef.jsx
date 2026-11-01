@@ -19125,7 +19125,7 @@ async function transcribeAudio(audioBuf, onP) {
   // to disappear. Taking the channel-wise envelope max preserves every note
   // that exists in either channel. The scratch float allocation cost is the
   // same either way; this is the only hot-path mono mix step.
-  const data = audioBuf.numberOfChannels > 1
+  const data0 = audioBuf.numberOfChannels > 1
     ? (() => {
         const c1 = audioBuf.getChannelData(1);
         const out = new Float32Array(ch0.length);
@@ -19136,6 +19136,14 @@ async function transcribeAudio(audioBuf, onP) {
         return out;
       })()
     : ch0;
+  // A QUIET RECORDING (the Mic's take — a phone's microphone sits far below a mastered file) is brought up to a
+  // mastered level before the analysis, so its notes clear the same thresholds an MP3's do. A mastered file
+  // (peak ≥ 0.5) is left exactly as it was — its transcription, and so its painting, does not change.
+  let data = data0;
+  {
+    let pk = 0; for (let i = 0; i < data0.length; i += 4) { const x = Math.abs(data0[i]); if (x > pk) pk = x; }
+    if (pk > 1e-4 && pk < 0.5) { const g = 0.9 / pk; data = new Float32Array(data0.length); for (let i = 0; i < data0.length; i++) data[i] = data0[i] * g; }
+  }
   const FRAME = 2048, HOP = 512;
   // Total frames = how many complete FRAME-sized windows fit, slid by HOP.
   // The last full frame ends at sample (total-1)*HOP + FRAME, so any audio
@@ -34503,7 +34511,9 @@ Hard requirements:
         hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
         const dst = ac.createMediaStreamDestination();
         if(isiOSrec){
-          src.connect(hp); hp.connect(dst);
+          // iPhone: MediaRecorder records the microphone's own stream reliably; through a Web Audio
+          // destination it may hand back an empty file — keep the raw stream (the catch below)
+          throw 0;
         } else {
           const comp = ac.createDynamicsCompressor();
           comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
@@ -34519,7 +34529,7 @@ Hard requirements:
       try{
         const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
         if(MR){
-          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          const cands = /iPad|iPhone|iPod/.test(navigator.userAgent||'') ? ['audio/mp4','audio/webm;codecs=opus','audio/webm',''] : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];   // iPhone: its own AAC first
           let mime = '';
           for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
           const opts = mime ? { mimeType: mime } : undefined;
@@ -34545,7 +34555,7 @@ Hard requirements:
             if(!basicModeRef.current && draftOwnerRef.current==='listen' && Date.now()-micTakeT0Ref.current>=4000 && loadAudioRef.current && blob.size>2000){
               try{
                 const ext = /mp4|aac|m4a/.test(type) ? '.m4a' : /ogg/.test(type) ? '.ogg' : /wav/.test(type) ? '.wav' : '.webm';
-                const d=new Date(), nm=String(t('mic')||'Mic').replace(/[^\p{L}\p{N} ]/gu,'').trim()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+                const d=new Date(), nm=(x=>x.charAt(0).toUpperCase()+x.slice(1).toLowerCase())(String(t('mic')||'Mic').replace(/[^\p{L}\p{N} ]/gu,'').trim())+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
                 const file=new File([blob], nm+ext, {type});
                 listenStashRef.current=null; setHasMicDraft(!!singStashRef.current);   // the preview is not a draft any more — the piece is
                 setHasMicBlob(false);
@@ -34851,7 +34861,9 @@ Hard requirements:
         hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
         const dst = ac.createMediaStreamDestination();
         if(isiOSrec){
-          src.connect(hp); hp.connect(dst);
+          // iPhone: MediaRecorder records the microphone's own stream reliably; through a Web Audio
+          // destination it may hand back an empty file — keep the raw stream (the catch below)
+          throw 0;
         } else {
           const comp = ac.createDynamicsCompressor();
           comp.threshold.value = -32; comp.knee.value = 12; comp.ratio.value = 2.5;
@@ -34863,7 +34875,7 @@ Hard requirements:
       try{
         const MR = typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
         if(MR){
-          const cands = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];
+          const cands = /iPad|iPhone|iPod/.test(navigator.userAgent||'') ? ['audio/mp4','audio/webm;codecs=opus','audio/webm',''] : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];   // iPhone: its own AAC first
           let mime = '';
           for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
           const opts = mime ? { mimeType: mime } : undefined;
@@ -39999,16 +40011,11 @@ Hard requirements:
                 </div>
                 <button type="button" className={'pf-mic-rec'+(micActive?' on':'')} onClick={_rec} aria-label={micActive ? 'stop' : 'REC'}><span/></button>
               </div>
-              {/* while it listens: the level; after a take: what you hear, and from the start */}
+              {/* while it listens: the level */}
               <div style={{minHeight:30,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 {micActive ? (
                   <div aria-hidden="true" style={{display:'flex',alignItems:'flex-end',gap:4,height:24}}>
                     {W.map((w,i)=>(<i key={i} style={{display:'block',width:4,borderRadius:2,height:Math.round(4+20*lv*w),background:voice?'rgba(255,130,130,.9)':'rgba(122,179,255,.9)',transition:'height .08s'}}/>))}
-                  </div>
-                ) : (take && _orig) ? (
-                  <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-                    <button type="button" onClick={()=>_pk('.pf-tx-micsrc')} style={_chip}>{playSourceMic==='original' ? 'orig' : 'piano'} ⇄</button>
-                    <button type="button" onClick={()=>_pk('.pf-tx-micre')} aria-label="restart from start" style={_chip}>↺</button>
                   </div>
                 ) : null}
               </div>
