@@ -26034,6 +26034,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // 🔀 has two states. Off = the painter you chose, and Next / Play bring more of its variants
   // (randomMode stays on under the hood with an artist chosen — see the effect below). On = ALL:
   // every painter in your set.
+  // the Studio letting go of every chosen painter: ↑ draws from your whole set again (with the Ensemble: whole new Fusions, nothing pinned)
+  const _stAllOn = ()=>{
+    if(!randomMode) _shuffleOn();
+    if(mosaicShuffleLock) setMosaicShuffleLock(false);
+    jamPinsRef.current=[]; setJamPins([]); if(jamOn) setJamAll(true);
+    if(painterStage.length) setPainterStage([]);
+    if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
+  };
   const _cycleArt = ()=>{
     if(working||anim) return;
     if(_artMode!==2){                                               // → on (ALL)
@@ -39225,7 +39233,7 @@ Hard requirements:
                   return;
                 }
                 if(locked && _inSig){ setPaywallReason('settings'); return; }   // a Pro ✦ member on Free: on its own it is Pro
-                if(studioFs && !jamOn && style===k){ _cycleArt(); return; }   // the Studio: the gold one tapped again = let go — ↑ draws from your whole set again
+                if(studioFs && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)){ _stAllOn(); return; }   // the Studio: the last gold one tapped again = let go — ↑ draws from your whole set again
                 // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
                 // must not slide into ALL just because nothing is selected any more).
                 if(_artMode===1 && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)) _shuffleOff();

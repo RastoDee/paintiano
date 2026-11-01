@@ -14400,7 +14400,13 @@ Hard requirements:
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         // ↑ in the Studio = someone else from your set — unless you chose (gold): a chosen painter or Fusion stays, ↑ does nothing (← its variants);
         // with the Ensemble drawing, the gold (pinned) painters stay and ↑ draws new guests
-        if(_artMode===2){ nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
+        if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
+          if(!randomMode) _shuffleOn();
+          const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX);
+          jamPinsRef.current=pins; setJamPins(pins); setJamAll(true);
+          nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true;
+        }
+        else if(_artMode===2){ nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
       }
     }catch(_){}
     if(!rolled) return;
