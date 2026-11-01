@@ -1971,11 +1971,21 @@ function _computeSongCharacter(chords){
   }
   return { energy, dynRange, register, density, weights, tempo, regularity, tension, contour };
 }
+// The canvas shape follows the piece's length: a short piece is painted on a landscape φ frame, a long one on a portrait 3:4 frame.
+// Music decides once by its length (the blocks it paints); a take (Compose, Mic) grows — it starts landscape and flips ONCE to portrait
+// when its plan doubles from 48 to 96 (the 41st chord), never back.
+const PF_LONG_SONG = 64;
+function _pfTakePortrait(n){ return n > 48*0.85; }
+// a portrait frame on a wide (desktop) screen is held to the screen's height
+function _pfFrameW(portrait, w){
+  if(!portrait || typeof window==='undefined' || !(window.innerWidth>=769)) return w;
+  const vh=window.innerHeight||900; return Math.max(300, Math.min(w, Math.floor((vh-260)*3/4)));
+}
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
-  // a song opened from the Mic (its events carry _mic) keeps the Mic's portrait 3:4 frame wherever it is laid out
-  if(Array.isArray(arg) && arg[0] && arg[0]._mic && !(opts && opts.liveMode)) opts = {...(opts||{}), liveMode:true, livePortrait:true};
   const liveMode = !!(opts && opts.liveMode);
+  // a loaded piece (Music, a mood, a sample, a song opened from the Mic) paints on a FIXED frame too — Lite keeps its growing canvas
+  const _fixedLoaded = !liveMode && !(opts && (opts.portraitGrow || opts.liteWide)) && !(typeof window!=='undefined' && window.__pfBasic);
   // STAGE 2: a loaded piece on a wide desktop screen uses a FIXED landscape
   // golden-ratio frame (see the loaded-mode branch below). `fixedFrame` marks
   // any mode that keeps a declared CH and stretches the last row to fill it —
@@ -1995,17 +2005,24 @@ function computeGrid(arg, opts){
   // (placeholder durQ:1 events) has no character, so weights stay absent there.
   const _char = Array.isArray(arg) ? computeSongCharacter(arg) : null;
   const _wts = (_char && _char.weights && _char.weights.length===evs.length) ? _char.weights : null;
-  const _effDurQ = (i)=>{
+  const _effDurQ0 = (i)=>{
     const base = (evs[i] && evs[i].durQ!=null) ? evs[i].durQ : 1;
     return _wts ? base * _wts[i] : base;
   };
-  const totalQ=evs.reduce((s,e,i)=>s+_effDurQ(i),0);
+  // a take's quick taps carry tiny durQ — on its fixed frame they would all crowd one row of thin stripes;
+  // lay the take out by its chord COUNT (durQ keeps the proportions between its notes)
+  const _tq0=evs.reduce((s,e,i)=>s+_effDurQ0(i),0);
+  const _qNorm=(liveMode && !(opts && opts.portraitGrow) && _tq0>0 && _tq0<evs.length) ? evs.length/_tq0 : 1;
+  const _effDurQ = (i)=> _effDurQ0(i)*_qNorm;
+  const totalQ=_tq0*_qNorm;
   // Live mic commits chords with very small durQ, so totalQ stays ~1–2 even
   // after many chords → N=2, rows=1 → a wide 1-row landscape strip. For
   // portraitGrow we size the column/row grid by the CHORD COUNT instead, which
   // grows 1,2,3… so rows climb and the canvas becomes a tall portrait. (totalQ
   // still drives per-cell widths below; only N/rows use the count.)
   const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
+  // the frame's shape: a take by its chord count (it flips once, at 41), a loaded piece by how many blocks it paints
+  const _port = liveMode ? ((opts && opts.livePortrait!==undefined) ? !!opts.livePortrait : _pfTakePortrait(evs.length)) : (_layoutQ >= PF_LONG_SONG);
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
   const _portrait = !!(opts && opts.portraitGrow);
@@ -2020,15 +2037,16 @@ function computeGrid(arg, opts){
     const score=fillRatio*100 - r*0.5;
     if(score>bestScore){bestScore=score; bestN=n;}
   }
-  // The Mic's portrait frame: columns × rows chosen so the blocks keep a Music block's shape (about φ tall),
+  // A fixed frame (landscape φ or portrait 3:4): columns × rows chosen so the blocks keep a Music block's shape (about φ tall),
   // not the widest-row pick — a short take would otherwise be one row of thin stripes.
-  if(opts && opts.livePortrait){
+  if(liveMode || _fixedLoaded){
     let bN=1, bS=-1e9;
-    const nMax=Math.max(2, Math.ceil(Math.sqrt(_layoutQ))+4);
+    const fA=_port ? 4/3 : 1/PHI;   // the frame's height / width
+    const nMax=Math.max(2, Math.ceil(Math.sqrt(_layoutQ)*1.6)+4);
     for(let n=1;n<=nMax;n++){
       const r=Math.max(1,Math.ceil(_layoutQ/n));
       const fill=_layoutQ/(n*r);
-      const asp=(4/3)*n/r;   // a block's height / width in the 3:4 frame
+      const asp=fA*n/r;   // a block's height / width in the frame
       const sc=fill*100 - Math.abs(Math.log(asp/PHI))*40;
       if(sc>bS){ bS=sc; bN=n; }
     }
@@ -2040,22 +2058,18 @@ function computeGrid(arg, opts){
   // Every block keeps the SAME unit width across the canvas (no per-row stretching).
   const scale=(N*rows)/_layoutQ;
   let BW, BH, CW, CH;
-  if(liveMode){
-    // LIVE-MODE FIXED CANVAS FRAME — compose / sing / listen.
-    // Width AND height stay constant regardless of chord count. Width chosen
-    // by viewport (a bit larger than non-live modes since compose paintings
-    // tend to be the focal point), height = width/PHI for golden-ratio frame.
-    // BH (row height) = CH/rows, so adding chords makes rows thinner without
-    // changing canvas shape — the "fixed picture frame" composition surface.
+  if(liveMode || _fixedLoaded){
+    // FIXED CANVAS FRAME — compose / sing / listen AND loaded pieces. Width AND height stay constant as
+    // chords are added; the blocks get smaller. Landscape φ for a short piece, portrait 3:4 for a long one
+    // (a take flips once, at its 41st chord). The frame is taken from the target width, not N×BW, so it
+    // never shifts by a pixel. On a desktop the loaded piece sits in the centre lane.
     const vp=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:540;
-    const targetCW=Math.min(820,Math.max(360,vp-32));
-    BW=Math.max(4,Math.floor(targetCW/N));
-    CW=N*BW;
-    if(opts && opts.livePortrait){ BW=Math.max(4,targetCW/N); CW=Math.round(targetCW); }   // the Mic's frame keeps its width to the pixel too
-    // MIC (voice and music): a portrait 3:4 frame — the shape a Music piece has on the
-    // same screen — fixed from the first note (taken from the target width, not N×BW,
-    // so it never shifts by a pixel); the blocks get smaller as the take grows.
-    CH=(opts && opts.livePortrait) ? Math.round(targetCW*4/3) : Math.max(140,Math.round(CW/PHI));
+    let targetCW=Math.min(820,Math.max(360,vp-32));
+    if(!liveMode && vp>=769){ const paneW=Math.max(320, vp - 2*180 - 2*24 - 56 - 12); targetCW=Math.min(900, paneW); }
+    targetCW=_pfFrameW(_port, targetCW);
+    BW=Math.max(2,targetCW/N);
+    CW=Math.round(targetCW);
+    CH=_port ? Math.round(targetCW*4/3) : Math.max(140,Math.round(targetCW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
   } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){
     // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as
@@ -22819,8 +22833,9 @@ const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',z
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
 function _takeInfoM(arr){
   if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
-  // the Mic's take starts on a plan of 48 (fuller in its first seconds; a concert takes it to 96, 192… — one re-layout each time)
-  let nv=(arr[0] && arr[0].mic) ? 48 : 96; while(arr.length > nv*0.85) nv*=2;
+  // a take (Compose, Mic) starts on a plan of 48 on a landscape frame; at its 41st chord the plan doubles to 96 and the frame
+  // turns portrait (see _pfTakePortrait) — then 192… on that portrait frame, one re-layout each time
+  let nv=48; while(arr.length > nv*0.85) nv*=2;
   return { nv };
 }
 function _takePadM(arr){
@@ -26679,6 +26694,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     }catch(_){ return true; }
   });
   const basicModeRef = useRef(false);
+  try{ if(typeof window!=='undefined') window.__pfBasic = !!basicMode; }catch(_){}   // computeGrid (module level) keeps Lite's growing canvas
   // Lite ⇄ Advanced: an ensemble never travels across the switch — Lite fills
   // its stage only from Surprise, Advanced only from chip taps.
   const _ensModeFirstRef = useRef(true);
@@ -26730,7 +26746,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[basicMode,liteFlipSeen,liteImageMode,chords.length]);
   useEffect(()=>{
     const _wasBasic = basicModeRef.current;
-    basicModeRef.current = basicMode;
+    basicModeRef.current = basicMode; try{ window.__pfBasic = !!basicMode; }catch(_){}
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
     // ZÁSAH 3 — measure Lite→Advanced discovery. Fires only on a real
     // transition out of Lite (not on initial mount), once per flip. Tells us
@@ -27217,13 +27233,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // With a painter on, a take is painted on the frame itself (the grid's few
   // spare pixels stay ground). The Mic (voice and music) has a portrait 3:4 frame;
   // Lite grows its canvas downward instead, so it keeps the grid's own size.
-  const _takeFrame = (own, legacy)=>{   // own: a favorite's authoring mode (else the live one); legacy: a Mic favorite from before its frame
+  const _takeFrame = (own, legacy, nv)=>{   // own: a favorite's authoring mode (else the live one); legacy: a Mic favorite from before its frame; nv: the take's plan
     const o = own!==undefined ? own : draftOwnerRef.current;
     if(basicModeRef.current || (legacy && o==='listen')) return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const cw=Math.min(820, Math.max(360, vp-32));
-    if(_isMicOwn(o) && !legacy) return { CW:cw, CH:Math.round(cw*4/3) };   // the Mic: a portrait frame, as a Music piece has
-    return { CW:cw, CH:Math.max(140, Math.round(cw/PHI)) };
+    const n = nv!=null ? nv : ((_takeInfo(chordsRef.current)||{}).nv || 48);
+    const port = !legacy && n>=96;   // landscape φ while the plan is 48, portrait 3:4 from 96 (the same frame computeGrid lays the live take on)
+    const cw=_pfFrameW(port, Math.min(820, Math.max(360, vp-32)));
+    return port ? { CW:Math.round(cw), CH:Math.round(cw*4/3) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
   };
   // The Mic (voice and music) paints like Compose — one fixed frame, the blocks getting smaller as the take grows —
   // but in the portrait 3:4 frame a Music piece has. Lite keeps its own growing portrait canvas.
@@ -27231,7 +27248,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _liveGridOpts = (own, legacy)=>{
     if(basicModeRef.current) return { liveMode:false, liteWide:true, portraitGrow:!liteImageModeRef.current };
     if(legacy) return { liveMode: own!=='listen' };
-    return { liveMode:true, livePortrait:_isMicOwn(own) };
+    return { liveMode:true };   // the frame follows the take's length (landscape, then portrait from its 41st chord)
   };
   const _takePainter = (st)=> !!(st && st!=='mosaic' && st!=='notes') || (painterStage && painterStage.length>0);
   // Kandinsky and the tile painters (_TAKE_ORIG) painting alone keep their ORIGINAL
@@ -27248,11 +27265,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _takeGridRef = useRef({ key:'', g:null });
   const _takeGrid = (st, arr)=>{
     const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || _takeSkip(st) || !_takeFrame()) return null;
-    return _planGrid(ti.nv, _isMicOwn(draftOwnerRef.current));
+    return _planGrid(ti.nv, ti.nv>=96);
   };
   const _planGrid = (nv, portrait)=>{
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const key=nv+'|'+vp+(portrait ? '|p' : '');
+    const key=nv+'|'+vp+'|'+((typeof window!=='undefined' && window.innerHeight)||0)+(portrait ? '|p' : '');
     if(_takeGridRef.current.key!==key){
       const evs=Array.from({length:nv},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
       let g=null; try{ g=computeGrid(evs,{liveMode:true, livePortrait:!!portrait}); }catch(_){ g=null; }
@@ -27946,7 +27963,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!g) return null;
     let CW=g.CW, CH=g.CH, pg=null;
     const painter = !!fv.keys || !!(fv.style && fv.style!=='mosaic' && fv.style!=='notes');
-    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, _isMicOwn(fv.own) && !_lg); } }
+    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg, ti.nv); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, !_lg && ti.nv>=96); } }
     return { g, pg, CW, CH };
   };
   const [favDim, setFavDim] = useState(null);   // {id, CW, CH} of the favorite on screen, as laid out here
@@ -28124,7 +28141,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(f.src==='midi' || f.src==='audio' || f.src==='score'){ await exportImage('story', true, null, null, false); return; }
     const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk); if(!pc) return;
     const title=(_favTitle(f)||'Paintiano').trim()||'Paintiano';
-    const audioName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+    const audioName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
     let audioBlob=null;
     try{ audioBlob=await renderAudioOffline(pc.chords,{speed:1}); }catch(_){}
     try{ await unlockAudio(); }catch(_){}
@@ -35003,7 +35020,7 @@ Hard requirements:
     let xml;
     try{ xml=encodeMusicXML(src,tempoGuess,title); }
     catch(e){ setScoreMsg({tone:'err',text:'Score export failed'}); return; }
-    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.xml';
+    const finalName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.xml';
     const blob=new Blob([xml],{type:'application/xml'});
     // Open a share/save panel (same pattern as Print and the recording row) so
     // the user picks share-sheet → Save to Files, rather than a silent download.
@@ -35049,7 +35066,7 @@ Hard requirements:
     const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
     if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
     const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
-    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+    const finalName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
     setScoreMsg({tone:'wait',text:t('rendering')});
     let blob;
     try{ blob=await renderAudioOffline(src,{speed:1}); }
@@ -39267,8 +39284,8 @@ Hard requirements:
       {/* Studio: the Audio / Notes file card — the dock's save rows sit under the Studio's own dock and can't be seen there,
           so the rendered file comes up here with one Save tap (a fresh tap: iOS opens the share sheet → Save to Files) */}
       {studioFs && !preview && ((recBlob && audioRowOpen) || scoreBlob || (scoreMsg && !scoreBlob)) && (()=>{
-        const isA=!!(recBlob && audioRowOpen); const blob=isA ? recBlob : scoreBlob; const nm=isA ? recName : scoreFileName;
-        const msg=isA ? audioShareMsg : scoreMsg; const busy=!blob;
+        const isA=!!(recBlob && audioRowOpen) || (!scoreBlob && !!scoreMsg && scoreMsg.text===t('rendering')); const blob=isA ? (audioRowOpen ? recBlob : null) : scoreBlob; const nm=isA ? recName : scoreFileName;
+        const msg=(isA && blob) ? audioShareMsg : scoreMsg; const busy=!blob;
         const close=()=>{ if(isA){ setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false); } else { setScoreBlob(null); setScoreFileName(''); } setScoreMsg(null); };
         const sv=String(t('save')||'Save'); const svL=sv.charAt(0).toUpperCase()+sv.slice(1);
         const tone=msg ? (msg.tone==='ok' ? 'rgba(140,255,180,.9)' : msg.tone==='wait' ? 'rgba(201,168,76,.9)' : 'rgba(255,140,120,.95)') : null;
@@ -40667,9 +40684,9 @@ Hard requirements:
                       if(useOriginalBlob){
                         audioBlob = listenBlobRef.current.blob;
                         const ext = (listenBlobRef.current.type||'').includes('mp4') ? '.m4a' : (listenBlobRef.current.type||'').includes('ogg') ? '.ogg' : '.webm';
-                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+ext;
+                        audioName = title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+ext;
                       } else {
-                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+                        audioName = title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
                         setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
                         try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
                         setScoreMsg(null);

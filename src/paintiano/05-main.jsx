@@ -555,8 +555,9 @@ const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',z
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
 function _takeInfoM(arr){
   if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
-  // the Mic's take starts on a plan of 48 (fuller in its first seconds; a concert takes it to 96, 192… — one re-layout each time)
-  let nv=(arr[0] && arr[0].mic) ? 48 : 96; while(arr.length > nv*0.85) nv*=2;
+  // a take (Compose, Mic) starts on a plan of 48 on a landscape frame; at its 41st chord the plan doubles to 96 and the frame
+  // turns portrait (see _pfTakePortrait) — then 192… on that portrait frame, one re-layout each time
+  let nv=48; while(arr.length > nv*0.85) nv*=2;
   return { nv };
 }
 function _takePadM(arr){
@@ -4415,6 +4416,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     }catch(_){ return true; }
   });
   const basicModeRef = useRef(false);
+  try{ if(typeof window!=='undefined') window.__pfBasic = !!basicMode; }catch(_){}   // computeGrid (module level) keeps Lite's growing canvas
   // Lite ⇄ Advanced: an ensemble never travels across the switch — Lite fills
   // its stage only from Surprise, Advanced only from chip taps.
   const _ensModeFirstRef = useRef(true);
@@ -4466,7 +4468,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[basicMode,liteFlipSeen,liteImageMode,chords.length]);
   useEffect(()=>{
     const _wasBasic = basicModeRef.current;
-    basicModeRef.current = basicMode;
+    basicModeRef.current = basicMode; try{ window.__pfBasic = !!basicMode; }catch(_){}
     try{ localStorage.setItem('paintiano_basic_mode', basicMode?'1':'0'); }catch(_){}
     // ZÁSAH 3 — measure Lite→Advanced discovery. Fires only on a real
     // transition out of Lite (not on initial mount), once per flip. Tells us
@@ -4953,13 +4955,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // With a painter on, a take is painted on the frame itself (the grid's few
   // spare pixels stay ground). The Mic (voice and music) has a portrait 3:4 frame;
   // Lite grows its canvas downward instead, so it keeps the grid's own size.
-  const _takeFrame = (own, legacy)=>{   // own: a favorite's authoring mode (else the live one); legacy: a Mic favorite from before its frame
+  const _takeFrame = (own, legacy, nv)=>{   // own: a favorite's authoring mode (else the live one); legacy: a Mic favorite from before its frame; nv: the take's plan
     const o = own!==undefined ? own : draftOwnerRef.current;
     if(basicModeRef.current || (legacy && o==='listen')) return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const cw=Math.min(820, Math.max(360, vp-32));
-    if(_isMicOwn(o) && !legacy) return { CW:cw, CH:Math.round(cw*4/3) };   // the Mic: a portrait frame, as a Music piece has
-    return { CW:cw, CH:Math.max(140, Math.round(cw/PHI)) };
+    const n = nv!=null ? nv : ((_takeInfo(chordsRef.current)||{}).nv || 48);
+    const port = !legacy && n>=96;   // landscape φ while the plan is 48, portrait 3:4 from 96 (the same frame computeGrid lays the live take on)
+    const cw=_pfFrameW(port, Math.min(820, Math.max(360, vp-32)));
+    return port ? { CW:Math.round(cw), CH:Math.round(cw*4/3) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
   };
   // The Mic (voice and music) paints like Compose — one fixed frame, the blocks getting smaller as the take grows —
   // but in the portrait 3:4 frame a Music piece has. Lite keeps its own growing portrait canvas.
@@ -4967,7 +4970,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _liveGridOpts = (own, legacy)=>{
     if(basicModeRef.current) return { liveMode:false, liteWide:true, portraitGrow:!liteImageModeRef.current };
     if(legacy) return { liveMode: own!=='listen' };
-    return { liveMode:true, livePortrait:_isMicOwn(own) };
+    return { liveMode:true };   // the frame follows the take's length (landscape, then portrait from its 41st chord)
   };
   const _takePainter = (st)=> !!(st && st!=='mosaic' && st!=='notes') || (painterStage && painterStage.length>0);
   // Kandinsky and the tile painters (_TAKE_ORIG) painting alone keep their ORIGINAL
@@ -4984,11 +4987,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _takeGridRef = useRef({ key:'', g:null });
   const _takeGrid = (st, arr)=>{
     const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || _takeSkip(st) || !_takeFrame()) return null;
-    return _planGrid(ti.nv, _isMicOwn(draftOwnerRef.current));
+    return _planGrid(ti.nv, ti.nv>=96);
   };
   const _planGrid = (nv, portrait)=>{
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const key=nv+'|'+vp+(portrait ? '|p' : '');
+    const key=nv+'|'+vp+'|'+((typeof window!=='undefined' && window.innerHeight)||0)+(portrait ? '|p' : '');
     if(_takeGridRef.current.key!==key){
       const evs=Array.from({length:nv},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
       let g=null; try{ g=computeGrid(evs,{liveMode:true, livePortrait:!!portrait}); }catch(_){ g=null; }
@@ -5682,7 +5685,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!g) return null;
     let CW=g.CW, CH=g.CH, pg=null;
     const painter = !!fv.keys || !!(fv.style && fv.style!=='mosaic' && fv.style!=='notes');
-    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, _isMicOwn(fv.own) && !_lg); } }
+    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg, ti.nv); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, !_lg && ti.nv>=96); } }
     return { g, pg, CW, CH };
   };
   const [favDim, setFavDim] = useState(null);   // {id, CW, CH} of the favorite on screen, as laid out here
