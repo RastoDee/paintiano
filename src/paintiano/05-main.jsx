@@ -1752,6 +1752,23 @@ const STUDIO_FX_CSS = `
 .pf-st-thumb{position:fixed;right:max(12px, env(safe-area-inset-right, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid rgba(220,150,255,.6);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5)}
 .pf-st-paused{position:fixed;left:50%;top:50%;z-index:10001;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);pointer-events:none;animation:pfStPausedIn .18s ease-out}
 .pf-st-paused svg{margin-left:4px}
+.pf-st-min.r{left:auto;right:max(12px, env(safe-area-inset-right, 0px))}
+.pf-st-min:disabled{cursor:default}
+.pf-mic-clock{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 18px);transform:translateX(-50%);z-index:10001;display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:14px;background:rgba(10,8,18,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#f2eee8;font-size:13px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;pointer-events:none}
+.pf-mic-clock i{width:8px;height:8px;border-radius:50%;background:#ff4d64;box-shadow:0 0 8px #ff4d64;animation:pfMicBlink 1.2s ease-in-out infinite}
+@keyframes pfMicBlink{50%{opacity:.35}}
+.pf-mic-mode{position:relative;background:none;border:0;padding:4px 2px;font-family:inherit;font-size:12.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(242,238,232,.42);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-mic-mode.on{cursor:default}
+.pf-mic-mode.on::after{content:"";position:absolute;left:50%;bottom:-7px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
+.pf-mic-side{display:flex;flex-direction:column;align-items:center;gap:6px;width:64px}
+.pf-mic-side button{width:54px;height:54px;padding:0;border-radius:50%;border:1px solid rgba(242,238,232,.2);background:rgba(255,255,255,.04);color:#f2eee8;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-mic-side button.gold{border:0;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#14110a;box-shadow:0 6px 22px rgba(201,168,76,.28)}
+.pf-mic-side button:disabled{opacity:.4;cursor:default}
+.pf-mic-side small{font-size:11px;color:rgba(242,238,232,.7);letter-spacing:.02em;white-space:nowrap}
+.pf-mic-rec{width:86px;height:86px;padding:0;border-radius:50%;border:4px solid #f2eee8;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:box-shadow .2s}
+.pf-mic-rec span{display:block;width:62px;height:62px;border-radius:50%;background:#ff4d64;transition:width .22s ease, height .22s ease, border-radius .22s ease}
+.pf-mic-rec.on{box-shadow:0 0 34px rgba(255,77,100,.4)}
+.pf-mic-rec.on span{width:30px;height:30px;border-radius:8px}
 .pf-st-paused.gone{opacity:0;transform:scale(.9);transition:opacity .9s ease, transform .9s ease}
 @keyframes pfStPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 .pf-st-bar{position:fixed;left:0;right:0;z-index:10001;display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));pointer-events:none}
@@ -14472,6 +14489,9 @@ Hard requirements:
   // a painting played to the end: its ▶ stays a moment, then goes quietly (a tap still plays it again)
   const _stEnded = !playing && !anim && !holdPaused && chords.length>0 && disp>=chords.length;
   const [stEndQuiet, setStEndQuiet] = useState(false);
+  // the Mic's clock: how long this REC has been listening (the pill on top, as a camera has)
+  const [micT0, setMicT0] = useState(0), [micTick, setMicTick] = useState(0);
+  useEffect(()=>{ if(!micActive){ setMicT0(0); return; } setMicT0(Date.now()); const iv=setInterval(()=>setMicTick(n=>n+1), 1000); return ()=>clearInterval(iv); },[micActive]);
   useEffect(()=>{ setStEndQuiet(false); if(!_stEnded) return; const tm=setTimeout(()=>setStEndQuiet(true), 2500); return ()=>clearTimeout(tm); },[_stEnded, chords]);
   const [feedHintN, setFeedHintN] = useState(()=>{ try{ return parseInt(localStorage.getItem('paintiano_feed_hint_n')||'0',10)||0; }catch(_){ return 0; } });
   const feedLookRef = useRef(null);   // your painter · palette before the feed, back when you return to the home card
@@ -17497,7 +17517,10 @@ Hard requirements:
           {!_vr && !stripOpen && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
           {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={_go(_stPeekTap)} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
           {!_vr && !_live && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
-          {!_vr && (<div className="pf-st-bar" style={{bottom:_live ? (stDockH+12)+'px' : 'calc(env(safe-area-inset-bottom, 0px) + 30px)'}}>
+          {/* the MIC is a camera: ♥ top right, the take's clock on top; ✦ Change · REC · share live in its dock below */}
+          {!_vr && _live && !composeMode && (<button type="button" className="pf-st-min r" onClick={_go(()=>{ if(favReadyAny) _favToggleAny(); })} disabled={!_stHasArt || !favReadyAny} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny} style={{color:favHitAny?'#ff5a8a':'#f2eee8',opacity:(!_stHasArt || !favReadyAny)?.45:1}}>{_heart}</button>)}
+          {!_vr && _live && !composeMode && micActive && micT0>0 && (<div className="pf-mic-clock" aria-live="off"><i aria-hidden="true"/>{(()=>{ const sec=Math.max(0, Math.floor((Date.now()-micT0)/1000)) + 0*micTick; return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); })()}</div>)}
+          {!_vr && !(_live && !composeMode) && (<div className="pf-st-bar" style={{bottom:_live ? (stDockH+12)+'px' : 'calc(env(safe-area-inset-bottom, 0px) + 30px)'}}>
             {stTip==='up' && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
             {!_live && (_ttl || _stEmpty) && (<div className={'pf-st-meta'+(((metaHide && !_stEmpty) || stTip==='chg' || stTip==='fav')?' hide':'')}>
               {_stEmpty ? (<div className="pf-st-meta-e">{_stT('chEmpty')}</div>) : (<>
@@ -17693,11 +17716,11 @@ Hard requirements:
           const _rec = ()=>{ if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); return; } setMicArmed(false); if(micPreset==='music') startMicListening(); else startMicPainting(); };
           const _pk = (sel)=>{ const el=document.querySelector(sel); if(el) el.click(); };
           const _orig = hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen' || draftOwnerRef.current==='sing');
-          const _chip = {display:'inline-flex',alignItems:'center',gap:8,padding:'10px 18px',borderRadius:22,border:'1px solid rgba(242,238,232,.18)',background:'rgba(28,24,40,.6)',color:'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'};
+          const _chip = {display:'inline-flex',alignItems:'center',gap:8,padding:'7px 16px',borderRadius:18,border:'1px solid rgba(242,238,232,.18)',background:'rgba(28,24,40,.6)',color:'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'};
           const W = [.35,.6,.85,1,.75,.95,.6,.45,.3];
           return (<>
             {!chords.length && (
-              <div aria-hidden="true" style={{position:'fixed',left:'50%',top:'calc((100dvh - '+stDockH+'px) / 2)',transform:'translate(-50%,-50%)',zIndex:10000,pointerEvents:'none'}}>
+              <div aria-hidden="true" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - 76px - '+stDockH+'px) / 2)',transform:'translate(-50%,-50%)',zIndex:10000,pointerEvents:'none'}}>
                 <div style={{width:150,height:150,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:col,border:'1px solid rgba('+rgb+',.38)',background:'radial-gradient(circle, rgba('+rgb+',.16), rgba('+rgb+',0) 70%)',opacity:micActive?1:.8,transform:'scale('+(micActive?(1+lv*.3).toFixed(3):1)+')',boxShadow:micActive?('0 0 '+Math.round(20+lv*60)+'px rgba('+rgb+',.35)'):'none',transition:'transform .1s, box-shadow .1s, opacity .3s'}}>
                   <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     {voice && (<rect x="9" y="2.5" width="6" height="11" rx="3"/>)}
@@ -17708,28 +17731,41 @@ Hard requirements:
                   </svg>
                 </div>
               </div>)}
-            <div ref={stMicRef} onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10003,minHeight:'calc(330px + env(safe-area-inset-bottom, 0px))',boxSizing:'border-box',padding:'18px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',background:'linear-gradient(180deg,rgba(6,5,11,0),rgba(6,5,11,.94) 18%)',display:'flex',flexDirection:'column',alignItems:'center',gap:14}}>
-              <div role="group" style={{display:'flex',gap:4,padding:3,width:'min(300px, 80vw)',borderRadius:22,border:'1px solid rgba(242,238,232,.14)',background:'rgba(20,16,30,.75)',opacity:recording?.5:1}}>
-                <button type="button" aria-pressed={!voice} onClick={()=>_to('music')} style={_seg(!voice,'music')}>{t('musicPreset').replace(/[^\p{L}]/gu,'')}</button>
-                <button type="button" aria-pressed={voice} onClick={()=>_to('voice')} style={_seg(voice,'voice')}>{t('voicePreset').replace(/[^\p{L}]/gu,'')}</button>
+            <div ref={stMicRef} onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10003,boxSizing:'border-box',padding:'8px max(18px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',alignItems:'center',gap:12,background:'linear-gradient(180deg, rgba(7,6,12,0), #07060c 22px)'}}>
+              {/* the modes, as a camera has them */}
+              <div role="group" style={{display:'flex',gap:30,opacity:recording?.5:1}}>
+                <button type="button" className={'pf-mic-mode'+(!voice?' on':'')} aria-pressed={!voice} onClick={()=>_to('music')} style={!voice?{color:'#9ad2ff'}:undefined}>{t('musicPreset').replace(/[^\p{L}]/gu,'')}</button>
+                <button type="button" className={'pf-mic-mode'+(voice?' on':'')} aria-pressed={voice} onClick={()=>_to('voice')} style={voice?{color:'#ff9a9a'}:undefined}>{t('voicePreset').replace(/[^\p{L}]/gu,'')}</button>
               </div>
-              {(
-                <button type="button" onClick={_rec} aria-label={micActive ? 'stop' : 'REC'} style={{width:104,height:104,borderRadius:'50%',border:'3px solid '+(micActive?'#ff4d6a':col),background:micActive?'rgba(255,60,90,.14)':'rgba('+rgb+',.12)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:7,cursor:'pointer',color:micActive?'#ff8a9a':col,fontFamily:'inherit',fontSize:(.62*effScale)+'rem',fontWeight:700,letterSpacing:'.18em',boxShadow:'0 0 0 '+(micActive?Math.round(6+lv*20):10)+'px '+(micActive?'rgba(255,60,90,.14)':'rgba('+rgb+',.1)')+', 0 0 40px '+(micActive?'rgba(255,60,90,.35)':'rgba('+rgb+',.3)'),transition:'box-shadow .12s'}}>
-                  {micActive ? (<span style={{width:28,height:28,borderRadius:6,background:'#ff4d6a'}}/>) : (<><span style={{width:18,height:18,borderRadius:'50%',background:col,boxShadow:'0 0 12px '+col}}/>REC</>)}
-                </button>)}
-              {micActive && (
-                <div aria-hidden="true" style={{display:'flex',alignItems:'flex-end',gap:4,height:30}}>
-                  {W.map((w,i)=>(<i key={i} style={{display:'block',width:4,borderRadius:2,height:Math.round(5+25*lv*w),background:voice?'rgba(255,130,130,.9)':'rgba(122,179,255,.9)',transition:'height .08s'}}/>))}
-                </div>)}
-              {take && (
-                <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'center'}}>
-                  {_orig && (<button type="button" onClick={()=>_pk('.pf-tx-micsrc')} style={_chip}>{playSourceMic==='original' ? 'orig' : 'piano'} ⇄</button>)}
-                  {_orig && (<button type="button" onClick={()=>_pk('.pf-tx-micre')} aria-label="restart from start" style={_chip}>↺</button>)}
-                </div>)}
-              <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.08em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em'}}>
+              {/* ✦ Change · REC · share */}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'clamp(22px, 9vw, 46px)',marginTop:2}}>
+                <div className="pf-mic-side">
+                  <button type="button" className="gold" onClick={()=>{ _tipDone('chg'); _stShow(null); setStChg(chords.length ? 'paint' : 'music'); }} aria-label={_stT('chg')}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg></button>
+                  <small>{_stT('chg')}</small>
+                </div>
+                <button type="button" className={'pf-mic-rec'+(micActive?' on':'')} onClick={_rec} aria-label={micActive ? 'stop' : 'REC'}><span/></button>
+                <div className="pf-mic-side">
+                  <button type="button" onClick={()=>setStShare(true)} disabled={!chords.length || micActive} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
+                  <small>{_stT('share')}</small>
+                </div>
+              </div>
+              {/* while it listens: the level; after a take: what you hear, and from the start */}
+              <div style={{minHeight:30,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {micActive ? (
+                  <div aria-hidden="true" style={{display:'flex',alignItems:'flex-end',gap:4,height:24}}>
+                    {W.map((w,i)=>(<i key={i} style={{display:'block',width:4,borderRadius:2,height:Math.round(4+20*lv*w),background:voice?'rgba(255,130,130,.9)':'rgba(122,179,255,.9)',transition:'height .08s'}}/>))}
+                  </div>
+                ) : (take && _orig) ? (
+                  <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+                    <button type="button" onClick={()=>_pk('.pf-tx-micsrc')} style={_chip}>{playSourceMic==='original' ? 'orig' : 'piano'} ⇄</button>
+                    <button type="button" onClick={()=>_pk('.pf-tx-micre')} aria-label="restart from start" style={_chip}>↺</button>
+                  </div>
+                ) : null}
+              </div>
+              <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em',maxWidth:360}}>
                 {take ? _stT('micCont') : (voice ? t('micVoiceHint') : t('micMusicHint'))}
               </div>
-              {micListening && (<div style={{fontSize:(.46*effScale)+'rem',letterSpacing:'.06em',color:'rgba(100,200,255,.45)',textAlign:'center',lineHeight:1.5,maxWidth:340}}>🔊 {t('listenHint')}</div>)}
+              {micListening && (<div style={{marginTop:-6,fontSize:(.46*effScale)+'rem',letterSpacing:'.04em',color:'rgba(100,200,255,.45)',textAlign:'center',lineHeight:1.45,maxWidth:340}}>🔊 {t('listenHint')}</div>)}
             </div>
           </>);
         })()}
@@ -17820,7 +17856,7 @@ Hard requirements:
           </div>
         );
       })()}
-      <div ref={canvasWrapRef} className="pf-stage-part" style={{...(favView?{display:'none'}:{}),...((studioFs && working && !_stHasArt)?{opacity:0}:{}),position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:(basicMode||_stEmpty)?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:(basicMode||_stEmpty)?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:studioLive?`calc((100dvh - ${stDockH}px) / 2)`:(studioFs && stFill)?'50%':studioFs?'calc(env(safe-area-inset-top, 0px) + 60px + (100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) / 2)':'50%',left:'50%',transform:'translate(-50%,-50%)',width:studioLive?`min(98vw, calc((100dvh - ${stDockH+16}px) * ${CW} / ${CH}))`:(studioFs && stFill)?`max(100vw, calc(100dvh * ${CW} / ${CH}))`:studioFs?`min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) * ${CW} / ${CH}))`:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:(_stEmpty || (studioFs && stFill))?'none':'1px solid rgba(201,168,76,.25)',...(studioFs && !studioLive ? {transition:'width .35s cubic-bezier(.2,.8,.2,1), top .35s cubic-bezier(.2,.8,.2,1)'} : {}),...(studioFs && !studioLive && !stFill ? {borderRadius:18, clipPath:'inset(0 round 18px)'} : {})}:{}),...((studioLive && !chords.length)?{visibility:'hidden'}:{})}}
+      <div ref={canvasWrapRef} className="pf-stage-part" style={{...(favView?{display:'none'}:{}),...((studioFs && working && !_stHasArt)?{opacity:0}:{}),position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:(basicMode||_stEmpty)?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:(basicMode||_stEmpty)?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:(studioLive && !composeMode)?`calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - 76px - ${stDockH}px) / 2)`:studioLive?`calc((100dvh - ${stDockH}px) / 2)`:(studioFs && stFill)?'50%':studioFs?'calc(env(safe-area-inset-top, 0px) + 60px + (100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) / 2)':'50%',left:'50%',transform:'translate(-50%,-50%)',width:(studioLive && !composeMode)?`min(calc(100vw - 32px), calc((100dvh - env(safe-area-inset-top, 0px) - 76px - ${stDockH}px) * ${CW} / ${CH}))`:studioLive?`min(98vw, calc((100dvh - ${stDockH+16}px) * ${CW} / ${CH}))`:(studioFs && stFill)?`max(100vw, calc(100dvh * ${CW} / ${CH}))`:studioFs?`min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) * ${CW} / ${CH}))`:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:(_stEmpty || (studioFs && stFill))?'none':'1px solid rgba(201,168,76,.25)',...(studioFs && !studioLive ? {transition:'width .35s cubic-bezier(.2,.8,.2,1), top .35s cubic-bezier(.2,.8,.2,1)'} : {}),...(studioFs && ((!studioLive && !stFill) || (studioLive && !composeMode)) ? {borderRadius:18, clipPath:'inset(0 round 18px)'} : {})}:{}),...((studioLive && !chords.length)?{visibility:'hidden'}:{})}}
         onContextMenu={e=>e.preventDefault()}
         onPointerMove={(e)=>{ if(e.pointerType==='mouse' && _holdTimerRef.current && _holdPosRef.current && Math.abs(e.clientX-_holdPosRef.current.x)+Math.abs(e.clientY-_holdPosRef.current.y)>14) _holdCancel(); if(_swipeStartRef.current) return; if(_holdingRef.current) return; if(playing||immersive) wakeControls(); }}
         onPointerDown={(e)=>{ if(immersive && e.pointerType==='mouse' && e.button===0) _holdStart(e.clientX, e.clientY); }}
