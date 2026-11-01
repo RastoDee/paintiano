@@ -12417,65 +12417,14 @@ Hard requirements:
       // SAME sig. Detection sensitivity (noise gate, pickPitches minMag,
       // detectChord threshold) is untouched — only the block-identity changed.
       const pcSig=(notes)=>{const s=[...new Set(notes.map(n=>((n.m%12)+12)%12))].sort((a,b)=>a-b);return s.join(',');};
+      // ONE MIC FOR EVERYTHING — the tones a frame holds, picked the way an MP3 is read (pickPitches: peaks over
+      // 12 % of the loudest, octave harmonics folded out, up to four): a voice or a whistle gives one tone, a band
+      // or a piano its melody, bass and chord — each with its own loudness. No fixed four-note voicing any more.
       const buildEvent=(mag,liveSr)=>{
-        const chroma=computeChroma(mag,liveSr);
-        // Smooth chroma over the last 3 commits — chord templates see a
-        // steadier vector, so detection stops flapping around its threshold.
-        chromaHist.push(chroma);
-        if(chromaHist.length>3)chromaHist.shift();
-        let chromaAvg=chroma;
-        if(chromaHist.length>1){
-          chromaAvg=new Float32Array(12);
-          for(let k=0;k<chromaHist.length;k++)for(let i=0;i<12;i++)chromaAvg[i]+=chromaHist[k][i];
-          for(let i=0;i<12;i++)chromaAvg[i]/=chromaHist.length;
-        }
-        const peaks=pickPitches(mag,liveSr,0.02); // original sensitivity (harmonics already folded out)
-        if(peaks.length===0) return null;
-        // A CHORD only when one is really heard: at least three distinct pitch
-        // classes sound (each ≥ 35% of the loudest) AND they are the three tones of
-        // a clear major/minor triad (template match ≥ 0.80). The template test on
-        // its own passed EVERY single tone — one pure tone already scores 0.63
-        // against the 0.60 bar, a piano or voice tone with its overtones up to
-        // 0.72 — so a melody came out as a chain of four-tone chords.
-        const strong=peaks.filter(p=>p.mag>=peaks[0].mag*0.35);
-        const heardPcs=new Set(strong.map(p=>((p.midi%12)+12)%12));
-        if(heardPcs.size>=3){
-          const det=detectChord(chromaAvg);
-          if(det && det.conf>=0.80){
-            const tri=[det.root,(det.root+(det.quality==='maj'?4:3))%12,(det.root+7)%12];
-            let fit=0; for(const pc of heardPcs) if(tri.includes(pc)) fit++;
-            if(fit>=3){
-              const notes=generateVoicing(det.root,det.quality);
-              return { sig:pcSig(notes), notes };
-            }
-          }
-        }
-        // Single dominant pitch: top peak ≥ 2.0× the next one → treat as melody.
-        if(peaks.length===1 || peaks[0].mag >= peaks[1].mag*2.0){
-          let m=peaks[0].midi;
-          // Harmonic-summation guard: if the sub-octave bin (f/2) carries
-          // real energy (≥30% of the peak), the dominant peak is actually a
-          // 2nd harmonic — take the true fundamental instead. Fixes the
-          // classic "melody jumps an octave up" FFT error.
-          const f2=(peaks[0].freq||0)/2;
-          if(f2>=27.5){
-            const binHz=liveSr/(mag.length*2);
-            const b=Math.round(f2/binHz);
-            if(b>=1&&b<mag.length-1){
-              let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];
-              const local=Math.max(mag[b-1],mag[b],mag[b+1])/(mx||1);
-              if(local>=peaks[0].mag*0.30){
-                const mm=Math.round(69+12*Math.log2(f2/440));
-                if(mm>=21&&mm<=108)m=mm;
-              }
-            }
-          }
-          const notes=[{m,v:Math.max(70,Math.min(110,Math.round(peaks[0].mag*110)))}];
-          return { sig:pcSig(notes), notes };
-        }
-        // Raw multi-pitch: take top 2–3, sorted ascending (low → high).
-        const taken=peaks.slice(0,3).map(p=>({m:p.midi,v:Math.max(60,Math.min(108,Math.round(p.mag*100)))})).sort((a,b)=>a.m-b.m);
-        return { sig:pcSig(taken), notes:taken };
+        const peaks=pickPitches(mag,liveSr);
+        if(!peaks.length) return null;
+        const notes=peaks.map(p=>({m:p.midi, v:Math.max(45,Math.min(115,Math.round(40+p.mag*75)))})).sort((a,b)=>a.m-b.m);
+        return { sig:pcSig(notes), notes };
       };
       const tick=()=>{
         if(!listenStreamRef.current){stopMicListening();return;}
@@ -15961,6 +15910,7 @@ Hard requirements:
                 if(hasSing && !hasListen)      presetOwner = 'sing';
                 else if(hasListen && !hasSing) presetOwner = 'listen';
                 else                           presetOwner = lastActiveOwner;  // both or none
+                if(studioOn) presetOwner = 'listen';   // the Studio has one Mic (it listens to everything)
                 // Keep the visible preset toggle in sync with where we're routing,
                 // so the canvas chrome (voice/music) matches the restored draft.
                 const targetPreset = presetOwner==='listen' ? 'music' : 'voice';
@@ -17728,13 +17678,13 @@ Hard requirements:
           </div>)}
         {/* MIC — its own panel under the painting: Music | Voice, the big REC (STOP while it listens), the level, a line */}
         {studioLive && !composeMode && (()=>{
-          const voice = micPreset==='voice';
+          const voice = false;   // the Studio has one Mic: it listens to everything (no Voice preset)
           const col = voice ? '#ff8a8a' : '#8accff', rgb = voice ? '255,90,90' : '90,172,255';
           const take = !micActive && chords.length>0;
           const lv = Math.max(0, Math.min(1, +micVolLevel || 0));
           const _seg = (on, v)=>{ const c = v==='voice' ? '255,120,120' : '100,180,255'; return {flex:1,padding:'9px 0',border:0,borderRadius:18,fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',cursor:(on||recording)?'default':'pointer',background:on?'rgba('+c+',.16)':'transparent',color:on?(v==='voice'?'#ff9a9a':'#9ad2ff'):'rgba(242,238,232,.5)',boxShadow:on?'inset 0 0 0 1px rgba('+c+',.75)':'none'}; };
           const _to = (v)=>{ if(micPreset===v || recording) return; if(micPresetBtnRef.current) micPresetBtnRef.current.click(); };
-          const _rec = ()=>{ if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); return; } /* armed stays on until the mic really listens (start clears it) — while iOS asks for the microphone the Mic stays on screen, not the empty Studio */ if(micPreset==='music') startMicListening(); else startMicPainting(); };
+          const _rec = ()=>{ if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); setMicArmed(true); return; } /* armed stays on until the mic really listens (start clears it) — while iOS asks for the microphone the Mic stays on screen, not the empty Studio */ /* one Mic: it always listens to everything */ if(true) startMicListening(); else startMicPainting(); };
           const _pk = (sel)=>{ const el=document.querySelector(sel); if(el) el.click(); };
           const _orig = hasMicBlob && !micActive && !recording && (draftOwnerRef.current==='listen' || draftOwnerRef.current==='sing');
           const _chip = {display:'inline-flex',alignItems:'center',gap:8,padding:'7px 16px',borderRadius:18,border:'1px solid rgba(242,238,232,.18)',background:'rgba(28,24,40,.6)',color:'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'};
@@ -17753,12 +17703,8 @@ Hard requirements:
                 </div>
               </div>)}
             <div ref={stMicRef} onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10003,boxSizing:'border-box',padding:'6px max(18px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',alignItems:'center',gap:10,background:'#07060c'}}>
-              {/* the instrument under the Studio's buttons (as Compose has its keys): Music | Voice · REC */}
+              {/* the instrument under the Studio's buttons (as Compose has its keys): one REC */}
               <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:18,width:'100%',maxWidth:380}}>
-                <div role="group" style={{flex:'1 1 auto',maxWidth:250,display:'flex',gap:4,padding:3,borderRadius:22,border:'1px solid rgba(242,238,232,.14)',background:'rgba(20,16,30,.75)',opacity:recording?.5:1}}>
-                  <button type="button" aria-pressed={!voice} onClick={()=>_to('music')} style={_seg(!voice,'music')}>{t('musicPreset').replace(/[^\p{L}]/gu,'')}</button>
-                  <button type="button" aria-pressed={voice} onClick={()=>_to('voice')} style={_seg(voice,'voice')}>{t('voicePreset').replace(/[^\p{L}]/gu,'')}</button>
-                </div>
                 <button type="button" className={'pf-mic-rec'+(micActive?' on':'')} onClick={_rec} aria-label={micActive ? 'stop' : 'REC'}><span/></button>
               </div>
               {/* while it listens: the level */}
@@ -17770,7 +17716,7 @@ Hard requirements:
                 ) : null}
               </div>
               <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em',maxWidth:360}}>
-                {take ? _stT('micCont') : (voice ? t('micVoiceHint') : t('micMusicHint'))}
+                {take ? _stT('micCont') : _stT('chMicS')}
               </div>
               {micListening && (<div style={{marginTop:-6,fontSize:(.46*effScale)+'rem',letterSpacing:'.04em',color:'rgba(100,200,255,.45)',textAlign:'center',lineHeight:1.45,maxWidth:340}}>🔊 {t('listenHint')}</div>)}
             </div>
