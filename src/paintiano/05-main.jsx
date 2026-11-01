@@ -16940,6 +16940,8 @@ Hard requirements:
                   return;
                 }
                 if(_artMode===2){                               // shuffle ALL: the draw decides — except Ensemble ALL, where a tap pins / unpins
+                  // the Studio has no 🔀: a tap picks this painter (↑ draws again, ← its variants); with the Ensemble it starts a new Fusion from it
+                  if(studioFs){ if(locked){ setPaywallReason('settings'); return; } if(jamAll){ setJamAll(false); setJamPins([]); } if(painterStage.length) setPainterStage([]); selectStyle(k); return; }
                   if(jamOn && jamAll && !locked) _jamPinTap(k);
                   return;
                 }

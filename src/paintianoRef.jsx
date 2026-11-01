@@ -36671,7 +36671,8 @@ Hard requirements:
         }
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         // ↑ in the Studio = someone else: another painter (or another Fusion) from your set — no 🔀 to set; ← is the same one, otherwise
-        if(_artMode!==2){ _cycleArt(); nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true; }
+        if(jamOn){ try{ jamPinsRef.current=[]; }catch(_){} if(jamPins && jamPins.length) setJamPins([]); }   // the Ensemble: a whole new Fusion each time (no painter pinned)
+        if(_artMode!==2){ if(jamOn) setJamAll(true); else _cycleArt(); nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true; }
         else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
       }
     }catch(_){}
