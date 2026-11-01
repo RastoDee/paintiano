@@ -2004,6 +2004,20 @@ function computeGrid(arg, opts){
     const score=fillRatio*100 - r*0.5;
     if(score>bestScore){bestScore=score; bestN=n;}
   }
+  // The Mic's portrait frame: columns × rows chosen so the blocks keep a Music block's shape (about φ tall),
+  // not the widest-row pick — a short take would otherwise be one row of thin stripes.
+  if(opts && opts.livePortrait){
+    let bN=1, bS=-1e9;
+    const nMax=Math.max(2, Math.ceil(Math.sqrt(_layoutQ))+4);
+    for(let n=1;n<=nMax;n++){
+      const r=Math.max(1,Math.ceil(_layoutQ/n));
+      const fill=_layoutQ/(n*r);
+      const asp=(4/3)*n/r;   // a block's height / width in the 3:4 frame
+      const sc=fill*100 - Math.abs(Math.log(asp/PHI))*40;
+      if(sc>bS){ bS=sc; bN=n; }
+    }
+    bestN=bN;
+  }
   const N=bestN;
   const rows=Math.max(1,Math.ceil(_layoutQ/N));
   // Uniform global scale so the totals fill exactly N*rows width-units.
@@ -2021,7 +2035,11 @@ function computeGrid(arg, opts){
     const targetCW=Math.min(820,Math.max(360,vp-32));
     BW=Math.max(4,Math.floor(targetCW/N));
     CW=N*BW;
-    CH=Math.max(140,Math.round(CW/PHI));
+    if(opts && opts.livePortrait){ BW=Math.max(4,targetCW/N); CW=Math.round(targetCW); }   // the Mic's frame keeps its width to the pixel too
+    // MIC (voice and music): a portrait 3:4 frame — the shape a Music piece has on the
+    // same screen — fixed from the first note (taken from the target width, not N×BW,
+    // so it never shifts by a pixel); the blocks get smaller as the take grows.
+    CH=(opts && opts.livePortrait) ? Math.round(targetCW*4/3) : Math.max(140,Math.round(CW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
   } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){
     // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as

@@ -4930,13 +4930,23 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // N×floor(width/N), so it shifts by a pixel or two as columns are added — and
   // painters seed from the canvas size, so one pixel re-threw the whole painting.
   // With a painter on, a take is painted on the frame itself (the grid's few
-  // spare pixels stay ground). Lite and the Mic music-listener grow their canvas
-  // downward instead, so they keep the grid's own size.
-  const _takeFrame = (own)=>{   // own: a favorite's authoring mode (else the live one)
-    if(basicModeRef.current || (own!==undefined ? own : draftOwnerRef.current)==='listen') return null;
+  // spare pixels stay ground). The Mic (voice and music) has a portrait 3:4 frame;
+  // Lite grows its canvas downward instead, so it keeps the grid's own size.
+  const _takeFrame = (own, legacy)=>{   // own: a favorite's authoring mode (else the live one); legacy: a Mic favorite from before its frame
+    const o = own!==undefined ? own : draftOwnerRef.current;
+    if(basicModeRef.current || (legacy && o==='listen')) return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
     const cw=Math.min(820, Math.max(360, vp-32));
+    if(_isMicOwn(o) && !legacy) return { CW:cw, CH:Math.round(cw*4/3) };   // the Mic: a portrait frame, as a Music piece has
     return { CW:cw, CH:Math.max(140, Math.round(cw/PHI)) };
+  };
+  // The Mic (voice and music) paints like Compose — one fixed frame, the blocks getting smaller as the take grows —
+  // but in the portrait 3:4 frame a Music piece has. Lite keeps its own growing portrait canvas.
+  const _isMicOwn = (o)=> o==='listen' || o==='sing';
+  const _liveGridOpts = (own, legacy)=>{
+    if(basicModeRef.current) return { liveMode:false, liteWide:true, portraitGrow:!liteImageModeRef.current };
+    if(legacy) return { liveMode: own!=='listen' };
+    return { liveMode:true, livePortrait:_isMicOwn(own) };
   };
   const _takePainter = (st)=> !!(st && st!=='mosaic' && st!=='notes') || (painterStage && painterStage.length>0);
   // Kandinsky and the tile painters (_TAKE_ORIG) painting alone keep their ORIGINAL
@@ -4953,14 +4963,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _takeGridRef = useRef({ key:'', g:null });
   const _takeGrid = (st, arr)=>{
     const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || _takeSkip(st) || !_takeFrame()) return null;
-    return _planGrid(ti.nv);
+    return _planGrid(ti.nv, _isMicOwn(draftOwnerRef.current));
   };
-  const _planGrid = (nv)=>{
+  const _planGrid = (nv, portrait)=>{
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
-    const key=nv+'|'+vp;
+    const key=nv+'|'+vp+(portrait ? '|p' : '');
     if(_takeGridRef.current.key!==key){
       const evs=Array.from({length:nv},(_,i)=>({ n:[{m:60,v:64,durMs:250}], idx:i, startMs:i*250, durQ:1 }));
-      let g=null; try{ g=computeGrid(evs,{liveMode:true}); }catch(_){ g=null; }
+      let g=null; try{ g=computeGrid(evs,{liveMode:true, livePortrait:!!portrait}); }catch(_){ g=null; }
       _takeGridRef.current={ key, g };
     }
     return _takeGridRef.current.g;
@@ -5194,7 +5204,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!cells || cells.length < chords.length){
         try{
           const evs = chords.map((c,i)=>({...c, idx:i, durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-          const fixed = computeGrid(evs, {liveMode: basicModeRef.current ? false : (draftOwnerRef.current!=='listen'), liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+          const fixed = computeGrid(evs, _liveGridOpts(draftOwnerRef.current));
           gridRef.current = fixed;
           setGrid(fixed);
         }catch(_){}
@@ -5624,7 +5634,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} }
     }
     const own=draftOwnerRef.current;
-    const fav={ id:'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), at:Date.now(), ak, ...addr, se, own: own||null,
+    const fav={ id:'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), at:Date.now(), ak, ...addr, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
       dna: globalThis.__PAINT_MUSIC_DNA ? clone(globalThis.__PAINT_MUSIC_DNA) : null,
       skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive,
       src: own==='compose' ? 'compose' : (own==='sing'||own==='listen') ? 'mic' : (chords[0] && chords[0].recorded) ? 'compose' : (loadedSource || (moodContext ? 'mood' : '')),
@@ -5645,13 +5655,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       else{
         const basic=basicModeRef.current;
         const evs=chords.map(c=>({durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
-        g=computeGrid(evs,{liveMode: basic ? false : fv.own!=='listen', liteWide: basic, portraitGrow: basic && !liteImageModeRef.current});
+        g=computeGrid(evs,_liveGridOpts(fv.own||null, _isMicOwn(fv.own) && !fv.mf));   // a Mic favorite from before the frame (no mf) keeps its old layout
       }
     }catch(_){ g=null; }
     if(!g) return null;
     let CW=g.CW, CH=g.CH, pg=null;
     const painter = !!fv.keys || !!(fv.style && fv.style!=='mosaic' && fv.style!=='notes');
-    if(ti && painter && !fv.skip){ const tf=_takeFrame(fv.own||null); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv); } }
+    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, _isMicOwn(fv.own) && !_lg); } }
     return { g, pg, CW, CH };
   };
   const [favDim, setFavDim] = useState(null);   // {id, CW, CH} of the favorite on screen, as laid out here
@@ -5986,7 +5996,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // In Lite, both voice and music capture use the grow-canvas (portrait) shape
     // — never the landscape fixed frame — so the live mic painting matches the
     // rest of Lite's portrait canvas.
-    const newGrid=computeGrid(evs,{liveMode: basicModeRef.current ? false : !isMusicListen, liteWide: basicModeRef.current, portraitGrow: basicModeRef.current && !liteImageModeRef.current});
+    const newGrid=computeGrid(evs,_liveGridOpts(draftOwnerRef.current));   // (isMusicListen: the old grow canvas — the Mic now has its own fixed frame)
     // Update the ref immediately so startPlay always sees fresh grid.
     // Defer the state update (which triggers a re-render) until not playing
     // so the grid recompute doesn't stutter compose-mode playback.
@@ -6029,7 +6039,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // liveMode — recomputing here without it would give the wrong frame).
       const vm = viewModeRef.current;
       const isScan = vm==='image' && !moodFromImgRef.current;
-      const isLiveAuthoring = draftOwnerRef.current && draftOwnerRef.current!=='listen';
+      const isLiveAuthoring = !!draftOwnerRef.current;   // compose and the Mic (voice and music) keep their own fixed frame
       return isScan || isLiveAuthoring;
     };
     const onResize=()=>{
@@ -14155,7 +14165,7 @@ Hard requirements:
     if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
     const fv={ style:st||null, keys, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0,
       cap:(proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
-      mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null,
+      mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
       dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive };
     const lay=_favLayout(fv, chords); if(!lay) return null;
     const c=document.createElement('canvas'); return _favPaint(c, fv, {chords}, 1, tone, lay) ? c : null;
