@@ -40007,6 +40007,8 @@ Hard requirements:
           return (<>
             {!chords.length && (
               <div aria-hidden="true" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)',transform:'translate(-50%,-50%)',zIndex:10000,pointerEvents:'none'}}>
+                {/* the iOS hint, before the first take: under the circle on the empty canvas — the dock keeps ONE height (nothing moves when REC starts) */}
+                {!micActive && !take && !micSong && (<div style={{position:'absolute',left:'50%',top:'calc(100% + 22px)',transform:'translateX(-50%)',width:'min(320px, calc(100vw - 48px))',fontSize:(.5*effScale)+'rem',letterSpacing:'.03em',color:'rgba(140,200,255,.55)',textAlign:'center',lineHeight:1.5}}>🔊 {t('listenHint')}</div>)}
                 <div style={{width:150,height:150,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:col,border:'1px solid rgba('+rgb+',.38)',background:'radial-gradient(circle, rgba('+rgb+',.16), rgba('+rgb+',0) 70%)',opacity:micActive?1:.8,transform:'scale('+(micActive?(1+lv*.3).toFixed(3):1)+')',boxShadow:micActive?('0 0 '+Math.round(20+lv*60)+'px rgba('+rgb+',.35)'):'none',transition:'transform .1s, box-shadow .1s, opacity .3s'}}>
                   <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     {voice && (<rect x="9" y="2.5" width="6" height="11" rx="3"/>)}
@@ -40035,8 +40037,6 @@ Hard requirements:
               <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em',maxWidth:360}}>
                 {(micSong && micSong.phase==='reading') ? '' : micSong ? _stT('micPlay') : take ? _stT('micCont').split(' · ')[0] : _stT('chMicS')}
               </div>
-              {/* the iOS hint only before the first take — while recording and after STOP the dock keeps one height, so the canvas never changes size */}
-              {!micActive && !take && !micSong && (<div style={{marginTop:-6,fontSize:(.46*effScale)+'rem',letterSpacing:'.04em',color:'rgba(100,200,255,.45)',textAlign:'center',lineHeight:1.45,maxWidth:340}}>🔊 {t('listenHint')}</div>)}
             </div>
           </>);
         })()}
