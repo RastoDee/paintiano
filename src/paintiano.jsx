@@ -36734,6 +36734,8 @@ Hard requirements:
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
   const [feedHeart, setFeedHeart] = useState(0);
+  // the ♥ pops once (0.9 s) and is gone — left set, it popped again on every next surprise (each card mounts it anew)
+  useEffect(()=>{ if(!feedHeart) return; const tm=setTimeout(()=>setFeedHeart(0), 950); return ()=>clearTimeout(tm); },[feedHeart]);
   const [feedBg, setFeedBg] = useState(null);
   const [feedIntro, setFeedIntro] = useState(null);   // Lite's opening lines on the card: {k:'m'|'p'|'s', t} — the Mosaic's key, the first painter, ✦ Signature
   useEffect(()=>{ if(!feedIntro || !playing) return; const tm=setTimeout(()=>setFeedIntro(null), 7700); return ()=>clearTimeout(tm); },[feedIntro, playing]);   // the lines run with the painting, not before it
