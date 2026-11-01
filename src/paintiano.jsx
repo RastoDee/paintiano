@@ -41983,7 +41983,7 @@ Hard requirements:
         const _faceGrid = {display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:'14px 4px',paddingTop:8};
         const _faceBtn = (on)=>({display:'flex',flexDirection:'column',alignItems:'center',gap:6,minWidth:0,background:'none',border:0,padding:'4px 0',cursor:'pointer',fontFamily:'inherit',WebkitTapHighlightColor:'transparent'});
         const _faceWrap = (on, locked)=>({position:'relative',display:'block',borderRadius:'50%',opacity:on?1:(locked?.3:.38),boxShadow:on?'0 0 0 3px #07060c, 0 0 0 5px rgba(240,215,138,.9)':'none',transition:'opacity .18s, box-shadow .18s'});
-        const _faceLbl = (on)=>({maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:_px(10.5),fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',color:on?'#f2eee8':'rgba(242,238,232,.45)'});
+        const _faceLbl = (on)=>({maxWidth:'calc(100% + 12px)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:_px(11.5),fontWeight:600,letterSpacing:'-.02em',color:on?'#f2eee8':'rgba(242,238,232,.45)'});   // the palettes' case and size — whole names (Lichtenstein, Rachmaninov) fit
         const _faceBadges = (on, locked, daily)=>(<>
           {on && (<span aria-hidden="true" style={{position:'absolute',right:-5,bottom:-5,width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</span>)}
           {locked && (<span aria-hidden="true" style={{position:'absolute',right:-4,bottom:-4,fontSize:13}}>🔒</span>)}

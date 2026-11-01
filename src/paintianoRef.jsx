@@ -36188,7 +36188,10 @@ Hard requirements:
   // canvas), a small picture made one at a time in the background while the sheet is open, kept for the song and palette.
   const [skinThumbs, setSkinThumbs] = useState({});
   const skinThumbRef = useRef({ key:'', done:{} });
-  const _skinPk = useMemo(()=> chords.length ? _favHash(chords) : '', [chords]);
+  // with no piece on (Styles & palettes from an empty screen) the faces paint a small built-in phrase — each painter still shows its hand
+  const _skinDemo = useMemo(()=> Array.from({length:48},(_,i)=>({ idx:i, startMs:i*320, durQ:1+((i*3)%4)*0.5, recorded:false,
+    n:[{m:43+((i*7)%24),v:62+((i*13)%55),durMs:320+((i*5)%4)*160},{m:60+((i*5)%19),v:58+((i*11)%40),durMs:320}] })), []);
+  const _skinPk = useMemo(()=> chords.length ? _favHash(chords) : (showSetupModal ? 'demo' : ''), [chords, showSetupModal]);
   const _skinPalKey = mode==='custom' ? (activePalette||[]).join(',') : '';
   // Compose / Mic grow the piece note by note: the faces are painted once when the sheet opens and stay
   // put while it is open (otherwise every new note repaints all of them — they flicker)
@@ -36204,7 +36207,7 @@ Hard requirements:
     if(R.key!==_skinKey){ R.key=_skinKey; R.done={}; setSkinThumbs({}); }
     const todo = ['mosaic'].concat(ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily')).filter(k=>!R.done[k]);
     if(!todo.length) return;
-    const cs = chords, own = draftOwnerRef.current || null;
+    const cs = chords.length ? chords : _skinDemo, own = chords.length ? (draftOwnerRef.current || null) : null;
     let dead=false, tm=null;
     const step = ()=>{
       if(dead) return;
@@ -41980,7 +41983,7 @@ Hard requirements:
         const _faceGrid = {display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:'14px 4px',paddingTop:8};
         const _faceBtn = (on)=>({display:'flex',flexDirection:'column',alignItems:'center',gap:6,minWidth:0,background:'none',border:0,padding:'4px 0',cursor:'pointer',fontFamily:'inherit',WebkitTapHighlightColor:'transparent'});
         const _faceWrap = (on, locked)=>({position:'relative',display:'block',borderRadius:'50%',opacity:on?1:(locked?.3:.38),boxShadow:on?'0 0 0 3px #07060c, 0 0 0 5px rgba(240,215,138,.9)':'none',transition:'opacity .18s, box-shadow .18s'});
-        const _faceLbl = (on)=>({maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:_px(10.5),fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',color:on?'#f2eee8':'rgba(242,238,232,.45)'});
+        const _faceLbl = (on)=>({maxWidth:'calc(100% + 6px)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:_px(11.5),fontWeight:600,letterSpacing:'-.01em',color:on?'#f2eee8':'rgba(242,238,232,.45)'});   // the palettes' case and size — whole names (Lichtenstein, Rachmaninov) fit
         const _faceBadges = (on, locked, daily)=>(<>
           {on && (<span aria-hidden="true" style={{position:'absolute',right:-5,bottom:-5,width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</span>)}
           {locked && (<span aria-hidden="true" style={{position:'absolute',right:-4,bottom:-4,fontSize:13}}>🔒</span>)}
