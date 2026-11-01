@@ -5860,7 +5860,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(f.src==='midi' || f.src==='audio' || f.src==='score'){ await exportImage('story', true, null, null, false); return; }
     const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk); if(!pc) return;
     const title=(_favTitle(f)||'Paintiano').trim()||'Paintiano';
-    const audioName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+    const audioName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
     let audioBlob=null;
     try{ audioBlob=await renderAudioOffline(pc.chords,{speed:1}); }catch(_){}
     try{ await unlockAudio(); }catch(_){}
@@ -12739,7 +12739,7 @@ Hard requirements:
     let xml;
     try{ xml=encodeMusicXML(src,tempoGuess,title); }
     catch(e){ setScoreMsg({tone:'err',text:'Score export failed'}); return; }
-    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.xml';
+    const finalName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.xml';
     const blob=new Blob([xml],{type:'application/xml'});
     // Open a share/save panel (same pattern as Print and the recording row) so
     // the user picks share-sheet → Save to Files, rather than a silent download.
@@ -12785,7 +12785,7 @@ Hard requirements:
     const src=chordsRef.current&&chordsRef.current.length?chordsRef.current:chords;
     if(!src||!src.length){setScoreMsg({tone:'err',text:t('noNotesGeneric')});return;}
     const title=(compositionName||recordingName||'Paintiano').trim()||'Paintiano';
-    const finalName=title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+    const finalName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
     setScoreMsg({tone:'wait',text:t('rendering')});
     let blob;
     try{ blob=await renderAudioOffline(src,{speed:1}); }
@@ -17000,6 +17000,26 @@ Hard requirements:
       </div>
       )}
 
+      {/* Studio: the Audio / Notes file card — the dock's save rows sit under the Studio's own dock and can't be seen there,
+          so the rendered file comes up here with one Save tap (a fresh tap: iOS opens the share sheet → Save to Files) */}
+      {studioFs && !preview && ((recBlob && audioRowOpen) || scoreBlob || (scoreMsg && !scoreBlob)) && (()=>{
+        const isA=!!(recBlob && audioRowOpen) || (!scoreBlob && !!scoreMsg && scoreMsg.text===t('rendering')); const blob=isA ? (audioRowOpen ? recBlob : null) : scoreBlob; const nm=isA ? recName : scoreFileName;
+        const msg=(isA && blob) ? audioShareMsg : scoreMsg; const busy=!blob;
+        const close=()=>{ if(isA){ setRecBlob(null); setRecName(''); setAudioShareMsg(null); setAudioSideImage(null); setAudioRowOpen(false); } else { setScoreBlob(null); setScoreFileName(''); } setScoreMsg(null); };
+        const sv=String(t('save')||'Save'); const svL=sv.charAt(0).toUpperCase()+sv.slice(1);
+        const tone=msg ? (msg.tone==='ok' ? 'rgba(140,255,180,.9)' : msg.tone==='wait' ? 'rgba(201,168,76,.9)' : 'rgba(255,140,120,.95)') : null;
+        return (<div role="status" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10012,padding:'0 max(12px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 14px) max(12px, env(safe-area-inset-left, 0px))',pointerEvents:'none'}}>
+          <div style={{pointerEvents:'auto',maxWidth:460,margin:'0 auto',display:'flex',alignItems:'center',gap:12,padding:'12px 12px 12px 14px',background:'rgba(22,20,30,.96)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',border:'1px solid rgba(255,255,255,.09)',borderRadius:18,boxShadow:'0 18px 50px rgba(0,0,0,.6)'}}>
+            <span style={{width:42,height:42,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',background:isA ? 'linear-gradient(135deg,#ff8a7a,#e8475f)' : 'linear-gradient(135deg,#a98bff,#6f4bff)'}}><TxIcon n={isA ? 'rec' : 'notes'} s={18}/></span>
+            <span style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:2}}>
+              <span style={{fontSize:14,fontWeight:600,color:'rgba(247,243,236,.95)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{busy ? (msg ? msg.text : t('rendering')) : nm}</span>
+              <span style={{fontSize:11.5,color:tone||'rgba(230,222,196,.5)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{busy ? '' : (msg && msg.tone!=='wait' ? msg.text : (blob.size>1048576 ? (blob.size/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(blob.size/1024))+' KB'))}</span>
+            </span>
+            {!busy && (<button type="button" onClick={isA ? shareRecording : shareScore} style={{height:40,padding:'0 18px',borderRadius:20,border:0,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:14,color:'#1a1408',background:'linear-gradient(135deg,#e6c56a,#c9a84c)',flexShrink:0}}>↓ {svL}</button>)}
+            <button type="button" aria-label="close" onClick={close} style={{width:34,height:34,borderRadius:'50%',border:0,cursor:'pointer',background:'rgba(255,255,255,.07)',color:'rgba(242,238,232,.75)',fontSize:14,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+          </div>
+        </div>);
+      })()}
       {preview && (
         <div onClick={closePreview} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.94)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10011,padding:10,overflow:'auto'}}>
           <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="image preview" style={{maxWidth:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
@@ -18383,9 +18403,9 @@ Hard requirements:
                       if(useOriginalBlob){
                         audioBlob = listenBlobRef.current.blob;
                         const ext = (listenBlobRef.current.type||'').includes('mp4') ? '.m4a' : (listenBlobRef.current.type||'').includes('ogg') ? '.ogg' : '.webm';
-                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+ext;
+                        audioName = title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+ext;
                       } else {
-                        audioName = title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_').trim().slice(0,40)+'.wav';
+                        audioName = title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
                         setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
                         try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
                         setScoreMsg(null);
