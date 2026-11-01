@@ -500,6 +500,11 @@ function _palCap(s){ s=String(s||''); return /^\S{1,2}[\/&]\S{1,2}$/.test(s) ? s
 function _fitText(cx, txt, maxW, size, min, fontFn){ let s=size; cx.font=fontFn(s); while(s>min && cx.measureText(txt).width>maxW){ s-=1; cx.font=fontFn(s); } if(cx.measureText(txt).width<=maxW) return txt; let t=txt; while(t.length>1 && cx.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
 // Web / Print with a caption: the painting on the dark ground; under it the title, the painters and the song's colours.
 // Print is an A1 sheet (594 × 841) holding as many pixels as the painting had, so a phone's canvas limit still holds.
+// the source picture in the export band: fit inside bw×bh, a thin gold hairline, a small round corner
+function _srcBox(im, bw, bh){ const iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height; const k=Math.min(bw/iw, bh/ih); return { w:Math.round(iw*k), h:Math.round(ih*k) }; }
+function _drawSrc(cx, im, x, y, w, h, W){ const r=Math.round(W*0.006);
+  cx.save(); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.clip(); cx.imageSmoothingQuality='high'; cx.drawImage(im,x,y,w,h); cx.restore();
+  cx.save(); cx.strokeStyle='rgba(201,168,76,.45)'; cx.lineWidth=Math.max(1,W*0.0012); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.stroke(); cx.restore(); }
 function _frameExport(hi, kind, o){
   const GOLD='rgba(201,168,76,.85)', CREAM='#f4e7c6', SOFT='rgba(230,222,196,.72)';
   const serifI=(s)=>`italic 600 ${s}px "Cormorant Garamond", Georgia, serif`, serifI5=(s)=>`italic 500 ${s}px "Cormorant Garamond", Georgia, serif`, sans=(s)=>`500 ${s}px "Outfit", Arial, sans-serif`;
@@ -513,12 +518,15 @@ function _frameExport(hi, kind, o){
     const px=Math.round((Wf-pw)/2), py=m+Math.round((bh-ph)/2);
     cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph);
     cx.strokeStyle='rgba(201,168,76,.5)'; cx.lineWidth=Math.max(2,Wf*0.0017); cx.strokeRect(px,py,pw,ph);
+    let bw2=bw;
+    if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.13), Math.round(Wf*0.17)); const sy0=Hf-cb+Math.round(Wf*0.035), sbh=Math.round(Wf*0.235);
+      _drawSrc(cx, o.src, px, sy0+Math.round((sbh-r.h)/2), r.w, r.h, Wf); bw2=Wf-2*(px+r.w+Math.round(Wf*0.03)); }
     cx.textAlign='center'; let y=Hf-cb+Math.round(Wf*0.07);
-    if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,bw,Math.round(Wf*0.044),Math.round(Wf*0.02),serifI); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.036); }
-    if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,bw,Math.round(Wf*0.02),Math.round(Wf*0.012),sans); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.034); }
+    if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,bw2,Math.round(Wf*0.044),Math.round(Wf*0.02),serifI); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.036); }
+    if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,bw2,Math.round(Wf*0.02),Math.round(Wf*0.012),sans); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.034); }
     const _il=o.insp ? (o.palN ? o.insp+'  |  '+o.palN : o.insp) : (o.pal||'');
-    if(_il){ cx.fillStyle=GOLD; const t=_fitText(cx,_il,bw,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
-    const sw=Math.round(Wf*0.54); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
+    if(_il){ cx.fillStyle=GOLD; const t=_fitText(cx,_il,bw2,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
+    const sw=Math.min(Math.round(Wf*0.54), bw2); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
     cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · '+(o.tag||'music → φ painting'), Wf/2, Hf-Math.round(m*0.5));   // a picture's export: φ painting → music
     return cv;
   }
@@ -527,11 +535,13 @@ function _frameExport(hi, kind, o){
   cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H); cx.imageSmoothingQuality='high'; cx.drawImage(hi,m,m,pw,ph);
   const sw=Math.round(W*0.42), sh=Math.round(W*0.11), sx=W-m-sw, sy=H-Math.round(m*0.8)-sh;
   _drawPcStrip(cx, sx, sy, sw, sh, o.wts, o.gc, o.names, {font:Math.round(W*0.016)});
-  const tw=sx-m-Math.round(W*0.03); cx.textAlign='left'; let y=m+ph+Math.round(W*0.06);
-  if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,tw,Math.round(W*0.036),Math.round(W*0.018),serifI); cx.fillText(t,m,y); y+=Math.round(W*0.033); }
-  if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,m,y); y+=Math.round(W*0.033); }
-  cx.fillStyle=GOLD; const t=_fitText(cx,(o.insp ? o.insp+' · ' : '')+'Paintiano',tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,m,y);
-  if(o.pal){ const fs=parseInt((/(\d+)px/.exec(cx.font)||[0,Math.round(W*0.021)])[1],10); y+=Math.round(W*0.033); cx.fillText(_fitText(cx,o.pal,tw,fs,Math.round(W*0.012),sans),m,y); }
+  let tx0=m;
+  if(o.src){ const r=_srcBox(o.src, Math.round(W*0.2), band-Math.round(W*0.06)); _drawSrc(cx, o.src, m, m+ph+Math.round((band-r.h)/2), r.w, r.h, W); tx0=m+r.w+Math.round(W*0.03); }
+  const tw=sx-tx0-Math.round(W*0.03); cx.textAlign='left'; let y=m+ph+Math.round(W*0.06);
+  if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,tw,Math.round(W*0.036),Math.round(W*0.018),serifI); cx.fillText(t,tx0,y); y+=Math.round(W*0.033); }
+  if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,tx0,y); y+=Math.round(W*0.033); }
+  cx.fillStyle=GOLD; const t=_fitText(cx,(o.insp ? o.insp+' · ' : '')+'Paintiano',tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,tx0,y);
+  if(o.pal){ const fs=parseInt((/(\d+)px/.exec(cx.font)||[0,Math.round(W*0.021)])[1],10); y+=Math.round(W*0.033); cx.fillText(_fitText(cx,o.pal,tw,fs,Math.round(W*0.012),sans),tx0,y); }
   return cv;
 }
 
@@ -13208,6 +13218,9 @@ Hard requirements:
       // canvas above the painting (see Story compose block below) — corner
       // overlay would look glued/cluttered against the social-format frame.
       const srcThumbUrl = withSource ? (originalImgUrl || imgMoodThumb) : null;
+      // with the caption band on, the source sits IN the dark band under the painting (_frameExport o.src), never over the paint
+      const _bandOn=(sizeMode==='web' || sizeMode==='print') && exportBandRef.current && (viewMode!=='image' || !favView) && chords.length;
+      let _srcForBand=null;
       if(srcThumbUrl && sizeMode!=='story'){
         try{
           const srcImg = await new Promise((res,rej)=>{
@@ -13218,7 +13231,8 @@ Hard requirements:
           });
           const iw=srcImg.naturalWidth||srcImg.width;
           const ih=srcImg.naturalHeight||srcImg.height;
-          if(iw>0 && ih>0){
+          if(iw>0 && ih>0 && _bandOn){ _srcForBand=srcImg; }
+          else if(iw>0 && ih>0){
             // Thumb sized to ~18% of the painting's shorter side. Mounted
             // bottom-right with a small margin, framed with a thin gold
             // border that matches the app's chrome.
@@ -13267,7 +13281,7 @@ Hard requirements:
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
           const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
-          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:_pcWeights(chords), gc, names:_miT('names')});
+          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:_pcWeights(chords), gc, names:_miT('names'), src:_srcForBand});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
         }catch(_){ outCanvas=hi; }
       }
