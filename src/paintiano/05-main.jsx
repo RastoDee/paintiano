@@ -519,6 +519,7 @@ function _frameExport(hi, kind, o){
     cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph);
     cx.strokeStyle='rgba(201,168,76,.5)'; cx.lineWidth=Math.max(2,Wf*0.0017); cx.strokeRect(px,py,pw,ph);
     let bw2=bw;
+    if(o.bare){ if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.22), Math.round(cb*0.6)); _drawSrc(cx, o.src, Math.round((Wf-r.w)/2), Hf-cb+Math.round((cb-r.h)/2), r.w, r.h, Wf); } return cv; }
     if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.13), Math.round(Wf*0.17)); const sy0=Hf-cb+Math.round(Wf*0.035), sbh=Math.round(Wf*0.235);
       _drawSrc(cx, o.src, px, sy0+Math.round((sbh-r.h)/2), r.w, r.h, Wf); bw2=Wf-2*(px+r.w+Math.round(Wf*0.03)); }
     cx.textAlign='center'; let y=Hf-cb+Math.round(Wf*0.07);
@@ -530,9 +531,10 @@ function _frameExport(hi, kind, o){
     cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · '+(o.tag||'music → φ painting'), Wf/2, Hf-Math.round(m*0.5));   // a picture's export: φ painting → music
     return cv;
   }
-  const W=hi.width, m=Math.round(W*0.038), pw=W-2*m, ph=Math.round(hi.height*pw/hi.width), band=Math.round(W*0.19);
+  const W=hi.width, m=Math.round(W*0.038), pw=W-2*m, ph=Math.round(hi.height*pw/hi.width), band=Math.round(W*(o.bare ? 0.15 : 0.19));
   const H=m+ph+band; cv.width=W; cv.height=H; cx=cv.getContext('2d');
   cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H); cx.imageSmoothingQuality='high'; cx.drawImage(hi,m,m,pw,ph);
+  if(o.bare){ if(o.src){ const r=_srcBox(o.src, Math.round(W*0.2), band-Math.round(W*0.05)); _drawSrc(cx, o.src, m, m+ph+Math.round((band-r.h)/2), r.w, r.h, W); } return cv; }
   const sw=Math.round(W*0.42), sh=Math.round(W*0.11), sx=W-m-sw, sy=H-Math.round(m*0.8)-sh;
   _drawPcStrip(cx, sx, sy, sw, sh, o.wts, o.gc, o.names, {font:Math.round(W*0.016)});
   let tx0=m;
@@ -13211,15 +13213,14 @@ Hard requirements:
       // proStatus is still 'loading' — so a fast Free export at app open won't
       // accidentally slip through unwatermarked.
       applyWatermark(hi, isPro);
-      // Optional source-image thumbnail overlay (web/print only). Drawn AFTER
-      // watermark so it sits on top of the painting. Source picked from
+      // Optional source-image thumbnail (web/print only) — placed in the dark band
+      // under the painting, never on it. Source picked from
       // originalImgUrl (regular image mode) or imgMoodThumb (MFI hand-off).
       // For Story, the source thumb is rendered SEPARATELY on the Story
       // canvas above the painting (see Story compose block below) — corner
       // overlay would look glued/cluttered against the social-format frame.
       const srcThumbUrl = withSource ? (originalImgUrl || imgMoodThumb) : null;
-      // with the caption band on, the source sits IN the dark band under the painting (_frameExport o.src), never over the paint
-      const _bandOn=(sizeMode==='web' || sizeMode==='print') && exportBandRef.current && (viewMode!=='image' || !favView) && chords.length;
+      // the source sits IN the dark band under the painting (_frameExport o.src), never over the paint
       let _srcForBand=null;
       if(srcThumbUrl && sizeMode!=='story'){
         try{
@@ -13231,38 +13232,8 @@ Hard requirements:
           });
           const iw=srcImg.naturalWidth||srcImg.width;
           const ih=srcImg.naturalHeight||srcImg.height;
-          if(iw>0 && ih>0 && _bandOn){ _srcForBand=srcImg; }
-          else if(iw>0 && ih>0){
-            // Thumb sized to ~18% of the painting's shorter side. Mounted
-            // bottom-right with a small margin, framed with a thin gold
-            // border that matches the app's chrome.
-            const targetShort = Math.round(Math.min(hi.width, hi.height) * 0.18);
-            const aspect = iw/ih;
-            let tw, th;
-            if(aspect>=1){ th = targetShort; tw = Math.round(th*aspect); }
-            else        { tw = targetShort; th = Math.round(tw/aspect); }
-            const margin = Math.round(targetShort * 0.18);
-            const tx = hi.width - tw - margin;
-            const ty = hi.height - th - margin;
-            // Draw without the scale transform (which was set for chord-grid
-            // coords) — save/reset/restore.
-            const tctx = hi.getContext('2d');
-            tctx.save();
-            tctx.setTransform(1,0,0,1,0,0);
-            // subtle drop shadow behind the thumb
-            tctx.shadowColor = 'rgba(0,0,0,.55)';
-            tctx.shadowBlur = Math.round(targetShort*0.08);
-            tctx.shadowOffsetY = Math.round(targetShort*0.03);
-            tctx.drawImage(srcImg, tx, ty, tw, th);
-            tctx.restore();
-            // gold frame on top, no shadow
-            tctx.save();
-            tctx.setTransform(1,0,0,1,0,0);
-            tctx.strokeStyle = 'rgba(201,168,76,.85)';
-            tctx.lineWidth = Math.max(2, Math.round(targetShort*0.012));
-            tctx.strokeRect(tx, ty, tw, th);
-            tctx.restore();
-          }
+          // never over the paint: the source always goes into the dark band under the painting (bare band when the caption is off)
+          if(iw>0 && ih>0 && (sizeMode==='web' || sizeMode==='print')) _srcForBand=srcImg;
         }catch(_){/* thumb overlay best-effort — never block export */}
       }
       // STORY (9:16) — compose the rendered painting onto a tall 1080×1920 dark
@@ -13285,6 +13256,7 @@ Hard requirements:
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
         }catch(_){ outCanvas=hi; }
       }
+      else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386); }catch(_){ outCanvas=hi; } }
       if(sizeMode==='story'){
         const SW=1080, SH=1920;
         const st=document.createElement('canvas'); st.width=SW; st.height=SH;

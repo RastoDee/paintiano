@@ -22790,7 +22790,7 @@ function _frameExport(hi, kind, o){
     if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,bw2,Math.round(Wf*0.02),Math.round(Wf*0.012),sans); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.034); }
     const _il=o.insp ? (o.palN ? o.insp+'  |  '+o.palN : o.insp) : (o.pal||'');
     if(_il){ cx.fillStyle=GOLD; const t=_fitText(cx,_il,bw2,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
-    const sw=Math.round(Wf*0.54); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
+    const sw=Math.min(Math.round(Wf*0.54), bw2); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
     cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · '+(o.tag||'music → φ painting'), Wf/2, Hf-Math.round(m*0.5));   // a picture's export: φ painting → music
     return cv;
   }
