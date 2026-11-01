@@ -1417,6 +1417,20 @@ function myImgOpen(){
     req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }catch(err){ reject(err); } });
   return _myImgDbPromise;
 }
+// rename(id, name) → a new name for a saved song / picture / favorite (Mine). Returns the record or null.
+async function _idbRename(open, store, id, field, name){
+  try{
+    const db = await open();
+    return await new Promise((resolve)=>{
+      const tx = db.transaction(store, 'readwrite'); const st = tx.objectStore(store); const g = st.get(id); let out = null;
+      g.onsuccess = ()=>{ const r = g.result; if(!r) return; r[field] = String(name||'').trim().slice(0,120); st.put(r); out = r; };
+      tx.oncomplete = ()=> resolve(out); tx.onerror = ()=> resolve(null);
+    });
+  }catch(_){ return null; }
+}
+async function myMusicRename(id, name){ return _idbRename(myMusicOpen, MY_MUSIC_STORE, id, 'name', name); }
+async function myImgRename(id, name){ return _idbRename(myImgOpen, MY_IMG_STORE, id, 'name', name); }
+async function favRename(id, name){ return _idbRename(favOpen, 'favs', id, 'name', name); }
 async function myImgList(){
   try{ const db=await myImgOpen(); return await new Promise((resolve)=>{ const req=db.transaction(MY_IMG_STORE,'readonly').objectStore(MY_IMG_STORE).getAll();
     req.onsuccess=()=>{ const byId=new Map((req.result||[]).map(r=>[r.id,r])); const out=[]; for(let i=1;i<=MY_IMG_MAX;i++) out.push(byId.get(i)||{id:i, empty:true}); resolve(out); };
