@@ -12679,7 +12679,7 @@ Hard requirements:
       let noteStart=performance.now();
       const emitNote=(note,heldMs)=>{
         const sustainMs=Math.round(Math.min(2400,Math.max(300,heldMs)));
-        playNote(note.m,note.v,sustainMs);
+        // silent while it listens (as Music): the piano from the speaker would come back into the mic — after the take, Orig ⇄ piano plays it
         setActive(p=>{const s=new Set(p);s.add(note.m);return s;});
         pushTimer(()=>setActive(p=>{const s=new Set(p);s.delete(note.m);return s;}),Math.min(sustainMs,1000));
         const idx=idxRef.current++;
