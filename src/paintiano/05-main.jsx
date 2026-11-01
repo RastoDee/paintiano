@@ -14390,7 +14390,9 @@ Hard requirements:
           else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
         }
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
-        if(!randomMode){ if(style===null && !(jamOn && painterStage.length)){ setOneMMode(false); setNotesMode(n=>!n); rolled = true; } else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; } }   // 🔀 off: the variants of your painter (Mosaic ⇆ Notes, or its own) — never the 'off' message
+        // ↑ in the Studio = someone else: another painter (or another Fusion) from your set — no 🔀 to set; ← is the same one, otherwise
+        if(jamOn){ try{ jamPinsRef.current=[]; }catch(_){} if(jamPins && jamPins.length) setJamPins([]); }   // the Ensemble: a whole new Fusion each time (no painter pinned)
+        if(_artMode!==2){ if(jamOn) setJamAll(true); else _cycleArt(); nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true; }
         else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
       }
     }catch(_){}
@@ -16793,7 +16795,7 @@ Hard requirements:
                 <button onClick={()=>setSetupArtists(['mosaicFamily'])} style={{padding:'2px 9px',borderRadius:11,fontSize:(.42*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'1px solid rgba(242,238,232,.2)',color:'rgba(230,222,196,.5)'}}>{ts('selNone','none')}</button>
               </div>
             )}
-            {!cockpitEdit && _modeBtn(_artMode===2 ? 2 : 0, _cycleArt, true)}
+            {!cockpitEdit && !studioFs && _modeBtn(_artMode===2 ? 2 : 0, _cycleArt, true)}{/* the Studio has no 🔀: ↑ = another painter, ← = the same one otherwise */}
             {/* Ensemble stays under ✦ too (lit when the signature is a fusion): another painter, or one taken off, and ✦ gives way to the Ensemble */}
             {!cockpitEdit && ensembleActive && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36, _artChoiceN()<2)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
