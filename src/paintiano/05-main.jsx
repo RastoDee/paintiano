@@ -3754,6 +3754,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // 🔀 has two states. Off = the painter you chose, and Next / Play bring more of its variants
   // (randomMode stays on under the hood with an artist chosen — see the effect below). On = ALL:
   // every painter in your set.
+  // the Studio letting go of every chosen painter: ↑ draws from your whole set again (with the Ensemble: whole new Fusions, nothing pinned)
+  const _stAllOn = ()=>{
+    if(!randomMode) _shuffleOn();
+    if(mosaicShuffleLock) setMosaicShuffleLock(false);
+    jamPinsRef.current=[]; setJamPins([]); if(jamOn) setJamAll(true);
+    if(painterStage.length) setPainterStage([]);
+    if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
+  };
   const _cycleArt = ()=>{
     if(working||anim) return;
     if(_artMode!==2){                                               // → on (ALL)
@@ -14390,10 +14398,9 @@ Hard requirements:
           else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
         }
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
-        // ↑ in the Studio = someone else: another painter (or another Fusion) from your set — no 🔀 to set; ← is the same one, otherwise
-        if(jamOn){ try{ jamPinsRef.current=[]; }catch(_){} if(jamPins && jamPins.length) setJamPins([]); }   // the Ensemble: a whole new Fusion each time (no painter pinned)
-        if(_artMode!==2){ if(jamOn) setJamAll(true); else _cycleArt(); nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true; }
-        else { nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
+        // ↑ in the Studio = someone else from your set — unless you chose (gold): a chosen painter or Fusion stays, ↑ does nothing (← its variants);
+        // with the Ensemble drawing, the gold (pinned) painters stay and ↑ draws new guests
+        if(_artMode===2){ nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
       }
     }catch(_){}
     if(!rolled) return;
@@ -16941,11 +16948,12 @@ Hard requirements:
                 }
                 if(_artMode===2){                               // shuffle ALL: the draw decides — except Ensemble ALL, where a tap pins / unpins
                   // the Studio has no 🔀: a tap picks this painter (↑ draws again, ← its variants); with the Ensemble it starts a new Fusion from it
-                  if(studioFs){ if(locked){ setPaywallReason('settings'); return; } if(jamAll){ setJamAll(false); setJamPins([]); } if(painterStage.length) setPainterStage([]); selectStyle(k); return; }
+                  if(studioFs && !(jamOn && jamAll)){ if(locked){ setPaywallReason('settings'); return; } if(painterStage.length) setPainterStage([]); selectStyle(k); return; }
                   if(jamOn && jamAll && !locked) _jamPinTap(k);
                   return;
                 }
                 if(locked && _inSig){ setPaywallReason('settings'); return; }   // a Pro ✦ member on Free: on its own it is Pro
+                if(studioFs && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)){ _stAllOn(); return; }   // the Studio: the last gold one tapped again = let go — ↑ draws from your whole set again
                 // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
                 // must not slide into ALL just because nothing is selected any more).
                 if(_artMode===1 && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)) _shuffleOff();
