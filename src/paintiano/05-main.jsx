@@ -13908,14 +13908,18 @@ Hard requirements:
   // canvas), a small picture made one at a time in the background while the sheet is open, kept for the song and palette.
   const [skinThumbs, setSkinThumbs] = useState({});
   const skinThumbRef = useRef({ key:'', done:{} });
-  const _skinPk = useMemo(()=> chords.length ? _favHash(chords) : '', [chords]);
+  // with no piece on (Styles & palettes from an empty screen) the faces paint a small built-in phrase — each painter still shows its hand
+  const _skinDemo = useMemo(()=> Array.from({length:48},(_,i)=>({ idx:i, startMs:i*320, durQ:1+((i*3)%4)*0.5, recorded:false,
+    n:[{m:43+((i*7)%24),v:62+((i*13)%55),durMs:320+((i*5)%4)*160},{m:60+((i*5)%19),v:58+((i*11)%40),durMs:320}] })), []);
+  const _skinPk = useMemo(()=> chords.length ? _favHash(chords) : (showSetupModal ? 'demo' : ''), [chords, showSetupModal]);
   const _skinPalKey = mode==='custom' ? (activePalette||[]).join(',') : '';
   // Compose / Mic grow the piece note by note: the faces are painted once when the sheet opens and stay
   // put while it is open (otherwise every new note repaints all of them — they flicker)
   const _skinPkRef = useRef('');
-  if(!(studioFs && stripOpen)) _skinPkRef.current='';
+  const _skinOpen = (studioFs && stripOpen) || showSetupModal;   // the look sheet, or Styles & palettes (the same faces)
+  if(!_skinOpen) _skinPkRef.current='';
   else if(!(composeMode || micActive) || !_skinPkRef.current) _skinPkRef.current=_skinPk;
-  const _skinKey = (studioFs && stripOpen && _skinPkRef.current && !(viewMode==='image' && !moodFromImg))
+  const _skinKey = (_skinOpen && _skinPkRef.current && !(viewMode==='image' && !moodFromImg))
     ? [_skinPkRef.current, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus].join('|') : '';
   useEffect(()=>{
     if(!_skinKey) return;
@@ -13923,7 +13927,7 @@ Hard requirements:
     if(R.key!==_skinKey){ R.key=_skinKey; R.done={}; setSkinThumbs({}); }
     const todo = ['mosaic'].concat(ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily')).filter(k=>!R.done[k]);
     if(!todo.length) return;
-    const cs = chords, own = draftOwnerRef.current || null;
+    const cs = chords.length ? chords : _skinDemo, own = chords.length ? (draftOwnerRef.current || null) : null;
     let dead=false, tm=null;
     const step = ()=>{
       if(dead) return;
@@ -13969,7 +13973,7 @@ Hard requirements:
   const _skinFace = (k, hit)=>{
     const u = skinThumbs[k||'mosaic'];
     let h=0; for(const c of String(k||'mosaic')) h=(h*31+c.charCodeAt(0))>>>0;
-    return (<span className={'pf-sk-face'+(hit?' pf-sk-hit':'')+(u?'':' pf-sk-wait')} aria-hidden="true"
+    return (<span className={'pf-sk-face'+(hit?' pf-sk-hit':'')+((u || !_skinKey)?'':' pf-sk-wait')} aria-hidden="true"
       style={u ? {backgroundImage:'url('+u+')'} : {background:'linear-gradient(145deg,hsl('+(h%360)+',34%,30%),hsl('+((h+50)%360)+',30%,13%))'}}/>);
   };
   const _skinGlyph = (g)=> <span className="pf-sk-face pf-sk-glyph" aria-hidden="true">{g}</span>;
@@ -19657,6 +19661,7 @@ Hard requirements:
           1 + 1 required (close + Done disabled otherwise). Free tier sees Pro
           artists in the list with a 🔒 indicator — checking them saves the
           preference, but tapping the tile in canvas still hits the paywall. */}
+      {showSetupModal && (<style>{STUDIO_SKIN_CSS}</style>)}{/* the painters' and composers' faces (.pf-sk-face) in Styles & palettes */}
       {showSetupModal && (()=>{
         const _palLabels = {harmony:t('harmony'), spectral:t('spectral'), phi:t('phi'), kontra:t('kontra'), custom:t('custom')};
         const _artistLabels = (()=>{ const m={mosaicFamily:(ts('setupMosaicFamily','Mosaic family'))}; ALL_ARTIST_KEYS.forEach(k=>{ if(k!=='mosaicFamily') m[k]=STYLE_INSPIRED[k]||k; }); return m; })();
@@ -19694,6 +19699,16 @@ Hard requirements:
           </div>
         );
         // One-of-three switch (tone, fusion style): a joined track, not chips — chips stay for "any of"
+        // painters and composers as faces — the same round faces as the Studio's look sheet; on = gold ring + ✓, off = dimmed
+        const _faceGrid = {display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:'14px 4px',paddingTop:8};
+        const _faceBtn = (on)=>({display:'flex',flexDirection:'column',alignItems:'center',gap:6,minWidth:0,background:'none',border:0,padding:'4px 0',cursor:'pointer',fontFamily:'inherit',WebkitTapHighlightColor:'transparent'});
+        const _faceWrap = (on, locked)=>({position:'relative',display:'block',borderRadius:'50%',opacity:on?1:(locked?.3:.38),boxShadow:on?'0 0 0 3px #07060c, 0 0 0 5px rgba(240,215,138,.9)':'none',transition:'opacity .18s, box-shadow .18s'});
+        const _faceLbl = (on)=>({maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:_px(10.5),fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',color:on?'#f2eee8':'rgba(242,238,232,.45)'});
+        const _faceBadges = (on, locked, daily)=>(<>
+          {on && (<span aria-hidden="true" style={{position:'absolute',right:-5,bottom:-5,width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</span>)}
+          {locked && (<span aria-hidden="true" style={{position:'absolute',right:-4,bottom:-4,fontSize:13}}>🔒</span>)}
+          {daily && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-9,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
+        </>);
         const _segWrap = (bg)=>({display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:4,padding:4,background:'rgba(255,255,255,.07)',border:0,borderRadius:18});
         const _segBtn = (on)=>({minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,padding:'9px 2px',minHeight:40,borderRadius:14,border:0,background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'transparent',color:on?'#1a1408':'rgba(242,238,232,.7)',fontFamily:'inherit',fontSize:_px(13.5),fontWeight:700,lineHeight:1.15,cursor:'pointer',textAlign:'center'});
         // Fusion style glyphs: turns (two hands alternating) · one new painter (two hues merged) · random (a die)
@@ -19738,7 +19753,7 @@ Hard requirements:
               <div className="pf-setup-artists">
                 {_secHead(_icoS(_kBrush, 0, 'linear-gradient(135deg,#cdb2ff,#8c5cff)'), ts('setupArtistsTitle',({EN:'Inspired by',SK:'Inšpirované',DE:'Inspiriert von',FR:'Inspiré par',ES:'Inspirado por',PT:'Inspirado por',zh:'灵感来源',zhTW:'靈感來源',ja:'インスパイア'})[lang]||'Inspired by'), setupArtists.length+' / '+ALL_ARTIST_KEYS.length, ()=>setSetupArtists(ALL_ARTIST_KEYS.slice()), ()=>setSetupArtists([]))}
                 {proStatus==='free' && !tasteUsedRef.current && (<div style={{fontSize:_px(12.5),lineHeight:1.4,color:'rgba(242,238,232,.6)',marginBottom:12}}>{ts('tasteHint',({EN:'Tap your favourite locked \uD83D\uDD12 artist — it unlocks for you to try.',SK:'\u0164ukni na svojho ob\u013E\u00FAben\u00E9ho zamknut\u00E9ho \uD83D\uDD12 umelca \u2014 odomkne sa ti na vysk\u00FA\u0161anie.',DE:'Tippe deinen liebsten gesperrten \uD83D\uDD12 K\u00FCnstler an \u2014 er wird f\u00FCr dich freigeschaltet.',FR:'Touche ton artiste verrouill\u00E9 \uD83D\uDD12 pr\u00E9f\u00E9r\u00E9 \u2014 il se d\u00E9verrouille pour toi.',ES:'Toca tu artista bloqueado \uD83D\uDD12 favorito \u2014 se desbloquea para que lo pruebes.',PT:'Toca no teu artista bloqueado \uD83D\uDD12 favorito \u2014 desbloqueia para experimentares.',zh:'\u70B9\u4E00\u4E0B\u4F60\u6700\u559C\u6B22\u7684\u9501\u5B9A\uD83D\uDD12\u827A\u672F\u5BB6\u2014\u2014\u4F1A\u4E3A\u4F60\u89E3\u9501\u8BD5\u7528\u3002',zhTW:'\u9EDE\u4E00\u4E0B\u4F60\u6700\u559C\u6B61\u7684\u9396\u5B9A\uD83D\uDD12\u85DD\u8853\u5BB6\u2014\u2014\u6703\u70BA\u4F60\u89E3\u9396\u8A66\u7528\u3002',ja:'\u597D\u304D\u306A\u30ED\u30C3\u30AF\u3055\u308C\u305F\uD83D\uDD12\u30A2\u30FC\u30C6\u30A3\u30B9\u30C8\u3092\u30BF\u30C3\u30D7\u2014\u3042\u306A\u305F\u306E\u305F\u3081\u306B\u89E3\u9664\u3055\u308C\u307E\u3059\u3002'})[lang]||'Tap your favourite locked artist — it unlocks for you to try.')}</div>)}
-                <div style={{display:'flex',flexWrap:'wrap',gap:8,paddingTop:6}}>
+                <div style={_faceGrid}>
                   {ALL_ARTIST_KEYS.map(k=>{
                     const on = setupArtists.includes(k);
                     // Compact single-word label to fit narrow 5-col chip
@@ -19756,7 +19771,7 @@ Hard requirements:
                     const chipStyleOn = {background:'linear-gradient(135deg,#cdb2ff,#8c5cff)',border:'1px solid transparent',color:'#fff'};
                     const chipStyleOff = {background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'};
                     return (
-                    <button key={k} onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={{position:'relative',display:'inline-flex',alignItems:'center',gap:5,padding:'9px 14px',fontSize:_px(13.5),fontWeight:600,fontFamily:'inherit',cursor:'pointer',borderRadius:20,whiteSpace:'nowrap',lineHeight:1.2,transition:'background .18s, color .18s',opacity:locked?0.55:1,...(on?chipStyleOn:chipStyleOff),...(isDailyArtist(k)?{boxShadow:'0 0 0 2px #f0d78a, 0 0 16px rgba(240,215,138,.35)'}:{})}}>{_label}{locked && (<span style={{fontSize:_px(10.5),opacity:.75}}>🔒</span>)}{isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}</button>
+                    <button key={k} type="button" onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} aria-pressed={on} title={locked ? (ts('proArtist','{artist} is Pro').replace('{artist}', _fullName)) : undefined} style={_faceBtn(on)}><span style={_faceWrap(on, locked)}>{_skinFace(k==='mosaicFamily' ? 'mosaic' : k)}{_faceBadges(on, locked, isDailyArtist(k))}</span><span style={_faceLbl(on)}>{_label}</span></button>
                     );
                   })}
                 </div>
@@ -19795,12 +19810,12 @@ Hard requirements:
                   feed the Lite surprise roulette. Scan is a mode, always on, not listed. */}
               <div className="pf-setup-composers">
                 {_secHead(_icoS(_kNote, 0, 'linear-gradient(135deg,#7ab3ff,#3f7bff)'), ({EN:'Composers',SK:'Skladatelia',DE:'Komponisten',FR:'Compositeurs',ES:'Compositores',PT:'Compositores',zh:'作曲家',zhTW:'作曲家',ja:'作曲家'})[lang]||'Composers', setupComposers.length+' / '+ALL_COMPOSER_KEYS.length, ()=>setSetupComposers(ALL_COMPOSER_KEYS.slice()), ()=>setSetupComposers([]))}
-                <div style={{display:'flex',flexWrap:'wrap',gap:8,paddingTop:6}}>
+                <div style={_faceGrid}>
                   {[{k:'glass',n:'Glass'},{k:'satie',n:'Satie'},{k:'chopin',n:'Chopin'},{k:'vine',n:'Carl Vine'},{k:'gershwin',n:'Gershwin'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'},{k:'mozart',n:'Mozart'},{k:'schubert',n:'Schubert'},{k:'tchaikovsky',n:'Tchaikovsky'}].map(c=>{
                     const on = setupComposers.includes(c.k);
                     const proLock = composerIsLocked(c.k);
                     return (
-                    <button key={c.k} onClick={()=>{ if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'setup'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined} style={{position:'relative',display:'inline-flex',alignItems:'center',gap:5,opacity:proLock?0.55:1,padding:'9px 14px',borderRadius:20,cursor:'pointer',fontFamily:'inherit',fontSize:_px(13.5),fontWeight:600,whiteSpace:'nowrap',transition:'background .18s, color .18s',...(on?{background:'linear-gradient(135deg,#7ab3ff,#3f7bff)',border:'1px solid transparent',color:'#fff'}:{background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'}),...(isDailyComposer(c.k)?{boxShadow:'0 0 0 2px #f0d78a, 0 0 16px rgba(240,215,138,.35)'}:{})}}>{c.n}{proLock && (<span style={{fontSize:_px(10.5),opacity:.75}}>🔒</span>)}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}</button>
+                    <button key={c.k} type="button" onClick={()=>{ if(proLock){ try{ window.posthog && window.posthog.capture('composer_locked_tap',{composer:c.k,where:'setup'}); }catch(_){} setShowSetupModal(false); setPaywallReason('settings'); return; } setSetupComposers(prev=> prev.includes(c.k) ? prev.filter(x=>x!==c.k) : [...prev, c.k]); }} aria-pressed={on} title={proLock ? (ts('proArtist','{artist} is Pro').replace('{artist}', c.n)) : undefined} style={_faceBtn(on)}><span style={_faceWrap(on, proLock)}>{_skinMono(c.k)}{_faceBadges(on, proLock, isDailyComposer(c.k))}</span><span style={_faceLbl(on)}>{c.n}</span></button>
                     );
                   })}
                 </div>
