@@ -1973,6 +1973,8 @@ function _computeSongCharacter(chords){
 }
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
+  // a song opened from the Mic (its events carry _mic) keeps the Mic's portrait 3:4 frame wherever it is laid out
+  if(Array.isArray(arg) && arg[0] && arg[0]._mic && !(opts && opts.liveMode)) opts = {...(opts||{}), liveMode:true, livePortrait:true};
   const liveMode = !!(opts && opts.liveMode);
   // STAGE 2: a loaded piece on a wide desktop screen uses a FIXED landscape
   // golden-ratio frame (see the loaded-mode branch below). `fixedFrame` marks
@@ -27375,7 +27377,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // ~900px buffer. SS=1 everywhere else → normal & mobile rendering byte-for-byte
     // unchanged. (immersive is declared early, near viewMode, so reading it here is
     // safe — reading it before its declaration was a TDZ crash = black screen.)
-    const SS=((immersive || feedHiRes) && viewMode==='paint')?2:1;
+    const SS=((immersive || feedHiRes) && (viewMode==='paint' || viewMode==='audio'))?2:1;   // an MP3 (and a song from the Mic) is painted as crisply as any piece
     const _bw=Math.max(1,Math.round(CW*SS)), _bh=Math.max(1,Math.round(CH*SS));
     if(cv.width!==_bw) cv.width=_bw;
     if(cv.height!==_bh) cv.height=_bh;
@@ -30816,6 +30818,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       const _fromMic=micToSongRef.current; micToSongRef.current=false;
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true} : undefined);
+      if(_fromMic) evts.forEach(e=>{ e._mic=1; });   // a song from the Mic keeps the Mic's 3:4 frame (computeGrid reads it — live, resized, as a favorite)
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       const aName=file.name.replace(/\.[^.]+$/,'');

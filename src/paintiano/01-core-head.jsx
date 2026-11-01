@@ -1973,6 +1973,8 @@ function _computeSongCharacter(chords){
 }
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
+  // a song opened from the Mic (its events carry _mic) keeps the Mic's portrait 3:4 frame wherever it is laid out
+  if(Array.isArray(arg) && arg[0] && arg[0]._mic && !(opts && opts.liveMode)) opts = {...(opts||{}), liveMode:true, livePortrait:true};
   const liveMode = !!(opts && opts.liveMode);
   // STAGE 2: a loaded piece on a wide desktop screen uses a FIXED landscape
   // golden-ratio frame (see the loaded-mode branch below). `fixedFrame` marks
