@@ -5678,7 +5678,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!ti) g=computeGrid(chords);
       else{
         const basic=basicModeRef.current;
-        const evs=chords.map(c=>({durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
+        const evs=chords.map(c=>({durQ: c.durQ!=null ? c.durQ : snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500), ...(c.mic ? {mic:1} : {})}));
         g=computeGrid(evs,_liveGridOpts(fv.own||null, _isMicOwn(fv.own) && !fv.mf));   // a Mic favorite from before the frame (no mf) keeps its old layout
       }
     }catch(_){ g=null; }
@@ -6008,7 +6008,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const sigStr=sig.toString(36)+'_'+chords.length;
     if(sigStr===gridSigRef.current)return;
     gridSigRef.current=sigStr;
-    const evs=chords.map(c=>({durQ:c.durQ!=null?c.durQ:snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500)}));
+    // (mic: a Mic take flips its frame at its 41st chord, Compose at its 82nd — computeGrid reads it off the first event)
+    const evs=chords.map(c=>({durQ:c.durQ!=null?c.durQ:snapDurQ(Math.max(...c.n.map(n=>n.durMs||250),250)/500), ...(c.mic ? {mic:1} : {})}));
     // Fixed-frame live canvas applies to in-the-moment creation only — Compose
     // and Voice (sing): short pieces that should sit in one golden-ratio frame
     // with rows thinning as you add chords. MUSIC (listen) is really a transcript
