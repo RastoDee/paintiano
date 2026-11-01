@@ -40033,7 +40033,7 @@ Hard requirements:
                 ) : null}
               </div>
               <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em',maxWidth:360}}>
-                {(micSong && micSong.phase==='reading') ? '' : micSong ? _stT('micPlay') : take ? _stT('micPlay')+' · '+_stT('micCont').split(' · ')[0] : _stT('chMicS')}
+                {(micSong && micSong.phase==='reading') ? '' : micSong ? _stT('micPlay') : take ? _stT('micCont').split(' · ')[0] : _stT('chMicS')}
               </div>
               {micListening && (<div style={{marginTop:-6,fontSize:(.46*effScale)+'rem',letterSpacing:'.04em',color:'rgba(100,200,255,.45)',textAlign:'center',lineHeight:1.45,maxWidth:340}}>🔊 {t('listenHint')}</div>)}
             </div>
