@@ -40039,7 +40039,7 @@ Hard requirements:
                   </svg>
                 </div>
               </div>)}
-            <div ref={stMicRef} onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10003,boxSizing:'border-box',padding:'6px max(18px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',alignItems:'center',gap:10,background:stFill ? 'linear-gradient(to top, rgba(7,6,12,.62), rgba(7,6,12,.28) 70%, rgba(7,6,12,0))' : '#07060c'}}>
+            <div ref={stMicRef} onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10003,boxSizing:'border-box',padding:'6px max(18px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',alignItems:'center',gap:10,background:stFill ? 'transparent' : '#07060c'}}>
               {/* the instrument under the Studio's buttons (as Compose has its keys): one REC */}
               <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:18,width:'100%',maxWidth:380}}>
                 {!micSong && (<button type="button" className={'pf-mic-rec'+(micActive?' on':'')} onClick={_rec} aria-label={micActive ? 'stop' : 'REC'}><span/></button>)}
