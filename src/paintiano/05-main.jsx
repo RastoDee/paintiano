@@ -1752,6 +1752,7 @@ const STUDIO_FX_CSS = `
 .pf-st-thumb{position:fixed;right:max(12px, env(safe-area-inset-right, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid rgba(220,150,255,.6);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5)}
 .pf-st-paused{position:fixed;left:50%;top:50%;z-index:10001;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);pointer-events:none;animation:pfStPausedIn .18s ease-out}
 .pf-st-paused svg{margin-left:4px}
+.pf-st-paused.gone{opacity:0;transform:scale(.9);transition:opacity .9s ease, transform .9s ease}
 @keyframes pfStPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 .pf-st-bar{position:fixed;left:0;right:0;z-index:10001;display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));pointer-events:none}
 .pf-st-bar:has(.pf-st-meta.hide)::before{opacity:.45}
@@ -14458,6 +14459,10 @@ Hard requirements:
   const _metaQuietOk = !!playing && !stChg && !stShare && !stripOpen && !showMine && ((studioFs && stFill && !studioLive) || (studioHome && feedLoaded!==null && feedAt>=0));
   useEffect(()=>{ setMetaHide(false); if(!_metaQuietOk) return; const tm=setTimeout(()=>{ if(metaHoldRef.current.on || _holdingRef.current) return; setMetaHide(true); }, 4000); return ()=>clearTimeout(tm);
   },[_metaQuietOk, feedFlash, feedAt, _swipeFlashKey, style, painterStage.length, imgComposer, info && info.title, metaPoke]);
+  // a painting played to the end: its ▶ stays a moment, then goes quietly (a tap still plays it again)
+  const _stEnded = !playing && !anim && !holdPaused && chords.length>0 && disp>=chords.length;
+  const [stEndQuiet, setStEndQuiet] = useState(false);
+  useEffect(()=>{ setStEndQuiet(false); if(!_stEnded) return; const tm=setTimeout(()=>setStEndQuiet(true), 2500); return ()=>clearTimeout(tm); },[_stEnded, chords]);
   const [feedHintN, setFeedHintN] = useState(()=>{ try{ return parseInt(localStorage.getItem('paintiano_feed_hint_n')||'0',10)||0; }catch(_){ return 0; } });
   const feedLookRef = useRef(null);   // your painter · palette before the feed, back when you return to the home card
   const feedStartRef = useRef(null);
@@ -17481,7 +17486,7 @@ Hard requirements:
           {stFill && !_live && (<><span className="pf-st-corner l" aria-hidden="true"/><span className="pf-st-corner r" aria-hidden="true"/></>)}   {/* full screen: the top corners rounded, as at home */}
           {!_vr && !stripOpen && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
           {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={_go(_stPeekTap)} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
-          {!_vr && !_live && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className="pf-st-paused" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
+          {!_vr && !_live && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
           {!_vr && (<div className="pf-st-bar" style={{bottom:_live ? (stDockH+12)+'px' : 'calc(env(safe-area-inset-bottom, 0px) + 30px)'}}>
             {stTip==='up' && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
             {!_live && (_ttl || _stEmpty) && (<div className={'pf-st-meta'+(((metaHide && !_stEmpty) || stTip==='chg' || stTip==='fav')?' hide':'')}>

@@ -27802,7 +27802,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // Never while it records, with the piano open, or on an image scan.
   const _favLim = anim ? disp : playing ? disp : holdPaused ? disp : composedModeRef.current ? chords.length : Math.min(disp, chords.length);
   const _favWhole = !composedModeRef.current && !(chords[0] && chords[0].recorded) && !micActive && !composeMode && !draftOwnerRef.current;
-  const favReady = chords.length>0 && (_favWhole || (_favLim>=chords.length && !playing && !anim)) && !recording && !composeMode && !micActive && !busy && !working && !demoReelOn && viewMode!=='image' && !imgComposeRef.current && !favView;
+  const favReady = chords.length>0 && (_favWhole || (_favLim>=chords.length && !playing && !anim)) && !recording && !composeMode && !micActive && !working && !demoReelOn && viewMode!=='image' && !imgComposeRef.current && !favView;
   const _favPk = useMemo(()=> favReady ? _favHash(chords) : null, [favReady, chords]);
   // The address of the painting on screen (see _favAddrKey).
   const _favAddrNow = ()=>{
