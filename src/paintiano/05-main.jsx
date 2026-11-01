@@ -3911,6 +3911,27 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       return (next.a|0)!==(shuffleArtistIndex|0);   // true = the artist on screen changes
     }
   };
+  // ← (Studio and Surprise me): the next variant of what is on screen — the same painter, or the same Fusion with a new combination
+  // of its members' variants; the drawing only (the palette stays), random without repeats until all have been seen
+  const variantBagRef = useRef({ key:'', bag:[] });
+  const _variantRoll = ()=>{
+    if(viewMode==='image') return false;
+    if(style!==null && painterStage.length){ return !!_fuRollAll(_jamStage()); }   // a Fusion: every member a new variant of its own
+    if(style===null && !randomMode){ setOneMMode(false); setNotesMode(n=>!n); return true; }   // the Mosaic: Mosaic ⇆ Notes
+    const k = style || shuffleStyle; if(!k || k==='mosaic'){ setOneMMode(false); setNotesMode(n=>!n); return true; }
+    const N = (proStatus==='free' && k!==artistOfDay && !(tastePreviewKeyRef.current && k===tastePreviewKeyRef.current)) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6);
+    if(N<2) return false;
+    const cur = (style ? phaseIndex : shufVariant)|0;
+    const B = variantBagRef.current, key = k+'|'+N+'|'+(pollockSessionSeed>>>0);
+    if(B.key!==key || !B.bag.length){
+      const arr = Array.from({length:N},(_,i)=>i).filter(i=>i!==cur);
+      for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=arr[i]; arr[i]=arr[j]; arr[j]=t; }
+      B.key=key; B.bag=arr;
+    }
+    const next = B.bag.shift()|0;
+    if(style) setPhaseIndex(next); else setShufVariant(next);
+    return true;
+  };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
   // Tear down the Show timer.
@@ -14379,11 +14400,18 @@ Hard requirements:
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
   };
+  const _stVariant = ()=>{
+    if(!((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive)) return;
+    let ok=false; try{ ok=_variantRoll(); }catch(_){} if(!ok) return;
+    setStFavPend(false); _stBuzz(10);
+    if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
+    setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
+  };
   // one gesture: up = the next painting (everything else is in ✦ Change). True = a swipe.
   _stSwipeRef.current = (dx, dy, dt)=>{
     const ax=Math.abs(dx), ay=Math.abs(dy);
     if(dt>700) return false;
-    if(ax>=60 && ax>ay*1.5) return true;   // sideways: nothing (the swipe is eaten, not a tap)
+    if(ax>=60 && ax>ay*1.5){ if(dx<0) _stVariant(); return true; }   // ← the next variant of this painter / Fusion; → nothing
     if(ay<50 || ay<ax*1.5) return false;
     if(dy<0){ _stNext(); return true; }
     return true;   // down: nothing
@@ -15762,7 +15790,8 @@ Hard requirements:
           const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }
-          if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedTake(); return; }   // down: it's yours — the surprise moves into the Studio and plays on
+          if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedTake(); return; }
+          if(dt<800 && dx<=-60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ let ok=false; try{ ok=_variantRoll(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } return; }   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
