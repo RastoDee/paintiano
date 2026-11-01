@@ -2024,7 +2024,7 @@ function computeGrid(arg, opts){
   // still drives per-cell widths below; only N/rows use the count.)
   const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
   // the frame's shape: a take by its chord count (it flips once, at 41), a loaded piece by how many blocks it paints
-  const _port = liveMode ? ((opts && opts.livePortrait!==undefined) ? !!opts.livePortrait : _pfTakePortrait(evs.length, evs)) : (_layoutQ >= PF_LONG_SONG);
+  const _port = liveMode ? ((opts && opts.livePortrait!==undefined) ? !!opts.livePortrait : _pfTakePortrait(evs.length, evs)) : (evs[0] && evs[0]._mic && evs[0]._micP!==undefined) ? !!evs[0]._micP : (_layoutQ >= PF_LONG_SONG);   // a song from the Mic: its take's shape
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
   const _portrait = !!(opts && opts.portraitGrow);

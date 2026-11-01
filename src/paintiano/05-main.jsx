@@ -8563,7 +8563,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       const _fromMic=micToSongRef.current; micToSongRef.current=false;
       const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true} : undefined);
-      if(_fromMic) evts.forEach(e=>{ e._mic=1; });   // a song from the Mic keeps the Mic's 3:4 frame (computeGrid reads it — live, resized, as a favorite)
+      if(_fromMic){ const _mp=(_fromMic && _fromMic.port) ? 1 : 0; evts.forEach(e=>{ e._mic=1; e._micP=_mp; }); }   // a song from the Mic keeps its take's frame, landscape or portrait (computeGrid reads _micP — live, resized, as a favorite)
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       const aName=file.name.replace(/\.[^.]+$/,'');
@@ -14457,7 +14457,8 @@ Hard requirements:
     const ext = /mp4|aac|m4a/.test(type) ? '.m4a' : /ogg/.test(type) ? '.ogg' : /wav/.test(type) ? '.wav' : '.webm';
     const d=new Date(micTakeAt || Date.now());
     const nm=_stT('micTake')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    micToSongRef.current=true;
+    // the song keeps the take's frame — landscape if the take was, portrait if it had flipped (one shape for one recording)
+    micToSongRef.current={ port: !!((_takeInfo(chordsRef.current)||{}).port) };
     try{ loadAudio({target:{files:[new File([B.blob], nm+ext, {type})], value:''}}); }catch(_){ micToSongRef.current=false; }
   };
   // the Mic's clock: how long this REC has been listening (the pill on top, as a camera has)
