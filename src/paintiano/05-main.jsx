@@ -509,11 +509,16 @@ function _frameExport(hi, kind, o){
   const GOLD='rgba(201,168,76,.85)', CREAM='#f4e7c6', SOFT='rgba(230,222,196,.72)';
   const serifI=(s)=>`italic 600 ${s}px "Cormorant Garamond", Georgia, serif`, serifI5=(s)=>`italic 500 ${s}px "Cormorant Garamond", Georgia, serif`, sans=(s)=>`500 ${s}px "Outfit", Arial, sans-serif`;
   const cv=document.createElement('canvas'); let cx;
-  if(kind==='print'){
-    const area=hi.width*hi.height; const Wf=Math.round(Math.sqrt(area*594/841)), Hf=Math.round(Wf*841/594);
+  // Web and Print share ONE layout (painting in a dark mat, the caption centred under it); Print keeps the A-sheet ratio, Web hugs the painting
+  {
+    const isP=(kind==='print');
+    const area=hi.width*hi.height; const Wf=isP ? Math.round(Math.sqrt(area*594/841)) : hi.width;
+    const m=Math.round(Wf*(isP ? 0.094 : 0.07));
+    const cb0=Math.round(Wf*(o.bare ? 0.24 : 0.36));
+    const Hf=isP ? Math.round(Wf*841/594) : (m + Math.round(hi.height*(Wf-2*m)/hi.width) + cb0);
     cv.width=Wf; cv.height=Hf; cx=cv.getContext('2d');
     cx.fillStyle='#0b0b10'; cx.fillRect(0,0,Wf,Hf);
-    const m=Math.round(Wf*0.094), cb=Math.round(Hf*0.25);
+    const cb=isP ? Math.round(Hf*0.25) : cb0;
     const bw=Wf-2*m, bh=Hf-m-cb; const k=Math.min(bw/hi.width, bh/hi.height); const pw=Math.round(hi.width*k), ph=Math.round(hi.height*k);
     const px=Math.round((Wf-pw)/2), py=m+Math.round((bh-ph)/2);
     cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph);
@@ -531,20 +536,6 @@ function _frameExport(hi, kind, o){
     cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · '+(o.tag||'music → φ painting'), Wf/2, Hf-Math.round(m*0.5));   // a picture's export: φ painting → music
     return cv;
   }
-  const W=hi.width, m=Math.round(W*0.038), pw=W-2*m, ph=Math.round(hi.height*pw/hi.width), band=Math.round(W*(o.bare ? 0.15 : 0.19));
-  const H=m+ph+band; cv.width=W; cv.height=H; cx=cv.getContext('2d');
-  cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H); cx.imageSmoothingQuality='high'; cx.drawImage(hi,m,m,pw,ph);
-  if(o.bare){ if(o.src){ const r=_srcBox(o.src, Math.round(W*0.2), band-Math.round(W*0.05)); _drawSrc(cx, o.src, m, m+ph+Math.round((band-r.h)/2), r.w, r.h, W); } return cv; }
-  const sw=Math.round(W*0.42), sh=Math.round(W*0.11), sx=W-m-sw, sy=H-Math.round(m*0.8)-sh;
-  _drawPcStrip(cx, sx, sy, sw, sh, o.wts, o.gc, o.names, {font:Math.round(W*0.016)});
-  let tx0=m;
-  if(o.src){ const r=_srcBox(o.src, Math.round(W*0.2), band-Math.round(W*0.06)); _drawSrc(cx, o.src, m, m+ph+Math.round((band-r.h)/2), r.w, r.h, W); tx0=m+r.w+Math.round(W*0.03); }
-  const tw=sx-tx0-Math.round(W*0.03); cx.textAlign='left'; let y=m+ph+Math.round(W*0.06);
-  if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,tw,Math.round(W*0.036),Math.round(W*0.018),serifI); cx.fillText(t,tx0,y); y+=Math.round(W*0.033); }
-  if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,tx0,y); y+=Math.round(W*0.033); }
-  cx.fillStyle=GOLD; const t=_fitText(cx,(o.insp ? o.insp+' · ' : '')+'Paintiano',tw,Math.round(W*0.021),Math.round(W*0.012),sans); cx.fillText(t,tx0,y);
-  if(o.pal){ const fs=parseInt((/(\d+)px/.exec(cx.font)||[0,Math.round(W*0.021)])[1],10); y+=Math.round(W*0.033); cx.fillText(_fitText(cx,o.pal,tw,fs,Math.round(W*0.012),sans),tx0,y); }
-  return cv;
 }
 
 // ── FAVORITES ─────────────────────────────────────────────────────────────────
