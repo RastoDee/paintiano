@@ -2065,6 +2065,17 @@ function _jamPaint(ctx, CW, CH, N, BW, BH, grid, chords, lim, gc, keys, seed, mo
   drawFusionOverlay(ctx, CW, CH, chords, lim, gc, seed, mode, ph, keys, !!noGround);
 }
 
+// A mood piece's title is written in the language of the moment it was made ("Enchanted → carefree → ethereal"):
+// shown, every mood word is read back to its mood and said in the language now on screen (anything else stays as it is).
+let _MOOD_REV = null;
+function _moodTitleLoc(s, mn){
+  if(!s || typeof s!=='string' || !mn) return s;
+  if(!_MOOD_REV){ _MOOD_REV = {}; try{ for(const L of LANGS){ const m=((I18N[L]||{}).moodNames)||{}; for(const k in m){ _MOOD_REV[String(m[k]).toLowerCase()]=k; } } for(const L of LANGS){ const m=((I18N[L]||{}).moodNames)||{}; for(const k in m) _MOOD_REV[k.toLowerCase()]=k; } }catch(_){} }
+  let hit = 0;
+  const out = s.split(' → ').map(seg=>{ const m=seg.match(/^(\s*)(.*?)(\s*·?\s*)$/); const core=m ? m[2] : seg; const k=_MOOD_REV[core.toLowerCase()];
+    if(!k || !mn[k]) return seg; hit++; let v=String(mn[k]); if(core && core.charAt(0)!==core.charAt(0).toLowerCase()) v=v.charAt(0).toUpperCase()+v.slice(1); return (m ? m[1] : '')+v+(m ? m[3] : ''); });
+  return hit ? out.join(' → ') : s;
+}
 export default function Paintiano() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
@@ -5821,7 +5832,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ await unlockAudio(); }catch(_){}
     await exportImage('story', true, audioBlob, audioName, false);
   };
-  const _favTitle = (f)=> f.kind==='img' ? (f.title || (()=>{ const w=String(t('image')||''); return w.charAt(0)+w.slice(1).toLowerCase(); })()) : f.src==='compose' ? t('compose').replace(/[^\p{L} ]/gu,'').trim() : f.src==='mic' ? t('mic').replace(/[^\p{L} ]/gu,'').trim() : (f.title||'');
+  const _favTitle = (f)=> f.kind==='img' ? (f.title || (()=>{ const w=String(t('image')||''); return w.charAt(0)+w.slice(1).toLowerCase(); })()) : f.src==='compose' ? t('compose').replace(/[^\p{L} ]/gu,'').trim() : f.src==='mic' ? t('mic').replace(/[^\p{L} ]/gu,'').trim() : ((f.mood || f.src==='mood' || f.src==='image') ? _moodTitleLoc(f.title||'', t('moodNames')) : (f.title||''));
   const _favWho = (f)=> f.kind==='img'
     ? (f.isig ? '✦ '+_sigT('label')+' · ' : '') + (f.ai ? (t('imgCompose')+(f.aiTitle ? ' · '+f.aiTitle : ''))
       : (f.keys && f.keys.length) ? f.keys.map(k=>_COMP_SHORT[k]||k).join((f.jam && f.jam.style==='E') ? ' \u00d7 ' : ' \u2194 ')
@@ -14648,7 +14659,7 @@ Hard requirements:
   },[_stDone]);
   const stVidRecRef = useRef(null), stVidRafRef = useRef(0), stVidLoopRef = useRef(null), stVidLockRef = useRef(null), stVidTextRef = useRef({title:'', line:''});
   const _vidOk = ()=>{ try{ return typeof MediaRecorder!=='undefined' && !!(HTMLCanvasElement.prototype.captureStream); }catch(_){ return false; } };
-  const _vidTitle = ()=>{ const im = viewMode==='image' && !moodFromImg; return (im ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '')) || 'Paintiano'; };
+  const _vidTitle = ()=>{ const im = viewMode==='image' && !moodFromImg; const x = (im ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '')) || 'Paintiano'; return (!im && (moodContext || moodFromImg)) ? _moodTitleLoc(x, t('moodNames')) : x; };
   const _vidName = (ext)=>'Paintiano - '+(String(_vidTitle()).replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,' ').trim().slice(0,60) || 'painting')+'.'+ext;
   // under the title: the palette · who painted it (or who composed the picture's music) · ✦ Signature
   const _vidLine = ()=>{
@@ -15648,7 +15659,7 @@ Hard requirements:
         };
         const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } if(!SRC[kind].d && _rp){ _replay(); return; } _tap(kind); };
         const _up = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
-        const ttl = _smp ? '' : (kind==='compose'||kind==='mic') ? '' : _up(H.t || '');
+        const ttl = _smp ? '' : (kind==='compose'||kind==='mic') ? '' : _up((kind==='mood'||kind==='mfi') ? _moodTitleLoc(H.t || '', t('moodNames')) : (H.t || ''));
         const line = _smp ? '' : (H.l || '');
         const favN = favs.length;
         const K = SRC[kind];
@@ -17450,7 +17461,7 @@ Hard requirements:
         const _vr = stVidRec || recording;   // a video or the picture's sound is being recorded: the rails rest
         const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording);
         const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg));
-        const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : ((info && info.title) || ((compositionName||'').trim()) || '');
+        const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : (()=>{ const x=((info && info.title) || ((compositionName||'').trim()) || ''); return (moodContext || moodFromImg) ? _moodTitleLoc(x, t('moodNames')) : x; })();
         const _loopOk = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)));
         const _morphOk = !_live && !loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && !!currentMood;
         const _showOk = !_live && !_img && playing && randomMode && !!(effectiveStyle||shuffleStyle) && chords.length>0;
