@@ -14350,6 +14350,14 @@ Hard requirements:
   const _stEmpty = studioFs && !_stHasArt && !studioLive && !micActive && !composeMode && !working;
   stEmptyRef.current = _stEmpty;
   useEffect(()=>{ if(_stEmpty && stSide!=='left') setStSide('left'); }, [_stEmpty, stSide]);
+  // an empty Studio is a dead end: after a moment it goes Home (a painting, a swipe up for a surprise, ✦ Change) —
+  // never while something is on its way, a sheet or a picker is open (Mic and Compose have their own empty screens)
+  useEffect(()=>{
+    if(!_stEmpty || stChg || stShare || stripOpen || pickMode || showMoodMenu || showMine || imgAiBusy || recording || demoReelOn || favView) return;
+    const tm=setTimeout(()=>{ if(stEmptyRef.current) _stHome(); }, 700);
+    return ()=>clearTimeout(tm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[_stEmpty, stChg, stShare, stripOpen, pickMode, showMoodMenu, showMine, imgAiBusy, recording, demoReelOn, favView]);
   const _stHeartTap = ()=>{ if(favReadyAny){ _favToggleAny(); setStFavPend(false); return; } if(!_stHasArt) return; setStFavPend(p=>{ if(!p) _stToastShow(_stT('hLater')); return !p; }); };
   _stHeartRef.current = (x, y)=>{
     try{ _tipDone('fav'); }catch(_){}
