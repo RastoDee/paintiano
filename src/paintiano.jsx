@@ -22778,20 +22778,21 @@ function _frameExport(hi, kind, o){
     const isP=(kind==='print');
     const area=hi.width*hi.height; const Wf=isP ? Math.round(Math.sqrt(area*594/841)) : hi.width;
     const m=Math.round(Wf*(isP ? 0.094 : 0.07));
-    const cb0=Math.round(Wf*(o.bare ? 0.24 : 0.36));
+    const cb0=Math.round(Wf*(o.bare ? 0.24 : o.src ? 0.46 : 0.36));
     const Hf=isP ? Math.round(Wf*841/594) : (m + Math.round(hi.height*(Wf-2*m)/hi.width) + cb0);
     cv.width=Wf; cv.height=Hf; cx=cv.getContext('2d');
     cx.fillStyle='#0b0b10'; cx.fillRect(0,0,Wf,Hf);
-    const cb=isP ? Math.round(Hf*0.25) : cb0;
+    const cb=isP ? Math.round(Hf*((o.src && !o.bare) ? 0.30 : 0.25)) : cb0;
     const bw=Wf-2*m, bh=Hf-m-cb; const k=Math.min(bw/hi.width, bh/hi.height); const pw=Math.round(hi.width*k), ph=Math.round(hi.height*k);
     const px=Math.round((Wf-pw)/2), py=m+Math.round((bh-ph)/2);
     cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph);
     cx.strokeStyle='rgba(201,168,76,.5)'; cx.lineWidth=Math.max(2,Wf*0.0017); cx.strokeRect(px,py,pw,ph);
     let bw2=bw;
     if(o.bare){ if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.22), Math.round(cb*0.6)); _drawSrc(cx, o.src, Math.round((Wf-r.w)/2), Hf-cb+Math.round((cb-r.h)/2), r.w, r.h, Wf); } return cv; }
-    if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.13), Math.round(Wf*0.17)); const sy0=Hf-cb+Math.round(Wf*0.035), sbh=Math.round(Wf*0.235);
-      _drawSrc(cx, o.src, px, sy0+Math.round((sbh-r.h)/2), r.w, r.h, Wf); bw2=Wf-2*(px+r.w+Math.round(Wf*0.03)); }
-    cx.textAlign='center'; let y=Hf-cb+Math.round(Wf*0.07);
+    let y=Hf-cb+Math.round(Wf*0.07);
+    // the source: a small badge centred under the painting, the caption below it
+    if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.09), Math.round(Wf*0.09)); _drawSrc(cx, o.src, Math.round((Wf-r.w)/2), Hf-cb+Math.round(Wf*0.03), r.w, r.h, Wf); y+=r.h+Math.round(Wf*0.01); }
+    cx.textAlign='center';
     if(o.title){ cx.fillStyle=CREAM; const t=_fitText(cx,o.title,bw2,Math.round(Wf*0.044),Math.round(Wf*0.02),serifI); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.036); }
     if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,bw2,Math.round(Wf*0.02),Math.round(Wf*0.012),sans); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.034); }
     const _il=o.insp ? (o.palN ? o.insp+'  |  '+o.palN : o.insp) : (o.pal||'');
