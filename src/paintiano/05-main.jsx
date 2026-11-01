@@ -14485,7 +14485,7 @@ Hard requirements:
       evts.forEach(ev=>{ if(ev.n.length>1) ev.n=[...ev.n].sort((a,b)=>b.m-a.m); });
       const wi=evts.map((c,i)=>({...c, idx:i}));
       let dna=null, sig=null; try{ dna=computeMusicDNA(wi); }catch(_){} try{ sig=computeSongSignature(wi, {audio:true}); }catch(_){}
-      micSongRef.current={ live:{chords:chordsRef.current, grid:gridRef.current}, song:{chords:wi, grid:computeGrid(wi), dna, sig} };
+      micSongRef.current={ live:{chords:chordsRef.current, grid:gridRef.current}, song:{chords:wi, grid:computeGrid(wi, {liveMode:true, livePortrait:true}), dna, sig} };   // the same 3:4 frame as the live take: switching Live | Song never changes the shape
       setMicSong({phase:'done', view:'song'});
       setTimeout(()=>_micShow('song'), 0);
     }catch(_){ if(micSongTokRef.current===tok){ setMicSong(null); _stToastShow(t('errs').noNotesAudio); } }
