@@ -14558,7 +14558,7 @@ Hard requirements:
   const micSong = null;
   const micToSongRef = useRef(false);
   // 📹 CAMERA — the iPhone's own Camera records the music with its natural sound; back in the app the video's sound is
-  // read like an MP3 (mic-tuned when it came from the Mic) and opens as a song. Also any video picked in Music.
+  // read like the Mic's take (tuned for a room / a concert) and opens as a song. Also any video picked in Music.
   const refCamVid = useRef(null);
   const loadVideoRef = useRef(null);
   const [camTap, setCamTap] = useState(null);   // Safari would not start the silent read without a tap: one tap
@@ -14585,7 +14585,7 @@ Hard requirements:
     }
     if(!ab){ setWorking(false); setErr(_stT('camErr')); setErrInfo(false); return; }
     const wav=_wavFromBuffer(ab);
-    if(fromMic) micToSongRef.current={ port:true };
+    micToSongRef.current={ port:true };   // every video is read as a room recording (as the Mic's take): from the Camera, from Photos, from Files
     try{ loadAudio({target:{files:[new File([wav], nm+'.wav', {type:'audio/wav'})], value:''}}); }catch(_){ micToSongRef.current=false; setWorking(false); }
   };
   loadVideoRef.current = loadVideoSound;
