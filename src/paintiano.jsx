@@ -36883,6 +36883,9 @@ Hard requirements:
   // the row of faces: in Solo a swipe picks (the face that stops in the middle — as a camera filter); a tap picks as always; the chosen one is centred
   const _trayCenter = (smooth)=>{ try{ const tr=trayRef.current; if(!tr) return; const rows=tr.querySelectorAll('.pf-art-grid'); const row=rows[rows.length-1]; if(!row) return;
     const _fu = viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current; const ons=row.querySelectorAll('.pf-artist-on');
+    // Fusion: the chosen stand together in the middle of the row — about as many faces left of them as right (the rest keep their order)
+    { const kids=[...row.children], sel=kids.filter(k=>k.classList.contains('pf-artist-on')), un=kids.filter(k=>!k.classList.contains('pf-artist-on')), half=Math.floor(un.length/2);
+      un.forEach((k,i)=>{ k.style.order = (_fu && sel.length>0 && i<half) ? '-300' : ''; }); }
     if(_fu && ons.length>1){ const rr=row.getBoundingClientRect(); let L=1e9,R=-1e9; ons.forEach(b=>{ const q=b.getBoundingClientRect(); L=Math.min(L,q.left); R=Math.max(R,q.right); }); row.scrollTo({left: row.scrollLeft + (L+R)/2 - (rr.left+rr.width/2), behavior: smooth ? 'smooth' : 'auto'}); return; }   // Fusion: its members sit together — the group is centred
     let on=row.querySelector('.pf-artist-on'); if(!on){ const h=row.querySelector('.pf-sk-hit'); on=h && h.closest('.pf-artist'); } if(!on) return;
     const rr=row.getBoundingClientRect(), q=on.getBoundingClientRect(); row.scrollTo({left: row.scrollLeft + (q.left+q.width/2) - (rr.left+rr.width/2), behavior: smooth ? 'smooth' : 'auto'}); }catch(_){} };
