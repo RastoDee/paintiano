@@ -24214,9 +24214,9 @@ const STUDIO_FX_CSS = `
 .pf-chg-tab.on{border-color:#d9b765;background:rgba(217,183,101,.09)}
 .pf-chg-tab.who{border-color:rgba(217,183,101,.7);background:linear-gradient(160deg,rgba(217,183,101,.16),rgba(255,255,255,.02))}
 .pf-chg-tab:disabled{opacity:.4;cursor:default}
-.pf-chg-who{display:flex;padding-left:6px}
-.pf-chg-who i{display:block;margin-left:-6px;width:26px;height:26px;border-radius:50%;overflow:hidden}
-.pf-chg-who .pf-sk-face{display:flex!important;align-items:center;justify-content:center;box-sizing:border-box;width:26px!important;height:26px!important;border-radius:50%;background-color:#1b1728;background-position:center;background-size:cover;background-repeat:no-repeat;border:1.5px solid #14121c!important;box-shadow:none!important;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:11px!important;font-weight:600;color:#f2eee8;animation:none!important}
+.pf-chg-who{display:flex;padding-left:8px}
+.pf-chg-who i{display:block;margin-left:-8px;width:24px;height:24px;border-radius:50%;overflow:hidden}
+.pf-chg-who .pf-sk-face{display:flex!important;align-items:center;justify-content:center;box-sizing:border-box;width:24px!important;height:24px!important;border-radius:50%;background-color:#1b1728;background-position:center;background-size:cover;background-repeat:no-repeat;border:1.5px solid #14121c!important;box-shadow:none!important;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:11px!important;font-weight:600;color:#f2eee8;animation:none!important}
 .pf-chg-lbl{font-size:11.5px;color:rgba(242,238,232,.5);margin:2px 2px 0}
 .pf-chg-hero{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:16px;border:1px solid rgba(255,140,150,.45);background:linear-gradient(135deg,rgba(255,95,143,.22),rgba(255,176,138,.12));color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-chg-hero.see{border-color:rgba(122,179,255,.5);background:linear-gradient(135deg,rgba(63,123,255,.25),rgba(122,179,255,.1))}
@@ -40280,7 +40280,7 @@ Hard requirements:
             const _pAct = _pAll.filter(r=>r.on===undefined && r.k!=='hear' && r.ok);
             const _pTg = _pAll.filter(r=>r.on!==undefined);
             const _lookOk = _stHasArt || _live;
-            const _who = (()=>{ const out=[]; const add=(k,el)=>{ if(out.length<4) out.push(<i key={k}>{el}</i>); };
+            const _who = (()=>{ const out=[]; const add=(k,el)=>{ if(out.length<5) out.push(<i key={k}>{el}</i>); };
               if(_img){ if(imgPlayMode==='compose') add('ai', _skinGlyph('✦')); else (crOn ? [imgComposer,...composerStage] : [imgComposer]).filter(Boolean).forEach(k=>add(k, _skinMono(k))); }
               else if(_stHasArt){ (jamOn && _jamStage().length>1 ? _jamStage() : [effectiveStyle||shuffleStyle||style||'mosaic']).filter(Boolean).forEach(k=>add(k, _skinFace(k))); }
               return out; })();

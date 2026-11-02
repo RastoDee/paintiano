@@ -24066,7 +24066,7 @@ const STUDIO_SKIN_CSS = `
 .pf-tray-ctl{display:flex;align-items:center;gap:8px;margin-left:auto}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-row .pf-sig{order:-1;position:static!important;transform:none!important}
 .pf-st-tray .pf-st-bar{opacity:0!important;pointer-events:none!important;transition:opacity .2s}
-.pf-ai-pill{order:-1;position:relative;border:1px solid rgba(169,127,245,.75);background:linear-gradient(135deg,rgba(120,70,200,.32),rgba(60,30,110,.28));color:#e4d2ff;font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 10px);font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;border-radius:12px;padding:4px 10px;cursor:pointer;box-shadow:0 0 14px rgba(160,110,255,.35);-webkit-tap-highlight-color:transparent}
+.pf-ai-pill{order:-1;position:relative;flex-shrink:0;border:1px solid rgba(169,127,245,.75);background:linear-gradient(135deg,rgba(120,70,200,.32),rgba(60,30,110,.28));color:#e4d2ff;font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 10px);font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;border-radius:12px;padding:4px 10px;cursor:pointer;box-shadow:0 0 14px rgba(160,110,255,.35);-webkit-tap-highlight-color:transparent}
 .pf-ai-pill.on{background:linear-gradient(135deg,#c9a2ff,#7a3ff0);color:#fff;border-color:rgba(220,200,255,.95)}
 .pf-ai-pill:disabled{opacity:.5;cursor:default}
 .pf-ai-pro{margin-left:6px;font-size:.8em;letter-spacing:.06em;padding:1px 5px;border-radius:6px;background:rgba(228,178,255,.2);color:#f0dcff}
@@ -24216,13 +24216,14 @@ const STUDIO_FX_CSS = `
 .pf-chg-tab:disabled{opacity:.4;cursor:default}
 .pf-chg-who{display:flex;padding-left:6px}
 .pf-chg-who i{display:block;margin-left:-6px;width:26px;height:26px;border-radius:50%;overflow:hidden}
-.pf-chg-who .pf-sk-face{width:26px!important;height:26px!important;border-width:1.5px!important;border-color:#14121c!important;box-shadow:none!important;font-size:10px!important}
+.pf-chg-who .pf-sk-face{display:flex!important;align-items:center;justify-content:center;box-sizing:border-box;width:26px!important;height:26px!important;border-radius:50%;background-color:#1b1728;background-position:center;background-size:cover;background-repeat:no-repeat;border:1.5px solid #14121c!important;box-shadow:none!important;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:11px!important;font-weight:600;color:#f2eee8;animation:none!important}
 .pf-chg-lbl{font-size:11.5px;color:rgba(242,238,232,.5);margin:2px 2px 0}
 .pf-chg-hero{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:16px;border:1px solid rgba(255,140,150,.45);background:linear-gradient(135deg,rgba(255,95,143,.22),rgba(255,176,138,.12));color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-chg-hero.see{border-color:rgba(122,179,255,.5);background:linear-gradient(135deg,rgba(63,123,255,.25),rgba(122,179,255,.1))}
 .pf-chg-hero:active,.pf-chg-c:active{transform:scale(.98)}
 .pf-chg-go{font-size:20px;color:rgba(242,238,232,.7)}
 .pf-chg-cc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pf-chg-cc>.pf-chg-c:last-child:nth-child(odd){grid-column:1 / -1}
 .pf-chg-c{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 11px;border-radius:16px;border:1px solid rgba(242,238,232,.06);background:rgba(255,255,255,.05);color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,color .2s}
 .pf-chg-c .pf-chg-tx b{font-size:13.5px}
 .pf-chg-c .pf-chg-tx small{font-size:10.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -39318,7 +39319,7 @@ Hard requirements:
                 {/* the Studio: AI compose sits up here, next to ✦ — not lost at the far end of the row */}
                 {studioFs && (<button type="button" className={'pf-ai-pill'+(_aiOn?' on':'')} disabled={busy||working} aria-pressed={_aiOn} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')}
                   onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }}>
-                  ✦ {t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}{(proStatus!=='pro_ai') && (<span className="pf-ai-pro">PRO</span>)}</button>)}
+                  ✦ AI{(proStatus!=='pro_ai') && (<span className="pf-ai-pro">PRO</span>)}</button>)}
               </div>
               <div className="pf-art-grid" style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}}>
                 <button key="scan" disabled={working} onClick={_toScan} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'}
