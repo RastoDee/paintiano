@@ -24058,8 +24058,14 @@ const STUDIO_SKIN_CSS = `
 .pf-app-root .pf-strip-grid.pf-tray::before{content:"";display:block;flex-shrink:0;width:40px;height:4px;border-radius:2px;background:rgba(242,238,232,.25);margin:0 auto}
 .pf-app-root .pf-strip-grid.pf-tray .pf-colors-inner{gap:8px!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs{display:flex!important;flex-wrap:nowrap!important;justify-content:center!important;gap:8px!important;grid-template-columns:none!important}
-.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab{font-size:0!important;gap:0!important;padding:0!important;flex:0 0 auto!important;width:auto!important;min-width:0!important}
-.pf-tray .pf-sk-ring{width:32px;height:32px;padding:2px}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs{gap:5px!important;justify-content:stretch!important}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab{flex:1 1 auto!important;width:auto!important;min-width:0!important;flex-direction:row!important;justify-content:center;gap:5px!important;padding:6px 8px!important;border-radius:15px!important;background:rgba(255,255,255,.07)!important;color:rgba(242,238,232,.78)!important;font-size:calc(min(var(--pf-read-scale,1),1.15) * 11.5px)!important;font-weight:600!important;letter-spacing:0!important;text-transform:capitalize!important;white-space:nowrap;overflow:hidden}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab.pf-tab-on{background:#f2eee8!important;color:#121018!important}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab>span:last-child{min-width:0;overflow:hidden}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab>span:last-child>span:first-child{overflow:hidden;text-overflow:ellipsis}
+.pf-tray .pf-sk-ring{display:none;flex-shrink:0;width:15px;height:15px;padding:0;border:0!important}
+.pf-tray .pf-tab-on .pf-sk-ring{display:block}
+.pf-tray .pf-sk-ring i{display:none}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-row{display:flex!important;align-items:center;gap:8px;min-height:30px;margin:0!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-label{display:none!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-row .pf-sig{position:static!important;transform:none!important}
@@ -24214,9 +24220,9 @@ const STUDIO_FX_CSS = `
 .pf-chg-tab.on{border-color:#d9b765;background:rgba(217,183,101,.09)}
 .pf-chg-tab.who{border-color:rgba(217,183,101,.7);background:linear-gradient(160deg,rgba(217,183,101,.16),rgba(255,255,255,.02))}
 .pf-chg-tab:disabled{opacity:.4;cursor:default}
-.pf-chg-who{display:flex;padding-left:6px}
-.pf-chg-who i{display:block;margin-left:-6px;width:26px;height:26px;border-radius:50%;overflow:hidden}
-.pf-chg-who .pf-sk-face{display:flex!important;align-items:center;justify-content:center;box-sizing:border-box;width:26px!important;height:26px!important;border-radius:50%;background-color:#1b1728;background-position:center;background-size:cover;background-repeat:no-repeat;border:1.5px solid #14121c!important;box-shadow:none!important;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:11px!important;font-weight:600;color:#f2eee8;animation:none!important}
+.pf-chg-who{display:flex;padding-left:8px}
+.pf-chg-who i{display:block;margin-left:-8px;width:24px;height:24px;border-radius:50%;overflow:hidden}
+.pf-chg-who .pf-sk-face{display:flex!important;align-items:center;justify-content:center;box-sizing:border-box;width:24px!important;height:24px!important;border-radius:50%;background-color:#1b1728;background-position:center;background-size:cover;background-repeat:no-repeat;border:1.5px solid #14121c!important;box-shadow:none!important;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:11px!important;font-weight:600;color:#f2eee8;animation:none!important}
 .pf-chg-lbl{font-size:11.5px;color:rgba(242,238,232,.5);margin:2px 2px 0}
 .pf-chg-hero{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:16px;border:1px solid rgba(255,140,150,.45);background:linear-gradient(135deg,rgba(255,95,143,.22),rgba(255,176,138,.12));color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-chg-hero.see{border-color:rgba(122,179,255,.5);background:linear-gradient(135deg,rgba(63,123,255,.25),rgba(122,179,255,.1))}
@@ -40280,7 +40286,7 @@ Hard requirements:
             const _pAct = _pAll.filter(r=>r.on===undefined && r.k!=='hear' && r.ok);
             const _pTg = _pAll.filter(r=>r.on!==undefined);
             const _lookOk = _stHasArt || _live;
-            const _who = (()=>{ const out=[]; const add=(k,el)=>{ if(out.length<4) out.push(<i key={k}>{el}</i>); };
+            const _who = (()=>{ const out=[]; const add=(k,el)=>{ if(out.length<5) out.push(<i key={k}>{el}</i>); };
               if(_img){ if(imgPlayMode==='compose') add('ai', _skinGlyph('✦')); else (crOn ? [imgComposer,...composerStage] : [imgComposer]).filter(Boolean).forEach(k=>add(k, _skinMono(k))); }
               else if(_stHasArt){ (jamOn && _jamStage().length>1 ? _jamStage() : [effectiveStyle||shuffleStyle||style||'mosaic']).filter(Boolean).forEach(k=>add(k, _skinFace(k))); }
               return out; })();
