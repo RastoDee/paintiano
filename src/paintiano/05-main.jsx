@@ -1786,6 +1786,10 @@ const STUDIO_SKIN_CSS = `
 .pf-tray-ctl{display:flex;align-items:center;gap:8px;margin-left:auto}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-row .pf-sig{order:-1;position:static!important;transform:none!important}
 .pf-st-tray .pf-st-bar{opacity:0!important;pointer-events:none!important;transition:opacity .2s}
+.pf-ai-pill{order:-1;position:relative;border:1px solid rgba(169,127,245,.75);background:linear-gradient(135deg,rgba(120,70,200,.32),rgba(60,30,110,.28));color:#e4d2ff;font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 10px);font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;border-radius:12px;padding:4px 10px;cursor:pointer;box-shadow:0 0 14px rgba(160,110,255,.35);-webkit-tap-highlight-color:transparent}
+.pf-ai-pill.on{background:linear-gradient(135deg,#c9a2ff,#7a3ff0);color:#fff;border-color:rgba(220,200,255,.95)}
+.pf-ai-pill:disabled{opacity:.5;cursor:default}
+.pf-ai-pro{margin-left:6px;font-size:.8em;letter-spacing:.06em;padding:1px 5px;border-radius:6px;background:rgba(228,178,255,.2);color:#f0dcff}
 .pf-tray-seg{display:flex;background:rgba(255,255,255,.07);border-radius:16px;padding:3px;gap:2px}
 .pf-tray-seg button{border:0;background:none;color:rgba(242,238,232,.62);font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 12px);font-weight:600;padding:5px 12px;border-radius:13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-tray-seg button.on{background:#f2eee8;color:#121018}
@@ -1793,6 +1797,7 @@ const STUDIO_SKIN_CSS = `
 .pf-tray-done{border:0;background:linear-gradient(180deg,#f4dc95,#d9b45a);color:#1a1408;font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 12px);font-weight:700;border-radius:14px;padding:6px 13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:2px!important;padding:6px calc(50% - 34px) 2px!important;margin:0 -14px!important;scrollbar-width:none;grid-template-columns:none!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid::-webkit-scrollbar{display:none}
+.pf-app-root .pf-strip-grid.pf-tray.pf-fu .pf-art-grid{scroll-snap-type:none}
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid>*{flex:0 0 68px!important;width:68px!important;max-width:none!important;scroll-snap-align:center}
 .pf-tray .pf-sk-face{width:58px;height:58px}
 .pf-tray .pf-artist-on .pf-sk-face{transform:scale(1.08)}
@@ -14573,6 +14578,8 @@ Hard requirements:
   },[studioFs, stripOpen, jamOn]);
   // the row of faces: in Solo a swipe picks (the face that stops in the middle — as a camera filter); a tap picks as always; the chosen one is centred
   const _trayCenter = (smooth)=>{ try{ const tr=trayRef.current; if(!tr) return; const rows=tr.querySelectorAll('.pf-art-grid'); const row=rows[rows.length-1]; if(!row) return;
+    const _fu = viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current; const ons=row.querySelectorAll('.pf-artist-on');
+    if(_fu && ons.length>1){ const rr=row.getBoundingClientRect(); let L=1e9,R=-1e9; ons.forEach(b=>{ const q=b.getBoundingClientRect(); L=Math.min(L,q.left); R=Math.max(R,q.right); }); row.scrollTo({left: row.scrollLeft + (L+R)/2 - (rr.left+rr.width/2), behavior: smooth ? 'smooth' : 'auto'}); return; }   // Fusion: its members sit together — the group is centred
     let on=row.querySelector('.pf-artist-on'); if(!on){ const h=row.querySelector('.pf-sk-hit'); on=h && h.closest('.pf-artist'); } if(!on) return;
     const rr=row.getBoundingClientRect(), q=on.getBoundingClientRect(); row.scrollTo({left: row.scrollLeft + (q.left+q.width/2) - (rr.left+rr.width/2), behavior: smooth ? 'smooth' : 'auto'}); }catch(_){} };
   const trayUserRef = useRef(false);
@@ -14586,7 +14593,8 @@ Hard requirements:
     return ()=>{ clearTimeout(tm); row.removeEventListener('scroll', onScroll); row.removeEventListener('touchstart', onUser); row.removeEventListener('wheel', onUser); row.removeEventListener('pointerdown', onUser); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[studioFs, stripOpen, loadedSource]);
-  useEffect(()=>{ if(studioFs && stripOpen && !trayUserRef.current){ const id=setTimeout(()=>_trayCenter(true), 60); return ()=>clearTimeout(id); } },[style, shuffleStyle, painterStage, sigActive, jamOn, imgComposer, composerStage, crOn, imgSigActive]);   // picked elsewhere (a swipe on the painting): the row follows
+  useEffect(()=>{ if(studioFs && stripOpen && (viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current)) trayUserRef.current=false;   // Fusion: a tap moves the face into the group — the row follows it
+    if(studioFs && stripOpen && !trayUserRef.current){ const id=setTimeout(()=>_trayCenter(true), 60); return ()=>clearTimeout(id); } },[style, shuffleStyle, painterStage, sigActive, jamOn, imgComposer, composerStage, crOn, imgSigActive]);   // picked elsewhere (a swipe on the painting): the row follows
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
   const stLookHistRef = useRef({key:'', st:[]});
   const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode, om:!!oneMMode,
@@ -16726,7 +16734,7 @@ Hard requirements:
         {!stripOpen && _capLines()}
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
-        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')+(studioFs?' pf-skin pf-tray':'')} ref={trayRef} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(studioFs?{position:'fixed',top:'auto',bottom:0,left:0,right:0,zIndex:10005,maxHeight:'46dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'22px 22px 0 0',border:'none',borderTop:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',gap:8}:{})}}
+        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')+(studioFs?' pf-skin pf-tray':'')+((studioFs && (viewMode==='image' ? crOn : jamOn))?' pf-fu':'')} ref={trayRef} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(studioFs?{position:'fixed',top:'auto',bottom:0,left:0,right:0,zIndex:10005,maxHeight:'46dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'22px 22px 0 0',border:'none',borderTop:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',gap:8}:{})}}
           onTouchStart={studioFs ? (e)=>{ const y=e.touches[0]&&e.touches[0].clientY; const onRow=!!(e.target && e.target.closest && e.target.closest('.pf-art-grid')); stSheetRef.current = (e.touches.length===1 && !onRow && e.currentTarget.scrollTop<=2) ? y : null; } : undefined}
           onTouchEnd={studioFs ? (e)=>{ const y0=stSheetRef.current; stSheetRef.current=null; const t=e.changedTouches&&e.changedTouches[0]; if(y0!=null && t && t.clientY-y0>60) setStripOpen(false); } : undefined}>
           {studioFs && (<style>{STUDIO_SKIN_CSS}</style>)}
@@ -17007,6 +17015,10 @@ Hard requirements:
                 </>)}
                 {/* ✦ SIGNATURE — the picture's own piece (computeImageSignature); lit while it plays */}
                 {imgSig && _isigBtn('left')}
+                {/* the Studio: AI compose sits up here, next to ✦ — not lost at the far end of the row */}
+                {studioFs && (<button type="button" className={'pf-ai-pill'+(_aiOn?' on':'')} disabled={busy||working} aria-pressed={_aiOn} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')}
+                  onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }}>
+                  ✦ {t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}{(proStatus!=='pro_ai') && (<span className="pf-ai-pro">PRO</span>)}</button>)}
               </div>
               <div className="pf-art-grid" style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}}>
                 <button key="scan" disabled={working} onClick={_toScan} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'}
@@ -17026,18 +17038,9 @@ Hard requirements:
                         if(!_aiOn && imgComposer===c.k && !composerStage.length){ _toScan(); return; }   // the chosen one tapped again → back to SCAN (an artist → Mosaic)
                         _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      style={{..._chipBase,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest)}{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
+                      style={{..._chipBase,order:(studioFs && crOn && sel) ? -100+Math.max(_cIx,0) : undefined,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest)}{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
                   );
                 })}
-                {studioFs && (
-                  <button key="ai" disabled={busy||working} onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }}
-                    title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')} aria-pressed={_aiOn}
-                    className={_aiOn?'pf-artist pf-artist-on':'pf-artist'} style={{..._chipBase,cursor:(busy||working)?'default':'pointer',opacity:(working||(busy&&!_aiOn))?.5:1,...chipStyle(_aiOn)}}>
-                    <span className="pf-sk-face pf-sk-glyph" aria-hidden="true" style={{background:'linear-gradient(135deg,#c9a2ff,#7a3ff0)',color:'#fff',fontSize:20,boxShadow:_aiOn?undefined:'0 0 16px rgba(160,110,255,.45)'}}>✦</span>
-                    {(proStatus!=='pro_ai') && (<span style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',pointerEvents:'none'}}><ProBadge t={t} readScale={effScale} size="sm" tier="ai" /></span>)}
-                    AI
-                  </button>
-                )}
               </div>
               {crOn && composerDice && !_aiOn && (
                 <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginTop:2,padding:'0 6px',fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(220,180,90,.9)',lineHeight:1.45}}>
@@ -17270,7 +17273,7 @@ Hard requirements:
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
-                  style={{position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?((k==='oneM'||locked)?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?((k==='oneM'||locked)?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {studioFs && _skinFace(k, shufHit && !isOn)}
                   {label}
                   {locked && cockpitEdit && (
