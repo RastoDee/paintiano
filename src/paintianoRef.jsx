@@ -36888,17 +36888,17 @@ Hard requirements:
     const rr=row.getBoundingClientRect(), q=on.getBoundingClientRect(); row.scrollTo({left: row.scrollLeft + (q.left+q.width/2) - (rr.left+rr.width/2), behavior: smooth ? 'smooth' : 'auto'}); }catch(_){} };
   const trayUserRef = useRef(false);
   useEffect(()=>{ if(!(studioFs && stripOpen)) return; const tr=trayRef.current; if(!tr) return; const rows=tr.querySelectorAll('.pf-art-grid'); const row=rows[rows.length-1]; if(!row) return;
-    requestAnimationFrame(()=>_trayCenter(false));
+    requestAnimationFrame(()=>_trayCenter(false)); const _rc1=setTimeout(()=>_trayCenter(true), 320), _rc2=setTimeout(()=>_trayCenter(true), 800);   // again once the sheet has slid up and the faces are laid out (iOS can drop the first one)
     let tm=null; const settle=()=>{ if(!trayUserRef.current) return; trayUserRef.current=false; if(viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current) return;
       const rr=row.getBoundingClientRect(), c=rr.left+rr.width/2; let best=null, d=1e9; row.querySelectorAll('.pf-artist').forEach(b=>{ const q=b.getBoundingClientRect(), dd=Math.abs(q.left+q.width/2-c); if(dd<d){ d=dd; best=b; } });
       if(!best || best.disabled || best.classList.contains('pf-artist-on') || best.getAttribute('data-lk')==='1') return; best.click(); };
     const onScroll=()=>{ clearTimeout(tm); tm=setTimeout(settle, 150); }; const onUser=()=>{ trayUserRef.current=true; };
     row.addEventListener('scroll', onScroll, {passive:true}); row.addEventListener('touchstart', onUser, {passive:true}); row.addEventListener('wheel', onUser, {passive:true}); row.addEventListener('pointerdown', onUser);
-    return ()=>{ clearTimeout(tm); row.removeEventListener('scroll', onScroll); row.removeEventListener('touchstart', onUser); row.removeEventListener('wheel', onUser); row.removeEventListener('pointerdown', onUser); };
+    return ()=>{ clearTimeout(tm); clearTimeout(_rc1); clearTimeout(_rc2); row.removeEventListener('scroll', onScroll); row.removeEventListener('touchstart', onUser); row.removeEventListener('wheel', onUser); row.removeEventListener('pointerdown', onUser); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[studioFs, stripOpen, loadedSource]);
   useEffect(()=>{ if(studioFs && stripOpen && (viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current)) trayUserRef.current=false;   // Fusion: a tap moves the face into the group — the row follows it
-    if(studioFs && stripOpen && !trayUserRef.current){ const id=setTimeout(()=>_trayCenter(true), 60); return ()=>clearTimeout(id); } },[style, shuffleStyle, painterStage, sigActive, jamOn, imgComposer, composerStage, crOn, imgSigActive]);   // picked elsewhere (a swipe on the painting): the row follows
+    if(studioFs && stripOpen && !trayUserRef.current){ const id=setTimeout(()=>_trayCenter(true), 60), id2=setTimeout(()=>{ if(viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current) _trayCenter(true); }, 420); return ()=>{ clearTimeout(id); clearTimeout(id2); }; } },[style, shuffleStyle, painterStage, sigActive, jamOn, imgComposer, composerStage, crOn, imgSigActive]);   // picked elsewhere (a swipe on the painting): the row follows
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
   const stLookHistRef = useRef({key:'', st:[]});
   const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode, om:!!oneMMode,
