@@ -3924,8 +3924,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // (randomMode stays on under the hood with an artist chosen — see the effect below). On = ALL:
   // every painter in your set.
   // the Studio letting go of every chosen painter: ↑ draws from your whole set again (with the Ensemble: whole new Fusions, nothing pinned)
+  // the Studio's Fusion switch: the painter on screen becomes no. 1 (gold, pinned) and 1–3 painters join it at once — the painting is a fusion straight away
+  const _stFusionOn = ()=>{
+    if(working||anim||jamOn) return;
+    const cur = (style && style!=='notes' && style!=='oneM') ? style : ((shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
+    if(sigActiveRef.current){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
+    if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
+    if(!randomMode) _shuffleOn();
+    if(mosaicShuffleLock) setMosaicShuffleLock(false);
+    setJamOn(true); setJamAll(true);
+    const pins = (cur && cur!=='mosaic') ? [cur] : [];
+    jamPinsRef.current=pins.slice(); setJamPins(pins.slice());
+    _jamAllRoll();
+    try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true, studio:true}); }catch(_){}
+  };
   const _stAllOn = ()=>{
     if(!randomMode) _shuffleOn();
+    // Fusion with no one chosen any more: a new fusion is drawn at once (2–5 painters) — never one painter alone under 'Fusion'
+    if(jamOn){ if(mosaicShuffleLock) setMosaicShuffleLock(false); jamPinsRef.current=[]; setJamPins([]); setJamAll(true); _jamAllRoll(); return; }
     if(mosaicShuffleLock) setMosaicShuffleLock(false);
     jamPinsRef.current=[]; setJamPins([]); if(jamOn) setJamAll(true);
     if(painterStage.length) setPainterStage([]);
@@ -17136,7 +17152,7 @@ Hard requirements:
             {/* Ensemble stays under ✦ too (lit when the signature is a fusion): another painter, or one taken off, and ✦ gives way to the Ensemble */}
             {!cockpitEdit && ensembleActive && !studioFs && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36, _artChoiceN()<2)}
             {!cockpitEdit && studioFs && (<div className="pf-tray-ctl">
-              {ensembleActive && (<div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!jamOn} className={!jamOn?'on':''} onClick={()=>{ if(jamOn) _toggleJam(); }}>{_stT('trSolo')}</button><button type="button" role="tab" aria-selected={!!jamOn} className={jamOn?'on':''} disabled={_artChoiceN()<2} onClick={()=>{ if(!jamOn) _toggleJam(); }}>{_ensT('fusion')}</button></div>)}
+              {ensembleActive && (<div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!jamOn} className={!jamOn?'on':''} onClick={()=>{ if(jamOn) _toggleJam(); }}>{_stT('trSolo')}</button><button type="button" role="tab" aria-selected={!!jamOn} className={jamOn?'on':''} disabled={_artChoiceN()<2} onClick={()=>{ if(!jamOn) _stFusionOn(); }}>{_ensT('fusion')}</button></div>)}
             </div>)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (
