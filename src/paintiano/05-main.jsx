@@ -1778,14 +1778,11 @@ const STUDIO_SKIN_CSS = `
 .pf-app-root .pf-strip-grid.pf-tray::before{content:"";display:block;flex-shrink:0;width:40px;height:4px;border-radius:2px;background:rgba(242,238,232,.25);margin:0 auto}
 .pf-app-root .pf-strip-grid.pf-tray .pf-colors-inner{gap:8px!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs{display:flex!important;flex-wrap:nowrap!important;justify-content:center!important;gap:8px!important;grid-template-columns:none!important}
-.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs{gap:5px!important;justify-content:stretch!important}
-.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab{flex:1 1 auto!important;width:auto!important;min-width:0!important;flex-direction:row!important;justify-content:center;gap:5px!important;padding:6px 8px!important;border-radius:15px!important;background:rgba(255,255,255,.07)!important;color:rgba(242,238,232,.78)!important;font-size:calc(min(var(--pf-read-scale,1),1.15) * 11.5px)!important;font-weight:600!important;letter-spacing:0!important;text-transform:capitalize!important;white-space:nowrap;overflow:hidden}
-.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab.pf-tab-on{background:#f2eee8!important;color:#121018!important}
-.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab>span:last-child{min-width:0;overflow:hidden}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs{gap:2px!important;justify-content:stretch!important}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab{flex:1 1 0!important;width:auto!important;min-width:0!important;gap:5px!important;padding:0!important;font-size:calc(min(var(--pf-read-scale,1),1.15) * 8.5px)!important;white-space:nowrap;overflow:hidden}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab>span:last-child{max-width:100%;min-width:0;overflow:hidden}
 .pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab>span:last-child>span:first-child{overflow:hidden;text-overflow:ellipsis}
-.pf-tray .pf-sk-ring{display:none;flex-shrink:0;width:15px;height:15px;padding:0;border:0!important}
-.pf-tray .pf-tab-on .pf-sk-ring{display:block}
-.pf-tray .pf-sk-ring i{display:none}
+.pf-tray .pf-sk-ring{flex-shrink:0;width:38px;height:38px;padding:2px}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-row{display:flex!important;align-items:center;gap:8px;min-height:30px;margin:0!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-label{display:none!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-inspired-row .pf-sig{position:static!important;transform:none!important}
