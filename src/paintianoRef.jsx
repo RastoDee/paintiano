@@ -22872,6 +22872,7 @@ function _pfKeepAlive(on){ try{ if(!_pfIsIOS()) return;
   if(_pfKeepEl.paused){ const p=_pfKeepEl.play(); if(p && p.catch) p.catch(()=>{}); }
 }catch(_){} }
 try{ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') _pfKeepAlive(false); }); }catch(_){}
+try{ const _kg=()=>_pfKeepAlive(true); document.addEventListener('touchend', _kg, {capture:true, passive:true}); document.addEventListener('click', _kg, {capture:true}); }catch(_){}   // every tap (the sound may already read 'running' and still be muted by the switch)
 // A video's sound (the iPhone Camera's take, a concert from Photos) → a WAV the Music pipeline reads.
 function _isVideoFile(f){ const nm=String(f.name||'').toLowerCase(); return /^video\//.test(f.type||'') || /\.(mov|mp4|m4v|3gp)$/.test(nm); }
 function _wavFromBuffer(ab){

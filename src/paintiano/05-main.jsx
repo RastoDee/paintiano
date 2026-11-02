@@ -3629,6 +3629,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setSigActive(true);
     try{ window.posthog && window.posthog.capture('signature_apply',{n:s.keys.length,lead:s.keys[0]}); }catch(_){}
   };
+  const _stTakenClrRef = useRef(null);
   const _sigOff = ()=>{
     if(!sigActiveRef.current) return;
     sigActiveRef.current = false; setSigActive(false);
@@ -3646,7 +3647,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     }
     try{ window.posthog && window.posthog.capture('signature_off'); }catch(_){}
   };
-  const _toggleSig = ()=>{ if(working||anim) return; if(sigActiveRef.current) _sigOff(); else if(chords.length) _applySig(); };
+  const _toggleSig = ()=>{ if(working||anim) return; try{ if(_stTakenClrRef.current) _stTakenClrRef.current(); }catch(_){} if(sigActiveRef.current) _sigOff(); else if(chords.length) _applySig(); };
   // An empty canvas has no song to sign: ✦ is inactive there, and a lit ✦ goes
   // out (back to the selection before it) the moment the canvas is cleared.
   useEffect(()=>{ if(!chords.length && sigActiveRef.current) _sigOff(); },[chords.length]);
@@ -14528,7 +14529,13 @@ Hard requirements:
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         // ↑ in the Studio = someone else from your set — unless you chose (gold): a chosen painter or Fusion stays, ↑ does nothing (← its variants);
         // with the Ensemble drawing, the gold (pinned) painters stay and ↑ draws new guests
-        if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
+        if(stTakenRef.current){   // a surprise kept with ↓: its painter(s) were never chosen (white) — ↑ goes on as in the surprises: someone else from your set
+          stTakenRef.current=false; setStTaken(false);
+          if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
+          _stAllOn();
+          nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true;
+        }
+        else if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
           if(!randomMode) _shuffleOn();
           const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX);
           jamPinsRef.current=pins; setJamPins(pins); setJamAll(true);
@@ -14742,6 +14749,7 @@ Hard requirements:
   };
   // put the piece in the player and start it (call it inside the gesture: the sound wakes there)
   const _feedLoad = (piece, sel, kind)=>{
+    if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
     setTimeout(()=>{ if(!_acRunning()) setFeedNeedTap(true); }, 450);   // still asleep (a swipe on iOS): ▶ asks for one tap
     if(!feedLookRef.current){
@@ -14869,7 +14877,11 @@ Hard requirements:
     const c=feedCards[feedAt]; if(!c || !_feedIsLoaded(c)){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600);
+    if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); }   // its painter is not chosen (white): ↑ goes on as in the surprises
   };
+  const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
+  _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
+  useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
   const _feedOpen = ()=>{ feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
@@ -17122,15 +17134,17 @@ Hard requirements:
               const _inSig = _sigK.includes(k);
               // Ensemble ALL: pinned members show as chosen (gold), drawn guests as a shuffle hit (white)
               const _pinned = jamOn && jamAll && jamPins.includes(k);
-              const isOn = (!cockpitEdit) && (jamOn && jamAll ? _pinned : (style===k || _stIx>0 || _inSig));
+              const _tk = studioFs && stTaken && !cockpitEdit, _tkMine = _tk && (style===k || painterStage.includes(k) || _inSig);   // a kept surprise: its painters show white (not chosen)
+              const isOn = (!cockpitEdit) && !_tk && (jamOn && jamAll ? _pinned : (style===k || _stIx>0 || _inSig));
               const inSet = setupArtists.includes(k);
-              const shufHit = (!cockpitEdit) && (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0 && !_pinned));
+              const shufHit = (!cockpitEdit) && (_tk ? _tkMine : (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0 && !_pinned)));
               const _ghost = cockpitEdit && !inSet;
               const onClick = ()=>{
                 if(cockpitEdit){
                   toggleArtSafe(k);
                   return;
                 }
+                if(_tk){ stTakenRef.current=false; setStTaken(false); if(_tkMine) return; }   // the kept surprise's own painter tapped: now it is chosen (gold); another one: chosen as usual
                 if(_artMode===2){                               // shuffle ALL: the draw decides — except Ensemble ALL, where a tap pins / unpins
                   // the Studio has no 🔀: a tap picks this painter (↑ draws again, ← its variants); with the Ensemble it starts a new Fusion from it
                   if(studioFs && !(jamOn && jamAll)){ if(locked){ setPaywallReason('settings'); return; } if(painterStage.length) setPainterStage([]); selectStyle(k); return; }
