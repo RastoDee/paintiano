@@ -33753,12 +33753,12 @@ Hard requirements:
     const fu = painterStage.length>0 && !sigActive && viewMode!=='image';
     if(!fu){ clear(); setFuIntroShow(false); return; }
     if(!_hasPaint || !playing || fuIntroDoneRef.current) return;
-    let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro_n'))||0; }catch(_){}
+    let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro2_n'))||0; }catch(_){}
     fuIntroDoneRef.current = true;
     if(n>=1) return;
     // For You: the card is the screen — the line goes on the card, as the ✦ Signature's does there
-    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
-    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} }, 1500));
+    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro2_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
+    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro2_n', String(n+1)); }catch(_){} }, 1500));
     _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(false); }, 1500+5600));
   },[painterStage, sigActive, _hasPaint, viewMode, playing]);
   useEffect(()=>()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
@@ -37181,7 +37181,7 @@ Hard requirements:
     const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); }catch(_){} };
   // the look on screen, to keep with a card
   feedDrawRef.current = _feedDraw;
-  const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive });
+  const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive, look:_stLookNow() });   // look: the whole look (a drawn painter, its variant, a fusion's members and variants) — back and forth it comes back the same
   // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
   const _feedPiece = (kind)=>{ const homeArt=_homeCur(); if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
     if(!homeArt) return (Math.random()*3)|0; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
@@ -37189,6 +37189,7 @@ Hard requirements:
   const _feedOpener = ()=>{ let o=['pollock','kandinsky','kusama','spiral'].filter(k=>setupArtists.includes(k) && !styleIsLocked(k)); if(proStatus==='free' && artistOfDay && Math.random()<0.4) o=[artistOfDay]; return o.length ? o[(Math.random()*o.length)|0] : (setupArtists.find(k=>k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'); };
   const _feedApply = (sel)=>{
     if(sel && sel.img){ if(sel.isig && imgSigRef.current && imgSigFnRef.current){ try{ imgSigFnRef.current.apply(imgSigRef.current); }catch(_){} return; } try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} imgComposerRef.current=sel.comp||null; setImgComposer(sel.comp||null); setComposerStage(sel.cstage ? sel.cstage.slice() : []); return; }
+    if(sel.look && !sel.sig){ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply({...sel.look, tk:false}); return; }   // a card seen before: exactly as it was
     setRandomMode(false); randomModeRef.current=false;
     if(sel.sig && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} return; }   // in this same batch: the latch and 🔀 off land together
     setStyle(sel.style); setPhaseIndex(sel.phase|0); setNotesMode(!!sel.notes); setOneMMode(false); setPainterStage(sel.stage ? sel.stage.slice() : []);
