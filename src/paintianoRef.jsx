@@ -24196,7 +24196,8 @@ const STUDIO_FX_CSS = `
 .pf-st-take i{flex-shrink:0;font-style:normal;color:#f0d78a;font-weight:700;margin-left:7px;display:inline-block;transform:scale(1.3) translateY(-1px)}
 .pf-st-take:active{opacity:.7}
 .pf-st-tipup.rm{display:none}
-.pf-st-futip{display:flex;flex-direction:column;align-items:center;gap:3px;max-width:min(320px,calc(100vw - 48px));margin:0 auto 10px;padding:9px 14px;border-radius:16px;background:rgba(10,8,18,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(240,215,138,.45);color:#f2eee8;text-align:center;pointer-events:none;animation:pfStTipIn .3s cubic-bezier(.2,.8,.2,1)}
+.pf-st-futip{display:flex;flex-direction:column;align-items:center;gap:3px;max-width:min(320px,calc(100vw - 48px));margin:0 auto 10px;padding:9px 14px;border-radius:16px;background:rgba(10,8,18,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(240,215,138,.45);color:#f2eee8;text-align:center;pointer-events:none;animation:pfFuIn .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes pfFuIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .pf-st-futip b{font-size:13px;font-weight:600;color:#f0d78a}
 .pf-st-futip span{font-size:12px;color:rgba(242,238,232,.75)}
 @media (prefers-reduced-motion: reduce){.pf-st-tipup.rm{display:inline-flex}}
