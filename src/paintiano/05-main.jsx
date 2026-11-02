@@ -14533,7 +14533,7 @@ Hard requirements:
   const fdRef = useRef({ t0:0, started:false, keysAt:0, n0:0 });
   // 0 s: the home comes up with the Bumble-Bee by Kandinsky already painting (one feed card, full screen)
   useEffect(()=>{
-    if(fdPhase!=='intro' || !studioHome || isDesktop || showIntro || fdRef.current.started) return;   // after the splash
+    if(fdPhase!=='intro' || !studioHome || isDesktop || fdRef.current.started) return;   // under the splash: the piece is loading while the logo is up
     if(_homeCur() || feedAt>=0){ _fdClose(); return; }   // something of yours already, or a surprise on: no demo
     fdRef.current.started = true;
     try{ localStorage.setItem('paintiano_feed_arc','1'); }catch(_){}
@@ -14543,10 +14543,10 @@ Hard requirements:
       feedStepsRef.current=[]; surpriseArtistBagRef.current=[];
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece, sel, u:null, l:'' };
       setFeedCards([c]); setFeedAt(0); _feedLoad(piece, sel); _feedFlashNow();
-    }catch(_){ _fdClose(); } }, 400);
+    }catch(_){ _fdClose(); } }, 60);
     return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[fdPhase, studioHome, isDesktop, showIntro]);
+  },[fdPhase, studioHome, isDesktop]);
   // the opening is painted (16 s with sound) → "Play.": the piece goes, the keys come
   useEffect(()=>{
     if(fdPhase!=='intro' || feedAt<0 || showIntro || !_stEnded) return;
@@ -17140,6 +17140,7 @@ Hard requirements:
       )}
 
       {studioFs && stTake>0 && (<div role="status" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 22px)',transform:'translateX(-50%)',zIndex:10012,padding:'8px 16px',borderRadius:20,background:'rgba(14,11,22,.82)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(240,215,138,.45)',color:'#f0d78a',fontSize:13,fontWeight:700,letterSpacing:'.02em',whiteSpace:'nowrap',pointerEvents:'none',animation:'pfStPausedIn .18s ease-out'}}>✦ {({EN:'Yours — in the Studio',SK:'Tvoja — v Štúdiu',DE:'Deins — im Studio',FR:'À toi — dans le Studio',ES:'Tuya — en el Estudio',PT:'Tua — no Estúdio',zh:'归你了 — 在工作室',zhTW:'歸你了 — 在工作室',ja:'あなたの絵 — スタジオへ'})[lang]||'Yours — in the Studio'}</div>)}
+      {fdPhase==='intro' && studioHome && !isDesktop && (feedAt<0 || feedLoaded===null) && (<div aria-hidden="true" style={{position:'fixed',inset:0,zIndex:10000,background:'#07060c'}}/>)}
       {/* FIRST CONTACT — the words over the painting */}
       {fdPhase==='intro' && studioHome && feedAt>=0 && (
         <div aria-hidden="true" style={{position:'fixed',left:0,right:0,top:'calc(env(safe-area-inset-top, 0px) + 84px)',zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:6,pointerEvents:'none',animation:'pfStPausedIn .5s ease-out'}}>
