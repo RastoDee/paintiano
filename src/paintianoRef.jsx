@@ -30365,7 +30365,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); setOneMMode(F.oneMMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
     try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
     try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
-    try{ ['paintiano_first_demo','paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
+    try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
     // Force back to Setup screen even if the caller was mid-flow.
     setForceSetup(false);
     setPickMode(null);
@@ -31723,8 +31723,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const _si=(idx===1||idx===2)?idx:0;
       const arrayBuffer=b64ToArrayBuffer([SAMPLE_MIDI_B64,SAMPLE_MIDI_B64_2,SAMPLE_MIDI_B64_3][_si]);
       const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
-      let evts=toChords(raw,div,temps);
-      if(opts && opts.maxMs){ const cut=evts.filter(e=>(e.startMs||0)<opts.maxMs); if(cut.length>8) evts=cut; }   // the first contact: the opening only
+      const evts=toChords(raw,div,temps);
       if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
       stopAll();wipeCanvasNow();sigMusicNextRef.current=!(opts && opts.noSig); applyEvents(evts,[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][_si]);
       builtinPieceRef.current=_si; // built-in piece owns the canvas → poster tool may fire
@@ -31737,7 +31736,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // loadSampleMidi but slices the chord events to the first `maxMs` ms so the
   // first-time user gets a digestible taste (~30 s) instead of the full 3:38
   // piece. Returns nothing — apply Events sets all the relevant state.
-  const loadSampleMidiTrimmed=useCallback((maxMs, opts)=>{
+  const loadSampleMidiTrimmed=useCallback((maxMs)=>{
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
       const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
@@ -31745,7 +31744,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!allEvts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
       const evts = allEvts.filter(e => (e.startMs||0) < maxMs);
       const finalEvts = evts.length > 0 ? evts : allEvts.slice(0, 32);
-      stopAll();wipeCanvasNow();sigMusicNextRef.current=!(opts && opts.noSig); applyEvents(finalEvts,SAMPLE_MIDI_NAME);
+      stopAll();wipeCanvasNow();sigMusicNextRef.current=true; applyEvents(finalEvts,SAMPLE_MIDI_NAME);
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
@@ -36055,8 +36054,7 @@ Hard requirements:
     setTimeout(()=>{ try{ if(!playingRef.current && viewModeRef.current==='image' && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){} }, 650);
   };
   // Artist of the day toast: it is only info — on screen for 5 s (or until the first Play), then gone for the day; tomorrow brings a new one
-  const [fdPhase, setFdPhase] = useState(()=>{ try{ return localStorage.getItem('paintiano_first_demo')==='1' ? null : 'intro'; }catch(_){ return null; } });
-  const _dailyShown = !!(dailyToast && !dailyPlayed && proStatus==='free' && !fdPhase && !showOnboarding && !showIntro && !isActiveView && !favView && (!basicMode || (!liteImageMode && !loadedSource && !liteEverUnlockedRef.current)));
+  const _dailyShown = !!(dailyToast && !dailyPlayed && proStatus==='free' && !showOnboarding && !showIntro && !isActiveView && !favView && (!basicMode || (!liteImageMode && !loadedSource && !liteEverUnlockedRef.current)));
   const _dailyDone = ()=>{ setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} };
   useEffect(()=>{ if(!_dailyShown) return; const t=setTimeout(_dailyDone, 5000); return ()=>clearTimeout(t); },[_dailyShown]);
   useEffect(()=>{ if(dailyPlayed && dailyToast) _dailyDone(); },[dailyPlayed]);
@@ -36662,7 +36660,7 @@ Hard requirements:
     else if(_stHasArt && !studioLive){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
   };
   // one tap on the painting: pause / play; on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
-  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
+  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (composeMode || micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
   useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
   useEffect(()=>{ if(!studioFs){ setStFavPend(false); setStShare(false); setStChg(null); } },[studioFs]);
   // the next painting (a swipe up): the Classic Next — and from a plain Mosaic, a painter drawn from your set;
@@ -36765,7 +36763,7 @@ Hard requirements:
   const [stTip, setStTip] = useState(null);   // null | 'up' | 'chg' | 'fav'
   const _tipSeen = (k)=>{ try{ return localStorage.getItem('paintiano_tip_'+k)==='1'; }catch(_){ return true; } };
   const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
-  const _tipQuiet = !!fdPhase || !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
+  const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
     if(studioFs && !up && !_tipSeen('up')) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
@@ -36794,61 +36792,6 @@ Hard requirements:
   // a painting played to the end: its ▶ stays a moment, then goes quietly (a tap still plays it again)
   const _stEnded = !playing && !anim && !holdPaused && chords.length>0 && disp>=chords.length;
   const [stEndQuiet, setStEndQuiet] = useState(false);
-  // ── FIRST CONTACT (the Studio, a phone, once): it paints at once (Bumble-Bee by Kandinsky, full screen) → "Play." (the keys,
-  // every tap a tone and a block) → "This is you." (share, swipe up for another painter). Then the home as always; reset brings it back.
-  const _FD_T = {
-    EN:{is:'This is music.',play:'Play.',playS:'tap a key — every tone is a colour',you:'This is you.',youS:'your composition · {n} tones',share:'Share',up:'swipe up — another painter',tap:'tap — sound',later:'Later'},
-    SK:{is:'Toto je hudba.',play:'Zahraj si.',playS:'ťukni na kláves — každý tón je farba',you:'Toto si ty.',youS:'tvoja kompozícia · {n} tónov',share:'Zdieľaj',up:'potiahni hore — iný maliar',tap:'ťukni — zvuk',later:'Neskôr'},
-    DE:{is:'Das ist Musik.',play:'Spiel.',playS:'tipp eine Taste — jeder Ton ist eine Farbe',you:'Das bist du.',youS:'deine Komposition · {n} Töne',share:'Teilen',up:'nach oben wischen — ein anderer Maler',tap:'tippen — Ton',later:'Später'},
-    FR:{is:'C’est de la musique.',play:'Joue.',playS:'touche une note — chaque ton est une couleur',you:'C’est toi.',youS:'ta composition · {n} notes',share:'Partager',up:'glisse vers le haut — un autre peintre',tap:'touche — le son',later:'Plus tard'},
-    ES:{is:'Esto es música.',play:'Toca.',playS:'pulsa una tecla — cada tono es un color',you:'Esto eres tú.',youS:'tu composición · {n} tonos',share:'Compartir',up:'desliza arriba — otro pintor',tap:'toca — sonido',later:'Luego'},
-    PT:{is:'Isto é música.',play:'Toca.',playS:'toca numa tecla — cada tom é uma cor',you:'Isto és tu.',youS:'a tua composição · {n} tons',share:'Partilhar',up:'desliza para cima — outro pintor',tap:'toca — som',later:'Mais tarde'},
-    zh:{is:'这就是音乐。',play:'弹一弹。',playS:'点一个琴键 — 每个音都是一种颜色',you:'这就是你。',youS:'你的作品 · {n} 个音',share:'分享',up:'上滑 — 换一位画家',tap:'轻点 — 开声音',later:'稍后'},
-    zhTW:{is:'這就是音樂。',play:'彈一彈。',playS:'點一個琴鍵 — 每個音都是一種顏色',you:'這就是你。',youS:'你的作品 · {n} 個音',share:'分享',up:'上滑 — 換一位畫家',tap:'輕點 — 開聲音',later:'稍後'},
-    ja:{is:'これが音楽。',play:'弾いてみて。',playS:'鍵盤をタップ — 音はそれぞれ色',you:'これがあなた。',youS:'あなたの曲 · {n} 音',share:'シェア',up:'上にスワイプ — 別の画家',tap:'タップ — 音',later:'あとで'},
-  };
-  const _fdT = (k)=> ((_FD_T[lang]||_FD_T.EN)[k] || _FD_T.EN[k] || k);
-  const _fdDone = ()=>{ try{ localStorage.setItem('paintiano_first_demo','1'); }catch(_){} };
-  const _fdClose = ()=>{ setFdPhase(null); _fdDone(); };
-  const fdRef = useRef({ t0:0, started:false, keysAt:0, n0:0 });
-  // 0 s: the home comes up with the Bumble-Bee by Kandinsky already painting (one feed card, full screen)
-  useEffect(()=>{
-    if(fdPhase!=='intro' || !studioHome || isDesktop || fdRef.current.started) return;   // under the splash: the piece is loading while the logo is up
-    if(_homeCur() || feedAt>=0){ _fdClose(); return; }   // something of yours already, or a surprise on: no demo
-    fdRef.current.started = true;
-    try{ localStorage.setItem('paintiano_feed_arc','1'); }catch(_){}
-    const tm=setTimeout(()=>{ try{
-      _stFillSet(true);
-      const piece=1, sel={style:'kandinsky', phase:0, mode, notes:false, stage:[], sig:false, maxMs:16000};   // the Bumble-Bee's opening, 16 s: the frame fills before your eyes
-      feedStepsRef.current=[]; surpriseArtistBagRef.current=[];
-      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece, sel, u:null, l:'' };
-      setFeedCards([c]); setFeedAt(0); _feedLoad(piece, sel); _feedFlashNow();
-    }catch(_){ _fdClose(); } }, 60);
-    return ()=>clearTimeout(tm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[fdPhase, studioHome, isDesktop]);
-  // the opening is painted (16 s with sound) → "Play.": the piece goes, the keys come
-  useEffect(()=>{
-    if(fdPhase!=='intro' || feedAt<0 || showIntro || !_stEnded) return;
-    const tm=setTimeout(()=>{ try{
-      setFdPhase('keys'); fdRef.current.keysAt=Date.now();
-      _feedExit(); setTimeout(()=>{ const T=feedTileRef.current; if(T) T.f('compose'); }, 140);
-    }catch(_){ _fdClose(); } }, 1200);
-    return ()=>clearTimeout(tm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[fdPhase, feedAt, _stEnded, showIntro]);
-  // the keys: 8 taps, or 3 s after the first one → "This is you."
-  useEffect(()=>{
-    if(fdPhase!=='keys' || !composeMode) return;
-    const n=chords.length; if(!n) return;
-    if(n>=8){ setFdPhase('done'); _fdDone(); return; }
-    const tm=setTimeout(()=>{ setFdPhase('done'); _fdDone(); }, 3000);
-    return ()=>clearTimeout(tm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[fdPhase, composeMode, chords.length]);
-  // left the demo by any other way (⌄, Change, the menu): it is over
-  useEffect(()=>{ if(fdPhase==='keys' && fdRef.current.keysAt && Date.now()-fdRef.current.keysAt>1500 && !composeMode && !studioHome) _fdClose(); },[fdPhase, composeMode, studioHome]);
-  useEffect(()=>{ if(fdPhase==='done' && !composeMode) _fdClose(); },[fdPhase, composeMode]);
   // ✦ OPEN AS A SONG — one deliberate tap after a take: the recording is read the way an MP3 is (mic-tuned) and
   // opens in Music as an ordinary piece (DNA, ✦ Signature, ♥, share); the live painting stays in the Mic as its draft.
   const micSong = null;
@@ -36936,7 +36879,7 @@ Hard requirements:
     }
     // ✦ Signature: the piece opens on its own painting, exactly as a piece does (the latch comes with the load)
     if(sel && sel.sig){ setRandomMode(false); randomModeRef.current=false; loadSampleMidi(piece); }
-    else loadSampleMidi(piece, {noSig:true, maxMs:(sel && sel.maxMs)||0});
+    else loadSampleMidi(piece, {noSig:true});
     feedPieceRef.current = true;
     if(!(sel && sel.sig)) _feedApply(sel);
     setFeedLoaded(piece); setFeedHiRes(true); feedTokRef.current++;
@@ -37044,7 +36987,6 @@ Hard requirements:
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
-    if(showIntro && fdPhase==='intro'){ F.t=Date.now(); return; }   // the first contact: it starts the moment the logo lifts, not under it
     if(Date.now()-F.t>8000){ feedStartRef.current=null; return; }
     if(F.img){ if(!chords.length || playing || anim || working || viewMode!=='image' || !originalImgUrl || originalImgUrl===F.prevUrl) return; if(F.sel && !F.applied){ F.applied=true; if(F.sel.img && (F.sel.comp!==undefined)) _feedApply(F.sel); } }
     else if(!chords.length || playing || anim || working || !(info && info.title===F.title)) return;
@@ -37056,7 +36998,7 @@ Hard requirements:
       else setTimeout(()=>{ if(feedTokRef.current!==tok || playingRef.current || !feedPieceRef.current) return; if(!_acRunning()) setFeedNeedTap(true); else { try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} } }, 900); };   // 🔇 only when the sound really sleeps
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);
     return ()=>clearTimeout(tm);
-  },[chords, playing, anim, working, info, viewMode, originalImgUrl, showIntro, fdPhase]);
+  },[chords, playing, anim, working, info, viewMode, originalImgUrl]);
 
   useEffect(()=>{ if(feedUpDone || feedAt<0 || !playing || feedIntro){ if(feedAt<0 && feedUpCue) setFeedUpCue(false); return; } const tm=setTimeout(()=>setFeedUpCue(true), 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedAt, playing, feedIntro]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); if(playing && !feedSoundOk) setFeedSoundOk(true); },[playing]);
@@ -37736,7 +37678,7 @@ Hard requirements:
         {studioOn && studioHome && _dailyShown && (
           <button type="button" className="pf-st-daily" onClick={openDailyInfo} aria-label={ts('dailyTitle','Artist of the day')}><i aria-hidden="true"/><span><small>✦ {ts('dailyBadgeTitle','Free today')}</small><b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}{composerOfDay ? ' & '+(COMPOSER_INSPIRED[composerOfDay]||composerOfDay) : ''}</b></span></button>
         )}
-        {studioOn && studioHome && !_dailyShown && fdPhase!=='intro' && (
+        {studioOn && studioHome && !_dailyShown && (
           <button type="button" className="pf-st-word" onClick={()=>setNavMenuOpen(true)} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
         {/* segmented control — text size + language */}
@@ -38164,7 +38106,7 @@ Hard requirements:
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
                 <div key={FC.id} className={'pf-sh-art '+(FC.dir==='d' ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')}>
-                  {feedUpCue && fdPhase!=='intro' && (<span className="pf-sh-up" aria-hidden="true">{[0,1].map(i=>(<svg key={i} width="26" height="14" viewBox="0 0 26 14"><path d="M3 12L13 3l10 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg>))}</span>)}
+                  {feedUpCue && (<span className="pf-sh-up" aria-hidden="true">{[0,1].map(i=>(<svg key={i} width="26" height="14" viewBox="0 0 26 14"><path d="M3 12L13 3l10 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg>))}</span>)}
                   {_fL && FC.u && (<img src={FC.u} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>)}
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   <span key={'ch'+(FC ? FC.id : '')} className="pf-sh-chip fade" style={{color:'#f0d78a'}}>{_sv(<path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/>, 13)}{t('surpriseMe')}</span>
@@ -38201,7 +38143,7 @@ Hard requirements:
               const _heartOn = _fL && favHitAny;
               return (
               <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
-                {FC && feedUpCue && !feedFly && fdPhase!=='intro' && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
+                {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
                 {(_mt || _ml) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg')?' hide':'')}>{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>)}
                 <div className="pf-st-acts">
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')} disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
@@ -39421,36 +39363,6 @@ Hard requirements:
       )}
 
       {studioFs && stTake>0 && (<div role="status" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 22px)',transform:'translateX(-50%)',zIndex:10012,padding:'8px 16px',borderRadius:20,background:'rgba(14,11,22,.82)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(240,215,138,.45)',color:'#f0d78a',fontSize:13,fontWeight:700,letterSpacing:'.02em',whiteSpace:'nowrap',pointerEvents:'none',animation:'pfStPausedIn .18s ease-out'}}>✦ {({EN:'Yours — in the Studio',SK:'Tvoja — v Štúdiu',DE:'Deins — im Studio',FR:'À toi — dans le Studio',ES:'Tuya — en el Estudio',PT:'Tua — no Estúdio',zh:'归你了 — 在工作室',zhTW:'歸你了 — 在工作室',ja:'あなたの絵 — スタジオへ'})[lang]||'Yours — in the Studio'}</div>)}
-      {fdPhase==='intro' && studioHome && !isDesktop && (feedAt<0 || feedLoaded===null || showIntro) && (<div aria-hidden="true" style={{position:'fixed',inset:0,zIndex:10000,background:'#07060c'}}/>)}
-      {/* FIRST CONTACT — the words over the painting */}
-      {fdPhase==='intro' && studioHome && feedAt>=0 && !showIntro && (
-        <div aria-hidden="true" style={{position:'fixed',left:0,right:0,top:'calc(env(safe-area-inset-top, 0px) + 84px)',zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:6,pointerEvents:'none',animation:'pfStPausedIn .5s ease-out'}}>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontStyle:'italic',fontSize:40,color:'#fff',textShadow:'0 2px 18px rgba(0,0,0,.9), 0 0 2px #000'}}>{_fdT('is')}</div>
-          {feedNeedTap && !playing && (<div style={{fontSize:13,letterSpacing:'.04em',color:'rgba(242,238,232,.85)',textShadow:'0 1px 8px rgba(0,0,0,.9)'}}>{_fdT('tap')}</div>)}
-        </div>
-      )}
-      {fdPhase==='keys' && studioFs && composeMode && !chords.length && (
-        <div aria-hidden="true" style={{position:'fixed',left:0,right:0,top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - 144px - '+stDockH+'px) / 2)',transform:'translateY(-50%)',zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:8,pointerEvents:'none',animation:'pfStPausedIn .4s ease-out'}}>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontStyle:'italic',fontSize:42,color:'#fff',textShadow:'0 2px 18px rgba(0,0,0,.9)'}}>{_fdT('play')}</div>
-          <div style={{fontSize:14,color:'rgba(242,238,232,.8)',textShadow:'0 1px 8px rgba(0,0,0,.9)'}}>{_fdT('playS')}</div>
-        </div>
-      )}
-      {fdPhase==='keys' && studioFs && composeMode && !chords.length && (<div aria-hidden="true" style={{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom, 0px) + 46px)',transform:'translateX(-50%)',zIndex:10004,width:46,height:46,borderRadius:'50%',border:'3px solid rgba(240,215,138,.95)',boxShadow:'0 0 18px rgba(240,215,138,.6)',display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',animation:'pfSkWait 1.2s ease-in-out infinite'}}><i style={{width:14,height:14,borderRadius:'50%',background:'#f0d78a'}}/></div>)}
-      {fdPhase==='done' && studioFs && composeMode && (()=>{
-        let y0=null;
-        return (<div onTouchStart={(e)=>{ y0=e.touches[0] && e.touches[0].clientY; }} onTouchEnd={(e)=>{ const t=e.changedTouches && e.changedTouches[0]; if(y0!=null && t && y0-t.clientY>50){ _fdClose(); setTimeout(()=>{ try{ _stNext(); }catch(_){} }, 60); } y0=null; }}
-          style={{position:'fixed',left:0,right:0,top:0,zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:6,paddingTop:'calc(env(safe-area-inset-top, 0px) + 70px)',paddingBottom:24,background:'linear-gradient(180deg, rgba(7,6,12,.7), rgba(7,6,12,0))',animation:'pfStPausedIn .5s ease-out'}}>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontStyle:'italic',fontSize:40,color:'#fff',textShadow:'0 2px 18px rgba(0,0,0,.9)'}}>{_fdT('you')}</div>
-          <div style={{fontSize:13,color:'rgba(240,215,138,.95)',textShadow:'0 1px 8px rgba(0,0,0,.9)'}}>{_fdT('youS').replace('{n}', String(chords.length))}</div>
-          <div style={{display:'flex',alignItems:'center',gap:14,marginTop:16}}>
-            <button type="button" onClick={()=>{ _fdClose(); setStShare(true); }} style={{height:50,padding:'0 30px',borderRadius:25,border:0,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:16,color:'#1a1408',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',boxShadow:'0 10px 30px rgba(201,168,76,.4)'}}>{_fdT('share')}</button>
-            <button type="button" onClick={_fdClose} style={{height:40,padding:'0 14px',borderRadius:20,border:'1px solid rgba(242,238,232,.25)',background:'rgba(7,6,12,.5)',color:'rgba(242,238,232,.8)',fontFamily:'inherit',fontSize:13,cursor:'pointer'}}>{_fdT('later')}</button>
-          </div>
-          <div style={{marginTop:14,display:'flex',flexDirection:'column',alignItems:'center',gap:0,color:'rgba(240,215,138,.95)',fontSize:13,fontWeight:600,textShadow:'0 1px 8px rgba(0,0,0,.9)'}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_fdT('up')}
-          </div>
-        </div>);
-      })()}
       {/* Studio: the Audio / Notes file card — the dock's save rows sit under the Studio's own dock and can't be seen there,
           so the rendered file comes up here with one Save tap (a fresh tap: iOS opens the share sheet → Save to Files) */}
       {studioFs && !preview && ((recBlob && audioRowOpen) || scoreBlob || (scoreMsg && !scoreBlob)) && (()=>{
@@ -40149,7 +40061,7 @@ Hard requirements:
             </div>
           </>);
         })()}
-        {studioLive && composeMode && !chords.length && fdPhase!=='keys' && (
+        {studioLive && composeMode && !chords.length && (
           <div aria-hidden="true" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)',transform:'translate(-50%,-50%)',zIndex:10000,pointerEvents:'none'}}>
             <div style={{width:150,height:150,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#8fd6a4',border:'1px solid rgba(143,214,164,.38)',background:'radial-gradient(circle, rgba(143,214,164,.16), rgba(143,214,164,0) 70%)',opacity:.85}}>
               <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
