@@ -37308,6 +37308,9 @@ Hard requirements:
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600);
     if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); }
+    // the switch tells what is on the canvas: one painter (one composer) = Solo, a crossing = Fusion
+    if(!painterStage.length && jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); } else if(painterStage.length && ensembleActive && !jamOn) setJamOn(true);
+    if(!composerStage.length && crOn) setCrOn(false);
     firstKeptRef.current = !!c.first;   // its painter is not chosen (white): ↑ goes on as in the surprises
   };
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
