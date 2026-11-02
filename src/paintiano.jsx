@@ -36839,10 +36839,15 @@ Hard requirements:
   useEffect(()=>{ const cv=canvasWrapRef.current; if(!cv) return;
     const off=()=>{ cv.style.translate=''; cv.style.scale=''; };
     if(!(studioFs && stripOpen)){ if(cv.style.translate || cv.style.scale){ cv.style.transition='translate .3s ease, scale .3s ease'; off(); } return; }
-    let raf=0; const fit=()=>{ try{ const tr=trayRef.current; if(!tr) return; const pt=cv.style.translate, ps=cv.style.scale; cv.style.transition='none'; off(); const r=cv.getBoundingClientRect(); cv.style.translate=pt; cv.style.scale=ps;
+    // the scale is measured, not assumed: the canvas carries its own transform (e.g. a centring translate(-50%)), which the scale also scales —
+    // so: scale it, see where it lands, then move it to where it belongs (centred, under the ⌄, above the tray)
+    let raf=0; const fit=()=>{ try{ const tr=trayRef.current; if(!tr) return; const pt=cv.style.translate, ps=cv.style.scale; cv.style.transition='none'; off(); const r=cv.getBoundingClientRect();
       const _mb=document.querySelector('.pf-st-min'), top=_mb ? _mb.getBoundingClientRect().bottom+10 : 60, bottom=window.innerHeight - tr.getBoundingClientRect().height - 8, avail=bottom-top;
-      if(avail<120 || !r.height) return; const sc=Math.min(1, avail/r.height), nh=r.height*sc, ny=top+Math.max(0,(avail-nh)/2), dy=ny-(r.top+r.height*(1-sc)/2);
-      requestAnimationFrame(()=>{ cv.style.transition='translate .35s cubic-bezier(.2,.8,.2,1), scale .35s cubic-bezier(.2,.8,.2,1)'; cv.style.translate='0 '+Math.round(dy)+'px'; cv.style.scale=String(Math.round(sc*1000)/1000); }); }catch(_){} };
+      if(avail<120 || !r.height){ cv.style.translate=pt; cv.style.scale=ps; return; }
+      const sc=Math.min(1, avail/r.height); cv.style.scale=String(Math.round(sc*1000)/1000); const r2=cv.getBoundingClientRect();
+      const ny=top+Math.max(0,(avail-r2.height)/2), tx=(window.innerWidth/2)-(r2.left+r2.width/2), ty=ny-r2.top;
+      cv.style.translate=pt; cv.style.scale=ps; void cv.offsetWidth;
+      requestAnimationFrame(()=>{ cv.style.transition='translate .35s cubic-bezier(.2,.8,.2,1), scale .35s cubic-bezier(.2,.8,.2,1)'; cv.style.translate=Math.round(tx)+'px '+Math.round(ty)+'px'; cv.style.scale=String(Math.round(sc*1000)/1000); }); }catch(_){} };
     raf=requestAnimationFrame(fit); const t2=setTimeout(fit, 260); window.addEventListener('resize', fit);
     return ()=>{ cancelAnimationFrame(raf); clearTimeout(t2); window.removeEventListener('resize', fit); };
   },[studioFs, stripOpen, jamOn]);

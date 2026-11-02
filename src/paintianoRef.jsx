@@ -25260,7 +25260,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const tasteUsedRef = useRef(false);
   const [tastePreviewKey, setTastePreviewKey] = useState(null);
   const tastePreviewKeyRef = useRef(null);
-  const feedFirstRef = useRef(false);   // the first screen's own painting is on (its look in full, even on Free — it is what the screen showed)
+  const feedFirstRef = useRef(false), firstKeptRef = useRef(false);   // … and kept with ↓ / its title: still that painting, in full   // the first screen's own painting is on (its look in full, even on Free — it is what the screen showed)
   useEffect(()=>{ tastePreviewKeyRef.current = tastePreviewKey; },[tastePreviewKey]);
   const FREE_UNLOCKED_KEYS = useMemo(
     () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
@@ -37092,7 +37092,7 @@ Hard requirements:
   const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
   // the first screen's painting: THIS piece in THIS look — a tap paints it right there (no slide, the picture melts into it); the first swipe up brings the arc
   const _FEED_FIRST = { piece:PF_FIRST.piece, sel:{ style:PF_FIRST.style, phase:PF_FIRST.phase, mode:'harmony', notes:false, stage:[], sig:false } };
-  feedFirstRef.current = feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first);
+  feedFirstRef.current = (feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first)) || (firstKeptRef.current && feedAt<0 && style===PF_FIRST.style && (phaseIndex|0)===PF_FIRST.phase && !painterStage.length && !sigActive);
   const _FEED_IMGS = (typeof SAMPLE_IMAGES!=='undefined') ? SAMPLE_IMAGES : [];
   const _feedKind = ()=>{ const h=_homeCur(); return (h && (h.k==='image' || (!h.k && h.src==='image'))) ? 'img' : 'music'; };
   const _feedTitle = (c)=> c ? (c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
@@ -37251,11 +37251,12 @@ Hard requirements:
     const c=feedCards[feedAt]; if(!c || !_feedIsLoaded(c)){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600);
-    if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); }   // its painter is not chosen (white): ↑ goes on as in the surprises
+    if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); }
+    firstKeptRef.current = !!c.first;   // its painter is not chosen (white): ↑ goes on as in the surprises
   };
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
-  useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } },[info && info.title, loadedSource]);   // another song: gone
+  useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
   const _feedOpen = ()=>{ feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
