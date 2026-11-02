@@ -37044,6 +37044,7 @@ Hard requirements:
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
+    if(showIntro && fdPhase==='intro'){ F.t=Date.now(); return; }   // the first contact: it starts the moment the logo lifts, not under it
     if(Date.now()-F.t>8000){ feedStartRef.current=null; return; }
     if(F.img){ if(!chords.length || playing || anim || working || viewMode!=='image' || !originalImgUrl || originalImgUrl===F.prevUrl) return; if(F.sel && !F.applied){ F.applied=true; if(F.sel.img && (F.sel.comp!==undefined)) _feedApply(F.sel); } }
     else if(!chords.length || playing || anim || working || !(info && info.title===F.title)) return;
@@ -37055,7 +37056,7 @@ Hard requirements:
       else setTimeout(()=>{ if(feedTokRef.current!==tok || playingRef.current || !feedPieceRef.current) return; if(!_acRunning()) setFeedNeedTap(true); else { try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} } }, 900); };   // 🔇 only when the sound really sleeps
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);
     return ()=>clearTimeout(tm);
-  },[chords, playing, anim, working, info, viewMode, originalImgUrl]);
+  },[chords, playing, anim, working, info, viewMode, originalImgUrl, showIntro, fdPhase]);
 
   useEffect(()=>{ if(feedUpDone || feedAt<0 || !playing || feedIntro){ if(feedAt<0 && feedUpCue) setFeedUpCue(false); return; } const tm=setTimeout(()=>setFeedUpCue(true), 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedAt, playing, feedIntro]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); if(playing && !feedSoundOk) setFeedSoundOk(true); },[playing]);
@@ -39420,9 +39421,9 @@ Hard requirements:
       )}
 
       {studioFs && stTake>0 && (<div role="status" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 22px)',transform:'translateX(-50%)',zIndex:10012,padding:'8px 16px',borderRadius:20,background:'rgba(14,11,22,.82)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(240,215,138,.45)',color:'#f0d78a',fontSize:13,fontWeight:700,letterSpacing:'.02em',whiteSpace:'nowrap',pointerEvents:'none',animation:'pfStPausedIn .18s ease-out'}}>✦ {({EN:'Yours — in the Studio',SK:'Tvoja — v Štúdiu',DE:'Deins — im Studio',FR:'À toi — dans le Studio',ES:'Tuya — en el Estudio',PT:'Tua — no Estúdio',zh:'归你了 — 在工作室',zhTW:'歸你了 — 在工作室',ja:'あなたの絵 — スタジオへ'})[lang]||'Yours — in the Studio'}</div>)}
-      {fdPhase==='intro' && studioHome && !isDesktop && (feedAt<0 || feedLoaded===null) && (<div aria-hidden="true" style={{position:'fixed',inset:0,zIndex:10000,background:'#07060c'}}/>)}
+      {fdPhase==='intro' && studioHome && !isDesktop && (feedAt<0 || feedLoaded===null || showIntro) && (<div aria-hidden="true" style={{position:'fixed',inset:0,zIndex:9990,background:'#07060c'}}/>)}
       {/* FIRST CONTACT — the words over the painting */}
-      {fdPhase==='intro' && studioHome && feedAt>=0 && (
+      {fdPhase==='intro' && studioHome && feedAt>=0 && !showIntro && (
         <div aria-hidden="true" style={{position:'fixed',left:0,right:0,top:'calc(env(safe-area-inset-top, 0px) + 84px)',zIndex:10001,display:'flex',flexDirection:'column',alignItems:'center',gap:6,pointerEvents:'none',animation:'pfStPausedIn .5s ease-out'}}>
           <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontStyle:'italic',fontSize:40,color:'#fff',textShadow:'0 2px 18px rgba(0,0,0,.9), 0 0 2px #000'}}>{_fdT('is')}</div>
           {feedNeedTap && !playing && (<div style={{fontSize:13,letterSpacing:'.04em',color:'rgba(242,238,232,.85)',textShadow:'0 1px 8px rgba(0,0,0,.9)'}}>{_fdT('tap')}</div>)}
