@@ -37080,6 +37080,7 @@ Hard requirements:
     if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>setStTip('fav'), 1200); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, favReadyAny, favHitAny]);
+  const feedResumeRef = useRef(null);   // ↓ from the first surprise back home: the cards wait for ↑
   const [feedFly, setFeedFly] = useState(null);     // the card flying off: {k, u, t, l, dir}
   const [feedFlash, setFeedFlash] = useState(0);    // the look's name over the card, for a moment
   // FULL SCREEN, QUIET: while a full-screen painting plays (the Studio's Full screen, the home's surprise) the song's lines fade after 4 s —
@@ -37181,7 +37182,7 @@ Hard requirements:
     const r=Math.max(W/s.width, Hh/s.height), dw=s.width*r, dh=s.height*r; x.drawImage(s,(W-dw)/2,(Hh-dh)/2,dw,dh); }catch(_){} };
   // the look on screen, to keep with a card
   feedDrawRef.current = _feedDraw;
-  const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive });
+  const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive, look:_stLookNow() });   // look: the whole look (a drawn painter, its variant, a fusion's members and variants) — back and forth it comes back the same
   // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
   const _feedPiece = (kind)=>{ const homeArt=_homeCur(); if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
     if(!homeArt) return (Math.random()*3)|0; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
@@ -37189,6 +37190,7 @@ Hard requirements:
   const _feedOpener = ()=>{ let o=['pollock','kandinsky','kusama','spiral'].filter(k=>setupArtists.includes(k) && !styleIsLocked(k)); if(proStatus==='free' && artistOfDay && Math.random()<0.4) o=[artistOfDay]; return o.length ? o[(Math.random()*o.length)|0] : (setupArtists.find(k=>k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'); };
   const _feedApply = (sel)=>{
     if(sel && sel.img){ if(sel.isig && imgSigRef.current && imgSigFnRef.current){ try{ imgSigFnRef.current.apply(imgSigRef.current); }catch(_){} return; } try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} imgComposerRef.current=sel.comp||null; setImgComposer(sel.comp||null); setComposerStage(sel.cstage ? sel.cstage.slice() : []); return; }
+    if(sel.look && !sel.sig){ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply({...sel.look, tk:false}); return; }   // a card seen before: exactly as it was
     setRandomMode(false); randomModeRef.current=false;
     if(sel.sig && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} return; }   // in this same batch: the latch and 🔀 off land together
     setStyle(sel.style); setPhaseIndex(sel.phase|0); setNotesMode(!!sel.notes); setOneMMode(false); setPainterStage(sel.stage ? sel.stage.slice() : []);
@@ -37281,7 +37283,10 @@ Hard requirements:
     if(feedFly) return;
     if(feedAt>=0 && !feedUpDone){ setFeedUpDone(true); setFeedUpCue(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} }
     setFeedIntro(null);
-    if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340); _feedStart(); _stBuzz(8); return; }
+    if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340);
+      const R=feedResumeRef.current; feedResumeRef.current=null;
+      if(R && R.cards && R.cards.length && R.kind===_feedKind()){ const c0=R.cards[0]; setFeedCards(R.cards); setFeedAt(0); _feedLoad(c0.piece, c0.sel || (c0.kind==='img' ? {img:true} : {sig:true}), c0.kind); _feedFlashNow(); _stBuzz(8); return; }   // back up after ↓ from the first surprise: the same one again
+      _feedStart(); _stBuzz(8); return; }
     // the card that leaves keeps its painting and its look
     const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
     setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0, pu:null} : c));
@@ -37314,6 +37319,8 @@ Hard requirements:
       return; }
     const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music'), own = !!mine && (mine==='image' ? hasImageDraft : hasMusicDraft);
     if(!own && !homeArt){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }   // nothing of yours yet: the card just gives
+    // ↑ again brings back these same surprises, from this card (as ↓ then ↑ does between cards) — not a new piece
+    try{ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(); feedResumeRef.current = { kind:_feedKind(), cards:feedCards.map(x=>x.id===c.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null, dir:'u'} : x) }; }catch(_){ feedResumeRef.current=null; }
     setFeedIntro(null); setFeedFly({k:Date.now(), u:_feedSnap(), t:_feedTitle(c), l:'', dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
     _feedExit(); if(own) setHomeSide(mine); _stBuzz(8);
   };
@@ -37334,7 +37341,7 @@ Hard requirements:
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
-  const _feedOpen = ()=>{ feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
+  const _feedOpen = ()=>{ feedResumeRef.current=null; feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
