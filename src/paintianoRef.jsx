@@ -36809,7 +36809,29 @@ Hard requirements:
   const _stSlide = ()=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{ el.animate([{translate:'0 0',opacity:1},{translate:'0 -48px',opacity:0,offset:.36},{translate:'0 64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
   // a new composer re-reads the picture (heavy on iOS): the sound dips under the change instead of crackling
   const _imgDip = (fn)=>{ try{ fn(); }catch(_){} };   // the dip itself rides on the composer change (see _cmpDipRef)
+  // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
+  const stLookHistRef = useRef({key:'', st:[]});
+  const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode, om:!!oneMMode,
+    jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current });
+  const _stLookApply = (L)=>{
+    if(sigActiveRef.current && !L.sig){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
+    randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt); setOneMMode(L.om);
+    setMosaicShuffleLock(L.lock); setJamOn(L.jo); setJamAll(L.ja); jamPinsRef.current=L.pins.slice(); setJamPins(L.pins.slice()); _setFuRoll(L.fu); setMode(L.md);
+    setStyle(L.st); setPainterStage(L.sg.slice());
+    stTakenRef.current=L.tk; setStTaken(L.tk);
+    if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ const g=songSigRef.current; setTimeout(()=>{ try{ applySigRef.current(g); }catch(_){} }, 0); }
+  };
+  const _stPrev = ()=>{
+    if(viewMode==='image' || !((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return;
+    const H=stLookHistRef.current; if(H.key!==((info && info.title) || '') || !H.st.length){ _stBuzz(6); return; }
+    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);   // the look comes back as it was: the shuffle must not draw again on the artist change
+    _stLookApply(H.st.pop()); setStFavPend(false); _stBuzz(12);
+    try{ const el=canvasWrapRef.current; if(el && el.animate) el.animate([{translate:'0 0',opacity:1},{translate:'0 48px',opacity:0,offset:.36},{translate:'0 -64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){}
+    if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
+    setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
+  };
   const _stNext = ()=>{
+    const _back0 = viewMode!=='image' ? _stLookNow() : null;
     let rolled = false;
     try{
       if(viewMode==='image'){
@@ -36824,8 +36846,12 @@ Hard requirements:
         if(stTakenRef.current){   // a surprise kept with ↓: its painter(s) were never chosen (white) — ↑ goes on as in the surprises: someone else from your set
           stTakenRef.current=false; setStTaken(false);
           if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
-          _stAllOn();
-          nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true;
+          const _cur = style || shuffleStyle, _pool = SHUFFLE_POOL.filter(k=>(setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay)) && k!==_cur && !painterStage.includes(k));
+          const _k = _pool.length ? _pool[(Math.random()*_pool.length)|0] : null;
+          if(_k){ const _N = (proStatus==='free' && _k!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[_k]>1) ? ARTIST_VARIANT_N[_k] : 6), _ix=_shuffleIndexFor(_k);
+            randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setOneMMode(false); setPainterStage([]); _setFuRoll(null);
+            nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+            setStyle(null); if(_ix>=0) setShuffleArtistIndex(_ix); setShufVariant((Math.random()*_N)|0); rolled = true; }
         }
         else if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
           if(!randomMode) _shuffleOn();
@@ -36837,6 +36863,7 @@ Hard requirements:
       }
     }catch(_){}
     if(!rolled) return;
+    if(_back0){ const H=stLookHistRef.current, k=(info && info.title) || ''; if(H.key!==k){ H.key=k; H.st=[]; } H.st.push(_back0); if(H.st.length>20) H.st.shift(); }
     setStFavPend(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} _tipDone('up');
     _stBuzz(12); if(viewMode!=='image') _stSlide();   // a picture does not change on ↑ (only who plays it): no slide, no blink
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
@@ -36856,7 +36883,7 @@ Hard requirements:
     if(ax>=60 && ax>ay*1.5){ _stVariant(dx>0); return true; }   // ← the next variant of this painter / Fusion; → back to the one before
     if(ay<50 || ay<ax*1.5) return false;
     if(dy<0){ _stNext(); return true; }
-    return true;   // down: nothing
+    _stPrev(); return true;   // ↓ back to the painting before
   };
   // … also on the dark around the painting
   const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; _swipeWasGestureRef.current=false; };
@@ -36911,15 +36938,17 @@ Hard requirements:
   const _tipSeen = (k)=>{ try{ return localStorage.getItem('paintiano_tip_'+k)==='1'; }catch(_){ return true; } };
   const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
   const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
+  // ⌃ only where ↑ does something: a painter you chose (gold) stays — there the hint would be wrong
+  const _stUpWorks = ()=> viewMode==='image' || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0);
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
-    if(studioFs && !up && !_tipSeen('up')) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
+    if(studioFs && !up && !_tipSeen('up') && _stUpWorks()) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
     if(!k) return; const tm=setTimeout(()=>setStTip(k), k==='up' ? 7000 : 12000); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[stTip, _tipQuiet, playing]);
-  useEffect(()=>{ if(!stTip) return; if(_tipQuiet){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipDone(k), 6500); return ()=>clearTimeout(tm);
+  },[stTip, _tipQuiet, playing, _artMode, jamOn, jamAll, viewMode]);
+  useEffect(()=>{ if(!stTip) return; if(_tipQuiet || (stTip==='up' && !_stUpWorks())){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipDone(k), 6500); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[stTip, _tipQuiet]);
+  },[stTip, _tipQuiet, _artMode, jamOn, jamAll]);
   // ♥: your own painting (a song, a picture, a mood, a take — not a surprise) is done and not kept yet
   useEffect(()=>{ if(stTip || _tipQuiet || _tipSeen('fav')) return; const own = !!(loadedSource || moodContext || draftOwnerRef.current);
     if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>setStTip('fav'), 1200); return ()=>clearTimeout(tm);
