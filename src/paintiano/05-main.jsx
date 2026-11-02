@@ -11472,13 +11472,15 @@ Hard requirements:
     const clear=()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); _fuiTimersRef.current=[]; };
     const fu = painterStage.length>0 && !sigActive && viewMode!=='image';
     if(!fu){ clear(); setFuIntroShow(false); return; }
-    if(!_hasPaint || fuIntroDoneRef.current) return;
+    if(!_hasPaint || !playing || fuIntroDoneRef.current) return;
     let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro_n'))||0; }catch(_){}
     fuIntroDoneRef.current = true;
     if(n>=1) return;
+    // For You: the card is the screen — the line goes on the card, as the ✦ Signature's does there
+    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
     _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} }, 1500));
     _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(false); }, 1500+5600));
-  },[painterStage, sigActive, _hasPaint, viewMode]);
+  },[painterStage, sigActive, _hasPaint, viewMode, playing]);
   useEffect(()=>()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
   // … and the first picture Signature ever (Lite or Advanced): the same line, said of the picture
   useEffect(()=>{
@@ -16197,6 +16199,7 @@ Hard requirements:
                       return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('line')}</p><div className="pf-sh-key">{[0,7,2,9,4,11,6,1,8,3,10,5].map(pc=>{ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){} const on=_lit.has(pc); return (<span key={pc} className={on?'on':''}><i style={{background:'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')',...(on?{boxShadow:'0 0 0 1.5px #f4e7c6,0 0 10px 1px rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+',.85)'}:{})}}/><b>{_nm[pc]}</b></span>); })}</div></div>); }
                     if(feedIntro.k==='p' && style && STYLE_INSPIRED[style]) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('painter').replace('{name}', STYLE_INSPIRED[style])}</p></div>);
                     if(feedIntro.k==='s' && sigActive) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><small>✦ {_sigT('label')}</small><p>{_sigT('intro')}</p></div>);
+                    if(feedIntro.k==='f' && painterStage.length && !sigActive) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><small>{_ensT('fusion')}</small><p>{_stT('fuTip')}</p></div>);
                     return null; })()}
                   {_fFlash && (()=>{ const ms = String(_fFlash.h||'').indexOf('✦')>=0 ? 5200 : (_fFlash.n.length>1 ? 3400 : 2200); feedFlashMsRef.current = ms; return null; })()}{_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true" style={{animationDuration:feedFlashMsRef.current+'ms'}}>{_fFlash.h && (<small>{_fFlash.h}</small>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>×</span>)}{x}</b>))}</div>)}
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
