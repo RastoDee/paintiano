@@ -1454,6 +1454,37 @@ async function myImgCompact(){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// §1.5c  RETIRED PAINTER KEYS — what was saved under an old key reads as its heir
+// ─────────────────────────────────────────────────────────────────────────────
+// The pseudo-painter "One Million Dollar Page" (key 'oneM', for a while also a
+// third state of the Mosaic chip, the look flag `om`) gave its seat to Alma
+// Thomas (key 'thomas', Nov 2026). Everything saved before — a Favorite, a
+// put-aside draft's look, the home card's look, a poster's ?artist= — opens as
+// Thomas. Pure functions: they never throw and return a fresh object.
+const _PAINTER_HEIR = {oneM:'thomas'};
+function _painterKeyNow(k){ return (typeof k==='string' && Object.prototype.hasOwnProperty.call(_PAINTER_HEIR, k)) ? _PAINTER_HEIR[k] : k; }
+// a look {st, sg, nt, om, …} (drafts, the home card): the painter, the stage, and the old Mosaic-chip flag
+function _lookMigrate(L){
+  if(!L || typeof L!=='object') return L;
+  const o={...L};
+  if(o.om && !o.st){ o.st=_PAINTER_HEIR.oneM; o.nt=false; }
+  delete o.om;
+  o.st=_painterKeyNow(o.st);
+  if(Array.isArray(o.sg)) o.sg=o.sg.map(_painterKeyNow);
+  return o;
+}
+// a Favorite: its painter, its fusion members, and its address key (the painter
+// is part of the key — see _favAddrKey — so the ♥ still finds the painting)
+function _favMigrate(f){
+  if(!f || typeof f!=='object') return f;
+  const k=(a)=>Array.isArray(a) ? a.map(_painterKeyNow) : a;
+  const o={...f, style:_painterKeyNow(f.style), keys:k(f.keys)};
+  if(f.fa && typeof f.fa==='object') o.fa={...f.fa, keys:k(f.fa.keys)};
+  if(typeof f.ak==='string'){ const q=f.ak.split('|'); if(q.length>2){ q[1]=_painterKeyNow(q[1]); q[2]=q[2].split('+').map(_painterKeyNow).join('+'); } o.ak=q.join('|'); }
+  return o;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // §1.6  FAVORITES — IndexedDB (painting addresses, no limit)
 // ─────────────────────────────────────────────────────────────────────────────
 // A favorite is a painting's ADDRESS, not a picture: the song's notes (kept once
@@ -1488,7 +1519,7 @@ async function favList(){
     const db = await favOpen();
     return await new Promise((resolve)=>{
       const req = db.transaction('favs','readonly').objectStore('favs').getAll();
-      req.onsuccess = ()=> resolve((req.result || []).sort((a,b)=> (b.at||0) - (a.at||0)));
+      req.onsuccess = ()=> resolve((req.result || []).map(_favMigrate).sort((a,b)=> (b.at||0) - (a.at||0)));
       req.onerror   = ()=> resolve([]);
     });
   }catch(_){ return []; }

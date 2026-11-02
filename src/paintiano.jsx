@@ -1454,6 +1454,37 @@ async function myImgCompact(){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// §1.5c  RETIRED PAINTER KEYS — what was saved under an old key reads as its heir
+// ─────────────────────────────────────────────────────────────────────────────
+// The pseudo-painter "One Million Dollar Page" (key 'oneM', for a while also a
+// third state of the Mosaic chip, the look flag `om`) gave its seat to Alma
+// Thomas (key 'thomas', Nov 2026). Everything saved before — a Favorite, a
+// put-aside draft's look, the home card's look, a poster's ?artist= — opens as
+// Thomas. Pure functions: they never throw and return a fresh object.
+const _PAINTER_HEIR = {oneM:'thomas'};
+function _painterKeyNow(k){ return (typeof k==='string' && Object.prototype.hasOwnProperty.call(_PAINTER_HEIR, k)) ? _PAINTER_HEIR[k] : k; }
+// a look {st, sg, nt, om, …} (drafts, the home card): the painter, the stage, and the old Mosaic-chip flag
+function _lookMigrate(L){
+  if(!L || typeof L!=='object') return L;
+  const o={...L};
+  if(o.om && !o.st){ o.st=_PAINTER_HEIR.oneM; o.nt=false; }
+  delete o.om;
+  o.st=_painterKeyNow(o.st);
+  if(Array.isArray(o.sg)) o.sg=o.sg.map(_painterKeyNow);
+  return o;
+}
+// a Favorite: its painter, its fusion members, and its address key (the painter
+// is part of the key — see _favAddrKey — so the ♥ still finds the painting)
+function _favMigrate(f){
+  if(!f || typeof f!=='object') return f;
+  const k=(a)=>Array.isArray(a) ? a.map(_painterKeyNow) : a;
+  const o={...f, style:_painterKeyNow(f.style), keys:k(f.keys)};
+  if(f.fa && typeof f.fa==='object') o.fa={...f.fa, keys:k(f.fa.keys)};
+  if(typeof f.ak==='string'){ const q=f.ak.split('|'); if(q.length>2){ q[1]=_painterKeyNow(q[1]); q[2]=q[2].split('+').map(_painterKeyNow).join('+'); } o.ak=q.join('|'); }
+  return o;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // §1.6  FAVORITES — IndexedDB (painting addresses, no limit)
 // ─────────────────────────────────────────────────────────────────────────────
 // A favorite is a painting's ADDRESS, not a picture: the song's notes (kept once
@@ -1488,7 +1519,7 @@ async function favList(){
     const db = await favOpen();
     return await new Promise((resolve)=>{
       const req = db.transaction('favs','readonly').objectStore('favs').getAll();
-      req.onsuccess = ()=> resolve((req.result || []).sort((a,b)=> (b.at||0) - (a.at||0)));
+      req.onsuccess = ()=> resolve((req.result || []).map(_favMigrate).sort((a,b)=> (b.at||0) - (a.at||0)));
       req.onerror   = ()=> resolve([]);
     });
   }catch(_){ return []; }
@@ -11388,312 +11419,209 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   _mrDraw(ctx,list,reveal,ss); _setCurE(0.5);
 }
 
-// ── $oneM$ — Million-Dollar-Homepage variant ──────────────────────────────
-// Third tap on the Mosaic chip enters this mode. Two layers:
-//   1. Background = chord-coloured rectangle tiles covering the canvas 100%
-//      (guillotine partition: recursively split the largest rect by a random
-//      ratio until we have ~60% of the chords as tiles). No gaps, no overlaps.
-//      Tiles get light decorations (borders ~30%, mini note labels ~12%).
-//   2. Foreground = chaos shapes from the remaining ~40% of chords, placed on
-//      a Vogel spiral (golden-angle fan-out from the centre) with jitter.
-//      Ten shape types — rectangle is just 8%, the rest are curves and points:
-//        circle, arc (Miró sweep), triangle, star, squiggle, rings, halfmoon,
-//        diamond, cross.
-//   Random sizes (medium 55% / large 30% / small 10% / hero 5%) regardless of
-//   shape. Saturated chord colours, hard black borders, mini note labels —
-//   everything stacks on top of the tile fill so the canvas is never empty.
-function drawOneMOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
-  if(!chords || chords.length === 0 || lim === 0) return;
-  const isBW = mode === 'bw';
-  const ss = (sessionSeed|0) ^ ((phaseIndex|0) * 0x9E3779B1) ^ 0x4D6F0001;
-  const R = (()=>{ let s = ss>>>0; return ()=>{ s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; })();
-  // Song character: a dense piece tips the split toward the chaos layer
-  // (more foreground shapes), a sparse one stays architectural; an energetic
-  // piece grows the chaos shapes. 0.5/0.5 = the untuned 0.60 split, size ×1.
-  const _chO=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const _bgShare = 0.60 - (((_chO?_chO.density:0.5))-0.5)*0.54;
-  // Layer split is decided from the WHOLE piece, never from lim: the
-  // partition, the shuffle, tile↔chord assignment and shape sizes are all
-  // fixed for the song. lim only reveals: tiles i<lim, then shapes
-  // i<lim-bgCount. Full reveal keeps today's 60/40-ish proportions.
-  const cn = chords.length;
-  const bgCount = Math.max(4, Math.floor(cn * _bgShare));
-  const fgCount = Math.max(0, cn - bgCount);
-  const fgVis = Math.max(0, Math.min(fgCount, lim - bgCount));
-  // ── LAYER 1: tile fill via guillotine partition ─────────────────────────
-  const rects = [{x:0, y:0, w:CW, h:CH}];
-  while(rects.length < bgCount){
-    let maxIdx = 0, maxArea = 0;
-    for(let i=0; i<rects.length; i++){
-      const a = rects[i].w * rects[i].h;
-      if(a > maxArea){ maxArea = a; maxIdx = i; }
+// ─────────────────────────────────────────────────────────────────────────────
+// ALMA THOMAS — the mosaic of dabs. Thomas (1891–1978) painted her late
+// abstractions as rows, columns and rings of short, square-ended strokes of
+// pure colour laid side by side, the white ground breathing between them
+// ("Resurrection", "Starry Night and the Astronauts", "Red Azaleas Singing and
+// Dancing Rock and Roll Music"). Here every dab is a chord: its colour the
+// chord through gc() (the average of its notes, as chordCol everywhere), its
+// LENGTH the chord's duration, its body and its light the chord's velocity.
+// The dabs are laid along one path in the order the music plays — a ring after
+// a ring, a row after a row, a column after a column — so the painting fills
+// in as the piece plays and is complete on its last chord.
+// Phases: 0 Resurrection (rings from the centre, cream) · 1 Concerto (rows) ·
+// 2 Starry Night (columns on night blue, the highest notes the pale stars) ·
+// 3 Snoopy (columns, each in the colour of the chord that opens it) ·
+// 4 Eclipse (rings from a point high on the left, around a dark sun) ·
+// 5 Red Azaleas (rows in two tones: the root chord, the loud chords in a second).
+// Free: 0 and 1.
+// ─────────────────────────────────────────────────────────────────────────────
+// the path a variant lays its dabs along, and its ground
+//   k    = the mean slot length (a dab + its gap) per pitch — rows/columns a little longer than wide, ring dabs short
+//   ctr  = the rings' centre (fraction of the canvas; ctrL on a landscape canvas) — the Eclipse's sits high on
+//          the left, but inside the part of a tall canvas a phone shows (the Studio crops the sides)
+const _TH_PH=[
+  {path:'rings', ctr:[0.5,0.52],  k:0.86, ground:[245,241,230]},   // 0 Resurrection
+  {path:'rows',                    k:1.32, ground:[247,243,234]},   // 1 Concerto
+  {path:'cols',                    k:1.38, ground:[15,26,74]},      // 2 Starry Night
+  {path:'cols',                    k:1.38, ground:[243,239,228]},   // 3 Snoopy
+  {path:'rings', ctr:[0.3,0.24], ctrL:[0.22,0.28], k:0.84, ground:[246,242,232]},   // 4 Eclipse
+  {path:'rows',                    k:1.22, ground:[251,246,236]},   // 5 Red Azaleas
+];
+// One layout per (canvas, piece, seed, variant): the path, the dabs on it and
+// every random number they draw — computed from the WHOLE piece, never from
+// lim, so a growing painting never shifts; lim only decides how many show.
+const _thCache=new Map();
+function _thCtr(P, CW, CH){ const c=(CW>CH && P.ctrL) ? P.ctrL : P.ctr; return [CW*c[0], CH*c[1]]; }
+function _thLayout(CW, CH, chords, ss, pick){
+  const cn=chords.length, P=_TH_PH[pick];
+  // the key: canvas, variant, seed and a light fingerprint of the notes that shape the layout (durations, velocities)
+  let fp=cn; for(let i=0;i<cn;i++){ const c=chords[i], n0=c&&c.n&&c.n[0]; fp=(Math.imul(fp,31)+Math.round(((c&&c.durQ)||0)*64)+((n0&&n0.v)|0)*7+((n0&&n0.durMs)|0))|0; }
+  const key=CW+'x'+CH+'|'+pick+'|'+(ss|0)+'|'+fp;
+  const hit=_thCache.get(key); if(hit) return hit;
+  // LCG — the same stream shape as the other engines; salted per variant
+  let s=((ss|0) ^ Math.imul((pick|0)+1, 0x9E3779B1) ^ 0x416C6D61)>>>0;
+  const R=()=>{ s=(Math.imul(s,1664525)+1013904223)>>>0; return s/4294967296; };
+  const S=Math.min(CW,CH), A=CW*CH;
+  // ── how fine the mosaic is: about one dab per chord, within her range — never
+  // coarser than ~13 dabs across the short side (a short piece repeats each chord
+  // as a run of dabs in its colour), never finer than ~36 (a long piece is
+  // sampled evenly, every passage still in it)
+  const p=Math.max(S/36, Math.min(S/13, Math.sqrt(A/(P.k*Math.max(1,cn)))));
+  // ── the path: a list of segments (straight runs or arcs), in playing order
+  const seg=[];
+  if(P.path==='rows' || P.path==='cols'){
+    const rows=P.path==='rows', span=rows?CW:CH, across=rows?CH:CW;
+    const nl=Math.max(1, Math.round(across/p)), pl=across/nl;
+    for(let i=0;i<nl;i++){
+      const c=(i+0.5)*pl, a=pl*(0.14+R()*0.3), b=span-pl*(0.14+R()*0.3);
+      seg.push(rows ? {x0:a,y0:c,x1:b,y1:c,len:b-a,pl} : {x0:c,y0:a,x1:c,y1:b,len:b-a,pl});
     }
-    let target = rects[maxIdx];
-    if(R() < 0.10 && rects.length > 4) target = rects[(R()*rects.length)|0];
-    const cutVertical = target.w > target.h ? (R() < 0.85) : (R() < 0.15);
-    const ratio = 0.25 + R() * 0.5;
-    const idx = rects.indexOf(target);
-    rects.splice(idx, 1);
-    if(cutVertical){
-      const splitW = target.w * ratio;
-      rects.push({x: target.x,           y: target.y, w: splitW,            h: target.h});
-      rects.push({x: target.x + splitW,  y: target.y, w: target.w - splitW, h: target.h});
-    } else {
-      const splitH = target.h * ratio;
-      rects.push({x: target.x, y: target.y,          w: target.w, h: splitH});
-      rects.push({x: target.x, y: target.y + splitH, w: target.w, h: target.h - splitH});
-    }
-  }
-  for(let i = rects.length-1; i > 0; i--){
-    const j = (R()*(i+1))|0;
-    [rects[i], rects[j]] = [rects[j], rects[i]];
-  }
-  const topNote = (ch)=>{
-    const notes = ch && (ch.n || ch.notes || (Array.isArray(ch) ? ch : null));
-    if(!notes || !notes.length) return null;
-    if(notes.length === 1) return notes[0];
-    let best = notes[0];
-    for(let i=1; i<notes.length; i++){ if((notes[i].m||0) > (best.m||0)) best = notes[i]; }
-    return best;
-  };
-  for(let i=0; i<bgCount && i<cn; i++){
-    const chord = chords[i];
-    const note = topNote(chord); if(!note) continue;
-    const rect = rects[i]; if(!rect) continue;
-    // Roll EVERY tile's decoration dice (revealed or not) so the R() stream —
-    // and with it every later tile and every chaos shape — never shifts with lim.
-    const decoTop = R() < 0.20;
-    const decoBot = !decoTop && (R() < 0.15);
-    const decoBorder = R() < 0.30;
-    const decoLabel = R() < 0.12;
-    if(i >= lim) continue;
-    // Set per-tile chord energy so gc() picks up Real-mode modulation here.
-    // Without this every tile reads default mid-energy and the OneM grid
-    // ignores dynamic changes in the piece.
-    _setCurE(chord && chord._E);
-    const m = note.m, v = note.v != null ? note.v : 100;
-    const [r,g,b,a] = gc(m, v);
-    const {x, y, w, h} = rect;
-    ctx.fillStyle = _rgbaStr(r, g, b, Math.max(0.92, a));
-    ctx.fillRect(x, y, w, h);
-    if(decoTop){
-      const acc = gc((m + 7) % 128, 110);
-      ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
-      ctx.fillRect(x, y, w, Math.max(2, h * 0.15));
-    } else if(decoBot){
-      const acc = gc((m + 9) % 128, 110);
-      const bh = Math.max(2, h * 0.15);
-      ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
-      ctx.fillRect(x, y + h - bh, w, bh);
-    }
-    if(decoBorder){
-      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-      ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.04);
-      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-    }
-    if(decoLabel && w > 16 && h > 14){
-      const name = _midiToName[m] || '';
-      const fs = Math.max(8, Math.min(h*0.45, w*0.36));
-      ctx.save();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = `800 ${fs}px Georgia, serif`;
-      const lum = (r*0.299 + g*0.587 + b*0.114);
-      ctx.fillStyle = lum > 150 ? 'rgba(0,0,0,0.90)' : 'rgba(255,255,255,0.96)';
-      ctx.fillText(name, x + w/2, y + h/2);
-      ctx.restore();
+  } else {
+    const [cx,cy]=_thCtr(P, CW, CH);
+    const rMax=Math.max(Math.hypot(cx,cy),Math.hypot(CW-cx,cy),Math.hypot(cx,CH-cy),Math.hypot(CW-cx,CH-cy));
+    const core=pick===4 ? p*1.45 : 0;                 // the Eclipse's dark sun
+    const m=p*0.3;                                    // a dab's centre keeps this far from the edge
+    const inside=(a,r)=>{ const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r; return x>=m && x<=CW-m && y>=m && y<=CH-m; };
+    for(let r=core+p*0.85; r<rMax; r+=p){
+      const a0=R()*6.2832;                           // each ring starts somewhere new
+      const ns=Math.max(24, Math.ceil(6.2832*r/(p*0.2))), da=6.2832/ns;
+      const ins=[]; let any=false, all=true;
+      for(let j=0;j<ns;j++){ const q=inside(a0+j*da, r); ins.push(q); if(q) any=true; else all=false; }
+      if(!any) continue;
+      if(all){ seg.push({cx,cy,r,a0,a1:a0+6.2832,len:6.2832*r,pl:p}); continue; }
+      // the visible arcs of this ring, from the first gap round
+      const st=ins.indexOf(false);
+      for(let j=1;j<=ns;j++){
+        const jj=(st+j)%ns;
+        if(ins[jj] && !ins[(jj-1+ns)%ns]){ let e=jj; while(ins[(e+1)%ns] && (e+1)%ns!==jj) e=(e+1)%ns; const n=(e-jj+ns)%ns+1;
+          const b0=a0+jj*da, b1=b0+n*da; if(n*da*r>p*0.6) seg.push({cx,cy,r,a0:b0,a1:b1,len:(b1-b0)*r,pl:p}); }
+      }
     }
   }
-  // ── LAYER 2: chaos shapes via Vogel-spiral placement ────────────────────
-  // Shape i's R() draws depend only on shapes 0..i-1 (all revealed before it),
-  // so drawing the prefix i<fgVis is stable; size/radius use the FULL count.
-  if(fgVis <= 0) return;
-  const fgSize = Math.sqrt((CW*CH) / Math.max(8, fgCount)) * 0.60 * (0.73+0.54*(_chO?_chO.energy:0.5));
-  const PHI_ANGLE = Math.PI * (3 - Math.sqrt(5));
-  const ccx = CW/2, ccy = CH/2;
-  const maxR = Math.min(CW, CH) * 0.46;
-  for(let i=0; i<fgVis; i++){
-    const chord = chords[bgCount + i];
-    _setCurE(chord && chord._E);
-    const note = topNote(chord); if(!note) continue;
-    const m = note.m, v = note.v != null ? note.v : 100;
-    const [r,g,b,a] = gc(m, v);
-    const baseColor = _rgbaStr(r, g, b, Math.max(0.92, a));
-    const rad = Math.sqrt(i / fgCount) * maxR;
-    const ang = i * PHI_ANGLE + R()*0.4;
-    const cx = ccx + Math.cos(ang)*rad + (R()-0.5) * Math.min(CW,CH) * 0.10;
-    const cy = ccy + Math.sin(ang)*rad + (R()-0.5) * Math.min(CW,CH) * 0.10;
-    const sRoll = R();
-    let size;
-    if(sRoll < 0.55)      size = fgSize * (0.5 + R()*0.6);
-    else if(sRoll < 0.85) size = fgSize * (1.0 + R()*0.8);
-    else if(sRoll < 0.95) size = fgSize * (0.25 + R()*0.30);
-    else                  size = fgSize * (1.8 + R()*1.5);
-    const shapeRoll = R();
-    let shape;
-    if      (shapeRoll < 0.08) shape = 'rect';
-    else if (shapeRoll < 0.26) shape = 'circle';
-    else if (shapeRoll < 0.41) shape = 'arc';
-    else if (shapeRoll < 0.53) shape = 'triangle';
-    else if (shapeRoll < 0.65) shape = 'star';
-    else if (shapeRoll < 0.75) shape = 'squiggle';
-    else if (shapeRoll < 0.83) shape = 'rings';
-    else if (shapeRoll < 0.91) shape = 'halfmoon';
-    else if (shapeRoll < 0.97) shape = 'diamond';
-    else                       shape = 'cross';
-    if(shape === 'rect'){
-      const aspect = 0.4 + R()*1.8;
-      const w = size, h = size / aspect;
-      const x = cx - w/2, y = cy - h/2;
-      ctx.fillStyle = baseColor;
-      ctx.fillRect(x, y, w, h);
-      if(R() < 0.55){
-        ctx.strokeStyle = 'rgba(0,0,0,0.88)';
-        ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.05);
-        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-      }
-    } else if(shape === 'circle'){
-      const radC = size / 2;
-      ctx.fillStyle = baseColor;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radC, 0, Math.PI*2);
-      ctx.fill();
-      if(R() < 0.55){
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth = Math.max(1, radC * 0.10);
-        ctx.stroke();
-      }
-      if(R() < 0.30){
-        const acc = gc((m + 5) % 128, 110);
-        ctx.fillStyle = _rgbaStr(acc[0], acc[1], acc[2], 0.95);
-        ctx.beginPath();
-        ctx.arc(cx, cy, radC * (0.30 + R()*0.15), 0, Math.PI*2);
-        ctx.fill();
-      }
-    } else if(shape === 'arc'){
-      const radA = size * 0.6;
-      const startA = R() * Math.PI * 2;
-      const sweep = (0.35 + R()*0.80) * Math.PI;
-      ctx.strokeStyle = baseColor;
-      ctx.lineWidth = Math.max(3, size * (0.05 + R()*0.07));
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.arc(cx, cy, radA, startA, startA + sweep);
-      ctx.stroke();
-    } else if(shape === 'triangle'){
-      const radT = size * 0.55;
-      const rot = R() * Math.PI * 2;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rot);
-      ctx.beginPath();
-      for(let k=0; k<3; k++){
-        const a2 = (k * 2 * Math.PI / 3) - Math.PI/2;
-        const px = Math.cos(a2) * radT, py = Math.sin(a2) * radT;
-        if(k===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fillStyle = baseColor;
-      ctx.fill();
-      if(R() < 0.55){
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth = Math.max(1, radT * 0.08);
-        ctx.stroke();
-      }
-      ctx.restore();
-    } else if(shape === 'star'){
-      const outerR = size * 0.55;
-      const innerR = outerR * 0.4;
-      const points = 5;
-      const rot = -Math.PI/2 + R() * Math.PI * 2;
-      ctx.beginPath();
-      for(let k=0; k<points*2; k++){
-        const rr = (k % 2 === 0) ? outerR : innerR;
-        const a2 = rot + (k * Math.PI / points);
-        const px = cx + Math.cos(a2) * rr, py = cy + Math.sin(a2) * rr;
-        if(k===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fillStyle = baseColor;
-      ctx.fill();
-      if(R() < 0.40){
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth = Math.max(1, outerR * 0.06);
-        ctx.stroke();
-      }
-    } else if(shape === 'squiggle'){
-      const len = size * 1.2;
-      const steps = 3 + ((R()*3)|0);
-      const amp = size * 0.25;
-      const baseAngle = R() * Math.PI * 2;
-      const dx = Math.cos(baseAngle), dy = Math.sin(baseAngle);
-      const nx = -dy, ny = dx;
-      ctx.strokeStyle = baseColor;
-      ctx.lineWidth = Math.max(3, size * (0.06 + R()*0.06));
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      const segs = steps * 4;
-      for(let k=0; k<=segs; k++){
-        const t = k / segs;
-        const xx = cx + (t - 0.5) * len * dx + Math.sin(t * Math.PI * steps) * amp * nx;
-        const yy = cy + (t - 0.5) * len * dy + Math.sin(t * Math.PI * steps) * amp * ny;
-        if(k===0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
-      }
-      ctx.stroke();
-    } else if(shape === 'rings'){
-      const maxRR = size * 0.5;
-      for(let k=3; k>=1; k--){
-        const ringR = maxRR * (k / 3);
-        const ringCol = (k % 2 === 0) ? gc((m + 5) % 128, 110) : [r,g,b,a];
-        ctx.fillStyle = _rgbaStr(ringCol[0], ringCol[1], ringCol[2], 0.95);
-        ctx.beginPath();
-        ctx.arc(cx, cy, ringR, 0, Math.PI*2);
-        ctx.fill();
-      }
-      if(R() < 0.30){
-        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-        ctx.lineWidth = Math.max(1, maxRR * 0.04);
-        ctx.beginPath();
-        ctx.arc(cx, cy, maxRR, 0, Math.PI*2);
-        ctx.stroke();
-      }
-    } else if(shape === 'halfmoon'){
-      const radH = size * 0.55;
-      const startA = R() * Math.PI * 2;
-      ctx.fillStyle = baseColor;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radH, startA, startA + Math.PI);
-      ctx.closePath();
-      ctx.fill();
-      if(R() < 0.45){
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth = Math.max(1, radH * 0.07);
-        ctx.stroke();
-      }
-    } else if(shape === 'diamond'){
-      const half = size * 0.5;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(Math.PI/4 + (R()-0.5)*0.4);
-      ctx.fillStyle = baseColor;
-      ctx.fillRect(-half, -half, half*2, half*2);
-      if(R() < 0.55){
-        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-        ctx.lineWidth = Math.max(1, half * 0.08);
-        ctx.strokeRect(-half, -half, half*2, half*2);
-      }
-      ctx.restore();
-    } else { // cross
-      const half = size * 0.45;
-      ctx.strokeStyle = baseColor;
-      ctx.lineWidth = Math.max(3, size * 0.15);
-      ctx.lineCap = 'butt';
-      ctx.beginPath();
-      ctx.moveTo(cx - half, cy); ctx.lineTo(cx + half, cy);
-      ctx.moveTo(cx, cy - half); ctx.lineTo(cx, cy + half);
-      ctx.stroke();
+  let Ltot=0; for(const g of seg){ g.s0=Ltot; Ltot+=g.len; }
+  // ── the dabs: as many as the path holds at this pitch; dab j sings chord c(j)
+  const M=Math.max(1, Math.round(Ltot/(P.k*p)));
+  const ci=new Int32Array(M), w=new Float32Array(M);
+  const durW=(c)=>{ const ch=chords[c]; let q=ch && ch.durQ;
+    if(!(q>0)){ const ns=(ch&&(ch.n||ch.notes))||[]; let d=0; for(const n of ns) d+=(n&&n.durMs)||400; q=ns.length ? d/ns.length/500 : 1; }
+    return Math.max(0.7, Math.min(2.2, 0.5+0.7*Math.sqrt(q))); };
+  let wSum=0;
+  for(let j=0;j<M;j++){ const c=Math.min(cn-1, Math.floor(j*cn/M)); ci[j]=c; w[j]=durW(c)*(0.9+R()*0.2); wSum+=w[j]; }
+  // the long chords take the long slots: each dab claims its share of the whole path,
+  // then every segment is filled exactly by the dabs whose middle falls on it
+  const D=[]; let acc=0, g=0;
+  const bySeg=seg.map(()=>[]);
+  for(let j=0;j<M;j++){ const sl=w[j]/wSum*Ltot, mid=acc+sl/2; acc+=sl;
+    while(g<seg.length-1 && mid>=seg[g].s0+seg[g].len) g++;
+    bySeg[g].push(j); }
+  for(let gi=0; gi<seg.length; gi++){
+    const G=seg[gi], js=bySeg[gi]; if(!js.length) continue;
+    let ws=0; for(const j of js) ws+=w[j]; const sc=G.len/ws, ring=G.r!==undefined; let t=0;
+    for(const j of js){
+      const sl=w[j]*sc, u=t+sl*(0.5+(R()-0.5)*0.08); t+=sl;
+      let x, y, ang;
+      if(ring){ const a=G.a0+u/G.r; x=G.cx+Math.cos(a)*G.r; y=G.cy+Math.sin(a)*G.r; ang=a+1.5708; }
+      else { const f=u/G.len; x=G.x0+(G.x1-G.x0)*f; y=G.y0+(G.y1-G.y0)*f; ang=Math.atan2(G.y1-G.y0, G.x1-G.x0); }
+      // across the path a hair off the line; the hand turns it a little; the four corners each a little out of true
+      const off=(R()-0.5)*G.pl*0.1;
+      x+=-Math.sin(ang)*off; y+=Math.cos(ang)*off;
+      const q=new Float32Array(8); for(let k=0;k<8;k++) q[k]=R()-0.5;
+      D.push({ j, c:ci[j], g:gi, x, y, ang:ang+(R()-0.5)*0.1, len:sl*(ring ? 0.8+R()*0.08 : 0.74+R()*0.1), pl:G.pl, q, lt:R()-0.5 });
     }
   }
+  D.sort((a,b)=>a.j-b.j);
+  const out={ D, p, seg, P };
+  if(_thCache.size>12) _thCache.clear();
+  _thCache.set(key, out);
+  return out;
+}
+// one dab: a slightly irregular quadrilateral of `len` along the path and `th`
+// across it, centred at (x,y), turned to `ang`; q = its eight corner jitters
+function _thDab(ctx, x, y, len, th, ang, q, jit){
+  const c=Math.cos(ang), s=Math.sin(ang), hl=len/2, ht=th/2, J=Math.min(len,th)*jit;
+  const P=[[-hl,-ht],[hl,-ht],[hl,ht],[-hl,ht]];
+  ctx.beginPath();
+  for(let k=0;k<4;k++){ const u=P[k][0]+q[k*2]*J, v=P[k][1]+q[k*2+1]*J; const px=x+u*c-v*s, py=y+u*s+v*c; k?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.closePath(); ctx.fill();
+}
+function drawThomasOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
+  if(!lim || !chords || !chords.length) return;
+  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const isBW=mode==='bw', cn=chords.length, ss=sessionSeed|0;
+  const L=_thLayout(CW, CH, chords, ss, pick), P=L.P;
+  const _ch=(typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
+  const energy=_ch ? _ch.energy : 0.5;
+  // ── the reading of the piece: each chord's colour (lazily, through gc), its
+  // velocity — half absolute, half within the piece, so a flat MIDI still breathes —
+  // and its top note
+  const col=new Array(cn), vel=new Float32Array(cn), top=new Int16Array(cn);
+  let vMin=127, vMax=0;
+  for(let i=0;i<cn;i++){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; let v=0, t=0;
+    for(const n of ns){ v+=(n&&n.v!==undefined)?n.v:80; const m=(n&&n.m!==undefined)?n.m:n; if(m>t) t=m; }
+    vel[i]=ns.length ? v/ns.length : 80; top[i]=t; if(vel[i]<vMin) vMin=vel[i]; if(vel[i]>vMax) vMax=vel[i]; }
+  const vr=vMax-vMin;
+  for(let i=0;i<cn;i++) vel[i]=Math.max(0, Math.min(1, 0.5*vel[i]/127 + 0.5*(vr>6 ? (vel[i]-vMin)/vr : 0.6)));
+  const chordCol=(i)=>{ if(col[i]) return col[i];
+    const chord=chords[i]; _setCurE(chord && chord._E);
+    const notes=chord && (chord.n || chord.notes);
+    if(!notes || !notes.length) return (col[i]=[200,150,120]);
+    let r=0,g=0,b=0,c=0,k=0;
+    for(const note of notes){ const m=note.m!==undefined?note.m:note, v=note.v!==undefined?note.v:80; const q=gc(m,v); r+=q[0]; g+=q[1]; b+=q[2]; k+=Math.max(q[0],q[1],q[2])-Math.min(q[0],q[1],q[2]); c++; }
+    r/=c; g/=c; b/=c; k/=c;
+    // her colours are pure: the mean of a chord's notes keeps the chroma its notes have (averaging alone greys a chord)
+    const l=(r+g+b)/3, k0=Math.max(r,g,b)-Math.min(r,g,b), f=k0>4 ? Math.min(2.2, k/k0) : 1;
+    return (col[i]=[Math.max(0,Math.min(255,l+(r-l)*f)), Math.max(0,Math.min(255,l+(g-l)*f)), Math.max(0,Math.min(255,l+(b-l)*f))]); };
+  const lift=(c,f)=>[Math.min(255,c[0]*f), Math.min(255,c[1]*f), Math.min(255,c[2]*f)];
+  const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+  const css=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  // ── the ground: cream, or night blue for the Starry Night (a dark grey in Black & White)
+  ctx.fillStyle=(pick===2 && isBW) ? 'rgb(38,38,40)' : (isBW ? 'rgb(242,241,238)' : css(P.ground));
+  ctx.fillRect(0,0,CW,CH);
+  // ── per-variant colour readings, from the whole piece
+  let rootC=null, loudC=null; const loud=pick===5 ? new Uint8Array(cn) : null, star=pick===2 ? new Uint8Array(cn) : null;
+  if(pick===2){ // the stars: the high notes of every passage — a chord whose top note stands above ~¾ of the chords
+    // around it (±12) is painted pale, so the night is starred all over, thickest where the melody climbs
+    for(let i=0;i<cn;i++){ let lo=0, n=0; for(let j=Math.max(0,i-12); j<=Math.min(cn-1,i+12); j++){ if(j===i) continue; n++; if(top[j]<top[i]) lo++; } star[i]=(n>0 && lo>=n*0.74) ? 1 : 0; } }
+  if(pick===5){ // two tones: the root chord, and the loud (climax) chords in a second colour
+    const pw=new Float32Array(12);
+    for(let i=0;i<cn;i++){ const ns=(chords[i]&&chords[i].n)||[]; for(const n of ns){ const m=(n&&n.m!==undefined)?n.m:60; pw[((m%12)+12)%12]+=((chords[i].durQ||1)*(0.4+vel[i])); } }
+    let tonic=0; for(let k=1;k<12;k++) if(pw[k]>pw[tonic]) tonic=k;
+    let ri=0; for(let i=0;i<cn;i++){ const ns=(chords[i]&&chords[i].n)||[]; let lo=999; for(const n of ns){ const m=(n&&n.m!==undefined)?n.m:60; if(m<lo) lo=m; } if(lo<999 && ((lo%12)+12)%12===tonic){ ri=i; break; } }
+    rootC=chordCol(ri);
+    const sc=Array.from(vel).map((v,i)=>v+0.25*((chords[i]&&typeof chords[i]._E==='number')?chords[i]._E:0.5));
+    const so=sc.slice().sort((a,b)=>a-b); let loudCut=so[Math.min(cn-1, Math.floor(cn*0.76))];
+    if(loudCut<=so[0]+1e-6) loudCut=so[0]-1;   // a piece without dynamics: the second tone follows the energy alone
+    // the second tone: of the loud chords, the one whose colour stands farthest from the root
+    let bd=-1; for(let i=0;i<cn;i++){ if(sc[i]<loudCut) continue; const c=chordCol(i); const d=Math.abs(c[0]-rootC[0])+Math.abs(c[1]-rootC[1])+Math.abs(c[2]-rootC[2]); if(d>bd){ bd=d; loudC=c; } }
+    if(!loudC || bd<70){ const l=rootC[0]*0.299+rootC[1]*0.587+rootC[2]*0.114; loudC=l>140 ? lift(rootC,0.55) : mix(rootC,[255,255,255],0.45); }
+    for(let i=0;i<cn;i++) loud[i]=sc[i]>=loudCut ? 1 : 0;
+  }
+  // Snoopy: each column is ONE colour — the colour of the chord that opens it
+  const segC=pick===3 ? new Array(L.seg.length) : null;
+  if(segC){ for(const d of L.D) if(!segC[d.g]) segC[d.g]=chordCol(d.c); }
+  const jit=0.1+0.08*energy;     // the energy of the piece: how freely the hand cuts the corners
+  for(const d of L.D){
+    if(d.c>=lim) break;          // dabs run in chord order — the painting grows with the music
+    const v=vel[d.c];
+    let c;
+    if(pick===3) c=lift(segC[d.g], 0.74+0.42*v);
+    else if(pick===5) c=loud[d.c] ? lift(loudC, 0.92+0.16*v) : lift(rootC, 0.8+0.34*v);
+    else {
+      c=lift(chordCol(d.c), 0.86+0.26*v);
+      if(pick===2 && star[d.c]) c=isBW ? [236,236,236] : mix(c,[236,241,255],0.82);
+    }
+    c=lift(c, 1+d.lt*0.08);      // no two dabs quite the same
+    _setCurE(chords[d.c] && chords[d.c]._E);
+    ctx.fillStyle=css(c);
+    _thDab(ctx, d.x, d.y, d.len, d.pl*(0.62+0.2*v), d.ang, d.q, jit);
+  }
+  // the Eclipse: the dark sun in the eye of the rings
+  if(pick===4){ const [cx,cy]=_thCtr(P, CW, CH), r=L.p*1.2; const c0=chordCol(0);
+    ctx.fillStyle=isBW ? 'rgb(28,28,30)' : css(mix(lift(c0,0.25),[12,16,48],0.6));
+    ctx.beginPath(); for(let k=0;k<16;k++){ const a=k/16*6.2832, q=r*(0.96+0.08*Math.sin(k*2.3+ss)); k?ctx.lineTo(cx+Math.cos(a)*q,cy+Math.sin(a)*q):ctx.moveTo(cx+Math.cos(a)*q,cy+Math.sin(a)*q); } ctx.closePath(); ctx.fill(); }
+  _setCurE(0.5);
 }
 
 function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, phaseIndex, cn, chords){
@@ -15837,7 +15765,7 @@ const ARTIST_DNA = {
   lichtenstein: {ground:'#fffdf5',mark:{benday:.7,blob:.3},               size:[.05,.2], edge:0,  alpha:1,  layout:{scatter:.6,grid:.4},     outline:1, tone:'primary', wobble:.1, lines:0, layers:1,density:.4, halftone:1},
   klee:         {ground:'#d9cfb6',mark:{tile:1},                          size:[.04,.1], edge:.35,alpha:.9, layout:{grid:1},                 outline:0, tone:'pastel',  wobble:.1, lines:.2,layers:1,density:1,  halftone:0},
   delaunay:     {ground:'#f0e9da',mark:{orphic:1},                        size:[.06,.3], edge:0,  alpha:.9, layout:{scatter:.6,radial:.4},   outline:0, tone:'pure',    wobble:.1, lines:0, layers:2,density:.35,halftone:0},
-  oneM:         {ground:'#ffffff',mark:{panel:.6,pixels:.4},              size:[.02,.07],edge:0,  alpha:1,  layout:{grid:1},                 outline:.3,tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
+  thomas:       {ground:'#f5f1e6',mark:{dab:1},                           size:[.012,.03],edge:0, alpha:1,  layout:{radial:.5,grid:.5},      outline:0, tone:'pure',    wobble:.15,lines:0, layers:1,density:.9, halftone:0},
 };
 ARTIST_DNA.notes = ARTIST_DNA.mosaic;
 // Per-variant genes — one entry per variant of the real engine (same order as
@@ -16065,20 +15993,20 @@ const ARTIST_VARIANTS = {
     {ground:'#282434',mark:{fan:1},size:[.3,.6],layout:{scatter:.55,radial:.45},density:.1},
     {ground:'#161422',mark:{blob:.7,disc:.3},size:[.05,.12],layout:{stack:.6,grid:.4},density:.45},
   ],
-  oneM: [
-    {mark:{panel:.6,pixels:.4},size:[.02,.07],layout:{grid:1},density:1},
-    {mark:{panel:.5,star:.2,disc:.3},size:[.02,.08],layout:{grid:.8,scatter:.2},density:1},
-    {mark:{panel:.7,pixels:.3},size:[.03,.1],layout:{grid:1},density:1},
-    {mark:{panel:.6,tri:.2,ring:.2},size:[.02,.07],layout:{grid:.8,scatter:.2},density:1},
-    {mark:{panel:.6,pixels:.4},size:[.02,.07],layout:{grid:1},density:1},
-    {mark:{panel:.5,star:.2,disc:.3},size:[.02,.08],layout:{grid:.8,scatter:.2},density:1},
+  thomas: [   // slot order = solo variants: Resurrection, Concerto, Starry Night, Snoopy, Eclipse, Red Azaleas
+    {ground:'#f5f1e6',mark:{dab:1},size:[.012,.03],layout:{radial:1},density:.9},                                   // Resurrection: rings from the centre
+    {ground:'#f7f3ea',mark:{dab:1},size:[.014,.034],layout:{grid:1},density:.9},                                    // Concerto: rows
+    {ground:'#0f1a4a',mark:{dab:1},size:[.012,.03],layout:{grid:.7,scatter:.3},density:.9,tone:'pure'},            // Starry Night: columns on night blue
+    {ground:'#f3efe4',mark:{dab:1},size:[.012,.032],layout:{grid:.6,stack:.4},density:.9},                          // Snoopy: columns, one colour each
+    {ground:'#f6f2e8',mark:{dab:.85,disc:.15},size:[.012,.03],layout:{radial:.7,scatter:.3},density:.85},           // Eclipse: rings around a dark sun
+    {ground:'#fbf6ec',mark:{dab:1},size:[.012,.032],layout:{grid:.7,field:.3},density:.9},                          // Red Azaleas: rows in two tones
   ],
 };
 
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,oneM:1,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
@@ -16298,7 +16226,7 @@ function _fuPlace(u, pitch, F, CW, CH, r1, r2, i, n){
 // the inner structure each form carries — how its parent treats the inside of the form
 const _FU_FILL={orphic:'sectors',fan:'sectors',arch:'sectors',protractor:'sectors',
   target:'rings',kring:'rings',ring:'rings',nest:'rings',nestpoly:'rings',
-  tile:'inset',checker:'tiles',pixels:'tiles',cube:'tiles',
+  tile:'inset',checker:'tiles',cube:'tiles',
   benday:'benday', dot:'polka',sphere:'polka',
   field:'veil',cloud:'veil',cell:'veil', pour:'skein', eye:'gold'};
 // the second colour must read against the first, or the fill gene is invisible
@@ -16313,7 +16241,7 @@ function _fuSil(ctx, kind, rr, R, F){
     case 'field': { const h=rr*(0.35+R()*.3); ctx.rect(-rr*2.2,-h,rr*4.4,2*h); break; }
     case 'rect': { const h=rr*(0.55+R()*0.9); ctx.rect(-rr,-h,2*rr,2*h); break; }
     case 'gridrect': { const h=rr*(0.6+R()*0.8); ctx.rect(-rr,-h,2*rr,2*h); break; }
-    case 'tile': case 'nest': case 'checker': case 'pixels': case 'mosaic': ctx.rect(-rr,-rr,2*rr,2*rr); break;
+    case 'tile': case 'nest': case 'checker': case 'mosaic': ctx.rect(-rr,-rr,2*rr,2*rr); break;
     case 'panel': ctx.rect(-rr*1.1,-rr*.8,rr*2.2,rr*1.6); break;
     case 'paper': ctx.rect(-rr*.65,-rr*.45,rr*1.3,rr*.9); break;
     case 'speech': ctx.rect(-rr,-rr*.55,rr*2,rr*1.1); break;
@@ -16440,7 +16368,7 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
 // geometry (_fuMark), whatever the hand; every other mark is a closed form the hand paints (_fuForm)
 // Haring's cast keeps his own hand in a crossing too: as a silhouette in the fused hand it reads as a pictogram
 const _FU_HRC=/^(figure|dog)$/;
-const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest)$/;
+const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab)$/;
 function _fuMark(ctx, kind, r, col, F, R, ang, col2){
   col2 = col2 || col;
   // line idioms (af Klint's rays, Mitchell's strokes; in E every gesture) stay crisp: a soft halo
@@ -16585,7 +16513,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=col; let px=-rr*1.4,py=0; ctx.moveTo(px,py); for(let j=0;j<4;j++){ const nx=px+rr*0.7, ny=(R()-.5)*rr*1.6; ctx.quadraticCurveTo(px+rr*.35,(R()-.5)*rr*1.8,nx,ny); px=nx; py=ny; }
         const _ga=ctx.globalAlpha; ctx.globalAlpha=_ga*0.28; ctx.lineWidth=Math.max(4,rr*.32); ctx.stroke();   // the glow
         ctx.globalAlpha=_ga; ctx.lineWidth=Math.max(1.5,rr*.09); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle=col2; ctx.lineWidth=Math.max(1.5,rr*.09); ctx.arc(px,py,rr*.2,0,6.2832); ctx.stroke(); break; }
-      case 'panel': { // Matisse / Kusama / $1M$: a flat colour panel, edge to edge of its cell
+      case 'panel': { // Matisse / Kusama: a flat colour panel, edge to edge of its cell
         ctx.rect(-rr*1.1,-rr*.8,rr*2.2,rr*1.6); ctx.fill(); break; }
       case 'cross': { // Miró: a black plus (white on a dark ground)
         ctx.strokeStyle=F.groundLum>128?'#111':'#f4efe4'; ctx.lineWidth=Math.max(2,rr*.22); ctx.lineCap='butt'; ctx.moveTo(-rr,0); ctx.lineTo(rr,0); ctx.moveTo(0,-rr*1.2); ctx.lineTo(0,rr*1.2); ctx.stroke(); break; }
@@ -16647,8 +16575,12 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'rain': { ctx.lineWidth=Math.max(1,rr*.03); for(let j=0;j<3;j++){ ctx.beginPath(); const x0=(R()-.5)*rr*2; ctx.moveTo(x0,-rr); ctx.lineTo(x0-rr*.4,rr); ctx.stroke(); } break; }
       case 'dotline': { for(let j=0;j<=10;j++){ ctx.beginPath(); ctx.fillStyle=(j%2)?col2:col; ctx.arc(-rr+j*rr*.2, Math.sin(j*.6)*rr*.3, rr*(.07+(j%3)*.02), 0, 6.2832); ctx.fill(); } break; }
       case 'arrow': { ctx.lineWidth=Math.max(2,rr*.14); ctx.moveTo(0,rr); ctx.lineTo(0,-rr*.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-rr*.4,-rr*.3); ctx.lineTo(0,-rr); ctx.lineTo(rr*.4,-rr*.3); ctx.closePath(); ctx.fill(); break; }
-      case 'pixels': { // $1M$: a patch of tiny squares
-        const st=Math.max(2,rr*.3); for(let yy=-rr;yy<rr;yy+=st) for(let xx=-rr;xx<rr;xx+=st){ ctx.fillStyle=(((xx+yy)/st)|0)%2?col:col2; ctx.fillRect(xx,yy,st*.85,st*.85); } break; }
+      case 'dab': { // Alma Thomas: a short run of her dabs along one line — three to five slightly irregular quadrilaterals, the ground breathing between them, the tone shifting a little from dab to dab
+        const nd=3+(R()*3|0), L=rr*0.95, T=rr*0.72, gp=rr*0.24, x0=-(nd*(L+gp)-gp)/2, c1=_fuRgb(col);
+        for(let j=0;j<nd;j++){ const l=L*(0.75+R()*0.5), k=0.9+R()*0.2, q=[]; for(let z=0;z<8;z++) q.push(R()-0.5);
+          ctx.fillStyle=`rgb(${Math.min(255,c1[0]*k)|0},${Math.min(255,c1[1]*k)|0},${Math.min(255,c1[2]*k)|0})`;
+          _thDab(ctx, x0+j*(L+gp)+L/2, (R()-0.5)*T*0.12, l, T*(0.85+R()*0.25), (R()-0.5)*0.08, q, 0.16); }
+        break; }
       default: ctx.arc(0,0,rr,0,6.2832); ctx.fill();
     }
     if(p===0 && F.halftone>0.3 && rr>8 && R()<F.halftone){ // Ben-Day screen inherited from Lichtenstein
@@ -16670,12 +16602,11 @@ let _fuSampleCache = new Map();
 // The real engines by key. (A globalThis['draw…Overlay'] lookup silently found
 // nothing in the module-scoped Vite build, so every fusion except Kusama /
 // Kandinsky sampled a blank canvas and painted on a black ground.)
-const _FU_ENGINES={raffel:drawRaffelOverlay,picasso:drawPicassoOverlay,matisse:drawMatisseOverlay,pollock:drawPollockOverlay,bloom:drawBloomOverlay,miro:drawMiroOverlay,mondrian:drawMondrianOverlay,bauhaus:drawBauhausOverlay,gold:drawGoldOverlay,rothko:drawRothkoOverlay,bulge:drawBulgeOverlay,wave:drawWaveOverlay,spiral:drawSpiralOverlay,arcs:drawArcsOverlay,pop:drawPopOverlay,mitchell:drawMitchellOverlay,monet:drawMonetOverlay,hokusai:drawHokusaiOverlay,lichtenstein:drawLichtensteinOverlay,klee:drawKleeOverlay,delaunay:drawDelaunayOverlay};
+const _FU_ENGINES={raffel:drawRaffelOverlay,picasso:drawPicassoOverlay,matisse:drawMatisseOverlay,pollock:drawPollockOverlay,bloom:drawBloomOverlay,miro:drawMiroOverlay,mondrian:drawMondrianOverlay,bauhaus:drawBauhausOverlay,gold:drawGoldOverlay,rothko:drawRothkoOverlay,bulge:drawBulgeOverlay,wave:drawWaveOverlay,spiral:drawSpiralOverlay,arcs:drawArcsOverlay,pop:drawPopOverlay,mitchell:drawMitchellOverlay,monet:drawMonetOverlay,hokusai:drawHokusaiOverlay,lichtenstein:drawLichtensteinOverlay,klee:drawKleeOverlay,delaunay:drawDelaunayOverlay,thomas:drawThomasOverlay};
 function _fuRealOverlay(k, ctx, CW, CH, chords, lim, gc, seed, mode, ph){
   switch(k){
     case 'kusama':    return drawKusamaOverlay(ctx,CW,CH,chords,lim,gc,seed,ph);
     case 'kandinsky': return drawKandinskyOverlay(ctx,CW,CH,lim,seed,mode,gc,ph,chords.length,chords);
-    case 'oneM':      return drawOneMOverlay(ctx,CW,CH,chords,lim,gc,seed,mode,0);
     case 'mosaic': case 'notes': return;
     default: { const fn=_FU_ENGINES[k]; if(typeof fn==='function') fn(ctx,CW,CH,chords,lim,gc,seed,mode,ph); }
   }
@@ -17398,7 +17329,7 @@ const I18N = {
   EN:{
     proArtist:'{artist} is Pro', mymusicSaveAria:'Save to My Music', tapToDeselect:'tap to deselect', tapToAdd:'tap to add to your set', inYourSet:'in your set — tap to remove',
     concept:'concept', demo:'demo', guide:'guide',
-    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', liteMosaicStyle:'TONES → COLOURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Next', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', palettesTitle:'palettes', selAll:'all', selNone:'none', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, a composer recomposes it in their own voice (3 free, all 15 in Pro), or ✦ AI Compose writes a whole new piece from it', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', hearImage:'Hear image', hearImageDis:'Finish the painting first', seeMusic:'See music', seeMusicDis:'Finish the painting first', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmo', atmoDetect:'read mood', melodyLabel:'melody', melodyHint:'AI sings a melody from the picture, in the key and pulse of what plays under it', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
+    sourceLabel:'source', moodLabel:'mood', colorLabel:'color', styleLabel:'style', mosaicStyle:'mosaic', liteMosaicStyle:'TONES → COLOURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Next', notesStyle:'notes', tagline:'paintings, played', tapToSkip:'tap to skip', inspiredBy:'inspired by {artist}', inspiredByTitle:'inspired by', palettesTitle:'palettes', selAll:'all', selNone:'none', onbTitle:'Paintiano', onbSubtitle:'music turns into paintings', onbPlayLabel:'Play sample', onbCaption:'Liebestraum — Liszt · painted by Pollock', onbHint:'each chord becomes a brushstroke…', onbDescription:'Paintiano listens to music and turns each chord into a brushstroke. Every painting is unique.', onbDoneLine:'Your painting will be uniquely yours', onbReplay:'Replay', onbTryYourOwn:'Try your own', onbSkip:'skip', moodDesc:'describe a feeling — AI composes & paints', mfiDesc:'pick a picture — AI captures its mood, then paints', helpTitle:'What does what', helpSub:'tap any source on the setup screen to begin', helpClose:'close', helpFab:'help', helpDesc_mood:'type or tap a feeling — Paintiano composes a piece in that mood and paints it', helpDesc_mfi:'drop an image — Paintiano reads its mood, composes a piece to match, then paints', helpDesc_midi:'got a MIDI file? Paintiano plays it and turns every chord into a brushstroke', helpDesc_audio:'any mp3 or wav — Paintiano listens, finds the chords, paints what it hears', helpDesc_score:'snap any sheet music — Paintiano reads the notes and paints the piece', helpDesc_music:'MIDI, mp3/wav or sheet music — Paintiano plays it, finds every chord and turns each one into a brushstroke', helpDesc_image:'pick an image — Scan plays its colours as music, a composer recomposes it in their own voice (3 free, all 15 in Pro), or ✦ AI Compose writes a whole new piece from it', helpDesc_compose:'play piano right on your screen — every note becomes a brushstroke, live', helpDesc_mic:'sing, hum, whistle — Paintiano hears the chords and paints them live', selectNeedsMosaic:'turn off {artist} style to edit notes', backToSetup:'back', backToCanvas:'canvas', backToImage:'image', hearImage:'Hear image', hearImageDis:'Finish the painting first', seeMusic:'See music', seeMusicDis:'Finish the painting first', newSource:'new', dirLabel:'scan', dir_lr:'rows', dir_vert:'columns', dir_spiralIn:'spiral in', dir_spiralOut:'spiral out', importLabel:'import', createLabel:'create', imgMood:'mood from image', atmoLabel:'atmo', atmoDetect:'read mood', melodyLabel:'melody', melodyHint:'AI sings a melody from the picture, in the key and pulse of what plays under it', imgComposition:'compose', imgCompositionHint:'AI writes a piece from this image', imgScan:'scan', imgScanHint:'read the picture as a score', imgCompose:'AI compose', imgComposeBlurb:'AI composes a full piece from this image — its colours, energy and mood. Press Play.', aiOffline:'offline', aiOfflineHint:'AI features need a connection',
     harmony:'harmony', spectral:'spectral', phi:'φ / Phi', kontra:'kontra', custom:'custom', bw:'b/w', pickLook:'Pick a look', pickLookImg:'Pick a sound', editSet:'Edit your set', editHint:'Tap to add or remove from your set.', editFull:'Manage all →', setupPickerLabel:'Styles & palettes', setupPickerHint:'choose which palettes and artists appear in the canvas pickers', setupPalettesTitle:'Palettes', setupArtistsTitle:'Artists', setupMosaicFamily:'Mosaic family', setupSave:'Done', setupMinError:'Choose at least 1 palette and 1 artist.', setupAll:'All', setupNone:'None', gcat_all:'All', gcat_start:'Start', gcat_colors:'Colors', gcat_style:'Style', gcat_music:'Music', gcat_tools:'Tools', gcat_save:'Save', gcat_pro:'Pro', gcat_book:'Book', guideMore:'More', guideLess:'Less', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Advanced', surpriseMe:'Surprise me', saveLabel:'Save', useMySong:'Use my song', useMyPicture:'Use my picture', tapToFlip:'tap to flip', useMySongFile:'File', useMySongMic:'Mic', useMySongImage:'Image', useMySongSample:'Sample', recLabel:'Rec', stopLabel:'Stop', cancelLabel:'Cancel', tapToBegin:'Tap to begin',
     editPalette:'edit palette', editShort:'edit', paletteEditorTitle:'YOUR PALETTE', resetPalette:'clear all', defaultPalette:'default',
     selectMood:'✦ select a mood…', moodPlaceholder:'describe any mood — e.g. rainy day in Paris', moodHowFeel:'how do you feel?', moodTwoWays:'Type anything above — or start typing to pick a one-word mood from the list.', moodExamples:['describe any mood in your own words…','e.g. rainy day in Paris','e.g. first snow at midnight','— or just start typing and pick a mood as it appears —','e.g. furious','e.g. nostalgic'], storyCaption:{mood:'this is what {mood} sounds like ✦ paintiano.app',moodFromImg:'the mood of this image, painted ✦ paintiano.app',compose:'made this on the piano · turned it into a painting ✦ paintiano.app',micVoice:'sang into the mic, got back a painting ✦ paintiano.app',micMusic:'caught a song in the room, painted it ✦ paintiano.app',midi:'music turned into colour ✦ paintiano.app',audio:'heard it, painted it ✦ paintiano.app',score:'sheet music, turned into a painting ✦ paintiano.app',image:'what this image sounds like ✦ paintiano.app',default:'music turns into paintings ✦ paintiano.app'}, storyImageHint:'painting + audio · for IG / TikTok', storyImageHintNoAudio:'painting · for IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'WAV · save to files', scoreExportHint:'MusicXML · for MuseScore', includeSourceThumb:'include source thumbnail', includeSourceImage:'include source original image', saveAudioHintImg:'image + audio · save to files', moodGo:'go', morph:'✦ morph', vary:'✦ vary',
@@ -17565,7 +17496,7 @@ const I18N = {
     proArtist:'{artist} ist Pro', mymusicSaveAria:'In Meine Musik speichern', tapToDeselect:'tippen zum Abwählen', tapToAdd:'tippen, um ins Set zu nehmen', inYourSet:'in deinem Set — tippen zum Entfernen',
     palettesTitle:'Paletten', selAll:'alle', selNone:'keine',
     concept:'konzept', demo:'demo', guide:'anleitung',
-    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', liteMosaicStyle:'TÖNE → FARBEN', liteSwipeHint:'Swipe ↑ Überraschung', advSwipeHint:'Swipe ↑ Weiter', notesStyle:'noten', oneMStyle:'$oneM$', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, ein Komponist komponiert es in seiner Sprache neu (3 gratis, alle 15 in Pro), oder ✦ KI komponieren schreibt daraus ein ganz neues Stück', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', hearImage:'Bild hören', hearImageDis:'Erst das Bild fertig malen', seeMusic:'Musik sehen', seeMusicDis:'Erst das Bild fertig malen', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'Atmo', atmoDetect:'stimmung lesen', melodyLabel:'Melodie', melodyHint:'KI singt eine Melodie aus dem Bild, in Tonart und Puls dessen, was darunter spielt', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Spielen.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
+    sourceLabel:'quelle', moodLabel:'stimmung', colorLabel:'farbe', styleLabel:'stil', mosaicStyle:'mosaik', liteMosaicStyle:'TÖNE → FARBEN', liteSwipeHint:'Swipe ↑ Überraschung', advSwipeHint:'Swipe ↑ Weiter', notesStyle:'noten', tagline:'Gemälde, gespielt', tapToSkip:'zum Überspringen tippen', inspiredBy:'inspiriert von {artist}', inspiredByTitle:'inspiriert von', onbTitle:'Paintiano', onbSubtitle:'Musik wird zu Gemälden', onbPlayLabel:'Beispiel abspielen', onbCaption:'Liebestraum — Liszt · gemalt von Pollock', onbHint:'jeder Akkord wird ein Pinselstrich…', onbDescription:'Paintiano hört Musik und verwandelt jeden Akkord in einen Pinselstrich. Jedes Gemälde ist einzigartig.', onbDoneLine:'Dein Gemälde wird einzigartig sein', onbReplay:'Wiederholen', onbTryYourOwn:'Probier dein eigenes', onbSkip:'überspringen', moodDesc:'Gefühl beschreiben — KI komponiert & malt', mfiDesc:'Bild wählen — KI fängt die Stimmung ein und malt', helpTitle:'Was macht was', helpSub:'tippe auf eine Quelle, um zu beginnen', helpClose:'schließen', helpFab:'Hilfe', helpDesc_mood:'tippe oder wähle ein Gefühl — Paintiano komponiert ein Stück in dieser Stimmung und malt es', helpDesc_mfi:'wirf ein Bild rein — Paintiano liest die Stimmung, komponiert dazu ein Stück und malt es', helpDesc_midi:'du hast eine MIDI-Datei? Paintiano spielt sie und macht aus jedem Akkord einen Pinselstrich', helpDesc_audio:'egal welches mp3 oder wav — Paintiano hört zu, findet die Akkorde und malt, was es hört', helpDesc_score:'fotografiere Noten — Paintiano liest sie und malt das Stück für dich', helpDesc_music:'MIDI, mp3/wav oder Noten — Paintiano spielt es, findet jeden Akkord und macht daraus einen Pinselstrich', helpDesc_image:'wähle ein Bild — Scan spielt seine Farben als Musik, ein Komponist komponiert es in seiner Sprache neu (3 gratis, alle 15 in Pro), oder ✦ KI komponieren schreibt daraus ein ganz neues Stück', helpDesc_compose:'spiel Klavier direkt auf deinem Bildschirm — jeder Ton wird zu einem Pinselstrich, live', helpDesc_mic:'singe, summe, pfeife — Paintiano hört die Akkorde und malt sie live mit', selectNeedsMosaic:'{artist}-stil ausschalten, um noten zu bearbeiten', backToSetup:'zurück', backToCanvas:'leinwand', backToImage:'bild', hearImage:'Bild hören', hearImageDis:'Erst das Bild fertig malen', seeMusic:'Musik sehen', seeMusicDis:'Erst das Bild fertig malen', newSource:'neu', dirLabel:'scan', dir_lr:'zeilen', dir_vert:'spalten', dir_spiralIn:'spirale rein', dir_spiralOut:'spirale raus', importLabel:'import', createLabel:'erstellen', imgMood:'stimmung aus bild', atmoLabel:'Atmo', atmoDetect:'stimmung lesen', melodyLabel:'Melodie', melodyHint:'KI singt eine Melodie aus dem Bild, in Tonart und Puls dessen, was darunter spielt', imgComposition:'komponieren', imgCompositionHint:'KI schreibt ein Stück aus diesem Bild', imgScan:'scan', imgScanHint:'das Bild als Partitur lesen', imgCompose:'KI komponieren', imgComposeBlurb:'Die KI komponiert ein ganzes Stück aus diesem Bild — Farben, Energie, Stimmung. Drück Spielen.', aiOffline:'offline', aiOfflineHint:'KI-Funktionen brauchen eine Verbindung',
     harmony:'harmonie', spectral:'spektral', phi:'φ / Phi', kontra:'kontra', custom:'eigen', bw:'s/w', pickLook:'Wähle einen Look', pickLookImg:'Wähle einen Sound', editSet:'Set bearbeiten', editHint:'Tippe zum Hinzufügen oder Entfernen.', editFull:'Alle verwalten →', setupPickerLabel:'Stile & Paletten', setupPickerHint:'wähle, welche Paletten und Künstler in den Canvas-Wählern erscheinen', setupPalettesTitle:'Paletten', setupArtistsTitle:'Künstler', setupMosaicFamily:'Mosaik-Familie', setupSave:'Fertig', setupMinError:'Wähle mindestens 1 Palette und 1 Künstler.', setupAll:'Alle', setupNone:'Keine', gcat_all:'Alle', gcat_start:'Start', gcat_colors:'Farben', gcat_style:'Stil', gcat_music:'Musik', gcat_tools:'Werkzeuge', gcat_save:'Sichern', gcat_pro:'Pro', gcat_book:'Buch', guideMore:'Mehr', guideLess:'Weniger', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Advanced', surpriseMe:'Überrasch mich', saveLabel:'Sichern', useMySong:'Mein Song', useMyPicture:'Mein Bild', tapToFlip:'tippen zum Wechseln', useMySongFile:'Datei', useMySongMic:'Mikro', useMySongImage:'Bild', useMySongSample:'Beispiel', recLabel:'Auf', stopLabel:'Stopp', cancelLabel:'Abbr.', tapToBegin:'Zum Starten tippen',
     editPalette:'palette bearbeiten', editShort:'ändern', paletteEditorTitle:'DEINE PALETTE', resetPalette:'alles löschen', defaultPalette:'standard',
     selectMood:'✦ stimmung wählen…', moodPlaceholder:'beschreibe eine Stimmung — z.B. Regentag in Paris', moodHowFeel:'wie fühlst du dich?', moodTwoWays:'Tippe oben irgendetwas — oder tippe los und wähle eine Ein-Wort-Stimmung aus der Liste.', moodExamples:['beschreibe eine Stimmung in eigenen Worten…','z.B. Regentag in Paris','z.B. erster Schnee um Mitternacht','— oder tippe einfach los und wähle eine vorgeschlagene Stimmung —','z.B. wütend','z.B. nostalgisch'], storyCaption:{mood:'so klingt {mood} ✦ paintiano.app',moodFromImg:'die Stimmung dieses Bildes, gemalt ✦ paintiano.app',compose:'am Klavier gespielt · in ein Bild verwandelt ✦ paintiano.app',micVoice:'ins Mikro gesungen, ein Bild zurückbekommen ✦ paintiano.app',micMusic:'einen Song im Raum eingefangen, gemalt ✦ paintiano.app',midi:'Musik in Farbe verwandelt ✦ paintiano.app',audio:'gehört, gemalt ✦ paintiano.app',score:'Noten, in ein Bild verwandelt ✦ paintiano.app',image:'wie dieses Bild klingt ✦ paintiano.app',default:'Musik wird zu Bildern ✦ paintiano.app'}, storyImageHint:'Bild + Audio · für IG / TikTok', storyImageHintNoAudio:'Bild · für IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'WAV · in Dateien speichern', scoreExportHint:'MusicXML · für MuseScore', includeSourceThumb:'Quellminiatur einfügen', includeSourceImage:'Originalbild beifügen', saveAudioHintImg:'Bild + Audio · in Dateien speichern', moodGo:'los', morph:'✦ morph', vary:'✦ variieren',
@@ -17730,7 +17661,7 @@ const I18N = {
     proArtist:'{artist} est Pro', mymusicSaveAria:'Enregistrer dans Ma musique', tapToDeselect:'touche pour désélectionner', tapToAdd:'touche pour l’ajouter à ton set', inYourSet:'dans ton set — touche pour retirer',
     palettesTitle:'palettes', selAll:'toutes', selNone:'aucune',
     concept:'concept', demo:'démo', guide:'guide',
-    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', liteMosaicStyle:'TONS → COULEURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Suivant', notesStyle:'notes', oneMStyle:'$oneM$', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, un compositeur la recompose dans sa langue (3 gratuits, les 15 en Pro), ou ✦ Composer IA en écrit un morceau tout neuf', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', hearImageDis:`Finis d'abord la peinture`, hearImage:'Écouter l’image', seeMusic:'Voir musique', seeMusicDis:`Finis d'abord la peinture`, newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'amb.', atmoDetect:'lire ambiance', melodyLabel:'mélodie', melodyHint:'l\'IA chante une mélodie issue de l\'image, dans la tonalité et le pouls de ce qui joue dessous', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Jouer.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
+    sourceLabel:'source', moodLabel:'ambiance', colorLabel:'couleur', styleLabel:'style', mosaicStyle:'mosaïque', liteMosaicStyle:'TONS → COULEURS', liteSwipeHint:'Swipe ↑ Surprise', advSwipeHint:'Swipe ↑ Suivant', notesStyle:'notes', tagline:'la peinture, jouée', tapToSkip:'toucher pour passer', inspiredBy:'inspiré par {artist}', inspiredByTitle:'inspiré par', onbTitle:'Paintiano', onbSubtitle:'la musique devient peinture', onbPlayLabel:'Lire l’échantillon', onbCaption:'Liebestraum — Liszt · peint par Pollock', onbHint:'chaque accord devient un coup de pinceau…', onbDescription:'Paintiano écoute la musique et transforme chaque accord en coup de pinceau. Chaque peinture est unique.', onbDoneLine:'Votre peinture sera unique', onbReplay:'Rejouer', onbTryYourOwn:'Essayez la vôtre', onbSkip:'passer', moodDesc:'décris une émotion — l’IA compose et peint', mfiDesc:'choisis une image — l’IA capte son humeur, puis peint', helpTitle:'Ce que fait quoi', helpSub:'touche une source pour commencer', helpClose:'fermer', helpFab:'aide', helpDesc_mood:'tape ou choisis une émotion — Paintiano compose un morceau dans cette humeur et le peint', helpDesc_mfi:'glisse une image — Paintiano lit son atmosphère, compose un morceau adapté et le peint', helpDesc_midi:'tu as un fichier MIDI ? Paintiano le joue et fait de chaque accord un coup de pinceau', helpDesc_audio:'n’importe quel mp3 ou wav — Paintiano écoute, trouve les accords et peint ce qu’il entend', helpDesc_score:'photographie une partition — Paintiano lit les notes et peint le morceau pour toi', helpDesc_music:'MIDI, mp3/wav ou partition — Paintiano le joue, trouve chaque accord et en fait un coup de pinceau', helpDesc_image:'choisis une image — Scan joue ses couleurs en musique, un compositeur la recompose dans sa langue (3 gratuits, les 15 en Pro), ou ✦ Composer IA en écrit un morceau tout neuf', helpDesc_compose:'joue du piano sur ton écran — chaque note devient un coup de pinceau, en direct', helpDesc_mic:'chante, fredonne, siffle — Paintiano entend les accords et les peint en direct', selectNeedsMosaic:'désactivez le style {artist} pour éditer', backToSetup:'retour', backToCanvas:'toile', backToImage:'image', hearImageDis:`Finis d'abord la peinture`, hearImage:'Écouter l’image', seeMusic:'Voir musique', seeMusicDis:`Finis d'abord la peinture`, newSource:'nouveau', dirLabel:'lecture', dir_lr:'lignes', dir_vert:'colonnes', dir_spiralIn:'spirale int.', dir_spiralOut:'spirale ext.', importLabel:'import', createLabel:'créer', imgMood:'ambiance image', atmoLabel:'amb.', atmoDetect:'lire ambiance', melodyLabel:'mélodie', melodyHint:'l\'IA chante une mélodie issue de l\'image, dans la tonalité et le pouls de ce qui joue dessous', imgComposition:'composer', imgCompositionHint:'l\'IA écrit un morceau à partir de cette image', imgScan:'scan', imgScanHint:'lire l\'image comme une partition', imgCompose:'composer IA', imgComposeBlurb:'L\'IA compose un morceau entier à partir de cette image — couleurs, énergie, ambiance. Appuie sur Jouer.', aiOffline:'hors ligne', aiOfflineHint:'Les fonctions IA nécessitent une connexion',
     harmony:'harmonie', spectral:'spectral', phi:'φ / Phi', kontra:'contre', custom:'perso', bw:'n/b', pickLook:'Choisis un style', pickLookImg:'Choisis un son', editSet:'Modifier ta sélection', editHint:'Touche pour ajouter ou retirer.', editFull:'Tout gérer →', setupPickerLabel:'Styles et palettes', setupPickerHint:'choisis quelles palettes et quels artistes apparaissent dans les sélecteurs', setupPalettesTitle:'Palettes', setupArtistsTitle:'Artistes', setupMosaicFamily:'Famille Mosaïque', setupSave:'Terminé', setupMinError:'Choisis au moins 1 palette et 1 artiste.', setupAll:'Tout', setupNone:'Aucun', gcat_all:'Tout', gcat_start:'Début', gcat_colors:'Couleurs', gcat_style:'Style', gcat_music:'Musique', gcat_tools:'Outils', gcat_save:'Sauver', gcat_pro:'Pro', gcat_book:'Livre', guideMore:'Plus', guideLess:'Moins', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Avancé', surpriseMe:'Surprends-moi', saveLabel:'Sauver', useMySong:'Ma chanson', useMyPicture:'Mon image', tapToFlip:'touche pour changer', useMySongFile:'Fichier', useMySongMic:'Micro', useMySongImage:'Image', useMySongSample:'Exemple', recLabel:'Rec', stopLabel:'Stop', cancelLabel:'Annuler', tapToBegin:'Touche pour commencer',
     editPalette:'modifier la palette', editShort:'modifier', paletteEditorTitle:'VOTRE PALETTE', resetPalette:'tout effacer', defaultPalette:'défaut',
     selectMood:'✦ choisir une humeur…', moodPlaceholder:'décris une humeur — ex. jour de pluie à Paris', moodHowFeel:'comment tu te sens ?', moodTwoWays:'Écris ce que tu veux ci-dessus — ou commence à taper pour choisir une humeur d\'un mot dans la liste.', moodExamples:['décris une humeur avec tes mots…','ex. jour de pluie à Paris','ex. première neige à minuit','— ou commence à taper et choisis une humeur proposée —','ex. furieux','ex. nostalgique'], storyCaption:{mood:'voilà à quoi {mood} ressemble ✦ paintiano.app',moodFromImg:'l\'humeur de cette image, peinte ✦ paintiano.app',compose:'joué au piano · transformé en peinture ✦ paintiano.app',micVoice:'chanté au micro, récupéré une peinture ✦ paintiano.app',micMusic:'attrapé un son dans la pièce, peint ✦ paintiano.app',midi:'musique transformée en couleur ✦ paintiano.app',audio:'entendu, peint ✦ paintiano.app',score:'partition, devenue peinture ✦ paintiano.app',image:'à quoi cette image ressemble en son ✦ paintiano.app',default:'la musique devient peinture ✦ paintiano.app'}, storyImageHint:'image + audio · pour IG / TikTok', storyImageHintNoAudio:'image · pour IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'WAV · sauver dans fichiers', scoreExportHint:'MusicXML · pour MuseScore', includeSourceThumb:'inclure la miniature source', includeSourceImage:'inclure l\'image source', saveAudioHintImg:'image + audio · sauver dans fichiers', moodGo:'go', morph:'✦ morphe', vary:'✦ varier',
@@ -17895,7 +17826,7 @@ const I18N = {
     proArtist:'{artist} es Pro', mymusicSaveAria:'Guardar en Mi música', tapToDeselect:'toca para deseleccionar', tapToAdd:'toca para añadir a tu set', inYourSet:'en tu set — toca para quitar',
     palettesTitle:'paletas', selAll:'todas', selNone:'ninguna',
     concept:'concepto', demo:'demo', guide:'guía',
-    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONOS → COLORES', liteSwipeHint:'Swipe ↑ Sorpresa', advSwipeHint:'Swipe ↑ Siguiente', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, un compositor la recompone con su voz (3 gratis, los 15 en Pro), o ✦ Componer IA escribe con ella una pieza nueva', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', hearImage:'Oír imagen', hearImageDis:'Termina primero la pintura', seeMusic:'Ver música', seeMusicDis:'Termina primero la pintura', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'amb.', atmoDetect:'leer ambiente', melodyLabel:'melodía', melodyHint:'la IA canta una melodía de la imagen, en la tonalidad y el pulso de lo que suena debajo', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Tocar.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
+    sourceLabel:'fuente', moodLabel:'estado', colorLabel:'color', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONOS → COLORES', liteSwipeHint:'Swipe ↑ Sorpresa', advSwipeHint:'Swipe ↑ Siguiente', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toca para saltar', inspiredBy:'inspirado en {artist}', inspiredByTitle:'inspirado en', onbTitle:'Paintiano', onbSubtitle:'la música se vuelve pintura', onbPlayLabel:'Reproducir muestra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde se convierte en un trazo…', onbDescription:'Paintiano escucha la música y convierte cada acorde en un trazo. Cada pintura es única.', onbDoneLine:'Tu pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Prueba la tuya', onbSkip:'omitir', moodDesc:'describe un sentimiento — la IA compone y pinta', mfiDesc:'elige una imagen — la IA capta su ánimo y pinta', helpTitle:'Qué hace cada cosa', helpSub:'toca cualquier fuente para empezar', helpClose:'cerrar', helpFab:'ayuda', helpDesc_mood:'escribe o elige un sentimiento — Paintiano compone una pieza en ese ánimo y la pinta', helpDesc_mfi:'suelta una imagen — Paintiano lee su ánimo, compone una pieza acorde y la pinta', helpDesc_midi:'¿tienes un archivo MIDI? Paintiano lo reproduce y convierte cada acorde en un trazo', helpDesc_audio:'cualquier mp3 o wav — Paintiano escucha, encuentra los acordes y pinta lo que oye', helpDesc_score:'fotografía una partitura — Paintiano lee las notas y pinta la pieza por ti', helpDesc_music:'MIDI, mp3/wav o partitura — Paintiano lo reproduce, encuentra cada acorde y lo convierte en un trazo', helpDesc_image:'elige una imagen — Escanear suena sus colores como música, un compositor la recompone con su voz (3 gratis, los 15 en Pro), o ✦ Componer IA escribe con ella una pieza nueva', helpDesc_compose:'toca piano en tu pantalla — cada nota se convierte en un trazo, en vivo', helpDesc_mic:'canta, tararea, silba — Paintiano oye los acordes y los pinta en vivo', selectNeedsMosaic:'desactiva el estilo {artist} para editar', backToSetup:'atrás', backToCanvas:'lienzo', backToImage:'imagen', hearImage:'Oír imagen', hearImageDis:'Termina primero la pintura', seeMusic:'Ver música', seeMusicDis:'Termina primero la pintura', newSource:'nuevo', dirLabel:'lectura', dir_lr:'filas', dir_vert:'columnas', dir_spiralIn:'espiral int.', dir_spiralOut:'espiral ext.', importLabel:'importar', createLabel:'crear', imgMood:'estado imagen', atmoLabel:'amb.', atmoDetect:'leer ambiente', melodyLabel:'melodía', melodyHint:'la IA canta una melodía de la imagen, en la tonalidad y el pulso de lo que suena debajo', imgComposition:'componer', imgCompositionHint:'la IA escribe una pieza a partir de esta imagen', imgScan:'escanear', imgScanHint:'leer la imagen como partitura', imgCompose:'componer IA', imgComposeBlurb:'La IA compone una pieza completa a partir de esta imagen — colores, energía y ánimo. Pulsa Tocar.', aiOffline:'sin conexión', aiOfflineHint:'Las funciones de IA necesitan conexión',
     harmony:'armonía', spectral:'espectral', phi:'φ / Phi', kontra:'contra', custom:'personal', bw:'b/n', pickLook:'Elige un estilo', pickLookImg:'Elige un sonido', editSet:'Editar tu conjunto', editHint:'Toca para añadir o quitar.', editFull:'Gestionar todo →', setupPickerLabel:'Estilos y paletas', setupPickerHint:'elige qué paletas y artistas aparecen en los selectores', setupPalettesTitle:'Paletas', setupArtistsTitle:'Artistas', setupMosaicFamily:'Familia Mosaico', setupSave:'Listo', setupMinError:'Elige al menos 1 paleta y 1 artista.', setupAll:'Todo', setupNone:'Nada', gcat_all:'Todo', gcat_start:'Inicio', gcat_colors:'Colores', gcat_style:'Estilo', gcat_music:'Música', gcat_tools:'Herramientas', gcat_save:'Guardar', gcat_pro:'Pro', gcat_book:'Libro', guideMore:'Más', guideLess:'Menos', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Avanzado', surpriseMe:'Sorpréndeme', saveLabel:'Guardar', useMySong:'Mi canción', useMyPicture:'Mi imagen', tapToFlip:'toca para cambiar', useMySongFile:'Archivo', useMySongMic:'Micro', useMySongImage:'Imagen', useMySongSample:'Muestra', recLabel:'Grabar', stopLabel:'Parar', cancelLabel:'Cancelar', tapToBegin:'Toca para empezar',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'TU PALETA', resetPalette:'borrar todo', defaultPalette:'predeterminado',
     selectMood:'✦ elegir un estado…', moodPlaceholder:'describe un estado — p.ej. día lluvioso en París', moodHowFeel:'¿cómo te sientes?', moodTwoWays:'Escribe lo que quieras arriba — o empieza a teclear para elegir un estado de una palabra de la lista.', moodExamples:['describe un estado con tus palabras…','p.ej. día lluvioso en París','p.ej. primera nieve a medianoche','— o empieza a escribir y elige un estado de los sugeridos —','p.ej. furioso','p.ej. nostálgico'], storyCaption:{mood:'así suena {mood} ✦ paintiano.app',moodFromImg:'el estado de esta imagen, pintado ✦ paintiano.app',compose:'tocado al piano · convertido en pintura ✦ paintiano.app',micVoice:'canté al micro, me devolvió una pintura ✦ paintiano.app',micMusic:'cogí un sonido en la sala, lo pinté ✦ paintiano.app',midi:'música convertida en color ✦ paintiano.app',audio:'lo escuché, lo pinté ✦ paintiano.app',score:'partitura, convertida en pintura ✦ paintiano.app',image:'cómo suena esta imagen ✦ paintiano.app',default:'la música se vuelve pintura ✦ paintiano.app'}, storyImageHint:'imagen + audio · para IG / TikTok', storyImageHintNoAudio:'imagen · para IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'WAV · guardar en archivos', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura origen', includeSourceImage:'incluir imagen original', saveAudioHintImg:'imagen + audio · guardar en archivos', moodGo:'ir', morph:'✦ morfar', vary:'✦ variar',
@@ -18059,7 +17990,7 @@ const I18N = {
   SK:{
     proArtist:'{artist} je Pro', mymusicSaveAria:'Uložiť do Mojej hudby', tapToDeselect:'ťukni pre zrušenie výberu', tapToAdd:'ťukni a pridaj do svojho setu', inYourSet:'v tvojom sete — ťukni pre odobratie',
     concept:'koncept', demo:'demo', guide:'príručka',
-    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', liteMosaicStyle:'TÓNY → FARBY', liteSwipeHint:'Swipe ↑ Prekvapenie', advSwipeHint:'Swipe ↑ Ďalší', notesStyle:'noty', oneMStyle:'$oneM$', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', palettesTitle:'palety', selAll:'všetko', selNone:'žiadne', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, skladateľ ho prekomponuje svojím hlasom (3 zadarmo, všetkých 15 v Pro), alebo ✦ AI skladba z neho zloží úplne novú skladbu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, bruč, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', hearImage:'Počuť obraz', hearImageDis:'Najprv domaľuj obraz', seeMusic:'Vidieť hudbu', seeMusicDis:'Najprv domaľuj obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmo', atmoDetect:'rozpoznať náladu', melodyLabel:'melódia', melodyHint:'AI zaspieva melódiu z obrazu, v tónine a pulze toho, čo hrá pod ňou', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Prehrať.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
+    sourceLabel:'zdroj', moodLabel:'nálada', colorLabel:'farba', styleLabel:'štýl', mosaicStyle:'mozaika', liteMosaicStyle:'TÓNY → FARBY', liteSwipeHint:'Swipe ↑ Prekvapenie', advSwipeHint:'Swipe ↑ Ďalší', notesStyle:'noty', tagline:'obrazy, zahrané', tapToSkip:'ťukni pre preskočenie', inspiredBy:'inšpirované {artist}', inspiredByTitle:'inšpirované', palettesTitle:'palety', selAll:'všetko', selNone:'žiadne', onbTitle:'Paintiano', onbSubtitle:'hudba sa stáva obrazom', onbPlayLabel:'Prehrať ukážku', onbCaption:'Liebestraum — Liszt · namaľoval Pollock', onbHint:'každý akord je ťah štetca…', onbDescription:'Paintiano počúva hudbu a každý akord premieňa na ťah štetca. Každý obraz je jedinečný.', onbDoneLine:'Tvoj obraz bude jedinečný', onbReplay:'Znova', onbTryYourOwn:'Skús vlastný', onbSkip:'preskočiť', moodDesc:'opíš pocit — AI skomponuje a maľuje', mfiDesc:'vyber obrázok — AI zachytí jeho náladu a maľuje', helpTitle:'Čo robí čo', helpSub:'ťukni na akýkoľvek zdroj a začni', helpClose:'zavrieť', helpFab:'pomoc', helpDesc_mood:'napíš alebo vyber pocit — Paintiano zloží skladbu v tej nálade a namaľuje ju', helpDesc_mfi:'hoď sem obrázok — Paintiano prečíta jeho náladu, zloží na mieru skladbu a namaľuje ho', helpDesc_midi:'máš MIDI súbor? Paintiano ho prehrá a každý akord premení na ťah štetca', helpDesc_audio:'akékoľvek mp3 alebo wav — Paintiano počúva, nájde akordy a maľuje to, čo počuje', helpDesc_score:'odfoť noty — Paintiano ich prečíta a namaľuje skladbu za teba', helpDesc_music:'MIDI, mp3/wav alebo noty — Paintiano ich prehrá, nájde každý akord a premení ho na ťah štetca', helpDesc_image:'vyber obrázok — Sken zahrá jeho farby ako hudbu, skladateľ ho prekomponuje svojím hlasom (3 zadarmo, všetkých 15 v Pro), alebo ✦ AI skladba z neho zloží úplne novú skladbu', helpDesc_compose:'hraj na klavíri priamo na obrazovke — každá nota sa stane ťahom štetca, naživo', helpDesc_mic:'spievaj, bruč, hvízdaj — Paintiano počuje akordy a maľuje ich naživo', selectNeedsMosaic:'pre úpravu nôt vypni štýl {artist}', backToSetup:'späť', backToCanvas:'plátno', backToImage:'obraz', hearImage:'Počuť obraz', hearImageDis:'Najprv domaľuj obraz', seeMusic:'Vidieť hudbu', seeMusicDis:'Najprv domaľuj obraz', newSource:'nový', newBy:{midi:'nový',image:'nový',audio:'nové',score:'nová',mood:'nová'}, dirLabel:'čítanie', dir_lr:'riadky', dir_vert:'stĺpce', dir_spiralIn:'špirála dnu', dir_spiralOut:'špirála von', importLabel:'import', createLabel:'tvorba', imgMood:'nálada z obrazu', atmoLabel:'atmo', atmoDetect:'rozpoznať náladu', melodyLabel:'melódia', melodyHint:'AI zaspieva melódiu z obrazu, v tónine a pulze toho, čo hrá pod ňou', imgComposition:'skomponovať', imgCompositionHint:'AI zloží skladbu z tohto obrazu', imgScan:'sken', imgScanHint:'čítať obraz ako partitúru', imgCompose:'AI skladba', imgComposeBlurb:'AI zloží celú skladbu z tohto obrazu — z jeho farieb, energie a nálady. Stlač Prehrať.', aiOffline:'offline', aiOfflineHint:'AI funkcie potrebujú pripojenie',
     harmony:'harmónia', spectral:'spektrum', phi:'φ / Phi', kontra:'kontra', custom:'vlastná', bw:'č/b', pickLook:'Vyber vzhľad', pickLookImg:'Vyber zvuk', editSet:'Uprav si zostavu', editHint:'Ťukni pre pridanie alebo odobranie.', editFull:'Spravovať všetko →', setupPickerLabel:'Štýly a palety', setupPickerHint:'vyber palety a umelcov, ktorí sa zobrazia v canvas selektoroch', setupPalettesTitle:'Palety', setupArtistsTitle:'Umelci', setupMosaicFamily:'Mosaic rodina', setupSave:'Hotovo', setupMinError:'Vyber aspoň 1 paletu a 1 umelca.', setupAll:'Všetko', setupNone:'Nič', gcat_all:'Všetko', gcat_start:'Začni', gcat_colors:'Farby', gcat_style:'Štýl', gcat_music:'Hudba', gcat_tools:'Nástroje', gcat_save:'Ulož', gcat_pro:'Pro', gcat_book:'Kniha', guideMore:'Viac', guideLess:'Menej', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Rozšírený', surpriseMe:'Prekvap ma', saveLabel:'Ulož', useMySong:'Moja skladba', useMyPicture:'Môj obrázok', tapToFlip:'ťukni pre prepnutie', useMySongFile:'Súbor', useMySongMic:'Mikro', useMySongImage:'Obrázok', useMySongSample:'Ukážka', recLabel:'Nahraj', stopLabel:'Stop', cancelLabel:'Zrušiť', tapToBegin:'Ťukni pre štart',
     editPalette:'upraviť paletu', editShort:'upraviť', paletteEditorTitle:'TVOJA PALETA', resetPalette:'vyčistiť', defaultPalette:'predvolené',
     selectMood:'✦ vyber náladu…', moodPlaceholder:'opíš akúkoľvek náladu — napr. daždivý deň v Paríži', moodHowFeel:'ako sa cítiš?', moodTwoWays:'Napíš hore čokoľvek — alebo začni písať a vyber jednoslovnú náladu zo zoznamu.', moodExamples:['opíš náladu vlastnými slovami…','napr. daždivý deň v Paríži','napr. prvý sneh o polnoci','— alebo začni písať a vyber z ponúkaných nálad —','napr. zúrivá','napr. nostalgická'], storyCaption:{mood:'takto znie {mood} ✦ paintiano.app',moodFromImg:'nálada tohto obrazu, namaľovaná ✦ paintiano.app',compose:'zahral som si · vznikol obraz ✦ paintiano.app',micVoice:'spieval do mikrofónu, vrátilo to obraz ✦ paintiano.app',micMusic:'zachytil zvuk v miestnosti, namaľoval ✦ paintiano.app',midi:'hudba premenená na farbu ✦ paintiano.app',audio:'vypočul, namaľoval ✦ paintiano.app',score:'noty premenené na obraz ✦ paintiano.app',image:'tak znie tento obraz ✦ paintiano.app',default:'hudba sa stáva maľbou ✦ paintiano.app'}, storyImageHint:'obraz + audio · pre IG / TikTok', storyImageHintNoAudio:'obraz · pre IG / TikTok', saveAudioLabel:'Audio', saveAudioHint:'WAV · uložiť do súborov', scoreExportHint:'MusicXML · pre MuseScore', includeSourceThumb:'pridať zdrojový náhľad', includeSourceImage:'pridať pôvodný obrázok', saveAudioHintImg:'obrázok + audio · uložiť do súborov', moodGo:'spusti', morph:'✦ morf', vary:'✦ variácia',
@@ -18223,7 +18154,7 @@ const I18N = {
     proArtist:'{artist} 为 Pro', mymusicSaveAria:'保存到我的音乐', tapToDeselect:'点按取消选择', tapToAdd:'点按加入你的组合', inYourSet:'已在你的组合中——点按移除',
     palettesTitle:'调色板', selAll:'全部', selNone:'无',
     concept:'理念', demo:'演示', guide:'指南',
-    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑动 ↑ 惊喜', advSwipeHint:'滑动 ↑ 下一个', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，作曲家用自己的语言重新谱写（免费 3 位，Pro 全部 15 位），或 ✦ AI 作曲从中谱写一首全新的曲子', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', hearImage:'听画', hearImageDis:'先完成绘画', seeMusic:'看音乐', seeMusicDis:'先完成绘画', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', melodyLabel:'旋律', melodyHint:'AI 从图像唱出一条旋律，跟随下方音乐的调性与节拍', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按播放。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
+    sourceLabel:'来源', moodLabel:'情绪', colorLabel:'颜色', styleLabel:'风格', mosaicStyle:'马赛克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑动 ↑ 惊喜', advSwipeHint:'滑动 ↑ 下一个', notesStyle:'音符', tagline:'演奏出的画', tapToSkip:'点击跳过', inspiredBy:'灵感来自 {artist}', inspiredByTitle:'灵感来自', onbTitle:'Paintiano', onbSubtitle:'音乐变成绘画', onbPlayLabel:'播放示例', onbCaption:'李斯特《爱之梦》· 由波洛克绘制', onbHint:'每个和弦化作一道笔触…', onbDescription:'Paintiano 聆听音乐，将每个和弦变成一道笔触。每幅画都独一无二。', onbDoneLine:'你的画作将独一无二', onbReplay:'重播', onbTryYourOwn:'试试你的', onbSkip:'跳过', moodDesc:'描述一种感觉 — AI 作曲并绘画', mfiDesc:'选一张图片 — AI 捕捉其情绪并绘画', helpTitle:'各项功能', helpSub:'点击任意来源开始', helpClose:'关闭', helpFab:'帮助', helpDesc_mood:'输入或点选一种心情 — Paintiano 以此心情谱写曲子并绘画', helpDesc_mfi:'放一张图片 — Paintiano 读懂它的情绪，谱写曲子并绘画', helpDesc_midi:'有 MIDI 文件？Paintiano 播放它，把每个和弦变成一笔画', helpDesc_audio:'任何 mp3 或 wav — Paintiano 倾听，找出和弦，绘出它听到的', helpDesc_score:'拍下乐谱 — Paintiano 读音符，为你绘出整首曲子', helpDesc_music:'MIDI、mp3/wav 或乐谱 — Paintiano 播放它，找出每个和弦，把每个变成一道笔触', helpDesc_image:'选一张图片 — 扫描把颜色当作音乐演奏，作曲家用自己的语言重新谱写（免费 3 位，Pro 全部 15 位），或 ✦ AI 作曲从中谱写一首全新的曲子', helpDesc_compose:'在屏幕上弹钢琴 — 每个音符即时变成一笔画', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 实时识别和弦并绘画', selectNeedsMosaic:'关闭 {artist} 风格以编辑音符', backToSetup:'返回', backToCanvas:'画布', backToImage:'图像', hearImage:'听画', hearImageDis:'先完成绘画', seeMusic:'看音乐', seeMusicDis:'先完成绘画', newSource:'新建', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'扫描', dir_lr:'横向', dir_vert:'纵向', dir_spiralIn:'向内螺旋', dir_spiralOut:'向外螺旋', importLabel:'导入', createLabel:'创作', imgMood:'从图像取情绪', atmoLabel:'氛围', atmoDetect:'识别情绪', melodyLabel:'旋律', melodyHint:'AI 从图像唱出一条旋律，跟随下方音乐的调性与节拍', imgComposition:'作曲', imgCompositionHint:'AI 从这幅图像谱写一首曲子', imgScan:'扫描', imgScanHint:'把图像当作乐谱来读', imgCompose:'AI 作曲', imgComposeBlurb:'AI 从这幅图像谱写一首完整曲子 — 来自它的色彩、能量与情绪。按播放。', aiOffline:'离线', aiOfflineHint:'AI 功能需要网络连接',
     harmony:'和声', spectral:'光谱', phi:'φ / Phi', kontra:'反向', custom:'自定义', bw:'黑白', pickLook:'选个风格', pickLookImg:'选个声音', editSet:'编辑你的组合', editHint:'点按以添加或移除。', editFull:'管理全部 →', setupPickerLabel:'风格与调色板', setupPickerHint:'选择哪些调色板和艺术家出现在画布选择器中', setupPalettesTitle:'调色板', setupArtistsTitle:'艺术家', setupMosaicFamily:'Mosaic 家族', setupSave:'完成', setupMinError:'至少选择 1 个调色板和 1 位艺术家。', setupAll:'全部', setupNone:'无', gcat_all:'全部', gcat_start:'开始', gcat_colors:'颜色', gcat_style:'风格', gcat_music:'音乐', gcat_tools:'工具', gcat_save:'保存', gcat_pro:'Pro', gcat_book:'书', guideMore:'更多', guideLess:'收起', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'高级', surpriseMe:'给我惊喜', saveLabel:'保存', useMySong:'用我的歌', useMyPicture:'用我的图片', tapToFlip:'点按切换', useMySongFile:'文件', useMySongMic:'麦克风', useMySongImage:'图片', useMySongSample:'示例', recLabel:'录制', stopLabel:'停止', cancelLabel:'取消', tapToBegin:'点按开始',
     editPalette:'编辑调色板', editShort:'编辑', paletteEditorTitle:'你的调色板', resetPalette:'全部清除', defaultPalette:'默认',
     selectMood:'✦ 选择情绪…', moodPlaceholder:'描述任意情绪 — 例如 巴黎的雨天', moodHowFeel:'你现在感觉如何?', moodTwoWays:'在上方输入任意内容 — 或开始输入,从列表选一个单词情绪。', moodExamples:['用你自己的话描述情绪…','例如 巴黎的雨天','例如 午夜初雪','— 或直接输入,从浮现的情绪中选择 —','例如 愤怒','例如 怀旧'], storyCaption:{mood:'这就是 {mood} 的声音 ✦ paintiano.app',moodFromImg:'这幅图像的情绪,画了出来 ✦ paintiano.app',compose:'弹了钢琴 · 变成了一幅画 ✦ paintiano.app',micVoice:'对着麦克风唱,得到一幅画 ✦ paintiano.app',micMusic:'抓住了房间里的一段声音,画了下来 ✦ paintiano.app',midi:'音乐变成了颜色 ✦ paintiano.app',audio:'听见了,画了下来 ✦ paintiano.app',score:'乐谱,变成了画 ✦ paintiano.app',image:'这张图听起来是这样 ✦ paintiano.app',default:'音乐变成画 ✦ paintiano.app'}, storyImageHint:'图像 + 音频 · 给 IG / TikTok', storyImageHintNoAudio:'图像 · 给 IG / TikTok', saveAudioLabel:'音频', saveAudioHint:'WAV · 保存到文件', scoreExportHint:'MusicXML · 给 MuseScore', includeSourceThumb:'附加来源缩略图', includeSourceImage:'附加原始图像', saveAudioHintImg:'图像 + 音频 · 保存到文件', moodGo:'开始', morph:'✦ 变形', vary:'✦ 变奏',
@@ -18387,7 +18318,7 @@ const I18N = {
     proArtist:'{artist} 為 Pro', mymusicSaveAria:'儲存到我的音樂', tapToDeselect:'點按取消選取', tapToAdd:'點按加入你的組合', inYourSet:'已在你的組合中——點按移除',
     palettesTitle:'調色盤', selAll:'全部', selNone:'無',
     concept:'理念', demo:'示範', guide:'指南',
-    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑動 ↑ 驚喜', advSwipeHint:'滑動 ↑ 下一個', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，作曲家用自己的語言重新譜寫（免費 3 位，Pro 全部 15 位），或 ✦ AI 作曲從中譜寫一首全新的曲子', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', hearImage:'聽畫', hearImageDis:'先完成繪畫', seeMusic:'看音樂', seeMusicDis:'先完成繪畫', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', melodyLabel:'旋律', melodyHint:'AI 從圖像唱出一條旋律，跟隨下方音樂的調性與節拍', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按播放。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
+    sourceLabel:'來源', moodLabel:'情緒', colorLabel:'顏色', styleLabel:'風格', mosaicStyle:'馬賽克', liteMosaicStyle:'音 → 色', liteSwipeHint:'滑動 ↑ 驚喜', advSwipeHint:'滑動 ↑ 下一個', notesStyle:'音符', tagline:'演奏出的畫', tapToSkip:'點擊跳過', inspiredBy:'靈感來自 {artist}', inspiredByTitle:'靈感來自', onbTitle:'Paintiano', onbSubtitle:'音樂變成繪畫', onbPlayLabel:'播放示例', onbCaption:'李斯特《愛之夢》· 由波洛克繪製', onbHint:'每個和弦化作一道筆觸…', onbDescription:'Paintiano 聆聽音樂，將每個和弦變成一道筆觸。每幅畫都獨一無二。', onbDoneLine:'你的畫作將獨一無二', onbReplay:'重播', onbTryYourOwn:'試試你的', onbSkip:'跳過', moodDesc:'描述一種感覺 — AI 作曲並繪畫', mfiDesc:'選一張圖片 — AI 捕捉其情緒並繪畫', helpTitle:'各項功能', helpSub:'點擊任意來源開始', helpClose:'關閉', helpFab:'幫助', helpDesc_mood:'輸入或點選一種心情 — Paintiano 以此心情譜寫曲子並繪畫', helpDesc_mfi:'放一張圖片 — Paintiano 讀懂它的情緒，譜寫曲子並繪畫', helpDesc_midi:'有 MIDI 檔？Paintiano 播放它，把每個和弦變成一筆畫', helpDesc_audio:'任何 mp3 或 wav — Paintiano 傾聽，找出和弦，繪出它聽到的', helpDesc_score:'拍下樂譜 — Paintiano 讀音符，為你繪出整首曲子', helpDesc_music:'MIDI、mp3/wav 或樂譜 — Paintiano 播放它，找出每個和弦，把每個變成一道筆觸', helpDesc_image:'選一張圖片 — 掃描把顏色當作音樂演奏，作曲家用自己的語言重新譜寫（免費 3 位，Pro 全部 15 位），或 ✦ AI 作曲從中譜寫一首全新的曲子', helpDesc_compose:'在螢幕上彈鋼琴 — 每個音符即時變成一筆畫', helpDesc_mic:'唱、哼、吹口哨 — Paintiano 即時辨識和弦並繪畫', selectNeedsMosaic:'關閉 {artist} 風格以編輯音符', backToSetup:'返回', backToCanvas:'畫布', backToImage:'圖像', hearImage:'聽畫', hearImageDis:'先完成繪畫', seeMusic:'看音樂', seeMusicDis:'先完成繪畫', newSource:'新增', newBy:{midi:'新',image:'新',audio:'新',score:'新',mood:'新'}, dirLabel:'掃描', dir_lr:'橫向', dir_vert:'縱向', dir_spiralIn:'向內螺旋', dir_spiralOut:'向外螺旋', importLabel:'匯入', createLabel:'創作', imgMood:'從圖像取情緒', atmoLabel:'氛圍', atmoDetect:'辨識情緒', melodyLabel:'旋律', melodyHint:'AI 從圖像唱出一條旋律，跟隨下方音樂的調性與節拍', imgComposition:'作曲', imgCompositionHint:'AI 從這幅圖像譜寫一首曲子', imgScan:'掃描', imgScanHint:'把圖像當作樂譜來讀', imgCompose:'AI 作曲', imgComposeBlurb:'AI 從這幅圖像譜寫一首完整曲子 — 來自它的色彩、能量與情緒。按播放。', aiOffline:'離線', aiOfflineHint:'AI 功能需要網路連線',
     harmony:'和聲', spectral:'光譜', phi:'φ / Phi', kontra:'反向', custom:'自訂', bw:'黑白', pickLook:'選個風格', pickLookImg:'選個聲音', editSet:'編輯你的組合', editHint:'點按以新增或移除。', editFull:'管理全部 →', setupPickerLabel:'風格與調色盤', setupPickerHint:'選擇哪些調色盤和藝術家出現在畫布選擇器中', setupPalettesTitle:'調色盤', setupArtistsTitle:'藝術家', setupMosaicFamily:'Mosaic 家族', setupSave:'完成', setupMinError:'至少選擇 1 個調色盤和 1 位藝術家。', setupAll:'全部', setupNone:'無', gcat_all:'全部', gcat_start:'開始', gcat_colors:'顏色', gcat_style:'風格', gcat_music:'音樂', gcat_tools:'工具', gcat_save:'儲存', next:'下一個', showLabel:'放映', gcat_pro:'Pro', gcat_book:'書', guideMore:'更多', guideLess:'收起', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'進階', surpriseMe:'給我驚喜', saveLabel:'儲存', useMySong:'用我的歌', useMyPicture:'用我的圖片', tapToFlip:'點按切換', useMySongFile:'檔案', useMySongMic:'麥克風', useMySongImage:'圖片', useMySongSample:'範例', recLabel:'錄製', stopLabel:'停止', cancelLabel:'取消', tapToBegin:'點按開始',
     editPalette:'編輯調色盤', editShort:'編輯', paletteEditorTitle:'你的調色盤', resetPalette:'全部清除', defaultPalette:'預設',
     selectMood:'✦ 選擇情緒…', moodPlaceholder:'描述任意情緒 — 例如 巴黎的雨天', moodHowFeel:'你現在感覺如何?', moodTwoWays:'在上方輸入任意內容 — 或開始輸入,從列表選一個單詞情緒。', moodExamples:['用你自己的話描述情緒…','例如 巴黎的雨天','例如 午夜初雪','— 或直接輸入,從浮現的情緒中選擇 —','例如 憤怒','例如 懷舊'], storyCaption:{mood:'這就是 {mood} 的聲音 ✦ paintiano.app',moodFromImg:'這幅圖像的情緒,畫了出來 ✦ paintiano.app',compose:'彈了鋼琴 · 變成了一幅畫 ✦ paintiano.app',micVoice:'對著麥克風唱,得到一幅畫 ✦ paintiano.app',micMusic:'抓住了房間裡的一段聲音,畫了下來 ✦ paintiano.app',midi:'音樂變成了顏色 ✦ paintiano.app',audio:'聽見了,畫了下來 ✦ paintiano.app',score:'樂譜,變成了畫 ✦ paintiano.app',image:'這張圖聽起來是這樣 ✦ paintiano.app',default:'音樂變成畫 ✦ paintiano.app'}, storyImageHint:'圖像 + 音訊 · 給 IG / TikTok', storyImageHintNoAudio:'圖像 · 給 IG / TikTok', saveAudioLabel:'音訊', saveAudioHint:'WAV · 儲存到檔案', scoreExportHint:'MusicXML · 給 MuseScore', includeSourceThumb:'附加來源縮圖', includeSourceImage:'附加原始圖像', saveAudioHintImg:'圖像 + 音訊 · 儲存到檔案', moodGo:'開始', morph:'✦ 變形', vary:'✦ 變奏',
@@ -18550,7 +18481,7 @@ const I18N = {
     proArtist:'{artist} é Pro', mymusicSaveAria:'Guardar em A minha música', tapToDeselect:'toca para desmarcar', tapToAdd:'toca para juntar ao teu set', inYourSet:'no teu set — toca para remover',
     palettesTitle:'paletas', selAll:'todas', selNone:'nenhuma',
     concept:'conceito', demo:'demo', guide:'guia',
-    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONS → CORES', liteSwipeHint:'Swipe ↑ Surpresa', advSwipeHint:'Swipe ↑ Próximo', notesStyle:'notas', oneMStyle:'$oneM$', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, um compositor recompõe-na com a sua voz (3 grátis, os 15 no Pro), ou ✦ Compor IA escreve uma peça totalmente nova', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', hearImage:'Ouvir imagem', hearImageDis:'Termina primeiro a pintura', seeMusic:'Ver música', seeMusicDis:'Termina primeiro a pintura', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atm', atmoDetect:'detectar humor', melodyLabel:'melodia', melodyHint:'a IA canta uma melodia da imagem, na tonalidade e no pulso do que toca por baixo', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Tocar.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
+    sourceLabel:'fonte', moodLabel:'humor', colorLabel:'cor', styleLabel:'estilo', mosaicStyle:'mosaico', liteMosaicStyle:'TONS → CORES', liteSwipeHint:'Swipe ↑ Surpresa', advSwipeHint:'Swipe ↑ Próximo', notesStyle:'notas', tagline:'pinturas, tocadas', tapToSkip:'toque para pular', inspiredBy:'inspirado em {artist}', inspiredByTitle:'inspirado em', onbTitle:'Paintiano', onbSubtitle:'a música vira pinturas', onbPlayLabel:'Reproduzir amostra', onbCaption:'Liebestraum — Liszt · pintado por Pollock', onbHint:'cada acorde vira uma pincelada…', onbDescription:'Paintiano escuta a música e transforma cada acorde em uma pincelada. Cada pintura é única.', onbDoneLine:'Sua pintura será única', onbReplay:'Repetir', onbTryYourOwn:'Tente o seu', onbSkip:'pular', moodDesc:'descreva um sentimento — a IA compõe e pinta', mfiDesc:'escolha uma imagem — a IA capta o seu humor e pinta', helpTitle:'O que faz o quê', helpSub:'toque em qualquer fonte para começar', helpClose:'fechar', helpFab:'ajuda', helpDesc_mood:'digite ou escolha um sentimento — Paintiano compõe uma peça nesse humor e a pinta', helpDesc_mfi:'solte uma imagem — Paintiano lê o humor, compõe uma peça adequada e a pinta', helpDesc_midi:'tem um arquivo MIDI? Paintiano toca e transforma cada acorde em uma pincelada', helpDesc_audio:'qualquer mp3 ou wav — Paintiano ouve, encontra os acordes e pinta o que escuta', helpDesc_score:'fotografe uma partitura — Paintiano lê as notas e pinta a peça para você', helpDesc_music:'MIDI, mp3/wav ou partitura — Paintiano toca, encontra cada acorde e transforma cada um em pincelada', helpDesc_image:'escolha uma imagem — Digitalizar toca as cores como música, um compositor recompõe-na com a sua voz (3 grátis, os 15 no Pro), ou ✦ Compor IA escreve uma peça totalmente nova', helpDesc_compose:'toque piano direto na sua tela — cada nota vira uma pincelada, ao vivo', helpDesc_mic:'cante, cantarole, assobie — Paintiano ouve os acordes e os pinta ao vivo', selectNeedsMosaic:'desative o estilo {artist} para editar notas', backToSetup:'voltar', backToCanvas:'tela', backToImage:'imagem', hearImage:'Ouvir imagem', hearImageDis:'Termina primeiro a pintura', seeMusic:'Ver música', seeMusicDis:'Termina primeiro a pintura', newSource:'nova', newBy:{midi:'novo',image:'nova',audio:'novo',score:'nova',mood:'novo'}, dirLabel:'leitura', dir_lr:'linhas', dir_vert:'colunas', dir_spiralIn:'espiral interna', dir_spiralOut:'espiral externa', importLabel:'importar', createLabel:'criar', imgMood:'humor da imagem', atmoLabel:'atm', atmoDetect:'detectar humor', melodyLabel:'melodia', melodyHint:'a IA canta uma melodia da imagem, na tonalidade e no pulso do que toca por baixo', imgComposition:'compor', imgCompositionHint:'a IA escreve uma peça a partir desta imagem', imgScan:'digitalizar', imgScanHint:'ler a imagem como partitura', imgCompose:'compor IA', imgComposeBlurb:'A IA compõe uma peça inteira a partir desta imagem — cores, energia e humor. Carrega em Tocar.', aiOffline:'offline', aiOfflineHint:'recursos de IA precisam de conexão',
     harmony:'harmonia', spectral:'espectral', phi:'φ / Phi', kontra:'contra', custom:'personalizada', bw:'p&b', pickLook:'Escolhe um estilo', pickLookImg:'Escolhe um som', editSet:'Editar o teu conjunto', editHint:'Toca para adicionar ou remover.', editFull:'Gerir tudo →', setupPickerLabel:'Estilos e paletas', setupPickerHint:'escolhe que paletas e artistas aparecem nos seletores da tela', setupPalettesTitle:'Paletas', setupArtistsTitle:'Artistas', setupMosaicFamily:'Família Mosaico', setupSave:'Pronto', setupMinError:'Escolhe pelo menos 1 paleta e 1 artista.', setupAll:'Tudo', setupNone:'Nenhum', gcat_all:'Tudo', gcat_start:'Início', gcat_colors:'Cores', gcat_style:'Estilo', gcat_music:'Música', gcat_tools:'Ferramentas', gcat_save:'Guardar', gcat_pro:'Pro', gcat_book:'Livro', guideMore:'Mais', guideLess:'Menos', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'Avançado', surpriseMe:'Surpreende-me', saveLabel:'Guardar', useMySong:'A minha música', useMyPicture:'A minha imagem', tapToFlip:'toca para trocar', useMySongFile:'Ficheiro', useMySongMic:'Micro', useMySongImage:'Imagem', useMySongSample:'Amostra', recLabel:'Gravar', stopLabel:'Parar', cancelLabel:'Cancelar', tapToBegin:'Toca para começar',
     editPalette:'editar paleta', editShort:'editar', paletteEditorTitle:'SUA PALETA', resetPalette:'limpar tudo', defaultPalette:'padrão',
     selectMood:'✦ escolha um humor…', moodPlaceholder:'descreva um humor — ex. dia chuvoso em Paris', moodHowFeel:'como te sentes?', moodTwoWays:'Escreve o que quiseres acima — ou começa a digitar para escolher um humor de uma palavra da lista.', moodExamples:['descreve um humor com as tuas palavras…','ex. dia chuvoso em Paris','ex. primeira neve à meia-noite','— ou começa a escrever e escolhe um humor sugerido —','ex. furioso','ex. nostálgico'], storyCaption:{mood:'é assim que {mood} soa ✦ paintiano.app',moodFromImg:'o humor desta imagem, pintado ✦ paintiano.app',compose:'toquei piano · virou pintura ✦ paintiano.app',micVoice:'cantei para o microfone, voltou uma pintura ✦ paintiano.app',micMusic:'apanhei um som na sala, pintei ✦ paintiano.app',midi:'música transformada em cor ✦ paintiano.app',audio:'ouvi, pintei ✦ paintiano.app',score:'partitura, virou pintura ✦ paintiano.app',image:'como esta imagem soa ✦ paintiano.app',default:'a música torna-se pintura ✦ paintiano.app'}, storyImageHint:'imagem + áudio · para IG / TikTok', storyImageHintNoAudio:'imagem · para IG / TikTok', saveAudioLabel:'Áudio', saveAudioHint:'WAV · guardar em ficheiros', scoreExportHint:'MusicXML · para MuseScore', includeSourceThumb:'incluir miniatura de origem', includeSourceImage:'incluir imagem original', saveAudioHintImg:'imagem + áudio · guardar em ficheiros', moodGo:'iniciar', morph:'✦ morph', vary:'✦ variar',
@@ -18714,7 +18645,7 @@ const I18N = {
     proArtist:'{artist} は Pro', mymusicSaveAria:'マイミュージックに保存', tapToDeselect:'タップで選択解除', tapToAdd:'タップでセットに追加', inYourSet:'セットに入っています — タップで外す',
     palettesTitle:'パレット', selAll:'すべて', selNone:'なし',
     concept:'コンセプト', demo:'デモ', guide:'ガイド',
-    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', liteMosaicStyle:'音 → 色', liteSwipeHint:'スワイプ ↑ サプライズ', advSwipeHint:'スワイプ ↑ 次へ', notesStyle:'音符', oneMStyle:'$oneM$', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'{artist} に着想を得て', inspiredByTitle:'着想', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、作曲家が自分の言葉で作り直し(無料 3人、Pro は 15人すべて)、または ✦ AI 作曲がまったく新しい曲を書く', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', hearImage:'絵を聴く', hearImageDis:'まず絵を完成させて', seeMusic:'音楽を見る', seeMusicDis:'まず絵を完成させて', newSource:'新規', dirLabel:'スキャン', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'雰囲気', atmoDetect:'ムードを読む', melodyLabel:'メロディ', melodyHint:'AI が画像からメロディを歌い、下で鳴る音楽の調とリズムに合わせる', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI 作曲', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。再生を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
+    sourceLabel:'ソース', moodLabel:'気持ち', colorLabel:'色', styleLabel:'スタイル', mosaicStyle:'モザイク', liteMosaicStyle:'音 → 色', liteSwipeHint:'スワイプ ↑ サプライズ', advSwipeHint:'スワイプ ↑ 次へ', notesStyle:'音符', tagline:'絵画、演奏', tapToSkip:'タップでスキップ', inspiredBy:'{artist} に着想を得て', inspiredByTitle:'着想', onbTitle:'Paintiano', onbSubtitle:'音楽が絵画に変わる', onbPlayLabel:'サンプル再生', onbCaption:'Liebestraum — Liszt · Pollock が描く', onbHint:'すべての和音が一筆に…', onbDescription:'Paintiano は音楽を聴き、各和音を一筆に変える。すべての絵がユニーク。', onbDoneLine:'あなたの絵は唯一のもの', onbReplay:'もう一度', onbTryYourOwn:'自分のもので試す', onbSkip:'スキップ', moodDesc:'気持ちを書く — AI が作曲して描く', mfiDesc:'画像を選ぶ — AI がムードを読み、描く', helpTitle:'何が何をする', helpSub:'セットアップ画面で任意のソースをタップして始める', helpClose:'閉じる', helpFab:'ヘルプ', helpDesc_mood:'気持ちを書くかタップ — Paintiano がそのムードで曲を作り、描く', helpDesc_mfi:'画像を入れる — Paintiano がムードを読み、合う曲を作り、描く', helpDesc_midi:'MIDI ファイル?Paintiano が再生し、各和音を一筆に', helpDesc_audio:'任意の mp3 や wav — Paintiano が聴き、和音を見つけ、聴こえたものを描く', helpDesc_score:'楽譜を撮る — Paintiano が音符を読み、曲を描く', helpDesc_music:'MIDI、mp3/wav、楽譜 — Paintiano が再生し、各和音を見つけ、それぞれを一筆に', helpDesc_image:'画像を選ぶ — Scan は色を音楽として演奏、作曲家が自分の言葉で作り直し(無料 3人、Pro は 15人すべて)、または ✦ AI 作曲がまったく新しい曲を書く', helpDesc_compose:'画面で直接ピアノを弾く — 各音が一筆に、ライブで', helpDesc_mic:'歌う、ハミング、口笛 — Paintiano が和音を聴き取り、ライブで描く', selectNeedsMosaic:'{artist} スタイルをオフにして音符を編集', backToSetup:'戻る', backToCanvas:'キャンバス', backToImage:'画像', hearImage:'絵を聴く', hearImageDis:'まず絵を完成させて', seeMusic:'音楽を見る', seeMusicDis:'まず絵を完成させて', newSource:'新規', dirLabel:'スキャン', dir_lr:'行', dir_vert:'列', dir_spiralIn:'内向き螺旋', dir_spiralOut:'外向き螺旋', importLabel:'インポート', createLabel:'作成', imgMood:'画像からムード', atmoLabel:'雰囲気', atmoDetect:'ムードを読む', melodyLabel:'メロディ', melodyHint:'AI が画像からメロディを歌い、下で鳴る音楽の調とリズムに合わせる', imgComposition:'作曲', imgCompositionHint:'AI がこの画像から曲を書く', imgScan:'スキャン', imgScanHint:'画像を楽譜として読む', imgCompose:'AI 作曲', imgComposeBlurb:'AI がこの画像から完全な曲を書く — その色、エネルギー、ムードから。再生を押す。', aiOffline:'オフライン', aiOfflineHint:'AI 機能には接続が必要',
     harmony:'ハーモニー', spectral:'スペクトル', phi:'φ / Phi', kontra:'反転', custom:'カスタム', bw:'白黒', pickLook:'ルックを選ぶ', pickLookImg:'サウンドを選ぶ', editSet:'セットを編集', editHint:'タップで追加・削除。', editFull:'すべて管理 →', setupPickerLabel:'スタイルとパレット', setupPickerHint:'キャンバスのピッカーに出すパレットとアーティストを選ぶ', setupPalettesTitle:'パレット', setupArtistsTitle:'アーティスト', setupMosaicFamily:'Mosaic ファミリー', setupSave:'完了', setupMinError:'最低 1 パレット + 1 アーティストを選んでください。', setupAll:'すべて', setupNone:'なし', gcat_all:'すべて', gcat_start:'はじめ', gcat_colors:'色', gcat_style:'スタイル', gcat_music:'音楽', gcat_tools:'ツール', gcat_save:'保存', gcat_pro:'Pro', gcat_book:'本', guideMore:'もっと', guideLess:'閉じる', proLockTitle:'Pro', basicMode:'Lite', advancedMode:'アドバンス', surpriseMe:'おまかせ', saveLabel:'保存', useMySong:'自分の曲', useMyPicture:'自分の画像', tapToFlip:'タップで切替', useMySongFile:'ファイル', useMySongMic:'マイク', useMySongImage:'画像', useMySongSample:'サンプル', recLabel:'録音', stopLabel:'停止', cancelLabel:'キャンセル', tapToBegin:'タップして開始',
     editPalette:'パレット編集', editShort:'編集', paletteEditorTitle:'あなたのパレット', resetPalette:'すべてクリア', defaultPalette:'デフォルト',
     selectMood:'✦ ムードを選ぶ…', moodPlaceholder:'どんなムードでも — 例:パリの雨の日', moodHowFeel:'今、どう感じる?', moodTwoWays:'上に何でも書く — または入力を始めてリストから一語ムードを選ぶ。', moodExamples:['自分の言葉でムードを書く…','例:パリの雨の日','例:真夜中の初雪','— または入力を始めて、出てきたムードを選ぶ —','例:激怒','例:ノスタルジック'], storyCaption:{mood:'{mood} はこんな音 ✦ paintiano.app',moodFromImg:'この画像のムード、描きました ✦ paintiano.app',compose:'ピアノで作った曲 · 絵にした ✦ paintiano.app',micVoice:'マイクに歌ったら絵が返ってきた ✦ paintiano.app',micMusic:'部屋の歌を捕まえて描いた ✦ paintiano.app',midi:'音楽が色になった ✦ paintiano.app',audio:'聴いて、描いた ✦ paintiano.app',score:'楽譜を絵にした ✦ paintiano.app',image:'この画像の音 ✦ paintiano.app',default:'音楽が絵画になる ✦ paintiano.app'}, storyImageHint:'絵 + 音声 · IG / TikTok 用', storyImageHintNoAudio:'絵 · IG / TikTok 用', saveAudioLabel:'音声', saveAudioHint:'WAV · ファイルに保存', scoreExportHint:'MusicXML · MuseScore 用', includeSourceThumb:'ソースサムネを含める', includeSourceImage:'ソースの元画像を含める', saveAudioHintImg:'画像 + 音声 · ファイルに保存', moodGo:'実行', morph:'✦ モーフ', vary:'✦ バリエーション',
@@ -19877,7 +19808,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = golden angle`, b:`Each note turns by 137.5° — like seeds in a sunflower. Colours never crowd.`, m:`Golden angle — 137.5°, the angle a sunflower packs its seeds by and a pine cone spirals. ◆ Scatter — No two notes ever land close together. ◆ Opposite of Harmony — Harmony clusters, Phi scatters as far as maths allows.`},
     kontra:{t:`Kontra = inverse harmony`, b:`Clashing chords clash on the canvas too; clean ones bloom apart. Free for everyone.`, m:`Consonances far — P5, M3, m3, M6, m6 and P4 get distant colours. ◆ Dissonances close — m2, M2, tritone, M7 and m7 get close ones. ◆ A painter's eye — Tension you can see. Unlocked on every tier.`},
     custom:{t:`Custom = Scriabin's map`, b:`Scriabin saw notes in colour. His 1910 map is the starting point — Pro edits every colour.`, m:`Scriabin — The most famous synaesthete wrote the colours into the "luce" part of Prometheus. ◆ The map — C red, G orange-pink, D yellow, A green, E pearly blue, B blue… ◆ With a picture — Only colours close to your twelve sound; the rest falls silent. ◆ Free and Pro — Free can look, Pro and Pro AI repaint all 12 colours.`},
-    style:{t:`24 painters`, b:`Tap a painter and the same notes repaint in their spirit.`, m:`Who — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring and more, plus $1M$ and RafFel. ◆ Inspired by — The canvas says "inspired by …": a tribute, not a copy. RafFel is the author's own style. ◆ Variants — Every painter has several. Same song + painter + variant = the same painting. ◆ Where — In the Atelier the painter tiles, in the Studio Look (swipe down).`},
+    style:{t:`24 painters`, b:`Tap a painter and the same notes repaint in their spirit.`, m:`Who — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring, Alma Thomas and more, plus RafFel. ◆ Inspired by — The canvas says "inspired by …": a tribute, not a copy. RafFel is the author's own style. ◆ Variants — Every painter has several. Same song + painter + variant = the same painting. ◆ Where — In the Atelier the painter tiles, in the Studio Look (swipe down).`},
     mosaic:{t:`Mosaic and Notes`, b:`Clean golden-ratio rectangles, one per chord. Notes writes each block's note on it.`, m:`Mosaic — Paints when no painter is chosen. ◆ Notes — The same grid with note names. The quickest way to learn which note is which colour. ◆ Switch — Tap Mosaic again. ◆ 🔀 — With 🔀 on, tapping Mosaic locks the draw to Mosaic ↔ Notes.`},
     shuffle:{t:`Shuffle 🔀`, b:`Same song = same painting. 🔀 off: Next brings variants of your painter. 🔀 on: every painter in your set.`, m:`Off — Your painter; Next brings more of its variants. ◆ On — Every painter in your set. ◆ Next — In the Atelier Next, in the Studio swipe up. ◆ Show — While a song plays, ↻ Show moves through paintings on its own. ◆ Ensemble ◎ — Sits next to 🔀; together they draw new crossings.`},
     signature:{t:`✦ Signature`, b:`Every song has one painting it chose itself. The same for everyone.`, m:`How — The music casts 2–5 painters by role: rhythm, melody, harmony, brightness, range. The notes pick the variant, the song's character the palette. ◆ For everyone — It depends only on the music, not on your Setup or tier. Free too. ◆ Where — Tap ✦ Signature in the caption by the painter's name. Another painter, palette or 🔀 turns it off. ◆ Lite — Every new song starts on it. ◆ Image — A picture has a Signature too: one piece, a composer or a Jam session. ◆ Finished works only — Music files, samples and pictures. Mood, Compose, Mic and Mood from image have none.`, mS:`How — The music casts 2–5 painters by role: rhythm, melody, harmony, brightness, range. The notes pick the variant, the song's character the palette. ◆ For everyone — It depends only on the music, not on your Setup or tier. Free too. ◆ Where — Tap the painting, then ✦ Signature in the caption at the top. Another painter, palette or 🔀 turns it off. ◆ Image — A picture has a Signature too: one piece, a composer or a Jam session. ◆ Finished works only — Music files, samples and pictures. Mood, Compose, Mic and Mood from image have none.`},
@@ -19913,7 +19844,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = zlatý uhol`, b:`Každý tón sa otočí o 137,5° — ako semienka v slnečnici. Farby sa nikdy nezhlukujú.`, m:`Zlatý uhol — 137,5°, ktorým slnečnica balí semená a šiška špiráluje. ◆ Rozptyl — Žiadne dva tóny nepadnú blízko seba. ◆ Opak Harmónie — Harmónia zhlukuje, Phi rozhadzuje tak ďaleko, ako matematika dovolí.`},
     kontra:{t:`Kontra = obrátená harmónia`, b:`Drsné akordy sa hádajú aj na plátne, čisté kvitnú od seba. Zadarmo pre všetkých.`, m:`Konsonancie ďaleko — č5, v3, m3, v6, m6 a č4 dostanú vzdialené farby. ◆ Disonancie blízko — m2, v2, tritón, v7 a m7 dostanú blízke. ◆ Oko maliara — Napätie, ktoré vidíš. Odomknuté na každej úrovni.`},
     custom:{t:`Vlastná = Skriabinova mapa`, b:`Skriabin videl tóny vo farbách. Jeho mapa z roku 1910 je základ — Pro upraví každú farbu.`, m:`Skriabin — Najznámejší synestet zapísal farby do „luce“ partu Prometea. ◆ Mapa — C červená, G oranžovo-ružová, D žltá, A zelená, E perlovo-modrá, H modrá… ◆ Pri obrázku — Znejú len farby blízke tvojim dvanástim, zvyšok stíchne. ◆ Free a Pro — Free ju má na čítanie, Pro a Pro AI premaľujú všetkých 12 farieb.`},
-    style:{t:`24 maliarov`, b:`Ťukni na maliara a tie isté tóny sa premaľujú v jeho duchu.`, m:`Kto — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring a ďalší, plus $1M$ a RafFel. ◆ Inšpirované — Plátno ukáže „inšpirované …“: pocta, nie kópia. RafFel je autorov vlastný štýl. ◆ Varianty — Každý maliar má viac variantov. Tá istá skladba + maliar + variant = rovnaká maľba. ◆ Kde — V Ateliéri dlaždice maliarov, v Štúdiu Vzhľad (potiahni dole).`},
+    style:{t:`24 maliarov`, b:`Ťukni na maliara a tie isté tóny sa premaľujú v jeho duchu.`, m:`Kto — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring, Alma Thomas a ďalší, plus RafFel. ◆ Inšpirované — Plátno ukáže „inšpirované …“: pocta, nie kópia. RafFel je autorov vlastný štýl. ◆ Varianty — Každý maliar má viac variantov. Tá istá skladba + maliar + variant = rovnaká maľba. ◆ Kde — V Ateliéri dlaždice maliarov, v Štúdiu Vzhľad (potiahni dole).`},
     mosaic:{t:`Mozaika a Noty`, b:`Čisté obdĺžniky v zlatom reze, jeden na akord. Noty ukážu na každom bloku jeho tón.`, m:`Mozaika — Maľuje, keď nie je vybraný žiadny maliar. ◆ Noty — Tá istá mriežka s menami tónov. Najrýchlejšie sa naučíš, ktorý tón je ktorá farba. ◆ Prepnutie — Ťukni na Mozaiku ešte raz. ◆ 🔀 — So zapnutým 🔀 ťuk na Mozaiku zamkne žreb na Mozaika ↔ Noty.`},
     shuffle:{t:`Zamiešanie 🔀`, b:`Tá istá skladba = tá istá maľba. 🔀 vyp: Ďalšia prinesie varianty tvojho maliara. 🔀 zap: všetci maliari z tvojho výberu.`, m:`Vyp — Tvoj maliar, Ďalšia prinesie ďalšie jeho varianty. ◆ Zap — Všetci maliari z tvojho výberu. ◆ Ďalšia — V Ateliéri Next, v Štúdiu potiahni hore. ◆ Show — Kým skladba hrá, ↻ Show posúva maľby samo. ◆ Ensemble ◎ — Sedí vedľa 🔀 a spolu žrebujú nové kríženia.`},
     signature:{t:`✦ Signatúra`, b:`Každá skladba má jednu maľbu, ktorú si vybrala sama. Rovnakú pre každého.`, m:`Ako — Hudba obsadí 2–5 maliarov podľa rolí: rytmus, melódia, harmónia, jas, rozsah. Variant vyberú noty, paletu charakter skladby. ◆ Pre každého — Závisí len od hudby, nie od Setupu ani úrovne. Aj vo Free. ◆ Kde — Ťukni na ✦ Signatúra v popise pri mene maliara. Iný maliar, paleta alebo 🔀 ju vypne. ◆ Lite — Každá nová skladba začne na nej. ◆ Obraz — Aj obrázok má Signatúru: jednu skladbu, skladateľa alebo Jam session. ◆ Len hotové diela — Hudobné súbory, ukážky a obrázky. Nálada, Komponovať, Mikro a Nálada z obrazu ju nemajú.`, mS:`Ako — Hudba obsadí 2–5 maliarov podľa rolí: rytmus, melódia, harmónia, jas, rozsah. Variant vyberú noty, paletu charakter skladby. ◆ Pre každého — Závisí len od hudby, nie od Setupu ani úrovne. Aj vo Free. ◆ Kde — Ťukni na maľbu a v popise hore ťukni na ✦ Signatúra. Iný maliar, paleta alebo 🔀 ju vypne. ◆ Obraz — Aj obrázok má Signatúru: jednu skladbu, skladateľa alebo Jam session. ◆ Len hotové diela — Hudobné súbory, ukážky a obrázky. Nálada, Komponovať, Mikro a Nálada z obrazu ju nemajú.`},
@@ -19949,7 +19880,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = goldener Winkel`, b:`Jeder Ton dreht sich um 137,5° — wie die Samen einer Sonnenblume. Die Farben drängen sich nie.`, m:`Goldener Winkel — 137,5°, mit dem die Sonnenblume ihre Samen packt und der Tannenzapfen spiralt. ◆ Streuung — Keine zwei Töne landen nah beieinander. ◆ Gegenteil von Harmonie — Harmonie bündelt, Phi streut so weit, wie die Mathematik erlaubt.`},
     kontra:{t:`Kontra = umgekehrte Harmonie`, b:`Schräge Akkorde streiten auch auf der Leinwand, klare blühen auseinander. Gratis für alle.`, m:`Konsonanzen weit — r5, gr3, kl3, gr6, kl6 und r4 bekommen weit entfernte Farben. ◆ Dissonanzen nah — kl2, gr2, Tritonus, gr7 und kl7 bekommen nahe. ◆ Das Auge des Malers — Spannung, die du siehst. Auf jeder Stufe freigeschaltet.`},
     custom:{t:`Eigen = Skrjabins Karte`, b:`Skrjabin sah Töne in Farben. Seine Karte von 1910 ist der Standard — Pro ändert jede Farbe.`, m:`Skrjabin — Der berühmteste Synästhet schrieb die Farben in den „luce“-Part seines Prometheus. ◆ Karte — C rot, G orange-rosa, D gelb, A grün, E perlblau, H blau… ◆ Bei einem Foto — Nur Farben nah an deinen zwölf klingen, der Rest verstummt. ◆ Free und Pro — Free kann sie nur ansehen, Pro und Pro KI färben alle 12 Farben neu.`},
-    style:{t:`24 Maler`, b:`Tippe auf einen Maler, und dieselben Töne malen sich neu in seinem Geist.`, m:`Wer — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring und weitere, plus $1M$ und RafFel. ◆ Inspiriert von — Die Leinwand zeigt „inspiriert von …“: eine Hommage, keine Kopie. RafFel ist der eigene Stil des Autors. ◆ Varianten — Jeder Maler hat mehrere Varianten. Gleiches Stück + Maler + Variante = gleiches Bild. ◆ Wo — Im Atelier die Maler-Kacheln, im Studio Look (nach unten wischen).`},
+    style:{t:`24 Maler`, b:`Tippe auf einen Maler, und dieselben Töne malen sich neu in seinem Geist.`, m:`Wer — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring, Alma Thomas und weitere, plus RafFel. ◆ Inspiriert von — Die Leinwand zeigt „inspiriert von …“: eine Hommage, keine Kopie. RafFel ist der eigene Stil des Autors. ◆ Varianten — Jeder Maler hat mehrere Varianten. Gleiches Stück + Maler + Variante = gleiches Bild. ◆ Wo — Im Atelier die Maler-Kacheln, im Studio Look (nach unten wischen).`},
     mosaic:{t:`Mosaik und Noten`, b:`Klare Rechtecke im Goldenen Schnitt, eins pro Akkord. Noten zeigt auf jedem Block seinen Ton.`, m:`Mosaik — Malt, wenn kein Maler gewählt ist. ◆ Noten — Dasselbe Raster mit Tonnamen. So lernst du am schnellsten, welcher Ton welche Farbe ist. ◆ Wechseln — Tippe noch einmal auf Mosaik. ◆ 🔀 — Mit 🔀 an sperrt ein Tipp auf Mosaik die Ziehung auf Mosaik ↔ Noten.`},
     shuffle:{t:`Zufall 🔀`, b:`Gleiches Stück = gleiches Bild. 🔀 aus: Nächstes bringt Varianten deines Malers. 🔀 an: alle Maler aus deiner Auswahl.`, m:`Aus — Dein Maler; Nächstes bringt weitere Varianten von ihm. ◆ An — Alle Maler aus deiner Auswahl. ◆ Nächstes — Im Atelier Next, im Studio nach oben wischen. ◆ Show — Während ein Stück spielt, schaltet ↻ Show die Bilder von selbst weiter. ◆ Ensemble ◎ — Sitzt neben 🔀, zusammen ziehen sie neue Kreuzungen.`},
     signature:{t:`✦ Signatur`, b:`Jedes Stück hat ein Bild, das es sich selbst ausgesucht hat. Für alle gleich.`, m:`Wie — Die Musik besetzt 2–5 Maler nach Rollen: Rhythmus, Melodie, Harmonie, Helligkeit, Umfang. Die Variante wählen die Noten, die Palette der Charakter des Stücks. ◆ Für alle — Hängt nur von der Musik ab, nicht von Setup oder Stufe. Auch in Free. ◆ Wo — Tippe in der Beschriftung neben dem Malernamen auf ✦ Signatur. Ein anderer Maler, eine andere Palette oder 🔀 schaltet sie aus. ◆ Lite — Jedes neue Stück beginnt mit ihr. ◆ Bild — Auch ein Foto hat eine Signatur: ein eigenes Stück, von einem Komponisten oder als Jam session. ◆ Nur fertige Werke — Musikdateien, Beispiele und Fotos. Stimmung, Komponieren, Mikro und Stimmung aus Bild haben keine.`, mS:`Wie — Die Musik besetzt 2–5 Maler nach Rollen: Rhythmus, Melodie, Harmonie, Helligkeit, Umfang. Die Variante wählen die Noten, die Palette der Charakter des Stücks. ◆ Für alle — Hängt nur von der Musik ab, nicht von Setup oder Stufe. Auch in Free. ◆ Wo — Tippe auf das Bild, dann oben in der Beschriftung auf ✦ Signatur. Ein anderer Maler, eine andere Palette oder 🔀 schaltet sie aus. ◆ Bild — Auch ein Foto hat eine Signatur: ein eigenes Stück, von einem Komponisten oder als Jam session. ◆ Nur fertige Werke — Musikdateien, Beispiele und Fotos. Stimmung, Komponieren, Mikro und Stimmung aus Bild haben keine.`},
@@ -19985,7 +19916,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = angle d’or`, b:`Chaque note tourne de 137,5° — comme les graines d’un tournesol. Les couleurs ne s’agglutinent jamais.`, m:`Angle d’or — 137,5°, celui du tournesol qui range ses graines et de la pomme de pin qui spirale. ◆ Dispersion — Jamais deux notes ne tombent près l’une de l’autre. ◆ L’inverse d’Harmonie — Harmonie regroupe, Phi disperse aussi loin que les maths le permettent.`},
     kontra:{t:`Contre = harmonie inversée`, b:`Les accords rugueux se disputent aussi sur la toile, les purs éclosent à l’écart. Gratuit pour tous.`, m:`Consonances loin — 5J, 3M, 3m, 6M, 6m et 4J reçoivent des couleurs éloignées. ◆ Dissonances près — 2m, 2M, triton, 7M et 7m reçoivent des proches. ◆ L’œil du peintre — La tension que tu vois. Débloqué à tous les niveaux.`},
     custom:{t:`Perso = la carte de Scriabine`, b:`Scriabine voyait les notes en couleurs. Sa carte de 1910 est la base — Pro modifie chaque couleur.`, m:`Scriabine — Le plus célèbre des synesthètes a noté les couleurs dans la partie « luce » de Prométhée. ◆ La carte — Do rouge, Sol orange-rose, Ré jaune, La vert, Mi bleu nacré, Si bleu… ◆ Avec une image — Seules les couleurs proches de tes douze sonnent, le reste se tait. ◆ Free et Pro — Free la voit en lecture seule, Pro et Pro IA recolorent les 12 couleurs.`},
-    style:{t:`24 peintres`, b:`Touche un peintre et les mêmes notes se repeignent dans son esprit.`, m:`Qui — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring et d’autres, plus $1M$ et RafFel. ◆ Inspiré par — La toile affiche « inspiré par … » : un hommage, pas une copie. RafFel est le style propre de l’auteur. ◆ Variantes — Chaque peintre a plusieurs variantes. Même morceau + peintre + variante = même peinture. ◆ Où — Dans l’Atelier, les tuiles des peintres ; en Studio, Style (glisse vers le bas).`},
+    style:{t:`24 peintres`, b:`Touche un peintre et les mêmes notes se repeignent dans son esprit.`, m:`Qui — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring, Alma Thomas et d’autres, plus RafFel. ◆ Inspiré par — La toile affiche « inspiré par … » : un hommage, pas une copie. RafFel est le style propre de l’auteur. ◆ Variantes — Chaque peintre a plusieurs variantes. Même morceau + peintre + variante = même peinture. ◆ Où — Dans l’Atelier, les tuiles des peintres ; en Studio, Style (glisse vers le bas).`},
     mosaic:{t:`Mosaïque et Notes`, b:`Des rectangles nets au nombre d’or, un par accord. Notes affiche sur chaque bloc sa note.`, m:`Mosaïque — Peint quand aucun peintre n’est choisi. ◆ Notes — La même grille avec le nom des notes. Le plus rapide pour apprendre quelle note a quelle couleur. ◆ Basculer — Touche encore Mosaïque. ◆ 🔀 — Avec 🔀 actif, toucher Mosaïque verrouille le tirage sur Mosaïque ↔ Notes.`},
     shuffle:{t:`Aléatoire 🔀`, b:`Même morceau = même peinture. 🔀 off : Suivante apporte des variantes de ton peintre. 🔀 actif : tous les peintres de ta sélection.`, m:`Off — Ton peintre ; Suivante apporte d’autres variantes de lui. ◆ Actif — Tous les peintres de ta sélection. ◆ Suivante — Dans l’Atelier Next, en Studio glisse vers le haut. ◆ Show — Pendant qu’un morceau joue, ↻ Show enchaîne les peintures tout seul. ◆ Ensemble ◎ — Il est à côté de 🔀, et ensemble ils tirent de nouveaux croisements.`},
     signature:{t:`✦ Signature`, b:`Chaque morceau a une peinture qu’il a choisie lui-même. La même pour tout le monde.`, m:`Comment — La musique distribue 2–5 peintres selon des rôles : rythme, mélodie, harmonie, clarté, étendue. Les notes choisissent la variante, le caractère du morceau la palette. ◆ Pour tous — Ne dépend que de la musique, pas de tes Réglages ni de ton niveau. Même en Free. ◆ Où — Touche ✦ Signature dans la légende, à côté du nom du peintre. Un autre peintre, une autre palette ou 🔀 la désactive. ◆ Lite — Chaque nouveau morceau commence par elle. ◆ Image — Une image aussi a sa Signature : un morceau à elle, d’un compositeur ou en Jam session. ◆ Œuvres finies seulement — Fichiers musicaux, exemples et images. Humeur, Composer, Micro et Ambiance image n’en ont pas.`, mS:`Comment — La musique distribue 2–5 peintres selon des rôles : rythme, mélodie, harmonie, clarté, étendue. Les notes choisissent la variante, le caractère du morceau la palette. ◆ Pour tous — Ne dépend que de la musique, pas de tes Réglages ni de ton niveau. Même en Free. ◆ Où — Touche la peinture, puis ✦ Signature dans la légende en haut. Un autre peintre, une autre palette ou 🔀 la désactive. ◆ Image — Une image aussi a sa Signature : un morceau à elle, d’un compositeur ou en Jam session. ◆ Œuvres finies seulement — Fichiers musicaux, exemples et images. Humeur, Composer, Micro et Ambiance image n’en ont pas.`},
@@ -20021,7 +19952,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = ángulo áureo`, b:`Cada nota gira 137,5° — como las semillas de un girasol. Los colores nunca se amontonan.`, m:`Ángulo áureo — 137,5°, con el que un girasol empaca sus semillas y una piña traza su espiral. ◆ Dispersión — Nunca caen dos notas cerca una de otra. ◆ Lo opuesto a Armonía — Armonía agrupa; Phi esparce todo tan lejos como permiten las matemáticas.`},
     kontra:{t:`Contra = armonía inversa`, b:`Los acordes ásperos chocan también en el lienzo; los limpios florecen aparte. Gratis para todos.`, m:`Consonancias lejos — 5J, 3M, 3m, 6M, 6m y 4J reciben colores lejanos. ◆ Disonancias cerca — 2m, 2M, tritono, 7M y 7m reciben colores cercanos. ◆ El ojo del pintor — Tensión que se ve. Desbloqueado en todos los niveles.`},
     custom:{t:`Personal = el mapa de Scriabin`, b:`Scriabin veía las notas en colores. Su mapa de 1910 es la base — Pro edita cada color.`, m:`Scriabin — El sinestésico más famoso escribió los colores en la parte «luce» de Prometeo. ◆ El mapa — Do rojo, Sol naranja-rosa, Re amarillo, La verde, Mi azul perla, Si azul… ◆ Con una imagen — Solo suenan los colores cercanos a tus doce; el resto calla. ◆ Free y Pro — Free la ve en solo lectura; Pro y Pro IA recolorean los 12 colores.`},
-    style:{t:`24 pintores`, b:`Toca un pintor y las mismas notas se repintan con su espíritu.`, m:`Quiénes — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring y más, además de $1M$ y RafFel. ◆ Inspirado en — El lienzo muestra «inspirado en …»: un homenaje, no una copia. RafFel es el estilo propio del autor. ◆ Variantes — Cada pintor tiene varias variantes. Misma pieza + pintor + variante = misma pintura. ◆ Dónde — En el Taller, las fichas de pintores; en Estudio, Aspecto (desliza abajo).`},
+    style:{t:`24 pintores`, b:`Toca un pintor y las mismas notas se repintan con su espíritu.`, m:`Quiénes — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring, Alma Thomas y más, además de RafFel. ◆ Inspirado en — El lienzo muestra «inspirado en …»: un homenaje, no una copia. RafFel es el estilo propio del autor. ◆ Variantes — Cada pintor tiene varias variantes. Misma pieza + pintor + variante = misma pintura. ◆ Dónde — En el Taller, las fichas de pintores; en Estudio, Aspecto (desliza abajo).`},
     mosaic:{t:`Mosaico y Notas`, b:`Rectángulos limpios en proporción áurea, uno por acorde. Notas muestra en cada bloque su nota.`, m:`Mosaico — Pinta cuando no hay ningún pintor elegido. ◆ Notas — La misma rejilla con los nombres de las notas. La forma más rápida de aprender qué nota es qué color. ◆ Cambiar — Toca Mosaico otra vez. ◆ 🔀 — Con 🔀 activo, tocar Mosaico fija el sorteo en Mosaico ↔ Notas.`},
     shuffle:{t:`Aleatorio 🔀`, b:`Misma pieza = misma pintura. 🔀 off: Siguiente trae variantes de tu pintor. 🔀 activo: todos los pintores de tu selección.`, m:`Off — Tu pintor; Siguiente trae más variantes suyas. ◆ Activo — Todos los pintores de tu selección. ◆ Siguiente — En el Taller, Next; en Estudio, desliza arriba. ◆ Show — Mientras suena la pieza, ↻ Show pasa las pinturas solo. ◆ Ensemble ◎ — Está junto a 🔀 y juntos sortean nuevos cruces.`},
     signature:{t:`✦ Firma`, b:`Cada pieza tiene una pintura que eligió ella misma. La misma para todos.`, m:`Cómo — La música reparte 2–5 pintores por roles: ritmo, melodía, armonía, brillo, extensión. Las notas eligen la variante; el carácter de la pieza, la paleta. ◆ Para todos — Depende solo de la música, no de tus ajustes ni de tu nivel. También en Free. ◆ Dónde — Toca ✦ Firma en el rótulo junto al nombre del pintor. Otro pintor, otra paleta o 🔀 la desactivan. ◆ Lite — Cada pieza nueva empieza con ella. ◆ Imagen — Una imagen también tiene Firma: una pieza, un compositor o una Jam session. ◆ Solo obras terminadas — Archivos de música, muestras e imágenes. ¿Cómo te sientes?, Componer, Micro y Estado imagen no la tienen.`, mS:`Cómo — La música reparte 2–5 pintores por roles: ritmo, melodía, armonía, brillo, extensión. Las notas eligen la variante; el carácter de la pieza, la paleta. ◆ Para todos — Depende solo de la música, no de tus ajustes ni de tu nivel. También en Free. ◆ Dónde — Toca la pintura y, en el rótulo de arriba, toca ✦ Firma. Otro pintor, otra paleta o 🔀 la desactivan. ◆ Imagen — Una imagen también tiene Firma: una pieza, un compositor o una Jam session. ◆ Solo obras terminadas — Archivos de música, muestras e imágenes. ¿Cómo te sientes?, Componer, Micro y Estado imagen no la tienen.`},
@@ -20057,7 +19988,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = ângulo dourado`, b:`Cada nota roda 137,5° — como as sementes de um girassol. As cores nunca se amontoam.`, m:`Ângulo dourado — 137,5°, com que um girassol arruma as sementes e uma pinha faz a sua espiral. ◆ Dispersão — Nunca duas notas caem perto uma da outra. ◆ O oposto de Harmonia — Harmonia agrupa; Phi espalha tudo tão longe quanto a matemática permite.`},
     kontra:{t:`Contra = harmonia inversa`, b:`Os acordes ásperos chocam também na tela; os limpos florescem à parte. Grátis para todos.`, m:`Consonâncias longe — 5J, 3M, 3m, 6M, 6m e 4J recebem cores distantes. ◆ Dissonâncias perto — 2m, 2M, trítono, 7M e 7m recebem cores próximas. ◆ O olho do pintor — Tensão que se vê. Desbloqueado em todos os níveis.`},
     custom:{t:`Personalizada = mapa de Scriabin`, b:`Scriabin via as notas em cores. O seu mapa de 1910 é a base — o Pro edita cada cor.`, m:`Scriabin — O sinesteta mais famoso escreveu as cores na parte «luce» de Prometeu. ◆ O mapa — Dó vermelho, Sol laranja-rosa, Ré amarelo, Lá verde, Mi azul-pérola, Si azul… ◆ Com uma imagem — Só soam as cores próximas das tuas doze; o resto cala-se. ◆ Free e Pro — O Free tem-na só de leitura; Pro e Pro IA recolorem as 12 cores.`},
-    style:{t:`24 pintores`, b:`Toca num pintor e as mesmas notas repintam-se no seu espírito.`, m:`Quem — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring e outros, mais $1M$ e RafFel. ◆ Inspirado em — A tela mostra «inspirado em …»: uma homenagem, não uma cópia. RafFel é o estilo próprio do autor. ◆ Variantes — Cada pintor tem várias variantes. A mesma peça + pintor + variante = a mesma pintura. ◆ Onde — No Atelier, as fichas dos pintores; no Estúdio, Visual (desliza para baixo).`},
+    style:{t:`24 pintores`, b:`Toca num pintor e as mesmas notas repintam-se no seu espírito.`, m:`Quem — Picasso, Kusama, Pollock, Kandinsky, Miró, Mondrian, Rothko, Matisse, Klimt, Monet, Hokusai, Riley, Haring, Alma Thomas e outros, mais RafFel. ◆ Inspirado em — A tela mostra «inspirado em …»: uma homenagem, não uma cópia. RafFel é o estilo próprio do autor. ◆ Variantes — Cada pintor tem várias variantes. A mesma peça + pintor + variante = a mesma pintura. ◆ Onde — No Atelier, as fichas dos pintores; no Estúdio, Visual (desliza para baixo).`},
     mosaic:{t:`Mosaico e Notas`, b:`Retângulos limpos em proporção áurea, um por acorde. Notas mostra em cada bloco a sua nota.`, m:`Mosaico — Pinta quando nenhum pintor está escolhido. ◆ Notas — A mesma grelha com os nomes das notas. A forma mais rápida de aprender que nota é que cor. ◆ Alternar — Toca em Mosaico outra vez. ◆ 🔀 — Com 🔀 ligado, tocar em Mosaico prende o sorteio a Mosaico ↔ Notas.`},
     shuffle:{t:`Aleatório 🔀`, b:`A mesma peça = a mesma pintura. 🔀 off: Seguinte traz variantes do teu pintor. 🔀 ligado: todos os pintores da tua seleção.`, m:`Off — O teu pintor; Seguinte traz mais variantes dele. ◆ Ligado — Todos os pintores da tua seleção. ◆ Seguinte — No Atelier, Next; no Estúdio, desliza para cima. ◆ Show — Enquanto a peça toca, ↻ Show passa as pinturas sozinho. ◆ Ensemble ◎ — Fica ao lado de 🔀 e juntos sorteiam novos cruzamentos.`},
     signature:{t:`✦ Assinatura`, b:`Cada peça tem uma pintura que escolheu ela própria. A mesma para todos.`, m:`Como — A música distribui 2–5 pintores por papéis: ritmo, melodia, harmonia, brilho, extensão. As notas escolhem a variante; o carácter da peça, a paleta. ◆ Para todos — Depende só da música, não das tuas configurações nem do teu nível. Também no Free. ◆ Onde — Toca em ✦ Assinatura na legenda junto ao nome do pintor. Outro pintor, outra paleta ou 🔀 desligam-na. ◆ Lite — Cada peça nova começa nela. ◆ Imagem — Uma imagem também tem Assinatura: uma peça, um compositor ou uma Jam session. ◆ Só obras acabadas — Ficheiros de música, amostras e imagens. Como te sentes?, Compor, Mic e Humor da imagem não a têm.`, mS:`Como — A música distribui 2–5 pintores por papéis: ritmo, melodia, harmonia, brilho, extensão. As notas escolhem a variante; o carácter da peça, a paleta. ◆ Para todos — Depende só da música, não das tuas configurações nem do teu nível. Também no Free. ◆ Onde — Toca na pintura e, na legenda em cima, toca em ✦ Assinatura. Outro pintor, outra paleta ou 🔀 desligam-na. ◆ Imagem — Uma imagem também tem Assinatura: uma peça, um compositor ou uma Jam session. ◆ Só obras acabadas — Ficheiros de música, amostras e imagens. Como te sentes?, Compor, Mic e Humor da imagem não a têm.`},
@@ -20093,7 +20024,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = 黄金角`, b:`每个音旋转 137.5°，就像向日葵里的种子。颜色永远不会挤在一起。`, m:`黄金角 — 137.5°，向日葵用它排列种子，松果用它盘旋。 ◆ 散开 — 任何两个音都不会落在一起。 ◆ 和声的反面 — 和声让颜色聚拢，Phi 则把它们撒到数学允许的最远处。`},
     kontra:{t:`反向 = 反过来的和声`, b:`刺耳的和弦在画布上也针锋相对，纯净的则彼此绽开。人人免费。`, m:`协和音程离得远 — 纯五、大三、小三、大六、小六和纯四得到相距很远的颜色。 ◆ 不协和音程挨得近 — 小二、大二、三全音、大七和小七得到相近的颜色。 ◆ 画家之眼 — 看得见的张力。每个级别都已解锁。`},
     custom:{t:`自定义 = 斯克里亚宾色彩图`, b:`斯克里亚宾能看见音的颜色。他 1910 年的色彩图是默认值，Pro 可调整每种颜色。`, m:`斯克里亚宾 — 最著名的联觉者，把颜色写进了《普罗米修斯》的“luce”声部。 ◆ 色彩图 — C 红、G 橙粉、D 黄、A 绿、E 珍珠蓝、B 蓝… ◆ 用于图像时 — 只有接近你那 12 种颜色的才会发声，其余静音。 ◆ Free 与 Pro — Free 只读，Pro 和 Pro AI 可以重设全部 12 种颜色。`},
-    style:{t:`24 位画家`, b:`轻点一位画家，同样的音就以他的风格重画。`, m:`有谁 — 毕加索、草间、波洛克、康定斯基、米罗、蒙德里安、罗斯科、马蒂斯、克里姆特、莫奈、北斋、莱利、哈林等，还有 $1M$ 和 RafFel。 ◆ 灵感来自 — 画布上显示“灵感来自 …”：是致敬，不是复制。RafFel 是作者本人的风格。 ◆ 变体 — 每位画家都有多个变体。同一首曲子 + 画家 + 变体 = 同一幅画。 ◆ 在哪里 — 画室：画家方块；工作室：外观（下滑）。`},
+    style:{t:`24 位画家`, b:`轻点一位画家，同样的音就以他的风格重画。`, m:`有谁 — 毕加索、草间、波洛克、康定斯基、米罗、蒙德里安、罗斯科、马蒂斯、克里姆特、莫奈、北斋、莱利、哈林、阿尔玛·托马斯等，还有 RafFel。 ◆ 灵感来自 — 画布上显示“灵感来自 …”：是致敬，不是复制。RafFel 是作者本人的风格。 ◆ 变体 — 每位画家都有多个变体。同一首曲子 + 画家 + 变体 = 同一幅画。 ◆ 在哪里 — 画室：画家方块；工作室：外观（下滑）。`},
     mosaic:{t:`马赛克与音符`, b:`黄金比例的干净矩形，每个和弦一块。音符模式在每块上标出它的音。`, m:`马赛克 — 没选画家时由它来画。 ◆ 音符 — 同一网格，标上音名。最快学会哪个音是哪种颜色。 ◆ 切换 — 再点一次马赛克。 ◆ 🔀 — 开启 🔀 时点马赛克，抽取就锁定在马赛克 ↔ 音符之间。`},
     shuffle:{t:`随机 🔀`, b:`同一首曲子 = 同一幅画。🔀 关：下一幅带来你画家的变体。🔀 开：你选中的所有画家。`, m:`关 — 你选的画家，下一幅带来他的更多变体。 ◆ 开 — 你选中的所有画家。 ◆ 下一幅 — 画室：Next；工作室：上滑。 ◆ 放映 — 曲子播放时，↻ 放映 会自动切换画作。 ◆ 合奏 ◎ — 就在 🔀 旁边，两者一起抽出新的杂交组合。`},
     signature:{t:`✦ 签名`, b:`每首曲子都有一幅它自己选出的画。人人看到的都一样。`, m:`原理 — 音乐按角色选出 2–5 位画家：节奏、旋律、和声、明亮度、音域。变体由音符决定，调色板由曲子的性格决定。 ◆ 人人相同 — 只取决于音乐，与设置或等级无关。Free 也有。 ◆ 在哪里 — 点画家名字旁说明里的 ✦ 签名。换画家、调色板或开 🔀 都会关闭它。 ◆ Lite — 每首新曲都从它开始。 ◆ 图像 — 图像也有签名：一首曲子，由一位作曲家或一场 Jam session 演奏。 ◆ 只限完成的作品 — 音乐文件、示例和图像。情绪、作曲、麦克风和从图像取情绪都没有。`, mS:`原理 — 音乐按角色选出 2–5 位画家：节奏、旋律、和声、明亮度、音域。变体由音符决定，调色板由曲子的性格决定。 ◆ 人人相同 — 只取决于音乐，与设置或等级无关。Free 也有。 ◆ 在哪里 — 轻点画作，再点顶部说明里的 ✦ 签名。换画家、调色板或开 🔀 都会关闭它。 ◆ 图像 — 图像也有签名：一首曲子，由一位作曲家或一场 Jam session 演奏。 ◆ 只限完成的作品 — 音乐文件、示例和图像。情绪、作曲、麦克风和从图像取情绪都没有。`},
@@ -20129,7 +20060,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = 黃金角`, b:`每個音旋轉 137.5°，就像向日葵的種子。顏色永遠不會擠在一起。`, m:`黃金角 — 137.5°，向日葵用它排列種子，松果用它螺旋生長。 ◆ 分散 — 任兩個音都不會靠在一起。 ◆ 和聲的反面 — 和聲讓顏色聚攏，Phi 則把它們撒到數學允許的最遠處。`},
     kontra:{t:`反向 = 反過來的和聲`, b:`刺耳的和弦在畫布上也互相衝突，乾淨的則各自綻放。人人免費。`, m:`協和音程離得遠 — 純五、大三、小三、大六、小六和純四得到相隔遙遠的顏色。 ◆ 不協和音程靠得近 — 小二、大二、三全音、大七和小七得到相近的顏色。 ◆ 畫家之眼 — 看得見的張力。每個等級都已解鎖。`},
     custom:{t:`自訂 = 斯克里亞賓色彩圖`, b:`斯克里亞賓看得見音的顏色。他 1910 年的色彩圖是預設值，Pro 可以調整每一種顏色。`, m:`斯克里亞賓 — 最知名的聯覺者，把顏色寫進《普羅米修斯》的「luce」聲部。 ◆ 色彩圖 — C 紅、G 橙粉、D 黃、A 綠、E 珍珠藍、B 藍… ◆ 用於圖像時 — 只有接近你那 12 種顏色的才會發聲，其餘靜音。 ◆ Free 與 Pro — Free 唯讀，Pro 和 Pro AI 可以重新設定全部 12 種顏色。`},
-    style:{t:`24 位畫家`, b:`輕點一位畫家，同樣的音就會以他的風格重畫。`, m:`有誰 — 畢卡索、草間、波洛克、康丁斯基、米羅、蒙德里安、羅斯科、馬蒂斯、克林姆、莫內、北齋、萊利、哈林等，還有 $1M$ 和 RafFel。 ◆ 靈感來自 — 畫布上顯示「靈感來自 …」：是致敬，不是複製。RafFel 是作者自己的風格。 ◆ 變體 — 每位畫家都有多個變體。同一首曲子 + 畫家 + 變體 = 同一幅畫。 ◆ 在哪裡 — 畫室：畫家方塊；工作室：外觀（下滑）。`},
+    style:{t:`24 位畫家`, b:`輕點一位畫家，同樣的音就會以他的風格重畫。`, m:`有誰 — 畢卡索、草間、波洛克、康丁斯基、米羅、蒙德里安、羅斯科、馬蒂斯、克林姆、莫內、北齋、萊利、哈林、阿爾瑪·湯瑪斯等，還有 RafFel。 ◆ 靈感來自 — 畫布上顯示「靈感來自 …」：是致敬，不是複製。RafFel 是作者自己的風格。 ◆ 變體 — 每位畫家都有多個變體。同一首曲子 + 畫家 + 變體 = 同一幅畫。 ◆ 在哪裡 — 畫室：畫家方塊；工作室：外觀（下滑）。`},
     mosaic:{t:`馬賽克與音符`, b:`黃金比例的乾淨矩形，每個和弦一塊。音符模式會在每一塊標出它的音。`, m:`馬賽克 — 沒選畫家時由它來畫。 ◆ 音符 — 同樣的網格，標上音名。最快學會哪個音是哪種顏色。 ◆ 切換 — 再點一次馬賽克。 ◆ 🔀 — 開啟 🔀 時點馬賽克，抽選就鎖定在馬賽克 ↔ 音符之間。`},
     shuffle:{t:`隨機 🔀`, b:`同一首曲子 = 同一幅畫。🔀 關：下一幅帶來你畫家的變體。🔀 開：你選的所有畫家。`, m:`關 — 你選的畫家，下一幅帶來他的更多變體。 ◆ 開 — 你選的所有畫家。 ◆ 下一幅 — 畫室：Next；工作室：上滑。 ◆ 放映 — 曲子播放時，↻ 放映 會自動切換畫作。 ◆ 合奏 ◎ — 就在 🔀 旁邊，兩者一起抽出新的雜交組合。`},
     signature:{t:`✦ 簽名`, b:`每首曲子都有一幅自己選出的畫。每個人看到的都一樣。`, m:`原理 — 音樂依角色選出 2–5 位畫家：節奏、旋律、和聲、明亮度、音域。變體由音符決定，調色盤由曲子的性格決定。 ◆ 人人相同 — 只取決於音樂，與設定或等級無關。Free 也有。 ◆ 在哪裡 — 點畫家名字旁說明裡的 ✦ 簽名。換畫家、調色盤或按 🔀 都會關閉它。 ◆ Lite — 每首新曲都從它開始。 ◆ 圖像 — 圖像也有簽名：一首曲子，由一位作曲家或一場 Jam session 演奏。 ◆ 只限完成的作品 — 音樂檔、範例和圖像。情緒、作曲、麥克風和從圖像取情緒都沒有。`, mS:`原理 — 音樂依角色選出 2–5 位畫家：節奏、旋律、和聲、明亮度、音域。變體由音符決定，調色盤由曲子的性格決定。 ◆ 人人相同 — 只取決於音樂，與設定或等級無關。Free 也有。 ◆ 在哪裡 — 輕點畫作，再點上方說明裡的 ✦ 簽名。換畫家、調色盤或按 🔀 都會關閉它。 ◆ 圖像 — 圖像也有簽名：一首曲子，由一位作曲家或一場 Jam session 演奏。 ◆ 只限完成的作品 — 音樂檔、範例和圖像。情緒、作曲、麥克風和從圖像取情緒都沒有。`},
@@ -20165,7 +20096,7 @@ const GUIDE_I18N = {
     phi:{t:`φ Phi = 黄金角`, b:`各音が 137.5° ずつ回る。ひまわりの種のように。色は決して固まらない。`, m:`黄金角 — 137.5°。ひまわりが種を詰め、松ぼっくりが螺旋を描く角度。 ◆ 散らばり — どの二つの音も近くに並ばない。 ◆ ハーモニーの逆 — ハーモニーは集め、Phi は数学が許す限り遠くへ散らす。`},
     kontra:{t:`反転 = 逆ハーモニー`, b:`ぶつかる和音はキャンバスでもぶつかり、澄んだ和音は離れて咲く。誰でも無料。`, m:`協和は遠く — 完全5、長3、短3、長6、短6、完全4 は遠い色に。 ◆ 不協和は近く — 短2、長2、三全音、長7、短7 は近い色に。 ◆ 画家の目 — 目に見える緊張。どの段階でも使える。`},
     custom:{t:`カスタム = スクリャービンの図`, b:`スクリャービンは音に色を見た。1910 年の彼の対応表がベース。Pro なら各色を編集できる。`, m:`スクリャービン — 最も有名な共感覚者は、《プロメテウス》の「luce」パートに色を書き込んだ。 ◆ 対応表 — C 赤、G 橙ピンク、D 黄、A 緑、E 真珠青、B 青… ◆ 画像では — あなたの 12 色に近い色だけが鳴り、残りは静まる。 ◆ Free と Pro — Free は読み取り専用。Pro と Pro AI は 12 色すべてを塗り替えられる。`},
-    style:{t:`24 人の画家`, b:`画家をタップすると、同じ音がその画家に着想を得て描き直される。`, m:`誰が — ピカソ、草間、ポロック、カンディンスキー、ミロ、モンドリアン、ロスコ、マティス、クリムト、モネ、北斎、ライリー、ヘリングほか、さらに $1M$ と RafFel。 ◆ 着想を得て — キャンバスには「… に着想を得て」と出る。オマージュであってコピーではない。RafFel は作者自身のスタイル。 ◆ バリアント — どの画家にも複数のバリアント。同じ曲 + 画家 + バリアント = 同じ絵。 ◆ どこに — アトリエでは画家のタイル、スタジオでは見た目（下にスワイプ）。`},
+    style:{t:`24 人の画家`, b:`画家をタップすると、同じ音がその画家に着想を得て描き直される。`, m:`誰が — ピカソ、草間、ポロック、カンディンスキー、ミロ、モンドリアン、ロスコ、マティス、クリムト、モネ、北斎、ライリー、ヘリング、アルマ・トーマスほか、さらに RafFel。 ◆ 着想を得て — キャンバスには「… に着想を得て」と出る。オマージュであってコピーではない。RafFel は作者自身のスタイル。 ◆ バリアント — どの画家にも複数のバリアント。同じ曲 + 画家 + バリアント = 同じ絵。 ◆ どこに — アトリエでは画家のタイル、スタジオでは見た目（下にスワイプ）。`},
     mosaic:{t:`モザイクと音符`, b:`黄金比の澄んだ長方形、和音ごとに一つ。音符は各ブロックに音名を表示。`, m:`モザイク — 画家を選んでいないときに描かれる。 ◆ 音符 — 同じ格子に音名入り。どの音がどの色か覚える最短の道。 ◆ 切替 — モザイクをもう一度タップ。 ◆ 🔀 — 🔀 オンでモザイクをタップすると、抽選がモザイク ↔ 音符に固定される。`},
     shuffle:{t:`シャッフル 🔀`, b:`同じ曲 = 同じ絵。🔀 オフ：次へであなたの画家の別バリアント。🔀 オン：選んだ画家全員から。`, m:`オフ — あなたの画家。次へで別のバリアントが出る。 ◆ オン — あなたが選んだ画家全員から。 ◆ 次へ — アトリエでは Next、スタジオでは上にスワイプ。 ◆ スライドショー — 曲が流れている間、↻ スライドショー が絵を自動で進める。 ◆ アンサンブル ◎ — 🔀 の隣にあり、一緒に新しい掛け合わせを引く。`},
     signature:{t:`✦ 署名`, b:`どの曲にも、曲自身が選んだ一枚がある。誰にとっても同じ一枚。`, m:`仕組み — 音楽が役割ごとに 2〜5 人の画家を配役する：リズム、旋律、和声、明るさ、音域。バリアントは音符が、パレットは曲の性格が選ぶ。 ◆ 誰でも同じ — 音楽だけで決まり、設定や段階には左右されない。Free でも。 ◆ どこに — 画家名の横のキャプションにある ✦ 署名 をタップ。別の画家、パレット、🔀 でオフになる。 ◆ Lite — 新しい曲はいつも署名から始まる。 ◆ 画像 — 画像にも署名がある：一つの曲、一人の作曲家、または Jam session。 ◆ 完成した作品だけ — 音楽ファイル、サンプル、画像。気分、作曲、マイク、画像からムードにはない。`, mS:`仕組み — 音楽が役割ごとに 2〜5 人の画家を配役する：リズム、旋律、和声、明るさ、音域。バリアントは音符が、パレットは曲の性格が選ぶ。 ◆ 誰でも同じ — 音楽だけで決まり、設定や段階には左右されない。Free でも。 ◆ どこに — 絵をタップし、上のキャプションで ✦ 署名 をタップ。別の画家、パレット、🔀 でオフになる。 ◆ 画像 — 画像にも署名がある：一つの曲、一人の作曲家、または Jam session。 ◆ 完成した作品だけ — 音楽ファイル、サンプル、画像。気分、作曲、マイク、画像からムードにはない。`},
@@ -22957,8 +22888,8 @@ function _favAddrKey(o){
   return [o.pk, o.style||'', (o.keys||[]).map(k=>k||'mosaic').join('+'), o.phase|0, o.seed>>>0, o.mode, o.tone,
           o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.fa && o.fa.fs==='E' ? ['E'] : []).concat(o.fa && o.fa.rv===2 ? ['r2'] : []).join('|');   // … and a painting under the new shape rules is another painting too   // an E fusion is another painting (an A one keeps the old key)
 }
-const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
-const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
+const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
+const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
 // Paint a Favorite from its address onto canvas `cv` at S× resolution. The same
 // steps as the live canvas for a finished painting (the draw effect in the app):
 // its notes on the grid this screen gives them (lay — see _favLayout), the
@@ -23997,7 +23928,7 @@ const TxIcon = ({n, s=15}) => {
 // drawFusionOverlay). This wrapper keeps one call for the live canvas, the
 // raster export and the SVG shim.
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi',mozart:'Mozart',schubert:'Schubert',tchaikovsky:'Tchaikovsky'};
-const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
+const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'};
 // Fusion style glyph — Setup, the captions and the fullscreen flash all draw the same two marks:
 // A = two hands taking turns (alternating bars), E = one new painter / composer (two hues merged)
 function FsGlyph({ v, w=28, h=20, fo=.6, mr=0, shadow=false, title }){
@@ -24941,10 +24872,10 @@ export default function Paintiano() {
   // Lets the user narrow what shows up in the canvas-view pickers. Two arrays
   // of opt-in keys, persisted in localStorage. Default = everything (current
   // behavior preserved on first launch). Mosaic family is one item that
-  // covers all three states (Mosaic / Notes / oneM); the chip still cycles
+  // covers both states (Mosaic / Notes); the chip still cycles
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
-  const ALL_ARTIST_KEYS  = ['mosaicFamily','raffel','picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai','lichtenstein','klee','delaunay','oneM'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','raffel','picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai','lichtenstein','klee','delaunay','thomas'];
   // Tones available in the active canvas Tone selector. Users can pre-filter
   // which tones appear in the main panel via Setup (same chip-list UI as
   // palettes/artists). Default: all three on.
@@ -24974,7 +24905,7 @@ export default function Paintiano() {
       // in Setup gets it forced back on at the next restart (the bug we're
       // fixing). We remember which artists have already been seeded in a
       // separate localStorage flag and never re-seed those again.
-      const NEW_ARTISTS = ['monet','hokusai','mondrian','bauhaus','raffel','lichtenstein','klee','delaunay','oneM'];
+      const NEW_ARTISTS = ['monet','hokusai','mondrian','bauhaus','raffel','lichtenstein','klee','delaunay','thomas'];
       let seeded = [];
       try { const s = JSON.parse(localStorage.getItem('paintiano_setup_artists_seeded')||'[]'); if(Array.isArray(s)) seeded = s; } catch(_){}
       let seededChanged = false;
@@ -25242,7 +25173,7 @@ export default function Paintiano() {
   // style row read EN regardless of UI language. Now keyed by lang and selected
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
-  const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
+  const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',thomas:'Alma Thomas',mosaic:'Mosaic',notes:'Notes'}
 const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma',bach:'J. S. Bach',beethoven:'Ludwig van Beethoven',debussy:'Claude Debussy',rachmaninov:'Sergei Rachmaninov',einaudi:'Ludovico Einaudi',hisaishi:'Joe Hisaishi',mozart:'Wolfgang Amadeus Mozart',schubert:'Franz Schubert',tchaikovsky:'Pyotr Ilyich Tchaikovsky'};
 // Free-tier composer split: Chopin + Satie + Gershwin ship free — three moods
 // (dense Romantic feeling, sparse calm, jazz energy), one full row of the image
@@ -25303,7 +25234,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // index (FNV mix) so every user worldwide gets the same pair → shareable,
   // marketable ("today: Klimt"). No server, no storage. Resets at LOCAL
   // midnight; an app left open flips on the next minute tick (dailyTick).
-  const DAILY_ARTIST_POOL = useMemo(()=> ['matisse','bloom','miro','bauhaus','rothko','wave','arcs','mitchell','hokusai','lichtenstein','klee','delaunay','oneM','raffel','mondrian'], []);
+  const DAILY_ARTIST_POOL = useMemo(()=> ['matisse','bloom','miro','bauhaus','rothko','wave','arcs','mitchell','hokusai','lichtenstein','klee','delaunay','thomas','raffel','mondrian'], []);
   const DAILY_COMPOSER_POOL = useMemo(()=> ['glass','vine','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi','mozart','schubert','tchaikovsky'], []);
   const _dayIndex = () => { const d=new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset()*60000)/86400000); };
   const [dailyTick, setDailyTick] = useState(()=>_dayIndex());
@@ -25318,10 +25249,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the gate to open the paywall instead of swapping styles.
   const styleIsLocked = useCallback((key) => {
     if (proStatus !== 'free') return false;
-    // Mosaic family (Mosaic / Notes / $1M$) is a core FREE feature — never
+    // Mosaic family (Mosaic / Notes) is a core FREE feature — never
     // locked. It isn't part of the artist style-pairs so it's absent from
     // FREE_UNLOCKED_KEYS; special-case it here so it renders unlocked.
-    if (key==='mosaicFamily' || key==='mosaicNotes' || key==='mosaicOneM') return false;
+    if (key==='mosaicFamily' || key==='mosaicNotes') return false;
     // The artist being tasted right now reads as unlocked for this one preview.
     if(key && key===tastePreviewKey) return false;
     // Artist of the day: fully unlocked for Free today (see artistOfDay).
@@ -25708,12 +25639,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
   const [notesMode, setNotesMode] = useState(false);
-  // $oneM$ — third tap on the Mosaic chip enters this mode: chord tiles fill
-  // the canvas 100% (guillotine partition) with chaos shapes (circles, arcs,
-  // triangles, stars, squiggles, rings, half-moons, diamonds, crosses, rects)
-  // scattered on top via a Vogel spiral from the centre. Mutually exclusive
-  // with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
-  const [oneMMode, setOneMMode] = useState(false);
   // True while the canvas belongs to a MOOD (vs a file source or live mode).
   // Unlike currentMood it survives Clear, so the "+ New mood" button stays after
   // clearing. Set when a mood is picked; cleared when a file/live source takes over.
@@ -25788,7 +25713,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL_ALL = ['raffel','lichtenstein','klee','delaunay','oneM','picasso','kusama','pollock','kandinsky','miro','bauhaus','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
+  const SHUFFLE_POOL_ALL = ['raffel','lichtenstein','klee','delaunay','thomas','picasso','kusama','pollock','kandinsky','miro','bauhaus','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
   // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
   // shuffle across all 16. Keeps the random feature usable for Free without ever
   // accidentally landing on a locked artist (which would just paint a Pro-only
@@ -25798,7 +25723,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
-    // $1M$ moved out of the family — it is a standalone (Pro) cockpit artist.
     const MOSAIC_FAMILY = ['mosaic','notes'];
     const familyOn = setupArtists.includes('mosaicFamily');
     // ── LOCK MODE ──
@@ -25816,7 +25740,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // Pool = (selected artists) + (mosaic family, only if selected in Setup).
     // Pseudo-randomly reordered per song via Fisher-Yates seeded with
     // pollockSessionSeed → same song gives the same order every time
-    // (deterministic), but Mosaic / Notes / oneM can land anywhere in the
+    // (deterministic), but Mosaic / Notes can land anywhere in the
     // sequence (not bunched at the end).
     const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
     const base = familyOn ? [...filteredArtists, ...MOSAIC_FAMILY] : filteredArtists;
@@ -25839,7 +25763,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // maps to effectiveStyle=null so the default Mosaic renderer takes over.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
-  const effectiveStyle = style || (shuffleStyle==='mosaic' ? null : shuffleStyle) || (oneMMode ? 'oneM' : notesMode ? 'notes' : null);
+  const effectiveStyle = style || (shuffleStyle==='mosaic' ? null : shuffleStyle) || (notesMode ? 'notes' : null);
   // DETERMINISTIC PAINT PHASE — the variant index that goes INTO drawing.
   // A painting's "address" is (song, artist, style). Same address → same
   // painting, ALWAYS. The dice only chooses WHICH address to jump to next; it
@@ -25957,10 +25881,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     s = s || songSigRef.current;
     if(!s || !s.keys || !s.keys.length) return;
     if(fuRollRef.current) _setFuRoll(null);       // a rolled crossing gives way to the signature's own variants
-    if(!sigActiveRef.current) sigPrevRef.current = { style, stage: painterStage.slice(), ph: phaseIndex|0, mode, jamOn, notesMode, oneMMode };
+    if(!sigActiveRef.current) sigPrevRef.current = { style, stage: painterStage.slice(), ph: phaseIndex|0, mode, jamOn, notesMode };
     sigActiveRef.current = true;                  // sync — the Setup guards run before the state effect
     _shuffleOff();
-    setNotesMode(false); setOneMMode(false); setStructureSeedLock(null);
+    setNotesMode(false); setStructureSeedLock(null);
     kontraAutoRef.current = false;
     _liteJamStyleRef.current = s.keys.length>1 ? s.keys[0] : null;
     if(s.keys.length>1 && ensembleOnRef.current) setJamOn(true);
@@ -25977,7 +25901,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const liveSig = songSigRef.current;
     if(p && (!liveSig || p.style!==liveSig.keys[0] || p.stage.join('+')!==liveSig.keys.slice(1).join('+') || p.ph!==(liveSig.ph|0) || p.mode!==liveSig.mode)){
       // back to the previous selection (artist, stage, variant, palette)
-      if(p.style===null){ setNotesMode(!!p.notesMode); setOneMMode(!!p.oneMMode); }
+      if(p.style===null) setNotesMode(!!p.notesMode);
       setStyle(p.style); setPainterStage(p.stage); setPhaseIndex(p.ph); setMode(p.mode);
       if(!p.jamOn) setJamOn(false);
       _liteJamStyleRef.current = p.stage.length ? p.style : null;
@@ -26209,7 +26133,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the Studio's Fusion switch: the painter on screen becomes no. 1 (gold, pinned) and 1–3 painters join it at once — the painting is a fusion straight away
   const _stFusionOn = ()=>{
     if(working||anim||jamOn) return;
-    const cur = (style && style!=='notes' && style!=='oneM') ? style : ((shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
+    const cur = (style && style!=='notes') ? style : ((shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
     if(sigActiveRef.current){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
     if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     if(!randomMode) _shuffleOn();
@@ -26234,7 +26158,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(_artMode!==2){                                               // → on (ALL)
       if(!randomMode) _shuffleOn();
       if(mosaicShuffleLock) setMosaicShuffleLock(false);   // from Mosaic ↔ Notes to every painter in your set
-      if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
+      if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
       if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }   // the draw starts on the SAME artist
       return; }
     // on → off: the artist (or the crossing) on screen stays, its variants go on
@@ -26248,7 +26172,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _toggleJam = ()=>{
     if(working||anim) return;
     if(!jamOn){
-      if(_artMode===2 && !jamAll){ const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null; if(cur){ setNotesMode(false); setOneMMode(false); setStyle(cur); } setJamAll(true); }
+      if(_artMode===2 && !jamAll){ const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null; if(cur){ setNotesMode(false); setStyle(cur); } setJamAll(true); }
       setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){}
       return;
     }
@@ -26259,14 +26183,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // right away (after the other pins); unpinning keeps it on the canvas as a guest
   // until the next draw. The stage is always pins first, then guests, max 5.
   const _jamPinTap = (k)=>{
-    if(!k || k==='mosaic' || k==='notes' || k==='oneM') return;
+    if(!k || k==='mosaic' || k==='notes') return;
     const pins=jamPinsRef.current.slice(); const st=_jamStage().filter(Boolean);
     const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
     if(!nextPins) return;
     const guests = st.filter(x=>!nextPins.includes(x));
     const stage = nextPins.concat(guests).slice(0, STAGE_MAX);
     jamPinsRef.current = nextPins; setJamPins(nextPins);
-    if(stage.length){ setNotesMode(false); setOneMMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
+    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
     try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
   };
   // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
@@ -26278,7 +26202,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
     if(pins.length){
       const room=STAGE_MAX-pins.length;
-      const gpool=SHUFFLE_POOL.filter(k=>k!=='oneM' && !pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+      const gpool=SHUFFLE_POOL.filter(k=>!pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
       if(room<=0 || !gpool.length){ _fuRollAll(_jamStage()); _fuRollPal(); return; }   // no room for guests: the crossing's variants and palette roll
       const curGuests=painterStage.filter(k=>!pins.includes(k)).join('+');
       let guests=[];
@@ -26289,18 +26213,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       }
       // a pin keeps the PAINTER on stage, not its variant: the guests reshape the whole
       // crossing anyway, so every member — pinned or not — rolls a new variant
-      setNotesMode(false); setOneMMode(false);
+      setNotesMode(false);
       setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests)); _fuRollAll(pins.concat(guests)); _fuRollPal();
       try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n:pins.length+guests.length, pinned:pins.length}); }catch(_){}
       return;
     }
-    const pool=SHUFFLE_POOL.filter(k=>k!=='oneM' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+    const pool=SHUFFLE_POOL.filter(k=>(setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
     if(pool.length<2) return;
     const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
     if(a[0]===style && a.length>2){ const x=a[0]; a[0]=a[1]; a[1]=x; }
     const n=Math.min(a.length, 2+((Math.random()*4)|0));
     const lead=a[0];
-    setNotesMode(false); setOneMMode(false);
+    setNotesMode(false);
     setStyle(lead); setPainterStage(a.slice(1,n)); _fuRollAll(a.slice(0,n)); _fuRollPal();
     try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n}); }catch(_){}
   };
@@ -26392,8 +26316,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _variantRoll = ()=>{
     if(viewMode==='image') return false;
     if(style!==null && painterStage.length){ return !!_fuRollAll(_jamStage()); }   // a Fusion: every member a new variant of its own
-    if(style===null && !randomMode){ setOneMMode(false); setNotesMode(n=>!n); return true; }   // the Mosaic: Mosaic ⇆ Notes
-    const k = style || shuffleStyle; if(!k || k==='mosaic'){ setOneMMode(false); setNotesMode(n=>!n); return true; }
+    if(style===null && !randomMode){ setNotesMode(n=>!n); return true; }   // the Mosaic: Mosaic ⇆ Notes
+    const k = style || shuffleStyle; if(!k || k==='mosaic'){ setNotesMode(n=>!n); return true; }
     const N = (proStatus==='free' && k!==artistOfDay && !(tastePreviewKeyRef.current && k===tastePreviewKeyRef.current)) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6);
     if(N<2) return false;
     const cur = (style ? phaseIndex : shufVariant)|0;
@@ -26411,10 +26335,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const varHistRef = useRef({key:'', st:[]});
   const _varKey = ()=> [(info && info.title) || '', style || '', painterStage.join('+'), randomMode ? 1 : 0, randomMode ? (shuffleStyle || '') : ''].join('|');
   const _variantNext = ()=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; }
-    const snap={ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, om:!!oneMMode, fu:fuRollRef.current || null };
+    const snap={ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, fu:fuRollRef.current || null };
     const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); } return ok; };
   const _variantBack = ()=>{ const H=varHistRef.current; if(H.key!==_varKey() || !H.st.length) return false;
-    const v=H.st.pop(); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); setOneMMode(v.om); _setFuRoll(v.fu); return true; };
+    const v=H.st.pop(); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu); return true; };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
   // Tear down the Show timer.
@@ -26530,7 +26454,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       //  • manual artist → (style, phaseIndex)
       //  • dice on, no artist → shuffle owns it → (shuffleStyle, shufVariant)
       //  • Mosaic / Notes family stops have no QR address — block with a hint.
-      const artKey = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode ? 'oneM' : null);
+      const artKey = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null);
       const vNow = style ? (phaseIndex|0) : (shufVariant|0);
       if(!artKey || (typeof ALL_ARTIST_KEYS!=='undefined' && !ALL_ARTIST_KEYS.includes(artKey))){
         alert('Poster maker: Mosaic/Notes stop nema QR adresu - vyber konkretneho umelca.'); return;
@@ -26624,7 +26548,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       a.href=URL.createObjectURL(zip); a.download=base+'.zip'; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),6000);
     }catch(e){ try{ alert('Poster export failed: '+e.message); }catch(_){} }
-  },[style,phaseIndex,shuffleStyle,shufVariant,oneMMode,mode,tone,STYLE_INSPIRED]);
+  },[style,phaseIndex,shuffleStyle,shufVariant,mode,tone,STYLE_INSPIRED]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -26644,7 +26568,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const next = prev===k ? null : k;
         if(next===null){ setStructureSeedLock(null); }
         else {
-          setNotesMode(false); setOneMMode(false); setMosaicShuffleLock(false); // choosing an artist exits Notes/$oneM$ mode + clears shuffle lock
+          setNotesMode(false); setMosaicShuffleLock(false); // choosing an artist exits Notes mode + clears shuffle lock
           // Compose: Pollock and Monet open on their first variant — the one that
           // paints each stroke in its note's exact colour (see _exactTone).
           if(composeMode && (next==='pollock' || next==='monet')) setPhaseIndex(0);
@@ -26672,7 +26596,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setStyle(()=>{
         if(k===null){ setStructureSeedLock(null); }
         else {
-          setNotesMode(false); setOneMMode(false);
+          setNotesMode(false);
           if(composeMode && (k==='pollock' || k==='monet')) setPhaseIndex(0);   // Compose: their exact-colour first variant (see selectStyle)
           // Compose/Mic + dice off: re-establish the seed lock when an artist
           // is re-selected through the paired-button cycle. Same rationale as
@@ -26830,7 +26754,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // ?artist= — the opening artist (the one printed on the poster). Validated
       // against the real key list; painted via the taste-preview REF so a Pro
       // artist renders fully for the poster's buyer regardless of tier.
-      const _qa=_u.get('artist');
+      const _qa=_painterKeyNow(_u.get('artist'));   // a poster printed for a retired painter opens its heir
       if(_qa && typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(_qa) && _qa!=='mosaicFamily'){ qrArtistRef.current=_qa; }
       // ?v= — the exact painting variant (phase index) printed on the poster.
       // Seed is a deterministic hash of the piece, so (piece, artist, v) pins
@@ -27818,7 +27742,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'&&style!=='oneM'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'&&style!=='thomas'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -27850,7 +27774,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='raffel' && style!=='lichtenstein' && style!=='klee' && style!=='delaunay' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='raffel' && style!=='lichtenstein' && style!=='klee' && style!=='delaunay' && style!=='thomas'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       _ensureEnergies(chords, _liveE);
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
@@ -27859,7 +27783,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+      const isOverlayStyle = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='thomas';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -27931,7 +27855,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='thomas';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap((proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords, _liveE);
@@ -27987,7 +27911,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='lichtenstein') drawLichtensteinOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='klee') drawKleeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='delaunay') drawDelaunayOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
+        else if(style==='thomas') drawThomasOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
@@ -28070,10 +27994,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='delaunay' && lim>0){
         drawDelaunayOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
-      if(style==='oneM' && lim>0){
-        drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
+      if(style==='thomas' && lim>0){
+        drawThomasOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'&&style!=='thomas'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -28937,7 +28861,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const isOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='thomas';
         if (viewModeRef.current === 'image') {
           const pix = pixelRef.current;
           if (d > 0 && chords.length && grid && pix && pix.nc) {
@@ -30071,7 +29995,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // picker effect (deps: …,loadedSource,moodFromImg) is not retriggered.
   const restoreMode = useCallback((mode)=>{
     // a draft read back after a relaunch comes with the look it had — the app starts on the default one
-    const _hydLook = (s)=>{ const L=s._look; if(!L || L.sig) return; setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); setOneMMode(!!L.om); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn); };
+    const _hydLook = (s)=>{ const L=_lookMigrate(s._look); if(!L || L.sig) return; setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn); };
     // Restoring INTO `mode` means leaving whatever source is currently live →
     // stash it first (stashOutgoing self-skips if the live mode == `mode`, e.g.
     // a wiped same-mode canvas) so switching between drafts never loses one.
@@ -30322,7 +30246,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // whenever the source changes (new loaded file, new mood, image↔mood switch),
   // so each fresh source starts in the normal reading rather than inheriting
   // note-names from the previous one.
-  useEffect(()=>{ setNotesMode(false); setOneMMode(false); },[loadedSource,currentMood,moodFromImg]);
+  useEffect(()=>{ setNotesMode(false); },[loadedSource,currentMood,moodFromImg]);
   // micArmed is reset explicitly at every site that leaves the MIC context
   // (start mic, ← Setup, Clear branches, source-picker handlers). A blanket
   // reset effect made micArmed flicker on/off whenever an unrelated source
@@ -30588,7 +30512,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // …the surprise on the home goes too (its piece was just wiped: it would stay a black card with a title), every mode's last card, and the first time's
     // arc and hints — after Reset the home is the first screen again, as for someone new
     try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){}
-    try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); setOneMMode(F.oneMMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
+    try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
     try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
     try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
     try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
@@ -33646,7 +33570,7 @@ Hard requirements:
         : (_openers.length
         ? _openers[(Math.random()*_openers.length)|0]
         : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'));
-      setStyle(_target); setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0); setNotesMode(false); setOneMMode(false);
+      setStyle(_target); setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0); setNotesMode(false);
       if(qrArtistRef.current){
         // Poster QR: paint in the poster's artist, full variant range, even on
         // Free (ref-only taste latch; state stays null so no countdown starts).
@@ -33702,7 +33626,7 @@ Hard requirements:
       _liteNextKRef.current = _arc ? _k : null;
       _liteNextIsSigRef.current = _hasSig;
       setRandomMode(false); randomModeRef.current=false;
-      setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      setStyle(null); setPhaseIndex(0); setNotesMode(false);
       _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
     }
@@ -33712,7 +33636,7 @@ Hard requirements:
     if(_hasSig && (!_arc || (sg.keys.length===1 && sg.keys[0]===_k && (sg.ph|0)===0))){ applySigRef.current(sg); return; }
     _liteNextIsSigRef.current = _arc && _hasSig;
     setRandomMode(false); randomModeRef.current=false;
-    setStyle(_k); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+    setStyle(_k); setPhaseIndex(0); setNotesMode(false);
     _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
   };
   // the opening piece is on screen as the bare Mosaic (Lite, music → painting)
@@ -33789,7 +33713,7 @@ Hard requirements:
     if(_liteNextKRef.current){
       const _k1 = _liteNextKRef.current; _liteNextKRef.current = null;
       setRandomMode(false); randomModeRef.current=false;
-      setStyle(_k1); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      setStyle(_k1); setPhaseIndex(0); setNotesMode(false);
       _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
     }
@@ -33801,7 +33725,7 @@ Hard requirements:
       _liteNextIsMosaicRef.current = false;
       setRandomMode(false); randomModeRef.current=false;
       // NOTE: no setSetupArtists here — Surprise is read-only over the setup.
-      setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      setStyle(null); setPhaseIndex(0); setNotesMode(false);
       // a Signature / Jam stage leaves together with its lead — never one frame of the rest without it
       _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
@@ -33834,17 +33758,16 @@ Hard requirements:
     const _familyAllowed = setupArtists.includes('mosaicFamily');
     // Free = 2 variants, except the artist of the day (full range, like Pro).
     const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6));
-    // The shuffle pool of "artists" includes the three Mosaic-family stops
-    // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
+    // The shuffle pool of "artists" includes the two Mosaic-family stops
+    // (Mosaic / Notes) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
-    const _isFamilyKey = (k)=> (k==='mosaicFamily'||k==='mosaicNotes'||k==='mosaicOneM');
-    // Mosaic family stops (Mosaic / Notes / $1M$) join the bag ONLY when the
+    const _isFamilyKey = (k)=> (k==='mosaicFamily'||k==='mosaicNotes');
+    // Mosaic family stops (Mosaic / Notes) join the bag ONLY when the
     // user kept mosaicFamily enabled in the central setup (option B).
     const bagKeys = _familyAllowed ? [...artists, 'mosaicFamily', 'mosaicNotes'] : [...artists];
     // Fisher–Yates shuffle.
     const shuffle = (arr)=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
     const curK = style ? style
-               : oneMMode ? 'mosaicOneM'
                : notesMode ? 'mosaicNotes'
                : 'mosaicFamily';
     const curV = (phaseIndex|0);
@@ -33901,31 +33824,30 @@ Hard requirements:
     } catch(_){}
     if(_isFamilyKey(nk)){
       // Mosaic family stop. style stays null; the sub-mode flags pick which
-      // bare-grid look renders via effectiveStyle (Mosaic / Notes / $1M$).
+      // bare-grid look renders via effectiveStyle (Mosaic / Notes).
       // NOTE: no setSetupArtists here — Surprise is read-only over the setup.
       setStyle(null);                 // null style → mosaic family
       setShufVariant(0);
       setNotesMode(nk==='mosaicNotes');
-      setOneMMode(false);   // $1M$ left the family — reachable only as an artist
     } else {
       // NOTE: no setSetupArtists here — Surprise only *reads* the allowed set.
       setStyle(nk);
       setPhaseIndex(nv|0);            // pick that artist's variant
-      setNotesMode(false); setOneMMode(false);  // artist exits any family sub-mode
+      setNotesMode(false);  // artist exits any family sub-mode
     }
     // ENSEMBLE in Lite (Pro, on in Setup): now and then Surprise paints a Jam —
     // the drawn artist (with its drawn variant) plus 1–4 more painters, count
     // and members random, from the same allowed pool. Otherwise a soloist.
     let _jamExtra = [];
     if(ensembleOnRef.current && !_isFamilyKey(nk) && Math.random()<0.25){
-      const o = Array.from(new Set(artists)).filter(k=>k!==nk && k!=='oneM');
+      const o = Array.from(new Set(artists)).filter(k=>k!==nk);
       for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; }
       _jamExtra = o.slice(0, Math.min(o.length, 1+((Math.random()*4)|0)));
     }
     _liteJamStyleRef.current = _jamExtra.length ? nk : null;
     setPainterStage(_jamExtra);
     if(_jamExtra.length) _fuRollAll([nk].concat(_jamExtra), {[nk]: nv|0});   // the drawn variant stays, the others roll their own
-  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode, setupPalettes, mode, setupArtists, artistOfDay]);
+  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, setupPalettes, mode, setupArtists, artistOfDay]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
   // and the canvas is empty (e.g. after the intro splash, or on entering Basic
@@ -34136,7 +34058,7 @@ Hard requirements:
           setStyle(_t);
         }
         setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0);
-        setNotesMode(false); setOneMMode(false);
+        setNotesMode(false);
         loadSampleMidi(litePieceRef.current);
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
@@ -35665,8 +35587,8 @@ Hard requirements:
         if(style==='delaunay' && chords.length>0){
           drawDelaunayOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
-        if(style==='oneM' && chords.length>0){
-          drawOneMOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, 0);
+        if(style==='thomas' && chords.length>0){
+          drawThomasOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         };
         // Transparent export = exactly what the live canvas shows, minus the
@@ -35879,7 +35801,7 @@ Hard requirements:
           sctx.save();
           sctx.textAlign='center';
           sctx.fillStyle='rgba(201,168,76,.78)';
-          // Italic serif matches the FS header; size scales to fit oneM's long label. The palette follows the painters.
+          // Italic serif matches the FS header; size scales to fit a long label. The palette follows the painters.
           const _iLine = _PAL_KEYS.test(mode||'') ? (_inspLabel+'  |  '+_palCap(t(mode))) : _inspLabel;
           let _fontSize = _iLine.length > 28 ? 36 : 44;
           sctx.font=`italic 500 ${_fontSize}px "Cormorant Garamond", Georgia, serif`;
@@ -36678,7 +36600,7 @@ Hard requirements:
   }catch(_){ return null; } };
   const _fullPaintUrl = ()=>{ const c=_fullPaintCanvas(); if(!c || !c.width || !c.height) return null; try{ const W=Math.min(720, c.width), H=Math.round(c.height*W/c.width); const o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(c,0,0,W,H); return o.toDataURL('image/jpeg',0.82); }catch(_){ return null; } };
   _lookRef.current = (()=>{ try{ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
-    return { st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, om:!!oneMMode && !_st, sig:!!sigActive }; }catch(_){ return null; } })();
+    return { st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive }; }catch(_){ return null; } })();
   const _captureHomeArt = ()=>{
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
@@ -36694,7 +36616,7 @@ Hard requirements:
       }catch(_){}
       // the look on the card (painter, fusion, variant, palette, tone): after a reload ▶ brings THIS painting back, not the piece's ✦ Signature
       let _lk=null; try{ if(!isImg){ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
-        _lk={ st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, om:!!oneMMode && !_st, sig:!!sigActive }; } }catch(_){ _lk=null; }
+        _lk={ st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive }; } }catch(_){ _lk=null; }
       const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r, lk:_lk }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
         _homeBySave(_k, o); try{ const im=new Image(); im.src=u; return im.decode ? im.decode().catch(()=>{}) : null; }catch(_){ return null; } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
@@ -36787,10 +36709,9 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
-            notes (bare grid with note labels) — get no "inspired by". One Million
-            Dollar Page goes through the artist branch above (it references a real
-            iconic web-art piece). Show the active colour mode • the style name so
-            the collapsed caption isn't blank. */}
+            notes (bare grid with note labels) — get no "inspired by". Show the
+            active colour mode • the style name so the collapsed caption isn't
+            blank. */}
         {(loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
@@ -36922,11 +36843,11 @@ Hard requirements:
     if(studioFs && stripOpen && !trayUserRef.current){ const id=setTimeout(()=>_trayCenter(true), 60), id2=setTimeout(()=>{ if(viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current) _trayCenter(true); }, 420); return ()=>{ clearTimeout(id); clearTimeout(id2); }; } },[style, shuffleStyle, painterStage, sigActive, jamOn, imgComposer, composerStage, crOn, imgSigActive]);   // picked elsewhere (a swipe on the painting): the row follows
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
   const stLookHistRef = useRef({key:'', st:[]});
-  const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode, om:!!oneMMode,
+  const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode,
     jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current });
   const _stLookApply = (L)=>{
     if(sigActiveRef.current && !L.sig){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
-    randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt); setOneMMode(L.om);
+    randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt);
     setMosaicShuffleLock(L.lock); setJamOn(L.jo); setJamAll(L.ja); jamPinsRef.current=L.pins.slice(); setJamPins(L.pins.slice()); _setFuRoll(L.fu); setMode(L.md);
     setStyle(L.st); setPainterStage(L.sg.slice());
     stTakenRef.current=L.tk; setStTaken(L.tk);
@@ -36960,13 +36881,13 @@ Hard requirements:
           const _cur = style || shuffleStyle, _pool = SHUFFLE_POOL.filter(k=>(setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay)) && k!==_cur && !painterStage.includes(k));
           const _k = _pool.length ? _pool[(Math.random()*_pool.length)|0] : null;
           if(_k){ const _N = (proStatus==='free' && _k!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[_k]>1) ? ARTIST_VARIANT_N[_k] : 6), _ix=_shuffleIndexFor(_k);
-            randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setOneMMode(false); setPainterStage([]); _setFuRoll(null);
+            randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null);
             nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
             setStyle(null); if(_ix>=0) setShuffleArtistIndex(_ix); setShufVariant((Math.random()*_N)|0); rolled = true; }
         }
         else if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
           if(!randomMode) _shuffleOn();
-          const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX);
+          const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX);
           jamPinsRef.current=pins; setJamPins(pins); setJamAll(true);
           nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true;
         }
@@ -37195,7 +37116,7 @@ Hard requirements:
     if(sel.look && !sel.sig){ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply({...sel.look, tk:false}); return; }   // a card seen before: exactly as it was
     setRandomMode(false); randomModeRef.current=false;
     if(sel.sig && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} return; }   // in this same batch: the latch and 🔀 off land together
-    setStyle(sel.style); setPhaseIndex(sel.phase|0); setNotesMode(!!sel.notes); setOneMMode(false); setPainterStage(sel.stage ? sel.stage.slice() : []);
+    setStyle(sel.style); setPhaseIndex(sel.phase|0); setNotesMode(!!sel.notes); setPainterStage(sel.stage ? sel.stage.slice() : []);
     if(sel.mode) setMode(sel.mode);
   };
   // put the piece in the player and start it (call it inside the gesture: the sound wakes there)
@@ -37204,7 +37125,7 @@ Hard requirements:
     if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
     setTimeout(()=>{ if(!_acRunning()) setFeedNeedTap(true); }, 450);   // still asleep (a swipe on iOS): ▶ asks for one tap
     if(!feedLookRef.current){
-      feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, oneMMode, comp:imgComposer, cstage:composerStage.slice() };
+      feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, comp:imgComposer, cstage:composerStage.slice() };
       try{ stashMode('image'); }catch(_){}       // your picture keeps its place too
       try{ stashOutgoing('music'); }catch(_){}   // what you had (a picture, a mood …) waits in its own place
       try{ stashMode('music'); }catch(_){}       // … and your music in the Music slot
@@ -37248,7 +37169,7 @@ Hard requirements:
   };
   // the feed's piece leaves the player (the cards keep their pictures); your painter and palette come back
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
-    setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode); setOneMMode(L.oneMMode);
+    setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode);
     if(L.comp!==undefined){ imgComposerRef.current=L.comp||null; setImgComposer(L.comp||null); setComposerStage(L.cstage||[]); } };
   const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
@@ -37565,7 +37486,7 @@ Hard requirements:
             const _fa=_fusionAddr(_jamStage(), paintPhase);
             if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode}</>);
             if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode+(_fa.fs==='E' ? ' · E' : '');
-            const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null);
+            const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null);
             return (_k ? (STYLE_INSPIRED[_k]||_k) : '—')+' · v'+(style?(phaseIndex|0):(shufVariant|0))+' · '+mode;
           })()}
         </div>
@@ -38398,8 +38319,8 @@ Hard requirements:
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         const _replay = ()=>{
           // the card's own look (a home saved before the look was kept, or a ✦ Signature card: the piece opens on its Signature as before)
-          if(_rp.s==='midi'){ const L=H.lk; if(L && !L.sig){ loadSampleMidi(_rp.i, {noSig:true});
-              setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); setOneMMode(!!L.om); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn);
+          if(_rp.s==='midi'){ const L=_lookMigrate(H.lk); if(L && !L.sig){ loadSampleMidi(_rp.i, {noSig:true});
+              setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn);
             } else loadSampleMidi(_rp.i);
             setForceSetup(false); return; }
           if(_rp.s==='img'){ loadSampleImage(_rp.i); setForceSetup(false); return; }
@@ -39530,8 +39451,6 @@ Hard requirements:
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
                 Shown when in set, or in edit mode (as a ghost when out of set). */}
             {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
-              // $1M$ left the Mosaic family — it is an artist chip of its own, so a
-              // shuffle draw of 'oneM' lights the $1M$ chip only, never this one.
               const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes');
               // Manual mosaic = selected and NOT being driven by the dice. Like
               // the artist pairs, a shuffle-hit shows the white frame (no gold
@@ -39542,13 +39461,12 @@ Hard requirements:
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes') ? 'notes'
                             : (shuffleStyle==='mosaic') ? 'mosaic'
-                            : (!shuffleStyle && oneMMode) ? 'oneM'
                             : (!shuffleStyle && notesMode) ? 'notes'
                             : 'mosaic';
-              const subLabel = subKind==='notes' ? t('notesStyle') : subKind==='oneM' ? t('oneMStyle') : t('mosaicStyle');
+              const subLabel = subKind==='notes' ? t('notesStyle') : t('mosaicStyle');
               const lockTip = randomMode
                 ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes')
-                : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap to clear back to mosaic' : 'mosaic — tap for note names'));
+                : (subKind==='notes' ? 'notes — tap to clear back to mosaic' : 'mosaic — tap for note names');
               return (
             <button onClick={()=>{
               // In edit mode the Mosaic chip behaves like every other chip:
@@ -39567,17 +39485,15 @@ Hard requirements:
               if(jamAll) return;
               if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
               // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
-              const _mosaicOwn = ()=>{ setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };
+              const _mosaicOwn = ()=>{ setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };
               if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
                 // restarts the cycle at 'mosaic' and clears the dice-off
-                // notes/oneM flags so the locked shuffle is the sole driver.
+                // notes flag so the locked shuffle is the sole driver.
                 if(!mosaicShuffleLock) _mosaicOwn();   // from ALL: Mosaic chosen, 🔀 off (already chosen: stays)
               } else {
-                // Dice off → 2-tap cycle Mosaic → Notes → Mosaic ($1M$ is now a
-                // standalone Pro artist chip, no longer a family stop).
-                setOneMMode(false);
+                // Dice off → 2-tap cycle Mosaic → Notes → Mosaic.
                 if(!notesMode){ setNotesMode(true); }
                 else { setNotesMode(false); }
               }
@@ -39588,7 +39504,7 @@ Hard requirements:
                 them opens the paywall instead of selecting. Edit mode: tap toggles
                 membership in setupArtists. ── */}
             {_visibleArtists.map((k)=>{
-              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'};
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
               const locked = styleIsLocked(k);            // Pro-only & user is Free
@@ -39626,7 +39542,7 @@ Hard requirements:
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
-                  data-fu={(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?((k==='oneM'||locked)?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  data-fu={(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?(locked?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {studioFs && _skinFace(k, shufHit && !isOn)}
                   {label}
                   {locked && cockpitEdit && (
@@ -39663,7 +39579,7 @@ Hard requirements:
               Clickable: opens the paywall with reason 'settings'. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
-            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'};
             const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
             return (
               <div
@@ -40745,7 +40661,7 @@ Hard requirements:
           // it counts as mosaic here — only true artist styles block selection,
           // because their cells are painted abstractly.
           if(composeMode || (holdPaused && composedModeRef.current)){
-            const artistStyle = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM';
+            const artistStyle = effectiveStyle && effectiveStyle!=='notes';
             if(artistStyle){
               const artist=STYLE_INSPIRED[effectiveStyle]||effectiveStyle;
               setErr(t('selectNeedsMosaic').replace('{artist}',artist));
@@ -40760,7 +40676,7 @@ Hard requirements:
           // artist style the cells are painted abstractly — tapping (or hitting
           // the Next button that sits over the canvas) should NOT trigger the
           // underlying notes, which was distracting in canvas / fullscreen mode.
-          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM';
+          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes';
           if(_artistStyleNow) return;
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
@@ -41703,7 +41619,7 @@ Hard requirements:
           return chord
             ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
-        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'&&effectiveStyle!=='oneM'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
+        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:8,justifyContent:'center',alignItems:'center',marginBottom:6,padding:'8px 12px',borderRadius:14,background:'rgba(140,255,180,.06)',border:'1px solid rgba(140,255,180,.25)',maxWidth:'fit-content',marginLeft:'auto',marginRight:'auto',flexWrap:'wrap'}}>
@@ -42514,7 +42430,7 @@ Hard requirements:
                     const on = setupArtists.includes(k);
                     // Compact single-word label to fit narrow 5-col chip
                     const _fullName = k==='mosaicFamily' ? '' : (STYLE_INSPIRED[k]||k);
-                    const _label = k==='mosaicFamily' ? t('mosaicStyle').replace(/^./, c=>c.toLocaleUpperCase()) : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'}; const _nm=_as[_fullName]||_fullName; return k==='raffel' ? ('✦ '+_nm) : _nm; })();
+                    const _label = k==='mosaicFamily' ? t('mosaicStyle').replace(/^./, c=>c.toLocaleUpperCase()) : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'}; const _nm=_as[_fullName]||_fullName; return k==='raffel' ? ('✦ '+_nm) : _nm; })();
                     // Free tier: Pro-only artists render as locked chips —
                     // dimmed with a 🔒 badge; tap closes the modal and opens the
                     // paywall instead of toggling the set. Paid tiers see no locks

@@ -677,8 +677,8 @@ function _favAddrKey(o){
   return [o.pk, o.style||'', (o.keys||[]).map(k=>k||'mosaic').join('+'), o.phase|0, o.seed>>>0, o.mode, o.tone,
           o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.fa && o.fa.fs==='E' ? ['E'] : []).concat(o.fa && o.fa.rv===2 ? ['r2'] : []).join('|');   // … and a painting under the new shape rules is another painting too   // an E fusion is another painting (an A one keeps the old key)
 }
-const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
-const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','oneM'];
+const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
+const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
 // Paint a Favorite from its address onto canvas `cv` at S× resolution. The same
 // steps as the live canvas for a finished painting (the draw effect in the app):
 // its notes on the grid this screen gives them (lay — see _favLayout), the
@@ -1717,7 +1717,7 @@ const TxIcon = ({n, s=15}) => {
 // drawFusionOverlay). This wrapper keeps one call for the live canvas, the
 // raster export and the SVG shim.
 const _COMP_SHORT = {glass:'Glass',satie:'Satie',chopin:'Chopin',vine:'Carl Vine',gershwin:'Gershwin',yiruma:'Yiruma',bach:'Bach',beethoven:'Beethoven',debussy:'Debussy',rachmaninov:'Rachmaninov',einaudi:'Einaudi',hisaishi:'Hisaishi',mozart:'Mozart',schubert:'Schubert',tchaikovsky:'Tchaikovsky'};
-const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
+const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'};
 // Fusion style glyph — Setup, the captions and the fullscreen flash all draw the same two marks:
 // A = two hands taking turns (alternating bars), E = one new painter / composer (two hues merged)
 function FsGlyph({ v, w=28, h=20, fo=.6, mr=0, shadow=false, title }){
@@ -2661,10 +2661,10 @@ export default function Paintiano() {
   // Lets the user narrow what shows up in the canvas-view pickers. Two arrays
   // of opt-in keys, persisted in localStorage. Default = everything (current
   // behavior preserved on first launch). Mosaic family is one item that
-  // covers all three states (Mosaic / Notes / oneM); the chip still cycles
+  // covers both states (Mosaic / Notes); the chip still cycles
   // internally on tap, but the family is shown/hidden as a unit.
   const ALL_PALETTE_KEYS = ['harmony','spectral','phi','kontra','custom'];
-  const ALL_ARTIST_KEYS  = ['mosaicFamily','raffel','picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai','lichtenstein','klee','delaunay','oneM'];
+  const ALL_ARTIST_KEYS  = ['mosaicFamily','raffel','picasso','matisse','pollock','bloom','kusama','miro','mondrian','bauhaus','kandinsky','gold','rothko','bulge','wave','spiral','arcs','pop','mitchell','monet','hokusai','lichtenstein','klee','delaunay','thomas'];
   // Tones available in the active canvas Tone selector. Users can pre-filter
   // which tones appear in the main panel via Setup (same chip-list UI as
   // palettes/artists). Default: all three on.
@@ -2694,7 +2694,7 @@ export default function Paintiano() {
       // in Setup gets it forced back on at the next restart (the bug we're
       // fixing). We remember which artists have already been seeded in a
       // separate localStorage flag and never re-seed those again.
-      const NEW_ARTISTS = ['monet','hokusai','mondrian','bauhaus','raffel','lichtenstein','klee','delaunay','oneM'];
+      const NEW_ARTISTS = ['monet','hokusai','mondrian','bauhaus','raffel','lichtenstein','klee','delaunay','thomas'];
       let seeded = [];
       try { const s = JSON.parse(localStorage.getItem('paintiano_setup_artists_seeded')||'[]'); if(Array.isArray(s)) seeded = s; } catch(_){}
       let seededChanged = false;
@@ -2962,7 +2962,7 @@ export default function Paintiano() {
   // style row read EN regardless of UI language. Now keyed by lang and selected
   // below, with EN as the fallback. (Artist attribution STYLE_INSPIRED stays as
   // proper names — those are not translated.)
-  const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',mosaic:'Mosaic',notes:'Notes',oneM:'One Million Dollar Page'}
+  const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',thomas:'Alma Thomas',mosaic:'Mosaic',notes:'Notes'}
 const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma',bach:'J. S. Bach',beethoven:'Ludwig van Beethoven',debussy:'Claude Debussy',rachmaninov:'Sergei Rachmaninov',einaudi:'Ludovico Einaudi',hisaishi:'Joe Hisaishi',mozart:'Wolfgang Amadeus Mozart',schubert:'Franz Schubert',tchaikovsky:'Pyotr Ilyich Tchaikovsky'};
 // Free-tier composer split: Chopin + Satie + Gershwin ship free — three moods
 // (dense Romantic feeling, sparse calm, jazz energy), one full row of the image
@@ -3023,7 +3023,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // index (FNV mix) so every user worldwide gets the same pair → shareable,
   // marketable ("today: Klimt"). No server, no storage. Resets at LOCAL
   // midnight; an app left open flips on the next minute tick (dailyTick).
-  const DAILY_ARTIST_POOL = useMemo(()=> ['matisse','bloom','miro','bauhaus','rothko','wave','arcs','mitchell','hokusai','lichtenstein','klee','delaunay','oneM','raffel','mondrian'], []);
+  const DAILY_ARTIST_POOL = useMemo(()=> ['matisse','bloom','miro','bauhaus','rothko','wave','arcs','mitchell','hokusai','lichtenstein','klee','delaunay','thomas','raffel','mondrian'], []);
   const DAILY_COMPOSER_POOL = useMemo(()=> ['glass','vine','yiruma','bach','beethoven','debussy','rachmaninov','einaudi','hisaishi','mozart','schubert','tchaikovsky'], []);
   const _dayIndex = () => { const d=new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset()*60000)/86400000); };
   const [dailyTick, setDailyTick] = useState(()=>_dayIndex());
@@ -3038,10 +3038,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the gate to open the paywall instead of swapping styles.
   const styleIsLocked = useCallback((key) => {
     if (proStatus !== 'free') return false;
-    // Mosaic family (Mosaic / Notes / $1M$) is a core FREE feature — never
+    // Mosaic family (Mosaic / Notes) is a core FREE feature — never
     // locked. It isn't part of the artist style-pairs so it's absent from
     // FREE_UNLOCKED_KEYS; special-case it here so it renders unlocked.
-    if (key==='mosaicFamily' || key==='mosaicNotes' || key==='mosaicOneM') return false;
+    if (key==='mosaicFamily' || key==='mosaicNotes') return false;
     // The artist being tasted right now reads as unlocked for this one preview.
     if(key && key===tastePreviewKey) return false;
     // Artist of the day: fully unlocked for Free today (see artistOfDay).
@@ -3428,12 +3428,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // colour blocks. Toggled by tapping the active Mosaic chip; auto-reset when any
   // artist style is chosen, or when the source is not a mood.
   const [notesMode, setNotesMode] = useState(false);
-  // $oneM$ — third tap on the Mosaic chip enters this mode: chord tiles fill
-  // the canvas 100% (guillotine partition) with chaos shapes (circles, arcs,
-  // triangles, stars, squiggles, rings, half-moons, diamonds, crosses, rects)
-  // scattered on top via a Vogel spiral from the centre. Mutually exclusive
-  // with notesMode; the chip cycles Mosaic → Notes → $oneM$ → Mosaic.
-  const [oneMMode, setOneMMode] = useState(false);
   // True while the canvas belongs to a MOOD (vs a file source or live mode).
   // Unlike currentMood it survives Clear, so the "+ New mood" button stays after
   // clearing. Set when a mood is picked; cleared when a file/live source takes over.
@@ -3508,7 +3502,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the pool — shuffle means "surprise me with an artist". The pick is derived
   // from the session seed so it stays deterministic (Random-off, history/Next
   // all behave normally) and re-rolls whenever the seed changes.
-  const SHUFFLE_POOL_ALL = ['raffel','lichtenstein','klee','delaunay','oneM','picasso','kusama','pollock','kandinsky','miro','bauhaus','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
+  const SHUFFLE_POOL_ALL = ['raffel','lichtenstein','klee','delaunay','thomas','picasso','kusama','pollock','kandinsky','miro','bauhaus','mondrian','rothko','matisse','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai'];
   // Free tier: shuffle dice (🎲) only lands on the 8 unlocked artists. Paid tiers
   // shuffle across all 16. Keeps the random feature usable for Free without ever
   // accidentally landing on a locked artist (which would just paint a Pro-only
@@ -3518,7 +3512,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     : SHUFFLE_POOL_ALL;
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
-    // $1M$ moved out of the family — it is a standalone (Pro) cockpit artist.
     const MOSAIC_FAMILY = ['mosaic','notes'];
     const familyOn = setupArtists.includes('mosaicFamily');
     // ── LOCK MODE ──
@@ -3536,7 +3529,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // Pool = (selected artists) + (mosaic family, only if selected in Setup).
     // Pseudo-randomly reordered per song via Fisher-Yates seeded with
     // pollockSessionSeed → same song gives the same order every time
-    // (deterministic), but Mosaic / Notes / oneM can land anywhere in the
+    // (deterministic), but Mosaic / Notes can land anywhere in the
     // sequence (not bunched at the end).
     const filteredArtists = SHUFFLE_POOL.filter(k => setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay));
     const base = familyOn ? [...filteredArtists, ...MOSAIC_FAMILY] : filteredArtists;
@@ -3559,7 +3552,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // maps to effectiveStyle=null so the default Mosaic renderer takes over.
   // Notes mode wins in plain Mosaic (no artist, no shuffle) for ANY source —
   // it only needs note MIDI + the colour fn, which every source provides.
-  const effectiveStyle = style || (shuffleStyle==='mosaic' ? null : shuffleStyle) || (oneMMode ? 'oneM' : notesMode ? 'notes' : null);
+  const effectiveStyle = style || (shuffleStyle==='mosaic' ? null : shuffleStyle) || (notesMode ? 'notes' : null);
   // DETERMINISTIC PAINT PHASE — the variant index that goes INTO drawing.
   // A painting's "address" is (song, artist, style). Same address → same
   // painting, ALWAYS. The dice only chooses WHICH address to jump to next; it
@@ -3677,10 +3670,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     s = s || songSigRef.current;
     if(!s || !s.keys || !s.keys.length) return;
     if(fuRollRef.current) _setFuRoll(null);       // a rolled crossing gives way to the signature's own variants
-    if(!sigActiveRef.current) sigPrevRef.current = { style, stage: painterStage.slice(), ph: phaseIndex|0, mode, jamOn, notesMode, oneMMode };
+    if(!sigActiveRef.current) sigPrevRef.current = { style, stage: painterStage.slice(), ph: phaseIndex|0, mode, jamOn, notesMode };
     sigActiveRef.current = true;                  // sync — the Setup guards run before the state effect
     _shuffleOff();
-    setNotesMode(false); setOneMMode(false); setStructureSeedLock(null);
+    setNotesMode(false); setStructureSeedLock(null);
     kontraAutoRef.current = false;
     _liteJamStyleRef.current = s.keys.length>1 ? s.keys[0] : null;
     if(s.keys.length>1 && ensembleOnRef.current) setJamOn(true);
@@ -3697,7 +3690,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const liveSig = songSigRef.current;
     if(p && (!liveSig || p.style!==liveSig.keys[0] || p.stage.join('+')!==liveSig.keys.slice(1).join('+') || p.ph!==(liveSig.ph|0) || p.mode!==liveSig.mode)){
       // back to the previous selection (artist, stage, variant, palette)
-      if(p.style===null){ setNotesMode(!!p.notesMode); setOneMMode(!!p.oneMMode); }
+      if(p.style===null) setNotesMode(!!p.notesMode);
       setStyle(p.style); setPainterStage(p.stage); setPhaseIndex(p.ph); setMode(p.mode);
       if(!p.jamOn) setJamOn(false);
       _liteJamStyleRef.current = p.stage.length ? p.style : null;
@@ -3929,7 +3922,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the Studio's Fusion switch: the painter on screen becomes no. 1 (gold, pinned) and 1–3 painters join it at once — the painting is a fusion straight away
   const _stFusionOn = ()=>{
     if(working||anim||jamOn) return;
-    const cur = (style && style!=='notes' && style!=='oneM') ? style : ((shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
+    const cur = (style && style!=='notes') ? style : ((shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
     if(sigActiveRef.current){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
     if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     if(!randomMode) _shuffleOn();
@@ -3954,7 +3947,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(_artMode!==2){                                               // → on (ALL)
       if(!randomMode) _shuffleOn();
       if(mosaicShuffleLock) setMosaicShuffleLock(false);   // from Mosaic ↔ Notes to every painter in your set
-      if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
+      if(jamOn){ setJamPins(_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX)); setJamAll(true); return; }   // ensemble: the stage stays and is pinned — Next only draws guests
       if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }   // the draw starts on the SAME artist
       return; }
     // on → off: the artist (or the crossing) on screen stays, its variants go on
@@ -3968,7 +3961,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _toggleJam = ()=>{
     if(working||anim) return;
     if(!jamOn){
-      if(_artMode===2 && !jamAll){ const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null; if(cur){ setNotesMode(false); setOneMMode(false); setStyle(cur); } setJamAll(true); }
+      if(_artMode===2 && !jamAll){ const cur=(shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null; if(cur){ setNotesMode(false); setStyle(cur); } setJamAll(true); }
       setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){}
       return;
     }
@@ -3979,14 +3972,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // right away (after the other pins); unpinning keeps it on the canvas as a guest
   // until the next draw. The stage is always pins first, then guests, max 5.
   const _jamPinTap = (k)=>{
-    if(!k || k==='mosaic' || k==='notes' || k==='oneM') return;
+    if(!k || k==='mosaic' || k==='notes') return;
     const pins=jamPinsRef.current.slice(); const st=_jamStage().filter(Boolean);
     const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
     if(!nextPins) return;
     const guests = st.filter(x=>!nextPins.includes(x));
     const stage = nextPins.concat(guests).slice(0, STAGE_MAX);
     jamPinsRef.current = nextPins; setJamPins(nextPins);
-    if(stage.length){ setNotesMode(false); setOneMMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
+    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
     try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
   };
   // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
@@ -3998,7 +3991,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
     if(pins.length){
       const room=STAGE_MAX-pins.length;
-      const gpool=SHUFFLE_POOL.filter(k=>k!=='oneM' && !pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+      const gpool=SHUFFLE_POOL.filter(k=>!pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
       if(room<=0 || !gpool.length){ _fuRollAll(_jamStage()); _fuRollPal(); return; }   // no room for guests: the crossing's variants and palette roll
       const curGuests=painterStage.filter(k=>!pins.includes(k)).join('+');
       let guests=[];
@@ -4009,18 +4002,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       }
       // a pin keeps the PAINTER on stage, not its variant: the guests reshape the whole
       // crossing anyway, so every member — pinned or not — rolls a new variant
-      setNotesMode(false); setOneMMode(false);
+      setNotesMode(false);
       setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests)); _fuRollAll(pins.concat(guests)); _fuRollPal();
       try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n:pins.length+guests.length, pinned:pins.length}); }catch(_){}
       return;
     }
-    const pool=SHUFFLE_POOL.filter(k=>k!=='oneM' && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+    const pool=SHUFFLE_POOL.filter(k=>(setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
     if(pool.length<2) return;
     const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
     if(a[0]===style && a.length>2){ const x=a[0]; a[0]=a[1]; a[1]=x; }
     const n=Math.min(a.length, 2+((Math.random()*4)|0));
     const lead=a[0];
-    setNotesMode(false); setOneMMode(false);
+    setNotesMode(false);
     setStyle(lead); setPainterStage(a.slice(1,n)); _fuRollAll(a.slice(0,n)); _fuRollPal();
     try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n}); }catch(_){}
   };
@@ -4112,8 +4105,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _variantRoll = ()=>{
     if(viewMode==='image') return false;
     if(style!==null && painterStage.length){ return !!_fuRollAll(_jamStage()); }   // a Fusion: every member a new variant of its own
-    if(style===null && !randomMode){ setOneMMode(false); setNotesMode(n=>!n); return true; }   // the Mosaic: Mosaic ⇆ Notes
-    const k = style || shuffleStyle; if(!k || k==='mosaic'){ setOneMMode(false); setNotesMode(n=>!n); return true; }
+    if(style===null && !randomMode){ setNotesMode(n=>!n); return true; }   // the Mosaic: Mosaic ⇆ Notes
+    const k = style || shuffleStyle; if(!k || k==='mosaic'){ setNotesMode(n=>!n); return true; }
     const N = (proStatus==='free' && k!==artistOfDay && !(tastePreviewKeyRef.current && k===tastePreviewKeyRef.current)) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6);
     if(N<2) return false;
     const cur = (style ? phaseIndex : shufVariant)|0;
@@ -4131,10 +4124,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const varHistRef = useRef({key:'', st:[]});
   const _varKey = ()=> [(info && info.title) || '', style || '', painterStage.join('+'), randomMode ? 1 : 0, randomMode ? (shuffleStyle || '') : ''].join('|');
   const _variantNext = ()=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; }
-    const snap={ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, om:!!oneMMode, fu:fuRollRef.current || null };
+    const snap={ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, fu:fuRollRef.current || null };
     const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); } return ok; };
   const _variantBack = ()=>{ const H=varHistRef.current; if(H.key!==_varKey() || !H.st.length) return false;
-    const v=H.st.pop(); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); setOneMMode(v.om); _setFuRoll(v.fu); return true; };
+    const v=H.st.pop(); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu); return true; };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
   // Tear down the Show timer.
@@ -4250,7 +4243,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       //  • manual artist → (style, phaseIndex)
       //  • dice on, no artist → shuffle owns it → (shuffleStyle, shufVariant)
       //  • Mosaic / Notes family stops have no QR address — block with a hint.
-      const artKey = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode ? 'oneM' : null);
+      const artKey = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null);
       const vNow = style ? (phaseIndex|0) : (shufVariant|0);
       if(!artKey || (typeof ALL_ARTIST_KEYS!=='undefined' && !ALL_ARTIST_KEYS.includes(artKey))){
         alert('Poster maker: Mosaic/Notes stop nema QR adresu - vyber konkretneho umelca.'); return;
@@ -4344,7 +4337,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       a.href=URL.createObjectURL(zip); a.download=base+'.zip'; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),6000);
     }catch(e){ try{ alert('Poster export failed: '+e.message); }catch(_){} }
-  },[style,phaseIndex,shuffleStyle,shufVariant,oneMMode,mode,tone,STYLE_INSPIRED]);
+  },[style,phaseIndex,shuffleStyle,shufVariant,mode,tone,STYLE_INSPIRED]);
   // Toggle an artist style with the canvas cross-fade. Shared by the expanded
   // panel and the collapsed strip so the behaviour can't drift between them.
   // Deselecting back to mosaic clears the structure lock; Random STAYS on (with
@@ -4364,7 +4357,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const next = prev===k ? null : k;
         if(next===null){ setStructureSeedLock(null); }
         else {
-          setNotesMode(false); setOneMMode(false); setMosaicShuffleLock(false); // choosing an artist exits Notes/$oneM$ mode + clears shuffle lock
+          setNotesMode(false); setMosaicShuffleLock(false); // choosing an artist exits Notes mode + clears shuffle lock
           // Compose: Pollock and Monet open on their first variant — the one that
           // paints each stroke in its note's exact colour (see _exactTone).
           if(composeMode && (next==='pollock' || next==='monet')) setPhaseIndex(0);
@@ -4392,7 +4385,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setStyle(()=>{
         if(k===null){ setStructureSeedLock(null); }
         else {
-          setNotesMode(false); setOneMMode(false);
+          setNotesMode(false);
           if(composeMode && (k==='pollock' || k==='monet')) setPhaseIndex(0);   // Compose: their exact-colour first variant (see selectStyle)
           // Compose/Mic + dice off: re-establish the seed lock when an artist
           // is re-selected through the paired-button cycle. Same rationale as
@@ -4550,7 +4543,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // ?artist= — the opening artist (the one printed on the poster). Validated
       // against the real key list; painted via the taste-preview REF so a Pro
       // artist renders fully for the poster's buyer regardless of tier.
-      const _qa=_u.get('artist');
+      const _qa=_painterKeyNow(_u.get('artist'));   // a poster printed for a retired painter opens its heir
       if(_qa && typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(_qa) && _qa!=='mosaicFamily'){ qrArtistRef.current=_qa; }
       // ?v= — the exact painting variant (phase index) printed on the poster.
       // Seed is a deterministic hash of the piece, so (piece, artist, v) pins
@@ -5538,7 +5531,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
       const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
       ctx.fillStyle='#04040a';ctx.fillRect(cx,cy,cw,ch);
-      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'&&style!=='oneM'){
+      if(style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'&&style!=='thomas'){
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
         ctx.strokeRect(cx+.5,cy+.5,cw-1,ch-1);
       }
@@ -5570,7 +5563,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       prev.playing===playing &&
       lim>=prev.disp &&
       lim-prev.disp<=Math.max(64,Math.ceil(chords.length/8)) && // sanity bound: skip giant jumps
-      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='raffel' && style!=='lichtenstein' && style!=='klee' && style!=='delaunay' && style!=='oneM'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
+      style!=='pollock' && style!=='kandinsky' && style!=='picasso' && style!=='kusama' && style!=='miro' && style!=='rothko' && style!=='matisse' && style!=='mondrian' && style!=='bauhaus' && style!=='bulge' && style!=='arcs' && style!=='bloom' && style!=='spiral' && style!=='gold' && style!=='pop' && style!=='wave' && style!=='mitchell' && style!=='monet' && style!=='hokusai' && style!=='raffel' && style!=='lichtenstein' && style!=='klee' && style!=='delaunay' && style!=='thomas'; // Overlay styles need full repaint — overlay shapes are canvas-wide, not per-cell
     if(canAppend && lim>prev.disp){
       _ensureEnergies(chords, _liveE);
       for(let i=prev.disp;i<lim;i++) drawOne(chords[i]);
@@ -5579,7 +5572,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // playback that's too costly ~7×/sec on long tracks, so throttle it to
       // ~9fps. Always allow the paint when paused/stopped or on the final
       // frame so the finished painting is fully rendered.
-      const isOverlayStyle = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+      const isOverlayStyle = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='kandinsky'||style==='picasso'||style==='kusama'||style==='miro'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='thomas';
       const nowMs = (typeof performance!=='undefined'?performance.now():Date.now());
       // A change in the session seed means the user pressed Next/Vary (or the
       // seed otherwise re-rolled): the WHOLE painting must change now, not on the
@@ -5651,7 +5644,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // wasted and — on long songs where cells are sub-pixel — bleeds through
         // as a microscopic pixel grid. Skip cell drawing for those; the overlay
         // alone owns the canvas.
-        const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='thomas';
         _setArtistSeed(pollockSessionSeed);
         _setVariantCap((proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords, _liveE);
@@ -5707,7 +5700,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='lichtenstein') drawLichtensteinOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='klee') drawKleeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='delaunay') drawDelaunayOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
-        else if(style==='oneM') drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
+        else if(style==='thomas') drawThomasOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
@@ -5790,10 +5783,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(style==='delaunay' && lim>0){
         drawDelaunayOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
-      if(style==='oneM' && lim>0){
-        drawOneMOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, 0);
+      if(style==='thomas' && lim>0){
+        drawThomasOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
       }
-      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'){
+      if(!info&&!playing&&style!=='pollock'&&style!=='picasso'&&style!=='kusama'&&style!=='miro'&&style!=='kandinsky'&&style!=='rothko'&&style!=='matisse'&&style!=='mondrian'&&style!=='bauhaus'&&style!=='bulge'&&style!=='arcs'&&style!=='bloom'&&style!=='spiral'&&style!=='gold'&&style!=='pop'&&style!=='wave'&&style!=='mitchell'&&style!=='monet'&&style!=='hokusai'&&style!=='raffel'&&style!=='lichtenstein'&&style!=='klee'&&style!=='delaunay'&&style!=='thomas'){
         const pi=idxRef.current,cell=grid.cells&&grid.cells[pi%(grid.cells.length||1)];
         const cx=cell?cell.x:((pi%(N*N))%N)*BW,cy=cell?cell.y:Math.floor((pi%(N*N))/N)*BH,cw=cell?cell.w:BW,ch=cell?cell.h:BH;
         ctx.strokeStyle='rgba(201,168,76,0.25)';ctx.lineWidth=.8;
@@ -6657,7 +6650,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         const grid = gridRef.current;
         const gc = gcRef.current;
         const style = lastPaintRef.current?.style ?? null;
-        const isOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
+        const isOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='pollock'||style==='picasso'||style==='kusama'||style==='miro'||style==='kandinsky'||style==='rothko'||style==='matisse'||style==='mondrian'||style==='bauhaus'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='thomas';
         if (viewModeRef.current === 'image') {
           const pix = pixelRef.current;
           if (d > 0 && chords.length && grid && pix && pix.nc) {
@@ -7791,7 +7784,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // picker effect (deps: …,loadedSource,moodFromImg) is not retriggered.
   const restoreMode = useCallback((mode)=>{
     // a draft read back after a relaunch comes with the look it had — the app starts on the default one
-    const _hydLook = (s)=>{ const L=s._look; if(!L || L.sig) return; setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); setOneMMode(!!L.om); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn); };
+    const _hydLook = (s)=>{ const L=_lookMigrate(s._look); if(!L || L.sig) return; setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn); };
     // Restoring INTO `mode` means leaving whatever source is currently live →
     // stash it first (stashOutgoing self-skips if the live mode == `mode`, e.g.
     // a wiped same-mode canvas) so switching between drafts never loses one.
@@ -8042,7 +8035,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // whenever the source changes (new loaded file, new mood, image↔mood switch),
   // so each fresh source starts in the normal reading rather than inheriting
   // note-names from the previous one.
-  useEffect(()=>{ setNotesMode(false); setOneMMode(false); },[loadedSource,currentMood,moodFromImg]);
+  useEffect(()=>{ setNotesMode(false); },[loadedSource,currentMood,moodFromImg]);
   // micArmed is reset explicitly at every site that leaves the MIC context
   // (start mic, ← Setup, Clear branches, source-picker handlers). A blanket
   // reset effect made micArmed flicker on/off whenever an unrelated source
@@ -8308,7 +8301,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // …the surprise on the home goes too (its piece was just wiped: it would stay a black card with a title), every mode's last card, and the first time's
     // arc and hints — after Reset the home is the first screen again, as for someone new
     try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){}
-    try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); setOneMMode(F.oneMMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
+    try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
     try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
     try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
     try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
@@ -11366,7 +11359,7 @@ Hard requirements:
         : (_openers.length
         ? _openers[(Math.random()*_openers.length)|0]
         : (setupArtists.find(k=> k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'));
-      setStyle(_target); setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0); setNotesMode(false); setOneMMode(false);
+      setStyle(_target); setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0); setNotesMode(false);
       if(qrArtistRef.current){
         // Poster QR: paint in the poster's artist, full variant range, even on
         // Free (ref-only taste latch; state stays null so no countdown starts).
@@ -11422,7 +11415,7 @@ Hard requirements:
       _liteNextKRef.current = _arc ? _k : null;
       _liteNextIsSigRef.current = _hasSig;
       setRandomMode(false); randomModeRef.current=false;
-      setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      setStyle(null); setPhaseIndex(0); setNotesMode(false);
       _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
     }
@@ -11432,7 +11425,7 @@ Hard requirements:
     if(_hasSig && (!_arc || (sg.keys.length===1 && sg.keys[0]===_k && (sg.ph|0)===0))){ applySigRef.current(sg); return; }
     _liteNextIsSigRef.current = _arc && _hasSig;
     setRandomMode(false); randomModeRef.current=false;
-    setStyle(_k); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+    setStyle(_k); setPhaseIndex(0); setNotesMode(false);
     _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
   };
   // the opening piece is on screen as the bare Mosaic (Lite, music → painting)
@@ -11509,7 +11502,7 @@ Hard requirements:
     if(_liteNextKRef.current){
       const _k1 = _liteNextKRef.current; _liteNextKRef.current = null;
       setRandomMode(false); randomModeRef.current=false;
-      setStyle(_k1); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      setStyle(_k1); setPhaseIndex(0); setNotesMode(false);
       _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
     }
@@ -11521,7 +11514,7 @@ Hard requirements:
       _liteNextIsMosaicRef.current = false;
       setRandomMode(false); randomModeRef.current=false;
       // NOTE: no setSetupArtists here — Surprise is read-only over the setup.
-      setStyle(null); setPhaseIndex(0); setNotesMode(false); setOneMMode(false);
+      setStyle(null); setPhaseIndex(0); setNotesMode(false);
       // a Signature / Jam stage leaves together with its lead — never one frame of the rest without it
       _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p);
       return;
@@ -11554,17 +11547,16 @@ Hard requirements:
     const _familyAllowed = setupArtists.includes('mosaicFamily');
     // Free = 2 variants, except the artist of the day (full range, like Pro).
     const variantsFor = (k)=> ((proStatus==='free' && k!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6));
-    // The shuffle pool of "artists" includes the three Mosaic-family stops
-    // (Mosaic / Notes / $1M$) as their own entries, so each bare-grid look
+    // The shuffle pool of "artists" includes the two Mosaic-family stops
+    // (Mosaic / Notes) as their own entries, so each bare-grid look
     // shows about as often as any single painter.
-    const _isFamilyKey = (k)=> (k==='mosaicFamily'||k==='mosaicNotes'||k==='mosaicOneM');
-    // Mosaic family stops (Mosaic / Notes / $1M$) join the bag ONLY when the
+    const _isFamilyKey = (k)=> (k==='mosaicFamily'||k==='mosaicNotes');
+    // Mosaic family stops (Mosaic / Notes) join the bag ONLY when the
     // user kept mosaicFamily enabled in the central setup (option B).
     const bagKeys = _familyAllowed ? [...artists, 'mosaicFamily', 'mosaicNotes'] : [...artists];
     // Fisher–Yates shuffle.
     const shuffle = (arr)=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
     const curK = style ? style
-               : oneMMode ? 'mosaicOneM'
                : notesMode ? 'mosaicNotes'
                : 'mosaicFamily';
     const curV = (phaseIndex|0);
@@ -11621,31 +11613,30 @@ Hard requirements:
     } catch(_){}
     if(_isFamilyKey(nk)){
       // Mosaic family stop. style stays null; the sub-mode flags pick which
-      // bare-grid look renders via effectiveStyle (Mosaic / Notes / $1M$).
+      // bare-grid look renders via effectiveStyle (Mosaic / Notes).
       // NOTE: no setSetupArtists here — Surprise is read-only over the setup.
       setStyle(null);                 // null style → mosaic family
       setShufVariant(0);
       setNotesMode(nk==='mosaicNotes');
-      setOneMMode(false);   // $1M$ left the family — reachable only as an artist
     } else {
       // NOTE: no setSetupArtists here — Surprise only *reads* the allowed set.
       setStyle(nk);
       setPhaseIndex(nv|0);            // pick that artist's variant
-      setNotesMode(false); setOneMMode(false);  // artist exits any family sub-mode
+      setNotesMode(false);  // artist exits any family sub-mode
     }
     // ENSEMBLE in Lite (Pro, on in Setup): now and then Surprise paints a Jam —
     // the drawn artist (with its drawn variant) plus 1–4 more painters, count
     // and members random, from the same allowed pool. Otherwise a soloist.
     let _jamExtra = [];
     if(ensembleOnRef.current && !_isFamilyKey(nk) && Math.random()<0.25){
-      const o = Array.from(new Set(artists)).filter(k=>k!==nk && k!=='oneM');
+      const o = Array.from(new Set(artists)).filter(k=>k!==nk);
       for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; }
       _jamExtra = o.slice(0, Math.min(o.length, 1+((Math.random()*4)|0)));
     }
     _liteJamStyleRef.current = _jamExtra.length ? nk : null;
     setPainterStage(_jamExtra);
     if(_jamExtra.length) _fuRollAll([nk].concat(_jamExtra), {[nk]: nv|0});   // the drawn variant stays, the others roll their own
-  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, oneMMode, setupPalettes, mode, setupArtists, artistOfDay]);
+  },[proStatus, FREE_UNLOCKED_KEYS, style, phaseIndex, notesMode, setupPalettes, mode, setupArtists, artistOfDay]);
 
   // BASIC mode: auto-load and play the Liszt sample once, when Basic is active
   // and the canvas is empty (e.g. after the intro splash, or on entering Basic
@@ -11856,7 +11847,7 @@ Hard requirements:
           setStyle(_t);
         }
         setPhaseIndex(qrArtistRef.current?qrVariantRef.current:0);
-        setNotesMode(false); setOneMMode(false);
+        setNotesMode(false);
         loadSampleMidi(litePieceRef.current);
         // Load the sample but hold playback behind a "Tap to begin" splash. iOS
         // needs a user gesture for sound, so we wait for the tap and then start
@@ -13385,8 +13376,8 @@ Hard requirements:
         if(style==='delaunay' && chords.length>0){
           drawDelaunayOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
-        if(style==='oneM' && chords.length>0){
-          drawOneMOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, 0);
+        if(style==='thomas' && chords.length>0){
+          drawThomasOverlay(_octx, CW, CH, _expChords, chords.length, gc, pollockSessionSeed, mode, paintPhase);
         }
         };
         // Transparent export = exactly what the live canvas shows, minus the
@@ -13599,7 +13590,7 @@ Hard requirements:
           sctx.save();
           sctx.textAlign='center';
           sctx.fillStyle='rgba(201,168,76,.78)';
-          // Italic serif matches the FS header; size scales to fit oneM's long label. The palette follows the painters.
+          // Italic serif matches the FS header; size scales to fit a long label. The palette follows the painters.
           const _iLine = _PAL_KEYS.test(mode||'') ? (_inspLabel+'  |  '+_palCap(t(mode))) : _inspLabel;
           let _fontSize = _iLine.length > 28 ? 36 : 44;
           sctx.font=`italic 500 ${_fontSize}px "Cormorant Garamond", Georgia, serif`;
@@ -14398,7 +14389,7 @@ Hard requirements:
   }catch(_){ return null; } };
   const _fullPaintUrl = ()=>{ const c=_fullPaintCanvas(); if(!c || !c.width || !c.height) return null; try{ const W=Math.min(720, c.width), H=Math.round(c.height*W/c.width); const o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(c,0,0,W,H); return o.toDataURL('image/jpeg',0.82); }catch(_){ return null; } };
   _lookRef.current = (()=>{ try{ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
-    return { st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, om:!!oneMMode && !_st, sig:!!sigActive }; }catch(_){ return null; } })();
+    return { st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive }; }catch(_){ return null; } })();
   const _captureHomeArt = ()=>{
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
@@ -14414,7 +14405,7 @@ Hard requirements:
       }catch(_){}
       // the look on the card (painter, fusion, variant, palette, tone): after a reload ▶ brings THIS painting back, not the piece's ✦ Signature
       let _lk=null; try{ if(!isImg){ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
-        _lk={ st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, om:!!oneMMode && !_st, sig:!!sigActive }; } }catch(_){ _lk=null; }
+        _lk={ st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive }; } }catch(_){ _lk=null; }
       const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r, lk:_lk }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
         _homeBySave(_k, o); try{ const im=new Image(); im.src=u; return im.decode ? im.decode().catch(()=>{}) : null; }catch(_){ return null; } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
@@ -14507,10 +14498,9 @@ Hard requirements:
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
-            notes (bare grid with note labels) — get no "inspired by". One Million
-            Dollar Page goes through the artist branch above (it references a real
-            iconic web-art piece). Show the active colour mode • the style name so
-            the collapsed caption isn't blank. */}
+            notes (bare grid with note labels) — get no "inspired by". Show the
+            active colour mode • the style name so the collapsed caption isn't
+            blank. */}
         {(loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
@@ -14642,11 +14632,11 @@ Hard requirements:
     if(studioFs && stripOpen && !trayUserRef.current){ const id=setTimeout(()=>_trayCenter(true), 60), id2=setTimeout(()=>{ if(viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current) _trayCenter(true); }, 420); return ()=>{ clearTimeout(id); clearTimeout(id2); }; } },[style, shuffleStyle, painterStage, sigActive, jamOn, imgComposer, composerStage, crOn, imgSigActive]);   // picked elsewhere (a swipe on the painting): the row follows
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
   const stLookHistRef = useRef({key:'', st:[]});
-  const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode, om:!!oneMMode,
+  const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode,
     jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current });
   const _stLookApply = (L)=>{
     if(sigActiveRef.current && !L.sig){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
-    randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt); setOneMMode(L.om);
+    randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt);
     setMosaicShuffleLock(L.lock); setJamOn(L.jo); setJamAll(L.ja); jamPinsRef.current=L.pins.slice(); setJamPins(L.pins.slice()); _setFuRoll(L.fu); setMode(L.md);
     setStyle(L.st); setPainterStage(L.sg.slice());
     stTakenRef.current=L.tk; setStTaken(L.tk);
@@ -14680,13 +14670,13 @@ Hard requirements:
           const _cur = style || shuffleStyle, _pool = SHUFFLE_POOL.filter(k=>(setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay)) && k!==_cur && !painterStage.includes(k));
           const _k = _pool.length ? _pool[(Math.random()*_pool.length)|0] : null;
           if(_k){ const _N = (proStatus==='free' && _k!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[_k]>1) ? ARTIST_VARIANT_N[_k] : 6), _ix=_shuffleIndexFor(_k);
-            randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setOneMMode(false); setPainterStage([]); _setFuRoll(null);
+            randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null);
             nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
             setStyle(null); if(_ix>=0) setShuffleArtistIndex(_ix); setShufVariant((Math.random()*_N)|0); rolled = true; }
         }
         else if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
           if(!randomMode) _shuffleOn();
-          const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='oneM').slice(0,STAGE_MAX);
+          const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX);
           jamPinsRef.current=pins; setJamPins(pins); setJamAll(true);
           nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true;
         }
@@ -14915,7 +14905,7 @@ Hard requirements:
     if(sel.look && !sel.sig){ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply({...sel.look, tk:false}); return; }   // a card seen before: exactly as it was
     setRandomMode(false); randomModeRef.current=false;
     if(sel.sig && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} return; }   // in this same batch: the latch and 🔀 off land together
-    setStyle(sel.style); setPhaseIndex(sel.phase|0); setNotesMode(!!sel.notes); setOneMMode(false); setPainterStage(sel.stage ? sel.stage.slice() : []);
+    setStyle(sel.style); setPhaseIndex(sel.phase|0); setNotesMode(!!sel.notes); setPainterStage(sel.stage ? sel.stage.slice() : []);
     if(sel.mode) setMode(sel.mode);
   };
   // put the piece in the player and start it (call it inside the gesture: the sound wakes there)
@@ -14924,7 +14914,7 @@ Hard requirements:
     if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
     setTimeout(()=>{ if(!_acRunning()) setFeedNeedTap(true); }, 450);   // still asleep (a swipe on iOS): ▶ asks for one tap
     if(!feedLookRef.current){
-      feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, oneMMode, comp:imgComposer, cstage:composerStage.slice() };
+      feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, comp:imgComposer, cstage:composerStage.slice() };
       try{ stashMode('image'); }catch(_){}       // your picture keeps its place too
       try{ stashOutgoing('music'); }catch(_){}   // what you had (a picture, a mood …) waits in its own place
       try{ stashMode('music'); }catch(_){}       // … and your music in the Music slot
@@ -14968,7 +14958,7 @@ Hard requirements:
   };
   // the feed's piece leaves the player (the cards keep their pictures); your painter and palette come back
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
-    setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode); setOneMMode(L.oneMMode);
+    setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode);
     if(L.comp!==undefined){ imgComposerRef.current=L.comp||null; setImgComposer(L.comp||null); setComposerStage(L.cstage||[]); } };
   const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
@@ -15285,7 +15275,7 @@ Hard requirements:
             const _fa=_fusionAddr(_jamStage(), paintPhase);
             if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode}</>);
             if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode+(_fa.fs==='E' ? ' · E' : '');
-            const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null) || (oneMMode?'oneM':null);
+            const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null);
             return (_k ? (STYLE_INSPIRED[_k]||_k) : '—')+' · v'+(style?(phaseIndex|0):(shufVariant|0))+' · '+mode;
           })()}
         </div>
@@ -16118,8 +16108,8 @@ Hard requirements:
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         const _replay = ()=>{
           // the card's own look (a home saved before the look was kept, or a ✦ Signature card: the piece opens on its Signature as before)
-          if(_rp.s==='midi'){ const L=H.lk; if(L && !L.sig){ loadSampleMidi(_rp.i, {noSig:true});
-              setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); setOneMMode(!!L.om); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn);
+          if(_rp.s==='midi'){ const L=_lookMigrate(H.lk); if(L && !L.sig){ loadSampleMidi(_rp.i, {noSig:true});
+              setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn);
             } else loadSampleMidi(_rp.i);
             setForceSetup(false); return; }
           if(_rp.s==='img'){ loadSampleImage(_rp.i); setForceSetup(false); return; }
@@ -17250,8 +17240,6 @@ Hard requirements:
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
                 Shown when in set, or in edit mode (as a ghost when out of set). */}
             {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
-              // $1M$ left the Mosaic family — it is an artist chip of its own, so a
-              // shuffle draw of 'oneM' lights the $1M$ chip only, never this one.
               const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes');
               // Manual mosaic = selected and NOT being driven by the dice. Like
               // the artist pairs, a shuffle-hit shows the white frame (no gold
@@ -17262,13 +17250,12 @@ Hard requirements:
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes') ? 'notes'
                             : (shuffleStyle==='mosaic') ? 'mosaic'
-                            : (!shuffleStyle && oneMMode) ? 'oneM'
                             : (!shuffleStyle && notesMode) ? 'notes'
                             : 'mosaic';
-              const subLabel = subKind==='notes' ? t('notesStyle') : subKind==='oneM' ? t('oneMStyle') : t('mosaicStyle');
+              const subLabel = subKind==='notes' ? t('notesStyle') : t('mosaicStyle');
               const lockTip = randomMode
                 ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes')
-                : (subKind==='oneM' ? 'tap to clear back to mosaic' : (subKind==='notes' ? 'notes — tap to clear back to mosaic' : 'mosaic — tap for note names'));
+                : (subKind==='notes' ? 'notes — tap to clear back to mosaic' : 'mosaic — tap for note names');
               return (
             <button onClick={()=>{
               // In edit mode the Mosaic chip behaves like every other chip:
@@ -17287,17 +17274,15 @@ Hard requirements:
               if(jamAll) return;
               if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
               // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
-              const _mosaicOwn = ()=>{ setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); setOneMMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };
+              const _mosaicOwn = ()=>{ setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };
               if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
                 // restarts the cycle at 'mosaic' and clears the dice-off
-                // notes/oneM flags so the locked shuffle is the sole driver.
+                // notes flag so the locked shuffle is the sole driver.
                 if(!mosaicShuffleLock) _mosaicOwn();   // from ALL: Mosaic chosen, 🔀 off (already chosen: stays)
               } else {
-                // Dice off → 2-tap cycle Mosaic → Notes → Mosaic ($1M$ is now a
-                // standalone Pro artist chip, no longer a family stop).
-                setOneMMode(false);
+                // Dice off → 2-tap cycle Mosaic → Notes → Mosaic.
                 if(!notesMode){ setNotesMode(true); }
                 else { setNotesMode(false); }
               }
@@ -17308,7 +17293,7 @@ Hard requirements:
                 them opens the paywall instead of selecting. Edit mode: tap toggles
                 membership in setupArtists. ── */}
             {_visibleArtists.map((k)=>{
-              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
+              const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'};
               const _full = STYLE_INSPIRED[k] || k;
               const label = _artistShort[_full] || _full;
               const locked = styleIsLocked(k);            // Pro-only & user is Free
@@ -17346,7 +17331,7 @@ Hard requirements:
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
                   onClick={onClick}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','{artist} is Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
-                  data-fu={(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?((k==='oneM'||locked)?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
+                  data-fu={(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?(locked?0.35:1):(_artMode===2&&!shufHit)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {studioFs && _skinFace(k, shufHit && !isOn)}
                   {label}
                   {locked && cockpitEdit && (
@@ -17383,7 +17368,7 @@ Hard requirements:
               Clickable: opens the paywall with reason 'settings'. */}
           {proStatus==='free' && expandedPair && (()=>{
             const [a,b] = expandedPair.split('|');
-            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'};
+            const _artistShort={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Claude Monet':'Monet','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'};
             const lockedName = (_artistShort[STYLE_INSPIRED[b]] || STYLE_INSPIRED[b]);
             return (
               <div
@@ -18465,7 +18450,7 @@ Hard requirements:
           // it counts as mosaic here — only true artist styles block selection,
           // because their cells are painted abstractly.
           if(composeMode || (holdPaused && composedModeRef.current)){
-            const artistStyle = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM';
+            const artistStyle = effectiveStyle && effectiveStyle!=='notes';
             if(artistStyle){
               const artist=STYLE_INSPIRED[effectiveStyle]||effectiveStyle;
               setErr(t('selectNeedsMosaic').replace('{artist}',artist));
@@ -18480,7 +18465,7 @@ Hard requirements:
           // artist style the cells are painted abstractly — tapping (or hitting
           // the Next button that sits over the canvas) should NOT trigger the
           // underlying notes, which was distracting in canvas / fullscreen mode.
-          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='oneM';
+          const _artistStyleNow = effectiveStyle && effectiveStyle!=='notes';
           if(_artistStyleNow) return;
           const midis=hit.n.map(({m,v,durMs})=>{playNote(m,v,durMs||300);return{m,dur:durMs||300};});
           setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
@@ -19423,7 +19408,7 @@ Hard requirements:
           return chord
             ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
-        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'&&effectiveStyle!=='oneM'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
+        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'—'}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:8,justifyContent:'center',alignItems:'center',marginBottom:6,padding:'8px 12px',borderRadius:14,background:'rgba(140,255,180,.06)',border:'1px solid rgba(140,255,180,.25)',maxWidth:'fit-content',marginLeft:'auto',marginRight:'auto',flexWrap:'wrap'}}>
@@ -20234,7 +20219,7 @@ Hard requirements:
                     const on = setupArtists.includes(k);
                     // Compact single-word label to fit narrow 5-col chip
                     const _fullName = k==='mosaicFamily' ? '' : (STYLE_INSPIRED[k]||k);
-                    const _label = k==='mosaicFamily' ? t('mosaicStyle').replace(/^./, c=>c.toLocaleUpperCase()) : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','One Million Dollar Page':'$1M$'}; const _nm=_as[_fullName]||_fullName; return k==='raffel' ? ('✦ '+_nm) : _nm; })();
+                    const _label = k==='mosaicFamily' ? t('mosaicStyle').replace(/^./, c=>c.toLocaleUpperCase()) : (()=>{ const _as={'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keith Haring':'Haring','Bridget Riley':'Riley','Joan Mitchell':'Mitchell','Katsushika Hokusai':'Hokusai','Gustav Klimt':'Klimt','Claude Monet':'Monet','Roy Lichtenstein':'Lichtenstein','Paul Klee':'Klee','Robert Delaunay':'Delaunay','Alma Thomas':'Thomas'}; const _nm=_as[_fullName]||_fullName; return k==='raffel' ? ('✦ '+_nm) : _nm; })();
                     // Free tier: Pro-only artists render as locked chips —
                     // dimmed with a 🔒 badge; tap closes the modal and opens the
                     // paywall instead of toggling the set. Paid tiers see no locks
