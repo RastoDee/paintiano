@@ -11473,12 +11473,12 @@ Hard requirements:
     const fu = painterStage.length>0 && !sigActive && viewMode!=='image';
     if(!fu){ clear(); setFuIntroShow(false); return; }
     if(!_hasPaint || !playing || fuIntroDoneRef.current) return;
-    let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro_n'))||0; }catch(_){}
+    let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro2_n'))||0; }catch(_){}
     fuIntroDoneRef.current = true;
     if(n>=1) return;
     // For You: the card is the screen — the line goes on the card, as the ✦ Signature's does there
-    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
-    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} }, 1500));
+    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro2_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
+    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro2_n', String(n+1)); }catch(_){} }, 1500));
     _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(false); }, 1500+5600));
   },[painterStage, sigActive, _hasPaint, viewMode, playing]);
   useEffect(()=>()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); },[]);

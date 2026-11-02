@@ -33757,7 +33757,7 @@ Hard requirements:
     fuIntroDoneRef.current = true;
     if(n>=1) return;
     // For You: the card is the screen — the line goes on the card, as the ✦ Signature's does there
-    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=> x ? x : {k:'f', t:Date.now()}); try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} }, 1200)); return; }
+    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
     _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro_n', String(n+1)); }catch(_){} }, 1500));
     _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(false); }, 1500+5600));
   },[painterStage, sigActive, _hasPaint, viewMode, playing]);
