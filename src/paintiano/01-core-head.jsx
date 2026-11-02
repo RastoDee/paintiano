@@ -1971,7 +1971,7 @@ function _computeSongCharacter(chords){
   }
   return { energy, dynRange, register, density, weights, tempo, regularity, tension, contour };
 }
-// The canvas shape follows the piece's length: a short piece is painted on a landscape φ frame, a long one on a portrait 3:4 frame.
+// The canvas: one portrait 3:4 frame for every piece (it used to be landscape φ for short pieces — dropped: a phone is upright).
 // Music decides once by its chord count (as the Mic: 41); a take (Compose, Mic) grows — it starts landscape and flips ONCE to portrait
 // when its plan first doubles (Mic 48→96 at its 41st chord, Compose 96→192 at its 82nd), never back.
 const PF_LONG_SONG = 41;   // ONE rule for Music and the Mic: up to 40 chords landscape φ, from the 41st portrait 3:4 (Compose: twice — from its 82nd)
@@ -2024,7 +2024,7 @@ function computeGrid(arg, opts){
   // still drives per-cell widths below; only N/rows use the count.)
   const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
   // the frame's shape: a take by its chord count (it flips once, at 41), a loaded piece by how many blocks it paints
-  const _port = liveMode ? ((opts && opts.livePortrait!==undefined) ? !!opts.livePortrait : _pfTakePortrait(evs.length, evs)) : (evs[0] && evs[0]._mic && evs[0]._micP!==undefined) ? !!evs[0]._micP : (evs.length >= PF_LONG_SONG);   // a song from the Mic: its take's shape
+  const _port = (liveMode && opts && opts.livePortrait===false) ? false : true;   // ONE frame everywhere: portrait 3:4 (Music, Compose, Mic, a song from the Mic) — a phone is held upright; no flip while a take grows
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
   const _portrait = !!(opts && opts.portraitGrow);

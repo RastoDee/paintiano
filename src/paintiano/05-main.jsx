@@ -4992,7 +4992,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(basicModeRef.current || (legacy && o==='listen')) return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
     const _ti = _takeInfo(chordsRef.current)||{};
-    const port = !legacy && (nv!=null ? (typeof nv==='object' ? !!nv.port : nv>=96) : !!_ti.port);   // landscape until the take's plan first doubles, then portrait 3:4   // landscape φ while the plan is 48, portrait 3:4 from 96 (the same frame computeGrid lays the live take on)
+    const port = !legacy;   // one portrait 3:4 frame for every take (an old Mic favorite from before its frame keeps its own)
     const cw=_pfFrameW(port, Math.min(820, Math.max(360, vp-32)));
     return port ? { CW:Math.round(cw), CH:Math.round(cw*4/3) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
   };
@@ -5019,7 +5019,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _takeGridRef = useRef({ key:'', g:null });
   const _takeGrid = (st, arr)=>{
     const ti=_takeInfo(arr); if(!ti || !_takePainter(st) || _takeSkip(st) || !_takeFrame()) return null;
-    return _planGrid(ti.nv, !!ti.port);
+    return _planGrid(ti.nv, true);
   };
   const _planGrid = (nv, portrait)=>{
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
@@ -5717,7 +5717,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(!g) return null;
     let CW=g.CW, CH=g.CH, pg=null;
     const painter = !!fv.keys || !!(fv.style && fv.style!=='mosaic' && fv.style!=='notes');
-    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg, ti); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, !_lg && !!ti.port); } }
+    if(ti && painter && !fv.skip){ const _lg=_isMicOwn(fv.own) && !fv.mf; const tf=_takeFrame(fv.own||null, _lg, ti); if(tf){ CW=tf.CW; CH=tf.CH; pg=_planGrid(ti.nv, !_lg); } }
     return { g, pg, CW, CH };
   };
   const [favDim, setFavDim] = useState(null);   // {id, CW, CH} of the favorite on screen, as laid out here
