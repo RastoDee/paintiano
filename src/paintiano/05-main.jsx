@@ -14208,7 +14208,10 @@ Hard requirements:
         else if(_k==='image'){ const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===_t); if(ii>=0) _r={s:'img', i:ii}; }
         else if(_k==='mood' && currentMood && MOODS.includes(currentMood)) _r={s:'mood', m:currentMood};
       }catch(_){}
-      const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
+      // the look on the card (painter, fusion, variant, palette, tone): after a reload ▶ brings THIS painting back, not the piece's ✦ Signature
+      let _lk=null; try{ if(!isImg){ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
+        _lk={ st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, om:!!oneMMode && !_st, sig:!!sigActive }; } }catch(_){ _lk=null; }
+      const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r, lk:_lk }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
         _homeBySave(_k, o); try{ const im=new Image(); im.src=u; return im.decode ? im.decode().catch(()=>{}) : null; }catch(_){ return null; } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
       if(isImg){ if(!originalImgUrl) return; const on=[...document.querySelectorAll('img')].find(i=>i.src===originalImgUrl && i.complete && i.naturalWidth); if(on){ return save(shrink(on, on.naturalWidth, on.naturalHeight)); } const im=new Image(); im.onload=()=>{ try{ save(shrink(im, im.naturalWidth, im.naturalHeight)); }catch(_){} }; im.src=originalImgUrl; return; }
@@ -15756,7 +15759,11 @@ Hard requirements:
         const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         const _replay = ()=>{
-          if(_rp.s==='midi'){ loadSampleMidi(_rp.i); setForceSetup(false); return; }
+          // the card's own look (a home saved before the look was kept, or a ✦ Signature card: the piece opens on its Signature as before)
+          if(_rp.s==='midi'){ const L=H.lk; if(L && !L.sig){ loadSampleMidi(_rp.i, {noSig:true});
+              setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); setOneMMode(!!L.om); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn);
+            } else loadSampleMidi(_rp.i);
+            setForceSetup(false); return; }
           if(_rp.s==='img'){ loadSampleImage(_rp.i); setForceSetup(false); return; }
           if(_rp.s==='mood' && MOODS.includes(_rp.m)){ const m=_rp.m, sg=findSong(m); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(m); setVarySource(sg); setImgMoodThumb(null); setMoodFromImg(false); setLoadedSource(null); setMoodContext(true); setSongQ(m); stopAll(); aiMidi(m); }
         };
