@@ -36660,7 +36660,7 @@ Hard requirements:
     else if(_stHasArt && !studioLive){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
   };
   // one tap on the painting: pause / play; on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
-  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (composeMode || micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
+  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
   useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
   useEffect(()=>{ if(!studioFs){ setStFavPend(false); setStShare(false); setStChg(null); } },[studioFs]);
   // the next painting (a swipe up): the Classic Next — and from a plain Mosaic, a painter drawn from your set;
