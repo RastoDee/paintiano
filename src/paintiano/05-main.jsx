@@ -1881,6 +1881,10 @@ const STUDIO_FX_CSS = `
 .pf-st-meta-t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
 .pf-st-meta-l{font-size:12px;letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-st-sup{font-weight:700;letter-spacing:.03em}
+.pf-st-take{cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;display:flex;justify-content:center;align-items:center}
+.pf-st-take span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-st-take i{flex-shrink:0;font-style:normal;color:#f0d78a;font-weight:700;margin-left:7px;display:inline-block;transform:scale(1.3) translateY(-1px)}
+.pf-st-take:active{opacity:.7}
 .pf-st-tipup.rm{display:none}
 @media (prefers-reduced-motion: reduce){.pf-st-tipup.rm{display:inline-flex}}
 .pf-st-meta-e{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;color:#f3ead2}
@@ -4051,6 +4055,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(style) setPhaseIndex(next); else setShufVariant(next);
     return true;
   };
+  // ← / →: the variants seen, so → goes back to the one just left (per painter / Fusion on screen — another one starts a new history)
+  const varHistRef = useRef({key:'', st:[]});
+  const _varKey = ()=> [(info && info.title) || '', style || '', painterStage.join('+'), randomMode ? 1 : 0, randomMode ? (shuffleStyle || '') : ''].join('|');
+  const _variantNext = ()=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; }
+    const snap={ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, om:!!oneMMode, fu:fuRollRef.current || null };
+    const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); } return ok; };
+  const _variantBack = ()=>{ const H=varHistRef.current; if(H.key!==_varKey() || !H.st.length) return false;
+    const v=H.st.pop(); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); setOneMMode(v.om); _setFuRoll(v.fu); return true; };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
   // Tear down the Show timer.
@@ -14550,9 +14562,9 @@ Hard requirements:
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
   };
-  const _stVariant = ()=>{
+  const _stVariant = (back)=>{
     if(!((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive)) return;
-    let ok=false; try{ ok=_variantRoll(); }catch(_){} if(!ok) return;
+    let ok=false; try{ ok = back ? _variantBack() : _variantNext(); }catch(_){} if(!ok) return;
     setStFavPend(false); _stBuzz(10);
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
@@ -14561,7 +14573,7 @@ Hard requirements:
   _stSwipeRef.current = (dx, dy, dt)=>{
     const ax=Math.abs(dx), ay=Math.abs(dy);
     if(dt>700) return false;
-    if(ax>=60 && ax>ay*1.5){ if(dx<0) _stVariant(); return true; }   // ← the next variant of this painter / Fusion; → nothing
+    if(ax>=60 && ax>ay*1.5){ _stVariant(dx>0); return true; }   // ← the next variant of this painter / Fusion; → back to the one before
     if(ay<50 || ay<ax*1.5) return false;
     if(dy<0){ _stNext(); return true; }
     return true;   // down: nothing
@@ -15995,8 +16007,8 @@ Hard requirements:
           const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }
-          if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedTake(); return; }
-          if(dt<800 && dx<=-60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ let ok=false; try{ ok=_variantRoll(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } return; }   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
+          if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedBack(); return; }   // ↓ back, as on TikTok: the surprise before
+          if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
@@ -16055,10 +16067,10 @@ Hard requirements:
               return (
               <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
                 {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup rm" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-                {(_mt || _ml || FC || _sTap) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg' || (FC && feedPeek>0))?' hide':'')}>{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{(_ml || FC || _sTap) && (<div className="pf-st-meta-l">{(FC || _sTap) && (<b className="pf-st-sup">✦ {_stT('sup')}</b>)}{((FC && _ml) || _sTap) ? ' · ' : ''}{_sTap ? _stT('supTap') : _ml}</div>)}</div>)}
+                {(_mt || _ml || FC || _sTap) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg' || (FC && feedPeek>0))?' hide':'')}>{_mt && (FC && _fL ? (<div className="pf-st-meta-t pf-st-take" role="button" tabIndex={0} onClick={(e)=>{ e.stopPropagation(); _feedTake(); }}><span>{_mt}</span><i aria-hidden="true">›</i></div>) : (<div className="pf-st-meta-t">{_mt}</div>))}{(_ml || FC || _sTap) && (<div className="pf-st-meta-l">{(FC || _sTap) && (<b className="pf-st-sup">✦ {_stT('sup')}</b>)}{((FC && _ml) || _sTap) ? ' · ' : ''}{_sTap ? _stT('supTap') : _ml}</div>)}</div>)}
                 <div className="pf-st-acts">
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')} disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-                  <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+(stTip==='chg'?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); setStChg('music'); }}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
+                  <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+(stTip==='chg'?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); if(FC && _fL){ _feedTake(); setTimeout(()=>setStripOpen(true), 380); return; } setStChg('music'); }}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
                   <button type="button" className="pf-st-act" disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(8); _feedOpen(); setTimeout(()=>setStShare(true), 380); }} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
                 </div>
               </div>); })()}
