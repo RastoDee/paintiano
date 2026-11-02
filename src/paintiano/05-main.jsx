@@ -609,6 +609,23 @@ function _videoAudioByPlaying(file, ac, onP, wantTap){
     }catch(_){ fin(false); }
   });
 }
+// A put-aside Music / Picture draft outlives a relaunch (iOS closes a PWA in the background): one record per source in IndexedDB, read back at start
+const _pfDraftSeq = {}, _pfDraftReady = {};
+function _pfIdb(){ return new Promise((ok, ko)=>{ try{ const r=indexedDB.open('paintiano_drafts', 1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('d'); }catch(_){} }; r.onsuccess=()=>ok(r.result); r.onerror=()=>ko(r.error); r.onblocked=()=>ko(new Error('blocked')); }catch(e){ ko(e); } }); }
+function _pfIdbDo(rw, fn){ return _pfIdb().then(db=>new Promise((ok, ko)=>{ const end=()=>{ try{ db.close(); }catch(_){} }; try{ const tx=db.transaction('d', rw ? 'readwrite' : 'readonly'); const rq=fn(tx.objectStore('d')); tx.oncomplete=()=>{ end(); ok(rq ? rq.result : undefined); }; tx.onerror=tx.onabort=()=>{ end(); ko(tx.error); }; }catch(e){ end(); ko(e); } })); }
+function _pfDraftSave(k, s){ const n=(_pfDraftSeq[k]=(_pfDraftSeq[k]||0)+1); (async()=>{ try{
+    const o={...s, audioPCM:null, audioSideImage:null, audioBlob:null, _ab:null, _at:''};   // the decoded sound is made again from the file
+    if(s.audioBlob){ o._ab=await s.audioBlob.arrayBuffer(); o._at=s.audioBlob.type||''; }
+    if(_pfDraftSeq[k]!==n) return;
+    await _pfIdbDo(true, st=>st.put(o, k));
+  }catch(_){ if(_pfDraftSeq[k]===n) _pfIdbDo(true, st=>st.delete(k)).catch(()=>{}); } })(); }
+function _pfDraftDrop(k){ if(!_pfDraftReady[k]) return; _pfDraftSeq[k]=(_pfDraftSeq[k]||0)+1; _pfIdbDo(true, st=>st.delete(k)).catch(()=>{}); }   // (before the start read nothing was put aside in this run)
+async function _pfDraftLoad(k){ const n=_pfDraftSeq[k]||0; const o=await _pfIdbDo(false, st=>st.get(k)); if(!o || !o.chords || !o.chords.length) return null;
+  if(o.sub==='audio' && !o._ab) return null;
+  const s={...o}; delete s._ab; delete s._at;
+  if(o._ab){ s.audioBlob=new Blob([o._ab], {type:o._at||'audio/wav'});
+    const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext; s.audioPCM=await new Promise((ok, ko)=>{ try{ const c=new OAC(1,1,44100); const p=c.decodeAudioData(o._ab.slice(0), ok, ko); if(p && p.then) p.then(ok, ko); }catch(e){ ko(e); } }); }
+  return ((_pfDraftSeq[k]||0)===n) ? s : null; }
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
 function _takeInfoM(arr){
   if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
@@ -7489,7 +7506,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // used to freeze them at their mount values (every ← Back restored variant 0).
   const phaseIndexRef=useRef(0), shufVariantRef=useRef(0), shuffleArtistIndexRef=useRef(0), rndSaltRef=useRef(0);
   useEffect(()=>{ phaseIndexRef.current=phaseIndex; shufVariantRef.current=shufVariant; shuffleArtistIndexRef.current=shuffleArtistIndex; rndSaltRef.current=rndSalt; },[phaseIndex,shufVariant,shuffleArtistIndex,rndSalt]);
-  const stashMode = useCallback((mode)=>{
+  const _lookRef = useRef(null), _homeNowRef = useRef(null);   // the look on screen (painter, fusion, variant, palette, tone) · the home card made from the canvas now
+  const stashMode = useCallback((mode, only)=>{   // only='save': just keep it for a relaunch (the app going to the background), no draft yet
+    if(only && mode!=='music' && mode!=='image') return;
     if(mode==='mood'){
       // Only a real text-mood with content. MFI (moodFromImg) is its own mode,
       // so a stash call while already in MFI is a no-op (self-guard).
@@ -7522,7 +7541,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const cur = chordsRef.current;
       if(!cur || !cur.length) return;
       const meta = moodMetaRef.current || {};
-      musicStashRef.current = {
+      const _o = {
         _dna: (globalThis.__PAINT_MUSIC_DNA || null),   // the piece's Music DNA: a surprise in between loads another piece (and its DNA)
         sub: ls,
         chords: cur.slice(),
@@ -7543,7 +7562,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         _shuffleArtistIndex: shuffleArtistIndexRef.current, _shufVariant: shufVariantRef.current, _phaseIndex: phaseIndexRef.current, _rndSalt: rndSaltRef.current, _fuRoll: fuRollRef.current,
         // the song's ✦ Signature, and whether it was on (leaving the canvas turns it off)
         _songSig: songSigRef.current || null, _sig: sigActiveRef.current ? (songSigRef.current || null) : null, _sigPhs: (globalThis.__PAINT_SIG_PHS || null),
+        _look: _lookRef.current,
       };
+      _pfDraftSave('music', _o); if(only) return;
+      musicStashRef.current = _o;
       setHasMusicDraft(true); try{ homeCapRef.current && homeCapRef.current('music'); }catch(_){}
     }
     if(mode==='image'){
@@ -7562,7 +7584,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const cur = chordsRef.current;
       if(!cur || !cur.length) return;
       const meta = moodMetaRef.current || {};
-      imageStashRef.current = {
+      const _o = {
         _dna: (globalThis.__PAINT_MUSIC_DNA || null),   // the piece's Music DNA: a surprise in between loads another piece (and its DNA)
         chords: cur.slice(),
         grid: gridRef.current,
@@ -7584,7 +7606,11 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         kontraAuto: kontraAutoRef.current,
         setupNoSel: !!meta.setupNoSel,
         playedOnce: !!meta.playedOnce,
+        // for a relaunch only (in a running app the look and the ✦ Signature stay on as they are)
+        _iLook: { isg: imgSigRef.current || null, on: !!imgSigActiveRef.current, comp: imgComposerRef.current || null, stage: (composerStageRef.current || []).slice() },
       };
+      _pfDraftSave('image', _o); if(only) return;
+      imageStashRef.current = _o;
       setHasImageDraft(true); try{ homeCapRef.current && homeCapRef.current('image', meta.originalImgUrl); }catch(_){}
     }
     if(mode==='mfi'){
@@ -7610,6 +7636,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }
   },[]);
 
+  // after a relaunch the Music / Picture draft put aside last time is there again — the home card's ▶ and the tile go back to it, as before the app was closed
+  useEffect(()=>{ let dead=false;
+    const one=(k, ref, set, ok)=> _pfDraftLoad(k).then(s=>{ if(dead || !s || ref.current || !ok(s)) return; s._hyd=true; ref.current=s; set(true); }).catch(()=>{}).then(()=>{ _pfDraftReady[k]=true; });
+    one('music', musicStashRef, setHasMusicDraft, ()=>true);
+    one('image', imageStashRef, setHasImageDraft, (s)=>!!(s.pixel || s.imgCompose));
+    // the app going to the background with a piece on the canvas: keep it too (iOS may not bring the app back)
+    const bg=(e)=>{ if(e.type==='visibilitychange' && document.visibilityState!=='hidden') return; try{ const ls=loadedSourceRef.current; if(ls==='image'||ls==='midi'||ls==='audio'||ls==='score'){ try{ _homeNowRef.current && _homeNowRef.current(); }catch(_){} } if(ls==='image') stashMode('image','save'); else if(ls==='midi'||ls==='audio'||ls==='score') stashMode('music','save'); }catch(_){} };
+    document.addEventListener('visibilitychange', bg); window.addEventListener('pagehide', bg);
+    return ()=>{ dead=true; document.removeEventListener('visibilitychange', bg); window.removeEventListener('pagehide', bg); };
+  },[]);
   // stashOutgoing: stash whatever SOURCE mode is currently live, unless it's the
   // same as the mode we're entering (so "+ NEW <same source>" replaces in place
   // rather than self-stashing). Called at every mode-transition chokepoint.
@@ -7628,6 +7664,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // substrateRef and does not set loadedSource / moodFromImg, so the auto-close
   // picker effect (deps: …,loadedSource,moodFromImg) is not retriggered.
   const restoreMode = useCallback((mode)=>{
+    // a draft read back after a relaunch comes with the look it had — the app starts on the default one
+    const _hydLook = (s)=>{ const L=s._look; if(!L || L.sig) return; setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); setOneMMode(!!L.om); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn); };
     // Restoring INTO `mode` means leaving whatever source is currently live →
     // stash it first (stashOutgoing self-skips if the live mode == `mode`, e.g.
     // a wiped same-mode canvas) so switching between drafts never loses one.
@@ -7760,6 +7798,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(s._songSig){ songSigRef.current = s._songSig; setSongSig(s._songSig); try{ globalThis.__PAINT_SONG_SIG = s._songSig; globalThis.__PAINT_SIG_PHS = s._sigPhs || null; }catch(_){} }
       if(s._sig){ const _sg = s._sig; setTimeout(()=>{ try{ if(applySigRef.current) applySigRef.current(_sg); }catch(_){} }, 0); }
       setLoadedSource(_sub);
+      if(s._hyd){ s._hyd=false; _hydLook(s); }
       setStamp(prev=>prev+1);
       setTimeout(()=>{ restoringRef.current = false; }, 0);
       return true;
@@ -7814,6 +7853,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setOriginalImgUrl(s.originalImgUrl||null);
       setViewMode('image'); viewModeRef.current='image';
       setLoadedSource('image');
+      if(s._hyd && s._iLook){ s._hyd=false; const L=s._iLook;   // the picture's ✦ Signature, or the composer(s) it was playing
+        imgSigRef.current = L.isg || null; setImgSig(L.isg || null);
+        if(L.on && L.isg){ try{ imgSigFnRef.current && imgSigFnRef.current.apply(L.isg); }catch(_){} }
+        else if(L.comp){ imgComposerRef.current = L.comp; setImgComposer(L.comp); composerStageRef.current = (L.stage||[]).slice(); setComposerStage((L.stage||[]).slice()); } }
       setStamp(prev=>prev+1);
       setTimeout(()=>{ restoringRef.current = false; }, 0);
       return true;
@@ -8093,7 +8136,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // return to. Image content may stay on the canvas for that session —
     // that's separate — but the source-tile indicator must reset.
     // Test path: load Image → Clear → Back to Setup → the Image tile must NOT glow.
-    imageStashRef.current = null; setHasImageDraft(false);
+    imageStashRef.current = null; setHasImageDraft(false); _pfDraftDrop('image');
     setDisp(0);setErr('');setStamp(s=>s+1);
     setCompositionName('');setPaintScale('off');setRecordingName('');setRecBlob(null);setRecName('');setAudioSideImage(null);setAudioRowOpen(false);
     // After clear in a creative mode, mark the canvas as draft-owned by that
@@ -8128,8 +8171,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     micActiveRecallIdRef.current = null;
     micActiveRecallPresetRef.current = null;
     moodStashRef.current    = null; setHasMoodDraft(false);
-    musicStashRef.current   = null; setHasMusicDraft(false);
-    imageStashRef.current   = null; setHasImageDraft(false);
+    musicStashRef.current   = null; setHasMusicDraft(false); _pfDraftDrop('music');
+    imageStashRef.current   = null; setHasImageDraft(false); _pfDraftDrop('image');
     mfiStashRef.current     = null; setHasMfiDraft(false);
     draftOwnerRef.current   = null;
     // Now run the standard content wipe (chords, loaded blob/url, canvas).
@@ -8272,7 +8315,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Image draft (playedOnce=true, full disp) and SEE MUSIC lights up again as
       // if the scan were still finished. Refresh the image stash to the CLEARED
       // state so returning to Image shows the bare photo with SEE MUSIC off.
-      musicStashRef.current=null; setHasMusicDraft(false);
+      musicStashRef.current=null; setHasMusicDraft(false); _pfDraftDrop('music');
       _seeMusicSrcSigRef.current=null;
       _musicFromImageRef.current=false;
       // Clear = no draft. Drop the image stash entirely so the Image chip in
@@ -8281,7 +8324,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // there's no STASHED draft for ← Back → chip to resurrect.
       dispRef.current=0; playedOnceRef.current=false;
       if(moodMetaRef.current) moodMetaRef.current.playedOnce=false;
-      imageStashRef.current=null; setHasImageDraft(false);
+      imageStashRef.current=null; setHasImageDraft(false); _pfDraftDrop('image');
       // loadedSource stays 'image' → image view persists with the photo on canvas,
       // direction/palette controls live, Play ready to re-scan from the top.
       return;
@@ -8402,7 +8445,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       setClearArmed(false);
       // loadedSource + stayActive STAY → active view persists with "+ new music".
       setStayActive(true);
-      musicStashRef.current=null; setHasMusicDraft(false);
+      musicStashRef.current=null; setHasMusicDraft(false); _pfDraftDrop('music');
       requestAnimationFrame(()=>{try{window.scrollTo({top:0,behavior:'smooth'});}catch(_){}});
       return;
     }
@@ -8442,8 +8485,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setStamp(s=>s+1);
     setImgPlayMode('scan'); imgPlayModeRef.current='scan';
     moodStashRef.current=null;setHasMoodDraft(false);
-    musicStashRef.current=null;setHasMusicDraft(false);
-    imageStashRef.current=null;setHasImageDraft(false);
+    musicStashRef.current=null;setHasMusicDraft(false); _pfDraftDrop('music');
+    imageStashRef.current=null;setHasImageDraft(false); _pfDraftDrop('image');
     mfiStashRef.current=null;setHasMfiDraft(false);
     setGrid({N:DN,BW:DB,BH:DH,CW:DN*DB,CH:DN*DH});
     setOriginalImgUrl(null);
@@ -14227,6 +14270,8 @@ Hard requirements:
     const c=document.createElement('canvas'); return _favPaint(c, fv, {chords}, 1, tone, lay) ? c : null;
   }catch(_){ return null; } };
   const _fullPaintUrl = ()=>{ const c=_fullPaintCanvas(); if(!c || !c.width || !c.height) return null; try{ const W=Math.min(720, c.width), H=Math.round(c.height*W/c.width); const o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(c,0,0,W,H); return o.toDataURL('image/jpeg',0.82); }catch(_){ return null; } };
+  _lookRef.current = (()=>{ try{ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
+    return { st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, om:!!oneMMode && !_st, sig:!!sigActive }; }catch(_){ return null; } })();
   const _captureHomeArt = ()=>{
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
@@ -14252,6 +14297,7 @@ Hard requirements:
       return save(shrink(cv, cv.width, cv.height));
     }catch(_){}
   };
+  _homeNowRef.current = (studioFs && !studioHome) ? _captureHomeArt : null;   // the app going to the background from the canvas: the home card is this painting
   // a piece painted to the end in the Studio becomes the home painting
   useEffect(()=>{
     if(!studioFs || playing || anim || !chords.length || disp<chords.length) return;
@@ -16318,7 +16364,7 @@ Hard requirements:
                   }
                 }catch(_){ _hearMosaicRowsRef.current=null; }
                 _hearImageSrcSigRef.current = (loadedSource||'') + '|' + (chordsRef.current ? chordsRef.current.length : 0) + '|' + ((info&&info.title)||'') + '|' + (effectiveStyle||'') + '|' + (mode||'') + '|' + (pollockSessionSeed>>>0) + '|' + (shuffleArtistIndex|0) + '|' + (shufVariant|0) + '|' + (rndSalt|0) + '|' + (phaseIndex|0) + '|' + (structureSeedLock==null?'x':(structureSeedLock>>>0));
-                imageStashRef.current = null; setHasImageDraft(false);
+                imageStashRef.current = null; setHasImageDraft(false); _pfDraftDrop('image');
                 const cv = canvasRef.current;
                 if(!cv) return;
                 cv.toBlob((blob)=>{
@@ -16380,7 +16426,7 @@ Hard requirements:
                 // now superseded; clear it and record the source signature so a
                 // later Back can tag the new draft for reuse.
                 _seeMusicSrcSigRef.current = (mode||'') + '|' + (imgComposerRef.current ? 'lr' : (imgDirRef.current||'lr')) + '|' + chords.length;
-                musicStashRef.current = null; setHasMusicDraft(false);
+                musicStashRef.current = null; setHasMusicDraft(false); _pfDraftDrop('music');
                 // Bake image-mode runtime expansion (tremolo re-strikes,
                 // arpeggio per-note offsets, sustained-plane durations,
                 // _playable:false skips) into the chord array so the MIDI
