@@ -37080,6 +37080,7 @@ Hard requirements:
     if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>setStTip('fav'), 1200); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, favReadyAny, favHitAny]);
+  const feedResumeRef = useRef(null);   // ↓ from the first surprise back home: the cards wait for ↑
   const [feedFly, setFeedFly] = useState(null);     // the card flying off: {k, u, t, l, dir}
   const [feedFlash, setFeedFlash] = useState(0);    // the look's name over the card, for a moment
   // FULL SCREEN, QUIET: while a full-screen painting plays (the Studio's Full screen, the home's surprise) the song's lines fade after 4 s —
@@ -37282,7 +37283,10 @@ Hard requirements:
     if(feedFly) return;
     if(feedAt>=0 && !feedUpDone){ setFeedUpDone(true); setFeedUpCue(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} }
     setFeedIntro(null);
-    if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340); _feedStart(); _stBuzz(8); return; }
+    if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340);
+      const R=feedResumeRef.current; feedResumeRef.current=null;
+      if(R && R.cards && R.cards.length && R.kind===_feedKind()){ const c0=R.cards[0]; setFeedCards(R.cards); setFeedAt(0); _feedLoad(c0.piece, c0.sel || (c0.kind==='img' ? {img:true} : {sig:true}), c0.kind); _feedFlashNow(); _stBuzz(8); return; }   // back up after ↓ from the first surprise: the same one again
+      _feedStart(); _stBuzz(8); return; }
     // the card that leaves keeps its painting and its look
     const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
     setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0, pu:null} : c));
@@ -37315,6 +37319,8 @@ Hard requirements:
       return; }
     const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music'), own = !!mine && (mine==='image' ? hasImageDraft : hasMusicDraft);
     if(!own && !homeArt){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }   // nothing of yours yet: the card just gives
+    // ↑ again brings back these same surprises, from this card (as ↓ then ↑ does between cards) — not a new piece
+    try{ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(); feedResumeRef.current = { kind:_feedKind(), cards:feedCards.map(x=>x.id===c.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null, dir:'u'} : x) }; }catch(_){ feedResumeRef.current=null; }
     setFeedIntro(null); setFeedFly({k:Date.now(), u:_feedSnap(), t:_feedTitle(c), l:'', dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
     _feedExit(); if(own) setHomeSide(mine); _stBuzz(8);
   };
@@ -37335,7 +37341,7 @@ Hard requirements:
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
-  const _feedOpen = ()=>{ feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
+  const _feedOpen = ()=>{ feedResumeRef.current=null; feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
