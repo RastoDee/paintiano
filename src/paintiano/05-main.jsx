@@ -578,6 +578,21 @@ async function _micStreamRaw(){
 function _micRecOpts(mime){ const o={ audioBitsPerSecond:256000 }; if(mime) o.mimeType=mime; return o; }
 // after STOP the phone goes back to media playback — left in record mode, iOS plays the take through its call path
 function _micSessionPlayback(){ try{ if(typeof navigator!=='undefined' && navigator.audioSession) navigator.audioSession.type='playback'; }catch(_){} }
+// iPhone with the ring/silent switch on: Web Audio is muted unless a media element plays (the audioSession API is not in every iOS browser — Chrome, in-app
+// browsers). A silent looping <audio>, started in the tap, puts the page in the 'playback' session so the piano is heard; it pauses when the app is hidden.
+let _pfKeepEl = null;
+function _pfIsIOS(){ try{ const ua=navigator.userAgent||''; return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints||0)>1); }catch(_){ return false; } }
+function _pfSilentWav(){ const n=8000, b=new ArrayBuffer(44+n), v=new DataView(b), w=(o,t)=>{ for(let i=0;i<t.length;i++) v.setUint8(o+i, t.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4,36+n,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,8000,true); v.setUint32(28,8000,true); v.setUint16(32,1,true); v.setUint16(34,8,true); w(36,'data'); v.setUint32(40,n,true);
+  for(let i=0;i<n;i++) v.setUint8(44+i,128); return URL.createObjectURL(new Blob([b], {type:'audio/wav'})); }
+function _pfKeepAlive(on){ try{ if(!_pfIsIOS()) return;
+  if(!on){ if(_pfKeepEl && !_pfKeepEl.paused) _pfKeepEl.pause(); return; }
+  if(document.visibilityState==='hidden') return;
+  if(!_pfKeepEl){ const a=document.createElement('audio'); a.setAttribute('playsinline',''); a.setAttribute('x-webkit-airplay','deny'); a.loop=true; a.preload='auto'; a.src=_pfSilentWav(); _pfKeepEl=a; }
+  if(_pfKeepEl.paused){ const p=_pfKeepEl.play(); if(p && p.catch) p.catch(()=>{}); }
+}catch(_){} }
+try{ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') _pfKeepAlive(false); }); }catch(_){}
+try{ const _kg=()=>_pfKeepAlive(true); document.addEventListener('touchend', _kg, {capture:true, passive:true}); document.addEventListener('click', _kg, {capture:true}); }catch(_){}   // every tap (the sound may already read 'running' and still be muted by the switch)
 // A video's sound (the iPhone Camera's take, a concert from Photos) → a WAV the Music pipeline reads.
 function _isVideoFile(f){ const nm=String(f.name||'').toLowerCase(); return /^video\//.test(f.type||'') || /\.(mov|mp4|m4v|3gp)$/.test(nm); }
 function _wavFromBuffer(ab){
@@ -2167,13 +2182,15 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-prog{bottom:env(safe-area-inset-bottom,0px);z-index:7}
 .pf-st-home .pf-sh-heart{top:50%}
 /* the surprise lifts a little: the next one waits under it (a vertical feed's own nudge — no button, no text to read) */
-.pf-st-home .pf-sh-stage{--pk:min(23vh,190px)}
-.pf-st-home .pf-sh-next{position:absolute;left:0;right:0;bottom:0;height:calc(var(--pk) + 40px);z-index:0;overflow:hidden;background:#0d0b16;pointer-events:none}
-.pf-st-home .pf-sh-next img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 18%;filter:saturate(1.08)}
-.pf-st-home .pf-sh-next::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(5,5,10,.2),rgba(5,5,10,.72) 60%)}
-.pf-st-home .pf-sh-next span{position:absolute;z-index:1;left:0;right:0;bottom:calc(var(--pk) - 28px);display:flex;align-items:center;justify-content:center;gap:6px;color:#f0d78a;font-size:calc(var(--pf-read-scale,1) * 12px);font-weight:700;letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.85)}
-.pf-st-home .pf-sh-card.peek{animation:pfFsPeek 1.6s cubic-bezier(.3,.7,.3,1) both;border-radius:0 0 22px 22px;overflow:hidden;box-shadow:0 18px 34px rgba(0,0,0,.6)}
-@keyframes pfFsPeek{0%{transform:none}38%{transform:translateY(calc(var(--pk) * -1))}52%{transform:translateY(calc(var(--pk) * -.9))}100%{transform:none}}
+.pf-st-home .pf-sh-stage{--pk:min(26vh,220px)}
+.pf-st-home .pf-sh-card{will-change:transform;backface-visibility:hidden}
+.pf-st-home .pf-sh-next{position:absolute;left:10px;right:10px;bottom:0;height:calc(var(--pk) - 12px);z-index:0;overflow:hidden;border-radius:20px 20px 0 0;background:#0d0b16;pointer-events:none;visibility:hidden}
+.pf-st-home .pf-sh-next.on{visibility:visible}
+.pf-st-home .pf-sh-next img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 22%}
+.pf-st-home .pf-sh-next::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(5,5,10,.08),rgba(5,5,10,.5))}
+.pf-st-home .pf-sh-next span{position:absolute;z-index:1;left:0;right:0;top:18px;display:flex;align-items:center;justify-content:center;gap:6px;color:#fff;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:700;letter-spacing:.03em;text-shadow:0 1px 10px rgba(0,0,0,.75)}
+.pf-st-home .pf-sh-card.peek{animation:pfFsPeek 1.9s both}
+@keyframes pfFsPeek{0%{transform:translate3d(0,0,0);animation-timing-function:cubic-bezier(.22,1,.36,1)}30%{transform:translate3d(0,calc(var(--pk) * -1),0);animation-timing-function:linear}56%{transform:translate3d(0,calc(var(--pk) * -1),0);animation-timing-function:cubic-bezier(.55,0,.25,1)}100%{transform:translate3d(0,0,0)}}
 @media (prefers-reduced-motion: reduce){.pf-st-home .pf-sh-card.peek{animation:none}.pf-st-home .pf-sh-next{display:none}}
 @media (prefers-reduced-motion: reduce){.pf-st-home .pf-sh-card,.pf-st-home .pf-sh-card .pf-sh-art,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-in,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inl,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-inr,.pf-st-home .pf-sh-card .pf-sh-art.pf-sh-back{animation:none!important}}
 `;
@@ -6628,6 +6645,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const feedLaRef = useRef(0);
   const _acRunning = ()=>{ try{ const ac=Tone.getContext().rawContext; return !ac || ac.state==='running'; }catch(_){ return true; } };
   const unlockAudio = useCallback(async ()=>{
+    _pfKeepAlive(true);   // first, still inside the tap (iOS silent switch)
     try{ Tone.start(); }catch(_){}
     // Shorten Tone's scheduler look-ahead from its default 100ms to 30ms.
     // Default 100ms means triggerAttackRelease(..., Tone.now(), ...) schedules
@@ -6813,6 +6831,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[]);
   const wakeAudioRef = useRef(0);
   const wakeAudio = useCallback(async ()=>{
+    _pfKeepAlive(true);
     try{ Tone.start(); }catch(_){}
     try{ Tone.getContext().lookAhead = feedLaRef.current || 0.03; }catch(_){}
     try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type = 'playback'; } }catch(_){}
@@ -14873,7 +14892,7 @@ Hard requirements:
   // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, 14 s apart, never after the first swipe up
   useEffect(()=>{ if(!feedUpCue || feedUpDone || !playing || feedAt<0) return; const id=(feedCards[feedAt]||{}).id, R=feedPeekNRef.current; if(R.id!==id){ R.id=id; R.n=0; }
     let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
-  useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>setFeedPeek(0), 1700); return ()=>clearTimeout(tm); },[feedPeek]);
+  useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>setFeedPeek(0), 2000); return ()=>clearTimeout(tm); },[feedPeek]);
   useEffect(()=>{ if(feedUpDone && feedPeek) setFeedPeek(0); },[feedUpDone]);
   useEffect(()=>{ if(!playing || feedAt<0) return; const c=feedCards[feedAt]; if(c && c.pu && feedPosterGo!==c.id) setFeedPosterGo(c.id); },[playing, feedAt, feedCards]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); if(playing && !feedSoundOk) setFeedSoundOk(true); },[playing]);
@@ -15977,7 +15996,7 @@ Hard requirements:
             <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
-              {FC && feedPeek>0 && !feedFly && (<div className="pf-sh-next" aria-hidden="true"><img src={'/gallery/gallery-'+['07-afklint','02-mondrian','05-kusama','09-vasarely','03-kandinsky','08-samfrancis','01-pollock','06-stella'][(feedCards.length+(feedPeekNRef.current.n|0))%8]+'.webp'} alt=""/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>✦ {_stT('supNext')}</span></div>)}
+              {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/gallery-'+['05-kusama','02-mondrian','09-vasarely','07-afklint','06-stella','08-samfrancis'][feedCards.length%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>✦ {_stT('supNext')}</span></div>)}
               <div className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
                 {_smp && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
                 {feedBurst && (<span key={feedBurst.k} className="pf-sh-burst" aria-hidden="true" style={{left:feedBurst.x, top:feedBurst.y}}>{Array.from({length:12},(_,i)=>{ const a=i/12*Math.PI*2, d=46+((i*37)%5)*9; return (<i key={i} style={{'--dx':Math.round(Math.cos(a)*d)+'px','--dy':Math.round(Math.sin(a)*d)+'px', animationDelay:((i%3)*25)+'ms'}}/>); })}</span>)}
@@ -16024,7 +16043,7 @@ Hard requirements:
               return (
               <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
                 {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup rm" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-                {(_mt || _ml || FC || _sTap) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg')?' hide':'')}>{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{(_ml || FC || _sTap) && (<div className="pf-st-meta-l">{(FC || _sTap) && (<b className="pf-st-sup">✦ {_stT('sup')}</b>)}{((FC && _ml) || _sTap) ? ' · ' : ''}{_sTap ? _stT('supTap') : _ml}</div>)}</div>)}
+                {(_mt || _ml || FC || _sTap) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg' || (FC && feedPeek>0))?' hide':'')}>{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{(_ml || FC || _sTap) && (<div className="pf-st-meta-l">{(FC || _sTap) && (<b className="pf-st-sup">✦ {_stT('sup')}</b>)}{((FC && _ml) || _sTap) ? ' · ' : ''}{_sTap ? _stT('supTap') : _ml}</div>)}</div>)}
                 <div className="pf-st-acts">
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')} disabled={!_fL} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
                   <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+(stTip==='chg'?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); setStChg('music'); }}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
