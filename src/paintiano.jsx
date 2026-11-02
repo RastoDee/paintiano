@@ -36911,15 +36911,17 @@ Hard requirements:
   const _tipSeen = (k)=>{ try{ return localStorage.getItem('paintiano_tip_'+k)==='1'; }catch(_){ return true; } };
   const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
   const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
+  // ⌃ only where ↑ does something: a painter you chose (gold) stays — there the hint would be wrong
+  const _stUpWorks = ()=> viewMode==='image' || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0);
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
-    if(studioFs && !up && !_tipSeen('up')) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
+    if(studioFs && !up && !_tipSeen('up') && _stUpWorks()) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
     if(!k) return; const tm=setTimeout(()=>setStTip(k), k==='up' ? 7000 : 12000); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[stTip, _tipQuiet, playing]);
-  useEffect(()=>{ if(!stTip) return; if(_tipQuiet){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipDone(k), 6500); return ()=>clearTimeout(tm);
+  },[stTip, _tipQuiet, playing, _artMode, jamOn, jamAll, viewMode]);
+  useEffect(()=>{ if(!stTip) return; if(_tipQuiet || (stTip==='up' && !_stUpWorks())){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipDone(k), 6500); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[stTip, _tipQuiet]);
+  },[stTip, _tipQuiet, _artMode, jamOn, jamAll]);
   // ♥: your own painting (a song, a picture, a mood, a take — not a surprise) is done and not kept yet
   useEffect(()=>{ if(stTip || _tipQuiet || _tipSeen('fav')) return; const own = !!(loadedSource || moodContext || draftOwnerRef.current);
     if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>setStTip('fav'), 1200); return ()=>clearTimeout(tm);
