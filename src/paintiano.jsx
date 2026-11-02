@@ -32704,7 +32704,7 @@ Hard requirements:
           } else {
             _liteImgNextIsSigRef.current = false;
             // Advanced: every picture file and sample opens on ✦ too — the mirror of music files and samples
-            if(!basicModeRef.current && !_fromMusic && _isg && !_isReturn) _isgOpen = true;
+            if(!basicModeRef.current && _isg && !_isReturn) _isgOpen = true;   // Hear the painting too: the picture opens on its own ✦ first
           }
           const startMode = _isgOpen ? _isg.mode : _fr ? (_fr.mode || autoMode) : (_fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode));
           if(_isgOpen){ try{ imgSigFnRef.current.apply(_isg); }catch(_){} }
