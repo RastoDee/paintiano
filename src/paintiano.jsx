@@ -30365,7 +30365,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); setOneMMode(F.oneMMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
     try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
     try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
-    try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
+    try{ ['paintiano_first_demo','paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
     // Force back to Setup screen even if the caller was mid-flow.
     setForceSetup(false);
     setPickMode(null);
@@ -31736,7 +31736,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // loadSampleMidi but slices the chord events to the first `maxMs` ms so the
   // first-time user gets a digestible taste (~30 s) instead of the full 3:38
   // piece. Returns nothing — apply Events sets all the relevant state.
-  const loadSampleMidiTrimmed=useCallback((maxMs)=>{
+  const loadSampleMidiTrimmed=useCallback((maxMs, opts)=>{
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
       const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
@@ -31744,7 +31744,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       if(!allEvts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
       const evts = allEvts.filter(e => (e.startMs||0) < maxMs);
       const finalEvts = evts.length > 0 ? evts : allEvts.slice(0, 32);
-      stopAll();wipeCanvasNow();sigMusicNextRef.current=true; applyEvents(finalEvts,SAMPLE_MIDI_NAME);
+      stopAll();wipeCanvasNow();sigMusicNextRef.current=!(opts && opts.noSig); applyEvents(finalEvts,SAMPLE_MIDI_NAME);
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
     }catch(e){setErr('Sample MIDI: '+e.message);setErrInfo(false);}
@@ -36054,7 +36054,8 @@ Hard requirements:
     setTimeout(()=>{ try{ if(!playingRef.current && viewModeRef.current==='image' && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){} }, 650);
   };
   // Artist of the day toast: it is only info — on screen for 5 s (or until the first Play), then gone for the day; tomorrow brings a new one
-  const _dailyShown = !!(dailyToast && !dailyPlayed && proStatus==='free' && !showOnboarding && !showIntro && !isActiveView && !favView && (!basicMode || (!liteImageMode && !loadedSource && !liteEverUnlockedRef.current)));
+  const [fdPhase, setFdPhase] = useState(()=>{ try{ return localStorage.getItem('paintiano_first_demo')==='1' ? null : 'intro'; }catch(_){ return null; } });
+  const _dailyShown = !!(dailyToast && !dailyPlayed && proStatus==='free' && !fdPhase && !showOnboarding && !showIntro && !isActiveView && !favView && (!basicMode || (!liteImageMode && !loadedSource && !liteEverUnlockedRef.current)));
   const _dailyDone = ()=>{ setDailyToast(false); try{ localStorage.setItem('paintiano_daily_toast_v1', String(dailyTick)); }catch(_){} };
   useEffect(()=>{ if(!_dailyShown) return; const t=setTimeout(_dailyDone, 5000); return ()=>clearTimeout(t); },[_dailyShown]);
   useEffect(()=>{ if(dailyPlayed && dailyToast) _dailyDone(); },[dailyPlayed]);
@@ -36763,7 +36764,7 @@ Hard requirements:
   const [stTip, setStTip] = useState(null);   // null | 'up' | 'chg' | 'fav'
   const _tipSeen = (k)=>{ try{ return localStorage.getItem('paintiano_tip_'+k)==='1'; }catch(_){ return true; } };
   const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
-  const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
+  const _tipQuiet = !!fdPhase || !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
     if(studioFs && !up && !_tipSeen('up')) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
@@ -36792,6 +36793,34 @@ Hard requirements:
   // a painting played to the end: its ▶ stays a moment, then goes quietly (a tap still plays it again)
   const _stEnded = !playing && !anim && !holdPaused && chords.length>0 && disp>=chords.length;
   const [stEndQuiet, setStEndQuiet] = useState(false);
+  // ── FIRST CONTACT (the Studio, a phone, once): the promise → the change itself, live → "and now you".
+  // Screen 1 replaces the home card: an empty canvas, "every tone has its colour", one ▶ button.
+  // The tap opens Liebestraum (30 s) as the plain Mosaic; under the painting the 12 colours light up with the tones.
+  // When it ends: a sheet with the three ways to make your own. Then the home as always (reset brings it back).
+  const _FD_T = {
+    EN:{h1:'Every tone',h2:'has its colour.',sub:'The music paints itself in front of you.',btn:'Listen to Liebestraum',sec:'30 seconds',cap:'Mosaic — every block is one tone',now:'Now you.',sing:'Sing',singS:'or hum — the mic paints live',play:'Play',playS:'keys on the screen, every note a block',own:'Your music',ownS:'MP3, MIDI or a score from your phone',up:'Swipe up — the same piece, another painter',later:'Later'},
+    SK:{h1:'Každý tón',h2:'má svoju farbu.',sub:'Hudba sa pred tebou namaľuje.',btn:'Vypočuj si Liebestraum',sec:'30 sekúnd',cap:'Mozaika — každý blok je jeden tón',now:'A teraz ty.',sing:'Zaspievaj',singS:'alebo zahmkaj — mikrofón maľuje naživo',play:'Zahraj si',playS:'klávesy na obrazovke, každá nota = blok',own:'Tvoja hudba',ownS:'MP3, MIDI alebo noty z telefónu',up:'Potiahni hore — tá istá skladba, iný maliar',later:'Neskôr'},
+    DE:{h1:'Jeder Ton',h2:'hat seine Farbe.',sub:'Die Musik malt sich vor deinen Augen.',btn:'Hör dir Liebestraum an',sec:'30 Sekunden',cap:'Mosaik — jeder Block ist ein Ton',now:'Jetzt du.',sing:'Sing',singS:'oder summ — das Mikro malt live',play:'Spiel',playS:'Tasten auf dem Bildschirm, jede Note ein Block',own:'Deine Musik',ownS:'MP3, MIDI oder Noten vom Handy',up:'Nach oben wischen — dasselbe Stück, ein anderer Maler',later:'Später'},
+    FR:{h1:'Chaque note',h2:'a sa couleur.',sub:'La musique se peint sous tes yeux.',btn:'Écoute Liebestraum',sec:'30 secondes',cap:'Mosaïque — chaque bloc est une note',now:'À toi.',sing:'Chante',singS:'ou fredonne — le micro peint en direct',play:'Joue',playS:'des touches à l’écran, chaque note un bloc',own:'Ta musique',ownS:'MP3, MIDI ou partition de ton téléphone',up:'Glisse vers le haut — le même morceau, un autre peintre',later:'Plus tard'},
+    ES:{h1:'Cada tono',h2:'tiene su color.',sub:'La música se pinta ante tus ojos.',btn:'Escucha Liebestraum',sec:'30 segundos',cap:'Mosaico — cada bloque es un tono',now:'Ahora tú.',sing:'Canta',singS:'o tararea — el micro pinta en vivo',play:'Toca',playS:'teclas en pantalla, cada nota un bloque',own:'Tu música',ownS:'MP3, MIDI o partitura de tu móvil',up:'Desliza arriba — la misma pieza, otro pintor',later:'Luego'},
+    PT:{h1:'Cada tom',h2:'tem a sua cor.',sub:'A música pinta-se à tua frente.',btn:'Ouve Liebestraum',sec:'30 segundos',cap:'Mosaico — cada bloco é um tom',now:'Agora tu.',sing:'Canta',singS:'ou trauteia — o micro pinta ao vivo',play:'Toca',playS:'teclas no ecrã, cada nota um bloco',own:'A tua música',ownS:'MP3, MIDI ou partitura do telemóvel',up:'Desliza para cima — a mesma peça, outro pintor',later:'Mais tarde'},
+    zh:{h1:'每个音',h2:'都有自己的颜色。',sub:'音乐在你眼前画出来。',btn:'听一听《爱之梦》',sec:'30 秒',cap:'马赛克 — 每个色块是一个音',now:'轮到你了。',sing:'唱一唱',singS:'或哼一哼 — 麦克风实时作画',play:'弹一弹',playS:'屏幕上的琴键，每个音一个色块',own:'你的音乐',ownS:'手机里的 MP3、MIDI 或乐谱',up:'上滑 — 同一首曲子，换一位画家',later:'稍后'},
+    zhTW:{h1:'每個音',h2:'都有自己的顏色。',sub:'音樂在你眼前畫出來。',btn:'聽一聽《愛之夢》',sec:'30 秒',cap:'馬賽克 — 每個色塊是一個音',now:'輪到你了。',sing:'唱一唱',singS:'或哼一哼 — 麥克風即時作畫',play:'彈一彈',playS:'螢幕上的琴鍵，每個音一個色塊',own:'你的音樂',ownS:'手機裡的 MP3、MIDI 或樂譜',up:'上滑 — 同一首曲子，換一位畫家',later:'稍後'},
+    ja:{h1:'すべての音に',h2:'色がある。',sub:'音楽が目の前で絵になる。',btn:'愛の夢を聴く',sec:'30 秒',cap:'モザイク — ブロックひとつが音ひとつ',now:'次はあなた。',sing:'歌う',singS:'ハミングでも — マイクがライブで描く',play:'弾く',playS:'画面の鍵盤、音ごとにブロック',own:'あなたの音楽',ownS:'スマホの MP3、MIDI、楽譜',up:'上にスワイプ — 同じ曲を別の画家で',later:'あとで'},
+  };
+  const _fdT = (k)=> ((_FD_T[lang]||_FD_T.EN)[k] || _FD_T.EN[k] || k);
+  const _fdDone = ()=>{ try{ localStorage.setItem('paintiano_first_demo','1'); }catch(_){} };
+  const _fdStart = ()=>{
+    try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){}
+    setFdPhase('play');
+    try{ setStyle(null); setPainterStage([]); setNotesMode(false); setOneMMode(false); if(randomMode) _shuffleOff(); }catch(_){}
+    try{ loadSampleMidiTrimmed(30000, {noSig:true}); setForceSetup(false); }catch(_){ setFdPhase(null); _fdDone(); return; }   // the plain Mosaic: one tone = one block, readable
+    setTimeout(()=>{ try{ if(!playingRef.current && startPlayRef.current) startPlayRef.current(); }catch(_){} }, 450);
+  };
+  // the piece is over → "and now you"
+  useEffect(()=>{ if(fdPhase!=='play' || !_stEnded) return; const tm=setTimeout(()=>{ setFdPhase('done'); _fdDone(); }, 900); return ()=>clearTimeout(tm); },[fdPhase, _stEnded]);
+  useEffect(()=>{ if(fdPhase==='play' && !chords.length && loadedSource===null){ /* left before it ended (⌄, Change): the demo is over */ } },[fdPhase, chords.length, loadedSource]);
+  const _fdClose = ()=>{ setFdPhase(null); _fdDone(); };
   // ✦ OPEN AS A SONG — one deliberate tap after a take: the recording is read the way an MP3 is (mic-tuned) and
   // opens in Music as an ordinary piece (DNA, ✦ Signature, ♥, share); the live painting stays in the Mic as its draft.
   const micSong = null;
@@ -37678,7 +37707,7 @@ Hard requirements:
         {studioOn && studioHome && _dailyShown && (
           <button type="button" className="pf-st-daily" onClick={openDailyInfo} aria-label={ts('dailyTitle','Artist of the day')}><i aria-hidden="true"/><span><small>✦ {ts('dailyBadgeTitle','Free today')}</small><b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}{composerOfDay ? ' & '+(COMPOSER_INSPIRED[composerOfDay]||composerOfDay) : ''}</b></span></button>
         )}
-        {studioOn && studioHome && !_dailyShown && (
+        {studioOn && studioHome && !_dailyShown && fdPhase!=='intro' && (
           <button type="button" className="pf-st-word" onClick={()=>setNavMenuOpen(true)} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
         {/* segmented control — text size + language */}
@@ -39363,6 +39392,63 @@ Hard requirements:
       )}
 
       {studioFs && stTake>0 && (<div role="status" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 22px)',transform:'translateX(-50%)',zIndex:10012,padding:'8px 16px',borderRadius:20,background:'rgba(14,11,22,.82)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(240,215,138,.45)',color:'#f0d78a',fontSize:13,fontWeight:700,letterSpacing:'.02em',whiteSpace:'nowrap',pointerEvents:'none',animation:'pfStPausedIn .18s ease-out'}}>✦ {({EN:'Yours — in the Studio',SK:'Tvoja — v Štúdiu',DE:'Deins — im Studio',FR:'À toi — dans le Studio',ES:'Tuya — en el Estudio',PT:'Tua — no Estúdio',zh:'归你了 — 在工作室',zhTW:'歸你了 — 在工作室',ja:'あなたの絵 — スタジオへ'})[lang]||'Yours — in the Studio'}</div>)}
+      {/* FIRST CONTACT — 1: the promise (over the home, once) */}
+      {fdPhase==='intro' && studioHome && !isDesktop && (()=>{
+        const _hc = _homeCur(); if(_hc || feedAt>=0) return null;   // something of yours already: no demo
+        const _pc = (()=>{ const o=[]; for(const pc of [0,7,2,9,4,11,6,1,8,3,10,5]){ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){} o.push({pc, c:'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')'}); } return o; })();
+        const _nm = _miT('names');
+        return (<div className="pf-fd" style={{position:'fixed',inset:0,zIndex:10010,background:'#07060c',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between',paddingTop:'calc(env(safe-area-inset-top, 0px) + 18px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',paddingLeft:'max(20px, env(safe-area-inset-left, 0px))',paddingRight:'max(20px, env(safe-area-inset-right, 0px))'}}>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontSize:22,color:'#c9a84c',letterSpacing:'.01em'}}>Paintiano</div>
+          <div style={{width:'100%',maxWidth:360,aspectRatio:'3 / 4',borderRadius:18,background:'#0a0912',border:'1px solid rgba(201,168,76,.18)',boxShadow:'0 24px 60px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:24,boxSizing:'border-box'}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontStyle:'italic',fontSize:34,lineHeight:1.15,color:'#f2eee8',textAlign:'center',textWrap:'balance'}}>{_fdT('h1')}<br/>{_fdT('h2')}</div>
+            <div style={{fontSize:14,color:'rgba(242,238,232,.6)',textAlign:'center'}}>{_fdT('sub')}</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:16,width:'100%'}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(12,minmax(0,1fr))',gap:5,width:'82%',maxWidth:320}}>
+              {_pc.map(x=>(<span key={x.pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:5}}><i style={{display:'block',width:'100%',aspectRatio:'1',borderRadius:4,background:x.c,opacity:.5}}/><small style={{fontSize:9,color:'rgba(242,238,232,.45)'}}>{(_nm&&_nm[x.pc])||''}</small></span>))}
+            </div>
+            <button type="button" onClick={_fdStart} style={{height:58,padding:'0 28px',borderRadius:29,border:0,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:17,color:'#1a1408',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',boxShadow:'0 10px 30px rgba(201,168,76,.35)',display:'inline-flex',alignItems:'center',gap:12,animation:'pfStPausedIn .35s ease-out'}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg>{_fdT('btn')}
+            </button>
+            <div style={{fontSize:12,color:'rgba(242,238,232,.4)',marginTop:-6}}>{_fdT('sec')}</div>
+          </div>
+        </div>);
+      })()}
+      {/* FIRST CONTACT — 2: the 12 colours light up with the tones, over the painting */}
+      {fdPhase==='play' && studioFs && chords.length>0 && (()=>{
+        const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))];
+        const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; }));
+        const _nm=_miT('names');
+        return (<div aria-hidden="true" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 12px)',transform:'translateX(-50%)',zIndex:10001,width:'min(300px, 70vw)',display:'flex',flexDirection:'column',alignItems:'center',gap:8,pointerEvents:'none'}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(12,minmax(0,1fr))',gap:4,width:'100%'}}>
+            {[0,7,2,9,4,11,6,1,8,3,10,5].map(pc=>{ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){} const on=_lit.has(pc); const col='rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';
+              return (<span key={pc} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}><i style={{display:'block',width:'100%',aspectRatio:'1',borderRadius:4,background:col,opacity:on?1:.3,boxShadow:on?('0 0 12px '+col):'none',transform:on?'scale(1.25)':'none',transition:'opacity .1s, transform .1s'}}/><small style={{fontSize:9,color:on?'#f2eee8':'rgba(242,238,232,.35)'}}>{(_nm&&_nm[pc])||''}</small></span>); })}
+          </div>
+          <div style={{fontSize:12,fontStyle:'italic',letterSpacing:'.04em',color:'rgba(240,215,138,.85)',textShadow:'0 1px 8px rgba(0,0,0,.8)'}}>{_fdT('cap')}</div>
+        </div>);
+      })()}
+      {/* FIRST CONTACT — 3: and now you */}
+      {fdPhase==='done' && studioFs && (()=>{
+        const C=[{k:'mic',t:_fdT('sing'),s:_fdT('singS'),g:'linear-gradient(135deg,#ff9ec0,#ff5a8a)',ic:(<><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></>),go:()=>{ _fdClose(); _stViaHome('.pf-mic'); }},
+                 {k:'compose',t:_fdT('play'),s:_fdT('playS'),g:'linear-gradient(135deg,#8fd6a4,#3fb37a)',ic:(<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8"/></>),go:()=>{ _fdClose(); _stViaHome('.pf-compose'); }},
+                 {k:'music',t:_fdT('own'),s:_fdT('ownS'),g:'linear-gradient(135deg,#7ab3ff,#3f7bff)',ic:(<><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></>),go:()=>{ _fdClose(); _stNewSrc('sound'); }}];
+        let y0=null;
+        return (<>
+          <div onClick={_fdClose} style={{position:'fixed',inset:0,zIndex:10005,background:'rgba(4,4,10,.45)'}}/>
+          <div role="dialog" aria-label={_fdT('now')} onTouchStart={(e)=>{ y0=e.touches[0] && e.touches[0].clientY; }} onTouchEnd={(e)=>{ const t=e.changedTouches && e.changedTouches[0]; if(y0!=null && t && y0-t.clientY>50){ _fdClose(); setTimeout(()=>{ try{ _stNext(); }catch(_){} }, 60); } y0=null; }}
+            style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10006,background:'rgba(14,11,22,.98)',borderRadius:'24px 24px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'18px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',gap:10,animation:'pfStPausedIn .3s ease-out'}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:600,fontStyle:'italic',fontSize:30,color:'#f2eee8',textAlign:'center',marginBottom:4}}>{_fdT('now')}</div>
+            {C.map(c=>(<button key={c.k} type="button" onClick={c.go} style={{display:'flex',alignItems:'center',gap:14,width:'100%',padding:'12px 14px',borderRadius:18,border:'1px solid rgba(255,255,255,.08)',background:'rgba(255,255,255,.04)',cursor:'pointer',fontFamily:'inherit',textAlign:'left',color:'#f2eee8'}}>
+              <span style={{width:46,height:46,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:c.g,color:'#fff'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{c.ic}</svg></span>
+              <span style={{display:'flex',flexDirection:'column',gap:2,minWidth:0}}><b style={{fontSize:17,fontWeight:700}}>{c.t}</b><small style={{fontSize:12.5,color:'rgba(242,238,232,.55)'}}>{c.s}</small></span>
+            </button>))}
+            <div style={{textAlign:'center',marginTop:8,color:'rgba(240,215,138,.9)',fontSize:13,fontWeight:600,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_fdT('up')}
+            </div>
+            <button type="button" onClick={_fdClose} style={{alignSelf:'center',marginTop:2,background:'none',border:0,color:'rgba(242,238,232,.45)',fontFamily:'inherit',fontSize:13,cursor:'pointer',padding:'6px 14px'}}>{_fdT('later')}</button>
+          </div>
+        </>);
+      })()}
       {/* Studio: the Audio / Notes file card — the dock's save rows sit under the Studio's own dock and can't be seen there,
           so the rendered file comes up here with one Save tap (a fresh tap: iOS opens the share sheet → Save to Files) */}
       {studioFs && !preview && ((recBlob && audioRowOpen) || scoreBlob || (scoreMsg && !scoreBlob)) && (()=>{
