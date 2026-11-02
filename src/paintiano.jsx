@@ -22832,6 +22832,32 @@ const FAV_I18N = {
   ja:{shelfHint:'絵をダブルタップするとここに残る',label:'お気に入り',close:'閉じる',saved:'お気に入りに保存しました',removed:'お気に入りから削除しました',undo:'元に戻す',add:'お気に入りに追加',del:'お気に入りから削除',empty:'お気に入りはまだありません。完成した絵や「画像」の画像の左上の ♡ をタップすると、ここに残ります。',today:'今日保存',yday:'昨日保存',on:'{d} に保存',prev:'前の絵',next:'次の絵',lost:'この絵は開けません。',failed:'保存できません——プライベートブラウズでは保存領域が使えません。',mm:'マイミュージック',mmSaved:'マイミュージックに保存済み',tones:{pure:'ピュア',real:'リアル',pastel:'パステル'},clearAll:'すべて削除',clearAllQ:'{n} 枚すべて削除？',clearedAll:'お気に入り {n} 枚をすべて削除しました',open:'開く',openTip:'保存したときのまま「画像」で開いて再生します'},
 };
 const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',zhTW:'zh-TW',ja:'ja'};
+// THE MIC'S SOUND — music, not a phone call. iOS turns on its call processing (echo cancelling, noise
+// suppression, automatic gain) whenever a page asks for the microphone plainly: music then pumps, warbles and
+// loses its highs. We ask for the raw microphone step by step (the full request, then fewer constraints) and only
+// as the very last resort plainly — and even then we try to switch the processing off on the live track.
+async function _micStreamRaw(){
+  const md = navigator.mediaDevices;
+  const raw = { echoCancellation:false, noiseSuppression:false, autoGainControl:false };
+  const tries = [
+    { ...raw, voiceIsolation:false, sampleRate:{ideal:48000}, channelCount:{ideal:2} },
+    { ...raw, sampleRate:{ideal:48000} },
+    { ...raw },
+    { echoCancellation:false, noiseSuppression:false },
+    { echoCancellation:false },
+  ];
+  for(const a of tries){
+    try{ return await md.getUserMedia({ audio:a, video:false }); }
+    catch(e){ if(!(e && (e.name==='OverconstrainedError' || e.name==='NotReadableError' || e.name==='TypeError'))) throw e; }
+  }
+  const st = await md.getUserMedia({ audio:true, video:false });
+  try{ const tr=st.getAudioTracks()[0]; if(tr && tr.applyConstraints) await tr.applyConstraints(raw); }catch(_){}
+  return st;
+}
+// the take's file: a generous bitrate (the browser's own default is often thin)
+function _micRecOpts(mime){ const o={ audioBitsPerSecond:256000 }; if(mime) o.mimeType=mime; return o; }
+// after STOP the phone goes back to media playback — left in record mode, iOS plays the take through its call path
+function _micSessionPlayback(){ try{ if(typeof navigator!=='undefined' && navigator.audioSession) navigator.audioSession.type='playback'; }catch(_){} }
 // A recorded take (Compose keyboard, Mic) — see _takeInfo / _takePad in the app.
 function _takeInfoM(arr){
   if(!arr || !arr.length || !(arr[0] && arr[0].recorded)) return null;
@@ -34504,6 +34530,7 @@ Hard requirements:
       listenRecorderRef.current = null;
     }
     if(micStreamRef.current){micStreamRef.current.getTracks().forEach(t=>t.stop());micStreamRef.current=null;}
+    _micSessionPlayback();
     if(micAcRef.current){micAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicPainting(false);
     stopMicVol();
@@ -34519,6 +34546,7 @@ Hard requirements:
       listenRecorderRef.current = null;
     }
     if(listenStreamRef.current){listenStreamRef.current.getTracks().forEach(t=>t.stop());listenStreamRef.current=null;}
+    _micSessionPlayback();   // the take plays back as media, not through the call path
     if(listenAcRef.current){listenAcRef.current=null;} // shared Tone context — release ref only, never close
     setMicListening(false);
     stopMicVol();
@@ -34553,19 +34581,7 @@ Hard requirements:
       // etc.) with OverconstrainedError/NotReadableError even though the mic is
       // available and permitted. Try the detailed request first, then fall back to
       // a plain {audio:true} request which iOS always accepts.
-      let stream;
-      try{
-        // iOS Safari's noiseSuppression is voice-tuned — it crushes musical
-        // spectrum and pushes vocals forward. Disable on iOS, let our own
-        // Web Audio chain (HP + compressor below) do the cleaning. Desktop
-        // browsers ship gentler NS, so we keep it on there.
-        const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
-        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false,voiceIsolation:false},video:false});
-      }catch(ce){
-        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
-          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-        } else { throw ce; }
-      }
+      let stream=await _micStreamRaw();   // the raw microphone, not iOS's call processing (see _micStreamRaw)
       listenStreamRef.current=stream;
       const ac=await getSharedAC();
       listenAcRef.current=ac;
@@ -34616,8 +34632,7 @@ Hard requirements:
           const cands = /iPad|iPhone|iPod/.test(navigator.userAgent||'') ? ['audio/mp4','audio/webm;codecs=opus','audio/webm',''] : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];   // iPhone: its own AAC first
           let mime = '';
           for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
-          const opts = mime ? { mimeType: mime } : undefined;
-          const rec = new MR(recordStream, opts);
+          let rec; try{ rec = new MR(recordStream, _micRecOpts(mime)); }catch(_){ rec = new MR(recordStream, mime ? { mimeType: mime } : undefined); }   // a generous bitrate for the take
           listenChunksRef.current = [];
           // Clear any previous draft's blob — fresh listen session.
           if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
@@ -34857,15 +34872,7 @@ Hard requirements:
       // Mirror startMicListening's iOS-aware constraint negotiation so the
       // Voice recording survives Safari's stricter audio policy. Falling back
       // to {audio:true} on OverconstrainedError keeps the older path working.
-      let stream;
-      try{
-        const isiOS = typeof navigator!=='undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent||'');
-        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:!isiOS,autoGainControl:false,voiceIsolation:false},video:false});
-      }catch(ce){
-        if(ce&&(ce.name==='OverconstrainedError'||ce.name==='NotReadableError'||ce.name==='TypeError')){
-          stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-        } else { throw ce; }
-      }
+      let stream=await _micStreamRaw();   // the raw microphone, not iOS's call processing (see _micStreamRaw)
       micStreamRef.current=stream;
       const ac=await getSharedAC();
       micAcRef.current=ac;
@@ -34903,8 +34910,7 @@ Hard requirements:
           const cands = /iPad|iPhone|iPod/.test(navigator.userAgent||'') ? ['audio/mp4','audio/webm;codecs=opus','audio/webm',''] : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg',''];   // iPhone: its own AAC first
           let mime = '';
           for(const c of cands){ if(c==='' || (MR.isTypeSupported && MR.isTypeSupported(c))){ mime=c; break; } }
-          const opts = mime ? { mimeType: mime } : undefined;
-          const rec = new MR(recordStream, opts);
+          let rec; try{ rec = new MR(recordStream, _micRecOpts(mime)); }catch(_){ rec = new MR(recordStream, mime ? { mimeType: mime } : undefined); }   // a generous bitrate for the take
           listenChunksRef.current = [];
           // Clear any previous draft's blob — fresh sing session.
           if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
