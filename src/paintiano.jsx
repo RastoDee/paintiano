@@ -33747,21 +33747,6 @@ Hard requirements:
     _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(false); }, 1500+5600));
   },[sigActive, _hasPaint, viewMode]);
   useEffect(()=>()=>{ _siTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
-  // the first Fusion (several painters, not a ✦ Signature — that one has its own line): the same overlay says what it is
-  useEffect(()=>{
-    const clear=()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); _fuiTimersRef.current=[]; };
-    const fu = painterStage.length>0 && !sigActive && viewMode!=='image';
-    if(!fu){ clear(); setFuIntroShow(false); return; }
-    if(!_hasPaint || !playing || fuIntroDoneRef.current) return;
-    let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro2_n'))||0; }catch(_){}
-    fuIntroDoneRef.current = true;
-    if(n>=1) return;
-    // For You: the card is the screen — the line goes on the card, as the ✦ Signature's does there
-    if(feedAt>=0 && feedLoaded!==null){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro2_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
-    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro2_n', String(n+1)); }catch(_){} }, 1500));
-    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(false); }, 1500+5600));
-  },[painterStage, sigActive, _hasPaint, viewMode, playing]);
-  useEffect(()=>()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
   // … and the first picture Signature ever (Lite or Advanced): the same line, said of the picture
   useEffect(()=>{
     const clear=()=>{ _isiTimersRef.current.forEach(t=>clearTimeout(t)); _isiTimersRef.current=[]; };
@@ -37160,6 +37145,23 @@ Hard requirements:
   useEffect(()=>{ if(!feedHeart) return; const tm=setTimeout(()=>setFeedHeart(0), 950); return ()=>clearTimeout(tm); },[feedHeart]);
   const [feedBg, setFeedBg] = useState(null);
   const [feedIntro, setFeedIntro] = useState(null);   // Lite's opening lines on the card: {k:'m'|'p'|'s', t} — the Mosaic's key, the first painter, ✦ Signature
+  // the first Fusion (several painters, not a ✦ Signature — that one has its own line) says what it is — only where it can be seen:
+  // For You on the card (as ✦ Signature's line there), the Studio over the painting; never under the home card, where it would be spent unseen
+  useEffect(()=>{
+    const clear=()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); _fuiTimersRef.current=[]; };
+    const fu = painterStage.length>0 && !sigActive && viewMode!=='image';
+    if(!fu){ clear(); setFuIntroShow(false); return; }
+    const inFeed = feedAt>=0 && feedLoaded!==null, inStudio = studioFs && !studioHome && feedAt<0;
+    if(!(inFeed || inStudio) || !_hasPaint || !playing || fuIntroDoneRef.current) return;
+    let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro3_n'))||0; }catch(_){}
+    if(n>=1){ fuIntroDoneRef.current = true; return; }
+    fuIntroDoneRef.current = true;
+    if(inFeed){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro3_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
+    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro3_n', String(n+1)); }catch(_){} }, 1500));
+    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(false); }, 1500+5600));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[painterStage, sigActive, _hasPaint, viewMode, playing, feedAt, feedLoaded, studioFs, studioHome, feedIntro]);
+  useEffect(()=>()=>{ _fuiTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
   useEffect(()=>{ if(!feedIntro || !playing) return; const tm=setTimeout(()=>setFeedIntro(null), 7700); return ()=>clearTimeout(tm); },[feedIntro, playing]);   // the lines run with the painting, not before it
   const [feedSoundOk, setFeedSoundOk] = useState(false);   // the sound has woken once: from now on a swipe starts the card by itself   // the blurred light behind the card, from the painting as it grows
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
