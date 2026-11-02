@@ -1762,6 +1762,8 @@ const STUDIO_SKIN_CSS = `
 `;
 // the Studio's first home (no painting of yours yet): Liebestraum, painted by its ✦ Signature — a tap plays it
 const STUDIO_HOME_SAMPLE = { u:'/studio/home.webp', src:'sample' };
+// the first screen: a painting of a built-in piece (index into the samples) in one look — the tap paints exactly this
+const PF_FIRST = { piece:1, style:'arcs', phase:5, u:'/studio/first.webp' };   // Flight of the Bumble-Bee by Stella (interlocking arcs) — the picture is this very painting, made in the app; bold from the first second, on a dark ground
 // MINE — My Music · My Images · ♥ Favorites as one grid of paintings
 const MINE_CSS = `
 .pf-mine{position:fixed;inset:0;z-index:100002;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:#0b0a10;color:#f2eee8;font-family:'Outfit','Helvetica Neue',Arial,sans-serif;padding:calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px));animation:pfMineIn .22s ease-out}
@@ -2041,6 +2043,10 @@ const STUDIO_HOME_CSS = `
 @media (prefers-reduced-motion: reduce){.pf-sh-tease img,.pf-sh-peek{animation:none!important}}
 .pf-sh-art img{display:block;width:100%;height:100%;object-fit:cover}
 .pf-sh-live{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pf-sh-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.pf-sh-poster.go{animation:pfPosterOut 1.6s ease .15s forwards}
+@keyframes pfPosterOut{to{opacity:0}}
+@media (prefers-reduced-motion: reduce){.pf-sh-poster.go{animation-duration:.4s}}
 .pf-sh-open{position:absolute;right:12px;top:12px;z-index:6;width:38px;height:38px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.24);color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s}
 .pf-sh-open:active{transform:scale(.9)}
 .pf-sh-paused{position:absolute;left:50%;top:45%;z-index:5;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);pointer-events:none;animation:pfShPausedIn .18s ease-out}
@@ -2928,6 +2934,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const tasteUsedRef = useRef(false);
   const [tastePreviewKey, setTastePreviewKey] = useState(null);
   const tastePreviewKeyRef = useRef(null);
+  const feedFirstRef = useRef(false);   // the first screen's own painting is on (its look in full, even on Free — it is what the screen showed)
   useEffect(()=>{ tastePreviewKeyRef.current = tastePreviewKey; },[tastePreviewKey]);
   const FREE_UNLOCKED_KEYS = useMemo(
     () => new Set(BASE_STYLE_PAIRS.map(([a]) => a)),
@@ -5357,7 +5364,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     _setArtistSeed(pollockSessionSeed);
     // Variant cap (free tier: 2 of N per artist; paid: full N). Updated every
     // paint so a tier change while the app is open takes effect immediately.
-    _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+    _setVariantCap((proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
     // See music paints what plays. A piece that came from a picture (Image → See
     // music) is painted like any other music: every tone of a chord in its own
     // colour, its lightness from the tone. Neither the source picture's colour nor
@@ -5491,7 +5498,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       lastOverlayPaintRef.current = nowMs;
       if(_jamKeys && lim>0){
         _setArtistSeed(pollockSessionSeed);
-        _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap((proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords, _liveE);
         ctx.clearRect(0,0,CW,CH);
         { const _jg=_takeGrid('ensemble', chords) || grid;
@@ -5544,7 +5551,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         // alone owns the canvas.
         const fullCanvasOverlay = style==='raffel'||style==='lichtenstein'||style==='klee'||style==='delaunay'||style==='mondrian'||style==='bauhaus'||style==='rothko'||style==='matisse'||style==='kusama'||style==='bulge'||style==='arcs'||style==='bloom'||style==='spiral'||style==='gold'||style==='pop'||style==='wave'||style==='mitchell'||style==='monet'||style==='hokusai'||style==='oneM';
         _setArtistSeed(pollockSessionSeed);
-        _setVariantCap((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
+        _setVariantCap((proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null);
         _ensureEnergies(chords, _liveE);
         if(!fullCanvasOverlay){
           for(let i=sub.builtTo;i<lim;i++){
@@ -5740,7 +5747,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const keys=(a.length>=2 && viewMode!=='image') ? a : null;
     return { pk:_favPk, style:effectiveStyle||null, keys: keys ? keys.slice() : null, fa: keys ? _fusionAddr(keys, paintPhase) : null,
              phase:paintPhase|0, seed:pollockSessionSeed>>>0,
-             cap:(proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
+             cap:(proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
              mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null };
   };
   const _favCurAddr = favReady ? _favAddrNow() : null;
@@ -7491,6 +7498,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // ↑ is learned once: until the first swipe up ever, a playing surprise lifts now and then and ⌃⌃ rises over its title
   const [feedUpDone, setFeedUpDone] = useState(()=>{ try{ return localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){ return false; } });
   const [feedUpCue, setFeedUpCue] = useState(false);
+  const [feedPosterGo, setFeedPosterGo] = useState(null);
   const [feedPeek, setFeedPeek] = useState(0);   // the surprise lifts a little and the next one shows under it (until the first swipe up)
   const feedPeekNRef = useRef({id:null, n:0});
   // Home tour: up · sideways · hold · down (only when it can go back) · tap — learned by doing, once offered after the first surprise
@@ -13193,7 +13201,7 @@ Hard requirements:
       }else{
         _setArtistSeed(pollockSessionSeed);
         _setNoBg(noBg);
-        _setVariantCap(X.cap!==undefined ? X.cap : ((proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null));
+        _setVariantCap(X.cap!==undefined ? X.cap : ((proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null));
         _ensureEnergies(chords, _liveE);
         // ── overlay pass as a function — called twice in transparent mode:
         // once into a throwaway probe ctx to DETECT whether this style/variant
@@ -14277,7 +14285,7 @@ Hard requirements:
     const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
     if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
     const fv={ style:st||null, keys, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0,
-      cap:(proStatus==='free' && !sigActiveRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
+      cap:(proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
       mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
       dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive };
     const lay=_favLayout(fv, chords); if(!lay) return null;
@@ -14682,6 +14690,9 @@ Hard requirements:
   const [feedSoundOk, setFeedSoundOk] = useState(false);   // the sound has woken once: from now on a swipe starts the card by itself   // the blurred light behind the card, from the painting as it grows
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
   const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
+  // the first screen's painting: THIS piece in THIS look — a tap paints it right there (no slide, the picture melts into it); the first swipe up brings the arc
+  const _FEED_FIRST = { piece:PF_FIRST.piece, sel:{ style:PF_FIRST.style, phase:PF_FIRST.phase, mode:'harmony', notes:false, stage:[], sig:false } };
+  feedFirstRef.current = feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first);
   const _FEED_IMGS = (typeof SAMPLE_IMAGES!=='undefined') ? SAMPLE_IMAGES : [];
   const _feedKind = ()=>{ const h=_homeCur(); return (h && (h.k==='image' || (!h.k && h.src==='image'))) ? 'img' : 'music'; };
   const _feedTitle = (c)=> c ? (c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
@@ -14750,7 +14761,7 @@ Hard requirements:
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
     while(feedStepsRef.current.length){
       const st = feedStepsRef.current.shift();
-      if(st==='mosaic'){ _feedApply({style:null, phase:0, mode, notes:false, stage:[], sig:false}); return; }
+      if(st==='mosaic'){ _feedApply({style:null, phase:0, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'m', t:Date.now()}); return; }
       if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:0, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'p', t:Date.now()}); return; }
       if(st==='sig'){ const sg=songSigRef.current; if(sg && sg.keys && sg.keys.length && applySigRef.current){ _feedApply({sig:true}); setFeedIntro({k:'s', t:Date.now()}); return; } continue; }
     }
@@ -14769,7 +14780,7 @@ Hard requirements:
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
-  const _feedStart = (want)=>{
+  const _feedStart = (want, first)=>{
     // like Lite: the very first time, the arc with its lines — the bare Mosaic, Kandinsky, ✦ Signature; every later time the piece opens on its ✦ Signature, then the shuffle
     let arc=true; try{ arc=localStorage.getItem('paintiano_feed_arc')!=='1'; localStorage.setItem('paintiano_feed_arc','1'); }catch(_){}
     const kind=(typeof want==='string' && want) || _feedKind();
@@ -14777,6 +14788,11 @@ Hard requirements:
       const piece=_feedPiece('img'); feedStepsRef.current=[];
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:'img', piece, sel:null, u:null, l:'' };
       setFeedCards([c]); setFeedAt(0); _feedLoad(piece, {img:true}, 'img'); _feedFlashNow(); _feedHintBump(); return;
+    }
+    if(first===true){   // the first screen tapped: its own painting starts where it is — no intro, no slide; up brings the Mosaic, Kandinsky, ✦ (or ✦ at once after the first time)
+      const F=_FEED_FIRST; feedStepsRef.current = arc ? ['mosaic','kandinsky','sig'] : ['sig']; surpriseArtistBagRef.current = [];
+      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece:F.piece, sel:F.sel, u:null, l:'', dir:'none', first:true, pu:PF_FIRST.u };
+      setFeedCards([c]); setFeedAt(0); _feedLoad(F.piece, F.sel); _feedHintBump(); return;
     }
     const piece=_feedPiece(), sel = arc ? {style:null, phase:0, mode, notes:false, stage:[], sig:false} : {sig:true};
     feedStepsRef.current = arc ? ['kandinsky','sig'] : [];
@@ -14794,7 +14810,7 @@ Hard requirements:
     if(feedAt<0){ setFeedFly({k:Date.now(), u:cur && cur.u, t:cur && cur.t, l:cur && cur.l, dir:'up'}); setTimeout(()=>setFeedFly(null), 340); _feedStart(); _stBuzz(8); return; }
     // the card that leaves keeps its painting and its look
     const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
-    setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c));
+    setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0, pu:null} : c));
     setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'up'});
     setTimeout(()=>setFeedFly(null), 340);
     if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedCards(cs=>cs.map(c=>c.id===nx.id ? {...c, dir:'u'} : c)); setFeedAt(feedAt+1); _feedGo(nx); }
@@ -14859,6 +14875,7 @@ Hard requirements:
     let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
   useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>setFeedPeek(0), 1700); return ()=>clearTimeout(tm); },[feedPeek]);
   useEffect(()=>{ if(feedUpDone && feedPeek) setFeedPeek(0); },[feedUpDone]);
+  useEffect(()=>{ if(!playing || feedAt<0) return; const c=feedCards[feedAt]; if(c && c.pu && feedPosterGo!==c.id) setFeedPosterGo(c.id); },[playing, feedAt, feedCards]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); if(playing && !feedSoundOk) setFeedSoundOk(true); },[playing]);
   useEffect(()=>{ const on = feedLoaded!==null; feedLaRef.current = on ? 0.15 : 0; try{ Tone.getContext().lookAhead = on ? 0.15 : 0.03; }catch(_){} },[feedLoaded]);
   // any plain tap wakes a sleeping sound (iOS gives none to a swipe): then a swipe can start the card at once
@@ -15930,13 +15947,13 @@ Hard requirements:
           if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }   // a tap is a gesture iOS accepts: the sound wakes here
           if(!FC && (_smp || _canPlay)){   // the first screen, or your painting waiting: answer at once — sparks fly, it starts (in the tap: iOS wakes the sound here)
             try{ const r=e.currentTarget.getBoundingClientRect(), tt=(e.changedTouches && e.changedTouches[0]) || e; setFeedBurst({k:Date.now(), x:Math.round((tt.clientX||r.left+r.width/2)-r.left), y:Math.round((tt.clientY||r.top+r.height/2)-r.top)}); setTimeout(()=>setFeedBurst(null), 900); }catch(_){}
-            _stBuzz(12); if(_smp) _feedStart(); else _play(); return; }
+            _stBuzz(12); if(_smp) _feedStart(null, true); else _play(); return; }
           const R=feedTapRef.current, now=Date.now();
           if(now-R.t<300){ if(R.tm){ clearTimeout(R.tm); R.tm=null; } R.t=0;
             if(_fL && chords.length){ setFeedHeart(now); _stBuzz(15); if(favReadyAny){ if(!favHitAny) _favToggleAny(); } else setStFavPend(true); }
             return; }
           R.t=now; if(R.tm) clearTimeout(R.tm);
-          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_smp){ _feedStart(); return; } if(_canPlay) _play(); return; } _fBtn(); }, 300);   // one tap on a surprise: pause / play (⤢ in its corner is full screen)
+          R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_smp){ _feedStart(null, true); return; } if(_canPlay) _play(); return; } _fBtn(); }, 300);   // one tap on a surprise: pause / play (⤢ in its corner is full screen)
         };
         const _fTS = (e)=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }
           { const MH=metaHoldRef.current; if(MH.tm) clearTimeout(MH.tm); MH.tm=null; MH.on=false; if(FC && _fL && e.touches.length===1) MH.tm=setTimeout(()=>{ MH.tm=null; MH.on=true; setMetaPoke(n=>n+1); _stBuzz(6); }, 420); }   // hold: the song and its painter, it plays on
@@ -15951,7 +15968,7 @@ Hard requirements:
           if(dt<800 && dx<=-60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ let ok=false; try{ ok=_variantRoll(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } return; }   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
-        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
+        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS + STUDIO_FX_CSS}</style>
@@ -15968,10 +15985,11 @@ Hard requirements:
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
                 <div className="pf-sh-ghost pf-sh-g2" aria-hidden="true"/>
                 {FC ? (
-                <div key={FC.id} className={'pf-sh-art '+(FC.dir==='d' ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')}>
+                <div key={FC.id} className={'pf-sh-art '+(FC.dir==='none' ? '' : FC.dir==='d' ? 'pf-sh-back' : FC.dir==='l' ? 'pf-sh-inl' : FC.dir==='r' ? 'pf-sh-inr' : 'pf-sh-in')}>
                   {feedUpCue && (<span className="pf-sh-up" aria-hidden="true">{[0,1].map(i=>(<svg key={i} width="26" height="14" viewBox="0 0 26 14"><path d="M3 12L13 3l10 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg>))}</span>)}
                   {_fL && FC.u && (<img src={FC.u} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>)}
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
+                  {FC.pu && (<img className={'pf-sh-poster'+((feedPosterGo===FC.id) ? ' go' : '')} src={FC.pu} alt="" aria-hidden="true"/>)}   {/* the first screen's picture stays until the piece starts, then melts into it */}
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
                   {_fL && feedIntro && _fPlay && (()=>{
                     if(feedIntro.k==='m'){ const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))]; const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; })); const _nm=_miT('names');
@@ -15985,7 +16003,7 @@ Hard requirements:
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')}>
-                                    {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><img src="/gallery/gallery-06-stella.webp" alt="" style={{opacity:1,animation:'none'}}/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                                    {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
