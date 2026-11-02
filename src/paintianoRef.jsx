@@ -40075,7 +40075,7 @@ Hard requirements:
               </div>)}
           </div>)}
         {err && !working && (<div role="alert" style={{position:'fixed',left:'max(16px, env(safe-area-inset-left, 0px))',right:'max(16px, env(safe-area-inset-right, 0px))',top:'calc(env(safe-area-inset-top, 0px) + 16px)',maxWidth:460,margin:'0 auto',zIndex:10004,display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',borderRadius:16,background:'rgba(14,12,22,.94)',border:'1px solid '+(errInfo?'rgba(240,215,138,.3)':'rgba(255,120,120,.35)'),color:'#f3ead2',fontSize:(13.5*effScale)+'px',lineHeight:1.4,boxShadow:'0 14px 40px rgba(0,0,0,.5)'}}><span style={{flex:1,minWidth:0,overflowWrap:'anywhere'}}>{err}</span><button type="button" onClick={()=>{setErr('');setErrInfo(false);}} aria-label="dismiss" style={{flexShrink:0,width:28,height:28,borderRadius:'50%',border:'1px solid rgba(255,255,255,.18)',background:'transparent',color:'#fff',cursor:'pointer',lineHeight:1}}>✕</button></div>)}   {/* the Studio's own error line: the page's one sits under the painting */}
-        {working && !_stMfiPic && (()=>{ const _wl=String(wLabel||''); const k=/transcrib/i.test(_wl) ? 'wkA' : /score|mxl|pars/i.test(_wl) ? 'wkS' : 'wkC';
+        {working && !_stMfiPic && (()=>{ const _wl=String(wLabel||''); const k=(_wl===_stT('camRead')) ? 'camRead' : /transcrib/i.test(_wl) ? 'wkA' : /score|mxl|pars/i.test(_wl) ? 'wkS' : 'wkC';   // the camera's video: 'Reading the video'
           const _ttl = moodContext ? _sent(((t('moodNames')||{})[currentMood]) || songQ || currentMood || '') : (midiName || audioName || '');
           const _art = chords.length>0 || (viewMode==='image' && !!originalImgUrl);
           return _art ? (
@@ -40163,7 +40163,7 @@ Hard requirements:
           const _chip = {display:'inline-flex',alignItems:'center',gap:8,padding:'7px 16px',borderRadius:18,border:'1px solid rgba(242,238,232,.18)',background:'rgba(28,24,40,.6)',color:'rgba(242,238,232,.88)',fontFamily:'inherit',fontSize:(.56*effScale)+'rem',fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',cursor:'pointer'};
           const W = [.35,.6,.85,1,.75,.95,.6,.45,.3];
           return (<>
-            {!chords.length && (
+            {!chords.length && !working && (
               <div aria-hidden="true" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)',transform:'translate(-50%,-50%)',zIndex:10000,pointerEvents:'none'}}>
                 {/* the iOS hint, before the first take: under the circle on the empty canvas — the dock keeps ONE height (nothing moves when REC starts) */}
                 {!micActive && !take && !micSong && (<div style={{position:'absolute',left:'50%',top:'calc(100% + 22px)',transform:'translateX(-50%)',width:'min(320px, calc(100vw - 48px))',fontSize:(.5*effScale)+'rem',letterSpacing:'.03em',color:'rgba(140,200,255,.55)',textAlign:'center',lineHeight:1.5}}>🔊 {t('listenHint')}</div>)}
