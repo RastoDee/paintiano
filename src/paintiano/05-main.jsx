@@ -4038,9 +4038,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   const _stCrSolo = ()=>{
     if(working||anim||!crOn) return;
+    const _lead = imgComposerRef.current, _wasPin = !composerDice || (!!_lead && crPinsRef.current.includes(_lead));
     crOnRef.current = false; setCrOn(false);                      // the lead plays on alone (the stage leaves with the Fusion)
     crPinsRef.current = []; setCrPins([]);
-    if(stCrDicePrevRef.current!==true) setComposerDice(false);
+    setComposerDice(!_wasPin);                                    // pinned (gold) stays gold — ↑ keeps it; a guest (white) stays white — ↑ draws on
     stCrDicePrevRef.current = null;
     try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:false, studio:true}); }catch(_){}
   };
@@ -14927,10 +14928,15 @@ Hard requirements:
     try{
       if(viewMode==='image'){
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
-          // 🔀 off or on, ↑ always brings something new (a composer has no variants of its own) — never the 'off' message
-          if(crOn && !composerDice) _stCrPinStage();   // a Fusion (e.g. ✦'s ensemble): its gold composers stay, ↑ seats white guests — as for the painters
-          if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
-          else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
+          // Fusion: the gold composers stay, ↑ seats new (white) guests. Solo: a composer you chose (gold) stays, as a chosen painter does;
+          // a white one (drawn — or yours tapped again) or Scan: ↑ draws the next one, and it is white too
+          const _soloKept = !crOn && !!imgComposerRef.current && !composerDice;
+          if(!_soloKept){
+            if(!crOn && !composerDice) setComposerDice(true);
+            if(crOn && !composerDice) _stCrPinStage();   // a Fusion (e.g. ✦'s ensemble): its gold composers stay, ↑ seats white guests — as for the painters
+            if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
+            else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
+          }
         }
       } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         // ↑ in the Studio = someone else from your set — unless you chose (gold): a chosen painter or Fusion stays, ↑ does nothing (← its variants);
@@ -15062,7 +15068,7 @@ Hard requirements:
   const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
   const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
   // ⌃ only where ↑ does something: a painter you chose (gold) stays — there the hint would be wrong
-  const _stUpWorks = ()=> viewMode==='image' || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0);
+  const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer) : (!!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
     if(studioFs && !up && !_tipSeen('up') && _stUpWorks()) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
@@ -15345,7 +15351,7 @@ Hard requirements:
     const c=feedCards[feedAt]; if(!c || !_feedIsLoaded(c)){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600);
-    if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); }
+    if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); } else if(!crOn && imgComposerRef.current) setComposerDice(true);   // a picture's composer: drawn, not chosen — white, ↑ draws on
     // the switch tells what is on the canvas: one painter (one composer) = Solo, a crossing = Fusion
     if(!painterStage.length && jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); } else if(painterStage.length && ensembleActive && !jamOn) setJamOn(true);
     if(!composerStage.length && crOn) setCrOn(false);
@@ -17400,7 +17406,9 @@ Hard requirements:
                   const _cPinned = _crAll && crPins.includes(c.k);
                   const _cGuest = _crAll && _cIx>=0 && !_cPinned;
                   const _inSigC = _isgK.includes(c.k);
-                  const sel = !_aiOn && (_crAll ? _cPinned : (imgComposer===c.k || _cIx>0 || _inSigC));
+                  // the Studio's Solo: the composer playing is gold when you chose it (↑ keeps it), white when drawn (↑ draws the next)
+                  const _cWhite = studioFs && !crOn && composerDice && !_aiOn && (imgComposer===c.k || _inSigC);
+                  const sel = !_aiOn && !_cWhite && (_crAll ? _cPinned : (imgComposer===c.k || _cIx>0 || _inSigC));
                   const locked=working;
                   return (
                     <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked||anim)return; if(_inSigC && composerIsLocked(c.k)){ setPaywallReason('settings'); return; } _leaveAi();
@@ -17408,10 +17416,13 @@ Hard requirements:
                           if(had>0 && !crPinsRef.current.length && imgPlayModeRef.current==='scan'){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }   // the last gold one let go: a fresh ensemble (2–5)
                           return; }
                         if(crOn && composerDice){ _crPinTap(c.k); return; } if(crOn && imgComposerRef.current){ _crTap(c.k); return; }
+                        if(studioFs && !_aiOn){   // the Studio's Solo: a tap chooses (gold, ↑ keeps it); the gold one tapped again turns white (↑ draws others)
+                          if((imgComposer===c.k || _inSigC) && !composerStage.length){ setComposerDice(d=>!d); return; }
+                          setComposerDice(false); _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); return; }
                         if(!_aiOn && imgComposer===c.k && !composerStage.length){ _toScan(); return; }   // the chosen one tapped again → back to SCAN (an artist → Mosaic)
                         _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      data-fu={(studioFs && crOn && (sel || _cIx>=0)) ? 1 : undefined} style={{..._chipBase,order:(studioFs && crOn && (sel || _cIx>=0)) ? -100+Math.max(_cIx,0) : undefined,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...(_cGuest?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest)}{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
+                      data-fu={(studioFs && crOn && (sel || _cIx>=0)) ? 1 : undefined} style={{..._chipBase,order:(studioFs && crOn && (sel || _cIx>=0)) ? -100+Math.max(_cIx,0) : undefined,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...((_cGuest || _cWhite)?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest || _cWhite)}{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
                   );
                 })}
               </div>
