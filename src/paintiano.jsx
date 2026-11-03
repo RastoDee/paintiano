@@ -36221,7 +36221,8 @@ Hard requirements:
   // (♥ · play · sound · save; Atmo · Melody on a picture) with the caption on top, double tap = the left rail
   // (New · Look · Favorites · Setup). Classic = the screen as before. Desktop and Lite are not touched.
   const liteChipRef = useRef(null);   // the Lite / Advanced chip — the Studio is Advanced, so picking it from Lite flips the chip
-  const [viewPref, setViewPref] = useState(()=>{ try{ if(!_proReadCache()) return 'studio'; return localStorage.getItem('paintiano_view')==='studio' ? 'studio' : 'classic'; }catch(_){ return 'classic'; } });
+  // the Studio is the phone's view for everyone; the Atelier only for whoever picked it (Styles & palettes → View) — the computer keeps the Atelier (studioOn needs !isDesktop)
+  const [viewPref, setViewPref] = useState(()=>{ try{ if(!_proReadCache()) return 'studio'; return localStorage.getItem('paintiano_view')==='classic' ? 'classic' : 'studio'; }catch(_){ return 'studio'; } });
   // Free (also a licence that lapsed): the Studio, never Classic or Lite. Written down, so an upgrade keeps the Studio
   // until the user picks Classic. A QR poster scan keeps its Lite disc for that visit.
   useEffect(()=>{ if(proStatus!=='free') return; setViewPref('studio'); try{ localStorage.setItem('paintiano_view','studio'); localStorage.setItem('paintiano_was_free','1'); }catch(_){}
