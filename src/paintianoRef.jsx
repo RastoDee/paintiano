@@ -1536,7 +1536,8 @@ async function favPiece(pk){
   }catch(_){ return null; }
 }
 // favAdd(fav, chords, pc) → saves one favorite in one transaction. The notes are
-// written only for a song not stored yet. A picture favorite (Image mode) brings
+// written only for a song not stored yet. A Mic take brings its recording too
+// (pc = {au:{buf, mime}}) — it is kept nowhere else. A picture favorite (Image mode) brings
 // its picture instead: pc = {buf: the original file's bytes, mime, name}, kept
 // once per picture like a song. Returns the record, or null (private mode, quota).
 async function favAdd(fav, chords, pc){
@@ -1547,7 +1548,7 @@ async function favAdd(fav, chords, pc){
       const ps = tx.objectStore('pieces');
       const g  = ps.get(fav.pk);
       g.onsuccess = ()=>{
-        if(!g.result) ps.put((pc && pc.buf) ? { pk:fav.pk, buf:pc.buf, mime:pc.mime||'', name:pc.name||'' } : (pc && pc.img) ? { pk:fav.pk, img:pc.img, name:pc.name||'' } : { pk:fav.pk, chords });
+        if(!g.result) ps.put((pc && pc.buf) ? { pk:fav.pk, buf:pc.buf, mime:pc.mime||'', name:pc.name||'' } : (pc && pc.img) ? { pk:fav.pk, img:pc.img, name:pc.name||'' } : ((pc && pc.au) ? { pk:fav.pk, chords, au:pc.au } : { pk:fav.pk, chords }));   // a Mic take keeps its own sound (au: {buf, mime}) beside its notes
         tx.objectStore('favs').put(fav);
       };
       tx.oncomplete = ()=> resolve();
@@ -24074,6 +24075,7 @@ const STUDIO_SKIN_CSS = `
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid::-webkit-scrollbar{display:none}
 .pf-app-root .pf-strip-grid.pf-tray.pf-fu .pf-art-grid{scroll-snap-type:none}
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid>*{flex:0 0 68px!important;width:68px!important;max-width:none!important;scroll-snap-align:center}
+.pf-app-root .pf-strip-grid.pf-tray .pf-art-grid>*{transition-property:background-color,border-color,color,box-shadow,opacity,transform!important}   /* never 'order': the chips' 'all .18s' animated it, so the row was measured mid-shuffle and the Fusion group centred on where it had been */
 .pf-tray .pf-sk-face{width:58px;height:58px}
 .pf-tray .pf-artist-on .pf-sk-face{transform:scale(1.08)}
 `;
@@ -27350,6 +27352,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{ imgSigActiveRef.current = imgSigActive; },[imgSigActive]);
   const imgSigPrevRef = useRef(null);            // what was playing before ✦ — tapping ✦ again returns to it
   const imgNameRef = useRef('');                 // the picture's file name — "← image" brings it back under it (title, a hand-picked ✦)
+  const favMusicRestoreRef = useRef(null);       // ♥ → Open on a Mic take: the next applyEvents paints it with the ♥'s look
+  const favApplyLookRef = useRef(null);          // _favApplyLook (defined further down)
+  const favComposeOpenRef = useRef(null);        // ♥ → Open on a composition: once Compose is on, its chords come back
   const favRestoreRef = useRef(null);            // the next loadImage opens a ♥ picture favorite (_favOpenImg): its palette, reading, composers, ✦
   const favRestorePostRef = useRef(null);        // … and once it is loaded: AI compose / atmosphere / melody, then Play
   const imgReturnLoadRef = useRef(false);        // the next loadImage is "← image": the picture comes back as it was, not on ✦
@@ -28192,7 +28197,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive,
       src: own==='compose' ? 'compose' : (own==='sing'||own==='listen') ? 'mic' : (chords[0] && chords[0].recorded) ? 'compose' : (loadedSource || (moodContext ? 'mood' : '')),
       title: (info && info.title) ? String(info.title) : '', mood: moodContext ? (currentMood||'') : '', n: chords.length };
-    const r=await favAdd(fav, clone(chords));
+    // a Mic take is kept nowhere else: its recording goes into the ♥ with its notes (up to ~25 MB), so ♥ → Open plays it again
+    let au=null;
+    if(fav.src==='mic'){ try{ const B=listenBlobRef.current; if(B && B.blob && B.blob.size>0 && B.blob.size<=25*1024*1024){ au={ buf: await B.blob.arrayBuffer(), mime: B.type || B.blob.type || 'audio/webm' }; fav.au=1; } }catch(_){ au=null; } }
+    const r=await favAdd(fav, clone(chords), au ? {au} : undefined);
     if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); }
     else _favToastShow({kind:'failed'});
   };
@@ -30963,8 +30971,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // Lite (no poster QR): Kandinsky v0 → Mosaic → ✦ (liteOpenRef). Advanced: music files and samples open on ✦.
       setLiteIntroPiece(false);
       if(basicModeRef.current && !qrArtistRef.current && liteOpenRef.current) liteOpenRef.current(_sg);
-      else if(_sg && _sgMusic && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);
+      else if(_sg && _sgMusic && !favMusicRestoreRef.current && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);   // ♥ → Open keeps the ♥'s own look, not ✦
     }catch(_){}
+    { const _fr=favMusicRestoreRef.current; if(_fr){ favMusicRestoreRef.current=null; setTimeout(()=>{ try{ favApplyLookRef.current && favApplyLookRef.current(_fr); }catch(_){} }, 260); } }   // ♥ → Open: as it was kept (after the new piece's own deferred picks)
     const wi=events.map((c,i)=>({...c,idx:i}));
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
@@ -31585,6 +31594,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       composeActiveRecallIdRef.current = entry.id;
     }catch(_){}
   },[stopAll,_composeRecentLabel]);
+  // ♥ → Open on a composition: Compose opens (empty), then its chords come back and it can go on from there
+  useEffect(()=>{ if(!composeMode || !favComposeOpenRef.current) return; const x=favComposeOpenRef.current; favComposeOpenRef.current=null;
+    const tm=setTimeout(()=>{ try{ _composeRecall({ id:null, ts:x.f.at, chords:x.chords, grid:null, style:null }); composeActiveRecallIdRef.current=null; favApplyLookRef.current && favApplyLookRef.current(x.f); }catch(_){} }, 220);
+    return ()=>clearTimeout(tm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[composeMode]);
   const [showComposeRecent,setShowComposeRecent]=useState(false);
 
   // ── Mic "recent 3" lists ────────────────────────────────────────────────────
@@ -36280,6 +36295,46 @@ Hard requirements:
   };
   const _favToggleAny = ()=>{ if(favReady) _favToggle(); else _favToggleImg(); };
   // Open (Favorites): the picture back in Image, exactly as saved — palette, reading, composers, ✦, AI piece — and it plays
+  // a ♥'s look on the live canvas: its painter (or Fusion), variant and palette — ✦ steps aside
+  const _favApplyLook = (f)=>{ try{
+    if(!f) return;
+    if(sigActiveRef.current){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
+    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+    randomModeRef.current=false; setRandomMode(false); setMosaicShuffleLock(false);
+    const keys=(f.keys && f.keys.length>1) ? f.keys.slice(0, STAGE_MAX) : null;
+    if(keys){ setNotesMode(false); setStyle(keys[0]); setPainterStage(keys.slice(1)); if(ensembleActive) setJamOn(true); }
+    else if(f.style==='notes'){ setStyle(null); setPainterStage([]); setNotesMode(true); setJamOn(false); }
+    else { setNotesMode(false); setStyle(f.style && f.style!=='mosaic' ? f.style : null); setPainterStage([]); setJamOn(false); }
+    setPhaseIndex(f.phase|0);
+    if(f.mode) setMode(f.mode);
+    if(f.mode==='custom' && f.pal && proStatus!=='free'){ try{ setCustomPalette(f.pal.slice()); }catch(_){} }
+  }catch(_){} };
+  favApplyLookRef.current = _favApplyLook;
+  // ♥ → Open on a composition (back into Compose, to go on) or a Mic take with its sound (as a song, its recording plays)
+  const _favCanOpen = (f)=> !!(f && f.kind!=='img' && (f.src==='compose' || (f.src==='mic' && f.au)));
+  const _favOpenSong = async ()=>{
+    const f=favCur; if(!_favCanOpen(f)) return;
+    try{ wakeAudio(); }catch(_){}
+    const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk);
+    if(!pc || !pc.chords || !pc.chords.length){ setFavBad(true); return; }
+    if(f.src==='compose'){
+      favComposeOpenRef.current={ f, chords:pc.chords };
+      _favClose();
+      if(studioOn) _stViaHome('.pf-compose'); else { try{ const el=document.querySelector('.pf-compose'); el && !el.disabled && el.click(); }catch(_){} }
+      return;
+    }
+    if(!pc.au || !pc.au.buf){ setFavBad(true); return; }
+    let file=null;
+    try{
+      const type=pc.au.mime || 'audio/webm';
+      const ext = /mp4|aac|m4a/.test(type) ? '.m4a' : /ogg/.test(type) ? '.ogg' : /wav/.test(type) ? '.wav' : '.webm';
+      file=new File([new Blob([pc.au.buf],{type})], (_favTitle(f) || _stT('micTake'))+ext, {type});
+    }catch(_){ setFavBad(true); return; }
+    _favClose();
+    micToSongRef.current={ port: !!((_takeInfo(pc.chords)||{}).port) };   // the song keeps the take's frame
+    favMusicRestoreRef.current=f;
+    try{ loadAudio({target:{files:[file], value:''}}); }catch(_){ micToSongRef.current=false; favMusicRestoreRef.current=null; }
+  };
   const _favOpenImg = async ()=>{
     const f=favCur; if(!f || f.kind!=='img') return;
     try{ wakeAudio(); }catch(_){}   // in the tap: the audio device is live when it starts playing
@@ -38322,7 +38377,7 @@ Hard requirements:
             {f && (<div className="pf-st-acts" onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()}>
               <button type="button" className={'pf-st-act pf-st-fav'+(gone?'':' on')} onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} aria-pressed={!gone}>{_heartSv}</button>
               {isImgFav ? (<button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenImg(); }} disabled={favBad}><TxIcon n="play" s={16}/>{_favT('open')}</button>)
-                : (<button type="button" className="pf-st-act" onClick={(e)=>{ e.stopPropagation(); if(_shOk) setStFavShare(true); }} disabled={!_shOk} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>)}
+                : (<>{_favCanOpen(f) && (<button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenSong(); }} disabled={favBad}><TxIcon n="play" s={16}/>{_favT('open')}</button>)}<button type="button" className="pf-st-act" onClick={(e)=>{ e.stopPropagation(); if(_shOk) setStFavShare(true); }} disabled={!_shOk} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button></>)}
             </div>)}
             </div>
             {/* where you are: the dots down the left (swipe ↑ ↓) */}
