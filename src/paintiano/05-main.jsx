@@ -18088,8 +18088,8 @@ Hard requirements:
             </>);
           })()}
           {stripOpen && (<div onClick={()=>setStripOpen(false)} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now()} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
-            // swipes on the painting work with the tray open too: ← → its variants, ↑ the next one (the row follows); ↓ or a tap closes the tray
-            if(st && tt){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(!(dy>0 && Math.abs(dy)>Math.abs(dx)) && _stSwipeRef.current){ trayUserRef.current=false; if(_stSwipeRef.current(dx, dy, Date.now()-st.t)) return; } }
+            // swipes on the painting work with the tray open too: ← → its variants, ↑ the next one, ↓ the one before (the row follows); only a tap closes the tray
+            if(st && tt){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(_stSwipeRef.current){ trayUserRef.current=false; if(_stSwipeRef.current(dx, dy, Date.now()-st.t)) return; } }
             setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'transparent',touchAction:'none'}}/>)}{/* the painting stays bright above the look tray: a tap on it closes the tray */}
 
         </>);
