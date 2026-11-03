@@ -242,8 +242,9 @@ const PF_STYLE = `
            the inline flex column in the JSX; no grid overrides here. Chip
            grid columns per section are also driven by inline styles so the
            section-specific grids don't get clobbered by an old 1fr rule. */
-        @media (min-width: 769px) and (min-height: 501px),
-               (max-height: 500px) and (orientation: landscape) {
+        /* the wide-screen Atelier grid is for a computer with a mouse — a phone or tablet (touch), upright or on its side, keeps the Studio's own layout */
+        @media (min-width: 769px) and (min-height: 501px) and (pointer: fine),
+               (max-height: 500px) and (orientation: landscape) and (pointer: fine) {
           html, body {
             background: #050507 !important;
             min-height: 100vh;
@@ -950,7 +951,7 @@ const PF_STYLE = `
            MORF + VARIÁCIA buttons stack vertically instead of side-by-side
            (uniform with the edge columns). Tablet PORTRAIT (3-col) and
            MOBILE LANDSCAPE (also 3-col now) are untouched. */
-        @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape) {
+        @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape) and (pointer: fine) {
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button {
             min-height: 56px;
             padding: 8px 5px !important;

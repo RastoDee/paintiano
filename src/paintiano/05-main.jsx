@@ -1328,6 +1328,8 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
 
 // The Studio's own Custom-palette editor: inside the look tray, under the palettes — the painting stays bright above and
 // changes as you pick. Tap a note, then its colour on the rainbow strip, or ⋯ (the system picker) for an exact one.
+// a phone or a tablet (a coarse pointer you touch) — never a computer with a mouse, even a wide one
+const PF_TOUCH_DEV = (()=>{ try{ return typeof window!=='undefined' && (navigator.maxTouchPoints||0)>0 && !!window.matchMedia && window.matchMedia('(pointer: coarse)').matches; }catch(_){ return false; } })();
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
 const _stPalRgb=(h)=>{ const m=/^#?([0-9a-f]{6})$/i.exec(String(h||'')); if(!m) return [136,136,136]; const n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -1919,6 +1921,15 @@ const MINE_CSS = `
 .pf-mine-empty{max-width:420px;margin:48px auto 0;text-align:center;font-size:15px;line-height:1.55;color:rgba(240,215,138,.88)}
 `;
 const STUDIO_FX_CSS = `
+.pf-app-root{--pf-side:min(360px, 42vw)}
+.pf-st-land.pf-st-tray .pf-st-bar{opacity:1!important}
+.pf-st-land .pf-st-bar{left:auto!important;right:0!important;width:var(--pf-side)!important;box-sizing:border-box;z-index:10006!important;padding-left:14px!important;padding-right:max(14px, env(safe-area-inset-right, 0px))!important;background:linear-gradient(180deg,rgba(12,10,19,0),rgba(12,10,19,.98) 26%)}
+@media (min-width:700px){.pf-chg{left:0!important;right:0!important;margin:0 auto;width:min(600px, 100%)!important}}   /* a tablet upright: the sheet keeps a phone's width, centred */
+.pf-st-land .pf-chg{left:auto!important;right:0!important;width:var(--pf-side)!important;max-height:100dvh!important;border-radius:22px 0 0 0!important;margin:0!important}
+.pf-app-root.pf-st-land .pf-strip-grid.pf-tray::before{display:none}
+.pf-app-root.pf-st-land .pf-strip-grid.pf-tray .pf-art-grid{flex-wrap:wrap!important;overflow:visible!important;scroll-snap-type:none!important;padding:6px 0 4px!important;margin:0!important;justify-content:center!important;row-gap:10px!important}
+.pf-app-root.pf-st-land .pf-strip-grid.pf-tray .pf-art-grid>*{flex:0 0 62px!important;width:62px!important}
+.pf-st-land .pf-tray .pf-sk-face{width:52px;height:52px}
 .pf-chbar{display:flex;align-items:center;gap:6px;margin:0 2px 8px;padding:7px;border-radius:18px;background:rgba(20,17,30,.94);border:1px solid rgba(240,192,64,.35)}
 .pf-chb{flex-shrink:0;border:0;border-radius:14px;padding:8px 11px;font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.15) * 13px);font-weight:600;background:rgba(255,255,255,.08);color:#f2eee8;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap}
 .pf-chb:disabled{opacity:.35;cursor:default}
@@ -2954,18 +2965,19 @@ export default function Paintiano() {
   const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
-  const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches;}catch(_){return false;}});
+  // a touch device (phone or tablet, upright or on its side) is never the 'desktop': it gets the Studio — the computer with a mouse keeps the Atelier
+  const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches && !PF_TOUCH_DEV;}catch(_){return false;}});
   // 5-col layout breakpoint (desktop landscape + tablet landscape). Matches
   // the CSS @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape).
   // Used to opt-in to layout changes that only make sense at this width.
-  const [is5Col, setIs5Col] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)').matches;}catch(_){return false;}});
+  const [is5Col, setIs5Col] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)').matches && !PF_TOUCH_DEV;}catch(_){return false;}});
   // isNotPhone \u2014 desktop + tablet portrait + tablet landscape (phones excluded in both orientations).
   // isCoarse — touch-first pointer (phone, tablet, touch laptop in tablet mode).
   // Fullscreen Lite: touch gets the swipe hint and NO button column; a mouse
   // gets the button column and NO swipe hint. Never both.
   const [isCoarse, setIsCoarse] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;}catch(_){return false;}});
   useEffect(()=>{ try{ const mq=window.matchMedia('(pointer: coarse)'); const h=()=>setIsCoarse(mq.matches); mq.addEventListener ? mq.addEventListener('change',h) : mq.addListener(h); return ()=>{ mq.removeEventListener ? mq.removeEventListener('change',h) : mq.removeListener(h); }; }catch(_){} },[]);
-  const [isNotPhone, setIsNotPhone] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px)').matches;}catch(_){return false;}});
+  const [isNotPhone, setIsNotPhone] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px)').matches && !PF_TOUCH_DEV;}catch(_){return false;}});
   // isMobilePortrait — phone held upright. Used by Setup to render the Tone
   // selector as a full-width horizontal row of 3 buttons below the two
   // columns, instead of the default vertical stack in the left column.
@@ -2973,21 +2985,21 @@ export default function Paintiano() {
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)');
-    const onChange = (e)=>setIs5Col(e.matches);
+    const onChange = (e)=>setIs5Col(e.matches && !PF_TOUCH_DEV);
     try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
     return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
   },[]);
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px)');
-    const onChange = (e)=>setIsNotPhone(e.matches);
+    const onChange = (e)=>setIsNotPhone(e.matches && !PF_TOUCH_DEV);
     try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
     return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
   },[]);
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
     const mql = window.matchMedia('(min-width: 769px)');
-    const onChange = (e)=>setIsDesktop(e.matches);
+    const onChange = (e)=>setIsDesktop(e.matches && !PF_TOUCH_DEV);
     try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
     return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
   },[]);
@@ -14540,6 +14552,11 @@ Hard requirements:
   // The painting is kept (a small JPEG in localStorage) when you leave it with New and when a piece is painted
   // to the end, so the app opens on it next time.
   const studioHome = studioOn && isSetupView && !favView;
+  // a phone or tablet on its side: the Studio's painting goes left, its look stays open in a column on the right (3B)
+  const [winLand, setWinLand] = useState(()=>{ try{ return window.innerWidth > window.innerHeight*1.15; }catch(_){ return false; } });
+  useEffect(()=>{ const on=()=>{ try{ setWinLand(window.innerWidth > window.innerHeight*1.15); }catch(_){} }; window.addEventListener('resize', on); window.addEventListener('orientationchange', on); return ()=>{ window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); }; },[]);
+  const stLand = !!(studioFs && winLand && !studioHome && !studioLive && !favView);
+  const stLandRef = useRef(false); stLandRef.current = stLand;
   const [favHint, setFavHint] = useState(false);
   useEffect(()=>{ if(!favHint) return; const tm=setTimeout(()=>setFavHint(false), 2600); return ()=>clearTimeout(tm); },[favHint]);
   const [favPulse, setFavPulse] = useState(0);
@@ -14767,6 +14784,8 @@ Hard requirements:
   const [stHearts, setStHearts] = useState([]);
   const [stFavPend, setStFavPend] = useState(false);
   const _stHasArt = chords.length>0 || (viewMode==='image' && !!originalImgUrl);
+  const _stLandWasRef = useRef(false);
+  useEffect(()=>{ if(stLand && _stHasArt && !stripOpen) setStripOpen(true); if(!stLand && _stLandWasRef.current) setStripOpen(false); _stLandWasRef.current = stLand; },[stLand, _stHasArt, stripOpen]);
   const _stEmpty = studioFs && !_stHasArt && !studioLive && !micActive && !composeMode && !working;
   stEmptyRef.current = _stEmpty;
   useEffect(()=>{ if(_stEmpty && stSide!=='left') setStSide('left'); }, [_stEmpty, stSide]);
@@ -14789,7 +14808,7 @@ Hard requirements:
     else if(_stHasArt && !studioLive){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
   };
   // one tap on the painting: pause / play; on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
-  const _stTapOne = ()=>{ if(stripOpen && studioFs){ setStripOpen(false); return; } if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
+  const _stTapOne = ()=>{ if(stripOpen && studioFs && !stLandRef.current){ setStripOpen(false); return; } if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
   useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
   useEffect(()=>{ if(!studioFs){ setStFavPend(false); setStShare(false); setStChg(null); } },[studioFs]);
   // the next painting (a swipe up): the Classic Next — and from a plain Mosaic, a painter drawn from your set;
@@ -14804,15 +14823,17 @@ Hard requirements:
     // the scale is measured, not assumed: the canvas carries its own transform (e.g. a centring translate(-50%)), which the scale also scales —
     // so: scale it, see where it lands, then move it to where it belongs (centred, under the ⌄, above the tray)
     let raf=0; const fit=()=>{ try{ const tr=trayRef.current; if(!tr) return; const pt=cv.style.translate, ps=cv.style.scale; cv.style.transition='none'; off(); const r=cv.getBoundingClientRect();
-      const _mb=document.querySelector('.pf-st-min'), top=_mb ? _mb.getBoundingClientRect().bottom+10 : 60, bottom=window.innerHeight - tr.getBoundingClientRect().height - 8, avail=bottom-top;
-      if(avail<120 || !r.height){ cv.style.translate=pt; cv.style.scale=ps; return; }
-      const sc=Math.min(1, avail/r.height); cv.style.scale=String(Math.round(sc*1000)/1000); const r2=cv.getBoundingClientRect();
-      const ny=top+Math.max(0,(avail-r2.height)/2), tx=(window.innerWidth/2)-(r2.left+r2.width/2), ty=ny-r2.top;
+      const land=stLandRef.current, trR=tr.getBoundingClientRect();
+      const _mb=document.querySelector('.pf-st-min'), top=land ? 12 : (_mb ? _mb.getBoundingClientRect().bottom+10 : 60), bottom=land ? window.innerHeight-12 : window.innerHeight - trR.height - 8, avail=bottom-top;
+      const x0=land ? (_mb ? _mb.getBoundingClientRect().right+8 : 12) : 0, x1=land ? trR.left-12 : window.innerWidth, availW=x1-x0;   // on its side: left of the column (and clear of the ⌄)
+      if(avail<120 || availW<120 || !r.height){ cv.style.translate=pt; cv.style.scale=ps; return; }
+      const sc=land ? Math.min(availW/r.width, avail/r.height) : Math.min(1, avail/r.height); cv.style.scale=String(Math.round(sc*1000)/1000); const r2=cv.getBoundingClientRect();
+      const ny=top+Math.max(0,(avail-r2.height)/2), tx=(x0+availW/2)-(r2.left+r2.width/2), ty=ny-r2.top;
       cv.style.translate=pt; cv.style.scale=ps; void cv.offsetWidth;
       requestAnimationFrame(()=>{ cv.style.transition='translate .35s cubic-bezier(.2,.8,.2,1), scale .35s cubic-bezier(.2,.8,.2,1)'; cv.style.translate=Math.round(tx)+'px '+Math.round(ty)+'px'; cv.style.scale=String(Math.round(sc*1000)/1000); }); }catch(_){} };
     raf=requestAnimationFrame(fit); const t2=setTimeout(fit, 260); window.addEventListener('resize', fit);
     return ()=>{ cancelAnimationFrame(raf); clearTimeout(t2); window.removeEventListener('resize', fit); };
-  },[studioFs, stripOpen, jamOn, stPalEdit]);
+  },[studioFs, stripOpen, jamOn, stPalEdit, stLand]);
   // the row of faces: in Solo a swipe picks (the face that stops in the middle — as a camera filter); a tap picks as always; the chosen one is centred
   const _trayCenter = (smooth)=>{ try{ const tr=trayRef.current; if(!tr) return; const rows=tr.querySelectorAll('.pf-art-grid'); const row=rows[rows.length-1]; if(!row) return;
     const _fu = viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current; const ons=row.querySelectorAll(_fu ? '[data-fu]' : '.pf-artist-on');
@@ -15508,7 +15529,7 @@ Hard requirements:
   },[stArmOn]);
   useEffect(()=>{ if(!favView) setStFavShare(false); },[!!favView]);
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+((studioFs && stripOpen)?' pf-st-tray':'')+(studioLive?' pf-studio-live':'')+((studioFs && stFill)?' pf-studio-fill':'')+((studioLive && !composeMode)?' pf-studio-mic':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+(stLand?' pf-st-land':'')+((studioFs && stripOpen)?' pf-st-tray':'')+(studioLive?' pf-studio-live':'')+((studioFs && stFill)?' pf-studio-fill':'')+((studioLive && !composeMode)?' pf-studio-mic':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (
@@ -17047,9 +17068,9 @@ Hard requirements:
         {!stripOpen && _capLines()}
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
-        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')+(studioFs?' pf-skin pf-tray':'')+((studioFs && stPalEdit)?' pf-paledit':'')+((studioFs && (viewMode==='image' ? crOn : jamOn))?' pf-fu':'')} ref={trayRef} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(studioFs?{position:'fixed',top:'auto',bottom:0,left:0,right:0,zIndex:10005,maxHeight:'46dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'22px 22px 0 0',border:'none',borderTop:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',gap:8}:{})}}
+        <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')+(studioFs?' pf-skin pf-tray':'')+((studioFs && stPalEdit)?' pf-paledit':'')+((studioFs && (viewMode==='image' ? crOn : jamOn))?' pf-fu':'')} ref={trayRef} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(stLand?{position:'fixed',top:0,bottom:0,left:'auto',right:0,width:'var(--pf-side)',zIndex:10005,maxHeight:'none',overflowY:'auto',overscrollBehavior:'contain',borderRadius:0,border:'none',borderLeft:'1px solid rgba(242,238,232,.1)',background:'rgba(12,10,19,.98)',padding:'calc(env(safe-area-inset-top, 0px) + 14px) max(14px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 150px) 14px',boxShadow:'none',gap:10}:studioFs?{position:'fixed',top:'auto',bottom:0,left:0,right:0,zIndex:10005,maxHeight:'46dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'22px 22px 0 0',border:'none',borderTop:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',gap:8}:{})}}
           onTouchStart={studioFs ? (e)=>{ const y=e.touches[0]&&e.touches[0].clientY; const onRow=!!(e.target && e.target.closest && e.target.closest('.pf-art-grid, .pf-paled-hue')); stSheetRef.current = (e.touches.length===1 && !onRow && e.currentTarget.scrollTop<=2) ? y : null; } : undefined}
-          onTouchEnd={studioFs ? (e)=>{ const y0=stSheetRef.current; stSheetRef.current=null; const t=e.changedTouches&&e.changedTouches[0]; if(y0!=null && t && t.clientY-y0>60) setStripOpen(false); } : undefined}>
+          onTouchEnd={studioFs ? (e)=>{ const y0=stSheetRef.current; stSheetRef.current=null; const t=e.changedTouches&&e.changedTouches[0]; if(y0!=null && t && t.clientY-y0>60 && !stLandRef.current) setStripOpen(false); } : undefined}>
           {studioFs && (<style>{STUDIO_SKIN_CSS}</style>)}
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Color */}
@@ -18348,7 +18369,7 @@ Hard requirements:
               </div>
             </>);
           })()}
-          {stripOpen && (<div onClick={()=>setStripOpen(false)} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now()} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
+          {stripOpen && !stLand && (<div onClick={()=>setStripOpen(false)} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now()} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
             // swipes on the painting work with the tray open too: ← → its variants, ↑ the next one, ↓ the one before (the row follows); only a tap closes the tray
             if(st && tt){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(_stSwipeRef.current){ trayUserRef.current=false; if(_stSwipeRef.current(dx, dy, Date.now()-st.t)) return; } }
             setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'transparent',touchAction:'none'}}/>)}{/* the painting stays bright above the look tray: a tap on it closes the tray */}
