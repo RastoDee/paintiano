@@ -36848,7 +36848,7 @@ Hard requirements:
   useEffect(()=>{ if(studioFs && stripOpen && (viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current)) trayUserRef.current=false;   // Fusion: a tap moves the face into the group — the row follows it
     if(studioFs && stripOpen && !trayUserRef.current){ const id=setTimeout(()=>_trayCenter(true), 60), id2=setTimeout(()=>{ if(viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current) _trayCenter(true); }, 420); return ()=>{ clearTimeout(id); clearTimeout(id2); }; } },[style, shuffleStyle, painterStage, sigActive, jamOn, imgComposer, composerStage, crOn, imgSigActive]);   // picked elsewhere (a swipe on the painting): the row follows
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
-  const stLookHistRef = useRef({key:'', st:[]});
+  const stLookHistRef = useRef({key:'', st:[], fw:[]});   // ↓ goes back through st; ↑ then goes forward again through fw (the same paintings), and only past them draws a new one
   const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode,
     jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current });
   const _stLookApply = (L)=>{
@@ -36863,6 +36863,7 @@ Hard requirements:
     if(viewMode==='image' || !((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return;
     const H=stLookHistRef.current; if(H.key!==((info && info.title) || '') || !H.st.length){ _stBuzz(6); return; }
     nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);   // the look comes back as it was: the shuffle must not draw again on the artist change
+    (H.fw || (H.fw=[])).push(_stLookNow()); if(H.fw.length>20) H.fw.shift();
     _stLookApply(H.st.pop()); setStFavPend(false); _stBuzz(12);
     try{ const el=canvasWrapRef.current; if(el && el.animate) el.animate([{translate:'0 0',opacity:1},{translate:'0 48px',opacity:0,offset:.36},{translate:'0 -64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){}
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
@@ -36871,6 +36872,16 @@ Hard requirements:
   const _stNext = ()=>{
     const _back0 = viewMode!=='image' ? _stLookNow() : null;
     let rolled = false;
+    // after ↓: ↑ brings back the painting you came from (as the surprises do) — a new one is drawn only past the last one seen
+    { const H=stLookHistRef.current, k=(info && info.title) || '';
+      if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
+      if(_back0 && H.fw && H.fw.length && _stUpWorks() && (disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
+        nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+        _stLookApply(H.fw.pop()); H.st.push(_back0); if(H.st.length>20) H.st.shift();
+        setStFavPend(false); _stBuzz(12); _stSlide();
+        if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
+        setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
+        return; } }
     try{
       if(viewMode==='image'){
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
@@ -36901,7 +36912,7 @@ Hard requirements:
       }
     }catch(_){}
     if(!rolled) return;
-    if(_back0){ const H=stLookHistRef.current, k=(info && info.title) || ''; if(H.key!==k){ H.key=k; H.st=[]; } H.st.push(_back0); if(H.st.length>20) H.st.shift(); }
+    if(_back0){ const H=stLookHistRef.current, k=(info && info.title) || ''; if(H.key!==k){ H.key=k; H.st=[]; } H.st.push(_back0); if(H.st.length>20) H.st.shift(); H.fw=[]; }   // a new one: the way forward starts here
     setStFavPend(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} _tipDone('up');
     _stBuzz(12); if(viewMode!=='image') _stSlide();   // a picture does not change on ↑ (only who plays it): no slide, no blink
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
