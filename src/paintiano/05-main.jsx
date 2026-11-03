@@ -3998,6 +3998,35 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     _jamAllRoll();
     try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true, studio:true}); }catch(_){}
   };
+  // the Studio's Fusion switch on a PICTURE — as for the painters: the composer playing now becomes no. 1 (gold, pinned) and
+  // 1–3 composers join it at once (white guests); with nobody playing (Scan) a whole new ensemble of 2–5 is seated.
+  // Under the hood it is the Atelier's Jam session + composers' 🔀 with pins (crOn + composerDice + crPins): ↑ (_composerRoll)
+  // keeps the pinned and draws new guests. Solo hands the 🔀 back as it was before.
+  const stCrDicePrevRef = useRef(null);
+  const _stCrFusionOn = ()=>{
+    if(working||anim||crOn) return;
+    stCrDicePrevRef.current = composerDice;
+    if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; }   // ✦ gives way to the Fusion
+    const cur = imgComposerRef.current;
+    const pins = (cur && _cOk(cur)) ? [cur] : [];
+    crOnRef.current = true; setCrOn(true); setComposerDice(true);
+    crPinsRef.current = pins.slice(); setCrPins(pins.slice());
+    if(imgPlayModeRef.current==='scan' && !working){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }
+    try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:true, studio:true, pinned:pins.length}); }catch(_){}
+  };
+  const _stCrSolo = ()=>{
+    if(working||anim||!crOn) return;
+    crOnRef.current = false; setCrOn(false);                      // the lead plays on alone (the stage leaves with the Fusion)
+    crPinsRef.current = []; setCrPins([]);
+    if(stCrDicePrevRef.current!==true) setComposerDice(false);
+    stCrDicePrevRef.current = null;
+    try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:false, studio:true}); }catch(_){}
+  };
+  // a Fusion put up some other way (a picture's ✦ Signature): its members become the pins, so taps and ↑ work as above
+  const _stCrPinStage = ()=>{
+    const st=[imgComposerRef.current, ...composerStageRef.current].filter(k=>k && _cOk(k)).slice(0,STAGE_MAX);
+    crPinsRef.current = st; setCrPins(st); setComposerDice(true);
+  };
   const _stAllOn = ()=>{
     if(!randomMode) _shuffleOn();
     // Fusion with no one chosen any more: a new fusion is drawn at once (2–5 painters) — never one painter alone under 'Fusion'
@@ -14782,6 +14811,7 @@ Hard requirements:
       if(viewMode==='image'){
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
           // 🔀 off or on, ↑ always brings something new (a composer has no variants of its own) — never the 'off' message
+          if(crOn && !composerDice) _stCrPinStage();   // a Fusion (e.g. ✦'s ensemble): its gold composers stay, ↑ seats white guests — as for the painters
           if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
           else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
         }
@@ -17198,7 +17228,7 @@ Hard requirements:
               <div className={studioFs ? 'pf-inspired-row pf-cmp-row' : undefined} style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',minHeight:28,display:'flex',alignItems:'center'}}>
                 {!studioFs && (<span style={{flex:1,textAlign:'center',fontStyle:'italic',fontWeight:400,letterSpacing:'.22em',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{_fsStripLabel('comp', t('inspiredByTitle'))}</span>)}
                 {/* the Studio: one Solo | Fusion switch, as for the painters (↑ on the painting is the composers' 🔀) */}
-                {studioFs && _rollable && ensembleActive && (<div className="pf-tray-ctl"><div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!crOn} className={!crOn?'on':''} onClick={()=>{ if(crOn) _toggleCr(); }}>{_stT('trSolo')}</button><button type="button" role="tab" aria-selected={!!crOn} className={crOn?'on':''} onClick={()=>{ if(!crOn) _toggleCr(); }}>{_ensT('fusion')}</button></div></div>)}
+                {studioFs && _rollable && ensembleActive && (<div className="pf-tray-ctl"><div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!crOn} className={!crOn?'on':''} onClick={()=>{ if(crOn) _stCrSolo(); }}>{_stT('trSolo')}</button><button type="button" role="tab" aria-selected={!!crOn} className={crOn?'on':''} onClick={()=>{ if(!crOn) _stCrFusionOn(); }}>{_ensT('fusion')}</button></div></div>)}
                 {/* composers' 🔀 + Jam session — only when there is more than one composer to roll between */}
                 {!studioFs && _rollable && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
@@ -17225,6 +17255,9 @@ Hard requirements:
                   const locked=working;
                   return (
                     <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked||anim)return; if(_inSigC && composerIsLocked(c.k)){ setPaywallReason('settings'); return; } _leaveAi();
+                        if(studioFs && crOn){ if(!composerDice) _stCrPinStage(); const had=crPinsRef.current.length; _crPinTap(c.k);   // the Studio's Fusion: a tap pins / unpins (as the painters)
+                          if(had>0 && !crPinsRef.current.length && imgPlayModeRef.current==='scan'){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }   // the last gold one let go: a fresh ensemble (2–5)
+                          return; }
                         if(crOn && composerDice){ _crPinTap(c.k); return; } if(crOn && imgComposerRef.current){ _crTap(c.k); return; }
                         if(!_aiOn && imgComposer===c.k && !composerStage.length){ _toScan(); return; }   // the chosen one tapped again → back to SCAN (an artist → Mosaic)
                         _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
