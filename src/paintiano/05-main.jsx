@@ -2313,15 +2313,15 @@ const STUDIO_HOME_CSS = `
 .pf-sh-bob b{animation:pfShBob 1.6s ease-in-out infinite}
 @keyframes pfShBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @keyframes pfShHintIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.pf-sh-flash{position:absolute;left:0;right:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2cqw;padding:10cqw;text-align:center;color:#f7f1e6;pointer-events:none;animation:pfShFlash 1.9s ease both;background:radial-gradient(60% 34% at 50% 50%,rgba(6,5,10,.55),rgba(6,5,10,0) 100%)}
-.pf-sh-flash small{font-family:'Outfit',sans-serif;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 2.7cqw);letter-spacing:.32em;text-transform:uppercase;color:#f0d78a}
-.pf-sh-flash em{font-family:'Outfit',sans-serif;font-style:normal;font-weight:500;font-size:calc(var(--pf-read-scale,1) * 2.6cqw);letter-spacing:.3em;text-transform:uppercase;opacity:.7}
-.pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 6.4cqw);line-height:1.12;letter-spacing:.01em;text-shadow:0 2px 16px rgba(0,0,0,.85)}
+.pf-sh-flash{--pf-shu:min(1cqw,.75svh);position:absolute;left:0;right:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(1.2 * var(--pf-shu));padding:calc(10 * var(--pf-shu));text-align:center;color:#f7f1e6;pointer-events:none;animation:pfShFlash 1.9s ease both;background:radial-gradient(60% 34% at 50% 50%,rgba(6,5,10,.55),rgba(6,5,10,0) 100%)}
+.pf-sh-flash small{font-family:'Outfit',sans-serif;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(2.7 * var(--pf-shu)));letter-spacing:.32em;text-transform:uppercase;color:#f0d78a}
+.pf-sh-flash em{font-family:'Outfit',sans-serif;font-style:normal;font-weight:500;font-size:calc(var(--pf-read-scale,1) * calc(2.6 * var(--pf-shu)));letter-spacing:.3em;text-transform:uppercase;opacity:.7}
+.pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(6.4 * var(--pf-shu)));line-height:1.12;letter-spacing:.01em;text-shadow:0 2px 16px rgba(0,0,0,.85)}
 .pf-sh-flash b span{display:block;font-family:'Outfit',sans-serif;font-style:normal;font-weight:400;font-size:.5em;opacity:.6;margin:.2em 0}
 @keyframes pfShFlash{0%{opacity:0;transform:translateY(6px)}14%{opacity:1;transform:none}72%{opacity:1}100%{opacity:0}}
-.pf-sh-intro{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4cqw;padding:0 8cqw 14cqw;text-align:center;pointer-events:none;background:radial-gradient(70% 42% at 50% 46%,rgba(8,6,14,.72),rgba(8,6,14,0) 100%);animation:pfShIntro 6.2s ease 1.5s both}
-.pf-sh-intro p{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 6.6cqw);line-height:1.28;color:#f4e7c6;text-shadow:0 1px 14px rgba(0,0,0,.85)}
-.pf-sh-intro small{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 2.9cqw);font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:#e2c477;text-shadow:0 1px 10px rgba(0,0,0,.85)}
+.pf-sh-intro{--pf-shu:min(1cqw,.75svh);position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(4 * var(--pf-shu));padding:0 calc(8 * var(--pf-shu)) calc(14 * var(--pf-shu));text-align:center;pointer-events:none;background:radial-gradient(70% 42% at 50% 46%,rgba(8,6,14,.72),rgba(8,6,14,0) 100%);animation:pfShIntro 6.2s ease 1.5s both}
+.pf-sh-intro p{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(6.6 * var(--pf-shu)));line-height:1.28;color:#f4e7c6;text-shadow:0 1px 14px rgba(0,0,0,.85)}
+.pf-sh-intro small{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * calc(2.9 * var(--pf-shu)));font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:#e2c477;text-shadow:0 1px 10px rgba(0,0,0,.85)}
 .pf-sh-key{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1.1cqw;width:92%}
 .pf-sh-key span{display:flex;flex-direction:column;align-items:center;gap:1.4cqw;min-width:0}
 .pf-sh-key i{display:block;width:100%;aspect-ratio:1;border-radius:1.2cqw;opacity:.62;transition:opacity .12s, box-shadow .12s}
