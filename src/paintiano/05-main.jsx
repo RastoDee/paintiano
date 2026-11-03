@@ -4121,13 +4121,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return true;
   };
   // ← / →: the variants seen, so → goes back to the one just left (per painter / Fusion on screen — another one starts a new history)
-  const varHistRef = useRef({key:'', st:[]});
+  const varHistRef = useRef({key:'', st:[], fw:[]});
   const _varKey = ()=> [(info && info.title) || '', style || '', painterStage.join('+'), randomMode ? 1 : 0, randomMode ? (shuffleStyle || '') : ''].join('|');
-  const _variantNext = ()=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; }
-    const snap={ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, fu:fuRollRef.current || null };
+  // ← a new variant, → back; after → the next ← goes forward again through the ones already seen (as the surprises do) — only past the last one a new one is drawn
+  const _variantSnap = ()=>({ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, fu:fuRollRef.current || null });
+  const _variantPut = (v)=>{ setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu); };
+  const _variantNext = ()=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
+    const snap=_variantSnap();
+    if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); _variantPut(v); return true; }
     const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); } return ok; };
   const _variantBack = ()=>{ const H=varHistRef.current; if(H.key!==_varKey() || !H.st.length) return false;
-    const v=H.st.pop(); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu); return true; };
+    const v=H.st.pop(); (H.fw || (H.fw=[])).push(_variantSnap()); if(H.fw.length>30) H.fw.shift(); _variantPut(v); return true; };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
   // Tear down the Show timer.
