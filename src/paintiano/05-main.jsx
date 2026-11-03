@@ -3007,6 +3007,20 @@ export default function Paintiano() {
   const [paintScale,setPaintScale]= useState('off');
   const [pending,   setPending]   = useState([]);
   const [playing,   setPlaying]   = useState(false);const mutedRef=useRef(false);
+  // Funnel: a painting played to its end — once per loaded piece. Armed only after
+  // playback has actually run through part of it (a finished painting shown at
+  // load, e.g. a ♥ opened, does not count); loop mode counts the first pass.
+  const _paintDoneRef = useRef({ c: null, armed: false, sent: null });
+  useEffect(() => {
+    const r = _paintDoneRef.current;
+    if (r.c !== chords) { r.c = chords; r.armed = false; }
+    if (!chords.length) return;
+    if (playing && disp < chords.length) r.armed = true;
+    if (r.armed && disp >= chords.length && r.sent !== chords) {
+      r.sent = chords;
+      try { window.posthog && window.posthog.capture('paint_done', { n: chords.length, touch: !!(typeof PF_TOUCH_DEV!=='undefined' && PF_TOUCH_DEV) }); } catch (_) {}
+    }
+  }, [disp, playing, chords]);
   const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
   // ── Lite "Surprise me" shuffle-bags (better perceived randomness) ──────────
   // surpriseArtistBag: a shuffled queue of artist keys; we pop one per tap and
@@ -6132,7 +6146,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     let au=null;
     if(fav.src==='mic'){ try{ const B=listenBlobRef.current; if(B && B.blob && B.blob.size>0 && B.blob.size<=25*1024*1024){ au={ buf: await B.blob.arrayBuffer(), mime: B.type || B.blob.type || 'audio/webm' }; fav.au=1; } }catch(_){ au=null; } }
     const r=await favAdd(fav, clone(chords), au ? {au} : undefined);
-    if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); }
+    if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); try{ window.posthog && window.posthog.capture('fav_add',{src:fav.src||'', n: favs.length+1}); }catch(_){} }
     else _favToastShow({kind:'failed'});
   };
   // The grid and frame a favorite gets on THIS screen — exactly what the live
@@ -13470,6 +13484,8 @@ Hard requirements:
     if(!lay){ setFavBad(true); return; }
     return _exportWith(_favExportX(fv, pc, lay), sizeMode, directShare, audioBlob, audioName, withSource, noBg);
   };
+  // Funnel: a file was made for the user (image / print / story / vector / video).
+  const _phExport=(kind, how, noBg)=>{ try{ window.posthog && window.posthog.capture('export_done',{kind, how, transparent: !!noBg}); }catch(_){} };
   const _exportWith=async(X, sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
     const { chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip } = X;
     try{
@@ -13702,6 +13718,7 @@ Hard requirements:
         const baseName = (info && info.title ? String(info.title).replace(/[^\w\u00C0-\u024F\u1E00-\u1EFF -]+/g,'').trim() : 'paintiano') || 'paintiano';
         const filename = `${baseName}-gallery${noBg?'-transparent':''}.svg`;
         const file = new File([blob], filename, {type:'image/svg+xml'});
+        _phExport('gallery','preview',noBg);
         setPreview({url, filename, w:CW, h:CH, size:blob.size, file, dpi:null, label: noBg ? label+'-transparent' : label});
         return;
       }
@@ -13938,6 +13955,7 @@ Hard requirements:
           const sharePayload = {files:shareFiles, title:'Paintiano'};
           if(sizeMode==='story') sharePayload.text = (X.caption!==undefined) ? X.caption : buildStoryCaption();
           await navigator.share(sharePayload);
+          _phExport(sizeMode,'share',noBg);
           // iOS suspends the AudioContext while the share sheet is on screen.
           // After it dismisses, resume so subsequent Play / REC still has audio.
           try{ await unlockAudio(); }catch(_){}
@@ -13951,6 +13969,7 @@ Hard requirements:
           // fall through to preview so the user still gets the image
         }
       }
+      _phExport(sizeMode,'preview',noBg);
       setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label,files:(shareFiles.length>1 ? shareFiles : null)});   // a Story with its sound keeps both files when the share sheet could not open (no fresh tap)
     }catch(e){ try{ _setNoBg(false); }catch(_){} if(X.leave) X.leave(); setErr('Print: '+e.message);setErrInfo(false);}
   };
@@ -14235,7 +14254,7 @@ Hard requirements:
       title: (bk && bk.imgTitle) || ((!addr.ai && info && info.title) ? String(info.title) : ''),
       aiTitle: (addr.ai && info && info.title) ? String(info.title) : '', aic };
     const r=await favAdd(fav, null, { buf: bytes.buf, mime: bytes.mime, name: imgNameRef.current||'' });
-    if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); }
+    if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); try{ window.posthog && window.posthog.capture('fav_add',{src:fav.src||'', n: favs.length+1}); }catch(_){} }
     else _favToastShow({kind:'failed'});
   };
   const _favToggleAny = ()=>{ if(favReady) _favToggle(); else _favToggleImg(); };
@@ -15656,7 +15675,7 @@ Hard requirements:
     if(r && r.state!=='inactive'){ try{ r.requestData(); }catch(_){} try{ r.stop(); }catch(_){} }
   };
   const _vidClose = ()=>{ try{ if(stVid && stVid.url) URL.revokeObjectURL(stVid.url); }catch(_){} setStVid(null); };
-  const _vidSave = ()=>{ if(!stVid || !stVid.url) return; const a=document.createElement('a'); a.href=stVid.url; a.download=_vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm'); document.body.appendChild(a); a.click(); a.remove(); };
+  const _vidSave = ()=>{ if(!stVid || !stVid.url) return; try{ window.posthog && window.posthog.capture('export_done',{kind:'video', how:'save'}); }catch(_){} const a=document.createElement('a'); a.href=stVid.url; a.download=_vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm'); document.body.appendChild(a); a.click(); a.remove(); };
   const _vidShare = async ()=>{
     if(!stVid || !stVid.blob) return;
     const f=new File([stVid.blob], _vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm'), {type:stVid.type});
@@ -15664,6 +15683,7 @@ Hard requirements:
       if(navigator.share && (!navigator.canShare || navigator.canShare({files:[f]}))){
         let text=''; try{ text=buildStoryCaption(); }catch(_){}
         await navigator.share(text ? {files:[f], title:'Paintiano', text} : {files:[f], title:'Paintiano'});
+        try{ window.posthog && window.posthog.capture('export_done',{kind:'video', how:'share'}); }catch(_){}
         try{ await unlockAudio(); }catch(_){}
         return;
       }
