@@ -14739,7 +14739,10 @@ Hard requirements:
   // five names, a header and the style pill never run off it (the tray open, on its side, a small phone).
   const flashBoxRef = useRef(null);
   useLayoutEffect(()=>{ const el=flashBoxRef.current; if(!el) return;
-    const fit=()=>{ try{ const card=el.firstElementChild; if(!card) return; const cv=canvasWrapRef.current, r=cv && cv.getBoundingClientRect();
+    const fit=()=>{ try{ const card=el.firstElementChild; if(!card) return; const cv=canvasWrapRef.current, r0=cv && cv.getBoundingClientRect();
+      // where the painting RESTS: a running slide moves it (translate) for a moment — take that out, so the names do not hop with it
+      let dy=0; if(cv){ try{ const py=(v)=>{ const m=String(v||'').match(/(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/); return (m && m[2]) ? parseFloat(m[2]) : 0; }; dy=py(getComputedStyle(cv).translate)-py(cv.style.translate); }catch(_){} }
+      const r = r0 ? {left:r0.left, width:r0.width, height:r0.height, top:r0.top-dy, bottom:r0.bottom-dy} : null;
       const W=window.innerWidth, H=window.innerHeight; let cx=W/2, cy=H/2, aw=W*0.9, ah=H*0.8;
       if(r && r.width>60 && r.height>60 && r.bottom>0 && r.top<H){ const t=Math.max(r.top,0), b=Math.min(r.bottom,H); cx=r.left+r.width/2; cy=(t+b)/2; aw=r.width*0.92; ah=(b-t)*0.9; }
       const sc=Math.max(0.4, Math.min(1, aw/Math.max(1,card.offsetWidth), ah/Math.max(1,card.offsetHeight)));
@@ -15008,9 +15011,11 @@ Hard requirements:
   // on a picture, the next composer. The painting slides out and the new one in.
   // The slide runs FROM where the painting sits now: with the look tray open it is moved (translate) and made smaller (scale) to stay
   // whole above the tray — a slide from '0 0' dropped that move for its 460 ms, so the smaller painting jumped down-right and snapped back.
+  // With the tray open (the painting carries the fit) the new painting only cross-fades in place: no travel, nothing jumps.
   const _cvSlide = (dir)=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{
     const m=String(el.style.translate||'').match(/(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/), x=m ? parseFloat(m[1]) : 0, y=(m && m[2]) ? parseFloat(m[2]) : 0, T=(dy)=>x+'px '+(y+dy)+'px';
-    el.animate([{translate:T(0),opacity:1},{translate:T(-48*dir),opacity:0,offset:.36},{translate:T(64*dir),opacity:0,offset:.37},{translate:T(0),opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
+    const k = (el.style.translate || el.style.scale) ? 0 : 1;
+    el.animate([{translate:T(0),opacity:1},{translate:T(-48*dir*k),opacity:0,offset:.36},{translate:T(64*dir*k),opacity:0,offset:.37},{translate:T(0),opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
   const _stSlide = ()=>_cvSlide(1);
   // a new composer re-reads the picture (heavy on iOS): the sound dips under the change instead of crackling
   const _imgDip = (fn)=>{ try{ fn(); }catch(_){} };   // the dip itself rides on the composer change (see _cmpDipRef)
