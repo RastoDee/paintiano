@@ -30,6 +30,12 @@ begin
 end $$;
 revoke all on function public.ai_hit(text, integer) from public, anon, authenticated;
 
+-- The server key needs explicit rights (newer Supabase projects do not grant
+-- them to new tables/functions by default), then the API reloads its schema.
+grant select, insert, update, delete on public.ai_usage to service_role;
+grant execute on function public.ai_hit(text, integer) to service_role;
+notify pgrst, 'reload schema';
+
 -- 3) Pro AI bought before the daily limit keeps AI without a daily limit.
 alter table public.licenses add column if not exists ai_unlimited boolean not null default false;
 update public.licenses set ai_unlimited = true
