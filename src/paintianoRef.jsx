@@ -39623,10 +39623,24 @@ Hard requirements:
               const isFree = proStatus==='free';
               const _inSet = setupPalettes.includes(m);
               const _ghost = cockpitEdit && !_inSet;
+              const _palHold = ()=>{ const H=palHoldRef.current; H.fired=true; _stBuzz(12);
+                if(isCustomTab && !isFree){ if(mode!=='custom'){ kontraAutoRef.current=false; setMode('custom'); } setCustomArmed(false); setShowColorPalette(false); _palGoldSet(true); setStPalView(null); setStPalEdit(true); return; }   // hold ✎ Custom: edit it right here
+                setStPalEdit(false); setStPalView(m); };   // hold any other: its notes' colours
+              const _phEnd = ()=>{ const H=palHoldRef.current; if(H.tm){ clearTimeout(H.tm); H.tm=null; } };
               return (
-              <button key={m} className={mode===m&&!cockpitEdit?'pf-tab pf-tab-on':'pf-tab'} onClick={()=>{
+              <button key={m} className={mode===m&&!cockpitEdit?'pf-tab pf-tab-on'+((studioFs && !palGold)?' pf-tab-w':''):'pf-tab'}
+                onPointerDown={(studioFs && !cockpitEdit) ? ()=>{ const H=palHoldRef.current; H.fired=false; clearTimeout(H.tm); H.tm=setTimeout(()=>{ H.tm=null; _palHold(); }, 480); } : undefined}
+                onPointerUp={_phEnd} onPointerLeave={_phEnd} onPointerCancel={_phEnd} onContextMenu={studioFs ? (e)=>e.preventDefault() : undefined} onClick={()=>{
                 if(cockpitEdit){ togglePalSafe(m); return; }
-                if(isCustomTab && mode==='custom' && studioFs && !isFree){ setStPalEdit(v=>!v); return; }   // the Studio: edited right here, under the palettes
+                if(studioFs){   // the Studio: a tap chooses (gold, ↑ keeps it); the chosen one tapped again turns white (↑ brings new colours); a hold views / edits
+                  if(palHoldRef.current.fired){ palHoldRef.current.fired=false; return; }
+                  if(stPalView) setStPalView(null);
+                  if(mode===m){ _palGoldSet(!palGoldRef.current); return; }
+                  _palGoldSet(true); setStPalEdit(false); setCustomArmed(false); setShowColorPalette(false);
+                  if(canvasRef.current){canvasRef.current.style.opacity='0';}
+                  kontraAutoRef.current=false;
+                  setTimeout(()=>{setMode(m);if(canvasRef.current)canvasRef.current.style.opacity='1';},200);
+                  return; }
                 if(isCustomTab && mode==='custom'){
                   if(!customArmed){
                     // tap 1: arm → label "✎ EDIT" + PRO badge (Free)
