@@ -21302,6 +21302,15 @@ function _proClearCache() {
   try { localStorage.removeItem(PRO_CFG.licenseStoreKey); } catch (_) {}
 }
 
+// The current anonymous PostHog visit id as '&pv=…' (funnel across a page change;
+// PostHog runs cookieless, so a new page would otherwise start a new visit).
+function _pfVisitParam() {
+  try {
+    const d = window.posthog && window.posthog.get_distinct_id && window.posthog.get_distinct_id();
+    return (typeof d === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(d)) ? '&pv=' + d : '';
+  } catch (_) { return ''; }
+}
+
 // ─── AI fair use (Nov 2026) ─────────────────────────────────────────────────
 // /api/compose counts AI on the server: a Pro AI key gets 30 pieces & melodies
 // a day, everyone else a small allowance per network. Every AI call in the app
@@ -21506,8 +21515,9 @@ function useProStatus() {
           displayMode: 'overlay',
           theme: 'dark',
           locale: (typeof navigator !== 'undefined' && navigator.language) ? navigator.language.slice(0, 2) : 'en',
+          // ?pv= keeps the same anonymous visit across the return page (funnel; nothing stored)
           successUrl: typeof window !== 'undefined'
-            ? window.location.origin + (isUpgrade ? '/play?upgraded=1' : '/?paid=1')
+            ? window.location.origin + (isUpgrade ? '/play?upgraded=1' : '/?paid=1') + _pfVisitParam()
             : undefined,
         },
       });
