@@ -37297,7 +37297,12 @@ Hard requirements:
   useEffect(()=>{ if(!studioFs){ setStFavPend(false); setStShare(false); setStChg(null); } },[studioFs]);
   // the next painting (a swipe up): the Classic Next — and from a plain Mosaic, a painter drawn from your set;
   // on a picture, the next composer. The painting slides out and the new one in.
-  const _stSlide = ()=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{ el.animate([{translate:'0 0',opacity:1},{translate:'0 -48px',opacity:0,offset:.36},{translate:'0 64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
+  // The slide runs FROM where the painting sits now: with the look tray open it is moved (translate) and made smaller (scale) to stay
+  // whole above the tray — a slide from '0 0' dropped that move for its 460 ms, so the smaller painting jumped down-right and snapped back.
+  const _cvSlide = (dir)=>{ const el=canvasWrapRef.current; if(!el || !el.animate) return; try{
+    const m=String(el.style.translate||'').match(/(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/), x=m ? parseFloat(m[1]) : 0, y=(m && m[2]) ? parseFloat(m[2]) : 0, T=(dy)=>x+'px '+(y+dy)+'px';
+    el.animate([{translate:T(0),opacity:1},{translate:T(-48*dir),opacity:0,offset:.36},{translate:T(64*dir),opacity:0,offset:.37},{translate:T(0),opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){} };
+  const _stSlide = ()=>_cvSlide(1);
   // a new composer re-reads the picture (heavy on iOS): the sound dips under the change instead of crackling
   const _imgDip = (fn)=>{ try{ fn(); }catch(_){} };   // the dip itself rides on the composer change (see _cmpDipRef)
   // the look tray: the painting moves up (a touch smaller if it must) so it stays whole above the tray
@@ -37360,7 +37365,7 @@ Hard requirements:
     nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);   // the look comes back as it was: the shuffle must not draw again on the artist change
     (H.fw || (H.fw=[])).push(_stLookNow()); if(H.fw.length>20) H.fw.shift();
     _stLookApply(H.st.pop()); setStFavPend(false); _stBuzz(12);
-    try{ const el=canvasWrapRef.current; if(el && el.animate) el.animate([{translate:'0 0',opacity:1},{translate:'0 48px',opacity:0,offset:.36},{translate:'0 -64px',opacity:0,offset:.37},{translate:'0 0',opacity:1}],{duration:460,easing:'cubic-bezier(.2,.8,.2,1)'}); }catch(_){}
+    _cvSlide(-1);
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
   };
