@@ -24402,6 +24402,7 @@ const STUDIO_HOME_CSS = `
 @keyframes pfHidFill{0%{opacity:.25;clip-path:inset(0 100% 0 0)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
 .pf-hid-t{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:26px;color:#e2c477;text-align:center;line-height:1.1}
 .pf-hid-s{font-size:13px;color:rgba(242,238,232,.6);text-align:center;margin-top:4px}
+@keyframes pfFsPillIn{from{opacity:0}to{opacity:1}}
 .pf-lang-sub{font-size:calc(min(var(--pf-read-scale,1),1.2) * 12.5px);color:rgba(242,238,232,.55);text-align:center;margin-top:4px}
 .pf-lang-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 8px;margin:22px auto 8px;padding:0 6px;width:100%;max-width:420px;box-sizing:border-box}
 .pf-lang{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;background:none;border:0;padding:0;color:rgba(242,238,232,.82);font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -24526,15 +24527,15 @@ const STUDIO_HOME_CSS = `
 .pf-sh-bob b{animation:pfShBob 1.6s ease-in-out infinite}
 @keyframes pfShBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @keyframes pfShHintIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.pf-sh-flash{position:absolute;left:0;right:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2cqw;padding:10cqw;text-align:center;color:#f7f1e6;pointer-events:none;animation:pfShFlash 1.9s ease both;background:radial-gradient(60% 34% at 50% 50%,rgba(6,5,10,.55),rgba(6,5,10,0) 100%)}
-.pf-sh-flash small{font-family:'Outfit',sans-serif;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 2.7cqw);letter-spacing:.32em;text-transform:uppercase;color:#f0d78a}
-.pf-sh-flash em{font-family:'Outfit',sans-serif;font-style:normal;font-weight:500;font-size:calc(var(--pf-read-scale,1) * 2.6cqw);letter-spacing:.3em;text-transform:uppercase;opacity:.7}
-.pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 6.4cqw);line-height:1.12;letter-spacing:.01em;text-shadow:0 2px 16px rgba(0,0,0,.85)}
+.pf-sh-flash{--pf-shu:min(1cqw,.75svh);position:absolute;left:0;right:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(1.2 * var(--pf-shu));padding:calc(10 * var(--pf-shu));text-align:center;color:#f7f1e6;pointer-events:none;animation:pfShFlash 1.9s ease both;background:radial-gradient(60% 34% at 50% 50%,rgba(6,5,10,.55),rgba(6,5,10,0) 100%)}
+.pf-sh-flash small{font-family:'Outfit',sans-serif;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(2.7 * var(--pf-shu)));letter-spacing:.32em;text-transform:uppercase;color:#f0d78a}
+.pf-sh-flash em{font-family:'Outfit',sans-serif;font-style:normal;font-weight:500;font-size:calc(var(--pf-read-scale,1) * calc(2.6 * var(--pf-shu)));letter-spacing:.3em;text-transform:uppercase;opacity:.7}
+.pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(6.4 * var(--pf-shu)));line-height:1.12;letter-spacing:.01em;text-shadow:0 2px 16px rgba(0,0,0,.85)}
 .pf-sh-flash b span{display:block;font-family:'Outfit',sans-serif;font-style:normal;font-weight:400;font-size:.5em;opacity:.6;margin:.2em 0}
 @keyframes pfShFlash{0%{opacity:0;transform:translateY(6px)}14%{opacity:1;transform:none}72%{opacity:1}100%{opacity:0}}
-.pf-sh-intro{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4cqw;padding:0 8cqw 14cqw;text-align:center;pointer-events:none;background:radial-gradient(70% 42% at 50% 46%,rgba(8,6,14,.72),rgba(8,6,14,0) 100%);animation:pfShIntro 6.2s ease 1.5s both}
-.pf-sh-intro p{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * 6.6cqw);line-height:1.28;color:#f4e7c6;text-shadow:0 1px 14px rgba(0,0,0,.85)}
-.pf-sh-intro small{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 2.9cqw);font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:#e2c477;text-shadow:0 1px 10px rgba(0,0,0,.85)}
+.pf-sh-intro{--pf-shu:min(1cqw,.75svh);position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(4 * var(--pf-shu));padding:0 calc(8 * var(--pf-shu)) calc(14 * var(--pf-shu));text-align:center;pointer-events:none;background:radial-gradient(70% 42% at 50% 46%,rgba(8,6,14,.72),rgba(8,6,14,0) 100%);animation:pfShIntro 6.2s ease 1.5s both}
+.pf-sh-intro p{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(6.6 * var(--pf-shu)));line-height:1.28;color:#f4e7c6;text-shadow:0 1px 14px rgba(0,0,0,.85)}
+.pf-sh-intro small{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * calc(2.9 * var(--pf-shu)));font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:#e2c477;text-shadow:0 1px 10px rgba(0,0,0,.85)}
 .pf-sh-key{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1.1cqw;width:92%}
 .pf-sh-key span{display:flex;flex-direction:column;align-items:center;gap:1.4cqw;min-width:0}
 .pf-sh-key i{display:block;width:100%;aspect-ratio:1;border-radius:1.2cqw;opacity:.62;transition:opacity .12s, box-shadow .12s}
@@ -36595,6 +36596,20 @@ Hard requirements:
   useEffect(()=>{ if(stPalEdit && (!stripOpen || !studioFs || mode!=='custom')) setStPalEdit(false); },[stripOpen, studioFs, mode, stPalEdit]);
   useEffect(()=>{ if(stPalView && (!stripOpen || !studioFs)) setStPalView(null); },[stripOpen, studioFs, stPalView]);
   const studioLive = studioFs && studioLiveSrc;
+  // The swipe / hold flash sits on the PAINTING (not the screen): centred on it and scaled down until it fits inside it —
+  // five names, a header and the style pill never run off it (the tray open, on its side, a small phone).
+  const flashBoxRef = useRef(null);
+  useLayoutEffect(()=>{ const el=flashBoxRef.current; if(!el) return;
+    const fit=()=>{ try{ const card=el.firstElementChild; if(!card) return; const cv=canvasWrapRef.current, r=cv && cv.getBoundingClientRect();
+      const W=window.innerWidth, H=window.innerHeight; let cx=W/2, cy=H/2, aw=W*0.9, ah=H*0.8;
+      if(r && r.width>60 && r.height>60 && r.bottom>0 && r.top<H){ const t=Math.max(r.top,0), b=Math.min(r.bottom,H); cx=r.left+r.width/2; cy=(t+b)/2; aw=r.width*0.92; ah=(b-t)*0.9; }
+      const sc=Math.max(0.4, Math.min(1, aw/Math.max(1,card.offsetWidth), ah/Math.max(1,card.offsetHeight)));
+      el.style.left=Math.round(cx)+'px'; el.style.top=Math.round(cy)+'px'; el.style.transform='scale('+sc.toFixed(3)+')'; }catch(_){} };
+    fit(); const t1=setTimeout(fit, 140), t2=setTimeout(fit, 420);   // the painting may still be on its way (the tray, a turn)
+    let ro=null; try{ ro=new ResizeObserver(fit); if(el.firstElementChild) ro.observe(el.firstElementChild); }catch(_){}
+    window.addEventListener('resize', fit);
+    return ()=>{ clearTimeout(t1); clearTimeout(t2); try{ ro && ro.disconnect(); }catch(_){} window.removeEventListener('resize', fit); };
+  });
   const _micGap = 144;   // a finished Mic take's name and palette sit over the painting's lower edge, as in Music — the frame keeps its size after STOP
   // the height of the bottom dock while live: the painting sits in the space above it
   const stDockRef = useRef(null), clearBtnRef = useRef(null), stMicRef = useRef(null), micPresetBtnRef = useRef(null);
@@ -41041,15 +41056,19 @@ Hard requirements:
           if(!String(_swipeFlashKey).startsWith('hold-')) _setSwipeFlashKey('hold-'+Date.now()+'~0~s');
           _holdKeep(); if(controlsIdleRef.current){ clearTimeout(controlsIdleRef.current); controlsIdleRef.current=null; } setControlsAwake(false); };
         return (
-          <div key={_swipeFlashKey} style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:10001,textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
+          <div ref={flashBoxRef} style={{position:'fixed',top:'50%',left:'50%',width:0,height:0,zIndex:10001,transformOrigin:'0 0',pointerEvents:'none'}}>   {/* centred on the painting, scaled down to fit inside it (see the flash's fit) */}
+          <div key={_swipeFlashKey} style={{position:'absolute',top:0,left:0,transform:'translate(-50%,-50%)',textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'rgba(240,222,180,.98)',textShadow:'-0.5px -0.5px 0 rgba(20,14,18,.65), 0.5px -0.5px 0 rgba(20,14,18,.65), -0.5px 0.5px 0 rgba(20,14,18,.65), 0.5px 0.5px 0 rgba(20,14,18,.65), 0 -0.5px 0 rgba(20,14,18,.65), 0 0.5px 0 rgba(20,14,18,.65), -0.5px 0 0 rgba(20,14,18,.65), 0.5px 0 0 rgba(20,14,18,.65)'}}>
             {(_ensF || _sigF) && (<>
               {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” — or ✦ SIGNATURE */}
               <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
               <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
-              {_fsV && !_fsTap && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
-              {_fsV && _fsTap && (<div style={{display:'flex',justifyContent:'center',marginBottom:'1.3em'}}><button type="button" onPointerDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onClick={_fsGo} aria-label={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)} title={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)}
+              {_fsV && !_fsTap && (<div style={{animation:'pfFsPillIn .25s ease-out both',display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
+              {_fsV && _fsTap && (<div style={{animation:'pfFsPillIn .25s ease-out both',display:'flex',justifyContent:'center',marginBottom:'1.3em'}}><button type="button" onPointerDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onClick={_fsGo} aria-label={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)} title={'\u2192 '+_fsWord(_fsV==='E'?'A':'E',_fsK)}
                 style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:'.8em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.22em',fontWeight:700,textTransform:'uppercase',fontFamily:'inherit',color:'#f3e2b4',textShadow:'inherit',background:'rgba(16,12,22,.26)',border:'1px solid rgba(226,188,98,.92)',borderRadius:30,padding:'.75em 1.2em .75em 1.1em',cursor:'pointer',boxShadow:'0 3px 12px rgba(0,0,0,.16)',WebkitTapHighlightColor:'transparent'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)} ›</button></div>)}
+              {!_fsV && _ensF && !_sigF && (_fsTap || (_fsK==='art' ? fuStyleNow : fuStyleCNow)==='AE') && (_fsTap
+                ? (<div aria-hidden="true" style={{visibility:'hidden',display:'flex',justifyContent:'center',marginBottom:'1.3em'}}><span style={{display:'inline-flex',alignItems:'center',gap:'.8em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.22em',fontWeight:700,border:'1px solid transparent',padding:'.75em 1.2em .75em 1.1em'}}><FsGlyph v="A" w={26} h={19} fo={.75}/>{_fsWord('A',_fsK)} ›</span></div>)
+                : (<div aria-hidden="true" style={{visibility:'hidden',display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em'}}><FsGlyph v="A" w={26} h={19} fo={.75}/>{_fsWord('A',_fsK)}</div>))}   {/* the style is still being worked out (a jam is written a moment later): its place is kept, the names below do not jump */}
             </>)}
             {(!_fBare || _ensF || _sigF) && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:(_ensF||_sigF)?14:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             {(()=>{
@@ -41061,6 +41080,7 @@ Hard requirements:
               const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
               return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div></Fragment>))}</div>);
             })()}
+          </div>
           </div>
         );
       })()}
