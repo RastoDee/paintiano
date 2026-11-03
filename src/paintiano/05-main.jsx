@@ -1327,10 +1327,8 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
 });
 
 // The Studio's own Custom-palette editor: inside the look tray, under the palettes — the painting stays bright above and
-// changes as you pick. Tap a note, then a colour from the grid, the rainbow strip, or ⋯ (the system picker) for an exact one.
+// changes as you pick. Tap a note, then its colour on the rainbow strip, or ⋯ (the system picker) for an exact one.
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
-const ST_PAL_PRESETS=['#ff2a2a','#ff8a1f','#ffe12a','#9be52a','#25d04a','#1fd6c6','#2aa7ff','#2a50ff','#7a3cff','#e52ad8',
-                      '#ff9fb8','#ffd2a0','#fff3c4','#b9f0c9','#a9dcff','#cdb8ff','#8a5a3a','#ffffff','#151515'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
 const _stPalRgb=(h)=>{ const m=/^#?([0-9a-f]{6})$/i.exec(String(h||'')); if(!m) return [136,136,136]; const n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; };
 const _stPalHue=(h)=>{ const [r,g,b]=_stPalRgb(h).map(x=>x/255), mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<0.04) return null;
@@ -1351,16 +1349,15 @@ const StPalEditor = memo(function StPalEditor({pal, setPal, sel, setSel, L, onDo
         {ST_PAL_NOTES.map((n,pc)=>{ const c=(pal && pal[pc]) || '#888888';
           return (<button key={pc} type="button" className={'pf-paled-n'+(pc===sel?' on':'')} style={{background:c, color:_stPalLight(c)?'#1a1408':'#fff'}} onClick={()=>setSel(pc)} aria-pressed={pc===sel}>{n}</button>); })}
       </div>
-      <div className="pf-paled-grid" role="group" aria-label={ST_PAL_NOTES[sel]}>
-        {ST_PAL_PRESETS.map(h=>(<button key={h} type="button" className={'pf-paled-c'+(h.toLowerCase()===String(cur).toLowerCase()?' on':'')} style={{background:h}} onClick={()=>put(h)} aria-label={h}/>))}
-        <label className="pf-paled-c pf-paled-more" aria-label={L.more}>⋯<input type="color" value={/^#[0-9a-f]{6}$/i.test(cur)?cur:'#888888'} onChange={e=>put(e.target.value)}/></label>
-      </div>
+      <div className="pf-paled-row">
       <div className="pf-paled-hue" ref={hueRef}
         onPointerDown={(e)=>{ dragRef.current=true; try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} fromX(e.clientX); }}
         onPointerMove={(e)=>{ if(dragRef.current) fromX(e.clientX); }}
         onPointerUp={()=>{ dragRef.current=false; }} onPointerCancel={()=>{ dragRef.current=false; }}>
         <span className="pf-paled-hn">{ST_PAL_NOTES[sel]}</span>
         <span className="pf-paled-ht">{hu!==null && (<i style={{left:(hu/360*100)+'%', background:cur}}/>)}</span>
+      </div>
+      <label className="pf-paled-c pf-paled-more" aria-label={L.more}>⋯<input type="color" value={/^#[0-9a-f]{6}$/i.test(cur)?cur:'#888888'} onChange={e=>put(e.target.value)}/></label>
       </div>
       <div className="pf-paled-acts">
         <button type="button" className="pf-paled-p" onClick={()=>{ setSure(false); setPal(_stPalDefault()); }}>↺ {L.def}</button>
@@ -1844,9 +1841,9 @@ const STUDIO_SKIN_CSS = `
 .pf-paled-n{aspect-ratio:1;max-width:52px;width:100%;justify-self:center;border-radius:50%;border:0;font-family:inherit;font-size:13px;font-weight:700;box-shadow:inset 0 0 0 2px rgba(255,255,255,.14);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s,transform .12s}
 .pf-paled-n.on{box-shadow:0 0 0 3px #0f0d17,0 0 0 5px #f0c040}
 .pf-paled-n:active{transform:scale(.92)}
-.pf-paled-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;padding:2px 0}
-.pf-paled-c{position:relative;aspect-ratio:1;width:100%;border-radius:50%;border:0;padding:0;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#f2eee8;overflow:hidden}
-.pf-paled-c.on{box-shadow:0 0 0 2px #0f0d17,0 0 0 4px #f2eee8}
+.pf-paled-row{display:flex;align-items:center;gap:8px}
+.pf-paled-row .pf-paled-hue{flex:1;min-width:0}
+.pf-paled-c{position:relative;flex-shrink:0;width:38px;height:38px;border-radius:50%;border:0;padding:0;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#f2eee8;overflow:hidden}
 .pf-paled-more{background:conic-gradient(#f22,#fd2,#2d4,#2cf,#24f,#d2f,#f22)}
 .pf-paled-more input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 .pf-paled-hue{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:14px;background:rgba(255,255,255,.05);touch-action:none;cursor:pointer}
