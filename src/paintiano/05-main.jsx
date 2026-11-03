@@ -14626,7 +14626,8 @@ Hard requirements:
       if(!best || best.disabled || best.classList.contains('pf-artist-on') || best.getAttribute('data-lk')==='1') return; best.click(); };
     const onScroll=()=>{ clearTimeout(tm); tm=setTimeout(settle, 150); }; const onUser=()=>{ trayUserRef.current=true; };
     row.addEventListener('scroll', onScroll, {passive:true}); row.addEventListener('touchstart', onUser, {passive:true}); row.addEventListener('wheel', onUser, {passive:true}); row.addEventListener('pointerdown', onUser);
-    return ()=>{ clearTimeout(tm); clearTimeout(_rc1); clearTimeout(_rc2); row.removeEventListener('scroll', onScroll); row.removeEventListener('touchstart', onUser); row.removeEventListener('wheel', onUser); row.removeEventListener('pointerdown', onUser); };
+    const onTap=()=>{ setTimeout(()=>{ trayUserRef.current=false; }, 0); }; row.addEventListener('click', onTap);   // a tap is not a scroll: the row follows the painting again afterwards (else it stayed put on every later ↑)
+    return ()=>{ clearTimeout(tm); clearTimeout(_rc1); clearTimeout(_rc2); row.removeEventListener('scroll', onScroll); row.removeEventListener('touchstart', onUser); row.removeEventListener('wheel', onUser); row.removeEventListener('pointerdown', onUser); row.removeEventListener('click', onTap); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[studioFs, stripOpen, loadedSource]);
   useEffect(()=>{ if(studioFs && stripOpen && (viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current)) trayUserRef.current=false;   // Fusion: a tap moves the face into the group — the row follows it
@@ -18084,7 +18085,7 @@ Hard requirements:
           })()}
           {stripOpen && (<div onClick={()=>setStripOpen(false)} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now()} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
             // swipes on the painting work with the tray open too: ← → its variants, ↑ the next one (the row follows); ↓ or a tap closes the tray
-            if(st && tt){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(!(dy>0 && Math.abs(dy)>Math.abs(dx)) && _stSwipeRef.current && _stSwipeRef.current(dx, dy, Date.now()-st.t)) return; }
+            if(st && tt){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(!(dy>0 && Math.abs(dy)>Math.abs(dx)) && _stSwipeRef.current){ trayUserRef.current=false; if(_stSwipeRef.current(dx, dy, Date.now()-st.t)) return; } }
             setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'transparent',touchAction:'none'}}/>)}{/* the painting stays bright above the look tray: a tap on it closes the tray */}
 
         </>);
