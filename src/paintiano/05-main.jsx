@@ -4337,7 +4337,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // can overwrite the ref). The moment the user actively moves to a DIFFERENT
   // artist, the pin disarms for good and normal behaviour takes over.
   useEffect(()=>{
-    if(!qrArtistRef.current) return;
+    if(!qrArtistRef.current || qrStudioRef.current) return;   // the Studio's opener sets the poster's painter itself
     // the fusion part disarms with the artist (and on leaving Lite — see the Lite/Advanced reset)
     if(style && style!==qrArtistRef.current){ qrArtistRef.current=null; _qrDropStage(); return; }
     if(style===qrArtistRef.current){
@@ -4632,10 +4632,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // ── QR poster deep link: /play?piece=liebestraum|bumblebee|metamorphosis ──
   // Poster QR codes land here. Parsed ONCE per page load; the param stays in
   // the URL (posters hang for years — a refresh must keep working). Effect:
-  //   • the app opens in Lite on the big Play disc (audio needs a gesture anyway)
-  //   • every Lite default-sample load (Play disc, Surprise, welcome-back) uses
-  //     THIS piece instead of the default Liebestraum
-  // No artist forcing, no UI changes — otherwise the normal Lite flow.
+  //   • a phone or a tablet opens it in the Studio, the poster's painting already
+  //     on the canvas — a tap plays it (audio needs a gesture anyway); see qrStudioRef
+  //   • a computer with a mouse (or the Atelier chosen) opens it in Lite on the big
+  //     Play disc, and every Lite default-sample load (Play disc, Surprise,
+  //     welcome-back) uses THIS piece instead of the default Liebestraum
   const qrPieceRef = useRef(undefined);
   const qrArtistRef = useRef(null);
   const qrVariantRef = useRef(0);
@@ -4649,6 +4650,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const litePieceRef = useRef(0);
   const qrModeRef = useRef(null);
   const qrToneRef = useRef(null);
+  const qrStudioRef = useRef(false);   // this scan opens in the Studio (until the poster is on the canvas)
+  const _stTakenSetRef = useRef(null);   // the poster in the Studio becomes a kept, not chosen painting (set by stTaken)
   // Which BUILT-IN sample currently owns the canvas (0/1/2) — set by
   // loadSampleMidi, cleared by every other loader via applyEvents. This is
   // what makes the poster tool work from the normal in-app sample picker,
@@ -4692,6 +4695,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(_u.get('postermaker')==='raffel2026'){ try{ localStorage.setItem('paintiano_postermaker','1'); }catch(_){} }
     }catch(_){}
     qrPieceRef.current=_qidx;
+    // the Studio takes the scan wherever it is the view: every touch device (and a narrow window), unless a Pro chose the Atelier
+    try{ const _wide = window.matchMedia && window.matchMedia('(min-width: 769px)').matches && !PF_TOUCH_DEV;
+      const _cls = _proReadCache() && localStorage.getItem('paintiano_view')==='classic';
+      qrStudioRef.current = _qidx!=null && !_wide && !_cls; }catch(_){ qrStudioRef.current=false; }
     // Lite session piece: the QR piece when present, otherwise a RANDOM pick
     // from the three built-in samples — chosen once per page load so Play,
     // Surprise and welcome-back all stay on the same song within a session.
@@ -4749,7 +4756,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // reloads — applies to every user, new or returning.
   const [basicMode, setBasicMode] = useState(()=>{
     try{
-      if(qrPieceRef.current!=null) return true; // QR poster scan → always land on the Lite Play disc
+      // QR poster scan: a phone or a tablet opens it in the Studio, right on the painting (see _qrStudioOpen);
+      // Lite's Play disc keeps it where the Studio is not — a computer with a mouse, or the Atelier chosen on purpose
+      if(qrPieceRef.current!=null) return !qrStudioRef.current;
       if(!_proReadCache()) return false;          // Free: no Lite — the Studio on a phone, the full app on a desktop
       if(!localStorage.getItem('paintiano_onboarded')) return true; // first visit → Basic
       return localStorage.getItem('paintiano_basic_mode')!=='0';
@@ -14231,6 +14240,28 @@ Hard requirements:
     if(open){ setSetupReturnTo(null); setShowSetupModal(true); } try{ window.posthog && window.posthog.capture('view_info', { open: !!open }); }catch(_){} };
   const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
   useEffect(()=>{ if(studioOn){ try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){} } },[studioOn]);
+  // A poster's QR in the Studio: its piece goes straight onto the painting in the poster's own look — the painter and
+  // the variant printed, the whole fusion, the palette and the tone (a Pro painter too, for anyone: the poster's taste latch).
+  // Nothing plays by itself (no gesture yet): a tap on the painting plays it. A poster with no painter opens on its ✦ Signature.
+  useEffect(()=>{
+    if(!qrStudioRef.current || !studioOn) return;
+    qrStudioRef.current = false;
+    const A = qrArtistRef.current, q = qrStageRef.current;
+    setRandomMode(false); randomModeRef.current=false;
+    if(!A){ loadSampleMidi(qrPieceRef.current); setForceSetup(false); return; }
+    tastePreviewKeyRef.current = A;
+    loadSampleMidi(qrPieceRef.current, {noSig:true});
+    setStyle(A); setPhaseIndex(qrVariantRef.current|0); setNotesMode(false);
+    if(q){ setPainterStage(q.keys.slice()); try{ globalThis.__PAINT_SIG_PHS = _qrPhs(); }catch(_){} if(ensembleActive) setJamOn(true); }
+    else { setPainterStage(p=>p.length?[]:p); if(jamOn) setJamOn(false); }
+    if(qrModeRef.current){ try{ setMode(qrModeRef.current); }catch(_){} }
+    if(qrToneRef.current){ try{ setTone(qrToneRef.current); }catch(_){} }
+    setForceSetup(false);
+    // once it is up, the poster is a painting like any other — kept, but not chosen by you (as a surprise kept from For You):
+    // ← → its variants, ↑ someone else, ↓ back to it; the next piece opens on its own ✦ again. Its exact fusion variants stay pinned.
+    setTimeout(()=>{ qrArtistRef.current=null; qrStageRef.current=null; if(_stTakenSetRef.current) _stTakenSetRef.current(); }, 700);
+    try{ window.posthog && window.posthog.capture('qr_open', { where:'studio', artist:A, fusion: q ? q.keys.length+1 : 1 }); }catch(_){}
+  },[studioOn]);
   // Compose and Mic are "live": the keys (or the Mic's stop) stay at the bottom, both rails stay out, a tap is the canvas's own.
   const _micCanvas = draftOwnerRef.current==='sing' || draftOwnerRef.current==='listen';
   const studioLiveSrc = composeMode || micActive || ((micArmed || micContext) && !(loadedSource || moodFromImg || viewMode==='image' || (moodContext && chords.length>0 && !_micCanvas)));
@@ -15321,6 +15352,7 @@ Hard requirements:
     firstKeptRef.current = !!c.first;   // its painter is not chosen (white): ↑ goes on as in the surprises
   };
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
+  _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
@@ -17487,6 +17519,8 @@ Hard requirements:
             // never contradicts the fusion info under it. Gone when ✦ goes off.
             const _sigK = (!cockpitEdit && sigActive && songSig && songSig.keys) ? songSig.keys : [];
             for(const _k of _sigK) if(_k && !_visibleArtists.includes(_k) && ALL_ARTIST_KEYS.includes(_k)) _visibleArtists.push(_k);
+            // the Studio: whoever paints the canvas has a chip too (a poster's painter on Free, one left out of your set …) — the faces never contradict the painting
+            if(!cockpitEdit && studioFs) for(const _k of [style].concat(painterStage)) if(_k && _k!=='mosaicFamily' && !_visibleArtists.includes(_k) && ALL_ARTIST_KEYS.includes(_k)) _visibleArtists.push(_k);
             const _chipCount = ((_familyOn || cockpitEdit)?1:0) + _visibleArtists.length;
             // Column count: keep tiles readable. Up to 5 across (so the full
             // 20-chip edit grid lays out as a tidy 5×4). Fewer chips → fewer cols.
