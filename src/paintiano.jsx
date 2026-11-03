@@ -38305,30 +38305,30 @@ Hard requirements:
                         <span style={{position:'relative',width:58,height:58,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:r.bg,color:r.dk?'#1a1408':'#fff',boxShadow:'0 8px 22px rgba(0,0,0,.35)'}}>{r.ic}
                           {r.n>0 && (<span style={{position:'absolute',top:-4,right:-4,minWidth:20,height:20,padding:'0 5px',boxSizing:'border-box',borderRadius:10,background:'#fff',color:'#d83a6a',fontSize:11,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',fontVariantNumeric:'tabular-nums'}}>{r.n}</span>)}
                         </span>
-                        <span style={{fontSize:(.56*effScale)+'rem',fontWeight:600,maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{_sent(r.label)}</span>
+                        <span style={{fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 12.5px)',fontWeight:600,maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{_sent(r.label)}</span>
                       </button>))}
                   </div>
                   {_pro && (
                     <button type="button" role="menuitem" className="pf-st-row" onClick={_go(()=>setPaywallReason('settings'))} style={{..._row,borderRadius:18,padding:'12px 14px',background:'linear-gradient(120deg,rgba(240,215,138,.20),rgba(140,92,255,.16))',border:'1px solid rgba(240,215,138,.35)',transition:'transform .12s'}}>
                       {_ri('linear-gradient(135deg,#f0d78a,#b8892f)', (<span style={{color:'#1a1408',fontSize:17,fontWeight:700}}>✦</span>))}
                       <span style={{flex:1,minWidth:0}}>
-                        <span style={{display:'block',fontSize:(.64*effScale)+'rem',fontWeight:700}}>{_pro.t}</span>
-                        <span style={{display:'block',marginTop:2,fontSize:(.52*effScale)+'rem',color:'rgba(242,238,232,.66)'}}>{_pro.s}</span>
+                        <span style={{display:'block',fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:700}}>{_pro.t}</span>
+                        <span style={{display:'block',marginTop:2,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 12px)',color:'rgba(242,238,232,.66)'}}>{_pro.s}</span>
                       </span>{_chev}
                     </button>)}
                   <div style={{borderRadius:18,background:'rgba(255,255,255,.045)',border:'1px solid rgba(255,255,255,.07)',overflow:'hidden'}}>
                     <button type="button" role="menuitem" onClick={_go(()=>setLangOpen(true))} style={_row}>
                       {_ri('linear-gradient(135deg,#9ad2ff,#3f7bff)', _sv(<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></>, 17))}
-                      <span style={{flex:1,fontSize:(.62*effScale)+'rem',fontWeight:600}}>{_stT('lang')}</span>
-                      <span style={{fontSize:(.56*effScale)+'rem',color:'rgba(242,238,232,.55)',fontWeight:600}}>{_lc}</span>{_chev}
+                      <span style={{flex:1,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:600}}>{_stT('lang')}</span>
+                      <span style={{fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 12.5px)',color:'rgba(242,238,232,.55)',fontWeight:600}}>{_lc}</span>{_chev}
                     </button>
                     <button type="button" role="menuitem" onClick={_go(()=>{ setSetupReturnTo(null); setShowSetupModal(true); })} style={{..._row,borderTop:'1px solid rgba(255,255,255,.07)'}}>
                       {_ri('linear-gradient(135deg,#8fd6a4,#3fb37a)', _sv(<><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6z"/></>, 17))}
-                      <span style={{flex:1,fontSize:(.62*effScale)+'rem',fontWeight:600}}>{ts('setupPickerLabel','Styles & palettes')}</span>{_chev}
+                      <span style={{flex:1,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:600}}>{ts('setupPickerLabel','Styles & palettes')}</span>{_chev}
                     </button>
                     <div style={{..._row,cursor:'default',borderTop:'1px solid rgba(255,255,255,.07)'}}>
                       {_ri('linear-gradient(135deg,#8fd6c8,#3fa7b3)', (<span style={{fontSize:14,fontWeight:700,fontFamily:"'Cormorant Garamond',Georgia,serif"}}>Aa</span>))}
-                      <span style={{flex:1,fontSize:(.62*effScale)+'rem',fontWeight:600}}>{_cap(t('fsLabel'))}</span>
+                      <span style={{flex:1,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:600}}>{_cap(t('fsLabel'))}</span>
                       <span role="group" aria-label={t('fsLabel')} style={{display:'flex',gap:3,padding:3,borderRadius:16,background:'rgba(255,255,255,.07)'}}>
                         {[[1,12],[1.25,15],[1.5,18]].map(([v,z])=>{ const on=readScale===v; return (
                           <button key={v} type="button" aria-pressed={on} onClick={()=>setReadScale(v)} style={{width:34,height:28,borderRadius:13,border:0,padding:0,cursor:'pointer',fontFamily:"'Cormorant Garamond',Georgia,serif",fontWeight:600,fontSize:z,lineHeight:1,background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'transparent',color:on?'#1a1408':'rgba(242,238,232,.75)'}}>A</button>); })}
@@ -38336,8 +38336,8 @@ Hard requirements:
                     </div>
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'2px 16px',paddingTop:2}}>
-                    <button type="button" onClick={_go(()=>resetAll())} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',color:'rgba(255,150,150,.7)',cursor:'pointer'}}>{ts('resetLabel',({EN:'Reset',SK:'Reset',DE:'Zurücksetzen',FR:'Réinitialiser',ES:'Restablecer',PT:'Redefinir',zh:'重置',zhTW:'重置',ja:'リセット'})[lang]||'Reset')}</button>
-                    {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',color:'rgba(242,238,232,.45)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
+                    <button type="button" onClick={_go(()=>resetAll())} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 11px)',color:'rgba(255,150,150,.7)',cursor:'pointer'}}>{ts('resetLabel',({EN:'Reset',SK:'Reset',DE:'Zurücksetzen',FR:'Réinitialiser',ES:'Restablecer',PT:'Redefinir',zh:'重置',zhTW:'重置',ja:'リセット'})[lang]||'Reset')}</button>
+                    {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 11px)',color:'rgba(242,238,232,.45)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
                   </div>
                 </div>
               </div>);

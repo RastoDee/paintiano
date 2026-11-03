@@ -36596,20 +36596,6 @@ Hard requirements:
   useEffect(()=>{ if(stPalEdit && (!stripOpen || !studioFs || mode!=='custom')) setStPalEdit(false); },[stripOpen, studioFs, mode, stPalEdit]);
   useEffect(()=>{ if(stPalView && (!stripOpen || !studioFs)) setStPalView(null); },[stripOpen, studioFs, stPalView]);
   const studioLive = studioFs && studioLiveSrc;
-  // The swipe / hold flash sits on the PAINTING (not the screen): centred on it and scaled down until it fits inside it —
-  // five names, a header and the style pill never run off it (the tray open, on its side, a small phone).
-  const flashBoxRef = useRef(null);
-  useLayoutEffect(()=>{ const el=flashBoxRef.current; if(!el) return;
-    const fit=()=>{ try{ const card=el.firstElementChild; if(!card) return; const cv=canvasWrapRef.current, r=cv && cv.getBoundingClientRect();
-      const W=window.innerWidth, H=window.innerHeight; let cx=W/2, cy=H/2, aw=W*0.9, ah=H*0.8;
-      if(r && r.width>60 && r.height>60 && r.bottom>0 && r.top<H){ const t=Math.max(r.top,0), b=Math.min(r.bottom,H); cx=r.left+r.width/2; cy=(t+b)/2; aw=r.width*0.92; ah=(b-t)*0.9; }
-      const sc=Math.max(0.4, Math.min(1, aw/Math.max(1,card.offsetWidth), ah/Math.max(1,card.offsetHeight)));
-      el.style.left=Math.round(cx)+'px'; el.style.top=Math.round(cy)+'px'; el.style.transform='scale('+sc.toFixed(3)+')'; }catch(_){} };
-    fit(); const t1=setTimeout(fit, 140), t2=setTimeout(fit, 420);   // the painting may still be on its way (the tray, a turn)
-    let ro=null; try{ ro=new ResizeObserver(fit); if(el.firstElementChild) ro.observe(el.firstElementChild); }catch(_){}
-    window.addEventListener('resize', fit);
-    return ()=>{ clearTimeout(t1); clearTimeout(t2); try{ ro && ro.disconnect(); }catch(_){} window.removeEventListener('resize', fit); };
-  });
   const _micGap = 144;   // a finished Mic take's name and palette sit over the painting's lower edge, as in Music — the frame keeps its size after STOP
   // the height of the bottom dock while live: the painting sits in the space above it
   const stDockRef = useRef(null), clearBtnRef = useRef(null), stMicRef = useRef(null), micPresetBtnRef = useRef(null);
@@ -36927,6 +36913,21 @@ Hard requirements:
   useEffect(()=>{ const on=()=>{ try{ setWinLand(window.innerWidth > window.innerHeight*1.15); }catch(_){} }; window.addEventListener('resize', on); window.addEventListener('orientationchange', on); return ()=>{ window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); }; },[]);
   const stLand = !!(studioFs && winLand && !studioHome && !studioLive && !favView);
   const stLandRef = useRef(false); stLandRef.current = stLand;
+  // The swipe / hold flash sits on the PAINTING (not the screen): centred on it and scaled down until it fits inside it —
+  // five names, a header and the style pill never run off it (the tray open, on its side, a small phone).
+  const flashBoxRef = useRef(null);
+  useLayoutEffect(()=>{ const el=flashBoxRef.current; if(!el) return;
+    const fit=()=>{ try{ const card=el.firstElementChild; if(!card) return; const cv=canvasWrapRef.current, r=cv && cv.getBoundingClientRect();
+      const W=window.innerWidth, H=window.innerHeight; let cx=W/2, cy=H/2, aw=W*0.9, ah=H*0.8;
+      if(r && r.width>60 && r.height>60 && r.bottom>0 && r.top<H){ const t=Math.max(r.top,0), b=Math.min(r.bottom,H); cx=r.left+r.width/2; cy=(t+b)/2; aw=r.width*0.92; ah=(b-t)*0.9; }
+      const sc=Math.max(0.4, Math.min(1, aw/Math.max(1,card.offsetWidth), ah/Math.max(1,card.offsetHeight)));
+      el.style.left=Math.round(cx)+'px'; el.style.top=Math.round(cy)+'px'; el.style.transform='scale('+sc.toFixed(3)+')'; }catch(_){} };
+    fit(); const t1=setTimeout(fit, 140), t2=setTimeout(fit, 420);   // the painting may still be on its way (the tray, a turn)
+    let ro=null; try{ ro=new ResizeObserver(fit); if(el.firstElementChild) ro.observe(el.firstElementChild); }catch(_){}
+    window.addEventListener('resize', fit);
+    return ()=>{ clearTimeout(t1); clearTimeout(t2); try{ ro && ro.disconnect(); }catch(_){} window.removeEventListener('resize', fit); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[_swipeFlashKey, stripOpen, stLand, immersive]);
   const [favHint, setFavHint] = useState(false);
   useEffect(()=>{ if(!favHint) return; const tm=setTimeout(()=>setFavHint(false), 2600); return ()=>clearTimeout(tm); },[favHint]);
   const [favPulse, setFavPulse] = useState(0);
