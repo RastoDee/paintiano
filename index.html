@@ -810,7 +810,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
       if(cur===b){ au.pause(); reset(); return; }
       if(cur===lb) backToLoop();
       reset(); au.src=b.getAttribute('data-src');
-      try{ var p=au.play(); if(p&&p.catch) p.catch(reset); }catch(_){ reset(); return; }
+      try{ var p=au.play(); if(p&&p.catch) p.catch(function(){ if(cur===b) reset(); }); }catch(_){ reset(); return; }
       cur=b; b.classList.add('playing'); track('landing_hear',{what:b.getAttribute('data-what')});
       var w=b.getAttribute('data-what'); if(vis[w]) vis[w].start();
     });
@@ -828,7 +828,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
      When the clip ends the rest is read in one sweep, in the app's order, and the picture is whole again */
   function reader(box,img,src,nr,nc,dir){ if(!box||!img) return null;
     var cv=document.createElement('canvas'), gl=document.createElement('canvas'); gl.className='rg'; box.appendChild(cv); box.appendChild(gl);
-    var cs=4, NC=Math.ceil(nc/cs), NB=Math.floor(nr/4), N=NC*NB, sp=(dir==='spiralIn'), U=sp ? Math.ceil(Math.min(NB,NC)/2) : NB, cells=[], seen, col=document.createElement('canvas'), ctx, gtx, W, H, raf=0, at=-1, u, b, c;
+    var cs=4, NC=Math.ceil(nc/cs), NB=Math.floor(nr/4), N=NC*NB, sp=(dir==='spiralIn'), U=sp ? Math.ceil(Math.min(NB,NC)/2) : NB, cells=[], seen, col=document.createElement('canvas'), ctx, gtx, W, H, raf=0, offT=0, at=-1, u, b, c;
     for(u=0;u<U;u++) cells.push([]);
     for(b=0;b<NB;b++) for(c=0;c<NC;c++) cells[sp ? Math.min(b,c,NB-1-b,NC-1-c) : b].push(b*NC+c);
     function unitOf(q){ var bb=(q/NC)|0, cc=q%NC; return sp ? Math.min(bb,cc,NB-1-bb,NC-1-cc) : bb; }
@@ -850,17 +850,19 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
       rg.addColorStop(0,'rgba(255,248,225,.98)'); rg.addColorStop(.18,'rgba(255,236,180,.8)'); rg.addColorStop(.5,'rgba('+warm+',.3)'); rg.addColorStop(1,'rgba('+warm+',0)'); gtx.fillStyle=rg; gtx.fillRect(x-R,yy-R,2*R,2*R);
       gtx.save(); gtx.shadowColor='rgba(255,230,160,.95)'; gtx.shadowBlur=Math.max(6,W/60); gtx.strokeStyle='rgba(255,246,215,1)'; gtx.lineWidth=Math.max(2,W/220); gtx.strokeRect(d[0]+1,d[1]+1,Math.max(2,d[2]-2),Math.max(2,d[3]-2)); gtx.restore(); }
     return {
-      start:function(SC){ if(rm) return; cancelAnimationFrame(raf); setup(); glow(-1,-1); box.classList.add('on'); var w=cur&&cur.getAttribute('data-what'), i=0, shown=-1, cand=-1, candT=0;
+      start:function(SC){ if(rm) return; cancelAnimationFrame(raf); clearTimeout(offT); var w=cur&&cur.getAttribute('data-what'), i=0, shown=-1, cand=-1, candT=0, tries=0;
+        /* the picture must be decoded and the canvases granted (iOS can refuse one for a moment): until then try again, never leave the picture un-read */
+        var ready=function(){ if(!(cur && cur.getAttribute('data-what')===w)) return false; try{ if(!img.complete || !img.naturalWidth) throw 0; setup(); if(!ctx || !gtx) throw 0; glow(-1,-1); box.classList.add('on'); return true; }catch(_){ if(++tries<40) offT=setTimeout(function(){ if(ready()) raf=requestAnimationFrame(tick); },150); return false; } };
         var tick=function(){ if(!(cur && cur.getAttribute('data-what')===w)) return; var tt=au.currentTime*100;
           while(i<SC.length && SC[i]<=tt){ var q=SC[i+1]*NC+SC[i+2]; if(q>=0 && q<N){ at=q; fillUnit(unitOf(q)); } i+=3; }
           /* the band or ring lights up once the music stays on it a moment, so it does not flicker with every note */
           if(at>=0){ var v=unitOf(at); if(shown<0) shown=v; else if(v===shown) cand=-1; else if(v!==cand){ cand=v; candT=tt; } else if(tt-candT>=40){ shown=v; cand=-1; } }
           glow(at, shown); raf=requestAnimationFrame(tick); };
-        raf=requestAnimationFrame(tick); },
-      stop:function(){ cancelAnimationFrame(raf); box.classList.remove('on'); },
+        if(ready()) raf=requestAnimationFrame(tick); },
+      stop:function(){ cancelAnimationFrame(raf); clearTimeout(offT); box.classList.remove('on'); },
       end:function(){ if(!box.classList.contains('on')) return; cancelAnimationFrame(raf); var t0=performance.now(), D=2600, v0=0;
         var step=function(now){ var x=Math.min(1,(now-t0)/D), e=x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2, m=Math.round(U*e); while(v0<m) fillUnit(v0++); glow(-1, m<U ? m : -1);
-          if(x<1) raf=requestAnimationFrame(step); else setTimeout(function(){ box.classList.remove('on'); },350); };
+          if(x<1) raf=requestAnimationFrame(step); else offT=setTimeout(function(){ box.classList.remove('on'); },350); };
         raf=requestAnimationFrame(step); }
     }; }
   function readOn(R,SC){ return R ? { start:function(){ R.start(SC); }, stop:R.stop, end:R.end } : null; }
