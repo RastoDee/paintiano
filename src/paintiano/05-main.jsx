@@ -702,7 +702,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
     const gc = _gcMake(fav.mode, fav.tone, fav.pal);
-    const style = fav.style || null, seed = fav.seed>>>0, mode = fav.mode, ph = fav.phase|0, lim = chords.length;
+    const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = chords.length;
     const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
     if(cp!==cp0 && cp._livePad && fav.compose){ cp._exactTone = true; cp._objFirst = true; }
@@ -750,6 +750,16 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
 // The colour of a note for a palette (mode), a tone and a Custom palette — the
 // app's gc. A factory, so a Favorite can repaint in ITS palette and tone while
 // the live canvas keeps its own (see _favPaint).
+// A Custom palette made only of greys (its B/W button, or greys picked by hand) paints as a black-and-white picture does:
+// the painters' own b/w look (grounds, accents), not only grey notes. The cleared palette (all #888888) stays Custom.
+function _paintModeOf(mode, pal){
+  if(mode!=='custom' || !Array.isArray(pal) || pal.length<12) return mode;
+  let same=true;
+  for(let i=0;i<12;i++){ const h=pal[i]; if(typeof h!=='string' || !/^#[0-9a-f]{6}$/i.test(h)) return mode;
+    const r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16); if(Math.max(r,g,b)-Math.min(r,g,b)>6) return mode;
+    if(h.toLowerCase()!=='#888888') same=false; }
+  return same ? mode : 'bw';
+}
 function _gcMake(mode, tone, activePalette){
   return (m,v)=>{
     if(mode==='bw') return bwCol(m,v);
@@ -1365,8 +1375,8 @@ const StPalEditor = memo(function StPalEditor({pal, setPal, sel, setSel, L, onDo
       </div>
       <div className="pf-paled-acts">
         <button type="button" className="pf-paled-p" onClick={()=>{ setSure(false); setPal(_stPalDefault()); }}>↺ {L.def}</button>
-        <button type="button" className={'pf-paled-p'+(sure?' warn':'')} onClick={()=>{ if(!sure){ setSure(true); return; } setSure(false); setPal(Array(12).fill('#888888')); }}>{sure ? L.sure : L.clr}</button>
         <button type="button" className="pf-paled-p" onClick={()=>{ setSure(false); setPal(_stPalBw()); }}>{L.bw}</button>
+        <button type="button" className={'pf-paled-p'+(sure?' warn':'')} onClick={()=>{ if(!sure){ setSure(true); return; } setSure(false); setPal(Array(12).fill('#888888')); }}>{sure ? L.sure : L.clr}</button>
         <button type="button" className="pf-paled-p w" onClick={onDone}>{L.done}</button>
       </div>
     </div>);
@@ -2745,6 +2755,7 @@ export default function Paintiano() {
   const activePalette=(proStatus==='free')
     ? defaultCustomPalette
     : (customPalette||defaultCustomPalette);
+  const paintMode = _paintModeOf(mode, activePalette);   // what the painters paint in (an all-grey Custom = b/w)
   useEffect(()=>{
     if(!customPalette)return;
     if(customPalette.every(h=>h==='#888888'))return;
@@ -5498,6 +5509,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
   const _songEnergyCacheRef = useRef({ src: null, e: 0.5 });
   useEffect(()=>{
+    const mode = paintMode;   // the painters paint in this (an all-grey Custom = b/w); the palette itself stays in gc
     const cv=canvasRef.current;if(!cv)return;
     // B1: push the piece's overall energy to the draw module so gc() tilts the
     // palette's saturation/lightness by character. Cached by chords identity so
@@ -6233,7 +6245,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const insp0 = fv.keys ? fv.keys.map(_painterLabel).join(' × ') : (bare ? STYLE_INSPIRED[key] : ('inspired by '+STYLE_INSPIRED[key]));
     return {
       chords: pc.chords, grid: lay.g, effectiveStyle: lead, shuffleStyle: null, pollockSessionSeed: fv.seed>>>0,
-      mode: fv.mode, gc: _gcMake(fv.mode, fv.tone, fv.pal), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
+      mode: _paintModeOf(fv.mode, fv.pal), gc: _gcMake(fv.mode, fv.tone, fv.pal), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
       info: {title:_favTitle(fv)}, compositionName: '', painterStageRef: {current: fv.keys ? fv.keys.slice(1) : []},
       sigActiveRef: {current:!!fv.sig}, draftOwnerRef: {current: fv.compose ? 'compose' : null},
       originalImgUrl: null, imgMoodThumb: null, currentMood: fv.mood || '',
@@ -13388,7 +13400,7 @@ Hard requirements:
   };
   const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
     const fv=(favView && favCur) ? favCur : null;
-    if(!fv) return _exportWith({ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip }, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
+    if(!fv) return _exportWith({ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip }, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
     const pc=favPiecesRef.current.get(fv.pk) || await favPiece(fv.pk);
     const lay=pc ? _favLayout(fv, pc.chords) : null;
     if(!lay){ setFavBad(true); return; }
