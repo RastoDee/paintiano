@@ -44,8 +44,8 @@ const WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET;
 // Two paid tiers (3-tier model, Jun 2026). Each maps a Paddle price ID → tier.
 // Set both in Vercel env. If a tier's env is unset, that tier simply won't be
 // recognized (purchases of it fall back to 'pro' with a logged warning).
-//   PADDLE_PRICE_ID_PRO    → 'pro'    (full tool, no unlimited AI)
-//   PADDLE_PRICE_ID_PRO_AI → 'pro_ai' (full tool + unlimited AI)
+//   PADDLE_PRICE_ID_PRO    → 'pro'    (full tool, AI only as a trial)
+//   PADDLE_PRICE_ID_PRO_AI → 'pro_ai' (full tool + AI, fair use 30 pieces & melodies a day)
 // Back-compat: the legacy single PADDLE_PRICE_ID, if present, is treated as Pro.
 const PRICE_ID_PRO    = process.env.PADDLE_PRICE_ID_PRO    || process.env.PADDLE_PRICE_ID || null;
 const PRICE_ID_PRO_AI = process.env.PADDLE_PRICE_ID_PRO_AI || null;
@@ -174,11 +174,11 @@ function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) 
   const safeKey = String(licenseKey).replace(/[^A-Z0-9-]/g, '');
   const isAI = tier === 'pro_ai';
   const tierName = isAI ? 'Pro AI' : 'Pro';
-  // What unlocks — Pro is the full deterministic tool WITHOUT unlimited AI;
-  // Pro AI adds AI composition. We deliberately say "AI composition included"
-  // (not "unlimited forever") so we keep room for a fair-use cap later.
+  // What unlocks — Pro is the full deterministic tool, AI only as a trial;
+  // Pro AI adds AI composition under fair use (30 pieces & melodies a day,
+  // counted in /api/compose).
   const unlockLine = isAI
-    ? 'high-resolution exports, the full style library, no watermark, plus AI composition from text and images.'
+    ? 'high-resolution exports, the full style library, no watermark, plus AI composition from text and images (up to 30 AI pieces & melodies a day).'
     : 'high-resolution exports, the full style library, and no watermark.';
   const priceLine = (amount != null && currency)
     ? `${amount} ${currency}`
@@ -341,7 +341,7 @@ function buildUpgradeEmailHtml({ fromKey, amount, currency, orderId }) {
     <div style="font-size:15px;color:#e8e2d4;line-height:1.6;">Your Pro key ending in <strong style="font-family:'SF Mono','Menlo','Consolas',monospace;color:#dcb4ff;letter-spacing:0.06em;">${tail}</strong> now opens <strong style="color:#dcb4ff;">Pro AI</strong>.<br>There is nothing to enter.</div>
   </div>
 
-  <p style="font-size:14px;color:#e8e2d4;margin:0 0 10px;">Open <a href="https://paintiano.app/play" style="color:#ffd07a;text-decoration:none;border-bottom:1px solid rgba(255,208,122,0.4);">Paintiano</a> as usual. AI is unlimited from now on: a piece from a feeling you name, a piece from a photo's mood, AI compose from your picture, atmosphere and a sung melody.</p>
+  <p style="font-size:14px;color:#e8e2d4;margin:0 0 10px;">Open <a href="https://paintiano.app/play" style="color:#ffd07a;text-decoration:none;border-bottom:1px solid rgba(255,208,122,0.4);">Paintiano</a> as usual. AI is on from now on — up to 30 AI pieces &amp; melodies a day: a piece from a feeling you name, a piece from a photo's mood, AI compose from your picture, atmosphere and a sung melody.</p>
   <p style="font-size:14px;color:rgba(232,226,212,0.78);margin:0 0 8px;">On your other devices Pro AI appears the next time Paintiano opens there.</p>
 
   <div style="margin:36px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.10);font-size:12px;color:rgba(232,226,212,0.55);line-height:1.7;">
@@ -376,7 +376,7 @@ function buildUpgradeEmailText({ fromKey, amount, currency, orderId }) {
     'Thank you for upgrading.',
     '',
     `Your Pro key ending in ${keyTail(fromKey)} now opens Pro AI. There is nothing to enter.`,
-    'Open https://paintiano.app/play as usual — AI is unlimited from now on.',
+    'Open https://paintiano.app/play as usual — AI is on from now on, up to 30 AI pieces & melodies a day.',
     'On your other devices Pro AI appears the next time Paintiano opens there.',
     '',
     `Order: ${orderId || '—'}`,

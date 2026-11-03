@@ -78,8 +78,8 @@ export default async function handler(req) {
     // Mask the email for privacy (return only domain part)
     const masked = row.email ? maskEmail(row.email) : null;
 
-    // Tier drives entitlements in the app: 'pro' (full tool, no unlimited AI)
-    // or 'pro_ai' (full tool + unlimited AI). Default to 'pro' for any
+    // Tier drives entitlements in the app: 'pro' (full tool, AI only as a trial)
+    // or 'pro_ai' (full tool + AI; /api/compose applies the daily fair use). Default to 'pro' for any
     // legacy/untagged row so a valid key still unlocks the paid tool.
     const tier = (row.tier === 'pro_ai') ? 'pro_ai' : 'pro';
 

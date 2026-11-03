@@ -42,7 +42,7 @@ const PRO_CFG = {
   paddleEnv: 'production',
   // Price IDs — TWO paid tiers since the 3-tier model (Jun 2026):
   //   Pro    = full deterministic tool, NO AI (lifetime). €9.99.
-  //   Pro AI = Pro + unlimited AI composition (lifetime). €19.99.
+  //   Pro AI = Pro + AI composition, fair use 30 pieces & melodies a day (lifetime). €19.99.
   // The legacy single price ID below is the original "Paintiano Pro Lifetime"
   // (€9.99). It is REUSED as the Pro tier price for now; the Pro AI price must
   // be created in the Paddle catalog and its ID pasted into paddlePriceIdProAI.
@@ -102,6 +102,37 @@ function _proClearCache() {
   try { localStorage.removeItem(PRO_CFG.licenseStoreKey); } catch (_) {}
 }
 
+// ─── AI fair use (Nov 2026) ─────────────────────────────────────────────────
+// /api/compose counts AI on the server: a Pro AI key gets 30 pieces & melodies
+// a day, everyone else a small allowance per network. Every AI call in the app
+// goes through pfAiFetch, which sends the licence key to OUR endpoint only
+// (never to a third party) and turns the server's 429 "pf_daily_limit" into
+// one recognisable error + a 'pf-ai-limit' window event (the app shows a note
+// and does NOT latch "AI is down"). Other endpoints in the same try-loop are
+// skipped for a moment so the limit error is the one that surfaces.
+const PF_AI_LIMIT = { at: 0, info: null };
+function pfAiLimitRecent() { return Date.now() - PF_AI_LIMIT.at < 15000; }
+async function pfAiFetch(ep, init) {
+  const own = typeof ep === 'string' && ep.charAt(0) === '/';
+  if (!own && pfAiLimitRecent()) { const e = new Error('pf_daily_limit'); e._aiLimit = true; throw e; }
+  const opt = Object.assign({}, init || {});
+  if (own) {
+    const h = Object.assign({}, opt.headers || {});
+    try { const c = _proReadCache(); if (c && c.key) h['X-Paintiano-Key'] = c.key; } catch (_) {}
+    opt.headers = h;
+  }
+  const r = await fetch(ep, opt);
+  if (own && r.status === 429) {
+    let d = null; try { d = await r.clone().json(); } catch (_) {}
+    if (d && d.error && d.error.type === 'pf_daily_limit') {
+      PF_AI_LIMIT.at = Date.now(); PF_AI_LIMIT.info = d.pf || null;
+      try { window.dispatchEvent(new CustomEvent('pf-ai-limit', { detail: d.pf || {} })); } catch (_) {}
+      const e = new Error('pf_daily_limit'); e._aiLimit = true; throw e;
+    }
+  }
+  return r;
+}
+
 // ─── server validation (through our own endpoint) ────────────────────────────
 async function _proValidate(key, check = false) {
   const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -127,10 +158,10 @@ async function _proValidate(key, check = false) {
 // ─── Pro status hook ──────────────────────────────────────────────────────────
 function useProStatus() {
   // proStatus: 'loading' | 'free' | 'pro' | 'pro_ai'
-  //   'pro'    = paid, full tool, NO unlimited AI (AI runs on trial like free)
-  //   'pro_ai' = paid, full tool + unlimited AI
+  //   'pro'    = paid, full tool, NO AI beyond the trial (AI runs on trial like free)
+  //   'pro_ai' = paid, full tool + AI (server fair use: 30 pieces & melodies a day)
   // isPro stays true for BOTH paid tiers (watermark/DPI300 gating unchanged);
-  // isProAI is the new flag that unlocks unlimited AI.
+  // isProAI is the new flag that unlocks AI beyond the trial.
   const [proStatus, setProStatus] = useState('loading');
   const [licenseKey, setLicenseKey] = useState(null);
   const [maskedEmail, setMaskedEmail] = useState(null);
@@ -659,6 +690,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
       ['proAiValueAtmo',  'AI atmospheric tinting'],
       ['proAiValueCompose','AI compose — a new piece written from your picture'],
       ['proAiValueMelody', 'AI melody — a line sung over your picture'],
+      ['proAiValueFair',  'Up to 30 AI pieces & melodies a day · fair use'],
     ] : [
       ['proValueArtists', '24 artists (free has 9)'],
       ['proValueTypes',   '6–9 paint types per artist (free has 2)'],
@@ -730,7 +762,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
             </div>
             <p style={{ fontSize: (1.05*readScale)+'rem', fontWeight: 800, textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>
               {upgradeOnly
-                ? tr('proPaywallTitleUpgrade', 'Add unlimited AI')
+                ? tr('proPaywallTitleUpgrade', 'Add AI composition')
                 : reason === 'ai_trial'
                   ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
                   : tr('proPaywallTitle', 'Unlock the full Paintiano')}
@@ -884,7 +916,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
               const yes = '✓';
               const no = '—';
               const allWord = tr('tierAll', 'all');
-              const inf = tr('tierUnlimited', '∞');
+              const inf = tr('tierUnlimited', '30/day');
               const ronly = tr('tierReadOnly', 'preview only');
               const credits3 = tr('tier3Credits', '1 try per mode');
               const rows = [
@@ -948,7 +980,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
               {[
                 ['proAboutHowFree1', 'Eight artists are unlocked from day one. Each unlocked artist has a Pro partner — tap them to see who it is, but only Pro paints with that partner.'],
                 ['proAboutHowFree2', 'Custom palette shows the default 12 colours; editing your own colours is Pro.'],
-                ['proAboutHowFree3', 'Each AI feature (✦) has 1 free try — text mood, Mood-from-image, AI Compose; Atmosphere + Melody share two — then Pro AI unlocks unlimited use. Exports always carry a watermark on Free.'],
+                ['proAboutHowFree3', 'Each AI feature (✦) has 1 free try — text mood, Mood-from-image, AI Compose; Atmosphere + Melody share two — then Pro AI gives you up to 30 pieces & melodies a day. Exports always carry a watermark on Free.'],
               ].map(([k, fb], i) => (
                 <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 11px', fontSize: (.68*readScale)+'rem', lineHeight: 1.5, color: '#cccccc' }}>
                   <span style={{ color: GOLD, flexShrink: 0, marginTop: 1, fontSize: (.7*readScale)+'rem' }}>·</span>
@@ -1038,7 +1070,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
               {reason === 'upgraded' ? tr('proAiWelcomeTitle', 'Pro AI is active') : tr('proWelcomeTitle', 'Welcome to Pro')}
             </p>
             <p style={{ fontSize: (.7*readScale)+'rem', color: '#9a9a9a', margin: 0, lineHeight: 1.5 }}>
-              {reason === 'upgraded' ? tr('proAiWelcomeBody', 'AI is now unlimited on this device.') : tr('proWelcomeBody', 'All features unlocked on this device.')}
+              {reason === 'upgraded' ? tr('proAiWelcomeBody', 'AI is on: up to 30 pieces & melodies a day.') : tr('proWelcomeBody', 'All features unlocked on this device.')}
             </p>
           </div>
         )}
