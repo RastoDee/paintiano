@@ -37834,7 +37834,7 @@ Hard requirements:
       {/* Address chip: visible with ANY content while poster-maker is on — also
           for external songs where the POSTER button itself stays hidden. */}
       {(addrChip || posterMaker) && chords.length>0 && (!studioOn || studioFs) && (
-        <div style={{position:'fixed',zIndex:studioOn?10002:9999,...(studioOn ? {left:stLand?'max(12px, env(safe-area-inset-left, 0px))':'calc(max(12px, env(safe-area-inset-left, 0px)) + 50px)',top:'calc(env(safe-area-inset-top, 0px) + '+(stLand?12:16)+'px)',maxWidth:stLand?'calc(100vw - var(--pf-side) - 150px)':'calc(100vw - 200px)'} : {left:14,bottom:132,maxWidth:'calc(100vw - 170px)'}),padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',lineHeight:1.35,fontVariantNumeric:'tabular-nums'}}>
+        <div style={{position:'fixed',zIndex:studioOn?10002:9999,...(studioOn ? {left:stLand?'max(12px, env(safe-area-inset-left, 0px))':'calc(max(12px, env(safe-area-inset-left, 0px)) + 50px)',top:'calc(env(safe-area-inset-top, 0px) + '+(stLand?12:16)+'px)',boxSizing:'border-box',maxWidth:stLand?'calc(100vw - var(--pf-side) - 176px)':'calc(100vw - 196px)'} : {left:14,bottom:132,maxWidth:'calc(100vw - 170px)'}),padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',lineHeight:1.35,fontVariantNumeric:'tabular-nums'}}>
           {(()=>{
             // A fusion (Ensemble / Signature) is addressed by EVERY member and its own
             // variant — the same variants fuseDNA paints (slot 1 = the phase, the others

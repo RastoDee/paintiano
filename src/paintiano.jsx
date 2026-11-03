@@ -23550,6 +23550,8 @@ const _stPalHue=(h)=>{ const [r,g,b]=_stPalRgb(h).map(x=>x/255), mx=Math.max(r,g
   let hu = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; hu*=60; return hu<0 ? hu+360 : hu; };
 const _stPalLight=(h)=>{ const [r,g,b]=_stPalRgb(h); return (0.299*r+0.587*g+0.114*b)>160; };
 const _stPalDefault=()=>Array.from({length:12},(_,pc)=>_stPalHex(fromHsl(CUSTOM_DEFAULT_HUE[pc],CUSTOM_DEFAULT_SAT[pc],55)));
+// B/W: the greys a black-and-white picture plays in (bwCol's ramp) — C the darkest, B the lightest, 12 even steps
+const _stPalBw=()=>Array.from({length:12},(_,pc)=>_stPalHex(fromHsl(0,0,BW_LIGHT[pc])));
 const StPalEditor = memo(function StPalEditor({pal, setPal, sel, setSel, L, onDone}){
   const [sure, setSure] = useState(false);
   useEffect(()=>{ if(!sure) return; const tm=setTimeout(()=>setSure(false), 3000); return ()=>clearTimeout(tm); },[sure]);
@@ -23577,6 +23579,7 @@ const StPalEditor = memo(function StPalEditor({pal, setPal, sel, setSel, L, onDo
       <div className="pf-paled-acts">
         <button type="button" className="pf-paled-p" onClick={()=>{ setSure(false); setPal(_stPalDefault()); }}>↺ {L.def}</button>
         <button type="button" className={'pf-paled-p'+(sure?' warn':'')} onClick={()=>{ if(!sure){ setSure(true); return; } setSure(false); setPal(Array(12).fill('#888888')); }}>{sure ? L.sure : L.clr}</button>
+        <button type="button" className="pf-paled-p" onClick={()=>{ setSure(false); setPal(_stPalBw()); }}>{L.bw}</button>
         <button type="button" className="pf-paled-p w" onClick={onDone}>{L.done}</button>
       </div>
     </div>);
@@ -39628,7 +39631,7 @@ Hard requirements:
           )}
           </div>
           {studioFs && stPalEdit && mode==='custom' && (<StPalEditor pal={activePalette} setPal={setCustomPalette} sel={stPalSel} setSel={setStPalSel} onDone={()=>{ setStPalEdit(false); setCustomArmed(false); }}
-            L={{hint:_stT('palHint'), def:_stT('palDef'), clr:_stT('clr'), sure:_stT('palSure'), done:_stT('trDone'), more:_stT('palMore')}}/>)}
+            L={{hint:_stT('palHint'), def:_stT('palDef'), clr:_stT('clr'), sure:_stT('palSure'), done:_stT('trDone'), more:_stT('palMore'), bw:String(t('bw')||'b/w').toUpperCase()}}/>)}
           <div className="pf-styles-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* IMAGE mode: the right column (where artists sit in other modes) holds
               the read-mode toggle (Scan / AI Compose) and — in Scan — the scan
