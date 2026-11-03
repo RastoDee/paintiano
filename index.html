@@ -294,6 +294,10 @@ body.is-proai .welcome .wt b{color:#cdb2ff}
 .klede{margin:14px 0 0;max-width:30em;font-family:var(--serif);font-style:italic;font-size:clamp(1.15rem,2vw,1.4rem);line-height:1.45;color:var(--ink)}
 .klede span{color:var(--gold)}
 .kline{margin:0;max-width:34em;font-size:.95rem;line-height:1.6;color:var(--ink2)}
+.kbody{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center}
+.kstory{width:112px;border-radius:18px;padding:4px;background:linear-gradient(160deg,#2a2833,#0d0c11);box-shadow:0 18px 44px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.08);transform:rotate(-4deg)}
+.kstory img{display:block;width:100%;height:auto;border-radius:14px}
+@media(min-width:760px){.kstory{width:128px}}
 .kline b{color:var(--ink);font-weight:600}
 @media(min-width:860px){.keep{grid-template-columns:1.1fr .9fr;column-gap:60px;row-gap:0;grid-template-areas:"grid head" "grid body"}.keep .khead{align-self:end}.keep .kbody{align-self:start;margin-top:22px}.keep .keepgrid{align-self:center}}
 .keepgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:520px;width:100%;margin:0 auto}
@@ -630,6 +634,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
       </div>
       <div class="keepgrid" id="keepgrid"><button class="kt" type="button" data-i="0"><img src="/landing/keep-1.webp" alt="Orange and green stripes with pale rings" loading="lazy" width="760" height="1100"></button><button class="kt" type="button" data-i="1"><img src="/landing/keep-2.webp" alt="Muted squares, circles and spirals on pale grey" loading="lazy" width="760" height="1100"></button><button class="kt" type="button" data-i="2"><img src="/landing/keep-3.webp" alt="Gold lines and soft circles on a dusk-blue ground" loading="lazy" width="760" height="1100"></button><button class="kt" type="button" data-i="3"><img src="/landing/keep-4.webp" alt="Coloured rings and squares on dark stripes" loading="lazy" width="760" height="1100"></button><p class="khint" data-i18n="keep_hint">Tap a painting to see it on a wall</p></div>
       <div class="kbody">
+        <div class="kstory" aria-hidden="true"><img src="/landing/keep-story.webp" alt="" loading="lazy" width="540" height="960"></div>
         <p class="kline" data-i18n-html="keep_line">For the wall, the frame, a gift: <b>print-ready A1</b> with the song's name and its colours · <b>9:16 story with the music</b> · <b>SVG vector</b> for giclée of any size (Pro) · <b>♥</b> saved on your phone, exactly as it was.</p>
       </div>
     </div>
