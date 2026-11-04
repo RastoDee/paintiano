@@ -15090,14 +15090,19 @@ Hard requirements:
   const _stSlide = ()=>_cvSlide(1);
   // a new composer re-reads the picture (heavy on iOS): the sound dips under the change instead of crackling
   const _imgDip = (fn)=>{ try{ fn(); }catch(_){} };   // the dip itself rides on the composer change (see _cmpDipRef)
+  // the painting's transition: its own (width and top, from React) always stays — the tray adds translate/scale for its move and takes
+  // them away after; a swipe takes them away for the drag. (The tray once set translate .3s for good: every swipe after it lagged .3 s
+  // behind the finger and the painting jumped instead of following.)
+  const _trBase = (el)=> String((el && el.style.transition) || '').split(/,(?![^(]*\))/).map(x=>x.trim()).filter(x=>x && x!=='none' && !/^(translate|scale|all)\b/.test(x)).join(', ');
+  const _trSet = (el, extra)=>{ try{ const b=_trBase(el); el.style.transition = [b, extra].filter(Boolean).join(', ') || 'none'; }catch(_){} };
   // the look tray: the painting moves up (a touch smaller if it must) so it stays whole above the tray
   useEffect(()=>{ const cv=canvasWrapRef.current; if(!cv) return;
     const off=()=>{ cv.style.translate=''; cv.style.scale=''; };
-    if(!(studioFs && stripOpen)){ if(cv.style.translate || cv.style.scale){ cv.style.transition='translate .3s ease, scale .3s ease'; off(); } return; }
+    if(!(studioFs && stripOpen)){ if(cv.style.translate || cv.style.scale){ _trSet(cv, 'translate .3s ease, scale .3s ease'); off(); const t=setTimeout(()=>{ if(!cv.style.translate && !cv.style.scale) _trSet(cv, ''); }, 360); return ()=>clearTimeout(t); } return; }
     try{ cv.querySelectorAll('.pf-fd-copy').forEach(n=>n.remove()); delete cv.dataset.fdz; }catch(_){}   // a swipe's copy never stays under the tray (no swipe runs while it is open)
     // the scale is measured, not assumed: the canvas carries its own transform (e.g. a centring translate(-50%)), which the scale also scales —
     // so: scale it, see where it lands, then move it to where it belongs (centred, under the ⌄, above the tray)
-    let raf=0, raf2=0, dead=false; const fit=()=>{ if(dead) return; try{ const tr=trayRef.current; if(!tr) return; const pt=cv.style.translate, ps=cv.style.scale; cv.style.transition='none'; off(); const r=cv.getBoundingClientRect();
+    let raf=0, raf2=0, dead=false; const fit=()=>{ if(dead) return; try{ const tr=trayRef.current; if(!tr) return; const pt=cv.style.translate, ps=cv.style.scale; _trSet(cv, 'translate 0s, scale 0s'); off(); const r=cv.getBoundingClientRect();
       const land=stLandRef.current, trR=tr.getBoundingClientRect();
       const _mb=document.querySelector('.pf-st-min'), top=land ? ((addrChip||posterMaker) ? 66 : 12) : (_mb ? _mb.getBoundingClientRect().bottom+10 : 60), bottom=land ? window.innerHeight-12 : window.innerHeight - trR.height - 8, avail=bottom-top;
       const x0=land ? (_mb ? _mb.getBoundingClientRect().right+8 : 12) : 0, x1=land ? trR.left-12 : window.innerWidth, availW=x1-x0;   // on its side: left of the column (and clear of the ⌄)
@@ -15105,7 +15110,7 @@ Hard requirements:
       const sc=land ? Math.min(availW/r.width, avail/r.height) : Math.min(1, avail/r.height); cv.style.scale=String(Math.round(sc*1000)/1000); const r2=cv.getBoundingClientRect();
       const ny=top+Math.max(0,(avail-r2.height)/2), tx=(x0+availW/2)-(r2.left+r2.width/2), ty=ny-r2.top;
       cv.style.translate=pt; cv.style.scale=ps; void cv.offsetWidth;
-      cancelAnimationFrame(raf2); raf2=requestAnimationFrame(()=>{ if(dead) return; cv.style.transition='translate .35s cubic-bezier(.2,.8,.2,1), scale .35s cubic-bezier(.2,.8,.2,1)'; cv.style.translate=Math.round(tx)+'px '+Math.round(ty)+'px'; cv.style.scale=String(Math.round(sc*1000)/1000); }); }catch(_){} };
+      cancelAnimationFrame(raf2); raf2=requestAnimationFrame(()=>{ if(dead) return; _trSet(cv, 'translate .35s cubic-bezier(.2,.8,.2,1), scale .35s cubic-bezier(.2,.8,.2,1)'); cv.style.translate=Math.round(tx)+'px '+Math.round(ty)+'px'; cv.style.scale=String(Math.round(sc*1000)/1000); }); }catch(_){} };
     raf=requestAnimationFrame(fit); const t2=setTimeout(fit, 260); window.addEventListener('resize', fit);
     return ()=>{ dead=true; cancelAnimationFrame(raf); cancelAnimationFrame(raf2); clearTimeout(t2); window.removeEventListener('resize', fit); };
   },[studioFs, stripOpen, jamOn, stPalEdit, stLand, addrChip, posterMaker]);
@@ -15285,6 +15290,7 @@ Hard requirements:
     const card=canvasWrapRef.current; if(!card || !_sdOk() || card.style.translate) return null;   // placed elsewhere (the look tray's fit): as before
     const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L || !r.height) return null;
     const fd={st:true, ax, dir, L, card, mode:'rub', d:0, copy:null, bx:-card.clientLeft, by:-card.clientTop};
+    _trSet(card, '');   // nothing eases the translate: the painting is exactly under the finger
     _sdCss(); try{ card.querySelectorAll('.pf-fd-copy').forEach(n=>n.remove()); }catch(_){}
     // the copy: every canvas of the painting, as it is on screen now
     let cp=null; try{ const dp=Math.min(1.5, window.devicePixelRatio||1); cp=_fdCopyCv(Math.round(r.width*dp), Math.round(r.height*dp));
