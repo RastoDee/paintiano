@@ -22663,8 +22663,7 @@ const SIG_AUDIO_LEAD={majHi:'ornament',majLo:'light',minHi:'gesture',minLo:'fiel
 const SIG_AUDIO_DENS_MID=1.33;   // median transcribed event density (log events/s)
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
-  const _kdR=_keyD(events);   // key-free (see _keyD) — but how high it sounds (reg) is the real height
-  events=_keyNorm(events, _kdR);
+  events=_keyNormOf(events);   // key-free (see _keyD), its register too: the ✦ Signature (its painters) is one for every key
   try{
     const ev=(events||[]).filter(ch=>ch&&ch.n&&ch.n.length);
     if(ev.length<4) return null;
@@ -22700,7 +22699,7 @@ function computeSongSignature(events, opts){
     const f={
       dens:Math.log(ev.length/spanS+0.1),
       tempo:-Math.log(Math.max(40,medIv)),
-      reg:avg(P)+_kdR,
+      reg:avg(P),
       spread:Ps[(Ps.length*.95)|0]-Ps[(Ps.length*.05)|0],
       regul:-cv,
       tens:pairs?dis/pairs:0,
