@@ -15144,7 +15144,7 @@ Hard requirements:
     raf=requestAnimationFrame(fit); const t2=setTimeout(fit, 260); window.addEventListener('resize', fit);
     return ()=>{ dead=true; cancelAnimationFrame(raf); cancelAnimationFrame(raf2); clearTimeout(t2); window.removeEventListener('resize', fit); };
   },[studioFs, stripOpen, jamOn, stPalEdit, stLand, addrChip, posterMaker]);
-  // the row of faces: in Solo a swipe picks (the face that stops in the middle — as a camera filter); a tap picks as always; the chosen one is centred
+  // the row of faces: a swipe only looks through them — a tap picks (gold); the chosen one is centred
   const _trayCenter = (smooth)=>{ try{ const tr=trayRef.current; if(!tr) return; const rows=tr.querySelectorAll('.pf-art-grid'); const row=rows[rows.length-1]; if(!row) return;
     const _fu = viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current; const ons=row.querySelectorAll(_fu ? '[data-fu]' : '.pf-artist-on');
     // Fusion: the chosen stand together in the middle of the row — about as many faces left of them as right (the rest keep their order)
@@ -15157,13 +15157,11 @@ Hard requirements:
   const trayBdRef = useRef(null);   // a touch on the painting above the look tray: a swipe there works as on the painting, a tap closes
   useEffect(()=>{ if(!(studioFs && stripOpen)) return; const tr=trayRef.current; if(!tr) return; const rows=tr.querySelectorAll('.pf-art-grid'); const row=rows[rows.length-1]; if(!row) return;
     requestAnimationFrame(()=>_trayCenter(false)); const _rc1=setTimeout(()=>_trayCenter(true), 320), _rc2=setTimeout(()=>_trayCenter(true), 800);   // again once the sheet has slid up and the faces are laid out (iOS can drop the first one)
-    let tm=null; const settle=()=>{ if(!trayUserRef.current) return; trayUserRef.current=false; if(viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current) return;
-      const rr=row.getBoundingClientRect(), c=rr.left+rr.width/2; let best=null, d=1e9; row.querySelectorAll('.pf-artist').forEach(b=>{ const q=b.getBoundingClientRect(), dd=Math.abs(q.left+q.width/2-c); if(dd<d){ d=dd; best=b; } });
-      if(!best || best.disabled || best.classList.contains('pf-artist-on') || best.getAttribute('data-lk')==='1') return; best.click(); };
-    const onScroll=()=>{ clearTimeout(tm); tm=setTimeout(settle, 150); }; const onUser=()=>{ trayUserRef.current=true; };
-    row.addEventListener('scroll', onScroll, {passive:true}); row.addEventListener('touchstart', onUser, {passive:true}); row.addEventListener('wheel', onUser, {passive:true}); row.addEventListener('pointerdown', onUser);
+    // a swipe of the row only looks: nothing is picked by where the row stops (it used to pick the face in the middle) — the row stays where it was left
+    const onUser=()=>{ trayUserRef.current=true; };
+    row.addEventListener('touchstart', onUser, {passive:true}); row.addEventListener('wheel', onUser, {passive:true}); row.addEventListener('pointerdown', onUser);
     const onTap=()=>{ setTimeout(()=>{ trayUserRef.current=false; }, 0); }; row.addEventListener('click', onTap);   // a tap is not a scroll: the row follows the painting again afterwards (else it stayed put on every later ↑)
-    return ()=>{ clearTimeout(tm); clearTimeout(_rc1); clearTimeout(_rc2); row.removeEventListener('scroll', onScroll); row.removeEventListener('touchstart', onUser); row.removeEventListener('wheel', onUser); row.removeEventListener('pointerdown', onUser); row.removeEventListener('click', onTap); };
+    return ()=>{ clearTimeout(_rc1); clearTimeout(_rc2); row.removeEventListener('touchstart', onUser); row.removeEventListener('wheel', onUser); row.removeEventListener('pointerdown', onUser); row.removeEventListener('click', onTap); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[studioFs, stripOpen, loadedSource]);
   useEffect(()=>{ if(studioFs && stripOpen && (viewModeRef.current==='image' ? crOnRef.current : jamOnRef.current)) trayUserRef.current=false;   // Fusion: a tap moves the face into the group — the row follows it
