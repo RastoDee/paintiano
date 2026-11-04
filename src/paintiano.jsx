@@ -24344,6 +24344,8 @@ const STUDIO_SKIN_CSS = `
 .pf-tray-seg button{border:0;background:none;color:rgba(242,238,232,.62);font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 12px);font-weight:600;padding:5px 12px;border-radius:13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-tray-seg button.on{background:#f2eee8;color:#121018}
 .pf-tray-seg button:disabled{opacity:.35;cursor:default}
+.pf-tray-seg button.lk{color:rgba(242,238,232,.42)}
+.pf-seg-lk{margin-left:5px;font-size:.85em;opacity:.8}
 .pf-tray-done{border:0;background:linear-gradient(180deg,#f4dc95,#d9b45a);color:#1a1408;font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 12px);font-weight:700;border-radius:14px;padding:6px 13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:2px!important;padding:6px calc(50% - 34px) 2px!important;margin:0 -14px!important;scrollbar-width:none;grid-template-columns:none!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid::-webkit-scrollbar{display:none}
@@ -40425,7 +40427,7 @@ Hard requirements:
               <div className={studioFs ? 'pf-inspired-row pf-cmp-row' : undefined} style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',minHeight:28,display:'flex',alignItems:'center'}}>
                 {!studioFs && (<span style={{flex:1,textAlign:'center',fontStyle:'italic',fontWeight:400,letterSpacing:'.22em',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{_fsStripLabel('comp', t('inspiredByTitle'))}</span>)}
                 {/* the Studio: one Solo | Fusion switch, as for the painters (↑ on the painting is the composers' 🔀) */}
-                {studioFs && _rollable && ensembleActive && (<div className="pf-tray-ctl"><div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!crOn} className={!crOn?'on':''} onClick={()=>{ if(crOn) _stCrSolo(); }}>{_stT('trSolo')}</button><button type="button" role="tab" aria-selected={!!crOn} className={crOn?'on':''} onClick={()=>{ if(!crOn) _stCrFusionOn(); }}>{_ensT('fusion')}</button></div></div>)}
+                {studioFs && _rollable && (ensembleActive || proStatus==='free') && (<div className="pf-tray-ctl"><div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!crOn} className={!crOn?'on':''} onClick={()=>{ if(crOn) _stCrSolo(); }}>{_stT('trSolo')}</button>{proStatus==='free' ? (<button type="button" role="tab" aria-selected={false} className="lk" onClick={()=>setPaywallReason('settings')}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" role="tab" aria-selected={!!crOn} className={crOn?'on':''} onClick={()=>{ if(!crOn) _stCrFusionOn(); }}>{_ensT('fusion')}</button>)}</div></div>)}
                 {/* composers' 🔀 + Jam session — only when there is more than one composer to roll between */}
                 {!studioFs && _rollable && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
@@ -40535,7 +40537,7 @@ Hard requirements:
             {/* Ensemble stays under ✦ too (lit when the signature is a fusion): another painter, or one taken off, and ✦ gives way to the Ensemble */}
             {!cockpitEdit && ensembleActive && !studioFs && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36, _artChoiceN()<2)}
             {!cockpitEdit && studioFs && (<div className="pf-tray-ctl">
-              {ensembleActive && (<div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!jamOn} className={!jamOn?'on':''} onClick={()=>{ if(jamOn) _toggleJam(); }}>{_stT('trSolo')}</button><button type="button" role="tab" aria-selected={!!jamOn} className={jamOn?'on':''} disabled={_artChoiceN()<2} onClick={()=>{ if(!jamOn) _stFusionOn(); }}>{_ensT('fusion')}</button></div>)}
+              {(ensembleActive || (studioFs && proStatus==='free')) && (<div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!jamOn} className={!jamOn?'on':''} onClick={()=>{ if(jamOn) _toggleJam(); }}>{_stT('trSolo')}</button>{proStatus==='free' ? (<button type="button" role="tab" aria-selected={false} className="lk" onClick={()=>setPaywallReason('settings')}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" role="tab" aria-selected={!!jamOn} className={jamOn?'on':''} disabled={_artChoiceN()<2} onClick={()=>{ if(!jamOn) _stFusionOn(); }}>{_ensT('fusion')}</button>)}</div>)}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
             </div>)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (

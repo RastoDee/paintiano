@@ -26354,7 +26354,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // out (back to the selection before it) the moment the canvas is cleared.
   useEffect(()=>{ if(!chords.length && sigActiveRef.current) _sigOff(); },[chords.length]);
   const applySigRef = useRef(null); applySigRef.current = _applySig;
-  try{ window.__pfT = { setStyle, setMode, setCustomPalette, setPainterStage, sigOff:()=>{ try{ if(sigActiveRef.current) _sigOff(); }catch(_){} }, setPh:(v)=>{ try{ setPhaseIndex(v); }catch(_){} }, chr:()=>{ const c=computeSongCharacter(chords); let nan=0, tot=0, bad=[]; for(const ch of chords){ for(const n of (ch.n||[])){ tot++; if(typeof n.m!=='number' || !isFinite(n.m)){ nan++; if(bad.length<3) bad.push(JSON.stringify(n).slice(0,120)); } } } return {register:c.register, energy:c.energy, density:c.density, keyD:_keyD(chords), nan, tot, bad, c0:JSON.stringify(chords[0]).slice(0,200)}; } }; }catch(_){}   // TEST HOOK — never committed
   useEffect(()=>{
     if(!sigActive) return;
     const s = songSigRef.current;
