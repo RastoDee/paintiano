@@ -4493,7 +4493,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // DYNAMIC HEIGHT: footer flows under the artwork, whatever its aspect —
       // fixed 3840 clipped the QR on taller canvases.
       const W=2160, AX=180, AY=560, AW=W-360;
-      const AH2=Math.min(Math.round(AW*(srcCv?srcCv.height/srcCv.width:PF_PORT)), 2900);
+      const AH2=Math.min(Math.round(AW*(srcCv?srcCv.height/srcCv.width:4/3)), 2900);
       const TY=AY+AH2+300;         // Paintiano baseline
       const TAGY=TY+96;            // tagline baseline
       const QS=240, QY=TAGY+70;    // QR top
@@ -4813,6 +4813,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // wordmark toggle it; persisted so Rasto's devices keep it on. Zero UI
   // otherwise — the chip renders only with a built-in piece on canvas.
   const [posterMaker,setPosterMaker]=useState(()=>{ try{ return localStorage.getItem('paintiano_postermaker')==='1'; }catch(_){ return false; } });
+  try{ if(typeof window!=='undefined') window.__pfFrame34 = !!posterMaker; }catch(_){}   // the POSTER tool paints in the poster's 3:4 frame (pfPort)
+  const _pmFirstRef = useRef(true);
+  useEffect(()=>{ if(_pmFirstRef.current){ _pmFirstRef.current=false; return; } try{ window.dispatchEvent(new Event('resize')); }catch(_){} },[posterMaker]);   // re-lay the painting out in its new frame
   // Address chip alone (artist · variant · palette) — its own switch: 2 quick
   // taps on the wordmark. Poster maker (POSTER button) stays on 4 taps.
   const [addrChip,setAddrChip]=useState(()=>{ try{ return localStorage.getItem('paintiano_addr_chip')==='1'; }catch(_){ return false; } });
@@ -5439,8 +5442,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
     const _ti = _takeInfo(chordsRef.current)||{};
     const port = !legacy;   // one portrait φ frame for every take (an old Mic favorite from before its frame keeps its own)
-    const cw=_pfFrameW(port, Math.min(820, Math.max(360, vp-32)));
-    return port ? { CW:Math.round(cw), CH:Math.round(cw*PF_PORT) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
+    const _r=pfPort(), cw=_pfFrameW(port, Math.min(820, Math.max(360, vp-32)), _r);
+    return port ? { CW:Math.round(cw), CH:Math.round(cw*_r) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
   };
   // The Mic (voice and music) paints like Compose — one fixed frame, the blocks getting smaller as the take grows —
   // but in the portrait φ frame a Music piece has. Lite keeps its own growing portrait canvas.
@@ -8936,6 +8939,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     }catch(_){}
     { const _fr=favMusicRestoreRef.current; if(_fr){ favMusicRestoreRef.current=null; setTimeout(()=>{ try{ favApplyLookRef.current && favApplyLookRef.current(_fr); }catch(_){} }, 260); } }   // ♥ → Open: as it was kept (after the new piece's own deferred picks)
     const wi=events.map((c,i)=>({...c,idx:i}));
+    try{ if(title && window.__pfQrName && title===window.__pfQrName) window.__pfQrSig=_pfSig(wi); }catch(_){}   // a scanned poster's song: its 3:4 poster frame (pfPort)
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
@@ -13480,9 +13484,19 @@ Hard requirements:
   };
   const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
     const fv=(favView && favCur) ? favCur : null;
-    if(!fv) return _exportWith({ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip }, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
+    // Prints are 3:4: the A1 print and the vector for giclée are laid out again in a 3:4 frame (the same painter, variant and
+    // colours, its own composition in that frame); the screen, the web picture and the story keep the painting's φ. A picture
+    // (Image) and Lite keep their own canvas.
+    const _p34 = (sizeMode==='print' || sizeMode==='gallery') && viewMode!=='image' && !basicModeRef.current;
+    const _lay34 = (f, ch)=>{ let L=null; try{ window.__pfPrint34=true; L=_favLayout(f, ch); }catch(_){ L=null; } finally{ try{ window.__pfPrint34=false; }catch(_){} } return L; };
+    if(!fv){
+      let X={ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip };
+      if(_p34){ const L=_lay34({ own:draftOwnerRef.current||null, mf:1, style:effectiveStyle, keys:(painterStage && painterStage.length) ? [effectiveStyle].concat(painterStage) : null, skip:_takeSkip(effectiveStyle) }, chords);
+        if(L) X=Object.assign({}, X, { grid:L.g, _takeGrid:()=>L.pg, _takeFrame:()=>({CW:L.CW, CH:L.CH}) }); }
+      return _exportWith(X, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
+    }
     const pc=favPiecesRef.current.get(fv.pk) || await favPiece(fv.pk);
-    const lay=pc ? _favLayout(fv, pc.chords) : null;
+    const lay=pc ? (_p34 ? (_lay34(fv, pc.chords) || _favLayout(fv, pc.chords)) : _favLayout(fv, pc.chords)) : null;
     if(!lay){ setFavBad(true); return; }
     return _exportWith(_favExportX(fv, pc, lay), sizeMode, directShare, audioBlob, audioName, withSource, noBg);
   };
@@ -14396,6 +14410,7 @@ Hard requirements:
     setRandomMode(false); randomModeRef.current=false;
     if(!A){ loadSampleMidi(qrPieceRef.current); setForceSetup(false); return; }
     tastePreviewKeyRef.current = A;
+    try{ window.__pfQrName=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][(qrPieceRef.current===1||qrPieceRef.current===2)?qrPieceRef.current:0]; }catch(_){}
     loadSampleMidi(qrPieceRef.current, {noSig:true});
     setStyle(A); setPhaseIndex(qrVariantRef.current|0); setNotesMode(false);
     if(q){ setPainterStage(q.keys.slice()); try{ globalThis.__PAINT_SIG_PHS = _qrPhs(); }catch(_){} if(ensembleActive) setJamOn(true); }

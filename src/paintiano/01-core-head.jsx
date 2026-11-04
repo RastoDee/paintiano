@@ -2009,14 +2009,19 @@ function _computeSongCharacter(chords){
 // Music decides once by its chord count (as the Mic: 41); a take (Compose, Mic) grows — it starts landscape and flips ONCE to portrait
 // when its plan first doubles (Mic 48→96 at its 41st chord, Compose 96→192 at its 82nd), never back.
 const PF_PORT = PHI;       // the portrait frame's height / width
+// …except where a print is made: 3:4 while the POSTER tool is on (window.__pfFrame34), for a print / vector export
+// (window.__pfPrint34, set only while its layout is computed), and for the song a scanned poster opened (window.__pfQrSig:
+// that piece keeps its poster frame this visit — other songs paint φ).
+function _pfSig(a){ try{ if(!Array.isArray(a) || !a.length) return ''; const l=a[a.length-1]; return a.length+':'+Math.round((l && l.startMs) || 0); }catch(_){ return ''; } }
+function pfPort(evs){ try{ if(typeof window!=='undefined'){ if(window.__pfFrame34 || window.__pfPrint34) return 4/3; if(evs && window.__pfQrSig && _pfSig(evs)===window.__pfQrSig) return 4/3; } }catch(_){} return PF_PORT; }
 const PF_LONG_SONG = 41;   // ONE rule for Music and the Mic: up to 40 chords landscape φ, from the 41st portrait φ (Compose: twice — from its 82nd)
 // the Mic's take starts on a plan of 48, Compose's on 96 (twice as long on the landscape frame); each flips at the first doubling
 function _pfTakeBase(arr){ return (arr && arr[0] && arr[0].mic) ? 48 : 96; }
 function _pfTakePortrait(n, arr){ return n > _pfTakeBase(arr)*0.85; }
 // a portrait frame on a wide (desktop) screen is held to the screen's height
-function _pfFrameW(portrait, w){
+function _pfFrameW(portrait, w, ratio){
   if(!portrait || typeof window==='undefined' || !(window.innerWidth>=769)) return w;
-  const vh=window.innerHeight||900; return Math.max(300, Math.min(w, Math.floor((vh-260)/PF_PORT)));
+  const vh=window.innerHeight||900; return Math.max(300, Math.min(w, Math.floor((vh-260)/(ratio || pfPort()))));
 }
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
@@ -2059,6 +2064,7 @@ function computeGrid(arg, opts){
   // still drives per-cell widths below; only N/rows use the count.)
   const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
   // the frame's shape: a take by its chord count (it flips once, at 41), a loaded piece by how many blocks it paints
+  const _PR = pfPort(liveMode ? null : (Array.isArray(arg) ? arg : null));   // the portrait frame for THIS piece (φ, or 3:4 for a print / poster)
   const _port = (liveMode && opts && opts.livePortrait===false) ? false : true;   // ONE frame everywhere: portrait φ (Music, Compose, Mic, a song from the Mic) — a phone is held upright; no flip while a take grows
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
@@ -2078,7 +2084,7 @@ function computeGrid(arg, opts){
   // not the widest-row pick — a short take would otherwise be one row of thin stripes.
   if(liveMode || _fixedLoaded){
     let bN=1, bS=-1e9;
-    const fA=_port ? PF_PORT : 1/PHI;   // the frame's height / width
+    const fA=_port ? _PR : 1/PHI;   // the frame's height / width
     const nMax=Math.max(2, Math.ceil(Math.sqrt(_layoutQ)*1.6)+4);
     for(let n=1;n<=nMax;n++){
       const r=Math.max(1,Math.ceil(_layoutQ/n));
@@ -2103,10 +2109,10 @@ function computeGrid(arg, opts){
     const vp=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:540;
     let targetCW=Math.min(820,Math.max(360,vp-32));
     if(!liveMode && vp>=769){ const paneW=Math.max(320, vp - 2*180 - 2*24 - 56 - 12); targetCW=Math.min(900, paneW); }
-    targetCW=_pfFrameW(_port, targetCW);
+    targetCW=_pfFrameW(_port, targetCW, _PR);
     BW=Math.max(2,targetCW/N);
     CW=Math.round(targetCW);
-    CH=_port ? Math.round(targetCW*PF_PORT) : Math.max(140,Math.round(targetCW/PHI));
+    CH=_port ? Math.round(targetCW*_PR) : Math.max(140,Math.round(targetCW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
   } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){
     // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as
