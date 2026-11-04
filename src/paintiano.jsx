@@ -32132,7 +32132,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setImgPlayMode('scan'); imgPlayModeRef.current='scan';
     setOriginalImgUrl(_src); setImgMoodThumb(null);
     // Clear the previous piece title so it doesn't linger over the new image while AI composes.
-    setCurrentMood(null); setInfo(null);
+    // Its own name too (compositionName — an audio's or a My Music file's name), and it stops playing:
+    // under the new picture nothing of the piece before it, while AI reads the picture.
+    stopAll();
+    setCurrentMood(null); setInfo(null); setCompositionName('');
     setMoodContext(true); setMoodFromImg(true); setViewMode('image'); setLoadedSource(null);
     setImgAiBusy(true); setWorking(true); setWLabel('composing…'); setWPct(20); setErr('');
     try{
@@ -41254,6 +41257,7 @@ Hard requirements:
         const _loopOk = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)));
         const _morphOk = !_live && !loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && !!currentMood;
         const _showOk = !_live && !_img && playing && chords.length>0;   // any painting that plays (Show draws from your set — see showLetGoRef)
+        const _mfiBusy = moodFromImg && imgAiBusy;   // AI reads the picture: under it only that (♥ and share wait for its piece)
         // the speaker: a tap mutes, a press-and-hold brings the sound back (iPhone), as in Classic
         const _hold = {
           onPointerDown:()=>{ if(speakerHoldRef.current && speakerHoldRef.current!=='fired') clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; try{ audioHardRecover(); }catch(_){} _stBuzz(20); }, 600); },
@@ -41273,16 +41277,16 @@ Hard requirements:
           {!_vr && _live && !composeMode && micActive && micT0>0 && (<div className="pf-mic-clock" aria-live="off"><i aria-hidden="true"/>{(()=>{ const sec=Math.max(0, Math.floor((Date.now()-micT0)/1000)) + 0*micTick; return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); })()}</div>)}
           {!_vr && (<div className={'pf-st-bar'+(_live ? ' pf-st-bar-live' : '')} style={{bottom:_live ? (stDockH+12)+'px' : 'calc(env(safe-area-inset-bottom, 0px) + 30px)', ...(_live ? {'--stb':(stDockH+12)+'px'} : {})}}>
             {stTip==='up' && (<div className="pf-st-tipup" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-            {((!_live && (_ttl || _stEmpty)) || (_live && !composeMode && !micActive && chords.length>0 && !(micSong && micSong.phase==='reading'))) && (<div className={'pf-st-meta'+(((metaHide && !_stEmpty) || stTip==='chg' || stTip==='fav')?' hide':'')}>
-              {_stEmpty ? (<div className="pf-st-meta-e">{_stT('chEmpty')}</div>) : (<>
+            {((!_live && (_ttl || _stEmpty || _mfiBusy)) || (_live && !composeMode && !micActive && chords.length>0 && !(micSong && micSong.phase==='reading'))) && (<div className={'pf-st-meta'+(((metaHide && !_stEmpty) || stTip==='chg' || stTip==='fav')?' hide':'')}>
+              {_stEmpty ? (<div className="pf-st-meta-e">{_stT('chEmpty')}</div>) : _mfiBusy ? (<div className="pf-st-meta-t"><span style={{color:'#dcb4ff'}}>✦</span> {_stT('mfiRead')}</div>) : (<>
                 <div className="pf-st-meta-t">{_live ? (_stT('micTake')+(micTakeAt ? ' '+(d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))(new Date(micTakeAt)) : '')) : (_ttl.charAt(0).toUpperCase()+_ttl.slice(1))}</div>
                 <div ref={stCapLinesRef}>{(fdMeta && fdMeta.cap) ? fdMeta.cap : _capLines()}</div>
               </>)}
             </div>)}
             <div className="pf-st-acts">
-              <span className="pf-st-tipw">{stTip==='fav' && (<span className="pf-st-tip l" role="status">{pfIcons(_stT('tipFav'))}</span>)}<button type="button" className={'pf-st-act pf-st-fav'+(favHitAny?' on':'')+((stFavPend && !favReadyAny)?' pend':'')} onClick={_go(()=>{ _tipDone('fav'); if(_live){ if(favReadyAny) _favToggleAny(); } else _stHeartTap(); })} disabled={!_stHasArt || (_live && !favReadyAny)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny}>{_heart}</button></span>
+              <span className="pf-st-tipw">{stTip==='fav' && (<span className="pf-st-tip l" role="status">{pfIcons(_stT('tipFav'))}</span>)}<button type="button" className={'pf-st-act pf-st-fav'+(favHitAny?' on':'')+((stFavPend && !favReadyAny)?' pend':'')} onClick={_go(()=>{ _tipDone('fav'); if(_live){ if(favReadyAny) _favToggleAny(); } else _stHeartTap(); })} disabled={!_stHasArt || _mfiBusy || (_live && !favReadyAny)} aria-label={favHitAny ? _favT('del') : _favT('add')} aria-pressed={!!favHitAny}>{_heart}</button></span>
               <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+((_stEmpty || stTip==='chg')?' glow':'')} onClick={_go(()=>{ _tipDone('chg'); _stShow(null); setStChg(stTip==='chg' ? 'music' : (_stHasArt ? 'paint' : 'music')); })}><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
-              <button type="button" className="pf-st-act" onClick={_go(()=>{ setStShare(true); })} disabled={!_stHasArt} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
+              <button type="button" className="pf-st-act" onClick={_go(()=>{ setStShare(true); })} disabled={!_stHasArt || _mfiBusy} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
             </div>
           </div>)}
           {/* ✦ CHANGE — one sheet for everything: Music · Image · Painter, what each can do, and the few odds and ends */}
@@ -41402,11 +41406,7 @@ Hard requirements:
             <div className={imgAiBusy ? 'pf-st-mfi pf-st-mfi-busy' : 'pf-st-mfi'} style={{display:'flex',maxWidth:'calc(100vw - 32px)'}}>
               <img src={originalImgUrl || imgMoodThumb} alt="" style={{display:'block',maxWidth:'100%',maxHeight:'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px)',objectFit:'contain',borderRadius:14,boxShadow:'0 24px 60px rgba(0,0,0,.7)'}}/>
             </div>
-            {(imgAiBusy || currentMood) && (
-              <div style={{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom, 0px) + 40px)',transform:'translateX(-50%)',display:'flex',alignItems:'center',gap:8,padding:'9px 16px',borderRadius:22,background:'rgba(10,8,18,.88)',border:'1px solid rgba(220,150,255,.5)',color:'#f2eee8',fontSize:(.58*effScale)+'rem',whiteSpace:'nowrap',maxWidth:'90vw',overflow:'hidden',textOverflow:'ellipsis'}}>
-                <span style={{color:'#dcb4ff'}}>✦</span>
-                <span>{imgAiBusy ? _stT('mfiRead') : _sent(((t('moodNames')||{})[currentMood]) || currentMood || '')}</span>
-              </div>)}
+            {/* what AI is doing / the piece's name: in the bar under the picture (a pill here sat behind ✦ Change) */}
           </div>)}
         {err && !working && (<div role="alert" style={{position:'fixed',left:'max(16px, env(safe-area-inset-left, 0px))',right:'max(16px, env(safe-area-inset-right, 0px))',top:'calc(env(safe-area-inset-top, 0px) + 16px)',maxWidth:460,margin:'0 auto',zIndex:10004,display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',borderRadius:16,background:'rgba(14,12,22,.94)',border:'1px solid '+(errInfo?'rgba(240,215,138,.3)':'rgba(255,120,120,.35)'),color:'#f3ead2',fontSize:(13.5*effScale)+'px',lineHeight:1.4,boxShadow:'0 14px 40px rgba(0,0,0,.5)'}}><span style={{flex:1,minWidth:0,overflowWrap:'anywhere'}}>{err}</span><button type="button" onClick={()=>{setErr('');setErrInfo(false);}} aria-label="dismiss" style={{flexShrink:0,width:28,height:28,borderRadius:'50%',border:'1px solid rgba(255,255,255,.18)',background:'transparent',color:'#fff',cursor:'pointer',lineHeight:1}}>✕</button></div>)}   {/* the Studio's own error line: the page's one sits under the painting */}
         {working && !_stMfiPic && (()=>{ const _wl=String(wLabel||''); const k=(_wl===_stT('camRead')) ? 'camRead' : /transcrib/i.test(_wl) ? 'wkA' : /score|mxl|pars/i.test(_wl) ? 'wkS' : 'wkC';   // the camera's video: 'Reading the video'

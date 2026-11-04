@@ -24147,6 +24147,60 @@ const STUDIO_I18N = {
   zhTW:{pvCopy:'拷貝',pvHold:'或長按圖片 → 儲存到照片',palView:'各音的顏色',palAsC:'作為自訂編輯',palOver:'取代自訂？',hidT:'隱藏工具',hidCode:'輸入密碼',hidCancel:'取消',hidChip:'地址標籤',hidChipS:'畫家 · 變體 · 調色盤顯示在畫上方',hidPost:'海報',hidPostS:'附 QR 碼的印刷母版——內建曲目',hidLock:'鎖定此裝置',chIns:'在後面插入',chDel:'刪除',chInsT:'彈一個和弦——插在第 {n} 個後面',upOnP:'在畫上 ↑',stA:'帶聲音的限動',stAS:'圖片和它的音樂，適合 IG / TikTok — 播放一遍錄下',stAR:'圖片和你的錄音，適合 IG / TikTok',aud:'音訊',audS:'播放一遍並錄下 — 然後儲存或傳送',audR:'你的錄音 — 儲存或傳送',xml:'樂譜',xmlS:'MusicXML — 可在 MuseScore 開啟',withPic:'音訊附上原圖',fName:'檔名',palHint:'點一個音，再選它的顏色',palDef:'史克里亞賓',palSure:'確定嗎？',palMore:'其他顏色',fuTip:'幾位畫家一起畫同一幅畫。',thisP:'這幅畫',thisI:'這張圖',hearS:'讓畫作自己演奏',seeS:'把圖的音樂畫出來',trSolo:'單人',trDone:'完成',sup:'推薦',supNext:'下一個',supTap:'輕點——帶著聲音畫出來',camT:'相機',camS:'最佳音質',recS:'即時作畫',camRead:'正在讀取影片',camWord:'影片',camErr:'無法讀取這段影片的聲音。',camTap:'輕點以讀取影片',mnRen:'重新命名',mnSave:'儲存',micTake:'錄音',micSong:'作為作品打開',micRead:'正在讀取錄音',micCancel:'取消',micLive:'現場',micSongV:'作品',micNew:'新錄音',micPlay:'點畫面 ▶ 播放錄音',tipUp:'上滑——下一幅畫',tipChg:'換成你自己的歌',tipFav:'收藏它——點 ♥',mine:'我的',mnAll:'全部',mnImg:'圖片',mnEdit:'編輯',mnDone:'完成',mnDel:'刪除？',mnEmpty:'你的曲子、圖片和 ♥ 畫作——都在這裡。',mnFavE:'雙擊一幅畫——它就會出現在這裡。',mnSaveM:'存入我的音樂',mnSaveI:'存入我的圖片',chg:'更換',chT:'想換點什麼？',chPaint:'畫家',chComp:'作曲家',chMusT:'你的曲子或一種心情',chImgT:'會演奏的照片',chPaintT:'誰來畫、怎麼畫',chCompT:'誰來奏、怎麼奏',chUp:'你的曲子',chUpS:'MP3 · 影片 · MIDI · 樂譜——或範例',chMoodS:'用文字寫心情，配上音樂',chCompS:'自己在琴鍵上彈',chMicS:'唱、彈、哼',chImg:'你的圖片',chImgS:'會演奏的照片——或範例',chMfiS:'AI 讀出圖片的心情',chLookS:'畫家、調色盤、融合',chLookSi:'作曲家和樂器',chEmpty:'從音樂或一張圖片開始',fOpen:'全螢幕',miT:'我的圖片',miSub:'你的圖片 · 最多 5 張',h_mi:'我的圖片——儲存這張圖片（最多 5 張）',miOk:'已儲存到我的圖片',miFull:'我的圖片已滿（5 張）——請先騰出位置',miHow:'打開你自己的圖片，用 {i} 儲存——下次它就在這裡。',mmHow:'打開你自己的檔案（MIDI · 音訊 · MusicXML），用 {i} 儲存——下次它就在這裡。',h_mm:'我的音樂——儲存這首曲子（最多 5 首）',mInv:'寫下任何東西——AI 把它變成音樂',mInsp:'靈感',mMoods:'心情',mAll:'全部心情 · {n}',mLess:'收起',mEx:'陽台上的早晨咖啡|假期的最後一天|第一次約會|夜裡開車穿過城市|考試週|奶奶的廚房|山頂的風景|窗上的雨',wkC:'正在為你作曲',wkA:'正在聆聽錄音',wkS:'正在讀譜',fh0:'播放|或向上滑',fhUp:'向上滑 — 驚喜',fh:'全螢幕|下一個|返回',feedHintUp:'↑ 向上滑卡片 — 一幅驚喜畫作',feedChip:'為你推薦',feedHint:'輕點 = 全螢幕 · ↑ 下一位畫家 · ↓ 返回',feedHint0:'▶ 在卡片上畫一首曲子 · ↑ 換一位畫家',inf_t:'歡迎來到工作室',inf_s:'畫作佔滿全螢幕，用手勢操作。不喜歡？在「風格與調色盤 → 顯示」中開啟畫室（Lite 或進階）。',inf2_t:'有了 Pro，你還能用畫室',inf2_s:'一目了然的介面，可選 Lite 或進階。在「風格與調色盤 → 顯示」中開啟。',inf_ok:'知道了',inf_open:'風格與調色盤',title:'顯示',studio:'工作室',classic:'畫室',sub:'工作室：畫作佔滿螢幕，需要時才出現控制項。畫室：Lite（輕點一下，自己畫）或進階（每一個控制項）。',gest:'上滑 — 下一幅 · 下滑 — 外觀 · 右滑 — 選單 · 輕點 — 控制項 · 雙擊 — ♥',look:'外觀',sound:'聲音',favs:'收藏',setup:'設定',c1:'上滑',c1s:'下一幅',c3:'輕點',c3s:'暫停 / 播放',c4:'雙擊',c4s:'♥ 加入收藏',go:'輕點開始',back:'輕點 — 回到畫作',bk:'返回',clr:'清除',mgo:'作曲並作畫',share:'分享',vid:'影片 9:16',vidS:'TikTok · Reels · Stories — 隨音樂自動作畫',pic:'限動圖片',picS:'9:16，附標題和畫家',sav:'儲存 · 列印',savS:'尺寸、檔案、列印',snd:'聲音',sndS:'錄下這幅圖的音樂',vRec:'錄製中',vDone:'你的影片',vShare:'分享',vSave:'儲存',vNo:'此瀏覽器無法錄製影片。',vClose:'關閉',hLater:'♥ 畫完後自動收藏',home:'首頁',fromImg:'它來自的圖片',c6:'長按',c6s:'曲名 · 誰在畫',q:'今天要畫什麼？',favE:'還沒有收藏。雙擊完成的畫作，或點右側的 ♥，即可保存在這裡。',rnd:'給我驚喜',micCont:'REC 繼續作畫 · 清除則重新開始',lang:'語言',mfiRead:'正在讀取情緒…',nxOff:'🔀 已關閉——下滑即可開啟',h_atmo:'氛圍 — AI 讀出圖像的氛圍，讓音樂帶上它',h_mel:'旋律 — AI 從圖像唱出一段旋律',h_loop:'循環 — 情緒一直播放',h_vary:'變奏 — 同一情緒換一個調',h_morph:'變形 — 漸變到另一種情緒',h_show:'放映 — 畫作自動更換',proSub:'全部 24 位畫家 · 無浮水印',proAiSub:'AI 作曲 · 每天 30 次'},
   ja:{pvCopy:'コピー',pvHold:'または画像を長押し → 写真に保存',palView:'各音の色',palAsC:'カスタムとして編集',palOver:'カスタムを置き換える？',hidT:'隠しツール',hidCode:'コードを入力',hidCancel:'キャンセル',hidChip:'アドレスチップ',hidChipS:'画家 · バリエーション · パレットを絵の上に',hidPost:'ポスター',hidPostS:'QR 付きの印刷用マスター — 内蔵曲',hidLock:'この端末をロック',chIns:'後に挿入',chDel:'削除',chInsT:'和音を弾くと {n} 番の後に入る',upOnP:'絵の上で ↑',stA:'サウンドつきストーリー',stAS:'画像とその音楽を IG / TikTok に — 一度再生して録音',stAR:'画像とあなたの録音を IG / TikTok に',aud:'オーディオ',audS:'一度再生して録音 — 保存または送信',audR:'あなたの録音 — 保存または送信',xml:'楽譜',xmlS:'MusicXML — MuseScore で開ける',withPic:'オーディオに元の画像を添える',fName:'ファイル名',palHint:'音をタップして色を選ぶ',palDef:'スクリャービン',palSure:'本当に？',palMore:'ほかの色',fuTip:'複数の画家が一枚の絵を一緒に描く。',thisP:'この絵',thisI:'この画像',hearS:'絵が自分を奏でる',seeS:'画像の音楽を描く',trSolo:'ソロ',trDone:'完了',sup:'おすすめ',supNext:'次へ',supTap:'タップ — 音付きで描かれる',camT:'カメラ',camS:'最高の音質',recS:'ライブで描く',camRead:'動画を読み取り中',camWord:'動画',camErr:'この動画の音声は読み取れません。',camTap:'タップして動画を読み取る',mnRen:'名前を変更',mnSave:'保存',micTake:'録音',micSong:'曲として開く',micRead:'録音を読み取り中',micCancel:'キャンセル',micLive:'ライブ',micSongV:'曲',micNew:'新しい録音',micPlay:'絵をタップ ▶ 録音を再生',tipUp:'上にスワイプ——次の絵',tipChg:'自分の曲を入れてみて',tipFav:'残そう——♥ をタップ',mine:'マイ',mnAll:'すべて',mnImg:'画像',mnEdit:'編集',mnDone:'完了',mnDel:'削除？',mnEmpty:'あなたの曲、画像、♥ の絵——ぜんぶここに。',mnFavE:'絵をダブルタップ——ここに届く。',mnSaveM:'マイミュージックに保存',mnSaveI:'マイ画像に保存',chg:'変える',chT:'何を変える？',chPaint:'画家',chComp:'作曲家',chMusT:'あなたの曲かムード',chImgT:'音を奏でる写真',chPaintT:'誰がどう描くか',chCompT:'誰がどう奏でるか',chUp:'あなたの曲',chUpS:'MP3 · 動画 · MIDI · 楽譜 — または見本',chMoodS:'言葉でムードを、それに合う音楽を',chCompS:'鍵盤で自分で弾く',chMicS:'歌う、弾く、ハミング',chImg:'あなたの画像',chImgS:'音を奏でる写真 — または見本',chMfiS:'AIが画像のムードを読む',chLookS:'画家、パレット、フュージョン',chLookSi:'作曲家と楽器',chEmpty:'音楽か画像から始めよう',fOpen:'全画面',miT:'マイ画像',miSub:'あなたの画像 · 最大5枚',h_mi:'マイ画像——この画像を保存（最大5枚）',miOk:'マイ画像に保存しました',miFull:'マイ画像がいっぱい（5枚）——先に空きを作って',miHow:'自分の画像を開いて {i} で保存——次回はここで待っている。',mmHow:'自分のファイル（MIDI · オーディオ · MusicXML）を開いて {i} で保存——次回はここで待っている。',h_mm:'マイミュージック——この曲を保存（最大5曲）',mInv:'何でも書いて——AIが音楽にする',mInsp:'インスピレーション',mMoods:'ムード',mAll:'すべてのムード · {n}',mLess:'閉じる',mEx:'バルコニーの朝のコーヒー|夏休み最後の日|初デート|夜の街をドライブ|試験週間|おばあちゃんの台所|山からの眺め|窓に降る雨',wkC:'あなたの音楽を作曲中',wkA:'録音を聴いています',wkS:'楽譜を読んでいます',fh0:'再生|または上へスワイプ',fhUp:'上へスワイプ — サプライズ',fh:'全画面|次へ|戻る',feedHintUp:'↑ カードを上へスワイプ — サプライズの絵',feedChip:'おすすめ',feedHint:'タップ = 全画面 · ↑ 次の画家 · ↓ 戻る',feedHint0:'▶ カードの上で曲を描く · ↑ 別の画家',inf_t:'スタジオへようこそ',inf_s:'絵を全画面に、ジェスチャーで操作。合わなければ、スタイルとパレット → 表示 でアトリエ（Lite かアドバンス）をオンに。',inf2_t:'Pro ならアトリエも使える',inf2_s:'すべてが見える画面。Lite かアドバンスで。スタイルとパレット → 表示 でオン。',inf_ok:'OK',inf_open:'スタイルとパレット',title:'表示',studio:'スタジオ',classic:'アトリエ',sub:'スタジオ：絵が画面いっぱいに広がり、操作は必要なときだけ。アトリエ：Lite（タップすると自動で描く）かアドバンス（すべての操作）。',gest:'上へ — 次の絵 · 下へ — 見た目 · 右へ — メニュー · タップ — 操作 · ダブルタップ — ♥',look:'見た目',sound:'サウンド',favs:'お気に入り',setup:'設定',c1:'上にスワイプ',c1s:'次の絵',c3:'タップ',c3s:'一時停止 / 再生',c4:'ダブルタップ',c4s:'♥ お気に入りへ',go:'タップして開始',back:'タップ — 絵に戻る',bk:'戻る',clr:'クリア',mgo:'作曲して描く',share:'シェア',vid:'動画 9:16',vidS:'TikTok · Reels · Stories — 音楽に合わせて描かれる',pic:'ストーリー画像',picS:'9:16、タイトルと描いた画家つき',sav:'保存 · 印刷',savS:'サイズ、ファイル、印刷',snd:'サウンド',sndS:'絵の音楽を録音',vRec:'録画中',vDone:'あなたの動画',vShare:'シェア',vSave:'保存',vNo:'このブラウザでは動画を録画できません。',vClose:'閉じる',hLater:'♥ 描き終わったら保存',home:'ホーム',fromImg:'元になった絵',c6:'長押し',c6s:'曲 · 誰が描く',q:'今日は何を描く？',favE:'まだお気に入りはありません。完成した絵をダブルタップするか、右の ♥ をタップするとここに残ります。',rnd:'おまかせ',micCont:'REC で続きを描く · クリアで最初から',lang:'言語',mfiRead:'ムードを読み取り中…',nxOff:'🔀 はオフです——下にスワイプしてオンに',h_atmo:'雰囲気 — AI が画像の雰囲気を読み取り、音楽に映す',h_mel:'メロディ — AI が画像からメロディを歌う',h_loop:'ループ — 気分がずっと流れる',h_vary:'バリエーション — 同じ気分を別の調で',h_morph:'モーフ — 別の気分へ溶け込む',h_show:'スライドショー — 絵が自動で切り替わる',proSub:'24人すべての画家 · 透かしなし',proAiSub:'AI 作曲 · 1日30回'}
 };
+// LEGAL IN THE STUDIO — Pricing / Terms / Privacy / Refunds keep their own HTML (public/*.html); in the Studio this goes on top
+// of their CSS inside the shadow root: the Studio's type (white bold titles, grey text, gold links and dots), cards like the
+// paywall's (✓ in a gold ring, gold pill to buy, Pro AI violet), no logo, no "Open the app" (you are in it).
+const LEGAL_ST_CSS = `
+.legal-root{background:transparent!important;font-family:inherit!important;color:#f2eee8!important;min-height:0!important;line-height:1.6!important}
+.wrap{max-width:600px!important;margin:0 auto!important;padding:4px 0 24px!important}
+header{text-align:left!important;margin:0 0 20px!important;padding:0!important;border:0!important}
+header .logo{display:none!important}
+header h1{font-family:inherit!important;font-style:normal!important;font-weight:700!important;font-size:1.45em!important;line-height:1.2!important;color:#f2eee8!important;margin:0!important;letter-spacing:-.01em!important;text-wrap:balance}
+header .meta{font-size:.8em!important;color:rgba(242,238,232,.5)!important;margin-top:6px!important;letter-spacing:0!important;line-height:1.5!important}
+h2{font-family:inherit!important;font-weight:700!important;font-size:1.05em!important;color:#f2eee8!important;margin:26px 0 8px!important;letter-spacing:0!important}
+h3{font-family:inherit!important;font-weight:600!important;font-size:.94em!important;color:#f2eee8!important;margin:16px 0 6px!important;letter-spacing:0!important}
+p,li{font-size:.9em!important;color:rgba(242,238,232,.74)!important;line-height:1.6!important}
+strong{color:#f2eee8!important;font-weight:600!important}
+a{color:#e0b95e!important;border-bottom:0!important;text-decoration:none!important}
+.muted{color:rgba(242,238,232,.45)!important;font-size:.8em!important}
+ul{list-style:none!important;padding-left:0!important}
+ul li{position:relative!important;padding-left:16px!important}
+ul li::before{content:''!important;position:absolute!important;left:2px!important;top:.7em!important;width:5px!important;height:5px!important;border-radius:50%!important;background:#c9a84c!important}
+ol{padding-left:20px!important}
+ol li::marker{color:#e0b95e;font-weight:700}
+.highlight,.contact,.faq{background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:16px!important;padding:14px 16px!important;margin:0 0 20px!important;box-shadow:none!important}
+.contact,.faq{margin-top:26px!important}
+.highlight h3,.contact h2{font-size:.62em!important;letter-spacing:.24em!important;text-transform:uppercase!important;color:rgba(201,168,76,.95)!important;font-weight:600!important;margin:0 0 8px!important}
+.highlight p{color:#f2eee8!important}
+.faq h3{color:#f2eee8!important;font-size:.9em!important}
+.faq p{color:rgba(242,238,232,.6)!important}
+table th{color:rgba(242,238,232,.5)!important;font-weight:600!important}
+table th,table td{border-bottom:1px solid rgba(255,255,255,.08)!important}
+footer{margin-top:28px!important;padding-top:14px!important;border-top:1px solid rgba(255,255,255,.08)!important;color:rgba(242,238,232,.36)!important;font-size:.7em!important;text-align:center!important;line-height:1.7!important}
+footer a{color:rgba(242,238,232,.5)!important}
+.grid{display:flex!important;flex-direction:column!important;gap:12px!important;margin:0!important}
+.plan{background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:18px!important;padding:16px!important;box-shadow:none!important;transform:none!important}
+.plan.pro{border-color:rgba(201,168,76,.45)!important}
+.plan.proai{border-color:rgba(205,178,255,.4)!important;background:rgba(140,92,255,.06)!important}
+.plan.proai[data-badge]::before{background:linear-gradient(135deg,#cdb2ff,#8c5cff)!important;color:#14091f!important;box-shadow:none!important;font-size:.6em!important;top:-9px!important;right:16px!important}
+.plan-name{font-family:inherit!important;font-size:1em!important;font-weight:700!important;color:#f2eee8!important;margin:0!important;letter-spacing:0!important}
+.plan-sub{font-family:inherit!important;font-style:normal!important;font-size:.78em!important;color:rgba(242,238,232,.5)!important;margin:2px 0 0!important}
+.plan-price{margin:6px 0 2px!important}
+.plan-price .amount{font-family:inherit!important;font-weight:800!important;font-size:1.65em!important;color:#f2eee8!important;letter-spacing:-.01em!important}
+.plan.pro .plan-price .amount{color:#e0b95e!important}
+.plan.proai .plan-price .amount,.plan.proai .plan-name{color:#cdb2ff!important}
+.plan-tagline{color:rgba(242,238,232,.55)!important;font-size:.8em!important;margin-bottom:10px!important;letter-spacing:0!important}
+.plan ul{margin-bottom:14px!important}
+.plan ul li{padding:5px 0 5px 28px!important;font-size:.86em!important;color:rgba(242,238,232,.82)!important}
+.plan ul li::before{content:'✓'!important;width:18px!important;height:18px!important;border-radius:50%!important;left:0!important;top:7px!important;background:rgba(201,168,76,.2)!important;color:#e0b95e!important;font-size:10px!important;font-weight:700!important;display:flex!important;align-items:center!important;justify-content:center!important}
+.plan.free ul li::before{background:rgba(255,255,255,.08)!important;color:rgba(242,238,232,.6)!important}
+.plan.proai ul li::before{background:rgba(205,178,255,.18)!important;color:#cdb2ff!important}
+.plan.free .cta{display:none!important}
+.plan .cta{border-radius:999px!important;padding:13px 16px!important;font-size:.95em!important;font-weight:700!important;letter-spacing:0!important;text-transform:none!important;box-shadow:none!important;border:0!important}
+.plan.pro .cta{background:linear-gradient(135deg,#f0d78a,#c9a84c)!important;color:#1a1408!important}
+.plan.proai .cta{background:linear-gradient(135deg,#cdb2ff,#8c5cff)!important;color:#14091f!important}
+.cta-note{font-family:inherit!important;font-style:normal!important;font-size:.74em!important;color:rgba(242,238,232,.45)!important}
+`;
 // STUDIO SKIN — the look sheet in the Studio: palettes as colour rings, painters as round faces (this song painted
 // by each of them), composers as monograms. The buttons and what they do are the Classic ones; only the look changes.
 const STUDIO_SKIN_CSS = `
@@ -36447,6 +36501,9 @@ Hard requirements:
   const [legalCss, setLegalCss] = useState('');
   const legalHostRef = useRef(null);
   const [legalLoading, setLegalLoading] = useState(false);
+  const legalTabsRef = useRef(null);   // the Studio sheet's row of the four docs
+  const legalFillRef = useRef(null);
+  const legalLastDocRef = useRef(null);
   useEffect(()=>{
     if(!legalDoc){ setLegalHtml(''); return; }
     let cancelled=false;
@@ -36521,14 +36578,15 @@ Hard requirements:
   // FIX 17: render the doc inside a Shadow DOM so its CSS is isolated from
   // the app (both directions). React never manages shadow children, so we
   // fill it imperatively whenever the content or loading state changes.
-  useEffect(()=>{
-    const el = legalHostRef.current;
-    if(!el) return;
+  // In the Studio the host carries data-st="1" and the doc gets LEGAL_ST_CSS on top. The Studio and the Atelier each render
+  // their own host, so a new host is filled at once (legalHostCb) — not only when the content changes.
+  legalFillRef.current = (el)=>{
     if(!el.shadowRoot){ try{ el.attachShadow({mode:'open'}); }catch(_){ return; } }
     const html = legalLoading
-      ? '<p style="opacity:.6;text-align:center;padding:40px;font-family:Arial">Loading…</p>'
-      : legalHtmlForLang;
+      ? '<p style="opacity:.6;text-align:center;padding:40px;font-family:inherit">Loading…</p>'
+      : legalHtmlForLang + (legalHtmlForLang && el.getAttribute('data-st')==='1' ? '<style>'+LEGAL_ST_CSS+'</style>' : '');
     try{ el.shadowRoot.innerHTML = html; }catch(_){}
+    if(legalLastDocRef.current!==legalDoc){ legalLastDocRef.current=legalDoc; try{ el.scrollTop=0; }catch(_){} }   // another doc: from its top
     // Buy CTAs: bind directly inside the shadow tree — more reliable than
     // relying on retargeted events reaching the host's React onClick.
     try{
@@ -36541,7 +36599,11 @@ Hard requirements:
         });
       });
     }catch(_){}
-  },[legalDoc, legalLoading, legalHtmlForLang, openCheckout]);
+  };
+  useEffect(()=>{ const el=legalHostRef.current; if(el && legalFillRef.current) legalFillRef.current(el); },[legalDoc, legalLoading, legalHtmlForLang, openCheckout]);
+  const legalHostCb = useCallback((el)=>{ legalHostRef.current=el; if(el && legalFillRef.current) legalFillRef.current(el); },[]);
+  // the open doc's name in view in the Studio's row (it scrolls sideways where the four names are long)
+  useEffect(()=>{ const r=legalTabsRef.current; if(!r) return; const a=r.querySelector('[aria-selected="true"]'); if(a) r.scrollLeft=Math.max(0, a.offsetLeft-(r.clientWidth-a.offsetWidth)/2); },[legalDoc]);
   // Intercept clicks on cross-doc anchors inside the modal — instead of
   // following the href (which would navigate the whole page), open the
   // matching doc inside the modal.
@@ -43358,7 +43420,21 @@ Hard requirements:
           rather than navigate the whole page. The HTML for each doc is
           fetched on demand from /public and stripped down to <body>'s
           contents to avoid clashing <html>/<head> styles. ── */}
-      {legalDoc && (
+      {/* In the Studio: a sheet like the others (pulled down or a tap beside it closes it), the four docs as a row on top */}
+      {legalDoc && studioOn && (<>
+        <div onClick={()=>setLegalDoc(null)} style={{position:'fixed',inset:0,zIndex:100001,background:'rgba(4,4,10,.62)'}}/>
+        <div role="dialog" aria-modal="true" data-pf-sheet="" aria-label={t('legal'+legalDoc[0].toUpperCase()+legalDoc.slice(1))} style={{position:'fixed',left:0,right:0,bottom:0,top:'max(48px, calc(env(safe-area-inset-top, 0px) + 12px))',zIndex:100002,maxWidth:560,margin:'0 auto',background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',display:'flex',flexDirection:'column',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)',animation:'pfStSheetUp .32s cubic-bezier(.2,.8,.2,1) both'}}>
+          <div style={{position:'relative',height:30,flexShrink:0}}>
+            <div aria-hidden="true" style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)'}}/>
+            <button type="button" onClick={()=>setLegalDoc(null)} aria-label="close" style={{position:'absolute',right:0,top:-2,width:30,height:30,borderRadius:15,border:0,padding:0,background:'rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontSize:13,lineHeight:1,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>✕</button>
+          </div>
+          <div ref={legalTabsRef} role="tablist" style={{position:'relative',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',marginTop:2,flexShrink:0}}>
+            {['pricing','terms','privacy','refunds'].map(k=>{ const on = k===legalDoc; return (<button key={k} type="button" role="tab" aria-selected={on} onClick={()=>setLegalDoc(k)} style={{flex:'1 0 auto',padding:'7px 10px',borderRadius:16,fontFamily:'inherit',fontSize:(12.5/16*effScale)+'rem',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer',...(on ? {background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.5)',color:'#e0b95e'} : {background:'transparent',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'})}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>); })}
+          </div>
+          <div onClick={onLegalClick} data-st="1" className="paintiano-legal-content" ref={legalHostCb} style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',overscrollBehavior:'contain',padding:'18px 2px calc(20px + env(safe-area-inset-bottom, 0px))',color:'#f2eee8',fontFamily:'inherit',fontSize:(15/16*effScale)+'rem',lineHeight:1.6}}/>
+        </div>
+      </>)}
+      {legalDoc && !studioOn && (
         <div
           onClick={(e)=>{ if(e.target===e.currentTarget) setLegalDoc(null); }}
           style={{position:'fixed',inset:0,zIndex:100001,background:'rgba(6,6,12,.94)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',paddingTop:`calc(env(safe-area-inset-top,0px) + 12px)`,paddingBottom:`calc(env(safe-area-inset-bottom,0px) + 12px)`,paddingLeft:12,paddingRight:12,overflow:'hidden',display:'flex',justifyContent:'center'}}
@@ -43373,7 +43449,7 @@ Hard requirements:
               onClick={onLegalClick}
               style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'24px 22px 28px',color:'rgba(247,243,236,.92)',fontFamily:'Arial, sans-serif',fontSize:(.85*effScale)+'rem',lineHeight:1.55}}
               className="paintiano-legal-content"
-              ref={legalHostRef}
+              ref={legalHostCb}
             />
           </div>
         </div>
