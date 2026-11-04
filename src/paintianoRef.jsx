@@ -37279,6 +37279,52 @@ Hard requirements:
   // NEW — the sources over the painting, as Classic's "+ New music": the painting on screen is kept as a draft
   // and the new one is picked at once (music, picture, mood, mood from a picture); Compose and Mic as their tiles
   // at home (the take in progress, or a fresh one); Home is the home screen itself.
+  // EVERY SHEET CLOSES THE SAME WAY — a tap beside it, or pulled down by itself (a sheet from the top: pushed up), as the look tray
+  // always did. It follows the finger; let go past a quarter of it (or thrown) and it goes, otherwise it comes back. A sheet whose
+  // content is scrolled follows only from the top of it (the scroll goes first). Sheets: the Studio's (.pf-st-sheet), ✦ Change
+  // (.pf-chg), the Guide's (.pf-g2-sheet) and the ones marked data-pf-sheet. Its close is the tap beside it (its backdrop), or a
+  // named one (data-pf-sheet="tray" → the look tray).
+  const sheetCloseRef = useRef({});
+  sheetCloseRef.current = { tray:()=>setStripOpen(false) };
+  useEffect(()=>{
+    let G=null;
+    const SEL='.pf-st-sheet > div, .pf-chg, .pf-g2-sheet, [data-pf-sheet]';
+    const scroller=(el, sh)=>{ for(let n=el; n; n=n.parentElement){ try{ const cs=getComputedStyle(n); if(/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight>n.clientHeight+1) return n; }catch(_){} if(n===sh) break; } return null; };
+    const backdrop=(sh)=>{ const p=sh.parentElement; if(p && p.classList.contains('pf-st-sheet')) return {el:p, fade:false};
+      if(sh.getAttribute('data-pf-sheet-bd')==='parent') return {el:p, fade:false};
+      const b=sh.previousElementSibling; if(b){ const cs=getComputedStyle(b); if(cs.position==='fixed' || cs.position==='absolute') return {el:b, fade:true}; } return null; };
+    const close=(g)=>{ const nm=g.sh.getAttribute('data-pf-sheet'); let done=false;
+      if(nm && sheetCloseRef.current[nm]){ try{ sheetCloseRef.current[nm](); done=true; }catch(_){} }
+      else if(g.bd && g.bd.el){ try{ g.bd.el.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true})); }catch(_){} try{ g.bd.el.click(); done=true; }catch(_){} }
+      // still there (nothing closed it): it comes back
+      setTimeout(()=>{ try{ if(g.sh.isConnected){ g.sh.style.transition='transform .28s cubic-bezier(.2,.8,.2,1)'; g.sh.style.transform=''; if(g.bd && g.bd.fade && g.bd.el.isConnected){ g.bd.el.style.transition=''; g.bd.el.style.opacity=''; } } }catch(_){} }, done ? 80 : 0); };
+    const ts=(e)=>{ G=null; if(e.touches.length!==1) return; const t=e.touches[0], tg=e.target; if(!tg || !tg.closest) return;
+      const sh=tg.closest(SEL); if(!sh || tg.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const r=sh.getBoundingClientRect(), vh=window.innerHeight, top=!!(sh.parentElement && sh.parentElement.classList.contains('pf-st-top'));
+      if(top ? !(r.top<=4 && r.bottom<vh-40) : !(r.bottom>=vh-4 && r.top>40)) return;   // a side panel or a full page: not a sheet here
+      G={sh, top, x0:t.clientX, y0:t.clientY, S:[[performance.now(), t.clientY]], lock:null, h:r.height, d:0, sc:scroller(tg, sh)}; };
+    const tm=(e)=>{ if(!G) return; const t=e.touches[0]; if(!t || e.touches.length!==1){ G=null; return; } const dy=t.clientY-G.y0, dx=t.clientX-G.x0, now=performance.now();
+      G.S.push([now, t.clientY]); while(G.S.length>2 && now-G.S[0][0]>100) G.S.shift();
+      if(G.lock===null){ if(Math.abs(dy)<8 && Math.abs(dx)<8) return; const way = G.top ? -dy : dy, sc=G.sc;
+        const edge = !sc || (G.top ? sc.scrollTop+sc.clientHeight>=sc.scrollHeight-1 : sc.scrollTop<=0);
+        if(!(Math.abs(dy)>Math.abs(dx) && way>0 && edge)){ G=null; return; }
+        G.lock=true; G.bd=backdrop(G.sh); G.sh.style.animation='none'; G.sh.style.transition='none'; if(G.bd && G.bd.fade){ G.bd.el.style.transition='none'; } }
+      if(e.cancelable) e.preventDefault();
+      const way=Math.max(0, G.top ? -dy : dy); G.d=way; G.sh.style.transform='translateY('+(G.top ? -way : way)+'px)';
+      if(G.bd && G.bd.fade) G.bd.el.style.opacity=String(Math.max(0, 1-way/Math.max(1, G.h))); };
+    const te=()=>{ const g=G; G=null; if(!g || !g.lock) return; const S=g.S, a=S[0], z=S[S.length-1], now=performance.now(); let v=0;
+      if(a && z && z[0]>a[0] && now-z[0]<80) v=(z[1]-a[1])/(z[0]-a[0]); const fv = g.top ? -v : v;
+      const go = fv>0.5 || (g.d>Math.max(70, g.h*0.25) && fv>-0.2);
+      if(go){ g.sh.style.transition='transform .2s cubic-bezier(.4,0,1,1)'; g.sh.style.transform='translateY('+((g.top ? -1 : 1)*(g.h+40))+'px)';
+        if(g.bd && g.bd.fade){ g.bd.el.style.transition='opacity .2s ease'; g.bd.el.style.opacity='0'; }
+        try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){} setTimeout(()=>close(g), 190); return; }
+      g.sh.style.transition='transform .28s cubic-bezier(.2,.8,.2,1)'; g.sh.style.transform='translateY(0px)';
+      if(g.bd && g.bd.fade){ g.bd.el.style.transition='opacity .28s ease'; g.bd.el.style.opacity=''; }
+      setTimeout(()=>{ try{ if(g.sh.style.transform==='translateY(0px)'){ g.sh.style.transition=''; g.sh.style.transform=''; } }catch(_){} }, 320); };
+    document.addEventListener('touchstart', ts, {capture:true, passive:true}); document.addEventListener('touchmove', tm, {capture:true, passive:false});
+    document.addEventListener('touchend', te, {capture:true, passive:true}); document.addEventListener('touchcancel', te, {capture:true, passive:true});
+    return ()=>{ document.removeEventListener('touchstart', ts, {capture:true}); document.removeEventListener('touchmove', tm, {capture:true}); document.removeEventListener('touchend', te, {capture:true}); document.removeEventListener('touchcancel', te, {capture:true}); };
+  },[]);
   // FULL SCREEN in the Studio (a choice, remembered): the painting covers the screen, its edges cropped — two fingers: spread on, pinch off
   const [stFill, setStFill] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_fill')==='1'; }catch(_){ return false; } });
   const _stFillSet = (v)=>{ setStFill(!!v); try{ localStorage.setItem('paintiano_st_fill', v ? '1' : '0'); }catch(_){} try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){} };
@@ -38936,7 +38982,7 @@ Hard requirements:
           </>)}
           {stFavShare && (<>
             <div onClick={()=>setStFavShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); e.stopPropagation(); setStFavShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)'}}/>
-            <div role="dialog" aria-label={_stT('share')} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10}}>
+            <div role="dialog" data-pf-sheet="" aria-label={_stT('share')} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10}}>
               <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 4px'}}/>
               <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',marginBottom:2}}>{_stT('share')}</div>
               {rows.map(r=>(
@@ -39783,8 +39829,7 @@ Hard requirements:
         </>)}
         {(isDesktop ? !deskFolded : stripOpen) && (
         <div className={"pf-strip-grid"+((loadedSource==='image'&&!moodFromImg)?' pf-strip-imagescan':'')+(composeMode?' pf-strip-compose':'')+(studioFs?' pf-skin pf-tray':'')+((studioFs && (stPalEdit || stPalView))?' pf-paledit':'')+((studioFs && (viewMode==='image' ? crOn : jamOn))?' pf-fu':'')} ref={trayRef} style={{display:'flex',flexDirection:'column',gap:12,paddingTop:8,background:PF.card,border:'1px solid rgba(242,238,232,.07)',borderRadius:16,padding:14,...(stLand?{position:'fixed',top:0,bottom:0,left:'auto',right:0,width:'var(--pf-side)',boxSizing:'border-box',zIndex:10005,maxHeight:'none',overflowY:'auto',overscrollBehavior:'contain',borderRadius:0,border:'none',borderLeft:'1px solid rgba(242,238,232,.1)',background:'rgba(12,10,19,.98)',padding:'calc(env(safe-area-inset-top, 0px) + 14px) max(14px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) 14px',boxShadow:'none',gap:10}:studioFs?{position:'fixed',top:'auto',bottom:0,left:0,right:0,zIndex:10005,maxHeight:'46dvh',overflowY:'auto',overscrollBehavior:'contain',borderRadius:'22px 22px 0 0',border:'none',borderTop:'1px solid rgba(242,238,232,.12)',background:'rgba(14,11,22,.97)',padding:'10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',gap:8}:{})}}
-          onTouchStart={studioFs ? (e)=>{ const y=e.touches[0]&&e.touches[0].clientY; const onRow=!!(e.target && e.target.closest && e.target.closest('.pf-art-grid, .pf-paled-hue')); stSheetRef.current = (e.touches.length===1 && !onRow && e.currentTarget.scrollTop<=2) ? y : null; } : undefined}
-          onTouchEnd={studioFs ? (e)=>{ const y0=stSheetRef.current; stSheetRef.current=null; const t=e.changedTouches&&e.changedTouches[0]; if(y0!=null && t && t.clientY-y0>60 && !stLandRef.current) setStripOpen(false); } : undefined}>
+          data-pf-sheet={studioFs ? 'tray' : undefined}>   {/* pulled down it closes, as every sheet (see sheetCloseRef) */}
           {studioFs && (<style>{STUDIO_SKIN_CSS}</style>)}
           <div className="pf-colors-inner" style={{display:'flex',flexDirection:'column',gap:12}}>
           {/* Color */}
@@ -41210,7 +41255,7 @@ Hard requirements:
           ];
           return (<>
             <div onClick={()=>setStShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); setStShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)',touchAction:'none'}}/>
-            <div role="dialog" aria-label={_stT('share')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10,maxHeight:'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)',overflowY:'auto',overscrollBehavior:'contain'}}>
+            <div role="dialog" data-pf-sheet="" aria-label={_stT('share')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10,maxHeight:'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)',overflowY:'auto',overscrollBehavior:'contain'}}>
               <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 4px',flexShrink:0}}/>
               <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',marginBottom:2}}>{_stT('share')}</div>
               {rows.map(r=>(<Fragment key={r.k}>
@@ -41312,7 +41357,7 @@ Hard requirements:
         {/* the finished video: watch it, share it, keep it */}
         {stVid && stVid.phase==='done' && (<>
           <div onClick={_vidClose} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.72)'}}/>
-          <div role="dialog" aria-label={_stT('vDone')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',gap:12,alignItems:'center'}}>
+          <div role="dialog" data-pf-sheet="" aria-label={_stT('vDone')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',gap:12,alignItems:'center'}}>
             <div style={{fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)'}}>{_stT('vDone')}</div>
             <video src={stVid.url} playsInline autoPlay loop controls style={{display:'block',height:'min(54dvh, 480px)',aspectRatio:'9 / 16',maxWidth:'100%',borderRadius:14,background:'#000'}}/>
             <div style={{display:'flex',gap:10,width:'100%'}}>
@@ -42325,7 +42370,7 @@ Hard requirements:
         const _pill = {flex:1,fontFamily:'inherit',fontSize:(15*effScale)+'px',fontWeight:700,padding:'13px 16px',borderRadius:999,cursor:'pointer',border:0};
         return (
         <div onClick={()=>_viewInfoDone(false)} style={{position:'fixed',inset:0,zIndex:100002,background:'rgba(4,3,8,.55)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label={_stT(_up ? 'inf2_t' : 'inf_t')} style={{width:'100%',maxWidth:560,boxSizing:'border-box',background:'#0c0a14',borderTop:'1px solid rgba(242,238,232,.12)',borderRadius:'24px 24px 0 0',padding:'22px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',animation:'pfStSheetUp .32s cubic-bezier(.2,.8,.2,1) both'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" data-pf-sheet="" data-pf-sheet-bd="parent" aria-modal="true" aria-label={_stT(_up ? 'inf2_t' : 'inf_t')} style={{width:'100%',maxWidth:560,boxSizing:'border-box',background:'#0c0a14',borderTop:'1px solid rgba(242,238,232,.12)',borderRadius:'24px 24px 0 0',padding:'22px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',animation:'pfStSheetUp .32s cubic-bezier(.2,.8,.2,1) both'}}>
             <div style={{display:'flex',alignItems:'center',gap:14}}>
               <span aria-hidden="true" style={{flex:'0 0 auto',width:52,height:52,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#06120d',background:'linear-gradient(135deg,#4de3a0,#2bb5c9)',boxShadow:'0 6px 18px rgba(60,220,170,.35)'}}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>

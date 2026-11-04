@@ -2408,7 +2408,6 @@ const STUDIO_HOME_CSS = `
 /* the feed under the finger: the other card (a copy of the painting you leave, or the picture of the one you go to) */
 .pf-st-home .pf-sh-dragout{position:absolute;inset:0;z-index:2;display:none;overflow:hidden;background:#04040a;pointer-events:none;will-change:transform;backface-visibility:hidden}
 .pf-st-home .pf-sh-dragout img,.pf-st-home .pf-sh-dragout canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.pf-st-home .pf-sh-live{transition:opacity .2s ease}
 /* the finger always lands on the card itself: a painting swapped under it (a new card) must not take the drag's touches with it */
 .pf-st-home .pf-sh-card *{pointer-events:none}
 .pf-st-home .pf-sh-card[data-fdz] .pf-sh-live{opacity:0;transition:none}
@@ -15278,9 +15277,9 @@ Hard requirements:
     hold:()=>{ metaKeepRef.current=true; setFdMeta({cap:_capLines()}); if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey(null); },
     free:()=>{ metaKeepRef.current=false; setFdMeta(null); } };
   const _sdOk = ()=> studioFs && stFill && !stripOpen && !studioLive && viewMode!=='image' && !demoReelOn && !recording && !stVidRec;
-  const _sdCss = ()=>{ try{ if(document.getElementById('pf-fd-css')) return; const el=document.createElement('style'); el.id='pf-fd-css'; el.textContent='[data-fdz] canvas:not(.pf-fd-copy){opacity:0!important;transition:none!important}'; document.head.appendChild(el); }catch(_){} };
+  const _sdCss = ()=>{ try{ if(document.getElementById('pf-fd-css')) return; const el=document.createElement('style'); el.id='pf-fd-css'; el.textContent='[data-fdz] canvas:not(.pf-fd-copy){opacity:0!important;transition:none!important} [data-fdd] canvas:not(.pf-fd-copy){transition:none!important}'; document.head.appendChild(el); }catch(_){} };
   const _sdCopyAt = (fd, off)=>{ const c=fd.copy; if(!c) return; c.style.left=(fd.bx + (fd.ax==='x' ? off : 0))+'px'; c.style.top=(fd.by + (fd.ax==='y' ? off : 0))+'px'; };
-  const _sdClear = (fd)=>{ try{ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdz; }catch(_){} };
+  const _sdClear = (fd)=>{ try{ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdz; delete fd.card.dataset.fdd; }catch(_){} };
   const _sdLock = (ax, dir)=>{
     const card=canvasWrapRef.current; if(!card || !_sdOk() || card.style.translate) return null;   // placed elsewhere (the look tray's fit): as before
     const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L || !r.height) return null;
@@ -15291,24 +15290,25 @@ Hard requirements:
       const x=cp.getContext('2d'); card.querySelectorAll('canvas').forEach(k=>{ if(k.classList.contains('pf-fd-copy') || !k.width || !k.height) return; const q=k.getBoundingClientRect(); if(!q.width || !q.height) return;
         const cs=getComputedStyle(k); if(cs.display==='none' || cs.visibility==='hidden' || +cs.opacity===0) return; x.drawImage(k, (q.left-r.left)*dp, (q.top-r.top)*dp, q.width*dp, q.height*dp); });
       cp.style.cssText='position:absolute;margin:0;width:'+r.width+'px;height:'+r.height+'px;pointer-events:none;z-index:5'; }catch(_){ cp=null; }
-    const N=stNavRef.current, sig0=_fdSig(); N.hold(); card.dataset.fdz='1'; let ok=false;
+    const N=stNavRef.current, sig0=_fdSig(); N.hold(); card.dataset.fdz='1'; card.dataset.fdd='1'; let ok=false;
     try{ ok = ax==='y' ? (dir>0 ? N.next() : N.prev()) : (dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; }
-    if(!ok){ delete card.dataset.fdz; N.free(); _fdSet(fd, 0); return fd; }   // nothing that way: the painting only gives
+    if(!ok){ delete card.dataset.fdz; delete card.dataset.fdd; N.free(); _fdSet(fd, 0); return fd; }   // nothing that way: the painting only gives
     fd.mode='pre'; if(cp){ fd.copy=cp; card.appendChild(cp); _sdCopyAt(fd, -dir*L); }
-    { const f=()=>{ delete card.dataset.fdz; }; _fdWhenNew(sig0, f, f); }
+    { const f=()=>{ delete card.dataset.fdz; fd.ready=true; }; _fdWhenNew(sig0, f, f); }
     _fdSet(fd, 0); return fd; };
   const _sdEnd = (fd, v)=>{ v=v||0; const N=stNavRef.current;
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;
+    const hold = go ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{
-      if(go){ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
+      if(go){ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdd; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
       // back: the copy covers the painting while the look you left comes back under it, then fades
       fd.card.style.translate=''; _sdCopyAt(fd, 0); fd.card.dataset.fdz='1'; const sig0=_fdSig();
       try{ if(fd.ax==='y') N.undo(fd.dir>0); else if(fd.dir>0) N.uvb(); else N.uvn(); }catch(_){}
       setFdMeta(null);
       const fin=()=>{ _sdClear(fd); metaKeepRef.current=false; };
       _fdWhenNew(sig0, ()=>{ delete fd.card.dataset.fdz; metaKeepRef.current=false; if(fd.copy){ fd.copy.style.transition='opacity .18s ease'; fd.copy.style.opacity='0'; } _fdLater(200, fin, fin); }, fin);
-    }); };
+    }, hold); };
   // a new piece plays at once (when the sound is already awake); once it plays, the rail goes after a while
   const _stFreshRef = useRef(false); _stFreshRef.current = _stFresh;
   const stAutoAtRef = useRef(0);     // when a timer last started the playback by itself (one start at a time)
@@ -15662,26 +15662,29 @@ Hard requirements:
     hold:(m)=>{ metaKeepRef.current=true; setFdMeta(m || null); setFeedFlash(0); },   // the lines stay, the last name over the card goes (it would turn into the new one mid-drag)
     free:()=>{ metaKeepRef.current=false; setFdMeta(null); } };
   const _fdT = (ax, v)=> ax==='y' ? 'translate3d(0,'+v+'px,0)' : 'translate3d('+v+'px,0,0)';
-  const _fdSpring = (from, v0, to, step, done)=>{ const S=feedSprRef.current; if(S.id) cancelAnimationFrame(S.id);
+  // hold(): while it gives a place, the spring waits there (the next painting is not on the canvas yet) — then it goes on to the end
+  const _fdSpring = (from, v0, to, step, done, hold)=>{ const S=feedSprRef.current; if(S.id) cancelAnimationFrame(S.id);
     let x=from, v=Math.max(-8000, Math.min(8000, v0||0)), last=performance.now(); const k=320, c=2*0.92*Math.sqrt(k);
     S.to=to; S.step=step; S.done=done;
-    const f=(t)=>{ const dt=Math.min(.034, Math.max(0, (t-last)/1000)); last=t; for(let i=0;i<3;i++){ const h=dt/3, a=-k*(x-to)-c*v; v+=a*h; x+=v*h; }
-      if(Math.abs(x-to)<.6 && Math.abs(v)<15){ S.id=0; const d=S.done; S.done=null; step(to); if(d) d(); return; }
+    const f=(t)=>{ const dt=Math.min(.034, Math.max(0, (t-last)/1000)); last=t; let g=null; try{ g = hold ? hold() : null; }catch(_){ g=null; } const T = g==null ? to : g;
+      for(let i=0;i<3;i++){ const h=dt/3, a=-k*(x-T)-c*v; v+=a*h; x+=v*h; }
+      if(g==null && Math.abs(x-to)<.6 && Math.abs(v)<15){ S.id=0; const d=S.done; S.done=null; step(to); if(d) d(); return; }
       step(x); S.id=requestAnimationFrame(f); };
     S.id=requestAnimationFrame(f); };
   // a card still landing when the finger comes back: it lands at once (and its copy goes), the finger takes the next one
   const _fdFinish = ()=>{ const S=feedSprRef.current; if(S.id){ cancelAnimationFrame(S.id); S.id=0; const d=S.done; S.done=null; try{ S.step && S.step(S.to); }catch(_){} if(d){ try{ d(); }catch(_){} } }
-    const C=feedFdCleanRef.current; if(C){ feedFdCleanRef.current=null; clearTimeout(C.tm); try{ C.fin && C.fin(); }catch(_){} } };
+    const C=feedFdCleanRef.current; if(C){ feedFdCleanRef.current=null; clearTimeout(C.tm); cancelAnimationFrame(C.raf); try{ C.fin && C.fin(); }catch(_){} } };
   // the copy over the card goes once the new painting is on it (the card mirrors the canvas every 110 ms)
   // fn: the step when its time comes · fin: all of it at once (a finger comes back before) — a newer step replaces an older one
-  const _fdLater = (ms, fn, fin)=>{ const P=feedFdCleanRef.current; if(P) clearTimeout(P.tm); const C={tm:0, fin}; C.tm=setTimeout(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }, ms); feedFdCleanRef.current=C; };
+  const _fdFrame = (fn, fin)=>{ const P=feedFdCleanRef.current; if(P){ clearTimeout(P.tm); cancelAnimationFrame(P.raf); } const C={tm:0, raf:0, fin}; C.raf=requestAnimationFrame(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }); feedFdCleanRef.current=C; };
+  const _fdLater = (ms, fn, fin)=>{ const P=feedFdCleanRef.current; if(P){ clearTimeout(P.tm); cancelAnimationFrame(P.raf); } const C={tm:0, raf:0, fin}; C.tm=setTimeout(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }, ms); feedFdCleanRef.current=C; };
   const _fdClear = (fd)=>{ try{ _fdCopyFree(); fd.out.style.display='none'; fd.out.style.transform=''; fd.out.style.opacity=''; fd.out.style.transition=''; fd.out.innerHTML=''; delete fd.card.dataset.fdz; fd.card.style.transform=''; fd.card.style.animation=''; }catch(_){} };
   // the painting, very small: once it differs clearly from before the change, the new look is on the canvas (at most 0.9 s of waiting)
   const _fdSig = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const c=feedSigCvRef.current || (feedSigCvRef.current=document.createElement('canvas')); c.width=12; c.height=20;
-    const x=c.getContext('2d', {willReadFrequently:true}); x.drawImage(s,0,0,12,20); return x.getImageData(0,0,12,20).data; }catch(_){ return null; } };
+    const x=c.getContext('2d'); x.clearRect(0,0,12,20); x.drawImage(s,0,0,12,20); return x.getImageData(0,0,12,20).data; }catch(_){ return null; } };   // no willReadFrequently: the big canvas is not read back, only these 240 pixels
   const _fdDiff = (a,b)=>{ if(!a || !b || a.length!==b.length) return 999; let t=0; for(let i=0;i<a.length;i+=4) t+=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]); return t/(a.length*.75); };
-  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdDiff(sig0, _fdSig())>12 || performance.now()-t0>900) fn(); else _fdLater(90, poll, fin); }; _fdLater(110, poll, fin); };
-  const _fdUngate = (fd, sig0)=>{ const f=()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; }; _fdWhenNew(sig0, f, f); };
+  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdDiff(sig0, _fdSig())>12 || performance.now()-t0>900) fn(); else _fdFrame(poll, fin); }; _fdFrame(poll, fin); };   // every frame: it shows the moment it is there
+  const _fdUngate = (fd, sig0)=>{ const f=()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; fd.ready=true; }; _fdWhenNew(sig0, f, f); };
   const _fdLock = (ax, dir, o)=>{
     const card=feedCardRef.current, out=feedOutRef.current; if(!card || !out || feedFly) return null;
     const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L) return null;
@@ -15711,6 +15714,7 @@ Hard requirements:
   const _fdEnd = (fd, v)=>{ v=v||0;
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
+    const hold = (go && fd.mode==='pre') ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
       if(fd.mode==='pre' && go){ _fdCopyFree(); fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
       if(fd.mode==='known' && !go){ _fdClear(fd); return; }
@@ -15720,7 +15724,7 @@ Hard requirements:
         else { if(fd.ax==='y') N.back(); else if(fd.dir>0) N.vb(); else N.vn(); setFdMeta(null); } }catch(_){}
       const fin=()=>{ N.draw(); _fdClear(fd); if(fd.mode==='pre') metaKeepRef.current=false; };
       _fdWhenNew(sig0, ()=>{ N.draw(); delete fd.card.dataset.fdz; if(fd.mode==='pre') metaKeepRef.current=false; fd.out.style.transition='opacity .18s ease'; fd.out.style.opacity='0'; _fdLater(200, ()=>_fdClear(fd), fin); }, fin);
-    }); };
+    }, hold); };
   // ⤢ on a playing card: full screen — it plays on, and from now on it is your painting
   // ↓ on a surprise: keep it — it slides down into the Studio as your painting (still painting / playing); nothing loaded yet: the card just gives
   const _feedTake = ()=>{
