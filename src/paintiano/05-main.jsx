@@ -2609,6 +2609,7 @@ export default function Paintiano() {
   const resumeFromRef = useRef(null); // null = fresh start, number = resume from this disp index
   // Tracks the last full-paint snapshot so playback can append incrementally
   // instead of re-running every artist-style draw from chord 0 on each `disp` tick.
+  const paintGenRef = useRef(0);   // +1 each time the painting is really drawn (a swipe waits for the first one after its look change)
   const lastPaintRef  = useRef({disp:0,chords:null,grid:null,gc:null,style:null,viewMode:null,pending:null,info:null,anim:false,playing:false,stamp:0,mode:null,holdPaused:false});
   // Throttle the expensive canvas-wide overlay repaint during playback. The
   // overlay (Pollock/Picasso/Kusama/Miró/Kandinsky/Rothko/Matisse) is redrawn
@@ -5871,7 +5872,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         ctx.clearRect(0,0,CW,CH);
         { const _jg=_takeGrid('ensemble', chords) || grid;
           _jamPaint(ctx, CW, CH, _jg.N, _jg.BW, _jg.BH, _jg, _chordsPaint, lim, gc, _jamKeys, pollockSessionSeed, mode, paintPhase, false, SS); }
-        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
+        paintGenRef.current++; lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
       if(isOverlayStyle && lim>0){
@@ -5974,7 +5975,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         else if(style==='klee') drawKleeOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='delaunay') drawDelaunayOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
         else if(style==='thomas') drawThomasOverlay(ctx, CW, CH, _chordsPaint, lim, gc, pollockSessionSeed, mode, paintPhase);
-        lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
+        paintGenRef.current++; lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
         return;
       }
       ctx.fillStyle='#04040a';ctx.fillRect(0,0,CW,CH);
@@ -6067,7 +6068,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         if(pending.length>0) drawBlock(ctx,cx,cy,pending.map(m=>({m,v:65,durMs:0})),gc,cw,ch,style);
       }
     }
-    lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
+    paintGenRef.current++; lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
   },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,feedHiRes,painterStage,fuRoll,fuStyleNow]);
 
   // ── FAVORITES (♥) ───────────────────────────────────────────────────────────
@@ -15290,7 +15291,7 @@ Hard requirements:
       const x=cp.getContext('2d'); card.querySelectorAll('canvas').forEach(k=>{ if(k.classList.contains('pf-fd-copy') || !k.width || !k.height) return; const q=k.getBoundingClientRect(); if(!q.width || !q.height) return;
         const cs=getComputedStyle(k); if(cs.display==='none' || cs.visibility==='hidden' || +cs.opacity===0) return; x.drawImage(k, (q.left-r.left)*dp, (q.top-r.top)*dp, q.width*dp, q.height*dp); });
       cp.style.cssText='position:absolute;margin:0;width:'+r.width+'px;height:'+r.height+'px;pointer-events:none;z-index:5'; }catch(_){ cp=null; }
-    const N=stNavRef.current, sig0=_fdSig(); N.hold(); card.dataset.fdz='1'; card.dataset.fdd='1'; let ok=false;
+    const N=stNavRef.current, sig0=_fdMark(); N.hold(); card.dataset.fdz='1'; card.dataset.fdd='1'; let ok=false;
     try{ ok = ax==='y' ? (dir>0 ? N.next() : N.prev()) : (dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; }
     if(!ok){ delete card.dataset.fdz; delete card.dataset.fdd; N.free(); _fdSet(fd, 0); return fd; }   // nothing that way: the painting only gives
     fd.mode='pre'; if(cp){ fd.copy=cp; card.appendChild(cp); _sdCopyAt(fd, -dir*L); }
@@ -15303,7 +15304,7 @@ Hard requirements:
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{
       if(go){ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdd; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
       // back: the copy covers the painting while the look you left comes back under it, then fades
-      fd.card.style.translate=''; _sdCopyAt(fd, 0); fd.card.dataset.fdz='1'; const sig0=_fdSig();
+      fd.card.style.translate=''; _sdCopyAt(fd, 0); fd.card.dataset.fdz='1'; const sig0=_fdMark();
       try{ if(fd.ax==='y') N.undo(fd.dir>0); else if(fd.dir>0) N.uvb(); else N.uvn(); }catch(_){}
       setFdMeta(null);
       const fin=()=>{ _sdClear(fd); metaKeepRef.current=false; };
@@ -15458,6 +15459,10 @@ Hard requirements:
   const feedFdCleanRef = useRef(null);   // a landed card's last step (the copy fades once the new painting is on the card)
   const feedNavRef = useRef({});         // the feed's steps, fresh from the last render (a spring ends after it)
   const feedSigCvRef = useRef(null);     // a 12×20 look at the painting: has the new look reached the canvas yet?
+  // the surest sign: the first render after a swipe's look change notes how many paints there were; one more = the new look is drawn
+  // (a similar look — two Klimt variants, both gold — never differed enough in the 12×20 look, and the swipe waited 0.9 s on black)
+  const fdWaitRef = useRef(null);
+  if(fdWaitRef.current && fdWaitRef.current.stage===0){ fdWaitRef.current.stage=1; fdWaitRef.current.gen0=paintGenRef.current; }
   // ONE canvas for the copy a drag carries, reused and shrunk after each swipe: iPhone keeps a canvas's memory until it is collected —
   // a new full-size copy per swipe ran it out, and the copy drew nothing (a black screen while the painting changed)
   const fdCopyRef = useRef(null);
@@ -15683,7 +15688,9 @@ Hard requirements:
   const _fdSig = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const c=feedSigCvRef.current || (feedSigCvRef.current=document.createElement('canvas')); c.width=12; c.height=20;
     const x=c.getContext('2d'); x.clearRect(0,0,12,20); x.drawImage(s,0,0,12,20); return x.getImageData(0,0,12,20).data; }catch(_){ return null; } };   // no willReadFrequently: the big canvas is not read back, only these 240 pixels
   const _fdDiff = (a,b)=>{ if(!a || !b || a.length!==b.length) return 999; let t=0; for(let i=0;i<a.length;i+=4) t+=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]); return t/(a.length*.75); };
-  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdDiff(sig0, _fdSig())>12 || performance.now()-t0>900) fn(); else _fdFrame(poll, fin); }; _fdFrame(poll, fin); };   // every frame: it shows the moment it is there
+  const _fdMark = ()=>{ fdWaitRef.current={stage:0, gen0:0}; return _fdSig(); };   // call right before the look changes
+  const _fdPainted = ()=>{ const W=fdWaitRef.current; return !!(W && W.stage===1 && paintGenRef.current>W.gen0); };
+  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdPainted() || _fdDiff(sig0, _fdSig())>12 || performance.now()-t0>900){ fdWaitRef.current=null; fn(); } else _fdFrame(poll, fin); }; _fdFrame(poll, fin); };   // every frame: it shows the moment it is there
   const _fdUngate = (fd, sig0)=>{ const f=()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; fd.ready=true; }; _fdWhenNew(sig0, f, f); };
   const _fdLock = (ax, dir, o)=>{
     const card=feedCardRef.current, out=feedOutRef.current; if(!card || !out || feedFly) return null;
@@ -15696,7 +15703,7 @@ Hard requirements:
     if(fd.mode==='pre'){
       try{ const src=feedCvRef.current; if(src && src.width && src.height){ const k=Math.min(1, 1.5*(src.clientWidth||src.width)/src.width), c=_fdCopyCv(Math.round(src.width*k), Math.round(src.height*k)); c.getContext('2d').drawImage(src,0,0,c.width,c.height); out.appendChild(c); } }catch(_){}
       card.dataset.fdz='1';   // the card's painting waits until the new look is on it
-      const N=feedNavRef.current, sig0=_fdSig(); N.hold(o.meta); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
+      const N=feedNavRef.current, sig0=_fdMark(); N.hold(o.meta); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
       if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; N.free(); } else _fdUngate(fd, sig0);
     } else if(fd.mode==='known' && fd.img){ const im=new Image(); im.src=fd.img; im.alt=''; out.appendChild(im); }
     if(fd.mode!=='rub') out.style.display='block';
@@ -15719,7 +15726,7 @@ Hard requirements:
       if(fd.mode==='pre' && go){ _fdCopyFree(); fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
       if(fd.mode==='known' && !go){ _fdClear(fd); return; }
       // the copy stays over the card while the look changes under it, then fades
-      fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdSig();
+      fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdMark();
       try{ if(fd.mode==='known'){ if(fd.dir>0) N.up(); else N.back(); N.flash(); N.buzz(8); }
         else { if(fd.ax==='y') N.back(); else if(fd.dir>0) N.vb(); else N.vn(); setFdMeta(null); } }catch(_){}
       const fin=()=>{ N.draw(); _fdClear(fd); if(fd.mode==='pre') metaKeepRef.current=false; };
