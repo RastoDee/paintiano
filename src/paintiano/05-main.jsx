@@ -678,7 +678,7 @@ function _favHash(arr){
 // The painting's identity: same key = the same painting, so ♥ shows it is saved.
 function _favAddrKey(o){
   return [o.pk, o.style||'', (o.keys||[]).map(k=>k||'mosaic').join('+'), o.phase|0, o.seed>>>0, o.mode, o.tone,
-          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.fa && o.fa.fs==='E' ? ['E'] : []).concat(o.fa && o.fa.rv===2 ? ['r2'] : []).join('|');   // … and a painting under the new shape rules is another painting too   // an E fusion is another painting (an A one keeps the old key)
+          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.ks ? ['k'+(o.ks|0)] : []).concat(o.fa && o.fa.fs==='E' ? ['E'] : []).concat(o.fa && o.fa.rv===2 ? ['r2'] : []).join('|');   // … and a painting under the new shape rules is another painting too   // an E fusion is another painting (an A one keeps the old key)
 }
 const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
 const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
@@ -704,7 +704,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     G.__PAINT_SIG_PHS = null;
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
-    const gc = _gcMake(fav.mode, fav.tone, fav.pal);
+    const gc = _gcMake(fav.mode, fav.tone, fav.pal, fav.ks);
     const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = chords.length;
     const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
@@ -763,8 +763,10 @@ function _paintModeOf(mode, pal){
     if(h.toLowerCase()!=='#888888') same=false; }
   return same ? mode : 'bw';
 }
-function _gcMake(mode, tone, activePalette){
-  return (m,v)=>{
+function _gcMake(mode, tone, activePalette, ks){
+  const _ks = ks|0;   // a ✦ Variation: the colours of the key it sounds in (the notes, so the shapes, stay)
+  return (m0,v)=>{
+    const m = _ks ? m0+_ks : m0;
     if(mode==='bw') return bwCol(m,v);
     // Tone routing:
     //   Pure   → pure palette variant (no modulation)
@@ -5678,7 +5680,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
 
 
 
-  const gc = useMemo(()=>_gcMake(mode, tone, activePalette),[mode,activePalette,tone]);
+  // ✦ VARIATION of a mood piece: the same painting in another key — its notes stay, so its shapes stay; it sounds ks semitones
+  // away and wears that key's colours. Kept per piece (its _favHash): any other piece is never shifted. The piece is hashed
+  // only once some piece has a Variation.
+  const [ksMap, setKsMap] = useState({});
+  const _ksPk = useMemo(()=> (Object.keys(ksMap).length && chords.length) ? _favHash(chords) : '', [chords, ksMap]);
+  const keyShift = _ksPk ? (ksMap[_ksPk]|0) : 0;
+  const keyShiftRef = useRef(0);
+  keyShiftRef.current = (composeMode || micActive) ? 0 : keyShift;
+  const gc = useMemo(()=>_gcMake(mode, tone, activePalette, keyShift),[mode,activePalette,tone,keyShift]);
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -6222,7 +6232,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     return { pk:_favPk, style:effectiveStyle||null, keys: keys ? keys.slice() : null, fa: keys ? _fusionAddr(keys, paintPhase) : null,
              phase:paintPhase|0, seed:pollockSessionSeed>>>0,
              cap:(proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
-             mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null };
+             mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, ...(keyShift ? {ks:keyShift} : {}) };
   };
   const _favCurAddr = favReady ? _favAddrNow() : null;
   const _favCurKey = _favCurAddr ? _favAddrKey(_favCurAddr) : null;
@@ -6429,7 +6439,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const insp0 = fv.keys ? fv.keys.map(_painterLabel).join(' × ') : (bare ? STYLE_INSPIRED[key] : ('inspired by '+STYLE_INSPIRED[key]));
     return {
       chords: pc.chords, grid: lay.g, effectiveStyle: lead, shuffleStyle: null, pollockSessionSeed: fv.seed>>>0,
-      mode: _paintModeOf(fv.mode, fv.pal), gc: _gcMake(fv.mode, fv.tone, fv.pal), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
+      mode: _paintModeOf(fv.mode, fv.pal), gc: _gcMake(fv.mode, fv.tone, fv.pal, fv.ks), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
       info: {title:_favTitle(fv)}, compositionName: '', painterStageRef: {current: fv.keys ? fv.keys.slice(1) : []},
       sigActiveRef: {current:!!fv.sig}, draftOwnerRef: {current: fv.compose ? 'compose' : null},
       originalImgUrl: null, imgMoodThumb: null, currentMood: fv.mood || '',
@@ -6467,7 +6477,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const title=(_favTitle(f)||'Paintiano').trim()||'Paintiano';
     const audioName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
     let audioBlob=null;
-    try{ audioBlob=await renderAudioOffline(pc.chords,{speed:1}); }catch(_){}
+    try{ audioBlob=await renderAudioOffline(pc.chords,{speed:1, ks:f.ks|0}); }catch(_){}
     try{ await unlockAudio(); }catch(_){}
     await exportImage('story', true, audioBlob, audioName, false);
   };
@@ -6709,6 +6719,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[composeMode]);
 
   const playNote = useCallback((midi,vel=88,durMs=500,tailScale=1)=>{
+    { const _k=keyShiftRef.current|0; if(_k) midi=Math.max(21,Math.min(108,midi+_k)); }   // a ✦ Variation sounds in its key
     // Spawn a visualizer ripple (skip in image mode — too busy with the photo)
     if (visualizerRef.current && viewModeRef.current !== 'image') {
       const c = visualizerRef.current;
@@ -8167,7 +8178,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // picker effect (deps: …,loadedSource,moodFromImg) is not retriggered.
   const restoreMode = useCallback((mode)=>{
     // a draft read back after a relaunch comes with the look it had — the app starts on the default one
-    const _hydLook = (s)=>{ const L=_lookMigrate(s._look); if(!L || L.sig) return; setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn); };
+    const _hydLook = (s)=>{ const L=_lookMigrate(s._look); if(!L || L.sig) return; setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn); if(L.ks && L.kp) setKsMap(m=>({...m, [L.kp]:L.ks|0})); };
     // Restoring INTO `mode` means leaving whatever source is currently live →
     // stash it first (stashOutgoing self-skips if the live mode == `mode`, e.g.
     // a wiped same-mode canvas) so switching between drafts never loses one.
@@ -13433,7 +13444,7 @@ Hard requirements:
     const finalName=title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
     setScoreMsg({tone:'wait',text:t('rendering')});
     let blob;
-    try{ blob=await renderAudioOffline(src,{speed:1}); }
+    try{ blob=await renderAudioOffline(src,{speed:1, ks:keyShiftRef.current|0}); }
     catch(e){ blob=null; }
     // Tone.Offline temporarily replaces the global Tone context. Restore the
     // live audio path so the next playback isn't silent.
@@ -14429,6 +14440,7 @@ Hard requirements:
     setPhaseIndex(f.phase|0);
     if(f.mode) setMode(f.mode);
     if(f.mode==='custom' && f.pal && proStatus!=='free'){ try{ setCustomPalette(f.pal.slice()); }catch(_){} }
+    if(f.pk){ const k=f.ks|0; setKsMap(m=> ((m[f.pk]|0)===k) ? m : {...m, [f.pk]:k}); }   // its ✦ Variation's key (or the piece's own)
   }catch(_){} };
   favApplyLookRef.current = _favApplyLook;
   // ♥ → Open on a composition (back into Compose, to go on) or a Mic take with its sound (as a song, its recording plays)
@@ -14947,7 +14959,7 @@ Hard requirements:
     const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
     const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
     if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
-    const fv={ style:st||null, keys, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0,
+    const fv={ style:st||null, keys, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0, ks:keyShift,
       cap:(proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
       mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
       dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive };
@@ -14956,7 +14968,7 @@ Hard requirements:
   }catch(_){ return null; } };
   const _fullPaintUrl = ()=>{ const c=_fullPaintCanvas(); if(!c || !c.width || !c.height) return null; try{ const W=Math.min(720, c.width), H=Math.round(c.height*W/c.width); const o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(c,0,0,W,H); return o.toDataURL('image/jpeg',0.82); }catch(_){ return null; } };
   _lookRef.current = (()=>{ try{ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
-    return { st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive }; }catch(_){ return null; } })();
+    return { st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive, ...(keyShift ? {ks:keyShift, kp:_ksPk} : {}) }; }catch(_){ return null; } })();
   const _captureHomeArt = ()=>{
     try{
       if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // an empty canvas is not a painting
@@ -14972,7 +14984,7 @@ Hard requirements:
       }catch(_){}
       // the look on the card (painter, fusion, variant, palette, tone): after a reload ▶ brings THIS painting back, not the piece's ✦ Signature
       let _lk=null; try{ if(!isImg){ const _st = style || ((randomMode && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
-        _lk={ st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive }; } }catch(_){ _lk=null; }
+        _lk={ st:_st, sg:painterStage.slice(), ph:(style ? phaseIndex : shufVariant)|0, md:mode, tn:tone, nt:!!notesMode && !_st, sig:!!sigActive, ...(keyShift ? {ks:keyShift, kp:_ksPk} : {}) }; } }catch(_){ _lk=null; }
       const save = (u)=>{ if(!u) return; const o={ u, src:isImg?'image':'music', k:_k, t:_t, l:_l, r:_r, lk:_lk }; setHomeArt(o); setHomeSide(null); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){}
         _homeBySave(_k, o); try{ const im=new Image(); im.src=u; return im.decode ? im.decode().catch(()=>{}) : null; }catch(_){ return null; } };
       const shrink = (el, w0, h0)=>{ if(!w0 || !h0) return null; const W=Math.min(720, w0), H=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(el,0,0,W,H); return c.toDataURL('image/jpeg',0.8); };
@@ -14996,66 +15008,28 @@ Hard requirements:
     // VARY is allowed while PLAYING (no need to pause first), but not
     // during compose/mic/recording/processing, and not on an empty
     // canvas. If it was playing, restart from the beginning with the
-    // new variation; if NOT playing, just load it (don't auto-play).
+    // new variation.
     const varyBlocked = composeMode||micPainting||micListening||recording||working;
     if(varyBlocked) return;
     if(!(playing||holdPausedRef.current)) return;   // VARY only while the piece plays: on a stopped canvas it loaded a blank variation
     if(!varySource||!chords.length){return;}
-    const varied=rerollSong(varySource, !randomMode);
-    if(!varied)return;
-    // Mark Vary in progress — the phaseIndex useEffect will see this
-    // flag and skip re-rolling the style. Vary changes tones only;
-    // the (umelec, štýl) pair must persist for 4-tuple identity.
-    varyInProgressRef.current = true;
+    // ✦ VARIATION = the same painting in another key: the notes stay as they are (so the shapes and their places, the painters'
+    // choices, the title), the piece sounds ks semitones away (playNote) in that key's colours (gc). It used to transpose the
+    // notes themselves, and a new key moved every shape: two Variations of one picture were two different paintings.
+    const pk=_favHash(chords), cur=(ksMap[pk]|0);
+    const opts=[-5,-4,-3,-2,-1,1,2,3,4,5].filter(k=>k!==cur);
+    const ks=opts[(Math.random()*opts.length)|0];
     const wasPlaying=playing||holdPausedRef.current; // active = playing OR paused → auto-restart, don't wait for Play
-    // Random OFF → keep the picture STRUCTURE, change only colors+sound:
-    // freeze the seed too (belt-and-braces with the pitch-only reroll).
-    // Random ON → fresh structure: clear the lock.
-    if(randomMode){ setStructureSeedLock(null); }
-    else { setStructureSeedLock(pollockSessionSeed>>>0); }
-    setVarySource(varied);
     stopAll();
-    const evts=noteArr2events(varied.notes,varied.tempo);
-    if(!evts.length){setErr(t('errs').varyFail);return;}
-    // applyEvents clears imgMoodThumb; in mood-from-image mode we want the
-    // small source picture to stay over the canvas, so capture + restore it.
-    const _wasMfi = moodFromImg;
-    const _keepThumb = moodFromImg ? imgMoodThumb : null;
-    // Localize the display title: a morphed piece's internal title is the
-    // EN mood-key chain ("relaxed → noble → ...") straight from the song
-    // library, so map each segment through moodNames for the canvas label.
-    // Non-mood titles (AI compose names etc.) pass through unchanged. The
-    // .mid filename below keeps the raw EN title (ASCII-safe).
-    const _mnV=t('moodNames')||{};
-    // Case-tolerant lookup: library titles are Title Case ("Determined") while
-    // moodNames is keyed by the lowercase mood id — try exact, then lowercase.
-    const _mnLook=(x)=>_mnV[x]||_mnV[String(x).toLowerCase()]||x;
-    const _dispVaryTitle=(varied.mood&&_mnV[varied.mood])?_mnV[varied.mood]:String(varied.title||'').split(' → ').map(_mnLook).join(' → ');
-    applyEvents(evts,_dispVaryTitle+' ·');
-    // applyEvents now clears moodContext AND moodFromImg; restore both
-    // because a Vary of a mood piece is still a mood piece — and an MFI
-    // Vary is still MFI. Without restoring moodFromImg the header reverts
-    // to mood mode (NEW MOOD + MORPH) instead of staying MFI (NEW IMAGE,
-    // no MORPH). The dock VARY and header MORPH read these latches too.
-    setMoodContext(true);
-    if(_wasMfi){ setMoodFromImg(true); }
-    if(_keepThumb){ setImgMoodThumb(_keepThumb); }
-    const bytes=encodeMidi(evts,varied.tempo||100);
-    setMidiBlob(new Blob([bytes],{type:'audio/midi'}));
-    setMidiName(varied.title.replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid');
-    // If we're varying an MFI piece, keep the recent entry in sync with
-    // the latest variation (replaces notes, keeps thumbnail + title).
-    // So when user revisits via Recently AI generated, they get THIS
-    // version — not the original AI generation.
-    if(moodFromImg && currentMood){
-      try{ _mfiRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
-    } else if(composeSource==='ai' && currentMood){
-      // Same idea for AI Compose (text-mood path) — update its recent.
-      try{ _aiComposeRecentUpdate(currentMood, varied.notes, varied.tempo); }catch(_){}
-    }
+    setKsMap(m=>({...m, [pk]:ks}));
+    // its MIDI (Save · MIDI) in that key
+    try{
+      const _tm=(x)=>{ const mm=name2midi(x); return mm ? noteName(Math.max(21,Math.min(108,mm+ks))) : x; };
+      const _vn=(varySource.notes||[]).map(n=>({...n, note:_tm(n.note)}));
+      const evts=noteArr2events(_vn, varySource.tempo);
+      if(evts.length){ setMidiBlob(new Blob([encodeMidi(evts, varySource.tempo||100)],{type:'audio/midi'})); setMidiName(String(varySource.title||'Paintiano').replace(/[^\w\s]/g,'').replace(/\s+/g,'_')+'_var.mid'); }
+    }catch(_){}
     setVaryFlash(true);setTimeout(()=>setVaryFlash(false),350);
-    // Only restart playback if it was already playing. When stopped,
-    // VARY just loads the new variation (canvas blank, ready to Play).
     if(wasPlaying){ resumeFromRef.current=0; setTimeout(()=>{ startPlayRef.current?.(); }, 60); }
   };
 
@@ -19924,7 +19898,7 @@ Hard requirements:
                       } else {
                         audioName = title.replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'_').slice(0,40)+'.wav';
                         setScoreMsg({tone:'wait',text:t('rendering')||'rendering audio…'});
-                        try{ audioBlob = await renderAudioOffline(src,{speed:1}); }catch(_){}
+                        try{ audioBlob = await renderAudioOffline(src,{speed:1, ks:keyShiftRef.current|0}); }catch(_){}
                         setScoreMsg(null);
                       }
                       try{ await unlockAudio(); }catch(_){}
