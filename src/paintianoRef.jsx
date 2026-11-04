@@ -16869,6 +16869,21 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       prev=[x,y]; }
     ctx.stroke(); ctx.restore();
   }
+  // Notes in a Fusion: its note names written on the painting where each chord paints — the Notes painter's own hand (serif,
+  // every note in its colour, a dark halo), the highest note on top, three at most per chord
+  if(F.keys.includes('notes')){
+    const fs=Math.max(10, S*0.03), halo=F.groundLum>150 ? 'rgba(4,4,10,.35)' : 'rgba(4,4,10,.85)';
+    ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.globalAlpha=1;
+    ctx.font=`600 ${fs}px 'Cormorant Garamond', Georgia, serif`;
+    let c=0;
+    for(let i=0;i<L && c<160;i+=stride){ if(!pos[i]) continue; const ns=chordAt(i); if(!ns.length) continue;
+      const so=(ns.length>1 ? [...ns].sort((a,b)=>((b.m!==undefined?b.m:b)-(a.m!==undefined?a.m:a))) : ns).slice(0,3); const [x,y]=pos[i];
+      so.forEach((note,j)=>{ const m=note.m!==undefined?note.m:(typeof note==='number'?note:60); const name=_midiToName[m]||''; if(!name) return;
+        const yy=y+(j-(so.length-1)/2)*fs*1.05; const [r,g,b,a]=gc(m, note.v||80);
+        ctx.fillStyle=halo; ctx.fillText(name,x+0.8,yy+0.8); ctx.fillStyle=_rgbaStr(r,g,b,Math.max(0.9,a)); ctx.fillText(name,x,yy); });
+      c++; }
+    ctx.restore();
+  }
   _setCurE(0.5);
 }
 
@@ -26000,8 +26015,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const SHUFFLE_POOL = (proStatus === 'free')
     ? SHUFFLE_POOL_ALL.filter(k => FREE_UNLOCKED_KEYS.has(k) || k===artistOfDay)
     : SHUFFLE_POOL_ALL;
+  const [painterStage, setPainterStage] = useState([]);   // extra painters, slots 2..5 (slot 1 = style; a Fusion led by the Mosaic / Notes: all of it, style null)
   const shuffleStyle = useMemo(() => {
     if(style || !randomMode) return null;       // only active in mosaic + random
+    if(painterStage.length) return null;        // a Fusion led by the Mosaic or Notes: the stage paints, no shuffle stop
     const MOSAIC_FAMILY = ['mosaic','notes'];
     const familyOn = setupArtists.includes('mosaicFamily');
     // ── LOCK MODE ──
@@ -26036,7 +26053,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     h ^= h>>>15; h = Math.imul(h, 0x2c1b3c6d>>>0); h ^= h>>>12;
     const basePick = (h>>>0) % pool.length;
     return pool[(basePick + shuffleArtistIndex) % pool.length];
-  }, [style, randomMode, shuffleSeed, SHUFFLE_POOL, shuffleArtistIndex, mosaicShuffleLock, setupArtists]);
+  }, [style, randomMode, shuffleSeed, SHUFFLE_POOL, shuffleArtistIndex, mosaicShuffleLock, setupArtists, painterStage]);
   // The style actually rendered: the user's pick, or the shuffle draw, or none.
   // shuffleStyle==='mosaic' is the plain-mosaic stop in the shuffle pool — it
   // maps to effectiveStyle=null so the default Mosaic renderer takes over.
@@ -26095,7 +26112,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   try{ globalThis.__PAINT_JAM_STYLE = fuStyleCNow; }catch(_){}
   const [ensHelp, setEnsHelp] = useState(false);   // Setup › Ensemble: the long explanation behind “How it works”
   const ensembleOnRef = useRef(false); useEffect(()=>{ ensembleOnRef.current = ensembleActive; },[ensembleActive]);
-  const [painterStage, setPainterStage] = useState([]);   // extra painters, slots 2..5 (slot 1 = style)
   const painterStageRef = useRef([]); useEffect(()=>{ painterStageRef.current = painterStage; },[painterStage]);
   const [composerStage, setComposerStage] = useState([]); // extra composers, slots 2..5 (slot 1 = imgComposer)
   const composerStageRef = useRef([]); useEffect(()=>{ composerStageRef.current = composerStage; },[composerStage]);
@@ -26213,6 +26229,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // any), then painterStage. Mosaic is a chip like any other ('mosaic' key) —
   // an empty selection is NOT an implicit mosaic on stage.
   const _jamStage = ()=> (style!==null ? [style] : []).concat(painterStage);
+  // the Mosaic and Notes are painters in a Fusion too; a stage they lead keeps no 'style' (the selection is a painter) — slot 1 lives in painterStage
+  const _isFam = (k)=> k==='mosaic' || k==='notes';
+  const _stageSet = (st)=>{ const a=(st||[]).filter(Boolean); if(a.length && _isFam(a[0])){ setStyle(null); setPainterStage(a); } else { setStyle(a[0]||null); setPainterStage(a.slice(1)); } };
   // A fusion's exact address: every member with the variant fuseDNA paints for it
   // (slot 1 = the phase, the others _fuVariantOf — or pinned by a curated
   // Signature / a poster QR through __PAINT_SIG_PHS). null for a single painter.
@@ -26349,7 +26368,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // the selected artist leaves: the next one steps into the selection
         const nx=painterStage[0];
         if(nx===undefined) setStyleTo(null);
-        else if(nx==='mosaic') setStyleTo(null);          // mosaic stays an explicit stage member
+        else if(_isFam(nx)) setStyleTo(null);             // the Mosaic / Notes stay explicit stage members
         else { setPainterStage(p=>p.slice(1)); setStyleTo(nx); }
       } else {
         const j = style!==null ? i-1 : i;
@@ -26359,7 +26378,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     }
     if(cur.length>=STAGE_MAX) return;
     try{ window.posthog && window.posthog.capture('ensemble_add',{kind:'jam',n:cur.length+1}); }catch(_){}
-    if(style===null && k!=='mosaic' && !painterStage.length){ setStyleTo(k); return; }   // first member = the normal selection
+    if(style===null && !_isFam(k) && !painterStage.length){ setStyleTo(k); return; }   // first member = the normal selection
     setPainterStage(p=>[...p,k]);
   };
   const _crTap = (k)=>{
@@ -26422,13 +26441,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the Studio's Fusion switch: the painter on screen becomes no. 1 (gold, pinned) and 1–3 painters join it at once — the painting is a fusion straight away
   const _stFusionOn = ()=>{
     if(working||anim||jamOn) return;
-    const cur = (style && style!=='notes') ? style : ((shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
+    const cur = style ? style : (shuffleStyle && !_isFam(shuffleStyle)) ? shuffleStyle : (effectiveStyle==='notes' ? 'notes' : 'mosaic');   // the Mosaic / Notes on screen too
     if(sigActiveRef.current){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
     if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     if(!randomMode) _shuffleOn();
     if(mosaicShuffleLock) setMosaicShuffleLock(false);
     setJamOn(true); setJamAll(true);
-    const pins = (cur && cur!=='mosaic') ? [cur] : [];
+    const pins = cur ? [cur] : [];
+    if(notesMode) setNotesMode(false);
     jamPinsRef.current=pins.slice(); setJamPins(pins.slice());
     _jamAllRoll();
     try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true, studio:true}); }catch(_){}
@@ -26495,21 +26515,21 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){}
       return;
     }
-    if(jamAll){ const keep=style; setJamAll(false); setStyle(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
+    if(jamAll){ const keep=style!==null ? style : (painterStage.find(_isFam) || null); setJamAll(false); setStyle(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
     setJamOn(false);
   };
   // Ensemble ALL, chip tap = pin toggle. Pinning a painter not on stage seats it
   // right away (after the other pins); unpinning keeps it on the canvas as a guest
   // until the next draw. The stage is always pins first, then guests, max 5.
   const _jamPinTap = (k)=>{
-    if(!k || k==='mosaic' || k==='notes') return;
+    if(!k) return;
     const pins=jamPinsRef.current.slice(); const st=_jamStage().filter(Boolean);
     const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
     if(!nextPins) return;
     const guests = st.filter(x=>!nextPins.includes(x));
     const stage = nextPins.concat(guests).slice(0, STAGE_MAX);
     jamPinsRef.current = nextPins; setJamPins(nextPins);
-    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
+    if(stage.length){ setNotesMode(false); _stageSet(stage); }
     try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
   };
   // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
@@ -26518,33 +26538,35 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // 2–5 painters from the shuffle pool, count and members random; member 1 gets
   // a random variant, the others derive theirs.
   const _jamAllRoll = ()=>{
-    const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
+    const pins=jamPinsRef.current.filter(Boolean);
+    const _famPool = setupArtists.includes('mosaicFamily') ? ['mosaic','notes'] : [];
+    const _oneFam = (a)=>{ let f=false; return a.filter(k=>{ if(!_isFam(k)) return true; if(f) return false; f=true; return true; }); };   // the Mosaic or Notes, not both
     if(pins.length){
       const room=STAGE_MAX-pins.length;
-      const gpool=SHUFFLE_POOL.filter(k=>!pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+      const gpool=SHUFFLE_POOL.concat(pins.some(_isFam) ? [] : _famPool).filter(k=>!pins.includes(k) && (_isFam(k) || setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
       if(room<=0 || !gpool.length){ _fuRollAll(_jamStage()); _fuRollPal(); return; }   // no room for guests: the crossing's variants and palette roll
       const curGuests=painterStage.filter(k=>!pins.includes(k)).join('+');
       let guests=[];
       for(let tries=0; tries<4; tries++){
-        const a=gpool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
+        const a=_oneFam((()=>{ const a=gpool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; } return a; })());
         guests=a.slice(0, Math.min(a.length, 1+((Math.random()*Math.min(3,room))|0)));
         if(guests.join('+')!==curGuests) break;            // never the same guests twice in a row
       }
       // a pin keeps the PAINTER on stage, not its variant: the guests reshape the whole
       // crossing anyway, so every member — pinned or not — rolls a new variant
       setNotesMode(false);
-      setStyle(pins[0]); setPainterStage(pins.slice(1).concat(guests)); _fuRollAll(pins.concat(guests)); _fuRollPal();
+      _stageSet(pins.concat(guests)); _fuRollAll(pins.concat(guests)); _fuRollPal();
       try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n:pins.length+guests.length, pinned:pins.length}); }catch(_){}
       return;
     }
-    const pool=SHUFFLE_POOL.filter(k=>(setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
+    const pool=SHUFFLE_POOL.filter(k=>(setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k)).concat(_famPool);
     if(pool.length<2) return;
-    const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
+    const a=_oneFam((()=>{ const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; } return a; })());
     if(a[0]===style && a.length>2){ const x=a[0]; a[0]=a[1]; a[1]=x; }
     const n=Math.min(a.length, 2+((Math.random()*4)|0));
     const lead=a[0];
     setNotesMode(false);
-    setStyle(lead); setPainterStage(a.slice(1,n)); _fuRollAll(a.slice(0,n)); _fuRollPal();
+    _stageSet(a.slice(0,n)); _fuRollAll(a.slice(0,n)); _fuRollPal();
     try{ window.posthog && window.posthog.capture('ensemble_all_roll',{n}); }catch(_){}
   };
   const _getCompMode = ()=> composerDice ? 1 : 0;   // lazy: composerDice is declared further down
@@ -26592,7 +26614,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _diceRoll = () => {
     if(jamOn && jamAll){ _jamAllRoll(); return; }
     // a Fusion on screen: every member gets a new variant of its own
-    if(style!==null && painterStage.length && viewMode!=='image' && !stTakenRef.current && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
+    if(_jamStage().length>1 && viewMode!=='image' && !stTakenRef.current && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
     // a kept surprise (For You → the Studio): its painter was never chosen — white in the tray. As ↑ does, Show and Next bring others
     // from your set, not more of its variants (Show kept painting only the surprise's Picasso)
     const _white = !!stTakenRef.current && (style!==null || painterStage.length>0);
@@ -26640,7 +26662,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const variantBagRef = useRef({ key:'', bag:[] });
   const _variantRoll = ()=>{
     if(viewMode==='image') return false;
-    if(style!==null && painterStage.length){ return !!_fuRollAll(_jamStage()); }   // a Fusion: every member a new variant of its own
+    if(_jamStage().length>1){   // a Fusion: every member a new variant of its own — the Mosaic's other side is its variant (Mosaic ⇆ Notes)
+      const st=_jamStage(), fi=st.findIndex(_isFam);
+      if(fi<0) return !!_fuRollAll(st);
+      const o=st[fi], nk=o==='mosaic' ? 'notes' : 'mosaic', ns=st.slice(); ns[fi]=nk;
+      if(jamPinsRef.current.includes(o)){ const pn=jamPinsRef.current.map(k=>k===o ? nk : k); jamPinsRef.current=pn; setJamPins(pn); }
+      _stageSet(ns); _fuRollAll(ns); return true; }
     if(style===null && !randomMode){ setNotesMode(n=>!n); return true; }   // the Mosaic: Mosaic ⇆ Notes
     // the Mosaic drawn or chosen (🔀): Mosaic ⇆ Notes — a drawn Notes is the Mosaic's other side, so ← brings the Mosaic; the painting
     // must not count as a new painter (the new-song roll drew someone else on ←, and a chosen Mosaic tapped could land on Notes)
@@ -27504,7 +27531,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const [imgComposer, setImgComposer] = useState(null);
   // flash length: a solo 1.2 s; a fusion / jam stays up 2.5 s (more to take in) — whoever wants it longer holds (press-and-hold keeps it up)
   _flashMsRef.current = (()=>{ try{ const img=(basicMode && liteImageMode) || (!basicMode && viewMode==='image');
-    const n = img ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).length : 0) : (painterStage.length && style!==null ? _jamStage().length : 0);
+    const n = img ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).length : 0) : (_jamStage().length>1 ? _jamStage().length : 0);
     if(img ? imgSigActiveRef.current : sigActiveRef.current) return 3200;   // ✦ Signature: a line to read, not one name — it stays longer
     return n>1 ? 2500 : 1200; }catch(_){ return 1200; } })();
   const imgComposerRef = useRef(null);
@@ -37251,14 +37278,14 @@ Hard requirements:
 
   // the caption under a folded look panel (and on top in the studio): palette · the painters / composers · ✦
   const _capLines = ()=> (<>
-        {(loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+        {(loadedSource!=='image' || moodFromImg) && ((effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle]) || _jamStage().length>1) && (
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style && _jamStage().length<2 && (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
             notes (bare grid with note labels) — get no "inspired by". Show the
             active colour mode • the style name so the collapsed caption isn't
             blank. */}
-        {(loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
+        {(loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && _jamStage().length<2 && (
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {loadedSource==='image' && !moodFromImg && (
@@ -37528,7 +37555,7 @@ Hard requirements:
         }
         else if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
           if(!randomMode) _shuffleOn();
-          const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX);
+          const pins=_jamStage().filter(Boolean).slice(0,STAGE_MAX);
           jamPinsRef.current=pins; setJamPins(pins); setJamAll(true);
           nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true;
         }
@@ -38136,9 +38163,9 @@ Hard requirements:
       let who;
       if(im){ const cs=[imgComposer].concat(composerStage||[]).filter(Boolean); who = cs.length ? cs.map(k=>COMPOSER_INSPIRED[k]||k).join(' ↔ ') : 'Scan'; }
       else {
-        let ks=(style!==null ? [style] : []).concat(painterStage||[]).filter(k=>k && k!=='mosaic' && k!=='notes');
+        let ks=(style!==null ? [style] : []).concat(painterStage||[]).filter(k=>k && (painterStage.length>0 || !_isFam(k)));   // a Fusion names its Mosaic / Notes too
         if(!ks.length && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ks=[shuffleStyle];
-        who = ks.length ? ks.map(k=>STYLE_INSPIRED[k]||k).join(' × ') : up(t('mosaicStyle'));
+        who = ks.length ? ks.map(k=>_isFam(k) ? up(_painterLabel(k)) : (STYLE_INSPIRED[k]||k)).join(' × ') : up(t('mosaicStyle'));
       }
       const parts=[up(t(mode)), who];
       if(im ? imgSigActive : sigActive) parts.push('✦ '+_sigT('label'));
@@ -40361,13 +40388,16 @@ Hard requirements:
             {/* Mosaic = default; not glowing while Shuffle is drawing an artist.
                 Shown when in set, or in edit mode (as a ghost when out of set). */}
             {(setupArtists.includes('mosaicFamily') || cockpitEdit) && (()=>{
-              const inFamilyShuffle = !!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes');
+              // in a Fusion the Mosaic (or Notes) is a member like any painter: gold = pinned / chosen, white = a drawn guest
+              const _famK = (jamOn && !cockpitEdit) ? (_jamStage().find(_isFam) || null) : null;
+              const _famAll = jamOn && jamAll && !cockpitEdit, _famPin = _famAll && !!_famK && jamPins.includes(_famK);
+              const inFamilyShuffle = _famAll ? (!!_famK && !_famPin) : (!!shuffleStyle && (shuffleStyle==='mosaic' || shuffleStyle==='notes'));
               // Manual mosaic = selected and NOT being driven by the dice. Like
               // the artist pairs, a shuffle-hit shows the white frame (no gold
               // glow); a manual pick shows the gold glow. Splitting these keeps
               // the Mosaic family visually consistent with the other chips.
-              const _mosIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf('mosaic') : -1;
-              const mosaicManual = (style===null && (!shuffleStyle || mosaicShuffleLock) && !(jamOn && painterStage.length)) || _mosIx>=0;   // Mosaic chosen (its variants on Next) is lit too
+              const _mosIx = (_famK && _jamStage().length>1) ? _jamStage().indexOf(_famK) : -1;
+              const mosaicManual = _famAll ? _famPin : ((style===null && (!shuffleStyle || mosaicShuffleLock) && !(jamOn && painterStage.length)) || _mosIx>=0);   // Mosaic chosen (its variants on Next) is lit too
               // Sub-label reflects the current rendered family member.
               const subKind = (shuffleStyle==='notes' || ((!shuffleStyle || shuffleStyle==='mosaic') && notesMode)) ? 'notes' : 'mosaic';
               const subLabel = subKind==='notes' ? t('notesStyle') : t('mosaicStyle');
@@ -40389,8 +40419,9 @@ Hard requirements:
                 });
                 return;
               }
+              if(jamOn && jamAll){ _jamPinTap(_famK || (subKind==='notes' ? 'notes' : 'mosaic')); return; }   // a Fusion: pin / unpin it, as any painter
               if(jamAll) return;
-              if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
+              if(jamOn){ const fk=_famK || 'mosaic'; if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]===fk) _shuffleOff(); _jamTap(fk); return; }
               // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
               const _mosaicOwn = ()=>{ _artQuiet(''); setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };   // the Mosaic itself (not a roll to Notes)
               if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
@@ -40410,7 +40441,7 @@ Hard requirements:
                 if(!notesMode){ setNotesMode(true); }
                 else { setNotesMode(false); }
               }
-            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} data-fu={(studioFs && jamOn && !cockpitEdit && _jamStage().indexOf('mosaic')>=0) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && _jamStage().indexOf('mosaic')>=0) ? -100+_jamStage().indexOf('mosaic') : undefined,width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:(!cockpitEdit && jamOn && jamAll && _mosIx<0)?0.35:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{studioFs && _skinFace('mosaic', inFamilyShuffle && !mosaicManual && !cockpitEdit)}{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
+            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} data-fu={(studioFs && jamOn && !cockpitEdit && _mosIx>=0) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && _mosIx>=0) ? -100+_mosIx : undefined,width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:_famAll?1:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{studioFs && _skinFace('mosaic', inFamilyShuffle && !mosaicManual && !cockpitEdit)}{_famK ? (_famK==='notes' ? t('notesStyle') : t('mosaicStyle')) : subLabel}{_stageBadge(_mosIx, [], _famAll ? (_famPin ? 'pin' : 'guest') : undefined)}</button>
             ); })()}
             {/* ── Per-artist chips (un-paired). Every artist is its own toggle.
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
@@ -41009,7 +41040,7 @@ Hard requirements:
             <div className="pf-fold-caption" style={{position:'absolute',left:0,right:0,top:'100%',marginTop:6,padding:'0 2px',fontSize:(.52*effScale)+'rem',letterSpacing:'.1em',lineHeight:1.6,color:'rgba(201,168,76,.65)'}}>
               <span style={{textTransform:'capitalize'}}>{t(mode)}</span>
               <span> · </span>
-              <span style={{fontStyle:'italic'}}>{(painterStage.length>0 && style!==null) ? (<>{_fsNames('art',20,14,6,true)}</>)
+              <span style={{fontStyle:'italic'}}>{(_jamStage().length>1) ? (<>{_fsNames('art',20,14,6,true)}</>)
                 : (effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle]) ? (effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle]))
                 : (effectiveStyle==='notes' ? t('notesStyle') : t('mosaicStyle'))}</span>
               {sigActive && (<span style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,whiteSpace:'nowrap'}}> · ✦ {_sigT('label')}</span>)}
@@ -41444,7 +41475,7 @@ Hard requirements:
         if(!_fLabel) return null;
         const _sigF = _isImgFlash ? (imgSigActive && !!imgComposer) : sigActive;
         const _ensF = _isImgFlash ? (composerStage.length ? [imgComposer,...composerStage].filter(Boolean).map(k=>_COMP_SHORT[k]||k) : null)
-                                  : (painterStage.length && style!==null ? _jamStage().map(_painterLabel) : null);
+                                  : (_jamStage().length>1 ? _jamStage().map(_painterLabel) : null);
         const _fsK = _isImgFlash ? 'comp' : 'art';
         // the style line: when it is drawn / switched — and always right after a tap on the style pill (the tap is what it confirms).
         // Pro: always, as a button on the painting — one tap switches this very fusion / jam to the other style (no second trip to the controls).

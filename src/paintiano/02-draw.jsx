@@ -14654,6 +14654,21 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       prev=[x,y]; }
     ctx.stroke(); ctx.restore();
   }
+  // Notes in a Fusion: its note names written on the painting where each chord paints — the Notes painter's own hand (serif,
+  // every note in its colour, a dark halo), the highest note on top, three at most per chord
+  if(F.keys.includes('notes')){
+    const fs=Math.max(10, S*0.03), halo=F.groundLum>150 ? 'rgba(4,4,10,.35)' : 'rgba(4,4,10,.85)';
+    ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.globalAlpha=1;
+    ctx.font=`600 ${fs}px 'Cormorant Garamond', Georgia, serif`;
+    let c=0;
+    for(let i=0;i<L && c<160;i+=stride){ if(!pos[i]) continue; const ns=chordAt(i); if(!ns.length) continue;
+      const so=(ns.length>1 ? [...ns].sort((a,b)=>((b.m!==undefined?b.m:b)-(a.m!==undefined?a.m:a))) : ns).slice(0,3); const [x,y]=pos[i];
+      so.forEach((note,j)=>{ const m=note.m!==undefined?note.m:(typeof note==='number'?note:60); const name=_midiToName[m]||''; if(!name) return;
+        const yy=y+(j-(so.length-1)/2)*fs*1.05; const [r,g,b,a]=gc(m, note.v||80);
+        ctx.fillStyle=halo; ctx.fillText(name,x+0.8,yy+0.8); ctx.fillStyle=_rgbaStr(r,g,b,Math.max(0.9,a)); ctx.fillText(name,x,yy); });
+      c++; }
+    ctx.restore();
+  }
   _setCurE(0.5);
 }
 
