@@ -2004,17 +2004,19 @@ function _computeSongCharacter(chords){
   }
   return { energy, dynRange, register, density, weights, tempo, regularity, tension, contour };
 }
-// The canvas: one portrait 3:4 frame for every piece (it used to be landscape φ for short pieces — dropped: a phone is upright).
+// The canvas: one portrait golden-ratio frame (1 : φ) for every piece — the ratio the whole concept stands on (Nov 2026; it was 3:4 before,
+// and landscape φ for short pieces before that). Print and story exports keep their own frames.
 // Music decides once by its chord count (as the Mic: 41); a take (Compose, Mic) grows — it starts landscape and flips ONCE to portrait
 // when its plan first doubles (Mic 48→96 at its 41st chord, Compose 96→192 at its 82nd), never back.
-const PF_LONG_SONG = 41;   // ONE rule for Music and the Mic: up to 40 chords landscape φ, from the 41st portrait 3:4 (Compose: twice — from its 82nd)
+const PF_PORT = PHI;       // the portrait frame's height / width
+const PF_LONG_SONG = 41;   // ONE rule for Music and the Mic: up to 40 chords landscape φ, from the 41st portrait φ (Compose: twice — from its 82nd)
 // the Mic's take starts on a plan of 48, Compose's on 96 (twice as long on the landscape frame); each flips at the first doubling
 function _pfTakeBase(arr){ return (arr && arr[0] && arr[0].mic) ? 48 : 96; }
 function _pfTakePortrait(n, arr){ return n > _pfTakeBase(arr)*0.85; }
 // a portrait frame on a wide (desktop) screen is held to the screen's height
 function _pfFrameW(portrait, w){
   if(!portrait || typeof window==='undefined' || !(window.innerWidth>=769)) return w;
-  const vh=window.innerHeight||900; return Math.max(300, Math.min(w, Math.floor((vh-260)*3/4)));
+  const vh=window.innerHeight||900; return Math.max(300, Math.min(w, Math.floor((vh-260)/PF_PORT)));
 }
 function computeGrid(arg, opts){
   const evs=Array.isArray(arg)?arg:new Array(arg).fill(null).map(()=>({durQ:1}));
@@ -2057,7 +2059,7 @@ function computeGrid(arg, opts){
   // still drives per-cell widths below; only N/rows use the count.)
   const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
   // the frame's shape: a take by its chord count (it flips once, at 41), a loaded piece by how many blocks it paints
-  const _port = (liveMode && opts && opts.livePortrait===false) ? false : true;   // ONE frame everywhere: portrait 3:4 (Music, Compose, Mic, a song from the Mic) — a phone is held upright; no flip while a take grows
+  const _port = (liveMode && opts && opts.livePortrait===false) ? false : true;   // ONE frame everywhere: portrait φ (Music, Compose, Mic, a song from the Mic) — a phone is held upright; no flip while a take grows
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
   const _portrait = !!(opts && opts.portraitGrow);
@@ -2072,11 +2074,11 @@ function computeGrid(arg, opts){
     const score=fillRatio*100 - r*0.5;
     if(score>bestScore){bestScore=score; bestN=n;}
   }
-  // A fixed frame (landscape φ or portrait 3:4): columns × rows chosen so the blocks keep a Music block's shape (about φ tall),
+  // A fixed frame (landscape φ or portrait φ): columns × rows chosen so the blocks keep a Music block's shape (about φ tall),
   // not the widest-row pick — a short take would otherwise be one row of thin stripes.
   if(liveMode || _fixedLoaded){
     let bN=1, bS=-1e9;
-    const fA=_port ? 4/3 : 1/PHI;   // the frame's height / width
+    const fA=_port ? PF_PORT : 1/PHI;   // the frame's height / width
     const nMax=Math.max(2, Math.ceil(Math.sqrt(_layoutQ)*1.6)+4);
     for(let n=1;n<=nMax;n++){
       const r=Math.max(1,Math.ceil(_layoutQ/n));
@@ -2095,7 +2097,7 @@ function computeGrid(arg, opts){
   let BW, BH, CW, CH;
   if(liveMode || _fixedLoaded){
     // FIXED CANVAS FRAME — compose / sing / listen AND loaded pieces. Width AND height stay constant as
-    // chords are added; the blocks get smaller. Landscape φ for a short piece, portrait 3:4 for a long one
+    // chords are added; the blocks get smaller. Landscape φ for a short piece, portrait φ for a long one
     // (a take flips once, at its 41st chord). The frame is taken from the target width, not N×BW, so it
     // never shifts by a pixel. On a desktop the loaded piece sits in the centre lane.
     const vp=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:540;
@@ -2104,7 +2106,7 @@ function computeGrid(arg, opts){
     targetCW=_pfFrameW(_port, targetCW);
     BW=Math.max(2,targetCW/N);
     CW=Math.round(targetCW);
-    CH=_port ? Math.round(targetCW*4/3) : Math.max(140,Math.round(targetCW/PHI));
+    CH=_port ? Math.round(targetCW*PF_PORT) : Math.max(140,Math.round(targetCW/PHI));
     BH=Math.max(4,Math.floor(CH/rows));
   } else if(typeof window!=='undefined' && window.innerWidth>=769 && !(opts&&opts.portraitGrow)){
     // LOADED-MODE DESKTOP (PC ≥769px) — uses the SAME grow-canvas engine as

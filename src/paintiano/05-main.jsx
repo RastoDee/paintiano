@@ -4493,7 +4493,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // DYNAMIC HEIGHT: footer flows under the artwork, whatever its aspect —
       // fixed 3840 clipped the QR on taller canvases.
       const W=2160, AX=180, AY=560, AW=W-360;
-      const AH2=Math.min(Math.round(AW*(srcCv?srcCv.height/srcCv.width:4/3)), 2900);
+      const AH2=Math.min(Math.round(AW*(srcCv?srcCv.height/srcCv.width:PF_PORT)), 2900);
       const TY=AY+AH2+300;         // Paintiano baseline
       const TAGY=TY+96;            // tagline baseline
       const QS=240, QY=TAGY+70;    // QR top
@@ -5431,19 +5431,19 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // N×floor(width/N), so it shifts by a pixel or two as columns are added — and
   // painters seed from the canvas size, so one pixel re-threw the whole painting.
   // With a painter on, a take is painted on the frame itself (the grid's few
-  // spare pixels stay ground). The Mic (voice and music) has a portrait 3:4 frame;
+  // spare pixels stay ground). The Mic (voice and music) has a portrait φ frame;
   // Lite grows its canvas downward instead, so it keeps the grid's own size.
   const _takeFrame = (own, legacy, nv)=>{   // own: a favorite's authoring mode (else the live one); legacy: a Mic favorite from before its frame; nv: the take's plan
     const o = own!==undefined ? own : draftOwnerRef.current;
     if(basicModeRef.current || (legacy && o==='listen')) return null;
     const vp=(typeof window!=='undefined' && window.innerWidth) ? window.innerWidth : 540;
     const _ti = _takeInfo(chordsRef.current)||{};
-    const port = !legacy;   // one portrait 3:4 frame for every take (an old Mic favorite from before its frame keeps its own)
+    const port = !legacy;   // one portrait φ frame for every take (an old Mic favorite from before its frame keeps its own)
     const cw=_pfFrameW(port, Math.min(820, Math.max(360, vp-32)));
-    return port ? { CW:Math.round(cw), CH:Math.round(cw*4/3) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
+    return port ? { CW:Math.round(cw), CH:Math.round(cw*PF_PORT) } : { CW:Math.round(cw), CH:Math.max(140, Math.round(cw/PHI)) };
   };
   // The Mic (voice and music) paints like Compose — one fixed frame, the blocks getting smaller as the take grows —
-  // but in the portrait 3:4 frame a Music piece has. Lite keeps its own growing portrait canvas.
+  // but in the portrait φ frame a Music piece has. Lite keeps its own growing portrait canvas.
   const _isMicOwn = (o)=> o==='listen' || o==='sing';
   const _liveGridOpts = (own, legacy)=>{
     if(basicModeRef.current) return { liveMode:false, liteWide:true, portraitGrow:!liteImageModeRef.current };
@@ -14430,7 +14430,7 @@ Hard requirements:
     return ()=>{ try{ ro && ro.disconnect(); }catch(_){} };
   },[studioLive, composeMode]);
   useLayoutEffect(()=>{ if(studioSrcOk && !immersive){ setStripOpen(false); setImmersive(true); } },[studioSrcOk, immersive]);
-  // the Atelier's Compose / Mic: the canvas fits between its own top and the dock (keys, buttons) — a portrait take (3:4) would run under them
+  // the Atelier's Compose / Mic: the canvas fits between its own top and the dock (keys, buttons) — a portrait take (φ) would run under them
   const _atLive = !studioFs && !immersive && !basicMode && (composeMode || micActive);
   const [atLiveMax, setAtLiveMax] = useState(0);
   useEffect(()=>{
