@@ -15666,7 +15666,13 @@ Hard requirements:
   feedFirstRef.current = (feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first)) || (firstKeptRef.current && feedAt<0 && style===PF_FIRST.style && (phaseIndex|0)===PF_FIRST.phase && !painterStage.length && !sigActive);
   const _FEED_IMGS = (typeof SAMPLE_IMAGES!=='undefined') ? SAMPLE_IMAGES : [];
   const _feedKind = ()=>{ const h=_homeCur(); return (h && (h.k==='image' || (!h.k && h.src==='image'))) ? 'img' : 'music'; };
-  const _feedTitle = (c)=> c ? (c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
+  // For you deals from your My Music / My Images too (ids only; the file is read when the card loads)
+  const feedMineRef = useRef({mus:[], img:[]});
+  useEffect(()=>{ if(!studioHome) return; let c=false; const _ok=(l)=>(l||[]).filter(r=>r && !r.empty && r.blob).map(r=>({id:r.id, n:r.name||''}));
+    myMusicList().then(l=>{ if(!c) feedMineRef.current.mus=_ok(l); }).catch(()=>{}); myImgList().then(l=>{ if(!c) feedMineRef.current.img=_ok(l); }).catch(()=>{});
+    return ()=>{ c=true; }; },[studioHome, myMusicSlots, myImgSlots]);
+  const _feedMine = (kind, piece)=> typeof piece==='string' ? ((kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).find(x=>'m'+x.id===piece) || null) : null;
+  const _feedTitle = (c)=> c ? (typeof c.piece==='string' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
   const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
@@ -15680,9 +15686,12 @@ Hard requirements:
   // the look on screen, to keep with a card
   feedDrawRef.current = _feedDraw;
   const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive, look:_stLookNow() });   // look: the whole look (a drawn painter, its variant, a fusion's members and variants) — back and forth it comes back the same
-  // the piece: the first-run card's Liebestraum; otherwise a built-in piece at random, not the one on the home card
-  const _feedPiece = (kind)=>{ const homeArt=_homeCur(); if(kind==='img'){ const h=homeArt ? _FEED_IMGS.findIndex(x=>{ const a=String((x&&x.t)||'').toLowerCase(), h=String(homeArt.t||'').toLowerCase(); return !!h && (a===h || a.startsWith(h) || h.startsWith(a)); }) : -1; const c=_FEED_IMGS.map((_,i)=>i).filter(i=>i!==h); return c.length ? c[(Math.random()*c.length)|0] : 0; }
-    if(!homeArt) return (Math.random()*3)|0; const h=_FEED_NAMES.findIndex(n=>String(n).toLowerCase()===String(homeArt.t||'').toLowerCase()); const c=[0,1,2].filter(i=>i!==h); return c[(Math.random()*c.length)|0]; };
+  // the piece: the first-run card's Liebestraum; otherwise one at random from the built-in pieces and yours (My Music / My Images), not the one on the home card
+  const _feedPiece = (kind)=>{ const homeArt=_homeCur(); const hn=String((homeArt && homeArt.t)||'').toLowerCase();
+    const same=(n)=>{ const a=String(n||'').toLowerCase(); return !!hn && !!a && (a===hn || a.startsWith(hn) || hn.startsWith(a)); };
+    const mine=(kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).filter(x=>!same(x.n)).map(x=>'m'+x.id);
+    const c=(kind==='img' ? _FEED_IMGS.map((x,i)=>same(x && x.t) ? -1 : i) : _FEED_NAMES.map((x,i)=>same(x) ? -1 : i)).filter(i=>i>=0).concat(mine);
+    return c.length ? c[(Math.random()*c.length)|0] : 0; };
   // the first painting, like Lite's Play: one of four strong openers from your set (Free: the artist of the day, often)
   const _feedOpener = ()=>{ let o=['pollock','kandinsky','kusama','spiral'].filter(k=>setupArtists.includes(k) && !styleIsLocked(k)); if(proStatus==='free' && artistOfDay && Math.random()<0.4) o=[artistOfDay]; return o.length ? o[(Math.random()*o.length)|0] : (setupArtists.find(k=>k!=='mosaicFamily' && !styleIsLocked(k)) || 'pollock'); };
   const _feedApply = (sel)=>{
@@ -15694,6 +15703,8 @@ Hard requirements:
     if(sel.mode) setMode(sel.mode);
   };
   // put the piece in the player and start it (call it inside the gesture: the sound wakes there)
+  const _feedMineImg = async(piece)=>{ const m=_feedMine('img', piece); if(!m) return; const l=await myImgList(); const rec=(l||[]).find(r=>r && r.id===m.id && r.blob); if(!rec) return;
+    loadImage({target:{files:[new File([rec.blob], (rec.name||'image')+'.jpg', {type:rec.blob.type||'image/jpeg'})], value:''}}); _loadedFromMyImgRef.current=rec.id; };
   const _feedLoad = (piece, sel, kind)=>{
     if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
@@ -15709,11 +15720,17 @@ Hard requirements:
     setForceSetup(true);   // the piece plays under the home, on the card
     if(kind==='img'){
       feedImgLoadRef.current = true; feedPieceRef.current = true; const prevUrl = originalImgUrl; const tok = ++feedTokRef.current;
-      Promise.resolve(loadSampleImage(piece)).then(()=>{ feedImgLoadRef.current=false; if(feedTokRef.current===tok){ feedPieceRef.current=true; setForceSetup(true); } }).catch(()=>{ feedImgLoadRef.current=false; });
+      Promise.resolve(typeof piece==='string' ? _feedMineImg(piece) : loadSampleImage(piece)).then(()=>{ feedImgLoadRef.current=false; if(feedTokRef.current===tok){ feedPieceRef.current=true; setForceSetup(true); } }).catch(()=>{ feedImgLoadRef.current=false; });
       setFeedLoaded('i'+piece); setFeedHiRes(false);
       feedStartRef.current = {t:Date.now(), img:true, prevUrl, sel};
       return;
     }
+    if(typeof piece==='string'){ const m=_feedMine('music', piece); feedPieceRef.current=true; const tok=++feedTokRef.current;
+      setFeedLoaded(piece); setFeedHiRes(true);
+      feedStartRef.current = {t:Date.now(), mine:true, c0:chords, sel:(sel && sel.look && !sel.sig) ? sel : null, lim:45000};
+      (async()=>{ try{ const l=await myMusicList(); if(feedTokRef.current!==tok) return; const rec=(l||[]).find(r=>r && m && r.id===m.id && r.blob); if(!rec) return;
+        const p=loadFromMyMusic(rec); setForceSetup(true); feedPieceRef.current=true; await p; }catch(_){} })();   // the loader leaves the home in its first step: the card keeps it
+      return; }
     // ✦ Signature: the piece opens on its own painting, exactly as a piece does (the latch comes with the load)
     if(sel && sel.sig){ setRandomMode(false); randomModeRef.current=false; loadSampleMidi(piece); }
     else loadSampleMidi(piece, {noSig:true});
@@ -15749,7 +15766,7 @@ Hard requirements:
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
     // after the first surprise the colour card never comes back: with no painting of yours, the home keeps the surprise you just left
-    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=(c.kind!=='img' && _canvasBlank(canvasRef.current) && _fullPaintUrl()) || _feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=(c.kind!=='img' && _canvasBlank(canvasRef.current) && _fullPaintUrl()) || _feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:typeof c.piece==='string' ? {s:isI?'mi':'mm', id:((_feedMine(c.kind, c.piece)||{}).id)} : isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
@@ -15767,7 +15784,8 @@ Hard requirements:
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece:F.piece, sel:F.sel, u:null, l:'', dir:'none', first:true, pu:PF_FIRST.u };
       setFeedCards([c]); setFeedAt(0); _feedLoad(F.piece, F.sel); _feedHintBump(); return;
     }
-    const piece=_feedPiece(), sel = arc ? {style:null, phase:0, mode, notes:false, stage:[], sig:false} : {sig:true};
+    const piece=_feedPiece(); if(typeof piece==='string') arc=false;
+    const sel = arc ? {style:null, phase:0, mode, notes:false, stage:[], sig:false} : {sig:true};
     feedStepsRef.current = arc ? ['kandinsky','sig'] : [];
     surpriseArtistBagRef.current = [];
     const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece, sel, u:null, l:'' };
@@ -15918,8 +15936,9 @@ Hard requirements:
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
     const F=feedStartRef.current; if(!F) return;
-    if(Date.now()-F.t>8000){ feedStartRef.current=null; return; }
+    if(Date.now()-F.t>(F.lim||8000)){ feedStartRef.current=null; return; }
     if(F.img){ if(!chords.length || playing || anim || working || viewMode!=='image' || !originalImgUrl || originalImgUrl===F.prevUrl) return; if(F.sel && !F.applied){ F.applied=true; if(F.sel.img && (F.sel.comp!==undefined)) _feedApply(F.sel); } }
+    else if(F.mine){ if(!chords.length || chords===F.c0 || playing || anim || working) return; feedPieceRef.current=true; if(F.sel && !F.applied){ F.applied=true; _feedApply(F.sel); } }
     else if(!chords.length || playing || anim || working || !(info && info.title===F.title)) return;
     // the first tap after opening the app only wakes the sound on iOS (it is still starting when the piece is in):
     // if the piece is not playing a moment later, it is started again — up to three times
@@ -17024,6 +17043,7 @@ Hard requirements:
             } else loadSampleMidi(_rp.i);
             setForceSetup(false); return; }
           if(_rp.s==='img'){ loadSampleImage(_rp.i); setForceSetup(false); return; }
+          if(_rp.s==='mm' || _rp.s==='mi'){ (_rp.s==='mm' ? myMusicList() : myImgList()).then(l=>{ const rec=(l||[]).find(r=>r && r.id===_rp.id && r.blob); if(rec){ if(_rp.s==='mm') loadFromMyMusic(rec); else loadFromMyImg(rec); } }).catch(()=>{}); setForceSetup(false); return; }
           if(_rp.s==='mood' && MOODS.includes(_rp.m)){ const m=_rp.m, sg=findSong(m); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(m); setVarySource(sg); setImgMoodThumb(null); setMoodFromImg(false); setLoadedSource(null); setMoodContext(true); setSongQ(m); stopAll(); aiMidi(m); }
         };
         const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } if(!SRC[kind].d && _rp){ _replay(); return; } _tap(kind); };
