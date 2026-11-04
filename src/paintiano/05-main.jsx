@@ -15282,6 +15282,10 @@ Hard requirements:
   const feedResumeRef = useRef(null);   // ↓ from the first surprise back home: the cards wait for ↑
   const [feedFly, setFeedFly] = useState(null);     // the card flying off: {k, u, t, l, dir}
   const [feedFlash, setFeedFlash] = useState(0);    // the look's name over the card, for a moment
+  // while a finger drags to a new look (it is put on the card at once), the song's lines under the card stay as they were —
+  // the new name comes when the card lands, never mid-drag (and a drag that goes back changes nothing)
+  const [fdMeta, setFdMeta] = useState(null);       // {t, l}: the lines frozen during the drag
+  const metaKeepRef = useRef(false);                 // the look changes under the drag: the lines keep their place (shown / faded)
   // FULL SCREEN, QUIET: while a full-screen painting plays (the Studio's Full screen, the home's surprise) the song's lines fade after 4 s —
   // a pause, the next painting, a sheet, anything that changes brings them back; the three buttons stay
   const [metaHide, setMetaHide] = useState(false);
@@ -15289,7 +15293,7 @@ Hard requirements:
   const metaHoldRef = useRef({tm:null, on:false});          // the home's hold (the Studio's is _holdingRef)
   _metaPokeRef.current = ()=>setMetaPoke(n=>n+1);
   const _metaQuietOk = !!playing && !stChg && !stShare && !stripOpen && !showMine && ((studioFs && stFill && !studioLive) || (studioHome && feedLoaded!==null && feedAt>=0));
-  useEffect(()=>{ setMetaHide(false); if(!_metaQuietOk) return; const tm=setTimeout(()=>{ if(metaHoldRef.current.on || _holdingRef.current) return; setMetaHide(true); }, 4000); return ()=>clearTimeout(tm);
+  useEffect(()=>{ if(!metaKeepRef.current) setMetaHide(false); if(!_metaQuietOk) return; const tm=setTimeout(()=>{ if(metaHoldRef.current.on || _holdingRef.current) return; setMetaHide(true); }, 4000); return ()=>clearTimeout(tm);
   },[_metaQuietOk, feedFlash, feedAt, _swipeFlashKey, style, painterStage.length, imgComposer, info && info.title, metaPoke]);
   // a painting played to the end: its ▶ stays a moment, then goes quietly (a tap still plays it again)
   const _stEnded = !playing && !anim && !holdPaused && chords.length>0 && disp>=chords.length;
@@ -15552,7 +15556,9 @@ Hard requirements:
   //  'known' the card you go to is a picture already (one seen before, the home card, a picture's own image): it is put on when it lands
   //  'rub'   nothing that way: the card only gives
   feedNavRef.current = { up:()=>_feedUp(null, true), back:()=>_feedBack(true), vn:()=>{ try{ return !!_variantNext(); }catch(_){ return false; } }, vb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
-    flash:()=>_feedFlashNow(), buzz:(ms)=>_stBuzz(ms), draw:()=>{ try{ feedDrawRef.current(); }catch(_){} } };
+    flash:()=>_feedFlashNow(), buzz:(ms)=>_stBuzz(ms), draw:()=>{ try{ feedDrawRef.current(); }catch(_){} },
+    hold:(m)=>{ metaKeepRef.current=true; setFdMeta(m || null); setFeedFlash(0); },   // the lines stay, the last name over the card goes (it would turn into the new one mid-drag)
+    free:()=>{ metaKeepRef.current=false; setFdMeta(null); } };
   const _fdT = (ax, v)=> ax==='y' ? 'translate3d(0,'+v+'px,0)' : 'translate3d('+v+'px,0,0)';
   const _fdSpring = (from, v0, to, step, done)=>{ const S=feedSprRef.current; if(S.id) cancelAnimationFrame(S.id);
     let x=from, v=Math.max(-8000, Math.min(8000, v0||0)), last=performance.now(); const k=320, c=2*0.92*Math.sqrt(k);
@@ -15585,8 +15591,8 @@ Hard requirements:
     if(fd.mode==='pre'){
       try{ const src=feedCvRef.current; if(src && src.width && src.height){ const c=document.createElement('canvas'); c.width=src.width; c.height=src.height; c.getContext('2d').drawImage(src,0,0); out.appendChild(c); } }catch(_){}
       card.dataset.fdz='1';   // the card's painting waits until the new look is on it
-      const N=feedNavRef.current, sig0=_fdSig(); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
-      if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; } else _fdUngate(fd, sig0);
+      const N=feedNavRef.current, sig0=_fdSig(); N.hold(o.meta); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
+      if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; N.free(); } else _fdUngate(fd, sig0);
     } else if(fd.mode==='known' && fd.img){ const im=new Image(); im.src=fd.img; im.alt=''; out.appendChild(im); }
     if(fd.mode!=='rub') out.style.display='block';
     _fdSet(fd, 0); return fd; };
@@ -15603,14 +15609,14 @@ Hard requirements:
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
-      if(fd.mode==='pre' && go){ fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
+      if(fd.mode==='pre' && go){ fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
       if(fd.mode==='known' && !go){ _fdClear(fd); return; }
       // the copy stays over the card while the look changes under it, then fades
       fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdSig();
       try{ if(fd.mode==='known'){ if(fd.dir>0) N.up(); else N.back(); N.flash(); N.buzz(8); }
-        else if(fd.ax==='y') N.back(); else if(fd.dir>0) N.vb(); else N.vn(); }catch(_){}
-      const fin=()=>{ N.draw(); _fdClear(fd); };
-      _fdWhenNew(sig0, ()=>{ N.draw(); delete fd.card.dataset.fdz; fd.out.style.transition='opacity .18s ease'; fd.out.style.opacity='0'; _fdLater(200, ()=>_fdClear(fd), fin); }, fin);
+        else { if(fd.ax==='y') N.back(); else if(fd.dir>0) N.vb(); else N.vn(); setFdMeta(null); } }catch(_){}
+      const fin=()=>{ N.draw(); _fdClear(fd); if(fd.mode==='pre') metaKeepRef.current=false; };
+      _fdWhenNew(sig0, ()=>{ N.draw(); delete fd.card.dataset.fdz; if(fd.mode==='pre') metaKeepRef.current=false; fd.out.style.transition='opacity .18s ease'; fd.out.style.opacity='0'; _fdLater(200, ()=>_fdClear(fd), fin); }, fin);
     }); };
   // ⤢ on a playing card: full screen — it plays on, and from now on it is your painting
   // ↓ on a surprise: keep it — it slides down into the Studio as your painting (still painting / playing); nothing loaded yet: the card just gives
@@ -16775,7 +16781,7 @@ Hard requirements:
           if(st.S){ const now=performance.now(); st.S.push([now, tt.clientX, tt.clientY]); while(st.S.length>2 && now-st.S[0][0]>100) st.S.shift(); }
           if(!st.ax && st.S && (Math.abs(dx)>10 || Math.abs(dy)>10)){ st.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x';
             if(FC && _fL && !st.b && !metaHoldRef.current.on){ const dir = st.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1), up = st.ax==='y' && dir>0, dn = st.ax==='y' && dir<0;
-              st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null,
+              st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null, meta:{t:_fTitle, l:_fLine},
                 nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? (H.u || null) : undefined)) : undefined }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
@@ -16844,7 +16850,7 @@ Hard requirements:
             </div>
             {/* the home is the Studio's screen (the mockup): the painting is the screen; under it the song and ♥ · ✦ Change · share */}
             {(()=>{
-              const _mt = FC ? _fTitle : ttl, _ml = FC ? _fLine : line;
+              const _mt = fdMeta ? fdMeta.t : (FC ? _fTitle : ttl), _ml = fdMeta ? fdMeta.l : (FC ? _fLine : line);
               const _sTap = _smp && !FC && !feedFly && !feedBurst;   // the first screen: what it is, and that a tap starts it (the rings in the middle) — words under the painting, not a button on it
               const _heartOn = _fL && favHitAny;
               return (

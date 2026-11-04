@@ -37656,6 +37656,7 @@ Hard requirements:
   const feedSprRef = useRef({id:0, to:0, step:null, done:null});   // the spring a card lands on
   const feedFdCleanRef = useRef(null);   // a landed card's last step (the copy fades once the new painting is on the card)
   const feedNavRef = useRef({});         // the feed's steps, fresh from the last render (a spring ends after it)
+  const feedSigCvRef = useRef(null);     // a 12×20 look at the painting: has the new look reached the canvas yet?
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
   const [feedHeart, setFeedHeart] = useState(0);
@@ -37861,11 +37862,17 @@ Hard requirements:
     S.id=requestAnimationFrame(f); };
   // a card still landing when the finger comes back: it lands at once (and its copy goes), the finger takes the next one
   const _fdFinish = ()=>{ const S=feedSprRef.current; if(S.id){ cancelAnimationFrame(S.id); S.id=0; const d=S.done; S.done=null; try{ S.step && S.step(S.to); }catch(_){} if(d){ try{ d(); }catch(_){} } }
-    const C=feedFdCleanRef.current; if(C){ feedFdCleanRef.current=null; clearTimeout(C.tm); try{ C.fn(); }catch(_){} } };
+    const C=feedFdCleanRef.current; if(C){ feedFdCleanRef.current=null; clearTimeout(C.tm); try{ C.fin && C.fin(); }catch(_){} } };
   // the copy over the card goes once the new painting is on it (the card mirrors the canvas every 110 ms)
-  const _fdLater = (fd, ms, fn)=>{ const C={fn, tm:0}; C.tm=setTimeout(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }, ms); feedFdCleanRef.current=C; };
+  // fn: the step when its time comes · fin: all of it at once (a finger comes back before) — a newer step replaces an older one
+  const _fdLater = (ms, fn, fin)=>{ const P=feedFdCleanRef.current; if(P) clearTimeout(P.tm); const C={tm:0, fin}; C.tm=setTimeout(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }, ms); feedFdCleanRef.current=C; };
   const _fdClear = (fd)=>{ try{ fd.out.style.display='none'; fd.out.style.transform=''; fd.out.style.opacity=''; fd.out.style.transition=''; fd.out.innerHTML=''; delete fd.card.dataset.fdz; fd.card.style.transform=''; fd.card.style.animation=''; }catch(_){} };
-  const _fdUngate = (fd, ms)=>_fdLater(fd, ms, ()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; });
+  // the painting, very small: once it differs clearly from before the change, the new look is on the canvas (at most 1.4 s of waiting)
+  const _fdSig = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const c=feedSigCvRef.current || (feedSigCvRef.current=document.createElement('canvas')); c.width=12; c.height=20;
+    const x=c.getContext('2d', {willReadFrequently:true}); x.drawImage(s,0,0,12,20); return x.getImageData(0,0,12,20).data; }catch(_){ return null; } };
+  const _fdDiff = (a,b)=>{ if(!a || !b || a.length!==b.length) return 999; let t=0; for(let i=0;i<a.length;i+=4) t+=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]); return t/(a.length*.75); };
+  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdDiff(sig0, _fdSig())>12 || performance.now()-t0>1400) fn(); else _fdLater(90, poll, fin); }; _fdLater(110, poll, fin); };
+  const _fdUngate = (fd, sig0)=>{ const f=()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; }; _fdWhenNew(sig0, f, f); };
   const _fdLock = (ax, dir, o)=>{
     const card=feedCardRef.current, out=feedOutRef.current; if(!card || !out || feedFly) return null;
     const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L) return null;
@@ -37877,8 +37884,8 @@ Hard requirements:
     if(fd.mode==='pre'){
       try{ const src=feedCvRef.current; if(src && src.width && src.height){ const c=document.createElement('canvas'); c.width=src.width; c.height=src.height; c.getContext('2d').drawImage(src,0,0); out.appendChild(c); } }catch(_){}
       card.dataset.fdz='1';   // the card's painting waits until the new look is on it
-      const N=feedNavRef.current; let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
-      if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; } else _fdUngate(fd, 240);
+      const N=feedNavRef.current, sig0=_fdSig(); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
+      if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; } else _fdUngate(fd, sig0);
     } else if(fd.mode==='known' && fd.img){ const im=new Image(); im.src=fd.img; im.alt=''; out.appendChild(im); }
     if(fd.mode!=='rub') out.style.display='block';
     _fdSet(fd, 0); return fd; };
@@ -37893,16 +37900,16 @@ Hard requirements:
   // let go: v = the finger's speed along the axis (px/ms)
   const _fdEnd = (fd, v)=>{ v=v||0;
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
-    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.2 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;
+    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
       if(fd.mode==='pre' && go){ fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
       if(fd.mode==='known' && !go){ _fdClear(fd); return; }
       // the copy stays over the card while the look changes under it, then fades
-      fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform='';
+      fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdSig();
       try{ if(fd.mode==='known'){ if(fd.dir>0) N.up(); else N.back(); N.flash(); N.buzz(8); }
         else if(fd.ax==='y') N.back(); else if(fd.dir>0) N.vb(); else N.vn(); }catch(_){}
-      _fdLater(fd, 260, ()=>{ N.draw(); delete fd.card.dataset.fdz; fd.out.style.transition='opacity .18s ease'; fd.out.style.opacity='0';
-        _fdLater(fd, 200, ()=>_fdClear(fd)); });
+      const fin=()=>{ N.draw(); _fdClear(fd); };
+      _fdWhenNew(sig0, ()=>{ N.draw(); delete fd.card.dataset.fdz; fd.out.style.transition='opacity .18s ease'; fd.out.style.opacity='0'; _fdLater(200, ()=>_fdClear(fd), fin); }, fin);
     }); };
   // ⤢ on a playing card: full screen — it plays on, and from now on it is your painting
   // ↓ on a surprise: keep it — it slides down into the Studio as your painting (still painting / playing); nothing loaded yet: the card just gives
