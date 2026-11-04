@@ -15095,17 +15095,22 @@ Hard requirements:
     stTakenRef.current=L.tk; setStTaken(L.tk);
     if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ const g=songSigRef.current; setTimeout(()=>{ try{ applySigRef.current(g); }catch(_){} }, 0); }
   };
-  const _stPrev = ()=>{
-    if(viewMode==='image' || !((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return;
-    const H=stLookHistRef.current; if(H.key!==((info && info.title) || '') || !H.st.length){ _stBuzz(6); return; }
-    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);   // the look comes back as it was: the shuffle must not draw again on the artist change
-    (H.fw || (H.fw=[])).push(_stLookNow()); if(H.fw.length>20) H.fw.shift();
-    _stLookApply(H.st.pop()); setStFavPend(false); _stBuzz(12);
-    _cvSlide(-1);
+  // the name over the painting, for a moment (the same as after every ↑ ↓ ← →)
+  const _stFlashNow = ()=>{
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
   };
-  const _stNext = ()=>{
+  // q: quiet — a finger drags the painting (no slide, no buzz, no name: they come when it lands). True = it changed.
+  const _stPrev = (q)=>{
+    if(viewMode==='image' || !((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
+    const H=stLookHistRef.current; if(H.key!==((info && info.title) || '') || !H.st.length){ if(!q) _stBuzz(6); return false; }
+    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);   // the look comes back as it was: the shuffle must not draw again on the artist change
+    (H.fw || (H.fw=[])).push(_stLookNow()); if(H.fw.length>20) H.fw.shift();
+    _stLookApply(H.st.pop()); setStFavPend(false);
+    if(!q){ _stBuzz(12); _cvSlide(-1); _stFlashNow(); }
+    return true;
+  };
+  const _stNext = (q)=>{
     const _back0 = viewMode!=='image' ? _stLookNow() : null;
     let rolled = false;
     // after ↓: ↑ brings back the painting you came from (as the surprises do) — a new one is drawn only past the last one seen
@@ -15114,10 +15119,8 @@ Hard requirements:
       if(_back0 && H.fw && H.fw.length && _stUpWorks() && (disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
         _stLookApply(H.fw.pop()); H.st.push(_back0); if(H.st.length>20) H.st.shift();
-        setStFavPend(false); _stBuzz(12); _stSlide();
-        if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
-        setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
-        return; } }
+        setStFavPend(false); if(!q){ _stBuzz(12); _stSlide(); _stFlashNow(); }
+        return true; } }
     try{
       if(viewMode==='image'){
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
@@ -15156,12 +15159,11 @@ Hard requirements:
         if(!palGoldRef.current && _fuRollPal(true)) rolled = true;
       }
     }catch(_){}
-    if(!rolled) return;
+    if(!rolled) return false;
     if(_back0){ const H=stLookHistRef.current, k=(info && info.title) || ''; if(H.key!==k){ H.key=k; H.st=[]; } H.st.push(_back0); if(H.st.length>20) H.st.shift(); H.fw=[]; }   // a new one: the way forward starts here
     setStFavPend(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} _tipDone('up');
-    _stBuzz(12); if(viewMode!=='image') _stSlide();   // a picture does not change on ↑ (only who plays it): no slide, no blink
-    if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
-    setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
+    if(!q){ _stBuzz(12); if(viewMode!=='image') _stSlide(); _stFlashNow(); }   // a picture does not change on ↑ (only who plays it): no slide, no blink
+    return true;
   };
   // Compose in the Studio: hold a chord on the painting → it is chosen (gold frame) and the painting shows its notes;
   // ‹ › the chord before / after, ＋ the next chord you play goes after it, Delete takes it out; ✕ / Done → the painting as it was
@@ -15194,12 +15196,11 @@ Hard requirements:
   useEffect(()=>{ if(stChEdit && (!composeMode || !studioFs)) _stChClose();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[composeMode, studioFs]);
-  const _stVariant = (back)=>{
-    if(!((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive)) return;
-    let ok=false; try{ ok = back ? _variantBack() : _variantNext(); }catch(_){} if(!ok) return;
-    setStFavPend(false); _stBuzz(10);
-    if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
-    setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
+  const _stVariant = (back, q)=>{
+    if(!((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
+    let ok=false; try{ ok = back ? _variantBack() : _variantNext(); }catch(_){} if(!ok) return false;
+    setStFavPend(false); if(!q){ _stBuzz(10); _stFlashNow(); }
+    return true;
   };
   // one gesture: up = the next painting (everything else is in ✦ Change). True = a swipe.
   _stSwipeRef.current = (dx, dy, dt)=>{
@@ -15213,6 +15214,51 @@ Hard requirements:
   // … also on the dark around the painting
   const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; _swipeWasGestureRef.current=false; };
   const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return; if(_stSwipeRef.current && _stSwipeRef.current(tt.clientX-st.x, tt.clientY-st.y, Date.now()-st.t)) _swipeWasGestureRef.current=true; };
+  // THE STUDIO IN FULL SCREEN UNDER THE FINGER — as the For You feed (a painting shown as a card keeps its slide): the painting follows
+  // the finger and the next look comes with it. The look is put on the canvas at once; the painting you leave is a copy that rides one
+  // screen before it. Let go: it lands with the finger's own speed — or goes back, and the look you left comes back exactly (the one you
+  // saw waits for the next ↑). Nothing that way (↓ on the first painting, ↑ under a chosen painter, the last variant): it only gives.
+  const _stUndo = (wasUp)=>{ const H=stLookHistRef.current, from = wasUp ? H.st : H.fw; if(!from || !from.length) return false; const to = wasUp ? (H.fw || (H.fw=[])) : H.st;
+    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+    to.push(_stLookNow()); if(to.length>20) to.shift(); _stLookApply(from.pop()); setStFavPend(false); return true; };
+  const stNavRef = useRef({});
+  stNavRef.current = { next:()=>_stNext(true), prev:()=>_stPrev(true), vn:()=>_stVariant(false, true), vb:()=>_stVariant(true, true), undo:(wasUp)=>_stUndo(wasUp),
+    uvn:()=>{ try{ return !!_variantNext(); }catch(_){ return false; } }, uvb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
+    flash:()=>_stFlashNow(), buzz:(ms)=>_stBuzz(ms),
+    hold:()=>{ metaKeepRef.current=true; setFdMeta({cap:_capLines()}); if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey(null); },
+    free:()=>{ metaKeepRef.current=false; setFdMeta(null); } };
+  const _sdOk = ()=> studioFs && stFill && !stripOpen && !studioLive && viewMode!=='image' && !demoReelOn && !recording && !stVidRec;
+  const _sdCss = ()=>{ try{ if(document.getElementById('pf-fd-css')) return; const el=document.createElement('style'); el.id='pf-fd-css'; el.textContent='[data-fdz] canvas:not(.pf-fd-copy){opacity:0!important;transition:none!important}'; document.head.appendChild(el); }catch(_){} };
+  const _sdCopyAt = (fd, off)=>{ const c=fd.copy; if(!c) return; c.style.left=(fd.bx + (fd.ax==='x' ? off : 0))+'px'; c.style.top=(fd.by + (fd.ax==='y' ? off : 0))+'px'; };
+  const _sdClear = (fd)=>{ try{ if(fd.copy && fd.copy.parentNode) fd.copy.parentNode.removeChild(fd.copy); fd.copy=null; fd.card.style.translate=''; delete fd.card.dataset.fdz; }catch(_){} };
+  const _sdLock = (ax, dir)=>{
+    const card=canvasWrapRef.current; if(!card || !_sdOk() || card.style.translate) return null;   // placed elsewhere (the look tray's fit): as before
+    const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L || !r.height) return null;
+    const fd={st:true, ax, dir, L, card, mode:'rub', d:0, copy:null, bx:-card.clientLeft, by:-card.clientTop};
+    _sdCss();
+    // the copy: every canvas of the painting, as it is on screen now
+    let cp=null; try{ const dp=Math.min(2, window.devicePixelRatio||1); cp=document.createElement('canvas'); cp.className='pf-fd-copy'; cp.width=Math.max(1, Math.round(r.width*dp)); cp.height=Math.max(1, Math.round(r.height*dp));
+      const x=cp.getContext('2d'); card.querySelectorAll('canvas').forEach(k=>{ if(k.classList.contains('pf-fd-copy') || !k.width || !k.height) return; const q=k.getBoundingClientRect(); if(!q.width || !q.height) return;
+        const cs=getComputedStyle(k); if(cs.display==='none' || cs.visibility==='hidden' || +cs.opacity===0) return; x.drawImage(k, (q.left-r.left)*dp, (q.top-r.top)*dp, q.width*dp, q.height*dp); });
+      cp.style.cssText='position:absolute;margin:0;width:'+r.width+'px;height:'+r.height+'px;pointer-events:none;z-index:5'; }catch(_){ cp=null; }
+    const N=stNavRef.current, sig0=_fdSig(); N.hold(); card.dataset.fdz='1'; let ok=false;
+    try{ ok = ax==='y' ? (dir>0 ? N.next() : N.prev()) : (dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; }
+    if(!ok){ delete card.dataset.fdz; N.free(); _fdSet(fd, 0); return fd; }   // nothing that way: the painting only gives
+    fd.mode='pre'; if(cp){ fd.copy=cp; card.appendChild(cp); _sdCopyAt(fd, -dir*L); }
+    { const f=()=>{ delete card.dataset.fdz; }; _fdWhenNew(sig0, f, f); }
+    _fdSet(fd, 0); return fd; };
+  const _sdEnd = (fd, v)=>{ v=v||0; const N=stNavRef.current;
+    if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
+    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;
+    _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{
+      if(go){ if(fd.copy && fd.copy.parentNode) fd.copy.parentNode.removeChild(fd.copy); fd.copy=null; fd.card.style.translate=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
+      // back: the copy covers the painting while the look you left comes back under it, then fades
+      fd.card.style.translate=''; _sdCopyAt(fd, 0); fd.card.dataset.fdz='1'; const sig0=_fdSig();
+      try{ if(fd.ax==='y') N.undo(fd.dir>0); else if(fd.dir>0) N.uvb(); else N.uvn(); }catch(_){}
+      setFdMeta(null);
+      const fin=()=>{ _sdClear(fd); metaKeepRef.current=false; };
+      _fdWhenNew(sig0, ()=>{ delete fd.card.dataset.fdz; metaKeepRef.current=false; if(fd.copy){ fd.copy.style.transition='opacity .18s ease'; fd.copy.style.opacity='0'; } _fdLater(200, fin, fin); }, fin);
+    }); };
   // a new piece plays at once (when the sound is already awake); once it plays, the rail goes after a while
   const _stFreshRef = useRef(false); _stFreshRef.current = _stFresh;
   const stAutoAtRef = useRef(0);     // when a timer last started the playback by itself (one start at a time)
@@ -15598,6 +15644,7 @@ Hard requirements:
     _fdSet(fd, 0); return fd; };
   // d: how far the finger went along the axis (px). The card that leaves sits at d, the one that comes at d + dir·L
   const _fdSet = (fd, d)=>{ fd.d=d;
+    if(fd.st){ const v = fd.mode==='rub' ? d : d + fd.dir*fd.L; fd.card.style.translate = fd.ax==='y' ? '0px '+v+'px' : v+'px 0px'; return; }   // the Studio (see _sdLock)
     if(fd.mode==='rub'){ fd.card.style.transform=_fdT(fd.ax, d); return; }
     const lv = fd.mode==='pre' ? fd.out : fd.card, cm = fd.mode==='pre' ? fd.card : fd.out;
     lv.style.transform=_fdT(fd.ax, d); cm.style.transform=_fdT(fd.ax, d + fd.dir*fd.L); };
@@ -16781,7 +16828,7 @@ Hard requirements:
           if(st.S){ const now=performance.now(); st.S.push([now, tt.clientX, tt.clientY]); while(st.S.length>2 && now-st.S[0][0]>100) st.S.shift(); }
           if(!st.ax && st.S && (Math.abs(dx)>10 || Math.abs(dy)>10)){ st.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x';
             if(FC && _fL && !st.b && !metaHoldRef.current.on){ const dir = st.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1), up = st.ax==='y' && dir>0, dn = st.ax==='y' && dir<0;
-              st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null, meta:{t:_fTitle, l:_fLine},
+              st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null, meta:{feed:1, t:_fTitle, l:_fLine},
                 nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? (H.u || null) : undefined)) : undefined }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
@@ -16850,7 +16897,7 @@ Hard requirements:
             </div>
             {/* the home is the Studio's screen (the mockup): the painting is the screen; under it the song and ♥ · ✦ Change · share */}
             {(()=>{
-              const _mt = fdMeta ? fdMeta.t : (FC ? _fTitle : ttl), _ml = fdMeta ? fdMeta.l : (FC ? _fLine : line);
+              const _fz = fdMeta && fdMeta.feed ? fdMeta : null, _mt = _fz ? _fz.t : (FC ? _fTitle : ttl), _ml = _fz ? _fz.l : (FC ? _fLine : line);
               const _sTap = _smp && !FC && !feedFly && !feedBurst;   // the first screen: what it is, and that a tap starts it (the rings in the middle) — words under the painting, not a button on it
               const _heartOn = _fL && favHitAny;
               return (
@@ -18661,7 +18708,7 @@ Hard requirements:
             {((!_live && (_ttl || _stEmpty)) || (_live && !composeMode && !micActive && chords.length>0 && !(micSong && micSong.phase==='reading'))) && (<div className={'pf-st-meta'+(((metaHide && !_stEmpty) || stTip==='chg' || stTip==='fav')?' hide':'')}>
               {_stEmpty ? (<div className="pf-st-meta-e">{_stT('chEmpty')}</div>) : (<>
                 <div className="pf-st-meta-t">{_live ? (_stT('micTake')+(micTakeAt ? ' '+(d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))(new Date(micTakeAt)) : '')) : (_ttl.charAt(0).toUpperCase()+_ttl.slice(1))}</div>
-                <div ref={stCapLinesRef}>{_capLines()}</div>
+                <div ref={stCapLinesRef}>{(fdMeta && fdMeta.cap) ? fdMeta.cap : _capLines()}</div>
               </>)}
             </div>)}
             <div className="pf-st-acts">
@@ -19047,9 +19094,11 @@ Hard requirements:
           // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
           // is bound to the image — no next style to swipe to). Ignore multi-touch.
           if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
+          { const o=_swipeStartRef.current; if(o && o.fd){ _swipeStartRef.current=null; _sdEnd(o.fd, 0); return; } }   // a second finger: the drag lets go
+          _fdFinish();   // a painting still landing lands at once — the finger takes the next one
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
-          _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now() };
+          _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now(), S:[[performance.now(), tt.clientX, tt.clientY]], ax:null, fd:null };
           _swipeWasGestureRef.current = false;
         }}
         onTouchMove={e=>{
@@ -19065,13 +19114,20 @@ Hard requirements:
             _swipeWasGestureRef.current = true;
           }
           if(studioFs && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 1.2){ _swipeWasGestureRef.current = true; }
+          // full screen in the Studio: the painting under the finger (_sdLock) — the way is decided once the finger has moved 10 px
+          if(studioFs && s.S){ const now=performance.now(); s.S.push([now, tt.clientX, tt.clientY]); while(s.S.length>2 && now-s.S[0][0]>100) s.S.shift();
+            if(!s.ax && (Math.abs(dx)>10 || Math.abs(dy)>10)){ s.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x'; if(!_holdingRef.current && e.touches.length===1) s.fd = _sdLock(s.ax, s.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1)); if(s.fd){ _swipeWasGestureRef.current = true; _holdCancel(); } }
+            if(s.fd) _fdMove(s.fd, s.ax==='y' ? dy : dx); }
         }}
-        onTouchCancel={()=>{ _holdEnd(); }}
+        onTouchCancel={()=>{ _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0); } }}
         onTouchEnd={e=>{
           _holdEnd();
           if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
+          if(s.fd){ _swipeWasGestureRef.current = true; const S=s.S||[], a=S[0], z=S[S.length-1], now=performance.now(); let v=0;   // the finger's speed in its last 100 ms (none if it stopped before it lifted)
+            if(a && z && z[0]>a[0] && now-z[0]<80) v = s.ax==='y' ? (z[2]-a[2])/(z[0]-a[0]) : (z[1]-a[1])/(z[0]-a[0]);
+            _sdEnd(s.fd, v); return; }
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
           if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x, dt = Date.now() - s.t;
