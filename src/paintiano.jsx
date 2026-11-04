@@ -26515,7 +26515,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){}
       return;
     }
-    if(jamAll){ const keep=style!==null ? style : (painterStage.find(_isFam) || null); setJamAll(false); setStyle(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
+    if(jamAll){ const keep=style!==null ? style : (painterStage.find(_isFam) || null); setJamAll(false); setStyle(null); setPainterStage(p=>p.length?[]:p); const ix=_shuffleIndexFor(keep); if(ix>=0){ setShuffleArtistIndex(ix); _artQuiet(keep==='mosaic' ? '' : keep); } }   // the stage goes in the same step: the leader stays on screen
     setJamOn(false);
   };
   // Ensemble ALL, chip tap = pin toggle. Pinning a painter not on stage seats it

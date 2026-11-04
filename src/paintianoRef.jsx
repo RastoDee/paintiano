@@ -26146,7 +26146,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _stT = (k)=>{ const d=STUDIO_I18N[lang]||STUDIO_I18N.EN; return d[k]!==undefined ? d[k] : STUDIO_I18N.EN[k]; };
   // the pin hints name the Atelier's Next button; in the Studio that is ↑ on the painting (the quotes around the button's name go with it)
   const _pinTxt = (x)=> studioFs ? String(x).replace(/[„“"«「]\s*\{next\}\s*[“”"»」]/g,'{next}').replace('{next}', _stT('upOnP')) : String(x).replace('{next}', t('next'));
-  const _painterLabel = (k)=>{ if(!k||k==='mosaic') return t('mosaicStyle'); if(k==='notes') return t('notesStyle'); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
+  const _painterLabel = (k)=>{ const _u=(x)=>x ? x.charAt(0).toLocaleUpperCase()+x.slice(1) : x; if(!k||k==='mosaic') return _u(t('mosaicStyle')); if(k==='notes') return _u(t('notesStyle')); const f=STYLE_INSPIRED[k]||k; return _ARTIST_SHORT[f]||f; };
   const _compSep = ()=>{ try{ const J=globalThis.__COMP_JAM_STYLE; const ks=[imgComposer, ...composerStage].filter(Boolean).join(); return (J && J.sig===ks && J.style==='E') ? ' \u00d7 ' : ' \u2194 '; }catch(_){ return ' \u2194 '; } };   // E = one composer bred from them (×), A = they trade phrases (↔)
   const _stageNames = (kind)=> kind==='art'
     ? _jamStage().map(_painterLabel).join(' × ')
@@ -26515,7 +26515,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setJamOn(true); try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true}); }catch(_){}
       return;
     }
-    if(jamAll){ const keep=style!==null ? style : (painterStage.find(_isFam) || null); setJamAll(false); setStyle(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
+    if(jamAll){ const keep=style!==null ? style : (painterStage.find(_isFam) || null); setJamAll(false); setStyle(null); setPainterStage(p=>p.length?[]:p); const ix=_shuffleIndexFor(keep); if(ix>=0){ setShuffleArtistIndex(ix); _artQuiet(keep==='mosaic' ? '' : keep); } }   // the stage goes in the same step: the leader stays on screen
     setJamOn(false);
   };
   // Ensemble ALL, chip tap = pin toggle. Pinning a painter not on stage seats it
