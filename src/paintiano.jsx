@@ -39391,7 +39391,7 @@ Hard requirements:
           mood:{sel:'.pf-moodtile', label:_sent(t('moodHowFeel')), g:'#f0d78a,#d6b25c', c:'#f0d78a', d:hasMoodDraft, p:(<path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/>)},
           compose:{sel:'.pf-compose', label:_sent(t('compose')), g:'#8fd6a4,#3fb37a', c:'#8fd6a4', d:hasComposeDraft, p:(<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8"/></>)},
           mic:{sel:'.pf-mic', label:_sent(t('mic')), g:'#ff9ec0,#ff5a8a', c:'#ff9ec0', d:hasMicDraft, p:(<><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></>)},
-          mfi:{sel:'[data-pf="mfi"]', label:_sent(t('imgMood')||'mood from image'), g:'#cdb2ff,#8c5cff', c:'#cdb2ff', d:hasMfiDraft, off:!aiLockedMode('mfi') && (!aiUsable || imgAiBusy), p:(<><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></>)},
+          mfi:{sel:'[data-pf="mfi"]', label:_sent(t('imgMood')||'mood from image'), g:'#cdb2ff,#8c5cff', c:'#cdb2ff', d:hasMfiDraft, off:(!aiUsable || imgAiBusy), p:(<><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></>)},
         };
         const ORDER = ['music','image','mfi','mood','compose','mic'];
         const _tap = (k)=>{ const el=document.querySelector(SRC[k].sel); if(el && !el.disabled) el.click(); };
@@ -39557,7 +39557,7 @@ Hard requirements:
               const _go = (k)=>()=>{ if(SRC[k].off) return; setStChg(null); const on=_on(k), back=!!SRC[k].d && !on;
                 if(FC){ _feedExit(); setTimeout(()=>{ const T=feedTileRef.current; if(T){ if(back) T.t(k); else T.f(k); } }, 120); return; }
                 if(back) _tap(k); else _fresh(k); };
-              const _row = (k, t1, s1)=>({k, ic:_sv(SRC[k].p, 20), g:SRC[k].g, t:t1, s:s1, lk:k==='mfi' && aiLockedMode('mfi'), ok:!SRC[k].off, dot:!!SRC[k].d && !_on(k), go:(k==='mfi' && aiLockedMode('mfi')) ? ()=>{ setStChg(null); setPaywallReason('ai_trial'); } : _go(k)});
+              const _row = (k, t1, s1)=>({k, ic:_sv(SRC[k].p, 20), g:SRC[k].g, t:t1, s:s1, ok:!SRC[k].off, dot:!!SRC[k].d && !_on(k), go:_go(k)});
               const _isImg = !!(FC && FC.kind==='img');
               const rows = {
                 music:[_row('music', _stT('chUp'), _stT('chUpS')), _row('mood', SRC.mood.label, _stT('chMoodS')), _row('compose', SRC.compose.label, _stT('chCompS')), _row('mic', SRC.mic.label, _stT('chMicS'))],
@@ -41431,7 +41431,7 @@ Hard requirements:
               ].concat(_mmOk ? [{k:'mm', ic:_IC_MM(20), g:G.mine, t:_stT('mnSaveM'), s:_stT('miSub').replace(/^[^·]*·\s*/,''), ok:true, go:()=>{ setStChg(null); _openMyMusicSave(); }}] : []),
               image:[
                 {k:'image', ic:IC.image, g:G.image, t:_stT('chImg'), s:_stT('chImgS'), ok:!_lk, go:_src('image', ()=>_stNewSrc('image'))},
-                {k:'mfi', ic:IC.mfi, g:G.mfi, t:_sent(t('imgMood')||'mood from image'), s:_stT('chMfiS'), lk:aiLockedMode('mfi'), ok:!_lk && (aiLockedMode('mfi') || (aiUsable && !imgAiBusy)), go:aiLockedMode('mfi') ? ()=>{ setStChg(null); setPaywallReason('ai_trial'); } : _src('mfi', ()=>_stNewSrc('imgmood'))},
+                {k:'mfi', ic:IC.mfi, g:G.mfi, t:_sent(t('imgMood')||'mood from image'), s:_stT('chMfiS'), ok:!_lk && aiUsable && !imgAiBusy, go:_src('mfi', ()=>_stNewSrc('imgmood'))}   /* no lock here: its sample plays for everyone — the lock is one step in, on your own picture */,
               ].concat(_miOk ? [{k:'mi', ic:_IC_MI(20), g:G.mine, t:_stT('mnSaveI'), s:_stT('miSub').replace(/^[^·]*·\s*/,''), ok:true, go:()=>{ setStChg(null); _myImgSave(); }}] : []),
               paint:[
                 {k:'look', ic:IC.look, g:G.paint, t:_img ? _stT('chLookSi') : _stT('look'), s:_img ? '' : _stT('chLookS'), ok:_stHasArt || _live, go:()=>{ setStChg(null); setStripOpen(true); }},
