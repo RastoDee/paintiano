@@ -2402,6 +2402,13 @@ const STUDIO_HOME_CSS = `
 /* the surprise lifts a little: the next one waits under it (a vertical feed's own nudge — no button, no text to read) */
 .pf-st-home .pf-sh-stage{--pk:min(26vh,220px)}
 .pf-st-home .pf-sh-card{will-change:transform;backface-visibility:hidden}
+/* the feed under the finger: the other card (a copy of the painting you leave, or the picture of the one you go to) */
+.pf-st-home .pf-sh-dragout{position:absolute;inset:0;z-index:2;display:none;overflow:hidden;background:#04040a;pointer-events:none;will-change:transform;backface-visibility:hidden}
+.pf-st-home .pf-sh-dragout img,.pf-st-home .pf-sh-dragout canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.pf-st-home .pf-sh-live{transition:opacity .2s ease}
+/* the finger always lands on the card itself: a painting swapped under it (a new card) must not take the drag's touches with it */
+.pf-st-home .pf-sh-card *{pointer-events:none}
+.pf-st-home .pf-sh-card[data-fdz] .pf-sh-live{opacity:0;transition:none}
 .pf-st-home .pf-sh-next{position:absolute;left:10px;right:10px;bottom:0;height:calc(var(--pk) - 12px);z-index:0;overflow:hidden;border-radius:20px 20px 0 0;background:#0d0b16;pointer-events:none;visibility:hidden}
 .pf-st-home .pf-sh-next.on{visibility:visible}
 .pf-st-home .pf-sh-next img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 22%}
@@ -15345,6 +15352,12 @@ Hard requirements:
   const feedTokRef = useRef(0);       // bumped when a feed piece is loaded or stopped — a late retry only starts the piece it was for  // {t, title}: start the piece once it is in
   const feedStepsRef = useRef([]);    // the fixed opening: 'mosaic', 'kandinsky', 'sig' — then the shuffle
   const feedCvRef = useRef(null);
+  const feedCardRef = useRef(null);      // the card on top: it follows the finger
+  const feedOutRef = useRef(null);       // the other card while a finger drags: a copy of the painting you leave, or the picture of the one you go to
+  const feedSprRef = useRef({id:0, to:0, step:null, done:null});   // the spring a card lands on
+  const feedFdCleanRef = useRef(null);   // a landed card's last step (the copy fades once the new painting is on the card)
+  const feedNavRef = useRef({});         // the feed's steps, fresh from the last render (a spring ends after it)
+  const feedSigCvRef = useRef(null);     // a 12×20 look at the painting: has the new look reached the canvas yet?
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
   const [feedHeart, setFeedHeart] = useState(0);
@@ -15488,7 +15501,7 @@ Hard requirements:
     if(arc) setFeedIntro({k:'m', t:Date.now()}); else _feedFlashNow();
     _feedHintBump();
   };
-  const _feedUp = (cur)=>{
+  const _feedUp = (cur, q)=>{   // q: quiet — a finger dragged the card here (no fly, no flash, no buzz: they come when it lands)
     if(feedFly) return;
     if(feedAt>=0 && !feedUpDone){ setFeedUpDone(true); setFeedUpCue(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} }
     setFeedIntro(null);
@@ -15499,18 +15512,17 @@ Hard requirements:
     // the card that leaves keeps its painting and its look
     const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id;
     setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0, pu:null} : c));
-    setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'up'});
-    setTimeout(()=>setFeedFly(null), 340);
-    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedCards(cs=>cs.map(c=>c.id===nx.id ? {...c, dir:'u'} : c)); setFeedAt(feedAt+1); _feedGo(nx); }
+    if(!q){ setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'up'}); setTimeout(()=>setFeedFly(null), 340); }
+    if(feedAt < feedCards.length-1){ const nx=feedCards[feedAt+1]; setFeedCards(cs=>cs.map(c=>c.id===nx.id ? {...c, dir:q ? 'none' : 'u'} : c)); setFeedAt(feedAt+1); _feedGo(nx); }
     else {
       const piece=feedCards[feedAt].piece, kind=feedCards[feedAt].kind;
-      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'' };
+      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'', ...(q ? {dir:'none'} : {}) };
       setFeedCards(cs=>{ const arr=cs.concat([c]); return arr.length>10 ? arr.slice(arr.length-10) : arr; });
       setFeedAt(Math.min(10, feedCards.length+1)-1);
       if(feedLoaded===null) _feedLoad(piece, kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}, kind); else _feedNextLook();
       _feedHintBump();
     }
-    _feedFlashNow(); _stBuzz(8);
+    if(!q){ _feedFlashNow(); _stBuzz(8); }
     // paused with a tap, then up: the next painting plays (as the next video does)
     if(holdPausedRef.current && feedLoaded!==null) setTimeout(()=>{ if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} } }, 220);
   };
@@ -15518,21 +15530,88 @@ Hard requirements:
   const _feedIsLoaded = (c)=> !!c && feedLoaded!==null && (c.kind==='img' ? feedLoaded==='i'+c.piece : feedLoaded===c.piece);
   const _feedGo = (c)=>{ if(_feedIsLoaded(c)){ if(c.sel) _feedApply(c.sel); return; } _feedLoad(c.piece, c.sel || (c.kind==='img' ? {img:true} : {sig:true}), c.kind); };
   // ↓ during a surprise: back, as on TikTok — the previous surprise; from the first one your own painting (the tap goes on with it)
-  const _feedBack = ()=>{
+  const _feedBack = (q)=>{   // q: quiet (a finger dragged it)
     if(feedAt<0 || feedFly) return;
     if(feedAt>0){ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id, idP=feedCards[feedAt-1].id;
-      setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c.id===idP ? {...c, dir:'d'} : c));   // it comes back from above
-      setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
-      const pv=feedCards[feedAt-1]; setFeedAt(feedAt-1); setFeedIntro(null); _feedGo(pv); _feedFlashNow(); _stBuzz(8);
+      setFeedCards(cs=>cs.map(c=>c.id===id0 ? {...c, u:u0||c.u, sel:sel0, l:l0} : c.id===idP ? {...c, dir:q ? 'none' : 'd'} : c));   // it comes back from above
+      if(!q){ setFeedFly({k:Date.now(), u:u0, t:_feedTitle(feedCards[feedAt]), l:l0, dir:'down'}); setTimeout(()=>setFeedFly(null), 340); }
+      const pv=feedCards[feedAt-1]; setFeedAt(feedAt-1); setFeedIntro(null); _feedGo(pv); if(!q){ _feedFlashNow(); _stBuzz(8); }
       if(holdPausedRef.current && feedLoaded!==null) setTimeout(()=>{ if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} } }, 220);
       return; }
     const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music'), own = !!mine && (mine==='image' ? hasImageDraft : hasMusicDraft);
     if(!own && !homeArt){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }   // nothing of yours yet: the card just gives
     // ↑ again brings back these same surprises, from this card (as ↓ then ↑ does between cards) — not a new piece
     try{ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(); feedResumeRef.current = { kind:_feedKind(), cards:feedCards.map(x=>x.id===c.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null, dir:'u'} : x) }; }catch(_){ feedResumeRef.current=null; }
-    setFeedIntro(null); setFeedFly({k:Date.now(), u:_feedSnap(), t:_feedTitle(c), l:'', dir:'down'}); setTimeout(()=>setFeedFly(null), 340);
-    _feedExit(); if(own) setHomeSide(mine); _stBuzz(8);
+    setFeedIntro(null); if(!q){ setFeedFly({k:Date.now(), u:_feedSnap(), t:_feedTitle(c), l:'', dir:'down'}); setTimeout(()=>setFeedFly(null), 340); }
+    _feedExit(); if(own) setHomeSide(mine); if(!q) _stBuzz(8);
   };
+  // THE FEED UNDER THE FINGER (as IG / TikTok): the card follows the finger and the next one comes with it; let go and it lands
+  // with the finger's own speed (a spring) — or, not far enough and not thrown, it goes back. How the card you go to is shown:
+  //  'pre'   the next look is put on the card at once (↑ to a new look, ← →): it paints there while you drag, the card you leave is a copy;
+  //          going back undoes it (↓, or the variant back) — and the same look waits for the next ↑
+  //  'known' the card you go to is a picture already (one seen before, the home card, a picture's own image): it is put on when it lands
+  //  'rub'   nothing that way: the card only gives
+  feedNavRef.current = { up:()=>_feedUp(null, true), back:()=>_feedBack(true), vn:()=>{ try{ return !!_variantNext(); }catch(_){ return false; } }, vb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
+    flash:()=>_feedFlashNow(), buzz:(ms)=>_stBuzz(ms), draw:()=>{ try{ feedDrawRef.current(); }catch(_){} } };
+  const _fdT = (ax, v)=> ax==='y' ? 'translate3d(0,'+v+'px,0)' : 'translate3d('+v+'px,0,0)';
+  const _fdSpring = (from, v0, to, step, done)=>{ const S=feedSprRef.current; if(S.id) cancelAnimationFrame(S.id);
+    let x=from, v=Math.max(-8000, Math.min(8000, v0||0)), last=performance.now(); const k=320, c=2*0.92*Math.sqrt(k);
+    S.to=to; S.step=step; S.done=done;
+    const f=(t)=>{ const dt=Math.min(.034, Math.max(0, (t-last)/1000)); last=t; for(let i=0;i<3;i++){ const h=dt/3, a=-k*(x-to)-c*v; v+=a*h; x+=v*h; }
+      if(Math.abs(x-to)<.6 && Math.abs(v)<15){ S.id=0; const d=S.done; S.done=null; step(to); if(d) d(); return; }
+      step(x); S.id=requestAnimationFrame(f); };
+    S.id=requestAnimationFrame(f); };
+  // a card still landing when the finger comes back: it lands at once (and its copy goes), the finger takes the next one
+  const _fdFinish = ()=>{ const S=feedSprRef.current; if(S.id){ cancelAnimationFrame(S.id); S.id=0; const d=S.done; S.done=null; try{ S.step && S.step(S.to); }catch(_){} if(d){ try{ d(); }catch(_){} } }
+    const C=feedFdCleanRef.current; if(C){ feedFdCleanRef.current=null; clearTimeout(C.tm); try{ C.fin && C.fin(); }catch(_){} } };
+  // the copy over the card goes once the new painting is on it (the card mirrors the canvas every 110 ms)
+  // fn: the step when its time comes · fin: all of it at once (a finger comes back before) — a newer step replaces an older one
+  const _fdLater = (ms, fn, fin)=>{ const P=feedFdCleanRef.current; if(P) clearTimeout(P.tm); const C={tm:0, fin}; C.tm=setTimeout(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }, ms); feedFdCleanRef.current=C; };
+  const _fdClear = (fd)=>{ try{ fd.out.style.display='none'; fd.out.style.transform=''; fd.out.style.opacity=''; fd.out.style.transition=''; fd.out.innerHTML=''; delete fd.card.dataset.fdz; fd.card.style.transform=''; fd.card.style.animation=''; }catch(_){} };
+  // the painting, very small: once it differs clearly from before the change, the new look is on the canvas (at most 1.4 s of waiting)
+  const _fdSig = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const c=feedSigCvRef.current || (feedSigCvRef.current=document.createElement('canvas')); c.width=12; c.height=20;
+    const x=c.getContext('2d', {willReadFrequently:true}); x.drawImage(s,0,0,12,20); return x.getImageData(0,0,12,20).data; }catch(_){ return null; } };
+  const _fdDiff = (a,b)=>{ if(!a || !b || a.length!==b.length) return 999; let t=0; for(let i=0;i<a.length;i+=4) t+=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]); return t/(a.length*.75); };
+  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdDiff(sig0, _fdSig())>12 || performance.now()-t0>1400) fn(); else _fdLater(90, poll, fin); }; _fdLater(110, poll, fin); };
+  const _fdUngate = (fd, sig0)=>{ const f=()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; }; _fdWhenNew(sig0, f, f); };
+  const _fdLock = (ax, dir, o)=>{
+    const card=feedCardRef.current, out=feedOutRef.current; if(!card || !out || feedFly) return null;
+    const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L) return null;
+    const fd={ax, dir, L, card, out, mode:'rub', d:0};
+    if(ax==='y' && dir>0){ if(o.nextU!==undefined){ fd.mode='known'; fd.img=o.nextU; } else if(o.img){ fd.mode='known'; fd.img=o.picU || null; } else fd.mode='pre'; }
+    else if(ax==='y'){ if(o.prevU!==undefined){ fd.mode='known'; fd.img=o.prevU; } }
+    else { if(o.img) return null; fd.mode='pre'; }
+    card.style.animation='none'; out.innerHTML=''; out.style.opacity=''; out.style.transition='';
+    if(fd.mode==='pre'){
+      try{ const src=feedCvRef.current; if(src && src.width && src.height){ const c=document.createElement('canvas'); c.width=src.width; c.height=src.height; c.getContext('2d').drawImage(src,0,0); out.appendChild(c); } }catch(_){}
+      card.dataset.fdz='1';   // the card's painting waits until the new look is on it
+      const N=feedNavRef.current, sig0=_fdSig(); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
+      if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; } else _fdUngate(fd, sig0);
+    } else if(fd.mode==='known' && fd.img){ const im=new Image(); im.src=fd.img; im.alt=''; out.appendChild(im); }
+    if(fd.mode!=='rub') out.style.display='block';
+    _fdSet(fd, 0); return fd; };
+  // d: how far the finger went along the axis (px). The card that leaves sits at d, the one that comes at d + dir·L
+  const _fdSet = (fd, d)=>{ fd.d=d;
+    if(fd.mode==='rub'){ fd.card.style.transform=_fdT(fd.ax, d); return; }
+    const lv = fd.mode==='pre' ? fd.out : fd.card, cm = fd.mode==='pre' ? fd.card : fd.out;
+    lv.style.transform=_fdT(fd.ax, d); cm.style.transform=_fdT(fd.ax, d + fd.dir*fd.L); };
+  const _fdMove = (fd, raw)=>{ const L=fd.L, rb=(x)=>(1-1/(x*0.55/L+1))*L;
+    if(fd.mode==='rub'){ _fdSet(fd, Math.sign(raw)*rb(Math.abs(raw))); return; }
+    const d = fd.dir>0 ? Math.max(-L, Math.min(0, raw)) : Math.min(L, Math.max(0, raw)); _fdSet(fd, d); };
+  // let go: v = the finger's speed along the axis (px/ms)
+  const _fdEnd = (fd, v)=>{ v=v||0;
+    if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
+    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
+    _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
+      if(fd.mode==='pre' && go){ fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
+      if(fd.mode==='known' && !go){ _fdClear(fd); return; }
+      // the copy stays over the card while the look changes under it, then fades
+      fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdSig();
+      try{ if(fd.mode==='known'){ if(fd.dir>0) N.up(); else N.back(); N.flash(); N.buzz(8); }
+        else if(fd.ax==='y') N.back(); else if(fd.dir>0) N.vb(); else N.vn(); }catch(_){}
+      const fin=()=>{ N.draw(); _fdClear(fd); };
+      _fdWhenNew(sig0, ()=>{ N.draw(); delete fd.card.dataset.fdz; fd.out.style.transition='opacity .18s ease'; fd.out.style.opacity='0'; _fdLater(200, ()=>_fdClear(fd), fin); }, fin);
+    }); };
   // ⤢ on a playing card: full screen — it plays on, and from now on it is your painting
   // ↓ on a surprise: keep it — it slides down into the Studio as your painting (still painting / playing); nothing loaded yet: the card just gives
   const _feedTake = ()=>{
@@ -16685,12 +16764,28 @@ Hard requirements:
           R.tm=setTimeout(()=>{ R.tm=null; if(!FC){ if(_smp){ _feedStart(null, true); return; } if(_canPlay) _play(); return; } _fBtn(); }, 300);   // one tap on a surprise: pause / play (⤢ in its corner is full screen)
         };
         const _fTS = (e)=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }
+          { const o=feedTouchRef.current; if(o && o.fd){ feedTouchRef.current=null; _fdEnd(o.fd, 0); return; } }   // a second finger: the drag lets go
+          _fdFinish();   // a card still landing lands at once — the finger takes the next one
           { const MH=metaHoldRef.current; if(MH.tm) clearTimeout(MH.tm); MH.tm=null; MH.on=false; if(FC && _fL && e.touches.length===1) MH.tm=setTimeout(()=>{ MH.tm=null; MH.on=true; setMetaPoke(n=>n+1); _stBuzz(6); }, 420); }   // hold: the song and its painter, it plays on
-          if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button'))}; };
-        const _fTM = (e)=>{ const st=feedTouchRef.current, tt=e.touches && e.touches[0]; if(!st || !tt) return; if(Math.abs(tt.clientX-st.x)>10 || Math.abs(tt.clientY-st.y)>10){ const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } };
+          if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button')), S:[[performance.now(), tt.clientX, tt.clientY]], ax:null, fd:null}; };
+        // the card under the finger (see _fdLock): the way it goes is decided once the finger has moved 10 px
+        const _canHome = (()=>{ const c=FC; if(!c) return false; const own = c.kind==='img' ? hasImageDraft : hasMusicDraft; return !!own || !!homeArt; })();
+        const _fTM = (e)=>{ const st=feedTouchRef.current, tt=e.touches && e.touches[0]; if(!st || !tt) return; const dx=tt.clientX-st.x, dy=tt.clientY-st.y;
+          if(Math.abs(dx)>10 || Math.abs(dy)>10){ const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } }
+          if(st.S){ const now=performance.now(); st.S.push([now, tt.clientX, tt.clientY]); while(st.S.length>2 && now-st.S[0][0]>100) st.S.shift(); }
+          if(!st.ax && st.S && (Math.abs(dx)>10 || Math.abs(dy)>10)){ st.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x';
+            if(FC && _fL && !st.b && !metaHoldRef.current.on){ const dir = st.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1), up = st.ax==='y' && dir>0, dn = st.ax==='y' && dir<0;
+              st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null,
+                nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
+                prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? (H.u || null) : undefined)) : undefined }); } }
+          if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
+        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0); };
         // one gesture: up = the next painting; everything else is a tap or a button (a hold shows the song, never pauses)
         const _fTE = (e)=>{ { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } if(MH.on){ MH.on=false; feedTouchRef.current=null; setMetaPoke(n=>n+1); return; } }
           const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
+          if(st.fd){ const S=st.S||[], a=S[0], z=S[S.length-1], now=performance.now(); let v=0;   // the finger's speed in its last 100 ms (none if it stopped before it lifted)
+            if(a && z && z[0]>a[0] && now-z[0]<80) v = st.ax==='y' ? (z[2]-a[2])/(z[0]-a[0]) : (z[1]-a[1])/(z[0]-a[0]);
+            _fdEnd(st.fd, v); return; }
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }
           if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedBack(); return; }   // ↓ back, as on TikTok: the surprise before
@@ -16707,7 +16802,8 @@ Hard requirements:
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/gallery-'+['05-kusama','02-mondrian','09-vasarely','07-afklint','06-stella','08-samfrancis'][feedCards.length%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
-              <div className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE}>
+              <div ref={feedOutRef} className="pf-sh-dragout" aria-hidden="true"/>
+              <div ref={feedCardRef} className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE} onTouchCancel={_fTC}>
                 {_smp && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
                 {feedBurst && (<span key={feedBurst.k} className="pf-sh-burst" aria-hidden="true" style={{left:feedBurst.x, top:feedBurst.y}}>{Array.from({length:12},(_,i)=>{ const a=i/12*Math.PI*2, d=46+((i*37)%5)*9; return (<i key={i} style={{'--dx':Math.round(Math.cos(a)*d)+'px','--dy':Math.round(Math.sin(a)*d)+'px', animationDelay:((i%3)*25)+'ms'}}/>); })}</span>)}
                 {!!FC && _fTapCue && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
