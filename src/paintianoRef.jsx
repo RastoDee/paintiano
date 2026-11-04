@@ -37533,14 +37533,14 @@ Hard requirements:
   const _sdOk = ()=> studioFs && stFill && !stripOpen && !studioLive && viewMode!=='image' && !demoReelOn && !recording && !stVidRec;
   const _sdCss = ()=>{ try{ if(document.getElementById('pf-fd-css')) return; const el=document.createElement('style'); el.id='pf-fd-css'; el.textContent='[data-fdz] canvas:not(.pf-fd-copy){opacity:0!important;transition:none!important}'; document.head.appendChild(el); }catch(_){} };
   const _sdCopyAt = (fd, off)=>{ const c=fd.copy; if(!c) return; c.style.left=(fd.bx + (fd.ax==='x' ? off : 0))+'px'; c.style.top=(fd.by + (fd.ax==='y' ? off : 0))+'px'; };
-  const _sdClear = (fd)=>{ try{ if(fd.copy && fd.copy.parentNode) fd.copy.parentNode.removeChild(fd.copy); fd.copy=null; fd.card.style.translate=''; delete fd.card.dataset.fdz; }catch(_){} };
+  const _sdClear = (fd)=>{ try{ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdz; }catch(_){} };
   const _sdLock = (ax, dir)=>{
     const card=canvasWrapRef.current; if(!card || !_sdOk() || card.style.translate) return null;   // placed elsewhere (the look tray's fit): as before
     const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L || !r.height) return null;
     const fd={st:true, ax, dir, L, card, mode:'rub', d:0, copy:null, bx:-card.clientLeft, by:-card.clientTop};
     _sdCss(); try{ card.querySelectorAll('.pf-fd-copy').forEach(n=>n.remove()); }catch(_){}
     // the copy: every canvas of the painting, as it is on screen now
-    let cp=null; try{ const dp=Math.min(2, window.devicePixelRatio||1); cp=document.createElement('canvas'); cp.className='pf-fd-copy'; cp.width=Math.max(1, Math.round(r.width*dp)); cp.height=Math.max(1, Math.round(r.height*dp));
+    let cp=null; try{ const dp=Math.min(1.5, window.devicePixelRatio||1); cp=_fdCopyCv(Math.round(r.width*dp), Math.round(r.height*dp));
       const x=cp.getContext('2d'); card.querySelectorAll('canvas').forEach(k=>{ if(k.classList.contains('pf-fd-copy') || !k.width || !k.height) return; const q=k.getBoundingClientRect(); if(!q.width || !q.height) return;
         const cs=getComputedStyle(k); if(cs.display==='none' || cs.visibility==='hidden' || +cs.opacity===0) return; x.drawImage(k, (q.left-r.left)*dp, (q.top-r.top)*dp, q.width*dp, q.height*dp); });
       cp.style.cssText='position:absolute;margin:0;width:'+r.width+'px;height:'+r.height+'px;pointer-events:none;z-index:5'; }catch(_){ cp=null; }
@@ -37554,7 +37554,7 @@ Hard requirements:
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{
-      if(go){ if(fd.copy && fd.copy.parentNode) fd.copy.parentNode.removeChild(fd.copy); fd.copy=null; fd.card.style.translate=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
+      if(go){ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
       // back: the copy covers the painting while the look you left comes back under it, then fades
       fd.card.style.translate=''; _sdCopyAt(fd, 0); fd.card.dataset.fdz='1'; const sig0=_fdSig();
       try{ if(fd.ax==='y') N.undo(fd.dir>0); else if(fd.dir>0) N.uvb(); else N.uvn(); }catch(_){}
@@ -37711,6 +37711,12 @@ Hard requirements:
   const feedFdCleanRef = useRef(null);   // a landed card's last step (the copy fades once the new painting is on the card)
   const feedNavRef = useRef({});         // the feed's steps, fresh from the last render (a spring ends after it)
   const feedSigCvRef = useRef(null);     // a 12×20 look at the painting: has the new look reached the canvas yet?
+  // ONE canvas for the copy a drag carries, reused and shrunk after each swipe: iPhone keeps a canvas's memory until it is collected —
+  // a new full-size copy per swipe ran it out, and the copy drew nothing (a black screen while the painting changed)
+  const fdCopyRef = useRef(null);
+  const _fdCopyCv = (w, h)=>{ let c=fdCopyRef.current; if(!c){ c=document.createElement('canvas'); fdCopyRef.current=c; } if(c.parentNode) c.parentNode.removeChild(c);
+    c.width=Math.max(1, w|0); c.height=Math.max(1, h|0); c.className='pf-fd-copy'; c.style.cssText=''; return c; };
+  const _fdCopyFree = ()=>{ const c=fdCopyRef.current; if(!c) return; if(c.parentNode) c.parentNode.removeChild(c); c.width=1; c.height=1; c.style.cssText=''; };
   const feedTouchRef = useRef(null);
   const feedTapRef = useRef({t:0, tm:null});
   const [feedHeart, setFeedHeart] = useState(0);
@@ -37748,7 +37754,7 @@ Hard requirements:
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
   const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
-  const _feedSnap = ()=>{ try{ if(viewMode==='image' && feedCvRef.current && feedCvRef.current.width){ return feedCvRef.current.toDataURL('image/jpeg',0.82); } const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const W=Math.min(720, s.width), Hh=Math.round(s.height*W/s.width); const c=document.createElement('canvas'); c.width=W; c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh); x.drawImage(s,0,0,W,Hh); return c.toDataURL('image/jpeg',0.8); }catch(_){ return null; } };
+  const _feedSnap = ()=>{ try{ if(viewMode==='image' && feedCvRef.current && feedCvRef.current.width){ return feedCvRef.current.toDataURL('image/jpeg',0.82); } const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const W=Math.min(720, s.width), Hh=Math.round(s.height*W/s.width); const c=document.createElement('canvas'); c.width=W; c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh); x.drawImage(s,0,0,W,Hh); const u=c.toDataURL('image/jpeg',0.8); c.width=0; c.height=0; return u; }catch(_){ return null; } };
   // the live canvas, mirrored into the card (cover)
   const _feedDraw = ()=>{ try{ const c=feedCvRef.current, s=canvasRef.current; if(!c || !s || !s.width || !s.height) return; const w=c.clientWidth, h=c.clientHeight; if(!w || !h) return; const d=Math.min(2, window.devicePixelRatio||1); const W=Math.round(w*d), Hh=Math.round(h*d); if(c.width!==W) c.width=W; if(c.height!==Hh) c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh);
     // a picture: the picture itself, the scan's light over it (screen) — as on the stage
@@ -37922,12 +37928,12 @@ Hard requirements:
   // the copy over the card goes once the new painting is on it (the card mirrors the canvas every 110 ms)
   // fn: the step when its time comes · fin: all of it at once (a finger comes back before) — a newer step replaces an older one
   const _fdLater = (ms, fn, fin)=>{ const P=feedFdCleanRef.current; if(P) clearTimeout(P.tm); const C={tm:0, fin}; C.tm=setTimeout(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }, ms); feedFdCleanRef.current=C; };
-  const _fdClear = (fd)=>{ try{ fd.out.style.display='none'; fd.out.style.transform=''; fd.out.style.opacity=''; fd.out.style.transition=''; fd.out.innerHTML=''; delete fd.card.dataset.fdz; fd.card.style.transform=''; fd.card.style.animation=''; }catch(_){} };
-  // the painting, very small: once it differs clearly from before the change, the new look is on the canvas (at most 1.4 s of waiting)
+  const _fdClear = (fd)=>{ try{ _fdCopyFree(); fd.out.style.display='none'; fd.out.style.transform=''; fd.out.style.opacity=''; fd.out.style.transition=''; fd.out.innerHTML=''; delete fd.card.dataset.fdz; fd.card.style.transform=''; fd.card.style.animation=''; }catch(_){} };
+  // the painting, very small: once it differs clearly from before the change, the new look is on the canvas (at most 0.9 s of waiting)
   const _fdSig = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const c=feedSigCvRef.current || (feedSigCvRef.current=document.createElement('canvas')); c.width=12; c.height=20;
     const x=c.getContext('2d', {willReadFrequently:true}); x.drawImage(s,0,0,12,20); return x.getImageData(0,0,12,20).data; }catch(_){ return null; } };
   const _fdDiff = (a,b)=>{ if(!a || !b || a.length!==b.length) return 999; let t=0; for(let i=0;i<a.length;i+=4) t+=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]); return t/(a.length*.75); };
-  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdDiff(sig0, _fdSig())>12 || performance.now()-t0>1400) fn(); else _fdLater(90, poll, fin); }; _fdLater(110, poll, fin); };
+  const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdDiff(sig0, _fdSig())>12 || performance.now()-t0>900) fn(); else _fdLater(90, poll, fin); }; _fdLater(110, poll, fin); };
   const _fdUngate = (fd, sig0)=>{ const f=()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; }; _fdWhenNew(sig0, f, f); };
   const _fdLock = (ax, dir, o)=>{
     const card=feedCardRef.current, out=feedOutRef.current; if(!card || !out || feedFly) return null;
@@ -37938,7 +37944,7 @@ Hard requirements:
     else { if(o.img) return null; fd.mode='pre'; }
     card.style.animation='none'; out.innerHTML=''; out.style.opacity=''; out.style.transition='';
     if(fd.mode==='pre'){
-      try{ const src=feedCvRef.current; if(src && src.width && src.height){ const c=document.createElement('canvas'); c.width=src.width; c.height=src.height; c.getContext('2d').drawImage(src,0,0); out.appendChild(c); } }catch(_){}
+      try{ const src=feedCvRef.current; if(src && src.width && src.height){ const k=Math.min(1, 1.5*(src.clientWidth||src.width)/src.width), c=_fdCopyCv(Math.round(src.width*k), Math.round(src.height*k)); c.getContext('2d').drawImage(src,0,0,c.width,c.height); out.appendChild(c); } }catch(_){}
       card.dataset.fdz='1';   // the card's painting waits until the new look is on it
       const N=feedNavRef.current, sig0=_fdSig(); N.hold(o.meta); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
       if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; N.free(); } else _fdUngate(fd, sig0);
@@ -37959,7 +37965,7 @@ Hard requirements:
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
-      if(fd.mode==='pre' && go){ fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
+      if(fd.mode==='pre' && go){ _fdCopyFree(); fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
       if(fd.mode==='known' && !go){ _fdClear(fd); return; }
       // the copy stays over the card while the look changes under it, then fades
       fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdSig();
