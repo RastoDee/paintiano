@@ -17279,6 +17279,8 @@ Hard requirements:
                 setMidiBlob(null); setMidiName(''); setAudioBlob(null); setAudioName(''); audioBlobRef.current=null;
                 setLoadedSource(null);
                 setMoodFromImg(false); setImgMoodThumb(null);
+                // the picture (or piece) before it goes too: its image, its name, its sound — the Mic opens on its own canvas
+                stopAll(); setViewMode('paint'); setOriginalImgUrl(null); pixelRef.current=null; setInfo(null); setCompositionName('');
                 setForceSetup(false);
                 // Which preset's canvas to open. Rule:
                 //   • draft in exactly ONE preset → open that one (don't strand it)
