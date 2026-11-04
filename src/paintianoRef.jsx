@@ -25332,7 +25332,7 @@ export default function Paintiano() {
       try { window.posthog && window.posthog.capture('paint_done', { n: chords.length, touch: !!(typeof PF_TOUCH_DEV!=='undefined' && PF_TOUCH_DEV) }); } catch (_) {}
     }
   }, [disp, playing, chords]);
-  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,_setSAI]=useState(0);const setShuffleArtistIndex=(v)=>{ try{ if(window.__pfTrace) console.log('SAI '+(typeof v==='function'?'fn':v)+' '+new Error().stack.split('\n').slice(2,6).map(x=>x.trim()).join(' | ')); }catch(_){} _setSAI(v); };const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
   // ── Lite "Surprise me" shuffle-bags (better perceived randomness) ──────────
   // surpriseArtistBag: a shuffled queue of artist keys; we pop one per tap and
   // only reshuffle once every artist has appeared — so none repeats until all
@@ -38076,7 +38076,6 @@ Hard requirements:
   };
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
-  try{ window.__pfDbg = {style, randomMode, shuffleStyle, lock:mosaicShuffleLock, idx:shuffleArtistIndex, notesMode, stTaken:stTakenRef.current, palGold, art:_artMode, jamOn, sig:sigActive, show:showMode}; window.__pfSet={setStyle,setRandomMode,setNotesMode,setMosaicShuffleLock,setShuffleArtistIndex}; }catch(_){}
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
