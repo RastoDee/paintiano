@@ -1978,13 +1978,15 @@ function computeSongCharacter(chords){
   if(Array.isArray(chords) && chords.length){
     const hit=_songCharCache.get(chords);
     if(hit && hit.n===chords.length) return hit.v;
-    const v=_computeSongCharacter(chords);
+    const v=_computeSongCharacter(chords, _kdR);
     _songCharCache.set(chords,{n:chords.length,v});
     return v;
   }
-  return _computeSongCharacter(chords);
+  return _computeSongCharacter(chords, _kdR);
 }
-function _computeSongCharacter(chords){
+// kdR: the piece's real height (see computeSongCharacter). Passed in — a bare _kdR here would be 02-draw's Kandinsky dice
+// (a function), and the register would come out NaN: every painter that places by it drew nothing.
+function _computeSongCharacter(chords, kdR=0){
   const empty = { energy:0.5, dynRange:0.3, register:0.5, density:0.3, weights:null, tempo:0.5, regularity:0.5, tension:0, contour:0.5 };
   if(!Array.isArray(chords) || chords.length===0) return empty;
   let vSum=0, vN=0, vMin=127, vMax=0, mSum=0, mN=0, nSum=0, nN=0;
@@ -2016,7 +2018,7 @@ function _computeSongCharacter(chords){
   const energy   = Math.max(0, Math.min(1, meanV/127));
   const dynRange = Math.max(0, Math.min(1, (vMax-vMin)/127));
   // MIDI 36 (C2) .. 84 (C6) spans most musical registers; normalise into it.
-  const register = Math.max(0, Math.min(1, (meanM+_kdR-36)/48));
+  const register = Math.max(0, Math.min(1, (meanM+(+kdR||0)-36)/48));
   const density  = Math.max(0, Math.min(1, (meanN-1)/5)); // 1 note → 0, 6+ → 1
   // Per-chord size weight: louder than the mean → bigger; lower (bass) than the
   // mean → bigger; softer/higher → smaller. Kept gentle (±~55%) so phrasing
