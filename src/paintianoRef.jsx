@@ -38094,7 +38094,6 @@ Hard requirements:
   };
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
-  try{ window.__pfDbg = {style, randomMode, shuffleStyle, eff:effectiveStyle, stage:painterStage.slice(), lock:mosaicShuffleLock, idx:shuffleArtistIndex, notesMode, stTaken:stTakenRef.current, art:_artMode, jamOn, jamAll, sig:sigActive, view:viewMode, studioFs}; }catch(_){}
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
