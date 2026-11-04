@@ -5689,6 +5689,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const keyShiftRef = useRef(0);
   keyShiftRef.current = (composeMode || micActive) ? 0 : keyShift;
   const gc = useMemo(()=>_gcMake(mode, tone, activePalette, keyShift),[mode,activePalette,tone,keyShift]);
+  const varyBwOff = _paintModeOf(mode, activePalette)==='bw';   // black and white: a Variation would change only the sound — there is none
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -15012,7 +15013,7 @@ Hard requirements:
     const varyBlocked = composeMode||micPainting||micListening||recording||working;
     if(varyBlocked) return;
     if(!(playing||holdPausedRef.current)) return;   // VARY only while the piece plays: on a stopped canvas it loaded a blank variation
-    if(!varySource||!chords.length){return;}
+    if(!varySource||!chords.length||varyBwOff){return;}
     // ✦ VARIATION = the same painting in another key: the notes stay as they are (so the shapes and their places, the painters'
     // choices, the title), the piece sounds ks semitones away (playNote) in that key's colours (gc). It used to transpose the
     // notes themselves, and a new key moved every shape: two Variations of one picture were two different paintings.
@@ -18926,8 +18927,8 @@ Hard requirements:
         const _img = viewMode==='image' && !moodFromImg;
         const _live = studioLive;
         const _vr = stVidRec || recording;   // a video or the picture's sound is being recorded: the rails rest
-        const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording);
-        const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg));
+        const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording && !varyBwOff);
+        const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg) && !varyBwOff);
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : (()=>{ const x=((info && info.title) || ((compositionName||'').trim()) || ''); return (moodContext || moodFromImg) ? _moodTitleLoc(x, t('moodNames')) : x; })();
         const _loopOk = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)));
         const _morphOk = !_live && !loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && !!currentMood;
@@ -19525,7 +19526,7 @@ Hard requirements:
           // VARY in fullscreen — mood + mood-from-image pieces only (same gate as
           // the dock chip); fullscreen CTAs hide instead of disabling, so it only
           // renders when actually actionable.
-          const showVaryFs = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && varySource && chords.length>0 && (playing||holdPaused) && !(composeMode||micPainting||micListening||recording||working));
+          const showVaryFs = !varyBwOff && !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && varySource && chords.length>0 && (playing||holdPaused) && !(composeMode||micPainting||micListening||recording||working));
           if(!exportReadyFs && !showNextFs && !showNextComposerFs && !showPaletteFs && !showVaryFs && !_stylePillKind && !(showSlideFs && !immersive)) return null;
           return (
             <div className="pf-fs-controls" style={{position:'fixed',zIndex:10000,display:'flex',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease',...(immersive?{
@@ -20467,7 +20468,7 @@ Hard requirements:
         )}
         {/* VARY — moved from the look strip to the dock (row 1, right of Loop).
             Same visibility gate as Loop: mood + mood-from-image pieces only. */}
-        {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && (
+        {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && !varyBwOff && (
           <button className="pf-lift pf-dock-vary" onClick={_doVary} disabled={composeMode||micPainting||micListening||recording||working||!chords.length||!(playing||holdPaused)} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{...txStyle('neutral',{effScale}),border:'none',color:'#fff',background:varySource&&chords.length&&(playing||holdPaused)&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&(playing||holdPaused)&&!(composeMode||micPainting||micListening||recording||working)?1:.55}}>{t('vary')}</button>
         )}
         {/* Original ⇄ Piano source toggle — appears once the mic session
