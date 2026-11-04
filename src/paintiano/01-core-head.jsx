@@ -1329,7 +1329,15 @@ async function myMusicList(){
 // record already exists at that id, it's overwritten (put semantics). `kind`
 // records the source type ('audio' | 'midi' | 'score') so the load path knows
 // how to re-open it. Returns the saved record on success or null on failure.
-async function myMusicSaveToSlot(id, {name, blob, mime, kind, thumb}){
+// an MP3 in My Music keeps its notes once read (a few % of the file): it opens at once next time.
+// Bump when transcribeAudio changes — the kept notes are then read again from the sound.
+const AUDIO_EV_VER = 1;
+const _evCopy = (e)=>{ try{ return typeof structuredClone==='function' ? structuredClone(e) : JSON.parse(JSON.stringify(e)); }catch(_){ return null; } };
+async function myMusicPatch(id, obj){
+  try{ const db=await myMusicOpen(); return await new Promise((resolve)=>{ const tx=db.transaction(MY_MUSIC_STORE,'readwrite'); const st=tx.objectStore(MY_MUSIC_STORE); const g=st.get(id);
+    g.onsuccess=()=>{ const r=g.result; if(r) st.put({...r, ...obj}); }; tx.oncomplete=()=>resolve(true); tx.onerror=()=>resolve(false); }); }catch(_){ return false; }
+}
+async function myMusicSaveToSlot(id, {name, blob, mime, kind, thumb, ev}){
   if(!Number.isInteger(id) || id<1 || id>MY_MUSIC_MAX) return null;
   if(!(blob instanceof Blob)) return null;
   try{
@@ -1341,6 +1349,7 @@ async function myMusicSaveToSlot(id, {name, blob, mime, kind, thumb}){
       mime: mime || blob.type || 'audio/mpeg',
       kind: kind || 'audio',
       thumb: typeof thumb==='string' ? thumb : null,   // the painting at the moment it was saved, small (Mine shows it)
+      ...(ev && Array.isArray(ev.e) ? {ev} : {}),       // an MP3's notes, already read
       sizeBytes: blob.size,
       addedAt: Date.now(),
     };

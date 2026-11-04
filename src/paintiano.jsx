@@ -1329,7 +1329,15 @@ async function myMusicList(){
 // record already exists at that id, it's overwritten (put semantics). `kind`
 // records the source type ('audio' | 'midi' | 'score') so the load path knows
 // how to re-open it. Returns the saved record on success or null on failure.
-async function myMusicSaveToSlot(id, {name, blob, mime, kind, thumb}){
+// an MP3 in My Music keeps its notes once read (a few % of the file): it opens at once next time.
+// Bump when transcribeAudio changes — the kept notes are then read again from the sound.
+const AUDIO_EV_VER = 1;
+const _evCopy = (e)=>{ try{ return typeof structuredClone==='function' ? structuredClone(e) : JSON.parse(JSON.stringify(e)); }catch(_){ return null; } };
+async function myMusicPatch(id, obj){
+  try{ const db=await myMusicOpen(); return await new Promise((resolve)=>{ const tx=db.transaction(MY_MUSIC_STORE,'readwrite'); const st=tx.objectStore(MY_MUSIC_STORE); const g=st.get(id);
+    g.onsuccess=()=>{ const r=g.result; if(r) st.put({...r, ...obj}); }; tx.oncomplete=()=>resolve(true); tx.onerror=()=>resolve(false); }); }catch(_){ return false; }
+}
+async function myMusicSaveToSlot(id, {name, blob, mime, kind, thumb, ev}){
   if(!Number.isInteger(id) || id<1 || id>MY_MUSIC_MAX) return null;
   if(!(blob instanceof Blob)) return null;
   try{
@@ -1341,6 +1349,7 @@ async function myMusicSaveToSlot(id, {name, blob, mime, kind, thumb}){
       mime: mime || blob.type || 'audio/mpeg',
       kind: kind || 'audio',
       thumb: typeof thumb==='string' ? thumb : null,   // the painting at the moment it was saved, small (Mine shows it)
+      ...(ev && Array.isArray(ev.e) ? {ev} : {}),       // an MP3's notes, already read
       sizeBytes: blob.size,
       addedAt: Date.now(),
     };
@@ -25866,6 +25875,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // to all source loaders so they behave the same.
   const loadTokenRef = useRef(0);
   const setAudioBlobAndRef = (b) => { audioBlobRef.current=b; setAudioBlob(b); };
+  const audioEvRef = useRef(null);   // {b: the audio blob, e: its notes as read} — My Music keeps them with the file
   // Set audio element src whenever audioBlob changes
   useEffect(()=>{
     const el=audioElRef.current;
@@ -31480,7 +31490,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     r.readAsArrayBuffer(file);
   };
 
-  const loadAudio=useCallback(async (e,_fromMyMusic=false)=>{
+  const loadAudio=useCallback(async (e,_fromMyMusic=false,_keptEv=null)=>{
     { const f0=e.target.files && e.target.files[0]; if(f0 && _isVideoFile(f0) && loadVideoRef.current){ e.target.value=''; loadVideoRef.current(f0, false); return; } }   // a video: its sound (see loadVideoSound)
     const file=e.target.files[0];if(!file)return;e.target.value='';stashOutgoing('music');if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);if(draftOwnerRef.current){stashDraft(draftOwnerRef.current);draftOwnerRef.current=null;}setPickMode(null);setMicArmed(false);setForceSetup(false);setCurrentMood(null);setVarySource(null);setSongQ('');setMidiBlob(null);setMidiName('');setAudioBlob(null);setAudioName('');audioBlobRef.current=null;setLoadedSource(null);setMoodFromImg(false);setImgMoodThumb(null);setMoodContext(false);
     if(!_fromMyMusic) _loadedFromMyMusicRef.current=null;
@@ -31596,12 +31606,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         setWLabel(t('transcribingAudioLong')||'transcribing audio · this may take a minute');
       }
       const _fromMic=micToSongRef.current; micToSongRef.current=false;
-      const evts=await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true} : undefined);
+      const _kept=(!_fromMic && Array.isArray(_keptEv) && _keptEv.length) ? _keptEv : null;   // My Music kept its notes: no reading again
+      const evts=_kept || await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true} : undefined);
       if(_fromMic){ const _mp=(_fromMic && _fromMic.port) ? 1 : 0; evts.forEach(e=>{ e._mic=1; e._micP=_mp; }); }   // a song from the Mic keeps its take's frame, landscape or portrait (computeGrid reads _micP — live, resized, as a favorite)
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
       const aName=file.name.replace(/\.[^.]+$/,'');
       setCompositionName(aName);
+      { const ec=_evCopy(evts); audioEvRef.current = ec ? {b:blob, e:ec} : null;   // the notes as read (before applyEvents touches them): kept with a save to My Music
+        const mid=_loadedFromMyMusicRef.current; if(_fromMyMusic && !_kept && ec && mid) myMusicPatch(mid, {ev:{v:AUDIO_EV_VER, e:ec}}); }   // one of yours read for the first time: next time at once
       setAudioBlobAndRef(blob);setAudioName(file.name);
       sigAudioNextRef.current=true; sigMusicNextRef.current=true; applyEvents(evts,aName);
       setViewMode('audio');viewModeRef.current='audio';
@@ -31666,7 +31679,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{
       if(rec.kind === 'midi')       loadMidi(_fakeEvent, true);
       else if(rec.kind === 'score') await (loadMusicXmlRef.current ? loadMusicXmlRef.current(_fakeEvent) : loadAudio(_fakeEvent, true));
-      else                           await loadAudio(_fakeEvent, true);
+      else                           await loadAudio(_fakeEvent, true, (rec.ev && rec.ev.v===AUDIO_EV_VER && Array.isArray(rec.ev.e)) ? rec.ev.e : null);
     }catch(err){ /* silent — user can retry from the drawer */ }
   }, [loadAudio, loadMidi]);
 
@@ -38646,7 +38659,7 @@ Hard requirements:
                             : loadedSource==='score' ? 'score'
                             : 'audio';
                 setMyMusicSaving(true);
-                const _r = await myMusicSaveToSlot(myMusicSaveTargetSlot, { name: myMusicSaveName.trim(), blob: _blob, mime: _blob.type || (_kind==='midi'?'audio/midi':(_kind==='score'?'application/vnd.recordare.musicxml+xml':'audio/mpeg')), kind: _kind, thumb: _canvasThumb() });
+                const _r = await myMusicSaveToSlot(myMusicSaveTargetSlot, { name: myMusicSaveName.trim(), blob: _blob, mime: _blob.type || (_kind==='midi'?'audio/midi':(_kind==='score'?'application/vnd.recordare.musicxml+xml':'audio/mpeg')), kind: _kind, ev:(_kind==='audio' && audioEvRef.current && audioEvRef.current.b===_blob) ? {v:AUDIO_EV_VER, e:audioEvRef.current.e} : undefined, thumb: _canvasThumb() });
                 setMyMusicSaving(false);
                 if(_r){
                   // Duplicate-save guard: also for Files-loaded audio/midi/score.
