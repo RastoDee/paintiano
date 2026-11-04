@@ -24535,10 +24535,10 @@ const STUDIO_FX_CSS = `
 .pf-chg-dot{position:absolute;right:-1px;top:-1px;width:10px;height:10px;border-radius:50%;background:#f0d78a;border:2px solid #0e0b16}
 .pf-chg-tab{position:relative}
 .pf-chg-stk{position:absolute;top:7px;right:8px;width:34px;height:44px;border-radius:7px;border:2px solid #fff;background:radial-gradient(circle at 30% 30%,#ffd36b 0 18%,transparent 19%),radial-gradient(circle at 70% 58%,#ff5f8f 0 22%,transparent 23%),linear-gradient(160deg,#2a1636,#120d1c);background-size:cover;background-position:center;transform:rotate(7deg);box-shadow:0 5px 14px rgba(0,0,0,.45),0 0 16px -2px var(--stk,#ff7a3d);animation:pfStkBob 2.6s ease-in-out infinite;pointer-events:none}
-.pf-chg-ic .pf-chg-stk{top:-8px;right:-10px;width:21px;height:27px;border-radius:5px;border-width:1.5px}
+.pf-chg-ic .pf-chg-stk{top:-5px;right:-4px;width:16px;height:21px;border-radius:4px;border-width:1.5px}
 @keyframes pfStkBob{50%{transform:rotate(3deg) translateY(-2px)}}
 @media (prefers-reduced-motion:reduce){.pf-chg-stk{animation:none}}
-.pf-chg-go{font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;color:var(--stk,#ffb08a)}
+.pf-chg-cont{display:inline-flex;align-items:center;gap:5px;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;color:var(--stk,#ffb08a)}
 .pf-chg-tg{flex-shrink:0;width:38px;height:22px;border-radius:11px;background:rgba(242,238,232,.18);position:relative;transition:background .2s}
 .pf-chg-tg i{position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
 .pf-chg-tg.on{background:#c9a84c}
@@ -39537,7 +39537,7 @@ Hard requirements:
                   <div aria-hidden="true" className="pf-chg-grab"/>
                   <div className="pf-chg-h">{_stT('chT')}</div>
                   <div className="pf-chg-tabs" role="tablist" style={{gridTemplateColumns:'repeat('+tabs.length+',minmax(0,1fr))'}}>
-                    {tabs.map(x=>(<button key={x.k} type="button" role="tab" aria-selected={tab===x.k} className={'pf-chg-tab'+(tab===x.k?' on':'')} onClick={()=>setStChg(x.k)}><span className="pf-chg-sw" style={{background:'linear-gradient(135deg,'+x.g+')'}}>{_sv(x.ic, 16)}</span>{(()=>{ const dk=_dk(rows[x.k]); return dk ? (<>{_stk(dk, x.g)}<b>{x.l}</b><span className="pf-chg-go" style={{'--stk':_stkC(x.g)}}>▶ {_stT('chgGo')}</span></>) : (<><b>{x.l}</b><small>{x.s}</small></>); })()}</button>))}
+                    {tabs.map(x=>(<button key={x.k} type="button" role="tab" aria-selected={tab===x.k} className={'pf-chg-tab'+(tab===x.k?' on':'')} onClick={()=>setStChg(x.k)}><span className="pf-chg-sw" style={{background:'linear-gradient(135deg,'+x.g+')'}}>{_sv(x.ic, 16)}</span>{(()=>{ const dk=_dk(rows[x.k]); return dk ? (<>{_stk(dk, x.g)}<b>{x.l}</b><span className="pf-chg-cont" style={{'--stk':_stkC(x.g)}}><svg width="8" height="9" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>{_stT('chgGo')}</span></>) : (<><b>{x.l}</b><small>{x.s}</small></>); })()}</button>))}
                   </div>
                   <div className="pf-chg-rows" key={tab}>
                     {rows[tab].map(r=>(
@@ -41427,7 +41427,7 @@ Hard requirements:
                   {tabs.map(x=> x.k==='paint' ? (
                     // Painter — a tab like Music and Image (its faces show who paints now); under it: Look (the row of faces) and This painting
                     <button key="paint" type="button" role="tab" aria-selected={stChg==='paint'} className={'pf-chg-tab'+(stChg==='paint'?' on':'')} onClick={()=>setStChg('paint')}><span className="pf-chg-sw" style={{background:'linear-gradient(135deg,'+G.paint+')',color:'#1a1408'}}>{IC.paint}</span><b>{x.l}</b>{_who.length ? (<span className="pf-chg-who">{_who}</span>) : (<small>{x.s}</small>)}</button>
-                  ) : (<button key={x.k} type="button" role="tab" aria-selected={stChg===x.k} className={'pf-chg-tab'+(stChg===x.k?' on':'')} onClick={()=>setStChg(x.k)}><span className="pf-chg-sw" style={{background:'linear-gradient(135deg,'+G[x.k]+')'}}>{IC[x.k]}</span>{(()=>{ const r=(rows[x.k]||[]).find(r=>_dr[r.k] && r.k!==_cur); return r ? (<>{_stk(r.k, G[x.k])}<b>{x.l}</b><span className="pf-chg-go" style={{'--stk':_stkC(G[x.k])}}>▶ {_stT('chgGo')}</span></>) : (<><b>{x.l}</b><small>{x.s}</small></>); })()}</button>))}
+                  ) : (<button key={x.k} type="button" role="tab" aria-selected={stChg===x.k} className={'pf-chg-tab'+(stChg===x.k?' on':'')} onClick={()=>setStChg(x.k)}><span className="pf-chg-sw" style={{background:'linear-gradient(135deg,'+G[x.k]+')'}}>{IC[x.k]}</span>{(()=>{ const r=(rows[x.k]||[]).find(r=>_dr[r.k] && r.k!==_cur); return r ? (<>{_stk(r.k, G[x.k])}<b>{x.l}</b><span className="pf-chg-cont" style={{'--stk':_stkC(G[x.k])}}><svg width="8" height="9" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1v8l7-4z" fill="currentColor"/></svg>{_stT('chgGo')}</span></>) : (<><b>{x.l}</b><small>{x.s}</small></>); })()}</button>))}
                 </div>
                 {stChg==='paint' ? (<div className="pf-chg-rows" key="paint">
                   {/* Look: painters, palettes, fusions (a picture: composers and instruments) — the way into the look tray */}
