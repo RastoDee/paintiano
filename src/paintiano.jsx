@@ -26592,9 +26592,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _diceRoll = () => {
     if(jamOn && jamAll){ _jamAllRoll(); return; }
     // a Fusion on screen: every member gets a new variant of its own
-    if(style!==null && painterStage.length && viewMode!=='image' && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
+    if(style!==null && painterStage.length && viewMode!=='image' && !stTakenRef.current && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
+    // a kept surprise (For You → the Studio): its painter was never chosen — white in the tray. As ↑ does, Show and Next bring others
+    // from your set, not more of its variants (Show kept painting only the surprise's Picasso)
+    const _white = !!stTakenRef.current && (style!==null || painterStage.length>0);
+    if(_white){ stTakenRef.current=false; setStTaken(false); if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
+      randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null); setStyle(null); }
     const N = _effVariants();
-    if(style){
+    if(style && !_white){
       // ── SELECTED ARTIST ── bag = this artist's variants [0..N-1], no repeat.
       const key = 'sel|'+style+'|'+N+'|'+(pollockSessionSeed>>>0);
       if(diceBagKeyRef.current!==key || diceBagRef.current.length===0){
