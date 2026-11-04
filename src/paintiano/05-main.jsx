@@ -18095,6 +18095,12 @@ Hard requirements:
               // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
               const _mosaicOwn = ()=>{ _artQuiet(''); setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };   // the Mosaic itself (not a roll to Notes)
               if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
+              // the Studio: the Mosaic is a painter like the others, with two sides (Mosaic, Notes — ← flips them). Gold tapped = let go
+              // (white: ↑ draws from your set again); white tapped = chosen (gold). The side on screen stays either way.
+              if(studioFs){
+                if(mosaicManual){ _stAllOn(); const ix=_shuffleIndexFor(subKind); if(ix>=0) setShuffleArtistIndex(ix); setNotesMode(false); _artQuiet(subKind==='notes' ? 'notes' : ''); return; }
+                _mosaicOwn(); if(subKind==='notes'){ setNotesMode(true); _artQuiet('notes'); } return;
+              }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
                 // restarts the cycle at 'mosaic' and clears the dice-off
