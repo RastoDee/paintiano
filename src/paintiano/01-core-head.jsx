@@ -1916,7 +1916,8 @@ const _songCharCache = new WeakMap();
 // THE FORM OF A PIECE IS KEY-FREE. _keyD: the key of a piece (Krumhansl–Schmuckler over its notes' pitch classes, weighted by
 // length) — its tonic (a minor key's: its relative major's) in the octave nearest the piece's middle — as the distance of that
 // note from middle C. Exact for any transposition (a semitone or an octave: the same distance moves along), so the form never
-// jumps; the register stays in the colours' lightness. The painters, the Music DNA,
+// jumps. How high a piece sounds stays real: in the colours' lightness and in the register the DNA, the character and the
+// ✦ Signature read (a piece a few semitones away: the same seed, the same shapes, a register a hair apart). The painters, the Music DNA,
 // the ✦ Signature, the song's character and the painting's seed read the piece moved by it into C (_keyNorm); its colours
 // put the key back (_gcMake ks). So one piece in any key is one form, and the key colours it. A live take (Compose, Mic:
 // recorded) and a picture's scan (band) stay as they are (0): the first is painted while it grows, the second is the picture's.
@@ -1959,7 +1960,8 @@ function _keyNorm(chords, d){
 }
 function _keyNormOf(chords){ return _keyNorm(chords, _keyD(chords)); }
 function computeSongCharacter(chords){
-  chords=_keyNormOf(chords);   // key-free (see _keyD)
+  const _kdR=_keyD(chords);   // key-free (see _keyD) — but how high it sounds (register) is the real height
+  chords=_keyNorm(chords, _kdR);
   // A LIVE take (Compose / Mic) is painted against a padded, still-growing array
   // (see the draw effect's _livePad): its character is held neutral so every new
   // note ADDS to the painting instead of re-shaping what is already there.
@@ -2005,7 +2007,7 @@ function _computeSongCharacter(chords){
   const energy   = Math.max(0, Math.min(1, meanV/127));
   const dynRange = Math.max(0, Math.min(1, (vMax-vMin)/127));
   // MIDI 36 (C2) .. 84 (C6) spans most musical registers; normalise into it.
-  const register = Math.max(0, Math.min(1, (meanM-36)/48));
+  const register = Math.max(0, Math.min(1, (meanM+_kdR-36)/48));
   const density  = Math.max(0, Math.min(1, (meanN-1)/5)); // 1 note → 0, 6+ → 1
   // Per-chord size weight: louder than the mean → bigger; lower (bass) than the
   // mean → bigger; softer/higher → smaller. Kept gentle (±~55%) so phrasing

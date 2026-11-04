@@ -10,7 +10,8 @@
 function computeMusicDNA(events){
   try{
     if(!events || !events.length) return null;
-    events=_keyNormOf(events);   // key-free (see _keyD)
+    const _kdR=_keyD(events);   // key-free (see _keyD) — but how high it sounds (registerCenter) is the real height
+    events=_keyNorm(events, _kdR);
     const on=[], pitches=[], vels=[];
     let minT=Infinity, maxT=-Infinity;
     for(const ch of events){
@@ -37,7 +38,7 @@ function computeMusicDNA(events){
     let med=500; if(iv.length){const s2=[...iv].sort((a,b)=>a-b); med=s2[s2.length>>1];}
     const tempoClass=clamp01((1200-med)/1050);
     // registerCenter — mean pitch 36..96; 0=deep bass, 1=high treble
-    const registerCenter=clamp01((avg(pitches)-36)/60);
+    const registerCenter=clamp01((avg(pitches)+_kdR-36)/60);
     // registerSpread — pitch range 12..60 semitones
     const registerSpread=clamp01((Math.max(...pitches)-Math.min(...pitches)-12)/48);
     // regularity — 1 − coefficient of variation of onset intervals
@@ -313,7 +314,7 @@ const SIG_AUDIO_LEAD={majHi:'ornament',majLo:'light',minHi:'gesture',minLo:'fiel
 const SIG_AUDIO_DENS_MID=1.33;   // median transcribed event density (log events/s)
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
-  events=_keyNormOf(events);   // key-free (see _keyD)
+  events=_keyNormOf(events);   // key-free (see _keyD), its register too: the ✦ Signature (its painters) is one for every key
   try{
     const ev=(events||[]).filter(ch=>ch&&ch.n&&ch.n.length);
     if(ev.length<4) return null;
