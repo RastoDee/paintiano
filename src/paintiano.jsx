@@ -24436,7 +24436,7 @@ const STUDIO_FX_CSS = `
 .pf-chg{position:fixed;left:0;right:0;bottom:0;z-index:10007;max-height:86dvh;overflow-y:auto;box-sizing:border-box;background:rgba(14,11,22,.98);border-radius:22px 22px 0 0;border-top:1px solid rgba(242,238,232,.12);padding:10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));box-shadow:0 -18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px;color:#f2eee8;animation:pfChgUp .26s cubic-bezier(.2,.8,.2,1)}
 @keyframes pfChgUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .pf-chg-grab{width:40px;height:4px;border-radius:2px;background:rgba(242,238,232,.25);margin:0 auto;flex-shrink:0}
-.pf-chg-h{font-family:'Cormorant Garamond',Georgia,serif;font-size:23px;line-height:1.15;text-align:center}
+.pf-chg-h{font-family:'Cormorant Garamond',Georgia,serif;font-size:calc(var(--pf-read-scale,1) * 23px);line-height:1.15;text-align:center}
 .pf-chg-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .pf-chg-tab{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;padding:11px 10px;border-radius:16px;border:1px solid rgba(242,238,232,.1);background:rgba(255,255,255,.04);color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-chg-tab.on{border-color:#d9b765;background:rgba(217,183,101,.09)}
@@ -24445,7 +24445,7 @@ const STUDIO_FX_CSS = `
 .pf-chg-who{display:flex;padding-left:8px}
 .pf-chg-who i{display:block;margin-left:-8px;width:24px;height:24px;border-radius:50%;overflow:hidden}
 .pf-chg-who .pf-sk-face{display:flex!important;align-items:center;justify-content:center;box-sizing:border-box;width:24px!important;height:24px!important;border-radius:50%;background-color:#1b1728;background-position:center;background-size:cover;background-repeat:no-repeat;border:1.5px solid #14121c!important;box-shadow:none!important;font-family:var(--serif,'Cormorant Garamond',Georgia,serif);font-size:11px!important;font-weight:600;color:#f2eee8;animation:none!important}
-.pf-chg-lbl{font-size:11.5px;color:rgba(242,238,232,.5);margin:2px 2px 0}
+.pf-chg-lbl{font-size:calc(var(--pf-read-scale,1) * 11.5px);color:rgba(242,238,232,.5);margin:2px 2px 0}
 .pf-chg-hero{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:16px;border:1px solid rgba(255,140,150,.45);background:linear-gradient(135deg,rgba(255,95,143,.22),rgba(255,176,138,.12));color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-chg-hero.see{border-color:rgba(122,179,255,.5);background:linear-gradient(135deg,rgba(63,123,255,.25),rgba(122,179,255,.1))}
 .pf-chg-hero:active,.pf-chg-c:active{transform:scale(.98)}
@@ -24453,16 +24453,16 @@ const STUDIO_FX_CSS = `
 .pf-chg-cc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .pf-chg-cc>.pf-chg-c:last-child:nth-child(odd){grid-column:1 / -1}
 .pf-chg-c{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 11px;border-radius:16px;border:1px solid rgba(242,238,232,.06);background:rgba(255,255,255,.05);color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,color .2s}
-.pf-chg-c .pf-chg-tx b{font-size:13.5px}
-.pf-chg-c .pf-chg-tx small{font-size:10.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-chg-c .pf-chg-tx b{font-size:calc(var(--pf-read-scale,1) * 13.5px)}
+.pf-chg-c .pf-chg-tx small{font-size:calc(var(--pf-read-scale,1) * 10.5px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pf-chg-ci{flex-shrink:0;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.09);color:#f2eee8}
 .pf-chg-ci svg{width:16px;height:16px}
 .pf-chg-c.on{background:#f2eee8;color:#121018}
 .pf-chg-c.on .pf-chg-tx small{color:rgba(18,16,24,.62)}
 .pf-chg-c.on .pf-chg-ci{background:var(--g);color:#fff}
 .pf-chg-c:disabled{opacity:.45;cursor:default}
-.pf-chg-tab b{font-size:13.5px;font-weight:600}
-.pf-chg-tab small{font-size:11px;line-height:1.3;color:rgba(242,238,232,.55)}
+.pf-chg-tab b{font-size:calc(var(--pf-read-scale,1) * 13.5px);font-weight:600}
+.pf-chg-tab small{font-size:calc(var(--pf-read-scale,1) * 11px);line-height:1.3;color:rgba(242,238,232,.55)}
 .pf-chg-sw{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff}
 .pf-chg-sw svg{width:16px;height:16px}
 .pf-chg-rows{display:flex;flex-direction:column;gap:6px;animation:pfChgIn .2s ease-out}
@@ -24473,15 +24473,15 @@ const STUDIO_FX_CSS = `
 .pf-chg-row.on{border-color:rgba(217,183,101,.55)}
 .pf-chg-ic{position:relative;flex-shrink:0;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff}
 .pf-chg-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.pf-chg-tx b{font-size:14.5px;font-weight:600}
-.pf-chg-tx small{font-size:12px;line-height:1.35;color:rgba(242,238,232,.6)}
+.pf-chg-tx b{font-size:calc(var(--pf-read-scale,1) * 14.5px);font-weight:600}
+.pf-chg-tx small{font-size:calc(var(--pf-read-scale,1) * 12px);line-height:1.35;color:rgba(242,238,232,.6)}
 .pf-chg-dot{position:absolute;right:-1px;top:-1px;width:10px;height:10px;border-radius:50%;background:#f0d78a;border:2px solid #0e0b16}
 .pf-chg-tg{flex-shrink:0;width:38px;height:22px;border-radius:11px;background:rgba(242,238,232,.18);position:relative;transition:background .2s}
 .pf-chg-tg i{position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
 .pf-chg-tg.on{background:#c9a84c}
 .pf-chg-tg.on i{transform:translateX(16px)}
 .pf-chg-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding-top:2px}
-.pf-chg-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:20px;border:1px solid rgba(242,238,232,.16);background:rgba(28,24,40,.5);color:rgba(242,238,232,.88);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-chg-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:20px;border:1px solid rgba(242,238,232,.16);background:rgba(28,24,40,.5);color:rgba(242,238,232,.88);font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-chg-chip svg{width:15px;height:15px}
 .pf-chg-chip.on{border-color:rgba(240,215,138,.6);color:#f0d78a}
 .pf-chg-chip.warn{background:rgba(220,70,90,.85);border-color:transparent;color:#fff}
@@ -38818,35 +38818,35 @@ Hard requirements:
               <div className="pf-st-sheet pf-st-mm" onClick={()=>setNavMenuOpen(false)} style={{position:'fixed',inset:0,zIndex:100001,display:'flex'}}>
                 <div role="menu" onClick={(e)=>e.stopPropagation()} style={{display:'flex',flexDirection:'column',gap:16}}>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6,paddingTop:4}}>
-                    {tiles.map(r=>(
+                    {tiles.map(r=>(   /* four words side by side: they grow to 1.35× (Anleitung still fits), the rows below grow fully */
                       <button key={r.k} type="button" role="menuitem" className="pf-st-row" onClick={r.go} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,background:'none',border:0,padding:'2px 0',color:'rgba(242,238,232,.92)',fontFamily:'inherit',cursor:r.off?'default':'pointer',opacity:r.off?.4:1,minWidth:0,transition:'transform .12s',WebkitTapHighlightColor:'transparent'}}>
                         <span style={{position:'relative',width:58,height:58,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:r.bg,color:r.dk?'#1a1408':'#fff',boxShadow:'0 8px 22px rgba(0,0,0,.35)'}}>{r.ic}
                           {r.n>0 && (<span style={{position:'absolute',top:-4,right:-4,minWidth:20,height:20,padding:'0 5px',boxSizing:'border-box',borderRadius:10,background:'#fff',color:'#d83a6a',fontSize:11,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',fontVariantNumeric:'tabular-nums'}}>{r.n}</span>)}
                         </span>
-                        <span style={{fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 12.5px)',fontWeight:600,maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{_sent(r.label)}</span>
+                        <span style={{fontSize:'calc(min(var(--pf-read-scale,1),1.35) * 12.5px)',fontWeight:600,maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{_sent(r.label)}</span>
                       </button>))}
                   </div>
                   {_pro && (
                     <button type="button" role="menuitem" className="pf-st-row" onClick={_go(()=>setPaywallReason('settings'))} style={{..._row,borderRadius:18,padding:'12px 14px',background:'linear-gradient(120deg,rgba(240,215,138,.20),rgba(140,92,255,.16))',border:'1px solid rgba(240,215,138,.35)',transition:'transform .12s'}}>
                       {_ri('linear-gradient(135deg,#f0d78a,#b8892f)', (<span style={{color:'#1a1408',fontSize:17,fontWeight:700}}>✦</span>))}
                       <span style={{flex:1,minWidth:0}}>
-                        <span style={{display:'block',fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:700}}>{_pro.t}</span>
-                        <span style={{display:'block',marginTop:2,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 12px)',color:'rgba(242,238,232,.66)'}}>{_pro.s}</span>
+                        <span style={{display:'block',fontSize:'calc(var(--pf-read-scale,1) * 14.5px)',fontWeight:700}}>{_pro.t}</span>
+                        <span style={{display:'block',marginTop:2,fontSize:'calc(var(--pf-read-scale,1) * 12px)',color:'rgba(242,238,232,.66)'}}>{_pro.s}</span>
                       </span>{_chev}
                     </button>)}
                   <div style={{borderRadius:18,background:'rgba(255,255,255,.045)',border:'1px solid rgba(255,255,255,.07)',overflow:'hidden'}}>
                     <button type="button" role="menuitem" onClick={_go(()=>setLangOpen(true))} style={_row}>
                       {_ri('linear-gradient(135deg,#9ad2ff,#3f7bff)', _sv(<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></>, 17))}
-                      <span style={{flex:1,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:600}}>{_stT('lang')}</span>
-                      <span style={{fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 12.5px)',color:'rgba(242,238,232,.55)',fontWeight:600}}>{_lc}</span>{_chev}
+                      <span style={{flex:1,fontSize:'calc(var(--pf-read-scale,1) * 14.5px)',fontWeight:600}}>{_stT('lang')}</span>
+                      <span style={{fontSize:'calc(var(--pf-read-scale,1) * 12.5px)',color:'rgba(242,238,232,.55)',fontWeight:600}}>{_lc}</span>{_chev}
                     </button>
                     <button type="button" role="menuitem" onClick={_go(()=>{ setSetupReturnTo(null); setShowSetupModal(true); })} style={{..._row,borderTop:'1px solid rgba(255,255,255,.07)'}}>
                       {_ri('linear-gradient(135deg,#8fd6a4,#3fb37a)', _sv(<><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6z"/></>, 17))}
-                      <span style={{flex:1,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:600}}>{ts('setupPickerLabel','Styles & palettes')}</span>{_chev}
+                      <span style={{flex:1,fontSize:'calc(var(--pf-read-scale,1) * 14.5px)',fontWeight:600}}>{ts('setupPickerLabel','Styles & palettes')}</span>{_chev}
                     </button>
                     <div style={{..._row,cursor:'default',borderTop:'1px solid rgba(255,255,255,.07)'}}>
                       {_ri('linear-gradient(135deg,#8fd6c8,#3fa7b3)', (<span style={{fontSize:14,fontWeight:700,fontFamily:"'Cormorant Garamond',Georgia,serif"}}>Aa</span>))}
-                      <span style={{flex:1,fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 14.5px)',fontWeight:600}}>{_cap(t('fsLabel'))}</span>
+                      <span style={{flex:1,fontSize:'calc(var(--pf-read-scale,1) * 14.5px)',fontWeight:600}}>{_cap(t('fsLabel'))}</span>
                       <span role="group" aria-label={t('fsLabel')} style={{display:'flex',gap:3,padding:3,borderRadius:16,background:'rgba(255,255,255,.07)'}}>
                         {[[1,12],[1.25,15],[1.5,18]].map(([v,z])=>{ const on=readScale===v; return (
                           <button key={v} type="button" aria-pressed={on} onClick={()=>setReadScale(v)} style={{width:34,height:28,borderRadius:13,border:0,padding:0,cursor:'pointer',fontFamily:"'Cormorant Garamond',Georgia,serif",fontWeight:600,fontSize:z,lineHeight:1,background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'transparent',color:on?'#1a1408':'rgba(242,238,232,.75)'}}>A</button>); })}
@@ -38854,8 +38854,8 @@ Hard requirements:
                     </div>
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'2px 16px',paddingTop:2}}>
-                    <button type="button" onClick={_go(()=>resetAll())} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 11px)',color:'rgba(255,150,150,.7)',cursor:'pointer'}}>{ts('resetLabel',({EN:'Reset',SK:'Reset',DE:'Zurücksetzen',FR:'Réinitialiser',ES:'Restablecer',PT:'Redefinir',zh:'重置',zhTW:'重置',ja:'リセット'})[lang]||'Reset')}</button>
-                    {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(min(var(--pf-read-scale,1),1.25) * 11px)',color:'rgba(242,238,232,.45)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
+                    <button type="button" onClick={_go(()=>resetAll())} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(255,150,150,.7)',cursor:'pointer'}}>{ts('resetLabel',({EN:'Reset',SK:'Reset',DE:'Zurücksetzen',FR:'Réinitialiser',ES:'Restablecer',PT:'Redefinir',zh:'重置',zhTW:'重置',ja:'リセット'})[lang]||'Reset')}</button>
+                    {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(242,238,232,.45)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
                   </div>
                 </div>
               </div>);
