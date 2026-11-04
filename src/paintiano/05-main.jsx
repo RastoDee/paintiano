@@ -2753,7 +2753,7 @@ export default function Paintiano() {
           trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
   const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings' | 'upgraded'
   // Back from a confirmed Pro → Pro AI upgrade: show the short success note once.
-  useEffect(() => { if (justUpgraded) { setPaywallReason('upgraded'); clearJustUpgraded(); } }, [justUpgraded, clearJustUpgraded]);
+  useEffect(() => { if (justUpgraded) { if (isDesktop) setPaywallReason('upgraded'); clearJustUpgraded(); } }, [justUpgraded, clearJustUpgraded]);   // a phone: the welcome card (below) says it
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
   // null = uninitialized. Seeded on first switch to 'custom' mode from whichever
   // mode was active. Persisted across sessions in localStorage.
@@ -14421,17 +14421,19 @@ Hard requirements:
   useEffect(()=>{ if(proStatus!=='free') return; setViewPref('studio'); try{ localStorage.setItem('paintiano_view','studio'); localStorage.setItem('paintiano_was_free','1'); }catch(_){}
     if(basicModeRef.current && qrPieceRef.current==null) setBasicMode(false); },[proStatus]);
   const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
-  // Pro on a phone, once: the Studio comes by itself (from Lite or Advanced) and a card says where the Atelier is;
-  // someone who came as Free hears that the Atelier is now theirs too
-  const [viewInfo, setViewInfo] = useState(()=>{ try{ return localStorage.getItem('paintiano_view_info')==='1'; }catch(_){ return false; } });
-  useEffect(()=>{ if(!isPro || isDesktop) return; let seen=false;
-    try{ seen = localStorage.getItem('paintiano_view_asked')==='1'; }catch(_){} if(seen) return;
-    try{ localStorage.setItem('paintiano_view_asked','1'); localStorage.setItem('paintiano_view_info','1'); }catch(_){}
-    const was = viewPref + (basicModeRef.current ? '+lite' : '');
-    if(viewPref!=='studio' || basicModeRef.current) _setView('studio');
-    setViewInfo(true); try{ window.posthog && window.posthog.capture('view_auto_studio', { was }); }catch(_){} },[isPro, isDesktop]);
-  const _viewInfoDone = (open)=>{ try{ localStorage.removeItem('paintiano_view_info'); }catch(_){} setViewInfo(false);
-    if(open){ setSetupReturnTo(null); setShowSetupModal(true); } try{ window.posthog && window.posthog.capture('view_info', { open: !!open }); }catch(_){} };
+  // Pro on a phone, once: the Studio comes by itself (from Lite or Advanced). A card welcomes Pro, and Pro AI when it comes —
+  // once per tier on this device (no word about the Atelier any more: it stays in Styles & palettes → View)
+  const [viewInfo, setViewInfo] = useState(false);
+  useEffect(()=>{ if(!isPro || isDesktop) return; const _rk=(x)=> x==='pro_ai' ? 2 : x==='pro' ? 1 : 0;
+    let seen=false; try{ seen = localStorage.getItem('paintiano_view_asked')==='1'; localStorage.removeItem('paintiano_view_info'); }catch(_){}
+    if(!seen){ try{ localStorage.setItem('paintiano_view_asked','1'); }catch(_){}
+      const was = viewPref + (basicModeRef.current ? '+lite' : '');
+      if(viewPref!=='studio' || basicModeRef.current) _setView('studio');
+      try{ window.posthog && window.posthog.capture('view_auto_studio', { was }); }catch(_){} }
+    let w=0; try{ const v=localStorage.getItem('paintiano_welcomed');
+      if(v) w=_rk(v); else if(seen){ w=_rk(proStatus); localStorage.setItem('paintiano_welcomed', proStatus); } }catch(_){}   // a Pro here before the welcome existed: nothing to welcome
+    if(_rk(proStatus) > w){ try{ localStorage.setItem('paintiano_welcomed', proStatus); }catch(_){} setViewInfo(true); } },[isPro, isDesktop, proStatus]);
+  const _viewInfoDone = ()=>{ setViewInfo(false); try{ window.posthog && window.posthog.capture('pro_welcome', { tier: proStatus }); }catch(_){} };
   const studioOn = viewPref==='studio' && !isDesktop && !basicMode;
   useEffect(()=>{ if(studioOn){ try{ localStorage.setItem('paintiano_onboarded','1'); }catch(_){} } },[studioOn]);
   // A poster's QR in the Studio: its piece goes straight onto the painting in the poster's own look — the painter and
@@ -20112,23 +20114,22 @@ Hard requirements:
           </div>
         </div>
       )}
-      {viewInfo && studioOn && !showIntro && !paywallReason && (()=>{ let _up=false; try{ _up = localStorage.getItem('paintiano_was_free')==='1'; }catch(_){}
+      {viewInfo && !isDesktop && !showIntro && !paywallReason && (()=>{ const _ai = proStatus==='pro_ai';
         const _pill = {flex:1,fontFamily:'inherit',fontSize:(15*effScale)+'px',fontWeight:700,padding:'13px 16px',borderRadius:999,cursor:'pointer',border:0};
         return (
         <div onClick={()=>_viewInfoDone(false)} style={{position:'fixed',inset:0,zIndex:100002,background:'rgba(4,3,8,.55)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
-          <div onClick={e=>e.stopPropagation()} role="dialog" data-pf-sheet="" data-pf-sheet-bd="parent" aria-modal="true" aria-label={_stT(_up ? 'inf2_t' : 'inf_t')} style={{width:'100%',maxWidth:560,boxSizing:'border-box',background:'#0c0a14',borderTop:'1px solid rgba(242,238,232,.12)',borderRadius:'24px 24px 0 0',padding:'22px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',animation:'pfStSheetUp .32s cubic-bezier(.2,.8,.2,1) both'}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" data-pf-sheet="" data-pf-sheet-bd="parent" aria-modal="true" aria-label={t(_ai ? 'proAiWelcomeTitle' : 'proWelcomeTitle')} style={{width:'100%',maxWidth:560,boxSizing:'border-box',background:'#0c0a14',borderTop:'1px solid rgba(242,238,232,.12)',borderRadius:'24px 24px 0 0',padding:'22px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',animation:'pfStSheetUp .32s cubic-bezier(.2,.8,.2,1) both'}}>
             <div style={{display:'flex',alignItems:'center',gap:14}}>
-              <span aria-hidden="true" style={{flex:'0 0 auto',width:52,height:52,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#06120d',background:'linear-gradient(135deg,#4de3a0,#2bb5c9)',boxShadow:'0 6px 18px rgba(60,220,170,.35)'}}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+              <span aria-hidden="true" style={{flex:'0 0 auto',width:52,height:52,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',boxShadow:'0 6px 18px rgba(201,168,76,.35)'}}>
+                <span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontWeight:700,fontSize:30,lineHeight:1,marginTop:-2}}>φ</span>
               </span>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:(20*effScale)+'px',fontWeight:800,color:'#fff',lineHeight:1.2}}>{_stT(_up ? 'inf2_t' : 'inf_t')}</div>
-                <div style={{fontSize:(13.5*effScale)+'px',color:'rgba(242,238,232,.66)',marginTop:4,lineHeight:1.4}}>{_stT(_up ? 'inf2_s' : 'inf_s')}</div>
+                <div style={{fontSize:(20*effScale)+'px',fontWeight:800,color:'#fff',lineHeight:1.2}}>{t(_ai ? 'proAiWelcomeTitle' : 'proWelcomeTitle')}</div>
+                <div style={{fontSize:(13.5*effScale)+'px',color:'rgba(242,238,232,.66)',marginTop:4,lineHeight:1.4}}>{t(_ai ? 'proAiWelcomeBody' : 'proWelcomeBody')}</div>
               </div>
             </div>
             <div style={{display:'flex',gap:10,marginTop:18}}>
-              <button type="button" onClick={()=>_viewInfoDone(false)} style={{..._pill,color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)'}}>{_stT('inf_ok')}</button>
-              <button type="button" onClick={()=>_viewInfoDone(true)} style={{..._pill,color:'#fff',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.14)'}}>{_stT('inf_open')}</button>
+              <button type="button" onClick={()=>_viewInfoDone()} style={{..._pill,color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)'}}>{_stT('inf_ok')}</button>
             </div>
           </div>
         </div>); })()}
