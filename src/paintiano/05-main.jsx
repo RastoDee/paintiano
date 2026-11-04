@@ -4425,6 +4425,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // rolled phaseIndex themselves. Stops useEffect from double-rolling and
   // causing a flicker (paint shows random_A then immediately swaps to random_B).
   const nextRollInProgressRef = useRef(false);
+  // a draft put back (Home → the card → the Studio): the song, its seed and its painter come back as they were — no new draw
+  const rollQuietUntilRef = useRef(0);
   useEffect(()=>{
     const seed = pollockSessionSeed>>>0;
     const art = effectiveStyle || '';
@@ -4439,6 +4441,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       }
       // Next/Play already set the new phaseIndex itself — consume the flag
       // and don't re-roll (would cause a visible flicker between two styles).
+      if(Date.now() < rollQuietUntilRef.current) return;   // a draft just put back: its own painter, not a new draw
       if(nextRollInProgressRef.current){
         nextRollInProgressRef.current = false;
         return;
@@ -8090,6 +8093,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // stash it first (stashOutgoing self-skips if the live mode == `mode`, e.g.
     // a wiped same-mode canvas) so switching between drafts never loses one.
     stashOutgoing(mode);
+    rollQuietUntilRef.current = Date.now() + 1500;   // the painter it had comes back with it (the song's seed changing back is not a new song)
     feedPieceRef.current = false;
     // A restore from a playing source can leave the play debounce primed and the
     // playing ref momentarily stale — both can swallow the FIRST Play tap after
@@ -15308,8 +15312,8 @@ Hard requirements:
   stNavRef.current = { next:()=>_stNext(true), prev:()=>_stPrev(true), vn:()=>_stVariant(false, true), vb:()=>_stVariant(true, true), undo:(wasUp)=>_stUndo(wasUp),
     uvn:()=>{ try{ return !!_variantNext(); }catch(_){ return false; } }, uvb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
     flash:()=>_stFlashNow(), buzz:(ms)=>_stBuzz(ms),
-    hold:()=>{ metaKeepRef.current=true; setFdMeta({cap:_capLines()}); if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey(null); },
-    free:()=>{ metaKeepRef.current=false; setFdMeta(null); } };
+    hold:()=>{ metaKeepRef.current=true; setFdMeta({cap:_capLines()}); _metaWatch(_swipeStartRef); if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey(null); },
+    free:()=>{ _metaWatchOff(); metaKeepRef.current=false; setFdMeta(null); } };
   const _sdOk = ()=> studioFs && stFill && !stripOpen && !studioLive && viewMode!=='image' && !demoReelOn && !recording && !stVidRec;
   const _sdCss = ()=>{ try{ if(document.getElementById('pf-fd-css')) return; const el=document.createElement('style'); el.id='pf-fd-css'; el.textContent='[data-fdz] canvas:not(.pf-fd-copy){opacity:0!important;transition:none!important} [data-fdd] canvas:not(.pf-fd-copy){transition:none!important}'; document.head.appendChild(el); }catch(_){} };
   const _sdCopyAt = (fd, off)=>{ const c=fd.copy; if(!c) return; c.style.left=(fd.bx + (fd.ax==='x' ? off : 0))+'px'; c.style.top=(fd.by + (fd.ax==='y' ? off : 0))+'px'; };
@@ -15417,6 +15421,16 @@ Hard requirements:
   // the new name comes when the card lands, never mid-drag (and a drag that goes back changes nothing)
   const [fdMeta, setFdMeta] = useState(null);       // {t, l}: the lines frozen during the drag
   const metaKeepRef = useRef(false);                 // the look changes under the drag: the lines keep their place (shown / faded)
+  // the frozen lines never outlive the drag: once no finger is on it and nothing lands (or after 4 s at most) they follow the painting again
+  // (a drag whose landing was cut short kept the old painter's name under every painting after it, and ✦ Signature unlit)
+  const metaWatchRef = useRef({id:0, t0:0});
+  const _metaWatchOff = ()=>{ const W=metaWatchRef.current; if(W.id){ clearInterval(W.id); W.id=0; } };
+  const _metaWatch = (touchRef)=>{ _metaWatchOff(); const W=metaWatchRef.current; W.t0=Date.now();
+    W.id=setInterval(()=>{ const t=touchRef.current, S=feedSprRef.current, old=Date.now()-W.t0>4000;
+      if(t && t.fd && !old) return; if(S && S.id && !old) return;
+      if(S && S.id){ try{ _fdFinish(); }catch(_){} }
+      _metaWatchOff(); metaKeepRef.current=false; setFdMeta(null); }, 700); };
+  useEffect(()=>()=>_metaWatchOff(), []);
   // FULL SCREEN, QUIET: while a full-screen painting plays (the Studio's Full screen, the home's surprise) the song's lines fade after 4 s —
   // a pause, the next painting, a sheet, anything that changes brings them back; the three buttons stay
   const [metaHide, setMetaHide] = useState(false);
@@ -15698,8 +15712,8 @@ Hard requirements:
   //  'rub'   nothing that way: the card only gives
   feedNavRef.current = { up:()=>_feedUp(null, true), back:()=>_feedBack(true), vn:()=>{ try{ return !!_variantNext(); }catch(_){ return false; } }, vb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
     flash:()=>_feedFlashNow(), buzz:(ms)=>_stBuzz(ms), draw:()=>{ try{ feedDrawRef.current(); }catch(_){} },
-    hold:(m)=>{ metaKeepRef.current=true; setFdMeta(m || null); setFeedFlash(0); },   // the lines stay, the last name over the card goes (it would turn into the new one mid-drag)
-    free:()=>{ metaKeepRef.current=false; setFdMeta(null); } };
+    hold:(m)=>{ metaKeepRef.current=true; setFdMeta(m || null); _metaWatch(feedTouchRef); setFeedFlash(0); },   // the lines stay, the last name over the card goes (it would turn into the new one mid-drag)
+    free:()=>{ _metaWatchOff(); metaKeepRef.current=false; setFdMeta(null); } };
   const _fdT = (ax, v)=> ax==='y' ? 'translate3d(0,'+v+'px,0)' : 'translate3d('+v+'px,0,0)';
   // hold(): while it gives a place, the spring waits there (the next painting is not on the canvas yet) — then it goes on to the end
   const _fdSpring = (from, v0, to, step, done, hold)=>{ const S=feedSprRef.current; if(S.id) cancelAnimationFrame(S.id);
@@ -15843,7 +15857,7 @@ Hard requirements:
       else {
         let ks=(style!==null ? [style] : []).concat(painterStage||[]).filter(k=>k && k!=='mosaic' && k!=='notes');
         if(!ks.length && shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ks=[shuffleStyle];
-        who = ks.length ? ks.map(k=>STYLE_INSPIRED[k]||k).join(' × ') : up(t('mosaicStyle'));
+        who = ks.length ? ks.map(k=>STYLE_INSPIRED[k]||k).join(' × ') : up(t(effectiveStyle==='notes' ? 'notesStyle' : 'mosaicStyle'));   // Notes is named as Notes (it said Mosaic)
       }
       const parts=[up(t(mode)), who];
       if(im ? imgSigActive : sigActive) parts.push('✦ '+_sigT('label'));
