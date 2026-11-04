@@ -4376,12 +4376,22 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[]);
   // Toggle the auto-shuffle slideshow. ON → roll immediately, then every
   // SHOW_INTERVAL_MS. OFF → clear the timer. Next is disabled while ON.
+  // Show on a painting nobody drew (shuffle off — a song just opened on its ✦ Signature, a painter you chose): Show turns the shuffle on.
+  // The ✦ Signature lets go (all painters, as ↑ does); a chosen painter stays and Show plays its variants. (Show was only offered after ↑.)
+  const showLetGoRef = useRef(()=>false);
+  showLetGoRef.current = ()=>{ if(randomModeRef.current) return false;
+    randomModeRef.current=true; setRandomMode(true);
+    // a song's ✦ Signature: Show draws from all painters (as ↑ does); a painter you chose keeps — Show plays its variants
+    if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null); setStyle(null); }
+    return true; };
   const toggleShow = useCallback(()=>{
     setShowMode(prev=>{
       const next=!prev;
       _stopShow();
       if(next){
-        try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){}
+        let _lg=false; try{ _lg=!!showLetGoRef.current(); }catch(_){}
+        const _roll=()=>{ try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){} };
+        if(_lg) setTimeout(_roll, 60); else _roll();   // after letting go, the first draw waits for the look it let go of to be gone
         showTimerRef.current=setInterval(()=>{
           try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){}
         }, SHOW_INTERVAL_MS);
@@ -18762,7 +18772,7 @@ Hard requirements:
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : (()=>{ const x=((info && info.title) || ((compositionName||'').trim()) || ''); return (moodContext || moodFromImg) ? _moodTitleLoc(x, t('moodNames')) : x; })();
         const _loopOk = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)));
         const _morphOk = !_live && !loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && !!currentMood;
-        const _showOk = !_live && !_img && playing && randomMode && !!(effectiveStyle||shuffleStyle) && chords.length>0;
+        const _showOk = !_live && !_img && playing && chords.length>0;   // any painting that plays (Show draws from your set — see showLetGoRef)
         // the speaker: a tap mutes, a press-and-hold brings the sound back (iPhone), as in Classic
         const _hold = {
           onPointerDown:()=>{ if(speakerHoldRef.current && speakerHoldRef.current!=='fired') clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; try{ audioHardRecover(); }catch(_){} _stBuzz(20); }, 600); },

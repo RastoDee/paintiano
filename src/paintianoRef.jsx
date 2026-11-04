@@ -26592,9 +26592,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _diceRoll = () => {
     if(jamOn && jamAll){ _jamAllRoll(); return; }
     // a Fusion on screen: every member gets a new variant of its own
-    if(style!==null && painterStage.length && viewMode!=='image' && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
+    if(style!==null && painterStage.length && viewMode!=='image' && !stTakenRef.current && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
+    // a kept surprise (For You → the Studio): its painter was never chosen — white in the tray. As ↑ does, Show and Next bring others
+    // from your set, not more of its variants (Show kept painting only the surprise's Picasso)
+    const _white = !!stTakenRef.current && (style!==null || painterStage.length>0);
+    if(_white){ stTakenRef.current=false; setStTaken(false); if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
+      randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null); setStyle(null); }
     const N = _effVariants();
-    if(style){
+    if(style && !_white){
       // ── SELECTED ARTIST ── bag = this artist's variants [0..N-1], no repeat.
       const key = 'sel|'+style+'|'+N+'|'+(pollockSessionSeed>>>0);
       if(diceBagKeyRef.current!==key || diceBagRef.current.length===0){
@@ -26670,12 +26675,20 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[]);
   // Toggle the auto-shuffle slideshow. ON → roll immediately, then every
   // SHOW_INTERVAL_MS. OFF → clear the timer. Next is disabled while ON.
+  // Show on a painting nobody drew from your set (a song just opened on its ✦ Signature, the Mosaic, Notes — shuffle off): it lets that
+  // look go and draws from your whole set, as it does under a drawn painter. (Show was only offered once ↑ had turned the shuffle on.)
+  const showLetGoRef = useRef(()=>false);
+  showLetGoRef.current = ()=>{ if(randomModeRef.current) return false;
+    if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
+    randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null); setStyle(null); return true; };
   const toggleShow = useCallback(()=>{
     setShowMode(prev=>{
       const next=!prev;
       _stopShow();
       if(next){
-        try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){}
+        let _lg=false; try{ _lg=!!showLetGoRef.current(); }catch(_){}
+        const _roll=()=>{ try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){} };
+        if(_lg) setTimeout(_roll, 60); else _roll();   // after letting go, the first draw waits for the look it let go of to be gone
         showTimerRef.current=setInterval(()=>{
           try{ nextRollInProgressRef.current=true; showDiceRef.current && showDiceRef.current(); }catch(_){}
         }, SHOW_INTERVAL_MS);
@@ -41056,7 +41069,7 @@ Hard requirements:
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : (()=>{ const x=((info && info.title) || ((compositionName||'').trim()) || ''); return (moodContext || moodFromImg) ? _moodTitleLoc(x, t('moodNames')) : x; })();
         const _loopOk = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)));
         const _morphOk = !_live && !loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && !!currentMood;
-        const _showOk = !_live && !_img && playing && randomMode && !!(effectiveStyle||shuffleStyle) && chords.length>0;
+        const _showOk = !_live && !_img && playing && chords.length>0;   // any painting that plays (Show draws from your set — see showLetGoRef)
         // the speaker: a tap mutes, a press-and-hold brings the sound back (iPhone), as in Classic
         const _hold = {
           onPointerDown:()=>{ if(speakerHoldRef.current && speakerHoldRef.current!=='fired') clearTimeout(speakerHoldRef.current); speakerHoldRef.current=setTimeout(()=>{ speakerHoldRef.current='fired'; try{ audioHardRecover(); }catch(_){} _stBuzz(20); }, 600); },
