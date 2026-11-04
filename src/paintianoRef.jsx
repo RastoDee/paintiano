@@ -25332,7 +25332,7 @@ export default function Paintiano() {
       try { window.posthog && window.posthog.capture('paint_done', { n: chords.length, touch: !!(typeof PF_TOUCH_DEV!=='undefined' && PF_TOUCH_DEV) }); } catch (_) {}
     }
   }, [disp, playing, chords]);
-  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
+  const [muted,setMuted]=useState(()=>{try{const v=localStorage.getItem('paintiano_muted')==='1';mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;localStorage.setItem('paintiano_muted',muted?'1':'0');if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,_setSAI]=useState(0);const setShuffleArtistIndex=(v)=>{ try{ if(window.__pfTrace) console.log('SAI '+(typeof v==='function'?'fn':v)+' '+new Error().stack.split('\n').slice(2,6).map(x=>x.trim()).join(' | ')); }catch(_){} _setSAI(v); };const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
   // ── Lite "Surprise me" shuffle-bags (better perceived randomness) ──────────
   // surpriseArtistBag: a shuffled queue of artist keys; we pop one per tap and
   // only reshuffle once every artist has appeared — so none repeats until all
@@ -26627,6 +26627,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         diceBagRef.current = combos;
       }
       const next = diceBagRef.current.shift() || {a:0,v:0};
+      if(notesMode) setNotesMode(false);   // a drawn Mosaic is the Mosaic (Notes is its own stop, or ←)
       // shuffleStyle reads ((basePick + shuffleArtistIndex) % poolLen). Set the
       // index so the artist lands exactly on combo.a (cancel basePick offset).
       setShuffleArtistIndex(next.a|0);
@@ -26641,7 +26642,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(viewMode==='image') return false;
     if(style!==null && painterStage.length){ return !!_fuRollAll(_jamStage()); }   // a Fusion: every member a new variant of its own
     if(style===null && !randomMode){ setNotesMode(n=>!n); return true; }   // the Mosaic: Mosaic ⇆ Notes
-    const k = style || shuffleStyle; if(!k || k==='mosaic'){ setNotesMode(n=>!n); return true; }
+    // the Mosaic drawn or chosen (🔀): Mosaic ⇆ Notes — a drawn Notes is the Mosaic's other side, so ← brings the Mosaic; the painting
+    // must not count as a new painter (the new-song roll drew someone else on ←, and a chosen Mosaic tapped could land on Notes)
+    const k = style || shuffleStyle;
+    if(!k || k==='mosaic' || (k==='notes' && style===null)){
+      if(k==='notes'){ const ix = mosaicShuffleLock ? (shuffleArtistIndex|0)+1 : _shuffleIndexFor('mosaic'); if(ix<0) return false;
+        _artQuiet(''); setShuffleArtistIndex(ix); setNotesMode(false); return true; }
+      const nt=!notesMode; _artQuiet(nt ? 'notes' : ''); setNotesMode(nt); return true; }
     const N = (proStatus==='free' && k!==artistOfDay && !(tastePreviewKeyRef.current && k===tastePreviewKeyRef.current)) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6);
     if(N<2) return false;
     const cur = (style ? phaseIndex : shufVariant)|0;
@@ -26657,10 +26664,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   // ← / →: the variants seen, so → goes back to the one just left (per painter / Fusion on screen — another one starts a new history)
   const varHistRef = useRef({key:'', st:[], fw:[]});
-  const _varKey = ()=> [(info && info.title) || '', style || '', painterStage.join('+'), randomMode ? 1 : 0, randomMode ? (shuffleStyle || '') : ''].join('|');
+  const _varKey = ()=> [(info && info.title) || '', style || '', painterStage.join('+'), randomMode ? 1 : 0, randomMode ? ((shuffleStyle==='notes' && style===null ? 'mosaic' : shuffleStyle) || '') : ''].join('|');
   // ← a new variant, → back; after → the next ← goes forward again through the ones already seen (as the surprises do) — only past the last one a new one is drawn
-  const _variantSnap = ()=>({ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode, fu:fuRollRef.current || null });
-  const _variantPut = (v)=>{ setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu); };
+  const _variantSnap = ()=>({ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode || (style===null && randomMode && shuffleStyle==='notes'), fu:fuRollRef.current || null });
+  const _variantPut = (v)=>{ if(style===null && (!shuffleStyle || shuffleStyle==='mosaic')) _artQuiet(v.nt ? 'notes' : ''); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu); };
   const _variantNext = ()=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
     const snap=_variantSnap();
     if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); _variantPut(v); return true; }
@@ -26675,12 +26682,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[]);
   // Toggle the auto-shuffle slideshow. ON → roll immediately, then every
   // SHOW_INTERVAL_MS. OFF → clear the timer. Next is disabled while ON.
-  // Show on a painting nobody drew from your set (a song just opened on its ✦ Signature, the Mosaic, Notes — shuffle off): it lets that
-  // look go and draws from your whole set, as it does under a drawn painter. (Show was only offered once ↑ had turned the shuffle on.)
+  // Show on a painting nobody drew (shuffle off — a song just opened on its ✦ Signature, a painter you chose): Show turns the shuffle on.
+  // The ✦ Signature lets go (all painters, as ↑ does); a chosen painter stays and Show plays its variants. (Show was only offered after ↑.)
   const showLetGoRef = useRef(()=>false);
   showLetGoRef.current = ()=>{ if(randomModeRef.current) return false;
-    if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
-    randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null); setStyle(null); return true; };
+    randomModeRef.current=true; setRandomMode(true);
+    // a song's ✦ Signature: Show draws from all painters (as ↑ does); a painter you chose keeps — Show plays its variants
+    if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null); setStyle(null); }
+    return true; };
   const toggleShow = useCallback(()=>{
     setShowMode(prev=>{
       const next=!prev;
@@ -26708,6 +26717,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // VARY keeps phaseIndex (Vary changes tones, but the artist's style should
   // persist). Next button increments phaseIndex to cycle styles manually.
   const prevSongArtistRef = useRef({seed:0, art:null});
+  // the painting changes on its own gesture (Mosaic ⇆ Notes, Mosaic chosen): the roll for a new song / painter below stays out
+  const _artQuiet = (art)=>{ prevSongArtistRef.current = {seed:pollockSessionSeed>>>0, art:art||''}; };
   const varyInProgressRef = useRef(false);
   // nextRollInProgressRef: set true by Next/Play when they already explicitly
   // rolled phaseIndex themselves. Stops useEffect from double-rolling and
@@ -38065,6 +38076,7 @@ Hard requirements:
   };
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
+  try{ window.__pfDbg = {style, randomMode, shuffleStyle, lock:mosaicShuffleLock, idx:shuffleArtistIndex, notesMode, stTaken:stTakenRef.current, palGold, art:_artMode, jamOn, sig:sigActive, show:showMode}; window.__pfSet={setStyle,setRandomMode,setNotesMode,setMosaicShuffleLock,setShuffleArtistIndex}; }catch(_){}
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
@@ -40358,10 +40370,7 @@ Hard requirements:
               const _mosIx = (jamOn && !cockpitEdit && _jamStage().length>1) ? _jamStage().indexOf('mosaic') : -1;
               const mosaicManual = (style===null && (!shuffleStyle || mosaicShuffleLock) && !(jamOn && painterStage.length)) || _mosIx>=0;   // Mosaic chosen (its variants on Next) is lit too
               // Sub-label reflects the current rendered family member.
-              const subKind = (shuffleStyle==='notes') ? 'notes'
-                            : (shuffleStyle==='mosaic') ? 'mosaic'
-                            : (!shuffleStyle && notesMode) ? 'notes'
-                            : 'mosaic';
+              const subKind = (shuffleStyle==='notes' || ((!shuffleStyle || shuffleStyle==='mosaic') && notesMode)) ? 'notes' : 'mosaic';
               const subLabel = subKind==='notes' ? t('notesStyle') : t('mosaicStyle');
               const lockTip = randomMode
                 ? (mosaicShuffleLock ? 'mosaic family locked — tap to release back to full shuffle' : 'tap to lock shuffle to mosaic / notes')
@@ -40384,7 +40393,7 @@ Hard requirements:
               if(jamAll) return;
               if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
               // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
-              const _mosaicOwn = ()=>{ setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };
+              const _mosaicOwn = ()=>{ _artQuiet(''); setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };   // the Mosaic itself (not a roll to Notes)
               if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
               if(randomMode){
                 // Dice on → toggle "mosaic family" lock. Entering the lock
