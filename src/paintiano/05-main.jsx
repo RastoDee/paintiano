@@ -10,6 +10,7 @@
 function computeMusicDNA(events){
   try{
     if(!events || !events.length) return null;
+    events=_keyNormOf(events);   // key-free (see _keyD)
     const on=[], pitches=[], vels=[];
     let minT=Infinity, maxT=-Infinity;
     for(const ch of events){
@@ -312,6 +313,7 @@ const SIG_AUDIO_LEAD={majHi:'ornament',majLo:'light',minHi:'gesture',minLo:'fiel
 const SIG_AUDIO_DENS_MID=1.33;   // median transcribed event density (log events/s)
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
+  events=_keyNormOf(events);   // key-free (see _keyD)
   try{
     const ev=(events||[]).filter(ch=>ch&&ch.n&&ch.n.length);
     if(ev.length<4) return null;
@@ -689,7 +691,8 @@ const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus
 // Every knob of the draw module it turns is put back, so the live painting
 // underneath is untouched. Returns false if it can't paint.
 function _favPaint(cv, fav, piece, S, liveTone, lay){
-  const chords = piece && piece.chords;
+  const _kd = _keyD(piece && piece.chords);   // the form is key-free (see _keyD): painted in C, coloured in its key
+  const chords = _keyNorm(piece && piece.chords, _kd);
   const g = lay && lay.g, pg = (lay && lay.pg) || null;
   if(!cv || !chords || !chords.length || !g) return false;
   const CW = lay.CW, CH = lay.CH;
@@ -697,14 +700,15 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
   const ctx = cv.getContext('2d'); if(!ctx) return false;
   ctx.setTransform(S,0,0,S,0,0);
   const G = globalThis;
-  const keep = { fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
+  const keep = { fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy(), kd:G.__PAINT_KEY_D };
   let ok = true;
   try{
+    G.__PAINT_KEY_D = _kd;
     G.__PAINT_FU_PHS = fav.fa ? { keys:fav.fa.keys.slice(), phs:fav.fa.phs.slice(), fs:(fav.fa.fs==='E' ? 'E' : 'A'), rv:(fav.fa.rv|0)||1 } : null;   // a Favorite keeps the fusion style it was painted in
     G.__PAINT_SIG_PHS = null;
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
-    const gc = _gcMake(fav.mode, fav.tone, fav.pal, fav.ks);
+    const gc = _gcMake(fav.mode, fav.tone, fav.pal, (fav.ks|0)+_kd);
     const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = chords.length;
     const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
@@ -744,7 +748,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     }
   }catch(_){ ok = false; }
   finally{
-    G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna;
+    G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna; G.__PAINT_KEY_D = keep.kd;
     _setSongEnergy(keep.se); _setMixOn(liveTone==='real'); _setCurE(0.5); _setNoBg(false);
   }
   return ok;
@@ -3727,9 +3731,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // _takeSkip): Kandinsky, and the tile painters, whose tiles must always fill the
   // whole canvas — Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein.
   const _TAKE_ORIG = ['kandinsky','kusama','bulge','gold','pop','klee','lichtenstein'];
+  // the piece as the painters see it: moved into C (see _keyD); the sound, the keyboard, the notes and the files keep it as it is
+  const paintKeyD = useMemo(()=> _keyD(chords), [chords]);
+  const paintChords = useMemo(()=> _keyNorm(chords, paintKeyD), [chords, paintKeyD]);
   const pollockSessionSeed = useMemo(() => {
     if(structureSeedLock!=null) return structureSeedLock>>>0;
     if(!chords || !chords.length) return 0;
+    const _kd = paintKeyD;   // the seed of the form: key-free too
     // A LIVE take (Compose keyboard, Mic — its chords carry recorded:true) is
     // seeded by its FIRST note only: hashing every note re-seeded the painter on
     // each new note, so Pollock re-threw his whole web (and the dice re-rolled the
@@ -3747,7 +3755,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       h ^= (i+1);
       h = Math.imul(h, 16777619);
       for(const note of notes){
-        const m = note.m !== undefined ? note.m : note;
+        const m = (note.m !== undefined ? note.m : note) - _kd;
         const v = note.v !== undefined ? note.v : 100;
         h ^= (m & 0xff);
         h = Math.imul(h, 16777619);
@@ -3761,7 +3769,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // SHUFFLE changes only the artist → chord hash stays → painting stays
     // identical for that song in the new artist's style.
     return (h >>> 0);
-  }, [chords, structureSeedLock, style]);
+  }, [chords, structureSeedLock, style, paintKeyD]);
   // The shuffle draw's seed. A recorded take (Compose / Mic) keeps the draw of the
   // empty canvas it started on: keys played never pick another artist — only
   // Next, swipe up in fullscreen or Show do.
@@ -5689,6 +5697,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const keyShiftRef = useRef(0);
   keyShiftRef.current = (composeMode || micActive) ? 0 : keyShift;
   const gc = useMemo(()=>_gcMake(mode, tone, activePalette, keyShift),[mode,activePalette,tone,keyShift]);
+  const paintGc = useMemo(()=> paintKeyD ? _gcMake(mode, tone, activePalette, keyShift+paintKeyD) : gc, [gc, paintKeyD, mode, tone, activePalette, keyShift]);   // for the piece in C
   const varyBwOff = _paintModeOf(mode, activePalette)==='bw';   // black and white: a Variation would change only the sound — there is none
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
@@ -5705,6 +5714,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _songEnergyCacheRef = useRef({ src: null, e: 0.5 });
   useEffect(()=>{
     const mode = paintMode;   // the painters paint in this (an all-grey Custom = b/w); the palette itself stays in gc
+    const chords = paintChords, gc = paintGc;   // the piece in C, its colours in its key (see _keyD)
+    globalThis.__PAINT_KEY_D = paintKeyD;
     const cv=canvasRef.current;if(!cv)return;
     // B1: push the piece's overall energy to the draw module so gc() tilts the
     // palette's saturation/lightness by character. Cached by chords identity so
@@ -6185,7 +6196,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     paintGenRef.current++; lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,feedHiRes,painterStage,fuRoll,fuStyleNow]);
+  },[chords,paintChords,disp,pending,mode,grid,info,gc,paintGc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,feedHiRes,painterStage,fuRoll,fuStyleNow]);
 
   // ── FAVORITES (♥) ───────────────────────────────────────────────────────────
   // ♥ at the top left of a FINISHED painting saves its address (favAdd in
@@ -6435,12 +6446,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // it is painted (enter / leave), so the live painting underneath stays untouched.
   const _favExportX = (fv, pc, lay)=>{
     const G=globalThis; let keep=null;
+    const _kd=_keyD(pc.chords);   // in C, coloured in its key (see _keyD)
     const lead = fv.keys ? fv.keys[0] : (fv.style||null);
     const key = fv.style || 'mosaic', bare = (key==='mosaic' || key==='notes' || key==='raffel');
     const insp0 = fv.keys ? fv.keys.map(_painterLabel).join(' × ') : (bare ? STYLE_INSPIRED[key] : ('inspired by '+STYLE_INSPIRED[key]));
     return {
-      chords: pc.chords, grid: lay.g, effectiveStyle: lead, shuffleStyle: null, pollockSessionSeed: fv.seed>>>0,
-      mode: _paintModeOf(fv.mode, fv.pal), gc: _gcMake(fv.mode, fv.tone, fv.pal, fv.ks), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
+      pcRealW: _pcWeights(pc.chords), gcReal: _gcMake(fv.mode, fv.tone, fv.pal, fv.ks),   // the colours strip: the real notes
+      chords: _keyNorm(pc.chords, _kd), grid: lay.g, effectiveStyle: lead, shuffleStyle: null, pollockSessionSeed: fv.seed>>>0,
+      mode: _paintModeOf(fv.mode, fv.pal), gc: _gcMake(fv.mode, fv.tone, fv.pal, (fv.ks|0)+_kd), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
       info: {title:_favTitle(fv)}, compositionName: '', painterStageRef: {current: fv.keys ? fv.keys.slice(1) : []},
       sigActiveRef: {current:!!fv.sig}, draftOwnerRef: {current: fv.compose ? 'compose' : null},
       originalImgUrl: null, imgMoodThumb: null, currentMood: fv.mood || '',
@@ -6450,14 +6463,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       caption: _favCaption(fv),
       enter: ()=>{
         if(keep) return;
-        keep={ fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
+        keep={ fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy(), kd:G.__PAINT_KEY_D };
+        G.__PAINT_KEY_D = _kd;
         G.__PAINT_FU_PHS = fv.fa ? { keys:fv.fa.keys.slice(), phs:fv.fa.phs.slice(), fs:(fv.fa.fs==='E' ? 'E' : 'A'), rv:(fv.fa.rv|0)||1 } : null;
         G.__PAINT_SIG_PHS = null; G.__PAINT_MUSIC_DNA = fv.dna || null;
         _setSongEnergy(fv.se); _setMixOn(fv.tone==='real');
       },
       leave: ()=>{
         if(!keep) return;
-        G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna;
+        G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna; G.__PAINT_KEY_D = keep.kd;
         _setSongEnergy(keep.se); _setMixOn(favLiveToneRef.current==='real'); _setCurE(0.5); keep=null;
       },
     };
@@ -13623,7 +13637,10 @@ Hard requirements:
     const _p34 = (sizeMode==='print' || sizeMode==='gallery') && viewMode!=='image' && !basicModeRef.current;
     const _lay34 = (f, ch)=>{ let L=null; try{ window.__pfPrint34=true; L=_favLayout(f, ch); }catch(_){ L=null; } finally{ try{ window.__pfPrint34=false; }catch(_){} } return L; };
     if(!fv){
-      let X={ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip };
+      let _kd0=0;
+      let X={ chords:paintChords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc:paintGc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip,
+        enter: ()=>{ _kd0=globalThis.__PAINT_KEY_D; globalThis.__PAINT_KEY_D=paintKeyD; }, leave: ()=>{ globalThis.__PAINT_KEY_D=_kd0; },
+        pcRealW: _pcWeights(chords), gcReal: gc };   // the song's colours strip under the painting: the real notes, named
       if(_p34){ const L=_lay34({ own:draftOwnerRef.current||null, mf:1, style:effectiveStyle, keys:(painterStage && painterStage.length) ? [effectiveStyle].concat(painterStage) : null, skip:_takeSkip(effectiveStyle) }, chords);
         if(L) X=Object.assign({}, X, { grid:L.g, _takeGrid:()=>L.pg, _takeFrame:()=>({CW:L.CW, CH:L.CH}) }); }
       return _exportWith(X, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
@@ -13915,7 +13932,7 @@ Hard requirements:
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
           const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
-          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:_pcWeights(chords), gc, names:_miT('names'), src:_srcForBand});
+          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:(X.pcRealW || _pcWeights(chords)), gc:(X.gcReal || gc), names:_miT('names'), src:_srcForBand});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
         }catch(_){ outCanvas=hi; }
       }
@@ -14008,7 +14025,7 @@ Hard requirements:
         const _inspLabel = (X.insp!==undefined) ? X.insp : imageModeStory ? (_imgInspLabel() || null) : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
-        const _stW = chords.length ? _pcWeights(chords) : null;   // the song's colours (between the painting and the wordmark)
+        const _stW = chords.length ? (X.pcRealW || _pcWeights(chords)) : null;   // the song's colours (between the painting and the wordmark) — the real notes
         const paintingBottomReserve = 290 + (_stW ? 190 : 0); // mood + wordmark + tagline (+ the song's colours)
         const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
         // Scale painting to fit BOTH dimensions. Width-only scaling overflowed
@@ -14051,7 +14068,7 @@ Hard requirements:
         sctx.textAlign='center';
         const moodLabel = (currentMood||'').trim();
         let cursorY = dy + dh + 110;
-        if(_stW){ const _sw=852, _sh=150; _drawPcStrip(sctx, Math.round((SW-_sw)/2), dy+dh+44, _sw, _sh, _stW, gc, _miT('names'), {font:22, gap:12}); cursorY = dy + dh + 44 + _sh + 96; }
+        if(_stW){ const _sw=852, _sh=150; _drawPcStrip(sctx, Math.round((SW-_sw)/2), dy+dh+44, _sw, _sh, _stW, (X.gcReal || gc), _miT('names'), {font:22, gap:12}); cursorY = dy + dh + 44 + _sh + 96; }
         if(moodLabel){
           sctx.fillStyle='rgba(255,220,140,.95)';
           sctx.font='italic 500 44px "Cormorant Garamond", Georgia, serif';
@@ -14708,7 +14725,7 @@ Hard requirements:
   if(!_skinOpen) _skinPkRef.current='';
   else if(!(composeMode || micActive) || !_skinPkRef.current) _skinPkRef.current=_skinPk;
   const _skinKey = (_skinOpen && _skinPkRef.current && !(viewMode==='image' && !moodFromImg))
-    ? [_skinPkRef.current, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus].join('|') : '';
+    ? [_skinPkRef.current, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus, keyShift].join('|') : '';
   useEffect(()=>{
     if(!_skinKey) return;
     const R = skinThumbRef.current;
@@ -14728,7 +14745,7 @@ Hard requirements:
         let se = 0.5;
         if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===cs) se=sc.e; else { try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){} } }
         const fv = { style:st, keys:null, fa:null, phase:0, seed:pollockSessionSeed>>>0,
-          cap:(proStatus==='free' && st!==artistOfDay) ? 2 : null, mode, tone, pal: mode==='custom' ? activePalette : null,
+          cap:(proStatus==='free' && st!==artistOfDay) ? 2 : null, mode, tone, pal: mode==='custom' ? activePalette : null, ks:keyShift,
           se, dna: globalThis.__PAINT_MUSIC_DNA || null, skip, liveE:seLive, compose: own==='compose', own };
         const lay = _favLayout(fv, cs);
         const cv = document.createElement('canvas');
@@ -15018,7 +15035,7 @@ Hard requirements:
     // choices, the title), the piece sounds ks semitones away (playNote) in that key's colours (gc). It used to transpose the
     // notes themselves, and a new key moved every shape: two Variations of one picture were two different paintings.
     const pk=_favHash(chords), cur=(ksMap[pk]|0);
-    const opts=[-5,-4,-3,-2,-1,1,2,3,4,5].filter(k=>k!==cur);
+    const opts=[-5,-4,-3,-2,-1,1,2,3,4,5].filter(k=>k!==cur);   // any key: the form is key-free (_keyD), so the Variation saved as MIDI and opened again is this same painting
     const ks=opts[(Math.random()*opts.length)|0];
     const wasPlaying=playing||holdPausedRef.current; // active = playing OR paused → auto-restart, don't wait for Play
     stopAll();

@@ -1913,7 +1913,53 @@ function parseMusicXml(xmlText){
 // Memoised per chords array (identity + length): every overlay painter calls
 // this on every repaint, and the answer only changes when the piece changes.
 const _songCharCache = new WeakMap();
+// THE FORM OF A PIECE IS KEY-FREE. _keyD: the key of a piece (Krumhansl–Schmuckler over its notes' pitch classes, weighted by
+// length) — its tonic (a minor key's: its relative major's) in the octave nearest the piece's middle — as the distance of that
+// note from middle C. Exact for any transposition (a semitone or an octave: the same distance moves along), so the form never
+// jumps; the register stays in the colours' lightness. The painters, the Music DNA,
+// the ✦ Signature, the song's character and the painting's seed read the piece moved by it into C (_keyNorm); its colours
+// put the key back (_gcMake ks). So one piece in any key is one form, and the key colours it. A live take (Compose, Mic:
+// recorded) and a picture's scan (band) stay as they are (0): the first is painted while it grows, the second is the picture's.
+// The sound, the keyboard, the notes and the files always keep the real notes.
+const _KS_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const _KS_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+const _keyDCache = new WeakMap();
+function _keyD(chords){
+  if(!Array.isArray(chords) || !chords.length) return 0;
+  const hit=_keyDCache.get(chords); if(hit!==undefined) return hit;
+  let d=0;
+  try{
+    const c0=chords[0];
+    if(!(c0 && (c0.recorded || c0.band!=null))){
+      const h=[0,0,0,0,0,0,0,0,0,0,0,0]; let tot=0;
+      for(const c of chords){ if(!c || !Array.isArray(c.n)) continue;
+        for(const n of c.n){ const m=(n && n.m!==undefined) ? n.m : n; if(typeof m!=='number' || !isFinite(m)) continue;
+          const w=Math.max(60, Math.min(4000, (n && n.durMs) || 250)); h[((Math.round(m)%12)+12)%12]+=w; tot+=w; } }
+      if(tot>0){
+        let mu=0, mw=0;   // the piece's middle (length-weighted)
+        for(const c of chords){ if(!c || !Array.isArray(c.n)) continue; for(const n of c.n){ const m=(n && n.m!==undefined) ? n.m : n; if(typeof m!=='number' || !isFinite(m)) continue; const w=Math.max(60, Math.min(4000, (n && n.durMs) || 250)); mu+=m*w; mw+=w; } }
+        mu = mw>0 ? mu/mw : 60;
+        const mx=tot/12;
+        const corr=(P, k)=>{ let my=0; for(let i=0;i<12;i++) my+=P[i]; my/=12; let num=0, dx=0, dy=0;
+          for(let i=0;i<12;i++){ const x=h[(i+k)%12]-mx, y=P[i]-my; num+=x*y; dx+=x*x; dy+=y*y; } return (dx>0 && dy>0) ? num/Math.sqrt(dx*dy) : -2; };
+        let best=-3, tonic=0;
+        for(let k=0;k<12;k++){ const a=corr(_KS_MAJ,k); if(a>best+1e-9){ best=a; tonic=k; } const b=corr(_KS_MIN,k); if(b>best+1e-9){ best=b; tonic=(k+3)%12; } }
+        d = (tonic + 12*Math.round((mu - tonic)/12)) - 60;   // its tonic nearest its middle → middle C
+      }
+    }
+  }catch(_){ d=0; }
+  _keyDCache.set(chords, d); return d;
+}
+function _keyNorm(chords, d){
+  if(!d || !Array.isArray(chords)) return chords;
+  const out=chords.map(c=> (c && Array.isArray(c.n)) ? {...c, n:c.n.map(n=> (n && typeof n.m==='number') ? {...n, m:n.m-d} : n)} : c);
+  for(const k of Object.keys(chords)) if(!/^\d+$/.test(k)) out[k]=chords[k];   // the take's own marks (_livePad, _exactTone…)
+  _keyDCache.set(out, 0);   // already in C
+  return out;
+}
+function _keyNormOf(chords){ return _keyNorm(chords, _keyD(chords)); }
 function computeSongCharacter(chords){
+  chords=_keyNormOf(chords);   // key-free (see _keyD)
   // A LIVE take (Compose / Mic) is painted against a padded, still-growing array
   // (see the draw effect's _livePad): its character is held neutral so every new
   // note ADDS to the painting instead of re-shaping what is already there.

@@ -1913,7 +1913,53 @@ function parseMusicXml(xmlText){
 // Memoised per chords array (identity + length): every overlay painter calls
 // this on every repaint, and the answer only changes when the piece changes.
 const _songCharCache = new WeakMap();
+// THE FORM OF A PIECE IS KEY-FREE. _keyD: the key of a piece (Krumhansl–Schmuckler over its notes' pitch classes, weighted by
+// length) — its tonic (a minor key's: its relative major's) in the octave nearest the piece's middle — as the distance of that
+// note from middle C. Exact for any transposition (a semitone or an octave: the same distance moves along), so the form never
+// jumps; the register stays in the colours' lightness. The painters, the Music DNA,
+// the ✦ Signature, the song's character and the painting's seed read the piece moved by it into C (_keyNorm); its colours
+// put the key back (_gcMake ks). So one piece in any key is one form, and the key colours it. A live take (Compose, Mic:
+// recorded) and a picture's scan (band) stay as they are (0): the first is painted while it grows, the second is the picture's.
+// The sound, the keyboard, the notes and the files always keep the real notes.
+const _KS_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const _KS_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+const _keyDCache = new WeakMap();
+function _keyD(chords){
+  if(!Array.isArray(chords) || !chords.length) return 0;
+  const hit=_keyDCache.get(chords); if(hit!==undefined) return hit;
+  let d=0;
+  try{
+    const c0=chords[0];
+    if(!(c0 && (c0.recorded || c0.band!=null))){
+      const h=[0,0,0,0,0,0,0,0,0,0,0,0]; let tot=0;
+      for(const c of chords){ if(!c || !Array.isArray(c.n)) continue;
+        for(const n of c.n){ const m=(n && n.m!==undefined) ? n.m : n; if(typeof m!=='number' || !isFinite(m)) continue;
+          const w=Math.max(60, Math.min(4000, (n && n.durMs) || 250)); h[((Math.round(m)%12)+12)%12]+=w; tot+=w; } }
+      if(tot>0){
+        let mu=0, mw=0;   // the piece's middle (length-weighted)
+        for(const c of chords){ if(!c || !Array.isArray(c.n)) continue; for(const n of c.n){ const m=(n && n.m!==undefined) ? n.m : n; if(typeof m!=='number' || !isFinite(m)) continue; const w=Math.max(60, Math.min(4000, (n && n.durMs) || 250)); mu+=m*w; mw+=w; } }
+        mu = mw>0 ? mu/mw : 60;
+        const mx=tot/12;
+        const corr=(P, k)=>{ let my=0; for(let i=0;i<12;i++) my+=P[i]; my/=12; let num=0, dx=0, dy=0;
+          for(let i=0;i<12;i++){ const x=h[(i+k)%12]-mx, y=P[i]-my; num+=x*y; dx+=x*x; dy+=y*y; } return (dx>0 && dy>0) ? num/Math.sqrt(dx*dy) : -2; };
+        let best=-3, tonic=0;
+        for(let k=0;k<12;k++){ const a=corr(_KS_MAJ,k); if(a>best+1e-9){ best=a; tonic=k; } const b=corr(_KS_MIN,k); if(b>best+1e-9){ best=b; tonic=(k+3)%12; } }
+        d = (tonic + 12*Math.round((mu - tonic)/12)) - 60;   // its tonic nearest its middle → middle C
+      }
+    }
+  }catch(_){ d=0; }
+  _keyDCache.set(chords, d); return d;
+}
+function _keyNorm(chords, d){
+  if(!d || !Array.isArray(chords)) return chords;
+  const out=chords.map(c=> (c && Array.isArray(c.n)) ? {...c, n:c.n.map(n=> (n && typeof n.m==='number') ? {...n, m:n.m-d} : n)} : c);
+  for(const k of Object.keys(chords)) if(!/^\d+$/.test(k)) out[k]=chords[k];   // the take's own marks (_livePad, _exactTone…)
+  _keyDCache.set(out, 0);   // already in C
+  return out;
+}
+function _keyNormOf(chords){ return _keyNorm(chords, _keyD(chords)); }
 function computeSongCharacter(chords){
+  chords=_keyNormOf(chords);   // key-free (see _keyD)
   // A LIVE take (Compose / Mic) is painted against a padded, still-growing array
   // (see the draw effect's _livePad): its character is held neutral so every new
   // note ADDS to the painting instead of re-shaping what is already there.
@@ -2531,7 +2577,7 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
       R=r; G=g; B=b;
     }
     const cx=bx+BW/2, cy=by+i*bh+bh/2;
-    const name=_midiToName[note.m]||'';
+    const name=_midiToName[note.m+(globalThis.__PAINT_KEY_D|0)]||'';   // the painters see the piece in C (_keyD): its names are the real ones
     // subtle dark halo for contrast against any colour, then the tinted glyph
     ctx.fillStyle='rgba(4,4,10,0.85)';
     ctx.fillText(name,cx+0.6,cy+0.6);
@@ -5293,7 +5339,7 @@ function pc2_guitar(ctx,CW,CH,chords,lim,gc,ss,mode){
   const frets=Math.min(12,A.phrases.length); for(let i=0;i<frets;i++){ const u=0.15+0.8*i/Math.max(1,frets-1); const cx=nx0+(nx1-nx0)*u, cy=ny0+(ny1-ny0)*u; const px=-Math.sin(nAng)*CW*0.035, py=Math.cos(nAng)*CW*0.035; list.push({id:list.length,t:0.62+i*0.01,line:[[cx-px,cy-py],[cx+px,cy+py]],col:[30,26,22],lw:Math.max(1,D*0.003)}); }
   const ns=Math.max(3,Math.min(6,Math.round(A.ch.density*5+1))); for(let i=0;i<ns;i++){ const off=(i-(ns-1)/2)*CW*0.012; const px=-Math.sin(nAng)*off, py=Math.cos(nAng)*off; list.push({id:list.length,t:0.75+i*0.02,line:[[nx1+px,ny1+py],[gx+px,gy+CH*0.12+py]],col:isBW?[30,30,30]:[36,30,26],lw:Math.max(1,D*0.0032)}); }
   // the lettering: the song's three strongest pitch classes, stencil-cut into the collage
-  const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; const order=A.pcW.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>NAMES[x[1]]);
+  const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; const _kD=globalThis.__PAINT_KEY_D|0; const order=A.pcW.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>NAMES[(((x[1]+_kD)%12)+12)%12]);
   list.push({id:list.length,t:0.9,text:order.join(' '),x:CW*0.74,y:CH*0.85,size:D*0.085,col:[28,26,24],rot:-0.08});
   _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
@@ -19860,7 +19906,7 @@ const GUIDE_I18N = {
     mosaic:{t:`Mosaic and Notes`, b:`Clean golden-ratio rectangles, one per chord. Notes writes each block's note on it.`, m:`Mosaic — Paints when no painter is chosen. ◆ Notes — The same grid with note names. The quickest way to learn which note is which colour. ◆ Switch — Tap Mosaic again. ◆ 🔀 — With 🔀 on, tapping Mosaic locks the draw to Mosaic ↔ Notes.`},
     shuffle:{t:`Shuffle 🔀`, b:`Same song = same painting. 🔀 off: Next brings variants of your painter. 🔀 on: every painter in your set.`, m:`Off — Your painter; Next brings more of its variants. ◆ On — Every painter in your set. ◆ Next — In the Atelier Next, in the Studio swipe up. ◆ Show — While a song plays, ↻ Show moves through paintings on its own. ◆ Ensemble ◎ — Sits next to 🔀; together they draw new crossings.`},
     signature:{t:`✦ Signature`, b:`Every song has one painting it chose itself. The same for everyone.`, m:`How — The music casts 2–5 painters by role: rhythm, melody, harmony, brightness, range. The notes pick the variant, the song's character the palette. ◆ For everyone — It depends only on the music, not on your Setup or tier. Free too. ◆ Where — Tap ✦ Signature in the caption by the painter's name. Another painter, palette or 🔀 turns it off. ◆ Lite — Every new song starts on it. ◆ Image — A picture has a Signature too: one piece, a composer or a Jam session. ◆ Finished works only — Music files, samples and pictures. Mood, Compose, Mic and Mood from image have none.`, mS:`How — The music casts 2–5 painters by role: rhythm, melody, harmony, brightness, range. The notes pick the variant, the song's character the palette. ◆ For everyone — It depends only on the music, not on your Setup or tier. Free too. ◆ Where — Tap the painting, then ✦ Signature in the caption at the top. Another painter, palette or 🔀 turns it off. ◆ Image — A picture has a Signature too: one piece, a composer or a Jam session. ◆ Finished works only — Music files, samples and pictures. Mood, Compose, Mic and Mood from image have none.`},
-    moods:{t:`How do you feel?`, b:`Type any feeling, in any language. AI writes you a piano piece for it.`, m:`A feeling — Furious, saudade, 3am drive, summer love — or tap a ready mood. ◆ Vary — A new key: the same painting in its colours. Works while the piece plays. ◆ Morph — Blends one mood into another. ◆ Loop — The mood plays on and on. ◆ Free and Pro AI — Free gets one try of each AI mode, Pro AI makes up to 30 pieces & melodies a day.`},
+    moods:{t:`How do you feel?`, b:`Type any feeling, in any language. AI writes you a piano piece for it.`, m:`A feeling — Furious, saudade, 3am drive, summer love — or tap a ready mood. ◆ Vary — A new key: the same painting in its colours (not in black and white). Works while the piece plays. ◆ Morph — Blends one mood into another. ◆ Loop — The mood plays on and on. ◆ Free and Pro AI — Free gets one try of each AI mode, Pro AI makes up to 30 pieces & melodies a day.`},
     mfi:{t:`Mood from image`, b:`AI reads the mood of your photo and writes a piece for it.`, m:`Picture first — While the mood is read, you see the photo it comes from. ◆ ▶ — Paints its mood. ◆ Hold — The original picture shows again. ◆ Vary and Morph — As with How do you feel?. ◆ Pro AI — Free gets one try.`},
     compose:{t:`Compose`, b:`Your live piano. A tap on a key is a stab, holding it a wider stroke.`, m:`Chords live — Hold a chord and its name appears: C major, A minor, D7… ◆ Edit (Studio) — Hold a chord on the painting: it gets a gold frame and the painting shows its notes. ‹ › the chord before / after, ＋ Insert after (the next chord you play goes after it), Delete takes it out; ✕ or Done and the painting is back. ◆ Keyboard — A–L white, W E T Y U O P black. Backspace undo, Space play. ◆ Phone — 88 keys, slide sideways; C4 sits in the middle. ◆ Scale — Snaps everything you play to the chosen key. ◆ Painters — The painting grows note by note. Paintings with a motif, like Monet's cathedral or Delaunay's tower, stand from the first note. ◆ Canvas — A fixed portrait frame in the golden ratio (1 : φ) from the first chord. Always full — the blocks get smaller with every chord.`},
     mic:{t:`Mic`, b:`Sing or play some music — Paintiano paints what it hears.`, m:`Mic — Listens to everything: a speaker, a band, a piano, your voice. Every tone it hears — melody, bass, chords and how loud — painted live, as a Music piece would be. ◆ Song — After a take, ✦ Open as a song reads the recording like an MP3 and opens it in Music: every note, DNA, ✦ Signature. The live painting waits in the Mic. ◆ REC — Another REC carries on in the same painting; Clear starts anew. ◆ Canvas — A fixed portrait frame from the first note. Always full — the blocks get smaller as the take grows. ◆ Camera — Opens the iPhone's Camera: record a video with its natural sound, tap Use Video, and the app paints its sound as a song. Nothing paints live while it records — that is what REC is for.`},
@@ -19896,7 +19942,7 @@ const GUIDE_I18N = {
     mosaic:{t:`Mozaika a Noty`, b:`Čisté obdĺžniky v zlatom reze, jeden na akord. Noty ukážu na každom bloku jeho tón.`, m:`Mozaika — Maľuje, keď nie je vybraný žiadny maliar. ◆ Noty — Tá istá mriežka s menami tónov. Najrýchlejšie sa naučíš, ktorý tón je ktorá farba. ◆ Prepnutie — Ťukni na Mozaiku ešte raz. ◆ 🔀 — So zapnutým 🔀 ťuk na Mozaiku zamkne žreb na Mozaika ↔ Noty.`},
     shuffle:{t:`Zamiešanie 🔀`, b:`Tá istá skladba = tá istá maľba. 🔀 vyp: Ďalšia prinesie varianty tvojho maliara. 🔀 zap: všetci maliari z tvojho výberu.`, m:`Vyp — Tvoj maliar, Ďalšia prinesie ďalšie jeho varianty. ◆ Zap — Všetci maliari z tvojho výberu. ◆ Ďalšia — V Ateliéri Next, v Štúdiu potiahni hore. ◆ Show — Kým skladba hrá, ↻ Show posúva maľby samo. ◆ Ensemble ◎ — Sedí vedľa 🔀 a spolu žrebujú nové kríženia.`},
     signature:{t:`✦ Signatúra`, b:`Každá skladba má jednu maľbu, ktorú si vybrala sama. Rovnakú pre každého.`, m:`Ako — Hudba obsadí 2–5 maliarov podľa rolí: rytmus, melódia, harmónia, jas, rozsah. Variant vyberú noty, paletu charakter skladby. ◆ Pre každého — Závisí len od hudby, nie od Setupu ani úrovne. Aj vo Free. ◆ Kde — Ťukni na ✦ Signatúra v popise pri mene maliara. Iný maliar, paleta alebo 🔀 ju vypne. ◆ Lite — Každá nová skladba začne na nej. ◆ Obraz — Aj obrázok má Signatúru: jednu skladbu, skladateľa alebo Jam session. ◆ Len hotové diela — Hudobné súbory, ukážky a obrázky. Nálada, Komponovať, Mikro a Nálada z obrazu ju nemajú.`, mS:`Ako — Hudba obsadí 2–5 maliarov podľa rolí: rytmus, melódia, harmónia, jas, rozsah. Variant vyberú noty, paletu charakter skladby. ◆ Pre každého — Závisí len od hudby, nie od Setupu ani úrovne. Aj vo Free. ◆ Kde — Ťukni na maľbu a v popise hore ťukni na ✦ Signatúra. Iný maliar, paleta alebo 🔀 ju vypne. ◆ Obraz — Aj obrázok má Signatúru: jednu skladbu, skladateľa alebo Jam session. ◆ Len hotové diela — Hudobné súbory, ukážky a obrázky. Nálada, Komponovať, Mikro a Nálada z obrazu ju nemajú.`},
-    moods:{t:`Ako sa cítiš?`, b:`Napíš akýkoľvek pocit, v akomkoľvek jazyku. AI ti k nemu napíše klavírnu skladbu.`, m:`Pocit — Zúrivý, saudade, 3am drive, letná láska — alebo ťukni na hotovú náladu. ◆ Variácia — Nová tónina: ten istý obraz v jej farbách. Funguje, kým skladba hrá. ◆ Morf — Prelína jednu náladu do druhej. ◆ Slučka — Nálada hrá dokola. ◆ Free a Pro AI — Free má jednu skúšku každého AI módu, Pro AI až 30 skladieb a melódií denne.`},
+    moods:{t:`Ako sa cítiš?`, b:`Napíš akýkoľvek pocit, v akomkoľvek jazyku. AI ti k nemu napíše klavírnu skladbu.`, m:`Pocit — Zúrivý, saudade, 3am drive, letná láska — alebo ťukni na hotovú náladu. ◆ Variácia — Nová tónina: ten istý obraz v jej farbách (nie v čiernobielej). Funguje, kým skladba hrá. ◆ Morf — Prelína jednu náladu do druhej. ◆ Slučka — Nálada hrá dokola. ◆ Free a Pro AI — Free má jednu skúšku každého AI módu, Pro AI až 30 skladieb a melódií denne.`},
     mfi:{t:`Nálada z obrazu`, b:`AI prečíta náladu tvojej fotky a napíše k nej skladbu.`, m:`Najprv obrázok — Kým sa nálada číta, vidíš fotku, z ktorej vzniká. ◆ ▶ — Namaľuje jej náladu. ◆ Podrž — Pôvodný obrázok sa ukáže znova. ◆ Variácia a Morf — Ako pri Ako sa cítiš?. ◆ Pro AI — Free má jednu skúšku.`},
     compose:{t:`Komponovať`, b:`Tvoj živý klavír. Ťuk na kláves je úder, podržanie širší ťah.`, m:`Akordy naživo — Podrž akord a zjaví sa jeho názov: C dur, A mol, D7… ◆ Úpravy (Štúdio) — Podrž akord na maľbe: dostane zlatý rámik a maľba ukáže jej tóny. ‹ › akord pred / za, ＋ Vložiť za (ďalší zahraný akord sa vloží zaň), Zmazať ho odstráni; ✕ alebo Hotovo a maľba je späť. ◆ Klávesnica — A–L biele, W E T Y U O P čierne. Backspace späť, Space play. ◆ Mobil — 88 klávesov, posúvaš vodorovne; C4 je v strede. ◆ Stupnica — Prichytí všetko, čo hráš, na zvolenú tóninu. ◆ Maliari — Maľba rastie tón po tóne. Maľby s motívom, ako Monetova katedrála či Delaunayho veža, stoja od prvej noty. ◆ Plátno — Pevný rám na výšku v zlatom reze (1 : φ) od prvého akordu. Vždy plné — s každým akordom sa bloky zmenšujú.`},
     mic:{t:`Mikro`, b:`Zaspievaj alebo pusti hudbu — Paintiano maľuje, čo počuje.`, m:`Mikro — Počúva všetko: reproduktor, kapelu, klavír, tvoj hlas. Každý tón, ktorý počuje — melódiu, bas, akordy aj hlasitosť — maľuje naživo, ako skladbu v Hudbe. ◆ Skladba — Po nahrávke ✦ Otvoriť ako skladbu prečíta nahrávku ako MP3 a otvorí ju v Hudbe: každý tón, DNA, ✦ Signatúra. Živá maľba počká v Mikro. ◆ REC — Ďalší REC pokračuje v tom istom obraze, Vyčistiť začne nanovo. ◆ Plátno — Pevný rám na výšku od prvého tónu. Vždy plné — s pribúdajúcou nahrávkou sa bloky zmenšujú. ◆ Kamera — Otvorí Fotoaparát iPhonu: nahráš video s prirodzeným zvukom, ťukneš Použiť video a appka jeho zvuk namaľuje ako skladbu. Počas nahrávania sa nemaľuje naživo — na to je REC.`},
@@ -19932,7 +19978,7 @@ const GUIDE_I18N = {
     mosaic:{t:`Mosaik und Noten`, b:`Klare Rechtecke im Goldenen Schnitt, eins pro Akkord. Noten zeigt auf jedem Block seinen Ton.`, m:`Mosaik — Malt, wenn kein Maler gewählt ist. ◆ Noten — Dasselbe Raster mit Tonnamen. So lernst du am schnellsten, welcher Ton welche Farbe ist. ◆ Wechseln — Tippe noch einmal auf Mosaik. ◆ 🔀 — Mit 🔀 an sperrt ein Tipp auf Mosaik die Ziehung auf Mosaik ↔ Noten.`},
     shuffle:{t:`Zufall 🔀`, b:`Gleiches Stück = gleiches Bild. 🔀 aus: Nächstes bringt Varianten deines Malers. 🔀 an: alle Maler aus deiner Auswahl.`, m:`Aus — Dein Maler; Nächstes bringt weitere Varianten von ihm. ◆ An — Alle Maler aus deiner Auswahl. ◆ Nächstes — Im Atelier Next, im Studio nach oben wischen. ◆ Show — Während ein Stück spielt, schaltet ↻ Show die Bilder von selbst weiter. ◆ Ensemble ◎ — Sitzt neben 🔀, zusammen ziehen sie neue Kreuzungen.`},
     signature:{t:`✦ Signatur`, b:`Jedes Stück hat ein Bild, das es sich selbst ausgesucht hat. Für alle gleich.`, m:`Wie — Die Musik besetzt 2–5 Maler nach Rollen: Rhythmus, Melodie, Harmonie, Helligkeit, Umfang. Die Variante wählen die Noten, die Palette der Charakter des Stücks. ◆ Für alle — Hängt nur von der Musik ab, nicht von Setup oder Stufe. Auch in Free. ◆ Wo — Tippe in der Beschriftung neben dem Malernamen auf ✦ Signatur. Ein anderer Maler, eine andere Palette oder 🔀 schaltet sie aus. ◆ Lite — Jedes neue Stück beginnt mit ihr. ◆ Bild — Auch ein Foto hat eine Signatur: ein eigenes Stück, von einem Komponisten oder als Jam session. ◆ Nur fertige Werke — Musikdateien, Beispiele und Fotos. Stimmung, Komponieren, Mikro und Stimmung aus Bild haben keine.`, mS:`Wie — Die Musik besetzt 2–5 Maler nach Rollen: Rhythmus, Melodie, Harmonie, Helligkeit, Umfang. Die Variante wählen die Noten, die Palette der Charakter des Stücks. ◆ Für alle — Hängt nur von der Musik ab, nicht von Setup oder Stufe. Auch in Free. ◆ Wo — Tippe auf das Bild, dann oben in der Beschriftung auf ✦ Signatur. Ein anderer Maler, eine andere Palette oder 🔀 schaltet sie aus. ◆ Bild — Auch ein Foto hat eine Signatur: ein eigenes Stück, von einem Komponisten oder als Jam session. ◆ Nur fertige Werke — Musikdateien, Beispiele und Fotos. Stimmung, Komponieren, Mikro und Stimmung aus Bild haben keine.`},
-    moods:{t:`Wie fühlst du dich?`, b:`Schreib irgendein Gefühl, in irgendeiner Sprache. Die KI schreibt dir ein Klavierstück dazu.`, m:`Gefühl — Wütend, saudade, 3am drive, Sommerliebe — oder tippe auf eine fertige Stimmung. ◆ Variieren — Neue Tonart: dasselbe Bild in ihren Farben. Geht, solange das Stück spielt. ◆ Morph — Blendet eine Stimmung in eine andere über. ◆ Loop — Die Stimmung spielt in Schleife. ◆ Free und Pro KI — Free hat einen Versuch pro KI-Modus, Pro KI bis zu 30 Stücke & Melodien pro Tag.`},
+    moods:{t:`Wie fühlst du dich?`, b:`Schreib irgendein Gefühl, in irgendeiner Sprache. Die KI schreibt dir ein Klavierstück dazu.`, m:`Gefühl — Wütend, saudade, 3am drive, Sommerliebe — oder tippe auf eine fertige Stimmung. ◆ Variieren — Neue Tonart: dasselbe Bild in ihren Farben (nicht in Schwarzweiß). Geht, solange das Stück spielt. ◆ Morph — Blendet eine Stimmung in eine andere über. ◆ Loop — Die Stimmung spielt in Schleife. ◆ Free und Pro KI — Free hat einen Versuch pro KI-Modus, Pro KI bis zu 30 Stücke & Melodien pro Tag.`},
     mfi:{t:`Stimmung aus Bild`, b:`Die KI liest die Stimmung deines Fotos und schreibt ein Stück dazu.`, m:`Erst das Foto — Während die Stimmung gelesen wird, siehst du das Foto, aus dem sie entsteht. ◆ ▶ — Malt seine Stimmung. ◆ Gedrückt halten — Das Originalfoto erscheint wieder. ◆ Variieren und Morph — Wie bei „Wie fühlst du dich?“. ◆ Pro KI — Free hat einen Versuch.`},
     compose:{t:`Komponieren`, b:`Dein Live-Klavier. Taste tippen = Tupfer, halten = breiterer Strich.`, m:`Akkorde live — Halte einen Akkord, und sein Name erscheint: C-Dur, a-Moll, D7… ◆ Bearbeiten (Studio) — Halte einen Akkord auf dem Bild: Er bekommt einen goldenen Rahmen, das Bild zeigt seine Töne. ‹ › der Akkord davor / danach, ＋ Danach einfügen (der nächste gespielte Akkord kommt dahinter), Löschen nimmt ihn heraus; ✕ oder Fertig, und das Bild ist zurück. ◆ Tastatur — A–L weiß, W E T Y U O P schwarz. Backspace zurück, Space Play. ◆ Handy — 88 Tasten, horizontal wischen; C4 liegt in der Mitte. ◆ Tonart — Rastet alles, was du spielst, auf die gewählte Tonart ein. ◆ Maler — Das Bild wächst Ton für Ton. Bilder mit Motiv, wie Monets Kathedrale oder Delaunays Turm, stehen ab der ersten Note. ◆ Leinwand — Ein fester Hochformat-Rahmen im Goldenen Schnitt (1 : φ) ab dem ersten Akkord. Immer voll — mit jedem Akkord werden die Blöcke kleiner.`},
     mic:{t:`Mikro`, b:`Sing oder spiel Musik ab — Paintiano malt, was es hört.`, m:`Mikro — Hört alles: Lautsprecher, Band, Klavier, deine Stimme. Jeden Ton, den es hört — Melodie, Bass, Akkorde und Lautstärke — malt es live, wie ein Musikstück. ◆ Stück — Nach der Aufnahme liest ✦ Als Musikstück öffnen sie wie eine MP3 und öffnet sie in Musik: jeder Ton, DNA, ✦ Signatur. Das Live-Bild wartet im Mikro. ◆ REC — Ein weiteres REC macht im selben Bild weiter, Löschen fängt neu an. ◆ Leinwand — Ein fester Hochformat-Rahmen ab dem ersten Ton. Immer voll — die Blöcke werden kleiner, je länger die Aufnahme wird. ◆ Kamera — Öffnet die Kamera des iPhone: Nimm ein Video mit natürlichem Klang auf, tippe auf Video verwenden, und die App malt seinen Ton als Musikstück. Während der Aufnahme wird nicht live gemalt — dafür gibt es REC.`},
@@ -19968,7 +20014,7 @@ const GUIDE_I18N = {
     mosaic:{t:`Mosaïque et Notes`, b:`Des rectangles nets au nombre d’or, un par accord. Notes affiche sur chaque bloc sa note.`, m:`Mosaïque — Peint quand aucun peintre n’est choisi. ◆ Notes — La même grille avec le nom des notes. Le plus rapide pour apprendre quelle note a quelle couleur. ◆ Basculer — Touche encore Mosaïque. ◆ 🔀 — Avec 🔀 actif, toucher Mosaïque verrouille le tirage sur Mosaïque ↔ Notes.`},
     shuffle:{t:`Aléatoire 🔀`, b:`Même morceau = même peinture. 🔀 off : Suivante apporte des variantes de ton peintre. 🔀 actif : tous les peintres de ta sélection.`, m:`Off — Ton peintre ; Suivante apporte d’autres variantes de lui. ◆ Actif — Tous les peintres de ta sélection. ◆ Suivante — Dans l’Atelier Next, en Studio glisse vers le haut. ◆ Show — Pendant qu’un morceau joue, ↻ Show enchaîne les peintures tout seul. ◆ Ensemble ◎ — Il est à côté de 🔀, et ensemble ils tirent de nouveaux croisements.`},
     signature:{t:`✦ Signature`, b:`Chaque morceau a une peinture qu’il a choisie lui-même. La même pour tout le monde.`, m:`Comment — La musique distribue 2–5 peintres selon des rôles : rythme, mélodie, harmonie, clarté, étendue. Les notes choisissent la variante, le caractère du morceau la palette. ◆ Pour tous — Ne dépend que de la musique, pas de tes Réglages ni de ton niveau. Même en Free. ◆ Où — Touche ✦ Signature dans la légende, à côté du nom du peintre. Un autre peintre, une autre palette ou 🔀 la désactive. ◆ Lite — Chaque nouveau morceau commence par elle. ◆ Image — Une image aussi a sa Signature : un morceau à elle, d’un compositeur ou en Jam session. ◆ Œuvres finies seulement — Fichiers musicaux, exemples et images. Humeur, Composer, Micro et Ambiance image n’en ont pas.`, mS:`Comment — La musique distribue 2–5 peintres selon des rôles : rythme, mélodie, harmonie, clarté, étendue. Les notes choisissent la variante, le caractère du morceau la palette. ◆ Pour tous — Ne dépend que de la musique, pas de tes Réglages ni de ton niveau. Même en Free. ◆ Où — Touche la peinture, puis ✦ Signature dans la légende en haut. Un autre peintre, une autre palette ou 🔀 la désactive. ◆ Image — Une image aussi a sa Signature : un morceau à elle, d’un compositeur ou en Jam session. ◆ Œuvres finies seulement — Fichiers musicaux, exemples et images. Humeur, Composer, Micro et Ambiance image n’en ont pas.`},
-    moods:{t:`Comment tu te sens ?`, b:`Écris n’importe quel ressenti, dans n’importe quelle langue. L’IA t’en fait un morceau de piano.`, m:`Ressenti — Furieux, saudade, 3am drive, amour d’été — ou touche une humeur toute prête. ◆ Varier — Nouvelle tonalité : le même tableau dans ses couleurs. Marche tant que le morceau joue. ◆ Morphe — Fond une humeur dans une autre. ◆ Loop — L’humeur tourne en boucle. ◆ Free et Pro IA — Free a un essai par mode IA, Pro IA jusqu’à 30 morceaux et mélodies par jour.`},
+    moods:{t:`Comment tu te sens ?`, b:`Écris n’importe quel ressenti, dans n’importe quelle langue. L’IA t’en fait un morceau de piano.`, m:`Ressenti — Furieux, saudade, 3am drive, amour d’été — ou touche une humeur toute prête. ◆ Varier — Nouvelle tonalité : le même tableau dans ses couleurs (pas en noir et blanc). Marche tant que le morceau joue. ◆ Morphe — Fond une humeur dans une autre. ◆ Loop — L’humeur tourne en boucle. ◆ Free et Pro IA — Free a un essai par mode IA, Pro IA jusqu’à 30 morceaux et mélodies par jour.`},
     mfi:{t:`Ambiance image`, b:`L’IA lit l’ambiance de ta photo et compose un morceau pour elle.`, m:`D’abord l’image — Pendant que l’ambiance se lit, tu vois la photo d’où elle naît. ◆ ▶ — Peint son ambiance. ◆ Maintenir — L’image d’origine réapparaît. ◆ Varier et Morphe — Comme pour « Comment tu te sens ? ». ◆ Pro IA — Free a un essai.`},
     compose:{t:`Composer`, b:`Ton piano en direct. Une touche tapée = un coup, tenue = un trait plus large.`, m:`Accords en direct — Maintiens un accord et son nom apparaît : Do maj, La min, Ré7… ◆ Modifier (Studio) — Maintiens un accord sur la peinture : il prend un cadre doré et la peinture montre ses notes. ‹ › l’accord d’avant / d’après, ＋ Insérer après (le prochain accord joué se place derrière), Supprimer l’enlève ; ✕ ou OK et la peinture revient. ◆ Clavier — A–L blanches, W E T Y U O P noires. Backspace pour revenir, Space pour play. ◆ Mobile — 88 touches, fais défiler à l’horizontale ; Do4 est au centre. ◆ Gamme — Cale tout ce que tu joues sur la tonalité choisie. ◆ Peintres — La peinture grandit note après note. Celles à motif, comme la cathédrale de Monet ou la tour de Delaunay, sont là dès la première note. ◆ Toile — Un cadre vertical fixe au nombre d’or (1 : φ) dès le premier accord. Toujours pleine — les blocs rapetissent à chaque accord.`},
     mic:{t:`Micro`, b:`Chante ou lance de la musique — Paintiano peint ce qu’il entend.`, m:`Micro — Écoute tout : enceinte, groupe, piano, ta voix. Chaque note entendue — mélodie, basse, accords et intensité — se peint en direct, comme un morceau de Musique. ◆ Morceau — Après la prise, ✦ Ouvrir comme morceau lit l’enregistrement comme un MP3 et l’ouvre dans Musique : chaque note, l’ADN, ✦ Signature. La peinture en direct attend dans Micro. ◆ REC — Un nouveau REC continue la même peinture, Effacer recommence à zéro. ◆ Toile — Un cadre vertical fixe dès la première note. Toujours pleine — les blocs rapetissent à mesure que la prise grandit. ◆ Caméra — Ouvre l’appareil photo de l’iPhone : filme avec un son naturel, touche Utiliser la vidéo, et l’app peint son son comme un morceau. Rien ne se peint en direct pendant la prise — c’est le rôle de REC.`},
@@ -20004,7 +20050,7 @@ const GUIDE_I18N = {
     mosaic:{t:`Mosaico y Notas`, b:`Rectángulos limpios en proporción áurea, uno por acorde. Notas muestra en cada bloque su nota.`, m:`Mosaico — Pinta cuando no hay ningún pintor elegido. ◆ Notas — La misma rejilla con los nombres de las notas. La forma más rápida de aprender qué nota es qué color. ◆ Cambiar — Toca Mosaico otra vez. ◆ 🔀 — Con 🔀 activo, tocar Mosaico fija el sorteo en Mosaico ↔ Notas.`},
     shuffle:{t:`Aleatorio 🔀`, b:`Misma pieza = misma pintura. 🔀 off: Siguiente trae variantes de tu pintor. 🔀 activo: todos los pintores de tu selección.`, m:`Off — Tu pintor; Siguiente trae más variantes suyas. ◆ Activo — Todos los pintores de tu selección. ◆ Siguiente — En el Taller, Next; en Estudio, desliza arriba. ◆ Show — Mientras suena la pieza, ↻ Show pasa las pinturas solo. ◆ Ensemble ◎ — Está junto a 🔀 y juntos sortean nuevos cruces.`},
     signature:{t:`✦ Firma`, b:`Cada pieza tiene una pintura que eligió ella misma. La misma para todos.`, m:`Cómo — La música reparte 2–5 pintores por roles: ritmo, melodía, armonía, brillo, extensión. Las notas eligen la variante; el carácter de la pieza, la paleta. ◆ Para todos — Depende solo de la música, no de tus ajustes ni de tu nivel. También en Free. ◆ Dónde — Toca ✦ Firma en el rótulo junto al nombre del pintor. Otro pintor, otra paleta o 🔀 la desactivan. ◆ Lite — Cada pieza nueva empieza con ella. ◆ Imagen — Una imagen también tiene Firma: una pieza, un compositor o una Jam session. ◆ Solo obras terminadas — Archivos de música, muestras e imágenes. ¿Cómo te sientes?, Componer, Micro y Estado imagen no la tienen.`, mS:`Cómo — La música reparte 2–5 pintores por roles: ritmo, melodía, armonía, brillo, extensión. Las notas eligen la variante; el carácter de la pieza, la paleta. ◆ Para todos — Depende solo de la música, no de tus ajustes ni de tu nivel. También en Free. ◆ Dónde — Toca la pintura y, en el rótulo de arriba, toca ✦ Firma. Otro pintor, otra paleta o 🔀 la desactivan. ◆ Imagen — Una imagen también tiene Firma: una pieza, un compositor o una Jam session. ◆ Solo obras terminadas — Archivos de música, muestras e imágenes. ¿Cómo te sientes?, Componer, Micro y Estado imagen no la tienen.`},
-    moods:{t:`¿Cómo te sientes?`, b:`Escribe cualquier sentimiento, en cualquier idioma. La IA te escribe una pieza de piano.`, m:`Sentimiento — Furioso, saudade, 3am drive, amor de verano — o toca un estado de ánimo ya listo. ◆ Variar — Nueva tonalidad: el mismo cuadro en sus colores. Funciona mientras suena la pieza. ◆ Morfar — Funde un estado de ánimo en otro. ◆ Loop — El estado de ánimo suena una y otra vez. ◆ Free y Pro IA — Free tiene una prueba de cada modo IA; Pro IA, hasta 30 piezas y melodías al día.`},
+    moods:{t:`¿Cómo te sientes?`, b:`Escribe cualquier sentimiento, en cualquier idioma. La IA te escribe una pieza de piano.`, m:`Sentimiento — Furioso, saudade, 3am drive, amor de verano — o toca un estado de ánimo ya listo. ◆ Variar — Nueva tonalidad: el mismo cuadro en sus colores (no en blanco y negro). Funciona mientras suena la pieza. ◆ Morfar — Funde un estado de ánimo en otro. ◆ Loop — El estado de ánimo suena una y otra vez. ◆ Free y Pro IA — Free tiene una prueba de cada modo IA; Pro IA, hasta 30 piezas y melodías al día.`},
     mfi:{t:`Estado imagen`, b:`La IA lee el ánimo de tu foto y le escribe una pieza.`, m:`Primero la imagen — Mientras se lee el ánimo, ves la foto de la que nace. ◆ ▶ — Pinta su ánimo. ◆ Mantén pulsado — Vuelve a aparecer la imagen original. ◆ Variar y Morfar — Igual que en ¿Cómo te sientes? ◆ Pro IA — Free tiene una prueba.`},
     compose:{t:`Componer`, b:`Tu piano en vivo. Tocar una tecla es un golpe; mantenerla, un trazo más ancho.`, m:`Acordes en vivo — Mantén un acorde y aparece su nombre: Do mayor, La menor, Re7… ◆ Editar (Estudio) — Mantén un acorde en la pintura: recibe un marco dorado y la pintura muestra sus notas. ‹ › el acorde anterior / siguiente, ＋ Insertar después (el siguiente acorde que toques va detrás), Borrar lo quita; ✕ o Listo y vuelve la pintura. ◆ Teclado — A–L blancas, W E T Y U O P negras. Backspace deshace, Space reproduce. ◆ Móvil — 88 teclas; desliza en horizontal. Do4 está en el centro. ◆ Escala — Ajusta todo lo que tocas a la tonalidad elegida. ◆ Pintores — La pintura crece nota a nota. Las que tienen motivo, como la catedral de Monet o la torre de Delaunay, están completas desde la primera nota. ◆ Lienzo — Un marco vertical fijo en proporción áurea (1 : φ) desde el primer acorde. Siempre lleno: los bloques se hacen más pequeños con cada acorde.`},
     mic:{t:`Micro`, b:`Canta o pon música — Paintiano pinta lo que oye.`, m:`Micro — Escucha todo: altavoz, banda, piano, tu voz. Cada nota que oye — melodía, bajo, acordes y volumen — se pinta en directo, como una pieza de Música. ◆ Pieza — Tras la toma, ✦ Abrir como pieza lee la grabación como un MP3 y la abre en Música: cada nota, el ADN, ✦ Firma. La pintura en vivo espera en Micro. ◆ REC — Otro REC sigue en la misma pintura; Borrar empieza de nuevo. ◆ Lienzo — Un marco vertical fijo desde la primera nota. Siempre lleno: los bloques se hacen más pequeños a medida que crece la toma. ◆ Cámara — Abre la Cámara del iPhone: graba un vídeo con su sonido natural, toca Usar vídeo y la app pinta su sonido como una pieza. Mientras graba no se pinta en vivo: para eso está REC.`},
@@ -20040,7 +20086,7 @@ const GUIDE_I18N = {
     mosaic:{t:`Mosaico e Notas`, b:`Retângulos limpos em proporção áurea, um por acorde. Notas mostra em cada bloco a sua nota.`, m:`Mosaico — Pinta quando nenhum pintor está escolhido. ◆ Notas — A mesma grelha com os nomes das notas. A forma mais rápida de aprender que nota é que cor. ◆ Alternar — Toca em Mosaico outra vez. ◆ 🔀 — Com 🔀 ligado, tocar em Mosaico prende o sorteio a Mosaico ↔ Notas.`},
     shuffle:{t:`Aleatório 🔀`, b:`A mesma peça = a mesma pintura. 🔀 off: Seguinte traz variantes do teu pintor. 🔀 ligado: todos os pintores da tua seleção.`, m:`Off — O teu pintor; Seguinte traz mais variantes dele. ◆ Ligado — Todos os pintores da tua seleção. ◆ Seguinte — No Atelier, Next; no Estúdio, desliza para cima. ◆ Show — Enquanto a peça toca, ↻ Show passa as pinturas sozinho. ◆ Ensemble ◎ — Fica ao lado de 🔀 e juntos sorteiam novos cruzamentos.`},
     signature:{t:`✦ Assinatura`, b:`Cada peça tem uma pintura que escolheu ela própria. A mesma para todos.`, m:`Como — A música distribui 2–5 pintores por papéis: ritmo, melodia, harmonia, brilho, extensão. As notas escolhem a variante; o carácter da peça, a paleta. ◆ Para todos — Depende só da música, não das tuas configurações nem do teu nível. Também no Free. ◆ Onde — Toca em ✦ Assinatura na legenda junto ao nome do pintor. Outro pintor, outra paleta ou 🔀 desligam-na. ◆ Lite — Cada peça nova começa nela. ◆ Imagem — Uma imagem também tem Assinatura: uma peça, um compositor ou uma Jam session. ◆ Só obras acabadas — Ficheiros de música, amostras e imagens. Como te sentes?, Compor, Mic e Humor da imagem não a têm.`, mS:`Como — A música distribui 2–5 pintores por papéis: ritmo, melodia, harmonia, brilho, extensão. As notas escolhem a variante; o carácter da peça, a paleta. ◆ Para todos — Depende só da música, não das tuas configurações nem do teu nível. Também no Free. ◆ Onde — Toca na pintura e, na legenda em cima, toca em ✦ Assinatura. Outro pintor, outra paleta ou 🔀 desligam-na. ◆ Imagem — Uma imagem também tem Assinatura: uma peça, um compositor ou uma Jam session. ◆ Só obras acabadas — Ficheiros de música, amostras e imagens. Como te sentes?, Compor, Mic e Humor da imagem não a têm.`},
-    moods:{t:`Como te sentes?`, b:`Escreve qualquer sentimento, em qualquer língua. A IA escreve-te uma peça de piano.`, m:`Sentimento — Furioso, saudade, 3am drive, amor de verão — ou toca num humor já pronto. ◆ Variar — Nova tonalidade: o mesmo quadro nas suas cores. Funciona enquanto a peça toca. ◆ Morph — Funde um humor noutro. ◆ Loop — O humor toca sem parar. ◆ Free e Pro IA — O Free tem uma tentativa de cada modo IA; o Pro IA, até 30 peças e melodias por dia.`},
+    moods:{t:`Como te sentes?`, b:`Escreve qualquer sentimento, em qualquer língua. A IA escreve-te uma peça de piano.`, m:`Sentimento — Furioso, saudade, 3am drive, amor de verão — ou toca num humor já pronto. ◆ Variar — Nova tonalidade: o mesmo quadro nas suas cores (não a preto e branco). Funciona enquanto a peça toca. ◆ Morph — Funde um humor noutro. ◆ Loop — O humor toca sem parar. ◆ Free e Pro IA — O Free tem uma tentativa de cada modo IA; o Pro IA, até 30 peças e melodias por dia.`},
     mfi:{t:`Humor da imagem`, b:`A IA lê o humor da tua foto e escreve-lhe uma peça.`, m:`Primeiro a imagem — Enquanto o humor é lido, vês a foto de onde nasce. ◆ ▶ — Pinta o seu humor. ◆ Mantém premido — A imagem original volta a aparecer. ◆ Variar e Morph — Como em Como te sentes? ◆ Pro IA — O Free tem uma tentativa.`},
     compose:{t:`Compor`, b:`O teu piano ao vivo. Tocar numa tecla é uma batida; mantê-la, um traço mais largo.`, m:`Acordes ao vivo — Mantém um acorde e aparece o nome: Dó maior, Lá menor, Ré7… ◆ Editar (Estúdio) — Mantém um acorde na pintura: ganha uma moldura dourada e a pintura mostra as notas. ‹ › o acorde anterior / seguinte, ＋ Inserir depois (o próximo acorde tocado entra a seguir), Apagar tira-o; ✕ ou Feito e a pintura volta. ◆ Teclado — A–L brancas, W E T Y U O P pretas. Backspace desfaz, Space toca. ◆ Telemóvel — 88 teclas; desliza na horizontal. Dó4 fica ao centro. ◆ Escala — Encaixa tudo o que tocas na tonalidade escolhida. ◆ Pintores — A pintura cresce nota a nota. As que têm motivo, como a catedral de Monet ou a torre de Delaunay, ficam inteiras desde a primeira nota. ◆ Tela — Uma moldura vertical fixa na proporção áurea (1 : φ) desde o primeiro acorde. Sempre cheia — os blocos ficam mais pequenos a cada acorde.`},
     mic:{t:`Mic`, b:`Canta ou põe música — o Paintiano pinta o que ouve.`, m:`Micro — Ouve tudo: coluna, banda, piano, a tua voz. Cada nota que ouve — melodia, baixo, acordes e volume — pinta-se ao vivo, como uma peça de Música. ◆ Peça — Depois da gravação, ✦ Abrir como peça lê-a como um MP3 e abre-a em Música: cada nota, o ADN, ✦ Assinatura. A pintura ao vivo espera no Micro. ◆ REC — Outro REC continua na mesma pintura; Limpar começa de novo. ◆ Tela — Uma moldura vertical fixa desde a primeira nota. Sempre cheia — os blocos ficam mais pequenos à medida que a gravação cresce. ◆ Câmara — Abre a Câmara do iPhone: grava um vídeo com o som natural, toca em Usar vídeo e a app pinta o seu som como uma peça. Enquanto grava não se pinta ao vivo — para isso há o REC.`},
@@ -20076,7 +20122,7 @@ const GUIDE_I18N = {
     mosaic:{t:`马赛克与音符`, b:`黄金比例的干净矩形，每个和弦一块。音符模式在每块上标出它的音。`, m:`马赛克 — 没选画家时由它来画。 ◆ 音符 — 同一网格，标上音名。最快学会哪个音是哪种颜色。 ◆ 切换 — 再点一次马赛克。 ◆ 🔀 — 开启 🔀 时点马赛克，抽取就锁定在马赛克 ↔ 音符之间。`},
     shuffle:{t:`随机 🔀`, b:`同一首曲子 = 同一幅画。🔀 关：下一幅带来你画家的变体。🔀 开：你选中的所有画家。`, m:`关 — 你选的画家，下一幅带来他的更多变体。 ◆ 开 — 你选中的所有画家。 ◆ 下一幅 — 画室：Next；工作室：上滑。 ◆ 放映 — 曲子播放时，↻ 放映 会自动切换画作。 ◆ 合奏 ◎ — 就在 🔀 旁边，两者一起抽出新的杂交组合。`},
     signature:{t:`✦ 签名`, b:`每首曲子都有一幅它自己选出的画。人人看到的都一样。`, m:`原理 — 音乐按角色选出 2–5 位画家：节奏、旋律、和声、明亮度、音域。变体由音符决定，调色板由曲子的性格决定。 ◆ 人人相同 — 只取决于音乐，与设置或等级无关。Free 也有。 ◆ 在哪里 — 点画家名字旁说明里的 ✦ 签名。换画家、调色板或开 🔀 都会关闭它。 ◆ Lite — 每首新曲都从它开始。 ◆ 图像 — 图像也有签名：一首曲子，由一位作曲家或一场 Jam session 演奏。 ◆ 只限完成的作品 — 音乐文件、示例和图像。情绪、作曲、麦克风和从图像取情绪都没有。`, mS:`原理 — 音乐按角色选出 2–5 位画家：节奏、旋律、和声、明亮度、音域。变体由音符决定，调色板由曲子的性格决定。 ◆ 人人相同 — 只取决于音乐，与设置或等级无关。Free 也有。 ◆ 在哪里 — 轻点画作，再点顶部说明里的 ✦ 签名。换画家、调色板或开 🔀 都会关闭它。 ◆ 图像 — 图像也有签名：一首曲子，由一位作曲家或一场 Jam session 演奏。 ◆ 只限完成的作品 — 音乐文件、示例和图像。情绪、作曲、麦克风和从图像取情绪都没有。`},
-    moods:{t:`你现在感觉如何?`, b:`写下任何感受，用任何语言。AI 为它写一段钢琴曲。`, m:`感受 — 愤怒、saudade、凌晨三点开车、夏日恋情，或点一个现成的情绪。 ◆ 变奏 — 换个新调：同一幅画，换上新调的颜色。曲子播放时也能用。 ◆ 变形 — 把一种情绪渐变成另一种。 ◆ 循环 — 情绪曲反复播放。 ◆ Free 与 Pro AI — Free 每个 AI 模式可试用一次，Pro AI 每天最多 30 首乐曲与旋律。`},
+    moods:{t:`你现在感觉如何?`, b:`写下任何感受，用任何语言。AI 为它写一段钢琴曲。`, m:`感受 — 愤怒、saudade、凌晨三点开车、夏日恋情，或点一个现成的情绪。 ◆ 变奏 — 换个新调：同一幅画，换上新调的颜色（黑白模式除外）。曲子播放时也能用。 ◆ 变形 — 把一种情绪渐变成另一种。 ◆ 循环 — 情绪曲反复播放。 ◆ Free 与 Pro AI — Free 每个 AI 模式可试用一次，Pro AI 每天最多 30 首乐曲与旋律。`},
     mfi:{t:`从图像取情绪`, b:`AI 读出你照片的情绪，为它写一首曲子。`, m:`先看图 — 读取情绪时，你会看到它所来自的那张照片。 ◆ ▶ — 把它的情绪画出来。 ◆ 长按 — 再次显示原图。 ◆ 变奏与 变形 — 和“你现在感觉如何?”一样。 ◆ Pro AI — Free 可试用一次。`},
     compose:{t:`作曲`, b:`你的现场钢琴。点一下键是一击，按住是更宽的一笔。`, m:`实时和弦 — 按住一个和弦，就会显示它的名字：C 大、A 小、D7… ◆ 编辑（工作室）— 在画上按住一个和弦：它会加上金框，画作改为显示音名。‹ › 前一个 / 后一个，＋ 在后面插入（下一个弹的和弦插在它后面），删除 把它去掉；✕ 或 完成 画作复原。 ◆ 键盘 — A–L 白键，W E T Y U O P 黑键。Backspace 撤销，Space 播放。 ◆ 手机 — 88 个键，横向滑动；C4 在中间。 ◆ 音阶 — 把你弹的一切吸附到所选的调。 ◆ 画家 — 画作一音一音地生长。有主题的画，比如莫奈的大教堂或德劳内的铁塔，从第一个音起就完整出现。 ◆ 画布 — 从第一个和弦起就是固定的黄金比例（1 : φ）竖幅画框。始终铺满，每弹一个和弦，色块就变小一些。`},
     mic:{t:`麦克风`, b:`唱首歌或放段音乐，Paintiano 把听到的画出来。`, m:`麦克风 — 什么都听：音箱、乐队、钢琴、你的声音。听到的每个音——旋律、低音、和弦和强弱——都像音乐作品一样实时画出来。 ◆ 作品 — 录完后，✦ 作为作品打开 会像读 MP3 一样读取录音，并在“音乐”中打开：每个音、DNA、✦ 签名。现场画作留在麦克风里。 ◆ REC — 再按 REC 会接着画同一幅，清空则重新开始。 ◆ 画布 — 从第一个音起就是固定的竖幅画框。始终铺满，录得越多，色块越小。 ◆ 相机 — 打开 iPhone 的相机：用自然的声音录一段视频，点“使用视频”，应用会把它的声音画成一首曲子。录制时不会实时作画——那是 REC 的事。`},
@@ -20112,7 +20158,7 @@ const GUIDE_I18N = {
     mosaic:{t:`馬賽克與音符`, b:`黃金比例的乾淨矩形，每個和弦一塊。音符模式會在每一塊標出它的音。`, m:`馬賽克 — 沒選畫家時由它來畫。 ◆ 音符 — 同樣的網格，標上音名。最快學會哪個音是哪種顏色。 ◆ 切換 — 再點一次馬賽克。 ◆ 🔀 — 開啟 🔀 時點馬賽克，抽選就鎖定在馬賽克 ↔ 音符之間。`},
     shuffle:{t:`隨機 🔀`, b:`同一首曲子 = 同一幅畫。🔀 關：下一幅帶來你畫家的變體。🔀 開：你選的所有畫家。`, m:`關 — 你選的畫家，下一幅帶來他的更多變體。 ◆ 開 — 你選的所有畫家。 ◆ 下一幅 — 畫室：Next；工作室：上滑。 ◆ 放映 — 曲子播放時，↻ 放映 會自動切換畫作。 ◆ 合奏 ◎ — 就在 🔀 旁邊，兩者一起抽出新的雜交組合。`},
     signature:{t:`✦ 簽名`, b:`每首曲子都有一幅自己選出的畫。每個人看到的都一樣。`, m:`原理 — 音樂依角色選出 2–5 位畫家：節奏、旋律、和聲、明亮度、音域。變體由音符決定，調色盤由曲子的性格決定。 ◆ 人人相同 — 只取決於音樂，與設定或等級無關。Free 也有。 ◆ 在哪裡 — 點畫家名字旁說明裡的 ✦ 簽名。換畫家、調色盤或按 🔀 都會關閉它。 ◆ Lite — 每首新曲都從它開始。 ◆ 圖像 — 圖像也有簽名：一首曲子，由一位作曲家或一場 Jam session 演奏。 ◆ 只限完成的作品 — 音樂檔、範例和圖像。情緒、作曲、麥克風和從圖像取情緒都沒有。`, mS:`原理 — 音樂依角色選出 2–5 位畫家：節奏、旋律、和聲、明亮度、音域。變體由音符決定，調色盤由曲子的性格決定。 ◆ 人人相同 — 只取決於音樂，與設定或等級無關。Free 也有。 ◆ 在哪裡 — 輕點畫作，再點上方說明裡的 ✦ 簽名。換畫家、調色盤或按 🔀 都會關閉它。 ◆ 圖像 — 圖像也有簽名：一首曲子，由一位作曲家或一場 Jam session 演奏。 ◆ 只限完成的作品 — 音樂檔、範例和圖像。情緒、作曲、麥克風和從圖像取情緒都沒有。`},
-    moods:{t:`你現在感覺如何?`, b:`寫下任何感受，用任何語言。AI 會為它寫一首鋼琴曲。`, m:`感受 — 憤怒、saudade、凌晨三點開車、夏日戀情，或點一個現成的情緒。 ◆ 變奏 — 換個新調：同一幅畫，換上新調的顏色。曲子播放時也能用。 ◆ 變形 — 把一種情緒漸變成另一種。 ◆ 循環 — 情緒曲重複播放。 ◆ Free 與 Pro AI — Free 每個 AI 模式可試用一次，Pro AI 每天最多 30 首樂曲與旋律。`},
+    moods:{t:`你現在感覺如何?`, b:`寫下任何感受，用任何語言。AI 會為它寫一首鋼琴曲。`, m:`感受 — 憤怒、saudade、凌晨三點開車、夏日戀情，或點一個現成的情緒。 ◆ 變奏 — 換個新調：同一幅畫，換上新調的顏色（黑白模式除外）。曲子播放時也能用。 ◆ 變形 — 把一種情緒漸變成另一種。 ◆ 循環 — 情緒曲重複播放。 ◆ Free 與 Pro AI — Free 每個 AI 模式可試用一次，Pro AI 每天最多 30 首樂曲與旋律。`},
     mfi:{t:`從圖像取情緒`, b:`AI 讀出你照片的情緒，為它寫一首曲子。`, m:`先看圖 — 讀取情緒時，你會看到它來自的那張照片。 ◆ ▶ — 把它的情緒畫出來。 ◆ 長按 — 再次顯示原圖。 ◆ 變奏與 變形 — 和「你現在感覺如何?」一樣。 ◆ Pro AI — Free 可試用一次。`},
     compose:{t:`作曲`, b:`你的現場鋼琴。點一下琴鍵是一擊，按住是更寬的一筆。`, m:`即時和弦 — 按住一個和弦，就會顯示它的名稱：C 大、A 小、D7… ◆ 編輯（工作室）— 在畫上按住一個和弦：它會加上金框，畫作改為顯示音名。‹ › 前一個 / 後一個，＋ 在後面插入（下一個彈的和弦插在它後面），刪除 把它去掉；✕ 或 完成 畫作復原。 ◆ 鍵盤 — A–L 白鍵，W E T Y U O P 黑鍵。Backspace 復原，Space 播放。 ◆ 手機 — 88 個鍵，橫向滑動；C4 在中間。 ◆ 音階 — 把你彈的一切吸附到所選的調。 ◆ 畫家 — 畫作一個音一個音地長出來。有主題的畫，例如莫內的大教堂或德洛內的鐵塔，從第一個音就完整出現。 ◆ 畫布 — 從第一個和弦起就是固定的黃金比例（1 : φ）直幅畫框。始終鋪滿，每彈一個和弦，色塊就變小一些。`},
     mic:{t:`麥克風`, b:`唱首歌或放段音樂，Paintiano 會把聽到的畫出來。`, m:`麥克風 — 什麼都聽：喇叭、樂團、鋼琴、你的聲音。聽到的每個音——旋律、低音、和弦和強弱——都像音樂作品一樣即時畫出來。 ◆ 作品 — 錄完後，✦ 作為作品打開 會像讀 MP3 一樣讀取錄音，並在「音樂」中打開：每個音、DNA、✦ 簽名。現場畫作留在麥克風裡。 ◆ REC — 再按 REC 會接著畫同一幅，清空則重新開始。 ◆ 畫布 — 從第一個音起就是固定的直幅畫框。始終鋪滿，錄得越多，色塊越小。 ◆ 相機 — 打開 iPhone 的相機：用自然的聲音錄一段影片，點「使用影片」，App 會把它的聲音畫成一首曲子。錄製時不會即時作畫——那是 REC 的事。`},
@@ -20148,7 +20194,7 @@ const GUIDE_I18N = {
     mosaic:{t:`モザイクと音符`, b:`黄金比の澄んだ長方形、和音ごとに一つ。音符は各ブロックに音名を表示。`, m:`モザイク — 画家を選んでいないときに描かれる。 ◆ 音符 — 同じ格子に音名入り。どの音がどの色か覚える最短の道。 ◆ 切替 — モザイクをもう一度タップ。 ◆ 🔀 — 🔀 オンでモザイクをタップすると、抽選がモザイク ↔ 音符に固定される。`},
     shuffle:{t:`シャッフル 🔀`, b:`同じ曲 = 同じ絵。🔀 オフ：次へであなたの画家の別バリアント。🔀 オン：選んだ画家全員から。`, m:`オフ — あなたの画家。次へで別のバリアントが出る。 ◆ オン — あなたが選んだ画家全員から。 ◆ 次へ — アトリエでは Next、スタジオでは上にスワイプ。 ◆ スライドショー — 曲が流れている間、↻ スライドショー が絵を自動で進める。 ◆ アンサンブル ◎ — 🔀 の隣にあり、一緒に新しい掛け合わせを引く。`},
     signature:{t:`✦ 署名`, b:`どの曲にも、曲自身が選んだ一枚がある。誰にとっても同じ一枚。`, m:`仕組み — 音楽が役割ごとに 2〜5 人の画家を配役する：リズム、旋律、和声、明るさ、音域。バリアントは音符が、パレットは曲の性格が選ぶ。 ◆ 誰でも同じ — 音楽だけで決まり、設定や段階には左右されない。Free でも。 ◆ どこに — 画家名の横のキャプションにある ✦ 署名 をタップ。別の画家、パレット、🔀 でオフになる。 ◆ Lite — 新しい曲はいつも署名から始まる。 ◆ 画像 — 画像にも署名がある：一つの曲、一人の作曲家、または Jam session。 ◆ 完成した作品だけ — 音楽ファイル、サンプル、画像。気分、作曲、マイク、画像からムードにはない。`, mS:`仕組み — 音楽が役割ごとに 2〜5 人の画家を配役する：リズム、旋律、和声、明るさ、音域。バリアントは音符が、パレットは曲の性格が選ぶ。 ◆ 誰でも同じ — 音楽だけで決まり、設定や段階には左右されない。Free でも。 ◆ どこに — 絵をタップし、上のキャプションで ✦ 署名 をタップ。別の画家、パレット、🔀 でオフになる。 ◆ 画像 — 画像にも署名がある：一つの曲、一人の作曲家、または Jam session。 ◆ 完成した作品だけ — 音楽ファイル、サンプル、画像。気分、作曲、マイク、画像からムードにはない。`},
-    moods:{t:`今、どう感じる?`, b:`どんな気持ちでも、どんな言語でも書いてみて。AI がそれに合うピアノ曲を書く。`, m:`気持ち — 激怒、サウダージ、午前3時のドライブ、夏の恋。用意された気分をタップしてもいい。 ◆ バリエーション — 新しい調で、同じ絵がその調の色になる。曲の再生中に使える。 ◆ モーフ — ある気分を別の気分へクロスフェード。 ◆ ループ — 気分の曲がくり返し流れる。 ◆ Free と Pro AI — Free は各 AI モードを 1 回ずつ試せる。Pro AI は 1 日 30 曲・メロディまで。`},
+    moods:{t:`今、どう感じる?`, b:`どんな気持ちでも、どんな言語でも書いてみて。AI がそれに合うピアノ曲を書く。`, m:`気持ち — 激怒、サウダージ、午前3時のドライブ、夏の恋。用意された気分をタップしてもいい。 ◆ バリエーション — 新しい調で、同じ絵がその調の色になる（白黒では使えない）。曲の再生中に使える。 ◆ モーフ — ある気分を別の気分へクロスフェード。 ◆ ループ — 気分の曲がくり返し流れる。 ◆ Free と Pro AI — Free は各 AI モードを 1 回ずつ試せる。Pro AI は 1 日 30 曲・メロディまで。`},
     mfi:{t:`画像からムード`, b:`AI が写真のムードを読み取り、それに合う曲を書く。`, m:`まず画像 — ムードを読み取る間、もとになる写真が見える。 ◆ ▶ — そのムードを絵にする。 ◆ 長押し — 元の画像がもう一度現れる。 ◆ バリエーションと モーフ — 「今、どう感じる?」と同じ。 ◆ Pro AI — Free は 1 回お試し。`},
     compose:{t:`作曲`, b:`あなたのライブピアノ。鍵をタップで一撃、長押しでより広いストローク。`, m:`和音をライブで — 和音を押さえると名前が出る：C メジャー、A マイナー、D7… ◆ 編集（スタジオ）— 絵の上で和音を長押し：金の枠が付き、絵は音名表示に。‹ › 前 / 次の和音、＋ 後に挿入（次に弾く和音がその後に入る）、削除 で取り除く。✕ か 完了 で絵が戻る。 ◆ キーボード — A–L 白鍵、W E T Y U O P 黒鍵。Backspace で取消、Space で再生。 ◆ スマホ — 88 鍵、横にスワイプして移動。C4 は真ん中。 ◆ スケール — 弾いた音をすべて選んだ調にスナップ。 ◆ 画家 — 絵は一音ずつ育つ。モネの大聖堂やドローネーの塔のようなモチーフのある絵は、最初の音から全体が立つ。 ◆ キャンバス — 最初の和音から黄金比（1 : φ）の縦長固定フレーム。いつも全面を使い、和音を弾くたびにブロックが小さくなる。`},
     mic:{t:`マイク`, b:`歌うか、音楽を流そう。Paintiano は聞こえたものを描く。`, m:`マイク — 何でも聞く：スピーカー、バンド、ピアノ、あなたの声。聞こえた音すべて——旋律、ベース、和音、強弱——を音楽の曲と同じようにライブで描く。 ◆ 曲 — 録音の後、✦ 曲として開く が録音を MP3 のように読み、音楽で開く：すべての音、DNA、✦ シグネチャー。ライブの絵はマイクに残る。 ◆ REC — 次の REC は同じ絵の続き。クリア で最初から。 ◆ キャンバス — 最初の音から縦長の固定フレーム。いつも全面を使い、録るほどブロックが小さくなる。 ◆ カメラ — iPhone のカメラを開く：自然な音で動画を撮り、「ビデオを使用」をタップすると、その音が曲として描かれる。撮影中はライブで描かない——それは REC の役目。`},
@@ -22311,6 +22357,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
 function computeMusicDNA(events){
   try{
     if(!events || !events.length) return null;
+    events=_keyNormOf(events);   // key-free (see _keyD)
     const on=[], pitches=[], vels=[];
     let minT=Infinity, maxT=-Infinity;
     for(const ch of events){
@@ -22613,6 +22660,7 @@ const SIG_AUDIO_LEAD={majHi:'ornament',majLo:'light',minHi:'gesture',minLo:'fiel
 const SIG_AUDIO_DENS_MID=1.33;   // median transcribed event density (log events/s)
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
+  events=_keyNormOf(events);   // key-free (see _keyD)
   try{
     const ev=(events||[]).filter(ch=>ch&&ch.n&&ch.n.length);
     if(ev.length<4) return null;
@@ -22990,7 +23038,8 @@ const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus
 // Every knob of the draw module it turns is put back, so the live painting
 // underneath is untouched. Returns false if it can't paint.
 function _favPaint(cv, fav, piece, S, liveTone, lay){
-  const chords = piece && piece.chords;
+  const _kd = _keyD(piece && piece.chords);   // the form is key-free (see _keyD): painted in C, coloured in its key
+  const chords = _keyNorm(piece && piece.chords, _kd);
   const g = lay && lay.g, pg = (lay && lay.pg) || null;
   if(!cv || !chords || !chords.length || !g) return false;
   const CW = lay.CW, CH = lay.CH;
@@ -22998,14 +23047,15 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
   const ctx = cv.getContext('2d'); if(!ctx) return false;
   ctx.setTransform(S,0,0,S,0,0);
   const G = globalThis;
-  const keep = { fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
+  const keep = { fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy(), kd:G.__PAINT_KEY_D };
   let ok = true;
   try{
+    G.__PAINT_KEY_D = _kd;
     G.__PAINT_FU_PHS = fav.fa ? { keys:fav.fa.keys.slice(), phs:fav.fa.phs.slice(), fs:(fav.fa.fs==='E' ? 'E' : 'A'), rv:(fav.fa.rv|0)||1 } : null;   // a Favorite keeps the fusion style it was painted in
     G.__PAINT_SIG_PHS = null;
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
-    const gc = _gcMake(fav.mode, fav.tone, fav.pal, fav.ks);
+    const gc = _gcMake(fav.mode, fav.tone, fav.pal, (fav.ks|0)+_kd);
     const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = chords.length;
     const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
@@ -23045,7 +23095,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     }
   }catch(_){ ok = false; }
   finally{
-    G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna;
+    G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna; G.__PAINT_KEY_D = keep.kd;
     _setSongEnergy(keep.se); _setMixOn(liveTone==='real'); _setCurE(0.5); _setNoBg(false);
   }
   return ok;
@@ -26028,9 +26078,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // _takeSkip): Kandinsky, and the tile painters, whose tiles must always fill the
   // whole canvas — Kusama, Vasarely, Klimt, Haring, Klee, Lichtenstein.
   const _TAKE_ORIG = ['kandinsky','kusama','bulge','gold','pop','klee','lichtenstein'];
+  // the piece as the painters see it: moved into C (see _keyD); the sound, the keyboard, the notes and the files keep it as it is
+  const paintKeyD = useMemo(()=> _keyD(chords), [chords]);
+  const paintChords = useMemo(()=> _keyNorm(chords, paintKeyD), [chords, paintKeyD]);
   const pollockSessionSeed = useMemo(() => {
     if(structureSeedLock!=null) return structureSeedLock>>>0;
     if(!chords || !chords.length) return 0;
+    const _kd = paintKeyD;   // the seed of the form: key-free too
     // A LIVE take (Compose keyboard, Mic — its chords carry recorded:true) is
     // seeded by its FIRST note only: hashing every note re-seeded the painter on
     // each new note, so Pollock re-threw his whole web (and the dice re-rolled the
@@ -26048,7 +26102,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       h ^= (i+1);
       h = Math.imul(h, 16777619);
       for(const note of notes){
-        const m = note.m !== undefined ? note.m : note;
+        const m = (note.m !== undefined ? note.m : note) - _kd;
         const v = note.v !== undefined ? note.v : 100;
         h ^= (m & 0xff);
         h = Math.imul(h, 16777619);
@@ -26062,7 +26116,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // SHUFFLE changes only the artist → chord hash stays → painting stays
     // identical for that song in the new artist's style.
     return (h >>> 0);
-  }, [chords, structureSeedLock, style]);
+  }, [chords, structureSeedLock, style, paintKeyD]);
   // The shuffle draw's seed. A recorded take (Compose / Mic) keeps the draw of the
   // empty canvas it started on: keys played never pick another artist — only
   // Next, swipe up in fullscreen or Show do.
@@ -27990,6 +28044,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const keyShiftRef = useRef(0);
   keyShiftRef.current = (composeMode || micActive) ? 0 : keyShift;
   const gc = useMemo(()=>_gcMake(mode, tone, activePalette, keyShift),[mode,activePalette,tone,keyShift]);
+  const paintGc = useMemo(()=> paintKeyD ? _gcMake(mode, tone, activePalette, keyShift+paintKeyD) : gc, [gc, paintKeyD, mode, tone, activePalette, keyShift]);   // for the piece in C
+  const varyBwOff = _paintModeOf(mode, activePalette)==='bw';   // black and white: a Variation would change only the sound — there is none
 
   // Colour for a pitch class (0..11) in a given mode — used by the read-only
   // colour previews under the Color tabs. B/W spreads the 12 classes across its
@@ -28005,6 +28061,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _songEnergyCacheRef = useRef({ src: null, e: 0.5 });
   useEffect(()=>{
     const mode = paintMode;   // the painters paint in this (an all-grey Custom = b/w); the palette itself stays in gc
+    const chords = paintChords, gc = paintGc;   // the piece in C, its colours in its key (see _keyD)
+    globalThis.__PAINT_KEY_D = paintKeyD;
     const cv=canvasRef.current;if(!cv)return;
     // B1: push the piece's overall energy to the draw module so gc() tilts the
     // palette's saturation/lightness by character. Cached by chords identity so
@@ -28485,7 +28543,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
     }
     paintGenRef.current++; lastPaintRef.current={disp:lim,chords,grid,gc,style,viewMode,pending,info,anim,playing,stamp,mode,holdPaused,pollockSessionSeed,phaseIndex:paintPhase,shuffleArtistIndex,jamSig:_jamSig};
-  },[chords,disp,pending,mode,grid,info,gc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,feedHiRes,painterStage,fuRoll,fuStyleNow]);
+  },[chords,paintChords,disp,pending,mode,grid,info,gc,paintGc,viewMode,playing,stamp,anim,style,effectiveStyle,holdPaused,pollockSessionSeed,composeMode,paintPhase,shuffleArtistIndex,immersive,feedHiRes,painterStage,fuRoll,fuStyleNow]);
 
   // ── FAVORITES (♥) ───────────────────────────────────────────────────────────
   // ♥ at the top left of a FINISHED painting saves its address (favAdd in
@@ -28735,12 +28793,14 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // it is painted (enter / leave), so the live painting underneath stays untouched.
   const _favExportX = (fv, pc, lay)=>{
     const G=globalThis; let keep=null;
+    const _kd=_keyD(pc.chords);   // in C, coloured in its key (see _keyD)
     const lead = fv.keys ? fv.keys[0] : (fv.style||null);
     const key = fv.style || 'mosaic', bare = (key==='mosaic' || key==='notes' || key==='raffel');
     const insp0 = fv.keys ? fv.keys.map(_painterLabel).join(' × ') : (bare ? STYLE_INSPIRED[key] : ('inspired by '+STYLE_INSPIRED[key]));
     return {
-      chords: pc.chords, grid: lay.g, effectiveStyle: lead, shuffleStyle: null, pollockSessionSeed: fv.seed>>>0,
-      mode: _paintModeOf(fv.mode, fv.pal), gc: _gcMake(fv.mode, fv.tone, fv.pal, fv.ks), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
+      pcRealW: _pcWeights(pc.chords), gcReal: _gcMake(fv.mode, fv.tone, fv.pal, fv.ks),   // the colours strip: the real notes
+      chords: _keyNorm(pc.chords, _kd), grid: lay.g, effectiveStyle: lead, shuffleStyle: null, pollockSessionSeed: fv.seed>>>0,
+      mode: _paintModeOf(fv.mode, fv.pal), gc: _gcMake(fv.mode, fv.tone, fv.pal, (fv.ks|0)+_kd), paintPhase: fv.phase|0, viewMode: 'paint', pixelRef: {current:null},
       info: {title:_favTitle(fv)}, compositionName: '', painterStageRef: {current: fv.keys ? fv.keys.slice(1) : []},
       sigActiveRef: {current:!!fv.sig}, draftOwnerRef: {current: fv.compose ? 'compose' : null},
       originalImgUrl: null, imgMoodThumb: null, currentMood: fv.mood || '',
@@ -28750,14 +28810,15 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       caption: _favCaption(fv),
       enter: ()=>{
         if(keep) return;
-        keep={ fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy() };
+        keep={ fu:G.__PAINT_FU_PHS, sig:G.__PAINT_SIG_PHS, dna:G.__PAINT_MUSIC_DNA, se:_getSongEnergy(), kd:G.__PAINT_KEY_D };
+        G.__PAINT_KEY_D = _kd;
         G.__PAINT_FU_PHS = fv.fa ? { keys:fv.fa.keys.slice(), phs:fv.fa.phs.slice(), fs:(fv.fa.fs==='E' ? 'E' : 'A'), rv:(fv.fa.rv|0)||1 } : null;
         G.__PAINT_SIG_PHS = null; G.__PAINT_MUSIC_DNA = fv.dna || null;
         _setSongEnergy(fv.se); _setMixOn(fv.tone==='real');
       },
       leave: ()=>{
         if(!keep) return;
-        G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna;
+        G.__PAINT_FU_PHS = keep.fu; G.__PAINT_SIG_PHS = keep.sig; G.__PAINT_MUSIC_DNA = keep.dna; G.__PAINT_KEY_D = keep.kd;
         _setSongEnergy(keep.se); _setMixOn(favLiveToneRef.current==='real'); _setCurE(0.5); keep=null;
       },
     };
@@ -35923,7 +35984,10 @@ Hard requirements:
     const _p34 = (sizeMode==='print' || sizeMode==='gallery') && viewMode!=='image' && !basicModeRef.current;
     const _lay34 = (f, ch)=>{ let L=null; try{ window.__pfPrint34=true; L=_favLayout(f, ch); }catch(_){ L=null; } finally{ try{ window.__pfPrint34=false; }catch(_){} } return L; };
     if(!fv){
-      let X={ chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip };
+      let _kd0=0;
+      let X={ chords:paintChords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc:paintGc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip,
+        enter: ()=>{ _kd0=globalThis.__PAINT_KEY_D; globalThis.__PAINT_KEY_D=paintKeyD; }, leave: ()=>{ globalThis.__PAINT_KEY_D=_kd0; },
+        pcRealW: _pcWeights(chords), gcReal: gc };   // the song's colours strip under the painting: the real notes, named
       if(_p34){ const L=_lay34({ own:draftOwnerRef.current||null, mf:1, style:effectiveStyle, keys:(painterStage && painterStage.length) ? [effectiveStyle].concat(painterStage) : null, skip:_takeSkip(effectiveStyle) }, chords);
         if(L) X=Object.assign({}, X, { grid:L.g, _takeGrid:()=>L.pg, _takeFrame:()=>({CW:L.CW, CH:L.CH}) }); }
       return _exportWith(X, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
@@ -36215,7 +36279,7 @@ Hard requirements:
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
           const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
-          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:_pcWeights(chords), gc, names:_miT('names'), src:_srcForBand});
+          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:(X.pcRealW || _pcWeights(chords)), gc:(X.gcReal || gc), names:_miT('names'), src:_srcForBand});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
         }catch(_){ outCanvas=hi; }
       }
@@ -36308,7 +36372,7 @@ Hard requirements:
         const _inspLabel = (X.insp!==undefined) ? X.insp : imageModeStory ? (_imgInspLabel() || null) : ((_inspLabel0 && sigActiveRef.current) ? ('✦ '+_sigT('label')+' · '+_inspLabel0) : _inspLabel0);
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
-        const _stW = chords.length ? _pcWeights(chords) : null;   // the song's colours (between the painting and the wordmark)
+        const _stW = chords.length ? (X.pcRealW || _pcWeights(chords)) : null;   // the song's colours (between the painting and the wordmark) — the real notes
         const paintingBottomReserve = 290 + (_stW ? 190 : 0); // mood + wordmark + tagline (+ the song's colours)
         const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
         // Scale painting to fit BOTH dimensions. Width-only scaling overflowed
@@ -36351,7 +36415,7 @@ Hard requirements:
         sctx.textAlign='center';
         const moodLabel = (currentMood||'').trim();
         let cursorY = dy + dh + 110;
-        if(_stW){ const _sw=852, _sh=150; _drawPcStrip(sctx, Math.round((SW-_sw)/2), dy+dh+44, _sw, _sh, _stW, gc, _miT('names'), {font:22, gap:12}); cursorY = dy + dh + 44 + _sh + 96; }
+        if(_stW){ const _sw=852, _sh=150; _drawPcStrip(sctx, Math.round((SW-_sw)/2), dy+dh+44, _sw, _sh, _stW, (X.gcReal || gc), _miT('names'), {font:22, gap:12}); cursorY = dy + dh + 44 + _sh + 96; }
         if(moodLabel){
           sctx.fillStyle='rgba(255,220,140,.95)';
           sctx.font='italic 500 44px "Cormorant Garamond", Georgia, serif';
@@ -37008,7 +37072,7 @@ Hard requirements:
   if(!_skinOpen) _skinPkRef.current='';
   else if(!(composeMode || micActive) || !_skinPkRef.current) _skinPkRef.current=_skinPk;
   const _skinKey = (_skinOpen && _skinPkRef.current && !(viewMode==='image' && !moodFromImg))
-    ? [_skinPkRef.current, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus].join('|') : '';
+    ? [_skinPkRef.current, mode, tone, _skinPalKey, pollockSessionSeed>>>0, proStatus, keyShift].join('|') : '';
   useEffect(()=>{
     if(!_skinKey) return;
     const R = skinThumbRef.current;
@@ -37028,7 +37092,7 @@ Hard requirements:
         let se = 0.5;
         if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===cs) se=sc.e; else { try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){} } }
         const fv = { style:st, keys:null, fa:null, phase:0, seed:pollockSessionSeed>>>0,
-          cap:(proStatus==='free' && st!==artistOfDay) ? 2 : null, mode, tone, pal: mode==='custom' ? activePalette : null,
+          cap:(proStatus==='free' && st!==artistOfDay) ? 2 : null, mode, tone, pal: mode==='custom' ? activePalette : null, ks:keyShift,
           se, dna: globalThis.__PAINT_MUSIC_DNA || null, skip, liveE:seLive, compose: own==='compose', own };
         const lay = _favLayout(fv, cs);
         const cv = document.createElement('canvas');
@@ -37313,12 +37377,12 @@ Hard requirements:
     const varyBlocked = composeMode||micPainting||micListening||recording||working;
     if(varyBlocked) return;
     if(!(playing||holdPausedRef.current)) return;   // VARY only while the piece plays: on a stopped canvas it loaded a blank variation
-    if(!varySource||!chords.length){return;}
+    if(!varySource||!chords.length||varyBwOff){return;}
     // ✦ VARIATION = the same painting in another key: the notes stay as they are (so the shapes and their places, the painters'
     // choices, the title), the piece sounds ks semitones away (playNote) in that key's colours (gc). It used to transpose the
     // notes themselves, and a new key moved every shape: two Variations of one picture were two different paintings.
     const pk=_favHash(chords), cur=(ksMap[pk]|0);
-    const opts=[-5,-4,-3,-2,-1,1,2,3,4,5].filter(k=>k!==cur);
+    const opts=[-5,-4,-3,-2,-1,1,2,3,4,5].filter(k=>k!==cur);   // any key: the form is key-free (_keyD), so the Variation saved as MIDI and opened again is this same painting
     const ks=opts[(Math.random()*opts.length)|0];
     const wasPlaying=playing||holdPausedRef.current; // active = playing OR paused → auto-restart, don't wait for Play
     stopAll();
@@ -41227,8 +41291,8 @@ Hard requirements:
         const _img = viewMode==='image' && !moodFromImg;
         const _live = studioLive;
         const _vr = stVidRec || recording;   // a video or the picture's sound is being recorded: the rails rest
-        const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording);
-        const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg));
+        const _varyOk = !!(currentMood && varySource && (moodContext || moodFromImg) && chords.length>0 && (playing||holdPaused) && !working && !recording && !varyBwOff);
+        const _showVary = !!(currentMood && varySource && (moodContext || moodFromImg) && !varyBwOff);
         const _ttl = _img ? (((compositionName||'').trim()) || (info && info.title) || '') : (()=>{ const x=((info && info.title) || ((compositionName||'').trim()) || ''); return (moodContext || moodFromImg) ? _moodTitleLoc(x, t('moodNames')) : x; })();
         const _loopOk = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)));
         const _morphOk = !_live && !loadedSource && !composeMode && !micActive && moodContext && !moodFromImg && !!currentMood;
@@ -41826,7 +41890,7 @@ Hard requirements:
           // VARY in fullscreen — mood + mood-from-image pieces only (same gate as
           // the dock chip); fullscreen CTAs hide instead of disabling, so it only
           // renders when actually actionable.
-          const showVaryFs = !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && varySource && chords.length>0 && (playing||holdPaused) && !(composeMode||micPainting||micListening||recording||working));
+          const showVaryFs = !varyBwOff && !!(currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && varySource && chords.length>0 && (playing||holdPaused) && !(composeMode||micPainting||micListening||recording||working));
           if(!exportReadyFs && !showNextFs && !showNextComposerFs && !showPaletteFs && !showVaryFs && !_stylePillKind && !(showSlideFs && !immersive)) return null;
           return (
             <div className="pf-fs-controls" style={{position:'fixed',zIndex:10000,display:'flex',opacity:controlsAwake?1:0,pointerEvents:controlsAwake?'auto':'none',transition:'opacity .4s ease',...(immersive?{
@@ -42768,7 +42832,7 @@ Hard requirements:
         )}
         {/* VARY — moved from the look strip to the dock (row 1, right of Loop).
             Same visibility gate as Loop: mood + mood-from-image pieces only. */}
-        {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && (
+        {currentMood && (moodFromImg || (!loadedSource && viewMode!=='image' && !composeMode && !micActive)) && !varyBwOff && (
           <button className="pf-lift pf-dock-vary" onClick={_doVary} disabled={composeMode||micPainting||micListening||recording||working||!chords.length||!(playing||holdPaused)} title={recording?t('stopRecFirst'):!varySource?t('pickMoodFirst'):t('reroll')} style={{...txStyle('neutral',{effScale}),border:'none',color:'#fff',background:varySource&&chords.length&&(playing||holdPaused)&&!(composeMode||micPainting||micListening||recording||working)?'linear-gradient(135deg,#d4622a,#f47c3c)':'rgba(212,98,42,.3)',opacity:varySource&&chords.length&&(playing||holdPaused)&&!(composeMode||micPainting||micListening||recording||working)?1:.55}}>{t('vary')}</button>
         )}
         {/* Original ⇄ Piano source toggle — appears once the mic session

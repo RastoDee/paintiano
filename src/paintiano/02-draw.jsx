@@ -316,7 +316,7 @@ function drawBlockNotes(ctx,bx,by,notes,gc,BW,BH){
       R=r; G=g; B=b;
     }
     const cx=bx+BW/2, cy=by+i*bh+bh/2;
-    const name=_midiToName[note.m]||'';
+    const name=_midiToName[note.m+(globalThis.__PAINT_KEY_D|0)]||'';   // the painters see the piece in C (_keyD): its names are the real ones
     // subtle dark halo for contrast against any colour, then the tinted glyph
     ctx.fillStyle='rgba(4,4,10,0.85)';
     ctx.fillText(name,cx+0.6,cy+0.6);
@@ -3078,7 +3078,7 @@ function pc2_guitar(ctx,CW,CH,chords,lim,gc,ss,mode){
   const frets=Math.min(12,A.phrases.length); for(let i=0;i<frets;i++){ const u=0.15+0.8*i/Math.max(1,frets-1); const cx=nx0+(nx1-nx0)*u, cy=ny0+(ny1-ny0)*u; const px=-Math.sin(nAng)*CW*0.035, py=Math.cos(nAng)*CW*0.035; list.push({id:list.length,t:0.62+i*0.01,line:[[cx-px,cy-py],[cx+px,cy+py]],col:[30,26,22],lw:Math.max(1,D*0.003)}); }
   const ns=Math.max(3,Math.min(6,Math.round(A.ch.density*5+1))); for(let i=0;i<ns;i++){ const off=(i-(ns-1)/2)*CW*0.012; const px=-Math.sin(nAng)*off, py=Math.cos(nAng)*off; list.push({id:list.length,t:0.75+i*0.02,line:[[nx1+px,ny1+py],[gx+px,gy+CH*0.12+py]],col:isBW?[30,30,30]:[36,30,26],lw:Math.max(1,D*0.0032)}); }
   // the lettering: the song's three strongest pitch classes, stencil-cut into the collage
-  const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; const order=A.pcW.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>NAMES[x[1]]);
+  const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; const _kD=globalThis.__PAINT_KEY_D|0; const order=A.pcW.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]).slice(0,3).map(x=>NAMES[(((x[1]+_kD)%12)+12)%12]);
   list.push({id:list.length,t:0.9,text:order.join(' '),x:CW*0.74,y:CH*0.85,size:D*0.085,col:[28,26,24],rot:-0.08});
   _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
