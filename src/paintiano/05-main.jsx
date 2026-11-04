@@ -4044,6 +4044,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(_fuKeys(_jamStage()).join()!==r.keys.join() || (phaseIndex|0)!==(r.phs[0]|0)) _setFuRoll(null);
   },[style, painterStage, phaseIndex]);
   const _jamTap = (k)=>{
+    if(k==='mosaic' || k==='notes') return;   // the Mosaic and Notes do not join a Fusion
     const cur=_jamStage(); const i=cur.indexOf(k);
     if(i>=0){
       if(style!==null && i===0){
@@ -4279,7 +4280,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // (The composers' switch is not shown at all with a single composer, like their 🔀.)
   const _artChoiceN = ()=>{
     const ks=new Set(ALL_ARTIST_KEYS.filter(k=>k!=='mosaicFamily' && (setupArtists.includes(k) || isDailyArtist(k)) && !styleIsLocked(k)));
-    if(setupArtists.includes('mosaicFamily')) ks.add('mosaic');
     if(sigActive && songSig && songSig.keys) for(const k of songSig.keys) if(k) ks.add(k);
     return ks.size;
   };
@@ -18090,8 +18090,7 @@ Hard requirements:
                 });
                 return;
               }
-              if(jamAll) return;
-              if(jamOn){ if(_artMode===1 && _jamStage().length===1 && _jamStage()[0]==='mosaic') _shuffleOff(); _jamTap('mosaic'); return; }
+              if(jamOn) return;   // the Mosaic and Notes stay out of a Fusion (dimmed while one is on)
               // choosing Mosaic = choosing a painter: 🔀 goes off, and its variants (Mosaic ↔ Notes) come on Next — never ALL
               const _mosaicOwn = ()=>{ _artQuiet(''); setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; };   // the Mosaic itself (not a roll to Notes)
               if(style!==null){ selectStyle(style); _mosaicOwn(); return; }
@@ -18111,7 +18110,7 @@ Hard requirements:
                 if(!notesMode){ setNotesMode(true); }
                 else { setNotesMode(false); }
               }
-            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} data-fu={(studioFs && jamOn && !cockpitEdit && _jamStage().indexOf('mosaic')>=0) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && _jamStage().indexOf('mosaic')>=0) ? -100+_jamStage().indexOf('mosaic') : undefined,width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:(!cockpitEdit && jamOn && jamAll && _mosIx<0)?0.35:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{studioFs && _skinFace('mosaic', inFamilyShuffle && !mosaicManual && !cockpitEdit)}{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
+            }} className={(((cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual))?'pf-artist pf-artist-on':'pf-artist')+(randomMode && mosaicShuffleLock?' pf-art-lock':'')} title={cockpitEdit ? (setupArtists.includes('mosaicFamily')?'in your set — tap to remove':'tap to add to your set') : lockTip} data-fu={(studioFs && jamOn && !cockpitEdit && _jamStage().indexOf('mosaic')>=0) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && _jamStage().indexOf('mosaic')>=0) ? -100+_jamStage().indexOf('mosaic') : undefined,width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',...(cockpitEdit&&!setupArtists.includes('mosaicFamily')?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:chipStyle(cockpitEdit ? setupArtists.includes('mosaicFamily') : mosaicManual)),...(!cockpitEdit&&!mosaicManual&&inFamilyShuffle?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{}),opacity:(!cockpitEdit && jamOn)?0.35:(!cockpitEdit && _artMode===2 && !mosaicManual && !inFamilyShuffle)?0.55:1,position:'relative'}}>{studioFs && _skinFace('mosaic', inFamilyShuffle && !mosaicManual && !cockpitEdit)}{_mosIx>=0 ? t('mosaicStyle') : subLabel}{_stageBadge(_mosIx, [])}</button>
             ); })()}
             {/* ── Per-artist chips (un-paired). Every artist is its own toggle.
                 Free tier: Pro-only artists show a small lock + are dimmed; tapping
