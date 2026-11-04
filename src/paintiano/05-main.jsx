@@ -481,6 +481,8 @@ const MOSAIC_INTRO_I18N = {
 // The song's colours: how much each of the twelve tones sounds (notes per pitch class).
 function _pcWeights(chords){ const w=new Array(12).fill(0); for(const c of (chords||[])){ const ns=(c&&(c.n||c.notes))||[]; for(const x of ns){ const m=(x&&x.m!==undefined)?x.m:x; w[((Math.round(+m||0)%12)+12)%12]+=1; } } return w; }
 const _FIFTHS=[0,7,2,9,4,11,6,1,8,3,10,5];
+// a rounded rectangle as a path (all four corners) — the painting in a Web / Story export, as it is in the app
+function _rrPath(cx,x,y,w,h,r){ r=Math.max(0,Math.min(r,w/2,h/2)); cx.beginPath(); if(!r){ cx.rect(x,y,w,h); return; } cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r); cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
 function _rrect(cx,x,y,w,h,r){ cx.beginPath(); cx.moveTo(x+r,y); cx.lineTo(x+w-r,y); cx.quadraticCurveTo(x+w,y,x+w,y+r); cx.lineTo(x+w,y+h); cx.lineTo(x,y+h); cx.lineTo(x,y+r); cx.quadraticCurveTo(x,y,x+r,y); cx.closePath(); }
 // Twelve bars in fifths, in the palette's colours (gc), each as tall as its tone sounds in the song, the tone's name under it.
 function _drawPcStrip(cx, x, y, w, h, wts, gc, names, o){
@@ -521,8 +523,9 @@ function _frameExport(hi, kind, o){
     const cb=isP ? Math.round(Hf*((o.src && !o.bare) ? 0.30 : 0.25)) : cb0;
     const bw=Wf-2*m, bh=Hf-m-cb; const k=Math.min(bw/hi.width, bh/hi.height); const pw=Math.round(hi.width*k), ph=Math.round(hi.height*k);
     const px=Math.round((Wf-pw)/2), py=m+Math.round((bh-ph)/2);
-    cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph);
-    cx.strokeStyle='rgba(201,168,76,.5)'; cx.lineWidth=Math.max(2,Wf*0.0017); cx.strokeRect(px,py,pw,ph);
+    const rr = isP ? 0 : Math.round(Math.min(pw,ph)*0.045);   // Web: the painting's corners round, as in the app — a print keeps them sharp
+    cx.save(); _rrPath(cx,px,py,pw,ph,rr); cx.clip(); cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph); cx.restore();
+    cx.strokeStyle='rgba(201,168,76,.5)'; cx.lineWidth=Math.max(2,Wf*0.0017); _rrPath(cx,px,py,pw,ph,rr); cx.stroke();
     let bw2=bw;
     if(o.bare){ if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.22), Math.round(cb*0.6)); _drawSrc(cx, o.src, Math.round((Wf-r.w)/2), Hf-cb+Math.round((cb-r.h)/2), r.w, r.h, Wf); } return cv; }
     let y=Hf-cb+Math.round(Wf*0.07);
@@ -13942,12 +13945,15 @@ Hard requirements:
           sctx.fillText(_iLine, SW/2, dy - 30);
           sctx.restore();
         }
+        // the painting's corners round, as in the app: its shadow, the painting clipped, the hairline
+        const _sr=Math.round(Math.min(dw,dh)*0.045);
         sctx.save();
         sctx.shadowColor='rgba(0,0,0,.55)'; sctx.shadowBlur=40; sctx.shadowOffsetY=12;
-        sctx.drawImage(_artImg, dx, dy, dw, dh);
+        _rrPath(sctx, dx, dy, dw, dh, _sr); sctx.fillStyle='#000'; sctx.fill();
         sctx.restore();
+        sctx.save(); _rrPath(sctx, dx, dy, dw, dh, _sr); sctx.clip(); sctx.drawImage(_artImg, dx, dy, dw, dh); sctx.restore();
         sctx.strokeStyle='rgba(201,168,76,.35)'; sctx.lineWidth=2;
-        sctx.strokeRect(dx, dy, dw, dh);
+        _rrPath(sctx, dx, dy, dw, dh, _sr); sctx.stroke();
         // mood label + wordmark + tagline below the art. Mood comes from
         // currentMood when set (mood pick, MFI auto-detected mood, etc.);
         // skipped when the composition has no mood association (pure MIDI /
