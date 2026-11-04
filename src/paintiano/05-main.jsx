@@ -978,9 +978,29 @@ function bookExcerptUrl(lang){
 // they know about Pro: what exists (24 painters, 6 composers), what they have
 // (nine, always), what is extra today, and that tomorrow brings another pair.
 // Pro is the natural last line, never the word "free".
-const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, artistName, composerName, readScale}){
+const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, artistName, composerName, readScale, studio}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
+  // the Studio: a sheet from the bottom like its others — the gold ✦, today's pair, one gold button to Pro; it closes pulled down or by a tap beside
+  if(studio) return (<>
+    <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(4,4,10,.6)'}}/>
+    <div ref={panelRef} role="dialog" aria-modal="true" data-pf-sheet="" aria-label={ts('dailyTitle','Artist of the day')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:100001,maxWidth:560,margin:'0 auto',background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
+      <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 12px'}}/>
+      <div style={{display:'flex',alignItems:'center',gap:14}}>
+        <span aria-hidden="true" style={{flex:'0 0 auto',width:52,height:52,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',boxShadow:'0 6px 18px rgba(201,168,76,.35)',fontSize:24,lineHeight:1}}>✦</span>
+        <div style={{minWidth:0}}>
+          <div style={{fontSize:(20*readScale)+'px',fontWeight:800,color:'#fff',lineHeight:1.2}}>{ts('dailyTitle','Artist of the day')}</div>
+          <div style={{fontSize:(13.5*readScale)+'px',color:'rgba(242,238,232,.66)',marginTop:4,lineHeight:1.45}}>{ts('dailyExplain','Paintiano paints in the styles of 24 painters and 15 composers. Nine of them are always yours — and every day one more painter and one more composer join them for a day.')}</div>
+        </div>
+      </div>
+      <div style={{marginTop:16,padding:'12px 14px',borderRadius:16,border:'1px solid rgba(242,238,232,.1)',background:'rgba(255,255,255,.035)'}}>
+        <div style={{fontSize:(12*readScale)+'px',color:'rgba(242,238,232,.5)'}}>{ts('dailyTodayIs','Today')}</div>
+        <div style={{fontSize:(15*readScale)+'px',fontWeight:600,color:'#f2eee8',marginTop:1}}>{artistName} · {composerName}</div>
+        <div style={{fontSize:(12*readScale)+'px',color:'rgba(242,238,232,.45)',marginTop:2}}>{ts('dailyTomorrowPair','Tomorrow — another pair.')}</div>
+      </div>
+      <button type="button" onClick={()=>{ onClose(); if(onPro) onPro(); }} style={{display:'flex',alignItems:'center',justifyContent:'center',width:'100%',minHeight:50,marginTop:18,padding:'0 18px',borderRadius:25,border:0,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:(15*readScale)+'px',color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)'}}>{ts('dailyAllPro','All 24, always → Paintiano Pro')}</button>
+    </div>
+  </>);
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(4,4,10,.72)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',padding:18}}>
       <div ref={panelRef} onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" style={{maxWidth:400,width:'100%',background:'rgba(16,12,24,0.97)',border:'1px solid rgba(226,196,119,.5)',borderRadius:14,padding:'24px 22px 20px',color:'rgba(230,222,196,.9)',fontFamily:'inherit',boxShadow:'0 0 32px rgba(226,196,119,.16), 0 20px 60px rgba(0,0,0,.6)',position:'relative'}}>
@@ -6509,6 +6529,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     setMyMusicSaveName(_stem || _autoName);
     setMyMusicSaveTargetSlot(null);
     myMusicFirstEmpty().then(slot=>setMyMusicSaveTargetSlot(slot));
+    myMusicList().then(l=>setMyMusicSlots(l)).catch(()=>{});   // the sheet shows which places are taken
     setShowMyMusicSaveModal(true);
   };
 
@@ -16165,22 +16186,8 @@ Hard requirements:
       {/* My Music — Save modal (♫ MY MUSIC chip by the song title). Prefilled name, target
           slot info, Save/Cancel. If archive is full, shows warning instead
           of the input. Fáza 2 will add the drawer for view/delete/load. */}
-      {showMyMusicSaveModal && (
-        <div onClick={()=>{ if(!myMusicSaving) setShowMyMusicSaveModal(false); }} style={{position:'fixed',inset:0,zIndex:20000,background:'rgba(4,3,8,0.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-          <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:400,background:'#0e0b16',border:'1px solid rgba(201,168,76,.35)',borderRadius:16,padding:'20px 22px 22px',display:'flex',flexDirection:'column',gap:16}}>
-            <div style={{fontSize:(.7*effScale)+'rem',fontWeight:500,letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(220,180,90,.9)',textAlign:'center'}}>{ts('mymusicSaveTitle',({EN:'Save to My Music',SK:'Uložiť do Moja hudba',DE:'In Meine Musik speichern',FR:'Enregistrer dans Ma musique',ES:'Guardar en Mi música',PT:'Guardar em Minha música',zh:'保存到我的音乐',zhTW:'儲存到我的音樂',ja:'マイミュージックに保存'})[lang]||'Save to My Music')}</div>
-            {myMusicSaveTargetSlot === null ? (
-              <div style={{padding:'12px 14px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.62*effScale)+'rem',lineHeight:1.4,textAlign:'center'}}>{ts('mymusicFull',({EN:'Archive is full (5/5). Open the archive and delete a slot first.',SK:'Archív je plný (5/5). Otvor archív a najprv odstráň slot.',DE:'Archiv voll (5/5). Öffne das Archiv und lösche zuerst einen Slot.',FR:'Archive pleine (5/5). Ouvrez l\'archive et supprimez d\'abord un slot.',ES:'Archivo lleno (5/5). Abre el archivo y elimina un slot primero.',PT:'Arquivo cheio (5/5). Abra o arquivo e apague um slot primeiro.',zh:'档案已满(5/5)。请先打开档案并删除一个位置。',zhTW:'檔案已滿(5/5)。請先開啟檔案並刪除一個位置。',ja:'アーカイブが満杯(5/5)。アーカイブを開いてスロットを削除してください。'})[lang]||'Archive is full (5/5). Delete a slot first.')}</div>
-            ) : (
-              <>
-                <input type="text" value={myMusicSaveName} onChange={e=>setMyMusicSaveName(e.target.value)} placeholder={ts('mymusicNamePlaceholder',({EN:'Song name',SK:'Názov skladby',DE:'Songname',FR:'Nom de la chanson',ES:'Nombre de canción',PT:'Nome da música',zh:'歌曲名称',zhTW:'歌曲名稱',ja:'曲名'})[lang]||'Song name')} maxLength={120} autoFocus style={{padding:'12px 14px',background:'transparent',border:'1px solid rgba(230,222,196,.22)',borderRadius:10,color:PF.cream,fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none'}} />
-                <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.5)',textAlign:'center',fontStyle:'italic'}}>{ts('mymusicSlotHint',({EN:'Slot',SK:'Slot',DE:'Slot',FR:'Emplacement',ES:'Espacio',PT:'Espaço',zh:'插槽',zhTW:'插槽',ja:'スロット'})[lang]||'Slot')} {myMusicSaveTargetSlot} / 5</div>
-                {myMusicSaveErr && (<div style={{padding:'10px 12px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.58*effScale)+'rem',lineHeight:1.4,textAlign:'center'}}>{ts('mymusicSaveErr',({EN:'Could not save — private/incognito mode blocks storage. Try a normal window.',SK:'Nedalo sa uložiť — inkognito režim blokuje úložisko. Skús normálne okno.',DE:'Speichern fehlgeschlagen — der Inkognito-Modus blockiert den Speicher. Versuch ein normales Fenster.',FR:'Échec de l\'enregistrement — le mode privé bloque le stockage. Essaie une fenêtre normale.',ES:'No se pudo guardar — el modo incógnito bloquea el almacenamiento. Prueba una ventana normal.',PT:'Não foi possível guardar — o modo anónimo bloqueia o armazenamento. Tenta uma janela normal.',zh:'无法保存——隐身模式阻止了存储。请使用普通窗口。',zhTW:'無法儲存——無痕模式封鎖了儲存。請使用一般視窗。',ja:'保存できません — シークレットモードはストレージをブロックします。通常のウィンドウでお試しください。'})[lang]||'Could not save — private mode blocks storage.')}</div>)}
-              </>
-            )}
-            <div style={{display:'flex',gap:8,marginTop:4}}>
-              <button onClick={()=>{ if(!myMusicSaving) setShowMyMusicSaveModal(false); }} disabled={myMusicSaving} style={{flex:1,padding:'10px 14px',background:'transparent',border:'1px solid rgba(230,222,196,.2)',borderRadius:10,color:'rgba(230,222,196,.75)',cursor:myMusicSaving?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',fontWeight:500}}>{_sent(ts('cancelLabel','Cancel'))}</button>
-              <button disabled={myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim()} onClick={async()=>{
+      {showMyMusicSaveModal && (()=>{
+        const _mmGo = async()=>{
                 // Pick the right blob for the current loaded source. All 3
                 // formats (audio, midi, MusicXML) go into the same archive.
                 const _blob = loadedSource==='audio' ? (audioBlobRef.current || audioBlob)
@@ -16209,11 +16216,46 @@ Hard requirements:
                   setMyMusicSaveErr(true);
                   setTimeout(()=>setMyMusicSaveErr(false), 4000);
                 }
-              }} style={{flex:1,padding:'10px 14px',background:(myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim())?'rgba(201,168,76,.15)':'rgba(201,168,76,.85)',border:'none',borderRadius:10,color:(myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim())?'rgba(220,180,90,.4)':'#0e0b16',cursor:(myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim())?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',fontWeight:600}}>{myMusicSaving?'…':_sent(ts('saveLabel','Save'))}</button>
+              };
+        const _off = myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim();
+        const _close = ()=>{ if(!myMusicSaving) setShowMyMusicSaveModal(false); };
+        // the Studio: a sheet like Save and Share — the name, the five places (the gold one is where it goes), gold Save; pulled down / a tap beside cancels
+        if(studioOn) return (<>
+          <div onClick={_close} style={{position:'fixed',inset:0,zIndex:20000,background:'rgba(4,4,10,.6)'}}/>
+          <div role="dialog" aria-modal="true" data-pf-sheet="" aria-label={_stT('mnSaveM')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:20001,maxWidth:560,margin:'0 auto',background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
+            <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 10px'}}/>
+            <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.9)',marginBottom:14}}>{_stT('mnSaveM')}</div>
+            {myMusicSaveTargetSlot === null ? (
+              <div style={{padding:'12px 14px',borderRadius:14,background:'rgba(232,85,122,.1)',border:'1px solid rgba(232,85,122,.35)',color:'#ff9ab4',fontSize:14,lineHeight:1.45,textAlign:'center'}}>{ts('mymusicFull',({EN:'Archive is full (5/5). Open the archive and delete a slot first.',SK:'Archív je plný (5/5). Otvor archív a najprv odstráň slot.',DE:'Archiv voll (5/5). Öffne das Archiv und lösche zuerst einen Slot.',FR:'Archive pleine (5/5). Ouvrez l\'archive et supprimez d\'abord un slot.',ES:'Archivo lleno (5/5). Abre el archivo y elimina un slot primero.',PT:'Arquivo cheio (5/5). Abra o arquivo e apague um slot primeiro.',zh:'档案已满(5/5)。请先打开档案并删除一个位置。',zhTW:'檔案已滿(5/5)。請先開啟檔案並刪除一個位置。',ja:'アーカイブが満杯(5/5)。アーカイブを開いてスロットを削除してください。'})[lang]||'Archive is full (5/5). Delete a slot first.')}</div>
+            ) : (<>
+              <input type="text" value={myMusicSaveName} onChange={e=>setMyMusicSaveName(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter' && !_off) _mmGo(); }} placeholder={ts('mymusicNamePlaceholder',({EN:'Song name',SK:'Názov skladby',DE:'Songname',FR:'Nom de la chanson',ES:'Nombre de canción',PT:'Nome da música',zh:'歌曲名称',zhTW:'歌曲名稱',ja:'曲名'})[lang]||'Song name')} maxLength={120} autoFocus style={{width:'100%',boxSizing:'border-box',height:48,padding:'0 16px',borderRadius:14,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.14)',color:'#f2eee8',fontFamily:'inherit',fontSize:16,outline:'none'}}/>
+              <div style={{display:'flex',gap:8,marginTop:14}}>{[1,2,3,4,5].map(i=>{ const r=(myMusicSlots||[]).find(x=>x && x.id===i), on=i===myMusicSaveTargetSlot, full=!!(r && !r.empty);
+                return (<div key={i} style={{flex:1,minWidth:0,height:58,borderRadius:12,boxSizing:'border-box',border:'1px solid '+(on?'#e2c477':'rgba(242,238,232,.12)'),background:on?'rgba(226,196,119,.12)':full?'rgba(255,255,255,.07)':'rgba(255,255,255,.03)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,color:on?'#e2c477':'rgba(242,238,232,.5)',fontSize:12,fontWeight:on?700:500,overflow:'hidden'}}>
+                  <span>{i}</span><span style={{fontSize:10,fontWeight:400,maxWidth:'90%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{on ? '✦' : full ? (r.name||'♪') : '·'}</span></div>); })}</div>
+              {myMusicSaveErr && (<div style={{marginTop:12,padding:'10px 12px',borderRadius:12,background:'rgba(232,85,122,.1)',border:'1px solid rgba(232,85,122,.35)',color:'#ff9ab4',fontSize:13,lineHeight:1.4,textAlign:'center'}}>{ts('mymusicSaveErr',({EN:'Could not save — private/incognito mode blocks storage. Try a normal window.',SK:'Nedalo sa uložiť — inkognito režim blokuje úložisko. Skús normálne okno.',DE:'Speichern fehlgeschlagen — der Inkognito-Modus blockiert den Speicher. Versuch ein normales Fenster.',FR:'Échec de l\'enregistrement — le mode privé bloque le stockage. Essaie une fenêtre normale.',ES:'No se pudo guardar — el modo incógnito bloquea el almacenamiento. Prueba una ventana normal.',PT:'Não foi possível guardar — o modo anónimo bloqueia o armazenamento. Tenta uma janela normal.',zh:'无法保存——隐身模式阻止了存储。请使用普通窗口。',zhTW:'無法儲存——無痕模式封鎖了儲存。請使用一般視窗。',ja:'保存できません — シークレットモードはストレージをブロックします。通常のウィンドウでお試しください。'})[lang]||'Could not save — private mode blocks storage.')}</div>)}
+            </>)}
+            <button type="button" disabled={_off} onClick={_mmGo} style={{display:'flex',alignItems:'center',justifyContent:'center',width:'100%',height:50,marginTop:16,borderRadius:25,border:0,cursor:_off?'default':'pointer',fontFamily:'inherit',fontWeight:700,fontSize:16,color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',opacity:_off?.45:1}}>{myMusicSaving ? '…' : _sent(t('save'))}</button>
+          </div>
+        </>);
+        return (<div onClick={()=>{ if(!myMusicSaving) setShowMyMusicSaveModal(false); }} style={{position:'fixed',inset:0,zIndex:20000,background:'rgba(4,3,8,0.7)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:400,background:'#0e0b16',border:'1px solid rgba(201,168,76,.35)',borderRadius:16,padding:'20px 22px 22px',display:'flex',flexDirection:'column',gap:16}}>
+            <div style={{fontSize:(.7*effScale)+'rem',fontWeight:500,letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(220,180,90,.9)',textAlign:'center'}}>{ts('mymusicSaveTitle',({EN:'Save to My Music',SK:'Uložiť do Mojej hudby',DE:'In Meine Musik speichern',FR:'Enregistrer dans Ma musique',ES:'Guardar en Mi música',PT:'Guardar em Minha música',zh:'保存到我的音乐',zhTW:'儲存到我的音樂',ja:'マイミュージックに保存'})[lang]||'Save to My Music')}</div>
+            {myMusicSaveTargetSlot === null ? (
+              <div style={{padding:'12px 14px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.62*effScale)+'rem',lineHeight:1.4,textAlign:'center'}}>{ts('mymusicFull',({EN:'Archive is full (5/5). Open the archive and delete a slot first.',SK:'Archív je plný (5/5). Otvor archív a najprv odstráň slot.',DE:'Archiv voll (5/5). Öffne das Archiv und lösche zuerst einen Slot.',FR:'Archive pleine (5/5). Ouvrez l\'archive et supprimez d\'abord un slot.',ES:'Archivo lleno (5/5). Abre el archivo y elimina un slot primero.',PT:'Arquivo cheio (5/5). Abra o arquivo e apague um slot primeiro.',zh:'档案已满(5/5)。请先打开档案并删除一个位置。',zhTW:'檔案已滿(5/5)。請先開啟檔案並刪除一個位置。',ja:'アーカイブが満杯(5/5)。アーカイブを開いてスロットを削除してください。'})[lang]||'Archive is full (5/5). Delete a slot first.')}</div>
+            ) : (
+              <>
+                <input type="text" value={myMusicSaveName} onChange={e=>setMyMusicSaveName(e.target.value)} placeholder={ts('mymusicNamePlaceholder',({EN:'Song name',SK:'Názov skladby',DE:'Songname',FR:'Nom de la chanson',ES:'Nombre de canción',PT:'Nome da música',zh:'歌曲名称',zhTW:'歌曲名稱',ja:'曲名'})[lang]||'Song name')} maxLength={120} autoFocus style={{padding:'12px 14px',background:'transparent',border:'1px solid rgba(230,222,196,.22)',borderRadius:10,color:PF.cream,fontSize:(.72*effScale)+'rem',fontFamily:'inherit',outline:'none'}} />
+                <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.5)',textAlign:'center',fontStyle:'italic'}}>{ts('mymusicSlotHint',({EN:'Slot',SK:'Slot',DE:'Slot',FR:'Emplacement',ES:'Espacio',PT:'Espaço',zh:'插槽',zhTW:'插槽',ja:'スロット'})[lang]||'Slot')} {myMusicSaveTargetSlot} / 5</div>
+                {myMusicSaveErr && (<div style={{padding:'10px 12px',borderRadius:8,background:'rgba(232,85,122,.12)',border:'1px solid rgba(232,85,122,.4)',color:'#ff9ab4',fontSize:(.58*effScale)+'rem',lineHeight:1.4,textAlign:'center'}}>{ts('mymusicSaveErr',({EN:'Could not save — private/incognito mode blocks storage. Try a normal window.',SK:'Nedalo sa uložiť — inkognito režim blokuje úložisko. Skús normálne okno.',DE:'Speichern fehlgeschlagen — der Inkognito-Modus blockiert den Speicher. Versuch ein normales Fenster.',FR:'Échec de l\'enregistrement — le mode privé bloque le stockage. Essaie une fenêtre normale.',ES:'No se pudo guardar — el modo incógnito bloquea el almacenamiento. Prueba una ventana normal.',PT:'Não foi possível guardar — o modo anónimo bloqueia o armazenamento. Tenta uma janela normal.',zh:'无法保存——隐身模式阻止了存储。请使用普通窗口。',zhTW:'無法儲存——無痕模式封鎖了儲存。請使用一般視窗。',ja:'保存できません — シークレットモードはストレージをブロックします。通常のウィンドウでお試しください。'})[lang]||'Could not save — private mode blocks storage.')}</div>)}
+              </>
+            )}
+            <div style={{display:'flex',gap:8,marginTop:4}}>
+              <button onClick={()=>{ if(!myMusicSaving) setShowMyMusicSaveModal(false); }} disabled={myMusicSaving} style={{flex:1,padding:'10px 14px',background:'transparent',border:'1px solid rgba(230,222,196,.2)',borderRadius:10,color:'rgba(230,222,196,.75)',cursor:myMusicSaving?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',fontWeight:500}}>{_sent(ts('cancelLabel','Cancel'))}</button>
+              <button disabled={myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim()} onClick={_mmGo} style={{flex:1,padding:'10px 14px',background:(myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim())?'rgba(201,168,76,.15)':'rgba(201,168,76,.85)',border:'none',borderRadius:10,color:(myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim())?'rgba(220,180,90,.4)':'#0e0b16',cursor:(myMusicSaving || myMusicSaveTargetSlot === null || !myMusicSaveName.trim())?'default':'pointer',fontFamily:'inherit',fontSize:(.65*effScale)+'rem',letterSpacing:'.08em',textTransform:'uppercase',fontWeight:600}}>{myMusicSaving?'…':_sent(ts('saveLabel','Save'))}</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>);
+      })()}
       {/* Saved flash — brief confirmation after successful save. */}
       {myMusicSavedFlash && (
         <div style={{position:'fixed',top:'max(20px, env(safe-area-inset-top))',left:'50%',transform:'translateX(-50%)',zIndex:20001,padding:'10px 20px',background:'rgba(90,170,90,0.95)',color:'#fff',borderRadius:20,fontSize:(.68*effScale)+'rem',fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase',boxShadow:'0 4px 16px rgba(0,0,0,.3)',pointerEvents:'none',animation:'pf-fadeUp .18s ease-out'}}>✓ {ts('mymusicSaved',({EN:'Saved',SK:'Uložené',DE:'Gespeichert',FR:'Enregistré',ES:'Guardado',PT:'Guardado',zh:'已保存',zhTW:'已儲存',ja:'保存済み'})[lang]||'Saved')}</div>
@@ -19912,7 +19954,7 @@ Hard requirements:
         />
       )}
       {showDailyInfo && (
-        <DailyInfoPopover onClose={()=>setShowDailyInfo(false)} onPro={()=>{ setShowSetupModal(false); setPaywallReason('settings'); }} ts={ts} artistName={STYLE_INSPIRED[artistOfDay]||artistOfDay} composerName={COMPOSER_INSPIRED[composerOfDay]||composerOfDay} readScale={effScale} />
+        <DailyInfoPopover onClose={()=>setShowDailyInfo(false)} onPro={()=>{ setShowSetupModal(false); setPaywallReason('settings'); }} ts={ts} artistName={STYLE_INSPIRED[artistOfDay]||artistOfDay} composerName={COMPOSER_INSPIRED[composerOfDay]||composerOfDay} readScale={effScale} studio={studioOn} />
       )}
       {showBook && (
         <GuideModal
