@@ -538,6 +538,8 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
     ? ((t && t('proAiBadge')) || 'PRO AI')
     : ((t && t('proBadge')) || 'PRO');
   const isSm = size === 'sm';
+  // a small badge marks something locked: everywhere the same 🔒 (the paywall says which tier)
+  if (isSm) return (<span role="img" aria-label={label} title={label} style={{ display: 'inline-block', marginLeft: 5, fontSize: '.85em', lineHeight: 1, verticalAlign: 'middle', opacity: .85 }}>🔒</span>);
   const fg = isAI ? '#dcb4ff' : GOLD;
   const bgCol = isAI ? 'rgba(220,150,255,.16)' : 'rgba(201,168,76,.15)';
   const borderCol = isAI ? 'rgba(220,150,255,.5)' : 'rgba(201,168,76,.45)';
@@ -815,10 +817,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {upgradeOnly ? (
                   renderTierCard(upTier, true)
                 ) : reason === 'ai_trial' ? (
-                  <>
-                    {renderTierCard('pro_ai', true)}
-                    {renderTierCard('pro', false)}
-                  </>
+                  renderTierCard('pro_ai', true)   /* AI: Pro does not help — Pro AI only */
                 ) : (
                   <>
                     {renderTierCard('pro', false)}

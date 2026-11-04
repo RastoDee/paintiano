@@ -17032,7 +17032,7 @@ Hard requirements:
           mood:{sel:'.pf-moodtile', label:_sent(t('moodHowFeel')), g:'#f0d78a,#d6b25c', c:'#f0d78a', d:hasMoodDraft, p:(<path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/>)},
           compose:{sel:'.pf-compose', label:_sent(t('compose')), g:'#8fd6a4,#3fb37a', c:'#8fd6a4', d:hasComposeDraft, p:(<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8"/></>)},
           mic:{sel:'.pf-mic', label:_sent(t('mic')), g:'#ff9ec0,#ff5a8a', c:'#ff9ec0', d:hasMicDraft, p:(<><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></>)},
-          mfi:{sel:'[data-pf="mfi"]', label:_sent(t('imgMood')||'mood from image'), g:'#cdb2ff,#8c5cff', c:'#cdb2ff', d:hasMfiDraft, off:(!aiUsable || imgAiBusy), p:(<><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></>)},
+          mfi:{sel:'[data-pf="mfi"]', label:_sent(t('imgMood')||'mood from image'), g:'#cdb2ff,#8c5cff', c:'#cdb2ff', d:hasMfiDraft, off:!aiLockedMode('mfi') && (!aiUsable || imgAiBusy), p:(<><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></>)},
         };
         const ORDER = ['music','image','mfi','mood','compose','mic'];
         const _tap = (k)=>{ const el=document.querySelector(SRC[k].sel); if(el && !el.disabled) el.click(); };
@@ -17198,7 +17198,7 @@ Hard requirements:
               const _go = (k)=>()=>{ if(SRC[k].off) return; setStChg(null); const on=_on(k), back=!!SRC[k].d && !on;
                 if(FC){ _feedExit(); setTimeout(()=>{ const T=feedTileRef.current; if(T){ if(back) T.t(k); else T.f(k); } }, 120); return; }
                 if(back) _tap(k); else _fresh(k); };
-              const _row = (k, t1, s1)=>({k, ic:_sv(SRC[k].p, 20), g:SRC[k].g, t:t1, s:s1, ok:!SRC[k].off, dot:!!SRC[k].d && !_on(k), go:_go(k)});
+              const _row = (k, t1, s1)=>({k, ic:_sv(SRC[k].p, 20), g:SRC[k].g, t:t1, s:s1, lk:k==='mfi' && aiLockedMode('mfi'), ok:!SRC[k].off, dot:!!SRC[k].d && !_on(k), go:(k==='mfi' && aiLockedMode('mfi')) ? ()=>{ setStChg(null); setPaywallReason('ai_trial'); } : _go(k)});
               const _isImg = !!(FC && FC.kind==='img');
               const rows = {
                 music:[_row('music', _stT('chUp'), _stT('chUpS')), _row('mood', SRC.mood.label, _stT('chMoodS')), _row('compose', SRC.compose.label, _stT('chCompS')), _row('mic', SRC.mic.label, _stT('chMicS'))],
@@ -17222,7 +17222,7 @@ Hard requirements:
                     {rows[tab].map(r=>(
                       <button key={r.k} type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}>
                         <span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}{r.dot && _stk(r.k, r.g)}</span>
-                        <span className="pf-chg-tx"><b>{r.t}</b>{r.s && (<small>{r.s}</small>)}</span>
+                        <span className="pf-chg-tx"><b>{r.t}{r.lk && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</b>{r.s && (<small>{r.s}</small>)}</span>
                       </button>))}
                   </div>
                   <div className="pf-chg-chips">
@@ -18079,7 +18079,7 @@ Hard requirements:
                 {/* the Studio: AI compose sits up here, next to ✦ — not lost at the far end of the row */}
                 {studioFs && (<button type="button" className={'pf-ai-pill'+(_aiOn?' on':'')} disabled={busy||working} aria-pressed={_aiOn} title={aiLocked?(t('aiLockedHint')||'AI is part of Paintiano Pro AI'):(t('imgCompositionHint')!=='imgCompositionHint'?t('imgCompositionHint'):'AI writes a piece from this image')}
                   onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }}>
-                  ✦ AI{(proStatus!=='pro_ai') && (<span className="pf-ai-pro">PRO</span>)}</button>)}
+                  ✦ AI{aiLockedMode('compose') && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</button>)}
               </div>
               <div className="pf-art-grid" style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}}>
                 <button key="scan" disabled={working} onClick={_toScan} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'}
@@ -19072,7 +19072,7 @@ Hard requirements:
               ].concat(_mmOk ? [{k:'mm', ic:_IC_MM(20), g:G.mine, t:_stT('mnSaveM'), s:_stT('miSub').replace(/^[^·]*·\s*/,''), ok:true, go:()=>{ setStChg(null); _openMyMusicSave(); }}] : []),
               image:[
                 {k:'image', ic:IC.image, g:G.image, t:_stT('chImg'), s:_stT('chImgS'), ok:!_lk, go:_src('image', ()=>_stNewSrc('image'))},
-                {k:'mfi', ic:IC.mfi, g:G.mfi, t:_sent(t('imgMood')||'mood from image'), s:_stT('chMfiS'), ok:!_lk && aiUsable && !imgAiBusy, go:_src('mfi', ()=>_stNewSrc('imgmood'))},
+                {k:'mfi', ic:IC.mfi, g:G.mfi, t:_sent(t('imgMood')||'mood from image'), s:_stT('chMfiS'), lk:aiLockedMode('mfi'), ok:!_lk && (aiLockedMode('mfi') || (aiUsable && !imgAiBusy)), go:aiLockedMode('mfi') ? ()=>{ setStChg(null); setPaywallReason('ai_trial'); } : _src('mfi', ()=>_stNewSrc('imgmood'))},
               ].concat(_miOk ? [{k:'mi', ic:_IC_MI(20), g:G.mine, t:_stT('mnSaveI'), s:_stT('miSub').replace(/^[^·]*·\s*/,''), ok:true, go:()=>{ setStChg(null); _myImgSave(); }}] : []),
               paint:[
                 {k:'look', ic:IC.look, g:G.paint, t:_img ? _stT('chLookSi') : _stT('look'), s:_img ? '' : _stT('chLookS'), ok:_stHasArt || _live, go:()=>{ setStChg(null); setStripOpen(true); }},
@@ -19082,7 +19082,7 @@ Hard requirements:
                .concat(_morphOk ? [{k:'morph', ic:IC.morph, g:G.morph, t:_hs('morph')[0], s:_hs('morph')[1], ok:!(recording||working), go:()=>{ setStChg(null); const go=()=>{ if(morphBtnRef.current) morphBtnRef.current.click(); }; if(playing && handlePauseClickRef.current){ handlePauseClickRef.current(); setTimeout(go, 160); } else go(); }}] : [])
                .concat(_showVary ? [{k:'vary', ic:(<TxIcon n="sparkle" s={18}/>), g:G.vary, t:_hs('vary')[0], s:_hs('vary')[1], ok:_varyOk, go:()=>{ if(_varyOk){ setStChg(null); _doVary(); } }}] : [])
                .concat(_loopOk ? [{k:'loop', ic:(<TxIcon n="loop" s={17}/>), g:G.paint, t:_hs('loop')[0], s:_hs('loop')[1], ok:!recording, on:!!loopMode, go:()=>{ if(recording) return; const v=!loopMode; setLoopMode(v); loopModeRef.current=v; }}] : [])
-               .concat(_aiOk ? [{k:'atmo', ic:IC.atmo, g:G.ai, t:_hs('atmo')[0]+(atmoBusy?' …':''), s:_hs('atmo')[1], ok:!atmoBusy, on:!!atmoOn, go:_atmoTap}, {k:'mel', ic:IC.mel, g:G.ai, t:_hs('mel')[0]+(melodyBusy?' …':''), s:_hs('mel')[1], ok:!melodyBusy, on:!!melodyOn, go:_melodyTap}] : [])
+               .concat(_aiOk ? [{k:'atmo', lk:aiLockedMode('atmomelody') && !atmoMood, ic:IC.atmo, g:G.ai, t:_hs('atmo')[0]+(atmoBusy?' …':''), s:_hs('atmo')[1], ok:!atmoBusy, on:!!atmoOn, go:_atmoTap}, {k:'mel', lk:aiLockedMode('atmomelody') && !melodyData, ic:IC.mel, g:G.ai, t:_hs('mel')[0]+(melodyBusy?' …':''), s:_hs('mel')[1], ok:!melodyBusy, on:!!melodyOn, go:_melodyTap}] : [])
                .concat(_showOk ? [{k:'show', ic:(<TxIcon n="show" s={17}/>), g:G.paint, t:_hs('show')[0], s:_hs('show')[1], ok:true, on:!!showMode, go:toggleShow}] : []),
             };
             const _pAll = rows.paint.filter(r=>r.k!=='look');
@@ -19112,18 +19112,18 @@ Hard requirements:
                 </div>
                 {stChg==='paint' ? (<div className="pf-chg-rows" key="paint">
                   {/* Look: painters, palettes, fusions (a picture: composers and instruments) — the way into the look tray */}
-                  {(()=>{ const r=rows.paint.find(x=>x.k==='look'); return r ? (<button type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{r.t}</b>{r.s && (<small>{r.s}</small>)}</span></button>) : null; })()}
+                  {(()=>{ const r=rows.paint.find(x=>x.k==='look'); return r ? (<button type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{r.t}{r.lk && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</b>{r.s && (<small>{r.s}</small>)}</span></button>) : null; })()}
                   {/* this painting: what it can do now — the one big step, then its switches (no grey rows: what can't be done isn't shown) */}
                   {(_pHero || _pAct.length>0 || _pTg.length>0) && (<div className="pf-chg-lbl">{_img ? _stT('thisI') : _stT('thisP')}</div>)}
                   {_pHero && (<button type="button" className={'pf-chg-hero'+(_img?' see':'')} onClick={_pHero.go}><span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+_pHero.g+')'}}>{_pHero.ic}</span><span className="pf-chg-tx"><b>{_pHero.t}</b><small>{_img ? _stT('seeS') : _stT('hearS')}</small></span><span className="pf-chg-go" aria-hidden="true">›</span></button>)}
-                  {_pAct.map(r=>(<button key={r.k} type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{pfIcons(r.t)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span></button>))}
-                  {_pTg.length>0 && (<div className="pf-chg-cc">{_pTg.map(r=>(<button key={r.k} type="button" className={'pf-chg-c'+(r.on?' on':'')} aria-pressed={!!r.on} disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ci" style={{'--g':'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{pfIcons(r.t)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span></button>))}</div>)}
+                  {_pAct.map(r=>(<button key={r.k} type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{pfIcons(r.t)}{r.lk && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span></button>))}
+                  {_pTg.length>0 && (<div className="pf-chg-cc">{_pTg.map(r=>(<button key={r.k} type="button" className={'pf-chg-c'+(r.on?' on':'')} aria-pressed={!!r.on} disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ci" style={{'--g':'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{pfIcons(r.t)}{r.lk && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span></button>))}</div>)}
                 </div>) : (
                 <div className="pf-chg-rows" key={stChg}>
                   {(rows[stChg]||[]).map(r=>(
                     <button key={r.k} type="button" className={'pf-chg-row'+(r.on?' on':'')} disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}>
                       <span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}{_dr[r.k] && r.k!==_cur && _stk(r.k, r.g)}</span>
-                      <span className="pf-chg-tx"><b>{pfIcons(r.t)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span>
+                      <span className="pf-chg-tx"><b>{pfIcons(r.t)}{r.lk && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span>
                       {r.on!==undefined && (<span className={'pf-chg-tg'+(r.on?' on':'')} aria-hidden="true"><i/></span>)}
                     </button>))}
                 </div>)}
