@@ -15053,8 +15053,12 @@ Hard requirements:
     return ()=>{ document.removeEventListener('touchstart', ts, {capture:true}); document.removeEventListener('touchmove', tm, {capture:true}); document.removeEventListener('touchend', te, {capture:true}); document.removeEventListener('touchcancel', te, {capture:true}); };
   },[]);
   // FULL SCREEN in the Studio (a choice, remembered): the painting covers the screen, its edges cropped — two fingers: spread on, pinch off
-  const [stFill, setStFill] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_fill')==='1'; }catch(_){ return false; } });
-  const _stFillSet = (v)=>{ setStFill(!!v); try{ localStorage.setItem('paintiano_st_fill', v ? '1' : '0'); }catch(_){} try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){} };
+  // A picture is not stretched by itself: it comes in its own size; spread = full screen for that picture, the next one comes in its own size again
+  const [stFillM, setStFillM] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_fill')==='1'; }catch(_){ return false; } });
+  const [stFillPic, setStFillPic] = useState(false);
+  const stFill = viewMode==='image' ? stFillPic : stFillM;
+  useEffect(()=>{ setStFillPic(false); },[originalImgUrl]);
+  const _stFillSet = (v)=>{ if(viewModeRef.current==='image') setStFillPic(!!v); else { setStFillM(!!v); try{ localStorage.setItem('paintiano_st_fill', v ? '1' : '0'); }catch(_){} } try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){} };
   useEffect(()=>{ if(!studioFs) return;   // Music, Compose and the Mic alike: spread two fingers = full screen
     let d0=0, done=false; const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
     const st=(e)=>{ if(e.touches.length===2 && !document.querySelector('[role="dialog"]')){ d0=dist(e.touches); done=false; } };
