@@ -8815,6 +8815,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // also falls through to full clear().
   const _clearAtRef = useRef(0);   // when Clear last ran: the Studio does not start the cleared piece again by itself
   const homeDropRef = useRef(null);   // (set with the home cards below) Clear takes the cleared painting's card off the home too
+  const studioClrRef = useRef(false);   // the Studio is on screen (set where studioFs is known): a cleared picture goes entirely there
   const clearCanvas = useCallback(()=>{
     _clearAtRef.current = Date.now();
     try{ homeDropRef.current && homeDropRef.current(); }catch(_){}
@@ -8859,6 +8860,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     // image canvas is transparent with the <img> beneath, clearing the canvas
     // reveals the photo again — and the stronger block outline (0.42) makes the
     // before/after difference obvious so Clear visibly did something.
+    // In the Studio a cleared picture goes entirely — the photo too, its draft and its home card — as a cleared piece of
+    // music does: the canvas is empty again ("Start with music or a picture"). The Atelier (below) keeps the photo to scan anew.
+    if(loadedSource==='image' && studioClrRef.current && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
+      leaveImgCompose(); setImgPlayMode('scan'); imgPlayModeRef.current='scan';
+      clear(); draftOwnerRef.current=null; setClearArmed(false);
+      return;
+    }
     if(loadedSource==='image' && !composeMode && !micPainting && !micListening && !draftOwnerRef.current){
       stopAll();
       setImgPlayMode('scan'); imgPlayModeRef.current='scan';
@@ -14644,6 +14652,7 @@ Hard requirements:
   // anything active in the Studio is shown in the Studio — also while the AI composes, a recording or a score is read (an empty canvas waits in black): never the Atelier
   const studioSrcOk = studioOn && isActiveView && !favView && !demoReelOn;
   const studioFs = studioOn && immersive;
+  studioClrRef.current = studioFs;
   // the Studio's palette editor closes with the tray, or when Custom is left
   useEffect(()=>{ if(stPalEdit && (!stripOpen || !studioFs || mode!=='custom')) setStPalEdit(false); },[stripOpen, studioFs, mode, stPalEdit]);
   useEffect(()=>{ if(stPalView && (!stripOpen || !studioFs)) setStPalView(null); },[stripOpen, studioFs, stPalView]);
