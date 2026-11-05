@@ -63,7 +63,9 @@ function fftMag(buf) {
   for (let i = 0; i < N / 2; i++) mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]);
   return mag.subarray(0, N / 2);
 }
-function pickPitches(mag,sr,minMag=0.12){const N=mag.length*2,bin=sr/N;let mx=0;for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];if(mx<0.0005)return[];const hits=[],lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil(4200/bin));for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(Math.abs(d)>1e-6?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
+// hiHz (videos): pitches only up to it, the loudest one counted within it — a phone's speaker or its camera lifts the highs and drops the bass, and the
+// upper partials (B's 5th → D♯, E's 4th → E) would otherwise be read as notes of their own
+function pickPitches(mag,sr,minMag=0.12,hiHz=0){const N=mag.length*2,bin=sr/N,lo=Math.floor(27.5/bin),hi=Math.min(mag.length-2,Math.ceil((hiHz||4200)/bin));let mx=0;if(hiHz){for(let i=Math.max(1,lo);i<=hi;i++)if(mag[i]>mx)mx=mag[i];}else{for(let i=0;i<mag.length;i++)if(mag[i]>mx)mx=mag[i];}if(mx<0.0005)return[];const hits=[];for(let i=Math.max(1,lo);i<hi;i++){if(mag[i]>mag[i-1]&&mag[i]>mag[i+1]&&mag[i]/mx>minMag){const d=mag[i-1]-2*mag[i]+mag[i+1],freq=(i+(Math.abs(d)>1e-6?0.5*(mag[i-1]-mag[i+1])/d:0))*bin,midi=Math.round(69+12*Math.log2(freq/440));if(midi>=21&&midi<=108)hits.push({midi,mag:mag[i]/mx,freq});}}return hits.filter((p,_,a)=>!a.some(q=>q!==p&&p.freq/q.freq>1.8&&Math.abs(p.freq/q.freq-Math.round(p.freq/q.freq))<0.06&&q.mag>=p.mag*0.6)).sort((a,b)=>b.mag-a.mag).slice(0,4);}
 
 // === Mic/Music chord-transcribe helpers ===
 // computeChroma: fold FFT magnitude into 12-bin pitch-class profile.
@@ -252,7 +254,7 @@ async function transcribeLikeMic(audioBuf, onP) {
   const seen = new Map();
   const pcSig = (ns) => [...new Set(ns.map(n => ((n.m % 12) + 12) % 12))].sort((a, b) => a - b).join(',');
   const build = (mag) => {
-    const peaks = pickPitches(mag, sr, 0.25), now = new Set(peaks.map(p => p.midi));
+    const peaks = pickPitches(mag, sr, 0.25, 1050), now = new Set(peaks.map(p => p.midi));   // up to C6: a filmed song's highs are its partials, not its notes (a 65 s phone video of a song in E: D♯ 44% → 8%, B on top as in the MP3)
     for (const k of [...seen.keys()]) if (!now.has(k)) seen.delete(k);
     for (const p of peaks) seen.set(p.midi, (seen.get(p.midi) || 0) + 1);
     const steady = peaks.filter(p => (seen.get(p.midi) || 0) >= 2).slice(0, 3);
