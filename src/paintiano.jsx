@@ -1261,21 +1261,26 @@ const hexToRgb=(hex)=>{
   return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
 };
 
-// Custom mode color: anchor on user's picked color per pitch class, then apply
-// subtle octave modulation (±15% lightness vs the default ±36% of Harmony/
-// Spectral) and gentle velocity modulation (saturation -10..+5%). The user's
-// chosen colour is faithfully represented at the mid-octave/mezzo-velocity
-// anchor point; surrounding notes shift slightly so octave and velocity remain
-// visually meaningful without overwhelming the user's palette intent.
+// Custom mode color: the user's picked colour per pitch class (hue + saturation
+// stay theirs), with the SAME octave lightness curve as Harmony / Spectral /
+// Phi / Kontra, and gentle velocity modulation (saturation ±7.5). The pick is
+// shown exactly at middle C; deep notes sink into shadow and high ones rise
+// into light just as in the built-in palettes. (Until Nov 2026 the octave
+// moved lightness only -12..+9 points, so a bass line C1–C2 in Scriabin's
+// palette painted almost as bright as the swatches — Harmony C1 22 %, Custom
+// C1 43 %.)
 const customCol=(m,v=100,palette)=>{
   const pc=m%12;
   const hex=(palette&&palette[pc])||'#888888';
   const[r,g,b]=hexToRgb(hex);
   const[h0,s0,l0]=toHsl(r,g,b);
-  // Octave: shift lightness toward 50% as anchor, then offset by octave delta.
-  // Anchor lightness on user pick at MIDI 60 (middle C); ±15% across 8 octaves.
-  const octDelta=(Math.max(0,Math.min(8,Math.floor(m/12)-1))-5)*3;  // -15..+9
-  const l=Math.max(8,Math.min(92,l0+octDelta));
+  // Octave: octL (12 % deep bass … 50 % middle C … 88 % top) re-anchored on
+  // the pick: 0..50 → 0..l0 below middle C, 50..100 → l0..100 above. A swatch
+  // at 50 % follows octL exactly; Scriabin's default swatches sit at 55 %, so
+  // C1 ≈ 24 % (Harmony 22 %), C8 ≈ 89 % (Harmony 88 %). No clipping for very
+  // light or very dark picks — the curve compresses instead.
+  const L=octL(m);
+  const l=Math.max(6,Math.min(94, L<=50 ? l0*L/50 : l0+(100-l0)*(L-50)/50));
   // Velocity: gentle saturation modulation around user's chosen saturation.
   // BUT if the swatch is greyscale (s0===0, e.g. the unset #888888 default or a
   // deliberately grey pick), keep it grey — adding saturation to a hue-less
