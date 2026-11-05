@@ -2018,7 +2018,9 @@ const STUDIO_SKIN_CSS = `
 .pf-tray-tg{background:none;padding:0;gap:6px}
 .pf-tray-tg button{display:inline-flex;align-items:center;gap:5px;padding:5px 11px 5px 13px;border:1px solid rgba(255,255,255,.14);background:transparent;color:rgba(230,222,196,.45);font-weight:500;border-radius:18px;transition:background .15s,border-color .15s,color .15s}
 .pf-tray-tg button.on{background:rgba(220,180,90,.12);border-color:rgba(220,180,90,.75);color:#f2eee8}   /* as Collage / Synthesis in Styles & palettes */
-.pf-tray-tg .pf-tg-ck{opacity:0;flex-shrink:0}.pf-tray-tg button.on .pf-tg-ck{opacity:.9}
+.pf-tray-tg .pf-tg-ck{opacity:0;flex-shrink:0}.pf-tray-tg button.on .pf-tg-ck,.pf-tray-tg button.cur .pf-tg-ck{opacity:.9}
+.pf-tray-tg button.cur{background:#f2eee8;border-color:#f2eee8;color:#121018;font-weight:600}   /* the one playing now */
+.pf-tray-tg button{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
 .pf-tray-tg button.lk{padding-right:13px}
 .pf-tray-tg button.shk{animation:pfTgShk .32s}
 @keyframes pfTgShk{20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
@@ -3959,6 +3961,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _setMix = (w, v)=>{ v=!!v; (w==='c' ? setStMixC : setStMixP)(v); try{ localStorage.setItem('paintiano_st_mix_'+w, v?'1':'0'); }catch(_){} };
   const _segShake = (e)=>{ try{ const b=e.currentTarget; b.classList.remove('shk'); void b.offsetWidth; b.classList.add('shk'); }catch(_){} try{ navigator.vibrate && navigator.vibrate(6); }catch(_){} };   // the last switch on stays on
   const composerRollRef = useRef(null);
+  // Solo / Fusion chips: a tap shows it (switches to it), a hold turns it on or off for the dice
+  const segHoldRef = useRef({tm:null, fired:false});
+  const _segPress = (onTap, onHold)=>({
+    onPointerDown:(e)=>{ const H=segHoldRef.current, el=e.currentTarget; H.fired=false; if(H.tm) clearTimeout(H.tm); H.tm=setTimeout(()=>{ H.tm=null; H.fired=true; try{ navigator.vibrate && navigator.vibrate(12); }catch(_){} onHold({currentTarget:el}); }, 450); },
+    onPointerUp:()=>{ const H=segHoldRef.current; if(H.tm){ clearTimeout(H.tm); H.tm=null; } },
+    onPointerLeave:()=>{ const H=segHoldRef.current; if(H.tm){ clearTimeout(H.tm); H.tm=null; } },
+    onPointerCancel:()=>{ const H=segHoldRef.current; if(H.tm){ clearTimeout(H.tm); H.tm=null; } },
+    onContextMenu:(e)=>{ e.preventDefault(); },
+    onClick:(e)=>{ const H=segHoldRef.current; if(H.fired){ H.fired=false; return; } onTap(e); } });
   const [crOn, setCrOn] = useState(false);
   const crOnRef = useRef(false); useEffect(()=>{ crOnRef.current = crOn; },[crOn]);
   // Jam session × composers' 🔀 with PINS — mirror of the painters' Ensemble ALL:
@@ -18237,9 +18248,11 @@ Hard requirements:
                 {/* the Studio: one Solo | Fusion switch, as for the painters (↑ on the painting is the composers' 🔀) */}
                 {studioFs && _rollable && (ensembleActive || proStatus==='free') && (<div className="pf-tray-ctl">{(()=>{   // the composers: the same two switches as the painters
                   const _fr=proStatus==='free', mix=stMixC && !_fr, sOn=mix || !crOn, fOn=!_fr && (mix || crOn);
-                  const tapS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('c', false); if(!crOn) _stCrFusionOn(); } else { _setMix('c', true); if(crOn) _stCrSolo(); } };
-                  const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('c', false); if(crOn) _stCrSolo(); } else { _setMix('c', true); if(!crOn) _stCrFusionOn(); } };
-                  return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={sOn?'on':''} onClick={tapS}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={fOn?'on':''} onClick={tapF}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
+                  const tapS=(e)=>{ if(_fr || !crOn) return; if(!sOn) _setMix('c', true); _stCrSolo(); };
+                  const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(crOn) return; if(!fOn) _setMix('c', true); _stCrFusionOn(); };
+                  const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('c', false); if(!crOn) _stCrFusionOn(); } else _setMix('c', true); };
+                  const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('c', false); if(crOn) _stCrSolo(); } else _setMix('c', true); };
+                  return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!crOn?'cur':sOn?'on':''} {..._segPress(tapS, holdS)}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={crOn?'cur':fOn?'on':''} {..._segPress(tapF, holdF)}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
                 {/* composers' 🔀 + Jam session — only when there is more than one composer to roll between */}
                 {!studioFs && _rollable && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
@@ -18351,9 +18364,12 @@ Hard requirements:
             {!cockpitEdit && studioFs && (<div className="pf-tray-ctl">
               {(ensembleActive || (studioFs && proStatus==='free')) && (()=>{   // Solo and Fusion: two switches (one, the other, or both — then ↑ throws the dice); Free: Fusion locked
                 const _fr=proStatus==='free', mix=stMixP && !_fr, sOn=mix || !jamOn, fOn=!_fr && (mix || jamOn), fDis=!_fr && _artChoiceN()<2;
-                const tapS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('p', false); if(!jamOn) _stFusionOn(); } else { _setMix('p', true); if(jamOn) _toggleJam(); } };
-                const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('p', false); if(jamOn) _toggleJam(); } else { _setMix('p', true); if(!jamOn) _stFusionOn(); } };
-                return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={sOn?'on':''} onClick={tapS}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={fOn?'on':''} disabled={fDis} onClick={tapF}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
+                // a tap shows it (an off one is turned on first), a hold turns it on or off for the dice; the one playing is filled
+                const tapS=(e)=>{ if(_fr || !jamOn) return; if(!sOn) _setMix('p', true); _toggleJam(); };
+                const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis || jamOn) return; if(!fOn) _setMix('p', true); _stFusionOn(); };
+                const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('p', false); if(!jamOn) _stFusionOn(); } else _setMix('p', true); };
+                const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('p', false); if(jamOn) _toggleJam(); } else _setMix('p', true); };
+                return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!jamOn?'cur':sOn?'on':''} {..._segPress(tapS, holdS)}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={jamOn?'cur':fOn?'on':''} disabled={fDis} {..._segPress(tapF, holdF)}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
             </div>)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (
