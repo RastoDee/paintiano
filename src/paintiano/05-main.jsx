@@ -14999,7 +14999,7 @@ Hard requirements:
   useEffect(()=>{ const n=favs.length; if(studioHome){ if(_favSeenRef.current!==null && n>_favSeenRef.current) setFavPulse(Date.now()); _favSeenRef.current=n; } },[studioHome]);
   useEffect(()=>{ if(studioHome) _favSeenRef.current=favs.length; },[favs.length]);
   const [homeArt, setHomeArt] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art')||'null'); return (o && typeof o.u==='string') ? o : null; }catch(_){ return null; } });
-  // your Music and your Image each keep their own card: ← → on the home switches between them (when you have both)
+  // every way you paint (Music, Image, Mood, …) keeps its own card: ← → on the home leafs through the unfinished ones (_homeLR)
   const [homeArtBy, setHomeArtBy] = useState(()=>{ try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art_by')||'null'); return (o && typeof o==='object') ? o : {}; }catch(_){ return {}; } });
   const [homeSide, setHomeSide] = useState(null);
   // a waiting draft: its painting as a little sticker on the way back (the card's own shot), in the way's colour
@@ -17186,6 +17186,15 @@ Hard requirements:
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? (H.u || null) : undefined)) : undefined }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
         const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0); };
+        // ← → on your home: through the paintings you left unfinished — each way's own card (Music, Image, Mood from image, Mood,
+        // Compose, Mic, in the ✦ Change order), round and round; ▶ goes back to the one in front
+        const _homeLR = (dir)=>{ const D={music:hasMusicDraft, image:hasImageDraft, mfi:hasMfiDraft, mood:hasMoodDraft, compose:hasComposeDraft, mic:hasMicDraft};
+          const kOf=(h)=> h ? (h.k || (h.src==='image' ? 'image' : 'music')) : null;
+          const cur = _hc ? (homeSide || kOf(homeArt)) : null;
+          const K = ORDER.filter(k=>(D[k] && homeArtBy[k] && homeArtBy[k].u) || k===cur);
+          if(K.length<2 || !cur) return false;
+          const nx = K[(K.indexOf(cur)+dir+K.length)%K.length];
+          setHomeSide(homeArt && nx===kOf(homeArt) ? null : nx); setHomeSlide(dir>0 ? 'l' : 'r'); setTimeout(()=>setHomeSlide(null), 400); _stBuzz(8); return true; };
         // one gesture: up = the next painting; everything else is a tap or a button (a hold shows the song, never pauses)
         const _fTE = (e)=>{ { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } if(MH.on){ MH.on=false; feedTouchRef.current=null; setMetaPoke(n=>n+1); return; } }
           const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
@@ -17195,7 +17204,7 @@ Hard requirements:
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }
           if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedBack(); return; }   // ↓ back, as on TikTok: the surprise before
-          if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
+          if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } else if(!FC){ _homeLR(dx<0 ? 1 : -1); } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
