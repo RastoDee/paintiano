@@ -28954,6 +28954,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const _mineOpen = (k)=>{ setMineEdit(false); setMineArm(null); setShowMine(k||'all'); setNavMenuOpen(false);
     myMusicList().then(l=>setMyMusicSlots(l)); myImgList().then(l=>setMyImgSlots(l)); if(!favViewRef.current) favList().then(l=>setFavs(l)); };
   useEffect(()=>{ if(!mineArm) return; const tm=setTimeout(()=>setMineArm(null), 3000); return ()=>clearTimeout(tm); },[mineArm]);
+  // the menu opens: Mine's number counts your music and pictures too, so read them now
+  useEffect(()=>{ if(!navMenuOpen) return; let c=false; myMusicList().then(l=>{ if(!c) setMyMusicSlots(l); }).catch(()=>{}); myImgList().then(l=>{ if(!c) setMyImgSlots(l); }).catch(()=>{}); return ()=>{ c=true; }; },[navMenuOpen]);
   // the painting on the canvas, small (a My Music song keeps it as its face)
   const _canvasThumb = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height || !(disp>0)) return null; const r=Math.min(1, 320/Math.max(s.width, s.height)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(s.width*r)); c.height=Math.max(1,Math.round(s.height*r)); const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,c.width,c.height); x.drawImage(s,0,0,c.width,c.height); return c.toDataURL('image/jpeg',0.8); }catch(_){ return null; } };
   // the Favorites' faces: each one painted from its address, small, one at a time while Mine is open (kept for the session)
@@ -39006,7 +39008,8 @@ Hard requirements:
             </svg>
           </button>
           {navMenuOpen && studioOn && (()=>{
-            const _fN = favs.length-(favGone!=null?1:0), _fOff = micActive||recording;
+            // the number on Mine: all that is in it (your music, your pictures, your ♥) — the same as its All tab
+            const _fN = favs.length-(favGone!=null?1:0) + myMusicSlots.filter(r=>!r.empty).length + myImgSlots.filter(r=>!r.empty).length, _fOff = micActive||recording;
             const _sv = (d, z)=>(<svg width={z||22} height={z||22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
             const _go = (fn)=>()=>{ setNavMenuOpen(false); fn(); };
             const _cap = (x)=>{ x=String(x||''); return x.charAt(0).toLocaleUpperCase()+x.slice(1); };
