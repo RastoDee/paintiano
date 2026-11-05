@@ -24705,6 +24705,7 @@ const STUDIO_FX_CSS = `
 .pf-st-meta.hide{opacity:0;transform:translateY(8px);pointer-events:none}
 .pf-st-meta-t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
 .pf-st-meta-l{font-size:12px;letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-st-bar-live .pf-st-meta > div:not(.pf-st-meta-t) > div{color:rgba(240,215,138,.92)!important}   /* the Mic: the palette · painters line sits inside the painting's lower edge — brighter there */
 .pf-st-sup{font-weight:700;letter-spacing:.03em}
 .pf-st-take{cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;display:flex;justify-content:center;align-items:center}
 .pf-st-take span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
