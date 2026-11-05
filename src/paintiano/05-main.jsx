@@ -15961,6 +15961,7 @@ Hard requirements:
     const fd={ax, dir, L, card, out, mode:'rub', d:0};
     if(ax==='y' && dir>0){ if(o.nextU!==undefined){ fd.mode='known'; fd.img=o.nextU; } else if(o.img){ fd.mode='known'; fd.img=o.picU || null; } else fd.mode='pre'; }
     else if(ax==='y'){ if(o.prevU!==undefined){ fd.mode='known'; fd.img=o.prevU; } }
+    else if(o.sideU!==undefined){ fd.mode='known'; fd.img=o.sideU; fd.onGo=o.onGo; }   // ← → on the home: the next unfinished painting comes with the finger
     else { if(o.img) return null; fd.mode='pre'; }
     card.style.animation='none'; out.innerHTML=''; out.style.opacity=''; out.style.transition='';
     if(fd.mode==='pre'){
@@ -15988,6 +15989,7 @@ Hard requirements:
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
       if(fd.mode==='pre' && go){ _fdCopyFree(); fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
       if(fd.mode==='known' && !go){ _fdClear(fd); return; }
+      if(fd.onGo){ fd.card.style.transform=''; fd.out.style.transform=''; try{ fd.onGo(); }catch(_){} N.buzz(8); _fdLater(140, ()=>_fdClear(fd), ()=>_fdClear(fd)); return; }
       // the copy stays over the card while the look changes under it, then fades
       fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdMark();
       try{ if(fd.mode==='known'){ if(fd.dir>0) N.up(); else N.back(); N.flash(); N.buzz(8); }
@@ -17183,18 +17185,22 @@ Hard requirements:
             if(FC && _fL && !st.b && !metaHoldRef.current.on){ const dir = st.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1), up = st.ax==='y' && dir>0, dn = st.ax==='y' && dir<0;
               st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null, meta:{feed:1, t:_fTitle, l:_fLine},
                 nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
-                prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? (H.u || null) : undefined)) : undefined }); } }
+                prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? (H.u || null) : undefined)) : undefined }); }
+            else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
         const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0); };
         // ← → on your home: through the paintings you left unfinished — each way's own card (Music, Image, Mood from image, Mood,
         // Compose, Mic, in the ✦ Change order), round and round; ▶ goes back to the one in front
-        const _homeLR = (dir)=>{ const D={music:hasMusicDraft, image:hasImageDraft, mfi:hasMfiDraft, mood:hasMoodDraft, compose:hasComposeDraft, mic:hasMicDraft};
-          const kOf=(h)=> h ? (h.k || (h.src==='image' ? 'image' : 'music')) : null;
-          const cur = _hc ? (homeSide || kOf(homeArt)) : null;
+        const _hkOf = (h)=> h ? (h.k || (h.src==='image' ? 'image' : 'music')) : null;
+        const _homeNb = (dir)=>{ const D={music:hasMusicDraft, image:hasImageDraft, mfi:hasMfiDraft, mood:hasMoodDraft, compose:hasComposeDraft, mic:hasMicDraft};
+          const cur = _hc ? (homeSide || _hkOf(homeArt)) : null;
           const K = ORDER.filter(k=>(D[k] && homeArtBy[k] && homeArtBy[k].u) || k===cur);
-          if(K.length<2 || !cur) return false;
-          const nx = K[(K.indexOf(cur)+dir+K.length)%K.length];
-          setHomeSide(homeArt && nx===kOf(homeArt) ? null : nx); setHomeSlide(dir>0 ? 'l' : 'r'); setTimeout(()=>setHomeSlide(null), 400); _stBuzz(8); return true; };
+          if(K.length<2 || !cur) return null;
+          const k = K[(K.indexOf(cur)+dir+K.length)%K.length], h = (homeArt && k===_hkOf(homeArt) && !homeSide) ? homeArt : (homeArtBy[k] || homeArt);
+          return { k, u:(h && h.u) || null }; };
+        const _homeGo = (k)=> setHomeSide(homeArt && k===_hkOf(homeArt) ? null : k);
+        const _homeLR = (dir)=>{ const nb=_homeNb(dir); if(!nb) return false;
+          _homeGo(nb.k); setHomeSlide(dir>0 ? 'l' : 'r'); setTimeout(()=>setHomeSlide(null), 400); _stBuzz(8); return true; };
         // one gesture: up = the next painting; everything else is a tap or a button (a hold shows the song, never pauses)
         const _fTE = (e)=>{ { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } if(MH.on){ MH.on=false; feedTouchRef.current=null; setMetaPoke(n=>n+1); return; } }
           const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
