@@ -23542,9 +23542,25 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const listOf = (k)=> k==='concept' ? concept : k==='book' ? [bookCard] : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
-  const open = (k, i)=>{ setSheet(false); setStory({k, i:i||0}); };
+  const open = (k, i, auto)=>{ setSheet(false); setStory({k, i:i||0, auto:!!auto}); };   // auto: the ▶ story plays on by itself (Instagram-like)
   const closeStory = useCallback(()=>{ setSheet(false); if(direct) onClose(); else setStory(null); }, [direct, onClose]);
-  const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n}); };
+  const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto}); };
+  // ▶ "in 30 seconds": each card stays as long as its short text needs (5–8 s), its bar fills, then the next comes. Reading the
+  // details (the sheet open) or a finger held on the card stops the time; letting go goes on from where it stood.
+  const goRef = useRef(go); goRef.current = go;
+  const autoFillRef = useRef(null), autoHoldRef = useRef(false), autoSheetRef = useRef(false); autoSheetRef.current = sheet;
+  useEffect(()=>{ if(!story || !story.auto || !card) return;
+    const len = String(card.title||'').length + String(card.body||'').length, dur = Math.max(5000, Math.min(8000, 4200 + len*25));
+    let el = 0, last = performance.now(), raf = 0, done = false;
+    const f = (t)=>{ const dt = Math.min(100, t-last); last = t;
+      if(!autoSheetRef.current && !autoHoldRef.current && document.visibilityState!=='hidden') el += dt;
+      const b = autoFillRef.current; if(b) b.style.width = Math.min(100, el/dur*100)+'%';
+      if(el>=dur){ if(!done){ done=true; goRef.current(1); } return; }
+      raf = requestAnimationFrame(f); };
+    raf = requestAnimationFrame(f);
+    return ()=>cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story && story.k, story && story.i, story && story.auto]);
   // back from Styles & palettes: straight to the card it was opened from
   useEffect(()=>{ if(!initialCardId || direct) return; const c=all.find(x=>x.id===initialCardId); if(c) open(c.cat, all.filter(x=>x.cat===c.cat).indexOf(c));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -23560,8 +23576,9 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   });
   // a story: swipe left / right = next / back, down = close; a tap on the left third = back, elsewhere = next
   const sw = useRef(null);
-  const tStart = (e)=>{ const p=e.touches && e.touches[0]; if(p) sw.current={x:p.clientX, y:p.clientY, mv:false}; };
-  const tEnd = (e)=>{ const s=sw.current, p=e.changedTouches && e.changedTouches[0]; if(!s || !p) return; const dx=p.clientX-s.x, dy=p.clientY-s.y;
+  const tStart = (e)=>{ const p=e.touches && e.touches[0]; if(p) sw.current={x:p.clientX, y:p.clientY, mv:false, t:Date.now()}; autoHoldRef.current=true; };
+  const tEnd = (e)=>{ autoHoldRef.current=false; const s=sw.current, p=e.changedTouches && e.changedTouches[0]; if(!s || !p) return; const dx=p.clientX-s.x, dy=p.clientY-s.y;
+    if(story && story.auto && Date.now()-(s.t||0)>350 && Math.abs(dx)<12 && Math.abs(dy)<12){ s.mv=true; return; }   // a hold paused it: letting go plays on, it does not skip
     if(dy>70 && dy>Math.abs(dx)*1.2){ s.mv=true; closeStory(); }
     else if(Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)*1.2){ s.mv=true; go(dx<0 ? 1 : -1); }
     else if(Math.abs(dx)>12 || Math.abs(dy)>12) s.mv=true; };
@@ -23605,7 +23622,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             </button>))}
         </div>
       ) : (<>
-        <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=>open(studio ? 'studio' : 'start', 0)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+        <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=>open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
           {artBg('blur(2px) brightness(.62) saturate(1.2)')}
           <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 10%,rgba(7,6,12,.86))'}}/>
           <span style={{position:'relative',flex:1,minWidth:0}}>
@@ -23635,11 +23652,13 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   // ── a story ──
   const top = 'calc(env(safe-area-inset-top, 0px) + ';
   const storyView = card && (<>
-    <div className="pf-g2-story" onTouchStart={tStart} onTouchEnd={tEnd} onClick={stageTap} style={{position:'absolute',inset:0,overflow:'hidden',cursor:'pointer',WebkitTapHighlightColor:'transparent',userSelect:'none',WebkitUserSelect:'none'}}>
+    <div className="pf-g2-story" onTouchStart={tStart} onTouchEnd={tEnd} onTouchCancel={()=>{ autoHoldRef.current=false; }} onMouseDown={()=>{ autoHoldRef.current=true; }} onMouseUp={()=>{ autoHoldRef.current=false; }} onMouseLeave={()=>{ autoHoldRef.current=false; }} onClick={stageTap} style={{position:'absolute',inset:0,overflow:'hidden',cursor:'pointer',WebkitTapHighlightColor:'transparent',userSelect:'none',WebkitUserSelect:'none'}}>
       {isArt && artBg('blur(38px) brightness(.36) saturate(1.3)')}
       {isArt && (<span aria-hidden="true" style={{position:'absolute',inset:0,background:'radial-gradient(120% 70% at 50% 35%,rgba(7,6,12,0),rgba(7,6,12,.7) 70%,rgba(7,6,12,.95))'}}/>)}
       <div aria-hidden="true" style={{position:'absolute',top:top+'10px)',left:12,right:12,display:'flex',gap:4,zIndex:3}}>
-        {cards.map((_,i)=>(<span key={i} style={{flex:1,height:3,borderRadius:2,background:i<=story.i?'rgba(242,238,232,.92)':'rgba(242,238,232,.22)',transition:'background .2s'}}/>))}
+        {cards.map((_,i)=> (story.auto && i===story.i)
+          ? (<span key={i+'a'} style={{flex:1,height:3,borderRadius:2,background:'rgba(242,238,232,.22)',overflow:'hidden'}}><span ref={autoFillRef} style={{display:'block',height:'100%',width:'0%',borderRadius:2,background:'rgba(242,238,232,.92)'}}/></span>)
+          : (<span key={i} style={{flex:1,height:3,borderRadius:2,background:i<=story.i?'rgba(242,238,232,.92)':'rgba(242,238,232,.22)',transition:'background .2s'}}/>))}
       </div>
       <div style={{position:'absolute',top:top+'24px)',left:14,right:14,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:3}}>
         <div style={{display:'flex',alignItems:'center',gap:9,fontSize:14.5*rs,fontWeight:700}}>

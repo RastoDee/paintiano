@@ -23545,12 +23545,12 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const open = (k, i, auto)=>{ setSheet(false); setStory({k, i:i||0, auto:!!auto}); };   // auto: the ▶ story plays on by itself (Instagram-like)
   const closeStory = useCallback(()=>{ setSheet(false); if(direct) onClose(); else setStory(null); }, [direct, onClose]);
   const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto}); };
-  // ▶ "in 30 seconds": each card stays as long as its short text needs (5–8 s), its bar fills, then the next comes. Reading the
+  // ▶ "in 30 seconds": each card stays as long as its short text needs (4–6 s), its bar fills, then the next comes. Reading the
   // details (the sheet open) or a finger held on the card stops the time; letting go goes on from where it stood.
   const goRef = useRef(go); goRef.current = go;
   const autoFillRef = useRef(null), autoHoldRef = useRef(false), autoSheetRef = useRef(false); autoSheetRef.current = sheet;
   useEffect(()=>{ if(!story || !story.auto || !card) return;
-    const len = String(card.title||'').length + String(card.body||'').length, dur = Math.max(5000, Math.min(8000, 4200 + len*25));
+    const len = String(card.title||'').length + String(card.body||'').length, dur = Math.max(4000, Math.min(6000, 3500 + len*15));
     let el = 0, last = performance.now(), raf = 0, done = false;
     const f = (t)=>{ const dt = Math.min(100, t-last); last = t;
       if(!autoSheetRef.current && !autoHoldRef.current && document.visibilityState!=='hidden') el += dt;
