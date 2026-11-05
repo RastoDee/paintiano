@@ -3961,6 +3961,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _setMix = (w, v)=>{ v=!!v; (w==='c' ? setStMixC : setStMixP)(v); try{ localStorage.setItem('paintiano_st_mix_'+w, v?'1':'0'); }catch(_){} };
   const _segShake = (e)=>{ try{ const b=e.currentTarget; b.classList.remove('shk'); void b.offsetWidth; b.classList.add('shk'); }catch(_){} try{ navigator.vibrate && navigator.vibrate(6); }catch(_){} };   // the last switch on stays on
   const composerRollRef = useRef(null);
+  // the fusion's gold painters, kept while a solo plays (a Solo dice throw, or Solo tapped to look): Fusion brings all of them back
+  const fuGoldMemRef = useRef([]);
   // Solo / Fusion chips: a tap shows it (switches to it), a hold turns it on or off for the dice
   const segHoldRef = useRef({tm:null, fired:false});
   const _segPress = (onTap, onHold)=>({
@@ -4294,7 +4296,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(!randomMode) _shuffleOn();
     if(mosaicShuffleLock) setMosaicShuffleLock(false);
     setJamOn(true); setJamAll(true);
-    const pins = (!fresh && cur && cur!=='mosaic') ? [cur] : [];
+    const _mem = (fuGoldMemRef.current||[]).filter(k=>k && k!=='mosaic' && k!=='notes');
+    const pins = fresh ? [] : (_mem.length && (!cur || _mem.includes(cur))) ? _mem.slice(0,STAGE_MAX) : (cur && cur!=='mosaic') ? [cur] : [];   // the gold kept from before the solo come back
+    fuGoldMemRef.current = [];
     jamPinsRef.current=pins.slice(); setJamPins(pins.slice());
     _jamAllRoll();
     try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true, studio:true}); }catch(_){}
@@ -15482,14 +15486,18 @@ Hard requirements:
         // Solo and Fusion both on: the dice say alone or together (0 Solo, 1 Fusion). A gold painter is in every result — alone in its
         // next variant, or no. 1 of a fusion with 1–3 guests (several gold: one of them alone, or all of them with new guests); nobody gold: all drawn
         const _mixP = (stMixP && proStatus!=='free' && _artChoiceN()>=2) ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
-        const _gold = (_mixP && !stTakenRef.current) ? (jamOn ? (jamAll ? jamPinsRef.current : _jamStage()) : ((style && style!=='notes' && style!=='mosaic') ? [style] : [])).filter(k=>k && k!=='mosaic' && k!=='notes') : [];
+        const _memG = fuGoldMemRef.current||[], _solo1 = (style && style!=='notes' && style!=='mosaic') ? style : null;
+        if(_mixP && !jamOn && _memG.length && (!_solo1 || !_memG.includes(_solo1))) fuGoldMemRef.current = [];   // another painter chosen by hand: the old gold go
+        const _gold = (_mixP && !stTakenRef.current) ? (jamOn ? (jamAll ? jamPinsRef.current : _jamStage()) : (_solo1 ? ((fuGoldMemRef.current.length && fuGoldMemRef.current.includes(_solo1)) ? fuGoldMemRef.current : [_solo1]) : [])).filter(k=>k && k!=='mosaic' && k!=='notes') : [];
         if(_mixP && _gold.length){
           if(_mixP==='fu'){
             if(!jamOn) _stFusionOn();   // the gold painter is no. 1, 1–3 guests join
             else { if(!randomMode) _shuffleOn(); jamPinsRef.current=_gold.slice(0,STAGE_MAX); setJamPins(_gold.slice(0,STAGE_MAX)); setJamAll(true); _jamAllRoll(); }   // the gold stay, new guests
           } else {
             const g = _gold[(Math.random()*_gold.length)|0];
+            if(_gold.length>1) fuGoldMemRef.current = _gold.slice(0,STAGE_MAX);   // one of the gold plays alone; the fusion keeps all of them for its next turn
             if(jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); setPainterStage([]); _setFuRoll(null); setNotesMode(false); setStyle(g); }
+            else if(g!==style){ setNotesMode(false); setStyle(g); }
             setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 60);   // its next variant
           }
           nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); rolled = true; }
@@ -18365,7 +18373,7 @@ Hard requirements:
               {(ensembleActive || (studioFs && proStatus==='free')) && (()=>{   // Solo and Fusion: two switches (one, the other, or both — then ↑ throws the dice); Free: Fusion locked
                 const _fr=proStatus==='free', mix=stMixP && !_fr, sOn=mix || !jamOn, fOn=!_fr && (mix || jamOn), fDis=!_fr && _artChoiceN()<2;
                 // a tap shows it (an off one is turned on first), a hold turns it on or off for the dice; the one playing is filled
-                const tapS=(e)=>{ if(_fr || !jamOn) return; if(!sOn) _setMix('p', true); _toggleJam(); };
+                const tapS=(e)=>{ if(_fr || !jamOn) return; if(!sOn) _setMix('p', true); { const gl=(jamAll ? jamPinsRef.current : _jamStage()).filter(k=>k && k!=='mosaic' && k!=='notes'); if(gl.length>1) fuGoldMemRef.current=gl.slice(0,STAGE_MAX); } _toggleJam(); };
                 const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis || jamOn) return; if(!fOn) _setMix('p', true); _stFusionOn(); };
                 const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('p', false); if(!jamOn) _stFusionOn(); } else _setMix('p', true); };
                 const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('p', false); if(jamOn) _toggleJam(); } else _setMix('p', true); };
