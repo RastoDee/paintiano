@@ -25588,6 +25588,7 @@ export default function Paintiano() {
   const [showMode,setShowMode]=useState(false);
   const showTimerRef=useRef(null);
   const showDiceRef=useRef(null); // holds the latest _diceRoll so the interval calls a fresh closure
+  const afterCommitRef=useRef([]);   // calls that need the state just set (a slow phone may paint before a timer's fresh closure is in place)
   // ── DICE "BAG" (shuffle without replacement) ──
   // Within one song, Dice should not repeat an already-shown combination until
   // every combination has been shown; then the bag refills and reshuffles.
@@ -26688,7 +26689,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(mosaicShuffleLock) setMosaicShuffleLock(false);
     setJamOn(true); setJamAll(true);
     const _mem = (fuGoldMemRef.current||[]).filter(k=>k && k!=='mosaic' && k!=='notes');
-    const pins = fresh ? [] : (_mem.length && (!cur || _mem.includes(cur))) ? _mem.slice(0,STAGE_MAX) : (cur && cur!=='mosaic') ? [cur] : [];   // the gold kept from before the solo come back
+    const pins = fresh ? [] : _mem.length ? _mem.slice(0,STAGE_MAX) : (cur && cur!=='mosaic') ? [cur] : [];   // the gold kept from before the solo come back
     fuGoldMemRef.current = [];
     jamPinsRef.current=pins.slice(); setJamPins(pins.slice());
     _jamAllRoll();
@@ -26936,6 +26937,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const v=H.st.pop(); (H.fw || (H.fw=[])).push(_variantSnap()); if(H.fw.length>30) H.fw.shift(); _variantPut(v); return true; };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
+  useEffect(()=>{ const q=afterCommitRef.current; if(!q.length) return; afterCommitRef.current=[]; q.forEach(f=>{ try{ f(); }catch(_){} }); });
   // Tear down the Show timer.
   const _stopShow = useCallback(()=>{
     if(showTimerRef.current){ clearInterval(showTimerRef.current); showTimerRef.current=null; }
@@ -37811,13 +37813,14 @@ Hard requirements:
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
   const stLookHistRef = useRef({key:'', st:[], fw:[]});   // ↓ goes back through st; ↑ then goes forward again through fw (the same paintings), and only past them draws a new one
   const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode,
-    jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current });
+    jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current, gm:(fuGoldMemRef.current||[]).slice() });
   const _stLookApply = (L)=>{
     if(sigActiveRef.current && !L.sig){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
     randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt);
     setMosaicShuffleLock(L.lock); setJamOn(L.jo); setJamAll(L.ja); jamPinsRef.current=L.pins.slice(); setJamPins(L.pins.slice()); _setFuRoll(L.fu); setMode(L.md);
     setStyle(L.st); setPainterStage(L.sg.slice());
     stTakenRef.current=L.tk; setStTaken(L.tk);
+    fuGoldMemRef.current = (L.gm||[]).slice();
     if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ const g=songSigRef.current; setTimeout(()=>{ try{ applySigRef.current(g); }catch(_){} }, 0); }
   };
   // the name over the painting, for a moment (the same as after every ↑ ↓ ← →)
@@ -37877,19 +37880,22 @@ Hard requirements:
         // Solo and Fusion both on: the dice say alone or together (0 Solo, 1 Fusion). A gold painter is in every result — alone in its
         // next variant, or no. 1 of a fusion with 1–3 guests (several gold: one of them alone, or all of them with new guests); nobody gold: all drawn
         const _mixP = (stMixP && proStatus!=='free' && _artChoiceN()>=2) ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
-        const _memG = fuGoldMemRef.current||[], _solo1 = (style && style!=='notes' && style!=='mosaic') ? style : null;
-        if(_mixP && !jamOn && _memG.length && (!_solo1 || !_memG.includes(_solo1))) fuGoldMemRef.current = [];   // another painter chosen by hand: the old gold go
-        const _gold = (_mixP && !stTakenRef.current) ? (jamOn ? (jamAll ? jamPinsRef.current : _jamStage()) : (_solo1 ? ((fuGoldMemRef.current.length && fuGoldMemRef.current.includes(_solo1)) ? fuGoldMemRef.current : [_solo1]) : [])).filter(k=>k && k!=='mosaic' && k!=='notes') : [];
+        const _memG = (fuGoldMemRef.current||[]).filter(k=>k && k!=='mosaic' && k!=='notes'), _solo1 = (style && style!=='notes' && style!=='mosaic') ? style : null;
+        // the gold: the fusion's pinned painters; during a solo the remembered ones (dropped only when you tap a painter by hand), else the solo's own gold
+        const _gold = (_mixP && !stTakenRef.current) ? (jamOn ? (jamAll ? jamPinsRef.current : _jamStage()) : (_memG.length ? _memG : (_solo1 ? [_solo1] : []))).filter(k=>k && k!=='mosaic' && k!=='notes') : [];
         if(_mixP && _gold.length){
           if(_mixP==='fu'){
-            if(!jamOn) _stFusionOn();   // the gold painter is no. 1, 1–3 guests join
+            if(!jamOn){ if(_memG.length) fuGoldMemRef.current=_memG.slice(); _stFusionOn(); }   // the gold (all the remembered ones) are no. 1…, 1–3 guests join
             else { if(!randomMode) _shuffleOn(); jamPinsRef.current=_gold.slice(0,STAGE_MAX); setJamPins(_gold.slice(0,STAGE_MAX)); setJamAll(true); _jamAllRoll(); }   // the gold stay, new guests
           } else {
             const g = _gold[(Math.random()*_gold.length)|0];
             if(_gold.length>1) fuGoldMemRef.current = _gold.slice(0,STAGE_MAX);   // one of the gold plays alone; the fusion keeps all of them for its next turn
-            if(jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); setPainterStage([]); _setFuRoll(null); setNotesMode(false); setStyle(g); }
-            else if(g!==style){ setNotesMode(false); setStyle(g); }
-            setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 60);   // its next variant
+            const _chg = jamOn || g!==style || randomMode!==true || painterStage.length>0 || notesMode;
+            if(jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); }
+            if(painterStage.length) setPainterStage([]);
+            _setFuRoll(null); setNotesMode(false); if(g!==style) setStyle(g);   // the gold painter alone — chosen (gold), never a white draw
+            const _next = ()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} };   // its next variant, rolled once the solo is in place
+            if(_chg) afterCommitRef.current.push(_next); else setTimeout(_next, 0);
           }
           nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); rolled = true; }
         else if(_mixP==='fu'){ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
@@ -40907,6 +40913,7 @@ Hard requirements:
               const shufHit = (!cockpitEdit) && (_tk ? _tkMine : (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0 && !_pinned)));
               const _ghost = cockpitEdit && !inSet;
               const onClick = ()=>{
+                fuGoldMemRef.current = [];   // a painter chosen by hand: the gold remembered from a fusion no longer count
                 if(cockpitEdit){
                   toggleArtSafe(k);
                   return;
