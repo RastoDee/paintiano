@@ -24837,9 +24837,12 @@ const STUDIO_HOME_CSS = `
 .pf-sh-heart{position:absolute;left:50%;top:45%;z-index:4;font-size:64px;line-height:1;color:#ff4d7d;transform:translate(-50%,-50%);animation:pfShHeartPop .9s ease forwards;pointer-events:none;text-shadow:0 6px 24px rgba(255,60,120,.5)}
 @keyframes pfShHeartPop{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}25%{transform:translate(-50%,-50%) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
 @keyframes pfShFloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-6px) rotate(-1.5deg)}}
-.pf-sh-chip{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:6px;padding:6px 11px 6px 9px;border-radius:16px;background:rgba(10,8,18,.66);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:calc(var(--pf-read-scale,1) * 10px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;border:1px solid currentColor;white-space:nowrap;max-width:calc(100% - 46px);overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
+.pf-sh-chip{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 6px;border-radius:12px;background:var(--g,linear-gradient(135deg,#7ab3ff,#3f7bff));border:2.5px solid #fff;box-shadow:0 6px 14px rgba(0,0,0,.35);color:#fff;font-size:calc(var(--pf-read-scale,1) * 12.5px);font-weight:800;letter-spacing:0;text-shadow:0 1px 0 rgba(0,0,0,.18);white-space:nowrap;max-width:calc(100% - 46px);box-sizing:border-box;rotate:-4deg;animation:pfShChipIn .45s cubic-bezier(.2,1.6,.4,1) both}   /* a sticker in the source's colours, like the draft stickers on the Change tiles */
+.pf-sh-chip-ic{width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pf-sh-chip-t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+@keyframes pfShChipIn{from{scale:.6;opacity:0}to{scale:1;opacity:1}}
 .pf-sh-chip svg{flex-shrink:0}
-.pf-sh-chip.fade{animation:pfShChipOut .7s ease 3.5s forwards}
+.pf-sh-chip.fade{animation:pfShChipIn .45s cubic-bezier(.2,1.6,.4,1) both,pfShChipOut .7s ease 3.5s forwards}
 @keyframes pfShChipOut{to{opacity:0;transform:translateY(-4px)}}
 .pf-sh-play.need{animation:pfShNeed 1.1s ease-in-out infinite}
 @keyframes pfShNeed{0%,100%{box-shadow:0 0 0 0 rgba(240,215,138,.55)}50%{box-shadow:0 0 0 14px rgba(240,215,138,0)}}
@@ -30586,10 +30589,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[]);
 
   // after a relaunch the Music / Picture draft put aside last time is there again — the home card's ▶ and the tile go back to it, as before the app was closed
+  const [draftsReady, setDraftsReady] = useState(false);   // the start read of the put-aside drafts is done (only then can a home card be judged gone)
   useEffect(()=>{ let dead=false;
     const one=(k, ref, set, ok)=> _pfDraftLoad(k).then(s=>{ if(dead || !s || ref.current || !ok(s)) return; s._hyd=true; ref.current=s; set(true); }).catch(()=>{}).then(()=>{ _pfDraftReady[k]=true; });
-    one('music', musicStashRef, setHasMusicDraft, ()=>true);
-    one('image', imageStashRef, setHasImageDraft, (s)=>!!(s.pixel || s.imgCompose));
+    Promise.all([
+      one('music', musicStashRef, setHasMusicDraft, ()=>true),
+      one('image', imageStashRef, setHasImageDraft, (s)=>!!(s.pixel || s.imgCompose)),
+    ]).then(()=>{ if(!dead) setDraftsReady(true); });
     // the app going to the background with a piece on the canvas: keep it too (iOS may not bring the app back)
     const bg=(e)=>{ if(e.type==='visibilitychange' && document.visibilityState!=='hidden') return; try{ const ls=loadedSourceRef.current; if(ls==='image'||ls==='midi'||ls==='audio'||ls==='score'){ try{ _homeNowRef.current && _homeNowRef.current(); }catch(_){} } if(ls==='image') stashMode('image','save'); else if(ls==='midi'||ls==='audio'||ls==='score') stashMode('music','save'); }catch(_){} };
     document.addEventListener('visibilitychange', bg); window.addEventListener('pagehide', bg);
@@ -37396,6 +37402,25 @@ Hard requirements:
   useEffect(()=>{ if(!homeArt) return; const k=homeArt.k;
     if((k==='mic' && !hasMicDraft && !micActive && !micArmed) || (k==='compose' && !hasComposeDraft && !composeMode)){
       setHomeArt(null); try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} } },[homeArt, hasMicDraft, hasComposeDraft, micActive, micArmed, composeMode]);
+  // A home card whose painting is gone (cleared, its draft dropped, not kept over a relaunch) and that has no way back
+  // (a built-in piece, a mood) is a dead end: no ▶, no sticker, and it hides For you. Drop it — the home shows another
+  // card that still plays, or For you. Judged a moment after the home settles, so a draft being put aside is not mistaken.
+  useEffect(()=>{ if(!studioHome || !draftsReady) return;
+    const D={music:hasMusicDraft, image:hasImageDraft, mood:hasMoodDraft, mfi:hasMfiDraft, compose:hasComposeDraft, mic:hasMicDraft};
+    const kOf=(h)=> h.k || (h.src==='image' ? 'image' : 'music');
+    const alive=(h)=> !!h && (!!h.r || !!D[kOf(h)]);
+    const by=homeArtBy||{}; const gone=Object.keys(by).filter(k=>by[k] && !alive(by[k]));
+    const hGone = !!homeArt && !alive(homeArt);
+    if(!gone.length && !hGone) return;
+    const tm=setTimeout(()=>{
+      const nb={...by}; gone.forEach(k=>{ delete nb[k]; }); if(hGone) delete nb[kOf(homeArt)];
+      if(Object.keys(nb).length!==Object.keys(by).length){ setHomeArtBy(nb); try{ localStorage.setItem('paintiano_home_art_by', JSON.stringify(nb)); }catch(_){} }
+      if(homeSide && !nb[homeSide]) setHomeSide(null);
+      if(hGone){ const next=Object.values(nb).find(h=>h && h.u && alive(h)) || null; setHomeArt(next);
+        try{ if(next) localStorage.setItem('paintiano_home_art', JSON.stringify(next)); else localStorage.removeItem('paintiano_home_art'); }catch(_){} }
+    }, 1200);
+    return ()=>clearTimeout(tm);
+  },[studioHome, draftsReady, homeArt, homeArtBy, homeSide, hasMusicDraft, hasImageDraft, hasMoodDraft, hasMfiDraft, hasComposeDraft, hasMicDraft]);
   // the whole painting of the piece on screen, painted at once (as the Favorites do) — for a card left before the piece is done
   // the canvas still clean: one color wall to wall (a few faint marks at most) — only then the home shows the whole painting instead
   const _canvasBlank = (cv)=>{ try{ if(!cv || !cv.width || !cv.height) return true; const n=40, c=document.createElement('canvas'); c.width=n; c.height=n; const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(cv,0,0,n,n); const d=x.getImageData(0,0,n,n).data;
@@ -39579,7 +39604,7 @@ Hard requirements:
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')}>
                                     {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
-                  {!_smp && _canPlay && (<span className="pf-sh-chip" style={{color:K.c}}>{_sv(K.p, 13)}{K.label}</span>)}
+                  {!_smp && _canPlay && (<span className="pf-sh-chip" style={{'--g':'linear-gradient(135deg,'+K.g+')'}}><span className="pf-sh-chip-ic">{_sv(K.p, 14)}</span><span className="pf-sh-chip-t">{K.label}</span></span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
                 </div>)}
                 {feedFly && (feedFly.u || feedFly.t) && (

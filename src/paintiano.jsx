@@ -30589,10 +30589,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   },[]);
 
   // after a relaunch the Music / Picture draft put aside last time is there again — the home card's ▶ and the tile go back to it, as before the app was closed
+  const [draftsReady, setDraftsReady] = useState(false);   // the start read of the put-aside drafts is done (only then can a home card be judged gone)
   useEffect(()=>{ let dead=false;
     const one=(k, ref, set, ok)=> _pfDraftLoad(k).then(s=>{ if(dead || !s || ref.current || !ok(s)) return; s._hyd=true; ref.current=s; set(true); }).catch(()=>{}).then(()=>{ _pfDraftReady[k]=true; });
-    one('music', musicStashRef, setHasMusicDraft, ()=>true);
-    one('image', imageStashRef, setHasImageDraft, (s)=>!!(s.pixel || s.imgCompose));
+    Promise.all([
+      one('music', musicStashRef, setHasMusicDraft, ()=>true),
+      one('image', imageStashRef, setHasImageDraft, (s)=>!!(s.pixel || s.imgCompose)),
+    ]).then(()=>{ if(!dead) setDraftsReady(true); });
     // the app going to the background with a piece on the canvas: keep it too (iOS may not bring the app back)
     const bg=(e)=>{ if(e.type==='visibilitychange' && document.visibilityState!=='hidden') return; try{ const ls=loadedSourceRef.current; if(ls==='image'||ls==='midi'||ls==='audio'||ls==='score'){ try{ _homeNowRef.current && _homeNowRef.current(); }catch(_){} } if(ls==='image') stashMode('image','save'); else if(ls==='midi'||ls==='audio'||ls==='score') stashMode('music','save'); }catch(_){} };
     document.addEventListener('visibilitychange', bg); window.addEventListener('pagehide', bg);
@@ -37399,6 +37402,25 @@ Hard requirements:
   useEffect(()=>{ if(!homeArt) return; const k=homeArt.k;
     if((k==='mic' && !hasMicDraft && !micActive && !micArmed) || (k==='compose' && !hasComposeDraft && !composeMode)){
       setHomeArt(null); try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} } },[homeArt, hasMicDraft, hasComposeDraft, micActive, micArmed, composeMode]);
+  // A home card whose painting is gone (cleared, its draft dropped, not kept over a relaunch) and that has no way back
+  // (a built-in piece, a mood) is a dead end: no ▶, no sticker, and it hides For you. Drop it — the home shows another
+  // card that still plays, or For you. Judged a moment after the home settles, so a draft being put aside is not mistaken.
+  useEffect(()=>{ if(!studioHome || !draftsReady) return;
+    const D={music:hasMusicDraft, image:hasImageDraft, mood:hasMoodDraft, mfi:hasMfiDraft, compose:hasComposeDraft, mic:hasMicDraft};
+    const kOf=(h)=> h.k || (h.src==='image' ? 'image' : 'music');
+    const alive=(h)=> !!h && (!!h.r || !!D[kOf(h)]);
+    const by=homeArtBy||{}; const gone=Object.keys(by).filter(k=>by[k] && !alive(by[k]));
+    const hGone = !!homeArt && !alive(homeArt);
+    if(!gone.length && !hGone) return;
+    const tm=setTimeout(()=>{
+      const nb={...by}; gone.forEach(k=>{ delete nb[k]; }); if(hGone) delete nb[kOf(homeArt)];
+      if(Object.keys(nb).length!==Object.keys(by).length){ setHomeArtBy(nb); try{ localStorage.setItem('paintiano_home_art_by', JSON.stringify(nb)); }catch(_){} }
+      if(homeSide && !nb[homeSide]) setHomeSide(null);
+      if(hGone){ const next=Object.values(nb).find(h=>h && h.u && alive(h)) || null; setHomeArt(next);
+        try{ if(next) localStorage.setItem('paintiano_home_art', JSON.stringify(next)); else localStorage.removeItem('paintiano_home_art'); }catch(_){} }
+    }, 1200);
+    return ()=>clearTimeout(tm);
+  },[studioHome, draftsReady, homeArt, homeArtBy, homeSide, hasMusicDraft, hasImageDraft, hasMoodDraft, hasMfiDraft, hasComposeDraft, hasMicDraft]);
   // the whole painting of the piece on screen, painted at once (as the Favorites do) — for a card left before the piece is done
   // the canvas still clean: one color wall to wall (a few faint marks at most) — only then the home shows the whole painting instead
   const _canvasBlank = (cv)=>{ try{ if(!cv || !cv.width || !cv.height) return true; const n=40, c=document.createElement('canvas'); c.width=n; c.height=n; const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(cv,0,0,n,n); const d=x.getImageData(0,0,n,n).data;
