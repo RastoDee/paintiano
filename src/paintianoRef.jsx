@@ -23080,10 +23080,93 @@ function _videoAudioByPlaying(file, ac, onP, wantTap){
         for(let i=0;i<L.length;i++) m[i]=(L[i]+R[i])*0.5; parts.push(m); n+=m.length; if(v.duration) onP && onP(Math.min(1, v.currentTime/v.duration)); };
       src.connect(sp); sp.connect(g); g.connect(ac.destination);
       v.onended=()=>fin(true); v.onerror=()=>fin(false);
-      const go=()=>v.play().then(()=>{ tm=setTimeout(()=>fin(true), ((v.duration||600)+15)*1000); }).catch(()=>{ if(wantTap) wantTap(()=>go()); else fin(false); });
+      const go=()=>v.play().then(()=>{ tm=setTimeout(()=>fin(true), ((v.duration||600)+15)*1000); setTimeout(()=>{ if(!n) fin(false); }, 6000); }).catch(()=>{ if(wantTap) wantTap(()=>go()); else fin(false); });   // no sound within 6 s (a sleeping audio context never calls back) → give up, not a frozen screen
       go();
     }catch(_){ fin(false); }
   });
+}
+// A video's sound without reading the whole video: only its AAC track is lifted out of the MP4 / MOV (an iPhone film is ~60 MB
+// a minute, its sound ~1.5 MB) and wrapped as a small .m4a — no 300 MB in memory, no decoding of the film. A short first piece is
+// decoded as a check; null → the old ways (the whole file, then playing it).
+async function _videoM4a(file, onP){
+  const rd=async (o,n)=>new Uint8Array(await file.slice(o, o+n).arrayBuffer());
+  const u32=(b,o)=>((b[o]<<24)>>>0)+(b[o+1]<<16)+(b[o+2]<<8)+b[o+3], u64=(b,o)=>u32(b,o)*4294967296+u32(b,o+4);
+  const typ=(b,o)=>String.fromCharCode(b[o],b[o+1],b[o+2],b[o+3]);
+  const kids=(b,s,e)=>{ const o=[]; while(s+8<=e){ let z=u32(b,s), h=8; if(z===1){ z=u64(b,s+8); h=16; } else if(z===0) z=e-s; if(z<h || s+z>e) break; o.push({t:typ(b,s+4), s, d:s+h, e:s+z}); s+=z; } return o; };
+  const kid=(b,x,t)=>kids(b,x.d,x.e).find(k=>k.t===t);
+  // the moov box, wherever it is (the iPhone writes it after the film)
+  let off=0, B=null, mv=null;
+  for(let g=0; g<200 && off+8<=file.size; g++){
+    const h=await rd(off,16); let z=u32(h,0), hl=8; if(z===1){ z=u64(h,8); hl=16; } else if(z===0) z=file.size-off;
+    if(z<hl) return null;
+    if(typ(h,4)==='moov'){ if(z>96*1024*1024) return null; B=await rd(off,z); mv={d:hl, e:B.length}; break; }
+    off+=z;
+  }
+  if(!B) return null;
+  const be=(n,v)=>{ const a=new Uint8Array(n); for(let i=n-1;i>=0;i--){ a[i]=v%256; v=Math.floor(v/256); } return a; };
+  const cat=(...a)=>{ const o=new Uint8Array(a.reduce((s,x)=>s+x.length,0)); let p=0; for(const x of a){ o.set(x,p); p+=x.length; } return o; };
+  const fc=(s)=>Uint8Array.from(s, c=>c.charCodeAt(0)), Z=(n)=>new Uint8Array(n);
+  const box=(t,...a)=>{ const c=cat(...a); return cat(be(4,c.length+8), fc(t), c); }, full=(t,v,f,...a)=>box(t, be(1,v), be(3,f), ...a);
+  const MX=cat(be(4,0x10000), Z(12), be(4,0x10000), Z(12), be(4,0x40000000));
+  const dec=(blob)=>blob.arrayBuffer().then(buf=>new Promise((rs,rj)=>{ let ok=false; const end=(f,v)=>{ if(!ok){ ok=true; clearTimeout(tm); f(v); } }, tm=setTimeout(()=>end(rj, new Error('timeout')), 8000);
+    try{ const OAC=window.OfflineAudioContext || window.webkitOfflineAudioContext, c=new OAC(1,1,44100), p=c.decodeAudioData(buf, b=>end(rs,b), e=>end(rj,e)); if(p && p.then) p.then(b=>end(rs,b), e=>end(rj,e)); }catch(e){ end(rj,e); } }));
+  // the first AAC sound track
+  for(const tk of kids(B, mv.d, mv.e).filter(k=>k.t==='trak')){
+    const md=kid(B,tk,'mdia'), hd=md && kid(B,md,'hdlr'), mh=md && kid(B,md,'mdhd'), mi=md && kid(B,md,'minf'), sb=mi && kid(B,mi,'stbl');
+    if(!hd || !mh || !sb || typ(B,hd.d+8)!=='soun') continue;
+    const sd=kid(B,sb,'stsd'), tt=kid(B,sb,'stts'), sc=kid(B,sb,'stsc'), sz=kid(B,sb,'stsz'), co=kid(B,sb,'stco') || kid(B,sb,'co64');
+    if(!sd || !tt || !sc || !sz || !co || u32(B,sd.d+4)!==1 || typ(B,sd.d+12)!=='mp4a') continue;
+    const e0=sd.d+8, e1=Math.min(sd.e, e0+u32(B,e0)); let esds=null;
+    for(let p=e0+12; p+4<=e1; p++) if(B[p]===0x65 && typ(B,p)==='esds'){ const z=u32(B,p-4); if(z>=12 && p-4+z<=e1) esds=B.subarray(p-4, p-4+z); break; }
+    if(!esds) continue;
+    const v1=B[mh.d]===1, tsc=u32(B, mh.d+(v1 ? 20 : 12));
+    let ch=(B[e0+24]<<8)|B[e0+25]; if(!(ch>=1 && ch<=8)) ch=2;
+    const fix=u32(B,sz.d+4), N=u32(B,sz.d+8), ssz=(i)=>fix || u32(B, sz.d+12+i*4);
+    if(!N || !tsc) continue;
+    const c64=co.t==='co64', nc=u32(B,co.d+4), cOff=(i)=>c64 ? u64(B,co.d+8+i*8) : u32(B,co.d+8+i*4);
+    const runs=[]; for(let j=0, ns=u32(B,sc.d+4); j<ns; j++){ const q=sc.d+8+j*12; runs.push([u32(B,q), u32(B,q+4)]); }
+    if(!runs.length) continue;
+    const parts=[]; let si=0, tot=0;
+    for(let c=0, j=0; c<nc && si<N; c++){
+      while(j+1<runs.length && c+1>=runs[j+1][0]) j++;
+      const n=Math.min(runs[j][1], N-si); let by=0; for(let k=0;k<n;k++) by+=ssz(si+k);
+      const o=cOff(c), L=parts[parts.length-1];
+      if(L && L[0]+L[1]===o) L[1]+=by; else parts.push([o,by]);
+      si+=n; tot+=by;
+    }
+    if(si<N || !tot || tot>64*1024*1024) continue;
+    const tts=[]; for(let j=0, ne=u32(B,tt.d+4); j<ne; j++){ const q=tt.d+8+j*8; tts.push([u32(B,q), u32(B,q+4)]); }
+    // a .m4a of the first n samples: one chunk, the same samples, the same timing
+    const mk=(pay, n)=>{
+      let by=0; for(let k=0;k<n;k++) by+=ssz(k);
+      const st=[]; let d=0, left=n; for(const [cn,dl] of tts){ if(left<=0) break; const c=Math.min(cn,left); st.push(be(4,c), be(4,dl)); d+=c*dl; left-=c; }
+      const ent=box('mp4a', Z(6), be(2,1), Z(8), be(2,ch), be(2,16), Z(4), be(4, Math.min(tsc,65535)*65536), esds);
+      const stsz=fix ? full('stsz',0,0, be(4,fix), be(4,n)) : full('stsz',0,0, be(4,0), be(4,n), B.subarray(sz.d+12, sz.d+12+n*4));
+      const ftyp=box('ftyp', fc('M4A '), be(4,0), fc('M4A '), fc('mp42'), fc('isom'));
+      const moov=(o)=>box('moov',
+        full('mvhd',0,0, Z(8), be(4,tsc), be(4,d), be(4,0x10000), be(2,0x100), Z(10), MX, Z(24), be(4,2)),
+        box('trak',
+          full('tkhd',0,7, Z(8), be(4,1), Z(4), be(4,d), Z(12), be(2,0x100), Z(2), MX, Z(8)),
+          box('mdia',
+            full('mdhd',0,0, Z(8), be(4,tsc), be(4,d), be(2,0x55c4), Z(2)),
+            full('hdlr',0,0, Z(4), fc('soun'), Z(12), fc('SoundHandler'), Z(1)),
+            box('minf', full('smhd',0,0, Z(4)), box('dinf', full('dref',0,0, be(4,1), full('url ',0,1))),
+              box('stbl', full('stsd',0,0, be(4,1), ent), full('stts',0,0, be(4,st.length/2), ...st), full('stsc',0,0, be(4,1), be(4,1), be(4,n), be(4,1)), stsz, full('stco',0,0, be(4,1), be(4,o)))))));
+      const m=moov(ftyp.length + moov(0).length + 8);
+      return new Blob([ftyp, m, be(4,by+8), fc('mdat'), pay.subarray(0,by)], {type:'audio/mp4'});
+    };
+    // read only the sound
+    const pay=new Uint8Array(tot); let w=0;
+    for(let i=0;i<parts.length;i+=8){
+      const got=await Promise.all(parts.slice(i,i+8).map(([o,n])=>rd(o,n)));
+      for(const u of got){ if(w+u.length>tot) return null; pay.set(u,w); w+=u.length; }
+      onP && onP(Math.min(1,(i+8)/parts.length));
+    }
+    if(w!==tot) return null;
+    try{ const pb=await dec(mk(pay, Math.min(N, 320))); if(!pb || !(pb.duration>0.5)) return null; }catch(_){ return null; }   // a few seconds decode → the browser reads this sound
+    return mk(pay, N);
+  }
+  return null;
 }
 // A put-aside Music / Picture draft outlives a relaunch (iOS closes a PWA in the background): one record per source in IndexedDB, read back at start
 const _pfDraftSeq = {}, _pfDraftReady = {};
@@ -23165,7 +23248,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
     const gc = _gcMake(fav.mode, fav.tone, fav.pal, (fav.ks|0)+_kd);
-    const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = (fav.lim>0 ? Math.min(fav.lim|0, chords.length) : chords.length);
+    const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = chords.length;
     const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
     if(cp!==cp0 && cp._livePad && fav.compose){ cp._exactTone = true; cp._objFirst = true; }
@@ -32673,18 +32756,6 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // loadSampleMidi but slices the chord events to the first `maxMs` ms so the
   // first-time user gets a digestible taste (~30 s) instead of the full 3:38
   // piece. Returns nothing — apply Events sets all the relevant state.
-  try{ window.__pfReel = {
-    chords: ()=>chords, tone: ()=>tone, mode: ()=>mode,
-    addr: ()=>{ const a=_favAddrNow() || { pk:'reel', style:effectiveStyle||null, keys:null, fa:null, phase:0, seed:pollockSessionSeed>>>0, cap:null, mode, tone, pal:null }; let se=0.5; try{ const c=computeSongCharacter(chords); se=c?c.energy:0.5; }catch(_){} return {...a, se, dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:false, liveE:false}; },
-    fuAddr: (keys, ph)=>_fusionAddr(keys, ph|0),
-    lay: (fav)=>_favLayout(fav, chords),
-    paint: (cv, fav, S, lim, tn)=>{ const lay=_favLayout(fav, chords); return _favPaint(cv, {...fav, lim:lim|0}, {chords}, S, tn||tone, lay); },
-    load: (i)=>loadSampleMidi(i),
-    vn: ()=> (typeof ARTIST_VARIANT_N!=='undefined' ? ARTIST_VARIANT_N : {}),
-    loadImg: (i)=>loadSampleImage(i),
-    play: ()=>{ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} },
-    st: ()=>({ viewMode, playing, disp, n: chords.length, comp: imgComposerRef.current, stage: composerStageRef.current, sig: imgSigActiveRef.current, mode: imgPlayModeRef.current, title: info && info.title }),
-  }; }catch(_){}
   const loadSampleMidiTrimmed=useCallback((maxMs)=>{
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
@@ -37181,7 +37252,7 @@ Hard requirements:
   useEffect(()=>{ if(stPalEdit && (!stripOpen || !studioFs || mode!=='custom')) setStPalEdit(false); },[stripOpen, studioFs, mode, stPalEdit]);
   useEffect(()=>{ if(stPalView && (!stripOpen || !studioFs)) setStPalView(null); },[stripOpen, studioFs, stPalView]);
   const studioLive = studioFs && studioLiveSrc;
-  const _micGap = 144;   // a finished Mic take's name and palette sit over the painting's lower edge, as in Music — the frame keeps its size after STOP
+  const _micGap = composeMode ? 144 : 128;   // the Mic: the painting reaches down to the buttons — a finished take's name and its palette · painters line sit inside its lower edge, never across it; the same size from the start, so the frame keeps its size after STOP (Compose as it was)
   // the height of the bottom dock while live: the painting sits in the space above it
   const stDockRef = useRef(null), clearBtnRef = useRef(null), stMicRef = useRef(null), micPresetBtnRef = useRef(null);
   const [stDockH, setStDockH] = useState(0);
@@ -38236,9 +38307,14 @@ Hard requirements:
     try{ if(micActive){ if(micPainting) stopMicPainting(); if(micListening) stopMicListening(); } }catch(_){}
     const d=new Date(), nm=_stT('camWord')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     setErr(''); setErrInfo(false); setWorking(true); setWLabel(_stT('camRead')); setWPct(0);
+    // 1. only the video's sound track, lifted out of the file (fast, small — a 5-minute iPhone film is ~300 MB, its sound ~7 MB)
+    let m4a=null; try{ m4a=await _videoM4a(file, (p)=>setWPct(Math.round(p*100))); }catch(_){ m4a=null; }
+    if(m4a){ micToSongRef.current={ port:true, live:true }; try{ loadAudio({target:{files:[new File([m4a], nm+'.m4a', {type:'audio/mp4'})], value:''}}); }catch(_){ micToSongRef.current=false; setWorking(false); } return; }
+    // 2. the whole file decoded (not for a huge one — it would not fit), 3. the video played silently
     let ab=null;
     try{
-      const raw=await file.arrayBuffer();
+      if(file.size>400*1024*1024) throw new Error('too big');
+      const raw=await Promise.race([file.arrayBuffer(), new Promise((_,rj)=>setTimeout(()=>rj(new Error('read timeout')), 30000))]);
       const OAC=window.OfflineAudioContext || window.webkitOfflineAudioContext;
       const off=new OAC(1,1,44100);
       ab=await new Promise((rs,rj)=>{ let ok=false; const tm=setTimeout(()=>{ if(!ok){ ok=true; rj(new Error('timeout')); } }, 20000);
@@ -38247,7 +38323,7 @@ Hard requirements:
       if(!ab || !ab.length || ab.duration<0.5) ab=null;
     }catch(_){ ab=null; }
     if(!ab){
-      let ac=null; try{ const rc=Tone.getContext().rawContext; ac=(rc && rc._nativeAudioContext) || rc; if(ac && ac.state!=='running') await ac.resume(); }catch(_){}   // the native context (Tone's wrapper has no ScriptProcessor)
+      let ac=null; try{ const rc=Tone.getContext().rawContext; ac=(rc && rc._nativeAudioContext) || rc; if(ac && ac.state!=='running') await Promise.race([ac.resume(), new Promise(r=>setTimeout(r, 3000))]); if(ac && ac.state!=='running') ac=null; }catch(_){ ac=null; }   // the native context (Tone's wrapper has no ScriptProcessor); after the camera iOS may leave it interrupted — resume() then never returns: 3 s, then the error, never a frozen screen
       if(ac && !ac.createScriptProcessor) ac=null;
       if(ac) ab=await _videoAudioByPlaying(file, ac, (p)=>setWPct(Math.round(p*100)), (again)=>setCamTap(()=>()=>{ setCamTap(null); again(); }));
       setCamTap(null);
