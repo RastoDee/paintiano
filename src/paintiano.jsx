@@ -31205,8 +31205,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // to an empty setup. For compose / mic the "painting" IS the chord draft, so it
   // also falls through to full clear().
   const _clearAtRef = useRef(0);   // when Clear last ran: the Studio does not start the cleared piece again by itself
+  const homeDropRef = useRef(null);   // (set with the home cards below) Clear takes the cleared painting's card off the home too
   const clearCanvas = useCallback(()=>{
     _clearAtRef.current = Date.now();
+    try{ homeDropRef.current && homeDropRef.current(); }catch(_){}
     // Voice/Music mic mode: the mic stream is still live and the capture loop
     // appends new chords continuously. If we only wipe the canvas, the next
     // detected sound instantly repaints — so Clear appears to do nothing. Stop
@@ -37390,6 +37392,18 @@ Hard requirements:
   const homeCapRef = useRef(null);   // (kind, pictureUrl?) → that mode's card, from the canvas as it is put aside   // null = the last painting; 'music' | 'image' = the card you swiped to
   const [homeSlide, setHomeSlide] = useState(null);   // the home card comes in from a side ('l'|'r')
   const _homeCur = ()=> (homeSide && (homeArtBy[homeSide] || {k:homeSide, src:homeSide==='image'?'image':'music', u:'', t:'', l:''})) || homeArt;
+  // Clear: the painting just wiped must not wait on the home as if it were still there (with ▶ starting it again) —
+  // its card goes; the home shows another card, or For you
+  homeDropRef.current = ()=>{ try{
+    if(!chords.length && !(viewMode==='image' && originalImgUrl)) return;   // nothing was painted
+    const k = composeMode ? 'compose' : (micActive||micArmed||micContext) ? 'mic' : moodFromImg ? 'mfi' : moodContext ? 'mood' : (viewMode==='image' && !moodFromImg) ? 'image' : 'music';
+    const kOf=(h)=> h.k || (h.src==='image' ? 'image' : 'music');
+    const by={...(homeArtBy||{})}; const had=!!by[k]; delete by[k];
+    if(had){ setHomeArtBy(by); try{ localStorage.setItem('paintiano_home_art_by', JSON.stringify(by)); }catch(_){} }
+    if(homeSide===k) setHomeSide(null);
+    if(homeArt && kOf(homeArt)===k){ const next=Object.values(by).find(h=>h && h.u) || null; setHomeArt(next);
+      try{ if(next) localStorage.setItem('paintiano_home_art', JSON.stringify(next)); else localStorage.removeItem('paintiano_home_art'); }catch(_){} }
+  }catch(_){} };
   const _homeBySave = (k, o)=> setHomeArtBy(b=>{ const nb={...b, [k]:{...(b[k]||{}), ...o, k}}; try{ localStorage.setItem('paintiano_home_art_by', JSON.stringify(nb)); }catch(_){} return nb; });
   homeCapRef.current = (k, url)=>{ try{
     const shrink=(el,w0,h0)=>{ if(!w0||!h0) return null; const W=Math.min(480,w0), Hh=Math.round(h0*W/w0); const c=document.createElement('canvas'); c.width=W; c.height=Hh; const x=c.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,Hh); x.drawImage(el,0,0,W,Hh); return c.toDataURL('image/jpeg',0.8); };
@@ -37535,6 +37549,7 @@ Hard requirements:
   const [stToast, setStToast] = useState(null);
   const stToastTmRef = useRef(null);
   useEffect(()=>{ if(clearArmed && studioFs){ try{ _stToastShow(t('clearConfirm')); }catch(_){} }
+    else { const q=t('clearConfirm'); setStToast(m=> m===q ? null : m); }   // cleared (or let go): its "again to clear" goes with it
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearArmed]);
   const _stToastShow = (msg)=>{ if(stToastTmRef.current) clearTimeout(stToastTmRef.current); setStToast(msg); stToastTmRef.current=setTimeout(()=>{ stToastTmRef.current=null; setStToast(null); }, 2400); };
