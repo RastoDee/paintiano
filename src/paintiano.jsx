@@ -19218,11 +19218,6 @@ let _TRANS_FRAME = null;
 
 async function transcribeAudio(audioBuf, onP, opts) {
   const MIC = !!(opts && opts.mic);   // a phone's microphone recording: brought to a mastered level, stricter peaks, no blips
-  // a video (a concert filmed on a phone: bass, guitar, drums): the pitches flicker under the drums and the room, so a note
-  // lives through short gaps (4 frames ≈ 40 ms) instead of ending at the first frame it is missed; middle threshold, 100 ms notes
-  // (with the Mic's strict settings a 37 s band video gave 2 notes)
-  const LIVE = !!(opts && opts.live), GAP = LIVE ? 4 : 0;
-  const TH = LIVE ? 0.16 : (MIC ? 0.22 : 0.12), MINMS = LIVE ? 100 : (MIC ? 120 : 60);
   const sr = audioBuf.sampleRate;
   const ch0 = audioBuf.getChannelData(0);
   // Mix to mono if stereo. Use max(|L|, |R|) instead of (L+R)*0.5: simple
@@ -19267,16 +19262,16 @@ async function transcribeAudio(audioBuf, onP, opts) {
     for (let i = 0; i < lim; i++) frame[i] = data[off + i];
     for (let i = lim; i < FRAME; i++) frame[i] = 0;
     const mag = fftMag(frame);
-    const picks = pickPitches(mag, sr, TH);
+    const picks = pickPitches(mag, sr, MIC ? 0.22 : 0.12);
     const found = new Set();
     for (const p of picks) {
       found.add(p.midi);
-      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag, lf: f};
-      else { active[p.midi].mx = Math.max(active[p.midi].mx, p.mag); active[p.midi].lf = f; }
+      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag};
+      else active[p.midi].mx = Math.max(active[p.midi].mx, p.mag);
     }
     for (const m in active) {
-      if (!found.has(+m) && f - active[m].lf > GAP) {   // GAP 0: ends at the first frame it is missed (as always)
-        notes.push({midi: +m, sf: active[m].sf, ef: GAP ? active[m].lf + 1 : f, mx: active[m].mx});
+      if (!found.has(+m)) {
+        notes.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
         delete active[m];
       }
     }
@@ -19285,10 +19280,10 @@ async function transcribeAudio(audioBuf, onP, opts) {
       await new Promise(r => setTimeout(r, 0));
     }
   }
-  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: GAP ? active[m].lf + 1 : total, mx: active[m].mx});
+  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
   const f2ms = f => f * HOP / sr * 1000;
   const raw = notes
-    .filter(n => f2ms(n.ef - n.sf) >= MINMS)
+    .filter(n => f2ms(n.ef - n.sf) >= (MIC ? 120 : 60))
     .map(n => ({m: n.midi, startMs: f2ms(n.sf), durMs: Math.max(80, f2ms(n.ef - n.sf)), v: Math.max(40, Math.min(120, Math.round(n.mx * 110)))}))
     // Secondary sort by midi pitch ensures notes with identical startMs always
     // land in the same order — clustering becomes fully deterministic for the
@@ -19305,6 +19300,70 @@ async function transcribeAudio(audioBuf, onP, opts) {
       evts.push({n: g, startMs: bt, durQ: snapDurQ(md / 500)});
     }
   }
+  return evts;
+}
+
+// A video (a concert, a song from a speaker, filmed on a phone) is read the way the Mic's REC hears it live — the same
+// listener run over the file: frames of 4096 samples, a tick every 1/60 s, a commit every 50 ms; an adaptive noise gate;
+// the strongest three tones over a quarter of the loudest, each heard in two commits in a row; a new block on a
+// spectral-flux onset or after two sightings of a new sound; blocks of 100 ms and more. So filming a song and
+// recording it with REC give the same painting (the file reader, made for clean MP3s, hears a band in a room as noise).
+async function transcribeLikeMic(audioBuf, onP) {
+  const sr = audioBuf.sampleRate, nCh = audioBuf.numberOfChannels || 1, c0 = audioBuf.getChannelData(0);
+  const x = nCh > 1 ? (() => { const c1 = audioBuf.getChannelData(1), o = new Float32Array(c0.length); for (let i = 0; i < c0.length; i++) o[i] = (c0[i] + c1[i]) * 0.5; return o; })() : c0;
+  const W = 4096, TICK = sr / 60, buf = new Float32Array(W), evts = [];
+  const COMMIT = 50, MIN_HOLD = 100, GATE_MULT = 1.8, RMS_MIN = 0.003;
+  let noiseFloor = 0.002, lastCommit = -1e9, pendingSig = '', pendingNotes = null, prevStart = 0;
+  let candSig = '', candNotes = null, candCount = 0, candAt = 0, pendStreak = 0, prevMag = null, fluxAvg = 0, lastOnset = -1e9, t0 = null;
+  const seen = new Map();
+  const pcSig = (ns) => [...new Set(ns.map(n => ((n.m % 12) + 12) % 12))].sort((a, b) => a - b).join(',');
+  const build = (mag) => {
+    const peaks = pickPitches(mag, sr, 0.25), now = new Set(peaks.map(p => p.midi));
+    for (const k of [...seen.keys()]) if (!now.has(k)) seen.delete(k);
+    for (const p of peaks) seen.set(p.midi, (seen.get(p.midi) || 0) + 1);
+    const steady = peaks.filter(p => (seen.get(p.midi) || 0) >= 2).slice(0, 3);
+    if (!steady.length) return null;
+    const notes = steady.map(p => ({ m: p.midi, v: Math.max(45, Math.min(115, Math.round(40 + p.mag * 75))) })).sort((a, b) => a.m - b.m);
+    return { sig: pcSig(notes), notes };
+  };
+  const emit = (notes, heldMs, at) => {
+    if (t0 === null) t0 = at;
+    evts.push({ n: notes.map(n => ({ ...n, durMs: Math.round(heldMs) })), startMs: at - t0, durQ: Math.max(0.25, Math.min(4, heldMs / 500)) });
+  };
+  const ticks = Math.floor((x.length - W) / TICK);
+  for (let k = 0; k <= ticks; k++) {
+    const off = Math.round(k * TICK), now = (off + W) / sr * 1000;
+    let rms = 0; for (let i = 0; i < W; i++) { const v = x[off + i] || 0; buf[i] = v; rms += v * v; } rms = Math.sqrt(rms / W);
+    if (rms < noiseFloor * 1.5) noiseFloor = noiseFloor * 0.95 + rms * 0.05;
+    const gate = Math.max(RMS_MIN, noiseFloor * GATE_MULT);
+    if (rms < gate) {
+      if (pendingNotes) { const held = now - prevStart; if (held >= MIN_HOLD) emit(pendingNotes, held, prevStart); pendingNotes = null; pendingSig = ''; }
+      candSig = ''; candNotes = null; candCount = 0; pendStreak = 0; prevMag = null; seen.clear();
+    } else if (now - lastCommit > COMMIT) {
+      lastCommit = now;
+      const mag = fftMag(buf);
+      let onset = false;
+      if (prevMag && prevMag.length === mag.length) {
+        let flux = 0; for (let i = 0; i < mag.length; i++) { const d = mag[i] - prevMag[i]; if (d > 0) flux += d; }
+        if (fluxAvg > 0 && flux > fluxAvg * 2.2 && (now - lastOnset) >= 220) onset = true;
+        fluxAvg = fluxAvg * 0.9 + flux * 0.1;
+      }
+      prevMag = Float32Array.from(mag);   // fftMag reuses its buffer
+      const ev = build(mag);
+      if (ev) {
+        if (onset && pendingNotes) { lastOnset = now; const held = now - prevStart; if (held >= MIN_HOLD) emit(pendingNotes, held, prevStart); pendingSig = ev.sig; pendingNotes = ev.notes; prevStart = now; candSig = ''; candNotes = null; candCount = 0; pendStreak = 0; }
+        else if (ev.sig === pendingSig) { pendStreak++; if (pendStreak >= 2) { candSig = ''; candNotes = null; candCount = 0; } }
+        else if (!pendingNotes) { lastOnset = now; pendingSig = ev.sig; pendingNotes = ev.notes; prevStart = now; candSig = ''; candNotes = null; candCount = 0; pendStreak = 0; }
+        else {
+          pendStreak = 0;
+          if (ev.sig === candSig) { candCount++; candNotes = ev.notes; } else { candSig = ev.sig; candNotes = ev.notes; candCount = 1; candAt = now; }
+          if (candCount >= 2) { const held = candAt - prevStart; if (held >= MIN_HOLD) emit(pendingNotes, held, prevStart); pendingSig = candSig; pendingNotes = candNotes; prevStart = candAt; candSig = ''; candNotes = null; candCount = 0; }
+        }
+      }
+    }
+    if (k % 240 === 0) { onP && onP(k / Math.max(1, ticks)); await new Promise(r => setTimeout(r, 0)); }
+  }
+  if (pendingNotes) { const end = x.length / sr * 1000, held = end - prevStart; if (held >= MIN_HOLD) emit(pendingNotes, held, prevStart); }
   return evts;
 }
 
@@ -31741,7 +31800,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       const _fromMic=micToSongRef.current; micToSongRef.current=false;
       const _kept=(!_fromMic && Array.isArray(_keptEv) && _keptEv.length) ? _keptEv : null;   // My Music kept its notes: no reading again
-      const evts=_kept || await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true, live:!!_fromMic.live} : undefined);
+      const evts=_kept || ((_fromMic && _fromMic.live) ? await transcribeLikeMic(audioBuf,p=>{setWPct(Math.round(p*100));}) : await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true} : undefined));   // a video: read as REC hears it (transcribeLikeMic)
       if(_fromMic){ const _mp=(_fromMic && _fromMic.port) ? 1 : 0; evts.forEach(e=>{ e._mic=1; e._micP=_mp; }); }   // a song from the Mic keeps its take's frame, landscape or portrait (computeGrid reads _micP — live, resized, as a favorite)
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
@@ -38183,7 +38242,7 @@ Hard requirements:
     }
     if(!ab){ setWorking(false); setErr(_stT('camErr')); setErrInfo(false); return; }
     const wav=_wavFromBuffer(ab);
-    micToSongRef.current={ port:true, live:true };   // every video is read as a room recording (as the Mic's take): from the Camera, from Photos, from Files — live music through its gaps (see transcribeAudio)
+    micToSongRef.current={ port:true, live:true };   // every video is read as a room recording, the way the Mic's REC hears it (transcribeLikeMic): from the Camera, from Photos, from Files
     try{ loadAudio({target:{files:[new File([wav], nm+'.wav', {type:'audio/wav'})], value:''}}); }catch(_){ micToSongRef.current=false; setWorking(false); }
   };
   loadVideoRef.current = loadVideoSound;
