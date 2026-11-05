@@ -25597,13 +25597,16 @@ export default function Paintiano() {
   },[]);
   // The room the picture has below whatever stands above it (the header, a title on two lines…) — measured, not
   // guessed: the stage CSS fits the painting into 100dvh minus --pf-top (a fixed 170px cut it when the header grew).
-  useEffect(()=>{ const st=canvasWrapRef.current; if(!st || typeof ResizeObserver==='undefined') return;
-    let raf=0; const meas=()=>{ cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ try{ const r=st.getBoundingClientRect(), rt=document.getElementById('root');
+  useEffect(()=>{ if(typeof ResizeObserver==='undefined') return;
+    let st=null, raf=0, ro=null, mo=null;
+    const meas=()=>{ cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ try{ if(!st || !st.isConnected) return; const r=st.getBoundingClientRect(), rt=document.getElementById('root');
       const y=Math.round(r.top + (window.scrollY||0) + (rt ? rt.scrollTop - rt.getBoundingClientRect().top : 0)); if(y>0 && y<4000) st.style.setProperty('--pf-top', y+'px'); }catch(_){} }); };
-    const ro=new ResizeObserver(meas); const par=st.parentElement; const watch=()=>{ if(!par) return; ro.observe(par); [...par.children].forEach(c=>{ if(c!==st) ro.observe(c); }); };
-    watch(); const mo=par ? new MutationObserver(()=>{ watch(); meas(); }) : null; if(mo) mo.observe(par, {childList:true});
-    window.addEventListener('resize', meas); meas();
-    return ()=>{ cancelAnimationFrame(raf); ro.disconnect(); if(mo) mo.disconnect(); window.removeEventListener('resize', meas); };
+    const watch=()=>{ const par=st && st.parentElement; if(!par) return; ro.observe(par); [...par.children].forEach(c=>{ if(c!==st) ro.observe(c); }); };
+    // the stage mounts after the splash and can be re-mounted: re-attach whenever the element under the ref changes
+    const attach=()=>{ const el=canvasWrapRef.current; if(el===st) return; if(ro) ro.disconnect(); if(mo) mo.disconnect(); st=el; if(!st) return;
+      ro=new ResizeObserver(meas); watch(); if(st.parentElement){ mo=new MutationObserver(()=>{ watch(); meas(); }); mo.observe(st.parentElement, {childList:true}); } meas(); };
+    attach(); const iv=setInterval(attach, 800); window.addEventListener('resize', meas);
+    return ()=>{ clearInterval(iv); cancelAnimationFrame(raf); if(ro) ro.disconnect(); if(mo) mo.disconnect(); window.removeEventListener('resize', meas); };
   },[]);
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
