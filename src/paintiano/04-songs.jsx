@@ -152,6 +152,11 @@ let _TRANS_FRAME = null;
 
 async function transcribeAudio(audioBuf, onP, opts) {
   const MIC = !!(opts && opts.mic);   // a phone's microphone recording: brought to a mastered level, stricter peaks, no blips
+  // a video (a concert filmed on a phone: bass, guitar, drums): the pitches flicker under the drums and the room, so a note
+  // lives through short gaps (4 frames ≈ 40 ms) instead of ending at the first frame it is missed; middle threshold, 100 ms notes
+  // (with the Mic's strict settings a 37 s band video gave 2 notes)
+  const LIVE = !!(opts && opts.live), GAP = LIVE ? 4 : 0;
+  const TH = LIVE ? 0.16 : (MIC ? 0.22 : 0.12), MINMS = LIVE ? 100 : (MIC ? 120 : 60);
   const sr = audioBuf.sampleRate;
   const ch0 = audioBuf.getChannelData(0);
   // Mix to mono if stereo. Use max(|L|, |R|) instead of (L+R)*0.5: simple
@@ -196,16 +201,16 @@ async function transcribeAudio(audioBuf, onP, opts) {
     for (let i = 0; i < lim; i++) frame[i] = data[off + i];
     for (let i = lim; i < FRAME; i++) frame[i] = 0;
     const mag = fftMag(frame);
-    const picks = pickPitches(mag, sr, MIC ? 0.22 : 0.12);
+    const picks = pickPitches(mag, sr, TH);
     const found = new Set();
     for (const p of picks) {
       found.add(p.midi);
-      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag};
-      else active[p.midi].mx = Math.max(active[p.midi].mx, p.mag);
+      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag, lf: f};
+      else { active[p.midi].mx = Math.max(active[p.midi].mx, p.mag); active[p.midi].lf = f; }
     }
     for (const m in active) {
-      if (!found.has(+m)) {
-        notes.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
+      if (!found.has(+m) && f - active[m].lf > GAP) {   // GAP 0: ends at the first frame it is missed (as always)
+        notes.push({midi: +m, sf: active[m].sf, ef: GAP ? active[m].lf + 1 : f, mx: active[m].mx});
         delete active[m];
       }
     }
@@ -214,10 +219,10 @@ async function transcribeAudio(audioBuf, onP, opts) {
       await new Promise(r => setTimeout(r, 0));
     }
   }
-  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
+  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: GAP ? active[m].lf + 1 : total, mx: active[m].mx});
   const f2ms = f => f * HOP / sr * 1000;
   const raw = notes
-    .filter(n => f2ms(n.ef - n.sf) >= (MIC ? 120 : 60))
+    .filter(n => f2ms(n.ef - n.sf) >= MINMS)
     .map(n => ({m: n.midi, startMs: f2ms(n.sf), durMs: Math.max(80, f2ms(n.ef - n.sf)), v: Math.max(40, Math.min(120, Math.round(n.mx * 110)))}))
     // Secondary sort by midi pitch ensures notes with identical startMs always
     // land in the same order — clustering becomes fully deterministic for the

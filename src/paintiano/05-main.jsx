@@ -9345,7 +9345,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       const _fromMic=micToSongRef.current; micToSongRef.current=false;
       const _kept=(!_fromMic && Array.isArray(_keptEv) && _keptEv.length) ? _keptEv : null;   // My Music kept its notes: no reading again
-      const evts=_kept || await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true} : undefined);
+      const evts=_kept || await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true, live:!!_fromMic.live} : undefined);
       if(_fromMic){ const _mp=(_fromMic && _fromMic.port) ? 1 : 0; evts.forEach(e=>{ e._mic=1; e._micP=_mp; }); }   // a song from the Mic keeps its take's frame, landscape or portrait (computeGrid reads _micP — live, resized, as a favorite)
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
@@ -15787,7 +15787,7 @@ Hard requirements:
     }
     if(!ab){ setWorking(false); setErr(_stT('camErr')); setErrInfo(false); return; }
     const wav=_wavFromBuffer(ab);
-    micToSongRef.current={ port:true };   // every video is read as a room recording (as the Mic's take): from the Camera, from Photos, from Files
+    micToSongRef.current={ port:true, live:true };   // every video is read as a room recording (as the Mic's take): from the Camera, from Photos, from Files — live music through its gaps (see transcribeAudio)
     try{ loadAudio({target:{files:[new File([wav], nm+'.wav', {type:'audio/wav'})], value:''}}); }catch(_){ micToSongRef.current=false; setWorking(false); }
   };
   loadVideoRef.current = loadVideoSound;

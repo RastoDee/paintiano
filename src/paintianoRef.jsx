@@ -19218,6 +19218,11 @@ let _TRANS_FRAME = null;
 
 async function transcribeAudio(audioBuf, onP, opts) {
   const MIC = !!(opts && opts.mic);   // a phone's microphone recording: brought to a mastered level, stricter peaks, no blips
+  // a video (a concert filmed on a phone: bass, guitar, drums): the pitches flicker under the drums and the room, so a note
+  // lives through short gaps (4 frames ≈ 40 ms) instead of ending at the first frame it is missed; middle threshold, 100 ms notes
+  // (with the Mic's strict settings a 37 s band video gave 2 notes)
+  const LIVE = !!(opts && opts.live), GAP = LIVE ? 4 : 0;
+  const TH = LIVE ? 0.16 : (MIC ? 0.22 : 0.12), MINMS = LIVE ? 100 : (MIC ? 120 : 60);
   const sr = audioBuf.sampleRate;
   const ch0 = audioBuf.getChannelData(0);
   // Mix to mono if stereo. Use max(|L|, |R|) instead of (L+R)*0.5: simple
@@ -19262,16 +19267,16 @@ async function transcribeAudio(audioBuf, onP, opts) {
     for (let i = 0; i < lim; i++) frame[i] = data[off + i];
     for (let i = lim; i < FRAME; i++) frame[i] = 0;
     const mag = fftMag(frame);
-    const picks = pickPitches(mag, sr, MIC ? 0.22 : 0.12);
+    const picks = pickPitches(mag, sr, TH);
     const found = new Set();
     for (const p of picks) {
       found.add(p.midi);
-      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag};
-      else active[p.midi].mx = Math.max(active[p.midi].mx, p.mag);
+      if (!active[p.midi]) active[p.midi] = {sf: f, mx: p.mag, lf: f};
+      else { active[p.midi].mx = Math.max(active[p.midi].mx, p.mag); active[p.midi].lf = f; }
     }
     for (const m in active) {
-      if (!found.has(+m)) {
-        notes.push({midi: +m, sf: active[m].sf, ef: f, mx: active[m].mx});
+      if (!found.has(+m) && f - active[m].lf > GAP) {   // GAP 0: ends at the first frame it is missed (as always)
+        notes.push({midi: +m, sf: active[m].sf, ef: GAP ? active[m].lf + 1 : f, mx: active[m].mx});
         delete active[m];
       }
     }
@@ -19280,10 +19285,10 @@ async function transcribeAudio(audioBuf, onP, opts) {
       await new Promise(r => setTimeout(r, 0));
     }
   }
-  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: total, mx: active[m].mx});
+  for (const m in active) notes.push({midi: +m, sf: active[m].sf, ef: GAP ? active[m].lf + 1 : total, mx: active[m].mx});
   const f2ms = f => f * HOP / sr * 1000;
   const raw = notes
-    .filter(n => f2ms(n.ef - n.sf) >= (MIC ? 120 : 60))
+    .filter(n => f2ms(n.ef - n.sf) >= MINMS)
     .map(n => ({m: n.midi, startMs: f2ms(n.sf), durMs: Math.max(80, f2ms(n.ef - n.sf)), v: Math.max(40, Math.min(120, Math.round(n.mx * 110)))}))
     // Secondary sort by midi pitch ensures notes with identical startMs always
     // land in the same order — clustering becomes fully deterministic for the
@@ -23101,7 +23106,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
     const gc = _gcMake(fav.mode, fav.tone, fav.pal, (fav.ks|0)+_kd);
-    const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = chords.length;
+    const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = (fav.lim>0 ? Math.min(fav.lim|0, chords.length) : chords.length);
     const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
     if(cp!==cp0 && cp._livePad && fav.compose){ cp._exactTone = true; cp._objFirst = true; }
@@ -26355,6 +26360,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const composerRollRef = useRef(null);
   // the fusion's gold painters, kept while a solo plays (a Solo dice throw, or Solo tapped to look): Fusion brings all of them back
   const fuGoldMemRef = useRef([]);
+  // Solo and Fusion keep separate choices: the solo's own gold painter (null = solos rotate, white) while a fusion plays; the same pair for composers
+  const soloGoldRef = useRef(null);
+  const crMemRef = useRef([]), soloCGoldRef = useRef(null);
   // Solo / Fusion chips: a tap shows it (switches to it), a hold turns it on or off for the dice
   const segHoldRef = useRef({tm:null, fired:false});
   const _segPress = (onTap, onHold)=>({
@@ -26705,7 +26713,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     stCrDicePrevRef.current = composerDice;
     if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; }   // ✦ gives way to the Fusion
     const cur = imgComposerRef.current;
-    const pins = (!fresh && cur && _cOk(cur)) ? [cur] : [];
+    const _cm = (crMemRef.current||[]).filter(k=>k && _cOk(k));
+    const pins = fresh ? [] : _cm.length ? _cm.slice(0,STAGE_MAX) : (cur && _cOk(cur)) ? [cur] : [];   // the gold kept from before the solo come back
+    crMemRef.current = [];
     crOnRef.current = true; setCrOn(true); setComposerDice(true);
     crPinsRef.current = pins.slice(); setCrPins(pins.slice());
     if(imgPlayModeRef.current==='scan' && !working){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }
@@ -31731,7 +31741,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       const _fromMic=micToSongRef.current; micToSongRef.current=false;
       const _kept=(!_fromMic && Array.isArray(_keptEv) && _keptEv.length) ? _keptEv : null;   // My Music kept its notes: no reading again
-      const evts=_kept || await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true} : undefined);
+      const evts=_kept || await transcribeAudio(audioBuf,p=>{setWPct(Math.round(p*100));}, _fromMic ? {mic:true, live:!!_fromMic.live} : undefined);
       if(_fromMic){ const _mp=(_fromMic && _fromMic.port) ? 1 : 0; evts.forEach(e=>{ e._mic=1; e._micP=_mp; }); }   // a song from the Mic keeps its take's frame, landscape or portrait (computeGrid reads _micP — live, resized, as a favorite)
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
@@ -32604,6 +32614,18 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   // loadSampleMidi but slices the chord events to the first `maxMs` ms so the
   // first-time user gets a digestible taste (~30 s) instead of the full 3:38
   // piece. Returns nothing — apply Events sets all the relevant state.
+  try{ window.__pfReel = {
+    chords: ()=>chords, tone: ()=>tone, mode: ()=>mode,
+    addr: ()=>{ const a=_favAddrNow() || { pk:'reel', style:effectiveStyle||null, keys:null, fa:null, phase:0, seed:pollockSessionSeed>>>0, cap:null, mode, tone, pal:null }; let se=0.5; try{ const c=computeSongCharacter(chords); se=c?c.energy:0.5; }catch(_){} return {...a, se, dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:false, liveE:false}; },
+    fuAddr: (keys, ph)=>_fusionAddr(keys, ph|0),
+    lay: (fav)=>_favLayout(fav, chords),
+    paint: (cv, fav, S, lim, tn)=>{ const lay=_favLayout(fav, chords); return _favPaint(cv, {...fav, lim:lim|0}, {chords}, S, tn||tone, lay); },
+    load: (i)=>loadSampleMidi(i),
+    vn: ()=> (typeof ARTIST_VARIANT_N!=='undefined' ? ARTIST_VARIANT_N : {}),
+    loadImg: (i)=>loadSampleImage(i),
+    play: ()=>{ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} },
+    st: ()=>({ viewMode, playing, disp, n: chords.length, comp: imgComposerRef.current, stage: composerStageRef.current, sig: imgSigActiveRef.current, mode: imgPlayModeRef.current, title: info && info.title }),
+  }; }catch(_){}
   const loadSampleMidiTrimmed=useCallback((maxMs)=>{
     try{
       const arrayBuffer=b64ToArrayBuffer(SAMPLE_MIDI_B64);
@@ -37813,14 +37835,14 @@ Hard requirements:
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
   const stLookHistRef = useRef({key:'', st:[], fw:[]});   // ↓ goes back through st; ↑ then goes forward again through fw (the same paintings), and only past them draws a new one
   const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode,
-    jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current, gm:(fuGoldMemRef.current||[]).slice() });
+    jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current, gm:(fuGoldMemRef.current||[]).slice(), sgm:soloGoldRef.current||null });
   const _stLookApply = (L)=>{
     if(sigActiveRef.current && !L.sig){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
     randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt);
     setMosaicShuffleLock(L.lock); setJamOn(L.jo); setJamAll(L.ja); jamPinsRef.current=L.pins.slice(); setJamPins(L.pins.slice()); _setFuRoll(L.fu); setMode(L.md);
     setStyle(L.st); setPainterStage(L.sg.slice());
     stTakenRef.current=L.tk; setStTaken(L.tk);
-    fuGoldMemRef.current = (L.gm||[]).slice();
+    fuGoldMemRef.current = (L.gm||[]).slice(); soloGoldRef.current = L.sgm||null;
     if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ const g=songSigRef.current; setTimeout(()=>{ try{ applySigRef.current(g); }catch(_){} }, 0); }
   };
   // the name over the painting, for a moment (the same as after every ↑ ↓ ← →)
@@ -37857,11 +37879,18 @@ Hard requirements:
           const _soloKept = !crOn && !!imgComposerRef.current && !composerDice;
           // Solo and Fusion both on: every ↑ draws — the dice say what (0 a solo composer, 1 a new fusion), nobody is kept
           const _mixC = (stMixC && proStatus!=='free') ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
-          const _cGold = _mixC ? (crOn ? crPinsRef.current.slice() : (_soloKept ? [imgComposerRef.current] : [])) : [];   // a gold composer is in every result, as a gold painter is
-          if(_mixC && _cGold.length){
-            if(_mixC==='fu'){ if(!crOn) _stCrFusionOn(); else { if(!composerDice) setComposerDice(true); if(playing) _imgDip(()=>_composerRoll()); else _composerRoll(); } rolled = true; }   // gold no. 1 (or the gold ones), new guests
-            else if(crOn){ _stCrSolo(); rolled = true; }   // the lead plays on alone
-            // a gold composer alone, dice 0: it stays — nothing to draw
+          // as for the painters: the Fusion's gold composers and the Solo's own gold composer are separate choices
+          const _cFu = _mixC ? (crOn ? crPinsRef.current.slice() : (crMemRef.current||[]).slice()).filter(k=>k && _cOk(k)) : [];
+          const _cSolo = _mixC ? (crOn ? soloCGoldRef.current : (_soloKept ? imgComposerRef.current : null)) : null;
+          if(_mixC==='solo' && crOn) crMemRef.current = _cFu.slice(0,STAGE_MAX);
+          if(_mixC==='fu' && !crOn) soloCGoldRef.current = _cSolo;
+          if(_mixC==='fu' && (_cFu.length || (!crOn && _cSolo))){
+            if(!crOn) _stCrFusionOn(); else { crPinsRef.current=_cFu.slice(0,STAGE_MAX); setCrPins(_cFu.slice(0,STAGE_MAX)); if(!composerDice) setComposerDice(true); if(playing) _imgDip(()=>_composerRoll()); else _composerRoll(); }   // the gold + new guests
+            rolled = true; }
+          else if(_mixC==='solo' && _cSolo){
+            if(crOn) _stCrSolo();
+            if(imgComposerRef.current!==_cSolo || composerDice){ setComposerDice(false); _lastComposerRef.current=_cSolo; imgComposerRef.current=_cSolo; setImgComposer(_cSolo); rolled = true; }   // the solo's gold composer plays alone
+            else if(crOn) rolled = true;
           }
           else if(_mixC==='fu'){ if(!crOn) _stCrFusionOn(true); else { crPinsRef.current=[]; setCrPins([]); if(!composerDice) setComposerDice(true); if(playing) _imgDip(()=>_composerRoll()); else _composerRoll(); } rolled = true; }
           else if(_mixC==='solo'){ if(crOn) _stCrSolo(); setComposerDice(true);   // nobody gold: a new composer, drawn
@@ -37880,23 +37909,27 @@ Hard requirements:
         // Solo and Fusion both on: the dice say alone or together (0 Solo, 1 Fusion). A gold painter is in every result — alone in its
         // next variant, or no. 1 of a fusion with 1–3 guests (several gold: one of them alone, or all of them with new guests); nobody gold: all drawn
         const _mixP = (stMixP && proStatus!=='free' && _artChoiceN()>=2) ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
-        const _memG = (fuGoldMemRef.current||[]).filter(k=>k && k!=='mosaic' && k!=='notes'), _solo1 = (style && style!=='notes' && style!=='mosaic') ? style : null;
-        // the gold: the fusion's pinned painters; during a solo the remembered ones (dropped only when you tap a painter by hand), else the solo's own gold
-        const _gold = (_mixP && !stTakenRef.current) ? (jamOn ? (jamAll ? jamPinsRef.current : _jamStage()) : (_memG.length ? _memG : (_solo1 ? [_solo1] : []))).filter(k=>k && k!=='mosaic' && k!=='notes') : [];
-        if(_mixP && _gold.length){
-          if(_mixP==='fu'){
-            if(!jamOn){ if(_memG.length) fuGoldMemRef.current=_memG.slice(); _stFusionOn(); }   // the gold (all the remembered ones) are no. 1…, 1–3 guests join
-            else { if(!randomMode) _shuffleOn(); jamPinsRef.current=_gold.slice(0,STAGE_MAX); setJamPins(_gold.slice(0,STAGE_MAX)); setJamAll(true); _jamAllRoll(); }   // the gold stay, new guests
-          } else {
-            const g = _gold[(Math.random()*_gold.length)|0];
-            if(_gold.length>1) fuGoldMemRef.current = _gold.slice(0,STAGE_MAX);   // one of the gold plays alone; the fusion keeps all of them for its next turn
-            const _chg = jamOn || g!==style || randomMode!==true || painterStage.length>0 || notesMode;
-            if(jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); }
-            if(painterStage.length) setPainterStage([]);
-            _setFuRoll(null); setNotesMode(false); if(g!==style) setStyle(g);   // the gold painter alone — chosen (gold), never a white draw
-            const _next = ()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} };   // its next variant, rolled once the solo is in place
-            if(_chg) afterCommitRef.current.push(_next); else setTimeout(_next, 0);
-          }
+        // Solo and Fusion each keep their own choice. Fusion: its gold painters (live pins, or remembered while a solo plays) + new guests;
+        // none → a whole new fusion. Solo: its own gold painter in its next variant; none (white) → someone else from your set.
+        const _okP = (k)=>k && k!=='mosaic' && k!=='notes';
+        const _fuGold = _mixP ? (jamOn ? (jamAll ? jamPinsRef.current : _jamStage()) : (fuGoldMemRef.current||[])).filter(_okP) : [];
+        const _soloG = _mixP ? (jamOn ? soloGoldRef.current : (_okP(style) ? style : null)) : null;
+        if(_mixP && stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
+        if(_mixP==='solo' && jamOn) fuGoldMemRef.current = _fuGold.slice(0,STAGE_MAX);   // the fusion's gold wait for its next turn
+        if(_mixP==='fu' && !jamOn) soloGoldRef.current = _soloG;                            // the solo's choice waits for its next turn
+        if(_mixP==='fu' && (_fuGold.length || (!jamOn && _soloG))){
+          if(!jamOn){ if(_fuGold.length) fuGoldMemRef.current=_fuGold.slice(); _stFusionOn(); }   // the remembered gold (or the solo's gold as no. 1) + 1–3 guests
+          else { if(!randomMode) _shuffleOn(); jamPinsRef.current=_fuGold.slice(0,STAGE_MAX); setJamPins(_fuGold.slice(0,STAGE_MAX)); setJamAll(true); _jamAllRoll(); }   // the gold stay, new guests
+          nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); rolled = true; }
+        else if(_mixP==='solo' && _soloG){
+          const g = _soloG;
+          const _chg = jamOn || g!==style || randomMode!==true || painterStage.length>0 || notesMode;
+          if(jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); }
+          if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
+          if(painterStage.length) setPainterStage([]);
+          _setFuRoll(null); setNotesMode(false); if(g!==style) setStyle(g);   // the solo's gold painter, chosen
+          const _next = ()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} };   // its next variant, rolled once the solo is in place
+          if(_chg) afterCommitRef.current.push(_next); else setTimeout(_next, 0);
           nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); rolled = true; }
         else if(_mixP==='fu'){ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
           if(!jamOn) _stFusionOn(true);
@@ -38162,7 +38195,7 @@ Hard requirements:
     }
     if(!ab){ setWorking(false); setErr(_stT('camErr')); setErrInfo(false); return; }
     const wav=_wavFromBuffer(ab);
-    micToSongRef.current={ port:true };   // every video is read as a room recording (as the Mic's take): from the Camera, from Photos, from Files
+    micToSongRef.current={ port:true, live:true };   // every video is read as a room recording (as the Mic's take): from the Camera, from Photos, from Files — live music through its gaps (see transcribeAudio)
     try{ loadAudio({target:{files:[new File([wav], nm+'.wav', {type:'audio/wav'})], value:''}}); }catch(_){ micToSongRef.current=false; setWorking(false); }
   };
   loadVideoRef.current = loadVideoSound;
@@ -40653,8 +40686,8 @@ Hard requirements:
                 {/* the Studio: one Solo | Fusion switch, as for the painters (↑ on the painting is the composers' 🔀) */}
                 {studioFs && _rollable && (ensembleActive || proStatus==='free') && (<div className="pf-tray-ctl">{(()=>{   // the composers: the same two switches as the painters
                   const _fr=proStatus==='free', mix=stMixC && !_fr, sOn=mix || !crOn, fOn=!_fr && (mix || crOn);
-                  const tapS=(e)=>{ if(_fr || !crOn) return; if(!sOn) _setMix('c', true); _stCrSolo(); };
-                  const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(crOn) return; if(!fOn) _setMix('c', true); _stCrFusionOn(); };
+                  const tapS=(e)=>{ if(_fr || !crOn) return; if(!sOn) _setMix('c', true); crMemRef.current=crPinsRef.current.slice(0,STAGE_MAX); _stCrSolo(); const cg=soloCGoldRef.current; if(cg){ setComposerDice(false); _lastComposerRef.current=cg; imgComposerRef.current=cg; setImgComposer(cg); } };
+                  const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(crOn) return; if(!fOn) _setMix('c', true); soloCGoldRef.current = (!composerDice && imgComposerRef.current) ? imgComposerRef.current : null; _stCrFusionOn(); };
                   const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('c', false); if(!crOn) _stCrFusionOn(); } else _setMix('c', true); };
                   const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('c', false); if(crOn) _stCrSolo(); } else _setMix('c', true); };
                   return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!crOn?'cur':sOn?'on':''} {..._segPress(tapS, holdS)}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={crOn?'cur':fOn?'on':''} {..._segPress(tapF, holdF)}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
@@ -40770,8 +40803,8 @@ Hard requirements:
               {(ensembleActive || (studioFs && proStatus==='free')) && (()=>{   // Solo and Fusion: two switches (one, the other, or both — then ↑ throws the dice); Free: Fusion locked
                 const _fr=proStatus==='free', mix=stMixP && !_fr, sOn=mix || !jamOn, fOn=!_fr && (mix || jamOn), fDis=!_fr && _artChoiceN()<2;
                 // a tap shows it (an off one is turned on first), a hold turns it on or off for the dice; the one playing is filled
-                const tapS=(e)=>{ if(_fr || !jamOn) return; if(!sOn) _setMix('p', true); { const gl=(jamAll ? jamPinsRef.current : _jamStage()).filter(k=>k && k!=='mosaic' && k!=='notes'); if(gl.length>1) fuGoldMemRef.current=gl.slice(0,STAGE_MAX); } _toggleJam(); };
-                const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis || jamOn) return; if(!fOn) _setMix('p', true); _stFusionOn(); };
+                const tapS=(e)=>{ if(_fr || !jamOn) return; if(!sOn) _setMix('p', true); { const gl=(jamAll ? jamPinsRef.current : _jamStage()).filter(k=>k && k!=='mosaic' && k!=='notes'); fuGoldMemRef.current=gl.slice(0,STAGE_MAX); } _toggleJam(); const sg=soloGoldRef.current; if(sg){ setPainterStage([]); setNotesMode(false); setStyle(sg); } };
+                const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis || jamOn) return; if(!fOn) _setMix('p', true); soloGoldRef.current = (style && style!=='notes' && style!=='mosaic') ? style : null; _stFusionOn(); };
                 const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('p', false); if(!jamOn) _stFusionOn(); } else _setMix('p', true); };
                 const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('p', false); if(jamOn) _toggleJam(); } else _setMix('p', true); };
                 return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!jamOn?'cur':sOn?'on':''} {..._segPress(tapS, holdS)}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={jamOn?'cur':fOn?'on':''} disabled={fDis} {..._segPress(tapF, holdF)}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
@@ -40913,7 +40946,6 @@ Hard requirements:
               const shufHit = (!cockpitEdit) && (_tk ? _tkMine : (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0 && !_pinned)));
               const _ghost = cockpitEdit && !inSet;
               const onClick = ()=>{
-                fuGoldMemRef.current = [];   // a painter chosen by hand: the gold remembered from a fusion no longer count
                 if(cockpitEdit){
                   toggleArtSafe(k);
                   return;
