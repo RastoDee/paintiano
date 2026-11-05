@@ -1370,6 +1370,16 @@ const PaletteEditorModal = memo(function PaletteEditorModal({onClose, t, activeP
 // changes as you pick. Tap a note, then its colour on the rainbow strip, or ⋯ (the system picker) for an exact one.
 // a phone or a tablet (a coarse pointer you touch) — never a computer with a mouse, even a wide one
 const PF_TOUCH_DEV = (()=>{ try{ return typeof window!=='undefined' && (navigator.maxTouchPoints||0)>0 && !!window.matchMedia && window.matchMedia('(pointer: coarse)').matches; }catch(_){ return false; } })();
+// The screen's shape decides the view, not how the pointer feels at this moment (a touch laptop flips between
+// fine and coarse from load to load). Wide (≥769) and on its side → the Atelier, touchscreen or not (a short
+// phone on its side stays a phone). Upright → a touchscreen gets the Studio like a tablet; a computer without
+// touch (a monitor turned upright, a window snapped to half the screen) keeps the Atelier. The CSS grid in
+// 01-core-head asks the same questions ((any-pointer: coarse) = a touchscreen is there), so the two never disagree.
+const _pfShape = ()=>{ try{ if(typeof window==='undefined' || !window.matchMedia) return {desk:false,notPhone:false,five:false};
+  const m=(q)=>window.matchMedia(q).matches; const wide=m('(min-width: 769px)'), tall=m('(min-height: 501px)'), land=m('(orientation: landscape)'), touch=m('(any-pointer: coarse)');
+  const desk = wide && (land ? (tall || !touch) : !touch);
+  return { desk, notPhone: desk && tall, five: wide && tall && land }; }catch(_){ return {desk:false,notPhone:false,five:false}; } };
+const PF_SHAPE_QS=['(min-width: 769px)','(min-height: 501px)','(orientation: landscape)','(any-pointer: coarse)'];
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
 const _stPalRgb=(h)=>{ const m=/^#?([0-9a-f]{6})$/i.exec(String(h||'')); if(!m) return [136,136,136]; const n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -3169,43 +3179,43 @@ export default function Paintiano() {
   const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
-  // a touch device (phone or tablet, upright or on its side) is never the 'desktop': it gets the Studio — the computer with a mouse keeps the Atelier
-  const [isDesktop, setIsDesktop] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px)').matches && !PF_TOUCH_DEV;}catch(_){return false;}});
+  // the screen's shape decides (see _pfShape): wide and on its side → the Atelier; upright with a touchscreen → the Studio
+  const [isDesktop, setIsDesktop] = useState(()=>_pfShape().desk);
   // 5-col layout breakpoint (desktop landscape + tablet landscape). Matches
   // the CSS @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape).
   // Used to opt-in to layout changes that only make sense at this width.
-  const [is5Col, setIs5Col] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)').matches && !PF_TOUCH_DEV;}catch(_){return false;}});
+  const [is5Col, setIs5Col] = useState(()=>_pfShape().five);
   // isNotPhone \u2014 desktop + tablet portrait + tablet landscape (phones excluded in both orientations).
   // isCoarse — touch-first pointer (phone, tablet, touch laptop in tablet mode).
   // Fullscreen Lite: touch gets the swipe hint and NO button column; a mouse
   // gets the button column and NO swipe hint. Never both.
   const [isCoarse, setIsCoarse] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;}catch(_){return false;}});
   useEffect(()=>{ try{ const mq=window.matchMedia('(pointer: coarse)'); const h=()=>setIsCoarse(mq.matches); mq.addEventListener ? mq.addEventListener('change',h) : mq.addListener(h); return ()=>{ mq.removeEventListener ? mq.removeEventListener('change',h) : mq.removeListener(h); }; }catch(_){} },[]);
-  const [isNotPhone, setIsNotPhone] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(min-width: 769px) and (min-height: 501px)').matches && !PF_TOUCH_DEV;}catch(_){return false;}});
+  const [isNotPhone, setIsNotPhone] = useState(()=>_pfShape().notPhone);
   // isMobilePortrait — phone held upright. Used by Setup to render the Tone
   // selector as a full-width horizontal row of 3 buttons below the two
   // columns, instead of the default vertical stack in the left column.
   const [isMobilePortrait, setIsMobilePortrait] = useState(()=>{try{return typeof window!=='undefined' && window.matchMedia && window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches;}catch(_){return false;}});
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
-    const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px) and (orientation: landscape)');
-    const onChange = (e)=>setIs5Col(e.matches && !PF_TOUCH_DEV);
-    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
-    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
+    // one answer for all three, re-asked whenever the window turns, is resized past a line, or gains/loses a touchscreen
+    const onChange = ()=>{ const v=_pfShape(); setIsDesktop(v.desk); setIsNotPhone(v.notPhone); setIs5Col(v.five); };
+    const mqls = PF_SHAPE_QS.map(q=>window.matchMedia(q));
+    mqls.forEach(mql=>{ try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} } });
+    return ()=>{ mqls.forEach(mql=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } }); };
   },[]);
-  useEffect(()=>{
-    if(typeof window==='undefined' || !window.matchMedia) return;
-    const mql = window.matchMedia('(min-width: 769px) and (min-height: 501px)');
-    const onChange = (e)=>setIsNotPhone(e.matches && !PF_TOUCH_DEV);
-    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
-    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
-  },[]);
-  useEffect(()=>{
-    if(typeof window==='undefined' || !window.matchMedia) return;
-    const mql = window.matchMedia('(min-width: 769px)');
-    const onChange = (e)=>setIsDesktop(e.matches && !PF_TOUCH_DEV);
-    try{ mql.addEventListener('change', onChange); }catch(_){ try{ mql.addListener(onChange); }catch(__){} }
-    return ()=>{ try{ mql.removeEventListener('change', onChange); }catch(_){ try{ mql.removeListener(onChange); }catch(__){} } };
+  // The room the picture has below whatever stands above it (the header, a title on two lines…) — measured, not
+  // guessed: the stage CSS fits the painting into 100dvh minus --pf-top (a fixed 170px cut it when the header grew).
+  useEffect(()=>{ if(typeof ResizeObserver==='undefined') return;
+    let st=null, raf=0, ro=null, mo=null;
+    const meas=()=>{ cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ try{ if(!st || !st.isConnected) return; const r=st.getBoundingClientRect(), rt=document.getElementById('root');
+      const y=Math.round(r.top + (window.scrollY||0) + (rt ? rt.scrollTop - rt.getBoundingClientRect().top : 0)); if(y>0 && y<4000) st.style.setProperty('--pf-top', y+'px'); }catch(_){} }); };
+    const watch=()=>{ const par=st && st.parentElement; if(!par) return; ro.observe(par); [...par.children].forEach(c=>{ if(c!==st) ro.observe(c); }); };
+    // the stage mounts after the splash and can be re-mounted: re-attach whenever the element under the ref changes
+    const attach=()=>{ const el=canvasWrapRef.current; if(el===st) return; if(ro) ro.disconnect(); if(mo) mo.disconnect(); st=el; if(!st) return;
+      ro=new ResizeObserver(meas); watch(); if(st.parentElement){ mo=new MutationObserver(()=>{ watch(); meas(); }); mo.observe(st.parentElement, {childList:true}); } meas(); };
+    attach(); const iv=setInterval(attach, 800); window.addEventListener('resize', meas);
+    return ()=>{ clearInterval(iv); cancelAnimationFrame(raf); if(ro) ro.disconnect(); if(mo) mo.disconnect(); window.removeEventListener('resize', meas); };
   },[]);
   useEffect(()=>{
     if(typeof window==='undefined' || !window.matchMedia) return;
@@ -4940,8 +4950,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(_u.get('postermaker')==='raffel2026'){ try{ localStorage.setItem('paintiano_postermaker','1'); }catch(_){} }
     }catch(_){}
     qrPieceRef.current=_qidx;
-    // the Studio takes the scan wherever it is the view: every touch device (and a narrow window), unless a Pro chose the Atelier
-    try{ const _wide = window.matchMedia && window.matchMedia('(min-width: 769px)').matches && !PF_TOUCH_DEV;
+    // the Studio takes the scan wherever it is the view (a phone, an upright touchscreen, a narrow window), unless a Pro chose the Atelier
+    try{ const _wide = _pfShape().desk;
       const _cls = _proReadCache() && localStorage.getItem('paintiano_view')==='classic';
       qrStudioRef.current = _qidx!=null && !_wide && !_cls; }catch(_){ qrStudioRef.current=false; }
     // Lite session piece: the QR piece when present, otherwise a RANDOM pick

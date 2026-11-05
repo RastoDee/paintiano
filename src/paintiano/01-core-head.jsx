@@ -242,9 +242,12 @@ const PF_STYLE = `
            the inline flex column in the JSX; no grid overrides here. Chip
            grid columns per section are also driven by inline styles so the
            section-specific grids don't get clobbered by an old 1fr rule. */
-        /* the wide-screen Atelier grid is for a computer with a mouse — a phone or tablet (touch), upright or on its side, keeps the Studio's own layout */
-        @media (min-width: 769px) and (min-height: 501px) and (pointer: fine),
-               (max-height: 500px) and (orientation: landscape) and (pointer: fine) {
+        /* the wide-screen Atelier grid follows the screen's shape, like _pfShape in 05-main: wide and on its side →
+           the grid, touchscreen or not; upright → only a computer without a touchscreen keeps it (an upright tablet
+           gets the Studio's own layout); a short window on its side → only without a touchscreen (a phone stays a phone) */
+        @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape),
+               (min-width: 769px) and (min-height: 501px) and (orientation: portrait) and (not (any-pointer: coarse)),
+               (max-height: 500px) and (orientation: landscape) and (not (any-pointer: coarse)) {
           html, body {
             background: #050507 !important;
             min-height: 100vh;
@@ -508,6 +511,8 @@ const PF_STYLE = `
             min-height: 48px !important;
             height: 48px !important;
             box-sizing: border-box !important;
+            flex-direction: row !important;   /* 48px holds one row: dot · icon · label (stacked, the label fell out the bottom) */
+            gap: 8px !important;
           }
           .pf-app-root > .pf-stage-part {
             grid-area: stage;
@@ -535,7 +540,7 @@ const PF_STYLE = `
              (--pf-ar = its width / height). It was the whole column: the φ portrait sat at its left edge, its two
              overlay canvases were stretched across the column, and a tall picture ran below the screen. */
           .pf-app-root:not(.pf-mode-lite):not(.pf-mode-live):not(.pf-mode-setup):not(.pf-immersive) > .pf-stage-part {
-            max-width: min(100%, calc((100dvh - 170px) * var(--pf-ar, 1))) !important;
+            max-width: min(100%, calc((100dvh - var(--pf-top, 150px) - 20px) * var(--pf-ar, 1))) !important;   /* --pf-top: the stage's measured top */
           }
           .pf-app-root:not(.pf-mode-lite):not(.pf-mode-live):not(.pf-mode-setup):not(.pf-immersive) > .pf-stage-part > canvas {
             max-width: 100% !important;
@@ -953,7 +958,7 @@ const PF_STYLE = `
           /* …and the whole painting stays in view: the stage as wide as the picture standing in the room under
              the title (--pf-ar = its width / height) — it was the full width, so the growing painting ran far below the screen. */
           .pf-app-root.pf-mode-lite:not(.pf-immersive):not(.pf-mode-live) > .pf-stage-part {
-            max-width: min(calc(100vw - 420px), calc((100dvh - 200px) * var(--pf-ar, 1))) !important;
+            max-width: min(calc(100vw - 420px), calc((100dvh - var(--pf-top, 172px) - 28px) * var(--pf-ar, 1))) !important;
           }
           /* Seek/title row spans the same width as the canvas. */
           .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-seek-block {
@@ -978,7 +983,7 @@ const PF_STYLE = `
            MORF + VARIÁCIA buttons stack vertically instead of side-by-side
            (uniform with the edge columns). Tablet PORTRAIT (3-col) and
            MOBILE LANDSCAPE (also 3-col now) are untouched. */
-        @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape) and (pointer: fine) {
+        @media (min-width: 769px) and (min-height: 501px) and (orientation: landscape) {
           .pf-app-root:not(.pf-mode-setup) .pf-transport-dock .pf-transport-row > button {
             min-height: 56px;
             padding: 8px 5px !important;
