@@ -5022,6 +5022,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // (since v2.6.0) in active view, Color/Style live in a strip that's collapsed by
   // default (canvas gets the room) and expands on tap.
   const [stripOpen, setStripOpen] = useState(false);
+  // the Studio: a tap on the painting with the look tray open plays it without folding the tray (palettes and painters can be tried while it plays)
+  const stTrayKeepRef = useRef(0);
+  const _stTrayKeep = ()=> Date.now() - (stTrayKeepRef.current||0) < 4000;
   // Landscape / computer (≥769 px, palettes left, artists right): PICK A LOOK folds
   // both columns away as well — open by default there, the last choice remembered.
   // A fresh Play folds it, as on a phone held upright; a new canvas starts from the choice remembered.
@@ -11550,7 +11553,8 @@ Hard requirements:
     // during playback to change colour/style, and we must NOT yank it shut again —
     // nothing here closes it mid-play, so it stays open until the next fresh Play.
     // (A restart the app makes itself — another composer or reading direction while playing — is not a fresh Play: the panel stays.)
-    if(!isResume && !_melodyRearm && !_dirRestart){ setStripOpen(false); setDeskStripOpen(false); }
+    if(!isResume && !_melodyRearm && !_dirRestart && !_stTrayKeep()){ setStripOpen(false); setDeskStripOpen(false); }
+    stTrayKeepRef.current = 0;   // used up: the next Play folds the tray as before
     // Score must not stay active during playback — close any open score-export
     // (MusicXML share) panel so it can't be interacted with while playing.
     setScoreBlob(null);setScoreFileName('');setScoreMsg(null);
@@ -12749,11 +12753,11 @@ Hard requirements:
       // startPlay schedules the first note.
       holdPausedRef.current=false; // sync — clear before the scan loop repaints
       setHoldPaused(false);
-      setStripOpen(false); setDeskStripOpen(false);   // Play (Resume too) folds the panel — the canvas gets the stage
+      if(!_stTrayKeep()){ setStripOpen(false); setDeskStripOpen(false); }   // Play (Resume too) folds the panel — the canvas gets the stage (not a Studio tap on the painting with the tray open)
       wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }else if(!busy){
       resumeFromRef.current=null;
-      setStripOpen(false); setDeskStripOpen(false);   // … also before an AI compose, which starts playback on its own
+      if(!_stTrayKeep()){ setStripOpen(false); setDeskStripOpen(false); }   // … also before an AI compose, which starts playback on its own
       wakeAudio().then(()=>{ startPlayRef.current?.(); }).catch(()=>{ startPlayRef.current?.(); });
     }
   },[playing,holdPaused,busy,disp,demoMode,startPlay,micPainting,micListening,wakeAudio]);
@@ -15437,8 +15441,8 @@ Hard requirements:
     if(favReadyAny){ if(!favHitAny) _favToggleAny(); }
     else if(_stHasArt && !studioLive){ if(!stFavPend) _stToastShow(_stT('hLater')); setStFavPend(true); }
   };
-  // one tap on the painting: pause / play; on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
-  const _stTapOne = ()=>{ if(stripOpen && studioFs && !stLandRef.current){ setStripOpen(false); return; } if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
+  // one tap on the painting: pause / play — with the look tray open too (the tray closes on a tap beside the painting or pulled down); on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
+  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ stTrayKeepRef.current = (stripOpen && studioFs) ? Date.now() : 0; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
   useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
   // ♥ or share tapped on the home card (your last painting, not loaded yet): it opens in the Studio, then the action follows
   const stHomeActRef = useRef(null);
@@ -15496,7 +15500,9 @@ Hard requirements:
     let on=row.querySelector('.pf-artist-on'); if(!on){ const h=row.querySelector('.pf-sk-hit'); on=h && h.closest('.pf-artist'); } if(!on) return;
     const rr=row.getBoundingClientRect(), q=on.getBoundingClientRect(); row.scrollTo({left: row.scrollLeft + (q.left+q.width/2) - (rr.left+rr.width/2), behavior: smooth ? 'smooth' : 'auto'}); }catch(_){} };
   const trayUserRef = useRef(false);
-  const trayBdRef = useRef(null);   // a touch on the painting above the look tray: a swipe there works as on the painting, a tap closes
+  const trayBdRef = useRef(null);   // a touch above the look tray: a swipe works as on the painting; a tap on the painting plays / pauses, beside it closes the tray
+  const _stOnArt = (x, y)=>{ if(!_stHasArt || x==null || y==null) return false; const w=canvasWrapRef.current; if(!w) return false; let r=null; try{ r=w.getBoundingClientRect(); }catch(_){ return false; }   // is (x, y) on the painting (not the dark around it)?
+    return !!r && r.width>0 && r.height>0 && x>=r.left && x<=r.right && y>=r.top && y<=r.bottom; };
   useEffect(()=>{ if(!(studioFs && stripOpen)) return; const tr=trayRef.current; if(!tr) return; const rows=tr.querySelectorAll('.pf-art-grid'); const row=rows[rows.length-1]; if(!row) return;
     requestAnimationFrame(()=>_trayCenter(false)); const _rc1=setTimeout(()=>_trayCenter(true), 320), _rc2=setTimeout(()=>_trayCenter(true), 800);   // again once the sheet has slid up and the faces are laid out (iOS can drop the first one)
     // a swipe of the row only looks: nothing is picked by where the row stops (it used to pick the face in the middle) — the row stays where it was left
@@ -19461,10 +19467,12 @@ Hard requirements:
               </div>
             </>);
           })()}
-          {stripOpen && !stLand && (<div onClick={()=>setStripOpen(false)} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now()} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
-            // swipes on the painting work with the tray open too: ← → its variants, ↑ the next one, ↓ the one before (the row follows); only a tap closes the tray
+          {stripOpen && !stLand && (<div onClick={(e)=>{ if(_stOnArt(e.clientX, e.clientY)){ _stTap(e); return; } setStripOpen(false); }} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now()} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
+            // swipes on the painting work with the tray open too: ← → its variants, ↑ the next one, ↓ the one before (the row follows)
             if(st && tt){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(_stSwipeRef.current){ trayUserRef.current=false; if(_stSwipeRef.current(dx, dy, Date.now()-st.t)) return; } }
-            setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'transparent',touchAction:'none'}}/>)}{/* the painting stays bright above the look tray: a tap on it closes the tray */}
+            // a tap on the painting plays / pauses as with the tray closed (two taps ♥) — the tray stays, so palettes and painters can be tried while it plays; a tap beside the painting closes the tray
+            if(tt && _stOnArt(tt.clientX, tt.clientY)){ _stTap({clientX:tt.clientX, clientY:tt.clientY}); return; }
+            setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'transparent',touchAction:'none'}}/>)}{/* the painting stays bright above the look tray: a tap on it plays / pauses, a tap beside it closes the tray */}
 
         </>);
       })()}
