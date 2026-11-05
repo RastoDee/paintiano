@@ -458,6 +458,12 @@ const PF_STYLE = `
             row-gap: 7px !important;
           }
           .pf-app-root .pf-styles-inner .pf-artist { padding: 7px 6px !important; letter-spacing: .06em !important; font-size: calc(.56rem * var(--pf-read-scale, 1)) !important; }
+          /* Composers stack in one column too (four squeezed columns ran out of the 180px column). */
+          .pf-app-root .pf-strip-grid:not(.pf-tray):not(.pf-skin) .pf-styles-inner .pf-art-grid { grid-template-columns: 1fr !important; gap: 7px !important; row-gap: 7px !important; }
+          /* The "inspired by" word on its own line above ✦ Signature and the 🔀 / Ensemble buttons — in the narrow column they sat on top of it. */
+          .pf-app-root .pf-strip-grid:not(.pf-tray):not(.pf-skin) .pf-styles-inner .pf-inspired-row { padding-top: 18px !important; min-height: 40px !important; }
+          .pf-app-root .pf-strip-grid:not(.pf-tray):not(.pf-skin) .pf-styles-inner .pf-inspired-row > .pf-inspired-label { position: absolute !important; top: 0; left: 0; right: 0; text-align: center !important; padding-right: 0 !important; }
+          .pf-app-root .pf-strip-grid:not(.pf-tray):not(.pf-skin) .pf-styles-inner .pf-inspired-row > *:not(.pf-inspired-label) { top: auto !important; bottom: 0 !important; transform: none !important; }
           /* Setup view (pre-load) has no colors/styles split — its single panel
              part spans the left+stage area so the setup tiles + hero read well. */
           /* Setup view (pre-load): a single narrow left-column panel (mirrors the
@@ -523,6 +529,15 @@ const PF_STYLE = `
             width: 100% !important;
           }
           .pf-mode-imagescan > .pf-stage-part > canvas {
+            max-width: 100% !important;
+          }
+          /* The painting's own shape: the stage is as wide as the picture standing in the room under the header
+             (--pf-ar = its width / height). It was the whole column: the φ portrait sat at its left edge, its two
+             overlay canvases were stretched across the column, and a tall picture ran below the screen. */
+          .pf-app-root:not(.pf-mode-lite):not(.pf-mode-live):not(.pf-mode-setup):not(.pf-immersive) > .pf-stage-part {
+            max-width: min(100%, calc((100dvh - 170px) * var(--pf-ar, 1))) !important;
+          }
+          .pf-app-root:not(.pf-mode-lite):not(.pf-mode-live):not(.pf-mode-setup):not(.pf-immersive) > .pf-stage-part > canvas {
             max-width: 100% !important;
           }
           /* Setup-view centre placeholder (desktop): a quiet golden-ratio frame
@@ -597,7 +612,7 @@ const PF_STYLE = `
             max-width: 180px !important;
             min-width: 0 !important;
             box-sizing: border-box !important;
-            background: linear-gradient(180deg, rgba(24,21,34,.92), rgba(14,12,20,.92)) !important;
+            background: linear-gradient(180deg, rgb(24,21,34), rgb(14,12,20)) !important;   /* opaque: the panel under it showed through */
             border: 1px solid rgba(201,168,76,.28) !important;
             border-radius: 18px !important;
             padding: 16px 12px !important;
@@ -647,6 +662,13 @@ const PF_STYLE = `
             left: 24px !important;
             right: auto !important;
           }
+          /* A picker pinned over a column: that column's own panel steps aside while it is open
+             (it peeked out under the shorter picker and its words showed through it). */
+          .pf-app-root:has(.pf-picker-overlay.pf-picker-left) :is(.pf-setup-col-left, .pf-colors-inner, .pf-transport-dock),
+          .pf-app-root:has(.pf-picker-overlay:not(.pf-picker-left), .pf-recent-overlay) :is(.pf-setup-col-right, .pf-styles-inner) { visibility: hidden !important; }
+          .pf-app-root .pf-recent-overlay .pf-recent-dialog { background: linear-gradient(180deg, rgb(24,21,34), rgb(14,12,20)) !important; }
+          /* the tiles' second line ("Liszt · Rimsky-Korsakov · Glass") wraps instead of ending in … */
+          .pf-app-root .pf-picker-overlay .pf-picker-dialog button span { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
           /* Picker buttons wrap their label instead of overflowing the 180px column. */
           .pf-app-root .pf-picker-overlay .pf-picker-dialog button {
             white-space: normal !important;
@@ -927,6 +949,11 @@ const PF_STYLE = `
             max-width: 100% !important;
             width: 100% !important;
             height: auto !important;
+          }
+          /* …and the whole painting stays in view: the stage as wide as the picture standing in the room under
+             the title (--pf-ar = its width / height) — it was the full width, so the growing painting ran far below the screen. */
+          .pf-app-root.pf-mode-lite:not(.pf-immersive):not(.pf-mode-live) > .pf-stage-part {
+            max-width: min(calc(100vw - 420px), calc((100dvh - 200px) * var(--pf-ar, 1))) !important;
           }
           /* Seek/title row spans the same width as the canvas. */
           .pf-app-root.pf-mode-lite:not(.pf-immersive) > .pf-seek-block {
