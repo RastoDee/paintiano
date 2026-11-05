@@ -2015,6 +2015,15 @@ const STUDIO_SKIN_CSS = `
 .pf-tray-seg button.on{background:#f2eee8;color:#121018}
 .pf-tray-seg button:disabled{opacity:.35;cursor:default}
 .pf-tray-seg button.lk{color:rgba(242,238,232,.42)}
+.pf-tray-tg{background:none;padding:0;gap:6px}
+.pf-tray-tg button{display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 7px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);border-radius:15px}
+.pf-tray-tg button.on{background:#f2eee8;color:#121018;border-color:#f2eee8}
+.pf-tray-tg button.lk{padding-left:12px}
+.pf-tg-c{width:15px;height:15px;border-radius:50%;border:1.5px solid rgba(242,238,232,.35);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.pf-tray-tg button.on .pf-tg-c{background:#121018;border-color:#121018}
+.pf-tray-tg button.on .pf-tg-c::after{content:'';width:6px;height:3px;border-left:1.6px solid #f2eee8;border-bottom:1.6px solid #f2eee8;transform:rotate(-45deg) translate(1px,-1px)}
+.pf-tray-tg button.shk{animation:pfTgShk .32s}
+@keyframes pfTgShk{20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
 .pf-seg-lk{margin-left:5px;font-size:.85em;opacity:.8}
 .pf-tray-done{border:0;background:linear-gradient(180deg,#f4dc95,#d9b45a);color:#1a1408;font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 12px);font-weight:700;border-radius:14px;padding:6px 13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-app-root .pf-strip-grid.pf-tray .pf-art-grid{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:2px!important;padding:6px calc(50% - 34px) 2px!important;margin:0 -14px!important;scrollbar-width:none;grid-template-columns:none!important}
@@ -3946,6 +3955,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the stage (max 5, order = role); tapping a member again takes it off.
   const [jamOn, setJamOn] = useState(false);
   const jamOnRef = useRef(false); useEffect(()=>{ jamOnRef.current = jamOn; },[jamOn]);
+  // the Studio: Solo and Fusion are two switches — both on, ↑ throws the dice (0 a solo painter, 1 a fusion); 'p' painters, 'c' a picture's composers
+  const [stMixP, setStMixP] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_mix_p')==='1'; }catch(_){ return false; } });
+  const [stMixC, setStMixC] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_mix_c')==='1'; }catch(_){ return false; } });
+  const _setMix = (w, v)=>{ v=!!v; (w==='c' ? setStMixC : setStMixP)(v); try{ localStorage.setItem('paintiano_st_mix_'+w, v?'1':'0'); }catch(_){} };
+  const _segShake = (e)=>{ try{ const b=e.currentTarget; b.classList.remove('shk'); void b.offsetWidth; b.classList.add('shk'); }catch(_){} try{ navigator.vibrate && navigator.vibrate(6); }catch(_){} };   // the last switch on stays on
+  const composerRollRef = useRef(null);
   const [crOn, setCrOn] = useState(false);
   const crOnRef = useRef(false); useEffect(()=>{ crOnRef.current = crOn; },[crOn]);
   // Jam session × composers' 🔀 with PINS — mirror of the painters' Ensemble ALL:
@@ -4262,7 +4277,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // every painter in your set.
   // the Studio letting go of every chosen painter: ↑ draws from your whole set again (with the Ensemble: whole new Fusions, nothing pinned)
   // the Studio's Fusion switch: the painter on screen becomes no. 1 (gold, pinned) and 1–3 painters join it at once — the painting is a fusion straight away
-  const _stFusionOn = ()=>{
+  const _stFusionOn = (fresh)=>{   // fresh: the dice's fusion — a new one, nobody kept from the screen
     if(working||anim||jamOn) return;
     const cur = (style && style!=='notes') ? style : ((shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes') ? shuffleStyle : null);
     if(sigActiveRef.current){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
@@ -4270,7 +4285,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(!randomMode) _shuffleOn();
     if(mosaicShuffleLock) setMosaicShuffleLock(false);
     setJamOn(true); setJamAll(true);
-    const pins = (cur && cur!=='mosaic') ? [cur] : [];
+    const pins = (!fresh && cur && cur!=='mosaic') ? [cur] : [];
     jamPinsRef.current=pins.slice(); setJamPins(pins.slice());
     _jamAllRoll();
     try{ window.posthog && window.posthog.capture('ensemble_jam_toggle',{on:true, studio:true}); }catch(_){}
@@ -4280,12 +4295,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Under the hood it is the Atelier's Jam session + composers' 🔀 with pins (crOn + composerDice + crPins): ↑ (_composerRoll)
   // keeps the pinned and draws new guests. Solo hands the 🔀 back as it was before.
   const stCrDicePrevRef = useRef(null);
-  const _stCrFusionOn = ()=>{
+  const _stCrFusionOn = (fresh)=>{
     if(working||anim||crOn) return;
     stCrDicePrevRef.current = composerDice;
     if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; }   // ✦ gives way to the Fusion
     const cur = imgComposerRef.current;
-    const pins = (cur && _cOk(cur)) ? [cur] : [];
+    const pins = (!fresh && cur && _cOk(cur)) ? [cur] : [];
     crOnRef.current = true; setCrOn(true); setComposerDice(true);
     crPinsRef.current = pins.slice(); setCrPins(pins.slice());
     if(imgPlayModeRef.current==='scan' && !working){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }
@@ -5435,6 +5450,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ window.posthog && window.posthog.capture('composer_dice_roll',{composer:c}); }catch(_){}
     return true;
   },[setupComposers, isDailyComposer, composerIsLocked]);
+  composerRollRef.current = _composerRoll;   // the dice between Solo and Fusion call it once the switch is through
   const imgDirRef = useRef('lr');
   useEffect(()=>{ imgDirRef.current=imgDir; },[imgDir]);
   // FULLSCREEN SCROLL LOCK — on iOS the swipe-up gesture also scrolled the whole
@@ -15432,7 +15448,12 @@ Hard requirements:
           // Fusion: the gold composers stay, ↑ seats new (white) guests. Solo: a composer you chose (gold) stays, as a chosen painter does;
           // a white one (drawn — or yours tapped again) or Scan: ↑ draws the next one, and it is white too
           const _soloKept = !crOn && !!imgComposerRef.current && !composerDice;
-          if(!_soloKept){
+          // Solo and Fusion both on: every ↑ draws — the dice say what (0 a solo composer, 1 a new fusion), nobody is kept
+          const _mixC = (stMixC && proStatus!=='free') ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
+          if(_mixC==='fu'){ if(!crOn) _stCrFusionOn(true); else { crPinsRef.current=[]; setCrPins([]); if(!composerDice) setComposerDice(true); if(playing) _imgDip(()=>_composerRoll()); else _composerRoll(); } rolled = true; }
+          else if(_mixC==='solo'){ if(crOn) _stCrSolo(); setComposerDice(true);
+            setTimeout(()=>{ const go=()=>{ try{ composerRollRef.current && composerRollRef.current(); }catch(_){} }; if(playingRef.current) _imgDip(go); else go(); }, 60); rolled = true; }
+          else if(!_soloKept){
             if(!crOn && !composerDice) setComposerDice(true);
             if(crOn && !composerDice) _stCrPinStage();   // a Fusion (e.g. ✦'s ensemble): its gold composers stay, ↑ seats white guests — as for the painters
             if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
@@ -15443,7 +15464,23 @@ Hard requirements:
         stUpPalRef.current = Date.now();
         // ↑ in the Studio = someone else from your set — unless you chose (gold): a chosen painter or Fusion stays, ↑ does nothing (← its variants);
         // with the Ensemble drawing, the gold (pinned) painters stay and ↑ draws new guests
-        if(stTakenRef.current){   // a surprise kept with ↓: its painter(s) were never chosen (white) — ↑ goes on as in the surprises: someone else from your set
+        // Solo and Fusion both on: every ↑ draws — the dice say what (0 a solo painter from your set, 1 a new fusion), nobody is kept
+        const _mixP = (stMixP && proStatus!=='free' && _artChoiceN()>=2) ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
+        if(_mixP==='fu'){ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
+          if(!jamOn) _stFusionOn(true);
+          else { if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); } if(!randomMode) _shuffleOn(); if(mosaicShuffleLock) setMosaicShuffleLock(false); jamPinsRef.current=[]; setJamPins([]); setJamAll(true); _jamAllRoll(); }
+          nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); rolled = true; }
+        else if(_mixP==='solo'){
+          const _cur = (style && style!=='notes') ? style : shuffleStyle, _pool = SHUFFLE_POOL.filter(k=>setupArtists.includes(k) && k!==_cur);
+          const _k = _pool.length ? _pool[(Math.random()*_pool.length)|0] : null;
+          if(_k){ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
+            if(jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); }
+            if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
+            const _N = (typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[_k]>1) ? ARTIST_VARIANT_N[_k] : 6, _ix=_shuffleIndexFor(_k);
+            randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null);
+            nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+            setStyle(null); if(_ix>=0) setShuffleArtistIndex(_ix); setShufVariant((Math.random()*_N)|0); rolled = true; } }
+        else if(stTakenRef.current){   // a surprise kept with ↓: its painter(s) were never chosen (white) — ↑ goes on as in the surprises: someone else from your set
           stTakenRef.current=false; setStTaken(false);
           if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
           const _cur = style || shuffleStyle, _pool = SHUFFLE_POOL.filter(k=>(setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay)) && k!==_cur && !painterStage.includes(k));
@@ -18182,7 +18219,11 @@ Hard requirements:
               <div className={studioFs ? 'pf-inspired-row pf-cmp-row' : 'pf-inspired-row'} style={{position:'relative',fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:4,textTransform:'uppercase',minHeight:28,display:'flex',alignItems:'center'}}>
                 {!studioFs && (<span className="pf-inspired-label" style={{flex:1,textAlign:'center',fontStyle:'italic',fontWeight:400,letterSpacing:'.22em',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{_fsStripLabel('comp', t('inspiredByTitle'))}</span>)}
                 {/* the Studio: one Solo | Fusion switch, as for the painters (↑ on the painting is the composers' 🔀) */}
-                {studioFs && _rollable && (ensembleActive || proStatus==='free') && (<div className="pf-tray-ctl"><div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!crOn} className={!crOn?'on':''} onClick={()=>{ if(crOn) _stCrSolo(); }}>{_stT('trSolo')}</button>{proStatus==='free' ? (<button type="button" role="tab" aria-selected={false} className="lk" onClick={()=>setPaywallReason('settings')}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" role="tab" aria-selected={!!crOn} className={crOn?'on':''} onClick={()=>{ if(!crOn) _stCrFusionOn(); }}>{_ensT('fusion')}</button>)}</div></div>)}
+                {studioFs && _rollable && (ensembleActive || proStatus==='free') && (<div className="pf-tray-ctl">{(()=>{   // the composers: the same two switches as the painters
+                  const _fr=proStatus==='free', mix=stMixC && !_fr, sOn=mix || !crOn, fOn=!_fr && (mix || crOn);
+                  const tapS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('c', false); if(!crOn) _stCrFusionOn(); } else { _setMix('c', true); if(crOn) _stCrSolo(); } };
+                  const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('c', false); if(crOn) _stCrSolo(); } else { _setMix('c', true); if(!crOn) _stCrFusionOn(); } };
+                  return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={sOn?'on':''} onClick={tapS}><span className="pf-tg-c" aria-hidden="true"/>{_stT('trSolo')}</button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={fOn?'on':''} onClick={tapF}><span className="pf-tg-c" aria-hidden="true"/>{_ensT('fusion')}</button>)}</div>); })()}</div>)}
                 {/* composers' 🔀 + Jam session — only when there is more than one composer to roll between */}
                 {!studioFs && _rollable && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
@@ -18292,7 +18333,11 @@ Hard requirements:
             {/* Ensemble stays under ✦ too (lit when the signature is a fusion): another painter, or one taken off, and ✦ gives way to the Ensemble */}
             {!cockpitEdit && ensembleActive && !studioFs && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36, _artChoiceN()<2)}
             {!cockpitEdit && studioFs && (<div className="pf-tray-ctl">
-              {(ensembleActive || (studioFs && proStatus==='free')) && (<div className="pf-tray-seg" role="tablist"><button type="button" role="tab" aria-selected={!jamOn} className={!jamOn?'on':''} onClick={()=>{ if(jamOn) _toggleJam(); }}>{_stT('trSolo')}</button>{proStatus==='free' ? (<button type="button" role="tab" aria-selected={false} className="lk" onClick={()=>setPaywallReason('settings')}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" role="tab" aria-selected={!!jamOn} className={jamOn?'on':''} disabled={_artChoiceN()<2} onClick={()=>{ if(!jamOn) _stFusionOn(); }}>{_ensT('fusion')}</button>)}</div>)}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
+              {(ensembleActive || (studioFs && proStatus==='free')) && (()=>{   // Solo and Fusion: two switches (one, the other, or both — then ↑ throws the dice); Free: Fusion locked
+                const _fr=proStatus==='free', mix=stMixP && !_fr, sOn=mix || !jamOn, fOn=!_fr && (mix || jamOn), fDis=!_fr && _artChoiceN()<2;
+                const tapS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('p', false); if(!jamOn) _stFusionOn(); } else { _setMix('p', true); if(jamOn) _toggleJam(); } };
+                const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('p', false); if(jamOn) _toggleJam(); } else { _setMix('p', true); if(!jamOn) _stFusionOn(); } };
+                return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={sOn?'on':''} onClick={tapS}><span className="pf-tg-c" aria-hidden="true"/>{_stT('trSolo')}</button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={fOn?'on':''} disabled={fDis} onClick={tapF}><span className="pf-tg-c" aria-hidden="true"/>{_ensT('fusion')}</button>)}</div>); })()}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
             </div>)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (
