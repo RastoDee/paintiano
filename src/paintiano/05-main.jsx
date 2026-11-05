@@ -2225,6 +2225,16 @@ const STUDIO_FX_CSS = `
 @keyframes pfStBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion: reduce){.pf-st-tipup svg{animation:none}}
 .pf-st-min{position:fixed;left:max(12px, env(safe-area-inset-left, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(242,238,232,.18);color:#f2eee8;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-st-tabs2{display:flex;gap:26px;align-items:flex-end;white-space:nowrap}
+.pf-st-tabs2 button{position:relative;border:0;background:none;margin:0;padding:8px 4px 7px;font-family:'Outfit',system-ui,sans-serif;font-size:calc(var(--pf-read-scale,1) * 15px);font-weight:700;letter-spacing:.01em;line-height:1;color:rgba(255,255,255,.62);text-shadow:0 1px 10px rgba(0,0,0,.75);cursor:pointer;-webkit-tap-highlight-color:transparent;pointer-events:auto;transition:opacity .15s}
+.pf-st-tabs2 button::before{content:'';position:absolute;inset:-8px -12px}
+.pf-st-tabs2 button.on{color:#fff;pointer-events:none}
+.pf-st-tabs2 button.on::after{content:'';position:absolute;left:50%;bottom:0;width:22px;height:2.5px;margin-left:-11px;border-radius:2px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.5)}
+.pf-st-tabs2 button:not(.on):active{opacity:.55}
+.pf-st-tabs2 button:disabled{opacity:.4;pointer-events:none}
+.pf-st-tabs2.fy{position:absolute;left:50%;top:calc(50% + 16px);transform:translateX(-50%)}
+.pf-st-tabs2.fy.low{top:calc(50% + 22px)}
+.pf-st-tabs2.st{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top, 0px) + 12px);height:40px;z-index:10001;align-items:center}
 .pf-st-thumb{position:fixed;right:max(12px, env(safe-area-inset-right, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid rgba(220,150,255,.6);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5)}
 .pf-st-paused{position:fixed;left:50%;top:50%;z-index:10001;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);pointer-events:none;animation:pfStPausedIn .18s ease-out}
 .pf-st-paused svg{margin-left:4px}
@@ -2619,7 +2629,7 @@ const STUDIO_HOME_CSS = `
 @keyframes pfFsFlyL{from{transform:none;opacity:1}to{transform:translateX(-100%);opacity:.5}}
 @keyframes pfFsFlyR{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.5}}
 @keyframes pfFsPress{0%{transform:scale(1)}35%{transform:scale(.985)}100%{transform:scale(1)}}
-.pf-st-home .pf-sh-chip{top:calc(env(safe-area-inset-top,0px) + 64px);left:max(14px,env(safe-area-inset-left,0px))}
+.pf-st-home .pf-sh-chip{top:calc(env(safe-area-inset-top,0px) + 92px);left:max(14px,env(safe-area-inset-left,0px))}
 .pf-st-home .pf-sh-mute{top:calc(env(safe-area-inset-top,0px) + 64px);bottom:auto;right:max(14px,env(safe-area-inset-right,0px))}
 .pf-st-home .pf-sh-paused{top:50%;width:76px;height:76px;margin:-38px 0 0 -38px}
 .pf-st-home .pf-sh-tap{top:50%}
@@ -16236,6 +16246,7 @@ Hard requirements:
     firstKeptRef.current = !!c.first;   // its painter is not chosen (white): ↑ goes on as in the surprises
   };
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
+  const stTabGoRef = useRef(null);   // the Studio tab on Home / For you: set with the card in front (a surprise is taken, your unfinished painting goes on)
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
@@ -16990,7 +17001,8 @@ Hard requirements:
         {studioOn && studioHome && _dailyShown && (
           <button type="button" className="pf-st-daily" onClick={openDailyInfo} aria-label={ts('dailyTitle','Artist of the day')}><i aria-hidden="true"/><span><small>✦ {ts('dailyBadgeTitle','Free today')}</small><b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}{composerOfDay ? ' & '+(COMPOSER_INSPIRED[composerOfDay]||composerOfDay) : ''}</b></span></button>
         )}
-        {studioOn && studioHome && ((feedAt>=0 && feedCards[feedAt]) || !_homeCur()) && (<span className={'pf-st-fy'+(_dailyShown ? ' low' : '')} aria-hidden="true">{_stT('sup')}</span>)}   {/* the feed of paintings picked for you: its name sits where the feed apps put it */}
+        {studioOn && studioHome && (()=>{ const _fc=!!(feedAt>=0 && feedCards[feedAt]), _own=!_fc && !!_homeCur();   // where you are: For you (a surprise, or the first run) or Home (your unfinished painting, its sticker on)
+          return (<div className={'pf-st-tabs2 fy'+(_dailyShown ? ' low' : '')}><button type="button" className="on" aria-current="page" tabIndex={-1}>{_own ? _stT('home') : _stT('sup')}</button><button type="button" disabled={!(_fc || _own)} onClick={(e)=>{ e.stopPropagation(); try{ stTabGoRef.current && stTabGoRef.current(); }catch(_){} }}>{_stT('studio')}</button></div>); })()}   {/* the screen's name where the feed apps put it, Studio next to it: a surprise becomes yours and moves into the Studio playing on (what the › after the title did); your unfinished painting goes on there (what a tap on it does) */}
         {studioOn && studioHome && !_dailyShown && (
           <button type="button" className={'pf-st-word'+(hidHold?' pf-hid-hold':'')} onClick={()=>{ if(hidHoldRef.current.fired){ hidHoldRef.current.fired=false; return; } setNavMenuOpen(true); }} onPointerDown={_hidDown} onPointerUp={_hidUp} onPointerLeave={_hidUp} onPointerCancel={_hidUp} onContextMenu={(e)=>e.preventDefault()} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
@@ -17440,6 +17452,7 @@ Hard requirements:
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
+        stTabGoRef.current = ()=>{ if(FC){ _feedTake(); return; } if(!_smp && _canPlay) _play(); };   // Studio on top: a surprise is taken into the Studio, your own card opens there
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS + STUDIO_FX_CSS}</style>
@@ -17499,7 +17512,7 @@ Hard requirements:
               return (
               <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
                 {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup rm" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT('tipUp')}</div>)}
-                {(_mt || _ml || _sTap) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg' || (FC && feedPeek>0))?' hide':'')}>{_mt && (FC && _fL ? (<div className="pf-st-meta-t pf-st-take" role="button" tabIndex={0} onClick={(e)=>{ e.stopPropagation(); _feedTake(); }}><span>{_mt}</span><i aria-hidden="true">›</i></div>) : (<div className="pf-st-meta-t">{_mt}</div>))}{(_ml || _sTap) && (<div className="pf-st-meta-l">{_sTap ? (()=>{ const x=_stT('supTap'); return x.charAt(0).toUpperCase()+x.slice(1); })() : _ml}</div>)}</div>)}
+                {(_mt || _ml || _sTap) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg' || (FC && feedPeek>0))?' hide':'')}>{_mt && (FC && _fL ? (<div className="pf-st-meta-t pf-st-take" role="button" tabIndex={0} onClick={(e)=>{ e.stopPropagation(); _feedTake(); }}><span>{_mt}</span></div>) : (<div className="pf-st-meta-t">{_mt}</div>))}{(_ml || _sTap) && (<div className="pf-st-meta-l">{_sTap ? (()=>{ const x=_stT('supTap'); return x.charAt(0).toUpperCase()+x.slice(1); })() : _ml}</div>)}</div>)}
                 <div className="pf-st-acts">
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')+(_hA?'':' off')} disabled={!_hA} aria-hidden={!_hA || undefined} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(!_fL){ _hArm('fav'); return; } if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
                   <span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+(stTip==='chg'?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); if(FC && _fL){ _feedTake(); setTimeout(()=>setStChg('paint'), 380); return; } setStChg('music'); }}   /* a playing painting: yours in the Studio, and the one ✦ Change sheet opens there on Painter (Look · This painting) — never straight into the tray */><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>
@@ -19344,9 +19357,10 @@ Hard requirements:
         const _heart = (<svg width="19" height="19" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>);
         const _go = (fn, keep)=>(e)=>{ e.stopPropagation(); try{ fn(); }catch(_){} if(keep) _stArm(); };
         return (<>
-          {/* the Studio, one screen: ⌄ home (top left), the song and its painter, ♥ · ✦ Change · share — always there, never a rail */}
+          {/* the Studio, one screen: Home | Studio on top (⌄ top left on its side), the song and its painter, ♥ · ✦ Change · share — always there, never a rail */}
           {stFill && (<><span className="pf-st-corner l" aria-hidden="true"/><span className="pf-st-corner r" aria-hidden="true"/></>)}   {/* full screen: the top corners rounded, as at home */}
-          {!_vr && (!stripOpen || stLand) && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
+          {!_vr && !stripOpen && !stLand && (<div className="pf-st-tabs2 st"><button type="button" onClick={_go(()=>{ _stHome(); })} disabled={recording}>{_stT('home')}</button><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('studio')}</button></div>)}   {/* Home | Studio: back home through the pair (it replaced the ⌄) */}
+          {!_vr && stLand && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
           {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={_go(_stPeekTap)} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
           {!_vr && (!_live || (!composeMode && !micActive && !(micSong && micSong.phase==='reading'))) && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true" style={_live ? {top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)'} : undefined}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
           {/* the MIC: the take's clock on top (♥ · ✦ Change · share stay where they are everywhere in the Studio) */}
