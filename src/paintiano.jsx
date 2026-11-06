@@ -25870,11 +25870,16 @@ export default function Paintiano() {
   // are declared (around line 930) — referencing them here would hit a
   // temporal dead zone on first render.
   // One-shot splash intro (palette→keyboard demo). Skippable by tap; auto-hides.
-  const [showIntro, setShowIntro] = useState(()=>!INTRO_SHOWN);
+  // the boot intro in play.html (the same paint-throw, drawn before this script arrived): when it is on screen the app
+  // plays no intro of its own — it waits for the boot one to end (or to be tapped) and takes over from there
+  const _bootIntro = (typeof window!=='undefined' && window.__pfBoot && !window.__pfBoot.done) ? window.__pfBoot : null;
+  const bootIntroRef = useRef(_bootIntro);
+  const [showIntro, setShowIntro] = useState(()=>!INTRO_SHOWN && !(typeof window!=='undefined' && window.__pfBoot && window.__pfBoot.done));
   useEffect(()=>{
     if(INTRO_SHOWN) return;
     INTRO_SHOWN = true;                          // mark immediately so remounts don't replay
-    const t=setTimeout(()=>setShowIntro(false), 4800);   // safety net slightly above the canvas DUR
+    const b=bootIntroRef.current; if(b){ b.onDone(()=>setShowIntro(false)); try{ b.ready(); }catch(_){} }   // the app is here: the boot intro may let go once its throw is over
+    const t=setTimeout(()=>setShowIntro(false), b ? 30000 : 4800);   // safety net slightly above the canvas DUR (the boot intro keeps its own cap)
     return ()=>clearTimeout(t);
   },[]);
   // Stable close callback so PaletteEditorModal's React.memo can skip
@@ -39191,7 +39196,7 @@ Hard requirements:
   return (
     <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+(stLand?' pf-st-land':'')+((studioFs && stripOpen)?' pf-st-tray':'')+(studioLive?' pf-studio-live':'')+((studioFs && stFill)?' pf-studio-fill':'')+((studioLive && !composeMode)?' pf-studio-mic':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
-      {showIntro && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
+      {showIntro && !bootIntroRef.current && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (!studioOn || studioFs) && (
         <button onClick={exportPoster} style={{position:'fixed',zIndex:studioOn?10002:9999,...(studioOn ? {right:stLand?'calc(var(--pf-side) + 14px)':'max(14px, env(safe-area-inset-right, 0px))',top:'calc(env(safe-area-inset-top, 0px) + '+(stLand?10:15)+'px)'} : {right:14,bottom:132}),padding:'10px 16px',borderRadius:22,border:'1px solid rgba(201,168,76,.8)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.18em',cursor:'pointer'}}>⬇ POSTER</button>
       )}
