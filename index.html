@@ -9,6 +9,17 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/paintiano-icon.png">
   <!-- Open Graph (Facebook, LinkedIn, Slack, iMessage, WhatsApp…) -->
+  <link rel="canonical" href="https://paintiano.app/">
+  <link rel="alternate" hreflang="en" href="https://paintiano.app/?lang=en">
+  <link rel="alternate" hreflang="sk" href="https://paintiano.app/?lang=sk">
+  <link rel="alternate" hreflang="de" href="https://paintiano.app/?lang=de">
+  <link rel="alternate" hreflang="fr" href="https://paintiano.app/?lang=fr">
+  <link rel="alternate" hreflang="es" href="https://paintiano.app/?lang=es">
+  <link rel="alternate" hreflang="pt" href="https://paintiano.app/?lang=pt">
+  <link rel="alternate" hreflang="zh-Hans" href="https://paintiano.app/?lang=zh">
+  <link rel="alternate" hreflang="zh-Hant" href="https://paintiano.app/?lang=zhTW">
+  <link rel="alternate" hreflang="ja" href="https://paintiano.app/?lang=ja">
+  <link rel="alternate" hreflang="x-default" href="https://paintiano.app/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Paintiano">
   <meta property="og:title" content="Paintiano — every song has its own painting">
@@ -419,7 +430,7 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
 @media(prefers-reduced-motion:reduce){.stage .flash,.wall img,.wheel .seg,.snd,.snd .lbl{transition:none}.hear .eq i{animation:none;height:10px}}
 </style>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Paintiano","applicationCategory":"MultimediaApplication","operatingSystem":"Web","url":"https://paintiano.app","description":"Every song is already a painting: play one and watch it appear, note by note — the same painting every time, chosen by the music. Pictures play back as music. Every note mapped to colour through the circle of fifths and the golden ratio.","offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"EUR"},{"@type":"Offer","name":"Pro","price":"9.99","priceCurrency":"EUR"},{"@type":"Offer","name":"Pro AI","price":"19.99","priceCurrency":"EUR"}]}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Paintiano","applicationCategory":"MultimediaApplication","operatingSystem":"Web","url":"https://paintiano.app","description":"Every song is already a painting: play one and watch it appear, note by note — the same painting every time, chosen by the music. Pictures play back as music. Every note mapped to colour through the circle of fifths and the golden ratio.","inLanguage":["en","sk","de","fr","es","pt","zh-Hans","zh-Hant","ja"],"image":"https://paintiano.app/ph_card1_hero.png","screenshot":"https://paintiano.app/og-cover.png","author":{"@type":"Person","name":"Raf Fel","url":"https://paintiano.app/concept"},"isAccessibleForFree":true,"offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"EUR"},{"@type":"Offer","name":"Pro","price":"9.99","priceCurrency":"EUR"},{"@type":"Offer","name":"Pro AI","price":"19.99","priceCurrency":"EUR"}]}
 </script>
 </head>
 <body>
@@ -1022,6 +1033,7 @@ var LANGS=[['en','English'],['sk','Slovenčina'],['de','Deutsch'],['fr','França
 var HTML_LANG={en:'en',sk:'sk',de:'de',fr:'fr',es:'es',pt:'pt',zh:'zh',zhTW:'zh-TW',ja:'ja'};
 var KEY='pf_lang';
 function pick(){
+  try{var q=new URLSearchParams(location.search).get('lang'); if(q&&I18N[q]){ try{localStorage.setItem(KEY,q);}catch(e){} return q; }}catch(e){}   // ?lang=sk — the language links (hreflang) land here
   try{var s=localStorage.getItem(KEY); if(s&&I18N[s])return s;}catch(e){}
   var n=(navigator.language||'en').toLowerCase();
   if(n.indexOf('zh')===0){return (n.indexOf('tw')>-1||n.indexOf('hk')>-1||n.indexOf('hant')>-1)?'zhTW':'zh';}
