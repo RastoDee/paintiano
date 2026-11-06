@@ -99,6 +99,39 @@ function shapeIssues() {
   return out;
 }
 
+// ── 2b. the rosters agree ─────────────────────────────────────────────────
+// One list of painters (ALL_ARTIST_KEYS) and one of composers (ALL_COMPOSER_KEYS) are the truth; every other
+// place that names them must match — so adding a painter means: this guard tells you every place to touch.
+function rosterIssues() {
+  const out = [];
+  const m5 = read('05-main.jsx'), m2 = read('02-draw.jsx'), m4 = read('04-songs.jsx');
+  const arr = (src, name) => { const m = src.match(new RegExp('const ' + name + '\\s*=\\s*(?:useMemo\\(\\(\\)=>\\s*)?(\\[[^\\]]*\\])')); return m ? vm.runInNewContext('(' + m[1] + ')', {}) : null; };
+  const objKeys = (src, name) => { const m = src.match(new RegExp('const ' + name + '\\s*=\\s*(\\{)')); if (!m) return null; let i = m.index + m[0].length - 1, d = 0, j = i, inS = null; for (; j < src.length; j++) { const c = src[j]; if (inS) { if (c === '\\\\') { j++; continue; } if (c === inS) inS = null; continue; } if (c === "'" || c === '"' || c === '`') { inS = c; continue; } if (c === '{') d++; else if (c === '}') { d--; if (d === 0) break; } } try { return Object.keys(vm.runInNewContext('(' + src.slice(i, j + 1) + ')', {})); } catch (_) { return null; } };
+  const artists = (arr(m5, 'ALL_ARTIST_KEYS') || []).filter((k) => k !== 'mosaicFamily');
+  const composers = arr(m5, 'ALL_COMPOSER_KEYS') || [];
+  if (!artists.length || !composers.length) return ['could not read ALL_ARTIST_KEYS / ALL_COMPOSER_KEYS'];
+  const need = (label, keys, list) => { if (!list) { out.push(`${label}: not found`); return; } const miss = keys.filter((k) => !list.includes(k)); if (miss.length) out.push(`${label} lacks: ${miss.join(', ')}`); };
+  const within = (label, list, keys) => { if (!list) { out.push(`${label}: not found`); return; } const extra = list.filter((k) => !keys.includes(k)); if (extra.length) out.push(`${label} has unknown: ${extra.join(', ')}`); };
+  need('STYLE_INSPIRED (05)', artists, objKeys(m5, 'STYLE_INSPIRED'));
+  need('ARTIST_VARIANT_N (02)', artists, objKeys(m2, 'ARTIST_VARIANT_N'));
+  within('DAILY_ARTIST_POOL (05)', arr(m5, 'DAILY_ARTIST_POOL'), artists);
+  need('COMPOSER_INSPIRED (05)', composers, objKeys(m5, 'COMPOSER_INSPIRED'));
+  need('_COMP_SHORT (05)', composers, objKeys(m5, '_COMP_SHORT'));
+  need('STUDIO_COMP_MONO (05)', composers, objKeys(m5, 'STUDIO_COMP_MONO'));
+  within('DAILY_COMPOSER_POOL (05)', arr(m5, 'DAILY_COMPOSER_POOL'), composers);
+  within('FREE_COMPOSER_KEYS (05)', arr(m5, 'FREE_COMPOSER_KEYS'), composers);
+  // api/og.js names every painter; public/og holds a card for every built-in piece × painter
+  const og = fs.existsSync('api/og.js') ? fs.readFileSync('api/og.js', 'utf8') : '';
+  const ogArtists = objKeys(og, 'ARTISTS'); need('api/og.js ARTISTS', artists, ogArtists); within('api/og.js ARTISTS', ogArtists, artists);
+  for (const pc of ['liebestraum', 'bumblebee', 'metamorphosis']) { const miss = artists.filter((a) => !fs.existsSync(path.join('public', 'og', `${pc}-${a}.jpg`))); if (miss.length) out.push(`public/og: no card for ${pc} × ${miss.join(', ')}`); }
+  // the Guide's counts
+  const nA = artists.length, nC = composers.length;
+  for (const [re, label] of [[/(\d+) painters/g, 'painters'], [/(\d+) composers/g, 'composers'], [/(\d+) maliarov/g, 'maliarov'], [/(\d+) skladateľov/g, 'skladateľov']]) {
+    let m; const want = /paint|mal/.test(label) ? nA : nC; while ((m = re.exec(m4))) { if (+m[1] !== want && +m[1] >= 10) { out.push(`04-songs.jsx says "${m[0]}" but there are ${want}`); break; } }
+  }
+  return out;
+}
+
 // ── run ───────────────────────────────────────────────────────────────────
 let failed = 0;
 const has = (src, p) => (p instanceof RegExp ? p.test(src) : src.includes(p));
@@ -116,6 +149,9 @@ for (const g of GUARDS) {
 const i18n = i18nIssues();
 if (i18n.length) { failed++; console.error(`✖ i18n: ${i18n.length} key(s) missing`); i18n.slice(0, 40).forEach((x) => console.error('     ' + x)); }
 else console.log('✓ i18n            every language holds every key');
+const roster = rosterIssues();
+if (roster.length) { failed++; console.error('✖ rosters'); roster.forEach((x) => console.error('     ' + x)); }
+else console.log('✓ rosters         painters and composers agree everywhere (05, 02, api/og.js, public/og, the Guide)');
 const shape = shapeIssues();
 if (shape.length) { failed++; shape.forEach((x) => console.error('✖ shape           ' + x)); }
 else console.log('✓ shape           bracket balance and line endings as known');

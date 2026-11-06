@@ -68,6 +68,16 @@ paintiano-pwa/
 - Branches: `dev` deploys the preview, `main` is paintiano.app (`main` = `dev` once checked on the preview).
 - Vercel environment: `ANTHROPIC_API_KEY`, Paddle keys, `EMAIL_BCC` (licence mails), PostHog key in `play.html`.
 
+## Adding a painter or a composer
+
+The lists are the truth: `ALL_ARTIST_KEYS` / `ALL_COMPOSER_KEYS` in `05-main.jsx`. `npm run check` then names every
+other place that must know the new key — for a painter: `STYLE_INSPIRED` (name), `ARTIST_VARIANT_N` (02-draw.jsx,
+variants), the drawing functions in 02-draw.jsx, `STUDIO_SKIN` thumbnails, `api/og.js` ARTISTS, a card in `public/og/`
+per built-in piece (rendered with the poster tool's `window.__pfFull`), the Guide's "24 painters" in 9 languages,
+optionally `DAILY_ARTIST_POOL` / `BASE_STYLE_PAIRS` (Free set). For a composer: `COMPOSER_INSPIRED`, `_COMP_SHORT`,
+`STUDIO_COMP_MONO`, the composer's profile (05-main.jsx, near `tchaikovsky:{C:…}`), optionally the daily pool and the
+Free three.
+
 ## Tech notes
 
 - **The piano** (Salamander, 30 samples, 2 MB) ships with the app and sits in the service worker's precache: it plays
