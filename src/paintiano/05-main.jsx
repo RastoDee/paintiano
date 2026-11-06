@@ -18444,7 +18444,7 @@ Hard requirements:
                   );
                 })}
               </div>
-              {crOn && composerDice && !_aiOn && (
+              {crOn && composerDice && !_aiOn && !studioFs && (   /* as for the painters: no hint row in the Studio */
                 <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginTop:2,padding:'0 6px',fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(220,180,90,.9)',lineHeight:1.45}}>
                   {_pinIcon('#f0c040', 11)}
                   <span>{_pinTxt(_ensT(crPins.length===0 ? 'cPinNone' : crPins.length>=STAGE_MAX ? 'cPinFull' : 'cPinHint'))}</span>
@@ -18695,7 +18695,7 @@ Hard requirements:
             })}
           </div>
           ); })()}
-          {!cockpitEdit && jamOn && jamAll && (
+          {!cockpitEdit && jamOn && jamAll && !studioFs && (   /* the Studio keeps no hint row: it grew the tray, shrank the painting and made the faces jump — the 📌 badges show who stays, the Guide (and the tour) tell the rest */
             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginTop:8,padding:'0 6px',fontSize:(.55*effScale)+'rem',letterSpacing:'.02em',color:'rgba(220,180,90,.9)',lineHeight:1.45}}>
               {_pinIcon('#f0c040', 11)}
               <span>{_pinTxt(_ensT(jamPins.length===0 ? 'pinNone' : jamPins.length>=STAGE_MAX ? 'pinFull' : 'pinHint'))}</span>
