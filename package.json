@@ -6,7 +6,8 @@
   "description": "Music → φ painting. Turn MIDI / audio / images / typed song names into a colored chord painting on the golden-ratio grid.",
   "scripts": {
     "dev": "vite",
-    "build": "node build-paintiano.js && vite build",
+    "check": "node check-paintiano.js",
+    "build": "node check-paintiano.js && node build-paintiano.js && vite build",
     "preview": "vite preview --host"
   },
   "dependencies": {
