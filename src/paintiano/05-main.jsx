@@ -558,6 +558,10 @@ const FAV_I18N = {
   ja:{shelfHint:'絵をダブルタップするとここに残る',label:'お気に入り',close:'閉じる',saved:'お気に入りに保存しました',removed:'お気に入りから削除しました',undo:'元に戻す',add:'お気に入りに追加',del:'お気に入りから削除',empty:'お気に入りはまだありません。完成した絵や「画像」の画像の左上の ♡ をタップすると、ここに残ります。',today:'今日保存',yday:'昨日保存',on:'{d} に保存',prev:'前の絵',next:'次の絵',lost:'この絵は開けません。',failed:'保存できません——プライベートブラウズでは保存領域が使えません。',mm:'マイミュージック',mmSaved:'マイミュージックに保存済み',tones:{pure:'ピュア',real:'リアル',pastel:'パステル'},clearAll:'すべて削除',clearAllQ:'{n} 枚すべて削除？',clearedAll:'お気に入り {n} 枚をすべて削除しました',open:'開く',openTip:'保存したときのまま「画像」で開いて再生します'},
 };
 const FAV_LOCALE = {EN:'en',SK:'sk',DE:'de',FR:'fr',ES:'es',PT:'pt',zh:'zh-CN',zhTW:'zh-TW',ja:'ja'};
+// numbers and dates in the language's own way (1,5 MB in SK, 1.5 MB in EN; the date as the language writes it)
+const _fmtNum = (lang, n, digits)=>{ try{ return new Intl.NumberFormat(FAV_LOCALE[lang]||'en', {minimumFractionDigits:digits, maximumFractionDigits:digits}).format(n); }catch(_){ return (+n).toFixed(digits); } };
+const _fmtSize = (lang, bytes)=> bytes>=1048576 ? _fmtNum(lang, bytes/1048576, 1)+' MB' : Math.max(1,Math.round(bytes/1024))+' kB';
+const _fmtDateTime = (lang, d)=>{ try{ return new Intl.DateTimeFormat(FAV_LOCALE[lang]||'en', {year:'numeric', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}).format(d); }catch(_){ return d.toLocaleString(); } };
 // THE MIC'S SOUND — music, not a phone call. iOS turns on its call processing (echo cancelling, noise
 // suppression, automatic gain) whenever a page asks for the microphone plainly: music then pumps, warbles and
 // loses its highs. We ask for the raw microphone step by step (the full request, then fewer constraints) and only
@@ -1278,6 +1282,8 @@ const TOUR_CSS = `
 .pf-tour-hd .tt{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:calc(var(--pf-read-scale,1) * 13.5px);font-weight:600;color:rgba(242,238,232,.86);text-shadow:0 1px 8px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-tour-hd .tt em{font-style:normal;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:20px;color:#f0c75e}
 .pf-tour-hd>div:last-child{display:flex;flex-shrink:0}
+.pf-app-root:lang(zh),.pf-app-root:lang(zh-CN),.pf-app-root:lang(zh-TW){word-break:keep-all;line-break:strict}
+.pf-app-root:lang(ja){line-break:strict;word-break:normal}
 .pf-tour-bt{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(7,6,12,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;padding:0;margin-left:8px;cursor:pointer}
 .pf-tour-cap{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 64px);width:max-content;max-width:min(92%,440px);box-sizing:border-box;transform:translateX(-50%) rotate(-2.5deg);background:rgba(14,10,24,.86);border:1.5px solid rgba(255,255,255,.14);border-radius:22px;padding:10px 20px 13px;text-align:center;box-shadow:0 12px 34px rgba(0,0,0,.5);pointer-events:none;z-index:3;animation:pfTourPop .34s cubic-bezier(.2,1.4,.4,1) both}
 .pf-tour.fs .pf-tour-cap{top:27%}
@@ -13988,6 +13994,7 @@ Hard requirements:
   const pianoColor={loading:'rgba(242,238,232,.4)',ready:'rgba(242,238,232,.5)',error:'rgba(201,168,76,.7)'};
   const pianoLabel={loading:t('loadingPiano'),ready:t('grandPiano'),error:t('synthPiano')};
   const changeLang=(l)=>{setLang(l);try{localStorage.setItem('paintiano_lang',l);}catch(_){}}
+  useEffect(()=>{ try{ document.documentElement.lang = FAV_LOCALE[lang]||'en'; }catch(_){} },[lang]);   // the page's own language: line breaking, hyphenation, screen readers
   const btn=(ex={})=>({background:'transparent',border:'1px solid',borderRadius:2,fontSize:(.7*effScale)+'rem',letterSpacing:'.12em',padding:'5px 14px',cursor:'pointer',textTransform:'uppercase',color:'rgba(207,197,168,.7)',borderColor:'rgba(207,197,168,.2)',...ex});
 
   // Build a poetic, mode-aware caption for the Story share dialog. iOS/Android
@@ -17050,8 +17057,8 @@ Hard requirements:
                 }
                 const _dt = new Date(rec.addedAt);
                 const _pad=n=>String(n).padStart(2,'0');
-                const _dtStr = _dt.getFullYear()+'-'+_pad(_dt.getMonth()+1)+'-'+_pad(_dt.getDate())+' '+_pad(_dt.getHours())+':'+_pad(_dt.getMinutes());
-                const _kb = rec.sizeBytes>=1024*1024 ? (rec.sizeBytes/1024/1024).toFixed(1)+' MB' : Math.round(rec.sizeBytes/1024)+' kB';
+                const _dtStr = _fmtDateTime(lang, _dt);
+                const _kb = _fmtSize(lang, rec.sizeBytes);
                 const _kindLabel = rec.kind==='midi' ? 'MIDI' : rec.kind==='score' ? 'MusicXML' : '';
                 return (
                   <div key={rec.id} style={{padding:'12px 14px',borderRadius:12,border:'1px solid rgba(201,168,76,.25)',background:'rgba(201,168,76,.05)',display:'flex',alignItems:'center',gap:10}}>
@@ -19065,7 +19072,7 @@ Hard requirements:
           : _ga ? (({EN:'Gallery',SK:'Galéria',DE:'Galerie',FR:'Galerie',ES:'Galería',PT:'Galeria',zh:'画廊',zhTW:'畫廊',ja:'ギャラリー'})[lang]||'Gallery')
           : /story/.test(lb) ? (t('sizeStory')||'Story') : /web/.test(lb) ? t('sizeWeb') : t('save');
         const _back = prevBackRef.current==='share' ? _stT('share') : prevBackRef.current==='picker' ? _sent(t('save')) : null;
-        const _mb = preview.size>1048576 ? (preview.size/1048576).toFixed(1).replace('.', lang==='EN'||lang==='zh'||lang==='zhTW'||lang==='ja' ? '.' : ',')+' MB' : Math.max(1,Math.round(preview.size/1024))+' KB';
+        const _mb = _fmtSize(lang, preview.size);
         const _tr = lb.includes('transparent');
         const _sv = (d, z)=>(<svg width={z||18} height={z||18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
         return (<>
