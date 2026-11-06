@@ -90,6 +90,14 @@ Free three.
   `?piece=today` opens the painting of the day. Crawlers get `api/og.js` with a card from `public/og/`.
 - **Build identity**: `__BUILD_SHA__` / `__BUILD_ENV__` from Vercel (the footer's build label on previews).
 
+## Built-in pieces
+
+Seven pieces ship as base64 MIDI in `03-i18n.jsx` (`BUILTIN_PIECES` — key, name, bytes; the order is the index
+everywhere). Liebestraum, Bumble-Bee and Metamorphosis One are the original three; Clair de lune, Gymnopédie No.1,
+Für Elise and The Entertainer are public-domain works typeset by the Mutopia Project (public domain) and compiled to
+MIDI with LilyPond. Adding one: a constant pair + an entry in `BUILTIN_PIECES`, a tile in the sample sub-picker and the
+Lite picker, `api/og.js` PIECES, the og cards, the Guide's Music card — `npm run check` names what is missing.
+
 ## Installing on a phone
 
 Open https://paintiano.app/play in Safari / Chrome → Share → **Add to Home Screen**. It opens full screen and works offline.

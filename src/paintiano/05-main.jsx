@@ -3661,7 +3661,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const artistOfDay   = DAILY_ARTIST_POOL[_dailyHash(dailyTick, 7) % DAILY_ARTIST_POOL.length];
   const composerOfDay = DAILY_COMPOSER_POOL[_dailyHash(dailyTick, 11) % DAILY_COMPOSER_POOL.length];
   // the painting of the day: a built-in piece, a painter and his variant, drawn from the date — the same for everyone (the link ?piece=today opens it)
-  const pieceOfDay = _dailyHash(dailyTick, 13) % 3;
+  const pieceOfDay = _dailyHash(dailyTick, 13) % BUILTIN_PIECES.length;
   const dayVariant = _dailyHash(dailyTick, 17) % ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[artistOfDay]>1) ? ARTIST_VARIANT_N[artistOfDay] : 6);
   const dayRef = useRef(null); dayRef.current = {piece:pieceOfDay, artist:artistOfDay, v:dayVariant};
   const isDailyArtist   = useCallback((k)=> proStatus==='free' && k===artistOfDay, [proStatus, artistOfDay]);
@@ -4974,7 +4974,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _paintAddr = ()=>{
     try{
       if(builtinPieceRef.current==null) return null;
-      const pieceKey=['liebestraum','bumblebee','metamorphosis'][builtinPieceRef.current];
+      const pieceKey=BUILTIN_KEYS[builtinPieceRef.current];
       const artKey = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null);
       if(!artKey || (typeof ALL_ARTIST_KEYS!=='undefined' && !ALL_ARTIST_KEYS.includes(artKey)) || artKey==='mosaicFamily') return 'https://paintiano.app/play?piece='+pieceKey;
       const vNow = style ? (phaseIndex|0) : (shufVariant|0);
@@ -4991,7 +4991,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const exportPoster = useCallback(async ()=>{
     try{
       if(builtinPieceRef.current==null){ alert('Poster maker: only built-in sample pieces.'); return; }
-      const pieceKey=['liebestraum','bumblebee','metamorphosis'][builtinPieceRef.current];
+      const pieceKey=BUILTIN_KEYS[builtinPieceRef.current];
       // The painted address, mirroring the paint pipeline exactly:
       //  • manual artist → (style, phaseIndex)
       //  • dice on, no artist → shuffle owns it → (shuffleStyle, shufVariant)
@@ -5304,7 +5304,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{
       const _u=new URLSearchParams(window.location.search);
       const _qp=_u.get('piece');
-      _qidx = _qp==='liebestraum' ? 0 : _qp==='bumblebee' ? 1 : _qp==='metamorphosis' ? 2 : _qp==='today' ? dayRef.current.piece : null;
+      _qidx = _qp==='today' ? dayRef.current.piece : (BUILTIN_KEYS.indexOf(_qp)>=0 ? BUILTIN_KEYS.indexOf(_qp) : null);
       if(_qp==='today'){ qrArtistRef.current=dayRef.current.artist; qrVariantRef.current=dayRef.current.v; }   // the painting of the day, whole
       // ?artist= — the opening artist (the one printed on the poster). Validated
       // against the real key list; painted via the taste-preview REF so a Pro
@@ -5343,9 +5343,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const _cls = _proReadCache() && localStorage.getItem('paintiano_view')==='classic';
       qrStudioRef.current = _qidx!=null && !_wide && !_cls; }catch(_){ qrStudioRef.current=false; }
     // Lite session piece: the QR piece when present, otherwise a RANDOM pick
-    // from the three built-in samples — chosen once per page load so Play,
+    // from the built-in samples — chosen once per page load so Play,
     // Surprise and welcome-back all stay on the same song within a session.
-    litePieceRef.current = (_qidx!=null) ? _qidx : ((Math.random()*3)|0);
+    litePieceRef.current = (_qidx!=null) ? _qidx : ((Math.random()*BUILTIN_PIECES.length)|0);
   }
   // Poster-maker mode: hidden production switch. 7 quick taps on the Paintiano
   // wordmark toggle it; persisted so Rasto's devices keep it on. Zero UI
@@ -10533,12 +10533,12 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   const loadSampleMidi=useCallback((idx, opts)=>{
     setMicArmed(false); setMicContext(false);   // a built-in piece is not a Mic take
     try{
-      const _si=(idx===1||idx===2)?idx:0;
-      const arrayBuffer=b64ToArrayBuffer([SAMPLE_MIDI_B64,SAMPLE_MIDI_B64_2,SAMPLE_MIDI_B64_3][_si]);
+      const _si=(Number.isInteger(idx) && idx>=0 && idx<BUILTIN_PIECES.length) ? idx : 0;
+      const arrayBuffer=b64ToArrayBuffer(BUILTIN_PIECES[_si].b64);
       const{raw,div,temps,skipped}=parseMidi(arrayBuffer);
       const evts=toChords(raw,div,temps);
       if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
-      stopAll();wipeCanvasNow();sigMusicNextRef.current=!(opts && opts.noSig); applyEvents(evts,[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][_si]);
+      stopAll();wipeCanvasNow();sigMusicNextRef.current=!(opts && opts.noSig); applyEvents(evts,BUILTIN_PIECES[_si].name);
       builtinPieceRef.current=_si; // built-in piece owns the canvas → poster tool may fire
       setLoadedSource('midi');
       if(skipped.length){setErr(`Loaded with warnings: track${skipped.length>1?'s':''} ${skipped.join(', ')} skipped (corrupt data).`);setErrInfo(true);}
@@ -15042,7 +15042,7 @@ Hard requirements:
     setRandomMode(false); randomModeRef.current=false;
     if(!A){ loadSampleMidi(qrPieceRef.current); setForceSetup(false); return; }
     tastePreviewKeyRef.current = A;
-    try{ window.__pfQrName=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3][(qrPieceRef.current===1||qrPieceRef.current===2)?qrPieceRef.current:0]; }catch(_){}
+    try{ window.__pfQrName=(BUILTIN_PIECES[qrPieceRef.current]||BUILTIN_PIECES[0]).name; }catch(_){}
     loadSampleMidi(qrPieceRef.current, {noSig:true});
     setStyle(A); setPhaseIndex(qrVariantRef.current|0); setNotesMode(false);
     if(q){ setPainterStage(q.keys.slice()); try{ globalThis.__PAINT_SIG_PHS = _qrPhs(); }catch(_){} if(ensembleActive) setJamOn(true); }
@@ -16240,7 +16240,7 @@ Hard requirements:
   useEffect(()=>{ if(!feedIntro || !playing) return; const tm=setTimeout(()=>setFeedIntro(null), 7700); return ()=>clearTimeout(tm); },[feedIntro, playing]);   // the lines run with the painting, not before it
   const [feedSoundOk, setFeedSoundOk] = useState(false);   // the sound has woken once: from now on a swipe starts the card by itself   // the blurred light behind the card, from the painting as it grows
   const _fUp = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
-  const _FEED_NAMES = [SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3];
+  const _FEED_NAMES = BUILTIN_NAMES;
   // the first screen's painting: THIS piece in THIS look — a tap paints it right there (no slide, the picture melts into it); the first swipe up brings the arc
   const _FEED_FIRST = { piece:PF_FIRST.piece, sel:{ style:PF_FIRST.style, phase:PF_FIRST.phase, mode:'harmony', notes:false, stage:[], sig:false } };
   feedFirstRef.current = (feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first)) || (firstKeptRef.current && feedAt<0 && style===PF_FIRST.style && (phaseIndex|0)===PF_FIRST.phase && !painterStage.length && !sigActive);
@@ -17647,7 +17647,7 @@ Hard requirements:
           if(k==='mfi'){ if(!imgAiBusy && !sourcePickerLocked && aiUsable) setPickMode('imgmood'); return; } if(k==='mood'){ if(!sourcePickerLocked){ setMoodEdit(''); setShowMoodMenu(true); } return; } _tap(k); };
         // after the app was closed there is no draft: the card brings its piece back itself (built-in piece / picture, a mood)
         feedTileRef.current = {t:(k)=>_tap(k), f:(k)=>_fresh(k)};
-        const _rp = _smp ? null : (H.r || (()=>{ const mi=[SAMPLE_MIDI_NAME,SAMPLE_MIDI_NAME_2,SAMPLE_MIDI_NAME_3].indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
+        const _rp = _smp ? null : (H.r || (()=>{ const mi=BUILTIN_NAMES.indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         const _replay = ()=>{
           // the card's own look (a home saved before the look was kept, or a ✦ Signature card: the piece opens on its Signature as before)
@@ -19289,13 +19289,17 @@ Hard requirements:
             </div>
             ) : (sampleSubPick && (pickMode==='sound'||pickMode==='score')) ? (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              {/* SAMPLE SUB-PICKER — three built-in MusicXML pieces. Opened by
+              {/* SAMPLE SUB-PICKER — the seven built-in pieces (BUILTIN_PIECES, in order). Opened by
                   tapping the sample tile in sound/score mode; back returns to
                   the normal picker. Reset on pickMode change via effect. */}
               {[
                 {n:'Liebestraum No.3 — Liszt',d:({EN:'romantic · lyrical',SK:'romantická · lyrická',DE:'romantisch · lyrisch',FR:'romantique · lyrique',ES:'romántica · lírica',PT:'romântica · lírica',zh:'浪漫 · 抒情',zhTW:'浪漫 · 抒情',ja:'ロマンティック · 拒情的'})[lang]||'romantic · lyrical'},
                 {n:'Flight of the Bumble-Bee — Rimsky-Korsakov',d:({EN:'fast · dense',SK:'rýchla · hustá',DE:'schnell · dicht',FR:'rapide · dense',ES:'rápida · densa',PT:'rápida · densa',zh:'快速 · 密集',zhTW:'快速 · 密集',ja:'高速 · 濃密'})[lang]||'fast · dense'},
-                {n:'Metamorphosis One — Philip Glass',d:({EN:'minimal · calm',SK:'minimalistická · pokojná',DE:'minimalistisch · ruhig',FR:'minimaliste · calme',ES:'minimalista · serena',PT:'minimalista · serena',zh:'极简 · 平静',zhTW:'極簡 · 平靜',ja:'ミニマル · 静寂'})[lang]||'minimal · calm'}
+                {n:'Metamorphosis One — Philip Glass',d:({EN:'minimal · calm',SK:'minimalistická · pokojná',DE:'minimalistisch · ruhig',FR:'minimaliste · calme',ES:'minimalista · serena',PT:'minimalista · serena',zh:'极简 · 平静',zhTW:'極簡 · 平靜',ja:'ミニマル · 静寂'})[lang]||'minimal · calm'},
+                {n:'Clair de lune — Debussy',d:({EN:'moonlit · dreamy',SK:'mesačná · snivá',DE:'mondhell · verträumt',FR:'lunaire · rêveuse',ES:'lunar · soñadora',PT:'luar · sonhadora',zh:'月光 · 梦幻',zhTW:'月光 · 夢幻',ja:'月の光 · 夢見る'})[lang]||'moonlit · dreamy'},
+                {n:'Gymnopédie No.1 — Satie',d:({EN:'slow · tender',SK:'pomalá · nežná',DE:'langsam · zart',FR:'lente · tendre',ES:'lenta · tierna',PT:'lenta · terna',zh:'缓慢 · 温柔',zhTW:'緩慢 · 溫柔',ja:'ゆるやか · やさしい'})[lang]||'slow · tender'},
+                {n:'Für Elise — Beethoven',d:({EN:'familiar · playful',SK:'známa · hravá',DE:'vertraut · verspielt',FR:'familière · espiègle',ES:'familiar · juguetona',PT:'familiar · brincalhona',zh:'熟悉 · 俏皮',zhTW:'熟悉 · 俏皮',ja:'おなじみ · 遊び心'})[lang]||'familiar · playful'},
+                {n:'The Entertainer — Joplin',d:({EN:'ragtime · bouncy',SK:'ragtime · poskočná',DE:'Ragtime · beschwingt',FR:'ragtime · sautillante',ES:'ragtime · saltarina',PT:'ragtime · saltitante',zh:'拉格泰姆 · 跳跃',zhTW:'拉格泰姆 · 跳躍',ja:'ラグタイム · はずむ'})[lang]||'ragtime · bouncy'}
               ].map((s,i)=>(
                 <button key={i} onClick={()=>{
                   if(micPainting)stopMicPainting();if(micListening)stopMicListening();setComposeMode(false);
@@ -19331,7 +19335,7 @@ Hard requirements:
                 setPickMode(null);
               }} className="pf-picker-tile pf-pt-ic pf-pt-smp" style={{width:'100%',padding:'14px',background:'rgba(255,255,255,.015)',border:'1px solid rgba(255,255,255,.06)',borderRadius:16,cursor:'pointer',fontFamily:'inherit',textAlign:'center',display:'block',transition:'background-color .18s, border-color .18s'}}>
                 <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,lineHeight:1.2,color:PF.cream,marginBottom:3}}><TxIcon n="play" s={14}/>{_sent(_stripIcon(t('builtInSample')))}</span>
-                <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'Liszt · Rimsky-Korsakov · Glass':pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?'Liszt · Rimsky-Korsakov · Glass':pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:'The Starry Night — Vincent van Gogh'}</span>
+                <span style={{display:'block',fontSize:(.6*effScale)+'rem',color:'rgba(230,222,196,.45)',letterSpacing:0,lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{pickMode==='sound'?'Liszt · Rimsky-Korsakov · Glass · Debussy · Satie · Beethoven · Joplin':pickMode==='midi'?SAMPLE_MIDI_NAME:pickMode==='audio'?SAMPLE_AUDIO_NAME:pickMode==='score'?'Liszt · Rimsky-Korsakov · Glass · Debussy · Satie · Beethoven · Joplin':pickMode==='imgmood'?SAMPLE_IMAGE_MFI_NAME:'The Starry Night — Vincent van Gogh'}</span>
               </button>
 
               {/* FILE TILE — universal upload icon, gold accent, hint shows accepted formats. */}
@@ -22226,6 +22230,10 @@ Hard requirements:
               <button onClick={()=>_loadSampleLite(0)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Liebestraum · Liszt</span></button>
               <button onClick={()=>_loadSampleLite(1)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Bumble-Bee · Rimsky-Korsakov</span></button>
               <button onClick={()=>_loadSampleLite(2)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Metamorphosis · Glass</span></button>
+              <button onClick={()=>_loadSampleLite(3)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Clair de lune · Debussy</span></button>
+              <button onClick={()=>_loadSampleLite(4)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Gymnopédie · Satie</span></button>
+              <button onClick={()=>_loadSampleLite(5)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Für Elise · Beethoven</span></button>
+              <button onClick={()=>_loadSampleLite(6)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>The Entertainer · Joplin</span></button>
               <button onClick={()=>setLiteSamplePick(false)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}><span>‹ {t('backToSetup')||'back'}</span></button>
               </>) : (<>
               <button onClick={()=>setLiteSamplePick(true)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>{ts('useMySongSample','Sample')}</span></button>

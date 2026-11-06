@@ -7,6 +7,10 @@ const PIECES = {
   liebestraum: 'Liebestraum No.3 — Liszt',
   bumblebee: 'Flight of the Bumble-Bee — Rimsky-Korsakov',
   metamorphosis: 'Metamorphosis One — Philip Glass',
+  clairdelune: 'Clair de lune — Debussy',
+  gymnopedie: 'Gymnopédie No.1 — Satie',
+  furelise: 'Für Elise — Beethoven',
+  entertainer: 'The Entertainer — Joplin',
 };
 const ARTISTS = {
   raffel: 'RafFel', lichtenstein: 'Roy Lichtenstein', klee: 'Paul Klee', delaunay: 'Robert Delaunay', picasso: 'Picasso',

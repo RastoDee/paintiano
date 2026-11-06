@@ -123,7 +123,9 @@ function rosterIssues() {
   // api/og.js names every painter; public/og holds a card for every built-in piece × painter
   const og = fs.existsSync('api/og.js') ? fs.readFileSync('api/og.js', 'utf8') : '';
   const ogArtists = objKeys(og, 'ARTISTS'); need('api/og.js ARTISTS', artists, ogArtists); within('api/og.js ARTISTS', ogArtists, artists);
-  for (const pc of ['liebestraum', 'bumblebee', 'metamorphosis']) { const miss = artists.filter((a) => !fs.existsSync(path.join('public', 'og', `${pc}-${a}.jpg`))); if (miss.length) out.push(`public/og: no card for ${pc} × ${miss.join(', ')}`); }
+  const pieces = (read('03-i18n.jsx').match(/key:"([a-z]+)"/g) || []).map((x) => x.slice(5, -1));
+  const ogPieces = objKeys(og, 'PIECES') || []; need('api/og.js PIECES', pieces, ogPieces); within('api/og.js PIECES', ogPieces, pieces);
+  for (const pc of pieces) { const miss = artists.filter((a) => !fs.existsSync(path.join('public', 'og', `${pc}-${a}.jpg`))); if (miss.length) out.push(`public/og: no card for ${pc} × ${miss.join(', ')}`); }
   // the Guide's counts
   const nA = artists.length, nC = composers.length;
   for (const [re, label] of [[/(\d+) painters/g, 'painters'], [/(\d+) composers/g, 'composers'], [/(\d+) maliarov/g, 'maliarov'], [/(\d+) skladateľov/g, 'skladateľov']]) {
