@@ -3694,7 +3694,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Composer mirror of styleIsLocked — Free plays Chopin + Satie + Gershwin; the other
   // four render locked and open the paywall. Never filters setupComposers
   // itself (the saved set survives an upgrade untouched), only gates use.
-  const composerIsLocked = useCallback((key) => proStatus === 'free' && key!==composerOfDay && !FREE_COMPOSER_KEYS.includes(key), [proStatus, composerOfDay]);
+  const [tasteCKey, setTasteCKey] = useState(null);   // the composer being tasted (Free: one taste per session, as for the painters)
+  const cTasteUsedRef = useRef(false);
+  const composerIsLocked = useCallback((key) => proStatus === 'free' && key!==composerOfDay && key!==tasteCKey && !FREE_COMPOSER_KEYS.includes(key), [proStatus, composerOfDay, tasteCKey]);
   // Remembers, per pair, which member the user last selected. So when a pair's
   // button is not currently active (you picked a DIFFERENT artist), tapping it
   // returns to YOUR last choice from that pair — not always the default 'a'.
@@ -15402,12 +15404,16 @@ Hard requirements:
   useLayoutEffect(()=>{ const el=flashBoxRef.current; if(!el) return;
     const fit=()=>{ try{ const card=el.firstElementChild; if(!card) return; const cv=canvasWrapRef.current, r0=cv && cv.getBoundingClientRect();
       // where the painting RESTS: a running slide moves it (translate) for a moment — take that out, so the names do not hop with it
-      let dy=0; if(cv){ try{ const py=(v)=>{ const m=String(v||'').match(/(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/); return (m && m[2]) ? parseFloat(m[2]) : 0; }; dy=py(getComputedStyle(cv).translate)-py(cv.style.translate); }catch(_){} }
-      const r = r0 ? {left:r0.left, width:r0.width, height:r0.height, top:r0.top-dy, bottom:r0.bottom-dy} : null;
+      let dx=0, dy=0; if(cv){ try{ const pxy=(v)=>{ const m=String(v||'').match(/(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/); return m ? [parseFloat(m[1])||0, (m[2]!=null ? parseFloat(m[2]) : 0)] : [0,0]; }; const c=pxy(getComputedStyle(cv).translate), o=pxy(cv.style.translate); dx=c[0]-o[0]; dy=c[1]-o[1]; }catch(_){} }   // a finger's drag or a slide moves it sideways too (a picture after ↑): take both out, or the names land off centre and hop back
+      const r = r0 ? {left:r0.left-dx, width:r0.width, height:r0.height, top:r0.top-dy, bottom:r0.bottom-dy} : null;
       const W=window.innerWidth, H=window.innerHeight; let cx=W/2, cy=H/2, aw=W*0.9, ah=H*0.8;
       if(r && r.width>60 && r.height>60 && r.bottom>0 && r.top<H){ const t=Math.max(r.top,0), b=Math.min(r.bottom,H); cx=r.left+r.width/2; cy=(t+b)/2; aw=r.width*0.92; ah=(b-t)*0.9; }
+      aw=Math.min(aw, W*0.94); ah=Math.min(ah, H*0.9);   // and never wider than the screen itself (a picture wider than the phone)
       const sc=Math.max(0.4, Math.min(1, aw/Math.max(1,card.offsetWidth), ah/Math.max(1,card.offsetHeight)));
-      el.style.left=Math.round(cx)+'px'; el.style.top=Math.round(cy)+'px'; el.style.transform='scale('+sc.toFixed(3)+')'; }catch(_){} };
+      el.style.left=Math.round(cx)+'px'; el.style.top=Math.round(cy)+'px'; el.style.transform='scale('+sc.toFixed(3)+')';
+      // then look where the names really landed: an ancestor that is a containing block (a transform, a filter — iOS) shifts a fixed box
+      // from where it was told to be, and the names ran off the right edge — so measure and move them back by the difference
+      const q=card.getBoundingClientRect(); if(q.width){ const ex=(q.left+q.width/2)-cx, ey=(q.top+q.height/2)-cy; if(Math.abs(ex)>1 || Math.abs(ey)>1){ el.style.left=Math.round(cx-ex)+'px'; el.style.top=Math.round(cy-ey)+'px'; } } }catch(_){} };
     fit(); const t1=setTimeout(fit, 140), t2=setTimeout(fit, 420);   // the painting may still be on its way (the tray, a turn)
     let ro=null; try{ ro=new ResizeObserver(fit); if(el.firstElementChild) ro.observe(el.firstElementChild); }catch(_){}
     window.addEventListener('resize', fit);
@@ -15814,6 +15820,18 @@ Hard requirements:
     fuGoldMemRef.current = (L.gm||[]).slice(); soloGoldRef.current = L.sgm||null;
     if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ const g=songSigRef.current; setTimeout(()=>{ try{ applySigRef.current(g); }catch(_){} }, 0); }
   };
+  // a picture's look: who plays it — the mirror of _stLookNow, so ↓ brings back the composer you came from and ↑ after ↓ goes forward again
+  const _stILookNow = ()=>({ i:true, comp:imgComposerRef.current||null, stage:(composerStageRef.current||[]).slice(), md:mode, cr:!!crOnRef.current, sig:!!imgSigActiveRef.current, dice:!!composerDice, pins:(crPinsRef.current||[]).slice() });
+  const _stILookApply = (L)=>{
+    if(L.sig && !imgSigActiveRef.current && imgSigRef.current){ try{ _applyImgSig(); }catch(_){} return; }
+    if(imgSigActiveRef.current && !L.sig){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; }
+    crOnRef.current=L.cr; setCrOn(L.cr); crPinsRef.current=(L.pins||[]).slice(); setCrPins((L.pins||[]).slice()); setComposerDice(!!L.dice);
+    composerStageRef.current=L.stage.slice(); setComposerStage(L.stage.slice());
+    if(L.comp) _lastComposerRef.current=L.comp; imgComposerRef.current=L.comp; setImgComposer(L.comp);
+    if(L.md && L.md!==mode) setMode(L.md);
+  };
+  const _stAnyApply = (L)=>{ if(L && L.i) _stILookApply(L); else _stLookApply(L); };
+  const _stHistKey = ()=> viewMode==='image' ? ('img:'+(imgNameRef.current||'')) : ((info && info.title) || '');
   // the name over the painting, for a moment (the same as after every ↑ ↓ ← →)
   const _stFlashNow = ()=>{
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
@@ -15821,24 +15839,24 @@ Hard requirements:
   };
   // q: quiet — a finger drags the painting (no slide, no buzz, no name: they come when it lands). True = it changed.
   const _stPrev = (q)=>{
-    if(viewMode==='image' || !((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
-    const H=stLookHistRef.current; if(H.key!==((info && info.title) || '') || !H.st.length){ if(!q) _stBuzz(6); return false; }
+    if(!((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
+    const H=stLookHistRef.current; if(H.key!==_stHistKey() || !H.st.length){ if(!q) _stBuzz(6); return false; }
     nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);   // the look comes back as it was: the shuffle must not draw again on the artist change
-    (H.fw || (H.fw=[])).push(_stLookNow()); if(H.fw.length>20) H.fw.shift();
-    _stLookApply(H.st.pop()); setStFavPend(false);
-    if(!q){ _stBuzz(12); _cvSlide(-1); _stFlashNow(); }
+    (H.fw || (H.fw=[])).push(viewMode==='image' ? _stILookNow() : _stLookNow()); if(H.fw.length>20) H.fw.shift();
+    _stAnyApply(H.st.pop()); setStFavPend(false);
+    if(!q){ _stBuzz(12); if(viewMode!=='image') _cvSlide(-1); _stFlashNow(); }
     return true;
   };
   const _stNext = (q)=>{
-    const _back0 = viewMode!=='image' ? _stLookNow() : null;
+    const _back0 = viewMode==='image' ? _stILookNow() : _stLookNow();
     let rolled = false;
     // after ↓: ↑ brings back the painting you came from (as the surprises do) — a new one is drawn only past the last one seen
-    { const H=stLookHistRef.current, k=(info && info.title) || '';
+    { const H=stLookHistRef.current, k=_stHistKey();
       if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
       if(_back0 && H.fw && H.fw.length && _stUpWorks() && (disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
-        _stLookApply(H.fw.pop()); H.st.push(_back0); if(H.st.length>20) H.st.shift();
-        setStFavPend(false); if(!q){ _stBuzz(12); _stSlide(); _stFlashNow(); }
+        _stAnyApply(H.fw.pop()); H.st.push(_back0); if(H.st.length>20) H.st.shift();
+        setStFavPend(false); if(!q){ _stBuzz(12); if(viewMode!=='image') _stSlide(); _stFlashNow(); }
         return true; } }
     try{
       if(viewMode==='image'){
@@ -15937,7 +15955,7 @@ Hard requirements:
       }
     }catch(_){}
     if(!rolled) return false;
-    if(_back0){ const H=stLookHistRef.current, k=(info && info.title) || ''; if(H.key!==k){ H.key=k; H.st=[]; } H.st.push(_back0); if(H.st.length>20) H.st.shift(); H.fw=[]; }   // a new one: the way forward starts here
+    if(_back0){ const H=stLookHistRef.current, k=_stHistKey(); if(H.key!==k){ H.key=k; H.st=[]; } H.st.push(_back0); if(H.st.length>20) H.st.shift(); H.fw=[]; }   // a new one: the way forward starts here
     setStFavPend(false); try{ localStorage.setItem('paintiano_swiped_up','1'); }catch(_){} _tipDone('up');
     if(!q){ _stBuzz(12); if(viewMode!=='image') _stSlide(); _stFlashNow(); }   // a picture does not change on ↑ (only who plays it): no slide, no blink
     return true;
@@ -18699,6 +18717,8 @@ Hard requirements:
               const _isgK = (imgSigActive && imgSig && imgSig.keys) ? imgSig.keys : [];
               const _cs = [{k:'chopin',n:'Chopin'},{k:'satie',n:'Satie'},{k:'gershwin',n:'Gershwin'},{k:'glass',n:'Glass'},{k:'vine',n:'Carl Vine'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'},{k:'mozart',n:'Mozart'},{k:'schubert',n:'Schubert'},{k:'tchaikovsky',n:'Tchaikovsky'}]
                 .filter(c=>_isgK.includes(c.k) || ((setupComposers.includes(c.k) || isDailyComposer(c.k)) && !composerIsLocked(c.k)));
+              // the Studio's rail shows every composer to Free: the locked ones after the free ones, dimmed with a 🔒 — the ones playing now first (a taste on the first tap, the paywall on the second), as for the painters
+              if(studioFs && proStatus==='free'){ const _now=new Set([imgComposer, ...(composerStage||[]), ..._isgK].filter(Boolean)); const _all=[{k:'chopin',n:'Chopin'},{k:'satie',n:'Satie'},{k:'gershwin',n:'Gershwin'},{k:'glass',n:'Glass'},{k:'vine',n:'Carl Vine'},{k:'yiruma',n:'Yiruma'},{k:'bach',n:'Bach'},{k:'beethoven',n:'Beethoven'},{k:'debussy',n:'Debussy'},{k:'rachmaninov',n:'Rachmaninov'},{k:'einaudi',n:'Einaudi'},{k:'hisaishi',n:'Hisaishi'},{k:'mozart',n:'Mozart'},{k:'schubert',n:'Schubert'},{k:'tchaikovsky',n:'Tchaikovsky'}]; const _lk=_all.filter(c=>composerIsLocked(c.k) && !_cs.some(x=>x.k===c.k)); _cs.push(..._lk.filter(c=>_now.has(c.k)), ..._lk.filter(c=>!_now.has(c.k))); }
               const _rollable = ALL_COMPOSER_KEYS.filter(k=>(setupComposers.includes(k) || isDailyComposer(k)) && !composerIsLocked(k)).length>1;
               // back from AI compose (or a stale compose) to reading the picture
               const _leaveAi = ()=>{ if(imgPlayMode!=='scan' || imgComposeRef.current || !pixelRef.current){ stopAll(); setImgPlayMode('scan'); imgPlayModeRef.current='scan'; leaveImgCompose(); } };
@@ -18746,7 +18766,7 @@ Hard requirements:
                   const sel = !_aiOn && !_cWhite && (_crAll ? _cPinned : (imgComposer===c.k || _cIx>0 || _inSigC));
                   const locked=working;
                   return (
-                    <button key={String(c.k)} disabled={locked} onClick={()=>{ if(locked||anim)return; if(_inSigC && composerIsLocked(c.k)){ setPaywallReason('settings'); return; } _leaveAi();
+                    <button key={String(c.k)} data-lk={composerIsLocked(c.k) ? 1 : 0} disabled={locked} onClick={()=>{ if(locked||anim)return; if(composerIsLocked(c.k)){ if(!cTasteUsedRef.current){ cTasteUsedRef.current=true; setTasteCKey(c.k); try{ window.posthog && window.posthog.capture('taste_preview', { composer:c.k }); }catch(_){} _leaveAi(); if(crOn){ setCrOn(false); crOnRef.current=false; } setComposerDice(false); setComposerStage([]); composerStageRef.current=[]; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); return; } setPaywallReason('settings'); return; } _leaveAi();
                         if(studioFs && crOn){ if(!composerDice) _stCrPinStage(); const had=crPinsRef.current.length; _crPinTap(c.k);   // the Studio's Fusion: a tap pins / unpins (as the painters)
                           if(had>0 && !crPinsRef.current.length && imgPlayModeRef.current==='scan'){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }   // the last gold one let go: a fresh ensemble (2–5)
                           return; }
@@ -18757,7 +18777,7 @@ Hard requirements:
                         if(!_aiOn && imgComposer===c.k && !composerStage.length){ _toScan(); return; }   // the chosen one tapped again → back to SCAN (an artist → Mosaic)
                         _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
                       className={sel?'pf-artist pf-artist-on':'pf-artist'}
-                      data-fu={(studioFs && crOn && (sel || _cIx>=0)) ? 1 : undefined} style={{..._chipBase,order:(studioFs && crOn && (sel || _cIx>=0)) ? -100+Math.max(_cIx,0) : undefined,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...((_cGuest || _cWhite)?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest || _cWhite)}{c.n}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
+                      data-fu={(studioFs && crOn && (sel || _cIx>=0)) ? 1 : undefined} style={{..._chipBase,order:(studioFs && crOn && (sel || _cIx>=0)) ? -100+Math.max(_cIx,0) : undefined,cursor:locked?'default':'pointer',opacity:locked?.5:(_aiOn?.4:1),...(sel?{background:PF.card2,border:'1px solid '+(_cPinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:'rgba(220,180,90,.98)',boxShadow:_cPinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(false)),...((_cGuest || _cWhite)?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>{studioFs && _skinMono(c.k, _cGuest || _cWhite)}{c.n}{composerIsLocked(c.k) && (<span aria-hidden="true" style={{position:'absolute',top:0,right:'calc(50% - 30px)',width:20,height:20,borderRadius:'50%',background:'rgba(7,6,12,.82)',border:'1px solid rgba(242,238,232,.18)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,lineHeight:1,zIndex:2}}>🔒</span>)}{isDailyComposer(c.k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}{_inSigC && !isDailyComposer(c.k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}{_stageBadge(_cIx, ['1','2','3','4','5'], _crAll ? (_cPinned ? 'pin' : 'guest') : undefined)}</button>
                   );
                 })}
               </div>
