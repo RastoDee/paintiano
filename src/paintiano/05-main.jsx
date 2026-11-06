@@ -18785,7 +18785,7 @@ Hard requirements:
             // Taste preview (Free): the previewed Pro artist swaps IN for one
             // pseudo-random free artist (deterministic per preview key), so the
             // cockpit stays at mosaic + 9 — never grows to 10. Ends with the preview.
-            if(!cockpitEdit && proStatus==='free' && tastePreviewKey && _visibleArtists.includes(tastePreviewKey)){
+            if(!studioFs && !cockpitEdit && proStatus==='free' && tastePreviewKey && _visibleArtists.includes(tastePreviewKey)){
               const _frees=_visibleArtists.filter(k=>k!==tastePreviewKey);
               if(_frees.length){
                 let _h=0; for(let _c=0;_c<tastePreviewKey.length;_c++){ _h=(_h*31+tastePreviewKey.charCodeAt(_c))>>>0; }
@@ -18797,6 +18797,8 @@ Hard requirements:
             // member on Free, or one left out of the user's set — so the grid
             // never contradicts the fusion info under it. Gone when ✦ goes off.
             const _sigK = (!cockpitEdit && sigActive && songSig && songSig.keys) ? songSig.keys : [];
+            // the Studio's rail shows every painter: the locked ones after the free ones, dimmed with a 🔒 (a taste on the first tap, the paywall on the second)
+            if(studioFs && !cockpitEdit && proStatus==='free') for(const _k of ALL_ARTIST_KEYS) if(_k!=='mosaicFamily' && !_visibleArtists.includes(_k)) _visibleArtists.push(_k);
             for(const _k of _sigK) if(_k && !_visibleArtists.includes(_k) && ALL_ARTIST_KEYS.includes(_k)) _visibleArtists.push(_k);
             // the Studio: whoever paints the canvas has a chip too (a poster's painter on Free, one left out of your set …) — the faces never contradict the painting
             if(!cockpitEdit && studioFs) for(const _k of [style].concat(painterStage)) if(_k && _k!=='mosaicFamily' && !_visibleArtists.includes(_k) && ALL_ARTIST_KEYS.includes(_k)) _visibleArtists.push(_k);
