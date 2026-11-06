@@ -1,118 +1,85 @@
 # Paintiano — PWA
 
-Music → φ painting. A Progressive Web App that turns songs, MIDI, audio, PDFs, and images into a colored chord painting laid out on the golden-ratio grid.
+Music → φ painting. Every song has its own painting: the app turns songs, MIDI, audio, a mood in words, a live
+performance or a picture into a colour painting on the golden-ratio grid — inspired by 24 painters, the same for everyone.
 
-## What this is
+Live at **https://paintiano.app** (the app at `/play`, the landing at `/`, the concept at `/concept`).
 
-A standalone, installable web app. Same code that ran as a Claude artifact, but unwrapped from the sandbox — so file downloads, the iOS share sheet, the clipboard, and `Add to Home Screen` all work natively.
+## Stack
 
-Built with **Vite + React + Tone.js + vite-plugin-pwa**. No backend. Everything runs in the browser.
+**Vite 5 + React 18 + Tone.js**, `vite-plugin-pwa` (service worker, offline), Vercel (static hosting + a few serverless
+functions under `api/`), Paddle (Pro licences), PostHog (analytics), Anthropic API (AI composing — "How do you feel?",
+Mood from image).
 
-## Quick start (local dev)
+## Quick start
 
-You'll need **Node.js 18+** installed.
+Node.js 18+.
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:5173
+npm run check      # the pre-build guard (see below)
+npm run build      # check → assemble the app → vite build → dist/
+npm run preview    # serve dist/ on http://localhost:4173
 ```
-
-Open http://localhost:5173. Hot-reload on edits.
-
-## Building for production
-
-```bash
-npm run build
-```
-
-Output lands in `dist/`. That folder is a complete static site — drop it on any static host.
-
-To preview the production build locally:
-
-```bash
-npm run preview
-```
-
-It serves on http://localhost:4173.
-
-## Installing on your iPhone (PWA)
-
-Once deployed (see below), open the deployed URL in **Safari** on your iPhone, then:
-
-1. Tap the **Share** icon (square with up arrow) at the bottom
-2. Scroll down → **Add to Home Screen**
-3. Name it "Paintiano" → **Add**
-
-A Paintiano icon appears on your home screen. Tap it — it opens full-screen, no Safari chrome, behaves like a native app. Works offline once cached.
-
-The 🖨 PRINT button will use **real iOS share sheet** and **real file system access** — no clipboard workarounds needed.
-
-## Deployment — pick one
-
-### Option 1: Vercel (easiest, zero config)
-
-1. Push this folder to a GitHub repo
-2. Go to [vercel.com/new](https://vercel.com/new), import the repo
-3. Vercel auto-detects Vite, builds, and deploys. Done in ~30 seconds
-4. Custom domain: optional, free
-
-### Option 2: Netlify (also one-click)
-
-1. Push to GitHub
-2. Go to [app.netlify.com/start](https://app.netlify.com/start), connect the repo
-3. Build command: `npm run build`. Publish directory: `dist`
-4. Deploy
-
-### Option 3: GitHub Pages (free forever)
-
-```bash
-# Build
-npm run build
-
-# Push dist/ to a gh-pages branch (one-time install)
-npm install -g gh-pages
-npx gh-pages -d dist
-```
-
-Then on GitHub repo Settings → Pages → source: `gh-pages` branch.
-
-### Option 4: Any static host
-
-Cloudflare Pages, Firebase Hosting, S3, your own server with nginx — anything that serves static files works. Just upload the contents of `dist/`.
-
-**Important:** the host must serve over **HTTPS** for the PWA to install and for the clipboard / share APIs to work. All four options above provide HTTPS automatically.
 
 ## Project layout
 
 ```
 paintiano-pwa/
-├── package.json          # deps + scripts
-├── vite.config.js        # Vite + PWA plugin config
-├── index.html            # entry HTML
+├── play.html                 # the app shell (OG tags, the boot intro drawn before the script arrives)
+├── index.html                # landing page (static, no React, no service worker)
+├── concept.html              # concept / author page (static)
+├── src/
+│   ├── main.jsx              # React entry: mounts the app, registers the service worker, update toast
+│   ├── paintiano.jsx         # GENERATED — the whole app, assembled from the fragments below (never edit)
+│   ├── paintianoRef.jsx      # the previous build (for diffing)
+│   └── paintiano/            # the SOURCE — raw text slices, concatenated in order by build-paintiano.js
+│       ├── 01-core-head.jsx  #   imports, constants, built-in samples, the piano (S_BASE / S_URLS)
+│       ├── 02-draw.jsx       #   the painters: every drawing function
+│       ├── 03-i18n.jsx       #   UI strings in 9 languages (EN SK DE FR ES PT zh zhTW ja)
+│       ├── 04-songs.jsx      #   Guide, Concept, built-in pieces, Signature, audio render
+│       ├── 05-main.jsx       #   the app: Studio, home / For You, Change, sharing, exports, feed
+│       ├── 06-demo-reel.jsx  #   the demo reel
+│       └── 07-pro.jsx        #   Pro: paywall, licence, watermark
+├── api/                      # Vercel functions
+│   ├── compose.js            #   AI composing (Anthropic), origin allow-list, CORS
+│   ├── og.js                 #   link previews for shared paintings (crawlers only, routed by vercel.json)
+│   ├── validate.js, paddle-webhook.js, webhook.js, keep-alive.js
 ├── public/
-│   ├── favicon.svg       # SVG favicon
-│   ├── icon-192.png      # PWA icon
-│   ├── icon-512.png      # PWA icon
-│   └── icon-maskable.png # Android adaptive icon
-└── src/
-    ├── main.jsx          # React entry
-    └── Paintiano.jsx     # the whole app (BUILD #70)
+│   ├── salamander/           # the piano: 30 Salamander samples (precached → plays offline)
+│   ├── og/                   # link-preview cards, one per built-in piece × painter (rendered in the app)
+│   ├── tour/                 # the in-app tour video (full.mp4) and the 27-second reel (reel.mp4)
+│   ├── samples/, studio/, gallery/, showcase/, book/, landing/
+├── build-paintiano.js        # assembles src/paintiano.jsx from the fragments (CRLF kept, JSX parse check)
+├── check-paintiano.js        # pre-build guard: fixes that must stay, i18n completeness, fragment shape
+├── vite.config.js            # multi-entry build (index / play / concept), PWA manifest + workbox
+├── vercel.json               # rewrites (/play, /concept, crawler → /api/og), cache headers, cron
+└── documentation/            # handover notes per feature
 ```
 
-Everything is in `src/Paintiano.jsx` — about 560 KB of code + embedded Liebestraum MIDI/MP3 samples + Scream image sample. That's the entire app.
+## How to work on it
 
-## Customizing icons / name
-
-- `public/icon-*.png`, `public/favicon.svg` — replace with your own
-- `vite.config.js` → `manifest` section — name, short_name, theme color, etc.
-- `index.html` → `<title>` and `<meta>` tags
+- Edit **only** `src/paintiano/0*.jsx`. `src/paintiano.jsx` is generated by `node build-paintiano.js`.
+- The fragments are raw slices of one file (no import/export between them), so the bracket balance of each one is
+  what it is — `check-paintiano.js` keeps it from drifting and keeps every language complete.
+- Line endings are **CRLF**; in Python open with `newline=''`.
+- i18n changes always touch all 9 languages; when the UI changes, the Guide (04-songs.jsx) says so too.
+- Branches: `dev` deploys the preview, `main` is paintiano.app (`main` = `dev` once checked on the preview).
+- Vercel environment: `ANTHROPIC_API_KEY`, Paddle keys, `EMAIL_BCC` (licence mails), PostHog key in `play.html`.
 
 ## Tech notes
 
-- **Tone.js** loads Salamander Grand piano samples from a CDN. Plays fine on the first interaction; falls back to oscillator synth if blocked.
-- **Service worker** precaches everything for offline use. Bumped cache size limit to 10 MB because the JSX has embedded base64 sample files.
-- **PWA manifest** generated automatically by vite-plugin-pwa at `/manifest.webmanifest`.
+- **The piano** (Salamander, 30 samples, 2 MB) ships with the app and sits in the service worker's precache: it plays
+  offline from the first install and does not depend on a CDN. Falls back to an oscillator synth if a sample is missing.
+- **Playback timing**: every chord has its intended moment (previous moment + written gap); each step wakes 80 ms early
+  and schedules the sound for the moment itself, so a late timer never slows the piece (05-main.jsx, `startPlay`).
+- **Service worker**: `prompt` mode — nothing reloads by itself; the update toast lets the user refresh. `/api/*` is
+  never cached. `/play*` falls back to `play.html` offline.
+- **Shared links**: `/play?piece=…&artist=…&v=…[&with=…]&p=…&t=…` is a painting's address (also the poster QR);
+  `?piece=today` opens the painting of the day. Crawlers get `api/og.js` with a card from `public/og/`.
+- **Build identity**: `__BUILD_SHA__` / `__BUILD_ENV__` from Vercel (the footer's build label on previews).
 
-## License
+## Installing on a phone
 
-Whatever you want. This is your app now.
+Open https://paintiano.app/play in Safari / Chrome → Share → **Add to Home Screen**. It opens full screen and works offline.
