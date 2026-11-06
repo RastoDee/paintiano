@@ -29303,7 +29303,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     };
   };
   const _favCaption = (f)=>{
-    const tpl=(t('storyCaption')||{}), pick=(k)=> tpl[k] || tpl.default || 'music turns into paintings ✦ paintiano.com';
+    const tpl=(t('storyCaption')||{}), pick=(k)=> tpl[k] || tpl.default || 'music turns into paintings ✦ paintiano.app';
     if(f.src==='compose') return pick('compose');
     if(f.src==='mic') return pick('micMusic');
     if(f.mood){ const mn=((t('moodNames')||{})[f.mood]) || f.mood; return pick('mood').replace('{mood}', mn); }
@@ -36440,7 +36440,7 @@ Hard requirements:
   // missing). Mood name (when applicable) is substituted into {mood}.
   const buildStoryCaption=()=>{
     const tpl = (t('storyCaption')||{});
-    const pick = (k)=> tpl[k] || tpl.default || 'music turns into paintings ✦ paintiano.com';
+    const pick = (k)=> tpl[k] || tpl.default || 'music turns into paintings ✦ paintiano.app';
     // Detection order matters — most specific first.
     if(viewMode==='image' && moodFromImg) return pick('moodFromImg');
     if(viewMode==='image') return pick('image');
@@ -36738,7 +36738,8 @@ Hard requirements:
       // Pro (or Pro AI). `isPro` here is `pro || pro_ai` and is `false` while
       // proStatus is still 'loading' — so a fast Free export at app open won't
       // accidentally slip through unwatermarked.
-      applyWatermark(hi, isPro);
+      // The Story picture (what people post) carries the brand in its footer instead: no tiles on it, Free or Pro.
+      if(sizeMode!=='story') applyWatermark(hi, isPro);
       // Optional source-image thumbnail (web/print only) — placed in the dark band
       // under the painting, never on it. Source picked from
       // originalImgUrl (regular image mode) or imgMoodThumb (MFI hand-off).
@@ -36872,7 +36873,7 @@ Hard requirements:
         const INSPIRED_BAR_H = _inspLabel ? 90 : 0;
         const paintingTopMin = (thumbH ? (thumbY + thumbH + THUMB_BOTTOM_GAP) : 160) + INSPIRED_BAR_H;
         const _stW = chords.length ? (X.pcRealW || _pcWeights(chords)) : null;   // the song's colours (between the painting and the wordmark) — the real notes
-        const paintingBottomReserve = 290 + (_stW ? 190 : 0); // mood + wordmark + tagline (+ the song's colours)
+        const paintingBottomReserve = 340 + (_stW ? 190 : 0); // mood + wordmark + the song's name + the address (+ the song's colours)
         const paintingAvailH = SH - paintingTopMin - paintingBottomReserve;
         // Scale painting to fit BOTH dimensions. Width-only scaling overflowed
         // the canvas footer on tall sources (mood-from-image with a portrait
@@ -36924,17 +36925,16 @@ Hard requirements:
         sctx.fillStyle='#f0c040';
         sctx.font='600 64px "Cormorant Garamond", Georgia, serif';
         sctx.fillText('Paintiano', SW/2, cursorY);
-        cursorY += 48;
-        sctx.fillStyle='rgba(201,168,76,.7)';
-        sctx.font='500 28px "Outfit", Arial, sans-serif';
-        sctx.fillText(imageModeStory ? 'φ painting → music' : 'music → φ painting', SW/2, cursorY);
+        cursorY += 50;
+        // the song's name under the wordmark (the tagline when there is none), then the address: the picture carries the brand itself
+        { let _stTitle = String((compositionName||'').trim() || (info && info.title) || '').trim(); if(_stTitle && moodLabel && _stTitle===moodLabel) _stTitle='';   // the mood's line above already names it
+          if(_stTitle){ sctx.fillStyle='rgba(242,238,232,.92)'; let _fz=36; sctx.font=`500 ${_fz}px "Cormorant Garamond", Georgia, serif`; while(_fz>24 && sctx.measureText(_stTitle).width > SW-120){ _fz-=2; sctx.font=`500 ${_fz}px "Cormorant Garamond", Georgia, serif`; } sctx.fillText(_stTitle, SW/2, cursorY); }
+          else if(!moodLabel){ sctx.fillStyle='rgba(201,168,76,.7)'; sctx.font='500 28px "Outfit", Arial, sans-serif'; sctx.fillText(imageModeStory ? 'φ painting → music' : 'music → φ painting', SW/2, cursorY); }
+          cursorY += (_stTitle || !moodLabel) ? 40 : 0;
+          sctx.fillStyle='rgba(201,168,76,.62)'; sctx.font='500 26px "Outfit", Arial, sans-serif'; sctx.fillText('paintiano.app', SW/2, cursorY); }
         outCanvas=st;
-        // Watermark on the Story composite — the one we applied to `hi` above
-        // got shrunk along with the painting when drawImage'd onto this 1080×
-        // 1920 canvas (text 12–30px at hi resolution becomes a smear here).
-        // Re-stamp on the final canvas so Free Story exports still carry the
-        // mark. Pro skips this (applyWatermark is a no-op when isPro=true).
-        applyWatermark(st, isPro);
+        // Pro: the φ signature on the final canvas. Free: nothing more — the footer is the mark.
+        if(isPro) applyWatermark(st, true);
       }
       let blob=await new Promise(res=>outCanvas.toBlob(res,'image/png'));
       let _mime='image/png', _ext='png';
