@@ -4,6 +4,7 @@
     { "path": "/api/keep-alive", "schedule": "0 3 * * *" }
   ],
   "rewrites": [
+    { "source": "/play", "has": [{ "type": "query", "key": "piece" }, { "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|Googlebot|bingbot).*" }], "destination": "/api/og" },
     { "source": "/", "has": [{ "type": "query", "key": "paid" }], "destination": "/play.html" },
     { "source": "/play", "destination": "/play.html" },
     { "source": "/play/:path*", "destination": "/play.html" },
