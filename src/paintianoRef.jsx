@@ -28292,7 +28292,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       return true;
     }
     const key=pool.join(',');
-    if(composerBagKeyRef.current!==key || composerBagRef.current.length===0){
+    if(composerBagKeyRef.current!==key || composerBagRef.current.length===0 || (composerBagRef.current.length===1 && composerBagRef.current[0]===imgComposerRef.current)){   // a bag down to the one playing now: a new bag, so ↑ never comes back empty
       composerBagKeyRef.current=key;
       const arr=pool.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t2=arr[i];arr[i]=arr[j];arr[j]=t2; }
       composerBagRef.current=arr;
@@ -38342,7 +38342,7 @@ Hard requirements:
         if(imgPlayMode!=='compose' && !working && !anim && !recording){
           // Fusion: the gold composers stay, ↑ seats new (white) guests. Solo: a composer you chose (gold) stays, as a chosen painter does;
           // a white one (drawn — or yours tapped again) or Scan: ↑ draws the next one, and it is white too
-          const _soloKept = !crOn && !!imgComposerRef.current && !composerDice;
+          const _soloKept = !crOn && !!imgComposerRef.current && !composerDice && !imgSigActiveRef.current;   // ✦'s composer is the picture's choice, not yours: ↑ draws the next one (the latch lets ✦ go)
           // Solo and Fusion both on: every ↑ draws — the dice say what (0 a solo composer, 1 a new fusion), nobody is kept
           const _mixC = (stMixC && proStatus!=='free') ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
           // as for the painters: the Fusion's gold composers and the Solo's own gold composer are separate choices
@@ -38362,6 +38362,7 @@ Hard requirements:
           else if(_mixC==='solo'){ if(crOn) _stCrSolo(); setComposerDice(true);   // nobody gold: a new composer, drawn
             setTimeout(()=>{ const go=()=>{ try{ composerRollRef.current && composerRollRef.current(); }catch(_){} }; if(playingRef.current) _imgDip(go); else go(); }, 60); rolled = true; }
           else if(!_soloKept){
+            if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && composerStageRef.current.length){ composerStageRef.current=[]; setComposerStage([]); } }   // ↑ from the picture's ✦: the latch lets go (as a painting's ✦ does) — its guests leave with it, the next composer is drawn, the ✦ word goes
             if(!crOn && !composerDice) setComposerDice(true);
             if(crOn && !composerDice) _stCrPinStage();   // a Fusion (e.g. ✦'s ensemble): its gold composers stay, ↑ seats white guests — as for the painters
             if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
@@ -38585,7 +38586,7 @@ Hard requirements:
   const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
   const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
   // ⌃ only where ↑ does something: a painter you chose (gold) stays — there the hint would be wrong
-  const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer) : (!palGold || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
+  const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer || imgSigActive) : (!palGold || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
     if(studioFs && !up && !_tipSeen('up') && _stUpWorks()) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
