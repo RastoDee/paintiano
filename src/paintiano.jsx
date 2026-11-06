@@ -23688,7 +23688,7 @@ const GuideGes = ({lang, rs})=>{
 // when played: they are not in the offline cache (and without a connection neither the ring nor the Guide's video shows).
 const TOUR_VIDEOS = {
   reel:{src:'/tour/reel.mp4', fs:true, d:'r', cues:[[0,'hook',1],[1.8,'song',1],[3.97,'col',1],[7.37,'art',1],[11.33,'swipe',1],[13.9,'photo',1],[16.23,'fav',1]]},
-  full:{src:'/tour/full.mp4', fs:false, d:'f', cues:[[0,'intro',1],[2.6,'song',0],[9.9,'look',1],[13.6,'tap',0],[16.4,'pal',0],[21.8,'fusion',1],[25.4,'pin',0],[28.7,'guests',0],[33.2,'variant',0],[42.1,'painter',1],[52.4,'fav',1],[57.9,'image',1],[71.7,'composer',0],[83.5,'home',1],[88.8,'foryou',0],[94.6,'variant',0],[99.0,'studio2',0]]},
+  full:{src:'/tour/full.mp4', fs:false, d:'f', cues:[[0,'intro',1],[2.6,'song',0],[11.2,'look',1],[16.6,'tap',0],[19.4,'pal',0],[24.8,'fusion',1],[28.4,'pin',0],[31.7,'guests',0],[36.2,'variant',0],[45.1,'painter',1],[58.1,'fav',1],[63.6,'image',1],[77.4,'composer',0],[96.4,'home',1],[101.7,'foryou',0],[107.5,'variant',0],[111.9,'studio2',0]]},
 };
 const TOUR_POSTER = '/tour/poster.webp';
 // *word* = the word in the gold-pink gradient; \n = a new line
@@ -23952,7 +23952,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=> onTour ? onTour('full') : open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
           {onTour ? (<img src={TOUR_POSTER} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'saturate(1.15)',pointerEvents:'none'}}/>) : artBg('blur(2px) brightness(.62) saturate(1.2)')}
           <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 10%,rgba(7,6,12,.86))'}}/>
-          {onTour && (<span aria-hidden="true" style={{position:'absolute',left:14,top:12,display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,fontWeight:800,letterSpacing:'.05em',padding:'4px 10px',borderRadius:99,background:'rgba(7,6,12,.5)',border:'1px solid rgba(255,255,255,.18)'}}><i style={{width:7,height:7,borderRadius:'50%',background:'#ff5f6d',boxShadow:'0 0 8px rgba(255,95,109,.8)'}}/>{TW.ui('vid')} · 1:47</span>)}
+          {onTour && (<span aria-hidden="true" style={{position:'absolute',left:14,top:12,display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,fontWeight:800,letterSpacing:'.05em',padding:'4px 10px',borderRadius:99,background:'rgba(7,6,12,.5)',border:'1px solid rgba(255,255,255,.18)'}}><i style={{width:7,height:7,borderRadius:'50%',background:'#ff5f6d',boxShadow:'0 0 8px rgba(255,95,109,.8)'}}/>{TW.ui('vid')} · 2:00</span>)}
           <span style={{position:'relative',flex:1,minWidth:0}}>
             <span style={{display:'block',fontSize:21*rs,fontWeight:700,lineHeight:1.15}}>{onTour ? TW.ui('t') : (studio ? U.featS : U.featC)}</span>
             <span style={{display:'block',marginTop:5,fontSize:13*rs,color:'rgba(242,238,232,.78)'}}>{onTour ? TW.ui('sub') : (studio ? U.featSsub : U.featCsub)}</span>
