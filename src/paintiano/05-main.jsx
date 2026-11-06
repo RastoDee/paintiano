@@ -1219,12 +1219,185 @@ const GuideGes = ({lang, rs})=>{
     </div>);
 };
 
-const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null}){
+// ── THE TOUR: a video of the app, its words written by the app ──────────────────────────────────────────────
+// Two videos of the real app, played by a finger: the 18 s reel (the story ring on For You, first launches) and the
+// 2-minute tour (the top of the Guide). The videos carry no words — the captions are the app's own text in the user's
+// language, timed to the video (cues: [second, caption, 1 = it opens a chapter = a bar on top]). The videos load only
+// when played: they are not in the offline cache (and without a connection neither the ring nor the Guide's video shows).
+const TOUR_VIDEOS = {
+  reel:{src:'/tour/reel.mp4', fs:true, d:'r', cues:[[0,'hook',1],[1.8,'song',1],[3.97,'col',1],[7.37,'art',1],[11.33,'swipe',1],[13.9,'photo',1],[16.23,'fav',1]]},
+  full:{src:'/tour/full.mp4', fs:false, d:'f', cues:[[0,'intro',1],[2.6,'song',0],[11.2,'look',1],[16.6,'tap',0],[19.4,'pal',0],[24.8,'fusion',1],[28.4,'pin',0],[31.7,'guests',0],[36.2,'variant',0],[45.1,'painter',1],[58.1,'fav',1],[63.6,'image',1],[77.4,'composer',0],[96.4,'home',1],[101.7,'foryou',0],[107.5,'variant',0],[111.9,'studio2',0]]},
+};
+const TOUR_POSTER = '/tour/poster.webp';
+// *word* = the word in the gold-pink gradient; \n = a new line
+const TOUR_I18N = {
+  EN:{ui:{ring:'How it works', nw:'NEW', skip:'Skip', hold:'hold = pause', now:'Now *you* ✦', nowSub:'Every song has its own painting. Tap and yours starts painting.', go:'Tap and paint', again:'Watch again', full:'Full tour · 2 min', err:'The video needs the internet.', t:'Paintiano in 2 minutes', sub:'The whole app — tap, swipe, paint', step:'Step by step', vid:'VIDEO'},
+    r:{hook:'Your music\n*paints itself* 🎨', song:'Pick *any song* 🎵', col:'Tap → *new colours* 🌈', art:'Tap → *new artist* 🖌️', swipe:'Swipe ↑ → *endless remixes* ♾️', photo:'Photos *play music* too 🖼️', fav:'Love it? *Double-tap* ❤️'},
+    f:{intro:['Every song has *its own painting*','A quick tour of Paintiano'], song:['Pick *a song*','your MP3, MIDI, a mood — or a sample'], look:['*Change → Look*','palettes, painters, fusion'], tap:['The music *paints*','every note becomes a colour and a shape'], pal:['Recolour it *live*','tap a palette while it plays'], fusion:['*Fusion* ✦ Pro','painters paint one painting together'], pin:['Tap a painter to *pin 📌*','pinned painters stay'], guests:['Swipe *↑* on the painting','new guests join the pinned ones'], variant:['Swipe *← →*','another variant of the same painting'], painter:['Pick a *painter*','same music, a whole new painting'], fav:['Double-tap *♥*','keep it in your favourites'], image:['A *picture* that plays','composers read its colours'], composer:['Pick a *composer*','same picture, new music'], home:['*Home*','your latest painting waits here'], foryou:['Swipe *↑* — *For You*','paintings picked for you'], studio2:['Tap *Studio*','make it yours']}},
+  SK:{ui:{ring:'Ako na to', nw:'NOVÉ', skip:'Preskočiť', hold:'podrž = pauza', now:'Teraz *ty* ✦', nowSub:'Každá skladba má svoj obraz. Ťukni a tvoja začne maľovať.', go:'Ťukni a maľuj', again:'Pozrieť znova', full:'Celá prehliadka · 2 min', err:'Video potrebuje internet.', t:'Paintiano za 2 minúty', sub:'Celá appka — ťukni, potiahni, maľuj', step:'Krok po kroku', vid:'VIDEO'},
+    r:{hook:'Tvoja hudba\n*sa sama maľuje* 🎨', song:'Vyber *hocijakú pesničku* 🎵', col:'Ťuk → *nové farby* 🌈', art:'Ťuk → *nový umelec* 🖌️', swipe:'Potiahni ↑ → *nové remixy* ♾️', photo:'Aj *fotka hrá* hudbu 🖼️', fav:'Páči sa? *Dvojťuk* ❤️'},
+    f:{intro:['Každá skladba má *svoj obraz*','Rýchla prehliadka Paintiana'], song:['Vyber *skladbu*','tvoje MP3, MIDI, náladu — alebo ukážku'], look:['*Zmeň → Vzhľad*','palety, maliari, fúzia'], tap:['Hudba *maľuje*','z každého tónu farba a tvar'], pal:['Prefarbi ju *naživo*','ťukni na paletu, kým hrá'], fusion:['*Fúzia* ✦ Pro','viac maliarov maľuje jeden obraz'], pin:['Ťukni na maliara — *pripni 📌*','pripnutí maliari ostávajú'], guests:['Potiahni *↑* po maľbe','k pripnutým prídu noví hostia'], variant:['Potiahni *← →*','iný variant tej istej maľby'], painter:['Vyber *maliara*','tá istá hudba, úplne nová maľba'], fav:['Dvakrát ťukni — *♥*','uložíš si ju medzi obľúbené'], image:['*Obraz*, ktorý hrá','skladatelia čítajú jeho farby'], composer:['Vyber *skladateľa*','ten istý obraz, nová hudba'], home:['*Domov*','čaká tu tvoja posledná maľba'], foryou:['Potiahni *↑* — *Pre teba*','maľby vybrané pre teba'], studio2:['Ťukni na *Štúdio*','a je tvoja']}},
+  DE:{ui:{ring:'So geht’s', nw:'NEU', skip:'Überspringen', hold:'halten = Pause', now:'Jetzt *du* ✦', nowSub:'Jeder Song hat sein eigenes Bild. Tippe, und deiner beginnt zu malen.', go:'Tippen und malen', again:'Nochmal ansehen', full:'Ganze Tour · 2 Min.', err:'Das Video braucht Internet.', t:'Paintiano in 2 Minuten', sub:'Die ganze App — tippen, wischen, malen', step:'Schritt für Schritt', vid:'VIDEO'},
+    r:{hook:'Deine Musik\n*malt sich selbst* 🎨', song:'Wähl *irgendeinen Song* 🎵', col:'Tippen → *neue Farben* 🌈', art:'Tippen → *neuer Künstler* 🖌️', swipe:'Wisch ↑ → *endlose Remixe* ♾️', photo:'Auch *Fotos spielen* Musik 🖼️', fav:'Gefällt’s? *Doppeltippen* ❤️'},
+    f:{intro:['Jeder Song hat *sein eigenes Bild*','Paintiano in Kürze'], song:['Wähl *einen Song*','dein MP3, MIDI, eine Stimmung — oder ein Beispiel'], look:['*Ändern → Look*','Paletten, Maler, Fusion'], tap:['Die Musik *malt*','jeder Ton wird Farbe und Form'], pal:['Färb es *live* um','tippe eine Palette, während es spielt'], fusion:['*Fusion* ✦ Pro','mehrere Maler malen ein Bild'], pin:['Tippe einen Maler — *anpinnen 📌*','angepinnte Maler bleiben'], guests:['Wisch *↑* übers Bild','neue Gäste kommen zu den angepinnten'], variant:['Wisch *← →*','eine andere Variante desselben Bildes'], painter:['Wähl einen *Maler*','gleiche Musik, ein ganz neues Bild'], fav:['Doppeltippen *♥*','es landet in deinen Favoriten'], image:['Ein *Bild*, das spielt','Komponisten lesen seine Farben'], composer:['Wähl einen *Komponisten*','gleiches Bild, neue Musik'], home:['*Start*','hier wartet dein letztes Bild'], foryou:['Wisch *↑* — *Für dich*','Bilder, für dich ausgewählt'], studio2:['Tippe *Studio*','und es gehört dir']}},
+  FR:{ui:{ring:'Comment ça marche', nw:'NOUVEAU', skip:'Passer', hold:'maintenir = pause', now:'À *toi* ✦', nowSub:'Chaque morceau a son propre tableau. Touche, et le tien commence à peindre.', go:'Touche et peins', again:'Revoir', full:'Visite complète · 2 min', err:'La vidéo a besoin d’Internet.', t:'Paintiano en 2 minutes', sub:'Toute l’app — touche, glisse, peins', step:'Pas à pas', vid:'VIDÉO'},
+    r:{hook:'Ta musique\n*se peint toute seule* 🎨', song:'Choisis *n’importe quel morceau* 🎵', col:'Touche → *nouvelles couleurs* 🌈', art:'Touche → *nouvel artiste* 🖌️', swipe:'Glisse ↑ → *remix à l’infini* ♾️', photo:'Les *photos jouent* aussi 🖼️', fav:'Coup de cœur ? *Double tap* ❤️'},
+    f:{intro:['Chaque morceau a *son propre tableau*','Paintiano en un clin d’œil'], song:['Choisis *un morceau*','ton MP3, MIDI, une humeur — ou un exemple'], look:['*Changer → Style*','palettes, peintres, fusion'], tap:['La musique *peint*','chaque note devient couleur et forme'], pal:['Recolore-le *en direct*','touche une palette pendant qu’il joue'], fusion:['*Fusion* ✦ Pro','plusieurs peintres peignent un seul tableau'], pin:['Touche un peintre — *épingle 📌*','les peintres épinglés restent'], guests:['Glisse *↑* sur le tableau','de nouveaux invités rejoignent les épinglés'], variant:['Glisse *← →*','une autre variante du même tableau'], painter:['Choisis un *peintre*','même musique, un tout nouveau tableau'], fav:['Touche deux fois *♥*','il rejoint tes favoris'], image:['Une *image* qui joue','les compositeurs lisent ses couleurs'], composer:['Choisis un *compositeur*','même image, nouvelle musique'], home:['*Accueil*','ton dernier tableau t’attend ici'], foryou:['Glisse *↑* — *Pour toi*','des tableaux choisis pour toi'], studio2:['Touche *Studio*','il est à toi']}},
+  ES:{ui:{ring:'Cómo funciona', nw:'NUEVO', skip:'Saltar', hold:'mantén = pausa', now:'Ahora *tú* ✦', nowSub:'Cada canción tiene su propia pintura. Toca y la tuya empieza a pintar.', go:'Toca y pinta', again:'Ver otra vez', full:'Recorrido completo · 2 min', err:'El vídeo necesita internet.', t:'Paintiano en 2 minutos', sub:'Toda la app — toca, desliza, pinta', step:'Paso a paso', vid:'VÍDEO'},
+    r:{hook:'Tu música\n*se pinta sola* 🎨', song:'Elige *cualquier canción* 🎵', col:'Toca → *nuevos colores* 🌈', art:'Toca → *nuevo artista* 🖌️', swipe:'Desliza ↑ → *remixes sin fin* ♾️', photo:'Las *fotos también suenan* 🖼️', fav:'¿Te gusta? *Doble toque* ❤️'},
+    f:{intro:['Cada canción tiene *su propia pintura*','Un recorrido rápido por Paintiano'], song:['Elige *una canción*','tu MP3, MIDI, un estado de ánimo — o un ejemplo'], look:['*Cambiar → Aspecto*','paletas, pintores, fusión'], tap:['La música *pinta*','cada nota se vuelve color y forma'], pal:['Cambia los colores *en vivo*','toca una paleta mientras suena'], fusion:['*Fusión* ✦ Pro','varios pintores pintan un solo cuadro'], pin:['Toca un pintor — *fíjalo 📌*','los pintores fijados se quedan'], guests:['Desliza *↑* sobre la pintura','llegan invitados nuevos junto a los fijados'], variant:['Desliza *← →*','otra variante de la misma pintura'], painter:['Elige un *pintor*','la misma música, una pintura nueva'], fav:['Doble toque *♥*','se guarda en tus favoritos'], image:['Una *imagen* que suena','los compositores leen sus colores'], composer:['Elige un *compositor*','la misma imagen, música nueva'], home:['*Inicio*','aquí te espera tu última pintura'], foryou:['Desliza *↑* — *Para ti*','pinturas elegidas para ti'], studio2:['Toca *Estudio*','y es tuya']}},
+  PT:{ui:{ring:'Como funciona', nw:'NOVO', skip:'Saltar', hold:'segura = pausa', now:'Agora *tu* ✦', nowSub:'Cada música tem a sua pintura. Toca e a tua começa a pintar.', go:'Toca e pinta', again:'Ver outra vez', full:'Visita completa · 2 min', err:'O vídeo precisa de internet.', t:'Paintiano em 2 minutos', sub:'A app inteira — toca, desliza, pinta', step:'Passo a passo', vid:'VÍDEO'},
+    r:{hook:'A tua música\n*pinta-se sozinha* 🎨', song:'Escolhe *qualquer música* 🎵', col:'Toca → *novas cores* 🌈', art:'Toca → *novo artista* 🖌️', swipe:'Desliza ↑ → *remixes sem fim* ♾️', photo:'As *fotos também tocam* 🖼️', fav:'Gostas? *Toque duplo* ❤️'},
+    f:{intro:['Cada música tem *a sua pintura*','Uma visita rápida ao Paintiano'], song:['Escolhe *uma música*','o teu MP3, MIDI, um estado de espírito — ou um exemplo'], look:['*Mudar → Visual*','paletas, pintores, fusão'], tap:['A música *pinta*','cada nota torna-se cor e forma'], pal:['Muda as cores *ao vivo*','toca numa paleta durante a música'], fusion:['*Fusão* ✦ Pro','vários pintores pintam um só quadro'], pin:['Toca num pintor — *fixa-o 📌*','os pintores fixados ficam'], guests:['Desliza *↑* na pintura','novos convidados juntam-se aos fixados'], variant:['Desliza *← →*','outra variante da mesma pintura'], painter:['Escolhe um *pintor*','a mesma música, uma pintura nova'], fav:['Toque duplo *♥*','fica nos teus favoritos'], image:['Uma *imagem* que toca','os compositores leem as suas cores'], composer:['Escolhe um *compositor*','a mesma imagem, nova música'], home:['*Início*','a tua última pintura espera aqui'], foryou:['Desliza *↑* — *Para ti*','pinturas escolhidas para ti'], studio2:['Toca em *Estúdio*','e é tua']}},
+  zh:{ui:{ring:'怎么玩', nw:'新', skip:'跳过', hold:'按住 = 暂停', now:'轮到*你*了 ✦', nowSub:'每首歌都有属于自己的画。点一下，你的歌就开始作画。', go:'点一下，开画', again:'再看一遍', full:'完整导览 · 2 分钟', err:'视频需要联网。', t:'2 分钟看懂 Paintiano', sub:'整个应用——点、滑、画', step:'一步一步', vid:'视频'},
+    r:{hook:'你的音乐\n*自己会画画* 🎨', song:'选*任意一首歌* 🎵', col:'点一下 → *换种颜色* 🌈', art:'点一下 → *换个画家* 🖌️', swipe:'上滑 ↑ → *无限混搭* ♾️', photo:'*照片*也能*奏乐* 🖼️', fav:'喜欢？*双击* ❤️'},
+    f:{intro:['每首歌都有*自己的画*','Paintiano 快速导览'], song:['选*一首歌*','你的 MP3、MIDI、一种心情——或示例'], look:['*更换 → 外观*','调色板、画家、融合'], tap:['音乐在*作画*','每个音符都化为颜色和形状'], pal:['*实时*换色','播放时点一个调色板'], fusion:['*融合* ✦ Pro','多位画家合画一幅画'], pin:['点画家——*钉住 📌*','钉住的画家会留下'], guests:['在画上*上滑 ↑*','新的客人加入钉住的画家'], variant:['*左右滑 ← →*','同一幅画的另一种变体'], painter:['选一位*画家*','同样的音乐，全新的画'], fav:['双击 *♥*','收进你的收藏'], image:['会*演奏*的图片','作曲家读出它的颜色'], composer:['选一位*作曲家*','同一幅图，新的音乐'], home:['*首页*','你最近的画在这里等你'], foryou:['*上滑 ↑* —— *推荐*','为你挑选的画'], studio2:['点*工作室*','它就是你的了']}},
+  zhTW:{ui:{ring:'怎麼玩', nw:'新', skip:'跳過', hold:'按住 = 暫停', now:'輪到*你*了 ✦', nowSub:'每首歌都有屬於自己的畫。點一下，你的歌就開始作畫。', go:'點一下，開畫', again:'再看一遍', full:'完整導覽 · 2 分鐘', err:'影片需要連網。', t:'2 分鐘看懂 Paintiano', sub:'整個應用——點、滑、畫', step:'一步一步', vid:'影片'},
+    r:{hook:'你的音樂\n*自己會畫畫* 🎨', song:'選*任何一首歌* 🎵', col:'點一下 → *換種顏色* 🌈', art:'點一下 → *換個畫家* 🖌️', swipe:'上滑 ↑ → *無限混搭* ♾️', photo:'*照片*也能*奏樂* 🖼️', fav:'喜歡？*雙擊* ❤️'},
+    f:{intro:['每首歌都有*自己的畫*','Paintiano 快速導覽'], song:['選*一首歌*','你的 MP3、MIDI、一種心情——或範例'], look:['*更換 → 外觀*','調色盤、畫家、融合'], tap:['音樂在*作畫*','每個音符都化為顏色和形狀'], pal:['*即時*換色','播放時點一個調色盤'], fusion:['*融合* ✦ Pro','多位畫家合畫一幅畫'], pin:['點畫家——*釘住 📌*','釘住的畫家會留下'], guests:['在畫上*上滑 ↑*','新的客人加入釘住的畫家'], variant:['*左右滑 ← →*','同一幅畫的另一種變體'], painter:['選一位*畫家*','同樣的音樂，全新的畫'], fav:['點兩下 *♥*','收進你的收藏'], image:['會*演奏*的圖片','作曲家讀出它的顏色'], composer:['選一位*作曲家*','同一張圖，新的音樂'], home:['*首頁*','你最近的畫在這裡等你'], foryou:['*上滑 ↑* —— *推薦*','為你挑選的畫'], studio2:['點*工作室*','它就是你的了']}},
+  ja:{ui:{ring:'使い方', nw:'NEW', skip:'スキップ', hold:'長押し = 一時停止', now:'次は*あなた* ✦', nowSub:'どの曲にも、その曲だけの絵がある。タップすると、あなたの曲が描き始める。', go:'タップして描く', again:'もう一度見る', full:'フルツアー · 2分', err:'動画の再生にはインターネットが必要です。', t:'2分でわかる Paintiano', sub:'アプリのすべて — タップ、スワイプ、描く', step:'ステップごとに', vid:'動画'},
+    r:{hook:'あなたの音楽が\n*絵を描く* 🎨', song:'*好きな曲*を選ぶ 🎵', col:'タップ → *新しい色* 🌈', art:'タップ → *別の画家* 🖌️', swipe:'上へスワイプ → *無限リミックス* ♾️', photo:'*写真*も*音楽になる* 🖼️', fav:'気に入った？*ダブルタップ* ❤️'},
+    f:{intro:['どの曲にも*自分だけの絵*がある','Paintiano クイックツアー'], song:['*曲*を選ぶ','MP3、MIDI、気分 — またはサンプル'], look:['*変える → 見た目*','パレット、画家、フュージョン'], tap:['音楽が*描く*','ひとつひとつの音が色と形になる'], pal:['*リアルタイム*で色替え','再生中にパレットをタップ'], fusion:['*フュージョン* ✦ Pro','何人もの画家が一枚の絵を描く'], pin:['画家をタップして*ピン留め 📌*','ピン留めした画家は残る'], guests:['絵の上で*上へスワイプ ↑*','ピン留めした画家に新しいゲストが加わる'], variant:['*左右にスワイプ ← →*','同じ絵の別バリエーション'], painter:['*画家*を選ぶ','同じ音楽で、まったく新しい絵'], fav:['ダブルタップで *♥*','お気に入りに保存'], image:['*音を奏でる*写真','作曲家がその色を読む'], composer:['*作曲家*を選ぶ','同じ写真に、新しい音楽'], home:['*ホーム*','最後の絵がここで待っている'], foryou:['*上へスワイプ ↑* — *おすすめ*','あなたのために選んだ絵'], studio2:['*スタジオ*をタップ','それはもうあなたのもの']}},
+};
+const tourWords = (lang)=>{ const L=TOUR_I18N[lang]||TOUR_I18N.EN, E=TOUR_I18N.EN; return { ui:(k)=>(L.ui[k]!==undefined ? L.ui[k] : E.ui[k]), cap:(d,k)=>((L[d] && L[d][k]!==undefined) ? L[d][k] : E[d][k]) }; };
+const tourRich = (s)=> String(s||'').split('*').map((x,i)=> i%2 ? (<b key={i}>{x}</b>) : x);
+const TOUR_CSS = `
+.pf-tour{position:fixed;inset:0;z-index:100050;background:#07060c;color:#f2eee8;font-family:'Outfit','Helvetica Neue',Arial,sans-serif;display:flex;justify-content:center;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+.pf-tour-in{position:relative;width:100%;max-width:480px;height:100%;overflow:hidden;cursor:pointer}
+.pf-tour-glow{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 42%,#1d1630,#07060c 70%)}
+.pf-tour-vw{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 128px);bottom:calc(env(safe-area-inset-bottom,0px) + 70px);display:flex;justify-content:center;align-items:flex-start}
+.pf-tour-vw .pf-tour-v{height:100%;width:auto;max-width:86%;aspect-ratio:9/16;object-fit:cover;border-radius:22px;background:#07060c;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(240,199,94,.25)}
+.pf-tour-vw.fs{inset:0}
+.pf-tour-vw.fs .pf-tour-v{width:100%;height:100%;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none}
+.pf-tour-shade{position:absolute;left:0;right:0;top:0;height:150px;background:linear-gradient(180deg,rgba(7,6,12,.72),rgba(7,6,12,0));pointer-events:none}
+.pf-tour-bars{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;display:flex;gap:4px;z-index:4}
+.pf-tour-bars span{flex:1;height:3px;border-radius:2px;background:rgba(242,238,232,.25);overflow:hidden}
+.pf-tour-bars span.d{background:rgba(242,238,232,.92)}
+.pf-tour-bars i{display:block;height:100%;width:0;background:rgba(242,238,232,.92)}
+.pf-tour-hd{position:absolute;top:calc(env(safe-area-inset-top,0px) + 22px);left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;z-index:4;cursor:default}
+.pf-tour-hd .tt{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:13.5px;font-weight:600;color:rgba(242,238,232,.86);text-shadow:0 1px 8px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-tour-hd .tt em{font-style:normal;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:20px;color:#f0c75e}
+.pf-tour-hd>div:last-child{display:flex;flex-shrink:0}
+.pf-tour-bt{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(7,6,12,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;padding:0;margin-left:8px;cursor:pointer}
+.pf-tour-cap{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 64px);width:max-content;max-width:min(92%,440px);box-sizing:border-box;transform:translateX(-50%) rotate(-2.5deg);background:rgba(14,10,24,.86);border:1.5px solid rgba(255,255,255,.14);border-radius:22px;padding:10px 20px 13px;text-align:center;box-shadow:0 12px 34px rgba(0,0,0,.5);pointer-events:none;z-index:3;animation:pfTourPop .34s cubic-bezier(.2,1.4,.4,1) both}
+.pf-tour.fs .pf-tour-cap{top:27%}
+.pf-tour-cap .l{font-weight:800;font-size:calc(var(--pf-read-scale,1) * 25px);line-height:1.1;letter-spacing:-.4px}
+.pf-tour.fs .pf-tour-cap .l{font-size:calc(var(--pf-read-scale,1) * 31px);letter-spacing:-.7px}
+.pf-tour-cap .s{margin-top:5px;font-weight:500;font-size:calc(var(--pf-read-scale,1) * 14px);line-height:1.3;color:rgba(242,238,232,.76)}
+.pf-tour b{font-weight:800;background:linear-gradient(90deg,#ff5fa2,#ff9d4d 45%,#f0c75e);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pf-tour-ft{position:absolute;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;align-items:center;justify-content:space-between;z-index:4;cursor:default}
+.pf-tour-ft .h{font-size:12px;color:rgba(242,238,232,.72);text-shadow:0 1px 8px rgba(0,0,0,.85);transition:opacity .6s}
+.pf-tour-sk{font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:99px;background:rgba(7,6,12,.5);border:1px solid rgba(255,255,255,.15);color:#f2eee8;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.pf-tour-err{position:absolute;left:24px;right:24px;top:45%;text-align:center;font-size:15px;color:rgba(242,238,232,.8);z-index:4}
+.pf-tour-end{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:0 28px;overflow:hidden;cursor:default;animation:pfTourFade .45s ease both}
+.pf-tour-end .bg{position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(24px) brightness(.36) saturate(1.3);z-index:-1}
+.pf-tour-end .lg{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:54px;line-height:1;color:#f0c75e;text-shadow:0 6px 30px rgba(0,0,0,.5)}
+.pf-tour-end .h{font-weight:800;font-size:calc(var(--pf-read-scale,1) * 36px);letter-spacing:-.8px;line-height:1.1}
+.pf-tour-end .s{font-size:calc(var(--pf-read-scale,1) * 15px);line-height:1.45;color:rgba(242,238,232,.8);max-width:300px}
+.pf-tour-go{margin-top:12px;font-family:inherit;border:0;cursor:pointer;padding:15px 30px;border-radius:99px;font-weight:800;font-size:18px;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;box-shadow:0 12px 34px rgba(201,168,76,.45)}
+.pf-tour-lk{font-family:inherit;border:0;background:none;color:rgba(242,238,232,.74);font-size:14px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pf-tour-lk.g{color:#f0c75e;font-weight:600}
+.pf-tour-ring{position:absolute;left:0;top:calc(100% + 30px);display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;padding:0;margin:0;cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;font-family:'Outfit',system-ui,sans-serif;animation:pfTourFade .5s ease both}
+.pf-tour-ring .r{position:relative;width:62px;height:62px;border-radius:50%;padding:3px;background:conic-gradient(from 200deg,#ff5fa2,#ff9d4d,#f0c75e,#ff5fa2);box-shadow:0 6px 20px rgba(0,0,0,.5);animation:pfTourPulse 2.6s ease-in-out infinite}
+.pf-tour-ring .r>i{display:block;width:100%;height:100%;border-radius:50%;padding:3px;background:#07060c}
+.pf-tour-ring img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.pf-tour-ring .n{position:absolute;right:-8px;bottom:-3px;font-size:9.5px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:99px;background:#ff5f6d;color:#fff;border:2px solid #07060c;line-height:1.2}
+.pf-tour-ring .lb{font-size:calc(var(--pf-read-scale,1) * 12px);font-weight:700;color:#f2eee8;padding:2px 9px;border-radius:99px;background:rgba(7,6,12,.62);white-space:nowrap}
+.pf-tour-ring:active .r{transform:scale(.94)}
+@keyframes pfTourPop{from{opacity:0;transform:translateX(-50%) translateY(14px) rotate(-2.5deg) scale(.92)}to{opacity:1;transform:translateX(-50%) rotate(-2.5deg)}}
+@keyframes pfTourFade{from{opacity:0}to{opacity:1}}
+@keyframes pfTourPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@media (orientation:landscape) and (max-height:520px){.pf-tour-ring{display:none}}
+@media (prefers-reduced-motion:reduce){.pf-tour-ring .r{animation:none}.pf-tour-cap{animation:none}}
+`;
+// The player: a story of the video — bars on top (chapters), a tap on the left third = back a chapter, elsewhere = next,
+// a finger held = pause, pulled down = close. At the end: "Now you ✦ — Tap and paint" closes it and plays.
+const TourPlayer = memo(function TourPlayer({kind, lang, onClose, onPlay, onFull}){
+  const V = TOUR_VIDEOS[kind] || TOUR_VIDEOS.reel;
+  const W = tourWords(lang);
+  const panelRef = useRef(null), vRef = useRef(null), fillRef = useRef(null), fRef = useRef({on:false, held:false, timer:0, x:0, y:0});
+  const [cue, setCue] = useState(0);
+  const [ended, setEnded] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [err, setErr] = useState(false);
+  const [hint, setHint] = useState(true);
+  useModalFocusTrap(panelRef);
+  const chs = useMemo(()=> V.cues.map((c,i)=>i).filter(i=>V.cues[i][2]), [V]);   // the cues that open a chapter
+  const chOf = (ci)=>{ let k=0; for(let j=0;j<chs.length;j++) if(chs[j]<=ci) k=j; return k; };
+  const ch = chOf(cue);
+  const cueRef = useRef(0); cueRef.current = cue;
+  // the clock: the caption on screen and the fill of the chapter's bar follow the video
+  useEffect(()=>{ let raf=0; const f=()=>{ const v=vRef.current; if(v){ const t=v.currentTime||0; let ci=0; for(let i=0;i<V.cues.length;i++) if(V.cues[i][0]<=t+0.05) ci=i;
+        if(ci!==cueRef.current) setCue(ci);
+        const k=chOf(ci), a=V.cues[chs[k]][0], b=(k+1<chs.length) ? V.cues[chs[k+1]][0] : (v.duration||a+1), el=fillRef.current;
+        if(el) el.style.width = Math.max(0, Math.min(100, (t-a)/Math.max(.1, b-a)*100))+'%'; }
+      raf=requestAnimationFrame(f); };
+    raf=requestAnimationFrame(f); return ()=>cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [V]);
+  const play = ()=>{ const v=vRef.current; if(!v) return; const p=v.play(); if(p && p.catch) p.catch(()=>{ v.muted=true; setMuted(true); v.play().catch(()=>{}); }); };   // the sound needs a tap on some phones: then it starts muted (🔇 → 🔊)
+  useEffect(()=>{ play(); const h=setTimeout(()=>setHint(false), 3800); return ()=>clearTimeout(h);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const toEnd = ()=>{ const v=vRef.current; if(v) v.pause(); setEnded(true); };
+  const jump = (d)=>{ const v=vRef.current; if(!v || ended) return; const t=v.currentTime||0, k=chOf(cueRef.current), a=V.cues[chs[k]][0];
+    if(d<0) v.currentTime = (t-a>1.2 || k===0) ? a : V.cues[chs[k-1]][0];
+    else if(k+1<chs.length) v.currentTime = V.cues[chs[k+1]][0];
+    else { toEnd(); return; }
+    if(v.paused) play(); };
+  useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); onClose(); }
+      else if(!ended && (e.key==='ArrowRight' || e.key==='ArrowLeft')){ e.preventDefault(); e.stopPropagation(); jump(e.key==='ArrowRight' ? 1 : -1); }
+      else if(!ended && e.key===' '){ e.preventDefault(); e.stopPropagation(); const v=vRef.current; if(v){ if(v.paused) play(); else v.pause(); } } };
+    window.addEventListener('keydown', onKey, true); return ()=>window.removeEventListener('keydown', onKey, true); });
+  const pDown = (e)=>{ if(ended) return; const F=fRef.current; F.on=true; F.held=false; F.x=e.clientX; F.y=e.clientY; clearTimeout(F.timer);
+    F.timer=setTimeout(()=>{ const v=vRef.current; if(v && !v.paused){ v.pause(); F.held=true; } }, 260); };
+  const pUp = (e)=>{ const F=fRef.current; if(!F.on) return; F.on=false; clearTimeout(F.timer); if(F.held){ F.held=false; play(); return; }
+    const dx=e.clientX-F.x, dy=e.clientY-F.y; if(dy>80 && dy>Math.abs(dx)*1.2){ onClose(); return; } if(Math.abs(dx)>14 || Math.abs(dy)>14) return;
+    const r=e.currentTarget.getBoundingClientRect(); jump((e.clientX-r.left) < r.width*.3 ? -1 : 1); };
+  const pCancel = ()=>{ const F=fRef.current; if(!F.on) return; F.on=false; clearTimeout(F.timer); if(F.held){ F.held=false; play(); } };
+  const again = ()=>{ const v=vRef.current; setEnded(false); setErr(false); setCue(0); if(v){ v.currentTime=0; play(); } };
+  const mute = (e)=>{ e.stopPropagation(); const v=vRef.current, m=!muted; setMuted(m); if(v){ v.muted=m; if(!m && v.paused && !ended) play(); } };
+  const stop = (e)=>e.stopPropagation();
+  const c = W.cap(V.d, V.cues[cue][1]);
+  const ico = (d, z)=>(<svg width={z||16} height={z||16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
+  return (
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label={kind==='full' ? W.ui('t') : W.ui('ring')} className={'pf-tour'+(V.fs ? ' fs' : '')} onTouchStart={stop} onTouchEnd={stop}>
+      <style>{TOUR_CSS}</style>
+      <div className="pf-tour-in" onPointerDown={pDown} onPointerUp={pUp} onPointerCancel={pCancel} onPointerLeave={pCancel}>
+        {!V.fs && (<div className="pf-tour-glow" aria-hidden="true"/>)}
+        <div className={'pf-tour-vw'+(V.fs ? ' fs' : '')}><video ref={vRef} className="pf-tour-v" src={V.src} poster={TOUR_POSTER} playsInline preload="auto" onEnded={()=>setEnded(true)} onError={()=>setErr(true)}/></div>
+        {V.fs && (<div className="pf-tour-shade" aria-hidden="true"/>)}
+        <div className="pf-tour-bars" aria-hidden="true">{chs.map((ci,j)=> (j===ch && !ended) ? (<span key={j}><i ref={fillRef}/></span>) : (<span key={j} className={(j<ch || ended) ? 'd' : ''}/>))}</div>
+        <div className="pf-tour-hd" onPointerDown={stop} onPointerUp={stop}>
+          <div className="tt"><em>Paintiano</em>{kind==='full' ? W.ui('full') : W.ui('ring')}</div>
+          <div><button type="button" className="pf-tour-bt" onClick={mute} aria-label={muted ? 'sound' : 'mute'}>{muted ? ico(<><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M23 9l-6 6M17 9l6 6"/></>) : ico(<><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></>)}</button>
+            <button type="button" className="pf-tour-bt" onClick={(e)=>{ e.stopPropagation(); onClose(); }} aria-label="close">{ico(<path d="M6 6l12 12M18 6L6 18"/>, 15)}</button></div>
+        </div>
+        {!ended && !err && c && (<div key={cue} className="pf-tour-cap" aria-live="polite">{Array.isArray(c)
+          ? (<><div className="l">{tourRich(c[0])}</div>{c[1] && (<div className="s">{c[1]}</div>)}</>)
+          : String(c).split('\n').map((x,i)=>(<div key={i} className="l">{tourRich(x)}</div>))}</div>)}
+        {err && !ended && (<div className="pf-tour-err">{W.ui('err')}</div>)}
+        {!ended && (<div className="pf-tour-ft" onPointerDown={stop} onPointerUp={stop}><span className="h" style={{opacity:hint ? 1 : 0}}>{W.ui('hold')}</span><button type="button" className="pf-tour-sk" onClick={(e)=>{ e.stopPropagation(); toEnd(); }}>{W.ui('skip')} ›</button></div>)}
+        {ended && (<div className="pf-tour-end" onPointerDown={stop} onPointerUp={stop}>
+          <div className="bg" style={{backgroundImage:'url('+TOUR_POSTER+')'}} aria-hidden="true"/>
+          <div className="lg">Paintiano</div>
+          <div className="h">{tourRich(W.ui('now'))}</div>
+          <div className="s">{W.ui('nowSub')}</div>
+          <button type="button" className="pf-tour-go" onClick={(e)=>{ e.stopPropagation(); onPlay(); }}>✦ {W.ui('go')}</button>
+          <button type="button" className="pf-tour-lk" onClick={(e)=>{ e.stopPropagation(); again(); }}>↻ {W.ui('again')}</button>
+          {kind!=='full' && onFull && (<button type="button" className="pf-tour-lk g" onClick={(e)=>{ e.stopPropagation(); onFull(); }}><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>{W.ui('full')}</button>)}
+        </div>)}
+      </div>
+    </div>);
+});
+
+const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null, onTour=null}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   const rs = readScale || 1;
   const _cap = (s)=>{ s=String(s||''); return s.charAt(0).toLocaleUpperCase()+s.slice(1); };
   const U = getGuideUI(lang);
+  const TW = tourWords(lang);
   const all = useMemo(()=>getGuideCards(lang, studio), [lang, studio]);
   const concept = useMemo(()=>getConceptCards(lang), [lang]);
   const bookCard = useMemo(()=>({id:'book', book:true, title:t('bookTitle')||'The Book', body:ts('bookDesc',''), cta:ts('bookExcerptCta','Book summary')}), [t, ts]);
@@ -1258,7 +1431,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(()=>{
-    const onKey=(e)=>{ if(focusedInput==='guide') return;
+    const onKey=(e)=>{ if(focusedInput==='guide') return; if(document.querySelector('.pf-tour')) return;   // the tour video over the Guide takes its own keys
       if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); if(sheet) setSheet(false); else if(story) closeStory(); else onClose(); return; }
       if(!story || sheet) return;
       if(e.key==='ArrowRight' || e.key==='ArrowDown'){ e.preventDefault(); go(1); }
@@ -1314,15 +1487,17 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             </button>))}
         </div>
       ) : (<>
-        <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=>open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-          {artBg('blur(2px) brightness(.62) saturate(1.2)')}
+        <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=> onTour ? onTour('full') : open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+          {onTour ? (<img src={TOUR_POSTER} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'saturate(1.15)',pointerEvents:'none'}}/>) : artBg('blur(2px) brightness(.62) saturate(1.2)')}
           <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 10%,rgba(7,6,12,.86))'}}/>
+          {onTour && (<span aria-hidden="true" style={{position:'absolute',left:14,top:12,display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,fontWeight:800,letterSpacing:'.05em',padding:'4px 10px',borderRadius:99,background:'rgba(7,6,12,.5)',border:'1px solid rgba(255,255,255,.18)'}}><i style={{width:7,height:7,borderRadius:'50%',background:'#ff5f6d',boxShadow:'0 0 8px rgba(255,95,109,.8)'}}/>{TW.ui('vid')} · 2:00</span>)}
           <span style={{position:'relative',flex:1,minWidth:0}}>
-            <span style={{display:'block',fontSize:21*rs,fontWeight:700,lineHeight:1.15}}>{studio ? U.featS : U.featC}</span>
-            <span style={{display:'block',marginTop:5,fontSize:13*rs,color:'rgba(242,238,232,.78)'}}>{studio ? U.featSsub : U.featCsub}</span>
+            <span style={{display:'block',fontSize:21*rs,fontWeight:700,lineHeight:1.15}}>{onTour ? TW.ui('t') : (studio ? U.featS : U.featC)}</span>
+            <span style={{display:'block',marginTop:5,fontSize:13*rs,color:'rgba(242,238,232,.78)'}}>{onTour ? TW.ui('sub') : (studio ? U.featSsub : U.featCsub)}</span>
           </span>
           <span aria-hidden="true" style={{position:'relative',width:54,height:54,borderRadius:'50%',flexShrink:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(201,168,76,.45)'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
         </button>
+        {onTour && (<button type="button" className="pf-g2-row" onClick={()=>open(studio ? 'studio' : 'start', 0, true)} style={{marginTop:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'10px 14px',borderRadius:14,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontFamily:'inherit',fontSize:13.5*rs,textAlign:'left',cursor:'pointer'}}><span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{TW.ui('step')}: {studio ? U.featS : U.featC}</span><span aria-hidden="true" style={{color:'rgba(240,199,94,.9)',fontSize:16}}>›</span></button>)}   {/* the 30-second cards, one by one, as before */}
         <div className="pf-g2-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',rowGap:18,marginTop:22,flexShrink:0}}>
           {GUIDE_HUB.map((k)=>(
             <button key={k} type="button" className="pf-g2-tp" onClick={()=>open(k, 0)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,background:'none',border:0,padding:0,color:'rgba(242,238,232,.92)',fontSize:12.5*rs,fontWeight:600,cursor:'pointer',minWidth:0,transition:'transform .12s'}}>
@@ -4987,6 +5162,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ if(!showSizePicker) setIncludeSourceThumb(false); },[showSizePicker]);
   // Inline "guide" modal: searchable how-to entries covering every feature.
   const [showGuide, setShowGuide] = useState(false);
+  // the tour (a video of the app): 'reel' from the story ring on For You, 'full' from the top of the Guide
+  const [tourKind, setTourKind] = useState(null);
+  const homePlayRef = useRef(null);   // Home / For You: what a tap on the painting does (set by the Home view) — the tour's "Tap and paint" does the same
+  const [tourRing, setTourRing] = useState(()=>{ try{ if(localStorage.getItem('paintiano_tour_seen')) return false; const n=(parseInt(localStorage.getItem('paintiano_tour_n')||'0',10)||0)+1; localStorage.setItem('paintiano_tour_n', String(n)); return n<=3; }catch(_){ return false; } });   // the ring: the first 3 launches, until the video is seen
+  const [tourOnline, setTourOnline] = useState(()=> typeof navigator==='undefined' || navigator.onLine!==false);
+  useEffect(()=>{ const on=()=>setTourOnline(true), off=()=>setTourOnline(false); window.addEventListener('online', on); window.addEventListener('offline', off); return ()=>{ window.removeEventListener('online', on); window.removeEventListener('offline', off); }; },[]);
   // Reading-text size for the Concept & Guide panels (accessibility — larger
   // type for older readers). 1 = Normal, 1.25 = Large. Applied via CSS zoom on
   // the content wrapper so text AND spacing scale proportionally with one prop.
@@ -15452,6 +15633,10 @@ Hard requirements:
   };
   // one tap on the painting: pause / play — with the look tray open too (the tray closes on a tap beside the painting or pulled down); on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
   const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ stTrayKeepRef.current = (stripOpen && studioFs) ? Date.now() : 0; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
+  // the tour: what plays stops for the video; its end "Tap and paint" closes it (and the Guide) and plays — like a tap on the painting
+  const openTour = (k)=>{ try{ if(playing && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){} try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){} setTourKind(k); };
+  const closeTour = ()=>{ setTourKind(null); setTourRing(false); };
+  const tourPlay = ()=>{ closeTour(); if(showGuide) closeGuide(); if(!studioOn) return; try{ if(studioHome && homePlayRef.current) homePlayRef.current(); else _stTapOne(); }catch(_){} };   // in the tap itself: iOS lets the sound start here
   useEffect(()=>{ if(stFavPend && favReadyAny){ setStFavPend(false); if(!favHitAny) _favToggleAny(); } },[stFavPend, favReadyAny]);
   // ♥ or share tapped on the home card (your last painting, not loaded yet): it opens in the Studio, then the action follows
   const stHomeActRef = useRef(null);
@@ -16434,6 +16619,7 @@ Hard requirements:
   const stFsRef = useRef(false); stFsRef.current = stArmOn;
   const stBackRef = useRef(null);
   stBackRef.current = ()=>{
+    if(tourKind){ closeTour(); return; }
     if(stVidRecRef.current){ _vidStop(); return; }
     if(stVid && stVid.phase==='done'){ _vidClose(); return; }
     if(favViewRef.current){ if(showSizePicker){ setShowSizePicker(false); return; } if(stFavShare){ setStFavShare(false); return; } _favClose(); return; }
@@ -17005,6 +17191,7 @@ Hard requirements:
           <button type="button" className="pf-st-daily" onClick={openDailyInfo} aria-label={ts('dailyTitle','Artist of the day')}><i aria-hidden="true"/><span><small>✦ {ts('dailyBadgeTitle','Free today')}</small><b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}{composerOfDay ? ' & '+(COMPOSER_INSPIRED[composerOfDay]||composerOfDay) : ''}</b></span></button>
         )}
         {studioOn && studioHome && ((feedAt>=0 && feedCards[feedAt]) || !_homeCur()) && (<div className={'pf-st-tabs2 fy'+(_dailyShown ? ' low' : '')}><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('sup')}</button><button type="button" disabled={!(feedAt>=0 && feedCards[feedAt])} onClick={(e)=>{ e.stopPropagation(); _feedTake(); }}>{_stT('studio')}</button></div>)}   {/* the feed of paintings picked for you, its name where the feed apps put it — and Studio next to it: this painting becomes yours and moves into the Studio, playing on (what the › after the title did); dimmed on the first run until something plays */}
+        {studioOn && studioHome && tourRing && tourOnline && !tourKind && ((feedAt>=0 && feedCards[feedAt]) || !_homeCur()) && (()=>{ const W=tourWords(lang); return (<><style>{TOUR_CSS}</style><button type="button" className="pf-tour-ring" onClick={(e)=>{ e.stopPropagation(); openTour('reel'); }} aria-label={W.ui('ring')}><span className="r"><i><img src={TOUR_POSTER} alt="" draggable={false}/></i><span className="n">{W.ui('nw')}</span></span><span className="lb">{W.ui('ring')}</span></button></>); })()}   {/* the story ring: an 18 s video of the app, the first launches, until it is seen */}
         {studioOn && studioHome && !_dailyShown && (
           <button type="button" className={'pf-st-word'+(hidHold?' pf-hid-hold':'')} onClick={()=>{ if(hidHoldRef.current.fired){ hidHoldRef.current.fired=false; return; } setNavMenuOpen(true); }} onPointerDown={_hidDown} onPointerUp={_hidUp} onPointerLeave={_hidUp} onPointerCancel={_hidUp} onContextMenu={(e)=>e.preventDefault()} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
@@ -17454,6 +17641,7 @@ Hard requirements:
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
+        homePlayRef.current = ()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _fBtn(); };
         return (
           <div className="pf-st-home" style={{position:'fixed',inset:0,zIndex:900,touchAction:'none',overscrollBehavior:'none',background:'#07060c',overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'calc(env(safe-area-inset-top, 0px) + 66px)',paddingBottom:'calc(env(safe-area-inset-bottom, 0px) + 12px)',paddingLeft:'max(14px, env(safe-area-inset-left, 0px))',paddingRight:'max(14px, env(safe-area-inset-right, 0px))',boxSizing:'border-box',fontFamily:"'Outfit','Helvetica Neue',Arial,sans-serif",color:'#f2eee8'}}>
             <style>{STUDIO_HOME_CSS + STUDIO_SRC_CSS + STUDIO_FX_CSS}</style>
@@ -20441,6 +20629,7 @@ Hard requirements:
           art={(homeArt && homeArt.u) || STUDIO_HOME_SAMPLE.u}
           onClose={closeGuide}
           onOpenSetup={openSetupFromGuide}
+          onTour={tourOnline ? openTour : null}
           initialCardId={guideReturnCardId}
           t={t}
           ts={ts}
@@ -20454,6 +20643,7 @@ Hard requirements:
           setReadScale={setReadScale}
         />
       )}
+      {tourKind && (<TourPlayer key={tourKind} kind={tourKind} lang={lang} onClose={closeTour} onPlay={tourPlay} onFull={()=>setTourKind('full')}/>)}
 
       {showComposeRecent && (
         <div onClick={()=>setShowComposeRecent(false)} className={"pf-recent-overlay pf-picker-compose"+(studioOn?' pf-st-sheet':'')} style={{position:'fixed',inset:0,background:'rgba(8,6,14,0.92)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'4vh 16px',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}}>
