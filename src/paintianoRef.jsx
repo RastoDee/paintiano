@@ -29611,7 +29611,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     wrap.scrollLeft = Math.max(0, target);
   },[composeMode]);
 
-  const playNote = useCallback((midi,vel=88,durMs=500,tailScale=1)=>{
+  const playNote = useCallback((midi,vel=88,durMs=500,tailScale=1,at=null)=>{
     { const _k=keyShiftRef.current|0; if(_k) midi=Math.max(21,Math.min(108,midi+_k)); }   // a ✦ Variation sounds in its key
     // Spawn a visualizer ripple (skip in image mode — too busy with the photo)
     if (visualizerRef.current && viewModeRef.current !== 'image') {
@@ -29619,7 +29619,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const x = ((Math.max(21, Math.min(108, midi)) - 21) / 87) * c.width;
       const y = c.height * (0.35 + Math.random() * 0.55);
       const [r,g,b] = harmCol(midi, vel);
-      ripplesRef.current.push({ x, y, r, g, b, born: performance.now() });
+      ripplesRef.current.push({ x, y, r, g, b, born: performance.now() + ((at!=null) ? Math.max(0, (at - Tone.now())*1000) : 0) });   // scheduled ahead: the ripple waits for its note
       // Cap to last 80 to bound memory if many notes pile up
       if (ripplesRef.current.length > 80) ripplesRef.current.splice(0, ripplesRef.current.length - 80);
       // Wake the visualizer loop — it stops itself when there's nothing to
@@ -29646,10 +29646,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       // iOS — the symptom users see as "sound randomly disappears." Cheap to
       // call and a no-op when already running.
       try{const _ac=Tone.getContext().rawContext;if(_ac&&_ac.state==='suspended')_ac.resume().catch(()=>{});}catch(_){}
-      if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,Tone.now(),gain);return;}
+      if(samplerOk.current&&samplerRef.current){samplerRef.current.triggerAttackRelease(Tone.Frequency(midi,'midi').toNote(),dur+tailS,(at!=null) ? Math.max(at, Tone.now()) : Tone.now(),gain);return;}
       const ac=Tone.getContext().rawContext;if(!ac)return;
       if(ac.state==='suspended')ac.resume().catch(()=>{});
-      const freq=440*Math.pow(2,(midi-69)/12),now=ac.currentTime,fade=Math.min(dur+tailS+.35,3.0),amp=gain*.18*(mutedRef.current?0:1),master=ac.createGain();
+      const freq=440*Math.pow(2,(midi-69)/12),now=(at!=null) ? Math.max(ac.currentTime+.005, at) : ac.currentTime,fade=Math.min(dur+tailS+.35,3.0),amp=gain*.18*(mutedRef.current?0:1),master=ac.createGain();
       master.gain.setValueAtTime(amp,now);master.gain.exponentialRampToValueAtTime(.0001,now+fade);master.connect(ac.destination);
       if(recStreamDestRef.current){try{master.connect(recStreamDestRef.current);}catch(_){}}
       [[1,1],[2,.5],[3,.25],[4,.1]].forEach(([h,w])=>{const osc=ac.createOscillator(),g=ac.createGain();osc.type='sine';osc.frequency.value=freq*h;g.gain.value=w;osc.connect(g);g.connect(master);osc.start(now);osc.stop(now+fade+.05);osc.onended=()=>{try{osc.disconnect();g.disconnect();}catch(_){}};});
@@ -29863,6 +29863,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         ripplesRef.current = ripplesRef.current.filter(rp => {
           const age = now - rp.born;
           if (age > MAX_AGE) return false;
+          if (age < 0) return true;   // its note has not sounded yet
           const t = age / MAX_AGE;
           const radius = 4 + t * 38;
           const alpha = (1 - t) * 0.7;
@@ -34355,8 +34356,12 @@ Hard requirements:
         }
         return 150;
       };
+      // the texture keeps its own time line too (see the chord loop below): the next event is the intended moment of this
+      // one plus its gap, so late timers never slow the piece; far behind (a hidden tab) it starts again from now
+      let _tgt=performance.now();
       const step=()=>{
         if(genRef.current!==gen)return;
+        { const _now=performance.now(); if(_now-_tgt>1500) _tgt=_now; }
         // Read chords LIVE from the ref each step (not the captured local), so a
         // colour change mid-playback that swaps in re-transcribed notes is heard
         // immediately on the very next step — no restart needed, no stale copy.
@@ -34537,7 +34542,8 @@ Hard requirements:
         // Step interval: the texture's own timeline (see _gapAt) — the same with
         // MELODY on or off.
         const _gapMs=_gapAt(liveChords,i);
-        timers.current.push(setTimeout(step,Math.round(_gapMs/playbackSpeedRef.current)));
+        _tgt+=_gapMs/playbackSpeedRef.current;
+        timers.current.push(setTimeout(step,Math.max(0,Math.round(_tgt-performance.now()))));
       };
       // ── Parallel MELODY voice ────────────────────────────────────────────────
       // The sung line is NOT in chordsRef (texture stays clean). Schedule it on its
@@ -34587,27 +34593,37 @@ Hard requirements:
       // live on every step — slider changes take effect immediately.
       const useRecorded=chords.some(c=>c.recorded);
       let i=fromIdx;
+      // The chords keep their own time line: chord i has an intended moment (_tgt), the next one is that moment plus the
+      // written gap — never "the gap after this timer fired", so a late timer no longer slows the whole piece down.
+      // Each step wakes AHEAD ms before its moment: the sound is scheduled for the moment itself (sample-exact even when
+      // the timer is late), the paint and the lit keys follow at the moment. Far behind (a hidden tab): it starts again from now.
+      const AHEAD=80; let _tgt=performance.now()+AHEAD;
       const step=()=>{
         if(i>=chords.length){setPlaying(false);setDisp(chords.length);return;}
         const{n,startMs,recorded}=chords[i];
-        setDisp(i+1);
+        const _now=performance.now(); if(_now-_tgt>1500) _tgt=_now+AHEAD;
+        const _wait=Math.max(0,_tgt-_now), _at=Tone.now()+_wait/1000;
+        const _atMoment=(fn)=>{ if(_wait>4) pushTimer(fn,_wait); else fn(); };
+        _atMoment(()=>setDisp(i+1));
         try{
           const midis=n.map(({m,v,durMs})=>{
             const scaledDur=Math.round((durMs||300)/playbackSpeedRef.current);
-            if(viewMode!=='audio' && !originalPlaybackRef.current) playNote(m,v,scaledDur);
+            if(viewMode!=='audio' && !originalPlaybackRef.current) playNote(m,v,scaledDur,1,_at);
             return{m,scaledDur};
           });
-          setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
-          const byDur={};
-          for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
-          for(const[t,ms]of Object.entries(byDur)){
-            pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
-          }
-          const wrap=kbScrollRef.current;
-          if(wrap){
-            const xs=n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
-            if(xs.length){const cx=xs.reduce((a,b)=>a+b,0)/xs.length;const target=Math.max(0,cx-wrap.clientWidth/2+13);wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});}
-          }
+          _atMoment(()=>{
+            setActive(p=>{const s=new Set(p);for(const x of midis)s.add(x.m);return s;});
+            const byDur={};
+            for(const{m,scaledDur}of midis){const t=Math.min(scaledDur,800);(byDur[t]||(byDur[t]=[])).push(m);}
+            for(const[t,ms]of Object.entries(byDur)){
+              pushTimer(()=>setActive(p=>{const s=new Set(p);ms.forEach(m=>s.delete(m));return s;}),+t);
+            }
+            const wrap=kbScrollRef.current;
+            if(wrap){
+              const xs=n.map(({m})=>midiToKeyX(m)).filter(x=>x!=null);
+              if(xs.length){const cx=xs.reduce((a,b)=>a+b,0)/xs.length;const target=Math.max(0,cx-wrap.clientWidth/2+13);wrap.scrollTo({left:target,behavior:Math.abs(target-wrap.scrollLeft)>200?'instant':'smooth'});}
+            }
+          });
         }catch(_){}
         i++;
         if(i>=chords.length){
@@ -34637,7 +34653,8 @@ Hard requirements:
           const hasTimings=info||recorded||useRecorded;
           const rawGap=hasTimings?Math.max(0,(chords[i].startMs||0)-(startMs||0)):350;
           const gap=useRecorded?Math.min(rawGap,1500):rawGap;
-          timers.current.push(setTimeout(step,Math.round(gap/playbackSpeedRef.current)));
+          _tgt+=gap/playbackSpeedRef.current;
+          timers.current.push(setTimeout(step,Math.max(0,Math.round(_tgt-AHEAD-performance.now()))));
         }
       };
       step();
