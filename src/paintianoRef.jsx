@@ -41260,6 +41260,12 @@ Hard requirements:
             const _sigK = (!cockpitEdit && sigActive && songSig && songSig.keys) ? songSig.keys : [];
             // the Studio's rail shows every painter: the locked ones after the free ones, dimmed with a 🔒 (a taste on the first tap, the paywall on the second)
             if(studioFs && !cockpitEdit && proStatus==='free') for(const _k of ALL_ARTIST_KEYS) if(_k!=='mosaicFamily' && !_visibleArtists.includes(_k)) _visibleArtists.push(_k);
+            // the locked block: the ones painting right now (the chosen one, a Fusion's or the Signature's members) come first, right after the free ones
+            if(studioFs && !cockpitEdit && proStatus==='free'){
+              const _now = new Set([style, shuffleStyle, ...(painterStage||[]), ...(jamOn ? _jamStage() : []), ..._sigK].filter(Boolean));
+              const _free = _visibleArtists.filter(k=>!styleIsLocked(k)), _lk = _visibleArtists.filter(k=>styleIsLocked(k));
+              _visibleArtists = _free.concat(_lk.filter(k=>_now.has(k)), _lk.filter(k=>!_now.has(k)));
+            }
             for(const _k of _sigK) if(_k && !_visibleArtists.includes(_k) && ALL_ARTIST_KEYS.includes(_k)) _visibleArtists.push(_k);
             // the Studio: whoever paints the canvas has a chip too (a poster's painter on Free, one left out of your set …) — the faces never contradict the painting
             if(!cockpitEdit && studioFs) for(const _k of [style].concat(painterStage)) if(_k && _k!=='mosaicFamily' && !_visibleArtists.includes(_k) && ALL_ARTIST_KEYS.includes(_k)) _visibleArtists.push(_k);
