@@ -43,16 +43,20 @@ const CAP = {
   free:      [8, 30],
 };
 
-// Allowed sources (our domains + local dev). Anything else is refused.
-const ALLOWED = [
-  'https://paintiano.vercel.app',
+// Allowed sources: our domains, Vercel previews of this project, local dev. Exact origins only —
+// a prefix test would let paintiano.app.evil.com or localhost.evil.com drive the key.
+const ALLOWED = new Set([
   'https://paintiano.app',
   'https://www.paintiano.app',
-  'https://paintiano-git-dev',
-  'https://paintiano-',
-  'http://localhost',
-  'http://127.0.0.1'
+  'https://paintiano.vercel.app'
+]);
+const ALLOWED_RE = [
+  /^https:\/\/paintiano-[a-z0-9-]+\.vercel\.app$/,   // paintiano-git-dev-…, paintiano-<hash>-… previews
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/
 ];
+function originAllowed(o) { return !!o && (ALLOWED.has(o) || ALLOWED_RE.some(re => re.test(o))); }
+function originOf(url) { try { return new URL(url).origin; } catch (_) { return ''; } }
 
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -73,8 +77,8 @@ function rateLimited(ip) {
 function sourceAllowed(req) {
   const origin = req.headers.origin || '';
   const referer = req.headers.referer || '';
-  if (origin) return ALLOWED.some(a => origin === a || origin.startsWith(a));
-  if (referer) return ALLOWED.some(a => referer.startsWith(a));
+  if (origin) return originAllowed(origin);
+  if (referer) return originAllowed(originOf(referer));
   return false; // browsers always send Origin on POST — no Origin = not our app
 }
 
@@ -150,10 +154,18 @@ function measure(messages) {
   return { text, images, b64 };
 }
 
+// Node function: a 2,000-token composition takes 10–25 s; without this Vercel's default (10 s) cuts long pieces.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Paintiano-Key');
+  // CORS: only an allowed origin may read the answer (never '*').
+  const reqOrigin = req.headers.origin || '';
+  if (originAllowed(reqOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', reqOrigin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Paintiano-Key');
+  }
 
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 

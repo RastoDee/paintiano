@@ -55,9 +55,9 @@ const PRICE_ID_UPGRADE = process.env.PADDLE_PRICE_ID_UPGRADE || 'pri_01m5zep41d8
 const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
 const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
 const EMAIL_REPLY_TO = 'hello@paintiano.app';
-// BCC copy of every license email to the founder for archive + customer-service
-// visibility. Override via env (comma-separated) if recipients change.
-const EMAIL_BCC = (process.env.EMAIL_BCC || 'drasto69@gmail.com')
+// BCC copy of every license email for archive + customer-service visibility:
+// env EMAIL_BCC (comma-separated). Unset = no BCC. Never an address in the code (public repo).
+const EMAIL_BCC = (process.env.EMAIL_BCC || '')
   .split(',').map(s => s.trim()).filter(Boolean);
 const PADDLE_API_KEY = process.env.PADDLE_API_KEY;     // server-side, for fetching customer email
 const PADDLE_API_BASE = 'https://api.paddle.com';
