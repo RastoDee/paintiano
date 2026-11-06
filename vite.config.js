@@ -83,7 +83,7 @@ export default defineConfig({
         // Precache only the static front-end build — never anything under /api
         // and never the landing page (we don't want offline navigations to
         // accidentally hit a cached version while the PWA is being served).
-        globPatterns: ['**/*.{js,css,svg,png,ico,woff2}', 'play.html'],
+        globPatterns: ['**/*.{js,css,svg,png,ico,woff2}', 'play.html', 'salamander/*.mp3'],   // the piano samples too: offline from the first install
         globIgnores: ['**/api/**', 'index.html', 'concept.html'],
         // The SPA navigation fallback now targets play.html (the PWA shell),
         // restricted to /play* URLs only. Root / and /landing.html stay
@@ -116,7 +116,9 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/tonejs\.github\.io\/audio\/salamander\/.*/,
+            // the piano samples are precached from /salamander (see globPatterns); this keeps any other copy (an old
+            // CDN address in a cached build) served from the cache once seen
+            urlPattern: /salamander\/.*\.mp3$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'salamander-piano',
