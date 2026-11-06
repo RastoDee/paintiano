@@ -528,7 +528,7 @@ function _frameExport(hi, kind, o){
     const px=Math.round((Wf-pw)/2), py=m+Math.round((bh-ph)/2);
     const rr = isP ? 0 : Math.round(Math.min(pw,ph)*0.045);   // Web: the painting's corners round, as in the app — a print keeps them sharp
     cx.save(); _rrPath(cx,px,py,pw,ph,rr); cx.clip(); cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph); cx.restore();
-    cx.strokeStyle='rgba(201,168,76,.5)'; cx.lineWidth=Math.max(2,Wf*0.0017); _rrPath(cx,px,py,pw,ph,rr); cx.stroke();
+    cx.strokeStyle='rgba(201,168,76,.78)'; cx.lineWidth=Math.max(2,Wf*0.0017); _rrPath(cx,px,py,pw,ph,rr); cx.stroke();
     let bw2=bw;
     if(o.bare){ if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.22), Math.round(cb*0.6)); _drawSrc(cx, o.src, Math.round((Wf-r.w)/2), Hf-cb+Math.round((cb-r.h)/2), r.w, r.h, Wf); } return cv; }
     let y=Hf-cb+Math.round(Wf*0.07);
@@ -1086,7 +1086,7 @@ const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, art
       <div style={{marginTop:16,padding:'12px 14px',borderRadius:16,border:'1px solid rgba(242,238,232,.1)',background:'rgba(255,255,255,.035)'}}>
         <div style={{fontSize:(12*readScale)+'px',color:'rgba(242,238,232,.5)'}}>{ts('dailyTodayIs','Today')}</div>
         <div style={{fontSize:(15*readScale)+'px',fontWeight:600,color:'#f2eee8',marginTop:1}}>{artistName} · {composerName}</div>
-        <div style={{fontSize:(12*readScale)+'px',color:'rgba(242,238,232,.45)',marginTop:2}}>{ts('dailyTomorrowPair','Tomorrow — another pair.')}</div>
+        <div style={{fontSize:(12*readScale)+'px',color:'rgba(242,238,232,.62)',marginTop:2}}>{ts('dailyTomorrowPair','Tomorrow — another pair.')}</div>
       </div>
       <button type="button" onClick={()=>{ onClose(); if(onPro) onPro(); }} style={{display:'flex',alignItems:'center',justifyContent:'center',width:'100%',minHeight:50,marginTop:18,padding:'0 18px',borderRadius:25,border:0,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:(15*readScale)+'px',color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)'}}>{ts('dailyAllPro','All 24, always → Paintiano Pro')}</button>
     </div>
@@ -1157,7 +1157,7 @@ const GUIDE2_CSS = `.pf-g2 *{box-sizing:border-box}
 @keyframes pfG2Up{from{transform:translateY(100%)}to{transform:none}}
 .pf-g2-tp:active,.pf-g2-feat:active,.pf-g2-row:active{transform:scale(.96)}
 .pf-g2-hub{scrollbar-width:none}.pf-g2-hub::-webkit-scrollbar{display:none}
-.pf-g2-search::placeholder{color:rgba(242,238,232,.42)}
+.pf-g2-search::placeholder{color:rgba(242,238,232,.62)}
 .pf-g2-search::-webkit-search-cancel-button{display:none}
 @media (max-height:600px){.pf-g2-big{min-height:112px!important;margin-top:12px!important}.pf-g2-grid{margin-top:14px!important;row-gap:12px!important}.pf-g2-grid .pf-g2-tp>span:first-child{width:52px!important;height:52px!important}}
 @media (prefers-reduced-motion:reduce){.pf-g2-in,.pf-g2-ln,.pf-g2-sheet{animation:none}}`;
@@ -1232,31 +1232,31 @@ const TOUR_POSTER = '/tour/poster.webp';
 // *word* = the word in the gold-pink gradient; \n = a new line
 const TOUR_I18N = {
   EN:{ui:{ring:'How it works', nw:'NEW', skip:'Skip', hold:'hold = pause', now:'Now *you* ✦', nowSub:'Every song has its own painting. Tap and yours starts painting.', go:'Tap and paint', again:'Watch again', full:'Full tour · 2 min', err:'The video needs the internet.', t:'Paintiano in 2 minutes', sub:'The whole app — tap, swipe, paint', step:'Step by step', vid:'VIDEO'},
-    r:{hook:'Your music\n*paints itself* 🎨', song:'Pick *any song* 🎵', col:'Tap → *new colours* 🌈', art:'Tap → *new artist* 🖌️', swipe:'Swipe ↑ → *endless remixes* ♾️', photo:'Photos *play music* too 🖼️', fav:'Love it? *Double-tap* ❤️'},
+    r:{hook:'Your music\n*paints itself* 🎨', song:'Pick *any song* 🎵', col:'Tap the *colour ring* → new colours 🌈', art:'Tap a *painter* → new style 🖌️', swipe:'Swipe ↑ → *endless remixes* ♾️', photo:'Photos *play music* too 🖼️', fav:'Love it? *Double-tap* ❤️'},
     f:{intro:['Every song has *its own painting*','A quick tour of Paintiano'], song:['Pick *a song*','your MP3, MIDI, a mood — or a sample'], look:['*Change → Look*','palettes, painters, fusion'], tap:['The music *paints*','every note becomes a colour and a shape'], pal:['Recolour it *live*','tap a palette while it plays'], fusion:['*Fusion* ✦ Pro','painters paint one painting together'], pin:['Tap a painter to *pin 📌*','pinned painters stay'], guests:['Swipe *↑* on the painting','new guests join the pinned ones'], variant:['Swipe *← →*','another variant of the same painting'], painter:['Pick a *painter*','same music, a whole new painting'], fav:['Double-tap *♥*','keep it in your favourites'], image:['A *picture* that plays','composers read its colours'], composer:['Pick a *composer*','same picture, new music'], home:['*Home*','your latest painting waits here'], foryou:['Swipe *↑* — *For You*','paintings picked for you'], studio2:['Tap *Studio*','make it yours']}},
   SK:{ui:{ring:'Ako na to', nw:'NOVÉ', skip:'Preskočiť', hold:'podrž = pauza', now:'Teraz *ty* ✦', nowSub:'Každá skladba má svoj obraz. Ťukni a tvoja začne maľovať.', go:'Ťukni a maľuj', again:'Pozrieť znova', full:'Celá prehliadka · 2 min', err:'Video potrebuje internet.', t:'Paintiano za 2 minúty', sub:'Celá appka — ťukni, potiahni, maľuj', step:'Krok po kroku', vid:'VIDEO'},
-    r:{hook:'Tvoja hudba\n*sa sama maľuje* 🎨', song:'Vyber *hocijakú pesničku* 🎵', col:'Ťuk → *nové farby* 🌈', art:'Ťuk → *nový umelec* 🖌️', swipe:'Potiahni ↑ → *nové remixy* ♾️', photo:'Aj *fotka hrá* hudbu 🖼️', fav:'Páči sa? *Dvojťuk* ❤️'},
+    r:{hook:'Tvoja hudba\n*sa sama maľuje* 🎨', song:'Vyber *hocijakú pesničku* 🎵', col:'Ťukni na *kruh farieb* → nové farby 🌈', art:'Ťukni na *maliara* → nový štýl 🖌️', swipe:'Potiahni ↑ → *nové remixy* ♾️', photo:'Aj *fotka hrá* hudbu 🖼️', fav:'Páči sa? *Dvojťuk* ❤️'},
     f:{intro:['Každá skladba má *svoj obraz*','Rýchla prehliadka Paintiana'], song:['Vyber *skladbu*','tvoje MP3, MIDI, náladu — alebo ukážku'], look:['*Zmeň → Vzhľad*','palety, maliari, fúzia'], tap:['Hudba *maľuje*','z každého tónu farba a tvar'], pal:['Prefarbi ju *naživo*','ťukni na paletu, kým hrá'], fusion:['*Fúzia* ✦ Pro','viac maliarov maľuje jeden obraz'], pin:['Ťukni na maliara — *pripni 📌*','pripnutí maliari ostávajú'], guests:['Potiahni *↑* po maľbe','k pripnutým prídu noví hostia'], variant:['Potiahni *← →*','iný variant tej istej maľby'], painter:['Vyber *maliara*','tá istá hudba, úplne nová maľba'], fav:['Dvakrát ťukni — *♥*','uložíš si ju medzi obľúbené'], image:['*Obraz*, ktorý hrá','skladatelia čítajú jeho farby'], composer:['Vyber *skladateľa*','ten istý obraz, nová hudba'], home:['*Domov*','čaká tu tvoja posledná maľba'], foryou:['Potiahni *↑* — *Pre teba*','maľby vybrané pre teba'], studio2:['Ťukni na *Štúdio*','a je tvoja']}},
   DE:{ui:{ring:'So geht’s', nw:'NEU', skip:'Überspringen', hold:'halten = Pause', now:'Jetzt *du* ✦', nowSub:'Jeder Song hat sein eigenes Bild. Tippe, und deiner beginnt zu malen.', go:'Tippen und malen', again:'Nochmal ansehen', full:'Ganze Tour · 2 Min.', err:'Das Video braucht Internet.', t:'Paintiano in 2 Minuten', sub:'Die ganze App — tippen, wischen, malen', step:'Schritt für Schritt', vid:'VIDEO'},
-    r:{hook:'Deine Musik\n*malt sich selbst* 🎨', song:'Wähl *irgendeinen Song* 🎵', col:'Tippen → *neue Farben* 🌈', art:'Tippen → *neuer Künstler* 🖌️', swipe:'Wisch ↑ → *endlose Remixe* ♾️', photo:'Auch *Fotos spielen* Musik 🖼️', fav:'Gefällt’s? *Doppeltippen* ❤️'},
+    r:{hook:'Deine Musik\n*malt sich selbst* 🎨', song:'Wähl *irgendeinen Song* 🎵', col:'Tipp auf den *Farbring* → neue Farben 🌈', art:'Tipp auf einen *Maler* → neuer Stil 🖌️', swipe:'Wisch ↑ → *endlose Remixe* ♾️', photo:'Auch *Fotos spielen* Musik 🖼️', fav:'Gefällt’s? *Doppeltippen* ❤️'},
     f:{intro:['Jeder Song hat *sein eigenes Bild*','Paintiano in Kürze'], song:['Wähl *einen Song*','dein MP3, MIDI, eine Stimmung — oder ein Beispiel'], look:['*Ändern → Look*','Paletten, Maler, Fusion'], tap:['Die Musik *malt*','jeder Ton wird Farbe und Form'], pal:['Färb es *live* um','tippe eine Palette, während es spielt'], fusion:['*Fusion* ✦ Pro','mehrere Maler malen ein Bild'], pin:['Tippe einen Maler — *anpinnen 📌*','angepinnte Maler bleiben'], guests:['Wisch *↑* übers Bild','neue Gäste kommen zu den angepinnten'], variant:['Wisch *← →*','eine andere Variante desselben Bildes'], painter:['Wähl einen *Maler*','gleiche Musik, ein ganz neues Bild'], fav:['Doppeltippen *♥*','es landet in deinen Favoriten'], image:['Ein *Bild*, das spielt','Komponisten lesen seine Farben'], composer:['Wähl einen *Komponisten*','gleiches Bild, neue Musik'], home:['*Start*','hier wartet dein letztes Bild'], foryou:['Wisch *↑* — *Für dich*','Bilder, für dich ausgewählt'], studio2:['Tippe *Studio*','und es gehört dir']}},
   FR:{ui:{ring:'Comment ça marche', nw:'NOUVEAU', skip:'Passer', hold:'maintenir = pause', now:'À *toi* ✦', nowSub:'Chaque morceau a son propre tableau. Touche, et le tien commence à peindre.', go:'Touche et peins', again:'Revoir', full:'Visite complète · 2 min', err:'La vidéo a besoin d’Internet.', t:'Paintiano en 2 minutes', sub:'Toute l’app — touche, glisse, peins', step:'Pas à pas', vid:'VIDÉO'},
-    r:{hook:'Ta musique\n*se peint toute seule* 🎨', song:'Choisis *n’importe quel morceau* 🎵', col:'Touche → *nouvelles couleurs* 🌈', art:'Touche → *nouvel artiste* 🖌️', swipe:'Glisse ↑ → *remix à l’infini* ♾️', photo:'Les *photos jouent* aussi 🖼️', fav:'Coup de cœur ? *Double tap* ❤️'},
+    r:{hook:'Ta musique\n*se peint toute seule* 🎨', song:'Choisis *n’importe quel morceau* 🎵', col:'Touche l’*anneau de couleurs* → nouvelles couleurs 🌈', art:'Touche un *peintre* → nouveau style 🖌️', swipe:'Glisse ↑ → *remix à l’infini* ♾️', photo:'Les *photos jouent* aussi 🖼️', fav:'Coup de cœur ? *Double tap* ❤️'},
     f:{intro:['Chaque morceau a *son propre tableau*','Paintiano en un clin d’œil'], song:['Choisis *un morceau*','ton MP3, MIDI, une humeur — ou un exemple'], look:['*Changer → Style*','palettes, peintres, fusion'], tap:['La musique *peint*','chaque note devient couleur et forme'], pal:['Recolore-le *en direct*','touche une palette pendant qu’il joue'], fusion:['*Fusion* ✦ Pro','plusieurs peintres peignent un seul tableau'], pin:['Touche un peintre — *épingle 📌*','les peintres épinglés restent'], guests:['Glisse *↑* sur le tableau','de nouveaux invités rejoignent les épinglés'], variant:['Glisse *← →*','une autre variante du même tableau'], painter:['Choisis un *peintre*','même musique, un tout nouveau tableau'], fav:['Touche deux fois *♥*','il rejoint tes favoris'], image:['Une *image* qui joue','les compositeurs lisent ses couleurs'], composer:['Choisis un *compositeur*','même image, nouvelle musique'], home:['*Accueil*','ton dernier tableau t’attend ici'], foryou:['Glisse *↑* — *Pour toi*','des tableaux choisis pour toi'], studio2:['Touche *Studio*','il est à toi']}},
   ES:{ui:{ring:'Cómo funciona', nw:'NUEVO', skip:'Saltar', hold:'mantén = pausa', now:'Ahora *tú* ✦', nowSub:'Cada canción tiene su propia pintura. Toca y la tuya empieza a pintar.', go:'Toca y pinta', again:'Ver otra vez', full:'Recorrido completo · 2 min', err:'El vídeo necesita internet.', t:'Paintiano en 2 minutos', sub:'Toda la app — toca, desliza, pinta', step:'Paso a paso', vid:'VÍDEO'},
-    r:{hook:'Tu música\n*se pinta sola* 🎨', song:'Elige *cualquier canción* 🎵', col:'Toca → *nuevos colores* 🌈', art:'Toca → *nuevo artista* 🖌️', swipe:'Desliza ↑ → *remixes sin fin* ♾️', photo:'Las *fotos también suenan* 🖼️', fav:'¿Te gusta? *Doble toque* ❤️'},
+    r:{hook:'Tu música\n*se pinta sola* 🎨', song:'Elige *cualquier canción* 🎵', col:'Toca el *anillo de colores* → nuevos colores 🌈', art:'Toca un *pintor* → nuevo estilo 🖌️', swipe:'Desliza ↑ → *remixes sin fin* ♾️', photo:'Las *fotos también suenan* 🖼️', fav:'¿Te gusta? *Doble toque* ❤️'},
     f:{intro:['Cada canción tiene *su propia pintura*','Un recorrido rápido por Paintiano'], song:['Elige *una canción*','tu MP3, MIDI, un estado de ánimo — o un ejemplo'], look:['*Cambiar → Aspecto*','paletas, pintores, fusión'], tap:['La música *pinta*','cada nota se vuelve color y forma'], pal:['Cambia los colores *en vivo*','toca una paleta mientras suena'], fusion:['*Fusión* ✦ Pro','varios pintores pintan un solo cuadro'], pin:['Toca un pintor — *fíjalo 📌*','los pintores fijados se quedan'], guests:['Desliza *↑* sobre la pintura','llegan invitados nuevos junto a los fijados'], variant:['Desliza *← →*','otra variante de la misma pintura'], painter:['Elige un *pintor*','la misma música, una pintura nueva'], fav:['Doble toque *♥*','se guarda en tus favoritos'], image:['Una *imagen* que suena','los compositores leen sus colores'], composer:['Elige un *compositor*','la misma imagen, música nueva'], home:['*Inicio*','aquí te espera tu última pintura'], foryou:['Desliza *↑* — *Para ti*','pinturas elegidas para ti'], studio2:['Toca *Estudio*','y es tuya']}},
   PT:{ui:{ring:'Como funciona', nw:'NOVO', skip:'Saltar', hold:'segura = pausa', now:'Agora *tu* ✦', nowSub:'Cada música tem a sua pintura. Toca e a tua começa a pintar.', go:'Toca e pinta', again:'Ver outra vez', full:'Visita completa · 2 min', err:'O vídeo precisa de internet.', t:'Paintiano em 2 minutos', sub:'A app inteira — toca, desliza, pinta', step:'Passo a passo', vid:'VÍDEO'},
-    r:{hook:'A tua música\n*pinta-se sozinha* 🎨', song:'Escolhe *qualquer música* 🎵', col:'Toca → *novas cores* 🌈', art:'Toca → *novo artista* 🖌️', swipe:'Desliza ↑ → *remixes sem fim* ♾️', photo:'As *fotos também tocam* 🖼️', fav:'Gostas? *Toque duplo* ❤️'},
+    r:{hook:'A tua música\n*pinta-se sozinha* 🎨', song:'Escolhe *qualquer música* 🎵', col:'Toca no *anel de cores* → novas cores 🌈', art:'Toca num *pintor* → novo estilo 🖌️', swipe:'Desliza ↑ → *remixes sem fim* ♾️', photo:'As *fotos também tocam* 🖼️', fav:'Gostas? *Toque duplo* ❤️'},
     f:{intro:['Cada música tem *a sua pintura*','Uma visita rápida ao Paintiano'], song:['Escolhe *uma música*','o teu MP3, MIDI, um estado de espírito — ou um exemplo'], look:['*Mudar → Visual*','paletas, pintores, fusão'], tap:['A música *pinta*','cada nota torna-se cor e forma'], pal:['Muda as cores *ao vivo*','toca numa paleta durante a música'], fusion:['*Fusão* ✦ Pro','vários pintores pintam um só quadro'], pin:['Toca num pintor — *fixa-o 📌*','os pintores fixados ficam'], guests:['Desliza *↑* na pintura','novos convidados juntam-se aos fixados'], variant:['Desliza *← →*','outra variante da mesma pintura'], painter:['Escolhe um *pintor*','a mesma música, uma pintura nova'], fav:['Toque duplo *♥*','fica nos teus favoritos'], image:['Uma *imagem* que toca','os compositores leem as suas cores'], composer:['Escolhe um *compositor*','a mesma imagem, nova música'], home:['*Início*','a tua última pintura espera aqui'], foryou:['Desliza *↑* — *Para ti*','pinturas escolhidas para ti'], studio2:['Toca em *Estúdio*','e é tua']}},
   zh:{ui:{ring:'怎么玩', nw:'新', skip:'跳过', hold:'按住 = 暂停', now:'轮到*你*了 ✦', nowSub:'每首歌都有属于自己的画。点一下，你的歌就开始作画。', go:'点一下，开画', again:'再看一遍', full:'完整导览 · 2 分钟', err:'视频需要联网。', t:'2 分钟看懂 Paintiano', sub:'整个应用——点、滑、画', step:'一步一步', vid:'视频'},
-    r:{hook:'你的音乐\n*自己会画画* 🎨', song:'选*任意一首歌* 🎵', col:'点一下 → *换种颜色* 🌈', art:'点一下 → *换个画家* 🖌️', swipe:'上滑 ↑ → *无限混搭* ♾️', photo:'*照片*也能*奏乐* 🖼️', fav:'喜欢？*双击* ❤️'},
+    r:{hook:'你的音乐\n*自己会画画* 🎨', song:'选*任意一首歌* 🎵', col:'点*色环* → 换种颜色 🌈', art:'点一位*画家* → 换个风格 🖌️', swipe:'上滑 ↑ → *无限混搭* ♾️', photo:'*照片*也能*奏乐* 🖼️', fav:'喜欢？*双击* ❤️'},
     f:{intro:['每首歌都有*自己的画*','Paintiano 快速导览'], song:['选*一首歌*','你的 MP3、MIDI、一种心情——或示例'], look:['*更换 → 外观*','调色板、画家、融合'], tap:['音乐在*作画*','每个音符都化为颜色和形状'], pal:['*实时*换色','播放时点一个调色板'], fusion:['*融合* ✦ Pro','多位画家合画一幅画'], pin:['点画家——*钉住 📌*','钉住的画家会留下'], guests:['在画上*上滑 ↑*','新的客人加入钉住的画家'], variant:['*左右滑 ← →*','同一幅画的另一种变体'], painter:['选一位*画家*','同样的音乐，全新的画'], fav:['双击 *♥*','收进你的收藏'], image:['会*演奏*的图片','作曲家读出它的颜色'], composer:['选一位*作曲家*','同一幅图，新的音乐'], home:['*首页*','你最近的画在这里等你'], foryou:['*上滑 ↑* —— *推荐*','为你挑选的画'], studio2:['点*工作室*','它就是你的了']}},
   zhTW:{ui:{ring:'怎麼玩', nw:'新', skip:'跳過', hold:'按住 = 暫停', now:'輪到*你*了 ✦', nowSub:'每首歌都有屬於自己的畫。點一下，你的歌就開始作畫。', go:'點一下，開畫', again:'再看一遍', full:'完整導覽 · 2 分鐘', err:'影片需要連網。', t:'2 分鐘看懂 Paintiano', sub:'整個應用——點、滑、畫', step:'一步一步', vid:'影片'},
-    r:{hook:'你的音樂\n*自己會畫畫* 🎨', song:'選*任何一首歌* 🎵', col:'點一下 → *換種顏色* 🌈', art:'點一下 → *換個畫家* 🖌️', swipe:'上滑 ↑ → *無限混搭* ♾️', photo:'*照片*也能*奏樂* 🖼️', fav:'喜歡？*雙擊* ❤️'},
+    r:{hook:'你的音樂\n*自己會畫畫* 🎨', song:'選*任何一首歌* 🎵', col:'點*色環* → 換種顏色 🌈', art:'點一位*畫家* → 換個風格 🖌️', swipe:'上滑 ↑ → *無限混搭* ♾️', photo:'*照片*也能*奏樂* 🖼️', fav:'喜歡？*雙擊* ❤️'},
     f:{intro:['每首歌都有*自己的畫*','Paintiano 快速導覽'], song:['選*一首歌*','你的 MP3、MIDI、一種心情——或範例'], look:['*更換 → 外觀*','調色盤、畫家、融合'], tap:['音樂在*作畫*','每個音符都化為顏色和形狀'], pal:['*即時*換色','播放時點一個調色盤'], fusion:['*融合* ✦ Pro','多位畫家合畫一幅畫'], pin:['點畫家——*釘住 📌*','釘住的畫家會留下'], guests:['在畫上*上滑 ↑*','新的客人加入釘住的畫家'], variant:['*左右滑 ← →*','同一幅畫的另一種變體'], painter:['選一位*畫家*','同樣的音樂，全新的畫'], fav:['點兩下 *♥*','收進你的收藏'], image:['會*演奏*的圖片','作曲家讀出它的顏色'], composer:['選一位*作曲家*','同一張圖，新的音樂'], home:['*首頁*','你最近的畫在這裡等你'], foryou:['*上滑 ↑* —— *推薦*','為你挑選的畫'], studio2:['點*工作室*','它就是你的了']}},
   ja:{ui:{ring:'使い方', nw:'NEW', skip:'スキップ', hold:'長押し = 一時停止', now:'次は*あなた* ✦', nowSub:'どの曲にも、その曲だけの絵がある。タップすると、あなたの曲が描き始める。', go:'タップして描く', again:'もう一度見る', full:'フルツアー · 2分', err:'動画の再生にはインターネットが必要です。', t:'2分でわかる Paintiano', sub:'アプリのすべて — タップ、スワイプ、描く', step:'ステップごとに', vid:'動画'},
-    r:{hook:'あなたの音楽が\n*絵を描く* 🎨', song:'*好きな曲*を選ぶ 🎵', col:'タップ → *新しい色* 🌈', art:'タップ → *別の画家* 🖌️', swipe:'上へスワイプ → *無限リミックス* ♾️', photo:'*写真*も*音楽になる* 🖼️', fav:'気に入った？*ダブルタップ* ❤️'},
+    r:{hook:'あなたの音楽が\n*絵を描く* 🎨', song:'*好きな曲*を選ぶ 🎵', col:'*色の輪*をタップ → 新しい色 🌈', art:'*画家*をタップ → 別のスタイル 🖌️', swipe:'上へスワイプ → *無限リミックス* ♾️', photo:'*写真*も*音楽になる* 🖼️', fav:'気に入った？*ダブルタップ* ❤️'},
     f:{intro:['どの曲にも*自分だけの絵*がある','Paintiano クイックツアー'], song:['*曲*を選ぶ','MP3、MIDI、気分 — またはサンプル'], look:['*変える → 見た目*','パレット、画家、フュージョン'], tap:['音楽が*描く*','ひとつひとつの音が色と形になる'], pal:['*リアルタイム*で色替え','再生中にパレットをタップ'], fusion:['*フュージョン* ✦ Pro','何人もの画家が一枚の絵を描く'], pin:['画家をタップして*ピン留め 📌*','ピン留めした画家は残る'], guests:['絵の上で*上へスワイプ ↑*','ピン留めした画家に新しいゲストが加わる'], variant:['*左右にスワイプ ← →*','同じ絵の別バリエーション'], painter:['*画家*を選ぶ','同じ音楽で、まったく新しい絵'], fav:['ダブルタップで *♥*','お気に入りに保存'], image:['*音を奏でる*写真','作曲家がその色を読む'], composer:['*作曲家*を選ぶ','同じ写真に、新しい音楽'], home:['*ホーム*','最後の絵がここで待っている'], foryou:['*上へスワイプ ↑* — *おすすめ*','あなたのために選んだ絵'], studio2:['*スタジオ*をタップ','それはもうあなたのもの']}},
 };
 const tourWords = (lang)=>{ const L=TOUR_I18N[lang]||TOUR_I18N.EN, E=TOUR_I18N.EN; return { ui:(k)=>(L.ui[k]!==undefined ? L.ui[k] : E.ui[k]), cap:(d,k)=>((L[d] && L[d][k]!==undefined) ? L[d][k] : E[d][k]) }; };
@@ -1275,10 +1275,10 @@ const TOUR_CSS = `
 .pf-tour-bars span.d{background:rgba(242,238,232,.92)}
 .pf-tour-bars i{display:block;height:100%;width:0;background:rgba(242,238,232,.92)}
 .pf-tour-hd{position:absolute;top:calc(env(safe-area-inset-top,0px) + 22px);left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;z-index:4;cursor:default}
-.pf-tour-hd .tt{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:13.5px;font-weight:600;color:rgba(242,238,232,.86);text-shadow:0 1px 8px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-tour-hd .tt{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:calc(var(--pf-read-scale,1) * 13.5px);font-weight:600;color:rgba(242,238,232,.86);text-shadow:0 1px 8px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-tour-hd .tt em{font-style:normal;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:20px;color:#f0c75e}
 .pf-tour-hd>div:last-child{display:flex;flex-shrink:0}
-.pf-tour-bt{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(7,6,12,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;padding:0;margin-left:8px;cursor:pointer}
+.pf-tour-bt{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(7,6,12,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#f2eee8;display:inline-flex;align-items:center;justify-content:center;padding:0;margin-left:8px;cursor:pointer}
 .pf-tour-cap{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 64px);width:max-content;max-width:min(92%,440px);box-sizing:border-box;transform:translateX(-50%) rotate(-2.5deg);background:rgba(14,10,24,.86);border:1.5px solid rgba(255,255,255,.14);border-radius:22px;padding:10px 20px 13px;text-align:center;box-shadow:0 12px 34px rgba(0,0,0,.5);pointer-events:none;z-index:3;animation:pfTourPop .34s cubic-bezier(.2,1.4,.4,1) both}
 .pf-tour.fs .pf-tour-cap{top:27%}
 .pf-tour-cap .l{font-weight:800;font-size:calc(var(--pf-read-scale,1) * 25px);line-height:1.1;letter-spacing:-.4px}
@@ -1286,22 +1286,22 @@ const TOUR_CSS = `
 .pf-tour-cap .s{margin-top:5px;font-weight:500;font-size:calc(var(--pf-read-scale,1) * 14px);line-height:1.3;color:rgba(242,238,232,.76)}
 .pf-tour b{font-weight:800;background:linear-gradient(90deg,#ff5fa2,#ff9d4d 45%,#f0c75e);-webkit-background-clip:text;background-clip:text;color:transparent}
 .pf-tour-ft{position:absolute;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;align-items:center;justify-content:space-between;z-index:4;cursor:default}
-.pf-tour-ft .h{font-size:12px;color:rgba(242,238,232,.72);text-shadow:0 1px 8px rgba(0,0,0,.85);transition:opacity .6s}
-.pf-tour-sk{font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:99px;background:rgba(7,6,12,.5);border:1px solid rgba(255,255,255,.15);color:#f2eee8;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.pf-tour-err{position:absolute;left:24px;right:24px;top:45%;text-align:center;font-size:15px;color:rgba(242,238,232,.8);z-index:4}
+.pf-tour-ft .h{font-size:calc(var(--pf-read-scale,1) * 12px);color:rgba(242,238,232,.72);text-shadow:0 1px 8px rgba(0,0,0,.85);transition:opacity .6s}
+.pf-tour-sk{font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;padding:8px 16px;border-radius:99px;background:rgba(7,6,12,.5);border:1px solid rgba(255,255,255,.15);color:#f2eee8;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.pf-tour-err{position:absolute;left:24px;right:24px;top:45%;text-align:center;font-size:calc(var(--pf-read-scale,1) * 15px);color:rgba(242,238,232,.8);z-index:4}
 .pf-tour-end{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:0 28px;overflow:hidden;cursor:default;animation:pfTourFade .45s ease both}
 .pf-tour-end .bg{position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(24px) brightness(.36) saturate(1.3);z-index:-1}
 .pf-tour-end .lg{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:54px;line-height:1;color:#f0c75e;text-shadow:0 6px 30px rgba(0,0,0,.5)}
 .pf-tour-end .h{font-weight:800;font-size:calc(var(--pf-read-scale,1) * 36px);letter-spacing:-.8px;line-height:1.1}
 .pf-tour-end .s{font-size:calc(var(--pf-read-scale,1) * 15px);line-height:1.45;color:rgba(242,238,232,.8);max-width:300px}
-.pf-tour-go{margin-top:12px;font-family:inherit;border:0;cursor:pointer;padding:15px 30px;border-radius:99px;font-weight:800;font-size:18px;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;box-shadow:0 12px 34px rgba(201,168,76,.45)}
-.pf-tour-lk{font-family:inherit;border:0;background:none;color:rgba(242,238,232,.74);font-size:14px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pf-tour-go{margin-top:12px;font-family:inherit;border:0;cursor:pointer;padding:15px 30px;border-radius:99px;font-weight:800;font-size:calc(var(--pf-read-scale,1) * 18px);background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;box-shadow:0 12px 34px rgba(201,168,76,.45)}
+.pf-tour-lk{font-family:inherit;border:0;background:none;color:rgba(242,238,232,.74);font-size:calc(var(--pf-read-scale,1) * 14px);padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .pf-tour-lk.g{color:#f0c75e;font-weight:600}
 .pf-tour-ring{position:absolute;left:0;top:calc(100% + 30px);display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;padding:0;margin:0;cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;font-family:'Outfit',system-ui,sans-serif;animation:pfTourFade .5s ease both}
 .pf-tour-ring .r{position:relative;width:62px;height:62px;border-radius:50%;padding:3px;background:conic-gradient(from 200deg,#ff5fa2,#ff9d4d,#f0c75e,#ff5fa2);box-shadow:0 6px 20px rgba(0,0,0,.5);animation:pfTourPulse 2.6s ease-in-out infinite}
 .pf-tour-ring .r>i{display:block;width:100%;height:100%;border-radius:50%;padding:3px;background:#07060c}
 .pf-tour-ring img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
-.pf-tour-ring .n{position:absolute;right:-8px;bottom:-3px;font-size:9.5px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:99px;background:#ff5f6d;color:#fff;border:2px solid #07060c;line-height:1.2}
+.pf-tour-ring .n{position:absolute;right:-8px;bottom:-3px;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:99px;background:#ff5f6d;color:#fff;border:2px solid #07060c;line-height:1.2}
 .pf-tour-ring .lb{font-size:calc(var(--pf-read-scale,1) * 12px);font-weight:700;color:#f2eee8;padding:2px 9px;border-radius:99px;background:rgba(7,6,12,.62);white-space:nowrap}
 .pf-tour-ring:active .r{transform:scale(.94)}
 @keyframes pfTourPop{from{opacity:0;transform:translateX(-50%) translateY(14px) rotate(-2.5deg) scale(.92)}to{opacity:1;transform:translateX(-50%) rotate(-2.5deg)}}
@@ -1404,6 +1404,8 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const direct = mode==='concept' || mode==='book';
   const [story, setStory] = useState(()=> mode==='concept' ? {k:'concept', i:0} : mode==='book' ? {k:'book', i:0} : null);
   const [sheet, setSheet] = useState(false);
+  const [sheetAll, setSheetAll] = useState(false);   // the sheet shows three rows first; "More" opens the rest
+  useEffect(()=>{ if(!sheet) setSheetAll(false); },[sheet]);
   const listOf = (k)=> k==='concept' ? concept : k==='book' ? [bookCard] : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
@@ -1466,7 +1468,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         <div id="paintiano-guide-title" style={{fontSize:17*rs,fontWeight:700}}>{_cap(t('guideTitle')||'Guide')}</div>
         <span style={{width:40}} aria-hidden="true"/>
       </div>
-      <label style={{marginTop:16,height:44,flexShrink:0,borderRadius:22,background:'rgba(255,255,255,.08)',border:'1px solid '+(focusedInput==='guide'?'rgba(240,215,138,.6)':'rgba(255,255,255,.1)'),display:'flex',alignItems:'center',gap:10,padding:'0 14px 0 16px',color:'rgba(242,238,232,.45)'}}>
+      <label style={{marginTop:16,height:44,flexShrink:0,borderRadius:22,background:'rgba(255,255,255,.08)',border:'1px solid '+(focusedInput==='guide'?'rgba(240,215,138,.6)':'rgba(255,255,255,.1)'),display:'flex',alignItems:'center',gap:10,padding:'0 14px 0 16px',color:'rgba(242,238,232,.62)'}}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input type="search" className="pf-g2-search" value={guideQuery} onChange={e=>setGuideQuery(e.target.value)}
           onFocus={()=>{ inputFocus.current=true; setFocusedInput('guide'); }} onBlur={()=>{ inputFocus.current=false; setFocusedInput(null); }}
@@ -1530,7 +1532,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
       <div style={{position:'absolute',top:top+'24px)',left:14,right:14,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:3}}>
         <div style={{display:'flex',alignItems:'center',gap:9,fontSize:14.5*rs,fontWeight:700}}>
           {circle(story.k, 30, 14)}{topicName(story.k)}
-          {cards.length>1 && (<span style={{fontWeight:500,fontSize:13*rs,color:'rgba(242,238,232,.42)',fontVariantNumeric:'tabular-nums'}}>{(story.i+1)+' / '+cards.length}</span>)}
+          {cards.length>1 && (<span style={{fontWeight:500,fontSize:13*rs,color:'rgba(242,238,232,.62)',fontVariantNumeric:'tabular-nums'}}>{(story.i+1)+' / '+cards.length}</span>)}
         </div>
         <button type="button" onClick={(e)=>{ e.stopPropagation(); closeStory(); }} aria-label="close" style={{...glass,width:36,height:36}}>{xIco(15)}</button>
       </div>
@@ -1566,7 +1568,8 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         <button type="button" onClick={()=>setSheet(false)} aria-label="close" style={{flexShrink:0,height:28,background:'none',border:0,padding:0,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><span aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)'}}/></button>
         <div style={{overflowY:'auto',padding:'0 18px calc(env(safe-area-inset-bottom, 0px) + 18px)'}}>
           <div style={{fontSize:19*rs,fontWeight:700,margin:'2px 0 8px'}}>{pfIcons(card.title)}</div>
-          {_gRows(card.more).map((r,i)=>(
+          {(()=>{ const _rows=_gRows(card.more); const _cut=(!sheetAll && _rows.length>4) ? _rows.slice(0,3) : _rows; return (<>
+          {_cut.map((r,i)=>(
             <div key={i} style={{display:'flex',gap:12,padding:'11px 0',borderTop:'1px solid rgba(242,238,232,.07)'}}>
               <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(card.cat).g}}/>
               <div style={{minWidth:0}}>
@@ -1574,6 +1577,8 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
                 <div style={{fontSize:13.5*rs,lineHeight:1.42,color:'rgba(242,238,232,.72)',marginTop:r.h?2:0}}>{pfIcons(r.x)}</div>
               </div>
             </div>))}
+          {_cut.length<_rows.length && (<button type="button" onClick={()=>setSheetAll(true)} style={{marginTop:8,height:44,width:'100%',borderRadius:22,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',fontSize:14.5*rs,fontWeight:700,fontFamily:'inherit',cursor:'pointer'}}>{((t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More')+' · '+(_rows.length-_cut.length)}</button>)}
+          </>); })()}
         </div>
       </div>
     </>)}
@@ -2071,7 +2076,7 @@ function txStyle(token, opts={}){
     save:{ border:'1px solid rgba(255,200,120,.55)', background:'rgba(255,200,120,.16)', color:'#ffd07a', fontWeight:700 },
     danger: on ? { border:'1px solid rgba(255,90,90,.65)', background:'rgba(255,90,90,.16)', color:'#ff8a8a' }
                : { border:'1px solid rgba(232,90,90,.45)', background:'rgba(232,90,90,.10)', color:'#e8857a' },
-    ghost:{ border:'1px solid rgba(201,168,76,.2)', background:'transparent', color:'rgba(201,168,76,.55)' },
+    ghost:{ border:'1px solid rgba(201,168,76,.2)', background:'transparent', color:'rgba(201,168,76,.78)' },
   };
   const style = { ...base, ...(T[token]||T.neutral) };
   if(disabled){ style.opacity = .42; }
@@ -2158,7 +2163,7 @@ h3{font-family:inherit!important;font-weight:600!important;font-size:.94em!impor
 p,li{font-size:.9em!important;color:rgba(242,238,232,.74)!important;line-height:1.6!important}
 strong{color:#f2eee8!important;font-weight:600!important}
 a{color:#e0b95e!important;border-bottom:0!important;text-decoration:none!important}
-.muted{color:rgba(242,238,232,.45)!important;font-size:.8em!important}
+.muted{color:rgba(242,238,232,.62)!important;font-size:.8em!important}
 ul{list-style:none!important;padding-left:0!important}
 ul li{position:relative!important;padding-left:16px!important}
 ul li::before{content:''!important;position:absolute!important;left:2px!important;top:.7em!important;width:5px!important;height:5px!important;border-radius:50%!important;background:#c9a84c!important}
@@ -2195,23 +2200,24 @@ footer a{color:rgba(242,238,232,.5)!important}
 .plan .cta{border-radius:999px!important;padding:13px 16px!important;font-size:.95em!important;font-weight:700!important;letter-spacing:0!important;text-transform:none!important;box-shadow:none!important;border:0!important}
 .plan.pro .cta{background:linear-gradient(135deg,#f0d78a,#c9a84c)!important;color:#1a1408!important}
 .plan.proai .cta{background:linear-gradient(135deg,#cdb2ff,#8c5cff)!important;color:#14091f!important}
-.cta-note{font-family:inherit!important;font-style:normal!important;font-size:.74em!important;color:rgba(242,238,232,.45)!important}
+.cta-note{font-family:inherit!important;font-style:normal!important;font-size:.74em!important;color:rgba(242,238,232,.62)!important}
 `;
 // STUDIO SKIN — the look sheet in the Studio: palettes as colour rings, painters as round faces (this song painted
 // by each of them), composers as monograms. The buttons and what they do are the Classic ones; only the look changes.
 const STUDIO_SKIN_CSS = `
 .pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs{gap:2px!important}
-.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab{display:flex!important;flex-direction:column;align-items:center;gap:6px;background:none!important;border:0!important;box-shadow:none!important;padding:2px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 8.5px)!important;letter-spacing:.1em!important;color:rgba(242,238,232,.62)!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab{display:flex!important;flex-direction:column;align-items:center;gap:6px;background:none!important;border:0!important;box-shadow:none!important;padding:2px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 10px)!important;letter-spacing:.1em!important;color:rgba(242,238,232,.62)!important;transform:none!important}
 .pf-app-root .pf-strip-grid.pf-skin .pf-color-tabs .pf-tab.pf-tab-on{color:#f0c040!important;font-weight:700!important}
 .pf-sk-ring{display:block;width:44px;height:44px;border-radius:50%;padding:3px;border:2px solid transparent;box-sizing:border-box;transition:border-color .18s, transform .12s}
 .pf-sk-ring i{display:block;width:100%;height:100%;border-radius:50%;border:3px solid #0e0b16;box-sizing:border-box}
 .pf-tab-on .pf-sk-ring{border-color:#f0c040}
 .pf-tab:active .pf-sk-ring{transform:scale(.92)}
 .pf-app-root .pf-strip-grid.pf-skin .pf-art-grid{row-gap:12px!important;column-gap:2px!important;align-items:start!important}
-.pf-app-root .pf-strip-grid.pf-skin .pf-artist{display:flex!important;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;box-shadow:none!important;padding:3px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 8px)!important;letter-spacing:.05em!important;color:rgba(242,238,232,.66)!important;overflow:visible!important;transform:none!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-artist{display:flex!important;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;box-shadow:none!important;padding:3px 0 0!important;border-radius:0!important;font-size:calc(min(var(--pf-read-scale,1), 1.25) * 10px)!important;letter-spacing:.05em!important;color:rgba(242,238,232,.66)!important;overflow:visible!important;transform:none!important}
 .pf-app-root .pf-strip-grid.pf-skin .pf-artist.pf-artist-on{color:#f0c040!important;font-weight:700!important}
 .pf-sk-face{display:block;flex-shrink:0;width:54px;height:54px;border-radius:50%;background:#1b1728 center/cover no-repeat;border:2px solid rgba(242,238,232,.08);box-shadow:0 4px 14px rgba(0,0,0,.5);box-sizing:border-box;transition:transform .12s, border-color .18s, box-shadow .18s}
 .pf-artist:active .pf-sk-face{transform:scale(.92)}
+.pf-artist[data-lk="1"] .pf-sk-face{opacity:.38;filter:saturate(.55)}
 .pf-artist-on .pf-sk-face{border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.35),0 4px 14px rgba(0,0,0,.5)}
 .pf-sk-face.pf-sk-hit{border-color:rgba(242,238,232,.8)}
 .pf-sk-face.pf-sk-wait{animation:pfSkWait 1.4s ease-in-out infinite}
@@ -2226,7 +2232,7 @@ const STUDIO_SKIN_CSS = `
 .pf-app-root .pf-strip-grid.pf-tray .pf-colors-inner{gap:8px!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs{display:flex!important;flex-wrap:nowrap!important;justify-content:center!important;gap:8px!important;grid-template-columns:none!important}
 .pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs{gap:2px!important;justify-content:stretch!important}
-.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab{flex:1 1 0!important;width:auto!important;min-width:0!important;gap:5px!important;padding:0!important;font-size:calc(min(var(--pf-read-scale,1),1.15) * 8.5px)!important;white-space:nowrap;overflow:hidden}
+.pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab{flex:1 1 0!important;width:auto!important;min-width:0!important;gap:5px!important;padding:0!important;font-size:calc(min(var(--pf-read-scale,1),1.15) * 10px)!important;white-space:nowrap;overflow:hidden}
 .pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab>span:last-child{max-width:100%;min-width:0;overflow:hidden}
 .pf-app-root .pf-strip-grid.pf-tray .pf-color-tabs .pf-tab>span:last-child>span:first-child{overflow:hidden;text-overflow:ellipsis}
 .pf-tray .pf-sk-ring{flex-shrink:0;width:38px;height:38px;padding:2px}
@@ -2272,7 +2278,7 @@ const STUDIO_SKIN_CSS = `
 .pf-tray-seg button{border:0;background:none;color:rgba(242,238,232,.62);font-family:inherit;font-size:calc(min(var(--pf-read-scale,1),1.2) * 12px);font-weight:600;padding:5px 12px;border-radius:13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-tray-seg button.on{background:#f2eee8;color:#121018}
 .pf-tray-seg button:disabled{opacity:.35;cursor:default}
-.pf-tray-seg button.lk{color:rgba(242,238,232,.42)}
+.pf-tray-seg button.lk{color:rgba(242,238,232,.62)}
 .pf-tray-tg{background:none;padding:0;gap:6px}
 .pf-tray-tg button{display:inline-flex;align-items:center;gap:5px;padding:5px 11px 5px 13px;border:1px solid rgba(255,255,255,.14);background:transparent;color:rgba(230,222,196,.45);font-weight:500;border-radius:18px;transition:background .15s,border-color .15s,color .15s}
 .pf-tray-tg button.on{background:rgba(220,180,90,.12);border-color:rgba(220,180,90,.75);color:#f2eee8}   /* as Collage / Synthesis in Styles & palettes */
@@ -2306,14 +2312,14 @@ const MINE_CSS = `
 .pf-mine{position:fixed;inset:0;z-index:100002;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:#0b0a10;color:#f2eee8;font-family:'Outfit','Helvetica Neue',Arial,sans-serif;padding:calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px));animation:pfMineIn .22s ease-out}
 @keyframes pfMineIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .pf-mine-hd{display:flex;align-items:center;gap:10px;max-width:720px;margin:0 auto 14px}
-.pf-mine-ttl{flex:1;font-family:'Cormorant Garamond',Georgia,serif;font-size:30px;line-height:1}
-.pf-mine-ed{height:34px;padding:0 14px;border-radius:17px;border:1px solid rgba(242,238,232,.18);background:transparent;color:rgba(242,238,232,.85);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pf-mine-ttl{flex:1;font-family:'Cormorant Garamond',Georgia,serif;font-size:calc(var(--pf-read-scale,1) * 30px);line-height:1}
+.pf-mine-ed{height:34px;padding:0 14px;border-radius:17px;border:1px solid rgba(242,238,232,.18);background:transparent;color:rgba(242,238,232,.85);font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;cursor:pointer}
 .pf-mine-ed.on{background:#f2eee8;color:#14110a;border-color:#f2eee8}
 .pf-mine-close{width:36px;height:36px;padding:0;border-radius:50%;border:1px solid rgba(242,238,232,.16);background:rgba(255,255,255,.05);color:#f2eee8;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pf-mine-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:720px;margin:0 auto 14px;padding-bottom:2px}
 .pf-mine-tabs::-webkit-scrollbar{display:none}
-.pf-mine-tab{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 11px;border-radius:17px;border:1px solid rgba(242,238,232,.14);background:transparent;color:rgba(242,238,232,.7);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.pf-mine-tab small{font-size:11px;font-weight:500;opacity:.6}
+.pf-mine-tab{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 11px;border-radius:17px;border:1px solid rgba(242,238,232,.14);background:transparent;color:rgba(242,238,232,.7);font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-mine-tab small{font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:500;opacity:.6}
 .pf-mine-tab.on{background:#f2eee8;color:#14110a;border-color:#f2eee8}
 .pf-mine-tab svg{color:#ff5a8a}
 .pf-mine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:720px;margin:0 auto;animation:pfMineIn .2s ease-out}
@@ -2327,15 +2333,15 @@ const MINE_CSS = `
 .pf-mine-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
 .pf-mine-wait{width:44%;height:44%;border-radius:12px;background:linear-gradient(110deg,rgba(255,255,255,.04) 30%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.04) 70%);background-size:200% 100%;animation:pfMineWait 1.3s linear infinite}
 @keyframes pfMineWait{to{background-position:-200% 0}}
-.pf-mine-tag{position:absolute;top:8px;left:8px;z-index:1;display:inline-flex;align-items:center;gap:5px;max-width:calc(100% - 16px);padding:4px 8px;border-radius:10px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden}
+.pf-mine-tag{position:absolute;top:8px;left:8px;z-index:1;display:inline-flex;align-items:center;gap:5px;max-width:calc(100% - 16px);padding:4px 8px;border-radius:10px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;white-space:nowrap;overflow:hidden}
 .pf-mine-tag.music{color:#9ad2ff}
 .pf-mine-tag.image{color:#ffb08a}
 .pf-mine-tag.fav{color:#ff9ec0}
 .pf-mine-cap{position:absolute;left:10px;right:10px;bottom:9px;z-index:1;display:flex;flex-direction:column;gap:2px;pointer-events:none}
-.pf-mine-cap b{font-size:13px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pf-mine-cap small{font-size:11px;line-height:1.3;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-mine-cap b{font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-mine-cap small{font-size:calc(var(--pf-read-scale,1) * 11px);line-height:1.3;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-mine.edit .pf-mine-tile{transform:scale(.96)}
-.pf-mine-del{position:absolute;top:7px;right:7px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:15px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.62);color:#fff;font-family:inherit;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:pfMineIn .15s ease-out}
+.pf-mine-del{position:absolute;top:7px;right:7px;z-index:2;min-width:30px;height:30px;padding:0 9px;border-radius:15px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.62);color:#fff;font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:pfMineIn .15s ease-out}
 .pf-mine-del.on{background:#e0465a;border-color:transparent}
 .pf-mine-ren{position:fixed;inset:0;z-index:3;background:rgba(4,4,10,.6);display:flex;align-items:center;justify-content:center;padding:0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))}
 .pf-mine-ren-box{width:100%;max-width:380px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:18px;background:#15121f;border:1px solid rgba(242,238,232,.14)}
@@ -2346,7 +2352,7 @@ const MINE_CSS = `
 .pf-mine-ren-box button{height:38px;padding:0 16px;border-radius:19px;border:1px solid rgba(242,238,232,.2);background:transparent;color:#f2eee8;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .pf-mine-ren-box button.on{background:#f0d78a;border-color:#f0d78a;color:#14110a}
 .pf-mine-ren-box button:disabled{opacity:.4}
-.pf-mine-empty{max-width:420px;margin:48px auto 0;text-align:center;font-size:15px;line-height:1.55;color:rgba(240,215,138,.88)}
+.pf-mine-empty{max-width:420px;margin:48px auto 0;text-align:center;font-size:calc(var(--pf-read-scale,1) * 15px);line-height:1.55;color:rgba(240,215,138,.88)}
 `;
 const STUDIO_FX_CSS = `
 .pf-app-root{--pf-side:min(360px, 42vw)}
@@ -2389,13 +2395,13 @@ const STUDIO_FX_CSS = `
    (Safari left the wrap's clip-path corners square here; in the card view they were round) */
 .pf-studio-fill.pf-st-tray .pf-stage-part canvas{border-radius:18px!important}
 .pf-st-tipw{position:relative;display:inline-flex}
-.pf-st-tip{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:8px 12px;border-radius:12px;background:#fff;color:#1a1408;font-size:13px;font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,.45);pointer-events:none;animation:pfStTipIn .3s cubic-bezier(.2,.8,.2,1) both}
+.pf-st-tip{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:8px 12px;border-radius:12px;background:#fff;color:#1a1408;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,.45);pointer-events:none;animation:pfStTipIn .3s cubic-bezier(.2,.8,.2,1) both}
 .pf-st-tip::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;margin-left:-5px;background:#fff;transform:rotate(45deg)}
 .pf-st-tip.l{left:-4px;transform:none;animation-name:pfStTipInL}
 .pf-st-tip.l::after{left:28px}
 @keyframes pfStTipIn{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes pfStTipInL{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.pf-st-tipup{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:16px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(242,238,232,.22);color:#fff;font-size:13px;font-weight:600;pointer-events:none;animation:pfStTipInL .3s ease-out both}
+.pf-st-tipup{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:16px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(242,238,232,.22);color:#fff;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;pointer-events:none;animation:pfStTipInL .3s ease-out both}
 .pf-st-tipup svg{animation:pfStBob 1.4s ease-in-out infinite}
 @keyframes pfStBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion: reduce){.pf-st-tipup svg{animation:none}}
@@ -2412,7 +2418,7 @@ const STUDIO_FX_CSS = `
 .pf-st-thumb{position:fixed;right:max(12px, env(safe-area-inset-right, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid rgba(220,150,255,.6);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
 .pf-st-paused{position:fixed;left:50%;top:50%;z-index:10001;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);pointer-events:none;animation:pfStPausedIn .18s ease-out}
 .pf-st-paused svg{margin-left:4px}
-.pf-mic-clock{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 18px);transform:translateX(-50%);z-index:10001;display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:14px;background:rgba(10,8,18,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#f2eee8;font-size:13px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;pointer-events:none}
+.pf-mic-clock{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 18px);transform:translateX(-50%);z-index:10001;display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:14px;background:rgba(10,8,18,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#f2eee8;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;pointer-events:none}
 .pf-mic-clock i{width:8px;height:8px;border-radius:50%;background:#ff4d64;box-shadow:0 0 8px #ff4d64;animation:pfMicBlink 1.2s ease-in-out infinite}
 @keyframes pfMicBlink{50%{opacity:.35}}
 .pf-mic-rec{flex-shrink:0;width:68px;height:68px;padding:0;border-radius:50%;border:3px solid #f2eee8;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:box-shadow .2s}
@@ -2432,8 +2438,8 @@ const STUDIO_FX_CSS = `
 .pf-st-meta [role="button"],.pf-st-meta button{pointer-events:auto;padding:8px 6px;margin:-8px -6px;-webkit-tap-highlight-color:transparent}   /* ✦ Signature, the artist of the day: the lines' own buttons work (the bar lets the rest through to the painting) */
 .pf-st-meta.hide [role="button"],.pf-st-meta.hide button{pointer-events:none}
 .pf-st-meta.hide{opacity:0;transform:translateY(8px);pointer-events:none}
-.pf-st-meta-t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
-.pf-st-meta-l{font-size:12px;letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-st-meta-t{font-size:calc(var(--pf-read-scale,1) * 15px);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.pf-st-meta-l{font-size:calc(var(--pf-read-scale,1) * 12px);letter-spacing:.02em;color:#f0d78a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-st-bar-live .pf-st-meta > div:not(.pf-st-meta-t) > div{color:rgba(240,215,138,.92)!important}   /* the Mic: the palette · painters line sits inside the painting's lower edge — brighter there */
 .pf-st-sup{font-weight:700;letter-spacing:.03em}
 .pf-st-take{cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;display:flex;justify-content:center;align-items:center}
@@ -2442,7 +2448,7 @@ const STUDIO_FX_CSS = `
 .pf-st-take:active{opacity:.7}
 .pf-st-tipup.rm{display:none}
 @media (prefers-reduced-motion: reduce){.pf-st-tipup.rm{display:inline-flex}}
-.pf-st-meta-e{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:22px;color:#f3ead2}
+.pf-st-meta-e{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:calc(var(--pf-read-scale,1) * 22px);color:#f3ead2}
 .pf-st-acts{display:flex;align-items:center;justify-content:center;gap:22px;transition:margin .25s ease}
 .pf-st-act{pointer-events:auto;width:48px;height:48px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(242,238,232,.2);color:#f2eee8;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s, opacity .2s}
 .pf-st-act:active{transform:scale(.9)}
@@ -2451,7 +2457,7 @@ const STUDIO_FX_CSS = `
 .pf-st-act.off{visibility:hidden;opacity:0;pointer-events:none;transition:none}
 .pf-st-fav.on{color:#ff4d7d;border-color:rgba(255,77,125,.55)}
 .pf-st-fav.pend{color:#ff6b8b;border-color:rgba(255,107,139,.6)}
-.pf-st-chg{pointer-events:auto;height:48px;padding:0 22px;border-radius:24px;border:0;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;font-family:inherit;font-size:15px;font-weight:700;letter-spacing:.02em;cursor:pointer;box-shadow:0 8px 24px -6px rgba(217,183,101,.6);-webkit-tap-highlight-color:transparent;transition:transform .12s}
+.pf-st-chg{pointer-events:auto;height:48px;padding:0 22px;border-radius:24px;border:0;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 15px);font-weight:700;letter-spacing:.02em;cursor:pointer;box-shadow:0 8px 24px -6px rgba(217,183,101,.6);-webkit-tap-highlight-color:transparent;transition:transform .12s}
 .pf-st-chg:active{transform:scale(.95)}
 .pf-st-chg.glow{animation:pfStChgGlow 2s ease-in-out infinite}
 @keyframes pfStChgGlow{0%,100%{box-shadow:0 0 0 0 rgba(240,215,138,.55),0 8px 24px -6px rgba(217,183,101,.6)}50%{box-shadow:0 0 0 12px rgba(240,215,138,0),0 8px 24px -6px rgba(217,183,101,.6)}}
@@ -2471,12 +2477,12 @@ const STUDIO_FX_CSS = `
 .pf-chg-hero{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:16px;border:1px solid rgba(255,140,150,.45);background:linear-gradient(135deg,rgba(255,95,143,.22),rgba(255,176,138,.12));color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-chg-hero.see{border-color:rgba(122,179,255,.5);background:linear-gradient(135deg,rgba(63,123,255,.25),rgba(122,179,255,.1))}
 .pf-chg-hero:active,.pf-chg-c:active{transform:scale(.98)}
-.pf-chg-go{font-size:20px;color:rgba(242,238,232,.7)}
+.pf-chg-go{font-size:calc(var(--pf-read-scale,1) * 20px);color:rgba(242,238,232,.7)}
 .pf-chg-cc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .pf-chg-cc>.pf-chg-c:last-child:nth-child(odd){grid-column:1 / -1}
 .pf-chg-c{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 11px;border-radius:16px;border:1px solid rgba(242,238,232,.06);background:rgba(255,255,255,.05);color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,color .2s}
 .pf-chg-c .pf-chg-tx b{font-size:calc(var(--pf-read-scale,1) * 13.5px)}
-.pf-chg-c .pf-chg-tx small{font-size:calc(var(--pf-read-scale,1) * 10.5px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-chg-c .pf-chg-tx small{font-size:calc(var(--pf-read-scale,1) * 11.5px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pf-chg-ci{flex-shrink:0;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.09);color:#f2eee8}
 .pf-chg-ci svg{width:16px;height:16px}
 .pf-chg-c.on{background:#f2eee8;color:#121018}
@@ -2557,7 +2563,7 @@ const STUDIO_SHEET_CSS = `
 .pf-sm-send:disabled{opacity:.25;cursor:default}
 .pf-sm-send:not(:disabled){animation:pfSmGlow 1.8s ease-out infinite}
 @keyframes pfSmGlow{0%{box-shadow:0 0 0 0 rgba(150,100,255,.55)}100%{box-shadow:0 0 0 12px rgba(150,100,255,0)}}
-.pf-sm-ph{position:absolute;left:21px;right:60px;top:50%;pointer-events:none;color:rgba(242,238,232,.45);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateY(-50%);animation:pfSmPh .45s ease both}
+.pf-sm-ph{position:absolute;left:21px;right:60px;top:50%;pointer-events:none;color:rgba(242,238,232,.62);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translateY(-50%);animation:pfSmPh .45s ease both}
 @keyframes pfSmPh{from{opacity:0;transform:translateY(-10%)}to{opacity:1;transform:translateY(-50%)}}
 .pf-sm-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:9px 14px 9px 11px;border-radius:22px;font-family:inherit;line-height:1.2;cursor:pointer;color:#f2eee8;transition:transform .12s, background-color .18s;-webkit-tap-highlight-color:transparent}
 .pf-sm-chip:active{transform:scale(.95)}
@@ -2769,7 +2775,7 @@ const STUDIO_HOME_CSS = `
 .pf-st-daily{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;padding:6px 16px 6px 7px;border-radius:24px;background:rgba(20,16,30,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(240,215,138,.35);box-shadow:0 8px 30px rgba(0,0,0,.45);white-space:nowrap;font-family:'Outfit',sans-serif;cursor:pointer;animation:pfStDaily .5s ease both}
 .pf-st-daily>i{display:block;width:28px;height:28px;border-radius:50%;background:conic-gradient(#e2c477,#8c5cff,#3fb37a,#e2c477);box-shadow:0 0 0 2px #0e0b16,0 0 0 3px rgba(240,215,138,.6)}
 .pf-st-daily>span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15}
-.pf-st-daily small{font-size:calc(var(--pf-read-scale,1) * 9px);font-weight:700;letter-spacing:.2em;color:#f0d78a;text-transform:uppercase}
+.pf-st-daily small{font-size:calc(var(--pf-read-scale,1) * 10.5px);font-weight:700;letter-spacing:.2em;color:#f0d78a;text-transform:uppercase}
 .pf-st-daily b{font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;color:#f2eee8}
 @keyframes pfStDaily{from{opacity:0;transform:translate(-50%,-70%)}to{opacity:1;transform:translate(-50%,-50%)}}
 .pf-sh-links button{background:none;border:0;padding:8px 4px;color:rgba(242,238,232,.72);font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
@@ -3618,6 +3624,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // A free user gets ONE taste of a locked artist total (not one per artist).
   // Once used, tapping ANY locked artist opens the paywall.
   const tasteUsedRef = useRef(false);
+  // a locked painter: the first tap is a taste (it unlocks to try), the second opens the paywall
+  const _lockTap = (k)=>{ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setPaywallReason('settings'); };
   const [tastePreviewKey, setTastePreviewKey] = useState(null);
   const tastePreviewKeyRef = useRef(null);
   const feedFirstRef = useRef(false), firstKeptRef = useRef(false);   // … and kept with ↓ / its title: still that painting, in full   // the first screen's own painting is on (its look in full, even on Free — it is what the screen showed)
@@ -14397,7 +14405,7 @@ Hard requirements:
           sctx.drawImage(storyThumbImg, tx, thumbY, tw, th);
           sctx.restore();
           // gold frame
-          sctx.strokeStyle='rgba(201,168,76,.55)'; sctx.lineWidth=2;
+          sctx.strokeStyle='rgba(201,168,76,.78)'; sctx.lineWidth=2;
           sctx.strokeRect(tx, thumbY, tw, th);
         }
         // Painting placement: below the thumb (if any), centered in the
@@ -15486,17 +15494,17 @@ Hard requirements:
   // the caption under a folded look panel (and on top in the studio): palette · the painters / composers · ✦
   const _capLines = ()=> (<>
         {(loadedSource!=='image' || moodFromImg) && effectiveStyle && effectiveStyle!=='notes' && effectiveStyle!=='mosaic' && STYLE_INSPIRED[effectiveStyle] && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span> • {!style&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyArtist(effectiveStyle) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{painterStage.length ? _fsNames('art',0,0,0,true) : effectiveStyle==='raffel' ? STYLE_INSPIRED[effectiveStyle] : t('inspiredBy').replace('{artist}', STYLE_INSPIRED[effectiveStyle])}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.78)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {/* Styles without an artist attribution — mosaic (no style selected) and
             notes (bare grid with note labels) — get no "inspired by". Show the
             active colour mode • the style name so the collapsed caption isn't
             blank. */}
         {(loadedSource!=='image' || moodFromImg) && (!effectiveStyle || effectiveStyle==='notes' || effectiveStyle==='mosaic') && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.78)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp',0,0,0,true) : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}{imgSig && imgPlayMode==='scan' && (<span onClick={_toggleImgSig} role="button" tabIndex={0} title={_sigT('tipImg')} aria-pressed={imgSigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:imgSigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.55)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp',0,0,0,true) : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}{imgSig && imgPlayMode==='scan' && (<span onClick={_toggleImgSig} role="button" tabIndex={0} title={_sigT('tipImg')} aria-pressed={imgSigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:imgSigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.78)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
   </>);
   // a built-in picture: its kept Atmosphere / Melody (SAMPLE_IMG_BAKE) — no AI call, no trial, no lock
@@ -16690,7 +16698,7 @@ Hard requirements:
       {/* Address chip: visible with ANY content while poster-maker is on — also
           for external songs where the POSTER button itself stays hidden. */}
       {(addrChip || posterMaker) && chords.length>0 && (!studioOn || studioFs) && (
-        <div style={{position:'fixed',zIndex:studioOn?10002:9999,...(studioOn ? {left:'calc(max(12px, env(safe-area-inset-left, 0px)) + 50px)',top:'calc(env(safe-area-inset-top, 0px) + 16px)',boxSizing:'border-box',maxWidth:stLand?'calc(100vw - var(--pf-side) - 176px)':'calc(100vw - 196px)'} : {left:14,bottom:132,maxWidth:'calc(100vw - 170px)'}),padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.5)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',lineHeight:1.35,fontVariantNumeric:'tabular-nums'}}>
+        <div style={{position:'fixed',zIndex:studioOn?10002:9999,...(studioOn ? {left:'calc(max(12px, env(safe-area-inset-left, 0px)) + 50px)',top:'calc(env(safe-area-inset-top, 0px) + 16px)',boxSizing:'border-box',maxWidth:stLand?'calc(100vw - var(--pf-side) - 176px)':'calc(100vw - 196px)'} : {left:14,bottom:132,maxWidth:'calc(100vw - 170px)'}),padding:'8px 14px',borderRadius:20,border:'1px solid rgba(201,168,76,.78)',background:'rgba(11,11,16,.92)',color:'#c9a84c',fontSize:12,letterSpacing:'.08em',lineHeight:1.35,fontVariantNumeric:'tabular-nums'}}>
           {(()=>{
             // A fusion (Ensemble / Signature) is addressed by EVERY member and its own
             // variant — the same variants fuseDNA paints (slot 1 = the phase, the others
@@ -17131,7 +17139,7 @@ Hard requirements:
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'2px 16px',paddingTop:2}}>
                     <button type="button" onClick={_go(()=>resetAll())} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(255,150,150,.7)',cursor:'pointer'}}>{ts('resetLabel',({EN:'Reset',SK:'Reset',DE:'Zurücksetzen',FR:'Réinitialiser',ES:'Restablecer',PT:'Redefinir',zh:'重置',zhTW:'重置',ja:'リセット'})[lang]||'Reset')}</button>
-                    {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(242,238,232,.45)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
+                    {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(242,238,232,.62)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
                   </div>
                 </div>
               </div>);
@@ -17273,10 +17281,10 @@ Hard requirements:
           return (
             <div style={{position:'relative'}}>
               <div style={{display:'inline-flex',alignItems:'stretch',border:'1px solid rgba(201,168,76,.26)',borderRadius:20,overflow:'hidden',background:'rgba(255,255,255,.03)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)'}}>
-                <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{height:38,padding:'0 12px',background:readScale>1?'rgba(201,168,76,.12)':'transparent',color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'none',borderRight:'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:4,fontWeight:600,WebkitTapHighlightColor:'transparent'}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
-                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{height:38,padding:'0 12px',background:'transparent',color:PF.muted,border:'none',borderRight:basicMode?'none':'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:(.62*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:5,WebkitTapHighlightColor:'transparent'}}><span style={{color:'rgba(220,180,90,.95)',fontWeight:600,letterSpacing:'.08em'}}>{meta.code}</span><span style={{fontSize:(.55*effScale)+'rem',opacity:.6}}>▾</span></button>
+                <button onClick={()=>setReadScale(rs=> rs>=1.5?1 : rs>=1.25?1.5 : 1.25)} aria-label={t('fsLabel')} title={t('fsLabel')+' · '+(readScale===1?'1×':readScale===1.25?'1.25×':'1.5×')} style={{height:44,padding:'0 12px',background:readScale>1?'rgba(201,168,76,.12)':'transparent',color:readScale>1?'rgba(220,180,90,.95)':PF.muted,border:'none',borderRight:'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:'.62rem',fontFamily:'inherit',letterSpacing:'.06em',display:'inline-flex',alignItems:'center',gap:4,fontWeight:600,WebkitTapHighlightColor:'transparent'}}><span style={{fontSize:'.62rem'}}>A</span><span style={{fontSize:'.78rem',lineHeight:.9}}>A</span>{readScale>1&&<span style={{fontSize:'.5rem',opacity:.85,marginLeft:1}}>{readScale===1.25?'1.25×':'1.5×'}</span>}</button>
+                <button onClick={()=>setLangOpen(v=>!v)} aria-label={`switch language (currently ${meta.name})`} aria-expanded={langOpen} title={`switch language (currently ${meta.name})`} style={{height:44,padding:'0 12px',background:'transparent',color:PF.muted,border:'none',borderRight:basicMode?'none':'1px solid rgba(201,168,76,.16)',cursor:'pointer',fontSize:(.62*effScale)+'rem',fontFamily:'inherit',letterSpacing:'.04em',display:'inline-flex',alignItems:'center',gap:5,WebkitTapHighlightColor:'transparent'}}><span style={{color:'rgba(220,180,90,.95)',fontWeight:600,letterSpacing:'.08em'}}>{meta.code}</span><span style={{fontSize:(.55*effScale)+'rem',opacity:.6}}>▾</span></button>
                 {!basicMode && (
-                <button className="pf-setup-chip" onClick={()=>{ setSetupReturnTo(null); setShowSetupModal(true); }} aria-label={ts('setupPickerLabel','Setup')} title={ts('setupPickerLabel','Setup')} style={{height:38,padding:'0 12px',background:'transparent',color:'rgba(220,180,90,.85)',border:'none',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                <button className="pf-setup-chip" onClick={()=>{ setSetupReturnTo(null); setShowSetupModal(true); }} aria-label={ts('setupPickerLabel','Setup')} title={ts('setupPickerLabel','Setup')} style={{height:44,padding:'0 12px',background:'transparent',color:'rgba(220,180,90,.85)',border:'none',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
                 )}
               </div>
               {langOpen && (
@@ -17425,7 +17433,7 @@ Hard requirements:
               <div key={f.id} className="pf-sf-meta" style={{flexShrink:0,width:'100%',boxSizing:'border-box',textAlign:'center',padding:'0 24px',lineHeight:1.45}}>
                 <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontWeight:600,fontSize:(.92*effScale)+'rem',lineHeight:1.1,color:'#f2eee8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favTitle(f) || _favT('label')}</div>
                 <div style={{marginTop:5,fontSize:(.56*effScale)+'rem',letterSpacing:'.04em',color:'#f0d78a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{(()=>{ const w=String(_favWho(f)||''); return w.charAt(0).toUpperCase()+w.slice(1); })()}</div>
-                <div style={{marginTop:2,fontSize:(.5*effScale)+'rem',letterSpacing:'.05em',color:'rgba(242,238,232,.45)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favMeta(f)}</div>
+                <div style={{marginTop:2,fontSize:(.5*effScale)+'rem',letterSpacing:'.05em',color:'rgba(242,238,232,.62)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favMeta(f)}</div>
               </div>
             )}
             {f && (<div className="pf-st-acts" onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()}>
@@ -17525,14 +17533,14 @@ Hard requirements:
               {favFs && f && (
                 <div style={{marginTop:14,padding:'0 16px',textAlign:'center',lineHeight:1.6}}>
                   <div style={{fontStyle:'italic',color:'rgba(201,168,76,.82)',fontSize:(.62*effScale)+'rem',letterSpacing:'.04em'}}>{_favTitle(f)}</div>
-                  <div style={{color:'rgba(242,238,232,.45)',fontSize:(.52*effScale)+'rem',letterSpacing:'.05em'}}>{who} · {_favMeta(f).split(' · ').slice(0,1)}</div>
+                  <div style={{color:'rgba(242,238,232,.62)',fontSize:(.52*effScale)+'rem',letterSpacing:'.05em'}}>{who} · {_favMeta(f).split(' · ').slice(0,1)}</div>
                 </div>
               )}
             </div>
             {f && (
               <div style={{textAlign:'center',marginTop:10,lineHeight:1.6,padding:'0 8px'}}>
                 <div style={{fontStyle:'italic',letterSpacing:'.08em',color:'rgba(201,168,76,.75)',fontSize:(.56*effScale)+'rem'}}>{who}</div>
-                <div style={{color:'rgba(242,238,232,.42)',fontSize:(.5*effScale)+'rem',letterSpacing:'.06em'}}>{_favMeta(f)}</div>
+                <div style={{color:'rgba(242,238,232,.62)',fontSize:(.5*effScale)+'rem',letterSpacing:'.06em'}}>{_favMeta(f)}</div>
               </div>
             )}
           </>)}
@@ -17800,7 +17808,7 @@ Hard requirements:
               mood (how do you feel?) · compose · mic. */}
           <div>
             <div style={{fontSize:(.58*effScale)+'rem',fontWeight:500,letterSpacing:'.04em',color:'rgba(242,238,232,0.45)',marginBottom:10}}>{_sent(t('createLabel'))}</div>
-            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMoodDraft){ restoreMode('mood'); setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>{(proStatus!=='pro_ai' && !modeExhausted('mood')) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(220,180,90,.95)',background:'rgba(201,168,76,.12)',border:'1px solid rgba(201,168,76,.5)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free AI try')}</span>)}
+            <button onClick={()=>{ if(sourcePickerLocked)return; if(showMoodMenu){ setShowMoodMenu(false); return; } if(moodContext&&!moodFromImg&&chords.length>0){ setForceSetup(false); return; } if(hasMoodDraft){ restoreMode('mood'); setForceSetup(false); return; } setMoodEdit(''); setShowMoodMenu(true); }} disabled={sourcePickerLocked} className="pf-lift pf-moodtile" title={(t('moodDesc')!=='moodDesc' ? t('moodDesc') : 'describe a feeling — AI composes & paints')} style={{width:'100%',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:8,padding:isNotPhone?'40px 24px':'13px',borderRadius:14,marginBottom:8,cursor:sourcePickerLocked?'default':'pointer',background:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.20)':'transparent',border:'1px solid '+((moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'rgba(201,168,76,.75)':'rgba(201,168,76,.35)'),color:(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)?'#eafff4':'rgba(220,180,90,.95)',fontFamily:'inherit',fontSize:(.78*effScale)+'rem',fontWeight:500,letterSpacing:0,opacity:sourcePickerLocked?0.4:1,position:'relative'}}>{(proStatus!=='pro_ai' && !modeExhausted('mood')) && (<span style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',fontSize:(.48*effScale)+'rem',fontWeight:600,letterSpacing:'.03em',whiteSpace:'nowrap',color:'rgba(220,180,90,.95)',background:'rgba(201,168,76,.12)',border:'1px solid rgba(201,168,76,.78)',borderRadius:10,padding:'2px 8px',pointerEvents:'none'}}>{ts('aiTrialBadge','1 free AI try')}</span>)}
               {(moodContext&&!moodFromImg&&chords.length>0||hasMoodDraft)&&<span style={{width:7,height:7,borderRadius:'50%',background:'#dcb45a',boxShadow:'0 0 6px #dcb45a',flexShrink:0}}/>}
               <span className="pf-chip-icon" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'1.2rem',height:'1.2rem'}}><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8.5-1.5A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></span>
               {_sent(t('moodHowFeel'))}
@@ -18889,14 +18897,14 @@ Hard requirements:
                   toggleArtSafe(k);
                   return;
                 }
+                if(locked){ _lockTap(k); return; }   // a locked painter, wherever it sits: a taste first, then the paywall
                 if(_tk){ stTakenRef.current=false; setStTaken(false); if(_tkMine) return; }   // the kept surprise's own painter tapped: now it is chosen (gold); another one: chosen as usual
                 if(_artMode===2){                               // shuffle ALL: the draw decides — except Ensemble ALL, where a tap pins / unpins
                   // the Studio has no 🔀: a tap picks this painter (↑ draws again, ← its variants); with the Ensemble it starts a new Fusion from it
-                  if(studioFs && !(jamOn && jamAll)){ if(locked){ setPaywallReason('settings'); return; } if(painterStage.length) setPainterStage([]); selectStyle(k); return; }
+                  if(studioFs && !(jamOn && jamAll)){ if(painterStage.length) setPainterStage([]); selectStyle(k); return; }
                   if(jamOn && jamAll && !locked) _jamPinTap(k);
                   return;
                 }
-                if(locked && _inSig){ setPaywallReason('settings'); return; }   // a Pro ✦ member on Free: on its own it is Pro
                 if(studioFs && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)){ _stAllOn(); return; }   // the Studio: the last gold one tapped again = let go — ↑ draws from your whole set again
                 // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
                 // must not slide into ALL just because nothing is selected any more).
@@ -18912,8 +18920,8 @@ Hard requirements:
                   data-fu={(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?(locked?0.35:1):(_artMode===2&&!shufHit&&!studioFs)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {studioFs && _skinFace(k, shufHit && !isOn)}
                   {label}
-                  {locked && cockpitEdit && (
-                    <span style={{position:'absolute',top:3,right:5,fontSize:(.34*effScale)+'rem',opacity:.7,letterSpacing:'.02em'}}>🔒</span>
+                  {locked && (
+                    <span aria-hidden="true" style={{position:'absolute',top:0,right:'calc(50% - 30px)',width:20,height:20,borderRadius:'50%',background:'rgba(7,6,12,.82)',border:'1px solid rgba(242,238,232,.18)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,lineHeight:1,zIndex:2}}>🔒</span>
                   )}
                   {isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
                   {_inSig && !isDailyArtist(k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}
@@ -19079,7 +19087,7 @@ Hard requirements:
               <button type="button" onClick={_prevSave} style={{flex:1.5,height:50,borderRadius:25,border:0,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:16,color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{_sv(<><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V17"/></>, 19)}{_sent(t('save'))}</button>
               <button type="button" onClick={copyPreview} style={{flex:1,height:50,borderRadius:25,cursor:'pointer',fontFamily:'inherit',fontWeight:600,fontSize:15,color:'#fff',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.14)',display:'flex',alignItems:'center',justifyContent:'center',gap:7}}>{_sv(<><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></>, 17)}{_stT('pvCopy')}</button>
             </div>
-            <div style={{marginTop:10,fontSize:11.5,color:'rgba(242,238,232,.42)',textAlign:'center',lineHeight:1.4,flexShrink:0}}>{_stT('pvHold')}</div>
+            <div style={{marginTop:10,fontSize:11.5,color:'rgba(242,238,232,.62)',textAlign:'center',lineHeight:1.4,flexShrink:0}}>{_stT('pvHold')}</div>
           </div>
         </>); })()}
       {preview && !studioOn && (
@@ -19472,7 +19480,7 @@ Hard requirements:
                 setDisp(next);
               }
             }}
-            style={{position:'relative',height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.55)':'none',outlineOffset:3}}
+            style={{position:'relative',height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,cursor:chords.length?'pointer':'default',marginTop:2,touchAction:'none',outline:focusedInput==='seek'?'2px solid rgba(201,168,76,.78)':'none',outlineOffset:3}}
             onFocus={()=>setFocusedInput('seek')}
             onBlur={()=>setFocusedInput(null)}>
             <div style={{height:'100%',width:pct+'%',background:basicMode?'rgba(242,238,232,.7)':(playing?'rgba(90,190,110,.65)':'rgba(201,168,76,.45)'),borderRadius:3,transition:'none',pointerEvents:'none'}}/>
@@ -19892,7 +19900,7 @@ Hard requirements:
             <span className="pf-st-dot" aria-hidden="true" style={{width:10,height:10,borderRadius:'50%',background:'#ff4d6a',boxShadow:'0 0 10px #ff4d6a'}}/>
             <span style={{textTransform:'uppercase',fontWeight:600}}>{_stT('vRec')}</span>
             {stVidRec && (<span style={{fontVariantNumeric:'tabular-nums',color:'rgba(242,238,232,.75)'}}>{(()=>{ const mm=(v)=>Math.floor(v/60)+':'+String(v%60).padStart(2,'0'); const sec=Math.max(0, Math.floor((Date.now()-stVid.t0)/1000)) + 0*stVidTick; return stVid.total ? (mm(Math.min(sec, stVid.total))+' / '+mm(stVid.total)) : mm(sec); })()}</span>)}
-            <button type="button" onClick={(e)=>{ e.stopPropagation(); if(stVidRec) _vidStop(); else if(recording) stopRecord(); }} aria-label="stop" style={{width:34,height:34,borderRadius:'50%',border:0,background:'#ff4d6a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0}}><span style={{width:12,height:12,borderRadius:2,background:'#fff'}}/></button>
+            <button type="button" onClick={(e)=>{ e.stopPropagation(); if(stVidRec) _vidStop(); else if(recording) stopRecord(); }} aria-label="stop" style={{width:44,height:44,borderRadius:'50%',border:0,background:'#ff4d6a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0}}><span style={{width:12,height:12,borderRadius:2,background:'#fff'}}/></button>
           </div>
         )}
         {/* the finished video: watch it, share it, keep it */}
@@ -20435,7 +20443,7 @@ Hard requirements:
           : moodFromImg
           ? { line:'rgba(228,178,255,.95)', dim:'rgba(225,175,255,.55)', border:'rgba(220,150,255,.55)', edge:'rgba(220,150,255,.4)' }
           : currentMood
-          ? { line:'rgba(220,180,90,.95)', dim:'rgba(220,180,90,.55)', border:'rgba(201,168,76,.55)', edge:'rgba(201,168,76,.4)' }
+          ? { line:'rgba(220,180,90,.95)', dim:'rgba(220,180,90,.55)', border:'rgba(201,168,76,.78)', edge:'rgba(201,168,76,.4)' }
           : { line:'rgba(200,160,255,.85)', dim:'rgba(180,160,255,.45)', border:'rgba(180,140,255,.4)', edge:'rgba(200,160,255,.35)' };
         // Imported-media sources (MIDI / Audio / Score files) are themselves
         // the canonical audio/score — exporting them back into the same format
@@ -20788,14 +20796,14 @@ Hard requirements:
                   })()}
                   {moodLocked && !moodEdit && (
                     <div aria-hidden="true" style={{position:'absolute',inset:0,borderRadius:8,overflow:'hidden',pointerEvents:'none',display:'inline-flex',alignItems:'center',paddingLeft:12,gap:6}}>
-                      <span style={{color:'rgba(242,238,232,.45)',fontSize:(.62*effScale)+'rem',fontStyle:'italic'}}>{t('moodChooseBelow')||'Choose a mood from the list below'}</span>
+                      <span style={{color:'rgba(242,238,232,.62)',fontSize:(.62*effScale)+'rem',fontStyle:'italic'}}>{t('moodChooseBelow')||'Choose a mood from the list below'}</span>
                       <ProBadge t={t} readScale={effScale} size="sm" tier="ai" />
                     </div>
                   )}
                   {studioOn && !moodEdit && !moodLocked && (()=>{ const L=String(_stT('mEx')||'').split('|').filter(Boolean).map(x=>x+'…'); if(!L.length) return null; return (<span key={stMoodPh} className="pf-sm-ph" aria-hidden="true" style={{fontSize:(.64*effScale)+'rem'}}>{String(L[stMoodPh % L.length])}</span>); })()}
                   {studioOn && (<button type="button" className="pf-sm-send" onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg></button>)}
                 </div>
-                {!studioOn && <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={moodLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.5)',fontSize:'1rem',fontWeight:700}}>→</button>}
+                {!studioOn && <button onClick={()=>{ if(canSubmit) submit(moodEdit); }} disabled={!canSubmit} aria-label={t('moodGo')} title={moodLocked&&!canSubmit?(t('moodPickFromList')||'Pick a mood from the list — custom moods are Pro AI'):t('moodGo')} style={{flexShrink:0,width:46,borderRadius:12,border:'none',cursor:canSubmit?'pointer':'default',background:canSubmit?PF.gold:'rgba(201,168,76,.2)',color:canSubmit?PF.bg:'rgba(201,168,76,.78)',fontSize:'1rem',fontWeight:700}}>→</button>}
               </div>
               {/* STUDIO: emoji chips (two moods in words, Pro AI; six from the list, free) and one big button */}
               {studioOn && (()=>{
@@ -20879,7 +20887,7 @@ Hard requirements:
                   stopAll();
                   aiMidi(m);
                   
-                }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 4px',borderRadius:14,background: (m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.18)':'rgba(255,255,255,.015)',color: (m===currentMood&&!imgMoodThumb)?PF.gold2:PF.cream,border:'1px solid '+((m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.5)':'rgba(255,255,255,.06)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
+                }} style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,padding:'12px 4px',borderRadius:14,background: (m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.18)':'rgba(255,255,255,.015)',color: (m===currentMood&&!imgMoodThumb)?PF.gold2:PF.cream,border:'1px solid '+((m===currentMood&&!imgMoodThumb)?'rgba(201,168,76,.78)':'rgba(255,255,255,.06)'),cursor:'pointer',fontFamily:'inherit',transition:'all .18s'}}>
                   <span style={{fontSize:'1.15rem',lineHeight:1}}>{MOOD_EMOJI[m]||'✦'}</span>
                   <span style={{fontSize:(.56*effScale)+'rem',fontWeight:500,letterSpacing:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>{_sent((t('moodNames')||{})[m]||m)}</span>
                 </button>
@@ -21070,12 +21078,12 @@ Hard requirements:
         </div>
       )}
       {/* Note-name readout */}
-      <div style={{textAlign:'center',marginBottom:2,fontSize:(.7*effScale)+'rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.78)':'rgba(201,168,76,.55)',fontVariantNumeric:'tabular-nums',height:'1.5em',lineHeight:'1.5em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontFamily:'inherit',transition:'color .15s ease'}}>
+      <div style={{textAlign:'center',marginBottom:2,fontSize:(.7*effScale)+'rem',letterSpacing:'.1em',color:active.size>0?GOLD:composeMode&&chords.length>0?'rgba(201,168,76,.78)':'rgba(201,168,76,.78)',fontVariantNumeric:'tabular-nums',height:'1.5em',lineHeight:'1.5em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',fontFamily:'inherit',transition:'color .15s ease'}}>
         {active.size>0?(()=>{
           const sorted=[...active].sort((a,b)=>a-b);
           const chord=recognizeChord(sorted);
           return chord
-            ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.55)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
+            ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.78)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
         })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'\u00a0'}   {/* nothing sounding: the line stays, empty (a lone dash read as a stray mark) */}
       </div>
@@ -21295,7 +21303,7 @@ Hard requirements:
           return(
             <span style={{position:'relative',display:'inline-flex'}}>
               {speedSweeping && (
-                <span style={{position:'absolute',bottom:'calc(100% + 8px)',left:'50%',transform:'translateX(-50%)',padding:'6px 14px',borderRadius:14,background:'rgba(20,18,30,.96)',border:'1px solid rgba(201,168,76,.5)',color:GOLD,fontSize:'1.1rem',fontWeight:700,letterSpacing:'.04em',fontFamily:'inherit',whiteSpace:'nowrap',pointerEvents:'none',boxShadow:'0 6px 20px rgba(0,0,0,.5)',zIndex:50}}>{label}</span>
+                <span style={{position:'absolute',bottom:'calc(100% + 8px)',left:'50%',transform:'translateX(-50%)',padding:'6px 14px',borderRadius:14,background:'rgba(20,18,30,.96)',border:'1px solid rgba(201,168,76,.78)',color:GOLD,fontSize:'1.1rem',fontWeight:700,letterSpacing:'.04em',fontFamily:'inherit',whiteSpace:'nowrap',pointerEvents:'none',boxShadow:'0 6px 20px rgba(0,0,0,.5)',zIndex:50}}>{label}</span>
               )}
               <button
                 onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);startHold();}}
@@ -21756,7 +21764,7 @@ Hard requirements:
             <button type="button" onClick={()=>setLegalDoc(null)} aria-label="close" style={{position:'absolute',right:0,top:-2,width:30,height:30,borderRadius:15,border:0,padding:0,background:'rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontSize:13,lineHeight:1,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>✕</button>
           </div>
           <div ref={legalTabsRef} role="tablist" style={{position:'relative',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',marginTop:2,flexShrink:0}}>
-            {['pricing','terms','privacy','refunds'].map(k=>{ const on = k===legalDoc; return (<button key={k} type="button" role="tab" aria-selected={on} onClick={()=>setLegalDoc(k)} style={{flex:'1 0 auto',padding:'7px 10px',borderRadius:16,fontFamily:'inherit',fontSize:(12.5/16*effScale)+'rem',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer',...(on ? {background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.5)',color:'#e0b95e'} : {background:'transparent',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'})}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>); })}
+            {['pricing','terms','privacy','refunds'].map(k=>{ const on = k===legalDoc; return (<button key={k} type="button" role="tab" aria-selected={on} onClick={()=>setLegalDoc(k)} style={{flex:'1 0 auto',padding:'7px 10px',borderRadius:16,fontFamily:'inherit',fontSize:(12.5/16*effScale)+'rem',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer',...(on ? {background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.78)',color:'#e0b95e'} : {background:'transparent',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'})}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>); })}
           </div>
           <div onClick={onLegalClick} data-st="1" className="paintiano-legal-content" ref={legalHostCb} style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',overscrollBehavior:'contain',padding:'18px 2px calc(20px + env(safe-area-inset-bottom, 0px))',color:'#f2eee8',fontFamily:'inherit',fontSize:(15/16*effScale)+'rem',lineHeight:1.6}}/>
         </div>
@@ -21830,7 +21838,7 @@ Hard requirements:
         const _faceGrid = {display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:'14px 4px',paddingTop:8};
         const _faceBtn = (on)=>({display:'flex',flexDirection:'column',alignItems:'center',gap:6,minWidth:0,background:'none',border:0,padding:'4px 0',cursor:'pointer',fontFamily:'inherit',WebkitTapHighlightColor:'transparent'});
         const _faceWrap = (on, locked)=>({position:'relative',display:'block',borderRadius:'50%',opacity:on?1:(locked?.3:.38),boxShadow:on?'0 0 0 3px #07060c, 0 0 0 5px rgba(240,215,138,.9)':'none',transition:'opacity .18s, box-shadow .18s'});
-        const _faceLbl = (on)=>({maxWidth:'calc(100% + 12px)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:_px(11.5),fontWeight:600,letterSpacing:'-.02em',color:on?'#f2eee8':'rgba(242,238,232,.45)'});   // the palettes' case and size — whole names (Lichtenstein, Rachmaninov) fit
+        const _faceLbl = (on)=>({maxWidth:'calc(100% + 12px)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:_px(11.5),fontWeight:600,letterSpacing:'-.02em',color:on?'#f2eee8':'rgba(242,238,232,.62)'});   // the palettes' case and size — whole names (Lichtenstein, Rachmaninov) fit
         const _faceBadges = (on, locked, daily)=>(<>
           {on && (<span aria-hidden="true" style={{position:'absolute',right:-5,bottom:-5,width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</span>)}
           {locked && (<span aria-hidden="true" style={{position:'absolute',right:-4,bottom:-4,fontSize:13}}>🔒</span>)}
@@ -21898,7 +21906,7 @@ Hard requirements:
                     const chipStyleOn = {background:'linear-gradient(135deg,#cdb2ff,#8c5cff)',border:'1px solid transparent',color:'#fff'};
                     const chipStyleOff = {background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'};
                     return (
-                    <button key={k} type="button" onClick={()=>{ if(locked){ if(!tasteUsedRef.current){ tasteUsedRef.current=true; setTastePreviewKey(k); try{ window.posthog && window.posthog.capture('taste_preview', { artist:k }); }catch(_){} setShowSetupModal(false); setTimeout(()=>{ try{ selectStyle(k); }catch(_){} }, 0); return; } setShowSetupModal(false); setPaywallReason('settings'); return; } toggleArt(k); }} aria-pressed={on} title={locked ? (ts('proArtist','Inspired by {artist} · Pro').replace('{artist}', _fullName)) : undefined} style={_faceBtn(on)}><span style={_faceWrap(on, locked)}>{_skinFace(k==='mosaicFamily' ? 'mosaic' : k)}{_faceBadges(on, locked, isDailyArtist(k))}</span><span style={_faceLbl(on)}>{_label}</span></button>
+                    <button key={k} type="button" onClick={()=>{ if(locked){ setShowSetupModal(false); _lockTap(k); return; } toggleArt(k); }} aria-pressed={on} title={locked ? (ts('proArtist','Inspired by {artist} · Pro').replace('{artist}', _fullName)) : undefined} style={_faceBtn(on)}><span style={_faceWrap(on, locked)}>{_skinFace(k==='mosaicFamily' ? 'mosaic' : k)}{_faceBadges(on, locked, isDailyArtist(k))}</span><span style={_faceLbl(on)}>{_label}</span></button>
                     );
                   })}
                 </div>
@@ -21910,7 +21918,7 @@ Hard requirements:
                   {ALL_PALETTE_KEYS.map(k=>{
                     const on = setupPalettes.includes(k);
                     return (
-                    <button key={k} type="button" onClick={()=>togglePal(k)} aria-pressed={on} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,minWidth:0,background:'none',border:0,padding:'4px 0',cursor:'pointer',fontFamily:'inherit',fontSize:_px(12.5),fontWeight:600,color:on?'#f2eee8':'rgba(242,238,232,.45)',WebkitTapHighlightColor:'transparent'}}>
+                    <button key={k} type="button" onClick={()=>togglePal(k)} aria-pressed={on} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,minWidth:0,background:'none',border:0,padding:'4px 0',cursor:'pointer',fontFamily:'inherit',fontSize:_px(12.5),fontWeight:600,color:on?'#f2eee8':'rgba(242,238,232,.62)',WebkitTapHighlightColor:'transparent'}}>
                       <span style={{position:'relative',width:50,height:50,borderRadius:'50%',background:_palWheelBg(k),opacity:on?1:.32,boxShadow:on?'0 0 0 3px #07060c, 0 0 0 5px rgba(240,215,138,.9)':'none',transition:'opacity .18s, box-shadow .18s'}}>
                         <span aria-hidden="true" style={{position:'absolute',inset:4,borderRadius:'50%',border:'3px solid #0e0b16'}}/>
                         {on && (<span aria-hidden="true" style={{position:'absolute',right:-5,bottom:-5,width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>✓</span>)}
@@ -22267,7 +22275,7 @@ Hard requirements:
           if(tourWelcome){
             return (
               <div style={{position:'fixed',inset:0,zIndex:100050,pointerEvents:'none'}}>
-                <div style={{position:'absolute',left:14,right:14,bottom:'calc(18px + env(safe-area-inset-bottom,0px))',pointerEvents:'auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:18,padding:20,boxShadow:'0 20px 60px rgba(0,0,0,.6)',maxWidth:402,margin:'0 auto'}}>
+                <div style={{position:'absolute',left:14,right:14,bottom:'calc(18px + env(safe-area-inset-bottom,0px))',pointerEvents:'auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.78)',borderRadius:18,padding:20,boxShadow:'0 20px 60px rgba(0,0,0,.6)',maxWidth:402,margin:'0 auto'}}>
                   <div style={{fontWeight:600,color:'#e8c96a',fontSize:(1.05*effScale)+'rem',marginBottom:6}}>{ts('tourWelcomeTitle','Vitaj v plnom Paintiane')}</div>
                   <div style={{fontSize:(.84*effScale)+'rem',lineHeight:1.45,color:'rgba(242,238,232,.75)',marginBottom:16}}>{ts('tourWelcomeBody','Tvoja skladba je tu \u2014 teraz ju vie\u0161 vidie\u0165 24 sp\u00f4sobmi. Chcem ti r\u00fdchlo uk\u00e1za\u0165, ako?')}</div>
                   <div style={{display:'flex',gap:10}}>
@@ -22287,8 +22295,8 @@ Hard requirements:
           return (
             <div style={{position:'fixed',inset:0,zIndex:100050}}>
               <div style={{position:'fixed',inset:0,background:'rgba(4,3,9,.38)',pointerEvents:'none'}} />
-              {r && (<div style={{position:'fixed',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:16,boxShadow:'0 0 0 2px rgba(201,168,76,.9), 0 0 22px 4px rgba(201,168,76,.55)',background:'rgba(201,168,76,.06)',pointerEvents:'none',transition:'all .35s cubic-bezier(.4,0,.2,1)'}} />)}
-              <div style={{position:'fixed',left:14,right:14,...(_pin?{bottom:'calc(14px + env(safe-area-inset-bottom,0px))'}:below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.5)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
+              {r && (<div style={{position:'fixed',left:(r.left-pad)+'px',top:(r.top-pad)+'px',width:(r.width+pad*2)+'px',height:(r.height+pad*2)+'px',borderRadius:16,boxShadow:'0 0 0 2px rgba(201,168,76,.9), 0 0 22px 4px rgba(201,168,76,.78)',background:'rgba(201,168,76,.06)',pointerEvents:'none',transition:'all .35s cubic-bezier(.4,0,.2,1)'}} />)}
+              <div style={{position:'fixed',left:14,right:14,...(_pin?{bottom:'calc(14px + env(safe-area-inset-bottom,0px))'}:below?{top:(r?(r.top+r.height+pad+14):120)+'px'}:{bottom:(window.innerHeight-(r?r.top:0)+pad+14)+'px'}),maxWidth:402,margin:'0 auto',background:'linear-gradient(180deg,#171220,#0f0b16)',border:'1px solid rgba(201,168,76,.78)',borderRadius:16,padding:'16px 18px',boxShadow:'0 16px 46px rgba(0,0,0,.6)'}}>
                 <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(201,168,76,.6)',marginBottom:5}}>{ts('tourStep','Krok')} {tourStep+1} / {TOUR.length}</div>
                 <div style={{fontSize:(.96*effScale)+'rem',color:'#e8c96a',fontWeight:600,marginBottom:5}}>{st.title}</div>
                 <div style={{fontSize:(.8*effScale)+'rem',lineHeight:1.4,color:'rgba(242,238,232,.75)',marginBottom:14}}>{pfIcons(st.body)}</div>
