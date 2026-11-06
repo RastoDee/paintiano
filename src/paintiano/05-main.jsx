@@ -2409,7 +2409,7 @@ const STUDIO_FX_CSS = `
 .pf-st-tabs2 button:disabled{opacity:.4;pointer-events:none}
 .pf-st-tabs2.fy{position:absolute;left:50%;top:calc(50% + 16px);transform:translateX(-50%)}
 .pf-st-tabs2.fy.low{top:calc(50% + 22px)}
-.pf-st-thumb{position:fixed;right:max(12px, env(safe-area-inset-right, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid rgba(220,150,255,.6);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.pf-st-thumb{position:fixed;right:max(12px, env(safe-area-inset-right, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid rgba(220,150,255,.6);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:none}
 .pf-st-paused{position:fixed;left:50%;top:50%;z-index:10001;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);pointer-events:none;animation:pfStPausedIn .18s ease-out}
 .pf-st-paused svg{margin-left:4px}
 .pf-mic-clock{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 18px);transform:translateX(-50%);z-index:10001;display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:14px;background:rgba(10,8,18,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#f2eee8;font-size:13px;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;pointer-events:none}
@@ -3693,13 +3693,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the finger rests on the painting and 3 s after it lets go. A plain tap shows the controls instead. A swipe cancels the hold before it shows.
   const _holdTimerRef = useRef(null);
   const _stChordHoldRef = useRef(null);   // Compose in the Studio: a hold on a chord opens it for editing (set below)
-  const _stPeekRef = useRef(null);   // Studio: the hold also shows the picture a mood is painted from (set below)
+  const _stPeekRef = useRef(null);   // Studio: a hold on the little picture (top right) also shows the picture a mood is painted from, large (set below)
   const _holdingRef = useRef(false);
   const _metaPokeRef = useRef(null);   // the song's lines come back when a hold lets go (set where they live)
   const _holdReleasedRef = useRef(false);
   const _holdCancel = ()=>{ if(_holdTimerRef.current){ clearTimeout(_holdTimerRef.current); _holdTimerRef.current=null; } };
   const _holdPosRef = useRef(null);
-  const _holdStart = (x,y)=>{ _holdCancel(); _holdReleasedRef.current=false; _holdPosRef.current={x,y}; _holdTimerRef.current=setTimeout(()=>{ _holdTimerRef.current=null; if(_swipeWasGestureRef.current) return; if(_stChordHoldRef.current && _stChordHoldRef.current(x,y)){ _holdReleasedRef.current=true; return; } _holdingRef.current=true; if(_stPeekRef.current) _stPeekRef.current(true); if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey('hold-'+Date.now()); },300); };
+  const _holdStart = (x,y,peek)=>{ _holdCancel(); _holdReleasedRef.current=false; _holdPosRef.current={x,y}; if(peek) _swipeWasGestureRef.current=false; _holdTimerRef.current=setTimeout(()=>{ _holdTimerRef.current=null; if(_swipeWasGestureRef.current) return; if(!peek && _stChordHoldRef.current && _stChordHoldRef.current(x,y)){ _holdReleasedRef.current=true; return; } _holdingRef.current=true; if(peek && _stPeekRef.current) _stPeekRef.current(true); if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey('hold-'+Date.now()); },300); };
   // let go → the info stays 3 s (time to tap the style on it), then fades
   const _holdKeep = ()=>{ if(_swipeFlashTimerRef.current) clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=setTimeout(()=>{ _setSwipeFlashKey('out-'+Date.now()); _swipeFlashTimerRef.current=setTimeout(()=>{ _swipeFlashTimerRef.current=null; _setSwipeFlashKey(null); },420); },3000); };
   const _holdEnd = ()=>{ _holdCancel(); if(_stPeekRef.current) _stPeekRef.current(false); if(!_holdingRef.current) return; _holdingRef.current=false; _holdReleasedRef.current=true; _holdKeep(); try{ _metaPokeRef.current && _metaPokeRef.current(); }catch(_){} };
@@ -15508,10 +15508,11 @@ Hard requirements:
   const _stToastShow = (msg)=>{ if(stToastTmRef.current) clearTimeout(stToastTmRef.current); setStToast(msg); stToastTmRef.current=setTimeout(()=>{ stToastTmRef.current=null; setStToast(null); }, 2400); };
   useEffect(()=>{ if(studioHome){ try{ window.scrollTo(0,0); }catch(_){} } },[studioHome]);
   const [stSeek, setStSeek] = useState(false);
-  // PEEK — a mood from a picture: hold the painting (or tap the little picture in the caption) to see the picture again
+  // PEEK — a mood from a picture: hold the little picture top right (or tap it) to see the picture large; a hold on the painting is the usual one
   const [stPeek, setStPeek] = useState(false);
   const _stMfiPic = studioFs && moodFromImg && !!(originalImgUrl || imgMoodThumb) && (imgAiBusy || (chords.length>0 && disp===0 && !playing && !anim && !holdPaused));
   const stPeekTmRef = useRef(null);
+  const stThumbHoldRef = useRef(false);   // the little picture was held: the tap after it does nothing more
   const _stPeekOk = studioFs && moodFromImg && !!(originalImgUrl || imgMoodThumb);
   _stPeekRef.current = (on)=>{ if(stPeekTmRef.current){ clearTimeout(stPeekTmRef.current); stPeekTmRef.current=null; } setStPeek(!!on && _stPeekOk); };
   const _stPeekTap = ()=>{ if(!_stPeekOk) return; setStPeek(true); if(stPeekTmRef.current) clearTimeout(stPeekTmRef.current); stPeekTmRef.current=setTimeout(()=>{ stPeekTmRef.current=null; setStPeek(false); }, 2400); };
@@ -19545,11 +19546,12 @@ Hard requirements:
         const _mute = ()=>{ if(speakerHoldRef.current==='fired'){ speakerHoldRef.current=null; return; } setMuted(m=>!m); };
         const _heart = (<svg width="19" height="19" viewBox="0 0 24 24" fill={favHitAny?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>);
         const _go = (fn, keep)=>(e)=>{ e.stopPropagation(); try{ fn(); }catch(_){} if(keep) _stArm(); };
+        const _thumbUp = ()=>{ const was=_holdingRef.current; _holdEnd(); if(was) stThumbHoldRef.current=true; };
         return (<>
           {/* the Studio, one screen: ⌄ home (top left), the song and its painter, ♥ · ✦ Change · share — always there, never a rail */}
           {stFill && (<><span className="pf-st-corner l" aria-hidden="true"/><span className="pf-st-corner r" aria-hidden="true"/></>)}   {/* full screen: the top corners rounded, as at home */}
           {!_vr && (!stripOpen || stLand) && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
-          {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={_go(_stPeekTap)} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
+          {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={(e)=>{ e.stopPropagation(); if(stThumbHoldRef.current){ stThumbHoldRef.current=false; return; } _stPeekTap(); }} onPointerDown={(e)=>{ stThumbHoldRef.current=false; _holdStart(e.clientX, e.clientY, true); }} onPointerUp={_thumbUp} onPointerCancel={_thumbUp} onPointerLeave={_thumbUp} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} onContextMenu={(e)=>e.preventDefault()} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
           {!_vr && (!_live || (!composeMode && !micActive && !(micSong && micSong.phase==='reading'))) && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true" style={_live ? {top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)'} : undefined}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
           {/* the MIC: the take's clock on top (♥ · ✦ Change · share stay where they are everywhere in the Studio) */}
           {!_vr && _live && !composeMode && micActive && micT0>0 && (<div className="pf-mic-clock" aria-live="off"><i aria-hidden="true"/>{(()=>{ const sec=Math.max(0, Math.floor((Date.now()-micT0)/1000)) + 0*micTick; return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); })()}</div>)}
@@ -19703,7 +19705,7 @@ Hard requirements:
             <span style={{position:'relative',fontSize:(12*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(240,215,138,.9)'}}>{_stT(k)}</span>
             <span style={{position:'relative',width:180,height:2,borderRadius:2,background:'rgba(255,255,255,.12)',overflow:'hidden'}}><i style={{display:'block',height:'100%',width:Math.max(6,wPct|0)+'%',background:'linear-gradient(90deg,#f0d78a,#c9a84c)',transition:'width .4s'}}/></span>
           </div>); })()}
-        {stPeek && (<div aria-hidden="true" style={{position:'fixed',left:'50%',bottom:'calc(env(safe-area-inset-bottom, 0px) + 44px)',transform:'translateX(-50%)',zIndex:10003,display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderRadius:20,background:'rgba(10,8,18,.88)',border:'1px solid rgba(220,150,255,.5)',color:'#f2eee8',fontSize:(.56*effScale)+'rem',whiteSpace:'nowrap',maxWidth:'90vw',overflow:'hidden',textOverflow:'ellipsis',pointerEvents:'none'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dcb4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>{_stT('fromImg')}</span></div>)}
+        {stPeek && (<div aria-hidden="true" style={{position:'fixed',right:'calc(max(12px, env(safe-area-inset-right, 0px)) + 50px)',top:'calc(env(safe-area-inset-top, 0px) + 32px)',transform:'translateY(-50%)',zIndex:10003,display:'flex',alignItems:'center',gap:8,padding:'8px 14px',borderRadius:20,background:'rgba(10,8,18,.88)',border:'1px solid rgba(220,150,255,.5)',color:'#f2eee8',fontSize:(.56*effScale)+'rem',whiteSpace:'nowrap',maxWidth:'calc(100vw - 150px)',overflow:'hidden',textOverflow:'ellipsis',pointerEvents:'none'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dcb4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>{_stT('fromImg')}</span></div>)}
         {stToast && (<div role="status" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 76px)',transform:'translateX(-50%)',zIndex:10008,padding:'9px 16px',borderRadius:20,background:'rgba(10,8,18,.9)',border:'1px solid rgba(255,107,139,.45)',color:'#f2eee8',fontSize:(.56*effScale)+'rem',letterSpacing:'.03em',whiteSpace:'nowrap',pointerEvents:'none'}}>{pfIcons(stToast)}</div>)}
         {/* the progress, a thin line on the bottom edge — drag it to go anywhere in the piece */}
         {!studioLive && chords.length>0 && !stVidRec && !(viewMode==='image' && recording) && (()=>{
