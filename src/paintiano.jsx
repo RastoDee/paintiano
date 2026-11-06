@@ -37949,7 +37949,12 @@ Hard requirements:
     try{ cv.querySelectorAll('.pf-fd-copy').forEach(n=>n.remove()); delete cv.dataset.fdz; }catch(_){}   // a swipe's copy never stays under the tray (no swipe runs while it is open)
     // the scale is measured, not assumed: the canvas carries its own transform (e.g. a centring translate(-50%)), which the scale also scales —
     // so: scale it, see where it lands, then move it to where it belongs (centred, under the ⌄, above the tray)
-    let raf=0, raf2=0, dead=false; const fit=()=>{ if(dead) return; try{ const tr=trayRef.current; if(!tr) return; const pt=cv.style.translate, ps=cv.style.scale; _trSet(cv, 'translate 0s, scale 0s'); off(); const r=cv.getBoundingClientRect();
+    let raf=0, raf2=0, dead=false; const fit=()=>{ if(dead) return; try{ const tr=trayRef.current; if(!tr) return;
+      // a look change's slide (_cvSlide, a Web Animation on translate) or the last move still running would be measured as the painting's place:
+      // Solo ⇄ Fusion under it landed the painting ~30 px right and ~90 px down for good — so wait until the painting stands still, then measure
+      const _an=(cv.getAnimations ? cv.getAnimations() : []).filter(a=>a.playState==='running' || a.playState==='pending');
+      if(_an.length){ Promise.all(_an.map(a=>a.finished.catch(()=>{}))).then(()=>{ if(!dead) fit(); }); return; }
+      const pt=cv.style.translate, ps=cv.style.scale; _trSet(cv, 'translate 0s, scale 0s'); off(); const r=cv.getBoundingClientRect();
       const land=stLandRef.current, trR=tr.getBoundingClientRect();
       const _mb=document.querySelector('.pf-st-min'), top=land ? ((addrChip||posterMaker) ? 66 : 12) : (_mb ? _mb.getBoundingClientRect().bottom+10 : 60), bottom=land ? window.innerHeight-12 : window.innerHeight - trR.height - 8, avail=bottom-top;
       const x0=land ? (_mb ? _mb.getBoundingClientRect().right+8 : 12) : 0, x1=land ? trR.left-12 : window.innerWidth, availW=x1-x0;   // on its side: left of the column (and clear of the ⌄)
