@@ -2850,159 +2850,145 @@ function _pcPaintAny(k,ctx,CW,CH,chords,lim,gc,ss,mode){
   _pc2Paint(k,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 // ═══════════════════════════════════════════════════════════════════════════
-// PICASSO LISTENS — not one of his paintings chosen, but the one the piece composes
-// from his vocabulary: a cubist still life, with the singer's head over it when the
-// piece sings high. What the music decides:
-//   the period (the palette)  slow minor → the blue period · slow major → the rose · dense and even → analytic cubism
-//                             (ochre, grey, brown) · quick major → synthetic (bright flat planes, pasted paper) · tension → Guernica's greys
-//   what is on the table      as many things as the piece has voices (2–4): the guitar when the line leaps, the bottle when the
-//                             rhythm is even, the newspaper when it is dense and quick, the fruit bowl in major, the glass when it is
-//                             quiet, the pipe when it is slow; each comes at its passage's moment, as big as that passage is loud
-//   the head                  when the piece sings high: profile and full face in one, its facets the phrases, the two eyes the tonic
-//                             and the dominant, tilted with the melody's contour
-//   the room                  a window behind in major (the light), a dark wall in minor; the planes cut by the phrases, the cut's
-//                             grain from the evenness, every plane in its chord's colour through the period's palette
+// PICASSO LISTENS — not one of his paintings, and not a list of subjects either: the piece
+// composes its own picture from everything that is his, the way a fusion is put together.
+//   the period (palette)  slow minor → blue · slow major → rose · dense and even → analytic (ochre, grey, brown) ·
+//                         quick major → synthetic (bright flat planes) · tension → Guernica's greys
+//   the setting           a room (window in major, a wall in minor) · the beach (quick, high, major) · the arena (loud minor:
+//                         the bull's head on the wall) · a bare ground (slow major, the rose period) · the night (slow minor:
+//                         the lamp of the climax)
+//   the figures           as many as the piece has voices (0–3): reclining when slow, seated at a middle pace, standing when
+//                         quick; the head seen from the front, in profile, or both at once when the line leaps; each one holds
+//                         what its passage calls for — a guitar or a clarinet (leaps), a bottle or a glass (an even rhythm),
+//                         a bird (a high passage), a flower (soft major), a book (dense), a candle (night), a hat when loud
+//   the things            on the table in the room, on the sand on the beach: the still life the piece calls for
+//   the planes            every body cut into as many planes as its passage has phrases, the grain from the evenness, the
+//                         contour heavy when loud, hatched where tense, each plane in its chord's colour through the palette
+// The picture grows with the piece: setting first, then each figure and thing at its passage's moment.
 // ═══════════════════════════════════════════════════════════════════════════
 function _pcListen(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const A=_kd2Analyze(chords,gc,mode); const H=_hear(chords,A); const {pace,loud,regular,leaps,poly,energy,major,tens}=H; const reg=A.ch?A.ch.register:0.5, dyn=A.ch?A.ch.dynRange:0.3;
-  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:A.cn}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
-  // the subject: every one needs its own kind of piece first (else 0), then ranks by how much of it there is
-  const score={
-    dreamer:     (major && pace<0.45) ? 0.5+reg*0.5+(1-pace)*0.5 : 0,
-    harlequin:   (major && pace>=0.35 && pace<=0.7 && regular>0.6) ? 0.4+regular*0.5+pace*0.3 : 0,
-    musicians:   (major && pace>0.55 && poly>2.2) ? 0.4+pace*0.5+regular*0.3 : 0,
-    demoiselles: (major && energy>0.6 && c.vmax>0.8 && dyn>0.4) ? 0.4+energy*0.6+dyn*0.5 : 0,
-    lightline:   (pace>(major?0.65:0.8) && poly<2.4) ? 0.4+pace*0.5+leaps*0.4 : 0,
-    blue:        (!major && pace<0.75) ? 0.5+(1-pace)*0.5+(1-loud)*0.3 : 0,
-    weeping:     (!major && (tens>0.3 || leaps>0.6) && pace>0.4) ? 0.4+tens*1.2+leaps*0.4 : 0,
-    guernica:    (tens>0.35 && energy>0.65) ? 0.5+tens+energy*0.5 : 0,
-    still:       (major && pace>=0.3 && pace<=0.75) ? 0.5+regular*0.2 : 0,
-  };
-  const subject=_hearPick(score,'still');
-  try{ globalThis.__PC_LISTEN={subject,score,pace,loud,regular,leaps,poly,energy,reg,tens,major,dyn}; }catch(_){}
-  const OLD={lightline:0,weeping:1,musicians:3,guernica:4,blue:5,demoiselles:6};
-  if(OLD[subject]!=null) return _pcPaintAny(OLD[subject],ctx,CW,CH,chords,lim,gc,ss,mode);
-  if(subject==='dreamer') return pc2_dreamer(ctx,CW,CH,chords,lim,gc,ss,mode,A,H,c);
-  if(subject==='harlequin') return pc2_harlequin(ctx,CW,CH,chords,lim,gc,ss,mode,A,H,c);
-  return pc2_still(ctx,CW,CH,chords,lim,gc,ss,mode,A,H);
-}
-// ── the Dreamer (the 1932 sleeping women) — big flat curved planes with a bold contour: a woman asleep in an armchair, her head
-//    tilted with the melody's contour, her face half lit (the tonic) and half in shadow (the dominant), the dress's planes one per
-//    passage in that passage's colour, the beads of her necklace the accents, the wallpaper's lozenges the phrases
-function pc2_dreamer(ctx,CW,CH,chords,lim,gc,ss,mode,A,H,c){
-  const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW; const r=_pcR(98100,ss); r(); const list=[]; let id=0; const P=_PC_PAL;
-  const g=(pts)=>_pgN(pts,CW,CH); const INK=[24,20,22]; const lw=Math.max(2,D*0.009); const F=(t,pts,col,o)=>list.push(_pgF(id++,t,pts,col,Object.assign({lw,inkCol:INK,ink:0.95},o||{})));
-  const flat=(t,base,k)=>{ const {rgb}=S.col(t); return _pcFlat(rgb,base,k==null?0.5:k,isBW); };
-  ctx.fillStyle=_pcCss(isBW?[226,224,220]:_pcMix(P.yellow,[250,240,200],0.6)); ctx.fillRect(0,0,CW,CH);
-  // the wallpaper: a lozenge per phrase group, in its colour, drawn as the piece goes
-  const G=_kd2Phrases(A,Math.min(12,Math.max(4,Math.round(A.phrases.length/5)))); const cols=Math.max(2,Math.round(Math.sqrt(G.length))); 
-  G.forEach((q,i)=>{ const cx=CW*((i%cols)+0.5)/cols, cy=CH*0.08+CH*0.5*Math.floor(i/cols)/Math.max(1,Math.ceil(G.length/cols)); const w=CW*0.11*(0.7+0.6*q.vmax), h=CH*0.09; F(q.t0,[[cx,cy-h],[cx+w,cy],[cx,cy+h],[cx-w,cy]],flat(q.t,i%2?P.violet:P.green,0.6),{ink:0.5,lw:lw*0.5}); });
-  // the armchair: a red curve (the tonic's colour) with a dark seat
-  F(0.02,g([[0.1,0.98],[0.08,0.5],[0.16,0.36],[0.3,0.34],[0.7,0.34],[0.88,0.38],[0.94,0.52],[0.92,0.98]]),flat(0,P.red,0.45),{hatch:0,ink:0.95});
-  F(0.03,g([[0.2,0.98],[0.2,0.62],[0.82,0.62],[0.84,0.98]]),flat(0.02,P.violet,0.5),{ink:0.9});
-  // the body: the dress's planes, one per passage of the piece in its colour; the arms folded, the hands at the lap
-  const nP=Math.min(5,Math.max(2,Math.round(A.phrases.length/10))); const Gd=_kd2Phrases(A,nP);
-  const dress=g([[0.24,0.98],[0.22,0.7],[0.3,0.56],[0.5,0.52],[0.7,0.56],[0.78,0.7],[0.76,0.98]]); const rd=_pcR(98110,ss); rd(); const out=[]; _pcCut(dress,rd,CW*CH/(nP*1.5),0,0.6+(rd()-.5),out);
-  out.forEach((poly,i)=>{ const q=Gd[Math.min(nP-1,Math.floor(i*nP/Math.max(1,out.length)))]; F(0.1+0.6*(q?q.t0:0),poly,flat(q?q.t:0.5,[P.yellow,P.green,P.rose,P.blue,P.ochre][i%5],0.45),{hatch:rd()<0.3?0.3:0,hang:0.8,open:rd()<0.3?Math.floor(rd()*poly.length):-1}); });
-  F(0.5,g([[0.34,0.74],[0.44,0.7],[0.56,0.72],[0.66,0.76],[0.6,0.84],[0.48,0.86],[0.36,0.82]]),flat(0.5,[236,200,170],0.4),{hatch:0.2,hang:0.3});   // the arms folded
-  // the head, tilted with the contour: half lit, half in shadow — the tonic and the dominant; the closed eye one curve; the hair's planes
-  const tilt=(A.ch?A.ch.contour-0.5:0)*0.9+0.35; const hx=CW*0.5, hy=CH*0.3, hw=CW*0.17, hh=CH*0.19;
-  const face=_pgRot(_pgEll(hx,hy,hw,hh,0,24),hx,hy,tilt); const lit=flat(0,[246,222,180],0.3), shade=flat(0.5,[200,170,220],0.45);
-  const R=face.slice(18).concat(face.slice(0,7)), Lh=face.slice(6,19); F(0.2,R,lit,{}); F(0.22,Lh,shade,{});   // the right half lit, the left in shadow
-  F(0.24,_pgRot([[hx-hw*1.1,hy-hh*0.2],[hx-hw*0.6,hy-hh*1.1],[hx+hw*0.3,hy-hh*1.15],[hx+hw*0.9,hy-hh*0.7],[hx+hw*0.5,hy-hh*0.5],[hx-hw*0.2,hy-hh*0.75],[hx-hw*0.7,hy-hh*0.35]],hx,hy,tilt),flat(0.1,[30,24,22],0.8),{hatch:0.3,hang:tilt+1.2});   // the hair
-  list.push({id:id++,t:0.3,stroke:_pgRot([[hx-hw*0.55,hy-hh*0.15],[hx-hw*0.3,hy-hh*0.25],[hx-hw*0.05,hy-hh*0.15]],hx,hy,tilt),w:[lw*0.6,lw*0.8,lw*0.6],col:INK,close:false});   // the closed eye
-  list.push({id:id++,t:0.32,stroke:_pgRot([[hx+hw*0.2,hy-hh*0.3],[hx+hw*0.45,hy+hh*0.1],[hx+hw*0.15,hy+hh*0.2]],hx,hy,tilt),w:[lw*0.7,lw*0.8,lw*0.6],col:INK,close:false});   // the nose, in profile
-  F(0.34,_pgRot([[hx-hw*0.2,hy+hh*0.45],[hx+hw*0.2,hy+hh*0.42],[hx+hw*0.1,hy+hh*0.58],[hx-hw*0.15,hy+hh*0.58]],hx,hy,tilt),flat(c.t,P.red,0.4),{ink:0.8});   // the mouth, the climax's colour
-  // the necklace: a bead per accent
-  const E=_kd2Events(A,24).filter(e=>e.acc).slice(0,9); E.forEach((e,i)=>{ const u=(i+0.5)/Math.max(1,E.length); const x=CW*(0.38+0.24*u), y=CH*(0.5+0.06*Math.sin(u*3.14)); F(0.4+0.5*e.t,_pgEll(x,y,D*0.012,D*0.012,0,8),flat(e.t,P.white,0.3),{ink:0.9,lw:lw*0.5}); });
-  list._objA=!!chords._objFirst; _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
-}
-// ── the Saltimbanques (the rose period) — Pierrot and Harlequin stand on a bare rose-and-ochre ground, no room around them:
-//    one figure per voice of the piece (1–3), each a passage, as tall as that passage is loud; the lozenges of Harlequin's costume
-//    are the beats in their chords' colours, the clarinet and the guitar their instruments; the horizon at the register
-function pc2_harlequin(ctx,CW,CH,chords,lim,gc,ss,mode,A,H,c){
-  const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW; const r=_pcR(98200,ss); r(); const list=[]; const P=_PC_PAL; const BR=[118,80,50];
-  const g=(pts)=>_pgN(pts,CW,CH); const tint=(base,pc,k)=>_pcFlat(A.pcCol(pc,60),base,k==null?0.72:k,isBW);
-  const F=(t,pts,col,o)=>list.push(_pgF(list.length,t,g(pts),col,Object.assign({lw:Math.max(1.6,D*0.006),inkCol:[60,40,36],ink:0.8},o||{})));
-  const ROSE=[214,160,140], OCHRE=[200,160,110], SAND=[226,200,160]; const hz=0.4+0.2*(1-(A.ch?A.ch.register:0.5));
-  F(0,[[0,0],[1,0],[1,hz],[0,hz]],tint(_pcMix(ROSE,[240,222,210],0.5),A.tonic,0.8),{ink:0,hatch:0.15,hang:0.1});
-  F(0.01,[[0,hz],[1,hz],[1,1],[0,1]],tint(OCHRE,(A.tonic+7)%12,0.75),{ink:0,hatch:0.2,hang:0.05});
-  const nf=Math.max(1,Math.min(3,Math.round(H.poly))); const w=1/nf; const kinds=['harlequin','pierrot','harlequin'];
-  for(let k=0;k<nf;k++){ const kind=kinds[k]; const t0=0.05+k/nf*0.85, t1=0.05+(k+1)/nf*0.85; const ph=A.phrases.filter(p=>p.t>=k/nf&&p.t<(k+1)/nf); const pc=ph.length?ph[Math.floor(ph.length/2)].pc:A.tonic, pc2=ph.length?ph[0].pc2:(A.tonic+7)%12;
-    const x0=w*(k+0.12), x1=w*(k+0.88); const loud=ph.length?Math.max(...ph.map(p=>p.vmax)):0.6; const top=0.14+(1-loud)*0.1;
-    const xm=(x0+x1)/2, lw2=(x1-x0)*0.16; const legC = kind==='pierrot' ? (isBW?[242,240,236]:P.white) : tint(P.ochre,pc,0.5);   // the legs, under the costume, to the ground
-    F(t0+(t1-t0)*0.09,[[xm-lw2*1.9,0.76],[xm-lw2*0.3,0.76],[xm-lw2*0.5,0.9],[xm-lw2*2.1,0.9]],legC,{}); F(t0+(t1-t0)*0.09,[[xm+lw2*0.3,0.76],[xm+lw2*1.9,0.76],[xm+lw2*2.1,0.9],[xm+lw2*0.5,0.9]],legC,{});
-    F(t0+(t1-t0)*0.095,[[xm-lw2*2.3,0.9],[xm-lw2*0.3,0.9],[xm-lw2*0.2,0.93],[xm-lw2*2.4,0.93]],isBW?[18,18,18]:P.black,{ink:0.3}); F(t0+(t1-t0)*0.095,[[xm+lw2*0.3,0.9],[xm+lw2*2.3,0.9],[xm+lw2*2.4,0.93],[xm+lw2*0.2,0.93]],isBW?[18,18,18]:P.black,{ink:0.3});   // the shoes
-    _pcMusician(kind,{A,P,BR,D,list,g,F,tint,isBW,t0,t1,ph,pc,pc2,x0,x1,top,loud}); }
-  // the shadows at their feet, the climax's colour
-  for(let k=0;k<nf;k++){ const xm=w*(k+0.5); F(0.02,_pgEll(xm,0.93,w*0.32,0.025,0,12),tint(_pcMix(OCHRE,[90,60,40],0.5),(A.tonic+5)%12,0.6),{ink:0,hatch:0.4,hang:0.1}); }
-  list._objA=!!chords._objFirst; _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
-}
-function pc2_still(ctx,CW,CH,chords,lim,gc,ss,mode,A,H){
-  const S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW; const {pace,loud,regular,leaps,poly,energy,major,tens}=H; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3, dyn=A.ch?A.ch.dynRange:0.3;
-  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:A.cn}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const H=_hear(chords,A); const {pace,loud,regular,leaps,poly,energy,major,tens}=H; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3, dyn=A.ch?A.ch.dynRange:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:A.cn,pc:A.tonic}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
   const r=_pcR(97950,ss); r(); const list=[]; let id=0; const g=(pts)=>_pgN(pts,CW,CH); const P=_PC_PAL;
-  // the period
-  const period = tens>0.4 ? 'guernica' : (!major && pace<0.5) ? 'blue' : (major && pace<0.4) ? 'rose' : (regular>0.7 && dens>0.3) ? 'analytic' : (major && pace>0.55) ? 'synthetic' : 'analytic';
+  const period = tens>0.4 ? 'guernica' : (!major && pace<0.5) ? 'blue' : (major && pace<0.4) ? 'rose' : (regular>0.7 && dens>0.3 && !(major && pace>0.6)) ? 'analytic' : (major && pace>0.55) ? 'synthetic' : 'analytic';
+  const setting = (tens>0.4 || (!major && loud>0.6 && pace>0.5)) ? 'arena' : (major && pace>0.6 && reg>0.55) ? 'beach' : (!major && pace<0.5) ? 'night' : (major && pace<0.4) ? 'ground' : 'room';
   const PAL = {
-    blue:      {ground:[22,38,74], bases:[[40,70,120],[70,100,150],[120,150,190],[28,48,90],[160,180,205]], ink:[8,14,30], k:0.78},
-    rose:      {ground:[214,170,150], bases:[[228,170,150],[200,120,110],[240,205,180],[170,120,120],[236,222,200]], ink:[60,38,40], k:0.7},
-    analytic:  {ground:[196,176,140], bases:[[160,132,90],[120,106,86],[196,180,150],[90,80,70],[214,200,170]], ink:[40,34,28], k:0.72},
-    synthetic: {ground:[236,226,200], bases:[P.yellow,P.green,P.violet,P.rose,P.red,P.blue,P.ochre,P.white], ink:[24,22,20], k:0.55},
-    guernica:  {ground:[200,198,192], bases:[[236,234,228],[150,148,142],[90,88,84],[40,38,36],[200,198,192]], ink:[16,14,12], k:0.9},
+    blue:      {ground:[22,38,74], bases:[[40,70,120],[70,100,150],[120,150,190],[28,48,90],[160,180,205]], ink:[8,14,30], k:0.78, skin:[150,170,200]},
+    rose:      {ground:[214,170,150], bases:[[228,170,150],[200,120,110],[240,205,180],[170,120,120],[236,222,200]], ink:[60,38,40], k:0.7, skin:[236,206,176]},
+    analytic:  {ground:[196,176,140], bases:[[160,132,90],[120,106,86],[196,180,150],[90,80,70],[214,200,170]], ink:[40,34,28], k:0.72, skin:[206,180,140]},
+    synthetic: {ground:[236,226,200], bases:[P.yellow,P.green,P.violet,P.rose,P.red,P.blue,P.ochre,P.white], ink:[24,22,20], k:0.55, skin:[246,214,180]},
+    guernica:  {ground:[200,198,192], bases:[[236,234,228],[150,148,142],[90,88,84],[40,38,36],[200,198,192]], ink:[16,14,12], k:0.9, skin:[220,218,212]},
   }[period];
-  const flat=(t,i)=>{ const {rgb,energy:E}=S.col(t); const base=PAL.bases[i%PAL.bases.length]; let col=_pcFlat(rgb,base,PAL.k,isBW); return _pcMix(col,[0,0,0],Math.max(0,E-0.7)*0.4); };
-  const lw=Math.max(1.2,D*0.005); const F=(t,pts,col,o)=>list.push(_pgF(id++,t,pts,col,Object.assign({lw,inkCol:PAL.ink},o||{})));
-  // the room: the wall cut into planes by the phrases (the grain from the evenness), a window in major
+  const bases=PAL.bases; const baseOf=(k)=> Array.isArray(k) ? k : bases[((k%bases.length)+bases.length)%bases.length];
+  const flat=(t,k,kk)=>{ const {rgb,energy:E}=S.col(t); let col=_pcFlat(rgb,baseOf(k),kk==null?PAL.k:kk,isBW); return _pcMix(col,[0,0,0],Math.max(0,E-0.7)*0.4); };
+  const skin=(t)=>_pcFlat(S.col(t).rgb,PAL.skin,0.7,isBW);
+  const lw=Math.max(1.2,D*(0.004+0.004*loud)); const F=(t,pts,col,o)=>list.push(_pgF(id++,t,pts,col,Object.assign({lw,inkCol:PAL.ink,ink:0.9,hatch:tens>0.25?0.25:0,hang:0.8},o||{})));
+  const grain = regular>0.6 ? 1.5708 : 0.9+(r()-.5)*0.8;
+  const pose = pace<0.35 ? 'reclining' : pace<0.62 ? 'seated' : 'standing';
+  const nFig = (pace<0.3 && poly<1.6) ? 0 : pose==='reclining' ? 1 : Math.max(1,Math.min(3,Math.round(poly)));   // one lies alone
+  try{ globalThis.__PC_LISTEN={period,setting,pose,nFig,pace,loud,regular,leaps,poly,energy,reg,tens,major,dyn,dens}; }catch(_){}
+  // ── the setting
   ctx.fillStyle=_pcCss(isBW?[200,198,194]:PAL.ground); ctx.fillRect(0,0,CW,CH);
-  const nPl=Math.min(16,Math.max(6,Math.round(A.phrases.length/3))); const minA=CW*CH/nPl; const grain=regular>0.6 ? 1.5708 : 0.9+(r()-.5)*0.8;
-  const wallOut=[]; _pcCut([[0,0],[CW,0],[CW,CH*0.62],[0,CH*0.62]],r,minA,0,grain,wallOut); const rw=_pcR(97960,ss); rw();
-  wallOut.forEach((poly,i)=>{ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW,0,1)*0.9; F(t*0.5,poly,_pcMix(flat(t,i),PAL.ground,0.45),{hatch:rw()<0.4?0.25:0,hang:grain+0.3,ink:0.55,open:rw()<0.4?Math.floor(rw()*poly.length):-1}); });
-  if(major && period!=='guernica'){ const wx=CW*(reg>0.5?0.58:0.08), wy=CH*0.06, ww=CW*0.34, wh=CH*0.3;   // the window: four panes of sky, the light of the piece
-    F(0.02,[[wx,wy],[wx+ww,wy],[wx+ww,wy+wh],[wx,wy+wh]],_pcMix(PAL.ink,PAL.ground,0.3),{ink:0.9});
-    for(let k=0;k<4;k++){ const px=wx+ww*0.06+(k%2)*ww*0.47, py=wy+wh*0.06+(k>>1)*wh*0.47; F(0.04+k*0.02,[[px,py],[px+ww*0.41,py],[px+ww*0.41,py+wh*0.41],[px,py+wh*0.41]],_pcMix(period==='blue'?[120,150,190]:[150,185,215],flat(0.1+k*0.2,k),0.35),{ink:0.6}); } }
-  // the table: a trapezoid across the lower part, its top tilted up as Picasso tilts it
-  const ty=CH*0.56, tb=CH*0.92; F(0.06,[[CW*0.02,tb],[CW*0.14,ty],[CW*0.9,ty-CH*0.02],[CW*1.0,tb]],_pcMix(flat(0.05,3),PAL.ground,0.2),{hatch:0.3,hang:0.15,ink:0.9});
-  F(0.07,[[CW*0.14,ty],[CW*0.9,ty-CH*0.02],[CW*0.88,ty+CH*0.03],[CW*0.16,ty+CH*0.05]],_pcMix(flat(0.08,1),[255,255,255],0.25),{ink:0.8});   // its lit edge
-  // what stands on it: one thing per passage, in the order the piece calls them
-  const n=Math.max(2,Math.min(4,Math.round(poly)+1)); const G=_kd2Phrases(A,n); const things=[];
-  if(leaps>0.45) things.push('guitar'); if(regular>0.6) things.push('bottle'); if(dens>0.35 && pace>0.55) things.push('newspaper'); if(major) things.push('fruit'); if(loud<0.55) things.push('glass'); if(pace<0.45) things.push('pipe');
-  for(const k of ['bottle','guitar','fruit','glass','newspaper','pipe']) if(things.length<n && !things.includes(k)) things.push(k);
-  const slots=things.slice(0,n); const rr=_pcR(97970,ss); rr();
-  slots.forEach((kind,i)=>{ const q=G[i]||G[G.length-1]; const t0=q.t0, t1=Math.min(1,q.t0+0.12); const sc=0.75+0.5*q.vmax; const x=CW*(0.16+0.68*(i+0.5)/n), base=ty+CH*0.02+CH*0.04*(i%2);
-    const T=(f)=>t0+(t1-t0)*f; const col=(k,j)=>flat(_pcClamp(q.t+0.03*j,0,1),k+j);
-    if(kind==='guitar'){ const w=D*0.17*sc, h=D*0.3*sc; const tilt=(leaps-0.5)*0.8+(rr()-.5)*0.3; const cx=x, cy=base-h*0.4;
-      F(T(0.1),_pgRot(_pgEll(cx,cy+h*0.12,w*0.55,h*0.3,0,14),cx,cy,tilt),col(0,0),{hatch:0.35,hang:tilt+0.6}); F(T(0.2),_pgRot(_pgEll(cx,cy-h*0.22,w*0.42,h*0.22,0,14),cx,cy,tilt),col(1,1),{hatch:0.2,hang:tilt+1.2});   // the two lobes
-      F(T(0.3),_pgRot([[cx-w*0.09,cy-h*0.32],[cx+w*0.09,cy-h*0.32],[cx+w*0.12,cy-h*0.95],[cx-w*0.12,cy-h*0.95]],cx,cy,tilt),col(2,2),{hatch:0.4,hang:tilt+1.57});   // the neck
-      F(T(0.4),_pgRot(_pgEll(cx,cy+h*0.02,w*0.12,w*0.12,0,10),cx,cy,tilt),PAL.ink,{ink:0});   // the sound hole
-      const ns=Math.min(6,Math.max(3,Math.round(poly)+1)); for(let k=0;k<ns;k++){ const u=(k+0.5)/ns-0.5; list.push({id:id++,t:T(0.5+0.1*k),line:_pgRot([[cx+w*0.2*u,cy+h*0.4],[cx+w*0.14*u,cy-h*0.95]],cx,cy,tilt),col:_pcMix(PAL.ink,[255,255,255],0.6),lw:Math.max(0.8,D*0.002)}); }   // the strings: the voices
-    } else if(kind==='bottle'){ const w=D*0.07*sc, h=D*0.3*sc; const cx=x, by=base;
-      F(T(0.1),[[cx-w,by],[cx+w,by],[cx+w,by-h*0.55],[cx+w*0.35,by-h*0.72],[cx+w*0.35,by-h],[cx-w*0.35,by-h],[cx-w*0.35,by-h*0.72],[cx-w,by-h*0.55]],col(0,0),{hatch:0.45,hang:1.57});
-      F(T(0.3),[[cx-w,by-h*0.1],[cx+w*0.1,by-h*0.12],[cx+w*0.1,by-h*0.5],[cx-w,by-h*0.5]],_pcMix(col(1,1),[255,255,255],0.3),{ink:0.7});   // the label, lit
-      list.push({id:id++,t:T(0.4),line:[[cx-w*0.35,by-h],[cx-w*0.35,by-h*0.72]],col:PAL.ink,lw});
-    } else if(kind==='fruit'){ const w=D*0.13*sc, h=D*0.06*sc; const cx=x, by=base;
-      F(T(0.1),[[cx-w,by-h*0.8],[cx+w,by-h*0.8],[cx+w*0.7,by],[cx-w*0.7,by]],col(3,0),{hatch:0.3,hang:0.2});   // the bowl
-      const nf=Math.min(5,2+Math.round(q.vmax*3)); for(let k=0;k<nf;k++){ const fx=cx-w*0.6+w*1.2*(k+0.5)/nf, fy=by-h*0.8-D*0.03*sc*(k%2?0.5:1); F(T(0.2+0.1*k),_pgEll(fx,fy,D*0.035*sc,D*0.03*sc,0.3,9),col(4,k),{hatch:k%2?0.3:0,hang:0.8}); }
-    } else if(kind==='glass'){ const w=D*0.05*sc, h=D*0.14*sc; const cx=x, by=base;
-      F(T(0.1),[[cx-w,by-h],[cx+w,by-h],[cx+w*0.5,by-h*0.35],[cx+w*0.15,by-h*0.1],[cx+w*0.6,by],[cx-w*0.6,by],[cx-w*0.15,by-h*0.1],[cx-w*0.5,by-h*0.35]],_pcMix(col(2,0),[255,255,255],0.45),{hatch:0.25,hang:1.4,ink:0.8});
-    } else if(kind==='newspaper'){ const w=D*0.16*sc, h=D*0.1*sc; const cx=x, by=base; const rot=(rr()-.5)*0.5;
-      list.push(Object.assign(_pgF(id++,T(0.1),_pgRot([[cx-w,by],[cx+w,by-h*0.1],[cx+w*0.9,by-h*1.3],[cx-w*1.05,by-h*1.2]],cx,by,rot),isBW?[226,224,220]:[232,226,208],{lw,inkCol:PAL.ink,ink:0.8}),{news:true}));
-      list.push({id:id++,t:T(0.3),text:'JOU',x:cx-w*0.25,y:by-h*0.75,rot,size:D*0.05*sc,col:PAL.ink});
-    } else { const w=D*0.12*sc, h=D*0.05*sc; const cx=x, by=base;   // the pipe: the bowl and the stem
-      F(T(0.1),_pgEll(cx-w*0.6,by-h*0.6,w*0.3,h*0.8,0,10),col(2,0),{hatch:0.4,hang:1.2}); F(T(0.2),[[cx-w*0.4,by-h*0.9],[cx+w*0.8,by-h*1.5],[cx+w*0.8,by-h*1.15],[cx-w*0.4,by-h*0.55]],PAL.ink,{ink:0}); }
-  });
-  // the singer's head over the table, when the piece sings high: profile and full face at once, its facets the phrases
-  if(reg>0.5){ const hx=CW*(major && reg>0.5 ? 0.3 : 0.5), hy=CH*0.3; const tilt=(A.ch.contour-0.5)*0.6; const hw=CW*0.17, hh=CH*0.2;
-    const head=_pgRot([[hx-hw*0.7,hy-hh*0.6],[hx+hw*0.5,hy-hh*0.75],[hx+hw*0.9,hy-hh*0.1],[hx+hw*0.55,hy+hh*0.7],[hx-hw*0.3,hy+hh*0.8],[hx-hw*0.85,hy+hh*0.2]],hx,hy,tilt);
-    const rh=_pcR(97980,ss); rh(); _pcFacets(list,head,rh,CW*CH/(30+dens*40),tilt+0.9,0.2,0.75,(t,p,i)=>({col:flat(t,i+2),hatch:rh()<0.4?0.3:0,hang:tilt+(rh()<0.5?0.3:1.6),ink:0.95,inkCol:PAL.ink,open:rh()<0.25?Math.floor(rh()*p.length):-1,lw}),{axis:2});
-    for(const f of list) if(f.t>=0.2 && f.t<=0.75 && !f.line && !f.text && f.poly && _pcCentre(f.poly)[1]<CH*0.55) f.id=f.id;   // (the facets keep their ids)
-    list.push({id:id++,t:0.76,stroke:head,w:head.map(()=>D*0.008),close:true,col:PAL.ink});
-    const eye=(ex,ey,fr)=>{ F(0.78,_pgRot(fr?_pgEll(ex,ey,hw*0.16,hh*0.1,0,10):_pgEll(ex,ey,hw*0.1,hh*0.1,0,10),hx,hy,tilt),isBW?[236,236,232]:[240,236,226],{ink:0.9}); F(0.8,_pgRot(_pgEll(ex+(fr?hw*0.02:0),ey,hh*0.05,hh*0.05,0,8),hx,hy,tilt),PAL.ink,{ink:0}); };
-    eye(hx-hw*0.3,hy-hh*0.15,true); eye(hx+hw*0.35,hy-hh*0.2,false);   // one eye from the front, one in profile: the tonic and the dominant
-    list.push({id:id++,t:0.82,stroke:_pgRot([[hx+hw*0.1,hy-hh*0.3],[hx+hw*0.35,hy+hh*0.15],[hx+hw*0.05,hy+hh*0.2]],hx,hy,tilt),w:[D*0.006,D*0.006,D*0.004],col:PAL.ink,close:false});   // the nose, one line
-    F(0.84,_pgRot([[hx-hw*0.15,hy+hh*0.45],[hx+hw*0.25,hy+hh*0.42],[hx+hw*0.2,hy+hh*0.55],[hx-hw*0.12,hy+hh*0.56]],hx,hy,tilt),period==='guernica'?[40,38,36]:_pcMix(P.red,flat(c.t,0),0.4),{ink:0.9});   // the mouth, the climax's colour
-  }
+  const floorY = setting==='beach' ? CH*0.5 : setting==='ground' ? CH*0.55 : CH*0.62;
+  { const nPl=Math.min(16,Math.max(6,Math.round(A.phrases.length/3))); const minA=CW*CH/nPl; const out=[]; _pcCut([[0,0],[CW,0],[CW,floorY],[0,floorY]],r,minA,0,grain,out); const rw=_pcR(97960,ss); rw();
+    const wallK = setting==='beach' ? 0.3 : 0.6;   /* the wall stays quiet: the figures and the things are the colour */ const wallBase = setting==='beach' ? (isBW?[200,200,200]:[150,185,215]) : PAL.ground;
+    out.forEach((poly,i)=>{ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW,0,1)*0.9; F(0.001+t*0.02,poly,_pcMix(flat(t,i),wallBase,wallK),{hatch:rw()<0.4?0.25:0,hang:grain+0.3,ink:0.55,open:rw()<0.4?Math.floor(rw()*poly.length):-1}); }); }
+  if(setting==='room' && major){ const wx=CW*(reg>0.5?0.58:0.08), wy=CH*0.06, ww=CW*0.34, wh=CH*0.3;   // the window: four panes of sky
+    F(0.02,[[wx,wy],[wx+ww,wy],[wx+ww,wy+wh],[wx,wy+wh]],_pcMix(PAL.ink,PAL.ground,0.3),{ink:0.9,hatch:0});
+    for(let k=0;k<4;k++){ const px=wx+ww*0.06+(k%2)*ww*0.47, py=wy+wh*0.06+(k>>1)*wh*0.47; F(0.04+k*0.02,[[px,py],[px+ww*0.41,py],[px+ww*0.41,py+wh*0.41],[px,py+wh*0.41]],_pcMix([150,185,215],flat(0.1+k*0.2,k),0.35),{ink:0.6,hatch:0}); } }
+  if(setting==='night'){ const lx=CW*(0.2+0.6*c.t), ly=CH*0.12; F(c.t,_pgEll(lx,ly,D*0.05,D*0.06,0,12),isBW?[240,240,236]:[250,236,170],{ink:0.9,hatch:0}); for(let k=0;k<10;k++){ const a=k/10*6.2832; list.push({id:id++,t:c.t+0.01,line:[[lx+Math.cos(a)*D*0.07,ly+Math.sin(a)*D*0.08],[lx+Math.cos(a)*D*(0.1+0.04*(k%2)),ly+Math.sin(a)*D*(0.11+0.04*(k%2))]],col:isBW?[240,240,236]:[250,236,170],lw:lw*0.8}); } }   // the lamp of the climax, Guernica's bulb
+  if(setting==='arena'){ const bx=CW*0.5, by=CH*0.22, bw=CW*0.14, bh=CH*0.1;   // the bull's head on the wall
+    F(0.05,[[bx-bw,by-bh*0.6],[bx-bw*0.5,by-bh],[bx+bw*0.5,by-bh],[bx+bw,by-bh*0.6],[bx+bw*0.7,by+bh*0.8],[bx,by+bh*1.3],[bx-bw*0.7,by+bh*0.8]],_pcMix(PAL.ink,PAL.ground,0.2),{hatch:0.4,hang:0.3});
+    list.push({id:id++,t:0.06,stroke:[[bx-bw*0.7,by-bh*0.9],[bx-bw*1.2,by-bh*1.6],[bx-bw*0.9,by-bh*2.2]],w:[lw*2,lw*1.5,lw*0.6],col:PAL.ink,close:false}); list.push({id:id++,t:0.06,stroke:[[bx+bw*0.7,by-bh*0.9],[bx+bw*1.2,by-bh*1.6],[bx+bw*0.9,by-bh*2.2]],w:[lw*2,lw*1.5,lw*0.6],col:PAL.ink,close:false});
+    F(0.07,_pgEll(bx-bw*0.35,by,bw*0.12,bh*0.15,0,8),isBW?[236,236,232]:[240,236,226],{ink:0.6,hatch:0}); F(0.07,_pgEll(bx+bw*0.35,by,bw*0.12,bh*0.15,0,8),isBW?[236,236,232]:[240,236,226],{ink:0.6,hatch:0}); }
+  // the floor / the sand / the ground
+  F(0.01,[[0,floorY],[CW,floorY],[CW,CH],[0,CH]],_pcMix(flat(0.03,2),setting==='beach'?(isBW?[220,218,210]:[232,212,160]):PAL.ground,setting==='beach'?0.7:0.35),{hatch:0.3,hang:0.1,ink:0.7});
+  if(setting==='beach'){ F(0.02,[[0,floorY-CH*0.08],[CW,floorY-CH*0.1],[CW,floorY],[0,floorY]],_pcMix(flat(0.05,5),isBW?[160,160,160]:[60,110,170],0.6),{hatch:0.2,hang:0.05,ink:0.6}); }   // the sea
+  // ── the things: on the table (room, night, arena) or the sand (beach); none on the bare ground
+  const things=[]; if(leaps>0.45) things.push('guitar'); if(regular>0.6) things.push('bottle'); if(dens>0.35 && pace>0.55) things.push('newspaper'); if(major) things.push('fruit'); if(loud<0.55) things.push('glass'); if(pace<0.45) things.push('pipe');
+  const nTh = setting==='ground' ? 0 : Math.max(nFig?1:2, Math.min(3,4-nFig));
+  if(nTh){ for(const k of ['bottle','guitar','fruit','glass','newspaper','pipe']) if(things.length<nTh && !things.includes(k)) things.push(k);
+    let ty=floorY+CH*0.04, tb=CH*0.92; if(setting!=='beach'){ F(0.06,[[CW*0.02,tb],[CW*0.14,ty],[CW*0.9,ty-CH*0.02],[CW*1.0,tb]],_pcMix(flat(0.05,3),PAL.ground,0.2),{hatch:0.3,hang:0.15}); F(0.07,[[CW*0.14,ty],[CW*0.9,ty-CH*0.02],[CW*0.88,ty+CH*0.03],[CW*0.16,ty+CH*0.05]],_pcMix(flat(0.08,1),[255,255,255],0.25),{ink:0.8,hatch:0}); } else ty=CH*0.86;
+    const G=_kd2Phrases(A,nTh); const rr=_pcR(97970,ss); rr(); const side = nFig ? (reg>0.5?0:1) : 0.5;   // the things keep away from the figures' side
+    things.slice(0,nTh).forEach((kind,i)=>{ const q=G[i]||G[G.length-1]; const sc=(setting==='beach'?0.6:0.75)+0.5*q.vmax; const x=CW*(nFig ? (side?0.62:0.1)+0.3*(i+0.5)/nTh : 0.16+0.68*(i+0.5)/nTh), base=ty+CH*0.02+CH*0.03*(i%2); _pcThing(kind,{list,F,flat,PAL,D,x,base,sc,t0:q.t0,t1:Math.min(1,q.t0+0.12),q,rr,poly,isBW,id:()=>id++}); }); }
+  // ── the figures: one per voice, each a passage of the piece, in the pose the pace calls for
+  if(nFig){ const G=_kd2Phrases(A,nFig); const xs = nFig===1 ? [reg>0.5?0.34:0.6] : nFig===2 ? [0.3,0.68] : [0.2,0.5,0.8];
+    G.forEach((q,i)=>{ const x0=xs[i]; const t0=q.t0, t1=Math.min(1,q.t0+0.3); const T=(f)=>t0+(t1-t0)*f; const loudQ=q.vmax; const nPh=Math.max(3,A.phrases.filter(p=>p.t>=q.t0&&p.t<q.t1).length);
+      const attr = (A.reg(q.top)>0.65) ? 'bird' : (leaps>0.5 && i===0) ? (poly>2.2?'guitar':'clarinet') : (regular>0.65) ? 'glass' : (setting==='night') ? 'candle' : (major && loudQ<0.6) ? 'flower' : (dens>0.4) ? 'book' : 'mirror';
+      const headKind = leaps>0.5 ? 'double' : (!major ? 'profile' : 'front');
+      _pcFigure(pose,{list,F,flat,skin,PAL,D,CW,CH,x0,floorY,T,q,loudQ,nPh,attr,headKind,hat:loudQ>0.75,grain,r,isBW,tens,c,id:()=>id++,A,P,i}); }); }
   list._objA=!!chords._objFirst; _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// a thing of Picasso's still life, standing at x on `base`, scaled by sc, its planes timed t0..t1 in its passage's colours
+function _pcThing(kind,o){ const {list,F,flat,PAL,D,x,base,sc,t0,t1,q,rr,poly,isBW,id}=o; const T=(f)=>t0+(t1-t0)*f; const col=(k,j)=>flat(_pcClamp(q.t+0.03*j,0,1),Array.isArray(k)?k:k+j); const lw=Math.max(0.8,D*0.002);
+  if(kind==='guitar'){ const w=D*0.17*sc, h=D*0.3*sc; const tilt=(rr()-.5)*0.6; const cx=x, cy=base-h*0.4;
+    F(T(0.1),_pgRot(_pgEll(cx,cy+h*0.12,w*0.55,h*0.3,0,14),cx,cy,tilt),col(0,0),{hatch:0.35,hang:tilt+0.6}); F(T(0.2),_pgRot(_pgEll(cx,cy-h*0.22,w*0.42,h*0.22,0,14),cx,cy,tilt),col(1,1),{hatch:0.2,hang:tilt+1.2});
+    F(T(0.3),_pgRot([[cx-w*0.09,cy-h*0.32],[cx+w*0.09,cy-h*0.32],[cx+w*0.12,cy-h*0.95],[cx-w*0.12,cy-h*0.95]],cx,cy,tilt),col(2,2),{hatch:0.4,hang:tilt+1.57});
+    F(T(0.4),_pgRot(_pgEll(cx,cy+h*0.02,w*0.12,w*0.12,0,10),cx,cy,tilt),PAL.ink,{ink:0,hatch:0});
+    const ns=Math.min(6,Math.max(3,Math.round(poly)+1)); for(let k=0;k<ns;k++){ const u=(k+0.5)/ns-0.5; list.push({id:id(),t:T(0.5+0.1*k),line:_pgRot([[cx+w*0.2*u,cy+h*0.4],[cx+w*0.14*u,cy-h*0.95]],cx,cy,tilt),col:_pcMix(PAL.ink,[255,255,255],0.6),lw}); }
+  } else if(kind==='bottle'){ const w=D*0.07*sc, h=D*0.3*sc; const cx=x, by=base;
+    F(T(0.1),[[cx-w,by],[cx+w,by],[cx+w,by-h*0.55],[cx+w*0.35,by-h*0.72],[cx+w*0.35,by-h],[cx-w*0.35,by-h],[cx-w*0.35,by-h*0.72],[cx-w,by-h*0.55]],col(0,0),{hatch:0.45,hang:1.57});
+    F(T(0.3),[[cx-w,by-h*0.1],[cx+w*0.1,by-h*0.12],[cx+w*0.1,by-h*0.5],[cx-w,by-h*0.5]],_pcMix(col(1,1),[255,255,255],0.3),{ink:0.7,hatch:0});
+  } else if(kind==='fruit'){ const w=D*0.13*sc, h=D*0.06*sc; const cx=x, by=base;
+    F(T(0.1),[[cx-w,by-h*0.8],[cx+w,by-h*0.8],[cx+w*0.7,by],[cx-w*0.7,by]],col(3,0),{hatch:0.3,hang:0.2});
+    const nf=Math.min(5,2+Math.round(q.vmax*3)); for(let k=0;k<nf;k++){ const fx=cx-w*0.6+w*1.2*(k+0.5)/nf, fy=by-h*0.8-D*0.03*sc*(k%2?0.5:1); F(T(0.2+0.1*k),_pgEll(fx,fy,D*0.035*sc,D*0.03*sc,0.3,9),col(4,k),{hatch:k%2?0.3:0,hang:0.8}); }
+  } else if(kind==='glass'){ const w=D*0.05*sc, h=D*0.14*sc; const cx=x, by=base;
+    F(T(0.1),[[cx-w,by-h],[cx+w,by-h],[cx+w*0.5,by-h*0.35],[cx+w*0.15,by-h*0.1],[cx+w*0.6,by],[cx-w*0.6,by],[cx-w*0.15,by-h*0.1],[cx-w*0.5,by-h*0.35]],_pcMix(col(2,0),[255,255,255],0.45),{hatch:0.25,hang:1.4,ink:0.8});
+  } else if(kind==='newspaper'){ const w=D*0.16*sc, h=D*0.1*sc; const cx=x, by=base; const rot=(rr()-.5)*0.5;
+    list.push(Object.assign(_pgF(id(),T(0.1),_pgRot([[cx-w,by],[cx+w,by-h*0.1],[cx+w*0.9,by-h*1.3],[cx-w*1.05,by-h*1.2]],cx,by,rot),isBW?[226,224,220]:[232,226,208],{lw:Math.max(1,D*0.004),inkCol:PAL.ink,ink:0.8}),{news:true}));
+    list.push({id:id(),t:T(0.3),text:'JOU',x:cx-w*0.25,y:by-h*0.75,rot,size:D*0.05*sc,col:PAL.ink});
+  } else { const w=D*0.12*sc, h=D*0.05*sc; const cx=x, by=base;
+    F(T(0.1),_pgEll(cx-w*0.6,by-h*0.6,w*0.3,h*0.8,0,10),col(2,0),{hatch:0.4,hang:1.2}); F(T(0.2),[[cx-w*0.4,by-h*0.9],[cx+w*0.8,by-h*1.5],[cx+w*0.8,by-h*1.15],[cx-w*0.4,by-h*0.55]],PAL.ink,{ink:0,hatch:0}); }
+}
+// a figure of Picasso's: a pose (reclining · seated · standing), a head (front · profile · both at once), what it holds,
+// its planes cut by its passage's phrases, its contour as heavy as it is loud
+function _pcFigure(pose,o){ const {list,F,flat,skin,PAL,D,CW,CH,x0,floorY,T,q,loudQ,nPh,attr,headKind,hat,grain,r,isBW,tens,c,id,A,P,i}=o;
+  const cx=CW*x0; const sc=0.8+0.4*loudQ; const col=(k,j)=>flat(_pcClamp(q.t+0.02*j,0,1),Array.isArray(k)?k:k+j);
+  const cut=(t,poly,n,colFn,o2)=>{ const out=[]; _pcCut(poly,r,_pcArea(poly)/Math.max(2,Math.min(5,n)),0,grain+0.7,out);   /* a body in a few big planes, cut on the slant */ out.forEach((pl,k)=>F(t+0.01*k,pl,colFn(k),Object.assign({open:r()<0.25?Math.floor(r()*pl.length):-1,hatch:(tens>0.25&&r()<0.5)?0.35:0,hang:grain+0.4},o2||{}))); };
+  let hx, hy, hw=CW*0.09*sc, hh=CH*0.085*sc, handX, handY;
+  if(pose==='reclining'){ // a long body along the floor, the head raised on an arm
+    const bw=CW*0.38*sc, bh=CH*0.14*sc; const bx=CW*0.5, by=floorY+CH*0.16; const dir = x0<0.5 ? 1 : -1;
+    const body=[[bx-bw,by+bh*0.4],[bx-bw*0.9,by-bh*0.4],[bx-bw*0.3,by-bh*0.7],[bx+bw*0.2,by-bh*0.5],[bx+bw*0.8,by-bh*0.6],[bx+bw,by+bh*0.2],[bx+bw*0.6,by+bh*0.5],[bx-bw*0.4,by+bh*0.6]];
+    cut(T(0.1),dir>0?body:body.map(p=>[2*bx-p[0],p[1]]),nPh,(k)=>col(k,k));
+    hx=bx-dir*bw*0.75; hy=by-bh*1.1; handX=bx+dir*bw*0.5; handY=by-bh*0.6;
+    F(T(0.3),[[hx+dir*hw*0.2,hy+hh*0.5],[hx+dir*hw*1.1,hy+hh*0.3],[hx+dir*hw*1.3,by+bh*0.4],[hx+dir*hw*0.4,by+bh*0.4]],skin(q.t),{hatch:0.2,hang:1.2});   // the arm under the head
+  } else if(pose==='seated'){ // in the armchair: the chair's curve, the dress's planes, the arms in the lap
+    const w=CW*0.2*sc, top=Math.max(CH*0.2,floorY-CH*0.28*sc); const by=CH*0.94;
+    F(T(0.05),[[cx-w*1.3,by],[cx-w*1.4,top+CH*0.02],[cx-w*0.9,top-CH*0.06],[cx+w*0.9,top-CH*0.06],[cx+w*1.4,top+CH*0.02],[cx+w*1.3,by]],col(P.red,0),{hatch:0.1,hang:0.3});   // the chair
+    const dress=[[cx-w*0.9,by],[cx-w,top+CH*0.12],[cx-w*0.6,top+CH*0.02],[cx,top],[cx+w*0.6,top+CH*0.02],[cx+w,top+CH*0.12],[cx+w*0.9,by]];
+    cut(T(0.1),dress,nPh,(k)=>col(k+1,k));
+    F(T(0.3),[[cx-w*0.7,top+CH*0.22],[cx-w*0.2,top+CH*0.18],[cx+w*0.3,top+CH*0.2],[cx+w*0.7,top+CH*0.24],[cx+w*0.5,top+CH*0.32],[cx-w*0.1,top+CH*0.34],[cx-w*0.6,top+CH*0.3]],skin(q.t),{hatch:0.2,hang:0.3});   // the arms folded
+    hx=cx; hy=top-hh*0.9; handX=cx+w*0.5; handY=top+CH*0.2;
+  } else { // standing: a tall body of planes, one arm raised, holding
+    const w=CW*0.14*sc, top=Math.max(CH*0.18,floorY-CH*0.34*sc); const by=CH*0.94;
+    const body=[[cx-w*0.7,by],[cx-w*0.8,top+CH*0.3],[cx-w*1.1,top+CH*0.06],[cx-w*0.4,top],[cx+w*0.4,top],[cx+w*1.1,top+CH*0.06],[cx+w*0.8,top+CH*0.3],[cx+w*0.7,by]];
+    cut(T(0.1),body,nPh,(k)=>col(k+2,k));
+    F(T(0.25),[[cx+w*1.0,top+CH*0.08],[cx+w*1.6,top-CH*0.02],[cx+w*1.7,top+CH*0.04],[cx+w*1.1,top+CH*0.18]],skin(q.t),{hatch:0.2,hang:0.9});   // the arm up, holding
+    hx=cx; hy=top-hh*0.9; handX=cx+w*1.6; handY=top-CH*0.02;
+  }
+  // the head: front, profile, or both at once (the two eyes at odds, the nose in profile over a frontal face)
+  const tilt=(A.ch?A.ch.contour-0.5:0)*0.6;
+  const face=_pgRot([[hx-hw*0.7,hy-hh*0.6],[hx+hw*0.5,hy-hh*0.75],[hx+hw*0.9,hy-hh*0.1],[hx+hw*0.55,hy+hh*0.7],[hx-hw*0.3,hy+hh*0.8],[hx-hw*0.85,hy+hh*0.2]],hx,hy,tilt);
+  if(headKind==='double'){ const half=[face[0],face[1],[hx+hw*0.1,hy-hh*0.75],[hx+hw*0.1,hy+hh*0.8],face[4],face[5]]; F(T(0.4),half,skin(q.t),{hatch:0}); F(T(0.42),[[hx+hw*0.1,hy-hh*0.75],face[1],face[2],face[3],[hx+hw*0.1,hy+hh*0.8]],_pcMix(skin(q.t),col(P.violet,1),0.45),{hatch:0.3,hang:1.2}); }
+  else { const out=[]; _pcCut(face,r,_pcArea(face)/4,0,tilt+0.9,out); out.forEach((pl,k)=>F(T(0.4+0.01*k),pl,k%2?skin(q.t):_pcMix(skin(q.t),col(k,k),0.3),{hatch:k%3===0?0.3:0,hang:tilt+1.2,open:r()<0.3?Math.floor(r()*pl.length):-1})); }
+  list.push({id:id(),t:T(0.46),stroke:face,w:face.map(()=>D*0.007),close:true,col:PAL.ink});
+  const eye=(ex,ey,fr)=>{ F(T(0.48),_pgRot(fr?_pgEll(ex,ey,hw*0.16,hh*0.1,0,10):_pgEll(ex,ey,hw*0.1,hh*0.1,0,10),hx,hy,tilt),isBW?[236,236,232]:[240,236,226],{ink:0.9,hatch:0}); F(T(0.49),_pgRot(_pgEll(ex+(fr?hw*0.02:0),ey,hh*0.05,hh*0.05,0,8),hx,hy,tilt),PAL.ink,{ink:0,hatch:0}); };
+  if(headKind==='profile'){ eye(hx+hw*0.3,hy-hh*0.2,false); list.push({id:id(),t:T(0.5),stroke:_pgRot([[hx+hw*0.5,hy-hh*0.4],[hx+hw*1.0,hy+hh*0.1],[hx+hw*0.6,hy+hh*0.25]],hx,hy,tilt),w:[D*0.006,D*0.006,D*0.004],col:PAL.ink,close:false}); }
+  else { eye(hx-hw*0.3,hy-hh*0.15,true); eye(hx+hw*0.35,hy-hh*0.2,headKind!=='double'); list.push({id:id(),t:T(0.5),stroke:_pgRot([[hx+hw*0.1,hy-hh*0.3],[hx+hw*0.35,hy+hh*0.15],[hx+hw*0.05,hy+hh*0.2]],hx,hy,tilt),w:[D*0.006,D*0.006,D*0.004],col:PAL.ink,close:false}); }
+  F(T(0.52),_pgRot([[hx-hw*0.15,hy+hh*0.45],[hx+hw*0.25,hy+hh*0.42],[hx+hw*0.2,hy+hh*0.55],[hx-hw*0.12,hy+hh*0.56]],hx,hy,tilt),_pcMix(P.red,flat(c.t,0),0.4),{ink:0.9,hatch:0});   // the mouth, the climax's colour
+  F(T(0.54),_pgRot([[hx-hw*0.95,hy-hh*0.1],[hx-hw*0.6,hy-hh*1.0],[hx+hw*0.3,hy-hh*1.05],[hx+hw*0.8,hy-hh*0.6],[hx+hw*0.4,hy-hh*0.5],[hx-hw*0.2,hy-hh*0.7],[hx-hw*0.7,hy-hh*0.3]],hx,hy,tilt),_pcMix(PAL.ink,col(P.blue,3),0.35),{hatch:0.3,hang:tilt+1.2});   // the hair
+  if(hat) F(T(0.56),_pgRot([[hx-hw*1.2,hy-hh*0.8],[hx+hw*1.2,hy-hh*0.85],[hx+hw*0.7,hy-hh*1.0],[hx+hw*0.5,hy-hh*1.5],[hx-hw*0.5,hy-hh*1.5],[hx-hw*0.7,hy-hh*1.0]],hx,hy,tilt),col(P.black,4),{hatch:0,ink:0.9});   // the hat, when loud
+  // what it holds
+  const ax=handX, ay=handY, s=D*0.05*sc;
+  if(attr==='guitar'){ F(T(0.6),_pgRot(_pgEll(ax,ay+s*1.2,s*1.4,s*2.2,0,14),ax,ay,-0.6),col(P.ochre,5),{hatch:0.35,hang:0.5}); F(T(0.62),_pgRot(_pgEll(ax,ay-s*0.6,s*1.0,s*1.3,0,12),ax,ay,-0.6),col(P.ochre,6),{hatch:0.2,hang:0.9}); F(T(0.64),_pgRot([[ax-s*0.25,ay-s*1.6],[ax+s*0.25,ay-s*1.6],[ax+s*0.3,ay-s*5],[ax-s*0.3,ay-s*5]],ax,ay,-0.6),PAL.ink,{ink:0,hatch:0}); F(T(0.66),_pgRot(_pgEll(ax,ay+s*0.6,s*0.35,s*0.35,0,10),ax,ay,-0.6),PAL.ink,{ink:0,hatch:0}); }
+  else if(attr==='clarinet'){ F(T(0.6),[[ax-s*0.25,ay],[ax+s*0.25,ay],[ax+s*0.45,ay+s*4.5],[ax-s*0.45,ay+s*4.5]],PAL.ink,{ink:0,hatch:0}); for(let k=0;k<4;k++) F(T(0.62+0.01*k),_pgEll(ax,ay+s*(0.8+0.8*k),s*0.1,s*0.1,0,8),isBW?[236,236,232]:[240,236,226],{ink:0,hatch:0}); }
+  else if(attr==='bird'){ F(T(0.6),_pgEll(ax,ay-s*0.8,s*1.1,s*0.5,-0.3,12),isBW?[236,236,232]:[240,236,226],{hatch:0}); F(T(0.62),[[ax+s*0.6,ay-s*1.1],[ax+s*1.4,ay-s*1.6],[ax+s*1.5,ay-s*1.1],[ax+s*1.0,ay-s*0.8]],isBW?[236,236,232]:[240,236,226],{hatch:0}); F(T(0.63),[[ax-s*0.3,ay-s*1.1],[ax+s*0.1,ay-s*2.2],[ax+s*0.7,ay-s*1.2]],_pcMix([240,236,226],col(P.blue,2),0.3),{hatch:0.2}); F(T(0.64),_pgEll(ax+s*1.25,ay-s*1.4,s*0.06,s*0.06,0,6),PAL.ink,{ink:0,hatch:0}); }
+  else if(attr==='flower'){ list.push({id:id(),t:T(0.6),line:[[ax,ay],[ax+s*0.4,ay-s*2.6]],col:_pcMix(PAL.ink,[70,120,70],0.5),lw:Math.max(1,D*0.004)}); for(let k=0;k<5;k++){ const a=k/5*6.2832; F(T(0.62+0.01*k),_pgEll(ax+s*0.4+Math.cos(a)*s*0.5,ay-s*2.6+Math.sin(a)*s*0.5,s*0.35,s*0.25,a,6),col([P.red,P.yellow,P.rose][k%3],k),{hatch:0,ink:0.7}); } F(T(0.67),_pgEll(ax+s*0.4,ay-s*2.6,s*0.2,s*0.2,0,8),P.yellow,{ink:0.6,hatch:0}); }
+  else if(attr==='book'){ F(T(0.6),[[ax-s*1.2,ay-s*0.2],[ax+s*1.2,ay-s*0.4],[ax+s*1.3,ay+s*1.4],[ax-s*1.1,ay+s*1.6]],isBW?[226,224,220]:[232,226,208],{hatch:0,news:true}); list.push({id:id(),t:T(0.62),line:[[ax,ay-s*0.3],[ax+s*0.05,ay+s*1.5]],col:PAL.ink,lw:Math.max(1,D*0.003)}); }
+  else if(attr==='candle'){ F(T(0.6),[[ax-s*0.2,ay],[ax+s*0.2,ay],[ax+s*0.2,ay-s*2.4],[ax-s*0.2,ay-s*2.4]],isBW?[236,236,232]:[246,240,220],{hatch:0}); F(T(0.62),[[ax,ay-s*3.4],[ax+s*0.35,ay-s*2.7],[ax,ay-s*2.3],[ax-s*0.35,ay-s*2.7]],isBW?[240,240,236]:[250,220,120],{ink:0.5,hatch:0}); }
+  else if(attr==='glass'){ F(T(0.6),[[ax-s*0.6,ay-s*1.8],[ax+s*0.6,ay-s*1.8],[ax+s*0.3,ay-s*0.5],[ax+s*0.1,ay-s*0.1],[ax+s*0.5,ay],[ax-s*0.5,ay],[ax-s*0.1,ay-s*0.1],[ax-s*0.3,ay-s*0.5]],_pcMix(col(P.white,1),[255,255,255],0.4),{hatch:0.25,hang:1.4,ink:0.8}); }
+  else { F(T(0.6),_pgEll(ax+s*0.3,ay-s*1.2,s*1.1,s*1.4,0.2,14),_pcMix(PAL.ink,[255,255,255],0.3),{hatch:0.2,hang:0.9}); F(T(0.62),_pgEll(ax+s*0.3,ay-s*1.2,s*0.8,s*1.1,0.2,12),_pcMix([200,215,230],col(P.blue,3),0.3),{hatch:0.4,hang:1.1,ink:0.6}); list.push({id:id(),t:T(0.63),line:[[ax+s*0.3,ay+s*0.2],[ax+s*0.3,ay+s*1.2]],col:PAL.ink,lw:Math.max(1,D*0.004)}); }   // the mirror
 }
 // ── Picasso phase LIGHT LINE — the 1949 "light drawings". ──
 // One unbroken luminous stroke draws itself across a near-black ground for
