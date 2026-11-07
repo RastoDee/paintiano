@@ -7801,6 +7801,65 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   _dl2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// RAFFEL LISTENS — the picture the piece composes from everything that is the
+// hand's own: the night ground tinted by the opening chord, the golden angle and
+// the golden section, the gold underglow, the thin coloured thread, the glowing
+// node, the circle of fifths, the ray, the soundwave bar. The piece decides the
+// geometry and what the thread carries.
+//   the heart        at the golden section of the canvas — upper left when the piece climbs, lower right when it falls,
+//                    centred when it stays
+//   the geometry     ORBITS — chords as nodes on φ-spaced rings round the heart, placed by their key on the circle of
+//                    fifths, the thread joining chord to chord (even, rhythmic) · THREAD — one long thread across the
+//                    sheet carrying the melody's contour, a gold underglow beneath, a node per accent (slow, singing) ·
+//                    RAYS — rays from the heart at the golden angle, as long as the chord is long (loud) · WAVE —
+//                    soundwave bars on a baseline the melody bends (quick) · WEB — the chords scattered by the golden
+//                    angle and joined in playing order, each to its nearest (many voices)
+//   the signs        an accent is a bright node with a halo · the climax passage drawn in gold · a faint golden spiral
+//                    under everything when the piece is even · the thread thicker as the piece is loud
+// ═══════════════════════════════════════════════════════════════════════════
+function _rfListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
+  const ss=sessionSeed|0, cn=chords.length, N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH), PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI);
+  const A=_kd2Analyze(chords0||chords,gc,mode); const X=_hear(chords0||chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const rnd=_seedRnd(139,ss,0,0);
+  const chordCol=(i,mul)=>{ const idx=Math.min(cn-1,Math.max(0,i%cn)); const chord=chords[idx]; _setCurE(chord&&chord._E); const notes=chord&&(chord.n||chord.notes); if(!notes||!notes.length) return [200,150,120]; let R=0,G=0,B=0,k=0; for(const note of notes){ const m=note.m!==undefined?note.m:note, v=note.v!==undefined?note.v:80; const q=gc(m,v); R+=q[0]; G+=q[1]; B+=q[2]; k++; } const f=mul===undefined?1:mul; return [Math.min(255,R/k*f),Math.min(255,G/k*f),Math.min(255,B/k*f)]; };
+  const css=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const meta=(i)=>{ const chord=chords[Math.min(cn-1,i)]; const notes=chord&&(chord.n||chord.notes)||[]; let d=0,v=0,k=0; for(const n of notes){ d+=(n.durMs||400); v+=(n.v!==undefined?n.v:80); k++; } return {dur:Math.min(1.6,k?(d/k)/900:0.5), vel:Math.min(1,k?(v/k)/110:0.7)}; };
+  const pcOf=(i)=>{ const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[]; let s=0,k=0; for(const nt of notes){ s+=(nt.m!==undefined?nt.m:nt); k++; } return ((Math.round(k?s/k:60)%12)+12)%12; };
+  const FIF=[0,7,2,9,4,11,6,1,8,3,10,5]; const GOLD=[201,168,76];
+  const geo = (pace<0.45) ? 'thread' : (regular>0.8 && leaps<0.5) ? 'orbits' : (loud>0.68) ? 'rays' : (pace>0.75) ? 'wave' : (poly>=2.4) ? 'web' : 'thread';
+  const hx = trend>0.55 ? CW*(1-1/PHI) : trend<0.45 ? CW/PHI : CW/2, hy = trend>0.55 ? CH*(1-1/PHI) : trend<0.45 ? CH/PHI : CH*(0.44+0.14*reg);
+  try{ globalThis.__RF_LISTEN={geo,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  // ── the night, tinted by the opening chord
+  const g0=chordCol(0,0.16); ctx.fillStyle=`rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`; ctx.fillRect(0,0,CW,CH);
+  // ── the contour of the melody
+  const C2=(()=>{ const n=24,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
+  for(let k=0;k<2;k++){ for(let i=1;i<23;i++) C2[i]=(C2[i-1]+C2[i]+C2[i+1])/3; } const at=(u)=>{ const i=Math.min(22,Math.floor(u*23)); const f=u*23-i; return C2[i]+(C2[i+1]-C2[i])*f; };
+  const inClimax=(i)=>{ const t=i/cn; return t>=c.t0 && t<=c.t1; }; const acc=new Uint8Array(cn); for(const e of A.ev){ if(e&&e.acc) acc[Math.min(cn-1,Math.max(0,Math.round(e.t*(cn-1))))]=1; }
+  const node=(x,y,col,rad,bright)=>{ const g=ctx.createRadialGradient(x,y,0.4,x,y,rad*2.6); g.addColorStop(0,css(col.map(q=>Math.min(255,q*1.3+30)),0.95)); g.addColorStop(0.4,css(col,0.7)); g.addColorStop(1,css(col,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,rad*2.6,0,7); ctx.fill(); ctx.fillStyle=css([255,252,246],bright); ctx.beginPath(); ctx.arc(x,y,Math.max(0.8,rad*0.42),0,7); ctx.fill(); };
+  // ── the golden spiral under everything, when the piece is even
+  if(regular>0.7){ ctx.strokeStyle=css(GOLD,0.07); ctx.lineWidth=Math.max(1,S*0.002); ctx.beginPath(); for(let k=0;k<=360;k++){ const a=k/360*6.2832*3; const r=S*0.02*Math.pow(PHI,a/(Math.PI/2)); if(r>S) break; const x=hx+Math.cos(a)*r, y=hy+Math.sin(a)*r; k?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke(); }
+  ctx.lineCap='round'; ctx.lineJoin='round'; const LW=Math.max(1,S*0.0016)*(0.8+0.8*loud);
+  if(geo==='orbits'){ const nR=Math.max(3,Math.min(8,Math.round(3+poly*1.5))); const pts=[]; for(let i=0;i<N;i++){ const slot=FIF.indexOf(pcOf(i)); const ring=Math.floor(i/cn*nR); const r=S*0.08*Math.pow(PHI,ring*0.75); const a=-Math.PI/2+slot/12*6.2832+(i%7)*0.03; pts.push({x:hx+Math.cos(a)*r,y:hy+Math.sin(a)*r,i}); }
+    for(let k=0;k<nR;k++){ const r=S*0.08*Math.pow(PHI,k*0.75); ctx.strokeStyle=css(GOLD,0.08); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(hx,hy,r,0,7); ctx.stroke(); }
+    for(let i=1;i<pts.length;i++){ const m=meta(i), col=inClimax(i)?GOLD:chordCol(i); ctx.strokeStyle=css(col,0.25+0.3*m.vel); ctx.lineWidth=LW; ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(pts[i].x,pts[i].y); ctx.stroke(); }
+    for(const p of pts){ const m=meta(p.i); node(p.x,p.y,chordCol(p.i),Math.max(1.2,S*0.003+m.dur*S*0.006)*(acc[p.i]?1.6:1),0.5*m.vel+0.2); } }
+  else if(geo==='rays'){ for(let i=0;i<N;i++){ const m=meta(i), col=inClimax(i)?GOLD:chordCol(i); const a=i*GA-Math.PI/2; const r0=S*0.03, r1=r0+(S*0.1+m.dur*S*0.32)*(0.7+0.6*at(i/cn)); const x0=hx+Math.cos(a)*r0, y0=hy+Math.sin(a)*r0, x1=hx+Math.cos(a)*r1, y1=hy+Math.sin(a)*r1; ctx.strokeStyle=css(col,0.4+0.35*m.vel); ctx.lineWidth=LW; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); if(acc[i]) node(x1,y1,col,Math.max(1.2,S*0.004),0.8); else { ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)),0.85); ctx.beginPath(); ctx.arc(x1,y1,Math.max(1,S*0.004*m.vel+1),0,7); ctx.fill(); } } }
+  else if(geo==='wave'){ const x0=CW*0.06, span=CW*0.88; const baseAt=(u)=>CH*(0.3+0.4*(1-at(u))); ctx.strokeStyle=css(GOLD,0.18); ctx.lineWidth=1; ctx.beginPath(); for(let k=0;k<=60;k++){ const u=k/60; k?ctx.lineTo(x0+u*span,baseAt(u)):ctx.moveTo(x0,baseAt(0)); } ctx.stroke();
+    for(let i=0;i<N;i++){ const m=meta(i), col=inClimax(i)?GOLD:chordCol(i); const u=i/Math.max(1,cn-1), x=x0+u*span, by=baseAt(u); const pcv=pcOf(i); const dir=(pcv%2===0)?-1:1; const hgt=(S*0.04+(pcv/11)*S*0.26)*(0.5+0.5*m.dur); ctx.strokeStyle=css(col,0.6+0.3*m.vel); ctx.lineWidth=Math.max(1.4,span/cn*0.5); ctx.beginPath(); ctx.moveTo(x,by); ctx.lineTo(x,by+dir*hgt); ctx.stroke(); if(acc[i]) node(x,by+dir*hgt,col,Math.max(1.2,S*0.004),0.8); else { ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)),0.9); ctx.beginPath(); ctx.arc(x,by+dir*hgt,Math.max(1,span/cn*0.3),0,7); ctx.fill(); } } }
+  else if(geo==='web'){ const rnd2=_seedRnd(139,ss,1,0); const pts=[]; for(let i=0;i<N;i++){ const m=meta(i), col=chordCol(i); const a=i*GA+(rnd2()-0.5)*0.6; const rad=Math.sqrt(rnd2())*S*0.46; let x=hx+Math.cos(a)*rad*(0.7+0.6*rnd2()), y=hy+Math.sin(a)*rad; x=Math.max(CW*0.05,Math.min(CW*0.95,x)); y=Math.max(CH*0.05,Math.min(CH*0.95,y)); pts.push({x,y,i,m,col}); }
+    for(let i=1;i<pts.length;i++){ const p=pts[i]; ctx.strokeStyle=css(inClimax(p.i)?GOLD:p.col,0.4+0.3*p.m.vel); ctx.lineWidth=LW*(0.6+0.7*p.m.dur); ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(p.x,p.y); ctx.stroke(); }
+    for(let i=0;i<pts.length;i++){ const p=pts[i]; let best=-1,bd=1e18; for(let j=0;j<pts.length;j++){ if(j===i) continue; const d=(pts[j].x-p.x)**2+(pts[j].y-p.y)**2; if(d<bd){ bd=d; best=j; } } if(best>=0){ ctx.strokeStyle=css(p.col,0.12); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(pts[best].x,pts[best].y); ctx.stroke(); } }
+    for(const p of pts){ if(acc[p.i]) node(p.x,p.y,p.col,Math.max(1.4,S*0.0035+p.m.dur*S*0.005),0.8); else { ctx.fillStyle=css(p.col,0.92); ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(1.4,S*0.0035+p.m.dur*S*0.005),0,7); ctx.fill(); } } }
+  else { // thread
+    const steps=Math.max(480,cn*8); const amp=CH*(0.3+0.2*leaps); const nv=Math.max(1,Math.min(3,Math.round(poly)));
+    const pos=(t,v)=>{ const x=CW*0.06+t*CW*0.88; const y=hy+(0.5-at(t))*amp*1.4+Math.sin(t*6.2832*(1+v)+v*1.3)*S*(0.03+0.03*v)*(0.5+leaps); return [x,y]; };
+    for(let v=nv-1;v>=0;v--){ let prev=null; for(let s2=0;s2<=steps;s2++){ const t=s2/steps; const [x,y]=pos(t,v); if(prev){ ctx.strokeStyle=css(GOLD,v?0.03:0.06); ctx.lineWidth=Math.max(4,S*(v?0.012:0.02)); ctx.beginPath(); ctx.moveTo(prev[0],prev[1]); ctx.lineTo(x,y); ctx.stroke(); } prev=[x,y]; }
+      prev=null; const coreT=N/cn; for(let s2=0;s2<=steps;s2++){ const t=s2/steps; if(t>coreT) break; const idx=Math.min(N-1,(t*cn)|0), col=inClimax(idx)?GOLD:chordCol(idx), m=meta(idx); const [x,y]=pos(t,v); if(prev){ ctx.strokeStyle=css(col,(v?0.3:0.6)+0.3*m.vel); ctx.lineWidth=Math.max(1.3,S*(v?0.003:0.006))*(0.8+0.8*loud); ctx.beginPath(); ctx.moveTo(prev[0],prev[1]); ctx.lineTo(x,y); ctx.stroke(); } prev=[x,y]; } }
+    for(let i=0;i<N;i++){ const ph=A.phrases.some(q=>Math.abs(q.t0*cn-i)<0.5); if(!acc[i] && !ph) continue; const [x,y]=pos(i/cn,0); const m=meta(i); node(x,y,chordCol(i),Math.max(1.6,S*0.005+m.dur*S*0.006),0.85); } }
+  _setCurE(0.5);
+}
 function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   // -- density cap: long pieces get a uniform subsample (sqrt scale) so the
@@ -7808,7 +7867,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   //    long ones stay visibly denser (600 -> ~198, 1400 -> ~253) but never a
   //    carpet. lim is remapped so the progressive reveal still grows smoothly
   //    with playback across the whole piece.
-  const _cn0 = chords.length;
+  const _chords0 = chords, _cn0 = chords.length;
   if(_cn0 > 110){
     const _K = Math.round(110 + 4*Math.sqrt(_cn0-110));
     const _sel = new Array(_K);
@@ -7854,7 +7913,10 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What it heard (_rfListen, generative) · 1 Niť (Lissajous) · 2 Súhvezdie · 3 Niť (spiral) · 4 Vlna · 5 Vejár · 6 Kompozícia. Free: 0 and 1.
+  const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick0===0){ _rfListen(ctx,CW,CH,chords,lim,gc,ss,mode,_chords0); return; }
+  const pick=pick0-1;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
   // ═══════════════ RafFel — active phase set (6) ═══════════════
@@ -16791,6 +16853,7 @@ ARTIST_DNA.notes = ARTIST_DNA.mosaic;
 // variants). Each entry overrides the artist's base genes.
 const ARTIST_VARIANTS = {
   raffel: [
+    {mark:{chain:.4,phiarc:.3,rays:.3},size:[.1,.4],layout:{radial:.5,scatter:.5},density:.2,lines:.6},   // What it heard
     {mark:{phiarc:1},size:[.2,.45],layout:{radial:1},density:.12},
     {mark:{chain:.7,beam:.3},size:[.05,.15],layout:{scatter:1},density:.2,lines:.6},
     {mark:{rays:1},size:[.2,.5],layout:{radial:1},density:.15},
@@ -17029,7 +17092,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
