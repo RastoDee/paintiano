@@ -4942,6 +4942,49 @@ function _lcMirror(ctx,x,y,w,h,c,lw,r){ const cx=x+w/2, cy=y+h/2, rx=w*0.36, ry=
   ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.4; ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,6.2832); ctx.stroke(); }
 const _LC_MOT=[_lcBrush,_lcBoom,_lcSun,_lcBalloon,_lcWave,_lcMirror];
 
+// ═══════════════════════════════════════════════════════════════════════════
+// LICHTENSTEIN LISTENS — one comic page composed from everything that is his:
+// the Ben-Day field, the flat primaries, the black contour, the explosion, the
+// brushstroke swash, the rising sun, the wave, the mirror, the speech balloon,
+// the ray burst. The piece decides the page and what goes on it.
+//   the page         one panel, or a strip of two or three (by the voices); white gutters, black borders
+//   each panel       a Ben-Day field in the passage's primary (or flat, when loud), and one event chosen by how the
+//                    passage sounds: the EXPLOSION at a loud accented climax · the BRUSHSTROKE swash when it sings
+//                    slowly · the SUN with rays when it is even and bright · the WAVE crest when it is high and quick ·
+//                    the MIRROR when it is quiet and inward · the ray BURST behind when it is loud
+//   over the page    a speech balloon with a note when there is tension · a scatter of small booms per accent ·
+//                    diagonal rays from a corner when the piece climbs · the strip reads left to right in time
+// ═══════════════════════════════════════════════════════════════════════════
+function _lcListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, S=_lcSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn, reveal=Math.max(1,Math.min(cn,lim))/cn;
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const r0=_lcR(71000,ss); r0(); const lw=Math.max(2,D*0.009)*(0.8+0.5*loud);
+  const nP = poly>=3 ? 3 : poly>=2.2 ? 2 : 1; const G=_kd2Phrases(A,nP);
+  const eventOf=(q)=>{ const v=q.vmax; if(v>0.8 && loud>0.6 && leaps>0.45) return 'boom'; if(pace<0.45) return 'brush'; if(regular>0.8 && major) return 'sun'; if(reg>0.58 && pace>0.6) return 'wave'; if(loud>0.7 || pace>0.8) return 'burst'; return 'mirror'; };
+  const el={ balloon: tens>0.25 || !major, booms: leaps>0.55 && loud>0.5, rays: trend>0.55 };
+  const panels=G.map((q,k)=>({q,ev:eventOf(q)}));
+  try{ globalThis.__LC_LISTEN={nP,events:panels.map(p=>p.ev),el,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  const list=[]; const push=(t,draw)=>list.push({t,draw,id:list.length});
+  ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(0,0,CW,CH);
+  const gut=D*0.025; const vert = CW>=CH; const boxes=[]; for(let k=0;k<nP;k++){ if(vert){ const w=(CW-gut*(nP+1))/nP; boxes.push([gut+k*(w+gut),gut,w,CH-2*gut]); } else { const h=(CH-gut*(nP+1))/nP; boxes.push([gut,gut+k*(h+gut),CW-2*gut,h]); } }
+  panels.forEach((P,k)=>{ const [x,y,w,h]=boxes[k]; const q=P.q; const col=S.col(q.t), col2=S.col(Math.min(0.999,q.t+0.2)); const bg=_lcPal[(_lcPal.indexOf(col)+1)%3]; const flat=loud>0.7 && P.ev!=='burst'; const t0=q.t0;
+    push(t0,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); if(flat){ ctx.fillStyle=_lcCss(bg); ctx.fillRect(x,y,w,h); } else { ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(x,y,w,h); _lcBenday(ctx,x,y,w,h,Math.max(3,D*(0.022-0.008*dens)),bg,()=>0.7); }
+      if(P.ev==='burst' || el.rays){ const cx=x+w*(trend>0.5?0.1:0.9), cy=y+h*0.95; ctx.fillStyle=_lcCss(P.ev==='burst'?col:_LC_WHT); for(let i=0;i<9;i++){ const a=-3.1416+(i+0.5)/9*3.1416; if(i%2) continue; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a-0.12)*D*2,cy+Math.sin(a-0.12)*D*2); ctx.lineTo(cx+Math.cos(a+0.12)*D*2,cy+Math.sin(a+0.12)*D*2); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.8; ctx.stroke(); } }
+      ctx.restore(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.4; ctx.strokeRect(x,y,w,h); });
+    const mx=x+w*0.08, my=y+h*0.1, mw=w*0.84, mh=h*0.8; const mc = col===bg ? col2===bg ? _lcPal[(_lcPal.indexOf(bg)+2)%3] : col2 : col;
+    if(P.ev==='boom'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); const s=0.7+0.5*q.vmax; _lcBoom(ctx,x+w*(0.5-0.5*s),y+h*(0.5-0.5*s),w*s,h*s,mc,lw*1.2,r); ctx.restore(); }); }
+    else if(P.ev==='brush'){ const n=Math.max(1,Math.min(3,Math.round(poly))); for(let j=0;j<n;j++){ const bc=j===0?mc:S.col(Math.min(0.999,q.t+0.1*(j+1))); const by=my+mh*(0.1+0.7*j/Math.max(1,n-1))*(n>1?1:0)+ (n===1?mh*0.25:0); push(t0+0.03+j*0.05,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); ctx.translate(x+w/2,by+mh*0.2); ctx.rotate((r()-.5)*0.5); _lcBrush(ctx,-w*0.48,-mh*0.2,w*0.96,mh*0.4,bc===bg?_LC_WHT:bc,lw,r); ctx.restore(); }); } }
+    else if(P.ev==='sun'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); _lcSun(ctx,x,y+h*0.05,w,h*0.95,mc,lw,r); ctx.restore(); }); }
+    else if(P.ev==='wave'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); let wc=mc===_lcPal[1]?_lcPal[2]:mc; if(wc===bg) wc=_lcPal[(_lcPal.indexOf(bg)+1)%3]; if(wc===_lcPal[1]) wc=_lcPal[(_lcPal.indexOf(bg)+2)%3]; _lcWave(ctx,x,y+h*0.2,w,h*0.8,wc,lw,r); ctx.restore(); }); }
+    else if(P.ev==='mirror'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); const s=Math.min(mw,mh)*0.9; _lcMirror(ctx,x+w/2-s*0.5,y+h/2-s*0.55,s,s*1.1,mc,lw,r); ctx.restore(); }); }
+    else { push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); const s=0.5+0.3*q.vmax; _lcBoom(ctx,x+w*(0.5-0.5*s),y+h*(0.45-0.5*s),w*s,h*s,mc,lw,r); ctx.restore(); }); }
+  });
+  if(el.booms){ const E=_kd2Events(A,Math.round(6+leaps*8)).filter(e=>e.acc).slice(0,5); E.forEach((e,i)=>{ const k=Math.min(nP-1,Math.floor(e.t*nP)); const [x,y,w,h]=boxes[k]; const bx=x+w*(0.1+0.7*r0()), by=y+h*(0.08+0.3*r0()), s=D*(0.06+0.06*e.v); const col=S.col(e.t); push(e.t,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); _lcBoom(ctx,bx,by,s,s,col,lw*0.7,r); ctx.restore(); }); }); }
+  if(el.balloon){ const k=Math.min(nP-1,Math.floor(c.t*nP)); const [x,y,w,h]=boxes[k]; const bw=Math.min(w*0.5,D*0.3), bh=bw*0.75; const bx=x+(c.t*nP-k<0.5?w*0.06:w-bw-w*0.06), by=y+h*0.05; push(Math.min(0.95,c.t+0.05),(ctx,r)=>{ _lcBalloon(ctx,bx,by,bw,bh,_LC_WHT,lw,r); ctx.fillStyle=_lcCss(_LC_BLK); ctx.font=`bold ${Math.round(bh*0.42)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(bx+bw*0.2,by+bh*0.2,bw*0.6,bh*0.42); ctx.fillStyle=_lcCss(_LC_BLK); ctx.fillText(major?'♪':'♪?',bx+bw/2,by+bh*0.42); }); }
+  list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_lcClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const r=_lcR(f.id*37+71100,ss); r(); f.draw(ctx,r); }
+  _setCurE(0.5);
+}
 // 0 · Mosaic — a page of comic panels read row by row: white gutters, black panel borders, each panel a flat primary or a Ben-Day field carrying one of his motifs
 function lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_lcSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH);
@@ -4993,7 +5036,10 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   const dotStep=(S*0.017)*(1.25-0.5*dnaD), dotR=dotStep*0.27;
   const GA=Math.PI*2*(1-2/(1+Math.sqrt(5)));
   ctx.fillStyle=PAPER; ctx.fillRect(0,0,CW,CH);
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 close-up curves · 4 brushstrokes · 5 mirrors · 6 Sunrise. Free: 0 and 1.
+  const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick0===0){ _lcListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  const pick=pick0-1;
 
   if(pick===0){ lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ lichtensteinPhaseSunrise(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -14442,6 +14488,7 @@ const ARTIST_VARIANTS = {
     {ground:'#1e3f6e',mark:{petal:.7,stem:.3},size:[.02,.06],layout:{flow:1},density:.4,tone:'dark'},
   ],
   lichtenstein: [
+    {ground:'#faf8f0',mark:{benday:.4,starburst:.3,panel:.3},size:[.1,.4],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // What he heard
     {ground:'#faf8f0',mark:{panel:.4,benday:.3,starburst:.2,speech:.1},size:[.06,.14],layout:{grid:1},density:.6,outline:1},   // Mosaic: comic panels
     {ground:'#e8e8f4',mark:{radiant:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.1},
     {ground:'#e8e8f4',mark:{wavyline:1},size:[.05,.12],layout:{stack:1},density:.5,outline:1},
@@ -14484,7 +14531,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
