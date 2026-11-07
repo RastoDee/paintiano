@@ -3740,7 +3740,9 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      small yellow stars (Icarus, the Sword-Swallower).
   // Slots: 0 Parakeet field · 1 big collage · 2 Fauve · 3 Nice · 4 French
   // Window · 5 La Gerbe · 6 nested-frame grid · 7 Memory of Oceania · 8 Jazz.
-  const _pn=_capN(8); const pick=[0,1,2,3,4,5,7,8][((phaseIndex|0)%_pn+_pn)%_pn];   // 8 of the nine below: the nested-frame grid (6) retired
+  // VARIANT: 0 What he heard (_matListen, generative) · 1 Parakeet field · 2 big collage · 3 Fauve · 4 Nice · 5 French Window · 6 La Gerbe · 7 Jazz (the nested-frame grid and Memory of Oceania retired). Free: 0 and 1.
+  const _pn=_capN(8); const pick=[-1,0,1,2,3,4,5,8][((phaseIndex|0)%_pn+_pn)%_pn];
+  if(pick===-1){ _matListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3807,6 +3809,71 @@ function _matDraw(ctx, list, reveal, ss){
 }
 function _matReveal(chords, lim){ const cn=chords.length; return Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn)); }
 
+const _matCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`; const _matMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+// the figures of his cut-outs, in the same local frame (centre 0,0; size ~1): the seated blue nude, Icarus with his arms out,
+// a dancer of the ring, a goldfish; and the palm frond
+// a closed outline smoothed through its corners (Catmull-Rom), so a figure's edge curves as the scissors did
+function _matSmooth(pts,k){ const n=pts.length, out=[]; for(let i=0;i<n;i++){ const p0=pts[(i-1+n)%n], p1=pts[i], p2=pts[(i+1)%n], p3=pts[(i+2)%n]; for(let j=0;j<k;j++){ const t=j/k, t2=t*t, t3=t2*t; out.push([0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3), 0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)]); } } return out; }
+function _matShapeSquare(rnd){ return [[[-0.9,-0.9],[0.9,-0.9],[0.9,0.9],[-0.9,0.9]]]; }
+function _matShapeNude(rnd){ const pts=[[0.05,-1],[0.3,-0.9],[0.35,-0.6],[0.2,-0.45],[0.55,-0.3],[0.7,0.1],[0.5,0.3],[0.65,0.75],[0.4,0.95],[0.1,0.7],[-0.15,0.95],[-0.45,0.85],[-0.3,0.45],[-0.6,0.3],[-0.7,-0.1],[-0.4,-0.25],[-0.5,-0.6],[-0.25,-0.85],[-0.15,-1]]; return [_matSmooth(pts.map(([x,y])=>[x+(rnd()-.5)*0.04,y+(rnd()-.5)*0.04]),4)]; }
+function _matShapeIcarus(rnd){ const pts=[[0,-1],[0.14,-0.92],[0.16,-0.7],[0.5,-0.55],[0.9,-0.75],[0.95,-0.6],[0.55,-0.3],[0.25,-0.25],[0.3,0.2],[0.45,0.95],[0.25,1],[0.08,0.3],[-0.1,0.95],[-0.3,1],[-0.25,0.2],[-0.3,-0.25],[-0.6,-0.4],[-0.95,-0.8],[-0.85,-0.9],[-0.45,-0.6],[-0.16,-0.7],[-0.14,-0.92]]; return [_matSmooth(pts.map(([x,y])=>[x+(rnd()-.5)*0.03,y+(rnd()-.5)*0.03]),3)]; }
+function _matShapeDancer(rnd){ const lean=(rnd()-.5)*0.6; const pts=[[0.1,-1],[0.28,-0.85],[0.22,-0.6],[0.7,-0.45],[1,-0.2],[0.9,-0.05],[0.45,-0.2],[0.3,0.05],[0.55,0.6],[0.75,1],[0.5,1],[0.2,0.5],[-0.1,1],[-0.35,1],[-0.2,0.45],[-0.3,-0.05],[-0.75,0.15],[-1,0.45],[-0.95,0.25],[-0.6,-0.2],[-0.25,-0.5],[-0.15,-0.85]]; return [_matSmooth(pts.map(([x,y])=>[x+lean*(y+1)*0.3+(rnd()-.5)*0.03,y+(rnd()-.5)*0.03]),3)]; }
+function _matShapeFish(rnd){ const pts=[[-1,0]]; _matBez([-1,0],[-0.6,-0.75],[0.5,-0.7],[0.95,0],8,pts); _matBez([0.95,0],[0.5,0.7],[-0.6,0.75],[-1,0],8,pts); pts.push([-1.35,-0.45],[-1.2,0],[-1.35,0.45]); return [pts]; }
+function _matShapePalm(rnd){ const n=5+(rnd()*3|0), polys=[]; for(let j=0;j<n;j++){ const a=-1.5708+(j/(n-1)-0.5)*2.6, L=1.0+rnd()*0.3, w=0.1+rnd()*0.05; const dx=Math.cos(a), dy=Math.sin(a), px=-dy, py=dx; const P=(u,v)=>[dx*L*u+px*w*v, 0.9+dy*L*u+py*w*v]; const pts=[[0,0.9]]; _matBez([0,0.9],P(0.3,1.6),P(0.9,0.8),P(1,0),7,pts); _matBez(P(1,0),P(0.9,-0.8),P(0.3,-1.6),[0,0.9],7,pts); polys.push(pts); } return polys; }
+Object.assign(_MAT_SHAPES,{nude:_matShapeNude, icarus:_matShapeIcarus, dancer:_matShapeDancer, fish:_matShapeFish, palm:_matShapePalm, square:_matShapeSquare});
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE LISTENS — the picture the piece composes from everything that is his:
+// flat colour, the scissors, the figure as a sign. A ground, and over it every
+// element from what he hears.
+//   the ground    white (a quick, dense piece: the all-over field) · cream (calm) · deep blue (minor: the Jazz night) · the
+//                 open window (a high major piece: the Fauve wall, the sea in the frame) · the dance's green-and-blue halves
+//                 (an even, quick major piece)
+//   the figures   the blue nude, seated, when the piece sings slowly (two when it has two voices) · Icarus, the black
+//                 figure with the red heart, at the climax of a loud minor piece, the stars its accents · the ring of dancers
+//                 on an even quick major piece, a dancer per voice (at least three), joined by the hands
+//   the shapes    a leaf or a frond per note when dense, a heart on soft major, a star at an accent, a pomegranate disc on an
+//                 even rhythm, a coral where the line leaps, a palm when it sings high, the goldfish in their bowl on a calm
+//                 major piece, the snail's spiral of squares on an ostinato
+//   the colour    every shape in its chord's flat colour; the ground the key's own
+// ═══════════════════════════════════════════════════════════════════════════
+function _matListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const rr=(k)=>{ const f=_seedRnd(k,ss,0,0); f(); return f; }; const fl=(i)=>_matFlat(chords,Math.max(0,Math.min(cn-1,i|0)),gc,isBW);
+  const ground = (!major && (pace>0.6 || loud>0.6)) ? 'night' : (regular>0.75 && pace>0.6 && major) ? 'dance' : (major && reg>0.58 && pace<0.65) ? 'window' : (pace>0.65 && dens>0.35) ? 'white' : 'cream';
+  const figure = ground==='dance' ? 'dance' : (!major && loud>0.55 && pace>0.5) ? 'icarus' : (pace<0.5) ? 'nude' : 'none';
+  const el = { leaves: dens>0.3 && figure!=='dance', hearts: major && loud<0.55 && pace<0.6, stars: true, discs: regular>0.65 && figure!=='dance', coral: leaps>0.55, palm: reg>0.6 && pace<0.7, fish: major && pace<0.5 && reg>0.45, snail: regular>0.8 && pace>0.45 };
+  if(el.fish) el.palm=false;
+  try{ globalThis.__MT_LISTEN={ground,figure,el,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  const key=fl(c.a); const list=[]; let id=0; const add=(kind,x,y,size,rot,col,t)=>list.push({kind,x,y,size,rot,col,id:id++,t});
+  // ── the ground
+  if(ground==='white'){ ctx.fillStyle=isBW?'#f0ece4':'#f4efe4'; ctx.fillRect(0,0,CW,CH); }
+  else if(ground==='cream'){ ctx.fillStyle=isBW?'#e2dccc':'#ebdcb8'; ctx.fillRect(0,0,CW,CH); }
+  else if(ground==='night'){ ctx.fillStyle=isBW?'#2a2a30':'#1c2a5e'; ctx.fillRect(0,0,CW,CH); }
+  else if(ground==='dance'){ ctx.fillStyle=isBW?'#4a4a48':'#2b5a9a'; ctx.fillRect(0,0,CW,CH*0.52); ctx.fillStyle=isBW?'#6a6a66':'#3f7a3a'; ctx.beginPath(); ctx.moveTo(0,CH*0.5); ctx.quadraticCurveTo(CW*0.5,CH*0.42,CW,CH*0.5); ctx.lineTo(CW,CH); ctx.lineTo(0,CH); ctx.closePath(); ctx.fill(); }
+  else { // the open window: the warm wall either side, the sea and the sky in the frame, the balcony rail
+    ctx.fillStyle=isBW?'#c8c2b4':`rgb(${key.map(v=>v|0).join(',')})`; ctx.fillRect(0,0,CW,CH); const wx=CW*0.2, ww=CW*0.6, hz=CH*(0.25+0.3*(1-reg));
+    ctx.fillStyle=isBW?'#dcd8ce':'#9fc8e8'; ctx.fillRect(wx,0,ww,hz); ctx.fillStyle=isBW?'#8e8c86':'#2c6fb8'; ctx.fillRect(wx,hz,ww,CH*0.78-hz);
+    const r=rr(47000); for(let i=0;i<40;i++){ ctx.fillStyle=_matCss(isBW?[200,196,190]:_matFlat(chords,Math.floor(r()*cn),gc,false)); const y=hz+r()*(CH*0.78-hz); ctx.fillRect(wx+r()*ww,y,D*(0.03+r()*0.06),D*0.012); }   // the water's touches in the chords' colours
+    ctx.fillStyle=isBW?'#3a3834':'#303030'; for(let i=0;i<=6;i++){ ctx.fillRect(wx+ww*i/6-D*0.004,CH*0.6,D*0.008,CH*0.18); } ctx.fillRect(wx,CH*0.6,ww,D*0.008);   // the rail
+    ctx.fillStyle=isBW?'#bcb6a8':_matCss(_matMix(key,[255,255,255],0.4)); ctx.fillRect(wx-D*0.03,0,D*0.03,CH*0.8); ctx.fillRect(wx+ww,0,D*0.03,CH*0.8); }
+  // ── the figures
+  if(figure==='nude'){ const n=Math.max(1,Math.min(2,Math.round(poly)-0)); const G=_kd2Phrases(A,n); G.forEach((q,i)=>{ const x=CW*(n===1?0.5:(0.3+0.4*i)), y=CH*0.52; add('nude',x,y,D*(0.3+0.1*q.vmax),(i%2?-1:1)*0.05,isBW?[70,70,76]:[30,60,150],q.t0); }); }
+  if(figure==='icarus'){ add('icarus',CW*(0.3+0.4*c.t),CH*0.5,D*0.36,(c.t-0.5)*0.2,isBW?[20,20,22]:[16,16,20],c.t); add('disc',CW*(0.3+0.4*c.t)+D*0.04,CH*0.44,D*0.022,0,isBW?[220,220,220]:[220,30,30],c.t+0.02); }
+  if(figure==='dance'){ const n=Math.max(3,Math.min(5,Math.round(poly)+1)); const G=_kd2Phrases(A,n); G.forEach((q,i)=>{ const a=-1.5708+i/n*6.2832; const x=CW*(0.5+0.36*Math.cos(a)), y=CH*(0.5+0.33*Math.sin(a)); add('dancer',x,y,D*(0.19+0.06*q.vmax),(Math.cos(a))*0.25,isBW?[180,170,160]:[214,110,80],q.t0); }); }
+  // ── the shapes, each at its note's moment, where the note sits in register, away from the figures
+  const E=_kd2Events(A,Math.round(26+dens*50)); const free=(x)=> figure==='none' || (figure==='nude' && (x<0.2 || x>0.8)) || (figure==='icarus' && Math.abs(x-(0.3+0.4*c.t))>0.25) || false;
+  E.forEach((e,i)=>{ const r=rr(47100+i); const x=0.04+0.92*e.t, y=0.08+0.84*(1-A.reg(e.top)); const col=fl(e.i); const sz=D*(0.06+0.08*e.v)*(figure==='none'?1:0.75); const keep=free(x) || (figure==='dance' && Math.hypot(x-0.5,(y-0.5)*CH/CW)>0.46);
+    if(!keep && !(e.acc && figure!=='dance')) return;
+    const kind = (e.acc && el.stars) ? 'star' : (el.leaves && r()<0.5) ? (r()<0.5?'leaf':'algue') : (el.hearts && r()<0.5) ? 'heart' : (el.discs && r()<0.5) ? 'disc' : (el.coral && r()<0.5) ? 'coral' : 'leaf';
+    add(kind,CW*x,CH*y,sz*(kind==='star'?0.6:1),(r()-.5)*1.2,(kind==='star' && ground==='night') ? (isBW?[240,240,230]:[250,220,60]) : col,e.t); });
+  if(el.palm){ const G=_kd2Phrases(A,Math.min(3,Math.max(1,Math.round(poly)))); G.forEach((q,i)=>add('palm',CW*(0.15+0.7*q.t),CH*(0.2+0.15*i),D*(0.16+0.1*q.vmax),0,fl(q.a),q.t0)); }
+  if(el.fish){ const bx=CW*(figure==='nude'?0.82:0.5), by=CH*(figure==='nude'?0.3:0.5); ctx.save(); ctx.fillStyle=_matCss(isBW?[210,206,200]:[200,230,240],0.85); ctx.beginPath(); ctx.ellipse(bx,by,D*0.13,D*0.16,0,0,6.2832); ctx.fill(); ctx.restore();
+    const n=Math.max(2,Math.min(5,Math.round(poly)+1)); const G=_kd2Phrases(A,n); G.forEach((q,i)=>{ const a=i/n*6.2832; add('fish',bx+Math.cos(a)*D*0.07,by+Math.sin(a)*D*0.09,D*(0.03+0.02*q.vmax),a+1.5708+(i%2?3.1416:0),isBW?[150,140,130]:[236,110,40],q.t0); }); }
+  if(el.snail){ const n=Math.round(12+dens*8); const cx=CW*(figure==='none'?0.5:0.78), cy=CH*(figure==='none'?0.5:0.75); for(let i=0;i<n;i++){ const a=i*1.45, rad=D*(0.03+0.022*i); add('square',cx+Math.cos(a)*rad,cy+Math.sin(a)*rad*0.9,D*(0.03+0.05*i/n),a*0.5,fl(Math.floor(i*cn/n)),i/n); } }   // the snail: squares (discs cut square) spiralling out
+  _matDraw(ctx, list, reveal, ss); _setCurE(0.5);
+}
 // ── Matisse A (slot 0): The Parakeet and the Mermaid — an all-over field of
 // leaves and fronds in three or four flat colours on white, with pomegranates.
 // Slot 6: Jazz — the same vocabulary, big and bright, on a deep ground with a
@@ -16437,12 +16504,12 @@ const ARTIST_VARIANTS = {
     {ground:'#dcc0a2',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // Demoiselles: big facets with a contour in the song's colours
   ],
   matisse: [
+    {ground:'#ebdcb8',mark:{cutout:.5,leaf:.3,star:.2},size:[.06,.25],layout:{scatter:.7,field:.3},density:.4},   // What he heard
     {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},size:[.05,.18],layout:{grid:.8,scatter:.2},density:.6},
     {ground:'#3fbf9a',mark:{starburst:.5,cutout:.5},size:[.15,.4],layout:{scatter:1},density:.12},
     {ground:'#d08a4a',mark:{poly:.6,panel:.4},size:[.04,.15],alpha:.8,layout:{grid:.6,field:.4},density:.9},
     {ground:'#3a3ad0',mark:{cutout:1},size:[.1,.3],layout:{scatter:1},density:.15,tone:'dark'},
     {ground:'#8a7a9a',mark:{stem:.6,panel:.4},size:[.08,.3],layout:{grid:1},density:.4},
-    {ground:'#e8e2cc',mark:{leaf:1},size:[.08,.3],layout:{radial:1},density:.25},
     {ground:'#e8e2cc',mark:{panel:.6,cutout:.4},size:[.1,.35],layout:{scatter:1},density:.15},
     {ground:'#141418',mark:{cutout:.5,star:.3,panel:.2},size:[.08,.25],layout:{scatter:1},density:.2},   // Jazz
   ],
