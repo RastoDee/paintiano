@@ -6255,6 +6255,53 @@ function _vsSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.lengt
 // the cell's partner colour: the complement, brought to a contrasting value
 function _vsPartner(c){ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; const q=[255-c[0],255-c[1],255-c[2]]; const lq=q[0]*0.299+q[1]*0.587+q[2]*0.114; const k=(l>128?(l-60):(l+60))/Math.max(1,lq); return q.map(v=>_vsClamp(v*k,0,255)); }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// VASARELY LISTENS — not one of the series above: his plastic unit, the cell and
+// the form inside it, laid as a lattice that the piece itself deforms. Every
+// passage presses on the lattice where it falls — a bulge when it is loud, a
+// dent when it is soft — the forms inside change with the chords, and the value
+// of the whole field follows the dynamics.
+//   the lattice      as fine as the piece is dense; read column by column in time, row by row in register
+//   the deformation  one pressure per passage at (its time, its register): outward and enlarging when the passage is
+//                    loud, inward and shrinking when it is soft, as wide as the passage is long; the whole lattice
+//                    sheared when the piece climbs or falls
+//   the unit         the cell in the chord's pure colour, the form inside in the partner colour: a disc when the
+//                    chord is thin, a square when it is full, a lozenge when the line leaps, a hexagon when the piece
+//                    is even; the form as big as the chord is loud
+//   the value        the field darkens where the piece is quiet and lightens where it is loud, so the dynamics read
+//                    across the whole surface
+// ═══════════════════════════════════════════════════════════════════════════
+function _vsListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_vsSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const D=Math.min(CW,CH);
+  const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  const r0=_vsR(83000,ss); r0();
+  const N=Math.max(8,Math.min(18,Math.round(9+dens*10))); const M=Math.max(8,Math.round(N*CH/CW)); const cw=CW/N, chh=CH/M;
+  const G=_kd2Phrases(A,Math.min(9,Math.max(3,Math.round(A.phrases.length/4))));
+  const press=G.map(q=>({x:CW*(0.08+0.84*q.t), y:CH*(0.12+0.76*(1-A.reg(q.top))), a:(q.v-0.5)*1.7*(0.5+0.5*loud), s:D*(0.16+0.18*(q.t1-q.t0)*G.length/3)}));
+  const shear=(trend-0.5)*0.5;
+  try{ globalThis.__VS_LISTEN={N,M,press:press.length,shear,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  // the displacement of a lattice point, and the local scale
+  const warp=(x,y)=>{ let dx=0, dy=0, sc=1; for(const p of press){ const ex=x-p.x, ey=y-p.y; const d=Math.hypot(ex,ey)||1; const g=Math.exp(-(d*d)/(p.s*p.s)); const k=p.a*p.s*0.7*g; dx+=ex/d*k; dy+=ey/d*k; sc+=p.a*0.8*g; } dx+=(y-CH/2)*shear; return [x+dx,y+dy,Math.max(0.5,Math.min(1.7,sc))]; };
+  // the chord under a cell: column = time, row = register
+  const cellChord=(i,j)=>{ const t=(j*N+i+0.5)/(N*M); return Math.min(cn-1,Math.floor(t*cn)); };
+  const loudAt=(t)=>{ const i=Math.min(cn-1,Math.max(0,Math.floor(t*cn))); const e=A.ev[i]; return e?e.v:0.5; };
+  ctx.fillStyle=_vsCss(S.isBW?[30,30,32]:_vsMix(S.col(0.5),[20,20,28],0.75)); ctx.fillRect(0,0,CW,CH);
+  const visN=Math.ceil(N*M*reveal);
+  for(let q=0;q<visN;q++){ const i=q%N, j=Math.floor(q/N); { const r=_vsR(83100+i*64+j,ss); r();
+      const x0=i*cw, y0=j*chh; const P=[warp(x0,y0),warp(x0+cw,y0),warp(x0+cw,y0+chh),warp(x0,y0+chh)]; const [cx,cy,sc]=warp(x0+cw/2,y0+chh/2);
+      const ci=cellChord(i,j); const t=(ci+0.5)/cn; const base=S.col(t); const lv=loudAt(t); const val=0.38+0.62*lv;   // the value follows the dynamics
+      const cell=_vsMix(base,[0,0,0],1-val); const partner=_vsPartner(cell);
+      ctx.fillStyle=_vsCss(cell); ctx.beginPath(); P.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_vsCss(_vsMix(cell,[0,0,0],0.25)); ctx.lineWidth=Math.max(0.6,D*0.0012); ctx.stroke();
+      const ev=A.ev[ci]; const nn=ev?ev.nn:2; const kind = regular>0.85 ? 'hex' : (leaps>0.55 && (i+j)%2) ? 'lozenge' : nn>=3.2 ? 'square' : 'disc';
+      const fr=Math.min(cw,chh)*0.5*sc*(0.4+0.42*(ev?ev.v:0.6)); const rx=(P[1][0]-P[0][0])/cw, ry=(P[3][1]-P[0][1])/chh;
+      ctx.fillStyle=_vsCss(partner); ctx.beginPath();
+      if(kind==='disc'){ ctx.ellipse(cx,cy,fr*Math.max(0.3,rx),fr*Math.max(0.3,ry),0,0,6.2832); }
+      else if(kind==='square'){ const w=fr*rx*0.9, h=fr*ry*0.9; ctx.rect(cx-w,cy-h,2*w,2*h); }
+      else if(kind==='lozenge'){ ctx.moveTo(cx,cy-fr*ry); ctx.lineTo(cx+fr*rx,cy); ctx.lineTo(cx,cy+fr*ry); ctx.lineTo(cx-fr*rx,cy); ctx.closePath(); }
+      else { for(let k=0;k<6;k++){ const a=k/6*6.2832+0.5236; const px=cx+Math.cos(a)*fr*rx, py=cy+Math.sin(a)*fr*ry; k?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); }
+      ctx.fill(); } }
+  _setCurE(0.5);
+}
 // ── Vasarely 0 · Folklore planétaire — the plastic unit: a lattice of square cells,
 // each a colour with a contrasting form inside (disc, square, ellipse, lozenge).
 function vasarelyPhaseFolklore(ctx,CW,CH,chords,lim,gc,ss,mode){
@@ -6329,7 +6376,10 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   //  Free (cap=2) sees Sphere/Cube + Vonal — grid-warp vs ray-radiate is the
   //  strongest op-art contrast Vasarely\'s catalogue offers.
   {
-    const _pn=_capN(7); const _vpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    // VARIANT: 0 What he heard (_vsListen, generative) · 1 Folklore · 2 Vonal · 3 Vega · 4 Supernovae · 5 Hexagon cubes · 6 Zebra · 7 Vonal tunnel. Free: 0 and 1.
+    const _pn=_capN(8); const _vpick0=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_vpick0===0){ _vsListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    const _vpick=_vpick0-1;
     if(_vpick===0){ vasarelyPhaseFolklore(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===1){ vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_vpick===2){ vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -17147,6 +17197,7 @@ const ARTIST_VARIANTS = {
     {ground:'#1a1418',mark:{field:1},size:[.4,.7],edge:.7,alpha:.5,layout:{stack:1},density:.3,tone:'dark'},
   ],
   bulge: [   // slot order = solo phases: Folklore, Vonal sphere, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
+    {mark:{cell:.6,disc:.2,lozenge:.2},size:[.04,.1],layout:{grid:1},density:1,warp:.6},   // What he heard
     {ground:'#141418',mark:{rect:.5,disc:.5},size:[.03,.06],layout:{grid:1},density:1},
     {ground:'#3a3a2a',mark:{vstripes:1},size:[.02,.05],layout:{stack:1},density:.8},
     {mark:{checker:1},size:[.02,.05],layout:{grid:1},density:1},
@@ -17272,7 +17323,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:8,arcs:7,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:8,wave:8,spiral:8,arcs:7,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
