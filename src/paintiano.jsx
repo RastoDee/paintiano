@@ -11045,6 +11045,59 @@ function _hokusaiInk(chords, lim, gc){
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// KUSAMA LISTENS — the picture the piece composes from everything that is hers:
+// the polka dot, the dot that grows, the infinity net, the dotted sphere, the
+// pumpkin, the eye with lashes, the tendril, the flat vivid ground. A ground,
+// one obsession, and over it every element from what she hears.
+//   the ground       the piece's own colour, pushed vivid (the default) · black (slow and quiet) · white (high and light)
+//   the obsession    PUMPKIN — one pumpkin filling the sheet, lobes by the voices, dots graded along each lobe (loud,
+//                    even, major) · SPHERES — dotted balls floating in the dark, one per passage (quick, leaping) ·
+//                    NET — the infinity net, a mesh of looped arcs over the ground (slow, quiet) · FIELD — the dot
+//                    field, every note a dot, sized by its weight (even and dense) · EYES — eyes with lashes in a dot
+//                    field (tension, minor) · TENDRILS — squiggles growing from the edges with dots along them (the rest)
+//   the signs        an accent is a big dot in ink · dots grow along the piece when it climbs · a ring of dots round the
+//                    climax · the whole thing dotted, always
+// ═══════════════════════════════════════════════════════════════════════════
+function _kuListen(ctx,CW,CH,chords,lim,gc,sessionSeed){
+  const ss=sessionSeed|0, cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn, D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,'color'); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const r0=_seedRnd(61,ss,0,0); r0();
+  const chordC=(t)=>_kwVivid(_kusChord(chords,Math.min(cn-1,Math.max(0,(t*cn)|0)),gc).rgb);
+  const base=chordC(c.t);
+  const ground = (pace<0.45) ? 'black' : (reg>0.6 && loud<0.55) ? 'white' : 'vivid';
+  const comp = (pace<0.45) ? 'net' : (loud>0.6 && regular>0.7 && major) ? 'pumpkin' : (pace>0.75 && leaps>0.45) ? 'spheres' : (regular>0.85 && pace>0.8) ? 'field' : (!major) ? 'eyes' : 'tendrils';
+  try{ globalThis.__KU_LISTEN={ground,comp,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  const GRD = ground==='black' ? [12,10,14] : ground==='white' ? [248,244,236] : base; const dark=_kwLum(GRD)<110; const INK = dark ? [248,244,236] : [18,14,20];
+  const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  const list=[]; const push=(t,draw)=>list.push({t,draw,id:list.length});
+  ctx.fillStyle=_kwCss(GRD); ctx.fillRect(0,0,CW,CH);
+  const dot=(x,y,r,col)=>{ ctx.fillStyle=_kwCss(col); ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); };
+  const C2=(()=>{ const n=24,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
+  const at=(u)=>{ const i=Math.min(22,Math.floor(u*23)); const f=u*23-i; return C2[i]+(C2[i+1]-C2[i])*f; };
+  if(comp==='pumpkin'){ const cx=CW/2, cy=CH*0.54, R=D*0.42, lobes=Math.max(5,Math.min(7,Math.round(3+poly*1.5))); const body=mix(base,[250,190,30],0.7); const stem=dark?[120,150,90]:[60,90,50];
+    push(0.02,(ctx,r)=>{ ctx.fillStyle=_kwCss(body); ctx.beginPath(); ctx.ellipse(cx,cy,R*1.05,R*0.82,0,0,6.2832); ctx.fill(); });
+    for(let k=0;k<lobes;k++){ const u=(k+0.5)/lobes; const lx=cx+(u-0.5)*R*1.9; const lw=R*1.9/lobes; const t=k/lobes; push(0.05+t*0.5,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.ellipse(cx,cy,R*1.05,R*0.82,0,0,6.2832); ctx.clip(); ctx.strokeStyle=_kwCss(mix(body,[0,0,0],0.3)); ctx.lineWidth=Math.max(1.5,D*0.005); ctx.beginPath(); ctx.ellipse(lx,cy,lw*0.75,R*0.86,0,0,6.2832); ctx.stroke(); ctx.restore(); }); const n=9+Math.round(dens*6); for(let j=0;j<n;j++){ const v=(j+0.5)/n; const yy=cy+(v-0.5)*R*1.45; const insideV=Math.abs(v-0.5)*2; const half=lw*0.75*Math.sqrt(Math.max(0,1-insideV*insideV)); for(let q2=-1;q2<=1;q2++){ const xx=lx+q2*half*0.55; const insideH=Math.abs(q2)*0.55; const rr=lw*0.24*(1-0.75*insideV*insideV)*(1-0.8*insideH)*(0.85+0.3*at(t)); if(rr<1.2 || Math.hypot((xx-cx)/(R*1.02),(yy-cy)/(R*0.8))>1) continue; push(0.1+t*0.6+v*0.25,(ctx,r)=>dot(xx,yy,rr,[18,14,20])); } } }
+    push(0.9,(ctx,r)=>{ ctx.fillStyle=_kwCss(stem); ctx.beginPath(); ctx.moveTo(cx-R*0.08,cy-R*0.78); ctx.quadraticCurveTo(cx-R*0.02,cy-R*1.05,cx+R*0.12,cy-R*1.0); ctx.lineTo(cx+R*0.1,cy-R*0.8); ctx.closePath(); ctx.fill(); });
+    const n2=Math.round(30+dens*40); for(let i=0;i<n2;i++){ const x=CW*r0(), y=CH*r0(); if(Math.hypot((x-cx)/(R*1.05),(y-cy)/(R*0.82))<1.05) continue; push(0.3+0.6*r0(),(ctx,r)=>dot(x,y,D*(0.006+0.012*r()),INK)); } }
+  else if(comp==='spheres'){ const G=_kd2Phrases(A,Math.min(10,Math.max(4,Math.round(A.phrases.length/2)))); G.forEach((q,k)=>{ const R=D*(0.07+0.12*q.vmax); const x=CW*(0.15+0.7*q.t)+(r0()-.5)*CW*0.2, y=CH*(0.15+0.7*(1-A.reg(q.top)))+(r0()-.5)*CH*0.12; const col=chordC(q.t); const dc=dark?INK:[18,14,20]; push(q.t0,(ctx,r)=>{ const g=ctx.createRadialGradient(x-R*0.3,y-R*0.3,R*0.1,x,y,R); g.addColorStop(0,_kwCss(mix(col,[255,255,255],0.3))); g.addColorStop(1,_kwCss(mix(col,[0,0,0],0.45))); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,R,0,6.2832); ctx.fill(); ctx.save(); ctx.beginPath(); ctx.arc(x,y,R,0,6.2832); ctx.clip(); const s=R/(3+((r()*3)|0)); for(let yy=y-R; yy<y+R; yy+=s*0.87){ for(let xx=x-R+((Math.round((yy-y)/s)%2)?s/2:0); xx<x+R; xx+=s){ const dd=Math.hypot(xx-x,yy-y)/R; if(dd>1) continue; dot(xx,yy,s*0.3*Math.sqrt(1-dd*dd*0.6),dc); } } ctx.restore(); }); });
+    const n2=Math.round(40+dens*60); for(let i=0;i<n2;i++){ const x=CW*r0(), y=CH*r0(); push(r0(),(ctx,r)=>dot(x,y,D*(0.002+0.005*r()),mix(INK,GRD,0.4))); } }
+  else if(comp==='net'){ const s=D*(0.035+0.03*(1-dens)); const cols=Math.ceil(CW/s)+2, rows=Math.ceil(CH/(s*0.8))+2, tot=cols*rows; const nc=dark?mix(INK,base,0.25):mix(INK,[255,255,255],0.1); for(let i=0;i<tot;i++){ const gx=i%cols, gy=Math.floor(i/cols); const x=gx*s+((gy%2)?s/2:0)-s, y=gy*s*0.8-s; const tt=i/tot; push(tt,(ctx,r)=>{ ctx.strokeStyle=_kwCss(nc); ctx.lineWidth=Math.max(1.2,s*0.14)*(0.8+0.4*r()); ctx.lineCap='round'; ctx.beginPath(); ctx.arc(x,y,s*0.52,0.2+r()*0.6,3.3+r()*0.6); ctx.stroke(); ctx.beginPath(); ctx.arc(x+s*0.5,y+s*0.4,s*0.45,3.4+r()*0.5,6.3+r()*0.5); ctx.stroke(); }); }
+    const E=_kd2Events(A,Math.round(6+dens*10)).filter(e=>e.acc).slice(0,8); E.forEach(e=>{ const x=CW*(0.1+0.8*e.t), y=CH*(0.15+0.7*(1-at(e.t))); push(e.t,(ctx,r)=>dot(x,y,D*(0.02+0.03*e.v),dark?chordC(e.t):INK)); }); }
+  else if(comp==='field'){ const E=_kd2Events(A,Math.round(80+dens*160)); E.forEach((e,i)=>{ const x=CW*(0.03+0.94*e.t)+(r0()-.5)*CW*0.04, y=CH*(0.05+0.9*(1-at(e.t)))+(r0()-.5)*CH*0.35; const rr=D*(0.006+0.03*e.v)*(e.acc?1.5:1); const col=e.acc?INK:(r0()<0.5?INK:chordC(Math.min(0.999,e.t+0.3))); push(e.t,(ctx,r)=>dot(x,y,rr,col)); });
+    for(let i=0;i<60;i++){ const x=CW*r0(), y=CH*r0(); push(r0(),(ctx,r)=>dot(x,y,D*(0.003+0.006*r()),mix(INK,GRD,0.3))); } }
+  else if(comp==='eyes'){ const s=D/(10+dens*6); for(let yy=0; yy<CH+s; yy+=s*0.87){ for(let xx=((Math.round(yy/s)%2)?s/2:0); xx<CW+s; xx+=s){ const tt=(yy/CH*0.7+xx/CW*0.3); push(tt*0.8,(ctx,r)=>dot(xx,yy,s*0.17,INK)); } }
+    const G=_kd2Phrases(A,Math.min(7,Math.max(3,Math.round(A.phrases.length/4)))); G.forEach((q,k)=>{ const x=CW*(0.15+0.7*q.t)+(r0()-.5)*CW*0.15, y=CH*(0.12+0.76*((1-A.reg(q.top))*0.4+r0()*0.6)), w=D*(0.1+0.1*q.vmax), h=w*0.5; const col=chordC(Math.min(0.999,q.t+0.3)); push(q.t0,(ctx,r)=>{ ctx.fillStyle=_kwCss(_KW_PAPER); ctx.beginPath(); ctx.moveTo(x-w,y); ctx.quadraticCurveTo(x,y-h*2,x+w,y); ctx.quadraticCurveTo(x,y+h*2,x-w,y); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_kwCss([18,14,20]); ctx.lineWidth=Math.max(1.5,w*0.04); ctx.stroke(); ctx.fillStyle=_kwCss(col); ctx.beginPath(); ctx.arc(x,y,h*0.95,0,6.2832); ctx.fill(); ctx.stroke(); ctx.fillStyle=_kwCss([18,14,20]); ctx.beginPath(); ctx.arc(x,y,h*0.45,0,6.2832); ctx.fill(); for(let k2=0;k2<7;k2++){ const a=Math.PI*(1.15+k2*0.7/6); ctx.beginPath(); ctx.moveTo(x+Math.cos(a)*w*0.9,y+Math.sin(a)*h*1.2); ctx.lineTo(x+Math.cos(a)*w*1.15,y+Math.sin(a)*h*2.0); ctx.stroke(); } }); }); }
+  else { // tendrils
+    const G=_kd2Phrases(A,Math.min(9,Math.max(4,Math.round(A.phrases.length/3)))); G.forEach((q,k)=>{ const side=k%4; const x0=side===0?0:side===1?CW:CW*r0(), y0=side===2?0:side===3?CH:CH*r0(); const a0=Math.atan2(CH/2-y0,CW/2-x0)+(r0()-.5)*0.8; const len=D*(0.3+0.4*q.vmax); const col=dark?mix(chordC(q.t),[255,255,255],0.3):mix(chordC(Math.min(0.999,q.t+0.3)),[0,0,0],0.2); const seed=r0();
+      push(q.t0,(ctx,r)=>{ ctx.strokeStyle=_kwCss(col); ctx.lineWidth=Math.max(2,D*0.012); ctx.lineCap='round'; let px=x0, py=y0, a=a0; ctx.beginPath(); ctx.moveTo(px,py); const n=40; for(let j=0;j<n;j++){ a+=Math.sin(j*0.5+seed*9)*0.35+(r()-.5)*0.2; px+=Math.cos(a)*len/n; py+=Math.sin(a)*len/n; ctx.lineTo(px,py); } ctx.stroke(); px=x0; py=y0; a=a0; for(let j=0;j<n;j+=4){ a+=Math.sin(j*0.5+seed*9)*0.35*4; px+=Math.cos(a)*len/n*4; py+=Math.sin(a)*len/n*4; dot(px,py,D*(0.008+0.014*(j/n)),INK); } }); });
+    const n2=Math.round(60+dens*80); for(let i=0;i<n2;i++){ const x=CW*r0(), y=CH*r0(); push(0.2+0.8*r0(),(ctx,r)=>dot(x,y,D*(0.004+0.01*r()),r()<0.7?INK:_KW_PAPER)); } }
+  // ── the climax ring
+  if(comp!=='pumpkin' && comp!=='eyes'){ const x=CW*(0.2+0.6*c.t), y=CH*(0.2+0.6*(1-at(c.t))); const n=14; for(let k=0;k<n;k++){ const a=k/n*6.2832; push(c.t+0.02,(ctx,r)=>dot(x+Math.cos(a)*D*0.09,y+Math.sin(a)*D*0.09,D*(0.012+0.01*loud),dark?chordC(c.t):INK)); } }
+  list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*Math.max(0,Math.min(1,reveal))); for(let i=0;i<n;i++){ const f=list[i]; const r=_seedRnd(6100+f.id,ss,0,0); r(); f.draw(ctx,r); }
+  _setCurE(0.5);
+}
 function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
@@ -11055,7 +11108,10 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex
   //  D = Dotted Spheres (floating dot orbs).
   //  E = Iconic Infinity Dots (saturated ground + black dots + chord accents).
   //  F = Tendril nets (light on colour).
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What she heard (_kuListen, generative) · 1 Wall of canvases · 2 Dot field · 3 Infinity Nets · 4 Dotted Spheres · 5 Infinity Dots · 6 Tendril nets. Free: 0 and 1.
+  const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick0===0){ _kuListen(ctx,CW,CH,chords,lim,gc,ss); return; }
+  const pick=pick0-1;
   if(pick===1){ kusamaPhaseB(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===2){ kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===3){ kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,ss); return; }
@@ -16722,6 +16778,7 @@ const ARTIST_VARIANTS = {
     {ground:'#f8f8f4',mark:{cell:.8,dot:.2},size:[.05,.12],edge:.3,alpha:.7,layout:{radial:1},density:.3},
   ],
   kusama: [
+    {mark:{dot:.7,sphere:.15,net:.15},size:[.01,.1],layout:{scatter:1},density:.7,tone:'pure'},   // What she heard
     {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},size:[.03,.09],layout:{grid:1},density:1},
     {ground:'#f4f4ee',mark:{dot:1},size:[.004,.02],layout:{scatter:1},density:1,tone:'pure'},
     {ground:'#5a4a2a',mark:{scallop:1},size:[.03,.06],layout:{grid:1},density:1},
@@ -16910,7 +16967,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:6,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:6,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
