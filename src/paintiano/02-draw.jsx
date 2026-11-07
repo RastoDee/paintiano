@@ -7306,6 +7306,75 @@ function _hrCreature(ctx,c,col,u,rnd,glow){ const W=u*1.15, Ol=u*0.4; ctx.lineCa
 }
 const _hrFar=(c,bg)=>{ if(Math.abs(c[0]-bg[0])+Math.abs(c[1]-bg[1])+Math.abs(c[2]-bg[2])<120) return [255-c[0],255-c[1],255-c[2]]; return c; };
 
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING LISTENS — not one of the murals above: a picture built from what the
+// piece does, with everything that is his — the flat ground, the black line,
+// the cast, the radiant marks, the heart, the snake, the flying saucer and its
+// beam, the ladder, the motion dashes, the dashes and crosses that fill a body.
+//   the ground       the piece's own colour pushed flat; black when it is heavy and minor
+//   the picture      CHAIN — figures holding hands along the melody's own contour, one per passage, each in the pose
+//                    the passage calls for (runner when it leaps, jumper when it is loud, waver when it repeats,
+//                    dancer otherwise) — the line of the melody made of people (slow and medium pieces) · TOTEM —
+//                    figures standing on each other's shoulders, one per voice, the loudest on top (many voices) ·
+//                    SAUCER — the flying saucer over the crowd, its beam on the figure at the climax, the others
+//                    thrown back with radiant marks (loud, quick) · SNAKE — a long snake winding across the sheet
+//                    with the figures riding and fleeing it (minor)
+//   the signs        a heart over the climax when the piece is major · radiant marks as many as the accents · motion
+//                    dashes behind the figures as quick as the piece is · a ladder when it climbs · the big figures
+//                    filled with his dashes and crosses when the piece is loud
+// ═══════════════════════════════════════════════════════════════════════════
+function _hrLinker(x,y,u,r,e,dir){ const p=_hrO(x,y,dir); const neck=p(0,-2.4*u), hips=p(0,0); const lift=0.6*e;
+  return {lines:[{p:[neck,hips]},{p:[neck,p(-1.4*u,-2.4*u-lift*u),p(-2.4*u,-2.6*u-lift*u)]},{p:[neck,p(1.4*u,-2.4*u-lift*u),p(2.4*u,-2.6*u-lift*u)]},{p:[hips,p(-0.9*u,1.3*u),p(-1.2*u,2.6*u)]},{p:[hips,p(0.9*u,1.3*u),p(1.2*u,2.6*u)]}],heads:[[...p(0,-3.6*u),u]],glow:null}; }
+function _hrStander(x,y,u,r,e,dir){ const p=_hrO(x,y,dir); const neck=p(0,-2.4*u), hips=p(0,0);
+  return {lines:[{p:[neck,hips]},{p:[neck,p(-1.6*u,-3.2*u),p(-2.0*u,-4.6*u)]},{p:[neck,p(1.6*u,-3.2*u),p(2.0*u,-4.6*u)]},{p:[hips,p(-1.1*u,1.3*u),p(-1.4*u,2.6*u)]},{p:[hips,p(1.1*u,1.3*u),p(1.4*u,2.6*u)]}],heads:[[...p(0,-3.6*u),u]],glow:null}; }
+function _hrFaller(x,y,u,r,e,dir){ const p=_hrO(x,y,dir); const neck=p(-1.6*u,-1.6*u), hips=p(0,0);
+  return {lines:[{p:[neck,hips]},{p:[neck,p(-2.4*u,-3.0*u),p(-2.0*u,-4.2*u)]},{p:[neck,p(-0.4*u,-2.8*u),p(0.4*u,-3.8*u)]},{p:[hips,p(1.2*u,0.9*u),p(2.4*u,0.2*u)]},{p:[hips,p(0.6*u,1.6*u),p(1.8*u,2.4*u)]}],heads:[[...p(-2.4*u,-2.4*u),u]],glow:[...p(-2.4*u,-2.4*u),1.8*u,2.8*u,5,-2.4*dir,2.2]}; }
+function _hrSaucer(ctx,x,y,u,col,beamTo,rnd){ const W=u*0.5; ctx.lineCap='round'; ctx.lineJoin='round';
+  if(beamTo){ ctx.fillStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},0.45)`; ctx.beginPath(); ctx.moveTo(x-u*1.2,y+u*0.6); ctx.lineTo(beamTo[0]-u*2.6,beamTo[1]+u*2.8); ctx.lineTo(beamTo[0]+u*2.6,beamTo[1]+u*2.8); ctx.lineTo(x+u*1.2,y+u*0.6); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_hrCss(_HR_BLK); ctx.lineWidth=W*0.8; for(let k=0;k<7;k++){ const t=(k+0.5)/7; const bx=x+(beamTo[0]-x)*t, by=y+u*0.6+(beamTo[1]+u*2.8-y-u*0.6)*t; const hw=u*1.2+(u*2.6-u*1.2)*t; ctx.beginPath(); ctx.moveTo(bx-hw*0.7,by); ctx.lineTo(bx+hw*0.7,by); ctx.stroke(); } }
+  ctx.fillStyle=_hrCss(_HR_BLK); ctx.beginPath(); ctx.ellipse(x,y,u*3.2,u*1.0,0,0,6.2832); ctx.fill(); ctx.fillStyle=_hrCss(col); ctx.beginPath(); ctx.ellipse(x,y,u*2.6,u*0.6,0,0,6.2832); ctx.fill();
+  ctx.fillStyle=_hrCss(_HR_BLK); ctx.beginPath(); ctx.arc(x,y-u*0.6,u*1.3,3.1416,0); ctx.closePath(); ctx.fill(); ctx.fillStyle=_hrCss([246,242,232]); ctx.beginPath(); ctx.arc(x,y-u*0.6,u*0.9,3.1416,0); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=_hrCss(_HR_BLK); ctx.lineWidth=W; for(let i=0;i<7;i++){ const a=-3.1416+(i+0.5)/7*3.1416; ctx.beginPath(); ctx.moveTo(x+Math.cos(a)*u*3.6,y+Math.sin(a)*u*1.6); ctx.lineTo(x+Math.cos(a)*u*4.6,y+Math.sin(a)*u*2.4); ctx.stroke(); } }
+function _hrSnakePts(CW,CH,at,amp){ const pts=[]; for(let i=0;i<=60;i++){ const t=i/60; pts.push([CW*(0.04+0.92*t), CH*(0.2+0.6*(1-at(t)))+Math.sin(t*12)*amp]); } return pts; }
+function _hrFillBody(ctx,c,u,rnd){ ctx.save(); ctx.strokeStyle=_hrCss(_HR_BLK); ctx.lineWidth=u*0.18; ctx.lineCap='round'; for(const l of c.lines){ const P=l.p; for(let i=1;i<P.length;i++){ const [ax,ay]=P[i-1],[bx,by]=P[i]; const L=Math.hypot(bx-ax,by-ay); const n=Math.max(1,Math.round(L/(u*0.7))); for(let k=0;k<n;k++){ const t=(k+0.5)/n; const x=ax+(bx-ax)*t, y=ay+(by-ay)*t; const dx=-(by-ay)/L*u*0.4, dy=(bx-ax)/L*u*0.4; ctx.beginPath(); ctx.moveTo(x-dx,y-dy); ctx.lineTo(x+dx,y+dy); ctx.stroke(); } } } ctx.restore(); }
+function _hrListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_hrSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const D=Math.min(CW,CH);
+  const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3; const energy=A.ch?A.ch.energy:0.5;
+  const r0=_hrR(79000,ss); r0();
+  const pic = (!major && tens>0.1) ? 'snake' : (loud>0.62 && pace>0.7) ? 'saucer' : (poly>=2.6) ? 'totem' : 'chain';
+  const black = !major && loud>0.6; const el={ heart: major, ladder: trend>0.55, dashes: pace>0.6, fill: loud>0.62 };
+  try{ globalThis.__HR_LISTEN={pic,black,el,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  const bg = black ? _HR_BLK : S.col(0.5); ctx.fillStyle=_hrCss(bg); ctx.fillRect(0,0,CW,CH); const INK=black?[246,242,232]:_HR_BLK;
+  const colOf=(t)=>black?S.col(t):_hrFar(S.col(t),bg);
+  const C2=(()=>{ const n=24,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
+  for(let k=0;k<2;k++){ for(let i=1;i<23;i++) C2[i]=(C2[i-1]+C2[i]+C2[i+1])/3; } const _amin=Math.min(...C2), _amax=Math.max(...C2); const at=(u)=>{ const i=Math.min(22,Math.floor(u*23)); const f=u*23-i; const v=C2[i]+(C2[i+1]-C2[i])*f; return _amax>_amin+0.03 ? 0.1+0.8*(v-_amin)/(_amax-_amin) : v; };
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const list=[]; const push=(t,draw)=>list.push({t,draw,id:list.length});
+  const accOf=(g)=>{ let a=0; for(const e of A.ev.slice(g.a,g.b)) if(e&&e.v>=A.vHi) a++; return a; };
+  const poseOf=(g,C)=>{ const first=C[0]?C[0].top:60, last=C[C.length-1]?C[C.length-1].top:60; return Math.abs(last-first)>7?'runner':g.v>0.68?'jumper':g.rep>0.3?'waver':'dancer'; };
+  const dashes=(x,y,u,dir,n)=>{ ctx.strokeStyle=_hrCss(INK); ctx.lineWidth=u*0.3; ctx.lineCap='round'; for(let k=0;k<n;k++){ const yy=y-2.6*u+k*1.2*u; ctx.beginPath(); ctx.moveTo(x-dir*(3.2*u+k*0.3*u),yy); ctx.lineTo(x-dir*(4.6*u+k*0.5*u),yy); ctx.stroke(); } };
+  if(pic==='chain'){ const u=D*(0.028+0.012*loud); const per=Math.max(4,Math.min(9,Math.round(CW/(u*5.4)))); const rows=Math.max(1,Math.min(4,Math.round(A.phrases.length/5),Math.floor(CH*0.72/(6.8*u)))); const G=_kd2Phrases(A,per*rows); const n=G.length; const rowH=CH*0.72/rows;
+    const P=G.map((g,i)=>{ const row=Math.floor(i/per), k=i%per; const kk=(row%2)?per-1-k:k; const t=(i+0.5)/n; const x=CW*(0.08+0.84*(kk+0.5)/per), y=CH*0.14+rowH*(row+0.55)+(0.5-at(t))*rowH*0.5; return [x,y,row]; });
+    G.forEach((g,i)=>{ const [x,y,row]=P[i]; const C=A.ev.slice(g.a,g.b).filter(Boolean); const first=C[0]?C[0].top:60, last=C[C.length-1]?C[C.length-1].top:60; const dir=last>=first?1:-1; const col=colOf(g.t); const acc=accOf(g); const big=g===c; const uu=u*(big?1.25:1);
+      push(g.t0,(ctx,r)=>{ const cr=_hrLinker(x,y,uu,r,energy,dir); if(i>0 && P[i-1][2]===row){ const [px,py]=P[i-1]; const left=px<x; cr.lines.push({p:[[x+(left?-2.4:2.4)*u,y-2.6*u-0.6*energy*u],[px+(left?2.4:-2.4)*u,py-2.6*u-0.6*energy*u]],w:0.9}); }
+        if(acc>0) cr.glow=[x,y-3.6*uu,1.8*uu,1.8*uu+uu*(0.6+0.25*Math.min(6,acc)),Math.max(3,Math.min(9,2+acc)),-1.57,1.3]; if(el.dashes) dashes(x,y,u,dir,2+Math.round(pace*3)); _hrCreature(ctx,cr,col,uu,r); if(el.fill && big) _hrFillBody(ctx,cr,uu,r); }); }); }
+  else if(pic==='totem'){ const nv=Math.max(3,Math.min(6,Math.round(poly)+1)); const G=_kd2Phrases(A,nv).slice().sort((a,b)=>a.vmax-b.vmax); const u=Math.min(D*0.055,CH/(nv*6.8)); const x=CW*0.5;
+    G.forEach((g,i)=>{ const y=CH*0.94-i*6.2*u; const col=colOf(g.t); const acc=accOf(g); const dir=i%2?-1:1; push(g.t0,(ctx,r)=>{ const cr=_hrStander(x+(r()-.5)*u*0.6,y,u,r,energy,dir); if(acc>0) cr.glow=[x,y-3.6*u,1.8*u,1.8*u+u*(0.6+0.25*Math.min(6,acc)),Math.max(3,Math.min(9,2+acc)),-1.57,1.3]; _hrCreature(ctx,cr,col,u,r); if(el.fill && i===nv-1) _hrFillBody(ctx,cr,u,r); }); });
+    const side=_kd2Events(A,Math.round(4+dens*6)).filter(e=>e.acc).slice(0,6); side.forEach((e,k)=>{ const sx=CW*(k%2?0.18:0.82)+(r0()-.5)*CW*0.1, sy=CH*(0.3+0.55*r0()); const u2=u*0.6; const col=colOf(e.t); push(e.t,(ctx,r)=>{ const cr=(k%2?_hrJumper:_hrDancer)(sx,sy,u2,r,energy,k%2?-1:1); _hrCreature(ctx,cr,col,u2,r); }); }); }
+  else if(pic==='saucer'){ const G=_kd2Phrases(A,Math.max(4,Math.min(8,Math.round(A.phrases.length/6)))); const n=G.length; const u=D*(0.03+0.012*loud); let ci=0; for(let i=1;i<n;i++) if(G[i].vmax>G[ci].vmax) ci=i;
+    const bx=CW*(0.15+0.7*((ci+0.5)/n)), by=CH*0.62;
+    G.forEach((g,i)=>{ const x=CW*(0.12+0.76*((i+0.5)/n))+(r0()-.5)*CW*0.05, y=i===ci?by:CH*(0.6+0.25*r0()); const dir=x<bx?-1:1; const col=colOf(g.t); const acc=accOf(g); push(g.t0,(ctx,r)=>{ const cr=i===ci?_hrStander(x,y,u*1.2,r,energy,1):_hrFaller(x,y,u,r,energy,dir); if(i!==ci && acc>0) cr.glow[4]=Math.max(3,Math.min(8,2+acc)); if(el.dashes && i!==ci) dashes(x,y,u,-dir,3); _hrCreature(ctx,cr,col,u*(i===ci?1.2:1),r); if(el.fill && i===ci) _hrFillBody(ctx,cr,u*1.2,r); }); });
+    const sc=colOf(c.t); push(c.t,(ctx,r)=>_hrSaucer(ctx,bx,CH*0.16,u*1.3,sc,[bx,by-3.6*u*1.2],r)); }
+  else { // snake
+    const pts=_hrSnakePts(CW,CH,at,D*0.02); const u=D*(0.026+0.01*loud); const sc=colOf(0.5);
+    for(let i=1;i<pts.length;i++){ const t=i/(pts.length-1); push(t*0.9,(ctx,r)=>{ ctx.lineCap='round'; ctx.strokeStyle=_hrCss(INK); ctx.lineWidth=u*2.4; ctx.beginPath(); ctx.moveTo(pts[i-1][0],pts[i-1][1]); ctx.lineTo(pts[i][0],pts[i][1]); ctx.stroke(); ctx.strokeStyle=_hrCss(sc); ctx.lineWidth=u*1.6; ctx.beginPath(); ctx.moveTo(pts[i-1][0],pts[i-1][1]); ctx.lineTo(pts[i][0],pts[i][1]); ctx.stroke(); ctx.strokeStyle=_hrCss(INK); ctx.lineWidth=u*0.2; const [ax,ay]=pts[i-1],[bx2,by2]=pts[i]; const L=Math.hypot(bx2-ax,by2-ay)||1; const mx=(ax+bx2)/2, my=(ay+by2)/2; const dx=-(by2-ay)/L*u*0.6, dy=(bx2-ax)/L*u*0.6; ctx.beginPath(); ctx.moveTo(mx-dx,my-dy); ctx.lineTo(mx+dx,my+dy); ctx.stroke(); }); }
+    const hx=pts[pts.length-1][0], hy=pts[pts.length-1][1]; push(0.92,(ctx,r)=>{ ctx.fillStyle=_hrCss(INK); ctx.beginPath(); ctx.ellipse(hx,hy,u*2.2,u*1.5,0,0,6.2832); ctx.fill(); ctx.fillStyle=_hrCss(sc); ctx.beginPath(); ctx.ellipse(hx,hy,u*1.7,u*1.1,0,0,6.2832); ctx.fill(); ctx.fillStyle=_hrCss(INK); ctx.beginPath(); ctx.arc(hx+u*0.5,hy-u*0.3,u*0.35,0,6.2832); ctx.fill(); ctx.strokeStyle=_hrCss(INK); ctx.lineWidth=u*0.35; ctx.beginPath(); ctx.moveTo(hx+u*1.7,hy+u*0.2); ctx.lineTo(hx+u*3.2,hy); ctx.lineTo(hx+u*3.8,hy-u*0.6); ctx.moveTo(hx+u*3.2,hy); ctx.lineTo(hx+u*3.8,hy+u*0.6); ctx.stroke(); });
+    const G=_kd2Phrases(A,Math.max(3,Math.min(8,Math.round(A.phrases.length/8)))); const n=G.length; G.forEach((g,i)=>{ const t=(i+0.5)/n; const k=Math.min(pts.length-1,Math.round(t*(pts.length-1))); const [sx,sy]=pts[k]; const above=i%2===0; const y=above?sy-u*3.2:sy+u*3.4; const col=colOf(g.t); const C=A.ev.slice(g.a,g.b).filter(Boolean); const pose=above?'rider':poseOf(g,C); const acc=accOf(g); const dir=i%2?-1:1;
+      push(g.t0,(ctx,r)=>{ const cr=pose==='rider'?_hrWaver(sx,y,u,r,energy,dir):_HR_CAST[pose](sx,y+u*2.4,u,r,energy,dir); if(cr.glow){ cr.glow[4]=Math.max(3,Math.min(8,2+acc)); } if(el.dashes) dashes(sx,y,u,dir,2); _hrCreature(ctx,cr,col,u,r); }); }); }
+  if(el.heart){ const hx=CW*(0.2+0.6*c.t), hy=CH*0.12; const u=D*0.03; push(Math.min(0.98,c.t+0.03),(ctx,r)=>{ const pts=_hrHeart(hx,hy,u*2.2); ctx.lineJoin='round'; ctx.strokeStyle=_hrCss(INK); ctx.lineWidth=u*0.8; ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); ctx.fillStyle=_hrCss(black?[226,36,40]:_hrFar([226,36,40],bg)); ctx.fill(); ctx.strokeStyle=_hrCss(INK); ctx.lineWidth=u*0.36; for(let i=0;i<9;i++){ const a=-3.1416+(i+0.5)/9*3.1416; ctx.beginPath(); ctx.moveTo(hx+Math.cos(a)*u*3.0,hy+Math.sin(a)*u*3.0); ctx.lineTo(hx+Math.cos(a)*u*3.9,hy+Math.sin(a)*u*3.9); ctx.stroke(); } }); }
+  if(el.ladder){ const lx=CW*(trend>0.5?0.9:0.1), u=D*0.02; push(0.1,(ctx,r)=>{ ctx.strokeStyle=_hrCss(INK); ctx.lineWidth=u*0.5; ctx.lineCap='round'; for(const dx of [-u*1.2,u*1.2]){ ctx.beginPath(); ctx.moveTo(lx+dx,CH*0.92); ctx.lineTo(lx+dx,CH*0.08); ctx.stroke(); } for(let j=0;j<9;j++){ const y=CH*(0.1+0.8*j/8); ctx.beginPath(); ctx.moveTo(lx-u*1.2,y); ctx.lineTo(lx+u*1.2,y); ctx.stroke(); } }); }
+  list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*Math.max(0,Math.min(1,reveal))); for(let i=0;i<n;i++){ const f=list[i]; const r=_hrR(79100+f.id,ss); r(); f.draw(ctx,r); }
+  _setCurE(0.5);
+}
 // 0 · Mosaic — the app's mosaic realised in Haring's hand: one tile per chord, each a flat colour with a black grout line, and on it one member of the cast in a contrasting colour
 function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_hrSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn;
@@ -7347,10 +7416,10 @@ function haringPhaseDoodle(ctx,CW,CH,chords,lim,gc,ss,mode){
 function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  // ── VARIANT: 0 Mosaic · 1 Mural · 2 Subway chalk · 3 Doodle · 4 Barking Dogs · 5 Dancing crowd ·
-  // 6 Figures (the cast engine throughout). Free: 0 and 1.
-  const _pn=_capN(7); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
-  const _ph=[haringPhaseMosaic,haringPhaseMural,haringPhaseSubway,haringPhaseDoodle,haringPhaseDog,haringPhaseDance,haringPhaseFigures];
+  // ── VARIANT: 0 What he heard (_hrListen, generative) · 1 Mosaic · 2 Mural · 3 Subway chalk · 4 Doodle · 5 Barking Dogs · 6 Dancing crowd ·
+  // 7 Figures (the cast engine throughout). Free: 0 and 1.
+  const _pn=_capN(8); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _ph=[_hrListen,haringPhaseMosaic,haringPhaseMural,haringPhaseSubway,haringPhaseDoodle,haringPhaseDog,haringPhaseDance,haringPhaseFigures];
   _ph[_hpick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -14806,6 +14875,7 @@ const ARTIST_VARIANTS = {
     {mark:{protractor:.6,nest:.4},size:[.15,.45],layout:{radial:1},density:.2},
   ],
   pop: [
+    {mark:{figure:.6,heart:.2,rays:.2},size:[.08,.25],layout:{flow:.6,stack:.4},density:.4,outline:1},   // What he heard
     {ground:'#121012',mark:{figure:.6,heart:.2,radiant:.2},size:[.05,.12],layout:{grid:1},density:.7},          // Mosaic
     {ground:'#f4f44a',mark:{figure:.7,disc:.3},size:[.15,.35],layout:{scatter:1},density:.12},
     {ground:'#1a1a2a',mark:{figure:.45,radiant:.35,tvbox:.2},size:[.04,.1],layout:{scatter:1},density:.3},
@@ -14891,7 +14961,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:8,arcs:7,pop:7,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:8,arcs:7,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
