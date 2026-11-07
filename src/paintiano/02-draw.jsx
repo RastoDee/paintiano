@@ -1429,8 +1429,8 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      small yellow stars (Icarus, the Sword-Swallower).
   // Slots: 0 Parakeet field · 1 big collage · 2 Fauve · 3 Nice · 4 French
   // Window · 5 La Gerbe · 6 nested-frame grid · 7 Memory of Oceania · 8 Jazz.
-  // VARIANT: 0 What he heard (_matListen, generative) · 1 Parakeet field · 2 big collage · 3 Fauve · 4 Nice · 5 French Window · 6 La Gerbe · 7 Jazz · 8 nested-frame grid (Memory of Oceania retired). Free: 0 and 1.
-  const _pn=_capN(9); const pick=[-1,0,1,2,3,4,5,8,6][((phaseIndex|0)%_pn+_pn)%_pn];   // 9: the nested-frame grid (6) kept as the last; Memory of Oceania (7) retired
+  // VARIANT: 0 What he heard (_matListen, generative) · 1 Parakeet field · 2 big collage · 3 Nice · 4 French Window · 5 La Gerbe · 6 Jazz · 7 nested-frame grid (Fauve and Memory of Oceania retired). Free: 0 and 1.
+  const _pn=_capN(8); const pick=[-1,0,1,3,4,5,8,6][((phaseIndex|0)%_pn+_pn)%_pn];   // the nested-frame grid (6) last; Fauve (2) and Memory of Oceania (7) retired
   if(pick===-1){ _matListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -14196,7 +14196,6 @@ const ARTIST_VARIANTS = {
     {ground:'#ebdcb8',mark:{cutout:.5,leaf:.3,star:.2},size:[.06,.25],layout:{scatter:.7,field:.3},density:.4},   // What he heard
     {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},size:[.05,.18],layout:{grid:.8,scatter:.2},density:.6},
     {ground:'#3fbf9a',mark:{starburst:.5,cutout:.5},size:[.15,.4],layout:{scatter:1},density:.12},
-    {ground:'#d08a4a',mark:{poly:.6,panel:.4},size:[.04,.15],alpha:.8,layout:{grid:.6,field:.4},density:.9},
     {ground:'#3a3ad0',mark:{cutout:1},size:[.1,.3],layout:{scatter:1},density:.15,tone:'dark'},
     {ground:'#8a7a9a',mark:{stem:.6,panel:.4},size:[.08,.3],layout:{grid:1},density:.4},
     {ground:'#e8e2cc',mark:{leaf:1},size:[.08,.3],layout:{radial:1},density:.25},   // La Gerbe
@@ -14409,7 +14408,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:9,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
