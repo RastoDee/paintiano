@@ -2973,21 +2973,54 @@ function picassoPhaseDemoiselles(ctx,CW,CH,chords,lim,gc,ss,mode){
   const r0=_pcR(94000,ss); r0();
   const ROSE=[232,160,128], OCHRE=[214,164,96], BLUE=[112,146,188], WHITE=[244,236,222], SHADOW=[132,84,70];
   const nf=3+Math.round(S.density*2); const list=[]; let id=0;
-  // the figures: tall strips with leaning sides; the curtain: what is left between them
-  const strips=[]; for(let k=0;k<nf;k++){ const x0=(k+0.08+r0()*0.1)/nf, x1=(k+0.92-r0()*0.1)/nf; const lean=(r0()-.5)*0.08, top=0.04+r0()*0.12, bot=0.92+r0()*0.08;
-    const w=(x1-x0), sh=0.2+r0()*0.3, hp=0.55+r0()*0.2, fl=0.05+r0()*0.08;   // shoulders, hips, flare
-    strips.push([[CW*(x0+lean+w*0.15),CH*top],[CW*(x1+lean-w*0.1),CH*(top+0.02)],[CW*(x1+lean*0.5+fl),CH*sh],[CW*(x1-lean+fl*0.5),CH*hp],[CW*(x1-lean-w*0.05),CH*bot],[CW*(x0-lean+w*0.05),CH*(bot+0.02)],[CW*(x0-lean-fl*0.5),CH*hp],[CW*(x0+lean*0.5-fl),CH*sh]]); }
+  // the figures: not tall boxes but bodies — a head (the mask), shoulders, a raised arm on every other one, the waist in,
+  // the hips out, the legs apart; the middle one sits lower. Each is one passage of the song, left to right.
+  const strips=[], heads=[]; for(let k=0;k<nf;k++){ const x0=(k+0.04+r0()*0.08)/nf, x1=(k+0.96-r0()*0.08)/nf; const w=(x1-x0), xm=(x0+x1)/2, lean=(r0()-.5)*0.06;
+    const seated = nf>=3 && k===nf-1; const top=(seated?0.38:0.04+(k%2)*0.04)+r0()*0.06, bot=0.94+r0()*0.06;   // the last one squats, the others stand at two heights
+    const H=bot-top, nk=top+H*0.14, sh=top+H*0.2, wa=top+H*0.5, hp=top+H*0.62, kn=top+H*0.82;   // neck, shoulders, waist, hips, knees
+    const raised = !seated && (k%2===1 || nf<3);   // the raised arm, bent at the elbow, up behind the head
+    const P=[];
+    P.push([xm-w*0.14+lean,nk]);                                                           // neck, left
+    P.push([x0+w*0.02-lean,sh]);                                                           // left shoulder
+    if(raised && k%2===1){ P.push([x0-w*0.1-lean,sh+H*0.22]); P.push([x0+w*0.1-lean,sh+H*0.26]); }   // the left arm out and down, bent
+    P.push([x0+w*0.12-lean*0.5,wa]);                                                       // the waist, in
+    P.push([x0+w*0.0,hp]);                                                                 // the hip, out
+    P.push([x0+w*0.1,kn]); P.push([x0+w*0.18,bot]);                                        // the left leg
+    P.push([xm-w*0.04,bot]); P.push([xm,kn+H*0.04]); P.push([xm+w*0.04,bot]);              // the legs apart
+    P.push([x1-w*0.18,bot]); P.push([x1-w*0.1,kn]);                                        // the right leg
+    P.push([x1-w*0.0,hp]);                                                                 // the hip
+    P.push([x1-w*0.12+lean*0.5,wa]);                                                       // the waist
+    if(raised){ P.push([x1-w*0.02+lean,sh+H*0.1]); P.push([x1+w*0.12+lean,top+H*0.04]); P.push([x1+w*0.04+lean,top-0.03]); P.push([xm+w*0.22+lean,sh-H*0.02]); }   // the raised arm: elbow out, hand up behind the head
+    else { P.push([x1-w*0.02+lean,sh]); }                                                  // the right shoulder
+    P.push([xm+w*0.14+lean,nk]);                                                           // neck, right
+    strips.push(P.map(([x,y])=>[CW*x,CH*y]));
+    // the head: an angular mask, narrower than the shoulders, turned a little
+    const hw=w*(seated?0.42:0.36), hh=H*(seated?0.27:0.17), hy=top+H*(seated?0.1:0.07), tilt=(r0()-.5)*0.4;
+    heads.push({poly:_pgRot([[xm-hw*0.6,hy-hh*0.55],[xm+hw*0.5,hy-hh*0.6],[xm+hw*0.7,hy-hh*0.1],[xm+hw*0.45,hy+hh*0.6],[xm-hw*0.25,hy+hh*0.65],[xm-hw*0.72,hy+hh*0.15]].map(([x,y])=>[CW*x,CH*y]),CW*xm,CH*hy,tilt), xm, hy, hw, hh, k, tilt}); }
   const minA=CW*CH/(70+S.density*80);
-  strips.forEach((strip,k)=>{ const rr=_pcR(94100+k,ss); rr(); const out=[]; _pcCut(strip,rr,minA*0.8,0,1.5708+(rr()-.5)*0.5,out); const cx=_pcCentre(strip)[0];
+  strips.forEach((strip,k)=>{ const rr=_pcR(94100+k,ss); rr(); const out=[]; _pcCut(strip,rr,minA*1.7,0,(k%2?1.15:2.0)+(rr()-.5)*0.5,out); const cx=_pcCentre(strip)[0];   // the facets lean: left on one, right on the next
     for(const poly of out){ const pc=_pcCentre(poly); const t=_pcClamp((k+(pc[1]/CH))/nf*0.96+rr()*0.03,0,1); const {rgb,energy}=S.col(t);
       const side=(pc[0]-cx)/(CW/nf); const u=rr(); let base = u<0.08 ? WHITE : u<0.2 ? SHADOW : (side<-0.15 ? ROSE : side>0.2 ? OCHRE : (rr()<0.5?ROSE:OCHRE));
       let col=isBW?rgb:_pcMix(base,rgb,0.28); if(base===WHITE) col=isBW?[240,236,230]:_pcMix(WHITE,rgb,0.12);
       col=_pcMix(col,[0,0,0],Math.max(0,energy-0.6)*0.5);
       list.push({fig:true,id:id++,t,poly,col,hatch:base===SHADOW?0.6:(rr()<0.25?0.3:0),hang:(rr()-.5)*0.8+(side>0?0.8:-0.8),ink:0.9,inkCol:[24,18,16],open:rr()<0.35?Math.floor(rr()*poly.length):-1,lw:Math.max(1.2,D*0.005)}); } });
+  // the masks: a few big facets in ochre and rose, the eyes as dark almonds, the nose one wedge — the song's colour at the figure's start
+  heads.forEach((h)=>{ const rr=_pcR(94300+h.k,ss); rr(); const out=[]; _pcCut(h.poly,rr,minA*0.5,0,0.4+(rr()-.5)*0.8,out); const t0=_pcClamp(h.k/nf*0.96,0,1); const {rgb}=S.col(t0);
+    const afr = h.k>=nf-2 && nf>=3;   // the striped masks at the right
+    for(const poly of out){ const u=rr(); const base=afr ? (u<0.35?OCHRE:u<0.6?[122,140,92]:u<0.85?ROSE:SHADOW) : (u<0.3?ROSE:u<0.75?OCHRE:u<0.88?WHITE:SHADOW); const col=isBW?_pcMix(rgb,[210,206,200],0.4):_pcMix(base,rgb,0.22);
+      list.push({fig:true,id:id++,t:t0+0.01,poly,col,hatch:afr?0.55:(base===SHADOW?0.5:0),hang:afr?(0.3+(rr()-.5)*0.4):0.6,ink:0.95,inkCol:[24,18,16],open:-1,lw:Math.max(1.2,D*0.005)}); }
+    const E=(dx,dy,sx)=>_pgRot(_pgEll(h.xm+dx*h.hw,h.hy+dy*h.hh,h.hw*0.17*sx,h.hh*0.05,0.25,8).map(([x,y])=>[CW*x,CH*y]),CW*h.xm,CH*h.hy,h.tilt);
+    list.push({fig:true,id:id++,t:t0+0.02,poly:E(-0.3,-0.15,1),col:isBW?[20,20,20]:[28,22,20],hatch:0,hang:0,ink:0,open:-1});   // the eyes
+    list.push({fig:true,id:id++,t:t0+0.02,poly:E(0.32,-0.2,1.3),col:isBW?[20,20,20]:[28,22,20],hatch:0,hang:0,ink:0,open:-1});
+    list.push({fig:true,id:id++,t:t0+0.02,poly:_pgRot([[h.xm-h.hw*0.05,h.hy-h.hh*0.1],[h.xm+h.hw*0.22,h.hy+h.hh*0.3],[h.xm-h.hw*0.1,h.hy+h.hh*0.32]].map(([x,y])=>[CW*x,CH*y]),CW*h.xm,CH*h.hy,h.tilt),col:isBW?[150,146,140]:_pcMix(SHADOW,rgb,0.2),hatch:0.5,hang:1.2,ink:0.9,inkCol:[24,18,16],open:-1,lw:Math.max(1,D*0.004)}); });   // the nose, one wedge
+  // the still life in front: a cloth and three fruit, on the loud pieces
+  if(S.energy>0.35){ const fy=0.9; list.push({id:id++,t:0.98,poly:[[CW*0.3,CH*fy],[CW*0.7,CH*(fy-0.02)],[CW*0.74,CH],[CW*0.26,CH]],col:isBW?[230,228,224]:_pcMix(WHITE,S.col(0.98).rgb,0.1),hatch:0.2,hang:0.1,ink:0.7,inkCol:[40,36,40],open:-1,lw:Math.max(1,D*0.003)});
+    [[0.42,0.93,[120,170,90]],[0.5,0.95,[200,60,50]],[0.58,0.93,[232,196,60]]].forEach(([fx,fyy,c],i)=>list.push({id:id++,t:0.99,poly:_pgEll(fx,fyy,0.04,0.03,0.2,9).map(([x,y])=>[CW*x,CH*y]),col:isBW?[160,160,160]:_pcMix(c,S.col(0.99).rgb,0.3),hatch:0,hang:0,ink:0.9,inkCol:[24,18,16],open:-1,lw:Math.max(1,D*0.004)})); }
   // the curtain behind: blue and white planes cut with a vertical grain, quiet, drawn first (t slightly ahead of the figure beside them)
-  const back=[[[0,0],[CW,0],[CW,CH],[0,CH]]]; const bk=[]; const rb=_pcR(94900,ss); rb(); _pcCut(back[0],rb,minA*2.2,0,1.5708,bk);
+  const bk=[]; const rb=_pcR(94900,ss); rb(); _pcCut([[0,0],[CW*0.55,0],[CW*0.45,CH],[0,CH]],rb,minA*2.6,0,0.9+(rb()-.5)*0.5,bk); _pcCut([[CW*0.55,0],[CW,0],[CW,CH],[CW*0.45,CH]],rb,minA*2.6,0,2.2+(rb()-.5)*0.5,bk);   // the curtain's folds fall from both top corners, big planes
   for(const poly of bk){ const pc=_pcCentre(poly); const t=_pcClamp(pc[0]/CW,0,1); const {rgb}=S.col(t); const u=rb(); const base=u<0.55?BLUE:u<0.8?WHITE:[196,170,140];
-    list.push({id:id++,t:_pcClamp(Math.floor(pc[0]/CW*nf)/nf-0.02,0,1),poly,col:isBW?_pcMix(rgb,[200,200,200],0.5):_pcMix(base,rgb,0.18),hatch:base===BLUE?0.35:0,hang:1.4+(rb()-.5)*0.4,ink:0.45,inkCol:[40,36,40],open:rb()<0.4?Math.floor(rb()*poly.length):-1,lw:Math.max(1,D*0.003)}); }
+    list.push({id:id++,t:_pcClamp(Math.floor(pc[0]/CW*nf)/nf-0.06,0,1),poly,col:isBW?_pcMix(rgb,[200,200,200],0.5):_pcMix(base,rgb,0.18),hatch:base===BLUE?0.35:0,hang:1.4+(rb()-.5)*0.4,ink:0.45,inkCol:[40,36,40],open:rb()<0.4?Math.floor(rb()*poly.length):-1,lw:Math.max(1,D*0.003)}); }
+  { const rd=_pcR(94950,ss); rd(); const dr=[]; _pcCut([[0,CH*0.3],[CW*0.16,CH*0.22],[CW*0.22,CH*0.6],[CW*0.14,CH],[0,CH]],rd,minA*1.4,0,1.3,dr); for(const poly of dr){ const u=rd(); list.push({id:id++,t:0.005,poly,col:isBW?[236,234,230]:_pcMix(u<0.7?WHITE:[214,196,176],S.col(0.02).rgb,0.08),hatch:u<0.4?0.3:0,hang:1.1,ink:0.6,inkCol:[70,62,60],open:-1,lw:Math.max(1,D*0.003)}); } }   // the white drape at the left, where the first one stands
   list._objA=!!chords._objFirst;   // a Compose take: every figure stands from the first note
   _pcDraw(ctx,list,reveal,D,ss);
   _setCurE(0.5);
