@@ -10192,9 +10192,70 @@ function _thDab(ctx, x, y, len, th, ang, q, jit){
   for(let k=0;k<4;k++){ const u=P[k][0]+q[k*2]*J, v=P[k][1]+q[k*2+1]*J; const px=x+u*c-v*s, py=y+u*s+v*c; k?ctx.lineTo(px,py):ctx.moveTo(px,py); }
   ctx.closePath(); ctx.fill();
 }
+// ═══════════════════════════════════════════════════════════════════════════
+// ALMA THOMAS LISTENS — the picture the piece composes from everything that is
+// hers: the dab, the path it is laid along (rings, rows, columns, the wind's wavy
+// bands), the cream or the night ground, the pure colours, the
+// pale stars, the dark sun. The piece decides the path and what the dabs carry.
+//   the ground       cream (the default) · night blue (slow and quiet — the Starry Night ground) · a pale warm cream (loud)
+//   the path         RINGS round a centre the piece chooses — high on the left when it climbs, low when it falls, with the
+//                    dark sun in the eye when it is minor (even, rhythmic) · ROWS, long dabs, when it sings slowly ·
+//                    COLUMNS when it is high and quick, or has many voices · WIND — the rows bend with the melody's own contour (the line
+//                    leaps)
+//   the dabs         the chord's pure colour, as long as the chord is long and as wide as it is loud; the highest notes
+//                    of every passage pale as stars on a dark ground; the climax passage in a second, lifted tone; the
+//                    corners cut as freely as the piece is loud
+// ═══════════════════════════════════════════════════════════════════════════
+function _thListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, isBW=mode==='bw', D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  let s=((ss|0) ^ 0x416C6D62)>>>0; const R=()=>{ s=(Math.imul(s,1664525)+1013904223)>>>0; return s/4294967296; };
+  const ground = (pace<0.45 && loud<0.65) ? 'night' : (loud>0.7) ? 'warm' : 'cream';
+  const path = (typeof globalThis!=='undefined' && globalThis.__TH_FORCE) ? globalThis.__TH_FORCE : (pace<0.45) ? 'rows' : (regular>0.8 && leaps<0.5) ? 'rings' : (poly>=2.6 || (reg>0.58 && pace>0.65)) ? 'cols' : (leaps>0.55) ? 'wind' : 'rings';
+  try{ globalThis.__TH_LISTEN={ground,path,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  const GRD = isBW ? (ground==='night'?[38,38,40]:[242,241,238]) : ground==='night' ? [15,26,74] : ground==='warm' ? [251,246,232] : [245,241,230]; const dark=ground==='night';
+  ctx.fillStyle=`rgb(${GRD[0]},${GRD[1]},${GRD[2]})`; ctx.fillRect(0,0,CW,CH);
+  // ── the reading: colour, velocity, top note per chord (as the solo variants read them)
+  const col=new Array(cn), vel=new Float32Array(cn), top=new Int16Array(cn); let vMin=127, vMax=0;
+  for(let i=0;i<cn;i++){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; let v=0, t=0; for(const n of ns){ v+=(n&&n.v!==undefined)?n.v:80; const m=(n&&n.m!==undefined)?n.m:n; if(m>t) t=m; } vel[i]=ns.length?v/ns.length:80; top[i]=t; if(vel[i]<vMin) vMin=vel[i]; if(vel[i]>vMax) vMax=vel[i]; }
+  const vr=vMax-vMin; for(let i=0;i<cn;i++) vel[i]=Math.max(0,Math.min(1,0.5*vel[i]/127+0.5*(vr>6?(vel[i]-vMin)/vr:0.6)));
+  const chordCol=(i)=>{ if(col[i]) return col[i]; const chord=chords[i]; _setCurE(chord && chord._E); const notes=chord&&(chord.n||chord.notes); if(!notes||!notes.length) return (col[i]=[200,150,120]); let r=0,g=0,b=0,cc=0,k=0; for(const note of notes){ const m=note.m!==undefined?note.m:note, v=note.v!==undefined?note.v:80; const q=gc(m,v); r+=q[0]; g+=q[1]; b+=q[2]; k+=Math.max(q[0],q[1],q[2])-Math.min(q[0],q[1],q[2]); cc++; } r/=cc; g/=cc; b/=cc; k/=cc; const l=(r+g+b)/3, k0=Math.max(r,g,b)-Math.min(r,g,b), f=k0>4?Math.min(2.2,k/k0):1; return (col[i]=[Math.max(0,Math.min(255,l+(r-l)*f)),Math.max(0,Math.min(255,l+(g-l)*f)),Math.max(0,Math.min(255,l+(b-l)*f))]); };
+  const lift=(c,f)=>[Math.min(255,c[0]*f),Math.min(255,c[1]*f),Math.min(255,c[2]*f)]; const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; const css=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  const star=new Uint8Array(cn); if(dark){ for(let i=0;i<cn;i++){ let lo=0,n=0; for(let j=Math.max(0,i-12);j<=Math.min(cn-1,i+12);j++){ if(j===i) continue; n++; if(top[j]<top[i]) lo++; } star[i]=(n>0&&lo>=n*0.74)?1:0; } }
+  const climax=(i)=>{ const t=i/cn; return t>=c.t0 && t<=c.t1; };
+  // ── the melody's contour (for the wind)
+  const C2=(()=>{ const n=24,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s2=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s2+=e.top; k++; } } out.push(k?A.reg(s2/k):0.5); } return out; })();
+  for(let k=0;k<3;k++){ for(let i=1;i<23;i++) C2[i]=(C2[i-1]+C2[i]+C2[i+1])/3; } const at=(u)=>{ const i=Math.min(22,Math.floor(u*23)); const f=u*23-i; return C2[i]+(C2[i+1]-C2[i])*f; };
+  // ── the pitch of the mosaic: quick pieces finer
+  const p=Math.max(D/36,Math.min(D/13,Math.sqrt(CW*CH/(1.2*Math.max(1,cn)))))*(1.15-0.3*pace);
+  const kLen = path==='rows'||path==='wind' ? 1.5 : path==='cols' ? 1.35 : 0.86;
+  // ── the segments of the path, in playing order: {pts:[[x,y,ang]...] sampled finely, len}
+  const seg=[]; const addPoly=(pts)=>{ let len=0; for(let i=1;i<pts.length;i++) len+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]); if(len>p) seg.push({pts,len}); };
+  if(path==='rows' || path==='wind'){ const nl=Math.max(1,Math.round(CH/p)), pl=CH/nl; for(let i=0;i<nl;i++){ const cy=(i+0.5)*pl; const pts=[]; const n=40; for(let j=0;j<=n;j++){ const u=j/n; const x=pl*0.2+u*(CW-pl*0.4); const y=path==='wind' ? cy+(at(u)-0.5)*CH*0.1*(0.6+0.8*leaps) : cy; pts.push([x,y]); } addPoly(pts); } }
+  else if(path==='cols'){ const nl=Math.max(1,Math.round(CW/p)), pl=CW/nl; for(let i=0;i<nl;i++){ const cx=(i+0.5)*pl; addPoly([[cx,pl*0.2],[cx,CH-pl*0.2]]); } }
+  else { // rings
+    const cx=CW*(trend>0.55?0.3:trend<0.45?0.7:0.5), cy=CH*(trend>0.55?0.26:trend<0.45?0.7:0.52); const core=(!major)?p*1.45:0; const m=p*0.3; const rMax=Math.max(Math.hypot(cx,cy),Math.hypot(CW-cx,cy),Math.hypot(cx,CH-cy),Math.hypot(CW-cx,CH-cy));
+    for(let r=core+p*0.85; r<rMax; r+=p){ const a0=R()*6.2832, ns=Math.max(24,Math.ceil(6.2832*r/(p*0.2))), da=6.2832/ns; let pts=[]; for(let j=0;j<=ns;j++){ const a=a0+j*da; const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r; const ins=x>=m&&x<=CW-m&&y>=m&&y<=CH-m; if(ins) pts.push([x,y]); else { if(pts.length>1) addPoly(pts); pts=[]; } } if(pts.length>1) addPoly(pts); }
+    if(!major){ ctx.fillStyle=isBW?'rgb(28,28,30)':css(mix(lift(chordCol(0),0.25),[12,16,48],0.6)); ctx.beginPath(); for(let k=0;k<16;k++){ const a=k/16*6.2832, q=p*1.2*(0.96+0.08*Math.sin(k*2.3+ss)); k?ctx.lineTo(cx+Math.cos(a)*q,cy+Math.sin(a)*q):ctx.moveTo(cx+Math.cos(a)*q,cy+Math.sin(a)*q); } ctx.closePath(); ctx.fill(); } }
+  let Ltot=0; for(const g of seg){ g.s0=Ltot; Ltot+=g.len; }
+  const M=Math.max(1,Math.round(Ltot/(kLen*p))); const w=new Float32Array(M); let wSum=0;
+  const durW=(cI)=>{ const ch=chords[cI]; let q=ch&&ch.durQ; if(!(q>0)){ const ns=(ch&&(ch.n||ch.notes))||[]; let d=0; for(const n of ns) d+=(n&&n.durMs)||400; q=ns.length?d/ns.length/500:1; } return Math.max(0.7,Math.min(2.2,0.5+0.7*Math.sqrt(q))); };
+  const ci=new Int32Array(M); for(let j=0;j<M;j++){ ci[j]=Math.min(cn-1,Math.floor(j*cn/M)); w[j]=durW(ci[j])*(0.9+R()*0.2); wSum+=w[j]; }
+  const jit=0.1+0.1*loud; const climaxTone=(cc)=>{ const l=cc[0]*0.299+cc[1]*0.587+cc[2]*0.114; return l>140?lift(cc,0.7):mix(cc,[255,255,255],0.35); };
+  // ── the dabs along the path, chord by chord; lim decides how many show
+  let acc=0, g=0, tIn=0; const posOn=(G,u)=>{ const pts=G.pts; let d=u; for(let i=1;i<pts.length;i++){ const L=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]); if(d<=L||i===pts.length-1){ const f=L>0?Math.max(0,Math.min(1,d/L)):0; return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*f, pts[i-1][1]+(pts[i][1]-pts[i-1][1])*f, Math.atan2(pts[i][1]-pts[i-1][1],pts[i][0]-pts[i-1][0])]; } d-=L; } return [pts[0][0],pts[0][1],0]; };
+  for(let j=0;j<M;j++){ const sl=w[j]/wSum*Ltot, mid=acc+sl/2; acc+=sl; while(g<seg.length-1 && mid>=seg[g].s0+seg[g].len) g++; const G=seg[g]; const cI=ci[j]; if(cI>=lim) break;
+    const [x,y,ang]=posOn(G,mid-G.s0); const v=vel[cI]; let cc=lift(chordCol(cI),0.86+0.26*v); if(dark && star[cI]) cc=isBW?[236,236,236]:mix(cc,[236,241,255],0.82); else if(loud>0.55 && climax(cI)) cc=climaxTone(cc); cc=lift(cc,1+(R()-.5)*0.1);
+    const q=[]; for(let k=0;k<8;k++) q.push(R()-.5); _setCurE(chords[cI]&&chords[cI]._E); ctx.fillStyle=css(cc); _thDab(ctx,x,y,sl*0.78,p*(0.62+0.2*v),ang,q,jit); }
+  _setCurE(0.5);
+}
 function drawThomasOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What she heard (_thListen, generative) · 1 Resurrection · 2 Concerto · 3 Starry Night · 4 Snoopy · 5 Eclipse · 6 Red Azaleas. Free: 0 and 1.
+  const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick0===0){ _thListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode); return; }
+  const pick=pick0-1;
   const isBW=mode==='bw', cn=chords.length, ss=sessionSeed|0;
   const L=_thLayout(CW, CH, chords, ss, pick), P=L.P;
   const _ch=(typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
@@ -14644,6 +14705,7 @@ const ARTIST_VARIANTS = {
     {ground:'#161422',mark:{blob:.7,disc:.3},size:[.05,.12],layout:{stack:.6,grid:.4},density:.45},
   ],
   thomas: [   // slot order = solo variants: Resurrection, Concerto, Starry Night, Snoopy, Eclipse, Red Azaleas
+    {ground:'#f5f1e6',mark:{dab:1},size:[.02,.05],layout:{rings:.4,stack:.4,flow:.2},density:1,tone:'pure'},   // What she heard
     {ground:'#f5f1e6',mark:{dab:1},size:[.012,.03],layout:{radial:1},density:.9},                                   // Resurrection: rings from the centre
     {ground:'#f7f3ea',mark:{dab:1},size:[.014,.034],layout:{grid:1},density:.9},                                    // Concerto: rows
     {ground:'#0f1a4a',mark:{dab:1},size:[.012,.03],layout:{grid:.7,scatter:.3},density:.9,tone:'pure'},            // Starry Night: columns on night blue
@@ -14656,7 +14718,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:6,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
