@@ -10124,10 +10124,11 @@ function mitchellPhaseLateWhite(ctx, CW, CH, chords, lim, gc, sessionSeed, mode)
 function drawMonetOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  const _pn = _capN(6);
+  // VARIANT: 0 What he heard (_monListen, generative) · 1 Nymphéas · 2 Impression · 3 Rouen · 4 Meules · 5 Peupliers · 6 Pont japonais. Free: 0 and 1.
+  const _pn = _capN(7);
   const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
-  _monObj = (chords._objFirst && _fpick>=1) ? _picChord(chords, 0, gc, mode==='bw').rgb : null;
-  [monetPhaseNympheas,monetPhaseImpression,monetPhaseRouen,monetPhaseMeules,monetPhasePeupliers,monetPhasePont][_fpick](ctx, CW, CH, chords, lim, gc, ss, mode);
+  _monObj = (chords._objFirst && _fpick>=2) ? _picChord(chords, 0, gc, mode==='bw').rgb : null;
+  [_monListen,monetPhaseNympheas,monetPhaseImpression,monetPhaseRouen,monetPhaseMeules,monetPhasePeupliers,monetPhasePont][_fpick](ctx, CW, CH, chords, lim, gc, ss, mode);
   _monObj = null;
 }
 const _monR=(a,ss)=>_seedRnd(a,ss,0,0);
@@ -10204,6 +10205,76 @@ function _monSetup(chords,gc,mode){
   return {cn,isBW,energy,density,register,tempo,col,avg,pitch};
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MONET LISTENS — the picture the piece composes from everything that is his,
+// in the comma dab and broken colour: a light, a ground, and over it every element
+// from what he hears.
+//   the light     sunrise (a slow major piece: the orange sun at the climax, its reflection down the water) · noon (bright,
+//                 quick) · dusk (minor: violet and rose) · fog (quiet and even: the grey-blue haze) · snow (slow minor: the
+//                 white field, the magpie on the fence at the climax)
+//   the ground    the pond (slow, lyrical major: lily pads in clusters, the willow strands) · the river (a middle pace) · the
+//                 sea under the cliff (loud and dense) · the field (haystacks when the rhythm is even, poppies when it is
+//                 quick and bright, the garden path when it sings high)
+//   the verticals a poplar per passage when the rhythm is even · the cathedral's façade when it is dense, even and loud ·
+//                 the Japanese bridge when the piece has two voices and moves slowly · a boat per passage when it is quick
+//   the figures   the woman with the parasol and the child in the poppies at the climax
+//   the touch     the dab as broad as the piece is loud, as many as it is dense; warm light on major, cool on minor
+// ═══════════════════════════════════════════════════════════════════════════
+function _monListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_monSetup(chords,gc,mode), D=Math.min(CW,CH), {cn,isBW,energy,density,register,col,avg,pitch}=S;
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const light = (major && pace<0.45) ? 'sunrise' : (!major && pace<0.45) ? 'snow' : (!major) ? 'dusk' : (regular>0.72 && loud<0.55 && pace<0.6) ? 'fog' : 'noon';
+  const ground = (major && pace<0.4) ? 'pond' : ((loud>0.62 && density>0.45 && pace>0.6) || pace>0.78) ? 'sea' : (regular>0.75 && pace<0.6) ? 'haystacks' : (pace>=0.4 && pace<0.65) ? 'river' : (register>0.58 && major && pace>0.6) ? 'path' : 'poppies';
+  const el = { poplars: regular>0.65 && ground!=='haystacks' && ground!=='sea', facade: density>0.45 && regular>0.7 && loud>0.6, bridge: poly>=1.8 && pace<0.5 && (ground==='pond' || ground==='river'), boats: pace>0.6 && (ground==='river' || ground==='sea'), figures: ground==='poppies' || ground==='path', magpie: light==='snow' };
+  if(el.facade){ el.poplars=false; el.bridge=false; }
+  try{ globalThis.__MN_LISTEN={light,ground,el,pace,loud,regular,leaps,poly,major,tens,trend,density,register}; }catch(_){}
+  const warm = major ? 1 : -1; const water = ground==='pond' || ground==='river' || ground==='sea';
+  const yh = ground==='pond' ? 0.0 : _monClamp(0.5+(0.5-register)*0.2,0.38,0.66);
+  const skyC = light==='snow' ? _monBrk(avg,-1,0.78,isBW) : light==='fog' ? _monBrk(avg,-1,0.5,isBW) : light==='dusk' ? _monBrk(_monMix(avg,[120,70,130],isBW?0:0.55),-1,0.2,isBW) : light==='sunrise' ? _monBrk(_monMix(avg,[240,160,90],isBW?0:0.5),+1,0.45,isBW) : _monBrk(avg,warm,0.5,isBW);
+  const grdC = light==='snow' ? _monBrk(avg,-1,0.82,isBW) : water ? _monBrk(avg,-1,-0.05,isBW) : ground==='poppies' ? _monBrk(_monMix(avg,[80,120,60],isBW?0:0.5),+1,0.1,isBW) : _monBrk(avg,+1,0.15,isBW);
+  ctx.fillStyle=`rgb(${skyC.map(v=>v|0).join(',')})`; ctx.fillRect(0,0,CW,CH*yh+1); ctx.fillStyle=`rgb(${grdC.map(v=>v|0).join(',')})`; ctx.fillRect(0,CH*yh,CW,CH*(1-yh));
+  const sx=CW*(0.15+0.7*c.t), sy=CH*(yh*0.55);
+  if(light==='sunrise'||light==='dusk') _monGlow(ctx,sx,sy,D*0.25,_monBrk(isBW?[235,235,235]:_monMix(col(c.a),[255,112,36],0.8),+1,0.3,isBW),0.5);
+  _monGlow(ctx,CW*0.5,CH*0.15,D*0.55,_monBrk(avg,warm,0.5,isBW),light==='fog'?0.25:0.45);
+  const list=[]; let id=0; const dab=(x,y,L,w,ang,cc,a,t,sub)=>list.push({x,y,L,w,ang,c:cc,a,t,id:id++,ss,sub:!!sub});
+  const Lk=0.8+0.5*loud, Nk=(0.7+0.6*density)*_MON_DN;
+  // the sky: broken touches, lit side warm, shadow cool; fog and snow stay pale
+  const Ns=Math.round(170*Nk); for(let i=0;i<Ns;i++){ const r=_monR(69100+i,ss); r(); const t=i/Ns; const cc=col(Math.floor(t*cn)); const y=0.02+r()*(yh-0.03); const lt = light==='snow'||light==='fog' ? 0.55+r()*0.2 : light==='dusk' ? 0.05+r()*0.2 : light==='sunrise' ? 0.3+r()*0.3 : 0.2+r()*0.25; const tint = light==='dusk' ? [120,70,130] : light==='sunrise' ? [240,160,90] : null;
+    if(yh>0.05) dab(CW*_monClamp(t+(r()-.5)*0.5,0.01,0.99),CH*y,D*(0.07+r()*0.06)*Lk,D*(0.011+r()*0.007),(r()-.5)*0.16,_monBrk(_monMix(skyC,tint?_monMix(cc,tint,isBW?0:0.4):cc,0.45),(i%3?warm:-warm),lt,isBW),0.7,t); }   // the touches stay near the sky's own colour: the chord tints them
+  // the ground: water in short horizontal dabs darker with depth, the field in slanting ones, snow in pale blue-white
+  const Ng=Math.round(260*Nk); for(let i=0;i<Ng;i++){ const r=_monR(69400+i,ss); r(); const t=i/Ng; const cc=col(Math.floor(t*cn)); const y=yh+0.01+r()*(0.97-yh); const per=0.6+(y-yh)/(1-yh);
+    const lt = light==='snow' ? 0.6+r()*0.2 : water ? -0.05-(y-yh)*0.35 : light==='dusk' ? -0.2+r()*0.15 : light==='fog' ? 0.25+r()*0.15 : 0.0+r()*0.15; dab(CW*_monClamp(t+(r()-.5)*0.5,0.01,0.99),CH*y,D*(water?0.045:0.035+r()*0.03)*per*Lk,D*(0.01+r()*0.007)*per,water?(r()-.5)*0.2:-0.2+(r()-.5)*0.3,_monBrk(_monMix(grdC,cc,0.45),(i%3?-1:1),lt,isBW),0.85,t); }
+  // ── the elements
+  if(ground==='pond'){ const K=5+Math.round(density*5); for(let k=0;k<K;k++){ const r=_monR(60500+k,ss); r(); const cx=0.1+r()*0.8, cy=0.3+r()*0.62, n=8+(r()*10|0); const ci=Math.floor((k+0.5)*cn/K);
+      for(let j=0;j<n;j++){ const cc=_monBrk(_monMix(col(ci+j*3),[64,132,72],isBW?0:0.5),(j%2?1:-1),0.1+r()*0.15,isBW); dab(CW*(cx+(r()-.5)*0.22),CH*(cy+(r()-.5)*0.1),D*(0.03+r()*0.02),D*(0.022+r()*0.012),(r()-.5)*0.3,cc,0.92,k/K+r()*0.3,true); }
+      for(let j=0;j<1+(r()*2|0);j++){ const cc=_monBrk(col(ci),+1,0.72,isBW); dab(CW*(cx+(r()-.5)*0.18),CH*(cy+(r()-.5)*0.08),D*0.02,D*0.016,-0.6+r()*1.2,cc,0.95,0.55+r()*0.45,true); } }
+    for(let i=0;i<40;i++){ const r=_monR(60700+i,ss); r(); const side=r()<0.5; const cc=_monBrk(_monMix(col(Math.floor(r()*cn)),[40,70,60],isBW?0:0.55),-1,-0.25,isBW); dab(CW*(side?0.02+r()*0.12:0.86+r()*0.12),CH*(r()*0.7),D*(0.05+r()*0.07),D*0.006,1.5708+(r()-.5)*0.25,cc,0.5,r(),true); } }
+  if(ground==='haystacks'){ const G=_kd2Phrases(A,Math.min(3,Math.max(1,Math.round(poly)))); G.forEach((q,gi)=>{ const ax=0.2+0.6*q.t, sz=(0.5+0.5*q.vmax)*D/CH, ay=yh-0.4*sz; const Hh=sz*0.42, HW=sz*0.3; const n=Math.round((200+density*120)*_MON_DN);
+      for(let i=0;i<n;i++){ const r=_monR(63600+gi*1000+i,ss); r(); const v=Math.sqrt(r()), u=(r()-.5)*2; const y=ay+v*Hh, x=ax+u*HW*v*(1+0.1*r()); const cc=col(Math.floor(q.a+(q.b-q.a)*r())); const cap=v<0.22, lit=u>-0.1; const c2 = cap ? _monBrk(cc,+1,0.5,isBW) : lit ? _monBrk(cc,+1,0.12+u*0.15,isBW) : _monBrk(cc,-1,-0.3+u*0.1,isBW);
+        dab(CW*x,CH*y,D*(0.03+r()*0.025),D*(0.011+r()*0.008),Math.atan2(ay-y,ax-x)+(r()-.5)*0.5,c2,0.88,q.t0+i/n*(q.t1-q.t0),true); } }); }
+  if(ground==='poppies'){ const E=_kd2Events(A,Math.round(60+density*200)); E.forEach((e,i)=>{ const r=_monR(69700+i,ss); r(); const y=yh+0.02+(1-A.reg(e.top))*0.0+r()*(0.95-yh); const per=0.5+(y-yh)/(1-yh); const red=isBW?[90,90,90]:_monMix([214,40,36],col(e.i),0.15); dab(CW*(0.02+0.96*e.t)+(r()-.5)*CW*0.06,CH*y,D*(0.025+0.035*e.v)*per,D*(0.022+0.02*e.v)*per,(r()-.5)*0.6,_monBrk(red,+1,0.05+r()*0.15,isBW),1,e.t,true); }); }
+  if(ground==='path'){ const G=_kd2Phrases(A,Math.min(12,Math.max(5,Math.round(A.phrases.length/4)))); for(let i=0;i<60;i++){ const r=_monR(69750+i,ss); r(); const y=yh+0.04+r()*(0.95-yh); const w=0.06+0.22*(y-yh)/(1-yh); dab(CW*(0.5+(r()-.5)*w*2),CH*y,D*(0.04+r()*0.03),D*0.012,(r()-.5)*0.3,_monBrk(_monMix(avg,[200,170,120],isBW?0:0.5),+1,0.3+r()*0.2,isBW),0.9,r()*0.5,true); }   // the path
+    G.forEach((q,gi)=>{ const side=gi%2?1:-1; for(let j=0;j<16;j++){ const r=_monR(69800+gi*40+j,ss); r(); const y=yh+0.05+r()*(0.9-yh); const w=0.06+0.22*(y-yh)/(1-yh); dab(CW*(0.5+side*(w+0.05+r()*0.3)),CH*y,D*(0.02+0.03*q.v),D*(0.018+0.012*q.vmax),(r()-.5)*0.8,_monBrk(col(Math.floor(q.a+(q.b-q.a)*r())),+1,0.2+r()*0.3,isBW),0.95,q.t0+j/16*(q.t1-q.t0),true); } }); }   // the flower beds either side, a bed per passage
+  if(el.poplars){ const G=_kd2Phrases(A,Math.min(8,Math.max(3,Math.round(A.phrases.length/5)))); G.forEach((q,k)=>{ const r=_monR(65600+k,ss); r(); const x=0.08+0.84*q.t, top=0.04+(1-q.vmax)*0.16, green=[70,140,78]; const trunk=_monBrk(_monMix(col(q.a),[60,40,80],isBW?0:0.6),-1,-0.4,isBW);
+      for(let j=0;j<14;j++){ const y=top+(yh-top)*j/14; dab(CW*(x+(r()-.5)*0.004),CH*y,D*0.04,D*0.011,1.5708,trunk,0.9,q.t0+j/14*(q.t1-q.t0),true); }
+      for(let j=0;j<Math.round(40+density*30);j++){ const u=r(); const y=top+(yh-top)*u*0.85; const w=0.02+0.05*(1-Math.abs(u-0.5)*2)*(0.6+0.4*q.vmax); const cc=_monBrk(_monMix(col(Math.floor(q.a+(q.b-q.a)*u)),green,isBW?0:0.5),(j%2?1:-1),0.05+r()*0.2,isBW); dab(CW*(x+(r()-.5)*w*2),CH*y,D*(0.025+r()*0.02),D*(0.012+r()*0.008),(r()-.5)*0.8,cc,0.9,q.t0+u*(q.t1-q.t0),true); }
+      if(water) for(let j=0;j<20;j++){ const u=r(); const y=yh+0.01+(yh-top)*u*0.7; dab(CW*(x+(r()-.5)*0.03),CH*y,D*0.03,D*0.008,1.5708+(r()-.5)*0.3,_monBrk(_monMix(col(q.a),green,isBW?0:0.5),-1,-0.25,isBW),0.5,q.t0+0.1,true); } }); }
+  if(el.facade){ const x0=0.18, x1=0.82; const N=Math.round((500+density*300)*_MON_DN); for(let i=0;i<N;i++){ const r=_monR(62100+i,ss); r(); const t=i/N; const ci=Math.floor(t*cn); const x=x0+(x1-x0)*r(), y=0.03+r()*0.9; const lit=x<0.5; const cc=_monBrk(col(ci),lit?+1:-1,lit?0.25+r()*0.2:-0.15+r()*0.1,isBW); dab(CW*x,CH*y,D*(0.03+r()*0.03),D*(0.01+r()*0.006),1.5708+(r()-.5)*0.2,cc,0.9,t,true); }
+    for(let i=0;i<40;i++){ const r=_monR(62600+i,ss); r(); dab(CW*(0.42+r()*0.16),CH*(0.7+r()*0.25),D*(0.03+r()*0.02),D*0.012,1.5708+(r()-.5)*0.3,_monBrk(avg,-1,-0.6,isBW),0.9,0.3+r()*0.5,true); } }   // the dark portal
+  if(el.bridge){ const yb=(x)=>0.36-0.1*Math.sin(Math.PI*x); const bc=(i)=>_monBrk(_monMix(col(i),[70,120,150],isBW?0:0.5),(i%2?-1:1),0.05,isBW); const nb=90+Math.round(density*40);
+    for(let i=0;i<nb;i++){ const r=_monR(66700+i,ss); r(); const t=i/nb; const x=0.02+0.96*t; const ci=Math.floor(t*cn); for(const dy of [0,0.035,0.07]) dab(CW*x,CH*(yb(x)+dy),D*0.05,D*0.018,Math.atan2(-0.1*Math.PI*Math.cos(Math.PI*x)*CH,CW)+(r()-.5)*0.2,bc(ci),0.95,t,true); if(i%5===0) dab(CW*x,CH*(yb(x)+0.035),D*0.08,D*0.01,1.5708,bc(ci),0.9,t,true); } }
+  if(el.boats){ const G=_kd2Phrases(A,Math.min(4,Math.max(1,Math.round(poly)))); const dark=isBW?[40,40,40]:_monMix(_monBrk(avg,-1,-0.55,isBW),[30,28,60],0.5); G.forEach((q,b)=>{ const r=_monR(61950+b,ss); r(); const bx=CW*(0.1+0.8*q.t), by=CH*(yh+0.08+r()*0.25); const L=D*(0.06+0.06*q.vmax);
+      dab(bx,by,L,D*0.016,0.05,dark,0.95,q.t0,true); dab(bx+L*0.1,by-D*0.03,D*0.03,D*0.01,1.5708,dark,0.9,q.t0+0.02,true); for(let j=0;j<4;j++) dab(bx+(r()-.5)*L,by+D*0.02+r()*D*0.04,D*0.03,D*0.008,(r()-.5)*0.2,_monBrk(dark,-1,0.2,isBW),0.6,q.t0+0.03,true); }); }
+  if((light==='sunrise'||light==='dusk') && yh>0.1){ const sun=isBW?[235,235,235]:_monMix(col(c.a),[255,112,36],0.8); list.push({x:sx,y:sy,L:0,w:D*0.09,ang:0,c:sun,a:1,t:c.t,id:id++,ss,disc:true,obj:true}); if(water){ const nr=26+Math.round(density*10); for(let i=0;i<nr;i++){ const r=_monR(61800+i,ss); r(); const y=yh+0.02+(i/nr)*(0.94-yh); dab(sx+(r()-.5)*D*(0.05+i*0.005),CH*y,D*(0.035+r()*0.05),D*(0.013+r()*0.008),(r()-.5)*0.2,_monBrk(sun,+1,r()*0.15,isBW),0.95,c.t+i/nr*0.2,true); } } }
+  if(el.figures){ const fx=CW*(0.2+0.6*c.t), fy=CH*(yh+0.14); const dk=_monBrk(_monMix(avg,[40,50,90],isBW?0:0.5),-1,-0.3,isBW); const wh=_monBrk(avg,+1,0.6,isBW);
+    for(let j=0;j<14;j++){ const r=_monR(69900+j,ss); r(); dab(fx+(r()-.5)*D*0.05,fy+D*0.07+j*D*0.016,D*(0.045+r()*0.03),D*0.02,(r()-.5)*0.4,j<4?wh:dk,0.95,c.t+0.01*j,true); }   // the woman, her dress in dark touches
+    dab(fx,fy-D*0.03,D*0.14,D*0.024,0.1,wh,0.95,c.t+0.1,true); dab(fx,fy+D*0.03,D*0.04,D*0.028,0,_monBrk(wh,+1,0.1,isBW),0.95,c.t+0.11,true);   // the parasol, the face under it
+    if(poly>1.5){ for(let j=0;j<5;j++){ const r=_monR(69950+j,ss); r(); dab(fx+D*0.16+(r()-.5)*D*0.03,fy+D*0.14+j*D*0.014,D*0.03,D*0.016,(r()-.5)*0.4,j<2?wh:dk,0.95,c.t+0.12+0.01*j,true); } } }   // the child beside her
+  if(el.magpie){ for(let j=0;j<12;j++){ const r=_monR(69980+j,ss); r(); dab(CW*(0.1+0.07*j),CH*(yh+0.12+0.01*Math.sin(j)),D*0.05,D*0.01,0.05,_monBrk(avg,-1,-0.35,isBW),0.9,0.2+0.05*j,true); }   // the fence
+    dab(CW*(0.2+0.5*c.t),CH*(yh+0.1),D*0.045,D*0.016,-0.3,_monBrk(avg,-1,-0.7,isBW),1,c.t,true); dab(CW*(0.2+0.5*c.t)+D*0.025,CH*(yh+0.088),D*0.018,D*0.012,0,_monBrk(avg,+1,0.7,isBW),1,c.t+0.01,true); }   // the magpie at the climax
+  _monDraw(ctx,list,Math.max(1,Math.min(cn,lim))/cn,CW,CH); _setCurE(0.5);
+}
 // ── 0 · Nymphéas — the water surface: sky reflected above, depth below, lily pads, willow strands
 function monetPhaseNympheas(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_monSetup(chords,gc,mode), D=Math.min(CW,CH), {cn,isBW,energy,density,col,avg,pitch}=S;
@@ -16520,6 +16591,7 @@ const ARTIST_VARIANTS = {
     {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
   ],
   monet: [   // in a fusion Monet is the water the partner paints on: every chord lays a patch of tonal touches UNDER the other hand
+    {mark:{surface:.9,disc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.7,scatter:.3},density:.9},   // What he heard
     {mark:{surface:1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.8,scatter:.2},density:.9},                          // Nymphéas
     {ground:'#c8ccd8',mark:{surface:.9,disc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.7,scatter:.3},density:.9},   // Impression
     {ground:'#e8e0cc',mark:{surface:1},size:[.08,.12],edge:0,alpha:.92,layout:{stack:.6,grid:.4},density:1},                // Rouen
@@ -16580,7 +16652,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
