@@ -8424,11 +8424,13 @@ function drawSpiralOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillRect(0, 0, CW, CH);
 
   const revealFrac = Math.max(0, Math.min(1, lim / cn));
-  // ── VARIANT: 0 Spiral (the floating forms below) · 1 The Ten Largest · 2 Altarpiece
-  // No. 1 · 3 The Swan, No. 17 · 4 The Tree of Knowledge · 5 Primordial Chaos (the
-  // _hk2 painters) · 6 Botanical (the plant chart). Free: 0 and 1.
+  // ── VARIANT: 0 What she heard (_hkListen, generative) · 1 Spiral (the floating forms below) · 2 The Ten Largest · 3 Altarpiece
+  // No. 1 · 4 The Swan, No. 17 · 5 The Tree of Knowledge · 6 Primordial Chaos (the
+  // _hk2 painters) · 7 Botanical (the plant chart). Free: 0 and 1.
   {
-    const _pn=_capN(7); const _kpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(8); const _kpick0=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_kpick0===0){ _hkListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    const _kpick=_kpick0-1;
     if(_kpick===6){ klintPhaseBotanical(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_kpick>0){ _hk2Paint(_kpick,ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   }
@@ -8736,6 +8738,61 @@ function hk2_chaos(ctx,CW,CH,chords,lim,gc,ss,mode){
   E.forEach((e,i)=>{ if(!e.acc) return; const p=pts[i]; const c=isBW?W:_hkMix(A.col(e.i),W,0.4); push({kind:'spiral',t:e.t,x:p[0],y:p[1],r:D*(0.02+e.v*0.035),turns:2+Math.round(e.v*2),w:D*0.0025,col:c,dir:i%2?1:-1,a0:r()*6.28}); });
   const P=_kd2Phrases(A,12); P.forEach((p,i)=>{ const a=p.t*turns*6.2832; const rad=D*(0.04+0.38*p.t)+D*0.07; push({kind:'text',t:p.t0,x:cx+Math.cos(a)*rad,y:cy+Math.sin(a)*rad*1.1,size:D*0.04,text:p.pc===A.tonic?'u':'w',col:Y,rot:a+1.5708,a:0.85}); });
   push({kind:'seed',t:0.0,x:cx,y:cy,rx:D*0.025,ry:D*0.04,ang:0.3,col:Y,ring:W});
+  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// AF KLINT LISTENS — not one of her paintings: the melody as her thread across
+// the sheet, and on it a form for every passage from everything that is hers —
+// the spiral, the seed, the flower, the halved disc, the rings, the letter, the
+// sun, the thin thread, the symmetry, the tempera ground of a stage of life.
+//   the ground       the stage of life the piece belongs to (childhood blue, youth orange, adulthood yellow, age
+//                    mauve), tinted by its tonic; black when the piece is heavy and minor
+//   the path         the melody's own contour, left to right, as one thin line; when the piece is even it is drawn
+//                    twice, mirrored across the vertical axis (her symmetry); when it is quick it coils (her snail)
+//   the forms        one per passage on the path: a spiral when the passage climbs, a seed when it falls, a flower
+//                    when the chords are full, a halved disc when it is loud; as big as the passage is loud; in minor
+//                    every form has its pair in the second colour on the other side of the path (her dualities)
+//   the signs        the sun the tonic, placed where the climax falls · the letters u and w at the loud passages ·
+//                    rings at the accents · thin threads between the forms
+// ═══════════════════════════════════════════════════════════════════════════
+function _hkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW, cn=A.cn;
+  const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const st=_HK_STAGE[_hk2Stage(A)]; const r=_hkR(82000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); };
+  const mirror = regular>0.78, coil = pace>0.78 && !mirror, dual = !major, black = !major && loud>0.62;
+  try{ globalThis.__HK2_LISTEN={mirror,coil,dual,black,stage:_hk2Stage(A),pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  const tone=(rgb)=>isBW?_hkPastel(rgb,0.3,true):_hkMix(rgb,[250,246,236],0.3);
+  const ground=black?(isBW?[24,24,26]:[22,18,20]):(isBW?_hkPastel(st.ground,0.2,true):_hkMix(st.ground,tone(A.pcCol(A.tonic,60)),0.4)); ctx.fillStyle=_hkCss(ground); ctx.fillRect(0,0,CW,CH);
+  const INK=black?[240,232,212]:st.ink;
+  const colOf=(p,k)=>{ const c1=tone(A.pcCol(p.pc,Math.round(p.top))), c2=tone(A.pcCol(p.pc2,Math.round(p.top)+12)); const pal=st.pal[k%st.pal.length]; return [isBW?c1:_hkMix(c1,pal,0.35), isBW?c2:_hkMix(c2,st.pal[(k+1)%st.pal.length],0.35)]; };
+  // ── the contour of the melody
+  const C2=(()=>{ const n=24,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
+  for(let k=0;k<2;k++){ for(let i=1;i<23;i++) C2[i]=(C2[i-1]+C2[i]+C2[i+1])/3; } const _amin=Math.min(...C2), _amax=Math.max(...C2); const at=(u)=>{ const i=Math.min(22,Math.floor(u*23)); const f=u*23-i; const v=C2[i]+(C2[i+1]-C2[i])*f; return _amax>_amin+0.03 ? 0.08+0.84*(v-_amin)/(_amax-_amin) : v; };
+  // ── the path: a point for every t in 0..1
+  const cx=CW/2, cy=CH*0.52;
+  const pos=(t)=>{ if(coil){ const turns=2.5+dens*2; const ang=t*turns*6.2832-Math.PI/2; const rr=D*(0.06+0.38*t); return [cx+Math.cos(ang)*rr, cy+Math.sin(ang)*rr*(CH>CW?1.1:0.9)]; }
+    if(mirror){ const x=cx+(CW*0.44)*t; const y=CH*(0.12+0.76*(1-at(t))); return [x,y]; }
+    return [CW*(0.08+0.84*t), CH*(0.14+0.72*(1-at(t)))]; };
+  const mir=([x,y])=>[2*cx-x,y];
+  // ── the thread
+  const steps=160; for(let s=1;s<=steps;s++){ const a=pos((s-1)/steps), b=pos(s/steps); push({kind:'curve',t:s/steps,pts:[a,b],col:INK,a:0.55,w:D*0.0022}); if(mirror) push({kind:'curve',t:s/steps,pts:[mir(a),mir(b)],col:INK,a:0.55,w:D*0.0022}); }
+  if(mirror) push({kind:'curve',t:0,pts:[[cx,CH*0.04],[cx,CH*0.5],[cx,CH*0.96]],col:INK,a:0.3,w:D*0.0015});
+  // ── the forms
+  const P=_kd2Phrases(A,Math.min(coil?16:12,Math.max(5,Math.round(A.phrases.length/2)))); const n=P.length;
+  const form=(p,k,x,y,R,flip)=>{ const [col,col2]=colOf(p,k); const rise=k+1<n?P[k+1].top-p.top:0; const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=ev.length?ev.reduce((s,e)=>s+e.nn,0)/ev.length:2; const u=r(); const c1=flip?col2:col, c2=flip?col:col2;
+    if(p.vmax>=A.vHi&&u<0.6) push({kind:'half',t:p.t,x,y,r:R,ang:r()*3.14,col:c1,col2:c2,ring:INK});
+    else if(nn>=3.2) push({kind:'flower',t:p.t,x,y,r:R*1.15,n:5+Math.round(r()*4),a0:r()*6.28,col:c1,col2:c2,core:INK});
+    else if(rise>1) push({kind:'spiral',t:p.t,x,y,r:R*1.1,turns:2+Math.round(p.n/8),w:D*(0.004+p.v*0.004),col:isBW?INK:_hkMix(c1,INK,0.3),dir:flip?-1:1,a0:r()*6.28});
+    else push({kind:'seed',t:p.t,x,y,rx:R*0.65,ry:R*1.05,ang:(r()-.5)*1.2*(flip?-1:1),col:c1,col2:c2,ring:INK});
+    if(p.vmax>=A.vHi && !flip) push({kind:'text',t:p.t1,x:x+R*1.3,y:y-R*0.9,size:D*0.035,text:r()<0.5?'u':'w',col:INK,rot:(r()-.5)*0.5}); };
+  P.forEach((p,k)=>{ const [x,y]=pos(p.t); const R=D*(0.022+Math.min(1,p.n/40)*0.022+p.v*0.04)*(p===c?1.6:1)*(coil?0.75:1)*(mirror?0.85:1);
+    form(p,k,x,y,R,false); if(mirror) form(p,k,2*cx-x,y,R,true);
+    if(dual){ const nx=-(pos(Math.min(1,p.t+0.02))[1]-pos(Math.max(0,p.t-0.02))[1]), ny=(pos(Math.min(1,p.t+0.02))[0]-pos(Math.max(0,p.t-0.02))[0]); const L=Math.hypot(nx,ny)||1; const off=R*2.4; const px=x+nx/L*off, py=y+ny/L*off; form(p,k,px,py,R*0.8,true); push({kind:'curve',t:p.t,pts:[[x,y],[px,py]],col:INK,a:0.5,w:D*0.0018}); if(mirror){ form(p,k,2*cx-px,py,R*0.8,false); } } });
+  // ── the accents as rings beside the path
+  const E=_kd2Events(A,Math.round(6+dens*8)).filter(e=>e.acc).slice(0,8); E.forEach((e,i)=>{ const [x,y]=pos(e.t); const a=r()*6.28, off=D*(0.06+0.05*r()); const col=tone(A.pcCol(A.tonic,60+(i%3)*12)); const fx=x+Math.cos(a)*off, fy=y+Math.sin(a)*off; push({kind:'rings',t:e.t,x:fx,y:fy,r:D*(0.018+0.02*e.v),n:3,col,col2:INK}); if(mirror) push({kind:'rings',t:e.t,x:2*cx-fx,y:fy,r:D*(0.018+0.02*e.v),n:3,col,col2:INK}); });
+  // ── the sun, the tonic, where the climax falls
+  { const [x,y]=pos(c.t); const sc=tone(A.pcCol(A.tonic,72)); const sx=mirror?cx:x, sy=Math.max(D*0.1,y-D*0.16); push({kind:'rings',t:c.t+0.02,x:sx,y:sy,r:D*(0.05+0.04*loud),n:4,col:isBW?sc:_hkMix(sc,[244,200,90],0.5),col2:_hkMix(sc,INK,0.3)}); push({kind:'disc',t:c.t+0.03,x:sx,y:sy,r:D*0.014,col:[246,232,180]}); }
   _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
 function _hk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
@@ -17040,6 +17097,7 @@ const ARTIST_VARIANTS = {
     {ground:'#f4f4f0',mark:{checker:1},size:[.03,.06],layout:{grid:1},density:1,tone:'mono'},              // Movement in Squares
   ],
   spiral: [
+    {mark:{goldspiral:.3,petal:.3,disc:.2,ring:.2},size:[.05,.2],layout:{radial:.5,scatter:.5},density:.3,tone:'pastel'},   // What she heard
     {mark:{target:.6,petal:.4},size:[.06,.25],layout:{radial:.6,scatter:.4},density:.4},                                             // Spiral: floating forms
     {ground:'#e8d48c',mark:{disc:.4,petal:.3,goldspiral:.3},size:[.08,.24],edge:.1,alpha:.95,layout:{scatter:1},density:.3,tone:'pastel',lines:.3},   // The Ten Largest
     {ground:'#1a1418',mark:{fan:1},size:[.3,.6],layout:{radial:1},density:.08},                                                     // Altarpiece
@@ -17144,7 +17202,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:8,arcs:7,pop:7,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
