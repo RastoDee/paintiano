@@ -7817,6 +7817,54 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // All colours driven by _picChord (song palette), densities by chord count and
 // computeSongCharacter, deterministic from sessionSeed + phaseIndex so the
 // same song + style + variant always recalls the identical painting.
+// ═══════════════════════════════════════════════════════════════════════════
+// MITCHELL LISTENS — the picture the piece composes from everything that is
+// hers: the loaded impasto stroke, the knot, the burst, the long horizontal
+// field stroke, the stem, the seam between panels, the dark mass, her white, the
+// bare canvas, the drip. The piece decides the canvas and what hangs on it.
+//   the canvas       one panel · a diptych or a triptych when the piece has that many voices, each panel its own passage,
+//                    strokes bridging the seams; the ground cream, near-white when the piece is quiet and sparse, a
+//                    deeper warm cream when it is loud
+//   the knots        one per passage, placed where the passage sits in time (left to right) and in register (high to
+//                    low), as big as the passage is loud, as dense as the piece is dense; its strokes RADIAL (a burst)
+//                    when the passage is accented, LONG AND HORIZONTAL (the field) when the piece sings slowly, VERTICAL
+//                    (stems) when it is even and high, TANGLED (the knot) otherwise
+//   the dark mass    when the piece is minor and heavy, the central knot is darkened, light jabs at its edge
+//   the signs        a drip under the lowest strokes, as many as the piece is loud · white strokes through the climax ·
+//                    the bare canvas left where the piece is silent
+// ═══════════════════════════════════════════════════════════════════════════
+function _jmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=Math.max(0,Math.min(1,Math.max(1,Math.min(cn,lim))/cn));
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const gr=_seedRnd(10101,ss,0,0); gr();
+  const nP = poly>=3 ? 3 : poly>=2.2 ? 2 : 1;
+  const ground = (loud<0.5 && dens<0.3) ? 'white' : (loud>0.7) ? 'deep' : 'cream';
+  const stroke = (pace<0.45) ? 'field' : (regular>0.8 && reg>0.55) ? 'stems' : (leaps>0.55 || loud>0.7) ? 'burst' : 'knot';
+  const darkMass = !major && loud>0.6 && pace<0.7;
+  try{ globalThis.__JM_LISTEN={nP,ground,stroke,darkMass,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  _mitchGround(ctx,CW,CH,chords,ground==='white'?'#fafaf2':ground==='deep'?'#e8dfc8':'#f4eee0',ground==='white'?'#f0eee4':ground==='deep'?'#d8d2c4':'#e8e2d4',isBW);
+  if(ground==='white'){ for(let i=0;i<150;i++){ const pr=_seedRnd(i+10110,ss,0,0); pr(); ctx.fillStyle=`rgba(220,215,200,${0.04+pr()*0.06})`; ctx.beginPath(); ctx.arc(pr()*CW,pr()*CH,0.4+pr()*1.0,0,6.2832); ctx.fill(); } }
+  for(let p=1;p<nP;p++){ const x=CW*p/nP; ctx.strokeStyle=isBW?'rgba(170,165,150,.5)':'rgba(190,184,168,.5)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CH); ctx.stroke(); }
+  const list=[]; const drive=0.5*loud+0.5*dens;
+  const nK = Math.max(2,Math.min(10,Math.round((ground==='white'?2:5)+dens*6)));
+  const G=_kd2Phrases(A,nK);
+  G.forEach((q,k)=>{ const pIdx=Math.min(nP-1,Math.floor(q.t*nP)); const px0=CW*pIdx/nP, pw=CW/nP; const u=(q.t*nP-pIdx);
+    const cx=px0+pw*(0.18+0.64*u)+(gr()-.5)*pw*0.1, cy=CH*(0.14+0.7*((1-A.reg(q.top))*0.35+((k*0.618+0.15)%1)*0.65))+(gr()-.5)*CH*0.06, R=D*(0.1+0.14*q.vmax)*(nP>1?0.8:1);
+    const accd = q.vmax>0.8 || (q.v>0.7 && leaps>0.5); const kind = accd ? 'burst' : stroke;
+    let pal=_mitchPal(chords,gc,isBW,Math.floor(q.t0*cn),Math.max(1,Math.ceil((q.t1-q.t0)*cn)));
+    const isClimax = q===c; if(darkMass && isClimax) pal=pal.map((cc,i)=>i<4?_mitchMix(cc,[18,14,22],0.55):cc);
+    const count=Math.round((kind==='field'?16:kind==='stems'?20:28)+drive*18)*(ground==='white'?0.7:1);
+    const o = kind==='burst' ? {radial:0.55,spread:2.2,len:1.15} : kind==='field' ? {dir:0,spread:0.25,radial:0,len:1.8,w:1.1,squash:0.6} : kind==='stems' ? {dir:Math.PI/2,spread:0.3,radial:0,len:1.4,w:0.9} : {spread:1.5,radial:0.12};
+    _mitchKnot(list,D,cx,cy,R,Math.round(count),pal,ss,10200+k,o);
+    for(const s of list) if(s.id>=(10200+k)*400 && s.id<(10200+k+1)*400) s.t=q.t0+(q.t1-q.t0)*s.t;   // the knot grows with its passage
+    if(darkMass && isClimax){ const lp=pal.map((cc)=>_mitchMix(cc,[250,246,236],0.35)); _mitchKnot(list,D,cx,cy,R*1.2,10+Math.round(drive*6),lp,ss,10300+k,{spread:2.0,radial:0.6,tight:1.0}); for(const s of list) if(s.id>=(10300+k)*400 && s.id<(10300+k+1)*400) s.t=q.t0+(q.t1-q.t0)*(0.5+0.5*s.t); }
+    if(isClimax && loud>0.55){ for(let j=0;j<4;j++){ const r=_seedRnd(j+10400+k,ss,0,0); r(); const a=(o.dir!=null?o.dir:r()*6.28)+(r()-.5)*0.8, L=D*(0.08+r()*0.1); const x=cx+(r()-.5)*R, y=cy+(r()-.5)*R; list.push({x0:x-Math.cos(a)*L/2,y0:y-Math.sin(a)*L/2,x1:x+Math.cos(a)*L/2,y1:y+Math.sin(a)*L/2,col:[246,243,234],w:D*(0.012+r()*0.01),id:10500+k*4+j,t:q.t0+(q.t1-q.t0)*(0.6+0.1*j)}); } } });
+  for(let p=1;p<nP;p++){ const x=CW*p/nP; for(let i=0;i<3+Math.round(drive*3);i++){ const r=_seedRnd(i+p*10+10600,ss,0,0); r(); const y=CH*(0.2+r()*0.6), L=D*(0.12+r()*0.1); const {rgb}=_picChord(chords,Math.min(cn-1,Math.floor((p/nP)*cn)+i*3),gc,isBW); list.push({x0:x-L/2,y0:y+(r()-.5)*D*0.05,x1:x+L/2,y1:y+(r()-.5)*D*0.05,col:rgb,w:D*(0.014+r()*0.012),id:10700+p*10+i,t:p/nP+i*0.02}); } }
+  _mitchDraw(ctx,list,reveal,ss);
+  if(reveal>0.4) _mitchDrips(ctx,D,list,Math.round(2+loud*6),ss,10800);
+  _setCurE(0.5);
+}
 function drawMitchellOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
@@ -7827,7 +7875,10 @@ function drawMitchellOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   //  D = Dark Central Mass (60s "violent" period — dense central blob).
   //  E = Sunflower (Van Gogh hommage 1990-91, vertical stems + flower heads).
   //  F = Late Sparse White (1992 — white ground, 2-3 concentrated zones).
-  const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What she heard (_jmListen, generative) · 1 Gestural Garden · 2 Color Bursts · 3 Diptych · 4 Dark Central Mass · 5 Sunflower · 6 Late White. Free: 0 and 1.
+  const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick0===0){ _jmListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  const pick=pick0-1;
   if(pick===1){ mitchellPhaseBursts(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ mitchellPhaseDiptych(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ mitchellPhaseDarkMass(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -14707,6 +14758,7 @@ const ARTIST_VARIANTS = {
     {mark:{heart:.6,radiant:.4},size:[.05,.15],layout:{grid:1},density:.6},
   ],
   mitchell: [
+    {mark:{brush:1},size:[.05,.16],layout:{scatter:.6,radial:.4},density:.4},   // What she heard
     {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
     {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
     {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.5},
@@ -14781,7 +14833,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
