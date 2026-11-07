@@ -10737,7 +10737,10 @@ function drawKandinskyOverlay(ctx, CW, CH, chordCount, sessionSeed, mode, gc, ph
   // 2 Several Circles · 3 Circles in a Circle · 4 Yellow–Red–Blue · 5 Improvisation ·
   // 6 On White II · 7 Composition X (the _kd2 painters). Free: 0 and 1. The Next
   // button cycles phaseIndex; _capN caps it on Free.
-  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What he heard (_kdListen, generative) · 1 Cosmic scatter · 2 Composition VIII · 3 Several Circles · 4 Circles in a Circle · 5 Yellow–Red–Blue · 6 Improvisation · 7 On White II (Composition X retired, approved). Free: 0 and 1.
+  const _pn=_capN(8); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick0===0){ _kdListen(ctx, CW, CH, chordCount, ss, mode, chords, gc); return; }
+  const pick=pick0-1;
   if(pick>0){ _kd2Paint(pick, ctx, CW, CH, chordCount, ss, mode, chords, gc); return; }
   kandinskyPhaseA(ctx, CW, CH, eff(280), ss, mode, palette, chords);
 }
@@ -11159,6 +11162,62 @@ function kd2_compX(ctx,CW,CH,cc,ss,mode,chords,gc){
   const E=_kd2Events(A,_kdClamp(Math.round(A.cn/10),24,90));
   for(const e of E){ if(e.dur>1.5&&!e.acc) continue; const c=_kdMix(A.col(e.i),S.W,0.2); push({kind:'circle',t:e.t,x:D*0.03+r()*(CW-D*0.06),y:D*0.03+r()*(CH-D*0.06),r:D*(0.004+e.v*0.008),col:c,ring:e.acc?S.W:null}); }
   for(let i=0;i<2;i++){ const t=0.35+i*0.3; push({kind:'lines',t,x:CW*(0.2+r()*0.6),y:CH*(0.2+r()*0.6),ang:r()*3.14,fan:0.05,len:D*(0.25+r()*0.3),w:D*0.0025,n:2,col:S.W,col2:A.col(Math.round(t*A.cn))}); }
+  _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// KANDINSKY LISTENS — not one of the paintings above: the piece laid out by his
+// own grammar (Point and Line to Plane, On the Spiritual in Art). One tilted
+// plane per voice — yellow for the voice that rises and warms, blue for the one
+// that sinks and cools, red between — and on each plane the forms of that voice:
+// the point (a note), the line (a passage, straight when even, angular when it
+// leaps, curved when it sings), the circle (a cold chord), the triangle (a warm
+// one), the square (red). The great black circle with its halo is the climax.
+//   the ground       cream (major) · black (minor and heavy) · white (light and high)
+//   the planes       as many as the voices (one to three), tilted by the trend, each in its primary, translucent
+//   the lines        the bass as the thick black line of the whole piece, angular or curved as it moves; a line per
+//                    passage on its plane, from the melody's own contour
+//   the forms        a form per chord on its plane, by hue: triangle warm, circle cold, square red, bar green; as big
+//                    as the chord is loud; a black ring on the accents
+//   the climax       the great circle in the tonic's colour with three halos, where the climax falls
+// ═══════════════════════════════════════════════════════════════════════════
+function _kdListen(ctx,CW,CH,cc,ss,mode,chords,gc){
+  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1), cn=A.cn;
+  const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1,top:60}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const r=_kdR(63000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
+  const ground = (!major && loud>0.6) ? 'black' : (reg>0.6 && loud<0.55) ? 'white' : 'cream'; const dark=ground==='black';
+  const nP=Math.max(1,Math.min(3,Math.round(poly))); const tilt=(trend-0.5)*0.9+(r()-.5)*0.2;
+  try{ globalThis.__KD_LISTEN={ground,nP,tilt,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  ctx.fillStyle=dark?(A.isBW?'#1c1c1e':'#17151a'):ground==='white'?'#f4f1ea':(A.isBW?'#ece9e2':'#efe8d6'); ctx.fillRect(0,0,CW,CH);
+  const INK=dark?S.W:S.K;
+  // ── the planes
+  const prim=[S.Y,S.Rd,S.Bl]; const planes=[]; for(let k=0;k<nP;k++){ const u=(k+0.5)/nP; const cx=CW*(0.5+(u-0.5)*0.4), cy=CH*(0.5+(u-0.5)*0.4*(nP>1?1:0)); const w=CW*(nP>1?0.62:0.78), h=CH*(nP>1?0.42:0.6); const col=nP===1?(major?S.Y:S.Bl):prim[k===0?0:k===nP-1?2:1]; planes.push({cx,cy,w,h,col,ang:tilt+(k-(nP-1)/2)*0.12}); }
+  planes.forEach((p,k)=>{ push({kind:'rect',t:k/nP*0.1,x:p.cx,y:p.cy,w:p.w,h:p.h,ang:p.ang,col:dark?_kdMix(p.col,S.K,0.35):_kdMix(p.col,S.W,0.45),a:0.75}); });
+  const onPlane=(p,u,v)=>{ const lx=(u-0.5)*p.w, ly=(v-0.5)*p.h; const ca=Math.cos(p.ang), sa=Math.sin(p.ang); return [p.cx+lx*ca-ly*sa, p.cy+lx*sa+ly*ca]; };
+  // ── the bass as the thick black line of the whole piece
+  { const T=(()=>{ const n=18,out=[]; for(let i=0;i<n;i++){ const cc2=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc2-cn/n/2));j<=Math.min(cn-1,Math.round(cc2+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.bass; k++; } } out.push(k?A.reg(s/k):0.3); } return out; })();
+    const P=T.map((v,i)=>{ const [x,y]=onPlane(planes[nP-1],0.06+0.88*i/17,0.85-0.7*v); return {x,y,w:D*(0.006+0.012*loud)}; });
+    if(leaps>0.5){ for(let i=1;i<P.length;i++) push({kind:'lines',t:i/P.length,x:(P[i-1].x+P[i].x)/2,y:(P[i-1].y+P[i].y)/2,ang:Math.atan2(P[i].y-P[i-1].y,P[i].x-P[i-1].x),fan:0,len:Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y),w:P[i].w*0.7,n:1,col:INK}); }
+    else push({kind:'stroke',t:0.05,pts:P,col:INK,a:0.95}); }
+  // ── a line per passage on its plane, the forms of its chords
+  const G=_kd2Phrases(A,Math.min(14,Math.max(4,Math.round(A.phrases.length/3))));
+  G.forEach((g,k)=>{ const p=planes[Math.min(nP-1,Math.floor((1-A.reg(g.top))*nP))]; const n=8; const T=[]; for(let i=0;i<n;i++){ const j=Math.min(cn-1,Math.round(g.a+(g.b-g.a)*i/(n-1))); const e=A.ev[j]; T.push(e?A.reg(e.top):0.5); }
+    const pts=T.map((v,i)=>{ const [x,y]=onPlane(p,0.08+0.84*(g.t0+(g.t1-g.t0)*i/(n-1)),0.9-0.8*v); return {x,y,w:D*(0.0025+0.004*g.v)}; });
+    const col=g.vmax>=A.vHi?INK:_kdMix(A.col(g.a),INK,0.3);
+    if(regular>0.8 && leaps<0.4){ push({kind:'lines',t:g.t0,x:(pts[0].x+pts[n-1].x)/2,y:(pts[0].y+pts[n-1].y)/2,ang:Math.atan2(pts[n-1].y-pts[0].y,pts[n-1].x-pts[0].x),fan:0.02,len:Math.hypot(pts[n-1].x-pts[0].x,pts[n-1].y-pts[0].y),w:D*0.002,n:2+Math.round(g.v*2),col,col2:A.col(g.a)}); }
+    else if(leaps>0.5){ for(let i=1;i<n;i++) push({kind:'lines',t:g.t0+(g.t1-g.t0)*i/n,x:(pts[i-1].x+pts[i].x)/2,y:(pts[i-1].y+pts[i].y)/2,ang:Math.atan2(pts[i].y-pts[i-1].y,pts[i].x-pts[i-1].x),fan:0,len:Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y),w:D*0.002,n:1,col}); }
+    else push({kind:'stroke',t:g.t0,pts,col,a:0.9});
+    const E=A.ev.slice(g.a,g.b).filter(Boolean); const step=Math.max(1,Math.round(E.length/(3+dens*4)));
+    E.forEach((e,i)=>{ if(i%step) return; const cc3=A.col(Math.min(cn-1,g.a+i)); const f=_kd2Form(cc3); const u=0.08+0.84*(g.t0+(g.t1-g.t0)*i/Math.max(1,E.length-1)), v=0.9-0.8*A.reg(e.top); const [x,y]=onPlane(p,u,v); const sz=D*(0.008+e.dur*0.01+e.v*0.02);
+      if(f==='tri') push({kind:'tri',t:e.t,x,y,ang:p.ang-1.5708+(r()-.5)*0.6,len:sz*3,aspect:0.2,col:cc3,ring:e.acc?INK:null});
+      else if(f==='circle') push({kind:'circle',t:e.t,x,y,r:sz,col:cc3,ring:e.acc?INK:null,halo:e.dur>=2?[_kdMix(cc3,S.W,0.5)]:null});
+      else if(f==='rect') push({kind:'rect',t:e.t,x,y,w:sz*2,h:sz*2,ang:p.ang,col:cc3,ring:e.acc?INK:null});
+      else push({kind:'rect',t:e.t,x,y,w:sz*3,h:sz*0.8,ang:p.ang,col:cc3}); }); });
+  // ── the great circle at the climax
+  { const p=planes[Math.min(nP-1,Math.floor((1-A.reg(c.top))*nP))]; const [x,y]=onPlane(p,0.08+0.84*c.t,0.5); const tc=A.pcCol(A.tonic,48); const fifth=A.pcCol((A.tonic+7)%12,60), second=A.pcCol((A.tonic+2)%12,60);
+    push({kind:'circle',t:c.t,x,y,r:D*(0.07+0.06*loud),col:dark?_kdMix(tc,S.W,0.2):_kdMix(tc,S.K,0.7),halo:[_kdMix(fifth,dark?S.K:S.W,0.3),_kdMix(fifth,dark?S.K:S.W,0.58),_kdMix(second,dark?S.K:S.W,0.78)]}); }
+  // ── the accents as angular bursts
+  const E2=_kd2Events(A,Math.round(8+dens*8)).filter(e=>e.acc).slice(0,6); E2.forEach((e,i)=>{ const p=planes[i%nP]; const [x,y]=onPlane(p,0.08+0.84*e.t,0.2+0.6*r()); push({kind:'lines',t:e.t,x,y,ang:r()*3.14,fan:0.5,len:D*(0.08+0.1*e.v),w:D*0.002,n:3,col:INK,col2:A.col(Math.min(cn-1,Math.round(e.t*(cn-1))))}); });
   _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
 function _kd2Paint(pick,ctx,CW,CH,cc,ss,mode,chords,gc){
@@ -14938,6 +14997,7 @@ const ARTIST_VARIANTS = {
     {ground:'#eae5da',mark:{beam:.5,disc:.3,bar:.2},size:[.12,.4],alpha:.55,layout:{scatter:1},density:.25},   // Construction (Moholy-Nagy)
   ],
   kandinsky: [
+    {mark:{plane:.3,tri:.2,disc:.2,beam:.3},size:[.02,.3],layout:{stack:.5,flow:.5},density:.5},   // What he heard
     {mark:{kring:.4,beam:.3,disc:.3},size:[.02,.16],layout:{scatter:.7,radial:.3},density:.6},                       // Cosmic scatter
     {ground:'#efe8d6',mark:{tri:.4,beam:.3,disc:.2,checker:.1},size:[.03,.14],layout:{flow:.7,scatter:.3},density:.35,outline:.4},   // Composition VIII
     {ground:'#0b0a12',mark:{disc:1},size:[.06,.26],edge:.5,alpha:.8,layout:{scatter:1},density:.3},                 // Several Circles
@@ -14945,7 +15005,6 @@ const ARTIST_VARIANTS = {
     {ground:'#dacdb2',mark:{panel:.35,disc:.3,bar:.2,tri:.15},size:[.05,.3],layout:{scatter:1},density:.2,outline:.3},   // Yellow–Red–Blue
     {ground:'#f3eee1',mark:{cloud:.6,beam:.25,dot:.15},size:[.08,.28],edge:.8,alpha:.65,layout:{flow:.6,scatter:.4},density:.4,layers:2,lines:.5},   // Improvisation
     {ground:'#f7f4ec',mark:{bar:.3,tri:.3,rect:.2,disc:.2},size:[.03,.16],layout:{flow:1},density:.3,outline:.6,lines:.4},   // On White II
-    {ground:'#131117',mark:{blob:.5,dot:.3,tri:.2},size:[.04,.16],layout:{scatter:1},density:.3,outline:.3,tone:'pastel'},   // Composition X
   ],
   gold: [
     {ground:'#5a4826',mark:{tile:.3,goldspiral:.3,target:.2,eye:.2},size:[.03,.1],layout:{field:.5,scatter:.5},density:.6,tone:'gold'},   // What he heard
