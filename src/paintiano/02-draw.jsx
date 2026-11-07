@@ -4476,7 +4476,10 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // 2 Black Paintings · 3 Hyena Stomp · 4 Irregular Polygon (Moultonboro) · 5 Interlocking arcs ·
   // 6 Notched stripes. Free: 0 and 1.
   {
-    const _pn=_capN(7); const _spick=((phaseIndex|0)%_pn+_pn)%_pn;
+    // VARIANT: 0 What he heard (_stListen, generative) · 1 Concentric Squares · 2 Protractor · 3 Black Paintings · 4 Hyena Stomp · 5 Irregular Polygon · 6 Interlocking arcs · 7 Notched stripes. Free: 0 and 1.
+    const _pn=_capN(8); const _spick0=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_spick0===0){ _stListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    const _spick=_spick0-1;
     if(_spick===1){ stellaPhaseProtractor(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===2){ stellaPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===3){ stellaPhaseHyena(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -4559,6 +4562,46 @@ function _stxPaint(rgb,isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; if
 function _stxSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   return {cn,isBW,density:ch?ch.density:0.4,col:(t)=>_stxPaint(_picChord(chords,_stxClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb,isBW)}; }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// STELLA LISTENS — not one of the series above: the shaped canvas the piece
+// itself cuts, hung on the wall. The outline comes from the piece — a corner for
+// every passage, pushed out as far as the passage is loud, placed round the
+// shape in time — and inside it the bands run parallel to the edge, mitred at
+// every corner, a pinstripe of raw canvas between them, each band a chord.
+//   the shape        a corner per passage, by time round the shape, by loudness out from the centre; sharp corners
+//                    when the piece is quick, rounded when it sings; a second shape locked into the first when the
+//                    piece has two voices or more
+//   the bands        as many as the piece is dense; from the edge inward when it climbs, from the centre outward when
+//                    it falls; as wide as the piece is loud; each in its chord's colour, flat
+//   the wall         the grey-white of the gallery wall around the canvas; the black bands of the early work when the
+//                    piece is heavy and minor
+// ═══════════════════════════════════════════════════════════════════════════
+function _stListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_stxSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const D=Math.min(CW,CH);
+  const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  const r0=_seedRnd(84000,ss,0,0); r0();
+  const black = !major && loud>0.6; const round = pace<0.5; const two = poly>=2.4;
+  const nB = Math.max(6,Math.min(16,Math.round(6+dens*12)));
+  try{ globalThis.__ST_LISTEN={black,round,two,nB,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  // the wall
+  ctx.fillStyle=S.isBW?'rgb(214,212,208)':'rgb(222,219,212)'; ctx.fillRect(0,0,CW,CH);
+  const shapeOf=(G,cx,cy,R,rot)=>{ const n=G.length; const pts=G.map((q,k)=>{ const a=rot+k/n*6.2832+(r0()-.5)/n*6.2832*0.7; const rr=R*(0.35+0.65*q.vmax)*(0.8+0.4*A.reg(q.top)); return [cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]; }); return pts; };
+  const nPts=Math.max(4,Math.min(9,Math.round(A.phrases.length/5)));
+  const shapes=[]; if(two && _kd2Phrases(A,nPts*2).length>=8){ const G2=_kd2Phrases(A,nPts*2); const h=Math.floor(G2.length/2); shapes.push(shapeOf(G2.slice(0,h),CW*0.4,CH*0.42,D*0.42,r0()*6.28)); shapes.push(shapeOf(G2.slice(h),CW*0.62,CH*0.6,D*0.38,r0()*6.28)); } else { const G=_kd2Phrases(A,nPts); shapes.push(shapeOf(G,CW/2,CH/2,D*0.56,r0()*6.28)); }
+  const tracePoly=(pts)=>{ ctx.beginPath(); if(round){ const n=pts.length; for(let i=0;i<=n;i++){ const p=pts[i%n], q=pts[(i+1)%n]; const mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2; if(i===0) ctx.moveTo(mx,my); else ctx.quadraticCurveTo(p[0],p[1],mx,my); } } else { pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); } ctx.closePath(); };
+  const inset=(pts,k)=>{ let cx=0,cy=0; pts.forEach(p=>{ cx+=p[0]; cy+=p[1]; }); cx/=pts.length; cy/=pts.length; return pts.map(p=>[cx+(p[0]-cx)*k, cy+(p[1]-cy)*k]); };
+  // the canvas shadow on the wall
+  shapes.forEach(pts=>{ ctx.save(); ctx.shadowColor='rgba(0,0,0,0.35)'; ctx.shadowBlur=D*0.03; ctx.shadowOffsetY=D*0.012; ctx.fillStyle=_stxCss(_STX_CANVAS); tracePoly(pts); ctx.fill(); ctx.restore(); });
+  // the bands: band k from the edge (k=0) to the centre, or the other way when the piece falls
+  const vis=Math.ceil(nB*reveal); const gap=0.055;
+  shapes.forEach((pts,si)=>{ ctx.save(); tracePoly(pts); ctx.clip(); ctx.fillStyle=_stxCss(_STX_CANVAS); ctx.fillRect(0,0,CW,CH);
+    for(let k=0;k<nB;k++){ const ti=trend>=0.5?k:nB-1-k; if(ti>=vis) continue; const o=k/nB, i=(k+1)/nB; const t=(si*0.5+(ti+0.5)/nB*(two?0.5:1)); const col=black?(k%2?[22,20,22]:_STX_CANVAS):S.col(Math.min(0.999,t));
+      ctx.fillStyle=_stxCss(col); tracePoly(inset(pts,1-o)); ctx.fill(); ctx.fillStyle=_stxCss(_STX_CANVAS); tracePoly(inset(pts,1-i+(1/nB)*0.14)); ctx.fill(); }
+    ctx.restore(); });
+  // the raw-canvas pinstripes already lie between the bands; the edge of the canvas
+  shapes.forEach(pts=>{ ctx.strokeStyle='rgba(60,54,48,0.5)'; ctx.lineWidth=Math.max(1,D*0.002); tracePoly(pts); ctx.stroke(); });
+  _setCurE(0.5);
+}
 // 3 · Hyena Stomp (1962) — one band winding inward as a rectangular spiral, mitred at every turn, each run a new colour; read from the outer edge to the centre
 function stellaPhaseHyena(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const S=_stxSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
@@ -14916,6 +14959,7 @@ const ARTIST_VARIANTS = {
     {ground:'#e8e2cc',mark:{stem:1},size:[.1,.3],layout:{grid:1},density:.3},                                                       // Botanical
   ],
   arcs: [
+    {ground:'#dedbd4',mark:{nest:.7,poly:.3},size:[.3,.6],layout:{radial:1},density:.3},   // What he heard
     {mark:{nest:1},size:[.1,.4],layout:{radial:.5,grid:.5},density:.3},
     {mark:{protractor:.7,arc:.3},size:[.2,.5],layout:{radial:1},density:.25},   // Protractor
     {mark:{nest:1},size:[.2,.5],layout:{grid:1},density:.2},
@@ -15012,7 +15056,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:8,wave:8,spiral:8,arcs:7,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
