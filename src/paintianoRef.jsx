@@ -3740,7 +3740,7 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      small yellow stars (Icarus, the Sword-Swallower).
   // Slots: 0 Parakeet field · 1 big collage · 2 Fauve · 3 Nice · 4 French
   // Window · 5 La Gerbe · 6 nested-frame grid · 7 Memory of Oceania · 8 Jazz.
-  const _pn=_capN(9); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(8); const pick=[0,1,2,3,4,5,7,8][((phaseIndex|0)%_pn+_pn)%_pn];   // 8 of the nine below: the nested-frame grid (6) retired
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ matissePhaseNice(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -10141,7 +10141,8 @@ function drawHokusaiOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const ss = sessionSeed | 0;
   const _pn = _capN(8);
   const _fpick = ((phaseIndex|0) % _pn + _pn) % _pn;
-  _wvPaint(_fpick, ctx, CW, CH, chords, lim, gc, ss, mode);
+  // VARIANT: 0 What he heard (_wvListen) · 1 The Great Wave · 2 Red Fuji · 3 Thunderstorm · 4 Kajikazawa · 5 Poppies · 6 Ejiri gust · 7 Weeping Cherry. Free: 0 and 1.
+  _wvPaint([8,0,1,2,3,5,6,7][_fpick], ctx, CW, CH, chords, lim, gc, ss, mode);   // _wvPaint keeps its own print numbers (the Masculine Wave, 4, retired)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -10160,7 +10161,7 @@ function _wvSetup(chords,lim,gc,mode){ const I=_hokusaiInk(chords,lim,gc); const
   const accents=(a,b)=>{ let k=0; for(let i=a;i<b;i++){ const e=A.ev[i]; if(e&&(e.v>=A.vHi||(A.gapHi>0&&e.gap>A.gapHi))) k++; } return k; };
   // the melody contour over chords a..b, n samples of register 0..1 (low-passed)
   const contour=(a,b,n)=>{ const out=[]; const w=Math.max(1,Math.round((b-a)/n)); for(let i=0;i<n;i++){ const c=a+(b-a)*i/Math.max(1,n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(c-w));j<=Math.min(cn-1,Math.round(c+w));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; };
-  return {I,A,cn,r,bw,mix,css,paper,D:I.D,M:I.M,L:I.L,Acc:I.A,sumi:I.sumi,groups,climax,regAll,density,energy:I.energy,dyn:A.ch?A.ch.dynRange:0.5,accents,contour,win:_hkWin}; }
+  return {I,A,cn,r,bw,mix,css,paper,D:I.D,M:I.M,L:I.L,Acc:I.A,sumi:I.sumi,groups,climax,regAll,density,energy:I.energy,dyn:A.ch?A.ch.dynRange:0.5,accents,contour,win:_hkWin,chords}; }
 // bokashi: a stepped gradient of flat bands (a woodblock has no gradients), c0 at y → c1 at y+h
 function _wvBok(ctx,S,x,y,w,h,c0,c1,n){ for(let i=0;i<n;i++){ ctx.fillStyle=S.css(S.mix(c0,c1,i/(n-1))); ctx.fillRect(x,y+h*i/n,w,h/n+1); } }
 // a smooth path through points (Catmull-Rom as beziers); close=true closes it
@@ -10285,6 +10286,7 @@ function _wvPaint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
           ctx.fillStyle=css(paper); ctx.beginPath(); ctx.arc(bx-s*0.21,by+s*0.62,s*0.035,0,6.2832); ctx.fill();
           ctx.fillStyle=css(sumi); ctx.beginPath(); ctx.moveTo(bx-s*0.46,by+s*0.82); ctx.lineTo(bx-s*0.64,by+s*1.0); ctx.lineTo(bx-s*0.38,by+s*0.92); ctx.closePath(); ctx.fill(); } });
       break; }
+    case 8: { _wvListen(ctx,S,W,H,Dm,rnd,ss); break; }
     default: { // The Great Wave off Kanagawa — the swells are the passages, the great one the climax; its claws the accents, the boats the phrases, Fuji the register
       _wvBok(ctx,S,0,0,W,H*0.26,mix(D,paper,0.5+0.3*(1-S.energy)),paper,7);
       const yS=H*0.62; const rise=win(r,0.05,0.6); const G=S.groups(Math.min(3,Math.max(1,Math.round(nP/12))));
@@ -10308,6 +10310,174 @@ function _wvPaint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
   _setCurE(0.5);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// HOKUSAI LISTENS — not a print chosen from the series, but the one he would cut
+// after hearing this piece. He is not bound to the wave and the mountain: the
+// piece picks its SUBJECT from his world, and inside it every stroke is read
+// from the music. Measured from the notes themselves: pace (notes a second),
+// loudness, major/minor, tension, register, the leaps of the line, how even the
+// onsets are, where the climax is. The subjects, and what calls each:
+//   the lake      — a slow, quiet piece: still water, mist, the far hills, one fisherman at the climax, a ripple per phrase
+//   the waterfall — an even, quick piece (an ostinato): a column of water per voice, white stripes for the notes, the pool, pines on the rock
+//   the bridge    — an even middle pace: the arched bridge, a walker with an umbrella per passage, the rain as dense as the piece
+//   the cranes    — a high, light piece: a flock along the melody's line, reeds below
+//   the carp      — a leaping, quick, bright piece: the stream's current is the contour, a carp leaps at every accent
+//   the snow road — a slow minor piece: the white road, snow-laden pines, a traveller per passage, flakes for the notes
+//   the blossom   — a lyrical high major piece: the bough from the corner, a blossom per note, a bud when soft
+//   the storm     — tension, or a loud minor: the dark sea, the lightning the melody of the loudest phrase, the rain
+//   the wave      — only when the piece truly storms and has a climax: the great one breaks where it is, its claws the accents
+// Fuji stands in the distance only when the piece climbs (a rising contour). The print grows with the piece.
+// ═══════════════════════════════════════════════════════════════════════════
+function _wvListen(ctx,S,W,H,Dm,rnd,ss){
+  const {css,mix,paper,D,M,L,Acc,sumi,r,win,A}=S; const cn=S.cn; const c=S.climax(); const nP=A.phrases.length;
+  const DNA=(typeof globalThis!=='undefined' && globalThis.__PAINT_MUSIC_DNA) || {}; const n01=(v,d)=>(typeof v==='number'?v:d);
+  const tens=n01(DNA.tension,0.1), trend=n01(DNA.contour,0.5);
+  let pace=0.5, loud=0.6, regular=0.5, leaps=0.3, poly=2; try{ const ch=S.chords; let nn=0, t0=null, t1=null; const iv=[]; let prev=null; let vs=0, vn=0; let lp=0, ln=0, ptop=null; let pn=0, pk=0;
+    for(const cc of ch){ if(!cc||!cc.n||!cc.n.length) continue; nn+=cc.n.length; pn+=cc.n.length; pk++; if(typeof cc.startMs==='number'){ if(t0==null) t0=cc.startMs; t1=cc.startMs; if(prev!=null && cc.startMs-prev>30) iv.push(cc.startMs-prev); prev=cc.startMs; } let top=-1; for(const q of cc.n){ vs+=(typeof q.v==='number'?q.v:80)/127; vn++; if((q.m|0)>top) top=q.m|0; } if(ptop!=null){ lp+=Math.abs(top-ptop); ln++; } ptop=top; }
+    const span=Math.max(1,((t1||0)-(t0||0))/1000); const nps=nn/span; pace=Math.max(0,Math.min(1,Math.log2(Math.max(1,nps))/4)); loud=vn?vs/vn:0.6; poly=pk?pn/pk:2;
+    if(iv.length>3){ const so=iv.slice().sort((x,y)=>x-y); const md=so[so.length>>1]; regular=iv.filter(x=>Math.abs(x-md)<md*0.12).length/iv.length; }
+    leaps=ln?Math.max(0,Math.min(1,lp/ln/14)):0.3; }catch(_){}
+  const energy=Math.max(0,Math.min(1,0.6*pace+0.4*(loud-0.2)/0.6)), dens=S.density, reg=S.regAll;
+  const MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88], MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+  let major=true; try{ const w=A.pcW||[]; const t=A.tonic|0; let sm=0,sn=0; for(let i=0;i<12;i++){ const x=w[(t+i)%12]||0; sm+=x*MAJ[i]; sn+=x*MIN[i]; } major=sm>=sn; }catch(_){}
+  // the subject: every one scores against what he hears, the best is cut
+  const mid=(x,a,b)=>(x>=a&&x<=b)?1:0;
+  const score={   // each subject needs its own kind of piece first (else 0), then ranks by how much of it there is
+    lake:      pace<0.4 ? 0.6+(0.4-pace)*4 + (major?0:0.1) : 0,
+    waterfall: (regular>0.7 && pace>0.6) ? (regular-0.6)*2 + (pace-0.5) : 0,
+    bridge:    (regular>0.65 && pace>=0.4 && pace<=0.7) ? 0.5+(regular-0.6)*2 : 0,
+    cranes:    (reg>0.5 && leaps>0.5 && pace>=0.35 && pace<=0.8) ? 0.3+reg*0.8+leaps*0.3 : 0,
+    carp:      (major && leaps>0.55 && pace>0.6) ? 0.4+leaps*0.6+pace*0.3+reg*0.3 : 0,
+    snow:      (!major && pace<0.75) ? 0.8+(1-pace)*0.6 : 0,
+    blossom:   (major && reg>0.5 && pace<0.55) ? 0.4+reg*0.6+(1-pace)*0.4 : 0,
+    storm:     (tens>0.4 || (!major && energy>0.7)) ? 0.6+tens*1.5+(!major?0.2:0) : 0,
+    wave:      (pace>0.65 && c.vmax>0.8 && energy>0.65) ? 0.5+energy*0.5+S.dyn*0.7 : 0,
+  };
+  let subject='lake', best=-1; for(const k in score) if(score[k]>best){ best=score[k]; subject=k; }
+  const night = !major && subject!=='storm' && subject!=='snow' && pace<0.75, dawn = major && pace<0.45 && subject!=='storm';
+  const fuji = trend>0.55 && /^(lake|cranes|snow|bridge|carp)$/.test(subject);
+  try{ globalThis.__HK_LISTEN={subject,score,pace,loud,regular,leaps,poly,energy,reg,tens,trend,major,dyn:S.dyn,night,dawn,fuji,nP,cvmax:c.vmax,ct:c.t}; }catch(_){}
+  const inkS = night ? mix(sumi,D,0.5) : sumi; const ink=(a)=>css(inkS,a);
+  const G=(n)=>S.groups(Math.min(n,Math.max(1,Math.round(nP/Math.max(1,Math.round(nP/n))))));
+  const sky=(y0,y1,c0,c1)=>_wvBok(ctx,S,0,y0,W,y1-y0,c0,c1,9);
+  const moon=(x,y,R)=>{ ctx.fillStyle=css(S.bw?paper:mix(paper,Acc,0.12)); ctx.beginPath(); ctx.arc(x,y,R,0,6.2832); ctx.fill(); };
+  const clouds=(top,bot,n)=>{ const g=G(n); const rr=_seedRnd(81800,ss,0,0); rr(); g.forEach((q)=>{ if(r<q.t0+0.02) return; const y=top+(bot-top)*(0.1+0.8*(1-q.reg)), x0=W*(0.02+0.7*q.t0), len=W*Math.max(0.1,Math.min(0.45,q.dur*1.5+0.06)); const h=H*(0.01+0.012*q.v); ctx.fillStyle=css(night?mix(paper,D,0.35):paper); const k=Math.max(3,Math.round(len/(h*2.2))); for(let i=0;i<k;i++){ const x=x0+len*(i+0.5)/k; ctx.beginPath(); ctx.ellipse(x,y,len/k*0.75,h*(0.8+0.4*rr()),0,0,6.2832); ctx.fill(); } }); };
+  const farFuji=(x,baseY,scale,body)=>{ if(!fuji) return; _wvFuji(ctx,S,x,baseY-H*scale*Math.max(0.03,win(r,0,0.5)),x-W*scale*1.5,baseY,x+W*scale*1.5,baseY,body,night?mix(paper,D,0.3):paper,r>0.5?2+Math.min(5,S.accents(c.a,c.b)):0,rnd); };
+  const boat=(x,y,l,ang,rows)=>{ ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(2,Dm*0.007); ctx.beginPath(); ctx.moveTo(x-l*Math.cos(ang),y+H*0.015-l*Math.sin(ang)); ctx.quadraticCurveTo(x,y+H*0.04,x+l*Math.cos(ang),y+H*0.008+l*Math.sin(ang)); ctx.stroke(); ctx.fillStyle=css(paper); for(let q=0;q<rows;q++){ const px=x-l*0.7+l*1.4*q/Math.max(1,rows-1); ctx.beginPath(); ctx.arc(px,y+H*0.01-(px-x)*Math.tan(ang)*0.5,Dm*0.0035,0,6.2832); ctx.fill(); } };
+  const walker=(px,py,s,hat,umb)=>{ ctx.fillStyle=ink(); _wvPath(ctx,[[px-s*0.5,py],[px-s*0.3,py-s*2],[px+s*0.3,py-s*2.7],[px+s*0.8,py-s*2],[px+s*0.5,py]],true); ctx.fill(); if(hat){ ctx.beginPath(); ctx.ellipse(px+s*0.2,py-s*3,s*0.9,s*0.35,0.2,0,6.2832); ctx.fill(); } if(umb){ ctx.fillStyle=css(umb); ctx.beginPath(); ctx.moveTo(px-s*1.6,py-s*3.2); ctx.quadraticCurveTo(px+s*0.2,py-s*5.2,px+s*2,py-s*3.2); ctx.closePath(); ctx.fill(); ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(0.6,Dm*0.002); ctx.beginPath(); ctx.moveTo(px+s*0.2,py-s*3.2); ctx.lineTo(px+s*0.1,py-s*1.6); ctx.stroke(); } };
+  const pine=(x,base,h,v,snow)=>{ ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1.5,Dm*0.006); ctx.beginPath(); ctx.moveTo(x,base); ctx.quadraticCurveTo(x+W*0.02,base-h*0.5,x-W*0.01,base-h); ctx.stroke(); for(let j=0;j<4;j++){ const u=0.4+0.2*j; const px=x+W*0.01*(1-u), py=base-h*u; const w=W*(0.075-0.014*j)*(0.7+0.3*v); ctx.fillStyle=css(S.bw?mix(D,sumi,0.4):mix(mix(D,[30,70,45],0.5),sumi,0.25)); ctx.beginPath(); ctx.moveTo(px-w,py+H*0.008); ctx.quadraticCurveTo(px-w*0.5,py-H*0.012,px,py-H*0.006); ctx.quadraticCurveTo(px+w*0.5,py-H*0.012,px+w,py+H*0.008); ctx.quadraticCurveTo(px,py+H*0.014,px-w,py+H*0.008); ctx.fill(); if(snow){ ctx.fillStyle=css(paper); ctx.beginPath(); ctx.moveTo(px-w*0.9,py+H*0.004); ctx.quadraticCurveTo(px,py-H*0.016,px+w*0.9,py+H*0.004); ctx.quadraticCurveTo(px,py-H*0.004,px-w*0.9,py+H*0.004); ctx.fill(); } } };
+  const rain=(nr,slant,a)=>{ const rr=_seedRnd(81820,ss,0,0); rr(); ctx.strokeStyle=ink(a==null?0.5:a); ctx.lineWidth=Math.max(0.6,Dm*0.0018); for(let i=0;i<nr;i++){ const x=W*(rr()*1.1-0.05), y=H*rr()*0.95; const len=H*(0.05+0.08*rr()); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+len*slant,y+len); ctx.stroke(); } };
+  const lightning=(x0,y0,y1)=>{ const n=Math.min(12,Math.max(6,c.b-c.a)); const C=S.contour(c.a,c.b,n); const P=[]; for(let i=0;i<n;i++){ const u=i/(n-1); P.push([x0+W*0.22*u+(i%2?-1:1)*W*0.015,y0+(y1-y0)*u+H*0.08*(0.5-C[i])]); } ctx.strokeStyle=css(S.bw?paper:mix(mix(Acc,[250,200,120],0.5),paper,0.25)); ctx.lineWidth=Math.max(2.5,Dm*0.009); ctx.beginPath(); P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke(); ctx.lineWidth=Math.max(1,Dm*0.003); for(let j=2;j<n-2;j+=3){ const q=P[j]; const d=(j%6<3)?1:-1; ctx.beginPath(); ctx.moveTo(q[0],q[1]); ctx.lineTo(q[0]+d*W*0.05,q[1]+H*0.04); ctx.lineTo(q[0]+d*W*0.09,q[1]+H*0.05); ctx.stroke(); } };
+  const skyCol = night ? [S.bw?mix(D,sumi,0.3):mix(D,[12,30,70],0.55), mix(D,paper,0.55)] : dawn ? [S.bw?mix(D,paper,0.2):mix(mix(Acc,[240,150,110],0.5),paper,0.35), paper] : [mix(D,paper,0.55+0.3*(1-energy)), paper];
+  const n=32, C=S.contour(0,cn,n), k=win(r,0,0.96), m=Math.max(2,Math.round(n*k));
+  const seaLine=(hz,amp)=>{ const P=[]; for(let i=0;i<n;i++){ const u=i/(n-1); P.push([-W*0.02+W*1.04*u, hz+H*(amp*(1-C[i])*2-amp)+H*0.02*Math.sin(u*9)]); } return P; };
+  const seaAt=(P,x)=>{ let y=P[0][1]; for(let i=0;i<P.length-1;i++) if(x>=P[i][0]&&x<=P[i+1][0]){ y=P[i][1]+(P[i+1][1]-P[i][1])*(x-P[i][0])/Math.max(1,P[i+1][0]-P[i][0]); } return y; };
+  const swells=(hz,amp,col)=>{ const P=seaLine(hz,amp); const Q=P.slice(0,m); ctx.fillStyle=css(col); _wvPath(ctx,Q.concat([[Q[m-1][0],H*1.02],[-W*0.02,H*1.02]]),true); ctx.fill(); const ns=4+Math.round(dens*26); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.9); ctx.lineWidth=Math.max(1,Dm*0.004); _wvPath(ctx,Q.map(q=>[q[0],q[1]+H*0.035*j]),false); ctx.stroke(); } ctx.strokeStyle=css(paper); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wvPath(ctx,Q,false); ctx.stroke();
+    const E=_kd2Events(A,Math.round(20+dens*60)); const rr=_seedRnd(81810,ss,0,0); rr(); const keep=new Set(E.filter(e=>e.acc).sort((a,b)=>b.v-a.v).slice(0,5).map(e=>e.i));
+    E.forEach(e=>{ if(e.t>k) return; const acc=e.acc&&keep.has(e.i); const x=-W*0.02+W*1.04*e.t, y=seaAt(P,x); if(acc){ const s=Dm*(0.03+0.06*e.v); const cx=x, cy=y-s*0.7; ctx.fillStyle=css(col); ctx.beginPath(); ctx.arc(cx,cy,s,0.9,3.5,true); ctx.arc(cx,cy,s*0.42,3.5,0.9,false); ctx.closePath(); ctx.fill(); const nc=3+Math.round(e.v*3); for(let q=0;q<nc;q++){ const a=2.9+0.7*q/(nc-1); _wvClaw(ctx,[cx+Math.cos(a)*s*0.98,cy+Math.sin(a)*s*0.98],-0.5-0.2*rr(),0.85,s*(0.4+0.35*rr()),css(paper)); } } else if(e.v>0.6){ ctx.fillStyle=css(paper); const d=Dm*(0.002+0.005*e.v); ctx.beginPath(); ctx.arc(x+(rr()-.5)*W*0.03,y+rr()*H*0.04,d,0,6.2832); ctx.fill(); } }); return P; };
+  const boats=(P,nmax,l0)=>{ G(nmax).forEach((g,i)=>{ if(r<g.t0+0.04) return; const x=W*(0.08+0.84*g.t); boat(x,seaAt(P,x),W*(l0+0.07*g.vmax),0.05*(i%2?-1:1),Math.max(2,Math.min(6,Math.round(g.n/8)))); }); };
+  switch(subject){
+    case 'lake': { // the still water: mist, the far hills (a passage each, as high as it is loud), the fisherman at the climax, a ripple per phrase
+      const hz=H*(0.42+0.1*(1-reg)); sky(0,hz,skyCol[0],skyCol[1]); if(night) moon(W*(0.2+0.6*c.t),H*0.12,Dm*0.06); else clouds(H*0.04,hz*0.7,4);
+      farFuji(W*(trend>0.5?0.68:0.32),hz,0.09+0.2*(1-reg),mix(D,paper,0.4));
+      const hills=G(5); hills.forEach((g,i)=>{ if(r<g.t0) return; const x=W*(0.05+0.9*g.t), w=W*(0.14+0.2*g.dur*3), h=H*(0.05+0.12*g.vmax); ctx.fillStyle=css(mix(D,paper,0.5+0.1*(i%3))); ctx.beginPath(); ctx.moveTo(x-w,hz); ctx.quadraticCurveTo(x-w*0.4,hz-h,x,hz-h*0.9); ctx.quadraticCurveTo(x+w*0.5,hz-h*0.8,x+w,hz); ctx.closePath(); ctx.fill(); });
+      ctx.fillStyle=css(night?mix(D,sumi,0.3):mix(D,paper,0.15)); ctx.fillRect(0,hz,W,H-hz); _wvBok(ctx,S,0,hz,W,H*0.12,mix(paper,D,0.35),night?mix(D,sumi,0.3):mix(D,paper,0.15),6);
+      const rip=G(14); ctx.strokeStyle=css(mix(paper,L,0.4),0.9); ctx.lineWidth=Math.max(1,Dm*0.003); rip.forEach((g,i)=>{ if(r<g.t0+0.02) return; const x=W*(0.06+0.88*g.t), y=hz+H*(0.16+0.6*((i*0.37)%1)); const len=W*(0.05+0.14*g.v); ctx.beginPath(); ctx.moveTo(x-len,y); ctx.quadraticCurveTo(x,y-H*0.012,x+len,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x-len*0.7,y+H*0.02); ctx.quadraticCurveTo(x,y+H*0.01,x+len*0.7,y+H*0.02); ctx.stroke(); });
+      if(r>c.t){ const x=W*(0.15+0.7*c.t), y=hz+H*0.3; boat(x,y,W*0.09,0,0); walker(x+W*0.02,y+H*0.012,Dm*0.012,true,null); ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(0.8,Dm*0.002); ctx.beginPath(); ctx.moveTo(x+W*0.03,y-H*0.02); ctx.lineTo(x+W*0.14,y-H*0.09); ctx.stroke(); }
+      // the near shore with a pine or two, in front
+      const sx=c.t<0.5 ? W*0.68 : -W*0.02;   // the shore on the side away from the fisherman
+      ctx.fillStyle=css(mix(M,paper,0.3)); ctx.beginPath(); ctx.moveTo(sx,H*1.02); ctx.lineTo(sx,H*0.86); ctx.quadraticCurveTo(sx+W*0.17,H*0.8,sx+W*0.36,H*0.86); ctx.lineTo(sx+W*0.36,H*1.02); ctx.closePath(); ctx.fill(); pine(sx+W*0.12,H*0.85,H*0.2,0.7,false); if(nP>12) pine(sx+W*0.24,H*0.86,H*0.14,0.5,false);
+      break; }
+    case 'waterfall': { // Kirifuri: a column of water per voice, the white threads the notes, the rock either side, the pool below
+      sky(0,H*0.3,mix(D,paper,0.5),paper); const nc=Math.max(2,Math.min(5,Math.round(poly))); const x0=W*0.26, x1=W*0.74; const top=H*0.08, pool=H*0.78;
+      ctx.fillStyle=css(mix(D,sumi,0.5)); _wvPath(ctx,[[-W*0.02,H*1.02],[-W*0.02,H*0.2],[W*0.12,H*0.14],[W*0.24,H*0.1],[x0+W*0.02,top],[x0-W*0.02,H*0.5],[x0+W*0.02,pool],[W*0.1,H*0.86]],true); ctx.fill();   // the rock, left
+      ctx.fillStyle=css(mix(D,sumi,0.4)); _wvPath(ctx,[[W*1.02,H*1.02],[W*1.02,H*0.16],[W*0.9,H*0.12],[x1-W*0.02,top],[x1+W*0.02,H*0.5],[x1-W*0.02,pool],[W*0.9,H*0.88]],true); ctx.fill();
+      ctx.fillStyle=css(D); ctx.fillRect(x0,top,x1-x0,pool-top);   // the water
+      const kk=win(r,0,0.9); const E=_kd2Events(A,Math.round(30+dens*140)); ctx.strokeStyle=css(paper); 
+      for(let ci=0;ci<nc;ci++){ const cx0=x0+(x1-x0)*(ci+0.08)/nc, cx1=x0+(x1-x0)*(ci+0.92)/nc; ctx.fillStyle=css(mix(D,L,0.35)); ctx.fillRect(cx0,top,cx1-cx0,(pool-top)*kk);
+        E.forEach((e,ei)=>{ if(e.t>kk || ei%nc!==ci) return; const x=cx0+(cx1-cx0)*(0.1+0.8*((ei*0.618)%1)); const y0=top+(pool-top)*e.t*0.9, len=H*(0.04+0.1*e.v); ctx.lineWidth=Math.max(0.8,Dm*(0.002+0.004*e.v)); ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x+(rnd()-.5)*W*0.01,Math.min(pool,y0+len)); ctx.stroke(); }); }
+      ctx.fillStyle=css(mix(D,paper,0.2)); ctx.fillRect(0,pool,W,H-pool); { const rr=_seedRnd(81840,ss,0,0); rr(); for(let i=0;i<14;i++){ const u=i/13; ctx.fillStyle=css(mix(paper,D,0.08),0.55+0.3*rr()); ctx.beginPath(); ctx.ellipse(x0-W*0.06+(x1-x0+W*0.12)*u,pool+H*(0.01-0.05*rr()),W*(0.05+0.05*rr()),H*(0.02+0.03*rr()),0,0,6.2832); ctx.fill(); } }   // the mist at the foot, soft
+      const rip=G(8); ctx.strokeStyle=css(paper,0.85); ctx.lineWidth=Math.max(1,Dm*0.003); rip.forEach((g)=>{ if(r<g.t0+0.02) return; const x=W*(0.1+0.8*g.t), y=pool+H*(0.05+0.12*((g.t*7)%1)); const len=W*(0.04+0.1*g.v); ctx.beginPath(); ctx.moveTo(x-len,y); ctx.quadraticCurveTo(x,y-H*0.012,x+len,y); ctx.stroke(); });
+      pine(W*0.1,H*0.2,H*0.14,0.7,false); pine(W*0.9,H*0.18,H*0.12,0.6,false); if(r>0.3){ walker(W*0.14,H*0.9,Dm*0.012,true,null); walker(W*0.2,H*0.92,Dm*0.012,true,null); }
+      break; }
+    case 'bridge': { // the arched bridge in the rain: a walker with an umbrella per passage, the river under, the rain as dense as the piece
+      sky(0,H*0.5,mix(D,paper,0.3),mix(D,paper,0.75)); farFuji(W*0.3,H*0.5,0.12,mix(D,paper,0.55));
+      const P=seaLine(H*0.6,0.025); ctx.fillStyle=css(mix(D,paper,0.1)); _wvPath(ctx,P.concat([[W*1.03,H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill(); const ns=3+Math.round(dens*14); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.7); ctx.lineWidth=Math.max(1,Dm*0.003); _wvPath(ctx,P.map(q=>[q[0],q[1]+H*0.04*j]),false); ctx.stroke(); }
+      boats(P,3,0.04);
+      const by=H*0.46, arc=H*0.1; const deck=(x)=>by-arc*Math.sin(Math.PI*Math.max(0,Math.min(1,(x+W*0.05)/(W*1.1))));
+      ctx.fillStyle=css(mix(sumi,D,0.25)); ctx.beginPath(); ctx.moveTo(-W*0.05,by+H*0.02); for(let i=0;i<=24;i++){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)); } ctx.lineTo(W*1.05,by+H*0.08); for(let i=24;i>=0;i--){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)+H*0.05); } ctx.closePath(); ctx.fill();
+      ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1,Dm*0.004); for(let i=0;i<=12;i++){ const x=-W*0.03+W*1.06*i/12; ctx.beginPath(); ctx.moveTo(x,deck(x)); ctx.lineTo(x,deck(x)-H*0.03); ctx.stroke(); } ctx.beginPath(); for(let i=0;i<=24;i++){ const x=-W*0.05+W*1.1*i/24; i?ctx.lineTo(x,deck(x)-H*0.03):ctx.moveTo(x,deck(x)-H*0.03); } ctx.stroke();
+      for(let i=1;i<4;i++){ const x=W*(0.25*i); ctx.strokeStyle=ink(0.8); ctx.lineWidth=Math.max(2,Dm*0.008); ctx.beginPath(); ctx.moveTo(x,deck(x)+H*0.05); ctx.lineTo(x,seaAt(P,x)+H*0.02); ctx.stroke(); }   // the piles
+      const wk=G(7); const cols=[mix(Acc,paper,0.2),mix(D,paper,0.3),mix([200,80,60],paper,0.2)]; wk.forEach((g,i)=>{ if(r<g.t0+0.03) return; const x=W*(0.06+0.88*g.t); walker(x,deck(x)-H*0.005,Dm*(0.01+0.006*g.vmax),false,S.bw?mix(paper,D,0.2):cols[i%3]); });
+      rain(Math.round((60+dens*300)*win(r,0.05,0.8)),(trend-0.5)*0.5,0.5);
+      break; }
+    case 'cranes': { // the flock along the melody: a crane per note of the line, white with black wing-tips and the red crown; reeds below
+      sky(0,H*0.72,skyCol[0],skyCol[1]); if(night) moon(W*0.75,H*0.14,Dm*0.07); else clouds(H*0.05,H*0.5,3); farFuji(W*0.5,H*0.72,0.14,mix(D,paper,0.45));
+      ctx.fillStyle=css(mix(D,paper,0.2)); ctx.fillRect(0,H*0.72,W,H*0.28); _wvBok(ctx,S,0,H*0.72,W,H*0.08,mix(paper,D,0.3),mix(D,paper,0.2),5);
+      const E=_kd2Events(A,Math.round(5+dens*12)); const C2=S.contour(0,cn,12);
+      E.forEach(e=>{ if(e.t>r) return; const u=e.t; const i=Math.min(10,Math.floor(u*11)); const f=u*11-i; const cy=C2[i]+(C2[i+1]-C2[i])*f; const x=W*(0.06+0.88*u), y=H*(0.08+0.46*(1-cy))+((e.i*0.618)%1-0.5)*H*0.22; const s=Dm*(0.03+0.05*e.v); const ph=(e.i%3)-1;
+        ctx.fillStyle=css(paper); ctx.beginPath(); ctx.ellipse(x,y,s*0.9,s*0.28,0.1,0,6.2832); ctx.fill();   // the body
+        ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1,Dm*0.003); ctx.beginPath(); ctx.moveTo(x+s*0.8,y-s*0.05); ctx.lineTo(x+s*1.6,y-s*0.5); ctx.stroke(); ctx.fillStyle=ink(); ctx.beginPath(); ctx.ellipse(x+s*1.6,y-s*0.5,s*0.12,s*0.09,0,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.moveTo(x+s*1.7,y-s*0.5); ctx.lineTo(x+s*2.1,y-s*0.42); ctx.lineTo(x+s*1.7,y-s*0.4); ctx.closePath(); ctx.fill();   // neck, head, bill
+        ctx.fillStyle=css(S.bw?mix(paper,D,0.2):[200,50,40]); ctx.beginPath(); ctx.arc(x+s*1.58,y-s*0.58,s*0.05,0,6.2832); ctx.fill();   // the crown
+        ctx.fillStyle=css(paper); ctx.beginPath(); ctx.moveTo(x-s*0.2,y-s*0.1); ctx.quadraticCurveTo(x-s*0.3,y-s*(0.9+0.5*ph),x+s*0.5,y-s*(1.2+0.6*ph)); ctx.lineTo(x+s*0.3,y-s*0.2); ctx.closePath(); ctx.fill(); ctx.fillStyle=ink(); ctx.beginPath(); ctx.moveTo(x+s*0.5,y-s*(1.2+0.6*ph)); ctx.lineTo(x+s*0.2,y-s*(1.0+0.5*ph)); ctx.lineTo(x+s*0.35,y-s*(0.8+0.5*ph)); ctx.closePath(); ctx.fill();   // the wing and its black tips
+        ctx.fillStyle=css(paper); ctx.beginPath(); ctx.moveTo(x-s*0.3,y+s*0.05); ctx.quadraticCurveTo(x-s*0.2,y+s*(0.7+0.4*ph),x+s*0.4,y+s*(0.9+0.4*ph)); ctx.lineTo(x+s*0.3,y+s*0.15); ctx.closePath(); ctx.fill(); ctx.fillStyle=ink(); ctx.beginPath(); ctx.moveTo(x-s*1.0,y); ctx.lineTo(x-s*0.6,y-s*0.2); ctx.lineTo(x-s*0.6,y+s*0.2); ctx.closePath(); ctx.fill();   // the lower wing, the tail
+        ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(0.8,Dm*0.002); ctx.beginPath(); ctx.moveTo(x-s*0.7,y+s*0.1); ctx.lineTo(x-s*1.5,y+s*0.3); ctx.stroke(); });   // the legs trailing
+      const rr=_seedRnd(81830,ss,0,0); rr(); ctx.strokeStyle=ink(0.8); for(let i=0;i<24;i++){ const x=W*rr(), h=H*(0.08+0.14*rr()); ctx.lineWidth=Math.max(1,Dm*0.003); ctx.beginPath(); ctx.moveTo(x,H*1.02); ctx.quadraticCurveTo(x+W*0.02,H-h*0.5,x+W*0.04*(rr()-.3),H-h); ctx.stroke(); }   // the reeds
+      break; }
+    case 'carp': { // the stream: its current the melody, a carp leaping at every accent (the loud ones), the rocks the long rests
+      sky(0,H*0.2,mix(D,paper,0.5),paper); const P=seaLine(H*0.3,0.06); ctx.fillStyle=css(D); _wvPath(ctx,P.concat([[W*1.03,H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill();
+      const ns=6+Math.round(dens*30); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:paper,0.8); ctx.lineWidth=Math.max(1,Dm*0.003); _wvPath(ctx,P.map(q=>[q[0],q[1]+H*0.7*j/ns+H*0.02*Math.sin(j+q[0]/W*7)]),false); ctx.stroke(); }
+      const rocks=A.phrases.filter(p=>p.n>=6 && p.v<0.4).slice(0,4); rocks.forEach((p)=>{ if(r<p.t0) return; const x=W*(0.1+0.8*p.t), y=H*(0.4+0.5*((p.t*3)%1)); ctx.fillStyle=css(mix(sumi,D,0.3)); ctx.beginPath(); ctx.ellipse(x,y,W*0.07,H*0.03,0.2,0,6.2832); ctx.fill(); ctx.strokeStyle=css(paper,0.8); ctx.lineWidth=Math.max(1,Dm*0.003); ctx.beginPath(); ctx.moveTo(x-W*0.09,y+H*0.01); ctx.quadraticCurveTo(x,y+H*0.05,x+W*0.09,y+H*0.01); ctx.stroke(); });
+      const nk=4+Math.round(dens*6); const keep=[]; for(let q=0;q<nk;q++){ let b=null; for(let i=Math.floor(cn*q/nk);i<Math.floor(cn*(q+1)/nk);i++){ const e=A.ev[i]; if(e && (!b || e.v>b.v)) b=e; } if(b) keep.push(b); }   // the loudest chord of every stretch: a carp each, across the whole piece
+      const orange=S.bw?mix(paper,D,0.3):[214,110,50];
+      keep.forEach(e=>{ if(e.t>r) return; const x=W*(0.08+0.84*e.t), y=H*(0.35+0.5*((e.i*0.618)%1)); const s=Dm*(0.05+0.07*e.v); const a=-0.9+(e.i%2)*1.8;
+        ctx.save(); ctx.translate(x,y); ctx.rotate(a); ctx.fillStyle=css(e.i%3?orange:mix(sumi,D,0.4)); ctx.beginPath(); ctx.moveTo(-s,0); ctx.quadraticCurveTo(-s*0.3,-s*0.5,s*0.7,-s*0.1); ctx.quadraticCurveTo(s*1.1,0,s*0.7,s*0.1); ctx.quadraticCurveTo(-s*0.3,s*0.5,-s,0); ctx.fill(); ctx.beginPath(); ctx.moveTo(-s*0.95,0); ctx.lineTo(-s*1.5,-s*0.45); ctx.lineTo(-s*1.3,0); ctx.lineTo(-s*1.5,s*0.45); ctx.closePath(); ctx.fill();   // the body, the tail
+        ctx.strokeStyle=ink(0.8); ctx.lineWidth=Math.max(0.8,Dm*0.002); for(let q=0;q<4;q++){ ctx.beginPath(); ctx.arc(-s*0.5+s*0.35*q,0,s*0.22,-1.2,1.2); ctx.stroke(); } ctx.fillStyle=ink(); ctx.beginPath(); ctx.arc(s*0.65,-s*0.08,s*0.05,0,6.2832); ctx.fill(); ctx.restore();   // the scales, the eye
+        ctx.fillStyle=css(paper); for(let q=0;q<5;q++){ ctx.beginPath(); ctx.arc(x+(rnd()-.5)*s*2,y+s*0.6+rnd()*s*0.6,s*0.06,0,6.2832); ctx.fill(); } });
+      break; }
+    case 'snow': { // the snow road: grey sky, the white road, snow-laden pines, a traveller per passage bent into the cold, a flake for every note
+      sky(0,H*0.5,mix(D,sumi,0.3),mix(D,paper,0.6)); farFuji(W*0.5,H*0.5,0.16,mix(D,paper,0.5));
+      ctx.fillStyle=css(paper); ctx.fillRect(0,H*0.5,W,H*0.5); ctx.fillStyle=css(mix(paper,D,0.08)); ctx.beginPath(); ctx.moveTo(-W*0.02,H*0.5); for(let i=0;i<=16;i++){ const u=i/16; ctx.lineTo(-W*0.02+W*1.04*u,H*(0.5+0.06*Math.sin(u*5+1)+0.03*Math.sin(u*13))); } ctx.lineTo(W*1.02,H*0.62); ctx.lineTo(-W*0.02,H*0.64); ctx.closePath(); ctx.fill();   // the far field
+      ctx.fillStyle=css(mix(paper,M,0.3)); ctx.beginPath(); ctx.moveTo(-W*0.02,H*0.78); ctx.quadraticCurveTo(W*0.3,H*0.7,W*0.6,H*0.76); ctx.quadraticCurveTo(W*0.85,H*0.8,W*1.02,H*0.72); ctx.lineTo(W*1.02,H*0.8); ctx.quadraticCurveTo(W*0.8,H*0.9,W*0.6,H*0.86); ctx.quadraticCurveTo(W*0.3,H*0.82,-W*0.02,H*0.92); ctx.closePath(); ctx.fill();   // the road
+      pine(W*0.12,H*0.72,H*0.3,0.8,true); pine(W*0.88,H*0.7,H*0.24,0.6,true); if(nP>20) pine(W*0.3,H*0.66,H*0.14,0.4,true);
+      G(6).forEach((g,i)=>{ if(r<g.t0+0.03) return; const x=W*(0.08+0.84*g.t), y=H*(0.8+0.04*Math.sin(x/W*6)); walker(x,y,Dm*(0.01+0.008*g.vmax),true,null); });
+      const E=_kd2Events(A,Math.round(40+dens*200)); ctx.fillStyle=css(paper); E.forEach(e=>{ if(e.t>r) return; const x=W*rnd(), y=H*0.5*rnd(); ctx.beginPath(); ctx.arc(x,y,Dm*(0.002+0.004*e.v),0,6.2832); ctx.fill(); });
+      ctx.fillStyle=css(mix(paper,D,0.15)); E.forEach(e=>{ if(e.t>r) return; const x=W*rnd(), y=H*(0.5+0.5*rnd()); ctx.beginPath(); ctx.arc(x,y,Dm*(0.002+0.003*e.v),0,6.2832); ctx.fill(); });
+      break; }
+    case 'blossom': { // the bough from the corner: it follows the melody, a blossom for every note (open when loud, a bud when soft), the bullfinch at the climax
+      sky(0,H,night?skyCol[0]:(S.bw?mix(D,sumi,0.2):mix(D,[16,48,100],0.45)),mix(D,paper,0.5)); if(night) moon(W*0.3,H*0.7,Dm*0.08);
+      const nn=12; const C2=S.contour(0,cn,nn); const fromR=trend<0.5; const Pb=[]; for(let i=0;i<nn;i++){ const u=i/(nn-1); Pb.push([fromR ? W*(1.04-0.92*u) : W*(-0.04+0.92*u), H*(0.07+0.26*u)+H*0.08*(0.5-C2[i])]); }
+      const kb=win(r,0,0.6); const mb=Math.max(2,Math.round(nn*kb)); ctx.strokeStyle=ink(); for(let i=0;i<mb-1;i++){ ctx.lineWidth=Math.max(1.5,Dm*(0.022-0.017*i/(nn-1))); ctx.beginPath(); ctx.moveTo(Pb[i][0],Pb[i][1]); ctx.lineTo(Pb[i+1][0],Pb[i+1][1]); ctx.stroke(); }
+      const at=(u)=>{ const i=Math.min(nn-2,Math.floor(u*(nn-1))); const f=u*(nn-1)-i; return [Pb[i][0]+(Pb[i+1][0]-Pb[i][0])*f,Pb[i][1]+(Pb[i+1][1]-Pb[i][1])*f]; };
+      const gg=G(8); const E=_kd2Events(A,Math.round(20+dens*180)); const pink=S.bw?mix(paper,D,0.1):mix([246,196,206],Acc,0.12), deep=S.bw?mix(paper,D,0.35):mix([214,120,150],Acc,0.2);
+      gg.forEach((g)=>{ if(g.t0>r) return; const a0=at(g.t); const len=H*(0.22+0.3*Math.min(2,g.dur*gg.length)); const sway=W*(0.12*(g.reg-0.5)-0.05); const tip=[a0[0]+sway,a0[1]+len]; const mid=[a0[0]+sway*0.2-W*0.04,a0[1]+len*0.5]; const kk=win(r,g.t0,Math.min(1,g.t0+0.08));
+        const tw=(f)=>[ (1-f)*(1-f)*a0[0]+2*(1-f)*f*mid[0]+f*f*tip[0], (1-f)*(1-f)*a0[1]+2*(1-f)*f*mid[1]+f*f*tip[1] ];
+        ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1,Dm*0.004); ctx.beginPath(); ctx.moveTo(a0[0],a0[1]); const e1=tw(kk); ctx.quadraticCurveTo((1-kk)*a0[0]+kk*mid[0],(1-kk)*a0[1]+kk*mid[1],e1[0],e1[1]); ctx.stroke();
+        E.forEach(e=>{ if(e.t<g.t0||e.t>=g.t1||e.t>r) return; const f=0.08+0.9*(e.t-g.t0)/Math.max(0.001,g.t1-g.t0); const q=tw(f); const side=(e.i%2?1:-1); const x=q[0]+side*Dm*(0.012+0.02*rnd()), y=q[1]+Dm*0.01*rnd(); const R=Dm*(0.012+0.02*e.v);
+          ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(0.7,Dm*0.002); ctx.beginPath(); ctx.moveTo(q[0],q[1]); ctx.lineTo(x,y); ctx.stroke();
+          if(e.v<0.5&&!e.acc){ ctx.fillStyle=css(deep); ctx.beginPath(); ctx.ellipse(x,y,R*0.7,R*1.05,side*0.3,0,6.2832); ctx.fill(); return; }
+          ctx.fillStyle=css(pink); for(let p5=0;p5<5;p5++){ const a=p5/5*6.2832+rnd()*0.3; ctx.beginPath(); ctx.ellipse(x+Math.cos(a)*R*0.62,y+Math.sin(a)*R*0.62,R*0.5,R*0.36,a,0,6.2832); ctx.fill(); }
+          ctx.fillStyle=css(deep); ctx.beginPath(); ctx.arc(x,y,R*0.18,0,6.2832); ctx.fill(); }); });
+      break; }
+    case 'storm': { // the dark sea in the storm: the lightning is the loudest phrase, the rain as dense as the piece, the boats fight the swells
+      sky(0,H*0.5,mix(D,sumi,0.35),mix(D,paper,0.6)); const P=swells(H*0.52,0.06+0.06*S.dyn,mix(D,sumi,0.2)); boats(P,4,0.05);
+      if(r>c.t) lightning(W*(0.1+0.6*c.t),H*0.03,H*0.45); rain(Math.round((80+dens*300)*win(r,0.05,0.8)),0.45,0.5);
+      break; }
+    default: { // the great wave: it breaks where the climax is, as tall as it is loud; its claws the accents; the rest of the piece as swells beyond it; the boats a passage each
+      sky(0,H*0.5,skyCol[0],skyCol[1]); if(!night) clouds(H*0.04,H*0.3,3); const hz=H*0.5; if(trend>0.5) farFuji(W*(c.t>0.5?0.26:0.74),hz+H*0.06,0.1,mix(D,paper,0.3));
+      const xc=Math.max(W*0.16,Math.min(W*0.56,W*c.t)), H1=H*(0.13+0.17*c.vmax)*Math.max(0.05,win(r,Math.max(0,c.t-0.25),Math.min(1,c.t+0.05))); const yS=hz+H*0.06, yc=yS-H1; const lipx=xc+W*0.36;
+      const B=[[-W*0.03,yS+H*0.02],[xc-W*0.34,yS-H1*0.1],[xc-W*0.18,yc+H1*0.35],[xc-W*0.07,yc+H1*0.06],[xc,yc],[xc+W*0.14,yc-H1*0.05],[xc+W*0.26,yc+H1*0.08]];
+      const P0=seaLine(hz+H*0.08,0.04); const Pw=B.concat([[lipx,yc+H1*0.3],[lipx-W*0.04,yc+H1*0.46],[lipx-W*0.14,yc+H1*0.4],[lipx-W*0.17,yc+H1*0.62],[lipx-W*0.1,yS-H*0.04],[lipx-W*0.01,yS+H*0.02]]);
+      for(let i=0;i<n;i++) if(P0[i][0]>lipx+W*0.02 && i<m) Pw.push([P0[i][0],Math.min(P0[i][1],yS+H*0.02)]); Pw.push([Math.max(lipx+W*0.03,P0[m-1][0]),yS+H*0.03]);
+      const seaCol=night?mix(D,sumi,0.3):D; ctx.fillStyle=css(seaCol); _wvPath(ctx,Pw.concat([[Pw[Pw.length-1][0],H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill();
+      const ns=3+Math.round(dens*25); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.85); ctx.lineWidth=Math.max(1,Dm*0.0045); _wvPath(ctx,B.map(q=>[q[0],q[1]+H*0.028*j]),false); ctx.stroke(); }
+      ctx.strokeStyle=css(mix(paper,L,0.3)); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wvPath(ctx,B,false); ctx.stroke();
+      if(r>c.t){ const na=7+Math.min(9,S.accents(c.a,c.b)); const kk=win(r,c.t,Math.min(1,c.t+0.2)); const mm=Math.round(na*kk); for(let i=0;i<mm;i++){ const u=i/(na-1); const q=[xc+(lipx-xc)*u,yc-H1*0.06*Math.sin(u*3.14)+(H1*0.3)*u*u*0.9]; const len=Dm*(0.05+0.09*c.vmax)*(1.15-0.7*u); const a=2.3+0.6*u; _wvClaw(ctx,q,Math.cos(a),Math.sin(a),len,css(paper)); }
+        ctx.fillStyle=css(paper); const nd=Math.round((30+dens*260)*win(r,c.t,1)); for(let i=0;i<nd;i++){ const x=xc+W*0.34*rnd(), y=yc+H1*(0.25+0.9*rnd()); if(y>yS+H*0.02) continue; const d=Dm*(0.0025+0.006*rnd()); ctx.beginPath(); ctx.arc(x,y,d,0,6.2832); ctx.fill(); } }
+      boats(Pw,4,0.05); if(reg>0.5 && pace>0.55){ const E=_kd2Events(A,Math.round(10+dens*30)); ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1,Dm*0.004); const C2=S.contour(0,cn,12); E.forEach(e=>{ if(e.t>r || A.reg(e.top)<0.55) return; const u=e.t; const i=Math.min(10,Math.floor(u*11)); const f=u*11-i; const cy=C2[i]+(C2[i+1]-C2[i])*f; const x=W*(0.06+0.88*u), y=hz*(0.15+0.65*(1-cy))+(rnd()-.5)*H*0.04; const s=Dm*(0.006+0.012*e.v); ctx.beginPath(); ctx.moveTo(x-s*1.4,y+s*0.3); ctx.quadraticCurveTo(x-s*0.6,y-s*0.6,x,y); ctx.quadraticCurveTo(x+s*0.6,y-s*0.6,x+s*1.4,y+s*0.3); ctx.stroke(); }); }   // the plovers, when it sings high and quick
+    }
+  }
+}
 // _hkWin(r,a,b) eases 0→1 over r∈[a,b] — the reveal windows of the prints above.
 function _hkWin(r, a, b){ const x=Math.max(0, Math.min(1, (r-a)/Math.max(1e-6, b-a))); return x*x*(3-2*x); }
 // ── HK v2: note-driven woodblock ink-set. The song's tonal centre becomes
@@ -15935,7 +16105,6 @@ const ARTIST_VARIANTS = {
     {ground:'#3a3ad0',mark:{cutout:1},size:[.1,.3],layout:{scatter:1},density:.15,tone:'dark'},
     {ground:'#8a7a9a',mark:{stem:.6,panel:.4},size:[.08,.3],layout:{grid:1},density:.4},
     {ground:'#e8e2cc',mark:{leaf:1},size:[.08,.3],layout:{radial:1},density:.25},
-    {ground:'#6a8a3a',mark:{panel:.5,cutout:.5},size:[.04,.12],layout:{grid:1},density:1},
     {ground:'#e8e2cc',mark:{panel:.6,cutout:.4},size:[.1,.35],layout:{scatter:1},density:.15},
     {ground:'#141418',mark:{cutout:.5,star:.3,panel:.2},size:[.08,.25],layout:{scatter:1},density:.2},   // Jazz
   ],
@@ -15992,7 +16161,6 @@ const ARTIST_VARIANTS = {
     {mark:{disc:.5,beam:.3,panel:.2},size:[.1,.35],alpha:.7,layout:{scatter:1},density:.4},
     {mark:{arch:.6,panel:.4},size:[.15,.45],layout:{stack:1},density:.3},
     {mark:{nest:1},size:[.2,.45],layout:{scatter:1},density:.1},   // Homage to the Square (Josef Albers)
-    {mark:{gridline:.5,disc:.3,panel:.2},size:[.1,.3],layout:{grid:1},density:.4},
     {ground:'#ece4d4',mark:{panel:.5,zigzag:.2,stripes:.2,checker:.1},size:[.08,.2],layout:{grid:1},density:.5},   // Colour weaving (Stölzl)
     {ground:'#eae5da',mark:{beam:.5,disc:.3,bar:.2},size:[.12,.4],alpha:.55,layout:{scatter:1},density:.25},   // Construction (Moholy-Nagy)
   ],
@@ -16092,12 +16260,12 @@ const ARTIST_VARIANTS = {
     {ground:'#d8e0d0',mark:{surface:.85,stem:.15},size:[.09,.14],edge:0,alpha:.92,layout:{grid:.6,field:.4},density:.9},   // Peupliers
     {ground:'#4a6a5a',mark:{surface:.9,arc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.6,scatter:.4},density:.9},   // Pont japonais
   ],
-  hokusai: [   // slot order = solo variants: Great Wave, Red Fuji, Thunderstorm, Kajikazawa, Masculine Wave, Poppies, Ejiri gust, Weeping Cherry
+  hokusai: [   // slot order = solo variants: What he heard, Great Wave, Red Fuji, Thunderstorm, Kajikazawa, Poppies, Ejiri gust, Weeping Cherry
+    {mark:{crest:.4,fuji:.2,cloud:.2,arc:.2},size:[.05,.2],layout:{flow:.6,stack:.4},density:.25},   // What he heard: the whole of his world, read from the piece
     {mark:{crest:.6,fuji:.2,arc:.2},size:[.06,.2],layout:{flow:1},density:.2},
     {ground:'#e6e0d0',mark:{fuji:.6,cloud:.4},size:[.12,.35],layout:{stack:1},density:.2},
     {ground:'#2a2a36',mark:{fuji:.5,zigzag:.3,beam:.2},size:[.1,.3],layout:{stack:1},density:.2,tone:'dark'},
     {ground:'#1b3a5b',mark:{crest:.6,arc:.2,fuji:.2},size:[.04,.12],layout:{flow:1},density:.3,tone:'dark'},
-    {mark:{crest:.6,dot:.4},size:[.03,.12],layout:{flow:1},density:.35},
     {ground:'#e8e2cc',mark:{petal:.6,stem:.4},size:[.06,.2],layout:{grid:1},density:.3},
     {ground:'#e6e0d0',mark:{paper:.7,fuji:.3},size:[.02,.06],layout:{scatter:1},density:.4},
     {ground:'#1e3f6e',mark:{petal:.7,stem:.3},size:[.02,.06],layout:{flow:1},density:.4,tone:'dark'},
@@ -16145,7 +16313,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:9,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:9,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:7,matisse:8,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:6,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
@@ -17135,7 +17303,7 @@ function drawBauhausOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // Reveal fraction so the painting builds up with playback.
   const revealFrac = Math.max(0, Math.min(1, lim / cn));
 
-  const _pn=_capN(9); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(8); const pick=[0,1,2,3,4,5,7,8][((phaseIndex|0)%_pn+_pn)%_pn];   // 8 of the nine below: Lines (6) retired
   if(pick===1){ bauhausPhaseHanging(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
