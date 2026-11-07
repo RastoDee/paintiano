@@ -5844,6 +5844,81 @@ function _pc2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
 // the beat inside the beat. A rare small black plane for the accents.
 const _MNV_PRIM=[[214,38,34],[246,206,36],[28,74,164]], _MNV_WHITE=[246,243,236], _MNV_WHITE2=[236,232,222], _MNV_SEAM=[200,196,188], _MNV_GREYS=[[214,211,204],[176,173,168]], _MNV_BLACK=[26,24,26];
 function _mnvPrim(rgb){ const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]), d=mx-mn; if(d<18) return 0; let h= mx===rgb[0]?((rgb[1]-rgb[2])/d)%6 : mx===rgb[1]?(rgb[2]-rgb[0])/d+2 : (rgb[0]-rgb[1])/d+4; h*=60; if(h<0) h+=360; return (h<35||h>=300)?0:(h<150)?1:2; }
+// a chord colour snapped to Mondrian's primaries (the piece decides the mix: warm pieces red and yellow, cold ones blue); grey steps in B&W, lightened in Pastel
+function _mdSnap(rgb,isBW){ const k=_mnvPrim(rgb); if(isBW) return [[70,70,70],[200,200,200],[120,120,120]][k]; const c=_MNV_PRIM[k]; return _pastelOn ? c.map(v=>Math.round(v+(255-v)*0.42)) : c.slice(); }
+// ── Mondrian B · Composition with Red, Yellow and Blue (1930) — the classic tableau: white,
+// a few thick black lines, the great plane in one primary, two small ones. The lines fall
+// where the piece's sections fall; the great plane is the climax, in its chord's primary.
+function mondrianPhaseClassic(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn, D=Math.min(CW,CH); const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A);
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const r=_seedRnd(3901,ss,0,0); r();
+  ctx.fillStyle=isBW?'#ece9e2':'#f6f3ec'; ctx.fillRect(0,0,CW,CH);
+  const lw=Math.max(4,Math.round(D*(0.016+0.012*X.loud)));
+  // the lines: 2–3 verticals and 2–3 horizontals, from the section boundaries, never evenly spaced
+  const G=_kd2Phrases(A,3); const vx=[], hy=[];
+  vx.push(CW*(0.2+0.25*(G[0]?G[0].t1:0.35))); vx.push(CW*(0.62+0.3*(G[1]?G[1].t1:0.7))); if(X.poly>=2.5) vx.push(CW*(0.08+0.08*r()));
+  hy.push(CH*(0.18+0.2*A.reg(c.top))); hy.push(CH*(0.7+0.2*(1-A.reg(G[0]?G[0].top:60)))); if(X.poly>=2.5) hy.push(CH*(0.9+0.05*r()));
+  const bigX=vx[0], bigY=hy[0];   // the great plane: top left
+  // the planes first (under the lines)
+  const big=_mdSnap(_picChord(chords,Math.min(cn-1,Math.max(0,c.a)),gc,isBW).rgb,isBW);
+  const items=[ {t:c.t0, x:0, y:0, w:bigX, h:bigY, col:big},
+    {t:(G[1]||c).t0, x:vx[1], y:hy[1], w:CW-vx[1], h:CH-hy[1], col:_mdSnap(_picChord(chords,Math.min(cn-1,Math.floor(((G[1]||c).t)*cn)),gc,isBW).rgb,isBW)},
+    {t:(G[2]||c).t0, x:0, y:hy[1], w:vx[0]*0.5, h:CH-hy[1], col:_mdSnap(_picChord(chords,Math.min(cn-1,Math.floor(((G[2]||c).t)*cn)),gc,isBW).rgb,isBW)} ];
+  if(!X.major){ items.push({t:0.5,x:vx[1],y:0,w:CW-vx[1],h:hy[0]*0.5,col:isBW?[30,30,30]:[22,20,20]}); }
+  items.sort((a,b)=>a.t-b.t); const vis=Math.ceil(items.length*reveal);
+  for(let i=0;i<vis;i++){ const it=items[i]; ctx.fillStyle=`rgb(${it.col[0]},${it.col[1]},${it.col[2]})`; ctx.fillRect(it.x,it.y,it.w,it.h); }
+  ctx.fillStyle=isBW?'#141414':'#141210'; const nl=vx.length+hy.length; const vl=Math.ceil(nl*reveal);
+  const lines=[...vx.map(x=>['v',x]),...hy.map(y=>['h',y])].sort((a,b)=>a[1]/(a[0]==='v'?CW:CH)-b[1]/(b[0]==='v'?CW:CH));
+  for(let i=0;i<vl;i++){ const [k,p]=lines[i]; if(k==='v') ctx.fillRect(p-lw/2,0,lw,CH); else ctx.fillRect(0,p-lw/2,CW,lw); }
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// MONDRIAN LISTENS — not one of the paintings above: the neoplastic grid the
+// piece itself draws. A vertical line where a section begins (time), a
+// horizontal where a voice sits (register); the lines as thick as the piece is
+// loud, doubled when it is quick; the planes between them white, and coloured —
+// in the chord's primary — where the section is loud; a black plane where it is
+// heaviest; the climax the largest coloured plane.
+// ═══════════════════════════════════════════════════════════════════════════
+function _mdListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn, D=Math.min(CW,CH); const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const r=_seedRnd(3951,ss,0,0); r();
+  const nS=Math.max(2,Math.min(6,Math.round(2+(A.ch?A.ch.density:0.3)*5))); const G=_kd2Phrases(A,nS); const nV=G.length;
+  // the voices' registers → horizontals
+  const regs=[]; { const top=A.reg(A.phrases.reduce((s,p)=>s+p.top*p.n,0)/Math.max(1,cn)); const bass=A.reg(A.phrases.reduce((s,p)=>s+p.bass*p.n,0)/Math.max(1,cn)); regs.push(1-top); if(poly>=1.8) regs.push(1-bass); if(poly>=2.8) regs.push(1-(top+bass)/2+0.08); }
+  const vx=G.slice(0,nV-1).map(g=>CW*(0.08+0.84*g.t1)); const hy=regs.map(v=>CH*(0.12+0.76*Math.max(0,Math.min(1,v)))).sort((a,b)=>a-b);
+  const double = pace>0.8; const lw=Math.max(3,Math.round(D*(0.012+0.014*loud)));
+  try{ globalThis.__MD_LISTEN={nV,nH:hy.length,double,pace,loud,regular,leaps,poly,major,tens,trend}; }catch(_){}
+  ctx.fillStyle=isBW?'#ece9e2':'#f6f3ec'; ctx.fillRect(0,0,CW,CH);
+  // the planes: a cell per (section, band); coloured when the section is loud, black when heavy and minor
+  const xs=[0,...vx,CW], ys=[0,...hy,CH]; const items=[];
+  G.forEach((g,i)=>{ const col=_mdSnap(_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb,isBW); const loudS=g.vmax>=A.vHi*0.97 || g===c;
+    for(let j=0;j<ys.length-1;j++){ const u=r(); let fill=null; if(loudS && (j===Math.floor((1-A.reg(g.top))*(ys.length-1)) || (g===c && u<0.5))) fill=col; else if(!major && g.v<0.45 && u<0.35) fill=isBW?[30,30,30]:[22,20,20]; else if(u<0.05) fill=isBW?[200,200,200]:[214,211,204];
+      if(fill) items.push({t:g.t0+(g.t1-g.t0)*j/ys.length, x:xs[i], y:ys[j], w:xs[i+1]-xs[i], h:ys[j+1]-ys[j], col:fill}); } });
+  items.sort((a,b)=>a.t-b.t); const vis=Math.ceil(items.length*reveal); for(let i=0;i<vis;i++){ const it=items[i]; ctx.fillStyle=`rgb(${it.col[0]},${it.col[1]},${it.col[2]})`; ctx.fillRect(it.x,it.y,it.w,it.h); }
+  // the lines, in time (the verticals as their sections arrive, the horizontals with the first)
+  ctx.fillStyle=isBW?'#141414':'#141210'; const lines=[...hy.map(y=>({t:0.02,k:'h',p:y})),...vx.map((x,i)=>({t:G[i].t1,k:'v',p:x}))].sort((a,b)=>a.t-b.t); const vl=Math.ceil(lines.length*reveal);
+  for(let i=0;i<vl;i++){ const L=lines[i]; if(L.k==='v'){ ctx.fillRect(L.p-lw/2,0,lw,CH); if(double) ctx.fillRect(L.p+lw*1.2,0,lw*0.7,CH); } else { ctx.fillRect(0,L.p-lw/2,CW,lw); if(double) ctx.fillRect(0,L.p+lw*1.2,CW,lw*0.7); } }
+  _setCurE(0.5);
+}
+// ── Mondrian H · Checkerboard with Dark Colours (1919) — the even grid of cells before the
+// black line; every cell a chord in its primary or a grey, read row by row; the loud chords
+// the saturated cells, the quiet ones the greys, so the piece's dynamics pattern the board.
+function mondrianPhaseCheckerboard(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A);
+  const r=_seedRnd(3971,ss,0,0); r();
+  const cols=Math.max(8,Math.min(16,Math.round(8+(A.ch?A.ch.density:0.3)*8))); const cw=CW/cols, rows=Math.round(CH/cw); const chh=CH/rows; const tot=cols*rows;
+  ctx.fillStyle=isBW?'#dcd9d2':'#e4dfd2'; ctx.fillRect(0,0,CW,CH);
+  const GREYS=isBW?[[150,150,150],[190,190,190],[110,110,110]]:[[176,170,158],[206,200,188],[128,122,112]]; const dark=!X.major;
+  const vis=Math.ceil(tot*reveal);
+  for(let q=0;q<vis;q++){ const i=q%cols, j=Math.floor(q/cols); const ci=Math.min(cn-1,Math.floor(q/tot*cn)); const e=A.ev[ci]; const v=e?e.v:0.5; const rgb=_picChord(chords,ci,gc,isBW).rgb;
+    let col; const u=r(); if(v>=A.vHi*0.97 && u<0.5) col=_mdSnap(rgb,isBW); else if(u<0.75) col=isBW?[232,232,228]:[238,234,224]; else col=GREYS[(i+j+((r()*3)|0))%3]; if(dark) col=col.map(c=>c*0.8);
+    ctx.fillStyle=`rgb(${col[0]|0},${col[1]|0},${col[2]|0})`; ctx.fillRect(i*cw,j*chh,cw+0.5,chh+0.5); }
+  ctx.strokeStyle=isBW?'rgba(40,40,40,0.5)':'rgba(60,56,50,0.45)'; ctx.lineWidth=Math.max(1,CW*0.002); for(let i=1;i<cols;i++){ ctx.beginPath(); ctx.moveTo(i*cw,0); ctx.lineTo(i*cw,CH); ctx.stroke(); } for(let j=1;j<rows;j++){ ctx.beginPath(); ctx.moveTo(0,j*chh); ctx.lineTo(CW,j*chh); ctx.stroke(); }
+  _setCurE(0.5);
+}
 function mondrianPhaseVictory(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length; const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; const dens=_ch?_ch.density:0.4;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), css=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
@@ -5927,12 +6002,8 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
     // force full saturation so the block reads as a bold Mondrian color.
     if(bestSat<=6) return [Math.round(best[0]),Math.round(best[1]),Math.round(best[2])];
     // Pastel tone: skip the force-saturation push, return the gc colour as-is.
-    if(_pastelOn) return [Math.round(best[0]),Math.round(best[1]),Math.round(best[2])];
-    // Push toward a pure, vivid hue: stretch brightest channel to 255, deepen others hard.
-    const mx=Math.max(best[0],best[1],best[2],1),k=255/mx;
-    let R=best[0]*k,G=best[1]*k,B=best[2]*k,m2=Math.max(R,G,B);
-    const pull=c=>c===m2?c:c*0.55; // harder pull than bold() -> more saturated
-    return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
+    // snapped to the primaries: the piece decides the mix
+    return _mdSnap(best,isBW);
   };
 
   // ── STYLE CHOOSER: commit to ONE of Mondrian's real phases per painting ──
@@ -5945,9 +6016,13 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   //  F = Lozenge (diamond canvas, grid rotated 45°)
   //  G = Tree (abstraction of branching lines)
   //  H = Pier & Ocean (scattered plus/minus marks forming a mesh)
-  const PHASES = ['A','B','C','D','E','F','G','H'];
+  // VARIANT: 0 What he heard (_mdListen, generative) · 1 Victory Boogie Woogie · 2 Composition with Red, Yellow and Blue · 3 New York City · 4 Broadway Boogie Woogie · 5 Lozenge · 6 Gray Tree · 7 Checkerboard 1919 (the Boogie-Woogie tracks, the old sparse grid and Pier & Ocean retired, approved). Free: 0 and 1.
+  const PHASES = ['L','A','K','D','E','F','G','H'];
   const _mpn = _capN(8);
   const phase = PHASES[((phaseIndex|0)%_mpn+_mpn)%_mpn];
+  if(phase==='L'){ _mdListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(phase==='K'){ mondrianPhaseClassic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(phase==='H'){ mondrianPhaseCheckerboard(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='E'){ mondrianPhaseBroadway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='F'){ mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='G'){ mondrianPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -6135,8 +6210,8 @@ function _mondrianBlock(chords,idx,gc,isBW){
   let best=null,bestSat=-1;
   if(notes&&notes.length)for(const note of notes){const m=note.m!==undefined?note.m:note,v=note.v!==undefined?note.v:80;const[r,g,b]=gc(m,v);const sat=Math.max(r,g,b)-Math.min(r,g,b);if(sat>bestSat){bestSat=sat;best=[r,g,b];}}
   if(!best)best=[150,40,30];
-  if(isBW||bestSat<=6)return best.map(Math.round);
-  if(_pastelOn) return best.map(Math.round);
+  if(bestSat<=6)return best.map(Math.round);
+  return _mdSnap(best,isBW);
   // Real mode at non-mezzo bands: pastel and dark variants have already been
   // applied inside gc(). The pull-to-primary normalization below would erase
   // their pastel-lightness or dark-shadow identity by re-saturating to 255
@@ -6265,7 +6340,7 @@ function mondrianPhasePier(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const a=rnd()*Math.PI*2,rr=Math.pow(rnd(),0.5);
     const x=CW*0.5+Math.cos(a)*rr*CW*0.46,y=CH*0.5+Math.sin(a)*rr*CH*0.42;
     const s=Math.min(CW,CH)*0.018;
-    ctx.strokeStyle=isBW?'rgba(30,30,40,0.8)':`rgba(${Math.round(R*0.3)},${Math.round(G*0.3)},${Math.round(B*0.4+40)},0.8)`;
+    ctx.strokeStyle=isBW?'rgba(30,30,40,0.8)':'rgba(24,22,22,0.85)';
     ctx.lineWidth=Math.max(1.5,s*0.4);
     ctx.beginPath();ctx.moveTo(x-s,y);ctx.lineTo(x+s,y);ctx.stroke(); // horizontal
     if(rnd()<0.6){ctx.beginPath();ctx.moveTo(x,y-s);ctx.lineTo(x,y+s);ctx.stroke();} // vertical → plus
@@ -17288,14 +17363,14 @@ const ARTIST_VARIANTS = {
     {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.1],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},     // Femme et oiseaux
   ],
   mondrian: [
+    {ground:'#f6f3ec',mark:{gridrect:1},size:[.1,.5],layout:{grid:1},density:.25,tone:'primary'},   // What he heard
     {ground:'#f4f1e8',mark:{rect:.7,gridrect:.3},size:[.04,.12],layout:{grid:1},density:.6,lines:0,tone:'primary'},   // Victory Boogie Woogie
-    {ground:'#f3efe6',mark:{gridrect:1},size:[.1,.4],layout:{grid:1},density:.3},
-    {ground:'#f8f8f4',mark:{rect:1},size:[.015,.03],layout:{scatter:1},density:.9,outline:0,lines:0},
+    {ground:'#f6f3ec',mark:{gridrect:1},size:[.15,.5],layout:{grid:1},density:.2,tone:'primary'},   // Composition with Red, Yellow and Blue
     {ground:'#f8f8f4',mark:{gridline:1},size:[.1,.3],layout:{grid:1},density:.2,outline:0,lines:0},
     {ground:'#f8f8f4',mark:{gridline:.7,rect:.3},size:[.02,.05],layout:{grid:1},density:1,outline:0,lines:0,tone:'gold'},
     {ground:'#0a0a0a',mark:{gridrect:1},size:[.05,.15],layout:{diagonal:1},density:.4,tone:'mono'},
     {ground:'#b4b0a6',mark:{arc:.6,beam:.4},size:[.1,.35],layout:{radial:1},density:.3,outline:0,lines:0,tone:'mono'},   // The Gray Tree
-    {ground:'#f8f8f4',mark:{cross:1},size:[.01,.02],layout:{scatter:1},density:.9,outline:0,lines:0},
+    {ground:'#e4dfd2',mark:{cell:1},size:[.06,.08],layout:{grid:1},density:1,tone:'primary'},   // Checkerboard
   ],
   bauhaus: [
     {mark:{field:.4,disc:.3,target:.3},size:[.12,.4],layout:{grid:.7,radial:.3},density:.3},
