@@ -11333,18 +11333,14 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  apart so the two-variant preview actually shows different paintings
   //  (A vs B alone read as the same dense composition).
   {
-    const _pn=_capN(6); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-    if(_variantCap === 2){
-      // Free: 0 = Constellations (fall through), 1 = Blue triptych.
-      if(pick===1){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    } else {
-      // Pro+: full ladder.
-      if(pick===1){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===2){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===3){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===4){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-      if(pick===5){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    }
+    // VARIANT: 0 What he heard (_mrListen, generative) · 1 Constellations · 2 Bright sparse · 3 Blue triptych · 4 Biomorphic · 5 Peinture 1933 · 6 Femme et oiseaux. Free: 0 and 1.
+    const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(pick===0){ _mrListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===2){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===3){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===4){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===5){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===6){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
   }
 }
@@ -12077,6 +12073,85 @@ function _mrStar(ctx,x,y,r,col,w,rnd){ const n=3+(rnd()<0.5?1:0); ctx.strokeStyl
 function _mrEye(ctx,x,y,r,ring,pupil,ground){ ctx.fillStyle=_mrCss(ground); ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); ctx.strokeStyle=_mrCss(ring); ctx.lineWidth=Math.max(1,r*0.22); ctx.stroke(); ctx.fillStyle=_mrCss(pupil); ctx.beginPath(); ctx.arc(x,y,r*0.42,0,6.2832); ctx.fill(); }
 function _mrDraw(ctx,list,reveal,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_mrClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_mrR(f.id*31+41001,ss); rnd(); f.draw(ctx,rnd); } }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MIRÓ LISTENS — the picture the piece composes from everything that is his: the
+// lobed body, the thick black line, the star, the eye, the crescent, the ladder,
+// the constellation, the flat primaries, the big colour field. A ground, a way
+// of composing, and over it every element from what he hears.
+//   the ground       pale cream (the default) · the stained warm wall (minor) · deep blue (slow) · the night (dense, quick,
+//                    even) · and, when the piece is loud, one or two big flat colour fields under everything
+//   the composition  GIANT — one figure filling the canvas (loud, few voices) · FRIEZE — a row of small personages on a
+//                    ground line (an even, rhythmic piece) · CONSTELLATION — many small signs joined by thin lines (dense
+//                    and quick) · STALKS — tall thin figures, a line with a head (high register) · SCATTER — a few bodies
+//                    in the air (otherwise)
+//   the figures      one per voice; the body lobed, round, a kite, or a bone; the woman (hair lines) when the piece sings
+//                    slowly, the bird (beak, wing) when it is high and quick, the dog (legs, barking) when the line leaps,
+//                    the personage (antennae, limbs) otherwise; an eye when there is tension; flat in a primary, or pale
+//                    with a smaller primary inside, or black
+//   the signs        a star per accent · a dot per note · the crescent on minor · the sun on a loud major piece · the
+//                    ladder when the piece climbs · a thin drifting line per passage
+// ═══════════════════════════════════════════════════════════════════════════
+function _mrListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, S=_mrSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(S.cn,lim))/S.cn, cn=S.cn;
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const r0=_mrR(47000,ss); r0(); const BLK=S.isBW?[16,16,16]:[18,16,20]; const PR=(i)=>S.isBW?[[60,60,60],[200,200,200],[110,110,110],[150,150,150]][i]:_MR_PRIM[i];
+  const ground = (regular>0.85 && pace>0.8) ? 'night' : (pace<0.45) ? 'blue' : (!major) ? 'warm' : 'cream';
+  const GRD = ground==='night' ? (S.isBW?[30,30,32]:[26,24,40]) : ground==='blue' ? (S.isBW?[70,70,74]:[31,58,138]) : ground==='warm' ? (S.isBW?[150,146,138]:[156,116,76]) : (S.isBW?[238,236,232]:[242,236,222]);
+  const dark = ground==='night' || ground==='blue'; const INK = dark ? (S.isBW?[240,240,236]:[244,238,220]) : BLK;
+  const comp = (dens>0.3 && pace>0.75 && regular>0.6) ? 'constellation' : (loud>0.62 && poly<2.2 && pace<0.8) ? 'giant' : (regular>0.78 && poly>=2) ? 'frieze' : (reg>0.6) ? 'stalks' : 'scatter';
+  const kind = pace<0.45 ? 'woman' : (reg>0.55 && pace>0.6) ? 'bird' : (leaps>0.55) ? 'dog' : 'personage';
+  const nf = comp==='giant' ? 1 : comp==='frieze' ? Math.max(3,Math.min(4,Math.round(poly)+1)) : comp==='constellation' ? 0 : Math.max(1,Math.min(4,Math.round(poly)));
+  const el = { stars:true, crescent: !major, sun: major && loud>0.6, ladder: trend>0.55, lines: true, eyes: tens>0.2 || !major, fields: loud>0.55 };
+  try{ globalThis.__MR_LISTEN={ground,comp,kind,nf,el,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  ctx.fillStyle=_mrCss(GRD); ctx.fillRect(0,0,CW,CH);
+  if(ground==='warm'){ for(let i=0;i<7;i++){ const x=CW*r0(), y=CH*r0(), rr=D*(0.25+r0()*0.3); const cc=_mrMix(GRD,r0()<0.5?[214,180,126]:[96,66,46],0.4+r0()*0.2); const g=ctx.createRadialGradient(x,y,0,x,y,rr); g.addColorStop(0,_mrCss(cc,0.55)); g.addColorStop(1,_mrCss(cc,0)); ctx.fillStyle=g; ctx.fillRect(x-rr,y-rr,2*rr,2*rr); } }
+  const list=[]; let id=0; const push=(t,draw)=>list.push({id:id++,t,draw}); const W=D*(0.012+0.014*loud);
+  const isBlue=(c)=>c[2]>c[0]+40; const prim=(t)=>{ let p=S.prim(t); if(dark && isBlue(p)) p=PR(1); return p; };
+  // ── the colour fields under everything (loud): big flat patches, Peinture 1933
+  if(el.fields){ const nF=loud>0.75?2:1; for(let i=0;i<nF;i++){ const x=CW*(0.2+0.6*r0()), y=CH*(0.2+0.6*r0()), r=D*(0.18+0.16*r0()); const col=i===0?prim(c.t):(dark?PR(0):BLK); const t=i===0?c.t*0.5:0.05; push(t,(ctx,rnd)=>{ const p=_mrBody(rnd,x,y,r,0.8+rnd()*0.6,0.8+rnd()*0.6,rnd()*3,true); _mrTrace(ctx,p); ctx.fillStyle=_mrCss(col); ctx.fill(); }); } }
+  // ── one body: lobed, round, a kite, or a bone
+  const body=(rnd,x,y,r,sx,sy,shape)=>{ if(shape==='round'){ const p=[]; for(let i=0;i<24;i++){ const a=i/24*6.2832; p.push([x+Math.cos(a)*r*sx*(1+0.03*Math.sin(3*a)), y+Math.sin(a)*r*sy]); } return p; }
+    if(shape==='kite'){ const p=[[x,y-r*sy*1.1],[x+r*sx*0.8,y+r*sy*0.1],[x,y+r*sy*1.05],[x-r*sx*0.8,y+r*sy*0.1]]; return p; }
+    if(shape==='bone'){ const p=[]; for(let i=0;i<32;i++){ const a=i/32*6.2832; const rr=r*(0.55+0.45*Math.abs(Math.cos(a))**0.5); p.push([x+Math.cos(a)*rr*sx*1.2, y+Math.sin(a)*rr*sy*0.8]); } return p; }
+    return _mrBody(rnd,x,y,r,sx,sy,(rnd()-.5)*0.5,true); };
+  const placed=[];
+  const figure=(q,x,y,r,sx,sy,shape,fill)=>{ const t=q.t0; placed.push([x,y,r*Math.max(sx,sy)]);
+    const c1=prim(q.t), c2=S.prim(Math.min(0.999,q.t+0.1)); const whole=fill==='whole', black=fill==='black';
+    push(t,(ctx,rnd)=>{ const p=body(rnd,x,y,r,sx,sy,shape); const kite=shape==='kite'; if(kite){ ctx.beginPath(); p.forEach((pt,i)=>i?ctx.lineTo(pt[0],pt[1]):ctx.moveTo(pt[0],pt[1])); ctx.closePath(); } else _mrTrace(ctx,p);
+      ctx.fillStyle=_mrCss(black?(dark?INK:BLK):whole?c1:(dark?_mrMix(GRD,[255,255,255],0.12):GRD)); ctx.fill();
+      if(!whole && !black){ const q2=_mrBody(rnd,x+(rnd()-.5)*r*0.5,y+(rnd()-.5)*r*0.5,r*0.45,1,1,0,true); ctx.save(); if(kite){ ctx.beginPath(); p.forEach((pt,i)=>i?ctx.lineTo(pt[0],pt[1]):ctx.moveTo(pt[0],pt[1])); ctx.closePath(); } else _mrTrace(ctx,p); ctx.clip(); _mrTrace(ctx,q2); ctx.fillStyle=_mrCss(isBlue(c2)?PR(0):c2); ctx.fill(); ctx.restore(); }
+      if(!black){ const ring=p.map(pt=>[pt[0],pt[1],0.8+rnd()*0.4]); ring.push(ring[0]); _mrBrush(ctx,ring,W*(kite?0.8:1),INK,true); } });
+    if(kind==='woman'){ for(let j=0;j<5;j++){ const a=-1.5708+(j-2)*0.35, len=D*(0.08+0.1*q.v); push(t+0.02+j*0.005,(ctx,rnd)=>_mrBrush(ctx,_mrPath(rnd,x+Math.cos(a)*r*sx,y+Math.sin(a)*r*sy,len,a,0.4,D),W*0.8,INK,false)); }
+      push(t+0.05,(ctx,rnd)=>{ for(let j=0;j<2;j++){ const a=1.2+j*0.7; _mrBrush(ctx,_mrPath(rnd,x+Math.cos(a)*r*sx,y+Math.sin(a)*r*sy,D*0.12,a,0.2,D),W*1.05,INK,false); } }); }
+    else if(kind==='bird'){ push(t+0.02,(ctx,rnd)=>{ const a=(q.t<0.5?0:3.1416); const bx=x+Math.cos(a)*r*sx, by=y; ctx.fillStyle=_mrCss(INK); ctx.beginPath(); ctx.moveTo(bx,by-r*0.12); ctx.lineTo(bx+Math.cos(a)*r*0.6,by); ctx.lineTo(bx,by+r*0.12); ctx.closePath(); ctx.fill();
+        _mrBrush(ctx,_mrPath(rnd,x,y-r*sy*0.8,D*(0.1+0.08*q.vmax),-1.9+(rnd()-.5)*0.6,0.5,D),W*0.9,INK,false); _mrBrush(ctx,_mrPath(rnd,x-Math.cos(a)*r*sx*0.9,y+r*0.1,D*0.08,a+3.1416+0.4,0.3,D),W*0.7,INK,false); }); }
+    else if(kind==='dog'){ push(t+0.02,(ctx,rnd)=>{ for(let j=0;j<4;j++){ const lx=x-r*sx*0.6+r*sx*1.2*j/3; _mrBrush(ctx,_mrPath(rnd,lx,y+r*sy*0.8,D*(0.06+0.05*q.v),1.5708+(rnd()-.5)*0.4,0.2,D),W*0.8,INK,false); }
+        const a=q.t<0.5?-0.6:3.7; _mrBrush(ctx,_mrPath(rnd,x+Math.cos(a)*r*sx,y+Math.sin(a)*r*sy,D*0.1,a,0.3,D),W*0.9,INK,false); for(let j=0;j<3;j++){ const ax=x+(q.t<0.5?1:-1)*r*sx*(1.3+0.25*j), ay=y-r*sy*(0.9+0.2*j); ctx.strokeStyle=_mrCss(INK); ctx.lineWidth=W*0.4; ctx.beginPath(); ctx.arc(ax,ay,D*(0.012+0.008*j),-1.2,1.2); ctx.stroke(); } }); }
+    else { const nl=2+(r0()*2|0); for(let j=0;j<nl;j++){ const a=r0()*6.28; push(t+0.02+j*0.01,(ctx,rnd)=>_mrBrush(ctx,_mrPath(rnd,x+Math.cos(a)*r*sx,y+Math.sin(a)*r*sy,D*(0.08+0.12*q.v),a,0.3,D),W*1.05,INK,false)); }
+      if(r0()<0.6){ push(t+0.03,(ctx,rnd)=>{ for(const d of [-1,1]){ const ax=x+d*r*sx*0.25, ay=y-r*sy*0.95; ctx.strokeStyle=_mrCss(INK); ctx.lineWidth=W*0.5; ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+d*r*0.2,ay-r*0.5); ctx.stroke(); ctx.fillStyle=_mrCss(INK); ctx.beginPath(); ctx.arc(ax+d*r*0.2,ay-r*0.5,W*0.6,0,6.2832); ctx.fill(); } }); } }   // the antennae
+    if(el.eyes || r0()<0.5){ const ex=x+(r0()-.5)*r*0.6, ey=y-r*sy*0.3; const ring=black?(dark?BLK:INK):INK, grd=black?(dark?INK:GRD):(dark?[244,238,220]:GRD); push(t+0.06,(ctx,rnd)=>_mrEye(ctx,ex,ey,r*(black?0.26:0.2),ring,ring,grd)); } };
+  const shapes=['lobed','lobed','round','kite','bone']; const fillOf=()=>{ const u=r0(); return u<0.45?'whole':u<0.8?'pale':'black'; };
+  if(comp==='giant'){ const q=c; const r=D*0.32, sx=0.8+r0()*0.3, sy=1+r0()*0.3; figure(q,CW*0.5+(r0()-.5)*CW*0.1,CH*0.5,r,sx,sy,shapes[(r0()*shapes.length)|0],r0()<0.6?'whole':'pale'); }
+  else if(comp==='frieze'){ const G=_kd2Phrases(A,nf); const gy=CH*0.7; push(0.02,(ctx,rnd)=>_mrBrush(ctx,_mrPath(rnd,CW*0.04,gy+D*0.16,CW*0.92,0,0.05,D),W*0.5,INK,false)); G.forEach((q,k)=>{ const r=D*(0.055+0.035*q.vmax); figure(q,CW*(0.14+0.72*k/(nf-1)),gy-r*(0.3+1.2*A.reg(q.top)),r,0.8+r0()*0.3,0.9+r0()*0.3,shapes[(r0()*shapes.length)|0],fillOf()); }); }
+  else if(comp==='stalks'){ const G=_kd2Phrases(A,Math.max(2,nf)); G.forEach((q,k)=>{ const x=CW*(0.15+0.7*q.t)+(r0()-.5)*CW*0.12, top=CH*(0.12+0.25*(1-A.reg(q.top))), bot=CH*0.92, r=D*(0.05+0.04*q.vmax); push(q.t0,(ctx,rnd)=>_mrBrush(ctx,_mrPath(rnd,x,bot,bot-top,-1.5708,0.12,D),W*0.9,INK,false)); figure(q,x,top,r,1,1,r0()<0.5?'round':'lobed',fillOf()); push(q.t0+0.04,(ctx,rnd)=>{ const fy=bot; _mrBrush(ctx,[[x-r*1.4,fy,1],[x+r*1.4,fy,1]],W*0.9,INK,false); }); }); }
+  else if(comp==='scatter'){ const G=_kd2Phrases(A,nf); G.forEach((q,k)=>{ const r=D*(0.1+0.09*q.vmax)*(nf===1?1.4:1), sx=0.75+r0()*0.4, sy=0.9+r0()*0.4; const x=_mrClamp(CW*(0.12+0.76*q.t)+(r0()-.5)*CW*0.1, r*2, CW-r*2), y=_mrClamp(CH*(0.25+0.5*(1-A.reg(q.top)))+(r0()-.5)*CH*0.12, r*2.2, CH-r*2.2); figure(q,x,y,r,sx,sy,shapes[(r0()*shapes.length)|0],fillOf()); }); }
+  // ── the signs
+  const E=_kd2Events(A,Math.round(comp==='constellation'?22+dens*24:14+dens*20)); const accs=E.filter(e=>e.acc).sort((a,b)=>b.v-a.v).slice(0,Math.round(2+loud*4)); const isStar=new Set(accs);
+  const C2=(()=>{ const n=12,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
+  const at=(u)=>{ const i=Math.min(10,Math.floor(u*11)); const f=u*11-i; return C2[i]+(C2[i+1]-C2[i])*f; };
+  const dots=[]; E.forEach((e,i)=>{ const x=CW*(0.06+0.88*e.t), y=comp==='constellation' ? CH*(0.08+0.84*((1-at(e.t))*0.25+r0()*0.75)) : CH*(0.08+0.8*(1-at(e.t)))+(r0()-.5)*CH*0.1; const near=placed.some(p=>Math.hypot(x-p[0],y-p[1])<p[2]*1.35); if(near) return;
+    if(comp==='constellation'){ const u=r0(); if(isStar.has(e)){ push(e.t,(ctx,rnd)=>_mrStar(ctx,x,y,D*(0.035+0.035*e.v),INK,W*0.55,rnd)); } else if(u<0.25){ push(e.t,(ctx,rnd)=>_mrEye(ctx,x,y,D*(0.014+0.02*e.v),INK,INK,dark?[244,238,220]:GRD)); } else if(u<0.4){ const col=prim(e.t); push(e.t,(ctx,rnd)=>{ const p=_mrBody(rnd,x,y,D*(0.02+0.03*e.v),1,1,0,true); _mrTrace(ctx,p); ctx.fillStyle=_mrCss(col); ctx.fill(); _mrBrush(ctx,p.map(pt=>[pt[0],pt[1],1]).concat([[p[0][0],p[0][1],1]]),W*0.45,INK,true); }); } else { const col=prim(e.t); push(e.t,(ctx,rnd)=>{ ctx.fillStyle=_mrCss(rnd()<0.5?INK:col); ctx.beginPath(); ctx.arc(x,y,D*(0.006+0.012*e.v),0,6.2832); ctx.fill(); }); } dots.push([x,y,e.t]); return; }
+    if(e.acc && !isStar.has(e)) return;
+    if(e.acc && el.stars) push(e.t,(ctx,rnd)=>_mrStar(ctx,x,y,D*(0.04+0.04*e.v),INK,W*0.6,rnd));
+    else { const col=prim(e.t); push(e.t,(ctx,rnd)=>{ ctx.fillStyle=_mrCss(rnd()<0.4?INK:col); ctx.beginPath(); ctx.arc(x,y,D*(0.008+0.016*e.v),0,6.2832); ctx.fill(); if(!dark){ ctx.strokeStyle=_mrCss(BLK); ctx.lineWidth=W*0.3; ctx.stroke(); } }); dots.push([x,y,e.t]); } });
+  if(comp==='constellation' && dots.length>2){ for(let i=1;i<dots.length;i++){ const a=dots[i-1], b=dots[i]; push(b[2],(ctx,rnd)=>{ ctx.strokeStyle=_mrCss(INK,0.8); ctx.lineWidth=Math.max(0.8,D*0.0022); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); }); } }
+  if(el.crescent){ const mx=CW*(0.15+r0()*0.7), my=CH*(0.08+r0()*0.1), mr=D*(0.05+r0()*0.03); push(0.9,(ctx,rnd)=>{ ctx.fillStyle=_mrCss(INK); ctx.beginPath(); ctx.arc(mx,my,mr,0,6.2832); ctx.fill(); ctx.fillStyle=_mrCss(GRD); ctx.beginPath(); ctx.arc(mx+mr*0.45,my-mr*0.15,mr*0.85,0,6.2832); ctx.fill(); }); }
+  if(el.sun){ const sx=CW*(0.15+0.7*c.t), sy=CH*(0.1+0.08*r0()), sr=D*(0.04+0.03*c.vmax); push(c.t,(ctx,rnd)=>{ ctx.fillStyle=_mrCss(PR(0)); ctx.beginPath(); ctx.arc(sx,sy,sr,0,6.2832); ctx.fill(); _mrBrush(ctx,[[sx-sr*1.3,sy,1],[sx+sr*1.3,sy,1]],W*0.6,INK,false); for(let j=0;j<8;j++){ const a=j/8*6.2832; ctx.strokeStyle=_mrCss(INK); ctx.lineWidth=W*0.4; ctx.beginPath(); ctx.moveTo(sx+Math.cos(a)*sr*1.2,sy+Math.sin(a)*sr*1.2); ctx.lineTo(sx+Math.cos(a)*sr*1.6,sy+Math.sin(a)*sr*1.6); ctx.stroke(); } }); }
+  if(el.ladder){ const lx=CW*(trend>0.5?0.86:0.12), top=CH*0.1, bot=CH*0.9; push(0.1,(ctx,rnd)=>{ ctx.strokeStyle=_mrCss(INK); ctx.lineWidth=W*0.5; ctx.lineCap='round'; for(const dx of [-D*0.025,D*0.025]){ ctx.beginPath(); ctx.moveTo(lx+dx,bot); ctx.lineTo(lx+dx*0.6,top); ctx.stroke(); } const n=7; for(let j=0;j<=n;j++){ const u=j/n, y=bot+(top-bot)*u, w=D*0.025*(1-0.4*u); ctx.beginPath(); ctx.moveTo(lx-w,y); ctx.lineTo(lx+w,y); ctx.stroke(); } }); }
+  if(el.lines){ const Gl=_kd2Phrases(A,Math.min(4,Math.max(2,Math.round(A.phrases.length/8)))); Gl.forEach((q,i)=>{ const x=CW*(0.1+r0()*0.8), y=CH*(0.1+r0()*0.8), len=D*(0.25+0.3*(q.t1-q.t0)*Gl.length), a=r0()*6.28; push(q.t0,(ctx,rnd)=>_mrBrush(ctx,_mrPath(rnd,x,y,len,a,0.25,D),D*0.004,INK,false)); }); }
+  _mrDraw(ctx,list,reveal,ss); _setCurE(0.5);
+}
 // ── Miró E · Peinture (1933) — a stained warm ground and a few large flat
 // biomorphic bodies afloat on it: black silhouettes, a red one, a white one,
 // thin contours, an eye here and there, a thin line drifting between them.
@@ -16542,6 +16617,7 @@ const ARTIST_VARIANTS = {
     {ground:'#d85a1a',mark:{net:1},size:[.05,.1],layout:{scatter:1},density:.3,lines:0},
   ],
   miro: [
+    {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.12],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},   // What he heard
     {ground:'#1b1812',mark:{tri:.3,blob:.3,target:.2,dot:.2},size:[.02,.07],layout:{scatter:1},density:.2,outline:.2},
     {ground:'#d8f4ee',mark:{cross:.5,rays:.3,dot:.2},size:[.02,.06],layout:{scatter:1},density:.08},
     {ground:'#1f3a8a',mark:{dot:.6,star:.2,wavyline:.2},size:[.03,.08],layout:{scatter:1},density:.15,tone:'primary'},
@@ -16719,7 +16795,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:6,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:6,picasso:8,matisse:8,pollock:8,bloom:8,kusama:6,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:7,wave:8,spiral:7,arcs:7,pop:7,mitchell:6,monet:7,hokusai:8,lichtenstein:6,klee:6,delaunay:8,thomas:6,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
