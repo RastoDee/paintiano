@@ -4538,7 +4538,10 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // 3 Blue Poles · 4 Convergence · 5 Number 14 (black pouring) — the _pol2 skeins, read
   // from the music · 6 Sparse (the open web below) · 7 White Light. Free: 0 and 1.
   {
-    const _pn=_capN(8); const _ppick=((phaseIndex|0)%_pn+_pn)%_pn;
+    // VARIANT: 0 What he heard (_pkListen, generative) · 1 Classic drip · 2 Autumn Rhythm · 3 Lavender Mist · 4 Blue Poles · 5 Convergence · 6 Number 14 · 7 White Light (Sparse retired, approved). Free: 0 and 1.
+    const _pn=_capN(8); const _ppick0=((phaseIndex|0)%_pn+_pn)%_pn;
+    if(_ppick0===0){ _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    const _ppick=[0,1,2,3,4,5,7][_ppick0-1];
     if(_ppick>=1&&_ppick<=5){ _pol2Paint(_ppick,ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ppick===7){ pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     _forcedPollVariant = (_ppick===6) ? 1 : 0;
@@ -5060,6 +5063,42 @@ function _pol2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
   _setCurE(0.5);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// POLLOCK LISTENS — not one of the paintings above: the canvas on the floor and
+// the painter walking round it with the piece. Every passage is a place on the
+// edge where he stands — he walks round the canvas as the piece goes — and a
+// pour from there into the canvas, the hand drawn by the melody.
+//   the ground       raw canvas (the default) · black when the piece is heavy and minor · white when it is light
+//   the walk         the passages go round the edge in time; from each station the skein is thrown inward, as far
+//                    as the passage is loud, swung by the melody, looping as the line leaps
+//   the layers       the bass voice first, black; the melody over it in the piece's colours; white at the accents;
+//                    silver threads when the piece is quick and fine
+//   the pour         wide and pooling where the piece is slow and loud (enamel with body), fine and spattered where
+//                    it is quick; a pool at every long note; the spatter as dense as the piece
+// ═══════════════════════════════════════════════════════════════════════════
+function _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const bw=mode==='bw'; const A0=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A0); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A0.ch?A0.ch.register:0.5, dens=A0.ch?A0.ch.density:0.3;
+  const black = !major && loud>0.6, white = loud<0.5 && reg>0.55 && !black;
+  try{ globalThis.__PK_LISTEN={black,white,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  _polGround(ctx,CW,CH,black?(bw?[24,22,22]:[22,18,16]):white?(bw?[236,234,230]:[238,234,226]):(bw?[222,218,210]:[220,206,176]));
+  _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.groups(_polClamp(Math.round(S.A.phrases.length/2),8,36)); const n=G.length;
+    const INK=black?(bw?[230,226,220]:[236,230,214]):S.ink; const WHITE=black?S.pal[1]:S.white;
+    // a station on the edge for a time t (going round from the top left)
+    const station=(t)=>{ const u=(t*4)%4; const m=D*0.02; if(u<1) return [m+(CW-2*m)*u, m, Math.PI/2]; if(u<2) return [CW-m, m+(CH-2*m)*(u-1), Math.PI]; if(u<3) return [CW-m-(CW-2*m)*(u-2), CH-m, -Math.PI/2]; return [m, CH-m-(CH-2*m)*(u-3), 0]; };
+    G.forEach((g,i)=>{ const r=_polR(99000+i,ss); r(); const [sx,sy,inward]=station(g.t); const ang=inward+(r()-.5)*1.2; const len=D*(0.8+1.6*g.vmax+0.8*Math.min(1.5,g.dur*n));
+      const slow=pace<0.45, quick=pace>0.75;
+      // the bass, black, first
+      list.push({id:id++,t:g.t,layer:0,x:sx,y:sy,ang,len,col:INK,alpha:0.95,relief:slow&&g.vmax>0.7,o:{speed:(slow?0.7:1.1)+S.tempo*0.4,w:(slow?0.018:quick?0.008:0.013)+0.01*g.vmax,loopy:0.2+0.9*leaps,wob:0.6+0.6*leaps,guide:_pol2Guide(S,g,sx,sy,ang,len,D*0.4,10,true),follow:0.24}});
+      // the melody over it, in colour
+      const col=bw?S.silver:S.pal[i%3]; const ang2=ang+(r()-.5)*0.5;
+      list.push({id:id++,t:g.t+0.005,layer:1,x:sx,y:sy,ang:ang2,len:len*0.9,col,alpha:0.95,relief:slow&&g.vmax>0.75,o:{speed:(slow?0.8:1.2)+S.tempo*0.4,w:(slow?0.015:quick?0.007:0.011)+0.008*g.v,loopy:0.3+0.8*leaps,wob:0.7+0.5*leaps,guide:_pol2Guide(S,g,sx,sy,ang2,len*0.9,D*0.45,10,false),follow:0.26}});
+      // the accents, white
+      if(g.vmax>=S.A.vHi*0.95){ list.push({id:id++,t:g.t1,layer:2,x:sx,y:sy,ang:ang+(r()-.5)*0.8,len:len*0.6,col:WHITE,alpha:0.95,o:{speed:1.4,w:0.009,loopy:0.25,wob:1.1,guide:_pol2Guide(S,g,sx,sy,ang,len*0.6,D*0.3,6,false),follow:0.2}}); }
+      // fine silver threads when it is quick
+      if(quick && r()<0.6){ list.push({id:id++,t:g.t+0.01,layer:2,x:sx,y:sy,ang:ang+(r()-.5)*1.5,len:len*1.2,col:S.silver,alpha:0.8,o:{speed:1.6,w:0.005,loopy:0.3,wob:1.3}}); } });
+    return list; });
+  _setCurE(0.5);
+}
 function pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const progress = N/Math.max(1,cn);
@@ -17152,13 +17191,13 @@ const ARTIST_VARIANTS = {
     {ground:'#6a8a3a',mark:{panel:.5,cutout:.5},size:[.04,.12],layout:{grid:1},density:1},   // nested-frame grid
   ],
   pollock: [   // slot order = solo variants: Classic drip, Autumn Rhythm, Lavender Mist, Blue Poles, Convergence, Number 14 black, Sparse, White Light
+    {mark:{skein:.8,splash:.2},size:[.03,.12],layout:{flow:1},density:.6},   // What he heard
     {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
     {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},
     {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},
     {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},
     {ground:'#ece8de',mark:{drip:.5,pour:.5},size:[.01,.08],layout:{flow:.6,scatter:.4},density:.6,layers:2},
     {ground:'#d6c6a6',mark:{drip:1},size:[.012,.05],alpha:.9,layout:{flow:1},density:.3,layers:1,tone:'dark'},
-    {mark:{drip:.5,splat:.3,blob:.2},size:[.006,.05],layout:{flow:.7,scatter:.3},density:.6,layers:2},
     {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
   ],
   bloom: [   // slot order = solo phases: field, Blue Balls, edge, Big Red, Disappearance, Hanging, Matrix, Mandala
