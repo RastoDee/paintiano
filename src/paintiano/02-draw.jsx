@@ -6829,20 +6829,18 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  3 = Danaë (golden shower, dramatic figurative, only non-gold ground).
   //  4 = The Kiss — the golden mantle (rectangles and rosettes) over a flower meadow.
   //  5 = Tree of Life (Stoclet frieze) — curling golden branches, eyes, the black bird.
-  //  6 = Birch Forest (1903) — white trunks over a carpet of fallen leaves.
-  //  7 = Farm Garden with Sunflowers (1907) — flowers packed to the edges.
+  //  6 = Farm Garden with Sunflowers (1907) — flowers packed to the edges.
   //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
   //  abstract spiral field is the strongest decorative contrast.
   {
-    // VARIANT: 0 What he heard (_kmListen, generative) · 1 Ornament grid · 2 Spiral Field · 3 Danaë · 4 The Kiss · 5 Tree of Life · 6 Birch Forest · 7 Farm Garden (the Mosaic Field retired). Free: 0 and 1.
-    const _pn=_capN(8); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    // VARIANT: 0 What he heard (_kmListen, generative) · 1 Ornament grid · 2 Spiral Field · 3 Danaë · 4 The Kiss · 5 Tree of Life · 6 Farm Garden (the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
+    const _pn=_capN(7); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_gpick===0){ _kmListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===2){ klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===3){ klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===5){ klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_gpick===6){ klimtPhaseBirch(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_gpick===7){ klimtPhaseGarden(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===6){ klimtPhaseGarden(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     // Slot 0 is the ornament body below (tile grid); its frieze-band layout is
     // no longer a slot of its own.
     _forcedGoldVariant = 0;
@@ -7061,7 +7059,7 @@ function _kmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
   const jw=(t)=>_kmMix(_kmJewel(_picChord(chords,Math.max(0,Math.min(cn-1,Math.floor(t*cn))),gc,isBW).rgb,isBW),isBW?[150,146,136]:_KM_GOLD,0.3);   // the enamel, warmed by the gold
   const r0=_seedRnd(98,ss,0,29); r0(); const rr=(k)=>{ const f=_seedRnd(k,ss,0,0); f(); return f; };
-  const ground = (pace<0.35 && poly<2 && major) ? 'lake' : (!major && pace<0.5) ? 'dark' : (regular>0.72 && reg>0.55 && loud<0.6 && pace<0.65) ? 'birch' : (major && pace<0.45) ? 'meadow' : (regular>0.7 && pace<0.6 && loud<0.6) ? 'frieze' : 'gold';
+  const ground = (pace<0.35 && poly<2 && major) ? 'lake' : (!major && pace<0.5) ? 'dark' : (major && pace<0.45) ? 'meadow' : (regular>0.7 && pace<0.6 && loud<0.6) ? 'frieze' : 'gold';
   const figure = pace>0.65 ? 'none' : (!major && pace<0.5) ? 'sleeper' : (poly>=1.8 && pace<0.6) ? 'embrace' : (poly<1.8) ? 'woman' : 'embrace';
   const el = { tree: trend>0.52 || ground==='frieze', flowers: major && ground!=='dark' && ground!=='lake', shower: (!major && pace<0.5) || (loud>0.6 && dens>0.4 && ground==='gold'), eyes: tens>0.25, spirals: leaps>0.5, bird: trend>0.52 || ground==='frieze' };
   try{ globalThis.__KM_LISTEN={ground,figure,el,pace,loud,regular,leaps,poly,energy,reg,tens,trend,major,dens}; }catch(_){}
@@ -7075,8 +7073,6 @@ function _kmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.fillStyle=isBW?'#5a5a56':'#2e5a52'; ctx.fillRect(0,hz-CH*0.06,CW,CH*0.1); for(let i=0;i<60;i++){ const r=rr(i+53200); ctx.fillStyle=_kmCss(isBW?[70,70,66]:_kmMix([40,80,60],[90,130,70],r())); ctx.beginPath(); ctx.arc(r()*CW,hz-CH*0.04-r()*CH*0.05,D*(0.015+r()*0.03),0,6.2832); ctx.fill(); }   // the far shore's foliage
     ctx.fillStyle=isBW?'#8a8e8c':'#6f9a92'; ctx.fillRect(0,hz+CH*0.04,CW,CH); for(let i=0;i<1400;i++){ const r=rr(i+53300); const y=hz+CH*0.04+Math.pow(r(),0.8)*(CH-hz); ctx.fillStyle=_kmCss(isBW?_kmMix([120,124,122],[160,164,160],r()):_kmMix([70,120,110],[150,180,160],r()),0.7); const w=D*(0.004+r()*0.012); ctx.fillRect(r()*CW,y,w,w*0.35); } }   // the water, in short flat touches
   else { ctx.fillStyle=isBW?'#4a4038':'#784020'; ctx.fillRect(0,0,CW,CH); for(let i=0;i<600;i++){ const r=rr(i+53400); ctx.fillStyle=_kmCss(isBW?_kmMix([120,110,100],[180,170,150],r()):_kmMix([150,90,40],[220,160,70],r()),0.6); ctx.beginPath(); ctx.arc(r()*CW,CH*0.55+r()*CH*0.45,D*(0.004+r()*0.009),0,6.2832); ctx.fill(); } }   // the leaf carpet of the wood
-  // ── the birch trunks: one per passage, as tall as it is loud
-  if(ground==='birch'){ const G=_kd2Phrases(A,Math.min(9,Math.max(3,Math.round(A.phrases.length/5)))); G.forEach((q,i)=>push(q.t0,()=>{ const x=CW*(0.06+0.88*q.t)+(rr(i+53500)()-.5)*CW*0.04, w=D*(0.02+0.02*q.vmax); ctx.fillStyle=_kmCss(isBW?[226,222,214]:[236,230,214]); ctx.fillRect(x-w/2,0,w,CH*0.98); const r=rr(i+53600); for(let k=0;k<14;k++){ ctx.fillStyle=_kmCss(_KM_BLK,0.7); ctx.fillRect(x-w/2,CH*r(),w*(0.4+0.6*r()),D*0.003); } })); }
   // ── the lake's reflection of the climax: a bright patch on the water where the piece peaks
   if(ground==='lake') push(c.t,()=>{ const hz=CH*(0.2+0.2*(1-reg)); const x=CW*(0.15+0.7*c.t); const r=rr(53700); for(let i=0;i<120;i++){ ctx.fillStyle=_kmCss(jw(Math.min(0.999,c.t+0.05*(r()-.5))),0.6); const w=D*(0.004+r()*0.012); ctx.fillRect(x+(r()-.5)*CW*0.3,hz+CH*0.06+r()*(CH-hz)*0.8,w,w*0.35); } });
   // ── the tree of life: a branch pair per passage, unrolling into curls; the bird at the climax
@@ -7274,34 +7270,7 @@ function _klxSetup(chords,gc,mode){ const isBW=mode==='bw', cn=chords.length; co
     css:(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`,
     lum:(c)=>c[0]*0.299+c[1]*0.587+c[2]*0.114,
     raw:(t)=>{ const c=_picChord(chords,clamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb; if(isBW){ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [l,l,l]; } return c; }}; }
-// 6 · Birch Forest (1903) — white trunks in rhythm across a carpet of fallen leaves, a strip of dark wood above. The leaves fall over the whole floor in the piece's order, russet folded with its colours; each trunk is a phrase, standing up as it arrives — the far ones thin and grey, the near ones broad
-function klimtPhaseBirch(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const S=_klxSetup(chords,gc,mode), ss=sessionSeed|0, D=Math.min(CW,CH); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const {mix,css,lum}=S;
-  const r=_seedRnd(99000,ss,0,0); r(); const hz=CH*(0.2+r()*0.06);
-  ctx.save();
-  ctx.fillStyle=css(S.isBW?[70,70,70]:[58,72,66]); ctx.fillRect(0,0,CW,hz+2);
-  for(let i=0;i<Math.round(CW*hz/120);i++){ ctx.fillStyle=css(mix([70,96,80],[150,150,110],r()),0.6); ctx.fillRect(r()*CW,r()*hz,2+r()*4,2+r()*3); }
-  ctx.fillStyle=css(S.isBW?[96,96,96]:[120,62,30]); ctx.fillRect(0,hz,CW,CH-hz);
-  const leaves=[]; let y=hz;
-  while(y<CH){ const s=D*(0.006+0.022*((y-hz)/(CH-hz))); for(let x=-s;x<CW+s;x+=s*1.25){ leaves.push({x:x+(r()-.5)*s*0.6,y:y+(r()-.5)*s*0.4,s}); } y+=s*0.75; }
-  const RUS=[[176,82,34],[204,120,44],[150,60,30],[214,150,60],[120,52,28]];
-  const rl=_seedRnd(99100,ss,0,0); rl(); const nL=leaves.length;
-  // the leaves fall all over the floor as the piece plays: a golden-ratio scatter of the rows, so the carpet thickens everywhere at once
-  const lOrd=leaves.map((_,i)=>i).sort((a,b)=>((a*0.6180339887)%1)-((b*0.6180339887)%1));
-  for(let k=0;k<nL;k++){ const t=k/nL; if(t>=reveal) break; const l=leaves[lOrd[k]]; const base=RUS[(rl()*RUS.length)|0];
-    const c=S.isBW?(()=>{ const g=lum(base)+rl()*30; return [g,g,g]; })():mix(base,S.raw(t),0.35); ctx.fillStyle=css(c); ctx.beginPath(); ctx.ellipse(l.x,l.y,l.s*0.62,l.s*0.4,0,0,6.2832); ctx.fill(); }
-  const nt=9+Math.round(S.density*6); const trunks=[];
-  for(let k=0;k<nt;k++){ const q=_seedRnd(99300+k,ss,0,0); q(); const near=q(); trunks.push({x:CW*(0.03+0.94*q()),w:D*(0.012+0.11*near*near),near,lean:(q()-.5)*0.03,t:k/nt,k}); }
-  trunks.sort((a,b)=>a.near-b.near);
-  for(const tr of trunks){ if(tr.t>=reveal) continue; const foot=hz+(CH-hz)*(0.15+0.8*tr.near); const bark=S.isBW?[226,226,226]:mix([232,228,216],[150,150,150],0.5*(1-tr.near));
-    ctx.save(); ctx.translate(tr.x,foot); ctx.rotate(tr.lean); ctx.fillStyle=css(bark); ctx.fillRect(-tr.w/2,-foot-10,tr.w,foot+10);
-    // the black marks of birch bark, and a shadow down one side
-    const rr=_seedRnd(99500+tr.k,ss,0,0); rr(); ctx.fillStyle=css([30,28,28],0.85);
-    for(let m=0;m<Math.round(foot/(tr.w*0.9+4));m++){ const my=-rr()*foot, mw=tr.w*(0.3+rr()*0.6), mh=Math.max(1,tr.w*(0.08+rr()*0.12)); ctx.fillRect(-tr.w/2+(rr()<0.5?0:tr.w-mw),my,mw,mh); }
-    ctx.fillStyle=css([0,0,0],0.18); ctx.fillRect(tr.w*0.18,-foot-10,tr.w*0.32,foot+10); ctx.restore(); }
-  ctx.restore();
-}
-// 7 · Farm Garden with Sunflowers (1907) — flowers packed to the edges over dark foliage, opening all over the beds, each a ring of petals in its moment's colour around a dark eye; three sunflowers rise out of the upper third one after another in the second half of the piece
+// 6 · Farm Garden with Sunflowers (1907) — flowers packed to the edges over dark foliage, opening all over the beds, each a ring of petals in its moment's colour around a dark eye; three sunflowers rise out of the upper third one after another in the second half of the piece
 function klimtPhaseGarden(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const S=_klxSetup(chords,gc,mode), ss=sessionSeed|0, D=Math.min(CW,CH); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const {mix,css,lum,clamp}=S;
   const r=_seedRnd(99800,ss,0,0); r();
@@ -15215,7 +15184,6 @@ const ARTIST_VARIANTS = {
     {ground:'#5a1a1a',mark:{disc:.5,arc:.5},size:[.03,.1],alpha:.9,layout:{radial:1},density:.4,tone:'gold'},
     {ground:'#5a4826',mark:{rect:.4,target:.4,goldspiral:.2},size:[.02,.06],layout:{field:.6,scatter:.4},density:.8,tone:'gold'},   // The Kiss
     {ground:'#efe2bc',mark:{goldspiral:.6,eye:.25,tri:.15},size:[.04,.12],layout:{radial:.5,scatter:.5},density:.4,tone:'gold'},    // Tree of Life
-    {ground:'#784020',mark:{dot:.6,vstripes:.4},size:[.01,.05],layout:{stack:.6,scatter:.4},density:.8},   // Birch Forest
     {ground:'#2c4628',mark:{dot:.7,disc:.3},size:[.02,.06],layout:{grid:1},density:1},   // Farm Garden with Sunflowers
   ],
   rothko: [   // slot order = solo variants: No. 61, Orange and Yellow, White Center, Four Darks in Red, Seagram, Multiform, No. 10, Chapel
@@ -15356,7 +15324,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:8,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
