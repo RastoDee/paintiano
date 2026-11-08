@@ -4327,6 +4327,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Exists only while Ensemble and ALL are both on.
   const [jamPins, setJamPins] = useState([]);
   const jamPinsRef = useRef([]); useEffect(()=>{ jamPinsRef.current = jamPins; },[jamPins]);
+  const jamClosedRef = useRef(false);   // the stage closed by hand: a guest held and taken off — from then on ↑ keeps only the pinned (gold) ones, no new guests, until Fusion is switched again
+  useEffect(()=>{ jamClosedRef.current=false; },[jamOn, jamAll]);
   useEffect(()=>{ if(!jamOn || !jamAll) setJamPins(p=>p.length?[]:p); },[jamOn, jamAll]);
   useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
   useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
@@ -4722,6 +4724,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
     try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
   };
+  // a face held in the Fusion row: that painter leaves the stage (pinned or guest); two must stay. The stage is then closed: ↑ rolls only the ones left
+  const _jamTakeOff = (k)=>{
+    if(!k || k==='mosaic' || k==='notes') return; const st=_jamStage().filter(Boolean); if(!st.includes(k) || st.length<=2){ _stBuzz(6); return; }
+    const pins=jamPinsRef.current.filter(x=>x!==k); const stage=st.filter(x=>x!==k);
+    jamPinsRef.current=pins; setJamPins(pins); jamClosedRef.current=true; setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); _stBuzz(10);
+    try{ window.posthog && window.posthog.capture('ensemble_takeoff',{n:stage.length}); }catch(_){}
+  };
   // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
   // guests are drawn around them, every member with a new variant; five pins
   // leave no room, so Next rolls the crossing's variants instead. Without pins:
@@ -4729,6 +4738,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // a random variant, the others derive theirs.
   const _jamAllRoll = ()=>{
     const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
+    if(jamClosedRef.current && _jamStage().filter(Boolean).length>=2){ const st=_jamStage().filter(Boolean); setNotesMode(false); setStyle(st[0]); setPainterStage(st.slice(1)); _fuRollAll(st); _fuRollPal(); return; }   // a closed stage: the same painters, new variants and palette — no guests
     if(pins.length){
       const room=STAGE_MAX-pins.length;
       const gpool=SHUFFLE_POOL.filter(k=>!pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
@@ -19091,7 +19101,7 @@ Hard requirements:
               return (
                 <button key={k} data-k={k} data-lk={locked ? 1 : 0}
                   className={isOn?'pf-artist pf-artist-on':'pf-artist'}
-                  onClick={onClick}
+                  {...((studioFs && jamOn && jamAll && !cockpitEdit && !locked && _jamStage().indexOf(k)>=0) ? _segPress(onClick, ()=>_jamTakeOff(k)) : {onClick})}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','Inspired by {artist} · Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
                   data-fu={(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?(locked?0.35:1):(_artMode===2&&!shufHit&&!studioFs)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {studioFs && _skinFace(k, shufHit && !isOn)}
