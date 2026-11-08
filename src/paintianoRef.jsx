@@ -11249,30 +11249,71 @@ function _wvFuji(ctx,S,sx,sy,x0,y0,x1,y1,body,snow,fingers,rnd){ const sw=(x1-x0
 // ── VARIANT: 0 The Great Wave off Kanagawa · 1 Fine Wind, Clear Morning (Red Fuji) · 2 Thunderstorm
 // beneath the Summit · 3 Kajikazawa in Kai Province (aizuri-e) · 4 Masculine Wave · 5 Poppies in the
 // Wind · 6 Ejiri in Suruga (the gust) · 7 Bullfinch and Weeping Cherry. Free: 0 and 1.
+// ── Hokusai's own curves (the woodblock's line is round, never angular) ──────────────────────────────
+// a smooth closed/open path through points, with a tension the lower the rounder
+function _wv2Path(ctx,P,close,tens){ const k=tens==null?6:tens; ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]); for(let i=0;i<P.length-1;i++){ const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||p2; ctx.bezierCurveTo(p1[0]+(p2[0]-p0[0])/k,p1[1]+(p2[1]-p0[1])/k,p2[0]-(p3[0]-p1[0])/k,p2[1]-(p3[1]-p1[1])/k,p2[0],p2[1]); } if(close) ctx.closePath(); }
+// the great wave's crest as a spiral: centre (cx,cy), radius R0 at the shoulder shrinking into the hook; t 0..1 along it
+function _wv2Spiral(cx,cy,R0,a0,a1,shrink,t){ const a=a0+(a1-a0)*t; const R=R0*(1-shrink*t); return [cx+Math.cos(a)*R, cy+Math.sin(a)*R]; }
+// a foam claw: a curved tapered finger from p along (dx,dy), bending toward (bx,by) (its concave side), length len, width w
+function _wv2Claw(ctx,p,dx,dy,len,w,bend,col){ const nx=-dy, ny=dx; const tip=[p[0]+dx*len+nx*bend*len, p[1]+dy*len+ny*bend*len]; ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(p[0]-nx*w,p[1]-ny*w); ctx.quadraticCurveTo(p[0]+dx*len*0.55-nx*w*0.6+nx*bend*len*0.2, p[1]+dy*len*0.55-ny*w*0.6+ny*bend*len*0.2, tip[0],tip[1]); ctx.quadraticCurveTo(p[0]+dx*len*0.5+nx*w*0.9+nx*bend*len*0.35, p[1]+dy*len*0.5+ny*w*0.9+ny*bend*len*0.35, p[0]+nx*w,p[1]+ny*w); ctx.closePath(); ctx.fill(); }
+// a drop of spray: a teardrop pointing along (dx,dy)
+function _wv2Drop(ctx,x,y,r,dx,dy,col){ ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(x+dx*r*2.2,y+dy*r*2.2); ctx.quadraticCurveTo(x-dy*r*1.1,y+dx*r*1.1,x-dx*r,y-dy*r); ctx.quadraticCurveTo(x+dy*r*1.1,y-dx*r*1.1,x+dx*r*2.2,y+dy*r*2.2); ctx.closePath(); ctx.fill(); }
+// Fuji with the concave slopes of the prints: summit (sx,sy), feet (x0,y0) left and (x1,y1) right; the slope steep at the top and flattening out
+function _wv2FujiPath(ctx,sx,sy,x0,y0,x1,y1,top){ const sw=(x1-x0)*0.025; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.bezierCurveTo(x0+(sx-x0)*0.55,y0-(y0-sy)*0.12, sx-sw-(sx-x0)*0.12,sy+(y0-sy)*0.42, sx-sw,sy); if(top) ctx.quadraticCurveTo(sx,sy-sw*0.3,sx+sw,sy); else ctx.lineTo(sx+sw,sy); ctx.bezierCurveTo(sx+sw+(x1-sx)*0.12,sy+(y1-sy)*0.42, x1-(x1-sx)*0.55,y1-(y1-sy)*0.12, x1,y1); }
+// the snow on the summit: the cap and its streaks running down the ridges, lengths uneven
+function _wv2Snow(ctx,sx,sy,x0,y0,x1,y1,depth,n,rnd,col){ const sw=(x1-x0)*0.025; ctx.fillStyle=col;
+  // the cap: its lower edge is the snow's fingers, running down the ridges — long and short by turns, their tips rounded
+  const tl=[-(sx-x0)*0.12-sw,(y0-sy)*0.42], tr=[(x1-sx)*0.12+sw,(y1-sy)*0.42]; const xl=(d)=>sx-sw+tl[0]/tl[1]*d, xr=(d)=>sx+sw+tr[0]/tr[1]*d;
+  const P=[[sx-sw,sy],[sx+sw,sy]]; const m=Math.max(6,n); const notch=depth*0.26;
+  for(let k=0;k<m;k++){ const u=1-(k+0.5)/m; const dt=depth*(0.5+0.5*((k*7)%5)/4+rnd()*0.25); const xa=xl(dt)+(xr(dt)-xl(dt))*u; const un=u-0.5/m; const xb=xl(notch)+(xr(notch)-xl(notch))*un; P.push([xa,sy+dt]); if(k<m-1) P.push([xb,sy+notch]); }
+  ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]); ctx.lineTo(P[1][0],P[1][1]); ctx.lineTo(xr(notch*0.6),sy+notch*0.6);
+  for(let k=2;k<P.length;k++){ const q=P[k]; const prev=P[k-1]; if(k%2===0){ ctx.quadraticCurveTo(q[0]+(prev[0]-q[0])*0.1,q[1]-(q[1]-prev[1])*0.05,q[0],q[1]); } else { ctx.quadraticCurveTo(prev[0]+(q[0]-prev[0])*0.5,q[1]+(prev[1]-q[1])*0.2,q[0],q[1]); } }
+  ctx.lineTo(xl(notch*0.6),sy+notch*0.6); ctx.closePath(); ctx.fill(); }
+// the stacked clouds of the prints: long bands with lobed tops, a few rows
+function _wv2Cloud(ctx,x0,y,len,h,rnd,fill,line){ const n=3+Math.floor(rnd()*3); for(let k=0;k<n;k++){ const l=len*(1-0.22*k)*(0.85+0.3*rnd()); const x=x0+len*0.1*k+(rnd()-.5)*len*0.12; const yy=y+h*1.25*k; ctx.fillStyle=fill; ctx.beginPath(); ctx.roundRect(x,yy,l,h,h*0.5); ctx.fill(); if(line){ ctx.strokeStyle=line; ctx.lineWidth=Math.max(0.8,h*0.07); ctx.stroke(); } } }
+// an oshiokuri boat: the long curved hull with its raised bow, the rowers bent over the oars
+function _wv2Boat(ctx,x,y,l,ang,hull,heads){ ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.fillStyle=hull; ctx.beginPath(); ctx.moveTo(-l*0.5,-l*0.06); ctx.quadraticCurveTo(-l*0.1,l*0.06,l*0.48,-l*0.02); ctx.quadraticCurveTo(l*0.55,-l*0.05,l*0.58,-l*0.13); ctx.quadraticCurveTo(l*0.4,-l*0.06,-l*0.5,-l*0.1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=heads; const n=6; for(let q=0;q<n;q++){ const px=-l*0.36+l*0.7*q/(n-1); const py=-l*0.1-l*0.02*Math.sin(q*1.7); ctx.beginPath(); ctx.ellipse(px,py-l*0.035,l*0.022,l*0.03,0,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.ellipse(px+l*0.01,py-l*0.005,l*0.03,l*0.018,0.3,0,6.2832); ctx.fill(); } ctx.restore(); }
 function _wvPaint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_wvSetup(chords,lim,gc,mode); const {css,mix,paper,D,M,L,Acc,sumi,r,win}=S; const rnd=_seedRnd(81001+pick*17,ss,0,0); rnd(); const W=CW,H=CH, Dm=Math.min(W,H);
   ctx.fillStyle=css(paper); ctx.fillRect(0,0,W,H); ctx.lineCap='round'; ctx.lineJoin='round';
   const c=S.climax(); const nP=S.A.phrases.length;
   switch(pick){
-    case 1: { // Fine Wind, Clear Morning (Red Fuji) — the clouds are the phrases at their register, the snow fingers the accents, the trees the chords
-      _wvBok(ctx,S,0,0,W,H*0.42,mix(D,paper,0.08),paper,9);
-      const G=S.groups(Math.min(7,Math.max(3,Math.round(nP/8)))); const rr=_seedRnd(81200,ss,0,0); rr();
-      G.forEach((g,i)=>{ if(r<g.t0+0.02) return; const y=H*(0.06+0.3*(1-g.reg)), x0=W*(0.02+0.7*g.t0), len=W*Math.max(0.12,Math.min(0.5,g.dur*1.6+0.08)); const h=H*(0.012+0.012*g.v); ctx.fillStyle=css(paper);
-        const n=Math.max(3,Math.round(len/(h*2.2))); for(let k=0;k<n;k++){ const x=x0+len*(k+0.5)/n; ctx.beginPath(); ctx.ellipse(x,y,len/n*0.75,h*(0.8+0.4*rr()),0,0,6.2832); ctx.fill(); } });
-      const sy=H*(0.14+0.2*(1-S.regAll)), sx=W*0.62; const rise=win(r,0,0.5); const sy2=H*0.92-(H*0.92-sy)*Math.max(0.03,rise);
-      _wvFuji(ctx,S,sx,sy2,-W*0.02,H*0.92,W*1.02,H*0.8,S.bw?mix(D,paper,0.35):mix(Acc,sumi,0.1),paper,r>0.5?3+Math.min(6,S.accents(c.a,c.b)):0,rnd);
-      // the forest: a dark scalloped band along the foot, dotted with trees — one dot per few chords
-      const fy=H*0.74; ctx.fillStyle=css(mix(D,sumi,0.35)); ctx.beginPath(); ctx.moveTo(-W*0.02,H*0.92); for(let i=0;i<=24;i++){ const u=i/24; const x=-W*0.02+W*1.04*u; const yy=fy+H*0.1*u+H*0.02*Math.sin(u*31+1)+H*0.012*Math.sin(u*77); ctx.lineTo(x,Math.max(yy,sy2+(H*0.92-sy2)*0.55)); } ctx.lineTo(W*1.02,H); ctx.lineTo(-W*0.02,H); ctx.closePath(); ctx.fill();
-      const nd=Math.round(Math.min(160,30+S.cn*0.12)*win(r,0.3,0.9)); ctx.fillStyle=css(mix(M,paper,0.25)); for(let i=0;i<nd;i++){ const u=rr(); const x=-W*0.02+W*1.04*u, yy=fy+H*0.1*u+H*0.02*Math.sin(u*31+1)-H*0.03*rr()*rr(); const d=Dm*0.004; ctx.beginPath(); ctx.ellipse(x,yy,d,d*1.5,0,0,6.2832); ctx.fill(); }
+    case 1: { // Fine Wind, Clear Morning (Red Fuji) — the clouds are the phrases at their register, the snow streaks the accents, the forest the chords
+      _wvBok(ctx,S,0,0,W,H*0.4,S.bw?mix(D,paper,0.2):mix(D,[40,70,140],0.5),paper,5);
+      const rr=_seedRnd(81200,ss,0,0); rr();
+      // the mountain: the summit at the register, the slopes concave and long, the right one reaching the edge
+      const sy=H*(0.16+0.18*(1-S.regAll)), sx=W*0.6; const rise=win(r,0,0.5); const sy2=H*0.9-(H*0.9-sy)*Math.max(0.03,rise);
+      const x0=-W*0.38, y0=H*1.12, x1=W*1.42, y1=H*1.06;
+      const body=S.bw?mix(D,paper,0.3):mix(Acc,[150,60,40],0.5), base=S.bw?mix(D,paper,0.1):mix(body,[70,30,30],0.55);
+      ctx.save(); _wv2FujiPath(ctx,sx,sy2,x0,y0,x1,y1,false); ctx.closePath(); ctx.clip(); _wvBok(ctx,S,0,sy2,W,H*1.02-sy2,body,base,7);
+      // the slopes carry fine dark ridges running down with the mountain (the brown of the print's grain)
+      ctx.strokeStyle=css(mix(base,sumi,0.3),0.35); ctx.lineWidth=Math.max(1,Dm*0.002); for(let i=0;i<14;i++){ const u=(i+0.5)/14; const left=u<0.5; const f=left?(0.5-u)*2:(u-0.5)*2; const bx=sx+(left?-1:1)*(x1-x0)*0.03*(1+f*3), by=sy2+(H*0.9-sy2)*(0.12+0.3*f*f); const ex=left?x0:x1, ey=left?y0:y1; ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+(ex-bx)*0.4,by+(ey-by)*0.7,ex+(bx-ex)*0.1,ey); ctx.stroke(); }
+      ctx.restore();
+      if(r>0.5){ ctx.save(); _wv2FujiPath(ctx,sx,sy2,x0,y0,x1,y1,false); ctx.closePath(); ctx.clip(); _wv2Snow(ctx,sx,sy2,x0,y0,x1,y1,(H*0.9-sy2)*0.24,10+Math.min(8,S.accents(c.a,c.b)),rnd,css(paper)); ctx.restore(); }
+      // the forest at the foot: a dark green band with a soft wavy top, stippled with trees — one for every few chords
+      const fy=H*0.78; ctx.fillStyle=css(S.bw?mix(D,sumi,0.3):mix([40,90,70],sumi,0.3)); const FP=[]; for(let i=0;i<=20;i++){ const u=i/20; FP.push([-W*0.02+W*1.04*u, fy+H*0.08*u+H*0.018*Math.sin(u*19+1)+H*0.01*Math.sin(u*53)]); } _wv2Path(ctx,FP,false,5); ctx.lineTo(W*1.02,H*1.02); ctx.lineTo(-W*0.02,H*1.02); ctx.closePath(); ctx.fill();
+      const nd=Math.round(Math.min(220,40+S.cn*0.15)*win(r,0.3,0.9)); for(let i=0;i<nd;i++){ const u=rr(); const x=-W*0.02+W*1.04*u, yy=fy+H*0.08*u+H*0.018*Math.sin(u*19+1)+H*0.05*rr()*rr(); const d=Dm*(0.003+0.003*rr()); ctx.fillStyle=css(S.bw?mix(paper,D,0.4):mix([120,170,120],paper,0.2),0.8); ctx.beginPath(); ctx.ellipse(x,yy,d*0.8,d*1.4,0,0,6.2832); ctx.fill(); }
+      // the clouds: long stacked bands at the phrases' registers, lobed, with a thin line
+      const G=S.groups(Math.min(6,Math.max(3,Math.round(nP/8))));
+      G.slice(0,4).forEach((g,i)=>{ if(r<g.t0+0.02) return; const y=H*(0.04+Math.max(0,sy2-H*0.1)/H*(1-g.reg)), x0c=W*(0.1+0.5*g.t0), len=W*Math.max(0.25,Math.min(0.8,g.dur*2.2+0.15)); const h=H*(0.009+0.008*g.v); _wv2Cloud(ctx,x0c,y,len,h,rr,css(paper),css(mix(D,paper,0.5),0.6)); });
       break; }
-    case 2: { // Thunderstorm beneath the Summit — the black mountain under a heavy sky; the lightning is the melody of the loudest phrase; the cloud rises with the energy
-      _wvBok(ctx,S,0,0,W,H*0.5,mix(D,sumi,0.45),mix(D,paper,0.55),8);
-      const sy=H*(0.12+0.18*(1-S.regAll)); const rise=win(r,0,0.45); const sy2=H*0.95-(H*0.95-sy)*Math.max(0.03,rise);
-      _wvFuji(ctx,S,W*0.58,sy2,-W*0.02,H*0.95,W*1.02,H*0.86,mix(sumi,D,0.3),mix(paper,D,0.25),r>0.45?1+Math.min(3,S.accents(c.a,c.b)):0,rnd);
-      const cy=H*(0.72-0.14*S.energy); ctx.fillStyle=css(mix(sumi,D,0.25)); ctx.beginPath(); ctx.moveTo(-W*0.02,H); ctx.lineTo(-W*0.02,cy+H*0.04); for(let i=0;i<=16;i++){ const u=i/16; ctx.lineTo(-W*0.02+W*1.04*u,cy+H*0.05*Math.sin(u*9+2)+H*0.03*Math.sin(u*23)); } ctx.lineTo(W*1.02,H); ctx.closePath(); ctx.fill();
-      if(r>0.5){ const n=Math.min(12,Math.max(6,c.b-c.a)); const C=S.contour(c.a,c.b,n); const P=[]; for(let i=0;i<n;i++){ const u=i/(n-1); P.push([W*(0.12+0.7*u),cy+H*0.02+H*0.2*u+H*0.16*(0.5-C[i])+(i%2?-1:1)*H*(0.012+0.02*rnd())]); }
-        const k=win(r,0.5,0.75); const m=Math.max(2,Math.round(P.length*k)); const lc=css(S.bw?paper:mix(mix(Acc,[250,200,120],0.5),paper,0.25)); ctx.strokeStyle=lc; ctx.lineWidth=Math.max(2.5,Dm*0.01); ctx.beginPath(); P.slice(0,m).forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
-        ctx.lineWidth=Math.max(1,Dm*0.0035); for(let j=3;j<m-2;j+=4){ const p=P[j]; const d=(j%8<4)?1:-1; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(p[0]+W*0.04,p[1]+d*H*0.035); ctx.lineTo(p[0]+W*0.09,p[1]+d*H*0.03); ctx.lineTo(p[0]+W*0.12,p[1]+d*H*0.07); ctx.stroke(); } }
+    case 2: { // Thunderstorm beneath the Summit — the black mountain under the clouds; the summit alone in the light; the lightning is the melody of the loudest phrase
+      _wvBok(ctx,S,0,0,W,H*0.5,S.bw?mix(D,sumi,0.4):mix(D,[50,80,150],0.4),mix(D,paper,0.7),6);
+      const sy=H*(0.12+0.18*(1-S.regAll)), sx=W*0.56; const rise=win(r,0,0.45); const sy2=H*0.95-(H*0.95-sy)*Math.max(0.03,rise);
+      const x0=-W*0.4, y0=H*1.14, x1=W*1.44, y1=H*1.08; const body=mix(sumi,D,0.25);
+      ctx.save(); _wv2FujiPath(ctx,sx,sy2,x0,y0,x1,y1,false); ctx.closePath(); ctx.clip(); _wvBok(ctx,S,0,sy2,W,H*1.02-sy2,mix(body,D,0.35),body,6); ctx.restore();
+      // a soft light on the upper slopes: the summit stands in the clear above the storm
+      ctx.save(); _wv2FujiPath(ctx,sx,sy2,x0,y0,x1,y1,false); ctx.closePath(); ctx.clip(); ctx.fillStyle=css(mix(paper,D,0.3),0.25); ctx.beginPath(); ctx.moveTo(sx-(x1-x0)*0.2,sy2+(H*0.95-sy2)*0.35); ctx.quadraticCurveTo(sx,sy2-H*0.05,sx+(x1-x0)*0.22,sy2+(H*0.95-sy2)*0.35); ctx.closePath(); ctx.fill(); ctx.restore();
+      if(r>0.45){ ctx.save(); _wv2FujiPath(ctx,sx,sy2,x0,y0,x1,y1,false); ctx.closePath(); ctx.clip(); _wv2Snow(ctx,sx,sy2,x0,y0,x1,y1,(H*0.95-sy2)*0.18,7+Math.min(5,S.accents(c.a,c.b)),rnd,css(mix(paper,D,0.08))); ctx.restore(); }
+      // the storm clouds below: a dark bank with lobed top, rising with the energy
+      const cy=H*(0.72-0.14*S.energy); const CP=[[-W*0.04,cy+H*0.05]]; for(let i=0;i<=14;i++){ const u=i/14; CP.push([-W*0.04+W*1.08*u, cy+H*0.05*Math.sin(u*9+2)+H*0.03*Math.sin(u*23)-H*0.03*(i%2)]); } CP.push([W*1.04,cy+H*0.05]);
+      ctx.fillStyle=css(mix(sumi,D,0.15)); _wv2Path(ctx,CP,false,4); ctx.lineTo(W*1.04,H*1.02); ctx.lineTo(-W*0.04,H*1.02); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=css(mix(sumi,[90,60,40],0.35),0.6); _wv2Path(ctx,CP.map((p,i)=>[p[0],p[1]+H*0.07+H*0.02*Math.sin(i*2.1)]),false,4); ctx.lineTo(W*1.04,H*1.02); ctx.lineTo(-W*0.04,H*1.02); ctx.closePath(); ctx.fill();
+      // the lightning — the one angular line of the print — the melody of the climax, branching at its leaps
+      if(r>0.5){ const n=Math.min(12,Math.max(6,c.b-c.a)); const C=S.contour(c.a,c.b,n); const P=[]; for(let i=0;i<n;i++){ const u=i/(n-1); P.push([W*(0.12+0.7*u),cy+H*0.03+H*0.2*u+H*0.16*(0.5-C[i])+(i%2?-1:1)*H*(0.012+0.02*rnd())]); }
+        const k=win(r,0.5,0.75); const m=Math.max(2,Math.round(P.length*k)); const lc=css(S.bw?paper:mix(mix(Acc,[250,200,120],0.5),paper,0.25)); ctx.strokeStyle=lc; ctx.lineWidth=Math.max(2.5,Dm*0.01); ctx.lineJoin='miter'; ctx.beginPath(); P.slice(0,m).forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+        ctx.lineWidth=Math.max(1,Dm*0.0035); for(let j=3;j<m-2;j+=4){ const p=P[j]; const d=(j%8<4)?1:-1; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(p[0]+W*0.04,p[1]+d*H*0.035); ctx.lineTo(p[0]+W*0.09,p[1]+d*H*0.03); ctx.lineTo(p[0]+W*0.12,p[1]+d*H*0.07); ctx.stroke(); } ctx.lineJoin='round'; }
       break; }
     case 3: { // Kajikazawa in Kai Province (aizuri-e) — one blue ink: the fisherman's lines are the voices, the crests the phrases, Fuji in the mist as the register
       const B=S.bw?mix(D,sumi,0.3):mix(D,[20,52,96],0.5); const Mb=mix(B,paper,0.4), Lb=mix(B,paper,0.72);
@@ -11364,24 +11405,36 @@ function _wvPaint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
     case 10: { _wvPrint('bridge',ctx,S,W,H,Dm,rnd,ss); break; }
     case 11: { _wvPrint('carp',ctx,S,W,H,Dm,rnd,ss); break; }
     default: { // The Great Wave off Kanagawa — the swells are the passages, the great one the climax; its claws the accents, the boats the phrases, Fuji the register
-      _wvBok(ctx,S,0,0,W,H*0.26,mix(D,paper,0.5+0.3*(1-S.energy)),paper,7);
-      const yS=H*0.62; const rise=win(r,0.05,0.6); const G=S.groups(Math.min(3,Math.max(1,Math.round(nP/12))));
-      _wvFuji(ctx,S,W*0.66,yS-H*(0.07+0.1*S.regAll),W*0.5,yS,W*0.82,yS,mix(D,paper,0.3),paper,2,rnd);
-      const H1=H*(0.24+0.2*c.vmax)*Math.max(0.05,rise); const xc=W*0.28, yc=yS-H1; const lip=[W*0.64,yc+H1*0.3];
-      const B=[[-W*0.03,yS+H*0.03],[W*0.04,yS-H1*0.2],[W*0.13,yc+H1*0.32],[W*0.21,yc+H1*0.06],[xc,yc],[W*0.4,yc-H1*0.04],[W*0.52,yc+H1*0.06]];   // the back slope, up to the lip
-      const P=B.concat([lip,[W*0.6,yc+H1*0.46],[W*0.5,yc+H1*0.4],[W*0.47,yc+H1*0.62],[W*0.54,yS-H*0.04],[W*0.63,yS+H*0.03]]);
-      G.forEach((g,i)=>{ if(i===0&&G.length>1) return; const x=W*(0.7+0.26*(G.length>1?(i-1)/Math.max(1,G.length-2):0.5)); P.push([x-W*0.07,yS+H*0.02],[x,yS-H*(0.04+0.12*g.vmax)*Math.max(0.05,rise)],[x+W*0.08,yS+H*0.02]); });
-      P.push([W*1.03,yS+H*0.03]);
-      ctx.fillStyle=css(D); _wvPath(ctx,P.concat([[W*1.03,H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill();
-      const ns=3+Math.round(S.density*25); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.85); ctx.lineWidth=Math.max(1,Dm*0.0045); _wvPath(ctx,B.map(p=>[p[0],p[1]+H*0.028*j]),false); ctx.stroke(); }
-      ctx.strokeStyle=css(mix(paper,L,0.3)); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wvPath(ctx,B,false); ctx.stroke();
-      // boats riding the swells — one per passage once the sea is up
-      if(S.energy>0.25){ const nb=Math.min(3,G.length); ctx.strokeStyle=css(sumi); ctx.lineWidth=Math.max(2,Dm*0.008); [[0.52,0.08,0.55],[0.8,-0.08,0.7],[0.92,0.05,0.85]].slice(0,nb).forEach(([u,ang,at])=>{ if(r<at) return; const x=W*u; let y=yS; for(let i=0;i<P.length-1;i++) if(x>=P[i][0]&&x<=P[i+1][0]){ y=P[i][1]+(P[i+1][1]-P[i][1])*(x-P[i][0])/Math.max(1,P[i+1][0]-P[i][0]); } const l=W*0.11;
-          ctx.beginPath(); ctx.moveTo(x-l*Math.cos(ang),y+H*0.02-l*Math.sin(ang)); ctx.quadraticCurveTo(x,y+H*0.045,x+l*Math.cos(ang),y+H*0.01+l*Math.sin(ang)); ctx.stroke(); ctx.fillStyle=css(paper); for(let q=0;q<5;q++){ const px=x-l*0.7+l*1.4*q/4; ctx.beginPath(); ctx.arc(px,y+H*0.012-(px-x)*Math.tan(ang)*0.5,Dm*0.004,0,6.2832); ctx.fill(); } }); }
-      // the claws along the lip, one per accent of the climax, and the spray
-      if(r>0.6){ const na=7+Math.min(9,S.accents(c.a,c.b)); const kk=win(r,0.6,0.85); const m=Math.round(na*kk); for(let i=0;i<m;i++){ const u=i/(na-1); const p=[xc+(lip[0]-xc)*u,yc-H1*0.06*Math.sin(u*3.14)+(lip[1]-yc)*u*u*0.9]; const len=Dm*(0.05+0.09*c.vmax)*(1.15-0.7*u); const a=2.3+0.6*u; _wvClaw(ctx,p,Math.cos(a),Math.sin(a),len,css(paper)); }
-        ctx.fillStyle=css(paper); const nd=Math.round((30+S.density*260)*win(r,0.7,1)); for(let i=0;i<nd;i++){ const x=W*(0.34+0.34*rnd()), y=yc+H1*(0.25+0.9*rnd()); if(y>yS+H*0.02) continue; const d=Dm*(0.0025+0.006*rnd()); ctx.beginPath(); ctx.arc(x,y,d,0,6.2832); ctx.fill(); } }
-    }
+      _wvBok(ctx,S,0,0,W,H*0.3,mix(D,paper,0.45+0.3*(1-S.energy)),paper,5);
+      const yS=H*0.64; const rise=win(r,0.05,0.6); const G=S.groups(Math.min(3,Math.max(1,Math.round(nP/12))));
+      // Fuji small in the trough, far away, pale
+      { const fx=W*0.64, fy=yS-H*(0.06+0.1*S.regAll); ctx.fillStyle=css(mix(D,paper,0.35)); _wv2FujiPath(ctx,fx,fy,W*0.44,yS+H*0.01,W*0.86,yS+H*0.01,false); ctx.closePath(); ctx.fill(); ctx.fillStyle=css(paper); _wv2Snow(ctx,fx,fy,W*0.44,yS+H*0.01,W*0.86,yS+H*0.01,(yS-fy)*0.25,4,rnd,css(paper)); }
+      // the far swell behind the great wave: a low smooth hump with its own small foam
+      { ctx.fillStyle=css(mix(D,M,0.5)); const FS=[[W*0.3,yS+H*0.02],[W*0.42,yS-H*0.03],[W*0.56,yS-H*0.05],[W*0.7,yS-H*0.02],[W*0.84,yS+H*0.02]]; _wv2Path(ctx,FS,false,5); ctx.lineTo(W*0.84,yS+H*0.1); ctx.lineTo(W*0.3,yS+H*0.1); ctx.closePath(); ctx.fill(); }
+      // the great wave: the back rises from the left to the shoulder, the crest arcs across and hooks down at the lip over the hollow; its height the climax's dynamics
+      const H1=H*(0.28+0.2*c.vmax)*Math.max(0.05,rise); const yc=yS-H1; const Cc=[W*0.5,yc+H1*0.46];   // the curl's centre
+      const BACK=[[-W*0.04,yS+H*0.06],[W*0.03,yS-H1*0.1],[W*0.11,yS-H1*0.36],[W*0.2,yc+H1*0.26],[W*0.3,yc+H1*0.08]];
+      const CREST=[[W*0.4,yc],[W*0.51,yc+H1*0.02],[W*0.6,yc+H1*0.12],[W*0.665,yc+H1*0.27],[W*0.655,yc+H1*0.41],[W*0.6,yc+H1*0.47],[W*0.54,yc+H1*0.43]];   // over the top and down into the hook
+      const HOLLOW=[[W*0.49,yc+H1*0.58],[W*0.47,yc+H1*0.8],[W*0.55,yS-H*0.02],[W*0.64,yS+H*0.03]];
+      const P=BACK.concat(CREST,HOLLOW);
+      G.forEach((g,i)=>{ if(i===0&&G.length>1) return; const x=W*(0.72+0.26*(G.length>1?(i-1)/Math.max(1,G.length-2):0.5)); P.push([x-W*0.07,yS+H*0.03],[x,yS-H*(0.04+0.12*g.vmax)*Math.max(0.05,rise)],[x+W*0.09,yS+H*0.03]); });
+      P.push([W*1.04,yS+H*0.04]);
+      ctx.fillStyle=css(D); _wv2Path(ctx,P.concat([[W*1.04,H*1.04],[-W*0.04,H*1.04]]),true,5); ctx.fill();
+      // the striations: lines along the back that curl into the hook, each drawn a little inside the last
+      const ns=4+Math.round(S.density*16); for(let j=1;j<=ns;j++){ const f=j/(ns+1); const Lb=BACK.map(p=>[p[0]+W*0.014*j,p[1]+H1*0.06*j]); const Lc=CREST.slice(0,6).map(p=>[Cc[0]+(p[0]-Cc[0])*(1-0.78*f),Cc[1]+(p[1]-Cc[1])*(1-0.78*f)]); ctx.strokeStyle=css(j%2?L:M,0.9-0.3*f); ctx.lineWidth=Math.max(1,Dm*(0.0055-0.002*f)); _wv2Path(ctx,Lb.concat(Lc),false,5); ctx.stroke(); }
+      // the light edge of the back
+      ctx.strokeStyle=css(mix(paper,L,0.35)); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wv2Path(ctx,BACK.concat(CREST.slice(0,3)),false,5); ctx.stroke();
+      // the boats riding the swells, one per passage once the sea is up
+      if(S.energy>0.25){ const nb=Math.min(3,G.length); [[0.5,-0.25,0.55],[0.8,0.18,0.7],[0.2,-0.2,0.85]].slice(0,nb).forEach(([u,ang,at])=>{ if(r<at) return; const x=W*u; let y=yS; for(let i=0;i<P.length-1;i++) if(x>=P[i][0]&&x<=P[i+1][0]){ y=P[i][1]+(P[i+1][1]-P[i][1])*(x-P[i][0])/Math.max(1,P[i+1][0]-P[i][0]); } if(u<0.3) y=yS-H1*0.15; _wv2Boat(ctx,x,y+H*0.015,W*0.2,ang,css(mix(sumi,[90,70,50],0.4)),css(paper)); }); }
+      // the foam: a comb of claws along the crest and the lip, long and short by turns (the longest at the accents), each curling on in the crest's own direction; then the spray thrown off the top
+      if(r>0.55){ const LIP=CREST.slice(0,7); const samp=(u)=>{ const k=u*(LIP.length-1); const i=Math.min(LIP.length-2,Math.floor(k)); const f=k-i; const p0=LIP[Math.max(0,i-1)], p1=LIP[i], p2=LIP[i+1], p3=LIP[Math.min(LIP.length-1,i+2)]; const cr=(a,b,c2,d)=>0.5*((2*b)+(-a+c2)*f+(2*a-5*b+4*c2-d)*f*f+(-a+3*b-3*c2+d)*f*f*f); return [cr(p0[0],p1[0],p2[0],p3[0]),cr(p0[1],p1[1],p2[1],p3[1])]; };
+        const na=24+Math.min(16,S.accents(c.a,c.b)*2); const kk=win(r,0.55,0.85); const m=Math.round(na*kk);
+        for(let i=0;i<m;i++){ const u=0.02+0.96*i/(na-1); const p=samp(u), q=samp(Math.min(1,u+0.012)); let tx=q[0]-p[0], ty=q[1]-p[1]; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl; let ox=p[0]-Cc[0], oy=p[1]-Cc[1]; const ol=Math.hypot(ox,oy)||1; ox/=ol; oy/=ol;
+          const dx=tx*0.8+ox*0.2, dy=ty*0.8+oy*0.2; const dl=Math.hypot(dx,dy)||1; const big=(i%3===0); const len=Dm*(big?0.09+0.1*c.vmax:0.035+0.05*c.vmax)*(0.5+0.7*u); _wv2Claw(ctx,[p[0]+ox*Dm*0.004,p[1]+oy*Dm*0.004],dx/dl,dy/dl,len,Dm*(big?0.013:0.007),-0.45,css(paper)); }
+        // the foam of the lesser swells
+        for(let i=BACK.length+CREST.length+HOLLOW.length;i<P.length-1;i++){ const p=P[i]; if(p[1]>yS-H*0.01) continue; for(let k=0;k<6;k++){ const x=p[0]-W*0.06+W*0.12*k/5; _wv2Claw(ctx,[x,p[1]+H*0.008+Math.abs(k-2.5)*H*0.008],-0.7,0.7,Dm*(0.02+0.014*(k%2)),Dm*0.004,-0.3,css(paper)); } }
+        const nd=Math.round((40+S.density*260)*win(r,0.65,1)); for(let i=0;i<nd;i++){ const u=0.1+0.9*rnd(); const p=samp(Math.min(1,u)); let ox=p[0]-Cc[0], oy=p[1]-Cc[1]; const ol=Math.hypot(ox,oy)||1; ox/=ol; oy/=ol; const dd=Dm*(0.02+0.16*rnd()*rnd()); const x=p[0]+ox*dd+(rnd()-.5)*Dm*0.05, y=p[1]+oy*dd-H*0.01; if(y>yS||x>W*1.0||x<0) continue; const d=Dm*(0.002+0.005*rnd()); if(rnd()<0.6) _wv2Drop(ctx,x,y,d,ox,oy,css(paper)); else { ctx.fillStyle=css(paper); ctx.beginPath(); ctx.arc(x,y,d,0,6.2832); ctx.fill(); } } }
+      break; }
   }
   _setCurE(0.5);
 }
@@ -11460,9 +11513,9 @@ function _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q){
   const G=(n)=>S.groups(Math.min(n,Math.max(1,Math.round(nP/Math.max(1,Math.round(nP/n))))));
   const skyBand=(y0,y1,c0,c1)=>_wvBok(ctx,S,0,y0,W,y1-y0,c0,c1,9);
   const moon=(x,y,R)=>{ ctx.fillStyle=css(S.bw?paper:mix(paper,Acc,0.12)); ctx.beginPath(); ctx.arc(x,y,R,0,6.2832); ctx.fill(); };
-  const clouds=(top,bot,n)=>{ const g=G(n); const rr=_seedRnd(81800,ss,0,0); rr(); g.forEach((q)=>{ if(r<q.t0+0.02) return; const y=top+(bot-top)*(0.1+0.8*(1-q.reg)), x0=W*(0.02+0.7*q.t0), len=W*Math.max(0.1,Math.min(0.45,q.dur*1.5+0.06)); const h=H*(0.01+0.012*q.v); ctx.fillStyle=css(night?mix(paper,D,0.35):paper); const k=Math.max(3,Math.round(len/(h*2.2))); for(let i=0;i<k;i++){ const x=x0+len*(i+0.5)/k; ctx.beginPath(); ctx.ellipse(x,y,len/k*0.75,h*(0.8+0.4*rr()),0,0,6.2832); ctx.fill(); } }); };
-  const fuji=(x,baseY,scale,body)=>{ _wvFuji(ctx,S,x,baseY-H*scale*Math.max(0.03,win(r,0,0.5)),x-W*scale*1.5,baseY,x+W*scale*1.5,baseY,body,night?mix(paper,D,0.3):paper,r>0.5?2+Math.min(5,S.accents(c.a,c.b)):0,rnd); };
-  const boat=(x,y,l,ang,rows)=>{ ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(2,Dm*0.007); ctx.beginPath(); ctx.moveTo(x-l*Math.cos(ang),y+H*0.015-l*Math.sin(ang)); ctx.quadraticCurveTo(x,y+H*0.04,x+l*Math.cos(ang),y+H*0.008+l*Math.sin(ang)); ctx.stroke(); ctx.fillStyle=css(paper); for(let q=0;q<rows;q++){ const px=x-l*0.7+l*1.4*q/Math.max(1,rows-1); ctx.beginPath(); ctx.arc(px,y+H*0.01-(px-x)*Math.tan(ang)*0.5,Dm*0.0035,0,6.2832); ctx.fill(); } };
+  const clouds=(top,bot,n)=>{ const g=G(n); const rr=_seedRnd(81800,ss,0,0); rr(); g.forEach((q)=>{ if(r<q.t0+0.02) return; const y=top+(bot-top)*(0.1+0.8*(1-q.reg)), x0=W*(0.02+0.7*q.t0), len=W*Math.max(0.1,Math.min(0.45,q.dur*1.5+0.06)); const h=H*(0.008+0.008*q.v); _wv2Cloud(ctx,x0,y,len,h,rr,css(night?mix(paper,D,0.35):paper),css(mix(D,paper,0.5),0.5)); }); };
+  const fuji=(x,baseY,scale,body)=>{ const sy=baseY-H*scale*Math.max(0.03,win(r,0,0.5)); const x0=x-W*scale*2.6, x1=x+W*scale*2.6; ctx.fillStyle=css(body); _wv2FujiPath(ctx,x,sy,x0,baseY,x1,baseY,false); ctx.closePath(); ctx.fill(); if(r>0.5){ ctx.save(); _wv2FujiPath(ctx,x,sy,x0,baseY,x1,baseY,false); ctx.closePath(); ctx.clip(); _wv2Snow(ctx,x,sy,x0,baseY,x1,baseY,(baseY-sy)*0.26,5+Math.min(5,S.accents(c.a,c.b)),rnd,css(night?mix(paper,D,0.3):paper)); ctx.restore(); } };
+  const boat=(x,y,l,ang,rows)=>{ _wv2Boat(ctx,x,y+H*0.012,l*1.9,ang,ink(),css(paper)); };
   const walker=(px,py,s,hat,umb)=>{ ctx.fillStyle=ink(); _wvPath(ctx,[[px-s*0.5,py],[px-s*0.3,py-s*2],[px+s*0.3,py-s*2.7],[px+s*0.8,py-s*2],[px+s*0.5,py]],true); ctx.fill(); if(hat){ ctx.beginPath(); ctx.ellipse(px+s*0.2,py-s*3,s*0.9,s*0.35,0.2,0,6.2832); ctx.fill(); } if(umb){ ctx.fillStyle=css(umb); ctx.beginPath(); ctx.moveTo(px-s*1.6,py-s*3.2); ctx.quadraticCurveTo(px+s*0.2,py-s*5.2,px+s*2,py-s*3.2); ctx.closePath(); ctx.fill(); ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(0.6,Dm*0.002); ctx.beginPath(); ctx.moveTo(px+s*0.2,py-s*3.2); ctx.lineTo(px+s*0.1,py-s*1.6); ctx.stroke(); } };
   const pine=(x,base,h,v,snow)=>{ ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1.5,Dm*0.006); ctx.beginPath(); ctx.moveTo(x,base); ctx.quadraticCurveTo(x+W*0.02,base-h*0.5,x-W*0.01,base-h); ctx.stroke(); for(let j=0;j<4;j++){ const u=0.4+0.2*j; const px=x+W*0.01*(1-u), py=base-h*u; const w=W*(0.075-0.014*j)*(0.7+0.3*v); ctx.fillStyle=css(S.bw?mix(D,sumi,0.4):mix(mix(D,[30,70,45],0.5),sumi,0.25)); ctx.beginPath(); ctx.moveTo(px-w,py+H*0.008); ctx.quadraticCurveTo(px-w*0.5,py-H*0.012,px,py-H*0.006); ctx.quadraticCurveTo(px+w*0.5,py-H*0.012,px+w,py+H*0.008); ctx.quadraticCurveTo(px,py+H*0.014,px-w,py+H*0.008); ctx.fill(); if(snow){ ctx.fillStyle=css(paper); ctx.beginPath(); ctx.moveTo(px-w*0.9,py+H*0.004); ctx.quadraticCurveTo(px,py-H*0.016,px+w*0.9,py+H*0.004); ctx.quadraticCurveTo(px,py-H*0.004,px-w*0.9,py+H*0.004); ctx.fill(); } } };
   const rain=(nr,slant,a)=>{ const rr=_seedRnd(81820,ss,0,0); rr(); ctx.strokeStyle=ink(a==null?0.5:a); ctx.lineWidth=Math.max(0.6,Dm*0.0018); for(let i=0;i<nr;i++){ const x=W*(rr()*1.1-0.05), y=H*rr()*0.95; const len=H*(0.05+0.08*rr()); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+len*slant,y+len); ctx.stroke(); } };
@@ -11473,18 +11526,22 @@ function _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q){
   const seaAt=(P,x)=>{ let y=P[0][1]; for(let i=0;i<P.length-1;i++) if(x>=P[i][0]&&x<=P[i+1][0]){ y=P[i][1]+(P[i+1][1]-P[i][1])*(x-P[i][0])/Math.max(1,P[i+1][0]-P[i][0]); } return y; };
   const swells=(hz,amp,col)=>{ const P=seaLine(hz,amp); const Qs=P.slice(0,m); ctx.fillStyle=css(col); _wvPath(ctx,Qs.concat([[Qs[m-1][0],H*1.02],[-W*0.02,H*1.02]]),true); ctx.fill(); const ns=4+Math.round(dens*26); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.9); ctx.lineWidth=Math.max(1,Dm*0.004); _wvPath(ctx,Qs.map(q=>[q[0],q[1]+H*0.035*j]),false); ctx.stroke(); } ctx.strokeStyle=css(paper); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wvPath(ctx,Qs,false); ctx.stroke();
     const E=_kd2Events(A,Math.round(20+dens*60)); const rr=_seedRnd(81810,ss,0,0); rr(); const keep=new Set(E.filter(e=>e.acc).sort((a,b)=>b.v-a.v).slice(0,5).map(e=>e.i));
-    E.forEach(e=>{ if(e.t>k) return; const acc=e.acc&&keep.has(e.i); const x=-W*0.02+W*1.04*e.t, y=seaAt(P,x); if(acc){ const sz=Dm*(0.03+0.06*e.v); const cx=x, cy=y-sz*0.7; ctx.fillStyle=css(col); ctx.beginPath(); ctx.arc(cx,cy,sz,0.9,3.5,true); ctx.arc(cx,cy,sz*0.42,3.5,0.9,false); ctx.closePath(); ctx.fill(); const nc=3+Math.round(e.v*3); for(let q=0;q<nc;q++){ const a=2.9+0.7*q/(nc-1); _wvClaw(ctx,[cx+Math.cos(a)*sz*0.98,cy+Math.sin(a)*sz*0.98],-0.5-0.2*rr(),0.85,sz*(0.4+0.35*rr()),css(paper)); } } else if(e.v>0.6){ ctx.fillStyle=css(paper); const d=Dm*(0.002+0.005*e.v); ctx.beginPath(); ctx.arc(x+(rr()-.5)*W*0.03,y+rr()*H*0.04,d,0,6.2832); ctx.fill(); } }); return P; };
-  const boats=(P,nmax,l0)=>{ G(nmax).forEach((g,i)=>{ if(r<g.t0+0.04) return; const x=W*(0.08+0.84*g.t); boat(x,seaAt(P,x),W*(l0+0.07*g.vmax),0.05*(i%2?-1:1),Math.max(2,Math.min(6,Math.round(g.n/8)))); }); };
+    E.forEach(e=>{ if(e.t>k) return; const acc=e.acc&&keep.has(e.i); const x=-W*0.02+W*1.04*e.t, y=seaAt(P,x); if(acc){ const sz=Dm*(0.03+0.06*e.v); const cx=x, cy=y-sz*0.5; ctx.fillStyle=css(col); _wv2Path(ctx,[[cx-sz*1.4,y+sz*0.1],[cx-sz*0.9,cy-sz*0.3],[cx-sz*0.2,cy-sz*0.6],[cx+sz*0.5,cy-sz*0.45],[cx+sz*0.8,cy],[cx+sz*0.5,cy+sz*0.3],[cx+sz*1.2,y+sz*0.1]],true,5); ctx.fill(); const nc=5+Math.round(e.v*5); for(let q=0;q<nc;q++){ const u=q/(nc-1); const px=cx-sz*0.6+sz*1.4*u, py=cy-sz*0.55+sz*0.5*u*u; _wv2Claw(ctx,[px,py],0.5+0.4*u,0.6+0.3*u,sz*(0.35+0.4*((q*3)%3)/2),sz*0.07,-0.4,css(paper)); } } else if(e.v>0.6){ ctx.fillStyle=css(paper); const d=Dm*(0.002+0.005*e.v); ctx.beginPath(); ctx.arc(x+(rr()-.5)*W*0.03,y+rr()*H*0.04,d,0,6.2832); ctx.fill(); } }); return P; };
+  const boats=(P,nmax,l0)=>{ G(nmax).forEach((g,i)=>{ if(r<g.t0+0.04) return; const x=W*(0.08+0.84*g.t); const y=seaAt(P,x); if(y<hz-H*0.1) return; boat(x,y,W*(l0+0.07*g.vmax),0.05*(i%2?-1:1),Math.max(2,Math.min(6,Math.round(g.n/8)))); }); };
   // ── the setting: the ground of the print; it says where its water is (for the boats and the carp) and where its shore is
   let hz=H*0.5, P=null, waterTop=null, waterBot=H, shoreY=null, fujiBase=null;
   if(setting==='gorge'){ // Kirifuri: a column of water per voice, the white threads the notes, the rock either side, the pool below
     skyBand(0,H*0.3,skyCol[0],skyCol[1]); const nc=Math.max(2,Math.min(5,Math.round(X.poly))); const x0=W*0.26, x1=W*0.74; const top=H*0.08, pool=H*0.78;
     ctx.fillStyle=css(mix(D,sumi,0.5)); _wvPath(ctx,[[-W*0.02,H*1.02],[-W*0.02,H*0.2],[W*0.12,H*0.14],[W*0.24,H*0.1],[x0+W*0.02,top],[x0-W*0.02,H*0.5],[x0+W*0.02,pool],[W*0.1,H*0.86]],true); ctx.fill();
     ctx.fillStyle=css(mix(D,sumi,0.4)); _wvPath(ctx,[[W*1.02,H*1.02],[W*1.02,H*0.16],[W*0.9,H*0.12],[x1-W*0.02,top],[x1+W*0.02,H*0.5],[x1-W*0.02,pool],[W*0.9,H*0.88]],true); ctx.fill();
-    ctx.fillStyle=css(D); ctx.fillRect(x0,top,x1-x0,pool-top);
+    // the fall: the whole sheet of water, its sides bowing out as it drops (a ribbon, not a column), then a ribbon per voice over it, each bending its own way, the white threads the notes running down them
+    const rib=(xa,xb,bow,kk2)=>{ const yb=top+(pool-top)*kk2; const mw=(xb-xa); ctx.beginPath(); ctx.moveTo(xa,top); ctx.bezierCurveTo(xa-mw*bow*0.2,top+(yb-top)*0.35, xa-mw*bow,top+(yb-top)*0.75, xa-mw*bow*0.6,yb); ctx.lineTo(xb+mw*bow*0.6,yb); ctx.bezierCurveTo(xb+mw*bow,top+(yb-top)*0.75, xb+mw*bow*0.2,top+(yb-top)*0.35, xb,top); ctx.closePath(); };
+    ctx.fillStyle=css(D); rib(x0,x1,0.12,1); ctx.fill();
     const kk=win(r,0,0.9); const E=_kd2Events(A,Math.round(30+dens*140)); ctx.strokeStyle=css(paper);
-    for(let ci=0;ci<nc;ci++){ const cx0=x0+(x1-x0)*(ci+0.08)/nc, cx1=x0+(x1-x0)*(ci+0.92)/nc; ctx.fillStyle=css(mix(D,L,0.35)); ctx.fillRect(cx0,top,cx1-cx0,(pool-top)*kk);
-      E.forEach((e,ei)=>{ if(e.t>kk || ei%nc!==ci) return; const x=cx0+(cx1-cx0)*(0.1+0.8*((ei*0.618)%1)); const y0=top+(pool-top)*e.t*0.9, len=H*(0.04+0.1*e.v); ctx.lineWidth=Math.max(0.8,Dm*(0.002+0.004*e.v)); ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x+(rnd()-.5)*W*0.01,Math.min(pool,y0+len)); ctx.stroke(); }); }
+    for(let ci=0;ci<nc;ci++){ const cx0=x0+(x1-x0)*(ci+0.1)/nc, cx1=x0+(x1-x0)*(ci+0.9)/nc; const bow=0.25*((ci%2)?1:-1)*(0.5+0.5*((ci*0.37)%1)); ctx.fillStyle=css(mix(D,L,0.35)); rib(cx0,cx1,0.3+bow,kk); ctx.fill();
+      ctx.save(); rib(cx0,cx1,0.3+bow,kk); ctx.clip();
+      E.forEach((e,ei)=>{ if(e.t>kk || ei%nc!==ci) return; const u=(0.1+0.8*((ei*0.618)%1)); const y0=top+(pool-top)*e.t*0.9, len=H*(0.05+0.12*e.v); const x=cx0+(cx1-cx0)*u; const sw=(cx1-cx0)*(0.3+bow)*((y0-top)/(pool-top)); ctx.lineWidth=Math.max(0.8,Dm*(0.002+0.004*e.v)); ctx.beginPath(); ctx.moveTo(x-sw*(1-2*u)*0.8,y0); ctx.quadraticCurveTo(x-sw*(1-2*u)*1.1+(rnd()-.5)*W*0.01,y0+len*0.5,x-sw*(1-2*u)*1.3,Math.min(pool,y0+len)); ctx.stroke(); });
+      ctx.restore(); }
     ctx.fillStyle=css(mix(D,paper,0.2)); ctx.fillRect(0,pool,W,H-pool); { const rr=_seedRnd(81840,ss,0,0); rr(); for(let i=0;i<14;i++){ const u=i/13; ctx.fillStyle=css(mix(paper,D,0.08),0.5+0.3*rr()); ctx.beginPath(); ctx.ellipse(x0-W*0.06+(x1-x0+W*0.12)*u,pool+H*(0.01-0.05*rr()),W*(0.05+0.05*rr()),H*(0.02+0.03*rr()),0,0,6.2832); ctx.fill(); } }
     const rip=G(8); ctx.strokeStyle=css(paper,0.85); ctx.lineWidth=Math.max(1,Dm*0.003); rip.forEach((g)=>{ if(r<g.t0+0.02) return; const x=W*(0.1+0.8*g.t), y=pool+H*(0.05+0.12*((g.t*7)%1)); const len=W*(0.04+0.1*g.v); ctx.beginPath(); ctx.moveTo(x-len,y); ctx.quadraticCurveTo(x,y-H*0.012,x+len,y); ctx.stroke(); });
     pine(W*0.1,H*0.2,H*0.14,0.7,el.flakes); pine(W*0.9,H*0.18,H*0.12,0.6,el.flakes); waterTop=pool+H*0.04; shoreY=H*0.9; hz=H*0.3;
@@ -11507,15 +11564,19 @@ function _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q){
     shoreY=H*0.72; Q.road=true;
   } else { // the sea: still, swells, or the great wave breaking where the climax is
     hz=H*0.5; skyBand(0,hz,skyCol[0],skyCol[1]); fujiBase=hz+H*0.06;
-    if(water==='wave'){ const xc=Math.max(W*0.16,Math.min(W*0.56,W*c.t)), H1=H*(0.13+0.17*c.vmax)*Math.max(0.05,win(r,Math.max(0,c.t-0.25),Math.min(1,c.t+0.05))); const yS=hz+H*0.06, yc=yS-H1; const lipx=xc+W*0.36;
-      const B=[[-W*0.03,yS+H*0.02],[xc-W*0.34,yS-H1*0.1],[xc-W*0.18,yc+H1*0.35],[xc-W*0.07,yc+H1*0.06],[xc,yc],[xc+W*0.14,yc-H1*0.05],[xc+W*0.26,yc+H1*0.08]];
-      const P0=seaLine(hz+H*0.08,0.04); const Pw=B.concat([[lipx,yc+H1*0.3],[lipx-W*0.04,yc+H1*0.46],[lipx-W*0.14,yc+H1*0.4],[lipx-W*0.17,yc+H1*0.62],[lipx-W*0.1,yS-H*0.04],[lipx-W*0.01,yS+H*0.02]]);
-      for(let i=0;i<n;i++) if(P0[i][0]>lipx+W*0.02 && i<m) Pw.push([P0[i][0],Math.min(P0[i][1],yS+H*0.02)]); Pw.push([Math.max(lipx+W*0.03,P0[m-1][0]),yS+H*0.03]);
-      const seaCol=night?mix(D,sumi,0.3):D; ctx.fillStyle=css(seaCol); _wvPath(ctx,Pw.concat([[Pw[Pw.length-1][0],H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill();
-      const ns=3+Math.round(dens*25); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.85); ctx.lineWidth=Math.max(1,Dm*0.0045); _wvPath(ctx,B.map(q=>[q[0],q[1]+H*0.028*j]),false); ctx.stroke(); }
-      ctx.strokeStyle=css(mix(paper,L,0.3)); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wvPath(ctx,B,false); ctx.stroke();
-      if(r>c.t){ const na=7+Math.min(9,S.accents(c.a,c.b)); const kk=win(r,c.t,Math.min(1,c.t+0.2)); const mm=Math.round(na*kk); for(let i=0;i<mm;i++){ const u=i/(na-1); const q=[xc+(lipx-xc)*u,yc-H1*0.06*Math.sin(u*3.14)+(H1*0.3)*u*u*0.9]; const len=Dm*(0.05+0.09*c.vmax)*(1.15-0.7*u); const a=2.3+0.6*u; _wvClaw(ctx,q,Math.cos(a),Math.sin(a),len,css(paper)); }
-        ctx.fillStyle=css(paper); const nd=Math.round((30+dens*260)*win(r,c.t,1)); for(let i=0;i<nd;i++){ const x=xc+W*0.34*rnd(), y=yc+H1*(0.25+0.9*rnd()); if(y>yS+H*0.02) continue; const d=Dm*(0.0025+0.006*rnd()); ctx.beginPath(); ctx.arc(x,y,d,0,6.2832); ctx.fill(); } }
+    if(water==='wave'){ const xc=Math.max(W*0.2,Math.min(W*0.5,W*c.t)), H1=H*(0.14+0.18*c.vmax)*Math.max(0.05,win(r,Math.max(0,c.t-0.25),Math.min(1,c.t+0.05))); const yS=hz+H*0.06, yc=yS-H1; const sc=W*0.5/0.5;   // the crest as in the print, placed where the climax falls
+      const Cc=[xc,yc+H1*0.46]; const BACK=[[-W*0.03,yS+H*0.04],[xc-W*0.47,yS-H1*0.1],[xc-W*0.39,yS-H1*0.36],[xc-W*0.3,yc+H1*0.26],[xc-W*0.2,yc+H1*0.08]];
+      const CREST=[[xc-W*0.1,yc],[xc+W*0.01,yc+H1*0.02],[xc+W*0.1,yc+H1*0.12],[xc+W*0.165,yc+H1*0.27],[xc+W*0.155,yc+H1*0.41],[xc+W*0.1,yc+H1*0.47],[xc+W*0.04,yc+H1*0.43]];
+      const HOLLOW=[[xc-W*0.01,yc+H1*0.58],[xc-W*0.03,yc+H1*0.8],[xc+W*0.05,yS-H*0.02],[xc+W*0.14,yS+H*0.03]];
+      const P0=seaLine(hz+H*0.08,0.04); const Pw=BACK.concat(CREST,HOLLOW); const lipx=xc+W*0.14;
+      for(let i=0;i<n;i++) if(P0[i][0]>lipx+W*0.04 && i<m) Pw.push([P0[i][0],Math.min(P0[i][1],yS+H*0.02)]); Pw.push([Math.max(lipx+W*0.05,P0[m-1][0]),yS+H*0.03]);
+      const seaCol=night?mix(D,sumi,0.3):D; ctx.fillStyle=css(seaCol); _wv2Path(ctx,Pw.concat([[Pw[Pw.length-1][0],H*1.02],[-W*0.03,H*1.02]]),true,5); ctx.fill();
+      const ns=3+Math.round(dens*16); for(let j=1;j<=ns;j++){ const f=j/(ns+1); const Lb=BACK.map(q=>[q[0]+W*0.012*j,q[1]+H1*0.06*j]); const Lc=CREST.slice(0,6).map(q=>[Cc[0]+(q[0]-Cc[0])*(1-0.78*f),Cc[1]+(q[1]-Cc[1])*(1-0.78*f)]); ctx.strokeStyle=css(j%2?L:M,0.9-0.3*f); ctx.lineWidth=Math.max(1,Dm*(0.005-0.002*f)); _wv2Path(ctx,Lb.concat(Lc),false,5); ctx.stroke(); }
+      ctx.strokeStyle=css(mix(paper,L,0.3)); ctx.lineWidth=Math.max(1.5,Dm*0.005); _wv2Path(ctx,BACK.concat(CREST.slice(0,3)),false,5); ctx.stroke();
+      if(r>c.t){ const LIP=CREST; const samp=(u)=>{ const k2=u*(LIP.length-1); const i=Math.min(LIP.length-2,Math.floor(k2)); const f=k2-i; const p0=LIP[Math.max(0,i-1)], p1=LIP[i], p2=LIP[i+1], p3=LIP[Math.min(LIP.length-1,i+2)]; const cr=(a,b,c2,d)=>0.5*((2*b)+(-a+c2)*f+(2*a-5*b+4*c2-d)*f*f+(-a+3*b-3*c2+d)*f*f*f); return [cr(p0[0],p1[0],p2[0],p3[0]),cr(p0[1],p1[1],p2[1],p3[1])]; };
+        const na=18+Math.min(12,S.accents(c.a,c.b)*2); const kk=win(r,c.t,Math.min(1,c.t+0.2)); const mm=Math.round(na*kk);
+        for(let i=0;i<mm;i++){ const u=0.02+0.96*i/(na-1); const p=samp(u), q=samp(Math.min(1,u+0.012)); let tx=q[0]-p[0], ty=q[1]-p[1]; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl; let ox=p[0]-Cc[0], oy=p[1]-Cc[1]; const ol=Math.hypot(ox,oy)||1; ox/=ol; oy/=ol; const dx=tx*0.8+ox*0.2, dy=ty*0.8+oy*0.2; const dl=Math.hypot(dx,dy)||1; const big=(i%3===0); const len=Dm*(big?0.07+0.08*c.vmax:0.028+0.04*c.vmax)*(0.5+0.7*u); _wv2Claw(ctx,[p[0]+ox*Dm*0.003,p[1]+oy*Dm*0.003],dx/dl,dy/dl,len,Dm*(big?0.011:0.006),-0.45,css(paper)); }
+        const nd=Math.round((30+dens*220)*win(r,c.t,1)); for(let i=0;i<nd;i++){ const u=0.1+0.9*rnd(); const p=samp(Math.min(1,u)); let ox=p[0]-Cc[0], oy=p[1]-Cc[1]; const ol=Math.hypot(ox,oy)||1; ox/=ol; oy/=ol; const dd=Dm*(0.02+0.14*rnd()*rnd()); const x=p[0]+ox*dd+(rnd()-.5)*Dm*0.04, y=p[1]+oy*dd-H*0.01; if(y>yS||x<0||x>W) continue; const d=Dm*(0.002+0.004*rnd()); if(rnd()<0.6) _wv2Drop(ctx,x,y,d,ox,oy,css(paper)); else { ctx.fillStyle=css(paper); ctx.beginPath(); ctx.arc(x,y,d,0,6.2832); ctx.fill(); } } }
       P=Pw; waterTop=yS+H*0.04;
     } else if(water==='still'){ ctx.fillStyle=css(night?mix(D,sumi,0.3):mix(D,paper,0.1)); ctx.fillRect(0,hz+H*0.04,W,H); _wvBok(ctx,S,0,hz+H*0.04,W,H*0.1,mix(paper,D,0.3),night?mix(D,sumi,0.3):mix(D,paper,0.1),5);
       const rip=G(14); ctx.strokeStyle=css(mix(paper,L,0.4),0.9); ctx.lineWidth=Math.max(1,Dm*0.003); rip.forEach((g,i)=>{ if(r<g.t0+0.02) return; const x=W*(0.06+0.88*g.t), y=hz+H*(0.16+0.6*((i*0.37)%1)); const len=W*(0.05+0.14*g.v); ctx.beginPath(); ctx.moveTo(x-len,y); ctx.quadraticCurveTo(x,y-H*0.012,x+len,y); ctx.stroke(); });
@@ -11523,7 +11584,7 @@ function _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q){
     } else { P=swells(hz+H*0.02,0.06+0.06*S.dyn,night?mix(D,sumi,0.3):storm?mix(D,sumi,0.2):D); waterTop=hz+H*0.08; }
   }
   // ── the sky's things, behind everything that stands: the moon, the clouds, Fuji
-  if(night) moon(W*(0.2+0.6*c.t),H*0.12,Dm*0.06); else if(!storm && !el.rain && setting!=='gorge') clouds(H*0.04,hz*0.7,4);
+  if(night) moon(W*(0.2+0.6*c.t),H*0.12,Dm*0.06); else if(!storm && !el.rain && setting!=='gorge' && water!=='wave') clouds(H*0.04,hz*0.7,4);
   if(el.fuji && fujiBase!=null) fuji(W*(setting==='sea' ? (c.t>0.5?0.26:0.74) : (trend>0.5?0.68:0.32)),fujiBase,0.09+0.2*(1-reg),dawn?(S.bw?mix(D,paper,0.35):mix(Acc,sumi,0.12)):storm?mix(D,sumi,0.3):night?mix(D,sumi,0.45):mix(D,paper,0.4));
   if(Q.bridge){ const {by,arc}=Q.bridge; const deck=(x)=>by-arc*Math.sin(Math.PI*Math.max(0,Math.min(1,(x+W*0.05)/(W*1.1))));
     ctx.fillStyle=css(mix(sumi,D,0.25)); ctx.beginPath(); ctx.moveTo(-W*0.05,by+H*0.02); for(let i=0;i<=24;i++){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)); } ctx.lineTo(W*1.05,by+H*0.08); for(let i=24;i>=0;i--){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)+H*0.05); } ctx.closePath(); ctx.fill();
@@ -40514,7 +40575,7 @@ Hard requirements:
     while(feedStepsRef.current.length){
       const st = feedStepsRef.current.shift();
       if(st==='mosaic'){ _feedApply({style:null, phase:0, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'m', t:Date.now()}); return; }
-      if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:0, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'p', t:Date.now()}); return; }
+      if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:1, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'p', t:Date.now()}); return; }   // phase 1: the painter's own first painting (0 is his "What he heard")
       if(st==='sig'){ const sg=songSigRef.current; if(sg && sg.keys && sg.keys.length && applySigRef.current){ _feedApply({sig:true}); setFeedIntro({k:'s', t:Date.now()}); return; } continue; }
     }
     _liteNextKRef.current=null; _liteNextIsMosaicRef.current=false; _liteNextIsSigRef.current=false;
@@ -40576,7 +40637,7 @@ Hard requirements:
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'', ...(q ? {dir:'none'} : {}) };
       setFeedCards(cs=>{ const arr=cs.concat([c]); return arr.length>10 ? arr.slice(arr.length-10) : arr; });
       setFeedAt(Math.min(10, feedCards.length+1)-1);
-      if(feedLoaded===null) _feedLoad(piece, kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}, kind); else _feedNextLook();
+      if(feedLoaded===null) _feedLoad(piece, kind==='img' ? {img:true} : {style:_feedOpener(), phase:1, mode, notes:false, stage:[], sig:false}, kind); else _feedNextLook();   // phase 1: the opener's own first painting
       _feedHintBump();
     }
     if(!q){ _feedFlashNow(); _stBuzz(8); }
