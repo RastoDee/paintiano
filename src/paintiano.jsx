@@ -10091,10 +10091,10 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
   }
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-  // ── VARIANT: 0 What she heard (_ryListen, generative) · 1 Fall · 2 Warp (Late Morning) · 3 Blaze ·
-  // 4 Cataract 3 · 5 Crest · 6 Triangles · 7 Movement in Squares. Retired, approved: the Fall ribbons, the dense Fall. Free: 0 and 1.
+  // ── VARIANT: 0 What she heard (_ryListen, generative) · 1 Fall ribbons (in the piece's colours) · 2 Warp (Late Morning) · 3 Blaze ·
+  // 4 Cataract 3 · 5 Crest · 6 Triangles · 7 Movement in Squares. Retired, approved: the two-colour Fall (10), the dense Fall. Free: 0 and 1.
   {
-    const _pn=_capN(8); const _rpick=[-1,10,1,11,3,4,5,7][((phaseIndex|0)%_pn+_pn)%_pn];
+    const _pn=_capN(8); const _rpick=[-1,0,1,11,3,4,5,7][((phaseIndex|0)%_pn+_pn)%_pn];
     if(_rpick===-1){ _ryListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===10){ rileyPhaseFall2(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===11){ rileyPhaseBlaze2(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -17550,7 +17550,7 @@ const ARTIST_VARIANTS = {
   ],
   wave: [
     {ground:'#f4f2ec',mark:{wavyline:1},size:[.015,.04],layout:{stack:1},density:.9},   // What she heard
-    {ground:'#f4f2ec',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.9,tone:'duo'},   // Fall
+    {ground:'#1a1a24',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.9},   // Fall ribbons
     {ground:'#2a2a3a',mark:{vstripes:1},size:[.01,.03],layout:{grid:1},density:1},
     {ground:'#1a1a2a',mark:{ring:1},size:[.1,.5],layout:{radial:1},density:.6,tone:'duo'},   // Blaze
     {ground:'#efebe2',mark:{wavyline:1},size:[.02,.05],layout:{stack:1},density:.8},                     // Cataract 3
