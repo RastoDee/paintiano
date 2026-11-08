@@ -4303,6 +4303,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Solo and Fusion keep separate choices: the solo's own gold painter (null = solos rotate, white) while a fusion plays; the same pair for composers
   const soloGoldRef = useRef(null);
   const crMemRef = useRef([]), soloCGoldRef = useRef(null);
+  // the composers, as the painters: no guests (the gold ones alone) unless the Guests switch is on — remembered
+  const [crFixed, setCrFixed] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_cguests')!=='1'; }catch(_){ return true; } }); const crFixedRef = useRef(crFixed); useEffect(()=>{ crFixedRef.current = crFixed; try{ localStorage.setItem('paintiano_st_cguests', crFixed?'0':'1'); }catch(_){} },[crFixed]);
   // Solo / Fusion chips: a tap shows it (switches to it), a hold turns it on or off for the dice
   const segHoldRef = useRef({tm:null, fired:false});
   const _segPress = (onTap, onHold)=>({
@@ -4589,7 +4591,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const pins=crPinsRef.current.slice(); const st=[imgComposerRef.current,...composerStageRef.current].filter(Boolean);
     const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
     if(!nextPins) return;
-    const stage = nextPins.concat(st.filter(x=>!nextPins.includes(x))).slice(0, STAGE_MAX);
+    const stage = (crFixedRef.current ? nextPins : nextPins.concat(st.filter(x=>!nextPins.includes(x)))).slice(0, STAGE_MAX);
     crPinsRef.current = nextPins; setCrPins(nextPins);
     if(stage.length){
       setComposerStage(stage.slice(1));
@@ -4664,6 +4666,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(imgPlayModeRef.current==='scan' && !working){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }
     try{ window.posthog && window.posthog.capture('ensemble_cr_toggle',{on:true, studio:true, pinned:pins.length}); }catch(_){}
   };
+  const _stCrQuiet = ()=>{ if(working||anim||crOn) return; if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; } crOnRef.current=true; setCrOn(true); setComposerDice(true); crPinsRef.current=[]; setCrPins([]); };
+  const _crGuestsTap = ()=>{ const dip=(go)=>{ if(playingRef.current) _imgDip(go); else go(); };
+    if(!crOn){ _stCrQuiet(); const cur=imgComposerRef.current; const pins=(cur && _cOk(cur)) ? [cur] : []; crPinsRef.current=pins; setCrPins(pins); crFixedRef.current=false; setCrFixed(false); dip(()=>_composerRoll()); return; }
+    const on=!crFixedRef.current; crFixedRef.current=on; setCrFixed(on); _stBuzz(8);
+    let pins=crPinsRef.current.filter(k=>k && _cOk(k)); if(on){ if(!pins.length){ pins=[imgComposerRef.current,...composerStageRef.current].filter(k=>k && _cOk(k)).slice(0,STAGE_MAX); crPinsRef.current=pins; setCrPins(pins); } if(pins.length){ dip(()=>{ setComposerStage(pins.slice(1)); if(pins[0]!==imgComposerRef.current){ _lastComposerRef.current=pins[0]; imgComposerRef.current=pins[0]; setImgComposer(pins[0]); } }); } return; }
+    dip(()=>_composerRoll()); };
   const _stCrSolo = ()=>{
     if(working||anim||!crOn) return;
     const _lead = imgComposerRef.current, _wasPin = !composerDice || (!!_lead && crPinsRef.current.includes(_lead));
@@ -5806,6 +5814,10 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     if(pool.length<2) return false;
     // Call & response + 🔀: Next seats a new random ensemble — 2–5 composers,
     // count and members random; the piece continues.
+    if(crOnRef.current && crFixedRef.current){   // no guests: the gold ones alone — nothing new to draw; nobody gold: someone else alone
+      if(crPinsRef.current.length) return false;
+      const a=pool.filter(k=>k!==imgComposerRef.current); const lead=a.length ? a[(Math.random()*a.length)|0] : null; if(!lead) return false;
+      setComposerStage([]); _lastComposerRef.current=lead; imgComposerRef.current=lead; setImgComposer(lead); return true; }
     if(crOnRef.current && crPinsRef.current.length){
       const pins=crPinsRef.current.slice(), room=STAGE_MAX-pins.length;
       const gpool=pool.filter(k=>!pins.includes(k));
@@ -18816,7 +18828,8 @@ Hard requirements:
                   const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(crOn) return; soloCGoldRef.current = (!composerDice && imgComposerRef.current) ? imgComposerRef.current : null; _stCrFusionOn(); };
                   const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('c', false); if(!crOn) _stCrFusionOn(); } else _setMix('c', true); };
                   const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('c', false); if(crOn) _stCrSolo(); } else _setMix('c', true); };
-                  return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!crOn?'cur':''} onClick={tapS}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={crOn?'cur':''} onClick={tapF}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
+                  const gOn=crOn && !crFixed; const tapG=()=>{ if(_fr){ setPaywallReason('settings'); return; } if(working || anim) return; _crGuestsTap(); };
+                  return (<div className="pf-tray-seg pf-tray-tg" role="group">{_fr ? (<button type="button" className="lk" onClick={tapG}>{_stT('fuGuests')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={gOn} className={gOn?'cur':''} onClick={tapG} title={gOn ? _stT('fuOnly') : _stT('fuGuests')}>{_stT('fuGuests')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
                 {/* composers' 🔀 + Jam session — only when there is more than one composer to roll between */}
                 {!studioFs && _rollable && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
@@ -18845,8 +18858,9 @@ Hard requirements:
                   const locked=working;
                   return (
                     <button key={String(c.k)} data-lk={composerIsLocked(c.k) ? 1 : 0} disabled={locked} onClick={()=>{ if(locked||anim)return; if(composerIsLocked(c.k)){ if(!cTasteUsedRef.current){ cTasteUsedRef.current=true; setTasteCKey(c.k); try{ window.posthog && window.posthog.capture('taste_preview', { composer:c.k }); }catch(_){} _leaveAi(); if(crOn){ setCrOn(false); crOnRef.current=false; } setComposerDice(false); setComposerStage([]); composerStageRef.current=[]; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); return; } setPaywallReason('settings'); return; } _leaveAi();
+                        if(studioFs && !crOn && !_aiOn && proStatus!=='free'){ _stCrQuiet(); _crPinTap(c.k); return; }   // the Studio (Pro): the first tap enters the ensemble quietly — this composer gold, alone
                         if(studioFs && crOn){ if(!composerDice) _stCrPinStage(); const had=crPinsRef.current.length; _crPinTap(c.k);   // the Studio's Fusion: a tap pins / unpins (as the painters)
-                          if(had>0 && !crPinsRef.current.length && imgPlayModeRef.current==='scan'){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }   // the last gold one let go: a fresh ensemble (2–5)
+                          if(had>0 && !crPinsRef.current.length && !crFixedRef.current && imgPlayModeRef.current==='scan'){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }   // the last gold one let go: a fresh ensemble (2–5)
                           return; }
                         if(crOn && composerDice){ _crPinTap(c.k); return; } if(crOn && imgComposerRef.current){ _crTap(c.k); return; }
                         if(studioFs && !_aiOn){   // the Studio's Solo: a tap chooses (gold, ↑ keeps it); the gold one tapped again turns white (↑ draws others)
