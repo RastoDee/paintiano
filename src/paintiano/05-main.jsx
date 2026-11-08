@@ -2225,6 +2225,8 @@ const STUDIO_SKIN_CSS = `
 .pf-artist:active .pf-sk-face{transform:scale(.92)}
 .pf-artist[data-lk="1"] .pf-sk-face{opacity:.38;filter:saturate(.55)}
 .pf-artist-on .pf-sk-face{border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.35),0 4px 14px rgba(0,0,0,.5)}
+.pf-artist-fix .pf-sk-face{border-color:#a78bff!important;box-shadow:0 0 0 2px rgba(167,139,255,.45),0 0 14px rgba(167,139,255,.55)!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-artist.pf-artist-fix{color:#c4b5ff!important;font-weight:700!important}
 .pf-sk-face.pf-sk-hit{border-color:rgba(242,238,232,.8)}
 .pf-sk-face.pf-sk-wait{animation:pfSkWait 1.4s ease-in-out infinite}
 @keyframes pfSkWait{50%{opacity:.55}}
@@ -4327,8 +4329,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Exists only while Ensemble and ALL are both on.
   const [jamPins, setJamPins] = useState([]);
   const jamPinsRef = useRef([]); useEffect(()=>{ jamPinsRef.current = jamPins; },[jamPins]);
-  const jamClosedRef = useRef(false);   // the stage closed by hand: a guest held and taken off — from then on ↑ keeps only the pinned (gold) ones, no new guests, until Fusion is switched again
-  useEffect(()=>{ jamClosedRef.current=false; },[jamOn, jamAll]);
+  // the fixed cast (violet): a face held in the Fusion row. With any painter fixed, the stage is exactly the fixed and the gold ones — no guests are drawn; one alone is a solo; two or more are the whole fusion. ↑ rolls their variants only. Cleared when Fusion is switched
+  const [jamFixed, setJamFixed] = useState([]); const jamFixedRef = useRef([]); useEffect(()=>{ jamFixedRef.current = jamFixed; },[jamFixed]);
+  useEffect(()=>{ jamFixedRef.current=[]; setJamFixed([]); },[jamOn, jamAll]);
   useEffect(()=>{ if(!jamOn || !jamAll) setJamPins(p=>p.length?[]:p); },[jamOn, jamAll]);
   useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
   useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
@@ -4718,18 +4721,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const pins=jamPinsRef.current.slice(); const st=_jamStage().filter(Boolean);
     const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
     if(!nextPins) return;
+    if(jamFixedRef.current.includes(k)) return;   // a fixed (violet) face: hold it to let it go
     const guests = st.filter(x=>!nextPins.includes(x));
-    const stage = nextPins.concat(guests).slice(0, STAGE_MAX);
+    const stage = jamFixedRef.current.length ? _jamCast(jamFixedRef.current, nextPins) : nextPins.concat(guests).slice(0, STAGE_MAX);
     jamPinsRef.current = nextPins; setJamPins(nextPins);
     if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
     try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
   };
-  // a face held in the Fusion row: that painter leaves the stage (pinned or guest); two must stay. The stage is then closed: ↑ rolls only the ones left
-  const _jamTakeOff = (k)=>{
-    if(!k || k==='mosaic' || k==='notes') return; const st=_jamStage().filter(Boolean); if(!st.includes(k) || st.length<=2){ _stBuzz(6); return; }
-    const pins=jamPinsRef.current.filter(x=>x!==k); const stage=st.filter(x=>x!==k);
-    jamPinsRef.current=pins; setJamPins(pins); jamClosedRef.current=true; setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); _stBuzz(10);
-    try{ window.posthog && window.posthog.capture('ensemble_takeoff',{n:stage.length}); }catch(_){}
+  // a face held in the Fusion row: the painter is fixed (violet) or let go again; the stage becomes the fixed and the gold ones, nobody else
+  const _jamCast = (fixed, pins)=>{ const out=[]; fixed.concat(pins).forEach(k=>{ if(k && k!=='mosaic' && k!=='notes' && !out.includes(k)) out.push(k); }); return out.slice(0, STAGE_MAX); };
+  const _jamFixTap = (k)=>{
+    if(!k || k==='mosaic' || k==='notes') return;
+    const was=jamFixedRef.current.includes(k); const fixed = was ? jamFixedRef.current.filter(x=>x!==k) : (jamFixedRef.current.length>=STAGE_MAX ? null : jamFixedRef.current.concat(k));
+    if(!fixed) return; jamFixedRef.current=fixed; setJamFixed(fixed);
+    const pins=jamPinsRef.current.filter(x=>x!==k); if(!was && pins.length!==jamPinsRef.current.length){ jamPinsRef.current=pins; setJamPins(pins); }   // fixed replaces gold on the same face
+    const stage = fixed.length ? _jamCast(fixed, jamPinsRef.current) : _jamStage().filter(Boolean);
+    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
+    _stBuzz(10);
+    try{ window.posthog && window.posthog.capture('ensemble_fix',{on:!was, n:fixed.length}); }catch(_){}
   };
   // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
   // guests are drawn around them, every member with a new variant; five pins
@@ -4738,7 +4747,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // a random variant, the others derive theirs.
   const _jamAllRoll = ()=>{
     const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
-    if(jamClosedRef.current && _jamStage().filter(Boolean).length>=2){ const st=_jamStage().filter(Boolean); setNotesMode(false); setStyle(st[0]); setPainterStage(st.slice(1)); _fuRollAll(st); _fuRollPal(); return; }   // a closed stage: the same painters, new variants and palette — no guests
+    if(jamFixedRef.current.length){ const st=_jamCast(jamFixedRef.current, pins); setNotesMode(false); setStyle(st[0]); setPainterStage(st.slice(1)); _fuRollAll(st); _fuRollPal(); return; }   // a fixed cast: the same painters, new variants and palette — no guests
     if(pins.length){
       const room=STAGE_MAX-pins.length;
       const gpool=SHUFFLE_POOL.filter(k=>!pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
@@ -4804,7 +4813,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ if(jamOn && _artChoiceN()<2) setJamOn(false); },[jamOn, setupArtists, sigActive, songSig, proStatus, artistOfDay]);
   // kind: undefined = stage member (gold), 'pin' = pinned in Ensemble ALL (gold + pin),
   // 'guest' = drawn by Next around the pins (outlined, like the white shuffle frame).
-  const _stageBadge = (ix, roles, kind)=> (ix<0) ? null : (kind==='guest')
+  const _stageBadge = (ix, roles, kind)=> (ix<0) ? null : (kind==='fix')
+    ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#c4b5ff,#8f6cf0)',color:'#14102a',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
+    : (kind==='guest')
     ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'0 5px',borderRadius:9,background:PF.card2,border:'1px solid rgba(242,238,232,.75)',color:PF.cream,lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
     : (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none',...(kind==='pin'?{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:2}:{})}}>{kind==='pin' && _pinIcon('#1a1408', 7)}{ix+1}</span>);
   const _pinIcon = (col, px)=> (<svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth={px<9?3:2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2Z"/></svg>);
@@ -19073,8 +19084,9 @@ Hard requirements:
               const _inSig = _sigK.includes(k);
               // Ensemble ALL: pinned members show as chosen (gold), drawn guests as a shuffle hit (white)
               const _pinned = jamOn && jamAll && jamPins.includes(k);
+              const _fixed = jamOn && jamAll && jamFixed.includes(k);   // held: the fixed cast (violet)
               const _tk = studioFs && stTaken && !cockpitEdit, _tkMine = _tk && (style===k || painterStage.includes(k) || _inSig);   // a kept surprise: its painters show white (not chosen)
-              const isOn = (!cockpitEdit) && !_tk && (jamOn && jamAll ? _pinned : (style===k || _stIx>0 || _inSig));
+              const isOn = (!cockpitEdit) && !_tk && (jamOn && jamAll ? (_pinned || _fixed) : (style===k || _stIx>0 || _inSig));
               const inSet = setupArtists.includes(k);
               const shufHit = (!cockpitEdit) && (_tk ? _tkMine : (shuffleStyle===k || (jamAll && _jamStage().indexOf(k)>=0 && !_pinned)));
               const _ghost = cockpitEdit && !inSet;
@@ -19100,8 +19112,8 @@ Hard requirements:
               };
               return (
                 <button key={k} data-k={k} data-lk={locked ? 1 : 0}
-                  className={isOn?'pf-artist pf-artist-on':'pf-artist'}
-                  {...((studioFs && jamOn && jamAll && !cockpitEdit && !locked && _jamStage().indexOf(k)>=0) ? _segPress(onClick, ()=>_jamTakeOff(k)) : {onClick})}
+                  className={(isOn?'pf-artist pf-artist-on':'pf-artist')+(_fixed?' pf-artist-fix':'')}
+                  {...((studioFs && jamOn && jamAll && !cockpitEdit && !locked) ? _segPress(onClick, ()=>_jamFixTap(k)) : {onClick})}
                   title={cockpitEdit ? (inSet?ts('inYourSet','in your set — tap to remove'):ts('tapToAdd','tap to add to your set')) : (locked? (ts('proArtist','Inspired by {artist} · Pro').replace('{artist}',_full)) : (isOn?ts('tapToDeselect','tap to deselect'):_full))}
                   data-fu={(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? 1 : undefined} style={{order:(studioFs && jamOn && !cockpitEdit && (isOn || _stIx>=0)) ? -100+Math.max(_stIx,0) : undefined,position:'relative',width:'100%',padding:'8px 4px',borderRadius:20,fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.04em',fontFamily:'inherit',textTransform:'uppercase',cursor:'pointer',whiteSpace:'nowrap',transition:'all .18s',lineHeight:1.2,opacity:(locked&&cockpitEdit)?0.5:(jamOn&&jamAll&&!cockpitEdit)?(locked?0.35:1):(_artMode===2&&!shufHit&&!studioFs)?0.55:1,...(_ghost?{background:'transparent',border:'1px dashed rgba(242,238,232,.22)',color:'rgba(230,222,196,.4)'}:(isOn?{background:PF.card2,border:'1px solid '+(_pinned?'rgba(240,192,64,.8)':'rgba(201,168,76,.4)'),color:((jamAll && !_pinned) ? chipStyle(false).color : 'rgba(220,180,90,.98)'),boxShadow:_pinned?'0 0 10px rgba(240,192,64,.18)':'none'}:chipStyle(cockpitEdit ? inSet : false))),...(!cockpitEdit&&!isOn&&shufHit?{border:'1px solid rgba(242,238,232,.7)',boxShadow:'0 0 0 1px rgba(242,238,232,.25)'}:{})}}>
                   {studioFs && _skinFace(k, shufHit && !isOn)}
@@ -19111,7 +19123,7 @@ Hard requirements:
                   )}
                   {isDailyArtist(k) && (<span onClick={openDailyInfo} role="button" title={ts('dailyTitle','Artist of the day')} style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.12em',padding:'1px 6px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,cursor:'pointer'}}>✦ {ts('dailyBadge','today')}</span>)}
                   {_inSig && !isDailyArtist(k) && (<span title={_sigT('label')} aria-hidden="true" style={{position:'absolute',top:-7,left:'50%',transform:'translateX(-50%)',fontSize:(.36*effScale)+'rem',fontWeight:700,padding:'1px 7px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',whiteSpace:'nowrap',lineHeight:1.3,pointerEvents:'none'}}>✦</span>)}
-                  {_stageBadge(_stIx, [], (jamOn && jamAll) ? (_pinned ? 'pin' : 'guest') : undefined)}
+                  {_stageBadge(_stIx, [], (jamOn && jamAll) ? (_fixed ? 'fix' : _pinned ? 'pin' : 'guest') : undefined)}
                 </button>
               );
             })}
