@@ -3082,10 +3082,11 @@ function _pcFigure(pose,o){ const {list,F,flat,skin,PAL,D,CW,CH,x0,floorY,T,q,lo
   if(headKind==='double'){ const half=[face[0],face[1],[hx+hw*0.1,hy-hh*0.75],[hx+hw*0.1,hy+hh*0.8],face[4],face[5]]; F(T(0.4),half,skin(q.t),{hatch:0}); F(T(0.42),[[hx+hw*0.1,hy-hh*0.75],face[1],face[2],face[3],[hx+hw*0.1,hy+hh*0.8]],_pcMix(skin(q.t),col(P.violet,1),0.45),{hatch:0.3,hang:1.2}); }
   else { const out=[]; _pcCut(face,r,_pcArea(face)/4,0,tilt+0.9,out); out.forEach((pl,k)=>F(T(0.4+0.01*k),pl,k%2?skin(q.t):_pcMix(skin(q.t),col(k,k),0.3),{hatch:k%3===0?0.3:0,hang:tilt+1.2,open:r()<0.3?Math.floor(r()*pl.length):-1})); }
   list.push({id:id(),t:T(0.46),stroke:face,w:face.map(()=>D*0.007),close:true,col:PAL.ink});
-  const eye=(ex,ey,fr)=>{ F(T(0.48),_pgRot(fr?_pgEll(ex,ey,hw*0.16,hh*0.1,0,10):_pgEll(ex,ey,hw*0.1,hh*0.1,0,10),hx,hy,tilt),isBW?[236,236,232]:[240,236,226],{ink:0.9,hatch:0}); F(T(0.49),_pgRot(_pgEll(ex+(fr?hw*0.02:0),ey,hh*0.05,hh*0.05,0,8),hx,hy,tilt),PAL.ink,{ink:0,hatch:0}); };
+  // the eyes as his: an almond, cut in facets, the pupil a dark lozenge — never a round white eyeball
+  const eye=(ex,ey,fr)=>{ const w=fr?hw*0.2:hw*0.13, h=hh*0.09; const lens=[[ex-w,ey],[ex-w*0.35,ey-h],[ex+w*0.35,ey-h*0.9],[ex+w,ey+h*0.1],[ex+w*0.3,ey+h],[ex-w*0.4,ey+h*0.9]]; F(T(0.48),_pgRot(lens,hx,hy,tilt),_pcMix(skin(q.t),isBW?[236,236,232]:[238,232,218],0.6),{ink:0.9,hatch:0}); F(T(0.49),_pgRot([[ex-w*0.25,ey],[ex,ey-h*0.75],[ex+w*0.25,ey],[ex,ey+h*0.75]],hx,hy,tilt),_pcMix(PAL.ink,col(P.blue,2),0.3),{ink:0,hatch:0}); };
   if(headKind==='profile'){ eye(hx+hw*0.3,hy-hh*0.2,false); list.push({id:id(),t:T(0.5),stroke:_pgRot([[hx+hw*0.5,hy-hh*0.4],[hx+hw*1.0,hy+hh*0.1],[hx+hw*0.6,hy+hh*0.25]],hx,hy,tilt),w:[D*0.006,D*0.006,D*0.004],col:PAL.ink,close:false}); }
   else { eye(hx-hw*0.3,hy-hh*0.15,true); eye(hx+hw*0.35,hy-hh*0.2,headKind!=='double'); list.push({id:id(),t:T(0.5),stroke:_pgRot([[hx+hw*0.1,hy-hh*0.3],[hx+hw*0.35,hy+hh*0.15],[hx+hw*0.05,hy+hh*0.2]],hx,hy,tilt),w:[D*0.006,D*0.006,D*0.004],col:PAL.ink,close:false}); }
-  F(T(0.52),_pgRot([[hx-hw*0.15,hy+hh*0.45],[hx+hw*0.25,hy+hh*0.42],[hx+hw*0.2,hy+hh*0.55],[hx-hw*0.12,hy+hh*0.56]],hx,hy,tilt),_pcMix(P.red,flat(c.t,0),0.4),{ink:0.9,hatch:0});   // the mouth, the climax's colour
+  F(T(0.52),_pgRot([[hx-hw*0.2,hy+hh*0.5],[hx+hw*0.05,hy+hh*0.42],[hx+hw*0.3,hy+hh*0.48],[hx+hw*0.08,hy+hh*0.58]],hx,hy,tilt),_pcMix(_pcMix(P.red,flat(c.t,0),0.4),PAL.ink,0.25),{ink:0.6,hatch:0});   // the mouth: a small lozenge in the climax's colour, darkened
   F(T(0.54),_pgRot([[hx-hw*0.95,hy-hh*0.1],[hx-hw*0.6,hy-hh*1.0],[hx+hw*0.3,hy-hh*1.05],[hx+hw*0.8,hy-hh*0.6],[hx+hw*0.4,hy-hh*0.5],[hx-hw*0.2,hy-hh*0.7],[hx-hw*0.7,hy-hh*0.3]],hx,hy,tilt),_pcMix(PAL.ink,col(P.blue,3),0.35),{hatch:0.3,hang:tilt+1.2});   // the hair
   if(hat) F(T(0.56),_pgRot([[hx-hw*1.2,hy-hh*0.8],[hx+hw*1.2,hy-hh*0.85],[hx+hw*0.7,hy-hh*1.0],[hx+hw*0.5,hy-hh*1.5],[hx-hw*0.5,hy-hh*1.5],[hx-hw*0.7,hy-hh*1.0]],hx,hy,tilt),col(P.black,4),{hatch:0,ink:0.9});   // the hat, when loud
   // what it holds
@@ -5545,22 +5546,25 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   if(pick===3){ // fish garden
     ground('#0c1418','#060a0e');
-    ctx.fillStyle='rgba(240,230,200,.5)';
-    for(let p=0;p<4;p++) for(let s2=0;s2<40;s2++){
-      const t=s2/40, x=CW*0.1+t*CW*0.8, y=CH*(0.2+p*0.2)+Math.sin(t*6+p)*CH*0.05;
-      ctx.beginPath(); ctx.arc(x,y,Math.max(1.2,S*0.0022),0,7); ctx.fill();
-    }
+    ctx.strokeStyle='rgba(240,230,200,.35)'; ctx.lineWidth=Math.max(0.8,S*0.0014);
+    for(let p=0;p<4;p++){ ctx.beginPath(); for(let s2=0;s2<=40;s2++){ const t=s2/40, x=CW*0.1+t*CW*0.8, y=CH*(0.2+p*0.2)+Math.sin(t*6+p)*CH*0.05; s2?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke(); }
+    { const cx=CW*0.72, cy=CH*0.2, R=S*0.05; ctx.strokeStyle='rgba(240,230,200,.8)'; ctx.lineWidth=Math.max(1,S*0.002); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke(); for(let k=0;k<12;k++){ const a=k/12*6.2832; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*R*0.8,cy+Math.sin(a)*R*0.8); ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy-R*0.6); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*0.45,cy+R*0.2); ctx.stroke(); }   // the clock of the night
     const _fstep=Math.max(3,Math.ceil(cn/18));
     for(let i=0;i<N;i++){
       if(i%_fstep) continue;
       const m=meta(i);
       const x=CW*0.1+((i*GA/(Math.PI*2))%1)*CW*0.8, y=CH*0.12+((i*PHI)%1)*CH*0.75;
       const s2=(S*0.03+m.dur*S*0.04)*(0.75+0.5*dnaE);
-      ctx.save(); ctx.translate(x,y); ctx.rotate((rnd()-0.5)*0.8);
-      ctx.fillStyle=css(col(i,1.05+m.vel*0.35),0.95);
-      ctx.beginPath(); ctx.ellipse(0,0,s2,s2*0.45,0,0,7); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(s2*0.9,0); ctx.lineTo(s2*1.5,-s2*0.4); ctx.lineTo(s2*1.5,s2*0.4); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#0c1418'; ctx.beginPath(); ctx.arc(-s2*0.45,0,Math.max(1,s2*0.09),0,7); ctx.fill();
+      // Klee's fish: a long lens body with a pointed snout, a forked tail of two soft lobes, a thin pale line round it,
+      // the body translucent and striped inside, a ring for the eye — drawn, not stamped
+      ctx.save(); ctx.translate(x,y); ctx.rotate((rnd()-0.5)*0.8); if(rnd()<0.5) ctx.scale(-1,1);
+      const fc=col(i,1.05+m.vel*0.35); const L=s2*1.3, Hh=s2*0.42;
+      const body=()=>{ ctx.beginPath(); ctx.moveTo(-L,0); ctx.bezierCurveTo(-L*0.6,-Hh*1.3, L*0.2,-Hh*1.2, L*0.85,-Hh*0.15); ctx.bezierCurveTo(L*0.2,Hh*1.2, -L*0.6,Hh*1.3, -L,0); ctx.closePath(); };
+      body(); ctx.fillStyle=css(fc,0.55); ctx.fill();
+      ctx.save(); body(); ctx.clip(); ctx.strokeStyle=css(fc,0.9); ctx.lineWidth=Math.max(1,s2*0.06); for(let b=0;b<5;b++){ const bx=-L*0.7+L*1.3*b/5; ctx.beginPath(); ctx.moveTo(bx,-Hh*1.3); ctx.quadraticCurveTo(bx+L*0.08,0,bx,Hh*1.3); ctx.stroke(); } ctx.restore();
+      ctx.strokeStyle='rgba(240,230,200,.85)'; ctx.lineWidth=Math.max(1,s2*0.05); body(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(L*0.8,0); ctx.quadraticCurveTo(L*1.1,-Hh*0.9,L*1.35,-Hh*0.9); ctx.quadraticCurveTo(L*1.15,-Hh*0.2,L*1.35,Hh*0.9); ctx.quadraticCurveTo(L*1.1,Hh*0.9,L*0.8,0); ctx.closePath(); ctx.fillStyle=css(fc,0.45); ctx.fill(); ctx.stroke();   // the forked tail
+      ctx.beginPath(); ctx.arc(-L*0.62,-Hh*0.15,Math.max(1.2,s2*0.1),0,7); ctx.stroke(); ctx.fillStyle='rgba(240,230,200,.9)'; ctx.beginPath(); ctx.arc(-L*0.62,-Hh*0.15,Math.max(0.8,s2*0.04),0,7); ctx.fill();   // the eye, a ring
       ctx.restore();
     }
     ctx.strokeStyle='rgba(120,200,150,.6)'; ctx.lineWidth=Math.max(1.6,S*0.0026);
@@ -6619,7 +6623,7 @@ function _hk2DrawForm(ctx,f,D,rnd){
     case 'poly': { ctx.beginPath(); f.pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); if(f.col){ ctx.fillStyle=_hkCss(f.col,f.a==null?1:f.a); ctx.fill(); } if(f.ring){ ctx.strokeStyle=_hkCss(f.ring); ctx.lineWidth=Math.max(0.8,f.w||D*0.003); ctx.stroke(); } break; }
     case 'curve': { // a smooth line through points, one width
       const P=f.pts; if(P.length<2) break; ctx.strokeStyle=_hkCss(f.col,f.a==null?1:f.a); ctx.lineWidth=Math.max(0.6,f.w||D*0.0025); ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]);
-      for(let i=1;i<P.length-1;i++){ ctx.quadraticCurveTo(P[i][0],P[i][1],(P[i][0]+P[i+1][0])/2,(P[i][1]+P[i+1][1])/2); } ctx.lineTo(P[P.length-1][0],P[P.length-1][1]); ctx.stroke(); break; }
+      if(P.length===3){ ctx.quadraticCurveTo(P[1][0],P[1][1],P[2][0],P[2][1]); } else { for(let i=0;i<P.length-1;i++){ const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||p2; ctx.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]); } } ctx.stroke(); break; }
     case 'text': { ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.rot||0); ctx.font=(f.weight||'400')+' '+Math.round(f.size)+'px "EB Garamond", Georgia, serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=_hkCss(f.col,f.a==null?0.9:f.a); ctx.fillText(f.text,0,0); ctx.restore(); break; }
   }
 }
@@ -6693,12 +6697,15 @@ function hk2_tree(ctx,CW,CH,chords,lim,gc,ss,mode){
   ctx.fillStyle=isBW?'#ece9e2':'#efe6d2'; ctx.fillRect(0,0,CW,CH);
   const cx=CW*0.5; const pts=[]; for(let k=0;k<=40;k++){ const a=k/40*6.2832; pts.push([cx+Math.cos(a)*CW*0.42, CH*0.5+Math.sin(a)*CH*0.46]); } push({kind:'poly',t:0,pts,col:isBW?[232,230,226]:_hkMix([236,226,206],A.pcCol(A.tonic,60),0.12),ring:INK,w:D*0.003});
   const top=CH*(0.2+(1-A.ch.register)*0.08), bot=CH*0.72; push({kind:'poly',t:0.02,pts:[[cx-D*0.012,top],[cx+D*0.012,top],[cx+D*0.02,bot],[cx-D*0.02,bot]],col:INK});
-  for(let k=0;k<4;k++){ const a=(k-1.5)*0.5; push({kind:'curve',t:0.03,pts:[[cx,bot],[cx+Math.sin(a)*D*0.1,bot+D*0.08],[cx+Math.sin(a)*D*0.2,bot+D*0.16]],col:INK,w:D*0.004}); }   // the roots
+  for(let k=0;k<6;k++){ const a=(k-2.5)*0.4; const sd=a<0?-1:1; push({kind:'curve',t:0.03,pts:[[cx,bot-D*0.01],[cx+Math.sin(a)*D*0.12,bot+D*0.1],[cx+Math.sin(a)*D*0.26+sd*D*0.02,bot+D*0.14-Math.abs(Math.sin(a))*D*0.06]],col:INK,w:D*0.004}); push({kind:'curve',t:0.04,pts:[[cx+Math.sin(a)*D*0.26+sd*D*0.02,bot+D*0.14-Math.abs(Math.sin(a))*D*0.06],[cx+Math.sin(a)*D*0.3+sd*D*0.04,bot+D*0.1-Math.abs(Math.sin(a))*D*0.06],[cx+Math.sin(a)*D*0.28+sd*D*0.03,bot+D*0.07-Math.abs(Math.sin(a))*D*0.05]],col:INK,w:D*0.003}); }   // the roots, curling back at their tips
+  // the branches: soft curves sweeping up and out, each curling at its tip; the leaves along the curve, turned with it
   const P=_kd2Phrases(A,8+Math.round(A.ch.density*6)); const n=P.length;
-  P.forEach((p,i)=>{ const u=(i+0.5)/n; const y=bot-(bot-top)*u; const len=CW*(0.08+(1-u)*0.24)*(0.8+p.v*0.4); const side=i%2?1:-1; const c=A.pcCol(p.pc,Math.round(p.top)); const leaf=isBW?_hkPastel(c,0.3,true):_hkMix(c,[250,244,230],0.25);
-    for(const sd of [side,-side]){ const ex=cx+sd*len, ey=y-D*0.06-p.v*D*0.04; push({kind:'curve',t:p.t0,pts:[[cx,y],[cx+sd*len*0.5,y-D*0.02],[ex,ey]],col:INK,w:D*0.0035});
-      const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nl=Math.min(9,Math.max(2,Math.round(ev.length/3))); for(let k=0;k<nl;k++){ const q=(k+1)/(nl+1); const lx=cx+sd*len*q, ly=y-D*0.02*q*2-(ey-y)*(-q)*0; push({kind:'seed',t:p.t0+(p.t1-p.t0)*q,x:lx,y:ly-D*0.025,rx:D*0.012,ry:D*0.02,ang:sd*0.6,col:leaf,ring:INK}); }
-      if(p.vmax>=A.vHi){ push({kind:'curve',t:p.t1,pts:[[ex-D*0.02,ey-D*0.03],[ex,ey-D*0.05],[ex+D*0.02,ey-D*0.03]],col:INK,w:D*0.003}); } } });
+  const qb=(p0,p1,p2,f)=>[(1-f)*(1-f)*p0[0]+2*(1-f)*f*p1[0]+f*f*p2[0],(1-f)*(1-f)*p0[1]+2*(1-f)*f*p1[1]+f*f*p2[1]];
+  P.forEach((p,i)=>{ const u=(i+0.5)/n; const y=bot-(bot-top)*u; const len=CW*(0.08+(1-u)*0.26)*(0.8+p.v*0.4); const side=i%2?1:-1; const c=A.pcCol(p.pc,Math.round(p.top)); const leaf=isBW?_hkPastel(c,0.3,true):_hkMix(c,[250,244,230],0.25);
+    for(const sd of [side,-side]){ const p0=[cx,y], p1=[cx+sd*len*0.45,y-D*(0.1+0.06*p.v)], p2=[cx+sd*len,y-D*(0.02+0.05*(1-u))]; push({kind:'curve',t:p.t0,pts:[p0,p1,p2],col:INK,w:D*0.0035});
+      push({kind:'curve',t:p.t0+0.01,pts:[p2,[p2[0]+sd*D*0.025,p2[1]-D*0.03],[p2[0]+sd*D*0.005,p2[1]-D*0.045]],col:INK,w:D*0.0025});   // the tip curls up
+      const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nl=Math.min(9,Math.max(2,Math.round(ev.length/3))); for(let k=0;k<nl;k++){ const q=(k+1)/(nl+1); const pt=qb(p0,p1,p2,q); const tg=qb(p0,p1,p2,Math.min(1,q+0.05)); const ang=Math.atan2(tg[1]-pt[1],tg[0]-pt[0]); const up=(k%2?1:-1); push({kind:'seed',t:p.t0+(p.t1-p.t0)*q,x:pt[0]-Math.sin(ang)*up*D*0.02,y:pt[1]+Math.cos(ang)*up*D*0.02,rx:D*0.011,ry:D*0.02,ang:ang+up*0.9,col:leaf,ring:INK}); }
+      if(p.vmax>=A.vHi){ push({kind:'curve',t:p.t1,pts:[[p2[0]-D*0.02,p2[1]-D*0.06],[p2[0],p2[1]-D*0.085],[p2[0]+D*0.02,p2[1]-D*0.06]],col:INK,w:D*0.003}); } } });
   const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60); push({kind:'disc',t:0.95,x:cx,y:top-D*0.05,r:D*0.045,col:_hkMix(tc,[250,244,230],0.2),ring:INK,rw:D*0.003});
   push({kind:'poly',t:0.97,pts:[[cx,top-D*0.03],[cx-D*0.022,top-D*0.062],[cx-D*0.01,top-D*0.078],[cx,top-D*0.066],[cx+D*0.01,top-D*0.078],[cx+D*0.022,top-D*0.062]],col:isBW?[90,90,90]:[200,70,70]});
   _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
@@ -7025,7 +7032,7 @@ const _KM_GOLD=[214,170,62], _KM_DGOLD=[150,110,30], _KM_BLK=[24,20,18], _KM_WHT
 // a chord colour as Klimt's enamel inlay: chroma kept, pulled a little toward gold
 function _kmJewel(rgb,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; return [l,l,l]; } const g=(rgb[0]+rgb[1]+rgb[2])/3; const c=rgb.map(v=>Math.max(0,Math.min(255,g+(v-g)*1.5))); return _kmMix(c,_KM_GOLD,0.18); }
 // the Klimt curl: a spiral line with a jewel at its eye
-function _kmCurl(ctx,x,y,r,turns,dir,col,lw,jewel){ ctx.strokeStyle=_kmCss(col); ctx.lineWidth=lw; ctx.lineCap='round'; ctx.beginPath(); const N=Math.max(24,turns*22);
+function _kmCurl(ctx,x,y,r,turns,dir,col,lw,jewel){ ctx.strokeStyle=_kmCss(col); ctx.lineWidth=lw; ctx.lineCap='round'; ctx.beginPath(); const N=Math.max(48,Math.round(turns*64));
   for(let i=0;i<=N;i++){ const t=i/N, a=dir*t*turns*6.2832, rr=r*(1-t*0.92); const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr; i?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.stroke();
   if(jewel){ ctx.fillStyle=_kmCss(jewel); ctx.beginPath(); ctx.arc(x,y,r*0.16,0,6.2832); ctx.fill(); } }
 // the Egyptian eye of the Stoclet frieze: an almond with an iris
@@ -7087,11 +7094,11 @@ function _kmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       else if(kind==='eye'){ _kmEye(ctx,it.x,it.y,s2*0.9,(r()-.5)*0.6,_KM_WHT,jw(it.t)); }
       else { const cc=jw(it.t), c2=jw(Math.min(0.999,it.t+0.1)); const rd=s2*(0.55+r()*0.45); ctx.fillStyle=_kmCss(cc); ctx.beginPath(); ctx.arc(it.x,it.y,rd,0,6.2832); ctx.fill(); ctx.fillStyle=_kmCss(c2); ctx.beginPath(); ctx.arc(it.x,it.y,rd*0.55,0,6.2832); ctx.fill(); if(r()<0.5){ ctx.strokeStyle=_kmCss(GOLD); ctx.lineWidth=Math.max(1,rd*0.12); ctx.beginPath(); ctx.arc(it.x,it.y,rd*0.8,0,6.2832); ctx.stroke(); } if(r()<0.35){ for(let k=0;k<6;k++){ const a=k/6*6.2832; ctx.fillStyle=_kmCss(c2); ctx.beginPath(); ctx.arc(it.x+Math.cos(a)*rd*1.25,it.y+Math.sin(a)*rd*1.25,rd*0.28,0,6.2832); ctx.fill(); } } } } };
   const mantleOf=(mx,top,foot,wTop,wFoot,lean)=>{ const edge=(u,side)=>{ const y=top+(foot-top)*u, w=wTop+(wFoot-wTop)*Math.pow(u,0.75); return [mx+lean*u+side*w*(1+0.05*Math.sin(u*9+side)), y]; }; const path=()=>{ ctx.beginPath(); for(let i=0;i<=40;i++){ const p=edge(i/40,-1); i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); } for(let i=40;i>=0;i--){ const p=edge(i/40,1); ctx.lineTo(p[0],p[1]); } ctx.closePath(); }; return {edge,path}; };
-  const face=(fx,fy,s,tilt,eyesClosed)=>{ ctx.save(); ctx.translate(fx,fy); ctx.rotate(tilt); ctx.fillStyle=_kmCss(isBW?[226,220,210]:[240,224,206]); ctx.beginPath(); ctx.ellipse(0,0,s*0.72,s,0,0,6.2832); ctx.fill();
-    ctx.fillStyle=_kmCss(isBW?[60,56,50]:[70,40,30]); ctx.beginPath(); ctx.ellipse(0,-s*0.55,s*0.95,s*0.6,0,Math.PI,0); ctx.closePath(); ctx.fill();   // the hair
-    ctx.strokeStyle=_kmCss(_KM_BLK); ctx.lineWidth=Math.max(1,s*0.05); for(const sx of [-0.3,0.3]){ ctx.beginPath(); if(eyesClosed){ ctx.moveTo(sx*s-s*0.15,-s*0.1); ctx.quadraticCurveTo(sx*s,-s*0.02,sx*s+s*0.15,-s*0.1); } else { ctx.ellipse(sx*s,-s*0.12,s*0.14,s*0.08,0,0,6.2832); } ctx.stroke(); }
-    ctx.fillStyle=_kmCss(isBW?[120,100,100]:[200,80,80]); ctx.beginPath(); ctx.ellipse(0,s*0.45,s*0.18,s*0.08,0,0,6.2832); ctx.fill();   // the mouth
-    for(let k=0;k<5;k++){ const r=rr(53800+k); ctx.fillStyle=_kmCss(jw(r())); ctx.beginPath(); ctx.arc((r()-.5)*s*1.6,-s*0.9-r()*s*0.3,s*0.1,0,6.2832); ctx.fill(); }   // the flowers in the hair
+  const face=(fx,fy,s,tilt,eyesClosed)=>{ ctx.save(); ctx.translate(fx,fy); ctx.rotate(tilt);
+    // no features: the pale cheek turned away under the dark mass of hair, flowers in it — the figure is carried by the ornament
+    ctx.fillStyle=_kmCss(isBW?[226,220,210]:[240,222,204]); ctx.beginPath(); ctx.ellipse(s*0.1,s*0.15,s*0.62,s*0.85,-0.2,0,6.2832); ctx.fill();
+    ctx.fillStyle=_kmCss(isBW?[60,56,50]:[74,38,28]); ctx.beginPath(); ctx.moveTo(-s*0.95,s*0.2); ctx.bezierCurveTo(-s*1.1,-s*0.7, -s*0.4,-s*1.25, s*0.4,-s*1.0); ctx.bezierCurveTo(s*0.9,-s*0.85, s*0.75,-s*0.2, s*0.3,-s*0.3); ctx.bezierCurveTo(-s*0.1,-s*0.35, -s*0.5,-s*0.1, -s*0.6,s*0.35); ctx.closePath(); ctx.fill();
+    for(let k=0;k<6;k++){ const r=rr(53800+k); ctx.fillStyle=_kmCss(jw(r())); ctx.beginPath(); ctx.arc(-s*0.8+r()*s*1.4,-s*0.75-r()*s*0.4,s*(0.08+0.06*r()),0,6.2832); ctx.fill(); }   // the flowers in the hair
     ctx.restore(); };
   // ── the figures
   if(figure==='embrace'){ const mx=CW*(0.5+(r0()-.5)*0.06), top=CH*0.08, foot=CH*0.86, lean=(r0()-.5)*CW*0.06; const M=mantleOf(mx,top,foot,CW*0.12,CW*0.4,lean);
@@ -7226,97 +7233,35 @@ function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fillStyle = grad;
   ctx.fillRect(0,0,CW,CH);
 
-  // Golden ornamental spiral nest — abstract stand-in for the curled figure.
-  // Nested golden arc shells (nautilus-like curled mass) + chord-jewel tiles
-  // along the spiral + tight Klimt curls at the outer tips. Pure Klimt
-  // ornament vocabulary (Stoclet / Tree-of-Life curls); no literal figure.
-  const cx = CW*0.63, cy = CH*0.56;
-  const nestR = CW*0.055;
-  const _nr = _seedRnd(31200, ss, 0, 0);
-  // Nested arc shells.
-  for(let sh=0; sh<7; sh++){
-    const r0 = nestR*(sh+1);
-    const a0 = 0.6 + sh*0.35, a1 = a0 + Math.PI*(1.15 + 0.1*sh);
-    ctx.strokeStyle = isBW
-      ? (sh%2===0 ? 'rgba(210,206,196,0.9)' : 'rgba(140,136,126,0.9)')
-      : (sh%2===0 ? 'rgba(232,200,98,0.9)' : 'rgba(184,134,46,0.9)');
-    ctx.lineWidth = 7 - sh*0.6;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    for(let s=0; s<=40; s++){
-      const a = a0 + (a1-a0)*s/40;
-      const rr = r0*(1 + 0.06*Math.sin(s*0.7 + sh));
-      const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*0.88;
-      if(s===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-  // Chord-jewel tiles along the spiral path.
-  for(let i=0; i<26; i++){
-    const a = 0.6 + i*0.42, rr = nestR*0.9*(1 + i*0.22);
-    if(rr > CW*0.38) break;
-    const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*0.88;
-    const {rgb} = _picChord(chords, _ornIdx(chords, i, 26, cn)%cn, gc, isBW);
-    const gold = isBW ? '#d0ccc0' : '#e8c862';
-    if(i%3===0){
-      ctx.save(); ctx.translate(x, y); ctx.rotate(i*0.3);
-      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      ctx.fillRect(-5, -5, 10, 10);
-      ctx.strokeStyle = gold; ctx.lineWidth = 1.2; ctx.strokeRect(-5, -5, 10, 10);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      ctx.beginPath(); ctx.arc(x, y, 4.6, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = gold; ctx.lineWidth = 1.2; ctx.stroke();
-    }
-  }
-  // Tight Klimt curls at the outer tips.
-  for(let i=0; i<5; i++){
-    const a = 0.6 + i*1.5, rr = CW*0.36;
-    const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*0.88;
-    ctx.strokeStyle = isBW ? 'rgba(210,206,196,0.85)' : 'rgba(232,200,98,0.85)';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    for(let s=0; s<30; s++){
-      const aa = s*0.55 + _nr()*0.2, r2 = 8*(1 - s/30);
-      const px = x + Math.cos(aa)*r2, py = y + Math.sin(aa)*r2;
-      if(s===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.stroke();
-  }
-
-  // Golden coin/disc shower — diagonal cascade from upper-left. Reveal-based count.
-  const showerCount = Math.max(20, Math.ceil(140*reveal));
-  for(let i=0;i<showerCount;i++){
-    const rnd=_seedRnd(i+31000,ss,0,0);
-    const t = rnd();
-    // Bias toward upper-left to lower-center cascade.
-    const x = CW * (0.05 + (1-t)*0.55 + rnd()*0.15);
-    const y = CH * (0.05 + t*0.85 + rnd()*0.10);
-    const r = 4 + rnd()*10;
-    const k = rnd();
-    if(k < 0.50){
-      // Solid gold disc.
-      ctx.fillStyle = isBW ? '#c8c4b8' : '#e8c862';
-      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = isBW ? 'rgba(40,40,40,0.7)' : 'rgba(80,55,15,0.7)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    } else if(k < 0.75){
-      // Larger pale gold.
-      ctx.fillStyle = isBW ? 'rgba(220,218,210,0.85)' : 'rgba(244,224,128,0.85)';
-      ctx.beginPath(); ctx.arc(x, y, r*1.3, 0, Math.PI*2); ctx.fill();
-    } else if(k < 0.92){
-      // Chord-coloured ornament disc.
-      const {rgb} = _picChord(chords, Math.floor(rnd()*cn), gc, isBW);
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.75)`;
-      ctx.beginPath(); ctx.arc(x, y, r*0.7, 0, Math.PI*2); ctx.fill();
-    } else {
-      // Square ornament.
-      ctx.fillStyle = isBW ? '#a8a4a0' : '#d4ab3e';
-      ctx.fillRect(x-r*0.7, y-r*0.7, r*1.4, r*1.4);
-    }
-  }
+  // Danaë herself: the sleeper curled on the red, seen only as the soft mass of her body, the auburn hair
+  // over her face (no features — Klimt's figure is carried by the ornament), the purple veil with its gold
+  // rings over her hips, and the shower of gold falling into the curl: a coin for every chord, in its colour.
+  const _nr=_seedRnd(31200,ss,0,0); _nr();
+  const cx=CW*0.54, cy=CH*0.55, R=Math.min(CW,CH)*0.42;
+  const flesh=isBW?[214,208,198]:[236,204,184], shade=isBW?[160,154,146]:[206,150,134], hair=isBW?[80,74,70]:[150,58,34];
+  const body=()=>{ ctx.beginPath(); ctx.moveTo(cx-R*0.95,cy+R*0.1); ctx.bezierCurveTo(cx-R*1.05,cy-R*0.7, cx-R*0.3,cy-R*1.1, cx+R*0.35,cy-R*0.95); ctx.bezierCurveTo(cx+R*1.0,cy-R*0.8, cx+R*1.15,cy+R*0.1, cx+R*0.85,cy+R*0.55); ctx.bezierCurveTo(cx+R*0.6,cy+R*0.95, cx-R*0.1,cy+R*1.05, cx-R*0.55,cy+R*0.8); ctx.bezierCurveTo(cx-R*0.85,cy+R*0.62, cx-R*0.95,cy+R*0.35, cx-R*0.95,cy+R*0.1); ctx.closePath(); };
+  // the body, modelled softly: a warm gradient, the fold of the knee as a second rounded lobe
+  { const g=ctx.createRadialGradient(cx-R*0.2,cy-R*0.2,R*0.1,cx,cy,R*1.2); g.addColorStop(0,`rgb(${flesh[0]},${flesh[1]},${flesh[2]})`); g.addColorStop(1,`rgb(${shade[0]},${shade[1]},${shade[2]})`); body(); ctx.fillStyle=g; ctx.fill();
+    // the thigh drawn up over the body: its own rounded mass with a shadow under it, and the arm folded over the breast
+    ctx.fillStyle=`rgba(${shade[0]},${shade[1]},${shade[2]},0.7)`; ctx.beginPath(); ctx.ellipse(cx+R*0.25,cy+R*0.3,R*0.62,R*0.4,-0.55,0,6.2832); ctx.fill();
+    ctx.fillStyle=`rgba(${flesh[0]},${flesh[1]},${flesh[2]},0.95)`; ctx.beginPath(); ctx.ellipse(cx+R*0.2,cy+R*0.18,R*0.55,R*0.32,-0.55,0,6.2832); ctx.fill();
+    ctx.fillStyle=`rgba(${shade[0]},${shade[1]},${shade[2]},0.5)`; ctx.beginPath(); ctx.ellipse(cx-R*0.35,cy-R*0.25,R*0.42,R*0.16,0.7,0,6.2832); ctx.fill();
+    ctx.fillStyle=`rgba(${flesh[0]},${flesh[1]},${flesh[2]},0.95)`; ctx.beginPath(); ctx.ellipse(cx-R*0.3,cy-R*0.32,R*0.4,R*0.13,0.7,0,6.2832); ctx.fill(); }
+  // the hair: an auburn cloud over where the face would be, its locks curling
+  { ctx.fillStyle=`rgb(${hair[0]},${hair[1]},${hair[2]})`; ctx.beginPath(); ctx.moveTo(cx-R*1.05,cy+R*0.05); ctx.bezierCurveTo(cx-R*1.3,cy-R*0.8, cx-R*0.7,cy-R*1.35, cx+R*0.2,cy-R*1.05); ctx.bezierCurveTo(cx+R*0.05,cy-R*0.7, cx-R*0.2,cy-R*0.45, cx-R*0.4,cy-R*0.2); ctx.bezierCurveTo(cx-R*0.6,cy+R*0.05, cx-R*0.9,cy+R*0.15, cx-R*1.05,cy+R*0.05); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=isBW?'rgba(40,38,36,0.6)':'rgba(96,30,16,0.6)'; ctx.lineWidth=Math.max(1,R*0.012); for(let k=0;k<7;k++){ const u=k/6; ctx.beginPath(); ctx.moveTo(cx-R*(0.95-0.5*u),cy-R*(0.15+0.6*u)); ctx.bezierCurveTo(cx-R*(0.7-0.4*u),cy-R*(0.5+0.4*u), cx-R*(0.5-0.3*u),cy-R*(0.9+0.1*u), cx-R*(0.3-0.4*u),cy-R*(1.0-0.1*u)); ctx.stroke(); } }
+  // the veil: translucent purple over the hips, its gold rings and black dots
+  { ctx.save(); body(); ctx.clip(); ctx.beginPath(); ctx.moveTo(cx-R*0.6,cy+R*1.2); ctx.bezierCurveTo(cx-R*0.1,cy+R*0.35, cx+R*0.7,cy+R*0.0, cx+R*1.3,cy+R*0.3); ctx.lineTo(cx+R*1.3,cy+R*1.3); ctx.closePath(); ctx.fillStyle=isBW?'rgba(70,66,74,0.7)':'rgba(90,48,130,0.7)'; ctx.fill();
+    const vr=_seedRnd(31300,ss,0,0); vr(); for(let k=0;k<34;k++){ const x=cx-R*0.5+vr()*R*1.7, y=cy+R*0.3+vr()*R*0.8; const rr=R*(0.03+0.05*vr()); ctx.strokeStyle=isBW?'rgba(220,216,208,0.8)':'rgba(236,204,98,0.85)'; ctx.lineWidth=Math.max(1,rr*0.3); ctx.beginPath(); ctx.arc(x,y,rr,0,6.2832); ctx.stroke(); if(vr()<0.5){ ctx.fillStyle='rgba(20,12,16,0.8)'; ctx.beginPath(); ctx.arc(x,y,rr*0.35,0,6.2832); ctx.fill(); } }
+    ctx.restore(); }
+  // the shower of gold: a stream from the upper left falling into the curl — a coin per chord, in time
+  { const n=Math.min(cn,160); const m=Math.ceil(n*reveal); for(let i=0;i<m;i++){ const rnd=_seedRnd(i+31000,ss,0,0); rnd(); const t=i/n; const x=CW*(0.1+0.42*t)+(rnd()-.5)*CW*0.2*(0.3+t), y=CH*(0.0+0.62*t)+(rnd()-.5)*CH*0.06; const r=Math.min(CW,CH)*(0.006+0.016*rnd()); const k=rnd();
+      const {rgb}=_picChord(chords,Math.min(cn-1,Math.floor(t*cn)),gc,isBW);
+      if(k<0.55){ ctx.fillStyle=isBW?'#c8c4b8':'#e8c862'; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); ctx.strokeStyle=isBW?'rgba(40,40,40,0.6)':'rgba(80,55,15,0.6)'; ctx.lineWidth=1; ctx.stroke(); }
+      else if(k<0.8){ ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`; ctx.beginPath(); ctx.arc(x,y,r*0.8,0,6.2832); ctx.fill(); ctx.strokeStyle=isBW?'#d0ccc0':'#e8c862'; ctx.lineWidth=1; ctx.stroke(); }
+      else { ctx.fillStyle=isBW?'rgba(220,218,210,0.8)':'rgba(244,224,128,0.8)'; ctx.beginPath(); ctx.moveTo(x,y-r*1.6); ctx.quadraticCurveTo(x+r,y,x,y+r); ctx.quadraticCurveTo(x-r,y,x,y-r*1.6); ctx.fill(); } } }
+  // the gold ornament of the red ground: a few curls at the edges
+  for(let i=0;i<5;i++){ const a=0.6+i*1.5, rr=CW*0.44; const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr*0.9; ctx.strokeStyle=isBW?'rgba(210,206,196,0.6)':'rgba(232,200,98,0.6)'; ctx.lineWidth=1.6; ctx.beginPath(); for(let q=0;q<=120;q++){ const t=q/120; const aa=t*2.6*6.2832, r2=12*(1-t*0.95); const px=x+Math.cos(aa)*r2, py=y+Math.sin(aa)*r2; q?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.stroke(); }
 }
 
 
@@ -7413,9 +7358,9 @@ function klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let i=0;i<visSpirals;i++){
     const cx = rnd()*CW;
     const cy = rnd()*CH;
-    const size = 12 + rnd()*40;
+    const size = 14 + rnd()*46;
     const dir = rnd()<0.5 ? 1 : -1;
-    const turns = 14 + Math.floor(rnd()*10);
+    const turns = 2 + rnd()*1.2;   // turns of the spiral
     const {rgb} = _picChord(chords, _ornIdx(chords, i, spiralCountFull, cn)%cn, gc, isBW);
 
     // Spiral line (slightly darkened chord)
@@ -7423,15 +7368,8 @@ function klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     ctx.lineWidth = 2 + rnd()*1.5;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    let sx = cx, sy = cy, sa = rnd()*Math.PI*2;
-    ctx.moveTo(sx, sy);
-    for(let t=0;t<turns;t++){
-      const r = (t/turns) * size;
-      sa += dir * 0.55;
-      sx = cx + Math.cos(sa)*r;
-      sy = cy + Math.sin(sa)*r;
-      ctx.lineTo(sx, sy);
-    }
+    const a0 = rnd()*Math.PI*2; const NS = Math.round(turns*56);
+    for(let q=0;q<=NS;q++){ const t=q/NS; const r=t*size; const sa=a0+dir*t*turns*6.2832; const sx=cx+Math.cos(sa)*r, sy=cy+Math.sin(sa)*r; q?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy); }
     ctx.stroke();
 
     // Jewel at centre — full chord colour
@@ -7715,6 +7653,8 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
 }
 
 // Shared Haring figure (dancing person) drawn as thick strokes.
+// one of his bodies at a point, drawn as he draws them: the thick black outline round a solid colour
+function _hrBodyAt(ctx,x,y,s,rgb,rnd,e){ const u=s/3.1; const k=(rnd()*4)|0; const dir=rnd()<0.5?-1:1; const c=k===0?_hrDancer(x,y+s*0.9,u,rnd,e,dir):k===1?_hrRunner(x,y+s*0.9,u,rnd,e,dir):k===2?_hrJumper(x,y+s*0.9,u,rnd,e,dir):_hrWaver(x,y+s*0.9,u,rnd,e,dir); _hrCreature(ctx,c,rgb,u,rnd); }
 function _haringFig(ctx,cx,cy,s,stroke){
   ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(2,s*0.16);ctx.lineCap='round';ctx.lineJoin='round';
   ctx.beginPath();ctx.arc(cx,cy-s*0.7,s*0.22,0,Math.PI*2);ctx.stroke(); // head
@@ -7736,7 +7676,7 @@ function haringPhaseMural(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const {rgb}=_picChord(chords,Math.floor(i*(cn/glyphs)),gc,isBW);
     const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.1+rnd()*0.12);
     const k=(rnd()*3)|0;
-    if(k===0){ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;_haringFig(ctx,x,y,s,'#0c0c0c');}
+    if(k===0){ _hrBodyAt(ctx,x,y,s,rgb,rnd,0.7); }
     else if(k===1){ // heart
       ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.beginPath();ctx.moveTo(x,y+s*0.4);ctx.quadraticCurveTo(x-s*0.7,y-s*0.2,x,y-s*0.5);ctx.quadraticCurveTo(x+s*0.7,y-s*0.2,x,y+s*0.4);ctx.fill();
       ctx.strokeStyle='#0c0c0c';ctx.lineWidth=Math.max(2,s*0.1);ctx.stroke();
@@ -7759,15 +7699,10 @@ function haringPhaseSubway(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.05+rnd()*0.06);
     const stroke=`rgb(${Math.min(255,rgb[0]+80)},${Math.min(255,rgb[1]+80)},${Math.min(255,rgb[2]+80)})`;
     const k=(rnd()*3)|0;
-    if(k===0)_haringFig(ctx,x,y,s,stroke);
-    else if(k===1){ // radiant baby (crawling + rays)
-      ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(2,s*0.16);
-      ctx.beginPath();ctx.arc(x,y,s*0.4,0,Math.PI*2);ctx.stroke();
-      for(let r=0;r<8;r++){const a=r/8*Math.PI*2;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*s*0.5,y+Math.sin(a)*s*0.5);ctx.lineTo(x+Math.cos(a)*s*0.8,y+Math.sin(a)*s*0.8);ctx.stroke();}
-    } else { // dog
-      ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(2,s*0.16);
-      ctx.beginPath();ctx.rect(x-s*0.5,y-s*0.2,s,s*0.5);ctx.moveTo(x-s*0.5,y-s*0.2);ctx.lineTo(x-s*0.75,y-s*0.4);ctx.stroke();
-    }
+    const bright=[Math.min(255,rgb[0]+80),Math.min(255,rgb[1]+80),Math.min(255,rgb[2]+80)]; const u=s/3.1;
+    if(k===0) _hrBodyAt(ctx,x,y,s*1.4,bright,rnd,0.8);
+    else if(k===1){ const c=_hrBaby(x,y,u*1.2,rnd,0.6,1); c.glow=[x,y-u*0.6,u*2.2,u*3.2,8,-3.14,6.28]; _hrCreature(ctx,c,bright,u*1.2,rnd); }   // the radiant baby
+    else { _hrCreature(ctx,_hrDog(x,y,u*1.1,rnd,0.6,rnd()<0.5?-1:1),bright,u*1.1,rnd); }   // the dog
   }
 }
 
@@ -7811,7 +7746,7 @@ function haringPhaseDance(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const rnd=_seedRnd(i+5400,ss,0,0);
     const {rgb}=_picChord(chords,Math.floor(i*(cn/figs)),gc,isBW);
     const x=rnd()*CW,y=rnd()*CH,s=Math.min(CW,CH)*(0.05+rnd()*0.05);
-    _haringFig(ctx,x,y,s,`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`);
+    _hrBodyAt(ctx,x,y,s*1.3,rgb,rnd,0.9);
     // motion ticks
     ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.6)`;ctx.lineWidth=Math.max(1.5,s*0.08);
     for(let t=0;t<3;t++){const a=rnd()*Math.PI*2;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*s*0.9,y+Math.sin(a)*s*0.9);ctx.lineTo(x+Math.cos(a)*s*1.2,y+Math.sin(a)*s*1.2);ctx.stroke();}
@@ -15818,7 +15753,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         ctx.beginPath(); break; }
       case 'stripe': ctx.lineWidth=Math.max(1,rr*.5); ctx.moveTo(-rr*6,0); ctx.lineTo(rr*6,0); ctx.stroke(); break;
       case 'wave': { ctx.lineWidth=Math.max(1,rr*.22); ctx.moveTo(-rr*2.5,0); for(let j=1;j<=4;j++){ ctx.quadraticCurveTo(-rr*2.5+rr*1.25*j-rr*.6, (j%2?-1:1)*rr*.9, -rr*2.5+rr*1.25*j, 0);} ctx.stroke(); break; }
-      case 'spiral': { ctx.lineWidth=Math.max(1,rr*.1); for(let j=0;j<=40;j++){ const t=j/40*6.2832*2.5, q=rr*j/40; j?ctx.lineTo(Math.cos(t)*q,Math.sin(t)*q):ctx.moveTo(0,0);} ctx.stroke(); break; }
+      case 'spiral': { ctx.lineWidth=Math.max(1,rr*.1); for(let j=0;j<=140;j++){ const t=j/140*6.2832*2.5, q=rr*j/140; j?ctx.lineTo(Math.cos(t)*q,Math.sin(t)*q):ctx.moveTo(0,0);} ctx.stroke(); break; }
       case 'drip': { // Pollock: one thrown line, thick where it lands and thinning as it flies, a few beads along it
         ctx.lineCap='round'; const segs=7, L=rr*16, a=(R()-.5)*1.2; const ca=Math.cos(a), sa=Math.sin(a);
         let px=-L/2, py=0, pw=(R()-.5)*rr*3;
@@ -15858,7 +15793,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         const h=rr*(0.6+R()*0.8); ctx.rect(-rr,-h,2*rr,2*h); ctx.fill(); ctx.strokeStyle='#141414'; ctx.lineWidth=Math.max(1.5,rr*.12); ctx.stroke(); break; }
       case 'kring': { // Kandinsky: ring, inner disc, a line through
         ctx.lineWidth=Math.max(1.2,rr*.12); ctx.arc(0,0,rr,0,6.2832); ctx.stroke(); ctx.beginPath(); ctx.fillStyle=col2; ctx.arc(0,0,rr*.45,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1,rr*.05); ctx.moveTo(-rr*1.6,rr*.3); ctx.lineTo(rr*1.6,-rr*.5); ctx.stroke(); break; }
-      case 'goldspiral': { ctx.lineWidth=Math.max(1,rr*.12); for(let j=0;j<=36;j++){ const t=j/36*6.2832*2.2, q=rr*j/36; j?ctx.lineTo(Math.cos(t)*q,Math.sin(t)*q):ctx.moveTo(0,0);} ctx.stroke(); for(let j=0;j<5;j++){ ctx.beginPath(); ctx.fillStyle=col2; ctx.arc((R()-.5)*rr*2,(R()-.5)*rr*2,rr*.12,0,6.2832); ctx.fill(); } break; }
+      case 'goldspiral': { ctx.lineWidth=Math.max(1,rr*.12); for(let j=0;j<=124;j++){ const t=j/124*6.2832*2.2, q=rr*j/124; j?ctx.lineTo(Math.cos(t)*q,Math.sin(t)*q):ctx.moveTo(0,0);} ctx.stroke(); for(let j=0;j<5;j++){ ctx.beginPath(); ctx.fillStyle=col2; ctx.arc((R()-.5)*rr*2,(R()-.5)*rr*2,rr*.12,0,6.2832); ctx.fill(); } break; }
       case 'bulge': { // Vasarely: a small grid of discs swelling toward the centre
         for(let yy=-2;yy<=2;yy++) for(let xx=-2;xx<=2;xx++){ const d=Math.sqrt(xx*xx+yy*yy)/2.9; const q=rr*.22*(1.3-d); ctx.beginPath(); ctx.fillStyle=((xx+yy)%2)?col:col2; ctx.arc(xx*rr*.45,yy*rr*.45,Math.max(.5,q),0,6.2832); ctx.fill(); } break; }
       case 'stripes': { // Riley: a bundle of parallel bands
