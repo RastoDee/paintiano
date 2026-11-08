@@ -16382,7 +16382,7 @@ Hard requirements:
     }
     if(typeof piece==='string'){ const m=_feedMine('music', piece); feedPieceRef.current=true; const tok=++feedTokRef.current;
       setFeedLoaded(piece); setFeedHiRes(true);
-      feedStartRef.current = {t:Date.now(), mine:true, c0:chords, sel:(sel && sel.look && !sel.sig) ? sel : null, lim:45000};
+      feedStartRef.current = {t:Date.now(), mine:true, c0:chords, sel:(sel && !sel.sig) ? sel : null, lim:45000};   // its look (or the first screen's painter) lands once the piece is in
       (async()=>{ try{ const l=await myMusicList(); if(feedTokRef.current!==tok) return; const rec=(l||[]).find(r=>r && m && r.id===m.id && r.blob); if(!rec) return;
         const p=loadFromMyMusic(rec); setForceSetup(true); feedPieceRef.current=true; await p; }catch(_){} })();   // the loader leaves the home in its first step: the card keeps it
       return; }
@@ -16637,34 +16637,47 @@ Hard requirements:
   const [liveBars, setLiveBars] = useState(null);       // the piece's colours for the pulse beneath
   const liveHomeRef = useRef(null);   // {piece, sel, snap} — what the first screen is painting now: a tap starts this one
   const liveCvRef = useRef(null); const liveOutRef = useRef(null); const liveListRef = useRef(null); const liveChordsRef = useRef({});
+  // your My Music too: the pieces whose notes are at hand (a MIDI, or an audio already read once), long enough for a painting
+  const liveMineRef = useRef([]);
+  useEffect(()=>{ if(!studioHome) return; let c=false; myMusicList().then(l=>{ if(c) return; liveMineRef.current=(l||[]).filter(r=>r && !r.empty && r.blob && (r.kind==='midi' || (r.ev && r.ev.v===AUDIO_EV_VER && Array.isArray(r.ev.e) && r.ev.e.length>=40))); }).catch(()=>{}); return ()=>{ c=true; }; },[studioHome, myMusicSlots]);
+  // after the first two, every painting draws its piece from one hat: the seven built in and yours — never the one just painted
+  const _livePick = (prev)=>{ const pool=[]; for(let i=0;i<BUILTIN_PIECES.length;i++) if(i!==PF_FIRST.piece && i!==prev) pool.push(i); liveMineRef.current.forEach(r=>{ const k='m'+r.id; if(k!==prev) pool.push(k); }); return pool.length ? pool[Math.floor(Math.random()*pool.length)] : pieceOfDay; };
   const _liveList = ()=>{ if(liveListRef.current) return liveListRef.current;
     const L=[{piece:PF_FIRST.piece, style:PF_FIRST.style, phase:PF_FIRST.phase}, {piece:pieceOfDay, style:artistOfDay, phase:dayVariant}];
     const ks=Object.keys(STYLE_INSPIRED).filter(k=>k!=='mosaic' && k!=='notes' && k!==PF_FIRST.style && k!==artistOfDay); for(let i=ks.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const x=ks[i]; ks[i]=ks[j]; ks[j]=x; }
-    const nP=BUILTIN_PIECES.length; let pc=pieceOfDay; ks.forEach((k,i)=>{ pc=(pc+1+Math.floor(Math.random()*(nP-2)))%nP; if(pc===PF_FIRST.piece) pc=(pc+1)%nP; L.push({piece:pc, style:k, phase:0}); });   // every painter's own "What he heard"
+    ks.forEach((k)=>{ L.push({piece:null, style:k, phase:0}); });   // every painter's own "What he heard" — the piece is drawn when its turn comes (_livePick)
     liveListRef.current=L; return L; };
-  const _liveChords = (idx)=>{ const C=liveChordsRef.current; if(C[idx]) return C[idx]; const ab=b64ToArrayBuffer(BUILTIN_PIECES[idx].b64); const {raw,div,temps}=parseMidi(ab); const ev=toChords(raw,div,temps); const cs=ev.map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; };
+  const _liveChords = (idx)=>{ const C=liveChordsRef.current; if(C[idx]) return C[idx];
+    if(typeof idx==='string'){ const r=liveMineRef.current.find(x=>'m'+x.id===idx); if(!r) return null;
+      if(r.kind!=='midi'){ const cs=r.ev.e.map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; }
+      return r.blob.arrayBuffer().then(ab=>{ const {raw,div,temps}=parseMidi(ab); const cs=toChords(raw,div,temps).map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; }); }
+    const ab=b64ToArrayBuffer(BUILTIN_PIECES[idx].b64); const {raw,div,temps}=parseMidi(ab); const ev=toChords(raw,div,temps); const cs=ev.map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; };
+  const _liveName = (idx)=>{ if(typeof idx==='string'){ const r=liveMineRef.current.find(x=>'m'+x.id===idx); return String((r && r.name)||'').replace(/\.[a-z0-9]+$/i,''); } return String(BUILTIN_NAMES[idx]||''); };
+  const livePrevRef = useRef(null);
   useEffect(()=>{
     if(!liveHomeOn){ liveHomeRef.current=null; return; }
     const cv=liveCvRef.current; if(!cv) return;
-    const L=_liveList(); const it=L[liveHome.i % L.length]; let cs=null; try{ cs=_liveChords(it.piece); }catch(_){ cs=null; }
-    if(!cs || !cs.length) return;
+    const L=_liveList(); const it0=L[liveHome.i % L.length]; const it=it0.piece==null ? {...it0, piece:_livePick(livePrevRef.current)} : it0; livePrevRef.current=it.piece;
+    let alive=true, tm=null, tc=null; let got=null; try{ got=_liveChords(it.piece); }catch(_){ got=null; }
+    const run=(cs)=>{ if(!alive) return; if(!cs || !cs.length){ if(typeof it.piece==='string') setLiveHome(h=>({i:h.i+1, k:Date.now()})); return; }   // one of yours that cannot be read: the next painting
     const st=it.style; const skip=!!(st && _TAKE_ORIG.includes(st)); let se=0.5; try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){}
     const fv={ style:st, keys:null, fa:null, phase:it.phase|0, seed:pollockSessionSeed>>>0, cap:null, mode:'harmony', tone, pal:null, ks:0, se, dna:null, skip, liveE:false, compose:false, own:null, lim:1 };
     const lay=_favLayout(fv, cs); if(!lay) return;
     try{ const box=cv.parentElement; const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; } }catch(_){}   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
     liveHomeRef.current={ piece:it.piece, sel:{style:st, phase:it.phase|0, mode:'harmony', notes:false, stage:[], sig:false}, snap:()=>{ try{ return cv.toDataURL('image/jpeg',0.8); }catch(_){ return null; } } };
-    try{ const nm=String(BUILTIN_NAMES[it.piece]||''); const q=nm.split(' — '); setLiveMeta({t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st)}); }catch(_){ setLiveMeta(null); }
+    try{ const nm=_liveName(it.piece); const q=nm.split(' — '); setLiveMeta({t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st)}); }catch(_){ setLiveMeta(null); }
     try{ const cn0=cs.length, bars=[]; for(let j=0;j<36;j++){ const c=cs[Math.min(cn0-1, Math.floor(j/36*cn0))]; const ns=(c && (c.n||c.notes))||[]; let top=60, vel=100; ns.forEach(x=>{ const m=(x && x.m!==undefined) ? x.m : (x && x.midi!==undefined ? x.midi : x); if(+m>top) top=+m; if(x && x.v) vel=x.v; }); const k=gc(top, vel); bars.push('rgb('+(k[0]|0)+','+(k[1]|0)+','+(k[2]|0)+')'); } setLiveBars(bars); }catch(_){ setLiveBars(null); }
     const reduce=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_){ return false; } })();
-    const cn=cs.length, t0=performance.now(); let alive=true, tm=null, last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);
+    const cn=cs.length, t0=performance.now(); let last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);
     const paint=(lim)=>{ fv.lim=lim; try{ _favPaint(cv, fv, {chords:cs}, S, tone, lay); }catch(_){} };
     const step=()=>{ if(!alive) return; const u=Math.min(1,(performance.now()-t0)/_LH_MS); const e=u<0.5 ? 2*u*u : 1-Math.pow(-2*u+2,2)/2; const lim=Math.max(1, Math.ceil(cn*e));
       const a=performance.now(); if(lim!==last){ last=lim; paint(lim); } const cost=performance.now()-a;
       if(lim>=cn){ setLivePhase('done'); tm=setTimeout(()=>{ if(!alive) return; try{ liveOutRef.current=cv.toDataURL('image/jpeg',0.7); }catch(_){} setLiveHome(h=>({i:h.i+1, k:Date.now()})); }, _LH_HOLD); return; }
       tm=setTimeout(step, Math.max(70, cost*1.5)); };
     setLivePhase('card');
-    if(reduce){ paint(cn); setLivePhase('done'); return ()=>{ alive=false; }; }   // no motion asked for: the finished painting, still
-    tm=setTimeout(step, 200); const tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, 2300);
+    if(reduce){ paint(cn); setLivePhase('done'); return; }   // no motion asked for: the finished painting, still
+    tm=setTimeout(step, 200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, 2300); };
+    if(got && typeof got.then==='function') got.then(run).catch(()=>{ run(null); }); else run(got);
     return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); };
   }, [liveHomeOn, liveHome.i, tone]);
   useEffect(()=>{
