@@ -16030,7 +16030,10 @@ Hard requirements:
   };
   // … also on the dark around the painting
   const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; _swipeWasGestureRef.current=false; };
-  const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return; if(_stSwipeRef.current && _stSwipeRef.current(tt.clientX-st.x, tt.clientY-st.y, Date.now()-st.t)) _swipeWasGestureRef.current=true; };
+  const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
+    // a pull up that began on the bar under the painting (♥ · ✦ Change · share) opens the look tray — palettes and painters without the way through ✦ Change
+    try{ const bar=document.querySelector('.pf-st-bar'); const br=bar && bar.getBoundingClientRect(); if(br && st.y>=br.top && !stripOpen && !stLand && !demoReelOn && !recording && tt.clientY-st.y<-40 && Date.now()-st.t<700){ _swipeWasGestureRef.current=true; _stBuzz(8); setStChg(null); setStripOpen(true); return; } }catch(_){}
+    if(_stSwipeRef.current && _stSwipeRef.current(tt.clientX-st.x, tt.clientY-st.y, Date.now()-st.t)) _swipeWasGestureRef.current=true; };
   // THE STUDIO IN FULL SCREEN UNDER THE FINGER — as the For You feed (a painting shown as a card keeps its slide): the painting follows
   // the finger and the next look comes with it. The look is put on the canvas at once; the painting you leave is a copy that rides one
   // screen before it. Let go: it lands with the finger's own speed — or goes back, and the look you left comes back exactly (the one you
