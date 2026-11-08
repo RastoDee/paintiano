@@ -2672,7 +2672,7 @@ const STUDIO_HOME_CSS = `
 .pf-lh-card small{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 .pf-lh-card b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1.02;color:#fff;margin:8px 0;text-shadow:0 4px 30px rgba(0,0,0,.95)}
 .pf-lh-card i{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:#f0c75e;text-shadow:0 2px 16px rgba(0,0,0,.95)}
-.pf-lh-foot{position:absolute;left:0;right:0;bottom:calc(150px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:10px;z-index:4;pointer-events:none}   /* the words under the painting stack: the pill above the line, never over it */
+.pf-lh-foot{position:absolute;left:0;right:0;bottom:calc(90px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:10px;z-index:4;pointer-events:none}   /* the words under the painting stack: the pill above the line, never over it */
 .pf-lh-line{text-align:center;pointer-events:none;animation:pfLhFade .5s ease both;background:rgba(6,6,12,.55);padding:6px 14px 7px;border-radius:14px;max-width:88%}
 .pf-lh-line b{display:block;font-size:13.5px;font-weight:700;color:#fff;text-shadow:0 2px 10px #000}
 .pf-lh-line i{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:15px;color:#f0c75e;text-shadow:0 2px 10px #000}
