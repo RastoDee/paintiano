@@ -24923,7 +24923,7 @@ function _favPaint(cv, fav, piece, S, liveTone, lay){
     G.__PAINT_MUSIC_DNA = fav.dna || null;
     _setSongEnergy(fav.se); _setMixOn(fav.tone==='real'); _setArtistSeed(fav.seed>>>0); _setVariantCap(fav.cap); _setNoBg(false);
     const gc = _gcMake(fav.mode, fav.tone, fav.pal, (fav.ks|0)+_kd);
-    const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = chords.length;
+    const style = fav.style || null, seed = fav.seed>>>0, mode = _paintModeOf(fav.mode, fav.pal), ph = fav.phase|0, lim = (fav.lim>0) ? Math.min(chords.length, fav.lim|0) : chords.length;   // fav.lim: a partly painted picture (the first screen painting itself)
     const cp0 = chords;   // See music paints what plays, as on screen: every tone in its own colour
     const cp = fav.skip ? cp0 : _takePadM(cp0);
     if(cp!==cp0 && cp._livePad && fav.compose){ cp._exactTone = true; cp._objFirst = true; }
@@ -26438,7 +26438,7 @@ const STUDIO_HOME_SAMPLE = { u:'/studio/home.webp', src:'sample' };
 // read on a Pro AI device 5 Nov 2026; the Atmosphere's title in the 9 languages (_atmoTitleL)
 const SAMPLE_IMG_BAKE = {"The Starry Night — Van Gogh":{"atmo":{"v":0.35,"e":0.82,"root":0,"title":{"EN":"Swirl of the night sky","SK":"Vírenie nočnej oblohy","DE":"Wirbel des Nachthimmels","FR":"Tourbillon du ciel nocturne","ES":"Remolino del cielo nocturno","PT":"Redemoinho do céu noturno","zh":"夜空的漩涡","zhTW":"夜空的漩渦","ja":"夜空の渦"}},"mel":{"notes":[["E5",1,0,108],["D5",0.5,1,104],["E5",0.5,1.5,106],["F5",1,2,110],["E5",1,3,105],["D5",1,4,102],["C5",0.5,5,100],["D5",0.5,5.5,103],["E5",1,6,108],["A5",1,7,112],["G5",1,8,110],["F5",0.5,9,106],["E5",0.5,9.5,104],["D5",1,10,100],["C5",0.5,11,98],["B4",0.5,11.5,96],["A4",1,12,102],["C5",0.5,13,104],["B4",0.5,13.5,100],["A4",1,14,98],["G4",0.5,15,96],["A4",0.5,15.5,98],["B4",0.5,16,100],["C5",0.5,16.5,103],["D5",1,17,106],["E5",1,18,110],["D5",0.5,19,105],["C5",0.5,19.5,102],["D5",1,20,104],["E5",1,21,108],["F5",0.5,22,106],["E5",0.5,22.5,104],["D5",1,23,100]],"chords":[[["D3","F3","A3","D4"],1,0,80],[["D3","F3","A3","D4"],1,1,76],[["D3","F3","A3","F4"],1,2,78],[["A2","E3","A3","C4"],1,3,75],[["G2","D3","G3","B3"],1,4,74],[["G2","D3","G3","B3"],1,5,72],[["A2","E3","A3","C4"],1,6,76],[["A2","E3","A3","E4"],1,7,80],[["D3","F3","A3","D4"],1,8,78],[["D3","F3","A3","D4"],1,9,75],[["E3","G3","B3","E4"],1,10,74],[["A2","E3","A3","C4"],1,11,72],[["D3","F3","A3","D4"],1,12,76],[["E3","G3","B3","E4"],1,13,74],[["A2","C3","E3","A3"],1,14,72],[["G2","D3","G3","B3"],1,15,70],[["G2","D3","G3","B3"],1,16,72],[["A2","E3","A3","C4"],1,17,75],[["D3","F3","A3","D4"],1,18,78],[["D3","F3","A3","D4"],1,19,76],[["G2","D3","G3","B3"],1,20,74],[["A2","E3","A3","C4"],1,21,76],[["A2","C3","E3","G3"],1,22,78],[["D3","F3","A3","D4"],1,23,82]],"tempo":90,"title":"Swirl of the night sky"}},"Water Lily Pond — Monet":{"atmo":{"v":0.42,"e":0.1,"root":0,"title":{"EN":"A quiet pond in summer","SK":"Tichý rybník v lete","DE":"Stiller Teich im Sommer","FR":"Étang paisible en été","ES":"Estanque tranquilo en verano","PT":"Lago tranquilo no verão","zh":"夏日静谧的池塘","zhTW":"夏日靜謐的池塘","ja":"夏の静かな池"}},"mel":{"notes":[["E5",1,0,100],["D5",1,1,98],["C5",1,2,96],["D5",1,3,98],["E5",1,4,102],["G5",1,5,104],["A5",2,6,108],["G5",1,8,100],["E5",1,9,98],["D5",1,10,96],["E5",1,11,98],["G5",1,12,102],["A5",1,13,104],["G5",1,14,100],["E5",1,15,98],["D5",1,16,96],["C5",1,17,98],["A4",1,18,100],["G4",1,19,98],["A4",1,20,100],["C5",1,21,102],["E5",2,22,110]],"chords":[[["C3","G3","C4","E4"],1,0,78],[["C3","G3","C4","E4"],1,1,76],[["C3","G3","C4","E4"],1,2,75],[["D3","A3","D4","F4"],1,3,76],[["C3","G3","C4","E4"],1,4,78],[["C3","E3","G3","E4"],1,5,78],[["A2","E3","A3","C4"],2,6,80],[["C3","G3","C4","E4"],1,8,78],[["C3","G3","C4","E4"],1,9,76],[["D3","A3","D4","F4"],1,10,76],[["C3","G3","C4","E4"],1,11,78],[["A2","E3","A3","C4"],1,12,80],[["D3","A3","D4","F4"],1,13,80],[["G2","D3","G3","D4"],1,14,82],[["G2","D3","G3","D4"],1,15,80],[["A2","E3","A3","E4"],1,16,82],[["A2","C3","E3","A3"],1,17,80],[["D3","A3","D4","F4"],1,18,80],[["G2","D3","G3","B3"],1,19,82],[["G2","D3","G3","B3"],1,20,84],[["G2","D3","G3","B3"],1,21,86],[["C3","G3","C4","E4"],2,22,85]],"tempo":90,"title":"A quiet pond in summer"}},"The Scream — Munch":{"atmo":{"v":-0.85,"e":0.95,"root":0,"title":{"EN":"A scream of existential dread","SK":"Výkrik existenciálnej hrôzy","DE":"Schrei existenzieller Angst","FR":"Cri d’angoisse existentielle","ES":"Grito de angustia existencial","PT":"Grito de angústia existencial","zh":"存在之恐惧的呐喊","zhTW":"存在之恐懼的吶喊","ja":"実存の恐怖の叫び"}},"mel":{"notes":[["G#5",1,0,112],["G#5",0.5,1,108],["A#5",0.5,1.5,114],["G#5",1,2,110],["F5",1,3,106],["D#5",1,4,112],["D#5",0.5,5,108],["F5",0.5,5.5,114],["G#5",1,6,116],["C5",1,7,104],["G#5",1,8,118],["A#5",0.5,9,112],["G#5",0.5,9.5,110],["F5",1,10,108],["D#5",0.5,11,106],["C5",0.5,11.5,104],["D#5",1,12,112],["F5",0.5,13,110],["D#5",0.5,13.5,108],["C5",1,14,118],["G#4",1,15,116]],"chords":[[["G#2","D#3","G#3","D#4"],1,0,88],[["G#2","D#3","G#3","D#4"],1,1,84],[["C3","G#3","C4","D#4"],1,2,86],[["F2","C3","A#3","F4"],1,3,82],[["D#2","A#2","G#3","D#4"],1,4,88],[["D#2","A#2","G#3","D#4"],1,5,84],[["G#2","D#3","G#3","D#4"],1,6,90],[["C3","G#3","C4","G#4"],1,7,86],[["G#2","D#3","G#3","D#4"],1,8,92],[["A#2","F3","A#3","D#4"],1,9,88],[["F2","C3","A#3","F4"],1,10,86],[["D#2","A#2","G#3","D#4"],1,11,90],[["G#2","D#3","G#3","D#4"],1,12,88],[["A#2","F3","A#3","D#4"],1,13,86],[["D#2","A#2","F3","G#3"],1,14,92],[["G#1","D#2","G#2","D#3"],1,15,96]],"tempo":132,"title":"A scream of existential dread"}}};
 function _atmoTitleL(t, lang){ return (t && typeof t==='object') ? (t[lang] || t.EN || '') : (t || ''); }
-const PF_FIRST = { piece:1, style:'arcs', phase:5, u:'/studio/first.webp' };   // Flight of the Bumble-Bee by Stella (interlocking arcs) — the picture is this very painting, made in the app; bold from the first second, on a dark ground
+const PF_FIRST = { piece:1, style:'arcs', phase:6, u:'/studio/first.webp' };   // Flight of the Bumble-Bee by Stella (interlocking arcs) — the picture is this very painting, made in the app; bold from the first second, on a dark ground
 // MINE — My Music · My Images · ♥ Favorites as one grid of paintings
 const MINE_CSS = `
 .pf-mine{position:fixed;inset:0;z-index:100002;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:#0b0a10;color:#f2eee8;font-family:'Outfit','Helvetica Neue',Arial,sans-serif;padding:calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px));animation:pfMineIn .22s ease-out}
@@ -26785,6 +26785,28 @@ const STUDIO_HOME_CSS = `
 .pf-st-home,.pf-st-home *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .pf-sh-art img{pointer-events:none;-webkit-user-drag:none}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
+.pf-lh{position:absolute;inset:0;overflow:hidden;background:#0a0814}
+.pf-lh-in{position:absolute;inset:0;animation:pfLhIn .6s cubic-bezier(.2,.8,.2,1) both;background:#0a0814}
+@keyframes pfLhIn{from{transform:translateY(100%)}to{transform:none}}
+.pf-lh-out{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:pfLhOut .6s cubic-bezier(.2,.8,.2,1) both;z-index:1;pointer-events:none}
+@keyframes pfLhOut{from{transform:none}to{transform:translateY(-100%)}}
+.pf-lh canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pf-lh-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;z-index:3;animation:pfLhCard 2.4s ease both}
+@keyframes pfLhCard{0%{opacity:0;transform:scale(1.06)}12%{opacity:1;transform:scale(1.03)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-40px) scale(.98)}}
+.pf-lh-card small{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 2px 12px rgba(0,0,0,.9)}
+.pf-lh-card b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1.02;color:#fff;margin:8px 0;text-shadow:0 4px 30px rgba(0,0,0,.95)}
+.pf-lh-card i{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:#f0c75e;text-shadow:0 2px 16px rgba(0,0,0,.95)}
+.pf-lh-line{position:absolute;left:0;right:0;bottom:92px;text-align:center;z-index:3;pointer-events:none;animation:pfLhFade .5s ease both}
+.pf-lh-line b{display:block;font-size:13.5px;font-weight:700;color:#fff;text-shadow:0 2px 10px #000}
+.pf-lh-line i{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:15px;color:#f0c75e;text-shadow:0 2px 10px #000}
+.pf-lh-bars{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:flex-end;justify-content:center;gap:3px;padding:0 12px;z-index:2;pointer-events:none;background:linear-gradient(rgba(4,4,8,0),rgba(4,4,8,.8));animation:pfLhFade .6s ease both;transition:opacity .5s}
+.pf-lh-bars.off{opacity:0}
+.pf-lh-bars s{display:block;flex:0 0 6px;border-radius:3px 3px 0 0;transform-origin:bottom;animation:pfLhBar .8s ease-in-out infinite alternate}
+@keyframes pfLhBar{from{transform:scaleY(.2)}to{transform:scaleY(1)}}
+.pf-lh-pill{position:absolute;left:50%;bottom:146px;transform:translateX(-50%);z-index:4;pointer-events:none;background:rgba(10,8,14,.74);border:1px solid rgba(240,199,94,.75);color:#fff;font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:999px;white-space:nowrap;animation:pfLhFade .5s ease both,pfLhRing 1.5s ease-out .5s infinite}
+@keyframes pfLhRing{0%{box-shadow:0 0 0 0 rgba(240,199,94,.55)}100%{box-shadow:0 0 0 16px rgba(240,199,94,0)}}
+@keyframes pfLhFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){.pf-lh-in,.pf-lh-out,.pf-lh-bars s,.pf-lh-card{animation:none}.pf-lh-pill{animation:pfLhFade .5s ease both}}
 .pf-sh-tease{position:absolute;inset:0;overflow:hidden;background:#0a0814}
 .pf-sh-tease img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:pfShReel 18s ease-in-out infinite}
 .pf-sh-tease img:first-child{opacity:1}
@@ -40520,8 +40542,9 @@ Hard requirements:
       setFeedCards([c]); setFeedAt(0); _feedLoad(piece, {img:true}, 'img'); _feedFlashNow(); _feedHintBump(); return;
     }
     if(first===true){   // the first screen tapped: its own painting starts where it is — no intro, no slide; up brings the Mosaic, Kandinsky, ✦ (or ✦ at once after the first time)
-      const F=_FEED_FIRST; feedStepsRef.current = arc ? ['mosaic','kandinsky','sig'] : ['sig']; surpriseArtistBagRef.current = [];
-      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece:F.piece, sel:F.sel, u:null, l:'', dir:'none', first:true, pu:PF_FIRST.u };
+      const LH=liveHomeRef.current; const F=LH ? {piece:LH.piece, sel:LH.sel} : _FEED_FIRST; const pu=(LH && LH.snap()) || PF_FIRST.u;   // the painting the first screen is painting right now, where it is
+      feedStepsRef.current = arc ? ['mosaic','kandinsky','sig'] : ['sig']; surpriseArtistBagRef.current = [];
+      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), piece:F.piece, sel:F.sel, u:null, l:'', dir:'none', first:true, pu };
       setFeedCards([c]); setFeedAt(0); _feedLoad(F.piece, F.sel); _feedHintBump(); return;
     }
     const piece=_feedPiece(); if(typeof piece==='string') arc=false;
@@ -40710,6 +40733,47 @@ Hard requirements:
   useEffect(()=>{ const f=()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} setTimeout(()=>{ if(_acRunning()) setFeedSoundOk(true); }, 400); } else setFeedSoundOk(true); }; document.addEventListener('click', f, true); return ()=>document.removeEventListener('click', f, true); },[]);
   // the card shows the canvas as it paints
   const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
+  // ── the first screen paints itself: a built-in piece by a painter, silent and sped up (the whole piece in a few
+  //    seconds), a title card over its first strokes, the piece's colours pulsing beneath; when it is done the next one
+  //    slides up — until a tap brings the sound (the piece then starts as itself, with the music)
+  const _LH_MS = 7000, _LH_HOLD = 2600;
+  const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCur() && !showIntro && !showOnboarding;   // once the splash has gone
+  const [liveHome, setLiveHome] = useState({i:0, k:0});
+  const [livePhase, setLivePhase] = useState('card');   // card → paint → done
+  const [liveMeta, setLiveMeta] = useState(null);       // {t, by, p} — title, composer, "inspired by …"
+  const [liveBars, setLiveBars] = useState(null);       // the piece's colours for the pulse beneath
+  const liveHomeRef = useRef(null);   // {piece, sel, snap} — what the first screen is painting now: a tap starts this one
+  const liveCvRef = useRef(null); const liveOutRef = useRef(null); const liveListRef = useRef(null); const liveChordsRef = useRef({});
+  const _liveList = ()=>{ if(liveListRef.current) return liveListRef.current;
+    const L=[{piece:PF_FIRST.piece, style:PF_FIRST.style, phase:PF_FIRST.phase}, {piece:pieceOfDay, style:artistOfDay, phase:dayVariant}];
+    const ks=Object.keys(STYLE_INSPIRED).filter(k=>k!=='mosaic' && k!=='notes' && k!==PF_FIRST.style && k!==artistOfDay); for(let i=ks.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const x=ks[i]; ks[i]=ks[j]; ks[j]=x; }
+    const nP=BUILTIN_PIECES.length; let pc=pieceOfDay; ks.forEach((k,i)=>{ pc=(pc+1+Math.floor(Math.random()*(nP-2)))%nP; if(pc===PF_FIRST.piece) pc=(pc+1)%nP; L.push({piece:pc, style:k, phase:0}); });   // every painter's own "What he heard"
+    liveListRef.current=L; return L; };
+  const _liveChords = (idx)=>{ const C=liveChordsRef.current; if(C[idx]) return C[idx]; const ab=b64ToArrayBuffer(BUILTIN_PIECES[idx].b64); const {raw,div,temps}=parseMidi(ab); const ev=toChords(raw,div,temps); const cs=ev.map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; };
+  useEffect(()=>{
+    if(!liveHomeOn){ liveHomeRef.current=null; return; }
+    const cv=liveCvRef.current; if(!cv) return;
+    const L=_liveList(); const it=L[liveHome.i % L.length]; let cs=null; try{ cs=_liveChords(it.piece); }catch(_){ cs=null; }
+    if(!cs || !cs.length) return;
+    const st=it.style; const skip=!!(st && _TAKE_ORIG.includes(st)); let se=0.5; try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){}
+    const fv={ style:st, keys:null, fa:null, phase:it.phase|0, seed:pollockSessionSeed>>>0, cap:null, mode:'harmony', tone, pal:null, ks:0, se, dna:null, skip, liveE:false, compose:false, own:null, lim:1 };
+    const lay=_favLayout(fv, cs); if(!lay) return;
+    try{ const box=cv.parentElement; const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; } }catch(_){}   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
+    liveHomeRef.current={ piece:it.piece, sel:{style:st, phase:it.phase|0, mode:'harmony', notes:false, stage:[], sig:false}, snap:()=>{ try{ return cv.toDataURL('image/jpeg',0.8); }catch(_){ return null; } } };
+    try{ const nm=String(BUILTIN_NAMES[it.piece]||''); const q=nm.split(' — '); setLiveMeta({t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st)}); }catch(_){ setLiveMeta(null); }
+    try{ const cn0=cs.length, bars=[]; for(let j=0;j<36;j++){ const c=cs[Math.min(cn0-1, Math.floor(j/36*cn0))]; const ns=(c && (c.n||c.notes))||[]; let top=60, vel=100; ns.forEach(x=>{ const m=(x && x.m!==undefined) ? x.m : (x && x.midi!==undefined ? x.midi : x); if(+m>top) top=+m; if(x && x.v) vel=x.v; }); const k=gc(top, vel); bars.push('rgb('+(k[0]|0)+','+(k[1]|0)+','+(k[2]|0)+')'); } setLiveBars(bars); }catch(_){ setLiveBars(null); }
+    const reduce=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_){ return false; } })();
+    const cn=cs.length, t0=performance.now(); let alive=true, tm=null, last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);
+    const paint=(lim)=>{ fv.lim=lim; try{ _favPaint(cv, fv, {chords:cs}, S, tone, lay); }catch(_){} };
+    const step=()=>{ if(!alive) return; const u=Math.min(1,(performance.now()-t0)/_LH_MS); const e=u<0.5 ? 2*u*u : 1-Math.pow(-2*u+2,2)/2; const lim=Math.max(1, Math.ceil(cn*e));
+      const a=performance.now(); if(lim!==last){ last=lim; paint(lim); } const cost=performance.now()-a;
+      if(lim>=cn){ setLivePhase('done'); tm=setTimeout(()=>{ if(!alive) return; try{ liveOutRef.current=cv.toDataURL('image/jpeg',0.7); }catch(_){} setLiveHome(h=>({i:h.i+1, k:Date.now()})); }, _LH_HOLD); return; }
+      tm=setTimeout(step, Math.max(70, cost*1.5)); };
+    setLivePhase('card');
+    if(reduce){ paint(cn); setLivePhase('done'); return ()=>{ alive=false; }; }   // no motion asked for: the finished painting, still
+    tm=setTimeout(step, 200); const tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, 2300);
+    return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); };
+  }, [liveHomeOn, liveHome.i, tone]);
   useEffect(()=>{
     if(!_feedLiveOn) return;
     feedDrawRef.current();
@@ -41919,7 +41983,7 @@ Hard requirements:
               {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/gallery-'+['05-kusama','02-mondrian','09-vasarely','07-afklint','06-stella','08-samfrancis'][feedCards.length%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
               <div ref={feedOutRef} className="pf-sh-dragout" aria-hidden="true"/>
               <div ref={feedCardRef} className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')+((FC && feedSidePeek>0 && !feedFly && !feedPeek) ? ' peekx' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE} onTouchCancel={_fTC}>
-                {_smp && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
+                {_smp && !liveHomeOn && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
                 {feedBurst && (<span key={feedBurst.k} className="pf-sh-burst" aria-hidden="true" style={{left:feedBurst.x, top:feedBurst.y}}>{Array.from({length:12},(_,i)=>{ const a=i/12*Math.PI*2, d=46+((i*37)%5)*9; return (<i key={i} style={{'--dx':Math.round(Math.cos(a)*d)+'px','--dy':Math.round(Math.sin(a)*d)+'px', animationDelay:((i%3)*25)+'ms'}}/>); })}</span>)}
                 {!!FC && _fTapCue && !feedFly && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
                 <div className="pf-sh-ghost pf-sh-g1" aria-hidden="true"/>
@@ -41944,7 +42008,7 @@ Hard requirements:
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')}>
-                                    {_smp ? (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                                    {_smp ? (liveHomeOn ? (<div className="pf-lh" aria-hidden="true">{(liveOutRef.current && liveHome.k) ? (<img key={'o'+liveHome.k} className="pf-lh-out" src={liveOutRef.current} alt=""/>) : null}<div key={'i'+liveHome.k} className="pf-lh-in"><canvas ref={liveCvRef}/>{livePhase==='card' && liveMeta && (<div className="pf-lh-card"><small>{liveMeta.by}</small><b>{liveMeta.t}</b><i>{liveMeta.p}</i></div>)}{livePhase!=='card' && liveMeta && (<div className="pf-lh-line"><b>{liveMeta.t}{liveMeta.by ? ' — '+liveMeta.by : ''}</b><i>{liveMeta.p}</i></div>)}{liveBars && (<div className={'pf-lh-bars'+(livePhase==='done' ? ' off' : '')}>{liveBars.map((c,j)=>(<s key={j} style={{background:c, height:(14+((j*37)%53))+'px', animationDuration:(0.45+((j*13)%7)/10)+'s', animationDelay:(-((j*29)%10)/10)+'s'}}/>))}</div>)}{livePhase==='done' && (<div className="pf-lh-pill">🔊 {(()=>{ const x=_stT('supTap'); return x.charAt(0).toUpperCase()+x.slice(1); })()}</div>)}</div></div>) : (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>)) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{'--g':'linear-gradient(135deg,'+K.g+')'}}><span className="pf-sh-chip-ic">{_sv(K.p, 14)}</span><span className="pf-sh-chip-t">{K.label}</span></span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
@@ -41962,7 +42026,7 @@ Hard requirements:
               const _fz = fdMeta && fdMeta.feed ? fdMeta : null, _mt = _fz ? _fz.t : (FC ? _fTitle : ttl), _ml = _fz ? _fz.l : (FC ? _fLine : line);
               const _isDay = loadedSource==='midi' && !_fz && builtinPieceRef.current===pieceOfDay && style===artistOfDay && (phaseIndex|0)===dayVariant && !painterStage.length && !(FC && FC.kind);   // the painting of the day itself: its word above the title
 
-              const _sTap = _smp && !FC && !feedFly && !feedBurst;   // the first screen: what it is, and that a tap starts it (the rings in the middle) — words under the painting, not a button on it
+              const _sTap = _smp && !liveHomeOn && !FC && !feedFly && !feedBurst;   // the first screen: what it is, and that a tap starts it (the rings in the middle) — words under the painting, not a button on it
               const _heartOn = _fL && favHitAny;
               const _hA = _fL || (!FC && !_smp && _canPlay && kind!=='compose' && kind!=='mic' && !((kind==='mood'||kind==='mfi') && !SRC[kind].d));   // your last painting: ♥ and share too (an AI mood without its draft would be written anew — none)
               const _hArm = (a)=>{ stHomeActRef.current={a, c:chords, u:originalImgUrl, p:!!(playing||anim), t:Date.now()}; _play(); };
