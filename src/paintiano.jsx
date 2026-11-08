@@ -3743,8 +3743,18 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   //      small yellow stars (Icarus, the Sword-Swallower).
   // Slots: 0 Parakeet field · 1 big collage · 2 Fauve · 3 Nice · 4 French
   // Window · 5 La Gerbe · 6 nested-frame grid · 7 Memory of Oceania · 8 Jazz.
-  // VARIANT: 0 What he heard (_matListen, generative) · 1 Parakeet field · 2 big collage · 3 Nice · 4 French Window · 5 La Gerbe · 6 Jazz · 7 nested-frame grid (Fauve and Memory of Oceania retired). Free: 0 and 1.
-  const _pn=_capN(8); const pick=[-1,0,1,3,4,5,8,6][((phaseIndex|0)%_pn+_pn)%_pn];   // the nested-frame grid (6) last; Fauve (2) and Memory of Oceania (7) retired
+  // VARIANT (his own papers and scissors — the gouache colours, the leaf, the seaweed, the dove, the coral): 0 Matisse listens
+  // (matisseListen: the wall of leaves, the patchwork of sheets or the Velvets, as the piece asks) · 1 Polynesia, the Sea ·
+  // 2 The Snail · 3 Beasts of the Sea · 4 The Tree of Life (the Vence windows) · 5 La Gerbe · 6 The Great Seaweed · 7 the
+  // nested-frame grid. Retired (code kept): What he heard (_matListen), the Parakeet field, the big collage, Nice, French
+  // Window, Jazz, Fauve, Memory of Oceania.
+  const _pn=_capN(8); const pick=[10,11,12,13,14,5,15,6][((phaseIndex|0)%_pn+_pn)%_pn];
+  if(pick===10){ matisseListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===11){ matissePolynesia(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===12){ matisseSnail(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===13){ matisseBeasts(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===14){ matisseVence(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===15){ matisseAlgae(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===-1){ _matListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===1){ matissePhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ matissePhaseFauve(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3754,6 +3764,346 @@ function drawMatisseOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   if(pick===6){ matissePhaseFrames(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===7){ matissePhaseMemoryOceania(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   matissePhaseA(ctx,CW,CH,chords,lim,gc,ss,mode, (pick===8)?1:0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE, HIS OWN HAND — the papers his assistants painted with gouache (Linel colours: ultramarine, cobalt, lemon,
+// orange, vermilion, rose, violet, emerald, leaf green, black, the white of the wall) and the shapes his scissors drew
+// from them: the leaf with its rounded fingers, the great seaweed, the dove, the fish, the star of Jazz, the coral, the
+// lobed leaf of Vence. Every chord gives its colour, snapped to the nearest of his papers — the music still chooses.
+// ═══════════════════════════════════════════════════════════════════════════
+const _MT_PIG=[[242,198,46],[236,124,38],[212,52,42],[214,82,128],[106,62,146],[34,58,150],[50,120,190],[36,148,150],[26,116,76],[108,160,62]];
+const _MT_BLACK=[30,28,32], _MT_WHITE=[246,241,229];
+// a random stream of its own (the shared _seedRnd state is never touched, so shapes can be cut inside any loop)
+function _mtR(a,b){ let s=((((a|0)*73)^((b|0)*113))^0x2f6b1d)>>>0; s^=s>>>16; s=Math.imul(s,0x7feb352d)>>>0; s^=s>>>15; s=Math.imul(s,0x846ca68b)>>>0; s^=s>>>16;
+  const f=()=>{ s=(s+0x6D2B79F5)>>>0; let t=s; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; f(); return f; }
+function _mtHue(c){ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<1e-6) return 0; let h= mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; return h<0?h+360:h; }
+const _MT_PIG_H=_MT_PIG.map(_mtHue);
+const _mtPastel=(p)=> (typeof _pastelOn!=='undefined' && _pastelOn && p!==_MT_BLACK && p!==_MT_WHITE) ? p.map(v=>Math.round(v+(250-v)*0.38)) : p;
+function _mtPigOf(rgb,isBW){
+  if(isBW){ const l=Math.round(rgb[0]*0.3+rgb[1]*0.59+rgb[2]*0.11); return [l,l,l]; }
+  const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]);
+  let p; if(mx<46) p=_MT_BLACK; else if(mx-mn<18) p= mx>200 ? _MT_WHITE : _MT_BLACK;
+  else { const h=_mtHue(rgb); let bi=0,bd=999; for(let i=0;i<_MT_PIG_H.length;i++){ const d=Math.abs(((_MT_PIG_H[i]-h)%360+540)%360-180); if(d<bd){ bd=d; bi=i; } } p=_MT_PIG[bi]; }
+  return _mtPastel(p); }
+const _mtLum=(c)=>(0.299*c[0]+0.587*c[1]+0.114*c[2])/255;
+const _mtMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _mtCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+const _mtSame=(a,b)=>!!(a&&b&&Math.abs(a[0]-b[0])<4&&Math.abs(a[1]-b[1])<4&&Math.abs(a[2]-b[2])<4);
+function _mtPigAt(chords,i,gc,isBW){ const cn=chords.length; return _mtPigOf(_picChord(chords,Math.max(0,Math.min(cn-1,i|0)),gc,isBW).rgb,isBW); }
+// the papers of a stretch of the piece, the most used first
+function _mtStats(chords,gc,isBW,a,b){ const cnt=new Map(), key=new Map(); const step=Math.max(1,Math.floor((b-a)/90));
+  for(let i=Math.max(0,a);i<Math.min(chords.length,b);i+=step){ const c=chords[i]; if(!c||!c.n||!c.n.length) continue; const p=_mtPigAt(chords,i,gc,isBW); const k=p.join(','); cnt.set(k,(cnt.get(k)||0)+1); key.set(k,p); }
+  const out=[...cnt.keys()].sort((x,y)=>cnt.get(y)-cnt.get(x)).map(k=>key.get(k)); return out.length?out:[_mtPastel(_MT_PIG[5])]; }
+// the paper that stands out most against another (hue apart, or light against dark)
+function _mtFar(list,against){ let best=list[0], bs=-1; for(const p of list){ const dh=Math.abs(((_mtHue(p)-_mtHue(against))%360+540)%360-180)/180; const dl=Math.abs(_mtLum(p)-_mtLum(against)); const s=dh*0.6+dl*1.1; if(s>bs){ bs=s; best=p; } } return best; }
+// the most used deep paper of the piece (a ground for white shapes); ultramarine when the piece has none
+function _mtDeep(st,isBW){ if(isBW) return [64,64,70]; for(const p of st){ if(p!==_MT_BLACK && _mtLum(p)<0.5 && Math.max(...p)-Math.min(...p)>60) return p; } return _mtPastel(_MT_PIG[5]); }
+function _mtBright(st,isBW){ if(isBW) return [236,234,226]; for(const p of st){ if(_mtLum(p)>0.55 && p!==_MT_WHITE) return p; } return _mtPastel(_MT_PIG[0]); }
+// the next paper on the list that is not one of these
+function _mtOther(st,not,isBW){ for(const p of st){ if(!not.some(q=>_mtSame(p,q))) return p; }
+  const pool=isBW?[[40,40,44],[120,120,120],[200,200,196]]:[_MT_PIG[8],_MT_PIG[4],_MT_PIG[2],_MT_PIG[5],_MT_PIG[0],_MT_PIG[3],_MT_PIG[1],_MT_BLACK].map(_mtPastel); for(const p of pool){ if(!not.some(q=>_mtSame(p,q))) return p; } return pool[0]; }
+// ── paths
+function _mtPoly(ctx,P){ ctx.moveTo(P[0][0],P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0],P[i][1]); ctx.closePath(); }
+function _mtArea(P){ let a=0; for(let i=0,n=P.length;i<n;i++){ const p=P[i], q=P[(i+1)%n]; a+=p[0]*q[1]-q[0]*p[1]; } return a/2; }
+function _mtXf(polys,x,y,s,rot,fx){ const ca=Math.cos(rot), sa=Math.sin(rot), f=fx||1; return polys.map(P=>{ const Q=P.map(([u,v])=>{ u*=f; return [x+(u*ca-v*sa)*s, y+(u*sa+v*ca)*s]; }); return _mtArea(Q)<0?Q.reverse():Q; }); }
+function _mtBez(p0,p1,p2,p3,n,out){ for(let i=1;i<=n;i++){ const u=i/n, v=1-u; out.push([v*v*v*p0[0]+3*v*v*u*p1[0]+3*v*u*u*p2[0]+u*u*u*p3[0], v*v*v*p0[1]+3*v*v*u*p1[1]+3*v*u*u*p2[1]+u*u*u*p3[1]]); } }
+// a spine that bends as it grows: [x,y,angle] points
+function _mtSpine(x,y,a,len,curl,N){ const S=[[x,y,a]]; const st=len/N; for(let i=1;i<=N;i++){ a+=curl/N; x+=Math.cos(a)*st; y+=Math.sin(a)*st; S.push([x,y,a]); } return S; }
+// a rounded finger along a spine: narrower at the foot, the tip a half circle (the leaf's fingers, the coral's branches)
+function _mtFinger(S,w,taper){ const N=S.length-1, L=[], R=[];
+  for(let i=0;i<=N;i++){ const u=i/N; const [sx,sy,sa]=S[i]; const hw=w*(taper==null ? (0.6+0.4*Math.min(1,u/0.22)) : Math.max(0.2,1-taper*u)); const nx=-Math.sin(sa), ny=Math.cos(sa); L.push([sx+nx*hw,sy+ny*hw]); R.push([sx-nx*hw,sy-ny*hw]); }
+  const [tx,ty,ta]=S[N]; const hwT=w*(taper==null?1:Math.max(0.2,1-taper)); const cap=[]; for(let k=1;k<10;k++){ const th=ta+Math.PI/2-k/10*Math.PI; cap.push([tx+Math.cos(th)*hwT, ty+Math.sin(th)*hwT]); }
+  return L.concat(cap, R.reverse()); }
+function _mtOval(cx,cy,rx,ry,k,rnd){ const P=[]; for(let i=0;i<k;i++){ const t=i/k*6.2832; const q=rnd?1+(rnd()-.5)*0.05:1; P.push([cx+Math.cos(t)*rx*q, cy+Math.sin(t)*ry*q]); } return P; }
+// ── the shapes, in a frame of about ±1 ──
+// the leaf of La Gerbe and the Parakeet: fingers fanning from one palm like a hand, close, their tips rounded
+function _mtShFeuille(rnd){ const P=[], n=5+2*(rnd()*3|0), spread=1.5+rnd()*0.7, ox=0, oy=0.72;
+  for(let j=0;j<n;j++){ const rel=n>1?(j/(n-1))*2-1:0; const a=-Math.PI/2+rel*spread/2+(rnd()-.5)*0.08; const L=1.62*(1-0.42*Math.pow(Math.abs(rel),1.4))*(0.86+0.28*rnd());
+    P.push(_mtFinger(_mtSpine(ox,oy,a,L,rel*0.32+(rnd()-.5)*0.15,12),0.15+0.04*rnd(),0.42)); }
+  P.push(_mtOval(ox,oy,0.26,0.2,24)); P.push(_mtFinger(_mtSpine(ox,oy,Math.PI/2+(rnd()-.5)*0.3,0.32,0,6),0.055,0.2)); return P; }
+// the great seaweed of Oceania: a thick winding body, fat rounded lobes close along both sides
+function _mtShAlgae(rnd){ const P=[], bend=(rnd()-.5)*1.2; const S=_mtSpine(0,1,-Math.PI/2+(rnd()-.5)*0.4,1.95,bend,32); P.push(_mtFinger(S,0.19,0.5));
+  let side=rnd()<0.5?1:-1; for(let u=0.06;u<0.9;u+=0.075+rnd()*0.035){ const s=S[Math.round(u*32)]; if(rnd()<0.7) side=-side; const a=s[2]+side*(1.05+0.45*rnd()); const len=(0.5-0.3*u)*(0.7+0.5*rnd());
+    P.push(_mtFinger(_mtSpine(s[0],s[1],a,len,-side*(0.3+0.5*rnd()),8),(0.17-0.07*u)*(0.85+0.3*rnd()),0.12)); }
+  return P; }
+// the coral bush of Polynesia: short knobbly fingers forking three times into a round bush
+function _mtShCoral(rnd){ const P=[]; const grow=(x,y,a,len,w,d)=>{ const S=_mtSpine(x,y,a,len,(rnd()-.5)*0.7,8); P.push(_mtFinger(S,w,0.1)); if(d<=0) return; const e=S[8]; const k=2+(rnd()<0.6?1:0);
+    for(let j=0;j<k;j++){ const aa=e[2]+(j/(k-1||1)-0.5)*(1.5+0.4*rnd())+(rnd()-.5)*0.3; grow(e[0],e[1],aa,len*(0.72+0.15*rnd()),w*0.86,d-1); } };
+  grow(0,1,-Math.PI/2+(rnd()-.5)*0.3,0.42,0.13,3); return P; }
+// the dove of Polynesia: flying, the head forward, one wing raised and one lowered, each ending in three feathers, the tail forked
+function _mtShBird(rnd){ const u=0.9+rnd()*0.2, d=0.7+rnd()*0.2, P=[[-1.0,-0.04]];
+  _mtBez([-1.0,-0.04],[-0.95,-0.16],[-0.82,-0.2],[-0.66,-0.16],5,P); _mtBez([-0.66,-0.16],[-0.58,-0.14],[-0.5,-0.13],[-0.44,-0.12],2,P);
+  _mtBez([-0.44,-0.12],[-0.36,-0.5],[-0.22,-0.82*u],[0.0,-1.0*u],10,P);
+  P.push([0.06,-0.7*u],[0.22,-0.86*u],[0.2,-0.56*u],[0.38,-0.62*u],[0.26,-0.26],[0.3,-0.08]);
+  _mtBez([0.3,-0.08],[0.42,-0.07],[0.52,-0.06],[0.62,-0.05],3,P); P.push([1.0,-0.28],[0.84,-0.02],[1.02,0.14],[0.82,0.1],[0.92,0.34],[0.6,0.1]);
+  _mtBez([0.6,0.1],[0.5,0.11],[0.4,0.12],[0.3,0.12],3,P); P.push([0.32,0.46*d],[0.18,0.4*d],[0.16,0.72*d],[0.02,0.52*d],[-0.1,0.8*d]);
+  _mtBez([-0.1,0.8*d],[-0.22,0.5*d],[-0.34,0.26],[-0.4,0.1],8,P); _mtBez([-0.4,0.1],[-0.6,0.1],[-0.85,0.06],[-1.0,-0.04],6,P); return [P]; }
+function _mtShFish(rnd){ const b=0.42+rnd()*0.12, P=[[-0.95,0]];
+  _mtBez([-0.95,0],[-0.55,-b*1.25],[0.25,-b*1.05],[0.55,-0.04],12,P); P.push([1.0,-0.46+(rnd()-.5)*0.1]); P.push([0.82,0]); P.push([1.0,0.46+(rnd()-.5)*0.1]);
+  P.push([0.55,0.04]); _mtBez([0.55,0.04],[0.25,b*1.05],[-0.55,b*1.25],[-0.95,0],12,P); return [P]; }
+// the burst: thin uneven spikes (Polynesia, the Velvets)
+function _mtShStar(rnd){ const k=8+(rnd()*6|0), P=[], r0=rnd()*6.28; for(let i=0;i<k;i++){ const a=r0+i/k*6.2832+(rnd()-.5)*0.25; const R=0.55+rnd()*0.45, r=0.2+rnd()*0.08, w=3.1416/k*(0.55+0.3*rnd());
+    P.push([Math.cos(a-w)*r,Math.sin(a-w)*r]); P.push([Math.cos(a)*R,Math.sin(a)*R]); P.push([Math.cos(a+w)*r,Math.sin(a+w)*r]); } return [P]; }
+function _mtShLobed(rnd){ // the leaf of Vence: rounded lobes fanning from one foot (the Tree of Life)
+  const P=[], n=2+(rnd()<0.5?1:0); P.push(_mtFinger(_mtSpine(0,1,-Math.PI/2,1.75,(rnd()-.5)*0.3,14),0.24));
+  for(let j=1;j<=n;j++){ for(const sd of [-1,1]){ const a=-Math.PI/2+sd*(0.42*j+0.12*rnd()); P.push(_mtFinger(_mtSpine(0,1-0.12*j,a,1.6-0.38*j,sd*0.25,12),0.2-0.02*j)); } } return P; }
+function _mtShDisc(rnd){ return [_mtOval(0,0,0.96,0.96,28,rnd)]; }
+const _MT_SH={feuille:_mtShFeuille, algae:_mtShAlgae, coral:_mtShCoral, bird:_mtShBird, fish:_mtShFish, star:_mtShStar, lobed:_mtShLobed, disc:_mtShDisc};
+function _mtShapePolys(kind,x,y,size,rot,seed,fx){ return _mtXf(_MT_SH[kind](_mtR(seed,7)),x,y,size,rot,fx); }
+// ── the paper
+// a sheet of paper cut by hand: the corners a little off, the edges barely bowed
+function _mtSheet(x,y,w,h,rnd,j){ const c=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(([a,b])=>[a+(rnd()-.5)*j, b+(rnd()-.5)*j]); const P=[];
+  for(let e=0;e<4;e++){ const p=c[e], q=c[(e+1)%4]; const bow=(rnd()-.5)*j*0.5; let nx=-(q[1]-p[1]), ny=q[0]-p[0]; const nl=Math.hypot(nx,ny)||1; nx/=nl; ny/=nl; for(let k=0;k<6;k++){ const u=k/6, b=Math.sin(Math.PI*u)*bow; P.push([p[0]+(q[0]-p[0])*u+nx*b, p[1]+(q[1]-p[1])*u+ny*b]); } } return P; }
+// the brush in the gouache: a few long faint strokes, lighter and darker, along the longer side
+function _mtBrush(ctx,x0,y0,x1,y1,rnd,D,n){ const vert=(y1-y0)>(x1-x0); n=n||(5+Math.round(rnd()*4));
+  for(let i=0;i<n;i++){ const lt=rnd()<0.55; ctx.strokeStyle=lt?'rgba(255,252,240,0.05)':'rgba(30,18,6,0.04)'; ctx.lineWidth=D*(0.02+rnd()*0.035); ctx.beginPath();
+    if(vert){ const x=x0+rnd()*(x1-x0); ctx.moveTo(x,y0-4); ctx.bezierCurveTo(x+(rnd()-.5)*D*0.04,y0+(y1-y0)*0.33,x+(rnd()-.5)*D*0.04,y0+(y1-y0)*0.66,x+(rnd()-.5)*D*0.03,y1+4); }
+    else { const y=y0+rnd()*(y1-y0); ctx.moveTo(x0-4,y); ctx.bezierCurveTo(x0+(x1-x0)*0.33,y+(rnd()-.5)*D*0.04,x0+(x1-x0)*0.66,y+(rnd()-.5)*D*0.04,x1+4,y+(rnd()-.5)*D*0.03); }
+    ctx.stroke(); } }
+// one cut paper: every piece of it one shape (no seams), a breath of shadow under it as it lies pinned on the wall, the brush
+// faintly in it when it is big
+function _mtPaper(ctx,polys,col,D,rnd,o){ o=o||{};
+  if(o.lead){ ctx.save(); ctx.beginPath(); for(const P of polys) _mtPoly(ctx,P); ctx.strokeStyle=o.lead; ctx.lineWidth=2*(o.leadW||Math.max(1,D*0.003)); ctx.lineJoin='round'; ctx.stroke(); ctx.restore(); }
+  ctx.save(); ctx.beginPath(); for(const P of polys) _mtPoly(ctx,P);
+  if(o.shadow!==0){ ctx.shadowColor='rgba(28,18,8,0.2)'; ctx.shadowBlur=Math.max(1,D*(o.shadow||0.006)); ctx.shadowOffsetX=D*0.0012; ctx.shadowOffsetY=D*0.0024; }
+  ctx.fillStyle=_mtCss(col,o.a); ctx.fill('nonzero'); ctx.shadowColor='rgba(0,0,0,0)'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+  if(rnd){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const P of polys) for(const p of P){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; }
+    if(Math.max(x1-x0,y1-y0)>D*0.1){ ctx.clip('nonzero'); _mtBrush(ctx,x0,y0,x1,y1,rnd,D,o.strokes); } }
+  ctx.restore(); }
+// a wall or a ground with a little life in it
+function _mtWall(ctx,x,y,w,h,col,ss){ ctx.fillStyle=_mtCss(col); ctx.fillRect(x,y,w,h); const r=_mtR(48800,ss); const D=Math.min(w,h);
+  ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+  for(let i=0;i<12;i++){ const cx=x+r()*w, cy=y+r()*h, R=D*(0.25+r()*0.45); const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R); const lt=r()<0.5; g.addColorStop(0,lt?'rgba(255,252,240,0.05)':'rgba(40,24,8,0.035)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(x,y,w,h); }
+  ctx.restore(); }
+// time-ordered drawing: every element waits for its moment in the piece
+function _mtOps(){ const ops=[]; return { at:(t,f)=>ops.push([t,ops.length,f]), run:(reveal)=>{ ops.sort((a,b)=>a[0]-b[0]||a[1]-b[1]); for(const [t,,f] of ops){ if(t>reveal+1e-9 && t>0) break; f(); } } }; }
+// an accent: a note clearly louder than the piece's usual, or one after a rest (a piece played at one loudness has none from loudness)
+function _mtAccOf(A){ if(A._mtAcc) return A._mtAcc; const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b); const med=vs.length?vs[vs.length>>1]:0.6; const loudOK=A.vHi>med+0.04;
+  A._mtAcc=(e)=>!!e && ((loudOK && e.v>=A.vHi) || (A.gapHi>0 && e.gap>A.gapHi && e.gap>220)); return A._mtAcc; }
+// what a stretch of the piece sounds like: its register, its leaps, its held notes, its loudness, its direction
+function _mtHearSpan(A,a,b){ const isAcc=_mtAccOf(A); let top=0,n=0,dur=0,j=0,m=0,v=0,vmax=0,prev=null,first=null,last=null,acc=0;
+  for(let i=Math.max(0,a);i<Math.min(A.cn,b);i++){ const e=A.ev[i]; if(!e) continue; top+=e.top; dur+=e.dur; v+=e.v; if(e.v>vmax) vmax=e.v; n++; if(prev){ j+=Math.abs(e.top-prev.top); m++; } if(isAcc(e)) acc++; prev=e; if(!first) first=e; last=e; }
+  if(!n) return {reg:0.5,dur:1,leap:0,v:0.5,vmax:0.5,dir:0,acc:0,n:0};
+  return {reg:A.reg(top/n), dur:dur/n, leap:m?j/m:0, v:v/n, vmax, dir:(last.top-first.top)/12, acc, n}; }
+// the shape a passage asks for
+function _mtKindOf(h,rnd,not){ const c=[]; if(h.reg>0.64) c.push('bird'); if(h.leap>6.5) c.push('coral'); if(h.dur>1.4) c.push('algae'); if(h.reg<0.36) c.push('fish'); c.push(rnd()<0.5?'feuille':'algae'); c.push('coral','feuille','bird');
+  for(const k of c){ if(!not || !not.includes(k)) return k; } return c[0]; }
+// the upright of each shape (where it stands, how it turns)
+function _mtPose(kind,h,rnd){ if(kind==='bird') return {rot:-Math.max(-0.45,Math.min(0.45,h.dir*0.25))+(rnd()-.5)*0.2, fx:(h.dir>=0?-1:1)};
+  if(kind==='fish') return {rot:(rnd()-.5)*0.8, fx:rnd()<0.5?1:-1};
+  if(kind==='star'||kind==='disc') return {rot:rnd()*6.28, fx:1};
+  return {rot:(rnd()-.5)*0.6, fx:rnd()<0.5?1:-1}; }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE — POLYNESIA, THE SEA (1946). Two tones of one deep paper laid as a checkerboard, and on it, in the white of
+// the wall, what lives in the sea and the sky: doves, fish, seaweed, coral, bursts. Every tile is a passage of the piece:
+// a high one brings a dove (it flies the way the line goes), a leaping one a coral, a held one a seaweed, a low one a
+// fish; the accents are the small bursts. The tones are the piece's own deepest paper.
+// ═══════════════════════════════════════════════════════════════════════════
+function matissePolynesia(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn);
+  const deep=_mtDeep(st,isBW), dark=_mtMix(deep,[8,8,20],0.08), light=_mtMix(deep,[255,255,255],isBW?0.22:0.3), white=isBW?[244,242,236]:_MT_WHITE;
+  const land=CW>CH*1.1, cols=land?(X.pace>0.55?4:3):(X.pace>0.55?3:2), rows=Math.max(2,Math.ceil(cols*CH/CW*(land?1:0.92)-0.15)), N=cols*rows, cw=CW/cols, chh=CH/rows;
+  const O=_mtOps();
+  O.at(0,()=>{ _mtWall(ctx,0,0,CW,CH,dark,ss); const r=_mtR(52001,ss);
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){ if((x+y)%2===0) continue; _mtPaper(ctx,[_mtSheet(x*cw-D*0.004,y*chh-D*0.004,cw+D*0.008,chh+D*0.008,r,D*0.012)],light,D,r,{shadow:0.004}); } });
+  const placed=[]; let prevK=[];
+  for(let k=0;k<N;k++){ const gx=k%cols, gy=Math.floor(k/cols); const a=Math.floor(k*cn/N), b=Math.floor((k+1)*cn/N); const h=_mtHearSpan(A,a,b); const r=_mtR(52100+k,ss);
+    const kind=_mtKindOf(h,r,prevK.slice(-1)); prevK.push(kind); const s=Math.min(cw,chh)*(kind==='bird'?0.44:kind==='fish'?0.38:0.42)*(0.84+0.3*h.vmax);
+    const x=(gx+0.5+(r()-.5)*0.22)*cw, y=(gy+0.5+(r()-.5)*0.2)*chh; const p=_mtPose(kind,h,r); placed.push([x,y,s]);
+    O.at((a+(b-a)*0.25)/cn, ()=>_mtPaper(ctx,_mtShapePolys(kind,x,y,s,p.rot,52200+k*7+ss,p.fx),white,D,null));
+    // the small ones: a burst at each accent, now and then a little fish or dove where the tile is empty
+    const smalls=Math.min(3,h.acc+(r()<0.5?1:0));
+    for(let j=0;j<smalls;j++){ let bx=0,by=0,bd=-1; for(let q=0;q<8;q++){ const cx=(gx+0.12+r()*0.76)*cw, cy=(gy+0.12+r()*0.76)*chh; let md=1e9; for(const [px,py,ps] of placed){ md=Math.min(md,(Math.hypot(cx-px,cy-py))/ps); } if(md>bd){ bd=md; bx=cx; by=cy; } }
+      const sk= j===0 && h.acc ? 'star' : (r()<0.5?'star':'disc'); const sz=D*(sk==='disc'?0.018:0.035)*(0.8+0.5*r()); placed.push([bx,by,sz]);
+      O.at((a+(b-a)*(0.4+0.5*j/Math.max(1,smalls)))/cn, ()=>_mtPaper(ctx,_mtShapePolys(sk,bx,by,sz,r()*6.28,52400+k*5+j+ss,1),white,D,null)); } }
+  O.run(reveal);
+  try{ globalThis.__MT_LISTEN={v:'polynesia',cols,rows,deep}; }catch(_){}
+  _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE — THE SNAIL (1953). Sheets of painted paper laid in a spiral, inside an orange frame on the white wall. The
+// piece's phrases are the sheets, in order, from the outside in: a longer, louder phrase takes a bigger sheet; each sheet
+// is the phrase's own colour, never the colour of the one before it.
+// ═══════════════════════════════════════════════════════════════════════════
+function matisseSnail(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn);
+  const wall=isBW?[240,238,232]:[245,241,232], frame=isBW?[150,150,150]:_mtPastel(_MT_PIG[1]);
+  const O=_mtOps(); const m=D*0.06, fw=D*0.055, gp=D*0.03;
+  O.at(0,()=>{ _mtWall(ctx,0,0,CW,CH,wall,ss); const r=_mtR(53001,ss); const j=D*0.01;
+    const strips=[[m,m,CW*0.55-m,fw],[CW*0.55-D*0.01,m,CW*0.45-m+D*0.01,fw],[CW-m-fw,m,fw,CH*0.5-m],[CW-m-fw,CH*0.5-D*0.01,fw,CH*0.5-m+D*0.01],[CW*0.45,CH-m-fw,CW*0.55-m,fw],[m,CH-m-fw,CW*0.45-m+D*0.01,fw],[m,CH*0.5,fw,CH*0.5-m],[m,m,fw,CH*0.5-m+D*0.01]];
+    for(const s of strips) _mtPaper(ctx,[_mtSheet(s[0],s[1],s[2],s[3],r,j)],frame,D,r,{strokes:3}); });
+  // the spiral: from the outside in, each phrase cuts its share off one side, turning as it goes
+  const G=_kd2Phrases(A,Math.max(7,Math.min(11,6+Math.round(X.pace*4)+(cn>400?1:0)))); const k=G.length; const avg=G.reduce((s,q)=>s+q.n,0)/Math.max(1,k);
+  let R={x:m+fw+gp, y:m+fw+gp, w:CW-2*(m+fw+gp), h:CH-2*(m+fw+gp)}; const sides=['L','T','R','B']; let si=0; const cells=[];
+  for(let i=0;i<k;i++){ const last= i===k-1 || Math.min(R.w,R.h)<D*0.12; if(last){ cells.push({R:Object.assign({},R),q:G[i]}); break; }
+    const f=Math.max(0.27,Math.min(0.5,0.37*Math.pow(G[i].n/avg,0.4)*(0.88+0.24*G[i].vmax))); const wantH=R.h>R.w*1.02; let guard=0; while(((sides[si%4]==='T'||sides[si%4]==='B'))!==wantH && guard++<4) si++; const s=sides[si%4]; si++;
+    if(s==='L'){ cells.push({R:{x:R.x,y:R.y,w:R.w*f,h:R.h},q:G[i]}); R={x:R.x+R.w*f,y:R.y,w:R.w*(1-f),h:R.h}; }
+    else if(s==='R'){ cells.push({R:{x:R.x+R.w*(1-f),y:R.y,w:R.w*f,h:R.h},q:G[i]}); R={x:R.x,y:R.y,w:R.w*(1-f),h:R.h}; }
+    else if(s==='T'){ cells.push({R:{x:R.x,y:R.y,w:R.w,h:R.h*f},q:G[i]}); R={x:R.x,y:R.y+R.h*f,w:R.w,h:R.h*(1-f)}; }
+    else { cells.push({R:{x:R.x,y:R.y+R.h*(1-f),w:R.w,h:R.h*f},q:G[i]}); R={x:R.x,y:R.y,w:R.w,h:R.h*(1-f)}; } }
+  const used=[];
+  cells.forEach((c,i)=>{ const q=c.q; const r=_mtR(53100+i,ss); let col=_mtPigAt(chords,Math.floor((q.a+q.b)/2),gc,isBW);
+    const not=used.slice(-3); if(i<4) not.push(frame); if(not.some(z=>_mtSame(z,col)) || _mtSame(col,_MT_WHITE)) col=_mtOther(st,not.concat([_MT_WHITE]),isBW); used.push(col);
+    const g=D*(r()<0.3?-0.004:0.004+0.01*r()), x=c.R.x+g, y=c.R.y+g, w=Math.max(4,c.R.w-2*g), h=Math.max(4,c.R.h-2*g); const rot=(r()-.5)*0.14;
+    const P=_mtSheet(x,y,w,h,r,Math.min(w,h)*0.12+D*0.006); const cx=x+w/2, cy=y+h/2, ca=Math.cos(rot), sa=Math.sin(rot); const Q=P.map(([px,py])=>[cx+(px-cx)*ca-(py-cy)*sa, cy+(px-cx)*sa+(py-cy)*ca]);
+    O.at(q.t0+(q.t1-q.t0)*0.2, ()=>_mtPaper(ctx,[Q],col,D,_mtR(53300+i,ss),{strokes:4})); });
+  O.run(reveal);
+  try{ globalThis.__MT_LISTEN={v:'snail',sheets:cells.length}; }catch(_){}
+  _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE — BEASTS OF THE SEA (Les Bêtes de la mer passant dans la nuit, 1950). A tall column of painted papers stacked
+// on the wall, each a phrase of the piece, as tall as the phrase is long, a little off the line of the one below; on
+// every paper the creature its phrase asks for (a fish for a low line, a seaweed for a held one, a coral for a leaping
+// one, a dove for a high one), cut from a paper that stands out against it; the accents are bursts on the wall beside.
+// ═══════════════════════════════════════════════════════════════════════════
+function matisseBeasts(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn); const isAcc=_mtAccOf(A);
+  const wall=isBW?[242,240,234]:[246,242,233], white=isBW?[248,248,244]:_MT_WHITE; const land=CW>CH*1.1;
+  const nC=land?2:1, colW=land?CW*0.26:CW*0.5, my=CH*0.05, H=CH-2*my; const O=_mtOps(); O.at(0,()=>_mtWall(ctx,0,0,CW,CH,wall,ss));
+  const G=_kd2Phrases(A,land?10:6); const per=Math.ceil(G.length/nC); const panels=[];
+  for(let c=0;c<nC;c++){ const g=G.slice(c*per,(c+1)*per); if(!g.length) continue; const tot=g.reduce((s,q)=>s+q.n,0)||1; const cx=land?CW*(0.3+0.4*c):CW*0.5; let y=my;
+    g.forEach((q,j)=>{ const r=_mtR(58100+c*40+j,ss); const h=H*(0.55*q.n/tot+0.45/g.length); const w=colW*(0.78+0.3*r()), x=cx-w/2+(r()-.5)*colW*0.22; panels.push({x,y,w,h,q,c,j}); y+=h; }); }
+  const used=[]; panels.forEach((P,i)=>{ const q=P.q, r=_mtR(58300+i,ss); let col=_mtPigAt(chords,Math.floor((q.a+q.b)/2),gc,isBW); const not=used.slice(-2).concat([_MT_WHITE]); if(not.some(z=>_mtSame(z,col))) col=_mtOther(st,not,isBW); used.push(col);
+    // a phrase of two voices splits its paper in two, side by side
+    const two=P.w>P.h*1.25 && r()<0.5; const parts=two?[[P.x,P.w*0.5],[P.x+P.w*0.5,P.w*0.5]]:[[P.x,P.w]];
+    const cols2=two?[col,_mtOther(st,[col,used[used.length-2]||col,_MT_WHITE],isBW)]:[col];
+    parts.forEach(([px,pw],k)=>{ const rr=_mtR(58400+i*3+k,ss); O.at(q.t0,()=>_mtPaper(ctx,[_mtSheet(px-D*0.002,P.y-D*0.003,pw+D*0.004,P.h+D*0.006,rr,D*0.012)],cols2[k],D,_mtR(58500+i*3+k,ss),{strokes:4})); });
+    const h=_mtHearSpan(A,q.a,q.b); const kind=_mtKindOf(h,r,i&&panels[i-1]._k?[panels[i-1]._k]:null); P._k=kind; const under=cols2[0];
+    const fg= _mtLum(under)<0.55 ? (r()<0.75?white:_mtFar(st,under)) : (isBW?[40,40,44]:(()=>{ const d=_mtDeep(st,false); return _mtSame(d,under)?_MT_BLACK:d; })());
+    const s=Math.min(P.h*0.56,P.w*0.46)*(kind==='bird'||kind==='fish'?1.15:1)*(0.9+0.2*h.vmax); const pose=_mtPose(kind,h,r);
+    const sx=P.x+P.w*0.5+(r()-.5)*P.w*0.14, sy=P.y+P.h*0.5+(r()-.5)*P.h*0.1;
+    O.at(q.t0+(q.t1-q.t0)*0.4, ()=>_mtPaper(ctx,_mtShapePolys(kind,sx,sy,s,pose.rot,58600+i*7+ss,pose.fx),fg,D,null)); });
+  // the accents: bursts and little seaweeds on the wall either side of the column, where the note sits
+  const E=_kd2Events(A,24).filter(isAcc).slice(0,land?10:7); const placed=panels.map(P=>[P.x+P.w/2,P.y+P.h/2,Math.max(P.w,P.h)*0.5]);
+  E.forEach((e,i)=>{ const r=_mtR(58800+i,ss); const side=(i%2?1:-1); const pc=panels.find(P=>e.i>=P.q.a&&e.i<P.q.b)||panels[0]; let x=side<0?pc.x-D*(0.06+0.04*r()):pc.x+pc.w+D*(0.06+0.04*r()), y=pc.y+pc.h*(0.2+0.6*r());
+    x=Math.max(D*0.05,Math.min(CW-D*0.05,x)); const sz=D*(0.035+0.02*e.v); const kind=r()<0.6?'star':'coral'; const col=_mtPigAt(chords,e.i,gc,isBW); const c2=_mtSame(col,_MT_WHITE)?_mtDeep(st,isBW):col;
+    O.at(e.i/cn, ()=>_mtPaper(ctx,_mtShapePolys(kind,x,y,kind==='coral'?sz*1.3:sz,kind==='coral'?(r()-.5)*0.4:r()*6.28,58900+i+ss,1),c2,D,null)); });
+  O.run(reveal);
+  try{ globalThis.__MT_LISTEN={v:'beasts',panels:panels.length}; }catch(_){}
+  _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE — THE TREE OF LIFE (the windows of the chapel at Vence, 1951). Tall lancets in the white stone, in each the
+// lobed leaves climbing over the deep glass with the green blades beside them, the lead holding every piece; and below,
+// on the white floor, the coloured light they throw. Each lancet is a part of the piece: its notes are the leaves, high
+// ones high, loud ones large; when a part has been played its light falls on the floor.
+// ═══════════════════════════════════════════════════════════════════════════
+function matisseVence(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn);
+  const stone=isBW?[236,234,228]:[240,236,226], ground=_mtDeep(st,isBW); const leaf=isBW?[230,230,224]:(()=>{ const b=_mtBright(st,false); return _mtLum(b)>0.55?b:_mtPastel(_MT_PIG[0]); })();
+  const blade=isBW?[120,120,118]:(()=>{ for(const p of st){ if(!_mtSame(p,ground)&&!_mtSame(p,leaf)&&p!==_MT_WHITE&&_mtLum(p)<0.6) return p; } return _mtPastel(_MT_PIG[8]); })();
+  const lead=isBW?'rgba(40,40,44,0.9)':'rgba(46,40,44,0.92)', leadW=Math.max(1,D*0.0025);
+  const land=CW>CH*1.1, n=land?5:3, mx=CW*0.08, gw=CW*0.045, top=CH*0.05, bot=CH*(land?0.66:0.64), lw=(CW-2*mx-(n-1)*gw)/n, lh=bot-top, fy=bot+CH*0.045, fl=CH-fy;
+  const lancet=(x)=>{ const P=[]; P.push([x,bot],[x,top+lw/2]); for(let k=1;k<16;k++){ const a=Math.PI+k/16*Math.PI; P.push([x+lw/2+Math.cos(a)*lw/2, top+lw/2+Math.sin(a)*lw/2]); } P.push([x+lw,top+lw/2],[x+lw,bot]); return P; };
+  // every lancet's glass: its ground, its two green blades, its leaves — drawn on the wall, and once more as the light on the floor
+  const L=[]; for(let j=0;j<n;j++){ const x=mx+j*(lw+gw); const a=Math.floor(j*cn/n), b=Math.floor((j+1)*cn/n); const h=_mtHearSpan(A,a,b); const r=_mtR(55100+j,ss);
+    const blades=[-1,1].map(sd=>{ const bh=lh*(0.42+0.4*h.vmax)*(0.85+0.3*r()); return [_mtFinger(_mtSpine(x+lw/2+sd*lw*0.37,bot+lw*0.1,-Math.PI/2+sd*0.03,bh,sd*(r()-.3)*0.2,16),lw*0.1,0.1)]; });
+    const E=[]; const want=Math.max(3,Math.min(4,Math.round(3+X.pace*1.5))); const step=Math.max(1,Math.floor((b-a)/want)); for(let i=a;i<b && E.length<want;i+=step){ if(A.ev[i]) E.push(A.ev[i]); }
+    const order=E.map((e,i)=>i).sort((p,q)=>E[q].top-E[p].top); const leaves=[]; const y0=top+lw*0.62, y1=bot-lw*0.55;
+    order.forEach((ei,k)=>{ const e=E[ei]; const side=(k%2?1:-1); const s=lw*(0.34+0.08*e.v); const ly=y0+(y1-y0)*(E.length>1?k/(E.length-1):0.5); leaves.push({e,polys:_mtShapePolys('lobed',x+lw/2+side*lw*0.08,ly,s,side*(0.28+0.15*r()),55300+j*31+k+ss,1)}); });
+    L.push({x,a,b,P:lancet(x),blades,leaves}); }
+  const glass=(c,l,withLead)=>{ c.save(); c.beginPath(); _mtPoly(c,l.P); c.clip(); c.fillStyle=_mtCss(ground); c.fillRect(l.x-2,top-2,lw+4,lh+4);
+    const g=c.createLinearGradient(l.x,top,l.x+lw,top); g.addColorStop(0,'rgba(255,255,255,0.09)'); g.addColorStop(0.5,'rgba(255,255,255,0)'); g.addColorStop(1,'rgba(0,0,0,0.09)'); c.fillStyle=g; c.fillRect(l.x,top,lw,lh);
+    for(const B of l.blades) _mtPaper(c,B,blade,D,null,{shadow:0,lead:withLead?lead:null,leadW});
+    for(const f of l.leaves) _mtPaper(c,f.polys,leaf,D,null,{shadow:0,lead:withLead?lead:null,leadW});
+    c.restore(); };
+  const O=_mtOps();
+  O.at(0,()=>{ _mtWall(ctx,0,0,CW,CH,stone,ss); ctx.fillStyle=_mtCss(_mtMix(stone,[206,196,176],0.14)); ctx.fillRect(0,fy,CW,fl); ctx.fillStyle='rgba(60,50,40,0.1)'; ctx.fillRect(0,fy,CW,Math.max(1,D*0.003));
+    for(const l of L){ ctx.save(); ctx.shadowColor='rgba(30,20,10,0.28)'; ctx.shadowBlur=D*0.012; ctx.fillStyle=_mtCss(_mtMix(ground,[0,0,0],0.3)); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.fill(); ctx.restore(); } });
+  L.forEach((l,j)=>{
+    O.at(l.a/cn, ()=>{ ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.clip(); ctx.fillStyle=_mtCss(ground); ctx.fillRect(l.x-2,top-2,lw+4,lh+4); for(const B of l.blades) _mtPaper(ctx,B,blade,D,null,{shadow:0,lead,leadW}); ctx.restore(); });
+    l.leaves.forEach((f,k)=>O.at(f.e.i/cn, ()=>{ ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.clip(); _mtPaper(ctx,f.polys,leaf,D,null,{shadow:0,lead,leadW}); ctx.restore(); }));
+    // the part is over: the lead closes the lancet, and its light falls on the floor, slanting, soft
+    O.at(l.b/cn-1e-6, ()=>{ glass(ctx,l,true); ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.clip(); ctx.strokeStyle=lead; ctx.lineWidth=Math.max(1,D*0.0035); const nb=Math.max(3,Math.round(lh/lw*0.9)); for(let k=1;k<nb;k++){ const yy=top+lw*0.5+(lh-lw*0.5)*k/nb; ctx.beginPath(); ctx.moveTo(l.x,yy); ctx.lineTo(l.x+lw,yy); ctx.stroke(); } ctx.restore();
+      ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.strokeStyle=lead; ctx.lineWidth=Math.max(1.5,D*0.007); ctx.stroke(); ctx.restore();
+      try{ const q=4, w=Math.max(8,Math.ceil(CW/q)), hh=Math.max(8,Math.ceil(fl/q)); const mk=()=>(typeof OffscreenCanvas!=='undefined') ? new OffscreenCanvas(w,hh) : Object.assign(document.createElement('canvas'),{width:w,height:hh});
+        const cv=mk(), c=cv.getContext('2d'); const sy=fl*0.9/lh, sk=lw*0.55; c.setTransform(1/q,0,(-sk/lh)/q,sy/q,(sk*(1+top/lh)+lw*0.08)/q,(-top*sy+fl*0.05)/q); glass(c,l,false);
+        const cv2=mk(), c2=cv2.getContext('2d'); const bl=Math.max(1.5,D*0.022/q);
+        if(typeof c2.filter==='string'){ c2.filter='blur('+bl.toFixed(1)+'px)'; c2.drawImage(cv,0,0); c2.filter='none'; }
+        else { for(let k=0;k<16;k++){ const a=k*2.39996, rr=bl*Math.sqrt((k+0.5)/16)*1.6; c2.globalAlpha=1/(k+1); c2.drawImage(cv,Math.cos(a)*rr,Math.sin(a)*rr); } }
+        ctx.save(); ctx.globalAlpha=0.42; ctx.globalCompositeOperation='multiply'; ctx.imageSmoothingEnabled=true; ctx.drawImage(cv2,0,fy,w*q,hh*q); ctx.restore(); }catch(_){} }); });
+  O.run(reveal);
+  try{ globalThis.__MT_LISTEN={v:'vence',n,ground,leaf,blade}; }catch(_){}
+  _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE — THE GREAT SEAWEED (the late algae, 1952–53: white seaweed on an orange and a red sheet). Two to four tall
+// sheets side by side on the wall, one per great part of the piece, as wide as the part is long, each in its own colour;
+// over each a seaweed as tall as the sheet, white on a deep sheet, deep on a light one, leaning the way its part moves.
+// ═══════════════════════════════════════════════════════════════════════════
+function matisseAlgae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn);
+  const wall=isBW?[240,238,232]:[245,241,232], white=isBW?[248,248,244]:_MT_WHITE;
+  const land=CW>CH*1.1, want=land?(X.pace>0.5?4:3):((X.pace>0.75 && cn>300)?3:2); const G=_kd2Phrases(A,want); const tot=G.reduce((s,q)=>s+q.n,0)||1;
+  const mx=CW*0.07, my=CH*0.06, W=CW-2*mx, H=CH-2*my; const O=_mtOps();
+  O.at(0,()=>_mtWall(ctx,0,0,CW,CH,wall,ss));
+  let x=mx, prev=null; const sheets=[];
+  G.forEach((q,i)=>{ const w=W*(0.5*q.n/tot+0.5/G.length); const r=_mtR(56100+i,ss); let col=_mtPigAt(chords,Math.floor((q.a+q.b)/2),gc,isBW); if(_mtSame(col,prev)||_mtSame(col,_MT_WHITE)) col=_mtOther(st,[prev||[0,0,0],_MT_WHITE],isBW); prev=col;
+    const sx=x, sy=my+(r()-.5)*D*0.02, sh=H+(r()-.5)*D*0.02; sheets.push({sx,sy,w,sh,col,q}); x+=w;
+    O.at(q.t0, ()=>_mtPaper(ctx,[_mtSheet(sx-D*0.002,sy,w+D*0.004,sh,_mtR(56200+i,ss),D*0.012)],col,D,_mtR(56300+i,ss),{strokes:7})); });
+  sheets.forEach((S,i)=>{ const q=S.q; const h=_mtHearSpan(A,q.a,q.b); const r=_mtR(56400+i,ss); const fg= _mtLum(S.col)<0.62 ? white : (isBW?[40,40,44]:(()=>{ const d=_mtDeep(st,false); return _mtSame(d,S.col)?_mtPastel(_MT_PIG[5]):d; })());
+    const s=Math.min(S.sh*0.45*(0.92+0.1*h.vmax), S.w*1.05), ax=S.sx+S.w*(0.5+(r()-.5)*0.15), ay=S.sy+S.sh*0.52; const rot=Math.max(-0.22,Math.min(0.22,h.dir*0.08))+(r()-.5)*0.08;
+    O.at(q.t0+(q.t1-q.t0)*0.35, ()=>_mtPaper(ctx,_mtShapePolys('algae',ax,ay,s,rot,56500+i*11+ss,r()<0.5?0.86:-0.86),fg,D,null)); });
+  O.run(reveal);
+  try{ globalThis.__MT_LISTEN={v:'algae',sheets:sheets.length}; }catch(_){}
+  _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATISSE LISTENS — the cut-out the piece asks for, from what it is:
+//   a quick, dense piece   the white wall covered all over with leaves, seaweed, doves and fruit (The Parakeet and the
+//                          Mermaid): the notes read along the wall in rows, high ones high in their row
+//   an even, steady piece  the patchwork of painted sheets with a shape on each (The Creole Dancer): one sheet per
+//                          passage, the rows as tall as the passages are long
+//   a slow, singing piece  a band of tall strips across the wall with shapes dancing over them (The Velvets)
+// the shapes: an accent a burst, a leap a coral, a held note a seaweed, a high line a dove, a low one a fish, the rest
+// the hand-leaf; every one its chord's paper, and never on a paper of its own colour
+// ═══════════════════════════════════════════════════════════════════════════
+function matisseListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn); const dens=A.ch?A.ch.density:0.3;
+  const ground = (X.pace>0.6 && dens>0.25) ? 'wall' : (X.regular>0.55 && X.pace>0.4) ? 'patch' : 'velvets';
+  const wall=isBW?[242,240,234]:[246,242,233]; const O=_mtOps(); const placed=[];
+  const colOn=(c,under)=>{ if(!under) return c; if(_mtSame(c,under)) return _mtFar(st.concat([_MT_WHITE,_MT_BLACK].map(_mtPastel)),under); const dh=Math.abs(((_mtHue(c)-_mtHue(under))%360+540)%360-180), dl=Math.abs(_mtLum(c)-_mtLum(under)); return (dh<40 && dl<0.2) ? _mtFar(st.concat([_MT_WHITE]),under) : c; };
+  const free=(x,y,s,tries,r,box)=>{ let bx=x,by=y,bd=-1; for(let k=0;k<tries;k++){ const cx=k?box[0]+r()*box[2]:x, cy=k?box[1]+r()*box[3]:y; let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(cx-p[0],cy-p[1])/(p[2]+s)); if(md>1.05) return [cx,cy]; if(md>bd){ bd=md; bx=cx; by=cy; } } return [bx,by]; };
+  const isAcc=_mtAccOf(A);
+  const shapeAt=(e,i,x,y,s,under,tt,acc,menu)=>{ const r=_mtR(57100+i,ss); const h=_mtHearSpan(A,Math.max(0,e.i-2),Math.min(cn,e.i+3)); let kind=acc?(menu==='wall'?'disc':'star'):_mtKindOf(h,r,null); if(kind==='feuille' && e.dur<0.5 && X.regular>0.5 && r()<0.3) kind='disc'; if(menu==='wall' && kind!=='disc' && kind!=='algae') kind='feuille';
+    const sc=kind==='star'?0.55:kind==='disc'?0.3:kind==='bird'?0.8:kind==='fish'?0.75:1; const p=_mtPose(kind,h,r); const col=colOn(_mtPigAt(chords,e.i,gc,isBW),under);
+    O.at(tt!=null?tt:e.i/cn, ()=>_mtPaper(ctx,_mtShapePolys(kind,x,y,s*sc,p.rot,57200+i*13+ss,p.fx),col,D,s>D*0.06?_mtR(57300+i,ss):null)); };
+  if(ground==='wall'){ // the Parakeet and the Mermaid: the notes along the wall in rows
+    O.at(0,()=>_mtWall(ctx,0,0,CW,CH,wall,ss)); const nR=CW>CH*1.1?2:3, E=_kd2Events(A,Math.round(8+dens*9)); const s0=D*Math.max(0.1,Math.min(0.14,0.56/Math.sqrt(E.length)));
+    E.forEach((e,i)=>{ const u=e.i/cn*nR, row=Math.min(nR-1,Math.floor(u)), fr=u-row, xr=(row%2)?1-fr:fr; const bh=CH/nR; const r=_mtR(57000+i,ss);
+      let x=CW*(0.1+0.8*xr), y=bh*(row+0.5)+(0.5-A.reg(e.top))*bh*0.5; const s=s0*(0.75+0.5*e.v); [x,y]=free(x,y,s,8,r,[CW*0.1,bh*row,CW*0.8,bh]); x=Math.max(s*0.95,Math.min(CW-s*0.95,x)); y=Math.max(s*1.05,Math.min(CH-s*0.95,y)); placed.push([x,y,s]); shapeAt(e,i,x,y,s,null,null,isAcc(e),'wall'); }); }
+  else if(ground==='patch'){ // the Creole Dancer: rows of sheets, each a passage with its shape
+    const G=_kd2Phrases(A,CW>CH*1.1?10:12); const nR=Math.max(2,Math.min(4,Math.round(Math.sqrt(G.length*CH/CW)))); const per=Math.ceil(G.length/nR); const tot=G.reduce((s,q)=>s+q.n,0)||1;
+    const m=D*0.035; O.at(0,()=>_mtWall(ctx,0,0,CW,CH,wall,ss)); let y=m; const rowsG=[]; for(let rI=0;rI<nR;rI++) rowsG.push(G.slice(rI*per,(rI+1)*per)); const rowsN=rowsG.filter(g=>g.length);
+    let prev=null; rowsN.forEach((g,rI)=>{ const rn=g.reduce((s,q)=>s+q.n,0); const rh=(CH-2*m)*(0.6*rn/tot+0.4/rowsN.length); let x=m;
+      g.forEach((q,j)=>{ const w=(CW-2*m)*q.n/rn; const r=_mtR(57500+rI*20+j,ss); let col=_mtPigAt(chords,Math.floor((q.a+q.b)/2),gc,isBW); if(_mtSame(col,prev)) col=_mtOther(st,[prev],isBW); prev=col;
+        const sx=x, sy=y; O.at(q.t0,()=>_mtPaper(ctx,[_mtSheet(sx-D*0.002,sy-D*0.002,w+D*0.004,rh+D*0.004,r,D*0.01)],col,D,_mtR(57600+rI*20+j,ss),{strokes:4,shadow:0.004}));
+        const h=_mtHearSpan(A,q.a,q.b); const e=A.ev[Math.floor((q.a+q.b)/2)]||A.ev[q.a]||{i:q.a,top:60,v:0.6,dur:1,acc:false}; const s=Math.min(w,rh)*0.44*(0.85+0.3*h.vmax);
+        shapeAt(e,rI*20+j,sx+w*(0.5+(r()-.5)*0.15),sy+rh*(0.5+(r()-.5)*0.12),s,col,q.t0+(q.t1-q.t0)*0.4,h.acc>1&&r()<0.4,'patch'); x+=w; }); y+=rh; }); }
+  else { // the Velvets: a band of tall strips, the shapes dancing over it
+    O.at(0,()=>_mtWall(ctx,0,0,CW,CH,wall,ss)); const G=_kd2Phrases(A,CW>CH*1.1?9:7); const tot=G.reduce((s,q)=>s+q.n,0)||1; const bx0=CW*0.08, bw=CW*0.84, y0=CH*0.2, y1=CH*0.8; let x=bx0, prev=null; const strips=[];
+    G.forEach((q,j)=>{ const w=bw*q.n/tot; const r=_mtR(57700+j,ss); let col=_mtPigAt(chords,Math.floor((q.a+q.b)/2),gc,isBW); if(_mtSame(col,prev)||_mtSame(col,_MT_WHITE)) col=_mtOther(st,[prev||[0,0,0],_MT_WHITE],isBW); prev=col;
+      const sy=y0+(r()-.5)*CH*0.06, sh=(y1-y0)+(r()-.5)*CH*0.08, sx=x; strips.push({sx,w,col}); O.at(q.t0,()=>_mtPaper(ctx,[_mtSheet(sx-D*0.002,sy,w+D*0.004,sh,r,D*0.01)],col,D,_mtR(57800+j,ss),{strokes:4})); x+=w; });
+    const E=_kd2Events(A,Math.round(7+dens*8)); const s0=D*0.16;
+    E.forEach((e,i)=>{ const r=_mtR(57900+i,ss); let x=bx0+bw*(0.06+0.88*e.i/cn)+(r()-.5)*bw*0.05, y=(y0+y1)/2+(0.5-A.reg(e.top))*(y1-y0)*1.0; const s=s0*(0.75+0.45*e.v); [x,y]=free(x,y,s,6,r,[bx0,y0-CH*0.06,bw,y1-y0+CH*0.12]); placed.push([x,y,s]);
+      const under=(y>y0&&y<y1)?(strips.find(S=>x>=S.sx&&x<S.sx+S.w)||{}).col:null; shapeAt(e,i,x,y,s,under||wall,null,isAcc(e),'velvets'); }); }
+  O.run(reveal);
+  try{ globalThis.__MT_LISTEN={v:'listen',ground,pace:X.pace,regular:X.regular,dens}; }catch(_){}
+  _setCurE(0.5);
 }
 
 // ── Matisse's cut-out engine (gouaches découpées). One vocabulary of paper
