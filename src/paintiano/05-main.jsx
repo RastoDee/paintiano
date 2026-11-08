@@ -4332,8 +4332,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [jamPins, setJamPins] = useState([]);
   const jamPinsRef = useRef([]); useEffect(()=>{ jamPinsRef.current = jamPins; },[jamPins]);
   // the fixed cast (violet): a face held in the Fusion row. With any painter fixed, the stage is exactly the fixed and the gold ones — no guests are drawn; one alone is a solo; two or more are the whole fusion. ↑ rolls their variants only. Cleared when Fusion is switched
-  const [jamFixed, setJamFixed] = useState([]); const jamFixedRef = useRef([]); useEffect(()=>{ jamFixedRef.current = jamFixed; },[jamFixed]);
-  useEffect(()=>{ jamFixedRef.current=[]; setJamFixed([]); },[jamOn, jamAll]);
+  const [jamFixed, setJamFixed] = useState(false); const jamFixedRef = useRef(false); useEffect(()=>{ jamFixedRef.current = jamFixed; },[jamFixed]);   // the whole cast fixed (violet): the pinned ones alone, no guests
+  useEffect(()=>{ jamFixedRef.current=false; setJamFixed(false); },[jamOn, jamAll]);
   useEffect(()=>{ if(!jamOn || !jamAll) setJamPins(p=>p.length?[]:p); },[jamOn, jamAll]);
   useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
   useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
@@ -4718,29 +4718,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Ensemble ALL, chip tap = pin toggle. Pinning a painter not on stage seats it
   // right away (after the other pins); unpinning keeps it on the canvas as a guest
   // until the next draw. The stage is always pins first, then guests, max 5.
-  const _jamCast = (fixed, pins)=>{ const out=[]; fixed.concat(pins).forEach(k=>{ if(k && k!=='mosaic' && k!=='notes' && !out.includes(k)) out.push(k); }); return out.slice(0, STAGE_MAX); };   // the stage with a fixed cast: the violet ones, then the gold ones, nobody else
-  // a face held: straight to violet (fixed) or let go again
-  const _jamFixTap = (k)=>{
+  // the cast is one thing: gold (pinned — ↑ seats 1–3 guests round them) or violet (fixed — these alone). A tap: white → gold; gold → the whole cast violet; violet → that one let go (none left: gold again). A hold flips gold ↔ violet
+  const _jamSetStage = (pins, fixedOn)=>{ const st=_jamStage().filter(Boolean); const guests=st.filter(x=>!pins.includes(x)); const stage=(fixedOn ? pins : pins.concat(guests)).slice(0, STAGE_MAX); if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); } };
+  const _jamFixTap = (k)=>{ const pins=jamPinsRef.current.filter(x=>x && x!=='mosaic' && x!=='notes'); if(!pins.length) return; const on=!jamFixedRef.current; jamFixedRef.current=on; setJamFixed(on); _jamSetStage(pins, on); _stBuzz(10); };
+  const _jamPinTap = (k)=>{
     if(!k || k==='mosaic' || k==='notes') return;
-    const was=jamFixedRef.current.includes(k); const fixed = was ? jamFixedRef.current.filter(x=>x!==k) : (jamFixedRef.current.length>=STAGE_MAX ? null : jamFixedRef.current.concat(k));
-    if(!fixed) return; jamFixedRef.current=fixed; setJamFixed(fixed);
-    const pins=jamPinsRef.current.filter(x=>x!==k); if(!was && pins.length!==jamPinsRef.current.length){ jamPinsRef.current=pins; setJamPins(pins); }
-    const stage = fixed.length ? _jamCast(fixed, jamPinsRef.current) : _jamStage().filter(Boolean);
-    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
-    _stBuzz(10);
-  };
-  const _jamPinTap = (k)=>{   // a tap cycles the face: white → gold (pinned, guests join) → violet (fixed, only these) → white
-    if(!k || k==='mosaic' || k==='notes') return;
-    const pins0=jamPinsRef.current.slice(), fixed0=jamFixedRef.current.slice(); const st=_jamStage().filter(Boolean);
-    let pins=pins0, fixed=fixed0;
-    if(fixed0.includes(k)){ fixed=fixed0.filter(x=>x!==k); }
-    else if(pins0.includes(k)){ pins=pins0.filter(x=>x!==k); if(fixed0.length<STAGE_MAX) fixed=fixed0.concat(k); }
-    else { if(pins0.length+fixed0.length>=STAGE_MAX) return; pins=pins0.concat(k); }
-    jamPinsRef.current=pins; setJamPins(pins); jamFixedRef.current=fixed; setJamFixed(fixed);
-    const guests=st.filter(x=>!pins.includes(x) && !fixed.includes(x));
-    const stage = fixed.length ? _jamCast(fixed, pins) : pins.concat(guests).slice(0, STAGE_MAX);
-    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
-    try{ window.posthog && window.posthog.capture('ensemble_pin',{state:fixed.includes(k)?'fixed':pins.includes(k)?'pinned':'free', n:pins.length+fixed.length}); }catch(_){}
+    const pins0=jamPinsRef.current.slice(); let pins=pins0, fixedOn=jamFixedRef.current;
+    if(!pins0.includes(k)){ if(pins0.length>=STAGE_MAX) return; pins=pins0.concat(k); }
+    else if(!fixedOn){ fixedOn=true; }
+    else { pins=pins0.filter(x=>x!==k); if(!pins.length) fixedOn=false; }
+    jamPinsRef.current=pins; setJamPins(pins); jamFixedRef.current=fixedOn; setJamFixed(fixedOn);
+    _jamSetStage(pins, fixedOn);
+    try{ window.posthog && window.posthog.capture('ensemble_pin',{fixed:fixedOn, n:pins.length}); }catch(_){}
   };
   // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
   // guests are drawn around them, every member with a new variant; five pins
@@ -4749,7 +4738,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // a random variant, the others derive theirs.
   const _jamAllRoll = ()=>{
     const pins=jamPinsRef.current.filter(k=>k && k!=='mosaic');
-    if(jamFixedRef.current.length){ const st=_jamCast(jamFixedRef.current, pins); setNotesMode(false); setStyle(st[0]); setPainterStage(st.slice(1)); _fuRollAll(st); _fuRollPal(); return; }   // a fixed cast: the same painters, new variants and palette — no guests
+    if(jamFixedRef.current && pins.length){ setNotesMode(false); setStyle(pins[0]); setPainterStage(pins.slice(1)); _fuRollAll(pins); _fuRollPal(); return; }   // a fixed cast: the same painters, new variants and palette — no guests
     if(pins.length){
       const room=STAGE_MAX-pins.length;
       const gpool=SHUFFLE_POOL.filter(k=>!pins.includes(k) && (setupArtists.includes(k)||isDailyArtist(k)) && !styleIsLocked(k));
@@ -19086,7 +19075,7 @@ Hard requirements:
               const _inSig = _sigK.includes(k);
               // Ensemble ALL: pinned members show as chosen (gold), drawn guests as a shuffle hit (white)
               const _pinned = jamOn && jamAll && jamPins.includes(k);
-              const _fixed = jamOn && jamAll && jamFixed.includes(k);   // held: the fixed cast (violet)
+              const _fixed = jamOn && jamAll && jamFixed && jamPins.includes(k);   // the fixed cast (violet)
               const _tk = studioFs && stTaken && !cockpitEdit, _tkMine = _tk && (style===k || painterStage.includes(k) || _inSig);   // a kept surprise: its painters show white (not chosen)
               const isOn = (!cockpitEdit) && !_tk && (jamOn && jamAll ? (_pinned || _fixed) : (style===k || _stIx>0 || _inSig));
               const inSet = setupArtists.includes(k);
