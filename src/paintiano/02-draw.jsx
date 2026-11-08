@@ -1252,9 +1252,9 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
   // ── VARIANT: 0 No. 61 (Rust and Blue) · 1 Orange and Yellow · 2 White Center ·
-  // 3 Four Darks in Red · 4 Black on Maroon (Seagram) · 5 Multiform No. 9 · 6 No. 10 ·
-  // 7 Chapel. Free: 0 and 1 — the deep classic stack against the luminous one.
-  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  // 3 Four Darks in Red · 4 Black on Maroon (Seagram) · 5 Multiform No. 9 · 6 What he heard (generative) ·
+  // 7 Chapel. Shown as 0 What he heard · 1 No. 61 · 2 Orange and Yellow · 3 White Center · 4 Four Darks · 5 Seagram · 6 Multiform · 7 Chapel. Free: 0 and 1.
+  const _pn=_capN(8); const pick=[6,0,1,2,3,4,5,7][((phaseIndex|0)%_pn+_pn)%_pn];
   _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -1271,7 +1271,8 @@ const _rkMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*
 const _rkCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
 // deepen: Rothko's pigment — chroma kept, value pulled toward a chosen key (0 dark .. 1 light)
 function _rkTone(rgb,key,isBW){ const l=(rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114); if(isBW){ const v=_rkClamp(l*0.5+key*140,10,245); return [v,v,v]; }
-  const g=(rgb[0]+rgb[1]+rgb[2])/3; let c=rgb.map(v=>_rkClamp(g+(v-g)*1.6,0,255)); const want=40+key*180; const have=(c[0]*0.299+c[1]*0.587+c[2]*0.114)||1; const k=want/have; return c.map(v=>_rkClamp(v*k,0,255)); }
+  const g=(rgb[0]+rgb[1]+rgb[2])/3; let c=rgb.map(v=>_rkClamp(g+(v-g)*1.0,0,255)); const earth=[132,92,66]; c=c.map((v,i)=>v+(earth[i]-v)*0.22);   // his pigments: the chroma held back, every colour pulled toward the underpainting's earth
+  const want=40+key*180; const have=(c[0]*0.299+c[1]*0.587+c[2]*0.114)||1; const k=want/have; return c.map(v=>_rkClamp(v*k,0,255)); }
 // a feathered rectangle: edge wobble from low-frequency sines, drawn as one filled path
 function _rkRect(ctx,x,y,w,h,f,rnd){
   const N=14, p=[]; const wob=(i,n,amp,ph)=>Math.sin(i/n*3.14159*2.3+ph)*amp*0.6+Math.sin(i/n*3.14159*5.1+ph*1.7)*amp*0.4;
@@ -1332,7 +1333,7 @@ function _rk2Stack(list,S,CW,CH,ss,G,keys,o){ o=o||{}; const D=Math.min(CW,CH); 
   return rects; }
 // ── VARIANT: 0 No. 61 (Rust and Blue) 1953 · 1 Orange and Yellow 1956 · 2 White Center 1950 ·
 // 3 Four Darks in Red 1958 · 4 Black on Maroon (Seagram) 1959 · 5 Multiform No. 9 1948 ·
-// 6 No. 10 1950 · 7 Chapel 1964–67. Free: 0 and 1 — the deep classic stack against the luminous one.
+// 6 What he heard (generative; No. 10 retired, approved) · 7 Chapel 1964–67. Free: 0 and 1 — the deep classic stack against the luminous one.
 function _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_rk2Setup(chords,gc,mode), cn=S.cn, A=S.A, bw=S.isBW; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH); const list=[]; const nP=A.phrases.length;
   switch(pick){
@@ -1345,8 +1346,8 @@ function _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
       _rkGround(ctx,CW,CH,_rkTone(S.avg(0,1),0.5,bw),ss);
       const R=_rk2Stack(list,S,CW,CH,ss,G,keys,{gap:0.028});
       const c=S.climax(); let bi=0,bd=9; for(let i=0;i<G.length-1;i++){ const d=Math.abs(G[i].t1-c.t); if(d<bd){bd=d;bi=i;} }
-      const ra=R[bi], rb=R[bi+1]||ra; const yb=(ra.y+ra.h+rb.y)/2, hb=CH*(0.025+0.03*c.vmax); const white=_rkTone(S.avg(Math.max(0,G[bi].t1-0.05),Math.min(1,G[bi].t1+0.05)),0.93,bw);
-      list.push({id:list.length,t:0.995,x:ra.x+ra.w*0.03,y:yb-hb/2,w:ra.w*0.94,h:hb,col:white,a:0.75,feather:D*0.02,k:0.5,ss}); break; }
+      const ra=R[bi], rb=R[bi+1]||ra; const yb=(ra.y+ra.h+rb.y)/2, hb=CH*(0.07+0.07*c.vmax); const white=_rkMix(_rkTone(S.avg(Math.max(0,G[bi].t1-0.05),Math.min(1,G[bi].t1+0.05)),0.93,bw),[250,246,236],0.78);
+      list.push({id:list.length,t:0.995,x:ra.x+ra.w*0.02,y:yb-hb/2,w:ra.w*0.96,h:hb,col:white,a:0.9,feather:D*0.025,k:0.5,ss}); break; }
     case 3: { // Four Darks in Red — dark bands on a red ground: forte is black, piano barely darker than the ground
       const G=S.groups(_rkClamp(Math.round(nP/12),2,5)); let lo=9,hi=0; for(const g of G){ if(g.v<lo)lo=g.v; if(g.v>hi)hi=g.v; }
       const ground=_rkMix(_rkTone(S.avg(0,1),0.24,bw),[128,22,28],bw?0:0.45); _rkGround(ctx,CW,CH,ground,ss);
@@ -1367,11 +1368,13 @@ function _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
         const cx=CW*(0.2+0.6*g.reg)+(rr()-.5)*CW*0.24, cy=CH*(0.1+0.8*g.t)+(rr()-.5)*CH*0.1;
         _rk2Field(list,S,_rkClamp(cx-w/2,CW*0.04,CW*0.96-w),_rkClamp(cy-h/2,CH*0.04,CH*0.96-h),w,h,g,0.4+0.38*g.reg,{D,ss,feather:D*0.05,K:5,core:1,streaks:0,alpha:0.85}); });
       break; }
-    case 6: { // No. 10 — the key itself: a field for each of the three pitch classes the piece leans on, as tall as its weight
-      const idx=[0,1,2,3,4,5,6,7,8,9,10,11].sort((a,b)=>A.pcW[b]-A.pcW[a]).slice(0,3); const T=idx.reduce((s,p)=>s+A.pcW[p],0)||1; const m0=44+Math.round(S.regAll*24);
-      const G=idx.map(pc=>Object.assign(S.span(0,1),{dur:A.pcW[pc]/T,pcc:A.pcCol(pc,m0)})); const keys=[0.6,0.34,0.74].map(k=>_rkClamp(k+(S.regAll-0.5)*0.2,0,1));
-      _rkGround(ctx,CW,CH,_rkTone(_rkMix(G[0].pcc,S.avg(0,1),0.3),0.18,bw),ss);
-      _rk2Stack(list,S,CW,CH,ss,G,keys,{weights:G.map(g=>g.dur),pulls:G.map(g=>[g.pcc,0.85])}); break; }
+    case 6: { // WHAT HE HEARD — the stack the piece itself lays: a field per voice (two to five), each as tall as its passages are long, as light as it is loud; the edges softer the slower the piece; the ground the tonic, dark; the loudest field glows from inside
+      const nF=_rkClamp(Math.round(2+(A.ch?A.ch.density:0.3)*4),2,5); const G=S.groups(nF);
+      const keys=G.map(g=>_rkClamp(0.12+0.7*g.v*(0.6+0.4*g.vmax),0.08,0.86)); const slow=A.ch?1-_rkClamp(A.ch.tempo,0,1):0.5;
+      try{ globalThis.__RK_LISTEN={nF,keys,slow,dyn:S.dyn}; }catch(_){}
+      _rkGround(ctx,CW,CH,_rkTone(_rkMix(S.avg(0,1),S.tonicCol,0.6),0.14+0.1*S.dyn,bw),ss);
+      _rk2Stack(list,S,CW,CH,ss,G,keys,{weights:G.map(g=>Math.max(0.08,g.dur)),feather:0.02+0.05*slow,gap:0.02+0.025*slow,K:Math.round(6+6*slow),core:2,streaks:slow>0.5?2:0,pulls:G.map(g=>[S.tonicCol,0.25+0.35*(1-g.v)])});
+      break; }
     case 7: { // Chapel — one plum-black field and, inside it, the black rectangle; the music sets its size and height
       const ground=_rkMix(_rkTone(S.avg(0,1),0.1,bw),[28,14,26],bw?0:0.6); _rkGround(ctx,CW,CH,ground,ss);
       const g=S.span(0,1), mx=CW*0.07, my=CH*0.06;
@@ -15092,13 +15095,13 @@ const ARTIST_VARIANTS = {
     {ground:'#2c4628',mark:{dot:.7,disc:.3},size:[.02,.06],layout:{grid:1},density:1},   // Farm Garden with Sunflowers
   ],
   rothko: [   // slot order = solo variants: No. 61, Orange and Yellow, White Center, Four Darks in Red, Seagram, Multiform, No. 10, Chapel
+    {mark:{field:1},size:[.3,.6],edge:.9,alpha:.8,layout:{stack:1},density:.5},   // What he heard
     {mark:{field:1},size:[.3,.6],edge:.9,alpha:.75,layout:{stack:1},density:.5},
     {ground:'#e8d8a8',mark:{field:1},size:[.35,.6],edge:.6,alpha:.7,layout:{stack:1},density:.4,tone:'pastel'},
     {ground:'#d8b8b8',mark:{field:1},size:[.25,.5],edge:.6,alpha:.75,layout:{stack:1},density:.45,tone:'pastel'},
     {ground:'#6a1418',mark:{field:1},size:[.2,.45],edge:.8,alpha:.8,layout:{stack:1},density:.5,tone:'dark'},
     {ground:'#4a1a1a',mark:{nest:1},size:[.3,.6],edge:.5,alpha:.7,layout:{grid:1},density:.3,tone:'dark'},
     {ground:'#e4c89a',mark:{field:1},size:[.15,.35],edge:.3,alpha:.6,layout:{scatter:1},density:.5},
-    {mark:{field:1},size:[.3,.6],edge:.9,alpha:.8,layout:{stack:1},density:.5},
     {ground:'#1a1418',mark:{field:1},size:[.4,.7],edge:.7,alpha:.5,layout:{stack:1},density:.3,tone:'dark'},
   ],
   bulge: [   // slot order = solo phases: Folklore, Vonal sphere, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
