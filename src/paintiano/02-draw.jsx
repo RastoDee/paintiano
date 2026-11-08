@@ -7785,6 +7785,181 @@ function klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.globalAlpha = 1;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING, HIS OWN LINE — the figure as he drew it: one heavy black line round a flat colour, the head a round ball on the
+// body, the arms and legs thick and rounded at the ends, never a face; the lines of motion around it (the short dashes
+// that radiate, the little arcs where a limb swings). The Pop Shop colours: red, yellow, blue, green, orange, pink,
+// purple, sky, black and white. Every chord's colour snapped to the nearest of them.
+// ═══════════════════════════════════════════════════════════════════════════
+const _HG_PAL=[[230,35,42],[255,214,0],[0,98,177],[0,160,80],[246,138,30],[236,72,150],[112,58,160],[50,176,230]];
+const _HG_BLK=[22,20,22], _HG_WHT=[250,248,242];
+function _hgR(a,b){ let s=((((a|0)*73)^((b|0)*113))^0x51ed27)>>>0; s^=s>>>16; s=Math.imul(s,0x7feb352d)>>>0; s^=s>>>15; s=Math.imul(s,0x846ca68b)>>>0; s^=s>>>16;
+  const f=()=>{ s=(s+0x6D2B79F5)>>>0; let t=s; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; f(); return f; }
+const _hgCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+function _hgHue(c){ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<1e-6) return 0; let h= mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; return h<0?h+360:h; }
+const _HG_PAL_H=_HG_PAL.map(_hgHue);
+const _hgLum=(c)=>(0.299*c[0]+0.587*c[1]+0.114*c[2])/255;
+const _hgSame=(a,b)=>!!(a&&b&&Math.abs(a[0]-b[0])<4&&Math.abs(a[1]-b[1])<4&&Math.abs(a[2]-b[2])<4);
+const _hgPastel=(p)=> (typeof _pastelOn!=='undefined' && _pastelOn && p!==_HG_BLK && p!==_HG_WHT) ? p.map(v=>Math.round(v+(250-v)*0.4)) : p;
+function _hgPalOf(rgb,isBW){ if(isBW){ const l=Math.round(rgb[0]*0.3+rgb[1]*0.59+rgb[2]*0.11); return [l,l,l]; }
+  const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]); if(mx-mn<20) return mx>200?_HG_WHT:_hgPastel(_HG_PAL[2]);
+  const h=_hgHue(rgb); let bi=0,bd=999; for(let i=0;i<_HG_PAL_H.length;i++){ const d=Math.abs(((_HG_PAL_H[i]-h)%360+540)%360-180); if(d<bd){ bd=d; bi=i; } } return _hgPastel(_HG_PAL[bi]); }
+// ── the figure: a skeleton of a few joints, every bone a thick rounded stroke
+// angles are directions on the sheet (0 right, π/2 down); a pose is given facing right and mirrored for the left
+const _HG_POSES={
+  dance:{lean:0.1, arms:[[-2.55,-2.0],[-0.5,-1.2]], legs:[[2.0,1.62],[1.0,1.85]]},
+  jump:{lean:0, arms:[[-2.5,-2.05],[-0.65,-1.1]], legs:[[2.15,2.8],[0.95,0.3]]},
+  run:{lean:0.38, arms:[[2.5,1.8],[-0.3,-1.3]], legs:[[2.25,2.95],[0.6,1.65]]},
+  bend:{lean:1.25, arms:[[1.5,1.62],[1.3,1.52]], legs:[[1.85,1.62],[1.3,1.55]]},
+  wave:{lean:-0.06, arms:[[2.4,1.95],[-1.05,-1.55]], legs:[[1.9,1.72],[1.25,1.42]]},
+  hold:{lean:0, arms:[[-2.6,-1.05],[-0.55,-2.1]], legs:[[1.95,1.75],[1.2,1.4]]},
+  cheer:{lean:0, arms:[[-2.4,-2.25],[-0.75,-0.9]], legs:[[2.0,1.8],[1.15,1.35]]},
+  reach:{lean:0.25, arms:[[2.7,2.95],[-0.15,-0.3]], legs:[[2.1,1.75],[1.1,1.4]]},
+  kneel:{lean:0.05, arms:[[-2.45,-1.95],[-0.6,-1.15]], legs:[[2.4,1.55],[0.9,1.75]]},
+  link:{lean:0, arms:[[3.0,2.92],[0.14,0.22]], legs:[[2.0,1.75],[1.15,1.4]]},
+  flip:{lean:3.14, arms:[[1.9,1.7],[1.25,1.45]], legs:[[-2.2,-2.55],[-0.95,-0.6]]},
+};
+function _hgFigure(x,y,s,kind,dir,rnd,amt){ const P=_HG_POSES[kind]||_HG_POSES.dance; const j=(a)=>a+(rnd()-.5)*0.22*(amt==null?1:amt); const m=(a)=>dir>0?a:Math.PI-a;
+  const up=-Math.PI/2+P.lean*dir; const at=(p,a,l)=>[p[0]+Math.cos(a)*l*s, p[1]+Math.sin(a)*l*s]; const px=Math.cos(up+Math.PI/2), py=Math.sin(up+Math.PI/2);
+  const hip=[x,y], neck=at(hip,up,1.0), sh=at(hip,up,0.86), head=at(neck,up+(rnd()-.5)*0.2,0.5);
+  const bones=[{a:hip,b:neck,w:0.54}], limbs=[];
+  P.arms.forEach(([a1,a2],i)=>{ const o=(i?1:-1)*0.17*s*(P.lean>3?-1:1)*-1; const S=[sh[0]-px*o*dir, sh[1]-py*o*dir]; const e=at(S,m(j(a1)),0.6), h=at(e,m(j(a2)),0.56); limbs.push([S,e,h]); bones.push({a:S,b:e,w:0.32},{a:e,b:h,w:0.32}); });
+  P.legs.forEach(([a1,a2],i)=>{ const o=(i?1:-1)*0.12*s*(P.lean>3?-1:1)*-1; const H=[hip[0]-px*o*dir, hip[1]-py*o*dir]; const k=at(H,m(j(a1)),0.68), f=at(k,m(j(a2)),0.66); limbs.push([H,k,f]); bones.push({a:H,b:k,w:0.36},{a:k,b:f,w:0.36}); });
+  return {bones, head:[head[0],head[1],0.35], s, hip, neck, limbs, x, y, dir, kind}; }
+// drawn as he drew: the black line all round, then the colour inside it; chalk: only the line, the inside the ground's
+function _hgDraw(ctx,F,col,ink,ol,inside){ const s=F.s, O=ol*s; ctx.lineCap='round'; ctx.lineJoin='round';
+  const pass=(c,extra)=>{ ctx.strokeStyle=_hgCss(c); for(const b of F.bones){ ctx.lineWidth=b.w*s+extra; ctx.beginPath(); ctx.moveTo(b.a[0],b.a[1]); ctx.lineTo(b.b[0],b.b[1]); ctx.stroke(); }
+    ctx.fillStyle=_hgCss(c); ctx.beginPath(); ctx.arc(F.head[0],F.head[1],F.head[2]*s+extra/2,0,6.2832); ctx.fill(); };
+  pass(ink,2*O); pass(inside||col,0); }
+// the lines of motion: short thick dashes radiating from a centre over an arc
+function _hgRays(ctx,cx,cy,r0,r1,n,a0,span,ink,w){ ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=w; ctx.lineCap='round'; for(let i=0;i<n;i++){ const a=a0+(span>=6.2?i/n:(n>1?i/(n-1)-0.5:0))*span; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0); ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke(); } }
+// his marks of movement on a figure: rays round the head when it is excited, two or three dashes off a swinging hand or foot
+function _hgMotion(ctx,F,ink,w,amt,rnd){ const s=F.s; if(amt<=0) return;
+  const hd=F.head; const n=3+Math.round(amt*4); _hgRays(ctx,hd[0],hd[1],s*0.62,s*(0.82+0.18*amt),n,-Math.PI/2+(F.kind==='flip'?Math.PI:0),1.6+amt*0.6,ink,w);
+  F.limbs.forEach((L,i)=>{ if(rnd()>0.35+amt*0.4) return; const [a,b,c]=L; const dx=c[0]-b[0], dy=c[1]-b[1], l=Math.hypot(dx,dy)||1; const nx=-dy/l, ny=dx/l; const side=rnd()<0.5?1:-1;
+    for(let k=0;k<2+(amt>0.6?1:0);k++){ const off=s*(0.34+0.14*k)*side; const cx=c[0]+nx*off-dx/l*s*0.05, cy=c[1]+ny*off-dy/l*s*0.05; ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=w; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx-dx/l*s*0.16,cy-dy/l*s*0.16); ctx.lineTo(cx+dx/l*s*0.12,cy+dy/l*s*0.12); ctx.stroke(); } }); }
+// the heart: full, round, the point down; rays round the top
+function _hgHeartPts(cx,cy,h){ const pts=[]; for(let i=0;i<=48;i++){ const t=i/48*6.2832; const x=16*Math.pow(Math.sin(t),3), y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)); pts.push([cx+x*h/17,cy+y*h/17+h*0.1]); } return pts; }
+function _hgHeart(ctx,cx,cy,h,col,ink,O,inside){ const P=_hgHeartPts(cx,cy,h); ctx.lineJoin='round'; ctx.beginPath(); P.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=2*O; ctx.stroke(); ctx.fillStyle=_hgCss(inside||col); ctx.fill(); }
+// ── the colours of a piece, the most used first, and the one that stands out on a ground
+function _hgStats(chords,gc,isBW){ const cnt=new Map(), key=new Map(); const cn=chords.length, step=Math.max(1,Math.floor(cn/90));
+  for(let i=0;i<cn;i+=step){ const c=chords[i]; if(!c||!c.n||!c.n.length) continue; const p=_hgPalOf(_picChord(chords,i,gc,isBW).rgb,isBW); const k=p.join(','); cnt.set(k,(cnt.get(k)||0)+1); key.set(k,p); }
+  const out=[...cnt.keys()].sort((x,y)=>cnt.get(y)-cnt.get(x)).map(k=>key.get(k)); return out.length?out:[_hgPastel(_HG_PAL[0])]; }
+function _hgAt(chords,i,gc,isBW){ const cn=chords.length; return _hgPalOf(_picChord(chords,Math.max(0,Math.min(cn-1,i|0)),gc,isBW).rgb,isBW); }
+const _hgClash=(a,b)=>{ const dh=Math.abs(((_hgHue(a)-_hgHue(b))%360+540)%360-180), dl=Math.abs(_hgLum(a)-_hgLum(b)); return (dh<45 && dl<0.22) || (dl<0.08 && dh<90); };
+function _hgOn(c,ground,isBW){ if(isBW) return _hgLum(ground)>0.6?[250,250,248]:[236,236,232]; if(!_hgClash(c,ground)) return c; let best=null,bs=-1; for(const p of _HG_PAL.map(_hgPastel)){ const dh=Math.abs(((_hgHue(p)-_hgHue(ground))%360+540)%360-180)/180, dl=Math.abs(_hgLum(p)-_hgLum(ground)); const sc=dh*0.8+dl; if(sc>bs){ bs=sc; best=p; } } return best; }
+// the pose a passage asks for
+function _hgPoseOf(h,rnd){ const c=[]; if(h.acc>1 && rnd()<0.5) c.push('jump'); if(h.leap>6.5) c.push(rnd()<0.5?'run':'jump'); if(h.reg>0.66) c.push(rnd()<0.5?'cheer':'reach'); if(h.reg<0.33) c.push(rnd()<0.6?'bend':'kneel'); if(h.dur>1.5) c.push('wave');
+  c.push(['dance','wave','cheer','dance','hold','jump'][(rnd()*6)|0]); return c[0]; }
+// a figure drawn turned about its middle (the all-over walls turn them every way)
+function _hgPut(ctx,kind,x,y,s,dir,rot,col,ink,O,seed,motion,inside){ const r=_hgR(seed,3); const F=_hgFigure(0,0.25*s,s,kind,dir,r,1); ctx.save(); ctx.translate(x,y); if(rot) ctx.rotate(rot); _hgDraw(ctx,F,col,ink,O/s,inside); if(motion>0) _hgMotion(ctx,F,ink,s*0.085,motion,_hgR(seed,4)); ctx.restore(); return F; }
+function _hgGround(ctx,CW,CH,col,ss){ ctx.fillStyle=_hgCss(col); ctx.fillRect(0,0,CW,CH); const r=_hgR(61000,ss); const D=Math.min(CW,CH); for(let i=0;i<8;i++){ const cx=r()*CW, cy=r()*CH, R=D*(0.3+r()*0.5); const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R); g.addColorStop(0,r()<0.5?'rgba(255,255,255,0.035)':'rgba(0,0,0,0.03)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); } }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE STORY (panels): the sheet cut into panels with a heavy black frame, read like a strip; each panel a passage
+// of the piece in its own colour, its figure in the pose the passage asks for, the loudest passage a heart.
+// ═══════════════════════════════════════════════════════════════════════════
+function haringStory(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const land=CW>CH*1.1;
+  const cols=land?3:2, rows=land?2:3, N=cols*rows, m=D*0.035, g=D*0.03, pw=(CW-2*m-(cols-1)*g)/cols, ph=(CH-2*m-(rows-1)*g)/rows; const O=Math.max(2,D*0.011);
+  const G=_kd2Phrases(A,N); let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
+  const Ops=_mtOps(); Ops.at(0,()=>{ ctx.fillStyle=_hgCss(isBW?[246,246,242]:_HG_WHT); ctx.fillRect(0,0,CW,CH); });
+  let prev=null;
+  for(let k=0;k<N;k++){ const q=G[Math.min(G.length-1,Math.floor(k*G.length/N))]; const gx=k%cols, gy=Math.floor(k/cols); const x=m+gx*(pw+g), y=m+gy*(ph+g); const r=_hgR(62100+k,ss);
+    let bg=_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW); if(_hgSame(bg,prev)) bg=st.find(p=>!_hgSame(p,prev))||_hgPastel(_HG_PAL[(k*3)%8]); prev=bg;
+    const h=_mtHearSpan(A,q.a,q.b); const fig=_hgOn(st[(k+1)%st.length]||_HG_WHT,bg,isBW); const s=Math.min(ph/3.6,pw/2.6); const kind=_hgPoseOf(h,r); const dir=r()<0.5?1:-1;
+    Ops.at(q.t0, ()=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,pw,ph); ctx.clip(); ctx.fillStyle=_hgCss(bg); ctx.fillRect(x,y,pw,ph);
+      if(k===ci && X.major) _hgHeart(ctx,x+pw/2,y+ph*0.48,Math.min(pw,ph)*0.3,isBW?[250,250,248]:_hgOn(_hgPastel(_HG_PAL[0]),bg,false),_HG_BLK,O);
+      else _hgPut(ctx,kind,x+pw/2,y+ph*0.52,s,dir,0,fig,_HG_BLK,O,62200+k+ss,0.35+0.5*X.energy);
+      if(k===ci) _hgRays(ctx,x+pw/2,y+ph*0.45,Math.min(pw,ph)*0.36,Math.min(pw,ph)*0.46,9,-Math.PI/2,2.6,_HG_BLK,O*1.1);
+      ctx.restore(); ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.6; ctx.lineJoin='round'; ctx.strokeRect(x,y,pw,ph); }); }
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'story',N}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE CROWD: figures packed edge to edge on the white wall, turned every way, interlocking, nothing left empty,
+// every figure a passage of the piece in its own colour (without colour: his black line on white, every gap filled with
+// his small marks).
+// ═══════════════════════════════════════════════════════════════════════════
+function _haringWall(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,colour){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const dens=A.ch?A.ch.density:0.3;
+  const target=Math.round((colour?22:30)+dens*16); const s=Math.sqrt(CW*CH/(target*8.6)); const cols=Math.max(3,Math.round(CW/(s*2.75))), rows=Math.max(3,Math.round(CH/(s*3.3))); const cw=CW/cols, chh=CH/rows; const N=cols*rows;
+  const O=Math.max(1.6,s*(colour?0.1:0.085)); const ground=colour?(isBW?[244,244,240]:_HG_WHT):[250,249,245]; const Ops=_mtOps(); Ops.at(0,()=>{ ctx.fillStyle=_hgCss(ground); ctx.fillRect(0,0,CW,CH); });
+  const cells=[]; for(let gy=0;gy<rows;gy++) for(let gx=0;gx<cols;gx++) cells.push([gx,gy]);
+  cells.forEach(([gx,gy],k)=>{ const a=Math.floor(k*cn/N), b=Math.floor((k+1)*cn/N); const h=_mtHearSpan(A,a,b); const r=_hgR(65100+k,ss); const kind=_hgPoseOf(h,r); const dir=r()<0.5?1:-1;
+    const rot=(r()<0.22?(r()<0.5?1:-1)*Math.PI/2:0)+(r()-.5)*0.5; const x=(gx+0.5+(gy%2?0.25:-0.25)*0.5+(r()-.5)*0.25)*cw, y=(gy+0.5+(r()-.5)*0.18)*chh;
+    const col=colour?_hgOn(_hgAt(chords,Math.floor((a+b)/2),gc,isBW),ground,isBW):ground;
+    Ops.at(a/cn, ()=>_hgPut(ctx,kind,x,y,s*(0.92+0.16*r()),dir,rot,col,_HG_BLK,O,65200+k+ss,colour?0.3:0)); });
+  // the maze: every gap gets his small marks — dashes, crosses, zigzags, little circles
+  if(!colour){ const r=_hgR(65900,ss); const M=Math.round(N*5); for(let i=0;i<M;i++){ const x=r()*CW, y=r()*CH, t=r(); const kind=(r()*4)|0; const z=s*(0.18+0.12*r());
+      Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*0.9; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath();
+        if(kind===0){ ctx.moveTo(x-z,y-z*0.4); ctx.lineTo(x+z,y-z*0.4); ctx.moveTo(x-z,y+z*0.4); ctx.lineTo(x+z,y+z*0.4); }
+        else if(kind===1){ ctx.moveTo(x-z*0.7,y-z*0.7); ctx.lineTo(x+z*0.7,y+z*0.7); ctx.moveTo(x+z*0.7,y-z*0.7); ctx.lineTo(x-z*0.7,y+z*0.7); }
+        else if(kind===2){ ctx.moveTo(x-z*1.2,y); for(let q=1;q<=4;q++) ctx.lineTo(x-z*1.2+q*z*0.6,y+(q%2?-z*0.5:z*0.5)); }
+        else { ctx.arc(x,y,z*0.55,0,6.2832); }
+        ctx.stroke(); }); } }
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:colour?'crowd':'maze',cols,rows}; }catch(_){} _setCurE(0.5);
+}
+function haringCrowd(ctx,CW,CH,chords,lim,gc,ss,mode){ _haringWall(ctx,CW,CH,chords,lim,gc,ss,mode,true); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE HEART: the big heart in the middle with its rays, a ray at every accent, and round it the figures dancing,
+// one per passage, two of them holding it up when the piece is major.
+// ═══════════════════════════════════════════════════════════════════════════
+function haringHeart(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const isAcc=_mtAccOf(A);
+  const bg=isBW?[236,236,232]:(st[1]&&!_hgSame(_hgPastel(_HG_PAL[0]),st[1])?st[1]:st[0]), red=isBW?[250,250,248]:_hgOn(_hgPastel(_HG_PAL[0]),bg,false), O=Math.max(2,D*0.012);
+  const hx=CW*0.5, hy=CH*0.38, hh=D*0.26; const Ops=_mtOps(); Ops.at(0,()=>{ _hgGround(ctx,CW,CH,bg,ss); _hgHeart(ctx,hx,hy,hh,red,_HG_BLK,O); });
+  const E=_kd2Events(A,48).filter(isAcc); const nR=Math.max(10,Math.min(26,E.length+10));
+  for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k+0.5)/nR*6.2832; Ops.at((k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.2; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(hx+Math.cos(a)*hh*1.3,hy+Math.sin(a)*hh*1.25); ctx.lineTo(hx+Math.cos(a)*hh*1.62,hy+Math.sin(a)*hh*1.55); ctx.stroke(); }); }
+  const G=_kd2Phrases(A,6); const s=D*0.075; const spots=[[0.16,0.78],[0.84,0.78],[0.36,0.86],[0.64,0.86],[0.12,0.22],[0.88,0.22]];
+  G.forEach((q,i)=>{ if(i>=spots.length) return; const r=_hgR(66100+i,ss); const h=_mtHearSpan(A,q.a,q.b); const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW);
+    const [px,py]=spots[i]; const x=CW*px, y=CH*py; const kind=i<2&&X.major?'reach':_hgPoseOf(h,r); const dir=px<0.5?1:-1;
+    Ops.at(q.t0, ()=>_hgPut(ctx,kind,x,y,s*(i<4?1.15:0.85),kind==='reach'?(px<0.5?1:-1):dir,0,_hgSame(col,red)?_hgOn(st[2]||_HG_PAL[1],bg,isBW):col,_HG_BLK,O,66200+i+ss,0.3+0.5*X.energy)); });
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'heart',rays:nR}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE ACROBATS: the human pyramid, every figure standing on the hands of the ones below, a passage each from
+// the bottom up; as many on the ground as the piece has voices; the top one throws up its arms, the rays round him.
+// ═══════════════════════════════════════════════════════════════════════════
+function haringAcrobats(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const bg=isBW?[236,236,232]:(st[2]||st[0]);
+  const k=Math.max(2,Math.min(4,Math.round(X.poly)+1)); const s=Math.min(CH*0.86/(k*3.05+1.0), CW*0.9/(k*2.25)); const O=Math.max(2,s*0.1); const n=k*(k+1)/2; const G=_kd2Phrases(A,n);
+  const Ops=_mtOps(); Ops.at(0,()=>_hgGround(ctx,CW,CH,bg,ss)); let idx=0; const baseY=CH*0.95-s*1.3;
+  for(let row=0;row<k;row++){ const m=k-row; for(let j=0;j<m;j++){ const q=G[Math.min(G.length-1,Math.floor(idx*G.length/n))]; const r=_hgR(67100+idx,ss); const top=row===k-1;
+      const x=CW/2+(j-(m-1)/2)*s*2.2, y=baseY-row*s*3.05; const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW); const kind=top?(X.energy>0.6?'cheer':'cheer'):'hold'; const i0=idx;
+      Ops.at(q.t0, ()=>{ _hgPut(ctx,kind,x,y,s,1,0,col,_HG_BLK,O,67200+i0+ss,0); if(top){ _hgRays(ctx,x,y-s*1.3,s*1.25,s*(1.6+0.3*X.energy),11,-Math.PI/2,3.4,_HG_BLK,O*1.1); } }); idx++; } }
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'acrobats',k}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING LISTENS — the picture the piece asks for: an even piece the chain of dancers holding hands along the melody
+// (one per passage, as high as it sings); a quick, dense one the crowd jumping all over a flat colour; a slow one two big
+// figures dancing at each other, the heart over them when it is major.
+// ═══════════════════════════════════════════════════════════════════════════
+function haringListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const dens=A.ch?A.ch.density:0.3;
+  const pic = (X.pace>0.62 && dens>0.25) ? 'crowd' : (X.regular>0.55) ? 'chain' : 'pair';
+  const bg=isBW?[236,236,232]:st[0]; const Ops=_mtOps(); Ops.at(0,()=>_hgGround(ctx,CW,CH,bg,ss));
+  if(pic==='chain'){ const land=CW>CH*1.1; const rowsN=land?2:3; const per=land?5:3; const G=_kd2Phrases(A,rowsN*per); const s=Math.min(CW*0.94/(per*2.7), CH*0.92/(rowsN*3.5)); const O=Math.max(2,s*0.1);
+    G.forEach((q,i)=>{ const row=Math.floor(i/per), j=i%per; if(row>=rowsN) return; const r=_hgR(68100+i,ss); const h=_mtHearSpan(A,q.a,q.b); const x=CW/2+(j-(per-1)/2)*s*2.66; const y=CH*(row+0.5)/rowsN+s*0.5+(0.5-h.reg)*s*1.2; const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW);
+      Ops.at(q.t0, ()=>_hgPut(ctx,'link',x,y,s,1,0,col,_HG_BLK,O,68200+i+ss,0.25+0.5*X.energy)); }); }
+  else if(pic==='crowd'){ const E=_kd2Events(A,Math.round(12+dens*10)); const s=D*0.075; const O=Math.max(2,s*0.1); const placed=[];
+    E.forEach((e,i)=>{ const r=_hgR(68300+i,ss); let x=CW*(0.12+0.76*(i%4+0.5)/4+(r()-.5)*0.1), y=CH*(0.14+0.74*((Math.floor(i/4)+0.5)/Math.ceil(E.length/4)))+(0.5-A.reg(e.top))*s; const h=_mtHearSpan(A,Math.max(0,e.i-3),Math.min(cn,e.i+3));
+      const col=_hgOn(_hgAt(chords,e.i,gc,isBW),bg,isBW); const kind=_mtAccOf(A)(e)?'jump':_hgPoseOf(h,r); const dir=r()<0.5?1:-1; Ops.at(e.i/cn, ()=>_hgPut(ctx,kind,x,y,s,dir,(r()-.5)*0.3,col,_HG_BLK,O,68400+i+ss,0.4+0.5*X.energy)); }); }
+  else { const s=Math.min(CH*0.15,CW*0.21); const O=Math.max(2,s*0.1); const G=_kd2Phrases(A,2); const fy=CH*0.6;
+    G.forEach((q,i)=>{ const h=_mtHearSpan(A,q.a,q.b); const r=_hgR(68500+i,ss); const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW); const kind=i?(h.reg>0.5?'wave':'dance'):(h.reg>0.5?'dance':'reach');
+      Ops.at(q.t0, ()=>_hgPut(ctx,kind,CW*(i?0.7:0.3),fy,s,i?-1:1,0,col,_HG_BLK,O,68600+i+ss,0.3+0.5*X.energy)); });
+    if(X.major){ const red=isBW?[250,250,248]:_hgOn(_hgPastel(_HG_PAL[0]),bg,false); Ops.at(0.55, ()=>{ _hgHeart(ctx,CW*0.5,CH*0.22,s*0.75,red,_HG_BLK,O); _hgRays(ctx,CW*0.5,CH*0.22,s*1.05,s*1.4,9,-Math.PI/2,3.2,_HG_BLK,O*1.1); }); } }
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'listen',pic,pace:X.pace,regular:X.regular,dens}; }catch(_){} _setCurE(0.5);
+}
+
 // ── Pop (Keith Haring) ───────────────────────────────────────────────────────
 // Bold flat colour blocks behind thick black-outlined glyphs, with radiating
 // "energy" ticks around them (Keith Haring's street-pop language). Each cell
@@ -7793,8 +7968,8 @@ function klimtPhaseMosaicField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Haring cast engine ───────────────────────────────────────────────────────
 // The outlined creature as a primitive: chunky limbs drawn twice (a thick black
 // stroke, then the colour inside it), round heads, motion dashes. A cast of
-// different creatures — dancer, runner, jumper, waver, the radiant baby, the
-// barking dog, two figures holding up a heart — so a wall never repeats one
+// different creatures — dancer, runner, jumper, waver, two figures holding up
+// a heart — so a wall never repeats one
 // figure. Slot 0 is the app's mosaic in Haring's hand (one tile per chord);
 // slot 3 the all-over doodle with a few characters caught in it.
 const _hrR=(a,ss)=>_seedRnd(a,ss,0,0);
@@ -7814,16 +7989,12 @@ function _hrJumper(x,y,u,r,e,dir){ const p=_hrO(x,y,dir); const neck=p(0,-2.4*u)
   return {lines:[{p:[neck,hips]},{p:[neck,p(-1.5*u,-3.1*u),p(-2.6*u,-4.1*u)]},{p:[neck,p(1.5*u,-3.1*u),p(2.6*u,-4.1*u)]},{p:[hips,p(-1.2*u,0.8*u),p(-1.0*u,2.3*u)]},{p:[hips,p(1.3*u,0.5*u),p(2.1*u,1.5*u)]}],heads:[[...p(0,-3.6*u),u]],glow:[...p(0,2.6*u),0.6*u,1.4*u,5,1.57,2.0]}; }
 function _hrWaver(x,y,u,r,e,dir){ const p=_hrO(x,y,dir); const neck=p(0,-2.4*u), hips=p(0,0);
   return {lines:[{p:[neck,hips]},{p:[neck,p(1.2*u,-3.0*u),p(1.5*u,-4.4*u)]},{p:[neck,p(-1.1*u,-1.6*u),p(-1.4*u,-0.4*u)]},{p:[hips,p(-0.6*u,1.4*u),p(-0.7*u,2.7*u)]},{p:[hips,p(0.6*u,1.4*u),p(0.7*u,2.7*u)]}],heads:[[...p(0,-3.6*u),u]],glow:[...p(1.5*u,-4.6*u),0.8*u,1.6*u,3,-1.2*dir,1.4]}; }
-function _hrBaby(x,y,u,r,e,dir){ const p=_hrO(x,y,dir); const hips=p(-1.5*u,0.6*u), sh=p(1.2*u,0.4*u);
-  return {lines:[{p:[hips,sh],w:1.35},{p:[sh,p(1.5*u,1.6*u),p(1.7*u,2.6*u)]},{p:[sh,p(0.7*u,1.6*u),p(0.8*u,2.6*u)]},{p:[hips,p(-1.3*u,1.7*u),p(-0.6*u,2.6*u)]},{p:[hips,p(-2.0*u,1.6*u),p(-1.5*u,2.6*u)]}],heads:[[...p(2.6*u,-0.4*u),1.05*u]],glow:[...p(0.2*u,0.6*u),3.6*u,4.6*u,13,0,6.28]}; }
-function _hrDog(x,y,u,r,e,dir){ const p=_hrO(x,y,dir);
-  return {lines:[{p:[p(-1.8*u,0),p(1.4*u,0)],w:1.6},{p:[p(-1.5*u,0),p(-1.6*u,2.2*u)]},{p:[p(-0.7*u,0),p(-0.6*u,2.2*u)]},{p:[p(0.5*u,0),p(0.6*u,2.2*u)]},{p:[p(1.2*u,0),p(1.4*u,2.2*u)]},{p:[p(-1.8*u,0),p(-2.6*u,-1.4*u)]},{p:[p(1.4*u,-0.2*u),p(2.2*u,-1.5*u)],w:1.2},{p:[p(2.0*u,-1.6*u),p(3.4*u,-1.3*u)],w:1.5},{p:[p(1.8*u,-2.0*u),p(1.6*u,-2.9*u)],w:0.8}],heads:[],glow:[...p(3.8*u,-1.4*u),0.6*u,1.8*u,4,dir>0?0:3.14,1.4]}; }
 function _hrHeart(cx,cy,h){ const pts=[]; for(let i=0;i<=40;i++){ const t=i/40*6.2832; const x=16*Math.pow(Math.sin(t),3), y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)); pts.push([cx+x*h/17,cy+y*h/17]); } return pts; }
 function _hrPairHeart(x,y,u,r,e,dir){ const a=_hrO(x-2.4*u,y,1), b=_hrO(x+2.4*u,y,1); const na=a(0,-2.4*u), nb=b(0,-2.4*u);
   return {lines:[{p:[na,a(0,0)]},{p:[na,a(0.9*u,-3.6*u),a(1.8*u,-4.9*u)]},{p:[na,a(-1.2*u,-1.6*u),a(-1.6*u,-0.4*u)]},{p:[a(0,0),a(-0.7*u,1.4*u),a(-0.8*u,2.7*u)]},{p:[a(0,0),a(0.6*u,1.4*u),a(0.7*u,2.7*u)]},
                  {p:[nb,b(0,0)]},{p:[nb,b(-0.9*u,-3.6*u),b(-1.8*u,-4.9*u)]},{p:[nb,b(1.2*u,-1.6*u),b(1.6*u,-0.4*u)]},{p:[b(0,0),b(-0.6*u,1.4*u),b(-0.7*u,2.7*u)]},{p:[b(0,0),b(0.7*u,1.4*u),b(0.8*u,2.7*u)]}],
           heads:[[...a(-0.4*u,-3.6*u),u],[...b(0.4*u,-3.6*u),u]],fills:[_hrHeart(x,y-6.4*u,2.2*u)],glow:[x,y-6.4*u,3.0*u,4.0*u,9,-1.57,3.4]}; }
-const _HR_CAST={dancer:_hrDancer,runner:_hrRunner,jumper:_hrJumper,waver:_hrWaver,baby:_hrBaby,dog:_hrDog,pairHeart:_hrPairHeart};
+const _HR_CAST={dancer:_hrDancer,runner:_hrRunner,jumper:_hrJumper,waver:_hrWaver,pairHeart:_hrPairHeart};
 function _hrCreature(ctx,c,col,u,rnd,glow){ const W=u*1.15, Ol=u*0.4; ctx.lineCap='round'; ctx.lineJoin='round';
   const path=(pts)=>{ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); };
   ctx.strokeStyle=_hrCss(_HR_BLK); c.lines.forEach(l=>{ ctx.lineWidth=W*(l.w||1)+Ol*2; path(l.p); ctx.stroke(); });
@@ -7911,7 +8082,7 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   const mul=0.8+0.4*(0.55*S.energy+0.45*S.density);
   const COLS=Math.max(3,Math.min(6,Math.round((cn<=6?3:cn<=18?4:cn<=60?5:6)*mul))), ROWS=Math.max(3,Math.round(COLS*CH/CW)); const cw=CW/COLS, ch=CH/ROWS, n=COLS*ROWS, vis=Math.ceil(n*reveal);
   ctx.fillStyle=_hrCss(_HR_BLK); ctx.fillRect(0,0,CW,CH);
-  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','baby','dog','heart','dancer','jumper'];
+  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper'];
   for(let i=0;i<vis;i++){ const r=_hrR(76000+i,ss); r(); const cx=i%COLS, cy=Math.floor(i/COLS); const x0=cx*cw, y0=cy*ch; const tile=S.col(i/n);
     ctx.fillStyle=_hrCss(tile); ctx.fillRect(x0+g,y0+g,cw-2*g,ch-2*g);
     const kind=pool[(r()*pool.length)|0], dir=r()<0.5?1:-1, c=_hrFar(S.col(Math.min(0.999,i/n+0.37)),tile); const mx=x0+cw/2, my=y0+ch/2;
@@ -7921,11 +8092,11 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
     else { const wide=(kind==='baby'||kind==='dog'); const u=Math.min(cw/(wide?7.8:6.6), ch/(wide?6.8:9.6)); const oy=kind==='baby'?-0.5*u:kind==='dog'?0.35*u:0.9*u, ox=kind==='baby'?-0.65*u*dir:kind==='dog'?-0.45*u*dir:0; const cr=_HR_CAST[kind](mx+ox,my+oy,u,r,S.energy,dir); if(r()>0.6) cr.glow=null; _hrCreature(ctx,cr,c,u,r); }
     ctx.restore(); }
 }
-// 1 · Doodle — a black all-over doodle on one bright flat colour, with a few large characters caught in it: the radiant baby, the barking dog, two figures holding up a heart
+// 1 · Doodle — a black all-over doodle on one bright flat colour, with a few large figures caught in it: a jumper, a dancer, a runner, two figures holding up a heart
 function haringPhaseDoodle(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_hrSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
   const r0=_hrR(78000,ss); r0(); const ground=S.col(0.1); ctx.fillStyle=_hrCss(ground); ctx.fillRect(0,0,CW,CH);
-  const cast=['baby','dog','pairHeart','runner']; const start=(r0()*cast.length)|0; const nf=2+Math.round(S.density*1.5); const u=D*0.042, figs=[];
+  const cast=['jumper','pairHeart','dancer','runner']; const start=(r0()*cast.length)|0; const nf=2+Math.round(S.density*1.5); const u=D*0.042, figs=[];
   const slots=nf===2?[[0.3,0.36],[0.68,0.72]]:nf===3?[[0.28,0.3],[0.72,0.45],[0.35,0.78]]:[[0.27,0.28],[0.73,0.3],[0.27,0.72],[0.73,0.76]];
   for(let k=0;k<nf;k++){ const kind=cast[(start+k)%cast.length]; const [sx,sy]=slots[k]; figs.push({kind,x:CW*sx+(r0()-.5)*CW*0.05,y:CH*sy+(r0()-.5)*CH*0.04+(kind==='pairHeart'?u*2:0),c:_hrFar(S.col(0.3+k/nf*0.6),ground),dir:r0()<0.5?1:-1}); }
   const busy=(x,y)=>figs.some(f=>{ const w=f.kind==='pairHeart'?6.5:f.kind==='dog'?5.2:4.8; const h=f.kind==='pairHeart'?7.5:5; return Math.abs(x-f.x)<u*w && Math.abs(y-(f.y-(f.kind==='pairHeart'?3.2*u:(f.kind==='baby'||f.kind==='dog')?0:1.2*u)))<u*h; });
@@ -7946,10 +8117,11 @@ function haringPhaseDoodle(ctx,CW,CH,chords,lim,gc,ss,mode){
 function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  // ── VARIANT: 0 What he heard (_hrListen, generative) · 1 Mosaic · 2 Mural · 3 Subway chalk · 4 Doodle · 5 Barking Dogs · 6 Dancing crowd ·
-  // 7 Figures (the cast engine throughout). Free: 0 and 1.
+  // ── VARIANT: 0 Haring listens (haringListen: the chain, the crowd or the pair, as the piece asks) · 1 The Story (panels) · 2 Mural ·
+  // 3 Subway chalk · 4 Doodle · 5 The Heart · 6 The Crowd · 7 The Acrobats. Retired (code kept): What he heard (_hrListen),
+  // Mosaic, Dancing crowd, Figures. His protected characters (the barking dog, the radiant baby) are gone from everything.
   const _pn=_capN(8); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
-  const _ph=[_hrListen,haringPhaseMosaic,haringPhaseMural,haringPhaseSubway,haringPhaseDoodle,haringPhaseDog,haringPhaseDance,haringPhaseFigures];
+  const _ph=[haringListen,haringStory,haringPhaseMural,haringPhaseSubway,haringPhaseDoodle,haringHeart,haringCrowd,haringAcrobats];
   _ph[_hpick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -8002,35 +8174,20 @@ function haringPhaseSubway(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const k=(rnd()*3)|0;
     const bright=[Math.min(255,rgb[0]+80),Math.min(255,rgb[1]+80),Math.min(255,rgb[2]+80)]; const u=s/3.1;
     if(k===0) _hrBodyAt(ctx,x,y,s*1.4,bright,rnd,0.8);
-    else if(k===1){ const c=_hrBaby(x,y,u*1.2,rnd,0.6,1); c.glow=[x,y-u*0.6,u*2.2,u*3.2,8,-3.14,6.28]; _hrCreature(ctx,c,bright,u*1.2,rnd); }   // the radiant baby
-    else { _hrCreature(ctx,_hrDog(x,y,u*1.1,rnd,0.6,rnd()<0.5?-1:1),bright,u*1.1,rnd); }   // the dog
+    else { const c=(k===1?_hrJumper:_hrWaver)(x,y+s*0.9,u*1.3,rnd,0.8,rnd()<0.5?-1:1); _hrCreature(ctx,c,bright,u*1.3,rnd); }
   }
 }
 
-// ── Haring: Barking Dogs (1982) — the dogs at Haring's scale: rows of big barking dogs on one flat
-// colour, a dog for every passage of the piece, facing the way the melody goes (up → right, down →
-// left), as big as the passage is loud, its bark the passage's accents; the rows fill as the piece plays. ──
-function haringPhaseDog(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_hrSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode);
-  const G=_kd2Phrases(A,Math.max(1,Math.min(9,Math.max(4,Math.round(A.phrases.length/6))))); const n=G.length; const rows=n<=4?2:3, perRow=Math.ceil(n/rows);
-  const bg=S.col(0.5); ctx.fillStyle=_hrCss(bg); ctx.fillRect(0,0,CW,CH);
-  const vis=Math.max(1,Math.ceil(n*reveal)); const rh=CH/rows, cw=CW/perRow;
-  for(let i=0;i<vis;i++){ const g=G[i]; const r=_hrR(77000+i,ss); r(); const row=Math.floor(i/perRow), k=i%perRow; const dir=(row%2?-1:1);
-    const C=A.ev.slice(g.a,g.b).filter(Boolean); const first=C[0]?C[0].top:60, last=C[C.length-1]?C[C.length-1].top:60; const face=(last>=first?1:-1)*dir;
-    const u=Math.min(cw/7.4,rh/6.4)*(0.6+0.4*g.vmax); const x=(k+0.5)*cw+(dir<0?0:0), y=(row+0.62)*rh;
-    const cr=_hrDog(x+0.4*u*face,y,u,r,A.ch?A.ch.energy:0.5,face); let acc=0; for(const e of C) if(e.v>=A.vHi) acc++; cr.glow=[x+face*2.8*u,y-2.6*u,1.2*u,1.2*u+u*(0.8+0.25*Math.min(6,acc)),Math.max(2,Math.min(8,2+acc)),face>0?-1.2:-1.94,1.4];
-    _hrCreature(ctx,cr,_hrFar(S.col(g.t),bg),u,r); }
-}
 // ── Haring: Figures (Untitled, 1982–89) — the big interlocking cast: one great figure for every
 // section of the piece, dancer or runner or jumper by the way the melody moves, as tall as the
-// section is loud, in its colour, its energy marks its accents; the radiant baby stands at the climax. ──
+// section is loud, in its colour, its energy marks its accents; a jumper stands at the climax. ──
 function haringPhaseFigures(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_hrSetup(chords,gc,mode); const cn=S.cn; const reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode);
   const G=_kd2Phrases(A,Math.max(1,Math.min(6,Math.max(3,Math.round(A.phrases.length/10))))); const n=G.length; let ci=0; for(let i=1;i<n;i++) if(G[i].vmax>G[ci].vmax) ci=i;
   const bg=S.col(0.02); ctx.fillStyle=_hrCss(bg); ctx.fillRect(0,0,CW,CH);
   const vis=Math.max(1,Math.ceil(n*reveal)); const D=Math.min(CW,CH);
   for(let i=0;i<vis;i++){ const g=G[i]; const r=_hrR(78000+i,ss); r(); const C=A.ev.slice(g.a,g.b).filter(Boolean); const first=C[0]?C[0].top:60, last=C[C.length-1]?C[C.length-1].top:60; const dir=last>=first?1:-1;
-    const kind=i===ci?'baby':(g.rep>0.3?'waver':Math.abs(last-first)>7?'runner':g.v>0.65?'jumper':'dancer'); const u=D*(0.038+0.034*g.vmax);
+    const kind=i===ci?'jumper':(g.rep>0.3?'waver':Math.abs(last-first)>7?'runner':g.v>0.65?'jumper':'dancer'); const u=D*(0.038+0.034*g.vmax);
     const x=CW*(0.14+0.72*((i+0.5)/n))+(r()-.5)*CW*0.08, y=CH*(0.28+0.44*(1-A.reg(g.top)))+(r()-.5)*CH*0.12;
     const cr=_HR_CAST[kind](x,y+(kind==='baby'?-0.5*u:0),u,r,A.ch?A.ch.energy:0.5,dir); let acc=0; for(const e of C) if(e.v>=A.vHi) acc++; if(cr.glow){ cr.glow[4]=Math.max(3,Math.min(kind==='baby'?16:9,3+acc)); }
     _hrCreature(ctx,cr,_hrFar(S.col(g.t),bg),u,r,i===ci?S.col(g.t):null); }
@@ -15575,7 +15732,7 @@ const ARTIST_VARIANTS = {
     {ground:'#f4f44a',mark:{figure:.7,disc:.3},size:[.15,.35],layout:{scatter:1},density:.12},
     {ground:'#1a1a2a',mark:{figure:.45,radiant:.35,tvbox:.2},size:[.04,.1],layout:{scatter:1},density:.3},
     {ground:'#e8d82a',mark:{zigzag:.4,figure:.35,heart:.25},size:[.04,.12],layout:{scatter:1},density:.4},          // Doodle
-    {ground:'#2a7ae8',mark:{dog:.8,radiant:.2},size:[.1,.2],layout:{grid:1},density:.5},                              // Barking Dogs
+    {ground:'#2a7ae8',mark:{heart:.6,radiant:.25,figure:.15},size:[.08,.2],layout:{radial:.6,scatter:.4},density:.45},     // The Heart
     {ground:'#e8e4b8',mark:{figure:1},size:[.03,.08],layout:{scatter:1},density:.4},
     {ground:'#e8187a',mark:{figure:.7,radiant:.3},size:[.2,.4],layout:{scatter:1},density:.2},                         // Figures
     {mark:{heart:.6,radiant:.4},size:[.05,.15],layout:{grid:1},density:.6},
@@ -15919,9 +16076,6 @@ function _fuSil(ctx, kind, rr, R, F){
     case 'figure': { // Haring: the dancing figure — arms up, legs apart, the head a disc
       const P=[[-.22,-.42],[-.7,-.82],[-.58,-.97],[-.1,-.6],[.1,-.6],[.58,-.97],[.7,-.82],[.22,-.42],[.22,.1],[.52,.85],[.3,.97],[0,.38],[-.3,.97],[-.52,.85],[-.22,.1]];
       P.forEach((p,j)=>j?ctx.lineTo(p[0]*rr,p[1]*rr):ctx.moveTo(p[0]*rr,p[1]*rr)); ctx.closePath(); ctx.moveTo(rr*.24,-rr*.74); ctx.arc(0,-rr*.74,rr*.24,0,6.2832); break; }
-    case 'dog': { // Haring: the barking dog — the box of a body, the head up, the jaw open, the tail up
-      const d=R()<.5?1:-1; const P=[[-.95,.1],[-.95,-.3],[.3,-.3],[.3,-.58],[.78,-.58],[.98,-.38],[.98,-.22],[.58,-.22],[.98,.0],[.6,.1],[.3,.1],[.3,.5],[.14,.5],[.14,.1],[-.1,.1],[-.1,.5],[-.26,.5],[-.26,.1],[-.56,.1],[-.56,.5],[-.72,.5],[-.72,.1],[-.95,.1],[-1.15,-.42],[-1.05,-.52],[-.86,-.3]];
-      P.forEach((p,j)=>j?ctx.lineTo(p[0]*rr*d,p[1]*rr):ctx.moveTo(p[0]*rr*d,p[1]*rr)); ctx.closePath(); break; }
     case 'eye': ctx.ellipse(0,0,rr,rr*.6,0,0,6.2832); break;
     case 'arch': ctx.arc(0,rr*.3,rr,Math.PI,0); ctx.closePath(); break;
     case 'fan': case 'protractor': { const a0=(R()*4|0)*1.5708; ctx.moveTo(0,0); ctx.arc(0,0,rr,a0,a0+1.5708); ctx.closePath(); break; }
@@ -16143,8 +16297,6 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
         const k=7+(R()*4|0); const P=[]; for(let j=0;j<k;j++){ const a=j/k*6.2832; P.push([Math.cos(a)*rr*(.7+R()*.6),Math.sin(a)*rr*(.6+R()*.5)]); }
         const blob=(dx,dy,s)=>{ ctx.beginPath(); P.forEach((q,j)=>{ const x=dx+q[0]*s,y=dy+q[1]*s; j?ctx.quadraticCurveTo(x,y,(x+dx+P[(j+1)%k][0]*s)/2,(y+dy+P[(j+1)%k][1]*s)/2):ctx.moveTo((x+dx+P[k-1][0]*s)/2,(y+dy+P[k-1][1]*s)/2); }); ctx.closePath(); };
         ctx.fillStyle='rgba(0,0,0,.35)'; blob(rr*.12,rr*.16,1.04); ctx.fill(); ctx.fillStyle=col; blob(0,0,1); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.35)'; blob(-rr*.08,-rr*.12,.45); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.7)'; blob(-rr*.12,-rr*.18,.16); ctx.fill(); ctx.beginPath(); break; }
-      case 'dog': { // Haring: the barking dog — his outline, flat colour, the bark lines
-        const u=rr*.36, dir=R()<.5?1:-1; const cr=_hrDog(-0.4*u*dir,u*.4,u,R,.5,dir); cr.glow=[dir*2.8*u,-2.2*u,1.2*u,2.2*u,4,dir>0?-1.2:-1.94,1.4]; const E1=!!(F && F.fs==='E'); const c=E1 ? _hrFar(_fuRgb(col),_fuRgb(F.ground)) : _fuRgb(col); const sv=ctx.lineWidth, sa=ctx.globalAlpha; if(E1) ctx.globalAlpha=1; _hrCreature(ctx,cr,c,u,R); ctx.lineWidth=sv; ctx.globalAlpha=sa; ctx.beginPath(); break; }
       case 'crest': { // Hokusai: the curling wave — a thick rise that curls over, foam fingers hanging from the lip
         ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(1.5,rr*.22);
         ctx.beginPath(); ctx.moveTo(-rr*1.6,rr*.5); ctx.bezierCurveTo(-rr*.9,-rr*.9, rr*.6,-rr*1.25, rr*.9,-rr*.4); ctx.bezierCurveTo(rr*1.0,rr*.1, rr*.45,rr*.2, rr*.35,-rr*.15); ctx.stroke();
