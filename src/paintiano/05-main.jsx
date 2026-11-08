@@ -2848,7 +2848,7 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-prog{bottom:env(safe-area-inset-bottom,0px);z-index:7}
 .pf-st-home .pf-sh-heart{top:50%}
 /* the surprise lifts a little: the next one waits under it (a vertical feed's own nudge — no button, no text to read) */
-.pf-st-home .pf-sh-stage{--pk:min(26vh,220px)}
+.pf-st-home .pf-sh-stage{--pk:min(18vh,150px)}
 .pf-st-home .pf-sh-card{will-change:transform;backface-visibility:hidden}
 /* the feed under the finger: the other card (a copy of the painting you leave, or the picture of the one you go to) */
 .pf-st-home .pf-sh-dragout{position:absolute;inset:0;z-index:2;display:none;overflow:hidden;background:#04040a;pointer-events:none;will-change:transform;backface-visibility:hidden}
@@ -16605,7 +16605,7 @@ Hard requirements:
   useEffect(()=>{ if(feedUpDone || feedAt<0 || !playing || feedIntro){ if(feedAt<0 && feedUpCue) setFeedUpCue(false); return; } const tm=setTimeout(()=>setFeedUpCue(true), 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedAt, playing, feedIntro]);
   // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, 14 s apart, never after the first swipe up
   useEffect(()=>{ if(!feedUpCue || feedUpDone || !playing || feedAt<0) return; const id=(feedCards[feedAt]||{}).id, R=feedPeekNRef.current; if(R.id!==id){ R.id=id; R.n=0; }
-    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
+    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; R.k=(R.k==null ? Math.floor(Math.random()*6) : R.k+1); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
   useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>setFeedPeek(0), 2000); return ()=>clearTimeout(tm); },[feedPeek]);
   useEffect(()=>{ if(feedUpDone && feedPeek) setFeedPeek(0); },[feedUpDone]);
   // the side nudge: the first swipe up is known, this card has played 6 s — the card slides a little to the left and another painting shows at its right edge (twice at most, ever)
@@ -17865,7 +17865,7 @@ Hard requirements:
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               {FC && feedUpDone && !feedSideDone && !feedFly && (<div className={'pf-sh-nextx'+(feedSidePeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/gallery-'+['09-vasarely','03-kandinsky','07-afklint'][feedSideNRef.current%3]+'.webp'} alt=""/></div>)}
-              {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/gallery-'+['05-kusama','02-mondrian','09-vasarely','07-afklint','06-stella','08-samfrancis'][feedCards.length%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
+              {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/peek-'+['monet','mitchell','mondrian','hokusai','delaunay','rothko'][(feedPeekNRef.current.k|0)%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
               <div ref={feedOutRef} className="pf-sh-dragout" aria-hidden="true"/>
               <div ref={feedCardRef} className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')+((FC && feedSidePeek>0 && !feedFly && !feedPeek) ? ' peekx' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE} onTouchCancel={_fTC}>
                 {_smp && !liveHomeOn && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
