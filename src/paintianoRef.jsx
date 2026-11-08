@@ -7900,9 +7900,12 @@ const _dlR=(a,ss)=>_seedRnd(a,ss,0,0);
 const _dlClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const _dlMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
 const _dlCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
-function _dlPure(rgb,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; return [l,l,l]; } const g=(rgb[0]+rgb[1]+rgb[2])/3; const c=rgb.map(v=>_dlClamp(g+(v-g)*1.6,0,255)); const m=Math.max(c[0],c[1],c[2])||1; return c.map(v=>_dlClamp(v*Math.min(1.3,235/m),0,255)); }
+// his pigments: cadmium red, vermilion, chrome yellow, emerald, viridian, cobalt, ultramarine, violet, rose, ochre — a chord colour snaps to the nearest by hue, so the piece decides the mix and nothing is neon
+const _DL_PIG=[[204,38,42],[232,108,28],[240,198,36],[44,142,88],[28,118,128],[42,92,172],[46,52,140],[112,58,150],[192,66,120],[206,154,58]];
+function _dlPigOf(rgb){ const r=rgb[0]/255,g=rgb[1]/255,b=rgb[2]/255; const mx=Math.max(r,g,b),mn=Math.min(r,g,b); const d=mx-mn; if(d<0.08) return 9; let h=0; if(mx===r) h=((g-b)/d+6)%6; else if(mx===g) h=(b-r)/d+2; else h=(r-g)/d+4; h*=60; const H=[358,24,48,150,188,218,238,275,330,40]; let bi=0,bd=999; for(let i=0;i<9;i++){ let dd=Math.abs(h-H[i]); dd=Math.min(dd,360-dd); if(dd<bd){bd=dd;bi=i;} } return bi; }
+function _dlPure(rgb,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; return [l,l,l]; } const i=_dlPigOf(rgb); const c=_DL_PIG[i]; const l0=(rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114)/255; const k=0.85+0.3*l0; return c.map(v=>_dlClamp(v*k,0,255)); }
 // the simultaneous partner: the complement, at the same value
-function _dlComp(c){ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; const q=[255-c[0],255-c[1],255-c[2]]; const lq=q[0]*0.299+q[1]*0.587+q[2]*0.114||1; return q.map(v=>_dlClamp(v*l/lq,0,255)); }
+function _dlComp(c){ if(Math.abs(c[0]-c[1])<10 && Math.abs(c[1]-c[2])<10) return c.map(v=>_dlClamp(255-v*0.9,0,255)); const i=_dlPigOf(c); const PAIR=[3,5,7,0,1,1,2,2,3,6]; const q=_DL_PIG[PAIR[i]]; const l=(c[0]*0.299+c[1]*0.587+c[2]*0.114)/255; const k=0.85+0.3*l; return q.map(v=>_dlClamp(v*k,0,255)); }   // the simultaneous partner: the complementary pigment
 function _dlSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col:(t)=>_dlPure(_picChord(chords,_dlClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb,isBW)}; }
 
@@ -8004,10 +8007,55 @@ function _dl2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
   _dl2Draw(ctx,items,reveal); _setCurE(0.5);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// DELAUNAY LISTENS — not one of the paintings above: the simultaneous disc the
+// piece itself is. One ring for every voice — the bass innermost, the melody
+// outermost — and on each ring a sector for every passage of that voice, as wide
+// as the passage is long, in its chord's pigment against its simultaneous
+// partner; the sector pushed outward where the passage is loud, so the disc's
+// edge carries the dynamics. The rings turn against each other with the piece's
+// trend, faster when it is quick; the ground is the tonic's pigment, light in a
+// major key, deep in a minor. The climax is the one sector that breaks the rim
+// with a halo; the accents the small cream points on their sectors.
+// ═══════════════════════════════════════════════════════════════════════════
+function _dlListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_dl2Setup(chords,gc,mode), cn=S.cn, A=S.A, bw=S.isBW; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH), W=CW, H=CH; const items=[];
+  const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const dens=A.ch?A.ch.density:0.3; const r=_dlR(90700,ss); r();
+  const cream=bw?[228,226,220]:[240,234,220], dark=bw?[24,24,26]:[22,20,34]; const c=S.climax();
+  const tonic=_dlPure(A.pcCol(A.tonic,major?70:40),bw);
+  const ground=major?_dlMix(cream,tonic,0.22):_dlMix(dark,tonic,0.28);
+  const nR=_dlClamp(Math.round(1+poly*1.2),2,5);
+  try{ globalThis.__DL_LISTEN={nR,pace,loud,regular,leaps,poly,major,tens,trend,dens}; }catch(_){}
+  ctx.fillStyle=_dlCss(ground); ctx.fillRect(0,0,W,H);
+  // the disc: as large as the piece is loud, drifting with the trend (rising pieces lift it)
+  const R=D*(0.36+0.1*loud); const x=W*0.5+(r()-.5)*W*0.06, y=H*(0.52-(trend-0.5)*0.12); const core=R*0.14;
+  items.push({t:0,z:0,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(x,y,R*1.03,0,6.2832); ctx.fill(); }});
+  // the rings: a voice each, from the bass inward to the melody outward; a ring's passages grow more numerous outward
+  const spin=(trend-0.5)*0.9+pace*0.35; const nOut=_dlClamp(Math.round(10+dens*16+cn/60),10,30);
+  const bassCol=(i)=>{ const e=A.ev[_dlClamp(i,0,cn-1)]; return e?_dlPure(A.pcCol(((e.bass%12)+12)%12,55),bw):S.col(i/cn); };
+  for(let k=0;k<nR;k++){ const u=k/(nR-1); const r0=core+(R-core)*k/nR, r1=core+(R-core)*(k+1)/nR; const nG=Math.max(4,Math.round(nOut*(0.3+0.7*u))); const G=S.groups(nG); const tot=G.reduce((s,g)=>s+g.n,0)||1;
+    const rot=-1.5708+spin*(k-(nR-1)/2); let a=rot; const isBass=(k===0 && nR>1);
+    G.forEach((g,i)=>{ const span=6.2832*g.n/tot; const a0=a, a1=a+span; a=a1; const col0=isBass?bassCol(g.a):S.col(g.t); const col=(i%2)?_dlComp(col0):col0; const lift=(g.vmax-A.vHi*0.6)/(A.vHi*0.4); const push=(r1-r0)*0.35*_dlClamp(lift,0,1); const ro=r1+push, ri=r0;
+      items.push({t:g.t0,z:1+k,f:(ctx)=>{ ctx.fillStyle=_dlCss(col); ctx.beginPath(); ctx.arc(x,y,ro,a0,a1+0.004); ctx.arc(x,y,ri,a1+0.004,a0,true); ctx.closePath(); ctx.fill(); }});
+      // the quiet passages pale toward the cream — the simultaneous disc breathes
+      if(g.v<0.4) items.push({t:g.t0,z:1+k,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream,0.35); ctx.beginPath(); ctx.arc(x,y,ro,a0,a1+0.004); ctx.arc(x,y,ri,a1+0.004,a0,true); ctx.closePath(); ctx.fill(); }});
+      // the climax sector breaks the rim with a halo
+      if(k===nR-1 && g.a<=c.a && g.b>=c.b){ items.push({t:c.t,z:10,f:(ctx)=>{ ctx.fillStyle=_dlCss(col,0.9); ctx.beginPath(); ctx.arc(x,y,R*1.2,a0,a1); ctx.arc(x,y,R*1.03,a1,a0,true); ctx.closePath(); ctx.fill(); ctx.fillStyle=_dlCss(_dlComp(col),0.85); ctx.beginPath(); ctx.arc(x,y,R*1.32,a0+span*0.25,a1-span*0.25); ctx.arc(x,y,R*1.21,a1-span*0.25,a0+span*0.25,true); ctx.closePath(); ctx.fill(); }}); }
+      // the accents as cream points on the sector
+      if(k===nR-1){ const E=A.ev.slice(g.a,g.b).filter(e=>e&&e.acc); if(E.length){ const am=(a0+a1)/2, rm=(ri+ro)/2; items.push({t:g.t,z:12,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream,0.95); ctx.beginPath(); ctx.arc(x+Math.cos(am)*rm,y+Math.sin(am)*rm,D*(0.006+0.006*g.vmax),0,6.2832); ctx.fill(); }}); } }
+    }); }
+  // the core: the tonic, and its simultaneous partner as the inner ring when the piece leaps
+  items.push({t:0.02,z:9,f:(ctx)=>{ if(leaps>0.5){ ctx.fillStyle=_dlCss(_dlComp(tonic)); ctx.beginPath(); ctx.arc(x,y,core,0,6.2832); ctx.fill(); ctx.fillStyle=_dlCss(tonic); ctx.beginPath(); ctx.arc(x,y,core*0.55,0,6.2832); ctx.fill(); } else { ctx.fillStyle=_dlCss(tonic); ctx.beginPath(); ctx.arc(x,y,core,0,6.2832); ctx.fill(); } }});
+  // the thin dark rim lines between rings when the piece is even (the contour of the Premier Disque)
+  if(regular>0.7){ items.push({t:0.03,z:11,f:(ctx)=>{ ctx.strokeStyle=_dlCss(dark,0.35); ctx.lineWidth=Math.max(1,D*0.0025); for(let k=1;k<nR;k++){ ctx.beginPath(); ctx.arc(x,y,core+(R-core)*k/nR,0,6.2832); ctx.stroke(); } }}); }
+  _dl2Draw(ctx,items,reveal); _setCurE(0.5);
+}
 function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss=sessionSeed|0;
-  const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _pn=_capN(8); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  if(pick0===0){ _dlListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  const pick=[0,1,3,4,5,6,7][pick0-1];   // Rythme n° 1 retired
   _dl2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -17565,10 +17613,10 @@ const ARTIST_VARIANTS = {
     {mark:{tile:1},size:[.04,.1],layout:{grid:1},density:1},
     {ground:'#e8e0d0',mark:{rect:1},size:[.04,.12],alpha:.6,layout:{scatter:1},density:.6,edge:0},
   ],
-  delaunay: [   // slot order = solo variants: Premier Disque, Rythme sans fin, Rythme n°1, Soleil Lune, Formes circulaires, Blériot, Prismes électriques, Bal Bullier
+  delaunay: [   // slot order = solo variants: What he heard, Premier Disque, Rythme sans fin, Soleil Lune, Formes circulaires, Blériot, Prismes électriques, Bal Bullier
+    {ground:'#e8e0cc',mark:{orphic:1},size:[.3,.6],layout:{radial:1},density:.15,tone:'pure'},   // What he heard: the simultaneous disc
     {ground:'#343040',mark:{orphic:1},size:[.4,.7],layout:{radial:1},density:.1},
     {ground:'#161422',mark:{arch:.7,orphic:.3},size:[.12,.28],layout:{stack:1},density:.25},
-    {mark:{orphic:.7,arch:.3},size:[.2,.4],layout:{stack:1},density:.2},
     {ground:'#e6dcc8',mark:{fan:.5,orphic:.3,arch:.2},size:[.15,.4],layout:{radial:1},density:.2},
     {mark:{orphic:1},size:[.14,.36],layout:{scatter:1},density:.25},
     {mark:{orphic:.8,disc:.2},size:[.05,.16],layout:{radial:.6,scatter:.4},density:.5},
