@@ -40728,8 +40728,8 @@ Hard requirements:
   useEffect(()=>{ if(feedUpDone || feedAt<0 || !playing || feedIntro){ if(feedAt<0 && feedUpCue) setFeedUpCue(false); return; } const tm=setTimeout(()=>setFeedUpCue(true), 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedAt, playing, feedIntro]);
   // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, 14 s apart, never after the first swipe up
   useEffect(()=>{ if(!feedUpCue || feedUpDone || !playing || feedAt<0) return; const id=(feedCards[feedAt]||{}).id, R=feedPeekNRef.current; if(R.id!==id){ R.id=id; R.n=0; }
-    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; R.k=(R.k==null ? Math.floor(Math.random()*6) : R.k+1); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
-  useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>setFeedPeek(0), 2000); return ()=>clearTimeout(tm); },[feedPeek]);
+    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; if(R.k==null) R.k=Math.floor(Math.random()*6); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
+  useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>{ setFeedPeek(0); feedPeekNRef.current.k=(feedPeekNRef.current.k|0)+1; }, 2000); return ()=>clearTimeout(tm); },[feedPeek]);   // the next painting is chosen once the card is down again: it loads hidden, so nothing swaps mid-lift
   useEffect(()=>{ if(feedUpDone && feedPeek) setFeedPeek(0); },[feedUpDone]);
   // the side nudge: the first swipe up is known, this card has played 6 s — the card slides a little to the left and another painting shows at its right edge (twice at most, ever)
   useEffect(()=>{ if(!feedUpDone || feedSideDone || !playing || feedAt<0 || feedIntro || feedSideNRef.current>=2) return; const tm=setTimeout(()=>{ feedSideNRef.current++; setFeedSidePeek(Date.now()); }, 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedSideDone, playing, feedAt, feedIntro]);

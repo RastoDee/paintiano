@@ -26971,7 +26971,7 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-prog{bottom:env(safe-area-inset-bottom,0px);z-index:7}
 .pf-st-home .pf-sh-heart{top:50%}
 /* the surprise lifts a little: the next one waits under it (a vertical feed's own nudge — no button, no text to read) */
-.pf-st-home .pf-sh-stage{--pk:min(18vh,150px)}
+.pf-st-home .pf-sh-stage{--pk:min(24vh,200px)}
 .pf-st-home .pf-sh-card{will-change:transform;backface-visibility:hidden}
 /* the feed under the finger: the other card (a copy of the painting you leave, or the picture of the one you go to) */
 .pf-st-home .pf-sh-dragout{position:absolute;inset:0;z-index:2;display:none;overflow:hidden;background:#04040a;pointer-events:none;will-change:transform;backface-visibility:hidden}
@@ -41988,7 +41988,7 @@ Hard requirements:
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
               {FC && feedUpDone && !feedSideDone && !feedFly && (<div className={'pf-sh-nextx'+(feedSidePeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/gallery-'+['09-vasarely','03-kandinsky','07-afklint'][feedSideNRef.current%3]+'.webp'} alt=""/></div>)}
-              {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/peek-'+['hokusai','kandinsky','delaunay','klimt','riley','haring'][(feedPeekNRef.current.k|0)%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
+              {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/peek-'+['stella','bauhaus','kandinsky','klee','mondrian','monet'][(feedPeekNRef.current.k|0)%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
               <div ref={feedOutRef} className="pf-sh-dragout" aria-hidden="true"/>
               <div ref={feedCardRef} className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')+((FC && feedSidePeek>0 && !feedFly && !feedPeek) ? ' peekx' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE} onTouchCancel={_fTC}>
                 {_smp && !liveHomeOn && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
