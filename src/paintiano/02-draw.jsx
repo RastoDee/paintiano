@@ -4844,7 +4844,7 @@ function drawBloomOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   const _pn=_capN(8); const _fpick=((phaseIndex|0)%_pn+_pn)%_pn;
-  const _ph=[francisPhaseField,francisPhaseBlueBalls,francisPhaseEdge,francisPhaseBigRed,francisPhaseDisappear,francisPhaseHanging,francisPhaseMatrix,francisPhaseMandala];
+  const _ph=[_frListen,francisPhaseField,francisPhaseBlueBalls,francisPhaseEdge,francisPhaseBigRed,francisPhaseHanging,francisPhaseMatrix,francisPhaseMandala];   // Disappearance retired
   _ph[_fpick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -4916,6 +4916,39 @@ function _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,spec){
   ctx.restore();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SAM FRANCIS LISTENS — not one of the paintings above: the piece thrown onto
+// the white sheet as his wet cells. A cell for every passage — where the melody
+// sits is where it lands (time left to right, register bottom to top), as large
+// as the passage is loud, in its chord's thinned colour — so a quiet, high piece
+// leaves the sheet mostly white, and a loud, dense one crowds it. The bass voice
+// lands first, larger and paler, under the melody. Drips fall from the loud
+// cells, long where the notes are long; the spatter flies at the accents, in the
+// piece's direction, thicker when it is quick; the climax is the largest cell,
+// bleeding into the white with its halo.
+// ═══════════════════════════════════════════════════════════════════════════
+function _frListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw'; _frGround(ctx,CW,CH,isBW);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const dens=A.ch?A.ch.density:0.3; const cn=A.cn;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn,top:60}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const nG=Math.max(14,Math.min(60,Math.round(A.phrases.length/1.5+dens*20))); const G=_kd2Phrases(A,nG); const n=G.length;
+  const flick=trend>0.55?-0.6:trend<0.45?0.6:0.2;
+  try{ globalThis.__BL_LISTEN={n,pace,loud,regular,leaps,poly,major,tens,trend,dens}; }catch(_){}
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const ra=_frR(81900,ss); ra();
+    const place=(t,reg,jit)=>{ const x=CW*(0.06+0.88*t)+(ra()-.5)*CW*jit; const y=CH*(0.08+0.84*(1-reg))+(ra()-.5)*CH*jit*(0.6+leaps*0.8); return [x,y]; };
+    const jit=regular>0.75?0.03:0.07;
+    // the bass voice first: larger, paler, under the melody
+    if(poly>=1.6){ const GB=_kd2Phrases(A,Math.max(5,Math.round(n/3))); GB.forEach(g=>{ const e=A.ev[g.a]; const bass=e?A.reg(e.bass):0.25; const [x,y]=place(g.t,bass*0.9,0.05); const col=isBW?[150,150,152]:_frMix(_frWet(A.pcCol(e?((e.bass%12)+12)%12:A.tonic,60)),[246,244,238],0.35);
+      list.push({id:id++,t:g.t0,x,y,r:D*(0.05+0.07*g.vmax),sx:1.1+ra()*0.4,sy:0.8+ra()*0.3,col,alpha:0.4+0.2*g.v,drip:0.3*g.vmax,dripLen:0.6+g.n/cn*n*0.3,spat:0,edge:0.4,bleed:0.8}); }); }
+    // a cell per passage of the melody
+    G.forEach((g,i)=>{ const reg=A.reg(g.top); const [x,y]=place(g.t,reg,jit); const col=S.col(g.t); const quiet=g.v<0.4; const big=g===c;
+      const rad=D*(0.018+0.07*g.vmax*(0.7+0.6*loud))*(big?1.6:1); const hasAcc=A.ev.slice(g.a,g.b).some(e=>e&&e.acc);
+      if(big) list.push({id:id++,t:g.t0,x,y,r:rad*1.5,sx:1.1,sy:1.05,col,alpha:0.16,drip:0,spat:0,edge:0,bleed:1});
+      list.push({id:id++,t:g.t0+0.0005,x,y,r:rad,sx:0.85+ra()*0.5,sy:0.8+ra()*0.45,col,alpha:quiet?0.3+0.2*ra():0.55+0.3*g.v,drip:g.vmax*0.8,dripLen:0.5+Math.min(2,g.n/cn*n)*0.5,spat:hasAcc?1:0.15,spatN:0.6+pace*1.2,spatR:0.7+leaps*0.8,flick:flick+(ra()-.5)*0.8,edge:quiet?0.4:1,bleed:quiet?0.9:0.5}); });
+    // the quick runs as fine spatter between the cells
+    if(pace>0.6){ const E=_kd2Events(A,Math.round(10+pace*20)); E.forEach(e=>{ const ev=A.ev[Math.min(cn-1,Math.round(e.t*(cn-1)))]; const [x,y]=place(e.t,ev?A.reg(ev.top):0.5,0.04); const col=S.col(e.t); list.push({id:id++,t:e.t,x,y,r:D*0.006,col,alpha:0.7,drip:0,spat:1,spatN:1.4,spatR:1.6,flick:flick+(ra()-.5)*1.2,edge:0,bleed:0}); }); }
+    return list; });
+}
 // ── Sam Francis 0: Cellular field (1950s — In Lovely Blueness) — cells gather
 // around a handful of attractors, white breathing through the gaps, drips everywhere.
 function francisPhaseField(ctx,CW,CH,chords,lim,gc,ss,mode){
@@ -15120,12 +15153,12 @@ const ARTIST_VARIANTS = {
     {ground:'#d6c6a6',mark:{drip:1},size:[.012,.05],alpha:.9,layout:{flow:1},density:.3,layers:1,tone:'dark'},
     {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
   ],
-  bloom: [   // slot order = solo phases: field, Blue Balls, edge, Big Red, Disappearance, Hanging, Matrix, Mandala
+  bloom: [   // slot order = solo phases: What he heard, field, Blue Balls, edge, Big Red, Hanging, Matrix, Mandala
+    {mark:{cell:.8,dot:.2},size:[.03,.14],edge:.3,alpha:.6,layout:{flow:.6,scatter:.4},density:.45},   // What he heard: a cell per passage, placed by the melody
     {mark:{cell:.7,dot:.3},size:[.05,.16],edge:.3,alpha:.65,layout:{scatter:.7,field:.3},density:.5},
     {ground:'#f8f8f4',mark:{cell:1},size:[.08,.2],edge:.2,alpha:.7,layout:{scatter:1},density:.3},
     {mark:{cell:.7,vdrip:.3},size:[.05,.18],edge:.3,alpha:.65,layout:{scatter:1},density:.5},
     {ground:'#f8f8f4',mark:{cell:.8,dot:.2},size:[.05,.16],edge:.3,alpha:.65,layout:{field:1},density:.7},
-    {ground:'#f8f8f4',mark:{dot:.7,cell:.3},size:[.01,.05],edge:.1,alpha:.8,layout:{scatter:1},density:.3},
     {ground:'#f8f8f4',mark:{vdrip:.6,cell:.4},size:[.03,.1],edge:.2,alpha:.8,layout:{grid:1},density:.35},
     {ground:'#f8f8f4',mark:{band:.4,vband:.4,cell:.2},size:[.04,.1],edge:.2,alpha:.55,layout:{grid:1},density:.4},
     {ground:'#f8f8f4',mark:{cell:.8,dot:.2},size:[.05,.12],edge:.3,alpha:.7,layout:{radial:1},density:.3},
