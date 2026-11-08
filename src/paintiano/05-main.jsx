@@ -4742,7 +4742,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       let guests=[];
       for(let tries=0; tries<4; tries++){
         const a=gpool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
-        guests=a.slice(0, Math.min(a.length, 1+((Math.random()*Math.min(3,room))|0)));
+        guests=a.slice(0, Math.min(a.length, 1+((Math.random()*Math.min(4,room))|0)));
         if(guests.join('+')!==curGuests) break;            // never the same guests twice in a row
       }
       // a pin keeps the PAINTER on stage, not its variant: the guests reshape the whole
@@ -5810,7 +5810,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       let g=[];
       for(let tries=0; tries<4; tries++){
         const a=gpool.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=a[i]; a[i]=a[j]; a[j]=x; }
-        g=a.slice(0, Math.min(a.length, 1+((Math.random()*Math.min(3,room))|0)));
+        g=a.slice(0, Math.min(a.length, 1+((Math.random()*Math.min(4,room))|0)));
         if(g.join('+')!==curG) break;                                // never the same guests twice in a row
       }
       setComposerStage(pins.slice(1).concat(g));
