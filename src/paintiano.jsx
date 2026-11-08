@@ -10201,8 +10201,9 @@ function rileyPhaseBlaze2(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=N/cn; const A=_kd2Analyze(chords,gc,mode); const energy=A.ch?A.ch.energy:0.5, dens=A.ch?A.ch.density:0.3; const sR=_seedRnd(7301,ss,0,0); sR();
   const [DK,LT]=_ryPair(chords,gc,isBW); ctx.fillStyle=`rgb(${LT[0]|0},${LT[1]|0},${LT[2]|0})`; ctx.fillRect(0,0,CW,CH);
   const cx=CW*(0.44+sR()*0.12), cy=CH*(0.44+sR()*0.12); const maxR=Math.hypot(CW,CH)*0.6; const nB=Math.round(18+dens*14); const vis=Math.ceil(nB*reveal); const teeth=18+Math.round(energy*10);
-  ctx.fillStyle=`rgb(${DK[0]|0},${DK[1]|0},${DK[2]|0})`;
-  const bw2=maxR/nB; for(let i=0;i<vis;i++){ const R0=maxR*i/nB, R1=R0+bw2*0.5; const rot=i*(3.1416/teeth)*0.3; ctx.beginPath(); for(let k=0;k<=teeth*2;k++){ const a=rot+k/(teeth*2)*6.2832; const rr=R1+(k%2?bw2*0.2:-bw2*0.2); const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr; k?ctx.lineTo(x,y):ctx.moveTo(x,y); } for(let k=teeth*2;k>=0;k--){ const a=rot+k/(teeth*2)*6.2832; const rr=Math.max(0,R0+(k%2?bw2*0.2:-bw2*0.2)); ctx.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr); } ctx.closePath(); ctx.fill(); }
+  // the rings in the piece's colours, from the centre outward in time — a few colours, as she keeps them, the ground the lightest
+  const few=_ryFew(chords,gc,isBW,4);
+  const bw2=maxR/nB; for(let i=0;i<vis;i++){ const R0=maxR*i/nB, R1=R0+bw2*0.5; const rot=i*(3.1416/teeth)*0.3; const rc=few(_picChord(chords,Math.min(cn-1,Math.floor(i/nB*cn)),gc,isBW).rgb); const dark=[(rc[0]+DK[0])/2,(rc[1]+DK[1])/2,(rc[2]+DK[2])/2]; ctx.fillStyle=`rgb(${dark[0]|0},${dark[1]|0},${dark[2]|0})`; ctx.beginPath(); for(let k=0;k<=teeth*2;k++){ const a=rot+k/(teeth*2)*6.2832; const rr=R1+(k%2?bw2*0.2:-bw2*0.2); const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr; k?ctx.lineTo(x,y):ctx.moveTo(x,y); } for(let k=teeth*2;k>=0;k--){ const a=rot+k/(teeth*2)*6.2832; const rr=Math.max(0,R0+(k%2?bw2*0.2:-bw2*0.2)); ctx.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr); } ctx.closePath(); ctx.fill(); }
 }
 // ═══════════════════════════════════════════════════════════════════════════
 // RILEY LISTENS — not one of the paintings above: her stripe-curve carrying the
