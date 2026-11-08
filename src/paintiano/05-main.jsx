@@ -2225,7 +2225,8 @@ const STUDIO_SKIN_CSS = `
 .pf-artist:active .pf-sk-face{transform:scale(.92)}
 .pf-artist[data-lk="1"] .pf-sk-face{opacity:.38;filter:saturate(.55)}
 .pf-artist-on .pf-sk-face{border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.35),0 4px 14px rgba(0,0,0,.5)}
-.pf-artist-fix .pf-sk-face{border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.35),0 0 0 4px rgba(240,192,64,.18),0 4px 14px rgba(0,0,0,.5)}
+.pf-artist-fix .pf-sk-face{border-color:#a78bff!important;box-shadow:0 0 0 2px rgba(167,139,255,.45),0 0 14px rgba(167,139,255,.55)!important}
+.pf-app-root .pf-strip-grid.pf-skin .pf-artist.pf-artist-fix{color:#c4b5ff!important;font-weight:700!important}
 .pf-artist,.pf-artist *,.pf-tray,.pf-tray *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;-webkit-tap-highlight-color:transparent!important}
 .pf-artist:focus{outline:none}
 .pf-sk-face.pf-sk-hit{border-color:rgba(242,238,232,.8)}
@@ -4717,29 +4718,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Ensemble ALL, chip tap = pin toggle. Pinning a painter not on stage seats it
   // right away (after the other pins); unpinning keeps it on the canvas as a guest
   // until the next draw. The stage is always pins first, then guests, max 5.
-  const _jamPinTap = (k)=>{
+  const _jamPinTap = (k)=>{   // a tap cycles the face: white → gold (pinned, guests join) → violet (fixed, only these) → white
     if(!k || k==='mosaic' || k==='notes') return;
-    const pins=jamPinsRef.current.slice(); const st=_jamStage().filter(Boolean);
-    const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
-    if(!nextPins) return;
-    if(jamFixedRef.current.includes(k)) return;   // a fixed (violet) face: hold it to let it go
-    const guests = st.filter(x=>!nextPins.includes(x));
-    const stage = jamFixedRef.current.length ? _jamCast(jamFixedRef.current, nextPins) : nextPins.concat(guests).slice(0, STAGE_MAX);
-    jamPinsRef.current = nextPins; setJamPins(nextPins);
+    const pins0=jamPinsRef.current.slice(), fixed0=jamFixedRef.current.slice(); const st=_jamStage().filter(Boolean);
+    let pins=pins0, fixed=fixed0;
+    if(fixed0.includes(k)){ fixed=fixed0.filter(x=>x!==k); }
+    else if(pins0.includes(k)){ pins=pins0.filter(x=>x!==k); if(fixed0.length<STAGE_MAX) fixed=fixed0.concat(k); }
+    else { if(pins0.length+fixed0.length>=STAGE_MAX) return; pins=pins0.concat(k); }
+    jamPinsRef.current=pins; setJamPins(pins); jamFixedRef.current=fixed; setJamFixed(fixed);
+    const guests=st.filter(x=>!pins.includes(x) && !fixed.includes(x));
+    const stage = fixed.length ? _jamCast(fixed, pins) : pins.concat(guests).slice(0, STAGE_MAX);
     if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
-    try{ window.posthog && window.posthog.capture('ensemble_pin',{on:!pins.includes(k), n:nextPins.length}); }catch(_){}
-  };
-  // a face held in the Fusion row: the painter is fixed (violet) or let go again; the stage becomes the fixed and the gold ones, nobody else
-  const _jamCast = (fixed, pins)=>{ const out=[]; fixed.concat(pins).forEach(k=>{ if(k && k!=='mosaic' && k!=='notes' && !out.includes(k)) out.push(k); }); return out.slice(0, STAGE_MAX); };
-  const _jamFixTap = (k)=>{
-    if(!k || k==='mosaic' || k==='notes') return;
-    const was=jamFixedRef.current.includes(k); const fixed = was ? jamFixedRef.current.filter(x=>x!==k) : (jamFixedRef.current.length>=STAGE_MAX ? null : jamFixedRef.current.concat(k));
-    if(!fixed) return; jamFixedRef.current=fixed; setJamFixed(fixed);
-    const pins=jamPinsRef.current.filter(x=>x!==k); if(!was && pins.length!==jamPinsRef.current.length){ jamPinsRef.current=pins; setJamPins(pins); }   // fixed replaces gold on the same face
-    const stage = fixed.length ? _jamCast(fixed, jamPinsRef.current) : _jamStage().filter(Boolean);
-    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
-    _stBuzz(10);
-    try{ window.posthog && window.posthog.capture('ensemble_fix',{on:!was, n:fixed.length}); }catch(_){}
+    try{ window.posthog && window.posthog.capture('ensemble_pin',{state:fixed.includes(k)?'fixed':pins.includes(k)?'pinned':'free', n:pins.length+fixed.length}); }catch(_){}
   };
   // Ensemble ALL draw. With pins: the pinned painters stay (same order) and 1–3
   // guests are drawn around them, every member with a new variant; five pins
@@ -4815,7 +4805,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // kind: undefined = stage member (gold), 'pin' = pinned in Ensemble ALL (gold + pin),
   // 'guest' = drawn by Next around the pins (outlined, like the white shuffle frame).
   const _stageBadge = (ix, roles, kind)=> (ix<0) ? null : (kind==='fix')
-    ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:2}}><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1a1408" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>{ix+1}</span>)
+    ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#c4b5ff,#8f6cf0)',color:'#14102a',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
     : (kind==='guest')
     ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'0 5px',borderRadius:9,background:PF.card2,border:'1px solid rgba(242,238,232,.75)',color:PF.cream,lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
     : (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none',...(kind==='pin'?{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:2}:{})}}>{kind==='pin' && _pinIcon('#1a1408', 7)}{ix+1}</span>);
