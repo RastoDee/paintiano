@@ -4718,6 +4718,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Ensemble ALL, chip tap = pin toggle. Pinning a painter not on stage seats it
   // right away (after the other pins); unpinning keeps it on the canvas as a guest
   // until the next draw. The stage is always pins first, then guests, max 5.
+  const _jamCast = (fixed, pins)=>{ const out=[]; fixed.concat(pins).forEach(k=>{ if(k && k!=='mosaic' && k!=='notes' && !out.includes(k)) out.push(k); }); return out.slice(0, STAGE_MAX); };   // the stage with a fixed cast: the violet ones, then the gold ones, nobody else
+  // a face held: straight to violet (fixed) or let go again
+  const _jamFixTap = (k)=>{
+    if(!k || k==='mosaic' || k==='notes') return;
+    const was=jamFixedRef.current.includes(k); const fixed = was ? jamFixedRef.current.filter(x=>x!==k) : (jamFixedRef.current.length>=STAGE_MAX ? null : jamFixedRef.current.concat(k));
+    if(!fixed) return; jamFixedRef.current=fixed; setJamFixed(fixed);
+    const pins=jamPinsRef.current.filter(x=>x!==k); if(!was && pins.length!==jamPinsRef.current.length){ jamPinsRef.current=pins; setJamPins(pins); }
+    const stage = fixed.length ? _jamCast(fixed, jamPinsRef.current) : _jamStage().filter(Boolean);
+    if(stage.length){ setNotesMode(false); setStyle(stage[0]); setPainterStage(stage.slice(1)); }
+    _stBuzz(10);
+  };
   const _jamPinTap = (k)=>{   // a tap cycles the face: white → gold (pinned, guests join) → violet (fixed, only these) → white
     if(!k || k==='mosaic' || k==='notes') return;
     const pins0=jamPinsRef.current.slice(), fixed0=jamFixedRef.current.slice(); const st=_jamStage().filter(Boolean);
