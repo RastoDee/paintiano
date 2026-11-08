@@ -15062,10 +15062,10 @@ const ARTIST_VARIANTS = {
     {ground:'#e4dfd2',mark:{cell:1},size:[.06,.08],layout:{grid:1},density:1,tone:'primary'},   // Checkerboard
   ],
   bauhaus: [
-    {mark:{field:.4,disc:.3,target:.3},size:[.12,.4],layout:{grid:.7,radial:.3},density:.3},
-    {ground:'#f0ebde',mark:{panel:.7,stripes:.3},size:[.08,.2],layout:{grid:1},density:.5},   // Wall hanging (Anni Albers)
+    {ground:'#f2eee4',mark:{disc:.34,tri:.33,panel:.33},size:[.08,.4],layout:{scatter:1},density:.3,tone:'primary'},   // What it heard
+    {ground:'#f2eee4',mark:{disc:.34,tri:.33,panel:.33},size:[.1,.2],layout:{grid:1},density:.9,tone:'primary'},   // Vorkurs forms
     {mark:{panel:.5,target:.3,bar:.2},size:[.1,.35],layout:{grid:1},density:.4},
-    {mark:{disc:.5,beam:.3,panel:.2},size:[.1,.35],alpha:.7,layout:{scatter:1},density:.4},
+    {ground:'#ece6d6',mark:{bar:.4,disc:.3,panel:.3},size:[.1,.4],layout:{stack:1},density:.3,tone:'primary'},   // Bayer poster
     {mark:{arch:.6,panel:.4},size:[.15,.45],layout:{stack:1},density:.3},
     {mark:{nest:1},size:[.2,.45],layout:{scatter:1},density:.1},   // Homage to the Square (Josef Albers)
     {ground:'#ece4d4',mark:{panel:.5,zigzag:.2,stripes:.2,checker:.1},size:[.08,.2],layout:{grid:1},density:.5},   // Colour weaving (Stölzl)
@@ -16219,7 +16219,11 @@ function drawBauhausOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // Reveal fraction so the painting builds up with playback.
   const revealFrac = Math.max(0, Math.min(1, lim / cn));
 
-  const _pn=_capN(8); const pick=[0,1,2,3,4,5,7,8][((phaseIndex|0)%_pn+_pn)%_pn];   // 8 of the nine below: Lines (6) retired
+  // VARIANT: 0 What it heard (_bhListen, generative) · 1 Vorkurs forms · 2 Face (Schlemmer) · 3 Bayer poster · 4 Arches · 5 Homage to the Square · 6 Weave (Stölzl) · 7 Construction (Moholy-Nagy). Retired, approved: the old Grid, the Hanging, the old Ausstellung, Lines. Free: 0 and 1.
+  const _pn=_capN(8); const pick=[-1,10,2,11,4,5,7,8][((phaseIndex|0)%_pn+_pn)%_pn];
+  if(pick===-1){ _bhListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===10){ bauhausPhaseForms(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===11){ bauhausPhaseBayer(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===1){ bauhausPhaseHanging(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===2){ bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===3){ bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -16303,6 +16307,73 @@ function _bhDrips(ctx,x,yt,yb,colCss,n,rnd){ ctx.strokeStyle=colCss; for(let i=0
 function _bhCreamFill(ctx,CW,CH){ ctx.fillStyle='rgb(239,233,221)'; ctx.fillRect(0,0,CW,CH); }
 
 // ── Phase 0: Modular grid (airy poster) ───────────────────────────────────
+// the Bauhaus palette: a chord colour snapped to the Vorkurs primaries (yellow, red, blue), black, white, grey
+const _BH_PRIM=[[214,46,38],[236,190,26],[34,72,150]], _BH_BLK=[24,22,22], _BH_WHT=[242,238,228], _BH_GRY=[150,148,142];
+function _bhSnap(rgb,isBW){ const k=_mnvPrim(rgb); if(isBW) return [[80,80,80],[200,200,200],[130,130,130]][k]; return _BH_PRIM[k].slice(); }
+// Kandinsky's questionnaire: the warm, active colour takes the triangle, the cold, deep one the circle, red the square
+function _bhFormOf(rgb){ const k=_mnvPrim(rgb); return k===1?'tri':k===2?'circle':'square'; }
+function _bhForm(ctx,kind,x,y,s,col,rot){ ctx.fillStyle=_bhCss(col); ctx.beginPath(); if(kind==='circle'){ ctx.arc(x,y,s/2,0,6.2832); } else if(kind==='tri'){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0); ctx.moveTo(0,-s*0.58); ctx.lineTo(s*0.5,s*0.29); ctx.lineTo(-s*0.5,s*0.29); ctx.closePath(); ctx.restore(); } else { ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0); ctx.rect(-s/2,-s/2,s,s); ctx.restore(); } ctx.fill(); }
+// ── Bauhaus 0 · Vorkurs — the basic forms on the grid: a cell per chord, the form and its primary by the chord's
+// colour (triangle yellow, circle blue, square red), on white or black; the loud chords' forms fill the cell, the
+// quiet ones sit small; a black diagonal half where the line leaps
+function bauhausPhaseForms(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const r=_seedRnd(16500,ss,0,0); r();
+  const cols=Math.max(3,Math.min(6,Math.round(3+(A.ch?A.ch.density:0.3)*4))); const cw=CW/cols, rows=Math.max(3,Math.round(CH/cw)), chh=CH/rows, tot=cols*rows;
+  ctx.fillStyle=_bhCss(_BH_WHT); ctx.fillRect(0,0,CW,CH); const vis=Math.ceil(tot*reveal);
+  for(let q=0;q<vis;q++){ const i=q%cols, j=Math.floor(q/cols); const ci=Math.min(cn-1,Math.floor(q/tot*cn)); const e=A.ev[ci]; const v=e?e.v:0.5; const rgb=_picChord(chords,ci,gc,isBW).rgb; const col=_bhSnap(rgb,isBW); const kind=_bhFormOf(rgb); const u=r();
+    const x=i*cw, y=j*chh; const blackCell = u<0.18; if(blackCell){ ctx.fillStyle=_bhCss(_BH_BLK); ctx.fillRect(x,y,cw+0.5,chh+0.5); } else if(u<0.3){ ctx.fillStyle=_bhCss(_BH_GRY); ctx.fillRect(x,y,cw+0.5,chh+0.5); }
+    if(X.leaps>0.5 && r()<0.25){ ctx.fillStyle=_bhCss(blackCell?_BH_WHT:_BH_BLK); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+cw,y); ctx.lineTo(x+cw,y+chh); ctx.closePath(); ctx.fill(); }
+    const s=Math.min(cw,chh)*(v>=A.vHi*0.97?0.92:0.45+0.4*v); _bhForm(ctx,kind,x+cw/2,y+chh/2,s,col,kind==='tri'&&r()<0.3?Math.PI:0); }
+  ctx.strokeStyle='rgba(30,28,26,0.18)'; ctx.lineWidth=1; for(let i=1;i<cols;i++){ ctx.beginPath(); ctx.moveTo(i*cw,0); ctx.lineTo(i*cw,CH); ctx.stroke(); } for(let j=1;j<rows;j++){ ctx.beginPath(); ctx.moveTo(0,j*chh); ctx.lineTo(CW,j*chh); ctx.stroke(); }
+  _setCurE(0.5);
+}
+// ── Bauhaus 3 · Bayer's exhibition poster — the typographic page: one great black bar, a red disc, a few flat blocks
+// in the primaries, rules and lines of "type" (short black bars) for the passages, a diagonal when the piece climbs
+function bauhausPhaseBayer(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn, D=Math.min(CW,CH); const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const r=_seedRnd(16520,ss,0,0); r();
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1,top:60}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  ctx.fillStyle=isBW?'#e8e4da':'#ece6d6'; ctx.fillRect(0,0,CW,CH);
+  const items=[]; const G=_kd2Phrases(A,Math.min(8,Math.max(4,Math.round(A.phrases.length/4)))); const n=G.length;
+  const barX=CW*(0.12+0.2*r()); items.push({t:0,draw:()=>{ ctx.fillStyle=_bhCss(_BH_BLK); ctx.fillRect(barX,0,D*(0.06+0.05*X.loud),CH); }});   // the great bar
+  G.forEach((g,k)=>{ const col=_bhSnap(_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb,isBW); const y=CH*(0.08+0.84*(k+0.5)/n); const w=CW*(0.18+0.5*g.v), h=D*(0.04+0.08*g.vmax);
+    if(g.vmax>=A.vHi*0.97 && k%2===0){ items.push({t:g.t0,draw:()=>{ ctx.fillStyle=_bhCss(col); ctx.fillRect(barX+D*0.09,y-h/2,w,h); }}); }
+    else { const lines=Math.min(6,2+Math.round(g.n/10)); items.push({t:g.t0,draw:()=>{ ctx.fillStyle=_bhCss(_BH_BLK); for(let j=0;j<lines;j++){ const lw2=CW*(0.08+0.22*r()); ctx.fillRect(barX+D*0.09+(j%2?D*0.02:0),y-h/2+j*D*0.016,lw2,D*0.008); } }}); } });
+  { const dc=_bhSnap(_picChord(chords,Math.min(cn-1,Math.floor(c.t*cn)),gc,isBW).rgb,isBW); const dcol=(dc[0]===_BH_PRIM[1][0]&&dc[1]===_BH_PRIM[1][1])?_BH_PRIM[0]:dc; items.push({t:c.t0,draw:()=>{ ctx.fillStyle=_bhCss(dcol); ctx.beginPath(); ctx.arc(CW*0.66,CH*(0.18+0.5*(1-A.reg(c.top))),D*(0.11+0.1*X.loud),0,6.2832); ctx.fill(); }}); }
+  items.push({t:0.3,draw:()=>{ ctx.fillStyle=_bhCss(_BH_BLK); ctx.fillRect(0,CH*0.86,CW,D*0.01); if(X.trend>0.55){ ctx.save(); ctx.translate(CW*0.7,CH*0.75); ctx.rotate(-0.6); ctx.fillRect(-D*0.25,-D*0.012,D*0.5,D*0.024); ctx.restore(); } }});
+  items.sort((a,b)=>a.t-b.t); const vis=Math.ceil(items.length*reveal); for(let i=0;i<vis;i++) items[i].draw();
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// BAUHAUS LISTENS — not one of the sheets above: the piece set as a Bauhaus
+// composition exercise. The piece's character chooses the great form — the
+// triangle when it is high and quick (yellow), the circle when it is low and
+// slow (blue), the square when it is steady (red) — as big as the piece is
+// loud; every passage a smaller form by its own character, placed by time and
+// register; black rules where the piece is even, a diagonal when it climbs,
+// the whole on white, or on black when it is heavy and minor.
+// ═══════════════════════════════════════════════════════════════════════════
+function _bhListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn, D=Math.min(CW,CH); const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1,top:60}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const r=_seedRnd(16540,ss,0,0); r();
+  const great = (reg>0.55 && pace>0.65) ? 'tri' : (pace<0.5 && reg<0.55) ? 'circle' : (regular>0.75) ? 'square' : (pace>0.6?'tri':'circle');
+  const black = !major && loud>0.6;
+  try{ globalThis.__BH_LISTEN={great,black,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
+  ctx.fillStyle=_bhCss(black?_BH_BLK:_BH_WHT); ctx.fillRect(0,0,CW,CH); const INK=black?_BH_WHT:_BH_BLK;
+  const items=[]; const push=(t,draw)=>items.push({t,draw});
+  // the rules
+  if(regular>0.7){ const nR=2+Math.round(regular*2); for(let k=0;k<nR;k++){ const y=CH*(0.1+0.8*(k+0.5)/nR); push(0.02+k*0.01,()=>{ ctx.fillStyle=_bhCss(INK); ctx.fillRect(CW*0.06,y,CW*0.88,Math.max(2,D*0.006)); }); } }
+  if(trend>0.55){ push(0.05,()=>{ ctx.save(); ctx.translate(CW/2,CH/2); ctx.rotate(-0.78); ctx.fillStyle=_bhCss(INK); ctx.fillRect(-D*0.7,-D*0.006,D*1.4,D*0.012); ctx.restore(); }); }
+  // the great form, where the climax falls
+  { const col=great==='tri'?_BH_PRIM[1]:great==='circle'?_BH_PRIM[2]:_BH_PRIM[0]; const s=D*(0.32+0.3*loud); const x=CW*(0.3+0.4*c.t), y=CH*(0.3+0.4*(1-A.reg(c.top))); push(c.t0,()=>_bhForm(ctx,great,x,y,s,isBW?[170,170,170]:col,great==='tri'&&trend<0.45?Math.PI:0)); }
+  // a form per passage
+  const G=_kd2Phrases(A,Math.min(12,Math.max(4,Math.round(A.phrases.length/3)))); G.forEach((g,k)=>{ if(g===c) return; const rgb=_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb; const kind=_bhFormOf(rgb); const col=_bhSnap(rgb,isBW); const s=D*(0.05+0.12*g.v); const x=CW*(0.1+0.8*g.t)+(r()-.5)*CW*0.08, y=CH*(0.1+0.8*((1-A.reg(g.top))*0.4+((k*0.618+0.2)%1)*0.6)); const outline=g.v<0.45;
+    push(g.t0,()=>{ if(outline){ ctx.strokeStyle=_bhCss(INK); ctx.lineWidth=Math.max(1.5,D*0.004); ctx.beginPath(); if(kind==='circle') ctx.arc(x,y,s/2,0,6.2832); else if(kind==='tri'){ ctx.moveTo(x,y-s*0.58); ctx.lineTo(x+s*0.5,y+s*0.29); ctx.lineTo(x-s*0.5,y+s*0.29); ctx.closePath(); } else ctx.rect(x-s/2,y-s/2,s,s); ctx.stroke(); } else _bhForm(ctx,kind,x,y,s,col,kind==='tri'&&r()<0.3?Math.PI:0); }); });
+  // the accents as small black discs
+  const E=_kd2Events(A,Math.round(6+dens*8)).filter(e=>e.acc).slice(0,8); E.forEach(e=>{ const x=CW*(0.08+0.84*e.t), y=CH*(0.08+0.84*r()); push(e.t,()=>{ ctx.fillStyle=_bhCss(INK); ctx.beginPath(); ctx.arc(x,y,D*(0.008+0.012*e.v),0,6.2832); ctx.fill(); }); });
+  items.sort((a,b)=>a.t-b.t); const vis=Math.ceil(items.length*reveal); for(let i=0;i<vis;i++) items[i].draw();
+  _setCurE(0.5);
+}
 function bauhausPhaseGrid(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(401,ss,0,0);
   const pal=_bhPalette(chords,cn,gc,rnd);
@@ -16502,7 +16573,7 @@ function bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ── Phase 4: Stacked arches (rainbow nested half-rings) ───────────────────
 function bauhausPhaseArches(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(405,ss,0,0);
-  const pal=_bhPalette(chords,cn,gc,rnd);
+  const pal=_bhPalette(chords,cn,gc,rnd).map(c=>_bhSnap(c,mode==='bw')).concat([_BH_BLK,_BH_WHT,_BH_GRY]);   // the Bauhaus palette
   _bhCreamFill(ctx,CW,CH);
   const cols=2, rows=3, cw=CW/cols, ch=CH/rows;
   const reveal=Math.max(0,Math.min(1,lim/cn));
