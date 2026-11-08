@@ -10075,11 +10075,13 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return [Math.min(255,R/c*k), Math.min(255,G/c*k), Math.min(255,B/c*k)];
   }
   const css = (c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-  // ── VARIANT: 0 Fall ribbons (the body below) · 1 Warp (Late Morning stripes) · 2 Blaze ·
-  // 3 Cataract 3 · 4 Crest · 5 Triangles · 6 Fall (dense diagonal) · 7 Movement in Squares.
-  // Free: 0 and 1.
+  // ── VARIANT: 0 What she heard (_ryListen, generative) · 1 Fall · 2 Warp (Late Morning) · 3 Blaze ·
+  // 4 Cataract 3 · 5 Crest · 6 Triangles · 7 Movement in Squares. Retired, approved: the Fall ribbons, the dense Fall. Free: 0 and 1.
   {
-    const _pn=_capN(8); const _rpick=((phaseIndex|0)%_pn+_pn)%_pn;
+    const _pn=_capN(8); const _rpick=[-1,10,1,11,3,4,5,7][((phaseIndex|0)%_pn+_pn)%_pn];
+    if(_rpick===-1){ _ryListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===10){ rileyPhaseFall2(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_rpick===11){ rileyPhaseBlaze2(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===1){ rileyPhaseWarp(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===2){ rileyPhaseBlaze(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===3){ rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -10164,6 +10166,49 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
 // the piece from the top down, its wave as deep as the passage's dynamics, its phase drifting with
 // the melody; the bands alternate the song's two tones against the pale ground, the twist tightening
 // toward the climax. ──
+// the two colours of a Riley pair: the darkest and the lightest chord colours of the piece, flattened
+function _ryPair(chords,gc,isBW){ const cn=chords.length; let dk=null,lt=null,dl=1e9,ll=-1; for(let i=0;i<cn;i+=Math.max(1,Math.floor(cn/48))){ const c=_picChord(chords,i,gc,isBW).rgb; const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; if(l<dl){dl=l;dk=c;} if(l>ll){ll=l;lt=c;} } dk=dk||[30,30,40]; lt=lt||[240,236,228]; const mixv=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; return [mixv(dk,[16,14,20],0.55), mixv(lt,[246,244,238],0.55)]; }
+// the piece's few colours: k chord colours spread across its length, every other colour snapped to the nearest
+function _ryFew(chords,gc,isBW,k){ const cn=chords.length; const pal=[]; for(let j=0;j<k;j++) pal.push(_picChord(chords,Math.min(cn-1,Math.floor((j+0.5)/k*cn)),gc,isBW).rgb); return (c)=>{ let b=pal[0],bd=1e9; for(const p of pal){ const d=(p[0]-c[0])**2+(p[1]-c[1])**2+(p[2]-c[2])**2; if(d<bd){bd=d;b=p;} } return b; }; }
+// ── Riley · Fall (1963) — the wave whose wavelength shortens down the sheet; two colours of the piece; the compression as steep as the piece is dense
+function rileyPhaseFall2(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=N/cn; const A=_kd2Analyze(chords,gc,mode); const dens=A.ch?A.ch.density:0.3, energy=A.ch?A.ch.energy:0.5;
+  const [DK,LT]=_ryPair(chords,gc,isBW); ctx.fillStyle=`rgb(${LT[0]|0},${LT[1]|0},${LT[2]|0})`; ctx.fillRect(0,0,CW,CH);
+  const nL=Math.round(24+dens*20); const vis=Math.ceil(nL*reveal); const lam=CW/(1.1+0.6*energy); const comp=0.55+0.3*dens;
+  // the line spacing shrinks down the sheet (the fall), the wave's height with it
+  const sp=[]; let tot=0; for(let i=0;i<nL;i++){ const u=i/(nL-1); const w=1-comp*u*u; sp.push(w); tot+=w; }
+  ctx.fillStyle=`rgb(${DK[0]|0},${DK[1]|0},${DK[2]|0})`; let y=0;
+  for(let i=0;i<nL;i++){ const h=CH*sp[i]/tot; if(i<vis){ const amp=h*0.9; const ph=i*0.22; ctx.beginPath(); for(let s2=0;s2<=100;s2++){ const u=s2/100; const x=u*CW; const off=Math.sin(u*CW/lam*6.2832+ph)*amp; s2?ctx.lineTo(x,y+h*0.25+off):ctx.moveTo(x,y+h*0.25+off); } for(let s2=100;s2>=0;s2--){ const u=s2/100; const x=u*CW; const off=Math.sin(u*CW/lam*6.2832+ph)*amp; ctx.lineTo(x,y+h*0.75+off); } ctx.closePath(); ctx.fill(); } y+=h; }
+}
+// ── Riley · Blaze (1962) — the zigzag rings that spin; two colours of the piece; the zigzag as sharp as the piece is loud
+function rileyPhaseBlaze2(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=N/cn; const A=_kd2Analyze(chords,gc,mode); const energy=A.ch?A.ch.energy:0.5, dens=A.ch?A.ch.density:0.3; const sR=_seedRnd(7301,ss,0,0); sR();
+  const [DK,LT]=_ryPair(chords,gc,isBW); ctx.fillStyle=`rgb(${LT[0]|0},${LT[1]|0},${LT[2]|0})`; ctx.fillRect(0,0,CW,CH);
+  const cx=CW*(0.44+sR()*0.12), cy=CH*(0.44+sR()*0.12); const maxR=Math.hypot(CW,CH)*0.6; const nB=Math.round(18+dens*14); const vis=Math.ceil(nB*reveal); const teeth=18+Math.round(energy*10);
+  ctx.fillStyle=`rgb(${DK[0]|0},${DK[1]|0},${DK[2]|0})`;
+  const bw2=maxR/nB; for(let i=0;i<vis;i++){ const R0=maxR*i/nB, R1=R0+bw2*0.5; const rot=i*(3.1416/teeth)*0.3; ctx.beginPath(); for(let k=0;k<=teeth*2;k++){ const a=rot+k/(teeth*2)*6.2832; const rr=R1+(k%2?bw2*0.2:-bw2*0.2); const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr; k?ctx.lineTo(x,y):ctx.moveTo(x,y); } for(let k=teeth*2;k>=0;k--){ const a=rot+k/(teeth*2)*6.2832; const rr=Math.max(0,R0+(k%2?bw2*0.2:-bw2*0.2)); ctx.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr); } ctx.closePath(); ctx.fill(); }
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// RILEY LISTENS — not one of the paintings above: her stripe-curve carrying the
+// melody. Horizontal bands, one per passage of the piece in time from the top,
+// each in its chord's colour, and every band bent by the melody's own contour —
+// the line goes up where the melody climbs — the bend as deep as the line leaps,
+// a tremor on it as quick as the piece; the bands as thick as the chords are
+// long. Precise, flat, hard-edged, as she paints.
+// ═══════════════════════════════════════════════════════════════════════════
+function _ryListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const dens=A.ch?A.ch.density:0.3;
+  const C2=(()=>{ const n=48,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
+  for(let k=0;k<14;k++){ for(let i=1;i<47;i++) C2[i]=(C2[i-1]+C2[i]+C2[i+1])/3; } const amin=Math.min(...C2), amax=Math.max(...C2); const at=(u)=>{ const i=Math.min(46,Math.floor(u*47)); const f=u*47-i; const v=C2[i]+(C2[i+1]-C2[i])*f; return amax>amin+0.03?(v-amin)/(amax-amin):0.5; };
+  const nB=Math.max(12,Math.min(30,Math.round(12+dens*14+cn/40))); const G=_kd2Phrases(A,nB); const n=G.length; const vis=Math.ceil(n*reveal);
+  try{ globalThis.__RY_LISTEN={nB:n,pace,loud,regular,leaps,poly,major,tens,trend,dens}; }catch(_){}
+  const few=_ryFew(chords,gc,isBW,Math.max(3,Math.min(7,Math.round(3+poly*1.5))));
+  const [DK,LT]=_ryPair(chords,gc,isBW); ctx.fillStyle=`rgb(${LT[0]|0},${LT[1]|0},${LT[2]|0})`; ctx.fillRect(0,0,CW,CH);
+  const amp=CH*(0.05+0.1*leaps); const trem=CH*(0.004*Math.max(0,pace-0.5)), tremF=3+pace*5; const wts=G.map(g=>Math.sqrt(Math.max(1,g.n))); const tot=wts.reduce((s,w)=>s+w,0)||1; let y=CH*0.02-amp*0.5;
+  const pts=(yy,s)=>{ const u=s/120; return [u*CW, yy-(at(u)-0.5)*amp+Math.sin(u*6.2832*tremF+yy*0.01)*trem]; };
+  for(let i=0;i<n;i++){ const h=(CH*0.96+amp)*(wts[i]/tot); if(i<vis){ const rgb=few(_picChord(chords,Math.min(cn-1,Math.floor(G[i].t*cn)),gc,isBW).rgb); const col=(i%2)?rgb:DK; ctx.fillStyle=`rgb(${col[0]|0},${col[1]|0},${col[2]|0})`; ctx.beginPath(); for(let s=0;s<=120;s++){ const [x,yy]=pts(y,s); s?ctx.lineTo(x,yy):ctx.moveTo(x,yy); } for(let s=120;s>=0;s--){ const [x,yy]=pts(y+h,s); ctx.lineTo(x,yy); } ctx.closePath(); ctx.fill(); } y+=h; }
+  _setCurE(0.5);
+}
 function rileyPhaseCataract(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=Math.max(0,Math.min(1,N/cn));
   const A=_kd2Analyze(chords,gc,mode); const sR=_seedRnd(31001,ss,0,0); sR();
@@ -10244,8 +10289,9 @@ function rileyPhaseTriangle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       return _picChord(chords, k%cn, gc, isBW).rgb;
     }
     const pos = col + row * altRowMul + (isUp ? 0 : upDownOffset);
-    return _picChord(chords, ((pos % cn) + cn) % cn, gc, isBW).rgb;
+    return _triFew(_picChord(chords, ((pos % cn) + cn) % cn, gc, isBW).rgb);   // her few colours
   }
+  const _triFew=_ryFew(chords,gc,isBW,4);
 
   let k=0;
   for(let ry=0;ry<nRows;ry++)for(let cx=0;cx<nCols;cx++){
@@ -17426,13 +17472,13 @@ const ARTIST_VARIANTS = {
     {ground:'#0e0e14',mark:{rect:1},size:[.05,.15],layout:{radial:1},density:.5},
   ],
   wave: [
-    {mark:{stripes:1},size:[.01,.03],layout:{stack:1},density:.8},
+    {ground:'#f4f2ec',mark:{wavyline:1},size:[.015,.04],layout:{stack:1},density:.9},   // What she heard
+    {ground:'#f4f2ec',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.9,tone:'duo'},   // Fall
     {ground:'#2a2a3a',mark:{vstripes:1},size:[.01,.03],layout:{grid:1},density:1},
-    {ground:'#1a1a2a',mark:{arc:1},size:[.2,.5],layout:{radial:1},density:.5,tone:'pure'},
+    {ground:'#1a1a2a',mark:{ring:1},size:[.1,.5],layout:{radial:1},density:.6,tone:'duo'},   // Blaze
     {ground:'#efebe2',mark:{wavyline:1},size:[.02,.05],layout:{stack:1},density:.8},                     // Cataract 3
     {ground:'#f4f4ec',mark:{wavyline:1},size:[.01,.03],layout:{stack:1},density:.8,tone:'mono'},
     {ground:'#f4f4ec',mark:{tri:1},size:[.05,.12],layout:{grid:1},density:1},
-    {ground:'#1a1a2a',mark:{stripes:1},size:[.004,.01],layout:{stack:1},density:1},
     {ground:'#f4f4f0',mark:{checker:1},size:[.03,.06],layout:{grid:1},density:1,tone:'mono'},              // Movement in Squares
   ],
   spiral: [
