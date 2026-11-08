@@ -2225,8 +2225,9 @@ const STUDIO_SKIN_CSS = `
 .pf-artist:active .pf-sk-face{transform:scale(.92)}
 .pf-artist[data-lk="1"] .pf-sk-face{opacity:.38;filter:saturate(.55)}
 .pf-artist-on .pf-sk-face{border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.35),0 4px 14px rgba(0,0,0,.5)}
-.pf-artist-fix .pf-sk-face{border-color:#a78bff!important;box-shadow:0 0 0 2px rgba(167,139,255,.45),0 0 14px rgba(167,139,255,.55)!important}
-.pf-app-root .pf-strip-grid.pf-skin .pf-artist.pf-artist-fix{color:#c4b5ff!important;font-weight:700!important}
+.pf-artist-fix .pf-sk-face{border-color:#f0c040;box-shadow:0 0 0 2px rgba(240,192,64,.35),0 0 0 4px rgba(240,192,64,.18),0 4px 14px rgba(0,0,0,.5)}
+.pf-artist,.pf-artist *,.pf-tray,.pf-tray *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;-webkit-tap-highlight-color:transparent!important}
+.pf-artist:focus{outline:none}
 .pf-sk-face.pf-sk-hit{border-color:rgba(242,238,232,.8)}
 .pf-sk-face.pf-sk-wait{animation:pfSkWait 1.4s ease-in-out infinite}
 @keyframes pfSkWait{50%{opacity:.55}}
@@ -4814,7 +4815,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // kind: undefined = stage member (gold), 'pin' = pinned in Ensemble ALL (gold + pin),
   // 'guest' = drawn by Next around the pins (outlined, like the white shuffle frame).
   const _stageBadge = (ix, roles, kind)=> (ix<0) ? null : (kind==='fix')
-    ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#c4b5ff,#8f6cf0)',color:'#14102a',lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
+    ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:2}}><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1a1408" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>{ix+1}</span>)
     : (kind==='guest')
     ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'0 5px',borderRadius:9,background:PF.card2,border:'1px solid rgba(242,238,232,.75)',color:PF.cream,lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
     : (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none',...(kind==='pin'?{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:2}:{})}}>{kind==='pin' && _pinIcon('#1a1408', 7)}{ix+1}</span>);
@@ -15908,7 +15909,7 @@ Hard requirements:
           // a white one (drawn — or yours tapped again) or Scan: ↑ draws the next one, and it is white too
           const _soloKept = !crOn && !!imgComposerRef.current && !composerDice && !imgSigActiveRef.current;   // ✦'s composer is the picture's choice, not yours: ↑ draws the next one (the latch lets ✦ go)
           // Solo and Fusion both on: every ↑ draws — the dice say what (0 a solo composer, 1 a new fusion), nobody is kept
-          const _mixC = (stMixC && proStatus!=='free') ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
+          const _mixC = null;
           // as for the painters: the Fusion's gold composers and the Solo's own gold composer are separate choices
           const _cFu = _mixC ? (crOn ? crPinsRef.current.slice() : (crMemRef.current||[]).slice()).filter(k=>k && _cOk(k)) : [];
           const _cSolo = _mixC ? (crOn ? soloCGoldRef.current : (_soloKept ? imgComposerRef.current : null)) : null;
@@ -15939,7 +15940,7 @@ Hard requirements:
         // with the Ensemble drawing, the gold (pinned) painters stay and ↑ draws new guests
         // Solo and Fusion both on: the dice say alone or together (0 Solo, 1 Fusion). A gold painter is in every result — alone in its
         // next variant, or no. 1 of a fusion with 1–3 guests (several gold: one of them alone, or all of them with new guests); nobody gold: all drawn
-        const _mixP = (stMixP && proStatus!=='free' && _artChoiceN()>=2) ? (Math.random()<0.5 ? 'solo' : 'fu') : null;
+        const _mixP = null;
         // Solo and Fusion each keep their own choice. Fusion: its gold painters (live pins, or remembered while a solo plays) + new guests;
         // none → a whole new fusion. Solo: its own gold painter in its next variant; none (white) → someone else from your set.
         const _okP = (k)=>k && k!=='mosaic' && k!=='notes';
@@ -18821,12 +18822,12 @@ Hard requirements:
                 {!studioFs && (<span className="pf-inspired-label" style={{flex:1,textAlign:'center',fontStyle:'italic',fontWeight:400,letterSpacing:'.22em',color:'rgba(201,168,76,.6)',userSelect:'none'}}>{_fsStripLabel('comp', t('inspiredByTitle'))}</span>)}
                 {/* the Studio: one Solo | Fusion switch, as for the painters (↑ on the painting is the composers' 🔀) */}
                 {studioFs && _rollable && (ensembleActive || proStatus==='free') && (<div className="pf-tray-ctl">{(()=>{   // the composers: the same two switches as the painters
-                  const _fr=proStatus==='free', mix=stMixC && !_fr, sOn=mix || !crOn, fOn=!_fr && (mix || crOn);
-                  const tapS=(e)=>{ if(_fr || !crOn) return; if(!sOn) _setMix('c', true); crMemRef.current=crPinsRef.current.slice(0,STAGE_MAX); _stCrSolo(); const cg=soloCGoldRef.current; if(cg){ setComposerDice(false); _lastComposerRef.current=cg; imgComposerRef.current=cg; setImgComposer(cg); } };
-                  const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(crOn) return; if(!fOn) _setMix('c', true); soloCGoldRef.current = (!composerDice && imgComposerRef.current) ? imgComposerRef.current : null; _stCrFusionOn(); };
+                  const _fr=proStatus==='free', mix=false, sOn=!crOn, fOn=!_fr && crOn;
+                  const tapS=(e)=>{ if(_fr || !crOn) return; crMemRef.current=crPinsRef.current.slice(0,STAGE_MAX); _stCrSolo(); const cg=soloCGoldRef.current; if(cg){ setComposerDice(false); _lastComposerRef.current=cg; imgComposerRef.current=cg; setImgComposer(cg); } };
+                  const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(crOn) return; soloCGoldRef.current = (!composerDice && imgComposerRef.current) ? imgComposerRef.current : null; _stCrFusionOn(); };
                   const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('c', false); if(!crOn) _stCrFusionOn(); } else _setMix('c', true); };
                   const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('c', false); if(crOn) _stCrSolo(); } else _setMix('c', true); };
-                  return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!crOn?'cur':sOn?'on':''} {..._segPress(tapS, holdS)}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={crOn?'cur':fOn?'on':''} {..._segPress(tapF, holdF)}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
+                  return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!crOn?'cur':''} onClick={tapS}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={crOn?'cur':''} onClick={tapF}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
                 {/* composers' 🔀 + Jam session — only when there is more than one composer to roll between */}
                 {!studioFs && _rollable && (<>
                   {_modeBtn(_getCompMode(), _cycleComp, false)}
@@ -18937,13 +18938,13 @@ Hard requirements:
             {!cockpitEdit && ensembleActive && !studioFs && _modeBtn(jamOn?1:0, _toggleJam, true, true, 36, _artChoiceN()<2)}
             {!cockpitEdit && studioFs && (<div className="pf-tray-ctl">
               {(ensembleActive || (studioFs && proStatus==='free')) && (()=>{   // Solo and Fusion: two switches (one, the other, or both — then ↑ throws the dice); Free: Fusion locked
-                const _fr=proStatus==='free', mix=stMixP && !_fr, sOn=mix || !jamOn, fOn=!_fr && (mix || jamOn), fDis=!_fr && _artChoiceN()<2;
+                const _fr=proStatus==='free', mix=false, sOn=!jamOn, fOn=!_fr && jamOn, fDis=!_fr && _artChoiceN()<2;   // two modes only: Solo or Fusion — a tap switches, ↑ draws in the mode that is on
                 // a tap shows it (an off one is turned on first), a hold turns it on or off for the dice; the one playing is filled
-                const tapS=(e)=>{ if(_fr || !jamOn) return; if(!sOn) _setMix('p', true); { const gl=(jamAll ? jamPinsRef.current : _jamStage()).filter(k=>k && k!=='mosaic' && k!=='notes'); fuGoldMemRef.current=gl.slice(0,STAGE_MAX); } _toggleJam(); const sg=soloGoldRef.current; if(sg){ setPainterStage([]); setNotesMode(false); setStyle(sg); } };
-                const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis || jamOn) return; if(!fOn) _setMix('p', true); soloGoldRef.current = (style && style!=='notes' && style!=='mosaic') ? style : null; _stFusionOn(); };
+                const tapS=(e)=>{ if(_fr || !jamOn) return; { const gl=(jamAll ? jamPinsRef.current : _jamStage()).filter(k=>k && k!=='mosaic' && k!=='notes'); fuGoldMemRef.current=gl.slice(0,STAGE_MAX); } _toggleJam(); const sg=soloGoldRef.current; if(sg){ setPainterStage([]); setNotesMode(false); setStyle(sg); } };
+                const tapF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis || jamOn) return; soloGoldRef.current = (style && style!=='notes' && style!=='mosaic') ? style : null; _stFusionOn(); };
                 const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('p', false); if(!jamOn) _stFusionOn(); } else _setMix('p', true); };
                 const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('p', false); if(jamOn) _toggleJam(); } else _setMix('p', true); };
-                return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!jamOn?'cur':sOn?'on':''} {..._segPress(tapS, holdS)}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={jamOn?'cur':fOn?'on':''} disabled={fDis} {..._segPress(tapF, holdF)}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
+                return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!jamOn?'cur':''} onClick={tapS}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={jamOn?'cur':''} disabled={fDis} onClick={tapF}>{_ensT('fusion')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
             </div>)}
             {/* ✦ SIGNATURE — the song's own painting (computeSongSignature); lit while it is on screen */}
             {!cockpitEdit && songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (
