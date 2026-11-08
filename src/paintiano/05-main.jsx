@@ -5399,7 +5399,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // otherwise — the chip renders only with a built-in piece on canvas.
   const [posterMaker,setPosterMaker]=useState(()=>{ try{ return localStorage.getItem('paintiano_postermaker')==='1'; }catch(_){ return false; } });
   try{ if(typeof window!=='undefined') window.__pfFrame34 = !!posterMaker; }catch(_){}
-  try{ if(typeof window!=='undefined' && posterMaker) window.__pfFull = (S)=>_fullPaintCanvas(S); }catch(_){}   // the poster tool: the whole painting at once (the OG pictures are made from it)   // the POSTER tool paints in the poster's 3:4 frame (pfPort)
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfFull = (S, lim)=>_fullPaintCanvas(S, lim); window.__pfChords = ()=>chords.map(c=>({t:c.startMs|0, n:(c.n||[]).map(x=>({m:x.m|0, v:x.v|0, d:x.durMs|0}))})); } }catch(_){}   // the poster tool: the whole painting at once (the OG pictures are made from it)   // the POSTER tool paints in the poster's 3:4 frame (pfPort)
   const _pmFirstRef = useRef(true);
   useEffect(()=>{ if(_pmFirstRef.current){ _pmFirstRef.current=false; return; } try{ window.dispatchEvent(new Event('resize')); }catch(_){} },[posterMaker]);   // re-lay the painting out in its new frame
   // Address chip alone (artist · variant · palette) — its own switch: 2 quick
@@ -15520,7 +15520,7 @@ Hard requirements:
     const cnt=new Map(); let bk=0, best=0; for(let i=0;i<d.length;i+=4){ const k=((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5); const v=(cnt.get(k)||0)+1; cnt.set(k,v); if(v>best){ best=v; bk=k; } }
     let r=0,g=0,b=0,m=0; for(let i=0;i<d.length;i+=4){ if((((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5))===bk){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; m++; } } r/=m; g/=m; b/=m;
     let near=0; for(let i=0;i<d.length;i+=4){ if(Math.abs(d[i]-r)+Math.abs(d[i+1]-g)+Math.abs(d[i+2]-b) <= 42) near++; } return near/(n*n) > 0.99; }catch(_){ return false; } };
-  const _fullPaintCanvas = (S)=>{ try{
+  const _fullPaintCanvas = (S, lim)=>{ try{
     if(!chords.length || composeMode || micActive || viewMode==='image') return null;
     const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
     const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
@@ -15530,6 +15530,7 @@ Hard requirements:
       mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
       dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive };
     const lay=_favLayout(fv, chords); if(!lay) return null;
+    if(lim>0) fv.lim=lim;   // the poster tool: the painting as far as this chord (reels, mockups)
     const c=document.createElement('canvas'); return _favPaint(c, fv, {chords}, (S>0 ? S : 1), tone, lay) ? c : null;
   }catch(_){ return null; } };
   const _fullPaintUrl = ()=>{ const c=_fullPaintCanvas(); if(!c || !c.width || !c.height) return null; try{ const W=Math.min(720, c.width), H=Math.round(c.height*W/c.width); const o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H); x.drawImage(c,0,0,W,H); return o.toDataURL('image/jpeg',0.82); }catch(_){ return null; } };
