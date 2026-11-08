@@ -2667,12 +2667,12 @@ const STUDIO_HOME_CSS = `
 .pf-lh-out{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:pfLhOut .6s cubic-bezier(.2,.8,.2,1) both;z-index:1;pointer-events:none}
 @keyframes pfLhOut{from{transform:none}to{transform:translateY(-100%)}}
 .pf-lh canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.pf-lh-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;z-index:3;animation:pfLhCard 2.4s ease both}
+.pf-lh-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;z-index:3;animation:pfLhCard 2.4s ease both;background:radial-gradient(ellipse 70% 38% at 50% 50%,rgba(6,6,12,.62),rgba(6,6,12,.35) 55%,rgba(6,6,12,0) 100%)}   /* a dark veil under the words: readable on a white painting too */
 @keyframes pfLhCard{0%{opacity:0;transform:scale(1.06)}12%{opacity:1;transform:scale(1.03)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-40px) scale(.98)}}
 .pf-lh-card small{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 .pf-lh-card b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1.02;color:#fff;margin:8px 0;text-shadow:0 4px 30px rgba(0,0,0,.95)}
 .pf-lh-card i{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:#f0c75e;text-shadow:0 2px 16px rgba(0,0,0,.95)}
-.pf-lh-line{position:absolute;left:0;right:0;bottom:92px;text-align:center;z-index:3;pointer-events:none;animation:pfLhFade .5s ease both}
+.pf-lh-line{position:absolute;left:50%;transform:translateX(-50%);bottom:92px;text-align:center;z-index:3;pointer-events:none;animation:pfLhFade .5s ease both;background:rgba(6,6,12,.55);padding:6px 14px 7px;border-radius:14px;max-width:88%}
 .pf-lh-line b{display:block;font-size:13.5px;font-weight:700;color:#fff;text-shadow:0 2px 10px #000}
 .pf-lh-line i{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:15px;color:#f0c75e;text-shadow:0 2px 10px #000}
 .pf-lh-bars{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:flex-end;justify-content:center;gap:3px;padding:0 12px;z-index:2;pointer-events:none;background:linear-gradient(rgba(4,4,8,0),rgba(4,4,8,.8));animation:pfLhFade .6s ease both;transition:opacity .5s}
