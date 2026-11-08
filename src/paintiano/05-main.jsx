@@ -16388,7 +16388,7 @@ Hard requirements:
     while(feedStepsRef.current.length){
       const st = feedStepsRef.current.shift();
       if(st==='mosaic'){ _feedApply({style:null, phase:0, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'m', t:Date.now()}); return; }
-      if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:0, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'p', t:Date.now()}); return; }
+      if(st==='kandinsky'){ if(style===k && !painterStage.length && !sigActive) continue; _feedApply({style:k, phase:1, mode, notes:false, stage:[], sig:false}); setFeedIntro({k:'p', t:Date.now()}); return; }   // phase 1: the painter's own first painting (0 is his "What he heard")
       if(st==='sig'){ const sg=songSigRef.current; if(sg && sg.keys && sg.keys.length && applySigRef.current){ _feedApply({sig:true}); setFeedIntro({k:'s', t:Date.now()}); return; } continue; }
     }
     _liteNextKRef.current=null; _liteNextIsMosaicRef.current=false; _liteNextIsSigRef.current=false;
@@ -16450,7 +16450,7 @@ Hard requirements:
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:null, u:null, l:'', ...(q ? {dir:'none'} : {}) };
       setFeedCards(cs=>{ const arr=cs.concat([c]); return arr.length>10 ? arr.slice(arr.length-10) : arr; });
       setFeedAt(Math.min(10, feedCards.length+1)-1);
-      if(feedLoaded===null) _feedLoad(piece, kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}, kind); else _feedNextLook();
+      if(feedLoaded===null) _feedLoad(piece, kind==='img' ? {img:true} : {style:_feedOpener(), phase:1, mode, notes:false, stage:[], sig:false}, kind); else _feedNextLook();   // phase 1: the opener's own first painting
       _feedHintBump();
     }
     if(!q){ _feedFlashNow(); _stBuzz(8); }
