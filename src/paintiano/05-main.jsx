@@ -15973,6 +15973,13 @@ Hard requirements:
             randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null);
             nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
             setStyle(null); if(_ix>=0) setShuffleArtistIndex(_ix); setShufVariant((Math.random()*_N)|0); rolled = true; } }
+        else if(jamOn){   // Fusion on: ↑ always draws a fusion — the gold stay, the rest are drawn anew; a kept surprise is let go
+          if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
+          if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
+          if(!randomMode) _shuffleOn(); if(mosaicShuffleLock) setMosaicShuffleLock(false);
+          const pins=(jamAll ? jamPinsRef.current : []).filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX);   // only the gold on screen stay (pins are shown only with the draw on); white members are drawn anew
+          jamPinsRef.current=pins; setJamPins(pins); if(!jamAll) setJamAll(true);
+          nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _jamAllRoll(); rolled = true; }
         else if(stTakenRef.current){   // a surprise kept with ↓: its painter(s) were never chosen (white) — ↑ goes on as in the surprises: someone else from your set
           stTakenRef.current=false; setStTaken(false);
           if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
