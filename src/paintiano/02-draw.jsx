@@ -7930,6 +7930,8 @@ function _hgDog(ctx,kind,x,y,u,dir,col,ink,O){ const X=(a)=>x+a*u*dir, Y=(b)=>y+
   else if(kind==='jump') P=[C(-0.45,0.3,0.3,-0.2,0.6),C(0.25,-0.1,0.72,0.0,0.2),C(0.15,0.0,0.58,0.22,0.2),C(-0.45,0.4,-0.95,0.72,0.2),C(-0.52,0.3,-1.02,0.42,0.2),C(-0.62,0.25,-0.92,-0.1,0.14),E(0.62,-0.52,0.36,0.3),C(0.8,-0.5,1.1,-0.62,0.26),E(0.45,-0.42,0.12,0.28,0.6),{dot:[X(1.17),Y(-0.64),0.065*u]}];
   else P=[E(0,0.15,0.75,0.42),E(0.62,0.0,0.34,0.28),C(0.82,0.05,1.1,0.12,0.22),E(0.5,-0.12,0.12,0.26,0.9),C(-0.6,0.45,0.2,0.55,0.14),{dot:[X(1.17),Y(0.12),0.06*u]}];
   _hgParts(ctx,P,col,ink,O); }
+function _hgRoundDog(ctx,x,y,s,dir,col,ink,O,inside){ const u=s*0.36; const cr=_hrRoundDog(x-0.4*u*dir,y+0.81*s,u,null,0.5,dir); ctx.lineCap='round'; ctx.lineJoin='round';
+  for(const [c,e] of [[ink,2*O],[inside||col,0]]){ ctx.strokeStyle=_hgCss(c); for(const l of cr.lines){ ctx.lineWidth=u*1.15*(l.w||1)+e; ctx.beginPath(); ctx.moveTo(l.p[0][0],l.p[0][1]); for(let i=1;i<l.p.length;i++) ctx.lineTo(l.p[i][0],l.p[i][1]); ctx.stroke(); } } }
 function _hgChild(ctx,x,y,u,col,ink,O){ const P=[{e:[x,y,0.42*u,0.46*u,0]},{e:[x,y-0.78*u,0.36*u,0.36*u,0]},{c:[x-0.22*u,y-0.25*u,x-0.62*u,y-0.72*u,0.18*u]},{c:[x+0.22*u,y-0.25*u,x+0.62*u,y-0.72*u,0.18*u]},{c:[x-0.25*u,y+0.36*u,x-0.62*u,y+0.52*u,0.2*u]},{c:[x+0.25*u,y+0.36*u,x+0.62*u,y+0.52*u,0.2*u]}]; _hgParts(ctx,P,col,ink,O); }
 // ── the colours of a piece, the most used first, and the one that stands out on a ground
 function _hgStats(chords,gc,isBW){ const cnt=new Map(), key=new Map(); const cn=chords.length, step=Math.max(1,Math.floor(cn/90));
@@ -7980,10 +7982,10 @@ function haringCrowd(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const sp=[]; const N=14; for(let i=0;i<=N;i++){ const t=i/N; const a=Math.floor(t*(cn-1)); const e=A.ev[a]||{top:60}; sp.push([CW*(0.06+0.88*t), CH*(0.25+0.5*(1-A.reg(e.top)))+Math.sin(t*7)*CH*0.08]); }
   const sc=_hgOn(st[0],wall,isBW); Ops.at(0.02,()=>_hgSnake(ctx,sp,D*0.045,sc,_HG_BLK,O,'cross'));
   const G=_kd2Phrases(A,Math.round(9+dens*6)); const used=new Set(); const placed=[];
-  G.forEach((q,i)=>{ const r=_hgR(63100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind=r()<0.5?'single':'back'; if(i%4===3) kind=r()<0.5?'dogsit':'walk';
+  G.forEach((q,i)=>{ const r=_hgR(63100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind=r()<0.5?'single':'back'; if(i%4===3) kind=['dogsit','rdog','walk'][(r()*3)|0];
     const s=D*(0.05+0.035*q.vmax)*(kind==='single'?1.25:1); let bx=0,by=0,bd=-1; for(let t=0;t<14;t++){ const cx=CW*(0.12+0.76*r()), cy=CH*(0.12+0.78*r()); let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(cx-p[0],cy-p[1])/(p[2]+s*1.9)); if(md>bd){ bd=md; bx=cx; by=cy; } } placed.push([bx,by,s*1.9]);
     const c=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),wall,isBW); const c2=_hgOn(st[(i+2)%st.length],wall,isBW);
-    Ops.at(q.t0, ()=>{ if(kind==='dogsit') _hgDog(ctx,'sit',bx,by+s*0.4,s*1.2,r()<0.5?1:-1,c,_HG_BLK,O); else _hgScene(ctx,kind,bx,by,s,63200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+1)%8],wall,isBW):c2,{ink:_HG_BLK,O,motion:0.35+0.5*X.energy,pat:i%3===0?'dash':(i%3===1?null:'cross')},wall); }); });
+    Ops.at(q.t0, ()=>{ if(kind==='dogsit') _hgDog(ctx,'sit',bx,by+s*0.4,s*1.2,r()<0.5?1:-1,c,_HG_BLK,O); else if(kind==='rdog') _hgRoundDog(ctx,bx,by,s*1.15,r()<0.5?1:-1,c,_HG_BLK,O); else _hgScene(ctx,kind,bx,by,s,63200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+1)%8],wall,isBW):c2,{ink:_HG_BLK,O,motion:0.35+0.5*X.energy,pat:i%3===0?'dash':(i%3===1?null:'cross')},wall); }); });
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'crowd',n:G.length}; }catch(_){} _setCurE(0.5);
 }
 
@@ -8048,16 +8050,16 @@ function haringListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const spots=[[0.27,0.3],[0.73,0.27],[0.3,0.66],[0.72,0.64]];
     G.slice(0,4).forEach((q,i)=>{ const r=_hgR(66100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind='leap'; const [px,py]=spots[i]; const c=colOf(q,i), c2=_hgOn(st[(i+2)%st.length],bg,isBW);
       Ops.at(q.t0, ()=>_hgScene(ctx,kind,CW*px,CH*py,s*(kind==='lift'||kind==='leap'?0.8:1),66200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+5)%8],bg,isBW):c2,{ink:_HG_BLK,O,motion:0.5+0.5*X.energy,pat:i%2?'dash':null,red},bg)); });
-    const q=G[4]||G[G.length-1]; Ops.at(q.t0, ()=>_hgDog(ctx,'run',CW*0.5,CH*0.92,s*0.9,(ss&1)?1:-1,colOf(q,4),_HG_BLK,O));
+    const q=G[4]||G[G.length-1]; Ops.at(q.t0, ()=>_hgRoundDog(ctx,CW*0.5,CH*0.97-1.6*s*0.8,s*0.8,(ss&1)?1:-1,colOf(q,4),_HG_BLK,O));
     if(X.loud>0.6) Ops.at(0.5, ()=>_hgSaucer(ctx,CW*0.5,CH*0.08,s*0.5,red,_HG_BLK,O,null)); }
   else if(pic==='parade'){ Ops.at(0,()=>_hgBG(ctx,CW,CH,'hstripes',bg,bg2,_HG_BLK,D,66300+ss)); const sp=[]; for(let i=0;i<=12;i++){ const t=i/12; const e=A.ev[Math.floor(t*(cn-1))]||{top:60}; sp.push([CW*(0.04+0.92*t), CH*(0.58+0.12*(0.5-A.reg(e.top)))+Math.sin(t*8)*CH*0.04]); }
     Ops.at(0.01,()=>_hgSnake(ctx,sp,D*0.075,_hgOn(st[2]||_HG_PAL[1],bg,isBW),_HG_BLK,O,'dash')); const G=_kd2Phrases(A,6); const s=Math.min(CW/9,CH*0.075);
     G.forEach((q,i)=>{ const r=_hgR(66400+i,ss); const h=_mtHearSpan(A,q.a,q.b); const t=(i+0.5)/G.length; const k=Math.round(t*12); const [x,y]=sp[Math.min(12,k)]; const c=colOf(q,i); const up=i%2===0;
-      Ops.at(q.t0, ()=>{ if(i===2) _hgDog(ctx,'run',x,y-s*0.9,s*0.75,1,c,_HG_BLK,O); else _hgFig(ctx,up?'jump':_hgPoseOf(h,r),x,up?y-s*2.3:y+s*2.4,s,1,0,66500+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%3===1?'dash':null}); }); }); }
+      Ops.at(q.t0, ()=>{ if(i===2) _hgDog(ctx,'run',x,y-s*0.9,s*0.75,1,c,_HG_BLK,O); else if(i===4) _hgRoundDog(ctx,x,y-s*1.55,s*0.75,1,c,_HG_BLK,O); else _hgFig(ctx,up?'jump':_hgPoseOf(h,r),x,up?y-s*2.3:y+s*2.4,s,1,0,66500+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%3===1?'dash':null}); }); }); }
   else { Ops.at(0,()=>_hgBG(ctx,CW,CH,'dots',bg,bg2,_HG_BLK,D,66600+ss)); const G=_kd2Phrases(A,3); const s=Math.min(CH*0.13,CW*0.2);
     if(G[0]) Ops.at(G[0].t0, ()=>_hgPair(ctx,X.major?'hug':'back',CW*0.5,CH*0.6,s,66700+ss,colOf(G[0],0),colOf(G[1]||G[0],1),{ink:_HG_BLK,O,motion:0.35}));
     if(X.major && G[1]) Ops.at(G[1].t0, ()=>{ const hy=CH*0.18; _hgHeart(ctx,CW*0.5,hy,s*0.8,red,_HG_BLK,O*1.2); _hgRays(ctx,CW*0.5,hy,s*1.1,s*1.45,9,-Math.PI/2,3.0,_HG_BLK,O*1.2); });
-    if(G[2]) Ops.at(G[2].t0, ()=>_hgDog(ctx,'sit',CW*0.82,CH*0.85,s*0.8,-1,colOf(G[2],2),_HG_BLK,O)); }
+    if(G[2]) Ops.at(G[2].t0, ()=>_hgRoundDog(ctx,CW*0.8,CH*0.97-1.6*s*0.7,s*0.7,-1,colOf(G[2],2),_HG_BLK,O)); }
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'listen',pic}; }catch(_){} _setCurE(0.5);
 }
 
@@ -8078,8 +8080,8 @@ function haringGiant(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k/nR-0.5)*Math.PI*1.3; Ops.at((k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(gx+Math.cos(a)*s*2.1,gy-s*0.5+Math.sin(a)*s*2.1); ctx.lineTo(gx+Math.cos(a)*s*2.45,gy-s*0.5+Math.sin(a)*s*2.45); ctx.stroke(); }); }
   const G=_kd2Phrases(A,4); const sm=s*0.32; const c=(i)=>_hgOn(_hgAt(chords,Math.floor(((G[i]||G[0]).a+(G[i]||G[0]).b)/2),gc,isBW),bg,isBW);
   if(G[0]) Ops.at(G[0].t0, ()=>{ _hgLadder(ctx,CW*0.12,CH*0.95,CH*0.45,D*0.06,_HG_BLK,O); _hgFig(ctx,'reach',CW*0.12,CH*0.66,sm,1,-0.2,67200+ss,{col:c(0),ink:_HG_BLK,O,motion:0.4}); });
-  if(G[1]) Ops.at(G[1].t0, ()=>_hgDog(ctx,'sit',gx+s*1.15,CH*0.9,sm*1.4,-1,c(1),_HG_BLK,O));
-  if(G[2]) Ops.at(G[2].t0, ()=>_hgFig(ctx,'jump',CW*0.85,CH*0.78,sm,-1,0.15,67201+ss,{col:c(2),ink:_HG_BLK,O,motion:0.6}));
+  if(G[1]) Ops.at(G[1].t0, ()=>_hgRoundDog(ctx,gx+s*1.2,CH*0.96-1.6*sm*1.3,sm*1.3,-1,_hgOn(c(1),bg2,isBW),_HG_BLK,O));
+  if(G[2]) Ops.at(G[2].t0, ()=>_hgFig(ctx,'jump',CW*0.86,CH*0.6,sm,-1,0.15,67201+ss,{col:c(2),ink:_HG_BLK,O,motion:0.6}));
   if(G[3] && X.loud>0.55) Ops.at(G[3].t0, ()=>_hgSaucer(ctx,CW*0.84,CH*0.1,sm*0.9,c(3),_HG_BLK,O,null)); else if(G[3]) Ops.at(G[3].t0, ()=>_hgBolt(ctx,CW*0.85,CH*0.13,sm*1.1,_hgOn(_hgPastel(_HG_PAL[1]),bg,isBW),_HG_BLK,O));
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'giant',kind}; }catch(_){} _setCurE(0.5);
 }
@@ -8141,7 +8143,8 @@ function _haringChalk(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,colour){
     const fx=x0+W*(0.5+(j-(inRow-1)/2)/Math.max(1,per)*0.94)+(r()-.5)*s*0.3, fy=y0+rowH*row+rowH*0.5-2.05*s+2.55*s+(r()-.5)*s*0.15, dir=(j%2?-1:1)*(r()<0.8?1:-1);
     const tint=isBW?chalk:_hgPalOf(_picChord(chords,Math.floor((q.a+q.b)/2),gc,false).rgb,false).map(v=>Math.round(v+(255-v)*0.35)); const ink=colour===true?tint:chalk, acc=colour?tint:chalk;
     const rot=(r()-.5)*0.12, mo=0.45+0.5*X.energy;
-    Ops.at(q.t0, ()=>{ const big=i===ci, sz=s*(big?1.08:1); const F=_hgPut(ctx,kind,fx,fy,sz,dir,rot,null,ink,O,64200+i+ss,colour==='accent'?0:mo,paper);
+    const isDog= i===1 && m>=4 && i!==ci;
+    Ops.at(q.t0, ()=>{ const big=i===ci, sz=s*(big?1.08:1); if(isDog){ _hgRoundDog(ctx,fx,fy,sz*0.95,dir,null,ink,O,paper); return; } const F=_hgPut(ctx,kind,fx,fy,sz,dir,rot,null,ink,O,64200+i+ss,colour==='accent'?0:mo,paper);
       if(colour==='accent'){ ctx.save(); ctx.translate(fx,fy); ctx.rotate(rot); _hgMotion(ctx,F,acc,Math.max(1.4,sz*0.085),mo,_hgR(64200+i+ss,4)); ctx.restore(); }
       if(big){ _hgRays(ctx,fx,fy-s*0.9,s*1.25,s*(1.5+0.15*X.energy),11,-Math.PI/2,3.3,acc,O*1.2); }
       if(big && X.major){ const hx=fx-dir*s*1.45, hy=fy-s*1.95; const P=_hgHeartPts(hx,hy,s*0.34); ctx.beginPath(); P.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.strokeStyle=_hgCss(colour?[240,96,110]:ink); ctx.lineWidth=O*1.4; ctx.lineJoin='round'; ctx.stroke(); } }); });
