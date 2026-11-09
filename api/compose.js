@@ -10,9 +10,10 @@
 // Claude here for anything.
 //
 // FAIR USE (Nov 2026) — AI is counted on the server:
-//  • Pro AI key (header X-Paintiano-Key)  → 30 AI pieces & melodies a day
-//    (+ 100 small calls a day: atmosphere, title translation, morph picks);
-//    licences bought from 10 Nov 2026 also 1,000 pieces a calendar year.
+//  • Pro AI key (header X-Paintiano-Key)  → 30 AI pieces & melodies a day and
+//    1,000 a calendar year, one shared limit; every generation that is started
+//    counts (+ 100 small calls a day: atmosphere, title translation, morph picks).
+//    The days and the year turn over in UTC. This is what the terms say (v1.3).
 //  • Pro AI bought before the limit (licenses.ai_unlimited = true) → no yearly
 //    limit, a daily guard against a leaked key only (100 pieces / 300 small).
 //  • Everyone else (Free, Pro, no key) → counted per network (an HMAC hash of
@@ -50,10 +51,8 @@ const CAP = {
   unlimited: [100, 300],
   free:      [8, 30],
 };
-// Yearly cap on pieces & melodies for Pro AI — only for licences bought from the day the
-// terms say so (YEAR_CAP_FROM); earlier buyers keep what they bought: 30 a day, no yearly cap.
+// Yearly cap on pieces & melodies for every Pro AI key (there were no Pro AI licences before it).
 const YEAR_CAP = 1000;
-const YEAR_CAP_FROM = Date.parse(process.env.PF_YEAR_CAP_FROM || '2026-11-10T00:00:00Z');
 
 // Allowed sources: our domains, Vercel previews of this project, local dev. Exact origins only —
 // a prefix test would let paintiano.app.evil.com or localhost.evil.com drive the key.
@@ -114,8 +113,7 @@ async function licenceOf(key) {
   if (c && Date.now() - c.at < 10 * 60 * 1000) return c.row;
   const hdr = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
   const base = `${SB_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&limit=1&select=`;
-  let res = await fetch(base + 'key,status,tier,ai_unlimited,created_at', { headers: hdr });
-  if (!res.ok) res = await fetch(base + 'key,status,tier,ai_unlimited', { headers: hdr });
+  let res = await fetch(base + 'key,status,tier,ai_unlimited', { headers: hdr });
   if (!res.ok) res = await fetch(base + 'key,status,tier', { headers: hdr }); // column not added yet
   if (!res.ok) throw new Error('licence lookup ' + res.status);
   const row = (await res.json())[0] || null;
@@ -251,8 +249,7 @@ export default async function handler(req, res) {
         const row = await licenceOf(key);
         if (row && row.status === 'active' && row.tier === 'pro_ai') {
           plan = row.ai_unlimited ? 'unlimited' : 'pro_ai';
-          const born = row.created_at ? Date.parse(row.created_at) : NaN;
-          yearly = plan === 'pro_ai' && isFinite(born) && born >= YEAR_CAP_FROM;
+          yearly = plan === 'pro_ai';
           bucket = 'k:' + crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
         }
       } catch (e) { console.warn('compose: licence lookup failed', String(e)); }
