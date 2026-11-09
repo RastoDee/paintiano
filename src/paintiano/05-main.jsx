@@ -510,6 +510,7 @@ function _srcBox(im, bw, bh){ const iw=im.naturalWidth||im.width, ih=im.naturalH
 function _drawSrc(cx, im, x, y, w, h, W){ const r=Math.round(W*0.006);
   cx.save(); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.clip(); cx.imageSmoothingQuality='high'; cx.drawImage(im,x,y,w,h); cx.restore();
   cx.save(); cx.strokeStyle='rgba(201,168,76,.45)'; cx.lineWidth=Math.max(1,W*0.0012); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.stroke(); cx.restore(); }
+const PF_A3_W=2806, PF_A3_LONG=3969;   // A3 (297 × 420 mm) at 240 DPI
 function _frameExport(hi, kind, o){
   const GOLD='rgba(201,168,76,.85)', CREAM='#f4e7c6', SOFT='rgba(230,222,196,.72)';
   const serifI=(s)=>`italic 600 ${s}px "Cormorant Garamond", Georgia, serif`, serifI5=(s)=>`italic 500 ${s}px "Cormorant Garamond", Georgia, serif`, sans=(s)=>`500 ${s}px "Outfit", Arial, sans-serif`;
@@ -517,7 +518,7 @@ function _frameExport(hi, kind, o){
   // Web and Print share ONE layout (painting in a dark mat, the caption centred under it); Print keeps the A-sheet ratio, Web hugs the painting
   {
     const isP=(kind==='print');
-    const area=hi.width*hi.height; const Wf=isP ? Math.round(Math.sqrt(area*594/841)) : hi.width;
+    const area=hi.width*hi.height; const Wf=isP ? (o.sheetW || Math.round(Math.sqrt(area*594/841))) : hi.width;
     const m=Math.round(Wf*(isP ? 0.094 : 0.07));
     const cb0=Math.round(Wf*(o.bare ? 0.24 : o.src ? 0.46 : 0.36));
     const Hf=isP ? Math.round(Wf*841/594) : (m + Math.round(hi.height*(Wf-2*m)/hi.width) + cb0);
@@ -14120,7 +14121,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Funnel: a file was made for the user (image / print / story / vector / video).
   const _phExport=(kind, how, noBg)=>{ try{ window.posthog && window.posthog.capture('export_done',{kind, how, transparent: !!noBg}); }catch(_){} };
   const _exportWith=async(X, sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
-    // 'print3' — Pro's print: the same sheet as A1, on A3 (300 DPI: 3508 × 4961 px). A1 and the vector stay with the studio (the hidden tools).
+    // 'print3' — Pro's print: the same sheet as A1, on A3 (240 DPI: 2806 × 3969 px). A1 and the vector stay with the studio (the hidden tools).
     const _a3 = sizeMode==='print3'; if(_a3) sizeMode='print';
     const { chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip } = X;
     try{
@@ -14142,8 +14143,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // floor on the longer canvas side (≥ 7016 px) so any orientation reaches
         // A1 quality. CAP by absolute output pixels so small sources scale up to
         // the A1 floor while huge sources don't render a needlessly big bitmap.
-        const A1_MIN=_a3 ? 4961 : 7016;   // A3: the painting's long side fills the sheet's long side, so the framed sheet lands at about 300 DPI
-        let MAX_OUT=_a3 ? 5600 : 9933;             // A1 long side @ 300 DPI; desktop/Android can do this
+        const A1_MIN=_a3 ? PF_A3_LONG : 7016;   // A3 at 240 DPI — a full-quality A3 that does not stretch well to larger sheets
+        let MAX_OUT=_a3 ? PF_A3_LONG : 9933;             // A1 long side @ 300 DPI; desktop/Android can do this
         const maxSide=Math.max(CW,CH);
         // iOS / iPadOS Safari caps a single canvas at ~16.7M PIXELS TOTAL (not per
         // side): above that, toBlob() returns null → "could not encode image".
@@ -14166,6 +14167,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // A1 @ 300 in one canvas — better a lower DPI that actually encodes than a
         // null blob). Never below 1.
         SCALE=Math.max(1, Math.min(capScale||1, minScaleForA1));
+        if(_a3) SCALE=Math.max(1, Math.floor(PF_A3_LONG/maxSide));
         // Honest DPI: actual long-side pixels / A1 long side in inches (33.11").
         dpi=Math.round((maxSide*SCALE)/(_a3 ? 16.54 : 33.11));
         label=_a3 ? 'A3-print' : 'A1-print';
@@ -14188,7 +14190,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         label='web';
       }
       const _isGallery = sizeMode==='gallery';
-      const hi = _isGallery ? null : document.createElement('canvas');
+      let hi = _isGallery ? null : document.createElement('canvas');
       if(hi){ hi.width=Math.round(CW*SCALE); hi.height=Math.round(CH*SCALE); }
       const hctx = _isGallery ? createSvgCtx(CW, CH) : hi.getContext('2d');
       if(!_isGallery){
@@ -14362,6 +14364,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // proStatus is still 'loading' — so a fast Free export at app open won't
       // accidentally slip through unwatermarked.
       // The Story picture (what people post) carries the brand in its footer instead: no tiles on it, Free or Pro.
+      // Web holds no more pixels than the A3 print (long side 3969): painted at 4× and brought down smoothly. The studio's devices keep the full size.
+      if(sizeMode==='web' && !hidOk && Math.max(hi.width, hi.height) > PF_A3_LONG){ try{ const _k=PF_A3_LONG/Math.max(hi.width, hi.height); const _c=document.createElement('canvas'); _c.width=Math.round(hi.width*_k); _c.height=Math.round(hi.height*_k); const _x=_c.getContext('2d'); _x.imageSmoothingEnabled=true; _x.imageSmoothingQuality='high'; _x.drawImage(hi,0,0,_c.width,_c.height); hi=_c; }catch(_){} }
       if(sizeMode!=='story') applyWatermark(hi, isPro);
       // Optional source-image thumbnail (web/print only) — placed in the dark band
       // under the painting, never on it. Source picked from
@@ -14402,11 +14406,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
           const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
-          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:(X.pcRealW || _pcWeights(chords)), gc:(X.gcReal || gc), names:_miT('names'), src:_srcForBand});
+          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:(X.pcRealW || _pcWeights(chords)), gc:(X.gcReal || gc), names:_miT('names'), src:_srcForBand, sheetW:(_a3 ? PF_A3_W : 0)});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386));
         }catch(_){ outCanvas=hi; }
       }
-      else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
+      else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand, sheetW:(_a3 ? PF_A3_W : 0)}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
       if(sizeMode==='story'){
         const SW=1080, SH=1920;
         const st=document.createElement('canvas'); st.width=SW; st.height=SH;
@@ -21893,7 +21897,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   [t('tierRowFusion') ||'Fusion & Jam session', no, yes,       yes,   null],
                   [t('tierRowPalette')||'Custom palette',  ronly,   yes,        yes,   null],
                   [t('tierRowMine')   ||'My Music · My Images', '1 + 1', '5 + 5', '5 + 5', null],
-                  [t('tierRowDpi')    ||'300 DPI export',  no,      yes,        yes,   null],
+                  [t('tierRowDpi')    ||'A3 export',  no,      yes,        yes,   null],
                   [t('tierRowWmark')  ||'Watermark',       yes,     no,         no,    null],
                   [t('tierRowAi')     ||'AI features',     (t('tier3Credits')||'1 try per mode'),  (t('tier3Credits')||'1 try per mode'),  inf, '✦'],
                 ];
