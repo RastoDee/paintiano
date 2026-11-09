@@ -14100,7 +14100,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // Prints are 3:4: the A1 print and the vector for giclée are laid out again in a 3:4 frame (the same painter, variant and
     // colours, its own composition in that frame); the screen, the web picture and the story keep the painting's φ. A picture
     // (Image) and Lite keep their own canvas.
-    const _p34 = (sizeMode==='print' || sizeMode==='gallery') && viewMode!=='image' && !basicModeRef.current;
+    const _p34 = (sizeMode==='print' || sizeMode==='print3' || sizeMode==='gallery') && viewMode!=='image' && !basicModeRef.current;
     const _lay34 = (f, ch)=>{ let L=null; try{ window.__pfPrint34=true; L=_favLayout(f, ch); }catch(_){ L=null; } finally{ try{ window.__pfPrint34=false; }catch(_){} } return L; };
     if(!fv){
       let _kd0=0;
@@ -14120,6 +14120,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Funnel: a file was made for the user (image / print / story / vector / video).
   const _phExport=(kind, how, noBg)=>{ try{ window.posthog && window.posthog.capture('export_done',{kind, how, transparent: !!noBg}); }catch(_){} };
   const _exportWith=async(X, sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
+    // 'print3' — Pro's print: the same sheet as A1, on A3 (300 DPI: 3508 × 4961 px). A1 and the vector stay with the studio (the hidden tools).
+    const _a3 = sizeMode==='print3'; if(_a3) sizeMode='print';
     const { chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip } = X;
     try{
       if(!chords.length){setErr(t('errs').nothingToPrint);setErrInfo(false);return;}
@@ -14140,8 +14142,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // floor on the longer canvas side (≥ 7016 px) so any orientation reaches
         // A1 quality. CAP by absolute output pixels so small sources scale up to
         // the A1 floor while huge sources don't render a needlessly big bitmap.
-        const A1_MIN=7016;
-        let MAX_OUT=9933;             // A1 long side @ 300 DPI; desktop/Android can do this
+        const A1_MIN=_a3 ? 4961 : 7016;   // A3: the painting's long side fills the sheet's long side, so the framed sheet lands at about 300 DPI
+        let MAX_OUT=_a3 ? 5600 : 9933;             // A1 long side @ 300 DPI; desktop/Android can do this
         const maxSide=Math.max(CW,CH);
         // iOS / iPadOS Safari caps a single canvas at ~16.7M PIXELS TOTAL (not per
         // side): above that, toBlob() returns null → "could not encode image".
@@ -14165,8 +14167,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // null blob). Never below 1.
         SCALE=Math.max(1, Math.min(capScale||1, minScaleForA1));
         // Honest DPI: actual long-side pixels / A1 long side in inches (33.11").
-        dpi=Math.round((maxSide*SCALE)/33.11);
-        label='A1-print';
+        dpi=Math.round((maxSide*SCALE)/(_a3 ? 16.54 : 33.11));
+        label=_a3 ? 'A3-print' : 'A1-print';
       } else if(sizeMode==='gallery'){
         // Vector SVG export — resolution-independent for fine-art / gallery prints.
         // The print shop's RIP rasterises at whatever DPI it supports (giclée
@@ -14401,10 +14403,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
           const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
           outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:(X.pcRealW || _pcWeights(chords)), gc:(X.gcReal || gc), names:_miT('names'), src:_srcForBand});
-          if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386);
+          if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386));
         }catch(_){ outCanvas=hi; }
       }
-      else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/23.386); }catch(_){ outCanvas=hi; } }
+      else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
       if(sizeMode==='story'){
         const SW=1080, SH=1920;
         const st=document.createElement('canvas'); st.width=SW; st.height=SH;
@@ -14592,7 +14594,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(sizeMode==='story') sharePayload.text = (X.caption!==undefined) ? X.caption : buildStoryCaption();
           try{ const _a=_paintAddrRef.current && _paintAddrRef.current(); if(_a && sizeMode==='story') sharePayload.url=_a; }catch(_){}
           await navigator.share(sharePayload);
-          _phExport(sizeMode,'share',noBg);
+          _phExport(_a3 ? 'print3' : sizeMode,'share',noBg);
           // iOS suspends the AudioContext while the share sheet is on screen.
           // After it dismisses, resume so subsequent Play / REC still has audio.
           try{ await unlockAudio(); }catch(_){}
@@ -14606,7 +14608,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           // fall through to preview so the user still gets the image
         }
       }
-      _phExport(sizeMode,'preview',noBg);
+      _phExport(_a3 ? 'print3' : sizeMode,'preview',noBg);
       setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label,files:(shareFiles.length>1 ? shareFiles : null)});   // a Story with its sound keeps both files when the share sheet could not open (no fresh tap)
     }catch(e){ try{ _setNoBg(false); }catch(_){} if(X.leave) X.leave(); setErr('Print: '+e.message);setErrInfo(false);}
   };
@@ -19304,7 +19306,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       {preview && studioOn && (()=>{
         // the Studio: a sheet like Share and Save — the picture, its size, gold Save and Copy; ‹ / pulled down / a tap beside goes back a step
         const lb=String(preview.label||''), _pr=/print/.test(lb), _ga=/gallery/.test(lb);
-        const _ttl = _pr ? (({EN:'Print A1',SK:'Tlač A1',DE:'Druck A1',FR:'Impression A1',ES:'Impresión A1',PT:'Impressão A1',zh:'打印 A1',zhTW:'列印 A1',ja:'印刷 A1'})[lang]||'Print A1')
+        const _ttl = _pr ? (({EN:'Print A1',SK:'Tlač A1',DE:'Druck A1',FR:'Impression A1',ES:'Impresión A1',PT:'Impressão A1',zh:'打印 A1',zhTW:'列印 A1',ja:'印刷 A1'})[lang]||'Print A1').replace('A1', /A3/.test(lb) ? 'A3' : 'A1')
           : _ga ? (({EN:'Gallery',SK:'Galéria',DE:'Galerie',FR:'Galerie',ES:'Galería',PT:'Galeria',zh:'画廊',zhTW:'畫廊',ja:'ギャラリー'})[lang]||'Gallery')
           : /story/.test(lb) ? (t('sizeStory')||'Story') : /web/.test(lb) ? t('sizeWeb') : t('save');
         const _back = prevBackRef.current==='share' ? _stT('share') : prevBackRef.current==='picker' ? _sent(t('save')) : null;
@@ -20829,14 +20831,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                     <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="web" s={14}/>{t('sizeWeb')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeWebHint')}</div>
                   </button>
-                  <button className="pf-sv pf-sv-print" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('print', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                  <button className="pf-sv pf-sv-print" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage(hidOk ? 'print' : 'print3', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       <TxIcon n="print" s={14}/>
-                      {({EN:'Print A1',SK:'Tlač A1',DE:'Druck A1',FR:'Impression A1',ES:'Impresión A1',PT:'Impressão A1',zh:'打印 A1',zhTW:'列印 A1',ja:'印刷 A1'})[lang]||'Print A1'}
+                      {(({EN:'Print A1',SK:'Tlač A1',DE:'Druck A1',FR:'Impression A1',ES:'Impresión A1',PT:'Impressão A1',zh:'打印 A1',zhTW:'列印 A1',ja:'印刷 A1'})[lang]||'Print A1').replace('A1', hidOk ? 'A1' : 'A3')}
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'high-res · large file · print-ready',SK:'vysoké rozlíšenie · veľký súbor · na tlač',DE:'hochauflösend · große Datei · druckfertig',FR:'haute résolution · gros fichier · prêt à imprimer',ES:'alta resolución · archivo grande · listo para imprimir',PT:'alta resolução · ficheiro grande · pronto a imprimir',zh:'高分辨率 · 大文件 · 可印刷',zhTW:'高解析度 · 大檔案 · 可列印',ja:'高解像度 · 大きいファイル · 印刷可能'})[lang]||'high-res · large file · print-ready'}</div>
                   </button>
+                  {hidOk && (<>
                   <button className="pf-sv pf-sv-gallery" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       <TxIcon n="gallery" s={14}/>
@@ -20853,6 +20856,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'SVG · no background · for design & merch',SK:'SVG · bez pozadia · pre dizajn a merč',DE:'SVG · ohne Hintergrund · für Design & Merch',FR:'SVG · sans fond · pour design & merch',ES:'SVG · sin fondo · para diseño y merch',PT:'SVG · sem fundo · para design e merch',zh:'SVG · 无背景 · 用于设计与周边',zhTW:'SVG · 無背景 · 用於設計與周邊',ja:'SVG · 背景なし · デザイン・グッズ用'})[lang]||'SVG · no background · for design & merch'}</div>
                   </button>
+                  </>)}
                   {/* Audio + Score export hidden for MIDI/Audio/Score sources
                       (isImportedMedia) — exporting them back to the same file
                       format the user just imported is redundant. */}
