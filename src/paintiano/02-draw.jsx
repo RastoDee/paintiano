@@ -8250,13 +8250,15 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   const mul=0.8+0.4*(0.55*S.energy+0.45*S.density);
   const COLS=Math.max(3,Math.min(6,Math.round((cn<=6?3:cn<=18?4:cn<=60?5:6)*mul))), ROWS=Math.max(3,Math.round(COLS*CH/CW)); const cw=CW/COLS, ch=CH/ROWS, n=COLS*ROWS, vis=Math.ceil(n*reveal);
   ctx.fillStyle=_hrCss(_HR_BLK); ctx.fillRect(0,0,CW,CH);
-  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper'];
+  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper','dsit','drun','djump'];   // our own dogs among the figures
   for(let i=0;i<vis;i++){ const r=_hrR(76000+i,ss); r(); const cx=i%COLS, cy=Math.floor(i/COLS); const x0=cx*cw, y0=cy*ch; const tile=S.col(i/n);
     ctx.fillStyle=_hrCss(tile); ctx.fillRect(x0+g,y0+g,cw-2*g,ch-2*g);
     const kind=pool[(r()*pool.length)|0], dir=r()<0.5?1:-1, c=_hrFar(S.col(Math.min(0.999,i/n+0.37)),tile); const mx=x0+cw/2, my=y0+ch/2;
     ctx.save(); ctx.beginPath(); ctx.rect(x0+g,y0+g,cw-2*g,ch-2*g); ctx.clip();
     if(kind==='heart'){ const h=Math.min(cw,ch)*0.3; const pts=_hrHeart(mx,my+h*0.15,h); ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); pts.forEach(q=>ctx.lineTo(q[0],q[1])); ctx.closePath(); ctx.lineJoin='round'; ctx.lineWidth=h*0.22; ctx.strokeStyle=_hrCss(_HR_BLK); ctx.stroke(); ctx.fillStyle=_hrCss(c); ctx.fill();
       ctx.strokeStyle=_hrCss(_HR_BLK); ctx.lineWidth=h*0.09; ctx.lineCap='round'; for(let k=0;k<6;k++){ const a=-2.6+k*0.43; ctx.beginPath(); ctx.moveTo(mx+Math.cos(a)*h*1.35,my+Math.sin(a)*h*1.25); ctx.lineTo(mx+Math.cos(a)*h*1.7,my+Math.sin(a)*h*1.6); ctx.stroke(); } }
+    else if(kind[0]==='d' && kind!=='dancer'){ const k=kind.slice(1), bw=k==='run'?2.9:k==='jump'?2.3:2.05, bh=k==='run'?1.15:k==='jump'?1.75:1.6, cy0=k==='run'?-0.06:k==='jump'?-0.1:-0.13; const u=Math.min((cw-2*g)*0.8/bw,(ch-2*g)*0.8/bh);
+      _hgDog(ctx,k,mx-(k==='run'?0.11:0.04)*u*dir,my-cy0*u,u,dir,c,_HR_BLK,Math.max(1.5,Math.min(cw,ch)*0.03)); }
     else { const wide=(kind==='baby'||kind==='dog'); const u=Math.min(cw/(wide?7.8:6.6), ch/(wide?6.8:9.6)); const oy=kind==='baby'?-0.5*u:kind==='dog'?0.35*u:0.9*u, ox=kind==='baby'?-0.65*u*dir:kind==='dog'?-0.45*u*dir:0; const cr=_HR_CAST[kind](mx+ox,my+oy,u,r,S.energy,dir); if(r()>0.6) cr.glow=null; _hrCreature(ctx,cr,c,u,r); }
     ctx.restore(); }
 }
@@ -8288,10 +8290,10 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
   // ── VARIANT (chosen by vote from every version we had): 0 Haring listens (the party, the parade along the snake, or the
   // pair under the heart, as the piece asks) · 1 The Subway (white chalk figures, the piece's colours in the accents) ·
   // 2 The Acrobats (the tower in motion) · 3 The Crowd (his murals: the snake and everyone) · 4 The Poster (one figure, the
-  // Pop Shop sheet) · 5 The Giant · 6 Mosaic (the first one) · 7 The Heart · 8 The Snake. Retired (code kept): the first
-  // Listens, the Story, Mural, the coloured-chalk Subway, Doodle, Dancing crowd, Figures.
-  const _pn=_capN(9); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
-  const _ph=[haringListen,haringSubwayAccent,haringAcrobats,haringCrowd,haringPoster,haringGiant,haringPhaseMosaic,haringHeart,haringSnakeWall];
+  // Pop Shop sheet) · 5 The Giant · 6 Mosaic (the first one) · 7 The Heart. Retired (code kept): the first Listens, the
+  // Story, Mural, the coloured-chalk Subway, Doodle, Dancing crowd, Figures, the Snake.
+  const _pn=_capN(8); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _ph=[haringListen,haringSubwayAccent,haringAcrobats,haringCrowd,haringPoster,haringGiant,haringPhaseMosaic,haringHeart];
   _ph[_hpick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -15905,7 +15907,6 @@ const ARTIST_VARIANTS = {
     {ground:'#e8187a',mark:{figure:.7,radiant:.3},size:[.25,.45],layout:{scatter:1},density:.1},             // The Giant
     {ground:'#121012',mark:{figure:.6,heart:.2,radiant:.2},size:[.05,.12],layout:{grid:1},density:.7},       // Mosaic
     {ground:'#2a7ae8',mark:{heart:.6,radiant:.25,figure:.15},size:[.08,.2],layout:{radial:.6,scatter:.4},density:.45},     // The Heart
-    {ground:'#e8d82a',mark:{wavyline:.45,figure:.4,zigzag:.15},size:[.06,.16],layout:{flow:1},density:.35},  // The Snake
   ],
   mitchell: [
     {mark:{brush:1},size:[.05,.16],layout:{scatter:.6,radial:.4},density:.4},   // What she heard
@@ -15983,7 +15984,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:9,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
