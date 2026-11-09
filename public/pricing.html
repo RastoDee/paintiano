@@ -1077,8 +1077,41 @@
 var PAINTIANO_PADDLE = {
   token: 'live_3ab34fef52eea1baa3656517dec',
   env: 'production',
-  prices: { pro: 'pri_01kt6s053namfk25tvvdw2eaey', pro_ai: 'pri_01ktkmf6ghq0kk3vkg2dtnjd7q' }
+  prices: { pro: 'pri_01kt6s053namfk25tvvdw2eaey', pro_ai: 'pri_01ktkmf6ghq0kk3vkg2dtnjd7q', up: 'pri_01m5zep41d8kv3m6tcxbbnxsb2' }
 };
+/* Local prices: Paddle can carry a price per country. Ask it once what THIS visitor pays and
+   swap the base prices (€9.99 / €19.99 / €10) in the page's texts — label and checkout agree.
+   No answer → the base prices stay. */
+function paintianoLocalPrices(){
+  paintianoLoadPaddle(function(Paddle){
+    if (!Paddle || !Paddle.PricePreview) return;
+    try {
+      Paddle.Environment.set(PAINTIANO_PADDLE.env);
+      Paddle.Initialize({ token: PAINTIANO_PADDLE.token });
+      var ids = PAINTIANO_PADDLE.prices, items = [];
+      for (var k in ids) items.push({ priceId: ids[k], quantity: 1 });
+      Paddle.PricePreview({ items: items }).then(function(r){
+        var m = {}, li = (r && r.data && r.data.details && r.data.details.lineItems) || [];
+        li.forEach(function(x){
+          var id = x && x.price && x.price.id, v = x && x.formattedTotals && (x.formattedTotals.total || x.formattedTotals.subtotal);
+          for (var k in ids) if (ids[k] === id && typeof v === 'string') m[k] = v.replace(/[.,]00(?=\D*$)/, '').trim();
+        });
+        if (!m.pro && !m.pro_ai) return;
+        var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null), n, list = [];
+        while ((n = w.nextNode())) { if (n.nodeValue.indexOf('€') >= 0 && !(n.parentNode && /^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName))) list.push(n); }
+        list.forEach(function(n){
+          var o = n.nodeValue;
+          if (m.pro_ai) o = o.replace(/€\s?19[.,]99|19[.,]99\s?€/g, function(){ return m.pro_ai; });
+          if (m.pro)    o = o.replace(/€\s?0(?![\d.,])/g, function(){ return m.pro.replace(/\d[\d.,\s]*\d|\d/, '0'); });
+          if (m.pro)    o = o.replace(/€\s?9[.,]99|9[.,]99\s?€/g, function(){ return m.pro; });
+          if (m.up)     o = o.replace(/€\s?10(?![\d.,])/g, function(){ return m.up; }).replace(/(^|[^\d.,])10\s?€/g, function(x, pre){ return pre + m.up; });
+          if (o !== n.nodeValue) n.nodeValue = o;
+        });
+      }).catch(function(){});
+    } catch (e) {}
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintianoLocalPrices); else paintianoLocalPrices();
 function paintianoLoadPaddle(cb){
   if (window.Paddle) return cb(window.Paddle);
   var s = document.createElement('script');

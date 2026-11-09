@@ -147,6 +147,57 @@ async function pfAiFetch(ep, init) {
   return r;
 }
 
+// ─── local prices (Nov 2026) ─────────────────────────────────────────────────
+// Paddle can carry a price per country (Catalog › price › Country specific
+// prices). The app's texts say the base price (€9.99 / €19.99 / €10); when the
+// paywall opens, Paddle is asked once what THIS visitor will pay (it places the
+// visitor by network, as its checkout does) and the price in every paywall text
+// is swapped for it — so the label and the checkout never disagree. No answer
+// (offline, blocked) → the base prices stay.
+const PF_PX = { map: null, busy: null };
+function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
+function pfPxLoad() {
+  if (PF_PX.map) return Promise.resolve(PF_PX.map);
+  if (PF_PX.busy) return PF_PX.busy;
+  PF_PX.busy = new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') return reject(new Error('no window'));
+    const go = () => {
+      try {
+        const P = window.Paddle; if (!P || !P.PricePreview) return reject(new Error('no paddle'));
+        P.Environment.set(PRO_CFG.paddleEnv); P.Initialize({ token: PRO_CFG.paddleClientToken });
+        const ids = { pro: PRO_CFG.paddlePriceIdPro, pro_ai: PRO_CFG.paddlePriceIdProAI, up: PRO_CFG.paddlePriceIdUpgrade };
+        const items = Object.keys(ids).filter(k => ids[k]).map(k => ({ priceId: ids[k], quantity: 1 }));
+        P.PricePreview({ items }).then(r => {
+          const m = {};
+          ((r && r.data && r.data.details && r.data.details.lineItems) || []).forEach(li => {
+            const id = li && li.price && li.price.id; const k = Object.keys(ids).find(x => ids[x] === id);
+            const v = li && li.formattedTotals && _pfPxTidy(li.formattedTotals.total || li.formattedTotals.subtotal);
+            if (k && v) m[k] = v;
+          });
+          if (!m.pro && !m.pro_ai) return reject(new Error('no prices'));
+          PF_PX.map = m; resolve(m);
+        }).catch(reject);
+      } catch (e) { reject(e); }
+    };
+    if (window.Paddle) return go();
+    let sc = document.querySelector('script[data-paintiano-paddle]');
+    if (!sc) { sc = document.createElement('script'); sc.src = 'https://cdn.paddle.com/paddle/v2/paddle.js'; sc.async = true; sc.setAttribute('data-paintiano-paddle', '1'); document.head.appendChild(sc); }
+    sc.addEventListener('load', go); sc.addEventListener('error', () => reject(new Error('paddle script load failed')));
+  });
+  PF_PX.busy.catch(() => { PF_PX.busy = null; });
+  return PF_PX.busy;
+}
+// A text with the base price in it → the same text with the visitor's price.
+function pfPx(s) {
+  const m = PF_PX.map; if (!m || typeof s !== 'string' || s.indexOf('€') < 0) return s;
+  let o = s;
+  if (m.pro_ai) o = o.replace(/€\s?19[.,]99|19[.,]99\s?€/g, () => m.pro_ai);
+  if (m.pro)    o = o.replace(/€\s?0(?![\d.,])/g, () => m.pro.replace(/\d[\d.,\s]*\d|\d/, '0'));   // Free: zero in the same currency
+  if (m.pro)    o = o.replace(/€\s?9[.,]99|9[.,]99\s?€/g, () => m.pro);
+  if (m.up)     o = o.replace(/€\s?10(?![\d.,])/g, () => m.up).replace(/(^|[^\d.,])10\s?€/g, (x, pre) => pre + m.up);   // (no lookbehind: old Safari cannot parse it)
+  return o;
+}
+
 // ─── server validation (through our own endpoint) ────────────────────────────
 async function _proValidate(key, check = false) {
   const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -583,7 +634,9 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
-  const tr = (k, fb) => { const v = t && t(k); return (v && v !== k) ? v : fb; };   // t() returns the key when missing
+  const [, _setPxTick] = useState(0);   // the visitor's own prices arrived → paint the texts again
+  useEffect(() => { let on = true; pfPxLoad().then(() => { if (on) _setPxTick(n => n + 1); }).catch(() => {}); return () => { on = false; }; }, []);
+  const tr = (k, fb) => { const v = t && t(k); return pfPx((v && v !== k) ? v : fb); };   // t() returns the key when missing; prices in the visitor's own currency
 
   const submit = async () => {
     setBusy(true); setErrMsg('');
@@ -958,9 +1011,9 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                     </tr>
                     <tr>
                       <th style={Object.assign({}, cellSty, { textAlign: 'left' })}></th>
-                      <th style={Object.assign({}, cellSty, { color: FREE_FG, fontWeight: 500 })}>€0</th>
-                      <th style={Object.assign({}, cellSty, { color: GOLD, fontWeight: 600, background: GOLD_BG })}>€9.99</th>
-                      <th style={Object.assign({}, cellSty, { color: AI_PURPLE, fontWeight: 600, background: PURPLE_BG })}>€19.99</th>
+                      <th style={Object.assign({}, cellSty, { color: FREE_FG, fontWeight: 500 })}>{pfPx('€0')}</th>
+                      <th style={Object.assign({}, cellSty, { color: GOLD, fontWeight: 600, background: GOLD_BG })}>{pfPx('€9.99')}</th>
+                      <th style={Object.assign({}, cellSty, { color: AI_PURPLE, fontWeight: 600, background: PURPLE_BG })}>{pfPx('€19.99')}</th>
                     </tr>
                   </thead>
                   <tbody>
