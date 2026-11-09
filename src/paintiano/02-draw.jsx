@@ -5593,6 +5593,34 @@ function lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   ctx.restore();
 }
 // 5 · Sunrise (1965) — a half sun on the horizon, rays alternating with white across a Ben-Day sky, the sea in outlined stripes, a cloud. The rays and the sky dots carry the piece's own colours at poster strength; the sun keeps the piece's warmest colour held between yellow and orange; the sea is its coolest colour, white crests surfacing stripe by stripe
+// ── Lichtenstein: Landscape — the land as he printed it, in dots and flat colour: the sky a Ben-Day field thinning toward
+// the horizon, three ridges (back to front) drawn by the melody itself — each a third of the piece, its line the line of the
+// tune — the far one in dots, the middle one flat, the near one striped or solid, a black contour along every ridge; a
+// round sun at the moment of the climax, as high as the climax sings; a comic cloud.
+function lichtensteinLandscape(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_lcSetup(chords,gc,mode); const cn=S.cn, isBW=S.isBW; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH); const lw=Math.max(2.5,D*0.01);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0.2,top:72}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const sky=isBW?_LC_GREY[1]:_LC_PRIM[2], sun=isBW?[250,250,250]:_LC_PRIM[1];
+  const prof=(a,b)=>{ const N=24, out=[]; for(let i=0;i<=N;i++){ const cc=a+(b-a)*i/N; let s=0,k=0; for(let j=Math.max(a,Math.round(cc-(b-a)/N));j<=Math.min(b-1,Math.round(cc+(b-a)/N));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } for(let r=0;r<2;r++) for(let i=1;i<N;i++) out[i]=(out[i-1]+out[i]+out[i+1])/3; const mn=Math.min(...out), mx=Math.max(...out); return out.map(v=>mx>mn+0.02?(v-mn)/(mx-mn):0.5); };
+  const layers=[0,1,2].map(k=>{ const a=Math.floor(k*cn/3), b=Math.floor((k+1)*cn/3); return {a,b,p:prof(a,Math.max(a+2,b)),base:CH*(0.5+0.15*k),amp:CH*(0.16-0.03*k),col:S.col((a+b)/2/cn)}; });
+  ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(0,0,CW,CH);
+  // the sky: dots, full at the top, gone by the horizon
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,CW,CH*0.62); ctx.clip(); _lcBenday(ctx,0,0,CW,CH*0.62,D*0.024,sky,(x,y)=>_lcClamp(1-y/(CH*0.6),0,1)); ctx.restore();
+  // the sun, at the climax, as high as it sings
+  if(reveal>=c.t0){ const sx=CW*(0.15+0.7*c.t), sy=CH*(0.08+0.22*(1-A.reg(c.top))), sr=D*0.09; ctx.fillStyle=_lcCss(_LC_WHT); ctx.beginPath(); ctx.arc(sx,sy,sr*1.12,0,6.2832); ctx.fill(); ctx.fillStyle=_lcCss(sun); ctx.beginPath(); ctx.arc(sx,sy,sr,0,6.2832); ctx.fill(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.stroke(); }
+  // the cloud: a comic cloud of round puffs, outlined, when the piece is past its first third
+  if(reveal>0.33){ const r=_lcR(69500,ss); r(); const cx=CW*(0.2+0.6*r()), cy=CH*(0.14+0.1*r()), w=D*0.3; const puffs=[[-0.32,0.04,0.2],[-0.1,-0.08,0.26],[0.16,-0.04,0.22],[0.34,0.06,0.16],[0.02,0.08,0.2]];
+    ctx.fillStyle=_lcCss(_LC_WHT); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; for(const pass of [0,1]){ for(const [dx,dy,rr] of puffs){ ctx.beginPath(); ctx.arc(cx+dx*w,cy+dy*w,rr*w*(pass?1:1.0)+(pass?0:lw*0.5),0,6.2832); if(pass) ctx.fill(); else { ctx.fillStyle=_lcCss(_LC_BLK); ctx.fill(); ctx.fillStyle=_lcCss(_LC_WHT); } } } }
+  // the ridges, back to front, each drawn when its third of the piece begins
+  layers.forEach((L,k)=>{ if(reveal<L.a/cn) return; const N=L.p.length-1; const pts=L.p.map((v,i)=>[CW*i/N, L.base-L.amp*v]); const path=()=>{ ctx.beginPath(); ctx.moveTo(-5,CH+5); ctx.lineTo(-5,pts[0][1]); for(let i=0;i<N;i++){ const a=pts[i], b=pts[i+1]; ctx.quadraticCurveTo(a[0],a[1],(a[0]+b[0])/2,(a[1]+b[1])/2); } ctx.lineTo(CW+5,pts[N][1]); ctx.lineTo(CW+5,CH+5); ctx.closePath(); };
+    ctx.save(); path(); ctx.fillStyle=_lcCss(_LC_WHT); ctx.fill(); ctx.clip(); const y0=L.base-L.amp;
+    if(k===0){ _lcBenday(ctx,0,y0,CW,CH-y0,D*0.022,L.col,(x,y)=>_lcClamp(0.9-0.6*(y-y0)/(CH-y0),0.25,1)); }
+    else if(k===1){ ctx.fillStyle=_lcCss(L.col); ctx.fillRect(0,y0-5,CW,CH); }
+    else { const col=L.col; if(X.leaps>0.45){ ctx.strokeStyle=_lcCss(col); ctx.lineWidth=D*0.016; for(let t=-CH;t<CW+CH;t+=D*0.034){ ctx.beginPath(); ctx.moveTo(t,y0); ctx.lineTo(t-CH,y0+CH); ctx.stroke(); } } else { ctx.fillStyle=_lcCss(isBW?_LC_GREY[0]:_LC_BLK); ctx.fillRect(0,y0-5,CW,CH); } }
+    ctx.restore(); ctx.save(); path(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.2; ctx.lineJoin='round'; ctx.stroke(); ctx.restore(); });
+  ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.6; ctx.strokeRect(lw*0.8,lw*0.8,CW-lw*1.6,CH-lw*1.6);
+  try{ globalThis.__LC_LISTEN={v:'landscape'}; }catch(_){} _setCurE(0.5);
+}
 function lichtensteinPhaseSunrise(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_lcSetup(chords,gc,mode); const cn=S.cn; const isBW=S.isBW; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH); const lw=Math.max(2,D*0.008);
   const fl=(t)=>{ const c=_picChord(chords,_lcClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb; if(isBW) return c; const g=(c[0]+c[1]+c[2])/3; const q=c.map(v=>_lcClamp(g+(v-g)*1.8,0,255)); const m=Math.max(q[0],q[1],q[2])||1; return q.map(v=>_lcClamp(v*Math.min(1.4,238/m),0,255)); };
@@ -5630,13 +5658,13 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   const dotStep=(S*0.017)*(1.25-0.5*dnaD), dotR=dotStep*0.27;
   const GA=Math.PI*2*(1-2/(1+Math.sqrt(5)));
   ctx.fillStyle=PAPER; ctx.fillRect(0,0,CW,CH);
-  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 close-up curves · 4 brushstrokes · 5 mirrors · 6 Sunrise. Free: 0 and 1.
+  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 close-up curves · 4 brushstrokes · 5 mirrors · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _lcListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
 
   if(pick===0){ lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===5){ lichtensteinPhaseSunrise(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===5){ lichtensteinLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Sunrise (a near copy of his 1965 picture) retired, code kept
   if(pick===1){ // burst
     _bendayField(ctx,0,0,CW,CH,css(flat(col(1))),dotR,dotStep,0.45);
     const cx=CW/2, cy=CH*0.52;
@@ -8162,7 +8190,10 @@ function _hrPairHeart(x,y,u,r,e,dir){ const a=_hrO(x-2.4*u,y,1), b=_hrO(x+2.4*u,
   return {lines:[{p:[na,a(0,0)]},{p:[na,a(0.9*u,-3.6*u),a(1.8*u,-4.9*u)]},{p:[na,a(-1.2*u,-1.6*u),a(-1.6*u,-0.4*u)]},{p:[a(0,0),a(-0.7*u,1.4*u),a(-0.8*u,2.7*u)]},{p:[a(0,0),a(0.6*u,1.4*u),a(0.7*u,2.7*u)]},
                  {p:[nb,b(0,0)]},{p:[nb,b(-0.9*u,-3.6*u),b(-1.8*u,-4.9*u)]},{p:[nb,b(1.2*u,-1.6*u),b(1.6*u,-0.4*u)]},{p:[b(0,0),b(-0.6*u,1.4*u),b(-0.7*u,2.7*u)]},{p:[b(0,0),b(0.7*u,1.4*u),b(0.8*u,2.7*u)]}],
           heads:[[...a(-0.4*u,-3.6*u),u],[...b(0.4*u,-3.6*u),u]],fills:[_hrHeart(x,y-6.4*u,2.2*u)],glow:[x,y-6.4*u,3.0*u,4.0*u,9,-1.57,3.4]}; }
-const _HR_CAST={dancer:_hrDancer,runner:_hrRunner,jumper:_hrJumper,waver:_hrWaver,pairHeart:_hrPairHeart};
+// our round dog (the Mosaic's own): a round body on legs drawn together, the head and the tail up, the mouth shut — it never barks
+function _hrRoundDog(x,y,u,r,e,dir){ const p=_hrO(x,y,dir);
+  return {lines:[{p:[p(-1.8*u,0),p(1.4*u,0)],w:1.6},{p:[p(-1.5*u,0),p(-1.6*u,2.2*u)]},{p:[p(-0.7*u,0),p(-0.6*u,2.2*u)]},{p:[p(0.5*u,0),p(0.6*u,2.2*u)]},{p:[p(1.2*u,0),p(1.4*u,2.2*u)]},{p:[p(-1.8*u,0),p(-2.6*u,-1.4*u)]},{p:[p(1.4*u,-0.2*u),p(2.2*u,-1.5*u)],w:1.2},{p:[p(2.0*u,-1.6*u),p(3.4*u,-1.3*u)],w:1.5},{p:[p(1.8*u,-2.0*u),p(1.6*u,-2.9*u)],w:0.8}],heads:[],glow:null}; }
+const _HR_CAST={dancer:_hrDancer,runner:_hrRunner,jumper:_hrJumper,waver:_hrWaver,pairHeart:_hrPairHeart,rdog:_hrRoundDog};
 function _hrCreature(ctx,c,col,u,rnd,glow){ const W=u*1.15, Ol=u*0.4; ctx.lineCap='round'; ctx.lineJoin='round';
   const path=(pts)=>{ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); };
   ctx.strokeStyle=_hrCss(_HR_BLK); c.lines.forEach(l=>{ ctx.lineWidth=W*(l.w||1)+Ol*2; path(l.p); ctx.stroke(); });
@@ -8250,7 +8281,7 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   const mul=0.8+0.4*(0.55*S.energy+0.45*S.density);
   const COLS=Math.max(3,Math.min(6,Math.round((cn<=6?3:cn<=18?4:cn<=60?5:6)*mul))), ROWS=Math.max(3,Math.round(COLS*CH/CW)); const cw=CW/COLS, ch=CH/ROWS, n=COLS*ROWS, vis=Math.ceil(n*reveal);
   ctx.fillStyle=_hrCss(_HR_BLK); ctx.fillRect(0,0,CW,CH);
-  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper','dsit','drun','djump'];   // our own dogs among the figures
+  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper','rdog','rdog','dsit','drun','djump'];   // our own dogs among the figures
   for(let i=0;i<vis;i++){ const r=_hrR(76000+i,ss); r(); const cx=i%COLS, cy=Math.floor(i/COLS); const x0=cx*cw, y0=cy*ch; const tile=S.col(i/n);
     ctx.fillStyle=_hrCss(tile); ctx.fillRect(x0+g,y0+g,cw-2*g,ch-2*g);
     const kind=pool[(r()*pool.length)|0], dir=r()<0.5?1:-1, c=_hrFar(S.col(Math.min(0.999,i/n+0.37)),tile); const mx=x0+cw/2, my=y0+ch/2;
@@ -8259,7 +8290,7 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
       ctx.strokeStyle=_hrCss(_HR_BLK); ctx.lineWidth=h*0.09; ctx.lineCap='round'; for(let k=0;k<6;k++){ const a=-2.6+k*0.43; ctx.beginPath(); ctx.moveTo(mx+Math.cos(a)*h*1.35,my+Math.sin(a)*h*1.25); ctx.lineTo(mx+Math.cos(a)*h*1.7,my+Math.sin(a)*h*1.6); ctx.stroke(); } }
     else if(kind[0]==='d' && kind!=='dancer'){ const k=kind.slice(1), bw=k==='run'?2.9:k==='jump'?2.3:2.05, bh=k==='run'?1.15:k==='jump'?1.75:1.6, cy0=k==='run'?-0.06:k==='jump'?-0.1:-0.13; const u=Math.min((cw-2*g)*0.8/bw,(ch-2*g)*0.8/bh);
       _hgDog(ctx,k,mx-(k==='run'?0.11:0.04)*u*dir,my-cy0*u,u,dir,c,_HR_BLK,Math.max(1.5,Math.min(cw,ch)*0.03)); }
-    else { const wide=(kind==='baby'||kind==='dog'); const u=Math.min(cw/(wide?7.8:6.6), ch/(wide?6.8:9.6)); const oy=kind==='baby'?-0.5*u:kind==='dog'?0.35*u:0.9*u, ox=kind==='baby'?-0.65*u*dir:kind==='dog'?-0.45*u*dir:0; const cr=_HR_CAST[kind](mx+ox,my+oy,u,r,S.energy,dir); if(r()>0.6) cr.glow=null; _hrCreature(ctx,cr,c,u,r); }
+    else { const wide=(kind==='rdog'); const u=Math.min(cw/(wide?7.8:6.6), ch/(wide?6.8:9.6)); const oy=kind==='rdog'?0.35*u:0.9*u, ox=kind==='rdog'?-0.45*u*dir:0; const cr=_HR_CAST[kind](mx+ox,my+oy,u,r,S.energy,dir); if(r()>0.6 || kind==='rdog') cr.glow=null; _hrCreature(ctx,cr,c,u,r); }
     ctx.restore(); }
 }
 // 1 · Doodle — a black all-over doodle on one bright flat colour, with a few large figures caught in it: a jumper, a dancer, a runner, two figures holding up a heart
@@ -15945,7 +15976,7 @@ const ARTIST_VARIANTS = {
     {ground:'#e8e8f4',mark:{wavyline:1},size:[.05,.12],layout:{stack:1},density:.5,outline:1},
     {ground:'#f4e8e8',mark:{stripes:1},size:[.03,.08],layout:{stack:1},density:.4,outline:1},
     {ground:'#111111',mark:{benday:1},size:[.1,.3],layout:{scatter:1},density:.15},
-    {ground:'#faf8f0',mark:{rays:.5,benday:.3,stripes:.2},size:[.1,.3],layout:{radial:.5,stack:.5},density:.25,outline:1},   // Sunrise
+    {ground:'#faf8f0',mark:{benday:.5,wavyline:.3,stripes:.2},size:[.1,.3],layout:{stack:1},density:.25,outline:1},   // Landscape
     {mark:{benday:.7,blob:.3},size:[.05,.2],layout:{scatter:1},density:.4},
     {ground:'#e8e8f4',mark:{radiant:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.1},
   ],
