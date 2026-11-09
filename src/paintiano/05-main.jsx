@@ -15802,7 +15802,20 @@ Hard requirements:
     // home once its card's picture is ready (a frame or two): the card never shows up empty
     return new Promise(res=>{ let gone=false; const go=()=>{ if(gone) return; gone=true; if(backBtnRef.current) backBtnRef.current.click(); res(); };
       if(pr && pr.then){ pr.then(go, go); setTimeout(go, 220); } else go(); }); };
-  const _stForYou = ()=>{ if(recording||demoReelOn) return; setStChg(null); setStripOpen(false); _stHome().then(()=>setTimeout(()=>{ try{ feedUpRef.current && feedUpRef.current(); }catch(_){} }, 180)); };   // the Studio's For You tab: your painting waits on the home card, the surprises start
+  // the Studio's For You tab: the painting on screen goes along — For You opens on it as its first card, playing on (or paused, as it was),
+  // no jump to the painting of the day, no restart; ↑ brings the surprises, Studio takes it back. Nothing on screen (or Compose / Mic live):
+  // your painting waits on the home card and the surprises start, as before
+  const _stForYou = ()=>{ if(recording||demoReelOn) return; setStChg(null); setStripOpen(false);
+    const isI = viewMode==='image' && !moodFromImg && !!originalImgUrl;
+    const has = isI ? !!pixelRef.current : (chords.length>0 && (disp>0 || playing || holdPaused));
+    if(has && !composeMode && !micActive && !micArmed && !working && !anim && feedAt<0){
+      let u=null; try{ u=_feedSnap(); }catch(_){} try{ const tt=_vidTitle(); feedOwnTtlRef.current = (tt && tt!=='Paintiano') ? tt : ''; }catch(_){ feedOwnTtlRef.current=''; }
+      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:isI?'img':undefined, piece:'own', own:true, sel:null, u, pu:u, l:'', dir:'none' };
+      feedResumeRef.current=null; feedStartRef.current=null; feedStepsRef.current=[]; feedPieceRef.current=true; feedLookRef.current=null;
+      setFeedIntro(null); setFeedCards([c]); setFeedAt(0); setFeedLoaded(isI ? 'iown' : 'own'); setFeedHiRes(!isI);
+      setForceSetup(true); requestAnimationFrame(()=>setStamp(x=>x+1)); setTimeout(()=>setStamp(x=>x+1), 120);   // the card's canvas is a new one: the painting so far is put back on it
+      return; }
+    _stHome().then(()=>setTimeout(()=>{ try{ feedUpRef.current && feedUpRef.current(); }catch(_){} }, 180)); };
   const _stViaHome = (sel)=>{ _stHome().then(()=>setTimeout(()=>{ const el=document.querySelector(sel); if(el && !el.disabled) el.click(); }, 140)); };
   const _stNewSrc = (target)=>{ _stPaused(()=>{ if(draftOwnerRef.current){ stashDraft(draftOwnerRef.current); draftOwnerRef.current=null; } setPickMode(target); }); };
   const _stNewMood = ()=>{ _stPaused(()=>{ setMoodEdit(''); setShowMoodMenu(true); }); };
@@ -16412,7 +16425,8 @@ Hard requirements:
     myMusicList().then(l=>{ if(!c) feedMineRef.current.mus=_ok(l); }).catch(()=>{}); myImgList().then(l=>{ if(!c) feedMineRef.current.img=_ok(l); }).catch(()=>{});
     return ()=>{ c=true; }; },[studioHome, myMusicSlots, myImgSlots]);
   const _feedMine = (kind, piece)=> typeof piece==='string' ? ((kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).find(x=>'m'+x.id===piece) || null) : null;
-  const _feedTitle = (c)=> c ? (typeof c.piece==='string' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
+  const feedOwnTtlRef = useRef('');   // the title of your own painting, brought along to For You
+  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
   const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
@@ -16461,6 +16475,7 @@ Hard requirements:
     if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
     setTimeout(()=>{ if(!_acRunning()) setFeedNeedTap(true); }, 450);   // still asleep (a swipe on iOS): ▶ asks for one tap
     if(!feedLookRef.current){
+      if(feedAt>=0 && feedCards[feedAt] && feedCards[feedAt].piece==='own') feedPieceRef.current = false;   // your own painting (brought from the Studio) is yours: it is put aside as a draft like any other
       feedLookRef.current = { style, stage:painterStage.slice(), mode, phase:phaseIndex|0, jamOn, notesMode, comp:imgComposer, cstage:composerStage.slice() };
       try{ stashMode('image'); }catch(_){}       // your picture keeps its place too
       try{ stashOutgoing('music'); }catch(_){}   // what you had (a picture, a mood …) waits in its own place
@@ -16516,6 +16531,7 @@ Hard requirements:
   const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
+    if(feedAt>=0 && feedCards[feedAt] && feedCards[feedAt].piece==='own' && feedLoaded!==null){ feedPieceRef.current=false; try{ stashMode('image'); }catch(_){} try{ stashOutgoing('music'); }catch(_){} try{ stashMode('music'); }catch(_){} _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; return; }   // your own painting: kept as a draft, the home card shows it
     // after the first surprise the colour card never comes back: with no painting of yours, the home keeps the surprise you just left
     if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=(c.kind!=='img' && _canvasBlank(canvasRef.current) && _fullPaintUrl()) || _feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:typeof c.piece==='string' ? {s:isI?'mi':'mm', id:((_feedMine(c.kind, c.piece)||{}).id)} : isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
@@ -16584,10 +16600,10 @@ Hard requirements:
       const pv=feedCards[feedAt-1]; setFeedAt(feedAt-1); setFeedIntro(null); _feedGo(pv); if(!q){ _feedFlashNow(); _stBuzz(8); }
       if(holdPausedRef.current && feedLoaded!==null) setTimeout(()=>{ if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} } }, 220);
       return; }
-    const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music'), own = !!mine && (mine==='image' ? hasImageDraft : hasMusicDraft);
+    const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music'), own = !!mine && (c.piece==='own' || (mine==='image' ? hasImageDraft : hasMusicDraft));   // your own painting brought from the Studio: ↓ puts it on the home card
     if(!own && !homeArt){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }   // nothing of yours yet: the card just gives
     // ↑ again brings back these same surprises, from this card (as ↓ then ↑ does between cards) — not a new piece
-    try{ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(); feedResumeRef.current = { kind:_feedKind(), cards:feedCards.map(x=>x.id===c.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null, dir:'u'} : x) }; }catch(_){ feedResumeRef.current=null; }
+    try{ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(); const cs=feedCards.filter(x=>x.piece!=='own'); feedResumeRef.current = cs.length ? { kind:_feedKind(), cards:cs.map(x=>x.id===c.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null, dir:'u'} : x) } : null; }catch(_){ feedResumeRef.current=null; }
     setFeedIntro(null); if(!q){ setFeedFly({k:Date.now(), u:_feedSnap(), t:_feedTitle(c), l:'', dir:'down'}); setTimeout(()=>setFeedFly(null), 340); }
     _feedExit(); if(own) setHomeSide(mine); if(!q) _stBuzz(8);
   };
@@ -16675,6 +16691,7 @@ Hard requirements:
   const _feedTake = ()=>{
     if(feedAt<0 || feedFly) return;
     const c=feedCards[feedAt]; if(!c || !_feedIsLoaded(c)){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }
+    if(c.piece==='own'){ setFeedIntro(null); _stBuzz(12); _feedOpen(); return; }   // your own painting, brought along from the Studio: it goes back as it is (its painter stays yours)
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600);
     if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); _palGoldSet(false); } else if(!crOn && imgComposerRef.current) setComposerDice(true);   // a picture's composer: drawn, not chosen — white, ↑ draws on
@@ -16711,7 +16728,7 @@ Hard requirements:
   const feedLitRef = useRef(false);
   // Studio lights up (and its whisper comes) only once you have had some For You: 15 s of it in this visit, over any number of paintings
   const feedPlayAccRef = useRef(0);
-  useEffect(()=>{ const on = feedAt>=0 && !!feedCards[feedAt] && playing && !feedIntro; if(!on){ feedLitRef.current=false; if(feedStudioLit) setFeedStudioLit(0); return; } if(feedLitRef.current) return;
+  useEffect(()=>{ const on = feedAt>=0 && !!feedCards[feedAt] && feedCards[feedAt].piece!=='own' && playing && !feedIntro; if(!on){ feedLitRef.current=false; if(feedStudioLit) setFeedStudioLit(0); return; } if(feedLitRef.current) return;
     const t0=Date.now(); let tOff=null;
     const lightUp=()=>{ feedLitRef.current=true; const seen=_tipSeen('studio') || !!tipSessRef.current.studio; if(!seen){ tipSessRef.current.studio=true; _tipCount('studio'); } setFeedStudioLit(seen ? 1 : 2); tOff=setTimeout(()=>setFeedStudioLit(0), seen ? 5000 : 9000); };
     const wait=Math.max(0, 15000-feedPlayAccRef.current); const tOn = wait>0 ? setTimeout(lightUp, wait) : null; if(!tOn) lightUp();
@@ -17944,7 +17961,7 @@ Hard requirements:
           { const MH=metaHoldRef.current; if(MH.tm) clearTimeout(MH.tm); MH.tm=null; MH.on=false; if(FC && _fL && e.touches.length===1) MH.tm=setTimeout(()=>{ MH.tm=null; MH.on=true; setMetaPoke(n=>n+1); _stBuzz(6); }, 420); }   // hold: the song and its painter, it plays on
           if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button')), S:[[performance.now(), tt.clientX, tt.clientY]], ax:null, fd:null}; };
         // the card under the finger (see _fdLock): the way it goes is decided once the finger has moved 10 px
-        const _canHome = (()=>{ const c=FC; if(!c) return false; const own = c.kind==='img' ? hasImageDraft : hasMusicDraft; return !!own || !!homeArt; })();
+        const _canHome = (()=>{ const c=FC; if(!c) return false; if(c.piece==='own') return true; const own = c.kind==='img' ? hasImageDraft : hasMusicDraft; return !!own || !!homeArt; })();   // your own painting brought from the Studio: ↓ puts it on the home card (↑ there: the surprises)
         const _fTM = (e)=>{ const st=feedTouchRef.current, tt=e.touches && e.touches[0]; if(!st || !tt) return; const dx=tt.clientX-st.x, dy=tt.clientY-st.y;
           if(Math.abs(dx)>10 || Math.abs(dy)>10){ const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } }
           if(st.S){ const now=performance.now(); st.S.push([now, tt.clientX, tt.clientY]); while(st.S.length>2 && now-st.S[0][0]>100) st.S.shift(); }
@@ -17952,7 +17969,7 @@ Hard requirements:
             if(FC && _fL && !st.b && !metaHoldRef.current.on){ const dir = st.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1), up = st.ax==='y' && dir>0, dn = st.ax==='y' && dir<0;
               st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null, meta:{feed:1, t:_fTitle, l:_fLine},
                 nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
-                prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? (H.u || null) : undefined)) : undefined }); }
+                prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? ((FC.piece==='own' && _feedSnap()) || H.u || null) : undefined)) : undefined }); }
             else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
         const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0); };
