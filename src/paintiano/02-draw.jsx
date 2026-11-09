@@ -15924,7 +15924,7 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
 const ARTIST_DNA = {
   mosaic:       {ground:'#04040a',mark:{rect:1},                          size:[.03,.08],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
   raffel:       {ground:'#06060c',mark:{phiarc:.8,ring:.2},               size:[.15,.4], edge:.2, alpha:.9, layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:.1, lines:.2,layers:1,density:.15,halftone:0},
-  picasso:      {ground:'#0a0a0e',mark:{neon:.7,ring:.3},                 size:[.06,.22],edge:.5, alpha:.95,layout:{flow:.6,scatter:.4},     outline:0, tone:'pure',    wobble:.6, lines:.3,layers:1,density:.2, halftone:0},
+  picasso:      {ground:'#c8b090',mark:{pcfacet:.45,pcpaper:.3,pcguitar:.25},size:[.06,.22],edge:0, alpha:.95,layout:{scatter:.7,flow:.3},     outline:.4,tone:'pure',    wobble:.3, lines:.2,layers:1,density:.4, halftone:0},
   matisse:      {ground:'#f6f2e9',mark:{mtleaf:.35,mtalgae:.25,mtsheet:.2,mtburst:.2},size:[.06,.2],edge:0,alpha:1,layout:{scatter:.8,grid:.2},     outline:0, tone:'pure',    wobble:.3, lines:0, layers:1,density:.45,halftone:0},
   pollock:      {ground:'#f2ede0',mark:{drip:.75,splat:.25},              size:[.006,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:2,density:.6, halftone:0},
   bloom:        {ground:'#f6f3ec',mark:{cell:.7,dot:.3},                  size:[.05,.18],edge:.3, alpha:.65,layout:{scatter:.7,field:.3},    outline:0, tone:'pastel',  wobble:.6, lines:.2,layers:2,density:.5, halftone:0},
@@ -15957,10 +15957,10 @@ const ARTIST_VARIANTS = {
     {mark:{chain:.4,phiarc:.3,rays:.3},size:[.1,.4],layout:{radial:.5,scatter:.5},density:.2,lines:.6},   // What it heard
     {mark:{phiarc:1},size:[.2,.45],layout:{radial:1},density:.12},
     {mark:{chain:.7,beam:.3},size:[.05,.15],layout:{scatter:1},density:.2,lines:.6},
-    {mark:{rays:1},size:[.2,.5],layout:{radial:1},density:.15},
-    {mark:{stem:1},size:[.08,.25],layout:{grid:1},density:.5,lines:0},
+    {mark:{phiarc:.6,goldspiral:.4},size:[.2,.5],layout:{radial:1},density:.15},
+    {mark:{wave:.7,phiarc:.3},size:[.08,.25],layout:{grid:1},density:.5,lines:0},
     {mark:{rays:.6,phiarc:.4},size:[.2,.5],layout:{radial:1},density:.15},
-    {mark:{rays:.5,chain:.5},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
+    {mark:{phi:.5,phiarc:.3,chain:.2},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
   ],
   picasso: [
     {ground:'#c8b090',mark:{pcfacet:.45,pcpaper:.3,pcguitar:.25},size:[.06,.22],edge:0,alpha:.95,layout:{scatter:.7,flow:.3},outline:.4,density:.4,nosnap:true},   // Listens
@@ -15983,7 +15983,7 @@ const ARTIST_VARIANTS = {
     {ground:'#6a8a3a',mark:{panel:.5,mtleaf:.25,mtburst:.25},size:[.04,.12],layout:{grid:1},density:1},   // nested-frame grid
   ],
   pollock: [   // slot order = solo variants: Classic drip, Autumn Rhythm, Lavender Mist, Blue Poles, Convergence, Number 14 black, Sparse, White Light
-    {mark:{skein:.8,splash:.2},size:[.03,.12],layout:{flow:1},density:.6},   // What he heard
+    {mark:{drip:.8,splat:.2},size:[.03,.12],layout:{flow:1},density:.6},   // What he heard
     {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
     {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},
     {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},
@@ -16006,17 +16006,17 @@ const ARTIST_VARIANTS = {
     {mark:{dot:.7,sphere:.15,net:.15},size:[.01,.1],layout:{scatter:1},density:.7,tone:'pure'},   // What she heard
     {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},size:[.03,.09],layout:{grid:1},density:1},
     {ground:'#f4f4ee',mark:{dot:1},size:[.004,.02],layout:{scatter:1},density:1,tone:'pure'},
-    {ground:'#5a4a2a',mark:{scallop:1},size:[.03,.06],layout:{grid:1},density:1},
+    {ground:'#5a4a2a',mark:{net:1},size:[.03,.06],layout:{grid:1},density:1},
     {ground:'#1a1410',mark:{sphere:1},size:[.08,.25],layout:{scatter:1},density:.3},
-    {ground:'#111111',mark:{target:.6,dotcluster:.4},size:[.1,.3],layout:{scatter:1},density:.25},
-    {ground:'#d85a1a',mark:{net:1},size:[.05,.1],layout:{scatter:1},density:.3,lines:0},
+    {ground:'#111111',mark:{dot:.7,dotcluster:.3},size:[.1,.3],layout:{scatter:1},density:.25},
+    {ground:'#d85a1a',mark:{net:.7,spiral:.3},size:[.05,.1],layout:{scatter:1},density:.3,lines:0},
   ],
   miro: [
     {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.12],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},   // What he heard
-    {ground:'#1b1812',mark:{tri:.3,blob:.3,target:.2,dot:.2},size:[.02,.07],layout:{scatter:1},density:.2,outline:.2},
+    {ground:'#1b1812',mark:{star:.35,dot:.3,cross:.15,miroblob:.2},size:[.02,.07],layout:{scatter:1},density:.2,outline:.2},
     {ground:'#d8f4ee',mark:{cross:.5,rays:.3,dot:.2},size:[.02,.06],layout:{scatter:1},density:.08},
     {ground:'#1f3a8a',mark:{dot:.6,star:.2,wavyline:.2},size:[.03,.08],layout:{scatter:1},density:.15,tone:'primary'},
-    {ground:'#f5f2e8',mark:{poly:.4,cross:.2,dot:.2,arch:.2},size:[.03,.1],layout:{scatter:1},density:.2,lines:.4,outline:.5},
+    {ground:'#f5f2e8',mark:{miroblob:.6,dot:.2,star:.2},size:[.03,.1],layout:{scatter:1},density:.2,lines:.4,outline:.5},
     {ground:'#8a6a48',mark:{blob:.6,disc:.2,dot:.2},size:[.06,.16],layout:{scatter:1},density:.2,outline:.5},                 // Peinture 1933
     {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.1],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},     // Femme et oiseaux
   ],
@@ -16028,7 +16028,7 @@ const ARTIST_VARIANTS = {
     {ground:'#f8f8f4',mark:{gridline:.7,rect:.3},size:[.02,.05],layout:{grid:1},density:1,outline:0,lines:0,tone:'gold'},
     {ground:'#0a0a0a',mark:{gridrect:1},size:[.05,.15],layout:{diagonal:1},density:.4,tone:'mono'},
     {ground:'#b4b0a6',mark:{arc:.6,beam:.4},size:[.1,.35],layout:{radial:1},density:.3,outline:0,lines:0,tone:'mono'},   // The Gray Tree
-    {ground:'#e4dfd2',mark:{cell:1},size:[.06,.08],layout:{grid:1},density:1,tone:'primary'},   // Checkerboard
+    {ground:'#e4dfd2',mark:{checker:.7,rect:.3},size:[.06,.08],layout:{grid:1},density:1,tone:'primary'},   // Checkerboard
   ],
   bauhaus: [
     {ground:'#f2eee4',mark:{disc:.34,tri:.33,panel:.33},size:[.08,.4],layout:{scatter:1},density:.3,tone:'primary'},   // What it heard
@@ -16041,7 +16041,7 @@ const ARTIST_VARIANTS = {
     {ground:'#eae5da',mark:{beam:.5,disc:.3,bar:.2},size:[.12,.4],alpha:.55,layout:{scatter:1},density:.25},   // Construction (Moholy-Nagy)
   ],
   kandinsky: [
-    {mark:{plane:.3,tri:.2,disc:.2,beam:.3},size:[.02,.3],layout:{stack:.5,flow:.5},density:.5},   // What he heard
+    {mark:{rect:.3,tri:.2,disc:.2,beam:.3},size:[.02,.3],layout:{stack:.5,flow:.5},density:.5},   // What he heard
     {mark:{kring:.4,beam:.3,disc:.3},size:[.02,.16],layout:{scatter:.7,radial:.3},density:.6},                       // Cosmic scatter
     {ground:'#efe8d6',mark:{tri:.4,beam:.3,disc:.2,checker:.1},size:[.03,.14],layout:{flow:.7,scatter:.3},density:.35,outline:.4},   // Composition VIII
     {ground:'#0b0a12',mark:{disc:1},size:[.06,.26],edge:.5,alpha:.8,layout:{scatter:1},density:.3},                 // Several Circles
@@ -16070,10 +16070,10 @@ const ARTIST_VARIANTS = {
     {ground:'#1a1418',mark:{field:1},size:[.4,.7],edge:.7,alpha:.5,layout:{stack:1},density:.3,tone:'dark'},
   ],
   bulge: [   // slot order = solo phases: Folklore, Vonal sphere, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
-    {mark:{cell:.6,disc:.2,lozenge:.2},size:[.04,.1],layout:{grid:1},density:1,warp:.6},   // What he heard
+    {mark:{bulge:.5,disc:.25,diamond:.25},size:[.04,.1],layout:{grid:1},density:1,warp:.6},   // What he heard
     {ground:'#141418',mark:{rect:.5,disc:.5},size:[.03,.06],layout:{grid:1},density:1},
     {ground:'#3a3a2a',mark:{vstripes:1},size:[.02,.05],layout:{stack:1},density:.8},
-    {mark:{checker:1},size:[.02,.05],layout:{grid:1},density:1},
+    {mark:{bulge:.7,checker:.3},size:[.02,.05],layout:{grid:1},density:1},
     {ground:'#16161a',mark:{rect:.6,dot:.4},size:[.01,.03],layout:{grid:1},density:1},
     {mark:{cube:1},size:[.015,.04],layout:{grid:1},density:1},
     {ground:'#0e0c10',mark:{band:1},size:[.02,.04],layout:{stack:1},density:.8},
@@ -16108,7 +16108,6 @@ const ARTIST_VARIANTS = {
     {mark:{poly:.7,bar:.3},size:[.3,.6],alpha:.95,layout:{grid:1},density:.15},   // Irregular Polygon
     {ground:'#141420',mark:{ring:.6,arc:.4},size:[.08,.25],layout:{scatter:1},density:.5},
     {ground:'#eee8da',mark:{step:.6,nest:.4},size:[.1,.35],layout:{radial:.5,grid:.5},density:.3,lines:0},   // Notched stripes
-    {mark:{protractor:.6,nest:.4},size:[.15,.45],layout:{radial:1},density:.2},
   ],
   pop: [
     {mark:{hgfig:.4,hgpair:.2,hgheart:.15,rdog:.15,hgtv:.1},size:[.08,.22],layout:{flow:.6,scatter:.4},density:.45,outline:1},   // Listens
@@ -16128,8 +16127,6 @@ const ARTIST_VARIANTS = {
     {mark:{brush:1},size:[.05,.12],layout:{radial:1},density:.5,tone:'dark'},
     {ground:'#e88a7a',mark:{brush:1},size:[.05,.12],layout:{radial:1},density:.4,tone:'gold'},
     {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.2},
-    {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
-    {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
   ],
   monet: [   // in a fusion Monet is the water the partner paints on: every chord lays a patch of tonal touches UNDER the other hand
     {mark:{surface:.9,disc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.7,scatter:.3},density:.9},   // What he heard
@@ -16160,15 +16157,13 @@ const ARTIST_VARIANTS = {
     {ground:'#faf8f0',mark:{lcridge:.65,benday:.35},size:[.1,.3],layout:{stack:1},density:.25,outline:1},   // Landscape
   ],
   klee: [
-    {ground:'#efe6d2',mark:{tile:.4,line:.3,dot:.3},size:[.03,.1],layout:{grid:.5,scatter:.5},density:.4,outline:.5},   // What he heard
+    {ground:'#efe6d2',mark:{tile:.4,step:.3,dot:.3},size:[.03,.1],layout:{grid:.5,scatter:.5},density:.4,outline:.5},   // What he heard
     {mark:{tile:1},size:[.04,.1],layout:{grid:1},density:1},
     {ground:'#e8e0d0',mark:{rect:1},size:[.04,.12],alpha:.6,layout:{scatter:1},density:.6,edge:0},
     {ground:'#1e1814',mark:{rect:.5,tri:.3,arch:.2},size:[.04,.1],layout:{stack:.6,grid:.4},density:.8,edge:0},          // Castle and Sun
     {ground:'#141420',mark:{dotline:.7,dot:.3},size:[.05,.2],layout:{flow:1},density:.3,edge:0,tone:'pastel'},
     {ground:'#c8b84a',mark:{field:.7,arrow:.3},size:[.2,.5],layout:{stack:1},density:.4,edge:0},
     {ground:'#a8844e',mark:{tile:.85,tri:.15},size:[.01,.03],layout:{grid:1},density:1,edge:0},                       // Ad Parnassum
-    {mark:{tile:1},size:[.04,.1],layout:{grid:1},density:1},
-    {ground:'#e8e0d0',mark:{rect:1},size:[.04,.12],alpha:.6,layout:{scatter:1},density:.6,edge:0},
   ],
   delaunay: [   // slot order = solo variants: What he heard, Premier Disque, Rythme sans fin, Soleil Lune, Formes circulaires, Blériot, Prismes électriques, Bal Bullier
     {ground:'#e8e0cc',mark:{orphic:1},size:[.3,.6],layout:{radial:1},density:.15,tone:'pure'},   // What he heard: the simultaneous disc
@@ -17032,7 +17027,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
-        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface|fuji|dog|cell|pour|hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface|fuji|dog|cell|pour|hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge)$/.test(kind))?0:(R()-.5)*F.wobble*1.2*(/^(mondrian|bulge|klee|arcs)$/.test(F.keys[_po])?0:1);   // the grid painters never tilt their forms
         // E: a closed form is painted by the painting's one hand (_fuForm); a gesture stays its parent's (_fuMark)
         if(_E && !_FU_GEST.test(kind) && !_FU_HRC.test(kind)){
           if(_FU_UNDER.test(kind)){ ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); _fuForm(ctx, kind, r, col, col2, R, F); ctx.restore(); }
