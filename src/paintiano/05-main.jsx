@@ -5712,9 +5712,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const need = Math.max(0, 18 - preselected.length);
     if(!need) return [];
     const list = MOODS.filter(m=>m!==base && !preselected.includes(m));
-    const prompt = `Current mood: "${String(base).slice(0,80)}". From the list below, pick exactly ${need} moods that make good morph / blend targets for it — MOSTLY emotionally related or escalating variations (same emotional family, rising or falling intensity), plus a few contrasting ones for variety. The phrase may be in ANY language; interpret its real emotion, do NOT read it word-by-word.
-List: ${list.join(', ')}
-Return ONLY a JSON array of exactly ${need} strings copied verbatim from the list. No prose, no markdown. Example: ["furious","tense","melancholic"]`;
+    const _pq = pfPromptBody('morph',{base:String(base).slice(0,80), need, list});   // prompt: src/ai-prompts.js
     try{
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
@@ -5722,7 +5720,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       let respText='',ok=false;
       for(const ep of _eps){
         try{
-          const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:prompt}]})});
+          const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)});
           const txt=await r.text(); if(r.ok&&txt){respText=txt;ok=true;break;}
         }catch(_){}
       }
@@ -9043,8 +9041,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{
     if(typeof window==='undefined') return;
     const on=(e)=>{ const d=(e&&e.detail)||{};
-      try{ window.posthog && window.posthog.capture('ai_daily_limit',{plan:d.plan||'',kind:d.kind||''}); }catch(_){}
-      setTimeout(()=>{ const m = d.plan==='free' ? t('aiLimitNet') : (d.kind==='piece' ? String(t('aiLimitDay')).replace('{n}', String(d.cap||30)) : t('aiLimitAny'));
+      try{ window.posthog && window.posthog.capture('ai_daily_limit',{plan:d.plan||'',kind:d.kind||'',limit:d.limit||'daily'}); }catch(_){}
+      setTimeout(()=>{ const m = d.limit==='year' ? String(t('aiLimitYear')).replace('{n}', Number(d.cap||1000).toLocaleString('en-US')) : d.plan==='free' ? t('aiLimitNet') : (d.kind==='piece' ? String(t('aiLimitDay')).replace('{n}', String(d.cap||30)) : t('aiLimitAny'));
         setErr(m); setErrInfo(true); }, 150); };
     window.addEventListener('pf-ai-limit',on);
     return ()=>window.removeEventListener('pf-ai-limit',on);
@@ -9080,7 +9078,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
       // Tiny probe payload — a few tokens is enough to confirm the endpoint
       // returns a real AI completion (not just any HTTP response).
-      const _body=JSON.stringify({model:CLAUDE_MODEL,max_tokens:8,messages:[{role:'user',content:'ping'}]});
+      const _body=JSON.stringify(pfPromptBody('probe',{}));
       let ok=false;
       for(const ep of _eps){
         if(cancelled) return;
@@ -10435,13 +10433,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-        const prompt='Look at this image. First, in one word, decide its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a short solo piano piece whose MUSICAL CHOICES are DRIVEN BY that emotion — do NOT use neutral defaults.\nMap the emotion to the music (choose to fit the SPECIFIC emotion, never fall back to a neutral middle):\n- KEY: bright/happy/triumphant/playful → a MAJOR key; sad/melancholic/eerie/tense/yearning → a MINOR key. Pick a SPECIFIC key and vary it across pieces (do not default to C).\n- TEMPO: calm/tender/melancholic → slow (50-75); joyful/playful → medium-fast (95-130); dramatic/tense/triumphant → driving (110-150); eerie → free and slow (55-80).\n- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.\n- DYNAMICS: tender → soft (velocity 35-65); triumphant/dramatic → loud (75-115); tense → uneven and accented.\n- ARTICULATION/RHYTHM: playful → staccato and syncopated; melancholic → legato and long notes; tense → repeated ostinato figures.\nTwo DIFFERENT emotions MUST yield audibly DIFFERENT pieces — different key colour, tempo, density and dynamics.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":<derived from emotion>,"key":"<derived from emotion>","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats); 52-80 notes; include a bass line (octaves 2-3, at least 12 notes) and a melody (octaves 4-6) with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity per the dynamics above; pitches sharps only (C#4 not Db4).';
+        // (prompt: src/ai-prompts.js · mfi)
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-        const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+        const _pq=pfPromptBody('mfi',{b64, lang});   // prompt: src/ai-prompts.js
         let respText='',ok=false;
-        for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+        for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
         setWPct(75);
         if(!ok) throw new Error('AI unavailable');
         setAiDown(false); // a live AI call just succeeded
@@ -10521,8 +10519,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
     const isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(host);
     const eps=isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-    const messages=[{role:'user',content:[{type:'text',text:'Translate this short art-piece title into '+_ln+'. Keep it Title Case, max 5 words. Output ONLY the translated phrase \u2014 no quotes, no extra text:\n'+text}]}];
-    for(const ep of eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:40,messages})}); const txt=await r.text(); if(r.ok&&txt){ const d=JSON.parse(txt); const out=((d.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('')).trim().replace(/^["'\s]+|["'\s]+$/g,''); if(out) return out; } }catch(_){} }
+    const _pq=pfPromptBody('title',{text:String(text).slice(0,80), lang:targetAppLang});   // prompt: src/ai-prompts.js
+    for(const ep of eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)}); const txt=await r.text(); if(r.ok&&txt){ const d=JSON.parse(txt); const out=((d.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('')).trim().replace(/^["'\s]+|["'\s]+$/g,''); if(out) return out; } }catch(_){} }
     return null;
   },[]);
   useEffect(()=>{
@@ -10926,36 +10924,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         im.src=_src;
       });
       const b64 = dataUrl.split(',')[1];
-      const prompt=`Look at this image. Identify WHAT is in it (a person, a landscape, a building, an abstract painting, a child, an animal, etc.) and its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a free-standing solo piano piece whose musical choices are DRIVEN by what you see and feel.
-The scanned musical material (a secondary hint — the image itself is the primary signal):
-- Pitch palette (most present pitch classes): ${mat.palette}
-- Range of the scan: ${mat.noteRange}${mat.mood?`\n- Detected mood: ${mat.mood}`:''}
-Map what you see to the music — two DIFFERENT images MUST yield audibly DIFFERENT pieces (different key, tempo, density, dynamics):
-- KEY: bright/happy/triumphant/playful subjects → MAJOR; sad/melancholic/eerie/tense/yearning subjects → MINOR. Pick a SPECIFIC key, vary across pieces (do not default to C).
-- TEMPO: calm/tender/melancholic → slow (55-80); joyful/playful → medium (90-120); dramatic/tense/triumphant → driving (110-145); eerie → free and slow.
-- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.
-- DYNAMICS: tender → soft (vel 40-65); triumphant/dramatic → loud (80-115); tense → uneven and accented.
-- ARTICULATION: playful → staccato and syncopated; melancholic → legato; tense → repeated ostinato.
-Output ONLY a single valid JSON object — no markdown, no prose.
-Schema: {"title":"...","tempo":<derived>,"key":"<derived>","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) describing THIS SPECIFIC image — must be distinctive, never a generic "quiet light" type phrase.
-Composition rules:
-- LENGTH: 60-90 seconds of music — the LAST note's (startBeat + duration) MUST reach at least tempo beats (= 60 seconds).
-- 90-150 notes total.
-- STYLE: Western tonal piano in the spirit of Einaudi, Yiruma, Max Richter, Chopin's Nocturnes, or Debussy. Lyrical melodies over flowing accompaniment. Avoid East-Asian-traditional evocations unless the image is unmistakably East Asian.
-- HARMONY: familiar functional progressions (I-V-vi-IV, ii-V-I; minor: i-VI-III-VII, i-iv-V-i). Diatonic with tasteful chromatic colour.
-- Structure: intro (motif, sparse) → development (richer) → contrasting middle → return of motif → close (quieter).
-- Bass (octaves 2-3): ≥20 notes. Melody (octaves 4-6): singable, recurring motif.
-- Vary durations (mix 0.25/0.5/1/2). Pitches with octave, sharps only (C#4 not Db4).`;
+      // (prompt: src/ai-prompts.js · cfi)
       setWPct(40);
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+      const _pq=pfPromptBody('cfi',{b64, lang, mat:{palette:mat.palette, noteRange:mat.noteRange, mood:mat.mood||null}});   // prompt: src/ai-prompts.js
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages})});
+          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
@@ -11029,54 +11007,15 @@ Composition rules:
       // the start — not just a generic melody that we later scale. (v,e) extremes
       // trigger hard rules; mid values give a gentle suggestion.
       const _atmoMood = (atmoOn && atmoMood) ? atmoMood : null;
-      let atmoBlock='';
-      if(_atmoMood){
-        const _av=_atmoMood.v, _ae=_atmoMood.e;
-        const lines=[];
-        if(_ae<=0.20){
-          lines.push('Energy is VERY LOW (calm/dreamy). MUST: slow tempo 50-70 BPM, legato long notes (mostly half/whole), soft dynamics (melody 60-85, chords 45-65), MID-LOW register (melody octaves 4-5, NOT 6), sparse texture, no leaps larger than a fifth, no syncopation, intro-able ambient feel.');
-        } else if(_ae>=0.80){
-          lines.push('Energy is VERY HIGH (intense/dramatic). MUST: tempo 115-150 BPM, articulated rhythms with staccato + syncopation, loud dynamics (melody 105-125, chords 88-108), full upper register (melody octave 5-6), denser chords, allow octave leaps and dramatic accents.');
-        } else if(_ae<=0.35){
-          lines.push('Energy is low. Prefer slow tempo 65-85 BPM, mostly legato, softer dynamics, mid register.');
-        } else if(_ae>=0.65){
-          lines.push('Energy is high. Prefer faster tempo 100-130 BPM, more articulation, brighter dynamics.');
-        }
-        if(_av<=-0.50){
-          lines.push('Valence is strongly negative (sad/heavy/melancholic). MUST: minor key, descending phrase shapes, dissonant suspensions resolved downward.');
-        } else if(_av>=0.50){
-          lines.push('Valence is strongly positive (joyful/bright). MUST: major key, ascending phrase shapes, plagal/authentic cadences that feel resolved and lifting.');
-        } else if(_av<=-0.20){
-          lines.push('Valence is slightly negative. Lean minor key.');
-        } else if(_av>=0.20){
-          lines.push('Valence is slightly positive. Lean major key.');
-        }
-        if(_atmoMood.title){ lines.push('Title hint: "'+_atmoTitleL(_atmoMood.title, 'EN')+'".'); }
-        if(lines.length){
-          atmoBlock = '\nMOOD DIRECTIVE (this overrides defaults; commit to these choices, do not regress to the safe middle):\n- '+lines.join('\n- ')+'\n';
-        }
-      }
-      const prompt=`A painting has been scanned into a musical TEXTURE (its colours played as notes). Compose a SECOND PIANO PART that a concert pianist would play over that texture — a full, two-handed, CHORDAL piece with a clear singing MELODY on top and real harmony underneath. NOT a thin one-finger line: this is a complete, rich piano voice that stands beside the texture as an equal. It must mirror and crown the scan, echoing the image's mood, colour and radiance.
-The image's musical material:
-- Pitch palette (colours → notes): ${mat.palette}
-- Range of the texture: ${mat.noteRange}
-- Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}${atmoBlock}
-Compose with real musical craft, following classical harmonization method:
-- KEY: let the pitch palette define the tonal centre; choose major or natural minor to fit the mood. Stay diatonic (tasteful passing/leading tones fine; no random chromaticism).
-- LENGTH: write ONE short, COMPLETE melodic phrase of about 8–16 bars (a self-contained tune that could loop seamlessly back to its start). Keep total length under ~24 beats. This cell will be REPEATED across the painting, so it must sound whole on its own and join cleanly to its own beginning.
-- MELODY (top voice): clear, singable, memorable, in the upper register (octaves 5–6). A 2–4 note MOTIF stated and answered. CONTINUOUS within the phrase — flowing eighth/quarter motion, mostly stepwise, no gaps longer than a beat. 16–28 notes in the cell (dense enough to sing, not a busy run).
-- HARMONY (underneath): under the melody supply CHORDS — diatonic triads/sevenths chosen by FUNCTION (I ii iii IV V vi V7) so the phrase moves tonic → subdominant → dominant → tonic and CADENCES at the end so the loop closes. Melody note = top of its chord. Mid-register voices (oct 3–4) + a bass root (oct 2–3). Move inner voices by the smallest steps (voice leading).
-- DYNAMICS: melody louder than accompaniment (vel 96–118 melody, 70–92 chords) so the lead sings on top.
-Output ONLY valid JSON, no prose, no markdown:
-{"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...],"chords":[[[pitch,pitch,...],durationInBeats,startBeat,velocity],...]}
-"notes" = the melody (top voice), one pitch each. "chords" = the harmony underneath, each a LIST of pitches (the accompanying chord voices + bass) sounding together. Pitches as names with octave, sharps only, e.g. "C5","F#4" ("Bb5"→"A#5"). Align each chord's startBeat to the melodic note it harmonizes. Title: a short evocative phrase (Title Case, max 5 words).`;
+      const _pq=pfPromptBody('melody',{ mat:{palette:mat.palette, noteRange:mat.noteRange, energy:mat.energy, tex:mat.tex, arc:mat.arc, mood:mat.mood||null},
+        atmo: _atmoMood ? { v:_atmoMood.v, e:_atmoMood.e, title: _atmoMood.title ? _atmoTitleL(_atmoMood.title, 'EN') : '' } : null });   // prompt + mood directive: src/ai-prompts.js
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
@@ -11159,30 +11098,7 @@ Output ONLY valid JSON, no prose, no markdown:
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
-      const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
-The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing, hope, restlessness) — do NOT read it word-by-word and do NOT assume it is English.
-
-Before writing ANY notes, derive these mood-driven parameters — they MUST translate into audible differences in the output. A piece for "calm sea" must sound nothing like a piece for "rage":
-
-- TEMPO (BPM): sad/melancholy 50-65 · calm/serene 65-85 · wistful/longing 70-90 · tender/hopeful 80-100 · playful 95-120 · joyful 110-135 · angry/intense 100-140 (sharp accents) · ecstatic/triumphant 125-155 · anxious/restless 95-130 (uneven)
-- MODE: MAJOR keys for joyful, triumphant, tender, hopeful, playful · MINOR keys for sad, longing, melancholy, anxious, angry · MODAL or AMBIGUOUS (Lydian, Dorian, Phrygian, whole-tone) for dreamy, mysterious, contemplative, unsettled
-- DYNAMIC RANGE: calm/sad pieces stay narrow and quiet (velocity 30-65 throughout) · angry/joyful pieces are loud and wide (velocity 70-127 with strong accents at 110-127) · mixed/contemplative moods use the full 35-105 range
-- DENSITY: sparse 25-45 notes (calm, sad, contemplative, lonely) · medium 45-65 notes (most moods) · dense 65-95 notes (joyful, agitated, dramatic, frenetic)
-- REGISTER BIAS: dark/heavy/grounded moods bias LOW (bass octaves 2-3, melody 3-4) · bright/uplifted/light moods bias HIGH (bass 3-4, melody 5-6) · balanced/conversational moods spread across the full range
-- ARTICULATION & DURATIONS: legato long (1, 2, 4 beats) for sad/calm/dreamy/longing · staccato short (0.25, 0.5 beats) for playful/anxious/angry · mixed for most moods
-- INTERVALLIC CHARACTER: stepwise 2nds and 3rds for sad/calm/tender · wide 5ths/6ths/octaves for joyful/triumphant/dramatic · dissonant 2nds, 7ths, tritones for angry/anxious/unsettled
-- STRUCTURE: opening (establish key + motif) → development (build harmonically/dynamically) → close (resolve OR fade). Adapt the intensity curve to the mood — sad pieces stay subdued, joyful pieces climax higher, angry pieces stay agitated.
-
-Set the "title" field to a short, natural translation of the phrase into ${_langName} that captures its meaning (Title Case, max 5 words).
-Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
-Schema: {"title":"...","tempo":<your derived BPM>,"key":"<your derived key>","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1-127.
-
-Hard requirements:
-- Apply ALL derived parameters — tempo, mode, dynamics, density, register, articulation, intervals — so the piece is audibly mood-specific
-- Bass register notes for harmonic grounding (count scales with density: sparse pieces need at least 8 bass notes, dense pieces 15+)
-- Melody in the mood-driven register with a recognisable motif that recurs
-- Pitches: use C4/F#3/Bb5 style with octave number, sharps only (no flats — use C#4 not Db4)`;
+      const _pq=pfPromptBody('mood',{title:String(title).slice(0,80), lang});   // prompt: src/ai-prompts.js
       setWPct(40);
       // Endpoint selection: in the Claude artifact preview, calls go straight to
       // Anthropic (their sandbox proxies it). Anywhere else — e.g. the Vercel
@@ -11204,7 +11120,7 @@ Hard requirements:
           const r=await pfAiFetch(_ep,{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:[{role:'user',content:prompt}]})
+            body:JSON.stringify(_pq)
           });
           const txt=await r.text();
           if(r.ok && txt){ resp=r; respText=txt; break; }
@@ -11768,25 +11684,13 @@ Hard requirements:
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
       const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-      const prompt=
-'You are judging the EMOTION / atmosphere of a single image. Output ONLY one JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."}.\n'+
-'valence: -1 (sad/dark/heavy) ... 0 (neutral) ... +1 (happy/bright/playful).\n'+
-'energy:   0 (calm/still/dreamy) ... 0.5 (moderate) ... 1 (intense/dramatic/turbulent).\n'+
-'CRITICAL: COMMIT to a strong reading. The MIDDLE band (0.40-0.60) is reserved for genuinely ambiguous scenes only. If the scene is clearly calm, output energy <= 0.20; if clearly serene/dreamy/quiet, energy <= 0.15. If clearly intense/dramatic/stormy, energy >= 0.80; if frantic/violent, energy >= 0.90. Same for valence: clearly sad/heavy <= -0.50; clearly joyful/bright >= +0.50.\n'+
-'Anchored examples (use as a guide for the strength of your numbers):\n'+
-'  A serene Monet pond at dawn          -> {"valence": 0.40, "energy": 0.10}\n'+
-'  A melancholic rainy street           -> {"valence": -0.55, "energy": 0.20}\n'+
-'  A bright sunny field, kids playing   -> {"valence": 0.85, "energy": 0.65}\n'+
-'  A stormy Turner seascape             -> {"valence": -0.20, "energy": 0.90}\n'+
-'  A neutral architectural drawing      -> {"valence": 0.05, "energy": 0.30}\n'+
-'Avoid the safe centre. Two different paintings MUST yield audibly different numbers.\n'+
-'title: short mood phrase in '+_langName+' (max 4 words, Title Case).';
+      // (prompt: src/ai-prompts.js · atmo)
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+      const _pq=pfPromptBody('atmo',{b64, lang});   // the prompt lives in src/ai-prompts.js (the server builds it too)
       let respText='',ok=false;
-      for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:200,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+      for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
       if(!ok) throw new Error('AI unavailable');
       setAiDown(false); // a live AI call just succeeded
       const data=JSON.parse(respText);

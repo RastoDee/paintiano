@@ -125,6 +125,11 @@ async function pfAiFetch(ep, init) {
   const own = typeof ep === 'string' && ep.charAt(0) === '/';
   if (!own && pfAiLimitRecent()) { const e = new Error('pf_daily_limit'); e._aiLimit = true; throw e; }
   const opt = Object.assign({}, init || {});
+  // A body from pfPromptBody carries pf = { kind, args }: our endpoint gets ONLY that (it builds the
+  // prompt itself — it composes music and nothing else); a direct call (claude.ai preview) gets the full body.
+  if (typeof opt.body === 'string' && opt.body.indexOf('"pf"') >= 0) {
+    try { const b = JSON.parse(opt.body); if (b && b.pf) { const pf = b.pf; delete b.pf; opt.body = JSON.stringify(own ? { kind: pf.kind, args: pf.args } : b); } } catch (_) {}
+  }
   if (own) {
     const h = Object.assign({}, opt.headers || {});
     try { const c = _proReadCache(); if (c && c.key) h['X-Paintiano-Key'] = c.key; } catch (_) {}
@@ -133,7 +138,7 @@ async function pfAiFetch(ep, init) {
   const r = await fetch(ep, opt);
   if (own && r.status === 429) {
     let d = null; try { d = await r.clone().json(); } catch (_) {}
-    if (d && d.error && d.error.type === 'pf_daily_limit') {
+    if (d && d.error && (d.error.type === 'pf_daily_limit' || d.error.type === 'pf_year_limit')) {
       PF_AI_LIMIT.at = Date.now(); PF_AI_LIMIT.info = d.pf || null;
       try { window.dispatchEvent(new CustomEvent('pf-ai-limit', { detail: d.pf || {} })); } catch (_) {}
       const e = new Error('pf_daily_limit'); e._aiLimit = true; throw e;

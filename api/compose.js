@@ -2,11 +2,19 @@
 // Vercel serverless function: the app's only way to Claude. The API key stays
 // on the server (Vercel env ANTHROPIC_API_KEY).
 //
-// FAIR USE (Nov 2026) — AI is counted per day, on the server:
+// ONLY MUSIC (Nov 2026): the app sends { kind, args } — the kind of AI call and
+// its inputs — and this function builds the prompt itself from src/ai-prompts.js
+// (the same texts the app uses). Inputs are checked and bounded, the answer must
+// be what the kind asks for (notes, a list, two numbers, a title). A request with
+// its own `messages` is refused: before, anyone who copied a request had a free
+// Claude here for anything.
+//
+// FAIR USE (Nov 2026) — AI is counted on the server:
 //  • Pro AI key (header X-Paintiano-Key)  → 30 AI pieces & melodies a day
-//    (+ 100 small calls: atmosphere, title translation, morph picks).
-//  • Pro AI bought before the limit (licenses.ai_unlimited = true) → no daily
-//    limit in practice (500 / 1000 — only a guard against a leaked key).
+//    (+ 100 small calls a day: atmosphere, title translation, morph picks);
+//    licences bought from 10 Nov 2026 also 1,000 pieces a calendar year.
+//  • Pro AI bought before the limit (licenses.ai_unlimited = true) → no yearly
+//    limit, a daily guard against a leaked key only (100 pieces / 300 small).
 //  • Everyone else (Free, Pro, no key) → counted per network (an HMAC hash of
 //    the IP, never the IP itself; rows are deleted after 3 days by the cron):
 //    8 pieces & melodies + 30 small calls a day. The app's own trial
@@ -23,13 +31,13 @@
 //  • Model from an allow-list, max_tokens capped, input size capped.
 
 import crypto from 'node:crypto';
+import { pfPromptBody, pfArgsCheck, pfOutputOk, PF_KINDS, PF_PIECE_KINDS } from '../src/ai-prompts.js';
 
 const API_MODEL = 'claude-sonnet-4-6';
 // Models the app may ask for (anything else → API_MODEL).
 // Haiku = cheap helper calls (morph pool), Sonnet = composition.
 const ALLOWED_MODELS = new Set(['claude-sonnet-4-6','claude-sonnet-4-6-20260218','claude-haiku-4-5','claude-haiku-4-5-20251001']);
 const MAX_TOKENS = 2000;                  // output cap
-const BIG_FROM = 400;                     // max_tokens above this = a piece / melody
 const MAX_TEXT_CHARS = 24000;             // all text blocks together
 const MAX_IMAGES = 2;
 const MAX_IMAGE_B64 = 3500000;            // all image data together (base64 chars)
@@ -39,9 +47,13 @@ const RATE_WINDOW_MS = 60 * 1000;         // …per 60 s per IP
 // Daily caps: [pieces & melodies, small calls]
 const CAP = {
   pro_ai:    [30, 100],
-  unlimited: [500, 1000],
+  unlimited: [100, 300],
   free:      [8, 30],
 };
+// Yearly cap on pieces & melodies for Pro AI — only for licences bought from the day the
+// terms say so (YEAR_CAP_FROM); earlier buyers keep what they bought: 30 a day, no yearly cap.
+const YEAR_CAP = 1000;
+const YEAR_CAP_FROM = Date.parse(process.env.PF_YEAR_CAP_FROM || '2026-11-10T00:00:00Z');
 
 // Allowed sources: our domains, Vercel previews of this project, local dev. Exact origins only —
 // a prefix test would let paintiano.app.evil.com or localhost.evil.com drive the key.
@@ -102,7 +114,8 @@ async function licenceOf(key) {
   if (c && Date.now() - c.at < 10 * 60 * 1000) return c.row;
   const hdr = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
   const base = `${SB_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&limit=1&select=`;
-  let res = await fetch(base + 'key,status,tier,ai_unlimited', { headers: hdr });
+  let res = await fetch(base + 'key,status,tier,ai_unlimited,created_at', { headers: hdr });
+  if (!res.ok) res = await fetch(base + 'key,status,tier,ai_unlimited', { headers: hdr });
   if (!res.ok) res = await fetch(base + 'key,status,tier', { headers: hdr }); // column not added yet
   if (!res.ok) throw new Error('licence lookup ' + res.status);
   const row = (await res.json())[0] || null;
@@ -135,6 +148,24 @@ async function hit(id, cap) {
     } catch (e) { console.warn('compose: ai_hit failed', String(e)); }
   }
   return memHit(id, cap);
+}
+
+// ── yearly counter (Pro AI pieces). Needs ai_hit_year from supabase/ai_usage.sql;
+// until that has been run (or when Supabase is unreachable) the year is not
+// counted — the daily cap still holds. Returns the new count, -1 when the cap is
+// reached, or 0 when it could not be counted.
+async function hitYear(id, cap) {
+  if (!SB_URL || !SB_KEY) return 0;
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/rpc/ai_hit_year`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_bucket: id, p_cap: cap }),
+    });
+    if (res.ok) { const v = await res.json(); if (typeof v === 'number') return v; }
+    else console.warn('compose: ai_hit_year', res.status, (await res.text()).slice(0, 160));
+  } catch (e) { console.warn('compose: ai_hit_year failed', String(e)); }
+  return 0;
 }
 
 // ── request shape ───────────────────────────────────────────────────────────
@@ -177,7 +208,7 @@ export default async function handler(req, res) {
         usage = r.ok ? 'ok' : 'missing (run supabase/ai_usage.sql)';
       } catch (_) { usage = 'unreachable'; }
     }
-    res.status(200).json({ ok: true, message: 'compose endpoint alive — use POST', hasKey: !!process.env.ANTHROPIC_API_KEY, model: API_MODEL, caps: CAP, usage });
+    res.status(200).json({ ok: true, message: 'compose endpoint alive — use POST { kind, args }', hasKey: !!process.env.ANTHROPIC_API_KEY, model: API_MODEL, kinds: PF_KINDS, caps: CAP, yearCap: YEAR_CAP, usage });
     return;
   }
 
@@ -193,32 +224,53 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { res.status(400).json({ error: 'Invalid JSON body' }); return; } }
-  if (!body || !Array.isArray(body.messages) || !body.messages.length || body.messages.length > 8) { res.status(400).json({ error: 'Missing messages in request body' }); return; }
-
-  const size = measure(body.messages);
+  if (!body || typeof body !== 'object') { res.status(400).json({ error: 'Missing request body' }); return; }
+  // Only { kind, args }: the prompt is ours. An old app (or anyone) sending its own messages is told to reload.
+  if (!body.kind) {
+    res.status(400).json({ type: 'error', error: { type: 'pf_update', message: 'Please reload Paintiano to use AI.' } }); return;
+  }
+  const kind = String(body.kind);
+  if (!PF_KINDS.includes(kind)) { res.status(400).json({ error: 'Unknown kind' }); return; }
+  const args = pfArgsCheck(kind, body.args);
+  if (!args) { res.status(400).json({ error: 'Invalid input for ' + kind }); return; }
+  const built = pfPromptBody(kind, args);
+  const size = measure(built.messages);
   if (!size || size.text > MAX_TEXT_CHARS || size.images > MAX_IMAGES || size.b64 > MAX_IMAGE_B64) {
     res.status(413).json({ error: 'Request too large or malformed' }); return;
   }
-
-  const maxTokens = Math.max(1, Math.min(parseInt(body.max_tokens, 10) || MAX_TOKENS, MAX_TOKENS));
-  const model = (body.model && ALLOWED_MODELS.has(body.model)) ? body.model : API_MODEL;
-  const probe = maxTokens <= 16 && size.text <= 16 && !size.images;
+  const maxTokens = Math.max(1, Math.min(built.max_tokens || MAX_TOKENS, MAX_TOKENS));
+  const model = ALLOWED_MODELS.has(built.model) ? built.model : API_MODEL;
+  const probe = kind === 'probe';
 
   if (!probe) {
     // Who is asking: a Pro AI key, or anyone else (per network).
-    let plan = 'free', bucket = null;
+    let plan = 'free', bucket = null, yearly = false;
     const key = String(req.headers['x-paintiano-key'] || '').trim();
     if (key) {
       try {
         const row = await licenceOf(key);
         if (row && row.status === 'active' && row.tier === 'pro_ai') {
           plan = row.ai_unlimited ? 'unlimited' : 'pro_ai';
+          const born = row.created_at ? Date.parse(row.created_at) : NaN;
+          yearly = plan === 'pro_ai' && isFinite(born) && born >= YEAR_CAP_FROM;
           bucket = 'k:' + crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
         }
       } catch (e) { console.warn('compose: licence lookup failed', String(e)); }
     }
     if (!bucket) bucket = ipBucket(ip);
-    const big = maxTokens > BIG_FROM;
+    const big = PF_PIECE_KINDS.includes(kind);
+    // The year first (Pro AI pieces only): a full year answers before today's counter moves.
+    if (big && yearly) {
+      const y = await hitYear(bucket + ':y', YEAR_CAP);
+      if (y < 0) {
+        res.status(429).json({
+          type: 'error',
+          error: { type: 'pf_year_limit', message: 'This year\'s AI pieces are used up — they renew on 1 January.' },
+          pf: { limit: 'year', plan, kind: 'piece', cap: YEAR_CAP },
+        });
+        return;
+      }
+    }
     const cap = CAP[plan][big ? 0 : 1];
     const n = await hit(bucket + (big ? ':p' : ':s'), cap);
     if (n < 0) {
@@ -235,9 +287,15 @@ export default async function handler(req, res) {
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: maxTokens, messages: body.messages })
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: built.messages })
     });
     const text = await upstream.text();
+    // The answer must be music (or what the helper kind asks for) — nothing else leaves this endpoint.
+    if (upstream.ok) {
+      let out = '';
+      try { const d = JSON.parse(text); out = (d.content || []).map(b => (b && b.type === 'text') ? b.text : '').join(''); } catch (_) { out = null; }
+      if (out == null || !pfOutputOk(kind, out)) { res.status(502).json({ error: 'AI answer was not usable', kind }); return; }
+    }
     res.status(upstream.status);
     res.setHeader('Content-Type', 'application/json');
     res.send(text);

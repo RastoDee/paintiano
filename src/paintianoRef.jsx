@@ -1,5 +1,6 @@
 import * as Tone from "tone";
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, memo, Fragment } from "react";
+import { pfPromptBody } from "./ai-prompts.js";   // the AI prompts (shared with /api/compose)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §1  CONSTANTS & MATH UTILITIES
@@ -20041,7 +20042,8 @@ const I18N = {
     aiLimitDay:'Today’s {n} AI pieces & melodies are used up — back tomorrow. Everything else plays on.',
     aiLimitNet:'AI tries from this network are used up for today — back tomorrow, or Pro AI: 30 pieces & melodies a day.',
     aiLimitAny:'Today’s AI limit is reached — back tomorrow.',
-    proAiValueFair:'Up to 30 AI pieces & melodies a day · fair use',
+    aiLimitYear:'This year’s {n} AI pieces & melodies are used up — they renew on 1 January. Everything else plays on.',
+    proAiValueFair:'Up to 30 AI pieces & melodies a day, 1,000 a year · fair use',
     tierReadOnly:'preview only',
     tierRowArtists:'Artists',
     tierRowComposers:'Composers',
@@ -20211,7 +20213,8 @@ const I18N = {
     aiLimitDay:'Die {n} KI-Stücke & Melodien für heute sind aufgebraucht — morgen geht’s weiter. Alles andere spielt weiter.',
     aiLimitNet:'Die KI-Versuche aus diesem Netz sind für heute aufgebraucht — morgen wieder, oder Pro KI: 30 Stücke & Melodien pro Tag.',
     aiLimitAny:'Das KI-Limit für heute ist erreicht — morgen geht’s weiter.',
-    proAiValueFair:'Bis zu 30 KI-Stücke & Melodien pro Tag · faire Nutzung',
+    aiLimitYear:'Die {n} KI-Stücke & Melodien für dieses Jahr sind aufgebraucht — am 1. Januar gibt es neue. Alles andere spielt weiter.',
+    proAiValueFair:'Bis zu 30 KI-Stücke & Melodien pro Tag, 1.000 pro Jahr · faire Nutzung',
     tierReadOnly:'nur Vorschau',
     tierRowArtists:'Künstler',
     tierRowComposers:'Komponisten',
@@ -20381,7 +20384,8 @@ const I18N = {
     aiLimitDay:'Les {n} morceaux et mélodies IA du jour sont épuisés — à demain. Tout le reste continue.',
     aiLimitNet:'Les essais IA depuis ce réseau sont épuisés pour aujourd’hui — à demain, ou Pro IA : 30 morceaux et mélodies par jour.',
     aiLimitAny:'La limite IA du jour est atteinte — à demain.',
-    proAiValueFair:'Jusqu’à 30 morceaux et mélodies IA par jour · usage équitable',
+    aiLimitYear:'Les {n} morceaux et mélodies IA de cette année sont épuisés — ils reviennent le 1er janvier. Tout le reste continue.',
+    proAiValueFair:'Jusqu’à 30 morceaux et mélodies IA par jour, 1 000 par an · usage équitable',
     tierReadOnly:'aperçu',
     tierRowArtists:'Artistes',
     tierRowComposers:'Compositeurs',
@@ -20551,7 +20555,8 @@ const I18N = {
     aiLimitDay:'Las {n} piezas y melodías IA de hoy se han agotado — vuelve mañana. Todo lo demás sigue sonando.',
     aiLimitNet:'Las pruebas IA desde esta red se agotaron por hoy — vuelve mañana, o Pro IA: 30 piezas y melodías al día.',
     aiLimitAny:'Se alcanzó el límite de IA de hoy — vuelve mañana.',
-    proAiValueFair:'Hasta 30 piezas y melodías IA al día · uso justo',
+    aiLimitYear:'Las {n} piezas y melodías IA de este año se han agotado — se renuevan el 1 de enero. Todo lo demás sigue sonando.',
+    proAiValueFair:'Hasta 30 piezas y melodías IA al día, 1.000 al año · uso justo',
     tierReadOnly:'solo vista',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
@@ -20720,7 +20725,8 @@ const I18N = {
     aiLimitDay:'Dnešných {n} AI skladieb a melódií je minutých — zajtra zas. Všetko ostatné hrá ďalej.',
     aiLimitNet:'AI skúšky z tejto siete sú na dnes minuté — zajtra zas, alebo Pro AI: 30 skladieb a melódií denne.',
     aiLimitAny:'Dnešný limit AI je vyčerpaný — zajtra zas.',
-    proAiValueFair:'Až 30 AI skladieb a melódií denne · férové používanie',
+    aiLimitYear:'Tohtoročných {n} AI skladieb a melódií je minutých — obnovia sa 1. januára. Všetko ostatné hrá ďalej.',
+    proAiValueFair:'Až 30 AI skladieb a melódií denne, 1 000 ročne · férové používanie',
     tierReadOnly:'len náhľad',
     tierRowArtists:'Umelci',
     tierRowComposers:'Skladatelia',
@@ -20889,7 +20895,8 @@ const I18N = {
     aiLimitDay:'今天的 {n} 首 AI 乐曲与旋律已用完——明天再来。其他功能照常使用。',
     aiLimitNet:'此网络今天的 AI 试用已用完——明天再来，或升级 Pro AI：每天 30 首乐曲与旋律。',
     aiLimitAny:'今天的 AI 用量已达上限——明天再来。',
-    proAiValueFair:'每天最多 30 首 AI 乐曲与旋律 · 合理使用',
+    aiLimitYear:'今年的 {n} 首 AI 乐曲与旋律已用完——1 月 1 日恢复。其他功能照常使用。',
+    proAiValueFair:'每天最多 30 首、每年 1,000 首 AI 乐曲与旋律 · 合理使用',
     tierReadOnly:'仅预览',
     tierRowArtists:'艺术家',
     tierRowComposers:'作曲家',
@@ -21052,7 +21059,8 @@ const I18N = {
     aiLimitDay:'今天的 {n} 首 AI 樂曲與旋律已用完——明天再來。其他功能照常使用。',
     aiLimitNet:'此網路今天的 AI 試用已用完——明天再來，或升級 Pro AI：每天 30 首樂曲與旋律。',
     aiLimitAny:'今天的 AI 用量已達上限——明天再來。',
-    proAiValueFair:'每天最多 30 首 AI 樂曲與旋律 · 合理使用',
+    aiLimitYear:'今年的 {n} 首 AI 樂曲與旋律已用完——1 月 1 日恢復。其他功能照常使用。',
+    proAiValueFair:'每天最多 30 首、每年 1,000 首 AI 樂曲與旋律 · 合理使用',
     tierReadOnly:'僅預覽',
     tierRowArtists:'藝術家',
     tierRowComposers:'作曲家',
@@ -21226,7 +21234,8 @@ const I18N = {
     aiLimitDay:'As {n} peças e melodias de IA de hoje esgotaram — volte amanhã. Tudo o resto continua.',
     aiLimitNet:'Os testes de IA desta rede esgotaram por hoje — volte amanhã, ou Pro IA: 30 peças e melodias por dia.',
     aiLimitAny:'O limite de IA de hoje foi atingido — volte amanhã.',
-    proAiValueFair:'Até 30 peças e melodias de IA por dia · uso justo',
+    aiLimitYear:'As {n} peças e melodias de IA deste ano esgotaram — renovam-se a 1 de janeiro. Tudo o resto continua.',
+    proAiValueFair:'Até 30 peças e melodias de IA por dia, 1.000 por ano · uso justo',
     tierReadOnly:'só prévia',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
@@ -21395,7 +21404,8 @@ const I18N = {
     aiLimitDay:'今日の AI 曲とメロディ {n} 回分を使い切りました——また明日。ほかの機能はそのまま使えます。',
     aiLimitNet:'このネットワークからの今日の AI お試しは使い切りました——また明日、または Pro AI で 1 日 30 曲・メロディまで。',
     aiLimitAny:'今日の AI の上限に達しました——また明日。',
-    proAiValueFair:'1 日 30 曲・メロディまでの AI · フェアユース',
+    aiLimitYear:'今年の AI 曲とメロディ {n} 回分を使い切りました——1 月 1 日に戻ります。ほかの機能はそのまま使えます。',
+    proAiValueFair:'1 日 30 曲・メロディまで、年 1,000 までの AI · フェアユース',
     tierReadOnly:'プレビューのみ',
     tierRowArtists:'アーティスト',
     tierRowComposers:'作曲家',
@@ -22574,7 +22584,7 @@ const GUIDE_I18N = {
     tools:{t:`Controls`, b:`Play / pause and the seek bar, loop, mute and Clear.`, bS:`Tap the painting to play or pause it; sound, loop and Clear are in ✦ Change.`, m:`Play — Starts and stops (Space too). A tap on the bar jumps. ◆ ⟳ Loop — The mood plays on and on. ◆ Sound — Mutes the music, the painting carries on. If the sound vanishes on iPhone, hold it. ◆ Clear — By mode: Compose wipes the canvas, Mic only the active draft, a file does a full reset. ◆ Piano loading — A few seconds (~5 MB). If it fails, a synth piano plays.`, mS:`Tap the painting — Starts and stops. ◆ ⟳ Loop — The mood plays on and on. ◆ Sound — Mutes the music, the painting carries on. If the sound vanishes on iPhone, hold it. ◆ Clear — ✕ in ✦ Change. Compose wipes the canvas, Mic only the active draft; music or a picture goes entirely, off the home too. ◆ Piano loading — A few seconds (~5 MB). If it fails, a synth piano plays.`},
     save:{t:`Save and share`, b:`The painting as a PNG, the music as sound. Story for Instagram and TikTok.`, bS:`Video 9:16, a Story picture or print — all under Share.`, m:`Story — 9:16 for IG and TikTok, with the painters and the palette. ◆ Web / Social — About 4×, for the feed. ◆ Print A1 — Gallery quality, in a 3:4 frame (Pro). ◆ The song's colours — Under the painting, the twelve notes and how long each sounded. Turn them off in Save. ◆ Record — With a picture, captures the sound as it plays. ◆ ♫ Score — The painting's notes as MusicXML. ◆ Watermark — On Save · print, Free has one and Pro removes it. The Story picture and the video carry only a small footer with the name, Free or Pro.`, mS:`Video 9:16 — It paints itself to the music: TikTok, Reels, Stories. ◆ Clip · 15 s — While it plays: the next 15 seconds from this moment, with the end card. ◆ Story picture — 9:16, with the title and who painted it. Also while it plays: the painting as it is right now. ◆ Save · print — Story, Web, Print A1, once the painting is finished. ◆ Sound — With a picture, records its music. ◆ Watermark — On Save · print, Free has one and Pro removes it. The Story picture and the video carry only a small footer with the name, Free or Pro.`},
     favorites:{t:`Favorites`, b:`Tap ♡ at the top left of the painting — even while it is still painting — and it stays. No limit.`, bS:`Double tap the painting or tap ♥ under it — even while it paints. No limit.`, m:`An address, not a picture — ♥ remembers the notes, painter, palette and tone; the painting paints itself again. ◆ Open them — ☰ → ♥ Favorites. Swipe or use ‹ › to flip through. ◆ Pictures — ♡ by a picture saves it with everything that plays it. ▶ Open brings it back. ◆ Clear all — Tap twice; Undo brings them back. ◆ Only here — On this device, in this browser.`, mS:`An address, not a picture — ♥ remembers the notes, painter, palette and tone; the painting paints itself again. ◆ Open them — From Mine: ✦ Change or the menu. Swipe up and down to flip through. ◆ Pictures — ♥ by a picture saves it with everything that plays it. ▶ opens it. ◆ Mic and Compose — ♥ on a Mic take keeps its sound too. ▶ Open: a composition goes back into Compose to carry on, a take opens as a song with its own sound. ◆ Panels — Swipe left: ♥ and Share. Swipe right: ✕ back and 🗑 clear all (tap twice). ◆ Only here — On this device, in this browser.`},
-    pro:{t:`Pro unlocks it all`, b:`Pro €9.99: all 24 painters, no watermark. Pro AI €19.99: AI, 30 pieces & melodies a day.`, m:`Free — 9 painters, Custom read-only, a watermark, one try of each AI mode. ◆ Pro €9.99 — All 24 painters and 15 composers, the Custom palette, print without a watermark, Ensemble, the Atelier (Lite or Advanced). ◆ Pro AI €19.99 — Everything in Pro plus AI — up to 30 pieces & melodies a day (fair use). ◆ Upgrade — From Pro to Pro AI for €10; your key stays the same. ◆ Once and for good — No subscription. Up to 5 devices, one at a time. ◆ Tip — On Free, tap a locked painter and try it once.`},
+    pro:{t:`Pro unlocks it all`, b:`Pro €9.99: all 24 painters, no watermark. Pro AI €19.99: AI, 30 pieces & melodies a day.`, m:`Free — 9 painters, Custom read-only, a watermark, one try of each AI mode. ◆ Pro €9.99 — All 24 painters and 15 composers, the Custom palette, print without a watermark, Ensemble, the Atelier (Lite or Advanced). ◆ Pro AI €19.99 — Everything in Pro plus AI — up to 30 pieces & melodies a day, 1,000 a year (fair use). ◆ Upgrade — From Pro to Pro AI for €10; your key stays the same. ◆ Once and for good — No subscription. Up to 5 devices, one at a time. ◆ Tip — On Free, tap a locked painter and try it once.`},
     ensemble:{t:`Ensemble`, b:`Fusion: 2–5 painters on one painting. Jam session: 2–5 composers on one picture.`, m:`Turn it on — ◎ next to 🔀, then tap painters, up to five. ◆ Collage — The painters side by side, each in their own hand. ◆ Synthesis — They cross into one new painter. ◆ Style — Drawn for every fusion; choose it in Styles & palettes → Ensemble. ◆ × 🔀 — 1 gives new variants. ALL keeps the pinned ones and adds 1–4 new. ◆ Jam session — Composers take turns by phrase (Collage) or merge into one (Synthesis). ◆ Pro — Switch it on in Styles & palettes → Ensemble.`},
    }},
   SK:{
@@ -22610,7 +22620,7 @@ const GUIDE_I18N = {
     tools:{t:`Ovládanie`, b:`Play / pauza a posun lišty, slučka, stíšenie a Vyčistiť.`, bS:`Ťukni na maľbu a hrá alebo stojí; zvuk, slučka a Vyčistiť sú v ✦ Zmeň.`, m:`Play — Spustí a zastaví (aj Space). Ťuk na lištu skočí. ◆ ⟳ Slučka — Nálada hrá dokola. ◆ Zvuk — Stíši hudbu, maľba ide ďalej. Keď na iPhone zvuk zmizne, podrž. ◆ Vyčistiť — Podľa módu: Komponovať zmaže plátno, Mikro len aktívny draft, súbor spraví reset. ◆ Klavír sa načítava — Pár sekúnd (~5 MB). Keď zlyhá, hrá syntetický.`, mS:`Ťuk na maľbu — Spustí a zastaví. ◆ ⟳ Slučka — Nálada hrá dokola. ◆ Zvuk — Stíši hudbu, maľba ide ďalej. Keď na iPhone zvuk zmizne, podrž. ◆ Vyčistiť — ✕ v ✦ Zmeň. Komponovať zmaže plátno, Mikro len aktívny draft; hudba či obrázok zmiznú úplne, aj z úvodu. ◆ Klavír sa načítava — Pár sekúnd (~5 MB). Keď zlyhá, hrá syntetický.`},
     save:{t:`Ulož a zdieľaj`, b:`Maľba ako PNG, hudba ako zvuk. Story pre Instagram a TikTok.`, bS:`Video 9:16, obrázok do Story alebo tlač — všetko v Zdieľať.`, m:`Story — 9:16 pre IG a TikTok, s maliarmi a paletou. ◆ Web / Social — Asi 4×, do feedu. ◆ Tlač A1 — Galériová kvalita, v ráme 3:4 (Pro). ◆ Farby skladby — Pod obrazom dvanásť tónov a ako dlho zneli. Vypneš ich v Ulož. ◆ Nahraj — Pri obrázku zachytí zvuk, ako hrá. ◆ ♫ Noty — Noty maľby ako MusicXML. ◆ Watermark — Pri Uložiť · tlač ho Free má a Pro ho odstráni. Story obrázok a video nesú len malú pätku s názvom, vo Free aj v Pro.`, mS:`Video 9:16 — Maľuje sa do hudby: TikTok, Reels, Stories. ◆ Klip · 15 s — Počas hrania: ďalších 15 sekúnd od tejto chvíle, so záverečnou kartou. ◆ Obrázok do Story — 9:16, s názvom a kto ho namaľoval. Aj počas hrania: maľba tak, ako je práve teraz. ◆ Uložiť · tlač — Story, Web, Tlač A1, keď sa maľba domaľuje. ◆ Zvuk — Pri obrázku nahrá jeho hudbu. ◆ Watermark — Pri Uložiť · tlač ho Free má a Pro ho odstráni. Story obrázok a video nesú len malú pätku s názvom, vo Free aj v Pro.`},
     favorites:{t:`Obľúbené`, b:`Ťukni na ♡ vľavo hore na maľbe — aj keď sa ešte maľuje — a ostane ti. Bez limitu.`, bS:`Dvakrát ťukni na maľbu alebo ťukni na ♥ pod ňou — aj kým sa ešte maľuje. Bez limitu.`, m:`Adresa, nie obrázok — ♥ si pamätá tóny, maliara, paletu a tón; maľba sa znova namaľuje. ◆ Otvoríš — ☰ → ♥ Obľúbené. Listuješ potiahnutím alebo ‹ ›. ◆ Obrázky — ♡ pri obrázku ho uloží so všetkým, čo ho hrá. ▶ Otvoriť ho vráti. ◆ Vymazať všetky — Ťukni dvakrát, Späť ich vráti. ◆ Len tu — V tomto zariadení a prehliadači.`, mS:`Adresa, nie obrázok — ♥ si pamätá tóny, maliara, paletu a tón; maľba sa znova namaľuje. ◆ Otvoríš — V Moje: ✦ Zmeň alebo menu. Listuješ potiahnutím hore a dole. ◆ Obrázky — ♥ pri obrázku ho uloží so všetkým, čo ho hrá. ▶ ho otvorí. ◆ Mikro a Komponovanie — ♥ pri nahrávke z Mikra uloží aj jej zvuk. ▶ Otvoriť: kompozícia sa vráti do Komponovania a pokračuješ, nahrávka sa otvorí ako skladba s vlastným zvukom. ◆ Lišty — Potiahni doľava: ♥ a zdieľanie. Doprava: ✕ späť a 🗑 vymazať všetky (ťukni dvakrát). ◆ Len tu — V tomto zariadení a prehliadači.`},
-    pro:{t:`Pro odomkne všetko`, b:`Pro €9.99: všetkých 24 maliarov a bez watermarku. Pro AI €19.99: AI, 30 skladieb a melódií denne.`, m:`Free — 9 maliarov, Vlastná na čítanie, watermark, jedna skúška každého AI módu. ◆ Pro €9.99 — Všetkých 24 maliarov a 15 skladateľov, Vlastná paleta, tlač bez watermarku, Ensemble, Ateliér (Lite aj Rozšírený). ◆ Pro AI €19.99 — Všetko z Pro a AI — až 30 skladieb a melódií denne (férové používanie). ◆ Upgrade — Z Pro na Pro AI za €10, kľúč ostáva. ◆ Raz a navždy — Bez predplatného. Až 5 zariadení, jedno naraz. ◆ Tip — Vo Free ťukni na zamknutého maliara a raz si ho vyskúšaš.`},
+    pro:{t:`Pro odomkne všetko`, b:`Pro €9.99: všetkých 24 maliarov a bez watermarku. Pro AI €19.99: AI, 30 skladieb a melódií denne.`, m:`Free — 9 maliarov, Vlastná na čítanie, watermark, jedna skúška každého AI módu. ◆ Pro €9.99 — Všetkých 24 maliarov a 15 skladateľov, Vlastná paleta, tlač bez watermarku, Ensemble, Ateliér (Lite aj Rozšírený). ◆ Pro AI €19.99 — Všetko z Pro a AI — až 30 skladieb a melódií denne, 1 000 ročne (férové používanie). ◆ Upgrade — Z Pro na Pro AI za €10, kľúč ostáva. ◆ Raz a navždy — Bez predplatného. Až 5 zariadení, jedno naraz. ◆ Tip — Vo Free ťukni na zamknutého maliara a raz si ho vyskúšaš.`},
     ensemble:{t:`Ensemble`, b:`Fúzia: 2–5 maliarov na jednom obraze. Jam session: 2–5 skladateľov nad jedným obrázkom.`, m:`Zapni — ◎ vedľa 🔀, potom ťukaj na maliarov, najviac päť. ◆ Koláž — Maliari vedľa seba, každý vlastnou rukou. ◆ Syntéza — Z nich sa skríži jeden nový maliar. ◆ Štýl — Losuje sa pre každú fúziu; vyberieš ho v Štýly a palety → Ensemble. ◆ × 🔀 — 1 dá nové varianty. ALL nechá pripnutých a pridá 1–4 nových. ◆ Jam session — Skladatelia si striedajú frázy (Koláž) alebo sa spoja do jedného (Syntéza). ◆ Pro — Zapína sa v Štýly a palety → Ensemble.`},
    }},
   DE:{
@@ -22646,7 +22656,7 @@ const GUIDE_I18N = {
     tools:{t:`Steuerung`, b:`Play / Pause und Spulen, Loop, Stummschalten und Löschen.`, bS:`Tippe aufs Bild für Play oder Pause; Ton, Loop und Löschen sind in ✦ Ändern.`, m:`Play — Start und Stopp (auch Space). Ein Tipp auf die Leiste springt. ◆ ⟳ Loop — Die Stimmung spielt in Schleife. ◆ Ton — Musik stumm, das Bild malt weiter. Ist am iPhone der Ton weg, gedrückt halten. ◆ Löschen — Je nach Modus: Komponieren leert die Leinwand, Mikro nur den aktiven Entwurf, eine Datei setzt zurück. ◆ Klavier lädt — Ein paar Sekunden (~5 MB). Klappt es nicht, spielt ein Synth-Klavier.`, mS:`Tippen aufs Bild — Start und Stopp. ◆ ⟳ Loop — Die Stimmung spielt in Schleife. ◆ Ton — Musik stumm, das Bild malt weiter. Ist am iPhone der Ton weg, gedrückt halten. ◆ Löschen — Das ✕ in ✦ Ändern. Komponieren leert die Leinwand, Mikro nur den aktiven Entwurf; Musik oder ein Bild verschwinden ganz, auch vom Start. ◆ Klavier lädt — Ein paar Sekunden (~5 MB). Klappt es nicht, spielt ein Synth-Klavier.`},
     save:{t:`Sichern und teilen`, b:`Das Bild als PNG, die Musik als Audio. Story für Instagram und TikTok.`, bS:`Video 9:16, Story-Bild oder Druck — alles unter Teilen.`, m:`Story — 9:16 für IG und TikTok, mit Malern und Palette. ◆ Web / Social — Etwa 4×, für den Feed. ◆ Druck A1 — Galeriequalität, im Format 3:4 (Pro). ◆ Farben des Stücks — Unter dem Bild die zwölf Töne und wie lange sie klangen. Abschalten in Sichern. ◆ Aufnehmen — Beim Foto nimmt es den Klang auf, während es spielt. ◆ ♫ Noten — Die Noten des Bildes als MusicXML. ◆ Wasserzeichen — Bei Speichern · Druck hat Free eins, Pro entfernt es. Story-Bild und Video tragen nur eine kleine Fußzeile mit dem Namen, bei Free wie bei Pro.`, mS:`Video 9:16 — Malt sich zur Musik: TikTok, Reels, Stories. ◆ Clip · 15 s — Während es spielt: die nächsten 15 Sekunden ab jetzt, mit der Abschlusskarte. ◆ Story-Bild — 9:16, mit Titel und wer es gemalt hat. Auch während es spielt: das Bild, wie es gerade ist. ◆ Speichern · Druck — Story, Web, Druck A1, sobald das Bild fertig gemalt ist. ◆ Ton — Beim Foto nimmt es seine Musik auf. ◆ Wasserzeichen — Bei Speichern · Druck hat Free eins, Pro entfernt es. Story-Bild und Video tragen nur eine kleine Fußzeile mit dem Namen, bei Free wie bei Pro.`},
     favorites:{t:`Favoriten`, b:`Tippe beim Bild oben links auf ♡ — auch während es noch gemalt wird — und es bleibt dir. Ohne Limit.`, bS:`Tippe doppelt auf das Bild oder auf ♥ darunter — auch während es noch gemalt wird. Ohne Limit.`, m:`Adresse, kein Bild — ♥ merkt sich Noten, Maler, Palette und Ton; das Bild wird neu gemalt. ◆ Öffnen — ☰ → ♥ Favoriten. Blättern per Wischen oder ‹ ›. ◆ Fotos — ♡ bei einem Foto speichert es mit allem, was es spielt. ▶ Öffnen holt es zurück. ◆ Alle löschen — Zweimal tippen, Rückgängig holt sie zurück. ◆ Nur hier — Auf diesem Gerät, in diesem Browser.`, mS:`Adresse, kein Bild — ♥ merkt sich Noten, Maler, Palette und Ton; das Bild wird neu gemalt. ◆ Öffnen — In Meins: ✦ Ändern oder Menü. Blättern per Wischen nach oben und unten. ◆ Fotos — ♥ bei einem Foto speichert es mit allem, was es spielt. ▶ öffnet es. ◆ Mikro und Komponieren — ♥ bei einer Mikro-Aufnahme behält auch ihren Ton. ▶ Öffnen: eine Komposition kommt zurück ins Komponieren zum Weitermachen, eine Aufnahme öffnet sich als Song mit ihrem eigenen Ton. ◆ Leisten — Nach links wischen: ♥ und Teilen. Nach rechts: ✕ zurück und 🗑 alle löschen (zweimal tippen). ◆ Nur hier — Auf diesem Gerät, in diesem Browser.`},
-    pro:{t:`Pro schaltet alles frei`, b:`Pro 9,99 €: alle 24 Maler und kein Wasserzeichen. Pro KI 19,99 €: KI, 30 Stücke & Melodien pro Tag.`, m:`Free — 9 Maler, Eigen schreibgeschützt, Wasserzeichen, ein Versuch pro KI-Modus. ◆ Pro 9,99 € — Alle 24 Maler und 15 Komponisten, editierbare Eigen-Palette, Druck ohne Wasserzeichen, Ensemble, Atelier (Lite oder Advanced). ◆ Pro KI 19,99 € — Alles aus Pro plus KI — bis zu 30 Stücke & Melodien pro Tag (faire Nutzung). ◆ Upgrade — Von Pro auf Pro KI für 10 €, dein Schlüssel bleibt. ◆ Einmal, für immer — Kein Abo. Bis zu 5 Geräte, eins gleichzeitig. ◆ Tipp — Tippe in Free auf einen gesperrten Maler und probier ihn einmal aus.`},
+    pro:{t:`Pro schaltet alles frei`, b:`Pro 9,99 €: alle 24 Maler und kein Wasserzeichen. Pro KI 19,99 €: KI, 30 Stücke & Melodien pro Tag.`, m:`Free — 9 Maler, Eigen schreibgeschützt, Wasserzeichen, ein Versuch pro KI-Modus. ◆ Pro 9,99 € — Alle 24 Maler und 15 Komponisten, editierbare Eigen-Palette, Druck ohne Wasserzeichen, Ensemble, Atelier (Lite oder Advanced). ◆ Pro KI 19,99 € — Alles aus Pro plus KI — bis zu 30 Stücke & Melodien pro Tag, 1.000 pro Jahr (faire Nutzung). ◆ Upgrade — Von Pro auf Pro KI für 10 €, dein Schlüssel bleibt. ◆ Einmal, für immer — Kein Abo. Bis zu 5 Geräte, eins gleichzeitig. ◆ Tipp — Tippe in Free auf einen gesperrten Maler und probier ihn einmal aus.`},
     ensemble:{t:`Ensemble`, b:`Fusion: 2–5 Maler auf einem Bild. Jam session: 2–5 Komponisten über einem Foto.`, m:`Einschalten — ◎ neben 🔀, dann auf Maler tippen, höchstens fünf. ◆ Collage — Die Maler nebeneinander, jeder mit eigener Hand. ◆ Synthese — Aus ihnen wird ein neuer Maler gekreuzt. ◆ Stil — Wird für jede Fusion gelost; festlegen in Stile & Paletten → Ensemble. ◆ × 🔀 — 1 gibt neue Varianten. ALL behält die Angehefteten und zieht 1–4 neue dazu. ◆ Jam session — Die Komponisten wechseln sich mit Phrasen ab (Collage) oder verschmelzen zu einem (Synthese). ◆ Pro — Einschalten in Stile & Paletten → Ensemble.`},
    }},
   FR:{
@@ -22682,7 +22692,7 @@ const GUIDE_I18N = {
     tools:{t:`Commandes`, b:`Play / pause et barre de lecture, Loop, sourdine et Effacer.`, bS:`Touche la peinture pour lancer ou mettre en pause ; le son, Loop et Effacer sont dans ✦ Changer.`, m:`Play — Lance et arrête (Space aussi). Touche la barre pour sauter. ◆ ⟳ Loop — L’humeur tourne en boucle. ◆ Son — Coupe la musique, la peinture continue. Si le son disparaît sur iPhone, maintiens. ◆ Effacer — Selon le mode : Composer vide la toile, Micro seulement le brouillon actif, un fichier fait un reset. ◆ Chargement du piano — Quelques secondes (~5 Mo). En cas d’échec, un piano synthé joue.`, mS:`Touche la peinture — Lance et arrête. ◆ ⟳ Loop — L’humeur tourne en boucle. ◆ Son — Coupe la musique, la peinture continue. Si le son disparaît sur iPhone, maintiens. ◆ Effacer — Le ✕ dans ✦ Changer. Composer vide la toile, Micro seulement le brouillon actif ; une musique ou une image disparaît entièrement, de l’accueil aussi. ◆ Chargement du piano — Quelques secondes (~5 Mo). En cas d’échec, un piano synthé joue.`},
     save:{t:`Sauve et partage`, b:`La peinture en PNG, la musique en audio. Story pour Instagram et TikTok.`, bS:`Vidéo 9:16, image Story ou impression — tout est dans Partager.`, m:`Story — 9:16 pour IG et TikTok, avec les peintres et la palette. ◆ Web / Social — Environ 4×, pour le feed. ◆ Impression A1 — Qualité galerie, au format 3:4 (Pro). ◆ Couleurs du morceau — Sous la peinture, les douze notes et combien de temps elles ont sonné. À décocher dans Sauver. ◆ Enregistrer — Avec une image, capte le son pendant qu’elle joue. ◆ ♫ Partition — Les notes de la peinture en MusicXML. ◆ Filigrane — Dans Enregistrer · imprimer, Free l’a et Pro le retire. L’image Story et la vidéo ne portent qu’un petit pied de page avec le nom, en Free comme en Pro.`, mS:`Vidéo 9:16 — Se peint au rythme de la musique : TikTok, Reels, Stories. ◆ Clip · 15 s — Pendant la lecture : les 15 prochaines secondes à partir de maintenant, avec la carte de fin. ◆ Image Story — 9:16, avec le titre et qui l’a peinte. Aussi pendant la lecture : le tableau tel qu’il est maintenant. ◆ Enregistrer · imprimer — Story, Web, Impression A1, une fois la peinture finie. ◆ Son — Avec une image, enregistre sa musique. ◆ Filigrane — Dans Enregistrer · imprimer, Free l’a et Pro le retire. L’image Story et la vidéo ne portent qu’un petit pied de page avec le nom, en Free comme en Pro.`},
     favorites:{t:`Favoris`, b:`Touche ♡ en haut à gauche de la peinture — même pendant qu’elle se peint — et elle reste à toi. Sans limite.`, bS:`Touche deux fois la peinture ou touche ♥ en dessous — même pendant qu’elle se peint. Sans limite.`, m:`Une adresse, pas une image — ♥ retient les notes, le peintre, la palette et le ton ; la peinture est repeinte. ◆ Ouvrir — ☰ → ♥ Favoris. Fais défiler en glissant ou avec ‹ ›. ◆ Images — ♡ sur une image la garde avec tout ce qui la joue. ▶ Ouvrir la ramène. ◆ Tout effacer — Touche deux fois, Annuler les ramène. ◆ Seulement ici — Sur cet appareil, dans ce navigateur.`, mS:`Une adresse, pas une image — ♥ retient les notes, le peintre, la palette et le ton ; la peinture est repeinte. ◆ Ouvrir — Dans À moi : ✦ Changer ou le menu. Fais défiler en glissant vers le haut ou le bas. ◆ Images — ♥ sur une image la garde avec tout ce qui la joue. ▶ l’ouvre. ◆ Micro et Composer — ♥ sur une prise du Micro garde aussi son son. ▶ Ouvrir : une composition revient dans Composer pour continuer, une prise s’ouvre comme un morceau avec son propre son. ◆ Barres — Glisse à gauche : ♥ et partager. À droite : ✕ retour et 🗑 tout effacer (touche deux fois). ◆ Seulement ici — Sur cet appareil, dans ce navigateur.`},
-    pro:{t:`Pro débloque tout`, b:`Pro 9,99 € : les 24 peintres et sans filigrane. Pro IA 19,99 € : l’IA, 30 morceaux et mélodies par jour.`, m:`Free — 9 peintres, Perso en lecture seule, filigrane, un essai par mode IA. ◆ Pro 9,99 € — Les 24 peintres et 15 compositeurs, palette Perso modifiable, impression sans filigrane, Ensemble, l’Atelier (Lite ou Avancé). ◆ Pro IA 19,99 € — Tout Pro, plus l’IA — jusqu’à 30 morceaux et mélodies par jour (usage équitable). ◆ Upgrade — De Pro à Pro IA pour 10 €, ta clé reste la même. ◆ Une fois pour toutes — Sans abonnement. Jusqu’à 5 appareils, un à la fois. ◆ Astuce — En Free, touche un peintre verrouillé pour l’essayer une fois.`},
+    pro:{t:`Pro débloque tout`, b:`Pro 9,99 € : les 24 peintres et sans filigrane. Pro IA 19,99 € : l’IA, 30 morceaux et mélodies par jour.`, m:`Free — 9 peintres, Perso en lecture seule, filigrane, un essai par mode IA. ◆ Pro 9,99 € — Les 24 peintres et 15 compositeurs, palette Perso modifiable, impression sans filigrane, Ensemble, l’Atelier (Lite ou Avancé). ◆ Pro IA 19,99 € — Tout Pro, plus l’IA — jusqu’à 30 morceaux et mélodies par jour, 1 000 par an (usage équitable). ◆ Upgrade — De Pro à Pro IA pour 10 €, ta clé reste la même. ◆ Une fois pour toutes — Sans abonnement. Jusqu’à 5 appareils, un à la fois. ◆ Astuce — En Free, touche un peintre verrouillé pour l’essayer une fois.`},
     ensemble:{t:`Ensemble`, b:`Fusion : 2–5 peintres sur une peinture. Jam session : 2–5 compositeurs sur une image.`, m:`Activer — ◎ à côté de 🔀, puis touche des peintres, cinq au plus. ◆ Collage — Les peintres côte à côte, chacun de sa propre main. ◆ Synthèse — Un nouveau peintre naît de leur croisement. ◆ Style — Tiré au sort pour chaque fusion ; à choisir dans Styles et palettes → Ensemble. ◆ × 🔀 — 1 donne de nouvelles variantes. ALL garde les épinglés et en ajoute 1–4 nouveaux. ◆ Jam session — Les compositeurs se passent les phrases (Collage) ou fusionnent en un seul (Synthèse). ◆ Pro — S’active dans Styles et palettes → Ensemble.`},
    }},
   ES:{
@@ -22718,7 +22728,7 @@ const GUIDE_I18N = {
     tools:{t:`Controles`, b:`Play / pausa y la barra de avance, Loop, silencio y Borrar.`, bS:`Toca la pintura para reproducir o pausar; el sonido, Loop y Borrar están en ✦ Cambiar.`, m:`Play — Inicia y detiene (también Space). Toca la barra para saltar. ◆ ⟳ Loop — El estado de ánimo suena una y otra vez. ◆ Sonido — Silencia la música; la pintura sigue. Si en el iPhone se va el sonido, mantén pulsado. ◆ Borrar — Según el modo: Componer borra el lienzo, Micro solo el borrador activo, un archivo se reinicia. ◆ Cargando el piano — Unos segundos (~5 MB). Si falla, suena uno sintético.`, mS:`Toca la pintura — Inicia y detiene. ◆ ⟳ Loop — El estado de ánimo suena una y otra vez. ◆ Sonido — Silencia la música; la pintura sigue. Si en el iPhone se va el sonido, mantén pulsado. ◆ Borrar — ✕ en ✦ Cambiar. Componer borra el lienzo; Micro, solo el borrador activo; una música o una imagen desaparece del todo, también del inicio. ◆ Cargando el piano — Unos segundos (~5 MB). Si falla, suena uno sintético.`},
     save:{t:`Guarda y comparte`, b:`La pintura en PNG, la música en audio. Story para Instagram y TikTok.`, bS:`Vídeo 9:16, Imagen para Story o impresión — todo en Compartir.`, m:`Story — 9:16 para IG y TikTok, con los pintores y la paleta. ◆ Web / Social — Unas 4×, lista para el feed. ◆ Impresión A1 — Calidad de galería, en formato 3:4 (Pro). ◆ Colores de la pieza — Bajo la pintura, las doce notas y cuánto sonaron. Se desactivan en Guardar. ◆ Grabar — Con una imagen, captura el sonido mientras suena. ◆ ♫ Partitura — Las notas de la pintura como MusicXML. ◆ Marca de agua — En Guardar · imprimir, Free la lleva y Pro la quita. La imagen Story y el vídeo solo llevan un pequeño pie con el nombre, en Free y en Pro.`, mS:`Vídeo 9:16 — Se pinta al ritmo de la música: TikTok, Reels, Stories. ◆ Clip · 15 s — Mientras suena: los próximos 15 segundos desde ahora, con la tarjeta final. ◆ Imagen para Story — 9:16, con el título y quién la pintó. También mientras suena: la pintura tal como está ahora. ◆ Guardar · imprimir — Story, Web, Impresión A1, cuando la pintura está terminada. ◆ Sonido — Con una imagen, graba su música. ◆ Marca de agua — En Guardar · imprimir, Free la lleva y Pro la quita. La imagen Story y el vídeo solo llevan un pequeño pie con el nombre, en Free y en Pro.`},
     favorites:{t:`Favoritos`, b:`Toca ♡ arriba a la izquierda de la pintura — incluso mientras se pinta — y se queda guardada. Sin límite.`, bS:`Toca dos veces la pintura o toca ♥ debajo — incluso mientras se pinta. Sin límite.`, m:`Dirección, no imagen — ♥ recuerda las notas, el pintor, la paleta y el tono; la pintura se vuelve a pintar. ◆ Abrir — ☰ → ♥ Favoritos. Pasa de una a otra deslizando o con ‹ ›. ◆ Imágenes — ♡ en una imagen la guarda con todo lo que la hace sonar. ▶ Abrir la devuelve. ◆ Borrar todos — Toca dos veces; Deshacer los devuelve. ◆ Solo aquí — En este dispositivo y este navegador.`, mS:`Dirección, no imagen — ♥ recuerda las notas, el pintor, la paleta y el tono; la pintura se vuelve a pintar. ◆ Abrir — En Lo mío: ✦ Cambiar o el menú. Pasa de una a otra deslizando arriba y abajo. ◆ Imágenes — ♥ en una imagen la guarda con todo lo que la hace sonar. ▶ la abre. ◆ Micro y Componer — ♥ en una toma del Micro guarda también su sonido. ▶ Abrir: una composición vuelve a Componer para seguir, una toma se abre como canción con su propio sonido. ◆ Barras — Desliza a la izquierda: ♥ y compartir. A la derecha: ✕ volver y 🗑 borrar todo (toca dos veces). ◆ Solo aquí — En este dispositivo y este navegador.`},
-    pro:{t:`Pro lo desbloquea todo`, b:`Pro 9,99 €: los 24 pintores y sin marca de agua. Pro IA 19,99 €: IA, 30 piezas y melodías al día.`, m:`Free — 9 pintores, Personal en solo lectura, marca de agua, una prueba de cada modo IA. ◆ Pro 9,99 € — Los 24 pintores y 15 compositores, paleta Personal, impresión sin marca de agua, Ensemble, Taller (Lite o Avanzado). ◆ Pro IA 19,99 € — Todo lo de Pro e IA — hasta 30 piezas y melodías al día (uso justo). ◆ Mejora — De Pro a Pro IA por 10 €; tu clave sigue igual. ◆ Una vez, para siempre — Sin suscripción. Hasta 5 dispositivos, uno a la vez. ◆ Truco — En Free, toca un pintor bloqueado y lo pruebas una vez.`},
+    pro:{t:`Pro lo desbloquea todo`, b:`Pro 9,99 €: los 24 pintores y sin marca de agua. Pro IA 19,99 €: IA, 30 piezas y melodías al día.`, m:`Free — 9 pintores, Personal en solo lectura, marca de agua, una prueba de cada modo IA. ◆ Pro 9,99 € — Los 24 pintores y 15 compositores, paleta Personal, impresión sin marca de agua, Ensemble, Taller (Lite o Avanzado). ◆ Pro IA 19,99 € — Todo lo de Pro e IA — hasta 30 piezas y melodías al día, 1.000 al año (uso justo). ◆ Mejora — De Pro a Pro IA por 10 €; tu clave sigue igual. ◆ Una vez, para siempre — Sin suscripción. Hasta 5 dispositivos, uno a la vez. ◆ Truco — En Free, toca un pintor bloqueado y lo pruebas una vez.`},
     ensemble:{t:`Ensemble`, b:`Fusión: 2–5 pintores en una pintura. Jam session: 2–5 compositores sobre una imagen.`, m:`Actívalo — ◎ junto a 🔀; luego toca pintores, hasta cinco. ◆ Collage — Los pintores lado a lado, cada uno con su propia mano. ◆ Síntesis — De ellos se cruza un pintor nuevo. ◆ Estilo — Se sortea en cada fusión; lo eliges en Estilos y paletas → Ensemble. ◆ × 🔀 — 1 da variantes nuevas. ALL mantiene a los fijados y suma 1–4 nuevos. ◆ Jam session — Los compositores se turnan las frases (Collage) o se funden en uno (Síntesis). ◆ Pro — Se activa en Estilos y paletas → Ensemble.`},
    }},
   PT:{
@@ -22754,7 +22764,7 @@ const GUIDE_I18N = {
     tools:{t:`Controlos`, b:`Play / pausa e a barra de progresso, Loop, silêncio e Limpar.`, bS:`Toca na pintura para tocar ou pausar; o som, Loop e Limpar estão em ✦ Mudar.`, m:`Play — Inicia e para (também Space). Toca na barra para saltar. ◆ ⟳ Loop — O humor toca sem parar. ◆ Som — Silencia a música; a pintura continua. Se no iPhone o som desaparecer, mantém premido. ◆ Limpar — Depende do modo: Compor apaga a tela, Mic só o rascunho ativo, um ficheiro faz reset. ◆ A carregar o piano — Uns segundos (~5 MB). Se falhar, toca um sintético.`, mS:`Toca na pintura — Inicia e para. ◆ ⟳ Loop — O humor toca sem parar. ◆ Som — Silencia a música; a pintura continua. Se no iPhone o som desaparecer, mantém premido. ◆ Limpar — ✕ em ✦ Mudar. Compor apaga a tela; Mic, só o rascunho ativo; uma música ou uma imagem desaparece por completo, também do início. ◆ A carregar o piano — Uns segundos (~5 MB). Se falhar, toca um sintético.`},
     save:{t:`Guarda e partilha`, b:`A pintura em PNG, a música em áudio. Story para Instagram e TikTok.`, bS:`Vídeo 9:16, Imagem para Story ou impressão — tudo em Partilhar.`, m:`Story — 9:16 para IG e TikTok, com os pintores e a paleta. ◆ Web / Social — Cerca de 4×, pronta para o feed. ◆ Impressão A1 — Qualidade de galeria, em formato 3:4 (Pro). ◆ Cores da peça — Por baixo da pintura, as doze notas e quanto tempo soaram. Desligas em Guardar. ◆ Gravar — Com uma imagem, capta o som enquanto toca. ◆ ♫ Partitura — As notas da pintura em MusicXML. ◆ Marca de água — Em Guardar · imprimir, o Free tem-na e o Pro remove-a. A imagem Story e o vídeo levam só um pequeno rodapé com o nome, no Free e no Pro.`, mS:`Vídeo 9:16 — Pinta-se ao ritmo da música: TikTok, Reels, Stories. ◆ Clip · 15 s — Enquanto toca: os próximos 15 segundos a partir de agora, com o cartão final. ◆ Imagem para Story — 9:16, com o título e quem a pintou. Também enquanto toca: a pintura tal como está agora. ◆ Guardar · imprimir — Story, Web, Impressão A1, quando a pintura acaba. ◆ Som — Com uma imagem, grava a sua música. ◆ Marca de água — Em Guardar · imprimir, o Free tem-na e o Pro remove-a. A imagem Story e o vídeo levam só um pequeno rodapé com o nome, no Free e no Pro.`},
     favorites:{t:`Favoritos`, b:`Toca em ♡ no canto superior esquerdo da pintura — mesmo enquanto ainda se pinta — e fica guardada. Sem limite.`, bS:`Toca duas vezes na pintura ou toca em ♥ por baixo — mesmo enquanto se pinta. Sem limite.`, m:`Endereço, não imagem — ♥ lembra as notas, o pintor, a paleta e o tom; a pintura volta a ser pintada. ◆ Abrir — ☰ → ♥ Favoritos. Passa de uma para outra a deslizar ou com ‹ ›. ◆ Imagens — ♡ numa imagem guarda-a com tudo o que a faz tocar. ▶ Abrir trá-la de volta. ◆ Apagar todos — Toca duas vezes; Desfazer trá-los de volta. ◆ Só aqui — Neste dispositivo e neste navegador.`, mS:`Endereço, não imagem — ♥ lembra as notas, o pintor, a paleta e o tom; a pintura volta a ser pintada. ◆ Abrir — Em O meu: ✦ Mudar ou o menu. Passa de uma para outra a deslizar para cima e para baixo. ◆ Imagens — ♥ numa imagem guarda-a com tudo o que a faz tocar. ▶ abre-a. ◆ Micro e Compor — ♥ numa gravação do Micro guarda também o som. ▶ Abrir: uma composição volta ao Compor para continuar, uma gravação abre como canção com o seu próprio som. ◆ Barras — Desliza para a esquerda: ♥ e partilhar. Para a direita: ✕ voltar e 🗑 apagar tudo (toca duas vezes). ◆ Só aqui — Neste dispositivo e neste navegador.`},
-    pro:{t:`Pro desbloqueia tudo`, b:`Pro 9,99 €: os 24 pintores e sem marca de água. Pro IA 19,99 €: IA, 30 peças e melodias por dia.`, m:`Free — 9 pintores, Personalizada só de leitura, marca de água, uma tentativa de cada modo IA. ◆ Pro 9,99 € — Os 24 pintores e 15 compositores, paleta Personalizada, impressão sem marca de água, Ensemble, Atelier (Lite ou Avançado). ◆ Pro IA 19,99 € — Tudo do Pro e IA — até 30 peças e melodias por dia (uso justo). ◆ Upgrade — Do Pro para o Pro IA por 10 €; a chave fica a mesma. ◆ Uma vez, para sempre — Sem subscrição. Até 5 dispositivos, um de cada vez. ◆ Dica — No Free, toca num pintor bloqueado e experimenta-o uma vez.`},
+    pro:{t:`Pro desbloqueia tudo`, b:`Pro 9,99 €: os 24 pintores e sem marca de água. Pro IA 19,99 €: IA, 30 peças e melodias por dia.`, m:`Free — 9 pintores, Personalizada só de leitura, marca de água, uma tentativa de cada modo IA. ◆ Pro 9,99 € — Os 24 pintores e 15 compositores, paleta Personalizada, impressão sem marca de água, Ensemble, Atelier (Lite ou Avançado). ◆ Pro IA 19,99 € — Tudo do Pro e IA — até 30 peças e melodias por dia, 1.000 por ano (uso justo). ◆ Upgrade — Do Pro para o Pro IA por 10 €; a chave fica a mesma. ◆ Uma vez, para sempre — Sem subscrição. Até 5 dispositivos, um de cada vez. ◆ Dica — No Free, toca num pintor bloqueado e experimenta-o uma vez.`},
     ensemble:{t:`Ensemble`, b:`Fusão: 2–5 pintores numa pintura. Jam session: 2–5 compositores sobre uma imagem.`, m:`Liga — ◎ ao lado de 🔀, depois toca nos pintores, até cinco. ◆ Colagem — Os pintores lado a lado, cada um com a sua mão. ◆ Síntese — Deles cruza-se um pintor novo. ◆ Estilo — É sorteado em cada fusão; escolhe-lo em Estilos e paletas → Ensemble. ◆ × 🔀 — 1 dá variantes novas. ALL mantém os fixados e junta 1–4 novos. ◆ Jam session — Os compositores alternam frases (Colagem) ou fundem-se num só (Síntese). ◆ Pro — Liga-se em Estilos e paletas → Ensemble.`},
    }},
   zh:{
@@ -22790,7 +22800,7 @@ const GUIDE_I18N = {
     tools:{t:`控制`, b:`播放 / 暂停、拖动进度条、循环、静音和清空。`, bS:`轻点画面即可播放或暂停；声音、循环和清除在 ✦ 更换 里。`, m:`播放 — 开始和停止（也可按 Space）。点进度条可跳转。 ◆ ⟳ 循环 — 情绪曲反复播放。 ◆ 声音 — 静音时画作照常进行。iPhone 上声音消失时，长按它。 ◆ 清空 — 视模式而定：作曲清空画布，麦克风只清当前草稿，文件则完全重置。 ◆ 钢琴加载中 — 几秒钟（约 5 MB）。失败时改用合成钢琴。`, mS:`轻点画面 — 开始和停止。 ◆ ⟳ 循环 — 情绪曲反复播放。 ◆ 声音 — 静音时画作照常进行。iPhone 上声音消失时，长按它。 ◆ 清除 — ✦ 更换 里的 ✕。作曲清空画布，麦克风只清当前草稿；音乐或图片会完全消失，首页上也不再有。 ◆ 钢琴加载中 — 几秒钟（约 5 MB）。失败时改用合成钢琴。`},
     save:{t:`保存与分享`, b:`画作存为 PNG，音乐存为音频。Story 适合 Instagram 和 TikTok。`, bS:`视频 9:16、快拍图片或打印，全在“分享”里。`, m:`Story — 9:16，适合 IG 和 TikTok，标注画家与调色板。 ◆ Web / Social — 约 4×，适合信息流。 ◆ 打印 A1 — 画廊级品质，3:4 画幅（Pro）。 ◆ 乐曲的颜色 — 画下方是十二个音，以及各自响了多久。可在保存中关闭。 ◆ 录制 — 图像模式下，边播放边录下声音。 ◆ ♫ 乐谱 — 把画作的音符导出为 MusicXML。 ◆ 水印 — 在“保存 · 打印”里，Free 有水印，Pro 会去掉它。Story 图片和视频只带一行小小的署名页脚，Free 和 Pro 都一样。`, mS:`视频 9:16 — 随音乐边画边播：TikTok、Reels、快拍。 ◆ 片段 · 15 秒 — 播放中：从现在起的 15 秒，带结尾卡。 ◆ 快拍图片 — 9:16，附曲名和作画者。播放中也可以：画面此刻的样子。 ◆ 保存 · 打印 — 画完后可选 Story、Web、打印 A1。 ◆ 声音 — 图像模式下录下它的音乐。 ◆ 水印 — 在“保存 · 打印”里，Free 有水印，Pro 会去掉它。Story 图片和视频只带一行小小的署名页脚，Free 和 Pro 都一样。`},
     favorites:{t:`收藏`, b:`点画作左上角的 ♡ 就能留下它——还在画的时候也可以。没有数量限制。`, bS:`双击画作，或点下方的 ♥——还在画的时候也可以。没有数量限制。`, m:`地址，不是图片 — ♥ 记住音符、画家、调色板和色调；画作会重新画出来。 ◆ 打开 — ☰ → ♥ 收藏。滑动或点 ‹ › 翻看。 ◆ 图像 — 图像上的 ♡ 会连同演奏它的一切一起保存。▶ 打开 把它带回来。 ◆ 全部清除 — 点两下；撤销可以找回。 ◆ 仅限本机 — 保存在这台设备、这个浏览器里。`, mS:`地址，不是图片 — ♥ 记住音符、画家、调色板和色调；画作会重新画出来。 ◆ 打开 — 在“我的”里：✦ 更换 或菜单。上下滑动翻看。 ◆ 图像 — 图像上的 ♥ 会连同演奏它的一切一起保存。▶ 打开它。 ◆ 麦克风和作曲 — 麦克风录音上的 ♥ 连声音一起保存。▶ 打开：作曲回到作曲模式继续写，录音作为带原声的曲子打开。 ◆ 侧栏 — 向左滑：♥ 和分享。向右滑：✕ 返回和 🗑 全部删除（点两下）。 ◆ 仅限本机 — 保存在这台设备、这个浏览器里。`},
-    pro:{t:`Pro 解锁一切`, b:`Pro €9.99：全部 24 位画家，无水印。Pro AI €19.99：AI，每天 30 首乐曲与旋律。`, m:`Free — 9 位画家，自定义只读，带水印，每个 AI 模式试用一次。 ◆ Pro €9.99 — 全部 24 位画家和 15 位作曲家、自定义调色板、无水印打印、合奏、画室（Lite 或高级）。 ◆ Pro AI €19.99 — Pro 的一切，外加 AI——每天最多 30 首乐曲与旋律（合理使用）。 ◆ 升级 — 从 Pro 升到 Pro AI 只需 €10，许可证密钥不变。 ◆ 一次买断 — 无订阅。最多 5 台设备，一次一台。 ◆ 小贴士 — 在 Free 中点一位锁定的画家，就能试用一次。`},
+    pro:{t:`Pro 解锁一切`, b:`Pro €9.99：全部 24 位画家，无水印。Pro AI €19.99：AI，每天 30 首乐曲与旋律。`, m:`Free — 9 位画家，自定义只读，带水印，每个 AI 模式试用一次。 ◆ Pro €9.99 — 全部 24 位画家和 15 位作曲家、自定义调色板、无水印打印、合奏、画室（Lite 或高级）。 ◆ Pro AI €19.99 — Pro 的一切，外加 AI——每天最多 30 首、每年 1,000 首乐曲与旋律（合理使用）。 ◆ 升级 — 从 Pro 升到 Pro AI 只需 €10，许可证密钥不变。 ◆ 一次买断 — 无订阅。最多 5 台设备，一次一台。 ◆ 小贴士 — 在 Free 中点一位锁定的画家，就能试用一次。`},
     ensemble:{t:`合奏`, b:`融合：2–5 位画家共画一幅画。Jam session：2–5 位作曲家共奏一张图。`, m:`开启 — 点 🔀 旁的 ◎，再点选画家，最多五位。 ◆ 拼贴 — 画家们并排作画，各用各的笔法。 ◆ 合成 — 由他们杂交出一位新画家。 ◆ 风格 — 每次融合随机抽取；可在“风格与调色板 → 合奏”中指定。 ◆ × 🔀 — 1 给出新变体。ALL 保留已固定的，再加 1–4 位新画家。 ◆ Jam session — 作曲家轮流接句（拼贴），或合为一位（合成）。 ◆ Pro — 在“风格与调色板 → 合奏”中开启。`},
    }},
   zhTW:{
@@ -22826,7 +22836,7 @@ const GUIDE_I18N = {
     tools:{t:`控制`, b:`播放 / 暫停、拖曳進度列、循環、靜音和清空。`, bS:`輕點畫面即可播放或暫停；聲音、循環和清除在 ✦ 更換 裡。`, m:`播放 — 開始和停止（也可按 Space）。點進度列可跳轉。 ◆ ⟳ 循環 — 情緒曲重複播放。 ◆ 聲音 — 靜音時畫作照樣繼續。iPhone 上聲音不見時，長按它。 ◆ 清空 — 依模式而定：作曲清空畫布，麥克風只清目前的草稿，檔案則完全重設。 ◆ 鋼琴載入中 — 幾秒鐘（約 5 MB）。失敗時改用合成鋼琴。`, mS:`輕點畫面 — 開始和停止。 ◆ ⟳ 循環 — 情緒曲重複播放。 ◆ 聲音 — 靜音時畫作照樣繼續。iPhone 上聲音不見時，長按它。 ◆ 清除 — ✦ 更換 裡的 ✕。作曲清空畫布，麥克風只清目前的草稿；音樂或圖片會完全消失，首頁上也不再有。 ◆ 鋼琴載入中 — 幾秒鐘（約 5 MB）。失敗時改用合成鋼琴。`},
     save:{t:`儲存與分享`, b:`畫作存成 PNG，音樂存成音訊。Story 適用 Instagram 和 TikTok。`, bS:`影片 9:16、限動圖片或列印，全在「分享」裡。`, m:`Story — 9:16，適用 IG 和 TikTok，標註畫家與調色盤。 ◆ Web / Social — 約 4×，適合動態消息。 ◆ 列印 A1 — 畫廊級品質，3:4 畫幅（Pro）。 ◆ 樂曲的顏色 — 畫下方是十二個音，以及各自響了多久。可在儲存中關閉。 ◆ 錄製 — 圖像模式下，一邊播放一邊錄下聲音。 ◆ ♫ 樂譜 — 把畫作的音符匯出為 MusicXML。 ◆ 浮水印 — 在「儲存 · 列印」裡，Free 有浮水印，Pro 會移除它。Story 圖片和影片只帶一行小小的署名頁尾，Free 和 Pro 都一樣。`, mS:`影片 9:16 — 隨著音樂邊畫邊播：TikTok、Reels、限時動態。 ◆ 片段 · 15 秒 — 播放中：從現在起的 15 秒，帶結尾卡。 ◆ 限動圖片 — 9:16，附上曲名和作畫者。播放中也可以：畫面此刻的樣子。 ◆ 儲存 · 列印 — 畫完後可選 Story、Web、列印 A1。 ◆ 聲音 — 圖像模式下錄下它的音樂。 ◆ 浮水印 — 在「儲存 · 列印」裡，Free 有浮水印，Pro 會移除它。Story 圖片和影片只帶一行小小的署名頁尾，Free 和 Pro 都一樣。`},
     favorites:{t:`收藏`, b:`點畫作左上角的 ♡ 就能留下它——還在畫的時候也可以。沒有數量限制。`, bS:`雙擊畫作，或點下方的 ♥——還在畫的時候也可以。沒有數量限制。`, m:`位址，不是圖片 — ♥ 記住音符、畫家、調色盤和色調；畫作會重新畫出來。 ◆ 開啟 — ☰ → ♥ 收藏。滑動或點 ‹ › 瀏覽。 ◆ 圖像 — 圖像上的 ♡ 會連同演奏它的一切一起儲存。▶ 打開 會把它帶回來。 ◆ 全部清除 — 點兩下；復原可以找回。 ◆ 僅限本機 — 存在這台裝置、這個瀏覽器裡。`, mS:`位址，不是圖片 — ♥ 記住音符、畫家、調色盤和色調；畫作會重新畫出來。 ◆ 開啟 — 在「我的」裡：✦ 更換 或選單。上下滑動瀏覽。 ◆ 圖像 — 圖像上的 ♥ 會連同演奏它的一切一起儲存。▶ 開啟它。 ◆ 麥克風和作曲 — 麥克風錄音上的 ♥ 連聲音一起儲存。▶ 開啟：作曲回到作曲模式繼續寫，錄音作為帶原聲的曲子開啟。 ◆ 側欄 — 向左滑：♥ 和分享。向右滑：✕ 返回和 🗑 全部刪除（點兩下）。 ◆ 僅限本機 — 存在這台裝置、這個瀏覽器裡。`},
-    pro:{t:`Pro 解鎖一切`, b:`Pro €9.99：全部 24 位畫家，無浮水印。Pro AI €19.99：AI，每天 30 首樂曲與旋律。`, m:`Free — 9 位畫家，自訂唯讀，帶浮水印，每個 AI 模式試用一次。 ◆ Pro €9.99 — 全部 24 位畫家和 15 位作曲家、自訂調色盤、無浮水印列印、合奏、畫室（Lite 或進階）。 ◆ Pro AI €19.99 — Pro 的一切，再加上 AI——每天最多 30 首樂曲與旋律（合理使用）。 ◆ 升級 — 從 Pro 升到 Pro AI 只要 €10，授權金鑰不變。 ◆ 一次買斷 — 不用訂閱。最多 5 台裝置，一次一台。 ◆ 小提示 — 在 Free 中點一位鎖定的畫家，就能試用一次。`},
+    pro:{t:`Pro 解鎖一切`, b:`Pro €9.99：全部 24 位畫家，無浮水印。Pro AI €19.99：AI，每天 30 首樂曲與旋律。`, m:`Free — 9 位畫家，自訂唯讀，帶浮水印，每個 AI 模式試用一次。 ◆ Pro €9.99 — 全部 24 位畫家和 15 位作曲家、自訂調色盤、無浮水印列印、合奏、畫室（Lite 或進階）。 ◆ Pro AI €19.99 — Pro 的一切，再加上 AI——每天最多 30 首、每年 1,000 首樂曲與旋律（合理使用）。 ◆ 升級 — 從 Pro 升到 Pro AI 只要 €10，授權金鑰不變。 ◆ 一次買斷 — 不用訂閱。最多 5 台裝置，一次一台。 ◆ 小提示 — 在 Free 中點一位鎖定的畫家，就能試用一次。`},
     ensemble:{t:`合奏`, b:`融合：2–5 位畫家共畫一幅畫。Jam session：2–5 位作曲家共奏一張圖。`, m:`開啟 — 點 🔀 旁的 ◎，再點選畫家，最多五位。 ◆ 拼貼 — 畫家們並排作畫，各用各的筆法。 ◆ 合成 — 由他們雜交出一位新畫家。 ◆ 風格 — 每次融合隨機抽選；可在「風格與調色盤 → 合奏」中指定。 ◆ × 🔀 — 1 給出新變體。ALL 保留已固定的，再加入 1–4 位新畫家。 ◆ Jam session — 作曲家輪流接句（拼貼），或合而為一（合成）。 ◆ Pro — 在「風格與調色盤 → 合奏」中開啟。`},
    }},
   ja:{
@@ -22862,7 +22872,7 @@ const GUIDE_I18N = {
     tools:{t:`操作`, b:`再生 / 一時停止とバーの移動、ループ、ミュート、クリア。`, bS:`絵をタップで再生／一時停止。サウンド、ループ、クリアは ✦ 変える に。`, m:`再生 — 開始と停止（Space でも）。バーをタップでジャンプ。 ◆ ⟳ ループ — 気分の曲がくり返す。 ◆ サウンド — 音楽を消しても絵は続く。iPhone で音が消えたら長押し。 ◆ クリア — モードしだい：作曲はキャンバスを消し、マイクはアクティブな下書きだけ、ファイルはリセット。 ◆ ピアノ読み込み中 — 数秒（約 5 MB）。失敗したらシンセピアノで鳴る。`, mS:`絵をタップ — 開始と停止。 ◆ ⟳ ループ — 気分の曲がくり返す。 ◆ サウンド — 音楽を消しても絵は続く。iPhone で音が消えたら長押し。 ◆ クリア — ✦ 変える の ✕。作曲はキャンバスを消し、マイクはアクティブな下書きだけ。音楽や画像は完全に消え、ホームからもなくなる。 ◆ ピアノ読み込み中 — 数秒（約 5 MB）。失敗したらシンセピアノで鳴る。`},
     save:{t:`保存とシェア`, b:`絵は PNG、音楽は音声で。Instagram と TikTok には Story。`, bS:`動画 9:16、ストーリー画像、印刷。すべて シェア の中に。`, m:`Story — IG と TikTok 向けの 9:16、画家とパレット付き。 ◆ Web / Social — 約 4×、フィード向け。 ◆ 印刷 A1 — ギャラリー品質、3:4 のフレームで（Pro）。 ◆ 曲の色 — 絵の下に十二の音と、それぞれが鳴った長さ。保存 でオフにできる。 ◆ 録音 — 画像の演奏中の音を録る。 ◆ ♫ 楽譜 — 絵の音符を MusicXML で。 ◆ ウォーターマーク — 保存・印刷では Free に付き、Pro で外れる。Story 画像と動画には名前入りの小さなフッターだけ、Free でも Pro でも同じ。`, mS:`動画 9:16 — 音楽に合わせて描かれる：TikTok、Reels、Stories。 ◆ クリップ · 15 秒 — 再生中に：いまから 15 秒、エンドカード付き。 ◆ ストーリー画像 — 9:16、曲名と誰が描いたか付き。再生中でも：いまこの瞬間の絵。 ◆ 保存 · 印刷 — 絵が描き終わったら Story、Web、印刷 A1。 ◆ サウンド — 画像ではその音楽を録音。 ◆ ウォーターマーク — 保存・印刷では Free に付き、Pro で外れる。Story 画像と動画には名前入りの小さなフッターだけ、Free でも Pro でも同じ。`},
     favorites:{t:`お気に入り`, b:`絵の左上の ♡ をタップすれば残せる。描いている途中でも OK。上限なし。`, bS:`絵をダブルタップ、またはその下の ♥ をタップ。描いている途中でも OK。上限なし。`, m:`画像でなく住所 — ♥ は音、画家、パレット、トーンを覚え、絵はもう一度描かれる。 ◆ 開く — ☰ → ♥ お気に入り。スワイプか ‹ › でめくる。 ◆ 画像 — 画像の ♡ は、それを奏でるすべてと一緒に保存。▶ 開く で戻る。 ◆ すべて削除 — 2 回タップ。元に戻す で復活。 ◆ ここだけ — この端末、このブラウザに保存。`, mS:`画像でなく住所 — ♥ は音、画家、パレット、トーンを覚え、絵はもう一度描かれる。 ◆ 開く — マイ から：✦ 変える かメニュー。上下にスワイプでめくる。 ◆ 画像 — 画像の ♥ は、それを奏でるすべてと一緒に保存。▶ で開く。 ◆ マイクと作曲 — マイク録音の ♥ は音も一緒に保存。▶ 開く：作曲は作曲モードに戻って続きを、録音は元の音つきの曲として開く。 ◆ サイドバー — 左へスワイプ：♥ と共有。右へ：✕ 戻る と 🗑 すべて削除（2回タップ）。 ◆ ここだけ — この端末、このブラウザに保存。`},
-    pro:{t:`Pro がすべてを解放`, b:`Pro €9.99：24 人の画家すべて、ウォーターマークなし。Pro AI €19.99：AI、1 日 30 曲・メロディまで。`, m:`Free — 画家 9 人、カスタムは読み取り専用、ウォーターマーク付き、各 AI モード 1 回お試し。 ◆ Pro €9.99 — 画家 24 人と作曲家 15 人すべて、カスタムパレット、ウォーターマークなしの印刷、アンサンブル、アトリエ（Lite かアドバンス）。 ◆ Pro AI €19.99 — Pro のすべてと AI——1 日 30 曲・メロディまで（フェアユース）。 ◆ アップグレード — Pro から Pro AI へ €10、キーはそのまま。 ◆ 一度で永久 — サブスクなし。最大 5 台、同時に 1 台。 ◆ ヒント — Free でロックされた画家をタップすると、1 回試せる。`},
+    pro:{t:`Pro がすべてを解放`, b:`Pro €9.99：24 人の画家すべて、ウォーターマークなし。Pro AI €19.99：AI、1 日 30 曲・メロディまで。`, m:`Free — 画家 9 人、カスタムは読み取り専用、ウォーターマーク付き、各 AI モード 1 回お試し。 ◆ Pro €9.99 — 画家 24 人と作曲家 15 人すべて、カスタムパレット、ウォーターマークなしの印刷、アンサンブル、アトリエ（Lite かアドバンス）。 ◆ Pro AI €19.99 — Pro のすべてと AI——1 日 30 曲・メロディまで、年 1,000 まで（フェアユース）。 ◆ アップグレード — Pro から Pro AI へ €10、キーはそのまま。 ◆ 一度で永久 — サブスクなし。最大 5 台、同時に 1 台。 ◆ ヒント — Free でロックされた画家をタップすると、1 回試せる。`},
     ensemble:{t:`アンサンブル`, b:`フュージョン：2〜5 人の画家で一枚の絵。Jam session：2〜5 人の作曲家で一枚の画像を。`, m:`オンにする — 🔀 の隣の ◎、それから画家をタップ。最大 5 人。 ◆ コラージュ — 画家たちが並んで、それぞれ自分の筆致で。 ◆ 合成 — 彼らから新しい画家がひとり生まれる。 ◆ 様式 — フュージョンごとに抽選。スタイルとパレット → アンサンブル で選べる。 ◆ × 🔀 — 1 は新しいバリアント。ALL はピン留めを残し、新しく 1〜4 人を加える。 ◆ Jam session — 作曲家がフレーズを交代する（コラージュ）か、一人に融合する（合成）。 ◆ Pro — スタイルとパレット → アンサンブル でオン。`},
    }},
 };
@@ -24039,6 +24049,11 @@ async function pfAiFetch(ep, init) {
   const own = typeof ep === 'string' && ep.charAt(0) === '/';
   if (!own && pfAiLimitRecent()) { const e = new Error('pf_daily_limit'); e._aiLimit = true; throw e; }
   const opt = Object.assign({}, init || {});
+  // A body from pfPromptBody carries pf = { kind, args }: our endpoint gets ONLY that (it builds the
+  // prompt itself — it composes music and nothing else); a direct call (claude.ai preview) gets the full body.
+  if (typeof opt.body === 'string' && opt.body.indexOf('"pf"') >= 0) {
+    try { const b = JSON.parse(opt.body); if (b && b.pf) { const pf = b.pf; delete b.pf; opt.body = JSON.stringify(own ? { kind: pf.kind, args: pf.args } : b); } } catch (_) {}
+  }
   if (own) {
     const h = Object.assign({}, opt.headers || {});
     try { const c = _proReadCache(); if (c && c.key) h['X-Paintiano-Key'] = c.key; } catch (_) {}
@@ -24047,7 +24062,7 @@ async function pfAiFetch(ep, init) {
   const r = await fetch(ep, opt);
   if (own && r.status === 429) {
     let d = null; try { d = await r.clone().json(); } catch (_) {}
-    if (d && d.error && d.error.type === 'pf_daily_limit') {
+    if (d && d.error && (d.error.type === 'pf_daily_limit' || d.error.type === 'pf_year_limit')) {
       PF_AI_LIMIT.at = Date.now(); PF_AI_LIMIT.info = d.pf || null;
       try { window.dispatchEvent(new CustomEvent('pf-ai-limit', { detail: d.pf || {} })); } catch (_) {}
       const e = new Error('pf_daily_limit'); e._aiLimit = true; throw e;
@@ -30717,9 +30732,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const need = Math.max(0, 18 - preselected.length);
     if(!need) return [];
     const list = MOODS.filter(m=>m!==base && !preselected.includes(m));
-    const prompt = `Current mood: "${String(base).slice(0,80)}". From the list below, pick exactly ${need} moods that make good morph / blend targets for it — MOSTLY emotionally related or escalating variations (same emotional family, rising or falling intensity), plus a few contrasting ones for variety. The phrase may be in ANY language; interpret its real emotion, do NOT read it word-by-word.
-List: ${list.join(', ')}
-Return ONLY a JSON array of exactly ${need} strings copied verbatim from the list. No prose, no markdown. Example: ["furious","tense","melancholic"]`;
+    const _pq = pfPromptBody('morph',{base:String(base).slice(0,80), need, list});   // prompt: src/ai-prompts.js
     try{
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
@@ -30727,7 +30740,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       let respText='',ok=false;
       for(const ep of _eps){
         try{
-          const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:prompt}]})});
+          const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)});
           const txt=await r.text(); if(r.ok&&txt){respText=txt;ok=true;break;}
         }catch(_){}
       }
@@ -34048,8 +34061,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
   useEffect(()=>{
     if(typeof window==='undefined') return;
     const on=(e)=>{ const d=(e&&e.detail)||{};
-      try{ window.posthog && window.posthog.capture('ai_daily_limit',{plan:d.plan||'',kind:d.kind||''}); }catch(_){}
-      setTimeout(()=>{ const m = d.plan==='free' ? t('aiLimitNet') : (d.kind==='piece' ? String(t('aiLimitDay')).replace('{n}', String(d.cap||30)) : t('aiLimitAny'));
+      try{ window.posthog && window.posthog.capture('ai_daily_limit',{plan:d.plan||'',kind:d.kind||'',limit:d.limit||'daily'}); }catch(_){}
+      setTimeout(()=>{ const m = d.limit==='year' ? String(t('aiLimitYear')).replace('{n}', Number(d.cap||1000).toLocaleString('en-US')) : d.plan==='free' ? t('aiLimitNet') : (d.kind==='piece' ? String(t('aiLimitDay')).replace('{n}', String(d.cap||30)) : t('aiLimitAny'));
         setErr(m); setErrInfo(true); }, 150); };
     window.addEventListener('pf-ai-limit',on);
     return ()=>window.removeEventListener('pf-ai-limit',on);
@@ -34085,7 +34098,7 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
       // Tiny probe payload — a few tokens is enough to confirm the endpoint
       // returns a real AI completion (not just any HTTP response).
-      const _body=JSON.stringify({model:CLAUDE_MODEL,max_tokens:8,messages:[{role:'user',content:'ping'}]});
+      const _body=JSON.stringify(pfPromptBody('probe',{}));
       let ok=false;
       for(const ep of _eps){
         if(cancelled) return;
@@ -35440,13 +35453,13 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
       }
       if(!parsed){
         const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-        const prompt='Look at this image. First, in one word, decide its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a short solo piano piece whose MUSICAL CHOICES are DRIVEN BY that emotion — do NOT use neutral defaults.\nMap the emotion to the music (choose to fit the SPECIFIC emotion, never fall back to a neutral middle):\n- KEY: bright/happy/triumphant/playful → a MAJOR key; sad/melancholic/eerie/tense/yearning → a MINOR key. Pick a SPECIFIC key and vary it across pieces (do not default to C).\n- TEMPO: calm/tender/melancholic → slow (50-75); joyful/playful → medium-fast (95-130); dramatic/tense/triumphant → driving (110-150); eerie → free and slow (55-80).\n- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.\n- DYNAMICS: tender → soft (velocity 35-65); triumphant/dramatic → loud (75-115); tense → uneven and accented.\n- ARTICULATION/RHYTHM: playful → staccato and syncopated; melancholic → legato and long notes; tense → repeated ostinato figures.\nTwo DIFFERENT emotions MUST yield audibly DIFFERENT pieces — different key colour, tempo, density and dynamics.\nOutput ONLY a single valid JSON object - no markdown, no prose.\nSet "title" to a short phrase in '+_langName+' describing the image mood (Title Case, max 5 words).\nSchema: {"title":"...","tempo":<derived from emotion>,"key":"<derived from emotion>","notes":[[pitch,durationInBeats,startBeat,velocity], ...]}\nRules: LENGTH — keep it SHORT, 20-35 seconds total at the chosen tempo (the LAST note\'s startBeat+duration MUST stay under tempo/2 beats); 52-80 notes; include a bass line (octaves 2-3, at least 12 notes) and a melody (octaves 4-6) with a recurring motif; vary durations (mix 0.25/0.5/1/2); velocity per the dynamics above; pitches sharps only (C#4 not Db4).';
+        // (prompt: src/ai-prompts.js · mfi)
         const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
         const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
         const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-        const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+        const _pq=pfPromptBody('mfi',{b64, lang});   // prompt: src/ai-prompts.js
         let respText='',ok=false;
-        for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+        for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
         setWPct(75);
         if(!ok) throw new Error('AI unavailable');
         setAiDown(false); // a live AI call just succeeded
@@ -35526,8 +35539,8 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     const host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
     const isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(host);
     const eps=isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-    const messages=[{role:'user',content:[{type:'text',text:'Translate this short art-piece title into '+_ln+'. Keep it Title Case, max 5 words. Output ONLY the translated phrase \u2014 no quotes, no extra text:\n'+text}]}];
-    for(const ep of eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:40,messages})}); const txt=await r.text(); if(r.ok&&txt){ const d=JSON.parse(txt); const out=((d.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('')).trim().replace(/^["'\s]+|["'\s]+$/g,''); if(out) return out; } }catch(_){} }
+    const _pq=pfPromptBody('title',{text:String(text).slice(0,80), lang:targetAppLang});   // prompt: src/ai-prompts.js
+    for(const ep of eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)}); const txt=await r.text(); if(r.ok&&txt){ const d=JSON.parse(txt); const out=((d.content||[]).map(b=>b&&b.type==='text'?b.text:'').join('')).trim().replace(/^["'\s]+|["'\s]+$/g,''); if(out) return out; } }catch(_){} }
     return null;
   },[]);
   useEffect(()=>{
@@ -35931,36 +35944,16 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
         im.src=_src;
       });
       const b64 = dataUrl.split(',')[1];
-      const prompt=`Look at this image. Identify WHAT is in it (a person, a landscape, a building, an abstract painting, a child, an animal, etc.) and its dominant EMOTION (e.g. joyful, calm, dramatic, melancholic, tense, eerie, tender, triumphant). Then compose a free-standing solo piano piece whose musical choices are DRIVEN by what you see and feel.
-The scanned musical material (a secondary hint — the image itself is the primary signal):
-- Pitch palette (most present pitch classes): ${mat.palette}
-- Range of the scan: ${mat.noteRange}${mat.mood?`\n- Detected mood: ${mat.mood}`:''}
-Map what you see to the music — two DIFFERENT images MUST yield audibly DIFFERENT pieces (different key, tempo, density, dynamics):
-- KEY: bright/happy/triumphant/playful subjects → MAJOR; sad/melancholic/eerie/tense/yearning subjects → MINOR. Pick a SPECIFIC key, vary across pieces (do not default to C).
-- TEMPO: calm/tender/melancholic → slow (55-80); joyful/playful → medium (90-120); dramatic/tense/triumphant → driving (110-145); eerie → free and slow.
-- REGISTER & DENSITY: intimate/calm → sparse, mid-low register, lots of space; energetic/triumphant → fuller chords, wider range, more notes.
-- DYNAMICS: tender → soft (vel 40-65); triumphant/dramatic → loud (80-115); tense → uneven and accented.
-- ARTICULATION: playful → staccato and syncopated; melancholic → legato; tense → repeated ostinato.
-Output ONLY a single valid JSON object — no markdown, no prose.
-Schema: {"title":"...","tempo":<derived>,"key":"<derived>","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Set "title" to a short evocative phrase in ${_langName} (Title Case, max 5 words) describing THIS SPECIFIC image — must be distinctive, never a generic "quiet light" type phrase.
-Composition rules:
-- LENGTH: 60-90 seconds of music — the LAST note's (startBeat + duration) MUST reach at least tempo beats (= 60 seconds).
-- 90-150 notes total.
-- STYLE: Western tonal piano in the spirit of Einaudi, Yiruma, Max Richter, Chopin's Nocturnes, or Debussy. Lyrical melodies over flowing accompaniment. Avoid East-Asian-traditional evocations unless the image is unmistakably East Asian.
-- HARMONY: familiar functional progressions (I-V-vi-IV, ii-V-I; minor: i-VI-III-VII, i-iv-V-i). Diatonic with tasteful chromatic colour.
-- Structure: intro (motif, sparse) → development (richer) → contrasting middle → return of motif → close (quieter).
-- Bass (octaves 2-3): ≥20 notes. Melody (octaves 4-6): singable, recurring motif.
-- Vary durations (mix 0.25/0.5/1/2). Pitches with octave, sharps only (C#4 not Db4).`;
+      // (prompt: src/ai-prompts.js · cfi)
       setWPct(40);
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+      const _pq=pfPromptBody('cfi',{b64, lang, mat:{palette:mat.palette, noteRange:mat.noteRange, mood:mat.mood||null}});   // prompt: src/ai-prompts.js
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages})});
+          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
@@ -36034,54 +36027,15 @@ Composition rules:
       // the start — not just a generic melody that we later scale. (v,e) extremes
       // trigger hard rules; mid values give a gentle suggestion.
       const _atmoMood = (atmoOn && atmoMood) ? atmoMood : null;
-      let atmoBlock='';
-      if(_atmoMood){
-        const _av=_atmoMood.v, _ae=_atmoMood.e;
-        const lines=[];
-        if(_ae<=0.20){
-          lines.push('Energy is VERY LOW (calm/dreamy). MUST: slow tempo 50-70 BPM, legato long notes (mostly half/whole), soft dynamics (melody 60-85, chords 45-65), MID-LOW register (melody octaves 4-5, NOT 6), sparse texture, no leaps larger than a fifth, no syncopation, intro-able ambient feel.');
-        } else if(_ae>=0.80){
-          lines.push('Energy is VERY HIGH (intense/dramatic). MUST: tempo 115-150 BPM, articulated rhythms with staccato + syncopation, loud dynamics (melody 105-125, chords 88-108), full upper register (melody octave 5-6), denser chords, allow octave leaps and dramatic accents.');
-        } else if(_ae<=0.35){
-          lines.push('Energy is low. Prefer slow tempo 65-85 BPM, mostly legato, softer dynamics, mid register.');
-        } else if(_ae>=0.65){
-          lines.push('Energy is high. Prefer faster tempo 100-130 BPM, more articulation, brighter dynamics.');
-        }
-        if(_av<=-0.50){
-          lines.push('Valence is strongly negative (sad/heavy/melancholic). MUST: minor key, descending phrase shapes, dissonant suspensions resolved downward.');
-        } else if(_av>=0.50){
-          lines.push('Valence is strongly positive (joyful/bright). MUST: major key, ascending phrase shapes, plagal/authentic cadences that feel resolved and lifting.');
-        } else if(_av<=-0.20){
-          lines.push('Valence is slightly negative. Lean minor key.');
-        } else if(_av>=0.20){
-          lines.push('Valence is slightly positive. Lean major key.');
-        }
-        if(_atmoMood.title){ lines.push('Title hint: "'+_atmoTitleL(_atmoMood.title, 'EN')+'".'); }
-        if(lines.length){
-          atmoBlock = '\nMOOD DIRECTIVE (this overrides defaults; commit to these choices, do not regress to the safe middle):\n- '+lines.join('\n- ')+'\n';
-        }
-      }
-      const prompt=`A painting has been scanned into a musical TEXTURE (its colours played as notes). Compose a SECOND PIANO PART that a concert pianist would play over that texture — a full, two-handed, CHORDAL piece with a clear singing MELODY on top and real harmony underneath. NOT a thin one-finger line: this is a complete, rich piano voice that stands beside the texture as an equal. It must mirror and crown the scan, echoing the image's mood, colour and radiance.
-The image's musical material:
-- Pitch palette (colours → notes): ${mat.palette}
-- Range of the texture: ${mat.noteRange}
-- Energy: ${mat.energy}    Texture: ${mat.tex}    Arc: ${mat.arc}${mat.mood?`\n- Mood / atmosphere: ${mat.mood}`:''}${atmoBlock}
-Compose with real musical craft, following classical harmonization method:
-- KEY: let the pitch palette define the tonal centre; choose major or natural minor to fit the mood. Stay diatonic (tasteful passing/leading tones fine; no random chromaticism).
-- LENGTH: write ONE short, COMPLETE melodic phrase of about 8–16 bars (a self-contained tune that could loop seamlessly back to its start). Keep total length under ~24 beats. This cell will be REPEATED across the painting, so it must sound whole on its own and join cleanly to its own beginning.
-- MELODY (top voice): clear, singable, memorable, in the upper register (octaves 5–6). A 2–4 note MOTIF stated and answered. CONTINUOUS within the phrase — flowing eighth/quarter motion, mostly stepwise, no gaps longer than a beat. 16–28 notes in the cell (dense enough to sing, not a busy run).
-- HARMONY (underneath): under the melody supply CHORDS — diatonic triads/sevenths chosen by FUNCTION (I ii iii IV V vi V7) so the phrase moves tonic → subdominant → dominant → tonic and CADENCES at the end so the loop closes. Melody note = top of its chord. Mid-register voices (oct 3–4) + a bass root (oct 2–3). Move inner voices by the smallest steps (voice leading).
-- DYNAMICS: melody louder than accompaniment (vel 96–118 melody, 70–92 chords) so the lead sings on top.
-Output ONLY valid JSON, no prose, no markdown:
-{"title":"...","tempo":90,"notes":[[pitch,durationInBeats,startBeat,velocity],...],"chords":[[[pitch,pitch,...],durationInBeats,startBeat,velocity],...]}
-"notes" = the melody (top voice), one pitch each. "chords" = the harmony underneath, each a LIST of pitches (the accompanying chord voices + bass) sounding together. Pitches as names with octave, sharps only, e.g. "C5","F#4" ("Bb5"→"A#5"). Align each chord's startBeat to the melodic note it harmonizes. Title: a short evocative phrase (Title Case, max 5 words).`;
+      const _pq=pfPromptBody('melody',{ mat:{palette:mat.palette, noteRange:mat.noteRange, energy:mat.energy, tex:mat.tex, arc:mat.arc, mood:mat.mood||null},
+        atmo: _atmoMood ? { v:_atmoMood.v, e:_atmoMood.e, title: _atmoMood.title ? _atmoTitleL(_atmoMood.title, 'EN') : '' } : null });   // prompt + mood directive: src/ai-prompts.js
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isArtifactPreview=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _endpoints=_isArtifactPreview?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
       let resp=null,respText='',lastErr=null;
       for(const _ep of _endpoints){
         try{
-          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+          const r=await pfAiFetch(_ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)});
           const txt=await r.text();
           if(r.ok&&txt){ resp=r; respText=txt; break; }
           lastErr=new Error(`API ${r.status}: ${txt.slice(0,160)}`);
@@ -36164,30 +36118,7 @@ Output ONLY valid JSON, no prose, no markdown:
     setWorking(true);setWLabel('composing…');setWPct(20);setErr('');setErrInfo(false);setMidiBlob(null);stopAll();wipeCanvasNow();
     try{
       const _langName={EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang]||'English';
-      const prompt=`Compose a short expressive solo piano piece inspired by this mood phrase: "${title.slice(0,80)}".
-The phrase may be written in ANY language and may be colloquial, slang or idiomatic. FIRST translate it and work out the genuine emotion it expresses (e.g. anger, irritation, joy, calm, sadness, longing, hope, restlessness) — do NOT read it word-by-word and do NOT assume it is English.
-
-Before writing ANY notes, derive these mood-driven parameters — they MUST translate into audible differences in the output. A piece for "calm sea" must sound nothing like a piece for "rage":
-
-- TEMPO (BPM): sad/melancholy 50-65 · calm/serene 65-85 · wistful/longing 70-90 · tender/hopeful 80-100 · playful 95-120 · joyful 110-135 · angry/intense 100-140 (sharp accents) · ecstatic/triumphant 125-155 · anxious/restless 95-130 (uneven)
-- MODE: MAJOR keys for joyful, triumphant, tender, hopeful, playful · MINOR keys for sad, longing, melancholy, anxious, angry · MODAL or AMBIGUOUS (Lydian, Dorian, Phrygian, whole-tone) for dreamy, mysterious, contemplative, unsettled
-- DYNAMIC RANGE: calm/sad pieces stay narrow and quiet (velocity 30-65 throughout) · angry/joyful pieces are loud and wide (velocity 70-127 with strong accents at 110-127) · mixed/contemplative moods use the full 35-105 range
-- DENSITY: sparse 25-45 notes (calm, sad, contemplative, lonely) · medium 45-65 notes (most moods) · dense 65-95 notes (joyful, agitated, dramatic, frenetic)
-- REGISTER BIAS: dark/heavy/grounded moods bias LOW (bass octaves 2-3, melody 3-4) · bright/uplifted/light moods bias HIGH (bass 3-4, melody 5-6) · balanced/conversational moods spread across the full range
-- ARTICULATION & DURATIONS: legato long (1, 2, 4 beats) for sad/calm/dreamy/longing · staccato short (0.25, 0.5 beats) for playful/anxious/angry · mixed for most moods
-- INTERVALLIC CHARACTER: stepwise 2nds and 3rds for sad/calm/tender · wide 5ths/6ths/octaves for joyful/triumphant/dramatic · dissonant 2nds, 7ths, tritones for angry/anxious/unsettled
-- STRUCTURE: opening (establish key + motif) → development (build harmonically/dynamically) → close (resolve OR fade). Adapt the intensity curve to the mood — sad pieces stay subdued, joyful pieces climax higher, angry pieces stay agitated.
-
-Set the "title" field to a short, natural translation of the phrase into ${_langName} that captures its meaning (Title Case, max 5 words).
-Output ONLY a single valid JSON object — no markdown, no prose, no explanation.
-Schema: {"title":"...","tempo":<your derived BPM>,"key":"<your derived key>","notes":[[pitch,durationInBeats,startBeat,velocity],...]}
-Each note: [pitch, durationInBeats, startBeat, velocity]. Same startBeat = chord. velocity 1-127.
-
-Hard requirements:
-- Apply ALL derived parameters — tempo, mode, dynamics, density, register, articulation, intervals — so the piece is audibly mood-specific
-- Bass register notes for harmonic grounding (count scales with density: sparse pieces need at least 8 bass notes, dense pieces 15+)
-- Melody in the mood-driven register with a recognisable motif that recurs
-- Pitches: use C4/F#3/Bb5 style with octave number, sharps only (no flats — use C#4 not Db4)`;
+      const _pq=pfPromptBody('mood',{title:String(title).slice(0,80), lang});   // prompt: src/ai-prompts.js
       setWPct(40);
       // Endpoint selection: in the Claude artifact preview, calls go straight to
       // Anthropic (their sandbox proxies it). Anywhere else — e.g. the Vercel
@@ -36209,7 +36140,7 @@ Hard requirements:
           const r=await pfAiFetch(_ep,{
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:2000,messages:[{role:'user',content:prompt}]})
+            body:JSON.stringify(_pq)
           });
           const txt=await r.text();
           if(r.ok && txt){ resp=r; respText=txt; break; }
@@ -36773,25 +36704,13 @@ Hard requirements:
       const dataUrl=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ try{ const max=320; let w=im.naturalWidth||320,h=im.naturalHeight||320; const sc=Math.min(1,max/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); res(cv.toDataURL('image/jpeg',0.8)); }catch(er){ rej(er); } }; im.onerror=()=>rej(new Error('img')); im.src=originalImgUrl; });
       const b64=dataUrl.split(',')[1];
       const _langName=({EN:'English',DE:'German',FR:'French',ES:'Spanish',PT:'Portuguese',SK:'Slovak',zh:'Simplified Chinese',zhTW:'Traditional Chinese',ja:'Japanese'}[lang])||'English';
-      const prompt=
-'You are judging the EMOTION / atmosphere of a single image. Output ONLY one JSON object, no prose: {"valence":NUMBER,"energy":NUMBER,"title":"..."}.\n'+
-'valence: -1 (sad/dark/heavy) ... 0 (neutral) ... +1 (happy/bright/playful).\n'+
-'energy:   0 (calm/still/dreamy) ... 0.5 (moderate) ... 1 (intense/dramatic/turbulent).\n'+
-'CRITICAL: COMMIT to a strong reading. The MIDDLE band (0.40-0.60) is reserved for genuinely ambiguous scenes only. If the scene is clearly calm, output energy <= 0.20; if clearly serene/dreamy/quiet, energy <= 0.15. If clearly intense/dramatic/stormy, energy >= 0.80; if frantic/violent, energy >= 0.90. Same for valence: clearly sad/heavy <= -0.50; clearly joyful/bright >= +0.50.\n'+
-'Anchored examples (use as a guide for the strength of your numbers):\n'+
-'  A serene Monet pond at dawn          -> {"valence": 0.40, "energy": 0.10}\n'+
-'  A melancholic rainy street           -> {"valence": -0.55, "energy": 0.20}\n'+
-'  A bright sunny field, kids playing   -> {"valence": 0.85, "energy": 0.65}\n'+
-'  A stormy Turner seascape             -> {"valence": -0.20, "energy": 0.90}\n'+
-'  A neutral architectural drawing      -> {"valence": 0.05, "energy": 0.30}\n'+
-'Avoid the safe centre. Two different paintings MUST yield audibly different numbers.\n'+
-'title: short mood phrase in '+_langName+' (max 4 words, Title Case).';
+      // (prompt: src/ai-prompts.js · atmo)
       const _host=(typeof window!=='undefined'&&window.location&&window.location.hostname)||'';
       const _isPrev=/claude\.ai$|claudeusercontent\.com$|\.claude\.com$/.test(_host);
       const _eps=_isPrev?['https://api.anthropic.com/v1/messages','/api/compose']:['/api/compose','https://api.anthropic.com/v1/messages'];
-      const messages=[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:prompt}]}];
+      const _pq=pfPromptBody('atmo',{b64, lang});   // the prompt lives in src/ai-prompts.js (the server builds it too)
       let respText='',ok=false;
-      for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:200,messages})}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
+      for(const ep of _eps){ try{ const r=await pfAiFetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_pq)}); const txt=await r.text(); if(r.ok&&txt){ respText=txt; ok=true; break; } }catch(_){} }
       if(!ok) throw new Error('AI unavailable');
       setAiDown(false); // a live AI call just succeeded
       const data=JSON.parse(respText);

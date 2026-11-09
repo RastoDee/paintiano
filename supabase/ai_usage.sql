@@ -42,3 +42,33 @@ update public.licenses set ai_unlimited = true
  where tier = 'pro_ai' and status = 'active' and ai_unlimited = false;
 -- ↑ Run step 3 only ONCE, when the new pricing goes live (main). Running it
 --   again later would also free every Pro AI bought after that day.
+
+-- 4) Yearly counter for Pro AI pieces & melodies (Nov 2026: 1,000 a year, calendar year).
+--    Run this part before the yearly cap goes to main; until it exists the server
+--    simply does not count the year (the daily cap still holds).
+create table if not exists public.ai_usage_year (
+  bucket text    not null,
+  yr     integer not null default extract(year from current_date)::int,
+  n      integer not null default 0,
+  primary key (bucket, yr)
+);
+alter table public.ai_usage_year enable row level security;
+
+create or replace function public.ai_hit_year(p_bucket text, p_cap integer)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v integer; y integer := extract(year from current_date)::int;
+begin
+  insert into ai_usage_year (bucket, yr, n) values (p_bucket, y, 1)
+  on conflict (bucket, yr) do update set n = ai_usage_year.n + 1
+    where ai_usage_year.n < p_cap
+  returning n into v;
+  return coalesce(v, -1);
+end $$;
+revoke all on function public.ai_hit_year(text, integer) from public, anon, authenticated;
+grant select, insert, update, delete on public.ai_usage_year to service_role;
+grant execute on function public.ai_hit_year(text, integer) to service_role;
+notify pgrst, 'reload schema';
