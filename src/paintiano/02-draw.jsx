@@ -7817,6 +7817,7 @@ const _HG_POSES={
   reach:{lean:0.25, arms:[[2.7,2.95],[-0.15,-0.3]], legs:[[2.1,1.75],[1.1,1.4]]},
   kneel:{lean:0.05, arms:[[-2.45,-1.95],[-0.6,-1.15]], legs:[[2.4,1.55],[0.9,1.75]]},
   link:{lean:0, arms:[[3.0,2.92],[0.14,0.22]], legs:[[2.0,1.75],[1.15,1.4]]},
+  dive:{lean:1.57, arms:[[-0.35,-0.15],[0.25,0.1]], legs:[[2.95,3.05],[3.25,3.15]]},
   flip:{lean:3.14, arms:[[1.9,1.7],[1.25,1.45]], legs:[[-2.2,-2.55],[-0.95,-0.6]]},
 };
 function _hgFigure(x,y,s,kind,dir,rnd,amt){ const P=_HG_POSES[kind]||_HG_POSES.dance; const j=(a)=>a+(rnd()-.5)*0.22*(amt==null?1:amt); const m=(a)=>dir>0?a:Math.PI-a;
@@ -7841,6 +7842,67 @@ function _hgMotion(ctx,F,ink,w,amt,rnd){ const s=F.s; if(amt<=0) return;
 // the heart: full, round, the point down; rays round the top
 function _hgHeartPts(cx,cy,h){ const pts=[]; for(let i=0;i<=48;i++){ const t=i/48*6.2832; const x=16*Math.pow(Math.sin(t),3), y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t)); pts.push([cx+x*h/17,cy+y*h/17+h*0.1]); } return pts; }
 function _hgHeart(ctx,cx,cy,h,col,ink,O,inside){ const P=_hgHeartPts(cx,cy,h); ctx.lineJoin='round'; ctx.beginPath(); P.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=2*O; ctx.stroke(); ctx.fillStyle=_hgCss(inside||col); ctx.fill(); }
+// ── the rest of his vocabulary: the figure filled with his marks (dashes, crosses, stripes), the hole through the body,
+// the outline-only figure; the snake, the flying saucer and its beam, the pyramid, the television for a head, the ladder,
+// the lightning; the grounds (stripes, dots, two colours split on the slant, the white wall with his zigzags)
+function _hgMarks(ctx,F,ink,O,kind){ const s=F.s; ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=Math.max(1,O*0.7); ctx.lineCap='round';
+  for(const b of F.bones){ const dx=b.b[0]-b.a[0], dy=b.b[1]-b.a[1], L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L, nx=-uy, ny=ux; const hw=b.w*s*0.3; const step=s*(kind==='cross'?0.24:0.17); const n=Math.max(1,Math.floor(L/step));
+    for(let k=0;k<n;k++){ const t=(k+0.5)/n, x=b.a[0]+dx*t, y=b.a[1]+dy*t; ctx.beginPath();
+      if(kind==='cross'){ const q=hw*0.75; ctx.moveTo(x-q,y-q); ctx.lineTo(x+q,y+q); ctx.moveTo(x+q,y-q); ctx.lineTo(x-q,y+q); }
+      else if(kind==='stripe'){ ctx.moveTo(x+nx*hw-ux*hw*0.6,y+ny*hw-uy*hw*0.6); ctx.lineTo(x-nx*hw+ux*hw*0.6,y-ny*hw+uy*hw*0.6); }
+      else { ctx.moveTo(x+nx*hw,y+ny*hw); ctx.lineTo(x-nx*hw,y-ny*hw); }
+      ctx.stroke(); } }
+  const h=F.head; ctx.beginPath(); const r=h[2]*s*0.45; if(kind==='cross'){ ctx.moveTo(h[0]-r,h[1]-r); ctx.lineTo(h[0]+r,h[1]+r); ctx.moveTo(h[0]+r,h[1]-r); ctx.lineTo(h[0]-r,h[1]+r); } else { ctx.moveTo(h[0]-r,h[1]-r*0.45); ctx.lineTo(h[0]+r,h[1]-r*0.45); ctx.moveTo(h[0]-r,h[1]+r*0.45); ctx.lineTo(h[0]+r,h[1]+r*0.45); } ctx.stroke(); }
+// a figure with everything: o={col, ink, O, pat:'dash'|'cross'|'stripe', patInk, hole:groundColour, inside (outline only), motion, tv:screenColour}
+function _hgFig(ctx,kind,x,y,s,dir,rot,seed,o){ const r=_hgR(seed,3); const F=_hgFigure(0,0.25*s,s,kind,dir,r,1); ctx.save(); ctx.translate(x,y); if(rot) ctx.rotate(rot);
+  _hgDraw(ctx,F,o.col,o.ink,o.O/s,o.inside);
+  if(o.pat) _hgMarks(ctx,F,o.patInk||o.ink,o.O,o.pat);
+  if(o.hole){ const t=F.bones[0]; const hx=(t.a[0]*0.45+t.b[0]*0.55), hy=(t.a[1]*0.45+t.b[1]*0.55); ctx.fillStyle=_hgCss(o.hole); ctx.strokeStyle=_hgCss(o.ink); ctx.lineWidth=o.O*1.6; ctx.beginPath(); ctx.arc(hx,hy,s*0.15,0,6.2832); ctx.fill(); ctx.stroke(); }
+  if(o.tv){ const h=F.head; const w=s*0.95, hh=s*0.72; ctx.fillStyle=_hgCss(o.ink); ctx.beginPath(); ctx.roundRect?ctx.roundRect(h[0]-w/2-o.O,h[1]-hh/2-o.O,w+2*o.O,hh+2*o.O,s*0.1):ctx.rect(h[0]-w/2-o.O,h[1]-hh/2-o.O,w+2*o.O,hh+2*o.O); ctx.fill();
+    ctx.fillStyle=_hgCss(o.col||_HG_WHT); ctx.fillRect(h[0]-w/2,h[1]-hh/2,w,hh); ctx.fillStyle=_hgCss(o.tv); ctx.fillRect(h[0]-w*0.36,h[1]-hh*0.32,w*0.6,hh*0.64); ctx.strokeStyle=_hgCss(o.ink); ctx.lineWidth=o.O*1.2; ctx.strokeRect(h[0]-w*0.36,h[1]-hh*0.32,w*0.6,hh*0.64);
+    ctx.beginPath(); ctx.moveTo(h[0]-w*0.1,h[1]-hh/2); ctx.lineTo(h[0]-w*0.32,h[1]-hh*1.05); ctx.moveTo(h[0]+w*0.1,h[1]-hh/2); ctx.lineTo(h[0]+w*0.3,h[1]-hh*1.05); ctx.stroke(); }
+  if(o.motion>0) _hgMotion(ctx,F,o.ink,Math.max(1.4,s*0.085),o.motion,_hgR(seed,4)); ctx.restore(); return F; }
+// two together: lifting, leaping over, back to back, holding each other — the pair as one picture
+function _hgPair(ctx,kind,x,y,s,seed,cA,cB,o){ const A=Object.assign({},o,{col:cA}), B=Object.assign({},o,{col:cB});
+  if(kind==='lift'){ _hgFig(ctx,'hold',x,y,s,1,0,seed,A); _hgFig(ctx,'dive',x,y-s*2.35,s*0.95,1,0,seed+1,B); }
+  else if(kind==='leap'){ _hgFig(ctx,'bend',x-s*0.2,y+s*0.35,s*0.95,1,0,seed,A); _hgFig(ctx,'jump',x+s*0.25,y-s*1.75,s,1,0.12,seed+1,B); }
+  else if(kind==='back'){ _hgFig(ctx,'dance',x-s*0.55,y,s,-1,-0.08,seed,A); _hgFig(ctx,'dance',x+s*0.55,y,s,1,0.08,seed+1,B); }
+  else if(kind==='hug'){ _hgFig(ctx,'reach',x-s*0.6,y,s,1,0.1,seed,A); _hgFig(ctx,'reach',x+s*0.6,y,s,-1,-0.1,seed+1,B); }
+  else if(kind==='hand'){ _hgFig(ctx,'hold',x,y,s,1,0,seed,A); _hgFig(ctx,'flip',x,y-s*2.9,s*0.95,1,0,seed+1,B); }
+  else { _hgFig(ctx,'link',x-s*1.33,y,s,1,0,seed,A); _hgFig(ctx,'link',x+s*1.33,y,s,1,0,seed+1,B); } }
+function _hgSnake(ctx,pts,w,col,ink,O,pat){ const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length-1;i++){ const a=pts[i], b=pts[i+1]; ctx.quadraticCurveTo(a[0],a[1],(a[0]+b[0])/2,(a[1]+b[1])/2); } const l=pts[pts.length-1]; ctx.lineTo(l[0],l[1]); };
+  ctx.lineCap='round'; ctx.lineJoin='round'; path(); ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=w+2*O; ctx.stroke(); path(); ctx.strokeStyle=_hgCss(col); ctx.lineWidth=w; ctx.stroke();
+  if(pat){ ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=O*0.8; for(let i=1;i<pts.length-1;i++){ const a=pts[i-1], b=pts[i+1]; const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; const nx=-dy/L*w*0.32, ny=dx/L*w*0.32; const p=pts[i]; ctx.beginPath(); if(pat==='cross'&&i%2){ ctx.moveTo(p[0]-nx-dx/L*w*0.2,p[1]-ny-dy/L*w*0.2); ctx.lineTo(p[0]+nx+dx/L*w*0.2,p[1]+ny+dy/L*w*0.2); } else { ctx.moveTo(p[0]-nx,p[1]-ny); ctx.lineTo(p[0]+nx,p[1]+ny); } ctx.stroke(); } }
+  const h=pts[pts.length-1], p=pts[pts.length-2]; const a=Math.atan2(h[1]-p[1],h[0]-p[0]); ctx.save(); ctx.translate(h[0],h[1]); ctx.rotate(a); ctx.fillStyle=_hgCss(ink); ctx.beginPath(); ctx.ellipse(w*0.2,0,w*0.95+O,w*0.68+O,0,0,6.2832); ctx.fill(); ctx.fillStyle=_hgCss(col); ctx.beginPath(); ctx.ellipse(w*0.2,0,w*0.95,w*0.68,0,0,6.2832); ctx.fill();
+  ctx.fillStyle=_hgCss(ink); ctx.beginPath(); ctx.arc(w*0.45,-w*0.25,w*0.13,0,6.2832); ctx.fill(); ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=O*0.9; ctx.beginPath(); ctx.moveTo(w*1.1,0); ctx.lineTo(w*1.7,0); ctx.lineTo(w*2.0,-w*0.25); ctx.moveTo(w*1.7,0); ctx.lineTo(w*2.0,w*0.25); ctx.stroke(); ctx.restore(); }
+function _hgSaucer(ctx,x,y,s,col,ink,O,beam){ if(beam){ ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=O*1.1; ctx.lineCap='round'; for(let k=-3;k<=3;k++){ const t=k/3; ctx.beginPath(); ctx.moveTo(x+t*s*0.7,y+s*0.4); ctx.lineTo(beam[0]+t*s*1.4,beam[1]); ctx.stroke(); } }
+  ctx.fillStyle=_hgCss(ink); ctx.beginPath(); ctx.ellipse(x,y,s*1.45+O,s*0.42+O,0,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.arc(x,y-s*0.2,s*0.62+O,Math.PI,0); ctx.fill();
+  ctx.fillStyle=_hgCss(_HG_WHT); ctx.beginPath(); ctx.arc(x,y-s*0.2,s*0.62,Math.PI,0); ctx.fill(); ctx.fillStyle=_hgCss(col); ctx.beginPath(); ctx.ellipse(x,y,s*1.45,s*0.42,0,0,6.2832); ctx.fill();
+  ctx.fillStyle=_hgCss(ink); for(let k=-2;k<=2;k++){ ctx.beginPath(); ctx.arc(x+k*s*0.5,y+s*0.06,s*0.08,0,6.2832); ctx.fill(); } }
+function _hgPyramid(ctx,x,y,w,h,col,ink,O){ ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(x-w/2,y); ctx.lineTo(x,y-h); ctx.lineTo(x+w/2,y); ctx.closePath(); ctx.fillStyle=_hgCss(col); ctx.fill(); ctx.save(); ctx.clip(); ctx.fillStyle=_hgCss(ink); const st=w*0.09; for(let yy=y-h+st;yy<y;yy+=st) for(let xx=x-w/2+((yy/st|0)%2)*st/2;xx<x+w/2;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*0.2,0,6.2832); ctx.fill(); } ctx.restore(); ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=O*2; ctx.beginPath(); ctx.moveTo(x-w/2,y); ctx.lineTo(x,y-h); ctx.lineTo(x+w/2,y); ctx.closePath(); ctx.stroke(); }
+function _hgLadder(ctx,x,y0,y1,w,ink,O){ ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=O*1.6; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x-w/2,y0); ctx.lineTo(x-w/2,y1); ctx.moveTo(x+w/2,y0); ctx.lineTo(x+w/2,y1); const n=Math.max(3,Math.round(Math.abs(y1-y0)/(w*0.7))); for(let k=1;k<n;k++){ const yy=y0+(y1-y0)*k/n; ctx.moveTo(x-w/2,yy); ctx.lineTo(x+w/2,yy); } ctx.stroke(); }
+function _hgBolt(ctx,x,y,s,col,ink,O){ const P=[[0,-1],[0.45,-1],[0.12,-0.15],[0.5,-0.15],[-0.2,1.05],[0.0,0.15],[-0.38,0.15]].map(([a,b])=>[x+a*s,y+b*s]); ctx.beginPath(); P.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.lineJoin='round'; ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=O*2; ctx.stroke(); ctx.fillStyle=_hgCss(col); ctx.fill(); }
+// grounds
+function _hgBG(ctx,CW,CH,kind,c1,c2,ink,D,seed){ ctx.fillStyle=_hgCss(c1); ctx.fillRect(0,0,CW,CH); const r=_hgR(seed||1,9);
+  if(kind==='stripes'){ ctx.fillStyle=_hgCss(c2); const st=D*0.12; ctx.save(); ctx.translate(CW/2,CH/2); ctx.rotate(-0.6); for(let x=-CW*1.5;x<CW*1.5;x+=st*2) ctx.fillRect(x,-CH*1.5,st,CH*3); ctx.restore(); }
+  else if(kind==='hstripes'){ ctx.fillStyle=_hgCss(c2); const st=D*0.09; for(let y=0;y<CH;y+=st*2) ctx.fillRect(0,y,CW,st); }
+  else if(kind==='dots'){ ctx.fillStyle=_hgCss(c2); const st=D*0.055; for(let y=st/2,j=0;y<CH+st;y+=st*0.87,j++) for(let x=(j%2)*st/2;x<CW+st;x+=st){ ctx.beginPath(); ctx.arc(x,y,st*0.2,0,6.2832); ctx.fill(); } }
+  else if(kind==='split'){ ctx.fillStyle=_hgCss(c2); ctx.beginPath(); const a=r()*0.3+0.35; ctx.moveTo(0,CH*a); ctx.lineTo(CW,CH*(a+0.25)); ctx.lineTo(CW,CH); ctx.lineTo(0,CH); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=D*0.012; ctx.beginPath(); ctx.moveTo(0,CH*a); ctx.lineTo(CW,CH*(a+0.25)); ctx.stroke(); }
+  else if(kind==='checker'){ ctx.fillStyle=_hgCss(c2); const st=D*0.1; for(let y=0,j=0;y<CH;y+=st,j++) for(let x=(j%2)*st;x<CW;x+=st*2) ctx.fillRect(x,y,st,st); }
+  else if(kind==='zig'){ ctx.strokeStyle=_hgCss(c2); ctx.lineWidth=D*0.006; ctx.lineCap='round'; ctx.lineJoin='round'; const n=Math.round(CW*CH/(D*D)*55); for(let i=0;i<n;i++){ const x=r()*CW, y=r()*CH, z=D*(0.02+0.015*r()), k=(r()*4)|0; ctx.beginPath(); if(k===0){ ctx.moveTo(x-z*1.5,y); for(let q=1;q<=4;q++) ctx.lineTo(x-z*1.5+q*z*0.75,y+(q%2?-z*0.5:z*0.5)); } else if(k===1){ ctx.moveTo(x-z,y-z); ctx.lineTo(x+z,y+z); ctx.moveTo(x+z,y-z); ctx.lineTo(x-z,y+z); } else if(k===2){ ctx.moveTo(x-z,y-z*0.4); ctx.lineTo(x+z,y-z*0.4); ctx.moveTo(x-z,y+z*0.4); ctx.lineTo(x+z,y+z*0.4); } else { ctx.arc(x,y,z*0.6,0,6.2832); } ctx.stroke(); } } }
+// ── his animals and the small child, drawn our own way (not his barking dog, not his crawling baby): a round dog sitting,
+// a long dog running with its ears flying, a dog leaping for something held up, a dog curled asleep; a small child sitting
+// with its arms up. All of rounded parts under one black line, like his figures.
+function _hgParts(ctx,parts,col,ink,O){ ctx.lineCap='round'; ctx.lineJoin='round';
+  const pass=(c,e)=>{ ctx.fillStyle=_hgCss(c); ctx.strokeStyle=_hgCss(c); for(const p of parts){ if(p.c){ const [a,b,cc,d,w]=p.c; ctx.lineWidth=w+2*e; ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(cc,d); ctx.stroke(); } else if(p.e){ const [x,y,rx,ry,rot]=p.e; ctx.beginPath(); ctx.ellipse(x,y,rx+e,ry+e,rot||0,0,6.2832); ctx.fill(); } } };
+  pass(ink,O); pass(col,0); for(const p of parts){ if(p.dot){ const [x,y,r]=p.dot; ctx.fillStyle=_hgCss(ink); ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); } } }
+function _hgDog(ctx,kind,x,y,u,dir,col,ink,O){ const X=(a)=>x+a*u*dir, Y=(b)=>y+b*u; const C=(a,b,c,d,w)=>({c:[X(a),Y(b),X(c),Y(d),w*u]}), E=(a,b,rx,ry,rot)=>({e:[X(a),Y(b),rx*u,ry*u,(rot||0)*dir]}); let P;
+  if(kind==='sit') P=[E(-0.3,0.25,0.52,0.45),C(-0.1,0.25,0.25,-0.35,0.58),C(0.28,-0.05,0.32,0.66,0.2),C(0.06,0.0,0.1,0.66,0.2),C(-0.72,0.45,-0.98,0.1,0.15),C(-0.98,0.1,-0.86,-0.14,0.15),E(0.45,-0.72,0.38,0.32),C(0.62,-0.66,0.98,-0.6,0.3),E(0.2,-0.6,0.13,0.3,0.35),{dot:[X(1.06),Y(-0.62),0.07*u]}];
+  else if(kind==='run') P=[C(-0.9,0,0.6,0,0.5),C(0.5,0.12,0.82,0.48,0.17),C(0.38,0.12,0.12,0.48,0.17),C(-0.62,0.12,-0.36,0.48,0.17),C(-0.76,0.12,-1.04,0.44,0.17),C(-0.95,-0.08,-1.28,-0.48,0.13),E(0.95,-0.32,0.33,0.27),C(1.05,-0.28,1.42,-0.2,0.23),C(0.82,-0.44,0.5,-0.62,0.17),{dot:[X(1.5),Y(-0.2),0.065*u]}];
+  else if(kind==='jump') P=[C(-0.45,0.3,0.3,-0.2,0.6),C(0.25,-0.1,0.72,0.0,0.2),C(0.15,0.0,0.58,0.22,0.2),C(-0.45,0.4,-0.95,0.72,0.2),C(-0.52,0.3,-1.02,0.42,0.2),C(-0.62,0.25,-0.92,-0.1,0.14),E(0.62,-0.52,0.36,0.3),C(0.8,-0.5,1.1,-0.62,0.26),E(0.45,-0.42,0.12,0.28,0.6),{dot:[X(1.17),Y(-0.64),0.065*u]}];
+  else P=[E(0,0.15,0.75,0.42),E(0.62,0.0,0.34,0.28),C(0.82,0.05,1.1,0.12,0.22),E(0.5,-0.12,0.12,0.26,0.9),C(-0.6,0.45,0.2,0.55,0.14),{dot:[X(1.17),Y(0.12),0.06*u]}];
+  _hgParts(ctx,P,col,ink,O); }
+function _hgChild(ctx,x,y,u,col,ink,O){ const P=[{e:[x,y,0.42*u,0.46*u,0]},{e:[x,y-0.78*u,0.36*u,0.36*u,0]},{c:[x-0.22*u,y-0.25*u,x-0.62*u,y-0.72*u,0.18*u]},{c:[x+0.22*u,y-0.25*u,x+0.62*u,y-0.72*u,0.18*u]},{c:[x-0.25*u,y+0.36*u,x-0.62*u,y+0.52*u,0.2*u]},{c:[x+0.25*u,y+0.36*u,x+0.62*u,y+0.52*u,0.2*u]}]; _hgParts(ctx,P,col,ink,O); }
 // ── the colours of a piece, the most used first, and the one that stands out on a ground
 function _hgStats(chords,gc,isBW){ const cnt=new Map(), key=new Map(); const cn=chords.length, step=Math.max(1,Math.floor(cn/90));
   for(let i=0;i<cn;i+=step){ const c=chords[i]; if(!c||!c.n||!c.n.length) continue; const p=_hgPalOf(_picChord(chords,i,gc,isBW).rgb,isBW); const k=p.join(','); cnt.set(k,(cnt.get(k)||0)+1); key.set(k,p); }
@@ -7855,116 +7917,189 @@ function _hgPoseOf(h,rnd){ const c=[]; if(h.acc>1 && rnd()<0.5) c.push('jump'); 
 function _hgPut(ctx,kind,x,y,s,dir,rot,col,ink,O,seed,motion,inside){ const r=_hgR(seed,3); const F=_hgFigure(0,0.25*s,s,kind,dir,r,1); ctx.save(); ctx.translate(x,y); if(rot) ctx.rotate(rot); _hgDraw(ctx,F,col,ink,O/s,inside); if(motion>0) _hgMotion(ctx,F,ink,s*0.085,motion,_hgR(seed,4)); ctx.restore(); return F; }
 function _hgGround(ctx,CW,CH,col,ss){ ctx.fillStyle=_hgCss(col); ctx.fillRect(0,0,CW,CH); const r=_hgR(61000,ss); const D=Math.min(CW,CH); for(let i=0;i<8;i++){ const cx=r()*CW, cy=r()*CH, R=D*(0.3+r()*0.5); const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R); g.addColorStop(0,r()<0.5?'rgba(255,255,255,0.035)':'rgba(0,0,0,0.03)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); } }
 
+// ── a scene: one or two of his figures doing something, or a figure with a dog, a child, a heart, a snake, a saucer. y is
+// the middle of a standing figure; s its size. TOP: how far above y the scene reaches (in s), for the layouts.
+const _HG_TOP={single:2.1,lift:3.5,leap:3.3,back:2.2,hug:2.2,hand:4.5,heart:3.1,dogplay:2.4,walk:2.1,baby:3.2,tv:2.5,saucer:4.7,snake:2.7};
+function _hgScene(ctx,kind,x,y,s,seed,cA,cB,o,ground){ const r=_hgR(seed,1); const O=o.O, ink=o.ink; const mo=o.motion||0;
+  const F=(k,xx,yy,ss,dir,rot,col,extra)=>_hgFig(ctx,k,xx,yy,ss,dir,rot,seed+((xx*7+yy*13)|0),Object.assign({col,ink,O,motion:mo},extra||{}));
+  switch(kind){
+    case 'lift': case 'leap': case 'back': case 'hug': case 'hand': _hgPair(ctx,kind,x,y,s,seed,cA,cB,{ink,O,motion:mo*0.6}); break;
+    case 'heart': { F('reach',x-s*0.95,y,s,1,0.05,cA); F('reach',x+s*0.95,y,s,-1,-0.05,cB); const hy=y-s*2.25; _hgHeart(ctx,x,hy,s*0.62,o.red||[230,35,42],ink,O); _hgRays(ctx,x,hy,s*0.85,s*1.15,7,-Math.PI/2,2.6,ink,O*1.1); break; }
+    case 'dogplay': { const d=r()<0.5?1:-1; F('hold',x-d*s*0.75,y,s,d,0,cA); _hgHeart(ctx,x-d*s*0.75,y-s*2.05,s*0.32,o.red||[230,35,42],ink,O); _hgDog(ctx,'jump',x+d*s*0.85,y+s*0.45,s*0.85,-d,cB,ink,O); break; }
+    case 'walk': { const d=r()<0.5?1:-1; F('run',x-d*s*0.7,y,s,d,0,cA,{pat:o.pat}); _hgDog(ctx,'run',x+d*s*1.05,y+s*1.1,s*0.62,d,cB,ink,O); break; }
+    case 'baby': { F('hold',x,y,s,1,0,cA); _hgChild(ctx,x,y-s*2.25,s*0.48,cB,ink,O); _hgRays(ctx,x,y-s*2.4,s*0.7,s*0.95,7,-Math.PI/2,2.4,ink,O); break; }
+    case 'tv': { F(['wave','dance','cheer'][(r()*3)|0],x,y,s,r()<0.5?1:-1,0,cA,{tv:cB}); break; }
+    case 'saucer': { F('cheer',x,y,s,1,0,cA,{hole:ground}); _hgSaucer(ctx,x,y-s*3.8,s*0.62,cB,ink,O,[x,y-s*2.1]); break; }
+    case 'snake': { const pts=[]; for(let k=0;k<=8;k++){ const t=k/8; pts.push([x-s*1.8+s*3.6*t, y+s*1.3+Math.sin(t*9+r()*2)*s*0.22]); } if(r()<0.5) pts.reverse(); _hgSnake(ctx,pts,s*0.34,cB,ink,O,'dash'); F('jump',x,y-s*0.55,s*0.9,r()<0.5?1:-1,0.1,cA); break; }
+    default: { F(o.pose||'dance',x,y,s,r()<0.5?1:-1,0,cA,{pat:o.pat,hole:o.hole?ground:null}); }
+  } }
+// which scene a passage asks for, never the same twice in a row (and each once, while there are unused ones)
+function _hgSceneOf(h,used,r){ const c=[]; if(h.leap>6) c.push('leap','snake'); if(h.reg>0.62) c.push('lift','hand','baby'); if(h.reg<0.38) c.push('walk','dogplay'); if(h.vmax>0.75) c.push('saucer','heart'); if(h.dur>1.4) c.push('hug','back');
+  c.push('single','tv','dogplay','back','heart','walk','leap','lift','baby','hug','snake'); for(const k of c) if(!used.has(k)){ used.add(k); return k; } return c[(r()*c.length)|0]; }
+function _hgTwo(st,ground,isBW,i){ const a=_hgOn(st[(i+1)%st.length]||_HG_PAL[0],ground,isBW); let b=_hgOn(st[(i+2)%st.length]||_HG_PAL[2],ground,isBW); if(_hgSame(a,b)) b=_hgOn(_HG_PAL[(i*3+4)%8],ground,isBW); return [a,b]; }
+const _HG_BGS=['dots','stripes','split','checker','hstripes','flat'];
+
 // ═══════════════════════════════════════════════════════════════════════════
-// HARING — THE STORY (panels): the sheet cut into panels with a heavy black frame, read like a strip; each panel a passage
-// of the piece in its own colour, its figure in the pose the passage asks for, the loudest passage a heart.
+// HARING — THE CROWD (his big murals): the white wall full of everything at once — a long snake winding through it, and
+// all over it pairs and singles, dogs and a child, of every size and colour, some filled with his dashes, the gaps filled
+// with his small marks. Every scene a passage of the piece in its colours, the louder the bigger.
 // ═══════════════════════════════════════════════════════════════════════════
-function haringStory(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+function haringCrowd(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
-  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const land=CW>CH*1.1;
-  const cols=land?3:2, rows=land?2:3, N=cols*rows, m=D*0.035, g=D*0.03, pw=(CW-2*m-(cols-1)*g)/cols, ph=(CH-2*m-(rows-1)*g)/rows; const O=Math.max(2,D*0.011);
-  const G=_kd2Phrases(A,N); let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
-  const Ops=_mtOps(); Ops.at(0,()=>{ ctx.fillStyle=_hgCss(isBW?[246,246,242]:_HG_WHT); ctx.fillRect(0,0,CW,CH); });
-  let prev=null;
-  for(let k=0;k<N;k++){ const q=G[Math.min(G.length-1,Math.floor(k*G.length/N))]; const gx=k%cols, gy=Math.floor(k/cols); const x=m+gx*(pw+g), y=m+gy*(ph+g); const r=_hgR(62100+k,ss);
-    let bg=_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW); if(_hgSame(bg,prev)) bg=st.find(p=>!_hgSame(p,prev))||_hgPastel(_HG_PAL[(k*3)%8]); prev=bg;
-    const h=_mtHearSpan(A,q.a,q.b); const fig=_hgOn(st[(k+1)%st.length]||_HG_WHT,bg,isBW); const s=Math.min(ph/3.6,pw/2.6); const kind=_hgPoseOf(h,r); const dir=r()<0.5?1:-1;
-    Ops.at(q.t0, ()=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,pw,ph); ctx.clip(); ctx.fillStyle=_hgCss(bg); ctx.fillRect(x,y,pw,ph);
-      if(k===ci && X.major) _hgHeart(ctx,x+pw/2,y+ph*0.48,Math.min(pw,ph)*0.3,isBW?[250,250,248]:_hgOn(_hgPastel(_HG_PAL[0]),bg,false),_HG_BLK,O);
-      else _hgPut(ctx,kind,x+pw/2,y+ph*0.52,s,dir,0,fig,_HG_BLK,O,62200+k+ss,0.35+0.5*X.energy);
-      if(k===ci) _hgRays(ctx,x+pw/2,y+ph*0.45,Math.min(pw,ph)*0.36,Math.min(pw,ph)*0.46,9,-Math.PI/2,2.6,_HG_BLK,O*1.1);
-      ctx.restore(); ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.6; ctx.lineJoin='round'; ctx.strokeRect(x,y,pw,ph); }); }
-  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'story',N}; }catch(_){} _setCurE(0.5);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const dens=A.ch?A.ch.density:0.3; const wall=isBW?[248,248,244]:_HG_WHT;
+  const O=Math.max(1.8,D*0.008); const Ops=_mtOps(); Ops.at(0,()=>_hgBG(ctx,CW,CH,'zig',wall,[60,58,62],_HG_BLK,D,63000+ss));
+  // the snake, first, winding the whole wall along the melody
+  const sp=[]; const N=14; for(let i=0;i<=N;i++){ const t=i/N; const a=Math.floor(t*(cn-1)); const e=A.ev[a]||{top:60}; sp.push([CW*(0.06+0.88*t), CH*(0.25+0.5*(1-A.reg(e.top)))+Math.sin(t*7)*CH*0.08]); }
+  const sc=_hgOn(st[0],wall,isBW); Ops.at(0.02,()=>_hgSnake(ctx,sp,D*0.045,sc,_HG_BLK,O,'cross'));
+  const G=_kd2Phrases(A,Math.round(9+dens*6)); const used=new Set(); const placed=[];
+  G.forEach((q,i)=>{ const r=_hgR(63100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind=r()<0.5?'single':'back'; if(i%4===3) kind=r()<0.5?'dogsit':'walk';
+    const s=D*(0.05+0.035*q.vmax)*(kind==='single'?1.25:1); let bx=0,by=0,bd=-1; for(let t=0;t<14;t++){ const cx=CW*(0.12+0.76*r()), cy=CH*(0.12+0.78*r()); let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(cx-p[0],cy-p[1])/(p[2]+s*1.9)); if(md>bd){ bd=md; bx=cx; by=cy; } } placed.push([bx,by,s*1.9]);
+    const c=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),wall,isBW); const c2=_hgOn(st[(i+2)%st.length],wall,isBW);
+    Ops.at(q.t0, ()=>{ if(kind==='dogsit') _hgDog(ctx,'sit',bx,by+s*0.4,s*1.2,r()<0.5?1:-1,c,_HG_BLK,O); else _hgScene(ctx,kind,bx,by,s,63200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+1)%8],wall,isBW):c2,{ink:_HG_BLK,O,motion:0.35+0.5*X.energy,pat:i%3===0?'dash':(i%3===1?null:'cross')},wall); }); });
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'crowd',n:G.length}; }catch(_){} _setCurE(0.5);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HARING — THE CROWD: figures packed edge to edge on the white wall, turned every way, interlocking, nothing left empty,
-// every figure a passage of the piece in its own colour (without colour: his black line on white, every gap filled with
-// his small marks).
-// ═══════════════════════════════════════════════════════════════════════════
-function _haringWall(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,colour){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
-  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const dens=A.ch?A.ch.density:0.3;
-  const target=Math.round((colour?22:30)+dens*16); const s=Math.sqrt(CW*CH/(target*8.6)); const cols=Math.max(3,Math.round(CW/(s*2.75))), rows=Math.max(3,Math.round(CH/(s*3.3))); const cw=CW/cols, chh=CH/rows; const N=cols*rows;
-  const O=Math.max(1.6,s*(colour?0.1:0.085)); const ground=colour?(isBW?[244,244,240]:_HG_WHT):[250,249,245]; const Ops=_mtOps(); Ops.at(0,()=>{ ctx.fillStyle=_hgCss(ground); ctx.fillRect(0,0,CW,CH); });
-  const cells=[]; for(let gy=0;gy<rows;gy++) for(let gx=0;gx<cols;gx++) cells.push([gx,gy]);
-  cells.forEach(([gx,gy],k)=>{ const a=Math.floor(k*cn/N), b=Math.floor((k+1)*cn/N); const h=_mtHearSpan(A,a,b); const r=_hgR(65100+k,ss); const kind=_hgPoseOf(h,r); const dir=r()<0.5?1:-1;
-    const rot=(r()<0.22?(r()<0.5?1:-1)*Math.PI/2:0)+(r()-.5)*0.5; const x=(gx+0.5+(gy%2?0.25:-0.25)*0.5+(r()-.5)*0.25)*cw, y=(gy+0.5+(r()-.5)*0.18)*chh;
-    const col=colour?_hgOn(_hgAt(chords,Math.floor((a+b)/2),gc,isBW),ground,isBW):ground;
-    Ops.at(a/cn, ()=>_hgPut(ctx,kind,x,y,s*(0.92+0.16*r()),dir,rot,col,_HG_BLK,O,65200+k+ss,colour?0.3:0)); });
-  // the maze: every gap gets his small marks — dashes, crosses, zigzags, little circles
-  if(!colour){ const r=_hgR(65900,ss); const M=Math.round(N*5); for(let i=0;i<M;i++){ const x=r()*CW, y=r()*CH, t=r(); const kind=(r()*4)|0; const z=s*(0.18+0.12*r());
-      Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*0.9; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath();
-        if(kind===0){ ctx.moveTo(x-z,y-z*0.4); ctx.lineTo(x+z,y-z*0.4); ctx.moveTo(x-z,y+z*0.4); ctx.lineTo(x+z,y+z*0.4); }
-        else if(kind===1){ ctx.moveTo(x-z*0.7,y-z*0.7); ctx.lineTo(x+z*0.7,y+z*0.7); ctx.moveTo(x+z*0.7,y-z*0.7); ctx.lineTo(x-z*0.7,y+z*0.7); }
-        else if(kind===2){ ctx.moveTo(x-z*1.2,y); for(let q=1;q<=4;q++) ctx.lineTo(x-z*1.2+q*z*0.6,y+(q%2?-z*0.5:z*0.5)); }
-        else { ctx.arc(x,y,z*0.55,0,6.2832); }
-        ctx.stroke(); }); } }
-  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:colour?'crowd':'maze',cols,rows}; }catch(_){} _setCurE(0.5);
-}
-function haringCrowd(ctx,CW,CH,chords,lim,gc,ss,mode){ _haringWall(ctx,CW,CH,chords,lim,gc,ss,mode,true); }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// HARING — THE HEART: the big heart in the middle with its rays, a ray at every accent, and round it the figures dancing,
-// one per passage, two of them holding it up when the piece is major.
+// HARING — THE HEART: the big heart filled with his dashes in the middle of a dotted ground, a ray at every accent; below,
+// two figures holding it up; a ladder with a figure climbing to it; a dog leaping for it; small hearts where the piece is
+// loud; every figure a passage in its colour.
 // ═══════════════════════════════════════════════════════════════════════════
 function haringHeart(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const isAcc=_mtAccOf(A);
-  const bg=isBW?[236,236,232]:(st[1]&&!_hgSame(_hgPastel(_HG_PAL[0]),st[1])?st[1]:st[0]), red=isBW?[250,250,248]:_hgOn(_hgPastel(_HG_PAL[0]),bg,false), O=Math.max(2,D*0.012);
-  const hx=CW*0.5, hy=CH*0.38, hh=D*0.26; const Ops=_mtOps(); Ops.at(0,()=>{ _hgGround(ctx,CW,CH,bg,ss); _hgHeart(ctx,hx,hy,hh,red,_HG_BLK,O); });
-  const E=_kd2Events(A,48).filter(isAcc); const nR=Math.max(10,Math.min(26,E.length+10));
-  for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k+0.5)/nR*6.2832; Ops.at((k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.2; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(hx+Math.cos(a)*hh*1.3,hy+Math.sin(a)*hh*1.25); ctx.lineTo(hx+Math.cos(a)*hh*1.62,hy+Math.sin(a)*hh*1.55); ctx.stroke(); }); }
-  const G=_kd2Phrases(A,6); const s=D*0.075; const spots=[[0.16,0.78],[0.84,0.78],[0.36,0.86],[0.64,0.86],[0.12,0.22],[0.88,0.22]];
-  G.forEach((q,i)=>{ if(i>=spots.length) return; const r=_hgR(66100+i,ss); const h=_mtHearSpan(A,q.a,q.b); const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW);
-    const [px,py]=spots[i]; const x=CW*px, y=CH*py; const kind=i<2&&X.major?'reach':_hgPoseOf(h,r); const dir=px<0.5?1:-1;
-    Ops.at(q.t0, ()=>_hgPut(ctx,kind,x,y,s*(i<4?1.15:0.85),kind==='reach'?(px<0.5?1:-1):dir,0,_hgSame(col,red)?_hgOn(st[2]||_HG_PAL[1],bg,isBW):col,_HG_BLK,O,66200+i+ss,0.3+0.5*X.energy)); });
+  const bg=isBW?[236,236,232]:(st[1]&&!_hgSame(_hgPastel(_HG_PAL[0]),st[1])?st[1]:st[0]), bg2=_hgOn(st[2]||_HG_PAL[1],bg,isBW), red=isBW?[250,250,248]:_hgOn(_hgPastel(_HG_PAL[0]),bg,false), O=Math.max(2,D*0.01);
+  const hx=CW*0.5, hy=CH*0.36, hh=D*0.25; const Ops=_mtOps();
+  Ops.at(0,()=>{ _hgBG(ctx,CW,CH,'dots',bg,bg2,_HG_BLK,D,64000+ss); _hgHeart(ctx,hx,hy,hh,red,_HG_BLK,O*1.3);
+    ctx.save(); const P=_hgHeartPts(hx,hy,hh); ctx.beginPath(); P.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.clip(); ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*0.9; ctx.lineCap='round'; const r=_hgR(64001,ss); for(let i=0;i<34;i++){ const x=hx+(r()-.5)*hh*2, y=hy+(r()-.5)*hh*2, z=hh*0.09, a=r()*3.14; ctx.beginPath(); ctx.moveTo(x-Math.cos(a)*z,y-Math.sin(a)*z); ctx.lineTo(x+Math.cos(a)*z,y+Math.sin(a)*z); ctx.stroke(); } ctx.restore(); });
+  const E=_kd2Events(A,48).filter(isAcc); const nR=Math.max(10,Math.min(24,E.length+10));
+  for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k+0.5)/nR*6.2832; Ops.at((k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.4; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(hx+Math.cos(a)*hh*1.32,hy+Math.sin(a)*hh*1.28); ctx.lineTo(hx+Math.cos(a)*hh*1.6,hy+Math.sin(a)*hh*1.52); ctx.stroke(); }); }
+  const G=_kd2Phrases(A,6); const s=D*0.07; const cs=G.map((q,i)=>_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW).map(v=>v)); const cc=(i)=>{ let c=cs[i%cs.length]; if(_hgSame(c,red)) c=_hgOn(st[3]||_HG_PAL[1],bg,isBW); return c; };
+  const sy=CH*0.8; const o={ink:_HG_BLK,O,motion:0.35+0.5*X.energy};
+  if(G[0]) Ops.at(G[0].t0, ()=>_hgFig(ctx,'reach',CW*0.28,sy,s*1.15,1,0.05,64100+ss,Object.assign({col:cc(0),pat:'dash'},o)));
+  if(G[1]) Ops.at(G[1].t0, ()=>_hgFig(ctx,'reach',CW*0.72,sy,s*1.15,-1,-0.05,64101+ss,Object.assign({col:cc(1)},o)));
+  if(G[2]) Ops.at(G[2].t0, ()=>{ _hgLadder(ctx,CW*0.1,CH*0.92,CH*0.3,D*0.07,_HG_BLK,O); _hgFig(ctx,'reach',CW*0.1,CH*0.52,s*0.8,1,-0.2,64102+ss,Object.assign({col:cc(2)},o)); });
+  if(G[3]) Ops.at(G[3].t0, ()=>_hgDog(ctx,'jump',CW*0.86,CH*0.62,s*1.1,-1,cc(3),_HG_BLK,O));
+  if(G[4]) Ops.at(G[4].t0, ()=>_hgPair(ctx,'back',CW*0.5,CH*0.93,s*0.7,64103+ss,cc(4),cc(5),o));
+  if(G[5]) Ops.at(G[5].t0, ()=>{ for(let k=0;k<3;k++){ const r=_hgR(64200+k,ss); _hgHeart(ctx,CW*(0.12+0.76*r()),CH*(0.06+0.1*r()),D*0.035,red,_HG_BLK,O*0.8); } });
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'heart',rays:nR}; }catch(_){} _setCurE(0.5);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HARING — THE ACROBATS: the human pyramid, every figure standing on the hands of the ones below, a passage each from
-// the bottom up; as many on the ground as the piece has voices; the top one throws up its arms, the rays round him.
+// HARING — THE ACROBATS: a tower in motion, a passage for each, from the ground up: the ones at the bottom holding, one
+// standing on his hands upside down on them, one lifted flat over a head, the top one throwing up his arms in his rays;
+// a dog leaping beside the tower; the ground in stripes.
 // ═══════════════════════════════════════════════════════════════════════════
 function haringAcrobats(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
-  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const bg=isBW?[236,236,232]:(st[2]||st[0]);
-  const k=Math.max(2,Math.min(4,Math.round(X.poly)+1)); const s=Math.min(CH*0.86/(k*3.05+1.0), CW*0.9/(k*2.25)); const O=Math.max(2,s*0.1); const n=k*(k+1)/2; const G=_kd2Phrases(A,n);
-  const Ops=_mtOps(); Ops.at(0,()=>_hgGround(ctx,CW,CH,bg,ss)); let idx=0; const baseY=CH*0.95-s*1.3;
-  for(let row=0;row<k;row++){ const m=k-row; for(let j=0;j<m;j++){ const q=G[Math.min(G.length-1,Math.floor(idx*G.length/n))]; const r=_hgR(67100+idx,ss); const top=row===k-1;
-      const x=CW/2+(j-(m-1)/2)*s*2.2, y=baseY-row*s*3.05; const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW); const kind=top?(X.energy>0.6?'cheer':'cheer'):'hold'; const i0=idx;
-      Ops.at(q.t0, ()=>{ _hgPut(ctx,kind,x,y,s,1,0,col,_HG_BLK,O,67200+i0+ss,0); if(top){ _hgRays(ctx,x,y-s*1.3,s*1.25,s*(1.6+0.3*X.energy),11,-Math.PI/2,3.4,_HG_BLK,O*1.1); } }); idx++; } }
-  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'acrobats',k}; }catch(_){} _setCurE(0.5);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const bg=isBW?[236,236,232]:(st[2]||st[0]), bg2=_hgOn(st[3]||_HG_PAL[6],bg,isBW);
+  const s=Math.min(CH*0.88/14.2, CW/7.4), O=Math.max(2,s*0.1); const G=_kd2Phrases(A,7); const col=(i)=>_hgOn(_hgAt(chords,Math.floor(((G[Math.min(G.length-1,i)]||{a:0,b:1}).a+(G[Math.min(G.length-1,i)]||{a:0,b:1}).b)/2),gc,isBW),bg,isBW); const t=(i)=>(G[Math.min(G.length-1,i)]||{t0:0}).t0;
+  const Ops=_mtOps(); const o={ink:_HG_BLK,O,motion:0.3+0.5*X.energy}; const base=CH*0.95-1.6*s, cx=CW*0.5;
+  Ops.at(0,()=>{ _hgBG(ctx,CW,CH,'stripes',bg,bg2,_HG_BLK,D,65000+ss); ctx.fillStyle=_hgCss(_HG_BLK); ctx.fillRect(0,base+1.62*s,CW,O*2); });
+  Ops.at(t(0), ()=>{ _hgFig(ctx,'hold',cx-s*1.25,base,s,1,0,65100+ss,Object.assign({col:col(0)},o)); _hgFig(ctx,'hold',cx+s*1.25,base,s,-1,0,65101+ss,Object.assign({col:col(1),pat:'dash'},o)); });
+  const y2=base-3.05*s; Ops.at(t(2), ()=>_hgFig(ctx,'flip',cx,y2-0.2*s,s,1,0,65102+ss,Object.assign({col:col(2)},o)));
+  const y3=y2-3.6*s; Ops.at(t(3), ()=>_hgFig(ctx,'hold',cx,y3-0.4*s,s*0.95,1,0,65103+ss,Object.assign({col:col(3),pat:'cross'},o)));
+  const y4=y3-2.75*s; Ops.at(t(4), ()=>{ _hgFig(ctx,'cheer',cx,y4-0.4*s,s*0.9,1,0,65104+ss,Object.assign({col:col(4)},o)); _hgRays(ctx,cx,y4-1.6*s,s*1.0,s*1.4,11,-Math.PI/2,3.4,_HG_BLK,O*1.2); });
+  Ops.at(t(5), ()=>_hgDog(ctx,'jump',cx+s*3.0,base+0.2*s,s*1.05,-1,col(5),_HG_BLK,O));
+  Ops.at(t(6), ()=>_hgFig(ctx,'run',cx-s*3.1,base+0.1*s,s*0.85,1,0,65105+ss,Object.assign({col:col(6)},o)));
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'acrobats2'}; }catch(_){} _setCurE(0.5);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HARING LISTENS — the picture the piece asks for: an even piece the chain of dancers holding hands along the melody
-// (one per passage, as high as it sings); a quick, dense one the crowd jumping all over a flat colour; a slow one two big
-// figures dancing at each other, the heart over them when it is major.
+// HARING LISTENS — the picture the piece asks for: a quick, dense piece the party (two colours split on the slant, the
+// scenes all over it, the dog running through, the saucer when it is loud); an even piece the parade along a snake (the
+// figures walking and jumping it, a dog with them, on bands); a slow piece the two big figures holding each other on dots,
+// the heart over them full of his dashes, a dog sitting by.
 // ═══════════════════════════════════════════════════════════════════════════
 function haringListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const dens=A.ch?A.ch.density:0.3;
-  const pic = (X.pace>0.62 && dens>0.25) ? 'crowd' : (X.regular>0.55) ? 'chain' : 'pair';
-  const bg=isBW?[236,236,232]:st[0]; const Ops=_mtOps(); Ops.at(0,()=>_hgGround(ctx,CW,CH,bg,ss));
-  if(pic==='chain'){ const land=CW>CH*1.1; const rowsN=land?2:3; const per=land?5:3; const G=_kd2Phrases(A,rowsN*per); const s=Math.min(CW*0.94/(per*2.7), CH*0.92/(rowsN*3.5)); const O=Math.max(2,s*0.1);
-    G.forEach((q,i)=>{ const row=Math.floor(i/per), j=i%per; if(row>=rowsN) return; const r=_hgR(68100+i,ss); const h=_mtHearSpan(A,q.a,q.b); const x=CW/2+(j-(per-1)/2)*s*2.66; const y=CH*(row+0.5)/rowsN+s*0.5+(0.5-h.reg)*s*1.2; const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW);
-      Ops.at(q.t0, ()=>_hgPut(ctx,'link',x,y,s,1,0,col,_HG_BLK,O,68200+i+ss,0.25+0.5*X.energy)); }); }
-  else if(pic==='crowd'){ const E=_kd2Events(A,Math.round(12+dens*10)); const s=D*0.075; const O=Math.max(2,s*0.1); const placed=[];
-    E.forEach((e,i)=>{ const r=_hgR(68300+i,ss); let x=CW*(0.12+0.76*(i%4+0.5)/4+(r()-.5)*0.1), y=CH*(0.14+0.74*((Math.floor(i/4)+0.5)/Math.ceil(E.length/4)))+(0.5-A.reg(e.top))*s; const h=_mtHearSpan(A,Math.max(0,e.i-3),Math.min(cn,e.i+3));
-      const col=_hgOn(_hgAt(chords,e.i,gc,isBW),bg,isBW); const kind=_mtAccOf(A)(e)?'jump':_hgPoseOf(h,r); const dir=r()<0.5?1:-1; Ops.at(e.i/cn, ()=>_hgPut(ctx,kind,x,y,s,dir,(r()-.5)*0.3,col,_HG_BLK,O,68400+i+ss,0.4+0.5*X.energy)); }); }
-  else { const s=Math.min(CH*0.15,CW*0.21); const O=Math.max(2,s*0.1); const G=_kd2Phrases(A,2); const fy=CH*0.6;
-    G.forEach((q,i)=>{ const h=_mtHearSpan(A,q.a,q.b); const r=_hgR(68500+i,ss); const col=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW); const kind=i?(h.reg>0.5?'wave':'dance'):(h.reg>0.5?'dance':'reach');
-      Ops.at(q.t0, ()=>_hgPut(ctx,kind,CW*(i?0.7:0.3),fy,s,i?-1:1,0,col,_HG_BLK,O,68600+i+ss,0.3+0.5*X.energy)); });
-    if(X.major){ const red=isBW?[250,250,248]:_hgOn(_hgPastel(_HG_PAL[0]),bg,false); Ops.at(0.55, ()=>{ _hgHeart(ctx,CW*0.5,CH*0.22,s*0.75,red,_HG_BLK,O); _hgRays(ctx,CW*0.5,CH*0.22,s*1.05,s*1.4,9,-Math.PI/2,3.2,_HG_BLK,O*1.1); }); } }
-  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'listen',pic,pace:X.pace,regular:X.regular,dens}; }catch(_){} _setCurE(0.5);
+  const pic = (X.pace>0.62 && dens>0.25) ? 'party' : (X.regular>0.55) ? 'parade' : 'pair';
+  const bg=isBW?[236,236,232]:st[0], bg2=_hgOn(st[1]||_HG_PAL[2],bg,isBW); const O=Math.max(2,D*0.009); const Ops=_mtOps(); const used=new Set();
+  const colOf=(q,i)=>_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW); const red=_hgOn(_hgPastel(_HG_PAL[0]),bg,isBW);
+  if(pic==='party'){ Ops.at(0,()=>_hgBG(ctx,CW,CH,'split',bg,bg2,_HG_BLK,D,66000+ss)); const G=_kd2Phrases(A,5); const s=D*0.1;
+    const spots=[[0.27,0.3],[0.73,0.27],[0.3,0.66],[0.72,0.64]];
+    G.slice(0,4).forEach((q,i)=>{ const r=_hgR(66100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind='leap'; const [px,py]=spots[i]; const c=colOf(q,i), c2=_hgOn(st[(i+2)%st.length],bg,isBW);
+      Ops.at(q.t0, ()=>_hgScene(ctx,kind,CW*px,CH*py,s*(kind==='lift'||kind==='leap'?0.8:1),66200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+5)%8],bg,isBW):c2,{ink:_HG_BLK,O,motion:0.5+0.5*X.energy,pat:i%2?'dash':null,red},bg)); });
+    const q=G[4]||G[G.length-1]; Ops.at(q.t0, ()=>_hgDog(ctx,'run',CW*0.5,CH*0.92,s*0.9,(ss&1)?1:-1,colOf(q,4),_HG_BLK,O));
+    if(X.loud>0.6) Ops.at(0.5, ()=>_hgSaucer(ctx,CW*0.5,CH*0.08,s*0.5,red,_HG_BLK,O,null)); }
+  else if(pic==='parade'){ Ops.at(0,()=>_hgBG(ctx,CW,CH,'hstripes',bg,bg2,_HG_BLK,D,66300+ss)); const sp=[]; for(let i=0;i<=12;i++){ const t=i/12; const e=A.ev[Math.floor(t*(cn-1))]||{top:60}; sp.push([CW*(0.04+0.92*t), CH*(0.58+0.12*(0.5-A.reg(e.top)))+Math.sin(t*8)*CH*0.04]); }
+    Ops.at(0.01,()=>_hgSnake(ctx,sp,D*0.075,_hgOn(st[2]||_HG_PAL[1],bg,isBW),_HG_BLK,O,'dash')); const G=_kd2Phrases(A,6); const s=Math.min(CW/9,CH*0.075);
+    G.forEach((q,i)=>{ const r=_hgR(66400+i,ss); const h=_mtHearSpan(A,q.a,q.b); const t=(i+0.5)/G.length; const k=Math.round(t*12); const [x,y]=sp[Math.min(12,k)]; const c=colOf(q,i); const up=i%2===0;
+      Ops.at(q.t0, ()=>{ if(i===2) _hgDog(ctx,'run',x,y-s*0.9,s*0.75,1,c,_HG_BLK,O); else _hgFig(ctx,up?'jump':_hgPoseOf(h,r),x,up?y-s*2.3:y+s*2.4,s,1,0,66500+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%3===1?'dash':null}); }); }); }
+  else { Ops.at(0,()=>_hgBG(ctx,CW,CH,'dots',bg,bg2,_HG_BLK,D,66600+ss)); const G=_kd2Phrases(A,3); const s=Math.min(CH*0.13,CW*0.2);
+    if(G[0]) Ops.at(G[0].t0, ()=>_hgPair(ctx,X.major?'hug':'back',CW*0.5,CH*0.6,s,66700+ss,colOf(G[0],0),colOf(G[1]||G[0],1),{ink:_HG_BLK,O,motion:0.35}));
+    if(X.major && G[1]) Ops.at(G[1].t0, ()=>{ const hy=CH*0.18; _hgHeart(ctx,CW*0.5,hy,s*0.8,red,_HG_BLK,O*1.2); _hgRays(ctx,CW*0.5,hy,s*1.1,s*1.45,9,-Math.PI/2,3.0,_HG_BLK,O*1.2); });
+    if(G[2]) Ops.at(G[2].t0, ()=>_hgDog(ctx,'sit',CW*0.82,CH*0.85,s*0.8,-1,colOf(G[2],2),_HG_BLK,O)); }
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'listen',pic}; }catch(_){} _setCurE(0.5);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE GIANT: one huge figure filled with his dashes over two colours split on the slant, in the pose the whole
+// piece asks for, the rays round him at every accent; small figures climbing a ladder to his hand, a dog at his feet, the
+// saucer by his head when the piece is loud.
+// ═══════════════════════════════════════════════════════════════════════════
+function haringGiant(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const isAcc=_mtAccOf(A);
+  const bg=isBW?[236,236,232]:st[0], bg2=_hgOn(st[1]||_HG_PAL[5],bg,isBW); const O=Math.max(2,D*0.011); const h=_mtHearSpan(A,0,cn);
+  const kind= X.energy>0.7 ? (X.leaps>0.5?'jump':'cheer') : X.energy>0.45 ? (X.leaps>0.5?'run':'dance') : (h.reg>0.55?'wave':'reach');
+  const s=Math.min(CH*0.17,CW*0.27), gx=CW*0.52, gy=CH*0.5; const big=_hgOn(st[2]||_HG_PAL[1],bg,isBW); const Ops=_mtOps();
+  Ops.at(0,()=>_hgBG(ctx,CW,CH,'split',bg,bg2,_HG_BLK,D,67000+ss));
+  Ops.at(0.02,()=>_hgFig(ctx,kind,gx,gy,s,(ss&1)?1:-1,0,67100+ss,{col:big,ink:_HG_BLK,O:O*1.3,pat:'dash',hole:X.major?null:bg2,motion:0}));
+  const E=_kd2Events(A,40).filter(isAcc); const nR=Math.max(9,Math.min(20,E.length+9));
+  for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k/nR-0.5)*Math.PI*1.3; Ops.at((k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(gx+Math.cos(a)*s*2.1,gy-s*0.5+Math.sin(a)*s*2.1); ctx.lineTo(gx+Math.cos(a)*s*2.45,gy-s*0.5+Math.sin(a)*s*2.45); ctx.stroke(); }); }
+  const G=_kd2Phrases(A,4); const sm=s*0.32; const c=(i)=>_hgOn(_hgAt(chords,Math.floor(((G[i]||G[0]).a+(G[i]||G[0]).b)/2),gc,isBW),bg,isBW);
+  if(G[0]) Ops.at(G[0].t0, ()=>{ _hgLadder(ctx,CW*0.12,CH*0.95,CH*0.45,D*0.06,_HG_BLK,O); _hgFig(ctx,'reach',CW*0.12,CH*0.66,sm,1,-0.2,67200+ss,{col:c(0),ink:_HG_BLK,O,motion:0.4}); });
+  if(G[1]) Ops.at(G[1].t0, ()=>_hgDog(ctx,'sit',gx+s*1.15,CH*0.9,sm*1.4,-1,c(1),_HG_BLK,O));
+  if(G[2]) Ops.at(G[2].t0, ()=>_hgFig(ctx,'jump',CW*0.85,CH*0.78,sm,-1,0.15,67201+ss,{col:c(2),ink:_HG_BLK,O,motion:0.6}));
+  if(G[3] && X.loud>0.55) Ops.at(G[3].t0, ()=>_hgSaucer(ctx,CW*0.84,CH*0.1,sm*0.9,c(3),_HG_BLK,O,null)); else if(G[3]) Ops.at(G[3].t0, ()=>_hgBolt(ctx,CW*0.85,CH*0.13,sm*1.1,_hgOn(_hgPastel(_HG_PAL[1]),bg,isBW),_HG_BLK,O));
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'giant',kind}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE SNAKE: one huge snake winding down the whole sheet, drawn by the melody, crossed with his marks; on it and
+// round it the figures — riding it, jumping it, running from it — and a dog running with them, a passage each.
+// ═══════════════════════════════════════════════════════════════════════════
+function haringSnakeWall(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const bg=isBW?[236,236,232]:(st[1]||st[0]); const O=Math.max(2,D*0.01);
+  const sp=[]; const N=18; for(let i=0;i<=N;i++){ const t=i/N; const e=A.ev[Math.floor(t*(cn-1))]||{top:60}; sp.push([CW*(0.5+(0.3+0.08*(A.reg(e.top)-0.5))*Math.sin(t*Math.PI*3.2)), CH*(0.05+0.9*t)]); }
+  const Ops=_mtOps(); const sc=_hgOn(st[0],bg,isBW); Ops.at(0,()=>_hgBG(ctx,CW,CH,'checker',bg,_hgOn(st[3]||_HG_PAL[7],bg,isBW),_HG_BLK,D,68000+ss));
+  for(let k=1;k<=N;k++){ Ops.at((k/N)*0.6, ()=>{}); } Ops.at(0.01,()=>_hgSnake(ctx,sp,D*0.11,sc,_HG_BLK,O*1.2,'cross'));
+  const G=_kd2Phrases(A,7); const s=D*0.06;
+  G.forEach((q,i)=>{ const r=_hgR(68100+i,ss); const h=_mtHearSpan(A,q.a,q.b); const k=Math.min(N,Math.round(((i+0.5)/G.length)*N)); const [x,y]=sp[k]; const side=(x<CW/2)?1:-1; const c=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW);
+    Ops.at(q.t0, ()=>{ if(i===3) _hgDog(ctx,'run',x+side*s*2.6,y+s*0.4,s*0.8,side,c,_HG_BLK,O); else if(i%3===0) _hgFig(ctx,'dance',x,y-s*1.5,s,1,0,68200+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5});
+      else _hgFig(ctx,i%3===1?'jump':_hgPoseOf(h,r),x+side*s*2.4,y,s,side,0,68200+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%2?'dash':null}); }); });
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'snake'}; }catch(_){} _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE POSTER (the Pop Shop sheet): one flat colour and on it one big figure (two when the piece has two voices,
+// dancing at each other), in the pose the whole piece asks for, the rays round him as many as its accents.
+// ═══════════════════════════════════════════════════════════════════════════
+function haringPoster(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const isAcc=_mtAccOf(A);
+  const bg=isBW?[232,232,228]:st[0], O=Math.max(2,D*0.013); const two=X.poly>=2.3; const h=_mtHearSpan(A,0,cn); const r=_hgR(63000,ss);
+  const kind= X.energy>0.7 ? (X.leaps>0.5?'jump':'cheer') : X.energy>0.45 ? (X.leaps>0.5?'run':'dance') : (h.reg>0.55?'wave':'hold');
+  const Ops=_mtOps(); Ops.at(0,()=>_hgGround(ctx,CW,CH,bg,ss));
+  const s=two?Math.min(CH*0.14,CW*0.19):Math.min(CH*0.17,CW*0.3); const figs=two?[[CW*0.3,1],[CW*0.7,-1]]:[[CW*0.5,r()<0.5?1:-1]]; const fy=CH*0.52;
+  figs.forEach(([fx,dir],i)=>{ const col=_hgOn(st[1+i]||_hgPastel(_HG_PAL[(i*3+2)%8]),bg,isBW); const k2=two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind;
+    Ops.at(i*0.12, ()=>_hgPut(ctx,k2,fx,fy,s,dir,0,col,_HG_BLK,O,63100+i+ss,0)); });
+  // the rays: one ring of dashes round each figure, a dash per accent as the piece reaches it
+  const E=_kd2Events(A,40).filter(isAcc); const nR=Math.max(8,Math.min(22,E.length+8));
+  figs.forEach(([fx],i)=>{ for(let k=0;k<nR;k++){ const t=(k+0.5)/nR; const a=-Math.PI/2+(k/nR)*6.2832*(two?0.5:1)-(two?Math.PI*0.5:0)+(two&&i?Math.PI:0); const cx=fx, cy=fy-s*0.4; const R0=s*1.85, R1=s*(2.1+0.25*X.energy);
+    Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.25; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*R0,cy+Math.sin(a)*R0*1.08); ctx.lineTo(cx+Math.cos(a)*R1,cy+Math.sin(a)*R1*1.08); ctx.stroke(); }); } });
+  // the little marks of motion off the hands and feet, quicker pieces more
+  figs.forEach(([fx,dir],i)=>{ Ops.at(0.5+i*0.1, ()=>{ const F=_hgFigure(fx,fy+0.25*s,s,two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind,dir,_hgR(63100+i+ss,3),1); _hgMotion(ctx,F,_HG_BLK,O*1.1,0.3+0.6*X.pace,_hgR(63200+i,ss)); }); });
+  Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'poster',kind,two}; }catch(_){} _setCurE(0.5);
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HARING — THE SUBWAY (the chalk drawings on the black paper of the empty ad panels, 1980–85): drawn fast and big, the
 // chalk line only, the inside the black of the paper. A few large figures fill the panel — a passage each, in the pose it
 // asks for — the loudest one with its rays and, when the piece is major, the heart over him; the dashes of motion; the
-// chalk never quite solid. Coloured chalk: every figure its passage's colour (without colour: white chalk only).
+// chalk never quite solid. (colour: the same in coloured chalk, every figure its passage's colour)
 // ═══════════════════════════════════════════════════════════════════════════
 function _haringChalk(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,colour){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
@@ -7976,19 +8111,22 @@ function _haringChalk(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,colour){
     const r=_hgR(64001,ss); for(let i=0;i<5;i++){ const cx=x0+r()*W, cy=y0+r()*H, R=D*(0.25+0.3*r()); const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R); g.addColorStop(0,'rgba(255,255,255,0.035)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.fillRect(x0,y0,W,H); } });
   G.forEach((q,i)=>{ const row=Math.floor(i/per), j=i%per, inRow=Math.min(per,m-row*per); const r=_hgR(64100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgPoseOf(h,r); if(kind==='kneel') kind='dance';
     const fx=x0+W*(0.5+(j-(inRow-1)/2)/Math.max(1,per)*0.94)+(r()-.5)*s*0.3, fy=y0+rowH*row+rowH*0.5-2.05*s+2.55*s+(r()-.5)*s*0.15, dir=(j%2?-1:1)*(r()<0.8?1:-1);
-    const ink=colour?(isBW?chalk:_hgPalOf(_picChord(chords,Math.floor((q.a+q.b)/2),gc,false).rgb,false).map(v=>Math.round(v+(255-v)*0.35))):chalk;
-    Ops.at(q.t0, ()=>{ const big=i===ci; _hgPut(ctx,kind,fx,fy,s*(big?1.08:1),dir,(r()-.5)*0.12,null,ink,O,64200+i+ss,0.45+0.5*X.energy,paper);
-      if(big){ _hgRays(ctx,fx,fy-s*0.9,s*1.25,s*(1.5+0.15*X.energy),11,-Math.PI/2,3.3,ink,O*1.2); }
+    const tint=isBW?chalk:_hgPalOf(_picChord(chords,Math.floor((q.a+q.b)/2),gc,false).rgb,false).map(v=>Math.round(v+(255-v)*0.35)); const ink=colour===true?tint:chalk, acc=colour?tint:chalk;
+    const rot=(r()-.5)*0.12, mo=0.45+0.5*X.energy;
+    Ops.at(q.t0, ()=>{ const big=i===ci, sz=s*(big?1.08:1); const F=_hgPut(ctx,kind,fx,fy,sz,dir,rot,null,ink,O,64200+i+ss,colour==='accent'?0:mo,paper);
+      if(colour==='accent'){ ctx.save(); ctx.translate(fx,fy); ctx.rotate(rot); _hgMotion(ctx,F,acc,Math.max(1.4,sz*0.085),mo,_hgR(64200+i+ss,4)); ctx.restore(); }
+      if(big){ _hgRays(ctx,fx,fy-s*0.9,s*1.25,s*(1.5+0.15*X.energy),11,-Math.PI/2,3.3,acc,O*1.2); }
       if(big && X.major){ const hx=fx-dir*s*1.45, hy=fy-s*1.95; const P=_hgHeartPts(hx,hy,s*0.34); ctx.beginPath(); P.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.strokeStyle=_hgCss(colour?[240,96,110]:ink); ctx.lineWidth=O*1.4; ctx.lineJoin='round'; ctx.stroke(); } }); });
   // the ground he drew them standing on, one quick line per row
-  for(let row=0;row<rowsN;row++){ const by=y0+rowH*row+rowH*0.5+0.5*s+1.65*s; const t=G[row*per]?G[row*per].t0:0; Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(chalk,0.85); ctx.lineWidth=O*1.1; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x0+W*0.05,by); ctx.lineTo(x0+W*0.95,by); ctx.stroke(); }); }
+  for(let row=0;row<rowsN;row++){ const by=y0+rowH*row+rowH*0.5+0.5*s+1.65*s; const q0=G[row*per]; const t=q0?q0.t0:0; const lc=(colour==='accent'&&q0&&!isBW)?_hgPalOf(_picChord(chords,Math.floor((q0.a+q0.b)/2),gc,false).rgb,false).map(v=>Math.round(v+(255-v)*0.35)):chalk; Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(lc,0.85); ctx.lineWidth=O*1.1; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x0+W*0.05,by); ctx.lineTo(x0+W*0.95,by); ctx.stroke(); }); }
   Ops.run(reveal);
   // the chalk: the line never quite solid, a little dust on the paper
   const r=_hgR(64900,ss); ctx.fillStyle=_hgCss(paper,0.55); const k=Math.round(W*H/520); for(let i=0;i<k;i++){ ctx.fillRect(x0+r()*W,y0+r()*H,0.8+r()*1.6,0.8+r()*1.6); }
   ctx.fillStyle='rgba(255,255,255,0.05)'; for(let i=0;i<k/6;i++){ ctx.fillRect(x0+r()*W,y0+r()*H,1+r()*2,1); }
-  try{ globalThis.__HG_LISTEN={v:colour?'subwayC':'subway',n:m,rowsN}; }catch(_){} _setCurE(0.5);
+  try{ globalThis.__HG_LISTEN={v:colour==='accent'?'subwayA':colour?'subwayC':'subway',n:m,rowsN}; }catch(_){} _setCurE(0.5);
 }
 function haringSubwayChalk(ctx,CW,CH,chords,lim,gc,ss,mode){ _haringChalk(ctx,CW,CH,chords,lim,gc,ss,mode,true); }
+function haringSubwayAccent(ctx,CW,CH,chords,lim,gc,ss,mode){ _haringChalk(ctx,CW,CH,chords,lim,gc,ss,mode,'accent'); }
 
 // ── Pop (Keith Haring) ───────────────────────────────────────────────────────
 // Bold flat colour blocks behind thick black-outlined glyphs, with radiating
@@ -8147,11 +8285,13 @@ function haringPhaseDoodle(ctx,CW,CH,chords,lim,gc,ss,mode){
 function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
-  // ── VARIANT: 0 Haring listens (haringListen: the chain, the crowd or the pair, as the piece asks) · 1 The Story (panels) · 2 Mural ·
-  // 3 The Subway (coloured chalk on the black paper) · 4 Doodle · 5 The Heart · 6 The Crowd · 7 The Acrobats. Retired (code
-  // kept): What he heard (_hrListen), Mosaic, the first Subway, Dancing crowd, Figures. His protected characters (the barking dog, the radiant baby) are gone from everything.
-  const _pn=_capN(8); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
-  const _ph=[haringListen,haringStory,haringPhaseMural,haringSubwayChalk,haringPhaseDoodle,haringHeart,haringCrowd,haringAcrobats];
+  // ── VARIANT (chosen by vote from every version we had): 0 Haring listens (the party, the parade along the snake, or the
+  // pair under the heart, as the piece asks) · 1 The Subway (white chalk figures, the piece's colours in the accents) ·
+  // 2 The Acrobats (the tower in motion) · 3 The Crowd (his murals: the snake and everyone) · 4 The Poster (one figure, the
+  // Pop Shop sheet) · 5 The Giant · 6 Mosaic (the first one) · 7 The Heart · 8 The Snake. Retired (code kept): the first
+  // Listens, the Story, Mural, the coloured-chalk Subway, Doodle, Dancing crowd, Figures.
+  const _pn=_capN(9); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
+  const _ph=[haringListen,haringSubwayAccent,haringAcrobats,haringCrowd,haringPoster,haringGiant,haringPhaseMosaic,haringHeart,haringSnakeWall];
   _ph[_hpick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
@@ -15757,15 +15897,15 @@ const ARTIST_VARIANTS = {
     {mark:{protractor:.6,nest:.4},size:[.15,.45],layout:{radial:1},density:.2},
   ],
   pop: [
-    {mark:{figure:.6,heart:.2,rays:.2},size:[.08,.25],layout:{flow:.6,stack:.4},density:.4,outline:1},   // What he heard
-    {ground:'#121012',mark:{figure:.6,heart:.2,radiant:.2},size:[.05,.12],layout:{grid:1},density:.7},          // Mosaic
-    {ground:'#f4f44a',mark:{figure:.7,disc:.3},size:[.15,.35],layout:{scatter:1},density:.12},
-    {ground:'#1a1a2a',mark:{figure:.45,radiant:.35,tvbox:.2},size:[.04,.1],layout:{scatter:1},density:.3},
-    {ground:'#e8d82a',mark:{zigzag:.4,figure:.35,heart:.25},size:[.04,.12],layout:{scatter:1},density:.4},          // Doodle
+    {mark:{figure:.6,heart:.2,rays:.2},size:[.08,.25],layout:{flow:.6,stack:.4},density:.4,outline:1},   // Listens
+    {ground:'#18171b',mark:{figure:.6,radiant:.4},size:[.06,.14],layout:{scatter:1},density:.3},              // The Subway
+    {mark:{figure:.85,radiant:.15},size:[.06,.16],layout:{stack:1},density:.35},                             // The Acrobats
+    {ground:'#faf8f2',mark:{figure:.75,wavyline:.15,heart:.1},size:[.04,.12],layout:{scatter:1},density:.6},   // The Crowd
+    {ground:'#f4f44a',mark:{figure:.7,radiant:.3},size:[.2,.4],layout:{scatter:1},density:.12},              // The Poster
+    {ground:'#e8187a',mark:{figure:.7,radiant:.3},size:[.25,.45],layout:{scatter:1},density:.1},             // The Giant
+    {ground:'#121012',mark:{figure:.6,heart:.2,radiant:.2},size:[.05,.12],layout:{grid:1},density:.7},       // Mosaic
     {ground:'#2a7ae8',mark:{heart:.6,radiant:.25,figure:.15},size:[.08,.2],layout:{radial:.6,scatter:.4},density:.45},     // The Heart
-    {ground:'#e8e4b8',mark:{figure:1},size:[.03,.08],layout:{scatter:1},density:.4},
-    {ground:'#e8187a',mark:{figure:.7,radiant:.3},size:[.2,.4],layout:{scatter:1},density:.2},                         // Figures
-    {mark:{heart:.6,radiant:.4},size:[.05,.15],layout:{grid:1},density:.6},
+    {ground:'#e8d82a',mark:{wavyline:.45,figure:.4,zigzag:.15},size:[.06,.16],layout:{flow:1},density:.35},  // The Snake
   ],
   mitchell: [
     {mark:{brush:1},size:[.05,.16],layout:{scatter:.6,radial:.4},density:.4},   // What she heard
@@ -15843,7 +15983,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:9,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
