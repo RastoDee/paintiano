@@ -166,6 +166,17 @@ async function hitYear(id, cap) {
   return 0;
 }
 
+// ── per-licence usage note (refund fair use). Needs lic_usage_hit from
+// supabase/ai_usage.sql part 5; until it exists this does nothing.
+async function usageHit(key) {
+  if (!SB_URL || !SB_KEY) return;
+  await fetch(`${SB_URL}/rest/v1/rpc/lic_usage_hit`, {
+    method: 'POST',
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_key: key, p_exports: 0, p_ai: 1 }),
+  });
+}
+
 // ── request shape ───────────────────────────────────────────────────────────
 function measure(messages) {
   let text = 0, images = 0, b64 = 0;
@@ -278,6 +289,8 @@ export default async function handler(req, res) {
       });
       return;
     }
+    // Refund fair use: a counted piece is also noted on the licence itself (best effort, never blocks).
+    if (big && key && plan !== 'free') usageHit(key).catch(() => {});
   }
 
   try {

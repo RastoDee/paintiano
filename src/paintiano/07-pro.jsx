@@ -147,6 +147,30 @@ async function pfAiFetch(ep, init) {
   return r;
 }
 
+// ─── refund fair use (Nov 2026) ──────────────────────────────────────────────
+// A full refund is given while the key has made few watermark-free exports, so the
+// app tells our server "one more" per Web / Print export made with a licence — the
+// key and a number, never the picture. Offline it waits in a small local queue.
+const PF_EXP_Q = 'paintiano_exp_q';
+let _pfExpBusy = false;
+async function pfExportFlush() {
+  if (_pfExpBusy) return;
+  let q = 0, key = null;
+  try { q = parseInt(localStorage.getItem(PF_EXP_Q) || '0', 10) || 0; const c = _proReadCache(); key = c && c.key; } catch (_) {}
+  if (!q || !key) return;
+  _pfExpBusy = true;
+  try {
+    const n = Math.min(q, 50);
+    const r = await fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, n }) });
+    if (r.ok) { try { const now = parseInt(localStorage.getItem(PF_EXP_Q) || '0', 10) || 0; localStorage.setItem(PF_EXP_Q, String(Math.max(0, now - n))); } catch (_) {} }
+  } catch (_) {} finally { _pfExpBusy = false; }
+}
+function pfExportHit() {
+  try { const c = _proReadCache(); if (!c || !c.key) return; localStorage.setItem(PF_EXP_Q, String((parseInt(localStorage.getItem(PF_EXP_Q) || '0', 10) || 0) + 1)); } catch (_) { return; }
+  pfExportFlush();
+}
+try { if (typeof window !== 'undefined') { window.addEventListener('online', () => { pfExportFlush(); }); setTimeout(pfExportFlush, 9000); } } catch (_) {}
+
 // ─── local prices (Nov 2026) ─────────────────────────────────────────────────
 // Paddle can carry a price per country (Catalog › price › Country specific
 // prices). The app's texts say the base price (€9.99 / €19.99 / €10); when the

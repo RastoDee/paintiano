@@ -250,7 +250,7 @@ function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) 
   <div style="margin:36px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.10);font-size:12px;color:rgba(232,226,212,0.55);line-height:1.7;">
     <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Order:</strong> ${orderId || '—'}</div>
     <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time, lifetime)</div>
-    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days, no questions asked — reply to this email and we'll handle it.</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days under fair use (see the Refund Policy) — reply to this email and we'll handle it.</div>
   </div>
 
   <!-- Support + footer -->
@@ -296,7 +296,7 @@ function buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }) 
     '',
     `Order: ${orderId || '—'}`,
     `Amount: ${priceLine} (one-time, lifetime)`,
-    'Refunds: 14 days, no questions asked. Just reply to this email.',
+    'Refunds: 14 days under fair use (see the Refund Policy). Just reply to this email.',
     '',
     'Need help? hello@paintiano.app',
     '',
@@ -347,7 +347,7 @@ function buildUpgradeEmailHtml({ fromKey, amount, currency, orderId }) {
   <div style="margin:36px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.10);font-size:12px;color:rgba(232,226,212,0.55);line-height:1.7;">
     <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Order:</strong> ${orderId || '—'}</div>
     <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time upgrade, lifetime)</div>
-    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days, no questions asked — your key simply returns to Pro. Reply to this email.</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days under fair use (see the Refund Policy) — your key simply returns to Pro. Reply to this email.</div>
   </div>
 
   <div style="margin:32px 0 0;text-align:center;font-size:13px;color:rgba(232,226,212,0.6);">
@@ -381,7 +381,7 @@ function buildUpgradeEmailText({ fromKey, amount, currency, orderId }) {
     '',
     `Order: ${orderId || '—'}`,
     `Amount: ${priceLine} (one-time upgrade, lifetime)`,
-    'Refunds: 14 days, no questions asked — your key simply returns to Pro. Just reply to this email.',
+    'Refunds: 14 days under fair use (see the Refund Policy) — your key simply returns to Pro. Just reply to this email.',
     '',
     'Need help? hello@paintiano.app',
     '',

@@ -72,3 +72,26 @@ revoke all on function public.ai_hit_year(text, integer) from public, anon, auth
 grant select, insert, update, delete on public.ai_usage_year to service_role;
 grant execute on function public.ai_hit_year(text, integer) to service_role;
 notify pgrst, 'reload schema';
+
+-- 5) Refund fair use (Nov 2026): per licence key, how many watermark-free exports
+--    and AI pieces & melodies were made — numbers only, never the works. A full
+--    refund is given up to 5 exports and 30 AI pieces; look the key up in
+--    "licenses" (columns exports, ai_pieces) when a refund is asked for.
+--    Until this part is run the server simply does not count.
+alter table public.licenses add column if not exists exports   integer not null default 0;
+alter table public.licenses add column if not exists ai_pieces integer not null default 0;
+
+create or replace function public.lic_usage_hit(p_key text, p_exports integer, p_ai integer)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update licenses
+     set exports   = exports   + greatest(0, least(coalesce(p_exports, 0), 50)),
+         ai_pieces = ai_pieces + greatest(0, least(coalesce(p_ai, 0), 50))
+   where key = p_key;
+$$;
+revoke all on function public.lic_usage_hit(text, integer, integer) from public, anon, authenticated;
+grant execute on function public.lic_usage_hit(text, integer, integer) to service_role;
+notify pgrst, 'reload schema';

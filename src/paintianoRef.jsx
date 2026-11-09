@@ -24071,6 +24071,30 @@ async function pfAiFetch(ep, init) {
   return r;
 }
 
+// ─── refund fair use (Nov 2026) ──────────────────────────────────────────────
+// A full refund is given while the key has made few watermark-free exports, so the
+// app tells our server "one more" per Web / Print export made with a licence — the
+// key and a number, never the picture. Offline it waits in a small local queue.
+const PF_EXP_Q = 'paintiano_exp_q';
+let _pfExpBusy = false;
+async function pfExportFlush() {
+  if (_pfExpBusy) return;
+  let q = 0, key = null;
+  try { q = parseInt(localStorage.getItem(PF_EXP_Q) || '0', 10) || 0; const c = _proReadCache(); key = c && c.key; } catch (_) {}
+  if (!q || !key) return;
+  _pfExpBusy = true;
+  try {
+    const n = Math.min(q, 50);
+    const r = await fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, n }) });
+    if (r.ok) { try { const now = parseInt(localStorage.getItem(PF_EXP_Q) || '0', 10) || 0; localStorage.setItem(PF_EXP_Q, String(Math.max(0, now - n))); } catch (_) {} }
+  } catch (_) {} finally { _pfExpBusy = false; }
+}
+function pfExportHit() {
+  try { const c = _proReadCache(); if (!c || !c.key) return; localStorage.setItem(PF_EXP_Q, String((parseInt(localStorage.getItem(PF_EXP_Q) || '0', 10) || 0) + 1)); } catch (_) { return; }
+  pfExportFlush();
+}
+try { if (typeof window !== 'undefined') { window.addEventListener('online', () => { pfExportFlush(); }); setTimeout(pfExportFlush, 9000); } } catch (_) {}
+
 // ─── local prices (Nov 2026) ─────────────────────────────────────────────────
 // Paddle can carry a price per country (Catalog › price › Country specific
 // prices). The app's texts say the base price (€9.99 / €19.99 / €10); when the
@@ -39196,6 +39220,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   // Funnel: a file was made for the user (image / print / story / vector / video).
   const _phExport=(kind, how, noBg)=>{ try{ window.posthog && window.posthog.capture('export_done',{kind, how, transparent: !!noBg}); }catch(_){} };
+  // refund fair use: a watermark-free export (Web, Print, vector) made with a licence is counted on that key — not on the studio's own devices
+  const _expCount=(kind)=>{ try{ if(isPro && !hidOk && kind!=='story') pfExportHit(); }catch(_){} };
   const _exportWith=async(X, sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
     // 'print3' — Pro's print: the same sheet as A1, on A3 (240 DPI: 2806 × 3969 px). A1 and the vector stay with the studio (the hidden tools).
     const _a3 = sizeMode==='print3'; if(_a3) sizeMode='print';
@@ -39431,7 +39457,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const baseName = (info && info.title ? String(info.title).replace(/[^\w\u00C0-\u024F\u1E00-\u1EFF -]+/g,'').trim() : 'paintiano') || 'paintiano';
         const filename = `${baseName}-gallery${noBg?'-transparent':''}.svg`;
         const file = new File([blob], filename, {type:'image/svg+xml'});
-        _phExport('gallery','preview',noBg);
+        _phExport('gallery','preview',noBg); _expCount(sizeMode);
         setPreview({url, filename, w:CW, h:CH, size:blob.size, file, dpi:null, label: noBg ? label+'-transparent' : label});
         return;
       }
@@ -39674,7 +39700,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(sizeMode==='story') sharePayload.text = (X.caption!==undefined) ? X.caption : buildStoryCaption();
           try{ const _a=_paintAddrRef.current && _paintAddrRef.current(); if(_a && sizeMode==='story') sharePayload.url=_a; }catch(_){}
           await navigator.share(sharePayload);
-          _phExport(_a3 ? 'print3' : sizeMode,'share',noBg);
+          _phExport(_a3 ? 'print3' : sizeMode,'share',noBg); _expCount(sizeMode);
           // iOS suspends the AudioContext while the share sheet is on screen.
           // After it dismisses, resume so subsequent Play / REC still has audio.
           try{ await unlockAudio(); }catch(_){}
@@ -39688,7 +39714,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           // fall through to preview so the user still gets the image
         }
       }
-      _phExport(_a3 ? 'print3' : sizeMode,'preview',noBg);
+      _phExport(_a3 ? 'print3' : sizeMode,'preview',noBg); _expCount(sizeMode);
       setPreview({url,filename,w:outCanvas.width,h:outCanvas.height,size:blob.size,file,dpi,label,files:(shareFiles.length>1 ? shareFiles : null)});   // a Story with its sound keeps both files when the share sheet could not open (no fresh tap)
     }catch(e){ try{ _setNoBg(false); }catch(_){} if(X.leave) X.leave(); setErr('Print: '+e.message);setErrInfo(false);}
   };
