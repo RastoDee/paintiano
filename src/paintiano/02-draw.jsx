@@ -3288,6 +3288,172 @@ function pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // biomorphic blobs, eyes, crescents, triangles. Full Miró palette -- black,
 // red, green, blue, yellow, orange -- driven by gc() note-color mapping.
 // Same freeze/seed/chord architecture as Pollock/Kandinsky.
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO, HIS PERIODS — not his pictures: the ways he painted, each read from the piece. Analytic cubism (the ochre and
+// grey facets, light on one edge and dark on the other), the papier collé guitar (wallpaper, false wood, newsprint, a
+// scrap of the piece's own score, the charcoal guitar across them), the painted still life with the guitar (the twenties),
+// the blue period (a quiet table in blues). No faces.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pxR(a,b){ let s=((((a|0)*73)^((b|0)*113))^0x6a09e6)>>>0; s^=s>>>16; s=Math.imul(s,0x7feb352d)>>>0; s^=s>>>15; s=Math.imul(s,0x846ca68b)>>>0; s^=s>>>16;
+  const f=()=>{ s=(s+0x6D2B79F5)>>>0; let t=s; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; f(); return f; }
+const _pxCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+const _pxMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const _pxLum=(c)=>(0.299*c[0]+0.587*c[1]+0.114*c[2])/255;
+const _pxGrey=(c)=>{ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [l,l,l]; };
+function _pxCol(chords,i,gc,isBW){ const cn=chords.length; const c=_picChord(chords,Math.max(0,Math.min(cn-1,i|0)),gc,isBW).rgb; return isBW?_pxGrey(c):c; }
+// the canvas: a fine weave over everything, and the ground's own unevenness
+function _pxCanvas(ctx,CW,CH,ss,a){ const r=_pxR(70001,ss); ctx.save(); ctx.globalAlpha=a==null?0.05:a; ctx.strokeStyle='#000'; ctx.lineWidth=0.6; const st=3;
+  for(let y=0;y<CH;y+=st){ if(r()<0.5) continue; ctx.beginPath(); ctx.moveTo(0,y+r()); ctx.lineTo(CW,y+r()); ctx.stroke(); } for(let x=0;x<CW;x+=st){ if(r()<0.5) continue; ctx.beginPath(); ctx.moveTo(x+r(),0); ctx.lineTo(x+r(),CH); ctx.stroke(); } ctx.restore(); }
+function _pxWash(ctx,CW,CH,col,ss,n,amp){ const r=_pxR(70002,ss); const D=Math.min(CW,CH); for(let i=0;i<(n||10);i++){ const x=r()*CW, y=r()*CH, R=D*(0.2+0.5*r()); const g=ctx.createRadialGradient(x,y,0,x,y,R); const lt=r()<0.5; g.addColorStop(0,lt?`rgba(255,250,235,${amp||0.06})`:`rgba(30,20,10,${amp||0.06})`); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); } }
+// a brushed fill: the colour laid in short strokes, lighter and darker, clipped to a path already made
+function _pxBrushIn(ctx,x0,y0,w,h,col,r,D,n,ang,amp){ ctx.lineCap='round'; for(let i=0;i<n;i++){ const x=x0+r()*w, y=y0+r()*h, L=D*(0.03+0.06*r()), a=(ang==null?r()*3.14:ang)+(r()-.5)*0.4; const k=(r()-.5)*(amp||0.22); ctx.strokeStyle=_pxCss(_pxMix(col,k>0?[255,252,240]:[10,8,6],Math.abs(k)),0.5); ctx.lineWidth=D*(0.006+0.012*r()); ctx.beginPath(); ctx.moveTo(x-Math.cos(a)*L/2,y-Math.sin(a)*L/2); ctx.lineTo(x+Math.cos(a)*L/2,y+Math.sin(a)*L/2); ctx.stroke(); } }
+function _pxPoly(ctx,P){ ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]); for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0],P[i][1]); ctx.closePath(); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO — ANALYTIC CUBISM (1909–12): a form broken into small planes, each lit on one edge and shadowed on the other,
+// dense in the middle and thinning to the edges, in ochres, greys and browns warmed by the piece's own colour; the
+// scaffolding of long lines and a few arcs. Every plane a note: high notes high, loud ones light, long ones large.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pxCut(P,px,py,a){ const nx=-Math.sin(a), ny=Math.cos(a); const side=(p)=>(p[0]-px)*nx+(p[1]-py)*ny; const A=[], B=[];
+  for(let i=0;i<P.length;i++){ const p=P[i], q=P[(i+1)%P.length]; const sp=side(p), sq=side(q); if(sp>=0) A.push(p); if(sp<=0) B.push(p); if((sp>0&&sq<0)||(sp<0&&sq>0)){ const t=sp/(sp-sq); const x=[p[0]+(q[0]-p[0])*t, p[1]+(q[1]-p[1])*t]; A.push(x); B.push(x); } } return [A,B]; }
+function _pxArea(P){ let a=0; for(let i=0;i<P.length;i++){ const p=P[i], q=P[(i+1)%P.length]; a+=p[0]*q[1]-q[0]*p[1]; } return Math.abs(a/2); }
+function _pxCent(P){ let x=0,y=0; for(const p of P){ x+=p[0]; y+=p[1]; } return [x/P.length,y/P.length]; }
+function picassoAnalytic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const tintC=_pxCol(chords,(A.phrases[0]||{a:0}).a,gc,isBW);
+  const ochre=isBW?[150,150,150]:_pxMix([164,130,90],tintC,0.16), dark=isBW?[38,38,38]:_pxMix([44,36,28],tintC,0.06), light=isBW?[236,236,232]:_pxMix([238,224,194],tintC,0.06);
+  const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,_pxCss(_pxMix(ochre,light,0.15))); g.addColorStop(1,_pxCss(_pxMix(ochre,dark,0.45))); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+  const r0=_pxR(70100,ss); ctx.save(); _pxBrushIn(ctx,0,0,CW,CH,ochre,r0,D,240,null,0.28); ctx.restore(); _pxWash(ctx,CW,CH,ochre,ss,10,0.08);
+  // the form: a tall pyramid-oval, as his seated figures and still lifes were built; cut into planes by the notes
+  const cx=CW*0.5, cy=CH*0.52, ax=CW*0.46, ay=CH*0.47; const env=[[cx-ax*0.12,cy-ay],[cx+ax*0.14,cy-ay*0.98],[cx+ax*0.6,cy-ay*0.42],[cx+ax*0.8,cy+ay*0.2],[cx+ax,cy+ay],[cx-ax,cy+ay],[cx-ax*0.82,cy+ay*0.15],[cx-ax*0.58,cy-ay*0.45]];
+  const E=_kd2Events(A,Math.round(40+X.pace*40)); let polys=[env]; const angs=[Math.PI/2,0,Math.PI/3,-Math.PI/3,Math.PI/6,-Math.PI/6,Math.PI/2];
+  E.forEach((e,i)=>{ const r=_pxR(70200+i,ss); let bi=0; for(let k=1;k<polys.length;k++) if(_pxArea(polys[k])>_pxArea(polys[bi])) bi=k; const P=polys[bi]; const [px,py]=_pxCent(P); const prev=E[i-1]; const leap=prev?Math.abs(e.top-prev.top):0;
+    const a=angs[leap>7?2+((r()*4)|0):(leap<1?0:((r()*7)|0))]+(r()-.5)*0.06; const [p1,p2]=_pxCut(P,px+(r()-.5)*D*0.05,py+(r()-.5)*D*0.05,a); if(p1.length<3||p2.length<3||_pxArea(p1)<D*D*0.0012||_pxArea(p2)<D*D*0.0012) return; polys.splice(bi,1,p1,p2); polys[bi]._e=e; polys[bi+1]._e=e; });
+  polys.forEach((P,i)=>{ if(!P._e) P._e=E[0]||{i:0,v:0.6,top:60}; }); polys.sort((p,q)=>p._e.i-q._e.i);
+  const vis=Math.max(1,Math.ceil(polys.length*reveal));
+  for(let i=0;i<vis;i++){ const P=polys[i], e=P._e, r=_pxR(70300+i,ss); const [qx,qy]=_pxCent(P); const d=Math.hypot((qx-cx)/ax,(qy-cy)/ay);
+    const L=0.18+0.7*e.v*(1.1-0.35*d)*(0.75+0.5*r()); const base=_pxMix(dark,light,Math.max(0.05,Math.min(0.95,L))); const tint=isBW?base:_pxMix(base,_pxMix(ochre,_pxCol(chords,e.i,gc,isBW),0.25),0.22);
+    const th=r()*6.2832, R=D*0.12; const gr=ctx.createLinearGradient(qx-Math.cos(th)*R,qy-Math.sin(th)*R,qx+Math.cos(th)*R,qy+Math.sin(th)*R); gr.addColorStop(0,_pxCss(_pxMix(tint,light,0.5),0.9)); gr.addColorStop(0.5,_pxCss(tint,0.86)); gr.addColorStop(1,_pxCss(_pxMix(tint,dark,0.6),0.9));
+    ctx.save(); _pxPoly(ctx,P); ctx.fillStyle=gr; ctx.globalAlpha=Math.max(0.12,Math.min(0.95,1.35-0.9*d)); ctx.fill(); ctx.clip(); ctx.globalAlpha=1; let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of P){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); } _pxBrushIn(ctx,x0,y0,x1-x0,y1-y0,tint,r,D,8,th,0.25); ctx.restore();
+    // the edges: some dark, some light, some left open (passage)
+    for(let k=0;k<P.length;k++){ const u=r(); if(u<0.35) continue; const a=P[k], b=P[(k+1)%P.length]; const md=Math.hypot(((a[0]+b[0])/2-cx)/ax,((a[1]+b[1])/2-cy)/ay); if(md>0.78 && r()<0.85) continue; ctx.strokeStyle=_pxCss(u<0.8?dark:light,0.7); ctx.lineWidth=Math.max(0.8,D*(u<0.8?0.0028:0.002)); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); } }
+  // the arcs and the few long lines of the scaffolding
+  const isAcc=_mtAccOf(A); E.filter(isAcc).slice(0,5).forEach((e,i)=>{ if(e.i/cn>reveal) return; const r=_pxR(70400+i,ss); ctx.strokeStyle=_pxCss(dark,0.75); ctx.lineWidth=Math.max(1,D*0.0032); ctx.beginPath(); ctx.arc(cx+(r()-.5)*ax*1.1,cy+(0.5-A.reg(e.top))*ay*1.1,D*(0.05+0.09*r()),r()*6.28,r()*6.28+1.4+r()); ctx.stroke(); });
+  ctx.strokeStyle=_pxCss(dark,0.45*Math.min(1,reveal*2)); ctx.lineWidth=Math.max(1,D*0.002); for(let i=0;i<6;i++){ const r=_pxR(70500+i,ss); const a=angs[i]; const x=cx+(r()-.5)*ax, y=cy+(r()-.5)*ay, L=D*(0.6+0.4*r()); ctx.beginPath(); ctx.moveTo(x-Math.cos(a)*L/2,y-Math.sin(a)*L/2); ctx.lineTo(x+Math.cos(a)*L/2,y+Math.sin(a)*L/2); ctx.stroke(); }
+  _pxCanvas(ctx,CW,CH,ss,0.045); try{ globalThis.__PC_LISTEN={v:'analytic',planes:polys.length}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO — THE GUITAR (papier collé, 1912–14): papers pasted on the sheet, a passage each — wallpaper, false wood grain,
+// newsprint, plain coloured paper, black paper, a scrap of the piece's own score — and across them the guitar in charcoal:
+// its body split and shifted, the sound hole (it opens at the climax), the neck, a string for every voice.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pxPaper(ctx,P,kind,col,col2,r,D){ ctx.save(); _pxPoly(ctx,P); ctx.shadowColor='rgba(30,20,10,0.25)'; ctx.shadowBlur=D*0.006; ctx.shadowOffsetY=D*0.002; ctx.fillStyle=_pxCss(kind==='black'?[28,26,26]:kind==='news'?[226,220,202]:kind==='wood'?[176,122,70]:col); ctx.fill(); ctx.shadowColor='rgba(0,0,0,0)'; ctx.clip();
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of P){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); }
+  if(kind==='wood'){ ctx.strokeStyle='rgba(90,54,24,0.55)'; ctx.lineWidth=Math.max(0.8,D*0.002); for(let y=y0;y<y1;y+=D*(0.008+0.006*r())){ ctx.beginPath(); ctx.moveTo(x0,y); for(let x=x0;x<=x1;x+=D*0.02) ctx.lineTo(x,y+Math.sin(x*0.02+y*0.05)*D*0.006); ctx.stroke(); } if(r()<0.8){ const kx=x0+(x1-x0)*r(), ky=y0+(y1-y0)*r(); ctx.beginPath(); ctx.ellipse(kx,ky,D*0.025,D*0.01,0,0,6.28); ctx.stroke(); ctx.beginPath(); ctx.ellipse(kx,ky,D*0.04,D*0.017,0,0,6.28); ctx.stroke(); } }
+  else if(kind==='news'){ ctx.fillStyle='rgba(40,36,30,0.55)'; const lh=D*0.011; for(let y=y0+lh;y<y1;y+=lh){ let x=x0+D*0.01; while(x<x1){ const w=D*(0.006+0.03*r()); ctx.fillRect(x,y,w,lh*0.45); x+=w+D*0.006; } if(r()<0.08) y+=lh*1.5; } ctx.fillStyle='rgba(20,18,16,0.8)'; ctx.fillRect(x0+D*0.01,y0+D*0.012,(x1-x0)*0.6,D*0.018); }
+  else if(kind==='wall'){ ctx.fillStyle=_pxCss(col2,0.85); const st=D*0.05; for(let y=y0;y<y1+st;y+=st) for(let x=x0+((y/st|0)%2)*st/2;x<x1+st;x+=st){ ctx.beginPath(); ctx.moveTo(x,y-st*0.22); ctx.lineTo(x+st*0.14,y); ctx.lineTo(x,y+st*0.22); ctx.lineTo(x-st*0.14,y); ctx.closePath(); ctx.fill(); } ctx.strokeStyle=_pxCss(col2,0.5); ctx.lineWidth=D*0.003; for(let x=x0;x<x1;x+=st){ ctx.beginPath(); ctx.moveTo(x+st/2,y0); ctx.lineTo(x+st/2,y1); ctx.stroke(); } }
+  else if(kind==='plain'){ _pxBrushIn(ctx,x0,y0,x1-x0,y1-y0,col,r,D,18,null,0.12); }
+  ctx.restore(); }
+function picassoGuitar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const mute=(c)=>isBW?_pxGrey(c):_pxMix(c,[200,190,170],0.35);
+  const wall=isBW?[214,212,206]:_pxMix(_pxCol(chords,0,gc,isBW),[232,224,206],0.78); ctx.fillStyle=_pxCss(wall); ctx.fillRect(0,0,CW,CH); _pxWash(ctx,CW,CH,wall,ss,8,0.05);
+  const G=_kd2Phrases(A,Math.round(6+X.pace*3)); const kinds=['wall','news','wood','plain','black','score','plain','wood','news'];
+  const Ops=_mtOps(); let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
+  G.forEach((q,i)=>{ const r=_pxR(70400+i,ss); const kind=kinds[(i+(ss&3))%kinds.length]; const w=CW*(0.34+0.26*r())*(0.8+0.4*Math.min(1.5,q.n/(cn/G.length))), h=CH*(0.2+0.2*r()); const x=CW*(0.1+0.8*((i+0.5)/G.length))-w/2+(r()-.5)*CW*0.12, y=CH*(0.08+0.62*((i*0.618)%1));
+    const a=(r()-.5)*0.25, cxp=x+w/2, cyp=y+h/2, ca=Math.cos(a), sa=Math.sin(a); const P=[[x,y],[x+w,y+(r()-.5)*h*0.1],[x+w,y+h],[x+(r()-.5)*w*0.08,y+h]].map(([px,py])=>[cxp+(px-cxp)*ca-(py-cyp)*sa,cyp+(px-cxp)*sa+(py-cyp)*ca]);
+    const col=mute(_pxCol(chords,Math.floor((q.a+q.b)/2),gc,isBW)), col2=mute(_pxCol(chords,q.a,gc,isBW));
+    Ops.at(q.t0, ()=>{ if(kind==='score'){ _pxPaper(ctx,P,'plain',[236,230,212],null,r,D); ctx.save(); _pxPoly(ctx,P); ctx.clip(); const st=D*0.012; ctx.strokeStyle='rgba(40,34,28,0.75)'; ctx.lineWidth=Math.max(0.7,D*0.0015); for(let sys=0;sys<2;sys++){ const by=y+h*(0.3+0.4*sys); for(let k=0;k<5;k++){ ctx.beginPath(); ctx.moveTo(x,by+k*st); ctx.lineTo(x+w,by+k*st); ctx.stroke(); }
+        ctx.fillStyle='rgba(30,26,22,0.85)'; const N=14; for(let k=0;k<N;k++){ const e=A.ev[Math.min(cn-1,q.a+Math.floor((q.b-q.a)*(sys*N+k)/(2*N)))]; if(!e) continue; const nx=x+w*(0.06+0.9*k/N), ny=by+st*4-(((e.top-60)%14+14)%14)*st*0.5; ctx.beginPath(); ctx.ellipse(nx,ny,st*0.55,st*0.4,-0.4,0,6.28); ctx.fill(); ctx.beginPath(); ctx.moveTo(nx+st*0.5,ny); ctx.lineTo(nx+st*0.5,ny-st*3); ctx.stroke(); } } ctx.restore(); }
+      else _pxPaper(ctx,P,kind,col,col2,r,D); }); });
+  // the guitar in charcoal: two halves of the body, one shifted; the hole; the neck; the strings
+  const gx=CW*(0.5+(X.trend-0.5)*0.1), gy=CH*0.56, gw=D*0.24, gh=CH*0.2, sh=D*(0.03+0.04*X.leaps); const ink='rgba(24,20,18,0.9)'; const lw=Math.max(1.4,D*0.0045);
+  const guitar=()=>{ ctx.save(); ctx.strokeStyle=ink; ctx.lineWidth=lw; ctx.lineCap='round';
+    ctx.beginPath(); ctx.ellipse(gx-sh,gy-gh*0.45,gw*0.62,gh*0.42,0,Math.PI*0.5,Math.PI*1.5); ctx.stroke(); ctx.beginPath(); ctx.ellipse(gx-sh,gy+gh*0.35,gw*0.82,gh*0.55,0,Math.PI*0.5,Math.PI*1.5); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(gx+sh,gy-gh*0.45,gw*0.62,gh*0.42,0,-Math.PI*0.5,Math.PI*0.5); ctx.stroke(); ctx.beginPath(); ctx.ellipse(gx+sh,gy+gh*0.35,gw*0.82,gh*0.55,0,-Math.PI*0.5,Math.PI*0.5); ctx.stroke();
+    ctx.fillStyle='rgba(60,50,40,0.18)'; ctx.beginPath(); ctx.ellipse(gx+sh,gy+gh*0.35,gw*0.82,gh*0.55,0,-Math.PI*0.5,Math.PI*0.5); ctx.fill();
+    const nw=gw*0.22; ctx.strokeRect(gx-nw/2,gy-gh*2.4,nw,gh*1.75); for(let k=1;k<8;k++){ ctx.beginPath(); ctx.moveTo(gx-nw/2,gy-gh*2.4+k*gh*0.22); ctx.lineTo(gx+nw/2,gy-gh*2.4+k*gh*0.22); ctx.stroke(); }
+    const ns=Math.max(4,Math.min(6,Math.round(X.poly)+3)); ctx.lineWidth=Math.max(0.8,lw*0.45); for(let k=0;k<ns;k++){ const sx=gx-nw*0.38+nw*0.76*k/(ns-1); ctx.beginPath(); ctx.moveTo(sx,gy-gh*2.35); ctx.lineTo(sx+(k-(ns-1)/2)*gw*0.02,gy+gh*0.75); ctx.stroke(); }
+    ctx.lineWidth=lw; ctx.strokeRect(gx-gw*0.2,gy+gh*0.72,gw*0.4,gh*0.08); ctx.restore(); };
+  const hole=()=>{ ctx.fillStyle='rgba(22,18,16,0.95)'; ctx.beginPath(); ctx.arc(gx,gy-gh*0.05,gw*0.2,0,6.28); ctx.fill(); ctx.strokeStyle='rgba(240,232,214,0.6)'; ctx.lineWidth=Math.max(1,D*0.002); ctx.beginPath(); ctx.arc(gx,gy-gh*0.05,gw*0.24,0,6.28); ctx.stroke(); };
+  Ops.run(reveal); if(reveal>0.08) guitar(); if(reveal>=(G[ci]?G[ci].t0:0.5)) hole(); _pxCanvas(ctx,CW,CH,ss,0.03); try{ globalThis.__PC_LISTEN={v:'guitar',papers:G.length}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO — STILL LIFE WITH GUITAR (painted synthetic cubism, the twenties): the wall in upright bands (one dotted, one
+// striped, one black), the table tipped up toward us under its striped cloth, and on it the guitar — its body two flat
+// halves, light and shadow, a black outline round all of it — with a mandolin when the piece has more voices, and a dish
+// with a fruit at every accent. The piece's colours, quietened into his.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pxShape(ctx,P,fill,ink,lw){ _pxPoly(ctx,P); ctx.fillStyle=_pxCss(fill); ctx.fill(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.lineJoin='round'; ctx.stroke(); }
+function _pxBody(cx,cy,w,h,pear){ const P=[]; const N=48; for(let k=0;k<N;k++){ const t=k/N*6.2832; const y=Math.sin(t); const waist= pear ? (0.55+0.45*(y+1)/2) : (1-0.28*Math.exp(-Math.pow(y+0.15,2)/0.06)); const xs= pear ? Math.cos(t)*(0.45+0.55*(y+1)/2) : Math.cos(t)*waist*(y<0?0.82:1); P.push([cx+xs*w/2, cy+y*h/2]); } return P; }
+function picassoStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const isAcc=_mtAccOf(A); const ink=[22,20,20], lw=Math.max(2.5,D*0.009), white=[240,234,220];
+  const quiet=(c)=>isBW?_pxGrey(c):_pxMix(c,[176,156,126],0.45); const G=_kd2Phrases(A,7); const col=(i)=>{ const q=G[Math.min(G.length-1,i)]||{a:0,b:1}; return quiet(_pxCol(chords,Math.floor((q.a+q.b)/2),gc,isBW)); };
+  const Ops=_mtOps(); const tilt=(X.trend-0.5)*0.25; let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
+  // the wall: upright bands, a passage each
+  const nb=4; let x=0; for(let k=0;k<nb;k++){ const w=CW*(k===nb-1?1:(0.18+0.12*((k*0.618+ss*0.001)%1))); const x0=x, x1=k===nb-1?CW:Math.min(CW,x+w); x=x1; const q=G[k]||G[0]; const c=k===2?[34,30,30]:col(k);
+    Ops.at(0, ()=>{ ctx.fillStyle=_pxCss(c); ctx.fillRect(x0,0,x1-x0,CH); if(k===1){ ctx.fillStyle=_pxCss(_pxMix(c,white,0.55)); const st=D*0.045; for(let yy=st/2;yy<CH;yy+=st) for(let xx=x0+st/2+((yy/st|0)%2)*st/2;xx<x1;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*0.13,0,6.28); ctx.fill(); } } if(k===3){ ctx.fillStyle=_pxCss(_pxMix(c,ink,0.25)); const st=D*0.05; for(let xx=x0;xx<x1;xx+=st*2) ctx.fillRect(xx,0,st,CH); } ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(x1,0); ctx.lineTo(x1,CH); ctx.stroke(); }); }
+  // the table tipped up, its cloth hanging in stripes, one curved leg
+  const ty=CH*0.5, tw=CW*0.86, tx=CW*0.07; const top=[[tx+CW*0.05,ty-CH*0.06+tilt*CH*0.1],[tx+tw,ty-CH*0.1-tilt*CH*0.1],[tx+tw-CW*0.02,ty+CH*0.16],[tx,ty+CH*0.2]];
+  Ops.at(0, ()=>{ ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*1.6; ctx.beginPath(); ctx.moveTo(CW*0.5,ty+CH*0.3); ctx.bezierCurveTo(CW*0.42,CH*0.8,CW*0.62,CH*0.85,CW*0.5,CH); ctx.stroke();
+    _pxShape(ctx,top,col(4),ink,lw); const cloth=[[tx,ty+CH*0.2],[tx+tw-CW*0.02,ty+CH*0.16],[tx+tw-CW*0.06,ty+CH*0.36],[tx+tw*0.55,ty+CH*0.32],[tx+tw*0.3,ty+CH*0.4],[tx+CW*0.02,ty+CH*0.34]];
+    ctx.save(); _pxPoly(ctx,cloth); ctx.fillStyle=_pxCss(white); ctx.fill(); ctx.clip(); ctx.strokeStyle=_pxCss(col(5)); ctx.lineWidth=D*0.022; for(let xx=0;xx<CW*1.5;xx+=D*0.05){ ctx.beginPath(); ctx.moveTo(xx,ty); ctx.lineTo(xx-CH*0.2,ty+CH*0.45); ctx.stroke(); } ctx.restore(); _pxPoly(ctx,cloth); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.stroke(); });
+  // the guitar: two halves of flat colour, the black line, the hole, the neck, the strings
+  const gx=CW*(0.42+tilt*0.3), gy=ty-CH*0.02, gw=D*0.36, gh=CH*0.32, gcol=col(ci), gdark=_pxMix(gcol,ink,0.45), ns=Math.max(4,Math.min(6,Math.round(X.poly)+3));
+  const guitar=()=>{ const pl=[[gx-gw*0.32,gy-gh*1.0],[gx+gw*0.18,gy-gh*1.05],[gx+gw*0.26,gy+gh*0.55],[gx-gw*0.24,gy+gh*0.6]]; _pxShape(ctx,pl,white,ink,lw*0.8);
+    const sh=gh*0.07; for(const [side,dy,c] of [[-1,-sh,gcol],[1,sh,gdark]]){ const body=_pxBody(gx+side*gw*0.02,gy+dy,gw,gh,false); ctx.save(); ctx.beginPath(); ctx.rect(side<0?gx-gw:gx,gy-gh*2,gw,gh*4); ctx.clip(); _pxPoly(ctx,body); ctx.fillStyle=_pxCss(c); ctx.fill(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.stroke(); ctx.restore(); }
+    ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(gx,gy-gh*0.6); ctx.lineTo(gx,gy+gh*0.6); ctx.stroke();
+    const nk=[[gx-gw*0.07,gy-gh*0.45],[gx+gw*0.07,gy-gh*0.45],[gx+gw*0.06,gy-gh*1.25],[gx-gw*0.06,gy-gh*1.25]]; _pxShape(ctx,nk,_pxMix(gcol,white,0.3),ink,lw*0.8); ctx.lineWidth=lw*0.5; for(let k=1;k<7;k++){ const yy=gy-gh*0.45-gh*0.8*k/7; ctx.beginPath(); ctx.moveTo(gx-gw*0.065,yy); ctx.lineTo(gx+gw*0.065,yy); ctx.stroke(); }
+    ctx.fillStyle=_pxCss(ink); ctx.beginPath(); ctx.arc(gx,gy-gh*0.02,gw*0.12,0,6.28); ctx.fill(); ctx.strokeStyle=_pxCss(white); ctx.lineWidth=Math.max(1,lw*0.35); for(let k=0;k<ns;k++){ const sx=gx-gw*0.045+gw*0.09*k/(ns-1); ctx.beginPath(); ctx.moveTo(sx,gy-gh*1.22); ctx.lineTo(sx,gy+gh*0.3); ctx.stroke(); } ctx.fillStyle=_pxCss(ink); ctx.fillRect(gx-gw*0.12,gy+gh*0.28,gw*0.24,gh*0.05); };
+  const mand=()=>{ const mx=gx+gw*0.55, my=gy+gh*0.08, mc=col((ci+3)%7); const body=_pxBody(mx,my,gw*0.6,gh*0.7,true); ctx.save(); _pxPoly(ctx,body); ctx.fillStyle=_pxCss(mc); ctx.fill(); ctx.clip(); ctx.fillStyle=_pxCss(_pxMix(mc,white,0.45)); ctx.fillRect(mx-gw,my-gh,gw,gh*2); ctx.restore(); _pxPoly(ctx,body); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.stroke(); ctx.fillStyle=_pxCss(ink); ctx.beginPath(); ctx.arc(mx,my+gh*0.08,gw*0.06,0,6.28); ctx.fill(); };
+  // the dish and its fruit
+  const dx=CW*(0.78-tilt*0.2), dy=ty+CH*0.08; const dish=()=>{ const P=[]; for(let k=0;k<=20;k++){ const a=Math.PI*k/20; P.push([dx+Math.cos(a)*D*0.13,dy+Math.sin(a)*D*0.05]); } _pxShape(ctx,P,white,ink,lw); };
+  Ops.at(G[ci]?G[ci].t0:0.2, guitar); if(X.poly>=2.2) Ops.at(G[(ci+1)%G.length]?G[(ci+1)%G.length].t0:0.4, mand); Ops.at(0.3, dish);
+  const fr=_kd2Events(A,40).filter(isAcc).slice(0,5); (fr.length?fr:_kd2Events(A,3)).forEach((e,i)=>{ const fx=dx+(i-2)*D*0.045, fy=dy-D*0.03-(i%2)*D*0.02; Ops.at(Math.max(0.31,e.i/cn), ()=>{ ctx.fillStyle=_pxCss(quiet(_pxCol(chords,e.i,gc,isBW))); ctx.beginPath(); ctx.arc(fx,fy,D*0.03,0,6.28); ctx.fill(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*0.8; ctx.stroke(); }); });
+  Ops.run(reveal); _pxCanvas(ctx,CW,CH,ss,0.035); try{ globalThis.__PC_LISTEN={v:'still2',mand:X.poly>=2.2}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO — THE BLUE PERIOD: the same quiet table, everything in blues laid with the brush — the wall, the bottle, the
+// glass, the bowl — the darkest blue for the outlines, a pale light where the piece is loudest. Slow and low: deeper blues.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pxStill(chords,gc,isBW,A,X,CW,CH,ss){ // the objects of the quiet table as closed outlines (the blue period, the one-line drawing)
+  const D=Math.min(CW,CH), ty=CH*0.6, side=X.trend>0.5?1:-1; const O=[];
+  const px=CW*(0.5-side*0.2), pw=D*0.14, ph=CH*0.26; const pit=[]; const N=40; for(let k=0;k<=N;k++){ const t=k/N; const y=ty-ph*t; const bulge=Math.sin(Math.PI*Math.min(1,t*1.15))*0.9+0.35*(t>0.82?(t-0.82)*5:0); pit.push([px+pw*(0.45+0.55*bulge),y]); } for(let k=N;k>=0;k--){ const t=k/N; const y=ty-ph*t; const bulge=Math.sin(Math.PI*Math.min(1,t*1.15))*0.9; pit.push([px-pw*(0.45+0.55*bulge)-(t>0.85?pw*0.5*(t-0.85)*6:0),y]); }
+  O.push({k:'pitcher',P:pit,handle:[[px+pw*1.3,ty-ph*0.75],[px+pw*2.0,ty-ph*0.55],[px+pw*1.35,ty-ph*0.25]]});
+  const bx=CW*(0.5+side*0.18), bw=D*0.2, bh=D*0.08, by=ty-D*0.05; const bowl=[]; for(let k=0;k<=24;k++){ const a=Math.PI*k/24; bowl.push([bx+Math.cos(a)*bw,by-bh*0.05+Math.sin(a)*bh]); } bowl.push([bx-bw*0.15,by+bh*1.0]); bowl.push([bx-bw*0.3,ty]); bowl.push([bx+bw*0.3,ty]); bowl.push([bx+bw*0.15,by+bh*1.0]);
+  O.push({k:'bowl',P:bowl,bx,by,bw,bh});
+  const gx=CW*(0.5+side*0.02), gwid=D*0.045, gh2=D*0.12; O.push({k:'glass',P:[[gx-gwid,ty-gh2],[gx+gwid,ty-gh2],[gx+gwid*0.6,ty],[gx-gwid*0.6,ty]]});
+  return {O,ty,side}; }
+function picassoBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const deep=isBW?[30,30,34]:[18,34,78], mid=isBW?[96,96,102]:[52,92,158], pale=isBW?[214,214,218]:[170,200,226];
+  const depth=Math.max(0,Math.min(1,0.65-0.4*X.pace+(X.major?-0.1:0.15))); const wall=_pxMix(mid,deep,depth*0.45), table=_pxMix(mid,deep,0.25+depth*0.35);
+  const S=_pxStill(chords,gc,isBW,A,X,CW,CH,ss); const ty=S.ty; const r=_pxR(70700,ss);
+  ctx.fillStyle=_pxCss(wall); ctx.fillRect(0,0,CW,ty); ctx.fillStyle=_pxCss(table); ctx.fillRect(0,ty,CW,CH-ty);
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,CW,CH); ctx.clip(); _pxBrushIn(ctx,0,0,CW,ty,wall,r,D,Math.round(260*Math.min(1,0.3+reveal)),Math.PI/2,0.2); _pxBrushIn(ctx,0,ty,CW,CH-ty,table,r,D,Math.round(160*Math.min(1,0.3+reveal)),0,0.2); ctx.restore();
+  let c=A.phrases[0]||{t:0.5,t0:0.3,vmax:0.6}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  if(reveal>=c.t0){ const lx=CW*(0.2+0.6*c.t), ly=CH*0.25, R=D*(0.25+0.25*c.vmax); const g=ctx.createRadialGradient(lx,ly,0,lx,ly,R); g.addColorStop(0,_pxCss(pale,0.35)); g.addColorStop(1,_pxCss(pale,0)); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); }
+  const [pit,bowl,glass]=S.O; const objs=[[glass,0.15],[pit,0.3],[bowl,0.55]]; objs.forEach(([o,t],i)=>{ if(reveal<t) return; const rr=_pxR(70710+i,ss); const oc=_pxMix(mid,pale,0.35+0.35*rr());
+    ctx.save(); _pxPoly(ctx,o.P); ctx.fillStyle=_pxCss(oc); ctx.fill(); ctx.clip(); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of o.P){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); } _pxBrushIn(ctx,x0,y0,x1-x0,y1-y0,oc,rr,D,60,Math.PI/2,0.3);
+    const gg=ctx.createLinearGradient(x0,0,x1,0); gg.addColorStop(0,_pxCss(pale,0.28)); gg.addColorStop(0.5,_pxCss(pale,0)); gg.addColorStop(1,_pxCss(deep,0.35)); ctx.fillStyle=gg; ctx.fillRect(x0,y0,x1-x0,y1-y0); ctx.restore();
+    _pxPoly(ctx,o.P); ctx.strokeStyle=_pxCss(deep,0.85); ctx.lineWidth=Math.max(2,D*0.008); ctx.lineJoin='round'; ctx.stroke(); if(o.handle){ const h=o.handle; ctx.lineWidth=Math.max(3,D*0.013); ctx.beginPath(); ctx.moveTo(h[0][0],h[0][1]); ctx.quadraticCurveTo(h[1][0],h[1][1],h[2][0],h[2][1]); ctx.stroke(); } });
+  ctx.strokeStyle=_pxCss(deep,0.8); ctx.lineWidth=Math.max(2,D*0.008); ctx.beginPath(); ctx.moveTo(0,ty); ctx.lineTo(CW,ty+D*0.01); ctx.stroke();
+  _pxCanvas(ctx,CW,CH,ss,0.05); try{ globalThis.__PC_LISTEN={v:'blue',depth}; }catch(_){} _setCurE(0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO LISTENS — the period the piece asks for: a slow minor piece the blue period · a dense, even one analytic cubism
+// · a quick major one the papier collé guitar · otherwise the still life of the thirties.
+// ═══════════════════════════════════════════════════════════════════════════
+function picassoListen2(ctx,CW,CH,chords,lim,gc,ss,mode){ const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const dens=A.ch?A.ch.density:0.3;
+  const p = (!X.major && X.pace<0.5) ? 'blue' : (dens>0.32 && X.regular>0.6) ? 'analytic' : (X.major && X.pace>0.55) ? 'guitar' : 'still';
+  if(p==='blue') picassoBlue(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='analytic') picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='guitar') picassoGuitar(ctx,CW,CH,chords,lim,gc,ss,mode); else picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
+  try{ globalThis.__PC_LISTEN=Object.assign({},globalThis.__PC_LISTEN||{},{listen:p}); }catch(_){} }
+
 function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
@@ -3295,11 +3461,16 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // 3 Three Musicians · 4 Guernica · 5 The Old Guitarist · 6 Les Demoiselles — the
   // paintings on the facet engine below (_pc2Paint). Free: 0 and 1. The Next
   // button cycles phaseIndex; _capN caps it on Free.
-  // VARIANT: 0 What he heard (_pcListen: the piece picks one of the paintings below and it reads the piece as ever) ·
-  // 1 Light line · 2 Weeping Woman · 3 Guitar · 4 Three Musicians · 5 Guernica · 6 The Old Guitarist · 7 Les Demoiselles. Free: 0 and 1.
+  // VARIANT (chosen by vote): 0 Picasso listens (picassoListen2: the blue period, analytic cubism, the papier collé guitar or
+  // the still life with the guitar, as the piece asks) · 1 Light line · 2 The Old Guitarist · 3 Les Demoiselles · 4 Analytic
+  // cubism · 5 The Guitar (papier collé) · 6 Three Musicians · 7 Still life with guitar. Retired (code kept): the first
+  // Listens, Weeping Woman, the first Guitar, Guernica.
   const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===0) return _pcListen(ctx,CW,CH,chords,lim,gc,ss,mode);
-  _pcPaintAny(pick-1,ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===0) return picassoListen2(ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===4) return picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===5) return picassoGuitar(ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===7) return picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
+  _pcPaintAny([0,0,5,6,0,0,3,0][pick],ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
 // the paintings by their old number: 0 Light line · 1 Weeping Woman · 2 Guitar · 3 Three Musicians · 4 Guernica · 5 The Old Guitarist · 6 Les Demoiselles
@@ -7982,7 +8153,7 @@ function haringCrowd(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const sp=[]; const N=14; for(let i=0;i<=N;i++){ const t=i/N; const a=Math.floor(t*(cn-1)); const e=A.ev[a]||{top:60}; sp.push([CW*(0.06+0.88*t), CH*(0.25+0.5*(1-A.reg(e.top)))+Math.sin(t*7)*CH*0.08]); }
   const sc=_hgOn(st[0],wall,isBW); Ops.at(0.02,()=>_hgSnake(ctx,sp,D*0.045,sc,_HG_BLK,O,'cross'));
   const G=_kd2Phrases(A,Math.round(9+dens*6)); const used=new Set(); const placed=[];
-  G.forEach((q,i)=>{ const r=_hgR(63100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind=r()<0.5?'single':'back'; if(i%4===3) kind=['dogsit','rdog','walk'][(r()*3)|0];
+  G.forEach((q,i)=>{ const r=_hgR(63100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='hand') kind=r()<0.5?'single':'back'; if(i===1) kind='tv'; if(i===4) kind='saucer'; if(i%4===3) kind=['dogsit','rdog','walk'][(r()*3)|0];
     const s=D*(0.05+0.035*q.vmax)*(kind==='single'?1.25:1); let bx=0,by=0,bd=-1; for(let t=0;t<14;t++){ const cx=CW*(0.12+0.76*r()), cy=CH*(0.12+0.78*r()); let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(cx-p[0],cy-p[1])/(p[2]+s*1.9)); if(md>bd){ bd=md; bx=cx; by=cy; } } placed.push([bx,by,s*1.9]);
     const c=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),wall,isBW); const c2=_hgOn(st[(i+2)%st.length],wall,isBW);
     Ops.at(q.t0, ()=>{ if(kind==='dogsit') _hgDog(ctx,'sit',bx,by+s*0.4,s*1.2,r()<0.5?1:-1,c,_HG_BLK,O); else if(kind==='rdog') _hgRoundDog(ctx,bx,by,s*1.15,r()<0.5?1:-1,c,_HG_BLK,O); else _hgScene(ctx,kind,bx,by,s,63200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+1)%8],wall,isBW):c2,{ink:_HG_BLK,O,motion:0.35+0.5*X.energy,pat:i%3===0?'dash':(i%3===1?null:'cross')},wall); }); });
@@ -8048,12 +8219,12 @@ function haringListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const colOf=(q,i)=>_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW); const red=_hgOn(_hgPastel(_HG_PAL[0]),bg,isBW);
   if(pic==='party'){ Ops.at(0,()=>_hgBG(ctx,CW,CH,'split',bg,bg2,_HG_BLK,D,66000+ss)); const G=_kd2Phrases(A,5); const s=D*0.1;
     const spots=[[0.27,0.3],[0.73,0.27],[0.3,0.66],[0.72,0.64]];
-    G.slice(0,4).forEach((q,i)=>{ const r=_hgR(66100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind='leap'; const [px,py]=spots[i]; const c=colOf(q,i), c2=_hgOn(st[(i+2)%st.length],bg,isBW);
+    G.slice(0,4).forEach((q,i)=>{ const r=_hgR(66100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='saucer'||kind==='hand') kind='leap'; if(i===2) kind='tv'; const [px,py]=spots[i]; const c=colOf(q,i), c2=_hgOn(st[(i+2)%st.length],bg,isBW);
       Ops.at(q.t0, ()=>_hgScene(ctx,kind,CW*px,CH*py,s*(kind==='lift'||kind==='leap'?0.8:1),66200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+5)%8],bg,isBW):c2,{ink:_HG_BLK,O,motion:0.5+0.5*X.energy,pat:i%2?'dash':null,red},bg)); });
     const q=G[4]||G[G.length-1]; Ops.at(q.t0, ()=>_hgRoundDog(ctx,CW*0.5,CH*0.97-1.6*s*0.8,s*0.8,(ss&1)?1:-1,colOf(q,4),_HG_BLK,O));
-    if(X.loud>0.6) Ops.at(0.5, ()=>_hgSaucer(ctx,CW*0.5,CH*0.08,s*0.5,red,_HG_BLK,O,null)); }
+    Ops.at(0.5, ()=>_hgSaucer(ctx,CW*0.5,CH*0.08,s*0.5,red,_HG_BLK,O,null)); }
   else if(pic==='parade'){ Ops.at(0,()=>_hgBG(ctx,CW,CH,'hstripes',bg,bg2,_HG_BLK,D,66300+ss)); const sp=[]; for(let i=0;i<=12;i++){ const t=i/12; const e=A.ev[Math.floor(t*(cn-1))]||{top:60}; sp.push([CW*(0.04+0.92*t), CH*(0.58+0.12*(0.5-A.reg(e.top)))+Math.sin(t*8)*CH*0.04]); }
-    Ops.at(0.01,()=>_hgSnake(ctx,sp,D*0.075,_hgOn(st[2]||_HG_PAL[1],bg,isBW),_HG_BLK,O,'dash')); const G=_kd2Phrases(A,6); const s=Math.min(CW/9,CH*0.075);
+    Ops.at(0.01,()=>_hgSnake(ctx,sp,D*0.075,_hgOn(st[2]||_HG_PAL[1],bg,isBW),_HG_BLK,O,'dash')); const G=_kd2Phrases(A,6); const s=Math.min(CW/9,CH*0.075); Ops.at(0.6,()=>_hgSaucer(ctx,CW*0.78,CH*0.1,s*0.6,_hgOn(_hgPastel(_HG_PAL[0]),bg,isBW),_HG_BLK,O,null));
     G.forEach((q,i)=>{ const r=_hgR(66400+i,ss); const h=_mtHearSpan(A,q.a,q.b); const t=(i+0.5)/G.length; const k=Math.round(t*12); const [x,y]=sp[Math.min(12,k)]; const c=colOf(q,i); const up=i%2===0;
       Ops.at(q.t0, ()=>{ if(i===2) _hgDog(ctx,'run',x,y-s*0.9,s*0.75,1,c,_HG_BLK,O); else if(i===4) _hgRoundDog(ctx,x,y-s*1.55,s*0.75,1,c,_HG_BLK,O); else _hgFig(ctx,up?'jump':_hgPoseOf(h,r),x,up?y-s*2.3:y+s*2.4,s,1,0,66500+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%3===1?'dash':null}); }); }); }
   else { Ops.at(0,()=>_hgBG(ctx,CW,CH,'dots',bg,bg2,_HG_BLK,D,66600+ss)); const G=_kd2Phrases(A,3); const s=Math.min(CH*0.13,CW*0.2);
@@ -8284,13 +8455,15 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   const mul=0.8+0.4*(0.55*S.energy+0.45*S.density);
   const COLS=Math.max(3,Math.min(6,Math.round((cn<=6?3:cn<=18?4:cn<=60?5:6)*mul))), ROWS=Math.max(3,Math.round(COLS*CH/CW)); const cw=CW/COLS, ch=CH/ROWS, n=COLS*ROWS, vis=Math.ceil(n*reveal);
   ctx.fillStyle=_hrCss(_HR_BLK); ctx.fillRect(0,0,CW,CH);
-  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper','rdog','rdog','dsit','drun','djump'];   // our own dogs among the figures
+  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper','rdog','rdog','dsit','drun','djump','tvhead','saucer'];   // our own dogs among the figures
   for(let i=0;i<vis;i++){ const r=_hrR(76000+i,ss); r(); const cx=i%COLS, cy=Math.floor(i/COLS); const x0=cx*cw, y0=cy*ch; const tile=S.col(i/n);
     ctx.fillStyle=_hrCss(tile); ctx.fillRect(x0+g,y0+g,cw-2*g,ch-2*g);
     const kind=pool[(r()*pool.length)|0], dir=r()<0.5?1:-1, c=_hrFar(S.col(Math.min(0.999,i/n+0.37)),tile); const mx=x0+cw/2, my=y0+ch/2;
     ctx.save(); ctx.beginPath(); ctx.rect(x0+g,y0+g,cw-2*g,ch-2*g); ctx.clip();
     if(kind==='heart'){ const h=Math.min(cw,ch)*0.3; const pts=_hrHeart(mx,my+h*0.15,h); ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); pts.forEach(q=>ctx.lineTo(q[0],q[1])); ctx.closePath(); ctx.lineJoin='round'; ctx.lineWidth=h*0.22; ctx.strokeStyle=_hrCss(_HR_BLK); ctx.stroke(); ctx.fillStyle=_hrCss(c); ctx.fill();
       ctx.strokeStyle=_hrCss(_HR_BLK); ctx.lineWidth=h*0.09; ctx.lineCap='round'; for(let k=0;k<6;k++){ const a=-2.6+k*0.43; ctx.beginPath(); ctx.moveTo(mx+Math.cos(a)*h*1.35,my+Math.sin(a)*h*1.25); ctx.lineTo(mx+Math.cos(a)*h*1.7,my+Math.sin(a)*h*1.6); ctx.stroke(); } }
+    else if(kind==='tvhead'){ const s2=Math.min((cw-2*g)/3.2,(ch-2*g)/4.0); _hgFig(ctx,['wave','dance','cheer'][(r()*3)|0],mx,my-s2*0.05,s2,dir,0,76500+i+ss,{col:c,ink:_HR_BLK,O:Math.max(1.5,Math.min(cw,ch)*0.03),tv:_hrFar([120,200,230],c)}); }
+    else if(kind==='saucer'){ const s2=Math.min(cw,ch)*0.2; _hgSaucer(ctx,mx,my-s2*0.6,s2,c,_HR_BLK,Math.max(1.5,Math.min(cw,ch)*0.03),[mx,my+s2*1.6]); }
     else if(kind[0]==='d' && kind!=='dancer'){ const k=kind.slice(1), bw=k==='run'?2.9:k==='jump'?2.3:2.05, bh=k==='run'?1.15:k==='jump'?1.75:1.6, cy0=k==='run'?-0.06:k==='jump'?-0.1:-0.13; const u=Math.min((cw-2*g)*0.8/bw,(ch-2*g)*0.8/bh);
       _hgDog(ctx,k,mx-(k==='run'?0.11:0.04)*u*dir,my-cy0*u,u,dir,c,_HR_BLK,Math.max(1.5,Math.min(cw,ch)*0.03)); }
     else { const wide=(kind==='rdog'); const u=Math.min(cw/(wide?7.8:6.6), ch/(wide?6.8:9.6)); const oy=kind==='rdog'?0.35*u:0.9*u, ox=kind==='rdog'?-0.45*u*dir:0; const cr=_HR_CAST[kind](mx+ox,my+oy,u,r,S.energy,dir); if(r()>0.6 || kind==='rdog') cr.glow=null; _hrCreature(ctx,cr,c,u,r); }
@@ -15785,14 +15958,14 @@ const ARTIST_VARIANTS = {
     {mark:{rays:.5,chain:.5},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
   ],
   picasso: [
-    {ground:'#e8e2d2',mark:{facet:.4,poly:.3,neon:.3},size:[.06,.22],edge:.2,alpha:.95,layout:{scatter:.7,flow:.3},outline:.8,density:.4,nosnap:true},   // What he heard
+    {ground:'#d6c4a0',mark:{facet:.5,panel:.3,disc:.2},size:[.06,.22],edge:0,alpha:.95,layout:{scatter:.7,flow:.3},outline:.8,density:.4,nosnap:true},   // Listens
     {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},                                            // Light line
-    {ground:'#c8b468',mark:{facet:.5,poly:.3,disc:.2},size:[.06,.2],edge:0,alpha:1,layout:{scatter:.6,radial:.4},outline:.9,density:.6,nosnap:true},   // Weeping Woman: the faceted head
-    {ground:'#d6c4a0',mark:{facet:.4,panel:.4,disc:.2},size:[.08,.26],edge:0,alpha:.95,layout:{scatter:1},outline:.7,density:.4,lines:.5,nosnap:true},   // Guitar: papier collé planes
-    {ground:'#5c3e2a',mark:{panel:.5,poly:.3,diamond:.2},size:[.06,.24],edge:0,alpha:1,layout:{grid:.6,scatter:.4},outline:.8,density:.5},   // Three Musicians: cut paper
-    {ground:'#d6d4ce',mark:{facet:.7,tri:.3},size:[.05,.18],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.7,nosnap:true},   // Guernica: shards with a contour, in the song's colours beside a
     {ground:'#1a2c52',mark:{facet:.6,poly:.4},size:[.1,.3],edge:0,alpha:.9,layout:{scatter:1},outline:.6,density:.3,tone:'dark',nosnap:true},   // The Old Guitarist: blue planes
     {ground:'#dcc0a2',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // Demoiselles: big facets with a contour in the song's colours
+    {ground:'#8a7350',mark:{facet:.8,tri:.2},size:[.04,.14],edge:0,alpha:.85,layout:{scatter:.5,radial:.5},outline:.4,density:.7,tone:'dark',nosnap:true},   // Analytic cubism: ochre facets
+    {ground:'#d6c4a0',mark:{facet:.4,panel:.4,disc:.2},size:[.08,.26],edge:0,alpha:.95,layout:{scatter:1},outline:.7,density:.4,lines:.5,nosnap:true},   // The Guitar: papier collé planes
+    {ground:'#5c3e2a',mark:{panel:.5,poly:.3,diamond:.2},size:[.06,.24],edge:0,alpha:1,layout:{grid:.6,scatter:.4},outline:.8,density:.5},   // Three Musicians: cut paper
+    {ground:'#c8b090',mark:{panel:.5,disc:.3,stripes:.2},size:[.08,.28],edge:0,alpha:1,layout:{stack:.6,scatter:.4},outline:.9,density:.35,nosnap:true},   // Still life with guitar
   ],
   matisse: [
     {ground:'#ebdcb8',mark:{cutout:.5,leaf:.3,star:.2},size:[.06,.25],layout:{scatter:.7,field:.3},density:.4},   // What he heard
