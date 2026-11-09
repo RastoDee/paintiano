@@ -11849,7 +11849,10 @@ Hard requirements:
     const fromIdx=resumeFromRef.current??0;resumeFromRef.current=null;
     const isResume=fromIdx>0;
     if(!isResume){
-      if(randomModeRef.current && artAllRef.current && !(opts && opts.keep)){
+      // a picture is played by its composers (or Scan), not by the painters: no painter roll on its Play — with the painters' Fusion on
+      // it rolled the palette too, and a picture opened on its ✦ Signature lost it the moment it started (Mood from image paints: it rolls)
+      const _picPlay = viewModeRef.current==='image' && !moodFromImgRef.current;   // refs: startPlay is memoised
+      if(randomModeRef.current && artAllRef.current && !(opts && opts.keep) && !_picPlay){
         setStructureSeedLock(null);
         nextRollInProgressRef.current = true;
         // Manual artist → rotate style. Shuffle (no manual artist) → rotate
