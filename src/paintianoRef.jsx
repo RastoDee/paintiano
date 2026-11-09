@@ -10374,7 +10374,7 @@ function _hgFig(ctx,kind,x,y,s,dir,rot,seed,o){ const r=_hgR(seed,3); const F=_h
   if(o.motion>0) _hgMotion(ctx,F,o.ink,Math.max(1.4,s*0.085),o.motion,_hgR(seed,4)); ctx.restore(); return F; }
 // two together: lifting, leaping over, back to back, holding each other — the pair as one picture
 function _hgPair(ctx,kind,x,y,s,seed,cA,cB,o){ const A=Object.assign({},o,{col:cA}), B=Object.assign({},o,{col:cB});
-  if(kind==='lift'){ _hgFig(ctx,'hold',x,y,s,1,0,seed,A); _hgFig(ctx,'dive',x,y-s*2.35,s*0.95,1,0,seed+1,B); }
+  if(kind==='lift'){ _hgFig(ctx,'hold',x,y,s,1,0,seed,A); _hgFig(ctx,'cheer',x,y-s*2.9,s*0.85,1,0,seed+1,B); }
   else if(kind==='leap'){ _hgFig(ctx,'bend',x-s*0.2,y+s*0.35,s*0.95,1,0,seed,A); _hgFig(ctx,'jump',x+s*0.25,y-s*1.75,s,1,0.12,seed+1,B); }
   else if(kind==='back'){ _hgFig(ctx,'dance',x-s*0.55,y,s,-1,-0.08,seed,A); _hgFig(ctx,'dance',x+s*0.55,y,s,1,0.08,seed+1,B); }
   else if(kind==='hug'){ _hgFig(ctx,'reach',x-s*0.6,y,s,1,0.1,seed,A); _hgFig(ctx,'reach',x+s*0.6,y,s,-1,-0.1,seed+1,B); }
@@ -10400,20 +10400,26 @@ function _hgBG(ctx,CW,CH,kind,c1,c2,ink,D,seed){ ctx.fillStyle=_hgCss(c1); ctx.f
   else if(kind==='split'){ ctx.fillStyle=_hgCss(c2); ctx.beginPath(); const a=r()*0.3+0.35; ctx.moveTo(0,CH*a); ctx.lineTo(CW,CH*(a+0.25)); ctx.lineTo(CW,CH); ctx.lineTo(0,CH); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=D*0.012; ctx.beginPath(); ctx.moveTo(0,CH*a); ctx.lineTo(CW,CH*(a+0.25)); ctx.stroke(); }
   else if(kind==='checker'){ ctx.fillStyle=_hgCss(c2); const st=D*0.1; for(let y=0,j=0;y<CH;y+=st,j++) for(let x=(j%2)*st;x<CW;x+=st*2) ctx.fillRect(x,y,st,st); }
   else if(kind==='zig'){ ctx.strokeStyle=_hgCss(c2); ctx.lineWidth=D*0.006; ctx.lineCap='round'; ctx.lineJoin='round'; const n=Math.round(CW*CH/(D*D)*55); for(let i=0;i<n;i++){ const x=r()*CW, y=r()*CH, z=D*(0.02+0.015*r()), k=(r()*4)|0; ctx.beginPath(); if(k===0){ ctx.moveTo(x-z*1.5,y); for(let q=1;q<=4;q++) ctx.lineTo(x-z*1.5+q*z*0.75,y+(q%2?-z*0.5:z*0.5)); } else if(k===1){ ctx.moveTo(x-z,y-z); ctx.lineTo(x+z,y+z); ctx.moveTo(x+z,y-z); ctx.lineTo(x-z,y+z); } else if(k===2){ ctx.moveTo(x-z,y-z*0.4); ctx.lineTo(x+z,y-z*0.4); ctx.moveTo(x-z,y+z*0.4); ctx.lineTo(x+z,y+z*0.4); } else { ctx.arc(x,y,z*0.6,0,6.2832); } ctx.stroke(); } } }
-// ── his animals and the small child, drawn our own way (not his barking dog, not his crawling baby): a round dog sitting,
-// a long dog running with its ears flying, a dog leaping for something held up, a dog curled asleep; a small child sitting
-// with its arms up. All of rounded parts under one black line, like his figures.
+// ── the small child: sitting with its arms up, rounded parts under one black line, like his figures
 function _hgParts(ctx,parts,col,ink,O){ ctx.lineCap='round'; ctx.lineJoin='round';
   const pass=(c,e)=>{ ctx.fillStyle=_hgCss(c); ctx.strokeStyle=_hgCss(c); for(const p of parts){ if(p.c){ const [a,b,cc,d,w]=p.c; ctx.lineWidth=w+2*e; ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(cc,d); ctx.stroke(); } else if(p.e){ const [x,y,rx,ry,rot]=p.e; ctx.beginPath(); ctx.ellipse(x,y,rx+e,ry+e,rot||0,0,6.2832); ctx.fill(); } } };
-  pass(ink,O); pass(col,0); for(const p of parts){ if(p.dot){ const [x,y,r]=p.dot; ctx.fillStyle=_hgCss(ink); ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); } } }
-function _hgDog(ctx,kind,x,y,u,dir,col,ink,O){ const X=(a)=>x+a*u*dir, Y=(b)=>y+b*u; const C=(a,b,c,d,w)=>({c:[X(a),Y(b),X(c),Y(d),w*u]}), E=(a,b,rx,ry,rot)=>({e:[X(a),Y(b),rx*u,ry*u,(rot||0)*dir]}); let P;
-  if(kind==='sit') P=[E(-0.3,0.25,0.52,0.45),C(-0.1,0.25,0.25,-0.35,0.58),C(0.28,-0.05,0.32,0.66,0.2),C(0.06,0.0,0.1,0.66,0.2),C(-0.72,0.45,-0.98,0.1,0.15),C(-0.98,0.1,-0.86,-0.14,0.15),E(0.45,-0.72,0.38,0.32),C(0.62,-0.66,0.98,-0.6,0.3),E(0.2,-0.6,0.13,0.3,0.35),{dot:[X(1.06),Y(-0.62),0.07*u]}];
-  else if(kind==='run') P=[C(-0.9,0,0.6,0,0.5),C(0.5,0.12,0.82,0.48,0.17),C(0.38,0.12,0.12,0.48,0.17),C(-0.62,0.12,-0.36,0.48,0.17),C(-0.76,0.12,-1.04,0.44,0.17),C(-0.95,-0.08,-1.28,-0.48,0.13),E(0.95,-0.32,0.33,0.27),C(1.05,-0.28,1.42,-0.2,0.23),C(0.82,-0.44,0.5,-0.62,0.17),{dot:[X(1.5),Y(-0.2),0.065*u]}];
-  else if(kind==='jump') P=[C(-0.45,0.3,0.3,-0.2,0.6),C(0.25,-0.1,0.72,0.0,0.2),C(0.15,0.0,0.58,0.22,0.2),C(-0.45,0.4,-0.95,0.72,0.2),C(-0.52,0.3,-1.02,0.42,0.2),C(-0.62,0.25,-0.92,-0.1,0.14),E(0.62,-0.52,0.36,0.3),C(0.8,-0.5,1.1,-0.62,0.26),E(0.45,-0.42,0.12,0.28,0.6),{dot:[X(1.17),Y(-0.64),0.065*u]}];
-  else P=[E(0,0.15,0.75,0.42),E(0.62,0.0,0.34,0.28),C(0.82,0.05,1.1,0.12,0.22),E(0.5,-0.12,0.12,0.26,0.9),C(-0.6,0.45,0.2,0.55,0.14),{dot:[X(1.17),Y(0.12),0.06*u]}];
-  _hgParts(ctx,P,col,ink,O); }
-function _hgRoundDog(ctx,x,y,s,dir,col,ink,O,inside){ const u=s*0.36; const cr=_hrRoundDog(x-0.4*u*dir,y+0.81*s,u,null,0.5,dir); ctx.lineCap='round'; ctx.lineJoin='round';
-  for(const [c,e] of [[ink,2*O],[inside||col,0]]){ ctx.strokeStyle=_hgCss(c); for(const l of cr.lines){ ctx.lineWidth=u*1.15*(l.w||1)+e; ctx.beginPath(); ctx.moveTo(l.p[0][0],l.p[0][1]); for(let i=1;i<l.p.length;i++) ctx.lineTo(l.p[i][0],l.p[i][1]); ctx.stroke(); } } }
+  pass(ink,O); pass(col,0); }
+// ── our round dog: thick rounded strokes under one black line, the legs together, the mouth shut, it never barks. Poses:
+// stand (the first one), sit, lie (head up), beg (up on its hind legs, as if dancing). In units u from the body line;
+// the feet always on the ground at +2.2u.
+const _RDOG={
+  stand:[[-1.8,0,1.4,0,1.6],[-1.5,0,-1.6,2.2,1],[-0.7,0,-0.6,2.2,1],[0.5,0,0.6,2.2,1],[1.2,0,1.4,2.2,1],[-1.8,0,-2.6,-1.4,1],[1.4,-0.2,2.2,-1.5,1.2],[2.0,-1.6,3.4,-1.3,1.5],[1.8,-2.0,1.6,-2.9,0.8]],
+  sit:[[-0.9,1.45,0.9,-0.25,1.6],[0.85,-0.1,0.95,2.2,1],[0.35,0.3,0.4,2.2,1],[-0.9,1.6,0.25,2.15,1.1],[-1.25,1.75,-2.3,1.3,1],[1.0,-0.4,1.6,-1.7,1.2],[1.4,-1.8,2.8,-1.5,1.5],[1.2,-2.2,1.0,-3.1,0.8]],
+  lie:[[-1.9,1.45,1.0,1.45,1.6],[0.8,1.95,2.6,1.95,1.05],[-1.4,1.95,-0.2,2.05,1],[-1.9,1.45,-2.9,0.95,1],[1.0,1.25,1.6,0.0,1.2],[1.4,-0.1,2.8,0.2,1.5],[1.2,-0.5,1.0,-1.4,0.8]],
+  beg:[[0,-1.3,0,1.3,1.6],[-0.4,1.3,-0.5,2.2,1],[0.4,1.3,0.5,2.2,1],[0.3,-1.0,1.35,-1.3,0.8],[0.3,0.25,1.35,0.05,0.8],[-0.2,1.1,-1.3,0.55,1],[0,-1.4,0.5,-2.4,1.2],[0.3,-2.5,1.7,-2.2,1.5],[0.1,-2.9,-0.1,-3.8,0.8]],
+};
+// placed like one of his figures: x the middle, y where a standing figure's middle would be, s its size
+function _hgRoundDog(ctx,x,y,s,dir,col,ink,O,inside,pose){ const u=s*0.36, L=_RDOG[pose]||_RDOG.stand; const ox=x-0.4*u*dir, oy=y+0.81*s; ctx.lineCap='round'; ctx.lineJoin='round';
+  for(const [c,e] of [[ink,2*O],[inside||col,0]]){ ctx.strokeStyle=_hgCss(c); for(const [a,b,cc,d,w] of L){ ctx.lineWidth=u*1.15*w+e; ctx.beginPath(); ctx.moveTo(ox+a*u*dir,oy+b*u); ctx.lineTo(ox+cc*u*dir,oy+d*u); ctx.stroke(); } } }
+// fitted into a box (the Mosaic's tiles): the pose's own extent, centred
+const _RDOG_BOX={stand:[7.8,6.2,0.4,-0.3],sit:[6.9,6.4,0.25,-0.4],lie:[7.5,4.6,-0.05,0.4],beg:[4.9,7.1,0.2,-0.75]};
+function _hgRoundDogFit(ctx,mx,my,W,H,dir,col,ink,O,pose){ const b=_RDOG_BOX[pose]||_RDOG_BOX.stand; const u=Math.min(W/(b[0]+0.6),H/(b[1]+0.6))*0.9; const s=u/0.36;
+  _hgRoundDog(ctx,mx+(0.4-b[2])*u*dir,my-2.25*u-b[3]*u,s,dir,col,ink,O,null,pose); }
 function _hgChild(ctx,x,y,u,col,ink,O){ const P=[{e:[x,y,0.42*u,0.46*u,0]},{e:[x,y-0.78*u,0.36*u,0.36*u,0]},{c:[x-0.22*u,y-0.25*u,x-0.62*u,y-0.72*u,0.18*u]},{c:[x+0.22*u,y-0.25*u,x+0.62*u,y-0.72*u,0.18*u]},{c:[x-0.25*u,y+0.36*u,x-0.62*u,y+0.52*u,0.2*u]},{c:[x+0.25*u,y+0.36*u,x+0.62*u,y+0.52*u,0.2*u]}]; _hgParts(ctx,P,col,ink,O); }
 // ── the colours of a piece, the most used first, and the one that stands out on a ground
 function _hgStats(chords,gc,isBW){ const cnt=new Map(), key=new Map(); const cn=chords.length, step=Math.max(1,Math.floor(cn/90));
@@ -10431,14 +10437,14 @@ function _hgGround(ctx,CW,CH,col,ss){ ctx.fillStyle=_hgCss(col); ctx.fillRect(0,
 
 // ── a scene: one or two of his figures doing something, or a figure with a dog, a child, a heart, a snake, a saucer. y is
 // the middle of a standing figure; s its size. TOP: how far above y the scene reaches (in s), for the layouts.
-const _HG_TOP={single:2.1,lift:3.5,leap:3.3,back:2.2,hug:2.2,hand:4.5,heart:3.1,dogplay:2.4,walk:2.1,baby:3.2,tv:2.5,saucer:4.7,snake:2.7};
+const _HG_TOP={single:2.1,lift:4.6,leap:3.3,back:2.2,hug:2.2,hand:4.5,heart:3.1,dogplay:2.4,walk:2.1,baby:3.2,tv:2.5,saucer:4.7,snake:2.7};
 function _hgScene(ctx,kind,x,y,s,seed,cA,cB,o,ground){ const r=_hgR(seed,1); const O=o.O, ink=o.ink; const mo=o.motion||0;
   const F=(k,xx,yy,ss,dir,rot,col,extra)=>_hgFig(ctx,k,xx,yy,ss,dir,rot,seed+((xx*7+yy*13)|0),Object.assign({col,ink,O,motion:mo},extra||{}));
   switch(kind){
     case 'lift': case 'leap': case 'back': case 'hug': case 'hand': _hgPair(ctx,kind,x,y,s,seed,cA,cB,{ink,O,motion:mo*0.6}); break;
     case 'heart': { F('reach',x-s*0.95,y,s,1,0.05,cA); F('reach',x+s*0.95,y,s,-1,-0.05,cB); const hy=y-s*2.25; _hgHeart(ctx,x,hy,s*0.62,o.red||[230,35,42],ink,O); _hgRays(ctx,x,hy,s*0.85,s*1.15,7,-Math.PI/2,2.6,ink,O*1.1); break; }
-    case 'dogplay': { const d=r()<0.5?1:-1; F('hold',x-d*s*0.75,y,s,d,0,cA); _hgHeart(ctx,x-d*s*0.75,y-s*2.05,s*0.32,o.red||[230,35,42],ink,O); _hgDog(ctx,'jump',x+d*s*0.85,y+s*0.45,s*0.85,-d,cB,ink,O); break; }
-    case 'walk': { const d=r()<0.5?1:-1; F('run',x-d*s*0.7,y,s,d,0,cA,{pat:o.pat}); _hgDog(ctx,'run',x+d*s*1.05,y+s*1.1,s*0.62,d,cB,ink,O); break; }
+    case 'dogplay': { const d=r()<0.5?1:-1; F('hold',x-d*s*0.75,y,s,d,0,cA); _hgHeart(ctx,x-d*s*0.75,y-s*2.05,s*0.32,o.red||[230,35,42],ink,O); _hgRoundDog(ctx,x+d*s*0.95,y+1.55*s-1.6*s*0.85,s*0.85,-d,cB,ink,O,null,'beg'); break; }
+    case 'walk': { const d=r()<0.5?1:-1; F('run',x-d*s*0.7,y,s,d,0,cA,{pat:o.pat}); _hgRoundDog(ctx,x+d*s*1.2,y+1.55*s-1.6*s*0.7,s*0.7,d,cB,ink,O,null,'stand'); break; }
     case 'baby': { F('hold',x,y,s,1,0,cA); _hgChild(ctx,x,y-s*2.25,s*0.48,cB,ink,O); _hgRays(ctx,x,y-s*2.4,s*0.7,s*0.95,7,-Math.PI/2,2.4,ink,O); break; }
     case 'tv': { F(['wave','dance','cheer'][(r()*3)|0],x,y,s,r()<0.5?1:-1,0,cA,{tv:cB}); break; }
     case 'saucer': { F('cheer',x,y,s,1,0,cA,{hole:ground}); _hgSaucer(ctx,x,y-s*3.8,s*0.62,cB,ink,O,[x,y-s*2.1]); break; }
@@ -10467,7 +10473,7 @@ function haringCrowd(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   G.forEach((q,i)=>{ const r=_hgR(63100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgSceneOf(h,used,r); if(kind==='hand') kind=r()<0.5?'single':'back'; if(i===1) kind='tv'; if(i===4) kind='saucer'; if(i%4===3) kind=['dogsit','rdog','walk'][(r()*3)|0];
     const s=D*(0.05+0.035*q.vmax)*(kind==='single'?1.25:1); let bx=0,by=0,bd=-1; for(let t=0;t<14;t++){ const cx=CW*(0.12+0.76*r()), cy=CH*(0.12+0.78*r()); let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(cx-p[0],cy-p[1])/(p[2]+s*1.9)); if(md>bd){ bd=md; bx=cx; by=cy; } } placed.push([bx,by,s*1.9]);
     const c=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),wall,isBW); const c2=_hgOn(st[(i+2)%st.length],wall,isBW);
-    Ops.at(q.t0, ()=>{ if(kind==='dogsit') _hgDog(ctx,'sit',bx,by+s*0.4,s*1.2,r()<0.5?1:-1,c,_HG_BLK,O); else if(kind==='rdog') _hgRoundDog(ctx,bx,by,s*1.15,r()<0.5?1:-1,c,_HG_BLK,O); else _hgScene(ctx,kind,bx,by,s,63200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+1)%8],wall,isBW):c2,{ink:_HG_BLK,O,motion:0.35+0.5*X.energy,pat:i%3===0?'dash':(i%3===1?null:'cross')},wall); }); });
+    Ops.at(q.t0, ()=>{ if(kind==='dogsit') _hgRoundDog(ctx,bx,by,s*1.15,r()<0.5?1:-1,c,_HG_BLK,O,null,'sit'); else if(kind==='rdog') _hgRoundDog(ctx,bx,by,s*1.15,r()<0.5?1:-1,c,_HG_BLK,O,null,['stand','lie','beg'][(r()*3)|0]); else _hgScene(ctx,kind,bx,by,s,63200+i+ss,c,_hgSame(c,c2)?_hgOn(_HG_PAL[(i*3+1)%8],wall,isBW):c2,{ink:_HG_BLK,O,motion:0.35+0.5*X.energy,pat:i%3===0?'dash':(i%3===1?null:'cross')},wall); }); });
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'crowd',n:G.length}; }catch(_){} _setCurE(0.5);
 }
 
@@ -10490,7 +10496,7 @@ function haringHeart(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   if(G[0]) Ops.at(G[0].t0, ()=>_hgFig(ctx,'reach',CW*0.28,sy,s*1.15,1,0.05,64100+ss,Object.assign({col:cc(0),pat:'dash'},o)));
   if(G[1]) Ops.at(G[1].t0, ()=>_hgFig(ctx,'reach',CW*0.72,sy,s*1.15,-1,-0.05,64101+ss,Object.assign({col:cc(1)},o)));
   if(G[2]) Ops.at(G[2].t0, ()=>{ _hgLadder(ctx,CW*0.1,CH*0.92,CH*0.3,D*0.07,_HG_BLK,O); _hgFig(ctx,'reach',CW*0.1,CH*0.52,s*0.8,1,-0.2,64102+ss,Object.assign({col:cc(2)},o)); });
-  if(G[3]) Ops.at(G[3].t0, ()=>_hgDog(ctx,'jump',CW*0.86,CH*0.62,s*1.1,-1,cc(3),_HG_BLK,O));
+  if(G[3]) Ops.at(G[3].t0, ()=>_hgRoundDog(ctx,CW*0.86,sy+1.55*s*1.15-1.6*s*1.05,s*1.05,-1,cc(3),_HG_BLK,O,null,'beg'));
   if(G[4]) Ops.at(G[4].t0, ()=>_hgPair(ctx,'back',CW*0.5,CH*0.93,s*0.7,64103+ss,cc(4),cc(5),o));
   if(G[5]) Ops.at(G[5].t0, ()=>{ for(let k=0;k<3;k++){ const r=_hgR(64200+k,ss); _hgHeart(ctx,CW*(0.12+0.76*r()),CH*(0.06+0.1*r()),D*0.035,red,_HG_BLK,O*0.8); } });
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'heart',rays:nR}; }catch(_){} _setCurE(0.5);
@@ -10511,7 +10517,7 @@ function haringAcrobats(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const y2=base-3.05*s; Ops.at(t(2), ()=>_hgFig(ctx,'flip',cx,y2-0.2*s,s,1,0,65102+ss,Object.assign({col:col(2)},o)));
   const y3=y2-3.6*s; Ops.at(t(3), ()=>_hgFig(ctx,'hold',cx,y3-0.4*s,s*0.95,1,0,65103+ss,Object.assign({col:col(3),pat:'cross'},o)));
   const y4=y3-2.75*s; Ops.at(t(4), ()=>{ _hgFig(ctx,'cheer',cx,y4-0.4*s,s*0.9,1,0,65104+ss,Object.assign({col:col(4)},o)); _hgRays(ctx,cx,y4-1.6*s,s*1.0,s*1.4,11,-Math.PI/2,3.4,_HG_BLK,O*1.2); });
-  Ops.at(t(5), ()=>_hgDog(ctx,'jump',cx+s*3.0,base+0.2*s,s*1.05,-1,col(5),_HG_BLK,O));
+  Ops.at(t(5), ()=>_hgRoundDog(ctx,cx+s*3.1,base+1.55*s-1.6*s,s,-1,col(5),_HG_BLK,O,null,'beg'));
   Ops.at(t(6), ()=>_hgFig(ctx,'run',cx-s*3.1,base+0.1*s,s*0.85,1,0,65105+ss,Object.assign({col:col(6)},o)));
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'acrobats2'}; }catch(_){} _setCurE(0.5);
 }
@@ -10537,11 +10543,11 @@ function haringListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   else if(pic==='parade'){ Ops.at(0,()=>_hgBG(ctx,CW,CH,'hstripes',bg,bg2,_HG_BLK,D,66300+ss)); const sp=[]; for(let i=0;i<=12;i++){ const t=i/12; const e=A.ev[Math.floor(t*(cn-1))]||{top:60}; sp.push([CW*(0.04+0.92*t), CH*(0.58+0.12*(0.5-A.reg(e.top)))+Math.sin(t*8)*CH*0.04]); }
     Ops.at(0.01,()=>_hgSnake(ctx,sp,D*0.075,_hgOn(st[2]||_HG_PAL[1],bg,isBW),_HG_BLK,O,'dash')); const G=_kd2Phrases(A,6); const s=Math.min(CW/9,CH*0.075); Ops.at(0.6,()=>_hgSaucer(ctx,CW*0.78,CH*0.1,s*0.6,_hgOn(_hgPastel(_HG_PAL[0]),bg,isBW),_HG_BLK,O,null));
     G.forEach((q,i)=>{ const r=_hgR(66400+i,ss); const h=_mtHearSpan(A,q.a,q.b); const t=(i+0.5)/G.length; const k=Math.round(t*12); const [x,y]=sp[Math.min(12,k)]; const c=colOf(q,i); const up=i%2===0;
-      Ops.at(q.t0, ()=>{ if(i===2) _hgDog(ctx,'run',x,y-s*0.9,s*0.75,1,c,_HG_BLK,O); else if(i===4) _hgRoundDog(ctx,x,y-s*1.55,s*0.75,1,c,_HG_BLK,O); else _hgFig(ctx,up?'jump':_hgPoseOf(h,r),x,up?y-s*2.3:y+s*2.4,s,1,0,66500+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%3===1?'dash':null}); }); }); }
+      Ops.at(q.t0, ()=>{ if(i===2) _hgRoundDog(ctx,x,y-s*1.55,s*0.75,1,c,_HG_BLK,O,null,'beg'); else if(i===4) _hgRoundDog(ctx,x,y-s*1.55,s*0.75,1,c,_HG_BLK,O,null,'stand'); else _hgFig(ctx,up?'jump':_hgPoseOf(h,r),x,up?y-s*2.3:y+s*2.4,s,1,0,66500+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%3===1?'dash':null}); }); }); }
   else { Ops.at(0,()=>_hgBG(ctx,CW,CH,'dots',bg,bg2,_HG_BLK,D,66600+ss)); const G=_kd2Phrases(A,3); const s=Math.min(CH*0.13,CW*0.2);
     if(G[0]) Ops.at(G[0].t0, ()=>_hgPair(ctx,X.major?'hug':'back',CW*0.5,CH*0.6,s,66700+ss,colOf(G[0],0),colOf(G[1]||G[0],1),{ink:_HG_BLK,O,motion:0.35}));
     if(X.major && G[1]) Ops.at(G[1].t0, ()=>{ const hy=CH*0.18; _hgHeart(ctx,CW*0.5,hy,s*0.8,red,_HG_BLK,O*1.2); _hgRays(ctx,CW*0.5,hy,s*1.1,s*1.45,9,-Math.PI/2,3.0,_HG_BLK,O*1.2); });
-    if(G[2]) Ops.at(G[2].t0, ()=>_hgRoundDog(ctx,CW*0.8,CH*0.97-1.6*s*0.7,s*0.7,-1,colOf(G[2],2),_HG_BLK,O)); }
+    if(G[2]) Ops.at(G[2].t0, ()=>_hgRoundDog(ctx,CW*0.8,CH*0.97-1.6*s*0.7,s*0.7,-1,colOf(G[2],2),_HG_BLK,O,null,'sit')); }
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'listen',pic}; }catch(_){} _setCurE(0.5);
 }
 
@@ -10580,7 +10586,7 @@ function haringSnakeWall(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let k=1;k<=N;k++){ Ops.at((k/N)*0.6, ()=>{}); } Ops.at(0.01,()=>_hgSnake(ctx,sp,D*0.11,sc,_HG_BLK,O*1.2,'cross'));
   const G=_kd2Phrases(A,7); const s=D*0.06;
   G.forEach((q,i)=>{ const r=_hgR(68100+i,ss); const h=_mtHearSpan(A,q.a,q.b); const k=Math.min(N,Math.round(((i+0.5)/G.length)*N)); const [x,y]=sp[k]; const side=(x<CW/2)?1:-1; const c=_hgOn(_hgAt(chords,Math.floor((q.a+q.b)/2),gc,isBW),bg,isBW);
-    Ops.at(q.t0, ()=>{ if(i===3) _hgDog(ctx,'run',x+side*s*2.6,y+s*0.4,s*0.8,side,c,_HG_BLK,O); else if(i%3===0) _hgFig(ctx,'dance',x,y-s*1.5,s,1,0,68200+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5});
+    Ops.at(q.t0, ()=>{ if(i===3) _hgRoundDog(ctx,x+side*s*2.6,y,s*0.8,side,c,_HG_BLK,O,null,'stand'); else if(i%3===0) _hgFig(ctx,'dance',x,y-s*1.5,s,1,0,68200+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5});
       else _hgFig(ctx,i%3===1?'jump':_hgPoseOf(h,r),x+side*s*2.4,y,s,side,0,68200+i+ss,{col:c,ink:_HG_BLK,O,motion:0.5+0.4*X.energy,pat:i%2?'dash':null}); }); });
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'snake'}; }catch(_){} _setCurE(0.5);
 }
@@ -10766,7 +10772,7 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   const mul=0.8+0.4*(0.55*S.energy+0.45*S.density);
   const COLS=Math.max(3,Math.min(6,Math.round((cn<=6?3:cn<=18?4:cn<=60?5:6)*mul))), ROWS=Math.max(3,Math.round(COLS*CH/CW)); const cw=CW/COLS, ch=CH/ROWS, n=COLS*ROWS, vis=Math.ceil(n*reveal);
   ctx.fillStyle=_hrCss(_HR_BLK); ctx.fillRect(0,0,CW,CH);
-  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper','rdog','rdog','dsit','drun','djump','tvhead','saucer'];   // our own dogs among the figures
+  const g=Math.max(2,Math.min(cw,ch)*0.035); const pool=['dancer','runner','jumper','waver','heart','dancer','jumper','rstand','rstand','rsit','rlie','rbeg','tvhead','saucer'];   // our own dogs among the figures
   for(let i=0;i<vis;i++){ const r=_hrR(76000+i,ss); r(); const cx=i%COLS, cy=Math.floor(i/COLS); const x0=cx*cw, y0=cy*ch; const tile=S.col(i/n);
     ctx.fillStyle=_hrCss(tile); ctx.fillRect(x0+g,y0+g,cw-2*g,ch-2*g);
     const kind=pool[(r()*pool.length)|0], dir=r()<0.5?1:-1, c=_hrFar(S.col(Math.min(0.999,i/n+0.37)),tile); const mx=x0+cw/2, my=y0+ch/2;
@@ -10775,8 +10781,7 @@ function haringPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
       ctx.strokeStyle=_hrCss(_HR_BLK); ctx.lineWidth=h*0.09; ctx.lineCap='round'; for(let k=0;k<6;k++){ const a=-2.6+k*0.43; ctx.beginPath(); ctx.moveTo(mx+Math.cos(a)*h*1.35,my+Math.sin(a)*h*1.25); ctx.lineTo(mx+Math.cos(a)*h*1.7,my+Math.sin(a)*h*1.6); ctx.stroke(); } }
     else if(kind==='tvhead'){ const s2=Math.min((cw-2*g)/3.2,(ch-2*g)/4.0); _hgFig(ctx,['wave','dance','cheer'][(r()*3)|0],mx,my-s2*0.05,s2,dir,0,76500+i+ss,{col:c,ink:_HR_BLK,O:Math.max(1.5,Math.min(cw,ch)*0.03),tv:_hrFar([120,200,230],c)}); }
     else if(kind==='saucer'){ const s2=Math.min(cw,ch)*0.2; _hgSaucer(ctx,mx,my-s2*0.6,s2,c,_HR_BLK,Math.max(1.5,Math.min(cw,ch)*0.03),[mx,my+s2*1.6]); }
-    else if(kind[0]==='d' && kind!=='dancer'){ const k=kind.slice(1), bw=k==='run'?2.9:k==='jump'?2.3:2.05, bh=k==='run'?1.15:k==='jump'?1.75:1.6, cy0=k==='run'?-0.06:k==='jump'?-0.1:-0.13; const u=Math.min((cw-2*g)*0.8/bw,(ch-2*g)*0.8/bh);
-      _hgDog(ctx,k,mx-(k==='run'?0.11:0.04)*u*dir,my-cy0*u,u,dir,c,_HR_BLK,Math.max(1.5,Math.min(cw,ch)*0.03)); }
+    else if(kind[0]==='r' && kind!=='runner'){ _hgRoundDogFit(ctx,mx,my,cw-2*g,ch-2*g,dir,c,_HR_BLK,Math.max(1.5,Math.min(cw,ch)*0.03),kind.slice(1)); }
     else { const wide=(kind==='rdog'); const u=Math.min(cw/(wide?7.8:6.6), ch/(wide?6.8:9.6)); const oy=kind==='rdog'?0.35*u:0.9*u, ox=kind==='rdog'?-0.45*u*dir:0; const cr=_HR_CAST[kind](mx+ox,my+oy,u,r,S.energy,dir); if(r()>0.6 || kind==='rdog') cr.glow=null; _hrCreature(ctx,cr,c,u,r); }
     ctx.restore(); }
 }
