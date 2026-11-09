@@ -34226,8 +34226,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
     try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
     try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
-    try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_swiped_side','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav','paintiano_tip_studio','paintiano_fu_intro3_n'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
+    try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_swiped_side','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav','paintiano_tip_studio','paintiano_fu_intro3_n','paintiano_mosaic_intro_n','paintiano_img_intro_n','paintiano_sig_intro_n','paintiano_isig_intro_n','paintiano_painter_intro_n'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
     fuIntroDoneRef.current = false;   // the first Fusion after the ✦ Signature says what it is again, like the arc's own lines
+    mosaicIntroDoneRef.current = false; imgIntroDoneRef.current = false; sigIntroDoneRef.current = false; isigIntroDoneRef.current = false; painterIntroDoneRef.current = false;   // every explaining line comes again after Reset (the Studio bubble too), as for someone new
     // Force back to Setup screen even if the caller was mid-flow.
     setForceSetup(false);
     setPickMode(null);
