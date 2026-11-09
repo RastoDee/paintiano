@@ -28014,6 +28014,7 @@ export default function Paintiano() {
   const fuIntroDoneRef = useRef(false); const _fuiTimersRef = useRef([]);
   const [mosaicIntroShow, setMosaicIntroShow] = useState(false);   // the line + the colour key over the canvas (first 3 times)
   const [surpriseHint, setSurpriseHint] = useState(false);         // "same notes – a different hand" over Surprise (once)
+  const introSessRef = useRef({});   // an explaining line shows at most once per visit: its second chance is the next visit
   const mosaicIntroDoneRef = useRef(false);
   const imgIntroDoneRef = useRef(false);   // the mirror in painting → music: once per session, the first 3 sessions
   const _miTimersRef = useRef([]);
@@ -34226,9 +34227,9 @@ Return ONLY a JSON array of exactly ${need} strings copied verbatim from the lis
     try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
     try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
     try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
-    try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_swiped_side','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav','paintiano_tip_studio','paintiano_fu_intro3_n','paintiano_mosaic_intro_n','paintiano_img_intro_n','paintiano_sig_intro_n','paintiano_isig_intro_n','paintiano_painter_intro_n'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
+    try{ ['paintiano_home_art_by','paintiano_feed_arc','paintiano_swiped_up','paintiano_swiped_side','paintiano_tip_up','paintiano_tip_chg','paintiano_tip_fav','paintiano_tip_studio','paintiano_tip_up_n','paintiano_tip_chg_n','paintiano_tip_fav_n','paintiano_tip_studio_n','paintiano_fu_intro3_n','paintiano_mosaic_intro_n','paintiano_img_intro_n','paintiano_sig_intro_n','paintiano_isig_intro_n','paintiano_painter_intro_n'].forEach(k=>localStorage.removeItem(k)); }catch(_){}
     fuIntroDoneRef.current = false;   // the first Fusion after the ✦ Signature says what it is again, like the arc's own lines
-    mosaicIntroDoneRef.current = false; imgIntroDoneRef.current = false; sigIntroDoneRef.current = false; isigIntroDoneRef.current = false; painterIntroDoneRef.current = false;   // every explaining line comes again after Reset (the Studio bubble too), as for someone new
+    mosaicIntroDoneRef.current = false; imgIntroDoneRef.current = false; sigIntroDoneRef.current = false; isigIntroDoneRef.current = false; painterIntroDoneRef.current = false; introSessRef.current = {}; tipSessRef.current = {};   // every explaining line comes again after Reset (the Studio bubble too), as for someone new
     // Force back to Setup screen even if the caller was mid-flow.
     setForceSetup(false);
     setPickMode(null);
@@ -37410,8 +37411,8 @@ Hard requirements:
     doneRef.current = true;
     const K = (_miKind==='m') ? 'paintiano_mosaic_intro_n' : 'paintiano_img_intro_n';
     let n=0; try{ n=(+localStorage.getItem(K))||0; }catch(_){}
-    if(n>=3) return;
-    _miTimersRef.current.push(setTimeout(()=>{ setMosaicIntroShow(true); try{ localStorage.setItem(K, String(n+1)); }catch(_){} }, 1500));
+    if(n>=2 || introSessRef.current[K]) return;   // twice, on two visits — a missed first one gets a second chance
+    _miTimersRef.current.push(setTimeout(()=>{ introSessRef.current[K]=true; setMosaicIntroShow(true); try{ localStorage.setItem(K, String(n+1)); }catch(_){} }, 1500));
     _miTimersRef.current.push(setTimeout(()=>{ setMosaicIntroShow(false); }, 1500+5600));
   },[_miKind, playing]);
   useEffect(()=>()=>{ _miTimersRef.current.forEach(t=>clearTimeout(t)); },[]);
@@ -37423,7 +37424,7 @@ Hard requirements:
     if(!_hasPaint || sigIntroDoneRef.current) return;
     sigIntroDoneRef.current = true;
     let n=0; try{ n=(+localStorage.getItem('paintiano_sig_intro_n'))||0; }catch(_){}
-    if(n>=1) return;
+    if(n>=2) return;   // twice, on two visits (the done-ref is per visit)
     _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(true); try{ localStorage.setItem('paintiano_sig_intro_n', String(n+1)); }catch(_){} }, 1500));
     _siTimersRef.current.push(setTimeout(()=>{ setSigIntroShow(false); }, 1500+5600));
   },[sigActive, _hasPaint, viewMode]);
@@ -37435,7 +37436,7 @@ Hard requirements:
     if(!playing || isigIntroDoneRef.current) return;
     isigIntroDoneRef.current = true;
     let n=0; try{ n=(+localStorage.getItem('paintiano_isig_intro_n'))||0; }catch(_){}
-    if(n>=1) return;
+    if(n>=2) return;   // twice, on two visits
     _isiTimersRef.current.push(setTimeout(()=>{ setIsigIntroShow(true); try{ localStorage.setItem('paintiano_isig_intro_n', String(n+1)); }catch(_){} }, 1500));
     _isiTimersRef.current.push(setTimeout(()=>{ setIsigIntroShow(false); }, 1500+5600));
   },[imgSigActive, playing, viewMode]);
@@ -37448,7 +37449,7 @@ Hard requirements:
     if(!_hasPaint || painterIntroDoneRef.current) return;
     painterIntroDoneRef.current = true;
     let n=0; try{ n=(+localStorage.getItem('paintiano_painter_intro_n'))||0; }catch(_){}
-    if(n>=1) return;
+    if(n>=2) return;   // twice, on two visits
     const _d = immersive ? 2600 : 1200;   // fullscreen: after the “inspired by” flash
     _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(true); try{ localStorage.setItem('paintiano_painter_intro_n', String(n+1)); }catch(_){} }, _d));
     _piTimersRef.current.push(setTimeout(()=>{ setPainterIntroShow(false); }, _d+5600));
@@ -41195,21 +41196,25 @@ Hard requirements:
   const [stTip, setStTip] = useState(null);   // null | 'up' | 'chg' | 'fav'
   const _tipSeen = (k)=>{ try{ return localStorage.getItem('paintiano_tip_'+k)==='1'; }catch(_){ return true; } };
   const _tipDone = (k)=>{ try{ localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} setStTip(x=> x===k ? null : x); };
+  // a tip for an action ends when you do it (_tipDone) — or after its third showing, one per visit, so it never nags
+  const tipSessRef = useRef({});
+  const _tipCount = (k)=>{ let n=0; try{ n=((+localStorage.getItem('paintiano_tip_'+k+'_n'))||0)+1; localStorage.setItem('paintiano_tip_'+k+'_n', String(n)); if(n>=3) localStorage.setItem('paintiano_tip_'+k,'1'); }catch(_){} };
+  const _tipShown = (k)=>{ _tipCount(k); setStTip(x=> x===k ? null : x); };
   const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn;
   // ⌃ only where ↑ does something: a painter you chose (gold) stays — there the hint would be wrong
   const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer || imgSigActive) : (!palGold || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
-    if(studioFs && !up && !_tipSeen('up') && _stUpWorks()) k='up'; else if(!_tipSeen('chg')) k='chg';   // at home ⌃ is the card's own cue
-    if(!k) return; const tm=setTimeout(()=>setStTip(k), k==='up' ? 7000 : 12000); return ()=>clearTimeout(tm);
+    if(studioFs && !up && !_tipSeen('up') && !tipSessRef.current.up && _stUpWorks()) k='up'; else if(!_tipSeen('chg') && !tipSessRef.current.chg) k='chg';   // at home ⌃ is the card's own cue
+    if(!k) return; const tm=setTimeout(()=>{ tipSessRef.current[k]=true; setStTip(k); }, k==='up' ? 7000 : 12000); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, playing, _artMode, jamOn, jamAll, viewMode]);
-  useEffect(()=>{ if(!stTip) return; if(_tipQuiet || (stTip==='up' && !_stUpWorks())){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipDone(k), 6500); return ()=>clearTimeout(tm);
+  useEffect(()=>{ if(!stTip) return; if(_tipQuiet || (stTip==='up' && !_stUpWorks())){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipShown(k), 6500); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, _artMode, jamOn, jamAll]);
   // ♥: your own painting (a song, a picture, a mood, a take — not a surprise) is done and not kept yet
-  useEffect(()=>{ if(stTip || _tipQuiet || _tipSeen('fav')) return; const own = !!(loadedSource || moodContext || draftOwnerRef.current);
-    if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>setStTip('fav'), 1200); return ()=>clearTimeout(tm);
+  useEffect(()=>{ if(stTip || _tipQuiet || _tipSeen('fav') || tipSessRef.current.fav) return; const own = !!(loadedSource || moodContext || draftOwnerRef.current);
+    if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>{ tipSessRef.current.fav=true; setStTip('fav'); }, 1200); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, favReadyAny, favHitAny]);
   const feedResumeRef = useRef(null);   // ↓ from the first surprise back home: the cards wait for ↑
@@ -41353,10 +41358,10 @@ Hard requirements:
     const inFeed = feedAt>=0 && feedLoaded!==null, inStudio = studioFs && !studioHome && feedAt<0;
     if(!(inFeed || inStudio) || !_hasPaint || !playing || fuIntroDoneRef.current) return;
     let n=0; try{ n=(+localStorage.getItem('paintiano_fu_intro3_n'))||0; }catch(_){}
-    if(n>=1){ fuIntroDoneRef.current = true; return; }
+    if(n>=2 || introSessRef.current.fu){ fuIntroDoneRef.current = true; return; }   // twice, on two visits
     fuIntroDoneRef.current = true;
-    if(inFeed){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } try{ localStorage.setItem('paintiano_fu_intro3_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
-    _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro3_n', String(n+1)); }catch(_){} }, 1500));
+    if(inFeed){ _fuiTimersRef.current.push(setTimeout(()=>{ setFeedIntro(x=>{ if(x){ fuIntroDoneRef.current=false; return x; } introSessRef.current.fu=true; try{ localStorage.setItem('paintiano_fu_intro3_n', String(n+1)); }catch(_){} return {k:'f', t:Date.now()}; }); }, 1200)); return; }
+    _fuiTimersRef.current.push(setTimeout(()=>{ introSessRef.current.fu=true; setFuIntroShow(true); try{ localStorage.setItem('paintiano_fu_intro3_n', String(n+1)); }catch(_){} }, 1500));
     _fuiTimersRef.current.push(setTimeout(()=>{ setFuIntroShow(false); }, 1500+5600));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[painterStage, sigActive, _hasPaint, viewMode, playing, feedAt, feedLoaded, studioFs, studioHome, feedIntro]);
@@ -41673,7 +41678,7 @@ Hard requirements:
   useEffect(()=>{ if(feedUpDone || feedAt<0 || !playing || feedIntro){ if(feedAt<0 && feedUpCue) setFeedUpCue(false); return; } const tm=setTimeout(()=>setFeedUpCue(true), 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedAt, playing, feedIntro]);
   // the Studio tab wakes with the first surprise that plays: it glows, and once — until it is tapped — a nudge says what it does
   const feedLitRef = useRef(false);
-  useEffect(()=>{ const on = feedAt>=0 && !!feedCards[feedAt] && playing && !feedIntro; if(!on){ feedLitRef.current=false; if(feedStudioLit) setFeedStudioLit(0); return; } if(feedLitRef.current) return; feedLitRef.current=true; const seen=_tipSeen('studio'); setFeedStudioLit(seen ? 1 : 2); const tm=setTimeout(()=>setFeedStudioLit(0), seen ? 5000 : 9000); return ()=>clearTimeout(tm); },[feedAt, playing, feedIntro]);
+  useEffect(()=>{ const on = feedAt>=0 && !!feedCards[feedAt] && playing && !feedIntro; if(!on){ feedLitRef.current=false; if(feedStudioLit) setFeedStudioLit(0); return; } if(feedLitRef.current) return; feedLitRef.current=true; const seen=_tipSeen('studio') || !!tipSessRef.current.studio; if(!seen){ tipSessRef.current.studio=true; _tipCount('studio'); } setFeedStudioLit(seen ? 1 : 2); const tm=setTimeout(()=>setFeedStudioLit(0), seen ? 5000 : 9000); return ()=>clearTimeout(tm); },[feedAt, playing, feedIntro]);
   // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, 14 s apart, never after the first swipe up
   useEffect(()=>{ if(!feedUpCue || feedUpDone || !playing || feedAt<0) return; const id=(feedCards[feedAt]||{}).id, R=feedPeekNRef.current; if(R.id!==id){ R.id=id; R.n=0; }
     let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; if(R.k==null) R.k=Math.floor(Math.random()*6); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
