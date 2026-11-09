@@ -5448,12 +5448,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [hidBad, setHidBad] = useState(0);
   const [hidHold, setHidHold] = useState(false);
   const hidHoldRef = useRef({tm:null, fired:false});
-  const _hidDown = ()=>{ const H=hidHoldRef.current; H.fired=false; clearTimeout(H.tm); setHidHold(true);
+  // Guessing: five wrong codes close the sheet and the hold does nothing on this device for 24 hours (the right code clears the count).
+  const _hidLockedOut = ()=>{ try{ const u=parseInt(localStorage.getItem('paintiano_hid_until')||'0',10)||0; if(u && Date.now()<u) return true; if(u){ localStorage.removeItem('paintiano_hid_until'); localStorage.removeItem('paintiano_hid_bad'); } }catch(_){} return false; };
+  const _hidDown = ()=>{ if(!hidOk && _hidLockedOut()) return; const H=hidHoldRef.current; H.fired=false; clearTimeout(H.tm); setHidHold(true);
     H.tm=setTimeout(()=>{ H.tm=null; H.fired=true; setHidHold(false); try{ navigator.vibrate && navigator.vibrate(15); }catch(_){} setHidCode(''); setHidOpen(true); }, 900); };
   const _hidUp = ()=>{ const H=hidHoldRef.current; if(H.tm){ clearTimeout(H.tm); H.tm=null; } setHidHold(false); };
   const _hidKey = (d)=>{ if(hidCode.length>=4) return; const n=hidCode+d; setHidCode(n); if(n.length<4) return;
-    if(_hidHash('pf-hid:'+n)===PF_HID_H){ setTimeout(()=>{ setHidOk(true); setHidCode(''); try{ localStorage.setItem('paintiano_hid_ok','1'); }catch(_){} }, 160); }
-    else { setHidBad(Date.now()); setTimeout(()=>setHidCode(''), 420); } };
+    if(_hidHash('pf-hid:'+n)===PF_HID_H){ setTimeout(()=>{ setHidOk(true); setHidCode(''); try{ localStorage.setItem('paintiano_hid_ok','1'); localStorage.removeItem('paintiano_hid_bad'); localStorage.removeItem('paintiano_hid_until'); }catch(_){} }, 160); }
+    else { setHidBad(Date.now()); let _out=false; try{ const b=(parseInt(localStorage.getItem('paintiano_hid_bad')||'0',10)||0)+1; localStorage.setItem('paintiano_hid_bad', String(b)); if(b>=5){ localStorage.setItem('paintiano_hid_until', String(Date.now()+24*3600*1000)); _out=true; } }catch(_){}
+      setTimeout(()=>{ setHidCode(''); if(_out) setHidOpen(false); }, 420); } };
   const _hidChip = ()=> setAddrChip(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_addr_chip', nv?'1':'0'); }catch(_){} return nv; });
   const _hidPost = ()=> setPosterMaker(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){} return nv; });
   const _hidLock = ()=>{ setHidOk(false); setHidOpen(false); setAddrChip(false); setPosterMaker(false);   // locked: the tools go off too
