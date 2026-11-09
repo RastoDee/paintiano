@@ -18236,7 +18236,7 @@ const ARTIST_DNA = {
   mosaic:       {ground:'#04040a',mark:{rect:1},                          size:[.03,.08],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
   raffel:       {ground:'#06060c',mark:{phiarc:.8,ring:.2},               size:[.15,.4], edge:.2, alpha:.9, layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:.1, lines:.2,layers:1,density:.15,halftone:0},
   picasso:      {ground:'#0a0a0e',mark:{neon:.7,ring:.3},                 size:[.06,.22],edge:.5, alpha:.95,layout:{flow:.6,scatter:.4},     outline:0, tone:'pure',    wobble:.6, lines:.3,layers:1,density:.2, halftone:0},
-  matisse:      {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},              size:[.05,.18],edge:0,  alpha:1,  layout:{grid:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.5, lines:0, layers:1,density:.6, halftone:0},
+  matisse:      {ground:'#f6f2e9',mark:{mtleaf:.35,mtalgae:.25,mtsheet:.2,mtburst:.2},size:[.06,.2],edge:0,alpha:1,layout:{scatter:.8,grid:.2},     outline:0, tone:'pure',    wobble:.3, lines:0, layers:1,density:.45,halftone:0},
   pollock:      {ground:'#f2ede0',mark:{drip:.75,splat:.25},              size:[.006,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:2,density:.6, halftone:0},
   bloom:        {ground:'#f6f3ec',mark:{cell:.7,dot:.3},                  size:[.05,.18],edge:.3, alpha:.65,layout:{scatter:.7,field:.3},    outline:0, tone:'pastel',  wobble:.6, lines:.2,layers:2,density:.5, halftone:0},
   kusama:       {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},          size:[.03,.09],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:.2, lines:.2,layers:1,density:1,  halftone:0},
@@ -18250,7 +18250,7 @@ const ARTIST_DNA = {
   wave:         {ground:'#1a1a2a',mark:{stripes:1},                       size:[.01,.03],edge:0,  alpha:1,  layout:{stack:1},                outline:0, tone:'pastel',  wobble:.2, lines:0, layers:1,density:.8, halftone:0},
   spiral:       {ground:'#b8963a',mark:{target:.6,petal:.4},              size:[.06,.25],edge:.1, alpha:.8, layout:{radial:.6,scatter:.4},   outline:0, tone:'pastel',  wobble:.1, lines:0, layers:2,density:.4, halftone:0},
   arcs:         {ground:'#eeeec0',mark:{nest:1},                          size:[.1,.4],  edge:0,  alpha:1,  layout:{radial:.5,grid:.5},      outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:.3, halftone:0},
-  pop:          {ground:'#ffd23f',mark:{heart:.5,radiant:.3,figure:.2},   size:[.05,.15],edge:0,  alpha:1,  layout:{grid:.7,scatter:.3},     outline:1, tone:'primary', wobble:.2, lines:0, layers:1,density:.6, halftone:0},
+  pop:          {ground:'#ffd23f',mark:{hgfig:.45,hgpair:.15,hgheart:.15,rdog:.1,hgtv:.1,hgsaucer:.05},size:[.06,.16],edge:0,alpha:1,layout:{grid:.4,scatter:.6},     outline:1, tone:'primary', wobble:.2, lines:0, layers:1,density:.5, halftone:0},
   mitchell:     {ground:'#f3f0e8',mark:{brush:1},                         size:[.04,.14],edge:.2, alpha:.85,layout:{scatter:1},              outline:0, tone:'pure',    wobble:.9, lines:.4,layers:2,density:.35,halftone:0},
   monet:        {ground:'#cfd6c8',mark:{surface:1},                       size:[.09,.14],  edge:0,  alpha:.92,layout:{field:.8,scatter:.2},    outline:0, tone:'pastel',  wobble:.5, lines:0, layers:2,density:.9, halftone:0},
   hokusai:      {ground:'#e6e0d0',mark:{crest:.5,fuji:.3,arc:.2},         size:[.05,.2], edge:0,  alpha:.95,layout:{stack:.6,flow:.4},      outline:.6,tone:'pure',    wobble:.3, lines:.3,layers:1,density:.25,halftone:0},
@@ -18274,24 +18274,24 @@ const ARTIST_VARIANTS = {
     {mark:{rays:.5,chain:.5},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
   ],
   picasso: [
-    {ground:'#d6c4a0',mark:{facet:.5,panel:.3,disc:.2},size:[.06,.22],edge:0,alpha:.95,layout:{scatter:.7,flow:.3},outline:.8,density:.4,nosnap:true},   // Listens
+    {ground:'#c8b090',mark:{pcfacet:.45,pcpaper:.3,pcguitar:.25},size:[.06,.22],edge:0,alpha:.95,layout:{scatter:.7,flow:.3},outline:.4,density:.4,nosnap:true},   // Listens
     {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},                                            // Light line
     {ground:'#1a2c52',mark:{facet:.6,poly:.4},size:[.1,.3],edge:0,alpha:.9,layout:{scatter:1},outline:.6,density:.3,tone:'dark',nosnap:true},   // The Old Guitarist: blue planes
     {ground:'#dcc0a2',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // Demoiselles: big facets with a contour in the song's colours
-    {ground:'#8a7350',mark:{facet:.8,tri:.2},size:[.04,.14],edge:0,alpha:.85,layout:{scatter:.5,radial:.5},outline:.4,density:.7,tone:'dark',nosnap:true},   // Analytic cubism: ochre facets
-    {ground:'#d6c4a0',mark:{facet:.4,panel:.4,disc:.2},size:[.08,.26],edge:0,alpha:.95,layout:{scatter:1},outline:.7,density:.4,lines:.5,nosnap:true},   // The Guitar: papier collé planes
+    {ground:'#8a7350',mark:{pcfacet:1},size:[.05,.16],edge:0,alpha:.9,layout:{scatter:.5,radial:.5},outline:0,density:.7,tone:'dark',nosnap:true},   // Analytic cubism: lit planes
+    {ground:'#d6c4a0',mark:{pcpaper:.65,pcguitar:.35},size:[.1,.26],edge:0,alpha:1,layout:{scatter:1},outline:0,density:.35,nosnap:true},   // The Guitar: papier collé
     {ground:'#5c3e2a',mark:{panel:.5,poly:.3,diamond:.2},size:[.06,.24],edge:0,alpha:1,layout:{grid:.6,scatter:.4},outline:.8,density:.5},   // Three Musicians: cut paper
-    {ground:'#c8b090',mark:{panel:.5,disc:.3,stripes:.2},size:[.08,.28],edge:0,alpha:1,layout:{stack:.6,scatter:.4},outline:.9,density:.35,nosnap:true},   // Still life with guitar
+    {ground:'#c8b090',mark:{pcguitar:.4,panel:.35,disc:.25},size:[.08,.26],edge:0,alpha:1,layout:{stack:.6,scatter:.4},outline:.9,density:.35,nosnap:true},   // Still life with guitar
   ],
-  matisse: [
-    {ground:'#ebdcb8',mark:{cutout:.5,leaf:.3,star:.2},size:[.06,.25],layout:{scatter:.7,field:.3},density:.4},   // What he heard
-    {ground:'#7a6a2a',mark:{cutout:.6,panel:.4},size:[.05,.18],layout:{grid:.8,scatter:.2},density:.6},
-    {ground:'#3fbf9a',mark:{starburst:.5,cutout:.5},size:[.15,.4],layout:{scatter:1},density:.12},
-    {ground:'#3a3ad0',mark:{cutout:1},size:[.1,.3],layout:{scatter:1},density:.15,tone:'dark'},
-    {ground:'#8a7a9a',mark:{stem:.6,panel:.4},size:[.08,.3],layout:{grid:1},density:.4},
-    {ground:'#e8e2cc',mark:{leaf:1},size:[.08,.3],layout:{radial:1},density:.25},   // La Gerbe
-    {ground:'#141418',mark:{cutout:.5,star:.3,panel:.2},size:[.08,.25],layout:{scatter:1},density:.2},   // Jazz
-    {ground:'#6a8a3a',mark:{panel:.5,cutout:.5},size:[.04,.12],layout:{grid:1},density:1},   // nested-frame grid
+  matisse: [   // his own papers and scissors, slot for slot with the engine
+    {ground:'#f6f2e9',mark:{mtleaf:.3,mtalgae:.2,mtsheet:.2,mtcoral:.15,mtburst:.15},size:[.06,.2],layout:{scatter:.8,grid:.2},density:.45},   // Listens
+    {ground:'#22408a',mark:{mtbird:.35,mtfish:.25,mtalgae:.2,mtburst:.2},size:[.06,.18],layout:{grid:.6,scatter:.4},density:.4},   // Polynesia
+    {ground:'#f5f1e8',mark:{mtsheet:.75,mtburst:.25},size:[.08,.24],layout:{radial:.7,scatter:.3},density:.35},   // The Snail
+    {ground:'#f6f2e9',mark:{mtsheet:.4,mtfish:.25,mtalgae:.2,mtcoral:.15},size:[.07,.2],layout:{stack:.6,scatter:.4},density:.4},   // Beasts of the Sea
+    {ground:'#f0ece2',mark:{mtlobed:.6,mtsheet:.25,mtleaf:.15},size:[.07,.22],layout:{stack:.5,scatter:.5},density:.35},   // The Tree of Life
+    {ground:'#e8e2cc',mark:{mtleaf:1},size:[.08,.3],layout:{radial:1},density:.25},   // La Gerbe
+    {ground:'#f5f1e8',mark:{mtalgae:.7,mtsheet:.3},size:[.1,.3],layout:{scatter:1},density:.2},   // The Great Seaweed
+    {ground:'#6a8a3a',mark:{panel:.5,mtleaf:.25,mtburst:.25},size:[.04,.12],layout:{grid:1},density:1},   // nested-frame grid
   ],
   pollock: [   // slot order = solo variants: Classic drip, Autumn Rhythm, Lavender Mist, Blue Poles, Convergence, Number 14 black, Sparse, White Light
     {mark:{skein:.8,splash:.2},size:[.03,.12],layout:{flow:1},density:.6},   // What he heard
@@ -18422,14 +18422,14 @@ const ARTIST_VARIANTS = {
     {mark:{protractor:.6,nest:.4},size:[.15,.45],layout:{radial:1},density:.2},
   ],
   pop: [
-    {mark:{figure:.6,heart:.2,rays:.2},size:[.08,.25],layout:{flow:.6,stack:.4},density:.4,outline:1},   // Listens
-    {ground:'#18171b',mark:{figure:.6,radiant:.4},size:[.06,.14],layout:{scatter:1},density:.3},              // The Subway
-    {mark:{figure:.85,radiant:.15},size:[.06,.16],layout:{stack:1},density:.35},                             // The Acrobats
-    {ground:'#faf8f2',mark:{figure:.75,wavyline:.15,heart:.1},size:[.04,.12],layout:{scatter:1},density:.6},   // The Crowd
-    {ground:'#f4f44a',mark:{figure:.7,radiant:.3},size:[.2,.4],layout:{scatter:1},density:.12},              // The Poster
-    {ground:'#e8187a',mark:{figure:.7,radiant:.3},size:[.25,.45],layout:{scatter:1},density:.1},             // The Giant
-    {ground:'#121012',mark:{figure:.6,heart:.2,radiant:.2},size:[.05,.12],layout:{grid:1},density:.7},       // Mosaic
-    {ground:'#2a7ae8',mark:{heart:.6,radiant:.25,figure:.15},size:[.08,.2],layout:{radial:.6,scatter:.4},density:.45},     // The Heart
+    {mark:{hgfig:.4,hgpair:.2,hgheart:.15,rdog:.15,hgtv:.1},size:[.08,.22],layout:{flow:.6,scatter:.4},density:.45,outline:1},   // Listens
+    {ground:'#18171b',mark:{hgchalk:.8,hgheart:.2},size:[.08,.18],layout:{scatter:1},density:.35},              // The Subway
+    {mark:{hgpair:.55,hgfig:.3,rdog:.15},size:[.08,.2],layout:{stack:1},density:.35},                             // The Acrobats
+    {ground:'#faf8f2',mark:{hgfig:.45,hgpair:.15,rdog:.15,hgtv:.15,hgsaucer:.1},size:[.05,.14],layout:{scatter:1},density:.6},   // The Crowd
+    {ground:'#f4f44a',mark:{hgfig:.8,hgheart:.2},size:[.2,.38],layout:{scatter:1},density:.12},              // The Poster
+    {ground:'#e8187a',mark:{hgfig:.6,rdog:.2,hgsaucer:.2},size:[.22,.4],layout:{scatter:1},density:.12},             // The Giant
+    {ground:'#121012',mark:{hgfig:.5,rdog:.25,hgheart:.15,hgtv:.1},size:[.05,.12],layout:{grid:1},density:.7},       // Mosaic
+    {ground:'#2a7ae8',mark:{hgheart:.55,hgfig:.25,rdog:.2},size:[.08,.2],layout:{radial:.6,scatter:.4},density:.45},     // The Heart
   ],
   mitchell: [
     {mark:{brush:1},size:[.05,.16],layout:{scatter:.6,radial:.4},density:.4},   // What she heard
@@ -18462,15 +18462,13 @@ const ARTIST_VARIANTS = {
     {ground:'#1e3f6e',mark:{petal:.7,stem:.3},size:[.02,.06],layout:{flow:1},density:.4,tone:'dark'},
   ],
   lichtenstein: [
-    {ground:'#faf8f0',mark:{benday:.4,starburst:.3,panel:.3},size:[.1,.4],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // What he heard
-    {ground:'#faf8f0',mark:{panel:.4,benday:.3,starburst:.2,speech:.1},size:[.06,.14],layout:{grid:1},density:.6,outline:1},   // Mosaic: comic panels
-    {ground:'#e8e8f4',mark:{radiant:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.1},
-    {ground:'#e8e8f4',mark:{wavyline:1},size:[.05,.12],layout:{stack:1},density:.5,outline:1},
-    {ground:'#f4e8e8',mark:{stripes:1},size:[.03,.08],layout:{stack:1},density:.4,outline:1},
-    {ground:'#111111',mark:{benday:1},size:[.1,.3],layout:{scatter:1},density:.15},
-    {ground:'#faf8f0',mark:{benday:.5,wavyline:.3,stripes:.2},size:[.1,.3],layout:{stack:1},density:.25,outline:1},   // Landscape
-    {mark:{benday:.7,blob:.3},size:[.05,.2],layout:{scatter:1},density:.4},
-    {ground:'#e8e8f4',mark:{radiant:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.1},
+    {ground:'#faf8f0',mark:{benday:.35,lcboom:.25,lcbrush:.2,panel:.2},size:[.1,.3],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // What he heard
+    {ground:'#faf8f0',mark:{panel:.4,benday:.3,lcboom:.2,speech:.1},size:[.06,.14],layout:{grid:1},density:.6,outline:1},   // Mosaic: comic panels
+    {ground:'#e8e8f4',mark:{lcboom:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.12},   // the burst
+    {ground:'#e8e8f4',mark:{lcwave:.6,wavyline:.4},size:[.08,.2],layout:{stack:1},density:.4,outline:1},   // close-up curves
+    {ground:'#f4e8e8',mark:{lcbrush:.8,benday:.2},size:[.08,.2],layout:{stack:.5,scatter:.5},density:.35,outline:1},   // brushstrokes
+    {ground:'#111111',mark:{lcmirror:.7,benday:.3},size:[.1,.3],layout:{scatter:1},density:.15},   // mirrors
+    {ground:'#faf8f0',mark:{lcridge:.65,benday:.35},size:[.1,.3],layout:{stack:1},density:.25,outline:1},   // Landscape
   ],
   klee: [
     {ground:'#efe6d2',mark:{tile:.4,line:.3,dot:.3},size:[.03,.1],layout:{grid:.5,scatter:.5},density:.4,outline:.5},   // What he heard
@@ -18571,7 +18569,7 @@ const _FU_HAND={rothko:'veil',klee:'veil',bloom:'veil',monet:'touches',pollock:'
 // Version 1 is everything painted before: the Signatures, Favorites saved and
 // posters printed until now, and the landing page's Ensemble painting repaint
 // exactly as they were (see _fuRules).
-const _FU_SYN_MAP={figure:'disc',dog:'rect',heart:'disc',starburst:'star',poly:'trap',facet:'trap',arrow:'tri',speech:'panel',tvbox:'panel',fuji:'arch',crest:'wave',eye:'disc',cutout:'disc',leaf:'disc',petal:'disc',net:'dotcluster',miroblob:'blob'};
+const _FU_SYN_MAP={hgfig:'disc',hgchalk:'disc',hgpair:'disc',hgtv:'panel',hgsaucer:'disc',hgheart:'disc',rdog:'rect',mtleaf:'disc',mtalgae:'disc',mtcoral:'disc',mtbird:'disc',mtfish:'disc',mtburst:'star',mtlobed:'disc',mtsheet:'panel',pcfacet:'trap',pcpaper:'panel',pcguitar:'arch',lcbrush:'band',lcboom:'star',lcmirror:'disc',lcwave:'wave',lcridge:'wave',figure:'disc',dog:'rect',heart:'disc',starburst:'star',poly:'trap',facet:'trap',arrow:'tri',speech:'panel',tvbox:'panel',fuji:'arch',crest:'wave',eye:'disc',cutout:'disc',leaf:'disc',petal:'disc',net:'dotcluster',miroblob:'blob'};
 // what a painter lends the new painter: a way of drawing, never a picture
 //   outline: an ink contour (pop: on every form, the same width; hokusai: a brush line, thick and thin)
 //   ticks: Haring's motion marks · pack: forms pressed together · echo: Hokusai's wave — an arc repeated smaller, and the field in layers
@@ -18865,12 +18863,65 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
 // the gestures — a thrown line, a loaded stroke, a ray, a band, the water, Hokusai's curling crest: drawn once, in their parent's own
 // geometry (_fuMark), whatever the hand; every other mark is a closed form the hand paints (_fuForm)
 // Haring's cast keeps his own hand in a crossing too: as a silhouette in the fused hand it reads as a pictogram
-const _FU_HRC=/^(figure|dog)$/;
+const _FU_HRC=/^(figure|dog|hgfig|hgchalk|hgpair|hgtv|rdog)$/;
 const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab)$/;
+// ── the signs of the painters we reworked, in a Collage drawn by their own engines (Haring's figures, pairs, TV heads,
+// saucers, hearts and our round dog; Matisse's cut papers; Picasso's planes, pasted papers and charcoal guitar;
+// Lichtenstein's brushstroke, explosion, mirror, wave and ridge). In a Synthesis they become plain forms (_FU_SYN_MAP).
+const _FU_SIGN=/^(hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge)$/;
+function _fuSign(ctx,kind,rr,col,col2,F,R){
+  let c=_fuRgb(col), c2=_fuRgb(col2||col); const seed=(R()*1e9)|0, K=_HG_BLK, D=F._S||rr*6, dir=R()<0.5?1:-1;
+  const g=String(F.ground||'')[0]==='#' ? _fuHex(F.ground) : _fuRgb(F.ground||'rgb(128,128,128)'); const lum=(q)=>(q[0]*0.299+q[1]*0.587+q[2]*0.114)/255;
+  const apart=(q,from)=>Math.abs(q[0]-from[0])+Math.abs(q[1]-from[1])+Math.abs(q[2]-from[2]);
+  // his own colours: Haring's Pop Shop paints, Matisse's gouache papers — snapped by hue, never the black of an outline, always clear of the ground
+  const own=(pal,snap)=>{ let a=snap(c), b=snap(c2); const P=pal.map(x=>x); if(apart(a,g)<110 || apart(a,[22,20,22])<60){ a=P.slice().sort((x,y)=>apart(y,g)-apart(x,g))[(seed>>>3)%3]; } if(apart(b,a)<90 || apart(b,g)<90){ b=P.filter(x=>apart(x,a)>=90 && apart(x,g)>=90)[(seed>>>5)%3]||P[(seed>>>7)%P.length]; } c=a; c2=b; };
+  if(/^(hg|rdog)/.test(kind)) own(_HG_PAL.map(_hgPastel),(q)=>{ const mx=Math.max(...q), mn=Math.min(...q); return (mx-mn<40) ? _hgPastel(_HG_PAL[(seed>>>9)%_HG_PAL.length]) : _hgPalOf(q,false); });
+  else if(/^mt/.test(kind)) own(_MT_PIG.map(_mtPastel).concat([_MT_WHITE]),(q)=>_mtPigOf(q,false));
+  else if(apart(c,c2)<90) c2=[255-c[0],255-c[1],255-c[2]];
+  switch(kind){
+    case 'hgfig': { const s=rr*0.5, P=['dance','jump','run','cheer','wave','reach','bend','kneel','flip']; const u=R(); const pat=u<0.18?'dash':(u<0.3?'cross':null);
+      _hgFig(ctx,P[(R()*P.length)|0],0,-s*0.15,s,dir,0,seed,{col:c,ink:K,O:Math.max(1.2,s*0.09),pat,hole:(u>0.92?c2:null),motion:0.25+0.45*R()}); break; }
+    case 'hgchalk': { const s=rr*0.5, P=['dance','jump','run','cheer','wave','reach']; const lt=c.map(v=>Math.round(v+(255-v)*0.45));
+      _hgFig(ctx,P[(R()*P.length)|0],0,-s*0.15,s,dir,0,seed,{col:null,ink:lt,inside:[24,23,26],O:Math.max(1,s*0.075),motion:0.4+0.4*R()}); break; }
+    case 'hgpair': { const s=rr*0.38, P=['lift','leap','back','hug','hand'], k=P[(R()*P.length)|0], top={lift:4.6,leap:3.3,back:2.2,hug:2.2,hand:4.5}[k];
+      _hgPair(ctx,k,0,s*(top-1.55)/2,s,seed,c,c2,{ink:K,O:Math.max(1.2,s*0.09),motion:0.3}); break; }
+    case 'hgtv': { const s=rr*0.5; _hgFig(ctx,['wave','dance','cheer'][(R()*3)|0],0,-s*0.05,s,dir,0,seed,{col:c,ink:K,O:Math.max(1.2,s*0.09),tv:c2,motion:0.3}); break; }
+    case 'hgsaucer': { const s=rr*0.45, O=Math.max(1.2,s*0.09); _hgSaucer(ctx,0,-rr*0.45,s,c,K,O,[0,rr*0.95]); break; }
+    case 'hgheart': { const O=Math.max(1.2,rr*0.05); _hgHeart(ctx,0,0,rr*0.62,c,K,O); _hgRays(ctx,0,-rr*0.05,rr*0.88,rr*1.15,9,-Math.PI/2,3.0,K,O*1.2); break; }
+    case 'rdog': { const P=['stand','stand','sit','lie','beg']; _hgRoundDogFit(ctx,0,0,rr*2.2,rr*1.8,dir,c,K,Math.max(1.2,rr*0.05),P[(R()*P.length)|0]); break; }
+    case 'mtleaf': case 'mtalgae': case 'mtcoral': case 'mtbird': case 'mtfish': case 'mtburst': case 'mtlobed': {
+      const k={mtleaf:'feuille',mtalgae:'algae',mtcoral:'coral',mtbird:'bird',mtfish:'fish',mtburst:'star',mtlobed:'lobed'}[kind];
+      const rot= k==='star' ? R()*6.28 : (R()-.5)*0.5; _mtPaper(ctx,_mtShapePolys(k,0,0,rr,rot,seed,(k==='bird'||k==='fish'||k==='feuille')?dir:1),c,D,null,{shadow:0.004}); break; }
+    case 'mtsheet': { const r1=_mtR(seed,1); const w=rr*(1.6+0.6*r1()), h=rr*(1.1+0.6*r1()); _mtPaper(ctx,[_mtSheet(-w/2,-h/2,w,h,r1,rr*0.07)],c,D,_mtR(seed,2),{strokes:4,shadow:0.004}); break; }
+    case 'pcfacet': { // an analytic plane: lit on one edge, shadowed on the other, one or two edges drawn, the others open
+      const r1=_pxR(seed,1); const a0=r1()*6.28, w=rr*(0.9+0.6*r1()), h=rr*(0.45+0.6*r1()), sk=(r1()-.5)*0.6*h; const ca=Math.cos(a0), sa=Math.sin(a0);
+      const P=[[-w/2,-h/2],[w/2+sk,-h/2],[w/2,h/2],[-w/2-sk*0.5,h/2]].map(([u,v])=>[u*ca-v*sa,u*sa+v*ca]); const lt=_pxMix(c,[240,228,200],0.45), dk=_pxMix(c,[30,24,18],0.55);
+      const g=ctx.createLinearGradient(-sa*h/2,ca*h/2,sa*h/2,-ca*h/2); g.addColorStop(0,_pxCss(lt)); g.addColorStop(0.55,_pxCss(c)); g.addColorStop(1,_pxCss(dk)); _pxPoly(ctx,P); ctx.fillStyle=g; ctx.fill();
+      ctx.strokeStyle=_pxCss(dk); ctx.lineWidth=Math.max(1,rr*0.04); const k=(r1()*4)|0; ctx.beginPath(); ctx.moveTo(P[k][0],P[k][1]); ctx.lineTo(P[(k+1)%4][0],P[(k+1)%4][1]); if(r1()<0.5) ctx.lineTo(P[(k+2)%4][0],P[(k+2)%4][1]); ctx.stroke(); break; }
+    case 'pcpaper': { const r1=_pxR(seed,1); const w=rr*(1.5+0.6*r1()), h=rr*(1.0+0.5*r1()), a=(r1()-.5)*0.3, ca=Math.cos(a), sa=Math.sin(a);
+      const P=[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([u,v])=>[u*ca-v*sa,u*sa+v*ca]); _pxPaper(ctx,P,['wall','news','wood','plain'][(r1()*4)|0],_pxMix(c,[200,190,170],0.3),_pxMix(c2,[200,190,170],0.3),r1,D); break; }
+    case 'pcguitar': { // the guitar in charcoal: two halves of the body shifted against each other, the hole, the neck, the strings
+      const ink=(F.groundLum!=null && F.groundLum<90)?'rgba(236,228,212,0.9)':'rgba(24,20,18,0.9)'; const gw=rr*0.9, gh=rr*0.7, sh=rr*0.08, lw=Math.max(1.2,rr*0.05);
+      ctx.save(); ctx.strokeStyle=ink; ctx.lineWidth=lw; ctx.lineCap='round';
+      ctx.beginPath(); ctx.ellipse(-sh,-gh*0.35,gw*0.42,gh*0.32,0,Math.PI*0.5,Math.PI*1.5); ctx.stroke(); ctx.beginPath(); ctx.ellipse(-sh,gh*0.3,gw*0.55,gh*0.42,0,Math.PI*0.5,Math.PI*1.5); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(sh,-gh*0.35,gw*0.42,gh*0.32,0,-Math.PI*0.5,Math.PI*0.5); ctx.stroke(); ctx.beginPath(); ctx.ellipse(sh,gh*0.3,gw*0.55,gh*0.42,0,-Math.PI*0.5,Math.PI*0.5); ctx.stroke();
+      ctx.fillStyle=_pxCss(c,0.55); ctx.beginPath(); ctx.ellipse(sh,gh*0.3,gw*0.55,gh*0.42,0,-Math.PI*0.5,Math.PI*0.5); ctx.fill();
+      ctx.strokeRect(-gw*0.08,-gh*1.55,gw*0.16,gh*1.25); ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(0,-gh*0.02,gw*0.13,0,6.28); ctx.fill();
+      ctx.lineWidth=Math.max(0.7,lw*0.45); for(let k=0;k<4;k++){ const x=-gw*0.05+gw*0.1*k/3; ctx.beginPath(); ctx.moveTo(x,-gh*1.5); ctx.lineTo(x,gh*0.6); ctx.stroke(); } ctx.restore(); break; }
+    case 'lcbrush': case 'lcboom': case 'lcmirror': case 'lcwave': { const lw=Math.max(1.5,rr*0.06); const fn={lcbrush:_lcBrush,lcboom:_lcBoom,lcmirror:_lcMirror,lcwave:_lcWave}[kind];
+      if(kind==='lcbrush') fn(ctx,-rr*1.3,-rr*0.7,rr*2.6,rr*1.4,c,lw,R); else fn(ctx,-rr,-rr,rr*2,rr*2,c,lw,R); break; }
+    case 'lcridge': { // the Landscape: a ridge of hills, dotted, its contour in black
+      const r1=_pxR(seed,1), W=rr*1.8, top=[]; for(let k=0;k<=12;k++){ const t=k/12; top.push([-W+2*W*t, -rr*0.3*Math.sin(t*Math.PI*(1+r1()))-rr*0.15*Math.sin(t*9+r1()*3)]); }
+      const path=()=>{ ctx.beginPath(); ctx.moveTo(-W,rr*0.55); top.forEach(p=>ctx.lineTo(p[0],p[1])); ctx.lineTo(W,rr*0.55); ctx.closePath(); };
+      path(); ctx.fillStyle=_lcCss(_LC_WHT); ctx.fill(); ctx.save(); path(); ctx.clip(); _lcBenday(ctx,-W,-rr*0.6,2*W,rr*1.2,Math.max(3,rr*0.13),c,(x,y)=>_lcClamp(0.95-0.6*(y+rr*0.5)/rr,0.3,1)); ctx.restore();
+      ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=Math.max(1.5,rr*0.05); ctx.lineJoin='round'; ctx.beginPath(); top.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); break; }
+  }
+  ctx.beginPath(); }
 function _fuMark(ctx, kind, r, col, F, R, ang, col2){
   col2 = col2 || col;
   // line idioms (af Klint's rays, Mitchell's strokes; in E every gesture) stay crisp: a soft halo
   // pass would re-draw them with fresh random angles → a tangle, or blur them fat
+  if(_FU_SIGN.test(kind)){ ctx.save(); ctx.rotate(ang); ctx.globalAlpha=1; _fuSign(ctx,kind,r,col,col2,F,R); ctx.restore(); ctx.globalAlpha=1; return; }
   const soft = F.edge>0.15 && (F.fs==='E' ? !_FU_GEST.test(kind) : (kind!=='rays' && kind!=='brush'));
   const passes = soft ? 3 : 1;
   for(let p=passes-1;p>=0;p--){
@@ -19257,7 +19308,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
           if(/^(tri|diamond|poly|facet|trap)$/.test(kind) && !_slot('AN',_Bang)) kind=({tri:'arch',diamond:'disc',trap:'arch'})[kind]||'rect';
           // a Collage keeps the originals, only fewer: Haring's cast, hearts, arrows, speech bubbles
           if(!_E && _FU_HRC.test(kind) && !_slot('HC',_Bhrc)) continue;
-          if(!_E && /^(heart|arrow|speech|tvbox)$/.test(kind) && !_slot('TY',_Btoy)) continue;
+          if(!_E && /^(heart|arrow|speech|tvbox|hgheart|hgsaucer|pcguitar|lcmirror)$/.test(kind) && !_slot('TY',_Btoy)) continue;
         }
         const sz0=(F.size[0]+PD.size[0])/2, sz1=(F.size[1]+PD.size[1])/2;
         const base=S*(sz0+(sz1-sz0)*(0.2+E*0.8))*(1.5-lf*0.7)*(j===0?1:0.6);
@@ -19275,6 +19326,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='surface'){ r=Math.max(S*0.07, Math.min(r, S*0.13));   // Monet's patch of water: big enough to tile a surface, never a single swatch — whatever the partner's scale or the register
           // and the water is budgeted like the big shapes: ~1.1 canvases of full patches spread evenly over the piece; past the budget a chord adds a handful of touches, so a long piece never floods the partner
           const B=Math.max(8, Math.min(60, Math.round(1.1/(Math.PI*1.3*0.95*(r/S)*(r/S))))); const sl='W'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)){ if(R()<0.5) continue; r*=0.4; } else _spanUsed.add(sl); }
+        else if(!_E && /^(hgfig|hgchalk|hgpair|hgtv|rdog|hgheart|hgsaucer)$/.test(kind)) r=Math.max(S*0.075, Math.min(r, S*0.12));
         else if(!_FU_LINEAR.test(kind)){
           r=Math.min(r, S*0.21);   // no single shape swallows a third of the canvas (Delaunay discs, Bauhaus targets…)
           // and big shapes are budgeted by the area they cover (~1.6 canvases in all), spread
@@ -19291,7 +19343,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         const col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
         const tx=x+(j?(R()-.5)*r*2.2:0), ty=y+(j?(R()-.5)*r*2.2:0);
-        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface|fuji|dog|cell|pour)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
+        const ang=(/^(field|stripe|stripes|band|vband|gridstub|shortbeam|brush|figure|cross|cube|panel|nest|wavyline|bar|gridline|vstripes|checker|stem|arch|step|speech|arrow|scallop|rain|vdrip|surface|fuji|dog|cell|pour|hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge)$/.test(kind))?0:(R()-.5)*F.wobble*1.2;
         // E: a closed form is painted by the painting's one hand (_fuForm); a gesture stays its parent's (_fuMark)
         if(_E && !_FU_GEST.test(kind) && !_FU_HRC.test(kind)){
           if(_FU_UNDER.test(kind)){ ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); _fuForm(ctx, kind, r, col, col2, R, F); ctx.restore(); }
