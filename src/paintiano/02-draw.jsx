@@ -7960,6 +7960,36 @@ function haringListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'listen',pic,pace:X.pace,regular:X.regular,dens}; }catch(_){} _setCurE(0.5);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// HARING — THE SUBWAY (the chalk drawings on the black paper of the empty ad panels, 1980–85): drawn fast and big, the
+// chalk line only, the inside the black of the paper. A few large figures fill the panel — a passage each, in the pose it
+// asks for — the loudest one with its rays and, when the piece is major, the heart over him; the dashes of motion; the
+// chalk never quite solid. Coloured chalk: every figure its passage's colour (without colour: white chalk only).
+// ═══════════════════════════════════════════════════════════════════════════
+function _haringChalk(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,colour){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const chalk=[244,242,234], paper=[22,21,24];
+  const fm=D*0.028, x0=fm, y0=fm, W=CW-2*fm, H=CH-2*fm; const land=CW>CH*1.1;
+  const n=Math.max(3,Math.min(5,Math.round(2.5+X.pace*2+(X.poly>2.4?1:0)))); const G=_kd2Phrases(A,n); const m=G.length; let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
+  const rowsN=land?1:(m>3?2:1), per=Math.ceil(m/rowsN); const rowH=H/rowsN; const s=Math.min(W*0.92/(per*2.45), rowH/4.4); const O=Math.max(1.6,s*0.075);
+  const Ops=_mtOps(); Ops.at(0,()=>{ ctx.fillStyle='rgb(120,116,110)'; ctx.fillRect(0,0,CW,CH); ctx.fillStyle=_hgCss(paper); ctx.fillRect(x0,y0,W,H);
+    const r=_hgR(64001,ss); for(let i=0;i<5;i++){ const cx=x0+r()*W, cy=y0+r()*H, R=D*(0.25+0.3*r()); const g=ctx.createRadialGradient(cx,cy,0,cx,cy,R); g.addColorStop(0,'rgba(255,255,255,0.035)'); g.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=g; ctx.fillRect(x0,y0,W,H); } });
+  G.forEach((q,i)=>{ const row=Math.floor(i/per), j=i%per, inRow=Math.min(per,m-row*per); const r=_hgR(64100+i,ss); const h=_mtHearSpan(A,q.a,q.b); let kind=_hgPoseOf(h,r); if(kind==='kneel') kind='dance';
+    const fx=x0+W*(0.5+(j-(inRow-1)/2)/Math.max(1,per)*0.94)+(r()-.5)*s*0.3, fy=y0+rowH*row+rowH*0.5-2.05*s+2.55*s+(r()-.5)*s*0.15, dir=(j%2?-1:1)*(r()<0.8?1:-1);
+    const ink=colour?(isBW?chalk:_hgPalOf(_picChord(chords,Math.floor((q.a+q.b)/2),gc,false).rgb,false).map(v=>Math.round(v+(255-v)*0.35))):chalk;
+    Ops.at(q.t0, ()=>{ const big=i===ci; _hgPut(ctx,kind,fx,fy,s*(big?1.08:1),dir,(r()-.5)*0.12,null,ink,O,64200+i+ss,0.45+0.5*X.energy,paper);
+      if(big){ _hgRays(ctx,fx,fy-s*0.9,s*1.25,s*(1.5+0.15*X.energy),11,-Math.PI/2,3.3,ink,O*1.2); }
+      if(big && X.major){ const hx=fx-dir*s*1.45, hy=fy-s*1.95; const P=_hgHeartPts(hx,hy,s*0.34); ctx.beginPath(); P.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.strokeStyle=_hgCss(colour?[240,96,110]:ink); ctx.lineWidth=O*1.4; ctx.lineJoin='round'; ctx.stroke(); } }); });
+  // the ground he drew them standing on, one quick line per row
+  for(let row=0;row<rowsN;row++){ const by=y0+rowH*row+rowH*0.5+0.5*s+1.65*s; const t=G[row*per]?G[row*per].t0:0; Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(chalk,0.85); ctx.lineWidth=O*1.1; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x0+W*0.05,by); ctx.lineTo(x0+W*0.95,by); ctx.stroke(); }); }
+  Ops.run(reveal);
+  // the chalk: the line never quite solid, a little dust on the paper
+  const r=_hgR(64900,ss); ctx.fillStyle=_hgCss(paper,0.55); const k=Math.round(W*H/520); for(let i=0;i<k;i++){ ctx.fillRect(x0+r()*W,y0+r()*H,0.8+r()*1.6,0.8+r()*1.6); }
+  ctx.fillStyle='rgba(255,255,255,0.05)'; for(let i=0;i<k/6;i++){ ctx.fillRect(x0+r()*W,y0+r()*H,1+r()*2,1); }
+  try{ globalThis.__HG_LISTEN={v:colour?'subwayC':'subway',n:m,rowsN}; }catch(_){} _setCurE(0.5);
+}
+function haringSubwayChalk(ctx,CW,CH,chords,lim,gc,ss,mode){ _haringChalk(ctx,CW,CH,chords,lim,gc,ss,mode,true); }
+
 // ── Pop (Keith Haring) ───────────────────────────────────────────────────────
 // Bold flat colour blocks behind thick black-outlined glyphs, with radiating
 // "energy" ticks around them (Keith Haring's street-pop language). Each cell
@@ -8118,10 +8148,10 @@ function drawPopOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIn
   if(!lim || !chords || !chords.length) return;
   const ss = sessionSeed | 0;
   // ── VARIANT: 0 Haring listens (haringListen: the chain, the crowd or the pair, as the piece asks) · 1 The Story (panels) · 2 Mural ·
-  // 3 Subway chalk · 4 Doodle · 5 The Heart · 6 The Crowd · 7 The Acrobats. Retired (code kept): What he heard (_hrListen),
-  // Mosaic, Dancing crowd, Figures. His protected characters (the barking dog, the radiant baby) are gone from everything.
+  // 3 The Subway (coloured chalk on the black paper) · 4 Doodle · 5 The Heart · 6 The Crowd · 7 The Acrobats. Retired (code
+  // kept): What he heard (_hrListen), Mosaic, the first Subway, Dancing crowd, Figures. His protected characters (the barking dog, the radiant baby) are gone from everything.
   const _pn=_capN(8); const _hpick=((phaseIndex|0)%_pn+_pn)%_pn;
-  const _ph=[haringListen,haringStory,haringPhaseMural,haringPhaseSubway,haringPhaseDoodle,haringHeart,haringCrowd,haringAcrobats];
+  const _ph=[haringListen,haringStory,haringPhaseMural,haringSubwayChalk,haringPhaseDoodle,haringHeart,haringCrowd,haringAcrobats];
   _ph[_hpick](ctx,CW,CH,chords,lim,gc,ss,mode);
 }
 
