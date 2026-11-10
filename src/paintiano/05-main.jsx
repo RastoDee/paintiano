@@ -3224,9 +3224,21 @@ export default function Paintiano() {
   // effectivePairs / etc. below. The hook has no parameter dependencies — order
   // among hooks doesn't matter for correctness as long as it stays consistent.
   const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
-          justUpgraded, clearJustUpgraded,
+          justUpgraded, clearJustUpgraded, aiUntil, aiExpired,
           trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
   const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings' | 'upgraded'
+  // The AI pass says when it is about to end (the last 14 days, once a day) and once when it has ended.
+  // The local prices are asked for first, so the note carries the visitor's own currency where it can.
+  useEffect(()=>{ if(!aiUntil) return; let on=true;
+    const soon = isProAI && (aiUntil - Date.now()) < 14*864e5, ended = !isProAI && aiExpired;
+    if(!soon && !ended) return;
+    const tag = ended ? ('ended:'+aiUntil) : ('soon:'+new Date().toISOString().slice(0,10));
+    try{ if(localStorage.getItem('paintiano_aipass_note')===tag) return; }catch(_){}
+    const tm = setTimeout(()=>{ const say=()=>{ if(!on) return; try{ localStorage.setItem('paintiano_aipass_note', tag); }catch(_){}
+        setErr(pfPx(ended ? t('aiPassEnded') : String(t('aiPassSoon')).replace('{d}', pfFmtDay(aiUntil, lang)))); setErrInfo(true); };
+      try{ pfPxLoad().then(say, say); }catch(_){ say(); } }, 6000);
+    return ()=>{ on=false; clearTimeout(tm); };
+  }, [aiUntil, aiExpired, isProAI]);
   // Back from a confirmed Pro → Pro AI upgrade: show the short success note once.
   useEffect(() => { if (justUpgraded) { if (isDesktop) setPaywallReason('upgraded'); clearJustUpgraded(); } }, [justUpgraded, clearJustUpgraded]);   // a phone: the welcome card (below) says it
   // Custom palette = 12 hex colors, one per pitch class (index 0 = C, 11 = B).
@@ -9046,7 +9058,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(typeof window==='undefined') return;
     const on=(e)=>{ const d=(e&&e.detail)||{};
       try{ window.posthog && window.posthog.capture('ai_daily_limit',{plan:d.plan||'',kind:d.kind||'',limit:d.limit||'daily'}); }catch(_){}
-      setTimeout(()=>{ const m = d.limit==='year' ? String(t('aiLimitYear')).replace('{n}', Number(d.cap||1000).toLocaleString('en-US')) : d.plan==='free' ? t('aiLimitNet') : (d.kind==='piece' ? String(t('aiLimitDay')).replace('{n}', String(d.cap||30)) : t('aiLimitAny'));
+      setTimeout(()=>{ const _rn = d.renews ? Date.parse(d.renews) : Date.UTC(new Date().getUTCFullYear()+1, 0, 1);   // a pass year renews on its own date; licences from before the pass on 1 January
+        const m = d.limit==='year' ? String(t('aiLimitYear')).replace('{n}', Number(d.cap||1000).toLocaleString('en-US')).replace('{d}', pfFmtDay(_rn, lang)) : d.plan==='free' ? t('aiLimitNet') : (d.kind==='piece' ? String(t('aiLimitDay')).replace('{n}', String(d.cap||30)) : t('aiLimitAny'));
         setErr(m); setErrInfo(true); }, 150); };
     window.addEventListener('pf-ai-limit',on);
     return ()=>window.removeEventListener('pf-ai-limit',on);
@@ -17327,7 +17340,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               {k:'concept', label:t('concept'), bg:'linear-gradient(135deg,#cdb2ff,#8c5cff)', ic:(<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,lineHeight:1}}>φ</span>), go:_go(()=>setShowAbout(true))},
               {k:'book', label:ts('gcat_book','Book'), bg:'linear-gradient(135deg,#ffb08a,#ff7a3d)', ic:_sv(<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14zM20 17v4H6.5A2.5 2.5 0 0 1 4 18.5"/>), go:_go(()=>setShowBook(true))},
             ];
-            const _pro = !isPro ? {t:'Paintiano Pro', s:_stT('proSub')} : !isProAI ? {t:'Paintiano Pro AI', s:_stT('proAiSub')} : null;
+            // On an AI pass the row tells its end date and opens the further year; a pass that has ended says so.
+            const _pro = !isPro ? {t:'Paintiano Pro', s:_stT('proSub')}
+              : !isProAI ? {t:'Paintiano Pro AI', s: aiExpired ? t('proPaywallSubExpired') : _stT('proAiSub')}
+              : aiUntil ? {t:String(t('aiPassRow')).replace('{d}', pfFmtDay(aiUntil, lang)), s:pfPx(t('aiPassRowSub'))} : null;
             const _row = {display:'flex',alignItems:'center',gap:14,width:'100%',boxSizing:'border-box',padding:'12px 14px',background:'none',border:0,color:'#f2eee8',fontFamily:'inherit',textAlign:'left',cursor:'pointer',WebkitTapHighlightColor:'transparent'};
             const _ri = (bg, ic)=>(<span style={{flexShrink:0,width:34,height:34,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:bg,color:'#fff'}}>{ic}</span>);
             const _chev = (<span aria-hidden="true" style={{color:'rgba(242,238,232,.3)',fontSize:18,lineHeight:1}}>›</span>);
@@ -17422,6 +17438,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   // {key:'setup',   label:ts('setupPickerLabel','Setup'),        onClick:()=>{setNavMenuOpen(false);setSetupReturnTo(null);setShowSetupModal(true);}},
                   (!isPro)            ? {key:'pro',  label:t('proBadge'),                   pro:'gold',   onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : (!isProAI)        ? {key:'proai',label:t('proAiBadge')||'PRO AI',       pro:'purple', onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
+                  : aiUntil           ? {key:'aipass',label:String(t('aiPassRow')).replace('{d}', pfFmtDay(aiUntil, lang)), pro:'purple', onClick:()=>{setNavMenuOpen(false);setPaywallReason('settings');}}
                   : null,
                   // Reset — full-app reset without page reload. Drops every
                   // draft, every stash, every loaded source across all modes;
@@ -21965,6 +21982,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           activateLicense={activateLicense}
           readScale={effScale}
           isDesktop={isDesktop}
+          aiUntil={aiUntil}
+          aiExpired={aiExpired}
+          lang={lang}
         />
       )}
       {/* ── FULLSCREEN DEMO REEL OVERLAY ───────────────────────────────────

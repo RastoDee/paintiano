@@ -19,14 +19,23 @@
 //   • transaction.canceled
 //       → no-op; we just 200 OK so Paddle doesn't retry.
 //
-// Pro → Pro AI upgrade (PADDLE_PRICE_ID_UPGRADE):
-//   The app opens the upgrade price with customData { upgrade_from: <Pro key> }.
-//   • valid active Pro key → that SAME key becomes tier 'pro_ai' (nothing to
-//     re-enter), and a record row (key UPGRADE-…, status 'disabled', never a
-//     working key) keeps the transaction so a refund can find it.
-//   • refund of the upgrade → the original key steps back to 'pro'.
-//   • no / unknown / not-Pro key → the buyer paid about the Pro price, so a
-//     fresh Pro licence is issued instead (logged for a manual look).
+// THE AI PASS (Nov 2026): Pro is for life; AI runs for 12 months from each
+// purchase and never renews by itself (licenses.ai_until, see _lib/pass.js).
+//   • Pro AI price → a new key, tier 'pro_ai', ai_until = now + 12 months.
+//   • Upgrade price (PADDLE_PRICE_ID_UPGRADE) = "AI for 12 months" for a key
+//     the buyer already has. The app opens it with customData
+//     { upgrade_from: <key> }:
+//       – a Pro key, or a key whose pass has ended → tier 'pro_ai',
+//         ai_until = now + 12 months;
+//       – a key whose pass is running → ai_until moves 12 months further
+//         (the year is added at the end, nothing is lost).
+//     A record row (key UPGRADE-…, status 'disabled', never a working key)
+//     keeps the transaction so a refund can find it.
+//   • refund of such a purchase → that year is taken back; with no AI time
+//     left the key is plain Pro again.
+//   • a key with AI and no end date (sold before the pass) is not extended;
+//     no / unknown key → the buyer paid about the Pro price, so a fresh Pro
+//     licence is issued instead (logged for a manual look).
 //   Paddle sends both transaction.paid and transaction.completed; a second
 //   event for an order_id we already stored is acknowledged and ignored.
 //
@@ -36,7 +45,8 @@
 // We reconstruct the signed payload as `${ts}:${rawBody}` and HMAC it with
 // the secret. If the digest doesn't match → 401, no DB writes happen.
 
-import { insertLicense, setLicenseStatus, getLicenseByKey, getLicenseByOrderId, setLicenseTier } from './_lib/supabase.js';
+import { insertLicense, setLicenseStatus, getLicenseByKey, getLicenseByOrderId, patchLicense } from './_lib/supabase.js';
+import { passState, extendedUntil, plusYear, minusYear } from './_lib/pass.js';
 
 export const config = { runtime: 'edge' };
 
@@ -170,7 +180,8 @@ function priceIdToTier(priceId) {
 // fallbacks that approximate Cormorant Garamond / Outfit. Dark Paintiano
 // palette: bg #06060c, ink #e8e2d4, gold #c9a84c, gold-soft #ffd07a.
 
-function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) {
+function fmtDay(iso) { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }); } catch (_) { return String(iso || '').slice(0, 10); } }
+function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId, aiUntil }) {
   const safeKey = String(licenseKey).replace(/[^A-Z0-9-]/g, '');
   const isAI = tier === 'pro_ai';
   const tierName = isAI ? 'Pro AI' : 'Pro';
@@ -178,7 +189,7 @@ function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) 
   // Pro AI adds AI composition under fair use (30 pieces & melodies a day,
   // counted in /api/compose).
   const unlockLine = isAI
-    ? 'high-resolution exports, the full style library, no watermark, plus AI composition from text and images (up to 30 AI pieces & melodies a day).'
+    ? 'print exports, the full style library, no watermark, plus AI composition from text and images for 12 months (up to 30 AI pieces & melodies a day, 500 over the 12 months).'
     : 'high-resolution exports, the full style library, and no watermark.';
   const priceLine = (amount != null && currency)
     ? `${amount} ${currency}`
@@ -203,7 +214,7 @@ function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) 
   <!-- Greeting -->
   <p style="font-size:15px;color:#e8e2d4;margin:32px 0 10px;">Hi,</p>
   <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you for supporting Paintiano. You're one of the early supporters of this little solo art project — it genuinely means a lot.</p>
-  <p style="font-size:15px;color:#e8e2d4;margin:0 0 28px;">Your lifetime ${tierName} license is below. Keep this email — it's the only place this key lives outside our database.</p>
+  <p style="font-size:15px;color:#e8e2d4;margin:0 0 28px;">Your ${tierName} license is below. ${isAI ? ('Pro is yours for life; the AI pass runs for 12 months' + (aiUntil ? (', until ' + fmtDay(aiUntil)) : '') + ' and never renews by itself — another year is a one-time payment, only if you want it. ') : 'It is yours for life. '}Keep this email — it's the only place this key lives outside our database.</p>
 
   <!-- License key box -->
   <div style="margin:28px 0 32px;padding:26px 22px;background:linear-gradient(135deg,rgba(201,168,76,0.10),rgba(255,208,122,0.04));border:1px solid rgba(255,208,122,0.55);border-radius:14px;text-align:center;">
@@ -249,7 +260,7 @@ function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) 
   <!-- Receipt info -->
   <div style="margin:36px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.10);font-size:12px;color:rgba(232,226,212,0.55);line-height:1.7;">
     <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Order:</strong> ${orderId || '—'}</div>
-    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time, lifetime)</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time${isAI ? '; Pro for life, AI for 12 months' : ', lifetime'})</div>
     <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days under fair use (see the Refund Policy) — reply to this email and we'll handle it.</div>
   </div>
 
@@ -275,7 +286,7 @@ function buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }) 
 
 // Plain-text fallback for clients that prefer text (or that auto-generate
 // previews). Keep it short and friendly with the same key + steps.
-function buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }) {
+function buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId, aiUntil }) {
   const isAI = tier === 'pro_ai';
   const tierName = isAI ? 'Pro AI' : 'Pro';
   const unlockLine = isAI
@@ -285,7 +296,8 @@ function buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }) 
   return [
     'Hi,',
     '',
-    `Thank you for supporting Paintiano. Your lifetime ${tierName} license is below — keep this email safe.`,
+    `Thank you for supporting Paintiano. Your ${tierName} license is below — keep this email safe.`,
+    isAI ? `Pro is yours for life. The AI pass runs for 12 months${aiUntil ? ' (until ' + fmtDay(aiUntil) + ')' : ''} and never renews by itself; another year is a one-time payment, only if you want it.` : 'It is yours for life.',
     '',
     `LICENSE KEY: ${licenseKey}`,
     '',
@@ -295,7 +307,7 @@ function buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }) 
     `  3. Paste the key — ${tierName} unlocks immediately (${unlockLine})`,
     '',
     `Order: ${orderId || '—'}`,
-    `Amount: ${priceLine} (one-time, lifetime)`,
+    `Amount: ${priceLine} (one-time${isAI ? '; Pro for life, AI for 12 months' : ', lifetime'})`,
     'Refunds: 14 days under fair use (see the Refund Policy). Just reply to this email.',
     '',
     'Need help? hello@paintiano.app',
@@ -316,7 +328,7 @@ function keyTail(key) {
   return String(key || '').replace(/[^A-Z0-9]/g, '').slice(-4) || '????';
 }
 
-function buildUpgradeEmailHtml({ fromKey, amount, currency, orderId }) {
+function buildUpgradeEmailHtml({ fromKey, amount, currency, orderId, aiUntil, renewed }) {
   const tail = keyTail(fromKey);
   const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€10';
   return `<!doctype html>
@@ -324,30 +336,30 @@ function buildUpgradeEmailHtml({ fromKey, amount, currency, orderId }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your Paintiano Pro is now Pro AI</title>
+<title>Your Paintiano AI pass</title>
 </head>
 <body style="margin:0;padding:0;background:#06060c;color:#e8e2d4;font-family:'Outfit',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;">
 <div style="max-width:560px;margin:0 auto;padding:40px 24px 56px;">
 
   <div style="text-align:center;padding-bottom:32px;border-bottom:1px solid rgba(232,226,212,.12);">
     <div style="font-family:'Cormorant Garamond',Georgia,'Palatino Linotype',serif;font-size:34px;font-weight:600;color:#c9a84c;letter-spacing:-0.5px;line-height:1;">Paintiano</div>
-    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;color:#e8e2d4;margin-top:10px;letter-spacing:0.3px;">your Pro is now Pro AI</div>
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;color:#e8e2d4;margin-top:10px;letter-spacing:0.3px;">${renewed ? 'your AI pass is extended' : 'your AI pass is on'}</div>
   </div>
 
   <p style="font-size:15px;color:#e8e2d4;margin:32px 0 10px;">Hi,</p>
-  <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you for upgrading. It genuinely means a lot to this little solo art project.</p>
+  <p style="font-size:15px;color:#e8e2d4;margin:0 0 8px;">Thank you. It genuinely means a lot to this little solo art project.</p>
 
   <div style="margin:28px 0 32px;padding:24px 22px;background:linear-gradient(135deg,rgba(169,127,245,0.12),rgba(220,150,255,0.04));border:1px solid rgba(220,150,255,0.5);border-radius:14px;text-align:center;">
-    <div style="font-size:15px;color:#e8e2d4;line-height:1.6;">Your Pro key ending in <strong style="font-family:'SF Mono','Menlo','Consolas',monospace;color:#dcb4ff;letter-spacing:0.06em;">${tail}</strong> now opens <strong style="color:#dcb4ff;">Pro AI</strong>.<br>There is nothing to enter.</div>
+    <div style="font-size:15px;color:#e8e2d4;line-height:1.6;">Your key ending in <strong style="font-family:'SF Mono','Menlo','Consolas',monospace;color:#dcb4ff;letter-spacing:0.06em;">${tail}</strong> has <strong style="color:#dcb4ff;">AI${aiUntil ? ' until ' + fmtDay(aiUntil) : ' for 12 months'}</strong>.<br>There is nothing to enter.</div>
   </div>
 
-  <p style="font-size:14px;color:#e8e2d4;margin:0 0 10px;">Open <a href="https://paintiano.app/play" style="color:#ffd07a;text-decoration:none;border-bottom:1px solid rgba(255,208,122,0.4);">Paintiano</a> as usual. AI is on from now on — up to 30 AI pieces &amp; melodies a day: a piece from a feeling you name, a piece from a photo's mood, AI compose from your picture, atmosphere and a sung melody.</p>
-  <p style="font-size:14px;color:rgba(232,226,212,0.78);margin:0 0 8px;">On your other devices Pro AI appears the next time Paintiano opens there.</p>
+  <p style="font-size:14px;color:#e8e2d4;margin:0 0 10px;">Open <a href="https://paintiano.app/play" style="color:#ffd07a;text-decoration:none;border-bottom:1px solid rgba(255,208,122,0.4);">Paintiano</a> as usual. Up to 30 AI pieces &amp; melodies a day, 500 over the 12 months: a piece from a feeling you name, a piece from a photo's mood, AI compose from your picture, atmosphere and a sung melody.</p>
+  <p style="font-size:14px;color:rgba(232,226,212,0.78);margin:0 0 8px;">The pass never renews by itself, and Pro stays yours for life either way. On your other devices AI appears the next time Paintiano opens there.</p>
 
   <div style="margin:36px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,0.10);font-size:12px;color:rgba(232,226,212,0.55);line-height:1.7;">
     <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Order:</strong> ${orderId || '—'}</div>
-    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time upgrade, lifetime)</div>
-    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days under fair use (see the Refund Policy) — your key simply returns to Pro. Reply to this email.</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Amount:</strong> ${priceLine} (one-time, AI for 12 months)</div>
+    <div><strong style="color:rgba(232,226,212,0.78);font-weight:600;">Refunds:</strong> 14 days under fair use (see the Refund Policy) — that year of AI is simply taken back. Reply to this email.</div>
   </div>
 
   <div style="margin:32px 0 0;text-align:center;font-size:13px;color:rgba(232,226,212,0.6);">
@@ -368,20 +380,21 @@ function buildUpgradeEmailHtml({ fromKey, amount, currency, orderId }) {
 </html>`;
 }
 
-function buildUpgradeEmailText({ fromKey, amount, currency, orderId }) {
+function buildUpgradeEmailText({ fromKey, amount, currency, orderId, aiUntil, renewed }) {
   const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€10';
   return [
     'Hi,',
     '',
-    'Thank you for upgrading.',
+    renewed ? 'Thank you — your AI pass is extended.' : 'Thank you — your AI pass is on.',
     '',
-    `Your Pro key ending in ${keyTail(fromKey)} now opens Pro AI. There is nothing to enter.`,
-    'Open https://paintiano.app/play as usual — AI is on from now on, up to 30 AI pieces & melodies a day.',
-    'On your other devices Pro AI appears the next time Paintiano opens there.',
+    `Your key ending in ${keyTail(fromKey)} has AI${aiUntil ? ' until ' + fmtDay(aiUntil) : ' for 12 months'}. There is nothing to enter.`,
+    'Open https://paintiano.app/play as usual — up to 30 AI pieces & melodies a day, 500 over the 12 months.',
+    'The pass never renews by itself. Pro stays yours for life either way.',
+    'On your other devices AI appears the next time Paintiano opens there.',
     '',
     `Order: ${orderId || '—'}`,
-    `Amount: ${priceLine} (one-time upgrade, lifetime)`,
-    'Refunds: 14 days under fair use (see the Refund Policy) — your key simply returns to Pro. Just reply to this email.',
+    `Amount: ${priceLine} (one-time, AI for 12 months)`,
+    'Refunds: 14 days under fair use (see the Refund Policy) — that year of AI is simply taken back. Just reply to this email.',
     '',
     'Need help? hello@paintiano.app',
     '',
@@ -395,7 +408,7 @@ function buildUpgradeEmailText({ fromKey, amount, currency, orderId }) {
 // Resend is down or the API key is missing we log and continue. The license
 // is already in Supabase so we can recover via a manual resend / lookup
 // endpoint.
-async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderId, subject, html, text, category }) {
+async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderId, subject, html, text, category, aiUntil }) {
   if (!RESEND_API_KEY) {
     console.warn('paddle-webhook: RESEND_API_KEY not set — skipping email send');
     return { ok: false, reason: 'no_api_key' };
@@ -418,8 +431,8 @@ async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderI
         bcc: EMAIL_BCC,
         reply_to: EMAIL_REPLY_TO,
         subject: subject || `Your Paintiano ${tierName} license`,
-        html: html || buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId }),
-        text: text || buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId }),
+        html: html || buildLicenseEmailHtml({ licenseKey, tier, amount, currency, orderId, aiUntil }),
+        text: text || buildLicenseEmailText({ licenseKey, tier, amount, currency, orderId, aiUntil }),
         tags: [
           { name: 'category', value: category || 'license_delivery' },
           { name: 'provider', value: 'paddle' },
@@ -545,8 +558,13 @@ export default async function handler(req) {
           const fromKey = (typeof rawFrom === 'string') ? rawFrom.trim() : '';
           const orig = (fromKey && fromKey.length >= 6 && fromKey.length <= 200)
             ? await getLicenseByKey(fromKey) : null;
-          const eligible = !!orig && orig.status === 'active' && orig.tier !== 'pro_ai';
+          // Eligible: an active key that is Pro, or Pro AI on a pass (running or ended).
+          // AI with no end date (sold before the pass) has nothing to extend.
+          const ps = orig ? passState(orig) : null;
+          const eligible = !!orig && orig.status === 'active' && !(ps && ps.lifetime);
           if (eligible) {
+            const renewed = !!(ps && ps.ai);            // a running pass gets a further year
+            const aiUntil = extendedUntil(orig);
             // Record row first (keeps the transaction for refunds; never a working key).
             await insertLicense({
               key: 'UPGRADE-' + generateLicenseKey().slice(6),
@@ -563,32 +581,35 @@ export default async function handler(req) {
               currency: currencyCode,
               raw_event: evt,
             });
-            await setLicenseTier(orig.key, 'pro_ai');
-            console.info('paddle-webhook: upgraded licence to pro_ai', { orderId, tail: keyTail(orig.key) });
+            await patchLicense(orig.key, { tier: 'pro_ai', ai_until: aiUntil });
+            console.info('paddle-webhook: AI pass set', { orderId, tail: keyTail(orig.key), renewed, until: aiUntil.slice(0, 10) });
             const mail = await sendLicenseEmail({
               to: email, tier: 'pro_ai', amount: amountMajor, currency: currencyCode, orderId,
-              subject: 'Your Paintiano Pro is now Pro AI',
-              html: buildUpgradeEmailHtml({ fromKey: orig.key, amount: amountMajor, currency: currencyCode, orderId }),
-              text: buildUpgradeEmailText({ fromKey: orig.key, amount: amountMajor, currency: currencyCode, orderId }),
-              category: 'license_upgrade',
+              subject: renewed ? 'Your Paintiano AI pass is extended' : 'Your Paintiano AI pass is on',
+              html: buildUpgradeEmailHtml({ fromKey: orig.key, amount: amountMajor, currency: currencyCode, orderId, aiUntil, renewed }),
+              text: buildUpgradeEmailText({ fromKey: orig.key, amount: amountMajor, currency: currencyCode, orderId, aiUntil, renewed }),
+              category: renewed ? 'ai_pass_renewal' : 'license_upgrade',
             });
             if (!mail.ok) console.warn('paddle-webhook: upgrade email NOT sent', mail);
             return json({ ok: true, upgraded: true, emailed: !!mail.ok });
           }
-          // Not a valid Pro key: the buyer paid about the Pro price, so they get Pro.
-          console.warn('paddle-webhook: upgrade without an eligible Pro key — issuing Pro instead', {
+          // Not a key the pass can go on: the buyer paid about the Pro price, so they get Pro.
+          console.warn('paddle-webhook: AI pass without an eligible key — issuing Pro instead', {
             orderId, hadKey: !!fromKey, found: !!orig, status: orig?.status || null, tier: orig?.tier || null,
           });
           tier = 'pro';
         }
 
         const licenseKey = generateLicenseKey();
+        // Pro AI = Pro for life + the AI pass: 12 months from now.
+        const newAiUntil = (tier === 'pro_ai') ? plusYear(Date.now()).toISOString() : null;
 
         await insertLicense({
           key: licenseKey,
           email,
           status: 'active',
           tier, // 'pro' | 'pro_ai' — drives entitlements in the app
+          ...(newAiUntil ? { ai_until: newAiUntil } : {}),
           order_id: orderId,
           provider: 'paddle',
           activations: 0,
@@ -612,6 +633,7 @@ export default async function handler(req) {
           amount: amountMajor,
           currency: currencyCode,
           orderId,
+          aiUntil: newAiUntil,
         });
         if (mail.ok) {
           console.info('paddle-webhook: email sent', { messageId: mail.messageId });
@@ -646,8 +668,19 @@ export default async function handler(req) {
           if (typeof ev === 'string') { try { ev = JSON.parse(ev); } catch { ev = null; } }
           const from = ev?.data?.custom_data?.upgrade_from;
           if (typeof from === 'string' && from.trim()) {
-            await setLicenseTier(from.trim(), 'pro');
-            console.info('paddle-webhook: upgrade refunded — key back to pro', { orderId, tail: keyTail(from) });
+            // Take that year back. With AI time still left the pass simply ends a year
+            // sooner; otherwise (or for an upgrade sold before the pass) the key is Pro again.
+            let orig = null;
+            try { orig = await getLicenseByKey(from.trim()); } catch (e) { console.warn('paddle-webhook: refund key lookup failed', e); }
+            const u = orig && orig.ai_until ? Date.parse(orig.ai_until) : null;
+            const back = (u != null && Number.isFinite(u)) ? minusYear(u) : null;
+            if (back && back.getTime() > Date.now()) {
+              await patchLicense(from.trim(), { ai_until: back.toISOString() });
+              console.info('paddle-webhook: AI pass year refunded — pass shortened', { orderId, tail: keyTail(from), until: back.toISOString().slice(0, 10) });
+              return json({ ok: true, revoked: true, shortened: true });
+            }
+            await patchLicense(from.trim(), { tier: 'pro', ai_until: null });
+            console.info('paddle-webhook: AI pass refunded — key back to pro', { orderId, tail: keyTail(from) });
             return json({ ok: true, revoked: true, downgraded: true });
           }
         }

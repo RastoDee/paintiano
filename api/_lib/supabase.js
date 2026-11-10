@@ -24,13 +24,19 @@ function headers() {
 }
 
 export async function insertLicense(row) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/licenses`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify(row),
-  });
+  const post = (r) => fetch(`${SUPABASE_URL}/rest/v1/licenses`, { method: 'POST', headers: headers(), body: JSON.stringify(r) });
+  let res = await post(row);
   if (!res.ok) {
     const text = await res.text();
+    // No ai_until column yet (supabase/ai_usage.sql part 6 not run): the licence is
+    // still issued — a sale never fails over it — and the missing date is logged.
+    if ('ai_until' in row && /ai_until/.test(text)) {
+      const { ai_until, ...rest } = row;
+      console.warn('supabase: licenses.ai_until is missing — run supabase/ai_usage.sql part 6');
+      res = await post(rest);
+      if (res.ok) return res.json();
+      throw new Error(`Supabase insert failed: ${res.status} ${await res.text()}`);
+    }
     throw new Error(`Supabase insert failed: ${res.status} ${text}`);
   }
   return res.json();
@@ -51,8 +57,11 @@ export async function upsertLicense(row) {
 }
 
 export async function getLicenseByKey(key) {
-  const url = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=key,email,status,tier,activations,created_at`;
-  const res = await fetch(url, { headers: headers() });
+  const base = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=key,email,status,tier,activations,created_at`;
+  // ai_until (the AI pass, supabase/ai_usage.sql part 6): asked for first; a database
+  // without the column yet answers the plain select, so nothing breaks before the SQL is run.
+  let res = await fetch(base + ',ai_until', { headers: headers() });
+  if (!res.ok) res = await fetch(base, { headers: headers() });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Supabase select failed: ${res.status} ${text}`);
@@ -86,6 +95,29 @@ export async function setLicenseTier(key, tier) {
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Supabase tier update failed: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+// Change fields of one licence key (tier, ai_until). If the database has no
+// ai_until column yet, the write is repeated without it — the tier still lands.
+export async function patchLicense(key, fields) {
+  const url = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}`;
+  let res = await fetch(url, { method: 'PATCH', headers: headers(), body: JSON.stringify(fields) });
+  if (!res.ok && 'ai_until' in fields) {
+    const text = await res.text();
+    if (/ai_until/.test(text)) {
+      const { ai_until, ...rest } = fields;
+      console.warn('supabase: licenses.ai_until is missing — run supabase/ai_usage.sql part 6');
+      if (!Object.keys(rest).length) return [];
+      res = await fetch(url, { method: 'PATCH', headers: headers(), body: JSON.stringify(rest) });
+    } else {
+      throw new Error(`Supabase licence update failed: ${res.status} ${text}`);
+    }
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase licence update failed: ${res.status} ${text}`);
   }
   return res.json();
 }

@@ -2,10 +2,12 @@
 // Public endpoint called by the Paintiano app when a user enters or re-validates a license key.
 //
 // Request:  POST /api/validate   { "key": "PAINT-XXXX-XXXX-XXXX" }
-// Response: { "valid": true,  "status": "active",  "email": "u@example.com" }
+// Response: { "valid": true,  "status": "active",  "email": "u@example.com", "tier": "pro" | "pro_ai",
+//             "ai_until": ISO date | null, "ai_expired": bool }
 //        or { "valid": false, "reason": "not_found" | "refunded" | "disabled" | "rate_limited" }
 
 import { getLicenseByKey, incrementActivations } from './_lib/supabase.js';
+import { passState } from './_lib/pass.js';
 
 export const config = { runtime: 'edge' };
 
@@ -81,9 +83,16 @@ export default async function handler(req) {
     // Tier drives entitlements in the app: 'pro' (full tool, AI only as a trial)
     // or 'pro_ai' (full tool + AI; /api/compose applies the daily fair use). Default to 'pro' for any
     // legacy/untagged row so a valid key still unlocks the paid tool.
-    const tier = (row.tier === 'pro_ai') ? 'pro_ai' : 'pro';
+    // The AI pass: a 'pro_ai' key whose 12 months have ended is plain Pro until it is
+    // extended (ai_expired tells the app why). ai_until null = AI with no end date.
+    const ps = passState(row);
+    const tier = ps.ai ? 'pro_ai' : 'pro';
 
-    return json({ valid: true, status: 'active', email: masked, tier });
+    return json({
+      valid: true, status: 'active', email: masked, tier,
+      ai_until: ps.until ? new Date(ps.until).toISOString() : null,
+      ai_expired: ps.expired,
+    });
   } catch (err) {
     console.error('validate error', err);
     return json({ valid: false, reason: 'server_error' }, 500);

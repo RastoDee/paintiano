@@ -42,7 +42,9 @@ const PRO_CFG = {
   paddleEnv: 'production',
   // Price IDs — TWO paid tiers since the 3-tier model (Jun 2026):
   //   Pro    = full deterministic tool, NO AI (lifetime). €9.99.
-  //   Pro AI = Pro + AI composition, fair use 30 pieces & melodies a day (lifetime). €19.99.
+  //   Pro AI = Pro for life + the AI pass: AI composition for 12 months (30 pieces &
+  //            melodies a day, 500 over the 12 months). €19.99. A further year of AI
+  //            is the upgrade price (€10); nothing renews by itself.
   // The legacy single price ID below is the original "Paintiano Pro Lifetime"
   // (€9.99). It is REUSED as the Pro tier price for now; the Pro AI price must
   // be created in the Paddle catalog and its ID pasted into paddlePriceIdProAI.
@@ -244,6 +246,13 @@ async function _proValidate(key, check = false) {
   }
 }
 
+// A day in the app's language (the AI pass: "until 10 November 2027").
+const PF_DATE_LOC = { EN:'en-GB', DE:'de-DE', FR:'fr-FR', ES:'es-ES', SK:'sk-SK', PT:'pt-PT', zh:'zh-CN', zhTW:'zh-TW', ja:'ja-JP' };
+function pfFmtDay(ms, lang) {
+  try { return new Date(ms).toLocaleDateString(PF_DATE_LOC[lang] || 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  catch (_) { try { return new Date(ms).toISOString().slice(0, 10); } catch (__) { return ''; } }
+}
+
 // ─── Pro status hook ──────────────────────────────────────────────────────────
 function useProStatus() {
   // proStatus: 'loading' | 'free' | 'pro' | 'pro_ai'
@@ -261,6 +270,21 @@ function useProStatus() {
   // any unknown/missing tier so a valid-but-untagged key still unlocks the
   // paid tool (safe: AI stays gated behind pro_ai).
   const _tierToStatus = (tier) => (tier === 'pro_ai' ? 'pro_ai' : 'pro');
+  // THE AI PASS (Nov 2026): Pro is for life, AI runs for 12 months from each purchase.
+  //   aiUntil   ms | null — when this key's AI ends (null: no pass, or AI with no end date)
+  //   aiExpired a pass that has ended: the key is plain Pro until another year is added
+  // The server decides (validate: ai_until, ai_expired); the device's own clock also
+  // ends a pass, so it does not outlive its date while offline.
+  const [aiUntil, setAiUntil] = useState(null);
+  const [aiExpired, setAiExpired] = useState(false);
+  const _passOf = (r) => { const u = r && r.ai_until ? Date.parse(r.ai_until) : NaN; return Number.isFinite(u) ? u : null; };
+  const _apply = (tier, until, expired) => {
+    let st = _tierToStatus(tier), ex = !!expired;
+    if (st === 'pro_ai' && until && Date.now() > until) { st = 'pro'; ex = true; }
+    setProStatus(st); setAiUntil(until || null); setAiExpired(ex);
+    return st;
+  };
+  const _cacheOf = (res) => ({ email: res.email, tier: res.tier, aiUntil: _passOf(res), aiExpired: !!res.ai_expired });
 
   useEffect(() => {
     // Back from the upgrade checkout? Strip the flag so a reload doesn't repeat it.
@@ -278,8 +302,10 @@ function useProStatus() {
     if (!cached) { setProStatus('free'); return; }
     let alive = true;
     const stale = Date.now() - (cached.validatedAt || 0) > PRO_CFG.revalidateAfterMs;
+    // A paid year has landed when the key has AI and its end date moved on (a first pass has no earlier date).
+    const _upOk = (res) => res.tier === 'pro_ai' && !(cached.aiUntil && _passOf(res) && _passOf(res) <= cached.aiUntil);
     if (!stale) {
-      setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+      _apply(cached.tier, cached.aiUntil || null, cached.aiExpired); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       // Every paid key is re-checked quietly on each start (the cache only
       // decides what shows first), so a tier change on the server reaches every
       // device: an upgrade to Pro AI, a refunded upgrade back to Pro, or a
@@ -292,14 +318,14 @@ function useProStatus() {
           const res = await _proValidate(cached.key, true);
           if (!alive) return;
           if (res.valid) {
-            _proWriteCache(cached.key, { email: res.email, tier: res.tier });
-            setProStatus(_tierToStatus(res.tier)); setMaskedEmail(res.email || null);
-            if (res.tier === 'pro_ai' || !upgraded) {
+            _proWriteCache(cached.key, _cacheOf(res));
+            _apply(res.tier, _passOf(res), res.ai_expired); setMaskedEmail(res.email || null);
+            if (_upOk(res) || !upgraded) {
               if (upgraded) { setJustUpgraded(true); try { window.posthog && window.posthog.capture('upgrade_confirmed'); } catch (_) {} }
               return;
             }
           } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
-            _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+            _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
             return;
           } else if (res.offline) {
             return;
@@ -311,15 +337,15 @@ function useProStatus() {
     _proValidate(cached.key, true).then((res) => {
       if (!alive) return;
       if (res.valid) {
-        _proWriteCache(cached.key, { email: res.email, tier: res.tier });
-        setProStatus(_tierToStatus(res.tier)); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
-        if (upgraded && res.tier === 'pro_ai') setJustUpgraded(true);
+        _proWriteCache(cached.key, _cacheOf(res));
+        _apply(res.tier, _passOf(res), res.ai_expired); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
+        if (upgraded && _upOk(res)) setJustUpgraded(true);
       } else if (res.offline) {
         // Network down during re-check → trust the cache (stay paid) until online.
-        setProStatus(_tierToStatus(cached.tier)); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+        _apply(cached.tier, cached.aiUntil || null, cached.aiExpired); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       } else {
         // Authoritative revoke (refunded/disabled/not_found)
-        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
       }
     });
     return () => { alive = false; };
@@ -330,15 +356,15 @@ function useProStatus() {
     if (!key) return { ok: false, reason: 'empty' };
     const res = await _proValidate(key);
     if (res.valid) {
-      _proWriteCache(key, { email: res.email, tier: res.tier });
-      setProStatus(_tierToStatus(res.tier)); setLicenseKey(key); setMaskedEmail(res.email || null);
-      return { ok: true, tier: _tierToStatus(res.tier) };
+      _proWriteCache(key, _cacheOf(res));
+      const st = _apply(res.tier, _passOf(res), res.ai_expired); setLicenseKey(key); setMaskedEmail(res.email || null);
+      return { ok: true, tier: st };
     }
     return { ok: false, reason: res.reason || 'unknown' };
   }, []);
 
   const deactivateLicense = useCallback(() => {
-    _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null);
+    _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
   }, []);
 
   // ── Paddle checkout ────────────────────────────────────────────────────────
@@ -376,8 +402,9 @@ function useProStatus() {
       // Pick the price for the requested tier. Pro AI falls back to the Pro
       // price until its Paddle price ID exists (step C) — so the button never
       // dead-ends; worst case it sells Pro instead of Pro AI.
-      // 'upgrade' = a Pro key holder buying Pro AI at the upgrade price. It needs
-      // both the upgrade price and the key; otherwise it is a plain Pro AI sale.
+      // 'upgrade' = a key holder buying AI for 12 months at the upgrade price (a first
+      // pass on a Pro key, or a further year on a pass). It needs both the upgrade
+      // price and the key; otherwise it is a plain Pro AI sale.
       const isUpgrade = tier === 'upgrade' && !!PRO_CFG.paddlePriceIdUpgrade && !!licenseKey;
       const wantsAI = tier === 'pro_ai' || tier === 'upgrade';
       const priceId = isUpgrade
@@ -418,6 +445,7 @@ function useProStatus() {
            isPro: proStatus === 'pro' || proStatus === 'pro_ai',
            isProAI: proStatus === 'pro_ai',
            licenseKey, maskedEmail, justUpgraded, clearJustUpgraded,
+           aiUntil, aiExpired,
            activateLicense, deactivateLicense, openCheckout };
 }
 
@@ -640,12 +668,14 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
 
 // ─── ProPaywall — the modal ────────────────────────────────────────────────────
 // Props: { t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }
-function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false }) {
+function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false, aiUntil = null, aiExpired = false, lang = 'EN' }) {
   // reason 'upgraded' = back from a confirmed Pro → Pro AI upgrade: open straight
   // on the success note and close by itself.
   const [view, setView] = useState(reason === 'upgraded' ? 'success' : 'intro'); // 'intro'|'key'|'about'|'success'
   // A Pro owner is only ever offered the upgrade to Pro AI, never Pro again.
-  const upgradeOnly = proStatus === 'pro';
+  // A key on a running AI pass is offered only its further year (added at the end).
+  const renew = proStatus === 'pro_ai' && !!aiUntil;
+  const upgradeOnly = proStatus === 'pro' || renew;
   // Until the upgrade price exists in Paddle, a Pro owner is shown (and charged)
   // the plain Pro AI price — never a €10 label on a €19.99 checkout.
   const upTier = PRO_CFG.paddlePriceIdUpgrade ? 'upgrade' : 'pro_ai';
@@ -773,9 +803,9 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
       ? tr('proAiTierTitle', 'Paintiano Pro AI')
       : tr('proTierTitle', 'Paintiano Pro');
     const priceLine = isUp
-      ? tr('proUpgradePrice', '€10 · upgrade from your Pro')
+      ? tr('proUpgradePrice', '€10 · AI for 12 months')
       : isAI
-        ? tr('proAiTierPrice', '€19.99 · once, yours for life')
+        ? tr('proAiTierPrice', '€19.99 · Pro for life + AI for 12 months')
         : tr('proTierPrice',   '€9.99 · once, yours for life');
     const values = isAI ? [
       isUp ? ['proUpgradeValueAll', 'Your Pro stays, plus:'] : ['proAiValueAll', 'Everything in Pro, plus:'],
@@ -784,7 +814,8 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
       ['proAiValueAtmo',  'AI atmospheric tinting'],
       ['proAiValueCompose','AI compose — a new piece written from your picture'],
       ['proAiValueMelody', 'AI melody — a line sung over your picture'],
-      ['proAiValueFair',  'Up to 30 AI pieces & melodies a day · fair use'],
+      ['proAiValueFair',  'Up to 30 AI pieces & melodies a day, 500 over the 12 months · fair use'],
+      ['proAiValuePass',  'After 12 months Pro stays yours. Another year of AI is €10 — nothing renews by itself'],
     ] : [
       ['proValueArtists', '24 artists (free has 9)'],
       ['proValueTypes',   '6–9 paint types per artist (free has 2)'],
@@ -821,7 +852,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
         </ul>
         <button style={ctaBtn} onClick={() => openCheckout(tierKey)}>
           {isUp
-            ? tr('proUpgradeCta', 'Upgrade to Pro AI')
+            ? ((renew || aiExpired) ? tr('proRenewCta', 'Add 12 months of AI') : tr('proUpgradeCta', 'Get the AI pass'))
             : isAI
               ? tr('proAiGetCta', 'Get Pro AI')
               : tr('proGetCta', 'Get Pro')}
@@ -855,14 +886,18 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
               }}>✦</div>
             </div>
             <p style={{ fontSize: (1.05*readScale)+'rem', fontWeight: 800, textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>
-              {upgradeOnly
+              {(renew || (upgradeOnly && aiExpired))
+                ? tr('proPaywallTitleRenew', 'Another year of AI')
+                : upgradeOnly
                 ? tr('proPaywallTitleUpgrade', 'Add AI composition')
                 : reason === 'ai_trial'
                   ? tr('proPaywallTitleAi', 'You’ve used your free AI compositions')
                   : tr('proPaywallTitle', 'Unlock the full Paintiano')}
             </p>
             <p style={{ fontSize: (.66*readScale)+'rem', color: 'rgba(242,238,232,.66)', textAlign: 'center', margin: '0 0 18px', lineHeight: 1.45 }}>
-              {upgradeOnly ? tr('proPaywallSubUpgrade', 'You already have every style.') : tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
+              {renew ? tr('proPaywallSubRenew', 'Your AI pass runs until {d}. The new year is added at the end.').replace('{d}', pfFmtDay(aiUntil, lang))
+                : (upgradeOnly && aiExpired) ? tr('proPaywallSubExpired', 'Your AI pass has ended. Pro stays yours.')
+                : upgradeOnly ? tr('proPaywallSubUpgrade', 'You already have every style.') : tr('proPaywallSubtitle', 'Pay once. Keep forever.')}
             </p>
             {/* a Pro owner already has a key — the key entry stays in "Learn more" */}
             {!upgradeOnly && (
@@ -1133,7 +1168,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                     cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10,
                   }}>
                   {(upgradeOnly && upTier === 'upgrade')
-                    ? <>{tr('proUpgradeCta', 'Upgrade to Pro AI')} — {tr('proUpgradePriceShort', '€10')}</>
+                    ? <>{(renew || aiExpired) ? tr('proRenewCta', 'Add 12 months of AI') : tr('proUpgradeCta', 'Get the AI pass')} — {tr('proUpgradePriceShort', '€10')}</>
                     : <>{tr('proAiGetCta', 'Get Pro AI')} — {tr('proAiTierPriceShort', '€19.99')}</>}
                 </button>
               </>

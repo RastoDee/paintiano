@@ -95,3 +95,31 @@ $$;
 revoke all on function public.lic_usage_hit(text, integer, integer) from public, anon, authenticated;
 grant execute on function public.lic_usage_hit(text, integer, integer) to service_role;
 notify pgrst, 'reload schema';
+
+-- 6) The AI pass (Nov 2026): Pro is for life, AI runs for 12 months from each
+--    purchase and never renews by itself.
+--    • licenses.ai_until = when the key's AI ends. NULL on a 'pro_ai' key = AI with
+--      no end date — that is what every licence sold before the pass keeps.
+--    • ai_hit_pass counts pieces & melodies per 12 months of a pass (the bucket
+--      carries the period's end date), in the same table as the yearly counter.
+--    Run this part before the pass goes to main. Until it is run nothing breaks:
+--    keys are issued without a date (AI with no end) and the server says so in its log.
+alter table public.licenses add column if not exists ai_until timestamptz;
+
+create or replace function public.ai_hit_pass(p_bucket text, p_cap integer)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v integer;
+begin
+  insert into ai_usage_year (bucket, yr, n) values (p_bucket, 0, 1)
+  on conflict (bucket, yr) do update set n = ai_usage_year.n + 1
+    where ai_usage_year.n < p_cap
+  returning n into v;
+  return coalesce(v, -1);
+end $$;
+revoke all on function public.ai_hit_pass(text, integer) from public, anon, authenticated;
+grant execute on function public.ai_hit_pass(text, integer) to service_role;
+notify pgrst, 'reload schema';

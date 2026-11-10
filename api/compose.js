@@ -10,10 +10,12 @@
 // Claude here for anything.
 //
 // FAIR USE (Nov 2026) — AI is counted on the server:
-//  • Pro AI key (header X-Paintiano-Key)  → 30 AI pieces & melodies a day and
-//    1,000 a calendar year, one shared limit; every generation that is started
-//    counts (+ 100 small calls a day: atmosphere, title translation, morph picks).
-//    The days and the year turn over in UTC. This is what the terms say (v1.3).
+//  • AI pass (a key with licenses.ai_until in the future; header X-Paintiano-Key)
+//    → 30 AI pieces & melodies a day and 500 per 12 months of the pass, one shared
+//    limit; every generation that is started counts (+ 100 small calls a day:
+//    atmosphere, title translation, morph picks). Days turn over in UTC.
+//    A pass that has ended is plain Pro (counted per network, below).
+//  • Pro AI sold before the pass (ai_until null) → 30 a day and 1,000 a calendar year.
 //  • Pro AI bought before the limit (licenses.ai_unlimited = true) → no yearly
 //    limit, a daily guard against a leaked key only (100 pieces / 300 small).
 //  • Everyone else (Free, Pro, no key) → counted per network (an HMAC hash of
@@ -33,6 +35,7 @@
 
 import crypto from 'node:crypto';
 import { pfPromptBody, pfArgsCheck, pfOutputOk, PF_KINDS, PF_PIECE_KINDS } from '../src/ai-prompts.js';
+import { passState, passPeriodEnd } from './_lib/pass.js';
 
 const API_MODEL = 'claude-sonnet-4-6';
 // Models the app may ask for (anything else → API_MODEL).
@@ -51,8 +54,11 @@ const CAP = {
   unlimited: [100, 300],
   free:      [8, 30],
 };
-// Yearly cap on pieces & melodies for every Pro AI key (there were no Pro AI licences before it).
+// Pieces & melodies over a longer stretch:
+//  • the AI pass (licenses.ai_until set): PASS_CAP per 12 months of the pass;
+//  • Pro AI sold before the pass (ai_until null): YEAR_CAP per calendar year.
 const YEAR_CAP = 1000;
+const PASS_CAP = 500;
 
 // Allowed sources: our domains, Vercel previews of this project, local dev. Exact origins only —
 // a prefix test would let paintiano.app.evil.com or localhost.evil.com drive the key.
@@ -113,7 +119,8 @@ async function licenceOf(key) {
   if (c && Date.now() - c.at < 10 * 60 * 1000) return c.row;
   const hdr = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
   const base = `${SB_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&limit=1&select=`;
-  let res = await fetch(base + 'key,status,tier,ai_unlimited', { headers: hdr });
+  let res = await fetch(base + 'key,status,tier,ai_unlimited,ai_until', { headers: hdr });
+  if (!res.ok) res = await fetch(base + 'key,status,tier,ai_unlimited', { headers: hdr }); // ai_until not added yet
   if (!res.ok) res = await fetch(base + 'key,status,tier', { headers: hdr }); // column not added yet
   if (!res.ok) throw new Error('licence lookup ' + res.status);
   const row = (await res.json())[0] || null;
@@ -152,17 +159,22 @@ async function hit(id, cap) {
 // until that has been run (or when Supabase is unreachable) the year is not
 // counted — the daily cap still holds. Returns the new count, -1 when the cap is
 // reached, or 0 when it could not be counted.
-async function hitYear(id, cap) {
+async function hitYear(id, cap, fn = 'ai_hit_year') {
   if (!SB_URL || !SB_KEY) return 0;
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/rpc/ai_hit_year`, {
+    const res = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
       method: 'POST',
       headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_bucket: id, p_cap: cap }),
     });
     if (res.ok) { const v = await res.json(); if (typeof v === 'number') return v; }
-    else console.warn('compose: ai_hit_year', res.status, (await res.text()).slice(0, 160));
-  } catch (e) { console.warn('compose: ai_hit_year failed', String(e)); }
+    else {
+      console.warn('compose: ' + fn, res.status, (await res.text()).slice(0, 160));
+      // ai_hit_pass comes with supabase/ai_usage.sql part 6; before it exists the
+      // calendar-year counter holds the same cap for the same pass period.
+      if (fn !== 'ai_hit_year') return hitYear(id, cap);
+    }
+  } catch (e) { console.warn('compose: ' + fn + ' failed', String(e)); }
   return 0;
 }
 
@@ -217,7 +229,7 @@ export default async function handler(req, res) {
         usage = r.ok ? 'ok' : 'missing (run supabase/ai_usage.sql)';
       } catch (_) { usage = 'unreachable'; }
     }
-    res.status(200).json({ ok: true, message: 'compose endpoint alive — use POST { kind, args }', hasKey: !!process.env.ANTHROPIC_API_KEY, model: API_MODEL, kinds: PF_KINDS, caps: CAP, yearCap: YEAR_CAP, usage });
+    res.status(200).json({ ok: true, message: 'compose endpoint alive — use POST { kind, args }', hasKey: !!process.env.ANTHROPIC_API_KEY, model: API_MODEL, kinds: PF_KINDS, caps: CAP, yearCap: YEAR_CAP, passCap: PASS_CAP, usage });
     return;
   }
 
@@ -254,14 +266,17 @@ export default async function handler(req, res) {
   let noteKey = null;
   if (!probe) {
     // Who is asking: a Pro AI key, or anyone else (per network).
-    let plan = 'free', bucket = null, yearly = false;
+    let plan = 'free', bucket = null, yearly = false, passEnd = null;
     const key = String(req.headers['x-paintiano-key'] || '').trim();
     if (key) {
       try {
         const row = await licenceOf(key);
-        if (row && row.status === 'active' && row.tier === 'pro_ai') {
-          plan = row.ai_unlimited ? 'unlimited' : 'pro_ai';
+        // A pass that has ended is plain Pro: counted per network like everyone without AI.
+        const ps = (row && row.status === 'active') ? passState(row) : null;
+        if (ps && ps.ai) {
+          plan = (row.ai_unlimited && ps.lifetime) ? 'unlimited' : 'pro_ai';
           yearly = plan === 'pro_ai';
+          if (!ps.lifetime) passEnd = passPeriodEnd(ps.until);
           bucket = 'k:' + crypto.createHash('sha256').update(key).digest('hex').slice(0, 32);
         }
       } catch (e) { console.warn('compose: licence lookup failed', String(e)); }
@@ -270,12 +285,16 @@ export default async function handler(req, res) {
     const big = PF_PIECE_KINDS.includes(kind);
     // The year first (Pro AI pieces only): a full year answers before today's counter moves.
     if (big && yearly) {
-      const y = await hitYear(bucket + ':y', YEAR_CAP);
+      const y = passEnd
+        ? await hitYear(bucket + ':y' + passEnd, PASS_CAP, 'ai_hit_pass')
+        : await hitYear(bucket + ':y', YEAR_CAP);
       if (y < 0) {
         res.status(429).json({
           type: 'error',
-          error: { type: 'pf_year_limit', message: 'This year\'s AI pieces are used up — they renew on 1 January.' },
-          pf: { limit: 'year', plan, kind: 'piece', cap: YEAR_CAP },
+          error: { type: 'pf_year_limit', message: passEnd
+            ? 'The AI pieces of this pass year are used up — they renew on ' + passEnd + '.'
+            : 'This year\'s AI pieces are used up — they renew on 1 January.' },
+          pf: { limit: 'year', plan, kind: 'piece', cap: passEnd ? PASS_CAP : YEAR_CAP, renews: passEnd },
         });
         return;
       }
