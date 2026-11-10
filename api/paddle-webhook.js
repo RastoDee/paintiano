@@ -5,7 +5,8 @@
 //   • Destination URL: https://paintiano.app/api/paddle-webhook
 //   • Usage type:      Both (Platform + Simulation)
 //   • Events:          transaction.completed, transaction.paid,
-//                      transaction.canceled, adjustment.created
+//                      transaction.canceled, adjustment.created,
+//                      adjustment.updated
 //
 // What this does on each event:
 //   • transaction.completed / transaction.paid
@@ -16,6 +17,10 @@
 //       → SET status='refunded' on the license that matches transaction id
 //       → the /api/validate endpoint already returns reason='refunded' for
 //         this status, and the app deactivates Pro on next session.
+//   • adjustment.updated (action=refund, status=rejected)
+//       → Paddle did not approve the refund: the licence switched off when the
+//         refund was asked for works again (a pass gets its year back) and the
+//         buyer is told by e-mail.
 //   • transaction.canceled
 //       → no-op; we just 200 OK so Paddle doesn't retry.
 //
@@ -692,6 +697,54 @@ export default async function handler(req) {
 
         console.info('paddle-webhook: license revoked', { orderId, action });
         return json({ ok: true, revoked: true });
+      }
+
+      case 'adjustment.updated': {
+        // A refund Paddle did not approve: undo what adjustment.created switched off.
+        if (data?.action !== 'refund' || data?.status !== 'rejected') {
+          return json({ ok: true, ignored: 'adjustment_update' });
+        }
+        const orderId = data?.transaction_id;
+        if (!orderId) return json({ ok: true, ignored: 'no_transaction_id' });
+        let rec = null;
+        try { rec = await getLicenseByOrderId(orderId); } catch (e) { console.warn('paddle-webhook: rejected-refund lookup failed', e); }
+        if (!rec || rec.status !== 'refunded') return json({ ok: true, ignored: 'not_refunded' });
+
+        const isPass = String(rec.key || '').startsWith('UPGRADE-');
+        await setLicenseStatus(orderId, isPass ? 'disabled' : 'active', { refunded_at: null });
+
+        let key = rec.key, aiUntil = null;
+        if (isPass) {
+          let ev = rec.raw_event;
+          if (typeof ev === 'string') { try { ev = JSON.parse(ev); } catch { ev = null; } }
+          const from = ev?.data?.custom_data?.upgrade_from;
+          key = (typeof from === 'string' && from.trim()) ? from.trim() : null;
+          if (key) {
+            const orig = await getLicenseByKey(key);
+            // The year comes back at the end of a pass still running, otherwise from now.
+            if (orig && !passState(orig).lifetime) {
+              aiUntil = extendedUntil(orig);
+              await patchLicense(key, { tier: 'pro_ai', ai_until: aiUntil });
+            }
+          }
+        }
+        console.info('paddle-webhook: refund rejected by Paddle — licence restored', { orderId, tail: keyTail(key), pass: isPass });
+
+        let to = null;
+        try { const row = key ? await getLicenseByKey(key) : null; to = row?.email || null; } catch (_) {}
+        const what = isPass ? 'your AI pass' : 'your Paintiano licence';
+        const line1 = `Paddle, our payment provider, did not approve the refund you asked for, so ${what} is active again.`;
+        const line2 = isPass && aiUntil ? `Your AI pass runs until ${fmtDay(aiUntil)}.` : 'Enter your licence key in the app again (Menu → Paintiano Pro → I already have a key) to switch it back on.';
+        const line3 = 'If you think the refund should have gone through, just reply to this e-mail and we will look at it in person.';
+        const mail = await sendLicenseEmail({
+          to, tier: rec.tier, orderId, category: 'refund_rejected',
+          subject: 'Your Paintiano refund was not approved — your licence works again',
+          text: [line1, '', line2, '', ...(key && !isPass ? ['Licence key: ' + key, ''] : []), line3, '', 'Paintiano'].join('\n'),
+          html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#222;max-width:520px">
+<p>${line1}</p><p>${line2}</p>${key && !isPass ? `<p>Licence key: <b style="font-family:monospace">${key}</b></p>` : ''}<p>${line3}</p><p>Paintiano</p></div>`,
+        });
+        if (!mail.ok) console.warn('paddle-webhook: refund-rejected email NOT sent', mail);
+        return json({ ok: true, restored: true, emailed: !!mail.ok });
       }
 
       case 'transaction.canceled':
