@@ -22880,8 +22880,10 @@ function getGuideUI(lang){ return (GUIDE_I18N[lang] || GUIDE_I18N.EN).ui; }
 function getGuideCards(lang, studio){
   const L = GUIDE_I18N[lang] || GUIDE_I18N.EN, E = GUIDE_I18N.EN;
   return GUIDE_META.filter(m=>studio || m.cat!=='studio').map(m=>{ const x = L.c[m.id] || E.c[m.id];
-    return {...m, title:x.t, body:(studio && x.bS) || x.b, more:(studio && x.mS) || x.m}; });
+    return {...m, title:x.t, body:_guidePx((studio && x.bS) || x.b), more:_guidePx((studio && x.mS) || x.m)}; });
 }
+// Prices in the Guide follow the visitor's own currency, like the paywall (the first opening may still show EUR while the local prices load).
+function _guidePx(s){ try{ if(typeof s==='string' && s.indexOf('€')>=0){ pfPxLoad().catch(()=>{}); return pfPx(s); } }catch(_){} return s; }
 // In-text icons: the app's own button glyphs instead of emoji — 🔀 = the
 // shuffle button, ◎ = the Ensemble button. Strings keep the plain tokens (so
 // search still works); pfIcons() swaps them for the real icons when rendered.
