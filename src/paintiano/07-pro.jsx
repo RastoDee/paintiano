@@ -250,6 +250,26 @@ async function pfIosRestore(key) {
 }
 // A short code after a failed-purchase message, e.g. " (server_error · apple_401)".
 function _pfIosWhy(r) { const a = r && r.reason ? String(r.reason).slice(0, 60) : '', b = r && r.detail ? String(r.detail).slice(0, 40) : ''; return a ? ' (' + a + (b ? ' \u00b7 ' + b : '') + ')' : ''; }
+// The Apple purchases this Apple ID holds: [{ product:'pro'|'pass', id }].
+async function pfIosPurchases() {
+  const NP = _pfNP(); if (!NP) return [];
+  try { const r = await NP.getPurchases({}); const seen = {};
+    return ((r && r.purchases) || []).filter((t) => t && t.transactionId && (t.productIdentifier === PF_IAP.pro || t.productIdentifier === PF_IAP.pass))
+      .map((t) => ({ product: t.productIdentifier === PF_IAP.pro ? 'pro' : 'pass', id: String(t.transactionId) }))
+      .filter((t) => (seen[t.id] ? false : (seen[t.id] = true)));
+  } catch (_) { return []; }
+}
+// Apple's own refund request sheet for one purchase (Apple decides; our server hears of a refund from Apple).
+// → { ok:true } (sent) | { ok:false, cancelled:true } | { ok:false, reason }
+async function pfIosRefund(transactionId) {
+  try {
+    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund; const o = { transactionId: String(transactionId) };
+    const r = P && P.request ? await P.request(o) : await C.nativePromise('PfRefund', 'request', o);
+    if (r && r.status === 'requested') return { ok: true };
+    if (r && r.status === 'cancelled') return { ok: false, cancelled: true };
+    return { ok: false, reason: 'unknown' };
+  } catch (e) { return { ok: false, reason: String((e && e.message) || e || 'failed').slice(0, 80) }; }
+}
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
 function pfPxLoad() {
   if (PF_PX.map) return Promise.resolve(PF_PX.map);
