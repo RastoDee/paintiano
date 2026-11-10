@@ -251,6 +251,7 @@ export default async function handler(req, res) {
   const model = ALLOWED_MODELS.has(built.model) ? built.model : API_MODEL;
   const probe = kind === 'probe';
 
+  let noteKey = null;
   if (!probe) {
     // Who is asking: a Pro AI key, or anyone else (per network).
     let plan = 'free', bucket = null, yearly = false;
@@ -289,8 +290,8 @@ export default async function handler(req, res) {
       });
       return;
     }
-    // Refund fair use: a counted piece is also noted on the licence itself (best effort, never blocks).
-    if (big && key && plan !== 'free') usageHit(key).catch(() => {});
+    // Refund fair use counts completed pieces only — noted on the licence after a usable answer (below).
+    if (big && key && plan !== 'free') noteKey = key;
   }
 
   try {
@@ -305,6 +306,8 @@ export default async function handler(req, res) {
       let out = '';
       try { const d = JSON.parse(text); out = (d.content || []).map(b => (b && b.type === 'text') ? b.text : '').join(''); } catch (_) { out = null; }
       if (out == null || !pfOutputOk(kind, out)) { res.status(502).json({ error: 'AI answer was not usable', kind }); return; }
+      // A completed piece: note it on the licence for the refund fair-use count (best effort, never blocks the answer).
+      if (noteKey) { try { await usageHit(noteKey); } catch (_) {} }
     }
     res.status(upstream.status);
     res.setHeader('Content-Type', 'application/json');
