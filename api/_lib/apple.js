@@ -36,7 +36,8 @@ async function signingKey() {
   const pem = String(KEY_P8).replace(/\\n/g, '\n');
   const body = pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '');
   const bin = atob(body); const der = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) der[i] = bin.charCodeAt(i);
-  _key = await crypto.subtle.importKey('pkcs8', der.buffer, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  try { _key = await crypto.subtle.importKey('pkcs8', der.buffer, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']); }
+  catch (e) { const err = new Error('apple: the key (APPLE_IAP_KEY_P8) cannot be read: ' + String(e).slice(0, 80)); err.detail = 'key_unreadable'; throw err; }
   return _key;
 }
 // The bearer token of the App Store Server API (ES256, short-lived).
@@ -56,7 +57,7 @@ export async function appleTransaction(id) {
   for (const host of ['https://api.storekit.itunes.apple.com', 'https://api.storekit-sandbox.itunes.apple.com']) {
     const r = await fetch(`${host}/inApps/v1/transactions/${id}`, { headers: { Authorization: `Bearer ${tok}` } });
     if (r.status === 404) continue;
-    if (!r.ok) throw new Error(`apple: transaction lookup ${r.status} ${(await r.text()).slice(0, 160)}`);
+    if (!r.ok) { const err = new Error(`apple: transaction lookup ${r.status} ${(await r.text()).slice(0, 160)}`); err.detail = 'apple_' + r.status; throw err; }
     const j = await r.json();
     const parts = String(j.signedTransactionInfo || '').split('.');
     if (parts.length !== 3) throw new Error('apple: no transaction in the answer');

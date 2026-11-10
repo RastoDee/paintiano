@@ -24160,7 +24160,7 @@ async function pfIosBuy(tier, key) {
   if (!ids.length) return cancelled ? { ok: false, cancelled: true } : { ok: false, reason: failed || 'failed' };
   const r = await _pfIosReport(ids, key);
   if (r && r.ok && r.key) return { ok: true, key: r.key };
-  return { ok: false, reason: (r && r.reason) || 'not_granted' };
+  return { ok: false, reason: (r && r.reason) || 'not_granted', detail: r && r.detail };
 }
 // "Restore purchases": everything this Apple ID has bought → the licence key.
 async function pfIosRestore(key) {
@@ -24172,8 +24172,10 @@ async function pfIosRestore(key) {
   if (!ids.length) return { ok: false, reason: 'none' };
   const r = await _pfIosReport(ids, key);
   if (r && r.ok && r.key) return { ok: true, key: r.key };
-  return { ok: false, reason: (r && r.ok) ? 'none' : ((r && r.reason) || 'server_error') };
+  return { ok: false, reason: (r && r.ok) ? 'none' : ((r && r.reason) || 'server_error'), detail: r && r.detail };
 }
+// A short code after a failed-purchase message, e.g. " (server_error · apple_401)".
+function _pfIosWhy(r) { const a = r && r.reason ? String(r.reason).slice(0, 60) : '', b = r && r.detail ? String(r.detail).slice(0, 40) : ''; return a ? ' (' + a + (b ? ' \u00b7 ' + b : '') + ')' : ''; }
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
 function pfPxLoad() {
   if (PF_PX.map) return Promise.resolve(PF_PX.map);
@@ -24765,7 +24767,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     const r = await openCheckout(tier);
     setBuyBusy(false);
     if (r && r.ok) done();
-    else if (!(r && r.cancelled)) setBuyMsg(tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+    else if (!(r && r.cancelled)) setBuyMsg(tr('iosBuyFail', 'The purchase could not be completed. Please try again.') + _pfIosWhy(r));
   };
   const restore = async () => {
     if (buyBusy) return;
@@ -24774,7 +24776,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     let ok = false;
     if (r && r.ok && r.key) { const a = await activateLicense(r.key); ok = !!(a && a.ok); }
     setBuyBusy(false);
-    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? tr('iosRestoreNone', 'No purchases found for this Apple ID.') : tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? tr('iosRestoreNone', 'No purchases found for this Apple ID.') : tr('iosBuyFail', 'The purchase could not be completed. Please try again.') + _pfIosWhy(r));
   };
   const submit = async () => {
     setBusy(true); setErrMsg('');
@@ -24999,6 +25001,10 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proHaveKey', 'I already have a key')}
               </button>
             )}
+            {PF_IOS && buyMsg && (   /* above the cards: under them it was out of sight */
+              <p ref={(el) => { if (el) { try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} } }}
+                style={{ color: '#f0b48a', fontSize: (.66*readScale)+'rem', textAlign: 'center', margin: '0 0 12px', padding: '10px 12px', lineHeight: 1.4, borderRadius: 12, border: '1px solid rgba(240,180,138,.35)', background: 'rgba(240,180,138,.08)' }}>{buyMsg}</p>
+            )}
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
@@ -25038,9 +25044,6 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
-            {PF_IOS && buyMsg && (
-              <p style={{ color: '#f0b48a', fontSize: (.62*readScale)+'rem', textAlign: 'center', margin: '10px 0 0', lineHeight: 1.4 }}>{buyMsg}</p>
-            )}
             {PF_IOS && (
               <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
                 <span onClick={restore} role="button" tabIndex={0}

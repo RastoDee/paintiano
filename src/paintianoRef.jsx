@@ -24133,7 +24133,13 @@ function _pfIosPrices() {
     if (a && a.priceString) m.pro = a.priceString;
     if (b && b.priceString) m.up = b.priceString;
     if (a && b && typeof a.price === 'number' && typeof b.price === 'number' && a.currencyCode && a.currencyCode === b.currencyCode) {
-      try { m.pro_ai = new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(a.price + b.price); } catch (_) {}
+      // the sum written the way Apple wrote the single price ("$8.99" → "$17.98", "9,99 €" → "19,98 €")
+      try {
+        const mm = String(a.priceString || '').match(/\d[\d\s.,\u00a0\u202f]*\d|\d/);
+        if (mm) { const sep = (mm[0].match(/[.,](?=\d{1,2}$)/) || [''])[0]; const sum = a.price + b.price;
+          m.pro_ai = a.priceString.replace(mm[0], sep ? sum.toFixed(2).replace('.', sep) : String(Math.round(sum))); }
+        else m.pro_ai = new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(a.price + b.price);
+      } catch (_) {}
     }
     if (!m.pro && !m.up) throw new Error('no prices');
     return m;
