@@ -37,13 +37,13 @@ jobs:
           node scripts/ios-web.mjs
           npx cap sync ios
       - name: Build for the simulator (no signing)
-        if: ${{ !inputs.upload }}
+        if: ${{ !inputs.upload && !contains(github.event.head_commit.message, '[testflight]') }}
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build | tail -40
       - name: Archive and upload to TestFlight
-        if: ${{ inputs.upload }}
+        if: ${{ inputs.upload || contains(github.event.head_commit.message, '[testflight]') }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
