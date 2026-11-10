@@ -1669,6 +1669,8 @@ const _pfShape = ()=>{ try{ if(typeof window==='undefined' || !window.matchMedia
   const desk = wide && (land ? (tall || !touch) : !touch);
   return { desk, notPhone: desk && tall, five: wide && tall && land }; }catch(_){ return {desk:false,notPhone:false,five:false}; } };
 const PF_SHAPE_QS=['(min-width: 769px)','(min-height: 501px)','(orientation: landscape)','(any-pointer: coarse)'];
+// inside the iOS app (window.__PF_NATIVE, set by the app's own start page): the Studio is its only view — no Atelier, no Lite
+const _pfIosApp = ()=>{ try{ return typeof window!=='undefined' && window.__PF_NATIVE==='ios'; }catch(_){ return false; } };
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
 const _stPalRgb=(h)=>{ const m=/^#?([0-9a-f]{6})$/i.exec(String(h||'')); if(!m) return [136,136,136]; const n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -5431,7 +5433,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     qrPieceRef.current=_qidx;
     // the Studio takes the scan wherever it is the view (a phone, an upright touchscreen, a narrow window), unless a Pro chose the Atelier
     try{ const _wide = _pfShape().desk;
-      const _cls = _proReadCache() && localStorage.getItem('paintiano_view')==='classic';
+      const _cls = !_pfIosApp() && _proReadCache() && localStorage.getItem('paintiano_view')==='classic';
       qrStudioRef.current = _qidx!=null && !_wide && !_cls; }catch(_){ qrStudioRef.current=false; }
     // Lite session piece: the QR piece when present, otherwise a RANDOM pick
     // from the built-in samples — chosen once per page load so Play,
@@ -15090,12 +15092,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // (New · Look · Favorites · Setup). Classic = the screen as before. Desktop and Lite are not touched.
   const liteChipRef = useRef(null);   // the Lite / Advanced chip — the Studio is Advanced, so picking it from Lite flips the chip
   // the Studio is the phone's view for everyone; the Atelier only for whoever picked it (Styles & palettes → View) — the computer keeps the Atelier (studioOn needs !isDesktop)
-  const [viewPref, setViewPref] = useState(()=>{ try{ if(!_proReadCache()) return 'studio'; return localStorage.getItem('paintiano_view')==='classic' ? 'classic' : 'studio'; }catch(_){ return 'studio'; } });
+  const [viewPref, setViewPref] = useState(()=>{ try{ if(_pfIosApp() || !_proReadCache()) return 'studio'; return localStorage.getItem('paintiano_view')==='classic' ? 'classic' : 'studio'; }catch(_){ return 'studio'; } });
   // Free (also a licence that lapsed): the Studio, never Classic or Lite. Written down, so an upgrade keeps the Studio
   // until the user picks Classic. A QR poster scan keeps its Lite disc for that visit.
   useEffect(()=>{ if(proStatus!=='free') return; setViewPref('studio'); try{ localStorage.setItem('paintiano_view','studio'); localStorage.setItem('paintiano_was_free','1'); }catch(_){}
     if(basicModeRef.current && qrPieceRef.current==null) setBasicMode(false); },[proStatus]);
-  const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
+  // the iOS app: the Studio for everyone, Pro too — the Atelier and Lite are not in it (the web keeps them)
+  useEffect(()=>{ if(!_pfIosApp()) return; if(viewPref!=='studio') setViewPref('studio'); if(basicMode) setBasicMode(false); },[viewPref, basicMode]);
+  const _setView = (v)=>{ if(_pfIosApp()) v='studio'; if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
   // Pro on a phone, once: the Studio comes by itself (from Lite or Advanced). A card welcomes Pro, and Pro AI when it comes —
   // once per tier on this device (no word about the Atelier any more: it stays in Styles & palettes → View)
   const [viewInfo, setViewInfo] = useState(false);
@@ -22209,7 +22213,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 </div>
               )}
               {/* View — Studio (the painting full screen, controls on a tap) or Classic (the screen as before). Phone, Advanced. */}
-              {!isDesktop && isPro && (
+              {!isDesktop && isPro && !_pfIosApp() && (
               <div className="pf-setup-view" style={{border:'1px solid rgba(255,255,255,.07)',borderRadius:20,background:'rgba(255,255,255,.045)',padding:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div aria-hidden="true" style={{flex:'0 0 auto',width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',background:'linear-gradient(135deg,#4de3a0,#2f9fc9)'}}>
