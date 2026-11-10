@@ -181,10 +181,76 @@ try { if (typeof window !== 'undefined') { window.addEventListener('online', () 
 // is swapped for it — so the label and the checkout never disagree. No answer
 // (offline, blocked) → the base prices stay.
 const PF_PX = { map: null, busy: null };
+
+// ─── the iOS app: purchases go through Apple (In-App Purchase) ────────────────
+// Inside the iOS app (window.__PF_NATIVE === 'ios', set by the app's own start page) nothing is sold
+// through Paddle. Two Apple products exist: Pro (bought once) and the AI pass (12 months, bought again
+// for each further year); "Pro AI" is the two bought one after the other. Apple's transaction ids go to
+// /api/apple, which checks them at Apple and answers with the licence key — from there on the app works
+// with the key exactly as on the web. A key bought on the web can still be entered.
+const PF_IOS = (typeof window !== 'undefined' && window.__PF_NATIVE === 'ios');
+const PF_IAP = { pro: 'app.paintiano.pro', pass: 'app.paintiano.aipass12' };
+function _pfNP() { try { const C = window.Capacitor; return (C && C.Plugins && C.Plugins.NativePurchases) || null; } catch (_) { return null; } }
+async function _pfIosReport(ids, key) {
+  try {
+    const r = await fetch('/api/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactions: ids, key: key || '' }) });
+    const j = await r.json().catch(() => null);
+    return (j && typeof j === 'object') ? j : { ok: false, reason: 'server_error' };
+  } catch (_) { return { ok: false, reason: 'network' }; }
+}
+// The prices as the App Store shows them to this buyer (Apple requires its own prices on screen).
+function _pfIosPrices() {
+  const NP = _pfNP(); if (!NP) return Promise.reject(new Error('no store'));
+  return NP.getProducts({ productIdentifiers: [PF_IAP.pro, PF_IAP.pass], productType: 'inapp' }).then((r) => {
+    const by = {}; ((r && r.products) || []).forEach((p) => { if (p) by[p.identifier || p.productIdentifier] = p; });
+    const a = by[PF_IAP.pro], b = by[PF_IAP.pass], m = {};
+    if (a && a.priceString) m.pro = a.priceString;
+    if (b && b.priceString) m.up = b.priceString;
+    if (a && b && typeof a.price === 'number' && typeof b.price === 'number' && a.currencyCode && a.currencyCode === b.currencyCode) {
+      try { m.pro_ai = new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(a.price + b.price); } catch (_) {}
+    }
+    if (!m.pro && !m.up) throw new Error('no prices');
+    return m;
+  });
+}
+// Buy. tier 'pro' | 'pro_ai' (Pro, then the pass) | 'upgrade' (the pass on the key in use).
+// → { ok:true, key } | { ok:false, cancelled:true } | { ok:false, reason }
+async function pfIosBuy(tier, key) {
+  const NP = _pfNP(); if (!NP) return { ok: false, reason: 'no_store' };
+  const ids = []; let cancelled = false, failed = null;
+  const one = async (pid) => {
+    try { const t = await NP.purchaseProduct({ productIdentifier: pid, productType: 'inapp', quantity: 1 }); if (t && t.transactionId) ids.push(String(t.transactionId)); return true; }
+    catch (e) { const m = String((e && (e.message || e.errorMessage)) || e || ''); if (/cancel/i.test(m)) cancelled = true; else failed = m || 'failed'; return false; }
+  };
+  let go = true;
+  if (tier === 'pro' || tier === 'pro_ai') go = await one(PF_IAP.pro);
+  if (go && (tier === 'pro_ai' || tier === 'upgrade')) await one(PF_IAP.pass);
+  if (!ids.length) return cancelled ? { ok: false, cancelled: true } : { ok: false, reason: failed || 'failed' };
+  const r = await _pfIosReport(ids, key);
+  if (r && r.ok && r.key) return { ok: true, key: r.key };
+  return { ok: false, reason: (r && r.reason) || 'not_granted' };
+}
+// "Restore purchases": everything this Apple ID has bought → the licence key.
+async function pfIosRestore(key) {
+  const NP = _pfNP(); if (!NP) return { ok: false, reason: 'no_store' };
+  try { await NP.restorePurchases(); } catch (_) {}
+  let list = [];
+  try { const r = await NP.getPurchases({}); list = (r && r.purchases) || []; } catch (_) {}
+  const ids = [...new Set(list.filter((t) => t && (t.productIdentifier === PF_IAP.pro || t.productIdentifier === PF_IAP.pass) && t.transactionId).map((t) => String(t.transactionId)))];
+  if (!ids.length) return { ok: false, reason: 'none' };
+  const r = await _pfIosReport(ids, key);
+  if (r && r.ok && r.key) return { ok: true, key: r.key };
+  return { ok: false, reason: (r && r.ok) ? 'none' : ((r && r.reason) || 'server_error') };
+}
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
 function pfPxLoad() {
   if (PF_PX.map) return Promise.resolve(PF_PX.map);
   if (PF_PX.busy) return PF_PX.busy;
+  if (PF_IOS) {   // in the iOS app the prices are Apple's
+    PF_PX.busy = _pfIosPrices().then((m) => { PF_PX.map = m; return m; });
+    PF_PX.busy.catch(() => { PF_PX.busy = null; });
+    return PF_PX.busy;
+  }
   PF_PX.busy = new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject(new Error('no window'));
     const go = () => {
@@ -434,6 +500,12 @@ function useProStatus() {
   }, []);
 
   const openCheckout = useCallback(async (tier = 'pro') => {
+    if (PF_IOS) {   // the iOS app: Apple's purchase sheet; the answer is the licence key
+      try { window.posthog && window.posthog.capture('checkout_opened', { tier, store: 'apple' }); } catch (_) {}
+      const r = await pfIosBuy(tier, licenseKey);
+      if (r.ok && r.key) { const a = await activateLicense(r.key); return { ok: !!a.ok, reason: a.ok ? null : 'key' }; }
+      return r;
+    }
     try {
       try { window.posthog && window.posthog.capture('checkout_opened', { tier }); } catch (_) {}
       const Paddle = await loadPaddleScript();
@@ -476,7 +548,7 @@ function useProStatus() {
         }
       } catch (_) {}
     }
-  }, [loadPaddleScript, licenseKey]);
+  }, [loadPaddleScript, licenseKey, activateLicense]);
 
   const clearJustUpgraded = useCallback(() => setJustUpgraded(false), []);
 
@@ -750,6 +822,28 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   useEffect(() => { let on = true; pfPxLoad().then(() => { if (on) _setPxTick(n => n + 1); }).catch(() => {}); return () => { on = false; }; }, []);
   const tr = (k, fb) => { const v = t && t(k); return pfPx((v && v !== k) ? v : fb); };   // t() returns the key when missing; prices in the visitor's own currency
 
+  // The iOS app: a purchase answers here (on the web the checkout leaves the page and comes back).
+  const [buyBusy, setBuyBusy] = useState(false);
+  const [buyMsg, setBuyMsg] = useState('');
+  const done = () => { setView('success'); if (onActivated) onActivated(); setTimeout(() => onClose && onClose(), 1500); };
+  const buy = async (tier) => {
+    if (!PF_IOS) return openCheckout(tier);
+    if (buyBusy) return;
+    setBuyBusy(true); setBuyMsg('');
+    const r = await openCheckout(tier);
+    setBuyBusy(false);
+    if (r && r.ok) done();
+    else if (!(r && r.cancelled)) setBuyMsg(tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+  };
+  const restore = async () => {
+    if (buyBusy) return;
+    setBuyBusy(true); setBuyMsg('');
+    const r = await pfIosRestore(licenseKey);
+    let ok = false;
+    if (r && r.ok && r.key) { const a = await activateLicense(r.key); ok = !!(a && a.ok); }
+    setBuyBusy(false);
+    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? tr('iosRestoreNone', 'No purchases found for this Apple ID.') : tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+  };
   const submit = async () => {
     setBusy(true); setErrMsg('');
     const r = await activateLicense(keyInput);
@@ -909,7 +1003,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
             </li>
           ))}
         </ul>
-        <button style={ctaBtn} onClick={() => openCheckout(tierKey)}>
+        <button style={Object.assign({}, ctaBtn, buyBusy ? { opacity: .55 } : null)} disabled={buyBusy} onClick={() => buy(tierKey)}>
           {isUp
             ? ((renew || aiExpired) ? tr('proRenewCta', 'Add 12 months of AI') : tr('proUpgradeCta', 'Get the AI pass'))
             : isAI
@@ -1012,6 +1106,18 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
+            {PF_IOS && buyMsg && (
+              <p style={{ color: '#f0b48a', fontSize: (.62*readScale)+'rem', textAlign: 'center', margin: '10px 0 0', lineHeight: 1.4 }}>{buyMsg}</p>
+            )}
+            {PF_IOS && (
+              <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+                <span onClick={restore} role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); restore(); } }}
+                  style={{ color: 'rgba(242,238,232,.6)', fontSize: (.6*readScale)+'rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, opacity: buyBusy ? .5 : 1 }}>
+                  {tr('iosRestore', 'Restore purchases')}
+                </span>
+              </p>
+            )}
             <p style={{ color: '#555', fontSize: (.55*readScale)+'rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
               {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
             </p>
@@ -1214,12 +1320,12 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {/* Get Pro — gold outline (secondary in the about view); a Pro owner never sees it */}
                 {!upgradeOnly && (
                 <button style={Object.assign({}, btnGoldOutline, { marginBottom: 10 })}
-                        onClick={() => openCheckout('pro')}>
+                        onClick={() => buy('pro')}>
                   {tr('proGetCta', 'Get Pro')} — {tr('proTierPriceShort', '€9.99')}
                 </button>
                 )}
                 {/* Get Pro AI — purple filled (primary, recommended upgrade) */}
-                <button onClick={() => openCheckout(upgradeOnly ? upTier : 'pro_ai')}
+                <button onClick={() => buy(upgradeOnly ? upTier : 'pro_ai')}
                   style={{
                     width: '100%', background: AI_PURPLE, color: '#0a0a12', border: 'none',
                     padding: '14px 18px', borderRadius: 5, fontSize: (.78*readScale)+'rem',

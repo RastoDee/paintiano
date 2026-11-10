@@ -36,6 +36,7 @@ async function recentPasses(row, now) {
   const since = new Date(now - REFUND_DAYS * DAY).toISOString();
   const rows = await sel(`email=eq.${encodeURIComponent(row.email)}&key=like.UPGRADE-*&status=eq.disabled&created_at=gte.${encodeURIComponent(since)}&select=key,order_id,created_at,amount_cents,currency,ai_pieces,raw_event&order=created_at.desc`);
   return rows.filter((r) => {
+    if (String(r.order_id || '').startsWith('apple:')) return false;   // bought in the iOS app: Apple refunds those
     let ev = r.raw_event;
     if (typeof ev === 'string') { try { ev = JSON.parse(ev); } catch { ev = null; } }
     const from = ev && ev.data && ev.data.custom_data && ev.data.custom_data.upgrade_from;
@@ -44,10 +45,11 @@ async function recentPasses(row, now) {
 }
 
 // When the refund window of this key closes (ms), or null when it is closed.
-// `row` needs key, email, created_at, ai_until.
+// `row` needs key, email, created_at, ai_until, order_id.
 export async function refundWindowEnd(row, now = Date.now()) {
   const c = ms(row && row.created_at);
-  if (c != null && c + REFUND_DAYS * DAY > now) return c + REFUND_DAYS * DAY;
+  const apple = String((row && row.order_id) || '').startsWith('apple:');   // an Apple purchase is refunded by Apple, never here
+  if (!apple && c != null && c + REFUND_DAYS * DAY > now) return c + REFUND_DAYS * DAY;
   if (!row || !row.ai_until) return null;          // no pass → nothing newer than the licence itself
   const p = await recentPasses(row, now);
   const pc = p.length ? ms(p[0].created_at) : null;
@@ -80,6 +82,7 @@ export async function refundCase(key, now = Date.now()) {
   out.until = b != null ? new Date(b + REFUND_DAYS * DAY).toISOString() : null;
 
   if (b == null || b + REFUND_DAYS * DAY <= now || !out.order_id) { out.reason = 'late'; return out; }
+  if (String(out.order_id).startsWith('apple:')) { out.reason = 'apple'; return out; }
   if (out.exports != null && out.exports > REFUND_MAX_EXPORTS) { out.reason = 'exports'; return out; }
   if (out.ai > REFUND_MAX_AI) { out.reason = 'ai'; return out; }
   if (row.email) {
