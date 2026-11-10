@@ -14844,6 +14844,32 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         }
       }
     }catch(_){}
+    // The iOS app: a purchase made through Apple is refunded by Apple. Under the summary sits a note and,
+    // per Apple purchase this Apple ID holds, a button that opens Apple's own request sheet.
+    try{
+      if(PF_IOS && legalDoc==='refunds' && !legalLoading){
+        const box=el.shadowRoot.querySelector('.wrap.active .highlight');
+        if(box && !box.querySelector('[data-pf-refund-ios]')){
+          const w=document.createElement('div'); w.setAttribute('data-pf-refund-ios','1'); w.style.cssText='margin-top:16px;display:none'; box.appendChild(w);
+          pfIosPurchases().then((list)=>{
+            if(!list || !list.length || !w.isConnected) return;
+            const n=document.createElement('p'); n.textContent=String(t('iosRefundNote')); n.style.cssText='margin:0 0 12px;font-size:.8rem;line-height:1.5;opacity:.85';
+            const msg=document.createElement('p'); msg.style.cssText='margin:10px 0 0;text-align:center;font-size:.76rem;line-height:1.45;color:#f0b48a;display:none';
+            w.appendChild(n);
+            list.sort((a,b)=>(a.product==='pro'?0:1)-(b.product==='pro'?0:1)).forEach((it)=>{
+              const b=document.createElement('button'); b.type='button'; b.textContent=String(t(it.product==='pro'?'iosRefundPro':'iosRefundPass'));
+              b.style.cssText='display:block;width:100%;margin-top:8px;border:0;border-radius:999px;padding:13px;text-align:center;font-weight:800;font-size:.82rem;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#0a0a12';
+              b.addEventListener('click',async(ev)=>{ ev.preventDefault(); ev.stopPropagation(); if(b.disabled) return; b.disabled=true; b.style.opacity='.55'; msg.style.display='none';
+                const r=await pfIosRefund(it.id); b.disabled=false; b.style.opacity='1';
+                if(r && r.cancelled) return;
+                msg.textContent=String(t(r && r.ok ? 'iosRefundSent' : 'iosRefundFail')); msg.style.color=(r && r.ok)?'#9fd8a8':'#f0b48a'; msg.style.display='block'; });
+              w.appendChild(b);
+            });
+            w.appendChild(msg); w.style.display='block';
+          });
+        }
+      }
+    }catch(_){}
   };
   useEffect(()=>{ const el=legalHostRef.current; if(el && legalFillRef.current) legalFillRef.current(el); },[legalDoc, legalLoading, legalHtmlForLang, openCheckout, refundUntil, _licKeyRf, isPro]);
   const legalHostCb = useCallback((el)=>{ legalHostRef.current=el; if(el && legalFillRef.current) legalFillRef.current(el); },[]);

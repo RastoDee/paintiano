@@ -37,6 +37,6 @@ export default async function handler(req) {
     return json({ ok: true, key: r.key, granted: r.granted, skipped: r.skipped });
   } catch (e) {
     console.error('apple: failed', String(e));
-    return json({ ok: false, reason: 'server_error' }, 503);
+    return json({ ok: false, reason: 'server_error', detail: (e && typeof e.detail === 'string') ? e.detail : undefined }, 503);
   }
 }

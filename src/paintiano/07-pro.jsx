@@ -207,7 +207,13 @@ function _pfIosPrices() {
     if (a && a.priceString) m.pro = a.priceString;
     if (b && b.priceString) m.up = b.priceString;
     if (a && b && typeof a.price === 'number' && typeof b.price === 'number' && a.currencyCode && a.currencyCode === b.currencyCode) {
-      try { m.pro_ai = new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(a.price + b.price); } catch (_) {}
+      // the sum written the way Apple wrote the single price ("$8.99" → "$17.98", "9,99 €" → "19,98 €")
+      try {
+        const mm = String(a.priceString || '').match(/\d[\d\s.,\u00a0\u202f]*\d|\d/);
+        if (mm) { const sep = (mm[0].match(/[.,](?=\d{1,2}$)/) || [''])[0]; const sum = a.price + b.price;
+          m.pro_ai = a.priceString.replace(mm[0], sep ? sum.toFixed(2).replace('.', sep) : String(Math.round(sum))); }
+        else m.pro_ai = new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(a.price + b.price);
+      } catch (_) {}
     }
     if (!m.pro && !m.up) throw new Error('no prices');
     return m;
@@ -228,7 +234,7 @@ async function pfIosBuy(tier, key) {
   if (!ids.length) return cancelled ? { ok: false, cancelled: true } : { ok: false, reason: failed || 'failed' };
   const r = await _pfIosReport(ids, key);
   if (r && r.ok && r.key) return { ok: true, key: r.key };
-  return { ok: false, reason: (r && r.reason) || 'not_granted' };
+  return { ok: false, reason: (r && r.reason) || 'not_granted', detail: r && r.detail };
 }
 // "Restore purchases": everything this Apple ID has bought → the licence key.
 async function pfIosRestore(key) {
@@ -240,7 +246,29 @@ async function pfIosRestore(key) {
   if (!ids.length) return { ok: false, reason: 'none' };
   const r = await _pfIosReport(ids, key);
   if (r && r.ok && r.key) return { ok: true, key: r.key };
-  return { ok: false, reason: (r && r.ok) ? 'none' : ((r && r.reason) || 'server_error') };
+  return { ok: false, reason: (r && r.ok) ? 'none' : ((r && r.reason) || 'server_error'), detail: r && r.detail };
+}
+// A short code after a failed-purchase message, e.g. " (server_error · apple_401)".
+function _pfIosWhy(r) { const a = r && r.reason ? String(r.reason).slice(0, 60) : '', b = r && r.detail ? String(r.detail).slice(0, 40) : ''; return a ? ' (' + a + (b ? ' \u00b7 ' + b : '') + ')' : ''; }
+// The Apple purchases this Apple ID holds: [{ product:'pro'|'pass', id }].
+async function pfIosPurchases() {
+  const NP = _pfNP(); if (!NP) return [];
+  try { const r = await NP.getPurchases({}); const seen = {};
+    return ((r && r.purchases) || []).filter((t) => t && t.transactionId && (t.productIdentifier === PF_IAP.pro || t.productIdentifier === PF_IAP.pass))
+      .map((t) => ({ product: t.productIdentifier === PF_IAP.pro ? 'pro' : 'pass', id: String(t.transactionId) }))
+      .filter((t) => (seen[t.id] ? false : (seen[t.id] = true)));
+  } catch (_) { return []; }
+}
+// Apple's own refund request sheet for one purchase (Apple decides; our server hears of a refund from Apple).
+// → { ok:true } (sent) | { ok:false, cancelled:true } | { ok:false, reason }
+async function pfIosRefund(transactionId) {
+  try {
+    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund; const o = { transactionId: String(transactionId) };
+    const r = P && P.request ? await P.request(o) : await C.nativePromise('PfRefund', 'request', o);
+    if (r && r.status === 'requested') return { ok: true };
+    if (r && r.status === 'cancelled') return { ok: false, cancelled: true };
+    return { ok: false, reason: 'unknown' };
+  } catch (e) { return { ok: false, reason: String((e && e.message) || e || 'failed').slice(0, 80) }; }
 }
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
 function pfPxLoad() {
@@ -833,7 +861,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     const r = await openCheckout(tier);
     setBuyBusy(false);
     if (r && r.ok) done();
-    else if (!(r && r.cancelled)) setBuyMsg(tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+    else if (!(r && r.cancelled)) setBuyMsg(tr('iosBuyFail', 'The purchase could not be completed. Please try again.') + _pfIosWhy(r));
   };
   const restore = async () => {
     if (buyBusy) return;
@@ -842,7 +870,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     let ok = false;
     if (r && r.ok && r.key) { const a = await activateLicense(r.key); ok = !!(a && a.ok); }
     setBuyBusy(false);
-    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? tr('iosRestoreNone', 'No purchases found for this Apple ID.') : tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? tr('iosRestoreNone', 'No purchases found for this Apple ID.') : tr('iosBuyFail', 'The purchase could not be completed. Please try again.') + _pfIosWhy(r));
   };
   const submit = async () => {
     setBusy(true); setErrMsg('');
@@ -1067,6 +1095,10 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proHaveKey', 'I already have a key')}
               </button>
             )}
+            {PF_IOS && buyMsg && (   /* above the cards: under them it was out of sight */
+              <p ref={(el) => { if (el) { try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} } }}
+                style={{ color: '#f0b48a', fontSize: (.66*readScale)+'rem', textAlign: 'center', margin: '0 0 12px', padding: '10px 12px', lineHeight: 1.4, borderRadius: 12, border: '1px solid rgba(240,180,138,.35)', background: 'rgba(240,180,138,.08)' }}>{buyMsg}</p>
+            )}
             {PRO_CFG.checkoutDisabled ? (
               <>
                 <div style={{...btnGold, opacity:.45, cursor:'default', pointerEvents:'none', display:'flex', flexDirection:'column', gap:2, padding:'14px 18px'}}>
@@ -1106,9 +1138,6 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
-            {PF_IOS && buyMsg && (
-              <p style={{ color: '#f0b48a', fontSize: (.62*readScale)+'rem', textAlign: 'center', margin: '10px 0 0', lineHeight: 1.4 }}>{buyMsg}</p>
-            )}
             {PF_IOS && (
               <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
                 <span onClick={restore} role="button" tabIndex={0}

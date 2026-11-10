@@ -18,8 +18,9 @@ export const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'app.paintiano';
 export const APPLE_PRODUCT_PRO = 'app.paintiano.pro';
 export const APPLE_PRODUCT_PASS = 'app.paintiano.aipass12';
 
-const KEY_ID = process.env.APPLE_IAP_KEY_ID;
-const ISSUER_ID = process.env.APPLE_IAP_ISSUER_ID;
+// trimmed: a space or a line break pasted along with the value makes Apple refuse the token
+const KEY_ID = (process.env.APPLE_IAP_KEY_ID || '').trim();
+const ISSUER_ID = (process.env.APPLE_IAP_ISSUER_ID || '').trim();
 const KEY_P8 = process.env.APPLE_IAP_KEY_P8;
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -36,7 +37,8 @@ async function signingKey() {
   const pem = String(KEY_P8).replace(/\\n/g, '\n');
   const body = pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '');
   const bin = atob(body); const der = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) der[i] = bin.charCodeAt(i);
-  _key = await crypto.subtle.importKey('pkcs8', der.buffer, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  try { _key = await crypto.subtle.importKey('pkcs8', der.buffer, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']); }
+  catch (e) { const err = new Error('apple: the key (APPLE_IAP_KEY_P8) cannot be read: ' + String(e).slice(0, 80)); err.detail = 'key_unreadable'; throw err; }
   return _key;
 }
 // The bearer token of the App Store Server API (ES256, short-lived).
@@ -53,16 +55,24 @@ async function appleToken() {
 export async function appleTransaction(id) {
   if (!/^[0-9]{6,40}$/.test(String(id))) return null;
   const tok = await appleToken();
-  for (const host of ['https://api.storekit.itunes.apple.com', 'https://api.storekit-sandbox.itunes.apple.com']) {
+  // Production answers 401 for an app that is not on the App Store yet, so a refusal there
+  // is not final: the sandbox is asked too, and only when neither knows the answer do we fail.
+  const bad = [];
+  for (const [tag, host] of [['p', 'https://api.storekit.itunes.apple.com'], ['s', 'https://api.storekit-sandbox.itunes.apple.com']]) {
     const r = await fetch(`${host}/inApps/v1/transactions/${id}`, { headers: { Authorization: `Bearer ${tok}` } });
     if (r.status === 404) continue;
-    if (!r.ok) throw new Error(`apple: transaction lookup ${r.status} ${(await r.text()).slice(0, 160)}`);
+    if (!r.ok) { bad.push(tag + r.status); console.warn('apple: transaction lookup', tag, r.status, (await r.text()).slice(0, 160)); continue; }
     const j = await r.json();
     const parts = String(j.signedTransactionInfo || '').split('.');
     if (parts.length !== 3) throw new Error('apple: no transaction in the answer');
     const t = JSON.parse(b64uDecodeText(parts[1]));
     if (t.bundleId !== APPLE_BUNDLE_ID) return null;
     return t;
+  }
+  if (bad.length === 2 || (bad.length === 1 && bad[0][0] === 's')) {
+    const err = new Error('apple: transaction lookup refused ' + bad.join(' '));
+    err.detail = 'apple_' + bad.join('_') + (/^[A-Z0-9]{10}$/.test(KEY_ID) ? '' : '_keyid') + (/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(ISSUER_ID) ? '' : '_issuer');
+    throw err;
   }
   return null;
 }
