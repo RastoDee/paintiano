@@ -62,24 +62,38 @@ public class PfRefundPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     @objc func request(_ call: CAPPluginCall) {
-        guard let text = call.getString("transactionId"), let id = UInt64(text) else {
-            call.reject("transactionId is required")
-            return
-        }
+        let idText = call.getString("transactionId") ?? ""
+        let productId = call.getString("productId") ?? ""
         Task { @MainActor in
-            guard let scene = self.bridge?.viewController?.view.window?.windowScene else {
-                call.reject("no window scene")
+            let active = UIApplication.shared.connectedScenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
+            guard let scene = self.bridge?.viewController?.view.window?.windowScene ?? active else {
+                call.reject("no_scene")
                 return
             }
+            // The purchase itself, looked up among what this Apple ID holds (by id, else by product).
+            var found: Transaction?
+            for await result in Transaction.currentEntitlements {
+                guard case .verified(let t) = result else { continue }
+                if String(t.id) == idText { found = t; break }
+                if !productId.isEmpty && t.productID == productId && found == nil { found = t }
+            }
             do {
-                let status = try await Transaction.beginRefundRequest(for: id, in: scene)
+                let status: Transaction.RefundRequestStatus
+                if let t = found {
+                    status = try await t.beginRefundRequest(in: scene)
+                } else if let id = UInt64(idText) {
+                    status = try await Transaction.beginRefundRequest(for: id, in: scene)
+                } else {
+                    call.reject("no_transaction")
+                    return
+                }
                 switch status {
                 case .success: call.resolve(["status": "requested"])
                 case .userCancelled: call.resolve(["status": "cancelled"])
                 @unknown default: call.resolve(["status": "unknown"])
                 }
             } catch {
-                call.reject(error.localizedDescription)
+                call.reject("refund: " + String(describing: error))
             }
         }
     }
