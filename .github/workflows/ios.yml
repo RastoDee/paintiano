@@ -18,7 +18,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The App Store page's texts (ios/fastlane/metadata) → App Store Connect. Only on a commit marked [metadata].
+  # Nothing is submitted for review here: the texts land in the version that is being prepared.
+  store_texts:
+    if: ${{ contains(github.event.head_commit.message, '[metadata]') }}
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload the texts
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/asc.json"
+          ruby -rjson -e 'File.write(ARGV[0], {key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"], key: ENV["ASC_KEY_P8"], in_house: false}.to_json)' "$KEY"
+          fastlane deliver --api_key_path "$KEY" --app_identifier app.paintiano --app_version 1.0 \
+            --metadata_path ios/fastlane/metadata --skip_binary_upload true --skip_screenshots true \
+            --force true --run_precheck_before_submit false --submit_for_review false 2>&1 | tail -60
+          rm -f "$KEY"
+
   build:
+    if: ${{ !contains(github.event.head_commit.message, '[metadata]') }}
     runs-on: macos-latest
     timeout-minutes: 45
     steps:

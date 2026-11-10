@@ -1,0 +1,1 @@
+Joue une chanson et regarde-la devenir un tableau, note après note. Chaque chanson a un tableau qui n’appartient qu’à elle — le même à chaque fois.
