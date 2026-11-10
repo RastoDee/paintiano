@@ -3224,7 +3224,7 @@ export default function Paintiano() {
   // effectivePairs / etc. below. The hook has no parameter dependencies — order
   // among hooks doesn't matter for correctness as long as it stays consistent.
   const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
-          justUpgraded, clearJustUpgraded, aiUntil, aiExpired,
+          justUpgraded, clearJustUpgraded, aiUntil, aiExpired, refundUntil, recheckLicense, licenseKey: _licKeyRf,
           trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
   const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings' | 'upgraded'
   // The AI pass says when it is about to end (the last 14 days, once a day) and once when it has ended.
@@ -21985,6 +21985,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           aiUntil={aiUntil}
           aiExpired={aiExpired}
           lang={lang}
+          refundUntil={refundUntil}
+          licenseKey={_licKeyRf}
+          onRefunded={()=>{ try{ recheckLicense(6); }catch(_){} }}
         />
       )}
       {/* ── FULLSCREEN DEMO REEL OVERLAY ───────────────────────────────────

@@ -47,6 +47,7 @@
 
 import { insertLicense, setLicenseStatus, getLicenseByKey, getLicenseByOrderId, patchLicense } from './_lib/supabase.js';
 import { passState, extendedUntil, plusYear, minusYear } from './_lib/pass.js';
+import { aiCountOf } from './_lib/refund.js';
 
 export const config = { runtime: 'edge' };
 
@@ -566,11 +567,15 @@ export default async function handler(req) {
             const renewed = !!(ps && ps.ai);            // a running pass gets a further year
             const aiUntil = extendedUntil(orig);
             // Record row first (keeps the transaction for refunds; never a working key).
+            // Its ai_pieces is the key's AI count at this moment, so an in-app refund of
+            // the pass counts only what was composed since (api/_lib/refund.js).
+            const aiAtPurchase = await aiCountOf(orig.key);
             await insertLicense({
               key: 'UPGRADE-' + generateLicenseKey().slice(6),
               email,
               status: 'disabled',
               tier: 'pro_ai',
+              ai_pieces: aiAtPurchase,
               order_id: orderId,
               provider: 'paddle',
               activations: 0,

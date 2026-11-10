@@ -248,6 +248,23 @@ async function _proValidate(key, check = false) {
 
 // A day in the app's language (the AI pass: "until 10 November 2027").
 const PF_DATE_LOC = { EN:'en-GB', DE:'de-DE', FR:'fr-FR', ES:'es-ES', SK:'sk-SK', PT:'pt-PT', zh:'zh-CN', zhTW:'zh-TW', ja:'ja-JP' };
+// Money as the buyer paid it (Paddle amounts are in the currency's smallest unit).
+const PF_ZERO_DEC = { JPY:1, KRW:1, VND:1, CLP:1, ISK:1, UGX:1, PYG:1, XAF:1, XOF:1 };
+function pfMoney(minor, cur, lang) {
+  if (minor == null || !cur) return '';
+  const v = PF_ZERO_DEC[cur] ? Number(minor) : Number(minor) / 100;
+  if (!Number.isFinite(v)) return '';
+  try { return new Intl.NumberFormat(PF_DATE_LOC[lang] || 'en-GB', { style: 'currency', currency: cur, minimumFractionDigits: Number.isInteger(v) ? 0 : 2 }).format(v); }
+  catch (_) { return v + ' ' + cur; }
+}
+// The in-app refund (api/refund.js): a preview, and — with confirm — the request itself.
+async function pfRefundCall(key, confirm) {
+  try {
+    const r = await fetch('/api/refund', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(confirm ? { key, confirm: true } : { key }) });
+    const j = await r.json().catch(() => null);
+    return j && typeof j === 'object' ? j : { ok: false, reason: 'server_error' };
+  } catch (_) { return { ok: false, reason: 'network' }; }
+}
 function pfFmtDay(ms, lang) {
   try { return new Date(ms).toLocaleDateString(PF_DATE_LOC[lang] || 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
   catch (_) { try { return new Date(ms).toISOString().slice(0, 10); } catch (__) { return ''; } }
@@ -277,14 +294,17 @@ function useProStatus() {
   // ends a pass, so it does not outlive its date while offline.
   const [aiUntil, setAiUntil] = useState(null);
   const [aiExpired, setAiExpired] = useState(false);
+  // In-app refund: when its 14-day window closes (ms | null). From validate (refund_until).
+  const [refundUntil, setRefundUntil] = useState(null);
+  const _refOf = (r) => { const u = r && r.refund_until ? Date.parse(r.refund_until) : NaN; return Number.isFinite(u) ? u : null; };
   const _passOf = (r) => { const u = r && r.ai_until ? Date.parse(r.ai_until) : NaN; return Number.isFinite(u) ? u : null; };
-  const _apply = (tier, until, expired) => {
+  const _apply = (tier, until, expired, refund) => {
     let st = _tierToStatus(tier), ex = !!expired;
     if (st === 'pro_ai' && until && Date.now() > until) { st = 'pro'; ex = true; }
-    setProStatus(st); setAiUntil(until || null); setAiExpired(ex);
+    setProStatus(st); setAiUntil(until || null); setAiExpired(ex); setRefundUntil(refund || null);
     return st;
   };
-  const _cacheOf = (res) => ({ email: res.email, tier: res.tier, aiUntil: _passOf(res), aiExpired: !!res.ai_expired });
+  const _cacheOf = (res) => ({ email: res.email, tier: res.tier, aiUntil: _passOf(res), aiExpired: !!res.ai_expired, refundUntil: _refOf(res) });
 
   useEffect(() => {
     // Back from the upgrade checkout? Strip the flag so a reload doesn't repeat it.
@@ -305,7 +325,7 @@ function useProStatus() {
     // A paid year has landed when the key has AI and its end date moved on (a first pass has no earlier date).
     const _upOk = (res) => res.tier === 'pro_ai' && !(cached.aiUntil && _passOf(res) && _passOf(res) <= cached.aiUntil);
     if (!stale) {
-      _apply(cached.tier, cached.aiUntil || null, cached.aiExpired); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+      _apply(cached.tier, cached.aiUntil || null, cached.aiExpired, cached.refundUntil || null); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       // Every paid key is re-checked quietly on each start (the cache only
       // decides what shows first), so a tier change on the server reaches every
       // device: an upgrade to Pro AI, a refunded upgrade back to Pro, or a
@@ -319,13 +339,13 @@ function useProStatus() {
           if (!alive) return;
           if (res.valid) {
             _proWriteCache(cached.key, _cacheOf(res));
-            _apply(res.tier, _passOf(res), res.ai_expired); setMaskedEmail(res.email || null);
+            _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setMaskedEmail(res.email || null);
             if (_upOk(res) || !upgraded) {
               if (upgraded) { setJustUpgraded(true); try { window.posthog && window.posthog.capture('upgrade_confirmed'); } catch (_) {} }
               return;
             }
           } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
-            _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
+            _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
             return;
           } else if (res.offline) {
             return;
@@ -338,14 +358,14 @@ function useProStatus() {
       if (!alive) return;
       if (res.valid) {
         _proWriteCache(cached.key, _cacheOf(res));
-        _apply(res.tier, _passOf(res), res.ai_expired); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
+        _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
         if (upgraded && _upOk(res)) setJustUpgraded(true);
       } else if (res.offline) {
         // Network down during re-check → trust the cache (stay paid) until online.
-        _apply(cached.tier, cached.aiUntil || null, cached.aiExpired); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+        _apply(cached.tier, cached.aiUntil || null, cached.aiExpired, cached.refundUntil || null); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       } else {
         // Authoritative revoke (refunded/disabled/not_found)
-        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
+        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
       }
     });
     return () => { alive = false; };
@@ -357,14 +377,33 @@ function useProStatus() {
     const res = await _proValidate(key);
     if (res.valid) {
       _proWriteCache(key, _cacheOf(res));
-      const st = _apply(res.tier, _passOf(res), res.ai_expired); setLicenseKey(key); setMaskedEmail(res.email || null);
+      const st = _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setLicenseKey(key); setMaskedEmail(res.email || null);
       return { ok: true, tier: st };
     }
     return { ok: false, reason: res.reason || 'unknown' };
   }, []);
 
+  // Ask the server again about the key in use (after an in-app refund: the licence is
+  // switched off by Paddle's webhook a moment later, so this is tried a few times).
+  const recheckLicense = useCallback(async (tries = 1) => {
+    const cached = _proReadCache();
+    if (!cached) return;
+    for (let i = 0; i < tries; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 3000));
+      const res = await _proValidate(cached.key, true);
+      if (res.valid) {
+        _proWriteCache(cached.key, _cacheOf(res));
+        _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setMaskedEmail(res.email || null);
+        if (!_refOf(res)) return;                    // the window is gone → the refund has landed (a pass)
+      } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
+        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
+        return;
+      } else if (res.offline) return;
+    }
+  }, []);
+
   const deactivateLicense = useCallback(() => {
-    _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
+    _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
   }, []);
 
   // ── Paddle checkout ────────────────────────────────────────────────────────
@@ -445,7 +484,7 @@ function useProStatus() {
            isPro: proStatus === 'pro' || proStatus === 'pro_ai',
            isProAI: proStatus === 'pro_ai',
            licenseKey, maskedEmail, justUpgraded, clearJustUpgraded,
-           aiUntil, aiExpired,
+           aiUntil, aiExpired, refundUntil, recheckLicense,
            activateLicense, deactivateLicense, openCheckout };
 }
 
@@ -668,7 +707,7 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
 
 // ─── ProPaywall — the modal ────────────────────────────────────────────────────
 // Props: { t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }
-function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false, aiUntil = null, aiExpired = false, lang = 'EN' }) {
+function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false, aiUntil = null, aiExpired = false, lang = 'EN', refundUntil = null, licenseKey = null, onRefunded = null }) {
   // reason 'upgraded' = back from a confirmed Pro → Pro AI upgrade: open straight
   // on the success note and close by itself.
   const [view, setView] = useState(reason === 'upgraded' ? 'success' : 'intro'); // 'intro'|'key'|'about'|'success'
@@ -684,6 +723,24 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     const tm = setTimeout(() => { onClose && onClose(); }, 2800);
     return () => clearTimeout(tm);
   }, [reason]);
+  // In-app refund: offered for 14 days from the purchase (the server decides everything).
+  const canRefund = !!licenseKey && !!refundUntil && refundUntil > Date.now() && (proStatus === 'pro' || proStatus === 'pro_ai');
+  const [rf, setRf] = useState(null);          // the server's answer
+  const [rfBusy, setRfBusy] = useState(false);
+  const [rfErr, setRfErr] = useState(false);
+  const openRefund = async () => {
+    setView('refund'); setRf(null); setRfErr(false); setRfBusy(true);
+    const r = await pfRefundCall(licenseKey, false);
+    setRfBusy(false);
+    if (r && r.ok) setRf(r); else setRfErr(true);
+  };
+  const doRefund = async () => {
+    if (rfBusy) return;
+    setRfBusy(true); setRfErr(false);
+    const r = await pfRefundCall(licenseKey, true);
+    setRfBusy(false);
+    if (r && r.ok) { setRf(r); if (r.done && onRefunded) onRefunded(); } else setRfErr(true);
+  };
   const [keyInput, setKeyInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
@@ -953,6 +1010,15 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
+            {canRefund && (
+              <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+                <span onClick={openRefund} role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRefund(); } }}
+                  style={{ color: 'rgba(242,238,232,.6)', fontSize: (.6*readScale)+'rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: 'rgba(242,238,232,.3)' }}>
+                  {tr('refundLink', 'Refund · until {d}').replace('{d}', pfFmtDay(refundUntil, lang))}
+                </span>
+              </p>
+            )}
             <p style={{ color: '#555', fontSize: (.55*readScale)+'rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
               {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
             </p>
@@ -1185,6 +1251,85 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
             </p>
           </>
         )}
+
+        {view === 'refund' && (() => {
+          const MAIL = 'hello@paintiano.app';
+          const GREEN = '#9be0b8', AMBER = '#f0b48a';
+          const head = (ic, bg, title, sub) => (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                <div style={{ display: 'inline-flex', width: 64, height: 64, borderRadius: '50%', alignItems: 'center', justifyContent: 'center', background: bg, color: '#fff', fontSize: 28 }}>{ic}</div>
+              </div>
+              <p style={{ fontSize: (1.05*readScale)+'rem', fontWeight: 800, textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>{title}</p>
+              <p style={{ fontSize: (.66*readScale)+'rem', color: 'rgba(242,238,232,.66)', textAlign: 'center', margin: '0 0 18px', lineHeight: 1.45 }}>{sub}</p>
+            </>
+          );
+          const rows = (list) => (
+            <div style={{ border: '1px solid rgba(255,255,255,.1)', borderRadius: 18, padding: '6px 16px', background: 'rgba(255,255,255,.03)', marginBottom: 14 }}>
+              {list.filter(Boolean).map((r, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', fontSize: (.72*readScale)+'rem', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 0 }}>
+                  <span style={{ color: 'rgba(242,238,232,.66)' }}>{r[0]}</span>
+                  <span style={{ fontWeight: 700, textAlign: 'right', color: r[2] || '#f5f5f5' }}>{r[1]}</span>
+                </div>
+              ))}
+            </div>
+          );
+          const pill = (label, onClick, gold) => (
+            <button type="button" onClick={onClick} disabled={rfBusy} style={{ display: 'block', width: '100%', border: 0, borderRadius: 999, padding: 14, textAlign: 'center', fontWeight: 800, fontSize: (.8*readScale)+'rem', fontFamily: 'inherit', cursor: 'pointer', opacity: rfBusy ? .55 : 1,
+              background: gold ? 'linear-gradient(135deg,#f0d78a,#c9a84c)' : 'rgba(255,255,255,.12)', color: gold ? '#0a0a12' : '#f5f5f5' }}>{label}</button>
+          );
+          const note = (txt) => (<p style={{ fontSize: (.6*readScale)+'rem', color: 'rgba(242,238,232,.5)', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>{txt}</p>);
+          const of = (n, m) => tr('refundOf', '{n} of {m}').replace('{n}', n).replace('{m}', m);
+          const back = (
+            <p style={{ textAlign: 'center', margin: '14px 0 0' }}>
+              <span onClick={() => setView('intro')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('intro'); } }}
+                style={{ color: 'rgba(242,238,232,.6)', fontSize: (.62*readScale)+'rem', cursor: 'pointer' }}>← {tr('proBack', 'Back')}</span>
+            </p>
+          );
+          if (!rf) return (
+            <>
+              {head('↩', 'rgba(255,255,255,.1)', tr('refundAskT', 'Get a refund?'), rfErr ? tr('refundErr', 'Could not connect. Try again in a moment.') : '…')}
+              {rfErr && pill(tr('refundDoPlain', 'Ask for the refund'), openRefund, false)}
+              {back}
+            </>
+          );
+          const name = rf.kind === 'pass' ? tr('refundPassName', 'AI pass') : rf.kind === 'pro_ai' ? 'Paintiano Pro AI' : 'Paintiano Pro';
+          const money = pfMoney(rf.amount_cents, rf.currency, lang);
+          const bought = rf.bought ? pfFmtDay(Date.parse(rf.bought), lang) : '';
+          const exRow = (rf.exports != null) ? [tr('refundRowExports', 'Watermark-free exports'), of(rf.exports, rf.max_exports), rf.exports > rf.max_exports ? AMBER : GREEN] : null;
+          const aiRow = (rf.kind !== 'pro' || rf.ai > 0) ? [tr('refundRowAi', 'AI pieces & melodies'), of(rf.ai, rf.max_ai), rf.ai > rf.max_ai ? AMBER : GREEN] : null;
+          if (rf.done) return (
+            <>
+              {head('✓', 'linear-gradient(135deg,#9be0b8,#3fa97a)', tr('refundOkT', 'Request received'), tr('refundOkSub', 'The money goes back to the same payment method, usually within a few days.'))}
+              {rows([money ? [tr('refundRowAmount', 'We refund'), money] : null, [tr('refundRowConfirm', 'Confirmation'), tr('refundByPaddle', 'by e-mail from Paddle')]])}
+              {pill(tr('refundOkBtn', 'Got it'), () => onClose && onClose(), true)}
+              {note(tr('refundOkNote', 'Thank you for trying Paintiano.'))}
+            </>
+          );
+          if (rf.eligible) return (
+            <>
+              {head('↩', 'rgba(255,255,255,.1)', tr('refundAskT', 'Get a refund?'), tr('refundBought', '{p} · bought {d}').replace('{p}', name).replace('{d}', bought))}
+              {rows([money ? [tr('refundRowAmount', 'We refund'), money] : null, exRow, aiRow,
+                [tr('refundRowOff', 'Switched off on this key'), rf.kind === 'pass' ? tr('refundOffPass', 'AI · Pro stays') : rf.kind === 'pro_ai' ? tr('refundOffProAi', 'Pro and AI') : tr('refundOffPro', 'Pro')]])}
+              {pill(money ? tr('refundDo', 'Refund {a}').replace('{a}', money) : tr('refundDoPlain', 'Ask for the refund'), doRefund, false)}
+              {rfErr && note(tr('refundErr', 'Could not connect. Try again in a moment.'))}
+              {note(rf.kind === 'pass' ? tr('refundAskNotePass', 'Pro stays yours, and so do the pieces you already have.') : tr('refundAskNote', 'The key stops working on all devices. Paintings and pieces you already have stay yours.'))}
+              {back}
+            </>
+          );
+          const byRule = rf.reason === 'late' || rf.reason === 'exports' || rf.reason === 'ai';
+          const mailHref = 'mailto:' + MAIL + '?subject=' + encodeURIComponent('Refund') + '&body=' + encodeURIComponent('Licence key: ' + (licenseKey || ''));
+          return (
+            <>
+              {head('!', 'linear-gradient(135deg,#f0b48a,#d9713d)', tr('refundNoT', 'This one needs a person'), byRule ? tr('refundNoSub', 'A refund by itself is for the first 14 days and ordinary trying out.') : tr('refundNoSubOther', 'This refund cannot be done by itself.'))}
+              {byRule && rows([exRow, aiRow, bought ? [tr('refundRowBought', 'Bought'), bought, rf.reason === 'late' ? AMBER : GREEN] : null])}
+              <a href={mailHref} style={{ display: 'block', borderRadius: 999, padding: 14, textAlign: 'center', fontWeight: 800, fontSize: (.8*readScale)+'rem', background: 'rgba(255,255,255,.12)', color: '#f5f5f5', textDecoration: 'none' }}>{tr('refundWrite', 'Write to us')}</a>
+              {note(tr('refundNoNote', 'If you think a refund is due, write to {e} — we will look at it in person.').replace('{e}', MAIL))}
+              {back}
+            </>
+          );
+        })()}
 
         {view === 'success' && (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>

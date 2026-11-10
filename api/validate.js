@@ -3,11 +3,12 @@
 //
 // Request:  POST /api/validate   { "key": "PAINT-XXXX-XXXX-XXXX" }
 // Response: { "valid": true,  "status": "active",  "email": "u@example.com", "tier": "pro" | "pro_ai",
-//             "ai_until": ISO date | null, "ai_expired": bool }
+//             "ai_until": ISO date | null, "ai_expired": bool, "refund_until": ISO date | null }
 //        or { "valid": false, "reason": "not_found" | "refunded" | "disabled" | "rate_limited" }
 
 import { getLicenseByKey, incrementActivations } from './_lib/supabase.js';
 import { passState } from './_lib/pass.js';
+import { refundWindowEnd } from './_lib/refund.js';
 
 export const config = { runtime: 'edge' };
 
@@ -88,8 +89,13 @@ export default async function handler(req) {
     const ps = passState(row);
     const tier = ps.ai ? 'pro_ai' : 'pro';
 
+    // In-app refund: when its window closes (14 days from the purchase), so the app
+    // knows whether to offer it. Never lets a validation fail.
+    let refundUntil = null;
+    try { const w = await refundWindowEnd(row); refundUntil = w ? new Date(w).toISOString() : null; } catch (_) {}
+
     return json({
-      valid: true, status: 'active', email: masked, tier,
+      valid: true, status: 'active', email: masked, tier, refund_until: refundUntil,
       ai_until: ps.until ? new Date(ps.until).toISOString() : null,
       ai_expired: ps.expired,
     });

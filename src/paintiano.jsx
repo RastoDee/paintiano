@@ -20043,7 +20043,7 @@ const I18N = {
     aiLimitNet:'AI tries from this network are used up for today — back tomorrow, or Pro AI: 30 pieces & melodies a day.',
     aiLimitAny:'Today’s AI limit is reached — back tomorrow.',
     aiLimitYear:'The {n} AI pieces & melodies of this pass year are used up — they renew on {d}. Everything else plays on.',
-    proAiValueFair:'Up to 30 AI pieces & melodies a day, 500 over the 12 months · fair use', proAiValuePass:'After 12 months Pro stays yours. Another year of AI is €10 — nothing renews by itself', proPaywallTitleRenew:'Another year of AI', proPaywallSubRenew:'Your AI pass runs until {d}. The new year is added at the end.', proPaywallSubExpired:'Your AI pass has ended. Pro stays yours.', proRenewCta:'Add 12 months of AI', aiPassRow:'AI pass until {d}', aiPassRowSub:'Another year · €10', aiPassSoon:'Your AI pass ends on {d}. Another year is €10 — only if you want it.', aiPassEnded:'Your AI pass has ended. Pro stays yours; another year of AI is €10.',
+    proAiValueFair:'Up to 30 AI pieces & melodies a day, 500 over the 12 months · fair use', proAiValuePass:'After 12 months Pro stays yours. Another year of AI is €10 — nothing renews by itself', proPaywallTitleRenew:'Another year of AI', proPaywallSubRenew:'Your AI pass runs until {d}. The new year is added at the end.', proPaywallSubExpired:'Your AI pass has ended. Pro stays yours.', proRenewCta:'Add 12 months of AI', aiPassRow:'AI pass until {d}', aiPassRowSub:'Another year · €10', aiPassSoon:'Your AI pass ends on {d}. Another year is €10 — only if you want it.', aiPassEnded:'Your AI pass has ended. Pro stays yours; another year of AI is €10.', refundLink:'Refund · until {d}', refundAskT:'Get a refund?', refundBought:'{p} · bought {d}', refundPassName:'AI pass', refundRowAmount:'We refund', refundRowExports:'Watermark-free exports', refundRowAi:'AI pieces & melodies', refundOf:'{n} of {m}', refundRowOff:'Switched off on this key', refundOffPro:'Pro', refundOffProAi:'Pro and AI', refundOffPass:'AI · Pro stays', refundDo:'Refund {a}', refundDoPlain:'Ask for the refund', refundAskNote:'The key stops working on all devices. Paintings and pieces you already have stay yours.', refundAskNotePass:'Pro stays yours, and so do the pieces you already have.', refundOkT:'Request received', refundOkSub:'The money goes back to the same payment method, usually within a few days.', refundRowConfirm:'Confirmation', refundByPaddle:'by e-mail from Paddle', refundOkNote:'Thank you for trying Paintiano.', refundOkBtn:'Got it', refundNoT:'This one needs a person', refundNoSub:'A refund by itself is for the first 14 days and ordinary trying out.', refundNoSubOther:'This refund cannot be done by itself.', refundRowBought:'Bought', refundWrite:'Write to us', refundNoNote:'If you think a refund is due, write to {e} — we will look at it in person.', refundErr:'Could not connect. Try again in a moment.',
     tierReadOnly:'preview only',
     tierRowArtists:'Artists',
     tierRowComposers:'Composers',
@@ -20214,7 +20214,7 @@ const I18N = {
     aiLimitNet:'Die KI-Versuche aus diesem Netz sind für heute aufgebraucht — morgen wieder, oder Pro KI: 30 Stücke & Melodien pro Tag.',
     aiLimitAny:'Das KI-Limit für heute ist erreicht — morgen geht’s weiter.',
     aiLimitYear:'Die {n} KI-Stücke & Melodien dieses Pass-Jahres sind aufgebraucht — ab {d} geht’s weiter. Alles andere spielt weiter.',
-    proAiValueFair:'Bis zu 30 KI-Stücke & Melodien pro Tag, 500 in den 12 Monaten · faire Nutzung', proAiValuePass:'Nach 12 Monaten bleibt Pro. Ein weiteres KI-Jahr kostet 10 € — nichts verlängert sich von selbst', proPaywallTitleRenew:'Noch ein Jahr KI', proPaywallSubRenew:'Dein KI-Pass läuft bis {d}. Das neue Jahr wird hinten angehängt.', proPaywallSubExpired:'Dein KI-Pass ist abgelaufen. Pro bleibt dir.', proRenewCta:'12 Monate KI dazu', aiPassRow:'KI-Pass bis {d}', aiPassRowSub:'Noch ein Jahr · 10 €', aiPassSoon:'Dein KI-Pass endet am {d}. Ein weiteres Jahr kostet 10 € — nur wenn du willst.', aiPassEnded:'Dein KI-Pass ist abgelaufen. Pro bleibt dir; ein weiteres KI-Jahr kostet 10 €.',
+    proAiValueFair:'Bis zu 30 KI-Stücke & Melodien pro Tag, 500 in den 12 Monaten · faire Nutzung', proAiValuePass:'Nach 12 Monaten bleibt Pro. Ein weiteres KI-Jahr kostet 10 € — nichts verlängert sich von selbst', proPaywallTitleRenew:'Noch ein Jahr KI', proPaywallSubRenew:'Dein KI-Pass läuft bis {d}. Das neue Jahr wird hinten angehängt.', proPaywallSubExpired:'Dein KI-Pass ist abgelaufen. Pro bleibt dir.', proRenewCta:'12 Monate KI dazu', aiPassRow:'KI-Pass bis {d}', aiPassRowSub:'Noch ein Jahr · 10 €', aiPassSoon:'Dein KI-Pass endet am {d}. Ein weiteres Jahr kostet 10 € — nur wenn du willst.', aiPassEnded:'Dein KI-Pass ist abgelaufen. Pro bleibt dir; ein weiteres KI-Jahr kostet 10 €.', refundLink:'Rückerstattung · bis {d}', refundAskT:'Geld zurück?', refundBought:'{p} · gekauft am {d}', refundPassName:'KI-Pass', refundRowAmount:'Wir erstatten', refundRowExports:'Exporte ohne Wasserzeichen', refundRowAi:'KI-Stücke & Melodien', refundOf:'{n} von {m}', refundRowOff:'Wird auf diesem Schlüssel abgeschaltet', refundOffPro:'Pro', refundOffProAi:'Pro und KI', refundOffPass:'KI · Pro bleibt', refundDo:'{a} erstatten', refundDoPlain:'Rückerstattung anfordern', refundAskNote:'Der Schlüssel gilt dann auf keinem Gerät mehr. Bilder und Stücke, die du schon hast, bleiben dir.', refundAskNotePass:'Pro bleibt dir, und die Stücke, die du schon hast, auch.', refundOkT:'Anfrage ist eingegangen', refundOkSub:'Das Geld geht auf dieselbe Zahlungsart zurück, meist innerhalb weniger Tage.', refundRowConfirm:'Bestätigung', refundByPaddle:'per E-Mail von Paddle', refundOkNote:'Danke, dass du Paintiano ausprobiert hast.', refundOkBtn:'Verstanden', refundNoT:'Hier braucht es einen Menschen', refundNoSub:'Automatisch erstatten wir in den ersten 14 Tagen und bei gewöhnlichem Ausprobieren.', refundNoSubOther:'Diese Rückerstattung geht nicht automatisch.', refundRowBought:'Gekauft', refundWrite:'Schreib uns', refundNoNote:'Wenn du meinst, dass dir eine Rückerstattung zusteht, schreib an {e} — wir sehen es uns persönlich an.', refundErr:'Keine Verbindung. Versuch es gleich noch einmal.',
     tierReadOnly:'nur Vorschau',
     tierRowArtists:'Künstler',
     tierRowComposers:'Komponisten',
@@ -20385,7 +20385,7 @@ const I18N = {
     aiLimitNet:'Les essais IA depuis ce réseau sont épuisés pour aujourd’hui — à demain, ou Pro IA : 30 morceaux et mélodies par jour.',
     aiLimitAny:'La limite IA du jour est atteinte — à demain.',
     aiLimitYear:'Les {n} morceaux et mélodies IA de cette année de pass sont épuisés — ils reviennent le {d}. Tout le reste continue.',
-    proAiValueFair:'Jusqu’à 30 morceaux et mélodies IA par jour, 500 sur les 12 mois · usage équitable', proAiValuePass:'Après 12 mois, Pro reste. Une autre année d’IA coûte 10 € — rien ne se renouvelle tout seul', proPaywallTitleRenew:'Une autre année d’IA', proPaywallSubRenew:'Ton pass IA court jusqu’au {d}. La nouvelle année s’ajoute à la fin.', proPaywallSubExpired:'Ton pass IA est terminé. Pro reste à toi.', proRenewCta:'Ajouter 12 mois d’IA', aiPassRow:'Pass IA jusqu’au {d}', aiPassRowSub:'Une autre année · 10 €', aiPassSoon:'Ton pass IA se termine le {d}. Une autre année coûte 10 € — seulement si tu le veux.', aiPassEnded:'Ton pass IA est terminé. Pro reste à toi ; une autre année d’IA coûte 10 €.',
+    proAiValueFair:'Jusqu’à 30 morceaux et mélodies IA par jour, 500 sur les 12 mois · usage équitable', proAiValuePass:'Après 12 mois, Pro reste. Une autre année d’IA coûte 10 € — rien ne se renouvelle tout seul', proPaywallTitleRenew:'Une autre année d’IA', proPaywallSubRenew:'Ton pass IA court jusqu’au {d}. La nouvelle année s’ajoute à la fin.', proPaywallSubExpired:'Ton pass IA est terminé. Pro reste à toi.', proRenewCta:'Ajouter 12 mois d’IA', aiPassRow:'Pass IA jusqu’au {d}', aiPassRowSub:'Une autre année · 10 €', aiPassSoon:'Ton pass IA se termine le {d}. Une autre année coûte 10 € — seulement si tu le veux.', aiPassEnded:'Ton pass IA est terminé. Pro reste à toi ; une autre année d’IA coûte 10 €.', refundLink:'Remboursement · jusqu’au {d}', refundAskT:'Être remboursé ?', refundBought:'{p} · acheté le {d}', refundPassName:'Pass IA', refundRowAmount:'Nous remboursons', refundRowExports:'Exports sans filigrane', refundRowAi:'Morceaux et mélodies IA', refundOf:'{n} sur {m}', refundRowOff:'Désactivé sur cette clé', refundOffPro:'Pro', refundOffProAi:'Pro et IA', refundOffPass:'IA · Pro reste', refundDo:'Rembourser {a}', refundDoPlain:'Demander le remboursement', refundAskNote:'La clé cesse de fonctionner sur tous les appareils. Les tableaux et morceaux que tu as déjà restent à toi.', refundAskNotePass:'Pro reste à toi, tout comme les morceaux que tu as déjà.', refundOkT:'Demande reçue', refundOkSub:'L’argent revient sur le même moyen de paiement, en général sous quelques jours.', refundRowConfirm:'Confirmation', refundByPaddle:'par e-mail de Paddle', refundOkNote:'Merci d’avoir essayé Paintiano.', refundOkBtn:'Compris', refundNoT:'Ici, il faut quelqu’un', refundNoSub:'Le remboursement automatique vaut pour les 14 premiers jours et un essai ordinaire.', refundNoSubOther:'Ce remboursement ne peut pas se faire automatiquement.', refundRowBought:'Acheté', refundWrite:'Nous écrire', refundNoNote:'Si tu penses avoir droit à un remboursement, écris à {e} — nous regarderons cela en personne.', refundErr:'Connexion impossible. Réessaie dans un instant.',
     tierReadOnly:'aperçu',
     tierRowArtists:'Artistes',
     tierRowComposers:'Compositeurs',
@@ -20556,7 +20556,7 @@ const I18N = {
     aiLimitNet:'Las pruebas IA desde esta red se agotaron por hoy — vuelve mañana, o Pro IA: 30 piezas y melodías al día.',
     aiLimitAny:'Se alcanzó el límite de IA de hoy — vuelve mañana.',
     aiLimitYear:'Las {n} piezas y melodías IA de este año de pase se han agotado — vuelven el {d}. Todo lo demás sigue sonando.',
-    proAiValueFair:'Hasta 30 piezas y melodías IA al día, 500 en los 12 meses · uso justo', proAiValuePass:'Tras 12 meses, Pro se queda. Otro año de IA cuesta 10 € — nada se renueva solo', proPaywallTitleRenew:'Otro año de IA', proPaywallSubRenew:'Tu pase IA dura hasta el {d}. El nuevo año se añade al final.', proPaywallSubExpired:'Tu pase IA ha terminado. Pro sigue siendo tuyo.', proRenewCta:'Añadir 12 meses de IA', aiPassRow:'Pase IA hasta el {d}', aiPassRowSub:'Otro año · 10 €', aiPassSoon:'Tu pase IA termina el {d}. Otro año cuesta 10 € — solo si quieres.', aiPassEnded:'Tu pase IA ha terminado. Pro sigue siendo tuyo; otro año de IA cuesta 10 €.',
+    proAiValueFair:'Hasta 30 piezas y melodías IA al día, 500 en los 12 meses · uso justo', proAiValuePass:'Tras 12 meses, Pro se queda. Otro año de IA cuesta 10 € — nada se renueva solo', proPaywallTitleRenew:'Otro año de IA', proPaywallSubRenew:'Tu pase IA dura hasta el {d}. El nuevo año se añade al final.', proPaywallSubExpired:'Tu pase IA ha terminado. Pro sigue siendo tuyo.', proRenewCta:'Añadir 12 meses de IA', aiPassRow:'Pase IA hasta el {d}', aiPassRowSub:'Otro año · 10 €', aiPassSoon:'Tu pase IA termina el {d}. Otro año cuesta 10 € — solo si quieres.', aiPassEnded:'Tu pase IA ha terminado. Pro sigue siendo tuyo; otro año de IA cuesta 10 €.', refundLink:'Reembolso · hasta el {d}', refundAskT:'¿Devolver el dinero?', refundBought:'{p} · comprado el {d}', refundPassName:'Pase IA', refundRowAmount:'Devolvemos', refundRowExports:'Exportaciones sin marca de agua', refundRowAi:'Piezas y melodías IA', refundOf:'{n} de {m}', refundRowOff:'Se desactiva en esta clave', refundOffPro:'Pro', refundOffProAi:'Pro e IA', refundOffPass:'IA · Pro se queda', refundDo:'Devolver {a}', refundDoPlain:'Pedir el reembolso', refundAskNote:'La clave deja de funcionar en todos los dispositivos. Los cuadros y piezas que ya tienes siguen siendo tuyos.', refundAskNotePass:'Pro sigue siendo tuyo, y también las piezas que ya tienes.', refundOkT:'Solicitud recibida', refundOkSub:'El dinero vuelve al mismo método de pago, normalmente en unos días.', refundRowConfirm:'Confirmación', refundByPaddle:'por correo de Paddle', refundOkNote:'Gracias por probar Paintiano.', refundOkBtn:'Entendido', refundNoT:'Esto necesita a una persona', refundNoSub:'El reembolso automático es para los primeros 14 días y una prueba normal.', refundNoSubOther:'Este reembolso no puede hacerse automáticamente.', refundRowBought:'Comprado', refundWrite:'Escríbenos', refundNoNote:'Si crees que te corresponde un reembolso, escribe a {e} — lo miraremos en persona.', refundErr:'No se pudo conectar. Inténtalo en un momento.',
     tierReadOnly:'solo vista',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
@@ -20726,7 +20726,7 @@ const I18N = {
     aiLimitNet:'AI skúšky z tejto siete sú na dnes minuté — zajtra zas, alebo Pro AI: 30 skladieb a melódií denne.',
     aiLimitAny:'Dnešný limit AI je vyčerpaný — zajtra zas.',
     aiLimitYear:'{n} AI skladieb a melódií tohto roka pasu je vyčerpaných — obnovia sa {d}. Všetko ostatné hrá ďalej.',
-    proAiValueFair:'Až 30 AI skladieb a melódií denne, 500 za 12 mesiacov · férové používanie', proAiValuePass:'Po 12 mesiacoch ti Pro ostáva. Ďalší rok AI stojí 10 € — nič sa samo neobnovuje', proPaywallTitleRenew:'Ďalší rok AI', proPaywallSubRenew:'Tvoj AI pas platí do {d}. Nový rok sa pripočíta na koniec.', proPaywallSubExpired:'Tvoj AI pas vypršal. Pro ti ostáva.', proRenewCta:'Pridať 12 mesiacov AI', aiPassRow:'AI pas do {d}', aiPassRowSub:'Ďalší rok · 10 €', aiPassSoon:'Tvoj AI pas končí {d}. Ďalší rok stojí 10 € — len ak chceš.', aiPassEnded:'Tvoj AI pas vypršal. Pro ti ostáva; ďalší rok AI stojí 10 €.',
+    proAiValueFair:'Až 30 AI skladieb a melódií denne, 500 za 12 mesiacov · férové používanie', proAiValuePass:'Po 12 mesiacoch ti Pro ostáva. Ďalší rok AI stojí 10 € — nič sa samo neobnovuje', proPaywallTitleRenew:'Ďalší rok AI', proPaywallSubRenew:'Tvoj AI pas platí do {d}. Nový rok sa pripočíta na koniec.', proPaywallSubExpired:'Tvoj AI pas vypršal. Pro ti ostáva.', proRenewCta:'Pridať 12 mesiacov AI', aiPassRow:'AI pas do {d}', aiPassRowSub:'Ďalší rok · 10 €', aiPassSoon:'Tvoj AI pas končí {d}. Ďalší rok stojí 10 € — len ak chceš.', aiPassEnded:'Tvoj AI pas vypršal. Pro ti ostáva; ďalší rok AI stojí 10 €.', refundLink:'Vrátenie peňazí · do {d}', refundAskT:'Vrátiť peniaze?', refundBought:'{p} · kúpené {d}', refundPassName:'AI pas', refundRowAmount:'Vrátime', refundRowExports:'Exporty bez vodoznaku', refundRowAi:'AI skladby a melódie', refundOf:'{n} z {m}', refundRowOff:'Na tomto kľúči sa vypne', refundOffPro:'Pro', refundOffProAi:'Pro aj AI', refundOffPass:'AI · Pro ostáva', refundDo:'Vrátiť {a}', refundDoPlain:'Požiadať o vrátenie', refundAskNote:'Kľúč prestane platiť na všetkých zariadeniach. Obrazy a skladby, ktoré už máš, ti ostanú.', refundAskNotePass:'Pro ti ostáva, aj skladby, ktoré už máš.', refundOkT:'Žiadosť je prijatá', refundOkSub:'Peniaze prídu na tú istú platobnú metódu, zvyčajne do pár dní.', refundRowConfirm:'Potvrdenie', refundByPaddle:'e-mailom od Paddle', refundOkNote:'Ďakujeme, že si Paintiano vyskúšal.', refundOkBtn:'Rozumiem', refundNoT:'Tu už automat nestačí', refundNoSub:'Automatické vrátenie je možné do 14 dní a pri bežnom vyskúšaní.', refundNoSubOther:'Toto vrátenie sa nedá vybaviť automaticky.', refundRowBought:'Kúpené', refundWrite:'Napísať nám', refundNoNote:'Ak si myslíš, že máš na vrátenie nárok, napíš na {e} — pozrieme sa na to osobne.', refundErr:'Nepodarilo sa spojiť. Skús to o chvíľu.',
     tierReadOnly:'len náhľad',
     tierRowArtists:'Umelci',
     tierRowComposers:'Skladatelia',
@@ -20896,7 +20896,7 @@ const I18N = {
     aiLimitNet:'此网络今天的 AI 试用已用完——明天再来，或升级 Pro AI：每天 30 首乐曲与旋律。',
     aiLimitAny:'今天的 AI 用量已达上限——明天再来。',
     aiLimitYear:'本通行证年度的 {n} 首 AI 乐曲与旋律已用完——将于 {d} 恢复。其他一切照常播放。',
-    proAiValueFair:'每天最多 30 首 AI 乐曲与旋律，12 个月内 500 首 · 合理使用', proAiValuePass:'12 个月后 Pro 仍然保留。再续一年 AI 为 €10——不会自动续费', proPaywallTitleRenew:'再来一年 AI', proPaywallSubRenew:'你的 AI 通行证有效期至 {d}。新的一年会接在后面。', proPaywallSubExpired:'你的 AI 通行证已到期。Pro 仍然归你。', proRenewCta:'增加 12 个月 AI', aiPassRow:'AI 通行证至 {d}', aiPassRowSub:'再续一年 · €10', aiPassSoon:'你的 AI 通行证将于 {d} 到期。再续一年为 €10——仅在你需要时。', aiPassEnded:'你的 AI 通行证已到期。Pro 仍然归你；再续一年 AI 为 €10。',
+    proAiValueFair:'每天最多 30 首 AI 乐曲与旋律，12 个月内 500 首 · 合理使用', proAiValuePass:'12 个月后 Pro 仍然保留。再续一年 AI 为 €10——不会自动续费', proPaywallTitleRenew:'再来一年 AI', proPaywallSubRenew:'你的 AI 通行证有效期至 {d}。新的一年会接在后面。', proPaywallSubExpired:'你的 AI 通行证已到期。Pro 仍然归你。', proRenewCta:'增加 12 个月 AI', aiPassRow:'AI 通行证至 {d}', aiPassRowSub:'再续一年 · €10', aiPassSoon:'你的 AI 通行证将于 {d} 到期。再续一年为 €10——仅在你需要时。', aiPassEnded:'你的 AI 通行证已到期。Pro 仍然归你；再续一年 AI 为 €10。', refundLink:'退款 · 截至 {d}', refundAskT:'申请退款？', refundBought:'{p} · 购于 {d}', refundPassName:'AI 通行证', refundRowAmount:'退还金额', refundRowExports:'无水印导出', refundRowAi:'AI 乐曲与旋律', refundOf:'{n} / {m}', refundRowOff:'此密钥将关闭', refundOffPro:'Pro', refundOffProAi:'Pro 和 AI', refundOffPass:'AI · Pro 保留', refundDo:'退还 {a}', refundDoPlain:'申请退款', refundAskNote:'密钥将在所有设备上失效。你已有的画作和乐曲仍归你所有。', refundAskNotePass:'Pro 仍归你所有，已有的乐曲也是。', refundOkT:'申请已收到', refundOkSub:'款项将退回原支付方式，通常在几天内到账。', refundRowConfirm:'确认', refundByPaddle:'Paddle 将发送电子邮件', refundOkNote:'感谢你试用 Paintiano。', refundOkBtn:'知道了', refundNoT:'这需要人工处理', refundNoSub:'自动退款适用于购买后 14 天内且属于正常试用的情况。', refundNoSubOther:'此退款无法自动办理。', refundRowBought:'购买日期', refundWrite:'联系我们', refundNoNote:'如果你认为应当退款，请写信至 {e}——我们会亲自查看。', refundErr:'无法连接，请稍后再试。',
     tierReadOnly:'仅预览',
     tierRowArtists:'艺术家',
     tierRowComposers:'作曲家',
@@ -21060,7 +21060,7 @@ const I18N = {
     aiLimitNet:'此網路今天的 AI 試用已用完——明天再來，或升級 Pro AI：每天 30 首樂曲與旋律。',
     aiLimitAny:'今天的 AI 用量已達上限——明天再來。',
     aiLimitYear:'本通行證年度的 {n} 首 AI 樂曲與旋律已用完——將於 {d} 恢復。其他一切照常播放。',
-    proAiValueFair:'每天最多 30 首 AI 樂曲與旋律，12 個月內 500 首 · 合理使用', proAiValuePass:'12 個月後 Pro 仍然保留。再續一年 AI 為 €10——不會自動續費', proPaywallTitleRenew:'再來一年 AI', proPaywallSubRenew:'你的 AI 通行證有效期至 {d}。新的一年會接在後面。', proPaywallSubExpired:'你的 AI 通行證已到期。Pro 仍然歸你。', proRenewCta:'增加 12 個月 AI', aiPassRow:'AI 通行證至 {d}', aiPassRowSub:'再續一年 · €10', aiPassSoon:'你的 AI 通行證將於 {d} 到期。再續一年為 €10——僅在你需要時。', aiPassEnded:'你的 AI 通行證已到期。Pro 仍然歸你；再續一年 AI 為 €10。',
+    proAiValueFair:'每天最多 30 首 AI 樂曲與旋律，12 個月內 500 首 · 合理使用', proAiValuePass:'12 個月後 Pro 仍然保留。再續一年 AI 為 €10——不會自動續費', proPaywallTitleRenew:'再來一年 AI', proPaywallSubRenew:'你的 AI 通行證有效期至 {d}。新的一年會接在後面。', proPaywallSubExpired:'你的 AI 通行證已到期。Pro 仍然歸你。', proRenewCta:'增加 12 個月 AI', aiPassRow:'AI 通行證至 {d}', aiPassRowSub:'再續一年 · €10', aiPassSoon:'你的 AI 通行證將於 {d} 到期。再續一年為 €10——僅在你需要時。', aiPassEnded:'你的 AI 通行證已到期。Pro 仍然歸你；再續一年 AI 為 €10。', refundLink:'退款 · 截至 {d}', refundAskT:'申請退款？', refundBought:'{p} · 購於 {d}', refundPassName:'AI 通行證', refundRowAmount:'退還金額', refundRowExports:'無浮水印匯出', refundRowAi:'AI 樂曲與旋律', refundOf:'{n} / {m}', refundRowOff:'此金鑰將關閉', refundOffPro:'Pro', refundOffProAi:'Pro 和 AI', refundOffPass:'AI · Pro 保留', refundDo:'退還 {a}', refundDoPlain:'申請退款', refundAskNote:'金鑰將在所有裝置上失效。你已有的畫作和樂曲仍歸你所有。', refundAskNotePass:'Pro 仍歸你所有，已有的樂曲也是。', refundOkT:'申請已收到', refundOkSub:'款項將退回原付款方式，通常在幾天內入帳。', refundRowConfirm:'確認', refundByPaddle:'Paddle 將寄送電子郵件', refundOkNote:'感謝你試用 Paintiano。', refundOkBtn:'知道了', refundNoT:'這需要人工處理', refundNoSub:'自動退款適用於購買後 14 天內且屬於正常試用的情況。', refundNoSubOther:'此退款無法自動辦理。', refundRowBought:'購買日期', refundWrite:'聯絡我們', refundNoNote:'如果你認為應當退款，請寫信至 {e}——我們會親自查看。', refundErr:'無法連線，請稍後再試。',
     tierReadOnly:'僅預覽',
     tierRowArtists:'藝術家',
     tierRowComposers:'作曲家',
@@ -21235,7 +21235,7 @@ const I18N = {
     aiLimitNet:'Os testes de IA desta rede esgotaram por hoje — volte amanhã, ou Pro IA: 30 peças e melodias por dia.',
     aiLimitAny:'O limite de IA de hoje foi atingido — volte amanhã.',
     aiLimitYear:'As {n} peças e melodias de IA deste ano do passe esgotaram-se — voltam a {d}. Tudo o resto continua a tocar.',
-    proAiValueFair:'Até 30 peças e melodias de IA por dia, 500 nos 12 meses · uso justo', proAiValuePass:'Após 12 meses, o Pro fica. Outro ano de IA custa 10 € — nada se renova sozinho', proPaywallTitleRenew:'Outro ano de IA', proPaywallSubRenew:'O teu passe de IA vai até {d}. O novo ano é acrescentado no fim.', proPaywallSubExpired:'O teu passe de IA terminou. O Pro continua teu.', proRenewCta:'Acrescentar 12 meses de IA', aiPassRow:'Passe de IA até {d}', aiPassRowSub:'Outro ano · 10 €', aiPassSoon:'O teu passe de IA termina a {d}. Outro ano custa 10 € — só se quiseres.', aiPassEnded:'O teu passe de IA terminou. O Pro continua teu; outro ano de IA custa 10 €.',
+    proAiValueFair:'Até 30 peças e melodias de IA por dia, 500 nos 12 meses · uso justo', proAiValuePass:'Após 12 meses, o Pro fica. Outro ano de IA custa 10 € — nada se renova sozinho', proPaywallTitleRenew:'Outro ano de IA', proPaywallSubRenew:'O teu passe de IA vai até {d}. O novo ano é acrescentado no fim.', proPaywallSubExpired:'O teu passe de IA terminou. O Pro continua teu.', proRenewCta:'Acrescentar 12 meses de IA', aiPassRow:'Passe de IA até {d}', aiPassRowSub:'Outro ano · 10 €', aiPassSoon:'O teu passe de IA termina a {d}. Outro ano custa 10 € — só se quiseres.', aiPassEnded:'O teu passe de IA terminou. O Pro continua teu; outro ano de IA custa 10 €.', refundLink:'Reembolso · até {d}', refundAskT:'Receber o dinheiro de volta?', refundBought:'{p} · comprado a {d}', refundPassName:'Passe de IA', refundRowAmount:'Devolvemos', refundRowExports:'Exportações sem marca de água', refundRowAi:'Peças e melodias de IA', refundOf:'{n} de {m}', refundRowOff:'Desligado nesta chave', refundOffPro:'Pro', refundOffProAi:'Pro e IA', refundOffPass:'IA · o Pro fica', refundDo:'Devolver {a}', refundDoPlain:'Pedir o reembolso', refundAskNote:'A chave deixa de funcionar em todos os dispositivos. Os quadros e peças que já tens continuam teus.', refundAskNotePass:'O Pro continua teu, e as peças que já tens também.', refundOkT:'Pedido recebido', refundOkSub:'O dinheiro volta ao mesmo método de pagamento, normalmente em poucos dias.', refundRowConfirm:'Confirmação', refundByPaddle:'por e-mail da Paddle', refundOkNote:'Obrigado por experimentares o Paintiano.', refundOkBtn:'Entendi', refundNoT:'Isto precisa de uma pessoa', refundNoSub:'O reembolso automático é para os primeiros 14 dias e uma experiência normal.', refundNoSubOther:'Este reembolso não pode ser feito automaticamente.', refundRowBought:'Comprado', refundWrite:'Escreve-nos', refundNoNote:'Se achas que tens direito a reembolso, escreve para {e} — vemos isso pessoalmente.', refundErr:'Não foi possível ligar. Tenta daqui a pouco.',
     tierReadOnly:'só prévia',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
@@ -21405,7 +21405,7 @@ const I18N = {
     aiLimitNet:'このネットワークからの今日の AI お試しは使い切りました——また明日、または Pro AI で 1 日 30 曲・メロディまで。',
     aiLimitAny:'今日の AI の上限に達しました——また明日。',
     aiLimitYear:'このパス年度の AI 曲とメロディ {n} 回を使い切りました — {d} に回復します。ほかはそのまま使えます。',
-    proAiValueFair:'AI 曲とメロディは 1 日 30 回まで、12 か月で 500 回まで · フェアユース', proAiValuePass:'12 か月後も Pro はそのまま。AI をもう 1 年使うなら €10 — 自動更新はありません', proPaywallTitleRenew:'AI をもう 1 年', proPaywallSubRenew:'AI パスは {d} まで有効です。新しい 1 年はその後ろに追加されます。', proPaywallSubExpired:'AI パスの期限が切れました。Pro はそのままです。', proRenewCta:'AI を 12 か月追加', aiPassRow:'AI パス：{d} まで', aiPassRowSub:'もう 1 年 · €10', aiPassSoon:'AI パスは {d} に終了します。もう 1 年は €10 — 必要なときだけ。', aiPassEnded:'AI パスの期限が切れました。Pro はそのまま。AI をもう 1 年使うなら €10。',
+    proAiValueFair:'AI 曲とメロディは 1 日 30 回まで、12 か月で 500 回まで · フェアユース', proAiValuePass:'12 か月後も Pro はそのまま。AI をもう 1 年使うなら €10 — 自動更新はありません', proPaywallTitleRenew:'AI をもう 1 年', proPaywallSubRenew:'AI パスは {d} まで有効です。新しい 1 年はその後ろに追加されます。', proPaywallSubExpired:'AI パスの期限が切れました。Pro はそのままです。', proRenewCta:'AI を 12 か月追加', aiPassRow:'AI パス：{d} まで', aiPassRowSub:'もう 1 年 · €10', aiPassSoon:'AI パスは {d} に終了します。もう 1 年は €10 — 必要なときだけ。', aiPassEnded:'AI パスの期限が切れました。Pro はそのまま。AI をもう 1 年使うなら €10。', refundLink:'返金 · {d} まで', refundAskT:'返金しますか？', refundBought:'{p} · 購入日 {d}', refundPassName:'AI パス', refundRowAmount:'返金額', refundRowExports:'透かしなしの書き出し', refundRowAi:'AI 曲とメロディ', refundOf:'{n} / {m}', refundRowOff:'このキーで停止するもの', refundOffPro:'Pro', refundOffProAi:'Pro と AI', refundOffPass:'AI · Pro は残ります', refundDo:'{a} を返金', refundDoPlain:'返金を申請', refundAskNote:'キーはすべての端末で使えなくなります。すでにある絵と曲はあなたのものです。', refundAskNotePass:'Pro はそのまま、すでにある曲もあなたのものです。', refundOkT:'申請を受け付けました', refundOkSub:'同じお支払い方法に、通常数日以内に返金されます。', refundRowConfirm:'確認', refundByPaddle:'Paddle からメールで届きます', refundOkNote:'Paintiano をお試しいただきありがとうございます。', refundOkBtn:'わかりました', refundNoT:'ここからは担当者が確認します', refundNoSub:'自動での返金は、購入から 14 日以内で通常のお試しの範囲が対象です。', refundNoSubOther:'この返金は自動では行えません。', refundRowBought:'購入日', refundWrite:'問い合わせる', refundNoNote:'返金の対象だと思われる場合は {e} までご連絡ください。担当者が確認します。', refundErr:'接続できませんでした。少ししてからもう一度お試しください。',
     tierReadOnly:'プレビューのみ',
     tierRowArtists:'アーティスト',
     tierRowComposers:'作曲家',
@@ -22584,7 +22584,7 @@ const GUIDE_I18N = {
     tools:{t:`Controls`, b:`Play / pause and the seek bar, loop, mute and Clear.`, bS:`Tap the painting to play or pause it; sound, loop and Clear are in ✦ Change.`, m:`Play — Starts and stops (Space too). A tap on the bar jumps. ◆ ⟳ Loop — The mood plays on and on. ◆ Sound — Mutes the music, the painting carries on. If the sound vanishes on iPhone, hold it. ◆ Clear — By mode: Compose wipes the canvas, Mic only the active draft, a file does a full reset. ◆ Piano loading — A few seconds (~5 MB). If it fails, a synth piano plays.`, mS:`Tap the painting — Starts and stops. ◆ ⟳ Loop — The mood plays on and on. ◆ Sound — Mutes the music, the painting carries on. If the sound vanishes on iPhone, hold it. ◆ Clear — ✕ in ✦ Change. Compose wipes the canvas, Mic only the active draft; music or a picture goes entirely, off the home too. ◆ Piano loading — A few seconds (~5 MB). If it fails, a synth piano plays.`},
     save:{t:`Save and share`, b:`The painting as a PNG, the music as sound. Story for Instagram and TikTok.`, bS:`Video 9:16, a Story picture or print — all under Share.`, m:`Story — 9:16 for IG and TikTok, with the painters and the palette. ◆ Web / Social — About 4×, for the feed. ◆ Print A3 — 240 DPI, in a 3:4 frame (Pro). ◆ The song's colours — Under the painting, the twelve notes and how long each sounded. Turn them off in Save. ◆ Record — With a picture, captures the sound as it plays. ◆ ♫ Score — The painting's notes as MusicXML. ◆ Watermark — On Save · print, Free has one and Pro removes it. The Story picture and the video carry only a small footer with the name, Free or Pro.`, mS:`Video 9:16 — It paints itself to the music: TikTok, Reels, Stories. ◆ Clip · 15 s — While it plays: the next 15 seconds from this moment, with the end card. ◆ Story picture — 9:16, with the title and who painted it. Also while it plays: the painting as it is right now. ◆ Save · print — Story, Web, Print A3, once the painting is finished. ◆ Sound — With a picture, records its music. ◆ Watermark — On Save · print, Free has one and Pro removes it. The Story picture and the video carry only a small footer with the name, Free or Pro.`},
     favorites:{t:`Favorites`, b:`Tap ♡ at the top left of the painting — even while it is still painting — and it stays. No limit.`, bS:`Double tap the painting or tap ♥ under it — even while it paints. No limit.`, m:`An address, not a picture — ♥ remembers the notes, painter, palette and tone; the painting paints itself again. ◆ Open them — ☰ → ♥ Favorites. Swipe or use ‹ › to flip through. ◆ Pictures — ♡ by a picture saves it with everything that plays it. ▶ Open brings it back. ◆ Clear all — Tap twice; Undo brings them back. ◆ Only here — On this device, in this browser.`, mS:`An address, not a picture — ♥ remembers the notes, painter, palette and tone; the painting paints itself again. ◆ Open them — From Mine: ✦ Change or the menu. Swipe up and down to flip through. ◆ Pictures — ♥ by a picture saves it with everything that plays it. ▶ opens it. ◆ Mic and Compose — ♥ on a Mic take keeps its sound too. ▶ Open: a composition goes back into Compose to carry on, a take opens as a song with its own sound. ◆ Panels — Swipe left: ♥ and Share. Swipe right: ✕ back and 🗑 clear all (tap twice). ◆ Only here — On this device, in this browser.`},
-    pro:{t:`Pro unlocks it all`, b:`Pro €9.99: all 24 painters, no watermark. Pro AI €19.99: Pro for life plus AI for 12 months.`, m:`Free — 9 painters, Custom read-only, a watermark, one try of each AI mode. ◆ Pro €9.99 — All 24 painters and 15 composers, the Custom palette, print without a watermark, Ensemble, the Atelier (Lite or Advanced). ◆ Pro AI €19.99 — Everything in Pro for life, plus an AI pass for 12 months — up to 30 pieces & melodies a day, 500 over the 12 months (fair use). ◆ AI pass — €10 for 12 months: on a Pro key, or as another year. Your key stays the same; nothing renews by itself. ◆ Once and for good — No subscription. Up to 5 devices, one at a time. ◆ Tip — On Free, tap a locked painter and try it once.`},
+    pro:{t:`Pro unlocks it all`, b:`Pro €9.99: all 24 painters, no watermark. Pro AI €19.99: Pro for life plus AI for 12 months.`, m:`Free — 9 painters, Custom read-only, a watermark, one try of each AI mode. ◆ Pro €9.99 — All 24 painters and 15 composers, the Custom palette, print without a watermark, Ensemble, the Atelier (Lite or Advanced). ◆ Pro AI €19.99 — Everything in Pro for life, plus an AI pass for 12 months — up to 30 pieces & melodies a day, 500 over the 12 months (fair use). ◆ AI pass — €10 for 12 months: on a Pro key, or as another year. Your key stays the same; nothing renews by itself. ◆ Once and for good — No subscription. Up to 5 devices, one at a time. ◆ Refund — For 14 days after buying, the licence window offers a refund. Up to 5 watermark-free exports and 30 AI pieces it goes through by itself. ◆ Tip — On Free, tap a locked painter and try it once.`},
     ensemble:{t:`Ensemble`, b:`Fusion: 2–5 painters on one painting. Jam session: 2–5 composers on one picture.`, m:`Turn it on — ◎ next to 🔀, then tap painters, up to five. ◆ Collage — The painters side by side, each in their own hand. ◆ Synthesis — They cross into one new painter. ◆ Style — Drawn for every fusion; choose it in Styles & palettes → Ensemble. ◆ × 🔀 — 1 gives new variants. ALL keeps the pinned ones and adds 1–4 new. ◆ Jam session — Composers take turns by phrase (Collage) or merge into one (Synthesis). ◆ Pro — Switch it on in Styles & palettes → Ensemble.`},
    }},
   SK:{
@@ -22620,7 +22620,7 @@ const GUIDE_I18N = {
     tools:{t:`Ovládanie`, b:`Play / pauza a posun lišty, slučka, stíšenie a Vyčistiť.`, bS:`Ťukni na maľbu a hrá alebo stojí; zvuk, slučka a Vyčistiť sú v ✦ Zmeň.`, m:`Play — Spustí a zastaví (aj Space). Ťuk na lištu skočí. ◆ ⟳ Slučka — Nálada hrá dokola. ◆ Zvuk — Stíši hudbu, maľba ide ďalej. Keď na iPhone zvuk zmizne, podrž. ◆ Vyčistiť — Podľa módu: Komponovať zmaže plátno, Mikro len aktívny draft, súbor spraví reset. ◆ Klavír sa načítava — Pár sekúnd (~5 MB). Keď zlyhá, hrá syntetický.`, mS:`Ťuk na maľbu — Spustí a zastaví. ◆ ⟳ Slučka — Nálada hrá dokola. ◆ Zvuk — Stíši hudbu, maľba ide ďalej. Keď na iPhone zvuk zmizne, podrž. ◆ Vyčistiť — ✕ v ✦ Zmeň. Komponovať zmaže plátno, Mikro len aktívny draft; hudba či obrázok zmiznú úplne, aj z úvodu. ◆ Klavír sa načítava — Pár sekúnd (~5 MB). Keď zlyhá, hrá syntetický.`},
     save:{t:`Ulož a zdieľaj`, b:`Maľba ako PNG, hudba ako zvuk. Story pre Instagram a TikTok.`, bS:`Video 9:16, obrázok do Story alebo tlač — všetko v Zdieľať.`, m:`Story — 9:16 pre IG a TikTok, s maliarmi a paletou. ◆ Web / Social — Asi 4×, do feedu. ◆ Tlač A3 — 240 DPI, v ráme 3:4 (Pro). ◆ Farby skladby — Pod obrazom dvanásť tónov a ako dlho zneli. Vypneš ich v Ulož. ◆ Nahraj — Pri obrázku zachytí zvuk, ako hrá. ◆ ♫ Noty — Noty maľby ako MusicXML. ◆ Watermark — Pri Uložiť · tlač ho Free má a Pro ho odstráni. Story obrázok a video nesú len malú pätku s názvom, vo Free aj v Pro.`, mS:`Video 9:16 — Maľuje sa do hudby: TikTok, Reels, Stories. ◆ Klip · 15 s — Počas hrania: ďalších 15 sekúnd od tejto chvíle, so záverečnou kartou. ◆ Obrázok do Story — 9:16, s názvom a kto ho namaľoval. Aj počas hrania: maľba tak, ako je práve teraz. ◆ Uložiť · tlač — Story, Web, Tlač A3, keď sa maľba domaľuje. ◆ Zvuk — Pri obrázku nahrá jeho hudbu. ◆ Watermark — Pri Uložiť · tlač ho Free má a Pro ho odstráni. Story obrázok a video nesú len malú pätku s názvom, vo Free aj v Pro.`},
     favorites:{t:`Obľúbené`, b:`Ťukni na ♡ vľavo hore na maľbe — aj keď sa ešte maľuje — a ostane ti. Bez limitu.`, bS:`Dvakrát ťukni na maľbu alebo ťukni na ♥ pod ňou — aj kým sa ešte maľuje. Bez limitu.`, m:`Adresa, nie obrázok — ♥ si pamätá tóny, maliara, paletu a tón; maľba sa znova namaľuje. ◆ Otvoríš — ☰ → ♥ Obľúbené. Listuješ potiahnutím alebo ‹ ›. ◆ Obrázky — ♡ pri obrázku ho uloží so všetkým, čo ho hrá. ▶ Otvoriť ho vráti. ◆ Vymazať všetky — Ťukni dvakrát, Späť ich vráti. ◆ Len tu — V tomto zariadení a prehliadači.`, mS:`Adresa, nie obrázok — ♥ si pamätá tóny, maliara, paletu a tón; maľba sa znova namaľuje. ◆ Otvoríš — V Moje: ✦ Zmeň alebo menu. Listuješ potiahnutím hore a dole. ◆ Obrázky — ♥ pri obrázku ho uloží so všetkým, čo ho hrá. ▶ ho otvorí. ◆ Mikro a Komponovanie — ♥ pri nahrávke z Mikra uloží aj jej zvuk. ▶ Otvoriť: kompozícia sa vráti do Komponovania a pokračuješ, nahrávka sa otvorí ako skladba s vlastným zvukom. ◆ Lišty — Potiahni doľava: ♥ a zdieľanie. Doprava: ✕ späť a 🗑 vymazať všetky (ťukni dvakrát). ◆ Len tu — V tomto zariadení a prehliadači.`},
-    pro:{t:`Pro odomkne všetko`, b:`Pro €9.99: všetkých 24 maliarov a bez watermarku. Pro AI €19.99: Pro navždy a AI na 12 mesiacov.`, m:`Free — 9 maliarov, Vlastná na čítanie, watermark, jedna skúška každého AI módu. ◆ Pro €9.99 — Všetkých 24 maliarov a 15 skladateľov, Vlastná paleta, tlač bez watermarku, Ensemble, Ateliér (Lite aj Rozšírený). ◆ Pro AI €19.99 — Všetko z Pro navždy a AI pas na 12 mesiacov — až 30 skladieb a melódií denne, 500 za 12 mesiacov (férové používanie). ◆ AI pas — €10 na 12 mesiacov: k Pro kľúču alebo ako ďalší rok. Kľúč ostáva; nič sa samo neobnovuje. ◆ Raz a navždy — Bez predplatného. Až 5 zariadení, jedno naraz. ◆ Tip — Vo Free ťukni na zamknutého maliara a raz si ho vyskúšaš.`},
+    pro:{t:`Pro odomkne všetko`, b:`Pro €9.99: všetkých 24 maliarov a bez watermarku. Pro AI €19.99: Pro navždy a AI na 12 mesiacov.`, m:`Free — 9 maliarov, Vlastná na čítanie, watermark, jedna skúška každého AI módu. ◆ Pro €9.99 — Všetkých 24 maliarov a 15 skladateľov, Vlastná paleta, tlač bez watermarku, Ensemble, Ateliér (Lite aj Rozšírený). ◆ Pro AI €19.99 — Všetko z Pro navždy a AI pas na 12 mesiacov — až 30 skladieb a melódií denne, 500 za 12 mesiacov (férové používanie). ◆ AI pas — €10 na 12 mesiacov: k Pro kľúču alebo ako ďalší rok. Kľúč ostáva; nič sa samo neobnovuje. ◆ Raz a navždy — Bez predplatného. Až 5 zariadení, jedno naraz. ◆ Vrátenie peňazí — 14 dní od nákupu ho ponúka okno licencie. Do 5 exportov bez vodoznaku a 30 AI skladieb prebehne samo. ◆ Tip — Vo Free ťukni na zamknutého maliara a raz si ho vyskúšaš.`},
     ensemble:{t:`Ensemble`, b:`Fúzia: 2–5 maliarov na jednom obraze. Jam session: 2–5 skladateľov nad jedným obrázkom.`, m:`Zapni — ◎ vedľa 🔀, potom ťukaj na maliarov, najviac päť. ◆ Koláž — Maliari vedľa seba, každý vlastnou rukou. ◆ Syntéza — Z nich sa skríži jeden nový maliar. ◆ Štýl — Losuje sa pre každú fúziu; vyberieš ho v Štýly a palety → Ensemble. ◆ × 🔀 — 1 dá nové varianty. ALL nechá pripnutých a pridá 1–4 nových. ◆ Jam session — Skladatelia si striedajú frázy (Koláž) alebo sa spoja do jedného (Syntéza). ◆ Pro — Zapína sa v Štýly a palety → Ensemble.`},
    }},
   DE:{
@@ -22656,7 +22656,7 @@ const GUIDE_I18N = {
     tools:{t:`Steuerung`, b:`Play / Pause und Spulen, Loop, Stummschalten und Löschen.`, bS:`Tippe aufs Bild für Play oder Pause; Ton, Loop und Löschen sind in ✦ Ändern.`, m:`Play — Start und Stopp (auch Space). Ein Tipp auf die Leiste springt. ◆ ⟳ Loop — Die Stimmung spielt in Schleife. ◆ Ton — Musik stumm, das Bild malt weiter. Ist am iPhone der Ton weg, gedrückt halten. ◆ Löschen — Je nach Modus: Komponieren leert die Leinwand, Mikro nur den aktiven Entwurf, eine Datei setzt zurück. ◆ Klavier lädt — Ein paar Sekunden (~5 MB). Klappt es nicht, spielt ein Synth-Klavier.`, mS:`Tippen aufs Bild — Start und Stopp. ◆ ⟳ Loop — Die Stimmung spielt in Schleife. ◆ Ton — Musik stumm, das Bild malt weiter. Ist am iPhone der Ton weg, gedrückt halten. ◆ Löschen — Das ✕ in ✦ Ändern. Komponieren leert die Leinwand, Mikro nur den aktiven Entwurf; Musik oder ein Bild verschwinden ganz, auch vom Start. ◆ Klavier lädt — Ein paar Sekunden (~5 MB). Klappt es nicht, spielt ein Synth-Klavier.`},
     save:{t:`Sichern und teilen`, b:`Das Bild als PNG, die Musik als Audio. Story für Instagram und TikTok.`, bS:`Video 9:16, Story-Bild oder Druck — alles unter Teilen.`, m:`Story — 9:16 für IG und TikTok, mit Malern und Palette. ◆ Web / Social — Etwa 4×, für den Feed. ◆ Druck A3 — 240 DPI, im Format 3:4 (Pro). ◆ Farben des Stücks — Unter dem Bild die zwölf Töne und wie lange sie klangen. Abschalten in Sichern. ◆ Aufnehmen — Beim Foto nimmt es den Klang auf, während es spielt. ◆ ♫ Noten — Die Noten des Bildes als MusicXML. ◆ Wasserzeichen — Bei Speichern · Druck hat Free eins, Pro entfernt es. Story-Bild und Video tragen nur eine kleine Fußzeile mit dem Namen, bei Free wie bei Pro.`, mS:`Video 9:16 — Malt sich zur Musik: TikTok, Reels, Stories. ◆ Clip · 15 s — Während es spielt: die nächsten 15 Sekunden ab jetzt, mit der Abschlusskarte. ◆ Story-Bild — 9:16, mit Titel und wer es gemalt hat. Auch während es spielt: das Bild, wie es gerade ist. ◆ Speichern · Druck — Story, Web, Druck A3, sobald das Bild fertig gemalt ist. ◆ Ton — Beim Foto nimmt es seine Musik auf. ◆ Wasserzeichen — Bei Speichern · Druck hat Free eins, Pro entfernt es. Story-Bild und Video tragen nur eine kleine Fußzeile mit dem Namen, bei Free wie bei Pro.`},
     favorites:{t:`Favoriten`, b:`Tippe beim Bild oben links auf ♡ — auch während es noch gemalt wird — und es bleibt dir. Ohne Limit.`, bS:`Tippe doppelt auf das Bild oder auf ♥ darunter — auch während es noch gemalt wird. Ohne Limit.`, m:`Adresse, kein Bild — ♥ merkt sich Noten, Maler, Palette und Ton; das Bild wird neu gemalt. ◆ Öffnen — ☰ → ♥ Favoriten. Blättern per Wischen oder ‹ ›. ◆ Fotos — ♡ bei einem Foto speichert es mit allem, was es spielt. ▶ Öffnen holt es zurück. ◆ Alle löschen — Zweimal tippen, Rückgängig holt sie zurück. ◆ Nur hier — Auf diesem Gerät, in diesem Browser.`, mS:`Adresse, kein Bild — ♥ merkt sich Noten, Maler, Palette und Ton; das Bild wird neu gemalt. ◆ Öffnen — In Meins: ✦ Ändern oder Menü. Blättern per Wischen nach oben und unten. ◆ Fotos — ♥ bei einem Foto speichert es mit allem, was es spielt. ▶ öffnet es. ◆ Mikro und Komponieren — ♥ bei einer Mikro-Aufnahme behält auch ihren Ton. ▶ Öffnen: eine Komposition kommt zurück ins Komponieren zum Weitermachen, eine Aufnahme öffnet sich als Song mit ihrem eigenen Ton. ◆ Leisten — Nach links wischen: ♥ und Teilen. Nach rechts: ✕ zurück und 🗑 alle löschen (zweimal tippen). ◆ Nur hier — Auf diesem Gerät, in diesem Browser.`},
-    pro:{t:`Pro schaltet alles frei`, b:`Pro 9,99 €: alle 24 Maler und kein Wasserzeichen. Pro KI 19,99 €: Pro für immer plus KI für 12 Monate.`, m:`Free — 9 Maler, Eigen schreibgeschützt, Wasserzeichen, ein Versuch pro KI-Modus. ◆ Pro 9,99 € — Alle 24 Maler und 15 Komponisten, editierbare Eigen-Palette, Druck ohne Wasserzeichen, Ensemble, Atelier (Lite oder Advanced). ◆ Pro KI 19,99 € — Alles aus Pro für immer plus KI-Pass für 12 Monate — bis zu 30 Stücke & Melodien pro Tag, 500 in den 12 Monaten (faire Nutzung). ◆ KI-Pass — 10 € für 12 Monate: zu einem Pro-Schlüssel oder als weiteres Jahr. Dein Schlüssel bleibt; nichts verlängert sich von selbst. ◆ Einmal, für immer — Kein Abo. Bis zu 5 Geräte, eins gleichzeitig. ◆ Tipp — Tippe in Free auf einen gesperrten Maler und probier ihn einmal aus.`},
+    pro:{t:`Pro schaltet alles frei`, b:`Pro 9,99 €: alle 24 Maler und kein Wasserzeichen. Pro KI 19,99 €: Pro für immer plus KI für 12 Monate.`, m:`Free — 9 Maler, Eigen schreibgeschützt, Wasserzeichen, ein Versuch pro KI-Modus. ◆ Pro 9,99 € — Alle 24 Maler und 15 Komponisten, editierbare Eigen-Palette, Druck ohne Wasserzeichen, Ensemble, Atelier (Lite oder Advanced). ◆ Pro KI 19,99 € — Alles aus Pro für immer plus KI-Pass für 12 Monate — bis zu 30 Stücke & Melodien pro Tag, 500 in den 12 Monaten (faire Nutzung). ◆ KI-Pass — 10 € für 12 Monate: zu einem Pro-Schlüssel oder als weiteres Jahr. Dein Schlüssel bleibt; nichts verlängert sich von selbst. ◆ Einmal, für immer — Kein Abo. Bis zu 5 Geräte, eins gleichzeitig. ◆ Rückerstattung — 14 Tage nach dem Kauf bietet sie das Lizenzfenster an. Bis 5 Exporte ohne Wasserzeichen und 30 KI-Stücke läuft sie von selbst. ◆ Tipp — Tippe in Free auf einen gesperrten Maler und probier ihn einmal aus.`},
     ensemble:{t:`Ensemble`, b:`Fusion: 2–5 Maler auf einem Bild. Jam session: 2–5 Komponisten über einem Foto.`, m:`Einschalten — ◎ neben 🔀, dann auf Maler tippen, höchstens fünf. ◆ Collage — Die Maler nebeneinander, jeder mit eigener Hand. ◆ Synthese — Aus ihnen wird ein neuer Maler gekreuzt. ◆ Stil — Wird für jede Fusion gelost; festlegen in Stile & Paletten → Ensemble. ◆ × 🔀 — 1 gibt neue Varianten. ALL behält die Angehefteten und zieht 1–4 neue dazu. ◆ Jam session — Die Komponisten wechseln sich mit Phrasen ab (Collage) oder verschmelzen zu einem (Synthese). ◆ Pro — Einschalten in Stile & Paletten → Ensemble.`},
    }},
   FR:{
@@ -22692,7 +22692,7 @@ const GUIDE_I18N = {
     tools:{t:`Commandes`, b:`Play / pause et barre de lecture, Loop, sourdine et Effacer.`, bS:`Touche la peinture pour lancer ou mettre en pause ; le son, Loop et Effacer sont dans ✦ Changer.`, m:`Play — Lance et arrête (Space aussi). Touche la barre pour sauter. ◆ ⟳ Loop — L’humeur tourne en boucle. ◆ Son — Coupe la musique, la peinture continue. Si le son disparaît sur iPhone, maintiens. ◆ Effacer — Selon le mode : Composer vide la toile, Micro seulement le brouillon actif, un fichier fait un reset. ◆ Chargement du piano — Quelques secondes (~5 Mo). En cas d’échec, un piano synthé joue.`, mS:`Touche la peinture — Lance et arrête. ◆ ⟳ Loop — L’humeur tourne en boucle. ◆ Son — Coupe la musique, la peinture continue. Si le son disparaît sur iPhone, maintiens. ◆ Effacer — Le ✕ dans ✦ Changer. Composer vide la toile, Micro seulement le brouillon actif ; une musique ou une image disparaît entièrement, de l’accueil aussi. ◆ Chargement du piano — Quelques secondes (~5 Mo). En cas d’échec, un piano synthé joue.`},
     save:{t:`Sauve et partage`, b:`La peinture en PNG, la musique en audio. Story pour Instagram et TikTok.`, bS:`Vidéo 9:16, image Story ou impression — tout est dans Partager.`, m:`Story — 9:16 pour IG et TikTok, avec les peintres et la palette. ◆ Web / Social — Environ 4×, pour le feed. ◆ Impression A3 — 240 DPI, au format 3:4 (Pro). ◆ Couleurs du morceau — Sous la peinture, les douze notes et combien de temps elles ont sonné. À décocher dans Sauver. ◆ Enregistrer — Avec une image, capte le son pendant qu’elle joue. ◆ ♫ Partition — Les notes de la peinture en MusicXML. ◆ Filigrane — Dans Enregistrer · imprimer, Free l’a et Pro le retire. L’image Story et la vidéo ne portent qu’un petit pied de page avec le nom, en Free comme en Pro.`, mS:`Vidéo 9:16 — Se peint au rythme de la musique : TikTok, Reels, Stories. ◆ Clip · 15 s — Pendant la lecture : les 15 prochaines secondes à partir de maintenant, avec la carte de fin. ◆ Image Story — 9:16, avec le titre et qui l’a peinte. Aussi pendant la lecture : le tableau tel qu’il est maintenant. ◆ Enregistrer · imprimer — Story, Web, Impression A3, une fois la peinture finie. ◆ Son — Avec une image, enregistre sa musique. ◆ Filigrane — Dans Enregistrer · imprimer, Free l’a et Pro le retire. L’image Story et la vidéo ne portent qu’un petit pied de page avec le nom, en Free comme en Pro.`},
     favorites:{t:`Favoris`, b:`Touche ♡ en haut à gauche de la peinture — même pendant qu’elle se peint — et elle reste à toi. Sans limite.`, bS:`Touche deux fois la peinture ou touche ♥ en dessous — même pendant qu’elle se peint. Sans limite.`, m:`Une adresse, pas une image — ♥ retient les notes, le peintre, la palette et le ton ; la peinture est repeinte. ◆ Ouvrir — ☰ → ♥ Favoris. Fais défiler en glissant ou avec ‹ ›. ◆ Images — ♡ sur une image la garde avec tout ce qui la joue. ▶ Ouvrir la ramène. ◆ Tout effacer — Touche deux fois, Annuler les ramène. ◆ Seulement ici — Sur cet appareil, dans ce navigateur.`, mS:`Une adresse, pas une image — ♥ retient les notes, le peintre, la palette et le ton ; la peinture est repeinte. ◆ Ouvrir — Dans À moi : ✦ Changer ou le menu. Fais défiler en glissant vers le haut ou le bas. ◆ Images — ♥ sur une image la garde avec tout ce qui la joue. ▶ l’ouvre. ◆ Micro et Composer — ♥ sur une prise du Micro garde aussi son son. ▶ Ouvrir : une composition revient dans Composer pour continuer, une prise s’ouvre comme un morceau avec son propre son. ◆ Barres — Glisse à gauche : ♥ et partager. À droite : ✕ retour et 🗑 tout effacer (touche deux fois). ◆ Seulement ici — Sur cet appareil, dans ce navigateur.`},
-    pro:{t:`Pro débloque tout`, b:`Pro 9,99 € : les 24 peintres et sans filigrane. Pro IA 19,99 € : Pro à vie plus l’IA pendant 12 mois.`, m:`Free — 9 peintres, Perso en lecture seule, filigrane, un essai par mode IA. ◆ Pro 9,99 € — Les 24 peintres et 15 compositeurs, palette Perso modifiable, impression sans filigrane, Ensemble, l’Atelier (Lite ou Avancé). ◆ Pro IA 19,99 € — Tout Pro à vie, plus un pass IA de 12 mois — jusqu’à 30 morceaux et mélodies par jour, 500 sur les 12 mois (usage équitable). ◆ Pass IA — 10 € pour 12 mois : sur une clé Pro, ou pour une année de plus. Ta clé reste la même ; rien ne se renouvelle tout seul. ◆ Une fois pour toutes — Sans abonnement. Jusqu’à 5 appareils, un à la fois. ◆ Astuce — En Free, touche un peintre verrouillé pour l’essayer une fois.`},
+    pro:{t:`Pro débloque tout`, b:`Pro 9,99 € : les 24 peintres et sans filigrane. Pro IA 19,99 € : Pro à vie plus l’IA pendant 12 mois.`, m:`Free — 9 peintres, Perso en lecture seule, filigrane, un essai par mode IA. ◆ Pro 9,99 € — Les 24 peintres et 15 compositeurs, palette Perso modifiable, impression sans filigrane, Ensemble, l’Atelier (Lite ou Avancé). ◆ Pro IA 19,99 € — Tout Pro à vie, plus un pass IA de 12 mois — jusqu’à 30 morceaux et mélodies par jour, 500 sur les 12 mois (usage équitable). ◆ Pass IA — 10 € pour 12 mois : sur une clé Pro, ou pour une année de plus. Ta clé reste la même ; rien ne se renouvelle tout seul. ◆ Une fois pour toutes — Sans abonnement. Jusqu’à 5 appareils, un à la fois. ◆ Remboursement — Pendant 14 jours après l’achat, la fenêtre de licence le propose. Jusqu’à 5 exports sans filigrane et 30 morceaux IA, il se fait tout seul. ◆ Astuce — En Free, touche un peintre verrouillé pour l’essayer une fois.`},
     ensemble:{t:`Ensemble`, b:`Fusion : 2–5 peintres sur une peinture. Jam session : 2–5 compositeurs sur une image.`, m:`Activer — ◎ à côté de 🔀, puis touche des peintres, cinq au plus. ◆ Collage — Les peintres côte à côte, chacun de sa propre main. ◆ Synthèse — Un nouveau peintre naît de leur croisement. ◆ Style — Tiré au sort pour chaque fusion ; à choisir dans Styles et palettes → Ensemble. ◆ × 🔀 — 1 donne de nouvelles variantes. ALL garde les épinglés et en ajoute 1–4 nouveaux. ◆ Jam session — Les compositeurs se passent les phrases (Collage) ou fusionnent en un seul (Synthèse). ◆ Pro — S’active dans Styles et palettes → Ensemble.`},
    }},
   ES:{
@@ -22728,7 +22728,7 @@ const GUIDE_I18N = {
     tools:{t:`Controles`, b:`Play / pausa y la barra de avance, Loop, silencio y Borrar.`, bS:`Toca la pintura para reproducir o pausar; el sonido, Loop y Borrar están en ✦ Cambiar.`, m:`Play — Inicia y detiene (también Space). Toca la barra para saltar. ◆ ⟳ Loop — El estado de ánimo suena una y otra vez. ◆ Sonido — Silencia la música; la pintura sigue. Si en el iPhone se va el sonido, mantén pulsado. ◆ Borrar — Según el modo: Componer borra el lienzo, Micro solo el borrador activo, un archivo se reinicia. ◆ Cargando el piano — Unos segundos (~5 MB). Si falla, suena uno sintético.`, mS:`Toca la pintura — Inicia y detiene. ◆ ⟳ Loop — El estado de ánimo suena una y otra vez. ◆ Sonido — Silencia la música; la pintura sigue. Si en el iPhone se va el sonido, mantén pulsado. ◆ Borrar — ✕ en ✦ Cambiar. Componer borra el lienzo; Micro, solo el borrador activo; una música o una imagen desaparece del todo, también del inicio. ◆ Cargando el piano — Unos segundos (~5 MB). Si falla, suena uno sintético.`},
     save:{t:`Guarda y comparte`, b:`La pintura en PNG, la música en audio. Story para Instagram y TikTok.`, bS:`Vídeo 9:16, Imagen para Story o impresión — todo en Compartir.`, m:`Story — 9:16 para IG y TikTok, con los pintores y la paleta. ◆ Web / Social — Unas 4×, lista para el feed. ◆ Impresión A3 — 240 DPI, en formato 3:4 (Pro). ◆ Colores de la pieza — Bajo la pintura, las doce notas y cuánto sonaron. Se desactivan en Guardar. ◆ Grabar — Con una imagen, captura el sonido mientras suena. ◆ ♫ Partitura — Las notas de la pintura como MusicXML. ◆ Marca de agua — En Guardar · imprimir, Free la lleva y Pro la quita. La imagen Story y el vídeo solo llevan un pequeño pie con el nombre, en Free y en Pro.`, mS:`Vídeo 9:16 — Se pinta al ritmo de la música: TikTok, Reels, Stories. ◆ Clip · 15 s — Mientras suena: los próximos 15 segundos desde ahora, con la tarjeta final. ◆ Imagen para Story — 9:16, con el título y quién la pintó. También mientras suena: la pintura tal como está ahora. ◆ Guardar · imprimir — Story, Web, Impresión A3, cuando la pintura está terminada. ◆ Sonido — Con una imagen, graba su música. ◆ Marca de agua — En Guardar · imprimir, Free la lleva y Pro la quita. La imagen Story y el vídeo solo llevan un pequeño pie con el nombre, en Free y en Pro.`},
     favorites:{t:`Favoritos`, b:`Toca ♡ arriba a la izquierda de la pintura — incluso mientras se pinta — y se queda guardada. Sin límite.`, bS:`Toca dos veces la pintura o toca ♥ debajo — incluso mientras se pinta. Sin límite.`, m:`Dirección, no imagen — ♥ recuerda las notas, el pintor, la paleta y el tono; la pintura se vuelve a pintar. ◆ Abrir — ☰ → ♥ Favoritos. Pasa de una a otra deslizando o con ‹ ›. ◆ Imágenes — ♡ en una imagen la guarda con todo lo que la hace sonar. ▶ Abrir la devuelve. ◆ Borrar todos — Toca dos veces; Deshacer los devuelve. ◆ Solo aquí — En este dispositivo y este navegador.`, mS:`Dirección, no imagen — ♥ recuerda las notas, el pintor, la paleta y el tono; la pintura se vuelve a pintar. ◆ Abrir — En Lo mío: ✦ Cambiar o el menú. Pasa de una a otra deslizando arriba y abajo. ◆ Imágenes — ♥ en una imagen la guarda con todo lo que la hace sonar. ▶ la abre. ◆ Micro y Componer — ♥ en una toma del Micro guarda también su sonido. ▶ Abrir: una composición vuelve a Componer para seguir, una toma se abre como canción con su propio sonido. ◆ Barras — Desliza a la izquierda: ♥ y compartir. A la derecha: ✕ volver y 🗑 borrar todo (toca dos veces). ◆ Solo aquí — En este dispositivo y este navegador.`},
-    pro:{t:`Pro lo desbloquea todo`, b:`Pro 9,99 €: los 24 pintores y sin marca de agua. Pro IA 19,99 €: Pro para siempre más IA durante 12 meses.`, m:`Free — 9 pintores, Personal en solo lectura, marca de agua, una prueba de cada modo IA. ◆ Pro 9,99 € — Los 24 pintores y 15 compositores, paleta Personal, impresión sin marca de agua, Ensemble, Taller (Lite o Avanzado). ◆ Pro IA 19,99 € — Todo lo de Pro para siempre, más un pase IA de 12 meses — hasta 30 piezas y melodías al día, 500 en los 12 meses (uso justo). ◆ Pase IA — 10 € por 12 meses: sobre una clave Pro, o como otro año. Tu clave sigue igual; nada se renueva solo. ◆ Una vez, para siempre — Sin suscripción. Hasta 5 dispositivos, uno a la vez. ◆ Truco — En Free, toca un pintor bloqueado y lo pruebas una vez.`},
+    pro:{t:`Pro lo desbloquea todo`, b:`Pro 9,99 €: los 24 pintores y sin marca de agua. Pro IA 19,99 €: Pro para siempre más IA durante 12 meses.`, m:`Free — 9 pintores, Personal en solo lectura, marca de agua, una prueba de cada modo IA. ◆ Pro 9,99 € — Los 24 pintores y 15 compositores, paleta Personal, impresión sin marca de agua, Ensemble, Taller (Lite o Avanzado). ◆ Pro IA 19,99 € — Todo lo de Pro para siempre, más un pase IA de 12 meses — hasta 30 piezas y melodías al día, 500 en los 12 meses (uso justo). ◆ Pase IA — 10 € por 12 meses: sobre una clave Pro, o como otro año. Tu clave sigue igual; nada se renueva solo. ◆ Una vez, para siempre — Sin suscripción. Hasta 5 dispositivos, uno a la vez. ◆ Reembolso — Durante 14 días tras la compra lo ofrece la ventana de licencia. Hasta 5 exportaciones sin marca de agua y 30 piezas IA se hace solo. ◆ Truco — En Free, toca un pintor bloqueado y lo pruebas una vez.`},
     ensemble:{t:`Ensemble`, b:`Fusión: 2–5 pintores en una pintura. Jam session: 2–5 compositores sobre una imagen.`, m:`Actívalo — ◎ junto a 🔀; luego toca pintores, hasta cinco. ◆ Collage — Los pintores lado a lado, cada uno con su propia mano. ◆ Síntesis — De ellos se cruza un pintor nuevo. ◆ Estilo — Se sortea en cada fusión; lo eliges en Estilos y paletas → Ensemble. ◆ × 🔀 — 1 da variantes nuevas. ALL mantiene a los fijados y suma 1–4 nuevos. ◆ Jam session — Los compositores se turnan las frases (Collage) o se funden en uno (Síntesis). ◆ Pro — Se activa en Estilos y paletas → Ensemble.`},
    }},
   PT:{
@@ -22764,7 +22764,7 @@ const GUIDE_I18N = {
     tools:{t:`Controlos`, b:`Play / pausa e a barra de progresso, Loop, silêncio e Limpar.`, bS:`Toca na pintura para tocar ou pausar; o som, Loop e Limpar estão em ✦ Mudar.`, m:`Play — Inicia e para (também Space). Toca na barra para saltar. ◆ ⟳ Loop — O humor toca sem parar. ◆ Som — Silencia a música; a pintura continua. Se no iPhone o som desaparecer, mantém premido. ◆ Limpar — Depende do modo: Compor apaga a tela, Mic só o rascunho ativo, um ficheiro faz reset. ◆ A carregar o piano — Uns segundos (~5 MB). Se falhar, toca um sintético.`, mS:`Toca na pintura — Inicia e para. ◆ ⟳ Loop — O humor toca sem parar. ◆ Som — Silencia a música; a pintura continua. Se no iPhone o som desaparecer, mantém premido. ◆ Limpar — ✕ em ✦ Mudar. Compor apaga a tela; Mic, só o rascunho ativo; uma música ou uma imagem desaparece por completo, também do início. ◆ A carregar o piano — Uns segundos (~5 MB). Se falhar, toca um sintético.`},
     save:{t:`Guarda e partilha`, b:`A pintura em PNG, a música em áudio. Story para Instagram e TikTok.`, bS:`Vídeo 9:16, Imagem para Story ou impressão — tudo em Partilhar.`, m:`Story — 9:16 para IG e TikTok, com os pintores e a paleta. ◆ Web / Social — Cerca de 4×, pronta para o feed. ◆ Impressão A3 — 240 DPI, em formato 3:4 (Pro). ◆ Cores da peça — Por baixo da pintura, as doze notas e quanto tempo soaram. Desligas em Guardar. ◆ Gravar — Com uma imagem, capta o som enquanto toca. ◆ ♫ Partitura — As notas da pintura em MusicXML. ◆ Marca de água — Em Guardar · imprimir, o Free tem-na e o Pro remove-a. A imagem Story e o vídeo levam só um pequeno rodapé com o nome, no Free e no Pro.`, mS:`Vídeo 9:16 — Pinta-se ao ritmo da música: TikTok, Reels, Stories. ◆ Clip · 15 s — Enquanto toca: os próximos 15 segundos a partir de agora, com o cartão final. ◆ Imagem para Story — 9:16, com o título e quem a pintou. Também enquanto toca: a pintura tal como está agora. ◆ Guardar · imprimir — Story, Web, Impressão A3, quando a pintura acaba. ◆ Som — Com uma imagem, grava a sua música. ◆ Marca de água — Em Guardar · imprimir, o Free tem-na e o Pro remove-a. A imagem Story e o vídeo levam só um pequeno rodapé com o nome, no Free e no Pro.`},
     favorites:{t:`Favoritos`, b:`Toca em ♡ no canto superior esquerdo da pintura — mesmo enquanto ainda se pinta — e fica guardada. Sem limite.`, bS:`Toca duas vezes na pintura ou toca em ♥ por baixo — mesmo enquanto se pinta. Sem limite.`, m:`Endereço, não imagem — ♥ lembra as notas, o pintor, a paleta e o tom; a pintura volta a ser pintada. ◆ Abrir — ☰ → ♥ Favoritos. Passa de uma para outra a deslizar ou com ‹ ›. ◆ Imagens — ♡ numa imagem guarda-a com tudo o que a faz tocar. ▶ Abrir trá-la de volta. ◆ Apagar todos — Toca duas vezes; Desfazer trá-los de volta. ◆ Só aqui — Neste dispositivo e neste navegador.`, mS:`Endereço, não imagem — ♥ lembra as notas, o pintor, a paleta e o tom; a pintura volta a ser pintada. ◆ Abrir — Em O meu: ✦ Mudar ou o menu. Passa de uma para outra a deslizar para cima e para baixo. ◆ Imagens — ♥ numa imagem guarda-a com tudo o que a faz tocar. ▶ abre-a. ◆ Micro e Compor — ♥ numa gravação do Micro guarda também o som. ▶ Abrir: uma composição volta ao Compor para continuar, uma gravação abre como canção com o seu próprio som. ◆ Barras — Desliza para a esquerda: ♥ e partilhar. Para a direita: ✕ voltar e 🗑 apagar tudo (toca duas vezes). ◆ Só aqui — Neste dispositivo e neste navegador.`},
-    pro:{t:`Pro desbloqueia tudo`, b:`Pro 9,99 €: os 24 pintores e sem marca de água. Pro IA 19,99 €: Pro para sempre mais IA durante 12 meses.`, m:`Free — 9 pintores, Personalizada só de leitura, marca de água, uma tentativa de cada modo IA. ◆ Pro 9,99 € — Os 24 pintores e 15 compositores, paleta Personalizada, impressão sem marca de água, Ensemble, Atelier (Lite ou Avançado). ◆ Pro IA 19,99 € — Tudo do Pro para sempre, mais um passe de IA de 12 meses — até 30 peças e melodias por dia, 500 nos 12 meses (uso justo). ◆ Passe de IA — 10 € por 12 meses: numa chave Pro, ou como mais um ano. A chave fica a mesma; nada se renova sozinho. ◆ Uma vez, para sempre — Sem subscrição. Até 5 dispositivos, um de cada vez. ◆ Dica — No Free, toca num pintor bloqueado e experimenta-o uma vez.`},
+    pro:{t:`Pro desbloqueia tudo`, b:`Pro 9,99 €: os 24 pintores e sem marca de água. Pro IA 19,99 €: Pro para sempre mais IA durante 12 meses.`, m:`Free — 9 pintores, Personalizada só de leitura, marca de água, uma tentativa de cada modo IA. ◆ Pro 9,99 € — Os 24 pintores e 15 compositores, paleta Personalizada, impressão sem marca de água, Ensemble, Atelier (Lite ou Avançado). ◆ Pro IA 19,99 € — Tudo do Pro para sempre, mais um passe de IA de 12 meses — até 30 peças e melodias por dia, 500 nos 12 meses (uso justo). ◆ Passe de IA — 10 € por 12 meses: numa chave Pro, ou como mais um ano. A chave fica a mesma; nada se renova sozinho. ◆ Uma vez, para sempre — Sem subscrição. Até 5 dispositivos, um de cada vez. ◆ Reembolso — Durante 14 dias após a compra, a janela da licença oferece-o. Até 5 exportações sem marca de água e 30 peças de IA faz-se sozinho. ◆ Dica — No Free, toca num pintor bloqueado e experimenta-o uma vez.`},
     ensemble:{t:`Ensemble`, b:`Fusão: 2–5 pintores numa pintura. Jam session: 2–5 compositores sobre uma imagem.`, m:`Liga — ◎ ao lado de 🔀, depois toca nos pintores, até cinco. ◆ Colagem — Os pintores lado a lado, cada um com a sua mão. ◆ Síntese — Deles cruza-se um pintor novo. ◆ Estilo — É sorteado em cada fusão; escolhe-lo em Estilos e paletas → Ensemble. ◆ × 🔀 — 1 dá variantes novas. ALL mantém os fixados e junta 1–4 novos. ◆ Jam session — Os compositores alternam frases (Colagem) ou fundem-se num só (Síntese). ◆ Pro — Liga-se em Estilos e paletas → Ensemble.`},
    }},
   zh:{
@@ -22800,7 +22800,7 @@ const GUIDE_I18N = {
     tools:{t:`控制`, b:`播放 / 暂停、拖动进度条、循环、静音和清空。`, bS:`轻点画面即可播放或暂停；声音、循环和清除在 ✦ 更换 里。`, m:`播放 — 开始和停止（也可按 Space）。点进度条可跳转。 ◆ ⟳ 循环 — 情绪曲反复播放。 ◆ 声音 — 静音时画作照常进行。iPhone 上声音消失时，长按它。 ◆ 清空 — 视模式而定：作曲清空画布，麦克风只清当前草稿，文件则完全重置。 ◆ 钢琴加载中 — 几秒钟（约 5 MB）。失败时改用合成钢琴。`, mS:`轻点画面 — 开始和停止。 ◆ ⟳ 循环 — 情绪曲反复播放。 ◆ 声音 — 静音时画作照常进行。iPhone 上声音消失时，长按它。 ◆ 清除 — ✦ 更换 里的 ✕。作曲清空画布，麦克风只清当前草稿；音乐或图片会完全消失，首页上也不再有。 ◆ 钢琴加载中 — 几秒钟（约 5 MB）。失败时改用合成钢琴。`},
     save:{t:`保存与分享`, b:`画作存为 PNG，音乐存为音频。Story 适合 Instagram 和 TikTok。`, bS:`视频 9:16、快拍图片或打印，全在“分享”里。`, m:`Story — 9:16，适合 IG 和 TikTok，标注画家与调色板。 ◆ Web / Social — 约 4×，适合信息流。 ◆ 打印 A3 — 240 DPI，3:4 画幅（Pro）。 ◆ 乐曲的颜色 — 画下方是十二个音，以及各自响了多久。可在保存中关闭。 ◆ 录制 — 图像模式下，边播放边录下声音。 ◆ ♫ 乐谱 — 把画作的音符导出为 MusicXML。 ◆ 水印 — 在“保存 · 打印”里，Free 有水印，Pro 会去掉它。Story 图片和视频只带一行小小的署名页脚，Free 和 Pro 都一样。`, mS:`视频 9:16 — 随音乐边画边播：TikTok、Reels、快拍。 ◆ 片段 · 15 秒 — 播放中：从现在起的 15 秒，带结尾卡。 ◆ 快拍图片 — 9:16，附曲名和作画者。播放中也可以：画面此刻的样子。 ◆ 保存 · 打印 — 画完后可选 Story、Web、打印 A3。 ◆ 声音 — 图像模式下录下它的音乐。 ◆ 水印 — 在“保存 · 打印”里，Free 有水印，Pro 会去掉它。Story 图片和视频只带一行小小的署名页脚，Free 和 Pro 都一样。`},
     favorites:{t:`收藏`, b:`点画作左上角的 ♡ 就能留下它——还在画的时候也可以。没有数量限制。`, bS:`双击画作，或点下方的 ♥——还在画的时候也可以。没有数量限制。`, m:`地址，不是图片 — ♥ 记住音符、画家、调色板和色调；画作会重新画出来。 ◆ 打开 — ☰ → ♥ 收藏。滑动或点 ‹ › 翻看。 ◆ 图像 — 图像上的 ♡ 会连同演奏它的一切一起保存。▶ 打开 把它带回来。 ◆ 全部清除 — 点两下；撤销可以找回。 ◆ 仅限本机 — 保存在这台设备、这个浏览器里。`, mS:`地址，不是图片 — ♥ 记住音符、画家、调色板和色调；画作会重新画出来。 ◆ 打开 — 在“我的”里：✦ 更换 或菜单。上下滑动翻看。 ◆ 图像 — 图像上的 ♥ 会连同演奏它的一切一起保存。▶ 打开它。 ◆ 麦克风和作曲 — 麦克风录音上的 ♥ 连声音一起保存。▶ 打开：作曲回到作曲模式继续写，录音作为带原声的曲子打开。 ◆ 侧栏 — 向左滑：♥ 和分享。向右滑：✕ 返回和 🗑 全部删除（点两下）。 ◆ 仅限本机 — 保存在这台设备、这个浏览器里。`},
-    pro:{t:`Pro 解锁一切`, b:`Pro €9.99：全部 24 位画家，无水印。Pro AI €19.99：Pro 永久，外加 12 个月 AI。`, m:`Free — 9 位画家，自定义只读，带水印，每个 AI 模式试用一次。 ◆ Pro €9.99 — 全部 24 位画家和 15 位作曲家、自定义调色板、无水印打印、合奏、画室（Lite 或高级）。 ◆ Pro AI €19.99 — Pro 的一切永久拥有，外加 12 个月 AI 通行证——每天最多 30 首、12 个月内 500 首乐曲与旋律（合理使用）。 ◆ AI 通行证 — €10 用 12 个月：加在 Pro 密钥上，或再续一年。许可证密钥不变；不会自动续费。 ◆ 一次买断 — 无订阅。最多 5 台设备，一次一台。 ◆ 小贴士 — 在 Free 中点一位锁定的画家，就能试用一次。`},
+    pro:{t:`Pro 解锁一切`, b:`Pro €9.99：全部 24 位画家，无水印。Pro AI €19.99：Pro 永久，外加 12 个月 AI。`, m:`Free — 9 位画家，自定义只读，带水印，每个 AI 模式试用一次。 ◆ Pro €9.99 — 全部 24 位画家和 15 位作曲家、自定义调色板、无水印打印、合奏、画室（Lite 或高级）。 ◆ Pro AI €19.99 — Pro 的一切永久拥有，外加 12 个月 AI 通行证——每天最多 30 首、12 个月内 500 首乐曲与旋律（合理使用）。 ◆ AI 通行证 — €10 用 12 个月：加在 Pro 密钥上，或再续一年。许可证密钥不变；不会自动续费。 ◆ 一次买断 — 无订阅。最多 5 台设备，一次一台。 ◆ 退款 — 购买后 14 天内，许可证窗口提供退款。无水印导出不超过 5 次、AI 乐曲不超过 30 首时自动办理。 ◆ 小贴士 — 在 Free 中点一位锁定的画家，就能试用一次。`},
     ensemble:{t:`合奏`, b:`融合：2–5 位画家共画一幅画。Jam session：2–5 位作曲家共奏一张图。`, m:`开启 — 点 🔀 旁的 ◎，再点选画家，最多五位。 ◆ 拼贴 — 画家们并排作画，各用各的笔法。 ◆ 合成 — 由他们杂交出一位新画家。 ◆ 风格 — 每次融合随机抽取；可在“风格与调色板 → 合奏”中指定。 ◆ × 🔀 — 1 给出新变体。ALL 保留已固定的，再加 1–4 位新画家。 ◆ Jam session — 作曲家轮流接句（拼贴），或合为一位（合成）。 ◆ Pro — 在“风格与调色板 → 合奏”中开启。`},
    }},
   zhTW:{
@@ -22836,7 +22836,7 @@ const GUIDE_I18N = {
     tools:{t:`控制`, b:`播放 / 暫停、拖曳進度列、循環、靜音和清空。`, bS:`輕點畫面即可播放或暫停；聲音、循環和清除在 ✦ 更換 裡。`, m:`播放 — 開始和停止（也可按 Space）。點進度列可跳轉。 ◆ ⟳ 循環 — 情緒曲重複播放。 ◆ 聲音 — 靜音時畫作照樣繼續。iPhone 上聲音不見時，長按它。 ◆ 清空 — 依模式而定：作曲清空畫布，麥克風只清目前的草稿，檔案則完全重設。 ◆ 鋼琴載入中 — 幾秒鐘（約 5 MB）。失敗時改用合成鋼琴。`, mS:`輕點畫面 — 開始和停止。 ◆ ⟳ 循環 — 情緒曲重複播放。 ◆ 聲音 — 靜音時畫作照樣繼續。iPhone 上聲音不見時，長按它。 ◆ 清除 — ✦ 更換 裡的 ✕。作曲清空畫布，麥克風只清目前的草稿；音樂或圖片會完全消失，首頁上也不再有。 ◆ 鋼琴載入中 — 幾秒鐘（約 5 MB）。失敗時改用合成鋼琴。`},
     save:{t:`儲存與分享`, b:`畫作存成 PNG，音樂存成音訊。Story 適用 Instagram 和 TikTok。`, bS:`影片 9:16、限動圖片或列印，全在「分享」裡。`, m:`Story — 9:16，適用 IG 和 TikTok，標註畫家與調色盤。 ◆ Web / Social — 約 4×，適合動態消息。 ◆ 列印 A3 — 240 DPI，3:4 畫幅（Pro）。 ◆ 樂曲的顏色 — 畫下方是十二個音，以及各自響了多久。可在儲存中關閉。 ◆ 錄製 — 圖像模式下，一邊播放一邊錄下聲音。 ◆ ♫ 樂譜 — 把畫作的音符匯出為 MusicXML。 ◆ 浮水印 — 在「儲存 · 列印」裡，Free 有浮水印，Pro 會移除它。Story 圖片和影片只帶一行小小的署名頁尾，Free 和 Pro 都一樣。`, mS:`影片 9:16 — 隨著音樂邊畫邊播：TikTok、Reels、限時動態。 ◆ 片段 · 15 秒 — 播放中：從現在起的 15 秒，帶結尾卡。 ◆ 限動圖片 — 9:16，附上曲名和作畫者。播放中也可以：畫面此刻的樣子。 ◆ 儲存 · 列印 — 畫完後可選 Story、Web、列印 A3。 ◆ 聲音 — 圖像模式下錄下它的音樂。 ◆ 浮水印 — 在「儲存 · 列印」裡，Free 有浮水印，Pro 會移除它。Story 圖片和影片只帶一行小小的署名頁尾，Free 和 Pro 都一樣。`},
     favorites:{t:`收藏`, b:`點畫作左上角的 ♡ 就能留下它——還在畫的時候也可以。沒有數量限制。`, bS:`雙擊畫作，或點下方的 ♥——還在畫的時候也可以。沒有數量限制。`, m:`位址，不是圖片 — ♥ 記住音符、畫家、調色盤和色調；畫作會重新畫出來。 ◆ 開啟 — ☰ → ♥ 收藏。滑動或點 ‹ › 瀏覽。 ◆ 圖像 — 圖像上的 ♡ 會連同演奏它的一切一起儲存。▶ 打開 會把它帶回來。 ◆ 全部清除 — 點兩下；復原可以找回。 ◆ 僅限本機 — 存在這台裝置、這個瀏覽器裡。`, mS:`位址，不是圖片 — ♥ 記住音符、畫家、調色盤和色調；畫作會重新畫出來。 ◆ 開啟 — 在「我的」裡：✦ 更換 或選單。上下滑動瀏覽。 ◆ 圖像 — 圖像上的 ♥ 會連同演奏它的一切一起儲存。▶ 開啟它。 ◆ 麥克風和作曲 — 麥克風錄音上的 ♥ 連聲音一起儲存。▶ 開啟：作曲回到作曲模式繼續寫，錄音作為帶原聲的曲子開啟。 ◆ 側欄 — 向左滑：♥ 和分享。向右滑：✕ 返回和 🗑 全部刪除（點兩下）。 ◆ 僅限本機 — 存在這台裝置、這個瀏覽器裡。`},
-    pro:{t:`Pro 解鎖一切`, b:`Pro €9.99：全部 24 位畫家，無浮水印。Pro AI €19.99：Pro 永久，外加 12 個月 AI。`, m:`Free — 9 位畫家，自訂唯讀，帶浮水印，每個 AI 模式試用一次。 ◆ Pro €9.99 — 全部 24 位畫家和 15 位作曲家、自訂調色盤、無浮水印列印、合奏、畫室（Lite 或進階）。 ◆ Pro AI €19.99 — Pro 的一切永久擁有，再加上 12 個月 AI 通行證——每天最多 30 首、12 個月內 500 首樂曲與旋律（合理使用）。 ◆ AI 通行證 — €10 用 12 個月：加在 Pro 金鑰上，或再續一年。授權金鑰不變；不會自動續費。 ◆ 一次買斷 — 不用訂閱。最多 5 台裝置，一次一台。 ◆ 小提示 — 在 Free 中點一位鎖定的畫家，就能試用一次。`},
+    pro:{t:`Pro 解鎖一切`, b:`Pro €9.99：全部 24 位畫家，無浮水印。Pro AI €19.99：Pro 永久，外加 12 個月 AI。`, m:`Free — 9 位畫家，自訂唯讀，帶浮水印，每個 AI 模式試用一次。 ◆ Pro €9.99 — 全部 24 位畫家和 15 位作曲家、自訂調色盤、無浮水印列印、合奏、畫室（Lite 或進階）。 ◆ Pro AI €19.99 — Pro 的一切永久擁有，再加上 12 個月 AI 通行證——每天最多 30 首、12 個月內 500 首樂曲與旋律（合理使用）。 ◆ AI 通行證 — €10 用 12 個月：加在 Pro 金鑰上，或再續一年。授權金鑰不變；不會自動續費。 ◆ 一次買斷 — 不用訂閱。最多 5 台裝置，一次一台。 ◆ 退款 — 購買後 14 天內，授權視窗提供退款。無浮水印匯出不超過 5 次、AI 樂曲不超過 30 首時自動辦理。 ◆ 小提示 — 在 Free 中點一位鎖定的畫家，就能試用一次。`},
     ensemble:{t:`合奏`, b:`融合：2–5 位畫家共畫一幅畫。Jam session：2–5 位作曲家共奏一張圖。`, m:`開啟 — 點 🔀 旁的 ◎，再點選畫家，最多五位。 ◆ 拼貼 — 畫家們並排作畫，各用各的筆法。 ◆ 合成 — 由他們雜交出一位新畫家。 ◆ 風格 — 每次融合隨機抽選；可在「風格與調色盤 → 合奏」中指定。 ◆ × 🔀 — 1 給出新變體。ALL 保留已固定的，再加入 1–4 位新畫家。 ◆ Jam session — 作曲家輪流接句（拼貼），或合而為一（合成）。 ◆ Pro — 在「風格與調色盤 → 合奏」中開啟。`},
    }},
   ja:{
@@ -22872,7 +22872,7 @@ const GUIDE_I18N = {
     tools:{t:`操作`, b:`再生 / 一時停止とバーの移動、ループ、ミュート、クリア。`, bS:`絵をタップで再生／一時停止。サウンド、ループ、クリアは ✦ 変える に。`, m:`再生 — 開始と停止（Space でも）。バーをタップでジャンプ。 ◆ ⟳ ループ — 気分の曲がくり返す。 ◆ サウンド — 音楽を消しても絵は続く。iPhone で音が消えたら長押し。 ◆ クリア — モードしだい：作曲はキャンバスを消し、マイクはアクティブな下書きだけ、ファイルはリセット。 ◆ ピアノ読み込み中 — 数秒（約 5 MB）。失敗したらシンセピアノで鳴る。`, mS:`絵をタップ — 開始と停止。 ◆ ⟳ ループ — 気分の曲がくり返す。 ◆ サウンド — 音楽を消しても絵は続く。iPhone で音が消えたら長押し。 ◆ クリア — ✦ 変える の ✕。作曲はキャンバスを消し、マイクはアクティブな下書きだけ。音楽や画像は完全に消え、ホームからもなくなる。 ◆ ピアノ読み込み中 — 数秒（約 5 MB）。失敗したらシンセピアノで鳴る。`},
     save:{t:`保存とシェア`, b:`絵は PNG、音楽は音声で。Instagram と TikTok には Story。`, bS:`動画 9:16、ストーリー画像、印刷。すべて シェア の中に。`, m:`Story — IG と TikTok 向けの 9:16、画家とパレット付き。 ◆ Web / Social — 約 4×、フィード向け。 ◆ 印刷 A3 — 240 DPI、3:4 のフレームで（Pro）。 ◆ 曲の色 — 絵の下に十二の音と、それぞれが鳴った長さ。保存 でオフにできる。 ◆ 録音 — 画像の演奏中の音を録る。 ◆ ♫ 楽譜 — 絵の音符を MusicXML で。 ◆ ウォーターマーク — 保存・印刷では Free に付き、Pro で外れる。Story 画像と動画には名前入りの小さなフッターだけ、Free でも Pro でも同じ。`, mS:`動画 9:16 — 音楽に合わせて描かれる：TikTok、Reels、Stories。 ◆ クリップ · 15 秒 — 再生中に：いまから 15 秒、エンドカード付き。 ◆ ストーリー画像 — 9:16、曲名と誰が描いたか付き。再生中でも：いまこの瞬間の絵。 ◆ 保存 · 印刷 — 絵が描き終わったら Story、Web、印刷 A3。 ◆ サウンド — 画像ではその音楽を録音。 ◆ ウォーターマーク — 保存・印刷では Free に付き、Pro で外れる。Story 画像と動画には名前入りの小さなフッターだけ、Free でも Pro でも同じ。`},
     favorites:{t:`お気に入り`, b:`絵の左上の ♡ をタップすれば残せる。描いている途中でも OK。上限なし。`, bS:`絵をダブルタップ、またはその下の ♥ をタップ。描いている途中でも OK。上限なし。`, m:`画像でなく住所 — ♥ は音、画家、パレット、トーンを覚え、絵はもう一度描かれる。 ◆ 開く — ☰ → ♥ お気に入り。スワイプか ‹ › でめくる。 ◆ 画像 — 画像の ♡ は、それを奏でるすべてと一緒に保存。▶ 開く で戻る。 ◆ すべて削除 — 2 回タップ。元に戻す で復活。 ◆ ここだけ — この端末、このブラウザに保存。`, mS:`画像でなく住所 — ♥ は音、画家、パレット、トーンを覚え、絵はもう一度描かれる。 ◆ 開く — マイ から：✦ 変える かメニュー。上下にスワイプでめくる。 ◆ 画像 — 画像の ♥ は、それを奏でるすべてと一緒に保存。▶ で開く。 ◆ マイクと作曲 — マイク録音の ♥ は音も一緒に保存。▶ 開く：作曲は作曲モードに戻って続きを、録音は元の音つきの曲として開く。 ◆ サイドバー — 左へスワイプ：♥ と共有。右へ：✕ 戻る と 🗑 すべて削除（2回タップ）。 ◆ ここだけ — この端末、このブラウザに保存。`},
-    pro:{t:`Pro がすべてを解放`, b:`Pro €9.99：24 人の画家すべて、ウォーターマークなし。Pro AI €19.99：Pro は永久、AI は 12 か月。`, m:`Free — 画家 9 人、カスタムは読み取り専用、ウォーターマーク付き、各 AI モード 1 回お試し。 ◆ Pro €9.99 — 画家 24 人と作曲家 15 人すべて、カスタムパレット、ウォーターマークなしの印刷、アンサンブル、アトリエ（Lite かアドバンス）。 ◆ Pro AI €19.99 — Pro のすべてを永久に、さらに 12 か月の AI パス——1 日 30 曲・メロディまで、12 か月で 500 まで（フェアユース）。 ◆ AI パス — €10 で 12 か月：Pro のキーに追加、またはもう 1 年。キーはそのまま。自動更新はありません。 ◆ 一度で永久 — サブスクなし。最大 5 台、同時に 1 台。 ◆ ヒント — Free でロックされた画家をタップすると、1 回試せる。`},
+    pro:{t:`Pro がすべてを解放`, b:`Pro €9.99：24 人の画家すべて、ウォーターマークなし。Pro AI €19.99：Pro は永久、AI は 12 か月。`, m:`Free — 画家 9 人、カスタムは読み取り専用、ウォーターマーク付き、各 AI モード 1 回お試し。 ◆ Pro €9.99 — 画家 24 人と作曲家 15 人すべて、カスタムパレット、ウォーターマークなしの印刷、アンサンブル、アトリエ（Lite かアドバンス）。 ◆ Pro AI €19.99 — Pro のすべてを永久に、さらに 12 か月の AI パス——1 日 30 曲・メロディまで、12 か月で 500 まで（フェアユース）。 ◆ AI パス — €10 で 12 か月：Pro のキーに追加、またはもう 1 年。キーはそのまま。自動更新はありません。 ◆ 一度で永久 — サブスクなし。最大 5 台、同時に 1 台。 ◆ 返金 — 購入から 14 日間、ライセンス画面から申請できます。透かしなしの書き出し 5 回、AI 曲 30 回までなら自動で進みます。 ◆ ヒント — Free でロックされた画家をタップすると、1 回試せる。`},
     ensemble:{t:`アンサンブル`, b:`フュージョン：2〜5 人の画家で一枚の絵。Jam session：2〜5 人の作曲家で一枚の画像を。`, m:`オンにする — 🔀 の隣の ◎、それから画家をタップ。最大 5 人。 ◆ コラージュ — 画家たちが並んで、それぞれ自分の筆致で。 ◆ 合成 — 彼らから新しい画家がひとり生まれる。 ◆ 様式 — フュージョンごとに抽選。スタイルとパレット → アンサンブル で選べる。 ◆ × 🔀 — 1 は新しいバリアント。ALL はピン留めを残し、新しく 1〜4 人を加える。 ◆ Jam session — 作曲家がフレーズを交代する（コラージュ）か、一人に融合する（合成）。 ◆ Pro — スタイルとパレット → アンサンブル でオン。`},
    }},
 };
@@ -24174,6 +24174,23 @@ async function _proValidate(key, check = false) {
 
 // A day in the app's language (the AI pass: "until 10 November 2027").
 const PF_DATE_LOC = { EN:'en-GB', DE:'de-DE', FR:'fr-FR', ES:'es-ES', SK:'sk-SK', PT:'pt-PT', zh:'zh-CN', zhTW:'zh-TW', ja:'ja-JP' };
+// Money as the buyer paid it (Paddle amounts are in the currency's smallest unit).
+const PF_ZERO_DEC = { JPY:1, KRW:1, VND:1, CLP:1, ISK:1, UGX:1, PYG:1, XAF:1, XOF:1 };
+function pfMoney(minor, cur, lang) {
+  if (minor == null || !cur) return '';
+  const v = PF_ZERO_DEC[cur] ? Number(minor) : Number(minor) / 100;
+  if (!Number.isFinite(v)) return '';
+  try { return new Intl.NumberFormat(PF_DATE_LOC[lang] || 'en-GB', { style: 'currency', currency: cur, minimumFractionDigits: Number.isInteger(v) ? 0 : 2 }).format(v); }
+  catch (_) { return v + ' ' + cur; }
+}
+// The in-app refund (api/refund.js): a preview, and — with confirm — the request itself.
+async function pfRefundCall(key, confirm) {
+  try {
+    const r = await fetch('/api/refund', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(confirm ? { key, confirm: true } : { key }) });
+    const j = await r.json().catch(() => null);
+    return j && typeof j === 'object' ? j : { ok: false, reason: 'server_error' };
+  } catch (_) { return { ok: false, reason: 'network' }; }
+}
 function pfFmtDay(ms, lang) {
   try { return new Date(ms).toLocaleDateString(PF_DATE_LOC[lang] || 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); }
   catch (_) { try { return new Date(ms).toISOString().slice(0, 10); } catch (__) { return ''; } }
@@ -24203,14 +24220,17 @@ function useProStatus() {
   // ends a pass, so it does not outlive its date while offline.
   const [aiUntil, setAiUntil] = useState(null);
   const [aiExpired, setAiExpired] = useState(false);
+  // In-app refund: when its 14-day window closes (ms | null). From validate (refund_until).
+  const [refundUntil, setRefundUntil] = useState(null);
+  const _refOf = (r) => { const u = r && r.refund_until ? Date.parse(r.refund_until) : NaN; return Number.isFinite(u) ? u : null; };
   const _passOf = (r) => { const u = r && r.ai_until ? Date.parse(r.ai_until) : NaN; return Number.isFinite(u) ? u : null; };
-  const _apply = (tier, until, expired) => {
+  const _apply = (tier, until, expired, refund) => {
     let st = _tierToStatus(tier), ex = !!expired;
     if (st === 'pro_ai' && until && Date.now() > until) { st = 'pro'; ex = true; }
-    setProStatus(st); setAiUntil(until || null); setAiExpired(ex);
+    setProStatus(st); setAiUntil(until || null); setAiExpired(ex); setRefundUntil(refund || null);
     return st;
   };
-  const _cacheOf = (res) => ({ email: res.email, tier: res.tier, aiUntil: _passOf(res), aiExpired: !!res.ai_expired });
+  const _cacheOf = (res) => ({ email: res.email, tier: res.tier, aiUntil: _passOf(res), aiExpired: !!res.ai_expired, refundUntil: _refOf(res) });
 
   useEffect(() => {
     // Back from the upgrade checkout? Strip the flag so a reload doesn't repeat it.
@@ -24231,7 +24251,7 @@ function useProStatus() {
     // A paid year has landed when the key has AI and its end date moved on (a first pass has no earlier date).
     const _upOk = (res) => res.tier === 'pro_ai' && !(cached.aiUntil && _passOf(res) && _passOf(res) <= cached.aiUntil);
     if (!stale) {
-      _apply(cached.tier, cached.aiUntil || null, cached.aiExpired); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+      _apply(cached.tier, cached.aiUntil || null, cached.aiExpired, cached.refundUntil || null); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       // Every paid key is re-checked quietly on each start (the cache only
       // decides what shows first), so a tier change on the server reaches every
       // device: an upgrade to Pro AI, a refunded upgrade back to Pro, or a
@@ -24245,13 +24265,13 @@ function useProStatus() {
           if (!alive) return;
           if (res.valid) {
             _proWriteCache(cached.key, _cacheOf(res));
-            _apply(res.tier, _passOf(res), res.ai_expired); setMaskedEmail(res.email || null);
+            _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setMaskedEmail(res.email || null);
             if (_upOk(res) || !upgraded) {
               if (upgraded) { setJustUpgraded(true); try { window.posthog && window.posthog.capture('upgrade_confirmed'); } catch (_) {} }
               return;
             }
           } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
-            _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
+            _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
             return;
           } else if (res.offline) {
             return;
@@ -24264,14 +24284,14 @@ function useProStatus() {
       if (!alive) return;
       if (res.valid) {
         _proWriteCache(cached.key, _cacheOf(res));
-        _apply(res.tier, _passOf(res), res.ai_expired); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
+        _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setLicenseKey(cached.key); setMaskedEmail(res.email || null);
         if (upgraded && _upOk(res)) setJustUpgraded(true);
       } else if (res.offline) {
         // Network down during re-check → trust the cache (stay paid) until online.
-        _apply(cached.tier, cached.aiUntil || null, cached.aiExpired); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
+        _apply(cached.tier, cached.aiUntil || null, cached.aiExpired, cached.refundUntil || null); setLicenseKey(cached.key); setMaskedEmail(cached.email || null);
       } else {
         // Authoritative revoke (refunded/disabled/not_found)
-        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
+        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
       }
     });
     return () => { alive = false; };
@@ -24283,14 +24303,33 @@ function useProStatus() {
     const res = await _proValidate(key);
     if (res.valid) {
       _proWriteCache(key, _cacheOf(res));
-      const st = _apply(res.tier, _passOf(res), res.ai_expired); setLicenseKey(key); setMaskedEmail(res.email || null);
+      const st = _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setLicenseKey(key); setMaskedEmail(res.email || null);
       return { ok: true, tier: st };
     }
     return { ok: false, reason: res.reason || 'unknown' };
   }, []);
 
+  // Ask the server again about the key in use (after an in-app refund: the licence is
+  // switched off by Paddle's webhook a moment later, so this is tried a few times).
+  const recheckLicense = useCallback(async (tries = 1) => {
+    const cached = _proReadCache();
+    if (!cached) return;
+    for (let i = 0; i < tries; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 3000));
+      const res = await _proValidate(cached.key, true);
+      if (res.valid) {
+        _proWriteCache(cached.key, _cacheOf(res));
+        _apply(res.tier, _passOf(res), res.ai_expired, _refOf(res)); setMaskedEmail(res.email || null);
+        if (!_refOf(res)) return;                    // the window is gone → the refund has landed (a pass)
+      } else if (!res.offline && (res.reason === 'refunded' || res.reason === 'disabled' || res.reason === 'not_found')) {
+        _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
+        return;
+      } else if (res.offline) return;
+    }
+  }, []);
+
   const deactivateLicense = useCallback(() => {
-    _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false);
+    _proClearCache(); setProStatus('free'); setLicenseKey(null); setMaskedEmail(null); setAiUntil(null); setAiExpired(false); setRefundUntil(null);
   }, []);
 
   // ── Paddle checkout ────────────────────────────────────────────────────────
@@ -24371,7 +24410,7 @@ function useProStatus() {
            isPro: proStatus === 'pro' || proStatus === 'pro_ai',
            isProAI: proStatus === 'pro_ai',
            licenseKey, maskedEmail, justUpgraded, clearJustUpgraded,
-           aiUntil, aiExpired,
+           aiUntil, aiExpired, refundUntil, recheckLicense,
            activateLicense, deactivateLicense, openCheckout };
 }
 
@@ -24594,7 +24633,7 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
 
 // ─── ProPaywall — the modal ────────────────────────────────────────────────────
 // Props: { t, reason, onClose, onActivated, openCheckout, activateLicense, trialLeft }
-function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false, aiUntil = null, aiExpired = false, lang = 'EN' }) {
+function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false, aiUntil = null, aiExpired = false, lang = 'EN', refundUntil = null, licenseKey = null, onRefunded = null }) {
   // reason 'upgraded' = back from a confirmed Pro → Pro AI upgrade: open straight
   // on the success note and close by itself.
   const [view, setView] = useState(reason === 'upgraded' ? 'success' : 'intro'); // 'intro'|'key'|'about'|'success'
@@ -24610,6 +24649,24 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     const tm = setTimeout(() => { onClose && onClose(); }, 2800);
     return () => clearTimeout(tm);
   }, [reason]);
+  // In-app refund: offered for 14 days from the purchase (the server decides everything).
+  const canRefund = !!licenseKey && !!refundUntil && refundUntil > Date.now() && (proStatus === 'pro' || proStatus === 'pro_ai');
+  const [rf, setRf] = useState(null);          // the server's answer
+  const [rfBusy, setRfBusy] = useState(false);
+  const [rfErr, setRfErr] = useState(false);
+  const openRefund = async () => {
+    setView('refund'); setRf(null); setRfErr(false); setRfBusy(true);
+    const r = await pfRefundCall(licenseKey, false);
+    setRfBusy(false);
+    if (r && r.ok) setRf(r); else setRfErr(true);
+  };
+  const doRefund = async () => {
+    if (rfBusy) return;
+    setRfBusy(true); setRfErr(false);
+    const r = await pfRefundCall(licenseKey, true);
+    setRfBusy(false);
+    if (r && r.ok) { setRf(r); if (r.done && onRefunded) onRefunded(); } else setRfErr(true);
+  };
   const [keyInput, setKeyInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
@@ -24879,6 +24936,15 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
+            {canRefund && (
+              <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+                <span onClick={openRefund} role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRefund(); } }}
+                  style={{ color: 'rgba(242,238,232,.6)', fontSize: (.6*readScale)+'rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: 'rgba(242,238,232,.3)' }}>
+                  {tr('refundLink', 'Refund · until {d}').replace('{d}', pfFmtDay(refundUntil, lang))}
+                </span>
+              </p>
+            )}
             <p style={{ color: '#555', fontSize: (.55*readScale)+'rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
               {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
             </p>
@@ -25111,6 +25177,85 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
             </p>
           </>
         )}
+
+        {view === 'refund' && (() => {
+          const MAIL = 'hello@paintiano.app';
+          const GREEN = '#9be0b8', AMBER = '#f0b48a';
+          const head = (ic, bg, title, sub) => (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                <div style={{ display: 'inline-flex', width: 64, height: 64, borderRadius: '50%', alignItems: 'center', justifyContent: 'center', background: bg, color: '#fff', fontSize: 28 }}>{ic}</div>
+              </div>
+              <p style={{ fontSize: (1.05*readScale)+'rem', fontWeight: 800, textAlign: 'center', margin: '0 0 6px', lineHeight: 1.2 }}>{title}</p>
+              <p style={{ fontSize: (.66*readScale)+'rem', color: 'rgba(242,238,232,.66)', textAlign: 'center', margin: '0 0 18px', lineHeight: 1.45 }}>{sub}</p>
+            </>
+          );
+          const rows = (list) => (
+            <div style={{ border: '1px solid rgba(255,255,255,.1)', borderRadius: 18, padding: '6px 16px', background: 'rgba(255,255,255,.03)', marginBottom: 14 }}>
+              {list.filter(Boolean).map((r, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', fontSize: (.72*readScale)+'rem', borderTop: i ? '1px solid rgba(255,255,255,.07)' : 0 }}>
+                  <span style={{ color: 'rgba(242,238,232,.66)' }}>{r[0]}</span>
+                  <span style={{ fontWeight: 700, textAlign: 'right', color: r[2] || '#f5f5f5' }}>{r[1]}</span>
+                </div>
+              ))}
+            </div>
+          );
+          const pill = (label, onClick, gold) => (
+            <button type="button" onClick={onClick} disabled={rfBusy} style={{ display: 'block', width: '100%', border: 0, borderRadius: 999, padding: 14, textAlign: 'center', fontWeight: 800, fontSize: (.8*readScale)+'rem', fontFamily: 'inherit', cursor: 'pointer', opacity: rfBusy ? .55 : 1,
+              background: gold ? 'linear-gradient(135deg,#f0d78a,#c9a84c)' : 'rgba(255,255,255,.12)', color: gold ? '#0a0a12' : '#f5f5f5' }}>{label}</button>
+          );
+          const note = (txt) => (<p style={{ fontSize: (.6*readScale)+'rem', color: 'rgba(242,238,232,.5)', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>{txt}</p>);
+          const of = (n, m) => tr('refundOf', '{n} of {m}').replace('{n}', n).replace('{m}', m);
+          const back = (
+            <p style={{ textAlign: 'center', margin: '14px 0 0' }}>
+              <span onClick={() => setView('intro')} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('intro'); } }}
+                style={{ color: 'rgba(242,238,232,.6)', fontSize: (.62*readScale)+'rem', cursor: 'pointer' }}>← {tr('proBack', 'Back')}</span>
+            </p>
+          );
+          if (!rf) return (
+            <>
+              {head('↩', 'rgba(255,255,255,.1)', tr('refundAskT', 'Get a refund?'), rfErr ? tr('refundErr', 'Could not connect. Try again in a moment.') : '…')}
+              {rfErr && pill(tr('refundDoPlain', 'Ask for the refund'), openRefund, false)}
+              {back}
+            </>
+          );
+          const name = rf.kind === 'pass' ? tr('refundPassName', 'AI pass') : rf.kind === 'pro_ai' ? 'Paintiano Pro AI' : 'Paintiano Pro';
+          const money = pfMoney(rf.amount_cents, rf.currency, lang);
+          const bought = rf.bought ? pfFmtDay(Date.parse(rf.bought), lang) : '';
+          const exRow = (rf.exports != null) ? [tr('refundRowExports', 'Watermark-free exports'), of(rf.exports, rf.max_exports), rf.exports > rf.max_exports ? AMBER : GREEN] : null;
+          const aiRow = (rf.kind !== 'pro' || rf.ai > 0) ? [tr('refundRowAi', 'AI pieces & melodies'), of(rf.ai, rf.max_ai), rf.ai > rf.max_ai ? AMBER : GREEN] : null;
+          if (rf.done) return (
+            <>
+              {head('✓', 'linear-gradient(135deg,#9be0b8,#3fa97a)', tr('refundOkT', 'Request received'), tr('refundOkSub', 'The money goes back to the same payment method, usually within a few days.'))}
+              {rows([money ? [tr('refundRowAmount', 'We refund'), money] : null, [tr('refundRowConfirm', 'Confirmation'), tr('refundByPaddle', 'by e-mail from Paddle')]])}
+              {pill(tr('refundOkBtn', 'Got it'), () => onClose && onClose(), true)}
+              {note(tr('refundOkNote', 'Thank you for trying Paintiano.'))}
+            </>
+          );
+          if (rf.eligible) return (
+            <>
+              {head('↩', 'rgba(255,255,255,.1)', tr('refundAskT', 'Get a refund?'), tr('refundBought', '{p} · bought {d}').replace('{p}', name).replace('{d}', bought))}
+              {rows([money ? [tr('refundRowAmount', 'We refund'), money] : null, exRow, aiRow,
+                [tr('refundRowOff', 'Switched off on this key'), rf.kind === 'pass' ? tr('refundOffPass', 'AI · Pro stays') : rf.kind === 'pro_ai' ? tr('refundOffProAi', 'Pro and AI') : tr('refundOffPro', 'Pro')]])}
+              {pill(money ? tr('refundDo', 'Refund {a}').replace('{a}', money) : tr('refundDoPlain', 'Ask for the refund'), doRefund, false)}
+              {rfErr && note(tr('refundErr', 'Could not connect. Try again in a moment.'))}
+              {note(rf.kind === 'pass' ? tr('refundAskNotePass', 'Pro stays yours, and so do the pieces you already have.') : tr('refundAskNote', 'The key stops working on all devices. Paintings and pieces you already have stay yours.'))}
+              {back}
+            </>
+          );
+          const byRule = rf.reason === 'late' || rf.reason === 'exports' || rf.reason === 'ai';
+          const mailHref = 'mailto:' + MAIL + '?subject=' + encodeURIComponent('Refund') + '&body=' + encodeURIComponent('Licence key: ' + (licenseKey || ''));
+          return (
+            <>
+              {head('!', 'linear-gradient(135deg,#f0b48a,#d9713d)', tr('refundNoT', 'This one needs a person'), byRule ? tr('refundNoSub', 'A refund by itself is for the first 14 days and ordinary trying out.') : tr('refundNoSubOther', 'This refund cannot be done by itself.'))}
+              {byRule && rows([exRow, aiRow, bought ? [tr('refundRowBought', 'Bought'), bought, rf.reason === 'late' ? AMBER : GREEN] : null])}
+              <a href={mailHref} style={{ display: 'block', borderRadius: 999, padding: 14, textAlign: 'center', fontWeight: 800, fontSize: (.8*readScale)+'rem', background: 'rgba(255,255,255,.12)', color: '#f5f5f5', textDecoration: 'none' }}>{tr('refundWrite', 'Write to us')}</a>
+              {note(tr('refundNoNote', 'If you think a refund is due, write to {e} — we will look at it in person.').replace('{e}', MAIL))}
+              {back}
+            </>
+          );
+        })()}
 
         {view === 'success' && (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
@@ -28358,7 +28503,7 @@ export default function Paintiano() {
   // effectivePairs / etc. below. The hook has no parameter dependencies — order
   // among hooks doesn't matter for correctness as long as it stays consistent.
   const { proStatus, isPro, isProAI, maskedEmail, activateLicense, deactivateLicense, openCheckout,
-          justUpgraded, clearJustUpgraded, aiUntil, aiExpired,
+          justUpgraded, clearJustUpgraded, aiUntil, aiExpired, refundUntil, recheckLicense, licenseKey: _licKeyRf,
           trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
   const [paywallReason, setPaywallReason] = useState(null); // null | 'ai_trial' | 'settings' | 'upgraded'
   // The AI pass says when it is about to end (the last 14 days, once a day) and once when it has ended.
@@ -47119,6 +47264,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           aiUntil={aiUntil}
           aiExpired={aiExpired}
           lang={lang}
+          refundUntil={refundUntil}
+          licenseKey={_licKeyRf}
+          onRefunded={()=>{ try{ recheckLicense(6); }catch(_){} }}
         />
       )}
       {/* ── FULLSCREEN DEMO REEL OVERLAY ───────────────────────────────────
