@@ -18,8 +18,9 @@ export const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'app.paintiano';
 export const APPLE_PRODUCT_PRO = 'app.paintiano.pro';
 export const APPLE_PRODUCT_PASS = 'app.paintiano.aipass12';
 
-const KEY_ID = process.env.APPLE_IAP_KEY_ID;
-const ISSUER_ID = process.env.APPLE_IAP_ISSUER_ID;
+// trimmed: a space or a line break pasted along with the value makes Apple refuse the token
+const KEY_ID = (process.env.APPLE_IAP_KEY_ID || '').trim();
+const ISSUER_ID = (process.env.APPLE_IAP_ISSUER_ID || '').trim();
 const KEY_P8 = process.env.APPLE_IAP_KEY_P8;
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -57,7 +58,7 @@ export async function appleTransaction(id) {
   for (const host of ['https://api.storekit.itunes.apple.com', 'https://api.storekit-sandbox.itunes.apple.com']) {
     const r = await fetch(`${host}/inApps/v1/transactions/${id}`, { headers: { Authorization: `Bearer ${tok}` } });
     if (r.status === 404) continue;
-    if (!r.ok) { const err = new Error(`apple: transaction lookup ${r.status} ${(await r.text()).slice(0, 160)}`); err.detail = 'apple_' + r.status; throw err; }
+    if (!r.ok) { const err = new Error(`apple: transaction lookup ${r.status} ${(await r.text()).slice(0, 160)}`); err.detail = 'apple_' + r.status + (r.status === 401 ? (/^[A-Z0-9]{10}$/.test(KEY_ID) ? '' : '_keyid') + (/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(ISSUER_ID) ? '' : '_issuer') : ''); throw err; }
     const j = await r.json();
     const parts = String(j.signedTransactionInfo || '').split('.');
     if (parts.length !== 3) throw new Error('apple: no transaction in the answer');
