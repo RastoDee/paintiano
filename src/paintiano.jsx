@@ -24203,13 +24203,16 @@ async function pfIosPurchases() {
 }
 // Apple's own refund request sheet for one purchase (Apple decides; our server hears of a refund from Apple).
 // → { ok:true } (sent) | { ok:false, cancelled:true } | { ok:false, reason }
-async function pfIosRefund(transactionId) {
+async function pfIosRefund(transactionId, product) {
   try {
-    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund; const o = { transactionId: String(transactionId) };
-    const r = P && P.request ? await P.request(o) : await C.nativePromise('PfRefund', 'request', o);
+    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund;
+    if (!P || typeof P.request !== 'function') return { ok: false, reason: 'no_plugin' };
+    const o = { transactionId: String(transactionId), productId: product === 'pass' ? PF_IAP.pass : PF_IAP.pro };
+    // a native call that never answers must not leave the button waiting for good
+    const r = await Promise.race([P.request(o), new Promise((res) => setTimeout(() => res({ status: 'timeout' }), 25000))]);
     if (r && r.status === 'requested') return { ok: true };
     if (r && r.status === 'cancelled') return { ok: false, cancelled: true };
-    return { ok: false, reason: 'unknown' };
+    return { ok: false, reason: (r && r.status) || 'unknown' };
   } catch (e) { return { ok: false, reason: String((e && e.message) || e || 'failed').slice(0, 80) }; }
 }
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
@@ -40286,9 +40289,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               const b=document.createElement('button'); b.type='button'; b.textContent=String(t(it.product==='pro'?'iosRefundPro':'iosRefundPass'));
               b.style.cssText='display:block;width:100%;margin-top:8px;border:0;border-radius:999px;padding:13px;text-align:center;font-weight:800;font-size:.82rem;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#0a0a12';
               b.addEventListener('click',async(ev)=>{ ev.preventDefault(); ev.stopPropagation(); if(b.disabled) return; b.disabled=true; b.style.opacity='.55'; msg.style.display='none';
-                const r=await pfIosRefund(it.id); b.disabled=false; b.style.opacity='1';
+                const r=await pfIosRefund(it.id, it.product); b.disabled=false; b.style.opacity='1';
                 if(r && r.cancelled) return;
-                msg.textContent=String(t(r && r.ok ? 'iosRefundSent' : 'iosRefundFail')); msg.style.color=(r && r.ok)?'#9fd8a8':'#f0b48a'; msg.style.display='block'; });
+                msg.textContent=String(t(r && r.ok ? 'iosRefundSent' : 'iosRefundFail')) + (r && r.ok ? '' : _pfIosWhy(r)); msg.style.color=(r && r.ok)?'#9fd8a8':'#f0b48a'; msg.style.display='block';
+                // when Apple's sheet does not open, Apple's own page is one tap away
+                if(!(r && r.ok) && !w.querySelector('[data-pf-rap]')){ const l=document.createElement('a'); l.setAttribute('data-pf-rap','1'); l.href='https://reportaproblem.apple.com/'; l.target='_blank'; l.rel='noopener'; l.textContent='reportaproblem.apple.com'; l.style.cssText='display:block;margin:8px 0 0;text-align:center;font-size:.8rem;font-weight:700;color:#f0c75e;text-decoration:underline'; w.appendChild(l); } });
               w.appendChild(b);
             });
             w.appendChild(msg); w.style.display='block';

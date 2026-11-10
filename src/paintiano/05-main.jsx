@@ -14862,9 +14862,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               const b=document.createElement('button'); b.type='button'; b.textContent=String(t(it.product==='pro'?'iosRefundPro':'iosRefundPass'));
               b.style.cssText='display:block;width:100%;margin-top:8px;border:0;border-radius:999px;padding:13px;text-align:center;font-weight:800;font-size:.82rem;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#0a0a12';
               b.addEventListener('click',async(ev)=>{ ev.preventDefault(); ev.stopPropagation(); if(b.disabled) return; b.disabled=true; b.style.opacity='.55'; msg.style.display='none';
-                const r=await pfIosRefund(it.id); b.disabled=false; b.style.opacity='1';
+                const r=await pfIosRefund(it.id, it.product); b.disabled=false; b.style.opacity='1';
                 if(r && r.cancelled) return;
-                msg.textContent=String(t(r && r.ok ? 'iosRefundSent' : 'iosRefundFail')); msg.style.color=(r && r.ok)?'#9fd8a8':'#f0b48a'; msg.style.display='block'; });
+                msg.textContent=String(t(r && r.ok ? 'iosRefundSent' : 'iosRefundFail')) + (r && r.ok ? '' : _pfIosWhy(r)); msg.style.color=(r && r.ok)?'#9fd8a8':'#f0b48a'; msg.style.display='block';
+                // when Apple's sheet does not open, Apple's own page is one tap away
+                if(!(r && r.ok) && !w.querySelector('[data-pf-rap]')){ const l=document.createElement('a'); l.setAttribute('data-pf-rap','1'); l.href='https://reportaproblem.apple.com/'; l.target='_blank'; l.rel='noopener'; l.textContent='reportaproblem.apple.com'; l.style.cssText='display:block;margin:8px 0 0;text-align:center;font-size:.8rem;font-weight:700;color:#f0c75e;text-decoration:underline'; w.appendChild(l); } });
               w.appendChild(b);
             });
             w.appendChild(msg); w.style.display='block';
