@@ -761,7 +761,8 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   const overlay = {
     position: 'fixed', inset: 0, zIndex: 100000,
     background: 'rgba(4,4,10,.78)', backdropFilter: 'blur(8px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px)', boxSizing: 'border-box',
     fontFamily: 'inherit',
   };
   const card = {
@@ -769,7 +770,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     background: '#0e0b16', border: '1px solid rgba(255,255,255,.08)',
     borderRadius: 24, padding: '26px 20px 20px', color: '#f5f5f5',
     boxShadow: '0 20px 60px rgba(0,0,0,.6)',
-    maxHeight: '90vh', overflowY: 'auto',
+    maxHeight: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)', overflowY: 'auto',
   };
   const cardWide = Object.assign({}, card, { maxWidth: 460 });
   const btnGold = {
@@ -923,7 +924,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       {view !== 'success' && (
         <button onClick={onClose} aria-label="Close" style={{
-          position: 'fixed', top: 16, right: 16, zIndex: 100001,
+          position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', right: 16, zIndex: 100001,   // below the status bar: under it the tap never arrives (the iOS app)
           width: 38, height: 38, borderRadius: '50%',
           background: 'rgba(255,255,255,.1)', backdropFilter: 'blur(8px)',
           border: '1px solid rgba(255,255,255,.14)',
