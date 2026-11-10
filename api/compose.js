@@ -65,7 +65,8 @@ const PASS_CAP = 500;
 const ALLOWED = new Set([
   'https://paintiano.app',
   'https://www.paintiano.app',
-  'https://paintiano.vercel.app'
+  'https://paintiano.vercel.app',
+  'capacitor://localhost'            // the iOS app (its pages are served from the device under this origin)
 ]);
 const ALLOWED_RE = [
   /^https:\/\/paintiano-[a-z0-9-]+\.vercel\.app$/,   // paintiano-git-dev-…, paintiano-<hash>-… previews
