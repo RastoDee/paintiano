@@ -55,6 +55,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/shots"
           for t in 12 25 45; do sleep $([ $t = 12 ] && echo 12 || [ $t = 25 ] && echo 13 || echo 20); xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/s$t.png"; done
           ls -la "$RUNNER_TEMP/shots"
+          for t in 12 45; do
+            sips -Z 1400 -s format jpeg -s formatOptions 45 "$RUNNER_TEMP/shots/s$t.png" --out "$RUNNER_TEMP/shots/s$t.jpg" >/dev/null
+            echo "B64START s$t"; base64 -i "$RUNNER_TEMP/shots/s$t.jpg" | fold -w 20000; echo "B64END s$t"
+          done
       - uses: actions/upload-artifact@v4
         if: ${{ contains(github.event.head_commit.message, '[simshot]') }}
         with:
