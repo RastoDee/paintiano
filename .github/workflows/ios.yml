@@ -35,8 +35,9 @@ jobs:
           set -euo pipefail
           KEY="$RUNNER_TEMP/asc.json"
           ruby -rjson -e 'File.write(ARGV[0], {key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"], key: ENV["ASC_KEY_P8"], in_house: false}.to_json)' "$KEY"
+          cd ios
           fastlane deliver --api_key_path "$KEY" --app_identifier app.paintiano --app_version 1.0 \
-            --metadata_path ios/fastlane/metadata --skip_binary_upload true --skip_screenshots true \
+            --metadata_path fastlane/metadata --skip_binary_upload true --skip_screenshots true \
             --force true --run_precheck_before_submit false --submit_for_review false 2>&1 | tail -60
           rm -f "$KEY"
 

@@ -1,0 +1,2 @@
+# The App Store page of Paintiano. Texts: fastlane/metadata/<locale>/*.txt — uploaded by .github/workflows/ios.yml ([metadata]).
+app_identifier("app.paintiano")
