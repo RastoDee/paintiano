@@ -14828,8 +14828,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         });
       });
     }catch(_){}
+    // Refunds: while this key's 14-day window is open, the request itself sits right under the summary
+    // (that is where a buyer looks for it). It opens the same confirm sheet as the licence window.
+    try{
+      if(legalDoc==='refunds' && !legalLoading && isPro && _licKeyRf && refundUntil && refundUntil>Date.now()){
+        const box=el.shadowRoot.querySelector('.wrap.active .highlight');
+        if(box && !box.querySelector('[data-pf-refund]')){
+          const w=document.createElement('div'); w.setAttribute('data-pf-refund','1'); w.style.cssText='margin-top:16px';
+          const b=document.createElement('button'); b.type='button'; b.textContent=String(t('refundDoPlain'));
+          b.style.cssText='display:block;width:100%;border:0;border-radius:999px;padding:13px;text-align:center;font-weight:800;font-size:.86rem;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#0a0a12';
+          b.addEventListener('click',(ev)=>{ ev.preventDefault(); ev.stopPropagation(); setLegalDoc(null); setPaywallReason('refund'); });
+          const n=document.createElement('p'); n.textContent=String(t('refundDocNote')).replace('{d}', pfFmtDay(refundUntil, lang));
+          n.style.cssText='margin:9px 0 0;text-align:center;font-size:.72rem;opacity:.6';
+          w.appendChild(b); w.appendChild(n); box.appendChild(w);
+        }
+      }
+    }catch(_){}
   };
-  useEffect(()=>{ const el=legalHostRef.current; if(el && legalFillRef.current) legalFillRef.current(el); },[legalDoc, legalLoading, legalHtmlForLang, openCheckout]);
+  useEffect(()=>{ const el=legalHostRef.current; if(el && legalFillRef.current) legalFillRef.current(el); },[legalDoc, legalLoading, legalHtmlForLang, openCheckout, refundUntil, _licKeyRf, isPro]);
   const legalHostCb = useCallback((el)=>{ legalHostRef.current=el; if(el && legalFillRef.current) legalFillRef.current(el); },[]);
   // the open doc's name in view in the Studio's row (it scrolls sideways where the four names are long)
   useEffect(()=>{ const r=legalTabsRef.current; if(!r) return; const a=r.querySelector('[aria-selected="true"]'); if(a) r.scrollLeft=Math.max(0, a.offsetLeft-(r.clientWidth-a.offsetWidth)/2); },[legalDoc]);

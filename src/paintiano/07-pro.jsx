@@ -710,7 +710,7 @@ function ProBadge({ t, readScale = 1, size = 'md', tier = 'pro' }) {
 function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, activateLicense, trialLeft, readScale = 1, isDesktop = false, aiUntil = null, aiExpired = false, lang = 'EN', refundUntil = null, licenseKey = null, onRefunded = null }) {
   // reason 'upgraded' = back from a confirmed Pro → Pro AI upgrade: open straight
   // on the success note and close by itself.
-  const [view, setView] = useState(reason === 'upgraded' ? 'success' : 'intro'); // 'intro'|'key'|'about'|'success'
+  const [view, setView] = useState(reason === 'upgraded' ? 'success' : reason === 'refund' ? 'refund' : 'intro'); // 'intro'|'key'|'about'|'success'
   // A Pro owner is only ever offered the upgrade to Pro AI, never Pro again.
   // A key on a running AI pass is offered only its further year (added at the end).
   const renew = proStatus === 'pro_ai' && !!aiUntil;
@@ -741,6 +741,8 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     setRfBusy(false);
     if (r && r.ok) { setRf(r); if (r.done && onRefunded) onRefunded(); } else setRfErr(true);
   };
+  // Opened from the Refunds page: straight to the refund, and "back" closes the window.
+  useEffect(() => { if (reason === 'refund') { if (licenseKey) openRefund(); else setView('intro'); } }, []);
   const [keyInput, setKeyInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
@@ -1279,11 +1281,12 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
               background: gold ? 'linear-gradient(135deg,#f0d78a,#c9a84c)' : 'rgba(255,255,255,.12)', color: gold ? '#0a0a12' : '#f5f5f5' }}>{label}</button>
           );
           const note = (txt) => (<p style={{ fontSize: (.6*readScale)+'rem', color: 'rgba(242,238,232,.5)', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>{txt}</p>);
+          const rfBack = () => { if (reason === 'refund') { onClose && onClose(); } else setView('intro'); };
           const of = (n, m) => tr('refundOf', '{n} of {m}').replace('{n}', n).replace('{m}', m);
           const back = (
             <p style={{ textAlign: 'center', margin: '14px 0 0' }}>
-              <span onClick={() => setView('intro')} role="button" tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('intro'); } }}
+              <span onClick={rfBack} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rfBack(); } }}
                 style={{ color: 'rgba(242,238,232,.6)', fontSize: (.62*readScale)+'rem', cursor: 'pointer' }}>← {tr('proBack', 'Back')}</span>
             </p>
           );
