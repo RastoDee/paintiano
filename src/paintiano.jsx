@@ -20043,7 +20043,7 @@ const I18N = {
     aiLimitNet:'AI tries from this network are used up for today — back tomorrow, or Pro AI: 30 pieces & melodies a day.',
     aiLimitAny:'Today’s AI limit is reached — back tomorrow.',
     aiLimitYear:'The {n} AI pieces & melodies of this pass year are used up — they renew on {d}. Everything else plays on.',
-    proAiValueFair:'Up to 30 AI pieces & melodies a day, 500 over the 12 months · fair use', proAiValuePass:'After 12 months Pro stays yours. Another year of AI is €10 — nothing renews by itself', proPaywallTitleRenew:'Another year of AI', proPaywallSubRenew:'Your AI pass runs until {d}. The new year is added at the end.', proPaywallSubExpired:'Your AI pass has ended. Pro stays yours.', proRenewCta:'Add 12 months of AI', aiPassRow:'AI pass until {d}', aiPassRowSub:'Another year · €10', aiPassSoon:'Your AI pass ends on {d}. Another year is €10 — only if you want it.', aiPassEnded:'Your AI pass has ended. Pro stays yours; another year of AI is €10.', refundLink:'Refund · until {d}', refundAskT:'Get a refund?', refundBought:'{p} · bought {d}', refundPassName:'AI pass', refundRowAmount:'We refund', refundRowExports:'Watermark-free exports', refundRowAi:'AI pieces & melodies', refundOf:'{n} of {m}', refundRowOff:'Switched off on this key', refundOffPro:'Pro', refundOffProAi:'Pro and AI', refundOffPass:'AI · Pro stays', refundDo:'Refund {a}', refundDoPlain:'Ask for the refund', refundAskNote:'The key stops working on all devices. Paintings and pieces you already have stay yours.', refundAskNotePass:'Pro stays yours, and so do the pieces you already have.', refundOkT:'Request received', refundOkSub:'The money goes back to the same payment method, usually within a few days.', refundRowConfirm:'Confirmation', refundByPaddle:'by e-mail from Paddle', refundOkNote:'Thank you for trying Paintiano.', refundOkBtn:'Got it', refundNoT:'This one needs a person', refundNoSub:'A refund by itself is for the first 14 days and ordinary trying out.', refundNoSubOther:'This refund cannot be done by itself.', refundRowBought:'Bought', refundWrite:'Write to us', refundNoNote:'If you think a refund is due, write to {e} — we will look at it in person.', refundErr:'Could not connect. Try again in a moment.', refundDocNote:'possible until {d}',
+    proAiValueFair:'Up to 30 AI pieces & melodies a day, 500 over the 12 months · fair use', proAiValuePass:'After 12 months Pro stays yours. Another year of AI is €10 — nothing renews by itself', proPaywallTitleRenew:'Another year of AI', proPaywallSubRenew:'Your AI pass runs until {d}. The new year is added at the end.', proPaywallSubExpired:'Your AI pass has ended. Pro stays yours.', proRenewCta:'Add 12 months of AI', aiPassRow:'AI pass until {d}', aiPassRowSub:'Another year · €10', aiPassSoon:'Your AI pass ends on {d}. Another year is €10 — only if you want it.', aiPassEnded:'Your AI pass has ended. Pro stays yours; another year of AI is €10.', refundLink:'Refund · until {d}', refundAskT:'Get a refund?', refundBought:'{p} · bought {d}', refundPassName:'AI pass', refundRowAmount:'We refund', refundRowExports:'Watermark-free exports', refundRowAi:'AI pieces & melodies', refundOf:'{n} of {m}', refundRowOff:'Switched off on this key', refundOffPro:'Pro', refundOffProAi:'Pro and AI', refundOffPass:'AI · Pro stays', refundDo:'Refund {a}', refundDoPlain:'Ask for the refund', refundAskNote:'The key stops working on all devices. Paintings and pieces you already have stay yours.', refundAskNotePass:'Pro stays yours, and so do the pieces you already have.', refundOkT:'Request received', refundOkSub:'The money goes back to the same payment method, usually within a few days.', refundRowConfirm:'Confirmation', refundByPaddle:'by e-mail from Paddle', refundOkNote:'Thank you for trying Paintiano.', refundOkBtn:'Got it', refundNoT:'This one needs a person', refundNoSub:'A refund by itself is for the first 14 days and ordinary trying out.', refundNoSubOther:'This refund cannot be done by itself.', refundRowBought:'Bought', refundWrite:'Write to us', refundNoNote:'If you think a refund is due, write to {e} — we will look at it in person.', refundErr:'Could not connect. Try again in a moment.', refundDocNote:'possible until {d}', iosRestore:'Restore purchases', iosRestoreNone:'No purchases found for this Apple ID.', iosBuyFail:'The purchase could not be completed. Please try again.',
     tierReadOnly:'preview only',
     tierRowArtists:'Artists',
     tierRowComposers:'Composers',
@@ -20214,7 +20214,7 @@ const I18N = {
     aiLimitNet:'Die KI-Versuche aus diesem Netz sind für heute aufgebraucht — morgen wieder, oder Pro KI: 30 Stücke & Melodien pro Tag.',
     aiLimitAny:'Das KI-Limit für heute ist erreicht — morgen geht’s weiter.',
     aiLimitYear:'Die {n} KI-Stücke & Melodien dieses Pass-Jahres sind aufgebraucht — ab {d} geht’s weiter. Alles andere spielt weiter.',
-    proAiValueFair:'Bis zu 30 KI-Stücke & Melodien pro Tag, 500 in den 12 Monaten · faire Nutzung', proAiValuePass:'Nach 12 Monaten bleibt Pro. Ein weiteres KI-Jahr kostet 10 € — nichts verlängert sich von selbst', proPaywallTitleRenew:'Noch ein Jahr KI', proPaywallSubRenew:'Dein KI-Pass läuft bis {d}. Das neue Jahr wird hinten angehängt.', proPaywallSubExpired:'Dein KI-Pass ist abgelaufen. Pro bleibt dir.', proRenewCta:'12 Monate KI dazu', aiPassRow:'KI-Pass bis {d}', aiPassRowSub:'Noch ein Jahr · 10 €', aiPassSoon:'Dein KI-Pass endet am {d}. Ein weiteres Jahr kostet 10 € — nur wenn du willst.', aiPassEnded:'Dein KI-Pass ist abgelaufen. Pro bleibt dir; ein weiteres KI-Jahr kostet 10 €.', refundLink:'Rückerstattung · bis {d}', refundAskT:'Geld zurück?', refundBought:'{p} · gekauft am {d}', refundPassName:'KI-Pass', refundRowAmount:'Wir erstatten', refundRowExports:'Exporte ohne Wasserzeichen', refundRowAi:'KI-Stücke & Melodien', refundOf:'{n} von {m}', refundRowOff:'Wird auf diesem Schlüssel abgeschaltet', refundOffPro:'Pro', refundOffProAi:'Pro und KI', refundOffPass:'KI · Pro bleibt', refundDo:'{a} erstatten', refundDoPlain:'Rückerstattung anfordern', refundAskNote:'Der Schlüssel gilt dann auf keinem Gerät mehr. Bilder und Stücke, die du schon hast, bleiben dir.', refundAskNotePass:'Pro bleibt dir, und die Stücke, die du schon hast, auch.', refundOkT:'Anfrage ist eingegangen', refundOkSub:'Das Geld geht auf dieselbe Zahlungsart zurück, meist innerhalb weniger Tage.', refundRowConfirm:'Bestätigung', refundByPaddle:'per E-Mail von Paddle', refundOkNote:'Danke, dass du Paintiano ausprobiert hast.', refundOkBtn:'Verstanden', refundNoT:'Hier braucht es einen Menschen', refundNoSub:'Automatisch erstatten wir in den ersten 14 Tagen und bei gewöhnlichem Ausprobieren.', refundNoSubOther:'Diese Rückerstattung geht nicht automatisch.', refundRowBought:'Gekauft', refundWrite:'Schreib uns', refundNoNote:'Wenn du meinst, dass dir eine Rückerstattung zusteht, schreib an {e} — wir sehen es uns persönlich an.', refundErr:'Keine Verbindung. Versuch es gleich noch einmal.', refundDocNote:'möglich bis {d}',
+    proAiValueFair:'Bis zu 30 KI-Stücke & Melodien pro Tag, 500 in den 12 Monaten · faire Nutzung', proAiValuePass:'Nach 12 Monaten bleibt Pro. Ein weiteres KI-Jahr kostet 10 € — nichts verlängert sich von selbst', proPaywallTitleRenew:'Noch ein Jahr KI', proPaywallSubRenew:'Dein KI-Pass läuft bis {d}. Das neue Jahr wird hinten angehängt.', proPaywallSubExpired:'Dein KI-Pass ist abgelaufen. Pro bleibt dir.', proRenewCta:'12 Monate KI dazu', aiPassRow:'KI-Pass bis {d}', aiPassRowSub:'Noch ein Jahr · 10 €', aiPassSoon:'Dein KI-Pass endet am {d}. Ein weiteres Jahr kostet 10 € — nur wenn du willst.', aiPassEnded:'Dein KI-Pass ist abgelaufen. Pro bleibt dir; ein weiteres KI-Jahr kostet 10 €.', refundLink:'Rückerstattung · bis {d}', refundAskT:'Geld zurück?', refundBought:'{p} · gekauft am {d}', refundPassName:'KI-Pass', refundRowAmount:'Wir erstatten', refundRowExports:'Exporte ohne Wasserzeichen', refundRowAi:'KI-Stücke & Melodien', refundOf:'{n} von {m}', refundRowOff:'Wird auf diesem Schlüssel abgeschaltet', refundOffPro:'Pro', refundOffProAi:'Pro und KI', refundOffPass:'KI · Pro bleibt', refundDo:'{a} erstatten', refundDoPlain:'Rückerstattung anfordern', refundAskNote:'Der Schlüssel gilt dann auf keinem Gerät mehr. Bilder und Stücke, die du schon hast, bleiben dir.', refundAskNotePass:'Pro bleibt dir, und die Stücke, die du schon hast, auch.', refundOkT:'Anfrage ist eingegangen', refundOkSub:'Das Geld geht auf dieselbe Zahlungsart zurück, meist innerhalb weniger Tage.', refundRowConfirm:'Bestätigung', refundByPaddle:'per E-Mail von Paddle', refundOkNote:'Danke, dass du Paintiano ausprobiert hast.', refundOkBtn:'Verstanden', refundNoT:'Hier braucht es einen Menschen', refundNoSub:'Automatisch erstatten wir in den ersten 14 Tagen und bei gewöhnlichem Ausprobieren.', refundNoSubOther:'Diese Rückerstattung geht nicht automatisch.', refundRowBought:'Gekauft', refundWrite:'Schreib uns', refundNoNote:'Wenn du meinst, dass dir eine Rückerstattung zusteht, schreib an {e} — wir sehen es uns persönlich an.', refundErr:'Keine Verbindung. Versuch es gleich noch einmal.', refundDocNote:'möglich bis {d}', iosRestore:'Käufe wiederherstellen', iosRestoreNone:'Für diese Apple-ID wurden keine Käufe gefunden.', iosBuyFail:'Der Kauf konnte nicht abgeschlossen werden. Bitte versuch es noch einmal.',
     tierReadOnly:'nur Vorschau',
     tierRowArtists:'Künstler',
     tierRowComposers:'Komponisten',
@@ -20385,7 +20385,7 @@ const I18N = {
     aiLimitNet:'Les essais IA depuis ce réseau sont épuisés pour aujourd’hui — à demain, ou Pro IA : 30 morceaux et mélodies par jour.',
     aiLimitAny:'La limite IA du jour est atteinte — à demain.',
     aiLimitYear:'Les {n} morceaux et mélodies IA de cette année de pass sont épuisés — ils reviennent le {d}. Tout le reste continue.',
-    proAiValueFair:'Jusqu’à 30 morceaux et mélodies IA par jour, 500 sur les 12 mois · usage équitable', proAiValuePass:'Après 12 mois, Pro reste. Une autre année d’IA coûte 10 € — rien ne se renouvelle tout seul', proPaywallTitleRenew:'Une autre année d’IA', proPaywallSubRenew:'Ton pass IA court jusqu’au {d}. La nouvelle année s’ajoute à la fin.', proPaywallSubExpired:'Ton pass IA est terminé. Pro reste à toi.', proRenewCta:'Ajouter 12 mois d’IA', aiPassRow:'Pass IA jusqu’au {d}', aiPassRowSub:'Une autre année · 10 €', aiPassSoon:'Ton pass IA se termine le {d}. Une autre année coûte 10 € — seulement si tu le veux.', aiPassEnded:'Ton pass IA est terminé. Pro reste à toi ; une autre année d’IA coûte 10 €.', refundLink:'Remboursement · jusqu’au {d}', refundAskT:'Être remboursé ?', refundBought:'{p} · acheté le {d}', refundPassName:'Pass IA', refundRowAmount:'Nous remboursons', refundRowExports:'Exports sans filigrane', refundRowAi:'Morceaux et mélodies IA', refundOf:'{n} sur {m}', refundRowOff:'Désactivé sur cette clé', refundOffPro:'Pro', refundOffProAi:'Pro et IA', refundOffPass:'IA · Pro reste', refundDo:'Rembourser {a}', refundDoPlain:'Demander le remboursement', refundAskNote:'La clé cesse de fonctionner sur tous les appareils. Les tableaux et morceaux que tu as déjà restent à toi.', refundAskNotePass:'Pro reste à toi, tout comme les morceaux que tu as déjà.', refundOkT:'Demande reçue', refundOkSub:'L’argent revient sur le même moyen de paiement, en général sous quelques jours.', refundRowConfirm:'Confirmation', refundByPaddle:'par e-mail de Paddle', refundOkNote:'Merci d’avoir essayé Paintiano.', refundOkBtn:'Compris', refundNoT:'Ici, il faut quelqu’un', refundNoSub:'Le remboursement automatique vaut pour les 14 premiers jours et un essai ordinaire.', refundNoSubOther:'Ce remboursement ne peut pas se faire automatiquement.', refundRowBought:'Acheté', refundWrite:'Nous écrire', refundNoNote:'Si tu penses avoir droit à un remboursement, écris à {e} — nous regarderons cela en personne.', refundErr:'Connexion impossible. Réessaie dans un instant.', refundDocNote:'possible jusqu’au {d}',
+    proAiValueFair:'Jusqu’à 30 morceaux et mélodies IA par jour, 500 sur les 12 mois · usage équitable', proAiValuePass:'Après 12 mois, Pro reste. Une autre année d’IA coûte 10 € — rien ne se renouvelle tout seul', proPaywallTitleRenew:'Une autre année d’IA', proPaywallSubRenew:'Ton pass IA court jusqu’au {d}. La nouvelle année s’ajoute à la fin.', proPaywallSubExpired:'Ton pass IA est terminé. Pro reste à toi.', proRenewCta:'Ajouter 12 mois d’IA', aiPassRow:'Pass IA jusqu’au {d}', aiPassRowSub:'Une autre année · 10 €', aiPassSoon:'Ton pass IA se termine le {d}. Une autre année coûte 10 € — seulement si tu le veux.', aiPassEnded:'Ton pass IA est terminé. Pro reste à toi ; une autre année d’IA coûte 10 €.', refundLink:'Remboursement · jusqu’au {d}', refundAskT:'Être remboursé ?', refundBought:'{p} · acheté le {d}', refundPassName:'Pass IA', refundRowAmount:'Nous remboursons', refundRowExports:'Exports sans filigrane', refundRowAi:'Morceaux et mélodies IA', refundOf:'{n} sur {m}', refundRowOff:'Désactivé sur cette clé', refundOffPro:'Pro', refundOffProAi:'Pro et IA', refundOffPass:'IA · Pro reste', refundDo:'Rembourser {a}', refundDoPlain:'Demander le remboursement', refundAskNote:'La clé cesse de fonctionner sur tous les appareils. Les tableaux et morceaux que tu as déjà restent à toi.', refundAskNotePass:'Pro reste à toi, tout comme les morceaux que tu as déjà.', refundOkT:'Demande reçue', refundOkSub:'L’argent revient sur le même moyen de paiement, en général sous quelques jours.', refundRowConfirm:'Confirmation', refundByPaddle:'par e-mail de Paddle', refundOkNote:'Merci d’avoir essayé Paintiano.', refundOkBtn:'Compris', refundNoT:'Ici, il faut quelqu’un', refundNoSub:'Le remboursement automatique vaut pour les 14 premiers jours et un essai ordinaire.', refundNoSubOther:'Ce remboursement ne peut pas se faire automatiquement.', refundRowBought:'Acheté', refundWrite:'Nous écrire', refundNoNote:'Si tu penses avoir droit à un remboursement, écris à {e} — nous regarderons cela en personne.', refundErr:'Connexion impossible. Réessaie dans un instant.', refundDocNote:'possible jusqu’au {d}', iosRestore:'Restaurer les achats', iosRestoreNone:'Aucun achat trouvé pour cet identifiant Apple.', iosBuyFail:'L’achat n’a pas pu aboutir. Réessaie.',
     tierReadOnly:'aperçu',
     tierRowArtists:'Artistes',
     tierRowComposers:'Compositeurs',
@@ -20556,7 +20556,7 @@ const I18N = {
     aiLimitNet:'Las pruebas IA desde esta red se agotaron por hoy — vuelve mañana, o Pro IA: 30 piezas y melodías al día.',
     aiLimitAny:'Se alcanzó el límite de IA de hoy — vuelve mañana.',
     aiLimitYear:'Las {n} piezas y melodías IA de este año de pase se han agotado — vuelven el {d}. Todo lo demás sigue sonando.',
-    proAiValueFair:'Hasta 30 piezas y melodías IA al día, 500 en los 12 meses · uso justo', proAiValuePass:'Tras 12 meses, Pro se queda. Otro año de IA cuesta 10 € — nada se renueva solo', proPaywallTitleRenew:'Otro año de IA', proPaywallSubRenew:'Tu pase IA dura hasta el {d}. El nuevo año se añade al final.', proPaywallSubExpired:'Tu pase IA ha terminado. Pro sigue siendo tuyo.', proRenewCta:'Añadir 12 meses de IA', aiPassRow:'Pase IA hasta el {d}', aiPassRowSub:'Otro año · 10 €', aiPassSoon:'Tu pase IA termina el {d}. Otro año cuesta 10 € — solo si quieres.', aiPassEnded:'Tu pase IA ha terminado. Pro sigue siendo tuyo; otro año de IA cuesta 10 €.', refundLink:'Reembolso · hasta el {d}', refundAskT:'¿Devolver el dinero?', refundBought:'{p} · comprado el {d}', refundPassName:'Pase IA', refundRowAmount:'Devolvemos', refundRowExports:'Exportaciones sin marca de agua', refundRowAi:'Piezas y melodías IA', refundOf:'{n} de {m}', refundRowOff:'Se desactiva en esta clave', refundOffPro:'Pro', refundOffProAi:'Pro e IA', refundOffPass:'IA · Pro se queda', refundDo:'Devolver {a}', refundDoPlain:'Pedir el reembolso', refundAskNote:'La clave deja de funcionar en todos los dispositivos. Los cuadros y piezas que ya tienes siguen siendo tuyos.', refundAskNotePass:'Pro sigue siendo tuyo, y también las piezas que ya tienes.', refundOkT:'Solicitud recibida', refundOkSub:'El dinero vuelve al mismo método de pago, normalmente en unos días.', refundRowConfirm:'Confirmación', refundByPaddle:'por correo de Paddle', refundOkNote:'Gracias por probar Paintiano.', refundOkBtn:'Entendido', refundNoT:'Esto necesita a una persona', refundNoSub:'El reembolso automático es para los primeros 14 días y una prueba normal.', refundNoSubOther:'Este reembolso no puede hacerse automáticamente.', refundRowBought:'Comprado', refundWrite:'Escríbenos', refundNoNote:'Si crees que te corresponde un reembolso, escribe a {e} — lo miraremos en persona.', refundErr:'No se pudo conectar. Inténtalo en un momento.', refundDocNote:'posible hasta el {d}',
+    proAiValueFair:'Hasta 30 piezas y melodías IA al día, 500 en los 12 meses · uso justo', proAiValuePass:'Tras 12 meses, Pro se queda. Otro año de IA cuesta 10 € — nada se renueva solo', proPaywallTitleRenew:'Otro año de IA', proPaywallSubRenew:'Tu pase IA dura hasta el {d}. El nuevo año se añade al final.', proPaywallSubExpired:'Tu pase IA ha terminado. Pro sigue siendo tuyo.', proRenewCta:'Añadir 12 meses de IA', aiPassRow:'Pase IA hasta el {d}', aiPassRowSub:'Otro año · 10 €', aiPassSoon:'Tu pase IA termina el {d}. Otro año cuesta 10 € — solo si quieres.', aiPassEnded:'Tu pase IA ha terminado. Pro sigue siendo tuyo; otro año de IA cuesta 10 €.', refundLink:'Reembolso · hasta el {d}', refundAskT:'¿Devolver el dinero?', refundBought:'{p} · comprado el {d}', refundPassName:'Pase IA', refundRowAmount:'Devolvemos', refundRowExports:'Exportaciones sin marca de agua', refundRowAi:'Piezas y melodías IA', refundOf:'{n} de {m}', refundRowOff:'Se desactiva en esta clave', refundOffPro:'Pro', refundOffProAi:'Pro e IA', refundOffPass:'IA · Pro se queda', refundDo:'Devolver {a}', refundDoPlain:'Pedir el reembolso', refundAskNote:'La clave deja de funcionar en todos los dispositivos. Los cuadros y piezas que ya tienes siguen siendo tuyos.', refundAskNotePass:'Pro sigue siendo tuyo, y también las piezas que ya tienes.', refundOkT:'Solicitud recibida', refundOkSub:'El dinero vuelve al mismo método de pago, normalmente en unos días.', refundRowConfirm:'Confirmación', refundByPaddle:'por correo de Paddle', refundOkNote:'Gracias por probar Paintiano.', refundOkBtn:'Entendido', refundNoT:'Esto necesita a una persona', refundNoSub:'El reembolso automático es para los primeros 14 días y una prueba normal.', refundNoSubOther:'Este reembolso no puede hacerse automáticamente.', refundRowBought:'Comprado', refundWrite:'Escríbenos', refundNoNote:'Si crees que te corresponde un reembolso, escribe a {e} — lo miraremos en persona.', refundErr:'No se pudo conectar. Inténtalo en un momento.', refundDocNote:'posible hasta el {d}', iosRestore:'Restaurar compras', iosRestoreNone:'No se encontraron compras para este Apple ID.', iosBuyFail:'No se pudo completar la compra. Inténtalo de nuevo.',
     tierReadOnly:'solo vista',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
@@ -20726,7 +20726,7 @@ const I18N = {
     aiLimitNet:'AI skúšky z tejto siete sú na dnes minuté — zajtra zas, alebo Pro AI: 30 skladieb a melódií denne.',
     aiLimitAny:'Dnešný limit AI je vyčerpaný — zajtra zas.',
     aiLimitYear:'{n} AI skladieb a melódií tohto roka pasu je vyčerpaných — obnovia sa {d}. Všetko ostatné hrá ďalej.',
-    proAiValueFair:'Až 30 AI skladieb a melódií denne, 500 za 12 mesiacov · férové používanie', proAiValuePass:'Po 12 mesiacoch ti Pro ostáva. Ďalší rok AI stojí 10 € — nič sa samo neobnovuje', proPaywallTitleRenew:'Ďalší rok AI', proPaywallSubRenew:'Tvoj AI pas platí do {d}. Nový rok sa pripočíta na koniec.', proPaywallSubExpired:'Tvoj AI pas vypršal. Pro ti ostáva.', proRenewCta:'Pridať 12 mesiacov AI', aiPassRow:'AI pas do {d}', aiPassRowSub:'Ďalší rok · 10 €', aiPassSoon:'Tvoj AI pas končí {d}. Ďalší rok stojí 10 € — len ak chceš.', aiPassEnded:'Tvoj AI pas vypršal. Pro ti ostáva; ďalší rok AI stojí 10 €.', refundLink:'Vrátenie platby · do {d}', refundAskT:'Vrátiť platbu?', refundBought:'{p} · kúpené {d}', refundPassName:'AI pas', refundRowAmount:'Vrátime', refundRowExports:'Exporty bez vodoznaku', refundRowAi:'AI skladby a melódie', refundOf:'{n} z {m}', refundRowOff:'Na tomto kľúči sa vypne', refundOffPro:'Pro', refundOffProAi:'Pro aj AI', refundOffPass:'AI · Pro ostáva', refundDo:'Vrátiť {a}', refundDoPlain:'Požiadať o vrátenie platby', refundAskNote:'Kľúč prestane platiť na všetkých zariadeniach. Obrazy a skladby, ktoré už máš, ti ostanú.', refundAskNotePass:'Pro ti ostáva, aj skladby, ktoré už máš.', refundOkT:'Žiadosť je prijatá', refundOkSub:'Platba sa vráti na tú istú platobnú metódu, zvyčajne do pár dní.', refundRowConfirm:'Potvrdenie', refundByPaddle:'e-mailom od Paddle', refundOkNote:'Ďakujeme, že si Paintiano vyskúšal.', refundOkBtn:'Rozumiem', refundNoT:'Tu už automat nestačí', refundNoSub:'Automatické vrátenie platby je možné do 14 dní a pri bežnom vyskúšaní.', refundNoSubOther:'Toto vrátenie platby sa nedá vybaviť automaticky.', refundRowBought:'Kúpené', refundWrite:'Napísať nám', refundNoNote:'Ak si myslíš, že máš na vrátenie platby nárok, napíš na {e} — pozrieme sa na to osobne.', refundErr:'Nepodarilo sa spojiť. Skús to o chvíľu.', refundDocNote:'možné do {d}',
+    proAiValueFair:'Až 30 AI skladieb a melódií denne, 500 za 12 mesiacov · férové používanie', proAiValuePass:'Po 12 mesiacoch ti Pro ostáva. Ďalší rok AI stojí 10 € — nič sa samo neobnovuje', proPaywallTitleRenew:'Ďalší rok AI', proPaywallSubRenew:'Tvoj AI pas platí do {d}. Nový rok sa pripočíta na koniec.', proPaywallSubExpired:'Tvoj AI pas vypršal. Pro ti ostáva.', proRenewCta:'Pridať 12 mesiacov AI', aiPassRow:'AI pas do {d}', aiPassRowSub:'Ďalší rok · 10 €', aiPassSoon:'Tvoj AI pas končí {d}. Ďalší rok stojí 10 € — len ak chceš.', aiPassEnded:'Tvoj AI pas vypršal. Pro ti ostáva; ďalší rok AI stojí 10 €.', refundLink:'Vrátenie platby · do {d}', refundAskT:'Vrátiť platbu?', refundBought:'{p} · kúpené {d}', refundPassName:'AI pas', refundRowAmount:'Vrátime', refundRowExports:'Exporty bez vodoznaku', refundRowAi:'AI skladby a melódie', refundOf:'{n} z {m}', refundRowOff:'Na tomto kľúči sa vypne', refundOffPro:'Pro', refundOffProAi:'Pro aj AI', refundOffPass:'AI · Pro ostáva', refundDo:'Vrátiť {a}', refundDoPlain:'Požiadať o vrátenie platby', refundAskNote:'Kľúč prestane platiť na všetkých zariadeniach. Obrazy a skladby, ktoré už máš, ti ostanú.', refundAskNotePass:'Pro ti ostáva, aj skladby, ktoré už máš.', refundOkT:'Žiadosť je prijatá', refundOkSub:'Platba sa vráti na tú istú platobnú metódu, zvyčajne do pár dní.', refundRowConfirm:'Potvrdenie', refundByPaddle:'e-mailom od Paddle', refundOkNote:'Ďakujeme, že si Paintiano vyskúšal.', refundOkBtn:'Rozumiem', refundNoT:'Tu už automat nestačí', refundNoSub:'Automatické vrátenie platby je možné do 14 dní a pri bežnom vyskúšaní.', refundNoSubOther:'Toto vrátenie platby sa nedá vybaviť automaticky.', refundRowBought:'Kúpené', refundWrite:'Napísať nám', refundNoNote:'Ak si myslíš, že máš na vrátenie platby nárok, napíš na {e} — pozrieme sa na to osobne.', refundErr:'Nepodarilo sa spojiť. Skús to o chvíľu.', refundDocNote:'možné do {d}', iosRestore:'Obnoviť nákupy', iosRestoreNone:'Pre toto Apple ID sa nenašli žiadne nákupy.', iosBuyFail:'Nákup sa nepodarilo dokončiť. Skús to znova.',
     tierReadOnly:'len náhľad',
     tierRowArtists:'Umelci',
     tierRowComposers:'Skladatelia',
@@ -20896,7 +20896,7 @@ const I18N = {
     aiLimitNet:'此网络今天的 AI 试用已用完——明天再来，或升级 Pro AI：每天 30 首乐曲与旋律。',
     aiLimitAny:'今天的 AI 用量已达上限——明天再来。',
     aiLimitYear:'本通行证年度的 {n} 首 AI 乐曲与旋律已用完——将于 {d} 恢复。其他一切照常播放。',
-    proAiValueFair:'每天最多 30 首 AI 乐曲与旋律，12 个月内 500 首 · 合理使用', proAiValuePass:'12 个月后 Pro 仍然保留。再续一年 AI 为 €10——不会自动续费', proPaywallTitleRenew:'再来一年 AI', proPaywallSubRenew:'你的 AI 通行证有效期至 {d}。新的一年会接在后面。', proPaywallSubExpired:'你的 AI 通行证已到期。Pro 仍然归你。', proRenewCta:'增加 12 个月 AI', aiPassRow:'AI 通行证至 {d}', aiPassRowSub:'再续一年 · €10', aiPassSoon:'你的 AI 通行证将于 {d} 到期。再续一年为 €10——仅在你需要时。', aiPassEnded:'你的 AI 通行证已到期。Pro 仍然归你；再续一年 AI 为 €10。', refundLink:'退款 · 截至 {d}', refundAskT:'申请退款？', refundBought:'{p} · 购于 {d}', refundPassName:'AI 通行证', refundRowAmount:'退还金额', refundRowExports:'无水印导出', refundRowAi:'AI 乐曲与旋律', refundOf:'{n} / {m}', refundRowOff:'此密钥将关闭', refundOffPro:'Pro', refundOffProAi:'Pro 和 AI', refundOffPass:'AI · Pro 保留', refundDo:'退还 {a}', refundDoPlain:'申请退款', refundAskNote:'密钥将在所有设备上失效。你已有的画作和乐曲仍归你所有。', refundAskNotePass:'Pro 仍归你所有，已有的乐曲也是。', refundOkT:'申请已收到', refundOkSub:'款项将退回原支付方式，通常在几天内到账。', refundRowConfirm:'确认', refundByPaddle:'Paddle 将发送电子邮件', refundOkNote:'感谢你试用 Paintiano。', refundOkBtn:'知道了', refundNoT:'这需要人工处理', refundNoSub:'自动退款适用于购买后 14 天内且属于正常试用的情况。', refundNoSubOther:'此退款无法自动办理。', refundRowBought:'购买日期', refundWrite:'联系我们', refundNoNote:'如果你认为应当退款，请写信至 {e}——我们会亲自查看。', refundErr:'无法连接，请稍后再试。', refundDocNote:'可申请至 {d}',
+    proAiValueFair:'每天最多 30 首 AI 乐曲与旋律，12 个月内 500 首 · 合理使用', proAiValuePass:'12 个月后 Pro 仍然保留。再续一年 AI 为 €10——不会自动续费', proPaywallTitleRenew:'再来一年 AI', proPaywallSubRenew:'你的 AI 通行证有效期至 {d}。新的一年会接在后面。', proPaywallSubExpired:'你的 AI 通行证已到期。Pro 仍然归你。', proRenewCta:'增加 12 个月 AI', aiPassRow:'AI 通行证至 {d}', aiPassRowSub:'再续一年 · €10', aiPassSoon:'你的 AI 通行证将于 {d} 到期。再续一年为 €10——仅在你需要时。', aiPassEnded:'你的 AI 通行证已到期。Pro 仍然归你；再续一年 AI 为 €10。', refundLink:'退款 · 截至 {d}', refundAskT:'申请退款？', refundBought:'{p} · 购于 {d}', refundPassName:'AI 通行证', refundRowAmount:'退还金额', refundRowExports:'无水印导出', refundRowAi:'AI 乐曲与旋律', refundOf:'{n} / {m}', refundRowOff:'此密钥将关闭', refundOffPro:'Pro', refundOffProAi:'Pro 和 AI', refundOffPass:'AI · Pro 保留', refundDo:'退还 {a}', refundDoPlain:'申请退款', refundAskNote:'密钥将在所有设备上失效。你已有的画作和乐曲仍归你所有。', refundAskNotePass:'Pro 仍归你所有，已有的乐曲也是。', refundOkT:'申请已收到', refundOkSub:'款项将退回原支付方式，通常在几天内到账。', refundRowConfirm:'确认', refundByPaddle:'Paddle 将发送电子邮件', refundOkNote:'感谢你试用 Paintiano。', refundOkBtn:'知道了', refundNoT:'这需要人工处理', refundNoSub:'自动退款适用于购买后 14 天内且属于正常试用的情况。', refundNoSubOther:'此退款无法自动办理。', refundRowBought:'购买日期', refundWrite:'联系我们', refundNoNote:'如果你认为应当退款，请写信至 {e}——我们会亲自查看。', refundErr:'无法连接，请稍后再试。', refundDocNote:'可申请至 {d}', iosRestore:'恢复购买', iosRestoreNone:'此 Apple ID 下没有找到购买记录。', iosBuyFail:'购买未能完成，请重试。',
     tierReadOnly:'仅预览',
     tierRowArtists:'艺术家',
     tierRowComposers:'作曲家',
@@ -21060,7 +21060,7 @@ const I18N = {
     aiLimitNet:'此網路今天的 AI 試用已用完——明天再來，或升級 Pro AI：每天 30 首樂曲與旋律。',
     aiLimitAny:'今天的 AI 用量已達上限——明天再來。',
     aiLimitYear:'本通行證年度的 {n} 首 AI 樂曲與旋律已用完——將於 {d} 恢復。其他一切照常播放。',
-    proAiValueFair:'每天最多 30 首 AI 樂曲與旋律，12 個月內 500 首 · 合理使用', proAiValuePass:'12 個月後 Pro 仍然保留。再續一年 AI 為 €10——不會自動續費', proPaywallTitleRenew:'再來一年 AI', proPaywallSubRenew:'你的 AI 通行證有效期至 {d}。新的一年會接在後面。', proPaywallSubExpired:'你的 AI 通行證已到期。Pro 仍然歸你。', proRenewCta:'增加 12 個月 AI', aiPassRow:'AI 通行證至 {d}', aiPassRowSub:'再續一年 · €10', aiPassSoon:'你的 AI 通行證將於 {d} 到期。再續一年為 €10——僅在你需要時。', aiPassEnded:'你的 AI 通行證已到期。Pro 仍然歸你；再續一年 AI 為 €10。', refundLink:'退款 · 截至 {d}', refundAskT:'申請退款？', refundBought:'{p} · 購於 {d}', refundPassName:'AI 通行證', refundRowAmount:'退還金額', refundRowExports:'無浮水印匯出', refundRowAi:'AI 樂曲與旋律', refundOf:'{n} / {m}', refundRowOff:'此金鑰將關閉', refundOffPro:'Pro', refundOffProAi:'Pro 和 AI', refundOffPass:'AI · Pro 保留', refundDo:'退還 {a}', refundDoPlain:'申請退款', refundAskNote:'金鑰將在所有裝置上失效。你已有的畫作和樂曲仍歸你所有。', refundAskNotePass:'Pro 仍歸你所有，已有的樂曲也是。', refundOkT:'申請已收到', refundOkSub:'款項將退回原付款方式，通常在幾天內入帳。', refundRowConfirm:'確認', refundByPaddle:'Paddle 將寄送電子郵件', refundOkNote:'感謝你試用 Paintiano。', refundOkBtn:'知道了', refundNoT:'這需要人工處理', refundNoSub:'自動退款適用於購買後 14 天內且屬於正常試用的情況。', refundNoSubOther:'此退款無法自動辦理。', refundRowBought:'購買日期', refundWrite:'聯絡我們', refundNoNote:'如果你認為應當退款，請寫信至 {e}——我們會親自查看。', refundErr:'無法連線，請稍後再試。', refundDocNote:'可申請至 {d}',
+    proAiValueFair:'每天最多 30 首 AI 樂曲與旋律，12 個月內 500 首 · 合理使用', proAiValuePass:'12 個月後 Pro 仍然保留。再續一年 AI 為 €10——不會自動續費', proPaywallTitleRenew:'再來一年 AI', proPaywallSubRenew:'你的 AI 通行證有效期至 {d}。新的一年會接在後面。', proPaywallSubExpired:'你的 AI 通行證已到期。Pro 仍然歸你。', proRenewCta:'增加 12 個月 AI', aiPassRow:'AI 通行證至 {d}', aiPassRowSub:'再續一年 · €10', aiPassSoon:'你的 AI 通行證將於 {d} 到期。再續一年為 €10——僅在你需要時。', aiPassEnded:'你的 AI 通行證已到期。Pro 仍然歸你；再續一年 AI 為 €10。', refundLink:'退款 · 截至 {d}', refundAskT:'申請退款？', refundBought:'{p} · 購於 {d}', refundPassName:'AI 通行證', refundRowAmount:'退還金額', refundRowExports:'無浮水印匯出', refundRowAi:'AI 樂曲與旋律', refundOf:'{n} / {m}', refundRowOff:'此金鑰將關閉', refundOffPro:'Pro', refundOffProAi:'Pro 和 AI', refundOffPass:'AI · Pro 保留', refundDo:'退還 {a}', refundDoPlain:'申請退款', refundAskNote:'金鑰將在所有裝置上失效。你已有的畫作和樂曲仍歸你所有。', refundAskNotePass:'Pro 仍歸你所有，已有的樂曲也是。', refundOkT:'申請已收到', refundOkSub:'款項將退回原付款方式，通常在幾天內入帳。', refundRowConfirm:'確認', refundByPaddle:'Paddle 將寄送電子郵件', refundOkNote:'感謝你試用 Paintiano。', refundOkBtn:'知道了', refundNoT:'這需要人工處理', refundNoSub:'自動退款適用於購買後 14 天內且屬於正常試用的情況。', refundNoSubOther:'此退款無法自動辦理。', refundRowBought:'購買日期', refundWrite:'聯絡我們', refundNoNote:'如果你認為應當退款，請寫信至 {e}——我們會親自查看。', refundErr:'無法連線，請稍後再試。', refundDocNote:'可申請至 {d}', iosRestore:'回復購買項目', iosRestoreNone:'此 Apple ID 下沒有找到購買記錄。', iosBuyFail:'購買未能完成，請再試一次。',
     tierReadOnly:'僅預覽',
     tierRowArtists:'藝術家',
     tierRowComposers:'作曲家',
@@ -21235,7 +21235,7 @@ const I18N = {
     aiLimitNet:'Os testes de IA desta rede esgotaram por hoje — volte amanhã, ou Pro IA: 30 peças e melodias por dia.',
     aiLimitAny:'O limite de IA de hoje foi atingido — volte amanhã.',
     aiLimitYear:'As {n} peças e melodias de IA deste ano do passe esgotaram-se — voltam a {d}. Tudo o resto continua a tocar.',
-    proAiValueFair:'Até 30 peças e melodias de IA por dia, 500 nos 12 meses · uso justo', proAiValuePass:'Após 12 meses, o Pro fica. Outro ano de IA custa 10 € — nada se renova sozinho', proPaywallTitleRenew:'Outro ano de IA', proPaywallSubRenew:'O teu passe de IA vai até {d}. O novo ano é acrescentado no fim.', proPaywallSubExpired:'O teu passe de IA terminou. O Pro continua teu.', proRenewCta:'Acrescentar 12 meses de IA', aiPassRow:'Passe de IA até {d}', aiPassRowSub:'Outro ano · 10 €', aiPassSoon:'O teu passe de IA termina a {d}. Outro ano custa 10 € — só se quiseres.', aiPassEnded:'O teu passe de IA terminou. O Pro continua teu; outro ano de IA custa 10 €.', refundLink:'Reembolso · até {d}', refundAskT:'Receber o dinheiro de volta?', refundBought:'{p} · comprado a {d}', refundPassName:'Passe de IA', refundRowAmount:'Devolvemos', refundRowExports:'Exportações sem marca de água', refundRowAi:'Peças e melodias de IA', refundOf:'{n} de {m}', refundRowOff:'Desligado nesta chave', refundOffPro:'Pro', refundOffProAi:'Pro e IA', refundOffPass:'IA · o Pro fica', refundDo:'Devolver {a}', refundDoPlain:'Pedir o reembolso', refundAskNote:'A chave deixa de funcionar em todos os dispositivos. Os quadros e peças que já tens continuam teus.', refundAskNotePass:'O Pro continua teu, e as peças que já tens também.', refundOkT:'Pedido recebido', refundOkSub:'O dinheiro volta ao mesmo método de pagamento, normalmente em poucos dias.', refundRowConfirm:'Confirmação', refundByPaddle:'por e-mail da Paddle', refundOkNote:'Obrigado por experimentares o Paintiano.', refundOkBtn:'Entendi', refundNoT:'Isto precisa de uma pessoa', refundNoSub:'O reembolso automático é para os primeiros 14 dias e uma experiência normal.', refundNoSubOther:'Este reembolso não pode ser feito automaticamente.', refundRowBought:'Comprado', refundWrite:'Escreve-nos', refundNoNote:'Se achas que tens direito a reembolso, escreve para {e} — vemos isso pessoalmente.', refundErr:'Não foi possível ligar. Tenta daqui a pouco.', refundDocNote:'possível até {d}',
+    proAiValueFair:'Até 30 peças e melodias de IA por dia, 500 nos 12 meses · uso justo', proAiValuePass:'Após 12 meses, o Pro fica. Outro ano de IA custa 10 € — nada se renova sozinho', proPaywallTitleRenew:'Outro ano de IA', proPaywallSubRenew:'O teu passe de IA vai até {d}. O novo ano é acrescentado no fim.', proPaywallSubExpired:'O teu passe de IA terminou. O Pro continua teu.', proRenewCta:'Acrescentar 12 meses de IA', aiPassRow:'Passe de IA até {d}', aiPassRowSub:'Outro ano · 10 €', aiPassSoon:'O teu passe de IA termina a {d}. Outro ano custa 10 € — só se quiseres.', aiPassEnded:'O teu passe de IA terminou. O Pro continua teu; outro ano de IA custa 10 €.', refundLink:'Reembolso · até {d}', refundAskT:'Receber o dinheiro de volta?', refundBought:'{p} · comprado a {d}', refundPassName:'Passe de IA', refundRowAmount:'Devolvemos', refundRowExports:'Exportações sem marca de água', refundRowAi:'Peças e melodias de IA', refundOf:'{n} de {m}', refundRowOff:'Desligado nesta chave', refundOffPro:'Pro', refundOffProAi:'Pro e IA', refundOffPass:'IA · o Pro fica', refundDo:'Devolver {a}', refundDoPlain:'Pedir o reembolso', refundAskNote:'A chave deixa de funcionar em todos os dispositivos. Os quadros e peças que já tens continuam teus.', refundAskNotePass:'O Pro continua teu, e as peças que já tens também.', refundOkT:'Pedido recebido', refundOkSub:'O dinheiro volta ao mesmo método de pagamento, normalmente em poucos dias.', refundRowConfirm:'Confirmação', refundByPaddle:'por e-mail da Paddle', refundOkNote:'Obrigado por experimentares o Paintiano.', refundOkBtn:'Entendi', refundNoT:'Isto precisa de uma pessoa', refundNoSub:'O reembolso automático é para os primeiros 14 dias e uma experiência normal.', refundNoSubOther:'Este reembolso não pode ser feito automaticamente.', refundRowBought:'Comprado', refundWrite:'Escreve-nos', refundNoNote:'Se achas que tens direito a reembolso, escreve para {e} — vemos isso pessoalmente.', refundErr:'Não foi possível ligar. Tenta daqui a pouco.', refundDocNote:'possível até {d}', iosRestore:'Restaurar compras', iosRestoreNone:'Não foram encontradas compras para este Apple ID.', iosBuyFail:'Não foi possível concluir a compra. Tenta de novo.',
     tierReadOnly:'só prévia',
     tierRowArtists:'Artistas',
     tierRowComposers:'Compositores',
@@ -21405,7 +21405,7 @@ const I18N = {
     aiLimitNet:'このネットワークからの今日の AI お試しは使い切りました——また明日、または Pro AI で 1 日 30 曲・メロディまで。',
     aiLimitAny:'今日の AI の上限に達しました——また明日。',
     aiLimitYear:'このパス年度の AI 曲とメロディ {n} 回を使い切りました — {d} に回復します。ほかはそのまま使えます。',
-    proAiValueFair:'AI 曲とメロディは 1 日 30 回まで、12 か月で 500 回まで · フェアユース', proAiValuePass:'12 か月後も Pro はそのまま。AI をもう 1 年使うなら €10 — 自動更新はありません', proPaywallTitleRenew:'AI をもう 1 年', proPaywallSubRenew:'AI パスは {d} まで有効です。新しい 1 年はその後ろに追加されます。', proPaywallSubExpired:'AI パスの期限が切れました。Pro はそのままです。', proRenewCta:'AI を 12 か月追加', aiPassRow:'AI パス：{d} まで', aiPassRowSub:'もう 1 年 · €10', aiPassSoon:'AI パスは {d} に終了します。もう 1 年は €10 — 必要なときだけ。', aiPassEnded:'AI パスの期限が切れました。Pro はそのまま。AI をもう 1 年使うなら €10。', refundLink:'返金 · {d} まで', refundAskT:'返金しますか？', refundBought:'{p} · 購入日 {d}', refundPassName:'AI パス', refundRowAmount:'返金額', refundRowExports:'透かしなしの書き出し', refundRowAi:'AI 曲とメロディ', refundOf:'{n} / {m}', refundRowOff:'このキーで停止するもの', refundOffPro:'Pro', refundOffProAi:'Pro と AI', refundOffPass:'AI · Pro は残ります', refundDo:'{a} を返金', refundDoPlain:'返金を申請', refundAskNote:'キーはすべての端末で使えなくなります。すでにある絵と曲はあなたのものです。', refundAskNotePass:'Pro はそのまま、すでにある曲もあなたのものです。', refundOkT:'申請を受け付けました', refundOkSub:'同じお支払い方法に、通常数日以内に返金されます。', refundRowConfirm:'確認', refundByPaddle:'Paddle からメールで届きます', refundOkNote:'Paintiano をお試しいただきありがとうございます。', refundOkBtn:'わかりました', refundNoT:'ここからは担当者が確認します', refundNoSub:'自動での返金は、購入から 14 日以内で通常のお試しの範囲が対象です。', refundNoSubOther:'この返金は自動では行えません。', refundRowBought:'購入日', refundWrite:'問い合わせる', refundNoNote:'返金の対象だと思われる場合は {e} までご連絡ください。担当者が確認します。', refundErr:'接続できませんでした。少ししてからもう一度お試しください。', refundDocNote:'{d} まで申請できます',
+    proAiValueFair:'AI 曲とメロディは 1 日 30 回まで、12 か月で 500 回まで · フェアユース', proAiValuePass:'12 か月後も Pro はそのまま。AI をもう 1 年使うなら €10 — 自動更新はありません', proPaywallTitleRenew:'AI をもう 1 年', proPaywallSubRenew:'AI パスは {d} まで有効です。新しい 1 年はその後ろに追加されます。', proPaywallSubExpired:'AI パスの期限が切れました。Pro はそのままです。', proRenewCta:'AI を 12 か月追加', aiPassRow:'AI パス：{d} まで', aiPassRowSub:'もう 1 年 · €10', aiPassSoon:'AI パスは {d} に終了します。もう 1 年は €10 — 必要なときだけ。', aiPassEnded:'AI パスの期限が切れました。Pro はそのまま。AI をもう 1 年使うなら €10。', refundLink:'返金 · {d} まで', refundAskT:'返金しますか？', refundBought:'{p} · 購入日 {d}', refundPassName:'AI パス', refundRowAmount:'返金額', refundRowExports:'透かしなしの書き出し', refundRowAi:'AI 曲とメロディ', refundOf:'{n} / {m}', refundRowOff:'このキーで停止するもの', refundOffPro:'Pro', refundOffProAi:'Pro と AI', refundOffPass:'AI · Pro は残ります', refundDo:'{a} を返金', refundDoPlain:'返金を申請', refundAskNote:'キーはすべての端末で使えなくなります。すでにある絵と曲はあなたのものです。', refundAskNotePass:'Pro はそのまま、すでにある曲もあなたのものです。', refundOkT:'申請を受け付けました', refundOkSub:'同じお支払い方法に、通常数日以内に返金されます。', refundRowConfirm:'確認', refundByPaddle:'Paddle からメールで届きます', refundOkNote:'Paintiano をお試しいただきありがとうございます。', refundOkBtn:'わかりました', refundNoT:'ここからは担当者が確認します', refundNoSub:'自動での返金は、購入から 14 日以内で通常のお試しの範囲が対象です。', refundNoSubOther:'この返金は自動では行えません。', refundRowBought:'購入日', refundWrite:'問い合わせる', refundNoNote:'返金の対象だと思われる場合は {e} までご連絡ください。担当者が確認します。', refundErr:'接続できませんでした。少ししてからもう一度お試しください。', refundDocNote:'{d} まで申請できます', iosRestore:'購入を復元', iosRestoreNone:'この Apple ID での購入は見つかりませんでした。', iosBuyFail:'購入を完了できませんでした。もう一度お試しください。',
     tierReadOnly:'プレビューのみ',
     tierRowArtists:'アーティスト',
     tierRowComposers:'作曲家',
@@ -24107,10 +24107,76 @@ try { if (typeof window !== 'undefined') { window.addEventListener('online', () 
 // is swapped for it — so the label and the checkout never disagree. No answer
 // (offline, blocked) → the base prices stay.
 const PF_PX = { map: null, busy: null };
+
+// ─── the iOS app: purchases go through Apple (In-App Purchase) ────────────────
+// Inside the iOS app (window.__PF_NATIVE === 'ios', set by the app's own start page) nothing is sold
+// through Paddle. Two Apple products exist: Pro (bought once) and the AI pass (12 months, bought again
+// for each further year); "Pro AI" is the two bought one after the other. Apple's transaction ids go to
+// /api/apple, which checks them at Apple and answers with the licence key — from there on the app works
+// with the key exactly as on the web. A key bought on the web can still be entered.
+const PF_IOS = (typeof window !== 'undefined' && window.__PF_NATIVE === 'ios');
+const PF_IAP = { pro: 'app.paintiano.pro', pass: 'app.paintiano.aipass12' };
+function _pfNP() { try { const C = window.Capacitor; return (C && C.Plugins && C.Plugins.NativePurchases) || null; } catch (_) { return null; } }
+async function _pfIosReport(ids, key) {
+  try {
+    const r = await fetch('/api/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactions: ids, key: key || '' }) });
+    const j = await r.json().catch(() => null);
+    return (j && typeof j === 'object') ? j : { ok: false, reason: 'server_error' };
+  } catch (_) { return { ok: false, reason: 'network' }; }
+}
+// The prices as the App Store shows them to this buyer (Apple requires its own prices on screen).
+function _pfIosPrices() {
+  const NP = _pfNP(); if (!NP) return Promise.reject(new Error('no store'));
+  return NP.getProducts({ productIdentifiers: [PF_IAP.pro, PF_IAP.pass], productType: 'inapp' }).then((r) => {
+    const by = {}; ((r && r.products) || []).forEach((p) => { if (p) by[p.identifier || p.productIdentifier] = p; });
+    const a = by[PF_IAP.pro], b = by[PF_IAP.pass], m = {};
+    if (a && a.priceString) m.pro = a.priceString;
+    if (b && b.priceString) m.up = b.priceString;
+    if (a && b && typeof a.price === 'number' && typeof b.price === 'number' && a.currencyCode && a.currencyCode === b.currencyCode) {
+      try { m.pro_ai = new Intl.NumberFormat(undefined, { style: 'currency', currency: a.currencyCode }).format(a.price + b.price); } catch (_) {}
+    }
+    if (!m.pro && !m.up) throw new Error('no prices');
+    return m;
+  });
+}
+// Buy. tier 'pro' | 'pro_ai' (Pro, then the pass) | 'upgrade' (the pass on the key in use).
+// → { ok:true, key } | { ok:false, cancelled:true } | { ok:false, reason }
+async function pfIosBuy(tier, key) {
+  const NP = _pfNP(); if (!NP) return { ok: false, reason: 'no_store' };
+  const ids = []; let cancelled = false, failed = null;
+  const one = async (pid) => {
+    try { const t = await NP.purchaseProduct({ productIdentifier: pid, productType: 'inapp', quantity: 1 }); if (t && t.transactionId) ids.push(String(t.transactionId)); return true; }
+    catch (e) { const m = String((e && (e.message || e.errorMessage)) || e || ''); if (/cancel/i.test(m)) cancelled = true; else failed = m || 'failed'; return false; }
+  };
+  let go = true;
+  if (tier === 'pro' || tier === 'pro_ai') go = await one(PF_IAP.pro);
+  if (go && (tier === 'pro_ai' || tier === 'upgrade')) await one(PF_IAP.pass);
+  if (!ids.length) return cancelled ? { ok: false, cancelled: true } : { ok: false, reason: failed || 'failed' };
+  const r = await _pfIosReport(ids, key);
+  if (r && r.ok && r.key) return { ok: true, key: r.key };
+  return { ok: false, reason: (r && r.reason) || 'not_granted' };
+}
+// "Restore purchases": everything this Apple ID has bought → the licence key.
+async function pfIosRestore(key) {
+  const NP = _pfNP(); if (!NP) return { ok: false, reason: 'no_store' };
+  try { await NP.restorePurchases(); } catch (_) {}
+  let list = [];
+  try { const r = await NP.getPurchases({}); list = (r && r.purchases) || []; } catch (_) {}
+  const ids = [...new Set(list.filter((t) => t && (t.productIdentifier === PF_IAP.pro || t.productIdentifier === PF_IAP.pass) && t.transactionId).map((t) => String(t.transactionId)))];
+  if (!ids.length) return { ok: false, reason: 'none' };
+  const r = await _pfIosReport(ids, key);
+  if (r && r.ok && r.key) return { ok: true, key: r.key };
+  return { ok: false, reason: (r && r.ok) ? 'none' : ((r && r.reason) || 'server_error') };
+}
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
 function pfPxLoad() {
   if (PF_PX.map) return Promise.resolve(PF_PX.map);
   if (PF_PX.busy) return PF_PX.busy;
+  if (PF_IOS) {   // in the iOS app the prices are Apple's
+    PF_PX.busy = _pfIosPrices().then((m) => { PF_PX.map = m; return m; });
+    PF_PX.busy.catch(() => { PF_PX.busy = null; });
+    return PF_PX.busy;
+  }
   PF_PX.busy = new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject(new Error('no window'));
     const go = () => {
@@ -24360,6 +24426,12 @@ function useProStatus() {
   }, []);
 
   const openCheckout = useCallback(async (tier = 'pro') => {
+    if (PF_IOS) {   // the iOS app: Apple's purchase sheet; the answer is the licence key
+      try { window.posthog && window.posthog.capture('checkout_opened', { tier, store: 'apple' }); } catch (_) {}
+      const r = await pfIosBuy(tier, licenseKey);
+      if (r.ok && r.key) { const a = await activateLicense(r.key); return { ok: !!a.ok, reason: a.ok ? null : 'key' }; }
+      return r;
+    }
     try {
       try { window.posthog && window.posthog.capture('checkout_opened', { tier }); } catch (_) {}
       const Paddle = await loadPaddleScript();
@@ -24402,7 +24474,7 @@ function useProStatus() {
         }
       } catch (_) {}
     }
-  }, [loadPaddleScript, licenseKey]);
+  }, [loadPaddleScript, licenseKey, activateLicense]);
 
   const clearJustUpgraded = useCallback(() => setJustUpgraded(false), []);
 
@@ -24676,6 +24748,28 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   useEffect(() => { let on = true; pfPxLoad().then(() => { if (on) _setPxTick(n => n + 1); }).catch(() => {}); return () => { on = false; }; }, []);
   const tr = (k, fb) => { const v = t && t(k); return pfPx((v && v !== k) ? v : fb); };   // t() returns the key when missing; prices in the visitor's own currency
 
+  // The iOS app: a purchase answers here (on the web the checkout leaves the page and comes back).
+  const [buyBusy, setBuyBusy] = useState(false);
+  const [buyMsg, setBuyMsg] = useState('');
+  const done = () => { setView('success'); if (onActivated) onActivated(); setTimeout(() => onClose && onClose(), 1500); };
+  const buy = async (tier) => {
+    if (!PF_IOS) return openCheckout(tier);
+    if (buyBusy) return;
+    setBuyBusy(true); setBuyMsg('');
+    const r = await openCheckout(tier);
+    setBuyBusy(false);
+    if (r && r.ok) done();
+    else if (!(r && r.cancelled)) setBuyMsg(tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+  };
+  const restore = async () => {
+    if (buyBusy) return;
+    setBuyBusy(true); setBuyMsg('');
+    const r = await pfIosRestore(licenseKey);
+    let ok = false;
+    if (r && r.ok && r.key) { const a = await activateLicense(r.key); ok = !!(a && a.ok); }
+    setBuyBusy(false);
+    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? tr('iosRestoreNone', 'No purchases found for this Apple ID.') : tr('iosBuyFail', 'The purchase could not be completed. Please try again.'));
+  };
   const submit = async () => {
     setBusy(true); setErrMsg('');
     const r = await activateLicense(keyInput);
@@ -24835,7 +24929,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
             </li>
           ))}
         </ul>
-        <button style={ctaBtn} onClick={() => openCheckout(tierKey)}>
+        <button style={Object.assign({}, ctaBtn, buyBusy ? { opacity: .55 } : null)} disabled={buyBusy} onClick={() => buy(tierKey)}>
           {isUp
             ? ((renew || aiExpired) ? tr('proRenewCta', 'Add 12 months of AI') : tr('proUpgradeCta', 'Get the AI pass'))
             : isAI
@@ -24938,6 +25032,18 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
+            {PF_IOS && buyMsg && (
+              <p style={{ color: '#f0b48a', fontSize: (.62*readScale)+'rem', textAlign: 'center', margin: '10px 0 0', lineHeight: 1.4 }}>{buyMsg}</p>
+            )}
+            {PF_IOS && (
+              <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
+                <span onClick={restore} role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); restore(); } }}
+                  style={{ color: 'rgba(242,238,232,.6)', fontSize: (.6*readScale)+'rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, opacity: buyBusy ? .5 : 1 }}>
+                  {tr('iosRestore', 'Restore purchases')}
+                </span>
+              </p>
+            )}
             <p style={{ color: '#555', fontSize: (.55*readScale)+'rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
               {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
             </p>
@@ -25140,12 +25246,12 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {/* Get Pro — gold outline (secondary in the about view); a Pro owner never sees it */}
                 {!upgradeOnly && (
                 <button style={Object.assign({}, btnGoldOutline, { marginBottom: 10 })}
-                        onClick={() => openCheckout('pro')}>
+                        onClick={() => buy('pro')}>
                   {tr('proGetCta', 'Get Pro')} — {tr('proTierPriceShort', '€9.99')}
                 </button>
                 )}
                 {/* Get Pro AI — purple filled (primary, recommended upgrade) */}
-                <button onClick={() => openCheckout(upgradeOnly ? upTier : 'pro_ai')}
+                <button onClick={() => buy(upgradeOnly ? upTier : 'pro_ai')}
                   style={{
                     width: '100%', background: AI_PURPLE, color: '#0a0a12', border: 'none',
                     padding: '14px 18px', borderRadius: 5, fontSize: (.78*readScale)+'rem',

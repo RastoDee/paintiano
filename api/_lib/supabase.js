@@ -57,7 +57,7 @@ export async function upsertLicense(row) {
 }
 
 export async function getLicenseByKey(key) {
-  const base = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=key,email,status,tier,activations,created_at`;
+  const base = `${SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=key,email,status,tier,activations,created_at,order_id`;
   // ai_until (the AI pass, supabase/ai_usage.sql part 6): asked for first; a database
   // without the column yet answers the plain select, so nothing breaks before the SQL is run.
   let res = await fetch(base + ',ai_until', { headers: headers() });
