@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import StoreKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -40,5 +41,46 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                                           sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
         return config
+    }
+}
+
+// The app's own view controller: the stock Capacitor one plus our small local plugin.
+class PfBridgeViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(PfRefundPlugin())
+    }
+}
+
+// PfRefund.request({ transactionId }) opens Apple's refund request sheet for one purchase.
+// Resolves { status: "requested" | "cancelled" | "unknown" }. Apple decides; the server hears of a refund from Apple.
+@objc(PfRefundPlugin)
+public class PfRefundPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "PfRefundPlugin"
+    public let jsName = "PfRefund"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "request", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func request(_ call: CAPPluginCall) {
+        guard let text = call.getString("transactionId"), let id = UInt64(text) else {
+            call.reject("transactionId is required")
+            return
+        }
+        Task { @MainActor in
+            guard let scene = self.bridge?.viewController?.view.window?.windowScene else {
+                call.reject("no window scene")
+                return
+            }
+            do {
+                let status = try await Transaction.beginRefundRequest(for: id, in: scene)
+                switch status {
+                case .success: call.resolve(["status": "requested"])
+                case .userCancelled: call.resolve(["status": "cancelled"])
+                @unknown default: call.resolve(["status": "unknown"])
+                }
+            } catch {
+                call.reject(error.localizedDescription)
+            }
+        }
     }
 }
