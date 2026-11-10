@@ -598,10 +598,10 @@
   <li><strong>Vašu e-mailovú adresu</strong> — odovzdáva nám ju náš spracovateľ platieb, aby sme vám mohli doručiť licenčný kľúč a poskytnúť podporu.</li>
   <li><strong>Váš licenčný kľúč</strong> — generujeme ho my a ukladáme ho spolu s vaším e-mailom v našej databáze.</li>
   <li><strong>Metadáta nákupu</strong> — dátum, mena a suma, krajina nákupu, anonymné ID transakcie z Paddle. Nevidíme ani číslo karty, ani vašu úplnú adresu.</li>
-  <li><strong>Záznamy o vrátení peňazí a reklamáciách</strong> — ak je to relevantné.</li>
+  <li><strong>Záznamy o vrátení platby a reklamáciách</strong> — ak je to relevantné.</li>
 </ul>
 <h3>3.3 AI funkcie nálady</h3>
-<p>Ak používate funkcie „Nálada" alebo „Nálada z obrázka", váš textový prompt (alebo malá verzia v nízkom rozlíšení vášho obrázka) sa odošle nášmu AI poskytovateľovi (Anthropic) výhradne na inferenciu. K požiadavke nepripájame váš e-mail ani žiadny identifikátor účtu. AI poskytovateľ neuchováva prompty na trénovanie budúcich modelov na Paintiano premávke. Aby AI zostala férová, náš server počíta AI požiadavky za deň — podľa jednosmerného hashu vášho licenčného kľúča (Pro AI) alebo vašej sieťovej adresy (všetci ostatní). Ukladá sa len tento hash a denný počet a po 3 dňoch sa vymažú. Pre pravidlá vrátenia peňazí náš server eviduje pri licenčnom kľúči aj počet exportov bez vodoznaku a AI skladieb — iba čísla, nikdy vaše diela.</p>
+<p>Ak používate funkcie „Nálada" alebo „Nálada z obrázka", váš textový prompt (alebo malá verzia v nízkom rozlíšení vášho obrázka) sa odošle nášmu AI poskytovateľovi (Anthropic) výhradne na inferenciu. K požiadavke nepripájame váš e-mail ani žiadny identifikátor účtu. AI poskytovateľ neuchováva prompty na trénovanie budúcich modelov na Paintiano premávke. Aby AI zostala férová, náš server počíta AI požiadavky za deň — podľa jednosmerného hashu vášho licenčného kľúča (Pro AI) alebo vašej sieťovej adresy (všetci ostatní). Ukladá sa len tento hash a denný počet a po 3 dňoch sa vymažú. Pre pravidlá vrátenia platby náš server eviduje pri licenčnom kľúči aj počet exportov bez vodoznaku a AI skladieb — iba čísla, nikdy vaše diela.</p>
 <h3>3.4 Technické protokoly</h3>
 <p>Ako každá webstránka, náš hostingový poskytovateľ (Vercel) automaticky zaznamenáva technické údaje o požiadavkách: IP adresu, reťazec user-agent, požadovanú URL, časovú pečiatku, stav odpovede. Tieto protokoly slúžia na bezpečnosť, prevenciu zneužitia a prevádzkovú diagnostiku. Uchovávajú sa krátko a nepoužívajú sa na marketing ani profilovanie.</p>
 <h2>4. Prečo používame vaše údaje (právne základy)</h2>
@@ -635,7 +635,7 @@
   <tr><td>Licenčný kľúč + e-mail (pre aktívne licencie)</td><td>Pokiaľ je licencia platná (doživotne pre produkt), plus primeraná archívna doba</td></tr>
   <tr><td>Metadáta nákupu / faktúry</td><td>10 rokov (slovenský zákon o účtovníctve)</td></tr>
   <tr><td>Korešpondencia podpory</td><td>Do 3 rokov od posledného kontaktu</td></tr>
-  <tr><td>Záznamy o vrátení peňazí</td><td>10 rokov (slovenský zákon o účtovníctve)</td></tr>
+  <tr><td>Záznamy o vrátení platby</td><td>10 rokov (slovenský zákon o účtovníctve)</td></tr>
   <tr><td>Protokoly prístupu na server</td><td>Do 30 dní</td></tr>
   <tr><td>AI prompty</td><td>Neuchovávame ich; preposielame ich AI poskytovateľovi na inferenciu</td></tr>
 </table>
