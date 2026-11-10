@@ -55,16 +55,24 @@ async function appleToken() {
 export async function appleTransaction(id) {
   if (!/^[0-9]{6,40}$/.test(String(id))) return null;
   const tok = await appleToken();
-  for (const host of ['https://api.storekit.itunes.apple.com', 'https://api.storekit-sandbox.itunes.apple.com']) {
+  // Production answers 401 for an app that is not on the App Store yet, so a refusal there
+  // is not final: the sandbox is asked too, and only when neither knows the answer do we fail.
+  const bad = [];
+  for (const [tag, host] of [['p', 'https://api.storekit.itunes.apple.com'], ['s', 'https://api.storekit-sandbox.itunes.apple.com']]) {
     const r = await fetch(`${host}/inApps/v1/transactions/${id}`, { headers: { Authorization: `Bearer ${tok}` } });
     if (r.status === 404) continue;
-    if (!r.ok) { const err = new Error(`apple: transaction lookup ${r.status} ${(await r.text()).slice(0, 160)}`); err.detail = 'apple_' + r.status + (r.status === 401 ? (/^[A-Z0-9]{10}$/.test(KEY_ID) ? '' : '_keyid') + (/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(ISSUER_ID) ? '' : '_issuer') : ''); throw err; }
+    if (!r.ok) { bad.push(tag + r.status); console.warn('apple: transaction lookup', tag, r.status, (await r.text()).slice(0, 160)); continue; }
     const j = await r.json();
     const parts = String(j.signedTransactionInfo || '').split('.');
     if (parts.length !== 3) throw new Error('apple: no transaction in the answer');
     const t = JSON.parse(b64uDecodeText(parts[1]));
     if (t.bundleId !== APPLE_BUNDLE_ID) return null;
     return t;
+  }
+  if (bad.length === 2 || (bad.length === 1 && bad[0][0] === 's')) {
+    const err = new Error('apple: transaction lookup refused ' + bad.join(' '));
+    err.detail = 'apple_' + bad.join('_') + (/^[A-Z0-9]{10}$/.test(KEY_ID) ? '' : '_keyid') + (/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(ISSUER_ID) ? '' : '_issuer');
+    throw err;
   }
   return null;
 }
