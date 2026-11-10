@@ -41953,9 +41953,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const lightUp=()=>{ feedLitRef.current=true; const seen=_tipSeen('studio') || !!tipSessRef.current.studio; if(!seen){ tipSessRef.current.studio=true; _tipCount('studio'); } setFeedStudioLit(seen ? 1 : 2); tOff=setTimeout(()=>setFeedStudioLit(0), seen ? 5000 : 9000); };
     const wait=Math.max(0, 15000-feedPlayAccRef.current); const tOn = wait>0 ? setTimeout(lightUp, wait) : null; if(!tOn) lightUp();
     return ()=>{ feedPlayAccRef.current += Date.now()-t0; if(tOn) clearTimeout(tOn); if(tOff) clearTimeout(tOff); }; },[feedAt, playing, feedIntro]);
-  // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, 14 s apart, never after the first swipe up
+  // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, the first after 14 s of looking (never at once: the painting is only starting), then 14 s apart, never after the first swipe up
   useEffect(()=>{ if(!feedUpCue || feedUpDone || !playing || feedAt<0) return; const id=(feedCards[feedAt]||{}).id, R=feedPeekNRef.current; if(R.id!==id){ R.id=id; R.n=0; }
-    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; if(R.k==null) R.k=Math.floor(Math.random()*6); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; go(); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
+    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; if(R.k==null) R.k=Math.floor(Math.random()*6); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; tm=setTimeout(go, 14000); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
   useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>{ setFeedPeek(0); feedPeekNRef.current.k=(feedPeekNRef.current.k|0)+1; }, 2000); return ()=>clearTimeout(tm); },[feedPeek]);   // the next painting is chosen once the card is down again: it loads hidden, so nothing swaps mid-lift
   useEffect(()=>{ if(feedUpDone && feedPeek) setFeedPeek(0); },[feedUpDone]);
   // the side nudge: the first swipe up is known, this card has played 6 s — the card slides a little to the left and another painting shows at its right edge (twice at most, ever)
