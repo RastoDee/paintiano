@@ -31,13 +31,37 @@ jobs:
         with:
           xcode-version: latest-stable
       - name: Web build
+        env:
+          PF_IOS_DEBUG: ${{ contains(github.event.head_commit.message, '[simshot]') && '1' || '0' }}
         run: |
           npm ci
           npm run build
           node scripts/ios-web.mjs
           npx cap sync ios
+      - name: Run in the simulator and take screenshots (diagnostics)
+        if: ${{ contains(github.event.head_commit.message, '[simshot]') }}
+        run: |
+          set -uo pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build | tail -5
+          APP=$(find "$RUNNER_TEMP/dd/Build/Products" -name 'App.app' -maxdepth 3 | head -1)
+          UDID=$(xcrun simctl list devices available | grep -E 'iPhone' | head -1 | grep -oE '[0-9A-F-]{36}')
+          echo "app=$APP sim=$UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b | tail -2
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" app.paintiano
+          mkdir -p "$RUNNER_TEMP/shots"
+          for t in 12 25 45; do sleep $([ $t = 12 ] && echo 12 || [ $t = 25 ] && echo 13 || echo 20); xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/s$t.png"; done
+          ls -la "$RUNNER_TEMP/shots"
+      - uses: actions/upload-artifact@v4
+        if: ${{ contains(github.event.head_commit.message, '[simshot]') }}
+        with:
+          name: simshots
+          path: ${{ runner.temp }}/shots
       - name: Build for the simulator (no signing)
-        if: ${{ !inputs.upload && !contains(github.event.head_commit.message, '[testflight]') }}
+        if: ${{ !inputs.upload && !contains(github.event.head_commit.message, '[testflight]') && !contains(github.event.head_commit.message, '[simshot]') }}
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
