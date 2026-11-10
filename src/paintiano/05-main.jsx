@@ -14773,6 +14773,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // App codes are uppercase (EN/DE/FR/ES/SK/PT) plus the camelCase zh/zhTW;
   // HTML attrs are lowercase except zhTW. Re-runs whenever lang changes
   // mid-modal so switching language in the app live-updates the open doc.
+  // The Pricing page inside the app has no script of its own (scripts are stripped above), so the local prices are put in here — the same ones the paywall shows.
+  const [legalPxTick, setLegalPxTick] = useState(0);
+  useEffect(()=>{ if(legalDoc!=='pricing') return; let on=true; try{ pfPxLoad().then(()=>{ if(on) setLegalPxTick(n=>n+1); }).catch(()=>{}); }catch(_){} return ()=>{ on=false; }; },[legalDoc]);
   const legalHtmlForLang = useMemo(()=>{
     if(!legalHtml) return '';
     const map = {EN:'en', DE:'de', FR:'fr', ES:'es', SK:'sk', PT:'pt', zh:'zh', zhTW:'zhTW', ja:'ja'};
@@ -14785,8 +14788,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // Fall back to EN if the requested language is missing in this doc.
       h = h.replace('class="wrap" data-lang="en"', 'class="wrap active" data-lang="en"');
     }
+    if(legalDoc==='pricing'){ try{ h = pfPx(h); }catch(_){} }
     return '<style>'+legalCss+'\n[data-lang]:not(.active){display:none}\n.legal-root{min-height:100%}</style><div class="legal-root">'+h+'</div>';
-  },[legalHtml, legalCss, lang]);
+  },[legalHtml, legalCss, lang, legalDoc, legalPxTick]);
   // FIX 17: render the doc inside a Shadow DOM so its CSS is isolated from
   // the app (both directions). React never manages shadow children, so we
   // fill it imperatively whenever the content or loading state changes.
