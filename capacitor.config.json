@@ -1,0 +1,14 @@
+{
+  "appId": "app.paintiano",
+  "appName": "Paintiano",
+  "webDir": "ios-web",
+  "backgroundColor": "#06060c",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#06060c",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}
