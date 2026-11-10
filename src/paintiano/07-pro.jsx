@@ -261,13 +261,16 @@ async function pfIosPurchases() {
 }
 // Apple's own refund request sheet for one purchase (Apple decides; our server hears of a refund from Apple).
 // → { ok:true } (sent) | { ok:false, cancelled:true } | { ok:false, reason }
-async function pfIosRefund(transactionId) {
+async function pfIosRefund(transactionId, product) {
   try {
-    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund; const o = { transactionId: String(transactionId) };
-    const r = P && P.request ? await P.request(o) : await C.nativePromise('PfRefund', 'request', o);
+    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund;
+    if (!P || typeof P.request !== 'function') return { ok: false, reason: 'no_plugin' };
+    const o = { transactionId: String(transactionId), productId: product === 'pass' ? PF_IAP.pass : PF_IAP.pro };
+    // a native call that never answers must not leave the button waiting for good
+    const r = await Promise.race([P.request(o), new Promise((res) => setTimeout(() => res({ status: 'timeout' }), 25000))]);
     if (r && r.status === 'requested') return { ok: true };
     if (r && r.status === 'cancelled') return { ok: false, cancelled: true };
-    return { ok: false, reason: 'unknown' };
+    return { ok: false, reason: (r && r.status) || 'unknown' };
   } catch (e) { return { ok: false, reason: String((e && e.message) || e || 'failed').slice(0, 80) }; }
 }
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }

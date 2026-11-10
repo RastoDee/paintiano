@@ -22877,10 +22877,26 @@ const GUIDE_I18N = {
    }},
 };
 function getGuideUI(lang){ return (GUIDE_I18N[lang] || GUIDE_I18N.EN).ui; }
+// Inside the iOS app the Studio is the only view (no Atelier, no Lite): the Guide leaves the Atelier out there —
+// the 'Studio and Atelier' card is not shown and these passages are cut or shortened (the web keeps the full text).
+const GUIDE_IOS_CUT = {
+  EN:[[' ◆ Atelier — With Pro, turn it on in Styles & palettes → View: every tool in sight.',''],['In the Atelier the tabs above the canvas, in the Studio Look (swipe down).','Look (swipe down).'],['In the Atelier the panel by the picture, in the Studio Look (swipe down).','Look (swipe down).'],['In the Atelier, ⚙ at the top. In the Studio, in the Paintiano ⌄ menu.','In the Paintiano ⌄ menu.'],['In the Atelier the painter tiles, in the Studio Look (swipe down).','Look (swipe down).'],[' ◆ View — Pro: Studio or Atelier, on phones. Free has the Studio.',''],[' With Pro, also the Studio / Atelier switch.',''],['In the Atelier Next, in the Studio swipe up.','Swipe up.'],[', the Atelier (Lite or Advanced).','.']],
+  SK:[[' ◆ Ateliér — S Pro ho zapneš v Štýly a palety → Zobrazenie: celé náradie na očiach.',''],[' ◆ Zobrazenie — Pro: Štúdio alebo Ateliér, na telefóne. Free má Štúdio.',''],['V Ateliéri záložky nad plátnom, v Štúdiu Vzhľad (potiahni dole).','Vzhľad (potiahni dole).'],['V Ateliéri dlaždice maliarov, v Štúdiu Vzhľad (potiahni dole).','Vzhľad (potiahni dole).'],['V Ateliéri panel pri obrázku, v Štúdiu Vzhľad (potiahni dole).','Vzhľad (potiahni dole).'],['V Ateliéri ⚙ hore. V Štúdiu v menu Paintiano ⌄.','V menu Paintiano ⌄.'],['V Ateliéri Next, v Štúdiu potiahni hore.','Potiahni hore.'],[' S Pro aj prepínač Štúdio / Ateliér.',''],[', Ateliér (Lite aj Rozšírený).','.']],
+  DE:[[' ◆ Atelier — Mit Pro schaltest du es in Stile & Paletten → Ansicht ein: alle Werkzeuge im Blick.',''],['Im Atelier die Tabs über der Leinwand, im Studio Look (nach unten wischen).','Look (nach unten wischen).'],[' ◆ Ansicht — Pro: Studio oder Atelier, auf dem Handy. Free hat das Studio.',''],['Im Atelier das Panel beim Foto, im Studio Look (nach unten wischen).','Look (nach unten wischen).'],['Im Atelier die Maler-Kacheln, im Studio Look (nach unten wischen).','Look (nach unten wischen).'],['Im Atelier oben ⚙. Im Studio im Menü Paintiano ⌄.','Im Menü Paintiano ⌄.'],['Im Atelier Next, im Studio nach oben wischen.','Nach oben wischen.'],[' Mit Pro auch der Schalter Studio / Atelier.',''],[', Atelier (Lite oder Advanced).','.']],
+  FR:[[' ◆ Atelier — Avec Pro, active-le dans Styles et palettes → Affichage : tous les outils sous les yeux.',''],['Dans l’Atelier, les onglets au-dessus de la toile ; en Studio, Style (glisse vers le bas).','Style (glisse vers le bas).'],['Dans l’Atelier, le panneau près de l’image ; en Studio, Style (glisse vers le bas).','Style (glisse vers le bas).'],['Dans l’Atelier, les tuiles des peintres ; en Studio, Style (glisse vers le bas).','Style (glisse vers le bas).'],[' ◆ Affichage — Pro : Studio ou l’Atelier, sur téléphone. Free a le Studio.',''],['Dans l’Atelier, ⚙ en haut. En Studio, dans le menu Paintiano ⌄.','Dans le menu Paintiano ⌄.'],['Dans l’Atelier Next, en Studio glisse vers le haut.','Glisse vers le haut.'],[' Avec Pro, aussi le choix Studio / Atelier.',''],[', l’Atelier (Lite ou Avancé).','.']],
+  ES:[[' ◆ Taller — Con Pro lo activas en Estilos y paletas → Vista: todas las herramientas a la vista.',''],['En el Taller, las pestañas sobre el lienzo; en Estudio, Aspecto (desliza abajo).','Aspecto (desliza abajo).'],['En el Taller, el panel junto a la imagen; en Estudio, Aspecto (desliza abajo).','Aspecto (desliza abajo).'],['En el Taller, las fichas de pintores; en Estudio, Aspecto (desliza abajo).','Aspecto (desliza abajo).'],[' ◆ Vista — Pro: Estudio o Taller, en el móvil. Free tiene el Estudio.',''],['En el Taller, ⚙ arriba. En Estudio, en el menú Paintiano ⌄.','En el menú Paintiano ⌄.'],['En el Taller, Next; en Estudio, desliza arriba.','Desliza arriba.'],[' Con Pro, también el cambio Estudio / Taller.',''],[', Taller (Lite o Avanzado).','.']],
+  PT:[[' ◆ Atelier — Com Pro ligas-o em Estilos e paletas → Vista: todas as ferramentas à vista.',''],['No Atelier, os separadores por cima da tela; no Estúdio, Visual (desliza para baixo).','Visual (desliza para baixo).'],['No Atelier, o painel junto à imagem; no Estúdio, Visual (desliza para baixo).','Visual (desliza para baixo).'],['No Atelier, as fichas dos pintores; no Estúdio, Visual (desliza para baixo).','Visual (desliza para baixo).'],[' ◆ Vista — Pro: Estúdio ou Atelier, no telemóvel. O Free tem o Estúdio.',''],['No Atelier, ⚙ em cima. No Estúdio, no menu Paintiano ⌄.','No menu Paintiano ⌄.'],['No Atelier, Next; no Estúdio, desliza para cima.','Desliza para cima.'],[' Com Pro, também a troca Estúdio / Atelier.',''],[', Atelier (Lite ou Avançado).','.']],
+  zh:[[' ◆ 画室 — 有 Pro 时，在“风格与调色板 → 显示”中开启：所有工具一目了然。',''],[' ◆ 显示 — Pro：手机上选工作室或画室。Free 使用工作室。',''],['画室：顶部的 ⚙。工作室：Paintiano ⌄ 菜单。','Paintiano ⌄ 菜单。'],['有 Pro 时，工作室 / 画室的切换也在这里。',''],['画室：画布上方的标签；工作室：外观（下滑）。','外观（下滑）。'],['画室：图像旁的面板；工作室：外观（下滑）。','外观（下滑）。'],['画室：画家方块；工作室：外观（下滑）。','外观（下滑）。'],['画室：Next；工作室：上滑。','上滑。'],['、画室（Lite 或高级）。','。']],
+  zhTW:[[' ◆ 畫室 — 有 Pro 時，在「風格與調色盤 → 顯示」中開啟：所有工具一目了然。',''],[' ◆ 顯示 — Pro：手機上選工作室或畫室。Free 使用工作室。',''],['畫室：頂端的 ⚙。工作室：Paintiano ⌄ 選單。','Paintiano ⌄ 選單。'],['有 Pro 時，工作室 / 畫室的切換也在這裡。',''],['畫室：畫布上方的標籤；工作室：外觀（下滑）。','外觀（下滑）。'],['畫室：圖像旁的面板；工作室：外觀（下滑）。','外觀（下滑）。'],['畫室：畫家方塊；工作室：外觀（下滑）。','外觀（下滑）。'],['畫室：Next；工作室：上滑。','上滑。'],['、畫室（Lite 或進階）。','。']],
+  ja:[[' ◆ アトリエ — Pro なら スタイルとパレット → 表示 でオン：すべての道具が見える。',''],[' ◆ 表示 — Pro：スマホでスタジオかアトリエか。Free はスタジオ。',''],['アトリエでは上の ⚙。スタジオでは Paintiano ⌄ のメニュー。','Paintiano ⌄ のメニュー。'],['アトリエではキャンバス上のタブ、スタジオでは見た目（下にスワイプ）。','見た目（下にスワイプ）。'],['アトリエでは画像の横のパネル、スタジオでは見た目（下にスワイプ）。','見た目（下にスワイプ）。'],['アトリエでは画家のタイル、スタジオでは見た目（下にスワイプ）。','見た目（下にスワイプ）。'],['アトリエでは Next、スタジオでは上にスワイプ。','上にスワイプ。'],['Pro ならスタジオ / アトリエの切替もここ。',''],['、アトリエ（Lite かアドバンス）。','。']],
+};
+function _guideIos(s, lang){ if(typeof s!=='string') return s; const a=(GUIDE_IOS_CUT[lang]||[]).concat(lang==='EN' ? [] : GUIDE_IOS_CUT.EN);
+  for(const [o,n] of a){ if(s.indexOf(o)>=0) s=s.split(o).join(n); } return s; }
 function getGuideCards(lang, studio){
   const L = GUIDE_I18N[lang] || GUIDE_I18N.EN, E = GUIDE_I18N.EN;
-  return GUIDE_META.filter(m=>studio || m.cat!=='studio').map(m=>{ const x = L.c[m.id] || E.c[m.id];
-    return {...m, title:x.t, body:_guidePx((studio && x.bS) || x.b), more:_guidePx((studio && x.mS) || x.m)}; });
+  const ios = (typeof window!=='undefined' && window.__PF_NATIVE==='ios'), fx = (s)=> ios ? _guideIos(s, lang) : s;
+  return GUIDE_META.filter(m=>(studio || m.cat!=='studio') && !(ios && m.id==='appmodes')).map(m=>{ const x = L.c[m.id] || E.c[m.id];
+    return {...m, title:x.t, body:_guidePx(fx((studio && x.bS) || x.b)), more:_guidePx(fx((studio && x.mS) || x.m))}; });
 }
 // Prices in the Guide follow the visitor's own currency, like the paywall (the first opening may still show EUR while the local prices load).
 function _guidePx(s){ try{ if(typeof s==='string' && s.indexOf('€')>=0){ pfPxLoad().catch(()=>{}); return pfPx(s); } }catch(_){} return s; }
@@ -24187,13 +24203,16 @@ async function pfIosPurchases() {
 }
 // Apple's own refund request sheet for one purchase (Apple decides; our server hears of a refund from Apple).
 // → { ok:true } (sent) | { ok:false, cancelled:true } | { ok:false, reason }
-async function pfIosRefund(transactionId) {
+async function pfIosRefund(transactionId, product) {
   try {
-    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund; const o = { transactionId: String(transactionId) };
-    const r = P && P.request ? await P.request(o) : await C.nativePromise('PfRefund', 'request', o);
+    const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund;
+    if (!P || typeof P.request !== 'function') return { ok: false, reason: 'no_plugin' };
+    const o = { transactionId: String(transactionId), productId: product === 'pass' ? PF_IAP.pass : PF_IAP.pro };
+    // a native call that never answers must not leave the button waiting for good
+    const r = await Promise.race([P.request(o), new Promise((res) => setTimeout(() => res({ status: 'timeout' }), 25000))]);
     if (r && r.status === 'requested') return { ok: true };
     if (r && r.status === 'cancelled') return { ok: false, cancelled: true };
-    return { ok: false, reason: 'unknown' };
+    return { ok: false, reason: (r && r.status) || 'unknown' };
   } catch (e) { return { ok: false, reason: String((e && e.message) || e || 'failed').slice(0, 80) }; }
 }
 function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)/, '').trim() : null; }
@@ -27077,6 +27096,8 @@ const _pfShape = ()=>{ try{ if(typeof window==='undefined' || !window.matchMedia
   const desk = wide && (land ? (tall || !touch) : !touch);
   return { desk, notPhone: desk && tall, five: wide && tall && land }; }catch(_){ return {desk:false,notPhone:false,five:false}; } };
 const PF_SHAPE_QS=['(min-width: 769px)','(min-height: 501px)','(orientation: landscape)','(any-pointer: coarse)'];
+// inside the iOS app (window.__PF_NATIVE, set by the app's own start page): the Studio is its only view — no Atelier, no Lite
+const _pfIosApp = ()=>{ try{ return typeof window!=='undefined' && window.__PF_NATIVE==='ios'; }catch(_){ return false; } };
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
 const _stPalRgb=(h)=>{ const m=/^#?([0-9a-f]{6})$/i.exec(String(h||'')); if(!m) return [136,136,136]; const n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -30839,7 +30860,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     qrPieceRef.current=_qidx;
     // the Studio takes the scan wherever it is the view (a phone, an upright touchscreen, a narrow window), unless a Pro chose the Atelier
     try{ const _wide = _pfShape().desk;
-      const _cls = _proReadCache() && localStorage.getItem('paintiano_view')==='classic';
+      const _cls = !_pfIosApp() && _proReadCache() && localStorage.getItem('paintiano_view')==='classic';
       qrStudioRef.current = _qidx!=null && !_wide && !_cls; }catch(_){ qrStudioRef.current=false; }
     // Lite session piece: the QR piece when present, otherwise a RANDOM pick
     // from the built-in samples — chosen once per page load so Play,
@@ -40268,9 +40289,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               const b=document.createElement('button'); b.type='button'; b.textContent=String(t(it.product==='pro'?'iosRefundPro':'iosRefundPass'));
               b.style.cssText='display:block;width:100%;margin-top:8px;border:0;border-radius:999px;padding:13px;text-align:center;font-weight:800;font-size:.82rem;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#0a0a12';
               b.addEventListener('click',async(ev)=>{ ev.preventDefault(); ev.stopPropagation(); if(b.disabled) return; b.disabled=true; b.style.opacity='.55'; msg.style.display='none';
-                const r=await pfIosRefund(it.id); b.disabled=false; b.style.opacity='1';
+                const r=await pfIosRefund(it.id, it.product); b.disabled=false; b.style.opacity='1';
                 if(r && r.cancelled) return;
-                msg.textContent=String(t(r && r.ok ? 'iosRefundSent' : 'iosRefundFail')); msg.style.color=(r && r.ok)?'#9fd8a8':'#f0b48a'; msg.style.display='block'; });
+                msg.textContent=String(t(r && r.ok ? 'iosRefundSent' : 'iosRefundFail')) + (r && r.ok ? '' : _pfIosWhy(r)); msg.style.color=(r && r.ok)?'#9fd8a8':'#f0b48a'; msg.style.display='block';
+                // when Apple's sheet does not open, Apple's own page is one tap away
+                if(!(r && r.ok) && !w.querySelector('[data-pf-rap]')){ const l=document.createElement('a'); l.setAttribute('data-pf-rap','1'); l.href='https://reportaproblem.apple.com/'; l.target='_blank'; l.rel='noopener'; l.textContent='reportaproblem.apple.com'; l.style.cssText='display:block;margin:8px 0 0;text-align:center;font-size:.8rem;font-weight:700;color:#f0c75e;text-decoration:underline'; w.appendChild(l); } });
               w.appendChild(b);
             });
             w.appendChild(msg); w.style.display='block';
@@ -40498,12 +40521,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // (New · Look · Favorites · Setup). Classic = the screen as before. Desktop and Lite are not touched.
   const liteChipRef = useRef(null);   // the Lite / Advanced chip — the Studio is Advanced, so picking it from Lite flips the chip
   // the Studio is the phone's view for everyone; the Atelier only for whoever picked it (Styles & palettes → View) — the computer keeps the Atelier (studioOn needs !isDesktop)
-  const [viewPref, setViewPref] = useState(()=>{ try{ if(!_proReadCache()) return 'studio'; return localStorage.getItem('paintiano_view')==='classic' ? 'classic' : 'studio'; }catch(_){ return 'studio'; } });
+  const [viewPref, setViewPref] = useState(()=>{ try{ if(_pfIosApp() || !_proReadCache()) return 'studio'; return localStorage.getItem('paintiano_view')==='classic' ? 'classic' : 'studio'; }catch(_){ return 'studio'; } });
   // Free (also a licence that lapsed): the Studio, never Classic or Lite. Written down, so an upgrade keeps the Studio
   // until the user picks Classic. A QR poster scan keeps its Lite disc for that visit.
   useEffect(()=>{ if(proStatus!=='free') return; setViewPref('studio'); try{ localStorage.setItem('paintiano_view','studio'); localStorage.setItem('paintiano_was_free','1'); }catch(_){}
     if(basicModeRef.current && qrPieceRef.current==null) setBasicMode(false); },[proStatus]);
-  const _setView = (v)=>{ if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
+  // the iOS app: the Studio for everyone, Pro too — the Atelier and Lite are not in it (the web keeps them)
+  useEffect(()=>{ if(!_pfIosApp()) return; if(viewPref!=='studio') setViewPref('studio'); if(basicMode) setBasicMode(false); },[viewPref, basicMode]);
+  const _setView = (v)=>{ if(_pfIosApp()) v='studio'; if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
   // Pro on a phone, once: the Studio comes by itself (from Lite or Advanced). A card welcomes Pro, and Pro AI when it comes —
   // once per tier on this device (no word about the Atelier any more: it stays in Styles & palettes → View)
   const [viewInfo, setViewInfo] = useState(false);
@@ -47617,7 +47642,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 </div>
               )}
               {/* View — Studio (the painting full screen, controls on a tap) or Classic (the screen as before). Phone, Advanced. */}
-              {!isDesktop && isPro && (
+              {!isDesktop && isPro && !_pfIosApp() && (
               <div className="pf-setup-view" style={{border:'1px solid rgba(255,255,255,.07)',borderRadius:20,background:'rgba(255,255,255,.045)',padding:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div aria-hidden="true" style={{flex:'0 0 auto',width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',background:'linear-gradient(135deg,#4de3a0,#2f9fc9)'}}>
