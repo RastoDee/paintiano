@@ -723,8 +723,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     const tm = setTimeout(() => { onClose && onClose(); }, 2800);
     return () => clearTimeout(tm);
   }, [reason]);
-  // In-app refund: offered for 14 days from the purchase (the server decides everything).
-  const canRefund = !!licenseKey && !!refundUntil && refundUntil > Date.now() && (proStatus === 'pro' || proStatus === 'pro_ai');
+  // In-app refund (opened from the Refunds page, reason 'refund'): the server decides everything.
   const [rf, setRf] = useState(null);          // the server's answer
   const [rfBusy, setRfBusy] = useState(false);
   const [rfErr, setRfErr] = useState(false);
@@ -1012,15 +1011,6 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
-            {canRefund && (
-              <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
-                <span onClick={openRefund} role="button" tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRefund(); } }}
-                  style={{ color: 'rgba(242,238,232,.6)', fontSize: (.6*readScale)+'rem', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: 'rgba(242,238,232,.3)' }}>
-                  {tr('refundLink', 'Refund · until {d}').replace('{d}', pfFmtDay(refundUntil, lang))}
-                </span>
-              </p>
-            )}
             <p style={{ color: '#555', fontSize: (.55*readScale)+'rem', textAlign: 'center', margin: '12px 0 0', letterSpacing: '.04em' }}>
               {tr('proPaywallFooter', 'One-time payment · No subscription · VAT included')}
             </p>
