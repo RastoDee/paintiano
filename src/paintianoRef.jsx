@@ -24687,7 +24687,8 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   const overlay = {
     position: 'fixed', inset: 0, zIndex: 100000,
     background: 'rgba(4,4,10,.78)', backdropFilter: 'blur(8px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px)', boxSizing: 'border-box',
     fontFamily: 'inherit',
   };
   const card = {
@@ -24695,7 +24696,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     background: '#0e0b16', border: '1px solid rgba(255,255,255,.08)',
     borderRadius: 24, padding: '26px 20px 20px', color: '#f5f5f5',
     boxShadow: '0 20px 60px rgba(0,0,0,.6)',
-    maxHeight: '90vh', overflowY: 'auto',
+    maxHeight: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)', overflowY: 'auto',
   };
   const cardWide = Object.assign({}, card, { maxWidth: 460 });
   const btnGold = {
@@ -24849,7 +24850,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose && onClose(); }}>
       {view !== 'success' && (
         <button onClick={onClose} aria-label="Close" style={{
-          position: 'fixed', top: 16, right: 16, zIndex: 100001,
+          position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', right: 16, zIndex: 100001,   // below the status bar: under it the tap never arrives (the iOS app)
           width: 38, height: 38, borderRadius: '50%',
           background: 'rgba(255,255,255,.1)', backdropFilter: 'blur(8px)',
           border: '1px solid rgba(255,255,255,.14)',
@@ -28143,7 +28144,7 @@ const STUDIO_HOME_CSS = `
 .pf-st-home .pf-sh-prog{bottom:env(safe-area-inset-bottom,0px);z-index:7}
 .pf-st-home .pf-sh-heart{top:50%}
 /* the surprise lifts a little: the next one waits under it (a vertical feed's own nudge — no button, no text to read) */
-.pf-st-home .pf-sh-stage{--pk:min(24vh,200px)}
+.pf-st-home .pf-sh-stage{--pk:min(16vh,135px)}
 .pf-st-home .pf-sh-card{will-change:transform;backface-visibility:hidden}
 /* the feed under the finger: the other card (a copy of the painting you leave, or the picture of the one you go to) */
 .pf-st-home .pf-sh-dragout{position:absolute;inset:0;z-index:2;display:none;overflow:hidden;background:#04040a;pointer-events:none;will-change:transform;backface-visibility:hidden}
@@ -41953,9 +41954,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const lightUp=()=>{ feedLitRef.current=true; const seen=_tipSeen('studio') || !!tipSessRef.current.studio; if(!seen){ tipSessRef.current.studio=true; _tipCount('studio'); } setFeedStudioLit(seen ? 1 : 2); tOff=setTimeout(()=>setFeedStudioLit(0), seen ? 5000 : 9000); };
     const wait=Math.max(0, 15000-feedPlayAccRef.current); const tOn = wait>0 ? setTimeout(lightUp, wait) : null; if(!tOn) lightUp();
     return ()=>{ feedPlayAccRef.current += Date.now()-t0; if(tOn) clearTimeout(tOn); if(tOff) clearTimeout(tOff); }; },[feedAt, playing, feedIntro]);
-  // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, the first after 14 s of looking (never at once: the painting is only starting), then 14 s apart, never after the first swipe up
+  // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, the first after 12 s of the painting (the cue wakes at 4 s, the lift 8 s later — never at once: the painting is only starting), then 14 s apart, never after the first swipe up
   useEffect(()=>{ if(!feedUpCue || feedUpDone || !playing || feedAt<0) return; const id=(feedCards[feedAt]||{}).id, R=feedPeekNRef.current; if(R.id!==id){ R.id=id; R.n=0; }
-    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; if(R.k==null) R.k=Math.floor(Math.random()*6); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; tm=setTimeout(go, 14000); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
+    let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; if(R.k==null) R.k=Math.floor(Math.random()*6); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; tm=setTimeout(go, 8000); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
   useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>{ setFeedPeek(0); feedPeekNRef.current.k=(feedPeekNRef.current.k|0)+1; }, 2000); return ()=>clearTimeout(tm); },[feedPeek]);   // the next painting is chosen once the card is down again: it loads hidden, so nothing swaps mid-lift
   useEffect(()=>{ if(feedUpDone && feedPeek) setFeedPeek(0); },[feedUpDone]);
   // the side nudge: the first swipe up is known, this card has played 6 s — the card slides a little to the left and another painting shows at its right edge (twice at most, ever)
