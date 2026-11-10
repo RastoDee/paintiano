@@ -41,8 +41,29 @@ jobs:
             --force true --run_precheck_before_submit false --submit_for_review false 2>&1 | tail -60
           rm -f "$KEY"
 
+  store_shots:
+    if: ${{ contains(github.event.head_commit.message, '[screens]') }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload the screenshots
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/asc.json"
+          ruby -rjson -e 'File.write(ARGV[0], {key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"], key: ENV["ASC_KEY_P8"], in_house: false}.to_json)' "$KEY"
+          cd ios
+          fastlane deliver --api_key_path "$KEY" --app_identifier app.paintiano --app_version 1.0 \
+            --screenshots_path fastlane/screenshots --skip_binary_upload true --skip_metadata true \
+            --overwrite_screenshots true --force true --run_precheck_before_submit false --submit_for_review false 2>&1 | tail -80
+          rm -f "$KEY"
+
   build:
-    if: ${{ !contains(github.event.head_commit.message, '[metadata]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[metadata]') && !contains(github.event.head_commit.message, '[screens]') }}
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
