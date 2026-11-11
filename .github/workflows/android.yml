@@ -62,6 +62,16 @@ jobs:
             sleep 15
             adb exec-out screencap -p > shots/3-later.png
             adb logcat -d -s Capacitor:* Capacitor/Console:* chromium:* AndroidRuntime:E | tail -200 > shots/logcat.txt || true
+      - name: Screenshots into the log
+        if: ${{ always() && contains(github.event.head_commit.message, '[emu]') }}
+        run: |
+          ls -la shots || true
+          for f in 1-start 2-after-tap 3-later; do
+            [ -f shots/$f.png ] || continue
+            convert shots/$f.png -resize 540x -quality 55 shots/$f.jpg
+            echo "B64START $f"; base64 -w 20000 shots/$f.jpg; echo "B64END $f"
+          done
+          echo "LOGCAT"; tail -60 shots/logcat.txt || true
       - uses: actions/upload-artifact@v4
         if: ${{ always() && contains(github.event.head_commit.message, '[emu]') }}
         with: { name: emulator-shots, path: shots }
