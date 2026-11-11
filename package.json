@@ -10,9 +10,11 @@
     "build": "node check-paintiano.js && node build-paintiano.js && vite build",
     "preview": "vite preview --host",
     "ios:web": "node scripts/ios-web.mjs",
-    "ios:sync": "node scripts/ios-web.mjs && cap sync ios"
+    "ios:sync": "node scripts/ios-web.mjs && cap sync ios",
+    "android:sync": "PF_NATIVE=android node scripts/ios-web.mjs && cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "@capacitor/ios": "^8.6.0",
     "@capgo/native-purchases": "8.9.6",

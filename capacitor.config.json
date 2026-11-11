@@ -9,6 +9,12 @@
     "limitsNavigationsToAppBoundDomains": false
   },
   "plugins": {
-    "CapacitorHttp": { "enabled": false }
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  },
+  "android": {
+    "backgroundColor": "#06060c",
+    "allowMixedContent": false
   }
 }
