@@ -189,11 +189,18 @@ const PF_PX = { map: null, busy: null };
 // /api/apple, which checks them at Apple and answers with the licence key — from there on the app works
 // with the key exactly as on the web. A key bought on the web can still be entered.
 const PF_IOS = (typeof window !== 'undefined' && window.__PF_NATIVE === 'ios');
+// The Android app (window.__PF_NATIVE === 'android') does the same through Google Play: the same two products,
+// both bought once (the pass is used up after each purchase, so a further year can be bought). Google's purchase
+// tokens go to /api/google, which checks them at Google, answers with the licence key and confirms the purchase.
+const PF_AND = (typeof window !== 'undefined' && window.__PF_NATIVE === 'android');
+const PF_STORE = PF_IOS || PF_AND;   // inside a store app: no Paddle, the store's own prices and purchase window
 const PF_IAP = { pro: 'app.paintiano.pro', pass: 'app.paintiano.aipass12m' };   // the pass is a non-renewing subscription
 function _pfNP() { try { const C = window.Capacitor; return (C && C.Plugins && C.Plugins.NativePurchases) || null; } catch (_) { return null; } }
-async function _pfIosReport(ids, key) {
+// items: [{ id, pid }] — id = Apple's transaction id / Google's purchase token, pid = the product
+async function _pfIosReport(items, key) {
   try {
-    const r = await fetch('/api/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactions: ids, key: key || '' }) });
+    const body = PF_AND ? { purchases: items.map((x) => ({ productId: x.pid, token: x.id })), key: key || '' } : { transactions: items.map((x) => x.id), key: key || '' };
+    const r = await fetch(PF_AND ? '/api/google' : '/api/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => null);
     return (j && typeof j === 'object') ? j : { ok: false, reason: 'server_error' };
   } catch (_) { return { ok: false, reason: 'network' }; }
@@ -219,32 +226,59 @@ function _pfIosPrices() {
     return m;
   });
 }
+// Google Play only: what the server gave is confirmed on the device too (the server has done it already;
+// this is the second hand on the same rope) — Pro is acknowledged, the pass is used up so it can be bought again.
+async function _pfAndSettle(items, r) {
+  const NP = _pfNP(); if (!PF_AND || !NP || !(r && r.ok && Array.isArray(r.granted))) return;
+  for (const x of items) {
+    if (!r.granted.some((g) => g && g.id === String(x.id).slice(-8))) continue;
+    try { if (x.pid === PF_IAP.pass) await NP.consumePurchase({ purchaseToken: x.id }); else await NP.acknowledgePurchase({ purchaseToken: x.id }); } catch (_) {}
+  }
+}
+// The purchases the store account holds: [{ id, pid }] (Google Play: only paid ones — a pending payment is not a purchase yet).
+async function _pfStoreOwned() {
+  const NP = _pfNP(); if (!NP) return [];
+  let list = [];
+  try { const r = await NP.getPurchases(PF_AND ? { productType: 'inapp' } : {}); list = (r && r.purchases) || []; } catch (_) {}
+  const seen = {};
+  return list.filter((t) => t && t.transactionId && (t.productIdentifier === PF_IAP.pro || t.productIdentifier === PF_IAP.pass) && (!PF_AND || String(t.purchaseState) === '1'))
+    .map((t) => ({ id: String(t.transactionId), pid: t.productIdentifier })).filter((t) => (seen[t.id] ? false : (seen[t.id] = true)));
+}
 // Buy. tier 'pro' | 'pro_ai' (Pro, then the pass) | 'upgrade' (the pass on the key in use).
 // → { ok:true, key } | { ok:false, cancelled:true } | { ok:false, reason }
 async function pfIosBuy(tier, key) {
   const NP = _pfNP(); if (!NP) return { ok: false, reason: 'no_store' };
-  const ids = []; let cancelled = false, failed = null;
+  const ids = []; let cancelled = false, failed = null, owned = false;
   const one = async (pid) => {
-    try { const t = await NP.purchaseProduct({ productIdentifier: pid, productType: 'inapp', quantity: 1 }); if (t && t.transactionId) ids.push(String(t.transactionId)); return true; }
-    catch (e) { const m = String((e && (e.message || e.errorMessage)) || e || ''); if (/cancel/i.test(m)) cancelled = true; else failed = m || 'failed'; return false; }
+    try {
+      const t = await NP.purchaseProduct(PF_AND ? { productIdentifier: pid, productType: 'inapp', quantity: 1, autoAcknowledgePurchases: false } : { productIdentifier: pid, productType: 'inapp', quantity: 1 });
+      if (PF_AND && t && String(t.purchaseState) !== '1') { failed = 'pending'; return false; }   // a payment still on its way (cash, a slow card): "Restore purchases" picks it up once paid
+      if (t && t.transactionId) ids.push({ id: String(t.transactionId), pid });
+      return true;
+    }
+    catch (e) { const m = String((e && (e.message || e.errorMessage)) || e || ''), c = String((e && e.code) || '');
+      if (/cancel/i.test(m) || /cancel/i.test(c)) cancelled = true; else if (/ALREADY_OWNED/i.test(c + ' ' + m)) owned = true; else failed = (c && !/^\d*$/.test(c) ? c : m) || 'failed';
+      return false; }
   };
   let go = true;
   if (tier === 'pro' || tier === 'pro_ai') go = await one(PF_IAP.pro);
   if (go && (tier === 'pro_ai' || tier === 'upgrade')) await one(PF_IAP.pass);
+  // Google Play says the product is held already (bought before, on another device, or not confirmed yet): what the account holds is reported instead
+  if (PF_AND && owned) { for (const o of await _pfStoreOwned()) if (!ids.some((x) => x.id === o.id)) ids.push(o); }
   if (!ids.length) return cancelled ? { ok: false, cancelled: true } : { ok: false, reason: failed || 'failed' };
   const r = await _pfIosReport(ids, key);
+  await _pfAndSettle(ids, r);
   if (r && r.ok && r.key) return { ok: true, key: r.key };
   return { ok: false, reason: (r && r.reason) || 'not_granted', detail: r && r.detail };
 }
-// "Restore purchases": everything this Apple ID has bought → the licence key.
+// "Restore purchases": everything this Apple ID / Google account has bought → the licence key.
 async function pfIosRestore(key) {
   const NP = _pfNP(); if (!NP) return { ok: false, reason: 'no_store' };
   try { await NP.restorePurchases(); } catch (_) {}
-  let list = [];
-  try { const r = await NP.getPurchases({}); list = (r && r.purchases) || []; } catch (_) {}
-  const ids = [...new Set(list.filter((t) => t && (t.productIdentifier === PF_IAP.pro || t.productIdentifier === PF_IAP.pass) && t.transactionId).map((t) => String(t.transactionId)))];
+  const ids = await _pfStoreOwned();
   if (!ids.length) return { ok: false, reason: 'none' };
   const r = await _pfIosReport(ids, key);
+  await _pfAndSettle(ids, r);
   if (r && r.ok && r.key) return { ok: true, key: r.key };
   return { ok: false, reason: (r && r.ok) ? 'none' : ((r && r.reason) || 'server_error'), detail: r && r.detail };
 }
@@ -252,7 +286,7 @@ async function pfIosRestore(key) {
 function _pfIosWhy(r) { const a = r && r.reason ? String(r.reason).slice(0, 60) : '', b = r && r.detail ? String(r.detail).slice(0, 40) : ''; return a ? ' (' + a + (b ? ' \u00b7 ' + b : '') + ')' : ''; }
 // The Apple purchases this Apple ID holds: [{ product:'pro'|'pass', id }].
 async function pfIosPurchases() {
-  const NP = _pfNP(); if (!NP) return [];
+  const NP = _pfNP(); if (!NP || PF_AND) return [];
   try { const r = await NP.getPurchases({}); const seen = {};
     return ((r && r.purchases) || []).filter((t) => t && t.transactionId && (t.productIdentifier === PF_IAP.pro || t.productIdentifier === PF_IAP.pass))
       .map((t) => ({ product: t.productIdentifier === PF_IAP.pro ? 'pro' : 'pass', id: String(t.transactionId) }))
@@ -277,7 +311,7 @@ function _pfPxTidy(v) { return typeof v === 'string' ? v.replace(/[.,]00(?=\D*$)
 function pfPxLoad() {
   if (PF_PX.map) return Promise.resolve(PF_PX.map);
   if (PF_PX.busy) return PF_PX.busy;
-  if (PF_IOS) {   // in the iOS app the prices are Apple's
+  if (PF_STORE) {   // in the iOS / Android app the prices are the store's
     PF_PX.busy = _pfIosPrices().then((m) => { PF_PX.map = m; return m; });
     PF_PX.busy.catch(() => { PF_PX.busy = null; });
     return PF_PX.busy;
@@ -531,8 +565,8 @@ function useProStatus() {
   }, []);
 
   const openCheckout = useCallback(async (tier = 'pro') => {
-    if (PF_IOS) {   // the iOS app: Apple's purchase sheet; the answer is the licence key
-      try { window.posthog && window.posthog.capture('checkout_opened', { tier, store: 'apple' }); } catch (_) {}
+    if (PF_STORE) {   // the iOS / Android app: the store's purchase window; the answer is the licence key
+      try { window.posthog && window.posthog.capture('checkout_opened', { tier, store: PF_AND ? 'google' : 'apple' }); } catch (_) {}
       const r = await pfIosBuy(tier, licenseKey);
       if (r.ok && r.key) { const a = await activateLicense(r.key); return { ok: !!a.ok, reason: a.ok ? null : 'key' }; }
       return r;
@@ -858,7 +892,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
   const [buyMsg, setBuyMsg] = useState('');
   const done = () => { setView('success'); if (onActivated) onActivated(); setTimeout(() => onClose && onClose(), 1500); };
   const buy = async (tier) => {
-    if (!PF_IOS) return openCheckout(tier);
+    if (!PF_STORE) return openCheckout(tier);
     if (buyBusy) return;
     setBuyBusy(true); setBuyMsg('');
     const r = await openCheckout(tier);
@@ -873,7 +907,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
     let ok = false;
     if (r && r.ok && r.key) { const a = await activateLicense(r.key); ok = !!(a && a.ok); }
     setBuyBusy(false);
-    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? tr('iosRestoreNone', 'No purchases found for this Apple ID.') : tr('iosBuyFail', 'The purchase could not be completed. Please try again.') + _pfIosWhy(r));
+    if (ok) done(); else setBuyMsg(r && r.reason === 'none' ? (PF_AND ? tr('andRestoreNone', 'No purchases found for this Google account.') : tr('iosRestoreNone', 'No purchases found for this Apple ID.')) : tr('iosBuyFail', 'The purchase could not be completed. Please try again.') + _pfIosWhy(r));
   };
   const submit = async () => {
     setBusy(true); setErrMsg('');
@@ -1098,7 +1132,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proHaveKey', 'I already have a key')}
               </button>
             )}
-            {PF_IOS && buyMsg && (   /* above the cards: under them it was out of sight */
+            {PF_STORE && buyMsg && (   /* above the cards: under them it was out of sight */
               <p ref={(el) => { if (el) { try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} } }}
                 style={{ color: '#f0b48a', fontSize: (.66*readScale)+'rem', textAlign: 'center', margin: '0 0 12px', padding: '10px 12px', lineHeight: 1.4, borderRadius: 12, border: '1px solid rgba(240,180,138,.35)', background: 'rgba(240,180,138,.08)' }}>{buyMsg}</p>
             )}
@@ -1141,7 +1175,7 @@ function ProPaywall({ t, reason, proStatus, onClose, onActivated, openCheckout, 
                 {tr('proLearnMore', 'Learn more about Pro')} →
               </span>
             </p>
-            {PF_IOS && (
+            {PF_STORE && (
               <p style={{ textAlign: 'center', margin: '10px 0 0' }}>
                 <span onClick={restore} role="button" tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); restore(); } }}
