@@ -34,9 +34,9 @@ def step(name):
 
 NOTES = {
  'app.paintiano.pro': 'One-time purchase that unlocks all painter styles, composers, the custom palette and watermark-free export. Open it by tapping any locked painter, then "Get Pro".',
- 'app.paintiano.aipass12': 'Non-renewing 12-month pass for AI composition from a mood or a photo. It does not renew automatically. Open it from the purchase screen: "Get Pro AI", or "Get the AI pass" for a Pro owner.',
+ 'app.paintiano.aipass12m': 'Non-renewing 12-month pass for AI composition from a mood or a photo. It does not renew automatically; after 12 months it can be bought again. Open it from the purchase screen: "Get Pro AI", or "Get the AI pass" for a Pro owner.',
 }
-SHOTS = {'app.paintiano.pro': 'iap-pro.png', 'app.paintiano.aipass12': 'iap-ai-pass.png'}
+SHOTS = {'app.paintiano.pro': 'iap-pro.png', 'app.paintiano.aipass12m': 'iap-ai-pass.png'}
 REVIEW_NOTES = open(os.path.join(HERE, 'review-notes.txt'), encoding='utf-8').read().strip()
 
 step('app')
@@ -49,6 +49,15 @@ s, j = call('GET', f'/v1/apps/{app}/inAppPurchasesV2?limit=50')
 if s != 200: print('FAIL', s, errs(j)); sys.exit(1)
 iaps = {d['attributes']['productId']: d for d in j['data']}
 for pid, d in iaps.items(): print(pid, '|', d['attributes'].get('inAppPurchaseType'), '|', d['attributes'].get('state'), '| note:', bool(d['attributes'].get('reviewNote')))
+
+RETIRED = 'app.paintiano.aipass12'
+if RETIRED in iaps:
+    step('retire ' + RETIRED)
+    st = iaps[RETIRED]['attributes'].get('state')
+    if st in ('MISSING_METADATA', 'READY_TO_SUBMIT'):
+        s, j = call('DELETE', '/v2/inAppPurchases/' + iaps[RETIRED]['id']); print('delete', s, '' if s == 204 else errs(j))
+        if s == 204: del iaps[RETIRED]
+    else: print('left alone, state', st)
 
 for pid, d in iaps.items():
     if pid not in NOTES: continue
@@ -95,6 +104,10 @@ step('build')
 s, j = call('GET', f'/v1/builds?filter[app]={app}&sort=-uploadedDate&limit=6')
 if s == 200:
     for d in j['data']: print(d['attributes'].get('version'), d['attributes'].get('processingState'), d['attributes'].get('uploadedDate'), 'expired' if d['attributes'].get('expired') else '')
+    for _ in range(40):
+        if not j['data'] or j['data'][0]['attributes'].get('processingState') != 'PROCESSING': break
+        time.sleep(20); s, j = call('GET', f'/v1/builds?filter[app]={app}&sort=-uploadedDate&limit=6')
+    print('newest now:', j['data'][0]['attributes'].get('version'), j['data'][0]['attributes'].get('processingState'))
     good = next((d for d in j['data'] if d['attributes'].get('processingState') == 'VALID' and not d['attributes'].get('expired')), None)
     newest = j['data'][0] if j['data'] else None
     if good and newest and good['id'] != newest['id']: print('NOTE: the newest build is still', newest['attributes'].get('processingState'), '- attaching the newest VALID one for now')
