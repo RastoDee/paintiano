@@ -66,9 +66,10 @@ jobs:
         if: ${{ always() && contains(github.event.head_commit.message, '[emu]') }}
         run: |
           ls -la shots || true
+          python3 -m pip install -q pillow
           for f in 1-start 2-after-tap 3-later; do
             [ -f shots/$f.png ] || continue
-            convert shots/$f.png -resize 540x -quality 55 shots/$f.jpg
+            python3 -c "from PIL import Image; im=Image.open('shots/$f.png').convert('RGB'); im=im.resize((540, im.height*540//im.width)); im.save('shots/$f.jpg', quality=55)"
             echo "B64START $f"; base64 -w 20000 shots/$f.jpg; echo "B64END $f"
           done
           echo "LOGCAT"; tail -60 shots/logcat.txt || true
