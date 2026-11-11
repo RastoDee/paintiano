@@ -432,8 +432,8 @@ async function renderAudioOffline(events,opts){
       // which is why samples appeared "unloaded" (silent) on iOS.
       await new Promise((resolve)=>{
         let done=false; const finish=()=>{ if(!done){done=true;resolve();} };
-        const sampler=new Tone.Sampler({
-          urls:S_URLS, baseUrl:S_BASE,
+        const sampler=pfPiano({
+          all:true,
           onload: finish, onerror: finish
         }).toDestination();
         // Safety timeout so a stuck load can't hang the render forever.

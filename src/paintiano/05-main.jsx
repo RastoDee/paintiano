@@ -6184,7 +6184,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // so deferring the sampler load here costs nothing.
     const buildSampler=()=>{
       if(s||dead)return;
-      s=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
+      s=pfPiano({
         onload:()=>{if(!dead){samplerOk.current=true;setPiano('ready');}},
         onerror:()=>{if(!dead){
           samplerOk.current=false;setPiano('error');
@@ -7824,7 +7824,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type='playback'; } }catch(_){}
     try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     try{
-      const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+      const s2 = pfPiano({
         onload:()=>{ samplerOk.current=true; setPiano('ready'); },
         onerror:()=>{ samplerOk.current=false; setPiano('error'); },
       }).toDestination();
@@ -7867,7 +7867,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       try{
         if(!samplerOk.current){
           try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
-          const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+          const s2 = pfPiano({
             onload:()=>{ samplerOk.current=true; setPiano('ready'); },
             onerror:()=>{ samplerOk.current=false; setPiano('error'); },
           }).toDestination();
@@ -7949,7 +7949,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{
       if(!_rebuilt && !samplerOk.current){
         try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
-        const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+        const s2 = pfPiano({
           onload:()=>{ samplerOk.current=true; setPiano('ready'); },
           onerror:()=>{ samplerOk.current=false; setPiano('error'); },
         }).toDestination();
@@ -8074,7 +8074,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 try{
                   if(!samplerOk.current){
                     try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
-                    const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+                    const s2 = pfPiano({
                       onload:()=>{ samplerOk.current=true; setPiano('ready'); },
                       onerror:()=>{ samplerOk.current=false; setPiano('error'); },
                     }).toDestination();
