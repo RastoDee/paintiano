@@ -1670,6 +1670,8 @@ const _pfShape = ()=>{ try{ if(typeof window==='undefined' || !window.matchMedia
   return { desk, notPhone: desk && tall, five: wide && tall && land }; }catch(_){ return {desk:false,notPhone:false,five:false}; } };
 const PF_SHAPE_QS=['(min-width: 769px)','(min-height: 501px)','(orientation: landscape)','(any-pointer: coarse)'];
 // inside the iOS app (window.__PF_NATIVE, set by the app's own start page): the Studio is its only view — no Atelier, no Lite
+// The legal sheet's tabs. The iOS app has no Pricing tab: prices there are Apple's, shown in the purchase window.
+const _pfLegalTabs = ()=> _pfIosApp() ? ['terms','privacy','refunds'] : ['pricing','terms','privacy','refunds'];
 const _pfIosApp = ()=>{ try{ return typeof window!=='undefined' && window.__PF_NATIVE==='ios'; }catch(_){ return false; } };
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
@@ -14790,6 +14792,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // mid-modal so switching language in the app live-updates the open doc.
   // The Pricing page inside the app has no script of its own (scripts are stripped above), so the local prices are put in here — the same ones the paywall shows.
   const [legalPxTick, setLegalPxTick] = useState(0);
+  useEffect(()=>{ if(legalDoc==='pricing' && _pfIosApp()) setLegalDoc('terms'); },[legalDoc]);
   useEffect(()=>{ if(legalDoc!=='pricing') return; let on=true; try{ pfPxLoad().then(()=>{ if(on) setLegalPxTick(n=>n+1); }).catch(()=>{}); }catch(_){} return ()=>{ on=false; }; },[legalDoc]);
   const legalHtmlForLang = useMemo(()=>{
     if(!legalHtml) return '';
@@ -14850,14 +14853,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // per Apple purchase this Apple ID holds, a button that opens Apple's own request sheet.
     try{
       if(PF_IOS && legalDoc==='refunds' && !legalLoading){
-        const box=el.shadowRoot.querySelector('.wrap.active .highlight');
+        const own=el.shadowRoot.querySelector('.wrap.active [data-pf-ios-note]');
+        const box=own || el.shadowRoot.querySelector('.wrap.active .highlight');
         if(box && !box.querySelector('[data-pf-refund-ios]')){
           const w=document.createElement('div'); w.setAttribute('data-pf-refund-ios','1'); w.style.cssText='margin-top:16px;display:none'; box.appendChild(w);
           pfIosPurchases().then((list)=>{
             if(!list || !list.length || !w.isConnected) return;
             const n=document.createElement('p'); n.textContent=String(t('iosRefundNote')); n.style.cssText='margin:0 0 12px;font-size:.8rem;line-height:1.5;opacity:.85';
             const msg=document.createElement('p'); msg.style.cssText='margin:10px 0 0;text-align:center;font-size:.76rem;line-height:1.45;color:#f0b48a;display:none';
-            w.appendChild(n);
+            if(!own) w.appendChild(n);   // the document's own iPhone block already says it
             list.sort((a,b)=>(a.product==='pro'?0:1)-(b.product==='pro'?0:1)).forEach((it)=>{
               const b=document.createElement('button'); b.type='button'; b.textContent=String(t(it.product==='pro'?'iosRefundPro':'iosRefundPass'));
               b.style.cssText='display:block;width:100%;margin-top:8px;border:0;border-radius:999px;padding:13px;text-align:center;font-weight:800;font-size:.82rem;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#0a0a12';
@@ -17437,7 +17441,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'2px 16px',paddingTop:2}}>
                     <button type="button" onClick={_go(()=>resetAll())} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(255,150,150,.7)',cursor:'pointer'}}>{ts('resetLabel',({EN:'Reset',SK:'Reset',DE:'Zurücksetzen',FR:'Réinitialiser',ES:'Restablecer',PT:'Redefinir',zh:'重置',zhTW:'重置',ja:'リセット'})[lang]||'Reset')}</button>
-                    {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(242,238,232,.62)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
+                    {_pfLegalTabs().map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:'calc(var(--pf-read-scale,1) * 11px)',color:'rgba(242,238,232,.62)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
                   </div>
                 </div>
               </div>);
@@ -17506,7 +17510,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   </div>
                 ))}
                 {studioOn && (<div style={{display:'flex',flexWrap:'wrap',gap:'2px 14px',padding:'8px 18px 12px',borderTop:'1px solid rgba(201,168,76,.14)'}}>
-                  {['pricing','terms','privacy','refunds'].map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.72)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
+                  {_pfLegalTabs().map(k=>(<button key={k} type="button" onClick={()=>{ setNavMenuOpen(false); setLegalDoc(k); }} style={{background:'none',border:0,padding:'4px 0',fontFamily:'inherit',fontSize:(.5*effScale)+'rem',letterSpacing:'.08em',color:'rgba(201,168,76,.72)',cursor:'pointer'}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>))}
                 </div>)}
               </div>
             </>
@@ -21759,8 +21763,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v3.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
+        {!_pfIosApp() && (<>
         <button onClick={()=>setLegalDoc('pricing')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPricing')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
+        </>)}
         <button onClick={()=>setLegalDoc('terms')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalTerms')}</button>
         <span style={{margin:'0 10px',opacity:.5}}>·</span>
         <button onClick={()=>setLegalDoc('privacy')} style={{background:'transparent',border:0,color:'inherit',fontFamily:'inherit',fontSize:'inherit',letterSpacing:'inherit',padding:0,cursor:'pointer',textDecoration:'none',borderBottom:'1px solid rgba(201,168,76,.25)',paddingBottom:1}}>{t('legalPrivacy')}</button>
@@ -22113,7 +22119,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             <button type="button" onClick={()=>setLegalDoc(null)} aria-label="close" style={{position:'absolute',right:0,top:-2,width:30,height:30,borderRadius:15,border:0,padding:0,background:'rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontSize:13,lineHeight:1,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>✕</button>
           </div>
           <div ref={legalTabsRef} role="tablist" style={{position:'relative',display:'flex',gap:6,overflowX:'auto',scrollbarWidth:'none',marginTop:2,flexShrink:0}}>
-            {['pricing','terms','privacy','refunds'].map(k=>{ const on = k===legalDoc; return (<button key={k} type="button" role="tab" aria-selected={on} onClick={()=>setLegalDoc(k)} style={{flex:'1 0 auto',padding:'7px 10px',borderRadius:16,fontFamily:'inherit',fontSize:(12.5/16*effScale)+'rem',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer',...(on ? {background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.78)',color:'#e0b95e'} : {background:'transparent',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'})}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>); })}
+            {_pfLegalTabs().map(k=>{ const on = k===legalDoc; return (<button key={k} type="button" role="tab" aria-selected={on} onClick={()=>setLegalDoc(k)} style={{flex:'1 0 auto',padding:'7px 10px',borderRadius:16,fontFamily:'inherit',fontSize:(12.5/16*effScale)+'rem',fontWeight:600,whiteSpace:'nowrap',cursor:'pointer',...(on ? {background:'rgba(201,168,76,.14)',border:'1px solid rgba(201,168,76,.78)',color:'#e0b95e'} : {background:'transparent',border:'1px solid rgba(255,255,255,.1)',color:'rgba(242,238,232,.6)'})}}>{t('legal'+k[0].toUpperCase()+k.slice(1))}</button>); })}
           </div>
           <div onClick={onLegalClick} data-st="1" className="paintiano-legal-content" ref={legalHostCb} style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',overscrollBehavior:'contain',padding:'18px 2px calc(20px + env(safe-area-inset-bottom, 0px))',color:'#f2eee8',fontFamily:'inherit',fontSize:(15/16*effScale)+'rem',lineHeight:1.6}}/>
         </div>
