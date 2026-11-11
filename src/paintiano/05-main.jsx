@@ -1671,10 +1671,10 @@ const _pfShape = ()=>{ try{ if(typeof window==='undefined' || !window.matchMedia
   const desk = wide && (land ? (tall || !touch) : !touch);
   return { desk, notPhone: desk && tall, five: wide && tall && land }; }catch(_){ return {desk:false,notPhone:false,five:false}; } };
 const PF_SHAPE_QS=['(min-width: 769px)','(min-height: 501px)','(orientation: landscape)','(any-pointer: coarse)'];
-// inside the iOS app (window.__PF_NATIVE, set by the app's own start page): the Studio is its only view — no Atelier, no Lite
+// inside the iOS and the Android app (window.__PF_NATIVE, set by the app's own start page): the Studio is its only view — no Atelier, no Lite
 // The legal sheet's tabs. The iOS app has no Pricing tab: prices there are Apple's, shown in the purchase window.
 const _pfLegalTabs = ()=> _pfIosApp() ? ['terms','privacy','refunds'] : ['pricing','terms','privacy','refunds'];
-const _pfIosApp = ()=>{ try{ return typeof window!=='undefined' && window.__PF_NATIVE==='ios'; }catch(_){ return false; } };
+const _pfIosApp = ()=>{ try{ return typeof window!=='undefined' && (window.__PF_NATIVE==='ios' || window.__PF_NATIVE==='android'); }catch(_){ return false; } };   // the store apps, iOS and Android alike
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
 const _stPalRgb=(h)=>{ const m=/^#?([0-9a-f]{6})$/i.exec(String(h||'')); if(!m) return [136,136,136]; const n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; };
