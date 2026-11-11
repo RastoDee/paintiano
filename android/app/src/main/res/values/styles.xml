@@ -9,10 +9,16 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- the app is dark edge to edge: the system bars and the window behind the web view take the app's ground, with light icons -->
+        <item name="android:windowBackground">@color/pf_ground</item>
+        <item name="android:statusBarColor">@color/pf_ground</item>
+        <item name="android:navigationBarColor">@color/pf_ground</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
 
