@@ -17,6 +17,7 @@ for d in j.get('data', []):
     for l in jl.get('data', []): x = l['attributes']; print('  ', x.get('locale'), '| name:', x.get('name'), '| subtitle:', x.get('subtitle'), '| privacy:', x.get('privacyPolicyUrl'))
 step('price and availability')
 j = get(f'/v1/apps/{app}/appPriceSchedule?include=baseTerritory,manualPrices'); print('  price schedule:', [(i['type'], i.get('attributes')) for i in j.get('included', [])] or 'NOT SET')
+jp = get(f'/v1/appPriceSchedules/{app}/manualPrices?include=appPricePoint,territory&limit=10'); print('  manual prices:', [(i['type'], i.get('attributes')) for i in jp.get('included', [])] or jp.get('data'))
 s, j = call('GET', f'/v2/appAvailabilities/{app}?include=territoryAvailabilities&limit[territoryAvailabilities]=5'); print('  availability:', s, (j.get('data') or {}).get('attributes') if s == 200 else errs(j)[:160])
 step('version')
 j = get(f'/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&limit=3'); v = j['data'][0]; vid = v['id']
