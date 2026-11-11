@@ -33486,6 +33486,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // suspend->resume re-acquire (iOS returns a running-but-dead device).
         audioWasHiddenRef.current = true;
         audioHiddenAtRef.current = Date.now();
+        // Leaving the app is silence at once, whether a piece is playing or only its last chord is still ringing: the phone keeps
+        // the app's sound going for a few seconds after it is left. unlockAudio() on the way back gives the sound its own setting again.
+        try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
+        try{ Tone.getDestination().mute = true; }catch(_){}
         if(playingRef.current){
           resumeFromRef.current=dispRef.current;
           setHoldPaused(true);
@@ -33560,6 +33564,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       }
     };
     document.addEventListener('visibilitychange',onHide);
+    const onPageHide = ()=>{ try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){} try{ Tone.getDestination().mute = true; }catch(_){} };   // the same silence where the page is put away without a visibilitychange
+    window.addEventListener('pagehide', onPageHide);
     // pageshow fires on bfcache restores (iOS swipe-back from another page,
     // tab switcher restoration) where visibilitychange may NOT fire. Same
     // recovery path: kill anything stuck and re-unlock.
@@ -33586,6 +33592,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     window.addEventListener('focus', onFocus);
     return ()=>{
       document.removeEventListener('visibilitychange',onHide);
+      window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('focus', onFocus);
     };
