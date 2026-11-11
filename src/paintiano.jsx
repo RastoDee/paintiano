@@ -24208,8 +24208,8 @@ async function pfIosRefund(transactionId, product) {
     const C = window.Capacitor; const P = C && C.Plugins && C.Plugins.PfRefund;
     if (!P || typeof P.request !== 'function') return { ok: false, reason: 'no_plugin' };
     const o = { transactionId: String(transactionId), productId: product === 'pass' ? PF_IAP.pass : PF_IAP.pro };
-    // a native call that never answers must not leave the button waiting for good
-    const r = await Promise.race([P.request(o), new Promise((res) => setTimeout(() => res({ status: 'timeout' }), 25000))]);
+    // No time limit here: Apple's sheet stays open as long as the person needs to pick a reason.
+    const r = await P.request(o);
     if (r && r.status === 'requested') return { ok: true };
     if (r && r.status === 'cancelled') return { ok: false, cancelled: true };
     return { ok: false, reason: (r && r.status) || 'unknown' };
