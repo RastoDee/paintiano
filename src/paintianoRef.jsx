@@ -26484,7 +26484,9 @@ const BOOK_LANGS = ['EN','DE','FR','ES','PT','SK','zh','zhTW','ja'];
 // per language at /public/book/paintiano-<LANG>-excerpt.pdf; EN fallback.
 function bookExcerptUrl(lang){
   const code = BOOK_LANGS.indexOf(lang) >= 0 ? lang : 'EN';
-  return '/book/paintiano-' + code + '-excerpt.pdf';
+  // The iOS app has no address of its own to open a file at (capacitor://… handed to the system opens whatever app claims that scheme),
+  // so there the summary opens from the website, in Safari.
+  return (_pfIosApp() ? 'https://paintiano.app' : '') + '/book/paintiano-' + code + '-excerpt.pdf';
 }
 
 // Self-contained concept-text modal. Lifted out of the main JSX so the modal
@@ -40223,6 +40225,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // The Pricing page inside the app has no script of its own (scripts are stripped above), so the local prices are put in here — the same ones the paywall shows.
   const [legalPxTick, setLegalPxTick] = useState(0);
   useEffect(()=>{ if(legalDoc==='pricing' && _pfIosApp()) setLegalDoc('terms'); },[legalDoc]);
+  // The iOS app: Apple's prices are fetched once at the start, so every price in the app (the menu's AI-pass row too) is Apple's from the first screen.
+  useEffect(()=>{ if(!_pfIosApp()) return; let on=true; try{ pfPxLoad().then(()=>{ if(on) setLegalPxTick(n=>n+1); }).catch(()=>{}); }catch(_){} return ()=>{ on=false; }; },[]);
   useEffect(()=>{ if(legalDoc!=='pricing') return; let on=true; try{ pfPxLoad().then(()=>{ if(on) setLegalPxTick(n=>n+1); }).catch(()=>{}); }catch(_){} return ()=>{ on=false; }; },[legalDoc]);
   const legalHtmlForLang = useMemo(()=>{
     if(!legalHtml) return '';
@@ -40251,6 +40255,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       : legalHtmlForLang + (legalHtmlForLang && el.getAttribute('data-st')==='1' ? '<style>'+LEGAL_ST_CSS+'</style>' : '');
     try{ el.shadowRoot.innerHTML = html; }catch(_){}
     if(legalLastDocRef.current!==legalDoc){ legalLastDocRef.current=legalDoc; try{ el.scrollTop=0; }catch(_){} }   // another doc: from its top
+    // Links from one legal text to another (/terms.html, /privacy.html, /refunds.html) switch the tab of this sheet instead of
+    // leaving the app: in the iOS app such a link would replace the app with a bare page and no way back.
+    try{
+      el.shadowRoot.querySelectorAll('a[href]').forEach(a=>{
+        const m=(a.getAttribute('href')||'').match(/^\/(terms|privacy|refunds|pricing)\.html(?:[?#].*)?$/);
+        if(!m || a.getAttribute('data-pf-in')) return;
+        a.setAttribute('data-pf-in','1');
+        a.addEventListener('click',(ev)=>{ ev.preventDefault(); ev.stopPropagation(); setLegalDoc((m[1]==='pricing' && _pfIosApp()) ? 'terms' : m[1]); });
+      });
+    }catch(_){}
     // Buy CTAs: bind directly inside the shadow tree — more reliable than
     // relying on retargeted events reaching the host's React onClick.
     try{
