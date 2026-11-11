@@ -1115,8 +1115,42 @@ function extractAiJson(raw){
 // always free — _imgMoodCacheGet returns this whenever the hash matches. The
 // hash is the _imgMoodHash of the downsampled sample image.
 const SAMPLE_IMGMOOD = { hash: 0, result: {"title":"A Glance in Pearl Light","tempo":63,"key":"G major","notes":[["G2",2,0,50],["D3",2,2,46],["D4",1.5,1,40],["G4",1.5,3,38],["B4",1,0,58],["D5",1,1,54],["G5",1.5,2,54],["F#5",0.5,3.5,54],["E2",2,4,50],["B2",2,6,46],["G4",1.5,5,40],["B4",1.5,7,38],["E5",1,4,58],["G5",1,5,54],["B4",2,6,54],["C3",2,8,50],["G3",2,10,46],["E4",1.5,9,40],["G4",1.5,11,38],["C5",1,8,58],["E5",1,9,54],["G5",1,10,54],["A5",1,11,54],["D3",2,12,50],["A3",2,14,46],["F#4",1.5,13,40],["A4",1.5,15,38],["F#5",1.5,12,58],["E5",0.5,13.5,54],["D5",2,14.0,54],["G2",2,16,50],["D3",2,18,46],["D4",1.5,17,40],["G4",1.5,19,38],["G5",1,16,58],["B5",1,17,54],["A5",1,18,54],["G5",1,19,54],["C3",2,20,50],["G3",2,22,46],["E4",1.5,21,40],["G4",1.5,23,38],["E5",1,20,58],["G5",0.5,21,54],["A5",0.5,21.5,54],["G5",2,22.0,54],["D3",2,24,50],["C4",2,26,46],["C4",1.5,25,40],["F#4",1.5,27,38],["F#5",1,24,58],["A5",1,25,54],["C5",1,26,54],["B4",1,27,54],["G2",2,28,50],["D3",2,30,46],["B3",1.5,29,40],["D4",1.5,31,38],["G4",4,28,58],["B4",4,28,44],["D5",4,28,42]]} };
-const S_BASE = "/salamander/";   // the piano (Salamander, 30 samples, 2 MB) ships with the app and sits in the service worker's precache: it plays offline and does not depend on a CDN
+const S_BASE = "/salamander/";   // the piano (Salamander, 30 notes in 3 strengths of touch, 6 MB) ships with the app and sits in the service worker's precache: it plays offline and does not depend on a CDN
 const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1":"A1.mp3","C2":"C2.mp3","D#2":"Ds2.mp3","F#2":"Fs2.mp3","A2":"A2.mp3","C3":"C3.mp3","D#3":"Ds3.mp3","F#3":"Fs3.mp3","A3":"A3.mp3","C4":"C4.mp3","D#4":"Ds4.mp3","F#4":"Fs4.mp3","A4":"A4.mp3","C5":"C5.mp3","D#5":"Ds5.mp3","F#5":"Fs5.mp3","A5":"A5.mp3","C6":"C6.mp3","D#6":"Ds6.mp3","F#6":"Fs6.mp3","A6":"A6.mp3","C7":"C7.mp3","D#7":"Ds7.mp3","F#7":"Fs7.mp3","A7":"A7.mp3","C8":"C8.mp3"};
+// The piano has three layers of touch — the same 30 notes recorded struck softly (X-p.mp3), normally (X.mp3) and hard (X-f.mp3).
+// A note is played from the layer of its velocity: a soft one is rounder, a loud one brighter, as on the instrument; the
+// files carry their level, so the gain stays velocity/127 in every layer. The middle layer loads first and the piano is ready
+// with it; the other two follow in the background (all:true waits for them — the offline render), and until one of them is
+// there, or if it fails, its notes play from the middle one. It answers to what the app calls on a Tone.Sampler.
+const S_SOFT_BELOW = 52, S_LOUD_FROM = 96;   // a piece with no dynamics of its own (velocity 88–90 throughout) stays on the middle layer
+const _sLayerUrls = (suf) => { const o = {}; for (const k in S_URLS) o[k] = S_URLS[k].replace('.mp3', suf + '.mp3'); return o; };
+function pfPiano(opts){
+  opts = opts || {};
+  const P = { mid:null, soft:null, loud:null, okS:false, okL:false, dead:false };
+  const mk = (urls, onload, onerror) => new Tone.Sampler({ urls, baseUrl:S_BASE, onload, onerror }).toDestination();
+  let left = 2;
+  const one = () => { left--; if (left === 0 && opts.all && !P.dead && opts.onload) opts.onload(); };
+  P.mid = mk(S_URLS, () => {
+    if (P.dead) return;
+    if (!opts.all && opts.onload) opts.onload();
+    try { P.soft = mk(_sLayerUrls('-p'), () => { P.okS = true; one(); }, one); } catch(_) { one(); }
+    try { P.loud = mk(_sLayerUrls('-f'), () => { P.okL = true; one(); }, one); } catch(_) { one(); }
+  }, () => { if (!P.dead && opts.onerror) opts.onerror(); });
+  const each = (fn) => { [P.mid, P.soft, P.loud].forEach(x => { if (x) { try { fn(x); } catch(_) {} } }); };
+  const api = {
+    get loaded(){ return !!(P.mid && P.mid.loaded); },
+    toDestination(){ return api; },
+    triggerAttackRelease(note, dur, time, gain){
+      const v = (gain == null ? 1 : gain) * 127;
+      const L = (v >= 2 && v < S_SOFT_BELOW && P.okS) ? P.soft : (v >= S_LOUD_FROM && P.okL) ? P.loud : P.mid;
+      return L.triggerAttackRelease(note, dur, time, gain);
+    },
+    triggerRelease(note, time){ each(x => x.triggerRelease(note, time)); },
+    releaseAll(time){ each(x => x.releaseAll(time)); },
+    dispose(){ P.dead = true; each(x => x.dispose()); },
+  };
+  return api;
+}
 
 
 const octL = m => 12 + Math.max(0,Math.min(8,Math.floor(m/12)-1))/8*76;
@@ -22057,8 +22091,8 @@ async function renderAudioOffline(events,opts){
       // which is why samples appeared "unloaded" (silent) on iOS.
       await new Promise((resolve)=>{
         let done=false; const finish=()=>{ if(!done){done=true;resolve();} };
-        const sampler=new Tone.Sampler({
-          urls:S_URLS, baseUrl:S_BASE,
+        const sampler=pfPiano({
+          all:true,
           onload: finish, onerror: finish
         }).toDestination();
         // Safety timeout so a stuck load can't hang the render forever.
@@ -31613,7 +31647,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // so deferring the sampler load here costs nothing.
     const buildSampler=()=>{
       if(s||dead)return;
-      s=new Tone.Sampler({urls:S_URLS,baseUrl:S_BASE,
+      s=pfPiano({
         onload:()=>{if(!dead){samplerOk.current=true;setPiano('ready');}},
         onerror:()=>{if(!dead){
           samplerOk.current=false;setPiano('error');
@@ -33253,7 +33287,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{ if(typeof navigator!=='undefined' && navigator.audioSession){ navigator.audioSession.type='playback'; } }catch(_){}
     try{ Tone.getDestination().mute = !!mutedRef.current; }catch(_){}
     try{
-      const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+      const s2 = pfPiano({
         onload:()=>{ samplerOk.current=true; setPiano('ready'); },
         onerror:()=>{ samplerOk.current=false; setPiano('error'); },
       }).toDestination();
@@ -33296,7 +33330,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       try{
         if(!samplerOk.current){
           try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
-          const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+          const s2 = pfPiano({
             onload:()=>{ samplerOk.current=true; setPiano('ready'); },
             onerror:()=>{ samplerOk.current=false; setPiano('error'); },
           }).toDestination();
@@ -33378,7 +33412,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{
       if(!_rebuilt && !samplerOk.current){
         try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
-        const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+        const s2 = pfPiano({
           onload:()=>{ samplerOk.current=true; setPiano('ready'); },
           onerror:()=>{ samplerOk.current=false; setPiano('error'); },
         }).toDestination();
@@ -33503,7 +33537,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 try{
                   if(!samplerOk.current){
                     try{ samplerRef.current && samplerRef.current.dispose(); }catch(_){}
-                    const s2 = new Tone.Sampler({urls:S_URLS, baseUrl:S_BASE,
+                    const s2 = pfPiano({
                       onload:()=>{ samplerOk.current=true; setPiano('ready'); },
                       onerror:()=>{ samplerOk.current=false; setPiano('error'); },
                     }).toDestination();
