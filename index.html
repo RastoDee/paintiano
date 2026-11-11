@@ -792,11 +792,11 @@ footer .v{letter-spacing:.2em;text-transform:uppercase;font-size:.72rem;color:rg
      "Hear it paint" plays the piece with a slower take of the same painting, in step with the music. */
   var v=document.getElementById('hv'), bar=document.getElementById('bar'), lb=document.getElementById('listen');
   var LOOP=[['/landing/hero-loop.mp4','video/mp4'],['/landing/hero-loop.webm','video/webm']], LISTEN=LOOP;   /* the 'hear it paint' take is gone until the hero is re-made; its button stays hidden */
-  var mode='loop', PAINT={loop:9.4,listen:27};
+  var mode='loop', PAINT={loop:18,listen:27};
   function setSrc(list){ while(v.firstChild) v.removeChild(v.firstChild); list.forEach(function(x){ var e=document.createElement('source'); e.src=x[0]; e.type=x[1]; v.appendChild(e); }); v.load(); }
   function vplay(){ try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){} }
   // the poster is the finished painting; the loop starts two thirds of the way in, never on an empty canvas
-  function startLoop(){ var go=function(){ if(mode!=='loop') return; try{ v.currentTime=rm?11.5:6.2; }catch(_){} if(!rm) vplay(); }; if(v.readyState>=1) go(); else v.addEventListener('loadedmetadata',go,{once:true}); }
+  function startLoop(){ var go=function(){ if(mode!=='loop') return; try{ v.currentTime=rm?20.5:12; }catch(_){} if(!rm) vplay(); }; if(v.readyState>=1) go(); else v.addEventListener('loadedmetadata',go,{once:true}); }
   v.addEventListener('timeupdate',function(){ var t=v.currentTime, P=PAINT[mode]; bar.style.width=Math.min(100,t/P*100)+'%';
     if(mode==='listen' && !au.paused && Math.abs(au.currentTime-t)>.35){ try{ v.currentTime=au.currentTime; }catch(_){} } });
   startLoop();
