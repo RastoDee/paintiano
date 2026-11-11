@@ -144,7 +144,7 @@ function _sigPin(sg){
 const SIG_CURATED = {
   [SAMPLE_MIDI_NAME]:   {keys:['gold','spiral'],   roles:['ornament','light'], ph:3, phs:[3,1], mode:'harmony', fs:'A'},   // Liebestraum: Klimt's gold and Hilma af Klint's spirals on a warm rust ground — the warm one of the three (Rasto's pick, Oct 2026; replaced Sam Francis × Monet)
   [SAMPLE_MIDI_NAME_2]: {keys:['bauhaus','wave','bulge'], roles:['structure','gesture','ornament'], ph:2, phs:[2,0,3], mode:'harmony', fs:'E'},   // Bumble-Bee: Bauhaus's bars and targets as the rhythm, Riley's stripes as the running line, Vasarely's squares and dots as the swarm (Rasto's pick, Oct 2026)
-  [SAMPLE_MIDI_NAME_3]: {keys:['delaunay','kandinsky'], roles:['structure','gesture'], ph:0, phs:[0,0], mode:'spectral', fs:'A'},   // Metamorphosis One: Delaunay's discs on cream, Kandinsky's rings and lines — Spectral (Rasto's pick, Oct 2026)
+  [SAMPLE_MIDI_NAME_3]: {keys:['delaunay','kandinsky'], roles:['structure','gesture'], ph:0, phs:[0,0], mode:'spectral', fs:'A'},   // the third piece (the Mountain King since Nov 2026): Delaunay's discs on cream, Kandinsky's rings and lines — Spectral (Rasto's pick, Oct 2026, kept for the slot)
 };
 
 // Image composers write a bar layer by layer — the whole left-hand figure, then
@@ -5366,7 +5366,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Cockpit-roll nudge: a soft gold pulse on the collapsed "choose look" bar,
   // shown until the user opens the roll for the first time ever.
   const [cockpitOpened, setCockpitOpened] = useState(()=>{ try{ return typeof localStorage!=='undefined' && localStorage.getItem('paintiano_cockpit_opened')==='1'; }catch(_){ return false; } });
-  // ── QR poster deep link: /play?piece=liebestraum|bumblebee|metamorphosis ──
+  // ── QR poster deep link: /play?piece=liebestraum|bumblebee|mountainking ──
   // Poster QR codes land here. Parsed ONCE per page load; the param stays in
   // the URL (posters hang for years — a refresh must keep working). Effect:
   //   • a phone or a tablet opens it in the Studio, the poster's painting already
@@ -5399,7 +5399,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{
       const _u=new URLSearchParams(window.location.search);
       const _qp=_u.get('piece');
-      _qidx = _qp==='today' ? dayRef.current.piece : (BUILTIN_KEYS.indexOf(_qp)>=0 ? BUILTIN_KEYS.indexOf(_qp) : null);
+      const _qk = BUILTIN_KEY_ALIAS[_qp] || _qp;
+      _qidx = _qp==='today' ? dayRef.current.piece : (BUILTIN_KEYS.indexOf(_qk)>=0 ? BUILTIN_KEYS.indexOf(_qk) : null);
       if(_qp==='today'){ qrArtistRef.current=dayRef.current.artist; qrVariantRef.current=dayRef.current.v; }   // the painting of the day, whole
       // ?artist= — the opening artist (the one printed on the poster). Validated
       // against the real key list; painted via the taste-preview REF so a Pro
@@ -19557,7 +19558,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               {[
                 {n:'Liebestraum No.3 — Liszt',d:({EN:'romantic · lyrical',SK:'romantická · lyrická',DE:'romantisch · lyrisch',FR:'romantique · lyrique',ES:'romántica · lírica',PT:'romântica · lírica',zh:'浪漫 · 抒情',zhTW:'浪漫 · 抒情',ja:'ロマンティック · 拒情的'})[lang]||'romantic · lyrical'},
                 {n:'Flight of the Bumble-Bee — Rimsky-Korsakov',d:({EN:'fast · dense',SK:'rýchla · hustá',DE:'schnell · dicht',FR:'rapide · dense',ES:'rápida · densa',PT:'rápida · densa',zh:'快速 · 密集',zhTW:'快速 · 密集',ja:'高速 · 濃密'})[lang]||'fast · dense'},
-                {n:'Metamorphosis One — Philip Glass',d:({EN:'minimal · calm',SK:'minimalistická · pokojná',DE:'minimalistisch · ruhig',FR:'minimaliste · calme',ES:'minimalista · serena',PT:'minimalista · serena',zh:'极简 · 平静',zhTW:'極簡 · 平靜',ja:'ミニマル · 静寂'})[lang]||'minimal · calm'},
+                {n:'In the Hall of the Mountain King — Grieg',d:({EN:'creeping · wild',SK:'zakrádavá · divoká',DE:'schleichend · wild',FR:'furtive · déchaînée',ES:'sigilosa · desatada',PT:'furtiva · desenfreada',zh:'潜行 · 狂野',zhTW:'潛行 · 狂野',ja:'忍び足 · 荒々しく'})[lang]||'creeping · wild'},
                 {n:'Clair de lune — Debussy',d:({EN:'moonlit · dreamy',SK:'mesačná · snivá',DE:'mondhell · verträumt',FR:'lunaire · rêveuse',ES:'lunar · soñadora',PT:'luar · sonhadora',zh:'月光 · 梦幻',zhTW:'月光 · 夢幻',ja:'月の光 · 夢見る'})[lang]||'moonlit · dreamy'},
                 {n:'Gymnopédie No.1 — Satie',d:({EN:'slow · tender',SK:'pomalá · nežná',DE:'langsam · zart',FR:'lente · tendre',ES:'lenta · tierna',PT:'lenta · terna',zh:'缓慢 · 温柔',zhTW:'緩慢 · 溫柔',ja:'ゆるやか · やさしい'})[lang]||'slow · tender'},
                 {n:'Für Elise — Beethoven',d:({EN:'familiar · playful',SK:'známa · hravá',DE:'vertraut · verspielt',FR:'familière · espiègle',ES:'familiar · juguetona',PT:'familiar · brincalhona',zh:'熟悉 · 俏皮',zhTW:'熟悉 · 俏皮',ja:'おなじみ · 遊び心'})[lang]||'familiar · playful'},
@@ -22508,7 +22509,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               {liteSamplePick ? (<>
               {dayPieces.includes(0) && (<button onClick={()=>_loadSampleLite(0)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Liebestraum · Liszt</span></button>)}
               {dayPieces.includes(1) && (<button onClick={()=>_loadSampleLite(1)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Bumble-Bee · Rimsky-Korsakov</span></button>)}
-              {dayPieces.includes(2) && (<button onClick={()=>_loadSampleLite(2)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Metamorphosis · Glass</span></button>)}
+              {dayPieces.includes(2) && (<button onClick={()=>_loadSampleLite(2)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Mountain King · Grieg</span></button>)}
               {dayPieces.includes(3) && (<button onClick={()=>_loadSampleLite(3)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Clair de lune · Debussy</span></button>)}
               {dayPieces.includes(4) && (<button onClick={()=>_loadSampleLite(4)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Gymnopédie · Satie</span></button>)}
               {dayPieces.includes(5) && (<button onClick={()=>_loadSampleLite(5)} style={{...btn,...((basicMode&&isDesktop)?{flexDirection:'column',gap:8,height:110,padding:'20px 12px',borderRadius:14,fontSize:(.66*effScale)+'rem'}:{justifyContent:'flex-start',gap:10,padding:'15px 18px',fontSize:(.74*effScale)+'rem'})}}>{_icoSample}<span style={{marginLeft:7}}>Für Elise · Beethoven</span></button>)}

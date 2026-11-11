@@ -93,7 +93,7 @@ Free three.
 ## Built-in pieces
 
 Seven pieces ship as base64 MIDI in `03-i18n.jsx` (`BUILTIN_PIECES` — key, name, bytes; the order is the index
-everywhere). Liebestraum, Bumble-Bee and Metamorphosis One are the original three; Clair de lune, Gymnopédie No.1,
+everywhere). Liebestraum and Bumble-Bee are two of the original three (the third, a work still in copyright, gave way to Grieg’s In the Hall of the Mountain King in Nov 2026 — Mutopia, public domain; old links to it open Grieg); Clair de lune, Gymnopédie No.1,
 Für Elise and The Entertainer are public-domain works typeset by the Mutopia Project (public domain) and compiled to
 MIDI with LilyPond. Adding one: a constant pair + an entry in `BUILTIN_PIECES`, a tile in the sample sub-picker and the
 Lite picker, `api/og.js` PIECES, the og cards, the Guide's Music card — `npm run check` names what is missing.
