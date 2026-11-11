@@ -22074,7 +22074,6 @@ function audioBufferToWav(abuf){
   }
   return new Blob([ab],{type:'audio/wav'});
 }
-if(typeof window!=="undefined") window.__pfTestRender=(e,o)=>renderAudioOffline(e,o);
 async function renderAudioOffline(events,opts){
   if(!events||!events.length) return null;
   const speed=(opts&&opts.speed)||1;
