@@ -17,6 +17,12 @@ for (const f of readdirSync(out)) {
   if (/^(sw\.js|workbox-.*\.js|registerSW\.js|manifest\.webmanifest|robots\.txt|sitemap\.xml|concept\.html)$/.test(f)) rmSync(resolve(out, f), { force: true });
 }
 
+// Web-only weight the app never opens: the landing page's media, the link-preview cards, the book PDFs (the app opens the
+// summary from the website), the landing's showcase / mockups / demo, the Pricing page (not shown in the iOS app) and the
+// site's own share images. Kept: the app's code, fonts, the piano, sample pictures, the tour videos, the Studio and gallery art.
+for (const d of ['landing', 'og', 'book', 'showcase', 'mockups', 'demo']) rmSync(resolve(out, d), { recursive: true, force: true });
+for (const f of ['pricing.html', 'og-cover.png', 'ph_card1_hero.png', 'author.jpg']) rmSync(resolve(out, f), { force: true });
+
 // Inside the app the page is served from the device (capacitor://localhost). Everything on the device
 // (the piano samples, pictures, the legal pages) is read by the web view itself — CapacitorHttp's global
 // fetch patch is OFF (capacitor.config.json): with it on, those local reads came back empty (status 0).
