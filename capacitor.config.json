@@ -11,6 +11,9 @@
   "plugins": {
     "CapacitorHttp": {
       "enabled": false
+    },
+    "SystemBars": {
+      "style": "DARK"
     }
   },
   "android": {
