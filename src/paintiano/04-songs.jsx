@@ -1271,7 +1271,7 @@ function _guideIos(s, lang){ if(typeof s!=='string') return s; const a=(GUIDE_IO
   for(const [o,n] of a){ if(s.indexOf(o)>=0) s=s.split(o).join(n); } return s; }
 function getGuideCards(lang, studio){
   const L = GUIDE_I18N[lang] || GUIDE_I18N.EN, E = GUIDE_I18N.EN;
-  const ios = (typeof window!=='undefined' && window.__PF_NATIVE==='ios'), fx = (s)=> ios ? _guideIos(s, lang) : s;
+  const ios = (typeof window!=='undefined' && (window.__PF_NATIVE==='ios' || window.__PF_NATIVE==='android')), fx = (s)=> ios ? _guideIos(s, lang) : s;
   return GUIDE_META.filter(m=>(studio || m.cat!=='studio') && !(ios && m.id==='appmodes')).map(m=>{ const x = L.c[m.id] || E.c[m.id];
     return {...m, title:x.t, body:_guidePx(fx((studio && x.bS) || x.b)), more:_guidePx(fx((studio && x.mS) || x.m))}; });
 }

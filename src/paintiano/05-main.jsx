@@ -14821,7 +14821,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       h = h.replace('class="wrap" data-lang="en"', 'class="wrap active" data-lang="en"');
     }
     if(legalDoc==='pricing'){ try{ h = pfPx(h); }catch(_){} }
-    return '<style>'+legalCss+'\n[data-lang]:not(.active){display:none}\n.legal-root{min-height:100%}</style><div class="legal-root">'+h+'</div>';
+    return '<style>'+legalCss+'\n[data-lang]:not(.active){display:none}\n.legal-root{min-height:100%}'+(PF_IOS?'\n[data-pf-and-note]{display:none}':'')+(PF_AND?'\n[data-pf-ios-note]{display:none}':'')+'</style><div class="legal-root">'+h+'</div>';
   },[legalHtml, legalCss, lang, legalDoc, legalPxTick]);
   // FIX 17: render the doc inside a Shadow DOM so its CSS is isolated from
   // the app (both directions). React never manages shadow children, so we
@@ -14899,6 +14899,21 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             });
             w.appendChild(msg); w.style.display='block';
           });
+        }
+      }
+    }catch(_){}
+    // The Android app: a purchase made through Google Play is refunded through Google Play. Under the document's own
+    // Android note sits a button that opens the account's Google Play order history, where a refund is asked for.
+    try{
+      if(PF_AND && legalDoc==='refunds' && !legalLoading){
+        const own=el.shadowRoot.querySelector('.wrap.active [data-pf-and-note]');
+        const box=own || el.shadowRoot.querySelector('.wrap.active .highlight');
+        if(box && !box.querySelector('[data-pf-refund-and]')){
+          const w=document.createElement('div'); w.setAttribute('data-pf-refund-and','1'); w.style.cssText='margin-top:16px'; box.appendChild(w);
+          if(!own){ const n=document.createElement('p'); n.textContent=String(t('andRefundNote')); n.style.cssText='margin:0 0 12px;font-size:.8rem;line-height:1.5;opacity:.85'; w.appendChild(n); }
+          const l=document.createElement('a'); l.href='https://play.google.com/store/account/orderhistory'; l.target='_blank'; l.rel='noopener'; l.textContent=String(t('andRefundOpen'));
+          l.style.cssText='display:block;width:100%;box-sizing:border-box;margin-top:8px;border:0;border-radius:999px;padding:13px;text-align:center;text-decoration:none;font-weight:800;font-size:.82rem;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#f0d78a,#c9a84c)'; l.style.setProperty('color','#0a0a12','important');   // the document's own link colour is gold
+          w.appendChild(l);
         }
       }
     }catch(_){}
