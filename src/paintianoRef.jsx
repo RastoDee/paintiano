@@ -28555,6 +28555,7 @@ export default function Paintiano() {
   const viewModeRef   = useRef('paint');
   const playbackSpeedRef = useRef(1);
   const resumeFromRef = useRef(null); // null = fresh start, number = resume from this disp index
+  const stSeekRef = useRef(null);   // the Studio's progress line under a finger: where the touch began, whether it has become a seek, and the position before it
   // Tracks the last full-paint snapshot so playback can append incrementally
   // instead of re-running every artist-style draw from chord 0 on each `disp` tick.
   const paintGenRef = useRef(0);   // +1 each time the painting is really drawn (a swipe waits for the first one after its look change)
@@ -45588,10 +45589,20 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           return (
             <div role="slider" aria-label="playback position" aria-valuemin={0} aria-valuemax={Math.max(0,chords.length-1)} aria-valuenow={Math.min(disp,Math.max(0,chords.length-1))}
               onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()}
-              onPointerDown={(e)=>{ e.stopPropagation(); if(recording) return; e.preventDefault(); try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} setStSeek(true); const idx=_at(e); stopAll(); resumeFromRef.current=idx; setDisp(idx); }}
-              onPointerMove={(e)=>{ if(recording || !e.currentTarget.hasPointerCapture || !e.currentTarget.hasPointerCapture(e.pointerId)) return; e.preventDefault(); const idx=_at(e); setDisp(idx); resumeFromRef.current=idx; }}
-              onPointerUp={(e)=>{ e.stopPropagation(); try{ e.currentTarget.releasePointerCapture(e.pointerId); }catch(_){} setStSeek(false); if(recording) return; const idx=resumeFromRef.current; startPlay(); if(resumeFromRef.current===null && idx!==null) resumeFromRef.current=idx; }}
-              onPointerCancel={()=>setStSeek(false)}
+              // The line lies on the phone's home-gesture edge: a swipe up to leave the app begins on it. So a touch only becomes a seek once it
+              // moves ALONG the line (or ends as a tap); a touch that travels up, or that the system takes over (pointercancel), changes nothing —
+              // and a seek already begun is put back where the piece was.
+              onPointerDown={(e)=>{ e.stopPropagation(); if(recording) return; e.preventDefault(); try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){}
+                stSeekRef.current={ x:e.clientX, y:e.clientY, on:false, off:false, d:dispRef.current|0, r:resumeFromRef.current, hold:!!holdPausedRef.current, play:!!playingRef.current }; }}
+              onPointerMove={(e)=>{ const S=stSeekRef.current; if(recording || !S || S.off || !e.currentTarget.hasPointerCapture || !e.currentTarget.hasPointerCapture(e.pointerId)) return; e.preventDefault();
+                const dx=e.clientX-S.x, dy=e.clientY-S.y;
+                if(!S.on){ if(dy < -22 && Math.abs(dy) > Math.abs(dx)){ S.off=true; return; } if(Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return; S.on=true; setStSeek(true); stopAll(); }
+                const idx=_at(e); setDisp(idx); resumeFromRef.current=idx; }}
+              onPointerUp={(e)=>{ e.stopPropagation(); try{ e.currentTarget.releasePointerCapture(e.pointerId); }catch(_){} const S=stSeekRef.current; stSeekRef.current=null; setStSeek(false); if(recording || !S || S.off) return;
+                if(!S.on){ if(Math.abs(e.clientX-S.x) > 10 || Math.abs(e.clientY-S.y) > 10) return; stopAll(); const i0=_at(e); setDisp(i0); resumeFromRef.current=i0; }   // a tap on the line: go there
+                const idx=resumeFromRef.current; startPlay(); if(resumeFromRef.current===null && idx!==null) resumeFromRef.current=idx; }}
+              onPointerCancel={()=>{ const S=stSeekRef.current; stSeekRef.current=null; setStSeek(false); if(!S || !S.on) return;
+                setDisp(S.d); dispRef.current=S.d; const mid = S.d>0 && S.d<chords.length; if(mid && (S.hold || S.play)){ setHoldPaused(true); holdPausedRef.current=true; resumeFromRef.current=S.d; } else resumeFromRef.current=S.r; }}
               style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10002,height:'calc(26px + env(safe-area-inset-bottom, 0px))',paddingBottom:'env(safe-area-inset-bottom, 0px)',boxSizing:'border-box',display:'flex',alignItems:'flex-end',touchAction:'none',cursor:'pointer'}}>
               <div style={{position:'relative',width:'100%',height:stSeek?6:3,background:'rgba(255,255,255,.16)',transition:'height .15s'}}>
                 <div style={{height:'100%',width:_p+'%',background:playing?'linear-gradient(90deg,#4de3a0,#2fc98a)':'linear-gradient(90deg,#c9a84c,#f0c040)',transition:stSeek?'none':'width .3s linear'}}/>
