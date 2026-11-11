@@ -1,0 +1,14 @@
+Paintiano turns music into a painting: each piece of music produces its own picture. No account or sign-in is needed.
+
+In-app purchases (StoreKit):
+- Paintiano Pro (non-consumable): unlocks all painter styles, composers, custom palette and watermark-free export.
+- AI pass 12 months (non-renewing subscription): AI composition from a mood or a photo for 12 months. It does not renew.
+To see the purchase screen: tap a locked painter or a locked feature. "Restore purchases" is at the bottom of that screen.
+
+Refunds: the Refunds page (menu "Paintiano" at the top > Refunds) has a button that opens Apple's refund request sheet.
+
+Licence key field: Paintiano is also a web app. People who bought a licence earlier on the website can enter their key to use it here (multiplatform service). All purchases inside the iOS app use In-App Purchase.
+
+AI features: a short text or a downscaled photo is sent to our server to compose a short piano piece. It is not a chat and no content from other users is shown.
+
+Microphone: used only when the user chooses to play or hum a melody; the audio is turned into notes on the device.

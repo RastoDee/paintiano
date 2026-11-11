@@ -41,6 +41,21 @@ jobs:
             --force true --run_precheck_before_submit false --submit_for_review false 2>&1 | tail -60
           rm -f "$KEY"
 
+  asc:
+    if: ${{ contains(github.event.head_commit.message, '[asc]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: App Store Connect housekeeping
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          pip install --quiet pyjwt cryptography
+          python3 ios/asc/asc.py
+
   store_shots:
     if: ${{ contains(github.event.head_commit.message, '[screens]') }}
     runs-on: macos-latest
@@ -63,7 +78,7 @@ jobs:
           rm -f "$KEY"
 
   build:
-    if: ${{ !contains(github.event.head_commit.message, '[metadata]') && !contains(github.event.head_commit.message, '[screens]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[metadata]') && !contains(github.event.head_commit.message, '[screens]') && !contains(github.event.head_commit.message, '[asc]') }}
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
