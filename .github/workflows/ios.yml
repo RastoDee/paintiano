@@ -55,7 +55,7 @@ jobs:
           MSG: ${{ github.event.head_commit.message }}
         run: |
           pip install --quiet pyjwt cryptography
-          if echo "$MSG" | grep -q "\[asc-swap\]"; then python3 ios/asc/asc_swap.py; elif echo "$MSG" | grep -q "\[asc-iap\]"; then python3 ios/asc/asc_iapsubmit.py; elif echo "$MSG" | grep -q "\[asc-final\]"; then python3 ios/asc/asc_final.py; elif echo "$MSG" | grep -q "\[asc-fill\]"; then python3 ios/asc/asc_fill.py; elif echo "$MSG" | grep -q "\[asc-check\]"; then python3 ios/asc/asc_check.py; elif echo "$MSG" | grep -q "\[asc-pass\]"; then python3 ios/asc/asc_pass.py; else python3 ios/asc/asc.py; fi
+          if echo "$MSG" | grep -q "\[asc-submit\]"; then python3 ios/asc/asc_submit.py; elif echo "$MSG" | grep -q "\[asc-swap\]"; then python3 ios/asc/asc_swap.py; elif echo "$MSG" | grep -q "\[asc-iap\]"; then python3 ios/asc/asc_iapsubmit.py; elif echo "$MSG" | grep -q "\[asc-final\]"; then python3 ios/asc/asc_final.py; elif echo "$MSG" | grep -q "\[asc-fill\]"; then python3 ios/asc/asc_fill.py; elif echo "$MSG" | grep -q "\[asc-check\]"; then python3 ios/asc/asc_check.py; elif echo "$MSG" | grep -q "\[asc-pass\]"; then python3 ios/asc/asc_pass.py; else python3 ios/asc/asc.py; fi
 
   store_shots:
     if: ${{ contains(github.event.head_commit.message, '[screens]') }}
