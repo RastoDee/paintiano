@@ -6,7 +6,7 @@
 const PIECES = {
   liebestraum: 'Liebestraum No.3 — Liszt',
   bumblebee: 'Flight of the Bumble-Bee — Rimsky-Korsakov',
-  metamorphosis: 'Metamorphosis One — Philip Glass',
+  mountainking: 'In the Hall of the Mountain King — Grieg',
   clairdelune: 'Clair de lune — Debussy',
   gymnopedie: 'Gymnopédie No.1 — Satie',
   furelise: 'Für Elise — Beethoven',
@@ -24,6 +24,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 
 export default function handler(req, res) {
   const q = req.query || {};
+  if (q.piece === 'metamorphosis') q.piece = 'mountainking';   // older links open the piece that took its place
   const piece = PIECES[q.piece] ? q.piece : (q.piece === 'today' ? 'today' : null);
   const artist = ARTISTS[q.artist] ? q.artist : null;
   const song = piece === 'today' ? 'Song of the day' : (piece ? PIECES[piece] : 'Paintiano');
