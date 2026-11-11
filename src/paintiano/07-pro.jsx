@@ -189,7 +189,7 @@ const PF_PX = { map: null, busy: null };
 // /api/apple, which checks them at Apple and answers with the licence key — from there on the app works
 // with the key exactly as on the web. A key bought on the web can still be entered.
 const PF_IOS = (typeof window !== 'undefined' && window.__PF_NATIVE === 'ios');
-const PF_IAP = { pro: 'app.paintiano.pro', pass: 'app.paintiano.aipass12' };
+const PF_IAP = { pro: 'app.paintiano.pro', pass: 'app.paintiano.aipass12m' };   // the pass is a non-renewing subscription
 function _pfNP() { try { const C = window.Capacitor; return (C && C.Plugins && C.Plugins.NativePurchases) || null; } catch (_) { return null; } }
 async function _pfIosReport(ids, key) {
   try {

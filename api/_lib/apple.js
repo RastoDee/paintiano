@@ -2,7 +2,8 @@
 // Purchases made in the iOS app (Apple In-App Purchase).
 //
 //   app.paintiano.pro       non-consumable             → a Pro licence key (as a Paddle sale would give)
-//   app.paintiano.aipass12  non-renewing subscription  → the AI pass: 12 months of AI on a key
+//   app.paintiano.aipass12m non-renewing subscription  → the AI pass: 12 months of AI on a key
+//   (app.paintiano.aipass12 was its first, wrongly typed product — a non-consumable; still honoured, never sold)
 //
 // The app sends the transaction ids it got from StoreKit; each is looked up at Apple itself
 // (App Store Server API, signed with our In-App Purchase key), so what comes back is Apple's
@@ -16,7 +17,8 @@ import { aiCountOf } from './refund.js';
 
 export const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'app.paintiano';
 export const APPLE_PRODUCT_PRO = 'app.paintiano.pro';
-export const APPLE_PRODUCT_PASS = 'app.paintiano.aipass12';
+export const APPLE_PRODUCT_PASS = 'app.paintiano.aipass12m';
+const _isPass = (id) => id === APPLE_PRODUCT_PASS || id === 'app.paintiano.aipass12';
 
 // trimmed: a space or a line break pasted along with the value makes Apple refuse the token
 const KEY_ID = (process.env.APPLE_IAP_KEY_ID || '').trim();
@@ -123,7 +125,7 @@ export async function applyAppleTransactions(ids, key) {
     else out.skipped.push({ id: t.transactionId, why: rec.status });
   }
 
-  for (const t of txs.filter((x) => x.productId === APPLE_PRODUCT_PASS)) {
+  for (const t of txs.filter((x) => _isPass(x.productId))) {
     if (t.revocationDate) { out.skipped.push({ id: t.transactionId, why: 'revoked' }); continue; }
     const order = orderOf(t);
     const rec = await rowByOrder(order);
@@ -160,7 +162,7 @@ export async function revokeAppleTransaction(id) {
   const rec = await rowByOrder(order);
   if (!rec || rec.status === 'refunded') return rec ? 'revoked' : 'unknown';
   await setStatusByOrder(order, 'refunded', { refunded_at: new Date().toISOString() });
-  if (t.productId !== APPLE_PRODUCT_PASS) { console.info('apple: licence revoked', { order }); return 'revoked'; }
+  if (!_isPass(t.productId)) { console.info('apple: licence revoked', { order }); return 'revoked'; }
   const on = passFrom(rec); if (!on) return 'revoked';
   const orig = await getLicenseByKey(on);
   const u = orig && orig.ai_until ? Date.parse(orig.ai_until) : null;
