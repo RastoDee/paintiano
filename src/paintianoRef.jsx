@@ -1122,6 +1122,9 @@ const S_URLS = {"A0":"A0.mp3","C1":"C1.mp3","D#1":"Ds1.mp3","F#1":"Fs1.mp3","A1"
 // files carry their level, so the gain stays velocity/127 in every layer. The middle layer loads first and the piano is ready
 // with it; the other two follow in the background (all:true waits for them — the offline render), and until one of them is
 // there, or if it fails, its notes play from the middle one. It answers to what the app calls on a Tone.Sampler.
+// On a phone or tablet only the middle layer is loaded: three layers are ~450 MB of decoded sound, and iOS under that weight
+// drops the app's canvas the moment it goes to the background (the painting came back from an older state, Play began again).
+const _sLean = () => { try { const ua = navigator.userAgent || ''; return /iP(hone|ad|od)|Android/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints||0) > 1) || !!window.__PF_NATIVE; } catch(_) { return false; } };
 const S_SOFT_BELOW = 52, S_LOUD_FROM = 96;   // a piece with no dynamics of its own (velocity 88–90 throughout) stays on the middle layer
 const _sLayerUrls = (suf) => { const o = {}; for (const k in S_URLS) o[k] = S_URLS[k].replace('.mp3', suf + '.mp3'); return o; };
 function pfPiano(opts){
@@ -1133,6 +1136,7 @@ function pfPiano(opts){
   P.mid = mk(S_URLS, () => {
     if (P.dead) return;
     if (!opts.all && opts.onload) opts.onload();
+    if (_sLean()) { left = 1; one(); return; }
     try { P.soft = mk(_sLayerUrls('-p'), () => { P.okS = true; one(); }, one); } catch(_) { one(); }
     try { P.loud = mk(_sLayerUrls('-f'), () => { P.okL = true; one(); }, one); } catch(_) { one(); }
   }, () => { if (!P.dead && opts.onerror) opts.onerror(); });
