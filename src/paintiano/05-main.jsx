@@ -8026,6 +8026,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         audioHiddenAtRef.current = Date.now();
         // Leaving the app is silence at once, whether a piece is playing or only its last chord is still ringing: the phone keeps
         // the app's sound going for a few seconds after it is left. unlockAudio() on the way back gives the sound its own setting again.
+        try{ const _S=stSeekRef.current; if(_S && _S.undo) _S.undo(); }catch(_){}   // a touch still resting on the progress line (the swipe out of the app began on it)
         try{if(samplerOk.current&&samplerRef.current)samplerRef.current.releaseAll();}catch(_){}
         try{ Tone.getDestination().mute = true; }catch(_){}
         if(playingRef.current){
@@ -20126,16 +20127,19 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               // moves ALONG the line (or ends as a tap); a touch that travels up, or that the system takes over (pointercancel), changes nothing —
               // and a seek already begun is put back where the piece was.
               onPointerDown={(e)=>{ e.stopPropagation(); if(recording) return; e.preventDefault(); try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){}
-                stSeekRef.current={ x:e.clientX, y:e.clientY, on:false, off:false, d:dispRef.current|0, r:resumeFromRef.current, hold:!!holdPausedRef.current, play:!!playingRef.current }; }}
+                const S={ x:e.clientX, y:e.clientY, on:false, off:false, d:dispRef.current|0, r:resumeFromRef.current, hold:!!holdPausedRef.current, play:!!playingRef.current, n:chords.length };
+                // undo: the piece back where it was before this touch, held there (also called when the app is left with the touch still down)
+                S.undo=()=>{ stSeekRef.current=null; setStSeek(false); if(!S.on || S.off) return; S.off=true; setDisp(S.d); dispRef.current=S.d; if(S.d>0 && S.d<S.n && (S.hold || S.play)){ setHoldPaused(true); holdPausedRef.current=true; resumeFromRef.current=S.d; } else resumeFromRef.current=S.r; };
+                stSeekRef.current=S; }}
               onPointerMove={(e)=>{ const S=stSeekRef.current; if(recording || !S || S.off || !e.currentTarget.hasPointerCapture || !e.currentTarget.hasPointerCapture(e.pointerId)) return; e.preventDefault();
                 const dx=e.clientX-S.x, dy=e.clientY-S.y;
                 if(!S.on){ if(dy < -22 && Math.abs(dy) > Math.abs(dx)){ S.off=true; return; } if(Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return; S.on=true; setStSeek(true); stopAll(); }
+                if(dy < -64){ S.undo(); return; }   // the finger has left the line upwards: that was the way out of the app, not a seek
                 const idx=_at(e); setDisp(idx); resumeFromRef.current=idx; }}
               onPointerUp={(e)=>{ e.stopPropagation(); try{ e.currentTarget.releasePointerCapture(e.pointerId); }catch(_){} const S=stSeekRef.current; stSeekRef.current=null; setStSeek(false); if(recording || !S || S.off) return;
                 if(!S.on){ if(Math.abs(e.clientX-S.x) > 10 || Math.abs(e.clientY-S.y) > 10) return; stopAll(); const i0=_at(e); setDisp(i0); resumeFromRef.current=i0; }   // a tap on the line: go there
-                const idx=resumeFromRef.current; startPlay(); if(resumeFromRef.current===null && idx!==null) resumeFromRef.current=idx; }}
-              onPointerCancel={()=>{ const S=stSeekRef.current; stSeekRef.current=null; setStSeek(false); if(!S || !S.on) return;
-                setDisp(S.d); dispRef.current=S.d; const mid = S.d>0 && S.d<chords.length; if(mid && (S.hold || S.play)){ setHoldPaused(true); holdPausedRef.current=true; resumeFromRef.current=S.d; } else resumeFromRef.current=S.r; }}
+                const idx=resumeFromRef.current; setTimeout(()=>{ try{ if(resumeFromRef.current===null && idx!==null) resumeFromRef.current=idx; startPlayRef.current && startPlayRef.current(); }catch(_){} }, 60); }}   // after the stop has settled
+              onPointerCancel={()=>{ const S=stSeekRef.current; if(S) S.undo(); else setStSeek(false); }}
               style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10002,height:'calc(26px + env(safe-area-inset-bottom, 0px))',paddingBottom:'env(safe-area-inset-bottom, 0px)',boxSizing:'border-box',display:'flex',alignItems:'flex-end',touchAction:'none',cursor:'pointer'}}>
               <div style={{position:'relative',width:'100%',height:stSeek?6:3,background:'rgba(255,255,255,.16)',transition:'height .15s'}}>
                 <div style={{height:'100%',width:_p+'%',background:playing?'linear-gradient(90deg,#4de3a0,#2fc98a)':'linear-gradient(90deg,#c9a84c,#f0c040)',transition:stSeek?'none':'width .3s linear'}}/>
