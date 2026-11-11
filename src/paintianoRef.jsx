@@ -40223,6 +40223,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // The Pricing page inside the app has no script of its own (scripts are stripped above), so the local prices are put in here — the same ones the paywall shows.
   const [legalPxTick, setLegalPxTick] = useState(0);
   useEffect(()=>{ if(legalDoc==='pricing' && _pfIosApp()) setLegalDoc('terms'); },[legalDoc]);
+  // The iOS app: Apple's prices are fetched once at the start, so every price in the app (the menu's AI-pass row too) is Apple's from the first screen.
+  useEffect(()=>{ if(!_pfIosApp()) return; let on=true; try{ pfPxLoad().then(()=>{ if(on) setLegalPxTick(n=>n+1); }).catch(()=>{}); }catch(_){} return ()=>{ on=false; }; },[]);
   useEffect(()=>{ if(legalDoc!=='pricing') return; let on=true; try{ pfPxLoad().then(()=>{ if(on) setLegalPxTick(n=>n+1); }).catch(()=>{}); }catch(_){} return ()=>{ on=false; }; },[legalDoc]);
   const legalHtmlForLang = useMemo(()=>{
     if(!legalHtml) return '';
