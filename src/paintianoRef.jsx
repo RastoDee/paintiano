@@ -28171,6 +28171,7 @@ const STUDIO_HOME_CSS = `
 .pf-hid-card{background:#1b1923;border:1px solid rgba(255,255,255,.06);border-radius:18px;margin-top:18px;overflow:hidden}
 .pf-hid-r{display:flex;align-items:center;gap:13px;width:100%;padding:14px;background:none;border:0;color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-hid-r+.pf-hid-r{border-top:1px solid rgba(255,255,255,.06)}
+.pf-hid-seg{display:flex;flex:none;border:1px solid rgba(242,238,232,.22);border-radius:16px;overflow:hidden}.pf-hid-seg button{border:0;background:none;color:#b9b5ad;font-family:inherit;font-size:13px;font-weight:600;padding:8px 11px;cursor:pointer;-webkit-tap-highlight-color:transparent}.pf-hid-seg button.on{background:linear-gradient(135deg,#f2d27a,#c9a84c);color:#0f0f12}
 .pf-hid-r b{display:block;font-size:14px;font-weight:600}.pf-hid-r small{display:block;font-size:11.5px;color:rgba(242,238,232,.55);margin-top:2px;line-height:1.35}
 .pf-hid-ic{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1a1408}
 .pf-hid-sw{flex:none;width:46px;height:28px;border-radius:14px;background:#3a3644;position:relative;transition:background .15s}
@@ -31025,13 +31026,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     fetch(PF_BTL+'/api/submit',{headers:{Authorization:'Bearer '+m.link}}).then(r=>r.status===401 ? {gone:true} : (r.ok ? r.json() : null)).then(d=>{ if(!d) return; const c=btlMineRef.current;
       if(d.gone){ _btlMineSet({...c, link:null, count:null}); return; } if(typeof d.count==='number') _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }).catch(()=>{}); }catch(_){} };
   const _btlLinked = (lk)=>{ if(!/^L\.[0-9a-f-]{36}\.\d+\.[A-Za-z0-9_-]+$/.test(lk)) return false; const m=btlMineRef.current;
-    _btlMineSet({...m, link:lk, sent:m.sent.concat(m.wait.map(w=>({k:w.k, id:null}))), wait:[], count:null}); return true; };
+    _btlMineSet({...m, link:lk, sent:m.sent.concat(m.wait.map(w=>({k:w.k, id:null, t:w.t}))), wait:[], count:null}); return true; };   // t: the ticket it went in with — Battle says which painting it became
   useEffect(()=>{ if(_pfIosApp()) return; const on=()=>{ if(!document.hidden) _btlCount(); };
     document.addEventListener('visibilitychange', on); window.addEventListener('focus', on);
     // Battle's page under the tab speaks to Paintiano: the link once it knows the account, the count, and "close me"
     const msg=(e)=>{ try{ if(e.origin!==PF_BTL || !e.data || e.data.type!=='pf-battle') return; const d=e.data;
       if(typeof d.link==='string'){ const had=!!btlMineRef.current.link, w=btlMineRef.current.wait.length; if(_btlLinked(d.link) && (!had || w)) _btlSay(_stT('btlLinked')); }
       if(typeof d.count==='number'){ const c=btlMineRef.current; _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }
+      if(Array.isArray(d.got)){ const c=btlMineRef.current; const by=new Map(d.got.filter(x=>x && typeof x.t==='string' && typeof x.id==='string').map(x=>[x.t, x.id])); if(by.size) _btlMineSet({...c, sent:c.sent.map(x=> (x.t && by.has(x.t)) ? {k:x.k, id:by.get(x.t)} : x)}); }   // the paintings that went in at the sign-in: now known by their ids
       if(typeof d.gone==='string' && d.gone){ const c=btlMineRef.current; _btlMineSet({...c, sent:c.sent.filter(x=>x.id!==d.gone)}); }   // removed from the round on Battle's own page: its dot goes out
       if(typeof d.on==='boolean'){ setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:d.on, at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); }   // Battle says where its switch stands for this Paintiano — at once, no restart
       if(d.close) setBtlTab(null); }catch(_){} };
@@ -31045,6 +31047,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(m.round!==btlInfo.number){ _btlMineSet({...m, round:btlInfo.number, sent:[], wait:[], count:null}); }
     _btlCount();
   },[btlInfo]);
+  // The Battle switch right in the hidden tools: off · test (only in test deployments of Paintiano) · on (everywhere). It works
+  // where this Paintiano is linked to the admin's Battle account (the link proves who asks); elsewhere the row opens Battle as before.
+  const [btlMode, setBtlMode] = useState(null);   // null = not known / not the admin · 'off' | 'test' | 'on'
+  const [btlModeBusy, setBtlModeBusy] = useState(false);
+  const _btlHere = (m)=> m==='on' || (m==='test' && !/^https:\/\/(www\.)?paintiano\.app$/.test(window.location.origin));   // is Battle shown in THIS Paintiano at that position?
+  const _btlModeSeen = (m)=>{ setBtlMode(m); setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:_btlHere(m), at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); };
+  useEffect(()=>{ if(!hidOpen || !hidOk || _pfIosApp()) return; const lk=btlMineRef.current.link; if(!lk){ setBtlMode(null); return; } let on=true;
+    fetch(PF_BTL+'/api/round', {headers:{Authorization:'Bearer '+lk}}).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on) return; if(d && d.admin && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else setBtlMode(null); }).catch(()=>{ if(on) setBtlMode(null); });
+    return ()=>{ on=false; }; },[hidOpen, hidOk]);
+  const _btlModeSet = (m)=>{ if(btlModeBusy || m===btlMode) return; const lk=btlMineRef.current.link; if(!lk) return; setBtlModeBusy(true);
+    fetch(PF_BTL+'/api/round', {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+lk}, body:JSON.stringify({mode:m})}).then(r=>r.ok ? r.json() : null)
+      .then(d=>{ if(d && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else _btlSay(_stT('btlNo')); }).catch(()=>{ _btlSay(_stT('btlNo')); }).finally(()=>setBtlModeBusy(false)); };
   const _hidBtl = ()=>{ try{ sessionStorage.removeItem('paintiano_btl'); }catch(_){} try{ if(!window.open(PF_BTL+'/#switch', '_blank')) window.location.href=PF_BTL+'/#switch'; }catch(_){} };   // the switch itself is Battle's (its admin only)
   const _hidChip = ()=> setAddrChip(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_addr_chip', nv?'1':'0'); }catch(_){} return nv; });
   const _hidPost = ()=> setPosterMaker(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){} return nv; });
@@ -43243,7 +43257,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   <div className="pf-hid-card">
                     {_sw(addrChip, _hidChip, '#', 'linear-gradient(135deg,#f0d78a,#c9a84c)', _stT('hidChip'), _stT('hidChipS'))}
                     {_sw(posterMaker, _hidPost, '⬇', 'linear-gradient(135deg,#f3b07a,#d2763f)', _stT('hidPost'), _stT('hidPostS'))}
-                    {_sw(!!(btlInfo && btlInfo.on), _hidBtl, '⚔', 'linear-gradient(135deg,#f2d27a,#c9a84c)', _stT('hidBtl'), _stT('hidBtlS'))}
+                    {btlMode ? (<div className="pf-hid-r" data-k="hidBtl3" style={{cursor:'default'}}>
+                      <span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#f2d27a,#c9a84c)'}}>⚔</span>
+                      <span style={{flex:1,minWidth:0}}><b>{_stT('hidBtl')}</b><small>{btlMode==='on' ? 'paintiano.app + dev' : btlMode==='test' ? 'dev' : '—'}</small></span>
+                      <span role="radiogroup" aria-label="Battle" className="pf-hid-seg" style={{opacity:btlModeBusy ? .5 : 1}}>{[['off','Off'],['test','Test'],['on','On']].map(([m, l])=>(<button key={m} type="button" role="radio" aria-checked={btlMode===m} className={btlMode===m ? 'on' : ''} disabled={btlModeBusy} onClick={()=>_btlModeSet(m)}>{l}</button>))}</span></div>)
+                      : _sw(!!(btlInfo && btlInfo.on), _hidBtl, '⚔', 'linear-gradient(135deg,#f2d27a,#c9a84c)', _stT('hidBtl'), _stT('hidBtlS'))}
                     <div className="pf-hid-r" style={{cursor:'default'}}><span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#9be0b8,#3fa97a)'}}>⤢</span><span style={{flex:1,minWidth:0}}><b>{_stT('hidExp')}</b><small>{_stT('hidExpS')}</small></span><span aria-hidden="true" style={{flex:'none',width:46,textAlign:'center',color:'#e2c477',fontSize:18,fontWeight:700}}>✓</span></div>
                   </div>
                   <button type="button" className="pf-hid-lock" onClick={_hidLock}>{_stT('hidLock')}</button>

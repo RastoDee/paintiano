@@ -28171,6 +28171,7 @@ const STUDIO_HOME_CSS = `
 .pf-hid-card{background:#1b1923;border:1px solid rgba(255,255,255,.06);border-radius:18px;margin-top:18px;overflow:hidden}
 .pf-hid-r{display:flex;align-items:center;gap:13px;width:100%;padding:14px;background:none;border:0;color:#f2eee8;font-family:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-hid-r+.pf-hid-r{border-top:1px solid rgba(255,255,255,.06)}
+.pf-hid-seg{display:flex;flex:none;border:1px solid rgba(242,238,232,.22);border-radius:16px;overflow:hidden}.pf-hid-seg button{border:0;background:none;color:#b9b5ad;font-family:inherit;font-size:13px;font-weight:600;padding:8px 11px;cursor:pointer;-webkit-tap-highlight-color:transparent}.pf-hid-seg button.on{background:linear-gradient(135deg,#f2d27a,#c9a84c);color:#0f0f12}
 .pf-hid-r b{display:block;font-size:14px;font-weight:600}.pf-hid-r small{display:block;font-size:11.5px;color:rgba(242,238,232,.55);margin-top:2px;line-height:1.35}
 .pf-hid-ic{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1a1408}
 .pf-hid-sw{flex:none;width:46px;height:28px;border-radius:14px;background:#3a3644;position:relative;transition:background .15s}
@@ -31046,6 +31047,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(m.round!==btlInfo.number){ _btlMineSet({...m, round:btlInfo.number, sent:[], wait:[], count:null}); }
     _btlCount();
   },[btlInfo]);
+  // The Battle switch right in the hidden tools: off · test (only in test deployments of Paintiano) · on (everywhere). It works
+  // where this Paintiano is linked to the admin's Battle account (the link proves who asks); elsewhere the row opens Battle as before.
+  const [btlMode, setBtlMode] = useState(null);   // null = not known / not the admin · 'off' | 'test' | 'on'
+  const [btlModeBusy, setBtlModeBusy] = useState(false);
+  const _btlHere = (m)=> m==='on' || (m==='test' && !/^https:\/\/(www\.)?paintiano\.app$/.test(window.location.origin));   // is Battle shown in THIS Paintiano at that position?
+  const _btlModeSeen = (m)=>{ setBtlMode(m); setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:_btlHere(m), at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); };
+  useEffect(()=>{ if(!hidOpen || !hidOk || _pfIosApp()) return; const lk=btlMineRef.current.link; if(!lk){ setBtlMode(null); return; } let on=true;
+    fetch(PF_BTL+'/api/round', {headers:{Authorization:'Bearer '+lk}}).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on) return; if(d && d.admin && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else setBtlMode(null); }).catch(()=>{ if(on) setBtlMode(null); });
+    return ()=>{ on=false; }; },[hidOpen, hidOk]);
+  const _btlModeSet = (m)=>{ if(btlModeBusy || m===btlMode) return; const lk=btlMineRef.current.link; if(!lk) return; setBtlModeBusy(true);
+    fetch(PF_BTL+'/api/round', {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+lk}, body:JSON.stringify({mode:m})}).then(r=>r.ok ? r.json() : null)
+      .then(d=>{ if(d && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else _btlSay(_stT('btlErr')); }).catch(()=>{ _btlSay(_stT('btlErr')); }).finally(()=>setBtlModeBusy(false)); };
   const _hidBtl = ()=>{ try{ sessionStorage.removeItem('paintiano_btl'); }catch(_){} try{ if(!window.open(PF_BTL+'/#switch', '_blank')) window.location.href=PF_BTL+'/#switch'; }catch(_){} };   // the switch itself is Battle's (its admin only)
   const _hidChip = ()=> setAddrChip(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_addr_chip', nv?'1':'0'); }catch(_){} return nv; });
   const _hidPost = ()=> setPosterMaker(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){} return nv; });
@@ -43244,7 +43257,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   <div className="pf-hid-card">
                     {_sw(addrChip, _hidChip, '#', 'linear-gradient(135deg,#f0d78a,#c9a84c)', _stT('hidChip'), _stT('hidChipS'))}
                     {_sw(posterMaker, _hidPost, '⬇', 'linear-gradient(135deg,#f3b07a,#d2763f)', _stT('hidPost'), _stT('hidPostS'))}
-                    {_sw(!!(btlInfo && btlInfo.on), _hidBtl, '⚔', 'linear-gradient(135deg,#f2d27a,#c9a84c)', _stT('hidBtl'), _stT('hidBtlS'))}
+                    {btlMode ? (<div className="pf-hid-r" data-k="hidBtl3" style={{cursor:'default'}}>
+                      <span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#f2d27a,#c9a84c)'}}>⚔</span>
+                      <span style={{flex:1,minWidth:0}}><b>{_stT('hidBtl')}</b><small>{btlMode==='on' ? 'paintiano.app + dev' : btlMode==='test' ? 'dev' : '—'}</small></span>
+                      <span role="radiogroup" aria-label="Battle" className="pf-hid-seg" style={{opacity:btlModeBusy ? .5 : 1}}>{[['off','Off'],['test','Test'],['on','On']].map(([m, l])=>(<button key={m} type="button" role="radio" aria-checked={btlMode===m} className={btlMode===m ? 'on' : ''} disabled={btlModeBusy} onClick={()=>_btlModeSet(m)}>{l}</button>))}</span></div>)
+                      : _sw(!!(btlInfo && btlInfo.on), _hidBtl, '⚔', 'linear-gradient(135deg,#f2d27a,#c9a84c)', _stT('hidBtl'), _stT('hidBtlS'))}
                     <div className="pf-hid-r" style={{cursor:'default'}}><span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#9be0b8,#3fa97a)'}}>⤢</span><span style={{flex:1,minWidth:0}}><b>{_stT('hidExp')}</b><small>{_stT('hidExpS')}</small></span><span aria-hidden="true" style={{flex:'none',width:46,textAlign:'center',color:'#e2c477',fontSize:18,fontWeight:700}}>✓</span></div>
                   </div>
                   <button type="button" className="pf-hid-lock" onClick={_hidLock}>{_stT('hidLock')}</button>
