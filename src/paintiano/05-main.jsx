@@ -16438,12 +16438,19 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(!k) return; const tm=setTimeout(()=>{ tipSessRef.current[k]=true; setStTip(k); }, k==='up' ? 7000 : 12000); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, playing, _artMode, jamOn, jamAll, viewMode]);
+  // someone who came from Paintiano Battle to paint their own (…&from=battle): lands in the Studio on a finished painting and is shown
+  // Change straight away — not after 12 s of playing, they have not pressed play yet
+  const fromBtlRef = useRef(null); if(fromBtlRef.current===null){ try{ fromBtlRef.current = /[?&]from=battle(&|$)/.test(window.location.search||''); }catch(_){ fromBtlRef.current=false; } }
+  useEffect(()=>{ if(!fromBtlRef.current || stTip || _tipQuiet || !studioFs || tipSessRef.current.chg) return;
+    const tm=setTimeout(()=>{ tipSessRef.current.chg=true; fromBtlRef.current=false; setStTip('chg'); }, 2500); return ()=>clearTimeout(tm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[stTip, _tipQuiet, studioFs]);
   useEffect(()=>{ if(!stTip) return; if(_tipQuiet || (stTip==='up' && !_stUpWorks())){ setStTip(null); return; } const k=stTip; const tm=setTimeout(()=>_tipShown(k), 6500); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, _artMode, jamOn, jamAll]);
   // ♥: your own painting (a song, a picture, a mood, a take — not a surprise) is done and not kept yet
   useEffect(()=>{ if(stTip || _tipQuiet || _tipSeen('fav') || tipSessRef.current.fav) return; const own = !!(loadedSource || moodContext || draftOwnerRef.current);
-    if(!own || !favReadyAny || favHitAny) return; const tm=setTimeout(()=>{ tipSessRef.current.fav=true; setStTip('fav'); }, 1200); return ()=>clearTimeout(tm);
+    if(!own || !favReadyAny || favHitAny || fromBtlRef.current) return; const tm=setTimeout(()=>{ tipSessRef.current.fav=true; setStTip('fav'); }, 1200);   // from Battle: Change is shown first return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[stTip, _tipQuiet, favReadyAny, favHitAny]);
   const feedResumeRef = useRef(null);   // ↓ from the first surprise back home: the cards wait for ↑
