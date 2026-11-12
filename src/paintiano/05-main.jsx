@@ -15766,8 +15766,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(c && c.width && c.height){ const W=720, H=960, o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H);
         const k=Math.max(W/c.width, H/c.height), w=c.width*k, h=c.height*k; x.drawImage(c,(W-w)/2,(H-h)/2,w,h); img=o.toDataURL('image/jpeg',0.86); } }catch(_){ img=null; }
     if(!a || !img){ _stToastShow(_stT('btlErr')); return; } setBtlBusy(false); setBtlSheet({addr:a, img}); };
+  // …and how it GREW: eight stages of the same painting (as far as the 1st … 8th ninth of the song) on one sheet, 4 × 2 —
+  // Battle's shared video lets the painting grow from them. One stage a tick, so the sheet stays alive; no stages → Battle only unveils it.
+  const _btlStages = ()=> new Promise((done)=>{ try{
+    const N=8, C=4, FW=360, FH=480, o=document.createElement('canvas'); o.width=FW*C; o.height=FH*(N/C); const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,o.width,o.height); let i=0;
+    const step=()=>{ try{ if(i>=N){ done(o.toDataURL('image/jpeg',0.72)); return; }
+      let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(1, Math.max(1, Math.round(chords.length*(i+1)/(N+1)))); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
+      if(!c || !c.width || !c.height){ done(null); return; }
+      const k=Math.max(FW/c.width, FH/c.height), w=c.width*k, h=c.height*k, dx=(i%C)*FW, dy=Math.floor(i/C)*FH;
+      x.save(); x.beginPath(); x.rect(dx,dy,FW,FH); x.clip(); x.drawImage(c, dx+(FW-w)/2, dy+(FH-h)/2, w, h); x.restore(); i++; setTimeout(step, 0);
+    }catch(_){ done(null); } }; setTimeout(step, 30); }catch(_){ done(null); } });
   const _btlSend = ()=>{ if(btlBusy || !btlSheet) return; setBtlBusy(true); const fail=(k)=>{ setBtlBusy(false); setBtlSheet(null); _stToastShow(_stT(k)); };
-    try{ fetch(PF_BTL+'/api/ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:btlSheet.addr,image:btlSheet.img})})
+    const sh=btlSheet; try{ _btlStages().then(stg=>fetch(PF_BTL+'/api/ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(stg ? {address:sh.addr,image:sh.img,stages:stg} : {address:sh.addr,image:sh.img})}))
       .then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok,d})))
       .then(({ok,d})=>{ if(ok && d && d.ticket){ setTimeout(()=>{ setBtlBusy(false); setBtlSheet(null); }, 4000); window.location.href=PF_BTL+'/#ticket='+encodeURIComponent(d.ticket); return; }
         fail(d && (d.error==='closed' || d.error==='no_round') ? 'btlClosed' : 'btlErr'); })
