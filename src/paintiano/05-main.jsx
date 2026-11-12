@@ -15651,8 +15651,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const cnt=new Map(); let bk=0, best=0; for(let i=0;i<d.length;i+=4){ const k=((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5); const v=(cnt.get(k)||0)+1; cnt.set(k,v); if(v>best){ best=v; bk=k; } }
     let r=0,g=0,b=0,m=0; for(let i=0;i<d.length;i+=4){ if((((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5))===bk){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; m++; } } r/=m; g/=m; b/=m;
     let near=0; for(let i=0;i<d.length;i+=4){ if(Math.abs(d[i]-r)+Math.abs(d[i+1]-g)+Math.abs(d[i+2]-b) <= 42) near++; } return near/(n*n) > 0.99; }catch(_){ return false; } };
-  const _fullPaintCanvas = (S, lim)=>{ try{
-    if(!chords.length || composeMode || micActive || viewMode==='image') return null;
+  const _fullPaintCanvas = (S, lim, anyMode)=>{ try{   // anyMode: also in Compose and at the Mic — the take as it stands (Battle)
+    if(!chords.length || ((composeMode || micActive) && !anyMode) || viewMode==='image') return null;
     const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
     const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
     if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
@@ -15789,7 +15789,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [stShare, setStShare] = useState(false);
   // Battle: the WHOLE painting at once in the competition's 3:4 frame (as a print is laid out)
   const _btlImg = ()=>{ let img=null;
-    try{ let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(2); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
+    try{ let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(2, 0, true); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
       if(c && c.width && c.height){ const W=720, H=960, o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H);
         const k=Math.max(W/c.width, H/c.height), w=c.width*k, h=c.height*k; x.drawImage(c,(W-w)/2,(H-h)/2,w,h); img=o.toDataURL('image/jpeg',0.86); } }catch(_){ img=null; }
     return img; };
@@ -15798,7 +15798,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _btlStages = ()=> new Promise((done)=>{ try{
     const N=8, C=4, FW=360, FH=480, o=document.createElement('canvas'); o.width=FW*C; o.height=FH*(N/C); const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,o.width,o.height); let i=0;
     const step=()=>{ try{ if(i>=N){ done(o.toDataURL('image/jpeg',0.72)); return; }
-      let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(1, Math.max(1, Math.round(chords.length*(i+1)/(N+1)))); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
+      let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(1, Math.max(1, Math.round(chords.length*(i+1)/(N+1))), true); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
       if(!c || !c.width || !c.height){ done(null); return; }
       const k=Math.max(FW/c.width, FH/c.height), w=c.width*k, h=c.height*k, dx=(i%C)*FW, dy=Math.floor(i/C)*FH;
       x.save(); x.beginPath(); x.rect(dx,dy,FW,FH); x.clip(); x.drawImage(c, dx+(FW-w)/2, dy+(FH-h)/2, w, h); x.restore(); i++; setTimeout(step, 0);
@@ -15806,6 +15806,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // while a take is being made (Compose, the Mic) the whole painting cannot be laid out afresh: the canvas as it stands goes
   const _btlSnap = ()=>{ try{ const c=canvasRef.current; if(!c || !c.width || !c.height || _canvasBlank(c)) return null; const W=720, H=960, o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H);
     const k=Math.max(W/c.width, H/c.height), w=c.width*k, h=c.height*k; x.drawImage(c,(W-w)/2,(H-h)/2,w,h); return o.toDataURL('image/jpeg',0.86); }catch(_){ return null; } };
+  // the same painting from a stored source (what Battle keeps): its look and its notes, laid out and painted afresh in 3:4
+  const _btlFromSource = (src, S)=>{ try{ const fv=src && src.look && src.look.fv, ch=src && src.chords; if(!fv || !Array.isArray(ch) || !ch.length) return null;
+    let lay=null; try{ window.__pfPrint34=true; lay=_favLayout(fv, ch); } finally{ try{ window.__pfPrint34=false; }catch(_){} } if(!lay) return null;
+    const c=document.createElement('canvas'); return _favPaint(c, fv, {chords:ch}, (S>0 ? S : 1), fv.tone || tone, lay) ? c : null; }catch(_){ return null; } };
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfBtlCheck = ()=>{ let a=null; try{ window.__pfPrint34=true; a=_fullPaintCanvas(1, 0, true); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
+    if(!a) return {ok:false, why:'no painting'}; const src=JSON.parse(JSON.stringify({chords, look:{fv:btlFvRef.current}})); const b=_btlFromSource(src, 1); if(!b) return {ok:false, why:'no repaint'};
+    const A=a.toDataURL('image/png'), B=b.toDataURL('image/png'); return {ok:A===B, w:a.width, h:a.height, bytes:JSON.stringify(src).length, compose:!!composeMode, mic:!!micActive, own:draftOwnerRef.current||null}; }; } }catch(_){}   // the poster tool only
   const _btlCan = ()=> _btlOn() && chords.length>0 && !(viewMode==='image' && !moodFromImg) && !demoReelOn;   // a picture that plays is not a painting
   // the painting's fingerprint: its notes and its look (the same painting is marked once)
   const _btlKey = ()=>{ try{ let h=0x811c9dc5; const add=(x)=>{ const t=String(x); for(let i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } };
@@ -15820,9 +15827,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(_btlN()>=3){ _btlSay(_stT('btlFull')); return; }
     setBtlBusy(true); const done=()=>setBtlBusy(false); const fail=(e)=>{ done(); _btlSay(_stT(e==='limit' ? 'btlFull' : e==='duplicate' ? 'btlDup' : (e==='closed' || e==='no_round') ? 'btlClosed' : 'btlErr')); };
     try{ let img=_btlImg(); const whole=!!img; if(!img) img=_btlSnap(); if(!img){ fail(); return; }
-      const fv=whole ? btlFvRef.current : null, a=_paintAddr(), addr=(a && a.indexOf('&artist=')>0 && builtinPieceRef.current!=null) ? a : null;
+      const fv=whole ? btlFvRef.current : null, a=_paintAddr(), addr=(a && a.indexOf('&artist=')>0 && builtinPieceRef.current!=null && !composeMode && !micActive && !draftOwnerRef.current) ? a : null;   // an address only for a built-in piece itself, never for a take made over it
       const source={v:1, app:'paintiano', from:(draftOwnerRef.current || loadedSource || null), whole,
-        chords:chords.map(c=>({t:c.startMs|0, n:(c.n||[]).map(x=>({m:x.m|0, v:x.v|0, d:x.durMs|0}))})),
+        chords:JSON.parse(JSON.stringify(chords)),   // as they are: the painting is made of exactly these
         look:Object.assign({artist:effectiveStyle||null, stage:(painterStage||[]).slice(), phase:paintPhase|0, mode, tone, ks:keyShift|0, sig:!!sigActive}, fv ? {fv:JSON.parse(JSON.stringify(fv))} : {})};
       (whole ? _btlStages() : Promise.resolve(null)).then(stg=>_btlPost('/api/ticket', Object.assign({image:img, source}, stg ? {stages:stg} : {}, addr ? {address:addr} : {})))
         .then(r=>{ if(!r.ok || !r.d.ticket){ fail(r.d.error); return; } const t=r.d.ticket, m=btlMineRef.current;
