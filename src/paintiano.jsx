@@ -31025,13 +31025,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     fetch(PF_BTL+'/api/submit',{headers:{Authorization:'Bearer '+m.link}}).then(r=>r.status===401 ? {gone:true} : (r.ok ? r.json() : null)).then(d=>{ if(!d) return; const c=btlMineRef.current;
       if(d.gone){ _btlMineSet({...c, link:null, count:null}); return; } if(typeof d.count==='number') _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }).catch(()=>{}); }catch(_){} };
   const _btlLinked = (lk)=>{ if(!/^L\.[0-9a-f-]{36}\.\d+\.[A-Za-z0-9_-]+$/.test(lk)) return false; const m=btlMineRef.current;
-    _btlMineSet({...m, link:lk, sent:m.sent.concat(m.wait.map(w=>({k:w.k, id:null}))), wait:[], count:null}); return true; };
+    _btlMineSet({...m, link:lk, sent:m.sent.concat(m.wait.map(w=>({k:w.k, id:null, t:w.t}))), wait:[], count:null}); return true; };   // t: the ticket it went in with — Battle says which painting it became
   useEffect(()=>{ if(_pfIosApp()) return; const on=()=>{ if(!document.hidden) _btlCount(); };
     document.addEventListener('visibilitychange', on); window.addEventListener('focus', on);
     // Battle's page under the tab speaks to Paintiano: the link once it knows the account, the count, and "close me"
     const msg=(e)=>{ try{ if(e.origin!==PF_BTL || !e.data || e.data.type!=='pf-battle') return; const d=e.data;
       if(typeof d.link==='string'){ const had=!!btlMineRef.current.link, w=btlMineRef.current.wait.length; if(_btlLinked(d.link) && (!had || w)) _btlSay(_stT('btlLinked')); }
       if(typeof d.count==='number'){ const c=btlMineRef.current; _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }
+      if(Array.isArray(d.got)){ const c=btlMineRef.current; const by=new Map(d.got.filter(x=>x && typeof x.t==='string' && typeof x.id==='string').map(x=>[x.t, x.id])); if(by.size) _btlMineSet({...c, sent:c.sent.map(x=> (x.t && by.has(x.t)) ? {k:x.k, id:by.get(x.t)} : x)}); }   // the paintings that went in at the sign-in: now known by their ids
+      if(typeof d.gone==='string' && d.gone){ const c=btlMineRef.current; _btlMineSet({...c, sent:c.sent.filter(x=>x.id!==d.gone)}); }   // removed from the round on Battle's own page: its dot goes out
       if(typeof d.on==='boolean'){ setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:d.on, at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); }   // Battle says where its switch stands for this Paintiano — at once, no restart
       if(d.close) setBtlTab(null); }catch(_){} };
     window.addEventListener('message', msg);

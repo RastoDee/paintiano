@@ -31032,6 +31032,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const msg=(e)=>{ try{ if(e.origin!==PF_BTL || !e.data || e.data.type!=='pf-battle') return; const d=e.data;
       if(typeof d.link==='string'){ const had=!!btlMineRef.current.link, w=btlMineRef.current.wait.length; if(_btlLinked(d.link) && (!had || w)) _btlSay(_stT('btlLinked')); }
       if(typeof d.count==='number'){ const c=btlMineRef.current; _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }
+      if(typeof d.gone==='string' && d.gone){ const c=btlMineRef.current; _btlMineSet({...c, sent:c.sent.filter(x=>x.id!==d.gone)}); }   // removed from the round on Battle's own page: its dot goes out
       if(typeof d.on==='boolean'){ setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:d.on, at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); }   // Battle says where its switch stands for this Paintiano — at once, no restart
       if(d.close) setBtlTab(null); }catch(_){} };
     window.addEventListener('message', msg);
@@ -41404,7 +41405,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   }catch(_){} },[!!btlTab]);
   // the gesture is shown once, where it can be used
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !chords.length) return; let seen=false; try{ seen=localStorage.getItem('paintiano_btl_hint')==='1'; }catch(_){}
-    if(seen) return; const tm=setTimeout(()=>{ try{ localStorage.setItem('paintiano_btl_hint','1'); }catch(_){} _btlSay(_stT('btlHint')); }, 6000); return ()=>clearTimeout(tm); },[btlInfo, studioHome, chords.length>0]);
+    if(seen) return; const tm=setTimeout(()=>{ if(_stGuideOn.current) return;   /* the first-minute guide says it itself, as its third step */ try{ localStorage.setItem('paintiano_btl_hint','1'); }catch(_){} _btlSay(_stT('btlHint')); }, 6000); return ()=>clearTimeout(tm); },[btlInfo, studioHome, chords.length>0]);
   const _btlUndo = (u)=>{ const m=btlMineRef.current; if(!u || !m.link) return; setBtlMsg(null);
     _btlPost('/api/submit', {withdraw:u.id}, m.link).then(q=>{ if(!q.ok){ _btlSay(_stT('btlErr')); return; } const c=btlMineRef.current; _btlMineSet({...c, sent:c.sent.filter(x=>x.k!==u.k), count:(typeof q.d.count==='number' ? q.d.count : c.count)}); _btlSay(_stT('btlUndone')); }).catch(()=>_btlSay(_stT('btlErr'))); };
   const [stWithPic, setStWithPic] = useState(false);   // the share sheet, a picture's Audio: the original picture rides along
@@ -41957,7 +41958,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [stGuideImg, setStGuideImg] = useState(null);
   _stGuideOn.current = stGuide>0;
   const stGuideRef = useRef({key:'', t:0});
-  const _stGuideEnd = (tip)=>{ try{ localStorage.setItem('paintiano_st_guide','1'); }catch(_){} setStGuide(0); setStGuideImg(null); fromBtlRef.current=false;
+  const _stGuideEnd = (tip)=>{ try{ localStorage.setItem('paintiano_st_guide','1'); if(stGuide===3) localStorage.setItem('paintiano_btl_hint','1'); }catch(_){} setStGuide(0); setStGuideImg(null); fromBtlRef.current=false;
     if(tip){ tipSessRef.current.chg=true; setTimeout(()=>setStTip('chg'), 700); } };
   const _stGuideOk = stGuide>0 && studioFs && !studioHome && chords.length>0 && viewMode!=='image' && !stChg && !stShare && !stripOpen && !btlTab && !recording && !studioLive;
   // 1: the whole painting, as it will be when the music has finished (painted once, when the notes are there)
