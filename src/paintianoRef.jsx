@@ -41167,10 +41167,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     let r=0,g=0,b=0,m=0; for(let i=0;i<d.length;i+=4){ if((((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5))===bk){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; m++; } } r/=m; g/=m; b/=m;
     let near=0; for(let i=0;i<d.length;i+=4){ if(Math.abs(d[i]-r)+Math.abs(d[i+1]-g)+Math.abs(d[i+2]-b) <= 42) near++; } return near/(n*n) > 0.99; }catch(_){ return false; } };
   // everything the whole painting is made from, besides the notes (the Favorites paint from exactly this) — also the painting's identity for Battle
+  const _fvSeRef = useRef(null);   // the song's energy, worked out once per set of notes
   const _fvNow = ()=>{
     const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
     const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
-    if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
+    if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { const m=_fvSeRef.current; if(m && m.src===chords) se=m.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} _fvSeRef.current={src:chords, e:se}; } } }
     const fv={ style:st||null, keys, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0, ks:keyShift,
       cap:(proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
       mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
