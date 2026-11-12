@@ -5502,11 +5502,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [btlMine, setBtlMineRaw] = useState(_btlLoad);
   const btlMineRef = useRef(btlMine); btlMineRef.current = btlMine;
   const _btlMineSet = (m)=>{ btlMineRef.current=m; setBtlMineRaw(m); try{ localStorage.setItem('paintiano_btl_mine', JSON.stringify(m)); }catch(_){} };
+  const btlAskAt = useRef(Date.now());
   useEffect(()=>{ if(_pfIosApp()) return; let on=true;
     try{ const c=JSON.parse(sessionStorage.getItem('paintiano_btl')||'null'); if(c && c.number && Date.now()-c.at < 5*60000){ setBtlInfo(c); if(!hidOk) return; } }catch(_){}   // the admin's device always asks afresh
     const tm=setTimeout(()=>{ try{ fetch(PF_BTL+'/api/round').then(r=>r.ok ? r.json() : null).then(d=>{ if(!on || !d || !d.round) return;
       const v={number:d.round.number|0, on:d.on===true, at:Date.now()}; setBtlInfo(v); try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} }).catch(()=>{}); }catch(_){} }, (hidOk || btlMineRef.current.link || btlMineRef.current.wait.length) ? 0 : 2500);
-    return ()=>{ on=false; clearTimeout(tm); };
+    // …and again whenever Paintiano comes back to the front (at most once a minute): the switch may have moved meanwhile
+    const again=()=>{ try{ if(document.hidden || !on) return; const c=btlAskAt.current; if(Date.now()-c < 60000) return; btlAskAt.current=Date.now();
+      fetch(PF_BTL+'/api/round').then(r=>r.ok ? r.json() : null).then(d=>{ if(!on || !d || !d.round) return; const v={number:d.round.number|0, on:d.on===true, at:Date.now()}; setBtlInfo(v); try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} }).catch(()=>{}); }catch(_){} };
+    document.addEventListener('visibilitychange', again); window.addEventListener('focus', again);
+    return ()=>{ on=false; clearTimeout(tm); document.removeEventListener('visibilitychange', again); window.removeEventListener('focus', again); };
   },[hidOk, hidOpen]);
   const _btlOn = ()=> !!(btlInfo && btlInfo.on && !_pfIosApp());
   const _btlN = ()=>{ const m=btlMine; return Math.min(3, (m.count==null ? m.sent.length : m.count) + m.wait.length); };   // Battle's own count once it is known
@@ -5523,6 +5528,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const msg=(e)=>{ try{ if(e.origin!==PF_BTL || !e.data || e.data.type!=='pf-battle') return; const d=e.data;
       if(typeof d.link==='string'){ const had=!!btlMineRef.current.link, w=btlMineRef.current.wait.length; if(_btlLinked(d.link) && (!had || w)) _btlSay(_stT('btlLinked')); }
       if(typeof d.count==='number'){ const c=btlMineRef.current; _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }
+      if(typeof d.on==='boolean'){ setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:d.on, at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); }   // Battle says where its switch stands for this Paintiano — at once, no restart
       if(d.close) setBtlTab(null); }catch(_){} };
     window.addEventListener('message', msg);
     return ()=>{ document.removeEventListener('visibilitychange', on); window.removeEventListener('focus', on); window.removeEventListener('message', msg); }; },[]);

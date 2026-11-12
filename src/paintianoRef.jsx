@@ -41387,6 +41387,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _btlAny = btlMine.sent.length + btlMine.wait.length > 0;
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !_btlAny){ setBtlDot(false); return; }
     const ask=()=>{ const v=!!btlDotFn.current(); setBtlDot(o=>o===v ? o : v); }; ask(); const iv=setInterval(ask, 400); return ()=>clearInterval(iv); },[btlInfo, studioOn, studioHome, _btlAny]);
+  // in the Battle place the Studio rests: a piece that was playing is paused (other paintings are judged there, and the one here
+  // should not paint on unseen) and goes on from the same spot on the way back to the Studio — only if it was playing when left
+  const btlPausedRef = useRef(false);
+  useEffect(()=>{ try{
+    if(btlTab){ if(playing && !micPainting && !micListening && !recording && handlePauseClickRef.current){ btlPausedRef.current=true; handlePauseClickRef.current(); } }
+    else if(btlPausedRef.current){ btlPausedRef.current=false; if(studioOn && !studioHome && holdPaused && !playing && !micPainting && !micListening && handlePauseClickRef.current) handlePauseClickRef.current(); }
+  }catch(_){} },[!!btlTab]);
   // the gesture is shown once, where it can be used
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !chords.length) return; let seen=false; try{ seen=localStorage.getItem('paintiano_btl_hint')==='1'; }catch(_){}
     if(seen) return; const tm=setTimeout(()=>{ try{ localStorage.setItem('paintiano_btl_hint','1'); }catch(_){} _btlSay(_stT('btlHint')); }, 6000); return ()=>clearTimeout(tm); },[btlInfo, studioHome, chords.length>0]);
