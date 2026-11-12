@@ -31058,7 +31058,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return ()=>{ on=false; }; },[hidOpen, hidOk]);
   const _btlModeSet = (m)=>{ if(btlModeBusy || m===btlMode) return; const lk=btlMineRef.current.link; if(!lk) return; setBtlModeBusy(true);
     fetch(PF_BTL+'/api/round', {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+lk}, body:JSON.stringify({mode:m})}).then(r=>r.ok ? r.json() : null)
-      .then(d=>{ if(d && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else _btlSay(_stT('btlNo')); }).catch(()=>{ _btlSay(_stT('btlNo')); }).finally(()=>setBtlModeBusy(false)); };
+      .then(d=>{ if(d && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else _btlSay(_stT('btlErr')); }).catch(()=>{ _btlSay(_stT('btlErr')); }).finally(()=>setBtlModeBusy(false)); };
   const _hidBtl = ()=>{ try{ sessionStorage.removeItem('paintiano_btl'); }catch(_){} try{ if(!window.open(PF_BTL+'/#switch', '_blank')) window.location.href=PF_BTL+'/#switch'; }catch(_){} };   // the switch itself is Battle's (its admin only)
   const _hidChip = ()=> setAddrChip(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_addr_chip', nv?'1':'0'); }catch(_){} return nv; });
   const _hidPost = ()=> setPosterMaker(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){} return nv; });

@@ -17755,7 +17755,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   <div className="pf-hid-card">
                     {_sw(addrChip, _hidChip, '#', 'linear-gradient(135deg,#f0d78a,#c9a84c)', _stT('hidChip'), _stT('hidChipS'))}
                     {_sw(posterMaker, _hidPost, '⬇', 'linear-gradient(135deg,#f3b07a,#d2763f)', _stT('hidPost'), _stT('hidPostS'))}
-                    {btlMode ? (<div className="pf-hid-r" data-k="hidBtl3" style={{cursor:'default'}}>
+                    {btlMode ? (<div className="pf-hid-r" data-k="hidBtl3" style={{cursor:'default',boxSizing:'border-box'}}>
                       <span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#f2d27a,#c9a84c)'}}>⚔</span>
                       <span style={{flex:1,minWidth:0}}><b>{_stT('hidBtl')}</b><small>{btlMode==='on' ? 'paintiano.app + dev' : btlMode==='test' ? 'dev' : '—'}</small></span>
                       <span role="radiogroup" aria-label="Battle" className="pf-hid-seg" style={{opacity:btlModeBusy ? .5 : 1}}>{[['off','Off'],['test','Test'],['on','On']].map(([m, l])=>(<button key={m} type="button" role="radio" aria-checked={btlMode===m} className={btlMode===m ? 'on' : ''} disabled={btlModeBusy} onClick={()=>_btlModeSet(m)}>{l}</button>))}</span></div>)
