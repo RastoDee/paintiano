@@ -41166,8 +41166,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const cnt=new Map(); let bk=0, best=0; for(let i=0;i<d.length;i+=4){ const k=((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5); const v=(cnt.get(k)||0)+1; cnt.set(k,v); if(v>best){ best=v; bk=k; } }
     let r=0,g=0,b=0,m=0; for(let i=0;i<d.length;i+=4){ if((((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5))===bk){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; m++; } } r/=m; g/=m; b/=m;
     let near=0; for(let i=0;i<d.length;i+=4){ if(Math.abs(d[i]-r)+Math.abs(d[i+1]-g)+Math.abs(d[i+2]-b) <= 42) near++; } return near/(n*n) > 0.99; }catch(_){ return false; } };
-  const _fullPaintCanvas = (S, lim, anyMode)=>{ try{   // anyMode: also in Compose and at the Mic — the take as it stands (Battle)
-    if(!chords.length || ((composeMode || micActive) && !anyMode) || viewMode==='image') return null;
+  // everything the whole painting is made from, besides the notes (the Favorites paint from exactly this) — also the painting's identity for Battle
+  const _fvNow = ()=>{
     const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
     const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
     if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
@@ -41175,6 +41175,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       cap:(proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
       mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
       dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive };
+    return fv; };
+  const _fullPaintCanvas = (S, lim, anyMode)=>{ try{   // anyMode: also in Compose and at the Mic — the take as it stands (Battle)
+    if(!chords.length || ((composeMode || micActive) && !anyMode) || viewMode==='image') return null;
+    const fv=_fvNow();
     const lay=_favLayout(fv, chords); if(!lay) return null; try{ btlFvRef.current=fv; }catch(_){}
     if(lim>0) fv.lim=lim;   // the poster tool: the painting as far as this chord (reels, mockups)
     const c=document.createElement('canvas'); return _favPaint(c, fv, {chords}, (S>0 ? S : 1), tone, lay) ? c : null;
@@ -41330,11 +41334,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const A=a.toDataURL('image/png'), B=b.toDataURL('image/png'); return {ok:A===B, w:a.width, h:a.height, bytes:JSON.stringify(src).length, compose:!!composeMode, mic:!!micActive, own:draftOwnerRef.current||null}; }; } }catch(_){}   // the poster tool only
   const _btlCan = ()=> _btlOn() && chords.length>0 && !(viewMode==='image' && !moodFromImg) && !demoReelOn;   // a picture that plays is not a painting
   // the painting's fingerprint: its notes and its look (the same painting is marked once)
+  // (what it is PAINTED from, nothing about where the Studio's controls stand — those move while the same painting stays)
   const _btlKey = ()=>{ try{ let h=0x811c9dc5; const add=(x)=>{ const t=String(x); for(let i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } };
     const n=chords.length; add(n); for(let i=0;i<n;i+=Math.max(1, Math.floor(n/64))){ const c=chords[i]; add((c.startMs|0)+':'+((c.n||[]).map(x=>x.m|0).join('.'))); }
-    const st=(style!==null ? [style] : []).concat(painterStage||[]), fa=st.length>=2 ? _fusionAddr(st, paintPhase) : null;
-    add([effectiveStyle||'', st.join('+'), paintPhase|0, pollockSessionSeed>>>0, mode, tone, keyShift|0, sigActive?1:0, fa ? fa.phs.join(',')+(fa.fs||'')+(fa.rv||'') : '',
-      mode==='custom' ? JSON.stringify(activePalette||null) : '', JSON.stringify(globalThis.__PAINT_SIG_PHS||null), JSON.stringify(globalThis.__PAINT_SONG_SIG||null), JSON.stringify(globalThis.__PAINT_MUSIC_DNA||null), JSON.stringify(_stLookNow())].join('|'));   // …and the Studio's own account of the look (what ↑ and ↓ move between)
+    const fv=_fvNow(); add(JSON.stringify([fv.style, fv.keys, fv.fa, fv.phase, fv.seed, fv.ks, fv.cap, fv.mode, fv.tone, fv.pal, Math.round((fv.se||0)*1000), fv.own, fv.mf, fv.dna, fv.skip, fv.liveE, fv.compose, fv.sig]));
     return h.toString(36); }catch(_){ return ''; } };
   const _btlHas = (k)=>{ const m=btlMine; return m.sent.some(x=>x.k===k) ? 'in' : (m.wait.some(x=>x.k===k) ? 'wait' : null); };
   // the BATTLE place: Battle's page under the tab — with the tickets that wait for the sign-in, if any
@@ -41377,6 +41380,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     D.on=true; _swipeWasGestureRef.current=true; _stBuzz(14); setBtlDrag({x, y, over:_btlOver(x, y), img, go:false});
     if(D.mouse){ const mv=(ev)=>{ _btlDragMove(ev.clientX, ev.clientY); }; const up=(ev)=>{ window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); _btlDragUp(ev.clientX, ev.clientY); }; window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up); }
     return true; };
+  // the dot at the tab: is THIS painting in Battle? What a painting is made of settles after the screen is drawn (a swipe to
+  // another look, a new painter), so the dot is asked again a moment later, not once at the draw — else it shows the last one's answer.
+  const [btlDot, setBtlDot] = useState(false);
+  const btlDotFn = useRef(null); btlDotFn.current = ()=>{ try{ return _btlCan() && !!_btlHas(_btlKey()); }catch(_){ return false; } };
+  const _btlAny = btlMine.sent.length + btlMine.wait.length > 0;
+  useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !_btlAny){ setBtlDot(false); return; }
+    const ask=()=>{ const v=!!btlDotFn.current(); setBtlDot(o=>o===v ? o : v); }; ask(); const iv=setInterval(ask, 400); return ()=>clearInterval(iv); },[btlInfo, studioOn, studioHome, _btlAny]);
   // the gesture is shown once, where it can be used
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !chords.length) return; let seen=false; try{ seen=localStorage.getItem('paintiano_btl_hint')==='1'; }catch(_){}
     if(seen) return; const tm=setTimeout(()=>{ try{ localStorage.setItem('paintiano_btl_hint','1'); }catch(_){} _btlSay(_stT('btlHint')); }, 6000); return ()=>clearTimeout(tm); },[btlInfo, studioHome, chords.length>0]);
@@ -45626,7 +45636,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         return (<>
           {/* the Studio, one screen: ⌄ home (top left), the song and its painter, ♥ · ✦ Change · share — always there, never a rail */}
           {stFill && (<><span className="pf-st-corner l" aria-hidden="true"/><span className="pf-st-corner r" aria-hidden="true"/></>)}   {/* full screen: the top corners rounded, as at home */}
-          {!_vr && (!stripOpen || stLand) && !stChg && !stShare && !demoReelOn && !recording && !micActive && !composeMode && !stSeek && (<div className="pf-st-tabs2 st"><button type="button" onClick={_go(()=>{ _stForYou(); })}>{_stT('sup')}</button><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('studio')}</button>{_btlOn() && (<button type="button" className={'pf-btl-tab'+(btlDrag ? (btlDrag.over ? ' drop over' : ' drop') : '')+(_btlHas(_btlKey()) ? ' has' : '')} onClick={_go(()=>{ _btlTabOpen(); })}>Battle</button>)}</div>)}   {/* the two places, here too: For You leaves to the surprises (your painting waits on the home card) */}
+          {!_vr && (!stripOpen || stLand) && !stChg && !stShare && !demoReelOn && !recording && !micActive && !composeMode && !stSeek && (<div className="pf-st-tabs2 st"><button type="button" onClick={_go(()=>{ _stForYou(); })}>{_stT('sup')}</button><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('studio')}</button>{_btlOn() && (<button type="button" className={'pf-btl-tab'+(btlDrag ? (btlDrag.over ? ' drop over' : ' drop') : '')+(btlDot ? ' has' : '')} onClick={_go(()=>{ _btlTabOpen(); })}>Battle</button>)}</div>)}   {/* the two places, here too: For You leaves to the surprises (your painting waits on the home card) */}
           {!_vr && (!stripOpen || stLand) && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
           {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={(e)=>{ e.stopPropagation(); if(stThumbHoldRef.current){ stThumbHoldRef.current=false; return; } _stPeekTap(); }} onPointerDown={(e)=>{ stThumbHoldRef.current=false; _holdStart(e.clientX, e.clientY, true); }} onPointerUp={_thumbUp} onPointerCancel={_thumbUp} onPointerLeave={_thumbUp} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} onContextMenu={(e)=>e.preventDefault()} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
           {!_vr && (!_live || (!composeMode && !micActive && !(micSong && micSong.phase==='reading'))) && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && !stPlayArm && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true" style={_live ? {top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)'} : undefined}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}

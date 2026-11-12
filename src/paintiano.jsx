@@ -41166,15 +41166,20 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const cnt=new Map(); let bk=0, best=0; for(let i=0;i<d.length;i+=4){ const k=((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5); const v=(cnt.get(k)||0)+1; cnt.set(k,v); if(v>best){ best=v; bk=k; } }
     let r=0,g=0,b=0,m=0; for(let i=0;i<d.length;i+=4){ if((((d[i]>>5)<<6)|((d[i+1]>>5)<<3)|(d[i+2]>>5))===bk){ r+=d[i]; g+=d[i+1]; b+=d[i+2]; m++; } } r/=m; g/=m; b/=m;
     let near=0; for(let i=0;i<d.length;i+=4){ if(Math.abs(d[i]-r)+Math.abs(d[i+1]-g)+Math.abs(d[i+2]-b) <= 42) near++; } return near/(n*n) > 0.99; }catch(_){ return false; } };
-  const _fullPaintCanvas = (S, lim, anyMode)=>{ try{   // anyMode: also in Compose and at the Mic — the take as it stands (Battle)
-    if(!chords.length || ((composeMode || micActive) && !anyMode) || viewMode==='image') return null;
+  // everything the whole painting is made from, besides the notes (the Favorites paint from exactly this) — also the painting's identity for Battle
+  const _fvSeRef = useRef(null);   // the song's energy, worked out once per set of notes
+  const _fvNow = ()=>{
     const st=effectiveStyle, a=(style!==null ? [style] : []).concat(painterStage||[]), keys=a.length>=2 ? a.slice() : null, own=draftOwnerRef.current;
     const seLive=!!(_takeInfo(chords) && !_takeSkip(st)); let se=0.5;
-    if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} } }
+    if(!seLive){ const sc=_songEnergyCacheRef.current; if(sc && sc.src===chords && sc.live===seLive) se=sc.e; else { const m=_fvSeRef.current; if(m && m.src===chords) se=m.e; else { try{ const c=computeSongCharacter(chords); se=c ? c.energy : 0.5; }catch(_){} _fvSeRef.current={src:chords, e:se}; } } }
     const fv={ style:st||null, keys, fa: keys ? _fusionAddr(keys, paintPhase) : null, phase:paintPhase|0, seed:pollockSessionSeed>>>0, ks:keyShift,
       cap:(proStatus==='free' && !sigActiveRef.current && !feedFirstRef.current && (style||shuffleStyle)!==artistOfDay && !(tastePreviewKeyRef.current && style===tastePreviewKeyRef.current)) ? 2 : null,
       mode, tone, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null, se, own: own||null, mf: _isMicOwn(own) ? 1 : 0,
       dna: globalThis.__PAINT_MUSIC_DNA ? JSON.parse(JSON.stringify(globalThis.__PAINT_MUSIC_DNA)) : null, skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive };
+    return fv; };
+  const _fullPaintCanvas = (S, lim, anyMode)=>{ try{   // anyMode: also in Compose and at the Mic — the take as it stands (Battle)
+    if(!chords.length || ((composeMode || micActive) && !anyMode) || viewMode==='image') return null;
+    const fv=_fvNow();
     const lay=_favLayout(fv, chords); if(!lay) return null; try{ btlFvRef.current=fv; }catch(_){}
     if(lim>0) fv.lim=lim;   // the poster tool: the painting as far as this chord (reels, mockups)
     const c=document.createElement('canvas'); return _favPaint(c, fv, {chords}, (S>0 ? S : 1), tone, lay) ? c : null;
@@ -41330,11 +41335,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const A=a.toDataURL('image/png'), B=b.toDataURL('image/png'); return {ok:A===B, w:a.width, h:a.height, bytes:JSON.stringify(src).length, compose:!!composeMode, mic:!!micActive, own:draftOwnerRef.current||null}; }; } }catch(_){}   // the poster tool only
   const _btlCan = ()=> _btlOn() && chords.length>0 && !(viewMode==='image' && !moodFromImg) && !demoReelOn;   // a picture that plays is not a painting
   // the painting's fingerprint: its notes and its look (the same painting is marked once)
+  // (what it is PAINTED from, nothing about where the Studio's controls stand — those move while the same painting stays)
   const _btlKey = ()=>{ try{ let h=0x811c9dc5; const add=(x)=>{ const t=String(x); for(let i=0;i<t.length;i++){ h^=t.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } };
     const n=chords.length; add(n); for(let i=0;i<n;i+=Math.max(1, Math.floor(n/64))){ const c=chords[i]; add((c.startMs|0)+':'+((c.n||[]).map(x=>x.m|0).join('.'))); }
-    const st=(style!==null ? [style] : []).concat(painterStage||[]), fa=st.length>=2 ? _fusionAddr(st, paintPhase) : null;
-    add([effectiveStyle||'', st.join('+'), paintPhase|0, pollockSessionSeed>>>0, mode, tone, keyShift|0, sigActive?1:0, fa ? fa.phs.join(',')+(fa.fs||'')+(fa.rv||'') : '',
-      mode==='custom' ? JSON.stringify(activePalette||null) : '', JSON.stringify(globalThis.__PAINT_SIG_PHS||null), JSON.stringify(globalThis.__PAINT_SONG_SIG||null), JSON.stringify(globalThis.__PAINT_MUSIC_DNA||null), JSON.stringify(_stLookNow())].join('|'));   // …and the Studio's own account of the look (what ↑ and ↓ move between)
+    const fv=_fvNow(); add(JSON.stringify([fv.style, fv.keys, fv.fa, fv.phase, fv.seed, fv.ks, fv.cap, fv.mode, fv.tone, fv.pal, Math.round((fv.se||0)*1000), fv.own, fv.mf, fv.dna, fv.skip, fv.liveE, fv.compose, fv.sig]));
     return h.toString(36); }catch(_){ return ''; } };
   const _btlHas = (k)=>{ const m=btlMine; return m.sent.some(x=>x.k===k) ? 'in' : (m.wait.some(x=>x.k===k) ? 'wait' : null); };
   // the BATTLE place: Battle's page under the tab — with the tickets that wait for the sign-in, if any
