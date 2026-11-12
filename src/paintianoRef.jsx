@@ -31011,18 +31011,31 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[hidOk, hidOpen]);
   const _btlOn = ()=> !!(btlInfo && btlInfo.on && !_pfIosApp());
   const _btlRound = ()=> _stT('btlR').replace('{n}', String((btlInfo && btlInfo.number) || 1).padStart(2,'0'));
-  const _btlN = ()=>{ const m=btlMine; return Math.min(3, Math.max(m.count==null ? 0 : m.count, m.sent.length) + m.wait.length); };
+  const _btlN = ()=>{ const m=btlMine; return Math.min(3, (m.count==null ? m.sent.length : m.count) + m.wait.length); };   // Battle's own count once it is known
+  // Battle opens NEXT to Paintiano (a new window / the app's own browser sheet), so the painting here stays as it is. The link
+  // comes back by itself: Battle leaves it under this device's key and Paintiano picks it up when it is looked at again.
+  // how many are in, as Battle counts them (asked on load and when Paintiano is looked at again; none there → none are lit here)
+  const btlCntAt = useRef(0);
+  const _btlCount = ()=>{ try{ const m=btlMineRef.current; if(!m.link || Date.now()-btlCntAt.current<8000) return; btlCntAt.current=Date.now();
+    fetch(PF_BTL+'/api/submit',{headers:{Authorization:'Bearer '+m.link}}).then(r=>r.status===401 ? {gone:true} : (r.ok ? r.json() : null)).then(d=>{ if(!d) return; const c=btlMineRef.current;
+      if(d.gone){ _btlMineSet({...c, link:null, count:null}); return; } if(typeof d.count==='number') _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }).catch(()=>{}); }catch(_){} };
+  const _btlDk = ()=>{ try{ let k=localStorage.getItem('paintiano_btl_dk'); if(!k || !/^[A-Za-z0-9_-]{22,64}$/.test(k)){ const b=new Uint8Array(24); crypto.getRandomValues(b); k=btoa(String.fromCharCode.apply(null, b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); localStorage.setItem('paintiano_btl_dk', k); } return k; }catch(_){ return null; } };
+  const btlExpectRef = useRef(0);   // until when a link is expected (Battle was opened to sign in)
+  const _btlLinked = (lk)=>{ if(!/^L\.[0-9a-f-]{36}\.\d+\.[A-Za-z0-9_-]+$/.test(lk)) return false; const m=btlMineRef.current; btlExpectRef.current=0;
+    _btlMineSet({...m, link:lk, sent:m.sent.concat(m.wait.map(w=>({k:w.k, id:null}))), wait:[], count:null}); setBtlSheet(null); setTimeout(()=>_btlSay(_stT('btlLinked')), 400); return true; };
+  const _btlPick = ()=>{ try{ const m=btlMineRef.current; if(m.link || !(btlExpectRef.current>Date.now() || m.wait.length)) return; const dk=_btlDk(); if(!dk) return;
+    fetch(PF_BTL+'/api/submit?dk='+dk).then(r=>r.ok ? r.json() : null).then(d=>{ if(d && d.link) _btlLinked(d.link); }).catch(()=>{}); }catch(_){} };
+  useEffect(()=>{ if(_pfIosApp()) return; const on=()=>{ if(!document.hidden){ _btlPick(); _btlCount(); } };
+    document.addEventListener('visibilitychange', on); window.addEventListener('focus', on); window.addEventListener('pageshow', on);
+    const iv=setInterval(()=>{ if(btlExpectRef.current>Date.now() && !document.hidden) _btlPick(); }, 4000);
+    return ()=>{ document.removeEventListener('visibilitychange', on); window.removeEventListener('focus', on); window.removeEventListener('pageshow', on); clearInterval(iv); }; },[]);
   // back from Battle with the link (…/play#battle_link=…): kept, the waiting ones are in — and a new round starts clean
   useEffect(()=>{ try{ const h=window.location.hash||''; if(h.indexOf('#battle_link=')!==0) return; const lk=decodeURIComponent(h.slice(13));
     window.history.replaceState(null, '', window.location.pathname+window.location.search);
-    if(!/^L\.[0-9a-f-]{36}\.\d+\.[A-Za-z0-9_-]+$/.test(lk)) return; const m=btlMineRef.current;
-    _btlMineSet({...m, link:lk, sent:m.sent.concat(m.wait.map(w=>({k:w.k, id:null}))), wait:[], count:null}); setTimeout(()=>_btlSay(_stT('btlLinked')), 900); }catch(_){} },[]);
+    _btlLinked(lk); }catch(_){} },[]);
   useEffect(()=>{ if(!btlInfo || !btlInfo.number) return; const m=btlMineRef.current;
     if(m.round!==btlInfo.number){ _btlMineSet({...m, round:btlInfo.number, sent:[], wait:[], count:null}); }
-    if(!_btlOn() || !m.link) return; let on=true;   // how many are in, as Battle counts them
-    try{ fetch(PF_BTL+'/api/submit',{headers:{Authorization:'Bearer '+m.link}}).then(r=>r.status===401 ? {gone:true} : (r.ok ? r.json() : null)).then(d=>{ if(!on || !d) return; const c=btlMineRef.current;
-      if(d.gone){ _btlMineSet({...c, link:null, count:null}); return; } if(typeof d.count==='number') _btlMineSet({...c, count:d.count}); }).catch(()=>{}); }catch(_){}
-    return ()=>{ on=false; };
+    _btlCount();
   },[btlInfo]);
   const _hidBtl = ()=>{ try{ sessionStorage.removeItem('paintiano_btl'); }catch(_){} try{ window.location.href=PF_BTL+'/#switch'; }catch(_){} };   // the switch itself is Battle's (its admin only)
   const _hidChip = ()=> setAddrChip(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_addr_chip', nv?'1':'0'); }catch(_){} return nv; });
@@ -41324,8 +41337,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       mode==='custom' ? JSON.stringify(activePalette||null) : '', JSON.stringify(globalThis.__PAINT_SIG_PHS||null), JSON.stringify(globalThis.__PAINT_SONG_SIG||null), JSON.stringify(globalThis.__PAINT_MUSIC_DNA||null), JSON.stringify(_stLookNow())].join('|'));   // …and the Studio's own account of the look (what ↑ and ↓ move between)
     return h.toString(36); }catch(_){ return ''; } };
   const _btlHas = (k)=>{ const m=btlMine; return m.sent.some(x=>x.k===k) ? 'in' : (m.wait.some(x=>x.k===k) ? 'wait' : null); };
-  const _btlOpenUrl = ()=>{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin); return PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'mine=1')+'&back='+o; };
-  const _btlGo = ()=>{ try{ window.location.href=_btlOpenUrl(); }catch(_){} };
+  const _btlOpenUrl = ()=>{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin), dk=m.link ? null : _btlDk(); return PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'mine=1')+'&back='+o+(dk ? '&dk='+dk : ''); };
+  const _btlGo = ()=>{ try{ const u=_btlOpenUrl(); if(!btlMineRef.current.link) btlExpectRef.current=Date.now()+15*60000; setBtlSheet(null); let w=null; try{ w=window.open(u, '_blank'); }catch(_){ w=null; } if(!w) window.location.href=u; }catch(_){} };   // next to Paintiano; only where a new window is refused, in its place
   const _btlPost = (path, body, link)=> fetch(PF_BTL+path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'}, link ? {Authorization:'Bearer '+link} : {}),body:JSON.stringify(body)}).then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok, s:r.status, d:d||{}})));
   const _btlMark = ()=>{ if(btlBusy || !_btlCan()) return; const k=_btlKey();
     if(_btlHas(k)){ setBtlSheet('in'); return; }
@@ -47438,7 +47451,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       )}
       </div>
       )}
-      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v3.0{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
+      {!basicMode && <footer className="pf-version-footer" style={{textAlign:'center',padding:'18px 0 10px',opacity:.4,fontSize:Math.round(8*effScale)+'px',letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(201,168,76,.9)'}}>Paintiano · v3.1{__BUILD_ENV__!=='production' ? ' · build '+__BUILD_SHA__ : ''}</footer>}
       {!basicMode && (
       <div className="pf-legal-links" style={{textAlign:'center',padding:'0 0 24px',opacity:.55,fontSize:Math.round(9*effScale)+'px',letterSpacing:'.08em',color:'rgba(201,168,76,.75)'}}>
         {!_pfIosApp() && (<>
