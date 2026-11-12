@@ -7,7 +7,7 @@ android {
         applicationId "app.paintiano"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode((System.getenv('PF_VERSION_CODE') ?: '1') as Integer)
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,8 +16,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // The upload key of Google Play (release builds in CI only; the key itself lives in the repository's secrets)
+    signingConfigs {
+        upload {
+            def ks = System.getenv('PF_KEYSTORE_FILE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('PF_KEYSTORE_PASSWORD')
+                keyAlias 'upload'
+                keyPassword System.getenv('PF_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (System.getenv('PF_KEYSTORE_FILE')) signingConfig signingConfigs.upload
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

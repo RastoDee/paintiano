@@ -1,5 +1,6 @@
 # Builds the Android app (Capacitor shell around the web app).
 #   • every push to the `android` branch: a debug APK (installable by hand, no secrets) as an artifact
+#   • a commit marked [aab]: the signed release bundle for Google Play (.aab) as an artifact
 #   • a commit marked [emu]: the APK is also started in an emulator and screenshots of it are kept as an artifact
 name: Android
 
@@ -34,6 +35,25 @@ jobs:
           ls -la app/build/outputs/apk/debug
       - uses: actions/upload-artifact@v4
         with: { name: paintiano-debug-apk, path: android/app/build/outputs/apk/debug/app-debug.apk }
+      - name: Release bundle for Google Play
+        if: ${{ contains(github.event.head_commit.message, '[aab]') }}
+        working-directory: android
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          PF_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PF_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          if [ -z "$KS_B64" ] || [ -z "$PF_KEYSTORE_PASSWORD" ]; then echo "the upload key is not in the secrets (ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD)"; exit 1; fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          export PF_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          ./gradlew --no-daemon bundleRelease
+          ls -la app/build/outputs/bundle/release
+          echo "versionCode $PF_VERSION_CODE"
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tail -3
+          rm -f "$RUNNER_TEMP/upload.jks"
+      - uses: actions/upload-artifact@v4
+        if: ${{ contains(github.event.head_commit.message, '[aab]') }}
+        with: { name: paintiano-release-aab, path: android/app/build/outputs/bundle/release/app-release.aab }
       - name: Enable KVM
         if: ${{ contains(github.event.head_commit.message, '[emu]') }}
         run: |
