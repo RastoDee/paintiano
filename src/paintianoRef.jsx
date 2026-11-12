@@ -41359,20 +41359,23 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             _btlSay(_stT('btlSent').replace('{n}', String(typeof q.d.count==='number' ? q.d.count : _btlN())), (q.d.state==='in' && id) ? {k, id} : null); }); })
         .catch(()=>fail());
     }catch(_){ fail(); } };
-  // the gesture: a finger rests on the painting (0.38 s), the painting lifts and follows it; let go on the Battle tab → sent,
-  // anywhere else → it settles back. A quick swipe never gets here (the hold is given up once the finger moves).
-  const btlDragRef = useRef({tm:null, x0:0, y0:0, on:false});
+  // the gesture: a finger rests on the painting (who paints comes up, as ever) and then MOVES — the painting lifts and follows it;
+  // let go on the Battle tab → sent, anywhere else → it settles back. A quick swipe never gets here: it is the next painting.
+  const btlDragRef = useRef({x0:0, y0:0, ok:false, on:false, mouse:false});
   const _btlTabRect = ()=>{ try{ const el=document.querySelector('.pf-st-tabs2.st .pf-btl-tab'); return el ? el.getBoundingClientRect() : null; }catch(_){ return null; } };
   const _btlOver = (x, y)=>{ const r=_btlTabRect(); return r ? (y < r.bottom+46 && x > r.left-70) : (y < 96 && x > window.innerWidth*0.45); };
   const _btlDragOk = ()=> _btlCan() && studioOn && !studioHome && !stChg && !stShare && !stripOpen && !recording && !btlTab && !btlBusy;
-  const _btlDragDown = (x, y)=>{ const D=btlDragRef.current; clearTimeout(D.tm); D.on=false; if(!_btlDragOk() || !_stOnArt(x, y)) return; D.x0=x; D.y0=y;
-    D.tm=setTimeout(()=>{ D.tm=null; let img=null; try{ const c=canvasRef.current; if(c && c.width){ const W=180, H=Math.round(W*c.height/c.width), o=document.createElement('canvas'); o.width=W; o.height=H; o.getContext('2d').drawImage(c,0,0,W,H); img=o.toDataURL('image/jpeg',0.8); } }catch(_){ img=null; }
-      if(!img) return; D.on=true; _swipeWasGestureRef.current=true; try{ _holdCancel(); }catch(_){} _stBuzz(14); setBtlDrag({x:D.x0, y:D.y0, over:false, img, go:false}); }, 380); };
-  const _btlDragMove = (x, y)=>{ const D=btlDragRef.current; if(D.on){ setBtlDrag(d=>d ? {...d, x, y, over:_btlOver(x, y)} : d); return true; }
-    if(D.tm && Math.hypot(x-D.x0, y-D.y0) > 10){ clearTimeout(D.tm); D.tm=null; } return false; };
-  const _btlDragUp = (x, y)=>{ const D=btlDragRef.current; if(D.tm){ clearTimeout(D.tm); D.tm=null; } if(!D.on) return false; D.on=false; _swipeWasGestureRef.current=true;
+  const _btlDragDown = (x, y, mouse)=>{ const D=btlDragRef.current; D.on=false; D.mouse=!!mouse; D.x0=x; D.y0=y; D.ok=_btlDragOk() && _stOnArt(x, y); };
+  const _btlDragUp = (x, y)=>{ const D=btlDragRef.current; D.ok=false; if(!D.on) return false; D.on=false; _swipeWasGestureRef.current=true;
     if(x!=null && _btlOver(x, y)){ const r=_btlTabRect(); setBtlDrag(d=>d ? {...d, x:(r ? r.left+r.width/2 : x), y:(r ? r.top+r.height/2 : 30), over:true, go:true} : d); _stBuzz(22); setTimeout(()=>{ setBtlDrag(null); _btlMark(); }, 260); }
     else setBtlDrag(null);
+    return true; };
+  const _btlDragMove = (x, y)=>{ const D=btlDragRef.current; if(D.on){ setBtlDrag(d=>d ? {...d, x, y, over:_btlOver(x, y)} : d); return true; }
+    if(!D.ok || !_holdingRef.current || Math.hypot(x-D.x0, y-D.y0) < 12) return false;
+    let img=null; try{ const c=canvasRef.current; if(c && c.width){ const W=180, H=Math.round(W*c.height/c.width), o=document.createElement('canvas'); o.width=W; o.height=H; o.getContext('2d').drawImage(c,0,0,W,H); img=o.toDataURL('image/jpeg',0.8); } }catch(_){ img=null; }
+    if(!img){ D.ok=false; return false; }
+    D.on=true; _swipeWasGestureRef.current=true; _stBuzz(14); setBtlDrag({x, y, over:_btlOver(x, y), img, go:false});
+    if(D.mouse){ const mv=(ev)=>{ _btlDragMove(ev.clientX, ev.clientY); }; const up=(ev)=>{ window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); _btlDragUp(ev.clientX, ev.clientY); }; window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up); }
     return true; };
   // the gesture is shown once, where it can be used
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !chords.length) return; let seen=false; try{ seen=localStorage.getItem('paintiano_btl_hint')==='1'; }catch(_){}
@@ -41800,9 +41803,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     _stPrev(); return true;   // ↓ back to the painting before
   };
   // … also on the dark around the painting
-  const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; _btlDragUp(null, null); return; } const tt=e.touches[0]; _btlDragDown(tt.clientX, tt.clientY); _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; _swipeWasGestureRef.current=false; };
-  const _stOvEnd = (e)=>{ { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _swipeStartRef.current=null; try{ e.preventDefault(); }catch(_){} return; } }   // the painting was carried: not a swipe, not a tap
-    const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
+  const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; _swipeWasGestureRef.current=false; };
+  const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
     // a pull up that began on the bar under the painting (♥ · ✦ Change · share) opens the look tray — palettes and painters without the way through ✦ Change
     try{ const bar=document.querySelector('.pf-st-bar'); const br=bar && bar.getBoundingClientRect(); if(br && st.y>=br.top && !stripOpen && !stLand && !demoReelOn && !recording && tt.clientY-st.y<-40 && Date.now()-st.t<700){ _swipeWasGestureRef.current=true; _stBuzz(8); setStChg(null); setStripOpen(true); return; } }catch(_){}
     if(_stSwipeRef.current && _stSwipeRef.current(tt.clientX-st.x, tt.clientY-st.y, Date.now()-st.t)) _swipeWasGestureRef.current=true; };
@@ -45576,7 +45578,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       })()}
       {/* MFI Recent strip removed from here — now rendered inside the MFI picker
           as 'Recently AI generated' button + text labels (no thumbnails). */}
-      {immersive && <div onTouchStart={studioFs ? _stOvStart : undefined} onTouchEnd={studioFs ? _stOvEnd : undefined} onTouchMove={studioFs ? (e)=>{ const tt=e.touches && e.touches[0]; if(tt) _btlDragMove(tt.clientX, tt.clientY); } : undefined} onTouchCancel={studioFs ? ()=>{ _btlDragUp(null, null); } : undefined} onMouseDown={studioFs ? (e)=>{ if(e.button!==0) return; _btlDragDown(e.clientX, e.clientY); const mv=(ev)=>{ _btlDragMove(ev.clientX, ev.clientY); }; const up=(ev)=>{ window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); _btlDragUp(ev.clientX, ev.clientY); }; window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up); } : undefined} onClick={(e)=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; if(studioFs){ _stTap(e); return; } wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
+      {immersive && <div onTouchStart={studioFs ? _stOvStart : undefined} onTouchEnd={studioFs ? _stOvEnd : undefined} onClick={(e)=>{ if(_swipeStartRef.current || _swipeWasGestureRef.current) return; if(studioFs){ _stTap(e); return; } wakeControls(); }} onPointerMove={()=>{ if(_swipeStartRef.current) return; wakeControls(); }} style={{position:'fixed',inset:0,zIndex:9998,background:'#06060c'}}/>}
       {/* Exit-fullscreen button — rendered OUTSIDE the canvas wrap. The wrap uses
           transform:translate(-50%,-50%) in immersive, and a position:fixed child
           of a transformed element anchors to that element, not the viewport — so
@@ -46038,13 +46040,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       })()}
       <div ref={canvasWrapRef} className="pf-stage-part" style={{'--pf-ar':(()=>{ const m=(moodFromImg && typeof mfiImgAspect==='string') ? mfiImgAspect.split('/').map(Number) : null; return (m && m[0]>0 && m[1]>0) ? m[0]/m[1] : (CH>0 ? CW/CH : 1); })(),...(favView?{display:'none'}:{}),...((studioFs && working && !_stHasArt)?{opacity:0}:{}),position:'relative',touchAction:immersive?'none':undefined,maxWidth:'100%',boxSizing:'border-box',border:(basicMode||_stEmpty)?'none':(varyFlash?'1px solid rgba(201,168,76,.8)':'1px solid rgba(201,168,76,.12)'),boxShadow:(basicMode||_stEmpty)?'none':(varyFlash?'0 0 40px rgba(201,168,76,.25), 0 0 40px rgba(0,0,0,.6)':'0 0 40px rgba(0,0,0,.6)'),marginBottom:basicMode?4:8,transition:'border-color .15s ease, box-shadow .15s ease',transform:micVolActive?`scale(${1+micVolLevel*0.04})`:'none',transformOrigin:'center center',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',...((basicMode&&isDesktop&&(composeMode||micActive))?{width:'auto',minWidth:0,maxWidth:'100%',maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}:(composeMode||micActive)?(atLiveMax ? {width:'fit-content',minWidth:0,maxWidth:'100%',maxHeight:atLiveMax+'px',marginLeft:'auto',marginRight:'auto'} : {width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 210px)',marginLeft:'auto',marginRight:'auto'}):(viewMode==='image'&&originalImgUrl)?{width:'100%',minWidth:0,maxWidth:`min(100%, 560px)`,marginLeft:'auto',marginRight:'auto'}:(basicMode&&!isDesktop)?{width:'auto',minWidth:0,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',minWidth:0,maxWidth:`min(100%, ${CW}px)`}),...(immersive?{position:'fixed',top:(studioLive && !stFill)?`calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - ${_micGap}px - ${stDockH}px) / 2)`:(studioFs && stFill)?'50%':studioFs?'calc(env(safe-area-inset-top, 0px) + 60px + (100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) / 2)':'50%',left:'50%',transform:'translate(-50%,-50%)',width:(studioLive && !stFill)?`min(calc(100vw - 32px), calc((100dvh - env(safe-area-inset-top, 0px) - ${_micGap}px - ${stDockH}px) * ${CW} / ${CH}))`:(studioFs && stFill)?`max(100vw, calc(100dvh * ${CW} / ${CH}))`:studioFs?`min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 200px) * ${CW} / ${CH}))`:`min(98vw, calc(98dvh * ${CW} / ${CH}))`,maxWidth:'none',maxHeight:'none',height:'auto',margin:0,zIndex:9999,border:(_stEmpty || (studioFs && stFill))?'none':'1px solid rgba(201,168,76,.25)',...(studioFs && !studioLive ? {transition:'width .35s cubic-bezier(.2,.8,.2,1), top .35s cubic-bezier(.2,.8,.2,1)'} : {}),...(studioFs && (!stFill || stripOpen) ? {borderRadius:18, clipPath:'inset(0 round 18px)'} : {})}:{}),...((studioLive && !chords.length)?{visibility:'hidden'}:{})}}
         onContextMenu={e=>e.preventDefault()}
-        onPointerMove={(e)=>{ if(e.pointerType==='mouse' && _holdTimerRef.current && _holdPosRef.current && Math.abs(e.clientX-_holdPosRef.current.x)+Math.abs(e.clientY-_holdPosRef.current.y)>14) _holdCancel(); if(_swipeStartRef.current) return; if(_holdingRef.current) return; if(playing||immersive) wakeControls(); }}
-        onPointerDown={(e)=>{ if(immersive && e.pointerType==='mouse' && e.button===0) _holdStart(e.clientX, e.clientY); }}
+        onPointerMove={(e)=>{ if(e.pointerType==='mouse' && _holdTimerRef.current && _holdPosRef.current && Math.abs(e.clientX-_holdPosRef.current.x)+Math.abs(e.clientY-_holdPosRef.current.y)>14) _holdCancel(); if(studioFs && e.pointerType==='mouse' && e.buttons===1 && _btlDragMove(e.clientX, e.clientY)) return; if(_swipeStartRef.current) return; if(_holdingRef.current) return; if(playing||immersive) wakeControls(); }}
+        onPointerDown={(e)=>{ if(immersive && e.pointerType==='mouse' && e.button===0){ _holdStart(e.clientX, e.clientY); if(studioFs) _btlDragDown(e.clientX, e.clientY, true); } }}
         onPointerUp={(e)=>{ if(e.pointerType==='mouse') _holdEnd(); }}
         onPointerLeave={(e)=>{ if(e.pointerType==='mouse'){ _holdCancel(); _holdEnd(); } }}
         onTouchStart={e=>{
           // Fullscreen (Lite + Advanced): press-and-hold shows who painted it.
           if(immersive){ if(e.touches.length===1) _holdStart(e.touches[0].clientX, e.touches[0].clientY); else _holdCancel(); }
+          if(studioFs){ if(e.touches.length===1) _btlDragDown(e.touches[0].clientX, e.touches[0].clientY); else _btlDragUp(null, null); }   // Battle: a held painting can be carried onto its tab
           // Fullscreen swipe (Lite + Advanced). Skip in Image mode (painting
           // is bound to the image — no next style to swipe to). Ignore multi-touch.
           if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
@@ -46056,6 +46059,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           _swipeWasGestureRef.current = false;
         }}
         onTouchMove={e=>{
+          if(studioFs && e.touches.length===1 && _btlDragMove(e.touches[0].clientX, e.touches[0].clientY)) return;   // the painting is being carried
           if(_holdTimerRef.current && _holdPosRef.current && e.touches[0]){ const _m=e.touches[0]; if(e.touches.length>1 || Math.abs(_m.clientX-_holdPosRef.current.x)+Math.abs(_m.clientY-_holdPosRef.current.y)>14) _holdCancel(); }
           // Mark the interaction as a gesture-in-progress as soon as vertical
           // travel is meaningful — the tap guard in onClick reads this so the
@@ -46073,8 +46077,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             if(!s.ax && (Math.abs(dx)>10 || Math.abs(dy)>10)){ s.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x'; if(!_holdingRef.current && e.touches.length===1) s.fd = _sdLock(s.ax, s.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1)); if(s.fd){ _swipeWasGestureRef.current = true; _holdCancel(); } }
             if(s.fd) _fdMove(s.fd, s.ax==='y' ? dy : dx); }
         }}
-        onTouchCancel={()=>{ _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0); } }}
+        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0); } }}
         onTouchEnd={e=>{
+          { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _holdEnd(); _swipeStartRef.current=null; return; } }   // carried: not a swipe, not a tap
           _holdEnd();
           if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;

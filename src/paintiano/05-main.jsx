@@ -15837,7 +15837,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _btlHas = (k)=>{ const m=btlMine; return m.sent.some(x=>x.k===k) ? 'in' : (m.wait.some(x=>x.k===k) ? 'wait' : null); };
   // the BATTLE place: Battle's page under the tab — with the tickets that wait for the sign-in, if any
   const _btlTabOpen = ()=>{ try{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin); setStChg(null); setStShare(false); setStripOpen(false);
-    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&at='+Date.now()); }catch(_){} };
+    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
   const _btlPost = (path, body, link)=> fetch(PF_BTL+path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'}, link ? {Authorization:'Bearer '+link} : {}),body:JSON.stringify(body)}).then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok, s:r.status, d:d||{}})));
   const _btlMark = ()=>{ if(btlBusy || !_btlCan()) return; const k=_btlKey();
     if(_btlHas(k)){ if(_btlHas(k)==='wait'){ _btlTabOpen(); return; } _btlSay(_stT('btlInH')); return; }
