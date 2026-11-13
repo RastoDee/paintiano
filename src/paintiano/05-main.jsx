@@ -5120,48 +5120,49 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // QR (H error correction) fetched, then recoloured gold-on-transparent
       const qrImg=await new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=rej; im.src='https://api.qrserver.com/v1/create-qr-code/?size=900x900&ecc=H&qzone=2&data='+encodeURIComponent(url); });
       const GOLD='#c9a84c';
-      // the art: the whole painting in the poster's 3:4 frame (the Studio stays φ); the canvas on screen only if that cannot be painted
+      // the art: the whole painting in its φ frame (as the Studio and Battle show it); the canvas on screen only if that cannot be painted
       let srcCv=null; try{ srcCv=window.__pfFull ? window.__pfFull(3) : null; }catch(_){ srcCv=null; } if(!srcCv) srcCv=canvasRef.current;
-      // DYNAMIC HEIGHT: footer flows under the artwork, whatever its aspect —
-      // fixed 3840 clipped the QR on taller canvases.
-      const W=2160, AX=180, AY=560, AW=W-360;
-      const AH2=Math.min(Math.round(AW*(srcCv?srcCv.height/srcCv.width:4/3)), 2900);
-      const TY=AY+AH2+300;         // Paintiano baseline
-      const TAGY=TY+96;            // tagline baseline
-      const QS=240, QY=TAGY+70;    // QR top
-      const CAPY=QY+QS+56;         // caption baseline
-      const H=CAPY+170;
+      // A standard A sheet (1 : √2, any A size prints it), the painting as large as it can be: the same margin M on top and at both
+      // sides, the footer row (Paintiano + its line on the left, the QR on the right, flush with the painting's edges) in F below it.
+      const W=2160, H=Math.round(W*Math.SQRT2), F=500;
+      const R=Math.max(1.3, Math.min(1.75, (srcCv && srcCv.width) ? srcCv.height/srcCv.width : PHI));   // the art's height / width (φ)
+      const M=Math.round((H-F-R*W)/(1-2*R)), AX=M, AY=M, AW=W-2*M, AH=Math.round(AW*R);
       const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
       const cx=cv.getContext('2d');
       cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H);
       cx.strokeStyle='rgba(201,168,76,.85)'; cx.lineWidth=2;
-      cx.strokeRect(AX-2,AY-2,AW+4,AH2+4);
-      if(srcCv){ cx.drawImage(srcCv,AX,AY,AW,AH2); }
+      cx.strokeRect(AX-2,AY-2,AW+4,AH+4);
+      if(srcCv && srcCv.width && srcCv.height){ const k=Math.max(AW/srcCv.width, AH/srcCv.height), w=srcCv.width*k, h=srcCv.height*k;
+        cx.save(); cx.beginPath(); cx.rect(AX,AY,AW,AH); cx.clip(); cx.drawImage(srcCv, AX+(AW-w)/2, AY+(AH-h)/2, w, h); cx.restore(); }
+      // the top margin: who painted it (a Signature's mark above the names)
+      const _sig=!!sigActiveRef.current, NY=Math.round(M/2+(_sig ? 70 : 30));
       cx.textAlign='center'; cx.fillStyle=GOLD;
       if(artKey && painterStageRef.current.length && style!==null){
-        cx.font='italic 600 72px "Cormorant Garamond", serif';
-        cx.fillText(_stageNames('art'), W/2, AY-120, W-200);
+        cx.font='italic 600 76px "Cormorant Garamond", serif';
+        cx.fillText(_stageNames('art'), W/2, NY, W-2*M);
       } else if(artKey && STYLE_INSPIRED[artKey]){
-        cx.font='italic 600 84px "Cormorant Garamond", serif';
-        cx.fillText('inspired by '+STYLE_INSPIRED[artKey], W/2, AY-120);
+        cx.font='italic 600 92px "Cormorant Garamond", serif';
+        cx.fillText('inspired by '+STYLE_INSPIRED[artKey], W/2, NY, W-2*M);
       }
-      if(sigActiveRef.current){ cx.font='600 40px Outfit, sans-serif'; cx.fillStyle='rgba(226,196,119,.95)'; cx.fillText('\u2726  S I G N A T U R E', W/2, AY-220); cx.fillStyle=GOLD; }
-      cx.font='600 132px "Cormorant Garamond", serif';
-      cx.fillText('Paintiano', W/2, TY);
-      cx.font='58px Outfit, sans-serif'; cx.fillStyle='rgba(201,168,76,.75)';
-      cx.fillText('music \u2192 \u03c6 painting', W/2, TAGY);
-      // gold QR centred beneath the tagline
+      if(_sig){ cx.font='600 40px Outfit, sans-serif'; cx.fillStyle='rgba(226,196,119,.95)'; cx.fillText('\u2726  S I G N A T U R E', W/2, NY-118); cx.fillStyle=GOLD; }
+      // the footer row
+      const rowTop=AY+AH+110, QS=250;
+      cx.textAlign='left'; cx.fillStyle=GOLD;
+      cx.font='600 150px "Cormorant Garamond", serif';
+      cx.fillText('Paintiano', AX-4, rowTop+118);
+      cx.font='60px Outfit, sans-serif'; cx.fillStyle='rgba(201,168,76,.75)';
+      cx.fillText('music \u2192 \u03c6 painting', AX, rowTop+192);
+      cx.font='30px Outfit, sans-serif'; cx.fillStyle='rgba(160,134,60,.9)';
+      cx.fillText('S C A N  \u00b7  H E A R  I T  P A I N T', AX, rowTop+QS-4);
+      // gold QR, its right edge on the painting's
       const t=document.createElement('canvas'); t.width=QS; t.height=QS;
       const tc=t.getContext('2d'); tc.drawImage(qrImg,0,0,QS,QS);
       const id=tc.getImageData(0,0,QS,QS); const d0=id.data;
       for(let i=0;i<d0.length;i+=4){ const dark=d0[i]<128; d0[i]=201; d0[i+1]=168; d0[i+2]=76; d0[i+3]=dark?255:0; }
       tc.putImageData(id,0,0);
-      cx.drawImage(t,W/2-QS/2,QY);
-      cx.textAlign='center';
-      cx.font='30px Outfit, sans-serif'; cx.fillStyle='rgba(160,134,60,.9)';
-      cx.fillText('S C A N  \u00b7  H E A R  I T  P A I N T', W/2, CAPY);
-      cx.font='italic 600 64px "Cormorant Garamond", serif'; cx.fillStyle=GOLD; cx.textAlign='right';
-      cx.fillText('\u03c6', W-140, H-110);
+      cx.drawImage(t,AX+AW-QS,rowTop);
+      cx.font='italic 600 64px "Cormorant Garamond", serif'; cx.fillStyle=GOLD; cx.textAlign='center';
+      cx.fillText('\u03c6', W-Math.round(M/2), H-Math.round((H-(rowTop+QS))/2)+20);
       // PRODUCTION PACKAGE — one ZIP (iOS Safari drops extra downloads), no libs:
       // a minimal STORED zip is ~40 lines. Contains poster / raw art / print QR.
       const base='paintiano-'+pieceKey+'-'+(_fa ? _fa.keys.map((k,i)=>k+_fa.phs[i]).join('+') : artKey+'-v'+vNow)+'-'+mode+'-'+tone;
@@ -5459,8 +5460,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // otherwise — the chip renders only with a built-in piece on canvas.
   const [posterMaker,setPosterMaker]=useState(()=>{ try{ return localStorage.getItem('paintiano_postermaker')==='1'; }catch(_){ return false; } });
   // the POSTER tool only adds the poster (with its QR) and the address chip: the Studio keeps its φ frame; a poster paints its own
-  // 3:4 picture of the painting (window.__pfPrint34 — as Battle and the prints do)
-  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfFull = (S, lim)=>{ let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(S, lim); } finally{ try{ window.__pfPrint34=false; }catch(_){} } return c; }; window.__pfChords = ()=>chords.map(c=>({t:c.startMs|0, n:(c.n||[]).map(x=>({m:x.m|0, v:x.v|0, d:x.durMs|0}))})); } }catch(_){}   // the poster tool: the whole painting at once (the OG pictures are made from it)   // the POSTER tool paints in the poster's 3:4 frame (pfPort)
+  // the whole painting in its φ frame (as the Studio and Battle show it)
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfFull = (S, lim)=>_fullPaintCanvas(S, lim); window.__pfChords = ()=>chords.map(c=>({t:c.startMs|0, n:(c.n||[]).map(x=>({m:x.m|0, v:x.v|0, d:x.durMs|0}))})); } }catch(_){}   // the poster tool: the whole painting at once (the OG pictures are made from it)   // the POSTER tool paints in the poster's 3:4 frame (pfPort)
   // Address chip alone (artist · variant · palette) — its own switch: 2 quick
   // taps on the wordmark. Poster maker (POSTER button) stays on 4 taps.
   const [addrChip,setAddrChip]=useState(()=>{ try{ return localStorage.getItem('paintiano_addr_chip')==='1'; }catch(_){ return false; } });
@@ -9745,7 +9746,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     }catch(_){}
     { const _fr=favMusicRestoreRef.current; if(_fr){ favMusicRestoreRef.current=null; setTimeout(()=>{ try{ favApplyLookRef.current && favApplyLookRef.current(_fr); }catch(_){} }, 260); } }   // ♥ → Open: as it was kept (after the new piece's own deferred picks)
     const wi=events.map((c,i)=>({...c,idx:i}));
-    try{ if(title && window.__pfQrName && title===window.__pfQrName) window.__pfQrSig=_pfSig(wi); }catch(_){}   // a scanned poster's song: its 3:4 poster frame (pfPort)
     const g=computeGrid(wi),lastMs=wi[wi.length-1]?.startMs||0;
     pixelRef.current=null;imgComposeRef.current=false;setViewMode('paint');setOriginalImgUrl(null);
     setGrid(g);setChords(wi);setDisp(0);
@@ -15265,7 +15265,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setRandomMode(false); randomModeRef.current=false;
     if(!A){ loadSampleMidi(qrPieceRef.current); setForceSetup(false); return; }
     tastePreviewKeyRef.current = A;
-    try{ window.__pfQrName=(BUILTIN_PIECES[qrPieceRef.current]||BUILTIN_PIECES[0]).name; }catch(_){}
     loadSampleMidi(qrPieceRef.current, {noSig:true});
     setStyle(A); setPhaseIndex(qrVariantRef.current|0); setNotesMode(false);
     if(q){ setPainterStage(q.keys.slice()); try{ globalThis.__PAINT_SIG_PHS = _qrPhs(); }catch(_){} if(ensembleActive) setJamOn(true); }
@@ -15841,30 +15840,30 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _stPeekTap = ()=>{ if(!_stPeekOk) return; setStPeek(true); if(stPeekTmRef.current) clearTimeout(stPeekTmRef.current); stPeekTmRef.current=setTimeout(()=>{ stPeekTmRef.current=null; setStPeek(false); }, 2400); };
   useEffect(()=>{ if(!_stPeekOk) setStPeek(false); },[_stPeekOk]);
   const [stShare, setStShare] = useState(false);
-  // Battle: the WHOLE painting at once in the competition's 3:4 frame (as a print is laid out)
+  // Battle: the WHOLE painting at once in its φ frame (the Studio's — one shape in Paintiano and in Battle; 720 × 1165)
   const _btlImg = ()=>{ let img=null;
-    try{ let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(2, 0, true); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
-      if(c && c.width && c.height){ const W=720, H=960, o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H);
+    try{ const c=_fullPaintCanvas(2, 0, true);
+      if(c && c.width && c.height){ const W=720, H=Math.round(720*PHI), o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H);
         const k=Math.max(W/c.width, H/c.height), w=c.width*k, h=c.height*k; x.drawImage(c,(W-w)/2,(H-h)/2,w,h); img=o.toDataURL('image/jpeg',0.86); } }catch(_){ img=null; }
     return img; };
   // …and how it GREW: eight stages of the same painting (as far as the 1st … 8th ninth of the song) on one sheet, 4 × 2 —
   // Battle's shared video lets the painting grow from them. One stage a tick, so the sheet stays alive; no stages → Battle only unveils it.
   const _btlStages = ()=> new Promise((done)=>{ try{
-    const N=8, C=4, FW=360, FH=480, o=document.createElement('canvas'); o.width=FW*C; o.height=FH*(N/C); const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,o.width,o.height); let i=0;
+    const N=8, C=4, FW=360, FH=Math.round(360*PHI), o=document.createElement('canvas'); o.width=FW*C; o.height=FH*(N/C); const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,o.width,o.height); let i=0;
     const step=()=>{ try{ if(i>=N){ done(o.toDataURL('image/jpeg',0.72)); return; }
-      let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(1, Math.max(1, Math.round(chords.length*(i+1)/(N+1))), true); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
+      const c=_fullPaintCanvas(1, Math.max(1, Math.round(chords.length*(i+1)/(N+1))), true);
       if(!c || !c.width || !c.height){ done(null); return; }
       const k=Math.max(FW/c.width, FH/c.height), w=c.width*k, h=c.height*k, dx=(i%C)*FW, dy=Math.floor(i/C)*FH;
       x.save(); x.beginPath(); x.rect(dx,dy,FW,FH); x.clip(); x.drawImage(c, dx+(FW-w)/2, dy+(FH-h)/2, w, h); x.restore(); i++; setTimeout(step, 0);
     }catch(_){ done(null); } }; setTimeout(step, 30); }catch(_){ done(null); } });
   // while a take is being made (Compose, the Mic) the whole painting cannot be laid out afresh: the canvas as it stands goes
-  const _btlSnap = ()=>{ try{ const c=canvasRef.current; if(!c || !c.width || !c.height || _canvasBlank(c)) return null; const W=720, H=960, o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H);
+  const _btlSnap = ()=>{ try{ const c=canvasRef.current; if(!c || !c.width || !c.height || _canvasBlank(c)) return null; const W=720, H=Math.round(720*PHI), o=document.createElement('canvas'); o.width=W; o.height=H; const x=o.getContext('2d'); x.fillStyle='#04040a'; x.fillRect(0,0,W,H);
     const k=Math.max(W/c.width, H/c.height), w=c.width*k, h=c.height*k; x.drawImage(c,(W-w)/2,(H-h)/2,w,h); return o.toDataURL('image/jpeg',0.86); }catch(_){ return null; } };
-  // the same painting from a stored source (what Battle keeps): its look and its notes, laid out and painted afresh in 3:4
+  // the same painting from a stored source (what Battle keeps): its look and its notes, laid out and painted afresh in φ
   const _btlFromSource = (src, S)=>{ try{ const fv=src && src.look && src.look.fv, ch=src && src.chords; if(!fv || !Array.isArray(ch) || !ch.length) return null;
-    let lay=null; try{ window.__pfPrint34=true; lay=_favLayout(fv, ch); } finally{ try{ window.__pfPrint34=false; }catch(_){} } if(!lay) return null;
+    const lay=_favLayout(fv, ch); if(!lay) return null;
     const c=document.createElement('canvas'); return _favPaint(c, fv, {chords:ch}, (S>0 ? S : 1), fv.tone || tone, lay) ? c : null; }catch(_){ return null; } };
-  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfBtlKey = ()=>_btlKey(); window.__pfBtlCheck = ()=>{ let a=null; try{ window.__pfPrint34=true; a=_fullPaintCanvas(1, 0, true); } finally{ try{ window.__pfPrint34=false; }catch(_){} }
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfBtlKey = ()=>_btlKey(); window.__pfBtlCheck = ()=>{ const a=_fullPaintCanvas(1, 0, true);
     if(!a) return {ok:false, why:'no painting'}; const src=JSON.parse(JSON.stringify({chords, look:{fv:btlFvRef.current}})); const b=_btlFromSource(src, 1); if(!b) return {ok:false, why:'no repaint'};
     const A=a.toDataURL('image/png'), B=b.toDataURL('image/png'); return {ok:A===B, w:a.width, h:a.height, bytes:JSON.stringify(src).length, compose:!!composeMode, mic:!!micActive, own:draftOwnerRef.current||null}; }; } }catch(_){}   // the poster tool only
   const _btlCan = ()=> _btlOn() && chords.length>0 && !(viewMode==='image' && !moodFromImg) && !demoReelOn;   // a picture that plays is not a painting
