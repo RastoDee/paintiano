@@ -26011,20 +26011,24 @@ function _drawSrc(cx, im, x, y, w, h, W){ const r=Math.round(W*0.006);
   cx.save(); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.clip(); cx.imageSmoothingQuality='high'; cx.drawImage(im,x,y,w,h); cx.restore();
   cx.save(); cx.strokeStyle='rgba(201,168,76,.45)'; cx.lineWidth=Math.max(1,W*0.0012); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.stroke(); cx.restore(); }
 const PF_A3_W=2806, PF_A3_LONG=3969;   // A3 (297 × 420 mm) at 240 DPI
-// Print without the caption: the painting (φ) on a white A sheet (1 : √2), as large as it sits well — 86 % of the sheet's height,
-// a slightly deeper margin below than above, wide margins at the sides (a passe-partout). The sheet holds as many pixels as the
-// painting had (a phone's canvas limit still holds); A3 is 2806 × 3969 (240 DPI).
-function _paperSheet(hi, sheetW){
+// Print without the caption: the painting (φ) on an A sheet (1 : √2), as large as it sits well — 86 % of the sheet's height,
+// a slightly deeper margin below than above, wide margins at the sides (a passe-partout). White paper (only the painting is printed)
+// or the dark sheet with its gold hairline. The sheet holds as many pixels as the painting had (a phone's canvas limit still holds);
+// A3 is 2806 × 3969 (240 DPI).
+function _paperSheet(hi, sheetW, dark){
   const Wf=sheetW || Math.round(Math.sqrt(hi.width*hi.height*594/841)), Hf=Math.round(Wf*841/594);
   const top=Math.round(Hf*0.065), bw=Math.round(Wf*0.76), bh=Math.round(Hf*0.86);
   const k=Math.min(bw/hi.width, bh/hi.height), pw=Math.round(hi.width*k), ph=Math.round(hi.height*k);
   const cv=document.createElement('canvas'); cv.width=Wf; cv.height=Hf; const cx=cv.getContext('2d');
-  cx.fillStyle='#ffffff'; cx.fillRect(0,0,Wf,Hf);
-  cx.imageSmoothingEnabled=true; cx.imageSmoothingQuality='high'; cx.drawImage(hi, Math.round((Wf-pw)/2), top+Math.round((bh-ph)/2), pw, ph);
+  cx.fillStyle=dark ? '#0b0b10' : '#ffffff'; cx.fillRect(0,0,Wf,Hf);
+  const px=Math.round((Wf-pw)/2), py=top+Math.round((bh-ph)/2);
+  cx.imageSmoothingEnabled=true; cx.imageSmoothingQuality='high'; cx.drawImage(hi, px, py, pw, ph);
+  if(dark){ cx.strokeStyle='rgba(201,168,76,.78)'; cx.lineWidth=Math.max(2,Wf*0.0017); cx.strokeRect(px,py,pw,ph); }
   return cv;
 }
 function _frameExport(hi, kind, o){
-  const GOLD='rgba(201,168,76,.85)', CREAM='#f4e7c6', SOFT='rgba(230,222,196,.72)';
+  const WH=(kind==='print' && o.white);   // a print on white paper: dark ink for the caption, no ground, no hairline
+  const GOLD=WH ? '#9a7a2e' : 'rgba(201,168,76,.85)', CREAM=WH ? '#1d1a14' : '#f4e7c6', SOFT=WH ? 'rgba(29,26,20,.62)' : 'rgba(230,222,196,.72)';
   const serifI=(s)=>`italic 600 ${s}px "Cormorant Garamond", Georgia, serif`, serifI5=(s)=>`italic 500 ${s}px "Cormorant Garamond", Georgia, serif`, sans=(s)=>`500 ${s}px "Outfit", Arial, sans-serif`;
   const cv=document.createElement('canvas'); let cx;
   // Web and Print share ONE layout (painting in a dark mat, the caption centred under it); Print keeps the A-sheet ratio, Web hugs the painting
@@ -26035,13 +26039,13 @@ function _frameExport(hi, kind, o){
     const cb0=Math.round(Wf*(o.bare ? 0.24 : o.src ? 0.46 : 0.36));
     const Hf=isP ? Math.round(Wf*841/594) : (m + Math.round(hi.height*(Wf-2*m)/hi.width) + cb0);
     cv.width=Wf; cv.height=Hf; cx=cv.getContext('2d');
-    cx.fillStyle='#0b0b10'; cx.fillRect(0,0,Wf,Hf);
+    cx.fillStyle=WH ? '#ffffff' : '#0b0b10'; cx.fillRect(0,0,Wf,Hf);
     const cb=isP ? Math.round(Hf*((o.src && !o.bare) ? 0.30 : 0.25)) : cb0;
     const bw=Wf-2*m, bh=Hf-m-cb; const k=Math.min(bw/hi.width, bh/hi.height); const pw=Math.round(hi.width*k), ph=Math.round(hi.height*k);
     const px=Math.round((Wf-pw)/2), py=m+Math.round((bh-ph)/2);
     const rr = isP ? 0 : Math.round(Math.min(pw,ph)*0.045);   // Web: the painting's corners round, as in the app — a print keeps them sharp
     cx.save(); _rrPath(cx,px,py,pw,ph,rr); cx.clip(); cx.imageSmoothingQuality='high'; cx.drawImage(hi,px,py,pw,ph); cx.restore();
-    cx.strokeStyle='rgba(201,168,76,.78)'; cx.lineWidth=Math.max(2,Wf*0.0017); _rrPath(cx,px,py,pw,ph,rr); cx.stroke();
+    if(!WH){ cx.strokeStyle='rgba(201,168,76,.78)'; cx.lineWidth=Math.max(2,Wf*0.0017); _rrPath(cx,px,py,pw,ph,rr); cx.stroke(); }
     let bw2=bw;
     if(o.bare){ if(o.src){ const r=_srcBox(o.src, Math.round(Wf*0.22), Math.round(cb*0.6)); _drawSrc(cx, o.src, Math.round((Wf-r.w)/2), Hf-cb+Math.round((cb-r.h)/2), r.w, r.h, Wf); } return cv; }
     let y=Hf-cb+Math.round(Wf*0.07);
@@ -26052,8 +26056,8 @@ function _frameExport(hi, kind, o){
     if(o.composer){ cx.fillStyle=SOFT; const t=_fitText(cx,o.composer,bw2,Math.round(Wf*0.02),Math.round(Wf*0.012),sans); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.034); }
     const _il=o.insp ? (o.palN ? o.insp+'  |  '+o.palN : o.insp) : (o.pal||'');
     if(_il){ cx.fillStyle=GOLD; const t=_fitText(cx,_il,bw2,Math.round(Wf*0.025),Math.round(Wf*0.014),serifI5); cx.fillText(t,Wf/2,y); y+=Math.round(Wf*0.03); }
-    const sw=Math.min(Math.round(Wf*0.54), bw2); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015)});
-    cx.textAlign='center'; cx.fillStyle='rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · '+(o.tag||'music → φ painting'), Wf/2, Hf-Math.round(m*0.5));   // a picture's export: φ painting → music
+    const sw=Math.min(Math.round(Wf*0.54), bw2); _drawPcStrip(cx, Math.round((Wf-sw)/2), y, sw, Math.round(Wf*0.092), o.wts, o.gc, o.names, {font:Math.round(Wf*0.015), labelColor:(WH ? 'rgba(29,26,20,.6)' : null)});
+    cx.textAlign='center'; cx.fillStyle=WH ? 'rgba(154,122,46,.9)' : 'rgba(201,168,76,.7)'; cx.font=sans(Math.round(Wf*0.017)); cx.fillText('Paintiano · '+(o.tag||'music → φ painting'), Wf/2, Hf-Math.round(m*0.5));   // a picture's export: φ painting → music
     return cv;
   }
 }
