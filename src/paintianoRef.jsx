@@ -42870,7 +42870,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                     radial-gradient(circle 4px at 88% 88%, #b4f0c8 0%, transparent 100%)
                   `,opacity:.85}}/>
                   <button onClick={playSample} aria-label="play sample" style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'inline-flex',alignItems:'center',gap:10,padding:'15px 28px',borderRadius:30,cursor:'pointer',fontFamily:'inherit',fontSize:'.95rem',fontWeight:700,letterSpacing:'.15em',textTransform:'uppercase',color:'#0a0a12',background:'linear-gradient(135deg,'+PF.gold+','+PF.gold2+')',border:'1px solid '+PF.gold2,boxShadow:'0 6px 22px rgba(240,192,64,.45)',animation:'pfPulse 2.2s ease-in-out infinite',WebkitTapHighlightColor:'transparent'}}>
-                    <span style={{fontSize:'1.1rem',lineHeight:1}}>▶</span> {t('onbPlayLabel')||'Play sample'}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg> {t('onbPlayLabel')||'Play sample'}
                   </button>
                 </>
               )}
@@ -43246,7 +43246,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             /* it only shows the painting: every touch goes through to the canvas under it (a tap plays, a swipe changes the look, a hold carries it to Battle) */
             return (<div data-k="stPoster" aria-hidden="true" style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',pointerEvents:'none',background:'#05050c'}}>
               <img alt="" src={stPoster.img} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
-              <span style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:78,height:78,borderRadius:'50%',border:'1px solid rgba(242,238,232,.35)',background:'rgba(5,5,12,.62)',display:'flex',alignItems:'center',justifyContent:'center',color:'#f2eee8',fontSize:26,paddingLeft:5,boxSizing:'border-box'}}>▶</span></div>); })()}
+              <span style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:76,height:76,borderRadius:'50%',border:'1px solid rgba(255,255,255,.3)',background:'rgba(10,8,18,.62)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',boxShadow:'0 4px 24px rgba(0,0,0,.4)',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box'}}><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" style={{marginLeft:4}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div>); })()}
           {_stGuideOk && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
             const box={position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',fontFamily:"'Outfit',system-ui,sans-serif",color:'#f2eee8',textAlign:'center'};
             const skip=(<button type="button" data-k="obSkip" onClick={()=>_stGuideEnd(false)} style={{position:'absolute',right:6,top:6,padding:'8px 10px',border:0,background:'none',color:'#d9d5cc',fontFamily:'inherit',fontSize:12,textShadow:'0 1px 6px #000',cursor:'pointer',pointerEvents:'auto'}}>{_stT('obSkip')}</button>);
@@ -43256,7 +43256,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               return (<div data-k="obLand" role="button" tabIndex={0} aria-label={_stT('obLandSub')} onClick={_stGuideGo} style={{...box,cursor:'pointer',background:'#05050c'}}>
                 {stGuideImg ? <img alt="" src={stGuideImg} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/> : null}
                 <span style={{position:'absolute',inset:0,background:'rgba(5,5,12,.46)'}}/>
-                <span aria-hidden="true" className="pf-ob-play" style={{position:'absolute',left:'50%',top:'40%',transform:'translate(-50%,-50%)',width:86,height:86,borderRadius:'50%',border:'2px solid #f2d27a',background:'rgba(5,5,12,.55)',display:'flex',alignItems:'center',justifyContent:'center',color:'#f2d27a',fontSize:32,paddingLeft:6,boxSizing:'border-box'}}>▶</span>
+                <span aria-hidden="true" className="pf-ob-play" style={{position:'absolute',left:'50%',top:'40%',transform:'translate(-50%,-50%)',width:86,height:86,borderRadius:'50%',border:'2px solid #f2d27a',background:'rgba(5,5,12,.55)',display:'flex',alignItems:'center',justifyContent:'center',color:'#f2d27a',boxSizing:'border-box'}}><svg width="34" height="34" viewBox="0 0 24 24" fill="#f2d27a" style={{marginLeft:5}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
                 {line(_stT('obLand'), _stT('obLandSub'), 'calc(40% + 66px)')}{dots}{skip}</div>); }
             if(stGuide===2 && !(stGuideRef.current.key || (playing && Date.now()-stGuideRef.current.t>5000))) return null;
             return (<div data-k={stGuide===2 ? 'obSwipe' : 'obSend'} style={{...box,pointerEvents:'none'}}>
