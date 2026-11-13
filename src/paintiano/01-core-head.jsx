@@ -2096,7 +2096,12 @@ function _computeSongCharacter(chords, kdR=0){
   const dynRange = Math.max(0, Math.min(1, (vMax-vMin)/127));
   // MIDI 36 (C2) .. 84 (C6) spans most musical registers; normalise into it.
   const register = Math.max(0, Math.min(1, (meanM+(+kdR||0)-36)/48));
-  const density  = Math.max(0, Math.min(1, (meanN-1)/5)); // 1 note → 0, 6+ → 1
+  const thick    = Math.max(0, Math.min(1, (meanN-1)/5)); // notes per chord: 1 note → 0, 6+ → 1
+  // DENSITY = how much music sounds per second (log: 1.8 notes/s → 0, 15/s → 1), plus a little of the chord's thickness.
+  // Notes per chord alone read Chopin's torrent of single notes (12/s) as sparser than Satie's slow chords (2/s).
+  let density = thick;
+  if(onsets.length>5){ let o0=Infinity,o1=-Infinity; for(const o of onsets){ if(o<o0)o0=o; if(o>o1)o1=o; } const span=(o1-o0)/1000;
+    if(span>=3){ const nps=nSum/span; const rate=Math.max(0, Math.min(1, Math.log(nps/1.8)/Math.log(15/1.8))); density=Math.min(1, 0.85*rate+0.15*thick); } }
   // Per-chord size weight: louder than the mean → bigger; lower (bass) than the
   // mean → bigger; softer/higher → smaller. Kept gentle (±~55%) so phrasing
   // shows without shredding the grid, then mean-normalised to 1.
