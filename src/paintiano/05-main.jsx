@@ -2446,6 +2446,9 @@ const STUDIO_FX_CSS = `
 .pf-st-tabs2 button.on{color:#fff;pointer-events:none}
 .pf-st-tabs2 button.pf-btl-tab.has::before{content:'';position:absolute;inset:auto;right:-7px;top:5px;width:5px;height:5px;border-radius:50%;background:#f2d27a;box-shadow:0 0 6px rgba(242,210,122,.9)}
 .pf-st-tabs2 button.pf-btl-tab.drop{z-index:100007;transform:scale(1.18);text-shadow:0 0 14px rgba(242,210,122,.9);transition:transform .16s ease}.pf-st-tabs2 button.pf-btl-tab.drop.over{transform:scale(1.42)}
+.pf-btl-show-fin{width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;box-sizing:border-box;background:rgba(255,255,255,.28);border:2px solid rgba(255,255,255,.85);z-index:2;animation:pfBtlFin 2.6s cubic-bezier(.4,0,.2,1) 2 both}@keyframes pfBtlFin{0%{opacity:0;transform:scale(1.3)}12%{opacity:1;transform:scale(1)}24%,32%{opacity:1;transform:scale(.82)}62%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(.82)}72%,100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.82)}}
+.pf-btl-show-card{z-index:1;border-radius:10px;box-shadow:0 18px 40px rgba(0,0,0,.65),0 0 0 2px #f2d27a;animation:pfBtlCard 2.6s cubic-bezier(.4,0,.2,1) 2 both}@keyframes pfBtlCard{0%,22%{opacity:0;transform:translate(-50%,-62%) scale(1.2) rotate(-3deg)}32%{opacity:1;transform:translate(-50%,-62%) scale(1) rotate(-3deg)}62%{opacity:1;transform:translate(calc(-50% + var(--dx)),calc(-62% + var(--dy))) scale(.4) rotate(0)}70%,100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-62% + var(--dy))) scale(.1)}}
+.pf-st-tabs2 button.pf-btl-tab.show{animation:pfBtlTab 2.6s ease 2 both}@keyframes pfBtlTab{0%,56%{transform:scale(1);text-shadow:none}64%,82%{transform:scale(1.3);color:#f2d27a;text-shadow:0 0 14px rgba(242,210,122,.9)}100%{transform:scale(1);text-shadow:none}}
 .pf-ob-play{box-shadow:0 0 0 12px rgba(242,210,122,.14);animation:pfObPlay 1.6s ease-in-out infinite}@keyframes pfObPlay{0%,100%{box-shadow:0 0 0 8px rgba(242,210,122,.16)}50%{box-shadow:0 0 0 18px rgba(242,210,122,.05)}}
 .pf-ob-swipe{animation:pfObSwipe 1.8s ease-in-out infinite}@keyframes pfObSwipe{0%,100%{transform:translateX(-70px)}50%{transform:translateX(20px)}}.pf-ob-up{animation:pfObUp 1.8s ease-in-out infinite}@keyframes pfObUp{0%,100%{transform:translateY(40px)}50%{transform:translateY(-50px)}}
 .pf-btl-drop{position:fixed;right:max(10px, env(safe-area-inset-right, 0px));top:calc(env(safe-area-inset-top, 0px) + 50px);z-index:100007;padding:6px 12px;border-radius:14px;border:1px solid rgba(242,210,122,.6);background:rgba(10,8,18,.8);color:#f2d27a;font-family:'Outfit',system-ui,sans-serif;font-size:12px;font-weight:600;pointer-events:none;transition:background-color .14s, color .14s}.pf-btl-drop.over{background:linear-gradient(135deg,#f2d27a,#c9a84c);color:#0f0f12;border-color:transparent}
@@ -5520,6 +5523,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [btlInfo, setBtlInfo] = useState(null);   // {number, on}
   const [btlTab, setBtlTab] = useState(null);   // the BATTLE place is open: the address its page was opened with
   const [btlDrag, setBtlDrag] = useState(null);   // the painting is being carried: {x, y, over, img, go}
+  const [btlShow, setBtlShow] = useState(null);   // the carry shown without words (after Battle's Súťaž): {x0, y0, dx, dy, img}
+  const btlShowFnRef = useRef(null), btlShowTm = useRef(null);
   const [btlBusy, setBtlBusy] = useState(false);
   const [btlMsg, setBtlMsg] = useState(null);   // {t, undo?} — a word from Battle, above everything for a moment
   const btlMsgTm = useRef(null);
@@ -5559,7 +5564,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(Array.isArray(d.got)){ const c=btlMineRef.current; const by=new Map(d.got.filter(x=>x && typeof x.t==='string' && typeof x.id==='string').map(x=>[x.t, x.id])); if(by.size) _btlMineSet({...c, sent:c.sent.map(x=> (x.t && by.has(x.t)) ? {k:x.k, id:by.get(x.t)} : x)}); }   // the paintings that went in at the sign-in: now known by their ids
       if(typeof d.gone==='string' && d.gone){ const c=btlMineRef.current; _btlMineSet({...c, sent:c.sent.filter(x=>x.id!==d.gone)}); }   // removed from the round on Battle's own page: its dot goes out
       if(typeof d.on==='boolean'){ setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:d.on, at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); }   // Battle says where its switch stands for this Paintiano — at once, no restart
-      if(d.close) setBtlTab(null); }catch(_){} };
+      if(d.close){ setBtlTab(null); if(d.join) setTimeout(()=>{ try{ if(btlShowFnRef.current) btlShowFnRef.current(); }catch(_){} }, 500); } }catch(_){} };   // Súťaž in Battle: back to the Studio, which shows how a painting gets in
     window.addEventListener('message', msg);
     return ()=>{ document.removeEventListener('visibilitychange', on); window.removeEventListener('focus', on); window.removeEventListener('message', msg); }; },[]);
   // back from Battle with the link (…/play#battle_link=…): kept, the waiting ones are in — and a new round starts clean
@@ -16531,6 +16536,26 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[_stPosterOk, playing, stGuide, stPosterKey]);
   const _stPosterOn = !!(stPoster && _stPosterOk && stPoster.key===stPosterKey);
+  // Battle's Súťaž (or Battle's web page with …&join=1): the carry is shown once, without words — a finger rests on the painting,
+  // a small card of it flies onto the Battle tab and the tab lights up; twice, then it is gone (any touch ends it). Reduced motion: the line.
+  const _btlShowCarry = ()=>{ try{
+    if(!_btlOn() || !studioOn || studioHome || btlTab || btlDrag) return false;
+    const reduce=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_){ return false; } })();
+    const w=canvasWrapRef.current, r=w && w.getBoundingClientRect(), t=_btlTabRect();
+    let img=(_stPosterOn && stPoster && stPoster.img) || null;
+    if(!img){ const c=canvasRef.current; if(c && c.width){ const W=180, H=Math.round(W*c.height/c.width), o=document.createElement('canvas'); o.width=W; o.height=H; o.getContext('2d').drawImage(c,0,0,W,H); img=o.toDataURL('image/jpeg',0.8); } }
+    try{ localStorage.setItem('paintiano_btl_hint','1'); }catch(_){}
+    if(reduce || !img || !r || r.width<40 || !t){ _btlSay(_stT('btlHint')); return true; }
+    const x0=r.left+r.width/2, y0=r.top+r.height*0.45;
+    setBtlShow({x0, y0, dx:Math.round(t.left+t.width/2-x0), dy:Math.round(t.top+t.height/2-y0), img});
+    clearTimeout(btlShowTm.current); btlShowTm.current=setTimeout(()=>setBtlShow(null), 5400);
+    return true; }catch(_){ return false; } };
+  btlShowFnRef.current=_btlShowCarry;
+  useEffect(()=>{ if(!btlShow) return; const end=()=>{ clearTimeout(btlShowTm.current); setBtlShow(null); }; window.addEventListener('pointerdown', end, true); return ()=>window.removeEventListener('pointerdown', end, true); },[!!btlShow]);
+  const joinBtlRef = useRef(null); if(joinBtlRef.current===null){ try{ joinBtlRef.current = /[?&]join=1(&|$)/.test(window.location.search||'');
+    if(joinBtlRef.current){ const u=new URL(window.location.href); u.searchParams.delete('join'); window.history.replaceState(window.history.state, '', u.pathname+u.search+u.hash); } }catch(_){ joinBtlRef.current=false; } }
+  useEffect(()=>{ if(!joinBtlRef.current || !_btlOn() || !studioOn || studioHome || !chords.length) return;   // a newcomer gets it as the guide's third step instead
+    const tm=setTimeout(()=>{ if(_stGuideOn.current || !joinBtlRef.current) return; if(_btlShowCarry()) joinBtlRef.current=false; }, 2200); return ()=>clearTimeout(tm); },[btlInfo, studioOn, studioHome, chords.length>0, _stPosterOn]);
   // 2 → 3: when the look changes (they swiped), or after a while; 3 → end: when the painting is carried, or after a while
   useEffect(()=>{ if(stGuide<2) return; const G=stGuideRef.current; G.t=Date.now(); G.key=''; const st=stGuide;
     const iv=setInterval(()=>{ try{ const dt=Date.now()-G.t;
@@ -17799,6 +17824,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             <div aria-hidden="true" className={'pf-btl-drop'+(btlDrag.over ? ' over' : '')}>{_stT('btlDrop')}</div>
             <img alt="" src={btlDrag.img} style={{position:'fixed',left:btlDrag.x,top:btlDrag.y,zIndex:100008,width:132,transform:'translate(-50%,-62%) scale('+(btlDrag.go ? .12 : (btlDrag.over ? .78 : 1))+') rotate('+(btlDrag.go ? 0 : -3)+'deg)',opacity:btlDrag.go ? 0 : 1,borderRadius:10,boxShadow:'0 18px 40px rgba(0,0,0,.65), 0 0 0 '+(btlDrag.over ? '2.5px #f2d27a' : '1px rgba(242,238,232,.3)'),pointerEvents:'none',transition:btlDrag.go ? 'left .24s ease-in, top .24s ease-in, transform .24s ease-in, opacity .24s ease-in' : 'transform .14s ease, box-shadow .14s ease'}}/>
           </>)}
+          {btlShow && !btlDrag && (<div aria-hidden="true" data-k="btlShow" style={{position:'fixed',inset:0,zIndex:100006,pointerEvents:'none','--dx':btlShow.dx+'px','--dy':btlShow.dy+'px'}}>
+            <img alt="" src={btlShow.img} className="pf-btl-show-card" style={{position:'fixed',left:btlShow.x0,top:btlShow.y0,width:132}}/>
+            <span className="pf-btl-show-fin" style={{position:'fixed',left:btlShow.x0,top:btlShow.y0}}/></div>)}
           {btlMsg && (<div role="status" data-k="btlMsg" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 76px)',transform:'translateX(-50%)',zIndex:100009,maxWidth:'90vw',display:'flex',alignItems:'center',gap:12,padding:'9px 16px',borderRadius:20,background:'rgba(10,8,18,.94)',border:'1px solid rgba(242,210,122,.5)',color:'#f2eee8',fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,textAlign:'center'}}>{btlMsg.t}{btlMsg.undo && (<button type="button" data-k="btlUndo" onClick={()=>_btlUndo(btlMsg.undo)} style={{border:0,background:'none',padding:'4px 2px',color:'#f2d27a',fontFamily:'inherit',fontSize:14,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>{_stT('btlUndo')}</button>)}</div>)}
           </div>); })(), document.body)}
           {hidOpen && studioOn && (()=>{   /* hidden tools: a code the first time on this device, then the switches */
@@ -20298,7 +20326,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         return (<>
           {/* the Studio, one screen: ⌄ home (top left), the song and its painter, ♥ · ✦ Change · share — always there, never a rail */}
           {stFill && (<><span className="pf-st-corner l" aria-hidden="true"/><span className="pf-st-corner r" aria-hidden="true"/></>)}   {/* full screen: the top corners rounded, as at home */}
-          {!_vr && (!stripOpen || stLand) && !stChg && !stShare && !demoReelOn && !recording && !micActive && !composeMode && !stSeek && (<div className="pf-st-tabs2 st"><button type="button" onClick={_go(()=>{ _stForYou(); })}>{_stT('sup')}</button><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('studio')}</button>{_btlOn() && (<button type="button" className={'pf-btl-tab'+(btlDrag ? (btlDrag.over ? ' drop over' : ' drop') : '')+(btlDot ? ' has' : '')} onClick={_go(()=>{ _btlTabOpen(); })}>Battle</button>)}</div>)}   {/* the two places, here too: For You leaves to the surprises (your painting waits on the home card) */}
+          {!_vr && (!stripOpen || stLand) && !stChg && !stShare && !demoReelOn && !recording && !micActive && !composeMode && !stSeek && (<div className="pf-st-tabs2 st"><button type="button" onClick={_go(()=>{ _stForYou(); })}>{_stT('sup')}</button><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('studio')}</button>{_btlOn() && (<button type="button" className={'pf-btl-tab'+(btlDrag ? (btlDrag.over ? ' drop over' : ' drop') : '')+(btlDot ? ' has' : '')+(btlShow && !btlDrag ? ' show' : '')} onClick={_go(()=>{ _btlTabOpen(); })}>Battle</button>)}</div>)}   {/* the two places, here too: For You leaves to the surprises (your painting waits on the home card) */}
           {!_vr && (!stripOpen || stLand) && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
           {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={(e)=>{ e.stopPropagation(); if(stThumbHoldRef.current){ stThumbHoldRef.current=false; return; } _stPeekTap(); }} onPointerDown={(e)=>{ stThumbHoldRef.current=false; _holdStart(e.clientX, e.clientY, true); }} onPointerUp={_thumbUp} onPointerCancel={_thumbUp} onPointerLeave={_thumbUp} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} onContextMenu={(e)=>e.preventDefault()} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
           {!_vr && (!_live || (!composeMode && !micActive && !(micSong && micSong.phase==='reading'))) && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && !stPlayArm && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true" style={_live ? {top:'calc(env(safe-area-inset-top, 0px) + 64px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)'} : undefined}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
