@@ -87,10 +87,24 @@ def diag():
     s, j = call('PATCH', f'{API}/edits/{eid}/details', {'contactEmail': 'hello@paintiano.app', 'contactWebsite': 'https://paintiano.app'}); print('C patch', s, '' if s == 200 else json.dumps(j)[:300])
     try_commit(eid, 'C')
 
+def closed(vc):
+    # the bundle already in the library → a release in closed testing (track "alpha"), so Google runs its pre-launch report on real devices
+    step('edit'); s, j = call('POST', API + '/edits', {}); must(s, j, 'edit'); eid = j['id']
+    notes = [{'language': 'en-US', 'text': 'First test build'}]
+    for status in ('completed', 'draft'):
+        s, j = call('PUT', f'{API}/edits/{eid}/tracks/alpha', {'track': 'alpha', 'releases': [{'name': f'1.0 ({vc})', 'versionCodes': [str(vc)], 'status': status, 'releaseNotes': notes}]})
+        print('alpha', status, s, '' if s == 200 else json.dumps(j)[:300])
+        if s == 200:
+            s2, j2 = call('POST', f'{API}/edits/{eid}:commit'); print('commit', s2, '' if s2 == 200 else json.dumps(j2)[:300])
+            if s2 == 200: return
+            s, j = call('POST', API + '/edits', {}); must(s, j, 'edit'); eid = j['id']
+    sys.exit(2)
+
 if __name__ == '__main__':
     m = sys.argv[1] if len(sys.argv) > 1 else 'check'
     if m == 'check': check()
     elif m == 'listing': listing()
     elif m == 'upload': upload(sys.argv[2])
     elif m == 'diag': diag()
+    elif m == 'closed': closed(sys.argv[2])
     else: print(__doc__); sys.exit(1)

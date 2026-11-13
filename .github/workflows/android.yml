@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   play:
-    if: ${{ contains(github.event.head_commit.message, '[play-check]') || contains(github.event.head_commit.message, '[play-listing]') || contains(github.event.head_commit.message, '[play-diag]') }}
+    if: ${{ contains(github.event.head_commit.message, '[play-check]') || contains(github.event.head_commit.message, '[play-listing]') || contains(github.event.head_commit.message, '[play-diag]') || contains(github.event.head_commit.message, '[play-closed]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -29,9 +29,10 @@ jobs:
           pip install --quiet pyjwt cryptography
           if echo "$MSG" | grep -q "\[play-listing\]"; then python3 android/play/play.py listing; fi
           if echo "$MSG" | grep -q "\[play-diag\]"; then python3 android/play/play.py diag; exit 0; fi
+          if echo "$MSG" | grep -q "\[play-closed\]"; then python3 android/play/play.py closed 9; fi
           python3 android/play/play.py check
   build:
-    if: ${{ !contains(github.event.head_commit.message, '[play-check]') && !contains(github.event.head_commit.message, '[play-listing]') && !contains(github.event.head_commit.message, '[play-diag]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[play-check]') && !contains(github.event.head_commit.message, '[play-listing]') && !contains(github.event.head_commit.message, '[play-diag]') && !contains(github.event.head_commit.message, '[play-closed]') }}
     runs-on: ubuntu-latest
     permissions: { contents: write }
     timeout-minutes: 45
