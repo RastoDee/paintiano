@@ -15906,7 +15906,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _btlHas = (k)=>{ const m=btlMine; return m.sent.some(x=>x.k===k) ? 'in' : (m.wait.some(x=>x.k===k) ? 'wait' : null); };
   // the BATTLE place: Battle's page under the tab — with the tickets that wait for the sign-in, if any
   const _btlTabOpen = (ask)=>{ try{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin); setStChg(null); setStShare(false); setStripOpen(false);
-    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
+    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+(cameBtlRef.current ? '&seen=1' : '')+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
   const _btlPost = (path, body, link)=> fetch(PF_BTL+path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'}, link ? {Authorization:'Bearer '+link} : {}),body:JSON.stringify(body)}).then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok, s:r.status, d:d||{}})));
   const _btlMark = ()=>{ if(btlBusy || !_btlCan()) return; const k=_btlKey();
     if(_btlHas(k)){ if(_btlHas(k)==='wait'){ _btlTabOpen(); return; } _btlSay(_stT('btlInH')); return; }
@@ -15939,7 +15939,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return true; };
   const _btlDragMove = (x, y)=>{ const D=btlDragRef.current; if(D.on){ setBtlDrag(d=>d ? {...d, x, y, over:_btlOver(x, y)} : d); return true; }
     if(!D.ok || !_holdingRef.current || Math.hypot(x-D.x0, y-D.y0) < 12) return false;
-    let img=null; try{ const c=canvasRef.current; if(c && c.width){ const W=180, H=Math.round(W*c.height/c.width), o=document.createElement('canvas'); o.width=W; o.height=H; o.getContext('2d').drawImage(c,0,0,W,H); img=o.toDataURL('image/jpeg',0.8); } }catch(_){ img=null; }
+    let img=(_stPosterOn && stPoster && stPoster.img) || null;   // before play the canvas is still empty: the finished still is the painting
+    if(!img) try{ const c=canvasRef.current; if(c && c.width){ const W=180, H=Math.round(W*c.height/c.width), o=document.createElement('canvas'); o.width=W; o.height=H; o.getContext('2d').drawImage(c,0,0,W,H); img=o.toDataURL('image/jpeg',0.8); } }catch(_){ img=null; }
     if(!img){ D.ok=false; return false; }
     D.on=true; _swipeWasGestureRef.current=true; _stBuzz(14); setBtlDrag({x, y, over:_btlOver(x, y), img, go:false});
     if(D.mouse){ const mv=(ev)=>{ _btlDragMove(ev.clientX, ev.clientY); }; const up=(ev)=>{ window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); _btlDragUp(ev.clientX, ev.clientY); }; window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up); }
@@ -16502,6 +16503,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // someone who came from Paintiano Battle to paint their own (…&from=battle): lands in the Studio on a finished painting and is shown
   // Change straight away — not after 12 s of playing, they have not pressed play yet
   const fromBtlRef = useRef(null); if(fromBtlRef.current===null){ try{ fromBtlRef.current = /[?&]from=battle(&|$)/.test(window.location.search||''); }catch(_){ fromBtlRef.current=false; } }
+  const cameBtlRef = useRef(null); if(cameBtlRef.current===null) cameBtlRef.current = !!fromBtlRef.current;   // stays for the visit (fromBtlRef is used up by the Change tip): the Battle tab then skips Battle's intro
   // THE FIRST MINUTE in the Studio, for someone who has never been here and came by a link (from Battle, from TikTok…): they
   // would stare at a canvas and a play button and leave. Three steps, one finger each, each shown once, any of them skippable:
   //   1 the finished painting and one line — "Music painted this. Tap and watch how" → the tap plays it from the start;
@@ -17799,7 +17801,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             </div>
             <iframe key={btlTab} title="Paintiano Battle" src={btlTab} allow="clipboard-write; web-share; autoplay" style={{flex:1,minHeight:0,width:'100%',border:0,background:'#0f0f12',colorScheme:'dark'}}/>
           </div>)}
-          {_stPosterOn && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
+          {_stPosterOn && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
             /* it only shows the painting: every touch goes through to the canvas under it (a tap plays, a swipe changes the look, a hold carries it to Battle) */
             return (<div data-k="stPoster" aria-hidden="true" style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',pointerEvents:'none',background:'#05050c'}}>
               <img alt="" src={stPoster.img} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
