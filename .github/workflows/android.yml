@@ -16,6 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions: { contents: write }
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +55,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ contains(github.event.head_commit.message, '[aab]') }}
         with: { name: paintiano-release-aab, path: android/app/build/outputs/bundle/release/app-release.aab }
+      - name: Release bundle onto the aab-drop branch (so it can be fetched with git)
+        if: ${{ contains(github.event.head_commit.message, '[aab]') }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/drop" && cp android/app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/drop/"
+          cd "$RUNNER_TEMP/drop" && git init -q -b aab-drop && git config user.name "github-actions" && git config user.email "actions@users.noreply.github.com"
+          git add app-release.aab && git commit -q -m "release bundle, versionCode ${{ github.run_number }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" aab-drop
       - name: Enable KVM
         if: ${{ contains(github.event.head_commit.message, '[emu]') }}
         run: |
