@@ -16529,7 +16529,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the whole painting is on it, as it will be when the music has finished. A tap plays it from the start. (A newcomer gets the same picture from the guide above.)
   const stPosterWant = useRef(null); if(stPosterWant.current===null){ try{ stPosterWant.current = /[?&]piece=/.test(window.location.search||''); }catch(_){ stPosterWant.current=false; } }
   const [stPoster, setStPoster] = useState(null);   // { img, key } — the still, and the look it was made for
-  const _stPosterOk = !!stPosterWant.current && stGuide===0 && studioFs && !studioHome && chords.length>0 && viewMode!=='image' && !stChg && !stShare && !stripOpen && !btlTab && !recording && !studioLive;
+  const _stPosterOk = !!stPosterWant.current && stGuide===0 && studioFs && !studioHome && chords.length>0 && viewMode!=='image' && !btlTab && !recording && !studioLive;   // Change, Share and the looks open over it: the still stays under them (before play the canvas is empty: black otherwise)
   const stPosterKey = (_stPosterOk && !playing) ? _btlKey() : '';   // another look (a swipe) or another piece: the still is painted anew
   useEffect(()=>{ if(!stPosterWant.current) return;
     if(playing || stGuide>0){ stPosterWant.current=false; if(stPoster) setStPoster(null); return; }   // it plays, or the guide has it: the still is over
@@ -16539,6 +16539,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[_stPosterOk, playing, stGuide, stPosterKey]);
   const _stPosterOn = !!(stPoster && _stPosterOk && stPoster.key===stPosterKey);
+  const stPosterEl = useRef(null);   // the painting moves and shrinks when the looks open (and back): the still follows it frame by frame
+  useEffect(()=>{ if(!_stPosterOn) return; let raf=0; const t0=Date.now();
+    const fit=()=>{ try{ const el=stPosterEl.current, w=canvasWrapRef.current, r=w && w.getBoundingClientRect(); if(el && r && r.width>=40){ el.style.left=r.left+'px'; el.style.top=r.top+'px'; el.style.width=r.width+'px'; el.style.height=r.height+'px'; } }catch(_){} if(Date.now()-t0<600) raf=requestAnimationFrame(fit); };
+    raf=requestAnimationFrame(fit); return ()=>cancelAnimationFrame(raf); },[_stPosterOn, stripOpen, !!stChg, !!stShare]);
   // Battle's Súťaž (or Battle's web page with …&join=1): the carry is shown once, without words — a finger rests on the painting,
   // a small card of it flies onto the Battle tab and the tab lights up; twice, then it is gone (any touch ends it). Reduced motion: the line.
   const _btlShowCarry = ()=>{ try{
@@ -17804,7 +17808,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           </div>)}
           {_stPosterOn && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
             /* it only shows the painting: every touch goes through to the canvas under it (a tap plays, a swipe changes the look, a hold carries it to Battle) */
-            return (<div data-k="stPoster" aria-hidden="true" style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',pointerEvents:'none',background:'#05050c'}}>
+            return (<div ref={stPosterEl} data-k="stPoster" aria-hidden="true" style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:(stChg || stShare || stripOpen) ? 10004 : 100000,borderRadius:16,overflow:'hidden',pointerEvents:'none',background:'#05050c'}}>
               <img alt="" src={stPoster.img} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
               <span style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:76,height:76,borderRadius:'50%',border:'1px solid rgba(255,255,255,.3)',background:'rgba(10,8,18,.62)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',boxShadow:'0 4px 24px rgba(0,0,0,.4)',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box'}}><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" style={{marginLeft:4}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div>); })()}
           {_stGuideOk && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
