@@ -1,6 +1,7 @@
 # Builds the Android app (Capacitor shell around the web app).
 #   • every push to the `android` branch: a debug APK (installable by hand, no secrets) as an artifact
 #   • a commit marked [aab]: the signed release bundle for Google Play (.aab) as an artifact
+#   • a commit marked [play-check] / [play-listing]: Google Play Console through its API (android/play/play.py); [play-upload] with [aab]: the bundle goes to internal testing
 #   • a commit marked [emu]: the APK is also started in an emulator and screenshots of it are kept as an artifact
 name: Android
 
@@ -14,7 +15,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  play:
+    if: ${{ contains(github.event.head_commit.message, '[play-check]') || contains(github.event.head_commit.message, '[play-listing]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Google Play Console
+        env:
+          GOOGLE_PLAY_SA_JSON: ${{ secrets.GOOGLE_PLAY_SA_JSON }}
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          pip install --quiet pyjwt cryptography
+          if echo "$MSG" | grep -q "\[play-listing\]"; then python3 android/play/play.py listing; fi
+          python3 android/play/play.py check
   build:
+    if: ${{ !contains(github.event.head_commit.message, '[play-check]') && !contains(github.event.head_commit.message, '[play-listing]') }}
     runs-on: ubuntu-latest
     permissions: { contents: write }
     timeout-minutes: 45
@@ -55,8 +71,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ contains(github.event.head_commit.message, '[aab]') }}
         with: { name: paintiano-release-aab, path: android/app/build/outputs/bundle/release/app-release.aab }
+      - name: Release bundle to Google Play (internal testing)
+        if: ${{ contains(github.event.head_commit.message, '[aab]') && contains(github.event.head_commit.message, '[play-upload]') }}
+        env:
+          GOOGLE_PLAY_SA_JSON: ${{ secrets.GOOGLE_PLAY_SA_JSON }}
+        run: |
+          pip install --quiet pyjwt cryptography
+          python3 android/play/play.py upload android/app/build/outputs/bundle/release/app-release.aab
       - name: Release bundle onto the aab-drop branch (so it can be fetched with git)
-        if: ${{ contains(github.event.head_commit.message, '[aab]') }}
+        if: ${{ contains(github.event.head_commit.message, '[aab]') && contains(github.event.head_commit.message, '[drop]') }}
         run: |
           mkdir -p "$RUNNER_TEMP/drop" && cp android/app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/drop/"
           cd "$RUNNER_TEMP/drop" && git init -q -b aab-drop && git config user.name "github-actions" && git config user.email "actions@users.noreply.github.com"
