@@ -8,6 +8,7 @@ def get(path):
     if s != 200: print('  !! GET', path.split('?')[0], s, errs(j)[:200])
     return j if s == 200 else {}
 step('app'); j = get('/v1/apps?filter[bundleId]=' + BUNDLE); a = j['data'][0]; app = a['id']
+print('APPLE ID', app, '| https://apps.apple.com/app/id' + app)
 print({k: a['attributes'].get(k) for k in ('name', 'sku', 'primaryLocale', 'contentRightsDeclaration', 'isOrEverWasMadeForKids')})
 step('app info')
 j = get(f'/v1/apps/{app}/appInfos?include=primaryCategory,secondaryCategory,ageRatingDeclaration')
