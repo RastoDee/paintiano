@@ -1,0 +1,4 @@
+klimt <- https://commons.wikimedia.org/wiki/File:Gustav_Klimt_016.jpg
+kandinsky <- https://commons.wikimedia.org/wiki/File:Vassily_Kandinsky,_1913_-_Composition_7.jpg
+botticelli <- https://commons.wikimedia.org/wiki/File:Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg
+vermeer <- https://commons.wikimedia.org/wiki/File:1665_Girl_with_a_Pearl_Earring.jpg
