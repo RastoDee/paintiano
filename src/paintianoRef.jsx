@@ -41984,16 +41984,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // A RETURNING visitor who came by a link (from Battle, a poster's QR) must never find an empty canvas with a play button:
   // the whole painting is on it, as it will be when the music has finished. A tap plays it from the start. (A newcomer gets the same picture from the guide above.)
   const stPosterWant = useRef(null); if(stPosterWant.current===null){ try{ stPosterWant.current = /[?&]piece=/.test(window.location.search||''); }catch(_){ stPosterWant.current=false; } }
-  const [stPoster, setStPoster] = useState(null);
+  const [stPoster, setStPoster] = useState(null);   // { img, key } — the still, and the look it was made for
   const _stPosterOk = !!stPosterWant.current && stGuide===0 && studioFs && !studioHome && chords.length>0 && viewMode!=='image' && !stChg && !stShare && !stripOpen && !btlTab && !recording && !studioLive;
+  const stPosterKey = (_stPosterOk && !playing) ? _btlKey() : '';   // another look (a swipe) or another piece: the still is painted anew
   useEffect(()=>{ if(!stPosterWant.current) return;
-    if(playing || stGuide>0 || stChg || stripOpen){ stPosterWant.current=false; if(stPoster) setStPoster(null); return; }   // it plays, the guide has it, or the look is being changed: the still is over
-    if(!_stPosterOk || stPoster) return;
-    let n=0, tm=null; const go=()=>{ let im=null; try{ im=_btlImg(); }catch(_){ im=null; } if(im){ setStPoster(im); return; } if(++n<25) tm=setTimeout(go, 300); };   // the notes may still be settling: try until the painting is there
+    if(playing || stGuide>0){ stPosterWant.current=false; if(stPoster) setStPoster(null); return; }   // it plays, or the guide has it: the still is over
+    if(!_stPosterOk || !stPosterKey || (stPoster && stPoster.key===stPosterKey)) return;
+    let n=0, tm=null; const go=()=>{ let im=null; try{ im=_btlImg(); }catch(_){ im=null; } if(im){ setStPoster({img:im, key:stPosterKey}); return; } if(++n<25) tm=setTimeout(go, 300); };   // the notes may still be settling: try until the painting is there
     tm=setTimeout(go, 200); return ()=>clearTimeout(tm);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[_stPosterOk, playing, stGuide, stChg, stripOpen]);
-  const _stPosterGo = ()=>{ stPosterWant.current=false; setStPoster(null); try{ if(!playing) _stTapOne(); }catch(_){} };
+  },[_stPosterOk, playing, stGuide, stPosterKey]);
+  const _stPosterOn = !!(stPoster && _stPosterOk && stPoster.key===stPosterKey);
   // 2 → 3: when the look changes (they swiped), or after a while; 3 → end: when the painting is carried, or after a while
   useEffect(()=>{ if(stGuide<2) return; const G=stGuideRef.current; G.t=Date.now(); G.key=''; const st=stGuide;
     const iv=setInterval(()=>{ try{ const dt=Date.now()-G.t;
@@ -43220,7 +43221,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 </div>
               </div>);
           })()}
-        {(btlTab || btlDrag || btlMsg || _stGuideOk || (stPoster && _stPosterOk)) && typeof document!=='undefined' && createPortal((()=>{ const _stop=(e)=>e.stopPropagation();   /* on the page itself: the same from the home and from the Studio, above both */
+        {(btlTab || btlDrag || btlMsg || _stGuideOk || _stPosterOn) && typeof document!=='undefined' && createPortal((()=>{ const _stop=(e)=>e.stopPropagation();   /* on the page itself: the same from the home and from the Studio, above both */
           return (<div onClick={_stop} onPointerDown={_stop} onPointerUp={_stop} onMouseDown={_stop} onTouchStart={_stop} onTouchEnd={_stop}>
           {btlTab && (<div className="pf-btl" role="region" aria-label="Paintiano Battle" style={{position:'fixed',inset:0,zIndex:100001,background:'#05050c',display:'flex',flexDirection:'column'}}>
             <div style={{flex:'none',height:'calc(env(safe-area-inset-top, 0px) + 58px)',position:'relative'}}>
@@ -43228,10 +43229,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             </div>
             <iframe key={btlTab} title="Paintiano Battle" src={btlTab} allow="clipboard-write; web-share; autoplay" style={{flex:1,minHeight:0,width:'100%',border:0,background:'#0f0f12',colorScheme:'dark'}}/>
           </div>)}
-          {stPoster && _stPosterOk && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
-            return (<div data-k="stPoster" role="button" tabIndex={0} aria-label={_stT('obLandSub')} onClick={_stPosterGo} style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',cursor:'pointer',background:'#05050c'}}>
-              <img alt="" src={stPoster} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
-              <span aria-hidden="true" style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:78,height:78,borderRadius:'50%',border:'1px solid rgba(242,238,232,.35)',background:'rgba(5,5,12,.62)',display:'flex',alignItems:'center',justifyContent:'center',color:'#f2eee8',fontSize:26,paddingLeft:5,boxSizing:'border-box'}}>▶</span></div>); })()}
+          {_stPosterOn && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
+            /* it only shows the painting: every touch goes through to the canvas under it (a tap plays, a swipe changes the look, a hold carries it to Battle) */
+            return (<div data-k="stPoster" aria-hidden="true" style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',pointerEvents:'none',background:'#05050c'}}>
+              <img alt="" src={stPoster.img} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+              <span style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:78,height:78,borderRadius:'50%',border:'1px solid rgba(242,238,232,.35)',background:'rgba(5,5,12,.62)',display:'flex',alignItems:'center',justifyContent:'center',color:'#f2eee8',fontSize:26,paddingLeft:5,boxSizing:'border-box'}}>▶</span></div>); })()}
           {_stGuideOk && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
             const box={position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',fontFamily:"'Outfit',system-ui,sans-serif",color:'#f2eee8',textAlign:'center'};
             const skip=(<button type="button" data-k="obSkip" onClick={()=>_stGuideEnd(false)} style={{position:'absolute',right:6,top:6,padding:'8px 10px',border:0,background:'none',color:'#d9d5cc',fontFamily:'inherit',fontSize:12,textShadow:'0 1px 6px #000',cursor:'pointer',pointerEvents:'auto'}}>{_stT('obSkip')}</button>);
