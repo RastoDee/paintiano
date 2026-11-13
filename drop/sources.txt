@@ -6,3 +6,6 @@ klimt2 <- https://commons.wikimedia.org/wiki/File:The_Kiss_-_Gustav_Klimt_-_Goog
 FAIL kandinsky2
 monalisa <- https://commons.wikimedia.org/wiki/File:Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg
 wanderer <- https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg
+rousseau <- https://commons.wikimedia.org/wiki/File:Henri_Rousseau_010.jpg
+FAIL marcblue
+FAIL marclarge
