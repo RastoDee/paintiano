@@ -16961,6 +16961,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(!composerStage.length && crOn) setCrOn(false);
     firstKeptRef.current = !!c.first;   // its painter is not chosen (white): ↑ goes on as in the surprises
   };
+  // Studio straight from the first screen (from Battle opened there): its painting starts as a tap would start it,
+  // and once it plays it goes into the Studio — no detour through For You
+  const feedTakeWantRef = useRef(0);
+  const _stFromLive = ()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _tipDone('studio'); setFeedStudioLit(0); feedTakeWantRef.current=Date.now(); _stBuzz(12); _feedStart(null, true); };
+  useEffect(()=>{ const w=feedTakeWantRef.current; if(!w) return; if(Date.now()-w>12000){ feedTakeWantRef.current=0; return; }
+    const c=feedCards[feedAt]; if(feedAt<0 || !c || !_feedIsLoaded(c)) return;
+    const take=()=>{ if(feedTakeWantRef.current!==w) return; feedTakeWantRef.current=0; _feedTake(); };
+    if(playing) { take(); return; }
+    const tm=setTimeout(take, Math.max(0, 6000-(Date.now()-w))); return ()=>clearTimeout(tm); },[feedAt, feedCards, feedLoaded, playing]);   // the sound may sleep (iOS): then it goes into the Studio as it is
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
@@ -17727,7 +17736,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           return (<div onClick={_stop} onPointerDown={_stop} onPointerUp={_stop} onMouseDown={_stop} onTouchStart={_stop} onTouchEnd={_stop}>
           {btlTab && (<div className="pf-btl" role="region" aria-label="Paintiano Battle" style={{position:'fixed',inset:0,zIndex:100001,background:'#05050c',display:'flex',flexDirection:'column'}}>
             <div style={{flex:'none',height:'calc(env(safe-area-inset-top, 0px) + 58px)',position:'relative'}}>
-              <div className="pf-st-tabs2 st" style={{zIndex:1}}><button type="button" onClick={()=>{ setBtlTab(null); if(!studioHome) _stForYou(); }}>{_stT('sup')}</button><button type="button" disabled={studioHome && !(feedAt>=0 && feedCards[feedAt])} onClick={()=>{ setBtlTab(null); if(studioHome) _feedTake(); }}>{_stT('studio')}</button><button type="button" className="on pf-btl-tab" aria-current="page" tabIndex={-1}>Battle</button></div>
+              <div className="pf-st-tabs2 st" style={{zIndex:1}}><button type="button" onClick={()=>{ setBtlTab(null); if(!studioHome) _stForYou(); }}>{_stT('sup')}</button><button type="button" disabled={studioHome && !(feedAt>=0 && feedCards[feedAt]) && !liveHomeOn} onClick={()=>{ setBtlTab(null); if(studioHome){ if(feedAt>=0 && feedCards[feedAt]) _feedTake(); else _stFromLive(); } }}>{_stT('studio')}</button><button type="button" className="on pf-btl-tab" aria-current="page" tabIndex={-1}>Battle</button></div>
             </div>
             <iframe key={btlTab} title="Paintiano Battle" src={btlTab} allow="clipboard-write; web-share; autoplay" style={{flex:1,minHeight:0,width:'100%',border:0,background:'#0f0f12',colorScheme:'dark'}}/>
           </div>)}
