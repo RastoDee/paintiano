@@ -1613,7 +1613,7 @@ const SAMPLE_IMAGES = [
   // four more (Nov 2026): public-domain paintings, Wikimedia Commons scans
   { u: "/samples/sample-hokusai.jpg", t: "The Great Wave off Kanagawa — Hokusai" },
   { u: "/samples/sample-seurat.jpg", t: "A Sunday on La Grande Jatte — Seurat" },
-  { u: "/samples/sample-caillebotte.jpg", t: "Paris Street; Rainy Day — Caillebotte" },
+  { u: "/samples/sample-renoir.jpg", t: "Dance at Le Moulin de la Galette — Renoir" },
   { u: "/samples/sample-gauguin.jpg", t: "Mahana no atua — Gauguin" },
   // four more (Nov 2026): public-domain paintings, Wikimedia Commons scans
   { u: "/samples/sample-klimt.jpg", t: "The Kiss — Klimt" },
