@@ -4,3 +4,5 @@ botticelli <- https://commons.wikimedia.org/wiki/File:Sandro_Botticelli_-_La_nas
 vermeer <- https://commons.wikimedia.org/wiki/File:1665_Girl_with_a_Pearl_Earring.jpg
 klimt2 <- https://commons.wikimedia.org/wiki/File:The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg
 FAIL kandinsky2
+monalisa <- https://commons.wikimedia.org/wiki/File:Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg
+wanderer <- https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg
