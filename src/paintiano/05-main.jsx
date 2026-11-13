@@ -2612,6 +2612,12 @@ const STUDIO_SHEET_CSS = `
 .pf-app-root .pf-st-sheet .pf-sv-web>span:first-of-type>svg{background:linear-gradient(135deg,#7ab3ff,#3f7bff);color:#fff}
 .pf-app-root .pf-st-sheet .pf-sv-gallery>span:first-of-type>svg{background:linear-gradient(135deg,#cdb2ff,#8c5cff);color:#fff}
 .pf-app-root .pf-st-sheet .pf-sv-gallery2>span:first-of-type>svg{background:linear-gradient(135deg,#8fd6a4,#3fb37a);color:#fff}
+.pf-app-root .pf-st-sheet .pf-sv-paper{padding-top:14px!important}
+.pf-app-root .pf-st-sheet .pf-sv-paper>span:first-of-type>svg{top:12px;margin-top:0}
+.pf-app-root .pf-st-sheet .pf-sv-paper>span:first-of-type{min-height:22px}
+.pf-app-root .pf-st-sheet .pf-sv-paper:active{transform:none}
+.pf-app-root .pf-st-sheet .pf-sv-paper>div.pf-paper-row{display:flex!important;width:calc(100% + 58px)!important;margin:20px 0 0 -58px!important}
+.pf-paper:active{transform:scale(.97)}
 .pf-app-root .pf-st-sheet .pf-sv-chk{border-bottom:0!important;padding:6px 2px!important;margin-bottom:0!important;color:rgba(242,238,232,.82)!important}
 .pf-app-root .pf-st-mood>div{position:relative}
 .pf-app-root .pf-st-sheet.pf-st-mood>div>div:first-of-type{font-family:'Cormorant Garamond',Georgia,serif!important;font-style:italic!important;font-weight:500!important;font-size:calc(var(--pf-read-scale,1) * 1.3rem)!important;letter-spacing:0!important;text-transform:none!important;color:#f2eee8!important;text-align:left!important;margin:2px 52px 16px 4px!important;line-height:1.1!important}
@@ -5314,6 +5320,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const openDailyInfo = useCallback((e)=>{ if(e){ e.preventDefault(); e.stopPropagation(); } setShowDailyInfo(true); try{ window.posthog && window.posthog.capture('daily_info_open'); }catch(_){} },[]);
   const closeBook = useCallback(()=>setShowBook(false),[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  const [printThumb, setPrintThumb] = useState(null);   // Save › Print: the painting, small, on the white and the dark sheet
   // Paint-mode Web/Print export toggle: when ON and a source image is on
   // hand (originalImgUrl for regular image, imgMoodThumb for MFI), overlay
   // a small thumbnail in the corner of the saved PNG so the viewer sees
@@ -6833,6 +6840,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // and Clear are off; Save exports the painting on screen. No limit.
   const [favs, setFavs] = useState([]);              // newest first
   const [favView, setFavView] = useState(null);      // {i} while the viewer is open
+  // Save › Print: the painting, small, for the white and the dark sheet's tiles
+  useEffect(()=>{ if(!showSizePicker){ setPrintThumb(null); return; }
+    const tm=setTimeout(()=>{ try{ const c=(favView && favCanvasRef.current) ? favCanvasRef.current : canvasRef.current; if(!c || !c.width || !c.height || _canvasBlank(c)) return;
+      const w=120, h=Math.round(c.height*w/c.width), o=document.createElement('canvas'); o.width=w; o.height=h; const x=o.getContext('2d'); x.imageSmoothingQuality='high'; x.drawImage(c,0,0,w,h); setPrintThumb(o.toDataURL('image/jpeg',0.8)); }catch(_){} }, 60);
+    return ()=>clearTimeout(tm); },[showSizePicker, favView]);
   const favViewRef = useRef(null);
   useEffect(()=>{ favViewRef.current = favView; },[favView]);
   const [favFs, setFavFs] = useState(false);         // the viewer in fullscreen
@@ -14238,7 +14250,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       return imgSigActiveRef.current ? ('\u2726 '+_sigT('label')+' \u00b7 '+l0) : l0;
     }catch(_){ return ''; }
   };
-  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
+  const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false, paper=null)=>{   // paper: a print's sheet — 'white' / 'dark' (Save › Print)
     prevBackRef.current = showSizePicker ? 'picker' : (prevBackRef.current==='share-next' ? 'share' : null);   // where the preview goes back to
     const fv=(favView && favCur) ? favCur : null;
     // Every export is the painting on screen, in its φ frame — the prints too (Nov 2026: what you see is what you print;
@@ -14249,18 +14261,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         enter: ()=>{ _kd0=globalThis.__PAINT_KEY_D; globalThis.__PAINT_KEY_D=paintKeyD; }, leave: ()=>{ globalThis.__PAINT_KEY_D=_kd0; },
         pcRealW: _pcWeights(chords), gcReal: gc,
         liveNow: sizeMode==='story' && (playing || holdPaused) };   // a Story while it plays: the painting as it is right now (the live canvas), not the finished one
-      return _exportWith(X, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
+      return _exportWith(X, sizeMode, directShare, audioBlob, audioName, withSource, noBg, paper);
     }
     const pc=favPiecesRef.current.get(fv.pk) || await favPiece(fv.pk);
     const lay=pc ? _favLayout(fv, pc.chords) : null;
     if(!lay){ setFavBad(true); return; }
-    return _exportWith(_favExportX(fv, pc, lay), sizeMode, directShare, audioBlob, audioName, withSource, noBg);
+    return _exportWith(_favExportX(fv, pc, lay), sizeMode, directShare, audioBlob, audioName, withSource, noBg, paper);
   };
   // Funnel: a file was made for the user (image / print / story / vector / video).
   const _phExport=(kind, how, noBg)=>{ try{ window.posthog && window.posthog.capture('export_done',{kind, how, transparent: !!noBg}); }catch(_){} };
   // refund fair use: a watermark-free export (Web, Print, vector) made with a licence is counted on that key — not on the studio's own devices
   const _expCount=(kind)=>{ try{ if(isPro && !hidOk && kind!=='story') pfExportHit(); }catch(_){} };
-  const _exportWith=async(X, sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
+  const _exportWith=async(X, sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false, paper=null)=>{
     // 'print3' — Pro's print: the same sheet as A1, on A3 (240 DPI: 2806 × 3969 px). A1 and the vector stay with the studio (the hidden tools).
     const _a3 = sizeMode==='print3'; if(_a3) sizeMode='print';
     const { chords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode, gc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip } = X;
@@ -14546,13 +14558,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           try{ await document.fonts.load('italic 600 64px "Cormorant Garamond"'); await document.fonts.load('500 32px "Outfit"'); }catch(_){}
           const _palNm=_PAL_KEYS.test(mode||'') ? _palCap(t(mode)) : '';
           const _palLn=_palNm ? String(_miT('palLine')).replace('{P}',_palNm).replace('{p}',t(mode)) : '';
-          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:(X.pcRealW || _pcWeights(chords)), gc:(X.gcReal || gc), names:_miT('names'), src:_srcForBand, sheetW:(_a3 ? PF_A3_W : 0)});
+          outCanvas=_frameExport(hi, sizeMode, {tag:(viewMode==='image' ? 'φ painting → music' : null), title:_title, composer:_comp, insp:_insp, pal:_palLn, palN:_palNm, wts:(X.pcRealW || _pcWeights(chords)), gc:(X.gcReal || gc), names:_miT('names'), src:_srcForBand, sheetW:(_a3 ? PF_A3_W : 0), white:(paper==='white')});
           if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386));
         }catch(_){ outCanvas=hi; }
       }
-      else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand, sheetW:(_a3 ? PF_A3_W : 0)}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
-      // a print without the caption: the painting on a white A sheet, a paper margin around it (a standard A3 / A1 frame takes it)
-      else if(sizeMode==='print' && !noBg){ try{ outCanvas=_paperSheet(hi, (_a3 ? PF_A3_W : 0)); dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
+      else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand, sheetW:(_a3 ? PF_A3_W : 0), white:(paper==='white')}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
+      // a print without the caption: the painting on an A sheet — white paper or the dark sheet, as picked — a margin around it (a standard A3 / A1 frame takes it)
+      else if(sizeMode==='print' && !noBg){ try{ outCanvas=_paperSheet(hi, (_a3 ? PF_A3_W : 0), paper==='dark'); dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
       if(sizeMode==='story'){
         const SW=1080, SH=1920;
         const st=document.createElement('canvas'); st.width=SW; st.height=SH;
@@ -21278,14 +21290,37 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                     <span style={{display:'inline-flex',alignItems:'center',gap:6,justifyContent:'center'}}><TxIcon n="web" s={14}/>{t('sizeWeb')}</span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{t('sizeWebHint')}</div>
                   </button>
-                  <button className="pf-sv pf-sv-print" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage(hidOk ? 'print' : 'print3', false, null, null, includeSourceThumb); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
+                  {/* Print: the painting on paper — two tiles, the white sheet (only the painting is printed) and the dark one; a tap saves it */}
+                  <div className="pf-sv pf-sv-print pf-sv-paper" style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
                       <TxIcon n="print" s={14}/>
                       {(({EN:'Print A1',SK:'Tlač A1',DE:'Druck A1',FR:'Impression A1',ES:'Impresión A1',PT:'Impressão A1',zh:'打印 A1',zhTW:'列印 A1',ja:'印刷 A1'})[lang]||'Print A1').replace('A1', hidOk ? 'A1' : 'A3')}
                       {!isPro && <ProBadge t={t} readScale={effScale} size="sm" />}
                     </span>
                     <div style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.4)',marginTop:4,letterSpacing:0}}>{({EN:'high-res · large file · print-ready',SK:'vysoké rozlíšenie · veľký súbor · na tlač',DE:'hochauflösend · große Datei · druckfertig',FR:'haute résolution · gros fichier · prêt à imprimer',ES:'alta resolución · archivo grande · listo para imprimir',PT:'alta resolução · ficheiro grande · pronto a imprimir',zh:'高分辨率 · 大文件 · 可印刷',zhTW:'高解析度 · 大檔案 · 可列印',ja:'高解像度 · 大きいファイル · 印刷可能'})[lang]||'high-res · large file · print-ready'}</div>
-                  </button>
+                    <div className="pf-paper-row" style={{display:'flex',gap:10,marginTop:10,width:'100%'}}>
+                      {['white','dark'].map(pp=>{ const W=pp==='white';
+                        const L=W ? ({EN:['On white','only the painting is printed'],SK:['Na bielom','tlačí sa len maľba'],DE:['Auf Weiß','nur das Bild wird gedruckt'],FR:['Sur blanc','seule la peinture est imprimée'],ES:['En blanco','solo se imprime la pintura'],PT:['Em branco','só a pintura é impressa'],zh:['白底','只打印画作'],zhTW:['白底','只列印畫作'],ja:['白い紙に','絵だけを印刷']})
+                                  : ({EN:['On black','the elegant dark sheet'],SK:['Na čiernom','elegantný tmavý list'],DE:['Auf Schwarz','das elegante dunkle Blatt'],FR:['Sur noir','la feuille sombre, élégante'],ES:['En negro','la elegante hoja oscura'],PT:['Em preto','a elegante folha escura'],zh:['黑底','优雅的深色纸面'],zhTW:['黑底','優雅的深色紙面'],ja:['黒い紙に','上品な黒い台紙']});
+                        const tx=L[lang]||L.EN, ink=W ? 'rgba(29,26,20,.55)' : 'rgba(244,231,198,.6)';
+                        return (
+                        <button key={pp} type="button" className={'pf-paper pf-paper-'+pp} aria-label={tx[0]} onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage(hidOk ? 'print' : 'print3', false, null, null, includeSourceThumb, false, pp); }}
+                          style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:10,padding:'9px 10px',background:'rgba(255,255,255,.025)',border:'1px solid rgba(201,168,76,.45)',borderRadius:14,color:'rgba(247,243,236,.95)',cursor:'pointer',fontFamily:'inherit',textAlign:'left',letterSpacing:0}}>
+                          <span aria-hidden="true" style={{position:'relative',flex:'0 0 auto',width:40,aspectRatio:'594 / 841',background:W ? '#ffffff' : '#0b0b10',border:'1px solid '+(W ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.14)'),boxShadow:'0 3px 10px rgba(0,0,0,.5)',overflow:'hidden'}}>
+                            {printThumb && <img src={printThumb} alt="" style={{position:'absolute',left:'50%',transform:'translateX(-50%)',top:(exportBand ? '6.6%' : '6.5%'),height:(exportBand ? '68%' : '86%'),width:'auto',maxWidth:'none',outline:W ? 'none' : '1px solid rgba(201,168,76,.7)'}}/>}
+                            {exportBand && <>
+                              <span style={{position:'absolute',left:'27%',right:'27%',top:'79%',height:2,background:ink}}/>
+                              <span style={{position:'absolute',left:'38%',right:'38%',top:'84%',height:1.5,background:ink,opacity:.7}}/>
+                              <span style={{position:'absolute',left:'30%',right:'30%',top:'88.5%',height:1.5,background:W ? 'rgba(154,122,46,.9)' : 'rgba(201,168,76,.85)'}}/>
+                            </>}
+                          </span>
+                          <span style={{display:'flex',flexDirection:'column',gap:2,minWidth:0}}>
+                            <span style={{fontWeight:600,fontSize:(.7*effScale)+'rem'}}>{tx[0]}</span>
+                            <span style={{fontSize:(.55*effScale)+'rem',color:'rgba(230,222,196,.55)'}}>{tx[1]}</span>
+                          </span>
+                        </button>); })}
+                    </div>
+                  </div>
                   {hidOk && (<>
                   <button className="pf-sv pf-sv-gallery" onClick={()=>{ if(!isPro){ setPaywallReason('settings'); return; } exportImage('gallery', false, null, null, false); }} style={{padding:'12px',background:'transparent',color:isPro?pk.line:pk.dim,border:'1px solid '+pk.border,borderRadius:6,cursor:'pointer',fontFamily:'inherit',letterSpacing:'.06em',fontSize:(.72*effScale)+'rem',opacity:isPro?1:.75,position:'relative'}}>
                     <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
