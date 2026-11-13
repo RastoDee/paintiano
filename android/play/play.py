@@ -69,9 +69,28 @@ def upload(path):
     step('internal track'); s, j = call('PUT', f'{API}/edits/{eid}/tracks/internal', {'track': 'internal', 'releases': [{'name': f"1.0 ({vc})", 'versionCodes': [str(vc)], 'status': os.environ.get('PF_RELEASE_STATUS', 'draft')}]}); must(s, j, 'track')
     step('commit'); s, j = call('POST', f'{API}/edits/{eid}:commit'); must(s, j, 'commit'); print('committed: internal testing has', vc)
 
+def diag():
+    def try_commit(eid, label):
+        s, j = call('POST', f'{API}/edits/{eid}:validate'); print(label, 'validate', s, '' if s == 200 else json.dumps(j)[:400])
+        s, j = call('POST', f'{API}/edits/{eid}:commit'); print(label, 'commit', s, '' if s == 200 else json.dumps(j)[:400])
+        if s != 200:
+            s, j = call('POST', f'{API}/edits/{eid}:commit?changesNotSentForReview=true'); print(label, 'commit (changesNotSentForReview)', s, '' if s == 200 else json.dumps(j)[:400])
+        if s != 200: call('DELETE', f'{API}/edits/{eid}')
+    step('voided purchases (financial permission)'); s, j = call('GET', f'{API}/purchases/voidedpurchases?type=0'); print(s, json.dumps(j)[:200])
+    step('A: empty edit'); s, j = call('POST', API + '/edits', {}); must(s, j, 'edit'); try_commit(j['id'], 'A')
+    step('B: en-US texts only'); s, j = call('POST', API + '/edits', {}); must(s, j, 'edit'); eid = j['id']
+    r = lambda f: open(os.path.join(HERE, 'listing', 'en-US', f + '.txt'), encoding='utf-8').read().strip()
+    s, j = call('PUT', f'{API}/edits/{eid}/listings/en-US', {'language': 'en-US', 'title': r('title'), 'shortDescription': r('short'), 'fullDescription': r('full')}); print('B put', s)
+    try_commit(eid, 'B')
+    step('C: contact details only'); s, j = call('POST', API + '/edits', {}); must(s, j, 'edit'); eid = j['id']
+    s, j = call('GET', f'{API}/edits/{eid}/details'); print('C current details', s, json.dumps(j)[:300])
+    s, j = call('PATCH', f'{API}/edits/{eid}/details', {'contactEmail': 'hello@paintiano.app', 'contactWebsite': 'https://paintiano.app'}); print('C patch', s, '' if s == 200 else json.dumps(j)[:300])
+    try_commit(eid, 'C')
+
 if __name__ == '__main__':
     m = sys.argv[1] if len(sys.argv) > 1 else 'check'
     if m == 'check': check()
     elif m == 'listing': listing()
     elif m == 'upload': upload(sys.argv[2])
+    elif m == 'diag': diag()
     else: print(__doc__); sys.exit(1)
