@@ -16936,9 +16936,12 @@ function _fuSample(k, chords, gc, seed, mode, ph){
     // palette the partner's colours snap to: every mark snapped to them read
     // as mud. Black and white stay (Pollock's drips, Kusama's dots).
     const _greys=[];
+    // a colour joins the palette only if it is a colour of its own: shades of one hue (Klee's brown tiles came out as four
+    // browns) count once — four of them made a 'palette' and a fusion snapped every mark to brown (Harmony, Nov 2026)
+    const _same=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])<56, _new=(c2)=>!out.pal.some(q=>_same(q,c2));
     for(let i=1;i<arr.length && out.pal.length<6;i++){ if(arr[i][1]<tot*0.012) break; const c2=toRgb(arr[i][0]); const g=out.ground; if(g && Math.abs(c2[0]-g[0])+Math.abs(c2[1]-g[1])+Math.abs(c2[2]-g[2])<60) continue;
-      const _mx=Math.max(c2[0],c2[1],c2[2]), _mn=Math.min(c2[0],c2[1],c2[2]); if(_mx-_mn<40 && _mx>40 && _mn<215){ _greys.push(c2); continue; } out.pal.push(c2); }
-    if(out.pal.length<3) out.pal.push(..._greys.slice(0,3-out.pal.length));
+      const _mx=Math.max(c2[0],c2[1],c2[2]), _mn=Math.min(c2[0],c2[1],c2[2]); if(_mx-_mn<40 && _mx>40 && _mn<215){ _greys.push(c2); continue; } if(_new(c2)) out.pal.push(c2); }
+    if(out.pal.length<3){ for(const c2 of _greys){ if(out.pal.length>=3) break; if(_new(c2)) out.pal.push(c2); } }
   }catch(_){ }
   if(_fuSampleCache.size>64) _fuSampleCache.clear();
   _fuSampleCache.set(key,out); return out;
