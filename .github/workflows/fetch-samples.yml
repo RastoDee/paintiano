@@ -19,8 +19,8 @@ jobs:
               if file "drop/$out.jpg" | grep -q "JPEG"; then echo "$out <- https://commons.wikimedia.org/wiki/File:$n" >> drop/sources.txt; return 0; fi
               sleep 2
             done; rm -f "drop/$out.jpg"; echo "FAIL $out" >> drop/sources.txt; }
-          get marcblue "Marc,_Franz_-_Blue_Horse_I_-_Google_Art_Project.jpg" "Franz_Marc_Blaues_Pferd_1911.jpg"
-          get marclarge "Franz_Marc_-_The_Large_Blue_Horses.jpg" "Franz_Marc-The_Large_Blue_Horses.jpg" "The_Large_Blue_Horses.jpg" "Franz_Marc_005.jpg" "Franz_Marc_-_Die_grossen_blauen_Pferde.jpg"
+          get renoir "Pierre-Auguste_Renoir,_Le_Moulin_de_la_Galette.jpg" "Auguste_Renoir_-_Dance_at_Le_Moulin_de_la_Galette_-_Google_Art_Project.jpg" "Renoir_-_Bal_du_moulin_de_la_Galette.jpg"
+          get bruegel "Pieter_Bruegel_the_Elder_-_Hunters_in_the_Snow_(Winter)_-_Google_Art_Project.jpg" "Pieter_Bruegel_d._Ä._106.jpg" "Pieter_Bruegel_the_Elder_-_Hunters_in_the_Snow_(Winter).jpg"
           cat drop/sources.txt; ls -la drop; file drop/*
       - name: Commit the drop
         run: |
