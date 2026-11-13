@@ -8661,15 +8661,13 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   const bandH = CH / BANDS;
   // (W1) Whole-painting palette: deep tone from the root chord.
   const waveDark = [darkC[0]*0.55, darkC[1]*0.55, darkC[2]*0.55];
-  // Climax = chord with the highest average velocity → its band gets the accent.
+  // Climax = the loudest PASSAGE (the chords' loudness averaged over ~3 % of the piece around each chord) → its band gets the
+  // accent. A single accent (an sf on the very first chord, a lone f) no longer pulls the ribbon to the top of the sheet.
   let _cxIdx = 0, _cxVel = -1;
-  for(let i=0;i<cn;i++){
-    const nn = chords[i] && (chords[i].n || chords[i].notes);
-    if(!nn || !nn.length) continue;
-    let v=0; for(const note of nn) v += (note.v!==undefined?note.v:80);
-    v/=nn.length;
-    if(v>_cxVel){ _cxVel=v; _cxIdx=i; }
-  }
+  { const pv=new Array(cn); for(let i=0;i<cn;i++){ const nn = chords[i] && (chords[i].n || chords[i].notes); if(!nn || !nn.length){ pv[i]=null; continue; } let v=0; for(const note of nn) v += (note.v!==undefined?note.v:80); pv[i]=v/nn.length; }
+    const w=Math.max(1, Math.round(cn*0.03)); let sum=0, n=0; const add=(i,k)=>{ if(i>=0 && i<cn && pv[i]!=null){ sum+=k*pv[i]; n+=k; } };
+    for(let i=-w;i<w;i++) add(i,1);
+    for(let i=0;i<cn;i++){ add(i+w,1); add(i-w-1,-1); if(pv[i]!=null && n>0 && sum/n>_cxVel){ _cxVel=sum/n; _cxIdx=i; } } }
   const accentBand = Math.min(BANDS-1, Math.floor((_cxIdx/cn)*BANDS));
   const accentCol = chordCol(_cxIdx, 1.1);
 
