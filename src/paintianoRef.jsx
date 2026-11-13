@@ -4103,7 +4103,7 @@ function matisseAlgae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn);
   const wall=isBW?[240,238,232]:[245,241,232], white=isBW?[248,248,244]:_MT_WHITE;
-  const land=CW>CH*1.1, want=land?(X.pace>0.5?4:3):((X.pace>0.75 && cn>300)?3:2); const G=_kd2Phrases(A,want); const tot=G.reduce((s,q)=>s+q.n,0)||1;
+  const _ad=A.ch?A.ch.density:0.3; const land=CW>CH*1.1, want=(land?(X.pace>0.5?4:3):((X.pace>0.75 && cn>300)?3:2))+Math.round(_ad*3); const G=_kd2Phrases(A,want); const tot=G.reduce((s,q)=>s+q.n,0)||1;   // a dense piece: more sheets, more seaweed
   const mx=CW*0.07, my=CH*0.06, W=CW-2*mx, H=CH-2*my; const O=_mtOps();
   O.at(0,()=>_mtWall(ctx,0,0,CW,CH,wall,ss));
   let x=mx, prev=null; const sheets=[];
@@ -6450,6 +6450,13 @@ function mondrianPhaseClassic(ctx,CW,CH,chords,lim,gc,ss,mode){
     {t:(G[1]||c).t0, x:vx[1], y:hy[1], w:CW-vx[1], h:CH-hy[1], col:_mdSnap(_picChord(chords,Math.min(cn-1,Math.floor(((G[1]||c).t)*cn)),gc,isBW).rgb,isBW)},
     {t:(G[2]||c).t0, x:0, y:hy[1], w:vx[0]*0.5, h:CH-hy[1], col:_mdSnap(_picChord(chords,Math.min(cn-1,Math.floor(((G[2]||c).t)*cn)),gc,isBW).rgb,isBW)} ];
   if(!X.major){ items.push({t:0.5,x:vx[1],y:0,w:CW-vx[1],h:hy[0]*0.5,col:isBW?[30,30,30]:[22,20,20]}); }
+  // a dense piece draws the later, denser grids of his New York years: more lines from the passages, and more of the
+  // cells between them in the passages' own primaries (a calm piece keeps the classic two or three lines)
+  { const _xd=A.ch?A.ch.density:0.3, extra=Math.round(_xd*5); if(extra>0){ const GX=_kd2Phrases(A,3+extra);
+      for(let k=0;k<extra;k++){ const g=GX[3+k]||GX[k%GX.length]; if(k%2) vx.push(CW*(0.06+0.88*((g.t1*0.618+k*0.37)%1))); else hy.push(CH*(0.06+0.88*((1-A.reg(g.top))*0.5+((k*0.618)%1)*0.5))); }
+      const xs=[0,...vx.slice().sort((a,b)=>a-b),CW], ys=[0,...hy.slice().sort((a,b)=>a-b),CH];
+      for(let k=0;k<extra+1;k++){ const g=GX[(k*2+1)%GX.length]; const i=Math.floor(r()*(xs.length-1)), j=Math.floor(r()*(ys.length-1)); if(xs[i+1]-xs[i]<lw*2.5 || ys[j+1]-ys[j]<lw*2.5) continue;
+        items.push({t:g.t0,x:xs[i],y:ys[j],w:xs[i+1]-xs[i],h:ys[j+1]-ys[j],col:_mdSnap(_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb,isBW)}); } } }
   items.sort((a,b)=>a.t-b.t); const vis=Math.ceil(items.length*reveal);
   for(let i=0;i<vis;i++){ const it=items[i]; ctx.fillStyle=`rgb(${it.col[0]},${it.col[1]},${it.col[2]})`; ctx.fillRect(it.x,it.y,it.w,it.h); }
   ctx.fillStyle=isBW?'#141414':'#141210'; const nl=vx.length+hy.length; const vl=Math.ceil(nl*reveal);
@@ -8797,6 +8804,9 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const S = Math.min(CW, CH);
   const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const dnaD = _ch ? _ch.density : 0.5;                // element counts
+  // the density of the WHOLE piece (dnaD reads the thinned-out sample above, so a torrent of notes looked calm): how many
+  // threads, how wide the fan, how many lines of the wave
+  const dnaDF = (_chords0!==chords && typeof computeSongCharacter==='function') ? (()=>{ try{ return computeSongCharacter(_chords0).density; }catch(_){ return dnaD; } })() : dnaD;
   const dnaE = _ch ? _ch.energy  : 0.5;                // sizes / luminosity
   const dnaR = _ch ? _ch.register: 0.5;                // vertical gravity
 
@@ -8866,13 +8876,14 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     // colour core (colour flows with the chords) - chord index maps through the
     // FULL song so played segments keep their colour; the core grows along the
     // curve with playback instead of re-flowing every frame.
-    prev=null;
-    const coreT=N/cn;
-    for(let s2=0;s2<=steps;s2++){ const t=s2/steps; if(t>coreT) break; const idx=Math.min(N-1,(t*cn)|0), col=chordCol(idx), m=chordMeta(idx), tt=t*Math.PI*2;
-      const x=cx+Math.sin(fa*tt+delta)*Ax, y=cy+Math.sin(fb*tt)*Ay;
+    // a calm piece is one thread; a dense one a cord of up to five, side by side, each a neighbouring voice's colour
+    const coreT=N/cn, nT=1+Math.round(dnaDF*4);
+    for(let th=0; th<nT; th++){ prev=null; const k=th-(nT-1)/2, dd=delta+k*0.1, sx=1-Math.abs(k)*0.05;
+    for(let s2=0;s2<=steps;s2++){ const t=s2/steps; if(t>coreT) break; const idx=Math.min(N-1,((t*cn)|0)+th), col=chordCol(idx), m=chordMeta(idx), tt=t*Math.PI*2;
+      const x=cx+Math.sin(fa*tt+dd)*Ax*sx, y=cy+Math.sin(fb*tt)*Ay*sx;
       if(prev){ ctx.strokeStyle=css(col, 0.55+0.3*m.vel); ctx.lineWidth=Math.max(1.3,S*0.0038); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
       prev={x,y};
-    }
+    } }
     return;
   }
 
@@ -8884,7 +8895,9 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
       let pm=60; if(notes.length){ let s=0,c=0; for(const nt of notes){ const mm=nt.m!==undefined?nt.m:nt; s+=mm; c++; } pm=s/Math.max(1,c); }
       const pcv=((Math.round(pm)%12)+12)%12; const slot=[0,7,2,9,4,11,6,1,8,3,10,5].indexOf(pcv);
-      const a=-Math.PI/2 + slot/12*Math.PI*2;
+      // a dense piece fans out round each fifth (a torrent of notes would otherwise pile onto twelve spokes)
+      const fan=((i*0.6180339887)%1-0.5)*(Math.PI/6)*dnaDF*1.6;
+      const a=-Math.PI/2 + slot/12*Math.PI*2 + fan;
       const rr=R*(0.30+0.68*(i/Math.max(1,cn-1)));
       pts.push({x:cx+Math.cos(a)*rr, y:cy+Math.sin(a)*rr, i, slot});
     }
@@ -8953,19 +8966,23 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 
   if(pick===3){
     // — 4 · VLNA — quiet soundwave: vertical bars on a baseline —
-    const baseY=CH*(0.46+0.10*dnaR);
+    // a calm piece is one line of the wave; a dense one is written in up to four lines, like the systems of a score
+    const nRows=1+Math.round(dnaDF*3), per=Math.ceil(cn/nRows), rowH=CH*0.7/nRows;
+    const hk=nRows>1?Math.min(1,(rowH*0.46)/(S*0.34)):1;
+    const baseOf=(rw)=>nRows>1?CH*(0.15+0.7*(rw+0.5)/nRows):CH*(0.46+0.10*dnaR);
     ctx.strokeStyle='rgba(201,168,76,.18)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(CW*0.06,baseY); ctx.lineTo(CW*0.94,baseY); ctx.stroke();
+    for(let rw=0;rw<nRows;rw++){ const by=baseOf(rw); ctx.beginPath(); ctx.moveTo(CW*0.06,by); ctx.lineTo(CW*0.94,by); ctx.stroke(); }
     const span=CW*0.88, x0=CW*0.06;
     for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i);
-      const x=x0+(i/Math.max(1,cn-1))*span;
+      const rw=Math.min(nRows-1,Math.floor(i/per)), baseY=baseOf(rw), ii=i-rw*per, pn=Math.min(per,cn-rw*per);
+      const x=x0+(ii/Math.max(1,pn-1))*span;
       const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
       let pm=60; if(notes.length){ const mm=notes[0].m!==undefined?notes[0].m:notes[0]; pm=mm; }
       const pcv=((Math.round(pm)%12)+12)%12; const dir=(pcv%2===0)?-1:1;
-      const hgt=(S*0.04 + (pcv/11)*S*0.30)*(0.5+0.5*m.dur);
-      ctx.strokeStyle=css(col, 0.6+0.3*m.vel); ctx.lineWidth=Math.max(1.4, span/cn*0.5); ctx.lineCap='round';
+      const hgt=(S*0.04 + (pcv/11)*S*0.30)*(0.5+0.5*m.dur)*hk;
+      ctx.strokeStyle=css(col, 0.6+0.3*m.vel); ctx.lineWidth=Math.max(1.4, span/per*0.5); ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(x,baseY); ctx.lineTo(x,baseY+dir*hgt); ctx.stroke();
-      ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.9); ctx.beginPath(); ctx.arc(x,baseY+dir*hgt, Math.max(1, span/cn*0.3),0,7); ctx.fill(); }
+      ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.9); ctx.beginPath(); ctx.arc(x,baseY+dir*hgt, Math.max(1, span/per*0.3),0,7); ctx.fill(); }
     return;
   }
 
@@ -9654,8 +9671,13 @@ function hk2_chaos(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the snail of time: angle by time, radius growing with it, the register breathing in the radius
   const E=_kd2Events(A,_kdClamp(Math.round(A.cn/4),60,260)); const cx=CW*0.5, cy=CH*0.46; const turns=2.4+A.ch.density; const pts=E.map(e=>{ const a=e.t*turns*6.2832; const rad=D*(0.04+0.38*e.t)+(A.reg(e.top)-0.5)*D*0.05; return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad*1.1]; });
   push({kind:'curve',t:0.02,pts,col:W,w:D*0.0045,a:0.9});
-  // on the snail, a seed of colour for every event — the piece's own colours; a dense piece fills the chaos
-  E.forEach((e,i)=>{ const p=pts[i]; const c=isBW?W:A.col(e.i); push({kind:'disc',t:e.t,x:p[0]+(r()-.5)*D*0.03,y:p[1]+(r()-.5)*D*0.03,r:D*(0.006+0.012*e.v),col:c}); });
+  // on the snail, her forms in the piece's own colours — a halved disc, a flower, a seed — a few for a calm piece,
+  // many for a dense one (never a dust of dots)
+  { const nF=Math.round(3+24*A.ch.density), stepF=Math.max(1,Math.floor(E.length/Math.max(1,nF))); let q=0; const RING=[244,240,226];
+    for(let i=Math.floor(stepF/2); i<E.length; i+=stepF, q++){ const e=E[i], p=pts[i]; const c1=isBW?W:A.col(e.i), c2=isBW?[150,150,150]:A.col(E[Math.min(E.length-1,i+Math.max(1,stepF>>1))].i); const R=D*(0.022+0.03*e.v); const k=q%3;
+      if(k===0) push({kind:'half',t:e.t,x:p[0],y:p[1],r:R,ang:r()*3.14,col:c1,col2:c2,ring:RING});
+      else if(k===1) push({kind:'flower',t:e.t,x:p[0],y:p[1],r:R*1.1,n:5+Math.round(r()*3),a0:r()*6.28,col:c1,col2:c2,core:RING});
+      else push({kind:'seed',t:e.t,x:p[0],y:p[1],rx:R*0.6,ry:R,ang:(r()-.5)*1.4,col:c1,col2:c2,ring:RING}); } }
   // the spirals: at the accents, and as many more as the piece is dense
   { const every=Math.max(1,Math.round(E.length/Math.max(1,6+40*A.ch.density))); E.forEach((e,i)=>{ if(!e.acc && i%every) return; const p=pts[i]; const c=isBW?W:_hkMix(A.col(e.i),W,0.25); push({kind:'spiral',t:e.t,x:p[0],y:p[1],r:D*(0.02+e.v*0.035),turns:2+Math.round(e.v*2),w:D*0.003,col:c,dir:i%2?1:-1,a0:r()*6.28}); }); }
   const P=_kd2Phrases(A,12); P.forEach((p,i)=>{ const a=p.t*turns*6.2832; const rad=D*(0.04+0.38*p.t)+D*0.07; push({kind:'text',t:p.t0,x:cx+Math.cos(a)*rad,y:cy+Math.sin(a)*rad*1.1,size:D*0.04,text:p.pc===A.tonic?'u':'w',col:Y,rot:a+1.5708,a:0.85}); });
@@ -9701,14 +9723,14 @@ function _hkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
   const steps=160; for(let s=1;s<=steps;s++){ const a=pos((s-1)/steps), b=pos(s/steps); push({kind:'curve',t:s/steps,pts:[a,b],col:INK,a:0.55,w:D*0.0022}); if(mirror) push({kind:'curve',t:s/steps,pts:[mir(a),mir(b)],col:INK,a:0.55,w:D*0.0022}); }
   if(mirror) push({kind:'curve',t:0,pts:[[cx,CH*0.04],[cx,CH*0.5],[cx,CH*0.96]],col:INK,a:0.3,w:D*0.0015});
   // ── the forms
-  const P=_kd2Phrases(A,Math.min(Math.round((coil?16:12)*(0.7+1.0*dens)),Math.max(5,Math.round(A.phrases.length/2))));   /* a dense piece: more forms along the spiral */ const n=P.length;
+  const P=_kd2Phrases(A,Math.min(Math.round((coil?16:12)*(0.6+1.7*dens)),Math.max(5,Math.round(A.phrases.length*(0.5+0.4*dens)))));   /* a dense piece: many more of her forms along the path */ const n=P.length; const _fs=Math.min(1,Math.sqrt(18/Math.max(18,n)));
   const form=(p,k,x,y,R,flip)=>{ const [col,col2]=colOf(p,k); const rise=k+1<n?P[k+1].top-p.top:0; const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=ev.length?ev.reduce((s,e)=>s+e.nn,0)/ev.length:2; const u=r(); const c1=flip?col2:col, c2=flip?col:col2;
     if(p.vmax>=A.vHi&&u<0.6) push({kind:'half',t:p.t,x,y,r:R,ang:r()*3.14,col:c1,col2:c2,ring:INK});
     else if(nn>=3.2) push({kind:'flower',t:p.t,x,y,r:R*1.15,n:5+Math.round(r()*4),a0:r()*6.28,col:c1,col2:c2,core:INK});
     else if(rise>1) push({kind:'spiral',t:p.t,x,y,r:R*1.1,turns:2+Math.round(p.n/8),w:D*(0.004+p.v*0.004),col:isBW?INK:_hkMix(c1,INK,0.3),dir:flip?-1:1,a0:r()*6.28});
     else push({kind:'seed',t:p.t,x,y,rx:R*0.65,ry:R*1.05,ang:(r()-.5)*1.2*(flip?-1:1),col:c1,col2:c2,ring:INK});
     if(p.vmax>=A.vHi && !flip) push({kind:'text',t:p.t1,x:x+R*1.3,y:y-R*0.9,size:D*0.035,text:r()<0.5?'u':'w',col:INK,rot:(r()-.5)*0.5}); };
-  P.forEach((p,k)=>{ const [x,y]=pos(p.t); const R=D*(0.022+Math.min(1,p.n/40)*0.022+p.v*0.04)*(p===c?1.6:1)*(coil?0.75:1)*(mirror?0.85:1);
+  P.forEach((p,k)=>{ const [x,y]=pos(p.t); const R=D*(0.022+Math.min(1,p.n/40)*0.022+p.v*0.04)*(p===c?1.6:1)*(coil?0.75:1)*(mirror?0.85:1)*(p===c?1:Math.max(0.8,_fs));
     form(p,k,x,y,R,false); if(mirror) form(p,k,2*cx-x,y,R,true);
     if(dual){ const nx=-(pos(Math.min(1,p.t+0.02))[1]-pos(Math.max(0,p.t-0.02))[1]), ny=(pos(Math.min(1,p.t+0.02))[0]-pos(Math.max(0,p.t-0.02))[0]); const L=Math.hypot(nx,ny)||1; const off=R*2.4; const px=x+nx/L*off, py=y+ny/L*off; form(p,k,px,py,R*0.8,true); push({kind:'curve',t:p.t,pts:[[x,y],[px,py]],col:INK,a:0.5,w:D*0.0018}); if(mirror){ form(p,k,2*cx-px,py,R*0.8,false); } } });
   // ── the accents as rings beside the path
@@ -13279,7 +13301,7 @@ function miroPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
 
   // A FEW large shapes — count grows slowly and stays sparse.
   const cn=chords.length;
-  const shapeCount=Math.max(3, Math.min(12, 3+Math.floor(cn/22)));
+  const shapeCount=Math.max(3, Math.min(Math.round(9+20*_pieceDens(chords)), 3+Math.floor(cn/22)));   // sparse for a calm piece; a dense one crowds the bright field
   const paintCount=Math.max(1, Math.min(shapeCount, Math.round(lim*(shapeCount/Math.max(1,cn)))));
 
   // Place shapes on a loose scatter, biased to keep them apart (sample a few
@@ -13538,32 +13560,35 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const P=_miroPal(isBW, gc, chords); const dens=_pieceDens(chords), Dm=Math.min(CW,CH);
   ctx.fillStyle=isBW?'rgb(70,72,90)':'rgb(20,55,150)';ctx.fillRect(0,0,CW,CH);
-  // the constellation under the signs: a small dot for the music's events in their own colours, a thin black thread
-  // joining the near ones — as many as the piece is dense (a slow piece keeps the blue nearly bare, Chopin fills it)
-  { const nD=Math.round(10+120*dens), visD=Math.ceil(N/cn*nD); let prev=null; const ACC=['RED','GRN','YEL','ORA'].map(k=>_miroAccentRGB(k, chords[0], gc, isBW, chords));
-    for(let i=0;i<visD;i++){ const rr=_seedRnd(i+7301,ss,0,0); rr(); const ci=Math.min(cn-1,Math.floor(i*cn/nD)); const pc=_picChord(chords,ci,gc,isBW); const c=ACC[i%ACC.length];
-      const x=CW*(0.06+0.88*rr()), y=CH*(0.06+0.88*rr()), r=Dm*(0.005+0.013*pc.energy+0.006*rr()); const col=rr()<0.7?pc.rgb:c;
-      if(prev && i%6 && Math.hypot(x-prev[0],y-prev[1])<Dm*0.3){ ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.6)`; ctx.lineWidth=Math.max(1,Dm*0.0018); ctx.beginPath(); ctx.moveTo(prev[0],prev[1]); ctx.lineTo(x,y); ctx.stroke(); }
-      ctx.fillStyle=`rgb(${col[0]|0},${col[1]|0},${col[2]|0})`; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); prev=[x,y]; } }
-  const marks=Math.max(3,Math.min(Math.round(14+40*dens),Math.round(cn/8)));
-  const vis=Math.max(1,Math.ceil(N/cn*marks));
+  // a few floating marks for a calm piece; for a dense one more of them, and his personages and eyes among them —
+  // never a dust of dots: every sign a Miró sign, spread over the blue
+  const marks=Math.max(3,Math.min(Math.round(10+26*dens),Math.round(cn/8)));
+  const vis=Math.max(1,Math.ceil(N/cn*marks)); const placed=[];
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+501,ss,0,0);
     const ci = Math.min(cn-1, Math.floor(i*(cn/marks)));
     const chord = chords[ci];
     const {rgb,energy}=_picChord(chords,ci,gc,isBW);
-    const x=0.1*CW+rnd()*0.8*CW, y=0.1*CH+rnd()*0.8*CH;
-    const kind=(rnd()*3)|0;
+    let x=0.1*CW+rnd()*0.8*CW, y=0.1*CH+rnd()*0.8*CH;
+    if(dens>0.35 && placed.length){ let bd=-1; for(let t=0;t<5;t++){ const qx=0.1*CW+rnd()*0.8*CW, qy=0.1*CH+rnd()*0.8*CH; let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(qx-p[0],qy-p[1])); if(md>bd){ bd=md; x=qx; y=qy; } } } placed.push([x,y]);
+    const u=rnd(); const kind=dens<=0.35 ? ((u*3)|0) : (u<0.2?0:u<0.5?1:u<0.62?2:u<0.86?3:4);   /* a calm piece: his three signs as before */
     if(kind===0){ // black gesture line
       ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`;ctx.lineWidth=Math.max(2,CW*0.006);ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+(rnd()-0.5)*CW*0.3,y+(rnd()-0.5)*CH*0.3,x+(rnd()-0.5)*CW*0.25,y+(rnd()-0.5)*CH*0.25);ctx.stroke();
     } else if(kind===1){ // red/yellow disc (band-aware via _miroAccentRGB), or the chord's own colour
       const col = rnd()<0.5 ? rgb : _miroAccentRGB(rnd()<0.5?'RED':'YEL', chord, gc, isBW, chords);
       ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
-      ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*(0.02+energy*0.04),0,Math.PI*2);ctx.fill();
-    } else { // star
+      ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*(0.025+energy*0.04),0,Math.PI*2);ctx.fill();
+    } else if(kind===2){ // star
       ctx.fillStyle=`rgb(${P.WHT[0]},${P.WHT[1]},${P.WHT[2]})`;const R=Math.min(CW,CH)*0.025;
       ctx.beginPath();for(let s=0;s<10;s++){const a=s*Math.PI/5,rr=s%2?R*0.4:R;ctx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}ctx.closePath();ctx.fill();
+    } else if(kind===3){ // a personage: a lobed body in the chord's colour, outlined in black
+      const bR=Dm*(0.045+0.04*energy), nP=6+((rnd()*4)|0), pts=[]; for(let k=0;k<nP;k++){ const a=k*(Math.PI*2/nP)+(rnd()-0.5)*0.6; pts.push([x+Math.cos(a)*bR*(0.55+rnd()*0.7), y+Math.sin(a)*bR*(0.55+rnd()*0.7)]); }
+      ctx.beginPath(); ctx.moveTo((pts[0][0]+pts[nP-1][0])/2,(pts[0][1]+pts[nP-1][1])/2); for(let k=0;k<nP;k++){ const c0=pts[k], c1=pts[(k+1)%nP]; ctx.quadraticCurveTo(c0[0],c0[1],(c0[0]+c1[0])/2,(c0[1]+c1[1])/2); } ctx.closePath();
+      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; ctx.fill(); ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`; ctx.lineWidth=Math.max(1.5,Dm*0.006); ctx.lineJoin='round'; ctx.stroke();
+    } else { // an eye: white almond, black pupil
+      const eR=Dm*(0.022+0.018*energy); ctx.fillStyle=`rgb(${P.WHT[0]},${P.WHT[1]},${P.WHT[2]})`; ctx.beginPath(); ctx.ellipse(x,y,eR*1.5,eR*0.8,(rnd()-0.5)*0.8,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`; ctx.lineWidth=Math.max(1.2,Dm*0.004); ctx.stroke(); ctx.fillStyle=`rgb(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]})`; ctx.beginPath(); ctx.arc(x,y,eR*0.5,0,Math.PI*2); ctx.fill();
     }
   }
 }
@@ -13600,7 +13625,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // nodes, energetic/dense = more, busier web).
   const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   const drive=_ch?(0.55*_ch.energy+0.45*_ch.density):0.5;
-  const nodeCountFull=Math.max(6,Math.min(14,Math.round(9+drive*5)));
+  const _wd=_ch?_ch.density:0.4; const nodeCountFull=Math.max(6,Math.min(36,Math.round(6+30*_wd+drive*4)));   // a dense piece: a busier web
   const visN=Math.max(2,Math.ceil(nodeCountFull*reveal));
 
   // Place nodes on a loose poisson-ish grid (even spread but not regular).
@@ -13665,9 +13690,9 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let i=0;i<visN;i++){
     const n=nodes[i];
     const nr=_seedRnd(i*47+333,ss,0,0); nr();
-    const {rgb}=_picChord(chords, i%cn, gc, isBW);
+    const {rgb}=_picChord(chords, Math.min(cn-1,Math.floor(i*cn/nodeCountFull)), gc, isBW);   // node i: its stretch of the piece (was the i-th chord — the opening bars only)
     const kind=Math.floor(nr()*4); // 0=disc, 1=diamond, 2=oval, 3=half-circle
-    const size=D*(0.04+nr()*0.06);
+    const size=D*(0.04+nr()*0.06)*Math.min(1,Math.sqrt(12/nodeCountFull));
     ctx.save();
     ctx.translate(n.x,n.y);
     ctx.rotate((nr()-0.5)*Math.PI);
@@ -13689,7 +13714,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 
   // Miró signature: scatter dots and 4-point stars across the canvas.
-  const marks=Math.ceil(28*reveal);
+  const marks=Math.ceil(Math.round(28*(1.15-0.7*_wd))*reveal);   // a busy web needs fewer stray marks
   for(let k=0;k<marks;k++){
     const mr=_seedRnd(k*7+9999,ss,0,0); mr();
     const x=margin+mr()*(CW-margin*2);
@@ -14553,13 +14578,15 @@ function kd2_improv(ctx,CW,CH,cc,ss,mode,chords,gc){
   const r=_kdR(66000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
   const px=t=>CW*(0.1+0.8*t), py=(reg)=>CH*(0.84-0.68*reg);
   const P4=_kd2Phrases(A,Math.round((10+A.ch.density*6)*_dW(A.ch.density)));
-  P4.forEach((p,k)=>{ const c=_kdMix(A.pcCol(p.pc,Math.round(p.top)),S.W,0.18); const x=px(p.t)+(r()-.5)*CW*0.18, y=py(A.reg((p.top+p.bass)/2))+(r()-.5)*CH*0.14;
+  P4.forEach((p,k)=>{ const c=_kdMix(_kdMix(A.col(Math.floor((p.a+p.b)/2)),A.pcCol(p.pc,Math.round(p.top)),0.4),S.W,0.18);   /* the wash: its passage's own colour, held in the key */ const x=px(p.t)+(r()-.5)*CW*0.18, y=py(A.reg((p.top+p.bass)/2))+(r()-.5)*CH*0.14;
     push({kind:'wash',t:p.t0,x,y,r:D*(0.1+Math.min(1,p.n/16)*0.12+p.v*0.08),sx:0.8+r()*0.7,sy:0.7+r()*0.6,ang:r()*3.14,ph:r()*6.28,col:c,a:0.5+p.v*0.3});
     if(p.vmax>0.7) push({kind:'wash',t:p.t,x:x+(r()-.5)*D*0.2,y:y+(r()-.5)*D*0.2,r:D*(0.05+p.v*0.06),sx:1,sy:1,ph:r()*6.28,col:_kdMix(A.pcCol(p.pc2,Math.round(p.top)),S.W,0.1),a:0.75}); });
   const mel=_kd2Phrases(A,Math.round(36*_dW(A.ch.density))); let seg=[];
   const flush=(t)=>{ if(seg.length>=3) push({kind:'stroke',t,pts:seg,col:S.K,a:0.9}); seg=[]; };
   mel.forEach((p,k)=>{ seg.push({x:px(p.t)+(r()-.5)*D*0.03,y:py(A.reg(p.top))+(r()-.5)*D*0.06,w:D*(0.005+p.v*0.016)}); if(seg.length>=8+Math.round(r()*5)) flush(p.t); }); flush(1);
   const acc=_kd2Events(A,_kdClamp(Math.round(A.cn/20),12,Math.round(26+40*A.ch.density)));
+  // a dense piece: his glowing circles among the washes (Several Circles), a passage's colour each — not a dust of dots
+  { const Ec=_kd2Events(A,Math.round(2+22*A.ch.density)); for(const e of Ec){ if(e.acc) continue; push({kind:'disc',t:e.t,x:px(e.t)+(r()-.5)*D*0.14,y:py(A.reg(e.top))+(r()-.5)*D*0.14,r:D*(0.02+e.v*0.03),col:A.col(e.i),glow:1.6,a:0.82}); } }
   for(const e of acc){ if(!e.acc) continue; const x=px(e.t), y=py(A.reg(e.top)); const a0=r()*6.28; push({kind:'arc',t:e.t,x:x+(r()-.5)*D*0.08,y:y+(r()-.5)*D*0.08,r:D*(0.02+e.v*0.03),a0,a1:a0+1.5+r()*1.8,w:D*(0.004+e.v*0.006),col:r()<0.75?S.K:A.col(e.i)}); if(r()<0.5) push({kind:'circle',t:e.t,x:x+(r()-.5)*D*0.12,y:y+(r()-.5)*D*0.12,r:D*(0.006+e.v*0.01),col:A.col(e.i)}); }
   _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
@@ -19772,7 +19799,7 @@ function _bhListen(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the great form, where the climax falls
   { const col=great==='tri'?_BH_PRIM[1]:great==='circle'?_BH_PRIM[2]:_BH_PRIM[0]; const s=D*(0.32+0.3*loud); const x=CW*(0.3+0.4*c.t), y=CH*(0.3+0.4*(1-A.reg(c.top))); push(c.t0,()=>_bhForm(ctx,great,x,y,s,isBW?[170,170,170]:col,great==='tri'&&trend<0.45?Math.PI:0)); }
   // a form per passage
-  const G=_kd2Phrases(A,Math.min(Math.round(8+14*dens),Math.max(4,Math.round(A.phrases.length/3)))); G.forEach((g,k)=>{ if(g===c) return; const rgb=_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb; const kind=_bhFormOf(rgb); const col=_bhSnap(rgb,isBW); const s=D*(0.05+0.12*g.v); const x=CW*(0.1+0.8*g.t)+(r()-.5)*CW*0.08, y=CH*(0.1+0.8*((1-A.reg(g.top))*0.4+((k*0.618+0.2)%1)*0.6)); const outline=g.v<0.45;
+  const G=_kd2Phrases(A,Math.min(Math.round(8+22*dens),Math.max(4,Math.round(A.phrases.length/(3-1.4*dens))))); G.forEach((g,k)=>{   /* a dense piece: more Bauhaus forms, not more dots */ if(g===c) return; const rgb=_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb; const kind=_bhFormOf(rgb); const col=_bhSnap(rgb,isBW); const s=D*(0.05+0.12*g.v); const x=CW*(0.1+0.8*g.t)+(r()-.5)*CW*0.08, y=CH*(0.1+0.8*((1-A.reg(g.top))*0.4+((k*0.618+0.2)%1)*0.6)); const outline=g.v<0.45;
     push(g.t0,()=>{ if(outline){ ctx.strokeStyle=_bhCss(INK); ctx.lineWidth=Math.max(1.5,D*0.004); ctx.beginPath(); if(kind==='circle') ctx.arc(x,y,s/2,0,6.2832); else if(kind==='tri'){ ctx.moveTo(x,y-s*0.58); ctx.lineTo(x+s*0.5,y+s*0.29); ctx.lineTo(x-s*0.5,y+s*0.29); ctx.closePath(); } else ctx.rect(x-s/2,y-s/2,s,s); ctx.stroke(); } else _bhForm(ctx,kind,x,y,s,col,kind==='tri'&&r()<0.3?Math.PI:0); }); });
   // the accents as small black discs
   const E=_kd2Events(A,Math.round((6+dens*8)*_dW(dens))).filter(e=>e.acc).slice(0,8); E.forEach(e=>{ const x=CW*(0.08+0.84*e.t), y=CH*(0.08+0.84*r()); push(e.t,()=>{ ctx.fillStyle=_bhCss(INK); ctx.beginPath(); ctx.arc(x,y,D*(0.008+0.012*e.v),0,6.2832); ctx.fill(); }); });
@@ -19891,10 +19918,23 @@ function bauhausPhaseHomage(ctx,CW,CH,chords,lim,gc,ss,mode){
   const lightIn=S.register>0.45;   // a high piece glows at the centre, a low one at the rim
   const L=[0.42,0.62,0.8,0.95];
   const cols=q.map((c,k)=>{ const target=(lightIn?L[k]:L[3-k])*255; const f=target/Math.max(20,_bhxLum(c)); const d=c.map(v=>_bhxClamp(v*f,0,255)); if(S.isBW){ const l=_bhxLum(d); return [l,l,l]; } return d; });
+  // a dense piece is a wall of Homages — he painted more than a thousand: one for a calm piece, two for a flowing one,
+  // a grid of six or fifteen for a torrent of notes, each a stretch of the piece in its own four colours
+  { const dn=_pieceDens(chords); const gC=dn<0.5?1:dn<0.75?2:3, gR=dn<0.3?1:dn<0.5?2:dn<0.75?3:5;
+    if(gC*gR>1){ ctx.save(); ctx.fillStyle=_bhxCss([236,232,222]); ctx.fillRect(0,0,CW,CH); const nC=gC*gR, gap=Math.min(CW,CH)*0.03, cw=(CW-gap*(gC+1))/gC, ch=(CH-gap*(gR+1))/gR;
+      for(let ci=0;ci<nC;ci++){ const t0=ci/nC, t1=(ci+1)/nC; const fC=chords._objFirst?1:_bhxClamp((reveal-t0)*nC,0,1); if(fC<=0) break;
+        const allc=_bhxAvg(S,t0,t1,16); const qq=[0,1,2,3].map(k=>_bhxMix(_bhxAvg(S,t0+(t1-t0)*k/4,t0+(t1-t0)*(k+1)/4,8),allc,0.35));
+        const cc=qq.map((c,k)=>{ const target=(lightIn?L[k]:L[3-k])*255; const f=target/Math.max(20,_bhxLum(c)); const d=c.map(v=>_bhxClamp(v*f,0,255)); if(S.isBW){ const l=_bhxLum(d); return [l,l,l]; } return d; });
+        const gx=gap+(ci%gC)*(cw+gap), gy=gap+Math.floor(ci/gC)*(ch+gap); const sd=Math.min(cw,ch), u=sd/10, ox2=gx+(cw-sd)/2, oy2=gy+(ch-sd)/2;
+        ctx.fillStyle=_bhxCss(cc[0]); ctx.fillRect(gx,gy,cw,ch);
+        for(let k=1;k<4;k++){ const f=_bhxClamp((fC-k/4)*4,0,1); if(f<=0) break; const s2=(10-2*k)*u, x=ox2+k*u, y=oy2+10*u-0.5*k*u-s2; ctx.fillStyle=_bhxCss(cc[k]); ctx.fillRect(x,y+s2*(1-f),s2,s2*f); } }
+      const rk=_bhxR(93000,ss); rk(); const nk=Math.round(CW*CH/900);
+      for(let i=0;i<nk;i++){ const x=rk()*CW, y=rk()*CH, w=6+rk()*22, h=1+rk()*1.6; ctx.fillStyle=rk()<0.5?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.045)'; ctx.fillRect(x,y,w,h); }
+      ctx.restore(); return; } }
   // a 10-unit square: inner squares 8/6/4 units, side gaps equal, the bottom gap half a side gap, the top gap one and a half
   const side=Math.min(CW,CH), U=side/10, ox=(CW-side)/2, oy=(CH-side)/2+(CH>CW?(CH-side)*0.12:0);
   ctx.save(); ctx.fillStyle=_bhxCss([236,232,222]); ctx.fillRect(0,0,CW,CH);
-  for(let k=0;k<4;k++){ const f=chords._objFirst ? 1 : _bhxClamp((reveal-k/4)*4,0,1);   // a Compose take: all four squares from the first note if(f<=0) break;
+  for(let k=0;k<4;k++){ const f=chords._objFirst ? 1 : _bhxClamp((reveal-k/4)*4,0,1);   /* a Compose take: all four squares from the first note */ if(f<=0) break;
     if(k===0){ ctx.fillStyle=_bhxCss(cols[0]); ctx.fillRect(0,CH*(1-f),CW,CH*f); continue; }
     const s=(10-2*k)*U, x=ox+k*U, y=oy+10*U-0.5*k*U-s; ctx.fillStyle=_bhxCss(cols[k]); ctx.fillRect(x,y+s*(1-f),s,s*f); }
   // the knife: short horizontal pulls, a shade lighter or darker, over the whole surface
