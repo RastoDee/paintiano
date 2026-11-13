@@ -3579,7 +3579,8 @@ export default function Paintiano() {
   // Prev/Next step the index so you can browse back to a variation you liked.
   const saltHistoryRef = useRef([0]);
   const saltIdxRef = useRef(0);
-  const [lang, setLang] = useState(()=>{try{const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
+  const [lang, setLang] = useState(()=>{try{ try{ const q=new URLSearchParams(window.location.search).get('lang'); if(q){ const lo=q.toLowerCase().replace('_','-'); const L={en:'EN',sk:'SK',de:'DE',fr:'FR',es:'ES',pt:'PT',ja:'ja',zh:'zh','zh-cn':'zh','zh-hans':'zh',zhtw:'zhTW','zh-tw':'zhTW','zh-hant':'zhTW','zh-hk':'zhTW'}[lo]; if(L){ try{ localStorage.setItem('paintiano_lang',L); }catch(_){} return L; } } }catch(_){}   /* a link's language (?lang=…, as Battle passes it) wins and is kept */
+    const s=localStorage.getItem('paintiano_lang');if(s)return s;const ls=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en']);for(const r of ls){if(!r)continue;const lo=r.toLowerCase();if(lo.startsWith('zh')&&(lo.includes('tw')||lo.includes('hk')||lo.includes('hant')||lo.includes('mo')))return 'zhTW';if(lo.startsWith('zh'))return 'zh';const two=lo.slice(0,2);const m={en:'EN',de:'DE',fr:'FR',es:'ES',sk:'SK',pt:'PT',ja:'ja'};if(m[two])return m[two];}return 'EN';}catch(_){return 'EN';}});
   // isDesktop — tightens vertical rhythm on notebook viewports so the phone-shape
   // column fits 100vh without a scrollbar. Mobile keeps the original spacing.
   // the screen's shape decides (see _pfShape): wide and on its side → the Atelier; upright with a touchscreen → the Studio
@@ -5119,7 +5120,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // QR (H error correction) fetched, then recoloured gold-on-transparent
       const qrImg=await new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=rej; im.src='https://api.qrserver.com/v1/create-qr-code/?size=900x900&ecc=H&qzone=2&data='+encodeURIComponent(url); });
       const GOLD='#c9a84c';
-      const srcCv=canvasRef.current;
+      // the art: the whole painting in the poster's 3:4 frame (the Studio stays φ); the canvas on screen only if that cannot be painted
+      let srcCv=null; try{ srcCv=window.__pfFull ? window.__pfFull(3) : null; }catch(_){ srcCv=null; } if(!srcCv) srcCv=canvasRef.current;
       // DYNAMIC HEIGHT: footer flows under the artwork, whatever its aspect —
       // fixed 3840 clipped the QR on taller canvases.
       const W=2160, AX=180, AY=560, AW=W-360;
@@ -5456,10 +5458,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // wordmark toggle it; persisted so Rasto's devices keep it on. Zero UI
   // otherwise — the chip renders only with a built-in piece on canvas.
   const [posterMaker,setPosterMaker]=useState(()=>{ try{ return localStorage.getItem('paintiano_postermaker')==='1'; }catch(_){ return false; } });
-  try{ if(typeof window!=='undefined') window.__pfFrame34 = !!posterMaker; }catch(_){}
-  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfFull = (S, lim)=>_fullPaintCanvas(S, lim); window.__pfChords = ()=>chords.map(c=>({t:c.startMs|0, n:(c.n||[]).map(x=>({m:x.m|0, v:x.v|0, d:x.durMs|0}))})); } }catch(_){}   // the poster tool: the whole painting at once (the OG pictures are made from it)   // the POSTER tool paints in the poster's 3:4 frame (pfPort)
-  const _pmFirstRef = useRef(true);
-  useEffect(()=>{ if(_pmFirstRef.current){ _pmFirstRef.current=false; return; } try{ window.dispatchEvent(new Event('resize')); }catch(_){} },[posterMaker]);   // re-lay the painting out in its new frame
+  // the POSTER tool only adds the poster (with its QR) and the address chip: the Studio keeps its φ frame; a poster paints its own
+  // 3:4 picture of the painting (window.__pfPrint34 — as Battle and the prints do)
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfFull = (S, lim)=>{ let c=null; try{ window.__pfPrint34=true; c=_fullPaintCanvas(S, lim); } finally{ try{ window.__pfPrint34=false; }catch(_){} } return c; }; window.__pfChords = ()=>chords.map(c=>({t:c.startMs|0, n:(c.n||[]).map(x=>({m:x.m|0, v:x.v|0, d:x.durMs|0}))})); } }catch(_){}   // the poster tool: the whole painting at once (the OG pictures are made from it)   // the POSTER tool paints in the poster's 3:4 frame (pfPort)
   // Address chip alone (artist · variant · palette) — its own switch: 2 quick
   // taps on the wordmark. Poster maker (POSTER button) stays on 4 taps.
   const [addrChip,setAddrChip]=useState(()=>{ try{ return localStorage.getItem('paintiano_addr_chip')==='1'; }catch(_){ return false; } });
@@ -5538,9 +5539,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     window.addEventListener('message', msg);
     return ()=>{ document.removeEventListener('visibilitychange', on); window.removeEventListener('focus', on); window.removeEventListener('message', msg); }; },[]);
   // back from Battle with the link (…/play#battle_link=…): kept, the waiting ones are in — and a new round starts clean
-  useEffect(()=>{ try{ const h=window.location.hash||''; if(h.indexOf('#battle_link=')!==0) return; const lk=decodeURIComponent(h.slice(13));
+  useEffect(()=>{ try{ const h=window.location.hash||''; if(h.indexOf('#battle_link=')!==0) return; const lk=decodeURIComponent(h.slice(13).split('&')[0]);
     window.history.replaceState(null, '', window.location.pathname+window.location.search);
     _btlLinked(lk); }catch(_){} },[]);
+  // Pro travels with the Battle account: a Paintiano with Pro, linked to Battle, notes the account on its licence (once per key and
+  // link); a Paintiano without a key, linked to the same account (on an iPhone: the one Battle's home-screen app opens), gets it
+  useEffect(()=>{ if(_pfIosApp() || !btlMine.link || proStatus==='loading') return; const lk=btlMine.link, key=_licKeyRf, paid=!!key && proStatus!=='free';
+    const mark='paintiano_btl_pro', tag=(paid ? 'k:'+key : 'a')+'|'+lk; let seen=''; try{ seen=sessionStorage.getItem(mark)||''; }catch(_){} if(seen===tag) return;
+    if(!paid && key) return;   // a key that is not paid (refunded…) is not swapped for another
+    let on=true; try{ sessionStorage.setItem(mark, tag); }catch(_){}
+    fetch('/api/battle-pro',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(paid ? {link:lk, key} : {link:lk})}).then(r=>r.json()).then(d=>{
+      if(!on || !d || !d.ok) return; if(!paid && typeof d.key==='string' && d.key) activateLicense(d.key); }).catch(()=>{});
+    return ()=>{ on=false; }; },[btlMine.link, _licKeyRf, proStatus]);
   useEffect(()=>{ if(!btlInfo || !btlInfo.number) return; const m=btlMineRef.current;
     if(m.round!==btlInfo.number){ _btlMineSet({...m, round:btlInfo.number, sent:[], wait:[], count:null}); }
     _btlCount();

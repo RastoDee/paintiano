@@ -2145,7 +2145,7 @@ function _computeSongCharacter(chords, kdR=0){
 // Music decides once by its chord count (as the Mic: 41); a take (Compose, Mic) grows — it starts landscape and flips ONCE to portrait
 // when its plan first doubles (Mic 48→96 at its 41st chord, Compose 96→192 at its 82nd), never back.
 const PF_PORT = PHI;       // the portrait frame's height / width
-// …except where a print is made: 3:4 while the POSTER tool is on (window.__pfFrame34), for a print / vector export
+// …except where a print is made: 3:4 for a poster, a print / vector export and Battle (window.__pfPrint34; __pfFrame34 is no longer set — the POSTER tool leaves the Studio φ)
 // (window.__pfPrint34, set only while its layout is computed), and for the song a scanned poster opened (window.__pfQrSig:
 // that piece keeps its poster frame this visit — other songs paint φ).
 function _pfSig(a){ try{ if(!Array.isArray(a) || !a.length) return ''; const l=a[a.length-1]; return a.length+':'+Math.round((l && l.startMs) || 0); }catch(_){ return ''; } }
