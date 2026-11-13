@@ -9671,8 +9671,13 @@ function hk2_chaos(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the snail of time: angle by time, radius growing with it, the register breathing in the radius
   const E=_kd2Events(A,_kdClamp(Math.round(A.cn/4),60,260)); const cx=CW*0.5, cy=CH*0.46; const turns=2.4+A.ch.density; const pts=E.map(e=>{ const a=e.t*turns*6.2832; const rad=D*(0.04+0.38*e.t)+(A.reg(e.top)-0.5)*D*0.05; return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad*1.1]; });
   push({kind:'curve',t:0.02,pts,col:W,w:D*0.0045,a:0.9});
-  // on the snail, a seed of colour for every event — the piece's own colours; a dense piece fills the chaos
-  E.forEach((e,i)=>{ const p=pts[i]; const c=isBW?W:A.col(e.i); push({kind:'disc',t:e.t,x:p[0]+(r()-.5)*D*0.03,y:p[1]+(r()-.5)*D*0.03,r:D*(0.006+0.012*e.v),col:c}); });
+  // on the snail, her forms in the piece's own colours — a halved disc, a flower, a seed — a few for a calm piece,
+  // many for a dense one (never a dust of dots)
+  { const nF=Math.round(3+24*A.ch.density), stepF=Math.max(1,Math.floor(E.length/Math.max(1,nF))); let q=0; const RING=[244,240,226];
+    for(let i=Math.floor(stepF/2); i<E.length; i+=stepF, q++){ const e=E[i], p=pts[i]; const c1=isBW?W:A.col(e.i), c2=isBW?[150,150,150]:A.col(E[Math.min(E.length-1,i+Math.max(1,stepF>>1))].i); const R=D*(0.022+0.03*e.v); const k=q%3;
+      if(k===0) push({kind:'half',t:e.t,x:p[0],y:p[1],r:R,ang:r()*3.14,col:c1,col2:c2,ring:RING});
+      else if(k===1) push({kind:'flower',t:e.t,x:p[0],y:p[1],r:R*1.1,n:5+Math.round(r()*3),a0:r()*6.28,col:c1,col2:c2,core:RING});
+      else push({kind:'seed',t:e.t,x:p[0],y:p[1],rx:R*0.6,ry:R,ang:(r()-.5)*1.4,col:c1,col2:c2,ring:RING}); } }
   // the spirals: at the accents, and as many more as the piece is dense
   { const every=Math.max(1,Math.round(E.length/Math.max(1,6+40*A.ch.density))); E.forEach((e,i)=>{ if(!e.acc && i%every) return; const p=pts[i]; const c=isBW?W:_hkMix(A.col(e.i),W,0.25); push({kind:'spiral',t:e.t,x:p[0],y:p[1],r:D*(0.02+e.v*0.035),turns:2+Math.round(e.v*2),w:D*0.003,col:c,dir:i%2?1:-1,a0:r()*6.28}); }); }
   const P=_kd2Phrases(A,12); P.forEach((p,i)=>{ const a=p.t*turns*6.2832; const rad=D*(0.04+0.38*p.t)+D*0.07; push({kind:'text',t:p.t0,x:cx+Math.cos(a)*rad,y:cy+Math.sin(a)*rad*1.1,size:D*0.04,text:p.pc===A.tonic?'u':'w',col:Y,rot:a+1.5708,a:0.85}); });
@@ -9717,17 +9722,15 @@ function _hkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
   // ── the thread
   const steps=160; for(let s=1;s<=steps;s++){ const a=pos((s-1)/steps), b=pos(s/steps); push({kind:'curve',t:s/steps,pts:[a,b],col:INK,a:0.55,w:D*0.0022}); if(mirror) push({kind:'curve',t:s/steps,pts:[mir(a),mir(b)],col:INK,a:0.55,w:D*0.0022}); }
   if(mirror) push({kind:'curve',t:0,pts:[[cx,CH*0.04],[cx,CH*0.5],[cx,CH*0.96]],col:INK,a:0.3,w:D*0.0015});
-  // ── the seeds: the music's events along the thread, a dot each in its colour — a few for a slow piece, a swarm for a dense one
-  { const Es=_kd2Events(A,Math.round(10+110*dens)); Es.forEach(e=>{ const [x,y]=pos(e.t); const j=D*0.035; const c=isBW?INK:_hkMix(A.col(e.i),INK,0.12); push({kind:'disc',t:e.t,x:x+(r()-.5)*j,y:y+(r()-.5)*j,r:D*(0.005+0.009*e.v),col:c}); if(mirror) push({kind:'disc',t:e.t,x:2*cx-x+(r()-.5)*j,y:y+(r()-.5)*j,r:D*(0.005+0.009*e.v),col:c}); }); }
   // ── the forms
-  const P=_kd2Phrases(A,Math.min(Math.round((coil?16:12)*(0.7+1.0*dens)),Math.max(5,Math.round(A.phrases.length/2))));   /* a dense piece: more forms along the spiral */ const n=P.length;
+  const P=_kd2Phrases(A,Math.min(Math.round((coil?16:12)*(0.6+1.7*dens)),Math.max(5,Math.round(A.phrases.length*(0.5+0.4*dens)))));   /* a dense piece: many more of her forms along the path */ const n=P.length; const _fs=Math.min(1,Math.sqrt(18/Math.max(18,n)));
   const form=(p,k,x,y,R,flip)=>{ const [col,col2]=colOf(p,k); const rise=k+1<n?P[k+1].top-p.top:0; const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=ev.length?ev.reduce((s,e)=>s+e.nn,0)/ev.length:2; const u=r(); const c1=flip?col2:col, c2=flip?col:col2;
     if(p.vmax>=A.vHi&&u<0.6) push({kind:'half',t:p.t,x,y,r:R,ang:r()*3.14,col:c1,col2:c2,ring:INK});
     else if(nn>=3.2) push({kind:'flower',t:p.t,x,y,r:R*1.15,n:5+Math.round(r()*4),a0:r()*6.28,col:c1,col2:c2,core:INK});
     else if(rise>1) push({kind:'spiral',t:p.t,x,y,r:R*1.1,turns:2+Math.round(p.n/8),w:D*(0.004+p.v*0.004),col:isBW?INK:_hkMix(c1,INK,0.3),dir:flip?-1:1,a0:r()*6.28});
     else push({kind:'seed',t:p.t,x,y,rx:R*0.65,ry:R*1.05,ang:(r()-.5)*1.2*(flip?-1:1),col:c1,col2:c2,ring:INK});
     if(p.vmax>=A.vHi && !flip) push({kind:'text',t:p.t1,x:x+R*1.3,y:y-R*0.9,size:D*0.035,text:r()<0.5?'u':'w',col:INK,rot:(r()-.5)*0.5}); };
-  P.forEach((p,k)=>{ const [x,y]=pos(p.t); const R=D*(0.022+Math.min(1,p.n/40)*0.022+p.v*0.04)*(p===c?1.6:1)*(coil?0.75:1)*(mirror?0.85:1);
+  P.forEach((p,k)=>{ const [x,y]=pos(p.t); const R=D*(0.022+Math.min(1,p.n/40)*0.022+p.v*0.04)*(p===c?1.6:1)*(coil?0.75:1)*(mirror?0.85:1)*(p===c?1:Math.max(0.8,_fs));
     form(p,k,x,y,R,false); if(mirror) form(p,k,2*cx-x,y,R,true);
     if(dual){ const nx=-(pos(Math.min(1,p.t+0.02))[1]-pos(Math.max(0,p.t-0.02))[1]), ny=(pos(Math.min(1,p.t+0.02))[0]-pos(Math.max(0,p.t-0.02))[0]); const L=Math.hypot(nx,ny)||1; const off=R*2.4; const px=x+nx/L*off, py=y+ny/L*off; form(p,k,px,py,R*0.8,true); push({kind:'curve',t:p.t,pts:[[x,y],[px,py]],col:INK,a:0.5,w:D*0.0018}); if(mirror){ form(p,k,2*cx-px,py,R*0.8,false); } } });
   // ── the accents as rings beside the path
@@ -13557,32 +13560,35 @@ function miroPhaseBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const P=_miroPal(isBW, gc, chords); const dens=_pieceDens(chords), Dm=Math.min(CW,CH);
   ctx.fillStyle=isBW?'rgb(70,72,90)':'rgb(20,55,150)';ctx.fillRect(0,0,CW,CH);
-  // the constellation under the signs: a small dot for the music's events in their own colours, a thin black thread
-  // joining the near ones — as many as the piece is dense (a slow piece keeps the blue nearly bare, Chopin fills it)
-  { const nD=Math.round(10+120*dens), visD=Math.ceil(N/cn*nD); let prev=null; const ACC=['RED','GRN','YEL','ORA'].map(k=>_miroAccentRGB(k, chords[0], gc, isBW, chords));
-    for(let i=0;i<visD;i++){ const rr=_seedRnd(i+7301,ss,0,0); rr(); const ci=Math.min(cn-1,Math.floor(i*cn/nD)); const pc=_picChord(chords,ci,gc,isBW); const c=ACC[i%ACC.length];
-      const x=CW*(0.06+0.88*rr()), y=CH*(0.06+0.88*rr()), r=Dm*(0.005+0.013*pc.energy+0.006*rr()); const col=rr()<0.7?pc.rgb:c;
-      if(prev && i%6 && Math.hypot(x-prev[0],y-prev[1])<Dm*0.3){ ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.6)`; ctx.lineWidth=Math.max(1,Dm*0.0018); ctx.beginPath(); ctx.moveTo(prev[0],prev[1]); ctx.lineTo(x,y); ctx.stroke(); }
-      ctx.fillStyle=`rgb(${col[0]|0},${col[1]|0},${col[2]|0})`; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); prev=[x,y]; } }
-  const marks=Math.max(3,Math.min(Math.round(14+40*dens),Math.round(cn/8)));
-  const vis=Math.max(1,Math.ceil(N/cn*marks));
+  // a few floating marks for a calm piece; for a dense one more of them, and his personages and eyes among them —
+  // never a dust of dots: every sign a Miró sign, spread over the blue
+  const marks=Math.max(3,Math.min(Math.round(10+26*dens),Math.round(cn/8)));
+  const vis=Math.max(1,Math.ceil(N/cn*marks)); const placed=[];
   for(let i=0;i<vis;i++){
     const rnd=_seedRnd(i+501,ss,0,0);
     const ci = Math.min(cn-1, Math.floor(i*(cn/marks)));
     const chord = chords[ci];
     const {rgb,energy}=_picChord(chords,ci,gc,isBW);
-    const x=0.1*CW+rnd()*0.8*CW, y=0.1*CH+rnd()*0.8*CH;
-    const kind=(rnd()*3)|0;
+    let x=0.1*CW+rnd()*0.8*CW, y=0.1*CH+rnd()*0.8*CH;
+    if(dens>0.35 && placed.length){ let bd=-1; for(let t=0;t<5;t++){ const qx=0.1*CW+rnd()*0.8*CW, qy=0.1*CH+rnd()*0.8*CH; let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(qx-p[0],qy-p[1])); if(md>bd){ bd=md; x=qx; y=qy; } } } placed.push([x,y]);
+    const u=rnd(); const kind=dens<=0.35 ? ((u*3)|0) : (u<0.2?0:u<0.5?1:u<0.62?2:u<0.86?3:4);   /* a calm piece: his three signs as before */
     if(kind===0){ // black gesture line
       ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`;ctx.lineWidth=Math.max(2,CW*0.006);ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+(rnd()-0.5)*CW*0.3,y+(rnd()-0.5)*CH*0.3,x+(rnd()-0.5)*CW*0.25,y+(rnd()-0.5)*CH*0.25);ctx.stroke();
     } else if(kind===1){ // red/yellow disc (band-aware via _miroAccentRGB), or the chord's own colour
       const col = rnd()<0.5 ? rgb : _miroAccentRGB(rnd()<0.5?'RED':'YEL', chord, gc, isBW, chords);
       ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
-      ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*(0.02+energy*0.04),0,Math.PI*2);ctx.fill();
-    } else { // star
+      ctx.beginPath();ctx.arc(x,y,Math.min(CW,CH)*(0.025+energy*0.04),0,Math.PI*2);ctx.fill();
+    } else if(kind===2){ // star
       ctx.fillStyle=`rgb(${P.WHT[0]},${P.WHT[1]},${P.WHT[2]})`;const R=Math.min(CW,CH)*0.025;
       ctx.beginPath();for(let s=0;s<10;s++){const a=s*Math.PI/5,rr=s%2?R*0.4:R;ctx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}ctx.closePath();ctx.fill();
+    } else if(kind===3){ // a personage: a lobed body in the chord's colour, outlined in black
+      const bR=Dm*(0.045+0.04*energy), nP=6+((rnd()*4)|0), pts=[]; for(let k=0;k<nP;k++){ const a=k*(Math.PI*2/nP)+(rnd()-0.5)*0.6; pts.push([x+Math.cos(a)*bR*(0.55+rnd()*0.7), y+Math.sin(a)*bR*(0.55+rnd()*0.7)]); }
+      ctx.beginPath(); ctx.moveTo((pts[0][0]+pts[nP-1][0])/2,(pts[0][1]+pts[nP-1][1])/2); for(let k=0;k<nP;k++){ const c0=pts[k], c1=pts[(k+1)%nP]; ctx.quadraticCurveTo(c0[0],c0[1],(c0[0]+c1[0])/2,(c0[1]+c1[1])/2); } ctx.closePath();
+      ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; ctx.fill(); ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`; ctx.lineWidth=Math.max(1.5,Dm*0.006); ctx.lineJoin='round'; ctx.stroke();
+    } else { // an eye: white almond, black pupil
+      const eR=Dm*(0.022+0.018*energy); ctx.fillStyle=`rgb(${P.WHT[0]},${P.WHT[1]},${P.WHT[2]})`; ctx.beginPath(); ctx.ellipse(x,y,eR*1.5,eR*0.8,(rnd()-0.5)*0.8,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=`rgba(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]},0.92)`; ctx.lineWidth=Math.max(1.2,Dm*0.004); ctx.stroke(); ctx.fillStyle=`rgb(${P.BLK[0]},${P.BLK[1]},${P.BLK[2]})`; ctx.beginPath(); ctx.arc(x,y,eR*0.5,0,Math.PI*2); ctx.fill();
     }
   }
 }
@@ -13708,7 +13714,7 @@ function miroPhaseBio(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 
   // Miró signature: scatter dots and 4-point stars across the canvas.
-  const marks=Math.ceil(Math.round(28*_dW(_wd))*reveal);
+  const marks=Math.ceil(Math.round(28*(1.15-0.7*_wd))*reveal);   // a busy web needs fewer stray marks
   for(let k=0;k<marks;k++){
     const mr=_seedRnd(k*7+9999,ss,0,0); mr();
     const x=margin+mr()*(CW-margin*2);
@@ -14579,8 +14585,8 @@ function kd2_improv(ctx,CW,CH,cc,ss,mode,chords,gc){
   const flush=(t)=>{ if(seg.length>=3) push({kind:'stroke',t,pts:seg,col:S.K,a:0.9}); seg=[]; };
   mel.forEach((p,k)=>{ seg.push({x:px(p.t)+(r()-.5)*D*0.03,y:py(A.reg(p.top))+(r()-.5)*D*0.06,w:D*(0.005+p.v*0.016)}); if(seg.length>=8+Math.round(r()*5)) flush(p.t); }); flush(1);
   const acc=_kd2Events(A,_kdClamp(Math.round(A.cn/20),12,Math.round(26+40*A.ch.density)));
-  // a dense piece: colour notes between the accents too — small discs in their chords' colours
-  { const Ec=_kd2Events(A,Math.round(4+70*A.ch.density)); for(const e of Ec){ if(e.acc) continue; push({kind:'circle',t:e.t,x:px(e.t)+(r()-.5)*D*0.1,y:py(A.reg(e.top))+(r()-.5)*D*0.1,r:D*(0.005+e.v*0.012),col:A.col(e.i)}); } }
+  // a dense piece: his glowing circles among the washes (Several Circles), a passage's colour each — not a dust of dots
+  { const Ec=_kd2Events(A,Math.round(2+22*A.ch.density)); for(const e of Ec){ if(e.acc) continue; push({kind:'disc',t:e.t,x:px(e.t)+(r()-.5)*D*0.14,y:py(A.reg(e.top))+(r()-.5)*D*0.14,r:D*(0.02+e.v*0.03),col:A.col(e.i),glow:1.6,a:0.82}); } }
   for(const e of acc){ if(!e.acc) continue; const x=px(e.t), y=py(A.reg(e.top)); const a0=r()*6.28; push({kind:'arc',t:e.t,x:x+(r()-.5)*D*0.08,y:y+(r()-.5)*D*0.08,r:D*(0.02+e.v*0.03),a0,a1:a0+1.5+r()*1.8,w:D*(0.004+e.v*0.006),col:r()<0.75?S.K:A.col(e.i)}); if(r()<0.5) push({kind:'circle',t:e.t,x:x+(r()-.5)*D*0.12,y:y+(r()-.5)*D*0.12,r:D*(0.006+e.v*0.01),col:A.col(e.i)}); }
   _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
@@ -19793,10 +19799,10 @@ function _bhListen(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the great form, where the climax falls
   { const col=great==='tri'?_BH_PRIM[1]:great==='circle'?_BH_PRIM[2]:_BH_PRIM[0]; const s=D*(0.32+0.3*loud); const x=CW*(0.3+0.4*c.t), y=CH*(0.3+0.4*(1-A.reg(c.top))); push(c.t0,()=>_bhForm(ctx,great,x,y,s,isBW?[170,170,170]:col,great==='tri'&&trend<0.45?Math.PI:0)); }
   // a form per passage
-  const G=_kd2Phrases(A,Math.min(Math.round(8+14*dens),Math.max(4,Math.round(A.phrases.length/3)))); G.forEach((g,k)=>{ if(g===c) return; const rgb=_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb; const kind=_bhFormOf(rgb); const col=_bhSnap(rgb,isBW); const s=D*(0.05+0.12*g.v); const x=CW*(0.1+0.8*g.t)+(r()-.5)*CW*0.08, y=CH*(0.1+0.8*((1-A.reg(g.top))*0.4+((k*0.618+0.2)%1)*0.6)); const outline=g.v<0.45;
+  const G=_kd2Phrases(A,Math.min(Math.round(8+22*dens),Math.max(4,Math.round(A.phrases.length/(3-1.4*dens))))); G.forEach((g,k)=>{   /* a dense piece: more Bauhaus forms, not more dots */ if(g===c) return; const rgb=_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb; const kind=_bhFormOf(rgb); const col=_bhSnap(rgb,isBW); const s=D*(0.05+0.12*g.v); const x=CW*(0.1+0.8*g.t)+(r()-.5)*CW*0.08, y=CH*(0.1+0.8*((1-A.reg(g.top))*0.4+((k*0.618+0.2)%1)*0.6)); const outline=g.v<0.45;
     push(g.t0,()=>{ if(outline){ ctx.strokeStyle=_bhCss(INK); ctx.lineWidth=Math.max(1.5,D*0.004); ctx.beginPath(); if(kind==='circle') ctx.arc(x,y,s/2,0,6.2832); else if(kind==='tri'){ ctx.moveTo(x,y-s*0.58); ctx.lineTo(x+s*0.5,y+s*0.29); ctx.lineTo(x-s*0.5,y+s*0.29); ctx.closePath(); } else ctx.rect(x-s/2,y-s/2,s,s); ctx.stroke(); } else _bhForm(ctx,kind,x,y,s,col,kind==='tri'&&r()<0.3?Math.PI:0); }); });
   // the accents as small black discs
-  const E=_kd2Events(A,Math.round((10+dens*40)*_dW(dens))).filter(e=>e.acc).slice(0,Math.round(6+24*dens)); E.forEach(e=>{ const x=CW*(0.08+0.84*e.t), y=CH*(0.08+0.84*r()); push(e.t,()=>{ ctx.fillStyle=_bhCss(INK); ctx.beginPath(); ctx.arc(x,y,D*(0.008+0.012*e.v),0,6.2832); ctx.fill(); }); });
+  const E=_kd2Events(A,Math.round((6+dens*8)*_dW(dens))).filter(e=>e.acc).slice(0,8); E.forEach(e=>{ const x=CW*(0.08+0.84*e.t), y=CH*(0.08+0.84*r()); push(e.t,()=>{ ctx.fillStyle=_bhCss(INK); ctx.beginPath(); ctx.arc(x,y,D*(0.008+0.012*e.v),0,6.2832); ctx.fill(); }); });
   items.sort((a,b)=>a.t-b.t); const vis=Math.ceil(items.length*reveal); for(let i=0;i<vis;i++) items[i].draw();
   _setCurE(0.5);
 }
