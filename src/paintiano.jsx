@@ -4054,7 +4054,7 @@ function matisseVence(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   // every lancet's glass: its ground, its two green blades, its leaves — drawn on the wall, and once more as the light on the floor
   const L=[]; for(let j=0;j<n;j++){ const x=mx+j*(lw+gw); const a=Math.floor(j*cn/n), b=Math.floor((j+1)*cn/n); const h=_mtHearSpan(A,a,b); const r=_mtR(55100+j,ss);
     const blades=[-1,1].map(sd=>{ const bh=lh*(0.42+0.4*h.vmax)*(0.85+0.3*r()); return [_mtFinger(_mtSpine(x+lw/2+sd*lw*0.37,bot+lw*0.1,-Math.PI/2+sd*0.03,bh,sd*(r()-.3)*0.2,16),lw*0.1,0.1)]; });
-    const E=[]; const want=Math.max(3,Math.min(4,Math.round(3+X.pace*1.5))); const step=Math.max(1,Math.floor((b-a)/want)); for(let i=a;i<b && E.length<want;i+=step){ if(A.ev[i]) E.push(A.ev[i]); }
+    const E=[]; const want=Math.max(3,Math.min(7,Math.round(3+X.pace*1.5+(A.ch?A.ch.density:0.3)*3.5))); const step=Math.max(1,Math.floor((b-a)/want)); for(let i=a;i<b && E.length<want;i+=step){ if(A.ev[i]) E.push(A.ev[i]); }
     const order=E.map((e,i)=>i).sort((p,q)=>E[q].top-E[p].top); const leaves=[]; const y0=top+lw*0.62, y1=bot-lw*0.55;
     order.forEach((ei,k)=>{ const e=E[ei]; const side=(k%2?1:-1); const s=lw*(0.34+0.08*e.v); const ly=y0+(y1-y0)*(E.length>1?k/(E.length-1):0.5); leaves.push({e,polys:_mtShapePolys('lobed',x+lw/2+side*lw*0.08,ly,s,side*(0.28+0.15*r()),55300+j*31+k+ss,1)}); });
     L.push({x,a,b,P:lancet(x),blades,leaves}); }
@@ -8132,7 +8132,8 @@ function lichtensteinLandscape(ctx,CW,CH,chords,lim,gc,ss,mode){
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0.2,top:72}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
   const sky=isBW?_LC_GREY[1]:_LC_PRIM[2], sun=isBW?[250,250,250]:_LC_PRIM[1];
   const prof=(a,b)=>{ const N=24, out=[]; for(let i=0;i<=N;i++){ const cc=a+(b-a)*i/N; let s=0,k=0; for(let j=Math.max(a,Math.round(cc-(b-a)/N));j<=Math.min(b-1,Math.round(cc+(b-a)/N));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } for(let r=0;r<2;r++) for(let i=1;i<N;i++) out[i]=(out[i-1]+out[i]+out[i+1])/3; const mn=Math.min(...out), mx=Math.max(...out); return out.map(v=>mx>mn+0.02?(v-mn)/(mx-mn):0.5); };
-  const layers=[0,1,2].map(k=>{ const a=Math.floor(k*cn/3), b=Math.floor((k+1)*cn/3); return {a,b,p:prof(a,Math.max(a+2,b)),base:CH*(0.5+0.15*k),amp:CH*(0.16-0.03*k),col:S.col((a+b)/2/cn)}; });
+  const nL=3+Math.round((A.ch?A.ch.density:0.3)*3);   // three ridges for a calm piece, up to six for a torrent of notes
+  const layers=Array.from({length:nL},(_,k)=>k).map(k=>{ const a=Math.floor(k*cn/nL), b=Math.floor((k+1)*cn/nL); return {a,b,p:prof(a,Math.max(a+2,b)),base:CH*(0.5+0.45*k/nL),amp:CH*(0.16-0.09*k/nL),col:S.col((a+b)/2/cn),st:(k===nL-1)?2:(k%2)}; });
   ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(0,0,CW,CH);
   // the sky: dots, full at the top, gone by the horizon
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,CW,CH*0.62); ctx.clip(); _lcBenday(ctx,0,0,CW,CH*0.62,D*0.024,sky,(x,y)=>_lcClamp(1-y/(CH*0.6),0,1)); ctx.restore();
@@ -8144,8 +8145,8 @@ function lichtensteinLandscape(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the ridges, back to front, each drawn when its third of the piece begins
   layers.forEach((L,k)=>{ if(reveal<L.a/cn) return; const N=L.p.length-1; const pts=L.p.map((v,i)=>[CW*i/N, L.base-L.amp*v]); const path=()=>{ ctx.beginPath(); ctx.moveTo(-5,CH+5); ctx.lineTo(-5,pts[0][1]); for(let i=0;i<N;i++){ const a=pts[i], b=pts[i+1]; ctx.quadraticCurveTo(a[0],a[1],(a[0]+b[0])/2,(a[1]+b[1])/2); } ctx.lineTo(CW+5,pts[N][1]); ctx.lineTo(CW+5,CH+5); ctx.closePath(); };
     ctx.save(); path(); ctx.fillStyle=_lcCss(_LC_WHT); ctx.fill(); ctx.clip(); const y0=L.base-L.amp;
-    if(k===0){ _lcBenday(ctx,0,y0,CW,CH-y0,D*0.022,L.col,(x,y)=>_lcClamp(0.9-0.6*(y-y0)/(CH-y0),0.25,1)); }
-    else if(k===1){ ctx.fillStyle=_lcCss(L.col); ctx.fillRect(0,y0-5,CW,CH); }
+    if(L.st===0){ _lcBenday(ctx,0,y0,CW,CH-y0,D*0.022,L.col,(x,y)=>_lcClamp(0.9-0.6*(y-y0)/(CH-y0),0.25,1)); }
+    else if(L.st===1){ ctx.fillStyle=_lcCss(L.col); ctx.fillRect(0,y0-5,CW,CH); }
     else { const col=L.col; if(X.leaps>0.45){ ctx.strokeStyle=_lcCss(col); ctx.lineWidth=D*0.016; for(let t=-CH;t<CW+CH;t+=D*0.034){ ctx.beginPath(); ctx.moveTo(t,y0); ctx.lineTo(t-CH,y0+CH); ctx.stroke(); } } else { ctx.fillStyle=_lcCss(isBW?_LC_GREY[0]:_LC_BLK); ctx.fillRect(0,y0-5,CW,CH); } }
     ctx.restore(); ctx.save(); path(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.2; ctx.lineJoin='round'; ctx.stroke(); ctx.restore(); });
   ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.6; ctx.strokeRect(lw*0.8,lw*0.8,CW-lw*1.6,CH-lw*1.6);
@@ -8363,7 +8364,7 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
 
   if(pick===0){ // magic squares + line
     ground('#241a14','#160f0d');
-    const cols=11, rows=8, colW=[], rowH=[]; let acc=0, accR=0;
+    const _qk=0.8+0.8*(_ch?_ch.density:0.4), cols=Math.round(11*_qk), rows=Math.round(8*_qk), colW=[], rowH=[]; let acc=0, accR=0;   // a dense piece: more, smaller squares
     for(let c=0;c<cols;c++){const w=0.6+rnd()*0.9;colW.push(w);acc+=w;}
     for(let r=0;r<rows;r++){const h2=0.6+rnd()*0.9;rowH.push(h2);accR+=h2;}
     const per=cn/cols; let cy=0;
@@ -8481,20 +8482,20 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return;
   }
   if(pick===4){ // arrows over terraces
-    const rows=9;
+    const _ad=(_ch?_ch.density:0.4), rows=Math.round(7+8*_ad);   // a dense piece: more terraces and more arrows
     for(let r=0;r<rows;r++){
       const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni);
       ctx.fillStyle=css(col(ni,0.55+m.vel*0.55),0.95);
       ctx.fillRect(0,r*CH/rows,CW,CH/rows+1);
     }
-    const per=Math.ceil(cn/6);
-    for(let p=0;p<6;p++){
+    const nA=Math.max(5,Math.round(3+10*_ad)), per=Math.ceil(cn/nA);
+    for(let p=0;p<nA;p++){
       const ai=Math.min(cn-1,p*per); if(ai>=N && p>0) break;
       const bi=Math.min(cn-1,p*per+per-1);
       const up=chordTopness(bi)>chordTopness(ai);
       const m=meta(ai);
-      const x=CW*(0.14+p*0.145), y=CH*(0.5+(p%2?0.16:-0.16));
-      const L=(CH*0.12+m.dur*CH*0.08)*(0.75+0.5*dnaE), dir=up?-1:1;
+      const x=CW*(0.14+p*0.725/Math.max(1,nA-1)), y=CH*(0.5+(p%2?0.16:-0.16));
+      const L=(CH*0.12+m.dur*CH*0.08)*(0.75+0.5*dnaE)*(nA>6?Math.sqrt(6/nA):1), dir=up?-1:1;
       ctx.fillStyle='rgba(20,14,10,.82)';
       ctx.fillRect(x-S*0.009, Math.min(y,y+dir*L*0.62), S*0.018, L*0.62);
       ctx.beginPath(); ctx.moveTo(x,y+dir*L); ctx.lineTo(x-S*0.03,y+dir*L*0.6); ctx.lineTo(x+S*0.03,y+dir*L*0.6); ctx.closePath(); ctx.fill();
@@ -9591,7 +9592,7 @@ function hk2_quarters(ctx,CW,CH,chords,lim,gc,ss,mode){
     const pts=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts.push([cx+Math.cos(a)*R,cy+Math.sin(a)*R]); } push({kind:'poly',t:0.05+i*0.22,pts,col:i%2?col:(isBW?[60,60,60]:_hkMix(col,K,0.7)),ring:K,w:D*0.003});
     // inside each quarter: a smaller arc of the other colour, and the rays for its voices
     const pts2=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts2.push([cx+Math.cos(a)*R*0.55,cy+Math.sin(a)*R*0.55]); } push({kind:'poly',t:0.1+i*0.22,pts:pts2,col:i%2?(isBW?[200,200,200]:_hkMix(A.pcCol(p.pc2,60),W,0.3)):W,ring:K,w:D*0.002});
-    const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=ev.length?Math.round(ev.reduce((s,e)=>s+e.nn,0)/ev.length):2; for(let k=0;k<nn+1;k++){ const a=a0+(k+0.5)/(nn+1)*1.5708; push({kind:'curve',t:0.15+i*0.22,pts:[[cx+Math.cos(a)*R*0.58,cy+Math.sin(a)*R*0.58],[cx+Math.cos(a)*R*0.98,cy+Math.sin(a)*R*0.98]],col:K,w:D*0.002}); } });
+    const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=(ev.length?Math.round(ev.reduce((s,e)=>s+e.nn,0)/ev.length):2)+Math.round((A.ch?A.ch.density:0.3)*7); for(let k=0;k<nn+1;k++){ const a=a0+(k+0.5)/(nn+1)*1.5708;   /* the voices, and more rays for a dense piece */ push({kind:'curve',t:0.15+i*0.22,pts:[[cx+Math.cos(a)*R*0.58,cy+Math.sin(a)*R*0.58],[cx+Math.cos(a)*R*0.98,cy+Math.sin(a)*R*0.98]],col:K,w:D*0.002}); } });
   push({kind:'ring',t:0.9,x:cx,y:cy,r:R,col:K,w:D*0.004}); push({kind:'curve',t:0.9,pts:[[cx,cy-R],[cx,cy+R]],col:K,w:D*0.003}); push({kind:'curve',t:0.9,pts:[[cx-R,cy],[cx+R,cy]],col:K,w:D*0.003});
   const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60); const q=D*0.07; push({kind:'poly',t:0.95,pts:[[cx-q,cy-q],[cx+q,cy-q],[cx+q,cy+q],[cx-q,cy+q]],col:tc,ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx-q,cy-q],[cx-q*0.5,cy-q*1.5],[cx+q*1.5,cy-q*1.5],[cx+q,cy-q]],col:_hkMix(tc,W,0.4),ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx+q,cy-q],[cx+q*1.5,cy-q*1.5],[cx+q*1.5,cy+q*0.5],[cx+q,cy+q]],col:_hkMix(tc,K,0.4),ring:K,w:D*0.003});
   _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
@@ -9674,7 +9675,7 @@ function _hkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
   const steps=160; for(let s=1;s<=steps;s++){ const a=pos((s-1)/steps), b=pos(s/steps); push({kind:'curve',t:s/steps,pts:[a,b],col:INK,a:0.55,w:D*0.0022}); if(mirror) push({kind:'curve',t:s/steps,pts:[mir(a),mir(b)],col:INK,a:0.55,w:D*0.0022}); }
   if(mirror) push({kind:'curve',t:0,pts:[[cx,CH*0.04],[cx,CH*0.5],[cx,CH*0.96]],col:INK,a:0.3,w:D*0.0015});
   // ── the forms
-  const P=_kd2Phrases(A,Math.min(coil?16:12,Math.max(5,Math.round(A.phrases.length/2)))); const n=P.length;
+  const P=_kd2Phrases(A,Math.min(Math.round((coil?16:12)*(0.7+1.0*dens)),Math.max(5,Math.round(A.phrases.length/2))));   /* a dense piece: more forms along the spiral */ const n=P.length;
   const form=(p,k,x,y,R,flip)=>{ const [col,col2]=colOf(p,k); const rise=k+1<n?P[k+1].top-p.top:0; const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=ev.length?ev.reduce((s,e)=>s+e.nn,0)/ev.length:2; const u=r(); const c1=flip?col2:col, c2=flip?col:col2;
     if(p.vmax>=A.vHi&&u<0.6) push({kind:'half',t:p.t,x,y,r:R,ang:r()*3.14,col:c1,col2:c2,ring:INK});
     else if(nn>=3.2) push({kind:'flower',t:p.t,x,y,r:R*1.15,n:5+Math.round(r()*4),a0:r()*6.28,col:c1,col2:c2,core:INK});
@@ -10035,7 +10036,7 @@ function klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const gg=ctx.createLinearGradient(0,top,0,foot); gg.addColorStop(0,isBW?'#cfc9bc':'#e8c862'); gg.addColorStop(0.5,isBW?'#bdb7aa':'#d4ab3e'); gg.addColorStop(1,isBW?'#a8a296':'#b8902f');
   mantle(); ctx.fillStyle=gg; ctx.fill();
   // the ornaments inside the mantle, in time order: the split runs diagonally, his side rectangles, hers rosettes
-  const items=[]; const n=Math.round(60+(_seedRnd(96,ss,0,0)()*0.5+0.5)*40);
+  const _md=(()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })(); const items=[]; const n=Math.round((60+(_seedRnd(96,ss,0,0)()*0.5+0.5)*40)*_dW(_md));   // a dense piece: a thicker meadow
   for(let i=0;i<n;i++){ const r=_seedRnd(i+50500,ss,0,0); r(); const u=0.05+r()*0.92; const L=edge(u,-1), R=edge(u,1); const v=r(); const x=L[0]+(R[0]-L[0])*v, y=L[1]+(r()-.5)*CH*0.02; const his = v < 0.45+0.15*(u-0.5);
     items.push({t:i/n,x,y,his,r,u}); }
   ctx.save(); mantle(); ctx.clip();
@@ -10049,7 +10050,7 @@ function klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.restore();
   mantle(); ctx.strokeStyle=_kmCss(_KM_DGOLD); ctx.lineWidth=D*0.004; ctx.stroke();
   // the meadow at the foot, spilling over the edge
-  const mf=Math.ceil((90+cn%40)*Math.min(1,reveal*1.2));
+  const mf=Math.ceil((90+cn%40)*_dW(_md)*Math.min(1,reveal*1.2));
   for(let i=0;i<mf;i++){ const r=_seedRnd(i+51000,ss,0,0); r(); const x=mx-wFoot*1.25+r()*wFoot*2.5, y=foot+(r()-.3)*CH*0.1, c=jw((i+0.5)/mf); const s2=D*(0.006+r()*0.008);
     ctx.fillStyle=_kmCss(c); for(let k=0;k<5;k++){ const a=k/5*6.2832; ctx.beginPath(); ctx.arc(x+Math.cos(a)*s2,y+Math.sin(a)*s2,s2*0.7,0,6.2832); ctx.fill(); } ctx.fillStyle=_kmCss(_KM_GOLD); ctx.beginPath(); ctx.arc(x,y,s2*0.5,0,6.2832); ctx.fill(); }
 }
@@ -10074,7 +10075,7 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   push(0.02,()=>{ ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.moveTo(cx-tw,base); ctx.lineTo(cx-tw*0.6,top); ctx.lineTo(cx+tw*0.6,top); ctx.lineTo(cx+tw,base); ctx.closePath(); ctx.fill();
     const nt=12; for(let i=0;i<nt;i++){ const y=base-(base-top)*(i+0.5)/nt, w=tw*(0.9-0.3*i/nt); ctx.fillStyle=_kmCss(i%2?_KM_BLK:_KM_WHT); ctx.beginPath(); ctx.moveTo(cx-w*0.6,y+w*0.5); ctx.lineTo(cx,y-w*0.6); ctx.lineTo(cx+w*0.6,y+w*0.5); ctx.closePath(); ctx.fill(); } });
   // branch pairs: from the trunk outwards, each unrolling into a curl
-  const nb=5+Math.round(r0()*3);
+  const nb=Math.round((5+Math.round(r0()*3))*_dW((()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })()));   // a dense piece: more branches
   for(let k=0;k<nb;k++){ const t=(k+0.5)/nb, by=base-(base-top)*(0.12+0.8*k/nb), reach=CW*(0.42-0.2*k/nb)*(0.85+r0()*0.25), cr=D*(0.06+0.035*(1-k/nb))*(0.8+r0()*0.4), drop=CH*(0.03+r0()*0.04);
     for(const sgn of [-1,1]) push(t,()=>{ const ex=cx+sgn*reach, ey=by-drop;
       ctx.strokeStyle=_kmCss(GOLD); ctx.lineWidth=D*0.014; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx,by); ctx.bezierCurveTo(cx+sgn*reach*0.35,by-drop*2.4,cx+sgn*reach*0.7,by+drop*0.8,ex,ey); ctx.stroke();
@@ -10141,7 +10142,7 @@ function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const vr=_seedRnd(31300,ss,0,0); vr(); for(let k=0;k<34;k++){ const x=cx-R*0.5+vr()*R*1.7, y=cy+R*0.3+vr()*R*0.8; const rr=R*(0.03+0.05*vr()); ctx.strokeStyle=isBW?'rgba(220,216,208,0.8)':'rgba(236,204,98,0.85)'; ctx.lineWidth=Math.max(1,rr*0.3); ctx.beginPath(); ctx.arc(x,y,rr,0,6.2832); ctx.stroke(); if(vr()<0.5){ ctx.fillStyle='rgba(20,12,16,0.8)'; ctx.beginPath(); ctx.arc(x,y,rr*0.35,0,6.2832); ctx.fill(); } }
     ctx.restore(); }
   // the shower of gold: a stream from the upper left falling into the curl — a coin per chord, in time
-  { const n=Math.min(cn,160); const m=Math.ceil(n*reveal); for(let i=0;i<m;i++){ const rnd=_seedRnd(i+31000,ss,0,0); rnd(); const t=i/n; const x=CW*(0.1+0.42*t)+(rnd()-.5)*CW*0.2*(0.3+t), y=CH*(0.0+0.62*t)+(rnd()-.5)*CH*0.06; const r=Math.min(CW,CH)*(0.006+0.016*rnd()); const k=rnd();
+  { const n=Math.min(cn,Math.round(90+220*(()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })())); const m=Math.ceil(n*reveal); for(let i=0;i<m;i++){ const rnd=_seedRnd(i+31000,ss,0,0); rnd(); const t=i/n; const x=CW*(0.1+0.42*t)+(rnd()-.5)*CW*0.2*(0.3+t), y=CH*(0.0+0.62*t)+(rnd()-.5)*CH*0.06; const r=Math.min(CW,CH)*(0.006+0.016*rnd()); const k=rnd();
       const {rgb}=_picChord(chords,Math.min(cn-1,Math.floor(t*cn)),gc,isBW);
       if(k<0.55){ ctx.fillStyle=isBW?'#c8c4b8':'#e8c862'; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); ctx.strokeStyle=isBW?'rgba(40,40,40,0.6)':'rgba(80,55,15,0.6)'; ctx.lineWidth=1; ctx.stroke(); }
       else if(k<0.8){ ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`; ctx.beginPath(); ctx.arc(x,y,r*0.8,0,6.2832); ctx.fill(); ctx.strokeStyle=isBW?'#d0ccc0':'#e8c862'; ctx.lineWidth=1; ctx.stroke(); }
@@ -11107,7 +11108,7 @@ function _ryListen(ctx,CW,CH,chords,lim,gc,ss,mode){
   const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const dens=A.ch?A.ch.density:0.3;
   const C2=(()=>{ const n=48,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
   for(let k=0;k<14;k++){ for(let i=1;i<47;i++) C2[i]=(C2[i-1]+C2[i]+C2[i+1])/3; } const amin=Math.min(...C2), amax=Math.max(...C2); const at=(u)=>{ const i=Math.min(46,Math.floor(u*47)); const f=u*47-i; const v=C2[i]+(C2[i+1]-C2[i])*f; return amax>amin+0.03?(v-amin)/(amax-amin):0.5; };
-  const nB=Math.max(12,Math.min(30,Math.round(12+dens*14+cn/40))); const G=_kd2Phrases(A,nB); const n=G.length; const vis=Math.ceil(n*reveal);
+  const nB=Math.max(12,Math.min(Math.round(30+30*dens),Math.round((12+dens*14+cn/40)*_dW(dens))));   /* a dense piece: more, finer waves */ const G=_kd2Phrases(A,nB); const n=G.length; const vis=Math.ceil(n*reveal);
   try{ globalThis.__RY_LISTEN={nB:n,pace,loud,regular,leaps,poly,major,tens,trend,dens}; }catch(_){}
   const few=_ryFew(chords,gc,isBW,Math.max(3,Math.min(7,Math.round(3+poly*1.5))));
   const [DK,LT]=_ryPair(chords,gc,isBW); ctx.fillStyle=`rgb(${LT[0]|0},${LT[1]|0},${LT[2]|0})`; ctx.fillRect(0,0,CW,CH);
@@ -11352,7 +11353,8 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ampScale = 0.08 + sR()*0.06;
 
   // Band count.
-  const bands = cn<=8?12:cn<=24?18:cn<=60?22:cn<=120?26:30;
+  const _cd=(()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })();
+  const bands = cn<=8?12:cn<=24?18:cn<=60?22:Math.round(18+28*_cd);   // a longer piece: as many crests as it is dense
   const visBands = Math.max(2, Math.ceil(bands*reveal));
   const bandH = (CH*0.70)/bands;
   const yStart = CH*0.15;
@@ -11435,7 +11437,7 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // ═══════════════════════════════════════════════════════════════════════════
 function _jmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=Math.max(0,Math.min(1,Math.max(1,Math.min(cn,lim))/cn));
-  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3; _mitchDens=dens;
   let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
   const gr=_seedRnd(10101,ss,0,0); gr();
   const nP = poly>=3 ? 3 : poly>=2.2 ? 2 : 1;
@@ -11547,7 +11549,7 @@ function _mitchPal(chords, gc, isBW, i0, span){
 }
 // list the strokes of one knot (nothing drawn yet)
 function _mitchKnot(list, D, cx, cy, R, count, pal, ss, idx, o){
-  o=o||{};
+  o=o||{}; count=Math.round(count*_dW(_mitchDens));   // a dense piece: thicker knots of strokes (_mitchChar sets the piece's density)
   const kr=_seedRnd(idx*17+9700, ss, 0, 0); kr();
   const dir=(o.dir!=null)?o.dir:kr()*Math.PI*2, spread=o.spread!=null?o.spread:1.3, radial=o.radial||0;
   for(let s=0;s<count;s++){
@@ -11575,7 +11577,8 @@ function _mitchDrips(ctx, D, list, k, ss, idx){
     ctx.strokeStyle=`rgba(${c[0]|0},${c[1]|0},${c[2]|0},0.8)`; ctx.lineWidth=Math.max(1.2,D*(0.003+r()*0.004)); ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo(x+(r()-.5)*D*0.02, y+D*0.08, x+(r()-.5)*D*0.03, y+D*(0.1+r()*0.2)); ctx.stroke(); });
 }
-function _mitchChar(chords){ const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; return _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5; }
+var _mitchDens=0.4;
+function _mitchChar(chords){ const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; _mitchDens=_ch?_ch.density:0.4; return _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5; }
 
 // ── Mitchell A: Gestural Garden — all-over: 6–9 knots overlapping across the whole canvas, bare canvas in the gaps ──
 function mitchellPhaseGarden(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
@@ -11865,7 +11868,7 @@ function monetPhaseNympheas(ctx,CW,CH,chords,lim,gc,ss,mode){
   for(let i=0;i<6;i++){ const c=_monBrk(col(Math.floor(g0()*cn)),+1,0.45,isBW); _monGlow(ctx,CW*g0(),CH*(0.05+g0()*0.45),D*(0.25+g0()*0.2),c,0.55); }
   for(let i=0;i<4;i++){ const c=_monBrk(col(Math.floor(g0()*cn)),-1,-0.2,isBW); _monGlow(ctx,CW*g0(),CH*(0.5+g0()*0.5),D*(0.25+g0()*0.2),c,0.5); }
   const list=[]; let id=0;
-  const N=Math.round((300+density*300)*_MON_DN);
+  const N=Math.round((300+density*300)*_MON_DN*_dW(density));
   for(let i=0;i<N;i++){ const r=_monR(60100+i,ss); r(); const t=i/N; const ci=Math.floor(t*cn); const c=col(ci);
     const y=_monClamp((1-pitch(ci))*0.3+r()*0.75+(r()-.5)*0.1,0.02,0.98), x=_monClamp(t+(r()-.5)*0.42,0.02,0.98);
     const sky=y<0.48; const cc=sky?_monBrk(c,(i%2?1:-1),0.22+(0.48-y)*0.7,isBW):_monBrk(c,(i%3?-1:1),-0.05-(y-0.48)*0.45,isBW);
@@ -12005,9 +12008,9 @@ function monetPhasePont(ctx,CW,CH,chords,lim,gc,ss,mode){
   const list=[]; let id=0;
   const yb=(x)=>0.36+0.2*(2*x-1)*(2*x-1);
   // the willows behind the bridge — a dark green mass hanging from the top
-  for(let i=0;i<Math.round(220*_MON_DN);i++){ const r=_monR(66000+i,ss); r(); const x=r(), y=0.02+r()*(yb(x)+0.08); const c=_monBrk(_monMix(col(Math.floor(r()*cn)),[40,96,62],isBW?0:0.6),(i%3?-1:1),-0.15+r()*0.3,isBW);
+  for(let i=0;i<Math.round(220*_MON_DN*_dW(density));i++){ const r=_monR(66000+i,ss); r(); const x=r(), y=0.02+r()*(yb(x)+0.08); const c=_monBrk(_monMix(col(Math.floor(r()*cn)),[40,96,62],isBW?0:0.6),(i%3?-1:1),-0.15+r()*0.3,isBW);
     list.push({x:CW*x,y:CH*y,L:D*(0.03+r()*0.035),w:D*(0.01+r()*0.006),ang:1.5708+(r()-.5)*0.9,c,a:0.75,t:r()*0.6,id:id++,ss}); }
-  for(let i=0;i<Math.round(300*_MON_DN);i++){ const r=_monR(66100+i,ss); r(); const x=r(), c=_monBrk(_monMix(col(Math.floor(r()*cn)),[60,130,80],isBW?0:0.4),(i%3?-1:1),-0.1+r()*0.25,isBW); const y=yb(x)+0.12+r()*(0.88-yb(x)-0.12);
+  for(let i=0;i<Math.round(300*_MON_DN*_dW(density));i++){ const r=_monR(66100+i,ss); r(); const x=r(), c=_monBrk(_monMix(col(Math.floor(r()*cn)),[60,130,80],isBW?0:0.4),(i%3?-1:1),-0.1+r()*0.25,isBW); const y=yb(x)+0.12+r()*(0.88-yb(x)-0.12);
     list.push({x:CW*x,y:CH*y,L:D*(0.04+r()*0.035),w:D*0.012,ang:(r()-.5)*0.2,c,a:0.85,t:r(),id:id++,ss}); }
   const K=Math.round((7+density*4)*_dW(density));
   for(let k=0;k<K;k++){ const r=_monR(66500+k,ss); r(); const cx=0.08+r()*0.84, cy=0.66+r()*0.3, n=8+(r()*9|0); const ci=Math.floor((k+0.5)*cn/K);
@@ -14475,7 +14478,7 @@ function kd2_circleInCircle(ctx,CW,CH,cc,ss,mode,chords,gc){
   const bl=[]; let id=0; const push=f=>{ f.id=id++; bl.push(f); };
   push({kind:'band',t:0,x:cx,y:cy,ang:-1.05+(r()-.5)*0.2,len:R*2.4,w:R*(0.42+A.ch.density*0.2),col:_kdMix(tc,S.W,0.45),a:0.5});
   push({kind:'band',t:0,x:cx,y:cy,ang:-0.45+(r()-.5)*0.2,len:R*2.4,w:R*(0.3+A.ch.energy*0.2),col:_kdMix(dc,S.W,0.5),a:0.45});
-  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/14),24,70)); const turns=1.9;
+  const E=_kd2Events(A,_kdClamp(Math.round(A.cn/14),24,Math.round(46+70*A.ch.density)));   /* a dense piece: more circles in the circle */ const turns=1.9;
   for(const e of E){ const ang=e.t*6.2832*turns+r()*0.6; const rad=R*(0.08+0.8*Math.sqrt(e.t)); const x=cx+Math.cos(ang)*rad*0.93, y=cy+Math.sin(ang)*rad*0.93; const c=A.col(e.i); const rr=D*(0.01+e.dur*0.01+(1-A.reg(e.top))*0.04+e.v*0.02);
     push({kind:'circle',t:e.t,x,y,r:rr,col:c,ring:S.K}); if(e.acc) push({kind:'circle',t:e.t,x:x+(r()-.5)*rr*2,y:y+(r()-.5)*rr*2,r:rr*0.35,col:S.K}); }
   for(let i=0;i<Math.round((2+A.ch.density*2)*_dW(A.ch.density));i++){ const t=0.2+i*0.2; push({kind:'lines',t,x:cx+(r()-.5)*R,y:cy+(r()-.5)*R,ang:r()*3.14,fan:0.02,len:R*2.2,w:D*0.002,n:1,col:S.K}); }
@@ -14520,10 +14523,10 @@ function kd2_improv(ctx,CW,CH,cc,ss,mode,chords,gc){
   P4.forEach((p,k)=>{ const c=_kdMix(A.pcCol(p.pc,Math.round(p.top)),S.W,0.18); const x=px(p.t)+(r()-.5)*CW*0.18, y=py(A.reg((p.top+p.bass)/2))+(r()-.5)*CH*0.14;
     push({kind:'wash',t:p.t0,x,y,r:D*(0.1+Math.min(1,p.n/16)*0.12+p.v*0.08),sx:0.8+r()*0.7,sy:0.7+r()*0.6,ang:r()*3.14,ph:r()*6.28,col:c,a:0.5+p.v*0.3});
     if(p.vmax>0.7) push({kind:'wash',t:p.t,x:x+(r()-.5)*D*0.2,y:y+(r()-.5)*D*0.2,r:D*(0.05+p.v*0.06),sx:1,sy:1,ph:r()*6.28,col:_kdMix(A.pcCol(p.pc2,Math.round(p.top)),S.W,0.1),a:0.75}); });
-  const mel=_kd2Phrases(A,36); let seg=[];
+  const mel=_kd2Phrases(A,Math.round(36*_dW(A.ch.density))); let seg=[];
   const flush=(t)=>{ if(seg.length>=3) push({kind:'stroke',t,pts:seg,col:S.K,a:0.9}); seg=[]; };
   mel.forEach((p,k)=>{ seg.push({x:px(p.t)+(r()-.5)*D*0.03,y:py(A.reg(p.top))+(r()-.5)*D*0.06,w:D*(0.005+p.v*0.016)}); if(seg.length>=8+Math.round(r()*5)) flush(p.t); }); flush(1);
-  const acc=_kd2Events(A,_kdClamp(Math.round(A.cn/20),12,40));
+  const acc=_kd2Events(A,_kdClamp(Math.round(A.cn/20),12,Math.round(26+40*A.ch.density)));
   for(const e of acc){ if(!e.acc) continue; const x=px(e.t), y=py(A.reg(e.top)); const a0=r()*6.28; push({kind:'arc',t:e.t,x:x+(r()-.5)*D*0.08,y:y+(r()-.5)*D*0.08,r:D*(0.02+e.v*0.03),a0,a1:a0+1.5+r()*1.8,w:D*(0.004+e.v*0.006),col:r()<0.75?S.K:A.col(e.i)}); if(r()<0.5) push({kind:'circle',t:e.t,x:x+(r()-.5)*D*0.12,y:y+(r()-.5)*D*0.12,r:D*(0.006+e.v*0.01),col:A.col(e.i)}); }
   _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
@@ -19736,7 +19739,7 @@ function _bhListen(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the great form, where the climax falls
   { const col=great==='tri'?_BH_PRIM[1]:great==='circle'?_BH_PRIM[2]:_BH_PRIM[0]; const s=D*(0.32+0.3*loud); const x=CW*(0.3+0.4*c.t), y=CH*(0.3+0.4*(1-A.reg(c.top))); push(c.t0,()=>_bhForm(ctx,great,x,y,s,isBW?[170,170,170]:col,great==='tri'&&trend<0.45?Math.PI:0)); }
   // a form per passage
-  const G=_kd2Phrases(A,Math.min(12,Math.max(4,Math.round(A.phrases.length/3)))); G.forEach((g,k)=>{ if(g===c) return; const rgb=_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb; const kind=_bhFormOf(rgb); const col=_bhSnap(rgb,isBW); const s=D*(0.05+0.12*g.v); const x=CW*(0.1+0.8*g.t)+(r()-.5)*CW*0.08, y=CH*(0.1+0.8*((1-A.reg(g.top))*0.4+((k*0.618+0.2)%1)*0.6)); const outline=g.v<0.45;
+  const G=_kd2Phrases(A,Math.min(Math.round(8+14*dens),Math.max(4,Math.round(A.phrases.length/3)))); G.forEach((g,k)=>{ if(g===c) return; const rgb=_picChord(chords,Math.min(cn-1,Math.floor(g.t*cn)),gc,isBW).rgb; const kind=_bhFormOf(rgb); const col=_bhSnap(rgb,isBW); const s=D*(0.05+0.12*g.v); const x=CW*(0.1+0.8*g.t)+(r()-.5)*CW*0.08, y=CH*(0.1+0.8*((1-A.reg(g.top))*0.4+((k*0.618+0.2)%1)*0.6)); const outline=g.v<0.45;
     push(g.t0,()=>{ if(outline){ ctx.strokeStyle=_bhCss(INK); ctx.lineWidth=Math.max(1.5,D*0.004); ctx.beginPath(); if(kind==='circle') ctx.arc(x,y,s/2,0,6.2832); else if(kind==='tri'){ ctx.moveTo(x,y-s*0.58); ctx.lineTo(x+s*0.5,y+s*0.29); ctx.lineTo(x-s*0.5,y+s*0.29); ctx.closePath(); } else ctx.rect(x-s/2,y-s/2,s,s); ctx.stroke(); } else _bhForm(ctx,kind,x,y,s,col,kind==='tri'&&r()<0.3?Math.PI:0); }); });
   // the accents as small black discs
   const E=_kd2Events(A,Math.round((6+dens*8)*_dW(dens))).filter(e=>e.acc).slice(0,8); E.forEach(e=>{ const x=CW*(0.08+0.84*e.t), y=CH*(0.08+0.84*r()); push(e.t,()=>{ ctx.fillStyle=_bhCss(INK); ctx.beginPath(); ctx.arc(x,y,D*(0.008+0.012*e.v),0,6.2832); ctx.fill(); }); });
@@ -19893,7 +19896,7 @@ function bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   pal.push([109,138,120],[125,138,153],[232,221,200]);
   // muted block field
   ctx.fillStyle='rgb(205,184,154)'; ctx.fillRect(0,0,CW,CH);
-  const cols=4, rows=5, cw=CW/cols, ch=CH/rows;
+  const _fk=0.85+0.9*(()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })(), cols=Math.round(4*_fk), rows=Math.round(5*_fk), cw=CW/cols, ch=CH/rows;   // a dense piece: a finer block field
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
     const x=c*cw,y=r*ch; _bhSq(ctx,x,y,cw,ch,_bhPick(pal,rnd));
     if(rnd()<0.25) _bhDrips(ctx,x+cw*rnd(),y+ch,CH,'rgba(20,20,18,.5)',2,rnd);
@@ -19944,7 +19947,7 @@ function bauhausPhaseArches(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(405,ss,0,0);
   const pal=_bhPalette(chords,cn,gc,rnd).map(c=>_bhSnap(c,mode==='bw')).concat([_BH_BLK,_BH_WHT,_BH_GRY]);   // the Bauhaus palette
   _bhCreamFill(ctx,CW,CH);
-  const cols=2, rows=3, cw=CW/cols, ch=CH/rows;
+  const _ak=0.9+1.1*(()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })(), cols=Math.round(2*_ak), rows=Math.round(3*_ak), cw=CW/cols, ch=CH/rows;   // a dense piece: more arches
   const reveal=Math.max(0,Math.min(1,lim/cn));
   const shown=Math.ceil(cols*rows*reveal);
   let idx=0;
