@@ -9,3 +9,5 @@ wanderer <- https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wan
 rousseau <- https://commons.wikimedia.org/wiki/File:Henri_Rousseau_010.jpg
 FAIL marcblue
 FAIL marclarge
+marcblue <- https://commons.wikimedia.org/wiki/File:Marc,_Franz_-_Blue_Horse_I_-_Google_Art_Project.jpg
+marclarge <- https://commons.wikimedia.org/wiki/File:Franz_Marc_005.jpg
