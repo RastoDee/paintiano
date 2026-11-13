@@ -19,10 +19,8 @@ jobs:
               if file "drop/$out.jpg" | grep -q JPEG; then echo "$out <- https://commons.wikimedia.org/wiki/File:$n" >> drop/sources.txt; return 0; fi
               sleep 2
             done; rm -f "drop/$out.jpg"; echo "FAIL $out" >> drop/sources.txt; }
-          get klimt "Gustav_Klimt_016.jpg" "The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg"
-          get kandinsky "Vassily_Kandinsky,_1913_-_Composition_7.jpg" "Kandinsky_-_Composition_VII.jpg"
-          get botticelli "Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg" "Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project.jpg" "The_Birth_of_Venus_(Botticelli).jpg"
-          get vermeer "1665_Girl_with_a_Pearl_Earring.jpg" "Meisje_met_de_parel.jpg" "Johannes_Vermeer_(1632-1675)_-_The_Girl_With_The_Pearl_Earring_(1665).jpg"
+          get klimt2 "The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg"
+          get kandinsky2 "Wassily_Kandinsky_-_Composition_VII_-_Google_Art_Project.jpg" "Kandinsky_-_Composition_VII,_1913.jpg" "Composition_VII_by_Wassily_Kandinsky.jpg"
           cat drop/sources.txt; ls -la drop; file drop/*
       - name: Commit the drop
         run: |
