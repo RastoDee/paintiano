@@ -1,0 +1,33 @@
+name: fetch-samples
+on:
+  push:
+    branches: [img-fetch]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Public-domain painting scans from Wikimedia Commons
+        run: |
+          mkdir -p drop
+          UA="PaintianoSampleFetch/1.0 (https://paintiano.app; one-off fetch of public-domain scans)"
+          get(){ out=$1; shift; for n in "$@"; do
+              rm -f "drop/$out.jpg"
+              curl -sSL --retry 3 -A "$UA" -o "drop/$out.jpg" "https://commons.wikimedia.org/wiki/Special:FilePath/$n?width=1920" || true
+              if file "drop/$out.jpg" | grep -q JPEG; then echo "$out <- https://commons.wikimedia.org/wiki/File:$n" >> drop/sources.txt; return 0; fi
+              sleep 2
+            done; rm -f "drop/$out.jpg"; echo "FAIL $out" >> drop/sources.txt; }
+          get klimt "Gustav_Klimt_016.jpg" "The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg"
+          get kandinsky "Vassily_Kandinsky,_1913_-_Composition_7.jpg" "Kandinsky_-_Composition_VII.jpg"
+          get botticelli "Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg" "Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project.jpg" "The_Birth_of_Venus_(Botticelli).jpg"
+          get vermeer "1665_Girl_with_a_Pearl_Earring.jpg" "Meisje_met_de_parel.jpg" "Johannes_Vermeer_(1632-1675)_-_The_Girl_With_The_Pearl_Earring_(1665).jpg"
+          cat drop/sources.txt; ls -la drop; file drop/*
+      - name: Commit the drop
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add drop
+          git commit -m "sample scans drop [skip ci]"
+          git push
