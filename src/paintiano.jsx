@@ -8461,8 +8461,9 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     const _fstep=Math.max(3,Math.ceil(cn/Math.round(10+26*(_ch?_ch.density:0.4))));   // ~12 fish for a slow piece, ~30 for a torrent of notes
     for(let i=0;i<N;i++){
       if(i%_fstep) continue;
-      const m=meta(i);
-      const x=CW*0.1+((i*GA/(Math.PI*2))%1)*CW*0.8, y=CH*0.12+((i*PHI)%1)*CH*0.75;
+      const m=meta(i); const fk=i/_fstep+1;
+      // the fish spread over the whole garden (the R2 sequence; i·(2−φ) and i·φ always summed to 1, so every fish swam on one diagonal)
+      const x=CW*0.1+((fk*0.7548776662+0.31)%1)*CW*0.8, y=CH*0.12+((fk*0.5698402910+0.17)%1)*CH*0.75;
       const s2=(S*0.03+m.dur*S*0.04)*(0.75+0.5*dnaE);
       // Klee's fish: a long lens body with a pointed snout, a forked tail of two soft lobes, a thin pale line round it,
       // the body translucent and striped inside, a ring for the eye — drawn, not stamped
