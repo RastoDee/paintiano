@@ -511,6 +511,18 @@ function _drawSrc(cx, im, x, y, w, h, W){ const r=Math.round(W*0.006);
   cx.save(); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.clip(); cx.imageSmoothingQuality='high'; cx.drawImage(im,x,y,w,h); cx.restore();
   cx.save(); cx.strokeStyle='rgba(201,168,76,.45)'; cx.lineWidth=Math.max(1,W*0.0012); cx.beginPath(); if(cx.roundRect) cx.roundRect(x,y,w,h,r); else cx.rect(x,y,w,h); cx.stroke(); cx.restore(); }
 const PF_A3_W=2806, PF_A3_LONG=3969;   // A3 (297 × 420 mm) at 240 DPI
+// Print without the caption: the painting (φ) on a white A sheet (1 : √2), as large as it sits well — 86 % of the sheet's height,
+// a slightly deeper margin below than above, wide margins at the sides (a passe-partout). The sheet holds as many pixels as the
+// painting had (a phone's canvas limit still holds); A3 is 2806 × 3969 (240 DPI).
+function _paperSheet(hi, sheetW){
+  const Wf=sheetW || Math.round(Math.sqrt(hi.width*hi.height*594/841)), Hf=Math.round(Wf*841/594);
+  const top=Math.round(Hf*0.065), bw=Math.round(Wf*0.76), bh=Math.round(Hf*0.86);
+  const k=Math.min(bw/hi.width, bh/hi.height), pw=Math.round(hi.width*k), ph=Math.round(hi.height*k);
+  const cv=document.createElement('canvas'); cv.width=Wf; cv.height=Hf; const cx=cv.getContext('2d');
+  cx.fillStyle='#ffffff'; cx.fillRect(0,0,Wf,Hf);
+  cx.imageSmoothingEnabled=true; cx.imageSmoothingQuality='high'; cx.drawImage(hi, Math.round((Wf-pw)/2), top+Math.round((bh-ph)/2), pw, ph);
+  return cv;
+}
 function _frameExport(hi, kind, o){
   const GOLD='rgba(201,168,76,.85)', CREAM='#f4e7c6', SOFT='rgba(230,222,196,.72)';
   const serifI=(s)=>`italic 600 ${s}px "Cormorant Garamond", Georgia, serif`, serifI5=(s)=>`italic 500 ${s}px "Cormorant Garamond", Georgia, serif`, sans=(s)=>`500 ${s}px "Outfit", Arial, sans-serif`;
@@ -14225,23 +14237,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const exportImage=async(sizeMode='web', directShare=false, audioBlob=null, audioName=null, withSource=false, noBg=false)=>{
     prevBackRef.current = showSizePicker ? 'picker' : (prevBackRef.current==='share-next' ? 'share' : null);   // where the preview goes back to
     const fv=(favView && favCur) ? favCur : null;
-    // Prints are 3:4: the A1 print and the vector for giclée are laid out again in a 3:4 frame (the same painter, variant and
-    // colours, its own composition in that frame); the screen, the web picture and the story keep the painting's φ. A picture
-    // (Image) and Lite keep their own canvas.
-    const _p34 = (sizeMode==='print' || sizeMode==='print3' || sizeMode==='gallery') && viewMode!=='image' && !basicModeRef.current;
-    const _lay34 = (f, ch)=>{ let L=null; try{ window.__pfPrint34=true; L=_favLayout(f, ch); }catch(_){ L=null; } finally{ try{ window.__pfPrint34=false; }catch(_){} } return L; };
+    // Every export is the painting on screen, in its φ frame — the prints too (Nov 2026: what you see is what you print;
+    // until then the A1 / A3 print and the vector were laid out again in 3:4). A print without the caption sits on a white A sheet (_paperSheet).
     if(!fv){
       let _kd0=0;
       let X={ chords:paintChords, grid, effectiveStyle, shuffleStyle, pollockSessionSeed, mode:paintMode, gc:paintGc, paintPhase, viewMode, pixelRef, info, compositionName, painterStageRef, sigActiveRef, draftOwnerRef, originalImgUrl, imgMoodThumb, currentMood, _takeInfo, _takeGrid, _takeFrame, _takePainter, _takeSkip,
         enter: ()=>{ _kd0=globalThis.__PAINT_KEY_D; globalThis.__PAINT_KEY_D=paintKeyD; }, leave: ()=>{ globalThis.__PAINT_KEY_D=_kd0; },
         pcRealW: _pcWeights(chords), gcReal: gc,
         liveNow: sizeMode==='story' && (playing || holdPaused) };   // a Story while it plays: the painting as it is right now (the live canvas), not the finished one
-      if(_p34){ const L=_lay34({ own:draftOwnerRef.current||null, mf:1, style:effectiveStyle, keys:(painterStage && painterStage.length) ? [effectiveStyle].concat(painterStage) : null, skip:_takeSkip(effectiveStyle) }, chords);
-        if(L) X=Object.assign({}, X, { grid:L.g, _takeGrid:()=>L.pg, _takeFrame:()=>({CW:L.CW, CH:L.CH}) }); }
       return _exportWith(X, sizeMode, directShare, audioBlob, audioName, withSource, noBg);
     }
     const pc=favPiecesRef.current.get(fv.pk) || await favPiece(fv.pk);
-    const lay=pc ? (_p34 ? (_lay34(fv, pc.chords) || _favLayout(fv, pc.chords)) : _favLayout(fv, pc.chords)) : null;
+    const lay=pc ? _favLayout(fv, pc.chords) : null;
     if(!lay){ setFavBad(true); return; }
     return _exportWith(_favExportX(fv, pc, lay), sizeMode, directShare, audioBlob, audioName, withSource, noBg);
   };
@@ -14540,6 +14547,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         }catch(_){ outCanvas=hi; }
       }
       else if(_srcForBand){ try{ outCanvas=_frameExport(hi, sizeMode, {bare:true, src:_srcForBand, sheetW:(_a3 ? PF_A3_W : 0)}); if(sizeMode==='print') dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
+      // a print without the caption: the painting on a white A sheet, a paper margin around it (a standard A3 / A1 frame takes it)
+      else if(sizeMode==='print' && !noBg){ try{ outCanvas=_paperSheet(hi, (_a3 ? PF_A3_W : 0)); dpi=Math.round(outCanvas.width/(_a3 ? 11.693 : 23.386)); }catch(_){ outCanvas=hi; } }
       if(sizeMode==='story'){
         const SW=1080, SH=1920;
         const st=document.createElement('canvas'); st.width=SW; st.height=SH;

@@ -2145,10 +2145,9 @@ function _computeSongCharacter(chords, kdR=0){
 // Music decides once by its chord count (as the Mic: 41); a take (Compose, Mic) grows — it starts landscape and flips ONCE to portrait
 // when its plan first doubles (Mic 48→96 at its 41st chord, Compose 96→192 at its 82nd), never back.
 const PF_PORT = PHI;       // the portrait frame's height / width
-// …except where a print is made: the A1 print and the vector for giclée are laid out 3:4 (window.__pfPrint34, set only while
-// their layout is computed). Everything else is φ — the Studio, Battle (its picture and stages), the QR poster's art and the song
-// a scanned poster opens (Nov 2026: one frame everywhere, so a painting never changes shape between Paintiano and Battle).
-function pfPort(evs){ try{ if(typeof window!=='undefined'){ if(window.__pfPrint34) return 4/3; } }catch(_){} return PF_PORT; }
+// ONE frame everywhere (Nov 2026): the Studio, Battle (its picture and stages), the QR poster's art, the song a scanned poster
+// opens and every print and vector — a painting never changes shape between Paintiano, Battle and the wall (prints were 3:4 before).
+function pfPort(evs){ return PF_PORT; }
 const PF_LONG_SONG = 41;   // ONE rule for Music and the Mic: up to 40 chords landscape φ, from the 41st portrait φ (Compose: twice — from its 82nd)
 // the Mic's take starts on a plan of 48, Compose's on 96 (twice as long on the landscape frame); each flips at the first doubling
 function _pfTakeBase(arr){ return (arr && arr[0] && arr[0].mic) ? 48 : 96; }
@@ -2199,7 +2198,7 @@ function computeGrid(arg, opts){
   // still drives per-cell widths below; only N/rows use the count.)
   const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
   // the frame's shape: a take by its chord count (it flips once, at 41), a loaded piece by how many blocks it paints
-  const _PR = pfPort(liveMode ? null : (Array.isArray(arg) ? arg : null));   // the portrait frame for THIS piece (φ, or 3:4 while a print is laid out)
+  const _PR = pfPort(liveMode ? null : (Array.isArray(arg) ? arg : null));   // the portrait frame (φ)
   const _port = (liveMode && opts && opts.livePortrait===false) ? false : true;   // ONE frame everywhere: portrait φ (Music, Compose, Mic, a song from the Mic) — a phone is held upright; no flip while a take grows
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
