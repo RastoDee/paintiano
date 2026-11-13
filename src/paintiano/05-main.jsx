@@ -5132,8 +5132,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       cx.fillStyle='#0b0b10'; cx.fillRect(0,0,W,H);
       cx.strokeStyle='rgba(201,168,76,.85)'; cx.lineWidth=2;
       cx.strokeRect(AX-2,AY-2,AW+4,AH+4);
-      if(srcCv && srcCv.width && srcCv.height){ const k=Math.max(AW/srcCv.width, AH/srcCv.height), w=srcCv.width*k, h=srcCv.height*k;
-        cx.save(); cx.beginPath(); cx.rect(AX,AY,AW,AH); cx.clip(); cx.drawImage(srcCv, AX+(AW-w)/2, AY+(AH-h)/2, w, h); cx.restore(); }
+      // …with the gold φ in its bottom-right corner, as on every Pro export (_drawPhiSignature)
+      if(srcCv && srcCv.width && srcCv.height){ const a=document.createElement('canvas'); a.width=AW; a.height=AH; const ax=a.getContext('2d');
+        const k=Math.max(AW/srcCv.width, AH/srcCv.height), w=srcCv.width*k, h=srcCv.height*k; ax.drawImage(srcCv, (AW-w)/2, (AH-h)/2, w, h);
+        try{ _drawPhiSignature(a); }catch(_){} cx.drawImage(a, AX, AY); }
       // the top margin: who painted it (a Signature's mark above the names)
       const _sig=!!sigActiveRef.current, NY=Math.round(M/2+(_sig ? 70 : 30));
       cx.textAlign='center'; cx.fillStyle=GOLD;
@@ -5161,8 +5163,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       for(let i=0;i<d0.length;i+=4){ const dark=d0[i]<128; d0[i]=201; d0[i+1]=168; d0[i+2]=76; d0[i+3]=dark?255:0; }
       tc.putImageData(id,0,0);
       cx.drawImage(t,AX+AW-QS,rowTop);
-      cx.font='italic 600 64px "Cormorant Garamond", serif'; cx.fillStyle=GOLD; cx.textAlign='center';
-      cx.fillText('\u03c6', W-Math.round(M/2), H-Math.round((H-(rowTop+QS))/2)+20);
       // PRODUCTION PACKAGE — one ZIP (iOS Safari drops extra downloads), no libs:
       // a minimal STORED zip is ~40 lines. Contains poster / raw art / print QR.
       const base='paintiano-'+pieceKey+'-'+(_fa ? _fa.keys.map((k,i)=>k+_fa.phs[i]).join('+') : artKey+'-v'+vNow)+'-'+mode+'-'+tone;
