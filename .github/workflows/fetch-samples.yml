@@ -19,8 +19,9 @@ jobs:
               if file "drop/$out.jpg" | grep -q "JPEG"; then echo "$out <- https://commons.wikimedia.org/wiki/File:$n" >> drop/sources.txt; return 0; fi
               sleep 2
             done; rm -f "drop/$out.jpg"; echo "FAIL $out" >> drop/sources.txt; }
-          get monalisa "Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg" "Leonardo_da_Vinci_-_Mona_Lisa_(Louvre,_Paris).jpg"
-          get wanderer "Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg" "Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg"
+          get rousseau "Henri_Rousseau_-_The_Sleeping_Gypsy_-_Google_Art_Project.jpg" "Henri_Rousseau_010.jpg" "La_Bohémienne_endormie.jpg" "Henri_Rousseau_-_La_Bohémienne_endormie.jpg"
+          get marcblue "Franz_Marc_-_Blaues_Pferd_I_-_Google_Art_Project.jpg" "Franz_Marc_Blaues_Pferd_I.jpg" "Franz_Marc_-_Blue_Horse_I.jpg"
+          get marclarge "Franz_Marc-The_Large_Blue_Horses-1911.jpg" "Franz_Marc_-_The_Large_Blue_Horses_-_Google_Art_Project.jpg" "Franz_Marc_-_Die_großen_blauen_Pferde.jpg" "Franz_Marc_Large_Blue_Horses.jpg"
           cat drop/sources.txt; ls -la drop; file drop/*
       - name: Commit the drop
         run: |
