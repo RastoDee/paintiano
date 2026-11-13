@@ -1,5 +1,6 @@
 import * as Tone from "tone";
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, memo, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { pfPromptBody } from "./ai-prompts.js";   // the AI prompts (shared with /api/compose)
 
 // ─────────────────────────────────────────────────────────────────────────────
