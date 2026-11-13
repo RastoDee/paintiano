@@ -11,3 +11,5 @@ FAIL marcblue
 FAIL marclarge
 marcblue <- https://commons.wikimedia.org/wiki/File:Marc,_Franz_-_Blue_Horse_I_-_Google_Art_Project.jpg
 marclarge <- https://commons.wikimedia.org/wiki/File:Franz_Marc_005.jpg
+renoir <- https://commons.wikimedia.org/wiki/File:Pierre-Auguste_Renoir,_Le_Moulin_de_la_Galette.jpg
+bruegel <- https://commons.wikimedia.org/wiki/File:Pieter_Bruegel_the_Elder_-_Hunters_in_the_Snow_(Winter)_-_Google_Art_Project.jpg
