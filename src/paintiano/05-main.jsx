@@ -16123,6 +16123,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:isI?'img':undefined, piece:'own', own:true, sel:null, u, pu:u, l:'', dir:'none' };
       feedResumeRef.current=null; feedStartRef.current=null; feedStepsRef.current=[]; feedPieceRef.current=true; feedLookRef.current=null;
       setFeedIntro(null); setFeedCards([c]); setFeedAt(0); setFeedLoaded(isI ? 'iown' : 'own'); setFeedHiRes(!isI);
+      if(metaHide){ feedCleanRef.current=true; setFeedClean(true); let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); }   // the Studio had gone quiet (its song line faded): For You opens just the painting too — a pinch brings everything back
       setForceSetup(true); requestAnimationFrame(()=>setStamp(x=>x+1)); setTimeout(()=>setStamp(x=>x+1), 120);   // the card's canvas is a new one: the painting so far is put back on it
       return; }
     _stHome().then(()=>setTimeout(()=>{ try{ feedUpRef.current && feedUpRef.current(); }catch(_){} }, 180)); };
