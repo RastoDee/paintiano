@@ -29279,6 +29279,22 @@ export default function Paintiano() {
     const vis=()=>{ if(document.visibilityState==='hidden'){ hid=Date.now(); keep(); return; } if(!hid) return; const away=Date.now()-hid; hid=0; if(away>30*60000 && mutedRef.current){ mutedRef.current=false; setMuted(false); } };
     document.addEventListener('visibilitychange', vis); window.addEventListener('pagehide', keep);
     return ()=>{ document.removeEventListener('visibilitychange', vis); window.removeEventListener('pagehide', keep); }; },[]);
+  // Leaving the app is silent from its very first moment, not only once the phone says the app is hidden (by then the last notes had
+  // sounded on for a while): a finger from the phone's bottom edge moving up — the way home or to the app switcher — hushes the output
+  // at once; the store apps also hear 'pfresign' from the app the moment it stops being the active one (the swipe home, the switcher,
+  // the lock button), Android its 'pause'. Only the output is hushed (nothing is stopped): if the phone stays in Paintiano (the finger
+  // lifts in it, the control centre closes) the sound is back as it was; leaving, the usual hidden-page silence and pause follow.
+  useEffect(()=>{ let edge=null, quiet=false, tm=null;
+    const hush=()=>{ quiet=true; clearTimeout(tm); try{ Tone.getDestination().mute=true; }catch(_){} };
+    const back=()=>{ if(!quiet) return; quiet=false; if(document.visibilityState!=='visible') return; try{ Tone.getDestination().mute=!!mutedRef.current; }catch(_){} };
+    const ts=(e)=>{ const t=e.touches && e.touches[0]; edge = (t && e.touches.length===1 && t.clientY > window.innerHeight*0.6 && _pfSysEdge(t.clientY)) ? {y:t.clientY} : null; };
+    const mv=(e)=>{ if(!edge || quiet) return; const t=e.touches && e.touches[0]; if(t && edge.y - t.clientY > 6) hush(); };
+    const up=()=>{ if(!edge) return; edge=null; if(!quiet) return; clearTimeout(tm); tm=setTimeout(back, 900); };   // still here a moment later: it was not the way out
+    document.addEventListener('touchstart', ts, {capture:true, passive:true}); document.addEventListener('touchmove', mv, {capture:true, passive:true});
+    document.addEventListener('touchend', up, {capture:true, passive:true}); document.addEventListener('touchcancel', up, {capture:true, passive:true});
+    window.addEventListener('pfresign', hush); window.addEventListener('pfactive', back); document.addEventListener('pause', hush); document.addEventListener('resume', back);
+    return ()=>{ clearTimeout(tm); document.removeEventListener('touchstart', ts, {capture:true}); document.removeEventListener('touchmove', mv, {capture:true}); document.removeEventListener('touchend', up, {capture:true}); document.removeEventListener('touchcancel', up, {capture:true});
+      window.removeEventListener('pfresign', hush); window.removeEventListener('pfactive', back); document.removeEventListener('pause', hush); document.removeEventListener('resume', back); }; },[]);
   // ── Lite "Surprise me" shuffle-bags (better perceived randomness) ──────────
   // surpriseArtistBag: a shuffled queue of artist keys; we pop one per tap and
   // only reshuffle once every artist has appeared — so none repeats until all
