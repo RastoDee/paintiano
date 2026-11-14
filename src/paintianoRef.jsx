@@ -27260,7 +27260,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             {card.vis==='ges' ? (<GuideGes lang={lang} rs={rs}/>)
               : card.vis==='wheel' ? (<GuideWheel id={card.id} lang={lang}/>)
               : card.vis==='pal5' ? (<GuidePal5 t={t} rs={rs}/>)
-              : (<span aria-hidden="true" style={{width:132,height:132,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:T(card.cat).g,boxShadow:'0 18px 60px rgba(0,0,0,.45)',fontSize:54,lineHeight:1,color:T(card.cat).dk?'#1a1408':'#fff'}}>{pfIcons(card.glyph)}</span>)}
+              : (<span aria-hidden="true" style={{width:132,height:132,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:T(card.id==='battle' ? 'battle' : card.cat).g,boxShadow:'0 18px 60px rgba(0,0,0,.45)',fontSize:54,lineHeight:1,color:T(card.id==='battle' ? 'battle' : card.cat).dk?'#1a1408':'#fff'}}>{pfIcons(card.glyph)}</span>)}
           </div>
           <div style={{fontSize:27*rs,fontWeight:700,lineHeight:1.12,textWrap:'balance'}}>{pfIcons(card.title)}</div>
           <div style={{marginTop:10,fontSize:16*rs,lineHeight:1.45,color:'rgba(242,238,232,.8)',maxWidth:340,textWrap:'balance'}}>{pfIcons(card.body)}</div>
@@ -27280,7 +27280,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
           {(()=>{ const _rows=_gRows(card.more); const _cut=(!sheetAll && _rows.length>4) ? _rows.slice(0,3) : _rows; return (<>
           {_cut.map((r,i)=>(
             <div key={i} style={{display:'flex',gap:12,padding:'11px 0',borderTop:'1px solid rgba(242,238,232,.07)'}}>
-              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(card.cat).g}}/>
+              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(card.id==='battle' ? 'battle' : card.cat).g}}/>
               <div style={{minWidth:0}}>
                 {r.h && (<div style={{fontSize:14.5*rs,fontWeight:700,lineHeight:1.3}}>{pfIcons(r.h)}</div>)}
                 <div style={{fontSize:13.5*rs,lineHeight:1.42,color:'rgba(242,238,232,.72)',marginTop:r.h?2:0}}>{pfIcons(r.x)}</div>
