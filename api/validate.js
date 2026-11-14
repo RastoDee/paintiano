@@ -81,7 +81,8 @@ export default async function handler(req) {
     // Mask the email for privacy (return only domain part)
     // a licence bought in the iOS app has no e-mail (Apple does not pass one on); `store` tells the app where it was bought
     const fromApple = String(row.order_id || '').startsWith('apple:');
-    const masked = (row.email && !fromApple) ? maskEmail(row.email) : null;
+    const fromGoogle = String(row.order_id || '').startsWith('google:');   // the Android app: Google passes no e-mail on either
+    const masked = (row.email && !fromApple && !fromGoogle) ? maskEmail(row.email) : null;
 
     // Tier drives entitlements in the app: 'pro' (full tool, AI only as a trial)
     // or 'pro_ai' (full tool + AI; /api/compose applies the daily fair use). Default to 'pro' for any
@@ -97,7 +98,7 @@ export default async function handler(req) {
     try { const w = await refundWindowEnd(row); refundUntil = w ? new Date(w).toISOString() : null; } catch (_) {}
 
     return json({
-      valid: true, status: 'active', email: masked, tier, refund_until: refundUntil, store: fromApple ? 'apple' : 'paddle',
+      valid: true, status: 'active', email: masked, tier, refund_until: refundUntil, store: fromApple ? 'apple' : (fromGoogle ? 'google' : 'paddle'),
       ai_until: ps.until ? new Date(ps.until).toISOString() : null,
       ai_expired: ps.expired,
     });

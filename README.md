@@ -92,10 +92,12 @@ Free three.
 
 ## Built-in pieces
 
-Seven pieces ship as base64 MIDI in `03-i18n.jsx` (`BUILTIN_PIECES` — key, name, bytes; the order is the index
+Eleven pieces ship as base64 MIDI in `03-i18n.jsx` (`BUILTIN_PIECES` — key, name, bytes; the order is the index
 everywhere). Liebestraum and Bumble-Bee are two of the original three (the third, a work still in copyright, gave way to Grieg’s In the Hall of the Mountain King in Nov 2026 — Mutopia, public domain; old links to it open Grieg); Clair de lune, Gymnopédie No.1,
 Für Elise and The Entertainer are public-domain works typeset by the Mutopia Project (public domain) and compiled to
-MIDI with LilyPond. Adding one: a constant pair + an entry in `BUILTIN_PIECES`, a tile in the sample sub-picker and the
+MIDI with LilyPond; so are the four added after them (Nov 2026): Bach’s Toccata in D minor (BWV 565 up to the Fugue),
+Chopin’s Fantaisie-Impromptu, Mussorgsky’s first Promenade and the 1st movement of Beethoven’s 5th (Mutopia’s piano
+reduction, the motto’s two fermatas held with tempo changes). Adding one: a constant pair + an entry in `BUILTIN_PIECES`, a tile in the sample sub-picker and the
 Lite picker, `api/og.js` PIECES, the og cards, the Guide's Music card — `npm run check` names what is missing.
 
 ## Installing on a phone
