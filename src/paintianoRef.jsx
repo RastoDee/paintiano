@@ -2620,6 +2620,27 @@ function _pieceCols(chords,gc,isBW,k,a,b){ const cn=chords.length; a=Math.max(0,
   for(let i=0; out.length<k; i++) out.push(out[i]);
   return out; }
 function _pieceDens(chords){ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } }
+// a stretch of the piece mixed into one colour (Nov 2026): the mean of its sampled chords, as before — but Spectral, Kontra
+// and Phi spread a key's notes round the whole wheel, so their mean went grey and a whole Rothko came out mud. Harmony is
+// the yardstick: there a key's notes sit side by side on the circle of fifths and their mix keeps its colour. A mix keeps
+// nearly as much of its notes' colour as the same notes keep in Harmony — where it lost more, it leans toward the stretch's
+// strongest family of hues (the most-heard notes, weighted by how vivid they are), only as far as it needs to.
+// Harmony itself is never touched. (hr is Harmony in the key as written: gc may sound the piece in another key, which
+// turns the hues but not how much colour the mix keeps.)
+function _mixIdx(chords,idx,gc,isBW,mode){ const n=idx.length; if(!n) return [120,100,160]; const m=[0,0,0], hr=[0,0,0], N=[], plain=isBW||mode==='harmony';
+  for(const i of idx){ const q=_picChord(chords,i,gc,isBW).rgb; m[0]+=q[0]/n; m[1]+=q[1]/n; m[2]+=q[2]/n; if(plain) continue;
+    const ch=chords[Math.min(chords.length-1,Math.max(0,i))]; const nt=ch&&(ch.n||ch.notes||[]); const L=nt?nt.length:0; if(!L){ hr[0]+=q[0]/n; hr[1]+=q[1]/n; hr[2]+=q[2]/n; continue; }
+    for(let j=0;j<L;j++){ const no=nt[j], mm=no.m!==undefined?no.m:no; const c=gc(mm, no.v!==undefined?no.v:80); N.push([c[0],c[1],c[2],1/L]);
+      const h=toHsl(c[0],c[1],c[2]), k=fromHsl(COF[((Math.round(mm)%12)+12)%12],h[1],h[2]), w=1/(L*n); hr[0]+=k[0]*w; hr[1]+=k[1]*w; hr[2]+=k[2]*w; } }
+  if(plain||!N.length) return m;
+  const cr=(c)=>Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2]); let aC=0,W=0; for(const q of N){ aC+=cr(q)*q[3]; W+=q[3]; } aC/=W||1; if(aC<24) return m;
+  const want=0.9*cr(hr), have=cr(m); if(have>=want-3) return m;
+  const B=new Array(12).fill(0), hb=N.map(q=>cr(q)<24?-1:Math.round(toHsl(q[0],q[1],q[2])[0]/30)%12); N.forEach((q,j)=>{ if(hb[j]>=0) B[hb[j]]+=cr(q)*q[3]; });
+  let b=0,bw=-1; for(let k=0;k<12;k++){ const w=B[k]+0.5*(B[(k+11)%12]+B[(k+1)%12]); if(w>bw){ bw=w; b=k; } }
+  const d=[0,0,0]; let dw=0; N.forEach((q,j)=>{ const h=hb[j]; if(h<0) return; const dk=Math.min((h-b+12)%12,(b-h+12)%12); if(dk>1) return; const w=cr(q)*q[3]*(dk?0.5:1); d[0]+=q[0]*w; d[1]+=q[1]*w; d[2]+=q[2]*w; dw+=w; });
+  if(!dw) return m; const dom=m.map((v,k)=>0.85*d[k]/dw+0.15*v); if(cr(dom)<=have) return m;
+  const at=(t)=>m.map((v,k)=>v+(dom[k]-v)*t); let lo=0,hi=1; if(cr(dom)>want) for(let it=0;it<12;it++){ const t=(lo+hi)/2; if(cr(at(t))<want) lo=t; else hi=t; }
+  return at(hi); }
 function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
   // notes are pre-sorted by caller (drawOne) when possible; sort defensively
   const sorted=notes.length>1?[...notes].sort((a,b)=>b.m-a.m):notes;
@@ -3654,7 +3675,7 @@ function _rkRect(ctx,x,y,w,h,f,rnd){
 function _rkVeil(ctx,v,rnd){ const e=v.feather*(1-v.k); ctx.fillStyle=_rkCss(v.col,v.a); _rkRect(ctx,v.x-e,v.y-e,v.w+2*e,v.h+2*e,v.feather*0.22*(1-v.k*0.4),rnd); }
 function _rkSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   const col=(t)=>_picChord(chords,_rkClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb;
-  const avg=(t0,t1)=>{ let c=[0,0,0],k=0; for(let t=t0;t<=t1;t+=Math.max(0.01,(t1-t0)/12)){ const q=col(t); c[0]+=q[0]; c[1]+=q[1]; c[2]+=q[2]; k++; } return c.map(v=>v/k); };
+  const avg=(t0,t1)=>{ const I=[]; for(let t=t0;t<=t1;t+=Math.max(0.01,(t1-t0)/12)) I.push(_rkClamp(Math.floor(t*cn),0,cn-1)); return _mixIdx(chords,I,gc,isBW,mode); };   /* the passage's chords fused — and never to grey (_mixIdx) */
   return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col,avg}; }
 function _rkDraw(ctx,list,reveal,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_rkClamp(reveal,0,1)); for(let i=0;i<n;i++){ const v=list[i]; const rnd=_rkR(v.id*29+61001,ss); rnd(); _rkVeil(ctx,v,rnd); } }
 function _rkGround(ctx,CW,CH,c,ss){ ctx.fillStyle=_rkCss(_rkMix(c,[0,0,0],0.3)); ctx.fillRect(0,0,CW,CH); const rnd=_rkR(61000,ss|0); rnd(); const f=Math.min(CW,CH)*0.05;   // the stain: darker at the edges, three feathered veils of the ground colour inward — paths only, so the SVG export matches to the pixel
@@ -19265,8 +19286,12 @@ function _fuRealOverlay(k, ctx, CW, CH, chords, lim, gc, seed, mode, ph){
   }
 }
 function _fuSample(k, chords, gc, seed, mode, ph){
-  let _pk=''; try{ _pk=String(gc(60,100))+String(gc(67,100))+String(gc(72,100)); }catch(_){}
-  const key=k+'|'+(ph|0)+'|'+(seed|0)+'|'+(chords.length)+'|'+(mode||'')+'|'+_pk+'|'+(chords[0]&&chords[0].n&&chords[0].n[0]?chords[0].n[0].m:0);
+  // the key holds everything the sample depends on: all twelve notes of the palette (three of them missed a Custom colour
+  // changed on any other note — the fusion kept the old colours), read at one fixed energy (in Real the colours move with
+  // the chord's energy, so the same sample was painted again and again), and the tier's variant cap (the same number is
+  // another painting on Free)
+  let _pk=''; const _e0=_curE; try{ _setCurE(0.5); for(let q=60;q<72;q++) _pk+=String(gc(q,100))+';'; }catch(_){} _setCurE(_e0);
+  const key=k+'|'+(ph|0)+'|'+(seed|0)+'|'+(chords.length)+'|'+(mode||'')+'|'+(_variantCap==null?'':_variantCap)+'|'+_pk+'|'+(chords[0]&&chords[0].n&&chords[0].n[0]?chords[0].n[0].m:0);
   const hit=_fuSampleCache.get(key); if(hit) return hit;
   let out={ground:null, pal:[]};
   try{
@@ -19275,11 +19300,13 @@ function _fuSample(k, chords, gc, seed, mode, ph){
     const cv=(typeof OffscreenCanvas!=='undefined') ? new OffscreenCanvas(W,H) : Object.assign(document.createElement('canvas'),{width:W,height:H});
     const c=cv.getContext('2d'); if(!c) return out;
     c.fillStyle = k==='pollock' ? '#f2ede0' : '#04040a'; c.fillRect(0,0,W,H);
-    const savedSeed=_artistSeed, savedE=_curE;
-    _setArtistSeed(seed); _setCurE(0.5);
-    _resetCtxState(c);
-    _fuRealOverlay(k, c, W, H, chords, chords.length, gc, seed, mode, ph);
-    _setArtistSeed(savedSeed); _setCurE(savedE);
+    const savedSeed=_artistSeed, savedE=_curE, savedNoBg=_noBg;
+    // the seed, the energy and the export flag go back even if a parent's engine throws — the fusion painted after it must
+    // not inherit them; and the sample is always the whole painting, also during a transparent export
+    try{ _setArtistSeed(seed); _setCurE(0.5); _noBg=false;
+      _resetCtxState(c);
+      _fuRealOverlay(k, c, W, H, chords, chords.length, gc, seed, mode, ph);
+    } finally { _setArtistSeed(savedSeed); _setCurE(savedE); _noBg=savedNoBg; }
     const d=c.getImageData(0,0,W,H).data; const cnt=new Map();
     for(let i=0;i<d.length;i+=4){ if(d[i+3]<128) continue; const q=((d[i]>>4)<<8)|((d[i+1]>>4)<<4)|(d[i+2]>>4); cnt.set(q,(cnt.get(q)||0)+1); }
     const arr=[...cnt.entries()].sort((a,b)=>b[1]-a[1]);
@@ -19295,11 +19322,29 @@ function _fuSample(k, chords, gc, seed, mode, ph){
     const _same=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])<56, _new=(c2)=>!out.pal.some(q=>_same(q,c2));
     for(let i=1;i<arr.length && out.pal.length<6;i++){ if(arr[i][1]<tot*0.012) break; const c2=toRgb(arr[i][0]); const g=out.ground; if(g && Math.abs(c2[0]-g[0])+Math.abs(c2[1]-g[1])+Math.abs(c2[2]-g[2])<60) continue;
       const _mx=Math.max(c2[0],c2[1],c2[2]), _mn=Math.min(c2[0],c2[1],c2[2]); if(_mx-_mn<40 && _mx>40 && _mn<215){ _greys.push(c2); continue; } if(_new(c2)) out.pal.push(c2); }
+    // the painting's own colours gathered by hue family, for the one palette of a new painter (E): a painter whose colours
+    // are spread over many shades — Kusama's shaded spheres, Mitchell's strokes, Kandinsky's small marks — shows no single
+    // shade over 1.2% and came back with one colour or none, so the partner's palette (Klee's ochres, Hokusai's greens)
+    // painted the whole fusion in one hue (Nov 2026). palE is taken only where the usual palette holds a single hue
+    // (_fuSpread); the take-turns palette (pal) is unchanged
+    if(out.pal.length>=3) out.palE=out.pal;
+    else { const E2=out.pal.slice(), H=[]; for(let k=0;k<24;k++) H.push([0,0,0,0]); const g=out.ground;
+      for(let i=0;i<d.length;i+=16){ if(d[i+3]<128) continue; const r=d[i],gg=d[i+1],bb=d[i+2], mx=Math.max(r,gg,bb), mn=Math.min(r,gg,bb); if(mx-mn<48) continue; const o=H[Math.floor(toHsl(r,gg,bb)[0]/15)%24]; o[0]+=r; o[1]+=gg; o[2]+=bb; o[3]++; }
+      const fam=H.filter(o=>o[3]>=tot/4*0.008).sort((a,b2)=>b2[3]-a[3]).map(o=>[Math.round(o[0]/o[3]),Math.round(o[1]/o[3]),Math.round(o[2]/o[3])]);
+      const _hu=(c)=>toHsl(c[0],c[1],c[2])[0], _ch=(c)=>Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2]), _sh=(q,c2)=>{ if(_ch(q)<48) return false; const dh=Math.abs(_hu(q)-_hu(c2)); return Math.min(dh,360-dh)<24; };   /* a shade of a hue already there counts once */
+      for(const c2 of fam){ if(E2.length>=4) break; if(g && Math.abs(c2[0]-g[0])+Math.abs(c2[1]-g[1])+Math.abs(c2[2]-g[2])<60) continue; if(!E2.some(q=>_same(q,c2)||_sh(q,c2))) E2.push(c2); }
+      for(const c2 of _greys){ if(E2.length>=3) break; if(!E2.some(q=>_same(q,c2))) E2.push(c2); }
+      out.palE=E2; }
     if(out.pal.length<3){ for(const c2 of _greys){ if(out.pal.length>=3) break; if(_new(c2)) out.pal.push(c2); } }
   }catch(_){ }
   if(_fuSampleCache.size>64) _fuSampleCache.clear();
   _fuSampleCache.set(key,out); return out;
 }
+const _fuVivid=(P)=>P.filter(c=>Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2])>=64).length;   // how many of a palette's colours are colours (chroma 64 and up)
+// how far round the wheel a palette's colours reach (chroma 64 and up; black, white and greys don't count): 0 for one hue or none,
+// under ~110° for shades of one family (browns and ochres, greens, violets)
+function _fuSpread(P){ const H=[]; for(const c of P){ const mx=Math.max(c[0],c[1],c[2]), mn=Math.min(c[0],c[1],c[2]); if(mx-mn>=64) H.push(toHsl(c[0],c[1],c[2])[0]); } if(H.length<2) return 0;
+  H.sort((a,b)=>a-b); let gap=360-H[H.length-1]+H[0]; for(let i=1;i<H.length;i++) gap=Math.max(gap,H[i]-H[i-1]); return 360-gap; }
 function _fuSnap(rgb, pal){ if(!pal||pal.length<2) return rgb; let best=pal[0], bd=1e9; for(const p of pal){ const d=(p[0]-rgb[0])**2+(p[1]-rgb[1])**2+(p[2]-rgb[2])**2; if(d<bd){bd=d;best=p;} } return best; }
 // Flat area idioms (Rothko fields, Wave stripes, Kusama panels, Bloom clouds…)
 // are the UNDERPAINTING of a crossing: they go down first and every gesture
@@ -19318,7 +19363,6 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const S = Math.min(CW,CH), n = chords.length; F._S = S;
   // samples of every parent's real engine for this song / seed / variant
   const SM = F.keys.map((k,i)=>_fuSample(k, chords, gc, sessionSeed, mode, F.phs[i]));
-  try{ globalThis.__FU_DBG={keys:F.keys,phs:F.phs,fs:F.fs,rv:F.rv,SM:SM.map(x=>({ground:x.ground,pal:x.pal}))}; }catch(_){}
   const _gi = _E ? F.roles.ground : 0;   // E: the ground parent's real ground for this song
   const g0 = SM[_gi] && SM[_gi].ground;
   if(g0){ F.ground=`rgb(${g0[0]},${g0[1]},${g0[2]})`; F.groundLum=g0[0]*.299+g0[1]*.587+g0[2]*.114; }
@@ -19356,7 +19400,10 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const _own={}; let _palE=null;
   const _v2=(F.rv|0)>=2;
   if(_E){ PDs.forEach((pd,i)=>{ for(const k in pd.mark){ const q=_v2 ? (_FU_SYN_MAP[k]||k) : k; if(_own[q]===undefined || pd.mark[k]>(PDs[_own[q]].mark[q]||0)) _own[q]=i; } });
-    const P=[]; if(!F.keys.some((k,i)=>k==='monet'||PDs[i].nosnap)){ for(let q=0;q<6;q++) for(let i=0;i<SM.length && P.length<6;i++){ const p=SM[i]&&SM[i].pal; if(p&&p[q]) P.push(p[q]); } }
+    let P=[]; if(!F.keys.some((k,i)=>k==='monet'||PDs[i].nosnap)){ const _il=(get)=>{ const Q=[]; for(let q=0;q<6;q++) for(let i=0;i<SM.length && Q.length<6;i++){ const p=SM[i]&&get(SM[i]); if(p&&p[q]) Q.push(p[q]); } return Q; };
+      P=_il(s=>s.pal);
+      /* a palette of one hue (Klimt's golds, Klee's ochres, Hokusai's greens) painted the whole new painter in it: then the parents' colours gathered by family */
+      if(P.length>=3 && _fuSpread(P)<=110){ const P2=_il(s=>s.palE||s.pal), w=_fuSpread(P); if(P2.length>=3 && (_fuSpread(P2)>=w+40 || (!_fuVivid(P) && _fuVivid(P2)))) P=P2; } }
     _palE=P.length>=3 ? P : null; }
   const _dAvg = _E ? 0.3+0.5*F.density : PDs.reduce((s,pd)=>s+(0.3+0.5*pd.density),0)/PDs.length;   // the compressed density the loop really uses
   let _exp=0; for(let ly=0; ly<F.layers; ly++){ const lf=(ly+1)/F.layers; _exp += Math.ceil(n/stride)*Math.min(1, _dAvg*(0.45+lf*0.55)*bigCap*crowd); }
@@ -19856,10 +19903,10 @@ const _bhxCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
 const _bhxLum=(c)=>c[0]*0.299+c[1]*0.587+c[2]*0.114;
 const _bhxSat=(c)=>{ const mx=Math.max(c[0],c[1],c[2]), mn=Math.min(c[0],c[1],c[2]); return mx?(mx-mn)/mx:0; };
 function _bhxSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
-  const raw=(t)=>_picChord(chords,_bhxClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb;
-  return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,raw}; }
+  const idx=(t)=>_bhxClamp(Math.floor(t*cn),0,cn-1); const raw=(t)=>_picChord(chords,idx(t),gc,isBW).rgb; const mix=(I)=>_mixIdx(chords,I,gc,isBW,mode);
+  return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,raw,idx,mix}; }
 // average colour of a stretch of the piece
-function _bhxAvg(S,t0,t1,n){ let a=[0,0,0]; for(let k=0;k<n;k++){ const c=S.raw(t0+(t1-t0)*(k+0.5)/n); a=[a[0]+c[0]/n,a[1]+c[1]/n,a[2]+c[2]/n]; } return a; }
+function _bhxAvg(S,t0,t1,n){ const I=[]; for(let k=0;k<n;k++) I.push(S.idx(t0+(t1-t0)*(k+0.5)/n)); return S.mix(I); }   /* never to grey: _mixIdx */
 // the woven surface: fine weft lines across, faint warp lines down — one pass over a region
 function _bhxWeave(ctx,x,y,w,h,u){ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
   const st=Math.max(1.6,u*0.07);
