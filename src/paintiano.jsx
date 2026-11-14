@@ -41570,15 +41570,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return h.toString(36); }catch(_){ return ''; } };
   const _btlHas = (k)=>{ const m=btlMine; return m.sent.some(x=>x.k===k) ? 'in' : (m.wait.some(x=>x.k===k) ? 'wait' : null); };
   // the BATTLE place: Battle's page under the tab — with the tickets that wait for the sign-in, if any
-  // before the BATTLE place opens the Studio falls silent: a piece that plays is paused as a tap on pause would pause it, and it
-  // does not start again on the way back — the user plays it again himself. True when Paintiano is then quiet, so Battle may play
-  // its own music (&music=1). A take being recorded and the mic painting live are never stopped from here — then false, and
-  // Battle stays muted
-  const _btlHush = ()=>{ try{ if(recording || stVidRec || micPaintingRef.current || micListeningRef.current) return false;
-    if(playingRef.current){ if(!handlePauseClickRef.current) return false; handlePauseClickRef.current(); }
-    return true; }catch(_){ return false; } };
-  const _btlTabOpen = (ask)=>{ try{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin); setStChg(null); setStShare(false); setStripOpen(false); const hushed=_btlHush();
-    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+(cameBtlRef.current ? '&seen=1' : '')+(hushed ? '&music=1' : '')+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
+  const _btlTabOpen = (ask)=>{ try{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin); setStChg(null); setStShare(false); setStripOpen(false);
+    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+(cameBtlRef.current ? '&seen=1' : '')+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
   const _btlPost = (path, body, link)=> fetch(PF_BTL+path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'}, link ? {Authorization:'Bearer '+link} : {}),body:JSON.stringify(body)}).then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok, s:r.status, d:d||{}})));
   const _btlMark = ()=>{ if(btlBusy || !_btlCan()) return; const k=_btlKey();
     if(_btlHas(k)){ if(_btlHas(k)==='wait'){ _btlTabOpen(); return; } _btlSay(_stT('btlInH')); return; }
@@ -41624,10 +41617,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _btlAny = btlMine.sent.length + btlMine.wait.length > 0;
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !_btlAny){ setBtlDot(false); return; }
     const ask=()=>{ const v=!!btlDotFn.current(); setBtlDot(o=>o===v ? o : v); }; ask(); const iv=setInterval(ask, 400); return ()=>clearInterval(iv); },[btlInfo, studioOn, studioHome, _btlAny]);
-  // in the Battle place the Studio rests (other paintings are judged there, Battle may play its own music, and the one here should
-  // not paint on unseen): _btlHush paused it on the way in; a piece that starts by itself while the place is open (an AI piece
-  // that finishes composing) is paused too. Nothing plays again on the way back — the user plays it himself (Nov 2026)
-  useEffect(()=>{ try{ if(btlTab && playing && !micPainting && !micListening && !recording && !stVidRec && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){} },[!!btlTab, playing]);
+  // in the Battle place the Studio rests: a piece that was playing is paused (other paintings are judged there, and the one here
+  // should not paint on unseen) and goes on from the same spot on the way back to the Studio — only if it was playing when left
+  const btlPausedRef = useRef(false);
+  useEffect(()=>{ try{
+    if(btlTab){ if(playing && !micPainting && !micListening && !recording && handlePauseClickRef.current){ btlPausedRef.current=true; handlePauseClickRef.current(); } }
+    else if(btlPausedRef.current){ btlPausedRef.current=false; if(studioOn && !studioHome && holdPaused && !playing && !micPainting && !micListening && handlePauseClickRef.current) handlePauseClickRef.current(); }
+  }catch(_){} },[!!btlTab]);
   // the gesture is shown once, where it can be used
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !chords.length) return; let seen=false; try{ seen=localStorage.getItem('paintiano_btl_hint')==='1'; }catch(_){}
     if(seen) return; const tm=setTimeout(()=>{ if(_stGuideOn.current) return;   /* the first-minute guide says it itself, as its third step */ try{ localStorage.setItem('paintiano_btl_hint','1'); }catch(_){} _btlSay(_stT('btlHint')); }, 6000); return ()=>clearTimeout(tm); },[btlInfo, studioHome, chords.length>0]);
