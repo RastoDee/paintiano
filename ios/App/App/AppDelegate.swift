@@ -46,8 +46,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 // The app's own view controller: the stock Capacitor one plus our small local plugin.
 class PfBridgeViewController: CAPBridgeViewController {
+    private var pfObservers: [NSObjectProtocol] = []
+
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(PfRefundPlugin())
+        // The moment the app stops being the active one (the swipe home, the app switcher, the lock button) the page hears
+        // "pfresign" and hushes its sound at once, instead of waiting for the later "hidden" while the last notes ring on;
+        // active again ("pfactive"), it gives the sound back if it never left (see 05-main.jsx).
+        let nc = NotificationCenter.default
+        pfObservers.append(nc.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.bridge?.triggerWindowJSEvent(eventName: "pfresign")
+        })
+        pfObservers.append(nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.bridge?.triggerWindowJSEvent(eventName: "pfactive")
+        })
+    }
+
+    deinit {
+        pfObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 }
 
