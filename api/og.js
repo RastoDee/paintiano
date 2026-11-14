@@ -11,6 +11,10 @@ const PIECES = {
   gymnopedie: 'Gymnopédie No.1 — Satie',
   furelise: 'Für Elise — Beethoven',
   entertainer: 'The Entertainer — Joplin',
+  toccata: 'Toccata in D minor — Bach',
+  fantaisie: 'Fantaisie-Impromptu — Chopin',
+  promenade: 'Promenade — Mussorgsky',
+  fifth: 'Symphony No.5 — Beethoven',
 };
 const ARTISTS = {
   raffel: 'RafFel', lichtenstein: 'Roy Lichtenstein', klee: 'Paul Klee', delaunay: 'Robert Delaunay', picasso: 'Picasso',

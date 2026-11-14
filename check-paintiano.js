@@ -55,6 +55,12 @@ const GUARDS = [
     must: ['pf-sh-poster'], symptom: 'the first screen goes black when the piece starts' },
   { file: '05-main.jsx', label: 'the read-scale reaches the Studio text',
     must: [/\.pf-st-tip\{[^}]*var\(--pf-read-scale/], symptom: 'A/A/A does not change the Studio tips' },
+  { file: '02-draw.jsx', label: 'a mixed stretch never goes grey (Rothko, Bauhaus)',
+    must: ['function _mixIdx(', 'return _mixIdx(chords,I,gc,isBW,mode)', 'return S.mix(I)', "mode==='harmony'"], symptom: 'Rothko and the Bauhaus Homage come out grey in Spectral / Kontra / Phi' },
+  { file: '02-draw.jsx', label: 'a fusion palette: shades of one hue count once, one hue alone is widened',
+    must: ['_new(c2)', 'function _fuSpread(', '_fuSpread(P)<=110'], symptom: 'a fusion is painted in one hue (all brown, all green)' },
+  { file: '02-draw.jsx', label: 'the fusion sample is keyed by the whole palette',
+    must: ['for(let q=60;q<72;q++) _pk+=', '_variantCap==null'], symptom: 'a fusion keeps the old colours after a Custom colour changes' },
 ];
 
 // ── 2. i18n completeness ──────────────────────────────────────────────────
@@ -134,6 +140,29 @@ function rosterIssues() {
   return out;
 }
 
+// ── 4. colour: a stretch mixed into one colour ───────────────────────────
+// _mixIdx (02-draw) is run here on a C-minor passage in the four palettes. In Harmony it must hand back the plain
+// mean (Harmony is the yardstick and is never touched); in the others the mix must keep at least 0.8 of the colour
+// the same notes keep in Harmony — a palette that spreads a key round the wheel used to mix it to grey.
+function mixIssues() {
+  const h = read('01-core-head.jsx'), d = read('02-draw.jsx');
+  const line = (src, start) => { const i = src.indexOf(start); return i < 0 ? null : src.slice(i, src.indexOf('\n', i)); };
+  const parts = ['const octL =', 'const COF=', 'const fromHsl=', 'const harmCol=', 'const SPEC_HUE=', 'const specCol=', 'const PHI_HUE=', 'const phiCol=', 'const KONTRA_HUE=', 'const kontraCol='].map((n) => line(h, n));
+  const t0 = h.indexOf('const toHsl = (r,g,b) => {'), t1 = h.indexOf('};', t0), m0 = d.indexOf('function _mixIdx('), m1 = d.indexOf('return at(hi); }', m0);
+  if (parts.includes(null) || t0 < 0 || t1 < 0 || m0 < 0 || m1 < 0) return ['could not read _mixIdx or the palette functions'];
+  const code = parts.join('\n') + '\n' + h.slice(t0, t1 + 2) + '\n' + d.slice(m0, m1 + 16) + `
+    function _picChord(chords,i,gc){ const ns=chords[i].n; const a=[0,0,0]; for(const q of ns){ const c=gc(q.m,q.v); a[0]+=c[0]; a[1]+=c[1]; a[2]+=c[2]; } return {rgb:a.map(v=>Math.round(v/ns.length))}; }
+    const P=[[48,60,63,67],[53,60,65,68],[55,59,62,67],[48,60,63,67],[51,55,58,63],[56,60,63,68],[55,59,62,65],[48,55,60,63]].map(ns=>({n:ns.map(m=>({m,v:80}))}));
+    const I=P.map((_,i)=>i), cr=(c)=>Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2]);
+    const plain=(gc)=>{ const m=[0,0,0]; for(const i of I){ const q=_picChord(P,i,gc).rgb; m[0]+=q[0]/I.length; m[1]+=q[1]/I.length; m[2]+=q[2]/I.length; } return m; };
+    ({ harm: cr(_mixIdx(P,I,harmCol,false,'harmony')), plain: cr(plain(harmCol)), Spectral: cr(_mixIdx(P,I,specCol,false,'spectral')), Phi: cr(_mixIdx(P,I,phiCol,false,'phi')), Kontra: cr(_mixIdx(P,I,kontraCol,false,'kontra')) })`;
+  let r; try { r = vm.runInNewContext(code, {}); } catch (e) { return ['_mixIdx did not run: ' + e.message]; }
+  const out = [];
+  if (!(r.harm > 40) || Math.abs(r.harm - r.plain) > 0.5) out.push('Harmony: a mixed stretch is no longer the plain mean of its chords');
+  for (const k of ['Spectral', 'Phi', 'Kontra']) if (!(r[k] >= 0.8 * r.harm)) out.push(`${k}: a C-minor passage mixes to grey (colour ${Math.round(r[k])}, Harmony keeps ${Math.round(r.harm)})`);
+  return out;
+}
+
 // ── run ───────────────────────────────────────────────────────────────────
 let failed = 0;
 const has = (src, p) => (p instanceof RegExp ? p.test(src) : src.includes(p));
@@ -154,6 +183,9 @@ else console.log('✓ i18n            every language holds every key');
 const roster = rosterIssues();
 if (roster.length) { failed++; console.error('✖ rosters'); roster.forEach((x) => console.error('     ' + x)); }
 else console.log('✓ rosters         painters and composers agree everywhere (05, 02, api/og.js, public/og, the Guide)');
+const mix = mixIssues();
+if (mix.length) { failed++; console.error('✖ colour'); mix.forEach((x) => console.error('     ' + x)); }
+else console.log('✓ colour          a mixed stretch keeps its colour in every palette (Rothko, Bauhaus)');
 const shape = shapeIssues();
 if (shape.length) { failed++; shape.forEach((x) => console.error('✖ shape           ' + x)); }
 else console.log('✓ shape           bracket balance and line endings as known');

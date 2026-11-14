@@ -2096,7 +2096,12 @@ function _computeSongCharacter(chords, kdR=0){
   const dynRange = Math.max(0, Math.min(1, (vMax-vMin)/127));
   // MIDI 36 (C2) .. 84 (C6) spans most musical registers; normalise into it.
   const register = Math.max(0, Math.min(1, (meanM+(+kdR||0)-36)/48));
-  const density  = Math.max(0, Math.min(1, (meanN-1)/5)); // 1 note → 0, 6+ → 1
+  const thick    = Math.max(0, Math.min(1, (meanN-1)/5)); // notes per chord: 1 note → 0, 6+ → 1
+  // DENSITY = how much music sounds per second (log: 1.8 notes/s → 0, 15/s → 1), plus a little of the chord's thickness.
+  // Notes per chord alone read Chopin's torrent of single notes (12/s) as sparser than Satie's slow chords (2/s).
+  let density = thick;
+  if(onsets.length>5){ let o0=Infinity,o1=-Infinity; for(const o of onsets){ if(o<o0)o0=o; if(o>o1)o1=o; } const span=(o1-o0)/1000;
+    if(span>=3){ const nps=nSum/span; const rate=Math.max(0, Math.min(1, Math.log(nps/1.8)/Math.log(15/1.8))); density=Math.min(1, 0.85*rate+0.15*thick); } }
   // Per-chord size weight: louder than the mean → bigger; lower (bass) than the
   // mean → bigger; softer/higher → smaller. Kept gentle (±~55%) so phrasing
   // shows without shredding the grid, then mean-normalised to 1.
@@ -2145,11 +2150,9 @@ function _computeSongCharacter(chords, kdR=0){
 // Music decides once by its chord count (as the Mic: 41); a take (Compose, Mic) grows — it starts landscape and flips ONCE to portrait
 // when its plan first doubles (Mic 48→96 at its 41st chord, Compose 96→192 at its 82nd), never back.
 const PF_PORT = PHI;       // the portrait frame's height / width
-// …except where a print is made: 3:4 while the POSTER tool is on (window.__pfFrame34), for a print / vector export
-// (window.__pfPrint34, set only while its layout is computed), and for the song a scanned poster opened (window.__pfQrSig:
-// that piece keeps its poster frame this visit — other songs paint φ).
-function _pfSig(a){ try{ if(!Array.isArray(a) || !a.length) return ''; const l=a[a.length-1]; return a.length+':'+Math.round((l && l.startMs) || 0); }catch(_){ return ''; } }
-function pfPort(evs){ try{ if(typeof window!=='undefined'){ if(window.__pfFrame34 || window.__pfPrint34) return 4/3; if(evs && window.__pfQrSig && _pfSig(evs)===window.__pfQrSig) return 4/3; } }catch(_){} return PF_PORT; }
+// ONE frame everywhere (Nov 2026): the Studio, Battle (its picture and stages), the QR poster's art, the song a scanned poster
+// opens and every print and vector — a painting never changes shape between Paintiano, Battle and the wall (prints were 3:4 before).
+function pfPort(evs){ return PF_PORT; }
 const PF_LONG_SONG = 41;   // ONE rule for Music and the Mic: up to 40 chords landscape φ, from the 41st portrait φ (Compose: twice — from its 82nd)
 // the Mic's take starts on a plan of 48, Compose's on 96 (twice as long on the landscape frame); each flips at the first doubling
 function _pfTakeBase(arr){ return (arr && arr[0] && arr[0].mic) ? 48 : 96; }
@@ -2200,7 +2203,7 @@ function computeGrid(arg, opts){
   // still drives per-cell widths below; only N/rows use the count.)
   const _layoutQ = (opts && opts.portraitGrow) ? Math.max(evs.length, totalQ) : totalQ;
   // the frame's shape: a take by its chord count (it flips once, at 41), a loaded piece by how many blocks it paints
-  const _PR = pfPort(liveMode ? null : (Array.isArray(arg) ? arg : null));   // the portrait frame for THIS piece (φ, or 3:4 for a print / poster)
+  const _PR = pfPort(liveMode ? null : (Array.isArray(arg) ? arg : null));   // the portrait frame (φ)
   const _port = (liveMode && opts && opts.livePortrait===false) ? false : true;   // ONE frame everywhere: portrait φ (Music, Compose, Mic, a song from the Mic) — a phone is held upright; no flip while a take grows
   // Smart N (column count) picker — minimizes wasted space in the last row.
   // Same as before; this just chooses a column count, not the canvas shape.
