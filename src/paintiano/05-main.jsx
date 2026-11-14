@@ -16100,7 +16100,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[]);
   // FULL SCREEN in the Studio (a choice, remembered): the painting covers the screen, its edges cropped — two fingers: spread on, pinch off
   // A picture is not stretched by itself: it comes in its own size; spread = full screen for that picture, the next one comes in its own size again
-  const [stFillM, setStFillM] = useState(()=>{ try{ return localStorage.getItem('paintiano_st_fill')==='1'; }catch(_){ return false; } });
+  // a short window (the in-app browser a link from Battle opens, Safari with its bars, a small iPhone): the whole painting would be narrow,
+  // so the Studio starts full screen there — unless this browser already chose (a pinch shows the whole painting and is remembered as before)
+  const [stFillM, setStFillM] = useState(()=>{ try{ const v=localStorage.getItem('paintiano_st_fill'); if(v==='1') return true; if(v==='0') return false; }catch(_){}
+    try{ const w=window.innerWidth, h=window.innerHeight; return h>w && w<=600 && !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) && (h-203)/1.618 < w*0.9; }catch(_){ return false; } });
   const [stFillPic, setStFillPic] = useState(false);
   const stFill = viewMode==='image' ? stFillPic : stFillM;
   useEffect(()=>{ setStFillPic(false); },[originalImgUrl]);
