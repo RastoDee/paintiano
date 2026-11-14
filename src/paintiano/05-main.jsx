@@ -5554,6 +5554,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const PF_BTL = 'https://battle.paintiano.app';
   const [btlInfo, setBtlInfo] = useState(null);   // {number, on}
   const [btlTab, setBtlTab] = useState(null);   // the BATTLE place is open: the address its page was opened with
+  const [btlAlone, setBtlAlone] = useState(false);   // Battle under the tab is paintings only (two fingers spread there): the tabs and the phone's bars go too
   const [btlDrag, setBtlDrag] = useState(null);   // the painting is being carried: {x, y, over, img, go}
   const [btlChgGlow, setBtlChgGlow] = useState(false);   // someone else's painting is exactly this one: Change lights up — change it and it is yours
   const [btlShow, setBtlShow] = useState(null);   // the carry shown without words (after Battle's Súťaž): {x0, y0, dx, dy, img}
@@ -5598,6 +5599,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(Array.isArray(d.got)){ const c=btlMineRef.current; const by=new Map(d.got.filter(x=>x && typeof x.t==='string' && typeof x.id==='string').map(x=>[x.t, x.id])); if(by.size) _btlMineSet({...c, sent:c.sent.map(x=> (x.t && by.has(x.t)) ? {k:x.k, id:by.get(x.t)} : x)}); }   // the paintings that went in at the sign-in: now known by their ids
       if(typeof d.gone==='string' && d.gone){ const c=btlMineRef.current; _btlMineSet({...c, sent:c.sent.filter(x=>x.id!==d.gone)}); }   // removed from the round on Battle's own page: its dot goes out
       if(typeof d.on==='boolean'){ setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:d.on, at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); }   // Battle says where its switch stands for this Paintiano — at once, no restart
+      if(typeof d.alone==='boolean') setBtlAlone(d.alone);   // two fingers in Battle: the paintings alone / everything back
       if(d.close){ setBtlTab(null); if(d.join) setTimeout(()=>{ try{ if(btlShowFnRef.current) btlShowFnRef.current(); }catch(_){} }, 500); } }catch(_){} };   // Súťaž in Battle: back to the Studio, which shows how a painting gets in
     window.addEventListener('message', msg);
     return ()=>{ document.removeEventListener('visibilitychange', on); window.removeEventListener('focus', on); window.removeEventListener('message', msg); }; },[]);
@@ -16000,6 +16002,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // in the Battle place the Studio rests: a piece that was playing is paused (other paintings are judged there, and the one here
   // should not paint on unseen) and goes on from the same spot on the way back to the Studio — only if it was playing when left
   const btlPausedRef = useRef(false);
+  // the paintings alone in Battle: the phone's bars go with the tabs (and come back with them, or when Battle closes)
+  const btlAloneOn = useRef(false);
+  useEffect(()=>{ const on=!!(btlTab && btlAlone); if(!btlTab && btlAlone){ setBtlAlone(false); } if(on===btlAloneOn.current) return; btlAloneOn.current=on; _pfSysBars(on); },[!!btlTab, btlAlone]);
   useEffect(()=>{ try{
     if(btlTab){ if(playing && !micPainting && !micListening && !recording && handlePauseClickRef.current){ btlPausedRef.current=true; handlePauseClickRef.current(); } }
     else if(btlPausedRef.current){ btlPausedRef.current=false; if(studioOn && !studioHome && holdPaused && !playing && !micPainting && !micListening && handlePauseClickRef.current) handlePauseClickRef.current(); }
@@ -17918,7 +17923,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           {btlTab && (<div className="pf-btl" role="region" aria-label="Paintiano Battle" style={{position:'fixed',inset:0,zIndex:100001,background:'#05050c'}}>
             <iframe key={btlTab} title="Paintiano Battle" src={btlTab} allow="clipboard-write; web-share; autoplay" style={{position:'absolute',inset:0,width:'100%',height:'100%',border:0,background:'#05050c',colorScheme:'dark'}}/>
             <div style={{display:'contents'}}>
-              <div className="pf-st-tabs2 st" style={{zIndex:1}}><button type="button" onClick={()=>{ setBtlTab(null); if(!studioHome) _stForYou(); }}>{_stT('sup')}</button><button type="button" disabled={studioHome && !(feedAt>=0 && feedCards[feedAt]) && !liveHomeOn} onClick={()=>{ setBtlTab(null); if(studioHome){ if(feedAt>=0 && feedCards[feedAt]) _feedTake(); else _stFromLive(); } }}>{_stT('studio')}</button><button type="button" className="on pf-btl-tab" aria-current="page" tabIndex={-1}>Battle</button></div>
+              <div className="pf-st-tabs2 st" style={{zIndex:1,transition:'opacity .3s ease',...(btlAlone ? {opacity:0,pointerEvents:'none'} : {})}}><button type="button" onClick={()=>{ setBtlTab(null); if(!studioHome) _stForYou(); }}>{_stT('sup')}</button><button type="button" disabled={studioHome && !(feedAt>=0 && feedCards[feedAt]) && !liveHomeOn} onClick={()=>{ setBtlTab(null); if(studioHome){ if(feedAt>=0 && feedCards[feedAt]) _feedTake(); else _stFromLive(); } }}>{_stT('studio')}</button><button type="button" className="on pf-btl-tab" aria-current="page" tabIndex={-1}>Battle</button></div>
             </div>
           </div>)}
           {_stPosterOn && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
