@@ -1697,6 +1697,17 @@ const PF_SHAPE_QS=['(min-width: 769px)','(min-height: 501px)','(orientation: lan
 // The legal sheet's tabs. The iOS app has no Pricing tab: prices there are Apple's, shown in the purchase window.
 const _pfLegalTabs = ()=> _pfIosApp() ? ['terms','privacy','refunds'] : ['pricing','terms','privacy','refunds'];
 const _pfIosApp = ()=>{ try{ return typeof window!=='undefined' && (window.__PF_NATIVE==='ios' || window.__PF_NATIVE==='android'); }catch(_){ return false; } };   // the store apps, iOS and Android alike
+// For You's painting alone (two fingers spread): the phone's own bars go too — in the store apps by the app itself (Capacitor's SystemBars:
+// the status bar, and Android's navigation bar or the iPhone's home line), in a browser that has full screen (Android, iPad) by full screen.
+// A browser opens full screen only on a touch: the spread asks, the fingers' lift opens it. The iPhone's browser keeps its bars (it has no full screen).
+let _pfFsAsk=false, _pfFsMine=false;
+function _pfSysBars(hide){ try{ const C=window.Capacitor, SB=C && C.Plugins && C.Plugins.SystemBars;
+  if(_pfIosApp()){ if(SB){ const r=hide ? SB.hide() : SB.show(); if(r && r.catch) r.catch(()=>{}); } return; }
+  if(hide){ _pfFsAsk=true; return; }
+  _pfFsAsk=false; if(_pfFsMine && document.fullscreenElement && document.exitFullscreen){ const r=document.exitFullscreen(); if(r && r.catch) r.catch(()=>{}); } _pfFsMine=false;
+}catch(_){} }
+try{ document.addEventListener('touchend', ()=>{ if(!_pfFsAsk) return; _pfFsAsk=false; try{ const d=document.documentElement;
+  if(!document.fullscreenElement && document.fullscreenEnabled && d.requestFullscreen){ const r=d.requestFullscreen({navigationUI:'hide'}); _pfFsMine=true; if(r && r.catch) r.catch(()=>{ _pfFsMine=false; }); } }catch(_){} }, {capture:true, passive:true}); }catch(_){}
 const ST_PAL_NOTES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const _stPalHex=(rgb)=>'#'+rgb.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
 const _stPalRgb=(h)=>{ const m=/^#?([0-9a-f]{6})$/i.exec(String(h||'')); if(!m) return [136,136,136]; const n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -2798,6 +2809,7 @@ const STUDIO_HOME_CSS = `
 .pf-sh-mutefl{position:absolute;left:50%;top:50%;z-index:7;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);color:#fff;pointer-events:none;animation:pfShMuteFl 1s ease-out both}
 @keyframes pfShMuteFl{0%{opacity:0;transform:scale(.72)}16%{opacity:1;transform:scale(1.07)}28%{transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
 .pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-flash,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-card,.pf-fy-clean .pf-lh-foot{display:none!important}
+.pf-fy-clean .pf-sh-stage::after{display:none!important}
 .pf-fy-cleanhint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);z-index:20;transform:translateX(-50%);white-space:nowrap;padding:9px 16px;border-radius:999px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);color:#f2eee8;font-size:13px;font-weight:600;letter-spacing:.01em;pointer-events:none;animation:pfFyHint 2.6s ease both}
 @keyframes pfFyHint{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,0)}}
 @keyframes pfShPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
@@ -5556,7 +5568,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const btlMineRef = useRef(btlMine); btlMineRef.current = btlMine;
   const _btlMineSet = (m)=>{ btlMineRef.current=m; setBtlMineRaw(m); try{ localStorage.setItem('paintiano_btl_mine', JSON.stringify(m)); }catch(_){} };
   const btlAskAt = useRef(Date.now());
-  useEffect(()=>{ if(_pfIosApp()) return; let on=true;
+  useEffect(()=>{ let on=true;
     try{ const c=JSON.parse(sessionStorage.getItem('paintiano_btl')||'null'); if(c && c.number && Date.now()-c.at < 5*60000){ setBtlInfo(c); if(!hidOk) return; } }catch(_){}   // the admin's device always asks afresh
     const tm=setTimeout(()=>{ try{ fetch(PF_BTL+'/api/round').then(r=>r.ok ? r.json() : null).then(d=>{ if(!on || !d || !d.round) return;
       const v={number:d.round.number|0, on:d.on===true, at:Date.now()}; setBtlInfo(v); try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} }).catch(()=>{}); }catch(_){} }, (hidOk || btlMineRef.current.link || btlMineRef.current.wait.length) ? 0 : 2500);
@@ -5566,7 +5578,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     document.addEventListener('visibilitychange', again); window.addEventListener('focus', again);
     return ()=>{ on=false; clearTimeout(tm); document.removeEventListener('visibilitychange', again); window.removeEventListener('focus', again); };
   },[hidOk, hidOpen]);
-  const _btlOn = ()=> !!(btlInfo && btlInfo.on && !_pfIosApp());
+  const _btlOn = ()=> !!(btlInfo && btlInfo.on);   // the web and the store apps alike
   const _btlN = ()=>{ const m=btlMine; return Math.min(3, (m.count==null ? m.sent.length : m.count) + m.wait.length); };   // Battle's own count once it is known
   // how many are in, as Battle counts them (asked on load and when Paintiano is looked at again; none there → none are lit here)
   const btlCntAt = useRef(0);
@@ -5575,7 +5587,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(d.gone){ _btlMineSet({...c, link:null, count:null}); return; } if(typeof d.count==='number') _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }).catch(()=>{}); }catch(_){} };
   const _btlLinked = (lk)=>{ if(!/^L\.[0-9a-f-]{36}\.\d+\.[A-Za-z0-9_-]+$/.test(lk)) return false; const m=btlMineRef.current;
     _btlMineSet({...m, link:lk, sent:m.sent.concat(m.wait.map(w=>({k:w.k, id:null, t:w.t}))), wait:[], count:null}); return true; };   // t: the ticket it went in with — Battle says which painting it became
-  useEffect(()=>{ if(_pfIosApp()) return; const on=()=>{ if(!document.hidden) _btlCount(); };
+  useEffect(()=>{ const on=()=>{ if(!document.hidden) _btlCount(); };
     document.addEventListener('visibilitychange', on); window.addEventListener('focus', on);
     // Battle's page under the tab speaks to Paintiano: the link once it knows the account, the count, and "close me"
     const msg=(e)=>{ try{ if(e.origin!==PF_BTL || !e.data || e.data.type!=='pf-battle') return; const d=e.data;
@@ -5611,7 +5623,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [btlModeBusy, setBtlModeBusy] = useState(false);
   const _btlHere = (m)=> m==='on' || (m==='test' && !/^https:\/\/(www\.)?paintiano\.app$/.test(window.location.origin));   // is Battle shown in THIS Paintiano at that position?
   const _btlModeSeen = (m)=>{ setBtlMode(m); setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:_btlHere(m), at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); };
-  useEffect(()=>{ if(!hidOpen || !hidOk || _pfIosApp()) return; const lk=btlMineRef.current.link; if(!lk){ setBtlMode(null); return; } let on=true;
+  useEffect(()=>{ if(!hidOpen || !hidOk) return; const lk=btlMineRef.current.link; if(!lk){ setBtlMode(null); return; } let on=true;
     fetch(PF_BTL+'/api/round', {headers:{Authorization:'Bearer '+lk}}).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on) return; if(d && d.admin && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else setBtlMode(null); }).catch(()=>{ if(on) setBtlMode(null); });
     return ()=>{ on=false; }; },[hidOpen, hidOk]);
   const _btlModeSet = (m)=>{ if(btlModeBusy || m===btlMode) return; const lk=btlMineRef.current.link; if(!lk) return; setBtlModeBusy(true);
@@ -5620,7 +5632,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const hidBtlAsk = useRef(false);
   // This device is not linked to a Battle account yet (e.g. paintiano.app while Battle is off there): the row signs in — Battle opens here, straight on its sign-in;
   // once the account is known, it closes by itself and the three positions are in the row. Otherwise (the app, or not the admin) Battle's own page.
-  const _hidBtl = ()=>{ if(!btlMineRef.current.link && !_pfIosApp()){ hidBtlAsk.current=true; setHidOpen(false); _btlTabOpen(true); return; }
+  const _hidBtl = ()=>{ if(!btlMineRef.current.link){ hidBtlAsk.current=true; setHidOpen(false); _btlTabOpen(true); return; }
     try{ sessionStorage.removeItem('paintiano_btl'); }catch(_){} try{ if(!window.open(PF_BTL+'/#switch', '_blank')) window.location.href=PF_BTL+'/#switch'; }catch(_){} };
   const _hidChip = ()=> setAddrChip(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_addr_chip', nv?'1':'0'); }catch(_){} return nv; });
   const _hidPost = ()=> setPosterMaker(v=>{ const nv=!v; try{ localStorage.setItem('paintiano_postermaker', nv?'1':'0'); }catch(_){} return nv; });
@@ -16639,12 +16651,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [feedClean, setFeedClean] = useState(false); const feedCleanRef = useRef(false); feedCleanRef.current = feedClean;
   const [feedCleanHint, setFeedCleanHint] = useState(0);
   useEffect(()=>{ if(!studioHome){ feedCleanRef.current=false; setFeedClean(false); } },[studioHome]);
+  useEffect(()=>{ const on=!!(feedClean && studioHome); _pfSysBars(on); if(!on) return;   // the phone's bars go with everything else (and come back with it)
+    const vis=()=>{ if(document.visibilityState==='visible' && feedCleanRef.current) _pfSysBars(true); };   // back in the app: the app hides them again
+    const fsc=()=>{ if(document.fullscreenElement){ _pfFsMine=true; return; } if(_pfFsMine && document.visibilityState==='visible' && feedCleanRef.current){ _pfFsMine=false; feedCleanRef.current=false; setFeedClean(false); setFeedCleanHint(0); } };   // Android's back left full screen: everything comes back
+    document.addEventListener('visibilitychange', vis); document.addEventListener('fullscreenchange', fsc);
+    return ()=>{ document.removeEventListener('visibilitychange', vis); document.removeEventListener('fullscreenchange', fsc); }; },[feedClean, studioHome]);
   useEffect(()=>{ if(!feedCleanHint) return; const tm=setTimeout(()=>setFeedCleanHint(0), 2600); return ()=>clearTimeout(tm); },[feedCleanHint]);
   useEffect(()=>{ if(!studioHome) return;
     let d0=0, done=false; const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
     const st=(e)=>{ if(e.touches.length===2 && !document.querySelector('[role="dialog"]')){ d0=dist(e.touches); done=false; } };
     const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(r<=1.22 && r>=0.82) return; done=true;
-      const v=r>1; if(feedCleanRef.current===v) return; feedCleanRef.current=v; setFeedClean(v); _stBuzz(10);
+      const v=r>1; if(feedCleanRef.current===v) return; feedCleanRef.current=v; setFeedClean(v); _stBuzz(10); if(v) _pfSysBars(true);
       if(v){ let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); } else setFeedCleanHint(0); };
     const en=(e)=>{ if(e.touches.length<2) d0=0; };
     document.addEventListener('touchstart', st, {passive:true}); document.addEventListener('touchmove', mv, {passive:true}); document.addEventListener('touchend', en, {passive:true}); document.addEventListener('touchcancel', en, {passive:true});
@@ -17948,7 +17965,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                       <span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#f2d27a,#c9a84c)'}}>⚔</span>
                       <span style={{flex:1,minWidth:0}}><b>{_stT('hidBtl')}</b><small>{btlMode==='on' ? 'paintiano.app + dev' : btlMode==='test' ? 'dev' : '—'}</small></span>
                       <span role="radiogroup" aria-label="Battle" className="pf-hid-seg" style={{opacity:btlModeBusy ? .5 : 1}}>{[['off','Off'],['test','Test'],['on','On']].map(([m, l])=>(<button key={m} type="button" role="radio" aria-checked={btlMode===m} className={btlMode===m ? 'on' : ''} disabled={btlModeBusy} onClick={()=>_btlModeSet(m)}>{l}</button>))}</span></div>)
-                      : _sw(!!(btlInfo && btlInfo.on), _hidBtl, '⚔', 'linear-gradient(135deg,#f2d27a,#c9a84c)', _stT('hidBtl'), _stT((btlMineRef.current.link || _pfIosApp()) ? 'hidBtlS' : 'hidBtlL'))}
+                      : _sw(!!(btlInfo && btlInfo.on), _hidBtl, '⚔', 'linear-gradient(135deg,#f2d27a,#c9a84c)', _stT('hidBtl'), _stT((btlMineRef.current.link) ? 'hidBtlS' : 'hidBtlL'))}
                     <div className="pf-hid-r" style={{cursor:'default'}}><span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#9be0b8,#3fa97a)'}}>⤢</span><span style={{flex:1,minWidth:0}}><b>{_stT('hidExp')}</b><small>{_stT('hidExpS')}</small></span><span aria-hidden="true" style={{flex:'none',width:46,textAlign:'center',color:'#e2c477',fontSize:18,fontWeight:700}}>✓</span></div>
                   </div>
                   <button type="button" className="pf-hid-lock" onClick={_hidLock}>{_stT('hidLock')}</button>
