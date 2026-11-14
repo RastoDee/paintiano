@@ -41570,8 +41570,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return h.toString(36); }catch(_){ return ''; } };
   const _btlHas = (k)=>{ const m=btlMine; return m.sent.some(x=>x.k===k) ? 'in' : (m.wait.some(x=>x.k===k) ? 'wait' : null); };
   // the BATTLE place: Battle's page under the tab — with the tickets that wait for the sign-in, if any
+  // the notch at the top in px: Battle is drawn under it too and has to know where its own content may start
+  const _btlSafeTop = ()=>{ try{ const d=document.createElement('div'); d.style.cssText='position:fixed;left:0;top:0;width:1px;height:env(safe-area-inset-top, 0px);visibility:hidden;pointer-events:none'; document.body.appendChild(d); const h=Math.round(d.getBoundingClientRect().height)||0; d.remove(); return Math.max(0, Math.min(120, h)); }catch(_){ return 0; } };
   const _btlTabOpen = (ask)=>{ try{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin); setStChg(null); setStShare(false); setStripOpen(false);
-    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+(cameBtlRef.current ? '&seen=1' : '')+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
+    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+(cameBtlRef.current ? '&seen=1' : '')+'&st='+_btlSafeTop()+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
   const _btlPost = (path, body, link)=> fetch(PF_BTL+path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'}, link ? {Authorization:'Bearer '+link} : {}),body:JSON.stringify(body)}).then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok, s:r.status, d:d||{}})));
   const _btlMark = ()=>{ if(btlBusy || !_btlCan()) return; const k=_btlKey();
     if(_btlHas(k)){ if(_btlHas(k)==='wait'){ _btlTabOpen(); return; } _btlSay(_stT('btlInH')); return; }
@@ -43464,11 +43466,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           })()}
         {(btlTab || btlDrag || btlMsg || _stGuideOk || _stPosterOn) && typeof document!=='undefined' && createPortal((()=>{ const _stop=(e)=>e.stopPropagation();   /* on the page itself: the same from the home and from the Studio, above both */
           return (<div onClick={_stop} onPointerDown={_stop} onPointerUp={_stop} onMouseDown={_stop} onTouchStart={_stop} onTouchEnd={_stop}>
-          {btlTab && (<div className="pf-btl" role="region" aria-label="Paintiano Battle" style={{position:'fixed',inset:0,zIndex:100001,background:'#05050c',display:'flex',flexDirection:'column'}}>
-            <div style={{flex:'none',height:'calc(env(safe-area-inset-top, 0px) + 58px)',position:'relative'}}>
+          {/* Battle fills the whole screen and the three tabs lie over it, exactly where Battle's own title is on the home screen: the two look the same */}
+          {btlTab && (<div className="pf-btl" role="region" aria-label="Paintiano Battle" style={{position:'fixed',inset:0,zIndex:100001,background:'#05050c'}}>
+            <iframe key={btlTab} title="Paintiano Battle" src={btlTab} allow="clipboard-write; web-share; autoplay" style={{position:'absolute',inset:0,width:'100%',height:'100%',border:0,background:'#05050c',colorScheme:'dark'}}/>
+            <div style={{display:'contents'}}>
               <div className="pf-st-tabs2 st" style={{zIndex:1}}><button type="button" onClick={()=>{ setBtlTab(null); if(!studioHome) _stForYou(); }}>{_stT('sup')}</button><button type="button" disabled={studioHome && !(feedAt>=0 && feedCards[feedAt]) && !liveHomeOn} onClick={()=>{ setBtlTab(null); if(studioHome){ if(feedAt>=0 && feedCards[feedAt]) _feedTake(); else _stFromLive(); } }}>{_stT('studio')}</button><button type="button" className="on pf-btl-tab" aria-current="page" tabIndex={-1}>Battle</button></div>
             </div>
-            <iframe key={btlTab} title="Paintiano Battle" src={btlTab} allow="clipboard-write; web-share; autoplay" style={{flex:1,minHeight:0,width:'100%',border:0,background:'#0f0f12',colorScheme:'dark'}}/>
           </div>)}
           {_stPosterOn && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
             /* it only shows the painting: every touch goes through to the canvas under it (a tap plays, a swipe changes the look, a hold carries it to Battle) */

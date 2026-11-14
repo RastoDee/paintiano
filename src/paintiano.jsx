@@ -31225,6 +31225,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // Battle's page under the tab speaks to Paintiano: the link once it knows the account, the count, and "close me"
     const msg=(e)=>{ try{ if(e.origin!==PF_BTL || !e.data || e.data.type!=='pf-battle') return; const d=e.data;
       if(typeof d.link==='string'){ const had=!!btlMineRef.current.link, w=btlMineRef.current.wait.length; const fresh=_btlLinked(d.link); if(hidBtlAsk.current && btlMineRef.current.link){ hidBtlAsk.current=false; setBtlTab(null); setHidOpen(true); } else if(fresh && (!had || w)) _btlSay(_stT('btlLinked')); }
+      if(d.out===true){ const c=btlMineRef.current; if(c.link) _btlMineSet({...c, link:null, count:null}); return; }   // signed out in Battle under the tab: the link is forgotten — the tab no longer signs in by it, and paintings wait for the next sign-in
       if(typeof d.count==='number'){ const c=btlMineRef.current; _btlMineSet({...c, count:d.count, sent:(d.count===0 ? [] : c.sent)}); }
       if(Array.isArray(d.got)){ const c=btlMineRef.current; const by=new Map(d.got.filter(x=>x && typeof x.t==='string' && typeof x.id==='string').map(x=>[x.t, x.id])); if(by.size) _btlMineSet({...c, sent:c.sent.map(x=> (x.t && by.has(x.t)) ? {k:x.k, id:by.get(x.t)} : x)}); }   // the paintings that went in at the sign-in: now known by their ids
       if(typeof d.gone==='string' && d.gone){ const c=btlMineRef.current; _btlMineSet({...c, sent:c.sent.filter(x=>x.id!==d.gone)}); }   // removed from the round on Battle's own page: its dot goes out
