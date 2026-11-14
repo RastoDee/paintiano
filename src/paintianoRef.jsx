@@ -31246,6 +31246,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // knows the account (it may only send that account's paintings); until then the carried ones wait here as tickets and
   // the tab opens for the one sign-in. Three a round. Not in the iOS / Android app yet.
   const PF_BTL = 'https://battle.paintiano.app';
+  // the iPhone app's TestFlight (and Xcode) build says so itself (window.PF_TESTFLIGHT, set by the app before the page loads): Battle's TEST position
+  // shows there, never in the App Store build — Paintiano passes it on to Battle as tf=1
+  const PF_TF = (()=>{ try{ return window.PF_TESTFLIGHT===true; }catch(_){ return false; } })();
+  const PF_TFQ = PF_TF ? '?tf=1' : '';
   const [btlInfo, setBtlInfo] = useState(null);   // {number, on}
   const [btlMeOff, setBtlMeOff] = useState(()=>{ try{ return localStorage.getItem('paintiano_btl_off')==='1'; }catch(_){ return false; } });   // Styles & palettes → Battle off: no tab here, whatever the central switch says
   const [btlTab, setBtlTab] = useState(null);   // the BATTLE place is open: the address its page was opened with
@@ -31268,11 +31272,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const btlAskAt = useRef(Date.now());
   useEffect(()=>{ let on=true;
     try{ const c=JSON.parse(sessionStorage.getItem('paintiano_btl')||'null'); if(c && c.number && Date.now()-c.at < 5*60000) setBtlInfo(c); }catch(_){}   // the last known position at once — and Battle is asked afresh anyway
-    const tm=setTimeout(()=>{ try{ fetch(PF_BTL+'/api/round').then(r=>r.ok ? r.json() : null).then(d=>{ if(!on || !d || !d.round) return;
+    const tm=setTimeout(()=>{ try{ fetch(PF_BTL+'/api/round'+PF_TFQ).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on || !d || !d.round) return;
       const v={number:d.round.number|0, on:d.on===true, at:Date.now()}; setBtlInfo(v); try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} }).catch(()=>{}); }catch(_){} }, (hidOk || btlMineRef.current.link || btlMineRef.current.wait.length) ? 0 : 2500);
     // …and again every time Paintiano comes back to the front (the switch may have moved meanwhile in the Battle web app): the tab follows at once
     const again=()=>{ try{ if(document.hidden || !on) return; const c=btlAskAt.current; if(Date.now()-c < 2000) return; btlAskAt.current=Date.now();
-      fetch(PF_BTL+'/api/round').then(r=>r.ok ? r.json() : null).then(d=>{ if(!on || !d || !d.round) return; const v={number:d.round.number|0, on:d.on===true, at:Date.now()}; setBtlInfo(v); try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} }).catch(()=>{}); }catch(_){} };
+      fetch(PF_BTL+'/api/round'+PF_TFQ).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on || !d || !d.round) return; const v={number:d.round.number|0, on:d.on===true, at:Date.now()}; setBtlInfo(v); try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} }).catch(()=>{}); }catch(_){} };
     document.addEventListener('visibilitychange', again); window.addEventListener('focus', again); window.addEventListener('pageshow', again);
     return ()=>{ on=false; clearTimeout(tm); document.removeEventListener('visibilitychange', again); window.removeEventListener('focus', again); window.removeEventListener('pageshow', again); };
   },[hidOk, hidOpen]);
@@ -31322,7 +31326,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _btlHere = (m)=> m==='on' || (m==='test' && !/^https:\/\/(www\.)?paintiano\.app$/.test(window.location.origin));   // is Battle shown in THIS Paintiano at that position?
   const _btlModeSeen = (m)=>{ setBtlMode(m); setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:_btlHere(m), at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); };
   useEffect(()=>{ if(!hidOpen || !hidOk) return; let on=true;
-    fetch(PF_BTL+'/api/round').then(r=>r.ok ? r.json() : null).then(d=>{ if(!on) return; if(d && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else setBtlMode(null); }).catch(()=>{ if(on) setBtlMode(null); });
+    fetch(PF_BTL+'/api/round'+PF_TFQ).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on) return; if(d && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else setBtlMode(null); }).catch(()=>{ if(on) setBtlMode(null); });
     return ()=>{ on=false; }; },[hidOpen, hidOk]);
   const hidBtlAsk = useRef(false);
   // This device is not linked to a Battle account yet (e.g. paintiano.app while Battle is off there): the row signs in — Battle opens here, straight on its sign-in;
@@ -41634,8 +41638,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the notch at the top in px: Battle is drawn under it too and has to know where its own content may start
   const _btlSafeTop = ()=>{ try{ const d=document.createElement('div'); d.style.cssText='position:fixed;left:0;top:0;width:1px;height:env(safe-area-inset-top, 0px);visibility:hidden;pointer-events:none'; document.body.appendChild(d); const h=Math.round(d.getBoundingClientRect().height)||0; d.remove(); return Math.max(0, Math.min(120, h)); }catch(_){ return 0; } };
   const _btlTabOpen = (ask)=>{ try{ const m=btlMineRef.current, o=encodeURIComponent(window.location.origin); setStChg(null); setStShare(false); setStripOpen(false);
-    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+(cameBtlRef.current ? '&seen=1' : '')+'&st='+_btlSafeTop()+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
-  const _btlPost = (path, body, link)=> fetch(PF_BTL+path,{method:'POST',headers:Object.assign({'Content-Type':'application/json'}, link ? {Authorization:'Bearer '+link} : {}),body:JSON.stringify(body)}).then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok, s:r.status, d:d||{}})));
+    setBtlTab(PF_BTL+'/#'+(m.wait.length ? 'tickets='+m.wait.map(w=>w.t).join(',') : 'embed=1')+'&back='+o+'&lang='+encodeURIComponent(lang||'EN')+(m.link ? '&link='+encodeURIComponent(m.link) : '')+(ask===true ? '&signin=1' : '')+(cameBtlRef.current ? '&seen=1' : '')+'&st='+_btlSafeTop()+(PF_TF ? '&tf=1' : '')+'&at='+Date.now()); }catch(_){} };   // Battle speaks Paintiano's language and, where Paintiano knows the account, is signed in with it
+  const _btlPost = (path, body, link)=> fetch(PF_BTL+path+(path==='/api/ticket' ? PF_TFQ : ''),{method:'POST',headers:Object.assign({'Content-Type':'application/json'}, link ? {Authorization:'Bearer '+link} : {}),body:JSON.stringify(body)}).then(r=>r.json().catch(()=>null).then(d=>({ok:r.ok, s:r.status, d:d||{}})));
   const _btlMark = ()=>{ if(btlBusy || !_btlCan()) return; const k=_btlKey();
     if(_btlHas(k)){ if(_btlHas(k)==='wait'){ _btlTabOpen(); return; } _btlSay(_stT('btlInH')); return; }
     if(_btlN()>=3){ _btlSay(_stT('btlFull')); return; }
