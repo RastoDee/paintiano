@@ -42124,7 +42124,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     _stPrev(); return true;   // ↓ back to the painting before
   };
   // … also on the dark around the painting
-  const _stOvStart = (e)=>{ { const o=_swipeStartRef.current; if(o && o.fd && 0){ _swipeStartRef.current=null; _sdEnd(o.fd, 0); return; } }   // a second finger beside a painting under the finger (moved, so the finger lands here): the drag lets go as on the painting — dropped, the painting stayed off the screen (black, the music on)
+  const _stOvStart = (e)=>{ { const o=_swipeStartRef.current; if(o && o.fd){ _swipeStartRef.current=null; _sdEnd(o.fd, 0); return; } }   // a second finger beside a painting under the finger (moved, so the finger lands here): the drag lets go as on the painting — dropped, the painting stayed off the screen (black, the music on)
     _fdFinish();   // a painting still landing lands at once (as on the painting)
     if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), e:_pfSysEdge(tt.clientY)}; _swipeWasGestureRef.current=false; };
   const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt || st.e) return;   // from the phone's edge: its own gesture (_pfSysEdge)
