@@ -26284,6 +26284,12 @@ function _pfKeepAlive(on){ try{ if(!_pfIsIOS()) return;
 }catch(_){} }
 try{ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') _pfKeepAlive(false); }); }catch(_){}
 try{ const _kg=()=>_pfKeepAlive(true); document.addEventListener('touchend', _kg, {capture:true, passive:true}); document.addEventListener('click', _kg, {capture:true}); }catch(_){}   // every tap (the sound may already read 'running' and still be muted by the switch)
+// the phone's own edges (Nov 2026): a swipe up from the very bottom leaves the app (iPhone, Android gesture navigation), a pull down
+// from the very top opens the notifications. A touch that begins there is the phone's, never Paintiano's swipe — it dealt the next
+// painting, and its music played, on the way out of the app; back in the app a different painting was waiting. A tap there still counts
+let _pfInsK='', _pfIns=[0,0];
+function _pfSysEdge(y){ try{ const k=window.innerWidth+'x'+window.innerHeight; if(k!==_pfInsK){ const d=document.createElement('div'); d.style.cssText='position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)'; document.body.appendChild(d); const cs=getComputedStyle(d); _pfIns=[parseFloat(cs.paddingTop)||0, parseFloat(cs.paddingBottom)||0]; d.remove(); _pfInsK=k; }
+  return y >= window.innerHeight - Math.max(22, _pfIns[1]) || y <= Math.max(14, Math.min(44, _pfIns[0])); }catch(_){ return false; } }
 // A video's sound (the iPhone Camera's take, a concert from Photos) → a WAV the Music pipeline reads.
 function _isVideoFile(f){ const nm=String(f.name||'').toLowerCase(); return /^video\//.test(f.type||'') || /\.(mov|mp4|m4v|3gp)$/.test(nm); }
 function _wavFromBuffer(ab){
@@ -42053,8 +42059,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     _stPrev(); return true;   // ↓ back to the painting before
   };
   // … also on the dark around the painting
-  const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now()}; _swipeWasGestureRef.current=false; };
-  const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
+  const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), e:_pfSysEdge(tt.clientY)}; _swipeWasGestureRef.current=false; };
+  const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt || st.e) return;   // from the phone's edge: its own gesture (_pfSysEdge)
     // a pull up that began on the bar under the painting (♥ · ✦ Change · share) opens the look tray — palettes and painters without the way through ✦ Change
     try{ const bar=document.querySelector('.pf-st-bar'); const br=bar && bar.getBoundingClientRect(); if(br && st.y>=br.top && !stripOpen && !stLand && !demoReelOn && !recording && tt.clientY-st.y<-40 && Date.now()-st.t<700){ _swipeWasGestureRef.current=true; _stBuzz(8); setStChg(null); setStripOpen(true); return; } }catch(_){}
     if(_stSwipeRef.current && _stSwipeRef.current(tt.clientX-st.x, tt.clientY-st.y, Date.now()-st.t)) _swipeWasGestureRef.current=true; };
@@ -42092,9 +42098,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     fd.mode='pre'; if(cp){ fd.copy=cp; card.appendChild(cp); _sdCopyAt(fd, -dir*L); }
     { const f=()=>{ delete card.dataset.fdz; fd.ready=true; }; _fdWhenNew(sig0, f, f); }
     _fdSet(fd, 0); return fd; };
-  const _sdEnd = (fd, v)=>{ v=v||0; const N=stNavRef.current;
+  const _sdEnd = (fd, v, back)=>{ v=v||0; const N=stNavRef.current;   // back: the phone took the touch — the painting goes back, never on
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
-    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;
+    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;
     const hold = go ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{
       if(go){ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdd; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
@@ -42665,9 +42671,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(fd.mode==='rub'){ _fdSet(fd, Math.sign(raw)*rb(Math.abs(raw))); return; }
     const d = fd.dir>0 ? Math.max(-L, Math.min(0, raw)) : Math.min(L, Math.max(0, raw)); _fdSet(fd, d); };
   // let go: v = the finger's speed along the axis (px/ms)
-  const _fdEnd = (fd, v)=>{ v=v||0;
+  const _fdEnd = (fd, v, back)=>{ v=v||0;   // back: the phone took the touch — the card goes back, never on
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
-    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = fv>0.3 || (p>0.25 && fv>-0.3), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
+    const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
     const hold = (go && fd.mode==='pre') ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
       if(fd.mode==='pre' && go){ _fdCopyFree(); fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
@@ -44011,11 +44017,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           { const o=feedTouchRef.current; if(o && o.fd){ feedTouchRef.current=null; _fdEnd(o.fd, 0); return; } }   // a second finger: the drag lets go
           _fdFinish();   // a card still landing lands at once — the finger takes the next one
           { const MH=metaHoldRef.current; if(MH.tm) clearTimeout(MH.tm); MH.tm=null; MH.on=false; if(FC && _fL && e.touches.length===1) MH.tm=setTimeout(()=>{ MH.tm=null; MH.on=true; setMetaPoke(n=>n+1); _stBuzz(6); }, 420); }   // hold: the song and its painter, it plays on
-          if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button')), S:[[performance.now(), tt.clientX, tt.clientY]], ax:null, fd:null}; };
+          if(e.touches.length!==1){ feedTouchRef.current=null; return; } const tt=e.touches[0]; feedTouchRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), b:!!(e.target && e.target.closest && e.target.closest('button')), e:_pfSysEdge(tt.clientY), S:[[performance.now(), tt.clientX, tt.clientY]], ax:null, fd:null}; };   // e: begun on the phone's edge — never a swipe
         // the card under the finger (see _fdLock): the way it goes is decided once the finger has moved 10 px
         const _canHome = (()=>{ const c=FC; if(!c) return false; if(c.piece==='own') return true; const own = c.kind==='img' ? hasImageDraft : hasMusicDraft; return !!own || !!homeArt; })();   // your own painting brought from the Studio: ↓ puts it on the home card (↑ there: the surprises)
         const _fTM = (e)=>{ const st=feedTouchRef.current, tt=e.touches && e.touches[0]; if(!st || !tt) return; const dx=tt.clientX-st.x, dy=tt.clientY-st.y;
           if(Math.abs(dx)>10 || Math.abs(dy)>10){ const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } }
+          if(st.e) return;   // the way out of the app (or the notifications): the card stays, nothing is dealt
           if(st.S){ const now=performance.now(); st.S.push([now, tt.clientX, tt.clientY]); while(st.S.length>2 && now-st.S[0][0]>100) st.S.shift(); }
           if(!st.ax && st.S && (Math.abs(dx)>10 || Math.abs(dy)>10)){ st.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x';
             if(FC && _fL && !st.b && !metaHoldRef.current.on){ const dir = st.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1), up = st.ax==='y' && dir>0, dn = st.ax==='y' && dir<0;
@@ -44024,7 +44031,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? ((FC.piece==='own' && _feedSnap()) || H.u || null) : undefined)) : undefined }); }
             else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
-        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0); };
+        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0, true); };   // the phone took the touch: the card goes back
         // ← → on your home: through the paintings you left unfinished — each way's own card (Music, Image, Mood from image, Mood,
         // Compose, Mic, in the ✦ Change order), round and round; ▶ goes back to the one in front
         const _hkOf = (h)=> h ? (h.k || (h.src==='image' ? 'image' : 'music')) : null;
@@ -44044,6 +44051,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             if(a && z && z[0]>a[0] && now-z[0]<80) v = st.ax==='y' ? (z[2]-a[2])/(z[0]-a[0]) : (z[1]-a[1])/(z[0]-a[0]);
             _fdEnd(st.fd, v); return; }
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
+          if(st.e && (Math.abs(dx)>=12 || Math.abs(dy)>=12)) return;   // from the phone's edge: not a swipe
           if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }
           if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedBack(); return; }   // ↓ back, as on TikTok: the surprise before
           if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ _sideDone(); let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } else if(!FC){ _homeLR(dx<0 ? 1 : -1); } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
@@ -46127,9 +46135,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               </div>
             </>);
           })()}
-          {stripOpen && !stLand && (<div onClick={(e)=>{ if(_stOnArt(e.clientX, e.clientY)){ _stTap(e); return; } setStripOpen(false); }} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now()} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
+          {stripOpen && !stLand && (<div onClick={(e)=>{ if(_stOnArt(e.clientX, e.clientY)){ _stTap(e); return; } setStripOpen(false); }} onTouchStart={(e)=>{ const tt=e.touches && e.touches[0]; trayBdRef.current = (tt && e.touches.length===1) ? {x:tt.clientX, y:tt.clientY, t:Date.now(), e:_pfSysEdge(tt.clientY)} : null; }} onTouchEnd={(e)=>{ e.preventDefault(); const st=trayBdRef.current; trayBdRef.current=null; const tt=e.changedTouches && e.changedTouches[0];
             // swipes on the painting work with the tray open too: ← → its variants, ↑ the next one, ↓ the one before (the row follows)
-            if(st && tt){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(_stSwipeRef.current){ trayUserRef.current=false; if(_stSwipeRef.current(dx, dy, Date.now()-st.t)) return; } }
+            if(st && tt && !st.e){ const dx=tt.clientX-st.x, dy=tt.clientY-st.y; if(_stSwipeRef.current){ trayUserRef.current=false; if(_stSwipeRef.current(dx, dy, Date.now()-st.t)) return; } }
             // a tap on the painting plays / pauses as with the tray closed (two taps ♥) — the tray stays, so palettes and painters can be tried while it plays; a tap beside the painting closes the tray
             if(tt && _stOnArt(tt.clientX, tt.clientY)){ _stTap({clientX:tt.clientX, clientY:tt.clientY}); return; }
             setStripOpen(false); }} style={{position:'fixed',inset:0,zIndex:10004,background:'transparent',touchAction:'none'}}/>)}{/* the painting stays bright above the look tray: a tap on it plays / pauses, a tap beside it closes the tray */}
@@ -46430,7 +46438,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           _fdFinish();   // a painting still landing lands at once — the finger takes the next one
           if(e.touches.length !== 1) { _swipeStartRef.current = null; return; }
           const tt = e.touches[0];
-          _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now(), S:[[performance.now(), tt.clientX, tt.clientY]], ax:null, fd:null };
+          _swipeStartRef.current = { x: tt.clientX, y: tt.clientY, t: Date.now(), S:[[performance.now(), tt.clientX, tt.clientY]], ax:null, fd:null, e:_pfSysEdge(tt.clientY) };   // e: begun on the phone's edge — never a swipe
           _swipeWasGestureRef.current = false;
         }}
         onTouchMove={e=>{
@@ -46449,10 +46457,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(studioFs && Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 1.2){ _swipeWasGestureRef.current = true; }
           // full screen in the Studio: the painting under the finger (_sdLock) — the way is decided once the finger has moved 10 px
           if(studioFs && s.S){ const now=performance.now(); s.S.push([now, tt.clientX, tt.clientY]); while(s.S.length>2 && now-s.S[0][0]>100) s.S.shift();
-            if(!s.ax && (Math.abs(dx)>10 || Math.abs(dy)>10)){ s.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x'; if(!_holdingRef.current && e.touches.length===1) s.fd = _sdLock(s.ax, s.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1)); if(s.fd){ _swipeWasGestureRef.current = true; _holdCancel(); } }
+            if(!s.ax && (Math.abs(dx)>10 || Math.abs(dy)>10)){ s.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x'; if(!_holdingRef.current && !s.e && e.touches.length===1) s.fd = _sdLock(s.ax, s.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1)); if(s.fd){ _swipeWasGestureRef.current = true; _holdCancel(); } }
             if(s.fd) _fdMove(s.fd, s.ax==='y' ? dy : dx); }
         }}
-        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0); } }}
+        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0, true); } }}   // the phone took the touch: the painting goes back
         onTouchEnd={e=>{
           { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _holdEnd(); _swipeStartRef.current=null; return; } }   // carried: not a swipe, not a tap
           _holdEnd();
@@ -46465,6 +46473,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           const tt = (e.changedTouches && e.changedTouches[0]) || null;
           if(!tt) return;
           const dy = tt.clientY - s.y, dx = tt.clientX - s.x, dt = Date.now() - s.t;
+          if(s.e && (Math.abs(dx)>=12 || Math.abs(dy)>=12)) return;   // the phone's edge: the way out of the app, the notifications — not a swipe
           // Studio: up = the next painting (_stSwipeRef)
           if(studioFs && _stSwipeRef.current){ _swipeWasGestureRef.current = !!_stSwipeRef.current(dx, dy, dt); return; }
           // Swipe criteria: 50px minimum vertical travel, under 700ms,
