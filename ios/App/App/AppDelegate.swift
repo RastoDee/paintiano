@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import StoreKit
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -48,6 +49,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 class PfBridgeViewController: CAPBridgeViewController {
     private var pfObservers: [NSObjectProtocol] = []
 
+    // A TestFlight (or Xcode) build tells the page so before it loads: window.PF_TESTFLIGHT = true. Paintiano passes it on to
+    // Battle (tf=1), so Battle's TEST position shows only in TestFlight, never in the App Store build (see 05-main.jsx).
+    // (Here and not in webViewConfiguration: Capacitor swaps in its own script controller after that one, before the web view is made.)
+    override open func webView(with frame: CGRect, configuration: WKWebViewConfiguration) -> WKWebView {
+        if PfBuild.isTest {
+            configuration.userContentController.addUserScript(WKUserScript(source: "window.PF_TESTFLIGHT = true;", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
+        return super.webView(with: frame, configuration: configuration)
+    }
+
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(PfRefundPlugin())
         // The moment the app stops being the active one (the swipe home, the app switcher, the lock button) the page hears
@@ -65,6 +76,17 @@ class PfBridgeViewController: CAPBridgeViewController {
     deinit {
         pfObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
+}
+
+// Which build runs: Xcode (DEBUG) or TestFlight (its receipt is the sandbox one) = test; the App Store build = live.
+enum PfBuild {
+    static let isTest: Bool = {
+        #if DEBUG
+        return true
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
+    }()
 }
 
 // PfRefund.request({ transactionId }) opens Apple's refund request sheet for one purchase.
