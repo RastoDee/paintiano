@@ -16450,7 +16450,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     _stPrev(); return true;   // ↓ back to the painting before
   };
   // … also on the dark around the painting
-  const _stOvStart = (e)=>{ if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), e:_pfSysEdge(tt.clientY)}; _swipeWasGestureRef.current=false; };
+  const _stOvStart = (e)=>{ { const o=_swipeStartRef.current; if(o && o.fd){ _swipeStartRef.current=null; _sdEnd(o.fd, 0); return; } }   // a second finger beside a painting under the finger (moved, so the finger lands here): the drag lets go as on the painting — dropped, the painting stayed off the screen (black, the music on)
+    _fdFinish();   // a painting still landing lands at once (as on the painting)
+    if(e.touches.length!==1){ _swipeStartRef.current=null; return; } const tt=e.touches[0]; _swipeStartRef.current={x:tt.clientX, y:tt.clientY, t:Date.now(), e:_pfSysEdge(tt.clientY)}; _swipeWasGestureRef.current=false; };
   const _stOvEnd = (e)=>{ const st=_swipeStartRef.current; _swipeStartRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt || st.e) return;   // from the phone's edge: its own gesture (_pfSysEdge)
     // a pull up that began on the bar under the painting (♥ · ✦ Change · share) opens the look tray — palettes and painters without the way through ✦ Change
     try{ const bar=document.querySelector('.pf-st-bar'); const br=bar && bar.getBoundingClientRect(); if(br && st.y>=br.top && !stripOpen && !stLand && !demoReelOn && !recording && tt.clientY-st.y<-40 && Date.now()-st.t<700){ _swipeWasGestureRef.current=true; _stBuzz(8); setStChg(null); setStripOpen(true); return; } }catch(_){}
@@ -16667,7 +16669,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     W.id=setInterval(()=>{ const t=touchRef.current, S=feedSprRef.current, old=Date.now()-W.t0>4000;
       if(t && t.fd && !old) return; if(S && S.id && !old) return;
       if(S && S.id){ try{ _fdFinish(); }catch(_){} }
+      if(touchRef===_swipeStartRef && !(t && t.fd)) _sdOrphan();
       _metaWatchOff(); metaKeepRef.current=false; setFdMeta(null); }, 700); };
+  // the Studio's painting moved by a drag that no finger holds and nothing lands any more: it comes back to its place (never off the screen)
+  const _sdOrphan = ()=>{ try{ const card=canvasWrapRef.current; if(!card || !card.dataset.fdd || !card.style.translate || document.querySelector('.pf-st-tray')) return;
+    if(fdCopyRef.current && fdCopyRef.current.parentNode===card) _fdCopyFree(); card.style.translate=''; delete card.dataset.fdz; delete card.dataset.fdd; }catch(_){} };
   useEffect(()=>()=>_metaWatchOff(), []);
   // FULL SCREEN, QUIET: while a full-screen painting plays (the Studio's Full screen, the home's surprise) the song's lines fade after 4 s —
   // a pause, the next painting, a sheet, anything that changes brings them back; the three buttons stay
@@ -20923,7 +20929,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         }}
         onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0, true); } }}   // the phone took the touch: the painting goes back
         onTouchEnd={e=>{
-          { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _holdEnd(); _swipeStartRef.current=null; return; } }   // carried: not a swipe, not a tap
+          { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _holdEnd(); const o=_swipeStartRef.current; _swipeStartRef.current=null; if(o && o.fd) _sdEnd(o.fd, 0, true); return; } }   // carried: not a swipe, not a tap
           _holdEnd();
           if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
