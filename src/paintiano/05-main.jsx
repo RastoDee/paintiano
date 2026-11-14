@@ -16097,10 +16097,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const stFill = viewMode==='image' ? stFillPic : stFillM;
   useEffect(()=>{ setStFillPic(false); },[originalImgUrl]);
   const _stFillSet = (v)=>{ if(viewModeRef.current==='image') setStFillPic(!!v); else { setStFillM(!!v); try{ localStorage.setItem('paintiano_st_fill', v ? '1' : '0'); }catch(_){} } try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){} };
+  // full screen without the words: a second spread takes the song's lines away (they no longer fade by themselves), a pinch brings them back —
+  // the tabs, ⌄ and the three buttons stay. From here For You opens just the painting
+  const stFillNowRef = useRef(false); stFillNowRef.current = stFill;
+  const [stQuiet, setStQuiet] = useState(false); const stQuietRef = useRef(false); stQuietRef.current = stQuiet;
+  const _stQuietSet = (v)=>{ v=!!v; if(stQuietRef.current===v) return; stQuietRef.current=v; setStQuiet(v); try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){} };
+  useEffect(()=>{ if(stQuiet && (!studioFs || !stFill || studioLive)){ stQuietRef.current=false; setStQuiet(false); } },[stQuiet, studioFs, stFill, studioLive]);
   useEffect(()=>{ if(!studioFs || studioHome) return;   // Music, Compose and the Mic alike: spread two fingers = full screen (For You has its own: the painting alone)
     let d0=0, done=false; const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
     const st=(e)=>{ if(e.touches.length===2 && !document.querySelector('[role="dialog"]')){ d0=dist(e.touches); done=false; } };
-    const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(r>1.22){ done=true; _stFillSet(true); } else if(r<0.82){ done=true; _stFillSet(false); } };   // spread = full screen, pinch = the whole painting
+    const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(r>1.22){ done=true; if(!stFillNowRef.current) _stFillSet(true); else if(!studioLive) _stQuietSet(true); } else if(r<0.82){ done=true; if(stQuietRef.current) _stQuietSet(false); else _stFillSet(false); } };   // spread = full screen, spread again = without the words; a pinch goes back a step
     const en=(e)=>{ if(e.touches.length<2) d0=0; };
     document.addEventListener('touchstart', st, {passive:true}); document.addEventListener('touchmove', mv, {passive:true}); document.addEventListener('touchend', en, {passive:true}); document.addEventListener('touchcancel', en, {passive:true});
     return ()=>{ document.removeEventListener('touchstart', st); document.removeEventListener('touchmove', mv); document.removeEventListener('touchend', en); document.removeEventListener('touchcancel', en); };
@@ -16123,7 +16129,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:isI?'img':undefined, piece:'own', own:true, sel:null, u, pu:u, l:'', dir:'none' };
       feedResumeRef.current=null; feedStartRef.current=null; feedStepsRef.current=[]; feedPieceRef.current=true; feedLookRef.current=null;
       setFeedIntro(null); setFeedCards([c]); setFeedAt(0); setFeedLoaded(isI ? 'iown' : 'own'); setFeedHiRes(!isI);
-      if(metaHide){ feedCleanRef.current=true; setFeedClean(true); let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); }   // the Studio had gone quiet (its song line faded): For You opens just the painting too — a pinch brings everything back
+      if(metaHide){ feedCleanRef.current=true; setFeedClean(true); let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); }   // the Studio without its words (the second spread): For You opens just the painting too — a pinch brings everything back
       setForceSetup(true); requestAnimationFrame(()=>setStamp(x=>x+1)); setTimeout(()=>setStamp(x=>x+1), 120);   // the card's canvas is a new one: the painting so far is put back on it
       return; }
     _stHome().then(()=>setTimeout(()=>{ try{ feedUpRef.current && feedUpRef.current(); }catch(_){} }, 180)); };
@@ -16677,7 +16683,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>()=>_metaWatchOff(), []);
   // FULL SCREEN, QUIET: while a full-screen painting plays (the Studio's Full screen, the home's surprise) the song's lines fade after 4 s —
   // a pause, the next painting, a sheet, anything that changes brings them back; the three buttons stay
-  const [metaHide, setMetaHide] = useState(false);
+  const metaHide = !!(stQuiet && studioFs && stFill && !studioLive && !stChg && !stShare && !stripOpen && !showMine);   // no longer by a timer: the second spread (stQuiet)
   const [metaPoke, setMetaPoke] = useState(0);              // a held finger: the lines come back
   const metaHoldRef = useRef({tm:null, on:false});          // the home's hold (the Studio's is _holdingRef)
   const [feedMuteFl, setFeedMuteFl] = useState(null);       // For You: a held finger turns the sound off / on — the speaker shows for a moment
@@ -16705,9 +16711,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[studioHome]);
   _metaPokeRef.current = ()=>setMetaPoke(n=>n+1);
-  const _metaQuietOk = !!playing && !stChg && !stShare && !stripOpen && !showMine && (studioFs && stFill && !studioLive);   // the Studio's full screen goes quiet; at home the song's name stays while it plays
-  useEffect(()=>{ if(!metaKeepRef.current) setMetaHide(false); if(!_metaQuietOk) return; const tm=setTimeout(()=>{ if(metaHoldRef.current.on || _holdingRef.current) return; setMetaHide(true); }, 4000); return ()=>clearTimeout(tm);
-  },[_metaQuietOk, feedFlash, feedAt, _swipeFlashKey, style, painterStage.length, imgComposer, info && info.title, metaPoke]);
   // a painting played to the end: its ▶ stays a moment, then goes quietly (a tap still plays it again)
   const _stEnded = !playing && !anim && !holdPaused && chords.length>0 && disp>=chords.length;
   const [stEndQuiet, setStEndQuiet] = useState(false);
