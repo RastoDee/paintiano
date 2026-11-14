@@ -2509,7 +2509,8 @@ const STUDIO_FX_CSS = `
 .pf-st-bar{position:fixed;left:0;right:0;z-index:10001;display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));pointer-events:none}
 .pf-st-bar:has(.pf-st-meta.hide)::before{opacity:.45}
 .pf-st-bar::before{transition:opacity .6s ease;content:"";position:absolute;left:0;right:0;top:0;bottom:calc(-1 * (env(safe-area-inset-bottom, 0px) + 140px));background:linear-gradient(180deg,rgba(6,6,12,0) 0,rgba(6,6,12,.72) calc(100% - env(safe-area-inset-bottom, 0px) - 140px),rgba(6,6,12,.72) 100%);z-index:-1}   /* down to the screen's very edge: no seam under the buttons (full display) */
-.pf-st-quiet .pf-st-tabs2.st,.pf-st-quiet .pf-st-min{display:none!important}
+.pf-st-quiet .pf-st-min{display:none!important}
+.pf-st-quiet .pf-st-tabs2.st{opacity:.5;transition:opacity .3s ease}   /* only the way to For You stays, quieter (from here For You opens just the painting) */
 .pf-st-quiet .pf-st-acts .pf-st-act{visibility:hidden!important;pointer-events:none!important}   /* the Studio without words: only ✦ Change stays (in its place) */
 .pf-st-bar.pf-st-bar-live::before{bottom:calc(-1 * var(--stb, 0px));background:linear-gradient(180deg,rgba(6,6,12,0) 0,rgba(6,6,12,.72) calc(100% - var(--stb, 0px)),rgba(6,6,12,.72) 100%)}   /* Compose / Mic: the shade runs under their dock to the screen's edge — no lighter strip at the bottom on full screen */
 .pf-studio-fill.pf-studio-live .pf-transport-dock{background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border-top-color:transparent!important}
