@@ -31298,6 +31298,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [btlModeBusy, setBtlModeBusy] = useState(false);
   const [btlAsk, setBtlAsk] = useState(null);   // the switch tapped on a device not linked as Battle's admin: {m, err} — nickname + password right in the row
   const btlAskRef = useRef({nick:'', pass:''});
+  useEffect(()=>{ if(!hidOpen){ setBtlAsk(null); btlAskRef.current.pass=''; } },[hidOpen]);
   const _btlHere = (m)=> m==='on' || (m==='test' && !/^https:\/\/(www\.)?paintiano\.app$/.test(window.location.origin));   // is Battle shown in THIS Paintiano at that position?
   const _btlModeSeen = (m)=>{ setBtlMode(m); setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:_btlHere(m), at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); };
   useEffect(()=>{ if(!hidOpen || !hidOk) return; const lk=btlMineRef.current.link; if(!lk){ setBtlMode(null); return; } let on=true;
