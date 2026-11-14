@@ -3174,11 +3174,12 @@ export default function Paintiano() {
   // build the next time the user briefly leaves Paintiano and comes back.
   useEffect(()=>{
     if(typeof navigator==='undefined' || !('serviceWorker' in navigator)) return;
-    let reloadArmed = false;
+    let reloadArmed = false, hiddenAt = 0;
+    // Nov 2026: a short trip out of the app (mail, a message) no longer costs the painting: the new build is taken on the way
+    // back only after 30 minutes away (a fresh start then, and it opens where you were — see WHERE YOU WERE), or at the next start
     const tryReload = ()=>{
       if(!reloadArmed) return;
-      // Only reload when the tab is hidden — avoids interrupting active painting.
-      if(document.visibilityState !== 'visible'){
+      if(document.visibilityState === 'visible' && hiddenAt && Date.now()-hiddenAt > 30*60*1000){
         // CIRCUIT BREAKER: at most ONE auto-reload per 10 minutes per browser.
         // Whatever inconsistent state the SW/cache ever gets into, a reload
         // LOOP is now physically impossible — worst case the user runs one
@@ -3189,23 +3190,24 @@ export default function Paintiano() {
           if(Date.now()-last < 10*60*1000) return;
           localStorage.setItem(K, String(Date.now()));
         }catch(_){}
+        try{ const r=JSON.parse(localStorage.getItem('paintiano_resume')||'null'); if(r){ r.t=Date.now(); localStorage.setItem('paintiano_resume', JSON.stringify(r)); } }catch(_){}   // the painting you left comes back after this start
         try{ window.location.reload(); }catch(_){}
       }
     };
     const onControllerChange = ()=>{
-      // A new SW just took control. Arm reload for the next background moment.
+      // A new SW just took control: it is taken after the next long absence (or at the next start).
       reloadArmed = true;
-      tryReload();
     };
     const onVisibility = ()=>{
       if(document.visibilityState === 'visible'){
+        // Back after a long absence with a new build waiting: take it now (the painting comes back, see WHERE YOU WERE).
+        tryReload(); hiddenAt = 0;
         // Foreground: ask the SW to check the network for a new build.
         navigator.serviceWorker.getRegistration()
           .then(reg => { if(reg) reg.update().catch(()=>{}); })
           .catch(()=>{});
       } else {
-        // Background: if an update has already downloaded, take it now.
-        tryReload();
+        hiddenAt = Date.now();
       }
     };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
@@ -17036,6 +17038,44 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(!composerStage.length && crOn) setCrOn(false);
     firstKeptRef.current = !!c.first;   // its painter is not chosen (white): ↑ goes on as in the surprises
   };
+  // WHERE YOU WERE (Nov 2026): the app put away and brought back stays as it was — but meanwhile a new version of Paintiano or
+  // the phone itself may start it afresh, and it opened on another painting. Leaving the app, the painting on screen is kept:
+  // the piece (built-in, or one of My Music), its look and the spot in it, For You or the Studio. A fresh start within 30
+  // minutes opens on it again, paused at that spot. Your own songs and pictures in the Studio come back on the home card as before
+  // (their drafts); a link (a poster, Battle, a shared painting) always opens what it points to
+  const feedTakeRef = useRef(null); feedTakeRef.current = _feedTake;
+  const resumeSaveRef = useRef(null), resumeGoRef = useRef(null);
+  resumeSaveRef.current = ()=>{ try{
+    let R=null;
+    if(studioOn && !demoReelOn && !recording && !composeMode && !micActive && !favView && viewMode!=='image' && chords.length && !(chords[0] && chords[0].recorded)){
+      const fc = (studioHome && feedAt>=0 && feedLoaded!==null) ? feedCards[feedAt] : null;
+      const piece = fc ? fc.piece : (!studioHome && builtinPieceRef.current!=null ? builtinPieceRef.current : null);
+      if(piece!=null && fc ? (fc.kind!=='img' && (typeof piece==='number' || /^m/.test(String(piece)))) : (piece!=null && !studioHome)){
+        const n=chords.length, d = (resumeFromRef.current!=null && (playingRef.current || holdPausedRef.current)) ? resumeFromRef.current : dispRef.current;
+        R={ t:Date.now(), where: fc ? 'feed' : 'studio', piece, sel:_feedSelNow(), d:Math.max(0, Math.min(n, d|0)), n, salt:rndSaltRef.current|0 };
+      } }
+    if(R) localStorage.setItem('paintiano_resume', JSON.stringify(R)); else localStorage.removeItem('paintiano_resume');
+  }catch(_){} };
+  resumeGoRef.current = (R)=>{ try{
+    if(!studioOn || !studioHome || feedAt>=0 || chords.length || favView || demoReelOn) return false;   // only the plain start: nothing of yours on the canvas yet
+    const kind = undefined, sel = R.sel || {sig:true};
+    const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece:R.piece, sel, u:null, l:'', dir:'none' };
+    feedStepsRef.current=[]; surpriseArtistBagRef.current=[]; setFeedIntro(null);
+    setFeedCards([c]); setFeedAt(0); _feedLoad(R.piece, sel, kind);
+    const F=feedStartRef.current; if(F){ F.hold=R.d|0; F.salt=R.salt; F.studio = R.where==='studio'; F.lim=Math.max(F.lim||0, 20000); }
+    setTimeout(()=>{ try{ setFeedNeedTap(false); }catch(_){} }, 520);   // paused, it shows ▶ — not the sleeping-sound cue (_feedLoad's check comes at 450 ms)
+    return true;
+  }catch(_){ return true; } };
+  useEffect(()=>{
+    const save=(e)=>{ if(e.type==='visibilitychange' && document.visibilityState!=='hidden') return; try{ resumeSaveRef.current && resumeSaveRef.current(); }catch(_){} };
+    document.addEventListener('visibilitychange', save); window.addEventListener('pagehide', save);
+    let R=null, tm=null, k=0; try{ R=JSON.parse(localStorage.getItem('paintiano_resume')||'null'); }catch(_){}
+    try{ const q=window.location.search||'', h=window.location.hash||'';
+      if(R && R.t && Date.now()-R.t < 30*60000 && R.piece!=null && !/[?&](piece|artist|join|from)=/.test(q) && !/battle_link=|tickets=/.test(h)){
+        const tryGo=()=>{ tm=null; let done=false; try{ done = !resumeGoRef.current || resumeGoRef.current(R)!==false; }catch(_){ done=true; } if(!done && ++k<20) tm=setTimeout(tryGo, 300); };   // once the start is on screen
+        tm=setTimeout(tryGo, 400); } }catch(_){}
+    return ()=>{ clearTimeout(tm); document.removeEventListener('visibilitychange', save); window.removeEventListener('pagehide', save); };
+  },[]);
   // Studio straight from the first screen (from Battle opened there): its painting starts as a tap would start it,
   // and once it plays it goes into the Studio — no detour through For You
   const feedTakeWantRef = useRef(0);
@@ -17058,6 +17098,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(F.img){ if(!chords.length || playing || anim || working || viewMode!=='image' || !originalImgUrl || originalImgUrl===F.prevUrl) return; if(F.sel && !F.applied){ F.applied=true; if(F.sel.img && (F.sel.comp!==undefined)) _feedApply(F.sel); } }
     else if(F.mine){ if(!chords.length || chords===F.c0 || playing || anim || working) return; feedPieceRef.current=true; if(F.sel && !F.applied){ F.applied=true; _feedApply(F.sel); } }
     else if(!chords.length || playing || anim || working || !(info && info.title===F.title)) return;
+    if(F.hold!=null){   // where you were (resumeGoRef): the painting at the spot you left it, paused — a tap plays on from there
+      const tmH=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; try{ setFeedNeedTap(false); }catch(_){}
+        if(F.salt!=null) setRndSalt(F.salt|0);
+        const n=chords.length, d=Math.max(0, Math.min(n, F.hold|0)); setDisp(d); dispRef.current=d;
+        if(d>0 && d<n){ setHoldPaused(true); holdPausedRef.current=true; resumeFromRef.current=d; } else resumeFromRef.current=null;
+        if(F.studio) setTimeout(()=>{ try{ feedTakeRef.current && feedTakeRef.current(); }catch(_){} }, 120);   // it was in the Studio: the Studio takes it, as its tab would
+      }, 80);
+      return ()=>clearTimeout(tmH); }
     // the first tap after opening the app only wakes the sound on iOS (it is still starting when the piece is in):
     // if the piece is not playing a moment later, it is started again — up to three times
     const tok=feedTokRef.current;
