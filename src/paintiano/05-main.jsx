@@ -2431,6 +2431,10 @@ const STUDIO_FX_CSS = `
 .pf-chb.w{background:#f2eee8;color:#121018}
 .pf-chb.r{background:rgba(255,90,90,.18);color:#ffb3b3}
 .pf-chb.x{margin-left:auto}
+.pf-chb.g{background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;padding:8px 13px;display:inline-flex;align-items:center}
+.pf-chb.r,.pf-tx-undo{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.pf-ch-undo{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 auto 8px;width:max-content;max-width:100%;padding:7px 8px 7px 16px;border-radius:20px;background:rgba(20,16,30,.97);border:1px solid rgba(242,238,232,.18);color:#f2eee8;font-size:calc(min(var(--pf-read-scale,1),1.15) * 13px);white-space:nowrap}
+.pf-ch-undo button{font:inherit;font-weight:600;height:28px;padding:0 13px;border-radius:14px;border:1px solid rgba(240,192,64,.6);background:transparent;color:#f0c040;cursor:pointer}
 .pf-chn{font-size:11.5px;color:rgba(242,238,232,.6);font-variant-numeric:tabular-nums;padding:0 2px}
 .pf-cht{flex:1;min-width:0;font-size:calc(min(var(--pf-read-scale,1),1.15) * 12.5px);color:rgba(242,238,232,.82);padding:0 6px}
 .pf-st-work-glow{position:absolute;left:50%;top:50%;width:min(70vw,320px);height:min(70vw,320px);margin:calc(min(70vw,320px)/-2) 0 0 calc(min(70vw,320px)/-2);border-radius:50%;background:radial-gradient(circle,rgba(240,215,138,.16),rgba(150,90,220,.08) 45%,transparent 70%);animation:pfStWork 3.2s ease-in-out infinite}
@@ -15706,10 +15710,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return (<span className={'pf-sk-face pf-sk-mono'+(hit?' pf-sk-hit':'')} aria-hidden="true" style={{background:'linear-gradient(145deg,'+d[1]+',#1d1830)'}}>{d[0]}</span>);
   };
   // one tap = pause / play, two taps within 300 ms = ♥
-  const stTapRef = useRef({ t:0, timer:null });
+  const stTapRef = useRef({ t:0, timer:null }); const stChTapRef = useRef(null);
   const _stHeartRef = useRef(null), _stSwipeRef = useRef(null);   // set below, next to the ♥ and the swipes
   const _stTap = (e)=>{ const r=stTapRef.current, now=Date.now(); clearTimeout(r.timer);
     const x = (e && e.clientX!=null) ? e.clientX : window.innerWidth/2, y = (e && e.clientY!=null) ? e.clientY : window.innerHeight/2;
+    if(stChTapRef.current && stChTapRef.current(x, y)) return;   // Compose with a chord chosen: a tap moves the frame (no play, no ♥)
     if(now-r.t<300){ r.t=0; if(_stHeartRef.current) _stHeartRef.current(x, y); return; }
     r.t=now; r.timer=setTimeout(()=>{ _stTapOne(); }, 260); };
   const backBtnRef = useRef(null), hearBtnRef = useRef(null), seeBtnRef = useRef(null), stSheetRef = useRef(null);
@@ -16318,9 +16323,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   // one tap on the painting: pause / play — with the look tray open too (the tray closes on a tap beside the painting or pulled down); on an empty Studio ✦ Change opens (Compose and Mic keep their own keys)
   const [stPlayArm, setStPlayArm] = useState(null);   // the piece is over and the painting was tapped: a ▶ waits at its centre {x,y} — only that starts it again (a tap while trying palettes and painters must not)
-  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ if(_stEnded){ if(stPlayArmRef.current){ setStPlayArm(null); return; } let c={x:window.innerWidth/2, y:window.innerHeight/2}; try{ const r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); if(r && r.width) c={x:r.left+r.width/2, y:r.top+r.height/2}; }catch(_){} setStPlayArm(c); return; }   /* the piece is over: the tap only offers ▶ — the ▶ itself plays it again from the start */ stTrayKeepRef.current = (stripOpen && studioFs) ? Date.now() : 0; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
+  const _stTapOne = ()=>{ if(stEmptyRef.current){ setStChg('music'); return; } if((studioLive && (micActive || (micSong && micSong.phase==='reading'))) || recording || demoReelOn) return; if(studioLive && composeMode && !chords.length) return;   /* Compose: a tap on the painting plays the composition (the keys paint) */ if(studioFs && composeMode && playing){ _stCompStop(); return; }   /* … a tap while it plays stops it there: the chord is chosen, notes go in after it */ if(studioFs && composeMode && !holdPaused) _stGhostTake(); if(_stEnded){ if(stPlayArmRef.current){ setStPlayArm(null); return; } let c={x:window.innerWidth/2, y:window.innerHeight/2}; try{ const r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); if(r && r.width) c={x:r.left+r.width/2, y:r.top+r.height/2}; }catch(_){} setStPlayArm(c); return; }   /* the piece is over: the tap only offers ▶ — the ▶ itself plays it again from the start */ stTrayKeepRef.current = (stripOpen && studioFs) ? Date.now() : 0; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };   // the Mic's take plays on a tap too
   const stPlayArmRef = useRef(null); useEffect(()=>{ stPlayArmRef.current=stPlayArm; },[stPlayArm]);
-  const _stPlayArmGo = (e)=>{ if(e){ e.stopPropagation(); e.preventDefault(); } setStPlayArm(null); stTrayKeepRef.current = (stripOpen && studioFs) ? Date.now() : 0; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };
+  const _stPlayArmGo = (e)=>{ if(e){ e.stopPropagation(); e.preventDefault(); } setStPlayArm(null); if(studioFs && composeMode) _stGhostTake(); stTrayKeepRef.current = (stripOpen && studioFs) ? Date.now() : 0; try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} };
   // the tour: what plays stops for the video; its end "Tap and paint" closes it (and the Guide) and plays — like a tap on the painting
   const openTour = (k)=>{ try{ if(playing && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){} try{ localStorage.setItem('paintiano_tour_seen','1'); }catch(_){} setTourKind(k); };
   const closeTour = ()=>{ setTourKind(null); setTourRing(false); };
@@ -16587,9 +16592,40 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     _stChSel(Math.max(0, pos-1)); setStChEdit('sel'); };
   _stChordHoldRef.current = (x,y)=>{ if(!(studioFs && composeMode && chords.length && !playing && !anim && !working)) return false;
     const ix=_stChordAt(x,y); if(ix==null) return false; _stBuzz(12); _stChOpen(ix); return true; };
-  // a chord played while one is chosen goes after it (the commit does that) — the bar says so; leaving Compose ends the editing
-  const _stChLenRef = useRef(0);
-  useEffect(()=>{ const n=chords.length, was=_stChLenRef.current; _stChLenRef.current=n; if(stChEdit==='sel' && n>was && was>0) setStChEdit('ins'); },[chords.length, stChEdit]);
+  // a chord played while one is chosen goes after it (the commit does that) and takes the frame along; leaving Compose ends the editing.
+  // Play in Compose: the whole composition stays on the painting, dimmed (stGhost — a still of it under the notes as they light up). A tap stops it there:
+  // the chord that just sounded is chosen, the keys put notes after it, Delete takes it out (held: it and all before it), a tap on another chord moves
+  // the frame, ▶ plays on from it, ✕ ends it — all lit, at the end of the composition again.
+  const [stGhost, setStGhost] = useState(null); const stWasPlayRef = useRef(false);
+  const _stGhostTake = ()=>{ try{ const cv=canvasRef.current; if(cv && chordsRef.current.length) setStGhost(cv.toDataURL('image/jpeg', .72)); }catch(_){} };
+  const _stCompStop = ()=>{ const n=chordsRef.current.length; if(!n) return; const at=Math.max(0, Math.min(n-1, (dispRef.current||1)-1));
+    try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){}
+    holdPausedRef.current=false; setHoldPaused(false); resumeFromRef.current=null; setDisp(n); setStGhost(null); _stBuzz(10); _stChOpen(at); };
+  const _stCompGo = ()=>{ const n=chordsRef.current.length; if(!n) return; const ix=selectedChordIdxRef.current; let from=(ix==null ? 0 : ix+1); if(from>=n) from=0;
+    _stGhostTake(); _stChSel(null); setStChEdit('play'); resumeFromRef.current = from>0 ? from : null;
+    wakeAudio().then(()=>{ startPlayRef.current && startPlayRef.current(); }).catch(()=>{ startPlayRef.current && startPlayRef.current(); }); };
+  stChTapRef.current = (x,y)=>{ if(!(studioFs && composeMode && stChEdit==='sel')) return false; const ix=_stChordAt(x,y); if(ix!=null && ix!==selectedChordIdxRef.current){ _stBuzz(6); _stChSel(ix); } return true; };
+  useEffect(()=>{ const was=stWasPlayRef.current; stWasPlayRef.current=playing; if(was && !playing){ setStGhost(null); if(stChEdit==='play') _stChClose(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[playing]);
+  useEffect(()=>{ if(stGhost && !composeMode) setStGhost(null); },[composeMode, stGhost]);
+  // Delete held: the chosen chord and all before it go (a word with Undo stays a while); ↩ held: one after another from the end (from the frame, while a chord is chosen)
+  const [stChUndo, setStChUndo] = useState(null); const stChUndoT = useRef(0);
+  const _stChDelAll = ()=>{ const ix=selectedChordIdxRef.current; if(ix==null) return; const prev=chordsRef.current; const pos=prev.findIndex(c=>c.idx===ix); if(pos<0) return;
+    const next=prev.slice(pos+1).map((c,i)=>({...c,idx:i})); chordsRef.current=next; setChords(next); _stBuzz(22);
+    clearTimeout(stChUndoT.current); setStChUndo({n:pos+1, chords:prev, sel:ix}); stChUndoT.current=setTimeout(()=>setStChUndo(null), 7000);
+    if(!next.length){ idxRef.current=0; sessionStart.current=0; setDisp(0); _stChClose(); return; }
+    resumeFromRef.current=null; idxRef.current=Math.min(idxRef.current, next.length); setDisp(next.length); _stChSel(0); setStChEdit('sel'); };
+  const _stChUndoGo = ()=>{ const u=stChUndo; if(!u) return; clearTimeout(stChUndoT.current); setStChUndo(null); chordsRef.current=u.chords; setChords(u.chords); setDisp(u.chords.length); _stBuzz(10);
+    if(studioFs && composeMode) _stChOpen(Math.min(u.sel, u.chords.length-1)); };
+  useEffect(()=>{ if(stChUndo && !composeMode){ clearTimeout(stChUndoT.current); setStChUndo(null); } },[composeMode, stChUndo]);
+  const stHoldRef = useRef({t:0, iv:0, long:false}); const stUndoFnRef = useRef(null);
+  stUndoFnRef.current = ()=>{ if(!chordsRef.current.length || busy || recording) return false; if(studioFs && composeMode && stChEdit==='sel') _stChDel(); else undoLast(); return true; };
+  const _stHoldEnd = ()=>{ const h=stHoldRef.current; clearTimeout(h.t); clearTimeout(h.iv); h.t=0; h.iv=0; };
+  const _stDelHold = { onPointerDown:()=>{ const h=stHoldRef.current; _stHoldEnd(); h.long=false; h.t=setTimeout(()=>{ h.long=true; _stChDelAll(); }, 600); }, onPointerUp:_stHoldEnd, onPointerLeave:_stHoldEnd, onPointerCancel:_stHoldEnd,
+    onContextMenu:(e)=>e.preventDefault(), onClick:()=>{ const h=stHoldRef.current; if(h.long){ h.long=false; return; } _stChDel(); } };
+  const _stUndoHold = { onPointerDown:()=>{ const h=stHoldRef.current; _stHoldEnd(); h.long=false; let gap=230; const go=()=>{ h.long=true; if(!stUndoFnRef.current || !stUndoFnRef.current()){ _stHoldEnd(); return; } _stBuzz(4); gap=Math.max(70, gap*0.93); h.iv=setTimeout(go, gap); }; h.t=setTimeout(go, 480); },
+    onPointerUp:_stHoldEnd, onPointerLeave:_stHoldEnd, onPointerCancel:_stHoldEnd, onContextMenu:(e)=>e.preventDefault(), onClick:()=>{ const h=stHoldRef.current; if(h.long){ h.long=false; return; } if(stUndoFnRef.current) stUndoFnRef.current(); } };
   useEffect(()=>{ if(stChEdit && (!composeMode || !studioFs)) _stChClose();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[composeMode, studioFs]);
@@ -21454,6 +21490,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
              canvas itself, not the whole screen. No pointer events. */
           <div style={{position:'absolute',inset:0,border:'min(5vw,28px) solid #f6f3ec',boxShadow:'inset 0 0 0 2px rgba(180,140,40,.6), 0 24px 60px rgba(0,0,0,.5)',pointerEvents:'none',transition:'all .5s ease',zIndex:5}}/>
         )}
+        {stGhost && studioFs && composeMode && (playing || anim) && (<img src={stGhost} alt="" aria-hidden="true" draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'fill',mixBlendMode:'lighten',filter:'brightness(.36) saturate(.8)',pointerEvents:'none',zIndex:3,borderRadius:'inherit'}}/>)}
+        {studioFs && composeMode && stChEdit==='sel' && selectedChordIdx!=null && grid.cells && (!effectiveStyle||effectiveStyle==='notes') && chords.filter(c=>c.idx>selectedChordIdx).flatMap(c=>{ const cell=grid.cells[c.idx]; if(!cell) return [];
+          return (cell.segments||[cell]).map((q,si)=>(<div key={'dm'+c.idx+'_'+si} aria-hidden="true" style={{position:'absolute',left:`${q.x/CW*100}%`,top:`${q.y/CH*100}%`,width:`${q.w/CW*100}%`,height:`${q.h/CH*100}%`,background:'rgba(6,6,12,.66)',zIndex:3,pointerEvents:'none'}}/>)); })}
         {selectedChordIdx!=null&&grid.cells&&grid.cells[selectedChordIdx]&&(!effectiveStyle||effectiveStyle==='notes')&&(()=>{
           const cell=grid.cells[selectedChordIdx];
           const segs=cell.segments||[cell];
@@ -22187,18 +22226,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       )}
       {isActiveView && !basicMode && (
       <div role="region" aria-label="playback controls" ref={stDockRef} className="pf-transport-dock" style={favView?{display:'none'}:isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:studioLive?10003:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
-      {studioFs && composeMode && stChEdit && (<div className="pf-chbar" onTouchStart={(e)=>e.stopPropagation()}>
-        {stChEdit==='sel' ? (<>
-          <button type="button" className="pf-chb" onClick={()=>_stChMove(-1)} aria-label="‹" disabled={!selectedChordIdx}>‹</button>
-          <button type="button" className="pf-chb" onClick={()=>_stChMove(1)} aria-label="›" disabled={selectedChordIdx!=null && selectedChordIdx>=chords.length-1}>›</button>
-          <span className="pf-chn">{(selectedChordIdx==null ? 0 : selectedChordIdx)+1}/{chords.length}</span>
-          <button type="button" className="pf-chb w" onClick={()=>setStChEdit('ins')}>＋ {_stT('chIns')}</button>
-          <button type="button" className="pf-chb r" onClick={_stChDel}>{_stT('chDel')}</button>
-          <button type="button" className="pf-chb x" onClick={_stChClose} aria-label="✕">✕</button>
-        </>) : (<>
-          <span className="pf-cht">{_stT('chInsT').replace('{n}', String((selectedChordIdx==null ? 0 : selectedChordIdx)+1))}</span>
-          <button type="button" className="pf-chb w" onClick={_stChClose}>{_stT('trDone')}</button>
-        </>)}
+      {studioFs && composeMode && stChUndo && (<div className="pf-ch-undo" role="status" onTouchStart={(e)=>e.stopPropagation()}>{_stT('mnDeleted').replace('{n}', stChUndo.n)}<button type="button" onClick={_stChUndoGo}>{_favT('undo')}</button></div>)}
+      {studioFs && composeMode && stChEdit==='sel' && (<div className="pf-chbar" onTouchStart={(e)=>e.stopPropagation()}>
+        <button type="button" className="pf-chb g" onClick={_stCompGo} aria-label={t('play')}><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>
+        <span className="pf-chn">{(selectedChordIdx==null ? 0 : selectedChordIdx)+1}/{chords.length}</span>
+        <button type="button" className="pf-chb r" {..._stDelHold}>{_stT('chDel')}</button>
+        <button type="button" className="pf-chb x" onClick={_stChClose} aria-label="✕">✕</button>
       </div>)}
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
@@ -22248,7 +22281,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           return chord
             ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.78)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
-        })():composeMode&&chords.length>0?(effectiveStyle&&effectiveStyle!=='notes'?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'\u00a0'}   {/* nothing sounding: the line stays, empty (a lone dash read as a stray mark) */}
+        })():composeMode&&chords.length>0?((effectiveStyle&&effectiveStyle!=='notes')||(studioFs&&stChEdit==='sel')?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'\u00a0'}   {/* nothing sounding: the line stays, empty (a lone dash read as a stray mark) */}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:8,justifyContent:'center',alignItems:'center',marginBottom:6,padding:'8px 12px',borderRadius:14,background:'rgba(140,255,180,.06)',border:'1px solid rgba(140,255,180,.25)',maxWidth:'fit-content',marginLeft:'auto',marginRight:'auto',flexWrap:'wrap'}}>
@@ -22514,7 +22547,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
         {composeMode&&(
-          <button className="pf-lift pf-tx-undo" onClick={undoLast} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
+          <button className="pf-lift pf-tx-undo" {..._stUndoHold} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
       </div>
       {composeMode && !working && (
