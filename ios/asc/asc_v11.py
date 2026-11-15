@@ -49,12 +49,13 @@ s, j = call('GET', f'/v1/builds?filter[app]={app}&filter[preReleaseVersion.versi
 bs = j.get('data', []) if s == 200 else []
 for b in bs: print('  build', b['attributes'].get('version'), b['attributes'].get('processingState'), b['attributes'].get('uploadedDate'), 'expired' if b['attributes'].get('expired') else '')
 import time
+MIN = int(os.environ.get('PF_MIN_BUILD', '118'))   # the build made for this version (an upload shows up at Apple a few minutes late)
 if os.environ.get('PF_ATTACH') == '1':   # the newest upload may still be processing at Apple: wait for it (up to 20 minutes) instead of taking an older build
     for _ in range(60):
-        if bs and bs[0]['attributes'].get('processingState') == 'VALID': break
+        if bs and int(bs[0]['attributes'].get('version') or 0) >= MIN and bs[0]['attributes'].get('processingState') == 'VALID': break
         print('  waiting for the newest build:', bs and (bs[0]['attributes'].get('version'), bs[0]['attributes'].get('processingState')), flush=True); time.sleep(20)
         s, j = call('GET', f'/v1/builds?filter[app]={app}&filter[preReleaseVersion.version]={VER}&sort=-uploadedDate&limit=5'); bs = j.get('data', []) if s == 200 else bs
-good = bs[0] if (bs and bs[0]['attributes'].get('processingState') == 'VALID' and not bs[0]['attributes'].get('expired')) else None
+good = bs[0] if (bs and int(bs[0]['attributes'].get('version') or 0) >= MIN and bs[0]['attributes'].get('processingState') == 'VALID' and not bs[0]['attributes'].get('expired')) else None   # never an older build than the one meant
 s, j = call('GET', f'/v1/appStoreVersions/{vid}/build'); cur = (j.get('data') or {}) if s == 200 else {}
 print('attached now:', cur.get('attributes', {}).get('version'))
 want = os.environ.get('PF_BUILD')
