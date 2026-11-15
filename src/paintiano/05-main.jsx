@@ -16437,11 +16437,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // ↓ in the Studio: back to the painting before the last ↑ (as ↓ in the surprises) — the looks ↑ left behind, per song
   const stLookHistRef = useRef({key:'', st:[], fw:[]});   // ↓ goes back through st; ↑ then goes forward again through fw (the same paintings), and only past them draws a new one
   const _stLookNow = ()=>({ st:style, sg:painterStage.slice(), rm:!!randomMode, sai:shuffleArtistIndex|0, sv:shufVariant|0, ph:phaseIndex|0, nt:!!notesMode,
-    jo:!!jamOn, ja:!!jamAll, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current, gm:(fuGoldMemRef.current||[]).slice(), sgm:soloGoldRef.current||null });
+    jo:!!jamOn, ja:!!jamAll, jf:!!jamFixedRef.current, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current, gm:(fuGoldMemRef.current||[]).slice(), sgm:soloGoldRef.current||null });
   const _stLookApply = (L)=>{
     if(sigActiveRef.current && !L.sig){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
     randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt);
     setMosaicShuffleLock(L.lock); setJamOn(L.jo); setJamAll(L.ja); jamPinsRef.current=L.pins.slice(); setJamPins(L.pins.slice()); _setFuRoll(L.fu); setMode(L.md);
+    { const _jf = !!L.jf && !!L.jo && !!L.ja && L.pins.length>1; if(_jf && (jamOn!==!!L.jo || jamAll!==!!L.ja)) jamFixKeepRef.current=true; jamFixedRef.current=_jf; setJamFixed(_jf); }   // a fusion's lock (📌) is part of its look: it comes back with it
     setStyle(L.st); setPainterStage(L.sg.slice());
     stTakenRef.current=L.tk; setStTaken(L.tk);
     fuGoldMemRef.current = (L.gm||[]).slice(); soloGoldRef.current = L.sgm||null;
@@ -16465,10 +16466,21 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current = null; }
     setTimeout(()=>{ const ms = _flashMsRef.current || 1200; _setSwipeFlashKey('flash-'+Date.now()+'~'+ms); _swipeFlashTimerRef.current = setTimeout(()=>{ _setSwipeFlashKey(null); }, ms); }, 0);
   };
+  // What you hold is never changed by going back or forward through the looks (Nov 2026): a gold painter, a fusion's gold painters (a locked
+  // fusion: exactly them) and a gold palette stay — a look from before that has others is not stepped to, and that way is forgotten.
+  const _stHoldOk = (L)=>{ if(!L || L.i || viewMode==='image') return true;
+    const ok=(k)=>k && k!=='mosaic' && k!=='notes', mem=[L.st].concat(L.sg||[]).filter(ok);
+    if(palGoldRef.current && L.md!==mode) return false;
+    if(stTakenRef.current || sigActiveRef.current) return true;   // not chosen: the piece's own ✦, or a look still to be taken
+    const pins=(jamPinsRef.current||[]).filter(ok);
+    if(jamOn){ if(!pins.length) return true; if(!L.jo || pins.some(k=>!mem.includes(k))) return false; return !(jamFixedRef.current && mem.length!==pins.length); }
+    if(style && style!=='notes' && _artMode!==2) return L.st===style && !(L.sg||[]).length && !L.jo && !L.sig;
+    return true; };
   // q: quiet — a finger drags the painting (no slide, no buzz, no name: they come when it lands). True = it changed.
   const _stPrev = (q)=>{
     if(!((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
-    const H=stLookHistRef.current; if(H.key!==_stHistKey() || !H.st.length){ if(!q) _stBuzz(6); return false; }
+    const H=stLookHistRef.current; if(H.key===_stHistKey() && H.st.length && !_stHoldOk(H.st[H.st.length-1])) H.st=[];
+    if(H.key!==_stHistKey() || !H.st.length){ if(!q) _stBuzz(6); return false; }
     nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);   // the look comes back as it was: the shuffle must not draw again on the artist change
     (H.fw || (H.fw=[])).push(viewMode==='image' ? _stILookNow() : _stLookNow()); if(H.fw.length>20) H.fw.shift();
     _stAnyApply(H.st.pop()); setStFavPend(false);
@@ -16481,6 +16493,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // after ↓: ↑ brings back the painting you came from (as the surprises do) — a new one is drawn only past the last one seen
     { const H=stLookHistRef.current, k=_stHistKey();
       if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
+      if(H.fw && H.fw.length && !_stHoldOk(H.fw[H.fw.length-1])) H.fw=[];
       if(_back0 && H.fw && H.fw.length && _stUpWorks() && (disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
         nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
         _stAnyApply(H.fw.pop()); H.st.push(_back0); if(H.st.length>20) H.st.shift();
@@ -17242,6 +17255,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setTimeout(()=>{ _liteRollComposer(); }, 120);   // after ✦ has let go (its own clean-up would undo a composer set in the same moment)
       setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 700);
       return; }
+    // the surprises decide for themselves: a painter or a fusion you hold in the Studio (gold, 📌) does not bind the next look here —
+    // your painting keeps it on its own card (↓ brings it back as it was) and the Studio gets what is on screen when you go there
+    if(jamOn) setJamOn(false); if(jamAll) setJamAll(false); if((jamPinsRef.current||[]).length){ jamPinsRef.current=[]; setJamPins([]); }
+    if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
     while(feedStepsRef.current.length){
       const st = feedStepsRef.current.shift();
@@ -17424,6 +17441,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const _own = c.piece==='own', _ownSame = _own && ownCastRef.current===[style||''].concat(painterStage).join('+');
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     if(_ownSame) return;
+    stLookHistRef.current = {key:_stHistKey(), st:[], fw:[]};   // what was before it in the Studio is not its past: ↓ and ↑ start anew here
     if(!_own){ setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600); }
     // What comes from the surprises is yours as it is — CHOSEN (gold), until you let it go yourself (Nov 2026; before: white, ↑ drew someone else):
     // one painter comes gold (↑ brings colours only, ← → its variants); a fusion comes locked with all its painters gold (↑ = their variants
