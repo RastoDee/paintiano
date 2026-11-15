@@ -4581,7 +4581,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _fuOut = (k)=> fuBanRef.current.includes(k);
   // the fixed cast (violet): a face held in the Fusion row. With any painter fixed, the stage is exactly the fixed and the gold ones — no guests are drawn; one alone is a solo; two or more are the whole fusion. ↑ rolls their variants only. Cleared when Fusion is switched
   const [jamFixed, setJamFixed] = useState(false); const jamFixedRef = useRef(false); useEffect(()=>{ jamFixedRef.current = jamFixed; },[jamFixed]);   // the whole cast fixed (violet): the pinned ones alone, no guests
-  useEffect(()=>{ jamFixedRef.current=false; setJamFixed(false); },[jamOn, jamAll]);
+  const jamFixKeepRef = useRef(false);   // a fusion taken from the surprises arrives locked: this once the switch-on must not let its lock go
+  useEffect(()=>{ if(jamFixKeepRef.current){ jamFixKeepRef.current=false; return; } jamFixedRef.current=false; setJamFixed(false); },[jamOn, jamAll]);
   useEffect(()=>{ if(!jamOn || !jamAll) setJamPins(p=>p.length?[]:p); },[jamOn, jamAll]);
   useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
   useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
@@ -17415,11 +17416,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(c.piece==='own'){ setFeedIntro(null); _stBuzz(12); _feedOpen(); return; }   // your own painting, brought along from the Studio: it goes back as it is (its painter stays yours)
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600);
-    if(c.kind!=='img'){ stTakenRef.current=true; setStTaken(true); _palGoldSet(false); } else if(!crOn && imgComposerRef.current) setComposerDice(true);   // a picture's composer: drawn, not chosen — white, ↑ draws on
+    // What comes from the surprises is yours as it is — CHOSEN (gold), until you let it go yourself (Nov 2026; before: white, ↑ drew someone else):
+    // one painter comes gold (↑ brings colours only, ← → its variants); a fusion comes locked with all its painters gold (↑ = their variants
+    // and a palette, no guests — a tap on Fusion unlocks it). Mosaic alone has nobody to hold: it stays as it was (↑ goes on drawing).
+    const _mem = [style].concat(painterStage).filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='mosaicFamily');
+    const _fuLock = c.kind!=='img' && painterStage.length>0 && _mem.length>=2 && ensembleActive;
+    if(c.kind!=='img'){ _palGoldSet(false); if(!_mem.length){ stTakenRef.current=true; setStTaken(true); } else if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } }
+    else if(!crOn && imgComposerRef.current) setComposerDice(true);   // a picture's composer: drawn, not chosen — white, ↑ draws on
     // the switch tells what is on the canvas: one painter (one composer) = Solo, a crossing = Fusion
-    if(!painterStage.length && jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); } else if(painterStage.length && ensembleActive && !jamOn) setJamOn(true);
+    if(_fuLock){ const pins=_mem.slice(0,STAGE_MAX); jamPinsRef.current=pins; setJamPins(pins); if(!jamOn || !jamAll) jamFixKeepRef.current=true; jamFixedRef.current=true; setJamFixed(true); if(!jamOn) setJamOn(true); if(!jamAll) setJamAll(true); if(mosaicShuffleLock) setMosaicShuffleLock(false); }
+    else if(!painterStage.length && jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } } else if(painterStage.length && ensembleActive && !jamOn) setJamOn(true);
     if(!composerStage.length && crOn) setCrOn(false);
-    firstKeptRef.current = !!c.first;   // its painter is not chosen (white): ↑ goes on as in the surprises
+    firstKeptRef.current = !!c.first;   // the first painting, kept: it is still the one from the first screen
   };
   // WHERE YOU WERE (Nov 2026): the app put away and brought back stays as it was — but meanwhile a new version of Paintiano or
   // the phone itself may start it afresh, and it opened on another painting. Leaving the app, the painting on screen is kept:
