@@ -16566,7 +16566,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(!randomMode) _shuffleOn(); if(mosaicShuffleLock) setMosaicShuffleLock(false);
           const pins=(jamAll ? jamPinsRef.current : []).filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX);   // only the gold on screen stay (pins are shown only with the draw on); white members are drawn anew
           jamPinsRef.current=pins; setJamPins(pins); if(!jamAll) setJamAll(true);
-          nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _jamAllRoll(); rolled = true; }
+          // a locked fusion (📌) is held like a gold solo: ↑ brings colours only (below), ← → its variants (Nov 2026; before ↑ rolled the variants too)
+          if(!(jamFixedRef.current && jamAll && pins.length>1)){ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _jamAllRoll(); rolled = true; } }
         else if(stTakenRef.current){   // a surprise kept with ↓: its painter(s) were never chosen (white) — ↑ goes on as in the surprises: someone else from your set
           stTakenRef.current=false; setStTaken(false);
           if(sigActiveRef.current){ sigPrevRef.current=null; _sigOff(); }
