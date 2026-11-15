@@ -5825,7 +5825,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{
     if(basicMode || sigActive || cockpitEdit) return;
     if(composeMode || micPainting || micListening){ if(randomMode && style!==null && !jamAll) _shuffleOff(); return; }
-    if(!randomMode && style!==null) _shuffleOn();
+    if(!randomMode && style!==null){ if(favSeedLockRef.current && favSeedLockRef.current===chordsRef.current){ setRandomMode(true); setShuffleArtistIndex(0); diceBagRef.current=[]; diceBagKeyRef.current=''; } else _shuffleOn(); }   // (a composition from its ♥ keeps the seed it was painted on)
   },[style, randomMode, composeMode, micPainting, micListening, basicMode, sigActive, cockpitEdit, jamAll]);
   // Keep cockpitEditRef (declared earlier, near the style-fallback effect) in
   // sync. The earlier effect needs to read cockpitEdit but is positioned
@@ -6937,8 +6937,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Never while it records, with the piano open, or on an image scan.
   const _favLim = anim ? disp : playing ? disp : holdPaused ? disp : composedModeRef.current ? chords.length : Math.min(disp, chords.length);
   const _favWhole = !composedModeRef.current && !(chords[0] && chords[0].recorded) && !micActive && !composeMode && !draftOwnerRef.current;
-  const favReady = chords.length>0 && (_favWhole || (_favLim>=chords.length && !playing && !anim)) && !recording && !composeMode && !micActive && !working && !demoReelOn && viewMode!=='image' && !imgComposeRef.current && !favView;
-  const _favPk = useMemo(()=> favReady ? _favHash(chords) : null, [favReady, chords]);
+  // in Compose too: what is played so far, painted and not playing, can be kept (♥ and its double tap were dead there, the heart only flew)
+  const favReady = chords.length>0 && (_favWhole || composeMode || (_favLim>=chords.length && !playing && !anim)) && !recording && !micActive && !working && !demoReelOn && viewMode!=='image' && !imgComposeRef.current && !favView;
+  const favSeedLockRef = useRef(null);   // the notes a ♥'s seed was put back for — another piece lets it go
+  useEffect(()=>{ if(favSeedLockRef.current && favSeedLockRef.current!==chords){ favSeedLockRef.current=null; if(!composeMode && !micPainting && !micListening) setStructureSeedLock(null); } },[chords]);
+  const favPkAliasRef = useRef(null);   // {to, armed, chords}: ▶ Play from a ♥ — while its notes are loaded they are that ♥'s piece
+  const _favPk = useMemo(()=>{ if(!favReady) return null; const A=favPkAliasRef.current;
+    if(A && A.armed && chords.length && chords!==A.prev){ A.chords=chords; A.armed=false; A.prev=null; }   // the first new notes after ▶ are the ♥'s
+    if(A && !A.armed && A.chords!==chords) favPkAliasRef.current=null;
+    return (favPkAliasRef.current && favPkAliasRef.current.chords===chords) ? favPkAliasRef.current.to : _favHash(chords); }, [favReady, chords]);
   // The address of the painting on screen (see _favAddrKey).
   const _favAddrNow = ()=>{
     if(!_favPk) return null;
@@ -15233,6 +15240,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(f.mode) setMode(f.mode);
     if(f.mode==='custom' && f.pal && proStatus!=='free'){ try{ setCustomPalette(f.pal.slice()); }catch(_){} }
     if(f.pk){ const k=f.ks|0; setKsMap(m=> ((m[f.pk]|0)===k) ? m : {...m, [f.pk]:k}); }   // its ✦ Variation's key (or the piece's own)
+    if(f.src==='compose' && f.seed!=null && chordsRef.current && chordsRef.current.length){ setStructureSeedLock(f.seed>>>0); favSeedLockRef.current=chordsRef.current; }   // a composition: the seed Compose held while it was played, so it is the same painting
   }catch(_){} };
   favApplyLookRef.current = _favApplyLook;
   // ♥ → Open on a composition (back into Compose, to go on) or a Mic take with its sound (as a song, its recording plays)
@@ -15267,7 +15275,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk);
     if(how==='notes'){
       if(!pc || !pc.chords || !pc.chords.length){ setFavBad(true); return; }
-      _favClose(); favMusicRestoreRef.current=f;
+      _favClose(); favMusicRestoreRef.current=f; favPkAliasRef.current={ to:f.pk, armed:true, prev:chords };
       try{ setMicArmed(false); setMicContext(false); stopAll(); wipeCanvasNow(); applyEvents(JSON.parse(JSON.stringify(pc.chords)), f.title||''); setLoadedSource(f.src==='score' ? 'score' : f.src==='midi' ? 'midi' : null); }catch(_){ favMusicRestoreRef.current=null; }
       return;
     }
@@ -16293,7 +16301,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     fuGoldMemRef.current = (L.gm||[]).slice(); soloGoldRef.current = L.sgm||null;
     if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} }   // in the same batch: deferred, the shuffle woke on the painter first and the guard then let the ✦ go
   };
-  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfLook = ()=>({ ...(_stLookNow()), fs:_fusionStyleOf('art'), sigA:!!sigActiveRef.current, disp:disp|0, ss:!!songSigRef.current, hist:{n:(stLookHistRef.current.st||[]).length, fw:(stLookHistRef.current.fw||[]).length, ok:stLookHistRef.current.key===_stHistKey(), last:(stLookHistRef.current.st||[]).slice(-1)[0]} }); } }catch(_){}   // the poster tool: the look on screen (tests)
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfLook = ()=>({ ...(_stLookNow()), fk:_favCurKey||null, fr:!!favReady, pl:!!playing, an:!!anim, hp:!!holdPaused, ssl:structureSeedLock, fsl:!!favSeedLockRef.current, fs:_fusionStyleOf('art'), sigA:!!sigActiveRef.current, disp:disp|0, ss:!!songSigRef.current, hist:{n:(stLookHistRef.current.st||[]).length, fw:(stLookHistRef.current.fw||[]).length, ok:stLookHistRef.current.key===_stHistKey(), last:(stLookHistRef.current.st||[]).slice(-1)[0]} }); } }catch(_){}   // the poster tool: the look on screen (tests)
   // a picture's look: who plays it — the mirror of _stLookNow, so ↓ brings back the composer you came from and ↑ after ↓ goes forward again
   const _stILookNow = ()=>({ i:true, comp:imgComposerRef.current||null, stage:(composerStageRef.current||[]).slice(), md:mode, cr:!!crOnRef.current, sig:!!imgSigActiveRef.current, dice:!!composerDice, pins:(crPinsRef.current||[]).slice() });
   const _stILookApply = (L)=>{
