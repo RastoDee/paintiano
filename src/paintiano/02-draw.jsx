@@ -3454,8 +3454,9 @@ function picassoStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PICASSO — THE BLUE PERIOD: the same quiet table, everything in blues laid with the brush — the wall, the bottle, the
-// glass, the bowl — the darkest blue for the outlines, a pale light where the piece is loudest. Slow and low: deeper blues.
+// PICASSO — THE BLUE PERIOD: the same quiet table, everything in blues laid with the brush — the wall, the pitcher, the
+// glass, the bowl — the darkest blue for the outlines. It grows with the piece: every chord its own strokes, the light where
+// the music is, the things on the table drawn in as it goes. Slow and low: deeper blues.
 // ═══════════════════════════════════════════════════════════════════════════
 function _pxStill(chords,gc,isBW,A,X,CW,CH,ss){ // the objects of the quiet table as closed outlines (the blue period, the one-line drawing)
   const D=Math.min(CW,CH), ty=CH*0.6, side=X.trend>0.5?1:-1; const O=[];
@@ -3470,14 +3471,38 @@ function picassoBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const deep=isBW?[30,30,34]:[18,34,78], mid=isBW?[96,96,102]:[52,92,158], pale=isBW?[214,214,218]:[170,200,226];
   const depth=Math.max(0,Math.min(1,0.65-0.4*X.pace+(X.major?-0.1:0.15))); const wall=_pxMix(mid,deep,depth*0.45), table=_pxMix(mid,deep,0.25+depth*0.35);
   const S=_pxStill(chords,gc,isBW,A,X,CW,CH,ss); const ty=S.ty; const r=_pxR(70700,ss);
+  const nr=Math.max(1,Math.min(cn,Math.ceil(reveal*cn)));   // the chords heard so far
+  // the ground: the wall and the table, a quiet underlayer of strokes from the start
   ctx.fillStyle=_pxCss(wall); ctx.fillRect(0,0,CW,ty); ctx.fillStyle=_pxCss(table); ctx.fillRect(0,ty,CW,CH-ty);
-  ctx.save(); ctx.beginPath(); ctx.rect(0,0,CW,CH); ctx.clip(); _pxBrushIn(ctx,0,0,CW,ty,wall,r,D,Math.round(260*Math.min(1,0.3+reveal)),Math.PI/2,0.2); _pxBrushIn(ctx,0,ty,CW,CH-ty,table,r,D,Math.round(160*Math.min(1,0.3+reveal)),0,0.2); ctx.restore();
-  let c=A.phrases[0]||{t:0.5,t0:0.3,vmax:0.6}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
-  if(reveal>=c.t0){ const lx=CW*(0.2+0.6*c.t), ly=CH*0.25, R=D*(0.25+0.25*c.vmax); const g=ctx.createRadialGradient(lx,ly,0,lx,ly,R); g.addColorStop(0,_pxCss(pale,0.35)); g.addColorStop(1,_pxCss(pale,0)); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); }
-  const [pit,bowl,glass]=S.O; const objs=[[glass,0.15],[pit,0.3],[bowl,0.55]]; objs.forEach(([o,t],i)=>{ if(reveal<t) return; const rr=_pxR(70710+i,ss); const oc=_pxMix(mid,pale,0.35+0.35*rr());
-    ctx.save(); _pxPoly(ctx,o.P); ctx.fillStyle=_pxCss(oc); ctx.fill(); ctx.clip(); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of o.P){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); } _pxBrushIn(ctx,x0,y0,x1-x0,y1-y0,oc,rr,D,60,Math.PI/2,0.3);
-    const gg=ctx.createLinearGradient(x0,0,x1,0); gg.addColorStop(0,_pxCss(pale,0.28)); gg.addColorStop(0.5,_pxCss(pale,0)); gg.addColorStop(1,_pxCss(deep,0.35)); ctx.fillStyle=gg; ctx.fillRect(x0,y0,x1-x0,y1-y0); ctx.restore();
-    _pxPoly(ctx,o.P); ctx.strokeStyle=_pxCss(deep,0.85); ctx.lineWidth=Math.max(2,D*0.008); ctx.lineJoin='round'; ctx.stroke(); if(o.handle){ const h=o.handle; ctx.lineWidth=Math.max(3,D*0.013); ctx.beginPath(); ctx.moveTo(h[0][0],h[0][1]); ctx.quadraticCurveTo(h[1][0],h[1][1],h[2][0],h[2][1]); ctx.stroke(); } });
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,CW,CH); ctx.clip(); _pxBrushIn(ctx,0,0,CW,ty,wall,r,D,110,Math.PI/2,0.16); _pxBrushIn(ctx,0,ty,CW,CH-ty,table,r,D,70,0,0.16); ctx.restore();
+  // every chord lays its own strokes: as high on the wall as its notes are high (low notes down on the table), a deep blue for the low
+  // ones, a pale one for the high, a breath of the palette's own colour in it; longer for a long note, broader for a loud one — the
+  // painting grows with the piece (played live it never comes: Picasso listens leaves it out there)
+  const at=(m)=>{ const u=Math.max(0,Math.min(1,((m|0)-38)/50)); return CH*(0.96-0.92*u); };
+  const per=Math.max(1,Math.min(6,Math.round(700/Math.max(1,cn))));
+  const mark=(i)=>{ const e=A.ev[i]; if(!e) return null; const rr=_pxR(71000+i,ss); const x=CW*(0.03+0.94*rr()); return {e,rr,x,y:at(e.top)}; };
+  ctx.save(); ctx.lineCap='round';
+  for(let i=0;i<nr;i++){ const M=mark(i); if(!M) continue; const {e,rr}=M; const u=Math.max(0,Math.min(1,(e.top-38)/50));
+    const tone=_pxMix(deep,pale,0.15+0.7*u), pc=_pxCol(chords,i,gc,isBW), col=_pxMix(tone,pc,isBW?0:0.2);
+    const n=per+Math.min(3,e.nn-1);
+    for(let k=0;k<n;k++){ const x=M.x+(rr()-0.5)*D*0.12, y=M.y+(rr()-0.5)*D*0.08; const onWall=y<ty; const L=D*(0.025+0.045*Math.min(1,e.dur/2)+0.02*rr()); const a=(onWall?Math.PI/2:0)+(rr()-0.5)*0.35;
+      ctx.strokeStyle=_pxCss(col,0.35+0.35*e.v); ctx.lineWidth=D*(0.005+0.013*e.v); ctx.beginPath(); ctx.moveTo(x-Math.cos(a)*L/2,y-Math.sin(a)*L/2); ctx.lineTo(x+Math.cos(a)*L/2,y+Math.sin(a)*L/2); ctx.stroke(); } }
+  ctx.restore();
+  // the light: while the piece sounds it stands where the last chord sounds; the finished painting keeps the loudest passage's light
+  let lx, ly, R, la;
+  if(reveal<1){ const M=mark(nr-1) || {x:CW*0.5,y:CH*0.3,e:{v:0.6}}; lx=M.x; ly=Math.min(M.y,ty-D*0.05); R=D*(0.22+0.3*M.e.v); la=0.32+0.2*M.e.v; }
+  else { let c=A.phrases[0]||{t:0.5,t0:0.3,vmax:0.6}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q; lx=CW*(0.2+0.6*c.t); ly=CH*0.25; R=D*(0.25+0.25*c.vmax); la=0.35; }
+  { const g=ctx.createRadialGradient(lx,ly,0,lx,ly,R); g.addColorStop(0,_pxCss(pale,la)); g.addColorStop(1,_pxCss(pale,0)); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); }
+  // the things on the table come as the piece goes — their one line drawn first, then the blue laid in; lit from the side the light is on
+  const [pit,bowl,glass]=S.O; const objs=[[glass,0.1],[pit,0.25],[bowl,0.45]];
+  objs.forEach(([o,t],i)=>{ const f=Math.max(0,Math.min(1,(reveal-t)/0.18)); if(f<=0) return; const rr=_pxR(70710+i,ss);
+    const ci=Math.min(cn-1,Math.max(0,Math.floor(cn*(0.2+0.3*i)))); const oc=_pxMix(_pxMix(mid,pale,0.35+0.35*rr()),_pxCol(chords,ci,gc,isBW),isBW?0:0.16);
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of o.P){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); }
+    if(f>=0.5){ const fa=Math.min(1,(f-0.5)*2); ctx.save(); ctx.globalAlpha=fa; _pxPoly(ctx,o.P); ctx.fillStyle=_pxCss(oc); ctx.fill(); ctx.clip(); _pxBrushIn(ctx,x0,y0,x1-x0,y1-y0,oc,rr,D,60,Math.PI/2,0.3);
+      const lit=lx>(x0+x1)/2; const gg=ctx.createLinearGradient(x0,0,x1,0); gg.addColorStop(lit?1:0,_pxCss(pale,0.32)); gg.addColorStop(0.5,_pxCss(pale,0)); gg.addColorStop(lit?0:1,_pxCss(deep,0.38)); ctx.fillStyle=gg; ctx.fillRect(x0,y0,x1-x0,y1-y0); ctx.restore(); }
+    const np=Math.max(2,Math.ceil(o.P.length*Math.min(1,f*2))); ctx.beginPath(); ctx.moveTo(o.P[0][0],o.P[0][1]); for(let k=1;k<np;k++) ctx.lineTo(o.P[k][0],o.P[k][1]); if(np>=o.P.length) ctx.closePath();
+    ctx.strokeStyle=_pxCss(deep,0.85); ctx.lineWidth=Math.max(2,D*0.008); ctx.lineJoin='round'; ctx.stroke();
+    if(o.handle && f>=1){ const h=o.handle; ctx.lineWidth=Math.max(3,D*0.013); ctx.beginPath(); ctx.moveTo(h[0][0],h[0][1]); ctx.quadraticCurveTo(h[1][0],h[1][1],h[2][0],h[2][1]); ctx.stroke(); } });
   ctx.strokeStyle=_pxCss(deep,0.8); ctx.lineWidth=Math.max(2,D*0.008); ctx.beginPath(); ctx.moveTo(0,ty); ctx.lineTo(CW,ty+D*0.01); ctx.stroke();
   _pxCanvas(ctx,CW,CH,ss,0.05); try{ globalThis.__PC_LISTEN={v:'blue',depth}; }catch(_){} _setCurE(0.5);
 }
