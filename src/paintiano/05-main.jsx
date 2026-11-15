@@ -15294,6 +15294,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     favMusicRestoreRef.current=f;
     try{ loadAudio({target:{files:[file], value:''}}); }catch(_){ micToSongRef.current=false; favMusicRestoreRef.current=null; }
   };
+  const favImgShareRef = useRef(0);   // ♥ of a picture → share: once the picture is open, the Studio's share sheet
+  const _favShareImg = ()=>{ favImgShareRef.current=Date.now(); _favOpenImg(); };
   const _favOpenImg = async ()=>{
     const f=favCur; if(!f || f.kind!=='img') return;
     try{ wakeAudio(); }catch(_){}   // in the tap: the audio device is live when it starts playing
@@ -15416,6 +15418,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ if(stPalEdit && (!stripOpen || !studioFs || mode!=='custom')) setStPalEdit(false); },[stripOpen, studioFs, mode, stPalEdit]);
   useEffect(()=>{ if(stPalView && (!stripOpen || !studioFs)) setStPalView(null); },[stripOpen, studioFs, stPalView]);
   const studioLive = studioFs && studioLiveSrc;
+  useEffect(()=>{ const t0=favImgShareRef.current; if(!t0) return; if(Date.now()-t0>20000){ favImgShareRef.current=0; return; }   // ♥ of a picture → share, once the picture is open
+    if(studioFs && viewMode==='image' && originalImgUrl && chords.length>0 && !working && !favView){ favImgShareRef.current=0; setTimeout(()=>{ try{ setStShare(true); }catch(_){} }, 450); } },[studioFs, viewMode, originalImgUrl, chords.length, working, favView]);
   // Compose / Mic: their own two spread steps (see stFill below)
   const [stLiveLv, setStLiveLv] = useState(0); const stLiveLvRef = useRef(0); stLiveLvRef.current = stLiveLv;
   useEffect(()=>{ if(!studioLive && stLiveLv){ stLiveLvRef.current=0; setStLiveLv(0); } },[studioLive, stLiveLv]);
@@ -18329,7 +18333,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             )}
             {f && (<div className="pf-st-acts" onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()}>
               <button type="button" className={'pf-st-act pf-st-fav'+(gone?'':' on')} onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} aria-pressed={!gone}>{_heartSv}</button>
-              {isImgFav ? (<button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenImg(); }} disabled={favBad}><TxIcon n="play" s={16}/>{_favT('open')}</button>)
+              {isImgFav ? (<><button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenImg(); }} disabled={favBad}><TxIcon n="play" s={16}/>{_sent(t('play'))}</button><button type="button" className="pf-st-act" onClick={(e)=>{ e.stopPropagation(); _favShareImg(); }} disabled={favBad} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button></>)
                 : (<>{_favCanOpen(f) && (<button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenSong(); }} disabled={favBad}><TxIcon n="play" s={16}/>{_sent(t('play'))}</button>)}<button type="button" className="pf-st-act" onClick={(e)=>{ e.stopPropagation(); if(_shOk) setStFavShare(true); }} disabled={!_shOk} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button></>)}
             </div>)}
             {f && !isImgFav && f.src==='compose' && (<div onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{display:'flex',justifyContent:'center',marginTop:10,flexShrink:0}}><button type="button" className="pf-chg-chip" onClick={(e)=>{ e.stopPropagation(); _favEditCompose(); }} disabled={favBad}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{marginRight:6}}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>{_favT('editCompose')}</button></div>)}   {/* a composition: ✎ back into Compose, to carry on */}
@@ -18438,7 +18442,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           </>)}
           <div role="region" aria-label={_favT('label')} style={{position:'fixed',bottom:0,left:0,right:0,zIndex:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'10px 8px calc(12px + env(safe-area-inset-bottom))',display:'flex',flexWrap:'wrap',justifyContent:'center',alignItems:'center',gap:8}}>
             {isImgFav ? (
-              <button onClick={_favOpenImg} disabled={favBad} className="pf-lift pf-tx-play" title={_favT('openTip')} style={txStyle('primary',{effScale,primary:true,disabled:favBad})}><TxIcon n="play" s={15*effScale}/>{_favT('open')}</button>
+              <button onClick={_favOpenImg} disabled={favBad} className="pf-lift pf-tx-play" title={_favT('openTip')} style={txStyle('primary',{effScale,primary:true,disabled:favBad})}><TxIcon n="play" s={15*effScale}/>{t('play')}</button>
             ) : (
               _favCanOpen(favCur) ? (<><button onClick={_favOpenSong} disabled={favBad} className="pf-lift pf-tx-play" style={txStyle('primary',{effScale,primary:true,disabled:favBad})}><TxIcon n="play" s={15*effScale}/>{t('play')}</button>{favCur && favCur.src==='compose' && (<button onClick={_favEditCompose} disabled={favBad} className="pf-lift" style={txStyle('neutral',{effScale,disabled:favBad})}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{marginRight:6}}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>{_favT('editCompose')}</button>)}</>)
               : (<button disabled aria-disabled="true" className="pf-tx-play" style={{...txStyle('primary',{effScale,primary:true,disabled:true}),cursor:'default'}}><TxIcon n="play" s={15*effScale}/>{t('play')}</button>)
