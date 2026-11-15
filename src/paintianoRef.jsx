@@ -41119,7 +41119,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ if(!studioLive && stLiveLv){ stLiveLvRef.current=0; setStLiveLv(0); } },[studioLive, stLiveLv]);
   const _stLiveSet = (v)=>{ v=Math.max(0, Math.min(2, v|0)); if(stLiveLvRef.current===v) return; stLiveLvRef.current=v; setStLiveLv(v); try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){} if(v===2) _pfSysBars(true); };
   const _lvTop = (studioLive && stLiveLv===1) ? (composeMode ? 14 : 60) : 64;   // one spread: no ⌄ / tabs above, no ♥ row below
-  const _micGap0 = composeMode ? 144 : 128;
+  const _micGap0 = composeMode ? 144 : 140;   // (the Mic had 128: ♥ · ✦ Change · share sat right on the painting's edge)
   const _micGap = (studioLive && stLiveLv===1) ? _lvTop + 12 : _micGap0;   // the Mic: the painting reaches down to the buttons — a finished take's name and its palette · painters line sit inside its lower edge, never across it; the same size from the start, so the frame keeps its size after STOP (Compose as it was)
   // the height of the bottom dock while live: the painting sits in the space above it
   const stDockRef = useRef(null), clearBtnRef = useRef(null), stMicRef = useRef(null), micPresetBtnRef = useRef(null);
@@ -46571,7 +46571,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 ) : (take && hasMicBlob) ? (stLiveLv===1 ? (
                   <button type="button" className="pf-mic-song" onClick={_micOpenSong} aria-label={_stT('micSong')} title={_stT('micSong')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
                 ) : (
-                  <button type="button" onClick={_micOpenSong} style={{..._chip,borderColor:'rgba(240,215,138,.55)',color:'#f0d78a',background:'linear-gradient(135deg,rgba(240,215,138,.2),rgba(201,168,76,.1))',textTransform:'none',letterSpacing:'.02em',fontSize:(.62*effScale)+'rem',fontWeight:700}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{marginRight:7,verticalAlign:'-2px'}}><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>{_stT('micSong')}</button>
+                  <button type="button" onClick={_micOpenSong} style={{..._chip,borderColor:'rgba(240,215,138,.55)',color:'#f0d78a',background:'linear-gradient(135deg,rgba(240,215,138,.2),rgba(201,168,76,.1))',textTransform:'none',letterSpacing:'.02em',fontSize:(.62*effScale)+'rem',fontWeight:700}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>{_stT('micSong')}</button>
                 )
                 ) : null}
               </div>
