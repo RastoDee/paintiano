@@ -1,4 +1,14 @@
-Paintiano turns music into a painting: each piece of music produces its own picture. No account or sign-in is needed.
+Paintiano turns music into a painting: each piece of music produces its own picture. Painting needs no account or sign-in.
+
+New in 1.1 - Battle (the third tab at the top: For You, Studio, Battle):
+Battle is a monthly game for paintings made in Paintiano. Two paintings are shown and a double tap votes for one. Voting needs no account. Only sending your own painting to compete needs a Battle account: a nickname and a password, made inside Battle (no e-mail, no third-party sign-in).
+Until the first round opens on December 1, 2026, visitors without an account see a countdown screen. To see the game now, sign in with the demo account from the sign-in fields: Battle tab > the circle at the top right > Sign in.
+Content from other people in Battle is only paintings made in Paintiano and nicknames (no chat, no free text, no photos):
+- The rules are shown when an account is made; offensive nicknames are refused.
+- Report: hold a painting > Report / block > Report painting or Report nickname. Reports are looked at within 24 hours; the content can be removed and the account closed.
+- Block: hold a painting > Report / block > Block the author. Their paintings are no longer shown to you.
+- Delete account: the circle at the top right > Delete account (the password, then a confirmation). The account, its paintings and its votes are deleted.
+- Contact: hello@paintiano.app
 
 In-app purchases (StoreKit):
 - Paintiano Pro (non-consumable): unlocks all painter styles, composers, custom palette and watermark-free export.
@@ -9,6 +19,6 @@ Refunds: the Refunds page (menu "Paintiano" at the top > Refunds) has a button t
 
 Licence key field: Paintiano is also a web app. People who bought a licence earlier on the website can enter their key to use it here (multiplatform service). All purchases inside the iOS app use In-App Purchase.
 
-AI features: a short text or a downscaled photo is sent to our server to compose a short piano piece. It is not a chat and no content from other users is shown.
+AI features: a short text or a downscaled photo is sent to our server to compose a short piano piece. It is not a chat.
 
 Microphone: used only when the user chooses to play or hum a melody; the audio is turned into notes on the device.
