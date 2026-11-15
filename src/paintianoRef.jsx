@@ -42518,6 +42518,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // A tap on a playing card opens it full screen, where it simply plays on — from then on it is your painting.
   const [feedCards, setFeedCards] = useState([]);   // the looks seen, oldest first (10 at most): {id, piece, sel, u, l}
   const [feedAt, setFeedAt] = useState(-1);         // -1 = the home card on top, i = feedCards[i]
+  // a locked fusion (📌) holds its painters alone: should the canvas ever show others beside them in the Studio (a look brought back from For You
+  // by an older version of the app), they are pinned too — what is on the screen is what is held; never a locked fusion with white guests
+  useEffect(()=>{ if(feedAt>=0 || !jamFixed || !jamOn || !jamAll) return; const st=[style].concat(painterStage).filter(k=>k && k!=='mosaic' && k!=='notes'); const pins=jamPinsRef.current||[];
+    if(st.length>1 && st.some(k=>!pins.includes(k))){ const np=st.slice(0,STAGE_MAX); jamPinsRef.current=np; setJamPins(np); } },[feedAt, jamFixed, jamOn, jamAll, style, painterStage]);
   const [feedLoaded, setFeedLoaded] = useState(null); // the piece in the player (0..2), or null
   // THE HINTS — three, once each: ⌃ the next painting (it plays a while), ✦ Change (your own song), ♥ (your own painting is done)
   const [stTip, setStTip] = useState(null);   // null | 'up' | 'chg' | 'fav'
