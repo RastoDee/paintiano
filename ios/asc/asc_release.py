@@ -4,7 +4,7 @@ Stops without releasing unless the version waits for the developer's release, ca
 import os, sys, json, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(compile(open(os.path.join(HERE, 'asc.py'), encoding='utf-8').read().split("\nNOTES = {")[0], 'asc_head', 'exec'))
-step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = j['data'][0]['id']
+step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = [d for d in j['data'] if d['attributes'].get('bundleId') == BUNDLE][0]['id']
 s, j = call('GET', f'/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&limit=3'); v = j['data'][0]; vid = v['id']
 state = v['attributes'].get('appStoreState')
 print('version', v['attributes'].get('versionString'), state, '| release type', v['attributes'].get('releaseType'))

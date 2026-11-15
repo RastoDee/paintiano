@@ -3,7 +3,7 @@
 import os, sys, json, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(compile(open(os.path.join(HERE, 'asc.py'), encoding='utf-8').read().split("\nNOTES = {")[0], 'asc_head', 'exec'))
-step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); a = j['data'][0]; app = a['id']
+step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); a = [d for d in j['data'] if d['attributes'].get('bundleId') == BUNDLE][0]; app = a['id']
 print('content rights now:', a['attributes'].get('contentRightsDeclaration'))
 if a['attributes'].get('contentRightsDeclaration') != 'USES_THIRD_PARTY_CONTENT':
     s, j = call('PATCH', '/v1/apps/' + app, {'data': {'type': 'apps', 'id': app, 'attributes': {'contentRightsDeclaration': 'USES_THIRD_PARTY_CONTENT'}}})

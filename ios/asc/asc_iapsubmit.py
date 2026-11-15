@@ -3,7 +3,7 @@
 import os, sys, json
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(compile(open(os.path.join(HERE, 'asc.py'), encoding='utf-8').read().split("\nNOTES = {")[0], 'asc_head', 'exec'))
-step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = j['data'][0]['id']
+step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = [d for d in j['data'] if d['attributes'].get('bundleId') == BUNDLE][0]['id']
 s, j = call('GET', f'/v1/apps/{app}/inAppPurchasesV2?limit=50')
 for d in j.get('data', []):
     x = d['attributes']; step(x['productId'] + ' | ' + str(x.get('state')))

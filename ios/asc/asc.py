@@ -41,6 +41,7 @@ REVIEW_NOTES = open(os.path.join(HERE, 'review-notes.txt'), encoding='utf-8').re
 
 step('app')
 s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE)
+if s == 200: j['data'] = [d for d in j.get('data', []) if d['attributes'].get('bundleId') == BUNDLE]   # the filter also finds app.paintiano.beta
 if s != 200 or not j.get('data'): print('FAIL', s, errs(j)); sys.exit(1)
 app = j['data'][0]['id']; print('app id', app, '|', j['data'][0]['attributes'].get('name'))
 

@@ -12,7 +12,7 @@ exec(compile(src, 'asc_head', 'exec'))
 OLD, NEW = 'app.paintiano.aipass12', 'app.paintiano.aipass12m'
 NOTE = 'Non-renewing 12-month pass for AI composition from a mood or a photo. It does not renew automatically; after 12 months it can be bought again. Open it from the purchase screen: "Get Pro AI", or "Get the AI pass" for a Pro owner.'
 
-step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = j['data'][0]['id']
+step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = [d for d in j['data'] if d['attributes'].get('bundleId') == BUNDLE][0]['id']
 s, j = call('GET', f'/v1/apps/{app}/inAppPurchasesV2?limit=50'); iaps = {d['attributes']['productId']: d for d in j['data']}
 for pid, d in iaps.items(): print(pid, '|', d['attributes'].get('name'), '|', d['attributes'].get('inAppPurchaseType'), '|', d['attributes'].get('state'))
 old = iaps.get(OLD)

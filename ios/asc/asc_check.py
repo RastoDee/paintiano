@@ -7,7 +7,7 @@ def get(path):
     s, j = call('GET', path)
     if s != 200: print('  !! GET', path.split('?')[0], s, errs(j)[:200])
     return j if s == 200 else {}
-step('app'); j = get('/v1/apps?filter[bundleId]=' + BUNDLE); a = j['data'][0]; app = a['id']
+step('app'); j = get('/v1/apps?filter[bundleId]=' + BUNDLE); a = [d for d in j['data'] if d['attributes'].get('bundleId') == BUNDLE][0]; app = a['id']
 print('APPLE ID', app, '| https://apps.apple.com/app/id' + app)
 print({k: a['attributes'].get(k) for k in ('name', 'sku', 'primaryLocale', 'contentRightsDeclaration', 'isOrEverWasMadeForKids')})
 step('app info')
@@ -21,7 +21,8 @@ j = get(f'/v1/apps/{app}/appPriceSchedule?include=baseTerritory,manualPrices'); 
 jp = get(f'/v1/appPriceSchedules/{app}/manualPrices?include=appPricePoint,territory&limit=10'); print('  manual prices:', [(i['type'], i.get('attributes')) for i in jp.get('included', [])] or jp.get('data'))
 s, j = call('GET', f'/v2/appAvailabilities/{app}?include=territoryAvailabilities&limit[territoryAvailabilities]=5'); print('  availability:', s, (j.get('data') or {}).get('attributes') if s == 200 else errs(j)[:160])
 step('version')
-j = get(f'/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&limit=3'); v = j['data'][0]; vid = v['id']
+j = get(f'/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&limit=5'); v = j['data'][0]; vid = v['id']
+for w in j['data']: print('  version', w['attributes'].get('versionString'), '|', w['attributes'].get('appStoreState'), '|', w['attributes'].get('appVersionState'), '| created', w['attributes'].get('createdDate'))
 print({k: v['attributes'].get(k) for k in ('versionString', 'appStoreState', 'appVersionState', 'releaseType', 'copyright', 'usesIdfa', 'downloadable')})
 j = get(f'/v1/appStoreVersions/{vid}/build'); b = (j.get('data') or {}); print('  build:', b.get('attributes', {}).get('version'), b.get('attributes', {}).get('processingState'), '| usesNonExemptEncryption:', b.get('attributes', {}).get('usesNonExemptEncryption'))
 j = get(f'/v1/appStoreVersions/{vid}/appStoreReviewDetail'); r = (j.get('data') or {}).get('attributes', {})
