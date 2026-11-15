@@ -46569,9 +46569,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                     {W.map((w,i)=>(<i key={i} style={{display:'block',width:4,borderRadius:2,height:Math.round(4+20*lv*w),background:voice?'rgba(255,130,130,.9)':'rgba(122,179,255,.9)',transition:'height .08s'}}/>))}
                   </div>
                 ) : (take && hasMicBlob) ? (stLiveLv===1 ? (
-                  <button type="button" className="pf-mic-song" onClick={_micOpenSong} aria-label={_stT('micSong')} title={_stT('micSong')}>✦</button>
+                  <button type="button" className="pf-mic-song" onClick={_micOpenSong} aria-label={_stT('micSong')} title={_stT('micSong')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
                 ) : (
-                  <button type="button" onClick={_micOpenSong} style={{..._chip,borderColor:'rgba(240,215,138,.55)',color:'#f0d78a',background:'linear-gradient(135deg,rgba(240,215,138,.2),rgba(201,168,76,.1))',textTransform:'none',letterSpacing:'.02em',fontSize:(.62*effScale)+'rem',fontWeight:700}}>✦ {_stT('micSong')}</button>
+                  <button type="button" onClick={_micOpenSong} style={{..._chip,borderColor:'rgba(240,215,138,.55)',color:'#f0d78a',background:'linear-gradient(135deg,rgba(240,215,138,.2),rgba(201,168,76,.1))',textTransform:'none',letterSpacing:'.02em',fontSize:(.62*effScale)+'rem',fontWeight:700}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{marginRight:7,verticalAlign:'-2px'}}><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>{_stT('micSong')}</button>
                 )
                 ) : null}
               </div>
