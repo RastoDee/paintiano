@@ -30258,7 +30258,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const jamFixKeepRef = useRef(false);   // a fusion taken from the surprises arrives locked: this once the switch-on must not let its lock go
   useEffect(()=>{ if(jamFixKeepRef.current){ jamFixKeepRef.current=false; return; } jamFixedRef.current=false; setJamFixed(false); },[jamOn, jamAll]);
   useEffect(()=>{ if(!jamOn || !jamAll) setJamPins(p=>p.length?[]:p); },[jamOn, jamAll]);
-  useEffect(()=>{ if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
+  const jamAllKeepRef = useRef(false);   // a look put back as it was (↓ ↑ → ←): its Fusion keeps 'all' though the shuffle goes off with its ✦
+  useEffect(()=>{ if(jamAllKeepRef.current){ jamAllKeepRef.current=false; if(jamOn) return; } if(!randomMode || !jamOn) setJamAll(false); },[randomMode, jamOn]);
   useEffect(()=>{ if(!crOn) setComposerStage(p=>p.length?[]:p); },[crOn]);
   const STAGE_MAX = 5;
   const _ensT = (k)=>{ const d=ENSEMBLE_I18N[lang]||ENSEMBLE_I18N.EN; return d[k]!==undefined ? d[k] : ENSEMBLE_I18N.EN[k]; };
@@ -30815,13 +30816,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _variantPut = (v)=>{ if(style===null && (!shuffleStyle || shuffleStyle==='mosaic')) _artQuiet(v.nt ? 'notes' : ''); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu);
     if(v.md && v.md!==mode && !palGoldRef.current && setupPalettes.includes(v.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(v.md); } };   // → and ← through the ones seen bring each variant's own palette back (a gold palette stays)
 
-  const _variantNext = (pal)=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
-    const snap=_variantSnap();
-    if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); _variantPut(v); return true; }
+  // ✦ Signature is a whole look, not a variant: ← leaves it, so the step keeps the look itself (H.keep: the painter's key may change with it) —
+  // → brings the ✦ back exactly, and ← after it goes forward to the same variant again
+  const _variantLook = (L)=>{ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply(L); };
+  const _variantNext = (pal)=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
+    const sig = viewMode!=='image' && !!sigActiveRef.current;
+    const snap = sig ? {..._variantSnap(), look:_stLookNow()} : _variantSnap();
+    if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); if(v.look){ H.keep=true; _variantLook(v.look); } else { if(sig) H.keep=true; _variantPut(v); } return true; }
     if(pal) stUpPalRef.current=Date.now();   // the Studio rolls the palette itself, once (the Fusion's own roll stands down)
-    const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(pal && !palGoldRef.current) _fuRollPal(true); } return ok; };
-  const _variantBack = ()=>{ const H=varHistRef.current; if(H.key!==_varKey() || !H.st.length) return false;
-    const v=H.st.pop(); (H.fw || (H.fw=[])).push(_variantSnap()); if(H.fw.length>30) H.fw.shift(); _variantPut(v); return true; };
+    const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current) _fuRollPal(true); } return ok; };
+  const _variantBack = ()=>{ const H=varHistRef.current; if((H.key!==_varKey() && !H.keep) || !H.st.length) return false;
+    const v=H.st.pop(); (H.fw || (H.fw=[])).push(v.look ? {..._variantSnap(), look:_stLookNow()} : _variantSnap()); if(H.fw.length>30) H.fw.shift();
+    if(v.look){ H.keep=true; _variantLook(v.look); } else _variantPut(v); return true; };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
   useEffect(()=>{ showDiceRef.current=_diceRoll; });
   useEffect(()=>{ const q=afterCommitRef.current; if(!q.length) return; afterCommitRef.current=[]; q.forEach(f=>{ try{ f(); }catch(_){} }); });
@@ -41991,7 +41997,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(has && !composeMode && !micActive && !micArmed && !working && !anim && feedAt<0){
       let u=null; try{ u = isI ? originalImgUrl : _feedSnap(); }catch(_){} try{ const tt=_vidTitle(); feedOwnTtlRef.current = (tt && tt!=='Paintiano') ? tt : ''; }catch(_){ feedOwnTtlRef.current=''; }
       const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:isI?'img':undefined, piece:'own', own:true, sel:null, u, pu:isI ? null : u, l:'', dir:'none' };   // a picture: the card draws the picture itself — a snapshot of the stage's canvas is only the scan's light on black, and lay over it while paused
-
       feedResumeRef.current=null; feedStartRef.current=null; feedStepsRef.current=[]; feedPieceRef.current=true; feedLookRef.current=null;
       setFeedIntro(null); setFeedCards([c]); setFeedAt(0); setFeedLoaded(isI ? 'iown' : 'own'); setFeedHiRes(!isI);
       if(metaHide){ feedCleanRef.current=true; setFeedClean(true); let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); }   // the Studio without its words (the second spread): For You opens just the painting too — a pinch brings everything back
@@ -42119,15 +42124,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     jo:!!jamOn, ja:!!jamAll, jf:!!jamFixedRef.current, pins:(jamPinsRef.current||[]).slice(), fu:fuRollRef.current || null, md:mode, sig:!!sigActiveRef.current, lock:!!mosaicShuffleLock, tk:!!stTakenRef.current, gm:(fuGoldMemRef.current||[]).slice(), sgm:soloGoldRef.current||null });
   const _stLookApply = (L)=>{
     if(sigActiveRef.current && !L.sig){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
+    // ✦ first, in the same batch: it switches the shuffle and the Fusion's 'all' off — the look's own settings below then put back what it had
+    // (a ✦ fusion taken from For You is locked 📌, and comes back locked); deferred, the shuffle woke on the painter first and the guard let the ✦ go
+    if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} }
+    if(L.jo && L.ja && !L.rm && randomModeRef.current) jamAllKeepRef.current=true;   // a ✦ fusion taken from For You: 'all' and the 📌 without the shuffle — as it was
     randomModeRef.current=L.rm; setRandomMode(L.rm); setShuffleArtistIndex(L.sai); setShufVariant(L.sv); setPhaseIndex(L.ph); setNotesMode(L.nt);
     setMosaicShuffleLock(L.lock); setJamOn(L.jo); setJamAll(L.ja); jamPinsRef.current=L.pins.slice(); setJamPins(L.pins.slice()); _setFuRoll(L.fu); setMode(L.md);
     { const _jf = !!L.jf && !!L.jo && !!L.ja && L.pins.length>1; if(_jf && (jamOn!==!!L.jo || jamAll!==!!L.ja)) jamFixKeepRef.current=true; jamFixedRef.current=_jf; setJamFixed(_jf); }   // a fusion's lock (📌) is part of its look: it comes back with it
     setStyle(L.st); setPainterStage(L.sg.slice());
     stTakenRef.current=L.tk; setStTaken(L.tk);
     fuGoldMemRef.current = (L.gm||[]).slice(); soloGoldRef.current = L.sgm||null;
-    if(L.sig && !sigActiveRef.current && songSigRef.current && applySigRef.current){ try{ applySigRef.current(songSigRef.current); }catch(_){} }   // in the same batch: deferred, the shuffle woke on the painter first and the guard then let the ✦ go
   };
-  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfLook = ()=>({ ...(_stLookNow()), fk:_favCurKey||null, fr:!!favReady, pl:!!playing, an:!!anim, hp:!!holdPaused, ssl:structureSeedLock, fsl:!!favSeedLockRef.current, fs:_fusionStyleOf('art'), sigA:!!sigActiveRef.current, disp:disp|0, ss:!!songSigRef.current, hist:{n:(stLookHistRef.current.st||[]).length, fw:(stLookHistRef.current.fw||[]).length, ok:stLookHistRef.current.key===_stHistKey(), last:(stLookHistRef.current.st||[]).slice(-1)[0]} }); } }catch(_){}   // the poster tool: the look on screen (tests)
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfLook = ()=>({ ...(_stLookNow()), fk:_favCurKey||null, fr:!!favReady, pl:!!playing, an:!!anim, hp:!!holdPaused, ssl:structureSeedLock, fsl:!!favSeedLockRef.current, fs:_fusionStyleOf('art'), sigA:!!sigActiveRef.current, disp:disp|0, ss:!!songSigRef.current, vh:{n:(varHistRef.current.st||[]).length, fw:(varHistRef.current.fw||[]).length, ok:varHistRef.current.key===_varKey(), keep:!!varHistRef.current.keep}, hist:{n:(stLookHistRef.current.st||[]).length, fw:(stLookHistRef.current.fw||[]).length, ok:stLookHistRef.current.key===_stHistKey(), last:(stLookHistRef.current.st||[]).slice(-1)[0]} }); } }catch(_){}   // the poster tool: the look on screen (tests)
   // a picture's look: who plays it — the mirror of _stLookNow, so ↓ brings back the composer you came from and ↑ after ↓ goes forward again
   const _stILookNow = ()=>({ i:true, comp:imgComposerRef.current||null, stage:(composerStageRef.current||[]).slice(), md:mode, cr:!!crOnRef.current, sig:!!imgSigActiveRef.current, dice:!!composerDice, pins:(crPinsRef.current||[]).slice() });
   const _stILookApply = (L)=>{
