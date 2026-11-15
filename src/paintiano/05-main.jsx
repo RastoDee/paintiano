@@ -6987,6 +6987,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       skip:_takeSkip(st), liveE:seLive, compose: own==='compose', sig: !!sigActive,
       src: own==='compose' ? 'compose' : (own==='sing'||own==='listen') ? 'mic' : (chords[0] && chords[0].recorded) ? 'compose' : (loadedSource || (moodContext ? 'mood' : '')),
       title: (info && info.title) ? String(info.title) : '', mood: moodContext ? (currentMood||'') : '', n: chords.length };
+    // ▶ Play from ♥ later: a built-in song by its key, a song of My Music by its slot (its music is kept there, not in the ♥)
+    { const _bi=builtinPieceRef.current; if(Number.isInteger(_bi) && BUILTIN_KEYS[_bi]) fav.bp=BUILTIN_KEYS[_bi];
+      const _mi=_loadedFromMyMusicRef.current, _mr=(_mi!=null) ? (myMusicSlots||[]).find(r=>r && r.id===_mi) : null;
+      if(_mr) fav.mm={ at:_mr.addedAt||0, sz:_mr.sizeBytes||0, name:String(_mr.name||'').slice(0,120) }; }
     // a Mic take is kept nowhere else: its recording goes into the ♥ with its notes (up to ~25 MB), so ♥ → Open plays it again
     let au=null;
     if(fav.src==='mic'){ try{ const B=listenBlobRef.current; if(B && B.blob && B.blob.size>0 && B.blob.size<=25*1024*1024){ au={ buf: await B.blob.arrayBuffer(), mime: B.type || B.blob.type || 'audio/webm' }; fav.au=1; } }catch(_){ au=null; } }
@@ -15225,17 +15229,40 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     else if(f.style==='notes'){ setStyle(null); setPainterStage([]); setNotesMode(true); setJamOn(false); }
     else { setNotesMode(false); setStyle(f.style && f.style!=='mosaic' ? f.style : null); setPainterStage([]); setJamOn(false); }
     setPhaseIndex(f.phase|0);
+    if(keys && f.fa && Array.isArray(f.fa.keys) && Array.isArray(f.fa.phs)) _setFuRoll({ keys:f.fa.keys.slice(), phs:f.fa.phs.slice(), fs:(f.fa.fs==='E' ? 'E' : 'A'), rv:(f.fa.rv|0)||1 });   // the fusion exactly as kept: each painter's variant, its style and rules
     if(f.mode) setMode(f.mode);
     if(f.mode==='custom' && f.pal && proStatus!=='free'){ try{ setCustomPalette(f.pal.slice()); }catch(_){} }
     if(f.pk){ const k=f.ks|0; setKsMap(m=> ((m[f.pk]|0)===k) ? m : {...m, [f.pk]:k}); }   // its ✦ Variation's key (or the piece's own)
   }catch(_){} };
   favApplyLookRef.current = _favApplyLook;
   // ♥ → Open on a composition (back into Compose, to go on) or a Mic take with its sound (as a song, its recording plays)
-  const _favCanOpen = (f)=> !!(f && f.kind!=='img' && (f.src==='compose' || (f.src==='mic' && f.au)));
+  // ♥ → ▶ Play: the painting again with its music — a built-in song (by its key; an older ♥ by its name), the notes the ♥ keeps
+  // (MIDI · MusicXML · a mood), an MP3 or a video while it is still in My Music (by its slot; an older ♥ by its name)
+  const _favMmName = (x)=> String(x||'').replace(/\.[a-z0-9]{2,5}$/i,'').trim().toLowerCase();
+  const _favMmFind = (f)=>{ const L=(myMusicSlots||[]).filter(r=>r && r.blob); if(f.mm && f.mm.at){ const r=L.find(x=>x.addedAt===f.mm.at && (x.sizeBytes|0)===(f.mm.sz|0)); if(r) return r; }
+    const w=_favMmName((f.mm && f.mm.name) || f.title); return w ? (L.find(x=>_favMmName(x.name)===w) || null) : null; };
+  const _favBuiltinIdx = (f)=>{ let i=f.bp ? BUILTIN_KEYS.indexOf(f.bp) : -1; if(i<0 && f.src==='midi' && f.title && !f.mm) i=BUILTIN_PIECES.findIndex(p=>p && p.name===f.title); return i; };
+  const _favHow = (f)=>{ if(!f || f.kind==='img') return null;
+    if(f.src==='compose') return 'compose';
+    if(f.src==='mic') return f.au ? 'mic' : null;
+    if(f.src==='audio') return _favMmFind(f) ? 'mm' : null;   // its music is not in the ♥: only while My Music has it
+    if(_favBuiltinIdx(f)>=0) return 'bp';
+    if(f.mm && _favMmFind(f)) return 'mm';
+    return (f.src==='midi' || f.src==='score' || f.src==='mood' || !f.src) ? 'notes' : null; };
+  const _favCanOpen = (f)=> !!_favHow(f);
+  useEffect(()=>{ if(!favView) return; let c=false; myMusicList().then(l=>{ if(!c) setMyMusicSlots(l); }).catch(()=>{}); return ()=>{ c=true; }; },[!!favView]);   // ▶ knows what My Music still has
   const _favOpenSong = async ()=>{
-    const f=favCur; if(!_favCanOpen(f)) return;
+    const f=favCur, how=_favHow(f); if(!how) return;
     try{ wakeAudio(); }catch(_){}
+    if(how==='bp'){ const i=_favBuiltinIdx(f); _favClose(); favMusicRestoreRef.current=f; try{ loadSampleMidi(i, {noSig:true}); }catch(_){ favMusicRestoreRef.current=null; } return; }
+    if(how==='mm'){ const rec=_favMmFind(f); if(!rec){ setFavBad(true); return; } _favClose(); favMusicRestoreRef.current=f; try{ await loadFromMyMusic(rec); }catch(_){ favMusicRestoreRef.current=null; } return; }
     const pc=favPiecesRef.current.get(f.pk) || await favPiece(f.pk);
+    if(how==='notes'){
+      if(!pc || !pc.chords || !pc.chords.length){ setFavBad(true); return; }
+      _favClose(); favMusicRestoreRef.current=f;
+      try{ setMicArmed(false); setMicContext(false); stopAll(); wipeCanvasNow(); applyEvents(JSON.parse(JSON.stringify(pc.chords)), f.title||''); setLoadedSource(f.src==='score' ? 'score' : f.src==='midi' ? 'midi' : null); }catch(_){ favMusicRestoreRef.current=null; }
+      return;
+    }
     if(!pc || !pc.chords || !pc.chords.length){ setFavBad(true); return; }
     if(f.src==='compose'){
       favComposeOpenRef.current={ f, chords:pc.chords };
@@ -18283,7 +18310,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             {f && (<div className="pf-st-acts" onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()}>
               <button type="button" className={'pf-st-act pf-st-fav'+(gone?'':' on')} onClick={(e)=>{ e.stopPropagation(); _favViewHeart(); }} aria-label={gone ? _favT('add') : _favT('del')} aria-pressed={!gone}>{_heartSv}</button>
               {isImgFav ? (<button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenImg(); }} disabled={favBad}><TxIcon n="play" s={16}/>{_favT('open')}</button>)
-                : (<>{_favCanOpen(f) && (<button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenSong(); }} disabled={favBad}><TxIcon n="play" s={16}/>{_favT('open')}</button>)}<button type="button" className="pf-st-act" onClick={(e)=>{ e.stopPropagation(); if(_shOk) setStFavShare(true); }} disabled={!_shOk} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button></>)}
+                : (<>{_favCanOpen(f) && (<button type="button" className="pf-st-chg" onClick={(e)=>{ e.stopPropagation(); _favOpenSong(); }} disabled={favBad}><TxIcon n="play" s={16}/>{(f.src==='compose' || f.src==='mic') ? _favT('open') : _sent(t('play'))}</button>)}<button type="button" className="pf-st-act" onClick={(e)=>{ e.stopPropagation(); if(_shOk) setStFavShare(true); }} disabled={!_shOk} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button></>)}
             </div>)}
             </div>
             {/* where you are: the dots down the left (swipe ↑ ↓) */}
@@ -18392,7 +18419,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             {isImgFav ? (
               <button onClick={_favOpenImg} disabled={favBad} className="pf-lift pf-tx-play" title={_favT('openTip')} style={txStyle('primary',{effScale,primary:true,disabled:favBad})}><TxIcon n="play" s={15*effScale}/>{_favT('open')}</button>
             ) : (
-              <button disabled aria-disabled="true" className="pf-tx-play" style={{...txStyle('primary',{effScale,primary:true,disabled:true}),cursor:'default'}}><TxIcon n="play" s={15*effScale}/>{t('play')}</button>
+              _favCanOpen(favCur) ? (<button onClick={_favOpenSong} disabled={favBad} className="pf-lift pf-tx-play" style={txStyle('primary',{effScale,primary:true,disabled:favBad})}><TxIcon n="play" s={15*effScale}/>{favCur && (favCur.src==='compose' || favCur.src==='mic') ? _favT('open') : t('play')}</button>)
+              : (<button disabled aria-disabled="true" className="pf-tx-play" style={{...txStyle('primary',{effScale,primary:true,disabled:true}),cursor:'default'}}><TxIcon n="play" s={15*effScale}/>{t('play')}</button>)
             )}
             {!isImgFav && (<button onClick={()=>{ setFavFs(false); setShowSizePicker(true); }} disabled={!f||favBad} className="pf-lift pf-tx-save" style={txStyle('save',{effScale,disabled:!f||favBad})}><TxIcon n="save" s={14*effScale}/>{t('save')}</button>)}
             <button onClick={_favClearAll} disabled={!(N - (favGone!=null ? 1 : 0))} className="pf-lift pf-tx-clear" title={_favT('clearAll')} style={favClearArmed ? txStyle('danger',{effScale,on:true}) : txStyle('ghost',{effScale,disabled:!(N - (favGone!=null ? 1 : 0))})}>{favClearArmed ? _favT('clearAllQ').replace('{n}', N - (favGone!=null ? 1 : 0)) : _favT('clearAll')}</button>
